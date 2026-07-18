@@ -25,35 +25,35 @@
 
 ### Sprint 2: Organization & Person
 
-- [ ] S2.1 Implement `OrganizationService` with Create, List, Get, Update, Delete methods
-- [ ] S2.2 Implement `POST /api/orgs` handler (validate name required)
-- [ ] S2.3 Implement `GET /api/orgs` and `GET /api/orgs/:orgId` handlers
-- [ ] S2.4 Implement `PATCH /api/orgs/:orgId` handler
-- [ ] S2.5 Implement `DELETE /api/orgs/:orgId` handler (reject if org has active projects)
-- [ ] S2.6 Implement `PersonService` with Create, List, Get, Update methods (scoped to organization)
-- [ ] S2.7 Implement create logic: validate unique email within the organization
-- [ ] S2.8 Implement `POST /api/orgs/:orgId/persons` handler (validate name + email required)
-- [ ] S2.9 Implement `GET /api/orgs/:orgId/persons` handler
-- [ ] S2.10 Implement `GET /api/persons/:personId` and `PATCH /api/persons/:personId` handlers
+- [X] S2.1 Implement `OrganizationService` with Create, List, Get, Update, Delete methods
+- [X] S2.2 Implement `POST /api/orgs` handler (validate name required)
+- [X] S2.3 Implement `GET /api/orgs` and `GET /api/orgs/:orgId` handlers
+- [X] S2.4 Implement `PATCH /api/orgs/:orgId` handler
+- [X] S2.5 Implement `DELETE /api/orgs/:orgId` handler (reject if org has active projects)
+- [X] S2.6 Implement `PersonService` with Create, List, Get, Update methods (scoped to organization)
+- [X] S2.7 Implement create logic: validate unique email within the organization
+- [X] S2.8 Implement `POST /api/orgs/:orgId/persons` handler (validate name + email required)
+- [X] S2.9 Implement `GET /api/orgs/:orgId/persons` handler
+- [X] S2.10 Implement `GET /api/persons/:personId` and `PATCH /api/persons/:personId` handlers
 
 ---
 
 ### Sprint 3: Project & Team
 
-- [ ] S3.1 Implement `ProjectService` with Create, List, Get, Update, Delete methods (scoped to organization)
-- [ ] S3.2 Implement create logic: default sprint_duration_days = 14, validate config fields
-- [ ] S3.3 Implement `POST /api/orgs/:orgId/projects` handler (validate name required)
-- [ ] S3.4 Implement `GET /api/orgs/:orgId/projects` handler
-- [ ] S3.5 Implement `GET /api/projects/:projectId` and `PATCH /api/projects/:projectId` handlers
-- [ ] S3.6 Implement `DELETE /api/projects/:projectId` handler (cascade delete teams, tasks, time entries, integrations)
-- [ ] S3.7 Implement `TeamService` with Create, List, Get, Update, Delete methods (scoped to project)
-- [ ] S3.8 Implement `POST /api/projects/:projectId/teams` handler (validate name required)
-- [ ] S3.9 Implement `GET /api/projects/:projectId/teams` handler
-- [ ] S3.10 Implement `GET /api/teams/:teamId` / `PATCH /api/teams/:teamId` / `DELETE /api/teams/:teamId` handlers
-- [ ] S3.11 Implement `TeamMembershipService` with Add, Remove, ListByTeam methods
-- [ ] S3.12 Implement `POST /api/teams/:teamId/members` handler (validate person exists in org)
-- [ ] S3.13 Implement `DELETE /api/teams/:teamId/members` handler
-- [ ] S3.14 Implement `GET /api/teams/:teamId/members` handler
+- [X] S3.1 Implement `ProjectService` with Create, List, Get, Update, Delete methods (scoped to organization)
+- [X] S3.2 Implement create logic: default sprint_duration_days = 14, validate config fields
+- [X] S3.3 Implement `POST /api/orgs/:orgId/projects` handler (validate name required)
+- [X] S3.4 Implement `GET /api/orgs/:orgId/projects` handler
+- [X] S3.5 Implement `GET /api/projects/:projectId` and `PATCH /api/projects/:projectId` handlers
+- [X] S3.6 Implement `DELETE /api/projects/:projectId` handler (cascade delete teams, tasks, time entries, integrations)
+- [X] S3.7 Implement `TeamService` with Create, List, Get, Update, Delete methods (scoped to project)
+- [X] S3.8 Implement `POST /api/projects/:projectId/teams` handler (validate name required)
+- [X] S3.9 Implement `GET /api/projects/:projectId/teams` handler
+- [X] S3.10 Implement `GET /api/teams/:teamId` / `PATCH /api/teams/:teamId` / `DELETE /api/teams/:teamId` handlers
+- [X] S3.11 Implement `TeamMembershipService` with Add, Remove, ListByTeam methods
+- [X] S3.12 Implement `POST /api/teams/:teamId/members` handler (validate person exists in org)
+- [X] S3.13 Implement `DELETE /api/teams/:teamId/members` handler
+- [X] S3.14 Implement `GET /api/teams/:teamId/members` handler
 
 ---
 
