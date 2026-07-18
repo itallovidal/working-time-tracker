@@ -1,0 +1,170 @@
+## Context
+
+This is a greenfield project. There is no existing code, database, or API. The system will be built from scratch to track worked time against tasks within projects, where tasks are linked to people, teams, and optionally to external items (issues, cards, tickets) through generic integrations. The project lives in a standalone repository (`working-time-tracker`).
+
+The system supports multiple organizations (companies), each with multiple projects. A project has teams of people, a configurable sprint duration, daily standup time, and weekly sync schedule. People register within an organization and are assigned to teams. Projects can have integrations with external platforms (GitHub, GitLab, Slack, Trello, etc.) to link tasks to external items and push notifications.
+
+Stakeholders are engineering teams who want accurate time-per-task data, visibility into project progress, task deadlines, and linked external items.
+
+## Goals / Non-Goals
+
+**Goals:**
+- Provide an organizational structure: organizations → projects → teams → people.
+- Implement clock-in/clock-out as the core time-tracking primitive within a project, enforcing one active session per person.
+- Manage tasks within projects, with default one-week deadline and single-person assignment.
+- Support generic integrations with external platforms (GitHub, GitLab, Slack, Trello, etc.) configured per project, replacing any single-platform coupling.
+- Allow linking tasks to external items (issues, cards, tickets) through integrations and retrieving their details on demand.
+- Support project-level configuration: sprint duration, daily standup time, and weekly sync schedule.
+- Define a minimal REST API covering all CRUD and clock-in/out operations, scoped by organization and project.
+- Serve a lightweight web UI (server-rendered HTML + Alpine.js) from the Go binary for administration and daily use.
+
+**Non-Goals:**
+- Real-time collaboration or SSE/WebSocket updates.
+- A heavy SPA framework or separate frontend build pipeline (server-rendered HTML + Alpine.js is sufficient for v1).
+- Webhook-driven automatic issue sync (external item details are fetched on demand for this iteration).
+- Complex RBAC with fine-grained permissions (simple member/admin roles within an organization is sufficient for v1).
+- Billing, invoicing, or payroll calculations from time entries.
+- Multi-region or sharded deployment (single PostgreSQL instance for v1).
+
+## Decisions
+
+### Decision 1: Tech stack — Go (Echo) + GORM + PostgreSQL + Alpine.js frontend
+**Choice:** Go backend using the Echo web framework, with PostgreSQL as the datastore and GORM as the ORM. The Go server also serves the frontend as server-rendered HTML templates enhanced with Alpine.js for interactivity. The frontend consumes the JSON REST API exposed by the same server.
+**Rationale:** GORM provides a productive Go ORM with AutoMigrate, hooks, and association management — eliminating raw SQL boilerplate while keeping the database schema driven by Go structs. Echo provides a lightweight HTTP router with middleware, static-asset serving, and HTML template rendering. Together they keep the backend fast to iterate on. PostgreSQL gives reliable timestamp handling, unique constraints, and JSONB columns for flexible integration config storage. Alpine.js adds reactivity with no build step.
+**Alternatives considered:**
+- Node.js + SQLite: simpler to start but weaker concurrency guarantees and no native single-binary deployment.
+- Python + Postgres: viable but heavier runtime; Go's compiled output suits a small tracker service better.
+- Raw `database/sql` without an ORM: more control but slower to develop; GORM's AutoMigrate and association handling justify the abstraction for this project's data-model complexity.
+- Separate SPA (React/Vue) frontend: more capable but adds a JavaScript build toolchain and a second deployment artifact; overkill for a small internal tracker.
+
+### Decision 2: Data model — Seven core entities
+**Choice:** Seven entities: `Organization`, `Project`, `Team`, `Person`, `Task`, `TimeEntry`, `Integration`, with a join table `TeamMembership`.
+
+```
+Organization: id (UUID PK), name, created_at
+Project: id (UUID PK), organization_id (FK Organization), name, description,
+         github_repo_url (nullable), gitlab_repo_url (nullable),
+         sprint_duration_days (int, default 14),
+         daily_time (TIME nullable), weekly_sync_day (VARCHAR nullable),
+         created_at
+Team: id (UUID PK), name, project_id (FK Project), created_at
+Person: id (UUID PK), name, email, organization_id (FK Organization), created_at
+TeamMembership: person_id (FK Person), team_id (FK Team), created_at
+               (unique constraint on person_id + team_id)
+Integration: id (UUID PK), project_id (FK Project), type (VARCHAR — e.g. github,
+             gitlab, slack, trello), display_name, config (JSONB, encrypted),
+             enabled (boolean, default true), created_at
+Task: id (UUID PK), project_id (FK Project), name, description,
+      assignee_id (FK Person), deadline (TIMESTAMP, default created_at + 7 days),
+      external_integration_id (FK Integration, nullable),
+      external_item_id (VARCHAR, nullable),
+      external_item_url (TEXT, nullable),
+      created_at
+TimeEntry: id (UUID PK), task_id (FK Task), person_id (FK Person),
+           start_at (TIMESTAMP), end_at (TIMESTAMP nullable), created_at
+```
+
+A partial unique index enforces one active session per person:
+`CREATE UNIQUE INDEX one_active_session ON time_entries (person_id) WHERE end_at IS NULL`
+
+**Rationale:** The model maps directly to the organizational hierarchy. A person belongs to an organization, which has projects. Each project has teams, integrations, and tasks. Links to external items are stored on the task itself (one link per task), referencing which integration provides the connection. The partial unique index on TimeEntry is the database-level guarantee against concurrent clock-in races. JSONB for Integration.config allows type-specific configuration without schema changes per platform.
+
+**Alternatives considered:**
+- Separate `TaskLink` table for external item references: more flexible for multiple links per task but over-normalized for v1 where one link per task is sufficient.
+- Separate per-integration tables: not extensible; adding a new integration type would require a migration.
+
+### Decision 3: Single active session enforcement — Partial unique index via GORM migration
+**Choice:** Enforce the "one active session per person" rule with a PostgreSQL partial unique index: `CREATE UNIQUE INDEX one_active_session ON time_entries (person_id) WHERE end_at IS NULL`. The standard table structure is managed by GORM AutoMigrate from model structs; the partial unique index is applied as a one-time migration step via `db.Exec()` after AutoMigrate, since GORM does not natively support partial indexes through struct tags.
+**Rationale:** Database-level guarantee that prevents race conditions even if two concurrent clock-in requests arrive. The service layer checks first for a friendly error, but the index is the hard guarantee. This decision is unchanged from the original design because the constraint is per-person regardless of project scope.
+**Alternatives considered:**
+- Application-level lock/check only: vulnerable to concurrent request races.
+- A `currently_active_entry_id` column on Person: denormalized state that can drift from the truth.
+
+### Decision 4: Organizational hierarchy — Org → Project → Team → Person
+**Choice:** Model the hierarchy as Organization (top-level tenant), Project (work container), Team (group of people within a project), Person (individual, belongs to one organization).
+
+- A person registers under one organization.
+- An organization has many projects; each project belongs exclusively to one organization.
+- A project has many teams; each team belongs exclusively to one project.
+- A person can be a member of multiple teams within the same project via TeamMembership.
+- Tasks are scoped to a project. The assignee of a task must be a member of at least one team within that project.
+- Time entries are scoped to tasks, which are scoped to projects. The clock-in endpoint requires a project context.
+
+**Rationale:** Clean tenant isolation at the organization level. Project is the natural scope for configuration (sprint, daily, sync) and integration settings. Teams allow grouping without duplicating data — a person can be on multiple teams.
+**Alternatives considered:**
+- Flat project list without organizations: simpler but no multi-tenant support.
+- Person directly assigned to project without teams: loses the grouping concept and makes per-team reporting harder.
+- Hierarchical orgs (parent/child organizations): over-engineering for v1; single-level orgs are sufficient.
+
+### Decision 5: Generic integration system
+**Choice:** Replace the previous GitHub-specific connection with a generic Integration entity configured per project.
+
+Each Integration stores:
+- `type`: a string identifier for the platform (e.g., `github`, `gitlab`, `slack`, `trello`).
+- `display_name`: a human-readable label (e.g., "Production Repo", "Team Slack").
+- `config`: a JSONB column holding type-specific configuration (API tokens, webhook URLs, etc.), encrypted at rest.
+- `enabled`: flag to enable/disable without deleting.
+
+Tasks can be linked to external items by setting `external_integration_id`, `external_item_id`, and `external_item_url`. When reading a task, the system fetches current item details from the integration's API on demand. If the API is unavailable, the task returns a null detail block (graceful degradation). Per-integration API responses are cached in-process with a short TTL (e.g., 60s).
+
+Each integration type implements a common interface:
+- `ValidateConfig(config) error` — verify credentials by calling the platform API.
+- `FetchItemDetails(config, itemID) (ItemDetails, error)` — retrieve title, state, URL.
+- (Future) `SendNotification(config, message)` — push notifications.
+
+**Rationale:** Decouples the core tracking system from any single external platform. Adding a new integration type only requires implementing the interface; no schema or core logic changes. Encrypted JSONB config keeps secrets safe while allowing per-type flexibility. On-demand fetch avoids stale data and webhook plumbing in v1.
+**Alternatives considered:**
+- Webhook-driven sync: more responsive but adds endpoint, secret management, and per-platform webhook registration complexity — deferred.
+- Persisting external item details and refreshing on a schedule: background job overhead for v1.
+- Separate `config_github`, `config_gitlab` etc. columns: not extensible; each new platform requires a migration.
+
+### Decision 6: Credential security — Encryption at rest
+**Choice:** Store integration credentials (API tokens, keys) encrypted at rest in the Integration.config JSONB column using symmetric AES-GCM with a key from environment configuration (`INTEGRATION_ENCRYPTION_KEY`). Never return credentials in any API response or log; expose only an `enabled` boolean and a masked `has_credentials` indicator per integration.
+**Rationale:** Symmetric encryption is simple for a single-instance service and keeps secrets safe if the database is compromised. The boolean indicator lets the UI show connection status without leaking secrets. Each integration type may require different credential fields; encrypting the entire JSONB config avoids per-field handling.
+**Alternatives considered:**
+- OAuth flow with refresh tokens: more secure/scalable but far more complex per-platform for v1.
+- Plaintext storage: unacceptable security posture.
+- Column-level encryption per field: more granular but couples schema to integration types.
+
+### Decision 7: API style — REST with JSON, scoped by organization and project
+**Choice:** RESTful JSON endpoints grouped by resource, scoped under organizations and projects.
+
+- `POST /api/orgs` / `GET /api/orgs` — create / list organizations
+- `GET /api/orgs/:orgId` / `PATCH /api/orgs/:orgId` — read / update organization
+- `POST /api/orgs/:orgId/projects` / `GET /api/orgs/:orgId/projects` — project CRUD within an org
+- `GET /api/projects/:projectId` / `PATCH /api/projects/:projectId` / `DELETE /api/projects/:projectId` — project detail / update / delete
+- `POST /api/projects/:projectId/teams` / `GET /api/projects/:projectId/teams` — team CRUD
+- `GET /api/teams/:teamId` / `PATCH /api/teams/:teamId` / `DELETE /api/teams/:teamId`
+- `POST /api/teams/:teamId/members` / `DELETE /api/teams/:teamId/members` — team membership
+- `POST /api/orgs/:orgId/persons` / `GET /api/orgs/:orgId/persons` — person CRUD scoped to org
+- `GET /api/persons/:personId` / `PATCH /api/persons/:personId`
+- `POST /api/projects/:projectId/tasks` / `GET /api/projects/:projectId/tasks` — task CRUD scoped to project
+- `GET /api/tasks/:taskId` / `PATCH /api/tasks/:taskId` / `DELETE /api/tasks/:taskId`
+- `POST /api/projects/:projectId/time-entries/clock-in` — clock in (body: task_id, person_id)
+- `POST /api/projects/:projectId/time-entries/clock-out` — clock out (body: person_id)
+- `GET /api/projects/:projectId/time-entries` — list (filters: task_id, person_id)
+- `GET /api/projects/:projectId/time-entries/total` — total time (filters: task_id, person_id)
+- `POST /api/projects/:projectId/integrations` / `GET /api/projects/:projectId/integrations` — integration CRUD
+- `GET /api/integrations/:integrationId` / `PATCH /api/integrations/:integrationId` / `DELETE /api/integrations/:integrationId`
+- `POST /api/tasks/:taskId/link-external-item` — link task to external item (body: integration_id, external_item_id, external_item_url)
+- `DELETE /api/tasks/:taskId/link-external-item` — unlink external item
+- `GET /api/tasks/:taskId/external-details` — fetch linked item details from integration
+
+**Rationale:** Scoping under orgs and projects provides natural access boundaries. The URL hierarchy mirrors the data model, making permissions and filtering straightforward. JSON is universally supported by both the Alpine.js frontend and CLI/script clients. The same Echo server additionally serves the frontend (see Decision 8); the `/api/*` endpoints remain the source of truth and are reusable by non-browser clients.
+
+### Decision 8: Frontend delivery — Server-rendered HTML + Alpine.js, served by Echo
+**Choice:** The Echo server renders HTML templates (Go `html/template`) for each main view and serves them at browser-friendly routes (e.g., `/`, `/orgs/:orgId`, `/projects/:projectId`, `/projects/:projectId/tasks`, `/projects/:projectId/time-tracking`). Templates load Alpine.js from a vendored local static asset for client-side interactivity. Alpine components call the JSON REST API (under `/api/*`) via `fetch` for create/update/clock-in/out actions and re-render the relevant sections. Templates and static assets are embedded into the binary via `embed.FS` so deployment is a single self-contained artifact.
+**Rationale:** Keeps a single deployable binary with no JavaScript build step. Alpine.js provides enough reactivity for forms, lists, the clock in/out button, and an active-session timer without a framework. The JSON API remains the source of truth and stays reusable by CLI/script clients. Organization/project scoping in the URL is reflected in the navigation structure.
+**Alternatives considered:**
+- HTMX instead of Alpine.js: also viable and build-free; Alpine.js chosen for finer-grained client state (e.g., active-session elapsed timer, inline validation feedback, multi-step forms for integration config).
+- Pure server-rendered forms with full page reloads: simpler but poorer UX for clock in/out and live totals.
+- Separate SPA frontend: rejected per Decision 1 (build toolchain + second deployment artifact).
+
+## Risks / Trade-offs
+
+- **[Per-integration API rate limits]** On-demand external item fetches consume API quota per platform. → Mitigation: cache item details in-process with a short TTL (e.g., 60s); document rate-limit handling per integration type.
+- **[Concurrent clock-in race]** Two near-simultaneous clock-in requests for the same person. → Mitigation: partial unique index is the hard guarantee; service returns a clear "already clocked in" error.
+- **[Credential compromise]** Encrypted-at-rest integration tokens are only as safe as the encryption key. → Mitigation: key from env var / secrets manager, not committed; document rotation procedure; each integration stores only necessary permissions.
+- **[Integration API drift]** External platforms may change their APIs, breaking item detail fetching. → Mitigation: integration interface allows per-type implementation; graceful degradation (null detail block) ensures task reads never fail.
+- **[On-demand fetch latency]** Reading a task with a linked external item adds an API round-trip. → Mitigation: in-process TTL cache and graceful null-on-failure so task reads never block indefinitely.
+- **[No build-time checks on frontend logic]** Alpine.js behavior lives in HTML attributes and inline scripts, so client-side errors only surface at runtime. → Mitigation: keep Alpine components small; rely on server-side validation as the source of truth; cover served routes with integration tests.
