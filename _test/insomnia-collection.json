@@ -1,0 +1,154 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2026-07-18T20:00:00.000Z",
+  "__export_source": "working-time-tracker",
+  "resources": [
+    {
+      "_id": "__workspace__",
+      "_type": "workspace",
+      "name": "Working Time Tracker"
+    },
+    {
+      "_id": "req_healthcheck",
+      "_type": "request",
+      "parentId": "__workspace__",
+      "name": "Healthcheck",
+      "method": "GET",
+      "url": "{{base_url}}/healthcheck/",
+      "headers": [],
+      "authentication": {},
+      "body": {}
+    },
+    {
+      "_id": "req_healthcheck_hello",
+      "_type": "request",
+      "parentId": "__workspace__",
+      "name": "Healthcheck Hello",
+      "method": "GET",
+      "url": "{{base_url}}/healthcheck/hello",
+      "headers": [],
+      "authentication": {},
+      "body": {}
+    },
+    {
+      "_id": "req_create_org",
+      "_type": "request",
+      "parentId": "__workspace__",
+      "name": "Create Organization",
+      "method": "POST",
+      "url": "{{base_url}}/api/orgs",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "authentication": {},
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Minha Empresa\"\n}"
+      }
+    },
+    {
+      "_id": "req_list_orgs",
+      "_type": "request",
+      "parentId": "__workspace__",
+      "name": "List Organizations",
+      "method": "GET",
+      "url": "{{base_url}}/api/orgs",
+      "headers": [],
+      "authentication": {},
+      "body": {}
+    },
+    {
+      "_id": "req_get_org",
+      "_type": "request",
+      "parentId": "__workspace__",
+      "name": "Get Organization",
+      "method": "GET",
+      "url": "{{base_url}}/api/orgs/{{org_id}}",
+      "headers": [],
+      "authentication": {},
+      "body": {}
+    },
+    {
+      "_id": "req_update_org",
+      "_type": "request",
+      "parentId": "__workspace__",
+      "name": "Update Organization",
+      "method": "PATCH",
+      "url": "{{base_url}}/api/orgs/{{org_id}}",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "authentication": {},
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Empresa Atualizada\"\n}"
+      }
+    },
+    {
+      "_id": "req_delete_org",
+      "_type": "request",
+      "parentId": "__workspace__",
+      "name": "Delete Organization",
+      "method": "DELETE",
+      "url": "{{base_url}}/api/orgs/{{org_id}}",
+      "headers": [],
+      "authentication": {},
+      "body": {}
+    },
+    {
+      "_id": "req_create_person",
+      "_type": "request",
+      "parentId": "__workspace__",
+      "name": "Create Person",
+      "method": "POST",
+      "url": "{{base_url}}/api/orgs/{{org_id}}/persons",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "authentication": {},
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"João Silva\",\n  \"email\": \"joao@empresa.com\"\n}"
+      }
+    },
+    {
+      "_id": "req_list_persons",
+      "_type": "request",
+      "parentId": "__workspace__",
+      "name": "List Persons by Org",
+      "method": "GET",
+      "url": "{{base_url}}/api/orgs/{{org_id}}/persons",
+      "headers": [],
+      "authentication": {},
+      "body": {}
+    },
+    {
+      "_id": "req_get_person",
+      "_type": "request",
+      "parentId": "__workspace__",
+      "name": "Get Person",
+      "method": "GET",
+      "url": "{{base_url}}/api/persons/{{person_id}}",
+      "headers": [],
+      "authentication": {},
+      "body": {}
+    },
+    {
+      "_id": "req_update_person",
+      "_type": "request",
+      "parentId": "__workspace__",
+      "name": "Update Person",
+      "method": "PATCH",
+      "url": "{{base_url}}/api/persons/{{person_id}}",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "authentication": {},
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"João Silva Atualizado\",\n  \"email\": \"joao.novo@empresa.com\"\n}"
+      }
+    }
+  ]
+}
