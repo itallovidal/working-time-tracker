@@ -149,6 +149,179 @@
         "mimeType": "application/json",
         "text": "{\n  \"name\": \"João Silva Atualizado\",\n  \"email\": \"joao.novo@empresa.com\"\n}"
       }
+    },
+    {
+      "_id": "req_create_project",
+      "_type": "request",
+      "parentId": "__workspace__",
+      "name": "Create Project",
+      "method": "POST",
+      "url": "{{base_url}}/api/orgs/{{org_id}}/projects",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "authentication": {},
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Meu Projeto\",\n  \"description\": \"Descrição do projeto\",\n  \"sprint_duration_days\": 14\n}"
+      }
+    },
+    {
+      "_id": "req_list_projects",
+      "_type": "request",
+      "parentId": "__workspace__",
+      "name": "List Projects by Org",
+      "method": "GET",
+      "url": "{{base_url}}/api/orgs/{{org_id}}/projects",
+      "headers": [],
+      "authentication": {},
+      "body": {}
+    },
+    {
+      "_id": "req_get_project",
+      "_type": "request",
+      "parentId": "__workspace__",
+      "name": "Get Project",
+      "method": "GET",
+      "url": "{{base_url}}/api/projects/{{project_id}}",
+      "headers": [],
+      "authentication": {},
+      "body": {}
+    },
+    {
+      "_id": "req_update_project",
+      "_type": "request",
+      "parentId": "__workspace__",
+      "name": "Update Project",
+      "method": "PATCH",
+      "url": "{{base_url}}/api/projects/{{project_id}}",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "authentication": {},
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Projeto Atualizado\",\n  \"description\": \"Nova descrição\",\n  \"sprint_duration_days\": 21\n}"
+      }
+    },
+    {
+      "_id": "req_delete_project",
+      "_type": "request",
+      "parentId": "__workspace__",
+      "name": "Delete Project",
+      "method": "DELETE",
+      "url": "{{base_url}}/api/projects/{{project_id}}",
+      "headers": [],
+      "authentication": {},
+      "body": {}
+    },
+    {
+      "_id": "req_create_team",
+      "_type": "request",
+      "parentId": "__workspace__",
+      "name": "Create Team",
+      "method": "POST",
+      "url": "{{base_url}}/api/projects/{{project_id}}/teams",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "authentication": {},
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Time Alpha\"\n}"
+      }
+    },
+    {
+      "_id": "req_list_teams",
+      "_type": "request",
+      "parentId": "__workspace__",
+      "name": "List Teams by Project",
+      "method": "GET",
+      "url": "{{base_url}}/api/projects/{{project_id}}/teams",
+      "headers": [],
+      "authentication": {},
+      "body": {}
+    },
+    {
+      "_id": "req_get_team",
+      "_type": "request",
+      "parentId": "__workspace__",
+      "name": "Get Team",
+      "method": "GET",
+      "url": "{{base_url}}/api/teams/{{team_id}}",
+      "headers": [],
+      "authentication": {},
+      "body": {}
+    },
+    {
+      "_id": "req_update_team",
+      "_type": "request",
+      "parentId": "__workspace__",
+      "name": "Update Team",
+      "method": "PATCH",
+      "url": "{{base_url}}/api/teams/{{team_id}}",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "authentication": {},
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Time Alpha Atualizado\"\n}"
+      }
+    },
+    {
+      "_id": "req_delete_team",
+      "_type": "request",
+      "parentId": "__workspace__",
+      "name": "Delete Team",
+      "method": "DELETE",
+      "url": "{{base_url}}/api/teams/{{team_id}}",
+      "headers": [],
+      "authentication": {},
+      "body": {}
+    },
+    {
+      "_id": "req_add_member",
+      "_type": "request",
+      "parentId": "__workspace__",
+      "name": "Add Team Member",
+      "method": "POST",
+      "url": "{{base_url}}/api/teams/{{team_id}}/members",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "authentication": {},
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"person_id\": \"{{person_id}}\"\n}"
+      }
+    },
+    {
+      "_id": "req_list_members",
+      "_type": "request",
+      "parentId": "__workspace__",
+      "name": "List Team Members",
+      "method": "GET",
+      "url": "{{base_url}}/api/teams/{{team_id}}/members",
+      "headers": [],
+      "authentication": {},
+      "body": {}
+    },
+    {
+      "_id": "req_remove_member",
+      "_type": "request",
+      "parentId": "__workspace__",
+      "name": "Remove Team Member",
+      "method": "DELETE",
+      "url": "{{base_url}}/api/teams/{{team_id}}/members",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "authentication": {},
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"person_id\": \"{{person_id}}\"\n}"
+      }
     }
   ]
 }
