@@ -32,12 +32,20 @@ func main() {
 
 	orgStore := store.NewOrganizationStore(db)
 	personStore := store.NewPersonStore(db)
+	projectStore := store.NewProjectStore(db)
+	teamStore := store.NewTeamStore(db)
+	teamMembershipStore := store.NewTeamMembershipStore(db)
 
 	orgSvc := service.NewOrganizationService(orgStore)
 	personSvc := service.NewPersonService(personStore)
+	projectSvc := service.NewProjectService(projectStore)
+	teamSvc := service.NewTeamService(teamStore)
+	teamMembershipSvc := service.NewTeamMembershipService(teamMembershipStore)
 
 	orgHandler := handlers.NewOrganizationHandler(orgSvc)
 	personHandler := handlers.NewPersonHandler(personSvc)
+	projectHandler := handlers.NewProjectHandler(projectSvc)
+	teamHandler := handlers.NewTeamHandler(teamSvc, teamMembershipSvc)
 
 	e := echo.New()
 
@@ -49,7 +57,7 @@ func main() {
 	e.Use(middleware.Recover())
 
 	routes.HealthcheckRoutesRegister(e)
-	routes.RegisterRoutes(e, orgHandler, personHandler)
+	routes.RegisterRoutes(e, orgHandler, personHandler, projectHandler, teamHandler)
 
 	if err := e.Start(":" + cfg.APIPort); err != nil {
 		e.Logger.Error("failed to start server", "error", err)
