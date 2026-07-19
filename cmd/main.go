@@ -3,16 +3,21 @@ package main
 import (
 	"log"
 
-	"working-time-tracker/internal/config"
-	"working-time-tracker/internal/handlers"
-	tmpl "working-time-tracker/internal/template"
-	"working-time-tracker/internal/routes"
-	"working-time-tracker/internal/service"
-	"working-time-tracker/internal/store"
-	"working-time-tracker/web"
-
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
+
+	"working-time-tracker/internal/config"
+	"working-time-tracker/internal/database"
+	"working-time-tracker/internal/domain/integration"
+	"working-time-tracker/internal/domain/organization"
+	"working-time-tracker/internal/domain/person"
+	"working-time-tracker/internal/domain/project"
+	"working-time-tracker/internal/domain/task"
+	"working-time-tracker/internal/domain/team"
+	"working-time-tracker/internal/domain/work_session"
+	"working-time-tracker/internal/routes"
+	tmpl "working-time-tracker/internal/template"
+	"working-time-tracker/web"
 )
 
 func main() {
@@ -21,40 +26,43 @@ func main() {
 		log.Fatalf("config: %v", err)
 	}
 
-	db, err := store.Open(cfg.DatabaseURL)
+	db, err := database.Open(cfg.DatabaseURL)
 	if err != nil {
 		log.Fatalf("database: %v", err)
 	}
 
-	if err := store.AutoMigrate(db); err != nil {
+	if err := database.AutoMigrate(db); err != nil {
 		log.Fatalf("migration: %v", err)
 	}
 
-	orgStore := store.NewOrganizationStore(db)
-	personStore := store.NewPersonStore(db)
-	projectStore := store.NewProjectStore(db)
-	teamStore := store.NewTeamStore(db)
-	teamMembershipStore := store.NewTeamMembershipStore(db)
-	taskStore := store.NewTaskStore(db)
-	sessionStore := store.NewWorkSessionStore(db)
-	integrationStore := store.NewIntegrationStore(db)
+	// Stores
+	orgStore := organization.NewStore(db)
+	personStore := person.NewStore(db)
+	projectStore := project.NewStore(db)
+	teamStore := team.NewStore(db)
+	membershipStore := team.NewMembershipStore(db)
+	taskStore := task.NewStore(db)
+	sessionStore := work_session.NewStore(db)
+	integrationStore := integration.NewStore(db)
 
-	orgSvc := service.NewOrganizationService(orgStore)
-	personSvc := service.NewPersonService(personStore)
-	projectSvc := service.NewProjectService(projectStore)
-	teamSvc := service.NewTeamService(teamStore)
-	teamMembershipSvc := service.NewTeamMembershipService(teamMembershipStore)
-	integrationSvc := service.NewIntegrationService(integrationStore, cfg.IntegrationEncryptKey)
-	taskSvc := service.NewTaskService(taskStore, teamMembershipStore, integrationSvc)
-	timeEntrySvc := service.NewTimeEntryService(sessionStore, taskStore)
+	// Services (integration before task; task before work_session due to cross-domain deps)
+	orgSvc := organization.NewService(orgStore)
+	personSvc := person.NewService(personStore)
+	projectSvc := project.NewService(projectStore)
+	teamSvc := team.NewService(teamStore)
+	membershipSvc := team.NewMembershipService(membershipStore)
+	integrationSvc := integration.NewService(integrationStore, cfg.IntegrationEncryptKey)
+	taskSvc := task.NewService(taskStore, membershipStore, integrationSvc)
+	workSessionSvc := work_session.NewService(sessionStore, taskStore)
 
-	orgHandler := handlers.NewOrganizationHandler(orgSvc)
-	personHandler := handlers.NewPersonHandler(personSvc)
-	projectHandler := handlers.NewProjectHandler(projectSvc)
-	teamHandler := handlers.NewTeamHandler(teamSvc, teamMembershipSvc)
-	taskHandler := handlers.NewTaskHandler(taskSvc)
-	timeEntryHandler := handlers.NewTimeEntryHandler(timeEntrySvc)
-	integrationHandler := handlers.NewIntegrationHandler(integrationSvc)
+	// Handlers
+	orgHandler := organization.NewHandler(orgSvc)
+	personHandler := person.NewHandler(personSvc)
+	projectHandler := project.NewHandler(projectSvc)
+	teamHandler := team.NewHandler(teamSvc, membershipSvc)
+	taskHandler := task.NewHandler(taskSvc)
+	workSessionHandler := work_session.NewHandler(workSessionSvc)
+	integrationHandler := integration.NewHandler(integrationSvc)
 
 	e := echo.New()
 
@@ -83,7 +91,7 @@ func main() {
 	e.Use(middleware.Recover())
 
 	routes.HealthcheckRoutesRegister(e)
-	routes.RegisterRoutes(e, orgHandler, personHandler, projectHandler, teamHandler, taskHandler, timeEntryHandler, integrationHandler)
+	routes.RegisterRoutes(e, orgHandler, personHandler, projectHandler, teamHandler, taskHandler, workSessionHandler, integrationHandler)
 
 	if err := e.Start(":" + cfg.APIPort); err != nil {
 		e.Logger.Error("failed to start server", "error", err)

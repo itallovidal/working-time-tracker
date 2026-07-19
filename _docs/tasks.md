@@ -135,7 +135,7 @@
 - [ ] S9.1 Build Task list UI scoped to project (name, assignee, deadline, external item badge) with create/edit/delete
 - [ ] S9.2 Build Task detail UI: edit form, external item link/unlink via integration selector
 - [ ] S9.3 Build Time Tracking UI within project: clock in (select task) and clock out button, active-session indicator, live elapsed timer
-- [ ] S9.4 Build time-entries list and total-time display filtered by task and/or person within a project
+- [ ] S9.4 Build work-sessions list and total-time display filtered by task and/or person within a project
 - [ ] S9.5 Write integration tests for frontend-serving routes: templates render, static assets served, main views return 200
 
 ---
@@ -147,3 +147,17 @@
 - [ ] S10.3 Write README with setup instructions (env vars, database setup, how to run, org/project/team workflow)
 - [ ] S10.4 Document the REST API endpoints with example requests/responses
 - [ ] S10.5 Document the web UI: browser routes, navigation flow, and that Alpine.js is vendored with no build step
+
+---
+
+### Refatoração: Domain-First Architecture (pré-Sprint 9)
+
+- [X] R1 Reorganizar código de layered-flat para domain-first: `internal/domain/<dominio>/` com `model.go`, `store.go`, `service.go`, `handler.go` por domínio
+- [X] R2 Fundir `team_membership` em `team` (sub-domínio)
+- [X] R3 Renomear domínio `time_entry` → `work_session` (structs, rotas HTTP `/api/time-entries/*` → `/api/work-sessions/*`)
+- [X] R4 Mover adaptadores externos (GitHub/GitLab/crypto) de `internal/integration/` para `internal/adapter/` para evitar colisão semântica com o domínio `integration`
+- [X] R5 Tipos sem prefixo em cada package (`Handler`, `Service`, `Store` em vez de `OrganizationHandler`, etc.)
+- [X] R6 Extrair helper de DB de teste para `testutil/` + tests em package externo `<dom>_test` para evitar ciclos de import
+- [X] R7 Adicionar JSON tags em todos os models para API retornar snake_case
+- [X] R8 Atualizar `cmd/main.go`, `routes/routes.go`, `database/db.go` com novos imports e construtores
+- [X] R9 Atualizar `_docs/design.md` com nova nomenclatura

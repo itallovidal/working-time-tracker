@@ -25,7 +25,7 @@ There is no structured way to track how much time is spent on each task across t
 
 ## Impact
 
-- **New data models**: Organization, Project, Team, Person (now org-scoped), Task (project-scoped), TimeEntry, Integration, TeamMembership.
+- **New data models**: Organization, Project, Team, Person (now org-scoped), Task (project-scoped), WorkSession, Integration, TeamMembership.
 - **New API surface**: Endpoints for organization/project/team CRUD, integration configuration, plus all task/time endpoints scoped to projects. Existing GitHub-specific endpoints are replaced by generic integration endpoints.
 - **External dependencies**: Integration-specific third-party APIs (GitHub API, GitLab API, Slack API, Trello API, etc.) depending on configured integrations.
 - **New web UI**: A server-rendered frontend (Alpine.js) served by the Go backend for organization/project/team management, clock in/out, task management, and integration configuration.

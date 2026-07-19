@@ -9,9 +9,9 @@ import (
 )
 
 type Config struct {
-	APIPort                string
-	DatabaseURL            string
-	IntegrationEncryptKey  string
+	APIPort               string
+	DatabaseURL           string
+	IntegrationEncryptKey string
 }
 
 func Load() (*Config, error) {

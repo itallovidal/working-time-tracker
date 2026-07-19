@@ -1,20 +1,26 @@
 package routes
 
 import (
-	"working-time-tracker/internal/handlers"
-
 	"github.com/labstack/echo/v5"
+
+	"working-time-tracker/internal/domain/integration"
+	"working-time-tracker/internal/domain/organization"
+	"working-time-tracker/internal/domain/person"
+	"working-time-tracker/internal/domain/project"
+	"working-time-tracker/internal/domain/task"
+	"working-time-tracker/internal/domain/team"
+	"working-time-tracker/internal/domain/work_session"
 )
 
 func RegisterRoutes(
 	e *echo.Echo,
-	orgHandler *handlers.OrganizationHandler,
-	personHandler *handlers.PersonHandler,
-	projectHandler *handlers.ProjectHandler,
-	teamHandler *handlers.TeamHandler,
-	taskHandler *handlers.TaskHandler,
-	timeEntryHandler *handlers.TimeEntryHandler,
-	integrationHandler *handlers.IntegrationHandler,
+	orgHandler *organization.Handler,
+	personHandler *person.Handler,
+	projectHandler *project.Handler,
+	teamHandler *team.Handler,
+	taskHandler *task.Handler,
+	workSessionHandler *work_session.Handler,
+	integrationHandler *integration.Handler,
 ) {
 	orgs := e.Group("/api/orgs")
 	orgs.POST("/", orgHandler.Create)
@@ -40,10 +46,10 @@ func RegisterRoutes(
 	projects.POST("/:projectId/tasks", taskHandler.Create)
 	projects.GET("/:projectId/tasks", taskHandler.ListByProject)
 
-	projects.POST("/:projectId/time-entries/clock-in", timeEntryHandler.ClockIn)
-	projects.POST("/:projectId/time-entries/clock-out", timeEntryHandler.ClockOut)
-	projects.GET("/:projectId/time-entries", timeEntryHandler.List)
-	projects.GET("/:projectId/time-entries/total", timeEntryHandler.Total)
+	projects.POST("/:projectId/work-sessions/clock-in", workSessionHandler.ClockIn)
+	projects.POST("/:projectId/work-sessions/clock-out", workSessionHandler.ClockOut)
+	projects.GET("/:projectId/work-sessions", workSessionHandler.List)
+	projects.GET("/:projectId/work-sessions/total", workSessionHandler.Total)
 
 	tasks := e.Group("/api/tasks")
 	tasks.GET("/:taskId", taskHandler.Get)

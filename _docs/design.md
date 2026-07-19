@@ -38,7 +38,7 @@ Stakeholders are engineering teams who want accurate time-per-task data, visibil
 - Separate SPA (React/Vue) frontend: more capable but adds a JavaScript build toolchain and a second deployment artifact; overkill for a small internal tracker.
 
 ### Decision 2: Data model — Seven core entities
-**Choice:** Seven entities: `Organization`, `Project`, `Team`, `Person`, `Task`, `TimeEntry`, `Integration`, with a join table `TeamMembership`.
+**Choice:** Seven entities: `Organization`, `Project`, `Team`, `Person`, `Task`, `WorkSession`, `Integration`, with a join table `TeamMembership`.
 
 ```
 Organization: id (UUID PK), name, created_at
@@ -60,14 +60,14 @@ Task: id (UUID PK), project_id (FK Project), name, description,
       external_item_id (VARCHAR, nullable),
       external_item_url (TEXT, nullable),
       created_at
-TimeEntry: id (UUID PK), task_id (FK Task), person_id (FK Person),
-           start_at (TIMESTAMP), end_at (TIMESTAMP nullable), created_at
+WorkSession: id (UUID PK), task_id (FK Task), person_id (FK Person),
+             start_at (TIMESTAMP), end_at (TIMESTAMP nullable), created_at
 ```
 
 A partial unique index enforces one active session per person:
 `CREATE UNIQUE INDEX one_active_session ON time_entries (person_id) WHERE end_at IS NULL`
 
-**Rationale:** The model maps directly to the organizational hierarchy. A person belongs to an organization, which has projects. Each project has teams, integrations, and tasks. Links to external items are stored on the task itself (one link per task), referencing which integration provides the connection. The partial unique index on TimeEntry is the database-level guarantee against concurrent clock-in races. JSONB for Integration.config allows type-specific configuration without schema changes per platform.
+**Rationale:** The model maps directly to the organizational hierarchy. A person belongs to an organization, which has projects. Each project has teams, integrations, and tasks. Links to external items are stored on the task itself (one link per task), referencing which integration provides the connection. The partial unique index on WorkSession is the database-level guarantee against concurrent clock-in races. JSONB for Integration.config allows type-specific configuration without schema changes per platform.
 
 **Alternatives considered:**
 - Separate `TaskLink` table for external item references: more flexible for multiple links per task but over-normalized for v1 where one link per task is sufficient.
@@ -140,10 +140,10 @@ Each integration type implements a common interface:
 - `GET /api/persons/:personId` / `PATCH /api/persons/:personId`
 - `POST /api/projects/:projectId/tasks` / `GET /api/projects/:projectId/tasks` — task CRUD scoped to project
 - `GET /api/tasks/:taskId` / `PATCH /api/tasks/:taskId` / `DELETE /api/tasks/:taskId`
-- `POST /api/projects/:projectId/time-entries/clock-in` — clock in (body: task_id, person_id)
-- `POST /api/projects/:projectId/time-entries/clock-out` — clock out (body: person_id)
-- `GET /api/projects/:projectId/time-entries` — list (filters: task_id, person_id)
-- `GET /api/projects/:projectId/time-entries/total` — total time (filters: task_id, person_id)
+- `POST /api/projects/:projectId/work-sessions/clock-in` — clock in (body: task_id, person_id)
+- `POST /api/projects/:projectId/work-sessions/clock-out` — clock out (body: person_id)
+- `GET /api/projects/:projectId/work-sessions` — list (filters: task_id, person_id)
+- `GET /api/projects/:projectId/work-sessions/total` — total time (filters: task_id, person_id)
 - `POST /api/projects/:projectId/integrations` / `GET /api/projects/:projectId/integrations` — integration CRUD
 - `GET /api/integrations/:integrationId` / `PATCH /api/integrations/:integrationId` / `DELETE /api/integrations/:integrationId`
 - `POST /api/tasks/:taskId/link-external-item` — link task to external item (body: integration_id, external_item_id, external_item_url)
