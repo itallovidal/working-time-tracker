@@ -59,16 +59,16 @@
 
 ### Sprint 4: Task Management
 
-- [ ] S4.1 Implement `TaskService` with Create, Get, List, Update, Delete methods (scoped to project)
-- [ ] S4.2 Implement create logic: default deadline to created_at + 7 days when not provided
-- [ ] S4.3 Implement `POST /api/projects/:projectId/tasks` handler (validate name + assignee required; assignee must be team member of the project)
-- [ ] S4.4 Implement `GET /api/projects/:projectId/tasks` handler
-- [ ] S4.5 Implement `GET /api/tasks/:taskId` handler (include external item details if linked)
-- [ ] S4.6 Implement `PATCH /api/tasks/:taskId` handler
-- [ ] S4.7 Implement `DELETE /api/tasks/:taskId` handler (cascade delete associated time entries)
-- [ ] S4.8 Implement `POST /api/tasks/:taskId/link-external-item` handler (body: integration_id, external_item_id, external_item_url)
-- [ ] S4.9 Implement `DELETE /api/tasks/:taskId/link-external-item` handler
-- [ ] S4.10 Implement `GET /api/tasks/:taskId/external-details` handler (fetch via integration)
+- [X] S4.1 Implement `TaskService` with Create, Get, List, Update, Delete methods (scoped to project)
+- [X] S4.2 Implement create logic: default deadline to created_at + 7 days when not provided
+- [X] S4.3 Implement `POST /api/projects/:projectId/tasks` handler (validate name + assignee required; assignee must be team member of the project)
+- [X] S4.4 Implement `GET /api/projects/:projectId/tasks` handler
+- [X] S4.5 Implement `GET /api/tasks/:taskId` handler (include external item details if linked)
+- [X] S4.6 Implement `PATCH /api/tasks/:taskId` handler
+- [X] S4.7 Implement `DELETE /api/tasks/:taskId` handler (cascade delete associated time entries)
+- [X] S4.8 Implement `POST /api/tasks/:taskId/link-external-item` handler (body: integration_id, external_item_id, external_item_url)
+- [X] S4.9 Implement `DELETE /api/tasks/:taskId/link-external-item` handler
+- [X] S4.10 Implement `GET /api/tasks/:taskId/external-details` handler (fetch via integration)
 
 ---
 

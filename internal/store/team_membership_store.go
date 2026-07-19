@@ -38,3 +38,12 @@ func (s *TeamMembershipStore) Exists(teamID, personID string) (bool, error) {
 		Count(&count).Error
 	return count > 0, err
 }
+
+func (s *TeamMembershipStore) IsPersonInProject(personID, projectID string) (bool, error) {
+	var count int64
+	err := s.db.Model(&model.TeamMembership{}).
+		Joins("JOIN teams ON teams.id = team_memberships.team_id").
+		Where("team_memberships.person_id = ? AND teams.project_id = ?", personID, projectID).
+		Count(&count).Error
+	return count > 0, err
+}

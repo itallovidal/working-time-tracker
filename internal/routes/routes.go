@@ -12,6 +12,7 @@ func RegisterRoutes(
 	personHandler *handlers.PersonHandler,
 	projectHandler *handlers.ProjectHandler,
 	teamHandler *handlers.TeamHandler,
+	taskHandler *handlers.TaskHandler,
 ) {
 	orgs := e.Group("/api/orgs")
 	orgs.POST("/", orgHandler.Create)
@@ -33,6 +34,17 @@ func RegisterRoutes(
 
 	projects.POST("/:projectId/teams", teamHandler.Create)
 	projects.GET("/:projectId/teams", teamHandler.ListByProject)
+
+	projects.POST("/:projectId/tasks", taskHandler.Create)
+	projects.GET("/:projectId/tasks", taskHandler.ListByProject)
+
+	tasks := e.Group("/api/tasks")
+	tasks.GET("/:taskId", taskHandler.Get)
+	tasks.PATCH("/:taskId", taskHandler.Update)
+	tasks.DELETE("/:taskId", taskHandler.Delete)
+	tasks.POST("/:taskId/link-external-item", taskHandler.LinkExternalItem)
+	tasks.DELETE("/:taskId/link-external-item", taskHandler.UnlinkExternalItem)
+	tasks.GET("/:taskId/external-details", taskHandler.GetExternalDetails)
 
 	teams := e.Group("/api/teams")
 	teams.GET("/:teamId", teamHandler.Get)
