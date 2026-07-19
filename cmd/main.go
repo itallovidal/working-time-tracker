@@ -62,7 +62,24 @@ func main() {
 
 	e.StaticFS("/static", echo.MustSubFS(web.FS, "static"))
 
-	e.Use(middleware.RequestLogger())
+	e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
+		LogProtocol: true,
+		LogRemoteIP: true,
+		LogHost:     true,
+		LogMethod:   true,
+		LogStatus:   true,
+		LogLatency:  true,
+		LogValuesFunc: func(c *echo.Context, v middleware.RequestLoggerValues) error {
+			c.Logger().Info("request",
+				"method", v.Method,
+				"host", v.Host,
+				"remote_ip", v.RemoteIP,
+				"status", v.Status,
+				"latency", v.Latency,
+			)
+			return nil
+		},
+	}))
 	e.Use(middleware.Recover())
 
 	routes.HealthcheckRoutesRegister(e)

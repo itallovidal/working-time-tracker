@@ -101,18 +101,18 @@
 
 ### Sprint 7: Security & Backend Tests
 
-- [ ] S7.1 Ensure integration credentials are never included in any API response, log, or error message
-- [ ] S7.2 Add redaction for credential fields in request/response logging
-- [ ] S7.3 Validate that integration type matches a known, whitelisted type before persisting
-- [ ] S7.4 Write tests for OrganizationService: create, list, update, delete, delete-with-projects-rejected
-- [ ] S7.5 Write tests for PersonService: create, unique email within org, list by org
-- [ ] S7.6 Write tests for ProjectService: create with defaults, create with explicit config, update config, delete cascade
-- [ ] S7.7 Write tests for TeamService + TeamMembershipService: create, add/remove members, duplicate membership rejected
-- [ ] S7.8 Write tests for TaskService: create with default deadline, create with explicit deadline, assignee must be team member, update, delete cascade, external item link/unlink
-- [ ] S7.9 Write tests for TimeEntryService: clock in success, clock in on missing task, clock out success, clock out with no active session, overlapping active session rejection, total time calculation
-- [ ] S7.10 Write tests for IntegrationService: create with valid/invalid config, credentials encrypted at rest, credentials never returned on get
-- [ ] S7.11 Write tests for credential encryption helper: round-trip encrypt/decrypt, wrong key fails
-- [ ] S7.12 Write handler/integration tests for all API endpoints covering happy path and error cases
+- [X] S7.1 Ensure integration credentials are never included in any API response, log, or error message
+- [X] S7.2 Add redaction for credential fields in request/response logging
+- [X] S7.3 Validate that integration type matches a known, whitelisted type before persisting
+- [X] S7.4 Write tests for OrganizationService: create, list, update, delete, delete-with-projects-rejected
+- [X] S7.5 Write tests for PersonService: create, unique email within org, list by org
+- [X] S7.6 Write tests for ProjectService: create with defaults, create with explicit config, update config, delete cascade
+- [X] S7.7 Write tests for TeamService + TeamMembershipService: create, add/remove members, duplicate membership rejected
+- [X] S7.8 Write tests for TaskService: create with default deadline, create with explicit deadline, assignee must be team member, update, delete cascade, external item link/unlink
+- [X] S7.9 Write tests for TimeEntryService: clock in success, clock in on missing task, clock out success, clock out with no active session, overlapping active session rejection, total time calculation
+- [X] S7.10 Write tests for IntegrationService: create with valid/invalid config, credentials encrypted at rest, credentials never returned on get
+- [X] S7.11 Write tests for credential encryption helper: round-trip encrypt/decrypt, wrong key fails
+- [X] S7.12 Write handler/integration tests for all API endpoints covering happy path and error cases
 
 ---
 
