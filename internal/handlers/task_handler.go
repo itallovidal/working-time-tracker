@@ -112,15 +112,12 @@ func (h *TaskHandler) UnlinkExternalItem(c *echo.Context) error {
 
 func (h *TaskHandler) GetExternalDetails(c *echo.Context) error {
 	taskID := c.Param("taskId")
-	task, err := h.svc.Get(taskID)
+	result, err := h.svc.GetExternalDetails(taskID)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return c.JSON(404, map[string]string{"error": "task not found"})
 		}
-		return c.JSON(500, map[string]string{"error": err.Error()})
+		return c.JSON(400, map[string]string{"error": err.Error()})
 	}
-	if task.ExternalIntegrationID == nil {
-		return c.JSON(400, map[string]string{"error": "task has no linked external item"})
-	}
-	return c.JSON(501, map[string]string{"error": "external details fetching not yet implemented"})
+	return c.JSON(200, result)
 }

@@ -37,13 +37,15 @@ func main() {
 	teamMembershipStore := store.NewTeamMembershipStore(db)
 	taskStore := store.NewTaskStore(db)
 	sessionStore := store.NewWorkSessionStore(db)
+	integrationStore := store.NewIntegrationStore(db)
 
 	orgSvc := service.NewOrganizationService(orgStore)
 	personSvc := service.NewPersonService(personStore)
 	projectSvc := service.NewProjectService(projectStore)
 	teamSvc := service.NewTeamService(teamStore)
 	teamMembershipSvc := service.NewTeamMembershipService(teamMembershipStore)
-	taskSvc := service.NewTaskService(taskStore, teamMembershipStore)
+	integrationSvc := service.NewIntegrationService(integrationStore, cfg.IntegrationEncryptKey)
+	taskSvc := service.NewTaskService(taskStore, teamMembershipStore, integrationSvc)
 	timeEntrySvc := service.NewTimeEntryService(sessionStore, taskStore)
 
 	orgHandler := handlers.NewOrganizationHandler(orgSvc)
@@ -52,6 +54,7 @@ func main() {
 	teamHandler := handlers.NewTeamHandler(teamSvc, teamMembershipSvc)
 	taskHandler := handlers.NewTaskHandler(taskSvc)
 	timeEntryHandler := handlers.NewTimeEntryHandler(timeEntrySvc)
+	integrationHandler := handlers.NewIntegrationHandler(integrationSvc)
 
 	e := echo.New()
 
@@ -63,7 +66,7 @@ func main() {
 	e.Use(middleware.Recover())
 
 	routes.HealthcheckRoutesRegister(e)
-	routes.RegisterRoutes(e, orgHandler, personHandler, projectHandler, teamHandler, taskHandler, timeEntryHandler)
+	routes.RegisterRoutes(e, orgHandler, personHandler, projectHandler, teamHandler, taskHandler, timeEntryHandler, integrationHandler)
 
 	if err := e.Start(":" + cfg.APIPort); err != nil {
 		e.Logger.Error("failed to start server", "error", err)

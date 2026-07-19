@@ -87,15 +87,15 @@
 
 ### Sprint 6: Integrations
 
-- [ ] S6.1 Implement `IntegrationService` with Create, List, Get, Update, Delete, ValidateConfig methods
-- [ ] S6.2 Define `Integration` interface: `ValidateConfig(config) error`, `FetchItemDetails(config, itemID) (ItemDetails, error)`
-- [ ] S6.3 Implement GitHub integration type (validates token via GitHub API, fetches issue by number)
-- [ ] S6.4 Implement GitLab integration type (validates token via GitLab API, fetches issue by IID)
-- [ ] S6.5 Implement credential encryption/decryption helper (AES-GCM using INTEGRATION_ENCRYPTION_KEY)
-- [ ] S6.6 Implement `POST /api/projects/:projectId/integrations` handler (validates config via type-specific implementation)
-- [ ] S6.7 Implement `GET /api/projects/:projectId/integrations` handler
-- [ ] S6.8 Implement `GET /api/integrations/:integrationId` / `PATCH /api/integrations/:integrationId` / `DELETE /api/integrations/:integrationId` handlers
-- [ ] S6.9 Graceful degradation: return null external details with error indicator when integration API is unreachable
+- [X] S6.1 Implement `IntegrationService` with Create, List, Get, Update, Delete, ValidateConfig methods
+- [X] S6.2 Define `Integration` interface: `ValidateConfig(config) error`, `FetchItemDetails(config, itemID) (ItemDetails, error)`
+- [X] S6.3 Implement GitHub integration type (validates token via GitHub API, fetches issue by number)
+- [X] S6.4 Implement GitLab integration type (validates token via GitLab API, fetches issue by IID)
+- [X] S6.5 Implement credential encryption/decryption helper (AES-GCM using INTEGRATION_ENCRYPTION_KEY)
+- [X] S6.6 Implement `POST /api/projects/:projectId/integrations` handler (validates config via type-specific implementation)
+- [X] S6.7 Implement `GET /api/projects/:projectId/integrations` handler
+- [X] S6.8 Implement `GET /api/integrations/:integrationId` / `PATCH /api/integrations/:integrationId` / `DELETE /api/integrations/:integrationId` handlers
+- [X] S6.9 Graceful degradation: return null external details with error indicator when integration API is unreachable
 
 ---
 

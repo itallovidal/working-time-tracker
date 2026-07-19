@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"time"
+	"working-time-tracker/internal/integration"
 	"working-time-tracker/internal/model"
 	"working-time-tracker/internal/store"
 
@@ -12,10 +13,11 @@ import (
 type TaskService struct {
 	taskStore        *store.TaskStore
 	membershipStore  *store.TeamMembershipStore
+	integrationSvc   *IntegrationService
 }
 
-func NewTaskService(taskStore *store.TaskStore, membershipStore *store.TeamMembershipStore) *TaskService {
-	return &TaskService{taskStore: taskStore, membershipStore: membershipStore}
+func NewTaskService(taskStore *store.TaskStore, membershipStore *store.TeamMembershipStore, integrationSvc *IntegrationService) *TaskService {
+	return &TaskService{taskStore: taskStore, membershipStore: membershipStore, integrationSvc: integrationSvc}
 }
 
 func (s *TaskService) Create(projectID, name, description, assigneeID string, deadline *time.Time) (*model.Task, error) {
@@ -42,11 +44,11 @@ func (s *TaskService) Create(projectID, name, description, assigneeID string, de
 	}
 
 	task := &model.Task{
-		ProjectID:   uuid.MustParse(projectID),
-		Name:        name,
+		ProjectID:  uuid.MustParse(projectID),
+		Name:       name,
 		Description: description,
-		AssigneeID:  uuid.MustParse(assigneeID),
-		Deadline:    dl,
+		AssigneeID: uuid.MustParse(assigneeID),
+		Deadline:   dl,
 	}
 	if err := s.taskStore.Create(task); err != nil {
 		return nil, err
@@ -115,4 +117,18 @@ func (s *TaskService) UnlinkExternalItem(taskID string) (*model.Task, error) {
 		return nil, err
 	}
 	return s.taskStore.GetByID(taskID)
+}
+
+func (s *TaskService) GetExternalDetails(taskID string) (*integration.ExternalDetailsResult, error) {
+	task, err := s.taskStore.GetByID(taskID)
+	if err != nil {
+		return nil, err
+	}
+	if task.ExternalIntegrationID == nil {
+		return nil, errors.New("task has no linked external item")
+	}
+	if s.integrationSvc == nil {
+		return nil, errors.New("integrations not available")
+	}
+	return s.integrationSvc.FetchItemDetails(task.ExternalIntegrationID.String(), *task.ExternalItemID)
 }

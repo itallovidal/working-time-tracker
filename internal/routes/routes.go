@@ -14,6 +14,7 @@ func RegisterRoutes(
 	teamHandler *handlers.TeamHandler,
 	taskHandler *handlers.TaskHandler,
 	timeEntryHandler *handlers.TimeEntryHandler,
+	integrationHandler *handlers.IntegrationHandler,
 ) {
 	orgs := e.Group("/api/orgs")
 	orgs.POST("/", orgHandler.Create)
@@ -59,6 +60,14 @@ func RegisterRoutes(
 	teams.POST("/:teamId/members", teamHandler.AddMember)
 	teams.DELETE("/:teamId/members", teamHandler.RemoveMember)
 	teams.GET("/:teamId/members", teamHandler.ListMembers)
+
+	projects.POST("/:projectId/integrations", integrationHandler.Create)
+	projects.GET("/:projectId/integrations", integrationHandler.ListByProject)
+
+	integrations := e.Group("/api/integrations")
+	integrations.GET("/:integrationId", integrationHandler.Get)
+	integrations.PATCH("/:integrationId", integrationHandler.Update)
+	integrations.DELETE("/:integrationId", integrationHandler.Delete)
 
 	persons := e.Group("/api/persons")
 	persons.GET("/:personId", personHandler.Get)
