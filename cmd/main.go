@@ -36,6 +36,7 @@ func main() {
 	teamStore := store.NewTeamStore(db)
 	teamMembershipStore := store.NewTeamMembershipStore(db)
 	taskStore := store.NewTaskStore(db)
+	sessionStore := store.NewWorkSessionStore(db)
 
 	orgSvc := service.NewOrganizationService(orgStore)
 	personSvc := service.NewPersonService(personStore)
@@ -43,12 +44,14 @@ func main() {
 	teamSvc := service.NewTeamService(teamStore)
 	teamMembershipSvc := service.NewTeamMembershipService(teamMembershipStore)
 	taskSvc := service.NewTaskService(taskStore, teamMembershipStore)
+	timeEntrySvc := service.NewTimeEntryService(sessionStore, taskStore)
 
 	orgHandler := handlers.NewOrganizationHandler(orgSvc)
 	personHandler := handlers.NewPersonHandler(personSvc)
 	projectHandler := handlers.NewProjectHandler(projectSvc)
 	teamHandler := handlers.NewTeamHandler(teamSvc, teamMembershipSvc)
 	taskHandler := handlers.NewTaskHandler(taskSvc)
+	timeEntryHandler := handlers.NewTimeEntryHandler(timeEntrySvc)
 
 	e := echo.New()
 
@@ -60,7 +63,7 @@ func main() {
 	e.Use(middleware.Recover())
 
 	routes.HealthcheckRoutesRegister(e)
-	routes.RegisterRoutes(e, orgHandler, personHandler, projectHandler, teamHandler, taskHandler)
+	routes.RegisterRoutes(e, orgHandler, personHandler, projectHandler, teamHandler, taskHandler, timeEntryHandler)
 
 	if err := e.Start(":" + cfg.APIPort); err != nil {
 		e.Logger.Error("failed to start server", "error", err)

@@ -48,7 +48,7 @@ func AutoMigrate(db *gorm.DB) error {
 	}
 
 	err = db.Exec(
-		`CREATE UNIQUE INDEX IF NOT EXISTS one_active_session ON time_entries (person_id) WHERE end_at IS NULL`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS one_active_session ON work_sessions (person_id) WHERE end_at IS NULL`,
 	).Error
 	if err != nil {
 		return fmt.Errorf("partial unique index: %w", err)

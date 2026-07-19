@@ -74,14 +74,14 @@
 
 ### Sprint 5: Time Tracking
 
-- [ ] S5.1 Implement `TimeEntryService` with ClockIn, ClockOut, ListByTask, ListByPerson, TotalTime methods
-- [ ] S5.2 Implement ClockIn: validate task exists in project; check no active entry for person (global); insert entry with start_at = now, end_at = NULL
-- [ ] S5.3 Implement ClockOut: find active entry for person; set end_at = now; error if none exists
-- [ ] S5.4 Implement `POST /api/projects/:projectId/time-entries/clock-in` handler (body: task_id, person_id)
-- [ ] S5.5 Implement `POST /api/projects/:projectId/time-entries/clock-out` handler (body: person_id)
-- [ ] S5.6 Implement `GET /api/projects/:projectId/time-entries` handler with task_id and person_id query filters
-- [ ] S5.7 Implement `GET /api/projects/:projectId/time-entries/total` handler computing total duration for task or person
-- [ ] S5.8 Return friendly error when clock-in is attempted while already clocked in
+- [X] S5.1 Implement `TimeEntryService` with ClockIn, ClockOut, ListByTask, ListByPerson, TotalTime methods
+- [X] S5.2 Implement ClockIn: validate task exists in project; check no active entry for person (global); insert entry with start_at = now, end_at = NULL
+- [X] S5.3 Implement ClockOut: find active entry for person; set end_at = now; error if none exists
+- [X] S5.4 Implement `POST /api/projects/:projectId/time-entries/clock-in` handler (body: task_id, person_id)
+- [X] S5.5 Implement `POST /api/projects/:projectId/time-entries/clock-out` handler (body: person_id)
+- [X] S5.6 Implement `GET /api/projects/:projectId/time-entries` handler with task_id and person_id query filters
+- [X] S5.7 Implement `GET /api/projects/:projectId/time-entries/total` handler computing total duration for task or person
+- [X] S5.8 Return friendly error when clock-in is attempted while already clocked in
 
 ---
 

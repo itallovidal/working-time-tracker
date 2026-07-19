@@ -13,6 +13,7 @@ func RegisterRoutes(
 	projectHandler *handlers.ProjectHandler,
 	teamHandler *handlers.TeamHandler,
 	taskHandler *handlers.TaskHandler,
+	timeEntryHandler *handlers.TimeEntryHandler,
 ) {
 	orgs := e.Group("/api/orgs")
 	orgs.POST("/", orgHandler.Create)
@@ -37,6 +38,11 @@ func RegisterRoutes(
 
 	projects.POST("/:projectId/tasks", taskHandler.Create)
 	projects.GET("/:projectId/tasks", taskHandler.ListByProject)
+
+	projects.POST("/:projectId/time-entries/clock-in", timeEntryHandler.ClockIn)
+	projects.POST("/:projectId/time-entries/clock-out", timeEntryHandler.ClockOut)
+	projects.GET("/:projectId/time-entries", timeEntryHandler.List)
+	projects.GET("/:projectId/time-entries/total", timeEntryHandler.Total)
 
 	tasks := e.Group("/api/tasks")
 	tasks.GET("/:taskId", taskHandler.Get)
