@@ -1,31 +1,29 @@
 package testutil
 
 import (
+	"database/sql"
 	"log"
 	"os"
 
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
+	entsql "entgo.io/ent/dialect/sql"
+	_ "github.com/jackc/pgx/v5/stdlib"
+
+	"working-time-tracker/ent"
 )
 
-// Setup abre conexão com o banco de testes usando TEST_DATABASE_URL
-// (fallback: postgres://localhost:5432/working_time_tracker_test?sslmode=disable).
-// Não roda AutoMigrate — cada package de teste externo (_test) deve fazê-lo
-// para evitar ciclos de import (database importa os domains, que não podem
-// importar database de volta).
-func Setup() *gorm.DB {
+func Setup() (*ent.Client, *sql.DB) {
 	dsn := os.Getenv("TEST_DATABASE_URL")
 	if dsn == "" {
 		dsn = "postgres://localhost:5432/working_time_tracker_test?sslmode=disable"
 	}
 
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Warn),
-	})
+	db, err := sql.Open("pgx", dsn)
 	if err != nil {
-		log.Fatalf("failed to connect to test database: %v", err)
+		log.Fatalf("failed to open test database: %v", err)
 	}
 
-	return db
+	drv := entsql.OpenDB("postgres", db)
+	client := ent.NewClient(ent.Driver(drv))
+
+	return client, db
 }

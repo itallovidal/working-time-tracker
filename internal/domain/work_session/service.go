@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 
+	"working-time-tracker/internal/database"
 	taskdom "working-time-tracker/internal/domain/task"
 )
 
@@ -32,7 +32,7 @@ func (s *Service) ClockIn(projectID, taskID, personID string) (*WorkSession, err
 	if err == nil {
 		return nil, errors.New("already clocked in")
 	}
-	if !errors.Is(err, gorm.ErrRecordNotFound) {
+	if !errors.Is(err, database.ErrNotFound) {
 		return nil, err
 	}
 
@@ -50,7 +50,7 @@ func (s *Service) ClockIn(projectID, taskID, personID string) (*WorkSession, err
 func (s *Service) ClockOut(personID string) (*WorkSession, error) {
 	active, err := s.sessionStore.GetActiveByPerson(personID)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if errors.Is(err, database.ErrNotFound) {
 			return nil, errors.New("no active session found")
 		}
 		return nil, err

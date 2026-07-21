@@ -4,7 +4,8 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo/v5"
-	"gorm.io/gorm"
+
+	"working-time-tracker/internal/database"
 )
 
 type Handler struct {
@@ -41,7 +42,7 @@ func (h *Handler) Get(c *echo.Context) error {
 	id := c.Param("orgId")
 	org, err := h.svc.Get(id)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if err == database.ErrNotFound {
 			return c.JSON(http.StatusNotFound, map[string]string{"error": "organization not found"})
 		}
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})

@@ -14,12 +14,12 @@ import (
 func setupDeps(t *testing.T) (*organization.Service, *person.Service, *project.Service, *team.Service, *team.MembershipService, *task.Service) {
 	cleanup(t)
 
-	orgSvc := organization.NewService(organization.NewStore(testDB))
-	personSvc := person.NewService(person.NewStore(testDB))
-	projSvc := project.NewService(project.NewStore(testDB))
-	teamSvc := team.NewService(team.NewStore(testDB))
-	memberSvc := team.NewMembershipService(team.NewMembershipStore(testDB))
-	taskSvc := task.NewService(task.NewStore(testDB), team.NewMembershipStore(testDB), nil)
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	personSvc := person.NewService(person.NewStore(testClient))
+	projSvc := project.NewService(project.NewStore(testClient))
+	teamSvc := team.NewService(team.NewStore(testClient))
+	memberSvc := team.NewMembershipService(team.NewMembershipStore(testClient))
+	taskSvc := task.NewService(task.NewStore(testClient), team.NewMembershipStore(testClient), nil)
 
 	return orgSvc, personSvc, projSvc, teamSvc, memberSvc, taskSvc
 }

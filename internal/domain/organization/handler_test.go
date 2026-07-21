@@ -17,7 +17,7 @@ func TestHandler_CreateAndList(t *testing.T) {
 	e := echo.New()
 	e.Use(middleware.Recover())
 
-	orgH := organization.NewHandler(organization.NewService(organization.NewStore(testDB)))
+	orgH := organization.NewHandler(organization.NewService(organization.NewStore(testClient)))
 	registerRoutes(e, orgH)
 
 	req := httptest.NewRequest("POST", "/api/orgs/", strings.NewReader(`{"name":"My Org"}`))
@@ -41,7 +41,7 @@ func TestHandler_Create_EmptyName(t *testing.T) {
 	e := echo.New()
 	e.Use(middleware.Recover())
 
-	orgH := organization.NewHandler(organization.NewService(organization.NewStore(testDB)))
+	orgH := organization.NewHandler(organization.NewService(organization.NewStore(testClient)))
 	registerRoutes(e, orgH)
 
 	req := httptest.NewRequest("POST", "/api/orgs/", strings.NewReader(`{"name":""}`))
@@ -58,7 +58,7 @@ func TestHandler_NotFound(t *testing.T) {
 	e := echo.New()
 	e.Use(middleware.Recover())
 
-	orgH := organization.NewHandler(organization.NewService(organization.NewStore(testDB)))
+	orgH := organization.NewHandler(organization.NewService(organization.NewStore(testClient)))
 	registerRoutes(e, orgH)
 
 	req := httptest.NewRequest("GET", "/api/orgs/00000000-0000-0000-0000-000000000000", nil)

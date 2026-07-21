@@ -4,9 +4,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-
 	"github.com/labstack/echo/v5"
-	"gorm.io/gorm"
+
+	"working-time-tracker/internal/database"
 )
 
 type integrationResponse struct {
@@ -81,7 +81,7 @@ func (h *Handler) Get(c *echo.Context) error {
 	id := c.Param("integrationId")
 	it, err := h.svc.Get(id)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if err == database.ErrNotFound {
 			return c.JSON(404, map[string]string{"error": "integration not found"})
 		}
 		return c.JSON(500, map[string]string{"error": err.Error()})

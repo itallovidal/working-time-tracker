@@ -15,8 +15,8 @@ func cleanup(t *testing.T) {
 
 func TestService_Create(t *testing.T) {
 	cleanup(t)
-	orgSvc := organization.NewService(organization.NewStore(testDB))
-	svc := project.NewService(project.NewStore(testDB))
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	svc := project.NewService(project.NewStore(testClient))
 
 	org, _ := orgSvc.Create("Test Org")
 	proj, err := svc.Create(org.ID.String(), "Project A", "desc", 0, nil, nil)
@@ -33,8 +33,8 @@ func TestService_Create(t *testing.T) {
 
 func TestService_Create_EmptyName(t *testing.T) {
 	cleanup(t)
-	orgSvc := organization.NewService(organization.NewStore(testDB))
-	svc := project.NewService(project.NewStore(testDB))
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	svc := project.NewService(project.NewStore(testClient))
 
 	org, _ := orgSvc.Create("Test Org")
 	_, err := svc.Create(org.ID.String(), "", "desc", 0, nil, nil)
@@ -45,8 +45,8 @@ func TestService_Create_EmptyName(t *testing.T) {
 
 func TestService_Create_DefaultSprintDuration(t *testing.T) {
 	cleanup(t)
-	orgSvc := organization.NewService(organization.NewStore(testDB))
-	svc := project.NewService(project.NewStore(testDB))
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	svc := project.NewService(project.NewStore(testClient))
 
 	org, _ := orgSvc.Create("Test Org")
 	proj, err := svc.Create(org.ID.String(), "Project A", "", 0, nil, nil)
@@ -60,8 +60,8 @@ func TestService_Create_DefaultSprintDuration(t *testing.T) {
 
 func TestService_Create_ExplicitSprintDuration(t *testing.T) {
 	cleanup(t)
-	orgSvc := organization.NewService(organization.NewStore(testDB))
-	svc := project.NewService(project.NewStore(testDB))
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	svc := project.NewService(project.NewStore(testClient))
 
 	org, _ := orgSvc.Create("Test Org")
 	proj, err := svc.Create(org.ID.String(), "Project A", "", 21, nil, nil)
@@ -75,8 +75,8 @@ func TestService_Create_ExplicitSprintDuration(t *testing.T) {
 
 func TestService_Update(t *testing.T) {
 	cleanup(t)
-	orgSvc := organization.NewService(organization.NewStore(testDB))
-	svc := project.NewService(project.NewStore(testDB))
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	svc := project.NewService(project.NewStore(testClient))
 
 	org, _ := orgSvc.Create("Test Org")
 	created, _ := svc.Create(org.ID.String(), "Old Name", "", 0, nil, nil)
@@ -97,8 +97,8 @@ func TestService_Update(t *testing.T) {
 
 func TestService_Delete(t *testing.T) {
 	cleanup(t)
-	orgSvc := organization.NewService(organization.NewStore(testDB))
-	svc := project.NewService(project.NewStore(testDB))
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	svc := project.NewService(project.NewStore(testClient))
 
 	org, _ := orgSvc.Create("Test Org")
 	proj, _ := svc.Create(org.ID.String(), "Project A", "", 0, nil, nil)
@@ -119,8 +119,8 @@ func TestService_Delete(t *testing.T) {
 // dependência cíclica (organization não pode importar project).
 func TestService_OrgDeletionBlockedByProjects(t *testing.T) {
 	cleanup(t)
-	orgSvc := organization.NewService(organization.NewStore(testDB))
-	projSvc := project.NewService(project.NewStore(testDB))
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	projSvc := project.NewService(project.NewStore(testClient))
 
 	org, _ := orgSvc.Create("Test Org")
 	projSvc.Create(org.ID.String(), "Project A", "", 0, nil, nil)

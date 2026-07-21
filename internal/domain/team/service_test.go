@@ -20,9 +20,9 @@ func cleanup(t *testing.T) {
 
 func TestService_Create(t *testing.T) {
 	cleanup(t)
-	orgSvc := organization.NewService(organization.NewStore(testDB))
-	projSvc := project.NewService(project.NewStore(testDB))
-	svc := team.NewService(team.NewStore(testDB))
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	projSvc := project.NewService(project.NewStore(testClient))
+	svc := team.NewService(team.NewStore(testClient))
 
 	org, _ := orgSvc.Create("Test Org")
 	proj, _ := projSvc.Create(org.ID.String(), "Project A", "", 0, nil, nil)
@@ -38,9 +38,9 @@ func TestService_Create(t *testing.T) {
 
 func TestService_ListByProject(t *testing.T) {
 	cleanup(t)
-	orgSvc := organization.NewService(organization.NewStore(testDB))
-	projSvc := project.NewService(project.NewStore(testDB))
-	svc := team.NewService(team.NewStore(testDB))
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	projSvc := project.NewService(project.NewStore(testClient))
+	svc := team.NewService(team.NewStore(testClient))
 
 	org, _ := orgSvc.Create("Test Org")
 	proj, _ := projSvc.Create(org.ID.String(), "Project A", "", 0, nil, nil)
@@ -58,11 +58,11 @@ func TestService_ListByProject(t *testing.T) {
 
 func TestService_AddRemoveMembers(t *testing.T) {
 	cleanup(t)
-	orgSvc := organization.NewService(organization.NewStore(testDB))
-	personSvc := person.NewService(person.NewStore(testDB))
-	projSvc := project.NewService(project.NewStore(testDB))
-	teamSvc := team.NewService(team.NewStore(testDB))
-	memberSvc := team.NewMembershipService(team.NewMembershipStore(testDB))
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	personSvc := person.NewService(person.NewStore(testClient))
+	projSvc := project.NewService(project.NewStore(testClient))
+	teamSvc := team.NewService(team.NewStore(testClient))
+	memberSvc := team.NewMembershipService(team.NewMembershipStore(testClient))
 
 	org, _ := orgSvc.Create("Test Org")
 	p, _ := personSvc.Create(org.ID.String(), "John", "john@test.com")
@@ -101,11 +101,11 @@ func TestService_AddRemoveMembers(t *testing.T) {
 
 func TestMembership_DuplicateRejected(t *testing.T) {
 	cleanup(t)
-	orgSvc := organization.NewService(organization.NewStore(testDB))
-	personSvc := person.NewService(person.NewStore(testDB))
-	projSvc := project.NewService(project.NewStore(testDB))
-	teamSvc := team.NewService(team.NewStore(testDB))
-	memberSvc := team.NewMembershipService(team.NewMembershipStore(testDB))
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	personSvc := person.NewService(person.NewStore(testClient))
+	projSvc := project.NewService(project.NewStore(testClient))
+	teamSvc := team.NewService(team.NewStore(testClient))
+	memberSvc := team.NewMembershipService(team.NewMembershipStore(testClient))
 
 	org, _ := orgSvc.Create("Test Org")
 	p, _ := personSvc.Create(org.ID.String(), "John", "john@test.com")

@@ -17,9 +17,9 @@ func cleanup(t *testing.T) {
 
 func TestService_Create(t *testing.T) {
 	cleanup(t)
-	orgSvc := organization.NewService(organization.NewStore(testDB))
-	projSvc := project.NewService(project.NewStore(testDB))
-	svc := integration.NewService(integration.NewStore(testDB), "test-32-byte-encryption-key!!!!")
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	projSvc := project.NewService(project.NewStore(testClient))
+	svc := integration.NewService(integration.NewStore(testClient), "test-32-byte-encryption-key!!!!")
 
 	org, _ := orgSvc.Create("Org")
 	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil)
@@ -41,9 +41,9 @@ func TestService_Create(t *testing.T) {
 
 func TestService_Create_InvalidType(t *testing.T) {
 	cleanup(t)
-	orgSvc := organization.NewService(organization.NewStore(testDB))
-	projSvc := project.NewService(project.NewStore(testDB))
-	svc := integration.NewService(integration.NewStore(testDB), "test-32-byte-encryption-key!!!!")
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	projSvc := project.NewService(project.NewStore(testClient))
+	svc := integration.NewService(integration.NewStore(testClient), "test-32-byte-encryption-key!!!!")
 
 	org, _ := orgSvc.Create("Org")
 	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil)
@@ -56,9 +56,9 @@ func TestService_Create_InvalidType(t *testing.T) {
 
 func TestService_Get_NoCredentials(t *testing.T) {
 	cleanup(t)
-	orgSvc := organization.NewService(organization.NewStore(testDB))
-	projSvc := project.NewService(project.NewStore(testDB))
-	svc := integration.NewService(integration.NewStore(testDB), "test-32-byte-encryption-key!!!!")
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	projSvc := project.NewService(project.NewStore(testClient))
+	svc := integration.NewService(integration.NewStore(testClient), "test-32-byte-encryption-key!!!!")
 
 	org, _ := orgSvc.Create("Org")
 	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil)
@@ -79,9 +79,9 @@ func TestService_Get_NoCredentials(t *testing.T) {
 
 func TestService_List_NoCredentials(t *testing.T) {
 	cleanup(t)
-	orgSvc := organization.NewService(organization.NewStore(testDB))
-	projSvc := project.NewService(project.NewStore(testDB))
-	svc := integration.NewService(integration.NewStore(testDB), "test-32-byte-encryption-key!!!!")
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	projSvc := project.NewService(project.NewStore(testClient))
+	svc := integration.NewService(integration.NewStore(testClient), "test-32-byte-encryption-key!!!!")
 
 	org, _ := orgSvc.Create("Org")
 	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil)
@@ -104,9 +104,9 @@ func TestService_List_NoCredentials(t *testing.T) {
 
 func TestService_Update(t *testing.T) {
 	cleanup(t)
-	orgSvc := organization.NewService(organization.NewStore(testDB))
-	projSvc := project.NewService(project.NewStore(testDB))
-	svc := integration.NewService(integration.NewStore(testDB), "test-32-byte-encryption-key!!!!")
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	projSvc := project.NewService(project.NewStore(testClient))
+	svc := integration.NewService(integration.NewStore(testClient), "test-32-byte-encryption-key!!!!")
 
 	org, _ := orgSvc.Create("Org")
 	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil)
@@ -128,9 +128,9 @@ func TestService_Update(t *testing.T) {
 
 func TestService_Delete(t *testing.T) {
 	cleanup(t)
-	orgSvc := organization.NewService(organization.NewStore(testDB))
-	projSvc := project.NewService(project.NewStore(testDB))
-	svc := integration.NewService(integration.NewStore(testDB), "test-32-byte-encryption-key!!!!")
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	projSvc := project.NewService(project.NewStore(testClient))
+	svc := integration.NewService(integration.NewStore(testClient), "test-32-byte-encryption-key!!!!")
 
 	org, _ := orgSvc.Create("Org")
 	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil)

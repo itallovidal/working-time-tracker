@@ -1,84 +1,203 @@
 package work_session
 
 import (
-	"gorm.io/gorm"
+	"context"
+	"time"
+
+	"github.com/google/uuid"
+
+	"working-time-tracker/ent"
+	"working-time-tracker/ent/task"
+	"working-time-tracker/ent/worksession"
+	"working-time-tracker/internal/database"
 )
 
 type Store struct {
-	db *gorm.DB
+	client *ent.Client
 }
 
-func NewStore(db *gorm.DB) *Store {
-	return &Store{db: db}
+func NewStore(client *ent.Client) *Store {
+	return &Store{client: client}
 }
 
 func (s *Store) Create(session *WorkSession) error {
-	return s.db.Create(session).Error
+	q := s.client.WorkSession.Create().
+		SetTaskID(session.TaskID).
+		SetPersonID(session.PersonID).
+		SetStartAt(session.StartAt)
+	if session.EndAt != nil {
+		q = q.SetEndAt(*session.EndAt)
+	}
+	created, err := q.Save(context.Background())
+	if err != nil {
+		return err
+	}
+	session.ID = created.ID
+	session.CreatedAt = created.CreatedAt
+	return nil
 }
 
 func (s *Store) GetActiveByPerson(personID string) (*WorkSession, error) {
-	var session WorkSession
-	err := s.db.Where("person_id = ? AND end_at IS NULL", personID).
-		Preload("Task").
-		First(&session).Error
+	uid, err := uuid.Parse(personID)
 	if err != nil {
 		return nil, err
 	}
-	return &session, nil
+	session, err := s.client.WorkSession.Query().
+		Where(worksession.PersonIDEQ(uid), worksession.EndAtIsNil()).
+		WithTask().
+		Only(context.Background())
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, database.ErrNotFound
+		}
+		return nil, err
+	}
+	return toDomainSession(session), nil
 }
 
 func (s *Store) Update(session *WorkSession) error {
-	return s.db.Save(session).Error
+	q := s.client.WorkSession.UpdateOneID(session.ID).
+		SetStartAt(session.StartAt)
+	if session.EndAt != nil {
+		q = q.SetEndAt(*session.EndAt)
+	} else {
+		q = q.ClearEndAt()
+	}
+	_, err := q.Save(context.Background())
+	return err
 }
 
 func (s *Store) ListByProject(projectID string, taskID, personID *string) ([]WorkSession, error) {
-	query := s.db.Joins("JOIN tasks ON tasks.id = work_sessions.task_id").
-		Where("tasks.project_id = ?", projectID)
+	prjid, err := uuid.Parse(projectID)
+	if err != nil {
+		return nil, err
+	}
+
+	q := s.client.WorkSession.Query().
+		Where(worksession.HasTaskWith(task.ProjectIDEQ(prjid)))
 
 	if taskID != nil && *taskID != "" {
-		query = query.Where("work_sessions.task_id = ?", *taskID)
+		tuid, _ := uuid.Parse(*taskID)
+		q = q.Where(worksession.TaskIDEQ(tuid))
 	}
 	if personID != nil && *personID != "" {
-		query = query.Where("work_sessions.person_id = ?", *personID)
+		puid, _ := uuid.Parse(*personID)
+		q = q.Where(worksession.PersonIDEQ(puid))
 	}
 
-	var sessions []WorkSession
-	err := query.
-		Preload("Task").
-		Preload("Person").
-		Order("work_sessions.start_at DESC").
-		Find(&sessions).Error
-	return sessions, err
-}
+	sessions, err := q.
+		WithTask().
+		WithPerson().
+		Order(ent.Desc(worksession.FieldStartAt)).
+		All(context.Background())
+	if err != nil {
+		return nil, err
+	}
 
-type DurationResult struct {
-	TotalSeconds float64
+	return toDomainSessions(sessions), nil
 }
 
 func (s *Store) TotalDurationByTask(taskID string) (float64, error) {
-	var result DurationResult
-	err := s.db.Model(&WorkSession{}).
-		Select("COALESCE(SUM(EXTRACT(EPOCH FROM COALESCE(end_at, NOW()) - start_at)), 0) as total_seconds").
-		Where("task_id = ?", taskID).
-		Scan(&result).Error
-	return result.TotalSeconds, err
+	tuid, err := uuid.Parse(taskID)
+	if err != nil {
+		return 0, err
+	}
+	sessions, err := s.client.WorkSession.Query().
+		Where(worksession.TaskIDEQ(tuid)).
+		All(context.Background())
+	if err != nil {
+		return 0, err
+	}
+	return computeDuration(sessions), nil
 }
 
 func (s *Store) TotalDurationByPerson(personID, projectID string) (float64, error) {
-	var result DurationResult
-	err := s.db.Model(&WorkSession{}).
-		Select("COALESCE(SUM(EXTRACT(EPOCH FROM COALESCE(end_at, NOW()) - start_at)), 0) as total_seconds").
-		Joins("JOIN tasks ON tasks.id = work_sessions.task_id").
-		Where("work_sessions.person_id = ? AND tasks.project_id = ?", personID, projectID).
-		Scan(&result).Error
-	return result.TotalSeconds, err
+	puid, err := uuid.Parse(personID)
+	if err != nil {
+		return 0, err
+	}
+	prjid, err := uuid.Parse(projectID)
+	if err != nil {
+		return 0, err
+	}
+	sessions, err := s.client.WorkSession.Query().
+		Where(worksession.PersonIDEQ(puid)).
+		WithTask().
+		All(context.Background())
+	if err != nil {
+		return 0, err
+	}
+	filtered := make([]*ent.WorkSession, 0, len(sessions))
+	for _, s := range sessions {
+		if s.Edges.Task != nil && s.Edges.Task.ProjectID == prjid {
+			filtered = append(filtered, s)
+		}
+	}
+	return computeDuration(filtered), nil
 }
 
 func (s *Store) TotalDurationByTaskAndPerson(taskID, personID string) (float64, error) {
-	var result DurationResult
-	err := s.db.Model(&WorkSession{}).
-		Select("COALESCE(SUM(EXTRACT(EPOCH FROM COALESCE(end_at, NOW()) - start_at)), 0) as total_seconds").
-		Where("task_id = ? AND person_id = ?", taskID, personID).
-		Scan(&result).Error
-	return result.TotalSeconds, err
+	tuid, err := uuid.Parse(taskID)
+	if err != nil {
+		return 0, err
+	}
+	puid, err := uuid.Parse(personID)
+	if err != nil {
+		return 0, err
+	}
+	sessions, err := s.client.WorkSession.Query().
+		Where(worksession.TaskIDEQ(tuid), worksession.PersonIDEQ(puid)).
+		All(context.Background())
+	if err != nil {
+		return 0, err
+	}
+	return computeDuration(sessions), nil
+}
+
+func computeDuration(sessions []*ent.WorkSession) float64 {
+	var total float64
+	now := time.Now()
+	for _, s := range sessions {
+		end := s.EndAt
+		if end == nil {
+			end = &now
+		}
+		total += end.Sub(s.StartAt).Seconds()
+	}
+	return total
+}
+
+func toDomainSession(e *ent.WorkSession) *WorkSession {
+	if e == nil {
+		return nil
+	}
+	s := &WorkSession{
+		ID:        e.ID,
+		TaskID:    e.TaskID,
+		PersonID:  e.PersonID,
+		StartAt:   e.StartAt,
+		EndAt:     e.EndAt,
+		CreatedAt: e.CreatedAt,
+	}
+	if e.Edges.Task != nil {
+		s.Task = &Task{
+			ID:   e.Edges.Task.ID,
+			Name: e.Edges.Task.Name,
+		}
+	}
+	if e.Edges.Person != nil {
+		s.Person = &Person{
+			ID:   e.Edges.Person.ID,
+			Name: e.Edges.Person.Name,
+		}
+	}
+	return s
+}
+
+func toDomainSessions(es []*ent.WorkSession) []WorkSession {
+	result := make([]WorkSession, len(es))
+	for i, e := range es {
+		result[i] = *toDomainSession(e)
+	}
+	return result
 }

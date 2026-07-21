@@ -4,14 +4,17 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-
-	"working-time-tracker/internal/domain/person"
 )
 
+type Person struct {
+	ID    uuid.UUID `json:"id"`
+	Name  string    `json:"name"`
+	Email string    `json:"email"`
+}
+
 type TeamMembership struct {
-	PersonID  uuid.UUID     `gorm:"type:uuid;not null;uniqueIndex:idx_person_team" json:"person_id"`
-	Person    person.Person `gorm:"foreignKey:PersonID;constraint:OnDelete:CASCADE" json:"person,omitempty"`
-	TeamID    uuid.UUID     `gorm:"type:uuid;not null;uniqueIndex:idx_person_team" json:"team_id"`
-	Team      Team          `gorm:"foreignKey:TeamID;constraint:OnDelete:CASCADE" json:"team,omitempty"`
-	CreatedAt time.Time     `json:"created_at"`
+	PersonID  uuid.UUID `json:"person_id"`
+	Person    *Person   `json:"person,omitempty"`
+	TeamID    uuid.UUID `json:"team_id"`
+	CreatedAt time.Time `json:"created_at"`
 }

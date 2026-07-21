@@ -31,14 +31,14 @@ type testApp struct {
 func setupTestApp(t *testing.T) *testApp {
 	cleanup(t)
 
-	orgSvc := organization.NewService(organization.NewStore(testDB))
-	personSvc := person.NewService(person.NewStore(testDB))
-	projSvc := project.NewService(project.NewStore(testDB))
-	teamSvc := team.NewService(team.NewStore(testDB))
-	memberSvc := team.NewMembershipService(team.NewMembershipStore(testDB))
-	integSvc := integration.NewService(integration.NewStore(testDB), "test-32-byte-encryption-key!!!!")
-	taskSvc := task.NewService(task.NewStore(testDB), team.NewMembershipStore(testDB), integSvc)
-	wsSvc := work_session.NewService(work_session.NewStore(testDB), task.NewStore(testDB))
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	personSvc := person.NewService(person.NewStore(testClient))
+	projSvc := project.NewService(project.NewStore(testClient))
+	teamSvc := team.NewService(team.NewStore(testClient))
+	memberSvc := team.NewMembershipService(team.NewMembershipStore(testClient))
+	integSvc := integration.NewService(integration.NewStore(testClient), "test-32-byte-encryption-key!!!!")
+	taskSvc := task.NewService(task.NewStore(testClient), team.NewMembershipStore(testClient), integSvc)
+	wsSvc := work_session.NewService(work_session.NewStore(testClient), task.NewStore(testClient))
 
 	e := echo.New()
 	e.Use(middleware.Recover())

@@ -1,42 +1,105 @@
 package integration
 
 import (
-	"gorm.io/gorm"
+	"context"
+
+	"github.com/google/uuid"
+
+	"working-time-tracker/ent"
+	"working-time-tracker/ent/integration"
+	"working-time-tracker/internal/database"
 )
 
 type Store struct {
-	db *gorm.DB
+	client *ent.Client
 }
 
-func NewStore(db *gorm.DB) *Store {
-	return &Store{db: db}
+func NewStore(client *ent.Client) *Store {
+	return &Store{client: client}
 }
 
-func (s *Store) Create(integration *Integration) error {
-	return s.db.Create(integration).Error
+func (s *Store) Create(it *Integration) error {
+	created, err := s.client.Integration.Create().
+		SetProjectID(it.ProjectID).
+		SetType(it.Type).
+		SetDisplayName(it.DisplayName).
+		SetConfig(it.Config).
+		SetEnabled(it.Enabled).
+		Save(context.Background())
+	if err != nil {
+		return err
+	}
+	it.ID = created.ID
+	it.CreatedAt = created.CreatedAt
+	return nil
 }
 
 func (s *Store) ListByProject(projectID string) ([]Integration, error) {
-	var integrations []Integration
-	err := s.db.Where("project_id = ?", projectID).
-		Order("created_at DESC").
-		Find(&integrations).Error
-	return integrations, err
-}
-
-func (s *Store) GetByID(id string) (*Integration, error) {
-	var integration Integration
-	err := s.db.First(&integration, "id = ?", id).Error
+	uid, err := uuid.Parse(projectID)
 	if err != nil {
 		return nil, err
 	}
-	return &integration, nil
+	integrations, err := s.client.Integration.Query().
+		Where(integration.ProjectIDEQ(uid)).
+		Order(ent.Desc(integration.FieldCreatedAt)).
+		All(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	return toDomainIntegrations(integrations), nil
 }
 
-func (s *Store) Update(integration *Integration) error {
-	return s.db.Save(integration).Error
+func (s *Store) GetByID(id string) (*Integration, error) {
+	uid, err := uuid.Parse(id)
+	if err != nil {
+		return nil, err
+	}
+	it, err := s.client.Integration.Get(context.Background(), uid)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, database.ErrNotFound
+		}
+		return nil, err
+	}
+	return toDomainIntegration(it), nil
+}
+
+func (s *Store) Update(it *Integration) error {
+	_, err := s.client.Integration.UpdateOneID(it.ID).
+		SetDisplayName(it.DisplayName).
+		SetConfig(it.Config).
+		SetEnabled(it.Enabled).
+		Save(context.Background())
+	return err
 }
 
 func (s *Store) Delete(id string) error {
-	return s.db.Delete(&Integration{}, "id = ?", id).Error
+	uid, err := uuid.Parse(id)
+	if err != nil {
+		return err
+	}
+	return s.client.Integration.DeleteOneID(uid).Exec(context.Background())
+}
+
+func toDomainIntegration(e *ent.Integration) *Integration {
+	if e == nil {
+		return nil
+	}
+	return &Integration{
+		ID:          e.ID,
+		ProjectID:   e.ProjectID,
+		Type:        e.Type,
+		DisplayName: e.DisplayName,
+		Config:      e.Config,
+		Enabled:     e.Enabled,
+		CreatedAt:   e.CreatedAt,
+	}
+}
+
+func toDomainIntegrations(es []*ent.Integration) []Integration {
+	result := make([]Integration, len(es))
+	for i, e := range es {
+		result[i] = *toDomainIntegration(e)
+	}
+	return result
 }

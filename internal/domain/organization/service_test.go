@@ -1,14 +1,13 @@
 package organization_test
 
 import (
+	"database/sql"
 	"testing"
-
-	"gorm.io/gorm"
 
 	"working-time-tracker/internal/domain/organization"
 )
 
-var localDB *gorm.DB
+var localDB *sql.DB
 
 func cleanup(t *testing.T) {
 	t.Helper()
@@ -20,7 +19,7 @@ func cleanup(t *testing.T) {
 
 func TestService_Create(t *testing.T) {
 	cleanup(t)
-	svc := organization.NewService(organization.NewStore(testDB))
+	svc := organization.NewService(organization.NewStore(testClient))
 
 	org, err := svc.Create("Test Org")
 	if err != nil {
@@ -36,7 +35,7 @@ func TestService_Create(t *testing.T) {
 
 func TestService_Create_EmptyName(t *testing.T) {
 	cleanup(t)
-	svc := organization.NewService(organization.NewStore(testDB))
+	svc := organization.NewService(organization.NewStore(testClient))
 
 	_, err := svc.Create("")
 	if err == nil {
@@ -46,7 +45,7 @@ func TestService_Create_EmptyName(t *testing.T) {
 
 func TestService_List(t *testing.T) {
 	cleanup(t)
-	svc := organization.NewService(organization.NewStore(testDB))
+	svc := organization.NewService(organization.NewStore(testClient))
 
 	svc.Create("Org A")
 	svc.Create("Org B")
@@ -62,7 +61,7 @@ func TestService_List(t *testing.T) {
 
 func TestService_Get(t *testing.T) {
 	cleanup(t)
-	svc := organization.NewService(organization.NewStore(testDB))
+	svc := organization.NewService(organization.NewStore(testClient))
 
 	created, _ := svc.Create("Test Org")
 	got, err := svc.Get(created.ID.String())
@@ -76,7 +75,7 @@ func TestService_Get(t *testing.T) {
 
 func TestService_Update(t *testing.T) {
 	cleanup(t)
-	svc := organization.NewService(organization.NewStore(testDB))
+	svc := organization.NewService(organization.NewStore(testClient))
 
 	created, _ := svc.Create("Old Name")
 	updated, err := svc.Update(created.ID.String(), "New Name")
@@ -90,7 +89,7 @@ func TestService_Update(t *testing.T) {
 
 func TestService_Delete(t *testing.T) {
 	cleanup(t)
-	svc := organization.NewService(organization.NewStore(testDB))
+	svc := organization.NewService(organization.NewStore(testClient))
 
 	org, _ := svc.Create("Test Org")
 

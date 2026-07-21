@@ -4,7 +4,8 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v5"
-	"gorm.io/gorm"
+
+	"working-time-tracker/internal/database"
 )
 
 type Handler struct {
@@ -46,7 +47,7 @@ func (h *Handler) Get(c *echo.Context) error {
 	id := c.Param("taskId")
 	task, err := h.svc.Get(id)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if err == database.ErrNotFound {
 			return c.JSON(404, map[string]string{"error": "task not found"})
 		}
 		return c.JSON(500, map[string]string{"error": err.Error()})
@@ -113,7 +114,7 @@ func (h *Handler) GetExternalDetails(c *echo.Context) error {
 	taskID := c.Param("taskId")
 	result, err := h.svc.GetExternalDetails(taskID)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if err == database.ErrNotFound {
 			return c.JSON(404, map[string]string{"error": "task not found"})
 		}
 		return c.JSON(400, map[string]string{"error": err.Error()})

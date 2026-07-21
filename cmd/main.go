@@ -21,29 +21,30 @@ import (
 )
 
 func main() {
-	cfg, err := config.Load()
+	ENV, err := config.Load()
 	if err != nil {
 		log.Fatalf("config: %v", err)
 	}
 
-	db, err := database.Open(cfg.DatabaseURL)
+	db, err := database.Open(ENV.DatabaseURL)
+
 	if err != nil {
 		log.Fatalf("database: %v", err)
 	}
 
-	if err := database.AutoMigrate(db); err != nil {
+	if err := database.AutoMigrate(db.Client, db.Raw); err != nil {
 		log.Fatalf("migration: %v", err)
 	}
 
 	// Stores
-	orgStore := organization.NewStore(db)
-	personStore := person.NewStore(db)
-	projectStore := project.NewStore(db)
-	teamStore := team.NewStore(db)
-	membershipStore := team.NewMembershipStore(db)
-	taskStore := task.NewStore(db)
-	sessionStore := work_session.NewStore(db)
-	integrationStore := integration.NewStore(db)
+	orgStore := organization.NewStore(db.Client)
+	personStore := person.NewStore(db.Client)
+	projectStore := project.NewStore(db.Client)
+	teamStore := team.NewStore(db.Client)
+	membershipStore := team.NewMembershipStore(db.Client)
+	taskStore := task.NewStore(db.Client)
+	sessionStore := work_session.NewStore(db.Client)
+	integrationStore := integration.NewStore(db.Client)
 
 	// Services (integration before task; task before work_session due to cross-domain deps)
 	orgSvc := organization.NewService(orgStore)
@@ -51,7 +52,7 @@ func main() {
 	projectSvc := project.NewService(projectStore)
 	teamSvc := team.NewService(teamStore)
 	membershipSvc := team.NewMembershipService(membershipStore)
-	integrationSvc := integration.NewService(integrationStore, cfg.IntegrationEncryptKey)
+	integrationSvc := integration.NewService(integrationStore, ENV.IntegrationEncryptKey)
 	taskSvc := task.NewService(taskStore, membershipStore, integrationSvc)
 	workSessionSvc := work_session.NewService(sessionStore, taskStore)
 
@@ -93,7 +94,7 @@ func main() {
 	routes.HealthcheckRoutesRegister(e)
 	routes.RegisterRoutes(e, orgHandler, personHandler, projectHandler, teamHandler, taskHandler, workSessionHandler, integrationHandler)
 
-	if err := e.Start(":" + cfg.APIPort); err != nil {
+	if err := e.Start(":" + ENV.APIPort); err != nil {
 		e.Logger.Error("failed to start server", "error", err)
 	}
 }

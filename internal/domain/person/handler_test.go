@@ -19,9 +19,9 @@ func TestHandler_Create_EmptyEmail(t *testing.T) {
 	e := echo.New()
 	e.Use(middleware.Recover())
 
-	orgSvc := organization.NewService(organization.NewStore(testDB))
+	orgSvc := organization.NewService(organization.NewStore(testClient))
 	orgH := organization.NewHandler(orgSvc)
-	personH := person.NewHandler(person.NewService(person.NewStore(testDB)))
+	personH := person.NewHandler(person.NewService(person.NewStore(testClient)))
 	registerRoutes(e, orgH, personH)
 
 	org := mustCreate(t, e, "POST", "/api/orgs/", `{"name":"Org"}`)

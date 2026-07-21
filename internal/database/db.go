@@ -1,65 +1,30 @@
 package database
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
+	entsql "entgo.io/ent/dialect/sql"
+	_ "github.com/jackc/pgx/v5/stdlib"
 
-	"working-time-tracker/internal/domain/integration"
-	"working-time-tracker/internal/domain/organization"
-	"working-time-tracker/internal/domain/person"
-	"working-time-tracker/internal/domain/project"
-	"working-time-tracker/internal/domain/task"
-	"working-time-tracker/internal/domain/team"
-	"working-time-tracker/internal/domain/work_session"
+	"working-time-tracker/ent"
 )
 
-func Open(dsn string) (*gorm.DB, error) {
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Info),
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to database: %w", err)
-	}
-
-	sqlDB, err := db.DB()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get underlying sql.DB: %w", err)
-	}
-
-	sqlDB.SetMaxOpenConns(25)
-	sqlDB.SetMaxIdleConns(5)
-
-	log.Println("database connection established")
-
-	return db, nil
+type DB struct {
+	Client *ent.Client
+	Raw    *sql.DB
 }
 
-func AutoMigrate(db *gorm.DB) error {
-	err := db.AutoMigrate(
-		&organization.Organization{},
-		&person.Person{},
-		&project.Project{},
-		&team.Team{},
-		&team.TeamMembership{},
-		&task.Task{},
-		&work_session.WorkSession{},
-		&integration.Integration{},
-	)
+func Open(dsn string) (*DB, error) {
+	raw, err := sql.Open("pgx", dsn)
 	if err != nil {
-		return fmt.Errorf("auto-migrate: %w", err)
+		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 
-	err = db.Exec(
-		`CREATE UNIQUE INDEX IF NOT EXISTS one_active_session ON work_sessions (person_id) WHERE end_at IS NULL`,
-	).Error
-	if err != nil {
-		return fmt.Errorf("partial unique index: %w", err)
-	}
+	drv := entsql.OpenDB("postgres", raw)
+	client := ent.NewClient(ent.Driver(drv))
 
-	log.Println("database migration completed")
-	return nil
+	log.Println("database connection established")
+	return &DB{Client: client, Raw: raw}, nil
 }

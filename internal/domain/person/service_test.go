@@ -15,8 +15,8 @@ func cleanup(t *testing.T) {
 
 func TestService_Create(t *testing.T) {
 	cleanup(t)
-	orgSvc := organization.NewService(organization.NewStore(testDB))
-	svc := person.NewService(person.NewStore(testDB))
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	svc := person.NewService(person.NewStore(testClient))
 
 	org, _ := orgSvc.Create("Test Org")
 	p, err := svc.Create(org.ID.String(), "John", "john@test.com")
@@ -33,8 +33,8 @@ func TestService_Create(t *testing.T) {
 
 func TestService_Create_DuplicateEmail(t *testing.T) {
 	cleanup(t)
-	orgSvc := organization.NewService(organization.NewStore(testDB))
-	svc := person.NewService(person.NewStore(testDB))
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	svc := person.NewService(person.NewStore(testClient))
 
 	org, _ := orgSvc.Create("Test Org")
 	svc.Create(org.ID.String(), "John", "john@test.com")
@@ -46,8 +46,8 @@ func TestService_Create_DuplicateEmail(t *testing.T) {
 
 func TestService_Create_EmptyName(t *testing.T) {
 	cleanup(t)
-	orgSvc := organization.NewService(organization.NewStore(testDB))
-	svc := person.NewService(person.NewStore(testDB))
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	svc := person.NewService(person.NewStore(testClient))
 
 	org, _ := orgSvc.Create("Test Org")
 	_, err := svc.Create(org.ID.String(), "", "john@test.com")
@@ -58,8 +58,8 @@ func TestService_Create_EmptyName(t *testing.T) {
 
 func TestService_Create_EmptyEmail(t *testing.T) {
 	cleanup(t)
-	orgSvc := organization.NewService(organization.NewStore(testDB))
-	svc := person.NewService(person.NewStore(testDB))
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	svc := person.NewService(person.NewStore(testClient))
 
 	org, _ := orgSvc.Create("Test Org")
 	_, err := svc.Create(org.ID.String(), "John", "")
@@ -70,8 +70,8 @@ func TestService_Create_EmptyEmail(t *testing.T) {
 
 func TestService_ListByOrg(t *testing.T) {
 	cleanup(t)
-	orgSvc := organization.NewService(organization.NewStore(testDB))
-	svc := person.NewService(person.NewStore(testDB))
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	svc := person.NewService(person.NewStore(testClient))
 
 	org, _ := orgSvc.Create("Test Org")
 	svc.Create(org.ID.String(), "John", "john@test.com")
@@ -88,8 +88,8 @@ func TestService_ListByOrg(t *testing.T) {
 
 func TestService_ListByOrg_SameEmailDifferentOrg(t *testing.T) {
 	cleanup(t)
-	orgSvc := organization.NewService(organization.NewStore(testDB))
-	svc := person.NewService(person.NewStore(testDB))
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	svc := person.NewService(person.NewStore(testClient))
 
 	orgA, _ := orgSvc.Create("Org A")
 	orgB, _ := orgSvc.Create("Org B")

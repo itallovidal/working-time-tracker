@@ -20,9 +20,9 @@ func TestHandler_Create(t *testing.T) {
 	e := echo.New()
 	e.Use(middleware.Recover())
 
-	orgSvc := organization.NewService(organization.NewStore(testDB))
-	projSvc := project.NewService(project.NewStore(testDB))
-	integSvc := integration.NewService(integration.NewStore(testDB), "test-32-byte-encryption-key!!!!")
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	projSvc := project.NewService(project.NewStore(testClient))
+	integSvc := integration.NewService(integration.NewStore(testClient), "test-32-byte-encryption-key!!!!")
 
 	orgH := organization.NewHandler(orgSvc)
 	projH := project.NewHandler(projSvc)
@@ -55,9 +55,9 @@ func TestHandler_Create_InvalidType(t *testing.T) {
 	e := echo.New()
 	e.Use(middleware.Recover())
 
-	orgSvc := organization.NewService(organization.NewStore(testDB))
-	projSvc := project.NewService(project.NewStore(testDB))
-	integSvc := integration.NewService(integration.NewStore(testDB), "test-32-byte-encryption-key!!!!")
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	projSvc := project.NewService(project.NewStore(testClient))
+	integSvc := integration.NewService(integration.NewStore(testClient), "test-32-byte-encryption-key!!!!")
 
 	orgH := organization.NewHandler(orgSvc)
 	projH := project.NewHandler(projSvc)

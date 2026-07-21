@@ -1,47 +1,114 @@
 package team
 
 import (
-	"gorm.io/gorm"
+	"context"
+
+	"github.com/google/uuid"
+
+	"working-time-tracker/ent"
+	"working-time-tracker/ent/team"
+	enttm "working-time-tracker/ent/teammembership"
 )
 
 type MembershipStore struct {
-	db *gorm.DB
+	client *ent.Client
 }
 
-func NewMembershipStore(db *gorm.DB) *MembershipStore {
-	return &MembershipStore{db: db}
+func NewMembershipStore(client *ent.Client) *MembershipStore {
+	return &MembershipStore{client: client}
 }
 
-func (s *MembershipStore) Add(membership *TeamMembership) error {
-	return s.db.Create(membership).Error
+func (s *MembershipStore) Add(m *TeamMembership) error {
+	_, err := s.client.TeamMembership.Create().
+		SetPersonID(m.PersonID).
+		SetTeamID(m.TeamID).
+		Save(context.Background())
+	return err
 }
 
 func (s *MembershipStore) Remove(teamID, personID string) error {
-	return s.db.Where("team_id = ? AND person_id = ?", teamID, personID).Delete(&TeamMembership{}).Error
+	tuid, err := uuid.Parse(teamID)
+	if err != nil {
+		return err
+	}
+	puid, err := uuid.Parse(personID)
+	if err != nil {
+		return err
+	}
+	_, err = s.client.TeamMembership.Delete().
+		Where(enttm.TeamIDEQ(tuid), enttm.PersonIDEQ(puid)).
+		Exec(context.Background())
+	return err
 }
 
 func (s *MembershipStore) ListByTeam(teamID string) ([]TeamMembership, error) {
-	var memberships []TeamMembership
-	err := s.db.Where("team_id = ?", teamID).
-		Preload("Person").
-		Order("created_at DESC").
-		Find(&memberships).Error
-	return memberships, err
+	tuid, err := uuid.Parse(teamID)
+	if err != nil {
+		return nil, err
+	}
+	memberships, err := s.client.TeamMembership.Query().
+		Where(enttm.TeamIDEQ(tuid)).
+		WithPerson().
+		Order(ent.Desc(enttm.FieldCreatedAt)).
+		All(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	return toDomainMemberships(memberships), nil
 }
 
 func (s *MembershipStore) Exists(teamID, personID string) (bool, error) {
-	var count int64
-	err := s.db.Model(&TeamMembership{}).
-		Where("team_id = ? AND person_id = ?", teamID, personID).
-		Count(&count).Error
+	tuid, err := uuid.Parse(teamID)
+	if err != nil {
+		return false, err
+	}
+	puid, err := uuid.Parse(personID)
+	if err != nil {
+		return false, err
+	}
+	count, err := s.client.TeamMembership.Query().
+		Where(enttm.TeamIDEQ(tuid), enttm.PersonIDEQ(puid)).
+		Count(context.Background())
 	return count > 0, err
 }
 
 func (s *MembershipStore) IsPersonInProject(personID, projectID string) (bool, error) {
-	var count int64
-	err := s.db.Model(&TeamMembership{}).
-		Joins("JOIN teams ON teams.id = team_memberships.team_id").
-		Where("team_memberships.person_id = ? AND teams.project_id = ?", personID, projectID).
-		Count(&count).Error
+	puid, err := uuid.Parse(personID)
+	if err != nil {
+		return false, err
+	}
+	prjid, err := uuid.Parse(projectID)
+	if err != nil {
+		return false, err
+	}
+	count, err := s.client.TeamMembership.Query().
+		Where(enttm.PersonIDEQ(puid)).
+		QueryTeam().
+		Where(team.ProjectIDEQ(prjid)).
+		Count(context.Background())
 	return count > 0, err
+}
+
+func toDomainMembership(e *ent.TeamMembership) TeamMembership {
+	m := TeamMembership{
+		PersonID:  e.PersonID,
+		TeamID:    e.TeamID,
+		CreatedAt: e.CreatedAt,
+	}
+	if e.Edges.Person != nil {
+		m.Person = &Person{
+			ID:    e.Edges.Person.ID,
+			Name:  e.Edges.Person.Name,
+			Email: e.Edges.Person.Email,
+		}
+	}
+	return m
+}
+
+func toDomainMemberships(es []*ent.TeamMembership) []TeamMembership {
+	result := make([]TeamMembership, len(es))
+	for i, e := range es {
+		result[i] = toDomainMembership(e)
+	}
+	return result
 }
