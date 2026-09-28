@@ -6,6 +6,7 @@ package page
 import (
 	"net/http"
 	"strings"
+	"unicode"
 
 	"github.com/labstack/echo/v5"
 
@@ -86,10 +87,13 @@ func (h *Handler) NotFound(c *echo.Context) error {
 }
 
 // safeNext só aceita caminhos locais, para o ?next= do login não virar um
-// redirecionamento para outro site.
+// redirecionamento para outro site. Caracteres de controle e barra invertida
+// são recusados em qualquer posição: o navegador remove TAB e quebra de linha
+// da URL e trata "\" como "/", então "/\t/host" chegaria como "//host".
 func safeNext(next string) string {
-	if strings.HasPrefix(next, "/") && !strings.HasPrefix(next, "//") && !strings.HasPrefix(next, "/\\") {
-		return next
+	if !strings.HasPrefix(next, "/") || strings.HasPrefix(next, "//") ||
+		strings.ContainsRune(next, '\\') || strings.IndexFunc(next, unicode.IsControl) >= 0 {
+		return "/"
 	}
-	return "/"
+	return next
 }
