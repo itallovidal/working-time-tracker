@@ -67,16 +67,34 @@ func (s *Store) GetByID(id string) (*Project, error) {
 	return toDomainProject(p), nil
 }
 
+// Update grava o projeto como está: um campo opcional nil é apagado no banco.
+// Quem decide entre manter e apagar é o service.
 func (s *Store) Update(p *Project) error {
-	_, err := s.client.Project.UpdateOneID(p.ID).
+	q := s.client.Project.UpdateOneID(p.ID).
 		SetName(p.Name).
 		SetDescription(p.Description).
-		SetNillableGithubRepoURL(p.GithubRepoURL).
-		SetNillableGitlabRepoURL(p.GitlabRepoURL).
-		SetSprintDurationDays(p.SprintDurationDays).
-		SetNillableDailyTime(p.DailyTime).
-		SetNillableWeeklySyncDay(p.WeeklySyncDay).
-		Save(context.Background())
+		SetSprintDurationDays(p.SprintDurationDays)
+	if p.GithubRepoURL != nil {
+		q = q.SetGithubRepoURL(*p.GithubRepoURL)
+	} else {
+		q = q.ClearGithubRepoURL()
+	}
+	if p.GitlabRepoURL != nil {
+		q = q.SetGitlabRepoURL(*p.GitlabRepoURL)
+	} else {
+		q = q.ClearGitlabRepoURL()
+	}
+	if p.DailyTime != nil {
+		q = q.SetDailyTime(*p.DailyTime)
+	} else {
+		q = q.ClearDailyTime()
+	}
+	if p.WeeklySyncDay != nil {
+		q = q.SetWeeklySyncDay(*p.WeeklySyncDay)
+	} else {
+		q = q.ClearWeeklySyncDay()
+	}
+	_, err := q.Save(context.Background())
 	return err
 }
 

@@ -1,0 +1,89 @@
+{{define "content"}}
+<main class="page" x-data="projectTeams">
+  {{template "project_head" .}}
+
+  {{if .IsAdmin}}
+  <form class="row" @submit.prevent="createTeam()" novalidate>
+    <div class="field flex-1">
+      <label for="team-name">Novo time</label>
+      <input id="team-name" type="text" placeholder="Ex.: Backend" x-model="newTeam">
+    </div>
+    <button type="submit" class="btn self-end" :disabled="pending">Criar time</button>
+  </form>
+  <p class="form-error" x-cloak x-show="errors.create" x-text="errors.create" role="alert"></p>
+  {{end}}
+
+  <p class="muted" x-show="loading">Carregando times…</p>
+  <p class="form-error" x-cloak x-show="errors.load" x-text="errors.load"></p>
+
+  <div class="empty" x-cloak x-show="!loading && !errors.load && teams.length === 0">
+    <strong>Nenhum time neste projeto</strong>
+    {{if .IsAdmin}}
+    <span>Crie um time e adicione as pessoas. Só membros de algum time podem ser responsáveis por tarefas.</span>
+    {{else}}
+    <span>Um admin precisa criar os times deste projeto.</span>
+    {{end}}
+  </div>
+
+  <div class="grid-2" x-show="teams.length > 0">
+    <template x-for="team in teams" :key="team.id">
+      <section class="card">
+        <div class="card-head">
+          <template x-if="editing !== team.id">
+            <h2 x-text="team.name"></h2>
+          </template>
+          <template x-if="editing === team.id">
+            <form class="row flex-1" @submit.prevent="rename(team)">
+              <input type="text" class="flex-1" x-model="editName" aria-label="Nome do time">
+              <button type="submit" class="btn btn-sm" :disabled="pending">Salvar</button>
+              <button type="button" class="btn btn-ghost btn-sm" @click="editing = null">Cancelar</button>
+            </form>
+          </template>
+          {{if .IsAdmin}}
+          <div class="row" x-show="editing !== team.id && confirming !== team.id">
+            <button type="button" class="btn btn-ghost btn-sm" @click="startRename(team)">Renomear</button>
+            <button type="button" class="btn btn-danger-ghost btn-sm" @click="confirming = team.id">Excluir</button>
+          </div>
+          {{end}}
+        </div>
+        {{if .IsAdmin}}
+        <div class="confirm" x-cloak x-show="confirming === team.id">
+          <span>Excluir o time? As pessoas continuam na organização.</span>
+          <button type="button" class="btn btn-danger btn-sm" :disabled="pending" @click="removeTeam(team)">Excluir</button>
+          <button type="button" class="btn btn-ghost btn-sm" @click="confirming = null">Cancelar</button>
+        </div>
+        {{end}}
+        <p class="form-error" x-show="errors['team-' + team.id]" x-text="errors['team-' + team.id]" role="alert"></p>
+
+        <p class="muted small" x-show="team.members.length === 0">Nenhum membro ainda.</p>
+        <ul class="list" x-show="team.members.length > 0">
+          <template x-for="m in team.members" :key="m.person_id">
+            <li>
+              <span class="avatar" aria-hidden="true" x-text="WTT.fmt.initials(m.person && m.person.name)"></span>
+              <div class="grow">
+                <div x-text="m.person ? m.person.name : m.person_id"></div>
+                <div class="muted small" x-text="m.person ? m.person.email : ''"></div>
+              </div>
+              {{if .IsAdmin}}
+              <button type="button" class="btn btn-danger-ghost btn-sm" :disabled="pending" @click="removeMember(team, m)">Remover</button>
+              {{end}}
+            </li>
+          </template>
+        </ul>
+
+        {{if .IsAdmin}}
+        <form class="row" @submit.prevent="addMember(team)" x-show="candidates(team).length > 0">
+          <select class="flex-1" x-model="adding[team.id]" aria-label="Pessoa para adicionar">
+            <option value="">Adicionar pessoa…</option>
+            <template x-for="p in candidates(team)" :key="p.id">
+              <option :value="p.id" x-text="p.name"></option>
+            </template>
+          </select>
+          <button type="submit" class="btn btn-secondary btn-sm" :disabled="pending || !adding[team.id]">Adicionar</button>
+        </form>
+        {{end}}
+      </section>
+    </template>
+  </div>
+</main>
+{{end}}

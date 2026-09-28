@@ -65,6 +65,16 @@
 
   const pad = (n) => String(n).padStart(2, '0');
 
+  const weekdays = [
+    { value: 'monday', label: 'Segunda-feira' },
+    { value: 'tuesday', label: 'Terça-feira' },
+    { value: 'wednesday', label: 'Quarta-feira' },
+    { value: 'thursday', label: 'Quinta-feira' },
+    { value: 'friday', label: 'Sexta-feira' },
+    { value: 'saturday', label: 'Sábado' },
+    { value: 'sunday', label: 'Domingo' },
+  ];
+
   const fmt = {
     // 3725 -> "01:02:05"
     clock(seconds) {
@@ -108,6 +118,10 @@
     role(role) {
       return role === 'admin' ? 'Admin' : 'Membro';
     },
+    weekday(value) {
+      const d = weekdays.find((w) => w.value === value);
+      return d ? d.label : value;
+    },
   };
 
   async function copyText(text) {
@@ -119,7 +133,7 @@
     }
   }
 
-  window.WTT = { api, ApiError, form, fmt, copyText, boot: window.BOOT || {} };
+  window.WTT = { api, ApiError, form, fmt, copyText, weekdays, boot: window.BOOT || {} };
 
   document.addEventListener('alpine:init', () => {
     Alpine.store('toast', {

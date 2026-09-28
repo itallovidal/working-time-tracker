@@ -161,6 +161,12 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .row-end { justify-content: flex-end; }
 .divider { border: 0; border-top: 1px solid var(--rule); margin: 0; }
+.flex-1 { flex: 1; min-width: 160px; }
+.self-end { align-self: flex-end; }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
 
 /* ---------- Formulários ---------- */
 .field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }

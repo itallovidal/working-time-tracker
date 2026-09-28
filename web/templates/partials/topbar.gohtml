@@ -3,7 +3,7 @@
   <div class="topbar-inner">
     <a class="brand" href="/orgs/{{.OrgID}}">
       <span class="brand-mark" aria-hidden="true"></span>
-      <span>{{.Me.OrganizationName}}</span>
+      <span data-org-name>{{.Me.OrganizationName}}</span>
     </a>
     <nav class="mainnav" aria-label="Organização">
       <a href="/orgs/{{.OrgID}}" {{if eq .Section "projects"}}aria-current="page"{{end}}>Projetos</a>
@@ -14,7 +14,7 @@
       {{template "active_session" .}}
       <span class="me" title="{{.Me.Email}}">
         <span class="avatar" aria-hidden="true">{{.Initials}}</span>
-        <span class="name">{{.Me.Name}}</span>
+        <span class="name" data-me-name>{{.Me.Name}}</span>
         {{if .IsAdmin}}<span class="badge badge-accent">Admin</span>{{end}}
       </span>
       <span x-data="logoutButton">

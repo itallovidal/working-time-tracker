@@ -1,0 +1,96 @@
+{{define "content"}}
+<main class="page" x-data="orgPeople">
+  <div class="page-head">
+    <div>
+      <div class="eyebrow">{{.Me.OrganizationName}}</div>
+      <h1>Pessoas</h1>
+      <p class="lede">Quem faz parte da organização. Para montar times, use a aba Times de cada projeto.</p>
+    </div>
+  </div>
+
+  <div class="{{if .IsAdmin}}grid-aside{{else}}stack{{end}}">
+    <section class="stack">
+      <p class="muted" x-show="loading">Carregando pessoas…</p>
+      <p class="form-error" x-cloak x-show="errors.load" x-text="errors.load"></p>
+      <p class="form-error" x-cloak x-show="errors.role" x-text="errors.role" role="alert"></p>
+      <div class="table-wrap" x-show="people.length > 0">
+        <table>
+          <thead>
+            <tr><th>Nome</th><th>Email</th><th>Papel</th>{{if .IsAdmin}}<th class="actions"><span class="sr-only">Ações</span></th>{{end}}</tr>
+          </thead>
+          <tbody>
+            <template x-for="p in people" :key="p.id">
+              <tr>
+                <td>
+                  <span x-text="p.name"></span>
+                  <span class="badge" x-show="p.id === me.id">você</span>
+                </td>
+                <td class="muted" x-text="p.email"></td>
+                <td><span class="badge" :class="p.role === 'admin' && 'badge-accent'" x-text="WTT.fmt.role(p.role)"></span></td>
+                {{if .IsAdmin}}
+                <td class="actions">
+                  <button type="button" class="btn btn-ghost btn-sm" :disabled="pending"
+                          @click="setRole(p, p.role === 'admin' ? 'member' : 'admin')"
+                          x-text="p.role === 'admin' ? 'Tornar membro' : 'Tornar admin'"></button>
+                </td>
+                {{end}}
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    {{if .IsAdmin}}
+    <aside class="stack">
+      <form class="card" @submit.prevent="createInvite()" novalidate>
+        <div class="card-head"><h2>Convidar pessoa</h2></div>
+        <div class="field">
+          <label for="invite-email">Email</label>
+          <input id="invite-email" type="email" placeholder="Opcional" x-model="invite.email">
+          <span class="hint">Com email, só essa pessoa consegue usar o link.</span>
+        </div>
+        <div class="field">
+          <label for="invite-role">Papel</label>
+          <select id="invite-role" x-model="invite.role">
+            <option value="member">Membro</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+        <p class="form-error" x-show="errors.invite" x-text="errors.invite" role="alert"></p>
+        <button type="submit" class="btn" :disabled="pending">Gerar link de convite</button>
+
+        <div class="stack" x-cloak x-show="lastLink">
+          <hr class="divider">
+          <div class="field">
+            <label for="invite-link">Link do convite</label>
+            <input id="invite-link" type="text" readonly :value="lastLink" @focus="$event.target.select()">
+            <span class="hint">Copie agora: o link não aparece de novo. Ele vale por 7 dias e funciona uma vez.</span>
+          </div>
+          <button type="button" class="btn btn-secondary" @click="copyLink()">Copiar link</button>
+        </div>
+      </form>
+
+      <section class="card">
+        <div class="card-head"><h2>Convites pendentes</h2></div>
+        <p class="muted small" x-show="invites.length === 0">Nenhum convite pendente.</p>
+        <ul class="list" x-show="invites.length > 0">
+          <template x-for="inv in invites" :key="inv.id">
+            <li>
+              <div class="grow">
+                <div x-text="inv.email || 'Qualquer email'"></div>
+                <div class="muted small">
+                  <span x-text="WTT.fmt.role(inv.role)"></span> ·
+                  expira em <span x-text="WTT.fmt.date(inv.expires_at)"></span>
+                </div>
+              </div>
+              <button type="button" class="btn btn-danger-ghost btn-sm" :disabled="pending" @click="revoke(inv)">Revogar</button>
+            </li>
+          </template>
+        </ul>
+      </section>
+    </aside>
+    {{end}}
+  </div>
+</main>
+{{end}}

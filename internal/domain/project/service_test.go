@@ -171,3 +171,56 @@ func TestService_Delete_CascadesChildren(t *testing.T) {
 		t.Errorf("persons: %d rows, want 1 (people belong to the organization, not the project)", n)
 	}
 }
+
+// Nos campos opcionais do update, omitir mantém o valor e texto vazio apaga.
+func TestService_Update_OptionalScheduleFields(t *testing.T) {
+	cleanup(t)
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	svc := project.NewService(project.NewStore(testClient))
+
+	org, _ := orgSvc.Create("Org")
+	daily, weekly := "09:30", "Friday"
+	proj, err := svc.Create(org.ID.String(), "Projeto", "", 0, &daily, &weekly)
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	if proj.WeeklySyncDay == nil || *proj.WeeklySyncDay != "friday" {
+		t.Errorf("weekly_sync_day = %v, want friday", proj.WeeklySyncDay)
+	}
+
+	kept, err := svc.Update(proj.ID.String(), "Projeto", "", 0, nil, nil)
+	if err != nil {
+		t.Fatalf("update keeping fields: %v", err)
+	}
+	if kept.DailyTime == nil || *kept.DailyTime != "09:30" || kept.WeeklySyncDay == nil {
+		t.Errorf("omitted fields should be kept, got daily=%v weekly=%v", kept.DailyTime, kept.WeeklySyncDay)
+	}
+
+	empty := ""
+	cleared, err := svc.Update(proj.ID.String(), "Projeto", "", 0, &empty, &empty)
+	if err != nil {
+		t.Fatalf("update clearing fields: %v", err)
+	}
+	reloaded, _ := svc.Get(proj.ID.String())
+	if cleared.DailyTime != nil || reloaded.DailyTime != nil || reloaded.WeeklySyncDay != nil {
+		t.Errorf("empty strings should clear, got daily=%v weekly=%v", reloaded.DailyTime, reloaded.WeeklySyncDay)
+	}
+}
+
+func TestService_Create_InvalidSchedule(t *testing.T) {
+	cleanup(t)
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	svc := project.NewService(project.NewStore(testClient))
+	org, _ := orgSvc.Create("Org")
+
+	badTime, badDay := "25:00", "someday"
+	if _, err := svc.Create(org.ID.String(), "P", "", 0, &badTime, nil); err != project.ErrInvalidDailyTime {
+		t.Errorf("invalid daily time: err = %v", err)
+	}
+	if _, err := svc.Create(org.ID.String(), "P", "", 0, nil, &badDay); err != project.ErrInvalidWeekday {
+		t.Errorf("invalid weekday: err = %v", err)
+	}
+	if _, err := svc.Create(org.ID.String(), "P", "", 120, nil, nil); err != project.ErrInvalidSprint {
+		t.Errorf("invalid sprint: err = %v", err)
+	}
+}
