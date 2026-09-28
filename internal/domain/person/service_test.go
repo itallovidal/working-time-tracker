@@ -2,6 +2,7 @@ package person_test
 
 import (
 	"context"
+	"sync"
 	"testing"
 
 	"working-time-tracker/internal/domain/organization"
@@ -141,6 +142,50 @@ func TestService_SetRole_LastAdmin(t *testing.T) {
 	}
 	if _, err := svc.SetRole(ana.ID.String(), person.RoleMember); err != nil {
 		t.Fatalf("with two admins, demoting one should work: %v", err)
+	}
+}
+
+// Com dois admins, dois rebaixamentos simultâneos não podem passar os dois:
+// um deles precisa receber ErrLastAdmin e a org continua com um admin.
+func TestService_SetRole_ConcurrentDemotionsKeepOneAdmin(t *testing.T) {
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	svc := person.NewService(person.NewStore(testClient))
+
+	for i := 0; i < 20; i++ {
+		cleanup(t)
+		org, _ := orgSvc.Create("Org")
+		ana, _ := svc.Create(org.ID.String(), "Ana", "ana@test.com")
+		bia, _ := svc.Create(org.ID.String(), "Bia", "bia@test.com")
+		svc.SetRole(ana.ID.String(), person.RoleAdmin)
+		svc.SetRole(bia.ID.String(), person.RoleAdmin)
+
+		errs := make([]error, 2)
+		var wg sync.WaitGroup
+		for j, id := range []string{ana.ID.String(), bia.ID.String()} {
+			wg.Add(1)
+			go func(j int, id string) {
+				defer wg.Done()
+				_, errs[j] = svc.SetRole(id, person.RoleMember)
+			}(j, id)
+		}
+		wg.Wait()
+
+		persons, err := svc.ListByOrg(org.ID.String())
+		if err != nil {
+			t.Fatalf("list persons: %v", err)
+		}
+		admins := 0
+		for _, p := range persons {
+			if p.Role == person.RoleAdmin {
+				admins++
+			}
+		}
+		if admins != 1 {
+			t.Fatalf("round %d: %d admins left (errors: %v, %v), want 1", i, admins, errs[0], errs[1])
+		}
+		if !(errs[0] == nil && errs[1] == person.ErrLastAdmin) && !(errs[0] == person.ErrLastAdmin && errs[1] == nil) {
+			t.Fatalf("round %d: errors = %v, %v; want one success and one ErrLastAdmin", i, errs[0], errs[1])
+		}
 	}
 }
 

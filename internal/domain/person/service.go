@@ -107,27 +107,11 @@ func (s *Service) Update(id, name, email string) (*Person, error) {
 	return person, nil
 }
 
-// SetRole muda o papel de uma pessoa, sem deixar a organização sem admin.
+// SetRole muda o papel de uma pessoa, sem deixar a organização sem admin. A
+// checagem do último admin fica no store, na mesma transação da mudança.
 func (s *Service) SetRole(id, role string) (*Person, error) {
 	if role != RoleAdmin && role != RoleMember {
 		return nil, ErrInvalidRole
 	}
-	person, err := s.store.GetByID(id)
-	if err != nil {
-		return nil, err
-	}
-	if person.Role == RoleAdmin && role == RoleMember {
-		admins, err := s.store.CountAdmins(person.OrganizationID)
-		if err != nil {
-			return nil, err
-		}
-		if admins <= 1 {
-			return nil, ErrLastAdmin
-		}
-	}
-	if err := s.store.SetRole(person.ID, role); err != nil {
-		return nil, err
-	}
-	person.Role = role
-	return person, nil
+	return s.store.SetRole(id, role)
 }

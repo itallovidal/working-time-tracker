@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 
 	"working-time-tracker/ent"
+	"working-time-tracker/ent/organization"
 	"working-time-tracker/ent/person"
 	"working-time-tracker/internal/database"
 )
@@ -74,17 +75,59 @@ func (s *Store) Update(p *Person) error {
 	return err
 }
 
-func (s *Store) SetRole(id uuid.UUID, role string) error {
-	_, err := s.client.Person.UpdateOneID(id).
-		SetRole(person.Role(role)).
-		Save(context.Background())
-	return err
-}
+// SetRole muda o papel numa transação que trava a linha da organização. Assim,
+// duas mudanças de papel na mesma org rodam uma de cada vez, e a contagem de
+// admins já enxerga a mudança da outra. A trava fica na organização porque o
+// Postgres não aceita FOR UPDATE junto com count().
+func (s *Store) SetRole(id, role string) (*Person, error) {
+	uid, err := uuid.Parse(id)
+	if err != nil {
+		return nil, err
+	}
+	ctx := context.Background()
+	tx, err := s.client.Tx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	rollback := func(err error) (*Person, error) {
+		tx.Rollback()
+		return nil, err
+	}
 
-func (s *Store) CountAdmins(orgID uuid.UUID) (int, error) {
-	return s.client.Person.Query().
-		Where(person.OrganizationIDEQ(orgID), person.RoleEQ(person.RoleAdmin)).
-		Count(context.Background())
+	p, err := tx.Person.Get(ctx, uid)
+	if ent.IsNotFound(err) {
+		return rollback(database.ErrNotFound)
+	}
+	if err != nil {
+		return rollback(err)
+	}
+	if _, err := tx.Organization.Query().Where(organization.IDEQ(p.OrganizationID)).ForUpdate().Only(ctx); err != nil {
+		return rollback(err)
+	}
+	// Relê depois da trava: o papel pode ter mudado enquanto esta transação esperava.
+	if p, err = tx.Person.Get(ctx, uid); err != nil {
+		return rollback(err)
+	}
+
+	if p.Role == person.RoleAdmin && role == RoleMember {
+		admins, err := tx.Person.Query().
+			Where(person.OrganizationIDEQ(p.OrganizationID), person.RoleEQ(person.RoleAdmin)).
+			Count(ctx)
+		if err != nil {
+			return rollback(err)
+		}
+		if admins <= 1 {
+			return rollback(ErrLastAdmin)
+		}
+	}
+
+	if p, err = tx.Person.UpdateOneID(uid).SetRole(person.Role(role)).Save(ctx); err != nil {
+		return rollback(err)
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return toDomainPerson(p), nil
 }
 
 // EmailInUse diz se o email já pertence a outra pessoa. exceptID permite
