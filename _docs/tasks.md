@@ -116,37 +116,59 @@
 
 ---
 
+### Correções pós-migração GORM → Ent
+
+- [X] C1 FKs com `ON DELETE CASCADE` (projeto → times/tarefas/integrações, tarefa → sessões, time → membros, organização → pessoas)
+- [X] C2 Índice parcial `one_active_session` declarado no schema do Ent em vez de SQL cru após o auto-migrate
+- [X] C3 `POST/GET /api/orgs` respondiam 404 (rota registrada como `"/"`); `RemoveTrailingSlash` para aceitar os dois formatos
+- [X] C4 Desvincular item externo não limpava `external_item_id`/`external_item_url`
+- [X] C5 `external_integration_id` não era lido do banco: `/external-details` nunca funcionava e editar a tarefa apagava o vínculo
+- [X] C6 Suíte verde: adapters com URL base injetável e GitHub fake nos testes; `testutil.Truncate` com os nomes reais das tabelas
+
+### Autenticação (pré-requisito da Fase 2)
+
+- [X] A1 `Person` com senha (bcrypt) e papel `admin|member`; email único no sistema
+- [X] A2 Signup cria organização + admin; login, logout, `/api/auth/me` e troca de senha
+- [X] A3 Sessões por cookie (`wtt_session`, HttpOnly, SameSite=Lax), token guardado como hash, validade de 7 dias
+- [X] A4 Convites por link (uso único, 7 dias, email opcional), listagem e revogação
+- [X] A5 Isolamento por organização em toda rota com ID (404) e rotas de admin (403)
+- [X] A6 Ponto da pessoa logada por padrão; só admin registra o ponto de outra pessoa
+- [X] A7 API só aceita corpo JSON em POST/PUT/PATCH (CSRF) e limita tentativas de login, signup e convite
+
+---
+
 ## 🎨 FASE 2: FRONTEND
 
 ---
 
 ### Sprint 8: Frontend — Core Views (Layout, Org, Person, Project, Team)
 
-- [ ] S8.1 Create base HTML layout template (header with org/project navigation, vendored Alpine.js include) and register the Echo template renderer
-- [ ] S8.2 Build Organization management UI: list orgs, create org form, org settings page
-- [ ] S8.3 Build Person management UI within org: list persons, create person form
-- [ ] S8.4 Build Project management UI: list projects within org, create project form (with sprint/daily/sync config fields), project settings page
-- [ ] S8.5 Build Team management UI: list teams within project, create team form, manage team members (add/remove)
+- [X] S8.1 Create base HTML layout template (header with org/project navigation, vendored Alpine.js include) and register the Echo template renderer
+- [X] S8.2 Build Organization management UI: list orgs, create org form, org settings page
+  - Como cada pessoa pertence a uma organização só, virou a visão geral e as configurações da própria organização; a criação de organização é o signup.
+- [X] S8.3 Build Person management UI within org: list persons, create person form
+- [X] S8.4 Build Project management UI: list projects within org, create project form (with sprint/daily/sync config fields), project settings page
+- [X] S8.5 Build Team management UI: list teams within project, create team form, manage team members (add/remove)
 
 ---
 
 ### Sprint 9: Frontend — Tasks & Time Tracking
 
-- [ ] S9.1 Build Task list UI scoped to project (name, assignee, deadline, external item badge) with create/edit/delete
-- [ ] S9.2 Build Task detail UI: edit form, external item link/unlink via integration selector
-- [ ] S9.3 Build Time Tracking UI within project: clock in (select task) and clock out button, active-session indicator, live elapsed timer
-- [ ] S9.4 Build work-sessions list and total-time display filtered by task and/or person within a project
-- [ ] S9.5 Write integration tests for frontend-serving routes: templates render, static assets served, main views return 200
+- [X] S9.1 Build Task list UI scoped to project (name, assignee, deadline, external item badge) with create/edit/delete
+- [X] S9.2 Build Task detail UI: edit form, external item link/unlink via integration selector
+- [X] S9.3 Build Time Tracking UI within project: clock in (select task) and clock out button, active-session indicator, live elapsed timer
+- [X] S9.4 Build work-sessions list and total-time display filtered by task and/or person within a project
+- [X] S9.5 Write integration tests for frontend-serving routes: templates render, static assets served, main views return 200
 
 ---
 
 ### Sprint 10: Frontend — Integrations & Documentation
 
-- [ ] S10.1 Build Integration config UI: list integrations per project, create with type selection and dynamic config form, credential mask, enable/disable toggle
-- [ ] S10.2 Wire Alpine.js client-side error handling and inline validation feedback from API errors
-- [ ] S10.3 Write README with setup instructions (env vars, database setup, how to run, org/project/team workflow)
-- [ ] S10.4 Document the REST API endpoints with example requests/responses
-- [ ] S10.5 Document the web UI: browser routes, navigation flow, and that Alpine.js is vendored with no build step
+- [X] S10.1 Build Integration config UI: list integrations per project, create with type selection and dynamic config form, credential mask, enable/disable toggle
+- [X] S10.2 Wire Alpine.js client-side error handling and inline validation feedback from API errors
+- [X] S10.3 Write README with setup instructions (env vars, database setup, how to run, org/project/team workflow)
+- [X] S10.4 Document the REST API endpoints with example requests/responses
+- [X] S10.5 Document the web UI: browser routes, navigation flow, and that Alpine.js is vendored with no build step
 
 ---
 

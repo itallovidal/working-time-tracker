@@ -13,5 +13,8 @@ type Integration struct {
 	DisplayName string                 `json:"display_name"`
 	Config      map[string]interface{} `json:"config,omitempty"`
 	Enabled     bool                   `json:"enabled"`
-	CreatedAt   time.Time              `json:"created_at"`
+	// HasConfig diz se há credencial salva. É calculado antes de a config ser
+	// removida da resposta, para a interface mostrar o estado sem ver o segredo.
+	HasConfig bool      `json:"-"`
+	CreatedAt time.Time `json:"created_at"`
 }

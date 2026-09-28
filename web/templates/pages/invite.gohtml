@@ -15,7 +15,7 @@
     </template>
 
     <template x-if="info">
-      <form class="stack" @submit.prevent="submit()" novalidate>
+      <form class="stack" @submit.prevent="submit()">
         <div class="stack">
           <h1>Entrar em <span x-text="info.organization_name"></span></h1>
           <p class="muted">Você foi convidado como <strong x-text="WTT.fmt.role(info.role)"></strong>. Crie sua conta para aceitar.</p>

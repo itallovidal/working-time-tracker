@@ -52,15 +52,15 @@ func (g *GitLabIntegration) ValidateConfig(config map[string]interface{}) error 
 
 	resp, err := g.client().Do(req)
 	if err != nil {
-		return fmt.Errorf("cannot reach GitLab API: %w", err)
+		return fmt.Errorf("não foi possível falar com o GitLab: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusUnauthorized {
-		return fmt.Errorf("invalid GitLab token")
+		return fmt.Errorf("token do GitLab inválido")
 	}
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("GitLab API returned status %d", resp.StatusCode)
+		return fmt.Errorf("o GitLab respondeu com status %d", resp.StatusCode)
 	}
 	return nil
 }
@@ -81,15 +81,18 @@ func (g *GitLabIntegration) FetchItemDetails(config map[string]interface{}, item
 
 	resp, err := g.client().Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("cannot reach GitLab API: %w", err)
+		return nil, fmt.Errorf("não foi possível falar com o GitLab: %w", err)
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode == http.StatusUnauthorized {
+		return nil, fmt.Errorf("token do GitLab inválido")
+	}
 	if resp.StatusCode == http.StatusNotFound {
-		return nil, fmt.Errorf("issue %s not found", itemID)
+		return nil, fmt.Errorf("item %s não encontrado", itemID)
 	}
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("GitLab API returned status %d", resp.StatusCode)
+		return nil, fmt.Errorf("o GitLab respondeu com status %d", resp.StatusCode)
 	}
 
 	var body struct {
@@ -98,7 +101,7 @@ func (g *GitLabIntegration) FetchItemDetails(config map[string]interface{}, item
 		WebURL string `json:"web_url"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
-		return nil, fmt.Errorf("failed to parse GitLab response: %w", err)
+		return nil, fmt.Errorf("resposta inesperada do GitLab: %w", err)
 	}
 
 	return &ItemDetails{
@@ -112,10 +115,10 @@ func parseGitlabConfig(config map[string]interface{}) (*gitlabConfig, error) {
 	token, _ := config["token"].(string)
 	projectURL, _ := config["project_url"].(string)
 	if token == "" {
-		return nil, fmt.Errorf("gitlab token is required")
+		return nil, fmt.Errorf("informe o token do GitLab")
 	}
 	if projectURL == "" {
-		return nil, fmt.Errorf("gitlab project_url is required")
+		return nil, fmt.Errorf("informe o projeto do GitLab (project_url)")
 	}
 	projectURL = strings.TrimPrefix(projectURL, "https://")
 	projectURL = strings.TrimPrefix(projectURL, "http://")

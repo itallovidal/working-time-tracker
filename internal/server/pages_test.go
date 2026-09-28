@@ -20,6 +20,7 @@ func pagePaths(orgID, projectID string) []string {
 		"/projects/" + projectID + "/tasks",
 		"/projects/" + projectID + "/time-tracking",
 		"/projects/" + projectID + "/teams",
+		"/projects/" + projectID + "/integrations",
 		"/projects/" + projectID + "/settings",
 	}
 }
@@ -99,7 +100,7 @@ func TestPages_AllTemplatesLoad(t *testing.T) {
 	for _, name := range []string{
 		"login", "signup", "invite", "notfound",
 		"org_projects", "org_people", "org_settings",
-		"project_tasks", "project_time", "project_teams", "project_settings", "task_detail",
+		"project_tasks", "project_time", "project_teams", "project_integrations", "project_settings", "task_detail",
 	} {
 		i := sort.SearchStrings(got, name)
 		if i == len(got) || got[i] != name {

@@ -20,14 +20,14 @@ func (s *MembershipService) Add(teamID, personID string) (*TeamMembership, error
 		return nil, err
 	}
 	if !sameOrg {
-		return nil, errors.New("person not found in this organization")
+		return nil, errors.New("pessoa não encontrada nesta organização")
 	}
 	exists, err := s.store.Exists(teamID, personID)
 	if err != nil {
 		return nil, err
 	}
 	if exists {
-		return nil, errors.New("person is already a member of this team")
+		return nil, errors.New("a pessoa já está neste time")
 	}
 	membership := &TeamMembership{
 		TeamID:   uuid.MustParse(teamID),

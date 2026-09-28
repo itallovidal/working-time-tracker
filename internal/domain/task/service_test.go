@@ -267,3 +267,34 @@ func TestService_Update_AssigneeMustBeProjectMember(t *testing.T) {
 		t.Fatal("expected error for an invalid assignee id")
 	}
 }
+
+// O vínculo com a integração precisa sobreviver à leitura e à edição da tarefa.
+// Antes, o store não copiava external_integration_id: /external-details sempre
+// dizia que não havia vínculo, e editar a tarefa apagava a integração.
+func TestService_LinkSurvivesReadAndUpdate(t *testing.T) {
+	orgSvc, personSvc, projSvc, teamSvc, memberSvc, taskSvc := setupDeps(t)
+
+	org, _ := orgSvc.Create("Org")
+	p, _ := personSvc.Create(org.ID.String(), "John", "john@test.com")
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil)
+	tm, _ := teamSvc.Create(proj.ID.String(), "Team")
+	memberSvc.Add(tm.ID.String(), p.ID.String())
+	task1, _ := taskSvc.Create(proj.ID.String(), "Task A", "", p.ID.String(), nil)
+	integrationID := createIntegration(t, proj.ID.String())
+
+	if _, err := taskSvc.LinkExternalItem(task1.ID.String(), integrationID, "42", "https://example.com/42"); err != nil {
+		t.Fatalf("link: %v", err)
+	}
+	got, _ := taskSvc.Get(task1.ID.String())
+	if got.ExternalIntegrationID == nil || got.ExternalIntegrationID.String() != integrationID {
+		t.Fatalf("external_integration_id after link = %v, want %s", got.ExternalIntegrationID, integrationID)
+	}
+
+	updated, err := taskSvc.Update(task1.ID.String(), "Task A renomeada", "", nil, nil)
+	if err != nil {
+		t.Fatalf("update: %v", err)
+	}
+	if updated.ExternalIntegrationID == nil || updated.ExternalItemID == nil || *updated.ExternalItemID != "42" {
+		t.Errorf("update dropped the link: integration=%v item=%v", updated.ExternalIntegrationID, updated.ExternalItemID)
+	}
+}

@@ -14,7 +14,7 @@ func NewService(store *Store) *Service {
 
 func (s *Service) Create(name string) (*Organization, error) {
 	if name == "" {
-		return nil, errors.New("name is required")
+		return nil, errors.New("informe o nome")
 	}
 	org := &Organization{Name: name}
 	if err := s.store.Create(org); err != nil {
@@ -33,7 +33,7 @@ func (s *Service) Get(id string) (*Organization, error) {
 
 func (s *Service) Update(id, name string) (*Organization, error) {
 	if name == "" {
-		return nil, errors.New("name is required")
+		return nil, errors.New("informe o nome")
 	}
 	org, err := s.store.GetByID(id)
 	if err != nil {
@@ -52,7 +52,7 @@ func (s *Service) Delete(id string) error {
 		return err
 	}
 	if hasProjects {
-		return errors.New("cannot delete organization with active projects")
+		return errors.New("exclua todos os projetos antes de excluir a organização")
 	}
 	return s.store.Delete(id)
 }

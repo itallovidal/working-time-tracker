@@ -21,7 +21,7 @@ func personFor(c *echo.Context, requested string) (string, int, string) {
 	me := auth.CurrentPerson(c)
 	if me == nil {
 		if requested == "" {
-			return "", 400, "person_id is required"
+			return "", 400, "informe a pessoa (person_id)"
 		}
 		return requested, 0, ""
 	}
@@ -41,10 +41,10 @@ func (h *Handler) ClockIn(c *echo.Context) error {
 		PersonID string `json:"person_id"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return c.JSON(400, map[string]string{"error": "invalid request body"})
+		return c.JSON(400, map[string]string{"error": "corpo da requisição inválido"})
 	}
 	if body.TaskID == "" {
-		return c.JSON(400, map[string]string{"error": "task_id is required"})
+		return c.JSON(400, map[string]string{"error": "informe a tarefa (task_id)"})
 	}
 	personID, status, msg := personFor(c, body.PersonID)
 	if status != 0 {
@@ -62,7 +62,7 @@ func (h *Handler) ClockOut(c *echo.Context) error {
 		PersonID string `json:"person_id"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return c.JSON(400, map[string]string{"error": "invalid request body"})
+		return c.JSON(400, map[string]string{"error": "corpo da requisição inválido"})
 	}
 	personID, status, msg := personFor(c, body.PersonID)
 	if status != 0 {

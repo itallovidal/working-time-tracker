@@ -7,7 +7,7 @@
 
   <div class="grid-aside" x-cloak x-show="!loading && task">
     <div class="stack">
-      <form class="card" @submit.prevent="save()" novalidate>
+      <form class="card" @submit.prevent="save()">
         <div class="card-head">
           <h2>Tarefa</h2>
           <span class="badge num" :class="deadlineClass()" x-text="deadlineLabel()"></span>
@@ -89,10 +89,10 @@
           </div>
         </template>
         <template x-if="task && !task.external_item_id">
-          <form class="stack" @submit.prevent="link()" novalidate>
+          <form class="stack" @submit.prevent="link()">
             <p class="muted small" x-show="integrations.length === 0">
               Este projeto não tem integrações.
-              {{if .IsAdmin}}Configure uma na aba Integrações.{{else}}Peça a um admin para configurar uma.{{end}}
+              {{if .IsAdmin}}<a href="/projects/{{.Project.ID}}/integrations">Configure uma</a> na aba Integrações.{{else}}Peça a um admin para configurar uma.{{end}}
             </p>
             <template x-if="integrations.length > 0">
               <div class="stack">

@@ -194,6 +194,80 @@ document.addEventListener('alpine:init', () => {
     externalLabel() { return this.task ? externalLabel(this.task) : ''; },
   }));
 
+  Alpine.data('projectIntegrations', () => ({
+    ...form(),
+    types: WTT.integrationTypes,
+    loading: true,
+    items: [],
+    creating: false,
+    draft: { type: 'github', display_name: '', config: {} },
+    editing: null,
+    editDraft: { display_name: '', config: {} },
+    confirming: null,
+    async init() {
+      try {
+        this.items = (await api('GET', '/api/projects/' + project.id + '/integrations')) || [];
+      } catch (e) {
+        this.errors.load = e.message;
+      } finally {
+        this.loading = false;
+      }
+    },
+    fieldsFor(type) {
+      const t = this.types.find((x) => x.value === type);
+      return t ? t.fields : [];
+    },
+    typeLabel(type) {
+      const t = this.types.find((x) => x.value === type);
+      return t ? t.label : type;
+    },
+    openCreate() {
+      this.draft = { type: this.types[0].value, display_name: '', config: {} };
+      this.creating = true;
+      this.$nextTick(() => this.$refs.name && this.$refs.name.focus());
+    },
+    create() {
+      return this.run('create', async () => {
+        const it = await api('POST', '/api/projects/' + project.id + '/integrations', {
+          type: this.draft.type,
+          display_name: this.draft.display_name,
+          config: { ...this.draft.config },
+          enabled: true,
+        });
+        this.items = [it, ...this.items];
+        this.creating = false;
+        toast('Integração criada. As credenciais foram validadas na plataforma.');
+      });
+    },
+    toggle(it) {
+      return this.run('item-' + it.id, async () => {
+        Object.assign(it, await api('PATCH', '/api/integrations/' + it.id, { enabled: !it.enabled }));
+      });
+    },
+    startEdit(it) {
+      this.editing = it.id;
+      this.editDraft = { display_name: it.display_name, config: {} };
+    },
+    saveEdit(it) {
+      return this.run('item-' + it.id, async () => {
+        const body = { display_name: this.editDraft.display_name };
+        const filled = Object.values(this.editDraft.config).some((v) => v);
+        if (filled) body.config = { ...this.editDraft.config };
+        Object.assign(it, await api('PATCH', '/api/integrations/' + it.id, body));
+        this.editing = null;
+        toast(filled ? 'Integração salva com a credencial nova.' : 'Integração salva.');
+      });
+    },
+    remove(it) {
+      return this.run('item-' + it.id, async () => {
+        await api('DELETE', '/api/integrations/' + it.id);
+        this.items = this.items.filter((x) => x.id !== it.id);
+        this.confirming = null;
+        toast('Integração excluída.');
+      });
+    },
+  }));
+
   Alpine.data('timeTracking', () => ({
     ...form(),
     project,

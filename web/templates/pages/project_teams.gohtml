@@ -3,7 +3,7 @@
   {{template "project_head" .}}
 
   {{if .IsAdmin}}
-  <form class="row" @submit.prevent="createTeam()" novalidate>
+  <form class="row" @submit.prevent="createTeam()">
     <div class="field flex-1">
       <label for="team-name">Novo time</label>
       <input id="team-name" type="text" placeholder="Ex.: Backend" x-model="newTeam">

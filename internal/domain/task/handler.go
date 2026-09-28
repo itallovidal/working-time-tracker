@@ -25,7 +25,7 @@ func (h *Handler) Create(c *echo.Context) error {
 		Deadline    *time.Time `json:"deadline"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return c.JSON(400, map[string]string{"error": "invalid request body"})
+		return c.JSON(400, map[string]string{"error": "corpo da requisição inválido"})
 	}
 	task, err := h.svc.Create(projectID, body.Name, body.Description, body.AssigneeID, body.Deadline)
 	if err != nil {
@@ -48,7 +48,7 @@ func (h *Handler) Get(c *echo.Context) error {
 	task, err := h.svc.Get(id)
 	if err != nil {
 		if err == database.ErrNotFound {
-			return c.JSON(404, map[string]string{"error": "task not found"})
+			return c.JSON(404, map[string]string{"error": "tarefa não encontrada"})
 		}
 		return c.JSON(500, map[string]string{"error": err.Error()})
 	}
@@ -64,7 +64,7 @@ func (h *Handler) Update(c *echo.Context) error {
 		Deadline    *time.Time `json:"deadline"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return c.JSON(400, map[string]string{"error": "invalid request body"})
+		return c.JSON(400, map[string]string{"error": "corpo da requisição inválido"})
 	}
 	task, err := h.svc.Update(id, body.Name, body.Description, body.AssigneeID, body.Deadline)
 	if err != nil {
@@ -89,10 +89,10 @@ func (h *Handler) LinkExternalItem(c *echo.Context) error {
 		ExternalItemURL string `json:"external_item_url"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return c.JSON(400, map[string]string{"error": "invalid request body"})
+		return c.JSON(400, map[string]string{"error": "corpo da requisição inválido"})
 	}
 	if body.IntegrationID == "" || body.ExternalItemID == "" || body.ExternalItemURL == "" {
-		return c.JSON(400, map[string]string{"error": "integration_id, external_item_id, and external_item_url are required"})
+		return c.JSON(400, map[string]string{"error": "informe a integração, o número do item e o link"})
 	}
 	task, err := h.svc.LinkExternalItem(taskID, body.IntegrationID, body.ExternalItemID, body.ExternalItemURL)
 	if err != nil {
@@ -115,7 +115,7 @@ func (h *Handler) GetExternalDetails(c *echo.Context) error {
 	result, err := h.svc.GetExternalDetails(taskID)
 	if err != nil {
 		if err == database.ErrNotFound {
-			return c.JSON(404, map[string]string{"error": "task not found"})
+			return c.JSON(404, map[string]string{"error": "tarefa não encontrada"})
 		}
 		return c.JSON(400, map[string]string{"error": err.Error()})
 	}

@@ -23,27 +23,27 @@ func NewService(sessionStore *Store, taskStore *taskdom.Store) *Service {
 func (s *Service) ClockIn(projectID, taskID, personID string) (*WorkSession, error) {
 	task, err := s.taskStore.GetByID(taskID)
 	if err != nil {
-		return nil, errors.New("task not found")
+		return nil, errors.New("tarefa não encontrada")
 	}
 	if task.ProjectID.String() != projectID {
-		return nil, errors.New("task does not belong to this project")
+		return nil, errors.New("a tarefa não é deste projeto")
 	}
 
 	personUID, err := uuid.Parse(personID)
 	if err != nil {
-		return nil, errors.New("person not found")
+		return nil, errors.New("pessoa não encontrada")
 	}
 	inOrg, err := s.sessionStore.PersonInProjectOrganization(personID, projectID)
 	if err != nil {
 		return nil, err
 	}
 	if !inOrg {
-		return nil, errors.New("person not found in this organization")
+		return nil, errors.New("pessoa não encontrada nesta organização")
 	}
 
 	_, err = s.sessionStore.GetActiveByPerson(personID)
 	if err == nil {
-		return nil, errors.New("already clocked in")
+		return nil, errors.New("já existe um ponto aberto para esta pessoa; pare a sessão atual antes de iniciar outra")
 	}
 	if !errors.Is(err, database.ErrNotFound) {
 		return nil, err
@@ -58,7 +58,7 @@ func (s *Service) ClockIn(projectID, taskID, personID string) (*WorkSession, err
 		// Duas requisições simultâneas passam pela checagem acima; o índice
 		// one_active_session barra a segunda aqui.
 		if ent.IsConstraintError(err) {
-			return nil, errors.New("already clocked in")
+			return nil, errors.New("já existe um ponto aberto para esta pessoa; pare a sessão atual antes de iniciar outra")
 		}
 		return nil, err
 	}
@@ -78,7 +78,7 @@ func (s *Service) ClockOut(personID string) (*WorkSession, error) {
 	active, err := s.sessionStore.GetActiveByPerson(personID)
 	if err != nil {
 		if errors.Is(err, database.ErrNotFound) {
-			return nil, errors.New("no active session found")
+			return nil, errors.New("não há ponto aberto para esta pessoa")
 		}
 		return nil, err
 	}
@@ -121,5 +121,5 @@ func (s *Service) TotalTime(projectID string, taskID, personID *string) (*TotalT
 		}
 		return &TotalTimeResult{TotalSeconds: total}, nil
 	}
-	return nil, errors.New("task_id or person_id filter is required")
+	return nil, errors.New("filtre por task_id ou person_id")
 }

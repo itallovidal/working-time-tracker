@@ -18,7 +18,7 @@ func Register(integrationType string, factory Factory) {
 func GetIntegration(integrationType string) (Integration, error) {
 	factory, ok := registry[integrationType]
 	if !ok {
-		return nil, fmt.Errorf("unsupported integration type: %s", integrationType)
+		return nil, fmt.Errorf("tipo de integração não suportado: %s", integrationType)
 	}
 	return factory(), nil
 }

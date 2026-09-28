@@ -17,9 +17,16 @@ func NewService(store *Store, encryptKey string) *Service {
 	return &Service{store: store, encryptKey: encryptKey}
 }
 
+// redact tira a config (criptografada) da integração antes de ela sair do
+// service, guardando só se havia credencial.
+func redact(it *Integration) {
+	it.HasConfig = len(it.Config) > 0
+	it.Config = nil
+}
+
 func (s *Service) Create(projectID, integrationType, displayName string, config map[string]interface{}, enabled bool) (*Integration, error) {
 	if displayName == "" {
-		return nil, errors.New("display_name is required")
+		return nil, errors.New("informe o nome da integração")
 	}
 
 	impl, err := adapter.GetIntegration(integrationType)
@@ -46,7 +53,7 @@ func (s *Service) Create(projectID, integrationType, displayName string, config 
 	if err := s.store.Create(it); err != nil {
 		return nil, err
 	}
-	it.Config = nil
+	redact(it)
 	return it, nil
 }
 
@@ -56,7 +63,7 @@ func (s *Service) ListByProject(projectID string) ([]Integration, error) {
 		return nil, err
 	}
 	for i := range integrations {
-		integrations[i].Config = nil
+		redact(&integrations[i])
 	}
 	return integrations, nil
 }
@@ -66,7 +73,7 @@ func (s *Service) Get(id string) (*Integration, error) {
 	if err != nil {
 		return nil, err
 	}
-	it.Config = nil
+	redact(it)
 	return it, nil
 }
 
@@ -102,7 +109,7 @@ func (s *Service) Update(id, displayName string, config map[string]interface{}, 
 	if err := s.store.Update(existing); err != nil {
 		return nil, err
 	}
-	existing.Config = nil
+	redact(existing)
 	return existing, nil
 }
 
@@ -122,6 +129,10 @@ func (s *Service) FetchItemDetails(integrationID, itemID string) (*adapter.Exter
 	existing, err := s.store.GetByID(integrationID)
 	if err != nil {
 		return nil, err
+	}
+	if !existing.Enabled {
+		msg := "a integração está desativada"
+		return &adapter.ExternalDetailsResult{Details: nil, Error: &msg}, nil
 	}
 
 	decrypted, err := adapter.DecryptConfig(existing.Config, s.encryptKey)

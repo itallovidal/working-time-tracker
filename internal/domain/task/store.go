@@ -129,15 +129,16 @@ func toDomainTask(e *ent.Task) *Task {
 		return nil
 	}
 	t := &Task{
-		ID:              e.ID,
-		ProjectID:       e.ProjectID,
-		Name:            e.Name,
-		Description:     e.Description,
-		AssigneeID:      e.AssigneeID,
-		Deadline:        e.Deadline,
-		ExternalItemID:  e.ExternalItemID,
-		ExternalItemURL: e.ExternalItemURL,
-		CreatedAt:       e.CreatedAt,
+		ID:                    e.ID,
+		ProjectID:             e.ProjectID,
+		Name:                  e.Name,
+		Description:           e.Description,
+		AssigneeID:            e.AssigneeID,
+		Deadline:              e.Deadline,
+		ExternalIntegrationID: e.ExternalIntegrationID,
+		ExternalItemID:        e.ExternalItemID,
+		ExternalItemURL:       e.ExternalItemURL,
+		CreatedAt:             e.CreatedAt,
 	}
 	if e.Edges.Assignee != nil {
 		t.Assignee = &Person{

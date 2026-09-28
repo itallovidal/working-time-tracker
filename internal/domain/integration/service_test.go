@@ -210,3 +210,34 @@ func TestService_FetchItemDetails(t *testing.T) {
 		t.Errorf("expected nil details and an error message, got %+v", missing)
 	}
 }
+
+func TestService_HasConfigAndDisabledFetch(t *testing.T) {
+	cleanup(t)
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	projSvc := project.NewService(project.NewStore(testClient))
+	svc := integration.NewService(integration.NewStore(testClient), "test-32-byte-encryption-key!!!!")
+
+	org, _ := orgSvc.Create("Org")
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil)
+
+	// Criada desativada: has_config tem que refletir a credencial, não o enabled.
+	created, err := svc.Create(proj.ID.String(), "github", "GitHub", map[string]interface{}{
+		"token": "ghp_test",
+		"repo":  "owner/repo",
+	}, false)
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	got, _ := svc.Get(created.ID.String())
+	if !got.HasConfig || got.Config != nil {
+		t.Errorf("HasConfig = %v, Config = %v; want true and nil", got.HasConfig, got.Config)
+	}
+
+	res, err := svc.FetchItemDetails(created.ID.String(), "42")
+	if err != nil {
+		t.Fatalf("fetch on disabled integration should degrade gracefully, got %v", err)
+	}
+	if res.Details != nil || res.Error == nil {
+		t.Errorf("disabled integration returned %+v, want nil details and an error message", res)
+	}
+}

@@ -25,7 +25,7 @@ func toIntegrationResponse(m *Integration) integrationResponse {
 		ProjectID:   m.ProjectID,
 		Type:        m.Type,
 		DisplayName: m.DisplayName,
-		HasConfig:   m.Enabled,
+		HasConfig:   m.HasConfig,
 		Enabled:     m.Enabled,
 		CreatedAt:   m.CreatedAt,
 	}
@@ -56,10 +56,10 @@ func (h *Handler) Create(c *echo.Context) error {
 		Enabled     bool                   `json:"enabled"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return c.JSON(400, map[string]string{"error": "invalid request body"})
+		return c.JSON(400, map[string]string{"error": "corpo da requisição inválido"})
 	}
 	if body.Type == "" {
-		return c.JSON(400, map[string]string{"error": "type is required"})
+		return c.JSON(400, map[string]string{"error": "informe o tipo da integração"})
 	}
 	it, err := h.svc.Create(projectID, body.Type, body.DisplayName, body.Config, body.Enabled)
 	if err != nil {
@@ -82,7 +82,7 @@ func (h *Handler) Get(c *echo.Context) error {
 	it, err := h.svc.Get(id)
 	if err != nil {
 		if err == database.ErrNotFound {
-			return c.JSON(404, map[string]string{"error": "integration not found"})
+			return c.JSON(404, map[string]string{"error": "integração não encontrada"})
 		}
 		return c.JSON(500, map[string]string{"error": err.Error()})
 	}
@@ -97,7 +97,7 @@ func (h *Handler) Update(c *echo.Context) error {
 		Enabled     *bool                  `json:"enabled"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return c.JSON(400, map[string]string{"error": "invalid request body"})
+		return c.JSON(400, map[string]string{"error": "corpo da requisição inválido"})
 	}
 	it, err := h.svc.Update(id, body.DisplayName, body.Config, body.Enabled)
 	if err != nil {

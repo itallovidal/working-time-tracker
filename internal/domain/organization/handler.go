@@ -21,7 +21,7 @@ func (h *Handler) Get(c *echo.Context) error {
 	org, err := h.svc.Get(id)
 	if err != nil {
 		if err == database.ErrNotFound {
-			return c.JSON(http.StatusNotFound, map[string]string{"error": "organization not found"})
+			return c.JSON(http.StatusNotFound, map[string]string{"error": "organização não encontrada"})
 		}
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
@@ -34,7 +34,7 @@ func (h *Handler) Update(c *echo.Context) error {
 		Name string `json:"name"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "corpo da requisição inválido"})
 	}
 	org, err := h.svc.Update(id, body.Name)
 	if err != nil {

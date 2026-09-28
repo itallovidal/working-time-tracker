@@ -9,7 +9,7 @@
     <button type="button" class="btn" x-show="!creating" @click="openCreate()" :disabled="members.length === 0">Nova tarefa</button>
   </div>
 
-  <form class="card" x-cloak x-show="creating" @submit.prevent="create()" novalidate>
+  <form class="card" x-cloak x-show="creating" @submit.prevent="create()">
     <div class="card-head"><h2>Nova tarefa</h2></div>
     <div class="fields">
       <div class="field">

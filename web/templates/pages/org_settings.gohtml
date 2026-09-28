@@ -8,7 +8,7 @@
   </div>
 
   <div class="grid-2">
-    <form class="card" @submit.prevent="saveOrg()" novalidate>
+    <form class="card" @submit.prevent="saveOrg()">
       <div class="card-head"><h2>Organização</h2></div>
       <div class="field">
         <label for="org-name">Nome</label>
@@ -21,7 +21,7 @@
       {{end}}
     </form>
 
-    <form class="card" @submit.prevent="saveProfile()" novalidate>
+    <form class="card" @submit.prevent="saveProfile()">
       <div class="card-head"><h2>Seu perfil</h2></div>
       <div class="field">
         <label for="me-name">Nome</label>
@@ -36,7 +36,7 @@
       <div class="row row-end"><button type="submit" class="btn" :disabled="pending">Salvar perfil</button></div>
     </form>
 
-    <form class="card" @submit.prevent="changePassword()" novalidate>
+    <form class="card" @submit.prevent="changePassword()">
       <div class="card-head"><h2>Senha</h2></div>
       <div class="field">
         <label for="pw-current">Senha atual</label>

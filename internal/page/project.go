@@ -61,6 +61,11 @@ func (h *Handler) Teams(c *echo.Context) error {
 	return h.projectPage(c, "project_teams", "Times", "teams")
 }
 
+// Integrations configura as integrações do projeto com GitHub e GitLab (S10.1).
+func (h *Handler) Integrations(c *echo.Context) error {
+	return h.projectPage(c, "project_integrations", "Integrações", "integrations")
+}
+
 func (h *Handler) ProjectSettings(c *echo.Context) error {
 	return h.projectPage(c, "project_settings", "Configurações", "settings")
 }

@@ -30,7 +30,7 @@ func (h *Handler) Get(c *echo.Context) error {
 	person, err := h.svc.Get(id)
 	if err != nil {
 		if err == database.ErrNotFound {
-			return c.JSON(http.StatusNotFound, map[string]string{"error": "person not found"})
+			return c.JSON(http.StatusNotFound, map[string]string{"error": "pessoa não encontrada"})
 		}
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
@@ -44,7 +44,7 @@ func (h *Handler) Update(c *echo.Context) error {
 		Email string `json:"email"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "corpo da requisição inválido"})
 	}
 	person, err := h.svc.Update(id, body.Name, body.Email)
 	if err != nil {
@@ -59,12 +59,12 @@ func (h *Handler) SetRole(c *echo.Context) error {
 		Role string `json:"role"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "corpo da requisição inválido"})
 	}
 	person, err := h.svc.SetRole(id, body.Role)
 	if err != nil {
 		if err == database.ErrNotFound {
-			return c.JSON(http.StatusNotFound, map[string]string{"error": "person not found"})
+			return c.JSON(http.StatusNotFound, map[string]string{"error": "pessoa não encontrada"})
 		}
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 	}

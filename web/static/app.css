@@ -166,6 +166,11 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 .check { display: inline-flex; align-items: center; gap: 8px; font-size: 0.92rem; color: var(--ink-2); cursor: pointer; }
 .check input { width: auto; }
 .filters select { width: auto; max-width: 240px; }
+.stack-tight { gap: 4px; }
+.row-tight { gap: 6px; }
+.facts { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 0; font-size: 0.9rem; }
+.facts dt { color: var(--muted); }
+.facts dd { margin: 0; }
 tfoot td { background: var(--surface-2); border-bottom: 0; }
 .self-end { align-self: flex-end; }
 .sr-only {

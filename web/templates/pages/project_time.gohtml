@@ -22,7 +22,7 @@
       </template>
 
       <template x-if="$store.clock.ready && !$store.clock.session">
-        <form class="stack" @submit.prevent="start()" novalidate>
+        <form class="stack" @submit.prevent="start()">
           <div class="clock-status muted">Parado</div>
           <div class="clock-face">00:00:00</div>
           <p class="muted" x-show="tasks.length === 0 && !loading">

@@ -51,15 +51,15 @@ func (g *GitHubIntegration) ValidateConfig(config map[string]interface{}) error 
 
 	resp, err := g.client().Do(req)
 	if err != nil {
-		return fmt.Errorf("cannot reach GitHub API: %w", err)
+		return fmt.Errorf("não foi possível falar com o GitHub: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusUnauthorized {
-		return fmt.Errorf("invalid GitHub token")
+		return fmt.Errorf("token do GitHub inválido")
 	}
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("GitHub API returned status %d", resp.StatusCode)
+		return fmt.Errorf("o GitHub respondeu com status %d", resp.StatusCode)
 	}
 	return nil
 }
@@ -79,15 +79,18 @@ func (g *GitHubIntegration) FetchItemDetails(config map[string]interface{}, item
 
 	resp, err := g.client().Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("cannot reach GitHub API: %w", err)
+		return nil, fmt.Errorf("não foi possível falar com o GitHub: %w", err)
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode == http.StatusUnauthorized {
+		return nil, fmt.Errorf("token do GitHub inválido")
+	}
 	if resp.StatusCode == http.StatusNotFound {
-		return nil, fmt.Errorf("issue %s not found", itemID)
+		return nil, fmt.Errorf("item %s não encontrado", itemID)
 	}
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("GitHub API returned status %d", resp.StatusCode)
+		return nil, fmt.Errorf("o GitHub respondeu com status %d", resp.StatusCode)
 	}
 
 	var body struct {
@@ -96,7 +99,7 @@ func (g *GitHubIntegration) FetchItemDetails(config map[string]interface{}, item
 		HTMLURL string `json:"html_url"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
-		return nil, fmt.Errorf("failed to parse GitHub response: %w", err)
+		return nil, fmt.Errorf("resposta inesperada do GitHub: %w", err)
 	}
 
 	return &ItemDetails{
@@ -110,10 +113,10 @@ func parseGithubConfig(config map[string]interface{}) (*githubConfig, error) {
 	token, _ := config["token"].(string)
 	repo, _ := config["repo"].(string)
 	if token == "" {
-		return nil, fmt.Errorf("github token is required")
+		return nil, fmt.Errorf("informe o token do GitHub")
 	}
 	if repo == "" {
-		return nil, fmt.Errorf("github repo is required")
+		return nil, fmt.Errorf("informe o repositório do GitHub (owner/repo)")
 	}
 	return &githubConfig{Token: token, Repo: repo}, nil
 }

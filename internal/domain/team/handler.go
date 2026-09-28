@@ -21,7 +21,7 @@ func (h *Handler) Create(c *echo.Context) error {
 		Name string `json:"name"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return c.JSON(400, map[string]string{"error": "invalid request body"})
+		return c.JSON(400, map[string]string{"error": "corpo da requisição inválido"})
 	}
 	team, err := h.svc.Create(projectID, body.Name)
 	if err != nil {
@@ -44,7 +44,7 @@ func (h *Handler) Get(c *echo.Context) error {
 	team, err := h.svc.Get(id)
 	if err != nil {
 		if err == database.ErrNotFound {
-			return c.JSON(404, map[string]string{"error": "team not found"})
+			return c.JSON(404, map[string]string{"error": "time não encontrado"})
 		}
 		return c.JSON(500, map[string]string{"error": err.Error()})
 	}
@@ -57,7 +57,7 @@ func (h *Handler) Update(c *echo.Context) error {
 		Name string `json:"name"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return c.JSON(400, map[string]string{"error": "invalid request body"})
+		return c.JSON(400, map[string]string{"error": "corpo da requisição inválido"})
 	}
 	team, err := h.svc.Update(id, body.Name)
 	if err != nil {
@@ -80,10 +80,10 @@ func (h *Handler) AddMember(c *echo.Context) error {
 		PersonID string `json:"person_id"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return c.JSON(400, map[string]string{"error": "invalid request body"})
+		return c.JSON(400, map[string]string{"error": "corpo da requisição inválido"})
 	}
 	if body.PersonID == "" {
-		return c.JSON(400, map[string]string{"error": "person_id is required"})
+		return c.JSON(400, map[string]string{"error": "informe a pessoa (person_id)"})
 	}
 	membership, err := h.membershipSvc.Add(teamID, body.PersonID)
 	if err != nil {
@@ -98,10 +98,10 @@ func (h *Handler) RemoveMember(c *echo.Context) error {
 		PersonID string `json:"person_id"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return c.JSON(400, map[string]string{"error": "invalid request body"})
+		return c.JSON(400, map[string]string{"error": "corpo da requisição inválido"})
 	}
 	if body.PersonID == "" {
-		return c.JSON(400, map[string]string{"error": "person_id is required"})
+		return c.JSON(400, map[string]string{"error": "informe a pessoa (person_id)"})
 	}
 	if err := h.membershipSvc.Remove(teamID, body.PersonID); err != nil {
 		return c.JSON(400, map[string]string{"error": err.Error()})

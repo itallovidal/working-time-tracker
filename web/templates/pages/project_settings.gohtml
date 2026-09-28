@@ -4,7 +4,7 @@
 
   <p class="muted" x-show="loading">Carregando…</p>
   <div class="grid-aside" x-cloak x-show="!loading">
-    <form class="card" @submit.prevent="save()" novalidate>
+    <form class="card" @submit.prevent="save()">
       <div class="card-head"><h2>Projeto</h2></div>
       <div class="field">
         <label for="ps-name">Nome</label>

@@ -134,7 +134,28 @@
     }
   }
 
-  window.WTT = { api, ApiError, form, fmt, copyText, weekdays, boot: window.BOOT || {} };
+  // Tipos de integração e os campos de credencial de cada um. Um tipo novo no
+  // backend (internal/adapter) precisa de uma entrada aqui para aparecer na tela.
+  const integrationTypes = [
+    {
+      value: 'github',
+      label: 'GitHub',
+      fields: [
+        { key: 'token', label: 'Token de acesso', type: 'password', hint: 'Token pessoal com permissão de leitura de issues.' },
+        { key: 'repo', label: 'Repositório', type: 'text', placeholder: 'dono/repositorio' },
+      ],
+    },
+    {
+      value: 'gitlab',
+      label: 'GitLab',
+      fields: [
+        { key: 'token', label: 'Token de acesso', type: 'password', hint: 'Token com escopo read_api.' },
+        { key: 'project_url', label: 'Projeto', type: 'text', placeholder: 'grupo/projeto ou https://gitlab.com/grupo/projeto' },
+      ],
+    },
+  ];
+
+  window.WTT = { api, ApiError, form, fmt, copyText, weekdays, integrationTypes, boot: window.BOOT || {} };
 
   document.addEventListener('alpine:init', () => {
     Alpine.store('toast', {
