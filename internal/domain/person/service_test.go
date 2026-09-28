@@ -86,7 +86,8 @@ func TestService_ListByOrg(t *testing.T) {
 	}
 }
 
-func TestService_ListByOrg_SameEmailDifferentOrg(t *testing.T) {
+// O email identifica a conta no login, então não pode se repetir nem entre organizações.
+func TestService_Create_EmailUniqueAcrossOrgs(t *testing.T) {
 	cleanup(t)
 	orgSvc := organization.NewService(organization.NewStore(testClient))
 	svc := person.NewService(person.NewStore(testClient))
@@ -94,10 +95,52 @@ func TestService_ListByOrg_SameEmailDifferentOrg(t *testing.T) {
 	orgA, _ := orgSvc.Create("Org A")
 	orgB, _ := orgSvc.Create("Org B")
 
-	svc.Create(orgA.ID.String(), "John", "john@test.com")
-	_, err := svc.Create(orgB.ID.String(), "John", "john@test.com")
-	if err != nil {
-		t.Fatalf("same email in different org should be allowed: %v", err)
+	if _, err := svc.Create(orgA.ID.String(), "John", "john@test.com"); err != nil {
+		t.Fatalf("first create failed: %v", err)
+	}
+	if _, err := svc.Create(orgB.ID.String(), "John", " John@Test.com "); err != person.ErrEmailInUse {
+		t.Fatalf("expected ErrEmailInUse for the same email (any case) in another org, got %v", err)
+	}
+}
+
+func TestService_Update_EmailInUse(t *testing.T) {
+	cleanup(t)
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	svc := person.NewService(person.NewStore(testClient))
+
+	org, _ := orgSvc.Create("Org")
+	svc.Create(org.ID.String(), "Ana", "ana@test.com")
+	bia, _ := svc.Create(org.ID.String(), "Bia", "bia@test.com")
+
+	if _, err := svc.Update(bia.ID.String(), "Bia", "ana@test.com"); err != person.ErrEmailInUse {
+		t.Fatalf("expected ErrEmailInUse, got %v", err)
+	}
+	// Manter o próprio email não conta como duplicado.
+	if _, err := svc.Update(bia.ID.String(), "Bia Souza", "bia@test.com"); err != nil {
+		t.Fatalf("keeping own email should work: %v", err)
+	}
+}
+
+func TestService_SetRole_LastAdmin(t *testing.T) {
+	cleanup(t)
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	svc := person.NewService(person.NewStore(testClient))
+
+	org, _ := orgSvc.Create("Org")
+	ana, _ := svc.Create(org.ID.String(), "Ana", "ana@test.com")
+	bia, _ := svc.Create(org.ID.String(), "Bia", "bia@test.com")
+
+	if _, err := svc.SetRole(ana.ID.String(), person.RoleAdmin); err != nil {
+		t.Fatalf("promote ana: %v", err)
+	}
+	if _, err := svc.SetRole(ana.ID.String(), person.RoleMember); err != person.ErrLastAdmin {
+		t.Fatalf("expected ErrLastAdmin, got %v", err)
+	}
+	if _, err := svc.SetRole(bia.ID.String(), person.RoleAdmin); err != nil {
+		t.Fatalf("promote bia: %v", err)
+	}
+	if _, err := svc.SetRole(ana.ID.String(), person.RoleMember); err != nil {
+		t.Fatalf("with two admins, demoting one should work: %v", err)
 	}
 }
 

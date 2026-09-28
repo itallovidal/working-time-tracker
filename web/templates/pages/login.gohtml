@@ -1,0 +1,24 @@
+{{define "content"}}
+<main class="auth-page">
+  <form class="auth-card" x-data="loginForm" @submit.prevent="submit()" novalidate>
+    <span class="brand"><span class="brand-mark" aria-hidden="true"></span>Working Time Tracker</span>
+    <div class="stack">
+      <h1>Entrar</h1>
+      <p class="muted">Use o email e a senha da sua conta.</p>
+    </div>
+    <div class="field">
+      <label for="login-email">Email</label>
+      <input id="login-email" type="email" autocomplete="email" required x-model="email" autofocus>
+    </div>
+    <div class="field">
+      <label for="login-password">Senha</label>
+      <input id="login-password" type="password" autocomplete="current-password" required x-model="password">
+    </div>
+    <p class="form-error" x-cloak x-show="errors.login" x-text="errors.login" role="alert"></p>
+    <button class="btn btn-block" type="submit" :disabled="pending">
+      <span x-text="pending ? 'Entrando…' : 'Entrar'">Entrar</span>
+    </button>
+    <p class="auth-foot">Ainda não tem conta? <a href="/signup">Crie uma organização</a></p>
+  </form>
+</main>
+{{end}}

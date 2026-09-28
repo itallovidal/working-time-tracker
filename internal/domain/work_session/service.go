@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"working-time-tracker/ent"
 	"working-time-tracker/internal/database"
 	taskdom "working-time-tracker/internal/domain/task"
 )
@@ -28,6 +29,18 @@ func (s *Service) ClockIn(projectID, taskID, personID string) (*WorkSession, err
 		return nil, errors.New("task does not belong to this project")
 	}
 
+	personUID, err := uuid.Parse(personID)
+	if err != nil {
+		return nil, errors.New("person not found")
+	}
+	inOrg, err := s.sessionStore.PersonInProjectOrganization(personID, projectID)
+	if err != nil {
+		return nil, err
+	}
+	if !inOrg {
+		return nil, errors.New("person not found in this organization")
+	}
+
 	_, err = s.sessionStore.GetActiveByPerson(personID)
 	if err == nil {
 		return nil, errors.New("already clocked in")
@@ -37,11 +50,16 @@ func (s *Service) ClockIn(projectID, taskID, personID string) (*WorkSession, err
 	}
 
 	session := &WorkSession{
-		TaskID:   uuid.MustParse(taskID),
-		PersonID: uuid.MustParse(personID),
+		TaskID:   task.ID,
+		PersonID: personUID,
 		StartAt:  time.Now(),
 	}
 	if err := s.sessionStore.Create(session); err != nil {
+		// Duas requisições simultâneas passam pela checagem acima; o índice
+		// one_active_session barra a segunda aqui.
+		if ent.IsConstraintError(err) {
+			return nil, errors.New("already clocked in")
+		}
 		return nil, err
 	}
 	return session, nil

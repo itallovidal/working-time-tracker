@@ -9,9 +9,11 @@ import (
 	"reflect"
 	"sync"
 	"working-time-tracker/ent/integration"
+	"working-time-tracker/ent/invite"
 	"working-time-tracker/ent/organization"
 	"working-time-tracker/ent/person"
 	"working-time-tracker/ent/project"
+	"working-time-tracker/ent/session"
 	"working-time-tracker/ent/task"
 	"working-time-tracker/ent/team"
 	"working-time-tracker/ent/teammembership"
@@ -81,9 +83,11 @@ func checkColumn(t, c string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
 			integration.Table:    integration.ValidColumn,
+			invite.Table:         invite.ValidColumn,
 			organization.Table:   organization.ValidColumn,
 			person.Table:         person.ValidColumn,
 			project.Table:        project.ValidColumn,
+			session.Table:        session.ValidColumn,
 			task.Table:           task.ValidColumn,
 			team.Table:           team.ValidColumn,
 			teammembership.Table: teammembership.ValidColumn,

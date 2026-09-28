@@ -12,6 +12,7 @@ type Config struct {
 	APIPort               string
 	DatabaseURL           string
 	IntegrationEncryptKey string
+	CookieSecure          bool
 }
 
 func Load() (*Config, error) {
@@ -21,6 +22,7 @@ func Load() (*Config, error) {
 		APIPort:               os.Getenv("API_PORT"),
 		DatabaseURL:           os.Getenv("DATABASE_URL"),
 		IntegrationEncryptKey: os.Getenv("INTEGRATION_ENCRYPTION_KEY"),
+		CookieSecure:          os.Getenv("COOKIE_SECURE") == "true",
 	}
 
 	var missing []string

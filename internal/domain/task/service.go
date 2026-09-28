@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 
 	"working-time-tracker/internal/adapter"
+	"working-time-tracker/internal/database"
 	"working-time-tracker/internal/domain/integration"
 	"working-time-tracker/internal/domain/team"
 )
@@ -76,7 +77,20 @@ func (s *Service) Update(id, name, description string, assigneeID *string, deadl
 	task.Name = name
 	task.Description = description
 	if assigneeID != nil {
-		task.AssigneeID = uuid.MustParse(*assigneeID)
+		uid, err := uuid.Parse(*assigneeID)
+		if err != nil {
+			return nil, errors.New("invalid assignee")
+		}
+		if uid != task.AssigneeID {
+			isMember, err := s.membershipStore.IsPersonInProject(*assigneeID, task.ProjectID.String())
+			if err != nil {
+				return nil, err
+			}
+			if !isMember {
+				return nil, errors.New("assignee must be a team member of this project")
+			}
+		}
+		task.AssigneeID = uid
 	}
 	if deadline != nil {
 		task.Deadline = *deadline
@@ -96,7 +110,20 @@ func (s *Service) LinkExternalItem(taskID, integrationID, externalItemID, extern
 	if err != nil {
 		return nil, err
 	}
-	eid := uuid.MustParse(integrationID)
+	eid, err := uuid.Parse(integrationID)
+	if err != nil {
+		return nil, errors.New("integration not found")
+	}
+	integrationProject, err := s.taskStore.IntegrationProjectID(eid)
+	if errors.Is(err, database.ErrNotFound) {
+		return nil, errors.New("integration not found")
+	}
+	if err != nil {
+		return nil, err
+	}
+	if integrationProject != task.ProjectID {
+		return nil, errors.New("integration belongs to another project")
+	}
 	task.ExternalIntegrationID = &eid
 	task.ExternalItemID = &externalItemID
 	task.ExternalItemURL = &externalItemURL

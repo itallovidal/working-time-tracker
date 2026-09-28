@@ -29,8 +29,11 @@ func TestHandler_Create(t *testing.T) {
 	integH := integration.NewHandler(integSvc)
 	registerRoutes(e, orgH, projH, integH)
 
-	org := mustCreate(t, e, "POST", "/api/orgs/", `{"name":"Org"}`)
-	orgID := jsonPath(org, "id")
+	org, err := orgSvc.Create("Org")
+	if err != nil {
+		t.Fatalf("create org: %v", err)
+	}
+	orgID := org.ID.String()
 	proj := mustCreate(t, e, "POST", "/api/orgs/"+orgID+"/projects", `{"name":"Project"}`)
 	projectID := jsonPath(proj, "id")
 
@@ -64,8 +67,11 @@ func TestHandler_Create_InvalidType(t *testing.T) {
 	integH := integration.NewHandler(integSvc)
 	registerRoutes(e, orgH, projH, integH)
 
-	org := mustCreate(t, e, "POST", "/api/orgs/", `{"name":"Org"}`)
-	orgID := jsonPath(org, "id")
+	org, err := orgSvc.Create("Org")
+	if err != nil {
+		t.Fatalf("create org: %v", err)
+	}
+	orgID := org.ID.String()
 	proj := mustCreate(t, e, "POST", "/api/orgs/"+orgID+"/projects", `{"name":"Project"}`)
 	projectID := jsonPath(proj, "id")
 
@@ -86,7 +92,6 @@ func registerRoutes(
 	integH *integration.Handler,
 ) {
 	orgs := e.Group("/api/orgs")
-	orgs.POST("/", orgH.Create)
 	orgs.POST("/:orgId/projects", projH.Create)
 
 	projects := e.Group("/api/projects")

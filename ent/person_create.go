@@ -7,8 +7,10 @@ import (
 	"errors"
 	"fmt"
 	"time"
+	"working-time-tracker/ent/invite"
 	"working-time-tracker/ent/organization"
 	"working-time-tracker/ent/person"
+	"working-time-tracker/ent/session"
 	"working-time-tracker/ent/task"
 	"working-time-tracker/ent/teammembership"
 	"working-time-tracker/ent/worksession"
@@ -40,6 +42,34 @@ func (_c *PersonCreate) SetEmail(v string) *PersonCreate {
 // SetOrganizationID sets the "organization_id" field.
 func (_c *PersonCreate) SetOrganizationID(v uuid.UUID) *PersonCreate {
 	_c.mutation.SetOrganizationID(v)
+	return _c
+}
+
+// SetPasswordHash sets the "password_hash" field.
+func (_c *PersonCreate) SetPasswordHash(v string) *PersonCreate {
+	_c.mutation.SetPasswordHash(v)
+	return _c
+}
+
+// SetNillablePasswordHash sets the "password_hash" field if the given value is not nil.
+func (_c *PersonCreate) SetNillablePasswordHash(v *string) *PersonCreate {
+	if v != nil {
+		_c.SetPasswordHash(*v)
+	}
+	return _c
+}
+
+// SetRole sets the "role" field.
+func (_c *PersonCreate) SetRole(v person.Role) *PersonCreate {
+	_c.mutation.SetRole(v)
+	return _c
+}
+
+// SetNillableRole sets the "role" field if the given value is not nil.
+func (_c *PersonCreate) SetNillableRole(v *person.Role) *PersonCreate {
+	if v != nil {
+		_c.SetRole(*v)
+	}
 	return _c
 }
 
@@ -121,6 +151,36 @@ func (_c *PersonCreate) AddWorkSessions(v ...*WorkSession) *PersonCreate {
 	return _c.AddWorkSessionIDs(ids...)
 }
 
+// AddSessionIDs adds the "sessions" edge to the Session entity by IDs.
+func (_c *PersonCreate) AddSessionIDs(ids ...uuid.UUID) *PersonCreate {
+	_c.mutation.AddSessionIDs(ids...)
+	return _c
+}
+
+// AddSessions adds the "sessions" edges to the Session entity.
+func (_c *PersonCreate) AddSessions(v ...*Session) *PersonCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddSessionIDs(ids...)
+}
+
+// AddCreatedInviteIDs adds the "created_invites" edge to the Invite entity by IDs.
+func (_c *PersonCreate) AddCreatedInviteIDs(ids ...uuid.UUID) *PersonCreate {
+	_c.mutation.AddCreatedInviteIDs(ids...)
+	return _c
+}
+
+// AddCreatedInvites adds the "created_invites" edges to the Invite entity.
+func (_c *PersonCreate) AddCreatedInvites(v ...*Invite) *PersonCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddCreatedInviteIDs(ids...)
+}
+
 // Mutation returns the PersonMutation object of the builder.
 func (_c *PersonCreate) Mutation() *PersonMutation {
 	return _c.mutation
@@ -156,6 +216,10 @@ func (_c *PersonCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (_c *PersonCreate) defaults() {
+	if _, ok := _c.mutation.Role(); !ok {
+		v := person.DefaultRole
+		_c.mutation.SetRole(v)
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := person.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
@@ -176,6 +240,14 @@ func (_c *PersonCreate) check() error {
 	}
 	if _, ok := _c.mutation.OrganizationID(); !ok {
 		return &ValidationError{Name: "organization_id", err: errors.New(`ent: missing required field "Person.organization_id"`)}
+	}
+	if _, ok := _c.mutation.Role(); !ok {
+		return &ValidationError{Name: "role", err: errors.New(`ent: missing required field "Person.role"`)}
+	}
+	if v, ok := _c.mutation.Role(); ok {
+		if err := person.RoleValidator(v); err != nil {
+			return &ValidationError{Name: "role", err: fmt.Errorf(`ent: validator failed for field "Person.role": %w`, err)}
+		}
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "Person.created_at"`)}
@@ -225,6 +297,14 @@ func (_c *PersonCreate) createSpec() (*Person, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Email(); ok {
 		_spec.SetField(person.FieldEmail, field.TypeString, value)
 		_node.Email = value
+	}
+	if value, ok := _c.mutation.PasswordHash(); ok {
+		_spec.SetField(person.FieldPasswordHash, field.TypeString, value)
+		_node.PasswordHash = &value
+	}
+	if value, ok := _c.mutation.Role(); ok {
+		_spec.SetField(person.FieldRole, field.TypeEnum, value)
+		_node.Role = value
 	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(person.FieldCreatedAt, field.TypeTime, value)
@@ -288,6 +368,38 @@ func (_c *PersonCreate) createSpec() (*Person, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(worksession.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.SessionsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   person.SessionsTable,
+			Columns: []string{person.SessionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(session.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.CreatedInvitesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   person.CreatedInvitesTable,
+			Columns: []string{person.CreatedInvitesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(invite.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

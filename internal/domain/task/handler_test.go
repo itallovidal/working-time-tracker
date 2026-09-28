@@ -48,10 +48,16 @@ func setupTestApp(t *testing.T) *testApp {
 		task.NewHandler(taskSvc),
 	)
 
-	org := mustCreate(t, e, "POST", "/api/orgs/", `{"name":"Org"}`)
-	orgID := jsonPath(org, "id")
-	personObj := mustCreate(t, e, "POST", "/api/orgs/"+orgID+"/persons", `{"name":"John","email":"john@test.com"}`)
-	personID := jsonPath(personObj, "id")
+	org, err := orgSvc.Create("Org")
+	if err != nil {
+		t.Fatalf("create org: %v", err)
+	}
+	orgID := org.ID.String()
+	personObj, err := personSvc.Create(orgID, "John", "john@test.com")
+	if err != nil {
+		t.Fatalf("create person: %v", err)
+	}
+	personID := personObj.ID.String()
 	projObj := mustCreate(t, e, "POST", "/api/orgs/"+orgID+"/projects", `{"name":"Project"}`)
 	projectID := jsonPath(projObj, "id")
 	teamObj := mustCreate(t, e, "POST", "/api/projects/"+projectID+"/teams", `{"name":"Team A"}`)
@@ -90,9 +96,14 @@ func TestHandler_Create_MissingAssignee(t *testing.T) {
 	taskH := task.NewHandler(taskSvc)
 	registerRoutes(e, orgH, personH, projH, teamH, taskH)
 
-	org := mustCreate(t, e, "POST", "/api/orgs/", `{"name":"Org"}`)
-	orgID := jsonPath(org, "id")
-	mustCreate(t, e, "POST", "/api/orgs/"+orgID+"/persons", `{"name":"John","email":"john@test.com"}`)
+	org, err := orgSvc.Create("Org")
+	if err != nil {
+		t.Fatalf("create org: %v", err)
+	}
+	orgID := org.ID.String()
+	if _, err := personSvc.Create(orgID, "John", "john@test.com"); err != nil {
+		t.Fatalf("create person: %v", err)
+	}
 	proj := mustCreate(t, e, "POST", "/api/orgs/"+orgID+"/projects", `{"name":"Project"}`)
 	projectID := jsonPath(proj, "id")
 
@@ -155,8 +166,6 @@ func registerRoutes(
 	taskH *task.Handler,
 ) {
 	orgs := e.Group("/api/orgs")
-	orgs.POST("/", orgH.Create)
-	orgs.POST("/:orgId/persons", personH.Create)
 	orgs.POST("/:orgId/projects", projH.Create)
 
 	projects := e.Group("/api/projects")

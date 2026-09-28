@@ -9,6 +9,9 @@ import (
 // Integration is the predicate function for integration builders.
 type Integration func(*sql.Selector)
 
+// Invite is the predicate function for invite builders.
+type Invite func(*sql.Selector)
+
 // Organization is the predicate function for organization builders.
 type Organization func(*sql.Selector)
 
@@ -17,6 +20,9 @@ type Person func(*sql.Selector)
 
 // Project is the predicate function for project builders.
 type Project func(*sql.Selector)
+
+// Session is the predicate function for session builders.
+type Session func(*sql.Selector)
 
 // Task is the predicate function for task builders.
 type Task func(*sql.Selector)

@@ -1,0 +1,26 @@
+{{define "topbar"}}
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="/orgs/{{.OrgID}}">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span>{{.Me.OrganizationName}}</span>
+    </a>
+    <nav class="mainnav" aria-label="Organização">
+      <a href="/orgs/{{.OrgID}}" {{if eq .Section "projects"}}aria-current="page"{{end}}>Projetos</a>
+      <a href="/orgs/{{.OrgID}}/people" {{if eq .Section "people"}}aria-current="page"{{end}}>Pessoas</a>
+      <a href="/orgs/{{.OrgID}}/settings" {{if eq .Section "settings"}}aria-current="page"{{end}}>Configurações</a>
+    </nav>
+    <div class="topbar-right">
+      {{template "active_session" .}}
+      <span class="me" title="{{.Me.Email}}">
+        <span class="avatar" aria-hidden="true">{{.Initials}}</span>
+        <span class="name">{{.Me.Name}}</span>
+        {{if .IsAdmin}}<span class="badge badge-accent">Admin</span>{{end}}
+      </span>
+      <span x-data="logoutButton">
+        <button type="button" class="btn btn-ghost btn-sm" @click="logout()" :disabled="busy">Sair</button>
+      </span>
+    </div>
+  </div>
+</header>
+{{end}}

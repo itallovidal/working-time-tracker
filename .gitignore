@@ -1,0 +1,5 @@
+# Configuração local com segredos
+.env
+
+# Binário gerado por `go build -o wtt ./cmd`
+/wtt

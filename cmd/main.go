@@ -24,7 +24,13 @@ func main() {
 		log.Fatalf("migration: %v", err)
 	}
 
-	e := server.New(db.Client, ENV.IntegrationEncryptKey)
+	e, err := server.New(db.Client, server.Options{
+		EncryptKey:   ENV.IntegrationEncryptKey,
+		CookieSecure: ENV.CookieSecure,
+	})
+	if err != nil {
+		log.Fatalf("server: %v", err)
+	}
 
 	if err := e.Start(":" + ENV.APIPort); err != nil {
 		e.Logger.Error("failed to start server", "error", err)

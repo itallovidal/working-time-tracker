@@ -16,28 +16,6 @@ func NewHandler(svc *Service) *Handler {
 	return &Handler{svc: svc}
 }
 
-func (h *Handler) Create(c *echo.Context) error {
-	var body struct {
-		Name string `json:"name"`
-	}
-	if err := c.Bind(&body); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request body"})
-	}
-	org, err := h.svc.Create(body.Name)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
-	}
-	return c.JSON(http.StatusCreated, org)
-}
-
-func (h *Handler) List(c *echo.Context) error {
-	orgs, err := h.svc.List()
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
-	}
-	return c.JSON(http.StatusOK, orgs)
-}
-
 func (h *Handler) Get(c *echo.Context) error {
 	id := c.Param("orgId")
 	org, err := h.svc.Get(id)

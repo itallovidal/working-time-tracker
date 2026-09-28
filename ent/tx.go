@@ -14,12 +14,16 @@ type Tx struct {
 	config
 	// Integration is the client for interacting with the Integration builders.
 	Integration *IntegrationClient
+	// Invite is the client for interacting with the Invite builders.
+	Invite *InviteClient
 	// Organization is the client for interacting with the Organization builders.
 	Organization *OrganizationClient
 	// Person is the client for interacting with the Person builders.
 	Person *PersonClient
 	// Project is the client for interacting with the Project builders.
 	Project *ProjectClient
+	// Session is the client for interacting with the Session builders.
+	Session *SessionClient
 	// Task is the client for interacting with the Task builders.
 	Task *TaskClient
 	// Team is the client for interacting with the Team builders.
@@ -160,9 +164,11 @@ func (tx *Tx) Client() *Client {
 
 func (tx *Tx) init() {
 	tx.Integration = NewIntegrationClient(tx.config)
+	tx.Invite = NewInviteClient(tx.config)
 	tx.Organization = NewOrganizationClient(tx.config)
 	tx.Person = NewPersonClient(tx.config)
 	tx.Project = NewProjectClient(tx.config)
+	tx.Session = NewSessionClient(tx.config)
 	tx.Task = NewTaskClient(tx.config)
 	tx.Team = NewTeamClient(tx.config)
 	tx.TeamMembership = NewTeamMembershipClient(tx.config)

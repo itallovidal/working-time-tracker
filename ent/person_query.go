@@ -7,9 +7,11 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"math"
+	"working-time-tracker/ent/invite"
 	"working-time-tracker/ent/organization"
 	"working-time-tracker/ent/person"
 	"working-time-tracker/ent/predicate"
+	"working-time-tracker/ent/session"
 	"working-time-tracker/ent/task"
 	"working-time-tracker/ent/teammembership"
 	"working-time-tracker/ent/worksession"
@@ -32,6 +34,8 @@ type PersonQuery struct {
 	withTasks           *TaskQuery
 	withTeamMemberships *TeamMembershipQuery
 	withWorkSessions    *WorkSessionQuery
+	withSessions        *SessionQuery
+	withCreatedInvites  *InviteQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -149,6 +153,50 @@ func (_q *PersonQuery) QueryWorkSessions() *WorkSessionQuery {
 			sqlgraph.From(person.Table, person.FieldID, selector),
 			sqlgraph.To(worksession.Table, worksession.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, person.WorkSessionsTable, person.WorkSessionsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QuerySessions chains the current query on the "sessions" edge.
+func (_q *PersonQuery) QuerySessions() *SessionQuery {
+	query := (&SessionClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(person.Table, person.FieldID, selector),
+			sqlgraph.To(session.Table, session.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, person.SessionsTable, person.SessionsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryCreatedInvites chains the current query on the "created_invites" edge.
+func (_q *PersonQuery) QueryCreatedInvites() *InviteQuery {
+	query := (&InviteClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(person.Table, person.FieldID, selector),
+			sqlgraph.To(invite.Table, invite.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, person.CreatedInvitesTable, person.CreatedInvitesColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -352,6 +400,8 @@ func (_q *PersonQuery) Clone() *PersonQuery {
 		withTasks:           _q.withTasks.Clone(),
 		withTeamMemberships: _q.withTeamMemberships.Clone(),
 		withWorkSessions:    _q.withWorkSessions.Clone(),
+		withSessions:        _q.withSessions.Clone(),
+		withCreatedInvites:  _q.withCreatedInvites.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -399,6 +449,28 @@ func (_q *PersonQuery) WithWorkSessions(opts ...func(*WorkSessionQuery)) *Person
 		opt(query)
 	}
 	_q.withWorkSessions = query
+	return _q
+}
+
+// WithSessions tells the query-builder to eager-load the nodes that are connected to
+// the "sessions" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *PersonQuery) WithSessions(opts ...func(*SessionQuery)) *PersonQuery {
+	query := (&SessionClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withSessions = query
+	return _q
+}
+
+// WithCreatedInvites tells the query-builder to eager-load the nodes that are connected to
+// the "created_invites" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *PersonQuery) WithCreatedInvites(opts ...func(*InviteQuery)) *PersonQuery {
+	query := (&InviteClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withCreatedInvites = query
 	return _q
 }
 
@@ -480,11 +552,13 @@ func (_q *PersonQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Perso
 	var (
 		nodes       = []*Person{}
 		_spec       = _q.querySpec()
-		loadedTypes = [4]bool{
+		loadedTypes = [6]bool{
 			_q.withOrganization != nil,
 			_q.withTasks != nil,
 			_q.withTeamMemberships != nil,
 			_q.withWorkSessions != nil,
+			_q.withSessions != nil,
+			_q.withCreatedInvites != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -529,6 +603,20 @@ func (_q *PersonQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Perso
 		if err := _q.loadWorkSessions(ctx, query, nodes,
 			func(n *Person) { n.Edges.WorkSessions = []*WorkSession{} },
 			func(n *Person, e *WorkSession) { n.Edges.WorkSessions = append(n.Edges.WorkSessions, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withSessions; query != nil {
+		if err := _q.loadSessions(ctx, query, nodes,
+			func(n *Person) { n.Edges.Sessions = []*Session{} },
+			func(n *Person, e *Session) { n.Edges.Sessions = append(n.Edges.Sessions, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withCreatedInvites; query != nil {
+		if err := _q.loadCreatedInvites(ctx, query, nodes,
+			func(n *Person) { n.Edges.CreatedInvites = []*Invite{} },
+			func(n *Person, e *Invite) { n.Edges.CreatedInvites = append(n.Edges.CreatedInvites, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -649,6 +737,69 @@ func (_q *PersonQuery) loadWorkSessions(ctx context.Context, query *WorkSessionQ
 		node, ok := nodeids[fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "person_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *PersonQuery) loadSessions(ctx context.Context, query *SessionQuery, nodes []*Person, init func(*Person), assign func(*Person, *Session)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Person)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(session.FieldPersonID)
+	}
+	query.Where(predicate.Session(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(person.SessionsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.PersonID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "person_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *PersonQuery) loadCreatedInvites(ctx context.Context, query *InviteQuery, nodes []*Person, init func(*Person), assign func(*Person, *Invite)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Person)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(invite.FieldCreatedByID)
+	}
+	query.Where(predicate.Invite(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(person.CreatedInvitesColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.CreatedByID
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "created_by_id" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "created_by_id" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

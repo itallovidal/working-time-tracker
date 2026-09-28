@@ -72,6 +72,34 @@ func (s *MembershipStore) Exists(teamID, personID string) (bool, error) {
 	return count > 0, err
 }
 
+// SameOrganization diz se a pessoa é da mesma organização do projeto do time.
+func (s *MembershipStore) SameOrganization(teamID, personID string) (bool, error) {
+	tuid, err := uuid.Parse(teamID)
+	if err != nil {
+		return false, nil
+	}
+	puid, err := uuid.Parse(personID)
+	if err != nil {
+		return false, nil
+	}
+	ctx := context.Background()
+	prj, err := s.client.Team.Query().Where(team.IDEQ(tuid)).QueryProject().Only(ctx)
+	if ent.IsNotFound(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	p, err := s.client.Person.Get(ctx, puid)
+	if ent.IsNotFound(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return p.OrganizationID == prj.OrganizationID, nil
+}
+
 func (s *MembershipStore) IsPersonInProject(personID, projectID string) (bool, error) {
 	puid, err := uuid.Parse(personID)
 	if err != nil {

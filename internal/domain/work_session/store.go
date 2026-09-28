@@ -55,6 +55,34 @@ func (s *Store) GetActiveByPerson(personID string) (*WorkSession, error) {
 	return toDomainSession(session), nil
 }
 
+// PersonInProjectOrganization diz se a pessoa existe e é da organização do projeto.
+func (s *Store) PersonInProjectOrganization(personID, projectID string) (bool, error) {
+	puid, err := uuid.Parse(personID)
+	if err != nil {
+		return false, nil
+	}
+	prjid, err := uuid.Parse(projectID)
+	if err != nil {
+		return false, nil
+	}
+	ctx := context.Background()
+	p, err := s.client.Person.Get(ctx, puid)
+	if ent.IsNotFound(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	prj, err := s.client.Project.Get(ctx, prjid)
+	if ent.IsNotFound(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return p.OrganizationID == prj.OrganizationID, nil
+}
+
 func (s *Store) Update(session *WorkSession) error {
 	q := s.client.WorkSession.UpdateOneID(session.ID).
 		SetStartAt(session.StartAt)

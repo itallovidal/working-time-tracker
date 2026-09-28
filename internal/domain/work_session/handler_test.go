@@ -51,11 +51,17 @@ func setupTestApp(t *testing.T) *testApp {
 		work_session.NewHandler(wsSvc),
 	)
 
-	org := mustCreate(t, e, "POST", "/api/orgs/", `{"name":"Test Org"}`)
-	orgID := jsonPath(org, "id")
+	org, err := orgSvc.Create("Test Org")
+	if err != nil {
+		t.Fatalf("create org: %v", err)
+	}
+	orgID := org.ID.String()
 
-	personObj := mustCreate(t, e, "POST", "/api/orgs/"+orgID+"/persons", `{"name":"John","email":"john@test.com"}`)
-	personID := jsonPath(personObj, "id")
+	personObj, err := personSvc.Create(orgID, "John", "john@test.com")
+	if err != nil {
+		t.Fatalf("create person: %v", err)
+	}
+	personID := personObj.ID.String()
 
 	projObj := mustCreate(t, e, "POST", "/api/orgs/"+orgID+"/projects", `{"name":"Project A"}`)
 	projectID := jsonPath(projObj, "id")
@@ -123,8 +129,6 @@ func registerRoutes(
 	wsH *work_session.Handler,
 ) {
 	orgs := e.Group("/api/orgs")
-	orgs.POST("/", orgH.Create)
-	orgs.POST("/:orgId/persons", personH.Create)
 	orgs.POST("/:orgId/projects", projH.Create)
 
 	projects := e.Group("/api/projects")

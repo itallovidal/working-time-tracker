@@ -6,9 +6,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"working-time-tracker/ent/invite"
 	"working-time-tracker/ent/organization"
 	"working-time-tracker/ent/person"
 	"working-time-tracker/ent/predicate"
+	"working-time-tracker/ent/session"
 	"working-time-tracker/ent/task"
 	"working-time-tracker/ent/teammembership"
 	"working-time-tracker/ent/worksession"
@@ -74,6 +76,40 @@ func (_u *PersonUpdate) SetNillableOrganizationID(v *uuid.UUID) *PersonUpdate {
 	return _u
 }
 
+// SetPasswordHash sets the "password_hash" field.
+func (_u *PersonUpdate) SetPasswordHash(v string) *PersonUpdate {
+	_u.mutation.SetPasswordHash(v)
+	return _u
+}
+
+// SetNillablePasswordHash sets the "password_hash" field if the given value is not nil.
+func (_u *PersonUpdate) SetNillablePasswordHash(v *string) *PersonUpdate {
+	if v != nil {
+		_u.SetPasswordHash(*v)
+	}
+	return _u
+}
+
+// ClearPasswordHash clears the value of the "password_hash" field.
+func (_u *PersonUpdate) ClearPasswordHash() *PersonUpdate {
+	_u.mutation.ClearPasswordHash()
+	return _u
+}
+
+// SetRole sets the "role" field.
+func (_u *PersonUpdate) SetRole(v person.Role) *PersonUpdate {
+	_u.mutation.SetRole(v)
+	return _u
+}
+
+// SetNillableRole sets the "role" field if the given value is not nil.
+func (_u *PersonUpdate) SetNillableRole(v *person.Role) *PersonUpdate {
+	if v != nil {
+		_u.SetRole(*v)
+	}
+	return _u
+}
+
 // SetOrganization sets the "organization" edge to the Organization entity.
 func (_u *PersonUpdate) SetOrganization(v *Organization) *PersonUpdate {
 	return _u.SetOrganizationID(v.ID)
@@ -122,6 +158,36 @@ func (_u *PersonUpdate) AddWorkSessions(v ...*WorkSession) *PersonUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.AddWorkSessionIDs(ids...)
+}
+
+// AddSessionIDs adds the "sessions" edge to the Session entity by IDs.
+func (_u *PersonUpdate) AddSessionIDs(ids ...uuid.UUID) *PersonUpdate {
+	_u.mutation.AddSessionIDs(ids...)
+	return _u
+}
+
+// AddSessions adds the "sessions" edges to the Session entity.
+func (_u *PersonUpdate) AddSessions(v ...*Session) *PersonUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddSessionIDs(ids...)
+}
+
+// AddCreatedInviteIDs adds the "created_invites" edge to the Invite entity by IDs.
+func (_u *PersonUpdate) AddCreatedInviteIDs(ids ...uuid.UUID) *PersonUpdate {
+	_u.mutation.AddCreatedInviteIDs(ids...)
+	return _u
+}
+
+// AddCreatedInvites adds the "created_invites" edges to the Invite entity.
+func (_u *PersonUpdate) AddCreatedInvites(v ...*Invite) *PersonUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddCreatedInviteIDs(ids...)
 }
 
 // Mutation returns the PersonMutation object of the builder.
@@ -198,6 +264,48 @@ func (_u *PersonUpdate) RemoveWorkSessions(v ...*WorkSession) *PersonUpdate {
 	return _u.RemoveWorkSessionIDs(ids...)
 }
 
+// ClearSessions clears all "sessions" edges to the Session entity.
+func (_u *PersonUpdate) ClearSessions() *PersonUpdate {
+	_u.mutation.ClearSessions()
+	return _u
+}
+
+// RemoveSessionIDs removes the "sessions" edge to Session entities by IDs.
+func (_u *PersonUpdate) RemoveSessionIDs(ids ...uuid.UUID) *PersonUpdate {
+	_u.mutation.RemoveSessionIDs(ids...)
+	return _u
+}
+
+// RemoveSessions removes "sessions" edges to Session entities.
+func (_u *PersonUpdate) RemoveSessions(v ...*Session) *PersonUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveSessionIDs(ids...)
+}
+
+// ClearCreatedInvites clears all "created_invites" edges to the Invite entity.
+func (_u *PersonUpdate) ClearCreatedInvites() *PersonUpdate {
+	_u.mutation.ClearCreatedInvites()
+	return _u
+}
+
+// RemoveCreatedInviteIDs removes the "created_invites" edge to Invite entities by IDs.
+func (_u *PersonUpdate) RemoveCreatedInviteIDs(ids ...uuid.UUID) *PersonUpdate {
+	_u.mutation.RemoveCreatedInviteIDs(ids...)
+	return _u
+}
+
+// RemoveCreatedInvites removes "created_invites" edges to Invite entities.
+func (_u *PersonUpdate) RemoveCreatedInvites(v ...*Invite) *PersonUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveCreatedInviteIDs(ids...)
+}
+
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (_u *PersonUpdate) Save(ctx context.Context) (int, error) {
 	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
@@ -227,6 +335,11 @@ func (_u *PersonUpdate) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *PersonUpdate) check() error {
+	if v, ok := _u.mutation.Role(); ok {
+		if err := person.RoleValidator(v); err != nil {
+			return &ValidationError{Name: "role", err: fmt.Errorf(`ent: validator failed for field "Person.role": %w`, err)}
+		}
+	}
 	if _u.mutation.OrganizationCleared() && len(_u.mutation.OrganizationIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "Person.organization"`)
 	}
@@ -250,6 +363,15 @@ func (_u *PersonUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.Email(); ok {
 		_spec.SetField(person.FieldEmail, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.PasswordHash(); ok {
+		_spec.SetField(person.FieldPasswordHash, field.TypeString, value)
+	}
+	if _u.mutation.PasswordHashCleared() {
+		_spec.ClearField(person.FieldPasswordHash, field.TypeString)
+	}
+	if value, ok := _u.mutation.Role(); ok {
+		_spec.SetField(person.FieldRole, field.TypeEnum, value)
 	}
 	if _u.mutation.OrganizationCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -415,6 +537,96 @@ func (_u *PersonUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if _u.mutation.SessionsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   person.SessionsTable,
+			Columns: []string{person.SessionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(session.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedSessionsIDs(); len(nodes) > 0 && !_u.mutation.SessionsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   person.SessionsTable,
+			Columns: []string{person.SessionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(session.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.SessionsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   person.SessionsTable,
+			Columns: []string{person.SessionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(session.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.CreatedInvitesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   person.CreatedInvitesTable,
+			Columns: []string{person.CreatedInvitesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(invite.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedCreatedInvitesIDs(); len(nodes) > 0 && !_u.mutation.CreatedInvitesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   person.CreatedInvitesTable,
+			Columns: []string{person.CreatedInvitesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(invite.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.CreatedInvitesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   person.CreatedInvitesTable,
+			Columns: []string{person.CreatedInvitesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(invite.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{person.Label}
@@ -477,6 +689,40 @@ func (_u *PersonUpdateOne) SetNillableOrganizationID(v *uuid.UUID) *PersonUpdate
 	return _u
 }
 
+// SetPasswordHash sets the "password_hash" field.
+func (_u *PersonUpdateOne) SetPasswordHash(v string) *PersonUpdateOne {
+	_u.mutation.SetPasswordHash(v)
+	return _u
+}
+
+// SetNillablePasswordHash sets the "password_hash" field if the given value is not nil.
+func (_u *PersonUpdateOne) SetNillablePasswordHash(v *string) *PersonUpdateOne {
+	if v != nil {
+		_u.SetPasswordHash(*v)
+	}
+	return _u
+}
+
+// ClearPasswordHash clears the value of the "password_hash" field.
+func (_u *PersonUpdateOne) ClearPasswordHash() *PersonUpdateOne {
+	_u.mutation.ClearPasswordHash()
+	return _u
+}
+
+// SetRole sets the "role" field.
+func (_u *PersonUpdateOne) SetRole(v person.Role) *PersonUpdateOne {
+	_u.mutation.SetRole(v)
+	return _u
+}
+
+// SetNillableRole sets the "role" field if the given value is not nil.
+func (_u *PersonUpdateOne) SetNillableRole(v *person.Role) *PersonUpdateOne {
+	if v != nil {
+		_u.SetRole(*v)
+	}
+	return _u
+}
+
 // SetOrganization sets the "organization" edge to the Organization entity.
 func (_u *PersonUpdateOne) SetOrganization(v *Organization) *PersonUpdateOne {
 	return _u.SetOrganizationID(v.ID)
@@ -525,6 +771,36 @@ func (_u *PersonUpdateOne) AddWorkSessions(v ...*WorkSession) *PersonUpdateOne {
 		ids[i] = v[i].ID
 	}
 	return _u.AddWorkSessionIDs(ids...)
+}
+
+// AddSessionIDs adds the "sessions" edge to the Session entity by IDs.
+func (_u *PersonUpdateOne) AddSessionIDs(ids ...uuid.UUID) *PersonUpdateOne {
+	_u.mutation.AddSessionIDs(ids...)
+	return _u
+}
+
+// AddSessions adds the "sessions" edges to the Session entity.
+func (_u *PersonUpdateOne) AddSessions(v ...*Session) *PersonUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddSessionIDs(ids...)
+}
+
+// AddCreatedInviteIDs adds the "created_invites" edge to the Invite entity by IDs.
+func (_u *PersonUpdateOne) AddCreatedInviteIDs(ids ...uuid.UUID) *PersonUpdateOne {
+	_u.mutation.AddCreatedInviteIDs(ids...)
+	return _u
+}
+
+// AddCreatedInvites adds the "created_invites" edges to the Invite entity.
+func (_u *PersonUpdateOne) AddCreatedInvites(v ...*Invite) *PersonUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddCreatedInviteIDs(ids...)
 }
 
 // Mutation returns the PersonMutation object of the builder.
@@ -601,6 +877,48 @@ func (_u *PersonUpdateOne) RemoveWorkSessions(v ...*WorkSession) *PersonUpdateOn
 	return _u.RemoveWorkSessionIDs(ids...)
 }
 
+// ClearSessions clears all "sessions" edges to the Session entity.
+func (_u *PersonUpdateOne) ClearSessions() *PersonUpdateOne {
+	_u.mutation.ClearSessions()
+	return _u
+}
+
+// RemoveSessionIDs removes the "sessions" edge to Session entities by IDs.
+func (_u *PersonUpdateOne) RemoveSessionIDs(ids ...uuid.UUID) *PersonUpdateOne {
+	_u.mutation.RemoveSessionIDs(ids...)
+	return _u
+}
+
+// RemoveSessions removes "sessions" edges to Session entities.
+func (_u *PersonUpdateOne) RemoveSessions(v ...*Session) *PersonUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveSessionIDs(ids...)
+}
+
+// ClearCreatedInvites clears all "created_invites" edges to the Invite entity.
+func (_u *PersonUpdateOne) ClearCreatedInvites() *PersonUpdateOne {
+	_u.mutation.ClearCreatedInvites()
+	return _u
+}
+
+// RemoveCreatedInviteIDs removes the "created_invites" edge to Invite entities by IDs.
+func (_u *PersonUpdateOne) RemoveCreatedInviteIDs(ids ...uuid.UUID) *PersonUpdateOne {
+	_u.mutation.RemoveCreatedInviteIDs(ids...)
+	return _u
+}
+
+// RemoveCreatedInvites removes "created_invites" edges to Invite entities.
+func (_u *PersonUpdateOne) RemoveCreatedInvites(v ...*Invite) *PersonUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveCreatedInviteIDs(ids...)
+}
+
 // Where appends a list predicates to the PersonUpdate builder.
 func (_u *PersonUpdateOne) Where(ps ...predicate.Person) *PersonUpdateOne {
 	_u.mutation.Where(ps...)
@@ -643,6 +961,11 @@ func (_u *PersonUpdateOne) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *PersonUpdateOne) check() error {
+	if v, ok := _u.mutation.Role(); ok {
+		if err := person.RoleValidator(v); err != nil {
+			return &ValidationError{Name: "role", err: fmt.Errorf(`ent: validator failed for field "Person.role": %w`, err)}
+		}
+	}
 	if _u.mutation.OrganizationCleared() && len(_u.mutation.OrganizationIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "Person.organization"`)
 	}
@@ -683,6 +1006,15 @@ func (_u *PersonUpdateOne) sqlSave(ctx context.Context) (_node *Person, err erro
 	}
 	if value, ok := _u.mutation.Email(); ok {
 		_spec.SetField(person.FieldEmail, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.PasswordHash(); ok {
+		_spec.SetField(person.FieldPasswordHash, field.TypeString, value)
+	}
+	if _u.mutation.PasswordHashCleared() {
+		_spec.ClearField(person.FieldPasswordHash, field.TypeString)
+	}
+	if value, ok := _u.mutation.Role(); ok {
+		_spec.SetField(person.FieldRole, field.TypeEnum, value)
 	}
 	if _u.mutation.OrganizationCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -841,6 +1173,96 @@ func (_u *PersonUpdateOne) sqlSave(ctx context.Context) (_node *Person, err erro
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(worksession.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.SessionsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   person.SessionsTable,
+			Columns: []string{person.SessionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(session.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedSessionsIDs(); len(nodes) > 0 && !_u.mutation.SessionsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   person.SessionsTable,
+			Columns: []string{person.SessionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(session.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.SessionsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   person.SessionsTable,
+			Columns: []string{person.SessionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(session.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.CreatedInvitesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   person.CreatedInvitesTable,
+			Columns: []string{person.CreatedInvitesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(invite.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedCreatedInvitesIDs(); len(nodes) > 0 && !_u.mutation.CreatedInvitesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   person.CreatedInvitesTable,
+			Columns: []string{person.CreatedInvitesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(invite.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.CreatedInvitesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   person.CreatedInvitesTable,
+			Columns: []string{person.CreatedInvitesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(invite.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

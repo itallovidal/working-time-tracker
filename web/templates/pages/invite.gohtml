@@ -1,0 +1,45 @@
+{{define "content"}}
+<main class="auth-page">
+  <div class="auth-card" x-data="inviteForm">
+    <span class="brand"><span class="brand-mark" aria-hidden="true"></span>Working Time Tracker</span>
+
+    <p class="muted" x-show="loading">Carregando o convite…</p>
+
+    <template x-if="!loading && !info">
+      <div class="stack">
+        <h1>Convite indisponível</h1>
+        <p class="muted" x-text="loadError"></p>
+        <p class="muted">Peça um novo link para quem convidou você.</p>
+        <a class="btn btn-secondary" href="/login">Ir para o login</a>
+      </div>
+    </template>
+
+    <template x-if="info">
+      <form class="stack" @submit.prevent="submit()" novalidate>
+        <div class="stack">
+          <h1>Entrar em <span x-text="info.organization_name"></span></h1>
+          <p class="muted">Você foi convidado como <strong x-text="WTT.fmt.role(info.role)"></strong>. Crie sua conta para aceitar.</p>
+        </div>
+        <div class="field">
+          <label for="invite-name">Seu nome</label>
+          <input id="invite-name" type="text" autocomplete="name" required x-model="name">
+        </div>
+        <div class="field">
+          <label for="invite-email">Email</label>
+          <input id="invite-email" type="email" autocomplete="email" required x-model="email" :readonly="!!info.email">
+          <span class="hint" x-show="info.email">Este convite é só para este email.</span>
+        </div>
+        <div class="field">
+          <label for="invite-password">Senha</label>
+          <input id="invite-password" type="password" autocomplete="new-password" minlength="8" required x-model="password">
+          <span class="hint">Pelo menos 8 caracteres.</span>
+        </div>
+        <p class="form-error" x-cloak x-show="errors.accept" x-text="errors.accept" role="alert"></p>
+        <button class="btn btn-block" type="submit" :disabled="pending">
+          <span x-text="pending ? 'Criando conta…' : 'Aceitar convite'">Aceitar convite</span>
+        </button>
+      </form>
+    </template>
+  </div>
+</main>
+{{end}}

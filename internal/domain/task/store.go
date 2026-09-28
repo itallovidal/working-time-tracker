@@ -104,6 +104,18 @@ func (s *Store) Update(t *Task) error {
 	return err
 }
 
+// IntegrationProjectID devolve o projeto dono da integração, ou database.ErrNotFound.
+func (s *Store) IntegrationProjectID(integrationID uuid.UUID) (uuid.UUID, error) {
+	it, err := s.client.Integration.Get(context.Background(), integrationID)
+	if ent.IsNotFound(err) {
+		return uuid.Nil, database.ErrNotFound
+	}
+	if err != nil {
+		return uuid.Nil, err
+	}
+	return it.ProjectID, nil
+}
+
 func (s *Store) Delete(id string) error {
 	uid, err := uuid.Parse(id)
 	if err != nil {

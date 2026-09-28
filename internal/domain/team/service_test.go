@@ -143,3 +143,22 @@ func TestService_Delete_CascadesMemberships(t *testing.T) {
 		t.Errorf("persons: %d rows, want 1", n)
 	}
 }
+
+func TestMembership_PersonFromAnotherOrgRejected(t *testing.T) {
+	cleanup(t)
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	personSvc := person.NewService(person.NewStore(testClient))
+	projSvc := project.NewService(project.NewStore(testClient))
+	svc := team.NewService(team.NewStore(testClient))
+	memberSvc := team.NewMembershipService(team.NewMembershipStore(testClient))
+
+	org, _ := orgSvc.Create("Org")
+	other, _ := orgSvc.Create("Outra Org")
+	outsider, _ := personSvc.Create(other.ID.String(), "Caio", "caio@test.com")
+	proj, _ := projSvc.Create(org.ID.String(), "Projeto", "", 0, nil, nil)
+	tm, _ := svc.Create(proj.ID.String(), "Time")
+
+	if _, err := memberSvc.Add(tm.ID.String(), outsider.ID.String()); err == nil {
+		t.Fatal("expected error when adding a person from another organization")
+	}
+}

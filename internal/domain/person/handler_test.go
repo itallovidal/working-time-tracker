@@ -1,7 +1,6 @@
 package person_test
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -14,58 +13,57 @@ import (
 	"working-time-tracker/internal/domain/person"
 )
 
-func TestHandler_Create_EmptyEmail(t *testing.T) {
-	cleanup(t)
+func newTestEcho(svc *person.Service) *echo.Echo {
 	e := echo.New()
 	e.Use(middleware.Recover())
+	personH := person.NewHandler(svc)
+	e.GET("/api/orgs/:orgId/persons", personH.ListByOrg)
+	e.PATCH("/api/persons/:personId", personH.Update)
+	e.PATCH("/api/persons/:personId/role", personH.SetRole)
+	return e
+}
 
-	orgSvc := organization.NewService(organization.NewStore(testClient))
-	orgH := organization.NewHandler(orgSvc)
-	personH := person.NewHandler(person.NewService(person.NewStore(testClient)))
-	registerRoutes(e, orgH, personH)
-
-	org := mustCreate(t, e, "POST", "/api/orgs/", `{"name":"Org"}`)
-	orgID := jsonPath(org, "id")
-
-	req := httptest.NewRequest("POST", "/api/orgs/"+orgID+"/persons", strings.NewReader(`{"name":"John","email":""}`))
+func patch(e *echo.Echo, path, body string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest("PATCH", path, strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 	e.ServeHTTP(rec, req)
-	if rec.Code != http.StatusBadRequest {
+	return rec
+}
+
+func TestHandler_Update_EmptyEmail(t *testing.T) {
+	cleanup(t)
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	svc := person.NewService(person.NewStore(testClient))
+	e := newTestEcho(svc)
+
+	org, _ := orgSvc.Create("Org")
+	p, _ := svc.Create(org.ID.String(), "John", "john@test.com")
+
+	if rec := patch(e, "/api/persons/"+p.ID.String(), `{"name":"John","email":""}`); rec.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d", rec.Code)
 	}
 }
 
-func registerRoutes(e *echo.Echo, orgH *organization.Handler, personH *person.Handler) {
-	orgs := e.Group("/api/orgs")
-	orgs.POST("/", orgH.Create)
-	orgs.GET("/", orgH.List)
-	orgs.GET("/:orgId", orgH.Get)
-	orgs.POST("/:orgId/persons", personH.Create)
-	orgs.GET("/:orgId/persons", personH.ListByOrg)
-}
+func TestHandler_SetRole(t *testing.T) {
+	cleanup(t)
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	svc := person.NewService(person.NewStore(testClient))
+	e := newTestEcho(svc)
 
-func mustCreate(t *testing.T, e *echo.Echo, method, path, body string) string {
-	t.Helper()
-	req := httptest.NewRequest(method, path, strings.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-	rec := httptest.NewRecorder()
-	e.ServeHTTP(rec, req)
-	if rec.Code >= 400 {
-		t.Fatalf("setup %s %s returned %d: %s", method, path, rec.Code, rec.Body.String())
-	}
-	return rec.Body.String()
-}
+	org, _ := orgSvc.Create("Org")
+	p, _ := svc.Create(org.ID.String(), "John", "john@test.com")
 
-func jsonPath(data, path string) string {
-	var m map[string]interface{}
-	if err := json.Unmarshal([]byte(data), &m); err != nil {
-		return ""
+	rec := patch(e, "/api/persons/"+p.ID.String()+"/role", `{"role":"admin"}`)
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"role":"admin"`) {
+		t.Fatalf("promote expected 200 with role admin, got %d: %s", rec.Code, rec.Body.String())
 	}
-	val, ok := m[path]
-	if !ok {
-		return ""
+
+	// Ele é o único admin, então não pode ser rebaixado.
+	if rec := patch(e, "/api/persons/"+p.ID.String()+"/role", `{"role":"member"}`); rec.Code != http.StatusBadRequest {
+		t.Fatalf("demoting the last admin expected 400, got %d: %s", rec.Code, rec.Body.String())
 	}
-	s, _ := val.(string)
-	return s
+	if rec := patch(e, "/api/persons/"+p.ID.String()+"/role", `{"role":"owner"}`); rec.Code != http.StatusBadRequest {
+		t.Fatalf("invalid role expected 400, got %d", rec.Code)
+	}
 }

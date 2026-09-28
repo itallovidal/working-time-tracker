@@ -1,0 +1,7 @@
+{{define "toasts"}}
+<div class="toasts" x-data aria-live="polite">
+  <template x-for="t in $store.toast.items" :key="t.id">
+    <div class="toast" :class="t.kind === 'error' && 'toast-error'" x-text="t.message" @click="$store.toast.dismiss(t.id)"></div>
+  </template>
+</div>
+{{end}}

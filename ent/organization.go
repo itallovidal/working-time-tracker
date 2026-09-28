@@ -34,9 +34,11 @@ type OrganizationEdges struct {
 	Persons []*Person `json:"persons,omitempty"`
 	// Projects holds the value of the projects edge.
 	Projects []*Project `json:"projects,omitempty"`
+	// Invites holds the value of the invites edge.
+	Invites []*Invite `json:"invites,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
+	loadedTypes [3]bool
 }
 
 // PersonsOrErr returns the Persons value or an error if the edge
@@ -55,6 +57,15 @@ func (e OrganizationEdges) ProjectsOrErr() ([]*Project, error) {
 		return e.Projects, nil
 	}
 	return nil, &NotLoadedError{edge: "projects"}
+}
+
+// InvitesOrErr returns the Invites value or an error if the edge
+// was not loaded in eager-loading.
+func (e OrganizationEdges) InvitesOrErr() ([]*Invite, error) {
+	if e.loadedTypes[2] {
+		return e.Invites, nil
+	}
+	return nil, &NotLoadedError{edge: "invites"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -122,6 +133,11 @@ func (_m *Organization) QueryPersons() *PersonQuery {
 // QueryProjects queries the "projects" edge of the Organization entity.
 func (_m *Organization) QueryProjects() *ProjectQuery {
 	return NewOrganizationClient(_m.config).QueryProjects(_m)
+}
+
+// QueryInvites queries the "invites" edge of the Organization entity.
+func (_m *Organization) QueryInvites() *InviteQuery {
+	return NewOrganizationClient(_m.config).QueryInvites(_m)
 }
 
 // Update returns a builder for updating this Organization.

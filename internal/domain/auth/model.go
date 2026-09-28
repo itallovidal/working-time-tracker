@@ -1,0 +1,40 @@
+package auth
+
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
+
+// Identity é a pessoa logada, como os handlers e as páginas enxergam.
+type Identity struct {
+	PersonID         uuid.UUID `json:"id"`
+	Name             string    `json:"name"`
+	Email            string    `json:"email"`
+	Role             string    `json:"role"`
+	OrganizationID   uuid.UUID `json:"organization_id"`
+	OrganizationName string    `json:"organization_name"`
+}
+
+func (i *Identity) IsAdmin() bool {
+	return i != nil && i.Role == "admin"
+}
+
+type Invite struct {
+	ID             uuid.UUID  `json:"id"`
+	OrganizationID uuid.UUID  `json:"organization_id"`
+	Email          *string    `json:"email"`
+	Role           string     `json:"role"`
+	CreatedByName  string     `json:"created_by_name,omitempty"`
+	ExpiresAt      time.Time  `json:"expires_at"`
+	AcceptedAt     *time.Time `json:"accepted_at,omitempty"`
+	CreatedAt      time.Time  `json:"created_at"`
+}
+
+// InviteInfo é o que a página pública do convite mostra antes do aceite.
+type InviteInfo struct {
+	OrganizationName string    `json:"organization_name"`
+	Email            *string   `json:"email"`
+	Role             string    `json:"role"`
+	ExpiresAt        time.Time `json:"expires_at"`
+}

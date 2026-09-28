@@ -3,6 +3,7 @@
 package person
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -21,6 +22,10 @@ const (
 	FieldEmail = "email"
 	// FieldOrganizationID holds the string denoting the organization_id field in the database.
 	FieldOrganizationID = "organization_id"
+	// FieldPasswordHash holds the string denoting the password_hash field in the database.
+	FieldPasswordHash = "password_hash"
+	// FieldRole holds the string denoting the role field in the database.
+	FieldRole = "role"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// EdgeOrganization holds the string denoting the organization edge name in mutations.
@@ -31,6 +36,10 @@ const (
 	EdgeTeamMemberships = "team_memberships"
 	// EdgeWorkSessions holds the string denoting the work_sessions edge name in mutations.
 	EdgeWorkSessions = "work_sessions"
+	// EdgeSessions holds the string denoting the sessions edge name in mutations.
+	EdgeSessions = "sessions"
+	// EdgeCreatedInvites holds the string denoting the created_invites edge name in mutations.
+	EdgeCreatedInvites = "created_invites"
 	// Table holds the table name of the person in the database.
 	Table = "persons"
 	// OrganizationTable is the table that holds the organization relation/edge.
@@ -61,6 +70,20 @@ const (
 	WorkSessionsInverseTable = "work_sessions"
 	// WorkSessionsColumn is the table column denoting the work_sessions relation/edge.
 	WorkSessionsColumn = "person_id"
+	// SessionsTable is the table that holds the sessions relation/edge.
+	SessionsTable = "sessions"
+	// SessionsInverseTable is the table name for the Session entity.
+	// It exists in this package in order to avoid circular dependency with the "session" package.
+	SessionsInverseTable = "sessions"
+	// SessionsColumn is the table column denoting the sessions relation/edge.
+	SessionsColumn = "person_id"
+	// CreatedInvitesTable is the table that holds the created_invites relation/edge.
+	CreatedInvitesTable = "invites"
+	// CreatedInvitesInverseTable is the table name for the Invite entity.
+	// It exists in this package in order to avoid circular dependency with the "invite" package.
+	CreatedInvitesInverseTable = "invites"
+	// CreatedInvitesColumn is the table column denoting the created_invites relation/edge.
+	CreatedInvitesColumn = "created_by_id"
 )
 
 // Columns holds all SQL columns for person fields.
@@ -69,6 +92,8 @@ var Columns = []string{
 	FieldName,
 	FieldEmail,
 	FieldOrganizationID,
+	FieldPasswordHash,
+	FieldRole,
 	FieldCreatedAt,
 }
 
@@ -88,6 +113,32 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// Role defines the type for the "role" enum field.
+type Role string
+
+// RoleMember is the default value of the Role enum.
+const DefaultRole = RoleMember
+
+// Role values.
+const (
+	RoleAdmin  Role = "admin"
+	RoleMember Role = "member"
+)
+
+func (r Role) String() string {
+	return string(r)
+}
+
+// RoleValidator is a validator for the "role" field enum values. It is called by the builders before save.
+func RoleValidator(r Role) error {
+	switch r {
+	case RoleAdmin, RoleMember:
+		return nil
+	default:
+		return fmt.Errorf("person: invalid enum value for role field: %q", r)
+	}
+}
 
 // OrderOption defines the ordering options for the Person queries.
 type OrderOption func(*sql.Selector)
@@ -110,6 +161,16 @@ func ByEmail(opts ...sql.OrderTermOption) OrderOption {
 // ByOrganizationID orders the results by the organization_id field.
 func ByOrganizationID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldOrganizationID, opts...).ToFunc()
+}
+
+// ByPasswordHash orders the results by the password_hash field.
+func ByPasswordHash(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPasswordHash, opts...).ToFunc()
+}
+
+// ByRole orders the results by the role field.
+func ByRole(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRole, opts...).ToFunc()
 }
 
 // ByCreatedAt orders the results by the created_at field.
@@ -165,6 +226,34 @@ func ByWorkSessions(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newWorkSessionsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// BySessionsCount orders the results by sessions count.
+func BySessionsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newSessionsStep(), opts...)
+	}
+}
+
+// BySessions orders the results by sessions terms.
+func BySessions(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newSessionsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByCreatedInvitesCount orders the results by created_invites count.
+func ByCreatedInvitesCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newCreatedInvitesStep(), opts...)
+	}
+}
+
+// ByCreatedInvites orders the results by created_invites terms.
+func ByCreatedInvites(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newCreatedInvitesStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newOrganizationStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -191,5 +280,19 @@ func newWorkSessionsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(WorkSessionsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, WorkSessionsTable, WorkSessionsColumn),
+	)
+}
+func newSessionsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(SessionsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, SessionsTable, SessionsColumn),
+	)
+}
+func newCreatedInvitesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(CreatedInvitesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, CreatedInvitesTable, CreatedInvitesColumn),
 	)
 }

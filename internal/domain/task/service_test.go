@@ -226,3 +226,44 @@ func TestService_Delete_CascadesWorkSessions(t *testing.T) {
 		t.Errorf("work_sessions: %d rows left, want 0", n)
 	}
 }
+
+func TestService_LinkExternalItem_IntegrationFromAnotherProject(t *testing.T) {
+	orgSvc, personSvc, projSvc, teamSvc, memberSvc, taskSvc := setupDeps(t)
+
+	org, _ := orgSvc.Create("Org")
+	p, _ := personSvc.Create(org.ID.String(), "John", "john@test.com")
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil)
+	otherProj, _ := projSvc.Create(org.ID.String(), "Other", "", 0, nil, nil)
+	tm, _ := teamSvc.Create(proj.ID.String(), "Team")
+	memberSvc.Add(tm.ID.String(), p.ID.String())
+	task1, _ := taskSvc.Create(proj.ID.String(), "Task A", "", p.ID.String(), nil)
+
+	foreign := createIntegration(t, otherProj.ID.String())
+	if _, err := taskSvc.LinkExternalItem(task1.ID.String(), foreign, "42", "https://example.com/42"); err == nil {
+		t.Fatal("expected error when linking an integration from another project")
+	}
+	if _, err := taskSvc.LinkExternalItem(task1.ID.String(), "not-a-uuid", "42", "https://example.com/42"); err == nil {
+		t.Fatal("expected error for an invalid integration id")
+	}
+}
+
+func TestService_Update_AssigneeMustBeProjectMember(t *testing.T) {
+	orgSvc, personSvc, projSvc, teamSvc, memberSvc, taskSvc := setupDeps(t)
+
+	org, _ := orgSvc.Create("Org")
+	p, _ := personSvc.Create(org.ID.String(), "John", "john@test.com")
+	outsider, _ := personSvc.Create(org.ID.String(), "Maria", "maria@test.com")
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil)
+	tm, _ := teamSvc.Create(proj.ID.String(), "Team")
+	memberSvc.Add(tm.ID.String(), p.ID.String())
+	task1, _ := taskSvc.Create(proj.ID.String(), "Task A", "", p.ID.String(), nil)
+
+	outsiderID := outsider.ID.String()
+	if _, err := taskSvc.Update(task1.ID.String(), "Task A", "", &outsiderID, nil); err == nil {
+		t.Fatal("expected error when assigning someone outside the project's teams")
+	}
+	bad := "not-a-uuid"
+	if _, err := taskSvc.Update(task1.ID.String(), "Task A", "", &bad, nil); err == nil {
+		t.Fatal("expected error for an invalid assignee id")
+	}
+}

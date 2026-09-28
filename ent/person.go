@@ -25,6 +25,10 @@ type Person struct {
 	Email string `json:"email,omitempty"`
 	// OrganizationID holds the value of the "organization_id" field.
 	OrganizationID uuid.UUID `json:"organization_id,omitempty"`
+	// PasswordHash holds the value of the "password_hash" field.
+	PasswordHash *string `json:"-"`
+	// Role holds the value of the "role" field.
+	Role person.Role `json:"role,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -43,9 +47,13 @@ type PersonEdges struct {
 	TeamMemberships []*TeamMembership `json:"team_memberships,omitempty"`
 	// WorkSessions holds the value of the work_sessions edge.
 	WorkSessions []*WorkSession `json:"work_sessions,omitempty"`
+	// Sessions holds the value of the sessions edge.
+	Sessions []*Session `json:"sessions,omitempty"`
+	// CreatedInvites holds the value of the created_invites edge.
+	CreatedInvites []*Invite `json:"created_invites,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [4]bool
+	loadedTypes [6]bool
 }
 
 // OrganizationOrErr returns the Organization value or an error if the edge
@@ -86,12 +94,30 @@ func (e PersonEdges) WorkSessionsOrErr() ([]*WorkSession, error) {
 	return nil, &NotLoadedError{edge: "work_sessions"}
 }
 
+// SessionsOrErr returns the Sessions value or an error if the edge
+// was not loaded in eager-loading.
+func (e PersonEdges) SessionsOrErr() ([]*Session, error) {
+	if e.loadedTypes[4] {
+		return e.Sessions, nil
+	}
+	return nil, &NotLoadedError{edge: "sessions"}
+}
+
+// CreatedInvitesOrErr returns the CreatedInvites value or an error if the edge
+// was not loaded in eager-loading.
+func (e PersonEdges) CreatedInvitesOrErr() ([]*Invite, error) {
+	if e.loadedTypes[5] {
+		return e.CreatedInvites, nil
+	}
+	return nil, &NotLoadedError{edge: "created_invites"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*Person) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case person.FieldName, person.FieldEmail:
+		case person.FieldName, person.FieldEmail, person.FieldPasswordHash, person.FieldRole:
 			values[i] = new(sql.NullString)
 		case person.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
@@ -136,6 +162,19 @@ func (_m *Person) assignValues(columns []string, values []any) error {
 			} else if value != nil {
 				_m.OrganizationID = *value
 			}
+		case person.FieldPasswordHash:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field password_hash", values[i])
+			} else if value.Valid {
+				_m.PasswordHash = new(string)
+				*_m.PasswordHash = value.String
+			}
+		case person.FieldRole:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field role", values[i])
+			} else if value.Valid {
+				_m.Role = person.Role(value.String)
+			}
 		case person.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
@@ -175,6 +214,16 @@ func (_m *Person) QueryWorkSessions() *WorkSessionQuery {
 	return NewPersonClient(_m.config).QueryWorkSessions(_m)
 }
 
+// QuerySessions queries the "sessions" edge of the Person entity.
+func (_m *Person) QuerySessions() *SessionQuery {
+	return NewPersonClient(_m.config).QuerySessions(_m)
+}
+
+// QueryCreatedInvites queries the "created_invites" edge of the Person entity.
+func (_m *Person) QueryCreatedInvites() *InviteQuery {
+	return NewPersonClient(_m.config).QueryCreatedInvites(_m)
+}
+
 // Update returns a builder for updating this Person.
 // Note that you need to call Person.Unwrap() before calling this method if this Person
 // was returned from a transaction, and the transaction was committed or rolled back.
@@ -206,6 +255,11 @@ func (_m *Person) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("organization_id=")
 	builder.WriteString(fmt.Sprintf("%v", _m.OrganizationID))
+	builder.WriteString(", ")
+	builder.WriteString("password_hash=<sensitive>")
+	builder.WriteString(", ")
+	builder.WriteString("role=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Role))
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))

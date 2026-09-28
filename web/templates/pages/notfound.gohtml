@@ -1,0 +1,9 @@
+{{define "content"}}
+<main class="{{if .Me}}page{{else}}auth-page{{end}}">
+  <div class="empty">
+    <strong>Página não encontrada</strong>
+    <span>O endereço não existe ou você não tem acesso a ele.</span>
+    <a class="btn btn-secondary" href="/">Voltar ao início</a>
+  </div>
+</main>
+{{end}}

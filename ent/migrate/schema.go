@@ -33,6 +33,38 @@ var (
 			},
 		},
 	}
+	// InvitesColumns holds the columns for the "invites" table.
+	InvitesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "token_hash", Type: field.TypeString, Unique: true},
+		{Name: "email", Type: field.TypeString, Nullable: true},
+		{Name: "role", Type: field.TypeEnum, Enums: []string{"admin", "member"}, Default: "member"},
+		{Name: "expires_at", Type: field.TypeTime},
+		{Name: "accepted_at", Type: field.TypeTime, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "organization_id", Type: field.TypeUUID},
+		{Name: "created_by_id", Type: field.TypeUUID, Nullable: true},
+	}
+	// InvitesTable holds the schema information for the "invites" table.
+	InvitesTable = &schema.Table{
+		Name:       "invites",
+		Columns:    InvitesColumns,
+		PrimaryKey: []*schema.Column{InvitesColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "invites_organizations_invites",
+				Columns:    []*schema.Column{InvitesColumns[7]},
+				RefColumns: []*schema.Column{OrganizationsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "invites_persons_created_invites",
+				Columns:    []*schema.Column{InvitesColumns[8]},
+				RefColumns: []*schema.Column{PersonsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
+	}
 	// OrganizationsColumns holds the columns for the "organizations" table.
 	OrganizationsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -50,6 +82,8 @@ var (
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "name", Type: field.TypeString},
 		{Name: "email", Type: field.TypeString},
+		{Name: "password_hash", Type: field.TypeString, Nullable: true},
+		{Name: "role", Type: field.TypeEnum, Enums: []string{"admin", "member"}, Default: "member"},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "organization_id", Type: field.TypeUUID},
 	}
@@ -61,16 +95,16 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "persons_organizations_persons",
-				Columns:    []*schema.Column{PersonsColumns[4]},
+				Columns:    []*schema.Column{PersonsColumns[6]},
 				RefColumns: []*schema.Column{OrganizationsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 		},
 		Indexes: []*schema.Index{
 			{
-				Name:    "person_organization_id_email",
+				Name:    "person_email",
 				Unique:  true,
-				Columns: []*schema.Column{PersonsColumns[4], PersonsColumns[2]},
+				Columns: []*schema.Column{PersonsColumns[2]},
 			},
 		},
 	}
@@ -98,6 +132,28 @@ var (
 				Columns:    []*schema.Column{ProjectsColumns[9]},
 				RefColumns: []*schema.Column{OrganizationsColumns[0]},
 				OnDelete:   schema.NoAction,
+			},
+		},
+	}
+	// SessionsColumns holds the columns for the "sessions" table.
+	SessionsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "token_hash", Type: field.TypeString, Unique: true},
+		{Name: "expires_at", Type: field.TypeTime},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "person_id", Type: field.TypeUUID},
+	}
+	// SessionsTable holds the schema information for the "sessions" table.
+	SessionsTable = &schema.Table{
+		Name:       "sessions",
+		Columns:    SessionsColumns,
+		PrimaryKey: []*schema.Column{SessionsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "sessions_persons_sessions",
+				Columns:    []*schema.Column{SessionsColumns[4]},
+				RefColumns: []*schema.Column{PersonsColumns[0]},
+				OnDelete:   schema.Cascade,
 			},
 		},
 	}
@@ -237,9 +293,11 @@ var (
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		IntegrationsTable,
+		InvitesTable,
 		OrganizationsTable,
 		PersonsTable,
 		ProjectsTable,
+		SessionsTable,
 		TasksTable,
 		TeamsTable,
 		TeamMembershipsTable,
@@ -249,8 +307,11 @@ var (
 
 func init() {
 	IntegrationsTable.ForeignKeys[0].RefTable = ProjectsTable
+	InvitesTable.ForeignKeys[0].RefTable = OrganizationsTable
+	InvitesTable.ForeignKeys[1].RefTable = PersonsTable
 	PersonsTable.ForeignKeys[0].RefTable = OrganizationsTable
 	ProjectsTable.ForeignKeys[0].RefTable = OrganizationsTable
+	SessionsTable.ForeignKeys[0].RefTable = PersonsTable
 	TasksTable.ForeignKeys[0].RefTable = IntegrationsTable
 	TasksTable.ForeignKeys[1].RefTable = PersonsTable
 	TasksTable.ForeignKeys[2].RefTable = ProjectsTable

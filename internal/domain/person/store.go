@@ -19,15 +19,19 @@ func NewStore(client *ent.Client) *Store {
 }
 
 func (s *Store) Create(p *Person) error {
-	created, err := s.client.Person.Create().
+	q := s.client.Person.Create().
 		SetName(p.Name).
 		SetEmail(p.Email).
-		SetOrganizationID(p.OrganizationID).
-		Save(context.Background())
+		SetOrganizationID(p.OrganizationID)
+	if p.Role != "" {
+		q = q.SetRole(person.Role(p.Role))
+	}
+	created, err := q.Save(context.Background())
 	if err != nil {
 		return err
 	}
 	p.ID = created.ID
+	p.Role = string(created.Role)
 	p.CreatedAt = created.CreatedAt
 	return nil
 }
@@ -39,7 +43,7 @@ func (s *Store) ListByOrg(orgID string) ([]Person, error) {
 	}
 	persons, err := s.client.Person.Query().
 		Where(person.OrganizationIDEQ(uid)).
-		Order(ent.Desc(person.FieldCreatedAt)).
+		Order(ent.Asc(person.FieldName)).
 		All(context.Background())
 	if err != nil {
 		return nil, err
@@ -70,14 +74,27 @@ func (s *Store) Update(p *Person) error {
 	return err
 }
 
-func (s *Store) ExistsByEmailInOrg(email, orgID string) (bool, error) {
-	uid, err := uuid.Parse(orgID)
-	if err != nil {
-		return false, err
-	}
-	count, err := s.client.Person.Query().
-		Where(person.EmailEQ(email), person.OrganizationIDEQ(uid)).
+func (s *Store) SetRole(id uuid.UUID, role string) error {
+	_, err := s.client.Person.UpdateOneID(id).
+		SetRole(person.Role(role)).
+		Save(context.Background())
+	return err
+}
+
+func (s *Store) CountAdmins(orgID uuid.UUID) (int, error) {
+	return s.client.Person.Query().
+		Where(person.OrganizationIDEQ(orgID), person.RoleEQ(person.RoleAdmin)).
 		Count(context.Background())
+}
+
+// EmailInUse diz se o email já pertence a outra pessoa. exceptID permite
+// ignorar a própria pessoa num update.
+func (s *Store) EmailInUse(email string, exceptID *uuid.UUID) (bool, error) {
+	q := s.client.Person.Query().Where(person.EmailEQ(email))
+	if exceptID != nil {
+		q = q.Where(person.IDNEQ(*exceptID))
+	}
+	count, err := q.Count(context.Background())
 	return count > 0, err
 }
 
@@ -90,6 +107,7 @@ func toDomainPerson(e *ent.Person) *Person {
 		Name:           e.Name,
 		Email:          e.Email,
 		OrganizationID: e.OrganizationID,
+		Role:           string(e.Role),
 		CreatedAt:      e.CreatedAt,
 	}
 }

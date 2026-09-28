@@ -5,10 +5,12 @@ package ent
 import (
 	"time"
 	"working-time-tracker/ent/integration"
+	"working-time-tracker/ent/invite"
 	"working-time-tracker/ent/organization"
 	"working-time-tracker/ent/person"
 	"working-time-tracker/ent/project"
 	"working-time-tracker/ent/schema"
+	"working-time-tracker/ent/session"
 	"working-time-tracker/ent/task"
 	"working-time-tracker/ent/team"
 	"working-time-tracker/ent/teammembership"
@@ -35,6 +37,16 @@ func init() {
 	integrationDescID := integrationFields[0].Descriptor()
 	// integration.DefaultID holds the default value on creation for the id field.
 	integration.DefaultID = integrationDescID.Default.(func() uuid.UUID)
+	inviteFields := schema.Invite{}.Fields()
+	_ = inviteFields
+	// inviteDescCreatedAt is the schema descriptor for created_at field.
+	inviteDescCreatedAt := inviteFields[8].Descriptor()
+	// invite.DefaultCreatedAt holds the default value on creation for the created_at field.
+	invite.DefaultCreatedAt = inviteDescCreatedAt.Default.(func() time.Time)
+	// inviteDescID is the schema descriptor for id field.
+	inviteDescID := inviteFields[0].Descriptor()
+	// invite.DefaultID holds the default value on creation for the id field.
+	invite.DefaultID = inviteDescID.Default.(func() uuid.UUID)
 	organizationFields := schema.Organization{}.Fields()
 	_ = organizationFields
 	// organizationDescCreatedAt is the schema descriptor for created_at field.
@@ -48,7 +60,7 @@ func init() {
 	personFields := schema.Person{}.Fields()
 	_ = personFields
 	// personDescCreatedAt is the schema descriptor for created_at field.
-	personDescCreatedAt := personFields[4].Descriptor()
+	personDescCreatedAt := personFields[6].Descriptor()
 	// person.DefaultCreatedAt holds the default value on creation for the created_at field.
 	person.DefaultCreatedAt = personDescCreatedAt.Default.(func() time.Time)
 	// personDescID is the schema descriptor for id field.
@@ -69,6 +81,16 @@ func init() {
 	projectDescID := projectFields[0].Descriptor()
 	// project.DefaultID holds the default value on creation for the id field.
 	project.DefaultID = projectDescID.Default.(func() uuid.UUID)
+	sessionFields := schema.Session{}.Fields()
+	_ = sessionFields
+	// sessionDescCreatedAt is the schema descriptor for created_at field.
+	sessionDescCreatedAt := sessionFields[4].Descriptor()
+	// session.DefaultCreatedAt holds the default value on creation for the created_at field.
+	session.DefaultCreatedAt = sessionDescCreatedAt.Default.(func() time.Time)
+	// sessionDescID is the schema descriptor for id field.
+	sessionDescID := sessionFields[0].Descriptor()
+	// session.DefaultID holds the default value on creation for the id field.
+	session.DefaultID = sessionDescID.Default.(func() uuid.UUID)
 	taskFields := schema.Task{}.Fields()
 	_ = taskFields
 	// taskDescCreatedAt is the schema descriptor for created_at field.

@@ -2,6 +2,8 @@ package work_session
 
 import (
 	"github.com/labstack/echo/v5"
+
+	"working-time-tracker/internal/domain/auth"
 )
 
 type Handler struct {
@@ -10,6 +12,26 @@ type Handler struct {
 
 func NewHandler(svc *Service) *Handler {
 	return &Handler{svc: svc}
+}
+
+// personFor decide de quem é o ponto. Com login, o padrão é a pessoa logada, e só
+// um admin pode bater o ponto de outra pessoa. Sem login no contexto (handler
+// montado fora do servidor, como nos testes), person_id continua obrigatório.
+func personFor(c *echo.Context, requested string) (string, int, string) {
+	me := auth.CurrentPerson(c)
+	if me == nil {
+		if requested == "" {
+			return "", 400, "person_id is required"
+		}
+		return requested, 0, ""
+	}
+	if requested == "" || requested == me.PersonID.String() {
+		return me.PersonID.String(), 0, ""
+	}
+	if !me.IsAdmin() {
+		return "", 403, "só admins podem registrar o ponto de outra pessoa"
+	}
+	return requested, 0, ""
 }
 
 func (h *Handler) ClockIn(c *echo.Context) error {
@@ -21,10 +43,14 @@ func (h *Handler) ClockIn(c *echo.Context) error {
 	if err := c.Bind(&body); err != nil {
 		return c.JSON(400, map[string]string{"error": "invalid request body"})
 	}
-	if body.TaskID == "" || body.PersonID == "" {
-		return c.JSON(400, map[string]string{"error": "task_id and person_id are required"})
+	if body.TaskID == "" {
+		return c.JSON(400, map[string]string{"error": "task_id is required"})
 	}
-	session, err := h.svc.ClockIn(projectID, body.TaskID, body.PersonID)
+	personID, status, msg := personFor(c, body.PersonID)
+	if status != 0 {
+		return c.JSON(status, map[string]string{"error": msg})
+	}
+	session, err := h.svc.ClockIn(projectID, body.TaskID, personID)
 	if err != nil {
 		return c.JSON(400, map[string]string{"error": err.Error()})
 	}
@@ -38,10 +64,11 @@ func (h *Handler) ClockOut(c *echo.Context) error {
 	if err := c.Bind(&body); err != nil {
 		return c.JSON(400, map[string]string{"error": "invalid request body"})
 	}
-	if body.PersonID == "" {
-		return c.JSON(400, map[string]string{"error": "person_id is required"})
+	personID, status, msg := personFor(c, body.PersonID)
+	if status != 0 {
+		return c.JSON(status, map[string]string{"error": msg})
 	}
-	session, err := h.svc.ClockOut(body.PersonID)
+	session, err := h.svc.ClockOut(personID)
 	if err != nil {
 		return c.JSON(400, map[string]string{"error": err.Error()})
 	}

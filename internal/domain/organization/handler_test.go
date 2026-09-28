@@ -12,39 +12,48 @@ import (
 	"working-time-tracker/internal/domain/organization"
 )
 
-func TestHandler_CreateAndList(t *testing.T) {
-	cleanup(t)
+func newTestEcho(svc *organization.Service) *echo.Echo {
 	e := echo.New()
 	e.Use(middleware.Recover())
+	orgH := organization.NewHandler(svc)
+	orgs := e.Group("/api/orgs")
+	orgs.GET("/:orgId", orgH.Get)
+	orgs.PATCH("/:orgId", orgH.Update)
+	orgs.DELETE("/:orgId", orgH.Delete)
+	return e
+}
 
-	orgH := organization.NewHandler(organization.NewService(organization.NewStore(testClient)))
-	registerRoutes(e, orgH)
+func TestHandler_GetAndUpdate(t *testing.T) {
+	cleanup(t)
+	svc := organization.NewService(organization.NewStore(testClient))
+	e := newTestEcho(svc)
+	org, _ := svc.Create("Minha Org")
 
-	req := httptest.NewRequest("POST", "/api/orgs/", strings.NewReader(`{"name":"My Org"}`))
-	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
-	e.ServeHTTP(rec, req)
-	if rec.Code != http.StatusCreated {
-		t.Fatalf("expected 201, got %d: %s", rec.Code, rec.Body.String())
+	e.ServeHTTP(rec, httptest.NewRequest("GET", "/api/orgs/"+org.ID.String(), nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("get expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
 
-	req = httptest.NewRequest("GET", "/api/orgs/", nil)
+	req := httptest.NewRequest("PATCH", "/api/orgs/"+org.ID.String(), strings.NewReader(`{"name":"Novo Nome"}`))
+	req.Header.Set("Content-Type", "application/json")
 	rec = httptest.NewRecorder()
 	e.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+		t.Fatalf("update expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), "Novo Nome") {
+		t.Errorf("update response does not contain the new name: %s", rec.Body.String())
 	}
 }
 
-func TestHandler_Create_EmptyName(t *testing.T) {
+func TestHandler_Update_EmptyName(t *testing.T) {
 	cleanup(t)
-	e := echo.New()
-	e.Use(middleware.Recover())
+	svc := organization.NewService(organization.NewStore(testClient))
+	e := newTestEcho(svc)
+	org, _ := svc.Create("Org")
 
-	orgH := organization.NewHandler(organization.NewService(organization.NewStore(testClient)))
-	registerRoutes(e, orgH)
-
-	req := httptest.NewRequest("POST", "/api/orgs/", strings.NewReader(`{"name":""}`))
+	req := httptest.NewRequest("PATCH", "/api/orgs/"+org.ID.String(), strings.NewReader(`{"name":""}`))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 	e.ServeHTTP(rec, req)
@@ -55,23 +64,11 @@ func TestHandler_Create_EmptyName(t *testing.T) {
 
 func TestHandler_NotFound(t *testing.T) {
 	cleanup(t)
-	e := echo.New()
-	e.Use(middleware.Recover())
+	e := newTestEcho(organization.NewService(organization.NewStore(testClient)))
 
-	orgH := organization.NewHandler(organization.NewService(organization.NewStore(testClient)))
-	registerRoutes(e, orgH)
-
-	req := httptest.NewRequest("GET", "/api/orgs/00000000-0000-0000-0000-000000000000", nil)
 	rec := httptest.NewRecorder()
-	e.ServeHTTP(rec, req)
+	e.ServeHTTP(rec, httptest.NewRequest("GET", "/api/orgs/00000000-0000-0000-0000-000000000000", nil))
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("expected 404, got %d", rec.Code)
 	}
-}
-
-func registerRoutes(e *echo.Echo, orgH *organization.Handler) {
-	orgs := e.Group("/api/orgs")
-	orgs.POST("/", orgH.Create)
-	orgs.GET("/", orgH.List)
-	orgs.GET("/:orgId", orgH.Get)
 }

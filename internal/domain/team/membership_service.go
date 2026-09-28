@@ -15,6 +15,13 @@ func NewMembershipService(store *MembershipStore) *MembershipService {
 }
 
 func (s *MembershipService) Add(teamID, personID string) (*TeamMembership, error) {
+	sameOrg, err := s.store.SameOrganization(teamID, personID)
+	if err != nil {
+		return nil, err
+	}
+	if !sameOrg {
+		return nil, errors.New("person not found in this organization")
+	}
 	exists, err := s.store.Exists(teamID, personID)
 	if err != nil {
 		return nil, err
