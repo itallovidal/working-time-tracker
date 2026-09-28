@@ -125,13 +125,19 @@ func (s *Store) ListByProject(projectID string, taskID, personID *string) ([]Wor
 	return toDomainSessions(sessions), nil
 }
 
-func (s *Store) TotalDurationByTask(taskID string) (float64, error) {
+// TotalDurationByTask soma as sessões da tarefa. O filtro pelo projeto impede
+// que uma tarefa de outra organização seja somada pela rota do projeto.
+func (s *Store) TotalDurationByTask(taskID, projectID string) (float64, error) {
 	tuid, err := uuid.Parse(taskID)
 	if err != nil {
 		return 0, err
 	}
+	prjid, err := uuid.Parse(projectID)
+	if err != nil {
+		return 0, err
+	}
 	sessions, err := s.client.WorkSession.Query().
-		Where(worksession.TaskIDEQ(tuid)).
+		Where(worksession.TaskIDEQ(tuid), worksession.HasTaskWith(task.ProjectIDEQ(prjid))).
 		All(context.Background())
 	if err != nil {
 		return 0, err
@@ -164,7 +170,7 @@ func (s *Store) TotalDurationByPerson(personID, projectID string) (float64, erro
 	return computeDuration(filtered), nil
 }
 
-func (s *Store) TotalDurationByTaskAndPerson(taskID, personID string) (float64, error) {
+func (s *Store) TotalDurationByTaskAndPerson(taskID, personID, projectID string) (float64, error) {
 	tuid, err := uuid.Parse(taskID)
 	if err != nil {
 		return 0, err
@@ -173,8 +179,16 @@ func (s *Store) TotalDurationByTaskAndPerson(taskID, personID string) (float64, 
 	if err != nil {
 		return 0, err
 	}
+	prjid, err := uuid.Parse(projectID)
+	if err != nil {
+		return 0, err
+	}
 	sessions, err := s.client.WorkSession.Query().
-		Where(worksession.TaskIDEQ(tuid), worksession.PersonIDEQ(puid)).
+		Where(
+			worksession.TaskIDEQ(tuid),
+			worksession.PersonIDEQ(puid),
+			worksession.HasTaskWith(task.ProjectIDEQ(prjid)),
+		).
 		All(context.Background())
 	if err != nil {
 		return 0, err

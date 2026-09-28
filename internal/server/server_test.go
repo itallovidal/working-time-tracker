@@ -269,6 +269,41 @@ func TestWorkSessions_UseLoggedInPerson(t *testing.T) {
 	}
 }
 
+// IDs que chegam pelo corpo ou pela query não passam pelo RequireOrg, então o
+// service precisa conferir a organização: um admin de A não fecha o ponto de
+// alguém de B nem soma as horas de uma tarefa de B.
+func TestAccess_IDsInBodyAndQueryStayInOrganization(t *testing.T) {
+	e := newServer(t)
+	a := signup(t, e, "Org A", "ana@a.com")
+	b := signup(t, e, "Org B", "bia@b.com")
+	projectA := createProject(t, e, a, "Projeto A")
+	projectB := createProject(t, e, b, "Projeto B")
+
+	rec := do(e, "POST", "/api/projects/"+projectB+"/teams", `{"name":"Time B"}`, b.session)
+	teamB := decode(t, rec)["id"].(string)
+	do(e, "POST", "/api/teams/"+teamB+"/members", `{"person_id":"`+b.id+`"}`, b.session)
+	rec = do(e, "POST", "/api/projects/"+projectB+"/tasks", `{"name":"Tarefa B","assignee_id":"`+b.id+`"}`, b.session)
+	taskB := decode(t, rec)["id"].(string)
+	if rec := do(e, "POST", "/api/projects/"+projectB+"/work-sessions/clock-in", `{"task_id":"`+taskB+`"}`, b.session); rec.Code != http.StatusCreated {
+		t.Fatalf("clock-in in org B = %d: %s", rec.Code, rec.Body.String())
+	}
+
+	rec = do(e, "POST", "/api/projects/"+projectA+"/work-sessions/clock-out", `{"person_id":"`+b.id+`"}`, a.session)
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("admin of A clocking out someone from B = %d, want 400: %s", rec.Code, rec.Body.String())
+	}
+	if rec := do(e, "GET", "/api/work-sessions/active", "", b.session); strings.TrimSpace(rec.Body.String()) == "null" {
+		t.Error("the session in org B was closed by an admin of org A")
+	}
+
+	for _, query := range []string{"task_id=" + taskB, "task_id=" + taskB + "&person_id=" + b.id} {
+		rec = do(e, "GET", "/api/projects/"+projectA+"/work-sessions/total?"+query, "", a.session)
+		if total := decode(t, rec)["total_seconds"]; total != float64(0) {
+			t.Errorf("total of org B's task through project A (%s) = %v, want 0", query, total)
+		}
+	}
+}
+
 func TestPages_AuthPagesRender(t *testing.T) {
 	e := newServer(t)
 	for _, path := range []string{"/login", "/signup", "/invite/qualquer-token"} {

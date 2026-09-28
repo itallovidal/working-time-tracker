@@ -95,7 +95,7 @@ func TestService_ClockOut_Success(t *testing.T) {
 	wsSvc.ClockIn(proj.ID.String(), task1.ID.String(), p.ID.String())
 	time.Sleep(time.Millisecond)
 
-	session, err := wsSvc.ClockOut(p.ID.String())
+	session, err := wsSvc.ClockOut(proj.ID.String(), p.ID.String())
 	if err != nil {
 		t.Fatalf("clock out failed: %v", err)
 	}
@@ -108,11 +108,28 @@ func TestService_ClockOut_Success(t *testing.T) {
 }
 
 func TestService_ClockOut_NoActiveSession(t *testing.T) {
-	_, _, _, _, _, _, wsSvc := setupDeps(t)
+	orgSvc, personSvc, projSvc, _, _, _, wsSvc := setupDeps(t)
 
-	_, err := wsSvc.ClockOut("00000000-0000-0000-0000-000000000001")
-	if err == nil {
-		t.Fatal("expected error for no active session, got nil")
+	org, _ := orgSvc.Create("Org")
+	p, _ := personSvc.Create(org.ID.String(), "John", "john@test.com")
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil)
+
+	_, err := wsSvc.ClockOut(proj.ID.String(), p.ID.String())
+	if err == nil || err.Error() != "não há ponto aberto para esta pessoa" {
+		t.Fatalf("expected no active session error, got %v", err)
+	}
+}
+
+func TestService_ClockOut_PersonFromAnotherOrganization(t *testing.T) {
+	orgSvc, personSvc, projSvc, _, _, _, wsSvc := setupDeps(t)
+
+	orgA, _ := orgSvc.Create("Org A")
+	orgB, _ := orgSvc.Create("Org B")
+	projA, _ := projSvc.Create(orgA.ID.String(), "Project A", "", 0, nil, nil)
+	personB, _ := personSvc.Create(orgB.ID.String(), "Bia", "bia@test.com")
+
+	if _, err := wsSvc.ClockOut(projA.ID.String(), personB.ID.String()); err == nil {
+		t.Fatal("expected clock out of a person from another organization to fail")
 	}
 }
 
@@ -146,7 +163,7 @@ func TestService_TotalTime(t *testing.T) {
 
 	wsSvc.ClockIn(proj.ID.String(), task1.ID.String(), p.ID.String())
 	time.Sleep(time.Millisecond)
-	wsSvc.ClockOut(p.ID.String())
+	wsSvc.ClockOut(proj.ID.String(), p.ID.String())
 
 	taskID := task1.ID.String()
 	personID := p.ID.String()

@@ -243,7 +243,8 @@ O `external-details` nunca falha por causa da plataforma. Se ela estiver fora, o
 | GET | `/api/projects/:projectId/work-sessions/total` | logado | `{"total_seconds": …}`. Exige `task_id`, `person_id` ou os dois |
 | GET | `/api/work-sessions/active` | logado | A sua sessão aberta, com a tarefa e o projeto, ou `null` |
 
-- Sem `person_id`, clock-in e clock-out valem para a pessoa logada. Só admins podem mandar o `person_id` de outra pessoa.
+- Sem `person_id`, clock-in e clock-out valem para a pessoa logada. Só admins podem mandar o `person_id` de outra pessoa, e ela precisa ser da organização do projeto.
+- O total só soma sessões de tarefas do projeto da rota. Um `task_id` de outro projeto dá `0`.
 - Cada pessoa tem no máximo uma sessão aberta. O banco garante isso com o índice único parcial `one_active_session`, então nem duas requisições simultâneas conseguem abrir duas sessões.
 - Uma sessão aberta conta no total até o momento da consulta.
 

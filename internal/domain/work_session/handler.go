@@ -68,7 +68,7 @@ func (h *Handler) ClockOut(c *echo.Context) error {
 	if status != 0 {
 		return c.JSON(status, map[string]string{"error": msg})
 	}
-	session, err := h.svc.ClockOut(personID)
+	session, err := h.svc.ClockOut(c.Param("projectId"), personID)
 	if err != nil {
 		return c.JSON(400, map[string]string{"error": err.Error()})
 	}

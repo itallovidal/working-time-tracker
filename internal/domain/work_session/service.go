@@ -74,7 +74,17 @@ func (s *Service) Active(personID string) (*WorkSession, error) {
 	return active, err
 }
 
-func (s *Service) ClockOut(personID string) (*WorkSession, error) {
+// ClockOut fecha a sessão aberta da pessoa. Como o person_id vem do corpo, a
+// pessoa precisa ser da organização do projeto da rota, como no ClockIn.
+func (s *Service) ClockOut(projectID, personID string) (*WorkSession, error) {
+	inOrg, err := s.sessionStore.PersonInProjectOrganization(personID, projectID)
+	if err != nil {
+		return nil, err
+	}
+	if !inOrg {
+		return nil, errors.New("pessoa não encontrada nesta organização")
+	}
+
 	active, err := s.sessionStore.GetActiveByPerson(personID)
 	if err != nil {
 		if errors.Is(err, database.ErrNotFound) {
@@ -101,14 +111,14 @@ type TotalTimeResult struct {
 
 func (s *Service) TotalTime(projectID string, taskID, personID *string) (*TotalTimeResult, error) {
 	if taskID != nil && *taskID != "" && personID != nil && *personID != "" {
-		total, err := s.sessionStore.TotalDurationByTaskAndPerson(*taskID, *personID)
+		total, err := s.sessionStore.TotalDurationByTaskAndPerson(*taskID, *personID, projectID)
 		if err != nil {
 			return nil, err
 		}
 		return &TotalTimeResult{TotalSeconds: total}, nil
 	}
 	if taskID != nil && *taskID != "" {
-		total, err := s.sessionStore.TotalDurationByTask(*taskID)
+		total, err := s.sessionStore.TotalDurationByTask(*taskID, projectID)
 		if err != nil {
 			return nil, err
 		}
