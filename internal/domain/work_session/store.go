@@ -209,8 +209,9 @@ func toDomainSession(e *ent.WorkSession) *WorkSession {
 	}
 	if e.Edges.Task != nil {
 		s.Task = &Task{
-			ID:   e.Edges.Task.ID,
-			Name: e.Edges.Task.Name,
+			ID:        e.Edges.Task.ID,
+			Name:      e.Edges.Task.Name,
+			ProjectID: e.Edges.Task.ProjectID,
 		}
 	}
 	if e.Edges.Person != nil {

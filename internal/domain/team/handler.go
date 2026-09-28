@@ -117,3 +117,13 @@ func (h *Handler) ListMembers(c *echo.Context) error {
 	}
 	return c.JSON(200, members)
 }
+
+// ListProjectMembers lista as pessoas que estão em algum time do projeto: são
+// elas que podem ser responsáveis por tarefas.
+func (h *Handler) ListProjectMembers(c *echo.Context) error {
+	persons, err := h.membershipSvc.ListPersonsInProject(c.Param("projectId"))
+	if err != nil {
+		return c.JSON(500, map[string]string{"error": err.Error()})
+	}
+	return c.JSON(200, persons)
+}

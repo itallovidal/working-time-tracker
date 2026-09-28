@@ -81,11 +81,12 @@
       const s = Math.max(0, Math.floor(seconds || 0));
       return pad(Math.floor(s / 3600)) + ':' + pad(Math.floor((s % 3600) / 60)) + ':' + pad(s % 60);
     },
-    // 3725 -> "1h 02min"
+    // 3725 -> "1h 02min"; 42 -> "42s"
     hours(seconds) {
-      const s = Math.max(0, Math.round(seconds || 0));
+      const s = Math.max(0, Math.floor(seconds || 0));
       const h = Math.floor(s / 3600);
       const m = Math.floor((s % 3600) / 60);
+      if (h === 0 && m === 0) return s + 's';
       if (h === 0) return m + 'min';
       return h + 'h ' + pad(m) + 'min';
     },
@@ -151,6 +152,60 @@
         this.items = this.items.filter((t) => t.id !== id);
       },
     });
+
+    // clock guarda a sessão de trabalho aberta da pessoa logada e um relógio que
+    // avança a cada segundo. O indicador do cabeçalho e a tela de ponto leem daqui.
+    Alpine.store('clock', {
+      session: null,
+      now: Date.now(),
+      ready: false,
+      init() {
+        if (!window.WTT.boot.me) return;
+        this.refresh();
+        setInterval(() => { this.now = Date.now(); }, 1000);
+      },
+      elapsed(session) {
+        const s = session || this.session;
+        if (!s) return 0;
+        const end = s.end_at ? new Date(s.end_at).getTime() : this.now;
+        return Math.max(0, (end - new Date(s.start_at).getTime()) / 1000);
+      },
+      async refresh() {
+        try {
+          this.session = await api('GET', '/api/work-sessions/active');
+        } catch (e) {
+          // O cabeçalho só deixa de mostrar o indicador; a tela de ponto mostra o erro.
+        } finally {
+          this.ready = true;
+        }
+      },
+      async clockIn(projectId, taskId) {
+        await api('POST', '/api/projects/' + projectId + '/work-sessions/clock-in', { task_id: taskId });
+        await this.refresh();
+        window.dispatchEvent(new CustomEvent('wtt:sessions-changed'));
+      },
+      async clockOut() {
+        if (!this.session) return;
+        await api('POST', '/api/projects/' + this.session.task.project_id + '/work-sessions/clock-out', {});
+        this.session = null;
+        window.dispatchEvent(new CustomEvent('wtt:sessions-changed'));
+      },
+    });
+
+    Alpine.data('activeSession', () => ({
+      busy: false,
+      async stop() {
+        this.busy = true;
+        try {
+          await Alpine.store('clock').clockOut();
+          Alpine.store('toast').show('Ponto encerrado.');
+        } catch (e) {
+          Alpine.store('toast').error(e.message);
+        } finally {
+          this.busy = false;
+        }
+      },
+    }));
 
     Alpine.data('logoutButton', () => ({
       busy: false,

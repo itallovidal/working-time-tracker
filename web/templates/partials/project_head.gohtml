@@ -6,6 +6,8 @@
   </div>
 </div>
 <nav class="tabs" aria-label="Seções do projeto">
+  <a href="/projects/{{.Project.ID}}/tasks" {{if eq .Tab "tasks"}}aria-current="page"{{end}}>Tarefas</a>
+  <a href="/projects/{{.Project.ID}}/time-tracking" {{if eq .Tab "time"}}aria-current="page"{{end}}>Ponto</a>
   <a href="/projects/{{.Project.ID}}/teams" {{if eq .Tab "teams"}}aria-current="page"{{end}}>Times</a>
   <a href="/projects/{{.Project.ID}}/settings" {{if eq .Tab "settings"}}aria-current="page"{{end}}>Configurações</a>
 </nav>

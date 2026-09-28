@@ -1,1 +1,14 @@
-{{define "active_session"}}{{end}}
+{{define "active_session"}}
+<div x-data="activeSession" x-cloak x-show="$store.clock.session">
+  <template x-if="$store.clock.session">
+    <div class="session-pill">
+      <span class="pulse" aria-hidden="true"></span>
+      <a :href="'/projects/' + $store.clock.session.task.project_id + '/time-tracking'"
+         :title="'Em andamento: ' + $store.clock.session.task.name"
+         x-text="$store.clock.session.task.name"></a>
+      <span class="mono" x-text="WTT.fmt.clock($store.clock.elapsed())"></span>
+      <button type="button" class="btn btn-sm" :disabled="busy" @click="stop()">Parar</button>
+    </div>
+  </template>
+</div>
+{{end}}

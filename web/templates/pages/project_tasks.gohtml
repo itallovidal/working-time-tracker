@@ -1,0 +1,88 @@
+{{define "content"}}
+<main class="page" x-data="projectTasks">
+  {{template "project_head" .}}
+
+  <div class="toolbar">
+    <label class="check">
+      <input type="checkbox" x-model="onlyMine"> Só as minhas tarefas
+    </label>
+    <button type="button" class="btn" x-show="!creating" @click="openCreate()" :disabled="members.length === 0">Nova tarefa</button>
+  </div>
+
+  <form class="card" x-cloak x-show="creating" @submit.prevent="create()" novalidate>
+    <div class="card-head"><h2>Nova tarefa</h2></div>
+    <div class="fields">
+      <div class="field">
+        <label for="task-name">Nome</label>
+        <input id="task-name" type="text" required x-model="draft.name" x-ref="name">
+      </div>
+      <div class="field">
+        <label for="task-assignee">Responsável</label>
+        <select id="task-assignee" required x-model="draft.assignee_id">
+          <template x-for="m in members" :key="m.id">
+            <option :value="m.id" x-text="m.name" :selected="m.id === draft.assignee_id"></option>
+          </template>
+        </select>
+      </div>
+      <div class="field">
+        <label for="task-deadline">Prazo</label>
+        <input id="task-deadline" type="date" x-model="draft.deadline">
+        <span class="hint">Vazio: 7 dias a partir de hoje.</span>
+      </div>
+    </div>
+    <div class="field">
+      <label for="task-description">Descrição</label>
+      <textarea id="task-description" x-model="draft.description" placeholder="Opcional"></textarea>
+    </div>
+    <p class="form-error" x-show="errors.create" x-text="errors.create" role="alert"></p>
+    <div class="row row-end">
+      <button type="button" class="btn btn-secondary" @click="creating = false">Cancelar</button>
+      <button type="submit" class="btn" :disabled="pending">Criar tarefa</button>
+    </div>
+  </form>
+
+  <p class="muted" x-show="loading">Carregando tarefas…</p>
+  <p class="form-error" x-cloak x-show="errors.load" x-text="errors.load"></p>
+  <p class="form-error" x-cloak x-show="errors.clock" x-text="errors.clock" role="alert"></p>
+
+  <div class="empty" x-cloak x-show="!loading && !errors.load && members.length === 0">
+    <strong>Ninguém nos times deste projeto</strong>
+    <span>Só quem está em algum time pode ser responsável por tarefas.</span>
+    <a class="btn btn-secondary" href="/projects/{{.Project.ID}}/teams">Montar os times</a>
+  </div>
+  <div class="empty" x-cloak x-show="!loading && members.length > 0 && visible().length === 0">
+    <strong x-text="onlyMine ? 'Nenhuma tarefa sua neste projeto' : 'Nenhuma tarefa ainda'"></strong>
+    <span>Crie uma tarefa para começar a registrar tempo nela.</span>
+  </div>
+
+  <div class="table-wrap" x-show="visible().length > 0">
+    <table>
+      <thead>
+        <tr><th>Tarefa</th><th>Responsável</th><th>Prazo</th><th>Item externo</th><th class="actions"><span class="sr-only">Ponto</span></th></tr>
+      </thead>
+      <tbody>
+        <template x-for="t in visible()" :key="t.id">
+          <tr>
+            <td><a :href="'/tasks/' + t.id" x-text="t.name"></a></td>
+            <td x-text="t.assignee ? t.assignee.name : '—'"></td>
+            <td>
+              <span class="badge num" :class="deadlineClass(t)" x-text="deadlineLabel(t)"></span>
+            </td>
+            <td>
+              <template x-if="t.external_item_id">
+                <a class="badge badge-accent" :href="t.external_item_url" target="_blank" rel="noopener"
+                   x-text="externalLabel(t)"></a>
+              </template>
+              <span class="muted" x-show="!t.external_item_id">—</span>
+            </td>
+            <td class="actions">
+              <span class="badge badge-ok" x-show="isRunning(t)">Em andamento</span>
+              <button type="button" class="btn btn-secondary btn-sm" x-show="!isRunning(t)" :disabled="pending" @click="start(t)">Iniciar</button>
+            </td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+  </div>
+</main>
+{{end}}

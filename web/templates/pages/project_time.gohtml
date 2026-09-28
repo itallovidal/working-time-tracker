@@ -1,0 +1,99 @@
+{{define "content"}}
+<main class="page" x-data="timeTracking">
+  {{template "project_head" .}}
+
+  <div class="grid-aside">
+    <section class="clock" aria-live="polite">
+      <p class="muted" x-show="!$store.clock.ready">Carregando…</p>
+
+      <template x-if="$store.clock.ready && $store.clock.session">
+        <div class="stack">
+          <div class="clock-status"><span class="pulse" aria-hidden="true"></span> Em andamento</div>
+          <div class="clock-face running" x-text="WTT.fmt.clock($store.clock.elapsed())"></div>
+          <div>
+            <a :href="'/tasks/' + $store.clock.session.task.id" x-text="$store.clock.session.task.name"></a>
+            <span class="muted">· desde as <span x-text="WTT.fmt.time($store.clock.session.start_at)"></span></span>
+          </div>
+          <p class="alert alert-warn" x-show="$store.clock.session.task.project_id !== project.id">
+            Esta sessão é de outro projeto. Pare antes de iniciar uma tarefa daqui.
+          </p>
+          <div class="row"><button type="button" class="btn btn-danger" :disabled="pending" @click="stop()">Parar</button></div>
+        </div>
+      </template>
+
+      <template x-if="$store.clock.ready && !$store.clock.session">
+        <form class="stack" @submit.prevent="start()" novalidate>
+          <div class="clock-status muted">Parado</div>
+          <div class="clock-face">00:00:00</div>
+          <p class="muted" x-show="tasks.length === 0 && !loading">
+            Este projeto ainda não tem tarefas. <a href="/projects/{{.Project.ID}}/tasks">Crie uma</a> para bater o ponto.
+          </p>
+          <div class="row" x-show="tasks.length > 0">
+            <select class="flex-1" x-model="taskId" aria-label="Tarefa">
+              <template x-for="t in tasks" :key="t.id">
+                <option :value="t.id" x-text="t.name" :selected="t.id === taskId"></option>
+              </template>
+            </select>
+            <button type="submit" class="btn" :disabled="pending || !taskId">Iniciar</button>
+          </div>
+        </form>
+      </template>
+      <p class="form-error" x-cloak x-show="errors.clock" x-text="errors.clock" role="alert"></p>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h2>Seu tempo neste projeto</h2></div>
+      <div class="totals">
+        <div class="total"><div class="v" x-text="WTT.fmt.hours(mine('today'))"></div><div class="k">Hoje</div></div>
+        <div class="total"><div class="v" x-text="WTT.fmt.hours(mine('week'))"></div><div class="k">Nesta semana</div></div>
+      </div>
+    </section>
+  </div>
+
+  <section class="stack">
+    <div class="card-head">
+      <h2>Sessões</h2>
+      <div class="row filters">
+        <select x-model="filter.task" aria-label="Filtrar por tarefa">
+          <option value="">Todas as tarefas</option>
+          <template x-for="t in tasks" :key="t.id"><option :value="t.id" x-text="t.name"></option></template>
+        </select>
+        <select x-model="filter.person" aria-label="Filtrar por pessoa">
+          <option value="">Todas as pessoas</option>
+          <template x-for="p in people()" :key="p.id"><option :value="p.id" x-text="p.name"></option></template>
+        </select>
+      </div>
+    </div>
+    <p class="form-error" x-cloak x-show="errors.load" x-text="errors.load"></p>
+    <div class="empty" x-cloak x-show="!loading && filtered().length === 0">
+      <strong>Nenhuma sessão</strong>
+      <span x-text="filter.task || filter.person ? 'Nada com esses filtros.' : 'Quando alguém bater o ponto neste projeto, a sessão aparece aqui.'"></span>
+    </div>
+    <div class="table-wrap" x-show="filtered().length > 0">
+      <table>
+        <thead><tr><th>Pessoa</th><th>Tarefa</th><th>Início</th><th>Fim</th><th class="actions">Duração</th></tr></thead>
+        <tbody>
+          <template x-for="s in filtered()" :key="s.id">
+            <tr>
+              <td x-text="s.person ? s.person.name : ''"></td>
+              <td><a :href="'/tasks/' + s.task_id" x-text="s.task ? s.task.name : ''"></a></td>
+              <td class="num" x-text="WTT.fmt.dateTime(s.start_at)"></td>
+              <td class="num">
+                <span x-show="s.end_at" x-text="WTT.fmt.dateTime(s.end_at)"></span>
+                <span class="badge badge-ok" x-show="!s.end_at">em andamento</span>
+              </td>
+              <td class="actions mono num" x-text="WTT.fmt.clock($store.clock.elapsed(s))"></td>
+            </tr>
+          </template>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="4"><strong>Total</strong> <span class="muted small" x-text="'(' + filtered().length + (filtered().length === 1 ? ' sessão)' : ' sessões)')"></span></td>
+            <td class="actions mono num"><strong x-text="WTT.fmt.hours(filteredTotal())"></strong></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </section>
+</main>
+{{end}}

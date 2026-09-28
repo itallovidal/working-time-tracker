@@ -65,6 +65,15 @@ func (s *Service) ClockIn(projectID, taskID, personID string) (*WorkSession, err
 	return session, nil
 }
 
+// Active devolve a sessão aberta da pessoa, ou nil quando ela não está com o ponto aberto.
+func (s *Service) Active(personID string) (*WorkSession, error) {
+	active, err := s.sessionStore.GetActiveByPerson(personID)
+	if errors.Is(err, database.ErrNotFound) {
+		return nil, nil
+	}
+	return active, err
+}
+
 func (s *Service) ClockOut(personID string) (*WorkSession, error) {
 	active, err := s.sessionStore.GetActiveByPerson(personID)
 	if err != nil {

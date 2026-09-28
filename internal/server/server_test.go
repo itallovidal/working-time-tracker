@@ -341,12 +341,14 @@ func TestRoutes_Table(t *testing.T) {
 		"DELETE /api/projects/:projectId",
 		"POST /api/projects/:projectId/teams",
 		"GET /api/projects/:projectId/teams",
+		"GET /api/projects/:projectId/members",
 		"POST /api/projects/:projectId/tasks",
 		"GET /api/projects/:projectId/tasks",
 		"POST /api/projects/:projectId/work-sessions/clock-in",
 		"POST /api/projects/:projectId/work-sessions/clock-out",
 		"GET /api/projects/:projectId/work-sessions",
 		"GET /api/projects/:projectId/work-sessions/total",
+		"GET /api/work-sessions/active",
 		"POST /api/projects/:projectId/integrations",
 		"GET /api/projects/:projectId/integrations",
 
@@ -384,5 +386,44 @@ func TestRoutes_Table(t *testing.T) {
 	if strings.Join(got, "\n") != strings.Join(want, "\n") {
 		t.Errorf("route table mismatch\n got:\n  %s\nwant:\n  %s",
 			strings.Join(got, "\n  "), strings.Join(want, "\n  "))
+	}
+}
+
+// A tela de ponto usa a sessão ativa da pessoa logada, e o seletor de
+// responsável usa os membros dos times do projeto.
+func TestAPI_ActiveSessionAndProjectMembers(t *testing.T) {
+	e := newServer(t)
+	admin := signup(t, e, "Org", "ana@test.com")
+	projectID := createProject(t, e, admin, "Projeto")
+
+	if rec := do(e, "GET", "/api/work-sessions/active", "", admin.session); rec.Code != http.StatusOK || strings.TrimSpace(rec.Body.String()) != "null" {
+		t.Fatalf("active without session = %d %q, want 200 null", rec.Code, rec.Body.String())
+	}
+	if rec := do(e, "GET", "/api/projects/"+projectID+"/members", "", admin.session); strings.TrimSpace(rec.Body.String()) != "[]" {
+		t.Fatalf("members of a project without teams = %q, want []", rec.Body.String())
+	}
+
+	rec := do(e, "POST", "/api/projects/"+projectID+"/teams", `{"name":"A"}`, admin.session)
+	teamA := decode(t, rec)["id"].(string)
+	rec = do(e, "POST", "/api/projects/"+projectID+"/teams", `{"name":"B"}`, admin.session)
+	teamB := decode(t, rec)["id"].(string)
+	do(e, "POST", "/api/teams/"+teamA+"/members", `{"person_id":"`+admin.id+`"}`, admin.session)
+	do(e, "POST", "/api/teams/"+teamB+"/members", `{"person_id":"`+admin.id+`"}`, admin.session)
+
+	rec = do(e, "GET", "/api/projects/"+projectID+"/members", "", admin.session)
+	var members []map[string]any
+	json.Unmarshal(rec.Body.Bytes(), &members)
+	if len(members) != 1 || members[0]["id"] != admin.id {
+		t.Errorf("members = %s, want only the admin once (even though she is in two teams)", rec.Body.String())
+	}
+
+	rec = do(e, "POST", "/api/projects/"+projectID+"/tasks", `{"name":"Tarefa","assignee_id":"`+admin.id+`"}`, admin.session)
+	taskID := decode(t, rec)["id"].(string)
+	do(e, "POST", "/api/projects/"+projectID+"/work-sessions/clock-in", `{"task_id":"`+taskID+`"}`, admin.session)
+
+	active := decode(t, do(e, "GET", "/api/work-sessions/active", "", admin.session))
+	task, _ := active["task"].(map[string]any)
+	if task == nil || task["id"] != taskID || task["project_id"] != projectID {
+		t.Errorf("active session = %v, want task %s of project %s", active, taskID, projectID)
 	}
 }

@@ -114,3 +114,16 @@ func (h *Handler) Total(c *echo.Context) error {
 	}
 	return c.JSON(200, total)
 }
+
+// Active devolve a sessão aberta da pessoa logada, ou null.
+func (h *Handler) Active(c *echo.Context) error {
+	me := auth.CurrentPerson(c)
+	if me == nil {
+		return c.JSON(401, map[string]string{"error": auth.ErrUnauthenticated.Error()})
+	}
+	session, err := h.svc.Active(me.PersonID.String())
+	if err != nil {
+		return c.JSON(500, map[string]string{"error": err.Error()})
+	}
+	return c.JSON(200, session)
+}

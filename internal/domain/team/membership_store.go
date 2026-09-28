@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 
 	"working-time-tracker/ent"
+	entperson "working-time-tracker/ent/person"
 	"working-time-tracker/ent/team"
 	enttm "working-time-tracker/ent/teammembership"
 )
@@ -98,6 +99,26 @@ func (s *MembershipStore) SameOrganization(teamID, personID string) (bool, error
 		return false, err
 	}
 	return p.OrganizationID == prj.OrganizationID, nil
+}
+
+// ListPersonsInProject lista, sem repetir, as pessoas que estão em algum time do projeto.
+func (s *MembershipStore) ListPersonsInProject(projectID string) ([]Person, error) {
+	prjid, err := uuid.Parse(projectID)
+	if err != nil {
+		return nil, err
+	}
+	persons, err := s.client.Person.Query().
+		Where(entperson.HasTeamMembershipsWith(enttm.HasTeamWith(team.ProjectIDEQ(prjid)))).
+		Order(ent.Asc(entperson.FieldName)).
+		All(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	result := make([]Person, len(persons))
+	for i, p := range persons {
+		result[i] = Person{ID: p.ID, Name: p.Name, Email: p.Email}
+	}
+	return result, nil
 }
 
 func (s *MembershipStore) IsPersonInProject(personID, projectID string) (bool, error) {

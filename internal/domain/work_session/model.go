@@ -7,8 +7,9 @@ import (
 )
 
 type Task struct {
-	ID   uuid.UUID `json:"id"`
-	Name string    `json:"name"`
+	ID        uuid.UUID `json:"id"`
+	Name      string    `json:"name"`
+	ProjectID uuid.UUID `json:"project_id"`
 }
 
 type Person struct {

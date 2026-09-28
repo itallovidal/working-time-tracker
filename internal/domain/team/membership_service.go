@@ -43,6 +43,10 @@ func (s *MembershipService) Remove(teamID, personID string) error {
 	return s.store.Remove(teamID, personID)
 }
 
+func (s *MembershipService) ListPersonsInProject(projectID string) ([]Person, error) {
+	return s.store.ListPersonsInProject(projectID)
+}
+
 func (s *MembershipService) ListByTeam(teamID string) ([]TeamMembership, error) {
 	return s.store.ListByTeam(teamID)
 }

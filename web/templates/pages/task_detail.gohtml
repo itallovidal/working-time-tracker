@@ -1,0 +1,139 @@
+{{define "content"}}
+<main class="page" x-data="taskDetail">
+  {{template "project_head" .}}
+
+  <p class="muted" x-show="loading">Carregando a tarefa…</p>
+  <p class="form-error" x-cloak x-show="errors.load" x-text="errors.load"></p>
+
+  <div class="grid-aside" x-cloak x-show="!loading && task">
+    <div class="stack">
+      <form class="card" @submit.prevent="save()" novalidate>
+        <div class="card-head">
+          <h2>Tarefa</h2>
+          <span class="badge num" :class="deadlineClass()" x-text="deadlineLabel()"></span>
+        </div>
+        <div class="field">
+          <label for="td-name">Nome</label>
+          <input id="td-name" type="text" required x-model="form.name">
+        </div>
+        <div class="field">
+          <label for="td-description">Descrição</label>
+          <textarea id="td-description" x-model="form.description"></textarea>
+        </div>
+        <div class="fields">
+          <div class="field">
+            <label for="td-assignee">Responsável</label>
+            <select id="td-assignee" x-model="form.assignee_id">
+              <template x-for="m in members" :key="m.id">
+                <option :value="m.id" x-text="m.name" :selected="m.id === form.assignee_id"></option>
+              </template>
+            </select>
+          </div>
+          <div class="field">
+            <label for="td-deadline">Prazo</label>
+            <input id="td-deadline" type="date" x-model="form.deadline">
+          </div>
+        </div>
+        <p class="form-error" x-show="errors.save" x-text="errors.save" role="alert"></p>
+        <div class="row row-end">
+          <a class="btn btn-secondary" href="/projects/{{.Project.ID}}/tasks">Voltar</a>
+          <button type="submit" class="btn" :disabled="pending">Salvar</button>
+        </div>
+      </form>
+
+      <section class="card">
+        <div class="card-head">
+          <h2>Tempo registrado</h2>
+          <span class="mono num" x-text="WTT.fmt.hours(totalSeconds())"></span>
+        </div>
+        <p class="muted small" x-show="sessions.length === 0">Ninguém registrou tempo nesta tarefa ainda.</p>
+        <ul class="list" x-show="sessions.length > 0">
+          <template x-for="s in sessions" :key="s.id">
+            <li>
+              <div class="grow">
+                <div x-text="s.person ? s.person.name : ''"></div>
+                <div class="muted small">
+                  <span x-text="WTT.fmt.dateTime(s.start_at)"></span>
+                  <span x-text="s.end_at ? '– ' + WTT.fmt.time(s.end_at) : '· em andamento'"></span>
+                </div>
+              </div>
+              <span class="mono num" x-text="WTT.fmt.clock($store.clock.elapsed(s))"></span>
+            </li>
+          </template>
+        </ul>
+      </section>
+    </div>
+
+    <div class="stack">
+      <section class="card">
+        <div class="card-head"><h2>Item externo</h2></div>
+        <template x-if="task && task.external_item_id">
+          <div class="stack">
+            <div>
+              <span class="badge badge-accent" x-text="externalLabel()"></span>
+            </div>
+            <p class="muted small" x-show="external.loading">Buscando detalhes…</p>
+            <template x-if="external.details">
+              <div class="stack">
+                <a :href="external.details.url" target="_blank" rel="noopener" x-text="external.details.title"></a>
+                <span class="badge" :class="external.details.state === 'open' || external.details.state === 'opened' ? 'badge-ok' : ''"
+                      x-text="'Estado: ' + external.details.state"></span>
+              </div>
+            </template>
+            <p class="alert alert-warn" x-show="external.error">
+              Não deu para buscar os detalhes agora: <span x-text="external.error"></span>
+              <a :href="task.external_item_url" target="_blank" rel="noopener">Abrir o link</a>
+            </p>
+            <p class="form-error" x-show="errors.unlink" x-text="errors.unlink" role="alert"></p>
+            <div class="row"><button type="button" class="btn btn-danger-ghost" :disabled="pending" @click="unlink()">Desvincular</button></div>
+          </div>
+        </template>
+        <template x-if="task && !task.external_item_id">
+          <form class="stack" @submit.prevent="link()" novalidate>
+            <p class="muted small" x-show="integrations.length === 0">
+              Este projeto não tem integrações.
+              {{if .IsAdmin}}Configure uma na aba Integrações.{{else}}Peça a um admin para configurar uma.{{end}}
+            </p>
+            <template x-if="integrations.length > 0">
+              <div class="stack">
+                <div class="field">
+                  <label for="td-integration">Integração</label>
+                  <select id="td-integration" x-model="linkForm.integration_id">
+                    <template x-for="i in integrations" :key="i.id">
+                      <option :value="i.id" x-text="i.display_name + ' (' + i.type + ')'" :selected="i.id === linkForm.integration_id"></option>
+                    </template>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="td-item">Número da issue</label>
+                  <input id="td-item" type="text" inputmode="numeric" placeholder="Ex.: 42" x-model="linkForm.external_item_id">
+                </div>
+                <div class="field">
+                  <label for="td-url">Link</label>
+                  <input id="td-url" type="url" placeholder="https://github.com/…/issues/42" x-model="linkForm.external_item_url">
+                </div>
+                <p class="form-error" x-show="errors.link" x-text="errors.link" role="alert"></p>
+                <button type="submit" class="btn btn-secondary" :disabled="pending">Vincular</button>
+              </div>
+            </template>
+          </form>
+        </template>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><h2>Excluir tarefa</h2></div>
+        <p class="muted small">Apaga a tarefa e todo o tempo registrado nela.</p>
+        <p class="form-error" x-show="errors.delete" x-text="errors.delete" role="alert"></p>
+        <div class="row" x-show="!confirmDelete">
+          <button type="button" class="btn btn-danger-ghost" @click="confirmDelete = true">Excluir tarefa</button>
+        </div>
+        <div class="confirm" x-cloak x-show="confirmDelete">
+          <span>Excluir de vez?</span>
+          <button type="button" class="btn btn-danger btn-sm" :disabled="pending" @click="remove()">Excluir</button>
+          <button type="button" class="btn btn-ghost btn-sm" @click="confirmDelete = false">Cancelar</button>
+        </div>
+      </section>
+    </div>
+  </div>
+</main>
+{{end}}
