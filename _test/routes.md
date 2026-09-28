@@ -8,7 +8,7 @@
 
 | Método | Rota | Descrição |
 |--------|------|-----------|
-| GET | `/healthcheck/` | Verifica se o servidor está rodando |
+| GET | `/healthcheck` | Verifica se o servidor está rodando |
 | GET | `/healthcheck/hello` | Hello world de teste |
 
 ---
@@ -213,7 +213,7 @@ Content-Type: application/json
 
 ## Fluxo de teste sugerido
 
-1. **Healthcheck** → `GET /healthcheck/`
+1. **Healthcheck** → `GET /healthcheck`
 2. **Criar org** → `POST /api/orgs` → copiar o `id` retornado
 3. **Listar orgs** → `GET /api/orgs`
 4. **Criar pessoa** → `POST /api/orgs/:orgId/persons`

@@ -1,14 +1,18 @@
 package task_test
 
 import (
+	"context"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
 
 	"working-time-tracker/internal/domain/organization"
 	"working-time-tracker/internal/domain/person"
 	"working-time-tracker/internal/domain/project"
 	"working-time-tracker/internal/domain/task"
 	"working-time-tracker/internal/domain/team"
+	"working-time-tracker/testutil"
 )
 
 func setupDeps(t *testing.T) (*organization.Service, *person.Service, *project.Service, *team.Service, *team.MembershipService, *task.Service) {
@@ -24,14 +28,23 @@ func setupDeps(t *testing.T) (*organization.Service, *person.Service, *project.S
 	return orgSvc, personSvc, projSvc, teamSvc, memberSvc, taskSvc
 }
 
-func cleanup(t *testing.T) {
+// createIntegration grava uma integração direto pelo Ent, sem validar credenciais
+// na API externa. Serve para testes que só precisam de uma FK válida.
+func createIntegration(t *testing.T, projectID string) string {
 	t.Helper()
-	testDB.Exec("TRUNCATE TABLE tasks CASCADE")
-	testDB.Exec("TRUNCATE TABLE team_memberships CASCADE")
-	testDB.Exec("TRUNCATE TABLE teams CASCADE")
-	testDB.Exec("TRUNCATE TABLE projects CASCADE")
-	testDB.Exec("TRUNCATE TABLE people CASCADE")
-	testDB.Exec("TRUNCATE TABLE organizations CASCADE")
+	it, err := testClient.Integration.Create().
+		SetProjectID(uuid.MustParse(projectID)).
+		SetType("github").
+		SetDisplayName("GitHub").
+		Save(context.Background())
+	if err != nil {
+		t.Fatalf("create integration: %v", err)
+	}
+	return it.ID.String()
+}
+
+func cleanup(t *testing.T) {
+	testutil.Truncate(t, testDB)
 }
 
 func TestService_Create_DefaultDeadline(t *testing.T) {
@@ -73,7 +86,8 @@ func TestService_Create_ExplicitDeadline(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create failed: %v", err)
 	}
-	if !task1.Deadline.Equal(dl) {
+	// O Postgres guarda microssegundos, então o prazo lido pode perder os nanossegundos.
+	if task1.Deadline.Sub(dl).Abs() >= time.Microsecond {
 		t.Errorf("deadline = %v, want %v", task1.Deadline, dl)
 	}
 }
@@ -172,7 +186,7 @@ func TestService_LinkUnlinkExternalItem(t *testing.T) {
 
 	task1, _ := taskSvc.Create(proj.ID.String(), "Task A", "", p.ID.String(), nil)
 
-	linked, err := taskSvc.LinkExternalItem(task1.ID.String(), "00000000-0000-0000-0000-000000000001", "42", "https://example.com/42")
+	linked, err := taskSvc.LinkExternalItem(task1.ID.String(), createIntegration(t, proj.ID.String()), "42", "https://example.com/42")
 	if err != nil {
 		t.Fatalf("link failed: %v", err)
 	}
@@ -186,5 +200,29 @@ func TestService_LinkUnlinkExternalItem(t *testing.T) {
 	}
 	if unlinked.ExternalItemID != nil {
 		t.Errorf("expected nil external_item_id after unlink, got %v", *unlinked.ExternalItemID)
+	}
+}
+
+func TestService_Delete_CascadesWorkSessions(t *testing.T) {
+	orgSvc, personSvc, projSvc, teamSvc, memberSvc, taskSvc := setupDeps(t)
+	ctx := context.Background()
+
+	org, _ := orgSvc.Create("Org")
+	p, _ := personSvc.Create(org.ID.String(), "John", "john@test.com")
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil)
+	tm, _ := teamSvc.Create(proj.ID.String(), "Team")
+	memberSvc.Add(tm.ID.String(), p.ID.String())
+	task1, _ := taskSvc.Create(proj.ID.String(), "Task A", "", p.ID.String(), nil)
+
+	testClient.WorkSession.Create().SetTaskID(task1.ID).SetPersonID(p.ID).
+		SetStartAt(time.Now().Add(-time.Hour)).SetEndAt(time.Now()).SaveX(ctx)
+	testClient.WorkSession.Create().SetTaskID(task1.ID).SetPersonID(p.ID).
+		SetStartAt(time.Now()).SaveX(ctx)
+
+	if err := taskSvc.Delete(task1.ID.String()); err != nil {
+		t.Fatalf("delete task with work sessions failed: %v", err)
+	}
+	if n := testClient.WorkSession.Query().CountX(ctx); n != 0 {
+		t.Errorf("work_sessions: %d rows left, want 0", n)
 	}
 }

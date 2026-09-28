@@ -128,8 +128,9 @@ func TestHandler_UpdateAndDelete(t *testing.T) {
 func TestHandler_LinkUnlinkExternalItem(t *testing.T) {
 	app := setupTestApp(t)
 
+	integrationID := createIntegration(t, app.projectID)
 	req := httptest.NewRequest("POST", "/api/tasks/"+app.taskID+"/link-external-item",
-		strings.NewReader(`{"integration_id":"00000000-0000-0000-0000-000000000000","external_item_id":"42","external_item_url":"https://example.com/42"}`))
+		strings.NewReader(`{"integration_id":"`+integrationID+`","external_item_id":"42","external_item_url":"https://example.com/42"}`))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 	app.e.ServeHTTP(rec, req)

@@ -1,20 +1,14 @@
 package organization_test
 
 import (
-	"database/sql"
 	"testing"
 
 	"working-time-tracker/internal/domain/organization"
+	"working-time-tracker/testutil"
 )
 
-var localDB *sql.DB
-
 func cleanup(t *testing.T) {
-	t.Helper()
-	if localDB == nil {
-		localDB = testDB
-	}
-	localDB.Exec("TRUNCATE TABLE organizations CASCADE")
+	testutil.Truncate(t, testDB)
 }
 
 func TestService_Create(t *testing.T) {

@@ -89,8 +89,17 @@ func (s *Store) Update(t *Task) error {
 	} else {
 		q = q.ClearExternalIntegrationID()
 	}
-	q = q.SetNillableExternalItemID(t.ExternalItemID)
-	q = q.SetNillableExternalItemURL(t.ExternalItemURL)
+	// SetNillable* ignora nil, então limpar o vínculo exige Clear* explícito.
+	if t.ExternalItemID != nil {
+		q = q.SetExternalItemID(*t.ExternalItemID)
+	} else {
+		q = q.ClearExternalItemID()
+	}
+	if t.ExternalItemURL != nil {
+		q = q.SetExternalItemURL(*t.ExternalItemURL)
+	} else {
+		q = q.ClearExternalItemURL()
+	}
 	_, err := q.Save(context.Background())
 	return err
 }
@@ -108,15 +117,15 @@ func toDomainTask(e *ent.Task) *Task {
 		return nil
 	}
 	t := &Task{
-		ID:            e.ID,
-		ProjectID:     e.ProjectID,
-		Name:          e.Name,
-		Description:   e.Description,
-		AssigneeID:    e.AssigneeID,
-		Deadline:      e.Deadline,
-		ExternalItemID: e.ExternalItemID,
+		ID:              e.ID,
+		ProjectID:       e.ProjectID,
+		Name:            e.Name,
+		Description:     e.Description,
+		AssigneeID:      e.AssigneeID,
+		Deadline:        e.Deadline,
+		ExternalItemID:  e.ExternalItemID,
 		ExternalItemURL: e.ExternalItemURL,
-		CreatedAt:     e.CreatedAt,
+		CreatedAt:       e.CreatedAt,
 	}
 	if e.Edges.Assignee != nil {
 		t.Assignee = &Person{

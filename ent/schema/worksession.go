@@ -4,8 +4,10 @@ import (
 	"time"
 
 	"entgo.io/ent"
+	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
+	"entgo.io/ent/schema/index"
 	"github.com/google/uuid"
 )
 
@@ -28,5 +30,15 @@ func (WorkSession) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("task", Task.Type).Ref("work_sessions").Field("task_id").Unique().Required(),
 		edge.From("person", Person.Type).Ref("work_sessions").Field("person_id").Unique().Required(),
+	}
+}
+
+// Indexes garante no banco que cada pessoa tenha no máximo uma sessão aberta.
+func (WorkSession) Indexes() []ent.Index {
+	return []ent.Index{
+		index.Fields("person_id").
+			Unique().
+			StorageKey("one_active_session").
+			Annotations(entsql.IndexWhere("end_at IS NULL")),
 	}
 }

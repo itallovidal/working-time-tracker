@@ -1,21 +1,18 @@
 package team_test
 
 import (
+	"context"
 	"testing"
 
 	"working-time-tracker/internal/domain/organization"
 	"working-time-tracker/internal/domain/person"
 	"working-time-tracker/internal/domain/project"
 	"working-time-tracker/internal/domain/team"
+	"working-time-tracker/testutil"
 )
 
 func cleanup(t *testing.T) {
-	t.Helper()
-	testDB.Exec("TRUNCATE TABLE team_memberships CASCADE")
-	testDB.Exec("TRUNCATE TABLE teams CASCADE")
-	testDB.Exec("TRUNCATE TABLE projects CASCADE")
-	testDB.Exec("TRUNCATE TABLE people CASCADE")
-	testDB.Exec("TRUNCATE TABLE organizations CASCADE")
+	testutil.Truncate(t, testDB)
 }
 
 func TestService_Create(t *testing.T) {
@@ -116,5 +113,33 @@ func TestMembership_DuplicateRejected(t *testing.T) {
 	_, err := memberSvc.Add(tm.ID.String(), p.ID.String())
 	if err == nil {
 		t.Fatal("expected error for duplicate membership, got nil")
+	}
+}
+
+func TestService_Delete_CascadesMemberships(t *testing.T) {
+	cleanup(t)
+	ctx := context.Background()
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	personSvc := person.NewService(person.NewStore(testClient))
+	projSvc := project.NewService(project.NewStore(testClient))
+	svc := team.NewService(team.NewStore(testClient))
+	memberSvc := team.NewMembershipService(team.NewMembershipStore(testClient))
+
+	org, _ := orgSvc.Create("Org")
+	p, _ := personSvc.Create(org.ID.String(), "Ana", "ana@test.com")
+	proj, _ := projSvc.Create(org.ID.String(), "Projeto", "", 0, nil, nil)
+	tm, _ := svc.Create(proj.ID.String(), "Time")
+	if _, err := memberSvc.Add(tm.ID.String(), p.ID.String()); err != nil {
+		t.Fatalf("add member: %v", err)
+	}
+
+	if err := svc.Delete(tm.ID.String()); err != nil {
+		t.Fatalf("delete team with members failed: %v", err)
+	}
+	if n := testClient.TeamMembership.Query().CountX(ctx); n != 0 {
+		t.Errorf("team_memberships: %d rows left, want 0", n)
+	}
+	if n := testClient.Person.Query().CountX(ctx); n != 1 {
+		t.Errorf("persons: %d rows, want 1", n)
 	}
 }

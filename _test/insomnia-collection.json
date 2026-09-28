@@ -15,7 +15,7 @@
       "parentId": "__workspace__",
       "name": "Healthcheck",
       "method": "GET",
-      "url": "{{base_url}}/healthcheck/",
+      "url": "{{base_url}}/healthcheck",
       "headers": [],
       "authentication": {},
       "body": {}

@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"entgo.io/ent"
+	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
@@ -31,8 +32,8 @@ func (Project) Fields() []ent.Field {
 func (Project) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("organization", Organization.Type).Ref("projects").Field("organization_id").Unique().Required(),
-		edge.To("teams", Team.Type),
-		edge.To("tasks", Task.Type),
-		edge.To("integrations", Integration.Type),
+		edge.To("teams", Team.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
+		edge.To("tasks", Task.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
+		edge.To("integrations", Integration.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"entgo.io/ent"
+	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
@@ -23,7 +24,7 @@ func (Organization) Fields() []ent.Field {
 
 func (Organization) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.To("persons", Person.Type),
+		edge.To("persons", Person.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("projects", Project.Type),
 	}
 }

@@ -6,13 +6,11 @@ import (
 	"working-time-tracker/internal/domain/integration"
 	"working-time-tracker/internal/domain/organization"
 	"working-time-tracker/internal/domain/project"
+	"working-time-tracker/testutil"
 )
 
 func cleanup(t *testing.T) {
-	t.Helper()
-	testDB.Exec("TRUNCATE TABLE integrations CASCADE")
-	testDB.Exec("TRUNCATE TABLE projects CASCADE")
-	testDB.Exec("TRUNCATE TABLE organizations CASCADE")
+	testutil.Truncate(t, testDB)
 }
 
 func TestService_Create(t *testing.T) {
@@ -63,10 +61,13 @@ func TestService_Get_NoCredentials(t *testing.T) {
 	org, _ := orgSvc.Create("Org")
 	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil)
 
-	created, _ := svc.Create(proj.ID.String(), "github", "My GitHub", map[string]interface{}{
+	created, err := svc.Create(proj.ID.String(), "github", "My GitHub", map[string]interface{}{
 		"token": "ghp_test",
 		"repo":  "owner/repo",
 	}, true)
+	if err != nil {
+		t.Fatalf("create failed: %v", err)
+	}
 
 	got, err := svc.Get(created.ID.String())
 	if err != nil {
@@ -111,10 +112,13 @@ func TestService_Update(t *testing.T) {
 	org, _ := orgSvc.Create("Org")
 	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil)
 
-	created, _ := svc.Create(proj.ID.String(), "github", "Old Name", map[string]interface{}{
+	created, err := svc.Create(proj.ID.String(), "github", "Old Name", map[string]interface{}{
 		"token": "ghp_test",
 		"repo":  "owner/repo",
 	}, true)
+	if err != nil {
+		t.Fatalf("create failed: %v", err)
+	}
 
 	enabled := true
 	updated, err := svc.Update(created.ID.String(), "New Name", nil, &enabled)
@@ -135,12 +139,15 @@ func TestService_Delete(t *testing.T) {
 	org, _ := orgSvc.Create("Org")
 	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil)
 
-	created, _ := svc.Create(proj.ID.String(), "github", "Test", map[string]interface{}{
+	created, err := svc.Create(proj.ID.String(), "github", "Test", map[string]interface{}{
 		"token": "ghp_test",
 		"repo":  "owner/repo",
 	}, true)
+	if err != nil {
+		t.Fatalf("create failed: %v", err)
+	}
 
-	err := svc.Delete(created.ID.String())
+	err = svc.Delete(created.ID.String())
 	if err != nil {
 		t.Fatalf("delete failed: %v", err)
 	}
@@ -148,5 +155,58 @@ func TestService_Delete(t *testing.T) {
 	_, err = svc.Get(created.ID.String())
 	if err == nil {
 		t.Error("expected error after delete, got nil")
+	}
+}
+
+func TestService_Create_InvalidToken(t *testing.T) {
+	cleanup(t)
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	projSvc := project.NewService(project.NewStore(testClient))
+	svc := integration.NewService(integration.NewStore(testClient), "test-32-byte-encryption-key!!!!")
+
+	org, _ := orgSvc.Create("Org")
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil)
+
+	_, err := svc.Create(proj.ID.String(), "github", "GitHub", map[string]interface{}{
+		"token": invalidGitHubToken,
+		"repo":  "owner/repo",
+	}, true)
+	if err == nil {
+		t.Fatal("expected error for invalid token, got nil")
+	}
+}
+
+func TestService_FetchItemDetails(t *testing.T) {
+	cleanup(t)
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	projSvc := project.NewService(project.NewStore(testClient))
+	svc := integration.NewService(integration.NewStore(testClient), "test-32-byte-encryption-key!!!!")
+
+	org, _ := orgSvc.Create("Org")
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil)
+
+	created, err := svc.Create(proj.ID.String(), "github", "GitHub", map[string]interface{}{
+		"token": "ghp_test",
+		"repo":  "owner/repo",
+	}, true)
+	if err != nil {
+		t.Fatalf("create failed: %v", err)
+	}
+
+	found, err := svc.FetchItemDetails(created.ID.String(), "42")
+	if err != nil {
+		t.Fatalf("fetch failed: %v", err)
+	}
+	if found.Details == nil || found.Details.Title != "Corrigir login" || found.Details.State != "open" {
+		t.Errorf("details = %+v, want title %q and state %q", found.Details, "Corrigir login", "open")
+	}
+
+	// Item inexistente: a chamada não falha, só devolve details nulo com a mensagem de erro.
+	missing, err := svc.FetchItemDetails(created.ID.String(), "999")
+	if err != nil {
+		t.Fatalf("fetch of missing item should degrade gracefully, got error: %v", err)
+	}
+	if missing.Details != nil || missing.Error == nil {
+		t.Errorf("expected nil details and an error message, got %+v", missing)
 	}
 }

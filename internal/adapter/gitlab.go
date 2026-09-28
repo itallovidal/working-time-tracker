@@ -9,7 +9,28 @@ import (
 	"time"
 )
 
-type GitLabIntegration struct{}
+const defaultGitLabBaseURL = "https://gitlab.com/api/v4"
+
+// GitLabIntegration fala com a API do GitLab. BaseURL e Client são opcionais e
+// existem para apontar o adapter para um servidor fake nos testes.
+type GitLabIntegration struct {
+	BaseURL string
+	Client  *http.Client
+}
+
+func (g *GitLabIntegration) baseURL() string {
+	if g.BaseURL == "" {
+		return defaultGitLabBaseURL
+	}
+	return strings.TrimRight(g.BaseURL, "/")
+}
+
+func (g *GitLabIntegration) client() *http.Client {
+	if g.Client == nil {
+		return &http.Client{Timeout: 10 * time.Second}
+	}
+	return g.Client
+}
 
 type gitlabConfig struct {
 	Token      string `json:"token"`
@@ -22,15 +43,14 @@ func (g *GitLabIntegration) ValidateConfig(config map[string]interface{}) error 
 		return err
 	}
 
-	apiURL := fmt.Sprintf("https://gitlab.com/api/v4/projects/%s", url.PathEscape(cfg.ProjectURL))
+	apiURL := fmt.Sprintf("%s/projects/%s", g.baseURL(), url.PathEscape(cfg.ProjectURL))
 	req, err := http.NewRequest("GET", apiURL, nil)
 	if err != nil {
 		return err
 	}
 	req.Header.Set("PRIVATE-TOKEN", cfg.Token)
 
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Do(req)
+	resp, err := g.client().Do(req)
 	if err != nil {
 		return fmt.Errorf("cannot reach GitLab API: %w", err)
 	}
@@ -51,16 +71,15 @@ func (g *GitLabIntegration) FetchItemDetails(config map[string]interface{}, item
 		return nil, err
 	}
 
-	apiURL := fmt.Sprintf("https://gitlab.com/api/v4/projects/%s/issues/%s",
-		url.PathEscape(cfg.ProjectURL), itemID)
+	apiURL := fmt.Sprintf("%s/projects/%s/issues/%s",
+		g.baseURL(), url.PathEscape(cfg.ProjectURL), itemID)
 	req, err := http.NewRequest("GET", apiURL, nil)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("PRIVATE-TOKEN", cfg.Token)
 
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Do(req)
+	resp, err := g.client().Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("cannot reach GitLab API: %w", err)
 	}

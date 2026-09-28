@@ -23,8 +23,8 @@ func RegisterRoutes(
 	integrationHandler *integration.Handler,
 ) {
 	orgs := e.Group("/api/orgs")
-	orgs.POST("/", orgHandler.Create)
-	orgs.GET("/", orgHandler.List)
+	orgs.POST("", orgHandler.Create)
+	orgs.GET("", orgHandler.List)
 	orgs.GET("/:orgId", orgHandler.Get)
 	orgs.PATCH("/:orgId", orgHandler.Update)
 	orgs.DELETE("/:orgId", orgHandler.Delete)

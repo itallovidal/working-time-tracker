@@ -10,6 +10,7 @@ import (
 	"working-time-tracker/internal/domain/task"
 	"working-time-tracker/internal/domain/team"
 	"working-time-tracker/internal/domain/work_session"
+	"working-time-tracker/testutil"
 )
 
 func setupDeps(t *testing.T) (*organization.Service, *person.Service, *project.Service, *team.Service, *team.MembershipService, *task.Service, *work_session.Service) {
@@ -27,14 +28,7 @@ func setupDeps(t *testing.T) (*organization.Service, *person.Service, *project.S
 }
 
 func cleanup(t *testing.T) {
-	t.Helper()
-	testDB.Exec("TRUNCATE TABLE work_sessions CASCADE")
-	testDB.Exec("TRUNCATE TABLE tasks CASCADE")
-	testDB.Exec("TRUNCATE TABLE team_memberships CASCADE")
-	testDB.Exec("TRUNCATE TABLE teams CASCADE")
-	testDB.Exec("TRUNCATE TABLE projects CASCADE")
-	testDB.Exec("TRUNCATE TABLE people CASCADE")
-	testDB.Exec("TRUNCATE TABLE organizations CASCADE")
+	testutil.Truncate(t, testDB)
 }
 
 func TestService_ClockInSuccess(t *testing.T) {

@@ -1,16 +1,17 @@
 package project_test
 
 import (
+	"context"
 	"testing"
+	"time"
 
 	"working-time-tracker/internal/domain/organization"
 	"working-time-tracker/internal/domain/project"
+	"working-time-tracker/testutil"
 )
 
 func cleanup(t *testing.T) {
-	t.Helper()
-	testDB.Exec("TRUNCATE TABLE projects CASCADE")
-	testDB.Exec("TRUNCATE TABLE organizations CASCADE")
+	testutil.Truncate(t, testDB)
 }
 
 func TestService_Create(t *testing.T) {
@@ -128,5 +129,45 @@ func TestService_OrgDeletionBlockedByProjects(t *testing.T) {
 	err := orgSvc.Delete(org.ID.String())
 	if err == nil {
 		t.Fatal("expected error deleting org with active projects, got nil")
+	}
+}
+
+// Excluir um projeto apaga times, membros, tarefas, sessões e integrações dele.
+func TestService_Delete_CascadesChildren(t *testing.T) {
+	cleanup(t)
+	ctx := context.Background()
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	svc := project.NewService(project.NewStore(testClient))
+
+	org, _ := orgSvc.Create("Org")
+	proj, _ := svc.Create(org.ID.String(), "Projeto", "", 0, nil, nil)
+
+	p := testClient.Person.Create().SetName("Ana").SetEmail("ana@test.com").SetOrganizationID(org.ID).SaveX(ctx)
+	tm := testClient.Team.Create().SetName("Time").SetProjectID(proj.ID).SaveX(ctx)
+	testClient.TeamMembership.Create().SetTeamID(tm.ID).SetPersonID(p.ID).SaveX(ctx)
+	it := testClient.Integration.Create().SetProjectID(proj.ID).SetType("github").SetDisplayName("GitHub").SaveX(ctx)
+	task := testClient.Task.Create().SetName("Tarefa").SetProjectID(proj.ID).SetAssigneeID(p.ID).
+		SetExternalIntegrationID(it.ID).SaveX(ctx)
+	testClient.WorkSession.Create().SetTaskID(task.ID).SetPersonID(p.ID).
+		SetStartAt(time.Now().Add(-time.Hour)).SetEndAt(time.Now()).SaveX(ctx)
+
+	if err := svc.Delete(proj.ID.String()); err != nil {
+		t.Fatalf("delete project with children failed: %v", err)
+	}
+
+	counts := map[string]int{
+		"teams":            testClient.Team.Query().CountX(ctx),
+		"team_memberships": testClient.TeamMembership.Query().CountX(ctx),
+		"tasks":            testClient.Task.Query().CountX(ctx),
+		"work_sessions":    testClient.WorkSession.Query().CountX(ctx),
+		"integrations":     testClient.Integration.Query().CountX(ctx),
+	}
+	for table, n := range counts {
+		if n != 0 {
+			t.Errorf("%s: %d rows left after deleting the project, want 0", table, n)
+		}
+	}
+	if n := testClient.Person.Query().CountX(ctx); n != 1 {
+		t.Errorf("persons: %d rows, want 1 (people belong to the organization, not the project)", n)
 	}
 }

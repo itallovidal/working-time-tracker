@@ -4,10 +4,32 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 )
 
-type GitHubIntegration struct{}
+const defaultGitHubBaseURL = "https://api.github.com"
+
+// GitHubIntegration fala com a API do GitHub. BaseURL e Client são opcionais e
+// existem para apontar o adapter para um servidor fake nos testes.
+type GitHubIntegration struct {
+	BaseURL string
+	Client  *http.Client
+}
+
+func (g *GitHubIntegration) baseURL() string {
+	if g.BaseURL == "" {
+		return defaultGitHubBaseURL
+	}
+	return strings.TrimRight(g.BaseURL, "/")
+}
+
+func (g *GitHubIntegration) client() *http.Client {
+	if g.Client == nil {
+		return &http.Client{Timeout: 10 * time.Second}
+	}
+	return g.Client
+}
 
 type githubConfig struct {
 	Token string `json:"token"`
@@ -20,15 +42,14 @@ func (g *GitHubIntegration) ValidateConfig(config map[string]interface{}) error 
 		return err
 	}
 
-	req, err := http.NewRequest("GET", fmt.Sprintf("https://api.github.com/repos/%s", cfg.Repo), nil)
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/repos/%s", g.baseURL(), cfg.Repo), nil)
 	if err != nil {
 		return err
 	}
 	req.Header.Set("Authorization", "Bearer "+cfg.Token)
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Do(req)
+	resp, err := g.client().Do(req)
 	if err != nil {
 		return fmt.Errorf("cannot reach GitHub API: %w", err)
 	}
@@ -49,15 +70,14 @@ func (g *GitHubIntegration) FetchItemDetails(config map[string]interface{}, item
 		return nil, err
 	}
 
-	req, err := http.NewRequest("GET", fmt.Sprintf("https://api.github.com/repos/%s/issues/%s", cfg.Repo, itemID), nil)
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/repos/%s/issues/%s", g.baseURL(), cfg.Repo, itemID), nil)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Authorization", "Bearer "+cfg.Token)
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Do(req)
+	resp, err := g.client().Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("cannot reach GitHub API: %w", err)
 	}

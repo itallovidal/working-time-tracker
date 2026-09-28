@@ -15,7 +15,7 @@ var testDB *sql.DB
 
 func TestMain(m *testing.M) {
 	testClient, testDB = testutil.Setup()
-	if err := database.AutoMigrate(testClient, testDB); err != nil {
+	if err := database.AutoMigrate(testClient); err != nil {
 		panic(err)
 	}
 	code := m.Run()

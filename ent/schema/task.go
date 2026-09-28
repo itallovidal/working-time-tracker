@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"entgo.io/ent"
+	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
@@ -33,6 +34,6 @@ func (Task) Edges() []ent.Edge {
 		edge.From("project", Project.Type).Ref("tasks").Field("project_id").Unique().Required(),
 		edge.From("assignee", Person.Type).Ref("tasks").Field("assignee_id").Unique().Required(),
 		edge.From("external_integration", Integration.Type).Ref("tasks").Field("external_integration_id").Unique(),
-		edge.To("work_sessions", WorkSession.Type),
+		edge.To("work_sessions", WorkSession.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
 	}
 }

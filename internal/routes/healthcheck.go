@@ -7,7 +7,7 @@ import (
 func HealthcheckRoutesRegister(e *echo.Echo) error {
 	group := e.Group("/healthcheck")
 
-	group.GET("/", RegisterHealthcheckHandler)
+	group.GET("", RegisterHealthcheckHandler)
 	group.GET("/hello", RegisterHelloWorldHandler)
 
 	return nil

@@ -3,6 +3,7 @@
 package migrate
 
 import (
+	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/dialect/sql/schema"
 	"entgo.io/ent/schema/field"
 )
@@ -28,7 +29,7 @@ var (
 				Symbol:     "integrations_projects_integrations",
 				Columns:    []*schema.Column{IntegrationsColumns[6]},
 				RefColumns: []*schema.Column{ProjectsColumns[0]},
-				OnDelete:   schema.NoAction,
+				OnDelete:   schema.Cascade,
 			},
 		},
 	}
@@ -62,7 +63,7 @@ var (
 				Symbol:     "persons_organizations_persons",
 				Columns:    []*schema.Column{PersonsColumns[4]},
 				RefColumns: []*schema.Column{OrganizationsColumns[0]},
-				OnDelete:   schema.NoAction,
+				OnDelete:   schema.Cascade,
 			},
 		},
 		Indexes: []*schema.Index{
@@ -135,7 +136,7 @@ var (
 				Symbol:     "tasks_projects_tasks",
 				Columns:    []*schema.Column{TasksColumns[9]},
 				RefColumns: []*schema.Column{ProjectsColumns[0]},
-				OnDelete:   schema.NoAction,
+				OnDelete:   schema.Cascade,
 			},
 		},
 	}
@@ -156,7 +157,7 @@ var (
 				Symbol:     "teams_projects_teams",
 				Columns:    []*schema.Column{TeamsColumns[3]},
 				RefColumns: []*schema.Column{ProjectsColumns[0]},
-				OnDelete:   schema.NoAction,
+				OnDelete:   schema.Cascade,
 			},
 		},
 	}
@@ -183,7 +184,7 @@ var (
 				Symbol:     "team_memberships_teams_memberships",
 				Columns:    []*schema.Column{TeamMembershipsColumns[3]},
 				RefColumns: []*schema.Column{TeamsColumns[0]},
-				OnDelete:   schema.NoAction,
+				OnDelete:   schema.Cascade,
 			},
 		},
 		Indexes: []*schema.Index{
@@ -219,7 +220,17 @@ var (
 				Symbol:     "work_sessions_tasks_work_sessions",
 				Columns:    []*schema.Column{WorkSessionsColumns[5]},
 				RefColumns: []*schema.Column{TasksColumns[0]},
-				OnDelete:   schema.NoAction,
+				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "one_active_session",
+				Unique:  true,
+				Columns: []*schema.Column{WorkSessionsColumns[4]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "end_at IS NULL",
+				},
 			},
 		},
 	}
