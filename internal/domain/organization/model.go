@@ -7,8 +7,9 @@ import (
 )
 
 const (
-	DefaultTimezone = "America/Sao_Paulo"
-	DefaultCurrency = "BRL"
+	DefaultTimezone   = "America/Sao_Paulo"
+	DefaultCurrency   = "BRL"
+	DefaultSprintDays = 14
 )
 
 type Organization struct {
@@ -38,14 +39,15 @@ type Organization struct {
 
 	Timezone          string `json:"timezone"`
 	WeeklyHours       *int   `json:"weekly_hours"`
-	DefaultSprintDays *int   `json:"default_sprint_days"`
+	DefaultSprintDays int    `json:"default_sprint_days"`
 	Currency          string `json:"currency"`
 
 	CreatedAt time.Time `json:"created_at"`
 }
 
 // UpdateInput são os campos que o PATCH da organização pode alterar. Campo
-// ausente (nil) mantém o valor atual; texto vazio ou número zero apaga.
+// ausente (nil) mantém o valor atual; texto vazio ou número zero apaga. Fuso,
+// moeda e sprint padrão nunca ficam sem valor: vazios, voltam para o padrão.
 type UpdateInput struct {
 	Name *string `json:"name"`
 

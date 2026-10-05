@@ -46,7 +46,7 @@ func (Organization) Fields() []ent.Field {
 		// Padrões de operação
 		field.String("timezone").Default("America/Sao_Paulo"),
 		field.Int("weekly_hours").Optional().Nillable(),
-		field.Int("default_sprint_days").Optional().Nillable(),
+		field.Int("default_sprint_days").Default(14),
 		field.String("currency").Default("BRL"),
 
 		field.Time("created_at").Default(time.Now).Immutable(),

@@ -39,24 +39,19 @@ func (s *Store) Create(p *Project) error {
 	return nil
 }
 
-// defaultSprintDays vale para organizações que não definiram uma sprint padrão.
-const defaultSprintDays = 14
-
 // DefaultSprintDays devolve a duração de sprint que a organização usa em
-// projetos novos.
+// projetos novos (14 dias, se ela não mudou).
 func (s *Store) DefaultSprintDays(orgID uuid.UUID) (int, error) {
 	org, err := s.client.Organization.Get(context.Background(), orgID)
 	if ent.IsNotFound(err) {
-		// O Create falha em seguida pela chave estrangeira.
-		return defaultSprintDays, nil
+		// Qualquer duração válida serve: o Create falha em seguida pela chave
+		// estrangeira.
+		return 14, nil
 	}
 	if err != nil {
 		return 0, err
 	}
-	if org.DefaultSprintDays == nil {
-		return defaultSprintDays, nil
-	}
-	return *org.DefaultSprintDays, nil
+	return org.DefaultSprintDays, nil
 }
 
 func (s *Store) ListByOrg(orgID string) ([]Project, error) {

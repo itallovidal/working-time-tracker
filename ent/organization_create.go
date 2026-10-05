@@ -466,6 +466,10 @@ func (_c *OrganizationCreate) defaults() {
 		v := organization.DefaultTimezone
 		_c.mutation.SetTimezone(v)
 	}
+	if _, ok := _c.mutation.DefaultSprintDays(); !ok {
+		v := organization.DefaultDefaultSprintDays
+		_c.mutation.SetDefaultSprintDays(v)
+	}
 	if _, ok := _c.mutation.Currency(); !ok {
 		v := organization.DefaultCurrency
 		_c.mutation.SetCurrency(v)
@@ -487,6 +491,9 @@ func (_c *OrganizationCreate) check() error {
 	}
 	if _, ok := _c.mutation.Timezone(); !ok {
 		return &ValidationError{Name: "timezone", err: errors.New(`ent: missing required field "Organization.timezone"`)}
+	}
+	if _, ok := _c.mutation.DefaultSprintDays(); !ok {
+		return &ValidationError{Name: "default_sprint_days", err: errors.New(`ent: missing required field "Organization.default_sprint_days"`)}
 	}
 	if _, ok := _c.mutation.Currency(); !ok {
 		return &ValidationError{Name: "currency", err: errors.New(`ent: missing required field "Organization.currency"`)}
@@ -615,7 +622,7 @@ func (_c *OrganizationCreate) createSpec() (*Organization, *sqlgraph.CreateSpec)
 	}
 	if value, ok := _c.mutation.DefaultSprintDays(); ok {
 		_spec.SetField(organization.FieldDefaultSprintDays, field.TypeInt, value)
-		_node.DefaultSprintDays = &value
+		_node.DefaultSprintDays = value
 	}
 	if value, ok := _c.mutation.Currency(); ok {
 		_spec.SetField(organization.FieldCurrency, field.TypeString, value)

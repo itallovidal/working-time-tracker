@@ -100,7 +100,10 @@ func TestService_Create_Defaults(t *testing.T) {
 	if org.Timezone != organization.DefaultTimezone || org.Currency != organization.DefaultCurrency {
 		t.Errorf("defaults = %q, %q; want %q, %q", org.Timezone, org.Currency, organization.DefaultTimezone, organization.DefaultCurrency)
 	}
-	if org.FoundedYear != nil || org.WeeklyHours != nil || org.DefaultSprintDays != nil || org.Summary != "" {
+	if org.DefaultSprintDays != organization.DefaultSprintDays {
+		t.Errorf("default_sprint_days = %d, want %d", org.DefaultSprintDays, organization.DefaultSprintDays)
+	}
+	if org.FoundedYear != nil || org.WeeklyHours != nil || org.Summary != "" {
 		t.Errorf("optional fields should start empty: %+v", org)
 	}
 }
@@ -168,8 +171,8 @@ func TestService_Update_Profile(t *testing.T) {
 	if got.WeeklyHours == nil || *got.WeeklyHours != 40 {
 		t.Errorf("weekly_hours = %v, want 40", got.WeeklyHours)
 	}
-	if got.DefaultSprintDays == nil || *got.DefaultSprintDays != 7 {
-		t.Errorf("default_sprint_days = %v, want 7", got.DefaultSprintDays)
+	if got.DefaultSprintDays != 7 {
+		t.Errorf("default_sprint_days = %d, want 7", got.DefaultSprintDays)
 	}
 
 	// Texto vazio e zero apagam; o que não vem continua como estava.
@@ -186,8 +189,16 @@ func TestService_Update_Profile(t *testing.T) {
 	if got.Timezone != organization.DefaultTimezone || got.Currency != organization.DefaultCurrency {
 		t.Errorf("empty timezone and currency should go back to the defaults, got %q and %q", got.Timezone, got.Currency)
 	}
-	if got.Industry != "Logística" || got.DefaultSprintDays == nil || got.LegalName != "Acme Entregas Ltda" {
+	if got.Industry != "Logística" || got.DefaultSprintDays != 7 || got.LegalName != "Acme Entregas Ltda" {
 		t.Errorf("fields that were not sent changed: %+v", got)
+	}
+
+	// A sprint padrão nunca fica em branco: zero volta para os 14 dias.
+	if _, err := svc.Update(id, organization.UpdateInput{DefaultSprintDays: ptr(0)}); err != nil {
+		t.Fatalf("resetting the default sprint failed: %v", err)
+	}
+	if got, _ = svc.Get(id); got.DefaultSprintDays != organization.DefaultSprintDays {
+		t.Errorf("default_sprint_days after clearing = %d, want %d", got.DefaultSprintDays, organization.DefaultSprintDays)
 	}
 }
 

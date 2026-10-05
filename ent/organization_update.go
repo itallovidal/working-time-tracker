@@ -475,12 +475,6 @@ func (_u *OrganizationUpdate) AddDefaultSprintDays(v int) *OrganizationUpdate {
 	return _u
 }
 
-// ClearDefaultSprintDays clears the value of the "default_sprint_days" field.
-func (_u *OrganizationUpdate) ClearDefaultSprintDays() *OrganizationUpdate {
-	_u.mutation.ClearDefaultSprintDays()
-	return _u
-}
-
 // SetCurrency sets the "currency" field.
 func (_u *OrganizationUpdate) SetCurrency(v string) *OrganizationUpdate {
 	_u.mutation.SetCurrency(v)
@@ -811,9 +805,6 @@ func (_u *OrganizationUpdate) sqlSave(ctx context.Context) (_node int, err error
 	}
 	if value, ok := _u.mutation.AddedDefaultSprintDays(); ok {
 		_spec.AddField(organization.FieldDefaultSprintDays, field.TypeInt, value)
-	}
-	if _u.mutation.DefaultSprintDaysCleared() {
-		_spec.ClearField(organization.FieldDefaultSprintDays, field.TypeInt)
 	}
 	if value, ok := _u.mutation.Currency(); ok {
 		_spec.SetField(organization.FieldCurrency, field.TypeString, value)
@@ -1461,12 +1452,6 @@ func (_u *OrganizationUpdateOne) AddDefaultSprintDays(v int) *OrganizationUpdate
 	return _u
 }
 
-// ClearDefaultSprintDays clears the value of the "default_sprint_days" field.
-func (_u *OrganizationUpdateOne) ClearDefaultSprintDays() *OrganizationUpdateOne {
-	_u.mutation.ClearDefaultSprintDays()
-	return _u
-}
-
 // SetCurrency sets the "currency" field.
 func (_u *OrganizationUpdateOne) SetCurrency(v string) *OrganizationUpdateOne {
 	_u.mutation.SetCurrency(v)
@@ -1827,9 +1812,6 @@ func (_u *OrganizationUpdateOne) sqlSave(ctx context.Context) (_node *Organizati
 	}
 	if value, ok := _u.mutation.AddedDefaultSprintDays(); ok {
 		_spec.AddField(organization.FieldDefaultSprintDays, field.TypeInt, value)
-	}
-	if _u.mutation.DefaultSprintDaysCleared() {
-		_spec.ClearField(organization.FieldDefaultSprintDays, field.TypeInt)
 	}
 	if value, ok := _u.mutation.Currency(); ok {
 		_spec.SetField(organization.FieldCurrency, field.TypeString, value)

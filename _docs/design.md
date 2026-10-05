@@ -49,7 +49,8 @@ Organization: id (UUID PK), name, created_at,
                        legal_name, cnpj, address_line1, address_line2, city, state,
                        postal_code, country (all optional)
               defaults: timezone (default America/Sao_Paulo), currency (default BRL),
-                        weekly_hours, default_sprint_days (both optional)
+                        default_sprint_days (default 14) — these three always have
+                        a value; weekly_hours (optional)
 Project: id (UUID PK), organization_id (FK Organization), name, description,
          github_repo_url (nullable), gitlab_repo_url (nullable),
          sprint_duration_days (int, default 14),

@@ -61,7 +61,7 @@ type Organization struct {
 	// WeeklyHours holds the value of the "weekly_hours" field.
 	WeeklyHours *int `json:"weekly_hours,omitempty"`
 	// DefaultSprintDays holds the value of the "default_sprint_days" field.
-	DefaultSprintDays *int `json:"default_sprint_days,omitempty"`
+	DefaultSprintDays int `json:"default_sprint_days,omitempty"`
 	// Currency holds the value of the "currency" field.
 	Currency string `json:"currency,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
@@ -289,8 +289,7 @@ func (_m *Organization) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for field default_sprint_days", values[i])
 			} else if value.Valid {
-				_m.DefaultSprintDays = new(int)
-				*_m.DefaultSprintDays = int(value.Int64)
+				_m.DefaultSprintDays = int(value.Int64)
 			}
 		case organization.FieldCurrency:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -427,10 +426,8 @@ func (_m *Organization) String() string {
 		builder.WriteString(fmt.Sprintf("%v", *v))
 	}
 	builder.WriteString(", ")
-	if v := _m.DefaultSprintDays; v != nil {
-		builder.WriteString("default_sprint_days=")
-		builder.WriteString(fmt.Sprintf("%v", *v))
-	}
+	builder.WriteString("default_sprint_days=")
+	builder.WriteString(fmt.Sprintf("%v", _m.DefaultSprintDays))
 	builder.WriteString(", ")
 	builder.WriteString("currency=")
 	builder.WriteString(_m.Currency)

@@ -97,7 +97,7 @@ func TestHandler_UpdateProfile(t *testing.T) {
 	body := rec.Body.String()
 	for _, want := range []string{
 		`"name":"Org"`, `"summary":"Entregas rápidas"`, `"cnpj":"12ABC34501DE35"`, `"weekly_hours":44`,
-		`"founded_year":null`, `"timezone":"America/Sao_Paulo"`, `"currency":"BRL"`,
+		`"founded_year":null`, `"timezone":"America/Sao_Paulo"`, `"currency":"BRL"`, `"default_sprint_days":14`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("GET body does not contain %s: %s", want, body)

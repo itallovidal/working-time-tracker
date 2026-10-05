@@ -78,6 +78,7 @@ func (s *Store) Update(org *Organization) error {
 		SetPostalCode(org.PostalCode).
 		SetCountry(org.Country).
 		SetTimezone(org.Timezone).
+		SetDefaultSprintDays(org.DefaultSprintDays).
 		SetCurrency(org.Currency)
 	if org.FoundedYear != nil {
 		q = q.SetFoundedYear(*org.FoundedYear)
@@ -88,11 +89,6 @@ func (s *Store) Update(org *Organization) error {
 		q = q.SetWeeklyHours(*org.WeeklyHours)
 	} else {
 		q = q.ClearWeeklyHours()
-	}
-	if org.DefaultSprintDays != nil {
-		q = q.SetDefaultSprintDays(*org.DefaultSprintDays)
-	} else {
-		q = q.ClearDefaultSprintDays()
 	}
 	_, err := q.Save(context.Background())
 	return err

@@ -4405,7 +4405,7 @@ func (m *OrganizationMutation) DefaultSprintDays() (r int, exists bool) {
 // OldDefaultSprintDays returns the old "default_sprint_days" field's value of the Organization entity.
 // If the Organization object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *OrganizationMutation) OldDefaultSprintDays(ctx context.Context) (v *int, err error) {
+func (m *OrganizationMutation) OldDefaultSprintDays(ctx context.Context) (v int, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldDefaultSprintDays is only allowed on UpdateOne operations")
 	}
@@ -4437,24 +4437,10 @@ func (m *OrganizationMutation) AddedDefaultSprintDays() (r int, exists bool) {
 	return *v, true
 }
 
-// ClearDefaultSprintDays clears the value of the "default_sprint_days" field.
-func (m *OrganizationMutation) ClearDefaultSprintDays() {
-	m.default_sprint_days = nil
-	m.adddefault_sprint_days = nil
-	m.clearedFields[organization.FieldDefaultSprintDays] = struct{}{}
-}
-
-// DefaultSprintDaysCleared returns if the "default_sprint_days" field was cleared in this mutation.
-func (m *OrganizationMutation) DefaultSprintDaysCleared() bool {
-	_, ok := m.clearedFields[organization.FieldDefaultSprintDays]
-	return ok
-}
-
 // ResetDefaultSprintDays resets all changes to the "default_sprint_days" field.
 func (m *OrganizationMutation) ResetDefaultSprintDays() {
 	m.default_sprint_days = nil
 	m.adddefault_sprint_days = nil
-	delete(m.clearedFields, organization.FieldDefaultSprintDays)
 }
 
 // SetCurrency sets the "currency" field.
@@ -5268,9 +5254,6 @@ func (m *OrganizationMutation) ClearedFields() []string {
 	if m.FieldCleared(organization.FieldWeeklyHours) {
 		fields = append(fields, organization.FieldWeeklyHours)
 	}
-	if m.FieldCleared(organization.FieldDefaultSprintDays) {
-		fields = append(fields, organization.FieldDefaultSprintDays)
-	}
 	return fields
 }
 
@@ -5341,9 +5324,6 @@ func (m *OrganizationMutation) ClearField(name string) error {
 		return nil
 	case organization.FieldWeeklyHours:
 		m.ClearWeeklyHours()
-		return nil
-	case organization.FieldDefaultSprintDays:
-		m.ClearDefaultSprintDays()
 		return nil
 	}
 	return fmt.Errorf("unknown Organization nullable field %s", name)

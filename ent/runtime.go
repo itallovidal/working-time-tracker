@@ -79,6 +79,10 @@ func init() {
 	organizationDescTimezone := organizationFields[20].Descriptor()
 	// organization.DefaultTimezone holds the default value on creation for the timezone field.
 	organization.DefaultTimezone = organizationDescTimezone.Default.(string)
+	// organizationDescDefaultSprintDays is the schema descriptor for default_sprint_days field.
+	organizationDescDefaultSprintDays := organizationFields[22].Descriptor()
+	// organization.DefaultDefaultSprintDays holds the default value on creation for the default_sprint_days field.
+	organization.DefaultDefaultSprintDays = organizationDescDefaultSprintDays.Default.(int)
 	// organizationDescCurrency is the schema descriptor for currency field.
 	organizationDescCurrency := organizationFields[23].Descriptor()
 	// organization.DefaultCurrency holds the default value on creation for the currency field.

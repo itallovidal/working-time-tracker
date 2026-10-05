@@ -145,6 +145,8 @@ func ValidColumn(column string) bool {
 var (
 	// DefaultTimezone holds the default value on creation for the "timezone" field.
 	DefaultTimezone string
+	// DefaultDefaultSprintDays holds the default value on creation for the "default_sprint_days" field.
+	DefaultDefaultSprintDays int
 	// DefaultCurrency holds the default value on creation for the "currency" field.
 	DefaultCurrency string
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.

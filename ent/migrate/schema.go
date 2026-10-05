@@ -149,7 +149,7 @@ var (
 		{Name: "country", Type: field.TypeString, Nullable: true},
 		{Name: "timezone", Type: field.TypeString, Default: "America/Sao_Paulo"},
 		{Name: "weekly_hours", Type: field.TypeInt, Nullable: true},
-		{Name: "default_sprint_days", Type: field.TypeInt, Nullable: true},
+		{Name: "default_sprint_days", Type: field.TypeInt, Default: 14},
 		{Name: "currency", Type: field.TypeString, Default: "BRL"},
 		{Name: "created_at", Type: field.TypeTime},
 	}

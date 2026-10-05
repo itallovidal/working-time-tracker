@@ -193,7 +193,7 @@ document.addEventListener('alpine:init', () => {
         ['Fuso horário', org.timezone],
         ['Moeda', WTT.fmt.currency(org.currency)],
         ['Jornada semanal', org.weekly_hours ? org.weekly_hours + ' horas' : ''],
-        ['Sprint padrão', (org.default_sprint_days || 14) + ' dias'],
+        ['Sprint padrão', org.default_sprint_days + ' dias'],
       ]);
     },
     // Fuso e moeda sempre têm valor, então não contam como perfil preenchido.

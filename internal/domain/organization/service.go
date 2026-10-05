@@ -196,14 +196,18 @@ func apply(org *Organization, in UpdateInput) error {
 		}
 		org.WeeklyHours = nilIfZero(*in.WeeklyHours)
 	}
+
+	// Sprint padrão, fuso e moeda sempre têm valor: vazio volta para o padrão.
 	if in.DefaultSprintDays != nil {
-		if *in.DefaultSprintDays < 0 || *in.DefaultSprintDays > 90 {
+		v := *in.DefaultSprintDays
+		if v == 0 {
+			v = DefaultSprintDays
+		}
+		if v < 1 || v > 90 {
 			return ErrInvalidSprint
 		}
-		org.DefaultSprintDays = nilIfZero(*in.DefaultSprintDays)
+		org.DefaultSprintDays = v
 	}
-
-	// Fuso e moeda sempre têm valor: vazio volta para o padrão.
 	if in.Timezone != nil {
 		v := strings.TrimSpace(*in.Timezone)
 		if v == "" {

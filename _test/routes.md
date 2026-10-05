@@ -119,7 +119,7 @@ A organização é criada pelo signup, e o `organization_id` vem no `/api/auth/m
 
 ### Perfil da organização
 
-O `GET` devolve todos os campos para qualquer membro. No `PATCH`, **campo que não vem no corpo fica como está**; texto vazio (`""`) ou número zero apaga o valor. `{"name": "…"}` sozinho continua renomeando.
+O `GET` devolve todos os campos para qualquer membro. No `PATCH`, **campo que não vem no corpo fica como está**; texto vazio (`""`) ou número zero apaga o valor. `timezone`, `currency` e `default_sprint_days` são a exceção: nunca ficam sem valor, e vazios voltam para o padrão. `{"name": "…"}` sozinho continua renomeando.
 
 | Campo | Regra |
 |---|---|
@@ -137,7 +137,7 @@ O `GET` devolve todos os campos para qualquer membro. No `PATCH`, **campo que n�
 | `timezone` | Nome IANA, por exemplo `America/Sao_Paulo` (o padrão) |
 | `currency` | `BRL` (o padrão), `USD` ou `EUR` |
 | `weekly_hours` | Jornada semanal, de 1 a 168 |
-| `default_sprint_days` | De 1 a 90. Vale para projetos criados sem `sprint_duration_days` |
+| `default_sprint_days` | De 1 a 90, `14` por padrão. Vale para projetos criados sem `sprint_duration_days` |
 
 ```http
 PATCH /api/orgs/:orgId

@@ -1721,16 +1721,6 @@ func DefaultSprintDaysLTE(v int) predicate.Organization {
 	return predicate.Organization(sql.FieldLTE(FieldDefaultSprintDays, v))
 }
 
-// DefaultSprintDaysIsNil applies the IsNil predicate on the "default_sprint_days" field.
-func DefaultSprintDaysIsNil() predicate.Organization {
-	return predicate.Organization(sql.FieldIsNull(FieldDefaultSprintDays))
-}
-
-// DefaultSprintDaysNotNil applies the NotNil predicate on the "default_sprint_days" field.
-func DefaultSprintDaysNotNil() predicate.Organization {
-	return predicate.Organization(sql.FieldNotNull(FieldDefaultSprintDays))
-}
-
 // CurrencyEQ applies the EQ predicate on the "currency" field.
 func CurrencyEQ(v string) predicate.Organization {
 	return predicate.Organization(sql.FieldEQ(FieldCurrency, v))
