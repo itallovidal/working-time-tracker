@@ -9,6 +9,66 @@ import (
 )
 
 var (
+	// AllocationsColumns holds the columns for the "allocations" table.
+	AllocationsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "pay_rate_cents", Type: field.TypeInt},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "person_id", Type: field.TypeUUID},
+		{Name: "project_id", Type: field.TypeUUID},
+	}
+	// AllocationsTable holds the schema information for the "allocations" table.
+	AllocationsTable = &schema.Table{
+		Name:       "allocations",
+		Columns:    AllocationsColumns,
+		PrimaryKey: []*schema.Column{AllocationsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "allocations_persons_allocations",
+				Columns:    []*schema.Column{AllocationsColumns[3]},
+				RefColumns: []*schema.Column{PersonsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "allocations_projects_allocations",
+				Columns:    []*schema.Column{AllocationsColumns[4]},
+				RefColumns: []*schema.Column{ProjectsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "allocation_project_id_person_id",
+				Unique:  true,
+				Columns: []*schema.Column{AllocationsColumns[4], AllocationsColumns[3]},
+			},
+		},
+	}
+	// CustomersColumns holds the columns for the "customers" table.
+	CustomersColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "name", Type: field.TypeString},
+		{Name: "document", Type: field.TypeString, Nullable: true},
+		{Name: "contact_name", Type: field.TypeString, Nullable: true},
+		{Name: "contact_email", Type: field.TypeString, Nullable: true},
+		{Name: "contact_phone", Type: field.TypeString, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "organization_id", Type: field.TypeUUID},
+	}
+	// CustomersTable holds the schema information for the "customers" table.
+	CustomersTable = &schema.Table{
+		Name:       "customers",
+		Columns:    CustomersColumns,
+		PrimaryKey: []*schema.Column{CustomersColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "customers_organizations_customers",
+				Columns:    []*schema.Column{CustomersColumns[7]},
+				RefColumns: []*schema.Column{OrganizationsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+	}
 	// IntegrationsColumns holds the columns for the "integrations" table.
 	IntegrationsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -140,7 +200,9 @@ var (
 		{Name: "sprint_duration_days", Type: field.TypeInt, Default: 14},
 		{Name: "daily_time", Type: field.TypeString, Nullable: true},
 		{Name: "weekly_sync_day", Type: field.TypeString, Nullable: true},
+		{Name: "bill_rate_cents", Type: field.TypeInt, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
+		{Name: "customer_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "organization_id", Type: field.TypeUUID},
 	}
 	// ProjectsTable holds the schema information for the "projects" table.
@@ -150,8 +212,14 @@ var (
 		PrimaryKey: []*schema.Column{ProjectsColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
+				Symbol:     "projects_customers_projects",
+				Columns:    []*schema.Column{ProjectsColumns[10]},
+				RefColumns: []*schema.Column{CustomersColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
 				Symbol:     "projects_organizations_projects",
-				Columns:    []*schema.Column{ProjectsColumns[9]},
+				Columns:    []*schema.Column{ProjectsColumns[11]},
 				RefColumns: []*schema.Column{OrganizationsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -314,6 +382,8 @@ var (
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		AllocationsTable,
+		CustomersTable,
 		IntegrationsTable,
 		InvitesTable,
 		OrganizationsTable,
@@ -328,11 +398,15 @@ var (
 )
 
 func init() {
+	AllocationsTable.ForeignKeys[0].RefTable = PersonsTable
+	AllocationsTable.ForeignKeys[1].RefTable = ProjectsTable
+	CustomersTable.ForeignKeys[0].RefTable = OrganizationsTable
 	IntegrationsTable.ForeignKeys[0].RefTable = ProjectsTable
 	InvitesTable.ForeignKeys[0].RefTable = OrganizationsTable
 	InvitesTable.ForeignKeys[1].RefTable = PersonsTable
 	PersonsTable.ForeignKeys[0].RefTable = OrganizationsTable
-	ProjectsTable.ForeignKeys[0].RefTable = OrganizationsTable
+	ProjectsTable.ForeignKeys[0].RefTable = CustomersTable
+	ProjectsTable.ForeignKeys[1].RefTable = OrganizationsTable
 	SessionsTable.ForeignKeys[0].RefTable = PersonsTable
 	TasksTable.ForeignKeys[0].RefTable = IntegrationsTable
 	TasksTable.ForeignKeys[1].RefTable = PersonsTable

@@ -202,10 +202,81 @@ document.addEventListener('alpine:init', () => {
     },
   }));
 
+  const blankCustomer = () => ({ name: '', document: '', contact_name: '', contact_email: '', contact_phone: '' });
+
+  Alpine.data('orgCustomers', () => ({
+    ...form(),
+    loading: true,
+    customers: [],
+    editing: null, // id do cliente em edição; null quando o formulário cria um novo
+    draft: blankCustomer(),
+    confirming: null,
+    async init() {
+      try {
+        this.customers = (await api('GET', '/api/orgs/' + orgId + '/customers')) || [];
+      } catch (e) {
+        this.errors.load = e.message;
+      } finally {
+        this.loading = false;
+      }
+    },
+    startEdit(c) {
+      this.editing = c.id;
+      this.draft = {
+        name: c.name,
+        document: WTT.fmt.cnpj(c.document),
+        contact_name: c.contact_name,
+        contact_email: c.contact_email,
+        contact_phone: c.contact_phone,
+      };
+      this.errors.save = '';
+      this.$nextTick(() => this.$refs.name && this.$refs.name.focus());
+    },
+    cancelEdit() {
+      this.editing = null;
+      this.draft = blankCustomer();
+      this.errors.save = '';
+    },
+    save() {
+      return this.run('save', async () => {
+        if (this.editing) {
+          const saved = await api('PATCH', '/api/customers/' + this.editing, this.draft);
+          this.customers = this.customers.map((c) => (c.id === saved.id ? saved : c));
+          toast('Cliente salvo.');
+        } else {
+          this.customers = [...this.customers, await api('POST', '/api/orgs/' + orgId + '/customers', this.draft)];
+          toast('Cliente criado.');
+        }
+        this.customers.sort((a, b) => a.name.localeCompare(b.name));
+        this.cancelEdit();
+      });
+    },
+    remove(c) {
+      return this.run('remove', async () => {
+        this.confirming = null;
+        await api('DELETE', '/api/customers/' + c.id);
+        this.customers = this.customers.filter((x) => x.id !== c.id);
+        if (this.editing === c.id) this.cancelEdit();
+        toast('Cliente excluído.');
+      });
+    },
+  }));
+
   Alpine.data('profileSettings', () => ({
     ...form(),
     profile: { name: me.name, email: me.email },
     password: { current: '', next: '' },
+    rates: [],
+    ratesLoaded: false,
+    async init() {
+      try {
+        this.rates = (await api('GET', '/api/persons/' + me.id + '/allocations')) || [];
+      } catch (e) {
+        this.errors.rates = e.message;
+      } finally {
+        this.ratesLoaded = true;
+      }
+    },
     saveProfile() {
       return this.run('profile', async () => {
         const p = await api('PATCH', '/api/persons/' + me.id, this.profile);

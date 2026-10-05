@@ -96,6 +96,16 @@ func WeeklySyncDay(v string) predicate.Project {
 	return predicate.Project(sql.FieldEQ(FieldWeeklySyncDay, v))
 }
 
+// CustomerID applies equality check predicate on the "customer_id" field. It's identical to CustomerIDEQ.
+func CustomerID(v uuid.UUID) predicate.Project {
+	return predicate.Project(sql.FieldEQ(FieldCustomerID, v))
+}
+
+// BillRateCents applies equality check predicate on the "bill_rate_cents" field. It's identical to BillRateCentsEQ.
+func BillRateCents(v int) predicate.Project {
+	return predicate.Project(sql.FieldEQ(FieldBillRateCents, v))
+}
+
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.Project {
 	return predicate.Project(sql.FieldEQ(FieldCreatedAt, v))
@@ -601,6 +611,86 @@ func WeeklySyncDayContainsFold(v string) predicate.Project {
 	return predicate.Project(sql.FieldContainsFold(FieldWeeklySyncDay, v))
 }
 
+// CustomerIDEQ applies the EQ predicate on the "customer_id" field.
+func CustomerIDEQ(v uuid.UUID) predicate.Project {
+	return predicate.Project(sql.FieldEQ(FieldCustomerID, v))
+}
+
+// CustomerIDNEQ applies the NEQ predicate on the "customer_id" field.
+func CustomerIDNEQ(v uuid.UUID) predicate.Project {
+	return predicate.Project(sql.FieldNEQ(FieldCustomerID, v))
+}
+
+// CustomerIDIn applies the In predicate on the "customer_id" field.
+func CustomerIDIn(vs ...uuid.UUID) predicate.Project {
+	return predicate.Project(sql.FieldIn(FieldCustomerID, vs...))
+}
+
+// CustomerIDNotIn applies the NotIn predicate on the "customer_id" field.
+func CustomerIDNotIn(vs ...uuid.UUID) predicate.Project {
+	return predicate.Project(sql.FieldNotIn(FieldCustomerID, vs...))
+}
+
+// CustomerIDIsNil applies the IsNil predicate on the "customer_id" field.
+func CustomerIDIsNil() predicate.Project {
+	return predicate.Project(sql.FieldIsNull(FieldCustomerID))
+}
+
+// CustomerIDNotNil applies the NotNil predicate on the "customer_id" field.
+func CustomerIDNotNil() predicate.Project {
+	return predicate.Project(sql.FieldNotNull(FieldCustomerID))
+}
+
+// BillRateCentsEQ applies the EQ predicate on the "bill_rate_cents" field.
+func BillRateCentsEQ(v int) predicate.Project {
+	return predicate.Project(sql.FieldEQ(FieldBillRateCents, v))
+}
+
+// BillRateCentsNEQ applies the NEQ predicate on the "bill_rate_cents" field.
+func BillRateCentsNEQ(v int) predicate.Project {
+	return predicate.Project(sql.FieldNEQ(FieldBillRateCents, v))
+}
+
+// BillRateCentsIn applies the In predicate on the "bill_rate_cents" field.
+func BillRateCentsIn(vs ...int) predicate.Project {
+	return predicate.Project(sql.FieldIn(FieldBillRateCents, vs...))
+}
+
+// BillRateCentsNotIn applies the NotIn predicate on the "bill_rate_cents" field.
+func BillRateCentsNotIn(vs ...int) predicate.Project {
+	return predicate.Project(sql.FieldNotIn(FieldBillRateCents, vs...))
+}
+
+// BillRateCentsGT applies the GT predicate on the "bill_rate_cents" field.
+func BillRateCentsGT(v int) predicate.Project {
+	return predicate.Project(sql.FieldGT(FieldBillRateCents, v))
+}
+
+// BillRateCentsGTE applies the GTE predicate on the "bill_rate_cents" field.
+func BillRateCentsGTE(v int) predicate.Project {
+	return predicate.Project(sql.FieldGTE(FieldBillRateCents, v))
+}
+
+// BillRateCentsLT applies the LT predicate on the "bill_rate_cents" field.
+func BillRateCentsLT(v int) predicate.Project {
+	return predicate.Project(sql.FieldLT(FieldBillRateCents, v))
+}
+
+// BillRateCentsLTE applies the LTE predicate on the "bill_rate_cents" field.
+func BillRateCentsLTE(v int) predicate.Project {
+	return predicate.Project(sql.FieldLTE(FieldBillRateCents, v))
+}
+
+// BillRateCentsIsNil applies the IsNil predicate on the "bill_rate_cents" field.
+func BillRateCentsIsNil() predicate.Project {
+	return predicate.Project(sql.FieldIsNull(FieldBillRateCents))
+}
+
+// BillRateCentsNotNil applies the NotNil predicate on the "bill_rate_cents" field.
+func BillRateCentsNotNil() predicate.Project {
+	return predicate.Project(sql.FieldNotNull(FieldBillRateCents))
+}
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.Project {
 	return predicate.Project(sql.FieldEQ(FieldCreatedAt, v))
@@ -656,6 +746,29 @@ func HasOrganization() predicate.Project {
 func HasOrganizationWith(preds ...predicate.Organization) predicate.Project {
 	return predicate.Project(func(s *sql.Selector) {
 		step := newOrganizationStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasCustomer applies the HasEdge predicate on the "customer" edge.
+func HasCustomer() predicate.Project {
+	return predicate.Project(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, CustomerTable, CustomerColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasCustomerWith applies the HasEdge predicate on the "customer" edge with a given conditions (other predicates).
+func HasCustomerWith(preds ...predicate.Customer) predicate.Project {
+	return predicate.Project(func(s *sql.Selector) {
+		step := newCustomerStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -725,6 +838,29 @@ func HasIntegrations() predicate.Project {
 func HasIntegrationsWith(preds ...predicate.Integration) predicate.Project {
 	return predicate.Project(func(s *sql.Selector) {
 		step := newIntegrationsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasAllocations applies the HasEdge predicate on the "allocations" edge.
+func HasAllocations() predicate.Project {
+	return predicate.Project(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, AllocationsTable, AllocationsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasAllocationsWith applies the HasEdge predicate on the "allocations" edge with a given conditions (other predicates).
+func HasAllocationsWith(preds ...predicate.Allocation) predicate.Project {
+	return predicate.Project(func(s *sql.Selector) {
+		step := newAllocationsStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

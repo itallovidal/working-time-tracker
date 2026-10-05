@@ -24,6 +24,7 @@ const (
 	KindIntegration
 	KindPerson
 	KindInvite
+	KindCustomer
 )
 
 // Resolver descobre a qual organização um recurso pertence.
@@ -80,6 +81,12 @@ func (r *Resolver) OrganizationOf(kind Kind, id string) (uuid.UUID, error) {
 			return uuid.Nil, err
 		}
 		return inv.OrganizationID, nil
+	case KindCustomer:
+		cust, err := r.client.Customer.Get(ctx, uid)
+		if err != nil {
+			return uuid.Nil, err
+		}
+		return cust.OrganizationID, nil
 	}
 	return uuid.Nil, &ent.NotFoundError{}
 }

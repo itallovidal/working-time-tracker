@@ -6,6 +6,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"working-time-tracker/ent/allocation"
+	"working-time-tracker/ent/customer"
 	"working-time-tracker/ent/integration"
 	"working-time-tracker/ent/organization"
 	"working-time-tracker/ent/predicate"
@@ -181,9 +183,61 @@ func (_u *ProjectUpdate) ClearWeeklySyncDay() *ProjectUpdate {
 	return _u
 }
 
+// SetCustomerID sets the "customer_id" field.
+func (_u *ProjectUpdate) SetCustomerID(v uuid.UUID) *ProjectUpdate {
+	_u.mutation.SetCustomerID(v)
+	return _u
+}
+
+// SetNillableCustomerID sets the "customer_id" field if the given value is not nil.
+func (_u *ProjectUpdate) SetNillableCustomerID(v *uuid.UUID) *ProjectUpdate {
+	if v != nil {
+		_u.SetCustomerID(*v)
+	}
+	return _u
+}
+
+// ClearCustomerID clears the value of the "customer_id" field.
+func (_u *ProjectUpdate) ClearCustomerID() *ProjectUpdate {
+	_u.mutation.ClearCustomerID()
+	return _u
+}
+
+// SetBillRateCents sets the "bill_rate_cents" field.
+func (_u *ProjectUpdate) SetBillRateCents(v int) *ProjectUpdate {
+	_u.mutation.ResetBillRateCents()
+	_u.mutation.SetBillRateCents(v)
+	return _u
+}
+
+// SetNillableBillRateCents sets the "bill_rate_cents" field if the given value is not nil.
+func (_u *ProjectUpdate) SetNillableBillRateCents(v *int) *ProjectUpdate {
+	if v != nil {
+		_u.SetBillRateCents(*v)
+	}
+	return _u
+}
+
+// AddBillRateCents adds value to the "bill_rate_cents" field.
+func (_u *ProjectUpdate) AddBillRateCents(v int) *ProjectUpdate {
+	_u.mutation.AddBillRateCents(v)
+	return _u
+}
+
+// ClearBillRateCents clears the value of the "bill_rate_cents" field.
+func (_u *ProjectUpdate) ClearBillRateCents() *ProjectUpdate {
+	_u.mutation.ClearBillRateCents()
+	return _u
+}
+
 // SetOrganization sets the "organization" edge to the Organization entity.
 func (_u *ProjectUpdate) SetOrganization(v *Organization) *ProjectUpdate {
 	return _u.SetOrganizationID(v.ID)
+}
+
+// SetCustomer sets the "customer" edge to the Customer entity.
+func (_u *ProjectUpdate) SetCustomer(v *Customer) *ProjectUpdate {
+	return _u.SetCustomerID(v.ID)
 }
 
 // AddTeamIDs adds the "teams" edge to the Team entity by IDs.
@@ -231,6 +285,21 @@ func (_u *ProjectUpdate) AddIntegrations(v ...*Integration) *ProjectUpdate {
 	return _u.AddIntegrationIDs(ids...)
 }
 
+// AddAllocationIDs adds the "allocations" edge to the Allocation entity by IDs.
+func (_u *ProjectUpdate) AddAllocationIDs(ids ...uuid.UUID) *ProjectUpdate {
+	_u.mutation.AddAllocationIDs(ids...)
+	return _u
+}
+
+// AddAllocations adds the "allocations" edges to the Allocation entity.
+func (_u *ProjectUpdate) AddAllocations(v ...*Allocation) *ProjectUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddAllocationIDs(ids...)
+}
+
 // Mutation returns the ProjectMutation object of the builder.
 func (_u *ProjectUpdate) Mutation() *ProjectMutation {
 	return _u.mutation
@@ -239,6 +308,12 @@ func (_u *ProjectUpdate) Mutation() *ProjectMutation {
 // ClearOrganization clears the "organization" edge to the Organization entity.
 func (_u *ProjectUpdate) ClearOrganization() *ProjectUpdate {
 	_u.mutation.ClearOrganization()
+	return _u
+}
+
+// ClearCustomer clears the "customer" edge to the Customer entity.
+func (_u *ProjectUpdate) ClearCustomer() *ProjectUpdate {
+	_u.mutation.ClearCustomer()
 	return _u
 }
 
@@ -305,6 +380,27 @@ func (_u *ProjectUpdate) RemoveIntegrations(v ...*Integration) *ProjectUpdate {
 	return _u.RemoveIntegrationIDs(ids...)
 }
 
+// ClearAllocations clears all "allocations" edges to the Allocation entity.
+func (_u *ProjectUpdate) ClearAllocations() *ProjectUpdate {
+	_u.mutation.ClearAllocations()
+	return _u
+}
+
+// RemoveAllocationIDs removes the "allocations" edge to Allocation entities by IDs.
+func (_u *ProjectUpdate) RemoveAllocationIDs(ids ...uuid.UUID) *ProjectUpdate {
+	_u.mutation.RemoveAllocationIDs(ids...)
+	return _u
+}
+
+// RemoveAllocations removes "allocations" edges to Allocation entities.
+func (_u *ProjectUpdate) RemoveAllocations(v ...*Allocation) *ProjectUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveAllocationIDs(ids...)
+}
+
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (_u *ProjectUpdate) Save(ctx context.Context) (int, error) {
 	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
@@ -334,6 +430,11 @@ func (_u *ProjectUpdate) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *ProjectUpdate) check() error {
+	if v, ok := _u.mutation.BillRateCents(); ok {
+		if err := project.BillRateCentsValidator(v); err != nil {
+			return &ValidationError{Name: "bill_rate_cents", err: fmt.Errorf(`ent: validator failed for field "Project.bill_rate_cents": %w`, err)}
+		}
+	}
 	if _u.mutation.OrganizationCleared() && len(_u.mutation.OrganizationIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "Project.organization"`)
 	}
@@ -391,6 +492,15 @@ func (_u *ProjectUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.WeeklySyncDayCleared() {
 		_spec.ClearField(project.FieldWeeklySyncDay, field.TypeString)
 	}
+	if value, ok := _u.mutation.BillRateCents(); ok {
+		_spec.SetField(project.FieldBillRateCents, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedBillRateCents(); ok {
+		_spec.AddField(project.FieldBillRateCents, field.TypeInt, value)
+	}
+	if _u.mutation.BillRateCentsCleared() {
+		_spec.ClearField(project.FieldBillRateCents, field.TypeInt)
+	}
 	if _u.mutation.OrganizationCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -413,6 +523,35 @@ func (_u *ProjectUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(organization.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.CustomerCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   project.CustomerTable,
+			Columns: []string{project.CustomerColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(customer.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.CustomerIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   project.CustomerTable,
+			Columns: []string{project.CustomerColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(customer.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -548,6 +687,51 @@ func (_u *ProjectUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(integration.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.AllocationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   project.AllocationsTable,
+			Columns: []string{project.AllocationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(allocation.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedAllocationsIDs(); len(nodes) > 0 && !_u.mutation.AllocationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   project.AllocationsTable,
+			Columns: []string{project.AllocationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(allocation.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AllocationsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   project.AllocationsTable,
+			Columns: []string{project.AllocationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(allocation.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -724,9 +908,61 @@ func (_u *ProjectUpdateOne) ClearWeeklySyncDay() *ProjectUpdateOne {
 	return _u
 }
 
+// SetCustomerID sets the "customer_id" field.
+func (_u *ProjectUpdateOne) SetCustomerID(v uuid.UUID) *ProjectUpdateOne {
+	_u.mutation.SetCustomerID(v)
+	return _u
+}
+
+// SetNillableCustomerID sets the "customer_id" field if the given value is not nil.
+func (_u *ProjectUpdateOne) SetNillableCustomerID(v *uuid.UUID) *ProjectUpdateOne {
+	if v != nil {
+		_u.SetCustomerID(*v)
+	}
+	return _u
+}
+
+// ClearCustomerID clears the value of the "customer_id" field.
+func (_u *ProjectUpdateOne) ClearCustomerID() *ProjectUpdateOne {
+	_u.mutation.ClearCustomerID()
+	return _u
+}
+
+// SetBillRateCents sets the "bill_rate_cents" field.
+func (_u *ProjectUpdateOne) SetBillRateCents(v int) *ProjectUpdateOne {
+	_u.mutation.ResetBillRateCents()
+	_u.mutation.SetBillRateCents(v)
+	return _u
+}
+
+// SetNillableBillRateCents sets the "bill_rate_cents" field if the given value is not nil.
+func (_u *ProjectUpdateOne) SetNillableBillRateCents(v *int) *ProjectUpdateOne {
+	if v != nil {
+		_u.SetBillRateCents(*v)
+	}
+	return _u
+}
+
+// AddBillRateCents adds value to the "bill_rate_cents" field.
+func (_u *ProjectUpdateOne) AddBillRateCents(v int) *ProjectUpdateOne {
+	_u.mutation.AddBillRateCents(v)
+	return _u
+}
+
+// ClearBillRateCents clears the value of the "bill_rate_cents" field.
+func (_u *ProjectUpdateOne) ClearBillRateCents() *ProjectUpdateOne {
+	_u.mutation.ClearBillRateCents()
+	return _u
+}
+
 // SetOrganization sets the "organization" edge to the Organization entity.
 func (_u *ProjectUpdateOne) SetOrganization(v *Organization) *ProjectUpdateOne {
 	return _u.SetOrganizationID(v.ID)
+}
+
+// SetCustomer sets the "customer" edge to the Customer entity.
+func (_u *ProjectUpdateOne) SetCustomer(v *Customer) *ProjectUpdateOne {
+	return _u.SetCustomerID(v.ID)
 }
 
 // AddTeamIDs adds the "teams" edge to the Team entity by IDs.
@@ -774,6 +1010,21 @@ func (_u *ProjectUpdateOne) AddIntegrations(v ...*Integration) *ProjectUpdateOne
 	return _u.AddIntegrationIDs(ids...)
 }
 
+// AddAllocationIDs adds the "allocations" edge to the Allocation entity by IDs.
+func (_u *ProjectUpdateOne) AddAllocationIDs(ids ...uuid.UUID) *ProjectUpdateOne {
+	_u.mutation.AddAllocationIDs(ids...)
+	return _u
+}
+
+// AddAllocations adds the "allocations" edges to the Allocation entity.
+func (_u *ProjectUpdateOne) AddAllocations(v ...*Allocation) *ProjectUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddAllocationIDs(ids...)
+}
+
 // Mutation returns the ProjectMutation object of the builder.
 func (_u *ProjectUpdateOne) Mutation() *ProjectMutation {
 	return _u.mutation
@@ -782,6 +1033,12 @@ func (_u *ProjectUpdateOne) Mutation() *ProjectMutation {
 // ClearOrganization clears the "organization" edge to the Organization entity.
 func (_u *ProjectUpdateOne) ClearOrganization() *ProjectUpdateOne {
 	_u.mutation.ClearOrganization()
+	return _u
+}
+
+// ClearCustomer clears the "customer" edge to the Customer entity.
+func (_u *ProjectUpdateOne) ClearCustomer() *ProjectUpdateOne {
+	_u.mutation.ClearCustomer()
 	return _u
 }
 
@@ -848,6 +1105,27 @@ func (_u *ProjectUpdateOne) RemoveIntegrations(v ...*Integration) *ProjectUpdate
 	return _u.RemoveIntegrationIDs(ids...)
 }
 
+// ClearAllocations clears all "allocations" edges to the Allocation entity.
+func (_u *ProjectUpdateOne) ClearAllocations() *ProjectUpdateOne {
+	_u.mutation.ClearAllocations()
+	return _u
+}
+
+// RemoveAllocationIDs removes the "allocations" edge to Allocation entities by IDs.
+func (_u *ProjectUpdateOne) RemoveAllocationIDs(ids ...uuid.UUID) *ProjectUpdateOne {
+	_u.mutation.RemoveAllocationIDs(ids...)
+	return _u
+}
+
+// RemoveAllocations removes "allocations" edges to Allocation entities.
+func (_u *ProjectUpdateOne) RemoveAllocations(v ...*Allocation) *ProjectUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveAllocationIDs(ids...)
+}
+
 // Where appends a list predicates to the ProjectUpdate builder.
 func (_u *ProjectUpdateOne) Where(ps ...predicate.Project) *ProjectUpdateOne {
 	_u.mutation.Where(ps...)
@@ -890,6 +1168,11 @@ func (_u *ProjectUpdateOne) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *ProjectUpdateOne) check() error {
+	if v, ok := _u.mutation.BillRateCents(); ok {
+		if err := project.BillRateCentsValidator(v); err != nil {
+			return &ValidationError{Name: "bill_rate_cents", err: fmt.Errorf(`ent: validator failed for field "Project.bill_rate_cents": %w`, err)}
+		}
+	}
 	if _u.mutation.OrganizationCleared() && len(_u.mutation.OrganizationIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "Project.organization"`)
 	}
@@ -964,6 +1247,15 @@ func (_u *ProjectUpdateOne) sqlSave(ctx context.Context) (_node *Project, err er
 	if _u.mutation.WeeklySyncDayCleared() {
 		_spec.ClearField(project.FieldWeeklySyncDay, field.TypeString)
 	}
+	if value, ok := _u.mutation.BillRateCents(); ok {
+		_spec.SetField(project.FieldBillRateCents, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedBillRateCents(); ok {
+		_spec.AddField(project.FieldBillRateCents, field.TypeInt, value)
+	}
+	if _u.mutation.BillRateCentsCleared() {
+		_spec.ClearField(project.FieldBillRateCents, field.TypeInt)
+	}
 	if _u.mutation.OrganizationCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -986,6 +1278,35 @@ func (_u *ProjectUpdateOne) sqlSave(ctx context.Context) (_node *Project, err er
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(organization.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.CustomerCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   project.CustomerTable,
+			Columns: []string{project.CustomerColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(customer.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.CustomerIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   project.CustomerTable,
+			Columns: []string{project.CustomerColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(customer.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1121,6 +1442,51 @@ func (_u *ProjectUpdateOne) sqlSave(ctx context.Context) (_node *Project, err er
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(integration.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.AllocationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   project.AllocationsTable,
+			Columns: []string{project.AllocationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(allocation.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedAllocationsIDs(); len(nodes) > 0 && !_u.mutation.AllocationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   project.AllocationsTable,
+			Columns: []string{project.AllocationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(allocation.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AllocationsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   project.AllocationsTable,
+			Columns: []string{project.AllocationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(allocation.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

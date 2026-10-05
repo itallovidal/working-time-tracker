@@ -7,6 +7,8 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"math"
+	"working-time-tracker/ent/allocation"
+	"working-time-tracker/ent/customer"
 	"working-time-tracker/ent/integration"
 	"working-time-tracker/ent/organization"
 	"working-time-tracker/ent/predicate"
@@ -30,9 +32,11 @@ type ProjectQuery struct {
 	inters           []Interceptor
 	predicates       []predicate.Project
 	withOrganization *OrganizationQuery
+	withCustomer     *CustomerQuery
 	withTeams        *TeamQuery
 	withTasks        *TaskQuery
 	withIntegrations *IntegrationQuery
+	withAllocations  *AllocationQuery
 	modifiers        []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -85,6 +89,28 @@ func (_q *ProjectQuery) QueryOrganization() *OrganizationQuery {
 			sqlgraph.From(project.Table, project.FieldID, selector),
 			sqlgraph.To(organization.Table, organization.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, project.OrganizationTable, project.OrganizationColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryCustomer chains the current query on the "customer" edge.
+func (_q *ProjectQuery) QueryCustomer() *CustomerQuery {
+	query := (&CustomerClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(project.Table, project.FieldID, selector),
+			sqlgraph.To(customer.Table, customer.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, project.CustomerTable, project.CustomerColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -151,6 +177,28 @@ func (_q *ProjectQuery) QueryIntegrations() *IntegrationQuery {
 			sqlgraph.From(project.Table, project.FieldID, selector),
 			sqlgraph.To(integration.Table, integration.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, project.IntegrationsTable, project.IntegrationsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryAllocations chains the current query on the "allocations" edge.
+func (_q *ProjectQuery) QueryAllocations() *AllocationQuery {
+	query := (&AllocationClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(project.Table, project.FieldID, selector),
+			sqlgraph.To(allocation.Table, allocation.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, project.AllocationsTable, project.AllocationsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -351,9 +399,11 @@ func (_q *ProjectQuery) Clone() *ProjectQuery {
 		inters:           append([]Interceptor{}, _q.inters...),
 		predicates:       append([]predicate.Project{}, _q.predicates...),
 		withOrganization: _q.withOrganization.Clone(),
+		withCustomer:     _q.withCustomer.Clone(),
 		withTeams:        _q.withTeams.Clone(),
 		withTasks:        _q.withTasks.Clone(),
 		withIntegrations: _q.withIntegrations.Clone(),
+		withAllocations:  _q.withAllocations.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -368,6 +418,17 @@ func (_q *ProjectQuery) WithOrganization(opts ...func(*OrganizationQuery)) *Proj
 		opt(query)
 	}
 	_q.withOrganization = query
+	return _q
+}
+
+// WithCustomer tells the query-builder to eager-load the nodes that are connected to
+// the "customer" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *ProjectQuery) WithCustomer(opts ...func(*CustomerQuery)) *ProjectQuery {
+	query := (&CustomerClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withCustomer = query
 	return _q
 }
 
@@ -401,6 +462,17 @@ func (_q *ProjectQuery) WithIntegrations(opts ...func(*IntegrationQuery)) *Proje
 		opt(query)
 	}
 	_q.withIntegrations = query
+	return _q
+}
+
+// WithAllocations tells the query-builder to eager-load the nodes that are connected to
+// the "allocations" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *ProjectQuery) WithAllocations(opts ...func(*AllocationQuery)) *ProjectQuery {
+	query := (&AllocationClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withAllocations = query
 	return _q
 }
 
@@ -482,11 +554,13 @@ func (_q *ProjectQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Proj
 	var (
 		nodes       = []*Project{}
 		_spec       = _q.querySpec()
-		loadedTypes = [4]bool{
+		loadedTypes = [6]bool{
 			_q.withOrganization != nil,
+			_q.withCustomer != nil,
 			_q.withTeams != nil,
 			_q.withTasks != nil,
 			_q.withIntegrations != nil,
+			_q.withAllocations != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -516,6 +590,12 @@ func (_q *ProjectQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Proj
 			return nil, err
 		}
 	}
+	if query := _q.withCustomer; query != nil {
+		if err := _q.loadCustomer(ctx, query, nodes, nil,
+			func(n *Project, e *Customer) { n.Edges.Customer = e }); err != nil {
+			return nil, err
+		}
+	}
 	if query := _q.withTeams; query != nil {
 		if err := _q.loadTeams(ctx, query, nodes,
 			func(n *Project) { n.Edges.Teams = []*Team{} },
@@ -534,6 +614,13 @@ func (_q *ProjectQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Proj
 		if err := _q.loadIntegrations(ctx, query, nodes,
 			func(n *Project) { n.Edges.Integrations = []*Integration{} },
 			func(n *Project, e *Integration) { n.Edges.Integrations = append(n.Edges.Integrations, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withAllocations; query != nil {
+		if err := _q.loadAllocations(ctx, query, nodes,
+			func(n *Project) { n.Edges.Allocations = []*Allocation{} },
+			func(n *Project, e *Allocation) { n.Edges.Allocations = append(n.Edges.Allocations, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -562,6 +649,38 @@ func (_q *ProjectQuery) loadOrganization(ctx context.Context, query *Organizatio
 		nodes, ok := nodeids[n.ID]
 		if !ok {
 			return fmt.Errorf(`unexpected foreign-key "organization_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (_q *ProjectQuery) loadCustomer(ctx context.Context, query *CustomerQuery, nodes []*Project, init func(*Project), assign func(*Project, *Customer)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*Project)
+	for i := range nodes {
+		if nodes[i].CustomerID == nil {
+			continue
+		}
+		fk := *nodes[i].CustomerID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(customer.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "customer_id" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -659,6 +778,36 @@ func (_q *ProjectQuery) loadIntegrations(ctx context.Context, query *Integration
 	}
 	return nil
 }
+func (_q *ProjectQuery) loadAllocations(ctx context.Context, query *AllocationQuery, nodes []*Project, init func(*Project), assign func(*Project, *Allocation)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Project)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(allocation.FieldProjectID)
+	}
+	query.Where(predicate.Allocation(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(project.AllocationsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.ProjectID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "project_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
 
 func (_q *ProjectQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := _q.querySpec()
@@ -690,6 +839,9 @@ func (_q *ProjectQuery) querySpec() *sqlgraph.QuerySpec {
 		}
 		if _q.withOrganization != nil {
 			_spec.Node.AddColumnOnce(project.FieldOrganizationID)
+		}
+		if _q.withCustomer != nil {
+			_spec.Node.AddColumnOnce(project.FieldCustomerID)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {

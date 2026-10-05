@@ -112,6 +112,8 @@ Se o convite foi criado com email, só esse email consegue aceitar. Um convite v
 | GET | `/api/orgs/:orgId/persons` | logado | Pessoas da organização |
 | POST | `/api/orgs/:orgId/projects` | admin | Cria um projeto |
 | GET | `/api/orgs/:orgId/projects` | logado | Projetos da organização |
+| POST | `/api/orgs/:orgId/customers` | admin | Cria um cliente |
+| GET | `/api/orgs/:orgId/customers` | admin | Clientes da organização, em ordem alfabética |
 
 A organização é criada pelo signup, e o `organization_id` vem no `/api/auth/me`, junto com `organization_currency`.
 
@@ -167,6 +169,34 @@ Content-Type: application/json
 
 ---
 
+## Clientes
+
+Quem contrata a organização. Todas as rotas são de **admin**.
+
+| Método | Rota | Descrição |
+|---|---|---|
+| POST | `/api/orgs/:orgId/customers` | Cria um cliente |
+| GET | `/api/orgs/:orgId/customers` | Lista, com `project_count` em cada um |
+| GET | `/api/customers/:customerId` | Detalhes |
+| PATCH | `/api/customers/:customerId` | Altera. Campo omitido mantém o valor; `""` apaga |
+| DELETE | `/api/customers/:customerId` | Exclui. Responde `400` enquanto algum projeto apontar para o cliente |
+
+```http
+POST /api/orgs/:orgId/customers
+Content-Type: application/json
+
+{
+  "name": "Rede Bom Preço",
+  "document": "12.ABC.345/01DE-35",
+  "contact_name": "Carla Dias",
+  "contact_email": "carla@bompreco.example",
+  "contact_phone": "+55 (11) 3003-1000"
+}
+```
+Só `name` é obrigatório. `document` é o CNPJ, com ou sem máscara: os dígitos verificadores são conferidos e a resposta traz sem máscara.
+
+---
+
 ## Pessoas
 
 | Método | Rota | Acesso | Descrição |
@@ -174,6 +204,7 @@ Content-Type: application/json
 | GET | `/api/persons/:personId` | logado | Detalhes da pessoa |
 | PATCH | `/api/persons/:personId` | a própria pessoa ou admin | Altera nome e email |
 | PATCH | `/api/persons/:personId/role` | admin | Muda o papel: `{"role": "admin"}` ou `{"role": "member"}` |
+| GET | `/api/persons/:personId/allocations` | a própria pessoa ou admin | Quanto a pessoa recebe por hora em cada projeto |
 
 A organização nunca fica sem admin: rebaixar o último admin responde `400`. Pessoas entram na organização pelo signup ou por convite.
 
@@ -205,6 +236,35 @@ Content-Type: application/json
 - `weekly_sync_day` vai de `monday` a `sunday`.
 
 No `PATCH`, um campo omitido mantém o valor atual, e `""` apaga `daily_time` ou `weekly_sync_day`.
+
+O projeto traz `customer` (`{"id", "name"}` ou `null`) para qualquer membro. O valor cobrado nunca vem aqui: ele fica em `/billing`.
+
+### Cliente e valor cobrado
+
+| Método | Rota | Acesso | Descrição |
+|---|---|---|---|
+| GET | `/api/projects/:projectId/billing` | admin | Cliente e valor que ele paga por hora |
+| PUT | `/api/projects/:projectId/billing` | admin | Substitui os dois. O que vier `null` é apagado |
+
+```http
+PUT /api/projects/:projectId/billing
+Content-Type: application/json
+
+{ "customer_id": "<id do cliente>", "bill_rate_cents": 10000 }
+```
+Os valores são sempre em **centavos**, na moeda da organização: `10000` é 100,00. O cliente precisa ser da mesma organização do projeto. Mandar `{"customer_id": null, "bill_rate_cents": null}` volta o projeto a ser interno.
+
+### Valor pago a cada pessoa
+
+O vínculo de uma pessoa com o projeto e quanto ela recebe por hora nele. Há um valor por pessoa em cada projeto.
+
+| Método | Rota | Acesso | Descrição |
+|---|---|---|---|
+| GET | `/api/projects/:projectId/allocations` | logado | Um admin recebe todos os valores; um membro recebe só o dele, ou `[]` |
+| PUT | `/api/projects/:projectId/allocations/:personId` | admin | Define o valor da pessoa: `{"pay_rate_cents": 2000}`. Cria o vínculo ou troca o valor |
+| DELETE | `/api/projects/:projectId/allocations/:personId` | admin | Tira a pessoa do projeto |
+
+`pay_rate_cents` vai de `0` a `100000000`. Zero vale: é alguém que trabalha no projeto sem receber por hora. A pessoa precisa ser da mesma organização do projeto.
 
 ---
 
@@ -321,7 +381,8 @@ Content-Type: application/json
 6. **Criar tarefa:** `POST /api/projects/:projectId/tasks` com você como responsável.
 7. **Bater o ponto:** `clock-in` com `{"task_id": "…"}`, `GET /api/work-sessions/active` e `clock-out`.
 8. **Totais:** `GET /api/projects/:projectId/work-sessions/total?task_id=…`.
-9. **Convidar alguém:** `POST /api/orgs/:orgId/invites`, depois `POST /api/auth/invites/:token/accept` numa sessão sem cookie (ou após `logout`).
+9. **Cliente e valores:** `POST /api/orgs/:orgId/customers`, `PUT /api/projects/:projectId/billing` com o cliente e `bill_rate_cents`, e `PUT /api/projects/:projectId/allocations/:personId` com `pay_rate_cents`.
+10. **Convidar alguém:** `POST /api/orgs/:orgId/invites`, depois `POST /api/auth/invites/:token/accept` numa sessão sem cookie (ou após `logout`).
 
 ## Variáveis de ambiente (Insomnia)
 
@@ -332,6 +393,7 @@ Content-Type: application/json
 | `person_id` | `id` do `/api/auth/me` ou de outra pessoa |
 | `project_id` | `id` retornado ao criar o projeto |
 | `team_id` | `id` retornado ao criar o time |
+| `customer_id` | `id` retornado ao criar o cliente |
 | `task_id` | `id` retornado ao criar a tarefa |
 | `integration_id` | `id` retornado ao criar a integração |
 | `invite_id` / `invite_token` | `id` e `token` retornados ao criar o convite |

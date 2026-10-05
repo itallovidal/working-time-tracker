@@ -333,6 +333,9 @@ document.addEventListener('alpine:init', () => {
     ...form(),
     loading: true,
     form: { name: '', description: '', sprint_duration_days: 14, daily_time: '', weekly_sync_day: '' },
+    customerName: '',
+    customers: [],
+    billing: { customer_id: '', rate: '' },
     confirmDelete: false,
     async init() {
       try {
@@ -344,11 +347,36 @@ document.addEventListener('alpine:init', () => {
           daily_time: p.daily_time || '',
           weekly_sync_day: p.weekly_sync_day || '',
         };
+        this.customerName = p.customer ? p.customer.name : '';
+        // O valor cobrado e a lista de clientes são rotas de admin.
+        if (me.role === 'admin') {
+          const [billing, customers] = await Promise.all([
+            api('GET', '/api/projects/' + project.id + '/billing'),
+            api('GET', '/api/orgs/' + me.organization_id + '/customers'),
+          ]);
+          this.customers = customers || [];
+          this.setBilling(billing);
+        }
       } catch (e) {
         this.errors.save = e.message;
       } finally {
         this.loading = false;
       }
+    },
+    setBilling(b) {
+      this.billing = { customer_id: b.customer ? b.customer.id : '', rate: WTT.fmt.moneyInput(b.bill_rate_cents) };
+      this.customerName = b.customer ? b.customer.name : '';
+    },
+    saveBilling() {
+      return this.run('billing', async () => {
+        const cents = WTT.toCents(this.billing.rate);
+        if (cents === null && String(this.billing.rate).trim() !== '') throw new Error('Informe um valor, por exemplo 100,00.');
+        this.setBilling(await api('PUT', '/api/projects/' + project.id + '/billing', {
+          customer_id: this.billing.customer_id || null,
+          bill_rate_cents: cents,
+        }));
+        toast('Cobrança salva.');
+      });
     },
     save() {
       return this.run('save', async () => {
@@ -368,6 +396,83 @@ document.addEventListener('alpine:init', () => {
       return this.run('delete', async () => {
         await api('DELETE', '/api/projects/' + project.id);
         location.href = '/orgs/' + me.organization_id;
+      });
+    },
+  }));
+
+  Alpine.data('projectRates', () => ({
+    ...form(),
+    loading: true,
+    billing: { customer: null, bill_rate_cents: null },
+    rows: [], // um vínculo por pessoa, com o texto do campo em draft
+    people: [], // todas as pessoas da organização
+    teamMembers: [], // quem está em algum time do projeto
+    add: { person_id: '', rate: '' },
+    confirming: null,
+    async init() {
+      try {
+        const [billing, allocations, people, teamMembers] = await Promise.all([
+          api('GET', '/api/projects/' + project.id + '/billing'),
+          api('GET', '/api/projects/' + project.id + '/allocations'),
+          api('GET', '/api/orgs/' + me.organization_id + '/persons'),
+          api('GET', '/api/projects/' + project.id + '/members'),
+        ]);
+        this.billing = billing;
+        this.rows = (allocations || []).map((a) => this.toRow(a));
+        this.people = people || [];
+        this.teamMembers = teamMembers || [];
+      } catch (e) {
+        this.errors.load = e.message;
+      } finally {
+        this.loading = false;
+      }
+    },
+    toRow(a) {
+      return { ...a, draft: WTT.fmt.moneyInput(a.pay_rate_cents) };
+    },
+    has(personId) {
+      return this.rows.some((r) => r.person_id === personId);
+    },
+    inTeam(p) {
+      return this.teamMembers.some((m) => m.id === p.id);
+    },
+    // Quem está nos times vem primeiro: é quem mais provavelmente falta.
+    candidates() {
+      return this.people.filter((p) => !this.has(p.id))
+        .sort((a, b) => (this.inTeam(b) - this.inTeam(a)) || a.name.localeCompare(b.name));
+    },
+    missing() {
+      return this.teamMembers.filter((m) => !this.has(m.id));
+    },
+    dirty(row) {
+      return WTT.toCents(row.draft) !== row.pay_rate_cents;
+    },
+    margin(row) {
+      return this.billing.bill_rate_cents === null ? null : this.billing.bill_rate_cents - row.pay_rate_cents;
+    },
+    async put(personId, text) {
+      const cents = WTT.toCents(text);
+      if (cents === null) throw new Error('Informe um valor, por exemplo 20,00.');
+      return api('PUT', '/api/projects/' + project.id + '/allocations/' + personId, { pay_rate_cents: cents });
+    },
+    save(row) {
+      return this.run('row-' + row.person_id, async () => {
+        Object.assign(row, this.toRow(await this.put(row.person_id, row.draft)));
+        toast('Valor de ' + row.person.name + ' salvo.');
+      });
+    },
+    addPerson() {
+      return this.run('add', async () => {
+        const a = await this.put(this.add.person_id, this.add.rate);
+        this.rows = [...this.rows, this.toRow(a)].sort((x, y) => x.person.name.localeCompare(y.person.name));
+        this.add = { person_id: '', rate: '' };
+      });
+    },
+    remove(row) {
+      return this.run('row-' + row.person_id, async () => {
+        await api('DELETE', '/api/projects/' + project.id + '/allocations/' + row.person_id);
+        this.rows = this.rows.filter((r) => r.person_id !== row.person_id);
+        this.confirming = null;
       });
     },
   }));

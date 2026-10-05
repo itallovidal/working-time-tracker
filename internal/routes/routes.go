@@ -3,7 +3,9 @@ package routes
 import (
 	"github.com/labstack/echo/v5"
 
+	"working-time-tracker/internal/domain/allocation"
 	"working-time-tracker/internal/domain/auth"
+	"working-time-tracker/internal/domain/customer"
 	"working-time-tracker/internal/domain/integration"
 	"working-time-tracker/internal/domain/organization"
 	"working-time-tracker/internal/domain/person"
@@ -16,9 +18,11 @@ import (
 type Handlers struct {
 	Auth         *auth.Handler
 	Organization *organization.Handler
+	Customer     *customer.Handler
 	Person       *person.Handler
 	Project      *project.Handler
 	Team         *team.Handler
+	Allocation   *allocation.Handler
 	Task         *task.Handler
 	WorkSession  *work_session.Handler
 	Integration  *integration.Handler
@@ -46,6 +50,7 @@ func RegisterRoutes(e *echo.Echo, h Handlers, m *auth.Middleware, authLimiter ec
 	integ := m.RequireOrg(auth.KindIntegration, "integrationId")
 	per := m.RequireOrg(auth.KindPerson, "personId")
 	inv := m.RequireOrg(auth.KindInvite, "inviteId")
+	cust := m.RequireOrg(auth.KindCustomer, "customerId")
 
 	r.POST("/auth/logout", h.Auth.Logout)
 	r.GET("/auth/me", h.Auth.Me)
@@ -61,9 +66,18 @@ func RegisterRoutes(e *echo.Echo, h Handlers, m *auth.Middleware, authLimiter ec
 	r.GET("/orgs/:orgId/invites", h.Auth.ListInvites, org, admin)
 	r.DELETE("/invites/:inviteId", h.Auth.RevokeInvite, inv, admin)
 
+	// Clientes, e tudo que diz quanto o cliente paga, são só de admins.
+	r.POST("/orgs/:orgId/customers", h.Customer.Create, org, admin)
+	r.GET("/orgs/:orgId/customers", h.Customer.ListByOrg, org, admin)
+	r.GET("/customers/:customerId", h.Customer.Get, cust, admin)
+	r.PATCH("/customers/:customerId", h.Customer.Update, cust, admin)
+	r.DELETE("/customers/:customerId", h.Customer.Delete, cust, admin)
+
 	r.GET("/persons/:personId", h.Person.Get, per)
 	r.PATCH("/persons/:personId", h.Person.Update, per, m.RequireSelfOrAdmin("personId"))
 	r.PATCH("/persons/:personId/role", h.Person.SetRole, per, admin)
+	// O handler só entrega os valores à própria pessoa ou a um admin.
+	r.GET("/persons/:personId/allocations", h.Allocation.ListByPerson, per)
 
 	r.GET("/projects/:projectId", h.Project.Get, prj)
 	r.PATCH("/projects/:projectId", h.Project.Update, prj, admin)
@@ -71,6 +85,12 @@ func RegisterRoutes(e *echo.Echo, h Handlers, m *auth.Middleware, authLimiter ec
 	r.POST("/projects/:projectId/teams", h.Team.Create, prj, admin)
 	r.GET("/projects/:projectId/teams", h.Team.ListByProject, prj)
 	r.GET("/projects/:projectId/members", h.Team.ListProjectMembers, prj)
+	r.GET("/projects/:projectId/billing", h.Project.GetBilling, prj, admin)
+	r.PUT("/projects/:projectId/billing", h.Project.SetBilling, prj, admin)
+	// Um membro recebe só o próprio valor; o handler filtra.
+	r.GET("/projects/:projectId/allocations", h.Allocation.ListByProject, prj)
+	r.PUT("/projects/:projectId/allocations/:personId", h.Allocation.Set, prj, per, admin)
+	r.DELETE("/projects/:projectId/allocations/:personId", h.Allocation.Remove, prj, per, admin)
 	r.POST("/projects/:projectId/tasks", h.Task.Create, prj)
 	r.GET("/projects/:projectId/tasks", h.Task.ListByProject, prj)
 	r.POST("/projects/:projectId/work-sessions/clock-in", h.WorkSession.ClockIn, prj)

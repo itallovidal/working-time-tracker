@@ -15,6 +15,7 @@ Stakeholders are teams of any kind that work by project and want accurate time-p
 - Support generic integrations with external platforms (GitHub, GitLab, Slack, Trello, etc.) configured per project, replacing any single-platform coupling.
 - Allow linking tasks to external items (issues, cards, tickets) through integrations and retrieving their details on demand.
 - Support project-level configuration: sprint duration, daily standup time, and weekly sync schedule.
+- Model how the organization is paid and how it pays: a customer hires a project at an hourly bill rate, and each person has an hourly pay rate per project. Admins see and change every value; a member sees only their own pay rate.
 - Define a minimal REST API covering all CRUD and clock-in/out operations, scoped by organization and project.
 - Serve a lightweight web UI (server-rendered HTML + Alpine.js) from the Go binary for administration and daily use.
 
@@ -23,7 +24,7 @@ Stakeholders are teams of any kind that work by project and want accurate time-p
 - A heavy SPA framework or separate frontend build pipeline (server-rendered HTML + Alpine.js is sufficient for v1).
 - Webhook-driven automatic issue sync (external item details are fetched on demand for this iteration).
 - Complex RBAC with fine-grained permissions (simple member/admin roles within an organization is sufficient for v1).
-- Billing, invoicing, or payroll calculations from time entries.
+- Invoicing or payroll: the system stores the hourly rate a customer pays per project and the hourly rate each person is paid per project, but it does not issue invoices, close pay periods or handle taxes.
 - Multi-region or sharded deployment (single PostgreSQL instance for v1).
 
 ## Decisions
@@ -52,11 +53,22 @@ Project: id (UUID PK), organization_id (FK Organization), name, description,
          github_repo_url (nullable), gitlab_repo_url (nullable),
          sprint_duration_days (int, default 14),
          daily_time (TIME nullable), weekly_sync_day (VARCHAR nullable),
+         customer_id (FK Customer, nullable — internal projects have none),
+         bill_rate_cents (int, nullable — what the customer pays per hour;
+         admin-only, served by /billing and never in the project JSON),
          created_at
+Customer: id (UUID PK), organization_id (FK Organization), name, document (CNPJ),
+          contact_name, contact_email, contact_phone, created_at
+          (named Customer in code because Ent reserves "Client")
 Team: id (UUID PK), name, project_id (FK Project), created_at
 Person: id (UUID PK), name, email, organization_id (FK Organization), created_at
 TeamMembership: person_id (FK Person), team_id (FK Team), created_at
                (unique constraint on person_id + team_id)
+Allocation: id (UUID PK), project_id (FK Project), person_id (FK Person),
+            pay_rate_cents (int >= 0), created_at
+            (unique constraint on project_id + person_id; the rate lives here and
+             not on TeamMembership because one person can be in two teams of the
+             same project)
 Integration: id (UUID PK), project_id (FK Project), type (VARCHAR — e.g. github,
              gitlab, slack, trello), display_name, config (JSONB, encrypted),
              enabled (boolean, default true), created_at

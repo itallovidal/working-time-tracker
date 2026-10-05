@@ -7,6 +7,7 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"math"
+	"working-time-tracker/ent/customer"
 	"working-time-tracker/ent/invite"
 	"working-time-tracker/ent/organization"
 	"working-time-tracker/ent/person"
@@ -24,14 +25,15 @@ import (
 // OrganizationQuery is the builder for querying Organization entities.
 type OrganizationQuery struct {
 	config
-	ctx          *QueryContext
-	order        []organization.OrderOption
-	inters       []Interceptor
-	predicates   []predicate.Organization
-	withPersons  *PersonQuery
-	withProjects *ProjectQuery
-	withInvites  *InviteQuery
-	modifiers    []func(*sql.Selector)
+	ctx           *QueryContext
+	order         []organization.OrderOption
+	inters        []Interceptor
+	predicates    []predicate.Organization
+	withPersons   *PersonQuery
+	withProjects  *ProjectQuery
+	withCustomers *CustomerQuery
+	withInvites   *InviteQuery
+	modifiers     []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -105,6 +107,28 @@ func (_q *OrganizationQuery) QueryProjects() *ProjectQuery {
 			sqlgraph.From(organization.Table, organization.FieldID, selector),
 			sqlgraph.To(project.Table, project.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, organization.ProjectsTable, organization.ProjectsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryCustomers chains the current query on the "customers" edge.
+func (_q *OrganizationQuery) QueryCustomers() *CustomerQuery {
+	query := (&CustomerClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(organization.Table, organization.FieldID, selector),
+			sqlgraph.To(customer.Table, customer.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, organization.CustomersTable, organization.CustomersColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -321,14 +345,15 @@ func (_q *OrganizationQuery) Clone() *OrganizationQuery {
 		return nil
 	}
 	return &OrganizationQuery{
-		config:       _q.config,
-		ctx:          _q.ctx.Clone(),
-		order:        append([]organization.OrderOption{}, _q.order...),
-		inters:       append([]Interceptor{}, _q.inters...),
-		predicates:   append([]predicate.Organization{}, _q.predicates...),
-		withPersons:  _q.withPersons.Clone(),
-		withProjects: _q.withProjects.Clone(),
-		withInvites:  _q.withInvites.Clone(),
+		config:        _q.config,
+		ctx:           _q.ctx.Clone(),
+		order:         append([]organization.OrderOption{}, _q.order...),
+		inters:        append([]Interceptor{}, _q.inters...),
+		predicates:    append([]predicate.Organization{}, _q.predicates...),
+		withPersons:   _q.withPersons.Clone(),
+		withProjects:  _q.withProjects.Clone(),
+		withCustomers: _q.withCustomers.Clone(),
+		withInvites:   _q.withInvites.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -354,6 +379,17 @@ func (_q *OrganizationQuery) WithProjects(opts ...func(*ProjectQuery)) *Organiza
 		opt(query)
 	}
 	_q.withProjects = query
+	return _q
+}
+
+// WithCustomers tells the query-builder to eager-load the nodes that are connected to
+// the "customers" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *OrganizationQuery) WithCustomers(opts ...func(*CustomerQuery)) *OrganizationQuery {
+	query := (&CustomerClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withCustomers = query
 	return _q
 }
 
@@ -446,9 +482,10 @@ func (_q *OrganizationQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]
 	var (
 		nodes       = []*Organization{}
 		_spec       = _q.querySpec()
-		loadedTypes = [3]bool{
+		loadedTypes = [4]bool{
 			_q.withPersons != nil,
 			_q.withProjects != nil,
+			_q.withCustomers != nil,
 			_q.withInvites != nil,
 		}
 	)
@@ -484,6 +521,13 @@ func (_q *OrganizationQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]
 		if err := _q.loadProjects(ctx, query, nodes,
 			func(n *Organization) { n.Edges.Projects = []*Project{} },
 			func(n *Organization, e *Project) { n.Edges.Projects = append(n.Edges.Projects, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withCustomers; query != nil {
+		if err := _q.loadCustomers(ctx, query, nodes,
+			func(n *Organization) { n.Edges.Customers = []*Customer{} },
+			func(n *Organization, e *Customer) { n.Edges.Customers = append(n.Edges.Customers, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -542,6 +586,36 @@ func (_q *OrganizationQuery) loadProjects(ctx context.Context, query *ProjectQue
 	}
 	query.Where(predicate.Project(func(s *sql.Selector) {
 		s.Where(sql.InValues(s.C(organization.ProjectsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.OrganizationID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "organization_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *OrganizationQuery) loadCustomers(ctx context.Context, query *CustomerQuery, nodes []*Organization, init func(*Organization), assign func(*Organization, *Customer)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Organization)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(customer.FieldOrganizationID)
+	}
+	query.Where(predicate.Customer(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(organization.CustomersColumn), fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {

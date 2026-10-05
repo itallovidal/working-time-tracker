@@ -4,6 +4,8 @@ package ent
 
 import (
 	"time"
+	"working-time-tracker/ent/allocation"
+	"working-time-tracker/ent/customer"
 	"working-time-tracker/ent/integration"
 	"working-time-tracker/ent/invite"
 	"working-time-tracker/ent/organization"
@@ -23,6 +25,30 @@ import (
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	allocationFields := schema.Allocation{}.Fields()
+	_ = allocationFields
+	// allocationDescPayRateCents is the schema descriptor for pay_rate_cents field.
+	allocationDescPayRateCents := allocationFields[3].Descriptor()
+	// allocation.PayRateCentsValidator is a validator for the "pay_rate_cents" field. It is called by the builders before save.
+	allocation.PayRateCentsValidator = allocationDescPayRateCents.Validators[0].(func(int) error)
+	// allocationDescCreatedAt is the schema descriptor for created_at field.
+	allocationDescCreatedAt := allocationFields[4].Descriptor()
+	// allocation.DefaultCreatedAt holds the default value on creation for the created_at field.
+	allocation.DefaultCreatedAt = allocationDescCreatedAt.Default.(func() time.Time)
+	// allocationDescID is the schema descriptor for id field.
+	allocationDescID := allocationFields[0].Descriptor()
+	// allocation.DefaultID holds the default value on creation for the id field.
+	allocation.DefaultID = allocationDescID.Default.(func() uuid.UUID)
+	customerFields := schema.Customer{}.Fields()
+	_ = customerFields
+	// customerDescCreatedAt is the schema descriptor for created_at field.
+	customerDescCreatedAt := customerFields[7].Descriptor()
+	// customer.DefaultCreatedAt holds the default value on creation for the created_at field.
+	customer.DefaultCreatedAt = customerDescCreatedAt.Default.(func() time.Time)
+	// customerDescID is the schema descriptor for id field.
+	customerDescID := customerFields[0].Descriptor()
+	// customer.DefaultID holds the default value on creation for the id field.
+	customer.DefaultID = customerDescID.Default.(func() uuid.UUID)
 	integrationFields := schema.Integration{}.Fields()
 	_ = integrationFields
 	// integrationDescEnabled is the schema descriptor for enabled field.
@@ -81,8 +107,12 @@ func init() {
 	projectDescSprintDurationDays := projectFields[6].Descriptor()
 	// project.DefaultSprintDurationDays holds the default value on creation for the sprint_duration_days field.
 	project.DefaultSprintDurationDays = projectDescSprintDurationDays.Default.(int)
+	// projectDescBillRateCents is the schema descriptor for bill_rate_cents field.
+	projectDescBillRateCents := projectFields[10].Descriptor()
+	// project.BillRateCentsValidator is a validator for the "bill_rate_cents" field. It is called by the builders before save.
+	project.BillRateCentsValidator = projectDescBillRateCents.Validators[0].(func(int) error)
 	// projectDescCreatedAt is the schema descriptor for created_at field.
-	projectDescCreatedAt := projectFields[9].Descriptor()
+	projectDescCreatedAt := projectFields[11].Descriptor()
 	// project.DefaultCreatedAt holds the default value on creation for the created_at field.
 	project.DefaultCreatedAt = projectDescCreatedAt.Default.(func() time.Time)
 	// projectDescID is the schema descriptor for id field.

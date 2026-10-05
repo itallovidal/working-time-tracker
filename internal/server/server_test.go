@@ -77,6 +77,15 @@ func decode(t *testing.T, rec *httptest.ResponseRecorder) map[string]any {
 	return m
 }
 
+func decodeList(t *testing.T, rec *httptest.ResponseRecorder) []map[string]any {
+	t.Helper()
+	var l []map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &l); err != nil {
+		t.Fatalf("decode list %q: %v", rec.Body.String(), err)
+	}
+	return l
+}
+
 type account struct {
 	session string
 	orgID   string
@@ -284,6 +293,147 @@ func TestOrganization_Profile(t *testing.T) {
 	}
 }
 
+// O admin vê e altera todos os valores. O membro vê só o que recebe: nunca o
+// valor cobrado do cliente nem o valor de um colega, em nenhuma rota.
+func TestRates_VisibilityByRole(t *testing.T) {
+	e := newServer(t)
+	admin := signup(t, e, "Org", "ana@test.com")
+	bia := invite(t, e, admin, "bia@test.com", "member")
+	caio := invite(t, e, admin, "caio@test.com", "member")
+	projectID := createProject(t, e, admin, "Projeto X")
+	prj := "/api/projects/" + projectID
+
+	rec := do(e, "POST", "/api/orgs/"+admin.orgID+"/customers", `{"name":"Empresa A","document":"11.222.333/0001-81"}`, admin.session)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("create customer = %d: %s", rec.Code, rec.Body.String())
+	}
+	customerID := decode(t, rec)["id"].(string)
+
+	rec = do(e, "PUT", prj+"/billing", `{"customer_id":"`+customerID+`","bill_rate_cents":10000}`, admin.session)
+	if rec.Code != http.StatusOK || decode(t, rec)["bill_rate_cents"] != float64(10000) {
+		t.Fatalf("set billing = %d: %s", rec.Code, rec.Body.String())
+	}
+	for person, cents := range map[string]string{bia.id: "2000", caio.id: "2599", admin.id: "0"} {
+		if rec := do(e, "PUT", prj+"/allocations/"+person, `{"pay_rate_cents":`+cents+`}`, admin.session); rec.Code != http.StatusOK {
+			t.Fatalf("set allocation = %d: %s", rec.Code, rec.Body.String())
+		}
+	}
+
+	// Rotas de admin.
+	forbidden := []struct{ method, path, body string }{
+		{"GET", prj + "/billing", ""},
+		{"PUT", prj + "/billing", `{"bill_rate_cents":1}`},
+		{"GET", "/api/orgs/" + admin.orgID + "/customers", ""},
+		{"POST", "/api/orgs/" + admin.orgID + "/customers", `{"name":"X"}`},
+		{"GET", "/api/customers/" + customerID, ""},
+		{"PATCH", "/api/customers/" + customerID, `{"name":"X"}`},
+		{"DELETE", "/api/customers/" + customerID, ""},
+		{"PUT", prj + "/allocations/" + bia.id, `{"pay_rate_cents":999999}`},
+		{"DELETE", prj + "/allocations/" + caio.id, ""},
+		{"GET", "/api/persons/" + caio.id + "/allocations", ""},
+		{"GET", "/api/persons/" + admin.id + "/allocations", ""},
+	}
+	for _, tc := range forbidden {
+		if rec := do(e, tc.method, tc.path, tc.body, bia.session); rec.Code != http.StatusForbidden {
+			t.Errorf("member %s %s = %d, want 403", tc.method, tc.path, rec.Code)
+		}
+	}
+
+	// O projeto mostra o nome do cliente, e só isso.
+	for _, path := range []string{prj, "/api/orgs/" + admin.orgID + "/projects"} {
+		for _, who := range []account{admin, bia} {
+			body := do(e, "GET", path, "", who.session).Body.String()
+			if !strings.Contains(body, `"name":"Empresa A"`) {
+				t.Errorf("GET %s does not show the customer name: %s", path, body)
+			}
+			// Só as chaves e o CNPJ são conferidos: um número solto como 10000
+			// pode aparecer por acaso num UUID ou num horário.
+			if strings.Contains(body, "bill_rate") || strings.Contains(body, "pay_rate") || strings.Contains(body, "11222333000181") {
+				t.Errorf("GET %s leaks billing data: %s", path, body)
+			}
+		}
+	}
+
+	// A lista de valores do projeto: o membro recebe só a própria linha.
+	rec = do(e, "GET", prj+"/allocations", "", bia.session)
+	mine := decodeList(t, rec)
+	if len(mine) != 1 || mine[0]["person_id"] != bia.id || mine[0]["pay_rate_cents"] != float64(2000) {
+		t.Errorf("member allocations = %s, want only her own", rec.Body.String())
+	}
+	if strings.Contains(rec.Body.String(), caio.id) {
+		t.Errorf("member sees a colleague's allocation: %s", rec.Body.String())
+	}
+	if all := decodeList(t, do(e, "GET", prj+"/allocations", "", admin.session)); len(all) != 3 {
+		t.Errorf("admin sees %d allocations, want 3", len(all))
+	}
+
+	// Os valores de uma pessoa em todos os projetos: ela mesma e o admin.
+	for _, who := range []account{bia, admin} {
+		rec := do(e, "GET", "/api/persons/"+bia.id+"/allocations", "", who.session)
+		list := decodeList(t, rec)
+		if rec.Code != http.StatusOK || len(list) != 1 || list[0]["pay_rate_cents"] != float64(2000) {
+			t.Errorf("GET own allocations = %d %s", rec.Code, rec.Body.String())
+		}
+		if prjRef, _ := list[0]["project"].(map[string]any); prjRef["name"] != "Projeto X" {
+			t.Errorf("allocation does not name the project: %s", rec.Body.String())
+		}
+	}
+
+	// Quem ainda não tem valor recebe uma lista vazia, não um erro.
+	dora := invite(t, e, admin, "dora@test.com", "member")
+	if rec := do(e, "GET", prj+"/allocations", "", dora.session); rec.Code != http.StatusOK || strings.TrimSpace(rec.Body.String()) != "[]" {
+		t.Errorf("member without allocation = %d %s, want 200 []", rec.Code, rec.Body.String())
+	}
+
+	if rec := do(e, "PUT", prj+"/allocations/"+bia.id, `{}`, admin.session); rec.Code != http.StatusBadRequest {
+		t.Errorf("PUT allocation without a rate = %d, want 400", rec.Code)
+	}
+	if rec := do(e, "DELETE", "/api/customers/"+customerID, "", admin.session); rec.Code != http.StatusBadRequest {
+		t.Errorf("DELETE customer with projects = %d, want 400", rec.Code)
+	}
+}
+
+// Clientes e valores de uma organização não existem para a outra.
+func TestRates_StayInOrganization(t *testing.T) {
+	e := newServer(t)
+	a := signup(t, e, "Org A", "ana@a.com")
+	b := signup(t, e, "Org B", "bia@b.com")
+	projectA := createProject(t, e, a, "Projeto A")
+	projectB := createProject(t, e, b, "Projeto B")
+	customerA := decode(t, do(e, "POST", "/api/orgs/"+a.orgID+"/customers", `{"name":"Empresa A"}`, a.session))["id"].(string)
+	do(e, "PUT", "/api/projects/"+projectA+"/allocations/"+a.id, `{"pay_rate_cents":2000}`, a.session)
+
+	notFound := []struct{ method, path, body string }{
+		{"GET", "/api/orgs/" + a.orgID + "/customers", ""},
+		{"POST", "/api/orgs/" + a.orgID + "/customers", `{"name":"X"}`},
+		{"GET", "/api/customers/" + customerA, ""},
+		{"PATCH", "/api/customers/" + customerA, `{"name":"X"}`},
+		{"DELETE", "/api/customers/" + customerA, ""},
+		{"GET", "/api/projects/" + projectA + "/billing", ""},
+		{"PUT", "/api/projects/" + projectA + "/billing", `{"bill_rate_cents":1}`},
+		{"GET", "/api/projects/" + projectA + "/allocations", ""},
+		{"PUT", "/api/projects/" + projectA + "/allocations/" + a.id, `{"pay_rate_cents":1}`},
+		{"DELETE", "/api/projects/" + projectA + "/allocations/" + a.id, ""},
+		{"GET", "/api/persons/" + a.id + "/allocations", ""},
+		// Projeto de B com uma pessoa de A.
+		{"PUT", "/api/projects/" + projectB + "/allocations/" + a.id, `{"pay_rate_cents":1}`},
+	}
+	for _, tc := range notFound {
+		if rec := do(e, tc.method, tc.path, tc.body, b.session); rec.Code != http.StatusNotFound {
+			t.Errorf("other org %s %s = %d, want 404", tc.method, tc.path, rec.Code)
+		}
+	}
+
+	// O ID do cliente vem no corpo, então quem confere a organização é o service.
+	rec := do(e, "PUT", "/api/projects/"+projectB+"/billing", `{"customer_id":"`+customerA+`","bill_rate_cents":5000}`, b.session)
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("billing with another organization's customer = %d, want 400", rec.Code)
+	}
+	if rec := do(e, "GET", "/api/projects/"+projectB, "", b.session); strings.Contains(rec.Body.String(), "Empresa A") {
+		t.Errorf("project B shows organization A's customer: %s", rec.Body.String())
+	}
+}
+
 // Um membro bate o próprio ponto sem mandar person_id, e não pode bater o de outra pessoa.
 func TestWorkSessions_UseLoggedInPerson(t *testing.T) {
 	e := newServer(t)
@@ -412,9 +562,16 @@ func TestRoutes_Table(t *testing.T) {
 		"GET /api/orgs/:orgId/invites",
 		"DELETE /api/invites/:inviteId",
 
+		"POST /api/orgs/:orgId/customers",
+		"GET /api/orgs/:orgId/customers",
+		"GET /api/customers/:customerId",
+		"PATCH /api/customers/:customerId",
+		"DELETE /api/customers/:customerId",
+
 		"GET /api/persons/:personId",
 		"PATCH /api/persons/:personId",
 		"PATCH /api/persons/:personId/role",
+		"GET /api/persons/:personId/allocations",
 
 		"GET /api/projects/:projectId",
 		"PATCH /api/projects/:projectId",
@@ -422,6 +579,11 @@ func TestRoutes_Table(t *testing.T) {
 		"POST /api/projects/:projectId/teams",
 		"GET /api/projects/:projectId/teams",
 		"GET /api/projects/:projectId/members",
+		"GET /api/projects/:projectId/billing",
+		"PUT /api/projects/:projectId/billing",
+		"GET /api/projects/:projectId/allocations",
+		"PUT /api/projects/:projectId/allocations/:personId",
+		"DELETE /api/projects/:projectId/allocations/:personId",
 		"POST /api/projects/:projectId/tasks",
 		"GET /api/projects/:projectId/tasks",
 		"POST /api/projects/:projectId/work-sessions/clock-in",

@@ -11,6 +11,8 @@ import (
 
 	"working-time-tracker/ent/migrate"
 
+	"working-time-tracker/ent/allocation"
+	"working-time-tracker/ent/customer"
 	"working-time-tracker/ent/integration"
 	"working-time-tracker/ent/invite"
 	"working-time-tracker/ent/organization"
@@ -34,6 +36,10 @@ type Client struct {
 	config
 	// Schema is the client for creating, migrating and dropping schema.
 	Schema *migrate.Schema
+	// Allocation is the client for interacting with the Allocation builders.
+	Allocation *AllocationClient
+	// Customer is the client for interacting with the Customer builders.
+	Customer *CustomerClient
 	// Integration is the client for interacting with the Integration builders.
 	Integration *IntegrationClient
 	// Invite is the client for interacting with the Invite builders.
@@ -65,6 +71,8 @@ func NewClient(opts ...Option) *Client {
 
 func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
+	c.Allocation = NewAllocationClient(c.config)
+	c.Customer = NewCustomerClient(c.config)
 	c.Integration = NewIntegrationClient(c.config)
 	c.Invite = NewInviteClient(c.config)
 	c.Organization = NewOrganizationClient(c.config)
@@ -167,6 +175,8 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	return &Tx{
 		ctx:            ctx,
 		config:         cfg,
+		Allocation:     NewAllocationClient(cfg),
+		Customer:       NewCustomerClient(cfg),
 		Integration:    NewIntegrationClient(cfg),
 		Invite:         NewInviteClient(cfg),
 		Organization:   NewOrganizationClient(cfg),
@@ -196,6 +206,8 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	return &Tx{
 		ctx:            ctx,
 		config:         cfg,
+		Allocation:     NewAllocationClient(cfg),
+		Customer:       NewCustomerClient(cfg),
 		Integration:    NewIntegrationClient(cfg),
 		Invite:         NewInviteClient(cfg),
 		Organization:   NewOrganizationClient(cfg),
@@ -212,7 +224,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 // Debug returns a new debug-client. It's used to get verbose logging on specific operations.
 //
 //	client.Debug().
-//		Integration.
+//		Allocation.
 //		Query().
 //		Count(ctx)
 func (c *Client) Debug() *Client {
@@ -235,8 +247,8 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
-		c.Integration, c.Invite, c.Organization, c.Person, c.Project, c.Session, c.Task,
-		c.Team, c.TeamMembership, c.WorkSession,
+		c.Allocation, c.Customer, c.Integration, c.Invite, c.Organization, c.Person,
+		c.Project, c.Session, c.Task, c.Team, c.TeamMembership, c.WorkSession,
 	} {
 		n.Use(hooks...)
 	}
@@ -246,8 +258,8 @@ func (c *Client) Use(hooks ...Hook) {
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
-		c.Integration, c.Invite, c.Organization, c.Person, c.Project, c.Session, c.Task,
-		c.Team, c.TeamMembership, c.WorkSession,
+		c.Allocation, c.Customer, c.Integration, c.Invite, c.Organization, c.Person,
+		c.Project, c.Session, c.Task, c.Team, c.TeamMembership, c.WorkSession,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -256,6 +268,10 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 // Mutate implements the ent.Mutator interface.
 func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 	switch m := m.(type) {
+	case *AllocationMutation:
+		return c.Allocation.mutate(ctx, m)
+	case *CustomerMutation:
+		return c.Customer.mutate(ctx, m)
 	case *IntegrationMutation:
 		return c.Integration.mutate(ctx, m)
 	case *InviteMutation:
@@ -278,6 +294,336 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.WorkSession.mutate(ctx, m)
 	default:
 		return nil, fmt.Errorf("ent: unknown mutation type %T", m)
+	}
+}
+
+// AllocationClient is a client for the Allocation schema.
+type AllocationClient struct {
+	config
+}
+
+// NewAllocationClient returns a client for the Allocation from the given config.
+func NewAllocationClient(c config) *AllocationClient {
+	return &AllocationClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `allocation.Hooks(f(g(h())))`.
+func (c *AllocationClient) Use(hooks ...Hook) {
+	c.hooks.Allocation = append(c.hooks.Allocation, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `allocation.Intercept(f(g(h())))`.
+func (c *AllocationClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Allocation = append(c.inters.Allocation, interceptors...)
+}
+
+// Create returns a builder for creating a Allocation entity.
+func (c *AllocationClient) Create() *AllocationCreate {
+	mutation := newAllocationMutation(c.config, OpCreate)
+	return &AllocationCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Allocation entities.
+func (c *AllocationClient) CreateBulk(builders ...*AllocationCreate) *AllocationCreateBulk {
+	return &AllocationCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *AllocationClient) MapCreateBulk(slice any, setFunc func(*AllocationCreate, int)) *AllocationCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &AllocationCreateBulk{err: fmt.Errorf("calling to AllocationClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*AllocationCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &AllocationCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Allocation.
+func (c *AllocationClient) Update() *AllocationUpdate {
+	mutation := newAllocationMutation(c.config, OpUpdate)
+	return &AllocationUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *AllocationClient) UpdateOne(_m *Allocation) *AllocationUpdateOne {
+	mutation := newAllocationMutation(c.config, OpUpdateOne, withAllocation(_m))
+	return &AllocationUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *AllocationClient) UpdateOneID(id uuid.UUID) *AllocationUpdateOne {
+	mutation := newAllocationMutation(c.config, OpUpdateOne, withAllocationID(id))
+	return &AllocationUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Allocation.
+func (c *AllocationClient) Delete() *AllocationDelete {
+	mutation := newAllocationMutation(c.config, OpDelete)
+	return &AllocationDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *AllocationClient) DeleteOne(_m *Allocation) *AllocationDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *AllocationClient) DeleteOneID(id uuid.UUID) *AllocationDeleteOne {
+	builder := c.Delete().Where(allocation.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &AllocationDeleteOne{builder}
+}
+
+// Query returns a query builder for Allocation.
+func (c *AllocationClient) Query() *AllocationQuery {
+	return &AllocationQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeAllocation},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a Allocation entity by its id.
+func (c *AllocationClient) Get(ctx context.Context, id uuid.UUID) (*Allocation, error) {
+	return c.Query().Where(allocation.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *AllocationClient) GetX(ctx context.Context, id uuid.UUID) *Allocation {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryProject queries the project edge of a Allocation.
+func (c *AllocationClient) QueryProject(_m *Allocation) *ProjectQuery {
+	query := (&ProjectClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(allocation.Table, allocation.FieldID, id),
+			sqlgraph.To(project.Table, project.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, allocation.ProjectTable, allocation.ProjectColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryPerson queries the person edge of a Allocation.
+func (c *AllocationClient) QueryPerson(_m *Allocation) *PersonQuery {
+	query := (&PersonClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(allocation.Table, allocation.FieldID, id),
+			sqlgraph.To(person.Table, person.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, allocation.PersonTable, allocation.PersonColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *AllocationClient) Hooks() []Hook {
+	return c.hooks.Allocation
+}
+
+// Interceptors returns the client interceptors.
+func (c *AllocationClient) Interceptors() []Interceptor {
+	return c.inters.Allocation
+}
+
+func (c *AllocationClient) mutate(ctx context.Context, m *AllocationMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&AllocationCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&AllocationUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&AllocationUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&AllocationDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Allocation mutation op: %q", m.Op())
+	}
+}
+
+// CustomerClient is a client for the Customer schema.
+type CustomerClient struct {
+	config
+}
+
+// NewCustomerClient returns a client for the Customer from the given config.
+func NewCustomerClient(c config) *CustomerClient {
+	return &CustomerClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `customer.Hooks(f(g(h())))`.
+func (c *CustomerClient) Use(hooks ...Hook) {
+	c.hooks.Customer = append(c.hooks.Customer, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `customer.Intercept(f(g(h())))`.
+func (c *CustomerClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Customer = append(c.inters.Customer, interceptors...)
+}
+
+// Create returns a builder for creating a Customer entity.
+func (c *CustomerClient) Create() *CustomerCreate {
+	mutation := newCustomerMutation(c.config, OpCreate)
+	return &CustomerCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Customer entities.
+func (c *CustomerClient) CreateBulk(builders ...*CustomerCreate) *CustomerCreateBulk {
+	return &CustomerCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *CustomerClient) MapCreateBulk(slice any, setFunc func(*CustomerCreate, int)) *CustomerCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &CustomerCreateBulk{err: fmt.Errorf("calling to CustomerClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*CustomerCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &CustomerCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Customer.
+func (c *CustomerClient) Update() *CustomerUpdate {
+	mutation := newCustomerMutation(c.config, OpUpdate)
+	return &CustomerUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *CustomerClient) UpdateOne(_m *Customer) *CustomerUpdateOne {
+	mutation := newCustomerMutation(c.config, OpUpdateOne, withCustomer(_m))
+	return &CustomerUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *CustomerClient) UpdateOneID(id uuid.UUID) *CustomerUpdateOne {
+	mutation := newCustomerMutation(c.config, OpUpdateOne, withCustomerID(id))
+	return &CustomerUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Customer.
+func (c *CustomerClient) Delete() *CustomerDelete {
+	mutation := newCustomerMutation(c.config, OpDelete)
+	return &CustomerDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *CustomerClient) DeleteOne(_m *Customer) *CustomerDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *CustomerClient) DeleteOneID(id uuid.UUID) *CustomerDeleteOne {
+	builder := c.Delete().Where(customer.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &CustomerDeleteOne{builder}
+}
+
+// Query returns a query builder for Customer.
+func (c *CustomerClient) Query() *CustomerQuery {
+	return &CustomerQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeCustomer},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a Customer entity by its id.
+func (c *CustomerClient) Get(ctx context.Context, id uuid.UUID) (*Customer, error) {
+	return c.Query().Where(customer.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *CustomerClient) GetX(ctx context.Context, id uuid.UUID) *Customer {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryOrganization queries the organization edge of a Customer.
+func (c *CustomerClient) QueryOrganization(_m *Customer) *OrganizationQuery {
+	query := (&OrganizationClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(customer.Table, customer.FieldID, id),
+			sqlgraph.To(organization.Table, organization.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, customer.OrganizationTable, customer.OrganizationColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryProjects queries the projects edge of a Customer.
+func (c *CustomerClient) QueryProjects(_m *Customer) *ProjectQuery {
+	query := (&ProjectClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(customer.Table, customer.FieldID, id),
+			sqlgraph.To(project.Table, project.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, customer.ProjectsTable, customer.ProjectsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *CustomerClient) Hooks() []Hook {
+	return c.hooks.Customer
+}
+
+// Interceptors returns the client interceptors.
+func (c *CustomerClient) Interceptors() []Interceptor {
+	return c.inters.Customer
+}
+
+func (c *CustomerClient) mutate(ctx context.Context, m *CustomerMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&CustomerCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&CustomerUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&CustomerUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&CustomerDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Customer mutation op: %q", m.Op())
 	}
 }
 
@@ -751,6 +1097,22 @@ func (c *OrganizationClient) QueryProjects(_m *Organization) *ProjectQuery {
 	return query
 }
 
+// QueryCustomers queries the customers edge of a Organization.
+func (c *OrganizationClient) QueryCustomers(_m *Organization) *CustomerQuery {
+	query := (&CustomerClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(organization.Table, organization.FieldID, id),
+			sqlgraph.To(customer.Table, customer.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, organization.CustomersTable, organization.CustomersColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryInvites queries the invites edge of a Organization.
 func (c *OrganizationClient) QueryInvites(_m *Organization) *InviteQuery {
 	query := (&InviteClient{config: c.config}).Query()
@@ -996,6 +1358,22 @@ func (c *PersonClient) QueryCreatedInvites(_m *Person) *InviteQuery {
 	return query
 }
 
+// QueryAllocations queries the allocations edge of a Person.
+func (c *PersonClient) QueryAllocations(_m *Person) *AllocationQuery {
+	query := (&AllocationClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(person.Table, person.FieldID, id),
+			sqlgraph.To(allocation.Table, allocation.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, person.AllocationsTable, person.AllocationsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *PersonClient) Hooks() []Hook {
 	return c.hooks.Person
@@ -1145,6 +1523,22 @@ func (c *ProjectClient) QueryOrganization(_m *Project) *OrganizationQuery {
 	return query
 }
 
+// QueryCustomer queries the customer edge of a Project.
+func (c *ProjectClient) QueryCustomer(_m *Project) *CustomerQuery {
+	query := (&CustomerClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(project.Table, project.FieldID, id),
+			sqlgraph.To(customer.Table, customer.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, project.CustomerTable, project.CustomerColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryTeams queries the teams edge of a Project.
 func (c *ProjectClient) QueryTeams(_m *Project) *TeamQuery {
 	query := (&TeamClient{config: c.config}).Query()
@@ -1186,6 +1580,22 @@ func (c *ProjectClient) QueryIntegrations(_m *Project) *IntegrationQuery {
 			sqlgraph.From(project.Table, project.FieldID, id),
 			sqlgraph.To(integration.Table, integration.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, project.IntegrationsTable, project.IntegrationsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryAllocations queries the allocations edge of a Project.
+func (c *ProjectClient) QueryAllocations(_m *Project) *AllocationQuery {
+	query := (&AllocationClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(project.Table, project.FieldID, id),
+			sqlgraph.To(allocation.Table, allocation.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, project.AllocationsTable, project.AllocationsColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -2062,11 +2472,11 @@ func (c *WorkSessionClient) mutate(ctx context.Context, m *WorkSessionMutation) 
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		Integration, Invite, Organization, Person, Project, Session, Task, Team,
-		TeamMembership, WorkSession []ent.Hook
+		Allocation, Customer, Integration, Invite, Organization, Person, Project,
+		Session, Task, Team, TeamMembership, WorkSession []ent.Hook
 	}
 	inters struct {
-		Integration, Invite, Organization, Person, Project, Session, Task, Team,
-		TeamMembership, WorkSession []ent.Interceptor
+		Allocation, Customer, Integration, Invite, Organization, Person, Project,
+		Session, Task, Team, TeamMembership, WorkSession []ent.Interceptor
 	}
 )

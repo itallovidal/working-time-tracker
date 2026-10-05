@@ -6,6 +6,8 @@ import (
 	"github.com/google/uuid"
 
 	"working-time-tracker/ent"
+	entcustomer "working-time-tracker/ent/customer"
+	entorg "working-time-tracker/ent/organization"
 	"working-time-tracker/ent/project"
 	"working-time-tracker/internal/database"
 )
@@ -64,6 +66,7 @@ func (s *Store) ListByOrg(orgID string) ([]Project, error) {
 	}
 	projects, err := s.client.Project.Query().
 		Where(project.OrganizationIDEQ(uid)).
+		WithCustomer().
 		Order(ent.Desc(project.FieldCreatedAt)).
 		All(context.Background())
 	if err != nil {
@@ -77,7 +80,10 @@ func (s *Store) GetByID(id string) (*Project, error) {
 	if err != nil {
 		return nil, err
 	}
-	p, err := s.client.Project.Get(context.Background(), uid)
+	p, err := s.client.Project.Query().
+		Where(project.IDEQ(uid)).
+		WithCustomer().
+		Only(context.Background())
 	if err != nil {
 		if ent.IsNotFound(err) {
 			return nil, database.ErrNotFound
@@ -85,6 +91,50 @@ func (s *Store) GetByID(id string) (*Project, error) {
 		return nil, err
 	}
 	return toDomainProject(p), nil
+}
+
+func (s *Store) Billing(projectID uuid.UUID) (*Billing, error) {
+	p, err := s.client.Project.Query().
+		Where(project.IDEQ(projectID)).
+		WithCustomer().
+		Only(context.Background())
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, database.ErrNotFound
+		}
+		return nil, err
+	}
+	return &Billing{Customer: customerRef(p), BillRateCents: p.BillRateCents}, nil
+}
+
+// SetBilling grava o cliente e o valor cobrado como vieram: nil apaga.
+func (s *Store) SetBilling(projectID uuid.UUID, customerID *uuid.UUID, billRateCents *int) error {
+	q := s.client.Project.UpdateOneID(projectID)
+	if customerID != nil {
+		q = q.SetCustomerID(*customerID)
+	} else {
+		q = q.ClearCustomer()
+	}
+	if billRateCents != nil {
+		q = q.SetBillRateCents(*billRateCents)
+	} else {
+		q = q.ClearBillRateCents()
+	}
+	_, err := q.Save(context.Background())
+	if ent.IsNotFound(err) {
+		return database.ErrNotFound
+	}
+	return err
+}
+
+// CustomerInProjectOrganization diz se o cliente existe e é da organização do projeto.
+func (s *Store) CustomerInProjectOrganization(customerID, projectID uuid.UUID) (bool, error) {
+	return s.client.Customer.Query().
+		Where(
+			entcustomer.IDEQ(customerID),
+			entcustomer.HasOrganizationWith(entorg.HasProjectsWith(project.IDEQ(projectID))),
+		).
+		Exist(context.Background())
 }
 
 // Update grava o projeto como está: um campo opcional nil é apagado no banco.
@@ -140,8 +190,16 @@ func toDomainProject(e *ent.Project) *Project {
 		SprintDurationDays: e.SprintDurationDays,
 		DailyTime:          e.DailyTime,
 		WeeklySyncDay:      e.WeeklySyncDay,
+		Customer:           customerRef(e),
 		CreatedAt:          e.CreatedAt,
 	}
+}
+
+func customerRef(e *ent.Project) *CustomerRef {
+	if c := e.Edges.Customer; c != nil {
+		return &CustomerRef{ID: c.ID, Name: c.Name}
+	}
+	return nil
 }
 
 func toDomainProjects(es []*ent.Project) []Project {

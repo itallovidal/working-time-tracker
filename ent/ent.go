@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"reflect"
 	"sync"
+	"working-time-tracker/ent/allocation"
+	"working-time-tracker/ent/customer"
 	"working-time-tracker/ent/integration"
 	"working-time-tracker/ent/invite"
 	"working-time-tracker/ent/organization"
@@ -82,6 +84,8 @@ var (
 func checkColumn(t, c string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
+			allocation.Table:     allocation.ValidColumn,
+			customer.Table:       customer.ValidColumn,
 			integration.Table:    integration.ValidColumn,
 			invite.Table:         invite.ValidColumn,
 			organization.Table:   organization.ValidColumn,

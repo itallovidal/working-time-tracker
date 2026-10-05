@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"working-time-tracker/ent/customer"
 	"working-time-tracker/ent/organization"
 	"working-time-tracker/ent/project"
 
@@ -35,6 +36,10 @@ type Project struct {
 	DailyTime *string `json:"daily_time,omitempty"`
 	// WeeklySyncDay holds the value of the "weekly_sync_day" field.
 	WeeklySyncDay *string `json:"weekly_sync_day,omitempty"`
+	// CustomerID holds the value of the "customer_id" field.
+	CustomerID *uuid.UUID `json:"customer_id,omitempty"`
+	// BillRateCents holds the value of the "bill_rate_cents" field.
+	BillRateCents *int `json:"bill_rate_cents,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -47,15 +52,19 @@ type Project struct {
 type ProjectEdges struct {
 	// Organization holds the value of the organization edge.
 	Organization *Organization `json:"organization,omitempty"`
+	// Customer holds the value of the customer edge.
+	Customer *Customer `json:"customer,omitempty"`
 	// Teams holds the value of the teams edge.
 	Teams []*Team `json:"teams,omitempty"`
 	// Tasks holds the value of the tasks edge.
 	Tasks []*Task `json:"tasks,omitempty"`
 	// Integrations holds the value of the integrations edge.
 	Integrations []*Integration `json:"integrations,omitempty"`
+	// Allocations holds the value of the allocations edge.
+	Allocations []*Allocation `json:"allocations,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [4]bool
+	loadedTypes [6]bool
 }
 
 // OrganizationOrErr returns the Organization value or an error if the edge
@@ -69,10 +78,21 @@ func (e ProjectEdges) OrganizationOrErr() (*Organization, error) {
 	return nil, &NotLoadedError{edge: "organization"}
 }
 
+// CustomerOrErr returns the Customer value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e ProjectEdges) CustomerOrErr() (*Customer, error) {
+	if e.Customer != nil {
+		return e.Customer, nil
+	} else if e.loadedTypes[1] {
+		return nil, &NotFoundError{label: customer.Label}
+	}
+	return nil, &NotLoadedError{edge: "customer"}
+}
+
 // TeamsOrErr returns the Teams value or an error if the edge
 // was not loaded in eager-loading.
 func (e ProjectEdges) TeamsOrErr() ([]*Team, error) {
-	if e.loadedTypes[1] {
+	if e.loadedTypes[2] {
 		return e.Teams, nil
 	}
 	return nil, &NotLoadedError{edge: "teams"}
@@ -81,7 +101,7 @@ func (e ProjectEdges) TeamsOrErr() ([]*Team, error) {
 // TasksOrErr returns the Tasks value or an error if the edge
 // was not loaded in eager-loading.
 func (e ProjectEdges) TasksOrErr() ([]*Task, error) {
-	if e.loadedTypes[2] {
+	if e.loadedTypes[3] {
 		return e.Tasks, nil
 	}
 	return nil, &NotLoadedError{edge: "tasks"}
@@ -90,10 +110,19 @@ func (e ProjectEdges) TasksOrErr() ([]*Task, error) {
 // IntegrationsOrErr returns the Integrations value or an error if the edge
 // was not loaded in eager-loading.
 func (e ProjectEdges) IntegrationsOrErr() ([]*Integration, error) {
-	if e.loadedTypes[3] {
+	if e.loadedTypes[4] {
 		return e.Integrations, nil
 	}
 	return nil, &NotLoadedError{edge: "integrations"}
+}
+
+// AllocationsOrErr returns the Allocations value or an error if the edge
+// was not loaded in eager-loading.
+func (e ProjectEdges) AllocationsOrErr() ([]*Allocation, error) {
+	if e.loadedTypes[5] {
+		return e.Allocations, nil
+	}
+	return nil, &NotLoadedError{edge: "allocations"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -101,7 +130,9 @@ func (*Project) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case project.FieldSprintDurationDays:
+		case project.FieldCustomerID:
+			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
+		case project.FieldSprintDurationDays, project.FieldBillRateCents:
 			values[i] = new(sql.NullInt64)
 		case project.FieldName, project.FieldDescription, project.FieldGithubRepoURL, project.FieldGitlabRepoURL, project.FieldDailyTime, project.FieldWeeklySyncDay:
 			values[i] = new(sql.NullString)
@@ -182,6 +213,20 @@ func (_m *Project) assignValues(columns []string, values []any) error {
 				_m.WeeklySyncDay = new(string)
 				*_m.WeeklySyncDay = value.String
 			}
+		case project.FieldCustomerID:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field customer_id", values[i])
+			} else if value.Valid {
+				_m.CustomerID = new(uuid.UUID)
+				*_m.CustomerID = *value.S.(*uuid.UUID)
+			}
+		case project.FieldBillRateCents:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field bill_rate_cents", values[i])
+			} else if value.Valid {
+				_m.BillRateCents = new(int)
+				*_m.BillRateCents = int(value.Int64)
+			}
 		case project.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
@@ -206,6 +251,11 @@ func (_m *Project) QueryOrganization() *OrganizationQuery {
 	return NewProjectClient(_m.config).QueryOrganization(_m)
 }
 
+// QueryCustomer queries the "customer" edge of the Project entity.
+func (_m *Project) QueryCustomer() *CustomerQuery {
+	return NewProjectClient(_m.config).QueryCustomer(_m)
+}
+
 // QueryTeams queries the "teams" edge of the Project entity.
 func (_m *Project) QueryTeams() *TeamQuery {
 	return NewProjectClient(_m.config).QueryTeams(_m)
@@ -219,6 +269,11 @@ func (_m *Project) QueryTasks() *TaskQuery {
 // QueryIntegrations queries the "integrations" edge of the Project entity.
 func (_m *Project) QueryIntegrations() *IntegrationQuery {
 	return NewProjectClient(_m.config).QueryIntegrations(_m)
+}
+
+// QueryAllocations queries the "allocations" edge of the Project entity.
+func (_m *Project) QueryAllocations() *AllocationQuery {
+	return NewProjectClient(_m.config).QueryAllocations(_m)
 }
 
 // Update returns a builder for updating this Project.
@@ -274,6 +329,16 @@ func (_m *Project) String() string {
 	if v := _m.WeeklySyncDay; v != nil {
 		builder.WriteString("weekly_sync_day=")
 		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.CustomerID; v != nil {
+		builder.WriteString("customer_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	if v := _m.BillRateCents; v != nil {
+		builder.WriteString("bill_rate_cents=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
 	}
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")

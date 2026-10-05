@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"time"
+	"working-time-tracker/ent/allocation"
+	"working-time-tracker/ent/customer"
 	"working-time-tracker/ent/integration"
 	"working-time-tracker/ent/organization"
 	"working-time-tracker/ent/project"
@@ -121,6 +123,34 @@ func (_c *ProjectCreate) SetNillableWeeklySyncDay(v *string) *ProjectCreate {
 	return _c
 }
 
+// SetCustomerID sets the "customer_id" field.
+func (_c *ProjectCreate) SetCustomerID(v uuid.UUID) *ProjectCreate {
+	_c.mutation.SetCustomerID(v)
+	return _c
+}
+
+// SetNillableCustomerID sets the "customer_id" field if the given value is not nil.
+func (_c *ProjectCreate) SetNillableCustomerID(v *uuid.UUID) *ProjectCreate {
+	if v != nil {
+		_c.SetCustomerID(*v)
+	}
+	return _c
+}
+
+// SetBillRateCents sets the "bill_rate_cents" field.
+func (_c *ProjectCreate) SetBillRateCents(v int) *ProjectCreate {
+	_c.mutation.SetBillRateCents(v)
+	return _c
+}
+
+// SetNillableBillRateCents sets the "bill_rate_cents" field if the given value is not nil.
+func (_c *ProjectCreate) SetNillableBillRateCents(v *int) *ProjectCreate {
+	if v != nil {
+		_c.SetBillRateCents(*v)
+	}
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *ProjectCreate) SetCreatedAt(v time.Time) *ProjectCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -152,6 +182,11 @@ func (_c *ProjectCreate) SetNillableID(v *uuid.UUID) *ProjectCreate {
 // SetOrganization sets the "organization" edge to the Organization entity.
 func (_c *ProjectCreate) SetOrganization(v *Organization) *ProjectCreate {
 	return _c.SetOrganizationID(v.ID)
+}
+
+// SetCustomer sets the "customer" edge to the Customer entity.
+func (_c *ProjectCreate) SetCustomer(v *Customer) *ProjectCreate {
+	return _c.SetCustomerID(v.ID)
 }
 
 // AddTeamIDs adds the "teams" edge to the Team entity by IDs.
@@ -197,6 +232,21 @@ func (_c *ProjectCreate) AddIntegrations(v ...*Integration) *ProjectCreate {
 		ids[i] = v[i].ID
 	}
 	return _c.AddIntegrationIDs(ids...)
+}
+
+// AddAllocationIDs adds the "allocations" edge to the Allocation entity by IDs.
+func (_c *ProjectCreate) AddAllocationIDs(ids ...uuid.UUID) *ProjectCreate {
+	_c.mutation.AddAllocationIDs(ids...)
+	return _c
+}
+
+// AddAllocations adds the "allocations" edges to the Allocation entity.
+func (_c *ProjectCreate) AddAllocations(v ...*Allocation) *ProjectCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddAllocationIDs(ids...)
 }
 
 // Mutation returns the ProjectMutation object of the builder.
@@ -258,6 +308,11 @@ func (_c *ProjectCreate) check() error {
 	}
 	if _, ok := _c.mutation.SprintDurationDays(); !ok {
 		return &ValidationError{Name: "sprint_duration_days", err: errors.New(`ent: missing required field "Project.sprint_duration_days"`)}
+	}
+	if v, ok := _c.mutation.BillRateCents(); ok {
+		if err := project.BillRateCentsValidator(v); err != nil {
+			return &ValidationError{Name: "bill_rate_cents", err: fmt.Errorf(`ent: validator failed for field "Project.bill_rate_cents": %w`, err)}
+		}
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "Project.created_at"`)}
@@ -328,6 +383,10 @@ func (_c *ProjectCreate) createSpec() (*Project, *sqlgraph.CreateSpec) {
 		_spec.SetField(project.FieldWeeklySyncDay, field.TypeString, value)
 		_node.WeeklySyncDay = &value
 	}
+	if value, ok := _c.mutation.BillRateCents(); ok {
+		_spec.SetField(project.FieldBillRateCents, field.TypeInt, value)
+		_node.BillRateCents = &value
+	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(project.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
@@ -347,6 +406,23 @@ func (_c *ProjectCreate) createSpec() (*Project, *sqlgraph.CreateSpec) {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.OrganizationID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.CustomerIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   project.CustomerTable,
+			Columns: []string{project.CustomerColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(customer.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.CustomerID = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := _c.mutation.TeamsIDs(); len(nodes) > 0 {
@@ -390,6 +466,22 @@ func (_c *ProjectCreate) createSpec() (*Project, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(integration.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.AllocationsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   project.AllocationsTable,
+			Columns: []string{project.AllocationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(allocation.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

@@ -40,6 +40,8 @@ const (
 	EdgeSessions = "sessions"
 	// EdgeCreatedInvites holds the string denoting the created_invites edge name in mutations.
 	EdgeCreatedInvites = "created_invites"
+	// EdgeAllocations holds the string denoting the allocations edge name in mutations.
+	EdgeAllocations = "allocations"
 	// Table holds the table name of the person in the database.
 	Table = "persons"
 	// OrganizationTable is the table that holds the organization relation/edge.
@@ -84,6 +86,13 @@ const (
 	CreatedInvitesInverseTable = "invites"
 	// CreatedInvitesColumn is the table column denoting the created_invites relation/edge.
 	CreatedInvitesColumn = "created_by_id"
+	// AllocationsTable is the table that holds the allocations relation/edge.
+	AllocationsTable = "allocations"
+	// AllocationsInverseTable is the table name for the Allocation entity.
+	// It exists in this package in order to avoid circular dependency with the "allocation" package.
+	AllocationsInverseTable = "allocations"
+	// AllocationsColumn is the table column denoting the allocations relation/edge.
+	AllocationsColumn = "person_id"
 )
 
 // Columns holds all SQL columns for person fields.
@@ -254,6 +263,20 @@ func ByCreatedInvites(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newCreatedInvitesStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByAllocationsCount orders the results by allocations count.
+func ByAllocationsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newAllocationsStep(), opts...)
+	}
+}
+
+// ByAllocations orders the results by allocations terms.
+func ByAllocations(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAllocationsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newOrganizationStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -294,5 +317,12 @@ func newCreatedInvitesStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(CreatedInvitesInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, CreatedInvitesTable, CreatedInvitesColumn),
+	)
+}
+func newAllocationsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(AllocationsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, AllocationsTable, AllocationsColumn),
 	)
 }

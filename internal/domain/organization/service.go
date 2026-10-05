@@ -3,7 +3,6 @@ package organization
 import (
 	"errors"
 	"fmt"
-	"regexp"
 	"strings"
 	"time"
 	_ "time/tzdata" // o binário valida fusos mesmo onde o sistema não tem a base instalada
@@ -28,9 +27,8 @@ var (
 )
 
 var (
-	sizes        = map[string]bool{"1-10": true, "11-50": true, "51-200": true, "201-500": true, "500+": true}
-	currencies   = map[string]bool{"BRL": true, "USD": true, "EUR": true}
-	phonePattern = regexp.MustCompile(`^[0-9+() .-]{8,32}$`)
+	sizes      = map[string]bool{"1-10": true, "11-50": true, "51-200": true, "201-500": true, "500+": true}
+	currencies = map[string]bool{"BRL": true, "USD": true, "EUR": true}
 )
 
 type Service struct {
@@ -162,7 +160,7 @@ func apply(org *Organization, in UpdateInput) error {
 	}
 	if in.Phone != nil {
 		v := strings.TrimSpace(*in.Phone)
-		if v != "" && !phonePattern.MatchString(v) {
+		if v != "" && !validate.Phone(v) {
 			return ErrInvalidPhone
 		}
 		org.Phone = v

@@ -34,6 +34,7 @@
           </select>
         </div>
       </div>
+      <p class="muted small" x-cloak x-show="customerName">Cliente: <strong x-text="customerName"></strong></p>
       {{if .IsAdmin}}
       <p class="form-error" x-show="errors.save" x-text="errors.save" role="alert"></p>
       <div class="row row-end"><button type="submit" class="btn" :disabled="pending">Salvar</button></div>
@@ -43,6 +44,28 @@
     </form>
 
     {{if .IsAdmin}}
+    <div class="stack">
+    <form class="card" @submit.prevent="saveBilling()">
+      <div class="card-head"><h2>Cliente e cobrança</h2></div>
+      <div class="field">
+        <label for="ps-customer">Cliente</label>
+        <select id="ps-customer" x-model="billing.customer_id">
+          <option value="">Nenhum (projeto interno)</option>
+          <template x-for="c in customers" :key="c.id">
+            <option :value="c.id" x-text="c.name" :selected="c.id === billing.customer_id"></option>
+          </template>
+        </select>
+        <span class="hint">Cadastre clientes em <a href="/orgs/{{.OrgID}}/customers">Organização › Clientes</a>.</span>
+      </div>
+      <div class="field">
+        <label for="ps-bill-rate">Valor cobrado por hora (<span x-text="WTT.fmt.moneyUnit()"></span>)</label>
+        <input id="ps-bill-rate" type="text" inputmode="decimal" class="num" placeholder="0,00" x-model="billing.rate">
+        <span class="hint">O que o cliente paga à organização. Só admins veem. Vazio apaga.</span>
+      </div>
+      <p class="form-error" x-show="errors.billing" x-text="errors.billing" role="alert"></p>
+      <div class="row row-end"><button type="submit" class="btn" :disabled="pending">Salvar cobrança</button></div>
+    </form>
+
     <section class="card">
       <div class="card-head"><h2>Excluir projeto</h2></div>
       <p class="muted small">Apaga o projeto com todos os times, tarefas, sessões de trabalho e integrações.</p>
@@ -56,6 +79,7 @@
         <button type="button" class="btn btn-ghost btn-sm" @click="confirmDelete = false">Cancelar</button>
       </div>
     </section>
+    </div>
     {{end}}
   </div>
 </main>

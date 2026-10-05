@@ -252,3 +252,59 @@ func TestService_Create_InvalidSchedule(t *testing.T) {
 		t.Errorf("invalid sprint: err = %v", err)
 	}
 }
+
+// O cliente e o valor cobrado ficam em Billing. O projeto mostra só o nome do
+// cliente, nunca o valor.
+func TestService_Billing(t *testing.T) {
+	cleanup(t)
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	svc := project.NewService(project.NewStore(testClient))
+	org, _ := orgSvc.Create("Org")
+	other, _ := orgSvc.Create("Outra")
+	proj, _ := svc.Create(org.ID.String(), "Projeto X", "", 0, nil, nil)
+	id := proj.ID.String()
+
+	ctx := context.Background()
+	mine := testClient.Customer.Create().SetOrganizationID(org.ID).SetName("Empresa A").SaveX(ctx).ID.String()
+	theirs := testClient.Customer.Create().SetOrganizationID(other.ID).SetName("Empresa B").SaveX(ctx).ID.String()
+
+	empty, err := svc.Billing(id)
+	if err != nil || empty.Customer != nil || empty.BillRateCents != nil {
+		t.Fatalf("new project billing = %+v, %v; want empty", empty, err)
+	}
+
+	rate := 10000
+	billing, err := svc.SetBilling(id, &mine, &rate)
+	if err != nil {
+		t.Fatalf("set billing: %v", err)
+	}
+	if billing.Customer == nil || billing.Customer.Name != "Empresa A" || billing.BillRateCents == nil || *billing.BillRateCents != 10000 {
+		t.Errorf("billing = %+v", billing)
+	}
+
+	got, _ := svc.Get(id)
+	if got.Customer == nil || got.Customer.Name != "Empresa A" {
+		t.Errorf("project customer = %+v, want Empresa A", got.Customer)
+	}
+	// Editar o projeto não mexe no cliente nem no valor.
+	if _, err := svc.Update(id, "Projeto X2", "", 0, nil, nil); err != nil {
+		t.Fatalf("update: %v", err)
+	}
+	if after, _ := svc.Billing(id); after.Customer == nil || after.BillRateCents == nil || *after.BillRateCents != 10000 {
+		t.Errorf("billing after project update = %+v, want it unchanged", after)
+	}
+
+	if _, err := svc.SetBilling(id, &theirs, &rate); err != project.ErrCustomerNotFound {
+		t.Errorf("customer from another organization: err = %v, want ErrCustomerNotFound", err)
+	}
+	negative := -1
+	if _, err := svc.SetBilling(id, &mine, &negative); err != project.ErrInvalidBillRate {
+		t.Errorf("negative rate: err = %v, want ErrInvalidBillRate", err)
+	}
+
+	// nil apaga os dois: o projeto volta a ser interno.
+	cleared, err := svc.SetBilling(id, nil, nil)
+	if err != nil || cleared.Customer != nil || cleared.BillRateCents != nil {
+		t.Errorf("cleared billing = %+v, %v; want empty", cleared, err)
+	}
+}

@@ -8,7 +8,8 @@ Ponto por tarefa para equipes que trabalham por projeto, de qualquer área. A pe
 
 - **Contas e organizações.** O signup cria uma organização com você como admin. Outras pessoas entram por **link de convite** (uso único, válido por 7 dias, opcionalmente preso a um email).
 - **Perfil da organização.** Resumo, descrição, segmento, contato, dados jurídicos (razão social, CNPJ, endereço) e padrões de operação (fuso, moeda, jornada semanal e sprint padrão). O admin edita; todos os membros leem na aba **Sobre**.
-- **Papéis.** Admins gerenciam a organização, as pessoas, os projetos, os times e as integrações. Membros gerenciam tarefas e batem o próprio ponto.
+- **Papéis.** Admins gerenciam a organização, as pessoas, os clientes, os projetos, os times, os valores e as integrações. Membros gerenciam tarefas e batem o próprio ponto.
+- **Clientes e valores por hora.** Cada projeto pode ter um cliente e o **valor cobrado** dele por hora. Cada pessoa tem um **valor pago** por hora em cada projeto, então a mesma pessoa pode receber 20 num projeto e 25 em outro. O admin vê e altera tudo, com a margem por hora; o membro vê só o que ele mesmo recebe.
 - **Projetos** com duração da sprint (a padrão da organização, se você não informar), horário da daily e dia da weekly.
 - **Times** dentro de cada projeto. Só quem está em algum time do projeto pode ser responsável por tarefas.
 - **Tarefas** com responsável, prazo (7 dias por padrão, com destaque quando está atrasada ou perto de vencer) e vínculo opcional com uma issue.
@@ -73,23 +74,25 @@ A interface segue a Decision 8 de `_docs/design.md`. O servidor renderiza a casc
 | `/orgs/:orgId/about` | Organização, aba Sobre: o perfil da organização, para todos os membros |
 | `/orgs/:orgId/settings` | Organização, aba Geral: perfil, padrões e exclusão da organização (só admins) |
 | `/orgs/:orgId/people` | Organização, aba Pessoas: pessoas, papéis e convites (só admins) |
+| `/orgs/:orgId/customers` | Organização, aba Clientes: quem contrata os projetos (só admins) |
 | `/orgs/:orgId/projects` | Organização, aba Projetos: a mesma lista de projetos da página inicial (só admins) |
-| `/profile` | Seu nome, seu email e sua senha |
+| `/profile` | Seu nome, seu email, sua senha e quanto você recebe por hora em cada projeto |
 | `/projects/:projectId` | Leva para a aba Tarefas |
 | `/projects/:projectId/tasks` | Tarefas, com início de ponto em um clique |
 | `/tasks/:taskId` | Edição da tarefa, vínculo com issue e tempo registrado |
 | `/projects/:projectId/time-tracking` | Cronômetro, sessões, filtros e totais |
 | `/projects/:projectId/teams` | Times e membros |
+| `/projects/:projectId/rates` | Valores: o que o cliente paga e o que cada pessoa recebe por hora (só admins) |
 | `/projects/:projectId/integrations` | Integrações com GitHub e GitLab |
-| `/projects/:projectId/settings` | Configurações e exclusão do projeto |
+| `/projects/:projectId/settings` | Configurações e exclusão do projeto; para admins, também o cliente e o valor cobrado |
 
 Sem sessão, qualquer página leva ao login, e a pessoa volta para a página pedida depois de entrar. Uma página de outra organização mostra "Página não encontrada".
 
 ### Navegação
 
 - A **barra superior** mostra a organização, o menu (Projetos e Organização), o **indicador do ponto aberto** com cronômetro e botão Parar, quem está logado (o nome leva ao **perfil**) e o botão Sair.
-- As páginas de projeto têm **abas**: Tarefas, Ponto, Times, Integrações e Configurações.
-- A página **Organização** abre na aba Sobre, que todos os membros leem. As abas Geral, Pessoas e Projetos são só de admins.
+- As páginas de projeto têm **abas**: Tarefas, Ponto, Times, Valores (só admins), Integrações e Configurações.
+- A página **Organização** abre na aba Sobre, que todos os membros leem. As abas Geral, Pessoas, Clientes e Projetos são só de admins.
 - Ações de admin não aparecem para membros. A API continua sendo quem garante as permissões.
 
 ### Onde fica cada coisa
@@ -120,9 +123,11 @@ Resumo dos grupos de rotas:
 | Grupo | Rotas |
 |---|---|
 | Autenticação | `/api/auth/signup`, `login`, `logout`, `me`, `password`, `invites/:token` |
-| Organização | `/api/orgs/:orgId` (+ `persons`, `projects`, `invites`) |
-| Pessoas | `/api/persons/:personId` (+ `role`) |
+| Organização | `/api/orgs/:orgId` (+ `persons`, `projects`, `customers`, `invites`) |
+| Clientes | `/api/customers/:customerId` |
+| Pessoas | `/api/persons/:personId` (+ `role`, `allocations`) |
 | Projetos | `/api/projects/:projectId` (+ `teams`, `tasks`, `members`, `integrations`, `work-sessions`) |
+| Valores | `/api/projects/:projectId/billing`, `/api/projects/:projectId/allocations` (+ `/:personId`) |
 | Times | `/api/teams/:teamId` (+ `members`) |
 | Tarefas | `/api/tasks/:taskId` (+ `link-external-item`, `external-details`) |
 | Ponto | `/api/projects/:projectId/work-sessions/*`, `/api/work-sessions/active` |
@@ -134,6 +139,7 @@ Resumo dos grupos de rotas:
 - **Sessões e convites** usam tokens aleatórios de 32 bytes, e o banco guarda só o sha256 deles. Trocar a senha encerra as outras sessões.
 - **Cookie** `wtt_session` HttpOnly e SameSite=Lax, com `Secure` via `COOKIE_SECURE`. Como a API só aceita corpo JSON em `POST`, `PUT` e `PATCH`, um formulário de outro site não consegue agir em nome de quem está logado.
 - **Isolamento entre organizações.** Cada rota com ID confere se o recurso é da organização de quem chama e responde 404 caso não seja.
+- **Valores.** O valor cobrado do cliente só existe em rotas de admin: ele não entra no JSON do projeto. Na lista de valores de um projeto, um membro recebe só a própria linha.
 - **Limite de tentativas** por IP em signup, login e convites.
 - **Credenciais de integração** criptografadas com AES-GCM (`INTEGRATION_ENCRYPTION_KEY`) e nunca devolvidas pela API.
 
@@ -169,7 +175,7 @@ internal/
   database/               # conexão e migração
   domain/
     auth/                 # signup, login, sessões, convites, middlewares e acesso por organização
-    organization/  person/  project/  team/  task/  work_session/  integration/
+    organization/  customer/  person/  project/  team/  allocation/  task/  work_session/  integration/
                           # cada domínio com model, store (Ent), service e handler
   page/                   # páginas HTML
   routes/                 # rotas da API (routes.go) e das páginas (pages.go)
@@ -187,17 +193,20 @@ _test/                    # referência da API e coleção do Insomnia
 
 ```
 Organization                          nome, perfil (resumo, contato, dados jurídicos) e padrões (fuso, moeda, jornada, sprint)
+Organization (1) ── (N) Customer      cliente: nome, CNPJ e contato
+Customer  (0..1) ── (N) Project       projeto interno fica sem cliente; o projeto guarda o valor cobrado por hora
 Organization (1) ── (N) Project
 Organization (1) ── (N) Person        email único no sistema, senha (bcrypt), papel admin|member
 Organization (1) ── (N) Invite        token (hash), email opcional, papel, expira em 7 dias, uso único
 Person       (1) ── (N) Session       token (hash), expira em 7 dias
 Project      (1) ── (N) Team ── (N) Person   via TeamMembership
+Project      (1) ── (N) Allocation ── (1) Person   valor pago por hora, um por pessoa em cada projeto
 Project      (1) ── (N) Task ── (N) WorkSession
 Project      (1) ── (N) Integration   config criptografada
 Task      (0..1) ── (0..1) Integration  via external_integration_id
 ```
 
-Excluir um projeto apaga os times, as tarefas, as sessões e as integrações dele. Excluir uma organização só é permitido sem projetos, e apaga as pessoas e os convites. O índice único parcial `one_active_session` em `work_sessions (person_id) WHERE end_at IS NULL` garante uma sessão aberta por pessoa.
+Excluir um projeto apaga os times, os valores, as tarefas, as sessões e as integrações dele. Excluir um cliente só é permitido quando nenhum projeto aponta para ele. Excluir uma organização só é permitido sem projetos, e apaga as pessoas, os clientes e os convites. O índice único parcial `one_active_session` em `work_sessions (person_id) WHERE end_at IS NULL` garante uma sessão aberta por pessoa.
 
 ## Stack
 

@@ -183,6 +183,8 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 /* .fact agrupa um par dt/dd gerado por x-for sem quebrar a grade do .facts. */
 .fact { display: contents; }
 .prose { white-space: pre-line; color: var(--ink-2); }
+.text-danger { color: var(--danger); }
+.nowrap { white-space: nowrap; }
 tfoot td { background: var(--surface-2); border-bottom: 0; }
 .self-end { align-self: flex-end; }
 .sr-only {
@@ -201,6 +203,8 @@ input, select, textarea {
   padding: 8px 10px; width: 100%; min-width: 0;
 }
 textarea { resize: vertical; min-height: 72px; }
+/* Campo de valor em dinheiro: estreito e alinhado à direita, como numa planilha. */
+.input-money { width: 130px; text-align: right; }
 input:focus, select:focus, textarea:focus { outline: 2px solid var(--focus); outline-offset: -1px; border-color: transparent; }
 input[aria-invalid="true"] { border-color: var(--danger); }
 
@@ -344,3 +348,5 @@ td.actions { text-align: right; white-space: nowrap; }
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
+/* Dentro de uma célula de tabela, a confirmação acompanha os botões da linha. */
+td .confirm { display: inline-flex; }

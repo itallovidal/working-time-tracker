@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"time"
+	"working-time-tracker/ent/allocation"
 	"working-time-tracker/ent/invite"
 	"working-time-tracker/ent/organization"
 	"working-time-tracker/ent/person"
@@ -179,6 +180,21 @@ func (_c *PersonCreate) AddCreatedInvites(v ...*Invite) *PersonCreate {
 		ids[i] = v[i].ID
 	}
 	return _c.AddCreatedInviteIDs(ids...)
+}
+
+// AddAllocationIDs adds the "allocations" edge to the Allocation entity by IDs.
+func (_c *PersonCreate) AddAllocationIDs(ids ...uuid.UUID) *PersonCreate {
+	_c.mutation.AddAllocationIDs(ids...)
+	return _c
+}
+
+// AddAllocations adds the "allocations" edges to the Allocation entity.
+func (_c *PersonCreate) AddAllocations(v ...*Allocation) *PersonCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddAllocationIDs(ids...)
 }
 
 // Mutation returns the PersonMutation object of the builder.
@@ -400,6 +416,22 @@ func (_c *PersonCreate) createSpec() (*Person, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(invite.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.AllocationsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   person.AllocationsTable,
+			Columns: []string{person.AllocationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(allocation.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

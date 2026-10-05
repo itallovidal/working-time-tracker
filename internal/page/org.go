@@ -50,6 +50,11 @@ func (h *Handler) OrgProjects(c *echo.Context) error {
 	return h.orgPage(c, "org_projects", "Projetos · Organização", "projects")
 }
 
+// Customers é a aba Clientes: quem contrata os projetos da organização (S12.4).
+func (h *Handler) Customers(c *echo.Context) error {
+	return h.orgPage(c, "org_customers", "Clientes · Organização", "customers")
+}
+
 // People é a aba Pessoas: as pessoas da organização, os papéis e os convites (S8.3).
 func (h *Handler) People(c *echo.Context) error {
 	return h.orgPage(c, "org_people", "Pessoas · Organização", "people")

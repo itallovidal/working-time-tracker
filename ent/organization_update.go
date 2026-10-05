@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"working-time-tracker/ent/customer"
 	"working-time-tracker/ent/invite"
 	"working-time-tracker/ent/organization"
 	"working-time-tracker/ent/person"
@@ -524,6 +525,21 @@ func (_u *OrganizationUpdate) AddProjects(v ...*Project) *OrganizationUpdate {
 	return _u.AddProjectIDs(ids...)
 }
 
+// AddCustomerIDs adds the "customers" edge to the Customer entity by IDs.
+func (_u *OrganizationUpdate) AddCustomerIDs(ids ...uuid.UUID) *OrganizationUpdate {
+	_u.mutation.AddCustomerIDs(ids...)
+	return _u
+}
+
+// AddCustomers adds the "customers" edges to the Customer entity.
+func (_u *OrganizationUpdate) AddCustomers(v ...*Customer) *OrganizationUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddCustomerIDs(ids...)
+}
+
 // AddInviteIDs adds the "invites" edge to the Invite entity by IDs.
 func (_u *OrganizationUpdate) AddInviteIDs(ids ...uuid.UUID) *OrganizationUpdate {
 	_u.mutation.AddInviteIDs(ids...)
@@ -584,6 +600,27 @@ func (_u *OrganizationUpdate) RemoveProjects(v ...*Project) *OrganizationUpdate 
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveProjectIDs(ids...)
+}
+
+// ClearCustomers clears all "customers" edges to the Customer entity.
+func (_u *OrganizationUpdate) ClearCustomers() *OrganizationUpdate {
+	_u.mutation.ClearCustomers()
+	return _u
+}
+
+// RemoveCustomerIDs removes the "customers" edge to Customer entities by IDs.
+func (_u *OrganizationUpdate) RemoveCustomerIDs(ids ...uuid.UUID) *OrganizationUpdate {
+	_u.mutation.RemoveCustomerIDs(ids...)
+	return _u
+}
+
+// RemoveCustomers removes "customers" edges to Customer entities.
+func (_u *OrganizationUpdate) RemoveCustomers(v ...*Customer) *OrganizationUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveCustomerIDs(ids...)
 }
 
 // ClearInvites clears all "invites" edges to the Invite entity.
@@ -864,6 +901,51 @@ func (_u *OrganizationUpdate) sqlSave(ctx context.Context) (_node int, err error
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(project.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.CustomersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   organization.CustomersTable,
+			Columns: []string{organization.CustomersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(customer.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedCustomersIDs(); len(nodes) > 0 && !_u.mutation.CustomersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   organization.CustomersTable,
+			Columns: []string{organization.CustomersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(customer.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.CustomersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   organization.CustomersTable,
+			Columns: []string{organization.CustomersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(customer.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1429,6 +1511,21 @@ func (_u *OrganizationUpdateOne) AddProjects(v ...*Project) *OrganizationUpdateO
 	return _u.AddProjectIDs(ids...)
 }
 
+// AddCustomerIDs adds the "customers" edge to the Customer entity by IDs.
+func (_u *OrganizationUpdateOne) AddCustomerIDs(ids ...uuid.UUID) *OrganizationUpdateOne {
+	_u.mutation.AddCustomerIDs(ids...)
+	return _u
+}
+
+// AddCustomers adds the "customers" edges to the Customer entity.
+func (_u *OrganizationUpdateOne) AddCustomers(v ...*Customer) *OrganizationUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddCustomerIDs(ids...)
+}
+
 // AddInviteIDs adds the "invites" edge to the Invite entity by IDs.
 func (_u *OrganizationUpdateOne) AddInviteIDs(ids ...uuid.UUID) *OrganizationUpdateOne {
 	_u.mutation.AddInviteIDs(ids...)
@@ -1489,6 +1586,27 @@ func (_u *OrganizationUpdateOne) RemoveProjects(v ...*Project) *OrganizationUpda
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveProjectIDs(ids...)
+}
+
+// ClearCustomers clears all "customers" edges to the Customer entity.
+func (_u *OrganizationUpdateOne) ClearCustomers() *OrganizationUpdateOne {
+	_u.mutation.ClearCustomers()
+	return _u
+}
+
+// RemoveCustomerIDs removes the "customers" edge to Customer entities by IDs.
+func (_u *OrganizationUpdateOne) RemoveCustomerIDs(ids ...uuid.UUID) *OrganizationUpdateOne {
+	_u.mutation.RemoveCustomerIDs(ids...)
+	return _u
+}
+
+// RemoveCustomers removes "customers" edges to Customer entities.
+func (_u *OrganizationUpdateOne) RemoveCustomers(v ...*Customer) *OrganizationUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveCustomerIDs(ids...)
 }
 
 // ClearInvites clears all "invites" edges to the Invite entity.
@@ -1799,6 +1917,51 @@ func (_u *OrganizationUpdateOne) sqlSave(ctx context.Context) (_node *Organizati
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(project.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.CustomersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   organization.CustomersTable,
+			Columns: []string{organization.CustomersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(customer.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedCustomersIDs(); len(nodes) > 0 && !_u.mutation.CustomersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   organization.CustomersTable,
+			Columns: []string{organization.CustomersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(customer.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.CustomersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   organization.CustomersTable,
+			Columns: []string{organization.CustomersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(customer.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

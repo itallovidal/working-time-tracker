@@ -7,6 +7,7 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"math"
+	"working-time-tracker/ent/allocation"
 	"working-time-tracker/ent/invite"
 	"working-time-tracker/ent/organization"
 	"working-time-tracker/ent/person"
@@ -37,6 +38,7 @@ type PersonQuery struct {
 	withWorkSessions    *WorkSessionQuery
 	withSessions        *SessionQuery
 	withCreatedInvites  *InviteQuery
+	withAllocations     *AllocationQuery
 	modifiers           []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -199,6 +201,28 @@ func (_q *PersonQuery) QueryCreatedInvites() *InviteQuery {
 			sqlgraph.From(person.Table, person.FieldID, selector),
 			sqlgraph.To(invite.Table, invite.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, person.CreatedInvitesTable, person.CreatedInvitesColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryAllocations chains the current query on the "allocations" edge.
+func (_q *PersonQuery) QueryAllocations() *AllocationQuery {
+	query := (&AllocationClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(person.Table, person.FieldID, selector),
+			sqlgraph.To(allocation.Table, allocation.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, person.AllocationsTable, person.AllocationsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -404,6 +428,7 @@ func (_q *PersonQuery) Clone() *PersonQuery {
 		withWorkSessions:    _q.withWorkSessions.Clone(),
 		withSessions:        _q.withSessions.Clone(),
 		withCreatedInvites:  _q.withCreatedInvites.Clone(),
+		withAllocations:     _q.withAllocations.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -473,6 +498,17 @@ func (_q *PersonQuery) WithCreatedInvites(opts ...func(*InviteQuery)) *PersonQue
 		opt(query)
 	}
 	_q.withCreatedInvites = query
+	return _q
+}
+
+// WithAllocations tells the query-builder to eager-load the nodes that are connected to
+// the "allocations" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *PersonQuery) WithAllocations(opts ...func(*AllocationQuery)) *PersonQuery {
+	query := (&AllocationClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withAllocations = query
 	return _q
 }
 
@@ -554,13 +590,14 @@ func (_q *PersonQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Perso
 	var (
 		nodes       = []*Person{}
 		_spec       = _q.querySpec()
-		loadedTypes = [6]bool{
+		loadedTypes = [7]bool{
 			_q.withOrganization != nil,
 			_q.withTasks != nil,
 			_q.withTeamMemberships != nil,
 			_q.withWorkSessions != nil,
 			_q.withSessions != nil,
 			_q.withCreatedInvites != nil,
+			_q.withAllocations != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -622,6 +659,13 @@ func (_q *PersonQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Perso
 		if err := _q.loadCreatedInvites(ctx, query, nodes,
 			func(n *Person) { n.Edges.CreatedInvites = []*Invite{} },
 			func(n *Person, e *Invite) { n.Edges.CreatedInvites = append(n.Edges.CreatedInvites, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withAllocations; query != nil {
+		if err := _q.loadAllocations(ctx, query, nodes,
+			func(n *Person) { n.Edges.Allocations = []*Allocation{} },
+			func(n *Person, e *Allocation) { n.Edges.Allocations = append(n.Edges.Allocations, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -805,6 +849,36 @@ func (_q *PersonQuery) loadCreatedInvites(ctx context.Context, query *InviteQuer
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "created_by_id" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *PersonQuery) loadAllocations(ctx context.Context, query *AllocationQuery, nodes []*Person, init func(*Person), assign func(*Person, *Allocation)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Person)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(allocation.FieldPersonID)
+	}
+	query.Where(predicate.Allocation(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(person.AllocationsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.PersonID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "person_id" returned %v for node %v`, fk, n.ID)
 		}
 		assign(node, n)
 	}

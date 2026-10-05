@@ -73,6 +73,37 @@ func (h *Handler) Update(c *echo.Context) error {
 	return c.JSON(200, project)
 }
 
+// GetBilling devolve o cliente e o valor cobrado do projeto. A rota é só de admins.
+func (h *Handler) GetBilling(c *echo.Context) error {
+	billing, err := h.svc.Billing(c.Param("projectId"))
+	if err != nil {
+		if err == database.ErrNotFound {
+			return c.JSON(404, map[string]string{"error": "projeto não encontrado"})
+		}
+		return c.JSON(500, map[string]string{"error": err.Error()})
+	}
+	return c.JSON(200, billing)
+}
+
+// SetBilling substitui o cliente e o valor cobrado: o que vier null é apagado.
+func (h *Handler) SetBilling(c *echo.Context) error {
+	var body struct {
+		CustomerID    *string `json:"customer_id"`
+		BillRateCents *int    `json:"bill_rate_cents"`
+	}
+	if err := c.Bind(&body); err != nil {
+		return c.JSON(400, map[string]string{"error": "corpo da requisição inválido"})
+	}
+	billing, err := h.svc.SetBilling(c.Param("projectId"), body.CustomerID, body.BillRateCents)
+	if err != nil {
+		if err == database.ErrNotFound {
+			return c.JSON(404, map[string]string{"error": "projeto não encontrado"})
+		}
+		return c.JSON(400, map[string]string{"error": err.Error()})
+	}
+	return c.JSON(200, billing)
+}
+
 func (h *Handler) Delete(c *echo.Context) error {
 	id := c.Param("projectId")
 	if err := h.svc.Delete(id); err != nil {

@@ -20,6 +20,7 @@
         "person_id": "",
         "project_id": "",
         "team_id": "",
+        "customer_id": "",
         "task_id": "",
         "integration_id": "",
         "invite_id": "",
@@ -878,6 +879,177 @@
       "url": "{{base_url}}/api/integrations/{{integration_id}}",
       "authentication": {},
       "metaSortKey": 4,
+      "headers": [],
+      "body": {}
+    },
+    {
+      "_id": "fld_09",
+      "_type": "request_group",
+      "parentId": "__workspace__",
+      "name": "Clientes e valores",
+      "metaSortKey": 9
+    },
+    {
+      "_id": "req_09_00",
+      "_type": "request",
+      "parentId": "fld_09",
+      "name": "Criar cliente",
+      "method": "POST",
+      "url": "{{base_url}}/api/orgs/{{org_id}}/customers",
+      "authentication": {},
+      "metaSortKey": 0,
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Rede Bom Preço\",\n  \"document\": \"12.ABC.345/01DE-35\",\n  \"contact_name\": \"Carla Dias\",\n  \"contact_email\": \"carla@bompreco.example\",\n  \"contact_phone\": \"+55 (11) 3003-1000\"\n}"
+      }
+    },
+    {
+      "_id": "req_09_01",
+      "_type": "request",
+      "parentId": "fld_09",
+      "name": "Listar clientes",
+      "method": "GET",
+      "url": "{{base_url}}/api/orgs/{{org_id}}/customers",
+      "authentication": {},
+      "metaSortKey": 1,
+      "headers": [],
+      "body": {}
+    },
+    {
+      "_id": "req_09_02",
+      "_type": "request",
+      "parentId": "fld_09",
+      "name": "Obter cliente",
+      "method": "GET",
+      "url": "{{base_url}}/api/customers/{{customer_id}}",
+      "authentication": {},
+      "metaSortKey": 2,
+      "headers": [],
+      "body": {}
+    },
+    {
+      "_id": "req_09_03",
+      "_type": "request",
+      "parentId": "fld_09",
+      "name": "Atualizar cliente",
+      "method": "PATCH",
+      "url": "{{base_url}}/api/customers/{{customer_id}}",
+      "authentication": {},
+      "metaSortKey": 3,
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"contact_name\": \"Carla Dias Souza\"\n}"
+      }
+    },
+    {
+      "_id": "req_09_04",
+      "_type": "request",
+      "parentId": "fld_09",
+      "name": "Excluir cliente",
+      "method": "DELETE",
+      "url": "{{base_url}}/api/customers/{{customer_id}}",
+      "authentication": {},
+      "metaSortKey": 4,
+      "headers": [],
+      "body": {}
+    },
+    {
+      "_id": "req_09_05",
+      "_type": "request",
+      "parentId": "fld_09",
+      "name": "Ver cobrança do projeto",
+      "method": "GET",
+      "url": "{{base_url}}/api/projects/{{project_id}}/billing",
+      "authentication": {},
+      "metaSortKey": 5,
+      "headers": [],
+      "body": {}
+    },
+    {
+      "_id": "req_09_06",
+      "_type": "request",
+      "parentId": "fld_09",
+      "name": "Definir cobrança do projeto",
+      "method": "PUT",
+      "url": "{{base_url}}/api/projects/{{project_id}}/billing",
+      "authentication": {},
+      "metaSortKey": 6,
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"customer_id\": \"{{customer_id}}\",\n  \"bill_rate_cents\": 10000\n}"
+      }
+    },
+    {
+      "_id": "req_09_07",
+      "_type": "request",
+      "parentId": "fld_09",
+      "name": "Listar valores do projeto",
+      "method": "GET",
+      "url": "{{base_url}}/api/projects/{{project_id}}/allocations",
+      "authentication": {},
+      "metaSortKey": 7,
+      "headers": [],
+      "body": {}
+    },
+    {
+      "_id": "req_09_08",
+      "_type": "request",
+      "parentId": "fld_09",
+      "name": "Definir valor da pessoa",
+      "method": "PUT",
+      "url": "{{base_url}}/api/projects/{{project_id}}/allocations/{{person_id}}",
+      "authentication": {},
+      "metaSortKey": 8,
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"pay_rate_cents\": 2000\n}"
+      }
+    },
+    {
+      "_id": "req_09_09",
+      "_type": "request",
+      "parentId": "fld_09",
+      "name": "Remover pessoa do projeto",
+      "method": "DELETE",
+      "url": "{{base_url}}/api/projects/{{project_id}}/allocations/{{person_id}}",
+      "authentication": {},
+      "metaSortKey": 9,
+      "headers": [],
+      "body": {}
+    },
+    {
+      "_id": "req_09_10",
+      "_type": "request",
+      "parentId": "fld_09",
+      "name": "Valores da pessoa",
+      "method": "GET",
+      "url": "{{base_url}}/api/persons/{{person_id}}/allocations",
+      "authentication": {},
+      "metaSortKey": 10,
       "headers": [],
       "body": {}
     }

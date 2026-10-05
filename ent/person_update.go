@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"working-time-tracker/ent/allocation"
 	"working-time-tracker/ent/invite"
 	"working-time-tracker/ent/organization"
 	"working-time-tracker/ent/person"
@@ -190,6 +191,21 @@ func (_u *PersonUpdate) AddCreatedInvites(v ...*Invite) *PersonUpdate {
 	return _u.AddCreatedInviteIDs(ids...)
 }
 
+// AddAllocationIDs adds the "allocations" edge to the Allocation entity by IDs.
+func (_u *PersonUpdate) AddAllocationIDs(ids ...uuid.UUID) *PersonUpdate {
+	_u.mutation.AddAllocationIDs(ids...)
+	return _u
+}
+
+// AddAllocations adds the "allocations" edges to the Allocation entity.
+func (_u *PersonUpdate) AddAllocations(v ...*Allocation) *PersonUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddAllocationIDs(ids...)
+}
+
 // Mutation returns the PersonMutation object of the builder.
 func (_u *PersonUpdate) Mutation() *PersonMutation {
 	return _u.mutation
@@ -304,6 +320,27 @@ func (_u *PersonUpdate) RemoveCreatedInvites(v ...*Invite) *PersonUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveCreatedInviteIDs(ids...)
+}
+
+// ClearAllocations clears all "allocations" edges to the Allocation entity.
+func (_u *PersonUpdate) ClearAllocations() *PersonUpdate {
+	_u.mutation.ClearAllocations()
+	return _u
+}
+
+// RemoveAllocationIDs removes the "allocations" edge to Allocation entities by IDs.
+func (_u *PersonUpdate) RemoveAllocationIDs(ids ...uuid.UUID) *PersonUpdate {
+	_u.mutation.RemoveAllocationIDs(ids...)
+	return _u
+}
+
+// RemoveAllocations removes "allocations" edges to Allocation entities.
+func (_u *PersonUpdate) RemoveAllocations(v ...*Allocation) *PersonUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveAllocationIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -627,6 +664,51 @@ func (_u *PersonUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if _u.mutation.AllocationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   person.AllocationsTable,
+			Columns: []string{person.AllocationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(allocation.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedAllocationsIDs(); len(nodes) > 0 && !_u.mutation.AllocationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   person.AllocationsTable,
+			Columns: []string{person.AllocationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(allocation.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AllocationsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   person.AllocationsTable,
+			Columns: []string{person.AllocationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(allocation.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{person.Label}
@@ -803,6 +885,21 @@ func (_u *PersonUpdateOne) AddCreatedInvites(v ...*Invite) *PersonUpdateOne {
 	return _u.AddCreatedInviteIDs(ids...)
 }
 
+// AddAllocationIDs adds the "allocations" edge to the Allocation entity by IDs.
+func (_u *PersonUpdateOne) AddAllocationIDs(ids ...uuid.UUID) *PersonUpdateOne {
+	_u.mutation.AddAllocationIDs(ids...)
+	return _u
+}
+
+// AddAllocations adds the "allocations" edges to the Allocation entity.
+func (_u *PersonUpdateOne) AddAllocations(v ...*Allocation) *PersonUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddAllocationIDs(ids...)
+}
+
 // Mutation returns the PersonMutation object of the builder.
 func (_u *PersonUpdateOne) Mutation() *PersonMutation {
 	return _u.mutation
@@ -917,6 +1014,27 @@ func (_u *PersonUpdateOne) RemoveCreatedInvites(v ...*Invite) *PersonUpdateOne {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveCreatedInviteIDs(ids...)
+}
+
+// ClearAllocations clears all "allocations" edges to the Allocation entity.
+func (_u *PersonUpdateOne) ClearAllocations() *PersonUpdateOne {
+	_u.mutation.ClearAllocations()
+	return _u
+}
+
+// RemoveAllocationIDs removes the "allocations" edge to Allocation entities by IDs.
+func (_u *PersonUpdateOne) RemoveAllocationIDs(ids ...uuid.UUID) *PersonUpdateOne {
+	_u.mutation.RemoveAllocationIDs(ids...)
+	return _u
+}
+
+// RemoveAllocations removes "allocations" edges to Allocation entities.
+func (_u *PersonUpdateOne) RemoveAllocations(v ...*Allocation) *PersonUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveAllocationIDs(ids...)
 }
 
 // Where appends a list predicates to the PersonUpdate builder.
@@ -1263,6 +1381,51 @@ func (_u *PersonUpdateOne) sqlSave(ctx context.Context) (_node *Person, err erro
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(invite.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.AllocationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   person.AllocationsTable,
+			Columns: []string{person.AllocationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(allocation.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedAllocationsIDs(); len(nodes) > 0 && !_u.mutation.AllocationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   person.AllocationsTable,
+			Columns: []string{person.AllocationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(allocation.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AllocationsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   person.AllocationsTable,
+			Columns: []string{person.AllocationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(allocation.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

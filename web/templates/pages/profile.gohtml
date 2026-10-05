@@ -23,6 +23,21 @@
       <div class="row row-end"><button type="submit" class="btn" :disabled="pending">Salvar perfil</button></div>
     </form>
 
+    <section class="card">
+      <div class="card-head"><h2>Meus valores</h2></div>
+      <p class="muted small">Quanto você recebe por hora em cada projeto. Só você e os admins veem.</p>
+      <p class="form-error" x-cloak x-show="errors.rates" x-text="errors.rates"></p>
+      <p class="muted small" x-cloak x-show="ratesLoaded && rates.length === 0">Você ainda não tem valor definido em nenhum projeto.</p>
+      <ul class="list" x-cloak x-show="rates.length > 0">
+        <template x-for="r in rates" :key="r.project_id">
+          <li>
+            <a class="grow" :href="'/projects/' + r.project_id + '/time-tracking'" x-text="r.project.name"></a>
+            <span class="num"><strong x-text="WTT.fmt.money(r.pay_rate_cents)"></strong> <span class="muted small">por hora</span></span>
+          </li>
+        </template>
+      </ul>
+    </section>
+
     <form class="card" @submit.prevent="changePassword()">
       <div class="card-head"><h2>Senha</h2></div>
       <div class="field">

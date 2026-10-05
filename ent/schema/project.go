@@ -25,6 +25,10 @@ func (Project) Fields() []ent.Field {
 		field.Int("sprint_duration_days").Default(14),
 		field.String("daily_time").Optional().Nillable(),
 		field.String("weekly_sync_day").Optional().Nillable(),
+		// Projeto interno fica sem cliente e sem valor cobrado.
+		field.UUID("customer_id", uuid.UUID{}).Optional().Nillable(),
+		// O que o cliente paga à organização por hora neste projeto.
+		field.Int("bill_rate_cents").Optional().Nillable().NonNegative(),
 		field.Time("created_at").Default(time.Now).Immutable(),
 	}
 }
@@ -32,8 +36,10 @@ func (Project) Fields() []ent.Field {
 func (Project) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("organization", Organization.Type).Ref("projects").Field("organization_id").Unique().Required(),
+		edge.From("customer", Customer.Type).Ref("projects").Field("customer_id").Unique(),
 		edge.To("teams", Team.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("tasks", Task.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("integrations", Integration.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
+		edge.To("allocations", Allocation.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
 	}
 }

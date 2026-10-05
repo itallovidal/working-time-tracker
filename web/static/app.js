@@ -152,7 +152,38 @@
       const c = currencies.find((x) => x.value === value);
       return c ? c.label : value;
     },
+    // Centavos na moeda da organização: 2050 -> "R$ 20,50". Sem valor, um travessão.
+    money(cents) {
+      if (cents === null || cents === undefined) return '—';
+      return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: orgCurrency() }).format(cents / 100);
+    },
+    // Centavos para um campo de texto: 2050 -> "20,50"
+    moneyInput(cents) {
+      if (cents === null || cents === undefined) return '';
+      return (cents / 100).toFixed(2).replace('.', ',');
+    },
+    // O símbolo da moeda da organização, para o rótulo dos campos: "R$"
+    moneyUnit() {
+      const parts = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: orgCurrency() }).formatToParts(0);
+      const symbol = parts.find((p) => p.type === 'currency');
+      return symbol ? symbol.value : orgCurrency();
+    },
   };
+
+  function orgCurrency() {
+    const me = window.BOOT && window.BOOT.me;
+    return (me && me.organization_currency) || 'BRL';
+  }
+
+  // toCents lê um valor digitado e devolve os centavos, ou null quando o texto
+  // não é um valor. Aceita "20", "20,5", "1.234,56", "1.234" e "20.50".
+  function toCents(text) {
+    let v = String(text === null || text === undefined ? '' : text).replace(/[^\d.,]/g, '');
+    if (v === '') return null;
+    if (v.includes(',') || /^\d{1,3}(\.\d{3})+$/.test(v)) v = v.replace(/\./g, '').replace(',', '.');
+    const n = Number(v);
+    return Number.isFinite(n) ? Math.round(n * 100) : null;
+  }
 
   async function copyText(text) {
     try {
@@ -184,7 +215,7 @@
     },
   ];
 
-  window.WTT = { api, ApiError, form, fmt, copyText, weekdays, orgSizes, currencies, integrationTypes, boot: window.BOOT || {} };
+  window.WTT = { api, ApiError, form, fmt, toCents, copyText, weekdays, orgSizes, currencies, integrationTypes, boot: window.BOOT || {} };
 
   document.addEventListener('alpine:init', () => {
     Alpine.store('toast', {

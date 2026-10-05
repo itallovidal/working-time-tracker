@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+
+	"working-time-tracker/internal/database"
 )
 
 var (
@@ -13,7 +15,12 @@ var (
 	ErrInvalidSprint    = errors.New("a sprint precisa ter entre 1 e 90 dias")
 	ErrInvalidDailyTime = errors.New("o horário da daily deve estar no formato HH:MM, por exemplo 09:30")
 	ErrInvalidWeekday   = errors.New("dia da weekly inválido: use monday, tuesday, wednesday, thursday, friday, saturday ou sunday")
+	ErrInvalidBillRate  = errors.New("o valor cobrado por hora deve ficar entre 0 e 1.000.000,00")
+	ErrCustomerNotFound = errors.New("cliente não encontrado nesta organização")
 )
+
+// maxBillRateCents é o teto do valor cobrado por hora: 1.000.000,00.
+const maxBillRateCents = 100_000_000
 
 var dailyTimePattern = regexp.MustCompile(`^([01]\d|2[0-3]):[0-5]\d$`)
 
@@ -144,4 +151,43 @@ func (s *Service) Update(id, name, description string, sprintDurationDays int, d
 
 func (s *Service) Delete(id string) error {
 	return s.store.Delete(id)
+}
+
+func (s *Service) Billing(projectID string) (*Billing, error) {
+	uid, err := uuid.Parse(projectID)
+	if err != nil {
+		return nil, database.ErrNotFound
+	}
+	return s.store.Billing(uid)
+}
+
+// SetBilling substitui o cliente e o valor cobrado do projeto. nil (ou cliente
+// vazio) apaga: é assim que um projeto volta a ser interno.
+func (s *Service) SetBilling(projectID string, customerID *string, billRateCents *int) (*Billing, error) {
+	uid, err := uuid.Parse(projectID)
+	if err != nil {
+		return nil, database.ErrNotFound
+	}
+	if billRateCents != nil && (*billRateCents < 0 || *billRateCents > maxBillRateCents) {
+		return nil, ErrInvalidBillRate
+	}
+	var customerUID *uuid.UUID
+	if customerID != nil && strings.TrimSpace(*customerID) != "" {
+		cid, err := uuid.Parse(strings.TrimSpace(*customerID))
+		if err != nil {
+			return nil, ErrCustomerNotFound
+		}
+		ok, err := s.store.CustomerInProjectOrganization(cid, uid)
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			return nil, ErrCustomerNotFound
+		}
+		customerUID = &cid
+	}
+	if err := s.store.SetBilling(uid, customerUID, billRateCents); err != nil {
+		return nil, err
+	}
+	return s.store.Billing(uid)
 }

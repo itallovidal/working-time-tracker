@@ -61,6 +61,12 @@ func (h *Handler) Teams(c *echo.Context) error {
 	return h.projectPage(c, "project_teams", "Times", "teams")
 }
 
+// Rates é a aba Valores: quanto o cliente paga e quanto cada pessoa recebe por
+// hora no projeto (S12.4). Só admins chegam aqui; o middleware de rota garante.
+func (h *Handler) Rates(c *echo.Context) error {
+	return h.projectPage(c, "project_rates", "Valores", "rates")
+}
+
 // Integrations configura as integrações do projeto com GitHub e GitLab (S10.1).
 func (h *Handler) Integrations(c *echo.Context) error {
 	return h.projectPage(c, "project_integrations", "Integrações", "integrations")

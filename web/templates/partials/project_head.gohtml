@@ -9,6 +9,7 @@
   <a href="/projects/{{.Project.ID}}/tasks" {{if eq .Tab "tasks"}}aria-current="page"{{end}}>Tarefas</a>
   <a href="/projects/{{.Project.ID}}/time-tracking" {{if eq .Tab "time"}}aria-current="page"{{end}}>Ponto</a>
   <a href="/projects/{{.Project.ID}}/teams" {{if eq .Tab "teams"}}aria-current="page"{{end}}>Times</a>
+  {{if .IsAdmin}}<a href="/projects/{{.Project.ID}}/rates" {{if eq .Tab "rates"}}aria-current="page"{{end}}>Valores</a>{{end}}
   <a href="/projects/{{.Project.ID}}/integrations" {{if eq .Tab "integrations"}}aria-current="page"{{end}}>Integrações</a>
   <a href="/projects/{{.Project.ID}}/settings" {{if eq .Tab "settings"}}aria-current="page"{{end}}>Configurações</a>
 </nav>

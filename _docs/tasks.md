@@ -188,11 +188,11 @@
 
 ### Sprint 12: Clients & Hourly Rates
 
-- [ ] S12.1 Add `Client` (per organization) and link projects to a client, with the hourly rate the client pays for the project
-- [ ] S12.2 Add `Allocation`: the hourly rate the organization pays a person in a project, unique per person and project
-- [ ] S12.3 Expose clients, project billing and allocations through the API: admins see and change everything, members only read their own rate
-- [ ] S12.4 Build the Clients tab (organization), the Rates tab and billing card (project) and "Meus valores" on the profile page
-- [ ] S12.5 Tests for the new domains and for rate visibility between roles and organizations; update seed and docs
+- [X] S12.1 Add `Customer` (per organization; `Client` is reserved by Ent) and link projects to a customer, with the hourly rate the customer pays for the project
+- [X] S12.2 Add `Allocation`: the hourly rate the organization pays a person in a project, unique per person and project
+- [X] S12.3 Expose customers, project billing and allocations through the API: admins see and change everything, members only read their own rate
+- [X] S12.4 Build the Clients tab (organization), the Rates tab and billing card (project) and "Meus valores" on the profile page
+- [X] S12.5 Tests for the new domains and for rate visibility between roles and organizations; update seed and docs
 
 ---
 

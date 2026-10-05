@@ -31,16 +31,24 @@ const (
 	FieldDailyTime = "daily_time"
 	// FieldWeeklySyncDay holds the string denoting the weekly_sync_day field in the database.
 	FieldWeeklySyncDay = "weekly_sync_day"
+	// FieldCustomerID holds the string denoting the customer_id field in the database.
+	FieldCustomerID = "customer_id"
+	// FieldBillRateCents holds the string denoting the bill_rate_cents field in the database.
+	FieldBillRateCents = "bill_rate_cents"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// EdgeOrganization holds the string denoting the organization edge name in mutations.
 	EdgeOrganization = "organization"
+	// EdgeCustomer holds the string denoting the customer edge name in mutations.
+	EdgeCustomer = "customer"
 	// EdgeTeams holds the string denoting the teams edge name in mutations.
 	EdgeTeams = "teams"
 	// EdgeTasks holds the string denoting the tasks edge name in mutations.
 	EdgeTasks = "tasks"
 	// EdgeIntegrations holds the string denoting the integrations edge name in mutations.
 	EdgeIntegrations = "integrations"
+	// EdgeAllocations holds the string denoting the allocations edge name in mutations.
+	EdgeAllocations = "allocations"
 	// Table holds the table name of the project in the database.
 	Table = "projects"
 	// OrganizationTable is the table that holds the organization relation/edge.
@@ -50,6 +58,13 @@ const (
 	OrganizationInverseTable = "organizations"
 	// OrganizationColumn is the table column denoting the organization relation/edge.
 	OrganizationColumn = "organization_id"
+	// CustomerTable is the table that holds the customer relation/edge.
+	CustomerTable = "projects"
+	// CustomerInverseTable is the table name for the Customer entity.
+	// It exists in this package in order to avoid circular dependency with the "customer" package.
+	CustomerInverseTable = "customers"
+	// CustomerColumn is the table column denoting the customer relation/edge.
+	CustomerColumn = "customer_id"
 	// TeamsTable is the table that holds the teams relation/edge.
 	TeamsTable = "teams"
 	// TeamsInverseTable is the table name for the Team entity.
@@ -71,6 +86,13 @@ const (
 	IntegrationsInverseTable = "integrations"
 	// IntegrationsColumn is the table column denoting the integrations relation/edge.
 	IntegrationsColumn = "project_id"
+	// AllocationsTable is the table that holds the allocations relation/edge.
+	AllocationsTable = "allocations"
+	// AllocationsInverseTable is the table name for the Allocation entity.
+	// It exists in this package in order to avoid circular dependency with the "allocation" package.
+	AllocationsInverseTable = "allocations"
+	// AllocationsColumn is the table column denoting the allocations relation/edge.
+	AllocationsColumn = "project_id"
 )
 
 // Columns holds all SQL columns for project fields.
@@ -84,6 +106,8 @@ var Columns = []string{
 	FieldSprintDurationDays,
 	FieldDailyTime,
 	FieldWeeklySyncDay,
+	FieldCustomerID,
+	FieldBillRateCents,
 	FieldCreatedAt,
 }
 
@@ -100,6 +124,8 @@ func ValidColumn(column string) bool {
 var (
 	// DefaultSprintDurationDays holds the default value on creation for the "sprint_duration_days" field.
 	DefaultSprintDurationDays int
+	// BillRateCentsValidator is a validator for the "bill_rate_cents" field. It is called by the builders before save.
+	BillRateCentsValidator func(int) error
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 	// DefaultID holds the default value on creation for the "id" field.
@@ -154,6 +180,16 @@ func ByWeeklySyncDay(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldWeeklySyncDay, opts...).ToFunc()
 }
 
+// ByCustomerID orders the results by the customer_id field.
+func ByCustomerID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCustomerID, opts...).ToFunc()
+}
+
+// ByBillRateCents orders the results by the bill_rate_cents field.
+func ByBillRateCents(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBillRateCents, opts...).ToFunc()
+}
+
 // ByCreatedAt orders the results by the created_at field.
 func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCreatedAt, opts...).ToFunc()
@@ -163,6 +199,13 @@ func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 func ByOrganizationField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
 		sqlgraph.OrderByNeighborTerms(s, newOrganizationStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByCustomerField orders the results by customer field.
+func ByCustomerField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newCustomerStep(), sql.OrderByField(field, opts...))
 	}
 }
 
@@ -207,11 +250,32 @@ func ByIntegrations(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newIntegrationsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByAllocationsCount orders the results by allocations count.
+func ByAllocationsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newAllocationsStep(), opts...)
+	}
+}
+
+// ByAllocations orders the results by allocations terms.
+func ByAllocations(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAllocationsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newOrganizationStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(OrganizationInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2O, true, OrganizationTable, OrganizationColumn),
+	)
+}
+func newCustomerStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(CustomerInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, CustomerTable, CustomerColumn),
 	)
 }
 func newTeamsStep() *sqlgraph.Step {
@@ -233,5 +297,12 @@ func newIntegrationsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(IntegrationsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, IntegrationsTable, IntegrationsColumn),
+	)
+}
+func newAllocationsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(AllocationsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, AllocationsTable, AllocationsColumn),
 	)
 }

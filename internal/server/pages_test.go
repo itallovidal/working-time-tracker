@@ -26,11 +26,12 @@ func pagePaths(orgID, projectID string) []string {
 	}
 }
 
-// orgPagePaths são as abas de gestão da organização: Geral, Pessoas e Projetos.
+// orgPagePaths são as abas de gestão da organização: Geral, Pessoas, Clientes e Projetos.
 func orgPagePaths(orgID string) []string {
 	return []string{
 		"/orgs/" + orgID + "/settings",
 		"/orgs/" + orgID + "/people",
+		"/orgs/" + orgID + "/customers",
 		"/orgs/" + orgID + "/projects",
 	}
 }
@@ -171,6 +172,40 @@ func TestPages_OrgSettingsAndProfileAreSeparate(t *testing.T) {
 	}
 }
 
+// A aba Valores do projeto é só de admins, como o cartão de cobrança das
+// configurações.
+func TestPages_ProjectRatesAreAdminOnly(t *testing.T) {
+	e := newServer(t)
+	admin := signup(t, e, "Org", "ana@test.com")
+	member := invite(t, e, admin, "bia@test.com", "member")
+	other := signup(t, e, "Outra", "caio@outra.com")
+	projectID := createProject(t, e, admin, "Projeto Alfa")
+	rates := "/projects/" + projectID + "/rates"
+	link := `href="` + rates + `"`
+
+	if rec := do(e, "GET", rates, "", admin.session); rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "Projeto Alfa") {
+		t.Errorf("admin GET %s = %d, want 200 with the project name", rates, rec.Code)
+	}
+	for who, session := range map[string]string{"member": member.session, "other organization": other.session} {
+		if rec := do(e, "GET", rates, "", session); rec.Code != http.StatusNotFound {
+			t.Errorf("%s GET %s = %d, want 404", who, rates, rec.Code)
+		}
+	}
+	if rec := do(e, "GET", rates, "", ""); rec.Code != http.StatusSeeOther {
+		t.Errorf("GET %s without session = %d, want 303", rates, rec.Code)
+	}
+
+	settings := "/projects/" + projectID + "/settings"
+	adminPage := do(e, "GET", settings, "", admin.session).Body.String()
+	memberPage := do(e, "GET", settings, "", member.session).Body.String()
+	if !strings.Contains(adminPage, link) || !strings.Contains(adminPage, `id="ps-bill-rate"`) {
+		t.Error("admin does not see the rates tab and the billing card")
+	}
+	if strings.Contains(memberPage, link) || strings.Contains(memberPage, `id="ps-bill-rate"`) {
+		t.Error("member sees the rates tab or the billing card")
+	}
+}
+
 func TestPages_RedirectWithoutSession(t *testing.T) {
 	e := newServer(t)
 	admin := signup(t, e, "Org", "ana@test.com")
@@ -215,8 +250,8 @@ func TestPages_AllTemplatesLoad(t *testing.T) {
 	sort.Strings(got)
 	for _, name := range []string{
 		"login", "signup", "invite", "notfound",
-		"org_projects", "org_people", "org_settings", "org_about", "profile",
-		"project_tasks", "project_time", "project_teams", "project_integrations", "project_settings", "task_detail",
+		"org_projects", "org_people", "org_settings", "org_about", "org_customers", "profile",
+		"project_tasks", "project_time", "project_teams", "project_rates", "project_integrations", "project_settings", "task_detail",
 	} {
 		i := sort.SearchStrings(got, name)
 		if i == len(got) || got[i] != name {

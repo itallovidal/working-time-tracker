@@ -1,0 +1,101 @@
+{{define "content"}}
+<main class="page" x-data="projectRates">
+  {{template "project_head" .}}
+
+  <p class="muted" x-show="loading">Carregando valores…</p>
+  <p class="form-error" x-cloak x-show="errors.load" x-text="errors.load"></p>
+
+  <div class="stack" x-cloak x-show="!loading && !errors.load">
+    <section class="card">
+      <div class="card-head">
+        <h2>O que o cliente paga</h2>
+        <a class="btn btn-secondary btn-sm" href="/projects/{{.Project.ID}}/settings">Alterar</a>
+      </div>
+      <dl class="facts">
+        <dt>Cliente</dt>
+        <dd x-text="billing.customer ? billing.customer.name : 'Nenhum (projeto interno)'"></dd>
+        <dt>Valor cobrado por hora</dt>
+        <dd class="num" x-text="billing.bill_rate_cents === null ? 'Não definido' : WTT.fmt.money(billing.bill_rate_cents)"></dd>
+      </dl>
+      <p class="muted small" x-show="billing.bill_rate_cents === null">Sem valor cobrado, a margem de cada pessoa não é calculada.</p>
+    </section>
+
+    <p class="alert alert-warn" x-show="missing().length > 0">
+      <strong x-text="missing().length === 1 ? '1 pessoa está' : missing().length + ' pessoas estão'"></strong>
+      em times deste projeto e ainda sem valor definido:
+      <span x-text="missing().map((p) => p.name).join(', ')"></span>.
+    </p>
+
+    <section class="stack">
+      <div class="card-head"><h2>O que cada pessoa recebe</h2></div>
+
+      <div class="empty" x-show="rows.length === 0">
+        <strong>Ninguém com valor definido</strong>
+        <span>Adicione as pessoas que trabalham neste projeto e quanto cada uma recebe por hora.</span>
+      </div>
+
+      <div class="table-wrap" x-show="rows.length > 0">
+        <table>
+          <thead>
+            <tr>
+              <th>Pessoa</th>
+              <th>Valor pago por hora (<span x-text="WTT.fmt.moneyUnit()"></span>)</th>
+              <th>Margem por hora</th>
+              <th class="actions"><span class="sr-only">Ações</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="row in rows" :key="row.person_id">
+              <tr>
+                <td>
+                  <div x-text="row.person.name"></div>
+                  <div class="muted small" x-text="row.person.email"></div>
+                </td>
+                <td>
+                  <form class="row row-tight" @submit.prevent="save(row)">
+                    <input type="text" inputmode="decimal" class="num input-money" x-model="row.draft" :aria-label="'Valor por hora de ' + row.person.name">
+                    <button type="submit" class="btn btn-sm" x-show="dirty(row)" :disabled="pending">Salvar</button>
+                  </form>
+                  <p class="form-error" x-show="errors['row-' + row.person_id]" x-text="errors['row-' + row.person_id]" role="alert"></p>
+                </td>
+                <td class="num">
+                  <span :class="margin(row) < 0 && 'text-danger'" x-text="WTT.fmt.money(margin(row))"></span>
+                </td>
+                <td class="actions">
+                  <button type="button" class="btn btn-danger-ghost btn-sm" x-show="confirming !== row.person_id" @click="confirming = row.person_id">Remover</button>
+                  <span class="confirm" x-cloak x-show="confirming === row.person_id">
+                    <span>Remover do projeto?</span>
+                    <button type="button" class="btn btn-danger btn-sm" :disabled="pending" @click="remove(row)">Remover</button>
+                    <button type="button" class="btn btn-ghost btn-sm" @click="confirming = null">Cancelar</button>
+                  </span>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+
+      <form class="card" @submit.prevent="addPerson()" x-show="candidates().length > 0">
+        <div class="card-head"><h2>Adicionar pessoa</h2></div>
+        <div class="row">
+          <div class="field flex-1">
+            <label for="rate-person">Pessoa</label>
+            <select id="rate-person" x-model="add.person_id">
+              <option value="">Escolha…</option>
+              <template x-for="p in candidates()" :key="p.id">
+                <option :value="p.id" x-text="p.name + (inTeam(p) ? '' : ' (fora dos times)')"></option>
+              </template>
+            </select>
+          </div>
+          <div class="field">
+            <label for="rate-value">Valor por hora (<span x-text="WTT.fmt.moneyUnit()"></span>)</label>
+            <input id="rate-value" type="text" inputmode="decimal" class="num input-money" placeholder="0,00" x-model="add.rate">
+          </div>
+          <button type="submit" class="btn self-end" :disabled="pending || !add.person_id">Adicionar</button>
+        </div>
+        <p class="form-error" x-show="errors.add" x-text="errors.add" role="alert"></p>
+      </form>
+    </section>
+  </div>
+</main>
+{{end}}

@@ -1,5 +1,6 @@
 // Command seed popula um banco vazio com dados de demonstração: uma organização
-// com o perfil preenchido, uma admin e um membro, um projeto, um time, tarefas e
+// com o perfil preenchido, uma admin e um membro, um cliente com dois projetos
+// (cada um com o valor cobrado e o valor pago a cada pessoa), times, tarefas e
 // algumas sessões de trabalho dos últimos dias.
 //
 // Uso: go run ./cmd/seed (lê DATABASE_URL do ambiente ou do .env)
@@ -15,7 +16,9 @@ import (
 	"github.com/joho/godotenv"
 
 	"working-time-tracker/internal/database"
+	"working-time-tracker/internal/domain/allocation"
 	"working-time-tracker/internal/domain/auth"
+	"working-time-tracker/internal/domain/customer"
 	"working-time-tracker/internal/domain/organization"
 	"working-time-tracker/internal/domain/project"
 	"working-time-tracker/internal/domain/task"
@@ -44,6 +47,8 @@ func main() {
 
 	authSvc := auth.NewService(auth.NewStore(db.Client))
 	orgSvc := organization.NewService(organization.NewStore(db.Client))
+	customerSvc := customer.NewService(customer.NewStore(db.Client))
+	allocationSvc := allocation.NewService(allocation.NewStore(db.Client))
 	projectSvc := project.NewService(project.NewStore(db.Client))
 	teamSvc := team.NewService(team.NewStore(db.Client))
 	membershipStore := team.NewMembershipStore(db.Client)
@@ -106,6 +111,46 @@ func main() {
 		must(err)
 	}
 
+	// O mesmo cliente contrata dois projetos a R$ 100,00 por hora. O Bruno
+	// recebe R$ 20,00 num e R$ 25,00 no outro, que é mais complexo.
+	cliente, err := customerSvc.Create(ana.OrganizationID.String(), customer.Input{
+		Name:         text("Rede Bom Preço"),
+		Document:     text("12.ABC.345/01DE-35"),
+		ContactName:  text("Carla Dias"),
+		ContactEmail: text("carla@bompreco.example"),
+		ContactPhone: text("+55 (11) 3003-1000"),
+	})
+	must(err)
+	clienteID := cliente.ID.String()
+
+	painel, err := projectSvc.Create(ana.OrganizationID.String(), "Painel do Lojista",
+		"Painel web para o lojista acompanhar pedidos, repasses e avaliações.", 0, nil, nil)
+	must(err)
+	painelTime, err := teamSvc.Create(painel.ID.String(), "Web")
+	must(err)
+	_, err = membershipSvc.Add(painelTime.ID.String(), bruno.PersonID.String())
+	must(err)
+	painelPrazo := time.Now().Add(6 * 24 * time.Hour)
+	_, err = taskSvc.Create(painel.ID.String(), "Relatório de repasses", "Totais por dia, com exportação em CSV.", bruno.PersonID.String(), &painelPrazo)
+	must(err)
+
+	for _, p := range []string{prj.ID.String(), painel.ID.String()} {
+		_, err := projectSvc.SetBilling(p, &clienteID, number(10000))
+		must(err)
+	}
+	for _, a := range []struct {
+		project string
+		person  *auth.Identity
+		cents   int
+	}{
+		{prj.ID.String(), ana, 4500},
+		{prj.ID.String(), bruno, 2000},
+		{painel.ID.String(), bruno, 2500},
+	} {
+		_, err := allocationSvc.Set(a.project, a.person.PersonID.String(), a.cents)
+		must(err)
+	}
+
 	now := time.Now()
 	day := 24 * time.Hour
 	newTask := func(name, description string, assignee *auth.Identity, deadline time.Duration) *task.Task {
@@ -150,7 +195,8 @@ func main() {
 
 	fmt.Println("Dados de demonstração criados.")
 	fmt.Println()
-	fmt.Println("  Organização: Acme Delivery · projeto App de Pedidos")
+	fmt.Println("  Organização: Acme Delivery · cliente Rede Bom Preço")
+	fmt.Println("  Projetos:    App de Pedidos e Painel do Lojista")
 	fmt.Printf("  Admin:  ana@example.com   / %s\n", password)
 	fmt.Printf("  Membro: bruno@example.com / %s\n", password)
 }

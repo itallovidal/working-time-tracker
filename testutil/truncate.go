@@ -11,7 +11,7 @@ func Truncate(t testing.TB, db *sql.DB) {
 	t.Helper()
 	if _, err := db.Exec(`TRUNCATE TABLE
 		sessions, invites, work_sessions, tasks, team_memberships, teams,
-		integrations, projects, persons, organizations CASCADE`); err != nil {
+		integrations, allocations, projects, customers, persons, organizations CASCADE`); err != nil {
 		t.Fatalf("truncate: %v", err)
 	}
 }

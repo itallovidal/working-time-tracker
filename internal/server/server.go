@@ -9,7 +9,9 @@ import (
 	"github.com/labstack/echo/v5/middleware"
 
 	"working-time-tracker/ent"
+	"working-time-tracker/internal/domain/allocation"
 	"working-time-tracker/internal/domain/auth"
+	"working-time-tracker/internal/domain/customer"
 	"working-time-tracker/internal/domain/integration"
 	"working-time-tracker/internal/domain/organization"
 	"working-time-tracker/internal/domain/person"
@@ -36,10 +38,12 @@ type Options struct {
 func New(client *ent.Client, opts Options) (*echo.Echo, error) {
 	// Stores
 	orgStore := organization.NewStore(client)
+	customerStore := customer.NewStore(client)
 	personStore := person.NewStore(client)
 	projectStore := project.NewStore(client)
 	teamStore := team.NewStore(client)
 	membershipStore := team.NewMembershipStore(client)
+	allocationStore := allocation.NewStore(client)
 	taskStore := task.NewStore(client)
 	sessionStore := work_session.NewStore(client)
 	integrationStore := integration.NewStore(client)
@@ -47,10 +51,12 @@ func New(client *ent.Client, opts Options) (*echo.Echo, error) {
 
 	// Services (integration before task; task before work_session due to cross-domain deps)
 	orgSvc := organization.NewService(orgStore)
+	customerSvc := customer.NewService(customerStore)
 	personSvc := person.NewService(personStore)
 	projectSvc := project.NewService(projectStore)
 	teamSvc := team.NewService(teamStore)
 	membershipSvc := team.NewMembershipService(membershipStore)
+	allocationSvc := allocation.NewService(allocationStore)
 	integrationSvc := integration.NewService(integrationStore, opts.EncryptKey)
 	taskSvc := task.NewService(taskStore, membershipStore, integrationSvc)
 	workSessionSvc := work_session.NewService(sessionStore, taskStore)
@@ -59,9 +65,11 @@ func New(client *ent.Client, opts Options) (*echo.Echo, error) {
 	handlers := routes.Handlers{
 		Auth:         auth.NewHandler(authSvc, opts.CookieSecure),
 		Organization: organization.NewHandler(orgSvc),
+		Customer:     customer.NewHandler(customerSvc),
 		Person:       person.NewHandler(personSvc),
 		Project:      project.NewHandler(projectSvc),
 		Team:         team.NewHandler(teamSvc, membershipSvc),
+		Allocation:   allocation.NewHandler(allocationSvc),
 		Task:         task.NewHandler(taskSvc),
 		WorkSession:  work_session.NewHandler(workSessionSvc),
 		Integration:  integration.NewHandler(integrationSvc),

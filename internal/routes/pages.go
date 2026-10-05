@@ -25,6 +25,7 @@ func RegisterPages(e *echo.Echo, p *page.Handler, m *auth.Middleware) {
 	admin := m.RequireAdminPage(p.NotFound)
 	g.GET("/orgs/:orgId/settings", p.OrgSettings, org, admin)
 	g.GET("/orgs/:orgId/people", p.People, org, admin)
+	g.GET("/orgs/:orgId/customers", p.Customers, org, admin)
 	g.GET("/orgs/:orgId/projects", p.OrgProjects, org, admin)
 
 	prj := m.RequireOrgPage(auth.KindProject, "projectId", p.NotFound)
@@ -32,6 +33,7 @@ func RegisterPages(e *echo.Echo, p *page.Handler, m *auth.Middleware) {
 	g.GET("/projects/:projectId/tasks", p.Tasks, prj)
 	g.GET("/projects/:projectId/time-tracking", p.TimeTracking, prj)
 	g.GET("/projects/:projectId/teams", p.Teams, prj)
+	g.GET("/projects/:projectId/rates", p.Rates, prj, admin)
 	g.GET("/projects/:projectId/integrations", p.Integrations, prj)
 	g.GET("/projects/:projectId/settings", p.ProjectSettings, prj)
 

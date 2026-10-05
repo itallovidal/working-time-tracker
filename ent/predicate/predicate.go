@@ -6,6 +6,12 @@ import (
 	"entgo.io/ent/dialect/sql"
 )
 
+// Allocation is the predicate function for allocation builders.
+type Allocation func(*sql.Selector)
+
+// Customer is the predicate function for customer builders.
+type Customer func(*sql.Selector)
+
 // Integration is the predicate function for integration builders.
 type Integration func(*sql.Selector)
 

@@ -504,6 +504,29 @@ func HasCreatedInvitesWith(preds ...predicate.Invite) predicate.Person {
 	})
 }
 
+// HasAllocations applies the HasEdge predicate on the "allocations" edge.
+func HasAllocations() predicate.Person {
+	return predicate.Person(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, AllocationsTable, AllocationsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasAllocationsWith applies the HasEdge predicate on the "allocations" edge with a given conditions (other predicates).
+func HasAllocationsWith(preds ...predicate.Allocation) predicate.Person {
+	return predicate.Person(func(s *sql.Selector) {
+		step := newAllocationsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.Person) predicate.Person {
 	return predicate.Person(sql.AndPredicates(predicates...))
