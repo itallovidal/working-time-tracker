@@ -23,6 +23,10 @@ const (
 	FieldStartAt = "start_at"
 	// FieldEndAt holds the string denoting the end_at field in the database.
 	FieldEndAt = "end_at"
+	// FieldPayRateCents holds the string denoting the pay_rate_cents field in the database.
+	FieldPayRateCents = "pay_rate_cents"
+	// FieldBillRateCents holds the string denoting the bill_rate_cents field in the database.
+	FieldBillRateCents = "bill_rate_cents"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// EdgeTask holds the string denoting the task edge name in mutations.
@@ -54,6 +58,8 @@ var Columns = []string{
 	FieldPersonID,
 	FieldStartAt,
 	FieldEndAt,
+	FieldPayRateCents,
+	FieldBillRateCents,
 	FieldCreatedAt,
 }
 
@@ -68,6 +74,10 @@ func ValidColumn(column string) bool {
 }
 
 var (
+	// PayRateCentsValidator is a validator for the "pay_rate_cents" field. It is called by the builders before save.
+	PayRateCentsValidator func(int) error
+	// BillRateCentsValidator is a validator for the "bill_rate_cents" field. It is called by the builders before save.
+	BillRateCentsValidator func(int) error
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 	// DefaultID holds the default value on creation for the "id" field.
@@ -100,6 +110,16 @@ func ByStartAt(opts ...sql.OrderTermOption) OrderOption {
 // ByEndAt orders the results by the end_at field.
 func ByEndAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldEndAt, opts...).ToFunc()
+}
+
+// ByPayRateCents orders the results by the pay_rate_cents field.
+func ByPayRateCents(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPayRateCents, opts...).ToFunc()
+}
+
+// ByBillRateCents orders the results by the bill_rate_cents field.
+func ByBillRateCents(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBillRateCents, opts...).ToFunc()
 }
 
 // ByCreatedAt orders the results by the created_at field.

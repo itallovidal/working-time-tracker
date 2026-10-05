@@ -334,13 +334,35 @@ O `external-details` nunca falha por causa da plataforma. Se ela estiver fora, o
 | POST | `/api/projects/:projectId/work-sessions/clock-in` | logado | Abre uma sessão: `{"task_id": "…"}` |
 | POST | `/api/projects/:projectId/work-sessions/clock-out` | logado | Fecha a sessão aberta: `{}` |
 | GET | `/api/projects/:projectId/work-sessions` | logado | Sessões do projeto. Filtros: `?task_id=` e `?person_id=` |
-| GET | `/api/projects/:projectId/work-sessions/total` | logado | `{"total_seconds": …}`. Exige `task_id`, `person_id` ou os dois |
+| GET | `/api/projects/:projectId/work-sessions/total` | logado | `{"total_seconds", "pay_amount_cents", "bill_amount_cents"}`. Exige `task_id`, `person_id` ou os dois |
 | GET | `/api/work-sessions/active` | logado | A sua sessão aberta, com a tarefa e o projeto, ou `null` |
 
 - Sem `person_id`, clock-in e clock-out valem para a pessoa logada. Só admins podem mandar o `person_id` de outra pessoa, e ela precisa ser da organização do projeto.
 - O total só soma sessões de tarefas do projeto da rota. Um `task_id` de outro projeto dá `0`.
 - Cada pessoa tem no máximo uma sessão aberta. O banco garante isso com o índice único parcial `one_active_session`, então nem duas requisições simultâneas conseguem abrir duas sessões.
 - Uma sessão aberta conta no total até o momento da consulta.
+
+### Valores nas sessões
+
+- **Sem valor, sem ponto.** O clock-in responde `400` quando a pessoa não tem valor por hora no projeto (`PUT /api/projects/:projectId/allocations/:personId`). Vale também para um admin batendo o ponto de outra pessoa.
+- **O valor é travado no clock-in.** A sessão guarda `pay_rate_cents` (o que a pessoa recebe por hora) e `bill_rate_cents` (o que o cliente paga; `null` em projeto sem valor cobrado). Mudar um valor depois só afeta as sessões seguintes.
+- Cada sessão traz também `pay_amount_cents` e `bill_amount_cents`: o tempo da sessão vezes o valor por hora, arredondado para o centavo. O total soma as sessões já arredondadas.
+- **Quem vê o quê.** Um admin recebe os quatro campos de todas as sessões. Um membro recebe `pay_rate_cents` e `pay_amount_cents` só nas próprias sessões; nas dos colegas, e sempre nos dois campos de `bill`, vem `null`. No total, um membro só recebe `pay_amount_cents` quando filtra por ele mesmo (`?person_id=` o próprio id).
+- Sessões criadas antes dos valores existirem ficam com tudo `null`.
+
+```json
+{
+  "id": "…",
+  "task_id": "…",
+  "person_id": "…",
+  "start_at": "2026-10-05T09:00:00-03:00",
+  "end_at": "2026-10-05T10:30:00-03:00",
+  "pay_rate_cents": 2000,
+  "pay_amount_cents": 3000,
+  "bill_rate_cents": 10000,
+  "bill_amount_cents": 15000
+}
+```
 
 ---
 
@@ -379,9 +401,9 @@ Content-Type: application/json
 4. **Criar projeto:** `POST /api/orgs/:orgId/projects`. Copie o `id` para `project_id`.
 5. **Criar time:** `POST /api/projects/:projectId/teams`, e depois `POST /api/teams/:teamId/members` com o seu próprio `id`.
 6. **Criar tarefa:** `POST /api/projects/:projectId/tasks` com você como responsável.
-7. **Bater o ponto:** `clock-in` com `{"task_id": "…"}`, `GET /api/work-sessions/active` e `clock-out`.
-8. **Totais:** `GET /api/projects/:projectId/work-sessions/total?task_id=…`.
-9. **Cliente e valores:** `POST /api/orgs/:orgId/customers`, `PUT /api/projects/:projectId/billing` com o cliente e `bill_rate_cents`, e `PUT /api/projects/:projectId/allocations/:personId` com `pay_rate_cents`.
+7. **Cliente e valores:** `POST /api/orgs/:orgId/customers`, `PUT /api/projects/:projectId/billing` com o cliente e `bill_rate_cents`, e `PUT /api/projects/:projectId/allocations/:personId` com o seu `id` e `pay_rate_cents`. Sem esse último passo o ponto não abre.
+8. **Bater o ponto:** `clock-in` com `{"task_id": "…"}`, `GET /api/work-sessions/active` e `clock-out`.
+9. **Totais:** `GET /api/projects/:projectId/work-sessions/total?task_id=…`.
 10. **Convidar alguém:** `POST /api/orgs/:orgId/invites`, depois `POST /api/auth/invites/:token/accept` numa sessão sem cookie (ou após `logout`).
 
 ## Variáveis de ambiente (Insomnia)

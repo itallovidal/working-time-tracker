@@ -2,7 +2,6 @@ package work_session
 
 import (
 	"context"
-	"time"
 
 	"github.com/google/uuid"
 
@@ -24,7 +23,9 @@ func (s *Store) Create(session *WorkSession) error {
 	q := s.client.WorkSession.Create().
 		SetTaskID(session.TaskID).
 		SetPersonID(session.PersonID).
-		SetStartAt(session.StartAt)
+		SetStartAt(session.StartAt).
+		SetNillablePayRateCents(session.PayRateCents).
+		SetNillableBillRateCents(session.BillRateCents)
 	if session.EndAt != nil {
 		q = q.SetEndAt(*session.EndAt)
 	}
@@ -83,6 +84,7 @@ func (s *Store) PersonInProjectOrganization(personID, projectID string) (bool, e
 	return p.OrganizationID == prj.OrganizationID, nil
 }
 
+// Update grava o início e o fim. Os valores por hora não mudam depois do clock-in.
 func (s *Store) Update(session *WorkSession) error {
 	q := s.client.WorkSession.UpdateOneID(session.ID).
 		SetStartAt(session.StartAt)
@@ -125,90 +127,6 @@ func (s *Store) ListByProject(projectID string, taskID, personID *string) ([]Wor
 	return toDomainSessions(sessions), nil
 }
 
-// TotalDurationByTask soma as sessões da tarefa. O filtro pelo projeto impede
-// que uma tarefa de outra organização seja somada pela rota do projeto.
-func (s *Store) TotalDurationByTask(taskID, projectID string) (float64, error) {
-	tuid, err := uuid.Parse(taskID)
-	if err != nil {
-		return 0, err
-	}
-	prjid, err := uuid.Parse(projectID)
-	if err != nil {
-		return 0, err
-	}
-	sessions, err := s.client.WorkSession.Query().
-		Where(worksession.TaskIDEQ(tuid), worksession.HasTaskWith(task.ProjectIDEQ(prjid))).
-		All(context.Background())
-	if err != nil {
-		return 0, err
-	}
-	return computeDuration(sessions), nil
-}
-
-func (s *Store) TotalDurationByPerson(personID, projectID string) (float64, error) {
-	puid, err := uuid.Parse(personID)
-	if err != nil {
-		return 0, err
-	}
-	prjid, err := uuid.Parse(projectID)
-	if err != nil {
-		return 0, err
-	}
-	sessions, err := s.client.WorkSession.Query().
-		Where(worksession.PersonIDEQ(puid)).
-		WithTask().
-		All(context.Background())
-	if err != nil {
-		return 0, err
-	}
-	filtered := make([]*ent.WorkSession, 0, len(sessions))
-	for _, s := range sessions {
-		if s.Edges.Task != nil && s.Edges.Task.ProjectID == prjid {
-			filtered = append(filtered, s)
-		}
-	}
-	return computeDuration(filtered), nil
-}
-
-func (s *Store) TotalDurationByTaskAndPerson(taskID, personID, projectID string) (float64, error) {
-	tuid, err := uuid.Parse(taskID)
-	if err != nil {
-		return 0, err
-	}
-	puid, err := uuid.Parse(personID)
-	if err != nil {
-		return 0, err
-	}
-	prjid, err := uuid.Parse(projectID)
-	if err != nil {
-		return 0, err
-	}
-	sessions, err := s.client.WorkSession.Query().
-		Where(
-			worksession.TaskIDEQ(tuid),
-			worksession.PersonIDEQ(puid),
-			worksession.HasTaskWith(task.ProjectIDEQ(prjid)),
-		).
-		All(context.Background())
-	if err != nil {
-		return 0, err
-	}
-	return computeDuration(sessions), nil
-}
-
-func computeDuration(sessions []*ent.WorkSession) float64 {
-	var total float64
-	now := time.Now()
-	for _, s := range sessions {
-		end := s.EndAt
-		if end == nil {
-			end = &now
-		}
-		total += end.Sub(s.StartAt).Seconds()
-	}
-	return total
-}
-
 func toDomainSession(e *ent.WorkSession) *WorkSession {
 	if e == nil {
 		return nil
@@ -220,6 +138,9 @@ func toDomainSession(e *ent.WorkSession) *WorkSession {
 		StartAt:   e.StartAt,
 		EndAt:     e.EndAt,
 		CreatedAt: e.CreatedAt,
+
+		PayRateCents:  e.PayRateCents,
+		BillRateCents: e.BillRateCents,
 	}
 	if e.Edges.Task != nil {
 		s.Task = &Task{

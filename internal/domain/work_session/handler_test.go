@@ -10,6 +10,7 @@ import (
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
 
+	"working-time-tracker/internal/domain/allocation"
 	"working-time-tracker/internal/domain/integration"
 	"working-time-tracker/internal/domain/organization"
 	"working-time-tracker/internal/domain/person"
@@ -38,7 +39,7 @@ func setupTestApp(t *testing.T) *testApp {
 	memberSvc := team.NewMembershipService(team.NewMembershipStore(testClient))
 	integSvc := integration.NewService(integration.NewStore(testClient), "test-32-byte-encryption-key!!!!")
 	taskSvc := task.NewService(task.NewStore(testClient), team.NewMembershipStore(testClient), integSvc)
-	wsSvc := work_session.NewService(work_session.NewStore(testClient), task.NewStore(testClient))
+	wsSvc := work_session.NewService(work_session.NewStore(testClient), task.NewStore(testClient), allocation.NewStore(testClient))
 
 	e := echo.New()
 	e.Use(middleware.Recover())
@@ -74,6 +75,11 @@ func setupTestApp(t *testing.T) *testApp {
 	taskObj := mustCreate(t, e, "POST", "/api/projects/"+projectID+"/tasks", `{"name":"Task A","assignee_id":"`+personID+`"}`)
 	taskID := jsonPath(taskObj, "id")
 
+	// Sem valor por hora no projeto a pessoa não bate ponto.
+	if _, err := allocation.NewService(allocation.NewStore(testClient)).Set(projectID, personID, 2000); err != nil {
+		t.Fatalf("set rate: %v", err)
+	}
+
 	return &testApp{
 		e:         e,
 		orgID:     orgID,
@@ -103,6 +109,10 @@ func TestHandler_ClockInOut(t *testing.T) {
 	app.e.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("clock-out expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+	// Este handler está montado sem login: sem saber quem pede, nenhum valor sai.
+	if !strings.Contains(rec.Body.String(), `"pay_rate_cents":null`) || !strings.Contains(rec.Body.String(), `"pay_amount_cents":null`) {
+		t.Errorf("response without a logged-in person shows rates: %s", rec.Body.String())
 	}
 }
 

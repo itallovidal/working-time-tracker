@@ -90,6 +90,23 @@ func (s *Store) ListByPerson(personID uuid.UUID) ([]Allocation, error) {
 	return result, nil
 }
 
+// Rates devolve os dois valores por hora de uma pessoa num projeto: o que ela
+// recebe e o que o cliente paga (nil em projeto sem valor cobrado). found é
+// false quando a pessoa não tem vínculo com o projeto.
+func (s *Store) Rates(personID, projectID uuid.UUID) (payRateCents int, billRateCents *int, found bool, err error) {
+	a, err := s.client.Allocation.Query().
+		Where(entalloc.ProjectIDEQ(projectID), entalloc.PersonIDEQ(personID)).
+		WithProject().
+		Only(context.Background())
+	if ent.IsNotFound(err) {
+		return 0, nil, false, nil
+	}
+	if err != nil {
+		return 0, nil, false, err
+	}
+	return a.PayRateCents, a.Edges.Project.BillRateCents, true, nil
+}
+
 func (s *Store) Delete(projectID, personID uuid.UUID) error {
 	n, err := s.client.Allocation.Delete().
 		Where(entalloc.ProjectIDEQ(projectID), entalloc.PersonIDEQ(personID)).

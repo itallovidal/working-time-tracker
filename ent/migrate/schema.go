@@ -346,6 +346,8 @@ var (
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "start_at", Type: field.TypeTime},
 		{Name: "end_at", Type: field.TypeTime, Nullable: true},
+		{Name: "pay_rate_cents", Type: field.TypeInt, Nullable: true},
+		{Name: "bill_rate_cents", Type: field.TypeInt, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "person_id", Type: field.TypeUUID},
 		{Name: "task_id", Type: field.TypeUUID},
@@ -358,13 +360,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "work_sessions_persons_work_sessions",
-				Columns:    []*schema.Column{WorkSessionsColumns[4]},
+				Columns:    []*schema.Column{WorkSessionsColumns[6]},
 				RefColumns: []*schema.Column{PersonsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "work_sessions_tasks_work_sessions",
-				Columns:    []*schema.Column{WorkSessionsColumns[5]},
+				Columns:    []*schema.Column{WorkSessionsColumns[7]},
 				RefColumns: []*schema.Column{TasksColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -373,7 +375,7 @@ var (
 			{
 				Name:    "one_active_session",
 				Unique:  true,
-				Columns: []*schema.Column{WorkSessionsColumns[4]},
+				Columns: []*schema.Column{WorkSessionsColumns[6]},
 				Annotation: &entsql.IndexAnnotation{
 					Where: "end_at IS NULL",
 				},

@@ -34,6 +34,19 @@ func personFor(c *echo.Context, requested string) (string, int, string) {
 	return requested, 0, ""
 }
 
+// redact apaga da sessão os valores que quem chama não pode ver. O valor cobrado
+// do cliente é só de admins; o valor pago é dos admins e da própria pessoa. Sem
+// login no contexto, nada é mostrado.
+func redact(me *auth.Identity, s *WorkSession) {
+	if s == nil || me.IsAdmin() {
+		return
+	}
+	s.BillRateCents, s.BillAmountCents = nil, nil
+	if me == nil || s.PersonID != me.PersonID {
+		s.PayRateCents, s.PayAmountCents = nil, nil
+	}
+}
+
 func (h *Handler) ClockIn(c *echo.Context) error {
 	projectID := c.Param("projectId")
 	var body struct {
@@ -54,6 +67,7 @@ func (h *Handler) ClockIn(c *echo.Context) error {
 	if err != nil {
 		return c.JSON(400, map[string]string{"error": err.Error()})
 	}
+	redact(auth.CurrentPerson(c), session)
 	return c.JSON(201, session)
 }
 
@@ -72,6 +86,7 @@ func (h *Handler) ClockOut(c *echo.Context) error {
 	if err != nil {
 		return c.JSON(400, map[string]string{"error": err.Error()})
 	}
+	redact(auth.CurrentPerson(c), session)
 	return c.JSON(200, session)
 }
 
@@ -91,6 +106,10 @@ func (h *Handler) List(c *echo.Context) error {
 	sessions, err := h.svc.ListByProject(projectID, taskIDPtr, personIDPtr)
 	if err != nil {
 		return c.JSON(500, map[string]string{"error": err.Error()})
+	}
+	me := auth.CurrentPerson(c)
+	for i := range sessions {
+		redact(me, &sessions[i])
 	}
 	return c.JSON(200, sessions)
 }
@@ -112,6 +131,14 @@ func (h *Handler) Total(c *echo.Context) error {
 	if err != nil {
 		return c.JSON(400, map[string]string{"error": err.Error()})
 	}
+	// Os mesmos limites das sessões: um membro só vê quanto ganhou quando o
+	// filtro é ele mesmo, e nunca o valor cobrado.
+	if me := auth.CurrentPerson(c); !me.IsAdmin() {
+		total.BillAmountCents = nil
+		if me == nil || personID != me.PersonID.String() {
+			total.PayAmountCents = nil
+		}
+	}
 	return c.JSON(200, total)
 }
 
@@ -125,5 +152,6 @@ func (h *Handler) Active(c *echo.Context) error {
 	if err != nil {
 		return c.JSON(500, map[string]string{"error": err.Error()})
 	}
+	redact(me, session)
 	return c.JSON(200, session)
 }

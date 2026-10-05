@@ -17,6 +17,24 @@ document.addEventListener('alpine:init', () => {
     return { label: WTT.fmt.date(iso), cls: '' };
   }
 
+  // periodStart devolve o início de hoje ou desta semana (a partir de segunda).
+  function periodStart(period) {
+    const start = new Date(clock().now);
+    start.setHours(0, 0, 0, 0);
+    if (period === 'week') start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+    return start.getTime();
+  }
+
+  // amountWithin soma quanto a pessoa ganhou depois de "since": o tempo de cada
+  // sessão dentro do período vezes o valor por hora daquela sessão. Usa o mesmo
+  // arredondamento do servidor, por sessão.
+  function amountWithin(sessions, since) {
+    return sessions.reduce((sum, s) => {
+      if (s.pay_rate_cents === null || s.pay_rate_cents === undefined) return sum;
+      return sum + Math.round(secondsWithin([s], since) * s.pay_rate_cents / 3600);
+    }, 0);
+  }
+
   const integrationNames = { github: 'GitHub', gitlab: 'GitLab' };
   function externalLabel(task) {
     const type = task.external_integration ? task.external_integration.type : '';
@@ -275,15 +293,19 @@ document.addEventListener('alpine:init', () => {
     tasks: [],
     sessions: [],
     taskId: '',
+    myRate: null, // quanto a pessoa logada recebe por hora aqui; null se ainda não tem valor
     filter: { task: '', person: '' },
     async init() {
       try {
-        const [tasks, sessions] = await Promise.all([
+        const [tasks, sessions, allocations] = await Promise.all([
           api('GET', '/api/projects/' + project.id + '/tasks'),
           api('GET', '/api/projects/' + project.id + '/work-sessions'),
+          api('GET', '/api/projects/' + project.id + '/allocations'),
         ]);
         this.tasks = tasks || [];
         this.sessions = sessions || [];
+        const own = (allocations || []).find((a) => a.person_id === me.id);
+        this.myRate = own ? own.pay_rate_cents : null;
         // Sugere uma tarefa da própria pessoa.
         const mine = this.tasks.find((t) => t.assignee_id === me.id) || this.tasks[0];
         this.taskId = mine ? mine.id : '';
@@ -320,12 +342,29 @@ document.addEventListener('alpine:init', () => {
     filteredTotal() {
       return this.filtered().reduce((sum, s) => sum + clock().elapsed(s), 0);
     },
-    // mine soma o tempo da pessoa logada hoje ou nesta semana (a partir de segunda).
+    // mine soma o tempo da pessoa logada hoje ou nesta semana, e earned, quanto
+    // ela ganhou nesse tempo.
     mine(period) {
-      const start = new Date(clock().now);
-      start.setHours(0, 0, 0, 0);
-      if (period === 'week') start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
-      return secondsWithin(this.sessions.filter((s) => s.person_id === me.id), start.getTime());
+      return secondsWithin(this.sessions.filter((s) => s.person_id === me.id), periodStart(period));
+    },
+    earned(period) {
+      return amountWithin(this.sessions.filter((s) => s.person_id === me.id), periodStart(period));
+    },
+    // amount é o valor de uma sessão: 'pay' é o que a pessoa recebe e 'bill', o
+    // que o cliente paga. A sessão fechada usa o valor que o servidor calculou; a
+    // aberta acompanha o cronômetro. null quando não há valor ou ele não é visível.
+    amount(s, kind) {
+      const rate = s[kind + '_rate_cents'];
+      if (rate === null || rate === undefined) return null;
+      return s.end_at ? s[kind + '_amount_cents'] : Math.round(clock().elapsed(s) * rate / 3600);
+    },
+    filteredAmount(kind) {
+      const values = this.filtered().map((s) => this.amount(s, kind)).filter((v) => v !== null && v !== undefined);
+      return values.length === 0 ? null : values.reduce((sum, v) => sum + v, 0);
+    },
+    filteredMargin() {
+      const bill = this.filteredAmount('bill');
+      return bill === null ? null : bill - (this.filteredAmount('pay') || 0);
     },
   }));
 

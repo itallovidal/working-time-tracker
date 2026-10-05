@@ -93,6 +93,60 @@ func (_u *WorkSessionUpdate) ClearEndAt() *WorkSessionUpdate {
 	return _u
 }
 
+// SetPayRateCents sets the "pay_rate_cents" field.
+func (_u *WorkSessionUpdate) SetPayRateCents(v int) *WorkSessionUpdate {
+	_u.mutation.ResetPayRateCents()
+	_u.mutation.SetPayRateCents(v)
+	return _u
+}
+
+// SetNillablePayRateCents sets the "pay_rate_cents" field if the given value is not nil.
+func (_u *WorkSessionUpdate) SetNillablePayRateCents(v *int) *WorkSessionUpdate {
+	if v != nil {
+		_u.SetPayRateCents(*v)
+	}
+	return _u
+}
+
+// AddPayRateCents adds value to the "pay_rate_cents" field.
+func (_u *WorkSessionUpdate) AddPayRateCents(v int) *WorkSessionUpdate {
+	_u.mutation.AddPayRateCents(v)
+	return _u
+}
+
+// ClearPayRateCents clears the value of the "pay_rate_cents" field.
+func (_u *WorkSessionUpdate) ClearPayRateCents() *WorkSessionUpdate {
+	_u.mutation.ClearPayRateCents()
+	return _u
+}
+
+// SetBillRateCents sets the "bill_rate_cents" field.
+func (_u *WorkSessionUpdate) SetBillRateCents(v int) *WorkSessionUpdate {
+	_u.mutation.ResetBillRateCents()
+	_u.mutation.SetBillRateCents(v)
+	return _u
+}
+
+// SetNillableBillRateCents sets the "bill_rate_cents" field if the given value is not nil.
+func (_u *WorkSessionUpdate) SetNillableBillRateCents(v *int) *WorkSessionUpdate {
+	if v != nil {
+		_u.SetBillRateCents(*v)
+	}
+	return _u
+}
+
+// AddBillRateCents adds value to the "bill_rate_cents" field.
+func (_u *WorkSessionUpdate) AddBillRateCents(v int) *WorkSessionUpdate {
+	_u.mutation.AddBillRateCents(v)
+	return _u
+}
+
+// ClearBillRateCents clears the value of the "bill_rate_cents" field.
+func (_u *WorkSessionUpdate) ClearBillRateCents() *WorkSessionUpdate {
+	_u.mutation.ClearBillRateCents()
+	return _u
+}
+
 // SetTask sets the "task" edge to the Task entity.
 func (_u *WorkSessionUpdate) SetTask(v *Task) *WorkSessionUpdate {
 	return _u.SetTaskID(v.ID)
@@ -149,6 +203,16 @@ func (_u *WorkSessionUpdate) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *WorkSessionUpdate) check() error {
+	if v, ok := _u.mutation.PayRateCents(); ok {
+		if err := worksession.PayRateCentsValidator(v); err != nil {
+			return &ValidationError{Name: "pay_rate_cents", err: fmt.Errorf(`ent: validator failed for field "WorkSession.pay_rate_cents": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.BillRateCents(); ok {
+		if err := worksession.BillRateCentsValidator(v); err != nil {
+			return &ValidationError{Name: "bill_rate_cents", err: fmt.Errorf(`ent: validator failed for field "WorkSession.bill_rate_cents": %w`, err)}
+		}
+	}
 	if _u.mutation.TaskCleared() && len(_u.mutation.TaskIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "WorkSession.task"`)
 	}
@@ -178,6 +242,24 @@ func (_u *WorkSessionUpdate) sqlSave(ctx context.Context) (_node int, err error)
 	}
 	if _u.mutation.EndAtCleared() {
 		_spec.ClearField(worksession.FieldEndAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.PayRateCents(); ok {
+		_spec.SetField(worksession.FieldPayRateCents, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedPayRateCents(); ok {
+		_spec.AddField(worksession.FieldPayRateCents, field.TypeInt, value)
+	}
+	if _u.mutation.PayRateCentsCleared() {
+		_spec.ClearField(worksession.FieldPayRateCents, field.TypeInt)
+	}
+	if value, ok := _u.mutation.BillRateCents(); ok {
+		_spec.SetField(worksession.FieldBillRateCents, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedBillRateCents(); ok {
+		_spec.AddField(worksession.FieldBillRateCents, field.TypeInt, value)
+	}
+	if _u.mutation.BillRateCentsCleared() {
+		_spec.ClearField(worksession.FieldBillRateCents, field.TypeInt)
 	}
 	if _u.mutation.TaskCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -319,6 +401,60 @@ func (_u *WorkSessionUpdateOne) ClearEndAt() *WorkSessionUpdateOne {
 	return _u
 }
 
+// SetPayRateCents sets the "pay_rate_cents" field.
+func (_u *WorkSessionUpdateOne) SetPayRateCents(v int) *WorkSessionUpdateOne {
+	_u.mutation.ResetPayRateCents()
+	_u.mutation.SetPayRateCents(v)
+	return _u
+}
+
+// SetNillablePayRateCents sets the "pay_rate_cents" field if the given value is not nil.
+func (_u *WorkSessionUpdateOne) SetNillablePayRateCents(v *int) *WorkSessionUpdateOne {
+	if v != nil {
+		_u.SetPayRateCents(*v)
+	}
+	return _u
+}
+
+// AddPayRateCents adds value to the "pay_rate_cents" field.
+func (_u *WorkSessionUpdateOne) AddPayRateCents(v int) *WorkSessionUpdateOne {
+	_u.mutation.AddPayRateCents(v)
+	return _u
+}
+
+// ClearPayRateCents clears the value of the "pay_rate_cents" field.
+func (_u *WorkSessionUpdateOne) ClearPayRateCents() *WorkSessionUpdateOne {
+	_u.mutation.ClearPayRateCents()
+	return _u
+}
+
+// SetBillRateCents sets the "bill_rate_cents" field.
+func (_u *WorkSessionUpdateOne) SetBillRateCents(v int) *WorkSessionUpdateOne {
+	_u.mutation.ResetBillRateCents()
+	_u.mutation.SetBillRateCents(v)
+	return _u
+}
+
+// SetNillableBillRateCents sets the "bill_rate_cents" field if the given value is not nil.
+func (_u *WorkSessionUpdateOne) SetNillableBillRateCents(v *int) *WorkSessionUpdateOne {
+	if v != nil {
+		_u.SetBillRateCents(*v)
+	}
+	return _u
+}
+
+// AddBillRateCents adds value to the "bill_rate_cents" field.
+func (_u *WorkSessionUpdateOne) AddBillRateCents(v int) *WorkSessionUpdateOne {
+	_u.mutation.AddBillRateCents(v)
+	return _u
+}
+
+// ClearBillRateCents clears the value of the "bill_rate_cents" field.
+func (_u *WorkSessionUpdateOne) ClearBillRateCents() *WorkSessionUpdateOne {
+	_u.mutation.ClearBillRateCents()
+	return _u
+}
+
 // SetTask sets the "task" edge to the Task entity.
 func (_u *WorkSessionUpdateOne) SetTask(v *Task) *WorkSessionUpdateOne {
 	return _u.SetTaskID(v.ID)
@@ -388,6 +524,16 @@ func (_u *WorkSessionUpdateOne) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *WorkSessionUpdateOne) check() error {
+	if v, ok := _u.mutation.PayRateCents(); ok {
+		if err := worksession.PayRateCentsValidator(v); err != nil {
+			return &ValidationError{Name: "pay_rate_cents", err: fmt.Errorf(`ent: validator failed for field "WorkSession.pay_rate_cents": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.BillRateCents(); ok {
+		if err := worksession.BillRateCentsValidator(v); err != nil {
+			return &ValidationError{Name: "bill_rate_cents", err: fmt.Errorf(`ent: validator failed for field "WorkSession.bill_rate_cents": %w`, err)}
+		}
+	}
 	if _u.mutation.TaskCleared() && len(_u.mutation.TaskIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "WorkSession.task"`)
 	}
@@ -434,6 +580,24 @@ func (_u *WorkSessionUpdateOne) sqlSave(ctx context.Context) (_node *WorkSession
 	}
 	if _u.mutation.EndAtCleared() {
 		_spec.ClearField(worksession.FieldEndAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.PayRateCents(); ok {
+		_spec.SetField(worksession.FieldPayRateCents, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedPayRateCents(); ok {
+		_spec.AddField(worksession.FieldPayRateCents, field.TypeInt, value)
+	}
+	if _u.mutation.PayRateCentsCleared() {
+		_spec.ClearField(worksession.FieldPayRateCents, field.TypeInt)
+	}
+	if value, ok := _u.mutation.BillRateCents(); ok {
+		_spec.SetField(worksession.FieldBillRateCents, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedBillRateCents(); ok {
+		_spec.AddField(worksession.FieldBillRateCents, field.TypeInt, value)
+	}
+	if _u.mutation.BillRateCentsCleared() {
+		_spec.ClearField(worksession.FieldBillRateCents, field.TypeInt)
 	}
 	if _u.mutation.TaskCleared() {
 		edge := &sqlgraph.EdgeSpec{

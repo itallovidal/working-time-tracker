@@ -76,6 +76,16 @@ func EndAt(v time.Time) predicate.WorkSession {
 	return predicate.WorkSession(sql.FieldEQ(FieldEndAt, v))
 }
 
+// PayRateCents applies equality check predicate on the "pay_rate_cents" field. It's identical to PayRateCentsEQ.
+func PayRateCents(v int) predicate.WorkSession {
+	return predicate.WorkSession(sql.FieldEQ(FieldPayRateCents, v))
+}
+
+// BillRateCents applies equality check predicate on the "bill_rate_cents" field. It's identical to BillRateCentsEQ.
+func BillRateCents(v int) predicate.WorkSession {
+	return predicate.WorkSession(sql.FieldEQ(FieldBillRateCents, v))
+}
+
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.WorkSession {
 	return predicate.WorkSession(sql.FieldEQ(FieldCreatedAt, v))
@@ -209,6 +219,106 @@ func EndAtIsNil() predicate.WorkSession {
 // EndAtNotNil applies the NotNil predicate on the "end_at" field.
 func EndAtNotNil() predicate.WorkSession {
 	return predicate.WorkSession(sql.FieldNotNull(FieldEndAt))
+}
+
+// PayRateCentsEQ applies the EQ predicate on the "pay_rate_cents" field.
+func PayRateCentsEQ(v int) predicate.WorkSession {
+	return predicate.WorkSession(sql.FieldEQ(FieldPayRateCents, v))
+}
+
+// PayRateCentsNEQ applies the NEQ predicate on the "pay_rate_cents" field.
+func PayRateCentsNEQ(v int) predicate.WorkSession {
+	return predicate.WorkSession(sql.FieldNEQ(FieldPayRateCents, v))
+}
+
+// PayRateCentsIn applies the In predicate on the "pay_rate_cents" field.
+func PayRateCentsIn(vs ...int) predicate.WorkSession {
+	return predicate.WorkSession(sql.FieldIn(FieldPayRateCents, vs...))
+}
+
+// PayRateCentsNotIn applies the NotIn predicate on the "pay_rate_cents" field.
+func PayRateCentsNotIn(vs ...int) predicate.WorkSession {
+	return predicate.WorkSession(sql.FieldNotIn(FieldPayRateCents, vs...))
+}
+
+// PayRateCentsGT applies the GT predicate on the "pay_rate_cents" field.
+func PayRateCentsGT(v int) predicate.WorkSession {
+	return predicate.WorkSession(sql.FieldGT(FieldPayRateCents, v))
+}
+
+// PayRateCentsGTE applies the GTE predicate on the "pay_rate_cents" field.
+func PayRateCentsGTE(v int) predicate.WorkSession {
+	return predicate.WorkSession(sql.FieldGTE(FieldPayRateCents, v))
+}
+
+// PayRateCentsLT applies the LT predicate on the "pay_rate_cents" field.
+func PayRateCentsLT(v int) predicate.WorkSession {
+	return predicate.WorkSession(sql.FieldLT(FieldPayRateCents, v))
+}
+
+// PayRateCentsLTE applies the LTE predicate on the "pay_rate_cents" field.
+func PayRateCentsLTE(v int) predicate.WorkSession {
+	return predicate.WorkSession(sql.FieldLTE(FieldPayRateCents, v))
+}
+
+// PayRateCentsIsNil applies the IsNil predicate on the "pay_rate_cents" field.
+func PayRateCentsIsNil() predicate.WorkSession {
+	return predicate.WorkSession(sql.FieldIsNull(FieldPayRateCents))
+}
+
+// PayRateCentsNotNil applies the NotNil predicate on the "pay_rate_cents" field.
+func PayRateCentsNotNil() predicate.WorkSession {
+	return predicate.WorkSession(sql.FieldNotNull(FieldPayRateCents))
+}
+
+// BillRateCentsEQ applies the EQ predicate on the "bill_rate_cents" field.
+func BillRateCentsEQ(v int) predicate.WorkSession {
+	return predicate.WorkSession(sql.FieldEQ(FieldBillRateCents, v))
+}
+
+// BillRateCentsNEQ applies the NEQ predicate on the "bill_rate_cents" field.
+func BillRateCentsNEQ(v int) predicate.WorkSession {
+	return predicate.WorkSession(sql.FieldNEQ(FieldBillRateCents, v))
+}
+
+// BillRateCentsIn applies the In predicate on the "bill_rate_cents" field.
+func BillRateCentsIn(vs ...int) predicate.WorkSession {
+	return predicate.WorkSession(sql.FieldIn(FieldBillRateCents, vs...))
+}
+
+// BillRateCentsNotIn applies the NotIn predicate on the "bill_rate_cents" field.
+func BillRateCentsNotIn(vs ...int) predicate.WorkSession {
+	return predicate.WorkSession(sql.FieldNotIn(FieldBillRateCents, vs...))
+}
+
+// BillRateCentsGT applies the GT predicate on the "bill_rate_cents" field.
+func BillRateCentsGT(v int) predicate.WorkSession {
+	return predicate.WorkSession(sql.FieldGT(FieldBillRateCents, v))
+}
+
+// BillRateCentsGTE applies the GTE predicate on the "bill_rate_cents" field.
+func BillRateCentsGTE(v int) predicate.WorkSession {
+	return predicate.WorkSession(sql.FieldGTE(FieldBillRateCents, v))
+}
+
+// BillRateCentsLT applies the LT predicate on the "bill_rate_cents" field.
+func BillRateCentsLT(v int) predicate.WorkSession {
+	return predicate.WorkSession(sql.FieldLT(FieldBillRateCents, v))
+}
+
+// BillRateCentsLTE applies the LTE predicate on the "bill_rate_cents" field.
+func BillRateCentsLTE(v int) predicate.WorkSession {
+	return predicate.WorkSession(sql.FieldLTE(FieldBillRateCents, v))
+}
+
+// BillRateCentsIsNil applies the IsNil predicate on the "bill_rate_cents" field.
+func BillRateCentsIsNil() predicate.WorkSession {
+	return predicate.WorkSession(sql.FieldIsNull(FieldBillRateCents))
+}
+
+// BillRateCentsNotNil applies the NotNil predicate on the "bill_rate_cents" field.
+func BillRateCentsNotNil() predicate.WorkSession {
+	return predicate.WorkSession(sql.FieldNotNull(FieldBillRateCents))
 }
 
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.

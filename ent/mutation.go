@@ -11038,20 +11038,24 @@ func (m *TeamMembershipMutation) ResetEdge(name string) error {
 // WorkSessionMutation represents an operation that mutates the WorkSession nodes in the graph.
 type WorkSessionMutation struct {
 	config
-	op            Op
-	typ           string
-	id            *uuid.UUID
-	start_at      *time.Time
-	end_at        *time.Time
-	created_at    *time.Time
-	clearedFields map[string]struct{}
-	task          *uuid.UUID
-	clearedtask   bool
-	person        *uuid.UUID
-	clearedperson bool
-	done          bool
-	oldValue      func(context.Context) (*WorkSession, error)
-	predicates    []predicate.WorkSession
+	op                 Op
+	typ                string
+	id                 *uuid.UUID
+	start_at           *time.Time
+	end_at             *time.Time
+	pay_rate_cents     *int
+	addpay_rate_cents  *int
+	bill_rate_cents    *int
+	addbill_rate_cents *int
+	created_at         *time.Time
+	clearedFields      map[string]struct{}
+	task               *uuid.UUID
+	clearedtask        bool
+	person             *uuid.UUID
+	clearedperson      bool
+	done               bool
+	oldValue           func(context.Context) (*WorkSession, error)
+	predicates         []predicate.WorkSession
 }
 
 var _ ent.Mutation = (*WorkSessionMutation)(nil)
@@ -11315,6 +11319,146 @@ func (m *WorkSessionMutation) ResetEndAt() {
 	delete(m.clearedFields, worksession.FieldEndAt)
 }
 
+// SetPayRateCents sets the "pay_rate_cents" field.
+func (m *WorkSessionMutation) SetPayRateCents(i int) {
+	m.pay_rate_cents = &i
+	m.addpay_rate_cents = nil
+}
+
+// PayRateCents returns the value of the "pay_rate_cents" field in the mutation.
+func (m *WorkSessionMutation) PayRateCents() (r int, exists bool) {
+	v := m.pay_rate_cents
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPayRateCents returns the old "pay_rate_cents" field's value of the WorkSession entity.
+// If the WorkSession object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *WorkSessionMutation) OldPayRateCents(ctx context.Context) (v *int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPayRateCents is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPayRateCents requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPayRateCents: %w", err)
+	}
+	return oldValue.PayRateCents, nil
+}
+
+// AddPayRateCents adds i to the "pay_rate_cents" field.
+func (m *WorkSessionMutation) AddPayRateCents(i int) {
+	if m.addpay_rate_cents != nil {
+		*m.addpay_rate_cents += i
+	} else {
+		m.addpay_rate_cents = &i
+	}
+}
+
+// AddedPayRateCents returns the value that was added to the "pay_rate_cents" field in this mutation.
+func (m *WorkSessionMutation) AddedPayRateCents() (r int, exists bool) {
+	v := m.addpay_rate_cents
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearPayRateCents clears the value of the "pay_rate_cents" field.
+func (m *WorkSessionMutation) ClearPayRateCents() {
+	m.pay_rate_cents = nil
+	m.addpay_rate_cents = nil
+	m.clearedFields[worksession.FieldPayRateCents] = struct{}{}
+}
+
+// PayRateCentsCleared returns if the "pay_rate_cents" field was cleared in this mutation.
+func (m *WorkSessionMutation) PayRateCentsCleared() bool {
+	_, ok := m.clearedFields[worksession.FieldPayRateCents]
+	return ok
+}
+
+// ResetPayRateCents resets all changes to the "pay_rate_cents" field.
+func (m *WorkSessionMutation) ResetPayRateCents() {
+	m.pay_rate_cents = nil
+	m.addpay_rate_cents = nil
+	delete(m.clearedFields, worksession.FieldPayRateCents)
+}
+
+// SetBillRateCents sets the "bill_rate_cents" field.
+func (m *WorkSessionMutation) SetBillRateCents(i int) {
+	m.bill_rate_cents = &i
+	m.addbill_rate_cents = nil
+}
+
+// BillRateCents returns the value of the "bill_rate_cents" field in the mutation.
+func (m *WorkSessionMutation) BillRateCents() (r int, exists bool) {
+	v := m.bill_rate_cents
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBillRateCents returns the old "bill_rate_cents" field's value of the WorkSession entity.
+// If the WorkSession object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *WorkSessionMutation) OldBillRateCents(ctx context.Context) (v *int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBillRateCents is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBillRateCents requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBillRateCents: %w", err)
+	}
+	return oldValue.BillRateCents, nil
+}
+
+// AddBillRateCents adds i to the "bill_rate_cents" field.
+func (m *WorkSessionMutation) AddBillRateCents(i int) {
+	if m.addbill_rate_cents != nil {
+		*m.addbill_rate_cents += i
+	} else {
+		m.addbill_rate_cents = &i
+	}
+}
+
+// AddedBillRateCents returns the value that was added to the "bill_rate_cents" field in this mutation.
+func (m *WorkSessionMutation) AddedBillRateCents() (r int, exists bool) {
+	v := m.addbill_rate_cents
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearBillRateCents clears the value of the "bill_rate_cents" field.
+func (m *WorkSessionMutation) ClearBillRateCents() {
+	m.bill_rate_cents = nil
+	m.addbill_rate_cents = nil
+	m.clearedFields[worksession.FieldBillRateCents] = struct{}{}
+}
+
+// BillRateCentsCleared returns if the "bill_rate_cents" field was cleared in this mutation.
+func (m *WorkSessionMutation) BillRateCentsCleared() bool {
+	_, ok := m.clearedFields[worksession.FieldBillRateCents]
+	return ok
+}
+
+// ResetBillRateCents resets all changes to the "bill_rate_cents" field.
+func (m *WorkSessionMutation) ResetBillRateCents() {
+	m.bill_rate_cents = nil
+	m.addbill_rate_cents = nil
+	delete(m.clearedFields, worksession.FieldBillRateCents)
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (m *WorkSessionMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
@@ -11439,7 +11583,7 @@ func (m *WorkSessionMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *WorkSessionMutation) Fields() []string {
-	fields := make([]string, 0, 5)
+	fields := make([]string, 0, 7)
 	if m.task != nil {
 		fields = append(fields, worksession.FieldTaskID)
 	}
@@ -11451,6 +11595,12 @@ func (m *WorkSessionMutation) Fields() []string {
 	}
 	if m.end_at != nil {
 		fields = append(fields, worksession.FieldEndAt)
+	}
+	if m.pay_rate_cents != nil {
+		fields = append(fields, worksession.FieldPayRateCents)
+	}
+	if m.bill_rate_cents != nil {
+		fields = append(fields, worksession.FieldBillRateCents)
 	}
 	if m.created_at != nil {
 		fields = append(fields, worksession.FieldCreatedAt)
@@ -11471,6 +11621,10 @@ func (m *WorkSessionMutation) Field(name string) (ent.Value, bool) {
 		return m.StartAt()
 	case worksession.FieldEndAt:
 		return m.EndAt()
+	case worksession.FieldPayRateCents:
+		return m.PayRateCents()
+	case worksession.FieldBillRateCents:
+		return m.BillRateCents()
 	case worksession.FieldCreatedAt:
 		return m.CreatedAt()
 	}
@@ -11490,6 +11644,10 @@ func (m *WorkSessionMutation) OldField(ctx context.Context, name string) (ent.Va
 		return m.OldStartAt(ctx)
 	case worksession.FieldEndAt:
 		return m.OldEndAt(ctx)
+	case worksession.FieldPayRateCents:
+		return m.OldPayRateCents(ctx)
+	case worksession.FieldBillRateCents:
+		return m.OldBillRateCents(ctx)
 	case worksession.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	}
@@ -11529,6 +11687,20 @@ func (m *WorkSessionMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetEndAt(v)
 		return nil
+	case worksession.FieldPayRateCents:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPayRateCents(v)
+		return nil
+	case worksession.FieldBillRateCents:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBillRateCents(v)
+		return nil
 	case worksession.FieldCreatedAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -11543,13 +11715,26 @@ func (m *WorkSessionMutation) SetField(name string, value ent.Value) error {
 // AddedFields returns all numeric fields that were incremented/decremented during
 // this mutation.
 func (m *WorkSessionMutation) AddedFields() []string {
-	return nil
+	var fields []string
+	if m.addpay_rate_cents != nil {
+		fields = append(fields, worksession.FieldPayRateCents)
+	}
+	if m.addbill_rate_cents != nil {
+		fields = append(fields, worksession.FieldBillRateCents)
+	}
+	return fields
 }
 
 // AddedField returns the numeric value that was incremented/decremented on a field
 // with the given name. The second boolean return value indicates that this field
 // was not set, or was not defined in the schema.
 func (m *WorkSessionMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case worksession.FieldPayRateCents:
+		return m.AddedPayRateCents()
+	case worksession.FieldBillRateCents:
+		return m.AddedBillRateCents()
+	}
 	return nil, false
 }
 
@@ -11558,6 +11743,20 @@ func (m *WorkSessionMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *WorkSessionMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case worksession.FieldPayRateCents:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddPayRateCents(v)
+		return nil
+	case worksession.FieldBillRateCents:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddBillRateCents(v)
+		return nil
 	}
 	return fmt.Errorf("unknown WorkSession numeric field %s", name)
 }
@@ -11568,6 +11767,12 @@ func (m *WorkSessionMutation) ClearedFields() []string {
 	var fields []string
 	if m.FieldCleared(worksession.FieldEndAt) {
 		fields = append(fields, worksession.FieldEndAt)
+	}
+	if m.FieldCleared(worksession.FieldPayRateCents) {
+		fields = append(fields, worksession.FieldPayRateCents)
+	}
+	if m.FieldCleared(worksession.FieldBillRateCents) {
+		fields = append(fields, worksession.FieldBillRateCents)
 	}
 	return fields
 }
@@ -11585,6 +11790,12 @@ func (m *WorkSessionMutation) ClearField(name string) error {
 	switch name {
 	case worksession.FieldEndAt:
 		m.ClearEndAt()
+		return nil
+	case worksession.FieldPayRateCents:
+		m.ClearPayRateCents()
+		return nil
+	case worksession.FieldBillRateCents:
+		m.ClearBillRateCents()
 		return nil
 	}
 	return fmt.Errorf("unknown WorkSession nullable field %s", name)
@@ -11605,6 +11816,12 @@ func (m *WorkSessionMutation) ResetField(name string) error {
 		return nil
 	case worksession.FieldEndAt:
 		m.ResetEndAt()
+		return nil
+	case worksession.FieldPayRateCents:
+		m.ResetPayRateCents()
+		return nil
+	case worksession.FieldBillRateCents:
+		m.ResetBillRateCents()
 		return nil
 	case worksession.FieldCreatedAt:
 		m.ResetCreatedAt()

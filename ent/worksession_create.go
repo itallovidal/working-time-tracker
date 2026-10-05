@@ -55,6 +55,34 @@ func (_c *WorkSessionCreate) SetNillableEndAt(v *time.Time) *WorkSessionCreate {
 	return _c
 }
 
+// SetPayRateCents sets the "pay_rate_cents" field.
+func (_c *WorkSessionCreate) SetPayRateCents(v int) *WorkSessionCreate {
+	_c.mutation.SetPayRateCents(v)
+	return _c
+}
+
+// SetNillablePayRateCents sets the "pay_rate_cents" field if the given value is not nil.
+func (_c *WorkSessionCreate) SetNillablePayRateCents(v *int) *WorkSessionCreate {
+	if v != nil {
+		_c.SetPayRateCents(*v)
+	}
+	return _c
+}
+
+// SetBillRateCents sets the "bill_rate_cents" field.
+func (_c *WorkSessionCreate) SetBillRateCents(v int) *WorkSessionCreate {
+	_c.mutation.SetBillRateCents(v)
+	return _c
+}
+
+// SetNillableBillRateCents sets the "bill_rate_cents" field if the given value is not nil.
+func (_c *WorkSessionCreate) SetNillableBillRateCents(v *int) *WorkSessionCreate {
+	if v != nil {
+		_c.SetBillRateCents(*v)
+	}
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *WorkSessionCreate) SetCreatedAt(v time.Time) *WorkSessionCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -149,6 +177,16 @@ func (_c *WorkSessionCreate) check() error {
 	if _, ok := _c.mutation.StartAt(); !ok {
 		return &ValidationError{Name: "start_at", err: errors.New(`ent: missing required field "WorkSession.start_at"`)}
 	}
+	if v, ok := _c.mutation.PayRateCents(); ok {
+		if err := worksession.PayRateCentsValidator(v); err != nil {
+			return &ValidationError{Name: "pay_rate_cents", err: fmt.Errorf(`ent: validator failed for field "WorkSession.pay_rate_cents": %w`, err)}
+		}
+	}
+	if v, ok := _c.mutation.BillRateCents(); ok {
+		if err := worksession.BillRateCentsValidator(v); err != nil {
+			return &ValidationError{Name: "bill_rate_cents", err: fmt.Errorf(`ent: validator failed for field "WorkSession.bill_rate_cents": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "WorkSession.created_at"`)}
 	}
@@ -200,6 +238,14 @@ func (_c *WorkSessionCreate) createSpec() (*WorkSession, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.EndAt(); ok {
 		_spec.SetField(worksession.FieldEndAt, field.TypeTime, value)
 		_node.EndAt = &value
+	}
+	if value, ok := _c.mutation.PayRateCents(); ok {
+		_spec.SetField(worksession.FieldPayRateCents, field.TypeInt, value)
+		_node.PayRateCents = &value
+	}
+	if value, ok := _c.mutation.BillRateCents(); ok {
+		_spec.SetField(worksession.FieldBillRateCents, field.TypeInt, value)
+		_node.BillRateCents = &value
 	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(worksession.FieldCreatedAt, field.TypeTime, value)

@@ -24,7 +24,8 @@ Stakeholders are teams of any kind that work by project and want accurate time-p
 - A heavy SPA framework or separate frontend build pipeline (server-rendered HTML + Alpine.js is sufficient for v1).
 - Webhook-driven automatic issue sync (external item details are fetched on demand for this iteration).
 - Complex RBAC with fine-grained permissions (simple member/admin roles within an organization is sufficient for v1).
-- Invoicing or payroll: the system stores the hourly rate a customer pays per project and the hourly rate each person is paid per project, but it does not issue invoices, close pay periods or handle taxes.
+- Invoicing or payroll: the system stores the hourly rate a customer pays per project and the hourly rate each person is paid per project, and shows what each work session is worth, but it does not issue invoices, close pay periods or handle taxes.
+- Fixed-price projects and rate history with effective dates: billing is hourly only, and a rate change applies from the next clock-in on.
 - Multi-region or sharded deployment (single PostgreSQL instance for v1).
 
 ## Decisions
@@ -79,7 +80,13 @@ Task: id (UUID PK), project_id (FK Project), name, description,
       external_item_url (TEXT, nullable),
       created_at
 WorkSession: id (UUID PK), task_id (FK Task), person_id (FK Person),
-             start_at (TIMESTAMP), end_at (TIMESTAMP nullable), created_at
+             start_at (TIMESTAMP), end_at (TIMESTAMP nullable),
+             pay_rate_cents (int, nullable), bill_rate_cents (int, nullable),
+             created_at
+             (the two rates are copied from the Allocation and the Project at
+              clock-in, so changing a rate later never rewrites past hours;
+              clock-in is refused for a person without an Allocation in the
+              project)
 ```
 
 A partial unique index enforces one active session per person:

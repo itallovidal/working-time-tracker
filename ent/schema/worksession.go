@@ -22,6 +22,12 @@ func (WorkSession) Fields() []ent.Field {
 		field.UUID("person_id", uuid.UUID{}),
 		field.Time("start_at"),
 		field.Time("end_at").Optional().Nillable(),
+		// Os valores por hora que valiam quando o ponto abriu: o que a pessoa
+		// recebe e o que o cliente paga. Ficam na sessão para que uma mudança de
+		// valor não reescreva as horas já trabalhadas. Sessões anteriores aos
+		// valores, e projetos sem valor cobrado, ficam com nulo.
+		field.Int("pay_rate_cents").Optional().Nillable().NonNegative(),
+		field.Int("bill_rate_cents").Optional().Nillable().NonNegative(),
 		field.Time("created_at").Default(time.Now).Immutable(),
 	}
 }

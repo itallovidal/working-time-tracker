@@ -198,11 +198,11 @@
 
 ### Sprint 13: Rates on Work Sessions
 
-- [ ] S13.1 Snapshot the pay and bill rates on each work session at clock-in, so later rate changes do not rewrite past hours
-- [ ] S13.2 Refuse clock-in for a person without an allocation in the project
-- [ ] S13.3 Return per-session amounts, hiding other people's pay and every bill value from non-admins
-- [ ] S13.4 Show rate, earnings, cost, revenue and margin on the time tracking screen according to the role
-- [ ] S13.5 Tests for the snapshot, the clock-in rule and amount visibility; update seed and docs
+- [X] S13.1 Snapshot the pay and bill rates on each work session at clock-in, so later rate changes do not rewrite past hours
+- [X] S13.2 Refuse clock-in for a person without an allocation in the project
+- [X] S13.3 Return per-session amounts, hiding other people's pay and every bill value from non-admins
+- [X] S13.4 Show rate, earnings, cost, revenue and margin on the time tracking screen according to the role
+- [X] S13.5 Tests for the snapshot, the clock-in rule and amount visibility; update seed and docs
 
 ---
 

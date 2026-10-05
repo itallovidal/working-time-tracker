@@ -28,6 +28,10 @@ type WorkSession struct {
 	StartAt time.Time `json:"start_at,omitempty"`
 	// EndAt holds the value of the "end_at" field.
 	EndAt *time.Time `json:"end_at,omitempty"`
+	// PayRateCents holds the value of the "pay_rate_cents" field.
+	PayRateCents *int `json:"pay_rate_cents,omitempty"`
+	// BillRateCents holds the value of the "bill_rate_cents" field.
+	BillRateCents *int `json:"bill_rate_cents,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -74,6 +78,8 @@ func (*WorkSession) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
+		case worksession.FieldPayRateCents, worksession.FieldBillRateCents:
+			values[i] = new(sql.NullInt64)
 		case worksession.FieldStartAt, worksession.FieldEndAt, worksession.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
 		case worksession.FieldID, worksession.FieldTaskID, worksession.FieldPersonID:
@@ -123,6 +129,20 @@ func (_m *WorkSession) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.EndAt = new(time.Time)
 				*_m.EndAt = value.Time
+			}
+		case worksession.FieldPayRateCents:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field pay_rate_cents", values[i])
+			} else if value.Valid {
+				_m.PayRateCents = new(int)
+				*_m.PayRateCents = int(value.Int64)
+			}
+		case worksession.FieldBillRateCents:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field bill_rate_cents", values[i])
+			} else if value.Valid {
+				_m.BillRateCents = new(int)
+				*_m.BillRateCents = int(value.Int64)
 			}
 		case worksession.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -188,6 +208,16 @@ func (_m *WorkSession) String() string {
 	if v := _m.EndAt; v != nil {
 		builder.WriteString("end_at=")
 		builder.WriteString(v.Format(time.ANSIC))
+	}
+	builder.WriteString(", ")
+	if v := _m.PayRateCents; v != nil {
+		builder.WriteString("pay_rate_cents=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	if v := _m.BillRateCents; v != nil {
+		builder.WriteString("bill_rate_cents=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
 	}
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")

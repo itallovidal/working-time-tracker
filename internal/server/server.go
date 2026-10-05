@@ -59,7 +59,7 @@ func New(client *ent.Client, opts Options) (*echo.Echo, error) {
 	allocationSvc := allocation.NewService(allocationStore)
 	integrationSvc := integration.NewService(integrationStore, opts.EncryptKey)
 	taskSvc := task.NewService(taskStore, membershipStore, integrationSvc)
-	workSessionSvc := work_session.NewService(sessionStore, taskStore)
+	workSessionSvc := work_session.NewService(sessionStore, taskStore, allocationStore)
 	authSvc := auth.NewService(authStore)
 
 	handlers := routes.Handlers{

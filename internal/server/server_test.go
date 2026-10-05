@@ -3,6 +3,7 @@ package server_test
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -127,6 +128,16 @@ func createProject(t *testing.T, e *echo.Echo, admin account, name string) strin
 		t.Fatalf("create project = %d: %s", rec.Code, rec.Body.String())
 	}
 	return decode(t, rec)["id"].(string)
+}
+
+// allocate define, como admin, quanto a pessoa recebe por hora no projeto. Sem
+// isso ela não bate ponto.
+func allocate(t *testing.T, e *echo.Echo, admin account, projectID, personID string, cents int) {
+	t.Helper()
+	rec := do(e, "PUT", "/api/projects/"+projectID+"/allocations/"+personID, fmt.Sprintf(`{"pay_rate_cents":%d}`, cents), admin.session)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("allocate = %d: %s", rec.Code, rec.Body.String())
+	}
 }
 
 // As rotas funcionam com e sem barra no final.
@@ -449,6 +460,7 @@ func TestWorkSessions_UseLoggedInPerson(t *testing.T) {
 		t.Fatalf("create task = %d: %s", rec.Code, rec.Body.String())
 	}
 	taskID := decode(t, rec)["id"].(string)
+	allocate(t, e, admin, projectID, member.id, 2000)
 
 	rec = do(e, "POST", "/api/projects/"+projectID+"/work-sessions/clock-in", `{"task_id":"`+taskID+`"}`, member.session)
 	if rec.Code != http.StatusCreated || decode(t, rec)["person_id"] != member.id {
@@ -461,6 +473,128 @@ func TestWorkSessions_UseLoggedInPerson(t *testing.T) {
 	}
 	if rec := do(e, "POST", "/api/projects/"+projectID+"/work-sessions/clock-out", `{}`, member.session); rec.Code != http.StatusOK {
 		t.Errorf("member clock-out = %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
+// Sem valor por hora no projeto ninguém bate ponto, nem um admin por outra pessoa.
+func TestWorkSessions_RequireRate(t *testing.T) {
+	e := newServer(t)
+	admin := signup(t, e, "Org", "ana@test.com")
+	member := invite(t, e, admin, "bia@test.com", "member")
+	projectID := createProject(t, e, admin, "Projeto")
+	prj := "/api/projects/" + projectID
+
+	teamID := decode(t, do(e, "POST", prj+"/teams", `{"name":"Time"}`, admin.session))["id"].(string)
+	do(e, "POST", "/api/teams/"+teamID+"/members", `{"person_id":"`+member.id+`"}`, admin.session)
+	taskID := decode(t, do(e, "POST", prj+"/tasks", `{"name":"Tarefa","assignee_id":"`+member.id+`"}`, admin.session))["id"].(string)
+
+	for who, tc := range map[string]struct{ body, session string }{
+		"member":             {`{"task_id":"` + taskID + `"}`, member.session},
+		"admin for a member": {`{"task_id":"` + taskID + `","person_id":"` + member.id + `"}`, admin.session},
+	} {
+		rec := do(e, "POST", prj+"/work-sessions/clock-in", tc.body, tc.session)
+		if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "valor por hora") {
+			t.Errorf("%s clock-in without a rate = %d %s, want 400 explaining the missing rate", who, rec.Code, rec.Body.String())
+		}
+	}
+	if rec := do(e, "GET", "/api/work-sessions/active", "", member.session); strings.TrimSpace(rec.Body.String()) != "null" {
+		t.Errorf("a session was opened without a rate: %s", rec.Body.String())
+	}
+
+	allocate(t, e, admin, projectID, member.id, 2000)
+	if rec := do(e, "POST", prj+"/work-sessions/clock-in", `{"task_id":"`+taskID+`"}`, member.session); rec.Code != http.StatusCreated {
+		t.Errorf("clock-in after the rate was set = %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
+// Nas sessões, o membro vê o valor só das próprias; o admin vê o valor pago de
+// todos e o valor cobrado. Mudar um valor não altera as sessões já feitas.
+func TestWorkSessions_AmountsByRole(t *testing.T) {
+	e := newServer(t)
+	admin := signup(t, e, "Org", "ana@test.com")
+	bia := invite(t, e, admin, "bia@test.com", "member")
+	caio := invite(t, e, admin, "caio@test.com", "member")
+	projectID := createProject(t, e, admin, "Projeto")
+	prj := "/api/projects/" + projectID
+
+	teamID := decode(t, do(e, "POST", prj+"/teams", `{"name":"Time"}`, admin.session))["id"].(string)
+	for _, p := range []account{bia, caio} {
+		do(e, "POST", "/api/teams/"+teamID+"/members", `{"person_id":"`+p.id+`"}`, admin.session)
+	}
+	taskID := decode(t, do(e, "POST", prj+"/tasks", `{"name":"Tarefa","assignee_id":"`+bia.id+`"}`, admin.session))["id"].(string)
+	if rec := do(e, "PUT", prj+"/billing", `{"bill_rate_cents":10000}`, admin.session); rec.Code != http.StatusOK {
+		t.Fatalf("set billing = %d: %s", rec.Code, rec.Body.String())
+	}
+	allocate(t, e, admin, projectID, bia.id, 2000)
+	allocate(t, e, admin, projectID, caio.id, 2500)
+
+	clockIn := `{"task_id":"` + taskID + `"}`
+	rec := do(e, "POST", prj+"/work-sessions/clock-in", clockIn, bia.session)
+	opened := decode(t, rec)
+	if rec.Code != http.StatusCreated || opened["pay_rate_cents"] != float64(2000) || opened["bill_rate_cents"] != nil {
+		t.Fatalf("member clock-in = %d %s, want her pay rate and no bill rate", rec.Code, rec.Body.String())
+	}
+	do(e, "POST", prj+"/work-sessions/clock-out", `{}`, bia.session)
+	do(e, "POST", prj+"/work-sessions/clock-in", clockIn, caio.session)
+	do(e, "POST", prj+"/work-sessions/clock-out", `{}`, caio.session)
+
+	// O admin troca o valor da Bia depois que ela já trabalhou.
+	allocate(t, e, admin, projectID, bia.id, 9000)
+
+	byPerson := func(session string) map[string]map[string]any {
+		t.Helper()
+		out := map[string]map[string]any{}
+		for _, s := range decodeList(t, do(e, "GET", prj+"/work-sessions", "", session)) {
+			out[s["person_id"].(string)] = s
+		}
+		if len(out) != 2 {
+			t.Fatalf("expected one session per person, got %d", len(out))
+		}
+		return out
+	}
+
+	asBia := byPerson(bia.session)
+	if asBia[bia.id]["pay_rate_cents"] != float64(2000) {
+		t.Errorf("her old session shows rate %v, want the 2000 from when she clocked in", asBia[bia.id]["pay_rate_cents"])
+	}
+	if asBia[bia.id]["pay_amount_cents"] == nil {
+		t.Error("member does not see the amount of her own session")
+	}
+	for _, key := range []string{"pay_rate_cents", "pay_amount_cents", "bill_rate_cents", "bill_amount_cents"} {
+		if v := asBia[caio.id][key]; v != nil {
+			t.Errorf("member sees %s = %v on a colleague's session", key, v)
+		}
+	}
+	for _, key := range []string{"bill_rate_cents", "bill_amount_cents"} {
+		if v := asBia[bia.id][key]; v != nil {
+			t.Errorf("member sees %s = %v on her own session", key, v)
+		}
+	}
+
+	asAdmin := byPerson(admin.session)
+	if asAdmin[bia.id]["pay_rate_cents"] != float64(2000) || asAdmin[caio.id]["pay_rate_cents"] != float64(2500) {
+		t.Errorf("admin sees pay rates %v and %v, want 2000 and 2500", asAdmin[bia.id]["pay_rate_cents"], asAdmin[caio.id]["pay_rate_cents"])
+	}
+	for _, p := range []account{bia, caio} {
+		if asAdmin[p.id]["bill_rate_cents"] != float64(10000) || asAdmin[p.id]["bill_amount_cents"] == nil {
+			t.Errorf("admin does not see the bill rate and amount: %v", asAdmin[p.id])
+		}
+	}
+
+	// O total segue as mesmas regras.
+	total := func(query, session string) map[string]any {
+		return decode(t, do(e, "GET", prj+"/work-sessions/total?"+query, "", session))
+	}
+	if got := total("person_id="+bia.id, bia.session); got["pay_amount_cents"] == nil || got["bill_amount_cents"] != nil {
+		t.Errorf("member total of herself = %v, want her earnings and no bill amount", got)
+	}
+	for _, query := range []string{"person_id=" + caio.id, "task_id=" + taskID} {
+		if got := total(query, bia.session); got["pay_amount_cents"] != nil || got["bill_amount_cents"] != nil {
+			t.Errorf("member total with %s = %v, want no amounts", query, got)
+		}
+	}
+	if got := total("task_id="+taskID, admin.session); got["pay_amount_cents"] == nil || got["bill_amount_cents"] == nil {
+		t.Errorf("admin total = %v, want both amounts", got)
 	}
 }
 
@@ -479,6 +613,7 @@ func TestAccess_IDsInBodyAndQueryStayInOrganization(t *testing.T) {
 	do(e, "POST", "/api/teams/"+teamB+"/members", `{"person_id":"`+b.id+`"}`, b.session)
 	rec = do(e, "POST", "/api/projects/"+projectB+"/tasks", `{"name":"Tarefa B","assignee_id":"`+b.id+`"}`, b.session)
 	taskB := decode(t, rec)["id"].(string)
+	allocate(t, e, b, projectB, b.id, 2000)
 	if rec := do(e, "POST", "/api/projects/"+projectB+"/work-sessions/clock-in", `{"task_id":"`+taskB+`"}`, b.session); rec.Code != http.StatusCreated {
 		t.Fatalf("clock-in in org B = %d: %s", rec.Code, rec.Body.String())
 	}
@@ -661,6 +796,7 @@ func TestAPI_ActiveSessionAndProjectMembers(t *testing.T) {
 
 	rec = do(e, "POST", "/api/projects/"+projectID+"/tasks", `{"name":"Tarefa","assignee_id":"`+admin.id+`"}`, admin.session)
 	taskID := decode(t, rec)["id"].(string)
+	allocate(t, e, admin, projectID, admin.id, 0)
 	do(e, "POST", "/api/projects/"+projectID+"/work-sessions/clock-in", `{"task_id":"`+taskID+`"}`, admin.session)
 
 	active := decode(t, do(e, "GET", "/api/work-sessions/active", "", admin.session))

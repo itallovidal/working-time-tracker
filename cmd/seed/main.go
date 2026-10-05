@@ -181,6 +181,8 @@ func main() {
 		{gateway, ana, at(1, 14, 0), at(1, 17, 15)},
 		{textos, ana, at(1, 17, 30), at(1, 18, 10)},
 	}
+	// As sessões guardam os valores por hora de quando o ponto abriu.
+	payRate := map[*auth.Identity]int{ana: 4500, bruno: 2000}
 	for _, s := range sessions {
 		if s.end.After(now) {
 			continue
@@ -190,6 +192,8 @@ func main() {
 			SetPersonID(s.person.PersonID).
 			SetStartAt(s.start).
 			SetEndAt(s.end).
+			SetPayRateCents(payRate[s.person]).
+			SetBillRateCents(10000).
 			SaveX(ctx)
 	}
 

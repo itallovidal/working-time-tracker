@@ -14,6 +14,7 @@ Ponto por tarefa para equipes que trabalham por projeto, de qualquer área. A pe
 - **Times** dentro de cada projeto. Só quem está em algum time do projeto pode ser responsável por tarefas.
 - **Tarefas** com responsável, prazo (7 dias por padrão, com destaque quando está atrasada ou perto de vencer) e vínculo opcional com uma issue.
 - **Ponto.** Clock-in e clock-out com cronômetro ao vivo no topo de todas as páginas, sessões filtradas por tarefa e pessoa, totais do filtro e o seu tempo de hoje e da semana. O banco garante uma única sessão aberta por pessoa.
+- **Horas em dinheiro.** Cada sessão guarda os valores por hora de quando o ponto abriu, então **mudar um valor só vale dali em diante**. Quem não tem valor definido no projeto **não bate ponto**. Na tela de ponto, o membro vê quanto ganhou; o admin vê custo, receita e margem.
 - **Integrações** com GitHub e GitLab. A credencial é validada na plataforma, guardada criptografada e nunca volta nas respostas. Os detalhes da issue (título e estado) são buscados na hora, e se a plataforma não responde a tela mostra o motivo, sem quebrar.
 
 ## Como rodar
@@ -80,7 +81,7 @@ A interface segue a Decision 8 de `_docs/design.md`. O servidor renderiza a casc
 | `/projects/:projectId` | Leva para a aba Tarefas |
 | `/projects/:projectId/tasks` | Tarefas, com início de ponto em um clique |
 | `/tasks/:taskId` | Edição da tarefa, vínculo com issue e tempo registrado |
-| `/projects/:projectId/time-tracking` | Cronômetro, sessões, filtros e totais |
+| `/projects/:projectId/time-tracking` | Cronômetro, sessões, filtros e totais em tempo e em dinheiro |
 | `/projects/:projectId/teams` | Times e membros |
 | `/projects/:projectId/rates` | Valores: o que o cliente paga e o que cada pessoa recebe por hora (só admins) |
 | `/projects/:projectId/integrations` | Integrações com GitHub e GitLab |
@@ -139,7 +140,7 @@ Resumo dos grupos de rotas:
 - **Sessões e convites** usam tokens aleatórios de 32 bytes, e o banco guarda só o sha256 deles. Trocar a senha encerra as outras sessões.
 - **Cookie** `wtt_session` HttpOnly e SameSite=Lax, com `Secure` via `COOKIE_SECURE`. Como a API só aceita corpo JSON em `POST`, `PUT` e `PATCH`, um formulário de outro site não consegue agir em nome de quem está logado.
 - **Isolamento entre organizações.** Cada rota com ID confere se o recurso é da organização de quem chama e responde 404 caso não seja.
-- **Valores.** O valor cobrado do cliente só existe em rotas de admin: ele não entra no JSON do projeto. Na lista de valores de um projeto, um membro recebe só a própria linha.
+- **Valores.** O valor cobrado do cliente só existe em rotas de admin: ele não entra no JSON do projeto. Na lista de valores de um projeto, um membro recebe só a própria linha. Nas sessões de ponto, a API apaga o valor pago das sessões de outras pessoas e todo valor cobrado antes de responder a quem não é admin.
 - **Limite de tentativas** por IP em signup, login e convites.
 - **Credenciais de integração** criptografadas com AES-GCM (`INTEGRATION_ENCRYPTION_KEY`) e nunca devolvidas pela API.
 
@@ -201,7 +202,7 @@ Organization (1) ── (N) Invite        token (hash), email opcional, papel, e
 Person       (1) ── (N) Session       token (hash), expira em 7 dias
 Project      (1) ── (N) Team ── (N) Person   via TeamMembership
 Project      (1) ── (N) Allocation ── (1) Person   valor pago por hora, um por pessoa em cada projeto
-Project      (1) ── (N) Task ── (N) WorkSession
+Project      (1) ── (N) Task ── (N) WorkSession   a sessão guarda o valor pago e o cobrado do clock-in
 Project      (1) ── (N) Integration   config criptografada
 Task      (0..1) ── (0..1) Integration  via external_integration_id
 ```

@@ -34,8 +34,16 @@
                 <option :value="t.id" x-text="t.name" :selected="t.id === taskId"></option>
               </template>
             </select>
-            <button type="submit" class="btn" :disabled="pending || !taskId">Iniciar</button>
+            <button type="submit" class="btn" :disabled="pending || !taskId || myRate === null">Iniciar</button>
           </div>
+          <p class="alert alert-warn" x-show="!loading && !errors.load && myRate === null">
+            Você ainda não tem valor por hora neste projeto, então o ponto está bloqueado.
+            {{if .IsAdmin}}
+            Defina o seu na aba <a href="/projects/{{.Project.ID}}/rates">Valores</a>.
+            {{else}}
+            Peça a um admin para definir.
+            {{end}}
+          </p>
         </form>
       </template>
       <p class="form-error" x-cloak x-show="errors.clock" x-text="errors.clock" role="alert"></p>
@@ -44,9 +52,18 @@
     <section class="card">
       <div class="card-head"><h2>Seu tempo neste projeto</h2></div>
       <div class="totals">
-        <div class="total"><div class="v" x-text="WTT.fmt.hours(mine('today'))"></div><div class="k">Hoje</div></div>
-        <div class="total"><div class="v" x-text="WTT.fmt.hours(mine('week'))"></div><div class="k">Nesta semana</div></div>
+        <div class="total">
+          <div class="v" x-text="WTT.fmt.hours(mine('today'))"></div>
+          <div class="k">Hoje<span x-show="myRate !== null"> · <span class="num" x-text="WTT.fmt.money(earned('today'))"></span></span></div>
+        </div>
+        <div class="total">
+          <div class="v" x-text="WTT.fmt.hours(mine('week'))"></div>
+          <div class="k">Nesta semana<span x-show="myRate !== null"> · <span class="num" x-text="WTT.fmt.money(earned('week'))"></span></span></div>
+        </div>
       </div>
+      <p class="muted small" x-cloak x-show="myRate !== null">
+        Seu valor neste projeto: <strong class="num" x-text="WTT.fmt.money(myRate)"></strong> por hora. Só você e os admins veem.
+      </p>
     </section>
   </div>
 
@@ -71,7 +88,12 @@
     </div>
     <div class="table-wrap" x-show="filtered().length > 0">
       <table>
-        <thead><tr><th>Pessoa</th><th>Tarefa</th><th>Início</th><th>Fim</th><th class="actions">Duração</th></tr></thead>
+        <thead>
+          <tr>
+            <th>Pessoa</th><th>Tarefa</th><th>Início</th><th>Fim</th><th class="actions">Duração</th>
+            {{if .IsAdmin}}<th class="actions">Custo</th><th class="actions">Receita</th>{{else}}<th class="actions">Seu valor</th>{{end}}
+          </tr>
+        </thead>
         <tbody>
           <template x-for="s in filtered()" :key="s.id">
             <tr>
@@ -83,6 +105,8 @@
                 <span class="badge badge-ok" x-show="!s.end_at">em andamento</span>
               </td>
               <td class="actions mono num" x-text="WTT.fmt.clock($store.clock.elapsed(s))"></td>
+              <td class="actions num" x-text="WTT.fmt.money(amount(s, 'pay'))"></td>
+              {{if .IsAdmin}}<td class="actions num" x-text="WTT.fmt.money(amount(s, 'bill'))"></td>{{end}}
             </tr>
           </template>
         </tbody>
@@ -90,7 +114,15 @@
           <tr>
             <td colspan="4"><strong>Total</strong> <span class="muted small" x-text="'(' + filtered().length + (filtered().length === 1 ? ' sessão)' : ' sessões)')"></span></td>
             <td class="actions mono num"><strong x-text="WTT.fmt.hours(filteredTotal())"></strong></td>
+            <td class="actions num"><strong x-text="WTT.fmt.money(filteredAmount('pay'))"></strong></td>
+            {{if .IsAdmin}}<td class="actions num"><strong x-text="WTT.fmt.money(filteredAmount('bill'))"></strong></td>{{end}}
           </tr>
+          {{if .IsAdmin}}
+          <tr>
+            <td colspan="6"><strong>Margem</strong> <span class="muted small">(receita menos custo)</span></td>
+            <td class="actions num"><strong :class="filteredMargin() < 0 && 'text-danger'" x-text="WTT.fmt.money(filteredMargin())"></strong></td>
+          </tr>
+          {{end}}
         </tfoot>
       </table>
     </div>

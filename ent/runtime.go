@@ -157,8 +157,16 @@ func init() {
 	teammembership.DefaultCreatedAt = teammembershipDescCreatedAt.Default.(func() time.Time)
 	worksessionFields := schema.WorkSession{}.Fields()
 	_ = worksessionFields
+	// worksessionDescPayRateCents is the schema descriptor for pay_rate_cents field.
+	worksessionDescPayRateCents := worksessionFields[5].Descriptor()
+	// worksession.PayRateCentsValidator is a validator for the "pay_rate_cents" field. It is called by the builders before save.
+	worksession.PayRateCentsValidator = worksessionDescPayRateCents.Validators[0].(func(int) error)
+	// worksessionDescBillRateCents is the schema descriptor for bill_rate_cents field.
+	worksessionDescBillRateCents := worksessionFields[6].Descriptor()
+	// worksession.BillRateCentsValidator is a validator for the "bill_rate_cents" field. It is called by the builders before save.
+	worksession.BillRateCentsValidator = worksessionDescBillRateCents.Validators[0].(func(int) error)
 	// worksessionDescCreatedAt is the schema descriptor for created_at field.
-	worksessionDescCreatedAt := worksessionFields[5].Descriptor()
+	worksessionDescCreatedAt := worksessionFields[7].Descriptor()
 	// worksession.DefaultCreatedAt holds the default value on creation for the created_at field.
 	worksession.DefaultCreatedAt = worksessionDescCreatedAt.Default.(func() time.Time)
 	// worksessionDescID is the schema descriptor for id field.
