@@ -239,6 +239,51 @@ func TestAccess_MemberCannotUseAdminRoutes(t *testing.T) {
 	}
 }
 
+// O admin preenche o perfil da organização; qualquer membro lê, e a moeda
+// acompanha a pessoa logada.
+func TestOrganization_Profile(t *testing.T) {
+	e := newServer(t)
+	admin := signup(t, e, "Org", "ana@test.com")
+	member := invite(t, e, admin, "bia@test.com", "member")
+	path := "/api/orgs/" + admin.orgID
+
+	rec := do(e, "PATCH", path, `{"summary":"Entregas no mesmo dia","website":"acme.com.br","cnpj":"11.222.333/0001-81","currency":"USD","default_sprint_days":7}`, admin.session)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("admin PATCH = %d: %s", rec.Code, rec.Body.String())
+	}
+
+	rec = do(e, "GET", path, "", member.session)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("member GET = %d: %s", rec.Code, rec.Body.String())
+	}
+	org := decode(t, rec)
+	for field, want := range map[string]any{
+		"name": "Org", "summary": "Entregas no mesmo dia", "website": "https://acme.com.br",
+		"cnpj": "11222333000181", "currency": "USD", "timezone": "America/Sao_Paulo", "default_sprint_days": float64(7),
+	} {
+		if org[field] != want {
+			t.Errorf("%s = %v, want %v", field, org[field], want)
+		}
+	}
+
+	if got := decode(t, do(e, "GET", "/api/auth/me", "", member.session))["organization_currency"]; got != "USD" {
+		t.Errorf("organization_currency in /auth/me = %v, want USD", got)
+	}
+
+	// Projeto novo sem duração usa a sprint padrão da organização.
+	rec = do(e, "POST", path+"/projects", `{"name":"Projeto"}`, admin.session)
+	if got := decode(t, rec)["sprint_duration_days"]; got != float64(7) {
+		t.Errorf("sprint_duration_days = %v, want the organization default 7", got)
+	}
+
+	if rec := do(e, "PATCH", path, `{"website":"javascript:alert(1)"}`, admin.session); rec.Code != http.StatusBadRequest {
+		t.Errorf("PATCH with a javascript: link = %d, want 400", rec.Code)
+	}
+	if rec := do(e, "PATCH", path, `{"summary":"Invasão"}`, member.session); rec.Code != http.StatusForbidden {
+		t.Errorf("member PATCH = %d, want 403", rec.Code)
+	}
+}
+
 // Um membro bate o próprio ponto sem mandar person_id, e não pode bater o de outra pessoa.
 func TestWorkSessions_UseLoggedInPerson(t *testing.T) {
 	e := newServer(t)

@@ -7,7 +7,7 @@
     </a>
     <nav class="mainnav" aria-label="Organização">
       <a href="/orgs/{{.OrgID}}" {{if eq .Section "projects"}}aria-current="page"{{end}}>Projetos</a>
-      {{if .IsAdmin}}<a href="/orgs/{{.OrgID}}/settings" {{if eq .Section "organization"}}aria-current="page"{{end}}>Organização</a>{{end}}
+      <a href="/orgs/{{.OrgID}}/about" {{if eq .Section "organization"}}aria-current="page"{{end}}>Organização</a>
     </nav>
     <div class="topbar-right">
       {{template "active_session" .}}

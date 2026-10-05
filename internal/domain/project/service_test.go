@@ -59,6 +59,34 @@ func TestService_Create_DefaultSprintDuration(t *testing.T) {
 	}
 }
 
+// Sem duração informada, o projeto novo usa a sprint padrão da organização.
+func TestService_Create_OrganizationSprintDefault(t *testing.T) {
+	cleanup(t)
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	svc := project.NewService(project.NewStore(testClient))
+
+	org, _ := orgSvc.Create("Test Org")
+	days := 7
+	if _, err := orgSvc.Update(org.ID.String(), organization.UpdateInput{DefaultSprintDays: &days}); err != nil {
+		t.Fatalf("set default sprint: %v", err)
+	}
+
+	proj, err := svc.Create(org.ID.String(), "Project", "", 0, nil, nil)
+	if err != nil {
+		t.Fatalf("create failed: %v", err)
+	}
+	if proj.SprintDurationDays != 7 {
+		t.Errorf("sprint_duration_days = %d, want the organization default 7", proj.SprintDurationDays)
+	}
+	explicit, err := svc.Create(org.ID.String(), "Other", "", 21, nil, nil)
+	if err != nil {
+		t.Fatalf("create failed: %v", err)
+	}
+	if explicit.SprintDurationDays != 21 {
+		t.Errorf("sprint_duration_days = %d, want the explicit 21", explicit.SprintDurationDays)
+	}
+}
+
 func TestService_Create_ExplicitSprintDuration(t *testing.T) {
 	cleanup(t)
 	orgSvc := organization.NewService(organization.NewStore(testClient))

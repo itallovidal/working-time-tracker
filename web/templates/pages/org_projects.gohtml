@@ -12,7 +12,7 @@
     <div>
       <div class="eyebrow">{{.Me.OrganizationName}}</div>
       <h1>Projetos</h1>
-      <p class="lede">Cada projeto tem seus times, tarefas e registro de tempo.</p>
+      <p class="lede">{{if and .Org .Org.Summary}}{{.Org.Summary}}{{else}}Cada projeto tem seus times, tarefas e registro de tempo.{{end}}</p>
     </div>
     {{if .IsAdmin}}
     <button type="button" class="btn" @click="openCreate()" x-show="!creating">Novo projeto</button>

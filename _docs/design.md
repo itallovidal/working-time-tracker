@@ -4,7 +4,7 @@ This is a greenfield project. There is no existing code, database, or API. The s
 
 The system supports multiple organizations (companies), each with multiple projects. A project has teams of people, a configurable sprint duration, daily standup time, and weekly sync schedule. People register within an organization and are assigned to teams. Projects can have integrations with external platforms (GitHub, GitLab, Slack, Trello, etc.) to link tasks to external items and push notifications.
 
-Stakeholders are engineering teams who want accurate time-per-task data, visibility into project progress, task deadlines, and linked external items.
+Stakeholders are teams of any kind that work by project and want accurate time-per-task data, visibility into project progress, task deadlines, and linked external items. The tracker is generic: nothing in the organization profile assumes a software company.
 
 ## Goals / Non-Goals
 
@@ -41,7 +41,13 @@ Stakeholders are engineering teams who want accurate time-per-task data, visibil
 **Choice:** Seven entities: `Organization`, `Project`, `Team`, `Person`, `Task`, `WorkSession`, `Integration`, with a join table `TeamMembership`.
 
 ```
-Organization: id (UUID PK), name, created_at
+Organization: id (UUID PK), name, created_at,
+              profile: summary, description, industry, founded_year, size,
+                       website, contact_email, phone, linkedin_url, instagram_url,
+                       legal_name, cnpj, address_line1, address_line2, city, state,
+                       postal_code, country (all optional)
+              defaults: timezone (default America/Sao_Paulo), currency (default BRL),
+                        weekly_hours, default_sprint_days (both optional)
 Project: id (UUID PK), organization_id (FK Organization), name, description,
          github_repo_url (nullable), gitlab_repo_url (nullable),
          sprint_duration_days (int, default 14),

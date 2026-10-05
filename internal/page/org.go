@@ -1,20 +1,45 @@
 package page
 
-import "github.com/labstack/echo/v5"
+import (
+	"github.com/labstack/echo/v5"
+
+	"working-time-tracker/internal/domain/auth"
+)
+
+// orgData monta os dados de uma página da organização de quem está logado. A
+// organização vai para o template (resumo no cabeçalho) e para o JavaScript, em
+// window.BOOT.org.
+func (h *Handler) orgData(c *echo.Context, d Data) Data {
+	d.Script = "org"
+	me := auth.CurrentPerson(c)
+	if me == nil {
+		return d
+	}
+	if org, err := h.deps.Orgs.Get(me.OrganizationID.String()); err == nil {
+		d.Org = org
+		d.Props = map[string]any{"org": org}
+	}
+	return d
+}
 
 // Org é a página inicial da organização: a lista de projetos (S8.4).
 func (h *Handler) Org(c *echo.Context) error {
-	return h.render(c, "org_projects", Data{Title: "Projetos", Section: "projects", Script: "org"})
+	return h.render(c, "org_projects", h.orgData(c, Data{Title: "Projetos", Section: "projects"}))
 }
 
-// orgPage monta a página de uma aba da organização. O middleware de rota já
-// garantiu que quem está logado é admin dela.
+// orgPage monta a página de uma aba da organização.
 func (h *Handler) orgPage(c *echo.Context, name, title, tab string) error {
-	return h.render(c, name, Data{Title: title, Section: "organization", Tab: tab, Script: "org"})
+	return h.render(c, name, h.orgData(c, Data{Title: title, Section: "organization", Tab: tab}))
+}
+
+// About é a aba Sobre: o perfil da organização, que todos os membros leem (S11.4).
+func (h *Handler) About(c *echo.Context) error {
+	return h.orgPage(c, "org_about", "Sobre · Organização", "about")
 }
 
 // OrgSettings é a aba Geral: os dados da organização e a exclusão dela (S8.2).
-// O perfil e a senha de quem está logado ficam em Profile.
+// O perfil e a senha de quem está logado ficam em Profile. Esta aba e as duas
+// seguintes são só de admins; o middleware de rota garante isso.
 func (h *Handler) OrgSettings(c *echo.Context) error {
 	return h.orgPage(c, "org_settings", "Organização", "general")
 }

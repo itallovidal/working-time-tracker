@@ -1,5 +1,5 @@
-// Componentes das páginas da organização (a lista de projetos e as abas Geral, Pessoas e Projetos)
-// e do perfil de quem está logado.
+// Componentes das páginas da organização (a lista de projetos e as abas Sobre, Geral, Pessoas e
+// Projetos) e do perfil de quem está logado.
 document.addEventListener('alpine:init', () => {
   const { api, form } = WTT;
   const me = WTT.boot.me;
@@ -7,7 +7,42 @@ document.addEventListener('alpine:init', () => {
   const toast = (msg, kind) => Alpine.store('toast').show(msg, kind);
   const setText = (selector, text) => document.querySelectorAll(selector).forEach((el) => { el.textContent = text; });
 
-  const blankProject = () => ({ name: '', description: '', sprint_duration_days: 14, daily_time: '', weekly_sync_day: '' });
+  // A organização vem pronta do servidor nas páginas dela (window.BOOT.org).
+  const org = WTT.boot.org || { name: me.organization_name };
+
+  const blankProject = () => ({
+    name: '', description: '', sprint_duration_days: org.default_sprint_days || 14, daily_time: '', weekly_sync_day: '',
+  });
+
+  const orgTexts = [
+    'name', 'summary', 'description', 'industry', 'size',
+    'website', 'contact_email', 'phone', 'linkedin_url', 'instagram_url',
+    'legal_name', 'cnpj', 'address_line1', 'address_line2', 'city', 'state', 'postal_code', 'country',
+    'timezone', 'currency',
+  ];
+  const orgNumbers = ['founded_year', 'weekly_hours', 'default_sprint_days'];
+
+  // orgForm copia a organização para o formulário: campo sem valor vira texto vazio.
+  function orgForm(o) {
+    const f = {};
+    orgTexts.concat(orgNumbers).forEach((k) => { f[k] = o[k] || ''; });
+    f.cnpj = WTT.fmt.cnpj(f.cnpj);
+    return f;
+  }
+
+  // timezoneOptions lista os fusos que o navegador conhece, sempre com o atual.
+  function timezoneOptions(current) {
+    let zones = [];
+    try { zones = Intl.supportedValuesOf('timeZone'); } catch (e) { zones = []; }
+    if (zones.length === 0) {
+      zones = ['America/Sao_Paulo', 'America/Manaus', 'America/Recife', 'America/Rio_Branco', 'America/Noronha', 'UTC'];
+    }
+    return current && !zones.includes(current) ? [current, ...zones] : zones;
+  }
+
+  // rows tira de uma lista de [rótulo, valor, extras] as linhas sem valor.
+  const rows = (list) => list.filter((r) => r[1]).map((r) => ({ label: r[0], value: r[1], ...(r[2] || {}) }));
+  const bareURL = (url) => (url || '').replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
 
   Alpine.data('orgProjects', () => ({
     ...form(),
@@ -97,12 +132,25 @@ document.addEventListener('alpine:init', () => {
 
   Alpine.data('orgSettings', () => ({
     ...form(),
-    orgName: me.organization_name,
+    form: orgForm(org),
+    timezones: timezoneOptions(org.timezone),
+    thisYear: new Date().getFullYear(),
     confirmDelete: false,
     saveOrg() {
       return this.run('org', async () => {
-        const org = await api('PATCH', '/api/orgs/' + orgId, { name: this.orgName });
-        setText('[data-org-name]', org.name);
+        // Texto vazio e zero apagam o campo; a API mantém o que não vier no corpo.
+        const body = {};
+        orgTexts.forEach((k) => { body[k] = this.form[k]; });
+        orgNumbers.forEach((k) => { body[k] = Number(this.form[k]) || 0; });
+        const saved = await api('PATCH', '/api/orgs/' + orgId, body);
+        Object.assign(org, saved);
+        this.form = orgForm(saved);
+        me.organization_currency = saved.currency;
+        setText('[data-org-name]', saved.name);
+        document.querySelectorAll('[data-org-summary]').forEach((el) => {
+          el.textContent = saved.summary;
+          el.hidden = !saved.summary;
+        });
         toast('Organização salva.');
       });
     },
@@ -111,6 +159,46 @@ document.addEventListener('alpine:init', () => {
         await api('DELETE', '/api/orgs/' + orgId);
         location.href = '/signup';
       });
+    },
+  }));
+
+  Alpine.data('orgAbout', () => ({
+    org,
+    identity() {
+      return rows([
+        ['Segmento', org.industry],
+        ['Porte', WTT.fmt.orgSize(org.size)],
+        ['Fundação', org.founded_year ? String(org.founded_year) : ''],
+        ['Localização', [org.city, org.state, org.country].filter(Boolean).join(', ')],
+      ]);
+    },
+    contact() {
+      return rows([
+        ['Site', bareURL(org.website), { href: org.website, external: true }],
+        ['Email', org.contact_email, { href: 'mailto:' + org.contact_email }],
+        ['Telefone', org.phone, { href: 'tel:' + (org.phone || '').replace(/[^0-9+]/g, '') }],
+        ['LinkedIn', bareURL(org.linkedin_url), { href: org.linkedin_url, external: true }],
+        ['Instagram', bareURL(org.instagram_url), { href: org.instagram_url, external: true }],
+      ]);
+    },
+    legal() {
+      return rows([
+        ['Razão social', org.legal_name],
+        ['CNPJ', WTT.fmt.cnpj(org.cnpj), { mono: true }],
+        ['Endereço', [org.address_line1, org.address_line2, org.postal_code].filter(Boolean).join(' · ')],
+      ]);
+    },
+    defaults() {
+      return rows([
+        ['Fuso horário', org.timezone],
+        ['Moeda', WTT.fmt.currency(org.currency)],
+        ['Jornada semanal', org.weekly_hours ? org.weekly_hours + ' horas' : ''],
+        ['Sprint padrão', (org.default_sprint_days || 14) + ' dias'],
+      ]);
+    },
+    // Fuso e moeda sempre têm valor, então não contam como perfil preenchido.
+    isEmpty() {
+      return !org.description && this.identity().length + this.contact().length + this.legal().length === 0;
     },
   }));
 

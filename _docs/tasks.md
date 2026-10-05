@@ -172,6 +172,40 @@
 
 ---
 
+## 💼 FASE 3: PERFIL DA ORGANIZAÇÃO E VALORES
+
+---
+
+### Sprint 11: Organization Profile
+
+- [X] S11.1 Add profile fields to the Organization schema (identity, contact, legal data, operating defaults) with validation: CNPJ check digits (numeric and alphanumeric), http/https links, IANA timezone, currency
+- [X] S11.2 Make `PATCH /api/orgs/:orgId` a partial update of the profile; `GET` returns the full profile to any member
+- [X] S11.3 Use the organization's default sprint length for new projects and expose the organization currency in the logged-in identity
+- [X] S11.4 Build the organization settings form (identity, contact, legal data, defaults) and the "Sobre" tab that every member can read; show the summary in the organization header
+- [X] S11.5 Tests for validators, service, handler, router access and pages; seed the demo organization profile; update README, design and API reference
+
+---
+
+### Sprint 12: Clients & Hourly Rates
+
+- [ ] S12.1 Add `Client` (per organization) and link projects to a client, with the hourly rate the client pays for the project
+- [ ] S12.2 Add `Allocation`: the hourly rate the organization pays a person in a project, unique per person and project
+- [ ] S12.3 Expose clients, project billing and allocations through the API: admins see and change everything, members only read their own rate
+- [ ] S12.4 Build the Clients tab (organization), the Rates tab and billing card (project) and "Meus valores" on the profile page
+- [ ] S12.5 Tests for the new domains and for rate visibility between roles and organizations; update seed and docs
+
+---
+
+### Sprint 13: Rates on Work Sessions
+
+- [ ] S13.1 Snapshot the pay and bill rates on each work session at clock-in, so later rate changes do not rewrite past hours
+- [ ] S13.2 Refuse clock-in for a person without an allocation in the project
+- [ ] S13.3 Return per-session amounts, hiding other people's pay and every bill value from non-admins
+- [ ] S13.4 Show rate, earnings, cost, revenue and margin on the time tracking screen according to the role
+- [ ] S13.5 Tests for the snapshot, the clock-in rule and amount visibility; update seed and docs
+
+---
+
 ### Refatoração: Domain-First Architecture (pré-Sprint 9)
 
 - [X] R1 Reorganizar código de layered-flat para domain-first: `internal/domain/<dominio>/` com `model.go`, `store.go`, `service.go`, `handler.go` por domínio

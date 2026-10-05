@@ -67,7 +67,7 @@ func New(client *ent.Client, opts Options) (*echo.Echo, error) {
 		Integration:  integration.NewHandler(integrationSvc),
 	}
 	authMW := auth.NewMiddleware(authSvc, auth.NewResolver(client), opts.CookieSecure)
-	pages := page.NewHandler(page.Deps{Projects: projectSvc, Tasks: taskSvc})
+	pages := page.NewHandler(page.Deps{Orgs: orgSvc, Projects: projectSvc, Tasks: taskSvc})
 
 	renderer, err := tmpl.New(web.FS)
 	if err != nil {

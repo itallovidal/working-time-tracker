@@ -175,10 +175,14 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 .filters select { width: auto; max-width: 240px; }
 .stack-tight { gap: 4px; }
 .stack-narrow { max-width: 560px; }
+.stack-form { max-width: 760px; }
 .row-tight { gap: 6px; }
 .facts { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 0; font-size: 0.9rem; }
 .facts dt { color: var(--muted); }
-.facts dd { margin: 0; }
+.facts dd { margin: 0; overflow-wrap: anywhere; }
+/* .fact agrupa um par dt/dd gerado por x-for sem quebrar a grade do .facts. */
+.fact { display: contents; }
+.prose { white-space: pre-line; color: var(--ink-2); }
 tfoot td { background: var(--surface-2); border-bottom: 0; }
 .self-end { align-self: flex-end; }
 .sr-only {

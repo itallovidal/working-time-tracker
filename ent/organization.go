@@ -20,6 +20,50 @@ type Organization struct {
 	ID uuid.UUID `json:"id,omitempty"`
 	// Name holds the value of the "name" field.
 	Name string `json:"name,omitempty"`
+	// Summary holds the value of the "summary" field.
+	Summary string `json:"summary,omitempty"`
+	// Description holds the value of the "description" field.
+	Description string `json:"description,omitempty"`
+	// Industry holds the value of the "industry" field.
+	Industry string `json:"industry,omitempty"`
+	// FoundedYear holds the value of the "founded_year" field.
+	FoundedYear *int `json:"founded_year,omitempty"`
+	// Size holds the value of the "size" field.
+	Size string `json:"size,omitempty"`
+	// Website holds the value of the "website" field.
+	Website string `json:"website,omitempty"`
+	// ContactEmail holds the value of the "contact_email" field.
+	ContactEmail string `json:"contact_email,omitempty"`
+	// Phone holds the value of the "phone" field.
+	Phone string `json:"phone,omitempty"`
+	// LinkedinURL holds the value of the "linkedin_url" field.
+	LinkedinURL string `json:"linkedin_url,omitempty"`
+	// InstagramURL holds the value of the "instagram_url" field.
+	InstagramURL string `json:"instagram_url,omitempty"`
+	// LegalName holds the value of the "legal_name" field.
+	LegalName string `json:"legal_name,omitempty"`
+	// Cnpj holds the value of the "cnpj" field.
+	Cnpj string `json:"cnpj,omitempty"`
+	// AddressLine1 holds the value of the "address_line1" field.
+	AddressLine1 string `json:"address_line1,omitempty"`
+	// AddressLine2 holds the value of the "address_line2" field.
+	AddressLine2 string `json:"address_line2,omitempty"`
+	// City holds the value of the "city" field.
+	City string `json:"city,omitempty"`
+	// State holds the value of the "state" field.
+	State string `json:"state,omitempty"`
+	// PostalCode holds the value of the "postal_code" field.
+	PostalCode string `json:"postal_code,omitempty"`
+	// Country holds the value of the "country" field.
+	Country string `json:"country,omitempty"`
+	// Timezone holds the value of the "timezone" field.
+	Timezone string `json:"timezone,omitempty"`
+	// WeeklyHours holds the value of the "weekly_hours" field.
+	WeeklyHours *int `json:"weekly_hours,omitempty"`
+	// DefaultSprintDays holds the value of the "default_sprint_days" field.
+	DefaultSprintDays *int `json:"default_sprint_days,omitempty"`
+	// Currency holds the value of the "currency" field.
+	Currency string `json:"currency,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -73,7 +117,9 @@ func (*Organization) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case organization.FieldName:
+		case organization.FieldFoundedYear, organization.FieldWeeklyHours, organization.FieldDefaultSprintDays:
+			values[i] = new(sql.NullInt64)
+		case organization.FieldName, organization.FieldSummary, organization.FieldDescription, organization.FieldIndustry, organization.FieldSize, organization.FieldWebsite, organization.FieldContactEmail, organization.FieldPhone, organization.FieldLinkedinURL, organization.FieldInstagramURL, organization.FieldLegalName, organization.FieldCnpj, organization.FieldAddressLine1, organization.FieldAddressLine2, organization.FieldCity, organization.FieldState, organization.FieldPostalCode, organization.FieldCountry, organization.FieldTimezone, organization.FieldCurrency:
 			values[i] = new(sql.NullString)
 		case organization.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
@@ -105,6 +151,141 @@ func (_m *Organization) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field name", values[i])
 			} else if value.Valid {
 				_m.Name = value.String
+			}
+		case organization.FieldSummary:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field summary", values[i])
+			} else if value.Valid {
+				_m.Summary = value.String
+			}
+		case organization.FieldDescription:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field description", values[i])
+			} else if value.Valid {
+				_m.Description = value.String
+			}
+		case organization.FieldIndustry:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field industry", values[i])
+			} else if value.Valid {
+				_m.Industry = value.String
+			}
+		case organization.FieldFoundedYear:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field founded_year", values[i])
+			} else if value.Valid {
+				_m.FoundedYear = new(int)
+				*_m.FoundedYear = int(value.Int64)
+			}
+		case organization.FieldSize:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field size", values[i])
+			} else if value.Valid {
+				_m.Size = value.String
+			}
+		case organization.FieldWebsite:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field website", values[i])
+			} else if value.Valid {
+				_m.Website = value.String
+			}
+		case organization.FieldContactEmail:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field contact_email", values[i])
+			} else if value.Valid {
+				_m.ContactEmail = value.String
+			}
+		case organization.FieldPhone:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field phone", values[i])
+			} else if value.Valid {
+				_m.Phone = value.String
+			}
+		case organization.FieldLinkedinURL:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field linkedin_url", values[i])
+			} else if value.Valid {
+				_m.LinkedinURL = value.String
+			}
+		case organization.FieldInstagramURL:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field instagram_url", values[i])
+			} else if value.Valid {
+				_m.InstagramURL = value.String
+			}
+		case organization.FieldLegalName:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field legal_name", values[i])
+			} else if value.Valid {
+				_m.LegalName = value.String
+			}
+		case organization.FieldCnpj:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field cnpj", values[i])
+			} else if value.Valid {
+				_m.Cnpj = value.String
+			}
+		case organization.FieldAddressLine1:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field address_line1", values[i])
+			} else if value.Valid {
+				_m.AddressLine1 = value.String
+			}
+		case organization.FieldAddressLine2:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field address_line2", values[i])
+			} else if value.Valid {
+				_m.AddressLine2 = value.String
+			}
+		case organization.FieldCity:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field city", values[i])
+			} else if value.Valid {
+				_m.City = value.String
+			}
+		case organization.FieldState:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field state", values[i])
+			} else if value.Valid {
+				_m.State = value.String
+			}
+		case organization.FieldPostalCode:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field postal_code", values[i])
+			} else if value.Valid {
+				_m.PostalCode = value.String
+			}
+		case organization.FieldCountry:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field country", values[i])
+			} else if value.Valid {
+				_m.Country = value.String
+			}
+		case organization.FieldTimezone:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field timezone", values[i])
+			} else if value.Valid {
+				_m.Timezone = value.String
+			}
+		case organization.FieldWeeklyHours:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field weekly_hours", values[i])
+			} else if value.Valid {
+				_m.WeeklyHours = new(int)
+				*_m.WeeklyHours = int(value.Int64)
+			}
+		case organization.FieldDefaultSprintDays:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field default_sprint_days", values[i])
+			} else if value.Valid {
+				_m.DefaultSprintDays = new(int)
+				*_m.DefaultSprintDays = int(value.Int64)
+			}
+		case organization.FieldCurrency:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field currency", values[i])
+			} else if value.Valid {
+				_m.Currency = value.String
 			}
 		case organization.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -165,6 +346,78 @@ func (_m *Organization) String() string {
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
 	builder.WriteString("name=")
 	builder.WriteString(_m.Name)
+	builder.WriteString(", ")
+	builder.WriteString("summary=")
+	builder.WriteString(_m.Summary)
+	builder.WriteString(", ")
+	builder.WriteString("description=")
+	builder.WriteString(_m.Description)
+	builder.WriteString(", ")
+	builder.WriteString("industry=")
+	builder.WriteString(_m.Industry)
+	builder.WriteString(", ")
+	if v := _m.FoundedYear; v != nil {
+		builder.WriteString("founded_year=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	builder.WriteString("size=")
+	builder.WriteString(_m.Size)
+	builder.WriteString(", ")
+	builder.WriteString("website=")
+	builder.WriteString(_m.Website)
+	builder.WriteString(", ")
+	builder.WriteString("contact_email=")
+	builder.WriteString(_m.ContactEmail)
+	builder.WriteString(", ")
+	builder.WriteString("phone=")
+	builder.WriteString(_m.Phone)
+	builder.WriteString(", ")
+	builder.WriteString("linkedin_url=")
+	builder.WriteString(_m.LinkedinURL)
+	builder.WriteString(", ")
+	builder.WriteString("instagram_url=")
+	builder.WriteString(_m.InstagramURL)
+	builder.WriteString(", ")
+	builder.WriteString("legal_name=")
+	builder.WriteString(_m.LegalName)
+	builder.WriteString(", ")
+	builder.WriteString("cnpj=")
+	builder.WriteString(_m.Cnpj)
+	builder.WriteString(", ")
+	builder.WriteString("address_line1=")
+	builder.WriteString(_m.AddressLine1)
+	builder.WriteString(", ")
+	builder.WriteString("address_line2=")
+	builder.WriteString(_m.AddressLine2)
+	builder.WriteString(", ")
+	builder.WriteString("city=")
+	builder.WriteString(_m.City)
+	builder.WriteString(", ")
+	builder.WriteString("state=")
+	builder.WriteString(_m.State)
+	builder.WriteString(", ")
+	builder.WriteString("postal_code=")
+	builder.WriteString(_m.PostalCode)
+	builder.WriteString(", ")
+	builder.WriteString("country=")
+	builder.WriteString(_m.Country)
+	builder.WriteString(", ")
+	builder.WriteString("timezone=")
+	builder.WriteString(_m.Timezone)
+	builder.WriteString(", ")
+	if v := _m.WeeklyHours; v != nil {
+		builder.WriteString("weekly_hours=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	if v := _m.DefaultSprintDays; v != nil {
+		builder.WriteString("default_sprint_days=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	builder.WriteString("currency=")
+	builder.WriteString(_m.Currency)
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))

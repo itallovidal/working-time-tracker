@@ -72,3 +72,48 @@ func TestHandler_NotFound(t *testing.T) {
 		t.Fatalf("expected 404, got %d", rec.Code)
 	}
 }
+
+// O PATCH aceita os campos do perfil, e o GET devolve todos eles.
+func TestHandler_UpdateProfile(t *testing.T) {
+	cleanup(t)
+	svc := organization.NewService(organization.NewStore(testClient))
+	e := newTestEcho(svc)
+	org, _ := svc.Create("Org")
+	path := "/api/orgs/" + org.ID.String()
+
+	patch := func(body string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest("PATCH", path, strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+		e.ServeHTTP(rec, req)
+		return rec
+	}
+
+	if rec := patch(`{"summary":"Entregas rápidas","cnpj":"12.ABC.345/01DE-35","weekly_hours":44}`); rec.Code != http.StatusOK {
+		t.Fatalf("update expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, httptest.NewRequest("GET", path, nil))
+	body := rec.Body.String()
+	for _, want := range []string{
+		`"name":"Org"`, `"summary":"Entregas rápidas"`, `"cnpj":"12ABC34501DE35"`, `"weekly_hours":44`,
+		`"founded_year":null`, `"timezone":"America/Sao_Paulo"`, `"currency":"BRL"`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("GET body does not contain %s: %s", want, body)
+		}
+	}
+
+	rec = patch(`{"cnpj":"11.222.333/0001-80"}`)
+	if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "CNPJ inválido") {
+		t.Errorf("invalid CNPJ = %d %s, want 400 with the reason", rec.Code, rec.Body.String())
+	}
+
+	req := httptest.NewRequest("PATCH", "/api/orgs/00000000-0000-0000-0000-000000000000", strings.NewReader(`{"name":"X"}`))
+	req.Header.Set("Content-Type", "application/json")
+	rec = httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("PATCH on a missing organization = %d, want 404", rec.Code)
+	}
+}

@@ -1,6 +1,6 @@
 // Command seed popula um banco vazio com dados de demonstração: uma organização
-// com uma admin e um membro, um projeto, um time, tarefas e algumas sessões de
-// trabalho dos últimos dias.
+// com o perfil preenchido, uma admin e um membro, um projeto, um time, tarefas e
+// algumas sessões de trabalho dos últimos dias.
 //
 // Uso: go run ./cmd/seed (lê DATABASE_URL do ambiente ou do .env)
 package main
@@ -16,6 +16,7 @@ import (
 
 	"working-time-tracker/internal/database"
 	"working-time-tracker/internal/domain/auth"
+	"working-time-tracker/internal/domain/organization"
 	"working-time-tracker/internal/domain/project"
 	"working-time-tracker/internal/domain/task"
 	"working-time-tracker/internal/domain/team"
@@ -42,6 +43,7 @@ func main() {
 	}
 
 	authSvc := auth.NewService(auth.NewStore(db.Client))
+	orgSvc := organization.NewService(organization.NewStore(db.Client))
 	projectSvc := project.NewService(project.NewStore(db.Client))
 	teamSvc := team.NewService(team.NewStore(db.Client))
 	membershipStore := team.NewMembershipStore(db.Client)
@@ -53,6 +55,33 @@ func main() {
 		Name:             "Ana Souza",
 		Email:            "ana@example.com",
 		Password:         password,
+	})
+	must(err)
+
+	text := func(v string) *string { return &v }
+	number := func(v int) *int { return &v }
+	_, err = orgSvc.Update(ana.OrganizationID.String(), organization.UpdateInput{
+		Summary: text("Entregas no mesmo dia para o comércio de bairro."),
+		Description: text("A Acme Delivery liga lojas de bairro a entregadores parceiros. " +
+			"O lojista pede a coleta pelo aplicativo e acompanha a entrega até a porta do cliente.\n\n" +
+			"Atendemos a Grande São Paulo, de segunda a sábado."),
+		Industry:          text("Logística"),
+		FoundedYear:       number(2019),
+		Size:              text("11-50"),
+		Website:           text("https://acme-delivery.example"),
+		ContactEmail:      text("contato@acme-delivery.example"),
+		Phone:             text("+55 (11) 4002-8922"),
+		LinkedinURL:       text("https://www.linkedin.com/company/acme-delivery"),
+		LegalName:         text("Acme Delivery Logística Ltda"),
+		CNPJ:              text("11.222.333/0001-81"),
+		AddressLine1:      text("Av. Paulista, 1000"),
+		AddressLine2:      text("Conjunto 42, Bela Vista"),
+		City:              text("São Paulo"),
+		State:             text("SP"),
+		PostalCode:        text("01310-100"),
+		Country:           text("Brasil"),
+		WeeklyHours:       number(40),
+		DefaultSprintDays: number(14),
 	})
 	must(err)
 

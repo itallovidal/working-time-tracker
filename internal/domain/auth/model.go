@@ -14,6 +14,8 @@ type Identity struct {
 	Role             string    `json:"role"`
 	OrganizationID   uuid.UUID `json:"organization_id"`
 	OrganizationName string    `json:"organization_name"`
+	// OrganizationCurrency é a moeda dos valores da organização (BRL, USD ou EUR).
+	OrganizationCurrency string `json:"organization_currency"`
 }
 
 func (i *Identity) IsAdmin() bool {

@@ -203,7 +203,7 @@
       "_id": "req_02_01",
       "_type": "request",
       "parentId": "fld_02",
-      "name": "Renomear organização",
+      "name": "Atualizar organização",
       "method": "PATCH",
       "url": "{{base_url}}/api/orgs/{{org_id}}",
       "authentication": {},
@@ -216,7 +216,7 @@
       ],
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"name\": \"Empresa Renomeada\"\n}"
+        "text": "{\n  \"name\": \"Empresa Renomeada\",\n  \"summary\": \"Entregas no mesmo dia para o comércio de bairro.\",\n  \"website\": \"https://empresa.example\",\n  \"cnpj\": \"11.222.333/0001-81\",\n  \"timezone\": \"America/Sao_Paulo\",\n  \"currency\": \"BRL\",\n  \"weekly_hours\": 40,\n  \"default_sprint_days\": 14\n}"
       }
     },
     {

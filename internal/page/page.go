@@ -11,6 +11,7 @@ import (
 	"github.com/labstack/echo/v5"
 
 	"working-time-tracker/internal/domain/auth"
+	"working-time-tracker/internal/domain/organization"
 )
 
 // Crumb identifica um recurso no cabeçalho da página.
@@ -23,9 +24,10 @@ type Crumb struct {
 type Data struct {
 	Title   string
 	Me      *auth.Identity
-	Section string // item ativo da barra superior: projects, organization, profile
+	Section string                     // item ativo da barra superior: projects, organization, profile
+	Org     *organization.Organization // só nas páginas da organização
 	Project *Crumb
-	Tab     string // aba ativa do projeto (tasks, time, teams, integrations, settings) ou da organização (general, people, projects)
+	Tab     string // aba ativa do projeto (tasks, time, teams, integrations, settings) ou da organização (about, general, people, projects)
 	Script  string // página em /static/pages/<Script>.js com os componentes Alpine
 	Props   map[string]any
 }

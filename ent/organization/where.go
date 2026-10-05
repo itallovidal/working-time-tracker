@@ -61,6 +61,116 @@ func Name(v string) predicate.Organization {
 	return predicate.Organization(sql.FieldEQ(FieldName, v))
 }
 
+// Summary applies equality check predicate on the "summary" field. It's identical to SummaryEQ.
+func Summary(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldSummary, v))
+}
+
+// Description applies equality check predicate on the "description" field. It's identical to DescriptionEQ.
+func Description(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldDescription, v))
+}
+
+// Industry applies equality check predicate on the "industry" field. It's identical to IndustryEQ.
+func Industry(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldIndustry, v))
+}
+
+// FoundedYear applies equality check predicate on the "founded_year" field. It's identical to FoundedYearEQ.
+func FoundedYear(v int) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldFoundedYear, v))
+}
+
+// Size applies equality check predicate on the "size" field. It's identical to SizeEQ.
+func Size(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldSize, v))
+}
+
+// Website applies equality check predicate on the "website" field. It's identical to WebsiteEQ.
+func Website(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldWebsite, v))
+}
+
+// ContactEmail applies equality check predicate on the "contact_email" field. It's identical to ContactEmailEQ.
+func ContactEmail(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldContactEmail, v))
+}
+
+// Phone applies equality check predicate on the "phone" field. It's identical to PhoneEQ.
+func Phone(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldPhone, v))
+}
+
+// LinkedinURL applies equality check predicate on the "linkedin_url" field. It's identical to LinkedinURLEQ.
+func LinkedinURL(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldLinkedinURL, v))
+}
+
+// InstagramURL applies equality check predicate on the "instagram_url" field. It's identical to InstagramURLEQ.
+func InstagramURL(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldInstagramURL, v))
+}
+
+// LegalName applies equality check predicate on the "legal_name" field. It's identical to LegalNameEQ.
+func LegalName(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldLegalName, v))
+}
+
+// Cnpj applies equality check predicate on the "cnpj" field. It's identical to CnpjEQ.
+func Cnpj(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldCnpj, v))
+}
+
+// AddressLine1 applies equality check predicate on the "address_line1" field. It's identical to AddressLine1EQ.
+func AddressLine1(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldAddressLine1, v))
+}
+
+// AddressLine2 applies equality check predicate on the "address_line2" field. It's identical to AddressLine2EQ.
+func AddressLine2(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldAddressLine2, v))
+}
+
+// City applies equality check predicate on the "city" field. It's identical to CityEQ.
+func City(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldCity, v))
+}
+
+// State applies equality check predicate on the "state" field. It's identical to StateEQ.
+func State(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldState, v))
+}
+
+// PostalCode applies equality check predicate on the "postal_code" field. It's identical to PostalCodeEQ.
+func PostalCode(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldPostalCode, v))
+}
+
+// Country applies equality check predicate on the "country" field. It's identical to CountryEQ.
+func Country(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldCountry, v))
+}
+
+// Timezone applies equality check predicate on the "timezone" field. It's identical to TimezoneEQ.
+func Timezone(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldTimezone, v))
+}
+
+// WeeklyHours applies equality check predicate on the "weekly_hours" field. It's identical to WeeklyHoursEQ.
+func WeeklyHours(v int) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldWeeklyHours, v))
+}
+
+// DefaultSprintDays applies equality check predicate on the "default_sprint_days" field. It's identical to DefaultSprintDaysEQ.
+func DefaultSprintDays(v int) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldDefaultSprintDays, v))
+}
+
+// Currency applies equality check predicate on the "currency" field. It's identical to CurrencyEQ.
+func Currency(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldCurrency, v))
+}
+
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.Organization {
 	return predicate.Organization(sql.FieldEQ(FieldCreatedAt, v))
@@ -129,6 +239,1561 @@ func NameEqualFold(v string) predicate.Organization {
 // NameContainsFold applies the ContainsFold predicate on the "name" field.
 func NameContainsFold(v string) predicate.Organization {
 	return predicate.Organization(sql.FieldContainsFold(FieldName, v))
+}
+
+// SummaryEQ applies the EQ predicate on the "summary" field.
+func SummaryEQ(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldSummary, v))
+}
+
+// SummaryNEQ applies the NEQ predicate on the "summary" field.
+func SummaryNEQ(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldNEQ(FieldSummary, v))
+}
+
+// SummaryIn applies the In predicate on the "summary" field.
+func SummaryIn(vs ...string) predicate.Organization {
+	return predicate.Organization(sql.FieldIn(FieldSummary, vs...))
+}
+
+// SummaryNotIn applies the NotIn predicate on the "summary" field.
+func SummaryNotIn(vs ...string) predicate.Organization {
+	return predicate.Organization(sql.FieldNotIn(FieldSummary, vs...))
+}
+
+// SummaryGT applies the GT predicate on the "summary" field.
+func SummaryGT(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldGT(FieldSummary, v))
+}
+
+// SummaryGTE applies the GTE predicate on the "summary" field.
+func SummaryGTE(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldGTE(FieldSummary, v))
+}
+
+// SummaryLT applies the LT predicate on the "summary" field.
+func SummaryLT(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldLT(FieldSummary, v))
+}
+
+// SummaryLTE applies the LTE predicate on the "summary" field.
+func SummaryLTE(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldLTE(FieldSummary, v))
+}
+
+// SummaryContains applies the Contains predicate on the "summary" field.
+func SummaryContains(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldContains(FieldSummary, v))
+}
+
+// SummaryHasPrefix applies the HasPrefix predicate on the "summary" field.
+func SummaryHasPrefix(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldHasPrefix(FieldSummary, v))
+}
+
+// SummaryHasSuffix applies the HasSuffix predicate on the "summary" field.
+func SummaryHasSuffix(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldHasSuffix(FieldSummary, v))
+}
+
+// SummaryIsNil applies the IsNil predicate on the "summary" field.
+func SummaryIsNil() predicate.Organization {
+	return predicate.Organization(sql.FieldIsNull(FieldSummary))
+}
+
+// SummaryNotNil applies the NotNil predicate on the "summary" field.
+func SummaryNotNil() predicate.Organization {
+	return predicate.Organization(sql.FieldNotNull(FieldSummary))
+}
+
+// SummaryEqualFold applies the EqualFold predicate on the "summary" field.
+func SummaryEqualFold(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEqualFold(FieldSummary, v))
+}
+
+// SummaryContainsFold applies the ContainsFold predicate on the "summary" field.
+func SummaryContainsFold(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldContainsFold(FieldSummary, v))
+}
+
+// DescriptionEQ applies the EQ predicate on the "description" field.
+func DescriptionEQ(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldDescription, v))
+}
+
+// DescriptionNEQ applies the NEQ predicate on the "description" field.
+func DescriptionNEQ(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldNEQ(FieldDescription, v))
+}
+
+// DescriptionIn applies the In predicate on the "description" field.
+func DescriptionIn(vs ...string) predicate.Organization {
+	return predicate.Organization(sql.FieldIn(FieldDescription, vs...))
+}
+
+// DescriptionNotIn applies the NotIn predicate on the "description" field.
+func DescriptionNotIn(vs ...string) predicate.Organization {
+	return predicate.Organization(sql.FieldNotIn(FieldDescription, vs...))
+}
+
+// DescriptionGT applies the GT predicate on the "description" field.
+func DescriptionGT(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldGT(FieldDescription, v))
+}
+
+// DescriptionGTE applies the GTE predicate on the "description" field.
+func DescriptionGTE(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldGTE(FieldDescription, v))
+}
+
+// DescriptionLT applies the LT predicate on the "description" field.
+func DescriptionLT(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldLT(FieldDescription, v))
+}
+
+// DescriptionLTE applies the LTE predicate on the "description" field.
+func DescriptionLTE(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldLTE(FieldDescription, v))
+}
+
+// DescriptionContains applies the Contains predicate on the "description" field.
+func DescriptionContains(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldContains(FieldDescription, v))
+}
+
+// DescriptionHasPrefix applies the HasPrefix predicate on the "description" field.
+func DescriptionHasPrefix(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldHasPrefix(FieldDescription, v))
+}
+
+// DescriptionHasSuffix applies the HasSuffix predicate on the "description" field.
+func DescriptionHasSuffix(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldHasSuffix(FieldDescription, v))
+}
+
+// DescriptionIsNil applies the IsNil predicate on the "description" field.
+func DescriptionIsNil() predicate.Organization {
+	return predicate.Organization(sql.FieldIsNull(FieldDescription))
+}
+
+// DescriptionNotNil applies the NotNil predicate on the "description" field.
+func DescriptionNotNil() predicate.Organization {
+	return predicate.Organization(sql.FieldNotNull(FieldDescription))
+}
+
+// DescriptionEqualFold applies the EqualFold predicate on the "description" field.
+func DescriptionEqualFold(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEqualFold(FieldDescription, v))
+}
+
+// DescriptionContainsFold applies the ContainsFold predicate on the "description" field.
+func DescriptionContainsFold(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldContainsFold(FieldDescription, v))
+}
+
+// IndustryEQ applies the EQ predicate on the "industry" field.
+func IndustryEQ(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldIndustry, v))
+}
+
+// IndustryNEQ applies the NEQ predicate on the "industry" field.
+func IndustryNEQ(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldNEQ(FieldIndustry, v))
+}
+
+// IndustryIn applies the In predicate on the "industry" field.
+func IndustryIn(vs ...string) predicate.Organization {
+	return predicate.Organization(sql.FieldIn(FieldIndustry, vs...))
+}
+
+// IndustryNotIn applies the NotIn predicate on the "industry" field.
+func IndustryNotIn(vs ...string) predicate.Organization {
+	return predicate.Organization(sql.FieldNotIn(FieldIndustry, vs...))
+}
+
+// IndustryGT applies the GT predicate on the "industry" field.
+func IndustryGT(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldGT(FieldIndustry, v))
+}
+
+// IndustryGTE applies the GTE predicate on the "industry" field.
+func IndustryGTE(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldGTE(FieldIndustry, v))
+}
+
+// IndustryLT applies the LT predicate on the "industry" field.
+func IndustryLT(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldLT(FieldIndustry, v))
+}
+
+// IndustryLTE applies the LTE predicate on the "industry" field.
+func IndustryLTE(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldLTE(FieldIndustry, v))
+}
+
+// IndustryContains applies the Contains predicate on the "industry" field.
+func IndustryContains(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldContains(FieldIndustry, v))
+}
+
+// IndustryHasPrefix applies the HasPrefix predicate on the "industry" field.
+func IndustryHasPrefix(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldHasPrefix(FieldIndustry, v))
+}
+
+// IndustryHasSuffix applies the HasSuffix predicate on the "industry" field.
+func IndustryHasSuffix(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldHasSuffix(FieldIndustry, v))
+}
+
+// IndustryIsNil applies the IsNil predicate on the "industry" field.
+func IndustryIsNil() predicate.Organization {
+	return predicate.Organization(sql.FieldIsNull(FieldIndustry))
+}
+
+// IndustryNotNil applies the NotNil predicate on the "industry" field.
+func IndustryNotNil() predicate.Organization {
+	return predicate.Organization(sql.FieldNotNull(FieldIndustry))
+}
+
+// IndustryEqualFold applies the EqualFold predicate on the "industry" field.
+func IndustryEqualFold(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEqualFold(FieldIndustry, v))
+}
+
+// IndustryContainsFold applies the ContainsFold predicate on the "industry" field.
+func IndustryContainsFold(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldContainsFold(FieldIndustry, v))
+}
+
+// FoundedYearEQ applies the EQ predicate on the "founded_year" field.
+func FoundedYearEQ(v int) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldFoundedYear, v))
+}
+
+// FoundedYearNEQ applies the NEQ predicate on the "founded_year" field.
+func FoundedYearNEQ(v int) predicate.Organization {
+	return predicate.Organization(sql.FieldNEQ(FieldFoundedYear, v))
+}
+
+// FoundedYearIn applies the In predicate on the "founded_year" field.
+func FoundedYearIn(vs ...int) predicate.Organization {
+	return predicate.Organization(sql.FieldIn(FieldFoundedYear, vs...))
+}
+
+// FoundedYearNotIn applies the NotIn predicate on the "founded_year" field.
+func FoundedYearNotIn(vs ...int) predicate.Organization {
+	return predicate.Organization(sql.FieldNotIn(FieldFoundedYear, vs...))
+}
+
+// FoundedYearGT applies the GT predicate on the "founded_year" field.
+func FoundedYearGT(v int) predicate.Organization {
+	return predicate.Organization(sql.FieldGT(FieldFoundedYear, v))
+}
+
+// FoundedYearGTE applies the GTE predicate on the "founded_year" field.
+func FoundedYearGTE(v int) predicate.Organization {
+	return predicate.Organization(sql.FieldGTE(FieldFoundedYear, v))
+}
+
+// FoundedYearLT applies the LT predicate on the "founded_year" field.
+func FoundedYearLT(v int) predicate.Organization {
+	return predicate.Organization(sql.FieldLT(FieldFoundedYear, v))
+}
+
+// FoundedYearLTE applies the LTE predicate on the "founded_year" field.
+func FoundedYearLTE(v int) predicate.Organization {
+	return predicate.Organization(sql.FieldLTE(FieldFoundedYear, v))
+}
+
+// FoundedYearIsNil applies the IsNil predicate on the "founded_year" field.
+func FoundedYearIsNil() predicate.Organization {
+	return predicate.Organization(sql.FieldIsNull(FieldFoundedYear))
+}
+
+// FoundedYearNotNil applies the NotNil predicate on the "founded_year" field.
+func FoundedYearNotNil() predicate.Organization {
+	return predicate.Organization(sql.FieldNotNull(FieldFoundedYear))
+}
+
+// SizeEQ applies the EQ predicate on the "size" field.
+func SizeEQ(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldSize, v))
+}
+
+// SizeNEQ applies the NEQ predicate on the "size" field.
+func SizeNEQ(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldNEQ(FieldSize, v))
+}
+
+// SizeIn applies the In predicate on the "size" field.
+func SizeIn(vs ...string) predicate.Organization {
+	return predicate.Organization(sql.FieldIn(FieldSize, vs...))
+}
+
+// SizeNotIn applies the NotIn predicate on the "size" field.
+func SizeNotIn(vs ...string) predicate.Organization {
+	return predicate.Organization(sql.FieldNotIn(FieldSize, vs...))
+}
+
+// SizeGT applies the GT predicate on the "size" field.
+func SizeGT(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldGT(FieldSize, v))
+}
+
+// SizeGTE applies the GTE predicate on the "size" field.
+func SizeGTE(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldGTE(FieldSize, v))
+}
+
+// SizeLT applies the LT predicate on the "size" field.
+func SizeLT(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldLT(FieldSize, v))
+}
+
+// SizeLTE applies the LTE predicate on the "size" field.
+func SizeLTE(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldLTE(FieldSize, v))
+}
+
+// SizeContains applies the Contains predicate on the "size" field.
+func SizeContains(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldContains(FieldSize, v))
+}
+
+// SizeHasPrefix applies the HasPrefix predicate on the "size" field.
+func SizeHasPrefix(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldHasPrefix(FieldSize, v))
+}
+
+// SizeHasSuffix applies the HasSuffix predicate on the "size" field.
+func SizeHasSuffix(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldHasSuffix(FieldSize, v))
+}
+
+// SizeIsNil applies the IsNil predicate on the "size" field.
+func SizeIsNil() predicate.Organization {
+	return predicate.Organization(sql.FieldIsNull(FieldSize))
+}
+
+// SizeNotNil applies the NotNil predicate on the "size" field.
+func SizeNotNil() predicate.Organization {
+	return predicate.Organization(sql.FieldNotNull(FieldSize))
+}
+
+// SizeEqualFold applies the EqualFold predicate on the "size" field.
+func SizeEqualFold(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEqualFold(FieldSize, v))
+}
+
+// SizeContainsFold applies the ContainsFold predicate on the "size" field.
+func SizeContainsFold(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldContainsFold(FieldSize, v))
+}
+
+// WebsiteEQ applies the EQ predicate on the "website" field.
+func WebsiteEQ(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldWebsite, v))
+}
+
+// WebsiteNEQ applies the NEQ predicate on the "website" field.
+func WebsiteNEQ(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldNEQ(FieldWebsite, v))
+}
+
+// WebsiteIn applies the In predicate on the "website" field.
+func WebsiteIn(vs ...string) predicate.Organization {
+	return predicate.Organization(sql.FieldIn(FieldWebsite, vs...))
+}
+
+// WebsiteNotIn applies the NotIn predicate on the "website" field.
+func WebsiteNotIn(vs ...string) predicate.Organization {
+	return predicate.Organization(sql.FieldNotIn(FieldWebsite, vs...))
+}
+
+// WebsiteGT applies the GT predicate on the "website" field.
+func WebsiteGT(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldGT(FieldWebsite, v))
+}
+
+// WebsiteGTE applies the GTE predicate on the "website" field.
+func WebsiteGTE(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldGTE(FieldWebsite, v))
+}
+
+// WebsiteLT applies the LT predicate on the "website" field.
+func WebsiteLT(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldLT(FieldWebsite, v))
+}
+
+// WebsiteLTE applies the LTE predicate on the "website" field.
+func WebsiteLTE(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldLTE(FieldWebsite, v))
+}
+
+// WebsiteContains applies the Contains predicate on the "website" field.
+func WebsiteContains(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldContains(FieldWebsite, v))
+}
+
+// WebsiteHasPrefix applies the HasPrefix predicate on the "website" field.
+func WebsiteHasPrefix(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldHasPrefix(FieldWebsite, v))
+}
+
+// WebsiteHasSuffix applies the HasSuffix predicate on the "website" field.
+func WebsiteHasSuffix(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldHasSuffix(FieldWebsite, v))
+}
+
+// WebsiteIsNil applies the IsNil predicate on the "website" field.
+func WebsiteIsNil() predicate.Organization {
+	return predicate.Organization(sql.FieldIsNull(FieldWebsite))
+}
+
+// WebsiteNotNil applies the NotNil predicate on the "website" field.
+func WebsiteNotNil() predicate.Organization {
+	return predicate.Organization(sql.FieldNotNull(FieldWebsite))
+}
+
+// WebsiteEqualFold applies the EqualFold predicate on the "website" field.
+func WebsiteEqualFold(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEqualFold(FieldWebsite, v))
+}
+
+// WebsiteContainsFold applies the ContainsFold predicate on the "website" field.
+func WebsiteContainsFold(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldContainsFold(FieldWebsite, v))
+}
+
+// ContactEmailEQ applies the EQ predicate on the "contact_email" field.
+func ContactEmailEQ(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldContactEmail, v))
+}
+
+// ContactEmailNEQ applies the NEQ predicate on the "contact_email" field.
+func ContactEmailNEQ(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldNEQ(FieldContactEmail, v))
+}
+
+// ContactEmailIn applies the In predicate on the "contact_email" field.
+func ContactEmailIn(vs ...string) predicate.Organization {
+	return predicate.Organization(sql.FieldIn(FieldContactEmail, vs...))
+}
+
+// ContactEmailNotIn applies the NotIn predicate on the "contact_email" field.
+func ContactEmailNotIn(vs ...string) predicate.Organization {
+	return predicate.Organization(sql.FieldNotIn(FieldContactEmail, vs...))
+}
+
+// ContactEmailGT applies the GT predicate on the "contact_email" field.
+func ContactEmailGT(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldGT(FieldContactEmail, v))
+}
+
+// ContactEmailGTE applies the GTE predicate on the "contact_email" field.
+func ContactEmailGTE(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldGTE(FieldContactEmail, v))
+}
+
+// ContactEmailLT applies the LT predicate on the "contact_email" field.
+func ContactEmailLT(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldLT(FieldContactEmail, v))
+}
+
+// ContactEmailLTE applies the LTE predicate on the "contact_email" field.
+func ContactEmailLTE(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldLTE(FieldContactEmail, v))
+}
+
+// ContactEmailContains applies the Contains predicate on the "contact_email" field.
+func ContactEmailContains(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldContains(FieldContactEmail, v))
+}
+
+// ContactEmailHasPrefix applies the HasPrefix predicate on the "contact_email" field.
+func ContactEmailHasPrefix(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldHasPrefix(FieldContactEmail, v))
+}
+
+// ContactEmailHasSuffix applies the HasSuffix predicate on the "contact_email" field.
+func ContactEmailHasSuffix(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldHasSuffix(FieldContactEmail, v))
+}
+
+// ContactEmailIsNil applies the IsNil predicate on the "contact_email" field.
+func ContactEmailIsNil() predicate.Organization {
+	return predicate.Organization(sql.FieldIsNull(FieldContactEmail))
+}
+
+// ContactEmailNotNil applies the NotNil predicate on the "contact_email" field.
+func ContactEmailNotNil() predicate.Organization {
+	return predicate.Organization(sql.FieldNotNull(FieldContactEmail))
+}
+
+// ContactEmailEqualFold applies the EqualFold predicate on the "contact_email" field.
+func ContactEmailEqualFold(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEqualFold(FieldContactEmail, v))
+}
+
+// ContactEmailContainsFold applies the ContainsFold predicate on the "contact_email" field.
+func ContactEmailContainsFold(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldContainsFold(FieldContactEmail, v))
+}
+
+// PhoneEQ applies the EQ predicate on the "phone" field.
+func PhoneEQ(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldPhone, v))
+}
+
+// PhoneNEQ applies the NEQ predicate on the "phone" field.
+func PhoneNEQ(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldNEQ(FieldPhone, v))
+}
+
+// PhoneIn applies the In predicate on the "phone" field.
+func PhoneIn(vs ...string) predicate.Organization {
+	return predicate.Organization(sql.FieldIn(FieldPhone, vs...))
+}
+
+// PhoneNotIn applies the NotIn predicate on the "phone" field.
+func PhoneNotIn(vs ...string) predicate.Organization {
+	return predicate.Organization(sql.FieldNotIn(FieldPhone, vs...))
+}
+
+// PhoneGT applies the GT predicate on the "phone" field.
+func PhoneGT(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldGT(FieldPhone, v))
+}
+
+// PhoneGTE applies the GTE predicate on the "phone" field.
+func PhoneGTE(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldGTE(FieldPhone, v))
+}
+
+// PhoneLT applies the LT predicate on the "phone" field.
+func PhoneLT(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldLT(FieldPhone, v))
+}
+
+// PhoneLTE applies the LTE predicate on the "phone" field.
+func PhoneLTE(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldLTE(FieldPhone, v))
+}
+
+// PhoneContains applies the Contains predicate on the "phone" field.
+func PhoneContains(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldContains(FieldPhone, v))
+}
+
+// PhoneHasPrefix applies the HasPrefix predicate on the "phone" field.
+func PhoneHasPrefix(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldHasPrefix(FieldPhone, v))
+}
+
+// PhoneHasSuffix applies the HasSuffix predicate on the "phone" field.
+func PhoneHasSuffix(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldHasSuffix(FieldPhone, v))
+}
+
+// PhoneIsNil applies the IsNil predicate on the "phone" field.
+func PhoneIsNil() predicate.Organization {
+	return predicate.Organization(sql.FieldIsNull(FieldPhone))
+}
+
+// PhoneNotNil applies the NotNil predicate on the "phone" field.
+func PhoneNotNil() predicate.Organization {
+	return predicate.Organization(sql.FieldNotNull(FieldPhone))
+}
+
+// PhoneEqualFold applies the EqualFold predicate on the "phone" field.
+func PhoneEqualFold(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEqualFold(FieldPhone, v))
+}
+
+// PhoneContainsFold applies the ContainsFold predicate on the "phone" field.
+func PhoneContainsFold(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldContainsFold(FieldPhone, v))
+}
+
+// LinkedinURLEQ applies the EQ predicate on the "linkedin_url" field.
+func LinkedinURLEQ(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldLinkedinURL, v))
+}
+
+// LinkedinURLNEQ applies the NEQ predicate on the "linkedin_url" field.
+func LinkedinURLNEQ(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldNEQ(FieldLinkedinURL, v))
+}
+
+// LinkedinURLIn applies the In predicate on the "linkedin_url" field.
+func LinkedinURLIn(vs ...string) predicate.Organization {
+	return predicate.Organization(sql.FieldIn(FieldLinkedinURL, vs...))
+}
+
+// LinkedinURLNotIn applies the NotIn predicate on the "linkedin_url" field.
+func LinkedinURLNotIn(vs ...string) predicate.Organization {
+	return predicate.Organization(sql.FieldNotIn(FieldLinkedinURL, vs...))
+}
+
+// LinkedinURLGT applies the GT predicate on the "linkedin_url" field.
+func LinkedinURLGT(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldGT(FieldLinkedinURL, v))
+}
+
+// LinkedinURLGTE applies the GTE predicate on the "linkedin_url" field.
+func LinkedinURLGTE(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldGTE(FieldLinkedinURL, v))
+}
+
+// LinkedinURLLT applies the LT predicate on the "linkedin_url" field.
+func LinkedinURLLT(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldLT(FieldLinkedinURL, v))
+}
+
+// LinkedinURLLTE applies the LTE predicate on the "linkedin_url" field.
+func LinkedinURLLTE(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldLTE(FieldLinkedinURL, v))
+}
+
+// LinkedinURLContains applies the Contains predicate on the "linkedin_url" field.
+func LinkedinURLContains(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldContains(FieldLinkedinURL, v))
+}
+
+// LinkedinURLHasPrefix applies the HasPrefix predicate on the "linkedin_url" field.
+func LinkedinURLHasPrefix(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldHasPrefix(FieldLinkedinURL, v))
+}
+
+// LinkedinURLHasSuffix applies the HasSuffix predicate on the "linkedin_url" field.
+func LinkedinURLHasSuffix(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldHasSuffix(FieldLinkedinURL, v))
+}
+
+// LinkedinURLIsNil applies the IsNil predicate on the "linkedin_url" field.
+func LinkedinURLIsNil() predicate.Organization {
+	return predicate.Organization(sql.FieldIsNull(FieldLinkedinURL))
+}
+
+// LinkedinURLNotNil applies the NotNil predicate on the "linkedin_url" field.
+func LinkedinURLNotNil() predicate.Organization {
+	return predicate.Organization(sql.FieldNotNull(FieldLinkedinURL))
+}
+
+// LinkedinURLEqualFold applies the EqualFold predicate on the "linkedin_url" field.
+func LinkedinURLEqualFold(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEqualFold(FieldLinkedinURL, v))
+}
+
+// LinkedinURLContainsFold applies the ContainsFold predicate on the "linkedin_url" field.
+func LinkedinURLContainsFold(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldContainsFold(FieldLinkedinURL, v))
+}
+
+// InstagramURLEQ applies the EQ predicate on the "instagram_url" field.
+func InstagramURLEQ(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldInstagramURL, v))
+}
+
+// InstagramURLNEQ applies the NEQ predicate on the "instagram_url" field.
+func InstagramURLNEQ(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldNEQ(FieldInstagramURL, v))
+}
+
+// InstagramURLIn applies the In predicate on the "instagram_url" field.
+func InstagramURLIn(vs ...string) predicate.Organization {
+	return predicate.Organization(sql.FieldIn(FieldInstagramURL, vs...))
+}
+
+// InstagramURLNotIn applies the NotIn predicate on the "instagram_url" field.
+func InstagramURLNotIn(vs ...string) predicate.Organization {
+	return predicate.Organization(sql.FieldNotIn(FieldInstagramURL, vs...))
+}
+
+// InstagramURLGT applies the GT predicate on the "instagram_url" field.
+func InstagramURLGT(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldGT(FieldInstagramURL, v))
+}
+
+// InstagramURLGTE applies the GTE predicate on the "instagram_url" field.
+func InstagramURLGTE(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldGTE(FieldInstagramURL, v))
+}
+
+// InstagramURLLT applies the LT predicate on the "instagram_url" field.
+func InstagramURLLT(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldLT(FieldInstagramURL, v))
+}
+
+// InstagramURLLTE applies the LTE predicate on the "instagram_url" field.
+func InstagramURLLTE(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldLTE(FieldInstagramURL, v))
+}
+
+// InstagramURLContains applies the Contains predicate on the "instagram_url" field.
+func InstagramURLContains(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldContains(FieldInstagramURL, v))
+}
+
+// InstagramURLHasPrefix applies the HasPrefix predicate on the "instagram_url" field.
+func InstagramURLHasPrefix(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldHasPrefix(FieldInstagramURL, v))
+}
+
+// InstagramURLHasSuffix applies the HasSuffix predicate on the "instagram_url" field.
+func InstagramURLHasSuffix(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldHasSuffix(FieldInstagramURL, v))
+}
+
+// InstagramURLIsNil applies the IsNil predicate on the "instagram_url" field.
+func InstagramURLIsNil() predicate.Organization {
+	return predicate.Organization(sql.FieldIsNull(FieldInstagramURL))
+}
+
+// InstagramURLNotNil applies the NotNil predicate on the "instagram_url" field.
+func InstagramURLNotNil() predicate.Organization {
+	return predicate.Organization(sql.FieldNotNull(FieldInstagramURL))
+}
+
+// InstagramURLEqualFold applies the EqualFold predicate on the "instagram_url" field.
+func InstagramURLEqualFold(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEqualFold(FieldInstagramURL, v))
+}
+
+// InstagramURLContainsFold applies the ContainsFold predicate on the "instagram_url" field.
+func InstagramURLContainsFold(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldContainsFold(FieldInstagramURL, v))
+}
+
+// LegalNameEQ applies the EQ predicate on the "legal_name" field.
+func LegalNameEQ(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldLegalName, v))
+}
+
+// LegalNameNEQ applies the NEQ predicate on the "legal_name" field.
+func LegalNameNEQ(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldNEQ(FieldLegalName, v))
+}
+
+// LegalNameIn applies the In predicate on the "legal_name" field.
+func LegalNameIn(vs ...string) predicate.Organization {
+	return predicate.Organization(sql.FieldIn(FieldLegalName, vs...))
+}
+
+// LegalNameNotIn applies the NotIn predicate on the "legal_name" field.
+func LegalNameNotIn(vs ...string) predicate.Organization {
+	return predicate.Organization(sql.FieldNotIn(FieldLegalName, vs...))
+}
+
+// LegalNameGT applies the GT predicate on the "legal_name" field.
+func LegalNameGT(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldGT(FieldLegalName, v))
+}
+
+// LegalNameGTE applies the GTE predicate on the "legal_name" field.
+func LegalNameGTE(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldGTE(FieldLegalName, v))
+}
+
+// LegalNameLT applies the LT predicate on the "legal_name" field.
+func LegalNameLT(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldLT(FieldLegalName, v))
+}
+
+// LegalNameLTE applies the LTE predicate on the "legal_name" field.
+func LegalNameLTE(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldLTE(FieldLegalName, v))
+}
+
+// LegalNameContains applies the Contains predicate on the "legal_name" field.
+func LegalNameContains(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldContains(FieldLegalName, v))
+}
+
+// LegalNameHasPrefix applies the HasPrefix predicate on the "legal_name" field.
+func LegalNameHasPrefix(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldHasPrefix(FieldLegalName, v))
+}
+
+// LegalNameHasSuffix applies the HasSuffix predicate on the "legal_name" field.
+func LegalNameHasSuffix(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldHasSuffix(FieldLegalName, v))
+}
+
+// LegalNameIsNil applies the IsNil predicate on the "legal_name" field.
+func LegalNameIsNil() predicate.Organization {
+	return predicate.Organization(sql.FieldIsNull(FieldLegalName))
+}
+
+// LegalNameNotNil applies the NotNil predicate on the "legal_name" field.
+func LegalNameNotNil() predicate.Organization {
+	return predicate.Organization(sql.FieldNotNull(FieldLegalName))
+}
+
+// LegalNameEqualFold applies the EqualFold predicate on the "legal_name" field.
+func LegalNameEqualFold(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEqualFold(FieldLegalName, v))
+}
+
+// LegalNameContainsFold applies the ContainsFold predicate on the "legal_name" field.
+func LegalNameContainsFold(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldContainsFold(FieldLegalName, v))
+}
+
+// CnpjEQ applies the EQ predicate on the "cnpj" field.
+func CnpjEQ(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldCnpj, v))
+}
+
+// CnpjNEQ applies the NEQ predicate on the "cnpj" field.
+func CnpjNEQ(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldNEQ(FieldCnpj, v))
+}
+
+// CnpjIn applies the In predicate on the "cnpj" field.
+func CnpjIn(vs ...string) predicate.Organization {
+	return predicate.Organization(sql.FieldIn(FieldCnpj, vs...))
+}
+
+// CnpjNotIn applies the NotIn predicate on the "cnpj" field.
+func CnpjNotIn(vs ...string) predicate.Organization {
+	return predicate.Organization(sql.FieldNotIn(FieldCnpj, vs...))
+}
+
+// CnpjGT applies the GT predicate on the "cnpj" field.
+func CnpjGT(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldGT(FieldCnpj, v))
+}
+
+// CnpjGTE applies the GTE predicate on the "cnpj" field.
+func CnpjGTE(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldGTE(FieldCnpj, v))
+}
+
+// CnpjLT applies the LT predicate on the "cnpj" field.
+func CnpjLT(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldLT(FieldCnpj, v))
+}
+
+// CnpjLTE applies the LTE predicate on the "cnpj" field.
+func CnpjLTE(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldLTE(FieldCnpj, v))
+}
+
+// CnpjContains applies the Contains predicate on the "cnpj" field.
+func CnpjContains(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldContains(FieldCnpj, v))
+}
+
+// CnpjHasPrefix applies the HasPrefix predicate on the "cnpj" field.
+func CnpjHasPrefix(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldHasPrefix(FieldCnpj, v))
+}
+
+// CnpjHasSuffix applies the HasSuffix predicate on the "cnpj" field.
+func CnpjHasSuffix(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldHasSuffix(FieldCnpj, v))
+}
+
+// CnpjIsNil applies the IsNil predicate on the "cnpj" field.
+func CnpjIsNil() predicate.Organization {
+	return predicate.Organization(sql.FieldIsNull(FieldCnpj))
+}
+
+// CnpjNotNil applies the NotNil predicate on the "cnpj" field.
+func CnpjNotNil() predicate.Organization {
+	return predicate.Organization(sql.FieldNotNull(FieldCnpj))
+}
+
+// CnpjEqualFold applies the EqualFold predicate on the "cnpj" field.
+func CnpjEqualFold(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEqualFold(FieldCnpj, v))
+}
+
+// CnpjContainsFold applies the ContainsFold predicate on the "cnpj" field.
+func CnpjContainsFold(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldContainsFold(FieldCnpj, v))
+}
+
+// AddressLine1EQ applies the EQ predicate on the "address_line1" field.
+func AddressLine1EQ(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldAddressLine1, v))
+}
+
+// AddressLine1NEQ applies the NEQ predicate on the "address_line1" field.
+func AddressLine1NEQ(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldNEQ(FieldAddressLine1, v))
+}
+
+// AddressLine1In applies the In predicate on the "address_line1" field.
+func AddressLine1In(vs ...string) predicate.Organization {
+	return predicate.Organization(sql.FieldIn(FieldAddressLine1, vs...))
+}
+
+// AddressLine1NotIn applies the NotIn predicate on the "address_line1" field.
+func AddressLine1NotIn(vs ...string) predicate.Organization {
+	return predicate.Organization(sql.FieldNotIn(FieldAddressLine1, vs...))
+}
+
+// AddressLine1GT applies the GT predicate on the "address_line1" field.
+func AddressLine1GT(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldGT(FieldAddressLine1, v))
+}
+
+// AddressLine1GTE applies the GTE predicate on the "address_line1" field.
+func AddressLine1GTE(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldGTE(FieldAddressLine1, v))
+}
+
+// AddressLine1LT applies the LT predicate on the "address_line1" field.
+func AddressLine1LT(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldLT(FieldAddressLine1, v))
+}
+
+// AddressLine1LTE applies the LTE predicate on the "address_line1" field.
+func AddressLine1LTE(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldLTE(FieldAddressLine1, v))
+}
+
+// AddressLine1Contains applies the Contains predicate on the "address_line1" field.
+func AddressLine1Contains(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldContains(FieldAddressLine1, v))
+}
+
+// AddressLine1HasPrefix applies the HasPrefix predicate on the "address_line1" field.
+func AddressLine1HasPrefix(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldHasPrefix(FieldAddressLine1, v))
+}
+
+// AddressLine1HasSuffix applies the HasSuffix predicate on the "address_line1" field.
+func AddressLine1HasSuffix(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldHasSuffix(FieldAddressLine1, v))
+}
+
+// AddressLine1IsNil applies the IsNil predicate on the "address_line1" field.
+func AddressLine1IsNil() predicate.Organization {
+	return predicate.Organization(sql.FieldIsNull(FieldAddressLine1))
+}
+
+// AddressLine1NotNil applies the NotNil predicate on the "address_line1" field.
+func AddressLine1NotNil() predicate.Organization {
+	return predicate.Organization(sql.FieldNotNull(FieldAddressLine1))
+}
+
+// AddressLine1EqualFold applies the EqualFold predicate on the "address_line1" field.
+func AddressLine1EqualFold(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEqualFold(FieldAddressLine1, v))
+}
+
+// AddressLine1ContainsFold applies the ContainsFold predicate on the "address_line1" field.
+func AddressLine1ContainsFold(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldContainsFold(FieldAddressLine1, v))
+}
+
+// AddressLine2EQ applies the EQ predicate on the "address_line2" field.
+func AddressLine2EQ(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldAddressLine2, v))
+}
+
+// AddressLine2NEQ applies the NEQ predicate on the "address_line2" field.
+func AddressLine2NEQ(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldNEQ(FieldAddressLine2, v))
+}
+
+// AddressLine2In applies the In predicate on the "address_line2" field.
+func AddressLine2In(vs ...string) predicate.Organization {
+	return predicate.Organization(sql.FieldIn(FieldAddressLine2, vs...))
+}
+
+// AddressLine2NotIn applies the NotIn predicate on the "address_line2" field.
+func AddressLine2NotIn(vs ...string) predicate.Organization {
+	return predicate.Organization(sql.FieldNotIn(FieldAddressLine2, vs...))
+}
+
+// AddressLine2GT applies the GT predicate on the "address_line2" field.
+func AddressLine2GT(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldGT(FieldAddressLine2, v))
+}
+
+// AddressLine2GTE applies the GTE predicate on the "address_line2" field.
+func AddressLine2GTE(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldGTE(FieldAddressLine2, v))
+}
+
+// AddressLine2LT applies the LT predicate on the "address_line2" field.
+func AddressLine2LT(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldLT(FieldAddressLine2, v))
+}
+
+// AddressLine2LTE applies the LTE predicate on the "address_line2" field.
+func AddressLine2LTE(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldLTE(FieldAddressLine2, v))
+}
+
+// AddressLine2Contains applies the Contains predicate on the "address_line2" field.
+func AddressLine2Contains(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldContains(FieldAddressLine2, v))
+}
+
+// AddressLine2HasPrefix applies the HasPrefix predicate on the "address_line2" field.
+func AddressLine2HasPrefix(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldHasPrefix(FieldAddressLine2, v))
+}
+
+// AddressLine2HasSuffix applies the HasSuffix predicate on the "address_line2" field.
+func AddressLine2HasSuffix(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldHasSuffix(FieldAddressLine2, v))
+}
+
+// AddressLine2IsNil applies the IsNil predicate on the "address_line2" field.
+func AddressLine2IsNil() predicate.Organization {
+	return predicate.Organization(sql.FieldIsNull(FieldAddressLine2))
+}
+
+// AddressLine2NotNil applies the NotNil predicate on the "address_line2" field.
+func AddressLine2NotNil() predicate.Organization {
+	return predicate.Organization(sql.FieldNotNull(FieldAddressLine2))
+}
+
+// AddressLine2EqualFold applies the EqualFold predicate on the "address_line2" field.
+func AddressLine2EqualFold(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEqualFold(FieldAddressLine2, v))
+}
+
+// AddressLine2ContainsFold applies the ContainsFold predicate on the "address_line2" field.
+func AddressLine2ContainsFold(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldContainsFold(FieldAddressLine2, v))
+}
+
+// CityEQ applies the EQ predicate on the "city" field.
+func CityEQ(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldCity, v))
+}
+
+// CityNEQ applies the NEQ predicate on the "city" field.
+func CityNEQ(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldNEQ(FieldCity, v))
+}
+
+// CityIn applies the In predicate on the "city" field.
+func CityIn(vs ...string) predicate.Organization {
+	return predicate.Organization(sql.FieldIn(FieldCity, vs...))
+}
+
+// CityNotIn applies the NotIn predicate on the "city" field.
+func CityNotIn(vs ...string) predicate.Organization {
+	return predicate.Organization(sql.FieldNotIn(FieldCity, vs...))
+}
+
+// CityGT applies the GT predicate on the "city" field.
+func CityGT(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldGT(FieldCity, v))
+}
+
+// CityGTE applies the GTE predicate on the "city" field.
+func CityGTE(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldGTE(FieldCity, v))
+}
+
+// CityLT applies the LT predicate on the "city" field.
+func CityLT(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldLT(FieldCity, v))
+}
+
+// CityLTE applies the LTE predicate on the "city" field.
+func CityLTE(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldLTE(FieldCity, v))
+}
+
+// CityContains applies the Contains predicate on the "city" field.
+func CityContains(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldContains(FieldCity, v))
+}
+
+// CityHasPrefix applies the HasPrefix predicate on the "city" field.
+func CityHasPrefix(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldHasPrefix(FieldCity, v))
+}
+
+// CityHasSuffix applies the HasSuffix predicate on the "city" field.
+func CityHasSuffix(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldHasSuffix(FieldCity, v))
+}
+
+// CityIsNil applies the IsNil predicate on the "city" field.
+func CityIsNil() predicate.Organization {
+	return predicate.Organization(sql.FieldIsNull(FieldCity))
+}
+
+// CityNotNil applies the NotNil predicate on the "city" field.
+func CityNotNil() predicate.Organization {
+	return predicate.Organization(sql.FieldNotNull(FieldCity))
+}
+
+// CityEqualFold applies the EqualFold predicate on the "city" field.
+func CityEqualFold(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEqualFold(FieldCity, v))
+}
+
+// CityContainsFold applies the ContainsFold predicate on the "city" field.
+func CityContainsFold(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldContainsFold(FieldCity, v))
+}
+
+// StateEQ applies the EQ predicate on the "state" field.
+func StateEQ(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldState, v))
+}
+
+// StateNEQ applies the NEQ predicate on the "state" field.
+func StateNEQ(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldNEQ(FieldState, v))
+}
+
+// StateIn applies the In predicate on the "state" field.
+func StateIn(vs ...string) predicate.Organization {
+	return predicate.Organization(sql.FieldIn(FieldState, vs...))
+}
+
+// StateNotIn applies the NotIn predicate on the "state" field.
+func StateNotIn(vs ...string) predicate.Organization {
+	return predicate.Organization(sql.FieldNotIn(FieldState, vs...))
+}
+
+// StateGT applies the GT predicate on the "state" field.
+func StateGT(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldGT(FieldState, v))
+}
+
+// StateGTE applies the GTE predicate on the "state" field.
+func StateGTE(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldGTE(FieldState, v))
+}
+
+// StateLT applies the LT predicate on the "state" field.
+func StateLT(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldLT(FieldState, v))
+}
+
+// StateLTE applies the LTE predicate on the "state" field.
+func StateLTE(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldLTE(FieldState, v))
+}
+
+// StateContains applies the Contains predicate on the "state" field.
+func StateContains(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldContains(FieldState, v))
+}
+
+// StateHasPrefix applies the HasPrefix predicate on the "state" field.
+func StateHasPrefix(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldHasPrefix(FieldState, v))
+}
+
+// StateHasSuffix applies the HasSuffix predicate on the "state" field.
+func StateHasSuffix(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldHasSuffix(FieldState, v))
+}
+
+// StateIsNil applies the IsNil predicate on the "state" field.
+func StateIsNil() predicate.Organization {
+	return predicate.Organization(sql.FieldIsNull(FieldState))
+}
+
+// StateNotNil applies the NotNil predicate on the "state" field.
+func StateNotNil() predicate.Organization {
+	return predicate.Organization(sql.FieldNotNull(FieldState))
+}
+
+// StateEqualFold applies the EqualFold predicate on the "state" field.
+func StateEqualFold(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEqualFold(FieldState, v))
+}
+
+// StateContainsFold applies the ContainsFold predicate on the "state" field.
+func StateContainsFold(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldContainsFold(FieldState, v))
+}
+
+// PostalCodeEQ applies the EQ predicate on the "postal_code" field.
+func PostalCodeEQ(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldPostalCode, v))
+}
+
+// PostalCodeNEQ applies the NEQ predicate on the "postal_code" field.
+func PostalCodeNEQ(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldNEQ(FieldPostalCode, v))
+}
+
+// PostalCodeIn applies the In predicate on the "postal_code" field.
+func PostalCodeIn(vs ...string) predicate.Organization {
+	return predicate.Organization(sql.FieldIn(FieldPostalCode, vs...))
+}
+
+// PostalCodeNotIn applies the NotIn predicate on the "postal_code" field.
+func PostalCodeNotIn(vs ...string) predicate.Organization {
+	return predicate.Organization(sql.FieldNotIn(FieldPostalCode, vs...))
+}
+
+// PostalCodeGT applies the GT predicate on the "postal_code" field.
+func PostalCodeGT(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldGT(FieldPostalCode, v))
+}
+
+// PostalCodeGTE applies the GTE predicate on the "postal_code" field.
+func PostalCodeGTE(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldGTE(FieldPostalCode, v))
+}
+
+// PostalCodeLT applies the LT predicate on the "postal_code" field.
+func PostalCodeLT(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldLT(FieldPostalCode, v))
+}
+
+// PostalCodeLTE applies the LTE predicate on the "postal_code" field.
+func PostalCodeLTE(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldLTE(FieldPostalCode, v))
+}
+
+// PostalCodeContains applies the Contains predicate on the "postal_code" field.
+func PostalCodeContains(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldContains(FieldPostalCode, v))
+}
+
+// PostalCodeHasPrefix applies the HasPrefix predicate on the "postal_code" field.
+func PostalCodeHasPrefix(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldHasPrefix(FieldPostalCode, v))
+}
+
+// PostalCodeHasSuffix applies the HasSuffix predicate on the "postal_code" field.
+func PostalCodeHasSuffix(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldHasSuffix(FieldPostalCode, v))
+}
+
+// PostalCodeIsNil applies the IsNil predicate on the "postal_code" field.
+func PostalCodeIsNil() predicate.Organization {
+	return predicate.Organization(sql.FieldIsNull(FieldPostalCode))
+}
+
+// PostalCodeNotNil applies the NotNil predicate on the "postal_code" field.
+func PostalCodeNotNil() predicate.Organization {
+	return predicate.Organization(sql.FieldNotNull(FieldPostalCode))
+}
+
+// PostalCodeEqualFold applies the EqualFold predicate on the "postal_code" field.
+func PostalCodeEqualFold(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEqualFold(FieldPostalCode, v))
+}
+
+// PostalCodeContainsFold applies the ContainsFold predicate on the "postal_code" field.
+func PostalCodeContainsFold(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldContainsFold(FieldPostalCode, v))
+}
+
+// CountryEQ applies the EQ predicate on the "country" field.
+func CountryEQ(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldCountry, v))
+}
+
+// CountryNEQ applies the NEQ predicate on the "country" field.
+func CountryNEQ(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldNEQ(FieldCountry, v))
+}
+
+// CountryIn applies the In predicate on the "country" field.
+func CountryIn(vs ...string) predicate.Organization {
+	return predicate.Organization(sql.FieldIn(FieldCountry, vs...))
+}
+
+// CountryNotIn applies the NotIn predicate on the "country" field.
+func CountryNotIn(vs ...string) predicate.Organization {
+	return predicate.Organization(sql.FieldNotIn(FieldCountry, vs...))
+}
+
+// CountryGT applies the GT predicate on the "country" field.
+func CountryGT(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldGT(FieldCountry, v))
+}
+
+// CountryGTE applies the GTE predicate on the "country" field.
+func CountryGTE(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldGTE(FieldCountry, v))
+}
+
+// CountryLT applies the LT predicate on the "country" field.
+func CountryLT(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldLT(FieldCountry, v))
+}
+
+// CountryLTE applies the LTE predicate on the "country" field.
+func CountryLTE(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldLTE(FieldCountry, v))
+}
+
+// CountryContains applies the Contains predicate on the "country" field.
+func CountryContains(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldContains(FieldCountry, v))
+}
+
+// CountryHasPrefix applies the HasPrefix predicate on the "country" field.
+func CountryHasPrefix(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldHasPrefix(FieldCountry, v))
+}
+
+// CountryHasSuffix applies the HasSuffix predicate on the "country" field.
+func CountryHasSuffix(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldHasSuffix(FieldCountry, v))
+}
+
+// CountryIsNil applies the IsNil predicate on the "country" field.
+func CountryIsNil() predicate.Organization {
+	return predicate.Organization(sql.FieldIsNull(FieldCountry))
+}
+
+// CountryNotNil applies the NotNil predicate on the "country" field.
+func CountryNotNil() predicate.Organization {
+	return predicate.Organization(sql.FieldNotNull(FieldCountry))
+}
+
+// CountryEqualFold applies the EqualFold predicate on the "country" field.
+func CountryEqualFold(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEqualFold(FieldCountry, v))
+}
+
+// CountryContainsFold applies the ContainsFold predicate on the "country" field.
+func CountryContainsFold(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldContainsFold(FieldCountry, v))
+}
+
+// TimezoneEQ applies the EQ predicate on the "timezone" field.
+func TimezoneEQ(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldTimezone, v))
+}
+
+// TimezoneNEQ applies the NEQ predicate on the "timezone" field.
+func TimezoneNEQ(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldNEQ(FieldTimezone, v))
+}
+
+// TimezoneIn applies the In predicate on the "timezone" field.
+func TimezoneIn(vs ...string) predicate.Organization {
+	return predicate.Organization(sql.FieldIn(FieldTimezone, vs...))
+}
+
+// TimezoneNotIn applies the NotIn predicate on the "timezone" field.
+func TimezoneNotIn(vs ...string) predicate.Organization {
+	return predicate.Organization(sql.FieldNotIn(FieldTimezone, vs...))
+}
+
+// TimezoneGT applies the GT predicate on the "timezone" field.
+func TimezoneGT(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldGT(FieldTimezone, v))
+}
+
+// TimezoneGTE applies the GTE predicate on the "timezone" field.
+func TimezoneGTE(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldGTE(FieldTimezone, v))
+}
+
+// TimezoneLT applies the LT predicate on the "timezone" field.
+func TimezoneLT(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldLT(FieldTimezone, v))
+}
+
+// TimezoneLTE applies the LTE predicate on the "timezone" field.
+func TimezoneLTE(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldLTE(FieldTimezone, v))
+}
+
+// TimezoneContains applies the Contains predicate on the "timezone" field.
+func TimezoneContains(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldContains(FieldTimezone, v))
+}
+
+// TimezoneHasPrefix applies the HasPrefix predicate on the "timezone" field.
+func TimezoneHasPrefix(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldHasPrefix(FieldTimezone, v))
+}
+
+// TimezoneHasSuffix applies the HasSuffix predicate on the "timezone" field.
+func TimezoneHasSuffix(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldHasSuffix(FieldTimezone, v))
+}
+
+// TimezoneEqualFold applies the EqualFold predicate on the "timezone" field.
+func TimezoneEqualFold(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEqualFold(FieldTimezone, v))
+}
+
+// TimezoneContainsFold applies the ContainsFold predicate on the "timezone" field.
+func TimezoneContainsFold(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldContainsFold(FieldTimezone, v))
+}
+
+// WeeklyHoursEQ applies the EQ predicate on the "weekly_hours" field.
+func WeeklyHoursEQ(v int) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldWeeklyHours, v))
+}
+
+// WeeklyHoursNEQ applies the NEQ predicate on the "weekly_hours" field.
+func WeeklyHoursNEQ(v int) predicate.Organization {
+	return predicate.Organization(sql.FieldNEQ(FieldWeeklyHours, v))
+}
+
+// WeeklyHoursIn applies the In predicate on the "weekly_hours" field.
+func WeeklyHoursIn(vs ...int) predicate.Organization {
+	return predicate.Organization(sql.FieldIn(FieldWeeklyHours, vs...))
+}
+
+// WeeklyHoursNotIn applies the NotIn predicate on the "weekly_hours" field.
+func WeeklyHoursNotIn(vs ...int) predicate.Organization {
+	return predicate.Organization(sql.FieldNotIn(FieldWeeklyHours, vs...))
+}
+
+// WeeklyHoursGT applies the GT predicate on the "weekly_hours" field.
+func WeeklyHoursGT(v int) predicate.Organization {
+	return predicate.Organization(sql.FieldGT(FieldWeeklyHours, v))
+}
+
+// WeeklyHoursGTE applies the GTE predicate on the "weekly_hours" field.
+func WeeklyHoursGTE(v int) predicate.Organization {
+	return predicate.Organization(sql.FieldGTE(FieldWeeklyHours, v))
+}
+
+// WeeklyHoursLT applies the LT predicate on the "weekly_hours" field.
+func WeeklyHoursLT(v int) predicate.Organization {
+	return predicate.Organization(sql.FieldLT(FieldWeeklyHours, v))
+}
+
+// WeeklyHoursLTE applies the LTE predicate on the "weekly_hours" field.
+func WeeklyHoursLTE(v int) predicate.Organization {
+	return predicate.Organization(sql.FieldLTE(FieldWeeklyHours, v))
+}
+
+// WeeklyHoursIsNil applies the IsNil predicate on the "weekly_hours" field.
+func WeeklyHoursIsNil() predicate.Organization {
+	return predicate.Organization(sql.FieldIsNull(FieldWeeklyHours))
+}
+
+// WeeklyHoursNotNil applies the NotNil predicate on the "weekly_hours" field.
+func WeeklyHoursNotNil() predicate.Organization {
+	return predicate.Organization(sql.FieldNotNull(FieldWeeklyHours))
+}
+
+// DefaultSprintDaysEQ applies the EQ predicate on the "default_sprint_days" field.
+func DefaultSprintDaysEQ(v int) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldDefaultSprintDays, v))
+}
+
+// DefaultSprintDaysNEQ applies the NEQ predicate on the "default_sprint_days" field.
+func DefaultSprintDaysNEQ(v int) predicate.Organization {
+	return predicate.Organization(sql.FieldNEQ(FieldDefaultSprintDays, v))
+}
+
+// DefaultSprintDaysIn applies the In predicate on the "default_sprint_days" field.
+func DefaultSprintDaysIn(vs ...int) predicate.Organization {
+	return predicate.Organization(sql.FieldIn(FieldDefaultSprintDays, vs...))
+}
+
+// DefaultSprintDaysNotIn applies the NotIn predicate on the "default_sprint_days" field.
+func DefaultSprintDaysNotIn(vs ...int) predicate.Organization {
+	return predicate.Organization(sql.FieldNotIn(FieldDefaultSprintDays, vs...))
+}
+
+// DefaultSprintDaysGT applies the GT predicate on the "default_sprint_days" field.
+func DefaultSprintDaysGT(v int) predicate.Organization {
+	return predicate.Organization(sql.FieldGT(FieldDefaultSprintDays, v))
+}
+
+// DefaultSprintDaysGTE applies the GTE predicate on the "default_sprint_days" field.
+func DefaultSprintDaysGTE(v int) predicate.Organization {
+	return predicate.Organization(sql.FieldGTE(FieldDefaultSprintDays, v))
+}
+
+// DefaultSprintDaysLT applies the LT predicate on the "default_sprint_days" field.
+func DefaultSprintDaysLT(v int) predicate.Organization {
+	return predicate.Organization(sql.FieldLT(FieldDefaultSprintDays, v))
+}
+
+// DefaultSprintDaysLTE applies the LTE predicate on the "default_sprint_days" field.
+func DefaultSprintDaysLTE(v int) predicate.Organization {
+	return predicate.Organization(sql.FieldLTE(FieldDefaultSprintDays, v))
+}
+
+// DefaultSprintDaysIsNil applies the IsNil predicate on the "default_sprint_days" field.
+func DefaultSprintDaysIsNil() predicate.Organization {
+	return predicate.Organization(sql.FieldIsNull(FieldDefaultSprintDays))
+}
+
+// DefaultSprintDaysNotNil applies the NotNil predicate on the "default_sprint_days" field.
+func DefaultSprintDaysNotNil() predicate.Organization {
+	return predicate.Organization(sql.FieldNotNull(FieldDefaultSprintDays))
+}
+
+// CurrencyEQ applies the EQ predicate on the "currency" field.
+func CurrencyEQ(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldCurrency, v))
+}
+
+// CurrencyNEQ applies the NEQ predicate on the "currency" field.
+func CurrencyNEQ(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldNEQ(FieldCurrency, v))
+}
+
+// CurrencyIn applies the In predicate on the "currency" field.
+func CurrencyIn(vs ...string) predicate.Organization {
+	return predicate.Organization(sql.FieldIn(FieldCurrency, vs...))
+}
+
+// CurrencyNotIn applies the NotIn predicate on the "currency" field.
+func CurrencyNotIn(vs ...string) predicate.Organization {
+	return predicate.Organization(sql.FieldNotIn(FieldCurrency, vs...))
+}
+
+// CurrencyGT applies the GT predicate on the "currency" field.
+func CurrencyGT(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldGT(FieldCurrency, v))
+}
+
+// CurrencyGTE applies the GTE predicate on the "currency" field.
+func CurrencyGTE(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldGTE(FieldCurrency, v))
+}
+
+// CurrencyLT applies the LT predicate on the "currency" field.
+func CurrencyLT(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldLT(FieldCurrency, v))
+}
+
+// CurrencyLTE applies the LTE predicate on the "currency" field.
+func CurrencyLTE(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldLTE(FieldCurrency, v))
+}
+
+// CurrencyContains applies the Contains predicate on the "currency" field.
+func CurrencyContains(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldContains(FieldCurrency, v))
+}
+
+// CurrencyHasPrefix applies the HasPrefix predicate on the "currency" field.
+func CurrencyHasPrefix(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldHasPrefix(FieldCurrency, v))
+}
+
+// CurrencyHasSuffix applies the HasSuffix predicate on the "currency" field.
+func CurrencyHasSuffix(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldHasSuffix(FieldCurrency, v))
+}
+
+// CurrencyEqualFold applies the EqualFold predicate on the "currency" field.
+func CurrencyEqualFold(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEqualFold(FieldCurrency, v))
+}
+
+// CurrencyContainsFold applies the ContainsFold predicate on the "currency" field.
+func CurrencyContainsFold(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldContainsFold(FieldCurrency, v))
 }
 
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.

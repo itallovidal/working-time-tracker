@@ -30,6 +30,314 @@ func (_c *OrganizationCreate) SetName(v string) *OrganizationCreate {
 	return _c
 }
 
+// SetSummary sets the "summary" field.
+func (_c *OrganizationCreate) SetSummary(v string) *OrganizationCreate {
+	_c.mutation.SetSummary(v)
+	return _c
+}
+
+// SetNillableSummary sets the "summary" field if the given value is not nil.
+func (_c *OrganizationCreate) SetNillableSummary(v *string) *OrganizationCreate {
+	if v != nil {
+		_c.SetSummary(*v)
+	}
+	return _c
+}
+
+// SetDescription sets the "description" field.
+func (_c *OrganizationCreate) SetDescription(v string) *OrganizationCreate {
+	_c.mutation.SetDescription(v)
+	return _c
+}
+
+// SetNillableDescription sets the "description" field if the given value is not nil.
+func (_c *OrganizationCreate) SetNillableDescription(v *string) *OrganizationCreate {
+	if v != nil {
+		_c.SetDescription(*v)
+	}
+	return _c
+}
+
+// SetIndustry sets the "industry" field.
+func (_c *OrganizationCreate) SetIndustry(v string) *OrganizationCreate {
+	_c.mutation.SetIndustry(v)
+	return _c
+}
+
+// SetNillableIndustry sets the "industry" field if the given value is not nil.
+func (_c *OrganizationCreate) SetNillableIndustry(v *string) *OrganizationCreate {
+	if v != nil {
+		_c.SetIndustry(*v)
+	}
+	return _c
+}
+
+// SetFoundedYear sets the "founded_year" field.
+func (_c *OrganizationCreate) SetFoundedYear(v int) *OrganizationCreate {
+	_c.mutation.SetFoundedYear(v)
+	return _c
+}
+
+// SetNillableFoundedYear sets the "founded_year" field if the given value is not nil.
+func (_c *OrganizationCreate) SetNillableFoundedYear(v *int) *OrganizationCreate {
+	if v != nil {
+		_c.SetFoundedYear(*v)
+	}
+	return _c
+}
+
+// SetSize sets the "size" field.
+func (_c *OrganizationCreate) SetSize(v string) *OrganizationCreate {
+	_c.mutation.SetSize(v)
+	return _c
+}
+
+// SetNillableSize sets the "size" field if the given value is not nil.
+func (_c *OrganizationCreate) SetNillableSize(v *string) *OrganizationCreate {
+	if v != nil {
+		_c.SetSize(*v)
+	}
+	return _c
+}
+
+// SetWebsite sets the "website" field.
+func (_c *OrganizationCreate) SetWebsite(v string) *OrganizationCreate {
+	_c.mutation.SetWebsite(v)
+	return _c
+}
+
+// SetNillableWebsite sets the "website" field if the given value is not nil.
+func (_c *OrganizationCreate) SetNillableWebsite(v *string) *OrganizationCreate {
+	if v != nil {
+		_c.SetWebsite(*v)
+	}
+	return _c
+}
+
+// SetContactEmail sets the "contact_email" field.
+func (_c *OrganizationCreate) SetContactEmail(v string) *OrganizationCreate {
+	_c.mutation.SetContactEmail(v)
+	return _c
+}
+
+// SetNillableContactEmail sets the "contact_email" field if the given value is not nil.
+func (_c *OrganizationCreate) SetNillableContactEmail(v *string) *OrganizationCreate {
+	if v != nil {
+		_c.SetContactEmail(*v)
+	}
+	return _c
+}
+
+// SetPhone sets the "phone" field.
+func (_c *OrganizationCreate) SetPhone(v string) *OrganizationCreate {
+	_c.mutation.SetPhone(v)
+	return _c
+}
+
+// SetNillablePhone sets the "phone" field if the given value is not nil.
+func (_c *OrganizationCreate) SetNillablePhone(v *string) *OrganizationCreate {
+	if v != nil {
+		_c.SetPhone(*v)
+	}
+	return _c
+}
+
+// SetLinkedinURL sets the "linkedin_url" field.
+func (_c *OrganizationCreate) SetLinkedinURL(v string) *OrganizationCreate {
+	_c.mutation.SetLinkedinURL(v)
+	return _c
+}
+
+// SetNillableLinkedinURL sets the "linkedin_url" field if the given value is not nil.
+func (_c *OrganizationCreate) SetNillableLinkedinURL(v *string) *OrganizationCreate {
+	if v != nil {
+		_c.SetLinkedinURL(*v)
+	}
+	return _c
+}
+
+// SetInstagramURL sets the "instagram_url" field.
+func (_c *OrganizationCreate) SetInstagramURL(v string) *OrganizationCreate {
+	_c.mutation.SetInstagramURL(v)
+	return _c
+}
+
+// SetNillableInstagramURL sets the "instagram_url" field if the given value is not nil.
+func (_c *OrganizationCreate) SetNillableInstagramURL(v *string) *OrganizationCreate {
+	if v != nil {
+		_c.SetInstagramURL(*v)
+	}
+	return _c
+}
+
+// SetLegalName sets the "legal_name" field.
+func (_c *OrganizationCreate) SetLegalName(v string) *OrganizationCreate {
+	_c.mutation.SetLegalName(v)
+	return _c
+}
+
+// SetNillableLegalName sets the "legal_name" field if the given value is not nil.
+func (_c *OrganizationCreate) SetNillableLegalName(v *string) *OrganizationCreate {
+	if v != nil {
+		_c.SetLegalName(*v)
+	}
+	return _c
+}
+
+// SetCnpj sets the "cnpj" field.
+func (_c *OrganizationCreate) SetCnpj(v string) *OrganizationCreate {
+	_c.mutation.SetCnpj(v)
+	return _c
+}
+
+// SetNillableCnpj sets the "cnpj" field if the given value is not nil.
+func (_c *OrganizationCreate) SetNillableCnpj(v *string) *OrganizationCreate {
+	if v != nil {
+		_c.SetCnpj(*v)
+	}
+	return _c
+}
+
+// SetAddressLine1 sets the "address_line1" field.
+func (_c *OrganizationCreate) SetAddressLine1(v string) *OrganizationCreate {
+	_c.mutation.SetAddressLine1(v)
+	return _c
+}
+
+// SetNillableAddressLine1 sets the "address_line1" field if the given value is not nil.
+func (_c *OrganizationCreate) SetNillableAddressLine1(v *string) *OrganizationCreate {
+	if v != nil {
+		_c.SetAddressLine1(*v)
+	}
+	return _c
+}
+
+// SetAddressLine2 sets the "address_line2" field.
+func (_c *OrganizationCreate) SetAddressLine2(v string) *OrganizationCreate {
+	_c.mutation.SetAddressLine2(v)
+	return _c
+}
+
+// SetNillableAddressLine2 sets the "address_line2" field if the given value is not nil.
+func (_c *OrganizationCreate) SetNillableAddressLine2(v *string) *OrganizationCreate {
+	if v != nil {
+		_c.SetAddressLine2(*v)
+	}
+	return _c
+}
+
+// SetCity sets the "city" field.
+func (_c *OrganizationCreate) SetCity(v string) *OrganizationCreate {
+	_c.mutation.SetCity(v)
+	return _c
+}
+
+// SetNillableCity sets the "city" field if the given value is not nil.
+func (_c *OrganizationCreate) SetNillableCity(v *string) *OrganizationCreate {
+	if v != nil {
+		_c.SetCity(*v)
+	}
+	return _c
+}
+
+// SetState sets the "state" field.
+func (_c *OrganizationCreate) SetState(v string) *OrganizationCreate {
+	_c.mutation.SetState(v)
+	return _c
+}
+
+// SetNillableState sets the "state" field if the given value is not nil.
+func (_c *OrganizationCreate) SetNillableState(v *string) *OrganizationCreate {
+	if v != nil {
+		_c.SetState(*v)
+	}
+	return _c
+}
+
+// SetPostalCode sets the "postal_code" field.
+func (_c *OrganizationCreate) SetPostalCode(v string) *OrganizationCreate {
+	_c.mutation.SetPostalCode(v)
+	return _c
+}
+
+// SetNillablePostalCode sets the "postal_code" field if the given value is not nil.
+func (_c *OrganizationCreate) SetNillablePostalCode(v *string) *OrganizationCreate {
+	if v != nil {
+		_c.SetPostalCode(*v)
+	}
+	return _c
+}
+
+// SetCountry sets the "country" field.
+func (_c *OrganizationCreate) SetCountry(v string) *OrganizationCreate {
+	_c.mutation.SetCountry(v)
+	return _c
+}
+
+// SetNillableCountry sets the "country" field if the given value is not nil.
+func (_c *OrganizationCreate) SetNillableCountry(v *string) *OrganizationCreate {
+	if v != nil {
+		_c.SetCountry(*v)
+	}
+	return _c
+}
+
+// SetTimezone sets the "timezone" field.
+func (_c *OrganizationCreate) SetTimezone(v string) *OrganizationCreate {
+	_c.mutation.SetTimezone(v)
+	return _c
+}
+
+// SetNillableTimezone sets the "timezone" field if the given value is not nil.
+func (_c *OrganizationCreate) SetNillableTimezone(v *string) *OrganizationCreate {
+	if v != nil {
+		_c.SetTimezone(*v)
+	}
+	return _c
+}
+
+// SetWeeklyHours sets the "weekly_hours" field.
+func (_c *OrganizationCreate) SetWeeklyHours(v int) *OrganizationCreate {
+	_c.mutation.SetWeeklyHours(v)
+	return _c
+}
+
+// SetNillableWeeklyHours sets the "weekly_hours" field if the given value is not nil.
+func (_c *OrganizationCreate) SetNillableWeeklyHours(v *int) *OrganizationCreate {
+	if v != nil {
+		_c.SetWeeklyHours(*v)
+	}
+	return _c
+}
+
+// SetDefaultSprintDays sets the "default_sprint_days" field.
+func (_c *OrganizationCreate) SetDefaultSprintDays(v int) *OrganizationCreate {
+	_c.mutation.SetDefaultSprintDays(v)
+	return _c
+}
+
+// SetNillableDefaultSprintDays sets the "default_sprint_days" field if the given value is not nil.
+func (_c *OrganizationCreate) SetNillableDefaultSprintDays(v *int) *OrganizationCreate {
+	if v != nil {
+		_c.SetDefaultSprintDays(*v)
+	}
+	return _c
+}
+
+// SetCurrency sets the "currency" field.
+func (_c *OrganizationCreate) SetCurrency(v string) *OrganizationCreate {
+	_c.mutation.SetCurrency(v)
+	return _c
+}
+
+// SetNillableCurrency sets the "currency" field if the given value is not nil.
+func (_c *OrganizationCreate) SetNillableCurrency(v *string) *OrganizationCreate {
+	if v != nil {
+		_c.SetCurrency(*v)
+	}
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *OrganizationCreate) SetCreatedAt(v time.Time) *OrganizationCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -138,6 +446,14 @@ func (_c *OrganizationCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (_c *OrganizationCreate) defaults() {
+	if _, ok := _c.mutation.Timezone(); !ok {
+		v := organization.DefaultTimezone
+		_c.mutation.SetTimezone(v)
+	}
+	if _, ok := _c.mutation.Currency(); !ok {
+		v := organization.DefaultCurrency
+		_c.mutation.SetCurrency(v)
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := organization.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
@@ -152,6 +468,12 @@ func (_c *OrganizationCreate) defaults() {
 func (_c *OrganizationCreate) check() error {
 	if _, ok := _c.mutation.Name(); !ok {
 		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "Organization.name"`)}
+	}
+	if _, ok := _c.mutation.Timezone(); !ok {
+		return &ValidationError{Name: "timezone", err: errors.New(`ent: missing required field "Organization.timezone"`)}
+	}
+	if _, ok := _c.mutation.Currency(); !ok {
+		return &ValidationError{Name: "currency", err: errors.New(`ent: missing required field "Organization.currency"`)}
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "Organization.created_at"`)}
@@ -194,6 +516,94 @@ func (_c *OrganizationCreate) createSpec() (*Organization, *sqlgraph.CreateSpec)
 	if value, ok := _c.mutation.Name(); ok {
 		_spec.SetField(organization.FieldName, field.TypeString, value)
 		_node.Name = value
+	}
+	if value, ok := _c.mutation.Summary(); ok {
+		_spec.SetField(organization.FieldSummary, field.TypeString, value)
+		_node.Summary = value
+	}
+	if value, ok := _c.mutation.Description(); ok {
+		_spec.SetField(organization.FieldDescription, field.TypeString, value)
+		_node.Description = value
+	}
+	if value, ok := _c.mutation.Industry(); ok {
+		_spec.SetField(organization.FieldIndustry, field.TypeString, value)
+		_node.Industry = value
+	}
+	if value, ok := _c.mutation.FoundedYear(); ok {
+		_spec.SetField(organization.FieldFoundedYear, field.TypeInt, value)
+		_node.FoundedYear = &value
+	}
+	if value, ok := _c.mutation.Size(); ok {
+		_spec.SetField(organization.FieldSize, field.TypeString, value)
+		_node.Size = value
+	}
+	if value, ok := _c.mutation.Website(); ok {
+		_spec.SetField(organization.FieldWebsite, field.TypeString, value)
+		_node.Website = value
+	}
+	if value, ok := _c.mutation.ContactEmail(); ok {
+		_spec.SetField(organization.FieldContactEmail, field.TypeString, value)
+		_node.ContactEmail = value
+	}
+	if value, ok := _c.mutation.Phone(); ok {
+		_spec.SetField(organization.FieldPhone, field.TypeString, value)
+		_node.Phone = value
+	}
+	if value, ok := _c.mutation.LinkedinURL(); ok {
+		_spec.SetField(organization.FieldLinkedinURL, field.TypeString, value)
+		_node.LinkedinURL = value
+	}
+	if value, ok := _c.mutation.InstagramURL(); ok {
+		_spec.SetField(organization.FieldInstagramURL, field.TypeString, value)
+		_node.InstagramURL = value
+	}
+	if value, ok := _c.mutation.LegalName(); ok {
+		_spec.SetField(organization.FieldLegalName, field.TypeString, value)
+		_node.LegalName = value
+	}
+	if value, ok := _c.mutation.Cnpj(); ok {
+		_spec.SetField(organization.FieldCnpj, field.TypeString, value)
+		_node.Cnpj = value
+	}
+	if value, ok := _c.mutation.AddressLine1(); ok {
+		_spec.SetField(organization.FieldAddressLine1, field.TypeString, value)
+		_node.AddressLine1 = value
+	}
+	if value, ok := _c.mutation.AddressLine2(); ok {
+		_spec.SetField(organization.FieldAddressLine2, field.TypeString, value)
+		_node.AddressLine2 = value
+	}
+	if value, ok := _c.mutation.City(); ok {
+		_spec.SetField(organization.FieldCity, field.TypeString, value)
+		_node.City = value
+	}
+	if value, ok := _c.mutation.State(); ok {
+		_spec.SetField(organization.FieldState, field.TypeString, value)
+		_node.State = value
+	}
+	if value, ok := _c.mutation.PostalCode(); ok {
+		_spec.SetField(organization.FieldPostalCode, field.TypeString, value)
+		_node.PostalCode = value
+	}
+	if value, ok := _c.mutation.Country(); ok {
+		_spec.SetField(organization.FieldCountry, field.TypeString, value)
+		_node.Country = value
+	}
+	if value, ok := _c.mutation.Timezone(); ok {
+		_spec.SetField(organization.FieldTimezone, field.TypeString, value)
+		_node.Timezone = value
+	}
+	if value, ok := _c.mutation.WeeklyHours(); ok {
+		_spec.SetField(organization.FieldWeeklyHours, field.TypeInt, value)
+		_node.WeeklyHours = &value
+	}
+	if value, ok := _c.mutation.DefaultSprintDays(); ok {
+		_spec.SetField(organization.FieldDefaultSprintDays, field.TypeInt, value)
+		_node.DefaultSprintDays = &value
+	}
+	if value, ok := _c.mutation.Currency(); ok {
+		_spec.SetField(organization.FieldCurrency, field.TypeString, value)
+		_node.Currency = value
 	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(organization.FieldCreatedAt, field.TypeTime, value)

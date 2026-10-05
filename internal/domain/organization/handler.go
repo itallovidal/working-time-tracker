@@ -30,14 +30,15 @@ func (h *Handler) Get(c *echo.Context) error {
 
 func (h *Handler) Update(c *echo.Context) error {
 	id := c.Param("orgId")
-	var body struct {
-		Name string `json:"name"`
-	}
+	var body UpdateInput
 	if err := c.Bind(&body); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "corpo da requisição inválido"})
 	}
-	org, err := h.svc.Update(id, body.Name)
+	org, err := h.svc.Update(id, body)
 	if err != nil {
+		if err == database.ErrNotFound {
+			return c.JSON(http.StatusNotFound, map[string]string{"error": "organização não encontrada"})
+		}
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 	}
 	return c.JSON(http.StatusOK, org)

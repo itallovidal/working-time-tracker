@@ -75,6 +75,21 @@
     { value: 'sunday', label: 'Domingo' },
   ];
 
+  const orgSizes = [
+    { value: '1-10', label: '1 a 10 pessoas' },
+    { value: '11-50', label: '11 a 50 pessoas' },
+    { value: '51-200', label: '51 a 200 pessoas' },
+    { value: '201-500', label: '201 a 500 pessoas' },
+    { value: '500+', label: 'Mais de 500 pessoas' },
+  ];
+
+  // As moedas que o backend aceita (internal/domain/organization).
+  const currencies = [
+    { value: 'BRL', label: 'Real (BRL)' },
+    { value: 'USD', label: 'Dólar americano (USD)' },
+    { value: 'EUR', label: 'Euro (EUR)' },
+  ];
+
   const fmt = {
     // 3725 -> "01:02:05"
     clock(seconds) {
@@ -123,6 +138,20 @@
       const d = weekdays.find((w) => w.value === value);
       return d ? d.label : value;
     },
+    // "11222333000181" -> "11.222.333/0001-81"
+    cnpj(value) {
+      const v = value || '';
+      if (v.length !== 14) return v;
+      return v.slice(0, 2) + '.' + v.slice(2, 5) + '.' + v.slice(5, 8) + '/' + v.slice(8, 12) + '-' + v.slice(12);
+    },
+    orgSize(value) {
+      const s = orgSizes.find((x) => x.value === value);
+      return s ? s.label : value;
+    },
+    currency(value) {
+      const c = currencies.find((x) => x.value === value);
+      return c ? c.label : value;
+    },
   };
 
   async function copyText(text) {
@@ -155,7 +184,7 @@
     },
   ];
 
-  window.WTT = { api, ApiError, form, fmt, copyText, weekdays, integrationTypes, boot: window.BOOT || {} };
+  window.WTT = { api, ApiError, form, fmt, copyText, weekdays, orgSizes, currencies, integrationTypes, boot: window.BOOT || {} };
 
   document.addEventListener('alpine:init', () => {
     Alpine.store('toast', {

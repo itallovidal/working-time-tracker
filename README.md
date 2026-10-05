@@ -1,14 +1,15 @@
 # Working Time Tracker
 
-Ponto por tarefa para times de engenharia. A pessoa faz **clock-in** numa tarefa, faz **clock-out** quando para, e o sistema soma o tempo por tarefa e por pessoa. Tudo fica organizado em organização, projetos e times, e as tarefas podem apontar para issues do GitHub ou do GitLab.
+Ponto por tarefa para equipes que trabalham por projeto, de qualquer área. A pessoa faz **clock-in** numa tarefa, faz **clock-out** quando para, e o sistema soma o tempo por tarefa e por pessoa. Tudo fica organizado em organização, projetos e times, e as tarefas podem apontar para issues do GitHub ou do GitLab.
 
 É um único binário em Go que serve a API JSON e a interface web.
 
 ## O que dá para fazer
 
 - **Contas e organizações.** O signup cria uma organização com você como admin. Outras pessoas entram por **link de convite** (uso único, válido por 7 dias, opcionalmente preso a um email).
+- **Perfil da organização.** Resumo, descrição, segmento, contato, dados jurídicos (razão social, CNPJ, endereço) e padrões de operação (fuso, moeda, jornada semanal e sprint padrão). O admin edita; todos os membros leem na aba **Sobre**.
 - **Papéis.** Admins gerenciam a organização, as pessoas, os projetos, os times e as integrações. Membros gerenciam tarefas e batem o próprio ponto.
-- **Projetos** com duração da sprint, horário da daily e dia da weekly.
+- **Projetos** com duração da sprint (a padrão da organização, se você não informar), horário da daily e dia da weekly.
 - **Times** dentro de cada projeto. Só quem está em algum time do projeto pode ser responsável por tarefas.
 - **Tarefas** com responsável, prazo (7 dias por padrão, com destaque quando está atrasada ou perto de vencer) e vínculo opcional com uma issue.
 - **Ponto.** Clock-in e clock-out com cronômetro ao vivo no topo de todas as páginas, sessões filtradas por tarefa e pessoa, totais do filtro e o seu tempo de hoje e da semana. O banco garante uma única sessão aberta por pessoa.
@@ -69,7 +70,8 @@ A interface segue a Decision 8 de `_docs/design.md`. O servidor renderiza a casc
 | `/invite/:token` | Aceitar um convite e criar a conta |
 | `/` | Leva para a organização de quem está logado |
 | `/orgs/:orgId` | Projetos da organização (admin cria) |
-| `/orgs/:orgId/settings` | Organização, aba Geral: nome e exclusão da organização (só admins) |
+| `/orgs/:orgId/about` | Organização, aba Sobre: o perfil da organização, para todos os membros |
+| `/orgs/:orgId/settings` | Organização, aba Geral: perfil, padrões e exclusão da organização (só admins) |
 | `/orgs/:orgId/people` | Organização, aba Pessoas: pessoas, papéis e convites (só admins) |
 | `/orgs/:orgId/projects` | Organização, aba Projetos: a mesma lista de projetos da página inicial (só admins) |
 | `/profile` | Seu nome, seu email e sua senha |
@@ -85,9 +87,9 @@ Sem sessão, qualquer página leva ao login, e a pessoa volta para a página ped
 
 ### Navegação
 
-- A **barra superior** mostra a organização, o menu (Projetos e, para admins, Organização), o **indicador do ponto aberto** com cronômetro e botão Parar, quem está logado (o nome leva ao **perfil**) e o botão Sair.
+- A **barra superior** mostra a organização, o menu (Projetos e Organização), o **indicador do ponto aberto** com cronômetro e botão Parar, quem está logado (o nome leva ao **perfil**) e o botão Sair.
 - As páginas de projeto têm **abas**: Tarefas, Ponto, Times, Integrações e Configurações.
-- A página **Organização** tem as abas Geral, Pessoas e Projetos, e só admins chegam a ela.
+- A página **Organização** abre na aba Sobre, que todos os membros leem. As abas Geral, Pessoas e Projetos são só de admins.
 - Ações de admin não aparecem para membros. A API continua sendo quem garante as permissões.
 
 ### Onde fica cada coisa
@@ -96,7 +98,7 @@ Sem sessão, qualquer página leva ao login, e a pessoa volta para a página ped
 web/
   templates/
     layouts/base.gohtml        # HTML base, carrega app.css, app.js, o script da página e o Alpine
-    partials/                  # barra superior, cabeçalho do projeto, indicador do ponto, toasts
+    partials/                  # barra superior, cabeçalhos da organização e do projeto, indicador do ponto, toasts
     pages/*.gohtml             # uma casca por tela; cada uma define o bloco "content"
   static/
     app.css                    # estilos com tema claro e escuro, sem framework
@@ -173,6 +175,7 @@ internal/
   routes/                 # rotas da API (routes.go) e das páginas (pages.go)
   server/                 # monta o servidor completo; usado pelo main e pelos testes
   template/               # renderer dos templates
+  validate/               # validações de formato usadas por mais de um domínio (CNPJ, links)
 testutil/                 # conexão e limpeza do banco de teste
 web/                      # templates e arquivos estáticos (embutidos no binário)
 docker-compose.yml        # PostgreSQL de dev e de testes
@@ -183,6 +186,7 @@ _test/                    # referência da API e coleção do Insomnia
 ## Modelo de dados
 
 ```
+Organization                          nome, perfil (resumo, contato, dados jurídicos) e padrões (fuso, moeda, jornada, sprint)
 Organization (1) ── (N) Project
 Organization (1) ── (N) Person        email único no sistema, senha (bcrypt), papel admin|member
 Organization (1) ── (N) Invite        token (hash), email opcional, papel, expira em 7 dias, uso único

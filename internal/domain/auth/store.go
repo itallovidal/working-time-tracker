@@ -241,6 +241,7 @@ func identityOf(p *ent.Person, org *ent.Organization) *Identity {
 	}
 	if org != nil {
 		id.OrganizationName = org.Name
+		id.OrganizationCurrency = org.Currency
 	}
 	return id
 }

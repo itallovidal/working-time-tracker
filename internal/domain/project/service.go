@@ -67,7 +67,11 @@ func (s *Service) Create(orgID, name, description string, sprintDurationDays int
 		return nil, errors.New("organização inválida")
 	}
 	if sprintDurationDays == 0 {
-		sprintDurationDays = 14
+		// Sem duração informada, vale a sprint padrão da organização.
+		sprintDurationDays, err = s.store.DefaultSprintDays(orgUID)
+		if err != nil {
+			return nil, err
+		}
 	}
 	if sprintDurationDays < 1 || sprintDurationDays > 90 {
 		return nil, ErrInvalidSprint

@@ -1,0 +1,63 @@
+{{define "content"}}
+<main class="page" x-data="orgAbout">
+  {{template "org_head" .}}
+
+  <div class="empty" x-cloak x-show="isEmpty()">
+    <strong>O perfil da organização ainda está vazio</strong>
+    {{if .IsAdmin}}
+    <span>Preencha os dados na aba <a href="/orgs/{{.OrgID}}/settings">Geral</a> para o time ver aqui.</span>
+    {{else}}
+    <span>Quando um admin preencher os dados da organização, eles aparecem aqui.</span>
+    {{end}}
+  </div>
+
+  <div class="grid-aside" x-cloak x-show="!isEmpty()">
+    <div class="stack">
+      <section class="card" x-show="org.description || identity().length > 0">
+        <div class="card-head"><h2>Sobre</h2></div>
+        <p class="prose" x-show="org.description" x-text="org.description"></p>
+        <dl class="facts" x-show="identity().length > 0">
+          <template x-for="f in identity()" :key="f.label">
+            <div class="fact"><dt x-text="f.label"></dt><dd x-text="f.value"></dd></div>
+          </template>
+        </dl>
+      </section>
+
+      <section class="card" x-show="legal().length > 0">
+        <div class="card-head"><h2>Dados da empresa</h2></div>
+        <dl class="facts">
+          <template x-for="f in legal()" :key="f.label">
+            <div class="fact"><dt x-text="f.label"></dt><dd :class="f.mono && 'mono'" x-text="f.value"></dd></div>
+          </template>
+        </dl>
+      </section>
+    </div>
+
+    <div class="stack">
+      <section class="card" x-show="contact().length > 0">
+        <div class="card-head"><h2>Contato</h2></div>
+        <dl class="facts">
+          <template x-for="f in contact()" :key="f.label">
+            <div class="fact">
+              <dt x-text="f.label"></dt>
+              <dd>
+                <a x-show="f.href" :href="f.href" :target="f.external ? '_blank' : null" :rel="f.external ? 'noopener noreferrer' : null" x-text="f.value"></a>
+                <span x-show="!f.href" x-text="f.value"></span>
+              </dd>
+            </div>
+          </template>
+        </dl>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><h2>Como trabalhamos</h2></div>
+        <dl class="facts">
+          <template x-for="f in defaults()" :key="f.label">
+            <div class="fact"><dt x-text="f.label"></dt><dd x-text="f.value"></dd></div>
+          </template>
+        </dl>
+      </section>
+    </div>
+  </div>
+</main>
+{{end}}

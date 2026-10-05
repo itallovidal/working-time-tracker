@@ -45,6 +45,455 @@ func (_u *OrganizationUpdate) SetNillableName(v *string) *OrganizationUpdate {
 	return _u
 }
 
+// SetSummary sets the "summary" field.
+func (_u *OrganizationUpdate) SetSummary(v string) *OrganizationUpdate {
+	_u.mutation.SetSummary(v)
+	return _u
+}
+
+// SetNillableSummary sets the "summary" field if the given value is not nil.
+func (_u *OrganizationUpdate) SetNillableSummary(v *string) *OrganizationUpdate {
+	if v != nil {
+		_u.SetSummary(*v)
+	}
+	return _u
+}
+
+// ClearSummary clears the value of the "summary" field.
+func (_u *OrganizationUpdate) ClearSummary() *OrganizationUpdate {
+	_u.mutation.ClearSummary()
+	return _u
+}
+
+// SetDescription sets the "description" field.
+func (_u *OrganizationUpdate) SetDescription(v string) *OrganizationUpdate {
+	_u.mutation.SetDescription(v)
+	return _u
+}
+
+// SetNillableDescription sets the "description" field if the given value is not nil.
+func (_u *OrganizationUpdate) SetNillableDescription(v *string) *OrganizationUpdate {
+	if v != nil {
+		_u.SetDescription(*v)
+	}
+	return _u
+}
+
+// ClearDescription clears the value of the "description" field.
+func (_u *OrganizationUpdate) ClearDescription() *OrganizationUpdate {
+	_u.mutation.ClearDescription()
+	return _u
+}
+
+// SetIndustry sets the "industry" field.
+func (_u *OrganizationUpdate) SetIndustry(v string) *OrganizationUpdate {
+	_u.mutation.SetIndustry(v)
+	return _u
+}
+
+// SetNillableIndustry sets the "industry" field if the given value is not nil.
+func (_u *OrganizationUpdate) SetNillableIndustry(v *string) *OrganizationUpdate {
+	if v != nil {
+		_u.SetIndustry(*v)
+	}
+	return _u
+}
+
+// ClearIndustry clears the value of the "industry" field.
+func (_u *OrganizationUpdate) ClearIndustry() *OrganizationUpdate {
+	_u.mutation.ClearIndustry()
+	return _u
+}
+
+// SetFoundedYear sets the "founded_year" field.
+func (_u *OrganizationUpdate) SetFoundedYear(v int) *OrganizationUpdate {
+	_u.mutation.ResetFoundedYear()
+	_u.mutation.SetFoundedYear(v)
+	return _u
+}
+
+// SetNillableFoundedYear sets the "founded_year" field if the given value is not nil.
+func (_u *OrganizationUpdate) SetNillableFoundedYear(v *int) *OrganizationUpdate {
+	if v != nil {
+		_u.SetFoundedYear(*v)
+	}
+	return _u
+}
+
+// AddFoundedYear adds value to the "founded_year" field.
+func (_u *OrganizationUpdate) AddFoundedYear(v int) *OrganizationUpdate {
+	_u.mutation.AddFoundedYear(v)
+	return _u
+}
+
+// ClearFoundedYear clears the value of the "founded_year" field.
+func (_u *OrganizationUpdate) ClearFoundedYear() *OrganizationUpdate {
+	_u.mutation.ClearFoundedYear()
+	return _u
+}
+
+// SetSize sets the "size" field.
+func (_u *OrganizationUpdate) SetSize(v string) *OrganizationUpdate {
+	_u.mutation.SetSize(v)
+	return _u
+}
+
+// SetNillableSize sets the "size" field if the given value is not nil.
+func (_u *OrganizationUpdate) SetNillableSize(v *string) *OrganizationUpdate {
+	if v != nil {
+		_u.SetSize(*v)
+	}
+	return _u
+}
+
+// ClearSize clears the value of the "size" field.
+func (_u *OrganizationUpdate) ClearSize() *OrganizationUpdate {
+	_u.mutation.ClearSize()
+	return _u
+}
+
+// SetWebsite sets the "website" field.
+func (_u *OrganizationUpdate) SetWebsite(v string) *OrganizationUpdate {
+	_u.mutation.SetWebsite(v)
+	return _u
+}
+
+// SetNillableWebsite sets the "website" field if the given value is not nil.
+func (_u *OrganizationUpdate) SetNillableWebsite(v *string) *OrganizationUpdate {
+	if v != nil {
+		_u.SetWebsite(*v)
+	}
+	return _u
+}
+
+// ClearWebsite clears the value of the "website" field.
+func (_u *OrganizationUpdate) ClearWebsite() *OrganizationUpdate {
+	_u.mutation.ClearWebsite()
+	return _u
+}
+
+// SetContactEmail sets the "contact_email" field.
+func (_u *OrganizationUpdate) SetContactEmail(v string) *OrganizationUpdate {
+	_u.mutation.SetContactEmail(v)
+	return _u
+}
+
+// SetNillableContactEmail sets the "contact_email" field if the given value is not nil.
+func (_u *OrganizationUpdate) SetNillableContactEmail(v *string) *OrganizationUpdate {
+	if v != nil {
+		_u.SetContactEmail(*v)
+	}
+	return _u
+}
+
+// ClearContactEmail clears the value of the "contact_email" field.
+func (_u *OrganizationUpdate) ClearContactEmail() *OrganizationUpdate {
+	_u.mutation.ClearContactEmail()
+	return _u
+}
+
+// SetPhone sets the "phone" field.
+func (_u *OrganizationUpdate) SetPhone(v string) *OrganizationUpdate {
+	_u.mutation.SetPhone(v)
+	return _u
+}
+
+// SetNillablePhone sets the "phone" field if the given value is not nil.
+func (_u *OrganizationUpdate) SetNillablePhone(v *string) *OrganizationUpdate {
+	if v != nil {
+		_u.SetPhone(*v)
+	}
+	return _u
+}
+
+// ClearPhone clears the value of the "phone" field.
+func (_u *OrganizationUpdate) ClearPhone() *OrganizationUpdate {
+	_u.mutation.ClearPhone()
+	return _u
+}
+
+// SetLinkedinURL sets the "linkedin_url" field.
+func (_u *OrganizationUpdate) SetLinkedinURL(v string) *OrganizationUpdate {
+	_u.mutation.SetLinkedinURL(v)
+	return _u
+}
+
+// SetNillableLinkedinURL sets the "linkedin_url" field if the given value is not nil.
+func (_u *OrganizationUpdate) SetNillableLinkedinURL(v *string) *OrganizationUpdate {
+	if v != nil {
+		_u.SetLinkedinURL(*v)
+	}
+	return _u
+}
+
+// ClearLinkedinURL clears the value of the "linkedin_url" field.
+func (_u *OrganizationUpdate) ClearLinkedinURL() *OrganizationUpdate {
+	_u.mutation.ClearLinkedinURL()
+	return _u
+}
+
+// SetInstagramURL sets the "instagram_url" field.
+func (_u *OrganizationUpdate) SetInstagramURL(v string) *OrganizationUpdate {
+	_u.mutation.SetInstagramURL(v)
+	return _u
+}
+
+// SetNillableInstagramURL sets the "instagram_url" field if the given value is not nil.
+func (_u *OrganizationUpdate) SetNillableInstagramURL(v *string) *OrganizationUpdate {
+	if v != nil {
+		_u.SetInstagramURL(*v)
+	}
+	return _u
+}
+
+// ClearInstagramURL clears the value of the "instagram_url" field.
+func (_u *OrganizationUpdate) ClearInstagramURL() *OrganizationUpdate {
+	_u.mutation.ClearInstagramURL()
+	return _u
+}
+
+// SetLegalName sets the "legal_name" field.
+func (_u *OrganizationUpdate) SetLegalName(v string) *OrganizationUpdate {
+	_u.mutation.SetLegalName(v)
+	return _u
+}
+
+// SetNillableLegalName sets the "legal_name" field if the given value is not nil.
+func (_u *OrganizationUpdate) SetNillableLegalName(v *string) *OrganizationUpdate {
+	if v != nil {
+		_u.SetLegalName(*v)
+	}
+	return _u
+}
+
+// ClearLegalName clears the value of the "legal_name" field.
+func (_u *OrganizationUpdate) ClearLegalName() *OrganizationUpdate {
+	_u.mutation.ClearLegalName()
+	return _u
+}
+
+// SetCnpj sets the "cnpj" field.
+func (_u *OrganizationUpdate) SetCnpj(v string) *OrganizationUpdate {
+	_u.mutation.SetCnpj(v)
+	return _u
+}
+
+// SetNillableCnpj sets the "cnpj" field if the given value is not nil.
+func (_u *OrganizationUpdate) SetNillableCnpj(v *string) *OrganizationUpdate {
+	if v != nil {
+		_u.SetCnpj(*v)
+	}
+	return _u
+}
+
+// ClearCnpj clears the value of the "cnpj" field.
+func (_u *OrganizationUpdate) ClearCnpj() *OrganizationUpdate {
+	_u.mutation.ClearCnpj()
+	return _u
+}
+
+// SetAddressLine1 sets the "address_line1" field.
+func (_u *OrganizationUpdate) SetAddressLine1(v string) *OrganizationUpdate {
+	_u.mutation.SetAddressLine1(v)
+	return _u
+}
+
+// SetNillableAddressLine1 sets the "address_line1" field if the given value is not nil.
+func (_u *OrganizationUpdate) SetNillableAddressLine1(v *string) *OrganizationUpdate {
+	if v != nil {
+		_u.SetAddressLine1(*v)
+	}
+	return _u
+}
+
+// ClearAddressLine1 clears the value of the "address_line1" field.
+func (_u *OrganizationUpdate) ClearAddressLine1() *OrganizationUpdate {
+	_u.mutation.ClearAddressLine1()
+	return _u
+}
+
+// SetAddressLine2 sets the "address_line2" field.
+func (_u *OrganizationUpdate) SetAddressLine2(v string) *OrganizationUpdate {
+	_u.mutation.SetAddressLine2(v)
+	return _u
+}
+
+// SetNillableAddressLine2 sets the "address_line2" field if the given value is not nil.
+func (_u *OrganizationUpdate) SetNillableAddressLine2(v *string) *OrganizationUpdate {
+	if v != nil {
+		_u.SetAddressLine2(*v)
+	}
+	return _u
+}
+
+// ClearAddressLine2 clears the value of the "address_line2" field.
+func (_u *OrganizationUpdate) ClearAddressLine2() *OrganizationUpdate {
+	_u.mutation.ClearAddressLine2()
+	return _u
+}
+
+// SetCity sets the "city" field.
+func (_u *OrganizationUpdate) SetCity(v string) *OrganizationUpdate {
+	_u.mutation.SetCity(v)
+	return _u
+}
+
+// SetNillableCity sets the "city" field if the given value is not nil.
+func (_u *OrganizationUpdate) SetNillableCity(v *string) *OrganizationUpdate {
+	if v != nil {
+		_u.SetCity(*v)
+	}
+	return _u
+}
+
+// ClearCity clears the value of the "city" field.
+func (_u *OrganizationUpdate) ClearCity() *OrganizationUpdate {
+	_u.mutation.ClearCity()
+	return _u
+}
+
+// SetState sets the "state" field.
+func (_u *OrganizationUpdate) SetState(v string) *OrganizationUpdate {
+	_u.mutation.SetState(v)
+	return _u
+}
+
+// SetNillableState sets the "state" field if the given value is not nil.
+func (_u *OrganizationUpdate) SetNillableState(v *string) *OrganizationUpdate {
+	if v != nil {
+		_u.SetState(*v)
+	}
+	return _u
+}
+
+// ClearState clears the value of the "state" field.
+func (_u *OrganizationUpdate) ClearState() *OrganizationUpdate {
+	_u.mutation.ClearState()
+	return _u
+}
+
+// SetPostalCode sets the "postal_code" field.
+func (_u *OrganizationUpdate) SetPostalCode(v string) *OrganizationUpdate {
+	_u.mutation.SetPostalCode(v)
+	return _u
+}
+
+// SetNillablePostalCode sets the "postal_code" field if the given value is not nil.
+func (_u *OrganizationUpdate) SetNillablePostalCode(v *string) *OrganizationUpdate {
+	if v != nil {
+		_u.SetPostalCode(*v)
+	}
+	return _u
+}
+
+// ClearPostalCode clears the value of the "postal_code" field.
+func (_u *OrganizationUpdate) ClearPostalCode() *OrganizationUpdate {
+	_u.mutation.ClearPostalCode()
+	return _u
+}
+
+// SetCountry sets the "country" field.
+func (_u *OrganizationUpdate) SetCountry(v string) *OrganizationUpdate {
+	_u.mutation.SetCountry(v)
+	return _u
+}
+
+// SetNillableCountry sets the "country" field if the given value is not nil.
+func (_u *OrganizationUpdate) SetNillableCountry(v *string) *OrganizationUpdate {
+	if v != nil {
+		_u.SetCountry(*v)
+	}
+	return _u
+}
+
+// ClearCountry clears the value of the "country" field.
+func (_u *OrganizationUpdate) ClearCountry() *OrganizationUpdate {
+	_u.mutation.ClearCountry()
+	return _u
+}
+
+// SetTimezone sets the "timezone" field.
+func (_u *OrganizationUpdate) SetTimezone(v string) *OrganizationUpdate {
+	_u.mutation.SetTimezone(v)
+	return _u
+}
+
+// SetNillableTimezone sets the "timezone" field if the given value is not nil.
+func (_u *OrganizationUpdate) SetNillableTimezone(v *string) *OrganizationUpdate {
+	if v != nil {
+		_u.SetTimezone(*v)
+	}
+	return _u
+}
+
+// SetWeeklyHours sets the "weekly_hours" field.
+func (_u *OrganizationUpdate) SetWeeklyHours(v int) *OrganizationUpdate {
+	_u.mutation.ResetWeeklyHours()
+	_u.mutation.SetWeeklyHours(v)
+	return _u
+}
+
+// SetNillableWeeklyHours sets the "weekly_hours" field if the given value is not nil.
+func (_u *OrganizationUpdate) SetNillableWeeklyHours(v *int) *OrganizationUpdate {
+	if v != nil {
+		_u.SetWeeklyHours(*v)
+	}
+	return _u
+}
+
+// AddWeeklyHours adds value to the "weekly_hours" field.
+func (_u *OrganizationUpdate) AddWeeklyHours(v int) *OrganizationUpdate {
+	_u.mutation.AddWeeklyHours(v)
+	return _u
+}
+
+// ClearWeeklyHours clears the value of the "weekly_hours" field.
+func (_u *OrganizationUpdate) ClearWeeklyHours() *OrganizationUpdate {
+	_u.mutation.ClearWeeklyHours()
+	return _u
+}
+
+// SetDefaultSprintDays sets the "default_sprint_days" field.
+func (_u *OrganizationUpdate) SetDefaultSprintDays(v int) *OrganizationUpdate {
+	_u.mutation.ResetDefaultSprintDays()
+	_u.mutation.SetDefaultSprintDays(v)
+	return _u
+}
+
+// SetNillableDefaultSprintDays sets the "default_sprint_days" field if the given value is not nil.
+func (_u *OrganizationUpdate) SetNillableDefaultSprintDays(v *int) *OrganizationUpdate {
+	if v != nil {
+		_u.SetDefaultSprintDays(*v)
+	}
+	return _u
+}
+
+// AddDefaultSprintDays adds value to the "default_sprint_days" field.
+func (_u *OrganizationUpdate) AddDefaultSprintDays(v int) *OrganizationUpdate {
+	_u.mutation.AddDefaultSprintDays(v)
+	return _u
+}
+
+// ClearDefaultSprintDays clears the value of the "default_sprint_days" field.
+func (_u *OrganizationUpdate) ClearDefaultSprintDays() *OrganizationUpdate {
+	_u.mutation.ClearDefaultSprintDays()
+	return _u
+}
+
+// SetCurrency sets the "currency" field.
+func (_u *OrganizationUpdate) SetCurrency(v string) *OrganizationUpdate {
+	_u.mutation.SetCurrency(v)
+	return _u
+}
+
+// SetNillableCurrency sets the "currency" field if the given value is not nil.
+func (_u *OrganizationUpdate) SetNillableCurrency(v *string) *OrganizationUpdate {
+	if v != nil {
+		_u.SetCurrency(*v)
+	}
+	return _u
+}
+
 // AddPersonIDs adds the "persons" edge to the Person entity by IDs.
 func (_u *OrganizationUpdate) AddPersonIDs(ids ...uuid.UUID) *OrganizationUpdate {
 	_u.mutation.AddPersonIDs(ids...)
@@ -196,6 +645,141 @@ func (_u *OrganizationUpdate) sqlSave(ctx context.Context) (_node int, err error
 	}
 	if value, ok := _u.mutation.Name(); ok {
 		_spec.SetField(organization.FieldName, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.Summary(); ok {
+		_spec.SetField(organization.FieldSummary, field.TypeString, value)
+	}
+	if _u.mutation.SummaryCleared() {
+		_spec.ClearField(organization.FieldSummary, field.TypeString)
+	}
+	if value, ok := _u.mutation.Description(); ok {
+		_spec.SetField(organization.FieldDescription, field.TypeString, value)
+	}
+	if _u.mutation.DescriptionCleared() {
+		_spec.ClearField(organization.FieldDescription, field.TypeString)
+	}
+	if value, ok := _u.mutation.Industry(); ok {
+		_spec.SetField(organization.FieldIndustry, field.TypeString, value)
+	}
+	if _u.mutation.IndustryCleared() {
+		_spec.ClearField(organization.FieldIndustry, field.TypeString)
+	}
+	if value, ok := _u.mutation.FoundedYear(); ok {
+		_spec.SetField(organization.FieldFoundedYear, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedFoundedYear(); ok {
+		_spec.AddField(organization.FieldFoundedYear, field.TypeInt, value)
+	}
+	if _u.mutation.FoundedYearCleared() {
+		_spec.ClearField(organization.FieldFoundedYear, field.TypeInt)
+	}
+	if value, ok := _u.mutation.Size(); ok {
+		_spec.SetField(organization.FieldSize, field.TypeString, value)
+	}
+	if _u.mutation.SizeCleared() {
+		_spec.ClearField(organization.FieldSize, field.TypeString)
+	}
+	if value, ok := _u.mutation.Website(); ok {
+		_spec.SetField(organization.FieldWebsite, field.TypeString, value)
+	}
+	if _u.mutation.WebsiteCleared() {
+		_spec.ClearField(organization.FieldWebsite, field.TypeString)
+	}
+	if value, ok := _u.mutation.ContactEmail(); ok {
+		_spec.SetField(organization.FieldContactEmail, field.TypeString, value)
+	}
+	if _u.mutation.ContactEmailCleared() {
+		_spec.ClearField(organization.FieldContactEmail, field.TypeString)
+	}
+	if value, ok := _u.mutation.Phone(); ok {
+		_spec.SetField(organization.FieldPhone, field.TypeString, value)
+	}
+	if _u.mutation.PhoneCleared() {
+		_spec.ClearField(organization.FieldPhone, field.TypeString)
+	}
+	if value, ok := _u.mutation.LinkedinURL(); ok {
+		_spec.SetField(organization.FieldLinkedinURL, field.TypeString, value)
+	}
+	if _u.mutation.LinkedinURLCleared() {
+		_spec.ClearField(organization.FieldLinkedinURL, field.TypeString)
+	}
+	if value, ok := _u.mutation.InstagramURL(); ok {
+		_spec.SetField(organization.FieldInstagramURL, field.TypeString, value)
+	}
+	if _u.mutation.InstagramURLCleared() {
+		_spec.ClearField(organization.FieldInstagramURL, field.TypeString)
+	}
+	if value, ok := _u.mutation.LegalName(); ok {
+		_spec.SetField(organization.FieldLegalName, field.TypeString, value)
+	}
+	if _u.mutation.LegalNameCleared() {
+		_spec.ClearField(organization.FieldLegalName, field.TypeString)
+	}
+	if value, ok := _u.mutation.Cnpj(); ok {
+		_spec.SetField(organization.FieldCnpj, field.TypeString, value)
+	}
+	if _u.mutation.CnpjCleared() {
+		_spec.ClearField(organization.FieldCnpj, field.TypeString)
+	}
+	if value, ok := _u.mutation.AddressLine1(); ok {
+		_spec.SetField(organization.FieldAddressLine1, field.TypeString, value)
+	}
+	if _u.mutation.AddressLine1Cleared() {
+		_spec.ClearField(organization.FieldAddressLine1, field.TypeString)
+	}
+	if value, ok := _u.mutation.AddressLine2(); ok {
+		_spec.SetField(organization.FieldAddressLine2, field.TypeString, value)
+	}
+	if _u.mutation.AddressLine2Cleared() {
+		_spec.ClearField(organization.FieldAddressLine2, field.TypeString)
+	}
+	if value, ok := _u.mutation.City(); ok {
+		_spec.SetField(organization.FieldCity, field.TypeString, value)
+	}
+	if _u.mutation.CityCleared() {
+		_spec.ClearField(organization.FieldCity, field.TypeString)
+	}
+	if value, ok := _u.mutation.State(); ok {
+		_spec.SetField(organization.FieldState, field.TypeString, value)
+	}
+	if _u.mutation.StateCleared() {
+		_spec.ClearField(organization.FieldState, field.TypeString)
+	}
+	if value, ok := _u.mutation.PostalCode(); ok {
+		_spec.SetField(organization.FieldPostalCode, field.TypeString, value)
+	}
+	if _u.mutation.PostalCodeCleared() {
+		_spec.ClearField(organization.FieldPostalCode, field.TypeString)
+	}
+	if value, ok := _u.mutation.Country(); ok {
+		_spec.SetField(organization.FieldCountry, field.TypeString, value)
+	}
+	if _u.mutation.CountryCleared() {
+		_spec.ClearField(organization.FieldCountry, field.TypeString)
+	}
+	if value, ok := _u.mutation.Timezone(); ok {
+		_spec.SetField(organization.FieldTimezone, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.WeeklyHours(); ok {
+		_spec.SetField(organization.FieldWeeklyHours, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedWeeklyHours(); ok {
+		_spec.AddField(organization.FieldWeeklyHours, field.TypeInt, value)
+	}
+	if _u.mutation.WeeklyHoursCleared() {
+		_spec.ClearField(organization.FieldWeeklyHours, field.TypeInt)
+	}
+	if value, ok := _u.mutation.DefaultSprintDays(); ok {
+		_spec.SetField(organization.FieldDefaultSprintDays, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedDefaultSprintDays(); ok {
+		_spec.AddField(organization.FieldDefaultSprintDays, field.TypeInt, value)
+	}
+	if _u.mutation.DefaultSprintDaysCleared() {
+		_spec.ClearField(organization.FieldDefaultSprintDays, field.TypeInt)
+	}
+	if value, ok := _u.mutation.Currency(); ok {
+		_spec.SetField(organization.FieldCurrency, field.TypeString, value)
 	}
 	if _u.mutation.PersonsCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -362,6 +946,455 @@ func (_u *OrganizationUpdateOne) SetName(v string) *OrganizationUpdateOne {
 func (_u *OrganizationUpdateOne) SetNillableName(v *string) *OrganizationUpdateOne {
 	if v != nil {
 		_u.SetName(*v)
+	}
+	return _u
+}
+
+// SetSummary sets the "summary" field.
+func (_u *OrganizationUpdateOne) SetSummary(v string) *OrganizationUpdateOne {
+	_u.mutation.SetSummary(v)
+	return _u
+}
+
+// SetNillableSummary sets the "summary" field if the given value is not nil.
+func (_u *OrganizationUpdateOne) SetNillableSummary(v *string) *OrganizationUpdateOne {
+	if v != nil {
+		_u.SetSummary(*v)
+	}
+	return _u
+}
+
+// ClearSummary clears the value of the "summary" field.
+func (_u *OrganizationUpdateOne) ClearSummary() *OrganizationUpdateOne {
+	_u.mutation.ClearSummary()
+	return _u
+}
+
+// SetDescription sets the "description" field.
+func (_u *OrganizationUpdateOne) SetDescription(v string) *OrganizationUpdateOne {
+	_u.mutation.SetDescription(v)
+	return _u
+}
+
+// SetNillableDescription sets the "description" field if the given value is not nil.
+func (_u *OrganizationUpdateOne) SetNillableDescription(v *string) *OrganizationUpdateOne {
+	if v != nil {
+		_u.SetDescription(*v)
+	}
+	return _u
+}
+
+// ClearDescription clears the value of the "description" field.
+func (_u *OrganizationUpdateOne) ClearDescription() *OrganizationUpdateOne {
+	_u.mutation.ClearDescription()
+	return _u
+}
+
+// SetIndustry sets the "industry" field.
+func (_u *OrganizationUpdateOne) SetIndustry(v string) *OrganizationUpdateOne {
+	_u.mutation.SetIndustry(v)
+	return _u
+}
+
+// SetNillableIndustry sets the "industry" field if the given value is not nil.
+func (_u *OrganizationUpdateOne) SetNillableIndustry(v *string) *OrganizationUpdateOne {
+	if v != nil {
+		_u.SetIndustry(*v)
+	}
+	return _u
+}
+
+// ClearIndustry clears the value of the "industry" field.
+func (_u *OrganizationUpdateOne) ClearIndustry() *OrganizationUpdateOne {
+	_u.mutation.ClearIndustry()
+	return _u
+}
+
+// SetFoundedYear sets the "founded_year" field.
+func (_u *OrganizationUpdateOne) SetFoundedYear(v int) *OrganizationUpdateOne {
+	_u.mutation.ResetFoundedYear()
+	_u.mutation.SetFoundedYear(v)
+	return _u
+}
+
+// SetNillableFoundedYear sets the "founded_year" field if the given value is not nil.
+func (_u *OrganizationUpdateOne) SetNillableFoundedYear(v *int) *OrganizationUpdateOne {
+	if v != nil {
+		_u.SetFoundedYear(*v)
+	}
+	return _u
+}
+
+// AddFoundedYear adds value to the "founded_year" field.
+func (_u *OrganizationUpdateOne) AddFoundedYear(v int) *OrganizationUpdateOne {
+	_u.mutation.AddFoundedYear(v)
+	return _u
+}
+
+// ClearFoundedYear clears the value of the "founded_year" field.
+func (_u *OrganizationUpdateOne) ClearFoundedYear() *OrganizationUpdateOne {
+	_u.mutation.ClearFoundedYear()
+	return _u
+}
+
+// SetSize sets the "size" field.
+func (_u *OrganizationUpdateOne) SetSize(v string) *OrganizationUpdateOne {
+	_u.mutation.SetSize(v)
+	return _u
+}
+
+// SetNillableSize sets the "size" field if the given value is not nil.
+func (_u *OrganizationUpdateOne) SetNillableSize(v *string) *OrganizationUpdateOne {
+	if v != nil {
+		_u.SetSize(*v)
+	}
+	return _u
+}
+
+// ClearSize clears the value of the "size" field.
+func (_u *OrganizationUpdateOne) ClearSize() *OrganizationUpdateOne {
+	_u.mutation.ClearSize()
+	return _u
+}
+
+// SetWebsite sets the "website" field.
+func (_u *OrganizationUpdateOne) SetWebsite(v string) *OrganizationUpdateOne {
+	_u.mutation.SetWebsite(v)
+	return _u
+}
+
+// SetNillableWebsite sets the "website" field if the given value is not nil.
+func (_u *OrganizationUpdateOne) SetNillableWebsite(v *string) *OrganizationUpdateOne {
+	if v != nil {
+		_u.SetWebsite(*v)
+	}
+	return _u
+}
+
+// ClearWebsite clears the value of the "website" field.
+func (_u *OrganizationUpdateOne) ClearWebsite() *OrganizationUpdateOne {
+	_u.mutation.ClearWebsite()
+	return _u
+}
+
+// SetContactEmail sets the "contact_email" field.
+func (_u *OrganizationUpdateOne) SetContactEmail(v string) *OrganizationUpdateOne {
+	_u.mutation.SetContactEmail(v)
+	return _u
+}
+
+// SetNillableContactEmail sets the "contact_email" field if the given value is not nil.
+func (_u *OrganizationUpdateOne) SetNillableContactEmail(v *string) *OrganizationUpdateOne {
+	if v != nil {
+		_u.SetContactEmail(*v)
+	}
+	return _u
+}
+
+// ClearContactEmail clears the value of the "contact_email" field.
+func (_u *OrganizationUpdateOne) ClearContactEmail() *OrganizationUpdateOne {
+	_u.mutation.ClearContactEmail()
+	return _u
+}
+
+// SetPhone sets the "phone" field.
+func (_u *OrganizationUpdateOne) SetPhone(v string) *OrganizationUpdateOne {
+	_u.mutation.SetPhone(v)
+	return _u
+}
+
+// SetNillablePhone sets the "phone" field if the given value is not nil.
+func (_u *OrganizationUpdateOne) SetNillablePhone(v *string) *OrganizationUpdateOne {
+	if v != nil {
+		_u.SetPhone(*v)
+	}
+	return _u
+}
+
+// ClearPhone clears the value of the "phone" field.
+func (_u *OrganizationUpdateOne) ClearPhone() *OrganizationUpdateOne {
+	_u.mutation.ClearPhone()
+	return _u
+}
+
+// SetLinkedinURL sets the "linkedin_url" field.
+func (_u *OrganizationUpdateOne) SetLinkedinURL(v string) *OrganizationUpdateOne {
+	_u.mutation.SetLinkedinURL(v)
+	return _u
+}
+
+// SetNillableLinkedinURL sets the "linkedin_url" field if the given value is not nil.
+func (_u *OrganizationUpdateOne) SetNillableLinkedinURL(v *string) *OrganizationUpdateOne {
+	if v != nil {
+		_u.SetLinkedinURL(*v)
+	}
+	return _u
+}
+
+// ClearLinkedinURL clears the value of the "linkedin_url" field.
+func (_u *OrganizationUpdateOne) ClearLinkedinURL() *OrganizationUpdateOne {
+	_u.mutation.ClearLinkedinURL()
+	return _u
+}
+
+// SetInstagramURL sets the "instagram_url" field.
+func (_u *OrganizationUpdateOne) SetInstagramURL(v string) *OrganizationUpdateOne {
+	_u.mutation.SetInstagramURL(v)
+	return _u
+}
+
+// SetNillableInstagramURL sets the "instagram_url" field if the given value is not nil.
+func (_u *OrganizationUpdateOne) SetNillableInstagramURL(v *string) *OrganizationUpdateOne {
+	if v != nil {
+		_u.SetInstagramURL(*v)
+	}
+	return _u
+}
+
+// ClearInstagramURL clears the value of the "instagram_url" field.
+func (_u *OrganizationUpdateOne) ClearInstagramURL() *OrganizationUpdateOne {
+	_u.mutation.ClearInstagramURL()
+	return _u
+}
+
+// SetLegalName sets the "legal_name" field.
+func (_u *OrganizationUpdateOne) SetLegalName(v string) *OrganizationUpdateOne {
+	_u.mutation.SetLegalName(v)
+	return _u
+}
+
+// SetNillableLegalName sets the "legal_name" field if the given value is not nil.
+func (_u *OrganizationUpdateOne) SetNillableLegalName(v *string) *OrganizationUpdateOne {
+	if v != nil {
+		_u.SetLegalName(*v)
+	}
+	return _u
+}
+
+// ClearLegalName clears the value of the "legal_name" field.
+func (_u *OrganizationUpdateOne) ClearLegalName() *OrganizationUpdateOne {
+	_u.mutation.ClearLegalName()
+	return _u
+}
+
+// SetCnpj sets the "cnpj" field.
+func (_u *OrganizationUpdateOne) SetCnpj(v string) *OrganizationUpdateOne {
+	_u.mutation.SetCnpj(v)
+	return _u
+}
+
+// SetNillableCnpj sets the "cnpj" field if the given value is not nil.
+func (_u *OrganizationUpdateOne) SetNillableCnpj(v *string) *OrganizationUpdateOne {
+	if v != nil {
+		_u.SetCnpj(*v)
+	}
+	return _u
+}
+
+// ClearCnpj clears the value of the "cnpj" field.
+func (_u *OrganizationUpdateOne) ClearCnpj() *OrganizationUpdateOne {
+	_u.mutation.ClearCnpj()
+	return _u
+}
+
+// SetAddressLine1 sets the "address_line1" field.
+func (_u *OrganizationUpdateOne) SetAddressLine1(v string) *OrganizationUpdateOne {
+	_u.mutation.SetAddressLine1(v)
+	return _u
+}
+
+// SetNillableAddressLine1 sets the "address_line1" field if the given value is not nil.
+func (_u *OrganizationUpdateOne) SetNillableAddressLine1(v *string) *OrganizationUpdateOne {
+	if v != nil {
+		_u.SetAddressLine1(*v)
+	}
+	return _u
+}
+
+// ClearAddressLine1 clears the value of the "address_line1" field.
+func (_u *OrganizationUpdateOne) ClearAddressLine1() *OrganizationUpdateOne {
+	_u.mutation.ClearAddressLine1()
+	return _u
+}
+
+// SetAddressLine2 sets the "address_line2" field.
+func (_u *OrganizationUpdateOne) SetAddressLine2(v string) *OrganizationUpdateOne {
+	_u.mutation.SetAddressLine2(v)
+	return _u
+}
+
+// SetNillableAddressLine2 sets the "address_line2" field if the given value is not nil.
+func (_u *OrganizationUpdateOne) SetNillableAddressLine2(v *string) *OrganizationUpdateOne {
+	if v != nil {
+		_u.SetAddressLine2(*v)
+	}
+	return _u
+}
+
+// ClearAddressLine2 clears the value of the "address_line2" field.
+func (_u *OrganizationUpdateOne) ClearAddressLine2() *OrganizationUpdateOne {
+	_u.mutation.ClearAddressLine2()
+	return _u
+}
+
+// SetCity sets the "city" field.
+func (_u *OrganizationUpdateOne) SetCity(v string) *OrganizationUpdateOne {
+	_u.mutation.SetCity(v)
+	return _u
+}
+
+// SetNillableCity sets the "city" field if the given value is not nil.
+func (_u *OrganizationUpdateOne) SetNillableCity(v *string) *OrganizationUpdateOne {
+	if v != nil {
+		_u.SetCity(*v)
+	}
+	return _u
+}
+
+// ClearCity clears the value of the "city" field.
+func (_u *OrganizationUpdateOne) ClearCity() *OrganizationUpdateOne {
+	_u.mutation.ClearCity()
+	return _u
+}
+
+// SetState sets the "state" field.
+func (_u *OrganizationUpdateOne) SetState(v string) *OrganizationUpdateOne {
+	_u.mutation.SetState(v)
+	return _u
+}
+
+// SetNillableState sets the "state" field if the given value is not nil.
+func (_u *OrganizationUpdateOne) SetNillableState(v *string) *OrganizationUpdateOne {
+	if v != nil {
+		_u.SetState(*v)
+	}
+	return _u
+}
+
+// ClearState clears the value of the "state" field.
+func (_u *OrganizationUpdateOne) ClearState() *OrganizationUpdateOne {
+	_u.mutation.ClearState()
+	return _u
+}
+
+// SetPostalCode sets the "postal_code" field.
+func (_u *OrganizationUpdateOne) SetPostalCode(v string) *OrganizationUpdateOne {
+	_u.mutation.SetPostalCode(v)
+	return _u
+}
+
+// SetNillablePostalCode sets the "postal_code" field if the given value is not nil.
+func (_u *OrganizationUpdateOne) SetNillablePostalCode(v *string) *OrganizationUpdateOne {
+	if v != nil {
+		_u.SetPostalCode(*v)
+	}
+	return _u
+}
+
+// ClearPostalCode clears the value of the "postal_code" field.
+func (_u *OrganizationUpdateOne) ClearPostalCode() *OrganizationUpdateOne {
+	_u.mutation.ClearPostalCode()
+	return _u
+}
+
+// SetCountry sets the "country" field.
+func (_u *OrganizationUpdateOne) SetCountry(v string) *OrganizationUpdateOne {
+	_u.mutation.SetCountry(v)
+	return _u
+}
+
+// SetNillableCountry sets the "country" field if the given value is not nil.
+func (_u *OrganizationUpdateOne) SetNillableCountry(v *string) *OrganizationUpdateOne {
+	if v != nil {
+		_u.SetCountry(*v)
+	}
+	return _u
+}
+
+// ClearCountry clears the value of the "country" field.
+func (_u *OrganizationUpdateOne) ClearCountry() *OrganizationUpdateOne {
+	_u.mutation.ClearCountry()
+	return _u
+}
+
+// SetTimezone sets the "timezone" field.
+func (_u *OrganizationUpdateOne) SetTimezone(v string) *OrganizationUpdateOne {
+	_u.mutation.SetTimezone(v)
+	return _u
+}
+
+// SetNillableTimezone sets the "timezone" field if the given value is not nil.
+func (_u *OrganizationUpdateOne) SetNillableTimezone(v *string) *OrganizationUpdateOne {
+	if v != nil {
+		_u.SetTimezone(*v)
+	}
+	return _u
+}
+
+// SetWeeklyHours sets the "weekly_hours" field.
+func (_u *OrganizationUpdateOne) SetWeeklyHours(v int) *OrganizationUpdateOne {
+	_u.mutation.ResetWeeklyHours()
+	_u.mutation.SetWeeklyHours(v)
+	return _u
+}
+
+// SetNillableWeeklyHours sets the "weekly_hours" field if the given value is not nil.
+func (_u *OrganizationUpdateOne) SetNillableWeeklyHours(v *int) *OrganizationUpdateOne {
+	if v != nil {
+		_u.SetWeeklyHours(*v)
+	}
+	return _u
+}
+
+// AddWeeklyHours adds value to the "weekly_hours" field.
+func (_u *OrganizationUpdateOne) AddWeeklyHours(v int) *OrganizationUpdateOne {
+	_u.mutation.AddWeeklyHours(v)
+	return _u
+}
+
+// ClearWeeklyHours clears the value of the "weekly_hours" field.
+func (_u *OrganizationUpdateOne) ClearWeeklyHours() *OrganizationUpdateOne {
+	_u.mutation.ClearWeeklyHours()
+	return _u
+}
+
+// SetDefaultSprintDays sets the "default_sprint_days" field.
+func (_u *OrganizationUpdateOne) SetDefaultSprintDays(v int) *OrganizationUpdateOne {
+	_u.mutation.ResetDefaultSprintDays()
+	_u.mutation.SetDefaultSprintDays(v)
+	return _u
+}
+
+// SetNillableDefaultSprintDays sets the "default_sprint_days" field if the given value is not nil.
+func (_u *OrganizationUpdateOne) SetNillableDefaultSprintDays(v *int) *OrganizationUpdateOne {
+	if v != nil {
+		_u.SetDefaultSprintDays(*v)
+	}
+	return _u
+}
+
+// AddDefaultSprintDays adds value to the "default_sprint_days" field.
+func (_u *OrganizationUpdateOne) AddDefaultSprintDays(v int) *OrganizationUpdateOne {
+	_u.mutation.AddDefaultSprintDays(v)
+	return _u
+}
+
+// ClearDefaultSprintDays clears the value of the "default_sprint_days" field.
+func (_u *OrganizationUpdateOne) ClearDefaultSprintDays() *OrganizationUpdateOne {
+	_u.mutation.ClearDefaultSprintDays()
+	return _u
+}
+
+// SetCurrency sets the "currency" field.
+func (_u *OrganizationUpdateOne) SetCurrency(v string) *OrganizationUpdateOne {
+	_u.mutation.SetCurrency(v)
+	return _u
+}
+
+// SetNillableCurrency sets the "currency" field if the given value is not nil.
+func (_u *OrganizationUpdateOne) SetNillableCurrency(v *string) *OrganizationUpdateOne {
+	if v != nil {
+		_u.SetCurrency(*v)
 	}
 	return _u
 }
@@ -547,6 +1580,141 @@ func (_u *OrganizationUpdateOne) sqlSave(ctx context.Context) (_node *Organizati
 	}
 	if value, ok := _u.mutation.Name(); ok {
 		_spec.SetField(organization.FieldName, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.Summary(); ok {
+		_spec.SetField(organization.FieldSummary, field.TypeString, value)
+	}
+	if _u.mutation.SummaryCleared() {
+		_spec.ClearField(organization.FieldSummary, field.TypeString)
+	}
+	if value, ok := _u.mutation.Description(); ok {
+		_spec.SetField(organization.FieldDescription, field.TypeString, value)
+	}
+	if _u.mutation.DescriptionCleared() {
+		_spec.ClearField(organization.FieldDescription, field.TypeString)
+	}
+	if value, ok := _u.mutation.Industry(); ok {
+		_spec.SetField(organization.FieldIndustry, field.TypeString, value)
+	}
+	if _u.mutation.IndustryCleared() {
+		_spec.ClearField(organization.FieldIndustry, field.TypeString)
+	}
+	if value, ok := _u.mutation.FoundedYear(); ok {
+		_spec.SetField(organization.FieldFoundedYear, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedFoundedYear(); ok {
+		_spec.AddField(organization.FieldFoundedYear, field.TypeInt, value)
+	}
+	if _u.mutation.FoundedYearCleared() {
+		_spec.ClearField(organization.FieldFoundedYear, field.TypeInt)
+	}
+	if value, ok := _u.mutation.Size(); ok {
+		_spec.SetField(organization.FieldSize, field.TypeString, value)
+	}
+	if _u.mutation.SizeCleared() {
+		_spec.ClearField(organization.FieldSize, field.TypeString)
+	}
+	if value, ok := _u.mutation.Website(); ok {
+		_spec.SetField(organization.FieldWebsite, field.TypeString, value)
+	}
+	if _u.mutation.WebsiteCleared() {
+		_spec.ClearField(organization.FieldWebsite, field.TypeString)
+	}
+	if value, ok := _u.mutation.ContactEmail(); ok {
+		_spec.SetField(organization.FieldContactEmail, field.TypeString, value)
+	}
+	if _u.mutation.ContactEmailCleared() {
+		_spec.ClearField(organization.FieldContactEmail, field.TypeString)
+	}
+	if value, ok := _u.mutation.Phone(); ok {
+		_spec.SetField(organization.FieldPhone, field.TypeString, value)
+	}
+	if _u.mutation.PhoneCleared() {
+		_spec.ClearField(organization.FieldPhone, field.TypeString)
+	}
+	if value, ok := _u.mutation.LinkedinURL(); ok {
+		_spec.SetField(organization.FieldLinkedinURL, field.TypeString, value)
+	}
+	if _u.mutation.LinkedinURLCleared() {
+		_spec.ClearField(organization.FieldLinkedinURL, field.TypeString)
+	}
+	if value, ok := _u.mutation.InstagramURL(); ok {
+		_spec.SetField(organization.FieldInstagramURL, field.TypeString, value)
+	}
+	if _u.mutation.InstagramURLCleared() {
+		_spec.ClearField(organization.FieldInstagramURL, field.TypeString)
+	}
+	if value, ok := _u.mutation.LegalName(); ok {
+		_spec.SetField(organization.FieldLegalName, field.TypeString, value)
+	}
+	if _u.mutation.LegalNameCleared() {
+		_spec.ClearField(organization.FieldLegalName, field.TypeString)
+	}
+	if value, ok := _u.mutation.Cnpj(); ok {
+		_spec.SetField(organization.FieldCnpj, field.TypeString, value)
+	}
+	if _u.mutation.CnpjCleared() {
+		_spec.ClearField(organization.FieldCnpj, field.TypeString)
+	}
+	if value, ok := _u.mutation.AddressLine1(); ok {
+		_spec.SetField(organization.FieldAddressLine1, field.TypeString, value)
+	}
+	if _u.mutation.AddressLine1Cleared() {
+		_spec.ClearField(organization.FieldAddressLine1, field.TypeString)
+	}
+	if value, ok := _u.mutation.AddressLine2(); ok {
+		_spec.SetField(organization.FieldAddressLine2, field.TypeString, value)
+	}
+	if _u.mutation.AddressLine2Cleared() {
+		_spec.ClearField(organization.FieldAddressLine2, field.TypeString)
+	}
+	if value, ok := _u.mutation.City(); ok {
+		_spec.SetField(organization.FieldCity, field.TypeString, value)
+	}
+	if _u.mutation.CityCleared() {
+		_spec.ClearField(organization.FieldCity, field.TypeString)
+	}
+	if value, ok := _u.mutation.State(); ok {
+		_spec.SetField(organization.FieldState, field.TypeString, value)
+	}
+	if _u.mutation.StateCleared() {
+		_spec.ClearField(organization.FieldState, field.TypeString)
+	}
+	if value, ok := _u.mutation.PostalCode(); ok {
+		_spec.SetField(organization.FieldPostalCode, field.TypeString, value)
+	}
+	if _u.mutation.PostalCodeCleared() {
+		_spec.ClearField(organization.FieldPostalCode, field.TypeString)
+	}
+	if value, ok := _u.mutation.Country(); ok {
+		_spec.SetField(organization.FieldCountry, field.TypeString, value)
+	}
+	if _u.mutation.CountryCleared() {
+		_spec.ClearField(organization.FieldCountry, field.TypeString)
+	}
+	if value, ok := _u.mutation.Timezone(); ok {
+		_spec.SetField(organization.FieldTimezone, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.WeeklyHours(); ok {
+		_spec.SetField(organization.FieldWeeklyHours, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedWeeklyHours(); ok {
+		_spec.AddField(organization.FieldWeeklyHours, field.TypeInt, value)
+	}
+	if _u.mutation.WeeklyHoursCleared() {
+		_spec.ClearField(organization.FieldWeeklyHours, field.TypeInt)
+	}
+	if value, ok := _u.mutation.DefaultSprintDays(); ok {
+		_spec.SetField(organization.FieldDefaultSprintDays, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedDefaultSprintDays(); ok {
+		_spec.AddField(organization.FieldDefaultSprintDays, field.TypeInt, value)
+	}
+	if _u.mutation.DefaultSprintDaysCleared() {
+		_spec.ClearField(organization.FieldDefaultSprintDays, field.TypeInt)
+	}
+	if value, ok := _u.mutation.Currency(); ok {
+		_spec.SetField(organization.FieldCurrency, field.TypeString, value)
 	}
 	if _u.mutation.PersonsCleared() {
 		edge := &sqlgraph.EdgeSpec{

@@ -107,13 +107,47 @@ Se o convite foi criado com email, só esse email consegue aceitar. Um convite v
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
 | GET | `/api/orgs/:orgId` | logado | Detalhes da organização |
-| PATCH | `/api/orgs/:orgId` | admin | Renomeia: `{"name": "…"}` |
+| PATCH | `/api/orgs/:orgId` | admin | Altera o nome e o perfil. Veja os campos abaixo |
 | DELETE | `/api/orgs/:orgId` | admin | Exclui a organização com as pessoas e os convites. Falha se ainda houver projetos |
 | GET | `/api/orgs/:orgId/persons` | logado | Pessoas da organização |
 | POST | `/api/orgs/:orgId/projects` | admin | Cria um projeto |
 | GET | `/api/orgs/:orgId/projects` | logado | Projetos da organização |
 
-A organização é criada pelo signup, e o `organization_id` vem no `/api/auth/me`.
+A organização é criada pelo signup, e o `organization_id` vem no `/api/auth/me`, junto com `organization_currency`.
+
+### Perfil da organização
+
+O `GET` devolve todos os campos para qualquer membro. No `PATCH`, **campo que não vem no corpo fica como está**; texto vazio (`""`) ou número zero apaga o valor. `{"name": "…"}` sozinho continua renomeando.
+
+| Campo | Regra |
+|---|---|
+| `name` | Obrigatório, até 120 caracteres |
+| `summary` | Uma linha, até 160 caracteres |
+| `description` | Texto puro, até 2000 caracteres |
+| `industry` | Segmento de atuação, até 100 caracteres |
+| `founded_year` | De 1900 ao ano atual |
+| `size` | `1-10`, `11-50`, `51-200`, `201-500` ou `500+` |
+| `website`, `linkedin_url`, `instagram_url` | Link `http` ou `https`. Sem esquema, vira `https://…` |
+| `contact_email`, `phone` | Email válido; telefone com números, espaços, `+`, parênteses e hífen |
+| `legal_name` | Razão social, até 200 caracteres |
+| `cnpj` | Com ou sem máscara. Os dígitos verificadores são conferidos, inclusive no formato alfanumérico. A resposta traz sem máscara |
+| `address_line1`, `address_line2`, `city`, `state`, `postal_code`, `country` | Texto livre |
+| `timezone` | Nome IANA, por exemplo `America/Sao_Paulo` (o padrão) |
+| `currency` | `BRL` (o padrão), `USD` ou `EUR` |
+| `weekly_hours` | Jornada semanal, de 1 a 168 |
+| `default_sprint_days` | De 1 a 90. Vale para projetos criados sem `sprint_duration_days` |
+
+```http
+PATCH /api/orgs/:orgId
+Content-Type: application/json
+
+{
+  "summary": "Entregas no mesmo dia para o comércio de bairro.",
+  "website": "acme-delivery.example",
+  "cnpj": "11.222.333/0001-81",
+  "default_sprint_days": 7
+}
+```
 
 ### Convites
 

@@ -17,6 +17,50 @@ const (
 	FieldID = "id"
 	// FieldName holds the string denoting the name field in the database.
 	FieldName = "name"
+	// FieldSummary holds the string denoting the summary field in the database.
+	FieldSummary = "summary"
+	// FieldDescription holds the string denoting the description field in the database.
+	FieldDescription = "description"
+	// FieldIndustry holds the string denoting the industry field in the database.
+	FieldIndustry = "industry"
+	// FieldFoundedYear holds the string denoting the founded_year field in the database.
+	FieldFoundedYear = "founded_year"
+	// FieldSize holds the string denoting the size field in the database.
+	FieldSize = "size"
+	// FieldWebsite holds the string denoting the website field in the database.
+	FieldWebsite = "website"
+	// FieldContactEmail holds the string denoting the contact_email field in the database.
+	FieldContactEmail = "contact_email"
+	// FieldPhone holds the string denoting the phone field in the database.
+	FieldPhone = "phone"
+	// FieldLinkedinURL holds the string denoting the linkedin_url field in the database.
+	FieldLinkedinURL = "linkedin_url"
+	// FieldInstagramURL holds the string denoting the instagram_url field in the database.
+	FieldInstagramURL = "instagram_url"
+	// FieldLegalName holds the string denoting the legal_name field in the database.
+	FieldLegalName = "legal_name"
+	// FieldCnpj holds the string denoting the cnpj field in the database.
+	FieldCnpj = "cnpj"
+	// FieldAddressLine1 holds the string denoting the address_line1 field in the database.
+	FieldAddressLine1 = "address_line1"
+	// FieldAddressLine2 holds the string denoting the address_line2 field in the database.
+	FieldAddressLine2 = "address_line2"
+	// FieldCity holds the string denoting the city field in the database.
+	FieldCity = "city"
+	// FieldState holds the string denoting the state field in the database.
+	FieldState = "state"
+	// FieldPostalCode holds the string denoting the postal_code field in the database.
+	FieldPostalCode = "postal_code"
+	// FieldCountry holds the string denoting the country field in the database.
+	FieldCountry = "country"
+	// FieldTimezone holds the string denoting the timezone field in the database.
+	FieldTimezone = "timezone"
+	// FieldWeeklyHours holds the string denoting the weekly_hours field in the database.
+	FieldWeeklyHours = "weekly_hours"
+	// FieldDefaultSprintDays holds the string denoting the default_sprint_days field in the database.
+	FieldDefaultSprintDays = "default_sprint_days"
+	// FieldCurrency holds the string denoting the currency field in the database.
+	FieldCurrency = "currency"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// EdgePersons holds the string denoting the persons edge name in mutations.
@@ -54,6 +98,28 @@ const (
 var Columns = []string{
 	FieldID,
 	FieldName,
+	FieldSummary,
+	FieldDescription,
+	FieldIndustry,
+	FieldFoundedYear,
+	FieldSize,
+	FieldWebsite,
+	FieldContactEmail,
+	FieldPhone,
+	FieldLinkedinURL,
+	FieldInstagramURL,
+	FieldLegalName,
+	FieldCnpj,
+	FieldAddressLine1,
+	FieldAddressLine2,
+	FieldCity,
+	FieldState,
+	FieldPostalCode,
+	FieldCountry,
+	FieldTimezone,
+	FieldWeeklyHours,
+	FieldDefaultSprintDays,
+	FieldCurrency,
 	FieldCreatedAt,
 }
 
@@ -68,6 +134,10 @@ func ValidColumn(column string) bool {
 }
 
 var (
+	// DefaultTimezone holds the default value on creation for the "timezone" field.
+	DefaultTimezone string
+	// DefaultCurrency holds the default value on creation for the "currency" field.
+	DefaultCurrency string
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 	// DefaultID holds the default value on creation for the "id" field.
@@ -85,6 +155,116 @@ func ByID(opts ...sql.OrderTermOption) OrderOption {
 // ByName orders the results by the name field.
 func ByName(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldName, opts...).ToFunc()
+}
+
+// BySummary orders the results by the summary field.
+func BySummary(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSummary, opts...).ToFunc()
+}
+
+// ByDescription orders the results by the description field.
+func ByDescription(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDescription, opts...).ToFunc()
+}
+
+// ByIndustry orders the results by the industry field.
+func ByIndustry(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldIndustry, opts...).ToFunc()
+}
+
+// ByFoundedYear orders the results by the founded_year field.
+func ByFoundedYear(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldFoundedYear, opts...).ToFunc()
+}
+
+// BySize orders the results by the size field.
+func BySize(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSize, opts...).ToFunc()
+}
+
+// ByWebsite orders the results by the website field.
+func ByWebsite(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldWebsite, opts...).ToFunc()
+}
+
+// ByContactEmail orders the results by the contact_email field.
+func ByContactEmail(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldContactEmail, opts...).ToFunc()
+}
+
+// ByPhone orders the results by the phone field.
+func ByPhone(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPhone, opts...).ToFunc()
+}
+
+// ByLinkedinURL orders the results by the linkedin_url field.
+func ByLinkedinURL(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldLinkedinURL, opts...).ToFunc()
+}
+
+// ByInstagramURL orders the results by the instagram_url field.
+func ByInstagramURL(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldInstagramURL, opts...).ToFunc()
+}
+
+// ByLegalName orders the results by the legal_name field.
+func ByLegalName(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldLegalName, opts...).ToFunc()
+}
+
+// ByCnpj orders the results by the cnpj field.
+func ByCnpj(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCnpj, opts...).ToFunc()
+}
+
+// ByAddressLine1 orders the results by the address_line1 field.
+func ByAddressLine1(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAddressLine1, opts...).ToFunc()
+}
+
+// ByAddressLine2 orders the results by the address_line2 field.
+func ByAddressLine2(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAddressLine2, opts...).ToFunc()
+}
+
+// ByCity orders the results by the city field.
+func ByCity(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCity, opts...).ToFunc()
+}
+
+// ByState orders the results by the state field.
+func ByState(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldState, opts...).ToFunc()
+}
+
+// ByPostalCode orders the results by the postal_code field.
+func ByPostalCode(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPostalCode, opts...).ToFunc()
+}
+
+// ByCountry orders the results by the country field.
+func ByCountry(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCountry, opts...).ToFunc()
+}
+
+// ByTimezone orders the results by the timezone field.
+func ByTimezone(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTimezone, opts...).ToFunc()
+}
+
+// ByWeeklyHours orders the results by the weekly_hours field.
+func ByWeeklyHours(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldWeeklyHours, opts...).ToFunc()
+}
+
+// ByDefaultSprintDays orders the results by the default_sprint_days field.
+func ByDefaultSprintDays(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDefaultSprintDays, opts...).ToFunc()
+}
+
+// ByCurrency orders the results by the currency field.
+func ByCurrency(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCurrency, opts...).ToFunc()
 }
 
 // ByCreatedAt orders the results by the created_at field.

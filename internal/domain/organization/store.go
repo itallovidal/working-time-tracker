@@ -26,8 +26,7 @@ func (s *Store) Create(org *Organization) error {
 	if err != nil {
 		return err
 	}
-	org.ID = created.ID
-	org.CreatedAt = created.CreatedAt
+	*org = *toDomainOrg(created)
 	return nil
 }
 
@@ -56,10 +55,46 @@ func (s *Store) GetByID(id string) (*Organization, error) {
 	return toDomainOrg(org), nil
 }
 
+// Update grava a organização como está: texto vazio fica vazio e número nil é
+// apagado no banco. Quem decide entre manter e apagar é o service.
 func (s *Store) Update(org *Organization) error {
-	_, err := s.client.Organization.UpdateOneID(org.ID).
+	q := s.client.Organization.UpdateOneID(org.ID).
 		SetName(org.Name).
-		Save(context.Background())
+		SetSummary(org.Summary).
+		SetDescription(org.Description).
+		SetIndustry(org.Industry).
+		SetSize(org.Size).
+		SetWebsite(org.Website).
+		SetContactEmail(org.ContactEmail).
+		SetPhone(org.Phone).
+		SetLinkedinURL(org.LinkedinURL).
+		SetInstagramURL(org.InstagramURL).
+		SetLegalName(org.LegalName).
+		SetCnpj(org.CNPJ).
+		SetAddressLine1(org.AddressLine1).
+		SetAddressLine2(org.AddressLine2).
+		SetCity(org.City).
+		SetState(org.State).
+		SetPostalCode(org.PostalCode).
+		SetCountry(org.Country).
+		SetTimezone(org.Timezone).
+		SetCurrency(org.Currency)
+	if org.FoundedYear != nil {
+		q = q.SetFoundedYear(*org.FoundedYear)
+	} else {
+		q = q.ClearFoundedYear()
+	}
+	if org.WeeklyHours != nil {
+		q = q.SetWeeklyHours(*org.WeeklyHours)
+	} else {
+		q = q.ClearWeeklyHours()
+	}
+	if org.DefaultSprintDays != nil {
+		q = q.SetDefaultSprintDays(*org.DefaultSprintDays)
+	} else {
+		q = q.ClearDefaultSprintDays()
+	}
+	_, err := q.Save(context.Background())
 	return err
 }
 
@@ -90,9 +125,31 @@ func toDomainOrg(e *ent.Organization) *Organization {
 		return nil
 	}
 	return &Organization{
-		ID:        e.ID,
-		Name:      e.Name,
-		CreatedAt: e.CreatedAt,
+		ID:                e.ID,
+		Name:              e.Name,
+		Summary:           e.Summary,
+		Description:       e.Description,
+		Industry:          e.Industry,
+		FoundedYear:       e.FoundedYear,
+		Size:              e.Size,
+		Website:           e.Website,
+		ContactEmail:      e.ContactEmail,
+		Phone:             e.Phone,
+		LinkedinURL:       e.LinkedinURL,
+		InstagramURL:      e.InstagramURL,
+		LegalName:         e.LegalName,
+		CNPJ:              e.Cnpj,
+		AddressLine1:      e.AddressLine1,
+		AddressLine2:      e.AddressLine2,
+		City:              e.City,
+		State:             e.State,
+		PostalCode:        e.PostalCode,
+		Country:           e.Country,
+		Timezone:          e.Timezone,
+		WeeklyHours:       e.WeeklyHours,
+		DefaultSprintDays: e.DefaultSprintDays,
+		Currency:          e.Currency,
+		CreatedAt:         e.CreatedAt,
 	}
 }
 
