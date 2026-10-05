@@ -16,11 +16,15 @@ func RegisterPages(e *echo.Echo, p *page.Handler, m *auth.Middleware) {
 
 	g := e.Group("", m.RequirePage)
 	g.GET("/", p.Home)
+	g.GET("/profile", p.Profile)
 
 	org := m.RequireOrgPage(auth.KindOrganization, "orgId", p.NotFound)
 	g.GET("/orgs/:orgId", p.Org, org)
-	g.GET("/orgs/:orgId/people", p.People, org)
-	g.GET("/orgs/:orgId/settings", p.OrgSettings, org)
+	// As abas da organização são só de admins.
+	admin := m.RequireAdminPage(p.NotFound)
+	g.GET("/orgs/:orgId/settings", p.OrgSettings, org, admin)
+	g.GET("/orgs/:orgId/people", p.People, org, admin)
+	g.GET("/orgs/:orgId/projects", p.OrgProjects, org, admin)
 
 	prj := m.RequireOrgPage(auth.KindProject, "projectId", p.NotFound)
 	g.GET("/projects/:projectId", p.Project, prj)

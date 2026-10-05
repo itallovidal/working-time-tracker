@@ -28,6 +28,11 @@ func (h *Handler) Invite(c *echo.Context) error {
 	})
 }
 
+// Profile tem os dados e a senha de quem está logado.
+func (h *Handler) Profile(c *echo.Context) error {
+	return h.render(c, "profile", Data{Title: "Seu perfil", Section: "profile", Script: "org"})
+}
+
 // Home leva a pessoa logada para a página da organização dela.
 func (h *Handler) Home(c *echo.Context) error {
 	return c.Redirect(http.StatusSeeOther, "/orgs/"+auth.CurrentPerson(c).OrganizationID.String())

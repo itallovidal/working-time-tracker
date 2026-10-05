@@ -69,8 +69,10 @@ A interface segue a Decision 8 de `_docs/design.md`. O servidor renderiza a casc
 | `/invite/:token` | Aceitar um convite e criar a conta |
 | `/` | Leva para a organização de quem está logado |
 | `/orgs/:orgId` | Projetos da organização (admin cria) |
-| `/orgs/:orgId/people` | Pessoas e papéis. O admin gera, copia e revoga convites |
-| `/orgs/:orgId/settings` | Nome da organização, seu perfil, sua senha e exclusão da organização |
+| `/orgs/:orgId/settings` | Organização, aba Geral: nome e exclusão da organização (só admins) |
+| `/orgs/:orgId/people` | Organização, aba Pessoas: pessoas, papéis e convites (só admins) |
+| `/orgs/:orgId/projects` | Organização, aba Projetos: a mesma lista de projetos da página inicial (só admins) |
+| `/profile` | Seu nome, seu email e sua senha |
 | `/projects/:projectId` | Leva para a aba Tarefas |
 | `/projects/:projectId/tasks` | Tarefas, com início de ponto em um clique |
 | `/tasks/:taskId` | Edição da tarefa, vínculo com issue e tempo registrado |
@@ -83,8 +85,9 @@ Sem sessão, qualquer página leva ao login, e a pessoa volta para a página ped
 
 ### Navegação
 
-- A **barra superior** mostra a organização, o menu (Projetos, Pessoas, Configurações), o **indicador do ponto aberto** com cronômetro e botão Parar, quem está logado e o botão Sair.
+- A **barra superior** mostra a organização, o menu (Projetos e, para admins, Organização), o **indicador do ponto aberto** com cronômetro e botão Parar, quem está logado (o nome leva ao **perfil**) e o botão Sair.
 - As páginas de projeto têm **abas**: Tarefas, Ponto, Times, Integrações e Configurações.
+- A página **Organização** tem as abas Geral, Pessoas e Projetos, e só admins chegam a ela.
 - Ações de admin não aparecem para membros. A API continua sendo quem garante as permissões.
 
 ### Onde fica cada coisa

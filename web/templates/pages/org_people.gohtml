@@ -1,14 +1,10 @@
 {{define "content"}}
 <main class="page" x-data="orgPeople">
-  <div class="page-head">
-    <div>
-      <div class="eyebrow">{{.Me.OrganizationName}}</div>
-      <h1>Pessoas</h1>
-      <p class="lede">Quem faz parte da organização. Para montar times, use a aba Times de cada projeto.</p>
-    </div>
-  </div>
+  {{template "org_head" .}}
 
-  <div class="{{if .IsAdmin}}grid-aside{{else}}stack{{end}}">
+  <p class="muted">Quem faz parte da organização. Para montar times, use a aba Times de cada projeto.</p>
+
+  <div class="grid-aside">
     <section class="stack">
       <p class="muted" x-show="loading">Carregando pessoas…</p>
       <p class="form-error" x-cloak x-show="errors.load" x-text="errors.load"></p>
@@ -16,7 +12,7 @@
       <div class="table-wrap" x-show="people.length > 0">
         <table>
           <thead>
-            <tr><th>Nome</th><th>Email</th><th>Papel</th>{{if .IsAdmin}}<th class="actions"><span class="sr-only">Ações</span></th>{{end}}</tr>
+            <tr><th>Nome</th><th>Email</th><th>Papel</th><th class="actions"><span class="sr-only">Ações</span></th></tr>
           </thead>
           <tbody>
             <template x-for="p in people" :key="p.id">
@@ -27,13 +23,11 @@
                 </td>
                 <td class="muted" x-text="p.email"></td>
                 <td><span class="badge" :class="p.role === 'admin' && 'badge-accent'" x-text="WTT.fmt.role(p.role)"></span></td>
-                {{if .IsAdmin}}
                 <td class="actions">
                   <button type="button" class="btn btn-ghost btn-sm" :disabled="pending"
                           @click="setRole(p, p.role === 'admin' ? 'member' : 'admin')"
                           x-text="p.role === 'admin' ? 'Tornar membro' : 'Tornar admin'"></button>
                 </td>
-                {{end}}
               </tr>
             </template>
           </tbody>
@@ -41,7 +35,6 @@
       </div>
     </section>
 
-    {{if .IsAdmin}}
     <aside class="stack">
       <form class="card" @submit.prevent="createInvite()">
         <div class="card-head"><h2>Convidar pessoa</h2></div>
@@ -90,7 +83,6 @@
         </ul>
       </section>
     </aside>
-    {{end}}
   </div>
 </main>
 {{end}}

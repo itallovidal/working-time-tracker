@@ -1,4 +1,5 @@
-// Componentes das páginas da organização: projetos, pessoas e configurações.
+// Componentes das páginas da organização (a lista de projetos e as abas Geral, Pessoas e Projetos)
+// e do perfil de quem está logado.
 document.addEventListener('alpine:init', () => {
   const { api, form } = WTT;
   const me = WTT.boot.me;
@@ -52,9 +53,10 @@ document.addEventListener('alpine:init', () => {
     lastLink: '',
     async init() {
       try {
-        const loads = [api('GET', '/api/orgs/' + orgId + '/persons')];
-        if (me.role === 'admin') loads.push(api('GET', '/api/orgs/' + orgId + '/invites'));
-        const [people, invites] = await Promise.all(loads);
+        const [people, invites] = await Promise.all([
+          api('GET', '/api/orgs/' + orgId + '/persons'),
+          api('GET', '/api/orgs/' + orgId + '/invites'),
+        ]);
         this.people = people || [];
         this.invites = invites || [];
       } catch (e) {
@@ -68,8 +70,8 @@ document.addEventListener('alpine:init', () => {
         const updated = await api('PATCH', '/api/persons/' + person.id + '/role', { role });
         person.role = updated.role;
         toast(person.name + ' agora é ' + WTT.fmt.role(updated.role).toLowerCase() + '.');
-        // Quem tirou o próprio admin perde o acesso às ações desta página.
-        if (person.id === me.id && updated.role !== 'admin') location.reload();
+        // Quem tirou o próprio admin perde o acesso a esta página.
+        if (person.id === me.id && updated.role !== 'admin') location.href = '/';
       });
     },
     createInvite() {
@@ -96,8 +98,6 @@ document.addEventListener('alpine:init', () => {
   Alpine.data('orgSettings', () => ({
     ...form(),
     orgName: me.organization_name,
-    profile: { name: me.name, email: me.email },
-    password: { current: '', next: '' },
     confirmDelete: false,
     saveOrg() {
       return this.run('org', async () => {
@@ -106,6 +106,18 @@ document.addEventListener('alpine:init', () => {
         toast('Organização salva.');
       });
     },
+    deleteOrg() {
+      return this.run('delete', async () => {
+        await api('DELETE', '/api/orgs/' + orgId);
+        location.href = '/signup';
+      });
+    },
+  }));
+
+  Alpine.data('profileSettings', () => ({
+    ...form(),
+    profile: { name: me.name, email: me.email },
+    password: { current: '', next: '' },
     saveProfile() {
       return this.run('profile', async () => {
         const p = await api('PATCH', '/api/persons/' + me.id, this.profile);
@@ -119,12 +131,6 @@ document.addEventListener('alpine:init', () => {
         await api('POST', '/api/auth/password', { current_password: this.password.current, new_password: this.password.next });
         this.password = { current: '', next: '' };
         toast('Senha trocada. As outras sessões foram encerradas.');
-      });
-    },
-    deleteOrg() {
-      return this.run('delete', async () => {
-        await api('DELETE', '/api/orgs/' + orgId);
-        location.href = '/signup';
       });
     },
   }));

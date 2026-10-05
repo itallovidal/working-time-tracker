@@ -23,9 +23,9 @@ type Crumb struct {
 type Data struct {
 	Title   string
 	Me      *auth.Identity
-	Section string // item ativo do menu da organização: projects, people, settings
+	Section string // item ativo da barra superior: projects, organization, profile
 	Project *Crumb
-	Tab     string // aba ativa do projeto: tasks, time, teams, integrations, settings
+	Tab     string // aba ativa do projeto (tasks, time, teams, integrations, settings) ou da organização (general, people, projects)
 	Script  string // página em /static/pages/<Script>.js com os componentes Alpine
 	Props   map[string]any
 }

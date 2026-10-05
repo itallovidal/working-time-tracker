@@ -1,5 +1,13 @@
 {{define "content"}}
 <main class="page" x-data="orgProjects">
+  {{if .Tab}}
+  {{template "org_head" .}}
+
+  <div class="toolbar">
+    <p class="muted">Cada projeto tem seus times, tarefas e registro de tempo.</p>
+    <button type="button" class="btn" @click="openCreate()" x-show="!creating">Novo projeto</button>
+  </div>
+  {{else}}
   <div class="page-head">
     <div>
       <div class="eyebrow">{{.Me.OrganizationName}}</div>
@@ -10,6 +18,7 @@
     <button type="button" class="btn" @click="openCreate()" x-show="!creating">Novo projeto</button>
     {{end}}
   </div>
+  {{end}}
 
   {{if .IsAdmin}}
   <form class="card" x-cloak x-show="creating" @submit.prevent="create()">

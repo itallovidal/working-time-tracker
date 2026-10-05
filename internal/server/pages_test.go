@@ -11,17 +11,26 @@ import (
 	"working-time-tracker/web"
 )
 
-// pagePaths são as páginas logadas de uma organização com um projeto.
+// pagePaths são as páginas logadas de uma organização com um projeto que todo
+// mundo vê. As abas da organização (orgPagePaths) são só de admins.
 func pagePaths(orgID, projectID string) []string {
 	return []string{
 		"/orgs/" + orgID,
-		"/orgs/" + orgID + "/people",
-		"/orgs/" + orgID + "/settings",
+		"/profile",
 		"/projects/" + projectID + "/tasks",
 		"/projects/" + projectID + "/time-tracking",
 		"/projects/" + projectID + "/teams",
 		"/projects/" + projectID + "/integrations",
 		"/projects/" + projectID + "/settings",
+	}
+}
+
+// orgPagePaths são as abas da organização: Geral, Pessoas e Projetos.
+func orgPagePaths(orgID string) []string {
+	return []string{
+		"/orgs/" + orgID + "/settings",
+		"/orgs/" + orgID + "/people",
+		"/orgs/" + orgID + "/projects",
 	}
 }
 
@@ -52,6 +61,66 @@ func TestPages_RenderForAdminAndMember(t *testing.T) {
 	rec = do(e, "GET", "/orgs/"+admin.orgID, "", admin.session)
 	if !strings.Contains(rec.Body.String(), "Novo projeto") {
 		t.Error("admin does not see the 'Novo projeto' button")
+	}
+}
+
+// As abas da organização são só de admins: membros não veem o item no menu e
+// recebem "Página não encontrada" se abrirem o endereço.
+func TestPages_OrgTabsAreAdminOnly(t *testing.T) {
+	e := newServer(t)
+	admin := signup(t, e, "Org", "ana@test.com")
+	member := invite(t, e, admin, "bia@test.com", "member")
+
+	for _, path := range orgPagePaths(admin.orgID) {
+		link := `href="` + path + `"`
+		rec := do(e, "GET", path, "", admin.session)
+		if rec.Code != http.StatusOK {
+			t.Errorf("admin GET %s = %d, want 200", path, rec.Code)
+		}
+		// Cada aba mostra as duas, então uma leva à outra.
+		for _, tab := range orgPagePaths(admin.orgID) {
+			if !strings.Contains(rec.Body.String(), `href="`+tab+`"`) {
+				t.Errorf("admin GET %s does not link to the tab %s", path, tab)
+			}
+		}
+		if rec := do(e, "GET", path, "", member.session); rec.Code != http.StatusNotFound {
+			t.Errorf("member GET %s = %d, want 404", path, rec.Code)
+		}
+		if rec := do(e, "GET", "/orgs/"+admin.orgID, "", member.session); strings.Contains(rec.Body.String(), link) {
+			t.Errorf("member sees a link to %s", path)
+		}
+		if rec := do(e, "GET", path, "", ""); rec.Code != http.StatusSeeOther || !strings.HasPrefix(rec.Header().Get("Location"), "/login?next=") {
+			t.Errorf("GET %s without session = %d to %q, want 303 to /login", path, rec.Code, rec.Header().Get("Location"))
+		}
+	}
+	if rec := do(e, "GET", "/orgs/"+admin.orgID, "", admin.session); !strings.Contains(rec.Body.String(), `href="/orgs/`+admin.orgID+`/settings"`) {
+		t.Error("admin does not see the organization link in the menu")
+	}
+}
+
+// A página da organização e o perfil são separados, e a barra superior leva
+// ao perfil.
+func TestPages_OrgSettingsAndProfileAreSeparate(t *testing.T) {
+	e := newServer(t)
+	admin := signup(t, e, "Org", "ana@test.com")
+
+	settings := do(e, "GET", "/orgs/"+admin.orgID+"/settings", "", admin.session).Body.String()
+	if !strings.Contains(settings, `id="org-name"`) || !strings.Contains(settings, "Excluir organização") {
+		t.Error("org settings page does not show the organization name and deletion")
+	}
+	if strings.Contains(settings, `id="me-email"`) || strings.Contains(settings, `id="pw-current"`) {
+		t.Error("org settings page still shows the profile or password form")
+	}
+	if !strings.Contains(settings, `href="/profile"`) {
+		t.Error("top bar does not link to the profile page")
+	}
+
+	profile := do(e, "GET", "/profile", "", admin.session).Body.String()
+	if !strings.Contains(profile, `id="me-email"`) || !strings.Contains(profile, `id="pw-current"`) {
+		t.Error("profile page does not show the profile and password forms")
+	}
+	if strings.Contains(profile, `id="org-name"`) || strings.Contains(profile, "Excluir organização") {
+		t.Error("profile page shows organization settings")
 	}
 }
 
@@ -99,7 +168,7 @@ func TestPages_AllTemplatesLoad(t *testing.T) {
 	sort.Strings(got)
 	for _, name := range []string{
 		"login", "signup", "invite", "notfound",
-		"org_projects", "org_people", "org_settings",
+		"org_projects", "org_people", "org_settings", "profile",
 		"project_tasks", "project_time", "project_teams", "project_integrations", "project_settings", "task_detail",
 	} {
 		i := sort.SearchStrings(got, name)

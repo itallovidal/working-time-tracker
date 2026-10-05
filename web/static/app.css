@@ -125,7 +125,12 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 .mainnav a[aria-current="page"] { background: var(--accent-soft); color: var(--accent); }
 
 .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
-.me { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; color: var(--ink-2); }
+.me {
+  display: flex; align-items: center; gap: 8px; font-size: 0.9rem; color: var(--ink-2);
+  text-decoration: none; padding: 3px 8px 3px 3px; border-radius: var(--radius-sm);
+}
+.me:hover { background: var(--surface-2); color: var(--ink); }
+.me[aria-current="page"] { background: var(--surface-2); color: var(--accent); }
 .avatar {
   width: 28px; height: 28px; border-radius: 50%;
   background: var(--accent-soft); color: var(--accent);
@@ -169,6 +174,7 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 .check input { width: auto; }
 .filters select { width: auto; max-width: 240px; }
 .stack-tight { gap: 4px; }
+.stack-narrow { max-width: 560px; }
 .row-tight { gap: 6px; }
 .facts { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 0; font-size: 0.9rem; }
 .facts dt { color: var(--muted); }

@@ -1,57 +1,18 @@
 {{define "content"}}
 <main class="page" x-data="orgSettings">
-  <div class="page-head">
-    <div>
-      <div class="eyebrow">{{.Me.OrganizationName}}</div>
-      <h1>Configurações</h1>
-    </div>
-  </div>
+  {{template "org_head" .}}
 
-  <div class="grid-2">
+  <div class="stack stack-narrow">
     <form class="card" @submit.prevent="saveOrg()">
-      <div class="card-head"><h2>Organização</h2></div>
+      <div class="card-head"><h2>Dados da organização</h2></div>
       <div class="field">
         <label for="org-name">Nome</label>
-        <input id="org-name" type="text" required x-model="orgName" {{if not .IsAdmin}}disabled{{end}}>
-        {{if not .IsAdmin}}<span class="hint">Só admins podem renomear a organização.</span>{{end}}
+        <input id="org-name" type="text" required x-model="orgName">
       </div>
-      {{if .IsAdmin}}
       <p class="form-error" x-show="errors.org" x-text="errors.org" role="alert"></p>
       <div class="row row-end"><button type="submit" class="btn" :disabled="pending">Salvar</button></div>
-      {{end}}
     </form>
 
-    <form class="card" @submit.prevent="saveProfile()">
-      <div class="card-head"><h2>Seu perfil</h2></div>
-      <div class="field">
-        <label for="me-name">Nome</label>
-        <input id="me-name" type="text" autocomplete="name" required x-model="profile.name">
-      </div>
-      <div class="field">
-        <label for="me-email">Email</label>
-        <input id="me-email" type="email" autocomplete="email" required x-model="profile.email">
-        <span class="hint">É o email que você usa para entrar.</span>
-      </div>
-      <p class="form-error" x-show="errors.profile" x-text="errors.profile" role="alert"></p>
-      <div class="row row-end"><button type="submit" class="btn" :disabled="pending">Salvar perfil</button></div>
-    </form>
-
-    <form class="card" @submit.prevent="changePassword()">
-      <div class="card-head"><h2>Senha</h2></div>
-      <div class="field">
-        <label for="pw-current">Senha atual</label>
-        <input id="pw-current" type="password" autocomplete="current-password" required x-model="password.current">
-      </div>
-      <div class="field">
-        <label for="pw-new">Nova senha</label>
-        <input id="pw-new" type="password" autocomplete="new-password" minlength="8" required x-model="password.next">
-        <span class="hint">Pelo menos 8 caracteres. As suas outras sessões serão encerradas.</span>
-      </div>
-      <p class="form-error" x-show="errors.password" x-text="errors.password" role="alert"></p>
-      <div class="row row-end"><button type="submit" class="btn" :disabled="pending">Trocar senha</button></div>
-    </form>
-
-    {{if .IsAdmin}}
     <section class="card">
       <div class="card-head"><h2>Excluir organização</h2></div>
       <p class="muted small">Apaga a organização, todas as pessoas e os convites. Só é possível depois de excluir todos os projetos.</p>
@@ -65,7 +26,6 @@
         <button type="button" class="btn btn-ghost btn-sm" @click="confirmDelete = false">Cancelar</button>
       </div>
     </section>
-    {{end}}
   </div>
 </main>
 {{end}}

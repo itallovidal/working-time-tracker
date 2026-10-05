@@ -95,6 +95,18 @@ func (m *Middleware) RequireAdmin(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 }
 
+// RequireAdminPage faz a mesma checagem para páginas, com a resposta de 404 dada.
+func (m *Middleware) RequireAdminPage(notFound echo.HandlerFunc) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c *echo.Context) error {
+			if !CurrentPerson(c).IsAdmin() {
+				return notFound(c)
+			}
+			return next(c)
+		}
+	}
+}
+
 // RequireSelfOrAdmin libera a rota para a própria pessoa do parâmetro ou para um admin.
 func (m *Middleware) RequireSelfOrAdmin(param string) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {

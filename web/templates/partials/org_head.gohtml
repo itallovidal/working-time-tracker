@@ -1,0 +1,13 @@
+{{define "org_head"}}
+<div class="page-head">
+  <div>
+    <div class="eyebrow" data-org-name>{{.Me.OrganizationName}}</div>
+    <h1>Organização</h1>
+  </div>
+</div>
+<nav class="tabs" aria-label="Seções da organização">
+  <a href="/orgs/{{.OrgID}}/settings" {{if eq .Tab "general"}}aria-current="page"{{end}}>Geral</a>
+  <a href="/orgs/{{.OrgID}}/people" {{if eq .Tab "people"}}aria-current="page"{{end}}>Pessoas</a>
+  <a href="/orgs/{{.OrgID}}/projects" {{if eq .Tab "projects"}}aria-current="page"{{end}}>Projetos</a>
+</nav>
+{{end}}

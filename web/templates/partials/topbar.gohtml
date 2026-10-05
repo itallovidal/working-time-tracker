@@ -7,16 +7,16 @@
     </a>
     <nav class="mainnav" aria-label="Organização">
       <a href="/orgs/{{.OrgID}}" {{if eq .Section "projects"}}aria-current="page"{{end}}>Projetos</a>
-      <a href="/orgs/{{.OrgID}}/people" {{if eq .Section "people"}}aria-current="page"{{end}}>Pessoas</a>
-      <a href="/orgs/{{.OrgID}}/settings" {{if eq .Section "settings"}}aria-current="page"{{end}}>Configurações</a>
+      {{if .IsAdmin}}<a href="/orgs/{{.OrgID}}/settings" {{if eq .Section "organization"}}aria-current="page"{{end}}>Organização</a>{{end}}
     </nav>
     <div class="topbar-right">
       {{template "active_session" .}}
-      <span class="me" title="{{.Me.Email}}">
+      <a class="me" href="/profile" title="{{.Me.Email}}" {{if eq .Section "profile"}}aria-current="page"{{end}}>
+        <span class="sr-only">Seu perfil:</span>
         <span class="avatar" aria-hidden="true">{{.Initials}}</span>
         <span class="name" data-me-name>{{.Me.Name}}</span>
         {{if .IsAdmin}}<span class="badge badge-accent">Admin</span>{{end}}
-      </span>
+      </a>
       <span x-data="logoutButton">
         <button type="button" class="btn btn-ghost btn-sm" @click="logout()" :disabled="busy">Sair</button>
       </span>
