@@ -278,9 +278,9 @@ func TestPages_ProjectCollaboratorsTab(t *testing.T) {
 	}
 	for _, adminOnly := range []string{
 		"Adicionar pessoa", "Novo time", `x-teleport="#modal-root"`, `id="collab-search"`, `id="collab-rate"`, `id="collab-team"`, `id="team-name"`,
-		"Valor por hora (", "Margem por hora", "Sem valor por hora", "saveRate(",
+		`$t('collab.col_rate'`, "Margem por hora", "Sem valor por hora", "saveRate(",
 		// Editar o time e tirar do projeto são botões só de ícone, com o nome da ação.
-		`title="Editar time"`, `:aria-label="'Editar o time ' + team.name"`, `title="Remover do projeto"`, "btn-icon",
+		`title="Editar time"`, `:aria-label="$t('collab.edit_team_label', { name: team.name })"`, `title="Remover do projeto"`, "btn-icon",
 		// O modal de editar time: o nome, os integrantes em caixas de marcar e a exclusão.
 		`x-show="$store.modal.name === 'team-edit'"`, `id="team-edit-name"`, `id="team-edit-search"`,
 		`type="checkbox" :value="p.id" x-model="edit.member_ids"`, "Excluir time", "saveTeam()", "removeTeam()",

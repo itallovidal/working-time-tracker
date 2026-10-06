@@ -767,11 +767,11 @@ document.addEventListener('alpine:init', () => {
     saveRate(c) {
       return this.run('person-' + c.person.id, async () => {
         const cents = WTT.toCents(c.draft);
-        if (cents === null) throw new Error('Informe um valor, por exemplo 20,00.');
+        if (cents === null) throw new Error(WTT.t('collab.rate_invalid'));
         const a = await api('PUT', '/api/projects/' + project.id + '/allocations/' + c.person.id, { pay_rate_cents: cents });
         c.pay_rate_cents = a.pay_rate_cents;
         c.draft = WTT.fmt.moneyInput(a.pay_rate_cents);
-        toast('Valor de ' + c.person.name + ' salvo.');
+        toast(WTT.t('collab.rate_saved', { name: c.person.name }));
       });
     },
     removePerson(c) {
@@ -779,7 +779,7 @@ document.addEventListener('alpine:init', () => {
         await api('DELETE', '/api/projects/' + project.id + '/collaborators/' + c.person.id);
         this.confirming = null;
         await this.reload();
-        toast(c.person.name + ' saiu do projeto.');
+        toast(WTT.t('collab.left', { name: c.person.name }));
       });
     },
     // Quem pode entrar no projeto: as pessoas da organização que ainda não estão nele.
@@ -794,14 +794,14 @@ document.addEventListener('alpine:init', () => {
     openAdd() {
       this.add = { search: '', person_id: '', rate: '', team_id: '' };
       this.errors.add = '';
-      Alpine.store('modal').open('collab-add', 'Adicionar pessoa ao projeto', () => !this.pending);
+      Alpine.store('modal').open('collab-add', WTT.t('collab.add_title'), () => !this.pending);
     },
     addPerson() {
       return this.run('add', async () => {
         const person = this.addCandidates().find((p) => p.id === this.add.person_id);
-        if (!person) throw new Error('Escolha uma pessoa.');
+        if (!person) throw new Error(WTT.t('collab.choose_person'));
         const cents = WTT.toCents(this.add.rate);
-        if (cents === null) throw new Error('Informe o valor por hora, por exemplo 20,00.');
+        if (cents === null) throw new Error(WTT.t('collab.rate_required'));
         await api('PUT', '/api/projects/' + project.id + '/allocations/' + person.id, { pay_rate_cents: cents });
         // Daqui em diante a pessoa já está no projeto: se o time falhar, ela
         // fica sem time e a tela avisa, em vez de parecer que nada aconteceu.
@@ -815,21 +815,21 @@ document.addEventListener('alpine:init', () => {
         }
         await this.reload();
         Alpine.store('modal').close();
-        if (teamError) Alpine.store('toast').error(person.name + ' entrou no projeto, mas não no time: ' + teamError);
-        else toast(person.name + ' entrou no projeto.');
+        if (teamError) Alpine.store('toast').error(WTT.t('collab.joined_no_team', { name: person.name, error: teamError }));
+        else toast(WTT.t('collab.joined', { name: person.name }));
       });
     },
     openTeam() {
       this.newTeam = '';
       this.errors.create = '';
-      Alpine.store('modal').open('team-new', 'Novo time', () => !this.pending);
+      Alpine.store('modal').open('team-new', WTT.t('collab.new_team'), () => !this.pending);
     },
     createTeam() {
       return this.run('create', async () => {
         const t = await api('POST', '/api/projects/' + project.id + '/teams', { name: this.newTeam });
         this.teams = [t, ...this.teams];
         Alpine.store('modal').close();
-        toast('Time criado.');
+        toast(WTT.t('collab.team_created'));
       });
     },
     // openEdit abre o modal Editar time com um rascunho do nome e dos integrantes.
@@ -844,7 +844,7 @@ document.addEventListener('alpine:init', () => {
       this.edit = { id: team.id, name: team.name, search: '', member_ids: [...inTeam], people: [...members, ...others] };
       this.confirming = null;
       this.errors.team = '';
-      Alpine.store('modal').open('team-edit', 'Editar time', () => !this.pending);
+      Alpine.store('modal').open('team-edit', WTT.t('collab.edit_team'), () => !this.pending);
       // A lista guarda a rolagem da última abertura; cada uma começa do topo, onde estão os integrantes.
       this.$nextTick(() => { this.$refs.editList.scrollTop = 0; });
     },
@@ -861,7 +861,7 @@ document.addEventListener('alpine:init', () => {
       return this.run('team', async () => {
         const team = this.teams.find((t) => t.id === this.edit.id);
         const name = this.edit.name.trim();
-        if (!name) throw new Error('Informe o nome do time.');
+        if (!name) throw new Error(WTT.t('collab.team_name_required'));
         const current = this.membersOf(team).map((c) => c.person.id);
         const wanted = this.edit.member_ids;
         const leaving = current.filter((id) => !wanted.includes(id));
@@ -878,7 +878,7 @@ document.addEventListener('alpine:init', () => {
         // O nome do time e quem está nele também aparecem na tabela de pessoas.
         await this.reload();
         Alpine.store('modal').close();
-        toast('Time salvo.');
+        toast(WTT.t('collab.team_saved'));
       });
     },
     removeTeam() {
@@ -887,7 +887,7 @@ document.addEventListener('alpine:init', () => {
         await api('DELETE', '/api/teams/' + id);
         this.teams = this.teams.filter((t) => t.id !== id);
         Alpine.store('modal').close();
-        toast('Time excluído.');
+        toast(WTT.t('collab.team_deleted'));
         await this.reload(); // quem só estava neste time, sem valor, deixa de ser do projeto
       });
     },

@@ -33,6 +33,7 @@ common:
   role: Papel
   actions: Ações
   optional: Opcional
+  you: você
   description_label: Descrição
   clear_filters: Limpar filtros
   loading: Carregando…
@@ -193,7 +194,6 @@ org:
     intro: Quem faz parte da organização. Para pôr alguém num projeto e montar os times, use a aba Colaboradores do projeto.
     add: Adicionar colaborador
     loading: Carregando colaboradores…
-    you: você
     make_member: Tornar membro
     make_admin: Tornar admin
     now_member: "{{.name}} agora é membro."
@@ -483,6 +483,87 @@ project_settings:
   rate_invalid: Informe um valor, por exemplo 100,00.
   billing_saved: Cobrança salva.
   saved: Projeto salvo.
+
+collab:
+  loading: Carregando colaboradores…
+  collaborators:
+    one: Colaborador
+    other: Colaboradores
+  teams_count:
+    one: Time
+    other: Times
+  no_team: Sem time
+  no_rate: Sem valor por hora
+  missing_count:
+    one: "{{.count}} pessoa está"
+    other: "{{.count}} pessoas estão"
+  missing_text: "neste projeto sem valor por hora:"
+  missing_blocked: Sem valor, o ponto fica bloqueado.
+  people_title: Pessoas
+  people_intro: "Quem trabalha neste projeto: quem está em algum time ou tem valor por hora aqui."
+  search_placeholder: Buscar por nome ou e-mail
+  search_label: Buscar colaborador por nome ou e-mail
+  add_person: Adicionar pessoa
+  none: Ninguém neste projeto ainda
+  none_admin: Adicione as pessoas que trabalham aqui e quanto cada uma recebe por hora.
+  none_member: Um admin precisa adicionar as pessoas deste projeto.
+  no_match: Ninguém com esse nome ou e-mail
+  clear_search: Limpar a busca
+  col_person: Pessoa
+  col_teams: Times
+  col_rate: "Valor por hora ({{.unit}})"
+  col_margin: Margem por hora
+  rate_placeholder: Sem valor
+  rate_label: "Valor por hora de {{.name}}"
+  remove_title: Remover do projeto
+  remove_label: "Remover {{.name}} do projeto"
+  remove_confirm: Tirar do projeto? Sai dos times e perde o valor.
+  remove: Remover
+  bill_info_before: O cliente paga
+  bill_info_after: "por hora neste projeto; a margem é a diferença para o que cada pessoa recebe."
+  no_bill: Sem valor cobrado do cliente, a margem de cada pessoa não é calculada.
+  change_in_settings: Alterar em Configurações
+  teams_title: Times
+  teams_intro: Só quem está em algum time pode ser responsável por tarefas.
+  new_team: Novo time
+  no_teams: Nenhum time neste projeto
+  no_teams_admin: Crie um time e ponha as pessoas nele.
+  no_teams_member: Um admin precisa criar os times deste projeto.
+  edit_team: Editar time
+  edit_team_label: "Editar o time {{.name}}"
+  no_members: Nenhum integrante ainda.
+  add_title: Adicionar pessoa ao projeto
+  person: Pessoa
+  picker_label: Pessoas da organização fora deste projeto
+  none_outside_search: Ninguém com esse nome ou e-mail fora do projeto.
+  all_in: Todas as pessoas da organização já estão neste projeto.
+  invite_link: Convidar alguém para a organização
+  rate_hint: Quanto a pessoa recebe aqui. Sem valor, ela não bate ponto.
+  team: Time
+  no_team_yet: Sem time por enquanto
+  team_hint: Quem está num time pode receber tarefas.
+  add_submit: Adicionar ao projeto
+  team_name: Nome do time
+  team_name_placeholder: "Ex.: Backend"
+  create_team: Criar time
+  members_label: Integrantes
+  members_aria: Integrantes do time
+  outside: fora do projeto
+  no_match_short: Ninguém com esse nome ou e-mail.
+  edit_hint: Quem está num time pode receber tarefas. Quem vem de fora do projeto entra nele sem valor por hora.
+  delete_team_confirm: Excluir o time? As pessoas continuam na organização.
+  delete_team: Excluir time
+  rate_invalid: Informe um valor, por exemplo 20,00.
+  rate_required: Informe o valor por hora, por exemplo 20,00.
+  rate_saved: "Valor de {{.name}} salvo."
+  left: "{{.name}} saiu do projeto."
+  choose_person: Escolha uma pessoa.
+  joined: "{{.name}} entrou no projeto."
+  joined_no_team: "{{.name}} entrou no projeto, mas não no time: {{.error}}"
+  team_created: Time criado.
+  team_name_required: Informe o nome do time.
+  team_saved: Time salvo.
+  team_deleted: Time excluído.
 
 labels:
   not_informed: Não informado
