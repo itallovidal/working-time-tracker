@@ -6,7 +6,7 @@
 
   <div class="grid-aside">
     <section class="stack">
-      <p class="muted" x-show="loading">Carregando pessoas…</p>
+      <p class="muted" x-show="loading">Carregando colaboradores…</p>
       <p class="form-error" x-cloak x-show="errors.load" x-text="errors.load"></p>
       <p class="form-error" x-cloak x-show="errors.role" x-text="errors.role" role="alert"></p>
       <div class="table-wrap" x-show="people.length > 0">
@@ -37,7 +37,7 @@
 
     <aside class="stack">
       <form class="card" @submit.prevent="createInvite()">
-        <div class="card-head"><h2>Convidar pessoa</h2></div>
+        <div class="card-head"><h2>Convidar colaborador</h2></div>
         <div class="field">
           <label for="invite-email">Email</label>
           <input id="invite-email" type="email" placeholder="Opcional" x-model="invite.email">

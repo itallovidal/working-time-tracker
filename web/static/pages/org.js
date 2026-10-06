@@ -1,5 +1,5 @@
-// Componentes das páginas da organização (a lista de projetos e as abas Sobre, Geral, Pessoas e
-// Projetos) e do perfil de quem está logado.
+// Componentes das páginas da organização (a lista de projetos, as abas Sobre, Colaboradores,
+// Clientes e Projetos e a tela de edição) e do perfil de quem está logado.
 document.addEventListener('alpine:init', () => {
   const { api, form } = WTT;
   const me = WTT.boot.me;
@@ -146,16 +146,10 @@ document.addEventListener('alpine:init', () => {
         const body = {};
         orgTexts.forEach((k) => { body[k] = this.form[k]; });
         orgNumbers.forEach((k) => { body[k] = Number(this.form[k]) || 0; });
-        const saved = await api('PATCH', '/api/orgs/' + orgId, body);
-        Object.assign(org, saved);
-        this.form = orgForm(saved);
-        me.organization_currency = saved.currency;
-        setText('[data-org-name]', saved.name);
-        document.querySelectorAll('[data-org-summary]').forEach((el) => {
-          el.textContent = saved.summary;
-          el.hidden = !saved.summary;
-        });
-        toast('Organização salva.');
+        await api('PATCH', '/api/orgs/' + orgId, body);
+        // A edição volta para a aba Sobre, que recarrega com os dados novos e mostra o toast.
+        Alpine.store('toast').flash('Organização salva.');
+        location.href = '/orgs/' + orgId + '/about';
       });
     },
     deleteOrg() {

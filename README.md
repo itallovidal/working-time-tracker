@@ -75,8 +75,8 @@ A interface segue a Decision 8 de `_docs/design.md`. O servidor renderiza a casc
 | `/` | Leva para a organização de quem está logado |
 | `/orgs/:orgId` | Projetos da organização (admin cria) |
 | `/orgs/:orgId/about` | Organização, aba Sobre: o perfil da organização, para todos os membros |
-| `/orgs/:orgId/settings` | Organização, aba Geral: perfil, regime, fuso, moeda e exclusão da organização (só admins) |
-| `/orgs/:orgId/people` | Organização, aba Pessoas: pessoas, papéis e convites (só admins) |
+| `/orgs/:orgId/settings` | Organização, tela de edição aberta pelo botão Editar da aba Sobre: perfil, regime, fuso, moeda e exclusão da organização (só admins) |
+| `/orgs/:orgId/people` | Organização, aba Colaboradores: pessoas, papéis e convites (só admins) |
 | `/orgs/:orgId/customers` | Organização, aba Clientes: quem contrata os projetos (só admins) |
 | `/orgs/:orgId/projects` | Organização, aba Projetos: a mesma lista de projetos da página inicial (só admins) |
 | `/profile` | Seu nome, seu email, sua senha e quanto você recebe por hora em cada projeto |
@@ -95,7 +95,7 @@ Sem sessão, qualquer página leva ao login, e a pessoa volta para a página ped
 
 - A **barra superior** mostra a organização, o menu (Projetos e Organização), o **indicador do ponto aberto** com cronômetro e botão Parar, quem está logado (o nome leva ao **perfil**) e o botão Sair.
 - As páginas de projeto têm **abas**: Tarefas, Ponto, Times, Valores (só admins), Integrações e Configurações.
-- A página **Organização** abre na aba Sobre, que todos os membros leem. As abas Geral, Pessoas, Clientes e Projetos são só de admins.
+- A página **Organização** abre na aba Sobre, que todos os membros leem. Nela o admin tem o botão **Editar**, que leva à tela de edição; salvar volta para a Sobre. As abas Colaboradores, Clientes e Projetos são só de admins.
 - Ações de admin não aparecem para membros. A API continua sendo quem garante as permissões.
 
 ### Onde fica cada coisa

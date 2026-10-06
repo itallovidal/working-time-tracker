@@ -2,11 +2,15 @@
 <main class="page" x-data="orgAbout">
   {{template "org_head" .}}
 
-  {{/* Os cartões ficam um embaixo do outro, na mesma largura do formulário da aba Geral. */}}
-  <div class="stack stack-form" x-cloak>
+  {{/* Os cartões ficam um embaixo do outro, na largura toda, como nas outras abas. */}}
+  <div class="stack" x-cloak>
     {{if .IsAdmin}}
+    <div class="toolbar">
+      <p class="muted flex-1">O que todos os membros leem sobre a organização.</p>
+      <a class="btn btn-secondary" href="/orgs/{{.OrgID}}/settings">{{template "icon" "pen"}} Editar</a>
+    </div>
     <p class="alert" x-show="isEmpty()">
-      O perfil da organização ainda está vazio. Preencha os dados na aba <a href="/orgs/{{.OrgID}}/settings">Geral</a> para o time ver aqui.
+      O perfil da organização ainda está vazio. <a href="/orgs/{{.OrgID}}/settings">Preencha os dados</a> para o time ver aqui.
     </p>
     {{end}}
 

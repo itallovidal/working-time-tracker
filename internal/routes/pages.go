@@ -21,7 +21,7 @@ func RegisterPages(e *echo.Echo, p *page.Handler, m *auth.Middleware) {
 	org := m.RequireOrgPage(auth.KindOrganization, "orgId", p.NotFound)
 	g.GET("/orgs/:orgId", p.Org, org)
 	g.GET("/orgs/:orgId/about", p.About, org)
-	// As outras abas da organização são só de admins.
+	// A tela de edição e as outras abas da organização são só de admins.
 	admin := m.RequireAdminPage(p.NotFound)
 	g.GET("/orgs/:orgId/settings", p.OrgSettings, org, admin)
 	g.GET("/orgs/:orgId/people", p.People, org, admin)

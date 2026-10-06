@@ -2,7 +2,12 @@
 <main class="page" x-data="orgSettings">
   {{template "org_head" .}}
 
-  <div class="stack stack-form">
+  {{/* A tela de edição abre pelo botão Editar da aba Sobre e volta para ela, na mesma largura. */}}
+  <div class="stack">
+    <div class="toolbar">
+      <h2>Editar organização</h2>
+      <a class="btn btn-ghost btn-sm" href="/orgs/{{.OrgID}}/about">{{template "icon" "arrow-left"}} Voltar</a>
+    </div>
     <form class="stack" @submit.prevent="saveOrg()">
       <section class="card">
         <div class="card-head"><h2>Identidade</h2></div>
@@ -144,7 +149,10 @@
       </section>
 
       <p class="form-error" x-show="errors.org" x-text="errors.org" role="alert"></p>
-      <div class="row row-end"><button type="submit" class="btn" :disabled="pending">Salvar</button></div>
+      <div class="row row-end">
+        <a class="btn btn-secondary" href="/orgs/{{.OrgID}}/about">Cancelar</a>
+        <button type="submit" class="btn" :disabled="pending">Salvar</button>
+      </div>
     </form>
 
     <section class="card">
@@ -152,7 +160,7 @@
       <p class="muted small">Apaga a organização, todas as pessoas e os convites. Só é possível depois de excluir todos os projetos.</p>
       <p class="form-error" x-show="errors.delete" x-text="errors.delete" role="alert"></p>
       <div class="row" x-show="!confirmDelete">
-        <button type="button" class="btn btn-danger-ghost" @click="confirmDelete = true">Excluir organização</button>
+        <button type="button" class="btn btn-danger-ghost" @click="confirmDelete = true">{{template "icon" "trash"}} Excluir organização</button>
       </div>
       <div class="confirm" x-cloak x-show="confirmDelete">
         <span>Excluir de vez? Isso não pode ser desfeito.</span>

@@ -37,11 +37,12 @@ func (h *Handler) About(c *echo.Context) error {
 	return h.orgPage(c, "org_about", "Sobre · Organização", "about")
 }
 
-// OrgSettings é a aba Geral: os dados da organização e a exclusão dela (S8.2).
-// O perfil e a senha de quem está logado ficam em Profile. Esta aba e as duas
-// seguintes são só de admins; o middleware de rota garante isso.
+// OrgSettings é a tela de edição da organização: os dados dela e a exclusão (S8.2).
+// Abre pelo botão Editar da aba Sobre, que continua marcada. O perfil e a senha de
+// quem está logado ficam em Profile. Esta tela e as abas seguintes são só de admins;
+// o middleware de rota garante isso.
 func (h *Handler) OrgSettings(c *echo.Context) error {
-	return h.orgPage(c, "org_settings", "Organização", "general")
+	return h.orgPage(c, "org_settings", "Editar · Organização", "about")
 }
 
 // OrgProjects é a aba Projetos: a mesma lista da página inicial, dentro da
@@ -55,7 +56,7 @@ func (h *Handler) Customers(c *echo.Context) error {
 	return h.orgPage(c, "org_customers", "Clientes · Organização", "customers")
 }
 
-// People é a aba Pessoas: as pessoas da organização, os papéis e os convites (S8.3).
+// People é a aba Colaboradores: as pessoas da organização, os papéis e os convites (S8.3).
 func (h *Handler) People(c *echo.Context) error {
-	return h.orgPage(c, "org_people", "Pessoas · Organização", "people")
+	return h.orgPage(c, "org_people", "Colaboradores · Organização", "people")
 }

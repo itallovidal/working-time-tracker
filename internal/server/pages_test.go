@@ -26,10 +26,9 @@ func pagePaths(orgID, projectID string) []string {
 	}
 }
 
-// orgPagePaths são as abas de gestão da organização: Geral, Pessoas, Clientes e Projetos.
+// orgPagePaths são as abas de gestão da organização: Colaboradores, Clientes e Projetos.
 func orgPagePaths(orgID string) []string {
 	return []string{
-		"/orgs/" + orgID + "/settings",
 		"/orgs/" + orgID + "/people",
 		"/orgs/" + orgID + "/customers",
 		"/orgs/" + orgID + "/projects",
@@ -73,17 +72,31 @@ func TestPages_OrgTabsAreAdminOnly(t *testing.T) {
 	admin := signup(t, e, "Org", "ana@test.com")
 	member := invite(t, e, admin, "bia@test.com", "member")
 
-	for _, path := range orgPagePaths(admin.orgID) {
+	about := "/orgs/" + admin.orgID + "/about"
+	// A edição não é uma aba: o admin chega nela pelo botão Editar da aba Sobre.
+	edit := "/orgs/" + admin.orgID + "/settings"
+
+	for _, path := range append(orgPagePaths(admin.orgID), edit) {
 		link := `href="` + path + `"`
 		rec := do(e, "GET", path, "", admin.session)
 		if rec.Code != http.StatusOK {
 			t.Errorf("admin GET %s = %d, want 200", path, rec.Code)
 		}
+		body := rec.Body.String()
 		// Cada aba mostra as outras, então uma leva à outra.
 		for _, tab := range orgPagePaths(admin.orgID) {
-			if !strings.Contains(rec.Body.String(), `href="`+tab+`"`) {
+			if !strings.Contains(body, `href="`+tab+`"`) {
 				t.Errorf("admin GET %s does not link to the tab %s", path, tab)
 			}
+		}
+		if !strings.Contains(body, "Colaboradores") {
+			t.Errorf("admin GET %s does not show the Colaboradores tab", path)
+		}
+		if path != edit && strings.Contains(body, `href="`+edit+`"`) {
+			t.Errorf("admin GET %s still links to the edit page as a tab", path)
+		}
+		if path == edit && !strings.Contains(body, `href="`+about+`"`) {
+			t.Error("the edit page does not link back to the about tab")
 		}
 		if rec := do(e, "GET", path, "", member.session); rec.Code != http.StatusNotFound {
 			t.Errorf("member GET %s = %d, want 404", path, rec.Code)
@@ -96,8 +109,7 @@ func TestPages_OrgTabsAreAdminOnly(t *testing.T) {
 		}
 	}
 	// O item do menu leva à aba Sobre, que todo mundo lê. Só o admin vê, nela,
-	// os links para as abas de gestão.
-	about := "/orgs/" + admin.orgID + "/about"
+	// os links para as abas de gestão e o botão Editar.
 	for _, who := range []account{admin, member} {
 		if rec := do(e, "GET", "/orgs/"+admin.orgID, "", who.session); !strings.Contains(rec.Body.String(), `href="`+about+`"`) {
 			t.Error("the menu does not link to the organization page")
@@ -105,7 +117,7 @@ func TestPages_OrgTabsAreAdminOnly(t *testing.T) {
 	}
 	adminAbout := do(e, "GET", about, "", admin.session).Body.String()
 	memberAbout := do(e, "GET", about, "", member.session).Body.String()
-	for _, path := range orgPagePaths(admin.orgID) {
+	for _, path := range append(orgPagePaths(admin.orgID), edit) {
 		link := `href="` + path + `"`
 		if !strings.Contains(adminAbout, link) {
 			t.Errorf("admin about page does not link to %s", path)

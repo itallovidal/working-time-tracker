@@ -8,11 +8,10 @@
 </div>
 {{if .IsAdmin}}
 <nav class="tabs" aria-label="Seções da organização">
-  <a href="/orgs/{{.OrgID}}/about" {{if eq .Tab "about"}}aria-current="page"{{end}}>Sobre</a>
-  <a href="/orgs/{{.OrgID}}/settings" {{if eq .Tab "general"}}aria-current="page"{{end}}>Geral</a>
-  <a href="/orgs/{{.OrgID}}/people" {{if eq .Tab "people"}}aria-current="page"{{end}}>Pessoas</a>
-  <a href="/orgs/{{.OrgID}}/customers" {{if eq .Tab "customers"}}aria-current="page"{{end}}>Clientes</a>
-  <a href="/orgs/{{.OrgID}}/projects" {{if eq .Tab "projects"}}aria-current="page"{{end}}>Projetos</a>
+  <a href="/orgs/{{.OrgID}}/about" {{if eq .Tab "about"}}aria-current="page"{{end}}>{{template "icon" "building"}} Sobre</a>
+  <a href="/orgs/{{.OrgID}}/people" {{if eq .Tab "people"}}aria-current="page"{{end}}>{{template "icon" "users"}} Colaboradores</a>
+  <a href="/orgs/{{.OrgID}}/customers" {{if eq .Tab "customers"}}aria-current="page"{{end}}>{{template "icon" "handshake"}} Clientes</a>
+  <a href="/orgs/{{.OrgID}}/projects" {{if eq .Tab "projects"}}aria-current="page"{{end}}>{{template "icon" "diagram-project"}} Projetos</a>
 </nav>
 {{end}}
 {{end}}
