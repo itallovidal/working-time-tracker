@@ -104,6 +104,60 @@ document.addEventListener('alpine:init', () => {
     }, 0);
   }
 
+  // projectOverview é a Visão geral, só de admins: os números do projeto lidos de
+  // uma vez em /overview. É uma fotografia do instante em generated_at, sem
+  // relógio correndo; o botão Atualizar e um ponto batido nesta aba releem tudo.
+  Alpine.data('projectOverview', () => ({
+    ...form(),
+    loading: true,
+    data: null,
+    // "Horas por pessoa" mostra cinco por vez. A lista já vem inteira, então as
+    // páginas são cortadas aqui.
+    personPage: 1,
+    perPage: 5,
+    async init() {
+      await this.load();
+      this.loading = false;
+      window.addEventListener('wtt:sessions-changed', () => this.load());
+    },
+    load() {
+      return this.run('load', async () => {
+        this.data = await api('GET', '/api/projects/' + project.id + '/overview');
+        // Uma releitura pode encolher a lista e deixar a página em uso sem linhas.
+        this.personPage = Math.min(this.personPage, this.personPages());
+      });
+    },
+    personPages() {
+      return Math.max(1, Math.ceil(this.data.by_person.length / this.perPage));
+    },
+    personRows() {
+      const start = (this.personPage - 1) * this.perPage;
+      return this.data.by_person.slice(start, start + this.perPage);
+    },
+    personSummary() {
+      const n = this.data.by_person.length;
+      return 'Página ' + this.personPage + ' de ' + this.personPages() + ' · ' + n + (n === 1 ? ' pessoa' : ' pessoas');
+    },
+    // marginShare é a margem como parte da receita, em por cento inteiro; null
+    // quando não há receita.
+    marginShare() {
+      const margin = this.data.money.margin_cents;
+      const bill = this.data.money.bill_amount_cents;
+      return margin === null || !bill ? null : Math.round(margin / bill * 100);
+    },
+    workingNames() {
+      return this.data.by_person.filter((p) => p.working_now).map((p) => p.person.name).join(', ');
+    },
+    integrationsSummary() {
+      const { total, enabled } = this.data.integrations;
+      return total + (total === 1 ? ' configurada' : ' configuradas') + ' · ' + enabled + (enabled === 1 ? ' ativa' : ' ativas');
+    },
+    typeLabel(type) {
+      const t = integrationType(type);
+      return t ? t.label : type;
+    },
+  }));
+
   Alpine.data('projectTasks', () => ({
     ...form(),
     loading: true,

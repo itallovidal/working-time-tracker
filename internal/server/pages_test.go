@@ -402,8 +402,8 @@ func TestPages_RedirectWithoutSession(t *testing.T) {
 			t.Errorf("GET %s without session = %d to %q, want 303 to /login", path, rec.Code, rec.Header().Get("Location"))
 		}
 	}
-	if rec := do(e, "GET", "/projects/"+projectID, "", admin.session); rec.Header().Get("Location") != "/projects/"+projectID+"/tasks" {
-		t.Errorf("GET /projects/:id redirects to %q, want the tasks tab", rec.Header().Get("Location"))
+	if rec := do(e, "GET", "/projects/"+projectID, "", admin.session); rec.Header().Get("Location") != "/projects/"+projectID+"/overview" {
+		t.Errorf("GET /projects/:id redirects the admin to %q, want the overview tab", rec.Header().Get("Location"))
 	}
 }
 
@@ -436,7 +436,7 @@ func TestPages_AllTemplatesLoad(t *testing.T) {
 	for _, name := range []string{
 		"login", "signup", "invite", "notfound",
 		"org_projects", "org_people", "org_settings", "org_about", "org_customers", "profile",
-		"project_tasks", "project_time", "project_teams", "project_integrations", "project_settings", "task_detail",
+		"project_overview", "project_tasks", "project_time", "project_teams", "project_integrations", "project_settings", "task_detail",
 	} {
 		i := sort.SearchStrings(got, name)
 		if i == len(got) || got[i] != name {

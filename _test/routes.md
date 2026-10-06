@@ -218,6 +218,7 @@ A organização nunca fica sem admin: rebaixar o último admin responde `400`. P
 | GET | `/api/projects/:projectId` | logado | Detalhes do projeto |
 | PATCH | `/api/projects/:projectId` | admin | Altera o projeto |
 | DELETE | `/api/projects/:projectId` | admin | Exclui o projeto com times, tarefas, sessões e integrações |
+| GET | `/api/projects/:projectId/overview` | admin | O projeto em números: pessoas, times, horas, custo, receita, tempo de projeto, tarefas e integrações. Veja [Visão geral](#visão-geral) |
 | GET | `/api/projects/:projectId/members` | logado | Pessoas que estão em algum time do projeto, sem repetir |
 
 ```http
@@ -300,6 +301,68 @@ Quem está no projeto. Uma pessoa é colaboradora quando tem valor por hora nele
 O `DELETE` faz as duas remoções numa transação e responde `204`. As tarefas e as sessões de trabalho da pessoa ficam como estão. Se ela não tinha valor nem time no projeto, a resposta é `404`.
 
 Para **pôr** alguém no projeto, use o `PUT` de `/allocations/:personId` acima e, se quiser, `POST /api/teams/:teamId/members`.
+
+### Visão geral
+
+Tudo o que a aba Visão geral mostra, numa resposta só. É só de admins, porque soma o que o projeto custou e rendeu: um membro recebe `403`.
+
+| Método | Rota | Acesso | Descrição |
+|---|---|---|---|
+| GET | `/api/projects/:projectId/overview` | admin | Pessoas, times, horas, custo, receita e margem, tempo de projeto, tarefas, integrações e as horas de cada pessoa |
+
+```json
+{
+  "project": {
+    "id": "…",
+    "name": "App de Pedidos",
+    "created_at": "2025-11-10T06:47:17Z",
+    "age": { "days": 330, "weeks": 47, "months": 10 },
+    "customer": { "id": "…", "name": "Rede Bom Preço" },
+    "bill_rate_cents": 14000
+  },
+  "people": { "total": 3, "without_team": 0, "without_rate": 0, "working_now": 0 },
+  "teams": { "total": 2 },
+  "time": {
+    "total_seconds": 95400,
+    "session_count": 10,
+    "last_7_days_seconds": 44100,
+    "last_30_days_seconds": 86400,
+    "first_session_at": "2026-08-23T12:00:00Z",
+    "last_session_at": "2026-10-05T12:10:00Z"
+  },
+  "money": { "pay_amount_cents": 169083, "bill_amount_cents": 371000, "margin_cents": 201917 },
+  "tasks": { "total": 14, "overdue": 2 },
+  "integrations": {
+    "total": 2,
+    "enabled": 1,
+    "items": [
+      { "id": "…", "type": "gitlab", "display_name": "Espelho no GitLab", "enabled": false, "has_token": false, "created_at": "…" },
+      { "id": "…", "type": "github", "display_name": "Repositório do app", "enabled": true, "has_token": false, "created_at": "…" }
+    ]
+  },
+  "by_person": [
+    {
+      "person": { "id": "…", "name": "Diego Rocha" },
+      "in_project": true,
+      "working_now": false,
+      "total_seconds": 54600,
+      "session_count": 5,
+      "pay_amount_cents": 91000,
+      "bill_amount_cents": 212333
+    }
+  ],
+  "generated_at": "2026-10-06T06:49:02Z"
+}
+```
+- `generated_at` é a hora da conta. As sessões abertas, a idade do projeto e as janelas de 7 e 30 dias foram medidas até ela; a resposta é uma fotografia, e chamar de novo dá números novos.
+- `project.created_at` é o início do projeto: o dia em que ele foi cadastrado. `age` é o tempo desde então em três medidas, cada uma arredondada para baixo: dias e semanas corridos, e meses de calendário já completos.
+- `project.customer` e `project.bill_rate_cents` são `null` em projeto interno.
+- `people.total` é a mesma conta de `/collaborators`: quem tem valor por hora no projeto ou está em algum time dele, cada pessoa uma vez. `without_rate` são os que estão num time sem valor e não batem ponto; `working_now`, quem está com uma sessão aberta no projeto.
+- `time` soma todas as sessões do projeto, e a aberta conta até `generated_at`. As duas janelas contam só o trecho de cada sessão que caiu dentro delas. `first_session_at` e `last_session_at` são o início da sessão mais antiga e o da mais recente, ou `null` se ninguém bateu ponto.
+- `money` soma o valor de cada sessão, já arredondado, então bate com as linhas de `/work-sessions`. `pay_amount_cents` é o custo e `bill_amount_cents`, a receita; cada um é `null` quando nenhuma sessão tem aquele valor por hora. `margin_cents` é a receita menos o custo, e `null` sem receita.
+- `tasks.overdue` conta as tarefas com o prazo vencido. Tarefa sem prazo não entra, e como tarefa não tem estado de concluída, ela só sai da conta quando o prazo muda ou ela é apagada.
+- `integrations.items` vem da mais nova para a mais antiga, sem o token e sem o `metadata`. É `[]` quando não há integração.
+- `by_person` traz só quem tem sessão no projeto, de quem mais trabalhou para quem menos, e a soma das linhas dá os totais. Quem já saiu do projeto continua na lista, com `in_project: false`, e não entra em `people.total`. É `[]` quando ninguém bateu ponto.
 
 ---
 

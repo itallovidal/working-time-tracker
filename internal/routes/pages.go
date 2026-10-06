@@ -30,6 +30,8 @@ func RegisterPages(e *echo.Echo, p *page.Handler, m *auth.Middleware) {
 
 	prj := m.RequireOrgPage(auth.KindProject, "projectId", p.NotFound)
 	g.GET("/projects/:projectId", p.Project, prj)
+	// A Visão geral é a única aba do projeto só de admins.
+	g.GET("/projects/:projectId/overview", p.Overview, prj, admin)
 	g.GET("/projects/:projectId/tasks", p.Tasks, prj)
 	g.GET("/projects/:projectId/time-tracking", p.TimeTracking, prj)
 	g.GET("/projects/:projectId/teams", p.Teams, prj)

@@ -443,6 +443,18 @@
       "body": {}
     },
     {
+      "_id": "req_04_06",
+      "_type": "request",
+      "parentId": "fld_04",
+      "name": "Visão geral do projeto",
+      "method": "GET",
+      "url": "{{base_url}}/api/projects/{{project_id}}/overview",
+      "authentication": {},
+      "metaSortKey": 6,
+      "headers": [],
+      "body": {}
+    },
+    {
       "_id": "fld_05",
       "_type": "request_group",
       "parentId": "__workspace__",

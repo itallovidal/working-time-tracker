@@ -1,0 +1,223 @@
+{{define "content"}}
+<main class="page" x-data="projectOverview">
+  {{template "project_head" .}}
+
+  {{/* A tela é uma fotografia: os números valem para a hora em "Atualizado às" e são
+       relidos pelo botão ou quando alguém bate o ponto nesta aba. */}}
+  <div class="toolbar">
+    <p class="muted">O projeto em números: quem trabalha nele, quanto tempo foi registrado e o que esse tempo custou e rendeu.</p>
+    <div class="row row-tight" x-cloak x-show="data">
+      <span class="muted small" x-text="data ? 'Atualizado às ' + WTT.fmt.time(data.generated_at) : ''"></span>
+      <button type="button" class="btn btn-secondary btn-sm" :disabled="pending === 'load'" @click="load()">{{template "icon" "rotate"}} Atualizar</button>
+    </div>
+  </div>
+
+  <p class="muted" x-show="loading">Carregando a visão geral…</p>
+  <p class="form-error" x-cloak x-show="errors.load" x-text="errors.load" role="alert"></p>
+
+  {{/* Cada bloco é um template próprio, para ser filho direto da página e herdar o
+       espaçamento dela. Nada é desenhado antes de a resposta chegar. */}}
+  <template x-if="data && data.people.without_rate > 0">
+    <p class="alert alert-warn">
+      <strong x-text="data.people.without_rate === 1 ? '1 pessoa está' : data.people.without_rate + ' pessoas estão'"></strong>
+      num time deste projeto sem valor por hora, e não consegue bater ponto.
+      Defina o valor na aba <a href="/projects/{{.Project.ID}}/teams">Colaboradores</a>.
+    </p>
+  </template>
+
+  <template x-if="data">
+    <div class="totals">
+      <div class="total">
+        <div class="v" x-text="data.people.total"></div>
+        <div class="k">
+          <span x-text="data.people.total === 1 ? 'Pessoa' : 'Pessoas'"></span><span x-show="data.people.without_team > 0"> · <span x-text="data.people.without_team"></span> sem time</span>
+        </div>
+      </div>
+      <div class="total">
+        <div class="v" x-text="data.teams.total"></div>
+        <div class="k" x-text="data.teams.total === 1 ? 'Time' : 'Times'"></div>
+      </div>
+      <div class="total">
+        <div class="v" x-text="WTT.fmt.hours(data.time.total_seconds)"></div>
+        <div class="k">Horas registradas</div>
+      </div>
+      <div class="total">
+        <div class="v" x-text="WTT.fmt.money(data.money.bill_amount_cents)"></div>
+        <div class="k">Receita</div>
+      </div>
+      <div class="total">
+        <div class="v" x-text="WTT.fmt.money(data.money.pay_amount_cents)"></div>
+        <div class="k">Custo</div>
+      </div>
+      <div class="total">
+        <div class="v" :class="data.money.margin_cents < 0 && 'text-danger'" x-text="WTT.fmt.money(data.money.margin_cents)"></div>
+        <div class="k">Margem (receita menos custo)<span x-show="marginShare() !== null"> · <span x-text="marginShare()"></span>% da receita</span></div>
+      </div>
+    </div>
+  </template>
+
+  <template x-if="data">
+    <div class="grid-2 items-stretch">
+      <section class="card">
+        <div class="card-head"><h2>Tempo de projeto</h2></div>
+        <div class="totals">
+          <div class="total">
+            <div class="v" x-text="data.project.age.days"></div>
+            <div class="k" x-text="data.project.age.days === 1 ? 'Dia' : 'Dias'"></div>
+          </div>
+          <div class="total">
+            <div class="v" x-text="data.project.age.weeks"></div>
+            <div class="k" x-text="data.project.age.weeks === 1 ? 'Semana' : 'Semanas'"></div>
+          </div>
+          <div class="total">
+            <div class="v" x-text="data.project.age.months"></div>
+            <div class="k" x-text="data.project.age.months === 1 ? 'Mês' : 'Meses'"></div>
+          </div>
+        </div>
+        <dl class="facts">
+          <div class="fact">
+            <dt>Início</dt>
+            <dd x-text="WTT.fmt.date(data.project.created_at)"></dd>
+          </div>
+          <div class="fact">
+            <dt>Primeiro ponto</dt>
+            <dd :class="data.time.first_session_at ? '' : 'muted'" x-text="data.time.first_session_at ? WTT.fmt.date(data.time.first_session_at) : 'Ninguém bateu ponto ainda'"></dd>
+          </div>
+          <div class="fact">
+            <dt>Último ponto</dt>
+            <dd :class="data.time.last_session_at ? '' : 'muted'" x-text="data.time.last_session_at ? WTT.fmt.date(data.time.last_session_at) : 'Ninguém bateu ponto ainda'"></dd>
+          </div>
+        </dl>
+        <p class="muted small">O início é o dia em que o projeto foi cadastrado. Dias, semanas e meses medem o mesmo tempo, cada um arredondado para baixo.</p>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><h2>Atividade</h2></div>
+        <div class="totals">
+          <div class="total">
+            <div class="v" x-text="WTT.fmt.hours(data.time.last_7_days_seconds)"></div>
+            <div class="k">Últimos 7 dias</div>
+          </div>
+          <div class="total">
+            <div class="v" x-text="WTT.fmt.hours(data.time.last_30_days_seconds)"></div>
+            <div class="k">Últimos 30 dias</div>
+          </div>
+          <div class="total">
+            <div class="v" x-text="data.people.working_now"></div>
+            <div class="k">Trabalhando agora</div>
+          </div>
+        </div>
+        <dl class="facts">
+          <div class="fact">
+            <dt>Em andamento</dt>
+            <dd :class="data.people.working_now > 0 ? '' : 'muted'" x-text="workingNames() || 'Ninguém com o ponto aberto'"></dd>
+          </div>
+          <div class="fact">
+            <dt>Sessões registradas</dt>
+            <dd class="num" x-text="data.time.session_count"></dd>
+          </div>
+        </dl>
+      </section>
+    </div>
+  </template>
+
+  <template x-if="data">
+    <div class="grid-2 items-stretch">
+      <section class="card">
+        <div class="card-head">
+          <h2>Integrações</h2>
+          <a class="btn btn-ghost btn-sm" href="/projects/{{.Project.ID}}/integrations">{{template "icon" "plug"}} Abrir a aba</a>
+        </div>
+        <div class="empty" x-show="data.integrations.total === 0">
+          <strong>Nenhuma integração</strong>
+          <span>Configure o GitHub, o GitLab ou o Trello na aba Integrações para ligar as tarefas a issues e cartões.</span>
+        </div>
+        <p class="muted small" x-show="data.integrations.total > 0" x-text="integrationsSummary()"></p>
+        <ul class="list" x-show="data.integrations.total > 0">
+          <template x-for="it in data.integrations.items" :key="it.id">
+            <li>
+              <div class="grow stack stack-tight">
+                <strong x-text="it.display_name"></strong>
+                <div class="row row-tight">
+                  <span class="badge badge-accent" x-text="typeLabel(it.type)"></span>
+                  <span class="badge" :class="it.enabled ? 'badge-ok' : ''" x-text="it.enabled ? 'Ativa' : 'Desativada'"></span>
+                  <span class="badge badge-warn" x-show="!it.has_token">sem credencial</span>
+                </div>
+              </div>
+            </li>
+          </template>
+        </ul>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><h2>Tarefas e cliente</h2></div>
+        <div class="totals">
+          <div class="total">
+            <div class="v" x-text="data.tasks.total"></div>
+            <div class="k" x-text="data.tasks.total === 1 ? 'Tarefa' : 'Tarefas'"></div>
+          </div>
+          <div class="total">
+            <div class="v" :class="data.tasks.overdue > 0 && 'text-danger'" x-text="data.tasks.overdue"></div>
+            <div class="k">
+              <span x-text="data.tasks.overdue === 1 ? 'Atrasada' : 'Atrasadas'"></span><span x-show="data.tasks.overdue > 0"> · <a href="/projects/{{.Project.ID}}/tasks?due=overdue">ver</a></span>
+            </div>
+          </div>
+        </div>
+        <dl class="facts">
+          <div class="fact">
+            <dt>Cliente</dt>
+            <dd :class="data.project.customer ? '' : 'muted'" x-text="data.project.customer ? data.project.customer.name : 'Projeto interno'"></dd>
+          </div>
+          <div class="fact">
+            <dt>Valor cobrado por hora</dt>
+            <dd class="num" :class="data.project.bill_rate_cents === null && 'muted'" x-text="data.project.bill_rate_cents === null ? 'Sem valor cobrado' : WTT.fmt.money(data.project.bill_rate_cents)"></dd>
+          </div>
+        </dl>
+        <p class="muted small">Atrasada é a tarefa com o prazo vencido. A receita soma o valor cobrado que valia quando cada ponto foi batido.</p>
+      </section>
+    </div>
+  </template>
+
+  <template x-if="data">
+    <section class="stack">
+      <div class="stack stack-tight">
+        <h2>Horas por pessoa</h2>
+        <p class="muted">Quem registrou ponto neste projeto, de quem mais trabalhou para quem menos. A soma das linhas dá os totais do topo.</p>
+      </div>
+      <div class="empty" x-show="data.by_person.length === 0">
+        <strong>Ninguém bateu ponto ainda</strong>
+        <span>Quando alguém registrar tempo neste projeto, as horas, o custo e a receita de cada pessoa aparecem aqui.</span>
+      </div>
+      <div class="table-wrap" x-show="data.by_person.length > 0">
+        <table>
+          <thead>
+            <tr><th>Pessoa</th><th>Sessões</th><th>Horas</th><th>Custo</th><th>Receita</th></tr>
+          </thead>
+          <tbody>
+            <template x-for="row in personRows()" :key="row.person.id">
+              <tr>
+                <td>
+                  <span x-text="row.person.name"></span>
+                  <span class="badge badge-ok" x-show="row.working_now">em andamento</span>
+                  <span class="badge" x-show="!row.in_project">saiu do projeto</span>
+                </td>
+                <td class="num" x-text="row.session_count"></td>
+                <td class="num nowrap" x-text="WTT.fmt.hours(row.total_seconds)"></td>
+                <td class="num nowrap" x-text="WTT.fmt.money(row.pay_amount_cents)"></td>
+                <td class="num nowrap" x-text="WTT.fmt.money(row.bill_amount_cents)"></td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+      <nav class="pager" aria-label="Páginas das horas por pessoa" x-show="data.by_person.length > 0">
+        <span class="muted small" x-text="personSummary()"></span>
+        <div class="row row-tight" x-show="personPages() > 1">
+          <button type="button" class="btn btn-secondary btn-sm" :disabled="personPage <= 1" @click="personPage--">{{template "icon" "chevron-left"}} Anterior</button>
+          <button type="button" class="btn btn-secondary btn-sm" :disabled="personPage >= personPages()" @click="personPage++">Próxima {{template "icon" "chevron-right"}}</button>
+        </div>
+      </nav>
+    </section>
+  </template>
+</main>
+{{end}}

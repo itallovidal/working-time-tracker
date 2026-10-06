@@ -2,7 +2,9 @@
 // house com o perfil preenchido, cinco pessoas, três clientes e seis projetos
 // (um deles interno). Cada projeto tem o valor cobrado do cliente, e cada pessoa
 // tem um valor por hora em cada projeto em que trabalha. Há também times,
-// tarefas e sessões de trabalho dos últimos dias, já com os valores.
+// tarefas e sessões de trabalho das últimas semanas, já com os valores. Os
+// projetos foram cadastrados de um mês a quase um ano atrás, e dois deles têm
+// integrações, para a Visão geral ter o que mostrar.
 //
 // Uso: go run ./cmd/seed (lê DATABASE_URL do ambiente ou do .env)
 package main
@@ -14,6 +16,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 
 	"working-time-tracker/internal/database"
@@ -167,6 +170,37 @@ var sessions = []struct {
 	{"arquitetura", "ana", 2, 10, 0, 12, 30},
 	{"recorrencia", "ana", 2, 14, 0, 17, 15},
 	{"recorrencia", "ana", 1, 14, 0, 16, 0},
+	// Mais antigas, para os últimos 7 dias, os últimos 30 dias e o total da Visão
+	// geral de um projeto não darem o mesmo número.
+	{"repasses", "carla", 9, 9, 0, 12, 0},
+	{"frete", "bruno", 12, 9, 0, 12, 0},
+	{"checkout", "diego", 12, 14, 0, 17, 30},
+	{"calendario", "carla", 15, 9, 0, 12, 0},
+	{"exames", "carla", 16, 14, 0, 17, 0},
+	{"arquitetura", "ana", 19, 10, 0, 12, 0},
+	{"webhook", "bruno", 23, 13, 30, 17, 0},
+	{"checkout", "diego", 26, 9, 0, 12, 15},
+	{"carga", "bruno", 44, 9, 0, 11, 30},
+	{"recorrencia", "ana", 51, 14, 0, 16, 30},
+}
+
+// Há quantos dias cada projeto foi cadastrado, que é o início dele na Visão
+// geral. Todos começam antes da sessão mais antiga que têm.
+var projectAgeDays = map[string]int{
+	"app": 330, "painel": 214, "agenda": 152, "portal": 96, "api": 68, "site": 37,
+}
+
+// As integrações de demonstração. Não têm credencial, porque o token é de cada
+// um: aparecem na aba Integrações e na Visão geral, e só buscam os itens depois
+// que alguém edita e informa o token.
+var integrations = []struct {
+	project, kind, name string
+	metadata            map[string]interface{}
+	enabled             bool
+}{
+	{"app", "github", "Repositório do app", map[string]interface{}{"repo": "jatoba-software/app-pedidos"}, true},
+	{"app", "gitlab", "Espelho no GitLab", map[string]interface{}{"project_url": "jatoba-software/app-pedidos"}, false},
+	{"api", "gitlab", "Repositório da API", map[string]interface{}{"project_url": "jatoba-software/api-cobrancas"}, true},
 }
 
 func main() {
@@ -302,8 +336,17 @@ func main() {
 		seeded[p.key] = seededProject{id: id, billRate: billRate, rates: p.rates}
 	}
 
-	// As tarefas.
 	now := time.Now()
+
+	// O cadastro de cada projeto volta no tempo. O service grava a data de hoje e
+	// ela não se altera depois, então sem isto todo projeto teria começado depois
+	// das próprias sessões.
+	for key, days := range projectAgeDays {
+		_, err := db.Raw.ExecContext(ctx, `UPDATE projects SET created_at = $1 WHERE id = $2`, now.AddDate(0, 0, -days), seeded[key].id)
+		must(err)
+	}
+
+	// As tarefas.
 	type seededTask struct {
 		task    *task.Task
 		project seededProject
@@ -335,11 +378,24 @@ func main() {
 			SaveX(ctx)
 	}
 
+	// As integrações vão direto ao banco: o service valida o token na plataforma,
+	// e aqui não há token.
+	for _, it := range integrations {
+		db.Client.Integration.Create().
+			SetProjectID(uuid.MustParse(seeded[it.project].id)).
+			SetType(it.kind).
+			SetDisplayName(it.name).
+			SetMetadata(it.metadata).
+			SetEnabled(it.enabled).
+			SaveX(ctx)
+	}
+
 	fmt.Println("Dados de demonstração criados.")
 	fmt.Println()
 	fmt.Println("  Organização: Jatobá Software, uma software house")
 	fmt.Printf("  %d clientes, %d projetos (um interno), %d tarefas e %d sessões de trabalho\n",
 		len(customers), len(projects), len(tasks), len(sessions))
+	fmt.Printf("  %d integrações sem credencial: informe o token na aba Integrações para usá-las\n", len(integrations))
 	fmt.Println()
 	fmt.Printf("  Admin:   %s / %s\n", people[0].email, password)
 	for _, p := range people[1:] {

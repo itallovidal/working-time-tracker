@@ -287,6 +287,18 @@
 
 ---
 
+### Sprint 26: Project Overview
+
+- [X] S26.1 `GET /api/projects/:projectId/overview`, for admins only: people, teams, hours, cost, revenue and margin, the age of the project, tasks, integrations and the hours of each person, in a read-only `overview` domain that reads the other services and has no table
+- [X] S26.2 The totals add the amount of each session, already rounded, so they match the time tracking tab; an open session counts up to `generated_at`, the 7 and 30 day windows only count the part of a session inside them, and whoever left the project stays in the hours per person, flagged
+- [X] S26.3 The start of the project is the day it was registered (`created_at`), shown with the first and the last clock-in; the age comes from the server as elapsed days and weeks and completed calendar months
+- [X] S26.4 "Visão geral" is the first tab of the project and the only one for admins alone: members do not see the link and get "Página não encontrada"; `/projects/:projectId` opens on it for an admin and on the tasks for a member
+- [X] S26.5 The screen: summary tiles, "Tempo de projeto", "Atividade", "Integrações", "Tarefas e cliente" and "Horas por pessoa" with five people per page; it is a snapshot with an "Atualizar" button, and it reloads when a session opens or closes
+- [X] S26.6 Seed: each project registered from a month to almost a year ago, older sessions so the 7 day, 30 day and total hours differ, and three integrations without a token
+- [X] S26.7 Tests for the totals with exact values, the age, the route and the page by role; update README, design, routes and the Insomnia collection
+
+---
+
 ### Refatoração: Domain-First Architecture (pré-Sprint 9)
 
 - [X] R1 Reorganizar código de layered-flat para domain-first: `internal/domain/<dominio>/` com `model.go`, `store.go`, `service.go`, `handler.go` por domínio

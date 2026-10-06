@@ -32,9 +32,10 @@ func (h *Handler) projectPage(c *echo.Context, name, title, tab string, props ma
 	})
 }
 
-// Project leva para a aba principal do projeto.
+// Project leva para a aba principal do projeto: a Visão geral para admins, as
+// Tarefas para os demais.
 func (h *Handler) Project(c *echo.Context) error {
-	return c.Redirect(http.StatusSeeOther, "/projects/"+c.Param("projectId")+"/tasks")
+	return c.Redirect(http.StatusSeeOther, "/projects/"+c.Param("projectId")+"/"+projectHome(c))
 }
 
 // Tasks é a lista de tarefas do projeto (S9.1).

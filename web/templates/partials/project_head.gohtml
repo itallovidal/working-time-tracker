@@ -6,6 +6,8 @@
   </div>
 </div>
 <nav class="tabs" aria-label="Seções do projeto">
+  {{/* A Visão geral soma o dinheiro do projeto: só admins veem a aba. */}}
+  {{if .IsAdmin}}<a href="/projects/{{.Project.ID}}/overview" {{if eq .Tab "overview"}}aria-current="page"{{end}}>{{template "icon" "chart-simple"}} Visão geral</a>{{end}}
   <a href="/projects/{{.Project.ID}}/tasks" {{if eq .Tab "tasks"}}aria-current="page"{{end}}>{{template "icon" "list-check"}} Tarefas</a>
   <a href="/projects/{{.Project.ID}}/time-tracking" {{if eq .Tab "time"}}aria-current="page"{{end}}>{{template "icon" "clock"}} Ponto</a>
   <a href="/projects/{{.Project.ID}}/teams" {{if eq .Tab "teams"}}aria-current="page"{{end}}>{{template "icon" "people-group"}} Colaboradores</a>

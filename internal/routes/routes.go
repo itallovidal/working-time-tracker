@@ -9,6 +9,7 @@ import (
 	"working-time-tracker/internal/domain/customer"
 	"working-time-tracker/internal/domain/integration"
 	"working-time-tracker/internal/domain/organization"
+	"working-time-tracker/internal/domain/overview"
 	"working-time-tracker/internal/domain/person"
 	"working-time-tracker/internal/domain/project"
 	"working-time-tracker/internal/domain/task"
@@ -25,6 +26,7 @@ type Handlers struct {
 	Team         *team.Handler
 	Allocation   *allocation.Handler
 	Collaborator *collaborator.Handler
+	Overview     *overview.Handler
 	Task         *task.Handler
 	WorkSession  *work_session.Handler
 	Integration  *integration.Handler
@@ -84,6 +86,8 @@ func RegisterRoutes(e *echo.Echo, h Handlers, m *auth.Middleware, authLimiter ec
 	r.GET("/projects/:projectId", h.Project.Get, prj)
 	r.PATCH("/projects/:projectId", h.Project.Update, prj, admin)
 	r.DELETE("/projects/:projectId", h.Project.Delete, prj, admin)
+	// A visão geral soma o que o projeto custou e rendeu: só de admins.
+	r.GET("/projects/:projectId/overview", h.Overview.Get, prj, admin)
 	r.POST("/projects/:projectId/teams", h.Team.Create, prj, admin)
 	r.GET("/projects/:projectId/teams", h.Team.ListByProject, prj)
 	r.GET("/projects/:projectId/members", h.Team.ListProjectMembers, prj)

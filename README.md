@@ -15,6 +15,7 @@ Ponto por tarefa para equipes que trabalham por projeto. Foi pensado principalme
 - **Tarefas** com responsável, prazo (7 dias por padrão, com destaque quando está atrasada ou perto de vencer) e vínculo opcional com uma issue. A lista tem busca por nome, filtro por responsável, filtro por prazo (atrasadas, até hoje, até o fim desta semana ou da próxima, ou até uma data) e 10 tarefas por página. A caixa "Só as minhas tarefas", abaixo dos filtros, mostra as suas e desliga a busca e o filtro de responsável: só o de prazo continua valendo. A tarefa nova é criada num modal.
 - **Ponto.** Clock-in e clock-out com cronômetro ao vivo no topo de todas as páginas, sessões filtradas por pessoa, data e tarefa, os totais do filtro num cartão à parte e o seu tempo de hoje e da semana. O banco garante uma única sessão aberta por pessoa.
 - **Horas em dinheiro.** Cada sessão guarda os valores por hora de quando o ponto abriu, então **mudar um valor só vale dali em diante**. Quem não tem valor definido no projeto **não bate ponto**. Na tela de ponto, o membro vê quanto ganhou; o admin vê custo, receita e margem.
+- **Visão geral do projeto**, a primeira aba e só para admins. Numa tela: quantas pessoas e quantos times trabalham no projeto, as horas registradas, a receita, o custo e a margem; há quanto tempo o projeto existe, em dias, semanas e meses, contados do dia em que foi cadastrado; as integrações configuradas e se estão ativas; a atividade dos últimos 7 e 30 dias e quem está com o ponto aberto; as tarefas atrasadas; e as horas, o custo e a receita de cada pessoa. É uma fotografia da hora em que foi lida, com um botão para atualizar.
 - **Integrações** com GitHub, GitLab e Trello. Todas usam a mesma estrutura: nome, token e, em `metadata`, os campos próprios da plataforma (o repositório, o projeto, a chave e o quadro), que cada integração confere antes de falar com ela. O token é validado na plataforma, guardado criptografado e nunca volta nas respostas. O admin cria e edita num modal só, que desenha os campos da plataforma escolhida; o cartão de cada integração é só de leitura, e desativar ou excluir também ficam no modal. Os detalhes do item (o título e o estado da issue, ou a lista em que o cartão está) são buscados na hora, e se a plataforma não responde a tela mostra o motivo, sem quebrar.
 
 ## Como rodar
@@ -43,6 +44,8 @@ Abra **http://localhost:8080**. O seed cria a **Jatobá Software**, uma software
 | Membro | `bruno@example.com`, `carla@example.com`, `diego@example.com` ou `elisa@example.com` | `demo12345` |
 
 O Bruno trabalha em quatro projetos e recebe mais na API de Cobranças; a Elisa trabalha em um só. O Diego está no time do Portal do Paciente ainda sem valor definido, para mostrar o aviso da aba Colaboradores e o ponto bloqueado. No Painel do Lojista, a Elisa já tem valor e ainda não entrou em nenhum time. O App de Pedidos tem mais de uma página de tarefas.
+
+Os projetos foram cadastrados de um mês a quase um ano atrás e têm sessões de ponto das últimas semanas, para a Visão geral mostrar tempos de projeto e totais diferentes entre si. O App de Pedidos e a API de Cobranças têm integrações de demonstração **sem credencial**: elas aparecem nas telas, mas só buscam issues depois que você edita e informa um token seu.
 
 Sem o seed, clique em **Crie uma organização** na tela de login.
 
@@ -80,7 +83,8 @@ A interface segue a Decision 8 de `_docs/design.md`. O servidor renderiza a casc
 | `/orgs/:orgId/customers` | Organização, aba Clientes: quem contrata os projetos, com cadastro e edição num modal (só admins) |
 | `/orgs/:orgId/projects` | Organização, aba Projetos: tabela de gestão com o cliente, os colaboradores e as tarefas de cada projeto; a linha abre o projeto (só admins) |
 | `/profile` | Seu nome, seu email, sua senha e quanto você recebe por hora em cada projeto |
-| `/projects/:projectId` | Leva para a aba Tarefas |
+| `/projects/:projectId` | Leva o admin para a aba Visão geral e o membro para a aba Tarefas |
+| `/projects/:projectId/overview` | Visão geral: pessoas, times, horas, receita, custo e margem, tempo de projeto, integrações, atividade recente, tarefas atrasadas e horas por pessoa (só admins) |
 | `/projects/:projectId/tasks` | Tarefas, com busca, filtros, paginação e início de ponto em um clique |
 | `/tasks/:taskId` | Edição da tarefa, vínculo com issue e tempo registrado |
 | `/projects/:projectId/time-tracking` | Cronômetro, sessões, filtros e totais em tempo e em dinheiro |
@@ -93,7 +97,7 @@ Sem sessão, qualquer página leva ao login, e a pessoa volta para a página ped
 ### Navegação
 
 - A **barra superior** mostra a organização, o menu (Projetos e Organização), o **indicador do ponto aberto** com cronômetro e botão Parar, quem está logado (o nome leva ao **perfil**) e o botão Sair.
-- As páginas de projeto têm **abas**: Tarefas, Ponto, Colaboradores, Integrações e Configurações. A aba Colaboradores juntou as antigas Times e Valores; o endereço dela continua `/teams`. O valor cobrado do cliente fica em Configurações.
+- As páginas de projeto têm **abas**: Visão geral, Tarefas, Ponto, Colaboradores, Integrações e Configurações. A Visão geral é só de admins: o membro não vê a aba, e o projeto abre para ele em Tarefas. A aba Colaboradores juntou as antigas Times e Valores; o endereço dela continua `/teams`. O valor cobrado do cliente fica em Configurações.
 - A página **Organização** abre na aba Sobre, que todos os membros leem. Nela o admin tem o botão **Editar**, que leva à tela de edição; salvar volta para a Sobre. As abas Colaboradores, Clientes e Projetos são só de admins.
 - Ações de admin não aparecem para membros. A API continua sendo quem garante as permissões.
 - A lista de **tarefas** guarda a busca, os filtros e a página na URL (`?q=`, `?assignee=`, `?due=`, `?page=`, e `?mine=1` para "Só as minhas tarefas"). Recarregar mantém o que estava na tela, o link pode ser compartilhado, e o botão Voltar de uma tarefa leva de volta ao mesmo ponto da lista.
@@ -148,7 +152,7 @@ Resumo dos grupos de rotas:
 | Organização | `/api/orgs/:orgId` (+ `persons`, `projects`, `customers`, `invites`) |
 | Clientes | `/api/customers/:customerId` |
 | Pessoas | `/api/persons/:personId` (+ `role`, `allocations`) |
-| Projetos | `/api/projects/:projectId` (+ `teams`, `tasks`, `members`, `collaborators`, `integrations`, `work-sessions`) |
+| Projetos | `/api/projects/:projectId` (+ `overview`, `teams`, `tasks`, `members`, `collaborators`, `integrations`, `work-sessions`) |
 | Valores | `/api/projects/:projectId/billing`, `/api/projects/:projectId/allocations` (+ `/:personId`) |
 | Times | `/api/teams/:teamId` (+ `members`) |
 | Tarefas | `/api/tasks/:taskId` (+ `link-external-item`, `external-details`) |
@@ -180,7 +184,7 @@ Um tipo novo é um arquivo em `internal/adapter` que implementa `Integration` e 
 - **Sessões e convites** usam tokens aleatórios de 32 bytes, e o banco guarda só o sha256 deles. Trocar a senha encerra as outras sessões.
 - **Cookie** `wtt_session` HttpOnly e SameSite=Lax, com `Secure` via `COOKIE_SECURE`. Como a API só aceita corpo JSON em `POST`, `PUT` e `PATCH`, um formulário de outro site não consegue agir em nome de quem está logado.
 - **Isolamento entre organizações.** Cada rota com ID confere se o recurso é da organização de quem chama e responde 404 caso não seja.
-- **Valores.** O valor cobrado do cliente só existe em rotas de admin: ele não entra no JSON do projeto. Na lista de valores de um projeto, um membro recebe só a própria linha, e na de colaboradores, só o próprio valor. Nas sessões de ponto, a API apaga o valor pago das sessões de outras pessoas e todo valor cobrado antes de responder a quem não é admin.
+- **Valores.** O valor cobrado do cliente só existe em rotas de admin: ele não entra no JSON do projeto. Na lista de valores de um projeto, um membro recebe só a própria linha, e na de colaboradores, só o próprio valor. Nas sessões de ponto, a API apaga o valor pago das sessões de outras pessoas e todo valor cobrado antes de responder a quem não é admin. A visão geral do projeto, que soma o custo e a receita de todos, é uma rota só de admins, e a página dela responde "Página não encontrada" a um membro.
 - **Limite de tentativas** por IP em signup, login e convites.
 - **Tokens de integração** criptografados com AES-GCM (`INTEGRATION_ENCRYPTION_KEY`) e nunca devolvidos pela API. O `metadata` de uma integração fica em claro e volta nas respostas, então não é lugar de segredo: cada tipo só guarda nele os campos que declara. O que vem de quem usa e entra numa URL da plataforma (o repositório, o quadro, o número da issue, o cartão) é conferido antes.
 
@@ -201,7 +205,8 @@ Cobertura:
 - **Domínios:** services e handlers.
 - **Migrações:** o banco que elas produzem bate com o `ent/schema`, regras de FK, índice parcial, recusa de banco sem histórico e checksum dos arquivos.
 - **Router real:** tabela de rotas, autenticação, permissões e isolamento entre organizações.
-- **Páginas:** toda página renderiza para admin e membro, redireciona sem sessão e dá 404 entre organizações; cada uma tem o modal uma única vez e carrega os ícones com SRI.
+- **Páginas:** toda página renderiza para admin e membro, redireciona sem sessão e dá 404 entre organizações; cada uma tem o modal uma única vez e carrega os ícones com SRI. As abas só de admins (as de gestão da organização e a Visão geral do projeto) dão 404 ao membro e somem do menu dele.
+- **Visão geral:** os totais com valores exatos (o arredondamento por sessão, a sessão aberta, as janelas de 7 e 30 dias, quem saiu do projeto, projeto interno e projeto vazio) e a idade do projeto em dias, semanas e meses.
 - **Alpine vendorizado:** o hash confere com o pacote oficial.
 
 ## Estrutura do projeto
@@ -221,6 +226,7 @@ internal/
     auth/                 # signup, login, sessões, convites, middlewares e acesso por organização
     organization/  customer/  person/  project/  team/  allocation/  collaborator/  task/  work_session/  integration/
                           # cada domínio com model, store (Ent), service e handler
+    overview/             # visão geral do projeto: só lê os outros domínios, sem tabela nem store
   page/                   # páginas HTML
   routes/                 # rotas da API (routes.go) e das páginas (pages.go)
   server/                 # monta o servidor completo; usado pelo main e pelos testes
