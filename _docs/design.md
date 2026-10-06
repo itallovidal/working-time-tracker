@@ -221,6 +221,17 @@ Each integration type implements a common interface (`internal/adapter`):
 - Atlas CLI for both generating and applying: no new Go dependency, but applying would live outside the binary.
 - Adopting existing databases by marking the baseline as applied: only local databases existed, and recreating them is simpler than proving an old schema matches the baseline.
 
+### Decision 10: Internationalization — YAML catalogs, language in a cookie
+**Choice:** The interface is available in Brazilian Portuguese (the default) and English. Every text a person reads lives in one YAML catalog per language (`internal/i18n/locales/<lang>.yaml`, embedded in the binary); code only references keys. The server loads them with go-i18n v2 and resolves the language of each request from the `wtt_lang` cookie, then `Accept-Language`, then the default. Templates call `{{.T "key"}}`. The browser gets the very same YAML as `window.I18N` from `GET /i18n/<lang>.js` (the content hash goes in the URL, so it is cached for a year and renewed only when the text changes) and reads it with a ~40-line `WTT.t` / Alpine `$t`, picking plural forms with `Intl.PluralRules`. The toggle is a plain link to `GET /lang/<code>?next=<page>`, which sets the cookie and redirects (the target goes through the same `safeNext` as the login).
+**Rationale:** The pages are server-rendered shells with Alpine components, so text lives in two places, templates and JavaScript; a single catalog serves both and a test keeps the languages in sync. go-i18n gives CLDR plural rules, placeholders and nested YAML for free; the browser needs no library because it only looks keys up. A cookie works on the screens that have no session (login, sign-up, invitation), and a link needs no JavaScript.
+**Rules:** one key per whole sentence (word order differs between languages), values through `{{.name}}` placeholders, plurals through `one`/`other` with `{{.count}}`. Inside an Alpine expression texts always come from `$t`, never from `{{.T}}`: `html/template` escapes HTML, not JavaScript, so an apostrophe in English would break the expression. Enum values stay as the backend codes; only their labels are translated. User-entered content and the demo seed are not translated.
+**Tests:** every language has exactly the same keys, placeholders and plural forms; every key used in templates, JavaScript and Go pages exists in every language (a scan of the sources); the server picks the language by cookie, header and toggle.
+**Alternatives considered:**
+- Language stored on the person (a column plus a migration): follows the person across devices, but needs a schema change and does not help the screens without a session, which still need a cookie. Left out for now; the cookie can later be seeded from the profile.
+- golang.org/x/text/message with `gotext` code generation: a build step and catalogs that are not YAML.
+- A JavaScript i18n library (i18next and similar): a second dictionary format and a vendored dependency for what is a key lookup.
+- `Accept-Language` only, without a toggle: gives people no way to choose.
+
 ## Risks / Trade-offs
 
 - **[Per-integration API rate limits]** On-demand external item fetches consume API quota per platform. → Mitigation: cache item details in-process with a short TTL (e.g., 60s); document rate-limit handling per integration type.

@@ -1,0 +1,100 @@
+# User interface text in English. Same keys and placeholders as pt-BR.yaml.
+
+lang:
+  label: Language
+  pt_br:
+    short: PT
+    name: Português
+  en:
+    short: EN
+    name: English
+
+common:
+  close: Close
+  per_hour: per hour
+
+titles:
+  login: Sign in
+  signup: Create account
+  invite: Invitation
+  profile: Your profile
+  not_found: Page not found
+
+nav:
+  label: Organization
+  projects: Projects
+  organization: Organization
+  profile_sr: "Your profile:"
+  logout: Sign out
+
+roles:
+  admin: Admin
+  member: Member
+
+session:
+  in_progress: "In progress: {{.name}}"
+  stop: Stop
+  stopped: Time tracking stopped.
+
+auth:
+  email: Email
+  password: Password
+  password_hint: At least 8 characters.
+  your_name: Your name
+  login:
+    title: Sign in
+    subtitle: Use the email and password of your account.
+    submit: Sign in
+    pending: Signing in…
+    no_account: Don't have an account yet?
+    create_org: Create an organization
+  signup:
+    title: Create organization
+    subtitle: You join as an admin and invite your team afterwards.
+    org_name: Organization name
+    submit: Create account
+    pending: Creating…
+    has_account: Already have an account?
+    login: Sign in
+  invite:
+    loading: Loading the invitation…
+    unavailable: Invitation unavailable
+    ask_new_link: Ask whoever invited you for a new link.
+    go_login: Go to sign in
+    join: "Join {{.name}}"
+    invited_as: You were invited as
+    create_to_accept: Create your account to accept.
+    email_only: This invitation is only for this email.
+    submit: Accept invitation
+    pending: Creating account…
+
+not_found:
+  title: Page not found
+  text: The address does not exist or you do not have access to it.
+  back: Back to start
+
+profile:
+  eyebrow: Your account
+  title: Your profile
+  personal:
+    title: Personal details
+    name: Name
+    email_hint: This is the email you use to sign in.
+    submit: Save profile
+    saved: Profile saved.
+  rates:
+    title: My rates
+    intro: How much you earn per hour on each project. Only you and the admins can see it.
+    empty: You don't have a rate set on any project yet.
+  password:
+    title: Password
+    current: Current password
+    next: New password
+    next_hint: At least 8 characters. Your other sessions will be signed out.
+    submit: Change password
+    changed: Password changed. Your other sessions were signed out.
+
+errors:
+  no_connection: Can't reach the server. Check your network and try again.
+  session_expired: Your session expired. Please sign in again.
+  server_error: "The server responded with error {{.status}}."

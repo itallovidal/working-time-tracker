@@ -287,6 +287,29 @@
 
 ---
 
+### Sprint 24: Internationalization — Interface
+
+- [X] S24.1 `internal/i18n`: YAML catalogs (`pt-BR`, `en`) read with go-i18n, language chosen by cookie, then `Accept-Language`, then Portuguese; `{{.T "key"}}` in templates, `TitleKey` in the Go pages
+- [X] S24.2 Language toggle (PT | EN) in the top bar and, without a session, in the corner of the screen; `GET /lang/:code` sets the cookie and redirects, `GET /i18n/:lang.js` serves the texts to the browser
+- [X] S24.3 `WTT.t` and the Alpine `$t` magic over the same YAML, with plural forms from `Intl.PluralRules`
+- [X] S24.4 Migrated: layout, top bar, modal, toasts, active session, sign-in, sign-up, invitation, profile and the 404 page
+- [X] S24.5 Tests: same keys and placeholders in every language, every used key exists, language by cookie / header / toggle, script cache headers; check in the browser in both languages
+- [ ] S24.6 Locale-aware formats: dates, currency, decimal separator, option labels
+- [ ] S24.7 Organization screens (`org_*`, `org.js`)
+- [ ] S24.8 Project: tasks, task detail and time tracking
+- [ ] S24.9 Project: integrations and settings
+- [ ] S24.10 Project: collaborators and teams
+- [ ] S24.11 Update README, design and the status page
+
+### Sprint 25: Internationalization — API Error Codes
+
+- [ ] S25.1 `internal/apperr`: errors with a stable code and parameters; sentinels and loose messages of every domain become coded errors
+- [ ] S25.2 One helper builds `{"error": {"code", "params"}}` for every handler and middleware; unknown errors become `internal.server_error` without leaking text
+- [ ] S25.3 The front end translates by code (`errors.*` in the catalogs); `api()` keeps `e.message`
+- [ ] S25.4 Document the codes (`_docs/error-codes.md`, README, routes, Insomnia) and test that every code has a text in every language
+
+---
+
 ### Sprint 26: Project Overview
 
 - [X] S26.1 `GET /api/projects/:projectId/overview`, for admins only: people, teams, hours, cost, revenue and margin, the age of the project, tasks, integrations and the hours of each person, in a read-only `overview` domain that reads the other services and has no table

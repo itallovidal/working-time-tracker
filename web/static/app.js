@@ -3,6 +3,36 @@
 (function () {
   'use strict';
 
+  // ---------- Textos ----------
+  // window.I18N vem de /i18n/<idioma>.js (o mesmo YAML do servidor). Uma chave é
+  // um texto ou, quando tem plural, um objeto com as formas one/other.
+  const i18n = window.I18N || { lang: document.documentElement.lang || 'pt-BR', messages: {} };
+  const lang = i18n.lang;
+  const pluralRules = new Intl.PluralRules(lang);
+
+  function lookup(key) {
+    let node = i18n.messages;
+    for (const part of key.split('.')) {
+      if (node === null || typeof node !== 'object' || !(part in node)) return undefined;
+      node = node[part];
+    }
+    return node;
+  }
+
+  // t traduz uma chave. Os placeholders são {{.nome}}; o parâmetro count também
+  // escolhe a forma do plural: t('x', { count: 3 }). Chave que não existe volta como está.
+  function t(key, params) {
+    let text = lookup(key);
+    if (text !== null && typeof text === 'object') {
+      text = text[pluralRules.select(Number(params && params.count))] ?? text.other;
+    }
+    if (typeof text !== 'string') {
+      console.warn('i18n: chave sem texto:', key);
+      return key;
+    }
+    return text.replace(/\{\{\s*\.(\w+)\s*\}\}/g, (match, name) => (params && params[name] !== undefined ? params[name] : match));
+  }
+
   class ApiError extends Error {
     constructor(message, status) {
       super(message);
@@ -22,11 +52,11 @@
     try {
       res = await fetch(path, opts);
     } catch (e) {
-      throw new ApiError('Sem conexão com o servidor. Confira a rede e tente de novo.', 0);
+      throw new ApiError(t('errors.no_connection'), 0);
     }
     if (res.status === 401 && !path.startsWith('/api/auth/')) {
       location.href = '/login?next=' + encodeURIComponent(location.pathname + location.search);
-      throw new ApiError('Sua sessão expirou. Entre de novo.', 401);
+      throw new ApiError(t('errors.session_expired'), 401);
     }
     if (res.status === 204) return null;
     const text = await res.text();
@@ -35,7 +65,7 @@
       try { data = JSON.parse(text); } catch (e) { data = null; }
     }
     if (!res.ok) {
-      const message = (data && (data.error || data.message)) || 'O servidor respondeu com erro ' + res.status + '.';
+      const message = (data && (data.error || data.message)) || t('errors.server_error', { status: res.status });
       throw new ApiError(message, res.status);
     }
     return data;
@@ -139,7 +169,7 @@
       return (name || '?').trim().split(/\s+/).slice(0, 2).map((p) => p[0].toUpperCase()).join('');
     },
     role(role) {
-      return role === 'admin' ? 'Admin' : 'Membro';
+      return t(role === 'admin' ? 'roles.admin' : 'roles.member');
     },
     weekday(value) {
       const d = weekdays.find((w) => w.value === value);
@@ -208,12 +238,15 @@
   // O que as telas mostram no lugar de um campo de cadastro sem valor.
   const notInformed = 'Não informado';
 
-  window.WTT = { api, ApiError, form, fmt, toCents, copyText, notInformed, weekdays, orgSizes, workModes, currencies, boot: window.BOOT || {} };
+  window.WTT = { t, lang, api, ApiError, form, fmt, toCents, copyText, notInformed, weekdays, orgSizes, workModes, currencies, boot: window.BOOT || {} };
 
   // Onde flash() deixa a mensagem para a página seguinte.
   const flashKey = 'wtt:flash';
 
   document.addEventListener('alpine:init', () => {
+    // $t('chave', { nome: valor }) nas expressões do Alpine (x-text, :title...).
+    Alpine.magic('t', () => t);
+
     Alpine.store('toast', {
       items: [],
       seq: 0,
@@ -348,7 +381,7 @@
         this.busy = true;
         try {
           await Alpine.store('clock').clockOut();
-          Alpine.store('toast').show('Ponto encerrado.');
+          Alpine.store('toast').show(t('session.stopped'));
         } catch (e) {
           Alpine.store('toast').error(e.message);
         } finally {

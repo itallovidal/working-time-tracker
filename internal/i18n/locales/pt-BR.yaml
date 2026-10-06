@@ -1,0 +1,107 @@
+# Textos da interface em português do Brasil (idioma padrão).
+#
+# Regras (valem para todos os idiomas, ver README):
+#   - uma chave por frase inteira; nada de montar frase juntando pedaços;
+#   - valores entram por placeholder: "{{.name}}";
+#   - plural com as formas one/other, e o placeholder {{.count}};
+#   - o mesmo conjunto de chaves e de placeholders em todos os idiomas
+#     (um teste confere).
+
+lang:
+  label: Idioma
+  pt_br:
+    short: PT
+    name: Português
+  en:
+    short: EN
+    name: English
+
+common:
+  close: Fechar
+  per_hour: por hora
+
+titles:
+  login: Entrar
+  signup: Criar conta
+  invite: Convite
+  profile: Seu perfil
+  not_found: Página não encontrada
+
+nav:
+  label: Organização
+  projects: Projetos
+  organization: Organização
+  profile_sr: "Seu perfil:"
+  logout: Sair
+
+roles:
+  admin: Admin
+  member: Membro
+
+session:
+  in_progress: "Em andamento: {{.name}}"
+  stop: Parar
+  stopped: Ponto encerrado.
+
+auth:
+  email: Email
+  password: Senha
+  password_hint: Pelo menos 8 caracteres.
+  your_name: Seu nome
+  login:
+    title: Entrar
+    subtitle: Use o email e a senha da sua conta.
+    submit: Entrar
+    pending: Entrando…
+    no_account: Ainda não tem conta?
+    create_org: Crie uma organização
+  signup:
+    title: Criar organização
+    subtitle: Você entra como admin e depois convida o time.
+    org_name: Nome da organização
+    submit: Criar conta
+    pending: Criando…
+    has_account: Já tem conta?
+    login: Entrar
+  invite:
+    loading: Carregando o convite…
+    unavailable: Convite indisponível
+    ask_new_link: Peça um novo link para quem convidou você.
+    go_login: Ir para o login
+    join: "Entrar em {{.name}}"
+    invited_as: Você foi convidado como
+    create_to_accept: Crie sua conta para aceitar.
+    email_only: Este convite é só para este email.
+    submit: Aceitar convite
+    pending: Criando conta…
+
+not_found:
+  title: Página não encontrada
+  text: O endereço não existe ou você não tem acesso a ele.
+  back: Voltar ao início
+
+profile:
+  eyebrow: Sua conta
+  title: Seu perfil
+  personal:
+    title: Dados pessoais
+    name: Nome
+    email_hint: É o email que você usa para entrar.
+    submit: Salvar perfil
+    saved: Perfil salvo.
+  rates:
+    title: Meus valores
+    intro: Quanto você recebe por hora em cada projeto. Só você e os admins veem.
+    empty: Você ainda não tem valor definido em nenhum projeto.
+  password:
+    title: Senha
+    current: Senha atual
+    next: Nova senha
+    next_hint: Pelo menos 8 caracteres. As suas outras sessões serão encerradas.
+    submit: Trocar senha
+    changed: Senha trocada. As outras sessões foram encerradas.
+
+errors:
+  no_connection: Sem conexão com o servidor. Confira a rede e tente de novo.
+  session_expired: Sua sessão expirou. Entre de novo.
+  server_error: "O servidor respondeu com erro {{.status}}."

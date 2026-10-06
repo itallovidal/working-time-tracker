@@ -1,5 +1,5 @@
 {{define "base"}}<!doctype html>
-<html lang="pt-BR">
+<html lang="{{.Lang}}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.3.1/css/all.min.css" integrity="sha512-QeR2VH+lsBE5LSAe1Q5EnTBbe7XTBubt8dG93Y7gidSgdMCr8nVqKcfKAMyN96SV8KDbZVTDXChatu5G2KQGzg==" crossorigin="anonymous" referrerpolicy="no-referrer">
   <link rel="stylesheet" href="/static/app.css">
   <script>window.BOOT = {{.Boot}};</script>
+  <script src="/i18n/{{.Lang}}.js?v={{.I18nHash}}"></script>
   <script src="/static/app.js" defer></script>
   {{- if .Script}}
   <script src="/static/pages/{{.Script}}.js" defer></script>
@@ -16,6 +17,8 @@
 <body>
 {{- if .Me}}
 {{template "topbar" .}}
+{{- else}}
+<div class="lang-float">{{template "lang_switch" .}}</div>
 {{- end}}
 {{template "content" .}}
 {{template "modal" .}}

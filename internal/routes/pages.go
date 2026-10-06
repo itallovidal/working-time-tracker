@@ -10,6 +10,10 @@ import (
 // RegisterPages monta as páginas HTML. As públicas mandam quem já está logado
 // para o início; as outras mandam quem não está para o login.
 func RegisterPages(e *echo.Echo, p *page.Handler, m *auth.Middleware) {
+	// O idioma vale para todo mundo, logado ou não.
+	e.GET("/lang/:code", p.SetLanguage)
+	e.GET("/i18n/:file", p.I18nScript)
+
 	e.GET("/login", p.Login, m.RedirectIfAuthenticated)
 	e.GET("/signup", p.Signup, m.RedirectIfAuthenticated)
 	e.GET("/invite/:token", p.Invite, m.RedirectIfAuthenticated)

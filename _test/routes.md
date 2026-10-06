@@ -557,6 +557,19 @@ Content-Type: application/json
 
 ---
 
+## Idioma
+
+A interface fala português do Brasil (padrão) e inglês. Estas duas rotas são do navegador, não da API JSON, e não precisam de sessão.
+
+| Método | Rota | Descrição |
+|--------|------|-----------|
+| GET | `/lang/:code?next=/caminho` | Grava o cookie `wtt_lang` (`pt-BR` ou `en`, por um ano) e responde **303** para `next`. Só caminhos do próprio site: qualquer outro vira `/`. Um código desconhecido não grava nada |
+| GET | `/i18n/:idioma.js?v=<hash>` | `window.I18N = {lang, messages}`, os textos do idioma para o JavaScript. Com o `v` certo, o cache é de um ano (`immutable`); sem ele, o navegador revalida pelo `ETag`. **404** para idioma desconhecido |
+
+Qual idioma uma página usa: o cookie `wtt_lang`; sem ele, o `Accept-Language`; sem nenhum dos dois, português. As respostas variam por `Cookie` e `Accept-Language`.
+
+---
+
 ## Fluxo de teste sugerido
 
 1. **Healthcheck:** `GET /healthcheck`.

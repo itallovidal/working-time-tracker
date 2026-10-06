@@ -3,31 +3,31 @@
   <form class="auth-card" x-data="signupForm" @submit.prevent="submit()">
     <span class="brand"><span class="brand-mark" aria-hidden="true"></span>Working Time Tracker</span>
     <div class="stack">
-      <h1>Criar organização</h1>
-      <p class="muted">Você entra como admin e depois convida o time.</p>
+      <h1>{{.T "auth.signup.title"}}</h1>
+      <p class="muted">{{.T "auth.signup.subtitle"}}</p>
     </div>
     <div class="field">
-      <label for="signup-org">Nome da organização</label>
+      <label for="signup-org">{{.T "auth.signup.org_name"}}</label>
       <input id="signup-org" type="text" autocomplete="organization" required x-model="organization_name" autofocus>
     </div>
     <div class="field">
-      <label for="signup-name">Seu nome</label>
+      <label for="signup-name">{{.T "auth.your_name"}}</label>
       <input id="signup-name" type="text" autocomplete="name" required x-model="name">
     </div>
     <div class="field">
-      <label for="signup-email">Email</label>
+      <label for="signup-email">{{.T "auth.email"}}</label>
       <input id="signup-email" type="email" autocomplete="email" required x-model="email">
     </div>
     <div class="field">
-      <label for="signup-password">Senha</label>
+      <label for="signup-password">{{.T "auth.password"}}</label>
       <input id="signup-password" type="password" autocomplete="new-password" minlength="8" required x-model="password">
-      <span class="hint">Pelo menos 8 caracteres.</span>
+      <span class="hint">{{.T "auth.password_hint"}}</span>
     </div>
     <p class="form-error" x-cloak x-show="errors.signup" x-text="errors.signup" role="alert"></p>
     <button class="btn btn-block" type="submit" :disabled="pending">
-      <span x-text="pending ? 'Criando…' : 'Criar conta'">Criar conta</span>
+      <span x-text="pending ? $t('auth.signup.pending') : $t('auth.signup.submit')">{{.T "auth.signup.submit"}}</span>
     </button>
-    <p class="auth-foot">Já tem conta? <a href="/login">Entrar</a></p>
+    <p class="auth-foot">{{.T "auth.signup.has_account"}} <a href="/login">{{.T "auth.signup.login"}}</a></p>
   </form>
 </main>
 {{end}}

@@ -1,0 +1,9 @@
+{{/* lang_switch é o toggle de idioma. Cada opção é um link para /lang/<código>, que grava o
+     cookie e volta para esta página: funciona sem JavaScript e nas telas sem login. */}}
+{{define "lang_switch"}}
+<nav class="lang-switch" aria-label="{{.T "lang.label"}}">
+  {{- range .LangOptions}}
+  <a href="/lang/{{.Code}}?next={{$.Path}}" lang="{{.Code}}" hreflang="{{.Code}}" title="{{.Name}}" {{if .Current}}aria-current="true"{{end}}>{{.Short}}</a>
+  {{- end}}
+</nav>
+{{end}}

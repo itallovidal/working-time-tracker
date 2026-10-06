@@ -21,6 +21,7 @@ import (
 	"working-time-tracker/internal/domain/task"
 	"working-time-tracker/internal/domain/team"
 	"working-time-tracker/internal/domain/work_session"
+	"working-time-tracker/internal/i18n"
 	"working-time-tracker/internal/page"
 	"working-time-tracker/internal/routes"
 	tmpl "working-time-tracker/internal/template"
@@ -88,7 +89,14 @@ func New(client *ent.Client, opts Options) (*echo.Echo, error) {
 		Integration:  integration.NewHandler(integrationSvc),
 	}
 	authMW := auth.NewMiddleware(authSvc, auth.NewResolver(client), opts.CookieSecure)
-	pages := page.NewHandler(page.Deps{Orgs: orgSvc, Projects: projectSvc, Tasks: taskSvc})
+	catalog, err := i18n.Load()
+	if err != nil {
+		return nil, err
+	}
+	pages := page.NewHandler(page.Deps{
+		Orgs: orgSvc, Projects: projectSvc, Tasks: taskSvc,
+		I18n: catalog, CookieSecure: opts.CookieSecure,
+	})
 
 	renderer, err := tmpl.New(web.FS)
 	if err != nil {
@@ -122,6 +130,7 @@ func New(client *ent.Client, opts Options) (*echo.Echo, error) {
 	}))
 	e.Use(middleware.Recover())
 	e.Use(authMW.LoadSession)
+	e.Use(catalog.Middleware())
 
 	routes.HealthcheckRoutesRegister(e)
 	routes.RegisterRoutes(e, handlers, authMW, authRateLimiter(opts.AuthRateLimit))
