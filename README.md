@@ -64,7 +64,7 @@ O servidor e o seed aplicam as migrações pendentes ao iniciar. São arquivos S
 
 ## Interface web
 
-A interface segue a Decision 8 de `_docs/design.md`. O servidor renderiza a casca de cada página em HTML (Go `html/template`), já sabendo quem está logado e qual é a organização e o projeto. Os componentes [Alpine.js](https://alpinejs.dev) buscam e alteram os dados pela API JSON em `/api`. **Não há etapa de build**: o CSS e o JavaScript são servidos como estão.
+A interface segue a Decision 8 de `_docs/design.md`. O servidor renderiza a casca de cada página em HTML (Go `html/template`), já sabendo quem está logado e qual é a organização e o projeto. Os componentes [Alpine.js](https://alpinejs.dev) buscam e alteram os dados pela API JSON em `/api`. **Não há etapa de build**: o CSS e o JavaScript são servidos como estão. A única coisa que vem de fora são os ícones ([Font Awesome Free](https://fontawesome.com)), carregados do cdnjs com SRI; sem acesso à CDN a interface continua funcionando, só sem os ícones.
 
 ### Rotas do navegador
 
@@ -103,12 +103,12 @@ Sem sessão, qualquer página leva ao login, e a pessoa volta para a página ped
 ```
 web/
   templates/
-    layouts/base.gohtml        # HTML base, carrega app.css, app.js, o script da página e o Alpine
-    partials/                  # barra superior, cabeçalhos da organização e do projeto, indicador do ponto, toasts
+    layouts/base.gohtml        # HTML base, carrega os ícones (cdnjs), app.css, app.js, o script da página e o Alpine
+    partials/                  # barra superior, cabeçalhos da organização e do projeto, indicador do ponto, toasts, modal e ícone
     pages/*.gohtml             # uma casca por tela; cada uma define o bloco "content"
   static/
     app.css                    # estilos com tema claro e escuro, sem framework
-    app.js                     # api() sobre fetch, estado de formulário, toasts, formatadores, cronômetro
+    app.js                     # api() sobre fetch, estado de formulário, toasts, modal, formatadores, cronômetro
     pages/*.js                 # componentes Alpine de cada grupo de telas (auth, org, project)
     alpine.min.js              # Alpine.js 3.14.8 vendorizado (dist/cdn.min.js do pacote npm)
 internal/page/                 # handlers das páginas
@@ -116,6 +116,23 @@ internal/template/renderer.go  # um conjunto de templates por página, carregado
 ```
 
 Para atualizar o Alpine, troque `web/static/alpine.min.js` e o hash em `web/embed_test.go` juntos. O teste existe porque a cópia vendorizada já esteve corrompida sem ninguém perceber.
+
+**Ícones.** `{{template "icon" "pen"}}` emite o ícone do Font Awesome com esse nome (sem o prefixo `fa-`). O ícone é decorativo: o botão mantém o texto, e um botão só de ícone leva `aria-label`. Num botão com texto dinâmico, ponha o texto num `<span x-text>`, porque um `x-text` no botão apagaria o ícone. Para trocar a versão, mude a URL e o `integrity` em `base.gohtml` juntos; o hash vem de `https://api.cdnjs.com/libraries/font-awesome/<versão>?fields=sri`.
+
+**Modal.** Há um só, no layout base (`partials/modal.gohtml`), controlado por `Alpine.store('modal')`. A página entrega o conteúdo e continua dona dele:
+
+```html
+<button type="button" class="btn" @click="$store.modal.open('customer', 'Novo cliente')">Novo cliente</button>
+
+<template x-teleport="#modal-root">
+  <form x-show="$store.modal.name === 'customer'" @submit.prevent="save()">
+    <input x-model="draft.name" data-autofocus>
+    ...
+  </form>
+</template>
+```
+
+O conteúdo aparece dentro do modal, mas segue no escopo do componente da página (`x-model`, `save()`, `errors`). O `<template>` precisa de um único elemento raiz. `open(nome, título, guarda)` abre e foca o campo com `data-autofocus`; `close()` fecha; `dismiss()` é o fechamento pedido pela pessoa (Esc, clique no fundo, X, Cancelar) e respeita a guarda, uma função que devolve `false` enquanto o modal não pode fechar, por exemplo durante um salvamento.
 
 ## API
 
@@ -163,7 +180,7 @@ Cobertura:
 - **Domínios:** services e handlers.
 - **Migrações:** o banco que elas produzem bate com o `ent/schema`, regras de FK, índice parcial, recusa de banco sem histórico e checksum dos arquivos.
 - **Router real:** tabela de rotas, autenticação, permissões e isolamento entre organizações.
-- **Páginas:** toda página renderiza para admin e membro, redireciona sem sessão e dá 404 entre organizações.
+- **Páginas:** toda página renderiza para admin e membro, redireciona sem sessão e dá 404 entre organizações; cada uma tem o modal uma única vez e carrega os ícones com SRI.
 - **Alpine vendorizado:** o hash confere com o pacote oficial.
 
 ## Estrutura do projeto
@@ -274,5 +291,5 @@ Isso apaga os dados desse banco. Para mantê-los, guarde-os antes com `pg_dump -
 |---|---|
 | Backend | Go + Echo v5 |
 | Banco | PostgreSQL + [Ent](https://entgo.io), com migrações versionadas aplicadas pelo [goose](https://github.com/pressly/goose) |
-| Frontend | HTML renderizado no servidor (`html/template`) + Alpine.js vendorizado, sem build |
+| Frontend | HTML renderizado no servidor (`html/template`) + Alpine.js vendorizado, sem build; ícones do Font Awesome Free pelo cdnjs |
 | Entrega | Binário único com `embed.FS` |

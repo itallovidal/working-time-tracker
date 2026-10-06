@@ -116,6 +116,25 @@ func TestPages_OrgTabsAreAdminOnly(t *testing.T) {
 	}
 }
 
+// O modal é um só, no layout base: sem ele, o formulário que uma página teleporta
+// some sem aviso. Os ícones vêm do cdnjs, sempre com SRI.
+func TestPages_ModalHostAndIcons(t *testing.T) {
+	e := newServer(t)
+	admin := signup(t, e, "Org", "ana@test.com")
+	projectID := createProject(t, e, admin, "Projeto Alfa")
+
+	for _, path := range append(pagePaths(admin.orgID, projectID), orgPagePaths(admin.orgID)...) {
+		body := do(e, "GET", path, "", admin.session).Body.String()
+		if n := strings.Count(body, `id="modal-root"`); n != 1 {
+			t.Errorf("GET %s has %d modal hosts, want 1", path, n)
+		}
+		if !strings.Contains(body, "/font-awesome/") || !strings.Contains(body, `integrity="sha512-`) {
+			t.Errorf("GET %s does not load the icon font with SRI", path)
+		}
+	}
+
+}
+
 // O resumo da organização aparece no cabeçalho das páginas dela e na página
 // inicial, e a organização chega pronta ao JavaScript.
 func TestPages_OrgSummaryInHeader(t *testing.T) {

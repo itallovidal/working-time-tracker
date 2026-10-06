@@ -231,10 +231,31 @@
 
   window.WTT = { api, ApiError, form, fmt, toCents, copyText, notInformed, weekdays, orgSizes, workModes, currencies, integrationTypes, boot: window.BOOT || {} };
 
+  // Onde flash() deixa a mensagem para a página seguinte.
+  const flashKey = 'wtt:flash';
+
   document.addEventListener('alpine:init', () => {
     Alpine.store('toast', {
       items: [],
       seq: 0,
+      // Mostra a mensagem que a página anterior deixou com flash().
+      init() {
+        let saved = null;
+        try {
+          saved = sessionStorage.getItem(flashKey);
+          sessionStorage.removeItem(flashKey);
+        } catch (e) {
+          // Sem sessionStorage não há mensagem para mostrar.
+        }
+        if (!saved) return;
+        let flash;
+        try {
+          flash = JSON.parse(saved);
+        } catch (e) {
+          flash = { message: saved };
+        }
+        this.show(flash.message, flash.kind);
+      },
       show(message, kind) {
         const id = ++this.seq;
         this.items.push({ id, message, kind: kind || 'info' });
@@ -243,8 +264,63 @@
       error(message) {
         this.show(message, 'error');
       },
+      // flash guarda a mensagem para aparecer na próxima página: é para quem salva e
+      // redireciona em seguida.
+      flash(message, kind) {
+        try {
+          sessionStorage.setItem(flashKey, JSON.stringify({ message, kind }));
+        } catch (e) {
+          // Sem sessionStorage a página seguinte só deixa de mostrar o toast.
+        }
+      },
       dismiss(id) {
         this.items = this.items.filter((t) => t.id !== id);
+      },
+    });
+
+    // modal é o único modal da aplicação (partials/modal.gohtml). A página teleporta o
+    // conteúdo para #modal-root e o mostra com x-show="$store.modal.name === '<nome>'".
+    // name e title não são limpos ao fechar: o conteúdo fica lá até o fim da transição.
+    let opener = null; // quem tinha o foco ao abrir, para devolver ao fechar
+    let canClose = null; // a página pode impedir o fechamento, por exemplo enquanto salva
+    const lockPage = (on) => {
+      const root = document.documentElement;
+      // Sem scroll a barra de rolagem some: o espaço dela vira padding para a página não pular.
+      root.style.paddingRight = on ? (window.innerWidth - root.clientWidth) + 'px' : '';
+      root.classList.toggle('modal-open', on);
+      // inert prende o foco no modal. Os toasts ficam de fora para continuarem sendo lidos.
+      document.querySelectorAll('body > .topbar, body > main').forEach((el) => { el.inert = on; });
+    };
+    Alpine.store('modal', {
+      name: null,
+      title: '',
+      isOpen: false,
+      open(name, title, guard) {
+        if (!this.isOpen) opener = document.activeElement; // antes do inert, que tira o foco
+        canClose = guard || null;
+        this.name = name;
+        this.title = title;
+        this.isOpen = true;
+        lockPage(true);
+        // O Alpine segura o nextTick até o painel aparecer, então o campo já aceita foco.
+        Alpine.nextTick(() => {
+          const panel = document.querySelector('.modal-panel');
+          const field = [...panel.querySelectorAll('[data-autofocus]')].find((el) => el.offsetParent);
+          (field || panel).focus();
+        });
+      },
+      // dismiss é o fechamento pedido pela pessoa: Esc, clique no fundo, X e Cancelar.
+      dismiss() {
+        if (this.isOpen && (!canClose || canClose())) this.close();
+      },
+      close() {
+        if (!this.isOpen) return;
+        this.isOpen = false;
+        lockPage(false);
+        const el = opener;
+        opener = null;
+        // Depois de o x-for reordenar a lista: mover a linha tiraria o foco do botão.
+        Alpine.nextTick(() => el && el.isConnected && el.focus());
       },
     });
 

@@ -1,0 +1,15 @@
+{{/* modal é o único modal da aplicação. A página entrega o conteúdo com
+     <template x-teleport="#modal-root"> e abre com $store.modal.open(nome, título). */}}
+{{define "modal"}}
+<div class="modal" x-data x-cloak x-show="$store.modal.isOpen" x-transition.opacity
+     @keydown.escape.window="$store.modal.dismiss()" @mousedown.self="$store.modal.dismiss()">
+  <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="modal-title" tabindex="-1"
+           x-show="$store.modal.isOpen" x-transition.scale.96>
+    <header class="modal-head">
+      <h2 id="modal-title" x-text="$store.modal.title"></h2>
+      <button type="button" class="btn btn-ghost btn-sm" aria-label="Fechar" title="Fechar" @click="$store.modal.dismiss()">{{template "icon" "xmark"}}</button>
+    </header>
+    <div id="modal-root" class="modal-body"></div>
+  </section>
+</div>
+{{end}}

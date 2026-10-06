@@ -208,6 +208,13 @@
 
 ---
 
+### Sprint 14: Organization Admin Screens
+
+- [X] S14.2 Add UI icons: Font Awesome Free from cdnjs with SRI and an `icon` template partial, used on the organization and project tabs and on the buttons of the organization screens
+- [X] S14.3 Add the application-wide modal: one host in the base layout, an Alpine store to open and close it, content handed over with `x-teleport`
+
+---
+
 ### Sprint 15: Versioned Migrations
 
 - [X] S15.1 Generate migrations from `ent/schema` with `cmd/migrate new`: replay the existing files on a throwaway database, diff against the Ent schema and warn about changes that touch existing data
