@@ -291,6 +291,11 @@ func TestService_LinkSurvivesReadAndUpdate(t *testing.T) {
 	if got.ExternalIntegrationID == nil || got.ExternalIntegrationID.String() != integrationID {
 		t.Fatalf("external_integration_id after link = %v, want %s", got.ExternalIntegrationID, integrationID)
 	}
+	// A lista também traz a integração: é dela que sai a plataforma do rótulo ("GitHub #42").
+	listed, err := taskSvc.ListByProject(proj.ID.String(), task.ListFilter{})
+	if err != nil || len(listed) != 1 || listed[0].ExternalIntegration == nil || listed[0].ExternalIntegration.Type != "github" {
+		t.Errorf("list after link = %+v (%v), want the task with its integration", listed, err)
+	}
 
 	updated, err := taskSvc.Update(task1.ID.String(), "Task A renomeada", "", nil, nil)
 	if err != nil {

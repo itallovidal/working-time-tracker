@@ -73,8 +73,10 @@ func (s *Store) ListByProject(projectID string, f ListFilter) ([]Task, error) {
 	}
 	// O id desempata tarefas criadas no mesmo instante, para a ordem não mudar
 	// de uma página para a outra.
+	// A integração vem junto para a lista saber de que plataforma é o item vinculado.
 	q := s.filtered(uid, f).
 		WithAssignee().
+		WithExternalIntegration().
 		Order(ent.Desc(task.FieldCreatedAt, task.FieldID))
 	if f.Page > 0 {
 		q = q.Limit(f.PerPage).Offset((f.Page - 1) * f.PerPage)
