@@ -193,6 +193,7 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 .nowrap { white-space: nowrap; }
 tfoot td { background: var(--surface-2); border-bottom: 0; }
 .self-end { align-self: flex-end; }
+.self-start { align-self: flex-start; }
 .sr-only {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
@@ -213,6 +214,9 @@ textarea { resize: vertical; min-height: 72px; }
 .input-money { width: 130px; text-align: right; }
 input:focus, select:focus, textarea:focus { outline: 2px solid var(--focus); outline-offset: -1px; border-color: transparent; }
 input[aria-invalid="true"] { border-color: var(--danger); }
+/* Campo desligado: sem isto ele fica igual aos outros, porque as cores acima
+   valem também para ele. */
+input:disabled, select:disabled, textarea:disabled { background: var(--surface-2); color: var(--muted); cursor: not-allowed; }
 
 .btn {
   font: inherit; font-weight: 600; font-size: 0.92rem; cursor: pointer;

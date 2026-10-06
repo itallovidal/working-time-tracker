@@ -237,6 +237,7 @@
 - [X] S16.1 Filter and paginate the task list on the server: `q`, `assignee_id`, `deadline_to`, `page` and `per_page` on `GET /api/projects/:projectId/tasks`; without `page` the route still returns the whole array, which the time tracking screen needs
 - [X] S16.2 Tasks tab: search by name, assignee and deadline filters and 10 tasks per page, with the state kept in the URL and restored by the "Voltar" button of a task
 - [X] S16.3 Tests for the filters, the pages and the query parameters; more tasks in the seed; update README, design and routes
+- [X] S16.4 After the manual test: the "Só as minhas tarefas" box sits below the filters and, when checked, turns off the name search and the assignee filter, leaving only the deadline one; the new task form opens in the modal
 
 ---
 

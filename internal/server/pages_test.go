@@ -302,6 +302,36 @@ func TestPages_ProjectCollaboratorsTab(t *testing.T) {
 	}
 }
 
+// A aba Tarefas tem a linha de filtros, a caixa "Só as minhas tarefas" logo
+// abaixo dela, desligando a busca e o filtro de responsável, e o formulário de
+// nova tarefa no modal. Admin e membro veem a mesma tela.
+func TestPages_ProjectTasksTab(t *testing.T) {
+	e := newServer(t)
+	admin := signup(t, e, "Org", "ana@test.com")
+	member := invite(t, e, admin, "bia@test.com", "member")
+	projectID := createProject(t, e, admin, "Projeto Alfa")
+
+	for who, session := range map[string]string{"admin": admin.session, "member": member.session} {
+		body := do(e, "GET", "/projects/"+projectID+"/tasks", "", session).Body.String()
+		for _, want := range []string{
+			`aria-label="Buscar tarefa pelo nome"`, `aria-label="Filtrar por responsável"`, `aria-label="Filtrar por prazo"`,
+			"Só as minhas tarefas", `class="pager"`,
+			"Nova tarefa", `x-teleport="#modal-root"`, `x-show="$store.modal.name === 'task-new'"`, `id="task-name"`, `id="task-assignee"`,
+		} {
+			if !strings.Contains(body, want) {
+				t.Errorf("%s: the tasks tab does not contain %q", who, want)
+			}
+		}
+		if n := strings.Count(body, `:disabled="filters.mine"`); n != 2 {
+			t.Errorf("%s: %d fields are turned off by the 'only mine' box, want the search and the assignee filter", who, n)
+		}
+		filters, mine, table := strings.Index(body, `aria-label="Filtrar por prazo"`), strings.Index(body, "Só as minhas tarefas"), strings.Index(body, "<table>")
+		if !(filters < mine && mine < table) {
+			t.Errorf("%s: the 'only mine' box is not between the filters and the table", who)
+		}
+	}
+}
+
 func TestPages_RedirectWithoutSession(t *testing.T) {
 	e := newServer(t)
 	admin := signup(t, e, "Org", "ana@test.com")

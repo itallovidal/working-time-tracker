@@ -107,11 +107,11 @@ document.addEventListener('alpine:init', () => {
     perPage: 10,
     members: [], // quem está nos times: pode ser responsável por tarefa nova
     assignees: [], // quem já é responsável por alguma tarefa, mesmo fora dos times
-    filters: { q: '', assignee: '', due: '', date: '' },
+    // mine é a caixa "Só as minhas tarefas": ligada, prende o responsável em
+    // quem está logado e desliga a busca e o filtro de responsável.
+    filters: { q: '', assignee: '', due: '', date: '', mine: false },
     dueOptions,
-    meId: me.id,
     seq: 0,
-    creating: false,
     draft: { name: '', description: '', assignee_id: '', deadline: '' },
     async init() {
       this.readURL();
@@ -128,20 +128,26 @@ document.addEventListener('alpine:init', () => {
       const p = new URLSearchParams(location.search);
       const due = p.get('due') || '';
       const isDate = /^\d{4}-\d{2}-\d{2}$/.test(due);
-      const assignee = p.get('assignee') || '';
+      const assignee = /^[0-9a-f-]{36}$/i.test(p.get('assignee') || '') ? p.get('assignee') : '';
+      const mine = p.get('mine') === '1';
       this.filters = {
-        q: p.get('q') || '',
-        assignee: /^[0-9a-f-]{36}$/i.test(assignee) ? assignee : '',
+        q: mine ? '' : (p.get('q') || ''),
+        assignee: mine ? me.id : assignee,
         due: isDate ? 'date' : (dueOptions.some((o) => o.value === due) ? due : ''),
         date: isDate ? due : '',
+        mine,
       };
       this.page = Math.max(1, parseInt(p.get('page'), 10) || 1);
     },
     writeURL() {
       const f = this.filters;
       const p = new URLSearchParams();
-      if (f.q.trim()) p.set('q', f.q.trim());
-      if (f.assignee) p.set('assignee', f.assignee);
+      if (f.mine) {
+        p.set('mine', '1');
+      } else {
+        if (f.q.trim()) p.set('q', f.q.trim());
+        if (f.assignee) p.set('assignee', f.assignee);
+      }
       const due = f.due === 'date' ? f.date : f.due;
       if (due) p.set('due', due);
       if (this.page > 1) p.set('page', this.page);
@@ -188,10 +194,16 @@ document.addEventListener('alpine:init', () => {
       return this.load();
     },
     clear() {
-      this.filters = { q: '', assignee: '', due: '', date: '' };
+      this.filters = { q: '', assignee: '', due: '', date: '', mine: false };
       return this.apply();
     },
+    // toggleMine liga ou desliga "Só as minhas tarefas". Ligada, a busca é
+    // apagada e o responsável passa a ser quem está logado; os dois campos ficam
+    // desligados na tela e só o prazo continua valendo. Desligada, tudo volta a
+    // "Todos os responsáveis".
     toggleMine(on) {
+      this.filters.mine = on;
+      this.filters.q = '';
       this.filters.assignee = on ? me.id : '';
       return this.apply();
     },
@@ -206,7 +218,7 @@ document.addEventListener('alpine:init', () => {
       return 'Página ' + this.page + ' de ' + this.pages() + ' · ' + this.total + (this.total === 1 ? ' tarefa' : ' tarefas');
     },
     // Quem aparece no filtro de responsável: os times, quem tem tarefa aqui e a
-    // própria pessoa, para "Só as minhas" ter sempre uma opção correspondente.
+    // própria pessoa, para o campo mostrar o nome dela com "Só as minhas" ligada.
     assigneeOptions() {
       const byId = new Map([[me.id, { id: me.id, name: me.name }]]);
       [...this.assignees, ...this.members].forEach((p) => byId.set(p.id, p));
@@ -215,8 +227,8 @@ document.addEventListener('alpine:init', () => {
     openCreate() {
       const self = this.members.find((m) => m.id === me.id) || this.members[0];
       this.draft = { name: '', description: '', assignee_id: self ? self.id : '', deadline: '' };
-      this.creating = true;
-      this.$nextTick(() => this.$refs.name && this.$refs.name.focus());
+      this.errors.create = '';
+      Alpine.store('modal').open('task-new', 'Nova tarefa', () => !this.pending);
     },
     create() {
       return this.run('create', async () => {
@@ -226,7 +238,7 @@ document.addEventListener('alpine:init', () => {
           assignee_id: this.draft.assignee_id,
           deadline: WTT.fmt.fromDateInput(this.draft.deadline),
         });
-        this.creating = false;
+        Alpine.store('modal').close();
         // A tarefa nova é a primeira da lista, se os filtros em uso a mostrarem.
         await this.apply();
         const shown = this.tasks.some((x) => x.id === t.id);
