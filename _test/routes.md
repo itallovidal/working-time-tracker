@@ -295,7 +295,7 @@ A pessoa precisa ser da mesma organização do projeto.
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
 | POST | `/api/projects/:projectId/tasks` | logado | Cria uma tarefa |
-| GET | `/api/projects/:projectId/tasks` | logado | Tarefas do projeto |
+| GET | `/api/projects/:projectId/tasks` | logado | Tarefas do projeto. Filtros: `?q=`, `?assignee_id=` e `?deadline_to=`; com `?page=`, uma página por vez |
 | GET | `/api/tasks/:taskId` | logado | Detalhes da tarefa |
 | PATCH | `/api/tasks/:taskId` | logado | Altera a tarefa |
 | DELETE | `/api/tasks/:taskId` | logado | Exclui a tarefa e as sessões dela |
@@ -315,6 +315,29 @@ Content-Type: application/json
 }
 ```
 O responsável precisa estar em algum time do projeto. Sem `deadline`, o prazo fica em 7 dias a partir de agora.
+
+```http
+GET /api/projects/:projectId/tasks?q=frete&assignee_id=…&deadline_to=2026-10-12T02:59:59Z&page=1&per_page=10
+```
+Todos os parâmetros são opcionais:
+
+- `q` busca no nome, sem diferenciar maiúsculas de minúsculas (acentos contam), com até 100 caracteres.
+- `assignee_id` traz só as tarefas daquela pessoa.
+- `deadline_to` traz as tarefas com prazo até aquele instante, inclusive. É uma data com hora em RFC 3339; num fuso escrito com `+`, use `%2B` na URL.
+- `page` começa em 1. `per_page` vale 10 por padrão, vai até 100 e só é lido junto de `page`.
+
+Sem `page`, a resposta é o array com todas as tarefas que passam pelos filtros, da mais nova para a mais antiga. Com `page`, vem uma página:
+
+```json
+{
+  "items": [{ "id": "…", "name": "Endpoint de cálculo de frete", "assignee_id": "…", "deadline": "2026-10-03T23:59:00-03:00" }],
+  "total": 1,
+  "page": 1,
+  "per_page": 10,
+  "assignees": [{ "id": "…", "name": "Bruno Lima", "email": "bruno@example.com" }]
+}
+```
+`total` conta tudo o que passa pelos filtros. Uma `page` além do fim devolve a última, e o campo `page` diz qual foi. `assignees` lista quem é responsável por alguma tarefa do projeto, mesmo que já tenha saído dos times. Um parâmetro inválido responde `400`.
 
 ```http
 POST /api/tasks/:taskId/link-external-item

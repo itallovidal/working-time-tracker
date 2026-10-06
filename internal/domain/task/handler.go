@@ -1,8 +1,13 @@
 package task
 
 import (
+	"errors"
+	"strconv"
+	"strings"
 	"time"
+	"unicode/utf8"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v5"
 
 	"working-time-tracker/internal/database"
@@ -34,13 +39,69 @@ func (h *Handler) Create(c *echo.Context) error {
 	return c.JSON(201, task)
 }
 
+// maxQueryLen limita o texto da busca por nome.
+const maxQueryLen = 100
+
+// parseListFilter lê os filtros da lista na query string: q, assignee_id,
+// deadline_to, page e per_page. Todos são opcionais.
+func parseListFilter(c *echo.Context) (ListFilter, error) {
+	var f ListFilter
+
+	f.Query = strings.TrimSpace(c.QueryParam("q"))
+	if utf8.RuneCountInString(f.Query) > maxQueryLen {
+		return f, errors.New("a busca aceita até 100 caracteres (q)")
+	}
+	if v := c.QueryParam("assignee_id"); v != "" {
+		id, err := uuid.Parse(v)
+		if err != nil {
+			return f, errors.New("responsável inválido (assignee_id)")
+		}
+		f.AssigneeID = &id
+	}
+	if v := c.QueryParam("deadline_to"); v != "" {
+		t, err := time.Parse(time.RFC3339, v)
+		if err != nil {
+			return f, errors.New("prazo inválido (deadline_to): use data e hora, como 2026-10-12T23:59:59Z")
+		}
+		f.DeadlineTo = &t
+	}
+	if v := c.QueryParam("page"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 1 {
+			return f, errors.New("página inválida (page): use um número a partir de 1")
+		}
+		f.Page = n
+	}
+	if v := c.QueryParam("per_page"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 1 {
+			return f, errors.New("tamanho de página inválido (per_page): use um número a partir de 1")
+		}
+		f.PerPage = n
+	}
+	return f, nil
+}
+
+// ListByProject lista as tarefas do projeto. Sem page, devolve todas num
+// array; com page, uma página com o total (per_page só vale junto de page).
 func (h *Handler) ListByProject(c *echo.Context) error {
 	projectID := c.Param("projectId")
-	tasks, err := h.svc.ListByProject(projectID)
+	f, err := parseListFilter(c)
+	if err != nil {
+		return c.JSON(400, map[string]string{"error": err.Error()})
+	}
+	if f.Page == 0 {
+		tasks, err := h.svc.ListByProject(projectID, f)
+		if err != nil {
+			return c.JSON(500, map[string]string{"error": err.Error()})
+		}
+		return c.JSON(200, tasks)
+	}
+	page, err := h.svc.ListPage(projectID, f)
 	if err != nil {
 		return c.JSON(500, map[string]string{"error": err.Error()})
 	}
-	return c.JSON(200, tasks)
+	return c.JSON(200, page)
 }
 
 func (h *Handler) Get(c *echo.Context) error {

@@ -12,7 +12,7 @@ Ponto por tarefa para equipes que trabalham por projeto. Foi pensado principalme
 - **Clientes e valores por hora.** Cada projeto pode ter um cliente e o **valor cobrado** dele por hora. Cada pessoa tem um **valor pago** por hora em cada projeto, então a mesma pessoa pode receber 20 num projeto e 25 em outro. O admin vê e altera tudo, com a margem por hora; o membro vê só o que ele mesmo recebe.
 - **Projetos** com duração da sprint, jornada semanal, horário da daily e dia da weekly. Esses valores são de cada projeto, não da organização, porque projetos diferentes podem trabalhar de formas diferentes.
 - **Times** dentro de cada projeto. Só quem está em algum time do projeto pode ser responsável por tarefas.
-- **Tarefas** com responsável, prazo (7 dias por padrão, com destaque quando está atrasada ou perto de vencer) e vínculo opcional com uma issue.
+- **Tarefas** com responsável, prazo (7 dias por padrão, com destaque quando está atrasada ou perto de vencer) e vínculo opcional com uma issue. A lista tem busca por nome, filtro por responsável, filtro por prazo (atrasadas, até hoje, até o fim desta semana ou da próxima, ou até uma data) e 10 tarefas por página.
 - **Ponto.** Clock-in e clock-out com cronômetro ao vivo no topo de todas as páginas, sessões filtradas por tarefa e pessoa, totais do filtro e o seu tempo de hoje e da semana. O banco garante uma única sessão aberta por pessoa.
 - **Horas em dinheiro.** Cada sessão guarda os valores por hora de quando o ponto abriu, então **mudar um valor só vale dali em diante**. Quem não tem valor definido no projeto **não bate ponto**. Na tela de ponto, o membro vê quanto ganhou; o admin vê custo, receita e margem.
 - **Integrações** com GitHub e GitLab. A credencial é validada na plataforma, guardada criptografada e nunca volta nas respostas. Os detalhes da issue (título e estado) são buscados na hora, e se a plataforma não responde a tela mostra o motivo, sem quebrar.
@@ -81,7 +81,7 @@ A interface segue a Decision 8 de `_docs/design.md`. O servidor renderiza a casc
 | `/orgs/:orgId/projects` | Organização, aba Projetos: tabela de gestão com o cliente, as pessoas nos times e as tarefas de cada projeto; a linha abre o projeto (só admins) |
 | `/profile` | Seu nome, seu email, sua senha e quanto você recebe por hora em cada projeto |
 | `/projects/:projectId` | Leva para a aba Tarefas |
-| `/projects/:projectId/tasks` | Tarefas, com início de ponto em um clique |
+| `/projects/:projectId/tasks` | Tarefas, com busca, filtros, paginação e início de ponto em um clique |
 | `/tasks/:taskId` | Edição da tarefa, vínculo com issue e tempo registrado |
 | `/projects/:projectId/time-tracking` | Cronômetro, sessões, filtros e totais em tempo e em dinheiro |
 | `/projects/:projectId/teams` | Times e membros |
@@ -97,6 +97,7 @@ Sem sessão, qualquer página leva ao login, e a pessoa volta para a página ped
 - As páginas de projeto têm **abas**: Tarefas, Ponto, Times, Valores (só admins), Integrações e Configurações.
 - A página **Organização** abre na aba Sobre, que todos os membros leem. Nela o admin tem o botão **Editar**, que leva à tela de edição; salvar volta para a Sobre. As abas Colaboradores, Clientes e Projetos são só de admins.
 - Ações de admin não aparecem para membros. A API continua sendo quem garante as permissões.
+- A lista de **tarefas** guarda a busca, os filtros e a página na URL (`?q=`, `?assignee=`, `?due=`, `?page=`). Recarregar mantém o que estava na tela, o link pode ser compartilhado, e o botão Voltar de uma tarefa leva de volta ao mesmo ponto da lista.
 
 ### Onde fica cada coisa
 

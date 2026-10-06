@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
@@ -157,6 +159,72 @@ func TestHandler_LinkUnlinkExternalItem(t *testing.T) {
 	}
 }
 
+func TestHandler_ListByProject(t *testing.T) {
+	app := setupTestApp(t)
+	get := func(query string) *httptest.ResponseRecorder {
+		rec := httptest.NewRecorder()
+		app.e.ServeHTTP(rec, httptest.NewRequest("GET", "/api/projects/"+app.projectID+"/tasks"+query, nil))
+		return rec
+	}
+	type page struct {
+		Items     []map[string]any `json:"items"`
+		Total     int              `json:"total"`
+		Page      int              `json:"page"`
+		PerPage   int              `json:"per_page"`
+		Assignees []map[string]any `json:"assignees"`
+	}
+
+	// Sem page a resposta é o array inteiro, que é o que a aba Ponto consome.
+	rec := get("")
+	var all []map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &all); rec.Code != http.StatusOK || err != nil || len(all) != 1 {
+		t.Fatalf("no params: status=%d err=%v body=%s, want an array with one task", rec.Code, err, rec.Body.String())
+	}
+	rec = get("?q=nothing-like-this")
+	if rec.Code != http.StatusOK || strings.TrimSpace(rec.Body.String()) != "[]" {
+		t.Errorf("no match without page: status=%d body=%s, want []", rec.Code, rec.Body.String())
+	}
+
+	// Com page vem a página com o total e os responsáveis.
+	rec = get("?page=1")
+	var first page
+	if err := json.Unmarshal(rec.Body.Bytes(), &first); rec.Code != http.StatusOK || err != nil {
+		t.Fatalf("page=1: status=%d err=%v body=%s", rec.Code, err, rec.Body.String())
+	}
+	if first.Total != 1 || first.Page != 1 || first.PerPage != task.DefaultPerPage || len(first.Items) != 1 || len(first.Assignees) != 1 {
+		t.Errorf("page=1 = %+v, want one task, one assignee, page 1 of %d per page", first, task.DefaultPerPage)
+	}
+
+	deadline := url.QueryEscape(time.Now().Add(30 * 24 * time.Hour).Format(time.RFC3339))
+	rec = get("?page=1&per_page=5&q=task&assignee_id=" + app.personID + "&deadline_to=" + deadline)
+	var filtered page
+	if err := json.Unmarshal(rec.Body.Bytes(), &filtered); rec.Code != http.StatusOK || err != nil {
+		t.Fatalf("all filters: status=%d err=%v body=%s", rec.Code, err, rec.Body.String())
+	}
+	if filtered.Total != 1 || filtered.PerPage != 5 {
+		t.Errorf("all filters = %+v, want the task with per_page 5", filtered)
+	}
+
+	// Página vazia continua com as listas presentes, e não null.
+	rec = get("?page=1&q=nothing-like-this")
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"items":[]`) {
+		t.Errorf("empty page: status=%d body=%s, want items as an empty array", rec.Code, rec.Body.String())
+	}
+
+	for _, query := range []string{
+		"?assignee_id=not-a-uuid",
+		"?deadline_to=2026-10-12",
+		"?page=0",
+		"?page=two",
+		"?page=1&per_page=0",
+		"?q=" + strings.Repeat("a", 101),
+	} {
+		if rec := get(query); rec.Code != http.StatusBadRequest {
+			t.Errorf("GET tasks%s: status=%d, want 400: %s", query, rec.Code, rec.Body.String())
+		}
+	}
+}
+
 func registerRoutes(
 	e *echo.Echo,
 	orgH *organization.Handler,
@@ -171,6 +239,7 @@ func registerRoutes(
 	projects := e.Group("/api/projects")
 	projects.POST("/:projectId/teams", teamH.Create)
 	projects.POST("/:projectId/tasks", taskH.Create)
+	projects.GET("/:projectId/tasks", taskH.ListByProject)
 
 	tasks := e.Group("/api/tasks")
 	tasks.PATCH("/:taskId", taskH.Update)

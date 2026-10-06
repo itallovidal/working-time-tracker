@@ -2,10 +2,12 @@ package task
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 
 	"working-time-tracker/ent"
+	entperson "working-time-tracker/ent/person"
 	"working-time-tracker/ent/task"
 	"working-time-tracker/internal/database"
 )
@@ -43,20 +45,75 @@ func (s *Store) Create(t *Task) error {
 	return nil
 }
 
-func (s *Store) ListByProject(projectID string) ([]Task, error) {
+// noDeadline é o limite abaixo do qual um prazo conta como "sem prazo": uma
+// tarefa antiga sem prazo, depois de editada, guarda o tempo zero do Go.
+var noDeadline = time.Date(1971, 1, 1, 0, 0, 0, 0, time.UTC)
+
+// filtered monta a consulta das tarefas do projeto que passam pelos filtros.
+func (s *Store) filtered(projectID uuid.UUID, f ListFilter) *ent.TaskQuery {
+	q := s.client.Task.Query().Where(task.ProjectIDEQ(projectID))
+	if f.Query != "" {
+		q = q.Where(task.NameContainsFold(f.Query))
+	}
+	if f.AssigneeID != nil {
+		q = q.Where(task.AssigneeIDEQ(*f.AssigneeID))
+	}
+	if f.DeadlineTo != nil {
+		q = q.Where(task.DeadlineLTE(*f.DeadlineTo), task.DeadlineGTE(noDeadline))
+	}
+	return q
+}
+
+// ListByProject lista as tarefas do projeto, da mais nova para a mais antiga.
+// Com f.Page maior que zero, devolve só aquela página.
+func (s *Store) ListByProject(projectID string, f ListFilter) ([]Task, error) {
 	uid, err := uuid.Parse(projectID)
 	if err != nil {
 		return nil, err
 	}
-	tasks, err := s.client.Task.Query().
-		Where(task.ProjectIDEQ(uid)).
+	// O id desempata tarefas criadas no mesmo instante, para a ordem não mudar
+	// de uma página para a outra.
+	q := s.filtered(uid, f).
 		WithAssignee().
-		Order(ent.Desc(task.FieldCreatedAt)).
-		All(context.Background())
+		Order(ent.Desc(task.FieldCreatedAt, task.FieldID))
+	if f.Page > 0 {
+		q = q.Limit(f.PerPage).Offset((f.Page - 1) * f.PerPage)
+	}
+	tasks, err := q.All(context.Background())
 	if err != nil {
 		return nil, err
 	}
 	return toDomainTasks(tasks), nil
+}
+
+// CountByProject conta as tarefas do projeto que passam pelos filtros.
+func (s *Store) CountByProject(projectID string, f ListFilter) (int, error) {
+	uid, err := uuid.Parse(projectID)
+	if err != nil {
+		return 0, err
+	}
+	return s.filtered(uid, f).Count(context.Background())
+}
+
+// AssigneesByProject lista, sem repetir e por nome, quem é responsável por
+// alguma tarefa do projeto, esteja ou não nos times.
+func (s *Store) AssigneesByProject(projectID string) ([]Person, error) {
+	uid, err := uuid.Parse(projectID)
+	if err != nil {
+		return nil, err
+	}
+	persons, err := s.client.Person.Query().
+		Where(entperson.HasTasksWith(task.ProjectIDEQ(uid))).
+		Order(ent.Asc(entperson.FieldName)).
+		All(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	result := make([]Person, len(persons))
+	for i, p := range persons {
+		result[i] = Person{ID: p.ID, Name: p.Name, Email: p.Email}
+	}
+	return result, nil
 }
 
 func (s *Store) GetByID(id string) (*Task, error) {

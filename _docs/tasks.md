@@ -232,6 +232,14 @@
 
 ---
 
+### Sprint 16: Task List Filters and Pages
+
+- [X] S16.1 Filter and paginate the task list on the server: `q`, `assignee_id`, `deadline_to`, `page` and `per_page` on `GET /api/projects/:projectId/tasks`; without `page` the route still returns the whole array, which the time tracking screen needs
+- [X] S16.2 Tasks tab: search by name, assignee and deadline filters and 10 tasks per page, with the state kept in the URL and restored by the "Voltar" button of a task
+- [X] S16.3 Tests for the filters, the pages and the query parameters; more tasks in the seed; update README, design and routes
+
+---
+
 ### Refatoração: Domain-First Architecture (pré-Sprint 9)
 
 - [X] R1 Reorganizar código de layered-flat para domain-first: `internal/domain/<dominio>/` com `model.go`, `store.go`, `service.go`, `handler.go` por domínio

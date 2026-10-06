@@ -101,7 +101,9 @@ var projects = []struct {
 	},
 }
 
-// As tarefas, com o prazo em dias a partir de hoje (negativo é atrasada).
+// As tarefas, com o prazo em dias a partir de hoje (negativo é atrasada). O App
+// de Pedidos tem mais de uma página delas, com prazos espalhados, para a busca,
+// os filtros e a paginação da lista terem o que mostrar.
 var tasks = []struct {
 	key, project, name, description, assignee string
 	deadlineDays                              float64
@@ -110,6 +112,16 @@ var tasks = []struct {
 	{"push", "app", "Notificações de status do pedido", "Push quando o pedido sai para entrega e quando chega.", "diego", 9},
 	{"frete", "app", "Endpoint de cálculo de frete", "Frete por distância, com frete grátis acima de R$ 100.", "bruno", -2},
 	{"arquitetura", "app", "Revisão de arquitetura do app", "", "ana", 0.8},
+	{"carrinho", "app", "Carrinho com itens salvos", "O carrinho continua como estava quando o cliente volta ao app.", "diego", 2},
+	{"historico", "app", "Histórico de pedidos", "", "diego", 11},
+	{"sms", "app", "Login com telefone e código por SMS", "", "bruno", 1},
+	{"mapa", "app", "Rastreamento da entrega no mapa", "Posição do entregador atualizada a cada 30 segundos.", "diego", 16},
+	{"cupom", "app", "Cupom de desconto no checkout", "", "bruno", 6},
+	{"avaliacao", "app", "Avaliação do pedido entregue", "", "diego", 20},
+	{"repetir", "app", "Endpoint de repetir pedido", "Monta um carrinho novo com os itens de um pedido anterior.", "bruno", 13},
+	{"carga", "app", "Testes de carga da API de pedidos", "", "bruno", -4},
+	{"privacidade", "app", "Política de privacidade no app", "", "ana", 3},
+	{"lojas", "app", "Publicação nas lojas de aplicativos", "", "ana", 25},
 	{"repasses", "painel", "Relatório de repasses", "Totais por dia, com exportação em CSV.", "carla", 6},
 	{"avaliacoes", "painel", "API de avaliações das lojas", "", "bruno", 12},
 	{"calendario", "agenda", "Calendário de horários disponíveis", "Horários por médico e por unidade.", "carla", 4},

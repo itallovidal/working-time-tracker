@@ -12,6 +12,12 @@ import (
 	"working-time-tracker/internal/domain/team"
 )
 
+// Tamanho de página da lista de tarefas: o padrão e o teto que a API aceita.
+const (
+	DefaultPerPage = 10
+	MaxPerPage     = 100
+)
+
 type Service struct {
 	taskStore       *Store
 	membershipStore *team.MembershipStore
@@ -58,8 +64,38 @@ func (s *Service) Create(projectID, name, description, assigneeID string, deadli
 	return s.taskStore.GetByID(task.ID.String())
 }
 
-func (s *Service) ListByProject(projectID string) ([]Task, error) {
-	return s.taskStore.ListByProject(projectID)
+// ListByProject devolve, de uma vez, todas as tarefas do projeto que passam
+// pelos filtros.
+func (s *Service) ListByProject(projectID string, f ListFilter) ([]Task, error) {
+	f.Page, f.PerPage = 0, 0
+	return s.taskStore.ListByProject(projectID, f)
+}
+
+// ListPage devolve uma página das tarefas do projeto. Quem pede uma página
+// além do fim recebe a última, e a resposta diz qual foi.
+func (s *Service) ListPage(projectID string, f ListFilter) (*Page, error) {
+	if f.PerPage <= 0 {
+		f.PerPage = DefaultPerPage
+	}
+	if f.PerPage > MaxPerPage {
+		f.PerPage = MaxPerPage
+	}
+	total, err := s.taskStore.CountByProject(projectID, f)
+	if err != nil {
+		return nil, err
+	}
+	last := max(1, (total+f.PerPage-1)/f.PerPage)
+	f.Page = min(max(f.Page, 1), last)
+
+	items, err := s.taskStore.ListByProject(projectID, f)
+	if err != nil {
+		return nil, err
+	}
+	assignees, err := s.taskStore.AssigneesByProject(projectID)
+	if err != nil {
+		return nil, err
+	}
+	return &Page{Items: items, Total: total, Page: f.Page, PerPage: f.PerPage, Assignees: assignees}, nil
 }
 
 func (s *Service) Get(id string) (*Task, error) {

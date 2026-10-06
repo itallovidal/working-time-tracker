@@ -705,6 +705,18 @@
       "body": {}
     },
     {
+      "_id": "req_06_08",
+      "_type": "request",
+      "parentId": "fld_06",
+      "name": "Listar tarefas (filtros e página)",
+      "method": "GET",
+      "url": "{{base_url}}/api/projects/{{project_id}}/tasks?q=tela&assignee_id={{person_id}}&deadline_to=2030-01-01T02:59:59Z&page=1&per_page=10",
+      "authentication": {},
+      "metaSortKey": 8,
+      "headers": [],
+      "body": {}
+    },
+    {
       "_id": "fld_07",
       "_type": "request_group",
       "parentId": "__workspace__",

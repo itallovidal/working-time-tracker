@@ -17,6 +17,53 @@ document.addEventListener('alpine:init', () => {
     return { label: WTT.fmt.date(iso), cls: '' };
   }
 
+  // Atalhos do filtro de prazo da lista de tarefas. 'date' abre o campo de data.
+  // "Qualquer prazo" fica fixo no template: uma opção de valor vazio criada por
+  // x-for fica sem o atributo value e passa a valer o próprio rótulo.
+  const dueOptions = [
+    { value: 'overdue', label: 'Atrasadas' },
+    { value: 'today', label: 'Até hoje' },
+    { value: 'week', label: 'Até o fim desta semana' },
+    { value: 'next_week', label: 'Até o fim da semana que vem' },
+    { value: 'date', label: 'Até uma data…' },
+  ];
+
+  // dueLimit devolve, em ISO, o instante-limite de um atalho de prazo, ou null
+  // quando ele não filtra nada. É calculado no fuso de quem está olhando, e a
+  // semana termina no domingo, como em periodStart.
+  function dueLimit(due, date) {
+    const endOfDay = (d) => {
+      d.setHours(23, 59, 59, 999);
+      return d.toISOString();
+    };
+    const sunday = (weeksAhead) => {
+      const d = new Date();
+      d.setDate(d.getDate() + ((7 - d.getDay()) % 7) + 7 * weeksAhead);
+      return endOfDay(d);
+    };
+    switch (due) {
+      case 'overdue': return new Date().toISOString();
+      case 'today': return endOfDay(new Date());
+      case 'week': return sunday(0);
+      case 'next_week': return sunday(1);
+      case 'date': return date ? endOfDay(new Date(date + 'T00:00:00')) : null;
+      default: return null;
+    }
+  }
+
+  // Onde a lista de tarefas guarda os filtros e a página em uso, para o Voltar
+  // do detalhe de uma tarefa cair no mesmo lugar.
+  const tasksQueryKey = 'wtt:tasks:' + project.id;
+  function tasksHref() {
+    let query = '';
+    try {
+      query = sessionStorage.getItem(tasksQueryKey) || '';
+    } catch (e) {
+      // Sem sessionStorage o Voltar leva à primeira página, sem filtros.
+    }
+    return '/projects/' + project.id + '/tasks' + (query ? '?' + query : '');
+  }
+
   // periodStart devolve o início de hoje ou desta semana (a partir de segunda).
   function periodStart(period) {
     const start = new Date(clock().now);
@@ -54,27 +101,116 @@ document.addEventListener('alpine:init', () => {
   Alpine.data('projectTasks', () => ({
     ...form(),
     loading: true,
-    tasks: [],
-    members: [],
+    tasks: [], // só a página em uso; os filtros e a paginação rodam no servidor
+    total: 0,
+    page: 1,
+    perPage: 10,
+    members: [], // quem está nos times: pode ser responsável por tarefa nova
+    assignees: [], // quem já é responsável por alguma tarefa, mesmo fora dos times
+    filters: { q: '', assignee: '', due: '', date: '' },
+    dueOptions,
+    meId: me.id,
+    seq: 0,
     creating: false,
-    onlyMine: false,
     draft: { name: '', description: '', assignee_id: '', deadline: '' },
     async init() {
+      this.readURL();
+      const members = api('GET', '/api/projects/' + project.id + '/members')
+        .then((list) => { this.members = list || []; })
+        .catch((e) => { this.errors.members = e.message; });
+      await Promise.all([members, this.load()]);
+      this.loading = false;
+    },
+    // A URL guarda os filtros e a página, para recarregar ou voltar do detalhe
+    // de uma tarefa sem perder o lugar. O prazo vai como o nome do atalho ou a
+    // data escolhida, nunca como instante.
+    readURL() {
+      const p = new URLSearchParams(location.search);
+      const due = p.get('due') || '';
+      const isDate = /^\d{4}-\d{2}-\d{2}$/.test(due);
+      const assignee = p.get('assignee') || '';
+      this.filters = {
+        q: p.get('q') || '',
+        assignee: /^[0-9a-f-]{36}$/i.test(assignee) ? assignee : '',
+        due: isDate ? 'date' : (dueOptions.some((o) => o.value === due) ? due : ''),
+        date: isDate ? due : '',
+      };
+      this.page = Math.max(1, parseInt(p.get('page'), 10) || 1);
+    },
+    writeURL() {
+      const f = this.filters;
+      const p = new URLSearchParams();
+      if (f.q.trim()) p.set('q', f.q.trim());
+      if (f.assignee) p.set('assignee', f.assignee);
+      const due = f.due === 'date' ? f.date : f.due;
+      if (due) p.set('due', due);
+      if (this.page > 1) p.set('page', this.page);
+      const query = p.toString();
+      history.replaceState(null, '', location.pathname + (query ? '?' + query : ''));
       try {
-        const [tasks, members] = await Promise.all([
-          api('GET', '/api/projects/' + project.id + '/tasks'),
-          api('GET', '/api/projects/' + project.id + '/members'),
-        ]);
-        this.tasks = tasks || [];
-        this.members = members || [];
+        sessionStorage.setItem(tasksQueryKey, query);
       } catch (e) {
-        this.errors.load = e.message;
-      } finally {
-        this.loading = false;
+        // Sem sessionStorage o Voltar da tarefa só deixa de lembrar os filtros.
       }
     },
-    visible() {
-      return this.onlyMine ? this.tasks.filter((t) => t.assignee_id === me.id) : this.tasks;
+    // load busca a página em uso. Não passa por run(), que descartaria uma
+    // troca de filtro feita durante outra ação, e ignora a resposta de um
+    // pedido mais antigo que o último.
+    async load() {
+      const seq = ++this.seq;
+      const f = this.filters;
+      const p = new URLSearchParams({ page: this.page });
+      if (f.q.trim()) p.set('q', f.q.trim());
+      if (f.assignee) p.set('assignee_id', f.assignee);
+      const limit = dueLimit(f.due, f.date);
+      if (limit) p.set('deadline_to', limit);
+      try {
+        const res = await api('GET', '/api/projects/' + project.id + '/tasks?' + p);
+        if (seq !== this.seq) return;
+        this.tasks = res.items || [];
+        this.total = res.total;
+        this.page = res.page; // o servidor devolve a última quando a pedida não existe mais
+        this.perPage = res.per_page;
+        this.assignees = res.assignees || [];
+        this.errors.load = '';
+        this.writeURL();
+      } catch (e) {
+        if (seq === this.seq) this.errors.load = e.message;
+      }
+    },
+    // apply é o que os filtros chamam ao mudar: volta para a primeira página.
+    apply() {
+      this.page = 1;
+      return this.load();
+    },
+    go(page) {
+      this.page = page;
+      return this.load();
+    },
+    clear() {
+      this.filters = { q: '', assignee: '', due: '', date: '' };
+      return this.apply();
+    },
+    toggleMine(on) {
+      this.filters.assignee = on ? me.id : '';
+      return this.apply();
+    },
+    hasFilters() {
+      const f = this.filters;
+      return !!(f.q.trim() || f.assignee || dueLimit(f.due, f.date));
+    },
+    pages() {
+      return Math.max(1, Math.ceil(this.total / this.perPage));
+    },
+    summary() {
+      return 'Página ' + this.page + ' de ' + this.pages() + ' · ' + this.total + (this.total === 1 ? ' tarefa' : ' tarefas');
+    },
+    // Quem aparece no filtro de responsável: os times, quem tem tarefa aqui e a
+    // própria pessoa, para "Só as minhas" ter sempre uma opção correspondente.
+    assigneeOptions() {
+      const byId = new Map([[me.id, { id: me.id, name: me.name }]]);
+      [...this.assignees, ...this.members].forEach((p) => byId.set(p.id, p));
+      return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
     },
     openCreate() {
       const self = this.members.find((m) => m.id === me.id) || this.members[0];
@@ -90,9 +226,11 @@ document.addEventListener('alpine:init', () => {
           assignee_id: this.draft.assignee_id,
           deadline: WTT.fmt.fromDateInput(this.draft.deadline),
         });
-        this.tasks = [t, ...this.tasks];
         this.creating = false;
-        toast('Tarefa criada.');
+        // A tarefa nova é a primeira da lista, se os filtros em uso a mostrarem.
+        await this.apply();
+        const shown = this.tasks.some((x) => x.id === t.id);
+        toast(shown ? 'Tarefa criada.' : 'Tarefa criada. Os filtros em uso não a mostram.');
       });
     },
     isRunning(t) {
@@ -201,9 +339,10 @@ document.addEventListener('alpine:init', () => {
     remove() {
       return this.run('delete', async () => {
         await api('DELETE', '/api/tasks/' + this.taskId);
-        location.href = '/projects/' + project.id + '/tasks';
+        location.href = tasksHref();
       });
     },
+    backHref: tasksHref,
     totalSeconds() {
       return this.sessions.reduce((sum, s) => sum + clock().elapsed(s), 0);
     },

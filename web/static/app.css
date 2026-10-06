@@ -175,7 +175,11 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .check { display: inline-flex; align-items: center; gap: 8px; font-size: 0.92rem; color: var(--ink-2); cursor: pointer; }
 .check input { width: auto; }
-.filters select { width: auto; max-width: 240px; }
+.filters select, .filters input { width: auto; max-width: 240px; }
+/* Rodapé de uma lista paginada: o resumo de um lado e os botões do outro. Um
+   botão sem página para onde ir não está ocupado, só não tem destino. */
+.pager { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.pager .btn:disabled { cursor: default; }
 .stack-tight { gap: 4px; }
 .stack-narrow { max-width: 560px; }
 .row-tight { gap: 6px; }

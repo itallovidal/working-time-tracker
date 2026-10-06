@@ -31,3 +31,23 @@ type Task struct {
 	ExternalItemURL       *string      `json:"external_item_url,omitempty"`
 	CreatedAt             time.Time    `json:"created_at"`
 }
+
+// ListFilter restringe a lista de tarefas de um projeto. O valor zero lista tudo.
+type ListFilter struct {
+	Query      string     // trecho do nome, sem diferenciar maiúsculas
+	AssigneeID *uuid.UUID // só as tarefas desta pessoa
+	DeadlineTo *time.Time // só as com prazo até este instante, inclusive
+	Page       int        // a partir de 1; zero é a lista inteira
+	PerPage    int
+}
+
+// Page é uma página da lista de tarefas. Total conta tudo o que passa pelos
+// filtros, e Assignees traz quem é responsável por alguma tarefa do projeto,
+// para o filtro alcançar também quem já saiu dos times.
+type Page struct {
+	Items     []Task   `json:"items"`
+	Total     int      `json:"total"`
+	Page      int      `json:"page"`
+	PerPage   int      `json:"per_page"`
+	Assignees []Person `json:"assignees"`
+}

@@ -36,7 +36,7 @@
         </div>
         <p class="form-error" x-show="errors.save" x-text="errors.save" role="alert"></p>
         <div class="row row-end">
-          <a class="btn btn-secondary" href="/projects/{{.Project.ID}}/tasks">Voltar</a>
+          <a class="btn btn-secondary" href="/projects/{{.Project.ID}}/tasks" :href="backHref()">Voltar</a>
           <button type="submit" class="btn" :disabled="pending">Salvar</button>
         </div>
       </form>

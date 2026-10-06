@@ -2,6 +2,8 @@ package task_test
 
 import (
 	"context"
+	"fmt"
+	"slices"
 	"testing"
 	"time"
 
@@ -296,5 +298,201 @@ func TestService_LinkSurvivesReadAndUpdate(t *testing.T) {
 	}
 	if updated.ExternalIntegrationID == nil || updated.ExternalItemID == nil || *updated.ExternalItemID != "42" {
 		t.Errorf("update dropped the link: integration=%v item=%v", updated.ExternalIntegrationID, updated.ExternalItemID)
+	}
+}
+
+// taskNames devolve os nomes em ordem alfabética, para comparar sem depender
+// da ordem de criação.
+func taskNames(tasks []task.Task) []string {
+	names := make([]string, len(tasks))
+	for i, tk := range tasks {
+		names[i] = tk.Name
+	}
+	slices.Sort(names)
+	return names
+}
+
+func TestService_ListByProject_Filters(t *testing.T) {
+	orgSvc, personSvc, projSvc, teamSvc, memberSvc, taskSvc := setupDeps(t)
+
+	org, _ := orgSvc.Create("Org")
+	john, _ := personSvc.Create(org.ID.String(), "John", "john@test.com")
+	maria, _ := personSvc.Create(org.ID.String(), "Maria", "maria@test.com")
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
+	other, _ := projSvc.Create(org.ID.String(), "Other", "", 0, nil, nil, nil)
+	for _, p := range []string{proj.ID.String(), other.ID.String()} {
+		tm, _ := teamSvc.Create(p, "Team")
+		memberSvc.Add(tm.ID.String(), john.ID.String())
+		memberSvc.Add(tm.ID.String(), maria.ID.String())
+	}
+
+	soon := time.Now().Add(24 * time.Hour).Truncate(time.Second)
+	later := time.Now().Add(30 * 24 * time.Hour).Truncate(time.Second)
+	pid := proj.ID.String()
+	create := func(project, name string, assignee uuid.UUID, deadline time.Time) {
+		t.Helper()
+		if _, err := taskSvc.Create(project, name, "", assignee.String(), &deadline); err != nil {
+			t.Fatalf("create %q: %v", name, err)
+		}
+	}
+	create(pid, "Monthly Report", john.ID, soon)
+	create(pid, "report of hours", maria.ID, later)
+	create(pid, "100% coverage", maria.ID, soon)
+	create(pid, "snake_case fields", john.ID, later)
+	// Tarefa de outro projeto: não pode aparecer em nenhum filtro.
+	create(other.ID.String(), "Report elsewhere", maria.ID, soon)
+
+	cutoff := soon.Add(time.Hour)
+	cases := []struct {
+		name string
+		f    task.ListFilter
+		want []string
+	}{
+		{"no filter", task.ListFilter{}, []string{"100% coverage", "Monthly Report", "report of hours", "snake_case fields"}},
+		{"name ignores case", task.ListFilter{Query: "REPORT"}, []string{"Monthly Report", "report of hours"}},
+		{"percent is literal", task.ListFilter{Query: "%"}, []string{"100% coverage"}},
+		{"underscore is literal", task.ListFilter{Query: "_"}, []string{"snake_case fields"}},
+		{"assignee", task.ListFilter{AssigneeID: &maria.ID}, []string{"100% coverage", "report of hours"}},
+		{"deadline", task.ListFilter{DeadlineTo: &cutoff}, []string{"100% coverage", "Monthly Report"}},
+		{"deadline is inclusive", task.ListFilter{DeadlineTo: &soon}, []string{"100% coverage", "Monthly Report"}},
+		{"combined", task.ListFilter{Query: "report", AssigneeID: &john.ID, DeadlineTo: &cutoff}, []string{"Monthly Report"}},
+		{"nothing matches", task.ListFilter{Query: "report", AssigneeID: &maria.ID, DeadlineTo: &cutoff}, []string{}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := taskSvc.ListByProject(pid, tc.f)
+			if err != nil {
+				t.Fatalf("list: %v", err)
+			}
+			if names := taskNames(got); !slices.Equal(names, tc.want) {
+				t.Errorf("got %v, want %v", names, tc.want)
+			}
+		})
+	}
+}
+
+// Uma tarefa antiga sem prazo, depois de editada, guarda o tempo zero. Ela não
+// pode entrar no filtro de prazo como se estivesse atrasada.
+func TestService_ListByProject_DeadlineFilterSkipsTasksWithoutDeadline(t *testing.T) {
+	orgSvc, personSvc, projSvc, teamSvc, memberSvc, taskSvc := setupDeps(t)
+	ctx := context.Background()
+
+	org, _ := orgSvc.Create("Org")
+	p, _ := personSvc.Create(org.ID.String(), "John", "john@test.com")
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
+	tm, _ := teamSvc.Create(proj.ID.String(), "Team")
+	memberSvc.Add(tm.ID.String(), p.ID.String())
+
+	overdue := time.Now().Add(-24 * time.Hour)
+	taskSvc.Create(proj.ID.String(), "Overdue", "", p.ID.String(), &overdue)
+	testClient.Task.Create().SetProjectID(proj.ID).SetName("Null deadline").SetAssigneeID(p.ID).SaveX(ctx)
+	testClient.Task.Create().SetProjectID(proj.ID).SetName("Zero deadline").SetAssigneeID(p.ID).
+		SetDeadline(time.Time{}).SaveX(ctx)
+
+	now := time.Now()
+	got, err := taskSvc.ListByProject(proj.ID.String(), task.ListFilter{DeadlineTo: &now})
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if names := taskNames(got); !slices.Equal(names, []string{"Overdue"}) {
+		t.Errorf("got %v, want only the overdue task", names)
+	}
+}
+
+func TestService_ListPage(t *testing.T) {
+	orgSvc, personSvc, projSvc, teamSvc, memberSvc, taskSvc := setupDeps(t)
+
+	org, _ := orgSvc.Create("Org")
+	john, _ := personSvc.Create(org.ID.String(), "John", "john@test.com")
+	maria, _ := personSvc.Create(org.ID.String(), "Maria", "maria@test.com")
+	idle, _ := personSvc.Create(org.ID.String(), "Zed", "zed@test.com")
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
+	tm, _ := teamSvc.Create(proj.ID.String(), "Team")
+	for _, p := range []string{john.ID.String(), maria.ID.String(), idle.ID.String()} {
+		memberSvc.Add(tm.ID.String(), p)
+	}
+	pid := proj.ID.String()
+
+	empty, err := taskSvc.ListPage(pid, task.ListFilter{Page: 1})
+	if err != nil {
+		t.Fatalf("empty page: %v", err)
+	}
+	if empty.Total != 0 || empty.Page != 1 || empty.PerPage != task.DefaultPerPage || empty.Items == nil || len(empty.Items) != 0 {
+		t.Errorf("empty project page = %+v, want page 1 with an empty, non-nil list", empty)
+	}
+
+	var newest *task.Task
+	for i := range 25 {
+		assignee := john
+		if i%5 == 0 {
+			assignee = maria
+		}
+		created, err := taskSvc.Create(pid, fmt.Sprintf("Task %02d", i), "", assignee.ID.String(), nil)
+		if err != nil {
+			t.Fatalf("create task %d: %v", i, err)
+		}
+		newest = created
+	}
+	// Maria sai dos times e continua responsável pelas tarefas dela.
+	if err := memberSvc.Remove(tm.ID.String(), maria.ID.String()); err != nil {
+		t.Fatalf("remove member: %v", err)
+	}
+
+	seen := map[uuid.UUID]bool{}
+	for page, size := range map[int]int{1: 10, 2: 10, 3: 5} {
+		got, err := taskSvc.ListPage(pid, task.ListFilter{Page: page})
+		if err != nil {
+			t.Fatalf("page %d: %v", page, err)
+		}
+		if got.Total != 25 || got.Page != page || got.PerPage != 10 || len(got.Items) != size {
+			t.Fatalf("page %d: total=%d page=%d per_page=%d items=%d, want 25/%d/10/%d",
+				page, got.Total, got.Page, got.PerPage, len(got.Items), page, size)
+		}
+		if page == 1 && got.Items[0].ID != newest.ID {
+			t.Errorf("page 1 starts with %q, want the newest task %q", got.Items[0].Name, newest.Name)
+		}
+		for _, tk := range got.Items {
+			if seen[tk.ID] {
+				t.Errorf("task %q shows up on more than one page", tk.Name)
+			}
+			seen[tk.ID] = true
+		}
+	}
+	if len(seen) != 25 {
+		t.Errorf("pages covered %d tasks, want 25", len(seen))
+	}
+
+	beyond, err := taskSvc.ListPage(pid, task.ListFilter{Page: 99})
+	if err != nil {
+		t.Fatalf("page 99: %v", err)
+	}
+	if beyond.Page != 3 || len(beyond.Items) != 5 {
+		t.Errorf("page 99: page=%d items=%d, want the last page (3) with 5 items", beyond.Page, len(beyond.Items))
+	}
+
+	capped, err := taskSvc.ListPage(pid, task.ListFilter{Page: 1, PerPage: 1000})
+	if err != nil {
+		t.Fatalf("per_page 1000: %v", err)
+	}
+	if capped.PerPage != task.MaxPerPage || len(capped.Items) != 25 {
+		t.Errorf("per_page 1000: per_page=%d items=%d, want %d and 25", capped.PerPage, len(capped.Items), task.MaxPerPage)
+	}
+
+	filtered, err := taskSvc.ListPage(pid, task.ListFilter{Page: 1, PerPage: 3, AssigneeID: &maria.ID})
+	if err != nil {
+		t.Fatalf("maria's tasks: %v", err)
+	}
+	if filtered.Total != 5 || len(filtered.Items) != 3 {
+		t.Errorf("maria's tasks: total=%d items=%d, want 5 and 3", filtered.Total, len(filtered.Items))
+	}
+
+	// Responsáveis: sem repetir, por nome, com quem saiu dos times e sem quem
+	// não tem tarefa.
+	var names []string
+	for _, a := range filtered.Assignees {
+		names = append(names, a.Name)
+	}
+	if !slices.Equal(names, []string{"John", "Maria"}) {
+		t.Errorf("assignees = %v, want [John Maria]", names)
 	}
 }

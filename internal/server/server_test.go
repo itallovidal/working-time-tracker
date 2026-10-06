@@ -856,3 +856,63 @@ func TestAPI_ActiveSessionAndProjectMembers(t *testing.T) {
 		t.Errorf("active session = %v, want task %s of project %s", active, taskID, projectID)
 	}
 }
+
+// Qualquer pessoa do projeto filtra e pagina a lista de tarefas. Sem page a
+// rota segue devolvendo o array inteiro, que é o que a aba Ponto consome.
+func TestTasks_ListFiltersAndPages(t *testing.T) {
+	e := newServer(t)
+	admin := signup(t, e, "Org", "ana@test.com")
+	member := invite(t, e, admin, "bia@test.com", "member")
+	outsider := signup(t, e, "Outra", "zeca@test.com")
+	projectID := createProject(t, e, admin, "Projeto")
+
+	teamID := decode(t, do(e, "POST", "/api/projects/"+projectID+"/teams", `{"name":"A"}`, admin.session))["id"].(string)
+	for _, id := range []string{admin.id, member.id} {
+		do(e, "POST", "/api/teams/"+teamID+"/members", `{"person_id":"`+id+`"}`, admin.session)
+	}
+	for i := range 12 {
+		assignee := admin.id
+		if i < 3 {
+			assignee = member.id
+		}
+		body := fmt.Sprintf(`{"name":"Tarefa %02d","assignee_id":"%s"}`, i, assignee)
+		if rec := do(e, "POST", "/api/projects/"+projectID+"/tasks", body, admin.session); rec.Code != http.StatusCreated {
+			t.Fatalf("create task %d = %d: %s", i, rec.Code, rec.Body.String())
+		}
+	}
+	base := "/api/projects/" + projectID + "/tasks"
+	page := func(query, session string) (total, number float64, items []any) {
+		t.Helper()
+		rec := do(e, "GET", base+query, "", session)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("GET tasks%s = %d: %s", query, rec.Code, rec.Body.String())
+		}
+		body := decode(t, rec)
+		items, _ = body["items"].([]any)
+		return body["total"].(float64), body["page"].(float64), items
+	}
+
+	if all := decodeList(t, do(e, "GET", base, "", member.session)); len(all) != 12 {
+		t.Errorf("list without page has %d tasks, want all 12 in an array", len(all))
+	}
+	if total, number, items := page("?page=2", member.session); total != 12 || number != 2 || len(items) != 2 {
+		t.Errorf("page 2: total=%v page=%v items=%d, want 12, 2 and 2", total, number, len(items))
+	}
+	if total, _, items := page("?page=1&assignee_id="+member.id, member.session); total != 3 || len(items) != 3 {
+		t.Errorf("member's tasks: total=%v items=%d, want 3 and 3", total, len(items))
+	}
+	if total, _, items := page("?page=1&q=tarefa+1", admin.session); total != 2 || len(items) != 2 {
+		t.Errorf(`search "tarefa 1": total=%v items=%d, want 2 (Tarefa 10 and Tarefa 11)`, total, len(items))
+	}
+	// Um responsável de outra organização só deixa a lista vazia.
+	if total, _, items := page("?page=1&assignee_id="+outsider.id, member.session); total != 0 || len(items) != 0 {
+		t.Errorf("assignee from another organization: total=%v items=%d, want an empty page", total, len(items))
+	}
+
+	if rec := do(e, "GET", base+"?page=1", "", outsider.session); rec.Code != http.StatusNotFound {
+		t.Errorf("tasks of another organization = %d, want 404", rec.Code)
+	}
+	if rec := do(e, "GET", base+"?page=0", "", member.session); rec.Code != http.StatusBadRequest {
+		t.Errorf("page=0 = %d, want 400", rec.Code)
+	}
+}

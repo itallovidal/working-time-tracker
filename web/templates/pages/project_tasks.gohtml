@@ -3,9 +3,27 @@
   {{template "project_head" .}}
 
   <div class="toolbar">
-    <label class="check">
-      <input type="checkbox" x-model="onlyMine"> Só as minhas tarefas
-    </label>
+    <div class="row filters">
+      <input type="search" placeholder="Buscar pelo nome" aria-label="Buscar tarefa pelo nome"
+             x-model="filters.q" @input.debounce.300ms="apply()">
+      <select aria-label="Filtrar por responsável" x-model="filters.assignee" @change="apply()">
+        <option value="">Todos os responsáveis</option>
+        <template x-for="p in assigneeOptions()" :key="p.id">
+          <option :value="p.id" x-text="p.name" :selected="p.id === filters.assignee"></option>
+        </template>
+      </select>
+      <select aria-label="Filtrar por prazo" x-model="filters.due" @change="apply()">
+        <option value="">Qualquer prazo</option>
+        <template x-for="o in dueOptions" :key="o.value">
+          <option :value="o.value" x-text="o.label" :selected="o.value === filters.due"></option>
+        </template>
+      </select>
+      <input type="date" aria-label="Prazo até a data" x-cloak x-show="filters.due === 'date'"
+             x-model="filters.date" @change="apply()">
+      <label class="check">
+        <input type="checkbox" :checked="filters.assignee === meId" @change="toggleMine($event.target.checked)"> Só as minhas tarefas
+      </label>
+    </div>
     <button type="button" class="btn" x-show="!creating" @click="openCreate()" :disabled="members.length === 0">Nova tarefa</button>
   </div>
 
@@ -42,26 +60,30 @@
   </form>
 
   <p class="muted" x-show="loading">Carregando tarefas…</p>
-  <p class="form-error" x-cloak x-show="errors.load" x-text="errors.load"></p>
+  <p class="form-error" x-cloak x-show="errors.load || errors.members" x-text="errors.load || errors.members"></p>
   <p class="form-error" x-cloak x-show="errors.clock" x-text="errors.clock" role="alert"></p>
 
-  <div class="empty" x-cloak x-show="!loading && !errors.load && members.length === 0">
+  <div class="empty" x-cloak x-show="!loading && !errors.load && !errors.members && members.length === 0">
     <strong>Ninguém nos times deste projeto</strong>
     <span>Só quem está em algum time pode ser responsável por tarefas.</span>
     <a class="btn btn-secondary" href="/projects/{{.Project.ID}}/teams">Montar os times</a>
   </div>
-  <div class="empty" x-cloak x-show="!loading && members.length > 0 && visible().length === 0">
-    <strong x-text="onlyMine ? 'Nenhuma tarefa sua neste projeto' : 'Nenhuma tarefa ainda'"></strong>
+  <div class="empty" x-cloak x-show="!loading && !errors.load && total === 0 && hasFilters()">
+    <strong>Nenhuma tarefa com esses filtros</strong>
+    <button type="button" class="btn btn-secondary btn-sm" @click="clear()">Limpar filtros</button>
+  </div>
+  <div class="empty" x-cloak x-show="!loading && !errors.load && members.length > 0 && total === 0 && !hasFilters()">
+    <strong>Nenhuma tarefa ainda</strong>
     <span>Crie uma tarefa para começar a registrar tempo nela.</span>
   </div>
 
-  <div class="table-wrap" x-show="visible().length > 0">
+  <div class="table-wrap" x-show="tasks.length > 0">
     <table>
       <thead>
         <tr><th>Tarefa</th><th>Responsável</th><th>Prazo</th><th>Item externo</th><th class="actions"><span class="sr-only">Ponto</span></th></tr>
       </thead>
       <tbody>
-        <template x-for="t in visible()" :key="t.id">
+        <template x-for="t in tasks" :key="t.id">
           <tr>
             <td><a :href="'/tasks/' + t.id" x-text="t.name"></a></td>
             <td x-text="t.assignee ? t.assignee.name : '—'"></td>
@@ -84,5 +106,13 @@
       </tbody>
     </table>
   </div>
+
+  <nav class="pager" aria-label="Páginas da lista de tarefas" x-cloak x-show="total > 0">
+    <span class="muted small" x-text="summary()"></span>
+    <div class="row row-tight" x-show="pages() > 1">
+      <button type="button" class="btn btn-secondary btn-sm" :disabled="page <= 1" @click="go(page - 1)">{{template "icon" "chevron-left"}} Anterior</button>
+      <button type="button" class="btn btn-secondary btn-sm" :disabled="page >= pages()" @click="go(page + 1)">Próxima {{template "icon" "chevron-right"}}</button>
+    </div>
+  </nav>
 </main>
 {{end}}
