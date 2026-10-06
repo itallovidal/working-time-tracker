@@ -83,6 +83,8 @@ A interface segue a Decision 8 de `_docs/design.md`. O servidor renderiza a casc
 | `/orgs/:orgId/customers` | Organização, aba Clientes: quem contrata os projetos, com cadastro e edição num modal (só admins) |
 | `/orgs/:orgId/projects` | Organização, aba Projetos: tabela de gestão com o cliente, os colaboradores e as tarefas de cada projeto; a linha abre o projeto (só admins) |
 | `/profile` | Seu nome, seu email, sua senha e quanto você recebe por hora em cada projeto |
+| `/lang/:code` | Troca o idioma (`pt-BR` ou `en`): grava o cookie e volta para `?next=` |
+| `/i18n/:idioma.js` | Os textos do idioma para o JavaScript (`window.I18N`) |
 | `/projects/:projectId` | Leva o admin para a aba Visão geral e o membro para a aba Tarefas |
 | `/projects/:projectId/overview` | Visão geral: pessoas, times, horas, receita, custo e margem, tempo de projeto, integrações, atividade recente, tarefas atrasadas e horas por pessoa (só admins) |
 | `/projects/:projectId/tasks` | Tarefas, com busca, filtros, paginação e início de ponto em um clique |
@@ -96,19 +98,32 @@ Sem sessão, qualquer página leva ao login, e a pessoa volta para a página ped
 
 ### Navegação
 
-- A **barra superior** mostra a organização, o menu (Projetos e Organização), o **indicador do ponto aberto** com cronômetro e botão Parar, quem está logado (o nome leva ao **perfil**) e o botão Sair.
+- A **barra superior** mostra a organização, o menu (Projetos e Organização), o **indicador do ponto aberto** com cronômetro e botão Parar, o **toggle de idioma** (PT | EN), quem está logado (o nome leva ao **perfil**) e o botão Sair. Sem login, o toggle fica no canto da tela.
 - As páginas de projeto têm **abas**: Visão geral, Tarefas, Ponto, Colaboradores, Integrações e Configurações. A Visão geral é só de admins: o membro não vê a aba, e o projeto abre para ele em Tarefas. A aba Colaboradores juntou as antigas Times e Valores; o endereço dela continua `/teams`. O valor cobrado do cliente fica em Configurações.
 - A página **Organização** abre na aba Sobre, que todos os membros leem. Nela o admin tem o botão **Editar**, que leva à tela de edição; salvar volta para a Sobre. As abas Colaboradores, Clientes e Projetos são só de admins.
 - Ações de admin não aparecem para membros. A API continua sendo quem garante as permissões.
 - A lista de **tarefas** guarda a busca, os filtros e a página na URL (`?q=`, `?assignee=`, `?due=`, `?page=`, e `?mine=1` para "Só as minhas tarefas"). Recarregar mantém o que estava na tela, o link pode ser compartilhado, e o botão Voltar de uma tarefa leva de volta ao mesmo ponto da lista.
+
+### Idiomas
+
+A interface fala **português do Brasil** (o padrão) e **inglês**. Todo texto que a pessoa lê mora em dois arquivos YAML, `internal/i18n/locales/pt-BR.yaml` e `en.yaml`; o código só conhece as chaves.
+
+- **Qual idioma vale:** o cookie `wtt_lang` (gravado pelo toggle, por um ano); sem ele, o `Accept-Language` do navegador; sem nenhum dos dois, português. O toggle é um link para `/lang/<código>?next=<página>`, então funciona sem JavaScript e nas telas sem login. O idioma não fica na conta: é uma escolha do navegador.
+- **Servidor:** [go-i18n v2](https://github.com/nicksnyder/go-i18n) lê os YAML (`internal/i18n`). Os templates usam `{{.T "chave"}}` (dentro de `range` ou `with`, `{{$.T "chave"}}`); com valores, `{{.T "chave" "nome" .Nome}}`. Os títulos das páginas em Go usam `TitleKey: "titles.login"`.
+- **Navegador:** o servidor entrega o mesmo YAML como `window.I18N` (`/i18n/<idioma>.js`, com o hash na URL para o cache), antes do `app.js`. No JavaScript, `WTT.t('chave', { nome: valor })`; nas expressões do Alpine, `$t('chave', { nome: valor })`.
+- **Regra importante:** dentro de uma expressão Alpine (`x-text`, `:title`, `:placeholder`) use sempre `$t`, nunca `{{.T}}`. O `html/template` só escapa HTML, e um apóstrofo de um texto em inglês ("Don't") quebraria a expressão JavaScript.
+- **Como escrever as chaves:** uma chave por **frase inteira**, nunca pedaços para juntar no código (a ordem das palavras muda de um idioma para outro); valores entram por placeholder (`"Em andamento: {{.name}}"`); plural com as formas `one` e `other` e o placeholder `{{.count}}`. No português o zero também é `one` (regra do CLDR), então "nenhuma pessoa" é uma chave à parte. Valores de enum (papel, moeda, regime) continuam sendo os códigos do backend; só o rótulo vem do YAML.
+- **Adicionar um idioma:** crie `locales/<código>.yaml` com as mesmas chaves, acrescente o código em `supported` (`internal/i18n/i18n.go`) e as chaves `lang.<código>.short` e `lang.<código>.name` em todos os catálogos. O teste confere o resto.
+- **Testes:** `internal/i18n` garante que todos os idiomas têm as mesmas chaves e os mesmos placeholders, e que toda chave usada nos templates, no JavaScript e nas páginas em Go existe. Em `internal/server`, o idioma por cookie, por cabeçalho e pelo toggle.
+- **Fora da tradução:** os dados de demonstração do seed e o que as pessoas digitam (nomes de projeto, tarefas, clientes) ficam como foram escritos. Logs e comandos de linha de comando seguem em português.
 
 ### Onde fica cada coisa
 
 ```
 web/
   templates/
-    layouts/base.gohtml        # HTML base, carrega os ícones (cdnjs), app.css, app.js, o script da página e o Alpine
-    partials/                  # barra superior, cabeçalhos da organização e do projeto, indicador do ponto, toasts, modal e ícone
+    layouts/base.gohtml        # HTML base, carrega os ícones (cdnjs), os textos do idioma, app.css, app.js, o script da página e o Alpine
+    partials/                  # barra superior, toggle de idioma, cabeçalhos da organização e do projeto, indicador do ponto, toasts, modal e ícone
     pages/*.gohtml             # uma casca por tela; cada uma define o bloco "content"
   static/
     app.css                    # estilos com tema claro e escuro, sem framework
@@ -116,6 +131,7 @@ web/
     pages/*.js                 # componentes Alpine de cada grupo de telas (auth, org, project)
     alpine.min.js              # Alpine.js 3.14.8 vendorizado (dist/cdn.min.js do pacote npm)
 internal/page/                 # handlers das páginas
+internal/i18n/                 # catálogos YAML (locales/), tradução, escolha do idioma e o script dos textos
 internal/template/renderer.go  # um conjunto de templates por página, carregado na inicialização
 ```
 

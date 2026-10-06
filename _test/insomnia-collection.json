@@ -1160,6 +1160,37 @@
       "metaSortKey": 12,
       "headers": [],
       "body": {}
+    },
+    {
+      "_id": "fld_10",
+      "_type": "request_group",
+      "parentId": "__workspace__",
+      "name": "Idioma",
+      "metaSortKey": 10
+    },
+    {
+      "_id": "req_10_00",
+      "_type": "request",
+      "parentId": "fld_10",
+      "name": "Trocar idioma (grava o cookie wtt_lang e redireciona)",
+      "method": "GET",
+      "url": "{{base_url}}/lang/en?next=/profile",
+      "authentication": {},
+      "metaSortKey": 0,
+      "headers": [],
+      "body": {}
+    },
+    {
+      "_id": "req_10_01",
+      "_type": "request",
+      "parentId": "fld_10",
+      "name": "Textos do navegador (window.I18N)",
+      "method": "GET",
+      "url": "{{base_url}}/i18n/pt-BR.js",
+      "authentication": {},
+      "metaSortKey": 1,
+      "headers": [],
+      "body": {}
     }
   ]
 }

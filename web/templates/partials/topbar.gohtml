@@ -5,20 +5,21 @@
       <span class="brand-mark" aria-hidden="true"></span>
       <span data-org-name>{{.Me.OrganizationName}}</span>
     </a>
-    <nav class="mainnav" aria-label="Organização">
-      <a href="/orgs/{{.OrgID}}" {{if eq .Section "projects"}}aria-current="page"{{end}}>Projetos</a>
-      <a href="/orgs/{{.OrgID}}/about" {{if eq .Section "organization"}}aria-current="page"{{end}}>Organização</a>
+    <nav class="mainnav" aria-label="{{.T "nav.label"}}">
+      <a href="/orgs/{{.OrgID}}" {{if eq .Section "projects"}}aria-current="page"{{end}}>{{.T "nav.projects"}}</a>
+      <a href="/orgs/{{.OrgID}}/about" {{if eq .Section "organization"}}aria-current="page"{{end}}>{{.T "nav.organization"}}</a>
     </nav>
     <div class="topbar-right">
       {{template "active_session" .}}
+      {{template "lang_switch" .}}
       <a class="me" href="/profile" title="{{.Me.Email}}" {{if eq .Section "profile"}}aria-current="page"{{end}}>
-        <span class="sr-only">Seu perfil:</span>
+        <span class="sr-only">{{.T "nav.profile_sr"}}</span>
         <span class="avatar" aria-hidden="true">{{.Initials}}</span>
         <span class="name" data-me-name>{{.Me.Name}}</span>
-        {{if .IsAdmin}}<span class="badge badge-accent">Admin</span>{{end}}
+        {{if .IsAdmin}}<span class="badge badge-accent">{{.T "roles.admin"}}</span>{{end}}
       </a>
       <span x-data="logoutButton">
-        <button type="button" class="btn btn-ghost btn-sm" @click="logout()" :disabled="busy">Sair</button>
+        <button type="button" class="btn btn-ghost btn-sm" @click="logout()" :disabled="busy">{{.T "nav.logout"}}</button>
       </span>
     </div>
   </div>

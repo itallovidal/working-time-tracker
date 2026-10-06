@@ -312,14 +312,14 @@ document.addEventListener('alpine:init', () => {
         const p = await api('PATCH', '/api/persons/' + me.id, this.profile);
         this.profile = { name: p.name, email: p.email };
         setText('[data-me-name]', p.name);
-        toast('Perfil salvo.');
+        toast(WTT.t('profile.personal.saved'));
       });
     },
     changePassword() {
       return this.run('password', async () => {
         await api('POST', '/api/auth/password', { current_password: this.password.current, new_password: this.password.next });
         this.password = { current: '', next: '' };
-        toast('Senha trocada. As outras sessões foram encerradas.');
+        toast(WTT.t('profile.password.changed'));
       });
     },
   }));

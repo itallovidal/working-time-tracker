@@ -12,6 +12,7 @@ import (
 
 	"working-time-tracker/internal/domain/auth"
 	"working-time-tracker/internal/domain/organization"
+	"working-time-tracker/internal/i18n"
 )
 
 // Crumb identifica um recurso no cabeçalho da página.
@@ -22,19 +23,63 @@ type Crumb struct {
 
 // Data é o que todo template recebe.
 type Data struct {
-	Title   string
-	Me      *auth.Identity
-	Section string                     // item ativo da barra superior: projects, organization, profile
-	Org     *organization.Organization // só nas páginas da organização
-	Project *Crumb
-	Tab     string // aba ativa do projeto (overview, tasks, time, teams, integrations, settings) ou da organização (about, people, customers, projects)
-	Script  string // página em /static/pages/<Script>.js com os componentes Alpine
-	Props   map[string]any
+	Title string
+	// TitleKey é a chave do título no catálogo; o render a traduz e põe em Title.
+	// TitleSuffix, se houver, vai depois: "Tarefas · Projeto Alfa".
+	TitleKey    string
+	TitleSuffix string
+	Me          *auth.Identity
+	Section     string                     // item ativo da barra superior: projects, organization, profile
+	Org         *organization.Organization // só nas páginas da organização
+	Project     *Crumb
+	Tab         string // aba ativa do projeto (overview, tasks, time, teams, integrations, settings) ou da organização (about, people, customers, projects)
+	Script      string // página em /static/pages/<Script>.js com os componentes Alpine
+	Props       map[string]any
+
+	Lang string // idioma da requisição: pt-BR ou en
+	Path string // caminho e query da página, para o toggle de idioma voltar para ela
+
+	cat *i18n.Catalog
+}
+
+// T traduz uma chave do catálogo no idioma da página. Os argumentos são pares
+// nome/valor: {{.T "session.in_progress" "name" .Name}}. Dentro de range ou with,
+// use {{$.T ...}}. Texto dentro de expressões Alpine usa $t no navegador, não isto.
+func (d Data) T(key string, args ...any) string {
+	return d.cat.T(d.Lang, key, args...)
+}
+
+// LangOption é uma opção do toggle de idioma.
+type LangOption struct {
+	Code    string
+	Short   string
+	Name    string
+	Current bool
+}
+
+// LangOptions lista os idiomas para o toggle, marcando o atual.
+func (d Data) LangOptions() []LangOption {
+	var out []LangOption
+	for _, code := range i18n.Supported() {
+		k := i18n.Key(code)
+		out = append(out, LangOption{
+			Code:    code,
+			Short:   d.T("lang." + k + ".short"),
+			Name:    d.T("lang." + k + ".name"),
+			Current: code == d.Lang,
+		})
+	}
+	return out
+}
+
+// I18nHash identifica a versão do catálogo, para a URL do script de textos.
+func (d Data) I18nHash() string {
+	return d.cat.Hash(d.Lang)
 }
 
 // Boot vira window.BOOT na página: os dados iniciais que o JavaScript precisa.
 func (d Data) Boot() map[string]any {
-	boot := map[string]any{"me": d.Me}
+	boot := map[string]any{"me": d.Me, "lang": d.Lang}
 	if d.Project != nil {
 		boot["project"] = d.Project
 	}
@@ -79,13 +124,59 @@ func NewHandler(deps Deps) *Handler {
 }
 
 func (h *Handler) render(c *echo.Context, name string, d Data) error {
+	return c.Render(http.StatusOK, name, h.prepare(c, d))
+}
+
+// prepare preenche o que toda página tem em comum: quem está logado, o idioma e
+// o título traduzido.
+func (h *Handler) prepare(c *echo.Context, d Data) Data {
 	d.Me = auth.CurrentPerson(c)
-	return c.Render(http.StatusOK, name, d)
+	d.Lang = h.deps.I18n.Lang(c)
+	d.Path = c.Request().URL.RequestURI()
+	d.cat = h.deps.I18n
+	if d.TitleKey != "" {
+		d.Title = d.T(d.TitleKey)
+		if d.TitleSuffix != "" {
+			d.Title += " · " + d.TitleSuffix
+		}
+	}
+	return d
 }
 
 // NotFound é a página de 404 para rotas do navegador.
 func (h *Handler) NotFound(c *echo.Context) error {
-	return c.Render(http.StatusNotFound, "notfound", Data{Title: "Página não encontrada", Me: auth.CurrentPerson(c)})
+	return c.Render(http.StatusNotFound, "notfound", h.prepare(c, Data{TitleKey: "titles.not_found"}))
+}
+
+// SetLanguage grava o idioma escolhido no toggle e volta para a página de onde
+// a pessoa veio. Funciona sem JavaScript e nas telas sem login.
+func (h *Handler) SetLanguage(c *echo.Context) error {
+	if lang, ok := h.deps.I18n.Valid(c.Param("code")); ok {
+		i18n.SetCookie(c, lang, h.deps.CookieSecure)
+	}
+	return c.Redirect(http.StatusSeeOther, safeNext(c.QueryParam("next")))
+}
+
+// I18nScript serve os textos do idioma para o JavaScript (window.I18N). O ?v=
+// é o hash do conteúdo: com ele a URL nunca muda de significado e pode ser guardada
+// para sempre; sem ele o navegador revalida a cada uso.
+func (h *Handler) I18nScript(c *echo.Context) error {
+	lang, ok := h.deps.I18n.Valid(strings.TrimSuffix(c.Param("file"), ".js"))
+	if !ok || !strings.HasSuffix(c.Param("file"), ".js") {
+		return echo.ErrNotFound
+	}
+	body, hash, _ := h.deps.I18n.Script(lang)
+	res := c.Response()
+	res.Header().Set("ETag", `"`+hash+`"`)
+	if c.QueryParam("v") == hash {
+		res.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+	} else {
+		res.Header().Set("Cache-Control", "no-cache")
+	}
+	if c.Request().Header.Get("If-None-Match") == `"`+hash+`"` {
+		return c.NoContent(http.StatusNotModified)
+	}
+	return c.Blob(http.StatusOK, "text/javascript; charset=utf-8", body)
 }
 
 // safeNext só aceita caminhos locais, para o ?next= do login não virar um

@@ -4,10 +4,10 @@
     <div class="session-pill">
       <span class="pulse" aria-hidden="true"></span>
       <a :href="'/projects/' + $store.clock.session.task.project_id + '/time-tracking'"
-         :title="'Em andamento: ' + $store.clock.session.task.name"
+         :title="$t('session.in_progress', { name: $store.clock.session.task.name })"
          x-text="$store.clock.session.task.name"></a>
       <span class="mono" x-text="WTT.fmt.clock($store.clock.elapsed())"></span>
-      <button type="button" class="btn btn-sm" :disabled="busy" @click="stop()">Parar</button>
+      <button type="button" class="btn btn-sm" :disabled="busy" @click="stop()">{{.T "session.stop"}}</button>
     </div>
   </template>
 </div>

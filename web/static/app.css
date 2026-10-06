@@ -127,6 +127,17 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 .mainnav a[aria-current="page"] { background: var(--accent-soft); color: var(--accent); }
 
 .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+
+/* Toggle de idioma: PT | EN. Na barra e, sem login, no canto da tela. */
+.lang-switch { display: inline-flex; border: 1px solid var(--rule); border-radius: var(--radius-sm); overflow: hidden; }
+.lang-switch a {
+  padding: 3px 8px; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.04em;
+  color: var(--muted); text-decoration: none;
+}
+.lang-switch a + a { border-left: 1px solid var(--rule); }
+.lang-switch a:hover { background: var(--surface-2); color: var(--ink); }
+.lang-switch a[aria-current] { background: var(--accent-soft); color: var(--accent); }
+.lang-float { position: fixed; top: 12px; right: 16px; z-index: 20; }
 .me {
   display: flex; align-items: center; gap: 8px; font-size: 0.9rem; color: var(--ink-2);
   text-decoration: none; padding: 3px 8px 3px 3px; border-radius: var(--radius-sm);
