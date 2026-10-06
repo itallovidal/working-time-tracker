@@ -41,6 +41,7 @@ titles:
   org_projects: Projects · Organization
   org_customers: Customers · Organization
   org_people: Collaborators · Organization
+  overview: Overview
   tasks: Tasks
   time: Time tracking
   teams: Collaborators
@@ -554,6 +555,86 @@ collab:
   team_name_required: Enter the team name.
   team_saved: Team saved.
   team_deleted: Team deleted.
+
+overview:
+  intro: "The project in numbers: who works on it, how much time was tracked and what that time cost and earned."
+  updated: "Updated at {{.time}}"
+  refresh: Refresh
+  loading: Loading the overview…
+  without_rate_count:
+    one: "{{.count}} person is"
+    other: "{{.count}} people are"
+  without_rate_text:
+    one: on a team of this project without an hourly rate and cannot clock in.
+    other: on a team of this project without an hourly rate and cannot clock in.
+  set_rate_before: Set the rate on the
+  set_rate_after: " tab."
+  people:
+    one: Person
+    other: People
+  without_team: " · {{.count}} without a team"
+  teams:
+    one: Team
+    other: Teams
+  hours: Hours tracked
+  revenue: Revenue
+  cost: Cost
+  margin: Margin (revenue minus cost)
+  margin_share: " · {{.percent}}% of the revenue"
+  age_title: Project age
+  days:
+    one: Day
+    other: Days
+  weeks:
+    one: Week
+    other: Weeks
+  months:
+    one: Month
+    other: Months
+  start: Started
+  first_session: First clock-in
+  last_session: Last clock-in
+  nobody_clocked: Nobody has clocked in yet
+  age_note: The start is the day the project was created. Days, weeks and months measure the same time, each rounded down.
+  activity: Activity
+  last_7: Last 7 days
+  last_30: Last 30 days
+  working_now: Working now
+  in_progress: In progress
+  nobody_open: Nobody has an open clock-in
+  session_count: Sessions tracked
+  integrations_title: Integrations
+  open_tab: Open the tab
+  no_integrations: No integrations
+  no_integrations_text: Set up GitHub, GitLab or Trello on the Integrations tab to link tasks to issues and cards.
+  no_credential: no credential
+  configured:
+    one: "{{.count}} set up"
+    other: "{{.count}} set up"
+  enabled:
+    one: "{{.count}} active"
+    other: "{{.count}} active"
+  tasks_title: Tasks and customer
+  tasks:
+    one: Task
+    other: Tasks
+  overdue:
+    one: Overdue
+    other: Overdue
+  see: view
+  bill_rate: Rate billed per hour
+  no_bill_rate: No billed rate
+  tasks_note: Overdue is a task past its deadline. The revenue adds up the billed rate that applied when each clock-in was made.
+  by_person: Hours per person
+  by_person_intro: Who tracked time on this project, from whoever worked the most to the least. The rows add up to the totals at the top.
+  nobody_title: Nobody has clocked in yet
+  nobody_text: When someone tracks time on this project, each person's hours, cost and revenue show up here.
+  col_hours: Hours
+  left: left the project
+  pager: Hours per person pages
+  person_summary:
+    one: "Page {{.page}} of {{.pages}} · {{.count}} person"
+    other: "Page {{.page}} of {{.pages}} · {{.count}} people"
 
 labels:
   not_informed: Not provided

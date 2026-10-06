@@ -300,6 +300,7 @@
 - [X] S24.9 Project: integrations and settings (the project field labels are shared with the new-project form in `project.fields`)
 - [X] S24.10 Project: collaborators and teams (counters with plural forms, rate and margin table, the add-person, new-team and edit-team modals)
 - [X] S24.11 Update README, design and the status page
+- [X] S24.12 After the rebase onto sprints 23 and 26: the integration tab and the platform descriptors (texts in `integration_types.*`, localized on the server), and the project Overview tab
 
 ### Sprint 25: Internationalization — API Error Codes
 
