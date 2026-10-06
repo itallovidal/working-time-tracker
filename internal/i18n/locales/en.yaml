@@ -94,6 +94,39 @@ profile:
     submit: Change password
     changed: Password changed. Your other sessions were signed out.
 
+labels:
+  not_informed: Not provided
+  weekday:
+    monday: Monday
+    tuesday: Tuesday
+    wednesday: Wednesday
+    thursday: Thursday
+    friday: Friday
+    saturday: Saturday
+    sunday: Sunday
+  org_size:
+    s1_10: 1 to 10 people
+    s11_50: 11 to 50 people
+    s51_200: 51 to 200 people
+    s201_500: 201 to 500 people
+    s500_plus: More than 500 people
+  work_mode:
+    remote: Remote
+    hybrid: Hybrid
+    onsite: On-site
+  currency:
+    BRL: Brazilian real (BRL)
+    USD: US dollar (USD)
+    EUR: Euro (EUR)
+  integration:
+    token: Access token
+    github_token_hint: Personal token with permission to read issues.
+    repo: Repository
+    repo_placeholder: owner/repository
+    gitlab_token_hint: Token with the read_api scope.
+    project: Project
+    project_placeholder: group/project or https://gitlab.com/group/project
+
 errors:
   no_connection: Can't reach the server. Check your network and try again.
   session_expired: Your session expired. Please sign in again.

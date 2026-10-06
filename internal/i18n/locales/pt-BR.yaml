@@ -101,6 +101,39 @@ profile:
     submit: Trocar senha
     changed: Senha trocada. As outras sessões foram encerradas.
 
+labels:
+  not_informed: Não informado
+  weekday:
+    monday: Segunda-feira
+    tuesday: Terça-feira
+    wednesday: Quarta-feira
+    thursday: Quinta-feira
+    friday: Sexta-feira
+    saturday: Sábado
+    sunday: Domingo
+  org_size:
+    s1_10: 1 a 10 pessoas
+    s11_50: 11 a 50 pessoas
+    s51_200: 51 a 200 pessoas
+    s201_500: 201 a 500 pessoas
+    s500_plus: Mais de 500 pessoas
+  work_mode:
+    remote: Remoto
+    hybrid: Híbrido
+    onsite: Presencial
+  currency:
+    BRL: Real (BRL)
+    USD: Dólar americano (USD)
+    EUR: Euro (EUR)
+  integration:
+    token: Token de acesso
+    github_token_hint: Token pessoal com permissão de leitura de issues.
+    repo: Repositório
+    repo_placeholder: dono/repositorio
+    gitlab_token_hint: Token com escopo read_api.
+    project: Projeto
+    project_placeholder: grupo/projeto ou https://gitlab.com/grupo/projeto
+
 errors:
   no_connection: Sem conexão com o servidor. Confira a rede e tente de novo.
   session_expired: Sua sessão expirou. Entre de novo.
