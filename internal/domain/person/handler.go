@@ -5,6 +5,7 @@ import (
 
 	"github.com/labstack/echo/v5"
 
+	"working-time-tracker/internal/apperr"
 	"working-time-tracker/internal/database"
 )
 
@@ -20,7 +21,7 @@ func (h *Handler) ListByOrg(c *echo.Context) error {
 	orgID := c.Param("orgId")
 	persons, err := h.svc.ListByOrg(orgID)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return apperr.Respond(c, http.StatusInternalServerError, err)
 	}
 	return c.JSON(http.StatusOK, persons)
 }
@@ -30,9 +31,9 @@ func (h *Handler) Get(c *echo.Context) error {
 	person, err := h.svc.Get(id)
 	if err != nil {
 		if err == database.ErrNotFound {
-			return c.JSON(http.StatusNotFound, map[string]string{"error": "pessoa não encontrada"})
+			return apperr.Respond(c, http.StatusNotFound, ErrNotFound)
 		}
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return apperr.Respond(c, http.StatusInternalServerError, err)
 	}
 	return c.JSON(http.StatusOK, person)
 }
@@ -44,11 +45,14 @@ func (h *Handler) Update(c *echo.Context) error {
 		Email string `json:"email"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "corpo da requisição inválido"})
+		return apperr.Respond(c, http.StatusBadRequest, apperr.ErrInvalidBody)
 	}
 	person, err := h.svc.Update(id, body.Name, body.Email)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+		if err == database.ErrNotFound {
+			return apperr.Respond(c, http.StatusNotFound, ErrNotFound)
+		}
+		return apperr.Respond(c, http.StatusBadRequest, err)
 	}
 	return c.JSON(http.StatusOK, person)
 }
@@ -59,14 +63,14 @@ func (h *Handler) SetRole(c *echo.Context) error {
 		Role string `json:"role"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "corpo da requisição inválido"})
+		return apperr.Respond(c, http.StatusBadRequest, apperr.ErrInvalidBody)
 	}
 	person, err := h.svc.SetRole(id, body.Role)
 	if err != nil {
 		if err == database.ErrNotFound {
-			return c.JSON(http.StatusNotFound, map[string]string{"error": "pessoa não encontrada"})
+			return apperr.Respond(c, http.StatusNotFound, ErrNotFound)
 		}
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return apperr.Respond(c, http.StatusBadRequest, err)
 	}
 	return c.JSON(http.StatusOK, person)
 }

@@ -5,6 +5,7 @@ import (
 
 	"github.com/labstack/echo/v5"
 
+	"working-time-tracker/internal/apperr"
 	"working-time-tracker/internal/database"
 )
 
@@ -21,9 +22,9 @@ func (h *Handler) Get(c *echo.Context) error {
 	org, err := h.svc.Get(id)
 	if err != nil {
 		if err == database.ErrNotFound {
-			return c.JSON(http.StatusNotFound, map[string]string{"error": "organização não encontrada"})
+			return apperr.Respond(c, http.StatusNotFound, ErrNotFound)
 		}
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return apperr.Respond(c, http.StatusInternalServerError, err)
 	}
 	return c.JSON(http.StatusOK, org)
 }
@@ -32,14 +33,14 @@ func (h *Handler) Update(c *echo.Context) error {
 	id := c.Param("orgId")
 	var body UpdateInput
 	if err := c.Bind(&body); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "corpo da requisição inválido"})
+		return apperr.Respond(c, http.StatusBadRequest, apperr.ErrInvalidBody)
 	}
 	org, err := h.svc.Update(id, body)
 	if err != nil {
 		if err == database.ErrNotFound {
-			return c.JSON(http.StatusNotFound, map[string]string{"error": "organização não encontrada"})
+			return apperr.Respond(c, http.StatusNotFound, ErrNotFound)
 		}
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return apperr.Respond(c, http.StatusBadRequest, err)
 	}
 	return c.JSON(http.StatusOK, org)
 }
@@ -47,7 +48,10 @@ func (h *Handler) Update(c *echo.Context) error {
 func (h *Handler) Delete(c *echo.Context) error {
 	id := c.Param("orgId")
 	if err := h.svc.Delete(id); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+		if err == database.ErrNotFound {
+			return apperr.Respond(c, http.StatusNotFound, ErrNotFound)
+		}
+		return apperr.Respond(c, http.StatusBadRequest, err)
 	}
 	return c.NoContent(http.StatusNoContent)
 }

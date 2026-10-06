@@ -2,7 +2,6 @@ package adapter
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -13,16 +12,12 @@ import (
 const defaultGitLabBaseURL = "https://gitlab.com/api/v4"
 
 var gitlabDescriptor = Descriptor{
-	Type:        "gitlab",
-	Label:       "GitLab",
-	Description: "Issues de um projeto",
-	TokenHint:   "Token com escopo read_api.",
+	Type:  "gitlab",
+	Label: "GitLab",
 	Metadata: []Field{
-		{Key: "project_url", Label: "Projeto", Placeholder: "grupo/projeto", Hint: "Aceita também o endereço do projeto no gitlab.com.", Required: true, Summary: true},
+		{Key: "project_url", Required: true, Summary: true},
 	},
-	ItemLabel:       "Número da issue",
-	ItemPlaceholder: "Ex.: 42",
-	ItemNumeric:     true,
+	ItemNumeric: true,
 }
 
 // GitLabIntegration fala com a API do GitLab. BaseURL e Client são opcionais e
@@ -64,7 +59,7 @@ func parseGitlabMetadata(raw map[string]any) (*gitlabMetadata, error) {
 		project = project[:i]
 	}
 	if !gitlabProject.MatchString(project) {
-		return nil, fmt.Errorf("projeto do GitLab inválido: use grupo/projeto")
+		return nil, ErrGitLabInvalidProject
 	}
 	return &gitlabMetadata{ProjectURL: project}, nil
 }
@@ -94,7 +89,7 @@ func (g *GitLabIntegration) get(conn Connection, path string) (*http.Response, e
 
 	resp, err := g.client().Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("não foi possível falar com o GitLab: %w", err)
+		return nil, ErrProviderUnreachable.With("provider", "GitLab").Wrap(err)
 	}
 	return resp, nil
 }
@@ -115,13 +110,13 @@ func (g *GitLabIntegration) Validate(conn Connection) error {
 	case http.StatusOK:
 		return nil
 	case http.StatusUnauthorized:
-		return fmt.Errorf("token do GitLab inválido")
+		return ErrInvalidToken.With("provider", "GitLab")
 	case http.StatusForbidden:
-		return fmt.Errorf("o token do GitLab não tem permissão para ler o projeto")
+		return ErrGitLabForbidden
 	case http.StatusNotFound:
-		return fmt.Errorf("projeto do GitLab não encontrado ou o token não tem acesso a ele")
+		return ErrGitLabProjectMissing
 	default:
-		return fmt.Errorf("o GitLab respondeu com status %d", resp.StatusCode)
+		return ErrProviderStatus.With("provider", "GitLab", "status", resp.StatusCode)
 	}
 }
 
@@ -142,13 +137,13 @@ func (g *GitLabIntegration) FetchItemDetails(conn Connection, itemID string) (*I
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusUnauthorized {
-		return nil, fmt.Errorf("token do GitLab inválido")
+		return nil, ErrInvalidToken.With("provider", "GitLab")
 	}
 	if resp.StatusCode == http.StatusNotFound {
-		return nil, fmt.Errorf("item %s não encontrado", number)
+		return nil, ErrItemNotFound.With("item", number)
 	}
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("o GitLab respondeu com status %d", resp.StatusCode)
+		return nil, ErrProviderStatus.With("provider", "GitLab", "status", resp.StatusCode)
 	}
 
 	var body struct {
@@ -157,7 +152,7 @@ func (g *GitLabIntegration) FetchItemDetails(conn Connection, itemID string) (*I
 		WebURL string `json:"web_url"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
-		return nil, fmt.Errorf("resposta inesperada do GitLab: %w", err)
+		return nil, ErrUnexpectedResponse.With("provider", "GitLab").Wrap(err)
 	}
 
 	return &ItemDetails{

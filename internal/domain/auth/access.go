@@ -11,6 +11,7 @@ import (
 	"working-time-tracker/ent/integration"
 	"working-time-tracker/ent/task"
 	"working-time-tracker/ent/team"
+	"working-time-tracker/internal/apperr"
 )
 
 // Kind é o tipo de recurso de um parâmetro de rota, para descobrir a organização dona.
@@ -105,7 +106,7 @@ func (r *Resolver) SameOrganization(c *echo.Context, kind Kind, id string) bool 
 // organização. É 404 e não 403 para não revelar que o recurso existe.
 func (m *Middleware) RequireOrg(kind Kind, param string) echo.MiddlewareFunc {
 	return m.requireOrg(kind, param, func(c *echo.Context) error {
-		return c.JSON(http.StatusNotFound, map[string]string{"error": "não encontrado"})
+		return apperr.Respond(c, http.StatusNotFound, apperr.ErrNotFound)
 	})
 }
 

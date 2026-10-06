@@ -1,9 +1,9 @@
 package adapter
 
 import (
-	"fmt"
 	"regexp"
 	"strings"
+	"working-time-tracker/internal/apperr"
 )
 
 type ItemDetails struct {
@@ -12,9 +12,12 @@ type ItemDetails struct {
 	URL   string `json:"url"`
 }
 
+// ExternalDetailsResult é a resposta de external-details. Quando a plataforma falha, a
+// resposta continua sendo 200, com details nulo e o motivo em Error, no mesmo formato
+// ({code, params}) dos outros erros da API.
 type ExternalDetailsResult struct {
-	Details *ItemDetails `json:"details"`
-	Error   *string      `json:"error,omitempty"`
+	Details *ItemDetails  `json:"details"`
+	Error   *apperr.Error `json:"error,omitempty"`
 }
 
 // Connection é a estrutura comum a todas as integrações: a credencial e os campos
@@ -24,7 +27,10 @@ type Connection struct {
 	Metadata map[string]any
 }
 
-// Field descreve um campo do metadata de um tipo de integração.
+// Field descreve um campo do metadata de um tipo de integração. Label, Placeholder e
+// Hint ficam vazios aqui: o texto de cada idioma está no catálogo, em
+// integration_types.<tipo>.fields.<campo>, e quem monta a resposta da página o
+// preenche (internal/page).
 type Field struct {
 	Key         string `json:"key"`
 	Label       string `json:"label"`
@@ -37,7 +43,9 @@ type Field struct {
 }
 
 // Descriptor diz o que um tipo de integração é e o que ele pede. A tela desenha o
-// formulário e os rótulos a partir dele.
+// formulário e os rótulos a partir dele. Só o nome da plataforma (Label) vem do
+// adapter; Description, TokenHint, ItemLabel, ItemPlaceholder e o texto dos campos
+// são do catálogo, em integration_types.<tipo>.
 type Descriptor struct {
 	Type        string  `json:"type"`
 	Label       string  `json:"label"`
@@ -72,11 +80,11 @@ func (d Descriptor) fields(raw map[string]any) (map[string]string, error) {
 		case string:
 			value = strings.TrimSpace(v)
 		default:
-			return nil, fmt.Errorf("o campo \"%s\" do %s precisa ser um texto", f.Label, d.Label)
+			return nil, ErrFieldNotText.With("field", f.Key, "provider", d.Label)
 		}
 		if value == "" {
 			if f.Required {
-				return nil, fmt.Errorf("informe o campo \"%s\" do %s", f.Label, d.Label)
+				return nil, ErrFieldRequired.With("field", f.Key, "provider", d.Label)
 			}
 			continue
 		}
@@ -89,7 +97,7 @@ func (d Descriptor) fields(raw map[string]any) (map[string]string, error) {
 func (d Descriptor) token(conn Connection) (string, error) {
 	token := strings.TrimSpace(conn.Token)
 	if token == "" {
-		return "", fmt.Errorf("informe o token do %s", d.Label)
+		return "", ErrTokenRequired.With("provider", d.Label)
 	}
 	return token, nil
 }
@@ -114,7 +122,7 @@ var issueNumberPattern = regexp.MustCompile(`^[0-9]+$`)
 func issueNumber(itemID string) (string, error) {
 	id := strings.TrimPrefix(strings.TrimSpace(itemID), "#")
 	if !issueNumberPattern.MatchString(id) {
-		return "", fmt.Errorf("o número da issue precisa ter só dígitos")
+		return "", ErrInvalidIssueNumber
 	}
 	return id, nil
 }

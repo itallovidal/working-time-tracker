@@ -378,7 +378,7 @@ document.addEventListener('alpine:init', () => {
       this.external = { loading: true, details: null, error: '' };
       try {
         const res = await api('GET', '/api/tasks/' + this.taskId + '/external-details');
-        this.external = { loading: false, details: res.details, error: res.details ? '' : (res.error || WTT.t('task_detail.no_response')) };
+        this.external = { loading: false, details: res.details, error: res.details ? '' : (res.error ? WTT.errorText(res.error) : WTT.t('task_detail.no_response')) };
       } catch (e) {
         this.external = { loading: false, details: null, error: e.message };
       }

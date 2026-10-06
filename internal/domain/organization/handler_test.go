@@ -105,7 +105,7 @@ func TestHandler_UpdateProfile(t *testing.T) {
 	}
 
 	rec = patch(`{"cnpj":"11.222.333/0001-80"}`)
-	if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "CNPJ inválido") {
+	if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), `"code":"organization.invalid_cnpj"`) {
 		t.Errorf("invalid CNPJ = %d %s, want 400 with the reason", rec.Code, rec.Body.String())
 	}
 

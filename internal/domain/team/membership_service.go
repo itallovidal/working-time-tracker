@@ -1,8 +1,6 @@
 package team
 
 import (
-	"errors"
-
 	"github.com/google/uuid"
 )
 
@@ -20,14 +18,14 @@ func (s *MembershipService) Add(teamID, personID string) (*TeamMembership, error
 		return nil, err
 	}
 	if !sameOrg {
-		return nil, errors.New("pessoa não encontrada nesta organização")
+		return nil, ErrPersonNotInOrg
 	}
 	exists, err := s.store.Exists(teamID, personID)
 	if err != nil {
 		return nil, err
 	}
 	if exists {
-		return nil, errors.New("a pessoa já está neste time")
+		return nil, ErrAlreadyMember
 	}
 	membership := &TeamMembership{
 		TeamID:   uuid.MustParse(teamID),

@@ -92,10 +92,10 @@ func TestService_Create_MissingMetadata(t *testing.T) {
 		metadata map[string]interface{}
 		wantErr  string
 	}{
-		{"github", nil, `informe o campo "Repositório" do GitHub`},
-		{"github", map[string]interface{}{"project_url": "group/project"}, `informe o campo "Repositório" do GitHub`},
-		{"gitlab", map[string]interface{}{}, `informe o campo "Projeto" do GitLab`},
-		{"trello", map[string]interface{}{"api_key": testutil.TrelloKey}, `informe o campo "Quadro" do Trello`},
+		{"github", nil, "integration.field_required"},
+		{"github", map[string]interface{}{"project_url": "group/project"}, "integration.field_required"},
+		{"gitlab", map[string]interface{}{}, "integration.field_required"},
+		{"trello", map[string]interface{}{"api_key": testutil.TrelloKey}, "integration.field_required"},
 	}
 	for _, tc := range cases {
 		_, err := svc.Create(projectID, tc.typ, "Sem metadata", "token", tc.metadata, true)
@@ -212,7 +212,7 @@ func TestService_Update_MetadataKeepsTheToken(t *testing.T) {
 	}
 	// O repositório novo não tem a issue 42: a resposta é "não encontrado", não "token inválido".
 	res, err := svc.FetchItemDetails(id, "42")
-	if err != nil || res.Details != nil || res.Error == nil || !strings.Contains(*res.Error, "não encontrado") {
+	if err != nil || res.Details != nil || res.Error == nil || res.Error.Code != "integration.item_not_found" {
 		t.Errorf("fetch on the new repository = %+v, %v", res, err)
 	}
 
@@ -220,7 +220,7 @@ func TestService_Update_MetadataKeepsTheToken(t *testing.T) {
 	if _, err := svc.Update(id, "", "", map[string]interface{}{"repo": "owner/missing"}, nil); err == nil {
 		t.Error("expected error for a repository the platform does not know")
 	}
-	if _, err := svc.Update(id, "", "", map[string]interface{}{}, nil); err == nil || !strings.Contains(err.Error(), `"Repositório"`) {
+	if _, err := svc.Update(id, "", "", map[string]interface{}{}, nil); err == nil || !strings.Contains(err.Error(), "integration.field_required") {
 		t.Errorf("empty metadata: error = %v, want the missing field", err)
 	}
 	got, _ := svc.Get(id)
@@ -282,7 +282,7 @@ func TestService_Create_InvalidToken(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for invalid token, got nil")
 	}
-	if _, err := svc.Create(projectID, "github", "GitHub", "", githubMetadata(), true); err == nil || !strings.Contains(err.Error(), "informe o token do GitHub") {
+	if _, err := svc.Create(projectID, "github", "GitHub", "", githubMetadata(), true); err == nil || !strings.Contains(err.Error(), "integration.token_required") {
 		t.Errorf("create without token: error = %v", err)
 	}
 }
@@ -357,7 +357,7 @@ func TestService_RowFromBeforeMetadata(t *testing.T) {
 	}
 
 	res, err := svc.FetchItemDetails(id, "42")
-	if err != nil || res.Details != nil || res.Error == nil || !strings.Contains(*res.Error, `"Repositório"`) {
+	if err != nil || res.Details != nil || res.Error == nil || !(res.Error.Code == "integration.field_required" && res.Error.Params["field"] == "repo") {
 		t.Fatalf("fetch before the edit = %+v, %v; want the missing field as the reason", res, err)
 	}
 
@@ -387,7 +387,7 @@ func TestService_UnreadableCredentials(t *testing.T) {
 	rotated := integration.NewService(integration.NewStore(testClient), "another-encryption-key")
 
 	res, err := rotated.FetchItemDetails(id, "42")
-	if err != nil || res.Details != nil || res.Error == nil || !strings.Contains(*res.Error, "informe o token de novo") {
+	if err != nil || res.Details != nil || res.Error == nil || res.Error.Code != "integration.unreadable_credential" {
 		t.Errorf("fetch = %+v, %v; want a reason that asks for the token again", res, err)
 	}
 	if _, err := rotated.Update(id, "", "", map[string]interface{}{"repo": "owner/other"}, nil); err == nil {
@@ -441,7 +441,7 @@ func TestService_Trello(t *testing.T) {
 		t.Errorf("fetch = %+v, %v", res, err)
 	}
 	other, err := svc.FetchItemDetails(id, "OutroQdr")
-	if err != nil || other.Details != nil || other.Error == nil || !strings.Contains(*other.Error, "outro quadro") {
+	if err != nil || other.Details != nil || other.Error == nil || other.Error.Code != "integration.trello_card_other_board" {
 		t.Errorf("fetch of a card from another board = %+v, %v", other, err)
 	}
 

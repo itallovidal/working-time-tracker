@@ -1,17 +1,9 @@
 package allocation
 
 import (
-	"errors"
-
 	"github.com/google/uuid"
 
 	"working-time-tracker/internal/database"
-)
-
-var (
-	ErrRateRequired   = errors.New("informe o valor por hora (pay_rate_cents)")
-	ErrInvalidRate    = errors.New("o valor por hora deve ficar entre 0 e 1.000.000,00")
-	ErrPersonNotInOrg = errors.New("pessoa não encontrada nesta organização")
 )
 
 type Service struct {

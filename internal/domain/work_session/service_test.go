@@ -2,6 +2,7 @@ package work_session_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -128,7 +129,7 @@ func TestService_ClockOut_NoActiveSession(t *testing.T) {
 	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
 
 	_, err := wsSvc.ClockOut(proj.ID.String(), p.ID.String())
-	if err == nil || err.Error() != "não há ponto aberto para esta pessoa" {
+	if !errors.Is(err, work_session.ErrNotOpen) {
 		t.Fatalf("expected no active session error, got %v", err)
 	}
 }

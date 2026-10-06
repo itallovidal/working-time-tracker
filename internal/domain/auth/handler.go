@@ -6,6 +6,7 @@ import (
 
 	"github.com/labstack/echo/v5"
 
+	"working-time-tracker/internal/apperr"
 	"working-time-tracker/internal/database"
 	"working-time-tracker/internal/domain/person"
 )
@@ -36,15 +37,11 @@ func fail(c *echo.Context, err error) error {
 		errors.Is(err, person.ErrInvalidEmail), errors.Is(err, person.ErrInvalidRole):
 		status = http.StatusBadRequest
 	}
-	if status == http.StatusInternalServerError {
-		c.Logger().Error("auth handler", "error", err)
-		return c.JSON(status, map[string]string{"error": "erro interno, tente de novo"})
-	}
-	return c.JSON(status, map[string]string{"error": err.Error()})
+	return apperr.Respond(c, status, err)
 }
 
 func badBody(c *echo.Context) error {
-	return c.JSON(http.StatusBadRequest, map[string]string{"error": "corpo da requisição inválido"})
+	return apperr.Respond(c, http.StatusBadRequest, apperr.ErrInvalidBody)
 }
 
 func (h *Handler) Signup(c *echo.Context) error {

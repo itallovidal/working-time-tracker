@@ -33,15 +33,34 @@
     return text.replace(/\{\{\s*\.(\w+)\s*\}\}/g, (match, name) => (params && params[name] !== undefined ? params[name] : match));
   }
 
+  // errorText devolve a mensagem de um erro da API, que chega como {code, params}. O
+  // texto é errors.<código> no catálogo. O parâmetro field, quando existe, é o
+  // nome de um campo da API, e o rótulo dele é fields.<campo>.
+  function errorText(err) {
+    const params = { ...(err && err.params) };
+    if (params.field) params.field = t('fields.' + params.field);
+    const key = 'errors.' + (err && err.code);
+    if (lookup(key) === undefined) {
+      console.warn('i18n: código de erro sem texto:', err && err.code);
+      return t('errors.unknown');
+    }
+    return t(key, params);
+  }
+
+  // ApiError é o erro de uma chamada à API. message já vem no idioma da pessoa; code
+  // e params são os que o servidor mandou, para quem precisa decidir pelo código.
   class ApiError extends Error {
-    constructor(message, status) {
+    constructor(message, status, code, params) {
       super(message);
       this.status = status;
+      this.code = code;
+      this.params = params;
     }
   }
 
-  // api chama a API JSON do próprio servidor. Em erro, lança ApiError com a
-  // mensagem que o servidor mandou em {"error": "..."}.
+  // api chama a API JSON do próprio servidor. Em erro, lança ApiError: o servidor
+  // manda só um código, em {"error": {"code": "...", "params": {...}}}, e a mensagem
+  // é montada aqui, no idioma da página.
   async function api(method, path, body) {
     const opts = { method, credentials: 'same-origin', headers: { Accept: 'application/json' } };
     if (body !== undefined) {
@@ -65,8 +84,9 @@
       try { data = JSON.parse(text); } catch (e) { data = null; }
     }
     if (!res.ok) {
-      const message = (data && (data.error || data.message)) || t('errors.server_error', { status: res.status });
-      throw new ApiError(message, res.status);
+      const err = data && data.error;
+      if (err && typeof err === 'object' && err.code) throw new ApiError(errorText(err), res.status, err.code, err.params);
+      throw new ApiError(t('errors.http_status', { status: res.status }), res.status);
     }
     return data;
   }
@@ -262,7 +282,7 @@
   // O que as telas mostram no lugar de um campo de cadastro sem valor.
   const notInformed = t('labels.not_informed');
 
-  window.WTT = { t, lang, api, ApiError, form, fmt, toCents, copyText, notInformed, weekdays, orgSizes, workModes, currencies, boot: window.BOOT || {} };
+  window.WTT = { t, lang, errorText, api, ApiError, form, fmt, toCents, copyText, notInformed, weekdays, orgSizes, workModes, currencies, boot: window.BOOT || {} };
 
   // Onde flash() deixa a mensagem para a página seguinte.
   const flashKey = 'wtt:flash';

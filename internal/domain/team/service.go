@@ -1,8 +1,6 @@
 package team
 
 import (
-	"errors"
-
 	"github.com/google/uuid"
 )
 
@@ -16,7 +14,7 @@ func NewService(store *Store) *Service {
 
 func (s *Service) Create(projectID, name string) (*Team, error) {
 	if name == "" {
-		return nil, errors.New("informe o nome")
+		return nil, ErrNameRequired
 	}
 	team := &Team{
 		ProjectID: uuid.MustParse(projectID),
@@ -38,7 +36,7 @@ func (s *Service) Get(id string) (*Team, error) {
 
 func (s *Service) Update(id, name string) (*Team, error) {
 	if name == "" {
-		return nil, errors.New("informe o nome")
+		return nil, ErrNameRequired
 	}
 	team, err := s.store.GetByID(id)
 	if err != nil {

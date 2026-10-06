@@ -15,15 +15,15 @@ func TestDescriptors_OrderAndShape(t *testing.T) {
 	var types []string
 	for _, d := range Descriptors() {
 		types = append(types, d.Type)
-		if d.Label == "" || d.ItemLabel == "" {
-			t.Errorf("%s: descriptor without a label or an item label: %+v", d.Type, d)
+		if d.Label == "" {
+			t.Errorf("%s: descriptor without the platform name: %+v", d.Type, d)
 		}
 		if len(d.Metadata) == 0 {
 			t.Errorf("%s: descriptor declares no metadata field", d.Type)
 		}
 		for _, f := range d.Metadata {
-			if f.Key == "" || f.Label == "" {
-				t.Errorf("%s: metadata field without key or label: %+v", d.Type, f)
+			if f.Key == "" {
+				t.Errorf("%s: metadata field without key: %+v", d.Type, f)
 			}
 		}
 	}
@@ -46,31 +46,31 @@ func TestCheckMetadata(t *testing.T) {
 		{name: "github url", typ: "github", raw: map[string]any{"repo": "https://github.com/owner/repo.git"}, want: map[string]any{"repo": "owner/repo"}},
 		{name: "github drops unknown keys", typ: "github", raw: map[string]any{"repo": "owner/repo", "token": "ghp_leak", "extra": 1},
 			want: map[string]any{"repo": "owner/repo"}},
-		{name: "github missing repo", typ: "github", raw: map[string]any{}, wantErr: `informe o campo "Repositório" do GitHub`},
-		{name: "github nil metadata", typ: "github", raw: nil, wantErr: `informe o campo "Repositório" do GitHub`},
-		{name: "github blank repo", typ: "github", raw: map[string]any{"repo": "   "}, wantErr: `informe o campo "Repositório" do GitHub`},
-		{name: "github repo is not a text", typ: "github", raw: map[string]any{"repo": 42}, wantErr: "precisa ser um texto"},
-		{name: "github repo without owner", typ: "github", raw: map[string]any{"repo": "repo"}, wantErr: "repositório do GitHub inválido"},
-		{name: "github repo climbing the path", typ: "github", raw: map[string]any{"repo": "owner/.."}, wantErr: "repositório do GitHub inválido"},
-		{name: "github repo with extra path", typ: "github", raw: map[string]any{"repo": "owner/repo/issues"}, wantErr: "repositório do GitHub inválido"},
+		{name: "github missing repo", typ: "github", raw: map[string]any{}, wantErr: "integration.field_required"},
+		{name: "github nil metadata", typ: "github", raw: nil, wantErr: "integration.field_required"},
+		{name: "github blank repo", typ: "github", raw: map[string]any{"repo": "   "}, wantErr: "integration.field_required"},
+		{name: "github repo is not a text", typ: "github", raw: map[string]any{"repo": 42}, wantErr: "integration.field_not_text"},
+		{name: "github repo without owner", typ: "github", raw: map[string]any{"repo": "repo"}, wantErr: "integration.github_invalid_repo"},
+		{name: "github repo climbing the path", typ: "github", raw: map[string]any{"repo": "owner/.."}, wantErr: "integration.github_invalid_repo"},
+		{name: "github repo with extra path", typ: "github", raw: map[string]any{"repo": "owner/repo/issues"}, wantErr: "integration.github_invalid_repo"},
 
 		{name: "gitlab plain", typ: "gitlab", raw: map[string]any{"project_url": "group/sub/project"}, want: map[string]any{"project_url": "group/sub/project"}},
 		{name: "gitlab url", typ: "gitlab", raw: map[string]any{"project_url": "https://gitlab.com/group/project/-/issues"},
 			want: map[string]any{"project_url": "group/project"}},
-		{name: "gitlab missing project", typ: "gitlab", raw: map[string]any{"repo": "group/project"}, wantErr: `informe o campo "Projeto" do GitLab`},
-		{name: "gitlab project without group", typ: "gitlab", raw: map[string]any{"project_url": "project"}, wantErr: "projeto do GitLab inválido"},
+		{name: "gitlab missing project", typ: "gitlab", raw: map[string]any{"repo": "group/project"}, wantErr: "integration.field_required"},
+		{name: "gitlab project without group", typ: "gitlab", raw: map[string]any{"project_url": "project"}, wantErr: "integration.gitlab_invalid_project"},
 
 		{name: "trello ids", typ: "trello", raw: map[string]any{"api_key": testutil.TrelloKey, "board_id": testutil.TrelloBoardID},
 			want: map[string]any{"api_key": testutil.TrelloKey, "board_id": testutil.TrelloBoardID}},
 		{name: "trello board url", typ: "trello",
 			raw:  map[string]any{"api_key": testutil.TrelloKey, "board_id": "https://trello.com/b/AbC123xy/app-do-cliente"},
 			want: map[string]any{"api_key": testutil.TrelloKey, "board_id": "AbC123xy"}},
-		{name: "trello missing key", typ: "trello", raw: map[string]any{"board_id": "AbC123xy"}, wantErr: `informe o campo "Chave da API" do Trello`},
-		{name: "trello missing board", typ: "trello", raw: map[string]any{"api_key": testutil.TrelloKey}, wantErr: `informe o campo "Quadro" do Trello`},
+		{name: "trello missing key", typ: "trello", raw: map[string]any{"board_id": "AbC123xy"}, wantErr: "integration.field_required"},
+		{name: "trello missing board", typ: "trello", raw: map[string]any{"api_key": testutil.TrelloKey}, wantErr: "integration.field_required"},
 		{name: "trello key breaking the header", typ: "trello", raw: map[string]any{"api_key": `abc", oauth_token="x`, "board_id": "AbC123xy"},
-			wantErr: "chave da API do Trello inválida"},
+			wantErr: "integration.trello_invalid_key"},
 		{name: "trello board climbing the path", typ: "trello", raw: map[string]any{"api_key": testutil.TrelloKey, "board_id": "../members/me"},
-			wantErr: "quadro do Trello inválido"},
+			wantErr: "integration.trello_invalid_board"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -127,8 +127,8 @@ func TestGitHub_ValidateAndFetch(t *testing.T) {
 		conn    Connection
 		wantErr string
 	}{
-		{"invalid token", Connection{Token: testutil.InvalidToken, Metadata: conn.Metadata}, "token do GitHub inválido"},
-		{"unknown repository", Connection{Token: "ghp_test", Metadata: map[string]any{"repo": "owner/missing"}}, "não encontrado ou o token não tem acesso"},
+		{"invalid token", Connection{Token: testutil.InvalidToken, Metadata: conn.Metadata}, "integration.invalid_token"},
+		{"unknown repository", Connection{Token: "ghp_test", Metadata: map[string]any{"repo": "owner/missing"}}, "integration.github_repo_not_found"},
 	}
 	for _, tc := range cases {
 		if err := g.Validate(tc.conn); err == nil || !strings.Contains(err.Error(), tc.wantErr) {
@@ -139,13 +139,13 @@ func TestGitHub_ValidateAndFetch(t *testing.T) {
 	// O que não chega a virar requisição: sem token, sem metadata, e um "número de
 	// issue" que tentaria sair do repositório configurado.
 	before := hits.Load()
-	if err := g.Validate(Connection{Metadata: conn.Metadata}); err == nil || !strings.Contains(err.Error(), "informe o token do GitHub") {
+	if err := g.Validate(Connection{Metadata: conn.Metadata}); err == nil || !strings.Contains(err.Error(), "integration.token_required") {
 		t.Errorf("validate without token: %v", err)
 	}
-	if err := g.Validate(Connection{Token: "ghp_test"}); err == nil || !strings.Contains(err.Error(), `informe o campo "Repositório"`) {
+	if err := g.Validate(Connection{Token: "ghp_test"}); err == nil || !strings.Contains(err.Error(), "integration.field_required") {
 		t.Errorf("validate without metadata: %v", err)
 	}
-	if _, err := g.FetchItemDetails(conn, "../../../owner/other/issues/1"); err == nil || !strings.Contains(err.Error(), "só dígitos") {
+	if _, err := g.FetchItemDetails(conn, "../../../owner/other/issues/1"); err == nil || !strings.Contains(err.Error(), "integration.invalid_issue_number") {
 		t.Errorf("fetch with a path as the issue number: %v", err)
 	}
 	if after := hits.Load(); after != before {
@@ -170,14 +170,14 @@ func TestGitLab_ValidateAndFetch(t *testing.T) {
 		t.Errorf("details = %+v", details)
 	}
 
-	if err := g.Validate(Connection{Token: testutil.InvalidToken, Metadata: conn.Metadata}); err == nil || !strings.Contains(err.Error(), "token do GitLab inválido") {
+	if err := g.Validate(Connection{Token: testutil.InvalidToken, Metadata: conn.Metadata}); err == nil || !strings.Contains(err.Error(), "integration.invalid_token") {
 		t.Errorf("invalid token: %v", err)
 	}
 	missing := Connection{Token: "glpat-test", Metadata: map[string]any{"project_url": "group/missing"}}
-	if err := g.Validate(missing); err == nil || !strings.Contains(err.Error(), "não encontrado ou o token não tem acesso") {
+	if err := g.Validate(missing); err == nil || !strings.Contains(err.Error(), "integration.gitlab_project_not_found") {
 		t.Errorf("unknown project: %v", err)
 	}
-	if _, err := g.FetchItemDetails(conn, "999"); err == nil || !strings.Contains(err.Error(), "item 999 não encontrado") {
+	if _, err := g.FetchItemDetails(conn, "999"); err == nil || !strings.Contains(err.Error(), "integration.item_not_found") {
 		t.Errorf("unknown issue: %v", err)
 	}
 }
@@ -201,12 +201,12 @@ func TestTrello_Validate(t *testing.T) {
 		conn    Connection
 		wantErr string
 	}{
-		{"invalid token", Connection{Token: testutil.InvalidToken, Metadata: meta(testutil.TrelloBoardID)}, "chave ou token do Trello inválido"},
-		{"wrong key", Connection{Token: "trello-token", Metadata: map[string]any{"api_key": "outrachave", "board_id": testutil.TrelloBoardID}}, "chave ou token do Trello inválido"},
-		{"unknown board", Connection{Token: "trello-token", Metadata: meta("ZzZ999zz")}, "quadro do Trello não encontrado"},
-		{"no token", Connection{Metadata: meta(testutil.TrelloBoardID)}, "informe o token do Trello"},
-		{"token breaking the header", Connection{Token: `x", extra="y`, Metadata: meta(testutil.TrelloBoardID)}, "token do Trello inválido"},
-		{"no metadata", Connection{Token: "trello-token"}, `informe o campo "Chave da API" do Trello`},
+		{"invalid token", Connection{Token: testutil.InvalidToken, Metadata: meta(testutil.TrelloBoardID)}, "integration.trello_no_access_board"},
+		{"wrong key", Connection{Token: "trello-token", Metadata: map[string]any{"api_key": "outrachave", "board_id": testutil.TrelloBoardID}}, "integration.trello_no_access_board"},
+		{"unknown board", Connection{Token: "trello-token", Metadata: meta("ZzZ999zz")}, "integration.trello_board_not_found"},
+		{"no token", Connection{Metadata: meta(testutil.TrelloBoardID)}, "integration.token_required"},
+		{"token breaking the header", Connection{Token: `x", extra="y`, Metadata: meta(testutil.TrelloBoardID)}, "integration.invalid_token"},
+		{"no metadata", Connection{Token: "trello-token"}, "integration.field_required"},
 	}
 	for _, tc := range cases {
 		if err := tr.Validate(tc.conn); err == nil || !strings.Contains(err.Error(), tc.wantErr) {
@@ -243,10 +243,10 @@ func TestTrello_FetchItemDetails(t *testing.T) {
 		}
 
 		cases := []struct{ item, wantErr string }{
-			{"OutroQdr", "é de outro quadro"},
-			{"NaoExist", "item NaoExist não encontrado"},
-			{"../boards/" + testutil.TrelloBoardID, "cartão do Trello inválido"},
-			{"", "cartão do Trello inválido"},
+			{"OutroQdr", "integration.trello_card_other_board"},
+			{"NaoExist", "integration.item_not_found"},
+			{"../boards/" + testutil.TrelloBoardID, "integration.trello_invalid_card"},
+			{"", "integration.trello_invalid_card"},
 		}
 		for _, tc := range cases {
 			if _, err := tr.FetchItemDetails(conn, tc.item); err == nil || !strings.Contains(err.Error(), tc.wantErr) {

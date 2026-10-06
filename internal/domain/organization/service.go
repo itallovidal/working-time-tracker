@@ -1,8 +1,6 @@
 package organization
 
 import (
-	"errors"
-	"fmt"
 	"strings"
 	"time"
 	_ "time/tzdata" // o binário valida fusos mesmo onde o sistema não tem a base instalada
@@ -10,19 +8,6 @@ import (
 
 	"working-time-tracker/internal/domain/person"
 	"working-time-tracker/internal/validate"
-)
-
-var (
-	ErrNameRequired       = errors.New("informe o nome")
-	ErrInvalidFoundedYear = errors.New("o ano de fundação deve ficar entre 1900 e o ano atual")
-	ErrInvalidSize        = errors.New("porte inválido: use 1-10, 11-50, 51-200, 201-500 ou 500+")
-	ErrInvalidURL         = errors.New("endereço inválido: use um link http ou https, por exemplo https://exemplo.com.br")
-	ErrInvalidEmail       = errors.New("informe um email de contato válido")
-	ErrInvalidPhone       = errors.New("telefone inválido: use números, espaços, +, parênteses e hífen")
-	ErrInvalidCNPJ        = errors.New("CNPJ inválido: confira os números e os dígitos verificadores")
-	ErrInvalidWorkMode    = errors.New("regime de trabalho inválido: use remote, hybrid ou onsite")
-	ErrInvalidTimezone    = errors.New("fuso horário inválido: use um nome como America/Sao_Paulo")
-	ErrInvalidCurrency    = errors.New("moeda inválida: use BRL, USD ou EUR")
 )
 
 var (
@@ -79,7 +64,7 @@ func (s *Service) Delete(id string) error {
 		return err
 	}
 	if hasProjects {
-		return errors.New("exclua todos os projetos antes de excluir a organização")
+		return ErrHasProjects
 	}
 	return s.store.Delete(id)
 }
@@ -90,7 +75,7 @@ func apply(org *Organization, in UpdateInput) error {
 		if name == "" {
 			return ErrNameRequired
 		}
-		if err := maxLen("o nome", name, 120); err != nil {
+		if err := maxLen("name", name, 120); err != nil {
 			return err
 		}
 		org.Name = name
@@ -103,15 +88,15 @@ func apply(org *Organization, in UpdateInput) error {
 		label string
 		max   int
 	}{
-		{&org.Description, in.Description, "a descrição", 2000},
-		{&org.Industry, in.Industry, "o segmento", 100},
-		{&org.LegalName, in.LegalName, "a razão social", 200},
-		{&org.AddressLine1, in.AddressLine1, "o endereço", 200},
-		{&org.AddressLine2, in.AddressLine2, "o complemento", 200},
-		{&org.City, in.City, "a cidade", 100},
-		{&org.State, in.State, "o estado", 100},
-		{&org.PostalCode, in.PostalCode, "o CEP", 16},
-		{&org.Country, in.Country, "o país", 100},
+		{&org.Description, in.Description, "long_description", 2000},
+		{&org.Industry, in.Industry, "industry", 100},
+		{&org.LegalName, in.LegalName, "legal_name", 200},
+		{&org.AddressLine1, in.AddressLine1, "address_line1", 200},
+		{&org.AddressLine2, in.AddressLine2, "address_line2", 200},
+		{&org.City, in.City, "city", 100},
+		{&org.State, in.State, "state", 100},
+		{&org.PostalCode, in.PostalCode, "postal_code", 16},
+		{&org.Country, in.Country, "country", 100},
 	} {
 		if f.src == nil {
 			continue
@@ -126,7 +111,7 @@ func apply(org *Organization, in UpdateInput) error {
 	if in.Summary != nil {
 		// O resumo é uma linha só: quebras e espaços repetidos viram um espaço.
 		v := strings.Join(strings.Fields(*in.Summary), " ")
-		if err := maxLen("o resumo", v, 160); err != nil {
+		if err := maxLen("summary", v, 160); err != nil {
 			return err
 		}
 		org.Summary = v
@@ -222,9 +207,11 @@ func apply(org *Organization, in UpdateInput) error {
 	return nil
 }
 
-func maxLen(label, v string, max int) error {
+// maxLen confere o tamanho de um campo de texto. field é o nome do campo na API,
+// e o cliente mostra o rótulo dele.
+func maxLen(field, v string, max int) error {
 	if utf8.RuneCountInString(v) > max {
-		return fmt.Errorf("%s pode ter até %d caracteres", label, max)
+		return ErrFieldTooLong.With("field", field, "max", max)
 	}
 	return nil
 }

@@ -12,16 +12,12 @@ import (
 const defaultTrelloBaseURL = "https://api.trello.com/1"
 
 var trelloDescriptor = Descriptor{
-	Type:        "trello",
-	Label:       "Trello",
-	Description: "Cartões de um quadro",
-	TokenHint:   "Token da API gerado a partir da chave, com permissão de leitura.",
+	Type:  "trello",
+	Label: "Trello",
 	Metadata: []Field{
-		{Key: "api_key", Label: "Chave da API", Hint: "A chave do seu Power-Up, em trello.com/apps/admin.", Required: true},
-		{Key: "board_id", Label: "Quadro", Placeholder: "https://trello.com/b/AbC123xy/nome", Hint: "O endereço do quadro, o link curto ou o id.", Required: true, Summary: true},
+		{Key: "api_key", Required: true},
+		{Key: "board_id", Required: true, Summary: true},
 	},
-	ItemLabel:       "Cartão",
-	ItemPlaceholder: "Link curto, ex.: H0TZyzbK",
 }
 
 // TrelloIntegration fala com a API do Trello. BaseURL e Client são opcionais e
@@ -66,14 +62,14 @@ func parseTrelloMetadata(raw map[string]any) (*trelloMetadata, error) {
 	}
 	key := fields["api_key"]
 	if !trelloID.MatchString(key) {
-		return nil, fmt.Errorf("chave da API do Trello inválida")
+		return nil, ErrTrelloInvalidKey
 	}
 	board := fields["board_id"]
 	if m := trelloBoardURL.FindStringSubmatch(board); m != nil {
 		board = m[1]
 	}
 	if !trelloID.MatchString(board) {
-		return nil, fmt.Errorf("quadro do Trello inválido: use o endereço do quadro, o link curto ou o id")
+		return nil, ErrTrelloInvalidBoard
 	}
 	return &trelloMetadata{APIKey: key, BoardID: board}, nil
 }
@@ -97,7 +93,7 @@ func (t *TrelloIntegration) get(conn Connection, meta *trelloMetadata, path stri
 		return nil, err
 	}
 	if strings.ContainsAny(token, "\"\\ \t\r\n") {
-		return nil, fmt.Errorf("token do Trello inválido")
+		return nil, ErrInvalidToken.With("provider", "Trello")
 	}
 	req, err := http.NewRequest("GET", t.baseURL()+path, nil)
 	if err != nil {
@@ -108,7 +104,7 @@ func (t *TrelloIntegration) get(conn Connection, meta *trelloMetadata, path stri
 
 	resp, err := t.client().Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("não foi possível falar com o Trello: %w", err)
+		return nil, ErrProviderUnreachable.With("provider", "Trello").Wrap(err)
 	}
 	return resp, nil
 }
@@ -130,11 +126,11 @@ func (t *TrelloIntegration) Validate(conn Connection) error {
 		return nil
 	case http.StatusUnauthorized:
 		// O Trello responde 401 tanto para credencial errada quanto para quadro que o token não vê.
-		return fmt.Errorf("chave ou token do Trello inválido, ou sem acesso ao quadro")
+		return ErrTrelloNoAccessBoard
 	case http.StatusBadRequest, http.StatusNotFound:
-		return fmt.Errorf("quadro do Trello não encontrado")
+		return ErrTrelloBoardMissing
 	default:
-		return fmt.Errorf("o Trello respondeu com status %d", resp.StatusCode)
+		return ErrProviderStatus.With("provider", "Trello", "status", resp.StatusCode)
 	}
 }
 
@@ -148,7 +144,7 @@ func (t *TrelloIntegration) FetchItemDetails(conn Connection, itemID string) (*I
 		card = m[1]
 	}
 	if !trelloID.MatchString(card) {
-		return nil, fmt.Errorf("cartão do Trello inválido: use o link curto, o id ou o endereço do cartão")
+		return nil, ErrTrelloInvalidCard
 	}
 
 	// Uma chamada só: o cartão com a lista e o quadro dele aninhados.
@@ -159,13 +155,13 @@ func (t *TrelloIntegration) FetchItemDetails(conn Connection, itemID string) (*I
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusUnauthorized {
-		return nil, fmt.Errorf("chave ou token do Trello inválido, ou sem acesso ao cartão")
+		return nil, ErrTrelloNoAccessCard
 	}
 	if resp.StatusCode == http.StatusBadRequest || resp.StatusCode == http.StatusNotFound {
-		return nil, fmt.Errorf("item %s não encontrado", card)
+		return nil, ErrItemNotFound.With("item", card)
 	}
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("o Trello respondeu com status %d", resp.StatusCode)
+		return nil, ErrProviderStatus.With("provider", "Trello", "status", resp.StatusCode)
 	}
 
 	var body struct {
@@ -182,14 +178,14 @@ func (t *TrelloIntegration) FetchItemDetails(conn Connection, itemID string) (*I
 		} `json:"board"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
-		return nil, fmt.Errorf("resposta inesperada do Trello: %w", err)
+		return nil, ErrUnexpectedResponse.With("provider", "Trello").Wrap(err)
 	}
 
 	// O quadro foi configurado pelo id ou pelo link curto: o cartão tem de ser dele.
 	sameBoard := meta.BoardID == body.Board.ShortLink ||
 		strings.EqualFold(meta.BoardID, body.Board.ID) || strings.EqualFold(meta.BoardID, body.IDBoard)
 	if !sameBoard {
-		return nil, fmt.Errorf("o cartão %s é de outro quadro", card)
+		return nil, ErrTrelloCardOtherBoard.With("card", card)
 	}
 
 	// O estado de um cartão é a lista em que ele está.
