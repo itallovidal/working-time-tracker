@@ -9,7 +9,6 @@ import (
 
 	"working-time-tracker/ent"
 	"working-time-tracker/internal/adapter"
-	"working-time-tracker/internal/database"
 	"working-time-tracker/testutil"
 )
 
@@ -21,9 +20,6 @@ const invalidGitHubToken = "invalid-token"
 
 func TestMain(m *testing.M) {
 	testClient, testDB = testutil.Setup()
-	if err := database.AutoMigrate(testClient); err != nil {
-		panic(err)
-	}
 
 	github := httptest.NewServer(fakeGitHub())
 	adapter.Register("github", func() adapter.Integration {

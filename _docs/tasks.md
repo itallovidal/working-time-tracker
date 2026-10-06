@@ -208,6 +208,17 @@
 
 ---
 
+### Sprint 15: Versioned Migrations
+
+- [X] S15.1 Generate migrations from `ent/schema` with `cmd/migrate new`: replay the existing files on a throwaway database, diff against the Ent schema and warn about changes that touch existing data
+- [X] S15.2 Baseline migration with the whole current schema; migrations embedded in the binary and applied at startup by goose, one transaction per file
+- [X] S15.3 Remove the Ent auto migration (with column and index drops) from the server, the seed and the tests
+- [X] S15.4 Refuse a database that has tables and no migration history, or a migration the build does not know
+- [X] S15.5 Tests for schema drift between `ent/schema` and the migrations, the refusals and the checksum file; the test helper rebuilds the schema of the `_test` database for each package
+- [X] S15.6 Document the migration workflow in the README and the decision in `design.md`
+
+---
+
 ### Refatoração: Domain-First Architecture (pré-Sprint 9)
 
 - [X] R1 Reorganizar código de layered-flat para domain-first: `internal/domain/<dominio>/` com `model.go`, `store.go`, `service.go`, `handler.go` por domínio

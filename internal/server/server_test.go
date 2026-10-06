@@ -14,7 +14,6 @@ import (
 	"github.com/labstack/echo/v5"
 
 	"working-time-tracker/ent"
-	"working-time-tracker/internal/database"
 	"working-time-tracker/internal/domain/auth"
 	"working-time-tracker/internal/server"
 	"working-time-tracker/testutil"
@@ -25,9 +24,6 @@ var testDB *sql.DB
 
 func TestMain(m *testing.M) {
 	testClient, testDB = testutil.Setup()
-	if err := database.AutoMigrate(testClient); err != nil {
-		panic(err)
-	}
 	os.Exit(m.Run())
 }
 

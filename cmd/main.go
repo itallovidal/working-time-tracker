@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 
 	"working-time-tracker/internal/config"
@@ -20,7 +21,7 @@ func main() {
 		log.Fatalf("database: %v", err)
 	}
 
-	if err := database.AutoMigrate(db.Client); err != nil {
+	if err := database.Migrate(context.Background(), db.Raw); err != nil {
 		log.Fatalf("migration: %v", err)
 	}
 

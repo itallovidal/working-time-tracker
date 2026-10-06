@@ -58,9 +58,9 @@ Para gerar o binário: `go build -o wtt ./cmd && ./wtt`. Templates e arquivos es
 | `DATABASE_URL` | sim | Conexão com o PostgreSQL |
 | `INTEGRATION_ENCRYPTION_KEY` | sim | Chave da criptografia AES-GCM das credenciais de integração. Trocá-la torna as credenciais salvas ilegíveis |
 | `COOKIE_SECURE` | não | `true` marca o cookie de sessão como `Secure`. Use em produção, atrás de HTTPS |
-| `TEST_DATABASE_URL` | só nos testes | Banco usado por `go test` |
+| `TEST_DATABASE_URL` | só nos testes | Banco usado por `go test`. O nome precisa terminar em `_test` |
 
-O servidor aplica as migrações do schema ao iniciar.
+O servidor e o seed aplicam as migrações pendentes ao iniciar. São arquivos SQL versionados, e só eles mudam o schema: veja [Migrações do banco](#migrações-do-banco).
 
 ## Interface web
 
@@ -155,11 +155,13 @@ TEST_DATABASE_URL=postgres://wtt:wtt@localhost:5432/working_time_tracker_test?ss
   go test -p 1 ./...
 ```
 
-O `-p 1` é necessário porque todos os pacotes limpam e usam o mesmo banco. As chamadas ao GitHub nos testes vão para um servidor fake (`httptest`), então a suíte não depende de rede.
+Cada pacote de teste apaga o schema desse banco e aplica as migrações de novo antes de rodar, então ele não precisa de preparo e os testes sempre veem o que os arquivos de migração produzem hoje. Por segurança, isso só acontece num banco cujo nome termina em `_test`.
+
+O `-p 1` é necessário porque todos os pacotes recriam e usam o mesmo banco. As chamadas ao GitHub nos testes vão para um servidor fake (`httptest`), então a suíte não depende de rede.
 
 Cobertura:
 - **Domínios:** services e handlers.
-- **Migração:** regras de FK, índice parcial e idempotência.
+- **Migrações:** o banco que elas produzem bate com o `ent/schema`, regras de FK, índice parcial, recusa de banco sem histórico e checksum dos arquivos.
 - **Router real:** tabela de rotas, autenticação, permissões e isolamento entre organizações.
 - **Páginas:** toda página renderiza para admin e membro, redireciona sem sessão e dá 404 entre organizações.
 - **Alpine vendorizado:** o hash confere com o pacote oficial.
@@ -168,14 +170,15 @@ Cobertura:
 
 ```
 cmd/
-  main.go                 # servidor: config, banco, migração e server.New
+  main.go                 # servidor: config, banco, migrações e server.New
   seed/main.go            # dados de demonstração
+  migrate/                # gera, confere e aplica as migrações do banco
 ent/
   schema/                 # schema do banco (Ent); o resto de ent/ é gerado: go generate ./ent
 internal/
   adapter/                # clientes do GitHub e do GitLab, e a criptografia das credenciais
   config/                 # variáveis de ambiente
-  database/               # conexão e migração
+  database/               # conexão, arquivos de migração (migrations/) e quem os aplica
   domain/
     auth/                 # signup, login, sessões, convites, middlewares e acesso por organização
     organization/  customer/  person/  project/  team/  allocation/  task/  work_session/  integration/
@@ -185,7 +188,7 @@ internal/
   server/                 # monta o servidor completo; usado pelo main e pelos testes
   template/               # renderer dos templates
   validate/               # validações de formato usadas por mais de um domínio (CNPJ, links)
-testutil/                 # conexão e limpeza do banco de teste
+testutil/                 # conexão, schema e limpeza do banco de teste
 web/                      # templates e arquivos estáticos (embutidos no binário)
 docker-compose.yml        # PostgreSQL de dev e de testes
 _docs/                    # proposta, design e plano das sprints
@@ -211,11 +214,65 @@ Task      (0..1) ── (0..1) Integration  via external_integration_id
 
 Excluir um projeto apaga os times, os valores, as tarefas, as sessões e as integrações dele. Excluir um cliente só é permitido quando nenhum projeto aponta para ele. Excluir uma organização só é permitido sem projetos, e apaga as pessoas, os clientes e os convites. O índice único parcial `one_active_session` em `work_sessions (person_id) WHERE end_at IS NULL` garante uma sessão aberta por pessoa.
 
+## Migrações do banco
+
+O schema do banco só muda por arquivos SQL versionados em `internal/database/migrations/`. O servidor e o seed aplicam os pendentes ao iniciar, em ordem, cada arquivo numa transação, e registram o que já rodou na tabela `goose_db_version`. Nada é calculado na hora: o que não está num arquivo commitado não roda.
+
+O `ent/schema` continua sendo a fonte do modelo, e os arquivos são gerados a partir dele:
+
+```bash
+# 1. Edite ent/schema e regenere o código
+go generate ./ent
+
+# 2. Gere a migração com a diferença
+go run ./cmd/migrate new add_invoice_number
+
+# 3. Revise o arquivo criado. Se editar à mão, recalcule o checksum
+go run ./cmd/migrate checksum
+
+# 4. Rode os testes e commite o ent/schema, o código gerado e a migração juntos
+```
+
+| Comando | O que faz |
+|---|---|
+| `go run ./cmd/migrate new <nome>` | Gera um arquivo com a diferença entre o que as migrações produzem e o `ent/schema`. Usa um banco temporário no servidor do `DATABASE_URL` e o apaga ao terminar, sem tocar no seu banco |
+| `go run ./cmd/migrate checksum` | Recalcula o `atlas.sum` depois de uma edição manual |
+| `go run ./cmd/migrate status` | Lista as migrações e quais já foram aplicadas no banco do `DATABASE_URL` |
+| `go run ./cmd/migrate up` | Aplica as pendentes sem subir o servidor |
+
+**Revise sempre o arquivo gerado.** O gerador compara schemas e não sabe o que há nas tabelas. Ele avisa quando a mudança mexe em dados existentes, mas quem corrige é você:
+
+- **Rename de campo** sai como `DROP COLUMN` + `ADD COLUMN`, o que apagaria os dados. Troque por `ALTER TABLE ... RENAME COLUMN ...`.
+- **Coluna `NOT NULL` nova sem default** falha numa tabela com linhas. Crie nullable, preencha com um `UPDATE` e só então `SET NOT NULL`, no mesmo arquivo.
+- **Dado que muda de lugar** (uma coluna que sai de uma tabela e vai para outra) precisa de um `UPDATE` escrito à mão antes do `DROP`.
+- **Entidade removida** do `ent/schema` não gera `DROP TABLE`. Se a tabela deve sair, escreva o `DROP TABLE`.
+
+Regras:
+
+- As migrações andam **só para frente**. Para desfazer uma mudança, escreva uma migração nova.
+- **Não edite uma migração que já está na `main`.** Os bancos que já a aplicaram não rodam o arquivo de novo.
+- Ao trazer a `main` para uma branch que tem migração nova, a sua precisa ficar depois das que chegaram. Se o timestamp dela for menor, apague o arquivo, rode `checksum` e gere de novo.
+- Um comando com `;` no meio (função, bloco `DO`) fica entre `-- +goose StatementBegin` e `-- +goose StatementEnd`.
+- Índice ou constraint criado à mão numa migração também precisa estar declarado no `ent/schema`. O teste `TestMigrate_NoSchemaDrift` falha quando os dois divergem.
+
+### Banco criado antes das migrações versionadas
+
+Um banco criado pelo auto migrate antigo tem as tabelas, mas não tem histórico. O servidor se recusa a iniciar nele (`database has tables but no migration history`), em vez de adivinhar em que estado ele está. O mesmo vale para um banco com uma migração que o binário não conhece. Recrie o banco e rode o seed:
+
+```bash
+docker compose exec db psql -U wtt -d postgres \
+  -c 'DROP DATABASE working_time_tracker' \
+  -c 'CREATE DATABASE working_time_tracker OWNER wtt'
+go run ./cmd/seed
+```
+
+Isso apaga os dados desse banco. Para mantê-los, guarde-os antes com `pg_dump --data-only`, recrie o banco, rode `go run ./cmd/migrate up` no lugar do seed e restaure o dump. Só funciona se o banco antigo estava com o schema da versão que introduziu as migrações.
+
 ## Stack
 
 | Camada | Tecnologia |
 |---|---|
 | Backend | Go + Echo v5 |
-| Banco | PostgreSQL + [Ent](https://entgo.io) |
+| Banco | PostgreSQL + [Ent](https://entgo.io), com migrações versionadas aplicadas pelo [goose](https://github.com/pressly/goose) |
 | Frontend | HTML renderizado no servidor (`html/template`) + Alpine.js vendorizado, sem build |
 | Entrega | Binário único com `embed.FS` |

@@ -30,13 +30,13 @@ Stakeholders are teams that work by project and want accurate time-per-task data
 
 ## Decisions
 
-### Decision 1: Tech stack — Go (Echo) + GORM + PostgreSQL + Alpine.js frontend
-**Choice:** Go backend using the Echo web framework, with PostgreSQL as the datastore and GORM as the ORM. The Go server also serves the frontend as server-rendered HTML templates enhanced with Alpine.js for interactivity. The frontend consumes the JSON REST API exposed by the same server.
-**Rationale:** GORM provides a productive Go ORM with AutoMigrate, hooks, and association management — eliminating raw SQL boilerplate while keeping the database schema driven by Go structs. Echo provides a lightweight HTTP router with middleware, static-asset serving, and HTML template rendering. Together they keep the backend fast to iterate on. PostgreSQL gives reliable timestamp handling, unique constraints, and JSONB columns for flexible integration config storage. Alpine.js adds reactivity with no build step.
+### Decision 1: Tech stack — Go (Echo) + Ent + PostgreSQL + Alpine.js frontend
+**Choice:** Go backend using the Echo web framework, with PostgreSQL as the datastore and Ent as the ORM (the project started on GORM and moved to Ent). The Go server also serves the frontend as server-rendered HTML templates enhanced with Alpine.js for interactivity. The frontend consumes the JSON REST API exposed by the same server.
+**Rationale:** Ent generates a typed client from the schema declared in `ent/schema` — eliminating raw SQL boilerplate while keeping the data model in Go. Schema changes reach the database through versioned migrations (Decision 9), not through the ORM at startup. Echo provides a lightweight HTTP router with middleware, static-asset serving, and HTML template rendering. Together they keep the backend fast to iterate on. PostgreSQL gives reliable timestamp handling, unique constraints, and JSONB columns for flexible integration config storage. Alpine.js adds reactivity with no build step.
 **Alternatives considered:**
 - Node.js + SQLite: simpler to start but weaker concurrency guarantees and no native single-binary deployment.
 - Python + Postgres: viable but heavier runtime; Go's compiled output suits a small tracker service better.
-- Raw `database/sql` without an ORM: more control but slower to develop; GORM's AutoMigrate and association handling justify the abstraction for this project's data-model complexity.
+- Raw `database/sql` without an ORM: more control but slower to develop; Ent's generated client and edge handling justify the abstraction for this project's data-model complexity.
 - Separate SPA (React/Vue) frontend: more capable but adds a JavaScript build toolchain and a second deployment artifact; overkill for a small internal tracker.
 
 ### Decision 2: Data model — Seven core entities
@@ -93,7 +93,7 @@ WorkSession: id (UUID PK), task_id (FK Task), person_id (FK Person),
 ```
 
 A partial unique index enforces one active session per person:
-`CREATE UNIQUE INDEX one_active_session ON time_entries (person_id) WHERE end_at IS NULL`
+`CREATE UNIQUE INDEX one_active_session ON work_sessions (person_id) WHERE end_at IS NULL`
 
 **Rationale:** The model maps directly to the organizational hierarchy. A person belongs to an organization, which has projects. Each project has teams, integrations, and tasks. Links to external items are stored on the task itself (one link per task), referencing which integration provides the connection. The partial unique index on WorkSession is the database-level guarantee against concurrent clock-in races. JSONB for Integration.config allows type-specific configuration without schema changes per platform.
 
@@ -101,8 +101,8 @@ A partial unique index enforces one active session per person:
 - Separate `TaskLink` table for external item references: more flexible for multiple links per task but over-normalized for v1 where one link per task is sufficient.
 - Separate per-integration tables: not extensible; adding a new integration type would require a migration.
 
-### Decision 3: Single active session enforcement — Partial unique index via GORM migration
-**Choice:** Enforce the "one active session per person" rule with a PostgreSQL partial unique index: `CREATE UNIQUE INDEX one_active_session ON time_entries (person_id) WHERE end_at IS NULL`. The standard table structure is managed by GORM AutoMigrate from model structs; the partial unique index is applied as a one-time migration step via `db.Exec()` after AutoMigrate, since GORM does not natively support partial indexes through struct tags.
+### Decision 3: Single active session enforcement — Partial unique index
+**Choice:** Enforce the "one active session per person" rule with a PostgreSQL partial unique index: `CREATE UNIQUE INDEX one_active_session ON work_sessions (person_id) WHERE end_at IS NULL`. The index is declared in the Ent schema (`ent/schema/worksession.go`) and created by the baseline migration (Decision 9).
 **Rationale:** Database-level guarantee that prevents race conditions even if two concurrent clock-in requests arrive. The service layer checks first for a friendly error, but the index is the hard guarantee. This decision is unchanged from the original design because the constraint is per-person regardless of project scope.
 **Alternatives considered:**
 - Application-level lock/check only: vulnerable to concurrent request races.
@@ -188,6 +188,16 @@ Each integration type implements a common interface:
 - Pure server-rendered forms with full page reloads: simpler but poorer UX for clock in/out and live totals.
 - Separate SPA frontend: rejected per Decision 1 (build toolchain + second deployment artifact).
 
+### Decision 9: Schema changes — Versioned migrations
+**Choice:** The database schema changes only through versioned SQL files in `internal/database/migrations`. They are embedded in the binary and applied in order at startup by goose (server and seed), one transaction per file, under an advisory lock. The files are generated from `ent/schema` by `go run ./cmd/migrate new <name>`: Ent's Atlas engine replays the existing files on a throwaway database, diffs the result against the Ent schema and writes the difference. A person reviews the file, and edits it when the change needs a rename or a backfill, before committing it. Migrations are forward-only. A database that has tables but no migration history is refused, not adopted.
+**Rationale:** Before this decision the server ran Ent's auto migration at every start with column and index drops enabled: it diffed the Ent schema against the live database and applied whatever came out. A renamed field became `DROP COLUMN` + `ADD COLUMN`, and a value that moved between tables was lost — it happened when the weekly hours moved from the organization to the project. That is not acceptable now that the database stores money (the hourly rates on allocations, projects and work sessions). With versioned files, every destructive statement is written down, reviewed and committed, and a backfill sits next to the DDL that needs it. A drift test (after the migrations run on an empty database, Ent's diff must be empty) keeps `ent/schema` and the files from diverging.
+**Alternatives considered:**
+- Keep the auto migration without drops: stops the data loss, but renames, type changes and backfills stay impossible to express, and dead columns pile up.
+- Apply migrations only through an explicit command: the right call with a deploy pipeline, but there is none; a binary that migrates itself keeps setup to one step.
+- golang-migrate: up/down file pairs and a "dirty" state to clear by hand after a failed migration; goose runs each file in a transaction.
+- Atlas CLI for both generating and applying: no new Go dependency, but applying would live outside the binary.
+- Adopting existing databases by marking the baseline as applied: only local databases existed, and recreating them is simpler than proving an old schema matches the baseline.
+
 ## Risks / Trade-offs
 
 - **[Per-integration API rate limits]** On-demand external item fetches consume API quota per platform. → Mitigation: cache item details in-process with a short TTL (e.g., 60s); document rate-limit handling per integration type.
@@ -195,4 +205,6 @@ Each integration type implements a common interface:
 - **[Credential compromise]** Encrypted-at-rest integration tokens are only as safe as the encryption key. → Mitigation: key from env var / secrets manager, not committed; document rotation procedure; each integration stores only necessary permissions.
 - **[Integration API drift]** External platforms may change their APIs, breaking item detail fetching. → Mitigation: integration interface allows per-type implementation; graceful degradation (null detail block) ensures task reads never fail.
 - **[On-demand fetch latency]** Reading a task with a linked external item adds an API round-trip. → Mitigation: in-process TTL cache and graceful null-on-failure so task reads never block indefinitely.
+- **[Schema and migrations drifting apart]** `ent/schema` is edited by hand and the migration files are generated from it, so one can change without the other. → Mitigation: a test applies the migrations and fails if Ent's diff against the result is not empty, or if the set of tables differs.
+- **[Migrations that only fail on real data]** The test suite migrates an empty database, so a migration that breaks on existing rows (a new NOT NULL column, a unique index over duplicates) passes the tests. → Mitigation: the generator warns about these changes and every file is reviewed; each migration runs in a transaction, so a failure leaves the database at the previous version and the server refuses to start.
 - **[No build-time checks on frontend logic]** Alpine.js behavior lives in HTML attributes and inline scripts, so client-side errors only surface at runtime. → Mitigation: keep Alpine components small; rely on server-side validation as the source of truth; cover served routes with integration tests.

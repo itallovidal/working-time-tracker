@@ -165,10 +165,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("database: %v", err)
 	}
-	if err := database.AutoMigrate(db.Client); err != nil {
+	ctx := context.Background()
+	if err := database.Migrate(ctx, db.Raw); err != nil {
 		log.Fatalf("migration: %v", err)
 	}
-	ctx := context.Background()
 	if n := db.Client.Organization.Query().CountX(ctx); n > 0 {
 		log.Fatalf("o banco já tem %d organização(ões); o seed só roda num banco vazio", n)
 	}
