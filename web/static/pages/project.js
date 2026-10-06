@@ -136,7 +136,7 @@ document.addEventListener('alpine:init', () => {
     },
     personSummary() {
       const n = this.data.by_person.length;
-      return 'Página ' + this.personPage + ' de ' + this.personPages() + ' · ' + n + (n === 1 ? ' pessoa' : ' pessoas');
+      return WTT.t('overview.person_summary', { page: this.personPage, pages: this.personPages(), count: n });
     },
     // marginShare é a margem como parte da receita, em por cento inteiro; null
     // quando não há receita.
@@ -150,7 +150,7 @@ document.addEventListener('alpine:init', () => {
     },
     integrationsSummary() {
       const { total, enabled } = this.data.integrations;
-      return total + (total === 1 ? ' configurada' : ' configuradas') + ' · ' + enabled + (enabled === 1 ? ' ativa' : ' ativas');
+      return WTT.t('overview.configured', { count: total }) + ' · ' + WTT.t('overview.enabled', { count: enabled });
     },
     typeLabel(type) {
       const t = integrationType(type);

@@ -252,6 +252,7 @@ func portugueseLeftovers(body string) []string {
 func migratedPages(admin account, projectID, taskID string) []string {
 	return []string{
 		"/profile",
+		"/projects/" + projectID + "/overview",
 		"/projects/" + projectID + "/tasks",
 		"/projects/" + projectID + "/time-tracking",
 		"/projects/" + projectID + "/teams",

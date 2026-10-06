@@ -51,6 +51,7 @@ titles:
   org_projects: Projetos · Organização
   org_customers: Clientes · Organização
   org_people: Colaboradores · Organização
+  overview: Visão geral
   tasks: Tarefas
   time: Ponto
   teams: Colaboradores
@@ -564,6 +565,86 @@ collab:
   team_name_required: Informe o nome do time.
   team_saved: Time salvo.
   team_deleted: Time excluído.
+
+overview:
+  intro: "O projeto em números: quem trabalha nele, quanto tempo foi registrado e o que esse tempo custou e rendeu."
+  updated: "Atualizado às {{.time}}"
+  refresh: Atualizar
+  loading: Carregando a visão geral…
+  without_rate_count:
+    one: "{{.count}} pessoa está"
+    other: "{{.count}} pessoas estão"
+  without_rate_text:
+    one: num time deste projeto sem valor por hora, e não consegue bater ponto.
+    other: num time deste projeto sem valor por hora, e não conseguem bater ponto.
+  set_rate_before: Defina o valor na aba
+  set_rate_after: "."
+  people:
+    one: Pessoa
+    other: Pessoas
+  without_team: " · {{.count}} sem time"
+  teams:
+    one: Time
+    other: Times
+  hours: Horas registradas
+  revenue: Receita
+  cost: Custo
+  margin: Margem (receita menos custo)
+  margin_share: " · {{.percent}}% da receita"
+  age_title: Tempo de projeto
+  days:
+    one: Dia
+    other: Dias
+  weeks:
+    one: Semana
+    other: Semanas
+  months:
+    one: Mês
+    other: Meses
+  start: Início
+  first_session: Primeiro ponto
+  last_session: Último ponto
+  nobody_clocked: Ninguém bateu ponto ainda
+  age_note: O início é o dia em que o projeto foi cadastrado. Dias, semanas e meses medem o mesmo tempo, cada um arredondado para baixo.
+  activity: Atividade
+  last_7: Últimos 7 dias
+  last_30: Últimos 30 dias
+  working_now: Trabalhando agora
+  in_progress: Em andamento
+  nobody_open: Ninguém com o ponto aberto
+  session_count: Sessões registradas
+  integrations_title: Integrações
+  open_tab: Abrir a aba
+  no_integrations: Nenhuma integração
+  no_integrations_text: Configure o GitHub, o GitLab ou o Trello na aba Integrações para ligar as tarefas a issues e cartões.
+  no_credential: sem credencial
+  configured:
+    one: "{{.count}} configurada"
+    other: "{{.count}} configuradas"
+  enabled:
+    one: "{{.count}} ativa"
+    other: "{{.count}} ativas"
+  tasks_title: Tarefas e cliente
+  tasks:
+    one: Tarefa
+    other: Tarefas
+  overdue:
+    one: Atrasada
+    other: Atrasadas
+  see: ver
+  bill_rate: Valor cobrado por hora
+  no_bill_rate: Sem valor cobrado
+  tasks_note: Atrasada é a tarefa com o prazo vencido. A receita soma o valor cobrado que valia quando cada ponto foi batido.
+  by_person: Horas por pessoa
+  by_person_intro: Quem registrou ponto neste projeto, de quem mais trabalhou para quem menos. A soma das linhas dá os totais do topo.
+  nobody_title: Ninguém bateu ponto ainda
+  nobody_text: Quando alguém registrar tempo neste projeto, as horas, o custo e a receita de cada pessoa aparecem aqui.
+  col_hours: Horas
+  left: saiu do projeto
+  pager: Páginas das horas por pessoa
+  person_summary:
+    one: "Página {{.page}} de {{.pages}} · {{.count}} pessoa"
+    other: "Página {{.page}} de {{.pages}} · {{.count}} pessoas"
 
 labels:
   not_informed: Não informado
