@@ -254,6 +254,7 @@ func migratedPages(admin account, projectID, taskID string) []string {
 		"/profile",
 		"/projects/" + projectID + "/tasks",
 		"/projects/" + projectID + "/time-tracking",
+		"/projects/" + projectID + "/teams",
 		"/projects/" + projectID + "/integrations",
 		"/projects/" + projectID + "/settings",
 		"/tasks/" + taskID,

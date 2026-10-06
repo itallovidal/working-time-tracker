@@ -24,7 +24,7 @@
             <tr>
               <td>
                 <span x-text="p.name"></span>
-                <span class="badge" x-show="p.id === me.id">{{.T "org.people.you"}}</span>
+                <span class="badge" x-show="p.id === me.id">{{.T "common.you"}}</span>
               </td>
               <td class="muted" x-text="p.email"></td>
               <td><span class="badge" :class="p.role === 'admin' && 'badge-accent'" x-text="WTT.fmt.role(p.role)"></span></td>

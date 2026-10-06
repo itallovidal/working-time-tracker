@@ -23,6 +23,7 @@ common:
   role: Role
   actions: Actions
   optional: Optional
+  you: you
   description_label: Description
   clear_filters: Clear filters
   loading: Loading…
@@ -183,7 +184,6 @@ org:
     intro: Who belongs to the organization. To put someone on a project and build the teams, use the project's Collaborators tab.
     add: Add collaborator
     loading: Loading collaborators…
-    you: you
     make_member: Make member
     make_admin: Make admin
     now_member: "{{.name}} is now a member."
@@ -473,6 +473,87 @@ project_settings:
   rate_invalid: Enter a value, for example 100.00.
   billing_saved: Billing saved.
   saved: Project saved.
+
+collab:
+  loading: Loading collaborators…
+  collaborators:
+    one: Collaborator
+    other: Collaborators
+  teams_count:
+    one: Team
+    other: Teams
+  no_team: No team
+  no_rate: No hourly rate
+  missing_count:
+    one: "{{.count}} person is"
+    other: "{{.count}} people are"
+  missing_text: "on this project without an hourly rate:"
+  missing_blocked: Without a rate, clocking in is blocked.
+  people_title: People
+  people_intro: "Who works on this project: whoever is on a team or has an hourly rate here."
+  search_placeholder: Search by name or email
+  search_label: Search collaborators by name or email
+  add_person: Add person
+  none: Nobody on this project yet
+  none_admin: Add the people who work here and how much each one earns per hour.
+  none_member: An admin needs to add the people of this project.
+  no_match: Nobody with that name or email
+  clear_search: Clear the search
+  col_person: Person
+  col_teams: Teams
+  col_rate: "Hourly rate ({{.unit}})"
+  col_margin: Margin per hour
+  rate_placeholder: No rate
+  rate_label: "Hourly rate of {{.name}}"
+  remove_title: Remove from the project
+  remove_label: "Remove {{.name}} from the project"
+  remove_confirm: Remove from the project? They leave the teams and lose the rate.
+  remove: Remove
+  bill_info_before: The customer pays
+  bill_info_after: "per hour on this project; the margin is the difference from what each person earns."
+  no_bill: Without a rate billed to the customer, each person's margin is not calculated.
+  change_in_settings: Change in Settings
+  teams_title: Teams
+  teams_intro: Only people on a team can be assigned tasks.
+  new_team: New team
+  no_teams: No teams on this project
+  no_teams_admin: Create a team and put people in it.
+  no_teams_member: An admin needs to create the teams of this project.
+  edit_team: Edit team
+  edit_team_label: "Edit the team {{.name}}"
+  no_members: No members yet.
+  add_title: Add a person to the project
+  person: Person
+  picker_label: Organization people outside this project
+  none_outside_search: Nobody with that name or email outside the project.
+  all_in: Everyone in the organization is already on this project.
+  invite_link: Invite someone to the organization
+  rate_hint: How much the person earns here. Without a rate, they cannot clock in.
+  team: Team
+  no_team_yet: No team for now
+  team_hint: People on a team can be assigned tasks.
+  add_submit: Add to the project
+  team_name: Team name
+  team_name_placeholder: "E.g.: Backend"
+  create_team: Create team
+  members_label: Members
+  members_aria: Team members
+  outside: outside the project
+  no_match_short: Nobody with that name or email.
+  edit_hint: People on a team can be assigned tasks. Someone from outside the project joins it without an hourly rate.
+  delete_team_confirm: Delete the team? The people stay in the organization.
+  delete_team: Delete team
+  rate_invalid: Enter a value, for example 20.00.
+  rate_required: Enter the hourly rate, for example 20.00.
+  rate_saved: "{{.name}}'s rate saved."
+  left: "{{.name}} left the project."
+  choose_person: Choose a person.
+  joined: "{{.name}} joined the project."
+  joined_no_team: "{{.name}} joined the project, but not the team: {{.error}}"
+  team_created: Team created.
+  team_name_required: Enter the team name.
+  team_saved: Team saved.
+  team_deleted: Team deleted.
 
 labels:
   not_informed: Not provided
