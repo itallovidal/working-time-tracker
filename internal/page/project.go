@@ -17,18 +17,19 @@ func integrationTypes() map[string]any {
 
 // projectPage monta a página de uma aba do projeto. O middleware de rota já
 // garantiu que o projeto existe e é da organização de quem está logado.
-func (h *Handler) projectPage(c *echo.Context, name, title, tab string, props map[string]any) error {
+func (h *Handler) projectPage(c *echo.Context, name, titleKey, tab string, props map[string]any) error {
 	p, err := h.deps.Projects.Get(c.Param("projectId"))
 	if err != nil {
 		return h.NotFound(c)
 	}
 	return h.render(c, name, Data{
-		Title:   title + " · " + p.Name,
-		Section: "projects",
-		Project: &Crumb{ID: p.ID.String(), Name: p.Name},
-		Tab:     tab,
-		Script:  "project",
-		Props:   props,
+		TitleKey:    titleKey,
+		TitleSuffix: p.Name,
+		Section:     "projects",
+		Project:     &Crumb{ID: p.ID.String(), Name: p.Name},
+		Tab:         tab,
+		Script:      "project",
+		Props:       props,
 	})
 }
 
@@ -40,12 +41,12 @@ func (h *Handler) Project(c *echo.Context) error {
 
 // Tasks é a lista de tarefas do projeto (S9.1).
 func (h *Handler) Tasks(c *echo.Context) error {
-	return h.projectPage(c, "project_tasks", "Tarefas", "tasks", integrationTypes())
+	return h.projectPage(c, "project_tasks", "titles.tasks", "tasks", integrationTypes())
 }
 
 // TimeTracking é o ponto do projeto: clock-in/out, sessões e totais (S9.3, S9.4).
 func (h *Handler) TimeTracking(c *echo.Context) error {
-	return h.projectPage(c, "project_time", "Ponto", "time", nil)
+	return h.projectPage(c, "project_time", "titles.time", "time", nil)
 }
 
 // TaskDetail edita uma tarefa e o vínculo com o item externo (S9.2).
@@ -72,14 +73,14 @@ func (h *Handler) TaskDetail(c *echo.Context) error {
 // quanto cada pessoa recebe por hora (S17). A rota segue /teams, de quando a
 // aba só tinha os times.
 func (h *Handler) Teams(c *echo.Context) error {
-	return h.projectPage(c, "project_teams", "Colaboradores", "teams", nil)
+	return h.projectPage(c, "project_teams", "titles.teams", "teams", nil)
 }
 
 // Integrations configura as integrações do projeto com GitHub, GitLab e Trello (S10.1, S23).
 func (h *Handler) Integrations(c *echo.Context) error {
-	return h.projectPage(c, "project_integrations", "Integrações", "integrations", integrationTypes())
+	return h.projectPage(c, "project_integrations", "titles.integrations", "integrations", integrationTypes())
 }
 
 func (h *Handler) ProjectSettings(c *echo.Context) error {
-	return h.projectPage(c, "project_settings", "Configurações", "settings", nil)
+	return h.projectPage(c, "project_settings", "titles.project_settings", "settings", nil)
 }

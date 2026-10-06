@@ -23,6 +23,8 @@ common:
   role: Role
   actions: Actions
   optional: Optional
+  description_label: Description
+  clear_filters: Clear filters
 
 titles:
   login: Sign in
@@ -36,6 +38,11 @@ titles:
   org_projects: Projects · Organization
   org_customers: Customers · Organization
   org_people: Collaborators · Organization
+  tasks: Tasks
+  time: Time tracking
+  teams: Collaborators
+  integrations: Integrations
+  project_settings: Settings
 
 nav:
   label: Organization
@@ -121,7 +128,6 @@ org:
   fields:
     segment: Industry
     size: Size
-    description_label: Description
     website: Website
     linkedin: LinkedIn
     instagram: Instagram
@@ -246,6 +252,142 @@ org:
     rate_too_high: The rate billed per hour must be between 0 and 1,000,000.00.
     created: Project created.
     created_no_billing: "Project created, but the customer and the rate were not saved: {{.error}}"
+
+project:
+  head:
+    projects: Projects
+    sections: Project sections
+    overview: Overview
+    tasks: Tasks
+    time: Time tracking
+    teams: Collaborators
+    integrations: Integrations
+    settings: Settings
+
+tasks:
+  search_placeholder: Search by name
+  search_label: Search tasks by name
+  assignee_filter: Filter by assignee
+  all_assignees: All assignees
+  due_filter: Filter by deadline
+  any_due: Any deadline
+  due_date: Deadline up to the date
+  only_mine: Only my tasks
+  new: New task
+  loading: Loading tasks…
+  no_members: Nobody on this project's teams
+  no_members_text: Only people on a team can be assigned tasks.
+  build_teams: Build the teams
+  none_filtered: No tasks match these filters
+  none: No tasks yet
+  none_text: Create a task to start tracking time on it.
+  col_task: Task
+  col_assignee: Assignee
+  col_deadline: Deadline
+  col_external: External item
+  col_clock: Clock
+  running: In progress
+  start: Start
+  pager: Task list pages
+  prev: Previous
+  next: Next
+  summary:
+    one: "Page {{.page}} of {{.pages}} · {{.count}} task"
+    other: "Page {{.page}} of {{.pages}} · {{.count}} tasks"
+  deadline_hint: "Empty: 7 days from today."
+  create: Create task
+  created: Task created.
+  created_hidden: Task created. The filters in use do not show it.
+  started: "Clocked in on \"{{.name}}\"."
+  no_deadline: No deadline
+  overdue: "Overdue · {{.date}}"
+  due_soon: "Due {{.date}}"
+  item: Item
+  due:
+    overdue: Overdue
+    today: Until today
+    week: Until the end of this week
+    next_week: Until the end of next week
+    date: Until a date…
+
+task_detail:
+  loading: Loading the task…
+  card: Task
+  time_title: Time tracked
+  no_time: Nobody has tracked time on this task yet.
+  in_progress: "· in progress"
+  external: External item
+  loading_details: Fetching details…
+  state: "State: {{.state}}"
+  fetch_failed: "Could not fetch the details right now:"
+  open_link: Open the link
+  no_response: no response from the integration
+  unlink: Unlink
+  no_integrations: This project has no integrations.
+  configure: Set one up on the Integrations tab.
+  ask_admin: Ask an admin to set one up.
+  integration: Integration
+  issue_number: Issue number
+  issue_placeholder: "E.g.: 42"
+  link: Link
+  link_placeholder: https://github.com/…/issues/42
+  link_action: Link
+  delete_title: Delete task
+  delete_text: Deletes the task and all the time tracked on it.
+  delete_confirm: Delete for good?
+  saved: Task saved.
+
+time:
+  no_rate: You don't have an hourly rate on this project yet, so the clock is blocked.
+  set_rate_before: Set yours on the
+  set_rate_after: " tab."
+  ask_admin: Ask an admin to set it.
+  loading: Loading…
+  running: In progress
+  since: "· since {{.time}}"
+  other_project: This session belongs to another project. Stop it before starting a task from here.
+  stop: Stop
+  stopped: Stopped
+  no_tasks: This project has no tasks yet.
+  create_task: Create one to clock in.
+  task: Task
+  start: Start
+  yours: Your time on this project
+  today: Today
+  this_week: This week
+  your_rate_before: "Your rate on this project:"
+  your_rate_after: per hour. Only you and the admins can see it.
+  sessions: Sessions
+  sessions_intro_admin: Everyone's time on this project.
+  sessions_intro_member: The time of whoever works on this project.
+  totals_follow: The totals follow the filters.
+  person_filter: Filter by person
+  all_people: All people
+  date_filter: Filter by date
+  date_filter_title: Sessions started on this day
+  all_tasks: All tasks
+  task_filter: Filter by task
+  totals: Totals
+  count:
+    one: "{{.count}} session"
+    other: "{{.count}} sessions"
+  count_filtered:
+    one: "{{.count}} session with these filters"
+    other: "{{.count}} sessions with these filters"
+  time_total: Time
+  cost: Cost
+  revenue: Revenue
+  margin: Margin (revenue minus cost)
+  your_value: Your rate
+  empty: No sessions
+  empty_filtered: Nothing matches these filters.
+  empty_text: When someone clocks in on this project, the session shows up here.
+  col_person: Person
+  col_task: Task
+  col_start: Start
+  col_end: End
+  col_duration: Duration
+  open: in progress
 
 labels:
   not_informed: Not provided

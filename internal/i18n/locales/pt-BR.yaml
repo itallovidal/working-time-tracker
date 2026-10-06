@@ -33,6 +33,8 @@ common:
   role: Papel
   actions: Ações
   optional: Opcional
+  description_label: Descrição
+  clear_filters: Limpar filtros
 
 titles:
   login: Entrar
@@ -46,6 +48,11 @@ titles:
   org_projects: Projetos · Organização
   org_customers: Clientes · Organização
   org_people: Colaboradores · Organização
+  tasks: Tarefas
+  time: Ponto
+  teams: Colaboradores
+  integrations: Integrações
+  project_settings: Configurações
 
 nav:
   label: Organização
@@ -131,7 +138,6 @@ org:
   fields:
     segment: Segmento
     size: Porte
-    description_label: Descrição
     website: Site
     linkedin: LinkedIn
     instagram: Instagram
@@ -256,6 +262,142 @@ org:
     rate_too_high: O valor cobrado por hora deve ficar entre 0 e 1.000.000,00.
     created: Projeto criado.
     created_no_billing: "Projeto criado, mas o cliente e o valor não foram salvos: {{.error}}"
+
+project:
+  head:
+    projects: Projetos
+    sections: Seções do projeto
+    overview: Visão geral
+    tasks: Tarefas
+    time: Ponto
+    teams: Colaboradores
+    integrations: Integrações
+    settings: Configurações
+
+tasks:
+  search_placeholder: Buscar pelo nome
+  search_label: Buscar tarefa pelo nome
+  assignee_filter: Filtrar por responsável
+  all_assignees: Todos os responsáveis
+  due_filter: Filtrar por prazo
+  any_due: Qualquer prazo
+  due_date: Prazo até a data
+  only_mine: Só as minhas tarefas
+  new: Nova tarefa
+  loading: Carregando tarefas…
+  no_members: Ninguém nos times deste projeto
+  no_members_text: Só quem está em algum time pode ser responsável por tarefas.
+  build_teams: Montar os times
+  none_filtered: Nenhuma tarefa com esses filtros
+  none: Nenhuma tarefa ainda
+  none_text: Crie uma tarefa para começar a registrar tempo nela.
+  col_task: Tarefa
+  col_assignee: Responsável
+  col_deadline: Prazo
+  col_external: Item externo
+  col_clock: Ponto
+  running: Em andamento
+  start: Iniciar
+  pager: Páginas da lista de tarefas
+  prev: Anterior
+  next: Próxima
+  summary:
+    one: "Página {{.page}} de {{.pages}} · {{.count}} tarefa"
+    other: "Página {{.page}} de {{.pages}} · {{.count}} tarefas"
+  deadline_hint: "Vazio: 7 dias a partir de hoje."
+  create: Criar tarefa
+  created: Tarefa criada.
+  created_hidden: Tarefa criada. Os filtros em uso não a mostram.
+  started: "Ponto iniciado em \"{{.name}}\"."
+  no_deadline: Sem prazo
+  overdue: "Atrasada · {{.date}}"
+  due_soon: "Vence {{.date}}"
+  item: Item
+  due:
+    overdue: Atrasadas
+    today: Até hoje
+    week: Até o fim desta semana
+    next_week: Até o fim da semana que vem
+    date: Até uma data…
+
+task_detail:
+  loading: Carregando a tarefa…
+  card: Tarefa
+  time_title: Tempo registrado
+  no_time: Ninguém registrou tempo nesta tarefa ainda.
+  in_progress: "· em andamento"
+  external: Item externo
+  loading_details: Buscando detalhes…
+  state: "Estado: {{.state}}"
+  fetch_failed: "Não deu para buscar os detalhes agora:"
+  open_link: Abrir o link
+  no_response: sem resposta da integração
+  unlink: Desvincular
+  no_integrations: Este projeto não tem integrações.
+  configure: Configure uma na aba Integrações.
+  ask_admin: Peça a um admin para configurar uma.
+  integration: Integração
+  issue_number: Número da issue
+  issue_placeholder: "Ex.: 42"
+  link: Link
+  link_placeholder: https://github.com/…/issues/42
+  link_action: Vincular
+  delete_title: Excluir tarefa
+  delete_text: Apaga a tarefa e todo o tempo registrado nela.
+  delete_confirm: Excluir de vez?
+  saved: Tarefa salva.
+
+time:
+  no_rate: Você ainda não tem valor por hora neste projeto, então o ponto está bloqueado.
+  set_rate_before: Defina o seu na aba
+  set_rate_after: "."
+  ask_admin: Peça a um admin para definir.
+  loading: Carregando…
+  running: Em andamento
+  since: "· desde as {{.time}}"
+  other_project: Esta sessão é de outro projeto. Pare antes de iniciar uma tarefa daqui.
+  stop: Parar
+  stopped: Parado
+  no_tasks: Este projeto ainda não tem tarefas.
+  create_task: Crie uma para bater o ponto.
+  task: Tarefa
+  start: Iniciar
+  yours: Seu tempo neste projeto
+  today: Hoje
+  this_week: Nesta semana
+  your_rate_before: "Seu valor neste projeto:"
+  your_rate_after: por hora. Só você e os admins veem.
+  sessions: Sessões
+  sessions_intro_admin: O ponto de todo mundo neste projeto.
+  sessions_intro_member: O ponto de quem trabalha neste projeto.
+  totals_follow: Os totais acompanham os filtros.
+  person_filter: Filtrar por pessoa
+  all_people: Todas as pessoas
+  date_filter: Filtrar por data
+  date_filter_title: Sessões iniciadas neste dia
+  all_tasks: Todas as tarefas
+  task_filter: Filtrar por tarefa
+  totals: Totais
+  count:
+    one: "{{.count}} sessão"
+    other: "{{.count}} sessões"
+  count_filtered:
+    one: "{{.count}} sessão com esses filtros"
+    other: "{{.count}} sessões com esses filtros"
+  time_total: Tempo
+  cost: Custo
+  revenue: Receita
+  margin: Margem (receita menos custo)
+  your_value: Seu valor
+  empty: Nenhuma sessão
+  empty_filtered: Nada com esses filtros.
+  empty_text: Quando alguém bater o ponto neste projeto, a sessão aparece aqui.
+  col_person: Pessoa
+  col_task: Tarefa
+  col_start: Início
+  col_end: Fim
+  col_duration: Duração
+  open: em andamento
 
 labels:
   not_informed: Não informado

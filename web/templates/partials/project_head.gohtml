@@ -1,17 +1,17 @@
 {{define "project_head"}}
 <div class="page-head">
   <div>
-    <div class="eyebrow"><a href="/orgs/{{.OrgID}}">Projetos</a></div>
+    <div class="eyebrow"><a href="/orgs/{{.OrgID}}">{{.T "project.head.projects"}}</a></div>
     <h1 data-project-name>{{.Project.Name}}</h1>
   </div>
 </div>
-<nav class="tabs" aria-label="Seções do projeto">
+<nav class="tabs" aria-label="{{.T "project.head.sections"}}">
   {{/* A Visão geral soma o dinheiro do projeto: só admins veem a aba. */}}
-  {{if .IsAdmin}}<a href="/projects/{{.Project.ID}}/overview" {{if eq .Tab "overview"}}aria-current="page"{{end}}>{{template "icon" "chart-simple"}} Visão geral</a>{{end}}
-  <a href="/projects/{{.Project.ID}}/tasks" {{if eq .Tab "tasks"}}aria-current="page"{{end}}>{{template "icon" "list-check"}} Tarefas</a>
-  <a href="/projects/{{.Project.ID}}/time-tracking" {{if eq .Tab "time"}}aria-current="page"{{end}}>{{template "icon" "clock"}} Ponto</a>
-  <a href="/projects/{{.Project.ID}}/teams" {{if eq .Tab "teams"}}aria-current="page"{{end}}>{{template "icon" "people-group"}} Colaboradores</a>
-  <a href="/projects/{{.Project.ID}}/integrations" {{if eq .Tab "integrations"}}aria-current="page"{{end}}>{{template "icon" "plug"}} Integrações</a>
-  <a href="/projects/{{.Project.ID}}/settings" {{if eq .Tab "settings"}}aria-current="page"{{end}}>{{template "icon" "gear"}} Configurações</a>
+  {{if .IsAdmin}}<a href="/projects/{{.Project.ID}}/overview" {{if eq .Tab "overview"}}aria-current="page"{{end}}>{{template "icon" "chart-simple"}} {{.T "project.head.overview"}}</a>{{end}}
+  <a href="/projects/{{.Project.ID}}/tasks" {{if eq .Tab "tasks"}}aria-current="page"{{end}}>{{template "icon" "list-check"}} {{.T "project.head.tasks"}}</a>
+  <a href="/projects/{{.Project.ID}}/time-tracking" {{if eq .Tab "time"}}aria-current="page"{{end}}>{{template "icon" "clock"}} {{.T "project.head.time"}}</a>
+  <a href="/projects/{{.Project.ID}}/teams" {{if eq .Tab "teams"}}aria-current="page"{{end}}>{{template "icon" "people-group"}} {{.T "project.head.teams"}}</a>
+  <a href="/projects/{{.Project.ID}}/integrations" {{if eq .Tab "integrations"}}aria-current="page"{{end}}>{{template "icon" "plug"}} {{.T "project.head.integrations"}}</a>
+  <a href="/projects/{{.Project.ID}}/settings" {{if eq .Tab "settings"}}aria-current="page"{{end}}>{{template "icon" "gear"}} {{.T "project.head.settings"}}</a>
 </nav>
 {{end}}
