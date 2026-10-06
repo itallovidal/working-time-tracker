@@ -4,7 +4,7 @@ This is a greenfield project. There is no existing code, database, or API. The s
 
 The system supports multiple organizations (companies), each with multiple projects. A project has teams of people, a configurable sprint duration, daily standup time, and weekly sync schedule. People register within an organization and are assigned to teams. Projects can have integrations with external platforms (GitHub, GitLab, Slack, Trello, etc.) to link tasks to external items and push notifications.
 
-Stakeholders are teams of any kind that work by project and want accurate time-per-task data, visibility into project progress, task deadlines, and linked external items. The tracker is generic: nothing in the organization profile assumes a software company.
+Stakeholders are teams that work by project and want accurate time-per-task data, visibility into project progress, task deadlines, and linked external items. The main audience is software development companies (software houses and consultancies) that serve several customers and allocate people to one or more projects; the demo seed is one of them. The model itself stays generic: nothing in the organization profile requires a software company.
 
 ## Goals / Non-Goals
 

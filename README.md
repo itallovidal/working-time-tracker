@@ -1,6 +1,6 @@
 # Working Time Tracker
 
-Ponto por tarefa para equipes que trabalham por projeto, de qualquer área. A pessoa faz **clock-in** numa tarefa, faz **clock-out** quando para, e o sistema soma o tempo por tarefa e por pessoa. Tudo fica organizado em organização, projetos e times, e as tarefas podem apontar para issues do GitHub ou do GitLab.
+Ponto por tarefa para equipes que trabalham por projeto. Foi pensado principalmente para empresas de desenvolvimento, como software houses e consultorias, que atendem vários clientes e alocam as pessoas em um ou mais projetos, mas nada nele depende disso. A pessoa faz **clock-in** numa tarefa, faz **clock-out** quando para, e o sistema soma o tempo por tarefa e por pessoa. Tudo fica organizado em organização, projetos e times, e as tarefas podem apontar para issues do GitHub ou do GitLab.
 
 É um único binário em Go que serve a API JSON e a interface web.
 
@@ -35,12 +35,14 @@ go run ./cmd/seed
 go run ./cmd
 ```
 
-Abra **http://localhost:8080**. Com o seed, entre como:
+Abra **http://localhost:8080**. O seed cria a **Jatobá Software**, uma software house com três clientes e seis projetos (um deles interno), em que cada pessoa tem um valor por hora diferente conforme o projeto. Entre como:
 
 | Papel | Email | Senha |
 |---|---|---|
 | Admin | `ana@example.com` | `demo12345` |
-| Membro | `bruno@example.com` | `demo12345` |
+| Membro | `bruno@example.com`, `carla@example.com`, `diego@example.com` ou `elisa@example.com` | `demo12345` |
+
+O Bruno trabalha em quatro projetos e recebe mais na API de Cobranças; a Elisa trabalha em um só. O Diego está no time do Portal do Paciente ainda sem valor definido, para mostrar o aviso da aba Valores e o ponto bloqueado.
 
 Sem o seed, clique em **Crie uma organização** na tela de login.
 
