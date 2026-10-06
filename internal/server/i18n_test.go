@@ -248,9 +248,12 @@ func portugueseLeftovers(body string) []string {
 
 // migratedPages são as páginas cujo texto já vem do catálogo. A lista cresce a cada
 // etapa da migração; uma página nova entra aqui junto com a sua tradução.
-func migratedPages(admin account) []string {
+func migratedPages(admin account, projectID, taskID string) []string {
 	return []string{
 		"/profile",
+		"/projects/" + projectID + "/tasks",
+		"/projects/" + projectID + "/time-tracking",
+		"/tasks/" + taskID,
 		"/orgs/" + admin.orgID,
 		"/orgs/" + admin.orgID + "/about",
 		"/orgs/" + admin.orgID + "/settings",
@@ -264,9 +267,15 @@ func TestLanguage_MigratedPagesHaveNoPortugueseInEnglish(t *testing.T) {
 	e := newServer(t)
 	admin := signup(t, e, "Org", "ana@test.com")
 	member := invite(t, e, admin, "bia@test.com", "member")
+	projectID := createProject(t, e, admin, "Alpha")
+	rec := do(e, "POST", "/api/projects/"+projectID+"/teams", `{"name":"Core"}`, admin.session)
+	teamID := decode(t, rec)["id"].(string)
+	do(e, "POST", "/api/teams/"+teamID+"/members", `{"person_id":"`+admin.id+`"}`, admin.session)
+	rec = do(e, "POST", "/api/projects/"+projectID+"/tasks", `{"name":"Login screen","assignee_id":"`+admin.id+`"}`, admin.session)
+	taskID := decode(t, rec)["id"].(string)
 
 	for _, who := range []account{admin, member} {
-		for _, path := range migratedPages(admin) {
+		for _, path := range migratedPages(admin, projectID, taskID) {
 			rec := getPage(e, path, who.session, "en", "")
 			if rec.Code == http.StatusNotFound {
 				continue // abas de gestão são só de admins

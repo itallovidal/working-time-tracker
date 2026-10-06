@@ -10,10 +10,10 @@ document.addEventListener('alpine:init', () => {
   // deadlineInfo descreve o prazo de uma tarefa para o badge: atrasada, vencendo
   // nas próximas 48 horas ou só a data.
   function deadlineInfo(iso) {
-    if (!iso || new Date(iso).getFullYear() < 1971) return { label: 'Sem prazo', cls: '' };
+    if (!iso || new Date(iso).getFullYear() < 1971) return { label: WTT.t('tasks.no_deadline'), cls: '' };
     const diff = new Date(iso).getTime() - Date.now();
-    if (diff < 0) return { label: 'Atrasada · ' + WTT.fmt.date(iso), cls: 'badge-danger' };
-    if (diff < 2 * DAY) return { label: 'Vence ' + WTT.fmt.date(iso), cls: 'badge-warn' };
+    if (diff < 0) return { label: WTT.t('tasks.overdue', { date: WTT.fmt.date(iso) }), cls: 'badge-danger' };
+    if (diff < 2 * DAY) return { label: WTT.t('tasks.due_soon', { date: WTT.fmt.date(iso) }), cls: 'badge-warn' };
     return { label: WTT.fmt.date(iso), cls: '' };
   }
 
@@ -21,11 +21,11 @@ document.addEventListener('alpine:init', () => {
   // "Qualquer prazo" fica fixo no template: uma opção de valor vazio criada por
   // x-for fica sem o atributo value e passa a valer o próprio rótulo.
   const dueOptions = [
-    { value: 'overdue', label: 'Atrasadas' },
-    { value: 'today', label: 'Até hoje' },
-    { value: 'week', label: 'Até o fim desta semana' },
-    { value: 'next_week', label: 'Até o fim da semana que vem' },
-    { value: 'date', label: 'Até uma data…' },
+    { value: 'overdue', label: WTT.t('tasks.due.overdue') },
+    { value: 'today', label: WTT.t('tasks.due.today') },
+    { value: 'week', label: WTT.t('tasks.due.week') },
+    { value: 'next_week', label: WTT.t('tasks.due.next_week') },
+    { value: 'date', label: WTT.t('tasks.due.date') },
   ];
 
   // dueLimit devolve, em ISO, o instante-limite de um atalho de prazo, ou null
@@ -90,7 +90,7 @@ document.addEventListener('alpine:init', () => {
   function externalLabel(task) {
     const type = task.external_integration ? task.external_integration.type : '';
     const t = integrationType(type);
-    if (!t) return (type || 'Item') + ' #' + task.external_item_id;
+    if (!t) return (type || WTT.t('tasks.item')) + ' #' + task.external_item_id;
     return t.label + ' ' + (t.item_numeric ? '#' : '') + task.external_item_id;
   }
 
@@ -275,7 +275,7 @@ document.addEventListener('alpine:init', () => {
       return Math.max(1, Math.ceil(this.total / this.perPage));
     },
     summary() {
-      return 'Página ' + this.page + ' de ' + this.pages() + ' · ' + this.total + (this.total === 1 ? ' tarefa' : ' tarefas');
+      return WTT.t('tasks.summary', { page: this.page, pages: this.pages(), count: this.total });
     },
     // Quem aparece no filtro de responsável: os times, quem tem tarefa aqui e a
     // própria pessoa, para o campo mostrar o nome dela com "Só as minhas" ligada.
@@ -288,7 +288,7 @@ document.addEventListener('alpine:init', () => {
       const self = this.members.find((m) => m.id === me.id) || this.members[0];
       this.draft = { name: '', description: '', assignee_id: self ? self.id : '', deadline: '' };
       this.errors.create = '';
-      Alpine.store('modal').open('task-new', 'Nova tarefa', () => !this.pending);
+      Alpine.store('modal').open('task-new', WTT.t('tasks.new'), () => !this.pending);
     },
     create() {
       return this.run('create', async () => {
@@ -302,7 +302,7 @@ document.addEventListener('alpine:init', () => {
         // A tarefa nova é a primeira da lista, se os filtros em uso a mostrarem.
         await this.apply();
         const shown = this.tasks.some((x) => x.id === t.id);
-        toast(shown ? 'Tarefa criada.' : 'Tarefa criada. Os filtros em uso não a mostram.');
+        toast(shown ? WTT.t('tasks.created') : WTT.t('tasks.created_hidden'));
       });
     },
     isRunning(t) {
@@ -312,7 +312,7 @@ document.addEventListener('alpine:init', () => {
     start(t) {
       return this.run('clock', async () => {
         await clock().clockIn(project.id, t.id);
-        toast('Ponto iniciado em "' + t.name + '".');
+        toast(WTT.t('tasks.started', { name: t.name }));
       });
     },
     deadlineClass: (t) => deadlineInfo(t.deadline).cls,
@@ -378,7 +378,7 @@ document.addEventListener('alpine:init', () => {
       this.external = { loading: true, details: null, error: '' };
       try {
         const res = await api('GET', '/api/tasks/' + this.taskId + '/external-details');
-        this.external = { loading: false, details: res.details, error: res.details ? '' : (res.error || 'sem resposta da integração') };
+        this.external = { loading: false, details: res.details, error: res.details ? '' : (res.error || WTT.t('task_detail.no_response')) };
       } catch (e) {
         this.external = { loading: false, details: null, error: e.message };
       }
@@ -392,7 +392,7 @@ document.addEventListener('alpine:init', () => {
           deadline: WTT.fmt.fromDateInput(this.form.deadline),
         });
         this.setTask(t);
-        toast('Tarefa salva.');
+        toast(WTT.t('task_detail.saved'));
       });
     },
     link() {

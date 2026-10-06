@@ -4,47 +4,47 @@
 
   {{/* O aviso fica acima dos cartões: dentro do relógio ele deixava um cartão mais alto que o outro. */}}
   <p class="alert alert-warn" x-cloak x-show="!loading && !errors.load && myRate === null">
-    Você ainda não tem valor por hora neste projeto, então o ponto está bloqueado.
+    {{.T "time.no_rate"}}
     {{if .IsAdmin}}
-    Defina o seu na aba <a href="/projects/{{.Project.ID}}/teams">Colaboradores</a>.
+    {{.T "time.set_rate_before"}} <a href="/projects/{{.Project.ID}}/teams">{{.T "project.head.teams"}}</a>{{.T "time.set_rate_after"}}
     {{else}}
-    Peça a um admin para definir.
+    {{.T "time.ask_admin"}}
     {{end}}
   </p>
 
   <div class="grid-aside items-stretch">
     <section class="clock" aria-live="polite">
-      <p class="muted" x-show="!$store.clock.ready">Carregando…</p>
+      <p class="muted" x-show="!$store.clock.ready">{{.T "time.loading"}}</p>
 
       <template x-if="$store.clock.ready && $store.clock.session">
         <div class="stack">
-          <div class="clock-status"><span class="pulse" aria-hidden="true"></span> Em andamento</div>
+          <div class="clock-status"><span class="pulse" aria-hidden="true"></span> {{.T "time.running"}}</div>
           <div class="clock-face running" x-text="WTT.fmt.clock($store.clock.elapsed())"></div>
           <div>
             <a :href="'/tasks/' + $store.clock.session.task.id" x-text="$store.clock.session.task.name"></a>
-            <span class="muted">· desde as <span x-text="WTT.fmt.time($store.clock.session.start_at)"></span></span>
+            <span class="muted" x-text="$t('time.since', { time: WTT.fmt.time($store.clock.session.start_at) })"></span>
           </div>
           <p class="alert alert-warn" x-show="$store.clock.session.task.project_id !== project.id">
-            Esta sessão é de outro projeto. Pare antes de iniciar uma tarefa daqui.
+            {{.T "time.other_project"}}
           </p>
-          <div class="row"><button type="button" class="btn btn-danger" :disabled="pending" @click="stop()">Parar</button></div>
+          <div class="row"><button type="button" class="btn btn-danger" :disabled="pending" @click="stop()">{{.T "time.stop"}}</button></div>
         </div>
       </template>
 
       <template x-if="$store.clock.ready && !$store.clock.session">
         <form class="stack" @submit.prevent="start()">
-          <div class="clock-status muted">Parado</div>
+          <div class="clock-status muted">{{.T "time.stopped"}}</div>
           <div class="clock-face">00:00:00</div>
           <p class="muted" x-show="tasks.length === 0 && !loading">
-            Este projeto ainda não tem tarefas. <a href="/projects/{{.Project.ID}}/tasks">Crie uma</a> para bater o ponto.
+            {{.T "time.no_tasks"}} <a href="/projects/{{.Project.ID}}/tasks">{{.T "time.create_task"}}</a>
           </p>
           <div class="row" x-show="tasks.length > 0">
-            <select class="flex-1" x-model="taskId" aria-label="Tarefa">
+            <select class="flex-1" x-model="taskId" aria-label="{{.T "time.task"}}">
               <template x-for="t in tasks" :key="t.id">
                 <option :value="t.id" x-text="t.name" :selected="t.id === taskId"></option>
               </template>
             </select>
-            <button type="submit" class="btn" :disabled="pending || !taskId || myRate === null">Iniciar</button>
+            <button type="submit" class="btn" :disabled="pending || !taskId || myRate === null">{{.T "time.start"}}</button>
           </div>
         </form>
       </template>
@@ -52,85 +52,85 @@
     </section>
 
     <section class="card">
-      <div class="card-head"><h2>Seu tempo neste projeto</h2></div>
+      <div class="card-head"><h2>{{.T "time.yours"}}</h2></div>
       <div class="totals">
         <div class="total">
           <div class="v" x-text="WTT.fmt.hours(mine('today'))"></div>
-          <div class="k">Hoje<span x-show="myRate !== null"> · <span class="num" x-text="WTT.fmt.money(earned('today'))"></span></span></div>
+          <div class="k">{{.T "time.today"}}<span x-show="myRate !== null"> · <span class="num" x-text="WTT.fmt.money(earned('today'))"></span></span></div>
         </div>
         <div class="total">
           <div class="v" x-text="WTT.fmt.hours(mine('week'))"></div>
-          <div class="k">Nesta semana<span x-show="myRate !== null"> · <span class="num" x-text="WTT.fmt.money(earned('week'))"></span></span></div>
+          <div class="k">{{.T "time.this_week"}}<span x-show="myRate !== null"> · <span class="num" x-text="WTT.fmt.money(earned('week'))"></span></span></div>
         </div>
       </div>
       <p class="muted small" x-cloak x-show="myRate !== null">
-        Seu valor neste projeto: <strong class="num" x-text="WTT.fmt.money(myRate)"></strong> por hora. Só você e os admins veem.
+        {{.T "time.your_rate_before"}} <strong class="num" x-text="WTT.fmt.money(myRate)"></strong> {{.T "time.your_rate_after"}}
       </p>
     </section>
   </div>
 
   <section class="stack">
     <div class="stack stack-tight">
-      <h2>Sessões</h2>
-      <p class="muted">{{if .IsAdmin}}O ponto de todo mundo neste projeto.{{else}}O ponto de quem trabalha neste projeto.{{end}} Os totais acompanham os filtros.</p>
+      <h2>{{.T "time.sessions"}}</h2>
+      <p class="muted">{{if .IsAdmin}}{{.T "time.sessions_intro_admin"}}{{else}}{{.T "time.sessions_intro_member"}}{{end}} {{.T "time.totals_follow"}}</p>
     </div>
     <div class="row filters">
-      <select x-model="filter.person" aria-label="Filtrar por pessoa">
-        <option value="">Todas as pessoas</option>
+      <select x-model="filter.person" aria-label="{{.T "time.person_filter"}}">
+        <option value="">{{.T "time.all_people"}}</option>
         <template x-for="p in people()" :key="p.id"><option :value="p.id" x-text="p.name"></option></template>
       </select>
-      <input type="date" x-model="filter.date" aria-label="Filtrar por data" title="Sessões iniciadas neste dia">
-      <select x-model="filter.task" aria-label="Filtrar por tarefa">
-        <option value="">Todas as tarefas</option>
+      <input type="date" x-model="filter.date" aria-label="{{.T "time.date_filter"}}" title="{{.T "time.date_filter_title"}}">
+      <select x-model="filter.task" aria-label="{{.T "time.task_filter"}}">
+        <option value="">{{.T "time.all_tasks"}}</option>
         <template x-for="t in tasks" :key="t.id"><option :value="t.id" x-text="t.name"></option></template>
       </select>
-      <button type="button" class="btn btn-ghost btn-sm" x-cloak x-show="hasFilters()" @click="clearFilters()">{{template "icon" "xmark"}} Limpar filtros</button>
+      <button type="button" class="btn btn-ghost btn-sm" x-cloak x-show="hasFilters()" @click="clearFilters()">{{template "icon" "xmark"}} {{.T "common.clear_filters"}}</button>
     </div>
     <p class="form-error" x-cloak x-show="errors.load" x-text="errors.load"></p>
 
     {{/* Os totais ficam num cartão próprio, e a tabela, só com a lista das sessões. */}}
     <section class="card" x-cloak x-show="filtered().length > 0">
       <div class="card-head">
-        <h3>Totais</h3>
-        <span class="muted small" x-text="filtered().length + (filtered().length === 1 ? ' sessão' : ' sessões') + (hasFilters() ? ' com esses filtros' : '')"></span>
+        <h3>{{.T "time.totals"}}</h3>
+        <span class="muted small" x-text="hasFilters() ? $t('time.count_filtered', { count: filtered().length }) : $t('time.count', { count: filtered().length })"></span>
       </div>
       <div class="totals">
         <div class="total">
           <div class="v" x-text="WTT.fmt.hours(filteredTotal())"></div>
-          <div class="k">Tempo</div>
+          <div class="k">{{.T "time.time_total"}}</div>
         </div>
         {{if .IsAdmin}}
         <div class="total">
           <div class="v" x-text="WTT.fmt.money(filteredAmount('pay'))"></div>
-          <div class="k">Custo</div>
+          <div class="k">{{.T "time.cost"}}</div>
         </div>
         <div class="total">
           <div class="v" x-text="WTT.fmt.money(filteredAmount('bill'))"></div>
-          <div class="k">Receita</div>
+          <div class="k">{{.T "time.revenue"}}</div>
         </div>
         <div class="total">
           <div class="v" :class="filteredMargin() < 0 && 'text-danger'" x-text="WTT.fmt.money(filteredMargin())"></div>
-          <div class="k">Margem (receita menos custo)</div>
+          <div class="k">{{.T "time.margin"}}</div>
         </div>
         {{else}}
         <div class="total">
           <div class="v" x-text="WTT.fmt.money(filteredAmount('pay'))"></div>
-          <div class="k">Seu valor</div>
+          <div class="k">{{.T "time.your_value"}}</div>
         </div>
         {{end}}
       </div>
     </section>
 
     <div class="empty" x-cloak x-show="!loading && filtered().length === 0">
-      <strong>Nenhuma sessão</strong>
-      <span x-text="hasFilters() ? 'Nada com esses filtros.' : 'Quando alguém bater o ponto neste projeto, a sessão aparece aqui.'"></span>
+      <strong>{{.T "time.empty"}}</strong>
+      <span x-text="hasFilters() ? $t('time.empty_filtered') : $t('time.empty_text')"></span>
     </div>
     <div class="table-wrap" x-show="filtered().length > 0">
       <table>
         <thead>
           <tr>
-            <th>Pessoa</th><th>Tarefa</th><th>Início</th><th>Fim</th><th class="actions">Duração</th>
-            {{if .IsAdmin}}<th class="actions">Custo</th><th class="actions">Receita</th>{{else}}<th class="actions">Seu valor</th>{{end}}
+            <th>{{.T "time.col_person"}}</th><th>{{.T "time.col_task"}}</th><th>{{.T "time.col_start"}}</th><th>{{.T "time.col_end"}}</th><th class="actions">{{.T "time.col_duration"}}</th>
+            {{if .IsAdmin}}<th class="actions">{{.T "time.cost"}}</th><th class="actions">{{.T "time.revenue"}}</th>{{else}}<th class="actions">{{.T "time.your_value"}}</th>{{end}}
           </tr>
         </thead>
         <tbody>
@@ -141,7 +141,7 @@
               <td class="num" x-text="WTT.fmt.dateTime(s.start_at)"></td>
               <td class="num">
                 <span x-show="s.end_at" x-text="WTT.fmt.dateTime(s.end_at)"></span>
-                <span class="badge badge-ok" x-show="!s.end_at">em andamento</span>
+                <span class="badge badge-ok" x-show="!s.end_at">{{.T "time.open"}}</span>
               </td>
               <td class="actions mono num" x-text="WTT.fmt.clock($store.clock.elapsed(s))"></td>
               <td class="actions num" x-text="WTT.fmt.money(amount(s, 'pay'))"></td>

@@ -18,7 +18,7 @@
       <div class="card-head"><h2>{{.T "org.about.identity"}}</h2></div>
       <p class="prose" x-show="org.description" x-text="org.description"></p>
       <dl class="facts">
-        <div class="fact" x-show="!org.description"><dt>{{.T "org.fields.description_label"}}</dt><dd class="muted" x-text="WTT.notInformed"></dd></div>
+        <div class="fact" x-show="!org.description"><dt>{{.T "common.description_label"}}</dt><dd class="muted" x-text="WTT.notInformed"></dd></div>
         <template x-for="f in identity()" :key="f.label">
           <div class="fact"><dt x-text="f.label"></dt><dd :class="f.empty && 'muted'" x-text="f.value"></dd></div>
         </template>

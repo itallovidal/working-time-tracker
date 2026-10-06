@@ -296,7 +296,7 @@
 - [X] S24.5 Tests: same keys and placeholders in every language, every used key exists, language by cookie / header / toggle, script cache headers; check in the browser in both languages
 - [X] S24.6 Locale-aware formats: dates, times and currency follow the language (the currency itself stays the organization's), money fields show and read the language's decimal separator, option labels (weekdays, sizes, work modes, currencies, integration fields) come from the catalogs
 - [X] S24.7 Organization screens (`org_*`, `org.js`): about, edit, collaborators and invitations, customers, projects; a test renders every migrated page in English and fails on any accented word left
-- [ ] S24.8 Project: tasks, task detail and time tracking
+- [X] S24.8 Project: tasks, task detail and time tracking (project header and tabs, filters, pager with plural forms, deadline badges, toasts, totals); page titles come from the catalogs
 - [ ] S24.9 Project: integrations and settings
 - [ ] S24.10 Project: collaborators and teams
 - [ ] S24.11 Update README, design and the status page
