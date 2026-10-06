@@ -5,7 +5,10 @@
 #   - valores entram por placeholder: "{{.name}}";
 #   - plural com as formas one/other, e o placeholder {{.count}};
 #   - o mesmo conjunto de chaves e de placeholders em todos os idiomas
-#     (um teste confere).
+#     (um teste confere);
+#   - não use como nome de chave: id, description, hash, leftdelim, rightdelim,
+#     zero, one, two, few, many, other, translation. O go-i18n os trata como
+#     partes de uma mensagem e recusa o arquivo (use, por exemplo, description_label).
 
 lang:
   label: Idioma
@@ -19,6 +22,17 @@ lang:
 common:
   close: Fechar
   per_hour: por hora
+  cancel: Cancelar
+  save: Salvar
+  delete: Excluir
+  edit: Editar
+  back: Voltar
+  name: Nome
+  email: Email
+  phone: Telefone
+  role: Papel
+  actions: Ações
+  optional: Opcional
 
 titles:
   login: Entrar
@@ -26,6 +40,12 @@ titles:
   invite: Convite
   profile: Seu perfil
   not_found: Página não encontrada
+  projects: Projetos
+  org_about: Sobre · Organização
+  org_settings: Editar · Organização
+  org_projects: Projetos · Organização
+  org_customers: Clientes · Organização
+  org_people: Colaboradores · Organização
 
 nav:
   label: Organização
@@ -44,7 +64,6 @@ session:
   stopped: Ponto encerrado.
 
 auth:
-  email: Email
   password: Senha
   password_hint: Pelo menos 8 caracteres.
   your_name: Seu nome
@@ -100,6 +119,143 @@ profile:
     next_hint: Pelo menos 8 caracteres. As suas outras sessões serão encerradas.
     submit: Trocar senha
     changed: Senha trocada. As outras sessões foram encerradas.
+
+org:
+  head:
+    title: Organização
+    sections: Seções da organização
+    about: Sobre
+    people: Colaboradores
+    customers: Clientes
+    projects: Projetos
+  fields:
+    segment: Segmento
+    size: Porte
+    description_label: Descrição
+    website: Site
+    linkedin: LinkedIn
+    instagram: Instagram
+    legal_name: Razão social
+    cnpj: CNPJ
+    address: Endereço
+    timezone: Fuso horário
+    currency: Moeda
+  about:
+    intro: O que todos os membros leem sobre a organização.
+    empty_profile: O perfil da organização ainda está vazio.
+    fill_profile: Preencha os dados para o time ver aqui.
+    identity: Sobre
+    how_we_work: Como trabalhamos
+    contact: Contato
+    company: Dados da empresa
+    founded: Fundação
+    location: Localização
+    work_mode: Regime
+  settings:
+    title: Editar organização
+    identity: Identidade
+    summary: Resumo
+    summary_hint: Uma linha que aparece no cabeçalho da organização.
+    description_hint: O que a organização faz e para quem. Todos os membros leem na aba Sobre.
+    industry_placeholder: "Ex.: logística, saúde, tecnologia"
+    founded_year: Ano de fundação
+    contact: Contato
+    contact_email: Email de contato
+    website_placeholder: https://exemplo.com.br
+    phone_placeholder: +55 (11) 4002-8922
+    linkedin_placeholder: https://www.linkedin.com/company/…
+    instagram_placeholder: https://www.instagram.com/…
+    legal: Dados jurídicos
+    cnpj_placeholder: 00.000.000/0000-00
+    address_placeholder: Rua e número
+    address2: Complemento e bairro
+    city: Cidade
+    state: Estado
+    postal_code: CEP
+    country: País
+    how_we_work: Como trabalhamos
+    work_mode: Regime de trabalho
+    hours_note: A jornada semanal e a duração da sprint ficam nas configurações de cada projeto.
+    delete_title: Excluir organização
+    delete_warning: Apaga a organização, todas as pessoas e os convites. Só é possível depois de excluir todos os projetos.
+    delete_confirm: Excluir de vez? Isso não pode ser desfeito.
+    saved: Organização salva.
+  people:
+    title: Integrantes
+    intro: Quem faz parte da organização. Para pôr alguém num projeto e montar os times, use a aba Colaboradores do projeto.
+    add: Adicionar colaborador
+    loading: Carregando colaboradores…
+    you: você
+    make_member: Tornar membro
+    make_admin: Tornar admin
+    now_member: "{{.name}} agora é membro."
+    now_admin: "{{.name}} agora é admin."
+    pending_title: Convites pendentes
+    pending_intro: Links gerados que ainda não foram usados. Cada um vale por 7 dias e funciona uma vez.
+    no_invites: Nenhum convite pendente
+    no_invites_text: Quando você adicionar um colaborador, o convite dele fica aqui até ser aceito.
+    any_email: Qualquer email
+    expires: Expira em
+    revoke: Revogar
+    revoked: Convite revogado.
+    invite_intro: A pessoa entra na organização por um link de convite, que você envia para ela.
+    invite_email_hint: Com email, só essa pessoa consegue usar o link.
+    generate: Gerar link de convite
+    link_label: Link do convite
+    link_hint: "Copie agora: o link não aparece de novo. Ele vale por 7 dias e funciona uma vez."
+    copy: Copiar link
+    done: Concluir
+    link_copied: Link copiado.
+    copy_failed: Não deu para copiar. Selecione o link e copie manualmente.
+  customers:
+    intro: Quem contrata a organização. Cada projeto pode ter um cliente e um valor cobrado por hora, definidos nas configurações do projeto.
+    new: Novo cliente
+    edit_title: Editar cliente
+    loading: Carregando clientes…
+    empty: Nenhum cliente ainda
+    empty_text: Cadastre o primeiro cliente para vincular aos projetos.
+    customer: Cliente
+    contact: Contato
+    projects: Projetos
+    delete_question: Excluir?
+    contact_person: Pessoa de contato
+    create: Criar cliente
+    saved: Cliente salvo.
+    created: Cliente criado.
+    deleted: Cliente excluído.
+  projects:
+    intro: Cada projeto tem seus times, tarefas e registro de tempo.
+    new: Novo projeto
+    internal: Projeto interno
+    customer: Cliente
+    bill_rate: "Valor cobrado por hora ({{.unit}})"
+    admins_only_hint: O cliente e o valor cobrado só aparecem para admins e podem ser trocados depois, nas configurações do projeto.
+    sprint_days: Duração da sprint (dias)
+    weekly_hours: Jornada semanal (horas)
+    daily_time: Horário da daily
+    weekly_day: Dia da weekly
+    no_weekly: Sem weekly
+    create: Criar projeto
+    loading: Carregando projetos…
+    empty: Nenhum projeto ainda
+    empty_admin: Crie o primeiro projeto para montar os times e começar a registrar tempo.
+    empty_member: Quando um admin criar um projeto, ele aparece aqui.
+    col_project: Projeto
+    col_customer: Cliente
+    col_people: Pessoas
+    col_people_title: "Colaboradores do projeto: quem está em algum time ou tem valor por hora nele"
+    col_tasks: Tarefas
+    sprint_badge:
+      one: "Sprint de {{.count}} dia"
+      other: "Sprint de {{.count}} dias"
+    hours_badge: "{{.hours}}h por semana"
+    daily_badge: "Daily {{.time}}"
+    weekly_badge: "Weekly {{.day}}"
+    customers_load_failed: "Não deu para carregar os clientes: {{.error}}"
+    rate_invalid: Informe o valor cobrado por hora, por exemplo 150,00.
+    rate_too_high: O valor cobrado por hora deve ficar entre 0 e 1.000.000,00.
+    created: Projeto criado.
+    created_no_billing: "Projeto criado, mas o cliente e o valor não foram salvos: {{.error}}"
 
 labels:
   not_informed: Não informado

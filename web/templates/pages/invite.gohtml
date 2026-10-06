@@ -25,7 +25,7 @@
           <input id="invite-name" type="text" autocomplete="name" required x-model="name">
         </div>
         <div class="field">
-          <label for="invite-email">{{.T "auth.email"}}</label>
+          <label for="invite-email">{{.T "common.email"}}</label>
           <input id="invite-email" type="email" autocomplete="email" required x-model="email" :readonly="!!info.email">
           <span class="hint" x-show="info.email">{{.T "auth.invite.email_only"}}</span>
         </div>

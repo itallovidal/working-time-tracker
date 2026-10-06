@@ -295,7 +295,7 @@
 - [X] S24.4 Migrated: layout, top bar, modal, toasts, active session, sign-in, sign-up, invitation, profile and the 404 page
 - [X] S24.5 Tests: same keys and placeholders in every language, every used key exists, language by cookie / header / toggle, script cache headers; check in the browser in both languages
 - [X] S24.6 Locale-aware formats: dates, times and currency follow the language (the currency itself stays the organization's), money fields show and read the language's decimal separator, option labels (weekdays, sizes, work modes, currencies, integration fields) come from the catalogs
-- [ ] S24.7 Organization screens (`org_*`, `org.js`)
+- [X] S24.7 Organization screens (`org_*`, `org.js`): about, edit, collaborators and invitations, customers, projects; a test renders every migrated page in English and fails on any accented word left
 - [ ] S24.8 Project: tasks, task detail and time tracking
 - [ ] S24.9 Project: integrations and settings
 - [ ] S24.10 Project: collaborators and teams

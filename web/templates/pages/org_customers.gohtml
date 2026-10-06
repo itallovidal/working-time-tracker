@@ -3,25 +3,25 @@
   {{template "org_head" .}}
 
   <div class="toolbar">
-    <p class="muted flex-1">Quem contrata a organização. Cada projeto pode ter um cliente e um valor cobrado por hora, definidos nas configurações do projeto.</p>
-    <button type="button" class="btn" @click="openForm()">{{template "icon" "plus"}} Novo cliente</button>
+    <p class="muted flex-1">{{.T "org.customers.intro"}}</p>
+    <button type="button" class="btn" @click="openForm()">{{template "icon" "plus"}} {{.T "org.customers.new"}}</button>
   </div>
 
   <section class="stack">
-    <p class="muted" x-show="loading">Carregando clientes…</p>
+    <p class="muted" x-show="loading">{{.T "org.customers.loading"}}</p>
     <p class="form-error" x-cloak x-show="errors.load" x-text="errors.load"></p>
     <p class="form-error" x-cloak x-show="errors.remove" x-text="errors.remove" role="alert"></p>
 
     <div class="empty" x-cloak x-show="!loading && !errors.load && customers.length === 0">
       {{template "icon" "handshake"}}
-      <strong>Nenhum cliente ainda</strong>
-      <span>Cadastre o primeiro cliente para vincular aos projetos.</span>
+      <strong>{{.T "org.customers.empty"}}</strong>
+      <span>{{.T "org.customers.empty_text"}}</span>
     </div>
 
     <div class="table-wrap" x-show="customers.length > 0">
       <table>
         <thead>
-          <tr><th>Cliente</th><th>CNPJ</th><th>Contato</th><th>Projetos</th><th class="actions"><span class="sr-only">Ações</span></th></tr>
+          <tr><th>{{.T "org.customers.customer"}}</th><th>{{.T "org.fields.cnpj"}}</th><th>{{.T "org.customers.contact"}}</th><th>{{.T "org.customers.projects"}}</th><th class="actions"><span class="sr-only">{{.T "common.actions"}}</span></th></tr>
         </thead>
         <tbody>
           <template x-for="c in customers" :key="c.id">
@@ -39,13 +39,13 @@
               <td class="num" x-text="c.project_count"></td>
               <td class="actions">
                 <span x-show="confirming !== c.id">
-                  <button type="button" class="btn btn-ghost btn-sm" @click="openForm(c)">{{template "icon" "pen"}} Editar</button>
-                  <button type="button" class="btn btn-danger-ghost btn-sm" @click="confirming = c.id">{{template "icon" "trash"}} Excluir</button>
+                  <button type="button" class="btn btn-ghost btn-sm" @click="openForm(c)">{{template "icon" "pen"}} {{.T "common.edit"}}</button>
+                  <button type="button" class="btn btn-danger-ghost btn-sm" @click="confirming = c.id">{{template "icon" "trash"}} {{.T "common.delete"}}</button>
                 </span>
                 <span class="confirm" x-cloak x-show="confirming === c.id">
-                  <span>Excluir?</span>
-                  <button type="button" class="btn btn-danger btn-sm" :disabled="pending" @click="remove(c)">Excluir</button>
-                  <button type="button" class="btn btn-ghost btn-sm" @click="confirming = null">Cancelar</button>
+                  <span>{{.T "org.customers.delete_question"}}</span>
+                  <button type="button" class="btn btn-danger btn-sm" :disabled="pending" @click="remove(c)">{{.T "common.delete"}}</button>
+                  <button type="button" class="btn btn-ghost btn-sm" @click="confirming = null">{{.T "common.cancel"}}</button>
                 </span>
               </td>
             </tr>
@@ -59,29 +59,29 @@
   <template x-teleport="#modal-root">
     <form class="stack" x-show="$store.modal.name === 'customer'" @submit.prevent="save()">
       <div class="field">
-        <label for="customer-name">Nome</label>
+        <label for="customer-name">{{.T "common.name"}}</label>
         <input id="customer-name" type="text" required maxlength="120" x-model="draft.name" data-autofocus>
       </div>
       <div class="field">
-        <label for="customer-document">CNPJ</label>
-        <input id="customer-document" type="text" class="mono" maxlength="18" placeholder="00.000.000/0000-00" x-model="draft.document">
+        <label for="customer-document">{{.T "org.fields.cnpj"}}</label>
+        <input id="customer-document" type="text" class="mono" maxlength="18" placeholder="{{.T "org.settings.cnpj_placeholder"}}" x-model="draft.document">
       </div>
       <div class="field">
-        <label for="customer-contact">Pessoa de contato</label>
+        <label for="customer-contact">{{.T "org.customers.contact_person"}}</label>
         <input id="customer-contact" type="text" maxlength="120" x-model="draft.contact_name">
       </div>
       <div class="field">
-        <label for="customer-email">Email</label>
+        <label for="customer-email">{{.T "common.email"}}</label>
         <input id="customer-email" type="email" maxlength="255" x-model="draft.contact_email">
       </div>
       <div class="field">
-        <label for="customer-phone">Telefone</label>
+        <label for="customer-phone">{{.T "common.phone"}}</label>
         <input id="customer-phone" type="tel" maxlength="32" x-model="draft.contact_phone">
       </div>
       <p class="form-error" x-show="errors.save" x-text="errors.save" role="alert"></p>
       <div class="row row-end">
-        <button type="button" class="btn btn-secondary" @click="$store.modal.dismiss()">Cancelar</button>
-        <button type="submit" class="btn" :disabled="pending" x-text="editing ? 'Salvar' : 'Criar cliente'">Criar cliente</button>
+        <button type="button" class="btn btn-secondary" @click="$store.modal.dismiss()">{{.T "common.cancel"}}</button>
+        <button type="submit" class="btn" :disabled="pending" x-text="editing ? $t('common.save') : $t('org.customers.create')">{{.T "org.customers.create"}}</button>
       </div>
     </form>
   </template>
