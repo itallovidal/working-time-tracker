@@ -153,7 +153,7 @@ func (h *Handler) LinkExternalItem(c *echo.Context) error {
 		return c.JSON(400, map[string]string{"error": "corpo da requisição inválido"})
 	}
 	if body.IntegrationID == "" || body.ExternalItemID == "" || body.ExternalItemURL == "" {
-		return c.JSON(400, map[string]string{"error": "informe a integração, o número do item e o link"})
+		return c.JSON(400, map[string]string{"error": "informe a integração, o item e o link"})
 	}
 	task, err := h.svc.LinkExternalItem(taskID, body.IntegrationID, body.ExternalItemID, body.ExternalItemURL)
 	if err != nil {

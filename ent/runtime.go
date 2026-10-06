@@ -52,11 +52,11 @@ func init() {
 	integrationFields := schema.Integration{}.Fields()
 	_ = integrationFields
 	// integrationDescEnabled is the schema descriptor for enabled field.
-	integrationDescEnabled := integrationFields[5].Descriptor()
+	integrationDescEnabled := integrationFields[6].Descriptor()
 	// integration.DefaultEnabled holds the default value on creation for the enabled field.
 	integration.DefaultEnabled = integrationDescEnabled.Default.(bool)
 	// integrationDescCreatedAt is the schema descriptor for created_at field.
-	integrationDescCreatedAt := integrationFields[6].Descriptor()
+	integrationDescCreatedAt := integrationFields[7].Descriptor()
 	// integration.DefaultCreatedAt holds the default value on creation for the created_at field.
 	integration.DefaultCreatedAt = integrationDescCreatedAt.Default.(func() time.Time)
 	// integrationDescID is the schema descriptor for id field.

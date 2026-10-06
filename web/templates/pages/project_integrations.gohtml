@@ -3,47 +3,11 @@
   {{template "project_head" .}}
 
   <div class="toolbar">
-    <p class="muted">Ligue tarefas a issues do GitHub ou do GitLab. As credenciais são validadas na plataforma e guardadas criptografadas.</p>
+    <p class="muted">Ligue tarefas a issues do GitHub ou do GitLab e a cartões do Trello. O token é validado na plataforma e guardado criptografado.</p>
     {{if .IsAdmin}}
-    <button type="button" class="btn" x-show="!creating" @click="openCreate()">Nova integração</button>
+    <button type="button" class="btn" @click="openCreate()">{{template "icon" "plus"}} Nova integração</button>
     {{end}}
   </div>
-
-  {{if .IsAdmin}}
-  <form class="card" x-cloak x-show="creating" @submit.prevent="create()">
-    <div class="card-head"><h2>Nova integração</h2></div>
-    <div class="fields">
-      <div class="field">
-        <label for="int-type">Plataforma</label>
-        <select id="int-type" x-model="draft.type" @change="draft.config = {}">
-          <template x-for="t in types" :key="t.value">
-            <option :value="t.value" x-text="t.label" :selected="t.value === draft.type"></option>
-          </template>
-        </select>
-      </div>
-      <div class="field">
-        <label for="int-name">Nome</label>
-        <input id="int-name" type="text" required placeholder="Ex.: Repositório do app" x-model="draft.display_name" x-ref="name">
-      </div>
-    </div>
-    <div class="fields">
-      <template x-for="f in fieldsFor(draft.type)" :key="draft.type + f.key">
-        <div class="field">
-          <label :for="'int-' + f.key" x-text="f.label"></label>
-          <input :id="'int-' + f.key" :type="f.type" required autocomplete="off" :placeholder="f.placeholder || ''" x-model="draft.config[f.key]">
-          <span class="hint" x-show="f.hint" x-text="f.hint"></span>
-        </div>
-      </template>
-    </div>
-    <p class="form-error" x-show="errors.create" x-text="errors.create" role="alert"></p>
-    <div class="row row-end">
-      <button type="button" class="btn btn-secondary" @click="creating = false">Cancelar</button>
-      <button type="submit" class="btn" :disabled="pending">
-        <span x-text="pending === 'create' ? 'Validando credenciais…' : 'Criar integração'">Criar integração</span>
-      </button>
-    </div>
-  </form>
-  {{end}}
 
   <p class="muted" x-show="loading">Carregando integrações…</p>
   <p class="form-error" x-cloak x-show="errors.load" x-text="errors.load"></p>
@@ -51,12 +15,14 @@
   <div class="empty" x-cloak x-show="!loading && !errors.load && items.length === 0">
     <strong>Nenhuma integração</strong>
     {{if .IsAdmin}}
-    <span>Crie uma para vincular tarefas a issues e ver o estado delas aqui.</span>
+    <span>Crie uma para vincular tarefas a issues ou cartões e ver o estado deles aqui.</span>
     {{else}}
-    <span>Um admin pode configurar o GitHub ou o GitLab deste projeto.</span>
+    <span>Um admin pode configurar o GitHub, o GitLab ou o Trello deste projeto.</span>
     {{end}}
   </div>
 
+  {{/* O cartão só mostra a integração. O lápis abre o modal, onde ficam a edição, o
+       ativar/desativar e a exclusão. */}}
   <div class="grid-2" x-show="items.length > 0">
     <template x-for="it in items" :key="it.id">
       <section class="card">
@@ -64,55 +30,106 @@
           <div class="stack stack-tight">
             <h2 x-text="it.display_name"></h2>
             <div class="row row-tight">
-              <span class="badge badge-accent" x-text="typeLabel(it.type)"></span>
+              <span class="badge badge-accent" x-text="typeOf(it.type).label"></span>
               <span class="badge" :class="it.enabled ? 'badge-ok' : ''" x-text="it.enabled ? 'Ativa' : 'Desativada'"></span>
             </div>
           </div>
           {{if .IsAdmin}}
-          <div class="row" x-show="editing !== it.id && confirming !== it.id">
-            <button type="button" class="btn btn-ghost btn-sm" :disabled="pending" @click="toggle(it)" x-text="it.enabled ? 'Desativar' : 'Ativar'"></button>
-            <button type="button" class="btn btn-ghost btn-sm" @click="startEdit(it)">Editar</button>
-            <button type="button" class="btn btn-danger-ghost btn-sm" @click="confirming = it.id">Excluir</button>
-          </div>
+          <button type="button" class="btn btn-ghost btn-sm btn-icon" title="Editar integração"
+                  :aria-label="'Editar a integração ' + it.display_name" @click="openEdit(it)">{{template "icon" "pen"}}</button>
           {{end}}
         </div>
 
         <dl class="facts">
-          <dt>Credencial</dt>
-          <dd class="mono" x-text="it.has_config ? '••••••••••••' : 'não configurada'"></dd>
+          <template x-for="f in facts(it)" :key="f.key">
+            <div class="fact">
+              <dt x-text="f.label"></dt>
+              <dd :class="f.value ? '' : 'muted'" x-text="f.value || WTT.notInformed"></dd>
+            </div>
+          </template>
+          <dt>Token</dt>
+          <dd :class="it.has_token ? 'mono' : 'muted'" x-text="it.has_token ? '••••••••••••' : WTT.notInformed"></dd>
           <dt>Criada em</dt>
           <dd x-text="WTT.fmt.date(it.created_at)"></dd>
         </dl>
 
-        {{if .IsAdmin}}
-        <div class="confirm" x-cloak x-show="confirming === it.id">
-          <span>Excluir? As tarefas vinculadas perdem o vínculo.</span>
-          <button type="button" class="btn btn-danger btn-sm" :disabled="pending" @click="remove(it)">Excluir</button>
-          <button type="button" class="btn btn-ghost btn-sm" @click="confirming = null">Cancelar</button>
-        </div>
-
-        <form class="stack" x-cloak x-show="editing === it.id" @submit.prevent="saveEdit(it)">
-          <hr class="divider">
-          <div class="field">
-            <label :for="'edit-name-' + it.id">Nome</label>
-            <input :id="'edit-name-' + it.id" type="text" required x-model="editDraft.display_name">
-          </div>
-          <p class="muted small">Para trocar a credencial, preencha todos os campos abaixo. Vazios mantêm a atual.</p>
-          <template x-for="f in fieldsFor(it.type)" :key="it.id + f.key">
-            <div class="field">
-              <label :for="'edit-' + it.id + f.key" x-text="f.label"></label>
-              <input :id="'edit-' + it.id + f.key" :type="f.type" autocomplete="off" :placeholder="f.placeholder || ''" x-model="editDraft.config[f.key]">
-            </div>
-          </template>
-          <div class="row row-end">
-            <button type="button" class="btn btn-secondary btn-sm" @click="editing = null">Cancelar</button>
-            <button type="submit" class="btn btn-sm" :disabled="pending">Salvar</button>
-          </div>
-        </form>
-        {{end}}
-        <p class="form-error" x-show="errors['item-' + it.id]" x-text="errors['item-' + it.id]" role="alert"></p>
+        <p class="alert alert-warn" x-cloak x-show="incomplete(it)">
+          Faltam dados desta integração, e os itens vinculados não são buscados.
+          {{if .IsAdmin}}Edite para completar.{{else}}Peça a um admin para completar.{{end}}
+        </p>
       </section>
     </template>
   </div>
+
+  {{if .IsAdmin}}
+  {{/* Criar e editar no mesmo modal. O corpo enviado é igual para todas as plataformas:
+       nome, token e, em metadata, os campos que o tipo declara. */}}
+  <template x-teleport="#modal-root">
+    <form class="stack" x-show="$store.modal.name === 'integration-form'" @submit.prevent="save()">
+      <template x-if="!draft.id">
+        <ul class="list picker" role="radiogroup" aria-label="Plataforma">
+          <template x-for="t in types" :key="t.type">
+            <li>
+              <label class="pick">
+                <input type="radio" name="int-type" :value="t.type" x-model="draft.type" @change="pickType()">
+                <span class="grow">
+                  <span x-text="t.label"></span>
+                  <span class="muted small" x-text="t.description"></span>
+                </span>
+              </label>
+            </li>
+          </template>
+        </ul>
+      </template>
+      <p class="muted small" x-show="draft.id">
+        Plataforma: <span class="badge badge-accent" x-text="typeOf(draft.type).label"></span>
+      </p>
+
+      <div class="field">
+        <label for="int-name">Nome</label>
+        <input id="int-name" type="text" required placeholder="Ex.: Repositório do app" x-model="draft.display_name" data-autofocus>
+      </div>
+      <div class="field">
+        <label for="int-token">Token de acesso</label>
+        {{/* new-password: com "off" o navegador ainda oferece a senha salva do site. */}}
+        <input id="int-token" type="password" autocomplete="new-password" :required="!draft.id"
+               :placeholder="draft.id && draft.has_token ? 'Em branco, mantém o token atual' : ''" x-model="draft.token">
+        <span class="hint" x-show="typeOf(draft.type).token_hint" x-text="typeOf(draft.type).token_hint"></span>
+      </div>
+      <template x-for="f in typeOf(draft.type).metadata" :key="draft.type + '-' + f.key">
+        <div class="field">
+          <label :for="'int-meta-' + f.key" x-text="f.label"></label>
+          <input :id="'int-meta-' + f.key" type="text" autocomplete="off" spellcheck="false" :required="f.required"
+                 :placeholder="f.placeholder || ''" x-model="draft.metadata[f.key]">
+          <span class="hint" x-show="f.hint" x-text="f.hint"></span>
+        </div>
+      </template>
+      {{/* Uma integração nasce ativa; desativar é coisa de quem edita. */}}
+      <div class="stack stack-tight" x-show="draft.id">
+        <label class="check"><input type="checkbox" x-model="draft.enabled"> Ativa</label>
+        <span class="muted small">Desativada, mantém os vínculos das tarefas, mas deixa de buscar os itens.</span>
+      </div>
+
+      <p class="form-error" x-show="errors.save || errors.remove" x-text="errors.save || errors.remove" role="alert"></p>
+
+      <div class="confirm" x-cloak x-show="confirming">
+        <span>Excluir a integração? As tarefas vinculadas perdem o vínculo.</span>
+        <button type="button" class="btn btn-danger btn-sm" :disabled="pending" @click="remove()">Excluir</button>
+        <button type="button" class="btn btn-ghost btn-sm" @click="confirming = false">Cancelar</button>
+      </div>
+      <div class="toolbar" x-show="!confirming">
+        <span>
+          <button type="button" class="btn btn-danger-ghost" x-show="draft.id" @click="confirming = true">{{template "icon" "trash"}} Excluir integração</button>
+        </span>
+        <div class="row">
+          <button type="button" class="btn btn-secondary" @click="$store.modal.dismiss()">Cancelar</button>
+          <button type="submit" class="btn" :disabled="pending">
+            <span x-text="draft.id ? (pending === 'save' ? 'Salvando…' : 'Salvar') : (pending === 'save' ? 'Validando conexão…' : 'Criar integração')">Criar integração</span>
+          </button>
+        </div>
+      </div>
+    </form>
+  </template>
+  {{end}}
 </main>
 {{end}}

@@ -100,17 +100,19 @@
                   <label for="td-integration">Integração</label>
                   <select id="td-integration" x-model="linkForm.integration_id">
                     <template x-for="i in integrations" :key="i.id">
-                      <option :value="i.id" x-text="i.display_name + ' (' + i.type + ')'" :selected="i.id === linkForm.integration_id"></option>
+                      <option :value="i.id" x-text="i.display_name + ' (' + typeLabel(i.type) + ')'" :selected="i.id === linkForm.integration_id"></option>
                     </template>
                   </select>
                 </div>
+                {{/* O que identifica o item muda com a plataforma: o número da issue, o cartão. */}}
                 <div class="field">
-                  <label for="td-item">Número da issue</label>
-                  <input id="td-item" type="text" inputmode="numeric" placeholder="Ex.: 42" x-model="linkForm.external_item_id">
+                  <label for="td-item" x-text="linkType().item_label || 'Item'">Item</label>
+                  <input id="td-item" type="text" autocomplete="off" :inputmode="linkType().item_numeric ? 'numeric' : 'text'"
+                         :placeholder="linkType().item_placeholder || ''" x-model="linkForm.external_item_id">
                 </div>
                 <div class="field">
                   <label for="td-url">Link</label>
-                  <input id="td-url" type="url" placeholder="https://github.com/…/issues/42" x-model="linkForm.external_item_url">
+                  <input id="td-url" type="url" placeholder="https://…" x-model="linkForm.external_item_url">
                 </div>
                 <p class="form-error" x-show="errors.link" x-text="errors.link" role="alert"></p>
                 <button type="submit" class="btn btn-secondary" :disabled="pending">Vincular</button>

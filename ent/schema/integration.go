@@ -19,7 +19,10 @@ func (Integration) Fields() []ent.Field {
 		field.UUID("project_id", uuid.UUID{}),
 		field.String("type"),
 		field.String("display_name"),
-		field.JSON("config", map[string]interface{}{}).Optional(),
+		// credentials guarda o token criptografado; metadata, os campos próprios de
+		// cada plataforma (repositório, quadro), em claro.
+		field.JSON("credentials", map[string]interface{}{}).Optional().Sensitive(),
+		field.JSON("metadata", map[string]interface{}{}).Optional(),
 		field.Bool("enabled").Default(true),
 		field.Time("created_at").Default(time.Now).Immutable(),
 	}

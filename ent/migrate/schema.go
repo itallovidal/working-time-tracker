@@ -74,7 +74,8 @@ var (
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "type", Type: field.TypeString},
 		{Name: "display_name", Type: field.TypeString},
-		{Name: "config", Type: field.TypeJSON, Nullable: true},
+		{Name: "credentials", Type: field.TypeJSON, Nullable: true},
+		{Name: "metadata", Type: field.TypeJSON, Nullable: true},
 		{Name: "enabled", Type: field.TypeBool, Default: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "project_id", Type: field.TypeUUID},
@@ -87,7 +88,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "integrations_projects_integrations",
-				Columns:    []*schema.Column{IntegrationsColumns[6]},
+				Columns:    []*schema.Column{IntegrationsColumns[7]},
 				RefColumns: []*schema.Column{ProjectsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},

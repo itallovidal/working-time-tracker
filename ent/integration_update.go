@@ -72,15 +72,27 @@ func (_u *IntegrationUpdate) SetNillableDisplayName(v *string) *IntegrationUpdat
 	return _u
 }
 
-// SetConfig sets the "config" field.
-func (_u *IntegrationUpdate) SetConfig(v map[string]interface{}) *IntegrationUpdate {
-	_u.mutation.SetConfig(v)
+// SetCredentials sets the "credentials" field.
+func (_u *IntegrationUpdate) SetCredentials(v map[string]interface{}) *IntegrationUpdate {
+	_u.mutation.SetCredentials(v)
 	return _u
 }
 
-// ClearConfig clears the value of the "config" field.
-func (_u *IntegrationUpdate) ClearConfig() *IntegrationUpdate {
-	_u.mutation.ClearConfig()
+// ClearCredentials clears the value of the "credentials" field.
+func (_u *IntegrationUpdate) ClearCredentials() *IntegrationUpdate {
+	_u.mutation.ClearCredentials()
+	return _u
+}
+
+// SetMetadata sets the "metadata" field.
+func (_u *IntegrationUpdate) SetMetadata(v map[string]interface{}) *IntegrationUpdate {
+	_u.mutation.SetMetadata(v)
+	return _u
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (_u *IntegrationUpdate) ClearMetadata() *IntegrationUpdate {
+	_u.mutation.ClearMetadata()
 	return _u
 }
 
@@ -203,11 +215,17 @@ func (_u *IntegrationUpdate) sqlSave(ctx context.Context) (_node int, err error)
 	if value, ok := _u.mutation.DisplayName(); ok {
 		_spec.SetField(integration.FieldDisplayName, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.Config(); ok {
-		_spec.SetField(integration.FieldConfig, field.TypeJSON, value)
+	if value, ok := _u.mutation.Credentials(); ok {
+		_spec.SetField(integration.FieldCredentials, field.TypeJSON, value)
 	}
-	if _u.mutation.ConfigCleared() {
-		_spec.ClearField(integration.FieldConfig, field.TypeJSON)
+	if _u.mutation.CredentialsCleared() {
+		_spec.ClearField(integration.FieldCredentials, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.Metadata(); ok {
+		_spec.SetField(integration.FieldMetadata, field.TypeJSON, value)
+	}
+	if _u.mutation.MetadataCleared() {
+		_spec.ClearField(integration.FieldMetadata, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.Enabled(); ok {
 		_spec.SetField(integration.FieldEnabled, field.TypeBool, value)
@@ -348,15 +366,27 @@ func (_u *IntegrationUpdateOne) SetNillableDisplayName(v *string) *IntegrationUp
 	return _u
 }
 
-// SetConfig sets the "config" field.
-func (_u *IntegrationUpdateOne) SetConfig(v map[string]interface{}) *IntegrationUpdateOne {
-	_u.mutation.SetConfig(v)
+// SetCredentials sets the "credentials" field.
+func (_u *IntegrationUpdateOne) SetCredentials(v map[string]interface{}) *IntegrationUpdateOne {
+	_u.mutation.SetCredentials(v)
 	return _u
 }
 
-// ClearConfig clears the value of the "config" field.
-func (_u *IntegrationUpdateOne) ClearConfig() *IntegrationUpdateOne {
-	_u.mutation.ClearConfig()
+// ClearCredentials clears the value of the "credentials" field.
+func (_u *IntegrationUpdateOne) ClearCredentials() *IntegrationUpdateOne {
+	_u.mutation.ClearCredentials()
+	return _u
+}
+
+// SetMetadata sets the "metadata" field.
+func (_u *IntegrationUpdateOne) SetMetadata(v map[string]interface{}) *IntegrationUpdateOne {
+	_u.mutation.SetMetadata(v)
+	return _u
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (_u *IntegrationUpdateOne) ClearMetadata() *IntegrationUpdateOne {
+	_u.mutation.ClearMetadata()
 	return _u
 }
 
@@ -509,11 +539,17 @@ func (_u *IntegrationUpdateOne) sqlSave(ctx context.Context) (_node *Integration
 	if value, ok := _u.mutation.DisplayName(); ok {
 		_spec.SetField(integration.FieldDisplayName, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.Config(); ok {
-		_spec.SetField(integration.FieldConfig, field.TypeJSON, value)
+	if value, ok := _u.mutation.Credentials(); ok {
+		_spec.SetField(integration.FieldCredentials, field.TypeJSON, value)
 	}
-	if _u.mutation.ConfigCleared() {
-		_spec.ClearField(integration.FieldConfig, field.TypeJSON)
+	if _u.mutation.CredentialsCleared() {
+		_spec.ClearField(integration.FieldCredentials, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.Metadata(); ok {
+		_spec.SetField(integration.FieldMetadata, field.TypeJSON, value)
+	}
+	if _u.mutation.MetadataCleared() {
+		_spec.ClearField(integration.FieldMetadata, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.Enabled(); ok {
 		_spec.SetField(integration.FieldEnabled, field.TypeBool, value)

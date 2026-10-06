@@ -231,14 +231,24 @@ func DisplayNameContainsFold(v string) predicate.Integration {
 	return predicate.Integration(sql.FieldContainsFold(FieldDisplayName, v))
 }
 
-// ConfigIsNil applies the IsNil predicate on the "config" field.
-func ConfigIsNil() predicate.Integration {
-	return predicate.Integration(sql.FieldIsNull(FieldConfig))
+// CredentialsIsNil applies the IsNil predicate on the "credentials" field.
+func CredentialsIsNil() predicate.Integration {
+	return predicate.Integration(sql.FieldIsNull(FieldCredentials))
 }
 
-// ConfigNotNil applies the NotNil predicate on the "config" field.
-func ConfigNotNil() predicate.Integration {
-	return predicate.Integration(sql.FieldNotNull(FieldConfig))
+// CredentialsNotNil applies the NotNil predicate on the "credentials" field.
+func CredentialsNotNil() predicate.Integration {
+	return predicate.Integration(sql.FieldNotNull(FieldCredentials))
+}
+
+// MetadataIsNil applies the IsNil predicate on the "metadata" field.
+func MetadataIsNil() predicate.Integration {
+	return predicate.Integration(sql.FieldIsNull(FieldMetadata))
+}
+
+// MetadataNotNil applies the NotNil predicate on the "metadata" field.
+func MetadataNotNil() predicate.Integration {
+	return predicate.Integration(sql.FieldNotNull(FieldMetadata))
 }
 
 // EnabledEQ applies the EQ predicate on the "enabled" field.

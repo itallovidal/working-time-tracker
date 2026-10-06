@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"sync/atomic"
 	"testing"
 
 	"working-time-tracker/ent"
@@ -15,40 +16,35 @@ import (
 var testClient *ent.Client
 var testDB *sql.DB
 
-// invalidGitHubToken é o único token que o GitHub fake rejeita.
-const invalidGitHubToken = "invalid-token"
+// platformCalls conta as requisições que chegam às plataformas fake: é como os testes
+// sabem se uma edição consultou a plataforma de novo.
+var platformCalls atomic.Int32
 
+// As chamadas às plataformas vão para servidores fake (testutil), que rejeitam
+// apenas testutil.InvalidToken.
 func TestMain(m *testing.M) {
 	testClient, testDB = testutil.Setup()
 
-	github := httptest.NewServer(fakeGitHub())
+	serve := func(next http.Handler) *httptest.Server {
+		return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			platformCalls.Add(1)
+			next.ServeHTTP(w, r)
+		}))
+	}
+	github, gitlab, trello := serve(testutil.FakeGitHub()), serve(testutil.FakeGitLab()), serve(testutil.FakeTrello())
 	adapter.Register("github", func() adapter.Integration {
 		return &adapter.GitHubIntegration{BaseURL: github.URL}
+	})
+	adapter.Register("gitlab", func() adapter.Integration {
+		return &adapter.GitLabIntegration{BaseURL: gitlab.URL}
+	})
+	adapter.Register("trello", func() adapter.Integration {
+		return &adapter.TrelloIntegration{BaseURL: trello.URL}
 	})
 
 	code := m.Run()
 	github.Close()
+	gitlab.Close()
+	trello.Close()
 	os.Exit(code)
-}
-
-// fakeGitHub imita as duas chamadas que o adapter faz: validar o repositório e
-// buscar uma issue. Conhece apenas o repositório owner/repo e a issue 42.
-func fakeGitHub() http.Handler {
-	mux := http.NewServeMux()
-	auth := func(next http.HandlerFunc) http.HandlerFunc {
-		return func(w http.ResponseWriter, r *http.Request) {
-			if r.Header.Get("Authorization") == "Bearer "+invalidGitHubToken {
-				http.Error(w, `{"message":"Bad credentials"}`, http.StatusUnauthorized)
-				return
-			}
-			next(w, r)
-		}
-	}
-	mux.HandleFunc("GET /repos/owner/repo", auth(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`{"full_name":"owner/repo"}`))
-	}))
-	mux.HandleFunc("GET /repos/owner/repo/issues/42", auth(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`{"title":"Corrigir login","state":"open","html_url":"https://github.com/owner/repo/issues/42"}`))
-	}))
-	return mux
 }

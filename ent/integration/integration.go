@@ -21,8 +21,10 @@ const (
 	FieldType = "type"
 	// FieldDisplayName holds the string denoting the display_name field in the database.
 	FieldDisplayName = "display_name"
-	// FieldConfig holds the string denoting the config field in the database.
-	FieldConfig = "config"
+	// FieldCredentials holds the string denoting the credentials field in the database.
+	FieldCredentials = "credentials"
+	// FieldMetadata holds the string denoting the metadata field in the database.
+	FieldMetadata = "metadata"
 	// FieldEnabled holds the string denoting the enabled field in the database.
 	FieldEnabled = "enabled"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
@@ -55,7 +57,8 @@ var Columns = []string{
 	FieldProjectID,
 	FieldType,
 	FieldDisplayName,
-	FieldConfig,
+	FieldCredentials,
+	FieldMetadata,
 	FieldEnabled,
 	FieldCreatedAt,
 }

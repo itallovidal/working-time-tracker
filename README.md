@@ -1,6 +1,6 @@
 # Working Time Tracker
 
-Ponto por tarefa para equipes que trabalham por projeto. Foi pensado principalmente para empresas de desenvolvimento, como software houses e consultorias, que atendem vários clientes e alocam as pessoas em um ou mais projetos, mas nada nele depende disso. A pessoa faz **clock-in** numa tarefa, faz **clock-out** quando para, e o sistema soma o tempo por tarefa e por pessoa. Tudo fica organizado em organização, projetos e times, e as tarefas podem apontar para issues do GitHub ou do GitLab.
+Ponto por tarefa para equipes que trabalham por projeto. Foi pensado principalmente para empresas de desenvolvimento, como software houses e consultorias, que atendem vários clientes e alocam as pessoas em um ou mais projetos, mas nada nele depende disso. A pessoa faz **clock-in** numa tarefa, faz **clock-out** quando para, e o sistema soma o tempo por tarefa e por pessoa. Tudo fica organizado em organização, projetos e times, e as tarefas podem apontar para issues do GitHub ou do GitLab e para cartões do Trello.
 
 É um único binário em Go que serve a API JSON e a interface web.
 
@@ -15,7 +15,7 @@ Ponto por tarefa para equipes que trabalham por projeto. Foi pensado principalme
 - **Tarefas** com responsável, prazo (7 dias por padrão, com destaque quando está atrasada ou perto de vencer) e vínculo opcional com uma issue. A lista tem busca por nome, filtro por responsável, filtro por prazo (atrasadas, até hoje, até o fim desta semana ou da próxima, ou até uma data) e 10 tarefas por página. A caixa "Só as minhas tarefas", abaixo dos filtros, mostra as suas e desliga a busca e o filtro de responsável: só o de prazo continua valendo. A tarefa nova é criada num modal.
 - **Ponto.** Clock-in e clock-out com cronômetro ao vivo no topo de todas as páginas, sessões filtradas por pessoa, data e tarefa, os totais do filtro num cartão à parte e o seu tempo de hoje e da semana. O banco garante uma única sessão aberta por pessoa.
 - **Horas em dinheiro.** Cada sessão guarda os valores por hora de quando o ponto abriu, então **mudar um valor só vale dali em diante**. Quem não tem valor definido no projeto **não bate ponto**. Na tela de ponto, o membro vê quanto ganhou; o admin vê custo, receita e margem.
-- **Integrações** com GitHub e GitLab. A credencial é validada na plataforma, guardada criptografada e nunca volta nas respostas. Os detalhes da issue (título e estado) são buscados na hora, e se a plataforma não responde a tela mostra o motivo, sem quebrar.
+- **Integrações** com GitHub, GitLab e Trello. Todas usam a mesma estrutura: nome, token e, em `metadata`, os campos próprios da plataforma (o repositório, o projeto, a chave e o quadro), que cada integração confere antes de falar com ela. O token é validado na plataforma, guardado criptografado e nunca volta nas respostas. O admin cria e edita num modal só, que desenha os campos da plataforma escolhida; o cartão de cada integração é só de leitura, e desativar ou excluir também ficam no modal. Os detalhes do item (o título e o estado da issue, ou a lista em que o cartão está) são buscados na hora, e se a plataforma não responde a tela mostra o motivo, sem quebrar.
 
 ## Como rodar
 
@@ -56,7 +56,7 @@ Para gerar o binário: `go build -o wtt ./cmd && ./wtt`. Templates e arquivos es
 |---|---|---|
 | `API_PORT` | sim | Porta HTTP, por exemplo `8080` |
 | `DATABASE_URL` | sim | Conexão com o PostgreSQL |
-| `INTEGRATION_ENCRYPTION_KEY` | sim | Chave da criptografia AES-GCM das credenciais de integração. Trocá-la torna as credenciais salvas ilegíveis |
+| `INTEGRATION_ENCRYPTION_KEY` | sim | Chave da criptografia AES-GCM dos tokens de integração. Trocá-la torna os tokens salvos ilegíveis: cada integração pede o token de novo na edição, e o resto dela (nome e `metadata`) continua |
 | `COOKIE_SECURE` | não | `true` marca o cookie de sessão como `Secure`. Use em produção, atrás de HTTPS |
 | `TEST_DATABASE_URL` | só nos testes | Banco usado por `go test`. O nome precisa terminar em `_test` |
 
@@ -85,7 +85,7 @@ A interface segue a Decision 8 de `_docs/design.md`. O servidor renderiza a casc
 | `/tasks/:taskId` | Edição da tarefa, vínculo com issue e tempo registrado |
 | `/projects/:projectId/time-tracking` | Cronômetro, sessões, filtros e totais em tempo e em dinheiro |
 | `/projects/:projectId/teams` | Colaboradores: as pessoas do projeto, com busca, e os times. Para admins, também o valor por hora de cada pessoa, a margem e as ações de adicionar, tirar e montar times; cada time é editado num modal |
-| `/projects/:projectId/integrations` | Integrações com GitHub e GitLab |
+| `/projects/:projectId/integrations` | Integrações com GitHub, GitLab e Trello: um cartão por integração e, para admins, o modal de criar e editar |
 | `/projects/:projectId/settings` | Configurações e exclusão do projeto; para admins, também o cliente e o valor cobrado |
 
 Sem sessão, qualquer página leva ao login, e a pessoa volta para a página pedida depois de entrar. Uma página de outra organização mostra "Página não encontrada".
@@ -134,7 +134,7 @@ Para atualizar o Alpine, troque `web/static/alpine.min.js` e o hash em `web/embe
 
 O conteúdo aparece dentro do modal, mas segue no escopo do componente da página (`x-model`, `save()`, `errors`). O `<template>` precisa de um único elemento raiz. `open(nome, título, guarda)` abre e foca o campo com `data-autofocus`; `close()` fecha; `dismiss()` é o fechamento pedido pela pessoa (Esc, clique no fundo, X, Cancelar) e respeita a guarda, uma função que devolve `false` enquanto o modal não pode fechar, por exemplo durante um salvamento.
 
-Hoje usam o modal o cadastro de cliente, o Adicionar colaborador, o Novo projeto, a Nova tarefa e, na aba Colaboradores do projeto, o Adicionar pessoa, o Novo time e o Editar time. Para focar um campo que acabou de aparecer dentro do modal (como o link do convite depois de gerado), dê ao bloco um `x-transition`: sem transição, o `x-show` só mostra o elemento no ciclo seguinte e o `$nextTick` chega antes de ele aceitar foco.
+Hoje usam o modal o cadastro de cliente, o Adicionar colaborador, o Novo projeto, a Nova tarefa e, na aba Colaboradores do projeto, o Adicionar pessoa, o Novo time e o Editar time, e, na aba Integrações, o formulário único de criar e editar integração. Para focar um campo que acabou de aparecer dentro do modal (como o link do convite depois de gerado), dê ao bloco um `x-transition`: sem transição, o `x-show` só mostra o elemento no ciclo seguinte e o `$nextTick` chega antes de ele aceitar foco.
 
 ## API
 
@@ -155,6 +155,25 @@ Resumo dos grupos de rotas:
 | Ponto | `/api/projects/:projectId/work-sessions/*`, `/api/work-sessions/active` |
 | Integrações | `/api/integrations/:integrationId` |
 
+**Integrações.** O corpo é o mesmo para qualquer plataforma. O que muda de uma para outra vai em `metadata`:
+
+```json
+{
+  "type": "trello",
+  "display_name": "Quadro do app",
+  "token": "…",
+  "metadata": { "api_key": "…", "board_id": "https://trello.com/b/AbC123xy/app" }
+}
+```
+
+| `type` | `token` | `metadata` |
+|---|---|---|
+| `github` | token pessoal com leitura de issues | `repo`: `dono/repositorio` ou o endereço |
+| `gitlab` | token com escopo `read_api` | `project_url`: `grupo/projeto` ou o endereço |
+| `trello` | token da API | `api_key`: a chave do Power-Up; `board_id`: o endereço do quadro, o link curto ou o id |
+
+Um tipo novo é um arquivo em `internal/adapter` que implementa `Integration` e uma linha no `registry.go`. O `Descriptor` dele diz que campos o `metadata` tem, e é dele que a tela tira o formulário e os rótulos (as páginas de projeto o recebem em `window.BOOT.integration_types`); o `CheckMetadata` confere e normaliza esses campos sem falar com a plataforma; `Validate` e `FetchItemDetails` recebem a `Connection`, com o token e o `metadata`.
+
 ## Segurança
 
 - **Senhas** com bcrypt. Contas sem senha (criadas antes do login existir) não conseguem entrar.
@@ -163,7 +182,7 @@ Resumo dos grupos de rotas:
 - **Isolamento entre organizações.** Cada rota com ID confere se o recurso é da organização de quem chama e responde 404 caso não seja.
 - **Valores.** O valor cobrado do cliente só existe em rotas de admin: ele não entra no JSON do projeto. Na lista de valores de um projeto, um membro recebe só a própria linha, e na de colaboradores, só o próprio valor. Nas sessões de ponto, a API apaga o valor pago das sessões de outras pessoas e todo valor cobrado antes de responder a quem não é admin.
 - **Limite de tentativas** por IP em signup, login e convites.
-- **Credenciais de integração** criptografadas com AES-GCM (`INTEGRATION_ENCRYPTION_KEY`) e nunca devolvidas pela API.
+- **Tokens de integração** criptografados com AES-GCM (`INTEGRATION_ENCRYPTION_KEY`) e nunca devolvidos pela API. O `metadata` de uma integração fica em claro e volta nas respostas, então não é lugar de segredo: cada tipo só guarda nele os campos que declara. O que vem de quem usa e entra numa URL da plataforma (o repositório, o quadro, o número da issue, o cartão) é conferido antes.
 
 ## Testes
 
@@ -176,7 +195,7 @@ TEST_DATABASE_URL=postgres://wtt:wtt@localhost:5432/working_time_tracker_test?ss
 
 Cada pacote de teste apaga o schema desse banco e aplica as migrações de novo antes de rodar, então ele não precisa de preparo e os testes sempre veem o que os arquivos de migração produzem hoje. Por segurança, isso só acontece num banco cujo nome termina em `_test`.
 
-O `-p 1` é necessário porque todos os pacotes recriam e usam o mesmo banco. As chamadas ao GitHub nos testes vão para um servidor fake (`httptest`), então a suíte não depende de rede.
+O `-p 1` é necessário porque todos os pacotes recriam e usam o mesmo banco. As chamadas ao GitHub, ao GitLab e ao Trello nos testes vão para servidores fake (`httptest`, em `testutil/platforms.go`), então a suíte não depende de rede.
 
 Cobertura:
 - **Domínios:** services e handlers.
@@ -195,7 +214,7 @@ cmd/
 ent/
   schema/                 # schema do banco (Ent); o resto de ent/ é gerado: go generate ./ent
 internal/
-  adapter/                # clientes do GitHub e do GitLab, e a criptografia das credenciais
+  adapter/                # clientes do GitHub, do GitLab e do Trello, o que cada tipo pede, e a criptografia do token
   config/                 # variáveis de ambiente
   database/               # conexão, arquivos de migração (migrations/) e quem os aplica
   domain/
@@ -227,7 +246,7 @@ Person       (1) ── (N) Session       token (hash), expira em 7 dias
 Project      (1) ── (N) Team ── (N) Person   via TeamMembership
 Project      (1) ── (N) Allocation ── (1) Person   valor pago por hora, um por pessoa em cada projeto
 Project      (1) ── (N) Task ── (N) WorkSession   a sessão guarda o valor pago e o cobrado do clock-in
-Project      (1) ── (N) Integration   config criptografada
+Project      (1) ── (N) Integration   token criptografado (credentials) e metadata em claro
 Task      (0..1) ── (0..1) Integration  via external_integration_id
 ```
 

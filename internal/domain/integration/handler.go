@@ -9,14 +9,17 @@ import (
 	"working-time-tracker/internal/database"
 )
 
+// integrationResponse é a mesma para todos os tipos: o que muda de uma plataforma
+// para outra está em metadata. O token nunca volta.
 type integrationResponse struct {
-	ID          uuid.UUID `json:"id"`
-	ProjectID   uuid.UUID `json:"project_id"`
-	Type        string    `json:"type"`
-	DisplayName string    `json:"display_name"`
-	HasConfig   bool      `json:"has_config"`
-	Enabled     bool      `json:"enabled"`
-	CreatedAt   time.Time `json:"created_at"`
+	ID          uuid.UUID              `json:"id"`
+	ProjectID   uuid.UUID              `json:"project_id"`
+	Type        string                 `json:"type"`
+	DisplayName string                 `json:"display_name"`
+	HasToken    bool                   `json:"has_token"`
+	Metadata    map[string]interface{} `json:"metadata"`
+	Enabled     bool                   `json:"enabled"`
+	CreatedAt   time.Time              `json:"created_at"`
 }
 
 func toIntegrationResponse(m *Integration) integrationResponse {
@@ -25,7 +28,8 @@ func toIntegrationResponse(m *Integration) integrationResponse {
 		ProjectID:   m.ProjectID,
 		Type:        m.Type,
 		DisplayName: m.DisplayName,
-		HasConfig:   m.HasConfig,
+		HasToken:    m.HasToken,
+		Metadata:    m.Metadata,
 		Enabled:     m.Enabled,
 		CreatedAt:   m.CreatedAt,
 	}
@@ -52,8 +56,9 @@ func (h *Handler) Create(c *echo.Context) error {
 	var body struct {
 		Type        string                 `json:"type"`
 		DisplayName string                 `json:"display_name"`
-		Config      map[string]interface{} `json:"config"`
-		Enabled     bool                   `json:"enabled"`
+		Token       string                 `json:"token"`
+		Metadata    map[string]interface{} `json:"metadata"`
+		Enabled     *bool                  `json:"enabled"`
 	}
 	if err := c.Bind(&body); err != nil {
 		return c.JSON(400, map[string]string{"error": "corpo da requisição inválido"})
@@ -61,7 +66,9 @@ func (h *Handler) Create(c *echo.Context) error {
 	if body.Type == "" {
 		return c.JSON(400, map[string]string{"error": "informe o tipo da integração"})
 	}
-	it, err := h.svc.Create(projectID, body.Type, body.DisplayName, body.Config, body.Enabled)
+	// Sem enabled no corpo, a integração nasce ativa.
+	enabled := body.Enabled == nil || *body.Enabled
+	it, err := h.svc.Create(projectID, body.Type, body.DisplayName, body.Token, body.Metadata, enabled)
 	if err != nil {
 		return c.JSON(400, map[string]string{"error": err.Error()})
 	}
@@ -93,13 +100,14 @@ func (h *Handler) Update(c *echo.Context) error {
 	id := c.Param("integrationId")
 	var body struct {
 		DisplayName string                 `json:"display_name"`
-		Config      map[string]interface{} `json:"config,omitempty"`
+		Token       string                 `json:"token"`
+		Metadata    map[string]interface{} `json:"metadata"`
 		Enabled     *bool                  `json:"enabled"`
 	}
 	if err := c.Bind(&body); err != nil {
 		return c.JSON(400, map[string]string{"error": "corpo da requisição inválido"})
 	}
-	it, err := h.svc.Update(id, body.DisplayName, body.Config, body.Enabled)
+	it, err := h.svc.Update(id, body.DisplayName, body.Token, body.Metadata, body.Enabled)
 	if err != nil {
 		return c.JSON(400, map[string]string{"error": err.Error()})
 	}

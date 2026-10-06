@@ -23,7 +23,8 @@ func (s *Store) Create(it *Integration) error {
 		SetProjectID(it.ProjectID).
 		SetType(it.Type).
 		SetDisplayName(it.DisplayName).
-		SetConfig(it.Config).
+		SetCredentials(it.Credentials).
+		SetMetadata(it.Metadata).
 		SetEnabled(it.Enabled).
 		Save(context.Background())
 	if err != nil {
@@ -67,7 +68,8 @@ func (s *Store) GetByID(id string) (*Integration, error) {
 func (s *Store) Update(it *Integration) error {
 	_, err := s.client.Integration.UpdateOneID(it.ID).
 		SetDisplayName(it.DisplayName).
-		SetConfig(it.Config).
+		SetCredentials(it.Credentials).
+		SetMetadata(it.Metadata).
 		SetEnabled(it.Enabled).
 		Save(context.Background())
 	return err
@@ -85,12 +87,18 @@ func toDomainIntegration(e *ent.Integration) *Integration {
 	if e == nil {
 		return nil
 	}
+	// Uma linha de antes do metadata tem a coluna nula: a resposta leva um objeto vazio.
+	metadata := e.Metadata
+	if metadata == nil {
+		metadata = map[string]interface{}{}
+	}
 	return &Integration{
 		ID:          e.ID,
 		ProjectID:   e.ProjectID,
 		Type:        e.Type,
 		DisplayName: e.DisplayName,
-		Config:      e.Config,
+		Credentials: e.Credentials,
+		Metadata:    metadata,
 		Enabled:     e.Enabled,
 		CreatedAt:   e.CreatedAt,
 	}

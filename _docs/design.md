@@ -75,8 +75,10 @@ Allocation: id (UUID PK), project_id (FK Project), person_id (FK Person),
              same project)
             A collaborator of a project is a person with an Allocation or a
             TeamMembership in it; the two are independent and no table joins them.
-Integration: id (UUID PK), project_id (FK Project), type (VARCHAR — e.g. github,
-             gitlab, slack, trello), display_name, config (JSONB, encrypted),
+Integration: id (UUID PK), project_id (FK Project), type (VARCHAR — github,
+             gitlab, trello), display_name,
+             credentials (JSONB, the encrypted token),
+             metadata (JSONB, the fields of that platform, in clear),
              enabled (boolean, default true), created_at
 Task: id (UUID PK), project_id (FK Project), name, description,
       assignee_id (FK Person), deadline (TIMESTAMP, default created_at + 7 days),
@@ -97,7 +99,7 @@ WorkSession: id (UUID PK), task_id (FK Task), person_id (FK Person),
 A partial unique index enforces one active session per person:
 `CREATE UNIQUE INDEX one_active_session ON work_sessions (person_id) WHERE end_at IS NULL`
 
-**Rationale:** The model maps directly to the organizational hierarchy. A person belongs to an organization, which has projects. Each project has teams, integrations, and tasks. Links to external items are stored on the task itself (one link per task), referencing which integration provides the connection. The partial unique index on WorkSession is the database-level guarantee against concurrent clock-in races. JSONB for Integration.config allows type-specific configuration without schema changes per platform.
+**Rationale:** The model maps directly to the organizational hierarchy. A person belongs to an organization, which has projects. Each project has teams, integrations, and tasks. Links to external items are stored on the task itself (one link per task), referencing which integration provides the connection. The partial unique index on WorkSession is the database-level guarantee against concurrent clock-in races. JSONB for Integration.metadata allows type-specific fields without schema changes per platform.
 
 **Alternatives considered:**
 - Separate `TaskLink` table for external item references: more flexible for multiple links per task but over-normalized for v1 where one link per task is sufficient.
@@ -130,31 +132,41 @@ A partial unique index enforces one active session per person:
 **Choice:** Replace the previous GitHub-specific connection with a generic Integration entity configured per project.
 
 Each Integration stores:
-- `type`: a string identifier for the platform (e.g., `github`, `gitlab`, `slack`, `trello`).
-- `display_name`: a human-readable label (e.g., "Production Repo", "Team Slack").
-- `config`: a JSONB column holding type-specific configuration (API tokens, webhook URLs, etc.), encrypted at rest.
+- `type`: a string identifier for the platform (`github`, `gitlab`, `trello`).
+- `display_name`: a human-readable label (e.g., "Production Repo", "Client board").
+- `credentials`: the token, encrypted at rest (Decision 6).
+- `metadata`: a JSONB column holding the fields only that platform has (the repository, the project, the Trello key and board), in clear.
 - `enabled`: flag to enable/disable without deleting.
 
 Tasks can be linked to external items by setting `external_integration_id`, `external_item_id`, and `external_item_url`. When reading a task, the system fetches current item details from the integration's API on demand. If the API is unavailable, the task returns a null detail block (graceful degradation). Per-integration API responses are cached in-process with a short TTL (e.g., 60s).
 
-Each integration type implements a common interface:
-- `ValidateConfig(config) error` — verify credentials by calling the platform API.
-- `FetchItemDetails(config, itemID) (ItemDetails, error)` — retrieve title, state, URL.
-- (Future) `SendNotification(config, message)` — push notifications.
+Each integration type implements a common interface (`internal/adapter`):
+- `Descriptor() Descriptor` — what the type is and what it asks for: its label, the metadata fields (key, label, hint, required) and how the linked item is called.
+- `CheckMetadata(raw) (metadata, error)` — without calling the platform, check that the metadata has every field the type needs and return what is stored: only the declared fields, normalized.
+- `Validate(conn) error` — verify the connection by calling the platform API.
+- `FetchItemDetails(conn, itemID) (ItemDetails, error)` — retrieve title, state, URL.
+- (Future) `SendNotification(conn, message)` — push notifications.
 
-**Rationale:** Decouples the core tracking system from any single external platform. Adding a new integration type only requires implementing the interface; no schema or core logic changes. Encrypted JSONB config keeps secrets safe while allowing per-type flexibility. On-demand fetch avoids stale data and webhook plumbing in v1.
+**Shared structure (Sprint 23):** Every type is created and edited with the same body, `{type, display_name, enabled, token, metadata}`, and answers with the same one, `{id, project_id, type, display_name, enabled, has_token, metadata, created_at}`. What is common sits at the first level; what belongs to the platform goes into `metadata`: `repo` for GitHub, `project_url` for GitLab, `api_key` and `board_id` for Trello. The adapter receives it as a `Connection{Token, Metadata}` and parses the metadata into its own typed struct, through `CheckMetadata`, before any request, so the check lives inside each integration. Before this, the body carried a `config` map that mixed the token with those fields and was encrypted whole: nothing of it could be shown back, and editing meant typing everything again. `PATCH` now takes any subset; an empty `token` keeps the stored one, a `metadata` replaces the stored one, and the platform is only called again when a token came or the metadata really changed, so renaming or disabling an integration does not depend on its token still being valid. The type catalog is also the backend's: the project pages receive the descriptors in `window.BOOT.integration_types` and draw the form and the labels from them, so a new adapter needs no JavaScript.
+
+**Trello (Sprint 23):** A Trello integration is bound to a board and links tasks to cards. The token goes in the shared field and the API key, which Trello documents as safe to be public, in the metadata. Both travel in the `Authorization: OAuth` header, never in the URL. One request (`GET /1/cards/{id}` with `list=true&board=true`) brings the card with its list and board: the state of a card is the name of the list it is in ("arquivado" when closed), and a card from another board is refused.
+
+**Input that reaches a platform URL (Sprint 23):** The repository, the board, the issue number and the card id come from a person and end up in the path of an API call. Each adapter checks their format first (an issue number is digits only, a repository is `owner/name`), so a member linking an item cannot point the request at another resource the token can read.
+
+**Rationale:** Decouples the core tracking system from any single external platform. Adding a new integration type only requires implementing the interface and registering it; no schema, core logic or frontend changes. The JSONB metadata allows per-type fields while the token stays encrypted. On-demand fetch avoids stale data and webhook plumbing in v1.
 **Alternatives considered:**
 - Webhook-driven sync: more responsive but adds endpoint, secret management, and per-platform webhook registration complexity — deferred.
 - Persisting external item details and refreshing on a schedule: background job overhead for v1.
 - Separate `config_github`, `config_gitlab` etc. columns: not extensible; each new platform requires a migration.
 
 ### Decision 6: Credential security — Encryption at rest
-**Choice:** Store integration credentials (API tokens, keys) encrypted at rest in the Integration.config JSONB column using symmetric AES-GCM with a key from environment configuration (`INTEGRATION_ENCRYPTION_KEY`). Never return credentials in any API response or log; expose only an `enabled` boolean and a masked `has_credentials` indicator per integration.
-**Rationale:** Symmetric encryption is simple for a single-instance service and keeps secrets safe if the database is compromised. The boolean indicator lets the UI show connection status without leaking secrets. Each integration type may require different credential fields; encrypting the entire JSONB config avoids per-field handling.
+**Choice:** Store the integration token encrypted at rest in the Integration.credentials JSONB column using symmetric AES-GCM with a key from environment configuration (`INTEGRATION_ENCRYPTION_KEY`). Never return it in any API response or log; expose only an `enabled` boolean and a `has_token` indicator per integration. The metadata is not a secret: it is stored in clear and returned, and each type only keeps the fields it declares, so a secret sent there by mistake under another key is dropped.
+**Rationale:** Symmetric encryption is simple for a single-instance service and keeps secrets safe if the database is compromised. The boolean indicator lets the UI show connection status without leaking secrets. Until Sprint 23 the whole config was encrypted, to avoid per-field handling; with one token shared by every type and the rest in `metadata`, only the token needs it, and the rest can be read, shown in the edit form and kept when the encryption key changes. A row written before that still has token and fields together in the blob: the token stays readable, the missing metadata is reported as the reason when details are fetched, and editing the integration once rewrites it in the new shape.
 **Alternatives considered:**
 - OAuth flow with refresh tokens: more secure/scalable but far more complex per-platform for v1.
 - Plaintext storage: unacceptable security posture.
 - Column-level encryption per field: more granular but couples schema to integration types.
+- Marking some metadata fields as secret and encrypting those: no type needs a second secret today; a type that does would add it then.
 
 ### Decision 7: API style — REST with JSON, scoped by organization and project
 **Choice:** RESTful JSON endpoints grouped by resource, scoped under organizations and projects.
@@ -191,6 +203,7 @@ Each integration type implements a common interface:
 **Task list (Sprint 16):** The task list is the first one that filters and paginates on the server instead of loading everything and filtering in the browser. `GET /api/projects/:projectId/tasks` takes `q`, `assignee_id`, `deadline_to`, `page` and `per_page`. Without `page` it still returns the plain array, because the time tracking screen needs every task of the project; with `page` it returns `{items, total, page, per_page, assignees}`. The browser turns a deadline shortcut ("until the end of next week") into an instant in the viewer's time zone and sends that, so the server never interprets a date. The page keeps the search, the filters and the page number in its own URL, so a reload, a shared link or the way back from a task lands on the same place.
 **Collaborators tab (Sprint 17):** A person is tied to a project in two independent ways: an Allocation (the hourly rate, which allows clocking in) and a TeamMembership (which allows being assigned tasks). The project used to show them on two tabs, "Times" and "Valores", so adding someone meant visiting both. The "Colaboradores" tab shows one list: a collaborator is whoever has at least one of the two. There is no table for it; `GET /api/projects/:projectId/collaborators` computes the union, and `DELETE .../collaborators/:personId` removes both ties in one transaction. Adding a person reuses the existing calls (`PUT .../allocations/:personId`, then `POST /api/teams/:teamId/members` when a team was chosen): the state between the two is valid, a collaborator without a team. The tab keeps the `/teams` route. Members open it and see people and teams; rates, margins and every action are for admins. The customer's bill rate is edited in the project settings.
 **Edit team modal (Sprint 19):** The team card used to carry every action: rename, delete, a remove button per member and a select to add one. It now only shows the team, and one "Editar time" modal holds the name, the members and the deletion. The modal edits a draft, and nothing reaches the server before "Salvar", so "Cancelar" means what it says. There is no new route: saving compares the draft with what the server has and calls `PATCH /api/teams/:teamId`, then `DELETE` and `POST .../members` for whoever left and joined, one request per change. The save is therefore not atomic. If a request fails, what was already applied stays, the page behind the modal is reloaded, and the modal stays open with the error; saving again only sends what is still missing, because the difference is computed again. A single transactional route was left out because a team changes a few people at a time and every intermediate state is valid.
+**Integrations tab (Sprint 23):** The tab had the creation form inline in the page and, on each card, the buttons to disable, edit and delete plus an inline edit form. It now follows the team card: the card only shows the integration (platform, status, the metadata field that identifies the connection, a masked token) with a single pencil for admins, and one modal creates and edits. The modal shows the platforms as a radio group on creation and draws the metadata fields of the chosen one from its descriptor; on edit the platform is fixed, an empty token keeps the stored one, and disabling and deleting (with a confirmation) are there too. Nothing is sent before "Salvar". The task page takes the label of the link field from the same descriptors ("Número da issue" or "Cartão"), and the task list now loads the integration of each linked item, which it did not, so the badge names the platform ("GitHub #42", "Trello H0TZyzbK").
 **Alternatives considered:**
 - HTMX instead of Alpine.js: also viable and build-free; Alpine.js chosen for finer-grained client state (e.g., active-session elapsed timer, inline validation feedback, multi-step forms for integration config).
 - Pure server-rendered forms with full page reloads: simpler but poorer UX for clock in/out and live totals.

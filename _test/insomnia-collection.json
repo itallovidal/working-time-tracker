@@ -835,7 +835,47 @@
       ],
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"type\": \"github\",\n  \"display_name\": \"Repositório do app\",\n  \"config\": {\n    \"token\": \"ghp_seu_token\",\n    \"repo\": \"acme/app\"\n  },\n  \"enabled\": true\n}"
+        "text": "{\n  \"type\": \"github\",\n  \"display_name\": \"Repositório do app\",\n  \"token\": \"ghp_seu_token\",\n  \"metadata\": {\n    \"repo\": \"acme/app\"\n  },\n  \"enabled\": true\n}"
+      }
+    },
+    {
+      "_id": "req_08_05",
+      "_type": "request",
+      "parentId": "fld_08",
+      "name": "Criar integração GitLab",
+      "method": "POST",
+      "url": "{{base_url}}/api/projects/{{project_id}}/integrations",
+      "authentication": {},
+      "metaSortKey": 1,
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"type\": \"gitlab\",\n  \"display_name\": \"GitLab do cliente\",\n  \"token\": \"glpat-seu_token\",\n  \"metadata\": {\n    \"project_url\": \"grupo/projeto\"\n  }\n}"
+      }
+    },
+    {
+      "_id": "req_08_06",
+      "_type": "request",
+      "parentId": "fld_08",
+      "name": "Criar integração Trello",
+      "method": "POST",
+      "url": "{{base_url}}/api/projects/{{project_id}}/integrations",
+      "authentication": {},
+      "metaSortKey": 2,
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"type\": \"trello\",\n  \"display_name\": \"Quadro do app\",\n  \"token\": \"seu_token_do_trello\",\n  \"metadata\": {\n    \"api_key\": \"sua_chave_de_api\",\n    \"board_id\": \"https://trello.com/b/AbC123xy/app\"\n  }\n}"
       }
     },
     {
@@ -846,7 +886,7 @@
       "method": "GET",
       "url": "{{base_url}}/api/projects/{{project_id}}/integrations",
       "authentication": {},
-      "metaSortKey": 1,
+      "metaSortKey": 3,
       "headers": [],
       "body": {}
     },
@@ -858,9 +898,29 @@
       "method": "GET",
       "url": "{{base_url}}/api/integrations/{{integration_id}}",
       "authentication": {},
-      "metaSortKey": 2,
+      "metaSortKey": 4,
       "headers": [],
       "body": {}
+    },
+    {
+      "_id": "req_08_07",
+      "_type": "request",
+      "parentId": "fld_08",
+      "name": "Editar integração (mantém o token)",
+      "method": "PATCH",
+      "url": "{{base_url}}/api/integrations/{{integration_id}}",
+      "authentication": {},
+      "metaSortKey": 5,
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"display_name\": \"Repositório principal\",\n  \"metadata\": {\n    \"repo\": \"acme/site\"\n  }\n}"
+      }
     },
     {
       "_id": "req_08_03",
@@ -870,7 +930,7 @@
       "method": "PATCH",
       "url": "{{base_url}}/api/integrations/{{integration_id}}",
       "authentication": {},
-      "metaSortKey": 3,
+      "metaSortKey": 6,
       "headers": [
         {
           "name": "Content-Type",
@@ -890,7 +950,7 @@
       "method": "DELETE",
       "url": "{{base_url}}/api/integrations/{{integration_id}}",
       "authentication": {},
-      "metaSortKey": 4,
+      "metaSortKey": 7,
       "headers": [],
       "body": {}
     },

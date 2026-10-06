@@ -37,19 +37,68 @@ func TestHandler_Create(t *testing.T) {
 	proj := mustCreate(t, e, "POST", "/api/orgs/"+orgID+"/projects", `{"name":"Project"}`)
 	projectID := jsonPath(proj, "id")
 
+	// O corpo é o mesmo para todos os tipos; sem enabled, a integração nasce ativa.
 	req := httptest.NewRequest("POST", "/api/projects/"+projectID+"/integrations",
-		strings.NewReader(`{"type":"github","display_name":"GitHub","config":{"token":"test","repo":"owner/repo"},"enabled":true}`))
+		strings.NewReader(`{"type":"github","display_name":"GitHub","token":"ghp_secret","metadata":{"repo":"owner/repo"}}`))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 	e.ServeHTTP(rec, req)
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("expected 201, got %d: %s", rec.Code, rec.Body.String())
 	}
+	assertResponse(t, rec.Body.String(), "GitHub", true)
+	id := jsonPath(rec.Body.String(), "id")
 
+	// O corpo antigo, com tudo dentro de config, não é mais aceito.
+	old := httptest.NewRequest("POST", "/api/projects/"+projectID+"/integrations",
+		strings.NewReader(`{"type":"github","display_name":"GitHub","config":{"token":"ghp_secret","repo":"owner/repo"}}`))
+	old.Header.Set("Content-Type", "application/json")
+	rec = httptest.NewRecorder()
+	e.ServeHTTP(rec, old)
+	if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "Repositório") {
+		t.Errorf("old body: got %d %s, want 400 naming the missing field", rec.Code, rec.Body.String())
+	}
+
+	// Edição sem token e sem metadata: muda só o que veio.
+	patch := httptest.NewRequest("PATCH", "/api/integrations/"+id,
+		strings.NewReader(`{"display_name":"Repositório do app","token":"","enabled":false}`))
+	patch.Header.Set("Content-Type", "application/json")
+	rec = httptest.NewRecorder()
+	e.ServeHTTP(rec, patch)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("patch: expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+	assertResponse(t, rec.Body.String(), "Repositório do app", false)
+
+	list := httptest.NewRecorder()
+	e.ServeHTTP(list, httptest.NewRequest("GET", "/api/projects/"+projectID+"/integrations", nil))
+	if strings.Contains(list.Body.String(), "ghp_secret") || strings.Contains(list.Body.String(), "encrypted_data") {
+		t.Errorf("list leaks the credential: %s", list.Body.String())
+	}
+}
+
+// assertResponse confere a resposta comum a todos os tipos: o metadata volta, o
+// token nunca.
+func assertResponse(t *testing.T, body, wantName string, wantEnabled bool) {
+	t.Helper()
 	var resp map[string]interface{}
-	json.Unmarshal(rec.Body.Bytes(), &resp)
-	if resp["config"] != nil {
-		t.Error("config should not be returned in response")
+	if err := json.Unmarshal([]byte(body), &resp); err != nil {
+		t.Fatalf("invalid json: %v: %s", err, body)
+	}
+	for _, key := range []string{"token", "config", "credentials", "has_config"} {
+		if _, ok := resp[key]; ok {
+			t.Errorf("response has %q: %s", key, body)
+		}
+	}
+	if strings.Contains(body, "ghp_secret") {
+		t.Errorf("response leaks the token: %s", body)
+	}
+	if resp["has_token"] != true || resp["display_name"] != wantName || resp["enabled"] != wantEnabled {
+		t.Errorf("response = %s, want has_token true, name %q and enabled %v", body, wantName, wantEnabled)
+	}
+	metadata, _ := resp["metadata"].(map[string]interface{})
+	if len(metadata) != 1 || metadata["repo"] != "owner/repo" {
+		t.Errorf("metadata = %v, want only the repository", resp["metadata"])
 	}
 }
 
@@ -76,7 +125,7 @@ func TestHandler_Create_InvalidType(t *testing.T) {
 	projectID := jsonPath(proj, "id")
 
 	req := httptest.NewRequest("POST", "/api/projects/"+projectID+"/integrations",
-		strings.NewReader(`{"type":"invalid","display_name":"Bad","config":{},"enabled":true}`))
+		strings.NewReader(`{"type":"invalid","display_name":"Bad","token":"x","metadata":{},"enabled":true}`))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 	e.ServeHTTP(rec, req)
@@ -97,6 +146,8 @@ func registerRoutes(
 	projects := e.Group("/api/projects")
 	projects.POST("/:projectId/integrations", integH.Create)
 	projects.GET("/:projectId/integrations", integH.ListByProject)
+
+	e.PATCH("/api/integrations/:integrationId", integH.Update)
 }
 
 func mustCreate(t *testing.T, e *echo.Echo, method, path, body string) string {

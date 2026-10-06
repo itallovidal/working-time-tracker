@@ -82,10 +82,16 @@ document.addEventListener('alpine:init', () => {
     }, 0);
   }
 
-  const integrationNames = { github: 'GitHub', gitlab: 'GitLab' };
+  // Os tipos de integração vêm do servidor (internal/adapter), com o que cada um pede:
+  // os campos do metadata e os rótulos. Um tipo novo lá aparece aqui sem mudança.
+  const integrationTypes = WTT.boot.integration_types || [];
+  const integrationType = (type) => integrationTypes.find((t) => t.type === type);
+  // externalLabel descreve o item vinculado: "GitHub #42", "Trello H0TZyzbK".
   function externalLabel(task) {
     const type = task.external_integration ? task.external_integration.type : '';
-    return (integrationNames[type] || type || 'Item') + ' #' + task.external_item_id;
+    const t = integrationType(type);
+    if (!t) return (type || 'Item') + ' #' + task.external_item_id;
+    return t.label + ' ' + (t.item_numeric ? '#' : '') + task.external_item_id;
   }
 
   // secondsWithin soma quanto de cada sessão caiu depois de "since", contando
@@ -361,18 +367,28 @@ document.addEventListener('alpine:init', () => {
     deadlineClass() { return this.task ? deadlineInfo(this.task.deadline).cls : ''; },
     deadlineLabel() { return this.task ? deadlineInfo(this.task.deadline).label : ''; },
     externalLabel() { return this.task ? externalLabel(this.task) : ''; },
+    // linkType é o tipo da integração escolhida no vínculo: dele vêm o rótulo e o
+    // exemplo do campo do item (o número da issue, o cartão).
+    linkType() {
+      const chosen = this.integrations.find((i) => i.id === this.linkForm.integration_id);
+      return (chosen && integrationType(chosen.type)) || {};
+    },
+    typeLabel(type) {
+      const t = integrationType(type);
+      return t ? t.label : type;
+    },
   }));
 
   Alpine.data('projectIntegrations', () => ({
     ...form(),
-    types: WTT.integrationTypes,
+    types: integrationTypes,
     loading: true,
     items: [],
-    creating: false,
-    draft: { type: 'github', display_name: '', config: {} },
-    editing: null,
-    editDraft: { display_name: '', config: {} },
-    confirming: null,
+    // O rascunho do modal, o mesmo para criar e editar (id nulo é criação). O corpo é
+    // igual para todos os tipos: o que é da plataforma vai em metadata. Nada vai para
+    // o servidor antes de Salvar.
+    draft: { id: null, type: '', display_name: '', token: '', metadata: {}, enabled: true, has_token: false },
+    confirming: false,
     async init() {
       try {
         this.items = (await api('GET', '/api/projects/' + project.id + '/integrations')) || [];
@@ -382,56 +398,64 @@ document.addEventListener('alpine:init', () => {
         this.loading = false;
       }
     },
-    fieldsFor(type) {
-      const t = this.types.find((x) => x.value === type);
-      return t ? t.fields : [];
+    typeOf(type) {
+      return integrationType(type) || { type, label: type, metadata: [] };
     },
-    typeLabel(type) {
-      const t = this.types.find((x) => x.value === type);
-      return t ? t.label : type;
+    // facts são os campos que identificam a conexão no cartão: o repositório, o quadro.
+    facts(it) {
+      return this.typeOf(it.type).metadata.filter((f) => f.summary)
+        .map((f) => ({ key: f.key, label: f.label, value: (it.metadata || {})[f.key] || '' }));
+    },
+    // Uma integração de antes do metadata não tem os campos da plataforma guardados.
+    incomplete(it) {
+      return this.typeOf(it.type).metadata.some((f) => f.required && !(it.metadata || {})[f.key]);
     },
     openCreate() {
-      this.draft = { type: this.types[0].value, display_name: '', config: {} };
-      this.creating = true;
-      this.$nextTick(() => this.$refs.name && this.$refs.name.focus());
+      this.draft = { id: null, type: this.types.length ? this.types[0].type : '', display_name: '', token: '', metadata: {}, enabled: true, has_token: false };
+      this.openForm('Nova integração');
     },
-    create() {
-      return this.run('create', async () => {
-        const it = await api('POST', '/api/projects/' + project.id + '/integrations', {
-          type: this.draft.type,
-          display_name: this.draft.display_name,
-          config: { ...this.draft.config },
-          enabled: true,
-        });
-        this.items = [it, ...this.items];
-        this.creating = false;
-        toast('Integração criada. As credenciais foram validadas na plataforma.');
+    openEdit(it) {
+      this.draft = {
+        id: it.id, type: it.type, display_name: it.display_name, token: '',
+        metadata: { ...(it.metadata || {}) }, enabled: it.enabled, has_token: it.has_token,
+      };
+      this.openForm('Editar integração');
+    },
+    openForm(title) {
+      this.confirming = false;
+      this.errors.save = '';
+      this.errors.remove = '';
+      Alpine.store('modal').open('integration-form', title, () => !this.pending);
+    },
+    // Cada plataforma tem os seus campos: trocar de uma para outra começa do zero.
+    pickType() {
+      this.draft.metadata = {};
+    },
+    save() {
+      this.errors.remove = '';
+      return this.run('save', async () => {
+        const d = this.draft;
+        const body = { display_name: d.display_name.trim(), enabled: d.enabled, token: d.token.trim(), metadata: { ...d.metadata } };
+        if (!body.display_name) throw new Error('Informe o nome da integração.');
+        if (d.id) {
+          const saved = await api('PATCH', '/api/integrations/' + d.id, body);
+          this.items = this.items.map((x) => (x.id === saved.id ? saved : x));
+          toast('Integração salva.');
+        } else {
+          const created = await api('POST', '/api/projects/' + project.id + '/integrations', { type: d.type, ...body });
+          this.items = [created, ...this.items];
+          toast('Integração criada. A conexão foi validada na plataforma.');
+        }
+        Alpine.store('modal').close();
       });
     },
-    toggle(it) {
-      return this.run('item-' + it.id, async () => {
-        Object.assign(it, await api('PATCH', '/api/integrations/' + it.id, { enabled: !it.enabled }));
-      });
-    },
-    startEdit(it) {
-      this.editing = it.id;
-      this.editDraft = { display_name: it.display_name, config: {} };
-    },
-    saveEdit(it) {
-      return this.run('item-' + it.id, async () => {
-        const body = { display_name: this.editDraft.display_name };
-        const filled = Object.values(this.editDraft.config).some((v) => v);
-        if (filled) body.config = { ...this.editDraft.config };
-        Object.assign(it, await api('PATCH', '/api/integrations/' + it.id, body));
-        this.editing = null;
-        toast(filled ? 'Integração salva com a credencial nova.' : 'Integração salva.');
-      });
-    },
-    remove(it) {
-      return this.run('item-' + it.id, async () => {
-        await api('DELETE', '/api/integrations/' + it.id);
-        this.items = this.items.filter((x) => x.id !== it.id);
-        this.confirming = null;
+    remove() {
+      this.errors.save = '';
+      return this.run('remove', async () => {
+        const id = this.draft.id;
+        await api('DELETE', '/api/integrations/' + id);
+        this.items = this.items.filter((x) => x.id !== id);
+        Alpine.store('modal').close();
         toast('Integração excluída.');
       });
     },

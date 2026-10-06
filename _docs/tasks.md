@@ -271,6 +271,22 @@
 
 ---
 
+### Sprint 23: Integrations Modal, Trello and a Shared Structure with Metadata
+
+- [X] S23.1 One body for every integration type: `{type, display_name, enabled, token, metadata}`, with the fields of each platform in `metadata`; the answer carries `has_token` and the `metadata`, never the token
+- [X] S23.2 Adapter contract: a `Descriptor` per type (label, metadata fields, how the linked item is called), `CheckMetadata` that checks and normalizes the fields without calling the platform, and `Validate` and `FetchItemDetails` over a `Connection{Token, Metadata}`
+- [X] S23.3 Column `config` renamed to `credentials` (the encrypted token) and a new `metadata` column, in a hand-edited migration (`RENAME COLUMN`, so no credential is lost)
+- [X] S23.4 `PATCH /api/integrations/:id` keeps the stored token when none is sent and only calls the platform again when the token or the metadata changed; `enabled` defaults to true on creation
+- [X] S23.5 Trello: token plus `api_key` and `board_id` in the metadata (the board as its address, short link or id), credentials in the `Authorization` header, the list of the card as its state, and a card from another board refused
+- [X] S23.6 What reaches a platform URL is checked first: the repository, the project, the board, the issue number and the card id
+- [X] S23.7 "Nova integração" and "Editar integração" in one modal: the platforms as a radio group, the metadata fields drawn from the descriptor, the token optional on edit, and disabling and "Excluir integração" with a confirmation inside it
+- [X] S23.8 The integration card only shows the integration, with a single pencil for admins; a card of a row from before the metadata says what is missing
+- [X] S23.9 The integration types reach the project pages in `window.BOOT.integration_types`; the hardcoded lists in `app.js` and `project.js` are gone, and the task page takes the label of the link field from them
+- [X] S23.10 The task list loads the integration of each linked item, so the badge names the platform ("GitHub #42", "Trello H0TZyzbK") instead of "Item #42"
+- [X] S23.11 Tests with fake GitHub, GitLab and Trello servers (`testutil/platforms.go`), for the adapters, the service, the handler and the pages; update README, design, routes and the Insomnia collection
+
+---
+
 ### Refatoração: Domain-First Architecture (pré-Sprint 9)
 
 - [X] R1 Reorganizar código de layered-flat para domain-first: `internal/domain/<dominio>/` com `model.go`, `store.go`, `service.go`, `handler.go` por domínio

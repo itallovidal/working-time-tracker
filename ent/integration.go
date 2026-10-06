@@ -26,8 +26,10 @@ type Integration struct {
 	Type string `json:"type,omitempty"`
 	// DisplayName holds the value of the "display_name" field.
 	DisplayName string `json:"display_name,omitempty"`
-	// Config holds the value of the "config" field.
-	Config map[string]interface{} `json:"config,omitempty"`
+	// Credentials holds the value of the "credentials" field.
+	Credentials map[string]interface{} `json:"-"`
+	// Metadata holds the value of the "metadata" field.
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
 	// Enabled holds the value of the "enabled" field.
 	Enabled bool `json:"enabled,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
@@ -74,7 +76,7 @@ func (*Integration) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case integration.FieldConfig:
+		case integration.FieldCredentials, integration.FieldMetadata:
 			values[i] = new([]byte)
 		case integration.FieldEnabled:
 			values[i] = new(sql.NullBool)
@@ -123,12 +125,20 @@ func (_m *Integration) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.DisplayName = value.String
 			}
-		case integration.FieldConfig:
+		case integration.FieldCredentials:
 			if value, ok := values[i].(*[]byte); !ok {
-				return fmt.Errorf("unexpected type %T for field config", values[i])
+				return fmt.Errorf("unexpected type %T for field credentials", values[i])
 			} else if value != nil && len(*value) > 0 {
-				if err := json.Unmarshal(*value, &_m.Config); err != nil {
-					return fmt.Errorf("unmarshal field config: %w", err)
+				if err := json.Unmarshal(*value, &_m.Credentials); err != nil {
+					return fmt.Errorf("unmarshal field credentials: %w", err)
+				}
+			}
+		case integration.FieldMetadata:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field metadata", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.Metadata); err != nil {
+					return fmt.Errorf("unmarshal field metadata: %w", err)
 				}
 			}
 		case integration.FieldEnabled:
@@ -198,8 +208,10 @@ func (_m *Integration) String() string {
 	builder.WriteString("display_name=")
 	builder.WriteString(_m.DisplayName)
 	builder.WriteString(", ")
-	builder.WriteString("config=")
-	builder.WriteString(fmt.Sprintf("%v", _m.Config))
+	builder.WriteString("credentials=<sensitive>")
+	builder.WriteString(", ")
+	builder.WriteString("metadata=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Metadata))
 	builder.WriteString(", ")
 	builder.WriteString("enabled=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Enabled))

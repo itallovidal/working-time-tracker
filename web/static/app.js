@@ -205,31 +205,10 @@
     }
   }
 
-  // Tipos de integração e os campos de credencial de cada um. Um tipo novo no
-  // backend (internal/adapter) precisa de uma entrada aqui para aparecer na tela.
-  const integrationTypes = [
-    {
-      value: 'github',
-      label: 'GitHub',
-      fields: [
-        { key: 'token', label: 'Token de acesso', type: 'password', hint: 'Token pessoal com permissão de leitura de issues.' },
-        { key: 'repo', label: 'Repositório', type: 'text', placeholder: 'dono/repositorio' },
-      ],
-    },
-    {
-      value: 'gitlab',
-      label: 'GitLab',
-      fields: [
-        { key: 'token', label: 'Token de acesso', type: 'password', hint: 'Token com escopo read_api.' },
-        { key: 'project_url', label: 'Projeto', type: 'text', placeholder: 'grupo/projeto ou https://gitlab.com/grupo/projeto' },
-      ],
-    },
-  ];
-
   // O que as telas mostram no lugar de um campo de cadastro sem valor.
   const notInformed = 'Não informado';
 
-  window.WTT = { api, ApiError, form, fmt, toCents, copyText, notInformed, weekdays, orgSizes, workModes, currencies, integrationTypes, boot: window.BOOT || {} };
+  window.WTT = { api, ApiError, form, fmt, toCents, copyText, notInformed, weekdays, orgSizes, workModes, currencies, boot: window.BOOT || {} };
 
   // Onde flash() deixa a mensagem para a página seguinte.
   const flashKey = 'wtt:flash';

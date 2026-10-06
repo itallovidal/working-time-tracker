@@ -1562,7 +1562,8 @@ type IntegrationMutation struct {
 	id             *uuid.UUID
 	_type          *string
 	display_name   *string
-	_config        *map[string]interface{}
+	credentials    *map[string]interface{}
+	metadata       *map[string]interface{}
 	enabled        *bool
 	created_at     *time.Time
 	clearedFields  map[string]struct{}
@@ -1788,53 +1789,102 @@ func (m *IntegrationMutation) ResetDisplayName() {
 	m.display_name = nil
 }
 
-// SetConfig sets the "config" field.
-func (m *IntegrationMutation) SetConfig(value map[string]interface{}) {
-	m._config = &value
+// SetCredentials sets the "credentials" field.
+func (m *IntegrationMutation) SetCredentials(value map[string]interface{}) {
+	m.credentials = &value
 }
 
-// Config returns the value of the "config" field in the mutation.
-func (m *IntegrationMutation) Config() (r map[string]interface{}, exists bool) {
-	v := m._config
+// Credentials returns the value of the "credentials" field in the mutation.
+func (m *IntegrationMutation) Credentials() (r map[string]interface{}, exists bool) {
+	v := m.credentials
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldConfig returns the old "config" field's value of the Integration entity.
+// OldCredentials returns the old "credentials" field's value of the Integration entity.
 // If the Integration object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *IntegrationMutation) OldConfig(ctx context.Context) (v map[string]interface{}, err error) {
+func (m *IntegrationMutation) OldCredentials(ctx context.Context) (v map[string]interface{}, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldConfig is only allowed on UpdateOne operations")
+		return v, errors.New("OldCredentials is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldConfig requires an ID field in the mutation")
+		return v, errors.New("OldCredentials requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldConfig: %w", err)
+		return v, fmt.Errorf("querying old value for OldCredentials: %w", err)
 	}
-	return oldValue.Config, nil
+	return oldValue.Credentials, nil
 }
 
-// ClearConfig clears the value of the "config" field.
-func (m *IntegrationMutation) ClearConfig() {
-	m._config = nil
-	m.clearedFields[integration.FieldConfig] = struct{}{}
+// ClearCredentials clears the value of the "credentials" field.
+func (m *IntegrationMutation) ClearCredentials() {
+	m.credentials = nil
+	m.clearedFields[integration.FieldCredentials] = struct{}{}
 }
 
-// ConfigCleared returns if the "config" field was cleared in this mutation.
-func (m *IntegrationMutation) ConfigCleared() bool {
-	_, ok := m.clearedFields[integration.FieldConfig]
+// CredentialsCleared returns if the "credentials" field was cleared in this mutation.
+func (m *IntegrationMutation) CredentialsCleared() bool {
+	_, ok := m.clearedFields[integration.FieldCredentials]
 	return ok
 }
 
-// ResetConfig resets all changes to the "config" field.
-func (m *IntegrationMutation) ResetConfig() {
-	m._config = nil
-	delete(m.clearedFields, integration.FieldConfig)
+// ResetCredentials resets all changes to the "credentials" field.
+func (m *IntegrationMutation) ResetCredentials() {
+	m.credentials = nil
+	delete(m.clearedFields, integration.FieldCredentials)
+}
+
+// SetMetadata sets the "metadata" field.
+func (m *IntegrationMutation) SetMetadata(value map[string]interface{}) {
+	m.metadata = &value
+}
+
+// Metadata returns the value of the "metadata" field in the mutation.
+func (m *IntegrationMutation) Metadata() (r map[string]interface{}, exists bool) {
+	v := m.metadata
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMetadata returns the old "metadata" field's value of the Integration entity.
+// If the Integration object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IntegrationMutation) OldMetadata(ctx context.Context) (v map[string]interface{}, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMetadata is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMetadata requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMetadata: %w", err)
+	}
+	return oldValue.Metadata, nil
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (m *IntegrationMutation) ClearMetadata() {
+	m.metadata = nil
+	m.clearedFields[integration.FieldMetadata] = struct{}{}
+}
+
+// MetadataCleared returns if the "metadata" field was cleared in this mutation.
+func (m *IntegrationMutation) MetadataCleared() bool {
+	_, ok := m.clearedFields[integration.FieldMetadata]
+	return ok
+}
+
+// ResetMetadata resets all changes to the "metadata" field.
+func (m *IntegrationMutation) ResetMetadata() {
+	m.metadata = nil
+	delete(m.clearedFields, integration.FieldMetadata)
 }
 
 // SetEnabled sets the "enabled" field.
@@ -2024,7 +2074,7 @@ func (m *IntegrationMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *IntegrationMutation) Fields() []string {
-	fields := make([]string, 0, 6)
+	fields := make([]string, 0, 7)
 	if m.project != nil {
 		fields = append(fields, integration.FieldProjectID)
 	}
@@ -2034,8 +2084,11 @@ func (m *IntegrationMutation) Fields() []string {
 	if m.display_name != nil {
 		fields = append(fields, integration.FieldDisplayName)
 	}
-	if m._config != nil {
-		fields = append(fields, integration.FieldConfig)
+	if m.credentials != nil {
+		fields = append(fields, integration.FieldCredentials)
+	}
+	if m.metadata != nil {
+		fields = append(fields, integration.FieldMetadata)
 	}
 	if m.enabled != nil {
 		fields = append(fields, integration.FieldEnabled)
@@ -2057,8 +2110,10 @@ func (m *IntegrationMutation) Field(name string) (ent.Value, bool) {
 		return m.GetType()
 	case integration.FieldDisplayName:
 		return m.DisplayName()
-	case integration.FieldConfig:
-		return m.Config()
+	case integration.FieldCredentials:
+		return m.Credentials()
+	case integration.FieldMetadata:
+		return m.Metadata()
 	case integration.FieldEnabled:
 		return m.Enabled()
 	case integration.FieldCreatedAt:
@@ -2078,8 +2133,10 @@ func (m *IntegrationMutation) OldField(ctx context.Context, name string) (ent.Va
 		return m.OldType(ctx)
 	case integration.FieldDisplayName:
 		return m.OldDisplayName(ctx)
-	case integration.FieldConfig:
-		return m.OldConfig(ctx)
+	case integration.FieldCredentials:
+		return m.OldCredentials(ctx)
+	case integration.FieldMetadata:
+		return m.OldMetadata(ctx)
 	case integration.FieldEnabled:
 		return m.OldEnabled(ctx)
 	case integration.FieldCreatedAt:
@@ -2114,12 +2171,19 @@ func (m *IntegrationMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetDisplayName(v)
 		return nil
-	case integration.FieldConfig:
+	case integration.FieldCredentials:
 		v, ok := value.(map[string]interface{})
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetConfig(v)
+		m.SetCredentials(v)
+		return nil
+	case integration.FieldMetadata:
+		v, ok := value.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMetadata(v)
 		return nil
 	case integration.FieldEnabled:
 		v, ok := value.(bool)
@@ -2165,8 +2229,11 @@ func (m *IntegrationMutation) AddField(name string, value ent.Value) error {
 // mutation.
 func (m *IntegrationMutation) ClearedFields() []string {
 	var fields []string
-	if m.FieldCleared(integration.FieldConfig) {
-		fields = append(fields, integration.FieldConfig)
+	if m.FieldCleared(integration.FieldCredentials) {
+		fields = append(fields, integration.FieldCredentials)
+	}
+	if m.FieldCleared(integration.FieldMetadata) {
+		fields = append(fields, integration.FieldMetadata)
 	}
 	return fields
 }
@@ -2182,8 +2249,11 @@ func (m *IntegrationMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *IntegrationMutation) ClearField(name string) error {
 	switch name {
-	case integration.FieldConfig:
-		m.ClearConfig()
+	case integration.FieldCredentials:
+		m.ClearCredentials()
+		return nil
+	case integration.FieldMetadata:
+		m.ClearMetadata()
 		return nil
 	}
 	return fmt.Errorf("unknown Integration nullable field %s", name)
@@ -2202,8 +2272,11 @@ func (m *IntegrationMutation) ResetField(name string) error {
 	case integration.FieldDisplayName:
 		m.ResetDisplayName()
 		return nil
-	case integration.FieldConfig:
-		m.ResetConfig()
+	case integration.FieldCredentials:
+		m.ResetCredentials()
+		return nil
+	case integration.FieldMetadata:
+		m.ResetMetadata()
 		return nil
 	case integration.FieldEnabled:
 		m.ResetEnabled()

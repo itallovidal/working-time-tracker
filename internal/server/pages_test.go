@@ -464,3 +464,85 @@ func TestPages_TaskDetail(t *testing.T) {
 		t.Errorf("task page from another org = %d, want 404", rec.Code)
 	}
 }
+
+// Na aba Integrações o cartão só mostra a integração. Criar, editar, desativar e
+// excluir ficam num modal só, que desenha os campos de cada plataforma a partir dos
+// tipos que o servidor entrega no window.BOOT. A tela da tarefa e a lista de tarefas
+// usam os mesmos tipos para o rótulo do item vinculado.
+func TestPages_ProjectIntegrationsTab(t *testing.T) {
+	e := newServer(t)
+	admin := signup(t, e, "Org", "ana@test.com")
+	member := invite(t, e, admin, "bia@test.com", "member")
+	projectID := createProject(t, e, admin, "Projeto Alfa")
+	// Os três tipos, na ordem da tela, cada um com os campos do seu metadata.
+	types := []string{
+		`"integration_types":[{"type":"github","label":"GitHub"`, `"key":"repo","label":"Repositório"`,
+		`{"type":"gitlab","label":"GitLab"`, `"key":"project_url"`,
+		`{"type":"trello","label":"Trello"`, `"key":"api_key"`, `"key":"board_id"`,
+	}
+
+	pages := map[string]string{}
+	for who, session := range map[string]string{"admin": admin.session, "member": member.session} {
+		body := do(e, "GET", "/projects/"+projectID+"/integrations", "", session).Body.String()
+		pages[who] = body
+		for _, want := range append([]string{`x-for="f in facts(it)"`, `x-show="incomplete(it)"`, "it.has_token"}, types...) {
+			if !strings.Contains(body, want) {
+				t.Errorf("%s: the integrations tab does not contain %q", who, want)
+			}
+		}
+		if github, trello := strings.Index(body, `{"type":"github"`), strings.Index(body, `{"type":"trello"`); github > trello {
+			t.Errorf("%s: the integration types are out of order", who)
+		}
+		// O formulário solto na página e as ações no cartão saíram.
+		for _, gone := range []string{`x-show="creating"`, "toggle(it)", "startEdit(", "saveEdit(", "remove(it)", "draft.config", "has_config"} {
+			if strings.Contains(body, gone) {
+				t.Errorf("%s: the integrations tab still has %q", who, gone)
+			}
+		}
+	}
+	for _, adminOnly := range []string{
+		"Nova integração", `x-teleport="#modal-root"`, `x-show="$store.modal.name === 'integration-form'"`,
+		`role="radiogroup" aria-label="Plataforma"`, `x-model="draft.type"`,
+		`id="int-name"`, `id="int-token"`, `autocomplete="new-password"`, `:required="!draft.id"`,
+		`x-for="f in typeOf(draft.type).metadata"`, `x-model="draft.metadata[f.key]"`, `x-model="draft.enabled"`,
+		`@click="openEdit(it)"`, `title="Editar integração"`, "Excluir integração", `@click="remove()"`,
+	} {
+		if !strings.Contains(pages["admin"], adminOnly) {
+			t.Errorf("admin does not see %q in the integrations tab", adminOnly)
+		}
+		if strings.Contains(pages["member"], adminOnly) {
+			t.Errorf("member sees %q in the integrations tab", adminOnly)
+		}
+	}
+	if !strings.Contains(pages["member"], "Um admin pode configurar o GitHub, o GitLab ou o Trello") {
+		t.Error("the empty state does not tell the member who can configure an integration")
+	}
+
+	// Uma tarefa precisa de um responsável que esteja num time do projeto.
+	rec := do(e, "POST", "/api/projects/"+projectID+"/teams", `{"name":"Time"}`, admin.session)
+	teamID := decode(t, rec)["id"].(string)
+	do(e, "PUT", "/api/projects/"+projectID+"/allocations/"+admin.id, `{"pay_rate_cents":0}`, admin.session)
+	do(e, "POST", "/api/teams/"+teamID+"/members", `{"person_id":"`+admin.id+`"}`, admin.session)
+	rec = do(e, "POST", "/api/projects/"+projectID+"/tasks", `{"name":"Tela de login","assignee_id":"`+admin.id+`"}`, admin.session)
+	taskID := decode(t, rec)["id"].(string)
+
+	detail := do(e, "GET", "/tasks/"+taskID, "", member.session).Body.String()
+	for _, want := range append([]string{
+		`x-text="linkType().item_label || 'Item'"`, `:inputmode="linkType().item_numeric ? 'numeric' : 'text'"`,
+		`:placeholder="linkType().item_placeholder || ''"`, "typeLabel(i.type)",
+	}, types...) {
+		if !strings.Contains(detail, want) {
+			t.Errorf("the task page does not contain %q", want)
+		}
+	}
+	// O rótulo do campo só existe dentro dos tipos, não escrito no template.
+	if all, inTypes := strings.Count(detail, "Número da issue"), strings.Count(detail, `"item_label":"Número da issue"`); all != inTypes {
+		t.Errorf("the task page has the issue label %d time(s) outside the integration types", all-inTypes)
+	}
+	if tasks := do(e, "GET", "/projects/"+projectID+"/tasks", "", member.session).Body.String(); !strings.Contains(tasks, types[0]) {
+		t.Error("the tasks tab does not get the integration types for the linked item label")
+	}
+	if clock := do(e, "GET", "/projects/"+projectID+"/time-tracking", "", member.session).Body.String(); strings.Contains(clock, "integration_types") {
+		t.Error("the time tracking tab gets the integration types without using them")
+	}
+}

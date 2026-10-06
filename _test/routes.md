@@ -329,9 +329,9 @@ A pessoa precisa ser da mesma organização do projeto.
 | GET | `/api/tasks/:taskId` | logado | Detalhes da tarefa |
 | PATCH | `/api/tasks/:taskId` | logado | Altera a tarefa |
 | DELETE | `/api/tasks/:taskId` | logado | Exclui a tarefa e as sessões dela |
-| POST | `/api/tasks/:taskId/link-external-item` | logado | Vincula a uma issue |
+| POST | `/api/tasks/:taskId/link-external-item` | logado | Vincula a uma issue ou a um cartão |
 | DELETE | `/api/tasks/:taskId/link-external-item` | logado | Desfaz o vínculo |
-| GET | `/api/tasks/:taskId/external-details` | logado | Busca título e estado da issue na plataforma |
+| GET | `/api/tasks/:taskId/external-details` | logado | Busca título e estado do item na plataforma |
 
 ```http
 POST /api/projects/:projectId/tasks
@@ -379,9 +379,11 @@ Content-Type: application/json
   "external_item_url": "https://github.com/acme/app/issues/42"
 }
 ```
-A integração precisa ser do mesmo projeto da tarefa.
+A integração precisa ser do mesmo projeto da tarefa. O `external_item_id` é o número da issue (GitHub e GitLab) ou o cartão do Trello: o link curto, o id ou o endereço dele.
 
-O `external-details` nunca falha por causa da plataforma. Se ela estiver fora, o token estiver errado ou a integração estiver desativada, a resposta é `200` com `{"details": null, "error": "motivo"}`.
+O `external-details` nunca falha por causa da plataforma. Se ela estiver fora, o token estiver errado ou ilegível, faltar um campo do `metadata`, o item não for do repositório ou do quadro configurado, ou a integração estiver desativada, a resposta é `200` com `{"details": null, "error": "motivo"}`. Com sucesso, `details` traz `title`, `state` e `url`; num cartão do Trello, `state` é o nome da lista em que ele está, ou `arquivado`.
+
+Na lista de tarefas e no detalhe, a tarefa vinculada traz `external_integration` com o `id` e o `type` da integração.
 
 ---
 
@@ -428,11 +430,13 @@ O `external-details` nunca falha por causa da plataforma. Se ela estiver fora, o
 
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
-| POST | `/api/projects/:projectId/integrations` | admin | Cria e valida as credenciais na plataforma |
+| POST | `/api/projects/:projectId/integrations` | admin | Cria e valida a conexão na plataforma |
 | GET | `/api/projects/:projectId/integrations` | logado | Integrações do projeto |
 | GET | `/api/integrations/:integrationId` | logado | Detalhes |
-| PATCH | `/api/integrations/:integrationId` | admin | Altera nome, credencial ou `enabled` |
+| PATCH | `/api/integrations/:integrationId` | admin | Altera nome, token, `metadata` ou `enabled` |
 | DELETE | `/api/integrations/:integrationId` | admin | Exclui. As tarefas vinculadas perdem o vínculo |
+
+O corpo é o mesmo para todas as plataformas. O que é comum fica no primeiro nível, e os campos próprios de cada uma vão em `metadata`:
 
 ```http
 POST /api/projects/:projectId/integrations
@@ -441,13 +445,52 @@ Content-Type: application/json
 {
   "type": "github",
   "display_name": "Repositório do app",
-  "config": { "token": "ghp_…", "repo": "acme/app" },
+  "token": "ghp_…",
+  "metadata": { "repo": "acme/app" },
   "enabled": true
 }
 ```
-- Para o GitLab, `config` é `{"token": "…", "project_url": "grupo/projeto"}`.
-- A credencial é validada na plataforma antes de salvar e fica criptografada (AES-GCM) no banco.
-- A credencial nunca volta nas respostas: elas mostram só `has_config`.
+
+| `type` | `token` | `metadata` (todos os campos são obrigatórios) |
+|---|---|---|
+| `github` | token pessoal com leitura de issues | `repo`: `dono/repositorio` ou o endereço do repositório |
+| `gitlab` | token com escopo `read_api` | `project_url`: `grupo/projeto` ou o endereço do projeto no gitlab.com |
+| `trello` | token da API do Trello, com leitura | `api_key`: a chave do Power-Up (trello.com/apps/admin); `board_id`: o endereço do quadro, o link curto ou o id |
+
+Resposta (`201`), igual em todas as rotas de integração:
+
+```json
+{
+  "id": "…",
+  "project_id": "…",
+  "type": "github",
+  "display_name": "Repositório do app",
+  "has_token": true,
+  "metadata": { "repo": "acme/app" },
+  "enabled": true,
+  "created_at": "2026-10-06T09:00:00-03:00"
+}
+```
+
+- Cada tipo confere o próprio `metadata` antes de falar com a plataforma. Faltando um campo, a resposta é `400` com o nome dele, por exemplo `informe o campo "Quadro" do Trello`. Chave que o tipo não declara é descartada, e o valor é guardado normalizado (o endereço do repositório vira `dono/repositorio`; o do quadro, o link curto).
+- A conexão é validada na plataforma antes de salvar. O token fica criptografado (AES-GCM) no banco e nunca volta nas respostas: elas mostram só `has_token`. O `metadata` fica em claro e volta, então não é lugar de segredo.
+- Sem `enabled` no corpo, a integração nasce ativa.
+- O corpo antigo, com `config`, não é mais aceito: a resposta é `400` pedindo o campo do `metadata`.
+
+```http
+PATCH /api/integrations/:integrationId
+Content-Type: application/json
+
+{
+  "display_name": "Repositório principal",
+  "metadata": { "repo": "acme/site" },
+  "enabled": false
+}
+```
+
+- Todos os campos são opcionais. `token` ausente ou vazio mantém o guardado; `metadata` presente substitui o atual inteiro. O `type` não muda.
+- A plataforma só é consultada de novo quando veio um token ou o `metadata` mudou de fato, e a conexão nova é validada com o token guardado quando nenhum veio. Renomear ou desativar não depende de o token ainda valer.
+- Uma integração criada antes do `metadata` aparece com `metadata: {}` e `has_token: true`. Basta um `PATCH` com o `metadata` dela, sem token.
 
 ---
 

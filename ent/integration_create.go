@@ -41,9 +41,15 @@ func (_c *IntegrationCreate) SetDisplayName(v string) *IntegrationCreate {
 	return _c
 }
 
-// SetConfig sets the "config" field.
-func (_c *IntegrationCreate) SetConfig(v map[string]interface{}) *IntegrationCreate {
-	_c.mutation.SetConfig(v)
+// SetCredentials sets the "credentials" field.
+func (_c *IntegrationCreate) SetCredentials(v map[string]interface{}) *IntegrationCreate {
+	_c.mutation.SetCredentials(v)
+	return _c
+}
+
+// SetMetadata sets the "metadata" field.
+func (_c *IntegrationCreate) SetMetadata(v map[string]interface{}) *IntegrationCreate {
+	_c.mutation.SetMetadata(v)
 	return _c
 }
 
@@ -221,9 +227,13 @@ func (_c *IntegrationCreate) createSpec() (*Integration, *sqlgraph.CreateSpec) {
 		_spec.SetField(integration.FieldDisplayName, field.TypeString, value)
 		_node.DisplayName = value
 	}
-	if value, ok := _c.mutation.Config(); ok {
-		_spec.SetField(integration.FieldConfig, field.TypeJSON, value)
-		_node.Config = value
+	if value, ok := _c.mutation.Credentials(); ok {
+		_spec.SetField(integration.FieldCredentials, field.TypeJSON, value)
+		_node.Credentials = value
+	}
+	if value, ok := _c.mutation.Metadata(); ok {
+		_spec.SetField(integration.FieldMetadata, field.TypeJSON, value)
+		_node.Metadata = value
 	}
 	if value, ok := _c.mutation.Enabled(); ok {
 		_spec.SetField(integration.FieldEnabled, field.TypeBool, value)

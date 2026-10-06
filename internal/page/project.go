@@ -4,11 +4,20 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo/v5"
+
+	"working-time-tracker/internal/adapter"
 )
+
+// integrationTypes vai no window.BOOT das páginas que mostram integrações: o que
+// cada tipo pede (campos do metadata, rótulos). A tela se desenha a partir disso,
+// então um tipo novo no adapter aparece sem mexer no JavaScript.
+func integrationTypes() map[string]any {
+	return map[string]any{"integration_types": adapter.Descriptors()}
+}
 
 // projectPage monta a página de uma aba do projeto. O middleware de rota já
 // garantiu que o projeto existe e é da organização de quem está logado.
-func (h *Handler) projectPage(c *echo.Context, name, title, tab string) error {
+func (h *Handler) projectPage(c *echo.Context, name, title, tab string, props map[string]any) error {
 	p, err := h.deps.Projects.Get(c.Param("projectId"))
 	if err != nil {
 		return h.NotFound(c)
@@ -19,6 +28,7 @@ func (h *Handler) projectPage(c *echo.Context, name, title, tab string) error {
 		Project: &Crumb{ID: p.ID.String(), Name: p.Name},
 		Tab:     tab,
 		Script:  "project",
+		Props:   props,
 	})
 }
 
@@ -29,12 +39,12 @@ func (h *Handler) Project(c *echo.Context) error {
 
 // Tasks é a lista de tarefas do projeto (S9.1).
 func (h *Handler) Tasks(c *echo.Context) error {
-	return h.projectPage(c, "project_tasks", "Tarefas", "tasks")
+	return h.projectPage(c, "project_tasks", "Tarefas", "tasks", integrationTypes())
 }
 
 // TimeTracking é o ponto do projeto: clock-in/out, sessões e totais (S9.3, S9.4).
 func (h *Handler) TimeTracking(c *echo.Context) error {
-	return h.projectPage(c, "project_time", "Ponto", "time")
+	return h.projectPage(c, "project_time", "Ponto", "time", nil)
 }
 
 // TaskDetail edita uma tarefa e o vínculo com o item externo (S9.2).
@@ -53,7 +63,7 @@ func (h *Handler) TaskDetail(c *echo.Context) error {
 		Project: &Crumb{ID: p.ID.String(), Name: p.Name},
 		Tab:     "tasks",
 		Script:  "project",
-		Props:   map[string]any{"task_id": t.ID.String()},
+		Props:   map[string]any{"task_id": t.ID.String(), "integration_types": adapter.Descriptors()},
 	})
 }
 
@@ -61,14 +71,14 @@ func (h *Handler) TaskDetail(c *echo.Context) error {
 // quanto cada pessoa recebe por hora (S17). A rota segue /teams, de quando a
 // aba só tinha os times.
 func (h *Handler) Teams(c *echo.Context) error {
-	return h.projectPage(c, "project_teams", "Colaboradores", "teams")
+	return h.projectPage(c, "project_teams", "Colaboradores", "teams", nil)
 }
 
-// Integrations configura as integrações do projeto com GitHub e GitLab (S10.1).
+// Integrations configura as integrações do projeto com GitHub, GitLab e Trello (S10.1, S23).
 func (h *Handler) Integrations(c *echo.Context) error {
-	return h.projectPage(c, "project_integrations", "Integrações", "integrations")
+	return h.projectPage(c, "project_integrations", "Integrações", "integrations", integrationTypes())
 }
 
 func (h *Handler) ProjectSettings(c *echo.Context) error {
-	return h.projectPage(c, "project_settings", "Configurações", "settings")
+	return h.projectPage(c, "project_settings", "Configurações", "settings", nil)
 }

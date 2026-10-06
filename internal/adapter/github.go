@@ -4,11 +4,25 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 )
 
 const defaultGitHubBaseURL = "https://api.github.com"
+
+var githubDescriptor = Descriptor{
+	Type:        "github",
+	Label:       "GitHub",
+	Description: "Issues de um repositório",
+	TokenHint:   "Token pessoal com permissão de leitura de issues.",
+	Metadata: []Field{
+		{Key: "repo", Label: "Repositório", Placeholder: "dono/repositorio", Hint: "Aceita também o endereço do repositório.", Required: true, Summary: true},
+	},
+	ItemLabel:       "Número da issue",
+	ItemPlaceholder: "Ex.: 42",
+	ItemNumeric:     true,
+}
 
 // GitHubIntegration fala com a API do GitHub. BaseURL e Client são opcionais e
 // existem para apontar o adapter para um servidor fake nos testes.
@@ -31,55 +45,95 @@ func (g *GitHubIntegration) client() *http.Client {
 	return g.Client
 }
 
-type githubConfig struct {
-	Token string `json:"token"`
-	Repo  string `json:"repo"`
+// githubMetadata são os campos que só o GitHub tem.
+type githubMetadata struct {
+	Repo string
 }
 
-func (g *GitHubIntegration) ValidateConfig(config map[string]interface{}) error {
-	cfg, err := parseGithubConfig(config)
-	if err != nil {
-		return err
-	}
+var githubRepo = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9._-]+$`)
 
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/repos/%s", g.baseURL(), cfg.Repo), nil)
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Authorization", "Bearer "+cfg.Token)
-	req.Header.Set("Accept", "application/vnd.github.v3+json")
-
-	resp, err := g.client().Do(req)
-	if err != nil {
-		return fmt.Errorf("não foi possível falar com o GitHub: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode == http.StatusUnauthorized {
-		return fmt.Errorf("token do GitHub inválido")
-	}
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("o GitHub respondeu com status %d", resp.StatusCode)
-	}
-	return nil
-}
-
-func (g *GitHubIntegration) FetchItemDetails(config map[string]interface{}, itemID string) (*ItemDetails, error) {
-	cfg, err := parseGithubConfig(config)
+func parseGithubMetadata(raw map[string]any) (*githubMetadata, error) {
+	fields, err := githubDescriptor.fields(raw)
 	if err != nil {
 		return nil, err
 	}
+	repo := trimURL(fields["repo"], "github.com")
+	// O repositório entra na URL da API: um nome só de pontos subiria de diretório.
+	name := repo[strings.LastIndex(repo, "/")+1:]
+	if !githubRepo.MatchString(repo) || strings.Trim(name, ".") == "" {
+		return nil, fmt.Errorf("repositório do GitHub inválido: use dono/repositorio")
+	}
+	return &githubMetadata{Repo: repo}, nil
+}
 
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/repos/%s/issues/%s", g.baseURL(), cfg.Repo, itemID), nil)
+func (g *GitHubIntegration) Descriptor() Descriptor {
+	return githubDescriptor
+}
+
+func (g *GitHubIntegration) CheckMetadata(raw map[string]any) (map[string]any, error) {
+	meta, err := parseGithubMetadata(raw)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Authorization", "Bearer "+cfg.Token)
+	return map[string]any{"repo": meta.Repo}, nil
+}
+
+func (g *GitHubIntegration) get(conn Connection, path string) (*http.Response, error) {
+	token, err := githubDescriptor.token(conn)
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequest("GET", g.baseURL()+path, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 
 	resp, err := g.client().Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("não foi possível falar com o GitHub: %w", err)
+	}
+	return resp, nil
+}
+
+func (g *GitHubIntegration) Validate(conn Connection) error {
+	meta, err := parseGithubMetadata(conn.Metadata)
+	if err != nil {
+		return err
+	}
+
+	resp, err := g.get(conn, "/repos/"+meta.Repo)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return nil
+	case http.StatusUnauthorized:
+		return fmt.Errorf("token do GitHub inválido")
+	case http.StatusNotFound:
+		return fmt.Errorf("repositório do GitHub não encontrado ou o token não tem acesso a ele")
+	default:
+		return fmt.Errorf("o GitHub respondeu com status %d", resp.StatusCode)
+	}
+}
+
+func (g *GitHubIntegration) FetchItemDetails(conn Connection, itemID string) (*ItemDetails, error) {
+	meta, err := parseGithubMetadata(conn.Metadata)
+	if err != nil {
+		return nil, err
+	}
+	number, err := issueNumber(itemID)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := g.get(conn, "/repos/"+meta.Repo+"/issues/"+number)
+	if err != nil {
+		return nil, err
 	}
 	defer resp.Body.Close()
 
@@ -87,7 +141,7 @@ func (g *GitHubIntegration) FetchItemDetails(config map[string]interface{}, item
 		return nil, fmt.Errorf("token do GitHub inválido")
 	}
 	if resp.StatusCode == http.StatusNotFound {
-		return nil, fmt.Errorf("item %s não encontrado", itemID)
+		return nil, fmt.Errorf("item %s não encontrado", number)
 	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("o GitHub respondeu com status %d", resp.StatusCode)
@@ -107,16 +161,4 @@ func (g *GitHubIntegration) FetchItemDetails(config map[string]interface{}, item
 		State: body.State,
 		URL:   body.HTMLURL,
 	}, nil
-}
-
-func parseGithubConfig(config map[string]interface{}) (*githubConfig, error) {
-	token, _ := config["token"].(string)
-	repo, _ := config["repo"].(string)
-	if token == "" {
-		return nil, fmt.Errorf("informe o token do GitHub")
-	}
-	if repo == "" {
-		return nil, fmt.Errorf("informe o repositório do GitHub (owner/repo)")
-	}
-	return &githubConfig{Token: token, Repo: repo}, nil
 }
