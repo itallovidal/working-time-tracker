@@ -95,37 +95,42 @@
 
   const pad = (n) => String(n).padStart(2, '0');
 
+  // Em todas as listas de rótulos o value é o código do backend e só o label é traduzido.
   const weekdays = [
-    { value: 'monday', label: 'Segunda-feira' },
-    { value: 'tuesday', label: 'Terça-feira' },
-    { value: 'wednesday', label: 'Quarta-feira' },
-    { value: 'thursday', label: 'Quinta-feira' },
-    { value: 'friday', label: 'Sexta-feira' },
-    { value: 'saturday', label: 'Sábado' },
-    { value: 'sunday', label: 'Domingo' },
+    { value: 'monday', label: t('labels.weekday.monday') },
+    { value: 'tuesday', label: t('labels.weekday.tuesday') },
+    { value: 'wednesday', label: t('labels.weekday.wednesday') },
+    { value: 'thursday', label: t('labels.weekday.thursday') },
+    { value: 'friday', label: t('labels.weekday.friday') },
+    { value: 'saturday', label: t('labels.weekday.saturday') },
+    { value: 'sunday', label: t('labels.weekday.sunday') },
   ];
 
   const orgSizes = [
-    { value: '1-10', label: '1 a 10 pessoas' },
-    { value: '11-50', label: '11 a 50 pessoas' },
-    { value: '51-200', label: '51 a 200 pessoas' },
-    { value: '201-500', label: '201 a 500 pessoas' },
-    { value: '500+', label: 'Mais de 500 pessoas' },
+    { value: '1-10', label: t('labels.org_size.s1_10') },
+    { value: '11-50', label: t('labels.org_size.s11_50') },
+    { value: '51-200', label: t('labels.org_size.s51_200') },
+    { value: '201-500', label: t('labels.org_size.s201_500') },
+    { value: '500+', label: t('labels.org_size.s500_plus') },
   ];
 
   // Os regimes de trabalho que o backend aceita (internal/domain/organization).
   const workModes = [
-    { value: 'remote', label: 'Remoto' },
-    { value: 'hybrid', label: 'Híbrido' },
-    { value: 'onsite', label: 'Presencial' },
+    { value: 'remote', label: t('labels.work_mode.remote') },
+    { value: 'hybrid', label: t('labels.work_mode.hybrid') },
+    { value: 'onsite', label: t('labels.work_mode.onsite') },
   ];
 
   // As moedas que o backend aceita (internal/domain/organization).
   const currencies = [
-    { value: 'BRL', label: 'Real (BRL)' },
-    { value: 'USD', label: 'Dólar americano (USD)' },
-    { value: 'EUR', label: 'Euro (EUR)' },
+    { value: 'BRL', label: t('labels.currency.BRL') },
+    { value: 'USD', label: t('labels.currency.USD') },
+    { value: 'EUR', label: t('labels.currency.EUR') },
   ];
+
+  // Separadores de número do idioma, para ler o que a pessoa digita em um campo de valor.
+  const numberParts = new Intl.NumberFormat(lang).formatToParts(1234.5);
+  const groupSeparator = (numberParts.find((p) => p.type === 'group') || {}).value || ',';
 
   const fmt = {
     // 3725 -> "01:02:05"
@@ -144,15 +149,15 @@
     },
     date(iso) {
       if (!iso) return '';
-      return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
+      return new Date(iso).toLocaleDateString(lang, { day: '2-digit', month: 'short', year: 'numeric' });
     },
     dateTime(iso) {
       if (!iso) return '';
-      return new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+      return new Date(iso).toLocaleString(lang, { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
     },
     time(iso) {
       if (!iso) return '';
-      return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      return new Date(iso).toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' });
     },
     // ISO -> "2026-09-28" no fuso local, para <input type="date">
     dateInput(iso) {
@@ -196,16 +201,16 @@
     // Centavos na moeda da organização: 2050 -> "R$ 20,50". Sem valor, um travessão.
     money(cents) {
       if (cents === null || cents === undefined) return '—';
-      return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: orgCurrency() }).format(cents / 100);
+      return new Intl.NumberFormat(lang, { style: 'currency', currency: orgCurrency() }).format(cents / 100);
     },
-    // Centavos para um campo de texto: 2050 -> "20,50"
+    // Centavos para um campo de texto, com o separador do idioma: 2050 -> "20,50" (pt-BR) ou "20.50" (en)
     moneyInput(cents) {
       if (cents === null || cents === undefined) return '';
-      return (cents / 100).toFixed(2).replace('.', ',');
+      return new Intl.NumberFormat(lang, { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false }).format(cents / 100);
     },
     // O símbolo da moeda da organização, para o rótulo dos campos: "R$"
     moneyUnit() {
-      const parts = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: orgCurrency() }).formatToParts(0);
+      const parts = new Intl.NumberFormat(lang, { style: 'currency', currency: orgCurrency() }).formatToParts(0);
       const symbol = parts.find((p) => p.type === 'currency');
       return symbol ? symbol.value : orgCurrency();
     },
@@ -217,11 +222,30 @@
   }
 
   // toCents lê um valor digitado e devolve os centavos, ou null quando o texto
-  // não é um valor. Aceita "20", "20,5", "1.234,56", "1.234" e "20.50".
+  // não é um valor. Aceita "20", "20,5", "20.50", "1.234,56" e "1,234.56". Com os dois
+  // separadores, o último é o decimal. Com um só: repetido ou seguido de três dígitos
+  // é milhar quando for o separador de milhar do idioma ("1.234" em pt-BR, "1,234" em
+  // en); nos outros casos é decimal.
   function toCents(text) {
     let v = String(text === null || text === undefined ? '' : text).replace(/[^\d.,]/g, '');
     if (v === '') return null;
-    if (v.includes(',') || /^\d{1,3}(\.\d{3})+$/.test(v)) v = v.replace(/\./g, '').replace(',', '.');
+    const dot = v.lastIndexOf('.');
+    const comma = v.lastIndexOf(',');
+    let decimal = null;
+    if (dot >= 0 && comma >= 0) {
+      decimal = dot > comma ? '.' : ',';
+    } else if (dot >= 0 || comma >= 0) {
+      const sep = dot >= 0 ? '.' : ',';
+      const repeated = v.split(sep).length > 2;
+      const thousands = v.length - v.lastIndexOf(sep) - 1 === 3 && sep === groupSeparator;
+      if (!repeated && !thousands) decimal = sep;
+    }
+    if (decimal) {
+      const i = v.lastIndexOf(decimal);
+      v = v.slice(0, i).replace(/[.,]/g, '') + '.' + v.slice(i + 1).replace(/[.,]/g, '');
+    } else {
+      v = v.replace(/[.,]/g, '');
+    }
     const n = Number(v);
     return Number.isFinite(n) ? Math.round(n * 100) : null;
   }
@@ -236,7 +260,7 @@
   }
 
   // O que as telas mostram no lugar de um campo de cadastro sem valor.
-  const notInformed = 'Não informado';
+  const notInformed = t('labels.not_informed');
 
   window.WTT = { t, lang, api, ApiError, form, fmt, toCents, copyText, notInformed, weekdays, orgSizes, workModes, currencies, boot: window.BOOT || {} };
 

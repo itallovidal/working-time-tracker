@@ -278,7 +278,7 @@ document.addEventListener('alpine:init', () => {
           this.customers = [...this.customers, await api('POST', '/api/orgs/' + orgId + '/customers', this.draft)];
           toast('Cliente criado.');
         }
-        this.customers.sort((a, b) => a.name.localeCompare(b.name));
+        this.customers.sort((a, b) => a.name.localeCompare(b.name, WTT.lang));
         Alpine.store('modal').close();
       });
     },

@@ -282,7 +282,7 @@ document.addEventListener('alpine:init', () => {
     assigneeOptions() {
       const byId = new Map([[me.id, { id: me.id, name: me.name }]]);
       [...this.assignees, ...this.members].forEach((p) => byId.set(p.id, p));
-      return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
+      return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name, WTT.lang));
     },
     openCreate() {
       const self = this.members.find((m) => m.id === me.id) || this.members[0];
@@ -561,7 +561,7 @@ document.addEventListener('alpine:init', () => {
     people() {
       const seen = new Map();
       this.sessions.forEach((s) => { if (s.person && !seen.has(s.person.id)) seen.set(s.person.id, s.person); });
-      return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
+      return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name, WTT.lang));
     },
     // filtered aplica os filtros da lista. A data pega as sessões iniciadas
     // naquele dia, no fuso de quem está olhando.
@@ -840,7 +840,7 @@ document.addEventListener('alpine:init', () => {
       const members = this.membersOf(team).map((c) => c.person);
       const inTeam = new Set(members.map((p) => p.id));
       const others = this.people.filter((p) => !inTeam.has(p.id))
-        .sort((a, b) => (this.inProject(b) - this.inProject(a)) || a.name.localeCompare(b.name));
+        .sort((a, b) => (this.inProject(b) - this.inProject(a)) || a.name.localeCompare(b.name, WTT.lang));
       this.edit = { id: team.id, name: team.name, search: '', member_ids: [...inTeam], people: [...members, ...others] };
       this.confirming = null;
       this.errors.team = '';
