@@ -2,7 +2,17 @@
 <main class="page" x-data="timeTracking">
   {{template "project_head" .}}
 
-  <div class="grid-aside">
+  {{/* O aviso fica acima dos cartões: dentro do relógio ele deixava um cartão mais alto que o outro. */}}
+  <p class="alert alert-warn" x-cloak x-show="!loading && !errors.load && myRate === null">
+    Você ainda não tem valor por hora neste projeto, então o ponto está bloqueado.
+    {{if .IsAdmin}}
+    Defina o seu na aba <a href="/projects/{{.Project.ID}}/teams">Colaboradores</a>.
+    {{else}}
+    Peça a um admin para definir.
+    {{end}}
+  </p>
+
+  <div class="grid-aside items-stretch">
     <section class="clock" aria-live="polite">
       <p class="muted" x-show="!$store.clock.ready">Carregando…</p>
 
@@ -36,14 +46,6 @@
             </select>
             <button type="submit" class="btn" :disabled="pending || !taskId || myRate === null">Iniciar</button>
           </div>
-          <p class="alert alert-warn" x-show="!loading && !errors.load && myRate === null">
-            Você ainda não tem valor por hora neste projeto, então o ponto está bloqueado.
-            {{if .IsAdmin}}
-            Defina o seu na aba <a href="/projects/{{.Project.ID}}/teams">Colaboradores</a>.
-            {{else}}
-            Peça a um admin para definir.
-            {{end}}
-          </p>
         </form>
       </template>
       <p class="form-error" x-cloak x-show="errors.clock" x-text="errors.clock" role="alert"></p>
@@ -68,23 +70,60 @@
   </div>
 
   <section class="stack">
-    <div class="card-head">
+    <div class="stack stack-tight">
       <h2>Sessões</h2>
-      <div class="row filters">
-        <select x-model="filter.task" aria-label="Filtrar por tarefa">
-          <option value="">Todas as tarefas</option>
-          <template x-for="t in tasks" :key="t.id"><option :value="t.id" x-text="t.name"></option></template>
-        </select>
-        <select x-model="filter.person" aria-label="Filtrar por pessoa">
-          <option value="">Todas as pessoas</option>
-          <template x-for="p in people()" :key="p.id"><option :value="p.id" x-text="p.name"></option></template>
-        </select>
-      </div>
+      <p class="muted">{{if .IsAdmin}}O ponto de todo mundo neste projeto.{{else}}O ponto de quem trabalha neste projeto.{{end}} Os totais acompanham os filtros.</p>
+    </div>
+    <div class="row filters">
+      <select x-model="filter.person" aria-label="Filtrar por pessoa">
+        <option value="">Todas as pessoas</option>
+        <template x-for="p in people()" :key="p.id"><option :value="p.id" x-text="p.name"></option></template>
+      </select>
+      <input type="date" x-model="filter.date" aria-label="Filtrar por data" title="Sessões iniciadas neste dia">
+      <select x-model="filter.task" aria-label="Filtrar por tarefa">
+        <option value="">Todas as tarefas</option>
+        <template x-for="t in tasks" :key="t.id"><option :value="t.id" x-text="t.name"></option></template>
+      </select>
+      <button type="button" class="btn btn-ghost btn-sm" x-cloak x-show="hasFilters()" @click="clearFilters()">{{template "icon" "xmark"}} Limpar filtros</button>
     </div>
     <p class="form-error" x-cloak x-show="errors.load" x-text="errors.load"></p>
+
+    {{/* Os totais ficam num cartão próprio, e a tabela, só com a lista das sessões. */}}
+    <section class="card" x-cloak x-show="filtered().length > 0">
+      <div class="card-head">
+        <h3>Totais</h3>
+        <span class="muted small" x-text="filtered().length + (filtered().length === 1 ? ' sessão' : ' sessões') + (hasFilters() ? ' com esses filtros' : '')"></span>
+      </div>
+      <div class="totals">
+        <div class="total">
+          <div class="v" x-text="WTT.fmt.hours(filteredTotal())"></div>
+          <div class="k">Tempo</div>
+        </div>
+        {{if .IsAdmin}}
+        <div class="total">
+          <div class="v" x-text="WTT.fmt.money(filteredAmount('pay'))"></div>
+          <div class="k">Custo</div>
+        </div>
+        <div class="total">
+          <div class="v" x-text="WTT.fmt.money(filteredAmount('bill'))"></div>
+          <div class="k">Receita</div>
+        </div>
+        <div class="total">
+          <div class="v" :class="filteredMargin() < 0 && 'text-danger'" x-text="WTT.fmt.money(filteredMargin())"></div>
+          <div class="k">Margem (receita menos custo)</div>
+        </div>
+        {{else}}
+        <div class="total">
+          <div class="v" x-text="WTT.fmt.money(filteredAmount('pay'))"></div>
+          <div class="k">Seu valor</div>
+        </div>
+        {{end}}
+      </div>
+    </section>
+
     <div class="empty" x-cloak x-show="!loading && filtered().length === 0">
       <strong>Nenhuma sessão</strong>
-      <span x-text="filter.task || filter.person ? 'Nada com esses filtros.' : 'Quando alguém bater o ponto neste projeto, a sessão aparece aqui.'"></span>
+      <span x-text="hasFilters() ? 'Nada com esses filtros.' : 'Quando alguém bater o ponto neste projeto, a sessão aparece aqui.'"></span>
     </div>
     <div class="table-wrap" x-show="filtered().length > 0">
       <table>
@@ -110,20 +149,6 @@
             </tr>
           </template>
         </tbody>
-        <tfoot>
-          <tr>
-            <td colspan="4"><strong>Total</strong> <span class="muted small" x-text="'(' + filtered().length + (filtered().length === 1 ? ' sessão)' : ' sessões)')"></span></td>
-            <td class="actions mono num"><strong x-text="WTT.fmt.hours(filteredTotal())"></strong></td>
-            <td class="actions num"><strong x-text="WTT.fmt.money(filteredAmount('pay'))"></strong></td>
-            {{if .IsAdmin}}<td class="actions num"><strong x-text="WTT.fmt.money(filteredAmount('bill'))"></strong></td>{{end}}
-          </tr>
-          {{if .IsAdmin}}
-          <tr>
-            <td colspan="6"><strong>Margem</strong> <span class="muted small">(receita menos custo)</span></td>
-            <td class="actions num"><strong :class="filteredMargin() < 0 && 'text-danger'" x-text="WTT.fmt.money(filteredMargin())"></strong></td>
-          </tr>
-          {{end}}
-        </tfoot>
       </table>
     </div>
   </section>

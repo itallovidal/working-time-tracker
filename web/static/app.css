@@ -167,6 +167,8 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: start; }
 .grid-aside { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 18px; align-items: start; }
 @media (max-width: 860px) { .grid-2, .grid-aside { grid-template-columns: 1fr; } }
+/* Cartões lado a lado com a mesma altura, mesmo quando um tem menos conteúdo. */
+.items-stretch { align-items: stretch; }
 .stack { display: flex; flex-direction: column; gap: 12px; }
 .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .row-end { justify-content: flex-end; }
@@ -191,7 +193,6 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 .prose { white-space: pre-line; color: var(--ink-2); }
 .text-danger { color: var(--danger); }
 .nowrap { white-space: nowrap; }
-tfoot td { background: var(--surface-2); border-bottom: 0; }
 .self-end { align-self: flex-end; }
 .self-start { align-self: flex-start; }
 .sr-only {

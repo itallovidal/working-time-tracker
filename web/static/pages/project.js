@@ -445,7 +445,7 @@ document.addEventListener('alpine:init', () => {
     sessions: [],
     taskId: '',
     myRate: null, // quanto a pessoa logada recebe por hora aqui; null se ainda não tem valor
-    filter: { task: '', person: '' },
+    filter: { task: '', person: '', date: '' }, // date é um dia, como "2026-10-06"
     async init() {
       try {
         const [tasks, sessions, allocations] = await Promise.all([
@@ -485,10 +485,19 @@ document.addEventListener('alpine:init', () => {
       this.sessions.forEach((s) => { if (s.person && !seen.has(s.person.id)) seen.set(s.person.id, s.person); });
       return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
     },
+    // filtered aplica os filtros da lista. A data pega as sessões iniciadas
+    // naquele dia, no fuso de quem está olhando.
     filtered() {
       return this.sessions.filter((s) =>
         (!this.filter.task || s.task_id === this.filter.task) &&
-        (!this.filter.person || s.person_id === this.filter.person));
+        (!this.filter.person || s.person_id === this.filter.person) &&
+        (!this.filter.date || WTT.fmt.dateInput(s.start_at) === this.filter.date));
+    },
+    hasFilters() {
+      return !!(this.filter.task || this.filter.person || this.filter.date);
+    },
+    clearFilters() {
+      this.filter = { task: '', person: '', date: '' };
     },
     filteredTotal() {
       return this.filtered().reduce((sum, s) => sum + clock().elapsed(s), 0);

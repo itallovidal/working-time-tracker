@@ -332,6 +332,56 @@ func TestPages_ProjectTasksTab(t *testing.T) {
 	}
 }
 
+// Na aba Ponto, o aviso de quem está sem valor por hora fica acima dos cartões,
+// e não dentro do relógio. As sessões têm filtro por pessoa, por data e por
+// tarefa, e os totais ficam num cartão próprio, fora da tabela: custo, receita
+// e margem para o admin, e só o próprio valor para o membro.
+func TestPages_ProjectTimeTab(t *testing.T) {
+	e := newServer(t)
+	admin := signup(t, e, "Org", "ana@test.com")
+	member := invite(t, e, admin, "bia@test.com", "member")
+	projectID := createProject(t, e, admin, "Projeto Alfa")
+	const warning = "ainda não tem valor por hora neste projeto"
+
+	pages := map[string]string{}
+	for who, session := range map[string]string{"admin": admin.session, "member": member.session} {
+		body := do(e, "GET", "/projects/"+projectID+"/time-tracking", "", session).Body.String()
+		pages[who] = body
+		if n := strings.Count(body, warning); n != 1 {
+			t.Errorf("%s: the page has the rate warning %d times, want once", who, n)
+		}
+		if at, clock := strings.Index(body, warning), strings.Index(body, `class="clock"`); at < 0 || clock < 0 || at > clock {
+			t.Errorf("%s: the rate warning is not above the clock card", who)
+		}
+		for _, want := range []string{
+			`class="grid-aside items-stretch"`,
+			`aria-label="Filtrar por pessoa"`, `aria-label="Filtrar por data"`, `aria-label="Filtrar por tarefa"`,
+			"<h3>Totais</h3>", `<div class="k">Tempo</div>`,
+		} {
+			if !strings.Contains(body, want) {
+				t.Errorf("%s: the time tracking tab does not contain %q", who, want)
+			}
+		}
+		if strings.Contains(body, "<tfoot>") {
+			t.Errorf("%s: the sessions table still has the totals in its footer", who)
+		}
+	}
+	for _, adminOnly := range []string{`<div class="k">Custo</div>`, `<div class="k">Receita</div>`, "Margem (receita menos custo)"} {
+		if !strings.Contains(pages["admin"], adminOnly) {
+			t.Errorf("admin does not see %q in the totals card", adminOnly)
+		}
+		if strings.Contains(pages["member"], adminOnly) {
+			t.Errorf("member sees %q in the totals card", adminOnly)
+		}
+	}
+	if !strings.Contains(pages["member"], `<div class="k">Seu valor</div>`) || strings.Contains(pages["admin"], `<div class="k">Seu valor</div>`) {
+		t.Error("the member's own amount should be in the totals card of the member only")
+	}
+	if !strings.Contains(pages["admin"], `href="/projects/`+projectID+`/teams">Colaboradores</a>`) || !strings.Contains(pages["member"], "Peça a um admin para definir") {
+		t.Error("the rate warning should send the admin to the collaborators tab and the member to an admin")
+	}
+}
+
 func TestPages_RedirectWithoutSession(t *testing.T) {
 	e := newServer(t)
 	admin := signup(t, e, "Org", "ana@test.com")

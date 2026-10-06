@@ -253,6 +253,15 @@
 
 ---
 
+### Sprint 18: Time Tracking Tab Review
+
+- [X] S18.1 Move the "no hourly rate" warning out of the clock card to the top of the page, and keep the clock card and the "Seu tempo neste projeto" card at the same height
+- [X] S18.2 Filter the sessions by date (the day the session started), next to the person and task filters, with a button to clear them
+- [X] S18.3 Move the totals (time, cost, revenue and margin, or the member's own amount) out of the table footer into their own card; the table only lists the sessions
+- [X] S18.4 Page test for the new layout; update README
+
+---
+
 ### Refatoração: Domain-First Architecture (pré-Sprint 9)
 
 - [X] R1 Reorganizar código de layered-flat para domain-first: `internal/domain/<dominio>/` com `model.go`, `store.go`, `service.go`, `handler.go` por domínio
