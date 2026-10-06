@@ -19,5 +19,5 @@ func projectHome(c *echo.Context) string {
 // tempo de projeto e integrações numa tela só, para admins (S26). Os tipos de
 // integração vão junto para a lista mostrar o nome de cada plataforma.
 func (h *Handler) Overview(c *echo.Context) error {
-	return h.projectPage(c, "project_overview", "Visão geral", "overview", integrationTypes())
+	return h.projectPage(c, "project_overview", "Visão geral", "overview", h.integrationTypes(c))
 }

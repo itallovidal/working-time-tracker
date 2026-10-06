@@ -9,6 +9,7 @@ import (
 
 	"github.com/labstack/echo/v5"
 
+	"working-time-tracker/internal/adapter"
 	"working-time-tracker/internal/domain/auth"
 	"working-time-tracker/internal/i18n"
 )
@@ -253,6 +254,8 @@ func migratedPages(admin account, projectID, taskID string) []string {
 		"/profile",
 		"/projects/" + projectID + "/tasks",
 		"/projects/" + projectID + "/time-tracking",
+		"/projects/" + projectID + "/integrations",
+		"/projects/" + projectID + "/settings",
 		"/tasks/" + taskID,
 		"/orgs/" + admin.orgID,
 		"/orgs/" + admin.orgID + "/about",
@@ -292,5 +295,45 @@ func TestLanguage_MigratedPagesHaveNoPortugueseInEnglish(t *testing.T) {
 				t.Errorf("GET %s in Portuguese has no accented word: is it rendering keys?", path)
 			}
 		}
+	}
+}
+
+// Cada tipo de integração tem o seu texto em todos os idiomas: a sobre, a dica do
+// token, o rótulo do item vinculado e o rótulo de cada campo do metadata.
+func TestIntegrationTypes_HaveTextsInEveryLanguage(t *testing.T) {
+	cat, err := i18n.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, lang := range i18n.Supported() {
+		for _, d := range adapter.Descriptors() {
+			base := "integration_types." + d.Type + "."
+			required := []string{base + "about", base + "token_hint", base + "item_label"}
+			for _, f := range d.Metadata {
+				required = append(required, base+"fields."+f.Key+".label")
+			}
+			for _, key := range required {
+				if !cat.Has(lang, key) {
+					t.Errorf("%s has no text for %q", lang, key)
+				}
+			}
+		}
+	}
+}
+
+// Os tipos que a página manda ao navegador vêm no idioma da requisição.
+func TestLanguage_IntegrationTypesInThePageData(t *testing.T) {
+	e := newServer(t)
+	admin := signup(t, e, "Org", "ana@test.com")
+	projectID := createProject(t, e, admin, "Alpha")
+	path := "/projects/" + projectID + "/integrations"
+
+	en := getPage(e, path, admin.session, "en", "").Body.String()
+	pt := getPage(e, path, admin.session, "", "").Body.String()
+	if !strings.Contains(en, "Issue number") || strings.Contains(en, "Número da issue") {
+		t.Error("the English page does not carry the English integration types")
+	}
+	if !strings.Contains(pt, "Número da issue") || strings.Contains(pt, "Issue number") {
+		t.Error("the Portuguese page does not carry the Portuguese integration types")
 	}
 }

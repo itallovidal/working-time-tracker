@@ -3,21 +3,21 @@
   {{template "project_head" .}}
 
   <div class="toolbar">
-    <p class="muted">Ligue tarefas a issues do GitHub ou do GitLab e a cartões do Trello. O token é validado na plataforma e guardado criptografado.</p>
+    <p class="muted">{{.T "integrations.intro"}}</p>
     {{if .IsAdmin}}
-    <button type="button" class="btn" @click="openCreate()">{{template "icon" "plus"}} Nova integração</button>
+    <button type="button" class="btn" @click="openCreate()">{{template "icon" "plus"}} {{.T "integrations.new"}}</button>
     {{end}}
   </div>
 
-  <p class="muted" x-show="loading">Carregando integrações…</p>
+  <p class="muted" x-show="loading">{{.T "integrations.loading"}}</p>
   <p class="form-error" x-cloak x-show="errors.load" x-text="errors.load"></p>
 
   <div class="empty" x-cloak x-show="!loading && !errors.load && items.length === 0">
-    <strong>Nenhuma integração</strong>
+    <strong>{{.T "integrations.none"}}</strong>
     {{if .IsAdmin}}
-    <span>Crie uma para vincular tarefas a issues ou cartões e ver o estado deles aqui.</span>
+    <span>{{.T "integrations.none_admin"}}</span>
     {{else}}
-    <span>Um admin pode configurar o GitHub, o GitLab ou o Trello deste projeto.</span>
+    <span>{{.T "integrations.none_member"}}</span>
     {{end}}
   </div>
 
@@ -31,12 +31,12 @@
             <h2 x-text="it.display_name"></h2>
             <div class="row row-tight">
               <span class="badge badge-accent" x-text="typeOf(it.type).label"></span>
-              <span class="badge" :class="it.enabled ? 'badge-ok' : ''" x-text="it.enabled ? 'Ativa' : 'Desativada'"></span>
+              <span class="badge" :class="it.enabled ? 'badge-ok' : ''" x-text="it.enabled ? $t('integrations.active') : $t('integrations.disabled')"></span>
             </div>
           </div>
           {{if .IsAdmin}}
-          <button type="button" class="btn btn-ghost btn-sm btn-icon" title="Editar integração"
-                  :aria-label="'Editar a integração ' + it.display_name" @click="openEdit(it)">{{template "icon" "pen"}}</button>
+          <button type="button" class="btn btn-ghost btn-sm btn-icon" title="{{.T "integrations.edit_title"}}"
+                  :aria-label="$t('integrations.edit_label', { name: it.display_name })" @click="openEdit(it)">{{template "icon" "pen"}}</button>
           {{end}}
         </div>
 
@@ -47,15 +47,15 @@
               <dd :class="f.value ? '' : 'muted'" x-text="f.value || WTT.notInformed"></dd>
             </div>
           </template>
-          <dt>Token</dt>
+          <dt>{{.T "integrations.token"}}</dt>
           <dd :class="it.has_token ? 'mono' : 'muted'" x-text="it.has_token ? '••••••••••••' : WTT.notInformed"></dd>
-          <dt>Criada em</dt>
+          <dt>{{.T "integrations.created_at"}}</dt>
           <dd x-text="WTT.fmt.date(it.created_at)"></dd>
         </dl>
 
         <p class="alert alert-warn" x-cloak x-show="incomplete(it)">
-          Faltam dados desta integração, e os itens vinculados não são buscados.
-          {{if .IsAdmin}}Edite para completar.{{else}}Peça a um admin para completar.{{end}}
+          {{.T "integrations.incomplete"}}
+          {{if .IsAdmin}}{{.T "integrations.complete_admin"}}{{else}}{{.T "integrations.complete_member"}}{{end}}
         </p>
       </section>
     </template>
@@ -67,7 +67,7 @@
   <template x-teleport="#modal-root">
     <form class="stack" x-show="$store.modal.name === 'integration-form'" @submit.prevent="save()">
       <template x-if="!draft.id">
-        <ul class="list picker" role="radiogroup" aria-label="Plataforma">
+        <ul class="list picker" role="radiogroup" aria-label="{{.T "integrations.platform"}}">
           <template x-for="t in types" :key="t.type">
             <li>
               <label class="pick">
@@ -82,18 +82,18 @@
         </ul>
       </template>
       <p class="muted small" x-show="draft.id">
-        Plataforma: <span class="badge badge-accent" x-text="typeOf(draft.type).label"></span>
+        {{.T "integrations.platform"}}: <span class="badge badge-accent" x-text="typeOf(draft.type).label"></span>
       </p>
 
       <div class="field">
-        <label for="int-name">Nome</label>
-        <input id="int-name" type="text" required placeholder="Ex.: Repositório do app" x-model="draft.display_name" data-autofocus>
+        <label for="int-name">{{.T "common.name"}}</label>
+        <input id="int-name" type="text" required placeholder="{{.T "integrations.name_placeholder"}}" x-model="draft.display_name" data-autofocus>
       </div>
       <div class="field">
-        <label for="int-token">Token de acesso</label>
+        <label for="int-token">{{.T "integrations.token_label"}}</label>
         {{/* new-password: com "off" o navegador ainda oferece a senha salva do site. */}}
         <input id="int-token" type="password" autocomplete="new-password" :required="!draft.id"
-               :placeholder="draft.id && draft.has_token ? 'Em branco, mantém o token atual' : ''" x-model="draft.token">
+               :placeholder="draft.id && draft.has_token ? $t('integrations.keep_token') : ''" x-model="draft.token">
         <span class="hint" x-show="typeOf(draft.type).token_hint" x-text="typeOf(draft.type).token_hint"></span>
       </div>
       <template x-for="f in typeOf(draft.type).metadata" :key="draft.type + '-' + f.key">
@@ -106,25 +106,25 @@
       </template>
       {{/* Uma integração nasce ativa; desativar é coisa de quem edita. */}}
       <div class="stack stack-tight" x-show="draft.id">
-        <label class="check"><input type="checkbox" x-model="draft.enabled"> Ativa</label>
-        <span class="muted small">Desativada, mantém os vínculos das tarefas, mas deixa de buscar os itens.</span>
+        <label class="check"><input type="checkbox" x-model="draft.enabled"> {{.T "integrations.active"}}</label>
+        <span class="muted small">{{.T "integrations.enabled_hint"}}</span>
       </div>
 
       <p class="form-error" x-show="errors.save || errors.remove" x-text="errors.save || errors.remove" role="alert"></p>
 
       <div class="confirm" x-cloak x-show="confirming">
-        <span>Excluir a integração? As tarefas vinculadas perdem o vínculo.</span>
-        <button type="button" class="btn btn-danger btn-sm" :disabled="pending" @click="remove()">Excluir</button>
-        <button type="button" class="btn btn-ghost btn-sm" @click="confirming = false">Cancelar</button>
+        <span>{{.T "integrations.delete_question"}}</span>
+        <button type="button" class="btn btn-danger btn-sm" :disabled="pending" @click="remove()">{{.T "common.delete"}}</button>
+        <button type="button" class="btn btn-ghost btn-sm" @click="confirming = false">{{.T "common.cancel"}}</button>
       </div>
       <div class="toolbar" x-show="!confirming">
         <span>
-          <button type="button" class="btn btn-danger-ghost" x-show="draft.id" @click="confirming = true">{{template "icon" "trash"}} Excluir integração</button>
+          <button type="button" class="btn btn-danger-ghost" x-show="draft.id" @click="confirming = true">{{template "icon" "trash"}} {{.T "integrations.delete"}}</button>
         </span>
         <div class="row">
-          <button type="button" class="btn btn-secondary" @click="$store.modal.dismiss()">Cancelar</button>
+          <button type="button" class="btn btn-secondary" @click="$store.modal.dismiss()">{{.T "common.cancel"}}</button>
           <button type="submit" class="btn" :disabled="pending">
-            <span x-text="draft.id ? (pending === 'save' ? 'Salvando…' : 'Salvar') : (pending === 'save' ? 'Validando conexão…' : 'Criar integração')">Criar integração</span>
+            <span x-text="draft.id ? (pending === 'save' ? $t('integrations.saving') : $t('common.save')) : (pending === 'save' ? $t('integrations.validating') : $t('integrations.create'))">{{.T "integrations.create"}}</span>
           </button>
         </div>
       </div>

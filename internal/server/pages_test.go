@@ -528,7 +528,7 @@ func TestPages_ProjectIntegrationsTab(t *testing.T) {
 
 	detail := do(e, "GET", "/tasks/"+taskID, "", member.session).Body.String()
 	for _, want := range append([]string{
-		`x-text="linkType().item_label || 'Item'"`, `:inputmode="linkType().item_numeric ? 'numeric' : 'text'"`,
+		`x-text="linkType().item_label || $t('tasks.item')"`, `:inputmode="linkType().item_numeric ? 'numeric' : 'text'"`,
 		`:placeholder="linkType().item_placeholder || ''"`, "typeLabel(i.type)",
 	}, types...) {
 		if !strings.Contains(detail, want) {

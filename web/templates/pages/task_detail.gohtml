@@ -130,7 +130,7 @@
           <button type="button" class="btn btn-danger-ghost" @click="confirmDelete = true">{{.T "task_detail.delete_title"}}</button>
         </div>
         <div class="confirm" x-cloak x-show="confirmDelete">
-          <span>{{.T "task_detail.delete_confirm"}}</span>
+          <span>{{.T "common.delete_confirm"}}</span>
           <button type="button" class="btn btn-danger btn-sm" :disabled="pending" @click="remove()">{{.T "common.delete"}}</button>
           <button type="button" class="btn btn-ghost btn-sm" @click="confirmDelete = false">{{.T "common.cancel"}}</button>
         </div>

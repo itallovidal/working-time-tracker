@@ -466,14 +466,14 @@ document.addEventListener('alpine:init', () => {
     },
     openCreate() {
       this.draft = { id: null, type: this.types.length ? this.types[0].type : '', display_name: '', token: '', metadata: {}, enabled: true, has_token: false };
-      this.openForm('Nova integração');
+      this.openForm(WTT.t('integrations.new'));
     },
     openEdit(it) {
       this.draft = {
         id: it.id, type: it.type, display_name: it.display_name, token: '',
         metadata: { ...(it.metadata || {}) }, enabled: it.enabled, has_token: it.has_token,
       };
-      this.openForm('Editar integração');
+      this.openForm(WTT.t('integrations.edit_title'));
     },
     openForm(title) {
       this.confirming = false;
@@ -490,15 +490,15 @@ document.addEventListener('alpine:init', () => {
       return this.run('save', async () => {
         const d = this.draft;
         const body = { display_name: d.display_name.trim(), enabled: d.enabled, token: d.token.trim(), metadata: { ...d.metadata } };
-        if (!body.display_name) throw new Error('Informe o nome da integração.');
+        if (!body.display_name) throw new Error(WTT.t('integrations.name_required'));
         if (d.id) {
           const saved = await api('PATCH', '/api/integrations/' + d.id, body);
           this.items = this.items.map((x) => (x.id === saved.id ? saved : x));
-          toast('Integração salva.');
+          toast(WTT.t('integrations.saved'));
         } else {
           const created = await api('POST', '/api/projects/' + project.id + '/integrations', { type: d.type, ...body });
           this.items = [created, ...this.items];
-          toast('Integração criada. A conexão foi validada na plataforma.');
+          toast(WTT.t('integrations.created'));
         }
         Alpine.store('modal').close();
       });
@@ -510,7 +510,7 @@ document.addEventListener('alpine:init', () => {
         await api('DELETE', '/api/integrations/' + id);
         this.items = this.items.filter((x) => x.id !== id);
         Alpine.store('modal').close();
-        toast('Integração excluída.');
+        toast(WTT.t('integrations.deleted'));
       });
     },
   }));
@@ -648,12 +648,12 @@ document.addEventListener('alpine:init', () => {
     saveBilling() {
       return this.run('billing', async () => {
         const cents = WTT.toCents(this.billing.rate);
-        if (cents === null && String(this.billing.rate).trim() !== '') throw new Error('Informe um valor, por exemplo 100,00.');
+        if (cents === null && String(this.billing.rate).trim() !== '') throw new Error(WTT.t('project_settings.rate_invalid'));
         this.setBilling(await api('PUT', '/api/projects/' + project.id + '/billing', {
           customer_id: this.billing.customer_id || null,
           bill_rate_cents: cents,
         }));
-        toast('Cobrança salva.');
+        toast(WTT.t('project_settings.billing_saved'));
       });
     },
     save() {
@@ -669,7 +669,7 @@ document.addEventListener('alpine:init', () => {
           weekly_sync_day: this.form.weekly_sync_day || '',
         });
         document.querySelectorAll('[data-project-name]').forEach((el) => { el.textContent = p.name; });
-        toast('Projeto salvo.');
+        toast(WTT.t('project_settings.saved'));
       });
     },
     remove() {

@@ -2,86 +2,86 @@
 <main class="page" x-data="projectSettings">
   {{template "project_head" .}}
 
-  <p class="muted" x-show="loading">Carregando…</p>
+  <p class="muted" x-show="loading">{{.T "common.loading"}}</p>
   <div class="grid-aside" x-cloak x-show="!loading">
     <form class="card" @submit.prevent="save()">
-      <div class="card-head"><h2>Projeto</h2></div>
+      <div class="card-head"><h2>{{.T "project_settings.title"}}</h2></div>
       <div class="field">
-        <label for="ps-name">Nome</label>
+        <label for="ps-name">{{.T "common.name"}}</label>
         <input id="ps-name" type="text" required x-model="form.name" {{if not .IsAdmin}}disabled{{end}}>
       </div>
       <div class="field">
-        <label for="ps-description">Descrição</label>
+        <label for="ps-description">{{.T "common.description_label"}}</label>
         <textarea id="ps-description" x-model="form.description" {{if not .IsAdmin}}disabled{{end}}></textarea>
       </div>
       <div class="fields">
         <div class="field">
-          <label for="ps-sprint">Duração da sprint (dias)</label>
+          <label for="ps-sprint">{{.T "project.fields.sprint_days"}}</label>
           <input id="ps-sprint" type="number" min="1" max="90" x-model.number="form.sprint_duration_days" {{if not .IsAdmin}}disabled{{end}}>
         </div>
         <div class="field">
-          <label for="ps-weekly-hours">Jornada semanal (horas)</label>
-          <input id="ps-weekly-hours" type="number" min="1" max="168" x-model="form.weekly_hours" {{if not .IsAdmin}}disabled placeholder="Não informado"{{end}}>
-          <span class="hint">Quantas horas por semana se espera de quem trabalha no projeto.</span>
+          <label for="ps-weekly-hours">{{.T "project.fields.weekly_hours"}}</label>
+          <input id="ps-weekly-hours" type="number" min="1" max="168" x-model="form.weekly_hours" {{if not .IsAdmin}}disabled placeholder="{{.T "labels.not_informed"}}"{{end}}>
+          <span class="hint">{{.T "project_settings.weekly_hours_hint"}}</span>
         </div>
         <div class="field">
-          <label for="ps-daily">Horário da daily</label>
+          <label for="ps-daily">{{.T "project.fields.daily_time"}}</label>
           <input id="ps-daily" type="time" x-model="form.daily_time" {{if not .IsAdmin}}disabled{{end}}>
-          <span class="hint">Deixe vazio se o time não faz daily.</span>
+          <span class="hint">{{.T "project_settings.daily_hint"}}</span>
         </div>
         <div class="field">
-          <label for="ps-weekly">Dia da weekly</label>
+          <label for="ps-weekly">{{.T "project.fields.weekly_day"}}</label>
           <select id="ps-weekly" x-model="form.weekly_sync_day" {{if not .IsAdmin}}disabled{{end}}>
-            <option value="">Sem weekly</option>
+            <option value="">{{.T "project.fields.no_weekly"}}</option>
             <template x-for="d in WTT.weekdays" :key="d.value">
               <option :value="d.value" x-text="d.label" :selected="d.value === form.weekly_sync_day"></option>
             </template>
           </select>
         </div>
       </div>
-      <p class="muted small" x-cloak x-show="customerName">Cliente: <strong x-text="customerName"></strong></p>
+      <p class="muted small" x-cloak x-show="customerName">{{.T "project_settings.customer"}} <strong x-text="customerName"></strong></p>
       {{if .IsAdmin}}
       <p class="form-error" x-show="errors.save" x-text="errors.save" role="alert"></p>
-      <div class="row row-end"><button type="submit" class="btn" :disabled="pending">Salvar</button></div>
+      <div class="row row-end"><button type="submit" class="btn" :disabled="pending">{{.T "common.save"}}</button></div>
       {{else}}
-      <p class="muted small">Só admins podem alterar as configurações do projeto.</p>
+      <p class="muted small">{{.T "project_settings.admin_only"}}</p>
       {{end}}
     </form>
 
     {{if .IsAdmin}}
     <div class="stack">
     <form class="card" @submit.prevent="saveBilling()">
-      <div class="card-head"><h2>Cliente e cobrança</h2></div>
+      <div class="card-head"><h2>{{.T "project_settings.billing_title"}}</h2></div>
       <div class="field">
-        <label for="ps-customer">Cliente</label>
+        <label for="ps-customer">{{.T "org.projects.customer"}}</label>
         <select id="ps-customer" x-model="billing.customer_id">
-          <option value="">Nenhum (projeto interno)</option>
+          <option value="">{{.T "project_settings.no_customer"}}</option>
           <template x-for="c in customers" :key="c.id">
             <option :value="c.id" x-text="c.name" :selected="c.id === billing.customer_id"></option>
           </template>
         </select>
-        <span class="hint">Cadastre clientes em <a href="/orgs/{{.OrgID}}/customers">Organização › Clientes</a>.</span>
+        <span class="hint">{{.T "project_settings.customers_hint"}} <a href="/orgs/{{.OrgID}}/customers">{{.T "org.head.title"}} › {{.T "org.head.customers"}}</a>.</span>
       </div>
       <div class="field">
-        <label for="ps-bill-rate">Valor cobrado por hora (<span x-text="WTT.fmt.moneyUnit()"></span>)</label>
-        <input id="ps-bill-rate" type="text" inputmode="decimal" class="num" placeholder="0,00" x-model="billing.rate">
-        <span class="hint">O que o cliente paga à organização. Só admins veem. Vazio apaga.</span>
+        <label for="ps-bill-rate" x-text="$t('project.fields.bill_rate', { unit: WTT.fmt.moneyUnit() })"></label>
+        <input id="ps-bill-rate" type="text" inputmode="decimal" class="num" placeholder="{{.T "project_settings.rate_placeholder"}}" x-model="billing.rate">
+        <span class="hint">{{.T "project_settings.bill_rate_hint"}}</span>
       </div>
       <p class="form-error" x-show="errors.billing" x-text="errors.billing" role="alert"></p>
-      <div class="row row-end"><button type="submit" class="btn" :disabled="pending">Salvar cobrança</button></div>
+      <div class="row row-end"><button type="submit" class="btn" :disabled="pending">{{.T "project_settings.save_billing"}}</button></div>
     </form>
 
     <section class="card">
-      <div class="card-head"><h2>Excluir projeto</h2></div>
-      <p class="muted small">Apaga o projeto com todos os times, tarefas, sessões de trabalho e integrações.</p>
+      <div class="card-head"><h2>{{.T "project_settings.delete_title"}}</h2></div>
+      <p class="muted small">{{.T "project_settings.delete_text"}}</p>
       <p class="form-error" x-show="errors.delete" x-text="errors.delete" role="alert"></p>
       <div class="row" x-show="!confirmDelete">
-        <button type="button" class="btn btn-danger-ghost" @click="confirmDelete = true">Excluir projeto</button>
+        <button type="button" class="btn btn-danger-ghost" @click="confirmDelete = true">{{.T "project_settings.delete_title"}}</button>
       </div>
       <div class="confirm" x-cloak x-show="confirmDelete">
-        <span>Excluir de vez?</span>
-        <button type="button" class="btn btn-danger btn-sm" :disabled="pending" @click="remove()">Excluir</button>
-        <button type="button" class="btn btn-ghost btn-sm" @click="confirmDelete = false">Cancelar</button>
+        <span>{{.T "common.delete_confirm"}}</span>
+        <button type="button" class="btn btn-danger btn-sm" :disabled="pending" @click="remove()">{{.T "common.delete"}}</button>
+        <button type="button" class="btn btn-ghost btn-sm" @click="confirmDelete = false">{{.T "common.cancel"}}</button>
       </div>
     </section>
     </div>
