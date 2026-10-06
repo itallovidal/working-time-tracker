@@ -9,6 +9,7 @@ import (
 	entcustomer "working-time-tracker/ent/customer"
 	entorg "working-time-tracker/ent/organization"
 	"working-time-tracker/ent/project"
+	enttask "working-time-tracker/ent/task"
 	"working-time-tracker/internal/database"
 )
 
@@ -45,9 +46,9 @@ func (s *Store) ListByOrg(orgID string) ([]Project, error) {
 	if err != nil {
 		return nil, err
 	}
-	projects, err := s.client.Project.Query().
+	projects, err := withCounts(s.client.Project.Query().
 		Where(project.OrganizationIDEQ(uid)).
-		WithCustomer().
+		WithCustomer()).
 		Order(ent.Desc(project.FieldCreatedAt)).
 		All(context.Background())
 	if err != nil {
@@ -61,9 +62,9 @@ func (s *Store) GetByID(id string) (*Project, error) {
 	if err != nil {
 		return nil, err
 	}
-	p, err := s.client.Project.Query().
+	p, err := withCounts(s.client.Project.Query().
 		Where(project.IDEQ(uid)).
-		WithCustomer().
+		WithCustomer()).
 		Only(context.Background())
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -72,6 +73,26 @@ func (s *Store) GetByID(id string) (*Project, error) {
 		return nil, err
 	}
 	return toDomainProject(p), nil
+}
+
+// withCounts carrega o que MemberCount e TaskCount precisam: os times com as
+// pessoas e, das tarefas, só o bastante para contar.
+func withCounts(q *ent.ProjectQuery) *ent.ProjectQuery {
+	return q.
+		WithTeams(func(t *ent.TeamQuery) { t.WithMemberships() }).
+		WithTasks(func(t *ent.TaskQuery) { t.Select(enttask.FieldID, enttask.FieldProjectID) })
+}
+
+// memberCount conta as pessoas dos times do projeto; quem está em mais de um time
+// conta uma vez.
+func memberCount(e *ent.Project) int {
+	people := map[uuid.UUID]bool{}
+	for _, team := range e.Edges.Teams {
+		for _, m := range team.Edges.Memberships {
+			people[m.PersonID] = true
+		}
+	}
+	return len(people)
 }
 
 func (s *Store) Billing(projectID uuid.UUID) (*Billing, error) {
@@ -178,6 +199,8 @@ func toDomainProject(e *ent.Project) *Project {
 		DailyTime:          e.DailyTime,
 		WeeklySyncDay:      e.WeeklySyncDay,
 		Customer:           customerRef(e),
+		MemberCount:        memberCount(e),
+		TaskCount:          len(e.Edges.Tasks),
 		CreatedAt:          e.CreatedAt,
 	}
 }

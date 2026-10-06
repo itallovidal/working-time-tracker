@@ -216,6 +216,7 @@
 - [X] S14.4 Move the customer form into the modal: the Clients tab becomes a full-width table with a "Novo cliente" button
 - [X] S14.5 Page tests for the new navigation, the modal host and the icon stylesheet; update README and design
 - [X] S14.6 Rework the Collaborators tab: an "Integrantes" table and a "Convites pendentes" table with an empty state, and the invite form in the modal behind an "Adicionar colaborador" button
+- [X] S14.7 Make the admin Projects tab a management table (customer, people in the teams, tasks) whose rows open the project; the project JSON gains `member_count` and `task_count`; the home page keeps the cards
 
 ---
 

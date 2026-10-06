@@ -73,12 +73,12 @@ A interface segue a Decision 8 de `_docs/design.md`. O servidor renderiza a casc
 | `/login`, `/signup` | Entrar e criar organização |
 | `/invite/:token` | Aceitar um convite e criar a conta |
 | `/` | Leva para a organização de quem está logado |
-| `/orgs/:orgId` | Projetos da organização (admin cria) |
+| `/orgs/:orgId` | Projetos da organização em cartões, para quem entra para trabalhar num deles (admin cria) |
 | `/orgs/:orgId/about` | Organização, aba Sobre: o perfil da organização, para todos os membros |
 | `/orgs/:orgId/settings` | Organização, tela de edição aberta pelo botão Editar da aba Sobre: perfil, regime, fuso, moeda e exclusão da organização (só admins) |
 | `/orgs/:orgId/people` | Organização, aba Colaboradores: integrantes e papéis, convites pendentes e o botão Adicionar colaborador, que gera o link de convite num modal (só admins) |
 | `/orgs/:orgId/customers` | Organização, aba Clientes: quem contrata os projetos, com cadastro e edição num modal (só admins) |
-| `/orgs/:orgId/projects` | Organização, aba Projetos: a mesma lista de projetos da página inicial (só admins) |
+| `/orgs/:orgId/projects` | Organização, aba Projetos: tabela de gestão com o cliente, as pessoas nos times e as tarefas de cada projeto; a linha abre o projeto (só admins) |
 | `/profile` | Seu nome, seu email, sua senha e quanto você recebe por hora em cada projeto |
 | `/projects/:projectId` | Leva para a aba Tarefas |
 | `/projects/:projectId/tasks` | Tarefas, com início de ponto em um clique |

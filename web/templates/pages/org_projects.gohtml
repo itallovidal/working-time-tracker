@@ -66,6 +66,7 @@
   <p class="form-error" x-cloak x-show="errors.load" x-text="errors.load"></p>
 
   <div class="empty" x-cloak x-show="!loading && !errors.load && projects.length === 0">
+    {{template "icon" "diagram-project"}}
     <strong>Nenhum projeto ainda</strong>
     {{if .IsAdmin}}
     <span>Crie o primeiro projeto para montar os times e começar a registrar tempo.</span>
@@ -74,6 +75,31 @@
     {{end}}
   </div>
 
+  {{if .Tab}}
+  {{/* A aba do admin é uma tabela de gestão; os cartões ficam na página inicial, para quem
+       entra para trabalhar num projeto. */}}
+  <div class="table-wrap" x-cloak x-show="projects.length > 0">
+    <table>
+      <thead>
+        <tr><th>Projeto</th><th>Cliente</th><th title="Pessoas em algum time do projeto">Pessoas</th><th>Tarefas</th></tr>
+      </thead>
+      <tbody>
+        <template x-for="p in projects" :key="p.id">
+          {{/* A linha inteira abre o projeto; o clique no link fica com o navegador. */}}
+          <tr class="row-link" @click="if (!$event.target.closest('a')) location.href = '/projects/' + p.id">
+            <td><a :href="'/projects/' + p.id" x-text="p.name"></a></td>
+            <td>
+              <span x-show="p.customer" x-text="p.customer && p.customer.name"></span>
+              <span class="muted" x-show="!p.customer">Projeto interno</span>
+            </td>
+            <td class="num" x-text="p.member_count"></td>
+            <td class="num" x-text="p.task_count"></td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+  </div>
+  {{else}}
   <div class="project-grid" x-show="projects.length > 0">
     <template x-for="p in projects" :key="p.id">
       <a class="project-card" :href="'/projects/' + p.id">
@@ -88,5 +114,6 @@
       </a>
     </template>
   </div>
+  {{end}}
 </main>
 {{end}}

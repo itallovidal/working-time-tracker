@@ -240,6 +240,8 @@ Content-Type: application/json
 
 No `PATCH`, um campo omitido mantém o valor atual, `""` apaga `daily_time` ou `weekly_sync_day`, e `0` apaga `weekly_hours`.
 
+O projeto traz `member_count`, as pessoas que estão em algum time dele, sem repetir (a mesma conta de `/members`), e `task_count`, as tarefas dele. Os dois vêm na lista e no detalhe.
+
 O projeto traz `customer` (`{"id", "name"}` ou `null`) para qualquer membro. O valor cobrado nunca vem aqui: ele fica em `/billing`.
 
 ### Cliente e valor cobrado

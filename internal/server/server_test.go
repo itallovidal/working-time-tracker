@@ -310,6 +310,51 @@ func TestOrganization_Profile(t *testing.T) {
 	}
 }
 
+// A lista de projetos e o detalhe trazem quantas pessoas estão nos times, sem
+// repetir quem está em mais de um, e quantas tarefas o projeto tem.
+func TestProjects_MemberAndTaskCounts(t *testing.T) {
+	e := newServer(t)
+	admin := signup(t, e, "Org", "ana@test.com")
+	member := invite(t, e, admin, "bia@test.com", "member")
+	busy := createProject(t, e, admin, "Projeto Alfa")
+	idle := createProject(t, e, admin, "Projeto Beta")
+
+	post := func(path, body string) map[string]any {
+		t.Helper()
+		rec := do(e, "POST", path, body, admin.session)
+		if rec.Code >= 300 {
+			t.Fatalf("POST %s = %d: %s", path, rec.Code, rec.Body.String())
+		}
+		return decode(t, rec)
+	}
+	// Dois times no mesmo projeto; a Bia está nos dois.
+	backend := post("/api/projects/"+busy+"/teams", `{"name":"Backend"}`)["id"].(string)
+	frontend := post("/api/projects/"+busy+"/teams", `{"name":"Frontend"}`)["id"].(string)
+	post("/api/teams/"+backend+"/members", `{"person_id":"`+admin.id+`"}`)
+	post("/api/teams/"+backend+"/members", `{"person_id":"`+member.id+`"}`)
+	post("/api/teams/"+frontend+"/members", `{"person_id":"`+member.id+`"}`)
+	for _, name := range []string{"Login", "Cadastro", "Relatório"} {
+		post("/api/projects/"+busy+"/tasks", `{"name":"`+name+`","assignee_id":"`+admin.id+`"}`)
+	}
+
+	type counts struct{ members, tasks any }
+	got := map[string]counts{}
+	for _, p := range decodeList(t, do(e, "GET", "/api/orgs/"+admin.orgID+"/projects", "", member.session)) {
+		got[p["id"].(string)] = counts{p["member_count"], p["task_count"]}
+	}
+	if got[busy] != (counts{float64(2), float64(3)}) {
+		t.Errorf("project with two teams and three tasks: got %+v, want 2 members and 3 tasks", got[busy])
+	}
+	if got[idle] != (counts{float64(0), float64(0)}) {
+		t.Errorf("project without teams or tasks: got %+v, want zeros", got[idle])
+	}
+
+	detail := decode(t, do(e, "GET", "/api/projects/"+busy, "", member.session))
+	if detail["member_count"] != float64(2) || detail["task_count"] != float64(3) {
+		t.Errorf("project detail: member_count=%v task_count=%v, want 2 and 3", detail["member_count"], detail["task_count"])
+	}
+}
+
 // O admin vê e altera todos os valores. O membro vê só o que recebe: nunca o
 // valor cobrado do cliente nem o valor de um colega, em nenhuma rota.
 func TestRates_VisibilityByRole(t *testing.T) {

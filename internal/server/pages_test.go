@@ -128,6 +128,31 @@ func TestPages_OrgTabsAreAdminOnly(t *testing.T) {
 	}
 }
 
+// A aba Projetos do admin é uma tabela de gestão; a página inicial, que todo
+// mundo abre, continua com os cartões.
+func TestPages_OrgProjectsTabIsATable(t *testing.T) {
+	e := newServer(t)
+	admin := signup(t, e, "Org", "ana@test.com")
+	member := invite(t, e, admin, "bia@test.com", "member")
+	home := "/orgs/" + admin.orgID
+
+	tab := do(e, "GET", home+"/projects", "", admin.session).Body.String()
+	for _, want := range []string{"<th>Projeto</th>", "<th>Cliente</th>", ">Pessoas</th>", "<th>Tarefas</th>", `class="row-link"`} {
+		if !strings.Contains(tab, want) {
+			t.Errorf("projects tab does not contain %q", want)
+		}
+	}
+	if strings.Contains(tab, "project-card") {
+		t.Error("projects tab still shows the project cards")
+	}
+	for who, session := range map[string]string{"admin": admin.session, "member": member.session} {
+		body := do(e, "GET", home, "", session).Body.String()
+		if !strings.Contains(body, "project-card") || strings.Contains(body, `class="row-link"`) {
+			t.Errorf("%s home page should show the cards and not the table", who)
+		}
+	}
+}
+
 // O modal é um só, no layout base: sem ele, o formulário que uma página teleporta
 // some sem aviso. Os ícones vêm do cdnjs, sempre com SRI.
 func TestPages_ModalHostAndIcons(t *testing.T) {
