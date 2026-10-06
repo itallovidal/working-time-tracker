@@ -299,7 +299,7 @@
 - [X] S24.8 Project: tasks, task detail and time tracking (project header and tabs, filters, pager with plural forms, deadline badges, toasts, totals); page titles come from the catalogs
 - [X] S24.9 Project: integrations and settings (the project field labels are shared with the new-project form in `project.fields`)
 - [X] S24.10 Project: collaborators and teams (counters with plural forms, rate and margin table, the add-person, new-team and edit-team modals)
-- [ ] S24.11 Update README, design and the status page
+- [X] S24.11 Update README, design and the status page
 
 ### Sprint 25: Internationalization — API Error Codes
 
