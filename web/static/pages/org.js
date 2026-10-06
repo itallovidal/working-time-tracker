@@ -113,12 +113,22 @@ document.addEventListener('alpine:init', () => {
         if (person.id === me.id && updated.role !== 'admin') location.href = '/';
       });
     },
+    // openInvite abre o modal de adicionar colaborador, sempre com o formulário zerado.
+    openInvite() {
+      this.invite = { email: '', role: 'member' };
+      this.lastLink = '';
+      this.errors.invite = '';
+      Alpine.store('modal').open('invite', 'Adicionar colaborador', () => !this.pending);
+    },
+    // O modal fica aberto depois de gerar o convite: o link só aparece nesta hora.
     createInvite() {
       return this.run('invite', async () => {
         const inv = await api('POST', '/api/orgs/' + orgId + '/invites', { email: this.invite.email, role: this.invite.role });
         this.lastLink = location.origin + inv.path;
-        this.invite.email = '';
         this.invites = [inv, ...this.invites];
+        // O bloco do link entra com x-transition, e o Alpine segura o $nextTick até ele
+        // aparecer. Sem a transição o campo ainda estaria escondido e não aceitaria o foco.
+        this.$nextTick(() => this.$refs.link && this.$refs.link.focus());
       });
     },
     async copyLink() {
@@ -126,7 +136,7 @@ document.addEventListener('alpine:init', () => {
       toast(ok ? 'Link copiado.' : 'Não deu para copiar. Selecione o link e copie manualmente.', ok ? 'info' : 'error');
     },
     revoke(inv) {
-      return this.run('invite', async () => {
+      return this.run('revoke', async () => {
         await api('DELETE', '/api/invites/' + inv.id);
         this.invites = this.invites.filter((i) => i.id !== inv.id);
         toast('Convite revogado.');

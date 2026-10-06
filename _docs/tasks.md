@@ -215,6 +215,7 @@
 - [X] S14.3 Add the application-wide modal: one host in the base layout, an Alpine store to open and close it, content handed over with `x-teleport`
 - [X] S14.4 Move the customer form into the modal: the Clients tab becomes a full-width table with a "Novo cliente" button
 - [X] S14.5 Page tests for the new navigation, the modal host and the icon stylesheet; update README and design
+- [X] S14.6 Rework the Collaborators tab: an "Integrantes" table and a "Convites pendentes" table with an empty state, and the invite form in the modal behind an "Adicionar colaborador" button
 
 ---
 
