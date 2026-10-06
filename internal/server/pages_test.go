@@ -243,7 +243,8 @@ func TestPages_OrgSettingsAndProfileAreSeparate(t *testing.T) {
 
 // A aba Colaboradores do projeto ficou no lugar de Times e de Valores. Todo
 // mundo a abre; só o admin vê nela os valores por hora e as ações, com os
-// formulários de adicionar pessoa e de novo time no modal. A aba Valores não
+// formulários de adicionar pessoa, de novo time e de editar time no modal. O
+// cartão de um time só mostra o nome e os integrantes. A aba Valores não
 // existe mais, e o cartão de cobrança das configurações segue só de admins.
 func TestPages_ProjectCollaboratorsTab(t *testing.T) {
 	e := newServer(t)
@@ -268,13 +269,21 @@ func TestPages_ProjectCollaboratorsTab(t *testing.T) {
 				t.Errorf("%s: the page does not contain %q", who, want)
 			}
 		}
+		// Renomear, excluir e pôr ou tirar gente saíram do cartão do time.
+		for _, gone := range []string{`title="Renomear"`, `title="Remover do time"`, "Adicionar pessoa…", "addMember(", "removeMember(", "rename("} {
+			if strings.Contains(body, gone) {
+				t.Errorf("%s: the team card still has %q", who, gone)
+			}
+		}
 	}
 	for _, adminOnly := range []string{
 		"Adicionar pessoa", "Novo time", `x-teleport="#modal-root"`, `id="collab-search"`, `id="collab-rate"`, `id="collab-team"`, `id="team-name"`,
 		"Valor por hora (", "Margem por hora", "Sem valor por hora", "saveRate(",
-		// Renomear, excluir e remover são botões só de ícone, com o nome da ação.
-		`title="Renomear"`, `title="Excluir"`, `title="Remover do time"`, `title="Remover do projeto"`,
-		`:aria-label="'Excluir o time ' + team.name"`, "btn-icon",
+		// Editar o time e tirar do projeto são botões só de ícone, com o nome da ação.
+		`title="Editar time"`, `:aria-label="'Editar o time ' + team.name"`, `title="Remover do projeto"`, "btn-icon",
+		// O modal de editar time: o nome, os integrantes em caixas de marcar e a exclusão.
+		`x-show="$store.modal.name === 'team-edit'"`, `id="team-edit-name"`, `id="team-edit-search"`,
+		`type="checkbox" :value="p.id" x-model="edit.member_ids"`, "Excluir time", "saveTeam()", "removeTeam()",
 	} {
 		if !strings.Contains(adminPage, adminOnly) {
 			t.Errorf("admin does not see %q on the collaborators tab", adminOnly)

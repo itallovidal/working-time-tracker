@@ -156,37 +156,17 @@
 
     <div class="grid-2" x-show="teams.length > 0">
       <template x-for="team in teams" :key="team.id">
+        {{/* O cartão só mostra o time. Nome, integrantes e exclusão mudam no modal de edição. */}}
         <section class="card">
           <div class="card-head">
-            <template x-if="editing !== team.id">
-              <h3 x-text="team.name"></h3>
-            </template>
+            <h3 x-text="team.name"></h3>
             {{if .IsAdmin}}
-            <template x-if="editing === team.id">
-              <form class="row flex-1" @submit.prevent="rename(team)">
-                <input type="text" class="flex-1" x-model="editName" :aria-label="'Novo nome do time ' + team.name">
-                <button type="submit" class="btn btn-sm" :disabled="pending">Salvar</button>
-                <button type="button" class="btn btn-ghost btn-sm" @click="editing = null">Cancelar</button>
-              </form>
-            </template>
-            <div class="row row-tight" x-show="editing !== team.id && confirming !== 'team-' + team.id">
-              <button type="button" class="btn btn-ghost btn-sm btn-icon" title="Renomear"
-                      :aria-label="'Renomear o time ' + team.name" @click="startRename(team)">{{template "icon" "pen"}}</button>
-              <button type="button" class="btn btn-danger-ghost btn-sm btn-icon" title="Excluir"
-                      :aria-label="'Excluir o time ' + team.name" @click="confirming = 'team-' + team.id">{{template "icon" "trash"}}</button>
-            </div>
+            <button type="button" class="btn btn-ghost btn-sm btn-icon" title="Editar time"
+                    :aria-label="'Editar o time ' + team.name" @click="openEdit(team)">{{template "icon" "pen"}}</button>
             {{end}}
           </div>
-          {{if .IsAdmin}}
-          <div class="confirm" x-cloak x-show="confirming === 'team-' + team.id">
-            <span>Excluir o time? As pessoas continuam na organização.</span>
-            <button type="button" class="btn btn-danger btn-sm" :disabled="pending" @click="removeTeam(team)">Excluir</button>
-            <button type="button" class="btn btn-ghost btn-sm" @click="confirming = null">Cancelar</button>
-          </div>
-          {{end}}
-          <p class="form-error" x-show="errors['team-' + team.id]" x-text="errors['team-' + team.id]" role="alert"></p>
 
-          <p class="muted small" x-show="membersOf(team).length === 0">Nenhum membro ainda.</p>
+          <p class="muted small" x-show="membersOf(team).length === 0">Nenhum integrante ainda.</p>
           <ul class="list" x-show="membersOf(team).length > 0">
             <template x-for="m in membersOf(team)" :key="m.person.id">
               <li>
@@ -195,33 +175,16 @@
                   <div x-text="m.person.name"></div>
                   <div class="muted small" x-text="m.person.email"></div>
                 </div>
-                {{if .IsAdmin}}
-                <button type="button" class="btn btn-danger-ghost btn-sm btn-icon" title="Remover do time" :disabled="pending"
-                        :aria-label="'Remover ' + m.person.name + ' do time ' + team.name"
-                        @click="removeMember(team, m)">{{template "icon" "xmark"}}</button>
-                {{end}}
               </li>
             </template>
           </ul>
-
-          {{if .IsAdmin}}
-          <form class="row" @submit.prevent="addMember(team)" x-show="teamCandidates(team).length > 0">
-            <select class="flex-1" x-model="adding[team.id]" :aria-label="'Pessoa para adicionar ao time ' + team.name">
-              <option value="">Adicionar pessoa…</option>
-              <template x-for="p in teamCandidates(team)" :key="p.id">
-                <option :value="p.id" x-text="p.name + (inProject(p) ? '' : ' (fora do projeto)')"></option>
-              </template>
-            </select>
-            <button type="submit" class="btn btn-secondary btn-sm" :disabled="pending || !adding[team.id]">Adicionar</button>
-          </form>
-          {{end}}
         </section>
       </template>
     </div>
   </section>
 
   {{if .IsAdmin}}
-  {{/* Os dois formulários aparecem no modal do layout base e continuam no escopo de projectTeams. */}}
+  {{/* Os três formulários aparecem no modal do layout base e continuam no escopo de projectTeams. */}}
   <template x-teleport="#modal-root">
     <form class="stack" x-show="$store.modal.name === 'collab-add'" @submit.prevent="addPerson()">
       <div class="field">
@@ -283,6 +246,52 @@
       <div class="row row-end">
         <button type="button" class="btn btn-secondary" @click="$store.modal.dismiss()">Cancelar</button>
         <button type="submit" class="btn" :disabled="pending">Criar time</button>
+      </div>
+    </form>
+  </template>
+
+  {{/* Editar time: nada vai para o servidor antes de Salvar, então Cancelar desfaz tudo. */}}
+  <template x-teleport="#modal-root">
+    <form class="stack" x-show="$store.modal.name === 'team-edit'" @submit.prevent="saveTeam()">
+      <div class="field">
+        <label for="team-edit-name">Nome do time</label>
+        <input id="team-edit-name" type="text" x-model="edit.name" data-autofocus>
+      </div>
+      <div class="field">
+        <label for="team-edit-search">Integrantes <span class="muted" x-text="'(' + edit.member_ids.length + ')'"></span></label>
+        {{/* Enter na busca não salva: quem digita ali ainda está escolhendo as pessoas. */}}
+        <input id="team-edit-search" type="search" placeholder="Buscar por nome ou e-mail" autocomplete="off"
+               x-model="edit.search" @keydown.enter.prevent>
+      </div>
+      <ul class="list picker" role="group" aria-label="Integrantes do time" x-ref="editList" x-show="editCandidates().length > 0">
+        <template x-for="p in editCandidates()" :key="p.id">
+          <li>
+            <label class="pick">
+              <input type="checkbox" :value="p.id" x-model="edit.member_ids">
+              <span class="avatar" aria-hidden="true" x-text="WTT.fmt.initials(p.name)"></span>
+              <span class="grow">
+                <span x-text="p.name"></span>
+                <span class="muted small" x-text="p.email"></span>
+              </span>
+              <span class="badge" x-show="!inProject(p)">fora do projeto</span>
+            </label>
+          </li>
+        </template>
+      </ul>
+      <p class="muted small" x-show="editCandidates().length === 0">Ninguém com esse nome ou e-mail.</p>
+      <p class="muted small">Quem está num time pode receber tarefas. Quem vem de fora do projeto entra nele sem valor por hora.</p>
+      <p class="form-error" x-show="errors.team" x-text="errors.team" role="alert"></p>
+      <div class="confirm" x-cloak x-show="confirming === 'team-' + edit.id">
+        <span>Excluir o time? As pessoas continuam na organização.</span>
+        <button type="button" class="btn btn-danger btn-sm" :disabled="pending" @click="removeTeam()">Excluir</button>
+        <button type="button" class="btn btn-ghost btn-sm" @click="confirming = null">Cancelar</button>
+      </div>
+      <div class="toolbar" x-show="confirming !== 'team-' + edit.id">
+        <button type="button" class="btn btn-danger-ghost" @click="confirming = 'team-' + edit.id">{{template "icon" "trash"}} Excluir time</button>
+        <div class="row">
+          <button type="button" class="btn btn-secondary" @click="$store.modal.dismiss()">Cancelar</button>
+          <button type="submit" class="btn" :disabled="pending">Salvar</button>
+        </div>
       </div>
     </form>
   </template>

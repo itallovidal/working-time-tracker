@@ -262,6 +262,15 @@
 
 ---
 
+### Sprint 19: Team Card and Edit Modal
+
+- [X] S19.1 The team card only shows the team: the name and each member's avatar, name and e-mail, with a single pencil button for admins; renaming, deleting and adding or removing members leave the card
+- [X] S19.2 "Editar time" in the modal: the name, the members as a searchable checklist over the people of the organization (the team first, then the project, then the rest, with a "fora do projeto" badge) and "Excluir time" with a confirmation
+- [X] S19.3 Nothing is sent before "Salvar", so "Cancelar" discards the draft; saving applies the difference with the existing team routes and can be repeated after a failure
+- [X] S19.4 Page test for the card and the modal; update README and design
+
+---
+
 ### Refatoração: Domain-First Architecture (pré-Sprint 9)
 
 - [X] R1 Reorganizar código de layered-flat para domain-first: `internal/domain/<dominio>/` com `model.go`, `store.go`, `service.go`, `handler.go` por domínio

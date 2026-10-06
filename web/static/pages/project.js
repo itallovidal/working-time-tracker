@@ -618,11 +618,11 @@ document.addEventListener('alpine:init', () => {
     people: [], // todas as pessoas da organização, para os admins adicionarem
     search: '',
     confirming: null, // 'person-<id>' ou 'team-<id>'
-    editing: null,
-    editName: '',
-    adding: {}, // por time, a pessoa escolhida no seletor
     add: { search: '', person_id: '', rate: '', team_id: '' },
     newTeam: '',
+    // O rascunho do modal Editar time: o nome, quem está marcado e, em people, a
+    // organização inteira na ordem em que a lista aparece.
+    edit: { id: '', name: '', search: '', member_ids: [], people: [] },
     async init() {
       try {
         const admin = me.role === 'admin';
@@ -754,47 +754,63 @@ document.addEventListener('alpine:init', () => {
         toast('Time criado.');
       });
     },
-    startRename(team) {
-      this.editing = team.id;
-      this.editName = team.name;
-    },
-    rename(team) {
-      return this.run('team-' + team.id, async () => {
-        const t = await api('PATCH', '/api/teams/' + team.id, { name: this.editName });
-        team.name = t.name;
-        this.editing = null;
-        await this.reload(); // o nome do time também aparece na tabela de pessoas
-      });
-    },
-    removeTeam(team) {
-      return this.run('team-' + team.id, async () => {
-        await api('DELETE', '/api/teams/' + team.id);
-        this.teams = this.teams.filter((t) => t.id !== team.id);
-        this.confirming = null;
-        await this.reload(); // quem só estava neste time, sem valor, deixa de ser do projeto
-        toast('Time excluído.');
-      });
-    },
-    // Quem pode entrar no time: qualquer pessoa da organização que não esteja
-    // nele, com quem já é do projeto primeiro.
-    teamCandidates(team) {
-      const inTeam = new Set(this.membersOf(team).map((c) => c.person.id));
-      return this.people.filter((p) => !inTeam.has(p.id))
+    // openEdit abre o modal Editar time com um rascunho do nome e dos integrantes.
+    // A lista traz a organização inteira: quem já está no time, depois quem é do
+    // projeto, depois o resto. A ordem é fixada aqui, para as linhas não trocarem
+    // de lugar a cada caixa marcada.
+    openEdit(team) {
+      const members = this.membersOf(team).map((c) => c.person);
+      const inTeam = new Set(members.map((p) => p.id));
+      const others = this.people.filter((p) => !inTeam.has(p.id))
         .sort((a, b) => (this.inProject(b) - this.inProject(a)) || a.name.localeCompare(b.name));
+      this.edit = { id: team.id, name: team.name, search: '', member_ids: [...inTeam], people: [...members, ...others] };
+      this.confirming = null;
+      this.errors.team = '';
+      Alpine.store('modal').open('team-edit', 'Editar time', () => !this.pending);
+      // A lista guarda a rolagem da última abertura; cada uma começa do topo, onde estão os integrantes.
+      this.$nextTick(() => { this.$refs.editList.scrollTop = 0; });
     },
-    addMember(team) {
-      const personId = this.adding[team.id];
-      if (!personId) return undefined;
-      return this.run('team-' + team.id, async () => {
-        await api('POST', '/api/teams/' + team.id + '/members', { person_id: personId });
-        this.adding[team.id] = '';
+    editCandidates() {
+      const query = fold(this.edit.search.trim());
+      return this.edit.people.filter((p) => matches(p, query));
+    },
+    // saveTeam aplica o rascunho com as rotas de time que já existiam: o nome e,
+    // pessoa a pessoa, quem saiu e quem entrou. Se uma chamada falhar, o que já
+    // foi aplicado continua valendo e o modal fica aberto com o erro; salvar de
+    // novo só repete o que faltou, porque a diferença é calculada contra o que
+    // o servidor tem.
+    saveTeam() {
+      return this.run('team', async () => {
+        const team = this.teams.find((t) => t.id === this.edit.id);
+        const name = this.edit.name.trim();
+        if (!name) throw new Error('Informe o nome do time.');
+        const current = this.membersOf(team).map((c) => c.person.id);
+        const wanted = this.edit.member_ids;
+        const leaving = current.filter((id) => !wanted.includes(id));
+        const joining = wanted.filter((id) => !current.includes(id));
+        const members = '/api/teams/' + team.id + '/members';
+        try {
+          if (name !== team.name) team.name = (await api('PATCH', '/api/teams/' + team.id, { name })).name;
+          for (const id of leaving) await api('DELETE', members, { person_id: id });
+          for (const id of joining) await api('POST', members, { person_id: id });
+        } catch (e) {
+          await this.reload().catch(() => {});
+          throw e;
+        }
+        // O nome do time e quem está nele também aparecem na tabela de pessoas.
         await this.reload();
+        Alpine.store('modal').close();
+        toast('Time salvo.');
       });
     },
-    removeMember(team, member) {
-      return this.run('team-' + team.id, async () => {
-        await api('DELETE', '/api/teams/' + team.id + '/members', { person_id: member.person.id });
-        await this.reload();
+    removeTeam() {
+      return this.run('team', async () => {
+        const id = this.edit.id;
+        await api('DELETE', '/api/teams/' + id);
+        this.teams = this.teams.filter((t) => t.id !== id);
+        Alpine.store('modal').close();
+        toast('Time excluído.');
+        await this.reload(); // quem só estava neste time, sem valor, deixa de ser do projeto
       });
     },
   }));

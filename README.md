@@ -11,7 +11,7 @@ Ponto por tarefa para equipes que trabalham por projeto. Foi pensado principalme
 - **Papéis.** Admins gerenciam a organização, as pessoas, os clientes, os projetos, os times, os valores e as integrações. Membros gerenciam tarefas e batem o próprio ponto.
 - **Clientes e valores por hora.** Cada projeto pode ter um cliente e o **valor cobrado** dele por hora. Cada pessoa tem um **valor pago** por hora em cada projeto, então a mesma pessoa pode receber 20 num projeto e 25 em outro. O admin vê e altera tudo, com a margem por hora; o membro vê só o que ele mesmo recebe.
 - **Projetos** com duração da sprint, jornada semanal, horário da daily e dia da weekly. Esses valores são de cada projeto, não da organização, porque projetos diferentes podem trabalhar de formas diferentes.
-- **Colaboradores e times** de cada projeto. A aba Colaboradores mostra quem trabalha no projeto, em que times está e, para o admin, quanto recebe por hora e a margem. O admin adiciona pessoas, muda valores, monta os times e tira alguém do projeto de uma vez. Só quem está em algum time do projeto pode ser responsável por tarefas.
+- **Colaboradores e times** de cada projeto. A aba Colaboradores mostra quem trabalha no projeto, em que times está e, para o admin, quanto recebe por hora e a margem. O admin adiciona pessoas, muda valores, monta os times e tira alguém do projeto de uma vez. O cartão de cada time mostra só o nome e os integrantes; o lápis abre o modal Editar time, onde o admin troca o nome, marca quem faz parte e exclui o time. Só quem está em algum time do projeto pode ser responsável por tarefas.
 - **Tarefas** com responsável, prazo (7 dias por padrão, com destaque quando está atrasada ou perto de vencer) e vínculo opcional com uma issue. A lista tem busca por nome, filtro por responsável, filtro por prazo (atrasadas, até hoje, até o fim desta semana ou da próxima, ou até uma data) e 10 tarefas por página. A caixa "Só as minhas tarefas", abaixo dos filtros, mostra as suas e desliga a busca e o filtro de responsável: só o de prazo continua valendo. A tarefa nova é criada num modal.
 - **Ponto.** Clock-in e clock-out com cronômetro ao vivo no topo de todas as páginas, sessões filtradas por pessoa, data e tarefa, os totais do filtro num cartão à parte e o seu tempo de hoje e da semana. O banco garante uma única sessão aberta por pessoa.
 - **Horas em dinheiro.** Cada sessão guarda os valores por hora de quando o ponto abriu, então **mudar um valor só vale dali em diante**. Quem não tem valor definido no projeto **não bate ponto**. Na tela de ponto, o membro vê quanto ganhou; o admin vê custo, receita e margem.
@@ -84,7 +84,7 @@ A interface segue a Decision 8 de `_docs/design.md`. O servidor renderiza a casc
 | `/projects/:projectId/tasks` | Tarefas, com busca, filtros, paginação e início de ponto em um clique |
 | `/tasks/:taskId` | Edição da tarefa, vínculo com issue e tempo registrado |
 | `/projects/:projectId/time-tracking` | Cronômetro, sessões, filtros e totais em tempo e em dinheiro |
-| `/projects/:projectId/teams` | Colaboradores: as pessoas do projeto, com busca, e os times. Para admins, também o valor por hora de cada pessoa, a margem e as ações de adicionar, tirar e montar times |
+| `/projects/:projectId/teams` | Colaboradores: as pessoas do projeto, com busca, e os times. Para admins, também o valor por hora de cada pessoa, a margem e as ações de adicionar, tirar e montar times; cada time é editado num modal |
 | `/projects/:projectId/integrations` | Integrações com GitHub e GitLab |
 | `/projects/:projectId/settings` | Configurações e exclusão do projeto; para admins, também o cliente e o valor cobrado |
 
@@ -117,7 +117,7 @@ internal/template/renderer.go  # um conjunto de templates por página, carregado
 
 Para atualizar o Alpine, troque `web/static/alpine.min.js` e o hash em `web/embed_test.go` juntos. O teste existe porque a cópia vendorizada já esteve corrompida sem ninguém perceber.
 
-**Ícones.** `{{template "icon" "pen"}}` emite o ícone do Font Awesome com esse nome (sem o prefixo `fa-`). O ícone é decorativo: o botão mantém o texto. Um botão só de ícone, como os de renomear, excluir e remover da aba Colaboradores, leva a classe `btn-icon` e o nome da ação em `aria-label` e em `title`. Num botão com texto dinâmico, ponha o texto num `<span x-text>`, porque um `x-text` no botão apagaria o ícone. Para trocar a versão, mude a URL e o `integrity` em `base.gohtml` juntos; o hash vem de `https://api.cdnjs.com/libraries/font-awesome/<versão>?fields=sri`.
+**Ícones.** `{{template "icon" "pen"}}` emite o ícone do Font Awesome com esse nome (sem o prefixo `fa-`). O ícone é decorativo: o botão mantém o texto. Um botão só de ícone, como os de editar um time e de tirar alguém do projeto na aba Colaboradores, leva a classe `btn-icon` e o nome da ação em `aria-label` e em `title`. Num botão com texto dinâmico, ponha o texto num `<span x-text>`, porque um `x-text` no botão apagaria o ícone. Para trocar a versão, mude a URL e o `integrity` em `base.gohtml` juntos; o hash vem de `https://api.cdnjs.com/libraries/font-awesome/<versão>?fields=sri`.
 
 **Modal.** Há um só, no layout base (`partials/modal.gohtml`), controlado por `Alpine.store('modal')`. A página entrega o conteúdo e continua dona dele:
 
@@ -134,7 +134,7 @@ Para atualizar o Alpine, troque `web/static/alpine.min.js` e o hash em `web/embe
 
 O conteúdo aparece dentro do modal, mas segue no escopo do componente da página (`x-model`, `save()`, `errors`). O `<template>` precisa de um único elemento raiz. `open(nome, título, guarda)` abre e foca o campo com `data-autofocus`; `close()` fecha; `dismiss()` é o fechamento pedido pela pessoa (Esc, clique no fundo, X, Cancelar) e respeita a guarda, uma função que devolve `false` enquanto o modal não pode fechar, por exemplo durante um salvamento.
 
-Hoje usam o modal o cadastro de cliente, o Adicionar colaborador, o Novo projeto, a Nova tarefa e, na aba Colaboradores do projeto, o Adicionar pessoa e o Novo time. Para focar um campo que acabou de aparecer dentro do modal (como o link do convite depois de gerado), dê ao bloco um `x-transition`: sem transição, o `x-show` só mostra o elemento no ciclo seguinte e o `$nextTick` chega antes de ele aceitar foco.
+Hoje usam o modal o cadastro de cliente, o Adicionar colaborador, o Novo projeto, a Nova tarefa e, na aba Colaboradores do projeto, o Adicionar pessoa, o Novo time e o Editar time. Para focar um campo que acabou de aparecer dentro do modal (como o link do convite depois de gerado), dê ao bloco um `x-transition`: sem transição, o `x-show` só mostra o elemento no ciclo seguinte e o `$nextTick` chega antes de ele aceitar foco.
 
 ## API
 
