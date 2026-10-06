@@ -145,6 +145,17 @@ func TestPages_ModalHostAndIcons(t *testing.T) {
 		}
 	}
 
+	// As telas que usam o modal: o formulário é teleportado e um botão abre.
+	for page, wants := range map[string][]string{
+		"customers": {"Novo cliente", `x-teleport="#modal-root"`, `id="customer-name"`},
+	} {
+		body := do(e, "GET", "/orgs/"+admin.orgID+"/"+page, "", admin.session).Body.String()
+		for _, want := range wants {
+			if !strings.Contains(body, want) {
+				t.Errorf("%s page does not contain %q", page, want)
+			}
+		}
+	}
 }
 
 // O resumo da organização aparece no cabeçalho das páginas dela e na página

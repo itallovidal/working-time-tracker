@@ -77,7 +77,7 @@ A interface segue a Decision 8 de `_docs/design.md`. O servidor renderiza a casc
 | `/orgs/:orgId/about` | Organização, aba Sobre: o perfil da organização, para todos os membros |
 | `/orgs/:orgId/settings` | Organização, tela de edição aberta pelo botão Editar da aba Sobre: perfil, regime, fuso, moeda e exclusão da organização (só admins) |
 | `/orgs/:orgId/people` | Organização, aba Colaboradores: pessoas, papéis e convites (só admins) |
-| `/orgs/:orgId/customers` | Organização, aba Clientes: quem contrata os projetos (só admins) |
+| `/orgs/:orgId/customers` | Organização, aba Clientes: quem contrata os projetos, com cadastro e edição num modal (só admins) |
 | `/orgs/:orgId/projects` | Organização, aba Projetos: a mesma lista de projetos da página inicial (só admins) |
 | `/profile` | Seu nome, seu email, sua senha e quanto você recebe por hora em cada projeto |
 | `/projects/:projectId` | Leva para a aba Tarefas |

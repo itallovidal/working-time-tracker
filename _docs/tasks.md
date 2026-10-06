@@ -213,6 +213,7 @@
 - [X] S14.1 Drop the "Geral" tab: the organization form becomes an edit screen opened by the "Editar" button on the "Sobre" tab, and saving returns to it with a toast; rename the "Pessoas" tab to "Colaboradores"; the "Sobre" tab and the edit screen use the full page width like the other tabs
 - [X] S14.2 Add UI icons: Font Awesome Free from cdnjs with SRI and an `icon` template partial, used on the organization and project tabs and on the buttons of the organization screens
 - [X] S14.3 Add the application-wide modal: one host in the base layout, an Alpine store to open and close it, content handed over with `x-teleport`
+- [X] S14.4 Move the customer form into the modal: the Clients tab becomes a full-width table with a "Novo cliente" button
 - [X] S14.5 Page tests for the new navigation, the modal host and the icon stylesheet; update README and design
 
 ---

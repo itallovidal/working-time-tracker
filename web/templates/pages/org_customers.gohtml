@@ -2,86 +2,88 @@
 <main class="page" x-data="orgCustomers">
   {{template "org_head" .}}
 
-  <p class="muted">Quem contrata a organização. Cada projeto pode ter um cliente e um valor cobrado por hora, definidos nas configurações do projeto.</p>
-
-  <div class="grid-aside">
-    <section class="stack">
-      <p class="muted" x-show="loading">Carregando clientes…</p>
-      <p class="form-error" x-cloak x-show="errors.load" x-text="errors.load"></p>
-      <p class="form-error" x-cloak x-show="errors.remove" x-text="errors.remove" role="alert"></p>
-
-      <div class="empty" x-cloak x-show="!loading && !errors.load && customers.length === 0">
-        <strong>Nenhum cliente ainda</strong>
-        <span>Cadastre o primeiro cliente ao lado para vincular aos projetos.</span>
-      </div>
-
-      <div class="table-wrap" x-show="customers.length > 0">
-        <table>
-          <thead>
-            <tr><th>Cliente</th><th>CNPJ</th><th>Contato</th><th>Projetos</th><th class="actions"><span class="sr-only">Ações</span></th></tr>
-          </thead>
-          <tbody>
-            <template x-for="c in customers" :key="c.id">
-              <tr>
-                <td class="nowrap" x-text="c.name"></td>
-                <td class="nowrap">
-                  <span class="mono num" x-show="c.document" x-text="WTT.fmt.cnpj(c.document)"></span>
-                  <span class="muted" x-show="!c.document" x-text="WTT.notInformed"></span>
-                </td>
-                <td>
-                  <div x-show="c.contact_name" x-text="c.contact_name"></div>
-                  <div class="muted small" x-show="c.contact_email || c.contact_phone" x-text="[c.contact_email, c.contact_phone].filter(Boolean).join(' · ')"></div>
-                  <span class="muted" x-show="!c.contact_name && !c.contact_email && !c.contact_phone" x-text="WTT.notInformed"></span>
-                </td>
-                <td class="num" x-text="c.project_count"></td>
-                <td class="actions">
-                  <span x-show="confirming !== c.id">
-                    <button type="button" class="btn btn-ghost btn-sm" @click="startEdit(c)">Editar</button>
-                    <button type="button" class="btn btn-danger-ghost btn-sm" @click="confirming = c.id">Excluir</button>
-                  </span>
-                  <span class="confirm" x-cloak x-show="confirming === c.id">
-                    <span>Excluir?</span>
-                    <button type="button" class="btn btn-danger btn-sm" :disabled="pending" @click="remove(c)">Excluir</button>
-                    <button type="button" class="btn btn-ghost btn-sm" @click="confirming = null">Cancelar</button>
-                  </span>
-                </td>
-              </tr>
-            </template>
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <aside class="stack">
-      <form class="card" @submit.prevent="save()">
-        <div class="card-head"><h2 x-text="editing ? 'Editar cliente' : 'Novo cliente'">Novo cliente</h2></div>
-        <div class="field">
-          <label for="customer-name">Nome</label>
-          <input id="customer-name" type="text" required maxlength="120" x-model="draft.name" x-ref="name">
-        </div>
-        <div class="field">
-          <label for="customer-document">CNPJ</label>
-          <input id="customer-document" type="text" class="mono" maxlength="18" placeholder="00.000.000/0000-00" x-model="draft.document">
-        </div>
-        <div class="field">
-          <label for="customer-contact">Pessoa de contato</label>
-          <input id="customer-contact" type="text" maxlength="120" x-model="draft.contact_name">
-        </div>
-        <div class="field">
-          <label for="customer-email">Email</label>
-          <input id="customer-email" type="email" maxlength="255" x-model="draft.contact_email">
-        </div>
-        <div class="field">
-          <label for="customer-phone">Telefone</label>
-          <input id="customer-phone" type="tel" maxlength="32" x-model="draft.contact_phone">
-        </div>
-        <p class="form-error" x-show="errors.save" x-text="errors.save" role="alert"></p>
-        <div class="row row-end">
-          <button type="button" class="btn btn-secondary" x-show="editing" @click="cancelEdit()">Cancelar</button>
-          <button type="submit" class="btn" :disabled="pending" x-text="editing ? 'Salvar' : 'Criar cliente'">Criar cliente</button>
-        </div>
-      </form>
-    </aside>
+  <div class="toolbar">
+    <p class="muted flex-1">Quem contrata a organização. Cada projeto pode ter um cliente e um valor cobrado por hora, definidos nas configurações do projeto.</p>
+    <button type="button" class="btn" @click="openForm()">{{template "icon" "plus"}} Novo cliente</button>
   </div>
+
+  <section class="stack">
+    <p class="muted" x-show="loading">Carregando clientes…</p>
+    <p class="form-error" x-cloak x-show="errors.load" x-text="errors.load"></p>
+    <p class="form-error" x-cloak x-show="errors.remove" x-text="errors.remove" role="alert"></p>
+
+    <div class="empty" x-cloak x-show="!loading && !errors.load && customers.length === 0">
+      {{template "icon" "handshake"}}
+      <strong>Nenhum cliente ainda</strong>
+      <span>Cadastre o primeiro cliente para vincular aos projetos.</span>
+    </div>
+
+    <div class="table-wrap" x-show="customers.length > 0">
+      <table>
+        <thead>
+          <tr><th>Cliente</th><th>CNPJ</th><th>Contato</th><th>Projetos</th><th class="actions"><span class="sr-only">Ações</span></th></tr>
+        </thead>
+        <tbody>
+          <template x-for="c in customers" :key="c.id">
+            <tr>
+              <td class="nowrap" x-text="c.name"></td>
+              <td class="nowrap">
+                <span class="mono num" x-show="c.document" x-text="WTT.fmt.cnpj(c.document)"></span>
+                <span class="muted" x-show="!c.document" x-text="WTT.notInformed"></span>
+              </td>
+              <td>
+                <div x-show="c.contact_name" x-text="c.contact_name"></div>
+                <div class="muted small" x-show="c.contact_email || c.contact_phone" x-text="[c.contact_email, c.contact_phone].filter(Boolean).join(' · ')"></div>
+                <span class="muted" x-show="!c.contact_name && !c.contact_email && !c.contact_phone" x-text="WTT.notInformed"></span>
+              </td>
+              <td class="num" x-text="c.project_count"></td>
+              <td class="actions">
+                <span x-show="confirming !== c.id">
+                  <button type="button" class="btn btn-ghost btn-sm" @click="openForm(c)">{{template "icon" "pen"}} Editar</button>
+                  <button type="button" class="btn btn-danger-ghost btn-sm" @click="confirming = c.id">{{template "icon" "trash"}} Excluir</button>
+                </span>
+                <span class="confirm" x-cloak x-show="confirming === c.id">
+                  <span>Excluir?</span>
+                  <button type="button" class="btn btn-danger btn-sm" :disabled="pending" @click="remove(c)">Excluir</button>
+                  <button type="button" class="btn btn-ghost btn-sm" @click="confirming = null">Cancelar</button>
+                </span>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  {{/* O formulário aparece no modal do layout base, mas continua no escopo de orgCustomers. */}}
+  <template x-teleport="#modal-root">
+    <form class="stack" x-show="$store.modal.name === 'customer'" @submit.prevent="save()">
+      <div class="field">
+        <label for="customer-name">Nome</label>
+        <input id="customer-name" type="text" required maxlength="120" x-model="draft.name" data-autofocus>
+      </div>
+      <div class="field">
+        <label for="customer-document">CNPJ</label>
+        <input id="customer-document" type="text" class="mono" maxlength="18" placeholder="00.000.000/0000-00" x-model="draft.document">
+      </div>
+      <div class="field">
+        <label for="customer-contact">Pessoa de contato</label>
+        <input id="customer-contact" type="text" maxlength="120" x-model="draft.contact_name">
+      </div>
+      <div class="field">
+        <label for="customer-email">Email</label>
+        <input id="customer-email" type="email" maxlength="255" x-model="draft.contact_email">
+      </div>
+      <div class="field">
+        <label for="customer-phone">Telefone</label>
+        <input id="customer-phone" type="tel" maxlength="32" x-model="draft.contact_phone">
+      </div>
+      <p class="form-error" x-show="errors.save" x-text="errors.save" role="alert"></p>
+      <div class="row row-end">
+        <button type="button" class="btn btn-secondary" @click="$store.modal.dismiss()">Cancelar</button>
+        <button type="submit" class="btn" :disabled="pending" x-text="editing ? 'Salvar' : 'Criar cliente'">Criar cliente</button>
+      </div>
+    </form>
+  </template>
 </main>
 {{end}}

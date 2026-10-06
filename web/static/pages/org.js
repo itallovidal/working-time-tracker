@@ -217,22 +217,20 @@ document.addEventListener('alpine:init', () => {
         this.loading = false;
       }
     },
-    startEdit(c) {
-      this.editing = c.id;
-      this.draft = {
+    // openForm abre o modal para criar (sem argumento) ou para editar o cliente c. O
+    // formulário é zerado aqui, e não ao fechar, para não mudar durante a transição de saída.
+    openForm(c) {
+      this.editing = c ? c.id : null;
+      this.draft = c ? {
         name: c.name,
         document: WTT.fmt.cnpj(c.document),
         contact_name: c.contact_name,
         contact_email: c.contact_email,
         contact_phone: c.contact_phone,
-      };
+      } : blankCustomer();
       this.errors.save = '';
-      this.$nextTick(() => this.$refs.name && this.$refs.name.focus());
-    },
-    cancelEdit() {
-      this.editing = null;
-      this.draft = blankCustomer();
-      this.errors.save = '';
+      // Enquanto salva, o modal não fecha: um erro do servidor ficaria sem ter onde aparecer.
+      Alpine.store('modal').open('customer', c ? 'Editar cliente' : 'Novo cliente', () => !this.pending);
     },
     save() {
       return this.run('save', async () => {
@@ -245,7 +243,7 @@ document.addEventListener('alpine:init', () => {
           toast('Cliente criado.');
         }
         this.customers.sort((a, b) => a.name.localeCompare(b.name));
-        this.cancelEdit();
+        Alpine.store('modal').close();
       });
     },
     remove(c) {
@@ -253,7 +251,6 @@ document.addEventListener('alpine:init', () => {
         this.confirming = null;
         await api('DELETE', '/api/customers/' + c.id);
         this.customers = this.customers.filter((x) => x.id !== c.id);
-        if (this.editing === c.id) this.cancelEdit();
         toast('Cliente excluído.');
       });
     },

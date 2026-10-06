@@ -240,7 +240,9 @@ input[aria-invalid="true"] { border-color: var(--danger); }
 .alert-ok { background: var(--ok-soft); border-color: transparent; color: var(--ok); }
 
 /* ---------- Tabelas e listas ---------- */
-.table-wrap { overflow-x: auto; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--surface); }
+/* position: relative prende o .sr-only do cabeçalho dentro da rolagem da tabela; solto, ele
+   alargava a página inteira no celular. */
+.table-wrap { position: relative; overflow-x: auto; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--surface); }
 table { width: 100%; border-collapse: collapse; font-size: 0.93rem; }
 th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--rule); vertical-align: middle; }
 th {
