@@ -55,7 +55,7 @@ func TestHandler_Create(t *testing.T) {
 	old.Header.Set("Content-Type", "application/json")
 	rec = httptest.NewRecorder()
 	e.ServeHTTP(rec, old)
-	if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "Repositório") {
+	if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), `"integration.field_required"`) {
 		t.Errorf("old body: got %d %s, want 400 naming the missing field", rec.Code, rec.Body.String())
 	}
 

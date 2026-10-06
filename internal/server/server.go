@@ -9,6 +9,7 @@ import (
 	"github.com/labstack/echo/v5/middleware"
 
 	"working-time-tracker/ent"
+	"working-time-tracker/internal/apperr"
 	"working-time-tracker/internal/domain/allocation"
 	"working-time-tracker/internal/domain/auth"
 	"working-time-tracker/internal/domain/collaborator"
@@ -152,9 +153,7 @@ func authRateLimiter(perSecond float64) echo.MiddlewareFunc {
 			Burst: burst,
 		}),
 		DenyHandler: func(c *echo.Context, _ string, _ error) error {
-			return c.JSON(http.StatusTooManyRequests, map[string]string{
-				"error": "muitas tentativas seguidas; espere um minuto e tente de novo",
-			})
+			return apperr.Respond(c, http.StatusTooManyRequests, apperr.ErrTooMany)
 		},
 	})
 }

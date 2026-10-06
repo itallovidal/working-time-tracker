@@ -12,9 +12,6 @@ import (
 	taskdom "working-time-tracker/internal/domain/task"
 )
 
-// ErrNoRate barra o ponto de quem ainda não tem valor por hora no projeto.
-var ErrNoRate = errors.New("esta pessoa ainda não tem valor por hora neste projeto; um admin precisa definir na aba Colaboradores antes do ponto")
-
 type Service struct {
 	sessionStore *Store
 	taskStore    *taskdom.Store
@@ -28,22 +25,22 @@ func NewService(sessionStore *Store, taskStore *taskdom.Store, rates *allocation
 func (s *Service) ClockIn(projectID, taskID, personID string) (*WorkSession, error) {
 	task, err := s.taskStore.GetByID(taskID)
 	if err != nil {
-		return nil, errors.New("tarefa não encontrada")
+		return nil, ErrTaskNotFound
 	}
 	if task.ProjectID.String() != projectID {
-		return nil, errors.New("a tarefa não é deste projeto")
+		return nil, ErrTaskOtherProject
 	}
 
 	personUID, err := uuid.Parse(personID)
 	if err != nil {
-		return nil, errors.New("pessoa não encontrada")
+		return nil, ErrPersonNotFound
 	}
 	inOrg, err := s.sessionStore.PersonInProjectOrganization(personID, projectID)
 	if err != nil {
 		return nil, err
 	}
 	if !inOrg {
-		return nil, errors.New("pessoa não encontrada nesta organização")
+		return nil, ErrPersonNotInOrg
 	}
 
 	// O valor por hora é conferido aqui e copiado para a sessão: quem não tem
@@ -59,7 +56,7 @@ func (s *Service) ClockIn(projectID, taskID, personID string) (*WorkSession, err
 
 	_, err = s.sessionStore.GetActiveByPerson(personID)
 	if err == nil {
-		return nil, errors.New("já existe um ponto aberto para esta pessoa; pare a sessão atual antes de iniciar outra")
+		return nil, ErrAlreadyOpen
 	}
 	if !errors.Is(err, database.ErrNotFound) {
 		return nil, err
@@ -76,7 +73,7 @@ func (s *Service) ClockIn(projectID, taskID, personID string) (*WorkSession, err
 		// Duas requisições simultâneas passam pela checagem acima; o índice
 		// one_active_session barra a segunda aqui.
 		if ent.IsConstraintError(err) {
-			return nil, errors.New("já existe um ponto aberto para esta pessoa; pare a sessão atual antes de iniciar outra")
+			return nil, ErrAlreadyOpen
 		}
 		return nil, err
 	}
@@ -105,13 +102,13 @@ func (s *Service) ClockOut(projectID, personID string) (*WorkSession, error) {
 		return nil, err
 	}
 	if !inOrg {
-		return nil, errors.New("pessoa não encontrada nesta organização")
+		return nil, ErrPersonNotInOrg
 	}
 
 	active, err := s.sessionStore.GetActiveByPerson(personID)
 	if err != nil {
 		if errors.Is(err, database.ErrNotFound) {
-			return nil, errors.New("não há ponto aberto para esta pessoa")
+			return nil, ErrNotOpen
 		}
 		return nil, err
 	}
@@ -152,16 +149,16 @@ func (s *Service) TotalTime(projectID string, taskID, personID *string) (*TotalT
 	hasTask := taskID != nil && *taskID != ""
 	hasPerson := personID != nil && *personID != ""
 	if !hasTask && !hasPerson {
-		return nil, errors.New("filtre por task_id ou person_id")
+		return nil, ErrFilterRequired
 	}
 	if hasTask {
 		if _, err := uuid.Parse(*taskID); err != nil {
-			return nil, errors.New("tarefa inválida (task_id)")
+			return nil, ErrInvalidTaskFilter
 		}
 	}
 	if hasPerson {
 		if _, err := uuid.Parse(*personID); err != nil {
-			return nil, errors.New("pessoa inválida (person_id)")
+			return nil, ErrInvalidPersonFilter
 		}
 	}
 	sessions, err := s.ListByProject(projectID, taskID, personID)

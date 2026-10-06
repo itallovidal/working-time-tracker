@@ -17,15 +17,7 @@ const (
 )
 
 var (
-	ErrInvalidCredentials  = errors.New("email ou senha incorretos")
-	ErrUnauthenticated     = errors.New("faça login para continuar")
-	ErrInviteInvalid       = errors.New("este convite não é válido: ele expirou, foi revogado ou já foi usado")
-	ErrInviteEmailMismatch = errors.New("este convite foi feito para outro email")
-	ErrWrongPassword       = errors.New("a senha atual está incorreta")
-	ErrEmailInUse          = person.ErrEmailInUse
-	ErrAccountExists       = errors.New("já existe uma conta com este email")
-	ErrNameRequired        = errors.New("informe o seu nome")
-	ErrOrgNameRequired     = errors.New("informe o nome da organização")
+	ErrEmailInUse = person.ErrEmailInUse
 )
 
 type Service struct {

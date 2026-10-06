@@ -2,7 +2,7 @@
 
 **Base URL:** `http://localhost:8080`
 
-Todas as rotas falam JSON. Erros sempre vêm como `{"error": "mensagem"}`, com a mensagem em português, pronta para mostrar a quem usa.
+Todas as rotas falam JSON. Erros sempre vêm como `{"error": {"code": "dominio.motivo", "params": {...}}}`: a API **não manda mensagem**, manda um código estável (e `params`, quando o texto precisa de valores), e quem chama mostra o texto no idioma da pessoa. A lista completa de códigos, com o status e os textos em português e inglês, está em [`_docs/error-codes.md`](../_docs/error-codes.md).
 
 ## Como a autenticação funciona
 
@@ -18,7 +18,7 @@ Todas as rotas falam JSON. Erros sempre vêm como `{"error": "mensagem"}`, com a
 | Status | Quando |
 |---|---|
 | 200 / 201 / 204 | Sucesso (204 não tem corpo) |
-| 400 | Dado inválido, com a mensagem explicando o quê |
+| 400 | Dado inválido, com o código dizendo o quê (`organization.invalid_cnpj`, `task.invalid_page`...) |
 | 401 | Sem sessão, sessão expirada ou email e senha errados |
 | 403 | A pessoa não é admin, ou tentou agir por outra pessoa |
 | 404 | O recurso não existe ou é de outra organização |
@@ -444,7 +444,7 @@ Content-Type: application/json
 ```
 A integração precisa ser do mesmo projeto da tarefa. O `external_item_id` é o número da issue (GitHub e GitLab) ou o cartão do Trello: o link curto, o id ou o endereço dele.
 
-O `external-details` nunca falha por causa da plataforma. Se ela estiver fora, o token estiver errado ou ilegível, faltar um campo do `metadata`, o item não for do repositório ou do quadro configurado, ou a integração estiver desativada, a resposta é `200` com `{"details": null, "error": "motivo"}`. Com sucesso, `details` traz `title`, `state` e `url`; num cartão do Trello, `state` é o nome da lista em que ele está, ou `arquivado`.
+O `external-details` nunca falha por causa da plataforma. Se ela estiver fora, o token estiver errado ou ilegível, faltar um campo do `metadata`, o item não for do repositório ou do quadro configurado, ou a integração estiver desativada, a resposta é `200` com `{"details": null, "error": {"code": "integration.invalid_token", "params": {"provider": "GitHub"}}}`, o mesmo formato dos outros erros. Com sucesso, `details` traz `title`, `state` e `url`; num cartão do Trello, `state` é o nome da lista em que ele está, ou `arquivado`.
 
 Na lista de tarefas e no detalhe, a tarefa vinculada traz `external_integration` com o `id` e o `type` da integração.
 

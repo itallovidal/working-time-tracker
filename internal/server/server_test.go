@@ -549,7 +549,7 @@ func TestWorkSessions_RequireRate(t *testing.T) {
 		"admin for a member": {`{"task_id":"` + taskID + `","person_id":"` + member.id + `"}`, admin.session},
 	} {
 		rec := do(e, "POST", prj+"/work-sessions/clock-in", tc.body, tc.session)
-		if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "valor por hora") {
+		if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), `"code":"work_session.no_rate"`) {
 			t.Errorf("%s clock-in without a rate = %d %s, want 400 explaining the missing rate", who, rec.Code, rec.Body.String())
 		}
 	}

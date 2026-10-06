@@ -1,23 +1,12 @@
 package project
 
 import (
-	"errors"
 	"regexp"
 	"strings"
 
 	"github.com/google/uuid"
 
 	"working-time-tracker/internal/database"
-)
-
-var (
-	ErrNameRequired     = errors.New("informe o nome do projeto")
-	ErrInvalidSprint    = errors.New("a sprint precisa ter entre 1 e 90 dias")
-	ErrInvalidWeekHours = errors.New("a jornada semanal deve ficar entre 1 e 168 horas")
-	ErrInvalidDailyTime = errors.New("o horário da daily deve estar no formato HH:MM, por exemplo 09:30")
-	ErrInvalidWeekday   = errors.New("dia da weekly inválido: use monday, tuesday, wednesday, thursday, friday, saturday ou sunday")
-	ErrInvalidBillRate  = errors.New("o valor cobrado por hora deve ficar entre 0 e 1.000.000,00")
-	ErrCustomerNotFound = errors.New("cliente não encontrado nesta organização")
 )
 
 // maxBillRateCents é o teto do valor cobrado por hora: 1.000.000,00.
@@ -88,7 +77,7 @@ func (s *Service) Create(orgID, name, description string, sprintDurationDays int
 	}
 	orgUID, err := uuid.Parse(orgID)
 	if err != nil {
-		return nil, errors.New("organização inválida")
+		return nil, ErrInvalidOrganization
 	}
 	if sprintDurationDays == 0 {
 		sprintDurationDays = 14

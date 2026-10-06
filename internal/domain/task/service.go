@@ -30,10 +30,10 @@ func NewService(taskStore *Store, membershipStore *team.MembershipStore, integra
 
 func (s *Service) Create(projectID, name, description, assigneeID string, deadline *time.Time) (*Task, error) {
 	if name == "" {
-		return nil, errors.New("informe o nome")
+		return nil, ErrNameRequired
 	}
 	if assigneeID == "" {
-		return nil, errors.New("escolha o responsável")
+		return nil, ErrAssigneeRequired
 	}
 
 	isMember, err := s.membershipStore.IsPersonInProject(assigneeID, projectID)
@@ -41,7 +41,7 @@ func (s *Service) Create(projectID, name, description, assigneeID string, deadli
 		return nil, err
 	}
 	if !isMember {
-		return nil, errors.New("o responsável precisa estar em algum time deste projeto")
+		return nil, ErrAssigneeNotInTeam
 	}
 
 	var dl time.Time
@@ -104,7 +104,7 @@ func (s *Service) Get(id string) (*Task, error) {
 
 func (s *Service) Update(id, name, description string, assigneeID *string, deadline *time.Time) (*Task, error) {
 	if name == "" {
-		return nil, errors.New("informe o nome")
+		return nil, ErrNameRequired
 	}
 	task, err := s.taskStore.GetByID(id)
 	if err != nil {
@@ -115,7 +115,7 @@ func (s *Service) Update(id, name, description string, assigneeID *string, deadl
 	if assigneeID != nil {
 		uid, err := uuid.Parse(*assigneeID)
 		if err != nil {
-			return nil, errors.New("responsável inválido")
+			return nil, ErrInvalidAssignee
 		}
 		if uid != task.AssigneeID {
 			isMember, err := s.membershipStore.IsPersonInProject(*assigneeID, task.ProjectID.String())
@@ -123,7 +123,7 @@ func (s *Service) Update(id, name, description string, assigneeID *string, deadl
 				return nil, err
 			}
 			if !isMember {
-				return nil, errors.New("o responsável precisa estar em algum time deste projeto")
+				return nil, ErrAssigneeNotInTeam
 			}
 		}
 		task.AssigneeID = uid
@@ -148,17 +148,17 @@ func (s *Service) LinkExternalItem(taskID, integrationID, externalItemID, extern
 	}
 	eid, err := uuid.Parse(integrationID)
 	if err != nil {
-		return nil, errors.New("integração não encontrada")
+		return nil, ErrIntegrationNotFound
 	}
 	integrationProject, err := s.taskStore.IntegrationProjectID(eid)
 	if errors.Is(err, database.ErrNotFound) {
-		return nil, errors.New("integração não encontrada")
+		return nil, ErrIntegrationNotFound
 	}
 	if err != nil {
 		return nil, err
 	}
 	if integrationProject != task.ProjectID {
-		return nil, errors.New("a integração é de outro projeto")
+		return nil, ErrIntegrationOtherProject
 	}
 	task.ExternalIntegrationID = &eid
 	task.ExternalItemID = &externalItemID
@@ -189,10 +189,10 @@ func (s *Service) GetExternalDetails(taskID string) (*adapter.ExternalDetailsRes
 		return nil, err
 	}
 	if task.ExternalIntegrationID == nil {
-		return nil, errors.New("a tarefa não tem item externo vinculado")
+		return nil, ErrNoExternalItem
 	}
 	if s.integrationSvc == nil {
-		return nil, errors.New("integrações indisponíveis")
+		return nil, ErrIntegrationsUnavailable
 	}
 	return s.integrationSvc.FetchItemDetails(task.ExternalIntegrationID.String(), *task.ExternalItemID)
 }

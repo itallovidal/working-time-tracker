@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 
 	"working-time-tracker/internal/adapter"
+	"working-time-tracker/internal/apperr"
 )
 
 type Service struct {
@@ -34,11 +35,11 @@ func (s *Service) seal(token string) (map[string]interface{}, error) {
 // open devolve o token guardado.
 func (s *Service) open(it *Integration) (string, error) {
 	if len(it.Credentials) == 0 {
-		return "", errors.New("a integração está sem credencial: edite-a e informe o token")
+		return "", ErrNoCredential
 	}
 	secrets, err := adapter.DecryptConfig(it.Credentials, s.encryptKey)
 	if err != nil {
-		return "", errors.New("não foi possível ler a credencial guardada: edite a integração e informe o token de novo")
+		return "", ErrUnreadableCredential
 	}
 	token, _ := secrets["token"].(string)
 	return token, nil
@@ -49,7 +50,7 @@ func (s *Service) open(it *Integration) (string, error) {
 // conexão na plataforma antes de qualquer coisa ser guardada.
 func (s *Service) Create(projectID, integrationType, displayName, token string, metadata map[string]interface{}, enabled bool) (*Integration, error) {
 	if displayName == "" {
-		return nil, errors.New("informe o nome da integração")
+		return nil, ErrNameRequired
 	}
 
 	impl, err := adapter.GetIntegration(integrationType)
@@ -169,11 +170,11 @@ func (s *Service) FetchItemDetails(integrationID, itemID string) (*adapter.Exter
 	if err != nil {
 		return nil, err
 	}
-	unavailable := func(msg string) (*adapter.ExternalDetailsResult, error) {
-		return &adapter.ExternalDetailsResult{Details: nil, Error: &msg}, nil
+	unavailable := func(err error) (*adapter.ExternalDetailsResult, error) {
+		return &adapter.ExternalDetailsResult{Details: nil, Error: coded(err)}, nil
 	}
 	if !existing.Enabled {
-		return unavailable("a integração está desativada")
+		return unavailable(ErrDisabled)
 	}
 
 	impl, err := adapter.GetIntegration(existing.Type)
@@ -183,15 +184,25 @@ func (s *Service) FetchItemDetails(integrationID, itemID string) (*adapter.Exter
 
 	token, err := s.open(existing)
 	if err != nil {
-		return unavailable(err.Error())
+		return unavailable(err)
 	}
 
 	details, err := impl.FetchItemDetails(adapter.Connection{Token: token, Metadata: existing.Metadata}, itemID)
 	if err != nil {
-		return unavailable(err.Error())
+		return unavailable(err)
 	}
 
 	return &adapter.ExternalDetailsResult{
 		Details: details,
 	}, nil
+}
+
+// coded devolve o erro de uma integração com código: o que já veio com código segue
+// como está, e qualquer outra falha vira um erro interno, sem o texto técnico.
+func coded(err error) *apperr.Error {
+	var e *apperr.Error
+	if errors.As(err, &e) {
+		return e
+	}
+	return apperr.ErrInternal
 }

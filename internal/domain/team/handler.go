@@ -3,6 +3,7 @@ package team
 import (
 	"github.com/labstack/echo/v5"
 
+	"working-time-tracker/internal/apperr"
 	"working-time-tracker/internal/database"
 )
 
@@ -21,11 +22,11 @@ func (h *Handler) Create(c *echo.Context) error {
 		Name string `json:"name"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return c.JSON(400, map[string]string{"error": "corpo da requisição inválido"})
+		return apperr.Respond(c, 400, apperr.ErrInvalidBody)
 	}
 	team, err := h.svc.Create(projectID, body.Name)
 	if err != nil {
-		return c.JSON(400, map[string]string{"error": err.Error()})
+		return apperr.Respond(c, 400, err)
 	}
 	return c.JSON(201, team)
 }
@@ -34,7 +35,7 @@ func (h *Handler) ListByProject(c *echo.Context) error {
 	projectID := c.Param("projectId")
 	teams, err := h.svc.ListByProject(projectID)
 	if err != nil {
-		return c.JSON(500, map[string]string{"error": err.Error()})
+		return apperr.Respond(c, 500, err)
 	}
 	return c.JSON(200, teams)
 }
@@ -44,9 +45,9 @@ func (h *Handler) Get(c *echo.Context) error {
 	team, err := h.svc.Get(id)
 	if err != nil {
 		if err == database.ErrNotFound {
-			return c.JSON(404, map[string]string{"error": "time não encontrado"})
+			return apperr.Respond(c, 404, ErrNotFound)
 		}
-		return c.JSON(500, map[string]string{"error": err.Error()})
+		return apperr.Respond(c, 500, err)
 	}
 	return c.JSON(200, team)
 }
@@ -57,11 +58,11 @@ func (h *Handler) Update(c *echo.Context) error {
 		Name string `json:"name"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return c.JSON(400, map[string]string{"error": "corpo da requisição inválido"})
+		return apperr.Respond(c, 400, apperr.ErrInvalidBody)
 	}
 	team, err := h.svc.Update(id, body.Name)
 	if err != nil {
-		return c.JSON(400, map[string]string{"error": err.Error()})
+		return apperr.Respond(c, 400, err)
 	}
 	return c.JSON(200, team)
 }
@@ -69,7 +70,7 @@ func (h *Handler) Update(c *echo.Context) error {
 func (h *Handler) Delete(c *echo.Context) error {
 	id := c.Param("teamId")
 	if err := h.svc.Delete(id); err != nil {
-		return c.JSON(400, map[string]string{"error": err.Error()})
+		return apperr.Respond(c, 400, err)
 	}
 	return c.NoContent(204)
 }
@@ -80,14 +81,14 @@ func (h *Handler) AddMember(c *echo.Context) error {
 		PersonID string `json:"person_id"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return c.JSON(400, map[string]string{"error": "corpo da requisição inválido"})
+		return apperr.Respond(c, 400, apperr.ErrInvalidBody)
 	}
 	if body.PersonID == "" {
-		return c.JSON(400, map[string]string{"error": "informe a pessoa (person_id)"})
+		return apperr.Respond(c, 400, ErrPersonRequired)
 	}
 	membership, err := h.membershipSvc.Add(teamID, body.PersonID)
 	if err != nil {
-		return c.JSON(400, map[string]string{"error": err.Error()})
+		return apperr.Respond(c, 400, err)
 	}
 	return c.JSON(201, membership)
 }
@@ -98,13 +99,13 @@ func (h *Handler) RemoveMember(c *echo.Context) error {
 		PersonID string `json:"person_id"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return c.JSON(400, map[string]string{"error": "corpo da requisição inválido"})
+		return apperr.Respond(c, 400, apperr.ErrInvalidBody)
 	}
 	if body.PersonID == "" {
-		return c.JSON(400, map[string]string{"error": "informe a pessoa (person_id)"})
+		return apperr.Respond(c, 400, ErrPersonRequired)
 	}
 	if err := h.membershipSvc.Remove(teamID, body.PersonID); err != nil {
-		return c.JSON(400, map[string]string{"error": err.Error()})
+		return apperr.Respond(c, 400, err)
 	}
 	return c.NoContent(204)
 }
@@ -113,7 +114,7 @@ func (h *Handler) ListMembers(c *echo.Context) error {
 	teamID := c.Param("teamId")
 	members, err := h.membershipSvc.ListByTeam(teamID)
 	if err != nil {
-		return c.JSON(500, map[string]string{"error": err.Error()})
+		return apperr.Respond(c, 500, err)
 	}
 	return c.JSON(200, members)
 }
@@ -123,7 +124,7 @@ func (h *Handler) ListMembers(c *echo.Context) error {
 func (h *Handler) ListProjectMembers(c *echo.Context) error {
 	persons, err := h.membershipSvc.ListPersonsInProject(c.Param("projectId"))
 	if err != nil {
-		return c.JSON(500, map[string]string{"error": err.Error()})
+		return apperr.Respond(c, 500, err)
 	}
 	return c.JSON(200, persons)
 }

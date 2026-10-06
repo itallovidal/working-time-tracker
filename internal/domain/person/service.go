@@ -1,17 +1,9 @@
 package person
 
 import (
-	"errors"
 	"strings"
 
 	"github.com/google/uuid"
-)
-
-var (
-	ErrEmailInUse   = errors.New("este email já está em uso")
-	ErrInvalidEmail = errors.New("informe um email válido")
-	ErrInvalidRole  = errors.New("papel inválido: use admin ou member")
-	ErrLastAdmin    = errors.New("a organização precisa de pelo menos um admin")
 )
 
 // NormalizeEmail tira espaços e deixa o email em minúsculas, para que
@@ -38,17 +30,17 @@ func (s *Service) Create(orgID, name, email string) (*Person, error) {
 	name = strings.TrimSpace(name)
 	email = NormalizeEmail(email)
 	if name == "" {
-		return nil, errors.New("informe o nome")
+		return nil, ErrNameRequired
 	}
 	if email == "" {
-		return nil, errors.New("informe o email")
+		return nil, ErrEmailRequired
 	}
 	if !ValidEmail(email) {
 		return nil, ErrInvalidEmail
 	}
 	orgUID, err := uuid.Parse(orgID)
 	if err != nil {
-		return nil, errors.New("organização inválida")
+		return nil, ErrInvalidOrganization
 	}
 	inUse, err := s.store.EmailInUse(email, nil)
 	if err != nil {
@@ -80,10 +72,10 @@ func (s *Service) Update(id, name, email string) (*Person, error) {
 	name = strings.TrimSpace(name)
 	email = NormalizeEmail(email)
 	if name == "" {
-		return nil, errors.New("informe o nome")
+		return nil, ErrNameRequired
 	}
 	if email == "" {
-		return nil, errors.New("informe o email")
+		return nil, ErrEmailRequired
 	}
 	if !ValidEmail(email) {
 		return nil, ErrInvalidEmail

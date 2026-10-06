@@ -1,7 +1,6 @@
 package customer
 
 import (
-	"errors"
 	"strings"
 	"unicode/utf8"
 
@@ -9,16 +8,6 @@ import (
 
 	"working-time-tracker/internal/domain/person"
 	"working-time-tracker/internal/validate"
-)
-
-var (
-	ErrNameRequired    = errors.New("informe o nome do cliente")
-	ErrNameTooLong     = errors.New("o nome do cliente pode ter até 120 caracteres")
-	ErrContactTooLong  = errors.New("o nome do contato pode ter até 120 caracteres")
-	ErrInvalidDocument = errors.New("CNPJ inválido: confira os números e os dígitos verificadores")
-	ErrInvalidEmail    = errors.New("informe um email de contato válido")
-	ErrInvalidPhone    = errors.New("telefone inválido: use números, espaços, +, parênteses e hífen")
-	ErrHasProjects     = errors.New("este cliente tem projetos; tire o cliente dos projetos antes de excluir")
 )
 
 type Service struct {
@@ -32,7 +21,7 @@ func NewService(store *Store) *Service {
 func (s *Service) Create(orgID string, in Input) (*Customer, error) {
 	orgUID, err := uuid.Parse(orgID)
 	if err != nil {
-		return nil, errors.New("organização inválida")
+		return nil, ErrInvalidOrganization
 	}
 	c := &Customer{OrganizationID: orgUID}
 	if in.Name == nil {

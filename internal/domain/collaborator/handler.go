@@ -6,6 +6,7 @@ import (
 
 	"github.com/labstack/echo/v5"
 
+	"working-time-tracker/internal/apperr"
 	"working-time-tracker/internal/database"
 	"working-time-tracker/internal/domain/auth"
 )
@@ -20,9 +21,9 @@ func NewHandler(svc *Service) *Handler {
 
 func fail(c *echo.Context, err error) error {
 	if errors.Is(err, database.ErrNotFound) {
-		return c.JSON(http.StatusNotFound, map[string]string{"error": "esta pessoa não está neste projeto"})
+		return apperr.Respond(c, http.StatusNotFound, ErrNotInProject)
 	}
-	return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	return apperr.Respond(c, http.StatusInternalServerError, err)
 }
 
 // redact apaga o valor por hora que quem chama não pode ver: ele é dos admins

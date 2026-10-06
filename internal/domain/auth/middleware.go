@@ -5,6 +5,7 @@ import (
 	"mime"
 	"net/http"
 	"net/url"
+	"working-time-tracker/internal/apperr"
 
 	"github.com/labstack/echo/v5"
 )
@@ -60,7 +61,7 @@ func (m *Middleware) LoadSession(next echo.HandlerFunc) echo.HandlerFunc {
 func (m *Middleware) RequireAPI(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c *echo.Context) error {
 		if CurrentPerson(c) == nil {
-			return c.JSON(http.StatusUnauthorized, map[string]string{"error": ErrUnauthenticated.Error()})
+			return apperr.Respond(c, http.StatusUnauthorized, ErrUnauthenticated)
 		}
 		return next(c)
 	}
@@ -89,7 +90,7 @@ func (m *Middleware) RedirectIfAuthenticated(next echo.HandlerFunc) echo.Handler
 func (m *Middleware) RequireAdmin(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c *echo.Context) error {
 		if !CurrentPerson(c).IsAdmin() {
-			return c.JSON(http.StatusForbidden, map[string]string{"error": "só admins podem fazer isso"})
+			return apperr.Respond(c, http.StatusForbidden, ErrAdminOnly)
 		}
 		return next(c)
 	}
@@ -113,7 +114,7 @@ func (m *Middleware) RequireSelfOrAdmin(param string) echo.MiddlewareFunc {
 		return func(c *echo.Context) error {
 			id := CurrentPerson(c)
 			if !id.IsAdmin() && (id == nil || id.PersonID.String() != c.Param(param)) {
-				return c.JSON(http.StatusForbidden, map[string]string{"error": "você só pode alterar o seu próprio perfil"})
+				return apperr.Respond(c, http.StatusForbidden, ErrOwnProfileOnly)
 			}
 			return next(c)
 		}
@@ -131,9 +132,7 @@ func (m *Middleware) JSONOnly(next echo.HandlerFunc) echo.HandlerFunc {
 			if ct != "" {
 				mt, _, err := mime.ParseMediaType(ct)
 				if err != nil || mt != "application/json" {
-					return c.JSON(http.StatusUnsupportedMediaType, map[string]string{
-						"error": "envie o corpo como JSON (Content-Type: application/json)",
-					})
+					return apperr.Respond(c, http.StatusUnsupportedMediaType, apperr.ErrJSONRequired)
 				}
 			}
 		}

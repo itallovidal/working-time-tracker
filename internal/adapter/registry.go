@@ -1,7 +1,5 @@
 package adapter
 
-import "fmt"
-
 type Factory func() Integration
 
 // order é a ordem em que os tipos aparecem na tela.
@@ -25,7 +23,7 @@ func Register(integrationType string, factory Factory) {
 func GetIntegration(integrationType string) (Integration, error) {
 	factory, ok := registry[integrationType]
 	if !ok {
-		return nil, fmt.Errorf("tipo de integração não suportado: %s", integrationType)
+		return nil, ErrUnsupportedType.With("type", integrationType)
 	}
 	return factory(), nil
 }

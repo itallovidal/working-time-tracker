@@ -3,6 +3,7 @@ package work_session
 import (
 	"github.com/labstack/echo/v5"
 
+	"working-time-tracker/internal/apperr"
 	"working-time-tracker/internal/domain/auth"
 )
 
@@ -17,21 +18,21 @@ func NewHandler(svc *Service) *Handler {
 // personFor decide de quem é o ponto. Com login, o padrão é a pessoa logada, e só
 // um admin pode bater o ponto de outra pessoa. Sem login no contexto (handler
 // montado fora do servidor, como nos testes), person_id continua obrigatório.
-func personFor(c *echo.Context, requested string) (string, int, string) {
+func personFor(c *echo.Context, requested string) (string, int, error) {
 	me := auth.CurrentPerson(c)
 	if me == nil {
 		if requested == "" {
-			return "", 400, "informe a pessoa (person_id)"
+			return "", 400, ErrPersonRequired
 		}
-		return requested, 0, ""
+		return requested, 0, nil
 	}
 	if requested == "" || requested == me.PersonID.String() {
-		return me.PersonID.String(), 0, ""
+		return me.PersonID.String(), 0, nil
 	}
 	if !me.IsAdmin() {
-		return "", 403, "só admins podem registrar o ponto de outra pessoa"
+		return "", 403, ErrOtherPersonAdminOnly
 	}
-	return requested, 0, ""
+	return requested, 0, nil
 }
 
 // redact apaga da sessão os valores que quem chama não pode ver. O valor cobrado
@@ -54,18 +55,18 @@ func (h *Handler) ClockIn(c *echo.Context) error {
 		PersonID string `json:"person_id"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return c.JSON(400, map[string]string{"error": "corpo da requisição inválido"})
+		return apperr.Respond(c, 400, apperr.ErrInvalidBody)
 	}
 	if body.TaskID == "" {
-		return c.JSON(400, map[string]string{"error": "informe a tarefa (task_id)"})
+		return apperr.Respond(c, 400, ErrTaskRequired)
 	}
-	personID, status, msg := personFor(c, body.PersonID)
+	personID, status, perr := personFor(c, body.PersonID)
 	if status != 0 {
-		return c.JSON(status, map[string]string{"error": msg})
+		return apperr.Respond(c, status, perr)
 	}
 	session, err := h.svc.ClockIn(projectID, body.TaskID, personID)
 	if err != nil {
-		return c.JSON(400, map[string]string{"error": err.Error()})
+		return apperr.Respond(c, 400, err)
 	}
 	redact(auth.CurrentPerson(c), session)
 	return c.JSON(201, session)
@@ -76,15 +77,15 @@ func (h *Handler) ClockOut(c *echo.Context) error {
 		PersonID string `json:"person_id"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return c.JSON(400, map[string]string{"error": "corpo da requisição inválido"})
+		return apperr.Respond(c, 400, apperr.ErrInvalidBody)
 	}
-	personID, status, msg := personFor(c, body.PersonID)
+	personID, status, perr := personFor(c, body.PersonID)
 	if status != 0 {
-		return c.JSON(status, map[string]string{"error": msg})
+		return apperr.Respond(c, status, perr)
 	}
 	session, err := h.svc.ClockOut(c.Param("projectId"), personID)
 	if err != nil {
-		return c.JSON(400, map[string]string{"error": err.Error()})
+		return apperr.Respond(c, 400, err)
 	}
 	redact(auth.CurrentPerson(c), session)
 	return c.JSON(200, session)
@@ -105,7 +106,7 @@ func (h *Handler) List(c *echo.Context) error {
 
 	sessions, err := h.svc.ListByProject(projectID, taskIDPtr, personIDPtr)
 	if err != nil {
-		return c.JSON(500, map[string]string{"error": err.Error()})
+		return apperr.Respond(c, 500, err)
 	}
 	me := auth.CurrentPerson(c)
 	for i := range sessions {
@@ -129,7 +130,7 @@ func (h *Handler) Total(c *echo.Context) error {
 
 	total, err := h.svc.TotalTime(projectID, taskIDPtr, personIDPtr)
 	if err != nil {
-		return c.JSON(400, map[string]string{"error": err.Error()})
+		return apperr.Respond(c, 400, err)
 	}
 	// Os mesmos limites das sessões: um membro só vê quanto ganhou quando o
 	// filtro é ele mesmo, e nunca o valor cobrado.
@@ -146,11 +147,11 @@ func (h *Handler) Total(c *echo.Context) error {
 func (h *Handler) Active(c *echo.Context) error {
 	me := auth.CurrentPerson(c)
 	if me == nil {
-		return c.JSON(401, map[string]string{"error": auth.ErrUnauthenticated.Error()})
+		return apperr.Respond(c, 401, auth.ErrUnauthenticated)
 	}
 	session, err := h.svc.Active(me.PersonID.String())
 	if err != nil {
-		return c.JSON(500, map[string]string{"error": err.Error()})
+		return apperr.Respond(c, 500, err)
 	}
 	redact(me, session)
 	return c.JSON(200, session)

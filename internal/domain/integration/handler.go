@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v5"
 
+	"working-time-tracker/internal/apperr"
 	"working-time-tracker/internal/database"
 )
 
@@ -61,16 +62,16 @@ func (h *Handler) Create(c *echo.Context) error {
 		Enabled     *bool                  `json:"enabled"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return c.JSON(400, map[string]string{"error": "corpo da requisição inválido"})
+		return apperr.Respond(c, 400, apperr.ErrInvalidBody)
 	}
 	if body.Type == "" {
-		return c.JSON(400, map[string]string{"error": "informe o tipo da integração"})
+		return apperr.Respond(c, 400, ErrTypeRequired)
 	}
 	// Sem enabled no corpo, a integração nasce ativa.
 	enabled := body.Enabled == nil || *body.Enabled
 	it, err := h.svc.Create(projectID, body.Type, body.DisplayName, body.Token, body.Metadata, enabled)
 	if err != nil {
-		return c.JSON(400, map[string]string{"error": err.Error()})
+		return apperr.Respond(c, 400, err)
 	}
 	return c.JSON(201, toIntegrationResponse(it))
 }
@@ -79,7 +80,7 @@ func (h *Handler) ListByProject(c *echo.Context) error {
 	projectID := c.Param("projectId")
 	integrations, err := h.svc.ListByProject(projectID)
 	if err != nil {
-		return c.JSON(500, map[string]string{"error": err.Error()})
+		return apperr.Respond(c, 500, err)
 	}
 	return c.JSON(200, toIntegrationResponseList(integrations))
 }
@@ -89,9 +90,9 @@ func (h *Handler) Get(c *echo.Context) error {
 	it, err := h.svc.Get(id)
 	if err != nil {
 		if err == database.ErrNotFound {
-			return c.JSON(404, map[string]string{"error": "integração não encontrada"})
+			return apperr.Respond(c, 404, ErrNotFound)
 		}
-		return c.JSON(500, map[string]string{"error": err.Error()})
+		return apperr.Respond(c, 500, err)
 	}
 	return c.JSON(200, toIntegrationResponse(it))
 }
@@ -105,11 +106,11 @@ func (h *Handler) Update(c *echo.Context) error {
 		Enabled     *bool                  `json:"enabled"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return c.JSON(400, map[string]string{"error": "corpo da requisição inválido"})
+		return apperr.Respond(c, 400, apperr.ErrInvalidBody)
 	}
 	it, err := h.svc.Update(id, body.DisplayName, body.Token, body.Metadata, body.Enabled)
 	if err != nil {
-		return c.JSON(400, map[string]string{"error": err.Error()})
+		return apperr.Respond(c, 400, err)
 	}
 	return c.JSON(200, toIntegrationResponse(it))
 }
@@ -117,7 +118,7 @@ func (h *Handler) Update(c *echo.Context) error {
 func (h *Handler) Delete(c *echo.Context) error {
 	id := c.Param("integrationId")
 	if err := h.svc.Delete(id); err != nil {
-		return c.JSON(400, map[string]string{"error": err.Error()})
+		return apperr.Respond(c, 400, err)
 	}
 	return c.NoContent(204)
 }

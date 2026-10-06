@@ -232,6 +232,14 @@ Each integration type implements a common interface (`internal/adapter`):
 - A JavaScript i18n library (i18next and similar): a second dictionary format and a vendored dependency for what is a key lookup.
 - `Accept-Language` only, without a toggle: gives people no way to choose.
 
+### Decision 11: API errors — stable codes, the text on the client
+**Choice:** The API no longer sends error messages. Every error response is `{"error": {"code": "domain.reason", "params": {...}}}` with the usual HTTP status. Codes are declared next to the domain that raises them (`apperr.New("organization.invalid_cnpj", 400)` in each `errors.go`, with the names of the parameters the text uses); services return the sentinel (`ErrX` or `ErrX.With("max", 160)`), and every handler answers through one function, `apperr.Respond(c, status, err)`. A record that does not exist (`database.ErrNotFound`) becomes `request.not_found` (404), and any error without a code becomes `internal.server_error` (500) with the detail only in the log, so no internal text leaves the server. The browser builds the message from the same YAML catalog as the rest of the interface (`errors.<code>`, with `fields.<field>` for the `field` parameter), so `ApiError.message` keeps working for every existing toast and form. The codes are documented in `_docs/error-codes.md`, generated from the registry and the catalogs by a test that fails when the file is stale.
+**Rationale:** A message sent by the server fixes the language of the answer, and the API had ~230 Portuguese texts spread over services and handlers. A code is a contract another client (a CLI, a script, a mobile app) can rely on and translate by itself, and it moves all the text to the catalogs, where the languages are kept in sync by tests (same codes, same placeholders). Declaring the parameters at the code keeps the text, the API and the documentation from drifting apart.
+**Alternatives considered:**
+- Translate on the server from `Accept-Language`: keeps clients trivial, but every client then depends on the server's wording, the API doc cannot list stable identifiers, and the browser would have two translation paths.
+- Send both the code and a message: easy, but the message would still be in one language and would tempt clients to match on it.
+- One code per field for the length errors: avoids the `field` parameter but multiplies codes that only differ by a noun.
+
 ## Risks / Trade-offs
 
 - **[Per-integration API rate limits]** On-demand external item fetches consume API quota per platform. → Mitigation: cache item details in-process with a short TTL (e.g., 60s); document rate-limit handling per integration type.

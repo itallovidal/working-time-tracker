@@ -2,7 +2,6 @@ package adapter
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"regexp"
 	"strings"
@@ -12,16 +11,12 @@ import (
 const defaultGitHubBaseURL = "https://api.github.com"
 
 var githubDescriptor = Descriptor{
-	Type:        "github",
-	Label:       "GitHub",
-	Description: "Issues de um repositório",
-	TokenHint:   "Token pessoal com permissão de leitura de issues.",
+	Type:  "github",
+	Label: "GitHub",
 	Metadata: []Field{
-		{Key: "repo", Label: "Repositório", Placeholder: "dono/repositorio", Hint: "Aceita também o endereço do repositório.", Required: true, Summary: true},
+		{Key: "repo", Required: true, Summary: true},
 	},
-	ItemLabel:       "Número da issue",
-	ItemPlaceholder: "Ex.: 42",
-	ItemNumeric:     true,
+	ItemNumeric: true,
 }
 
 // GitHubIntegration fala com a API do GitHub. BaseURL e Client são opcionais e
@@ -61,7 +56,7 @@ func parseGithubMetadata(raw map[string]any) (*githubMetadata, error) {
 	// O repositório entra na URL da API: um nome só de pontos subiria de diretório.
 	name := repo[strings.LastIndex(repo, "/")+1:]
 	if !githubRepo.MatchString(repo) || strings.Trim(name, ".") == "" {
-		return nil, fmt.Errorf("repositório do GitHub inválido: use dono/repositorio")
+		return nil, ErrGitHubInvalidRepo
 	}
 	return &githubMetadata{Repo: repo}, nil
 }
@@ -92,7 +87,7 @@ func (g *GitHubIntegration) get(conn Connection, path string) (*http.Response, e
 
 	resp, err := g.client().Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("não foi possível falar com o GitHub: %w", err)
+		return nil, ErrProviderUnreachable.With("provider", "GitHub").Wrap(err)
 	}
 	return resp, nil
 }
@@ -113,11 +108,11 @@ func (g *GitHubIntegration) Validate(conn Connection) error {
 	case http.StatusOK:
 		return nil
 	case http.StatusUnauthorized:
-		return fmt.Errorf("token do GitHub inválido")
+		return ErrInvalidToken.With("provider", "GitHub")
 	case http.StatusNotFound:
-		return fmt.Errorf("repositório do GitHub não encontrado ou o token não tem acesso a ele")
+		return ErrGitHubRepoNotFound
 	default:
-		return fmt.Errorf("o GitHub respondeu com status %d", resp.StatusCode)
+		return ErrProviderStatus.With("provider", "GitHub", "status", resp.StatusCode)
 	}
 }
 
@@ -138,13 +133,13 @@ func (g *GitHubIntegration) FetchItemDetails(conn Connection, itemID string) (*I
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusUnauthorized {
-		return nil, fmt.Errorf("token do GitHub inválido")
+		return nil, ErrInvalidToken.With("provider", "GitHub")
 	}
 	if resp.StatusCode == http.StatusNotFound {
-		return nil, fmt.Errorf("item %s não encontrado", number)
+		return nil, ErrItemNotFound.With("item", number)
 	}
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("o GitHub respondeu com status %d", resp.StatusCode)
+		return nil, ErrProviderStatus.With("provider", "GitHub", "status", resp.StatusCode)
 	}
 
 	var body struct {
@@ -153,7 +148,7 @@ func (g *GitHubIntegration) FetchItemDetails(conn Connection, itemID string) (*I
 		HTMLURL string `json:"html_url"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
-		return nil, fmt.Errorf("resposta inesperada do GitHub: %w", err)
+		return nil, ErrUnexpectedResponse.With("provider", "GitHub").Wrap(err)
 	}
 
 	return &ItemDetails{

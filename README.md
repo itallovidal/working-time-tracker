@@ -116,6 +116,7 @@ A interface fala **português do Brasil** (o padrão) e **inglês**. Todo texto 
 - **Adicionar um idioma:** crie `locales/<código>.yaml` com as mesmas chaves, acrescente o código em `supported` (`internal/i18n/i18n.go`) e as chaves `lang.<código>.short` e `lang.<código>.name` em todos os catálogos. O teste confere o resto.
 - **Testes:** `internal/i18n` garante que todos os idiomas têm as mesmas chaves e os mesmos placeholders, e que toda chave usada nos templates, no JavaScript e nas páginas em Go existe. Em `internal/server`, o idioma por cookie, por cabeçalho e pelo toggle.
 - **Datas, horas e valores** seguem o idioma (`Intl` com `WTT.lang`): "R$ 20,50" em português e "R$20.50" em inglês. A **moeda** não muda com o idioma, é a da organização. Os campos de valor mostram o separador do idioma e leem os dois jeitos de digitar ("20,5", "20.50", "1.234,56" e "1,234.56"); com um separador só e três dígitos depois ("1.234"), vale o separador de milhar do idioma.
+- **Erros da API:** a API não manda mensagem, só um código estável (`{"error": {"code": "auth.invalid_credentials", "params": {...}}}`). O navegador traduz pelo código, procurando `errors.<código>` no mesmo YAML (`WTT.errorText`), e `e.message` já chega no idioma da página. Os códigos são declarados em `errors.go` de cada domínio (`apperr.New`) e estão documentados, com o status e os textos, em [`_docs/error-codes.md`](_docs/error-codes.md), um arquivo gerado por teste. Um teste recusa código sem texto, texto sem código e placeholder que o código não declara.
 - **Fora da tradução:** os dados de demonstração do seed e o que as pessoas digitam (nomes de projeto, tarefas, clientes) ficam como foram escritos. Logs e comandos de linha de comando seguem em português.
 
 ### Onde fica cada coisa
@@ -159,7 +160,7 @@ Hoje usam o modal o cadastro de cliente, o Adicionar colaborador, o Novo projeto
 
 ## API
 
-A referência completa, com exemplos, está em [`_test/routes.md`](_test/routes.md). A coleção do Insomnia está em `_test/insomnia-collection.json`: importe, rode **Signup** ou **Login** e o Insomnia guarda o cookie de sessão para as outras chamadas.
+A referência completa, com exemplos, está em [`_test/routes.md`](_test/routes.md), e os códigos de erro em [`_docs/error-codes.md`](_docs/error-codes.md). A coleção do Insomnia está em `_test/insomnia-collection.json`: importe, rode **Signup** ou **Login** e o Insomnia guarda o cookie de sessão para as outras chamadas.
 
 Resumo dos grupos de rotas:
 

@@ -5,6 +5,7 @@ import (
 
 	"github.com/labstack/echo/v5"
 
+	"working-time-tracker/internal/apperr"
 	"working-time-tracker/internal/database"
 )
 
@@ -18,15 +19,15 @@ func NewHandler(svc *Service) *Handler {
 
 func fail(c *echo.Context, err error) error {
 	if err == database.ErrNotFound {
-		return c.JSON(http.StatusNotFound, map[string]string{"error": "cliente não encontrado"})
+		return apperr.Respond(c, http.StatusNotFound, ErrNotFound)
 	}
-	return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+	return apperr.Respond(c, http.StatusBadRequest, err)
 }
 
 func (h *Handler) Create(c *echo.Context) error {
 	var body Input
 	if err := c.Bind(&body); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "corpo da requisição inválido"})
+		return apperr.Respond(c, http.StatusBadRequest, apperr.ErrInvalidBody)
 	}
 	customer, err := h.svc.Create(c.Param("orgId"), body)
 	if err != nil {
@@ -38,7 +39,7 @@ func (h *Handler) Create(c *echo.Context) error {
 func (h *Handler) ListByOrg(c *echo.Context) error {
 	customers, err := h.svc.ListByOrg(c.Param("orgId"))
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return apperr.Respond(c, http.StatusInternalServerError, err)
 	}
 	return c.JSON(http.StatusOK, customers)
 }
@@ -54,7 +55,7 @@ func (h *Handler) Get(c *echo.Context) error {
 func (h *Handler) Update(c *echo.Context) error {
 	var body Input
 	if err := c.Bind(&body); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "corpo da requisição inválido"})
+		return apperr.Respond(c, http.StatusBadRequest, apperr.ErrInvalidBody)
 	}
 	customer, err := h.svc.Update(c.Param("customerId"), body)
 	if err != nil {
