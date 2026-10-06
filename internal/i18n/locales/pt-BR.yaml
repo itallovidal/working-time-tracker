@@ -35,6 +35,8 @@ common:
   optional: Opcional
   description_label: Descrição
   clear_filters: Limpar filtros
+  loading: Carregando…
+  delete_confirm: Excluir de vez?
 
 titles:
   login: Entrar
@@ -234,13 +236,7 @@ org:
     new: Novo projeto
     internal: Projeto interno
     customer: Cliente
-    bill_rate: "Valor cobrado por hora ({{.unit}})"
     admins_only_hint: O cliente e o valor cobrado só aparecem para admins e podem ser trocados depois, nas configurações do projeto.
-    sprint_days: Duração da sprint (dias)
-    weekly_hours: Jornada semanal (horas)
-    daily_time: Horário da daily
-    weekly_day: Dia da weekly
-    no_weekly: Sem weekly
     create: Criar projeto
     loading: Carregando projetos…
     empty: Nenhum projeto ainda
@@ -273,6 +269,13 @@ project:
     teams: Colaboradores
     integrations: Integrações
     settings: Configurações
+  fields:
+    sprint_days: Duração da sprint (dias)
+    weekly_hours: Jornada semanal (horas)
+    daily_time: Horário da daily
+    weekly_day: Dia da weekly
+    no_weekly: Sem weekly
+    bill_rate: "Valor cobrado por hora ({{.unit}})"
 
 tasks:
   search_placeholder: Buscar pelo nome
@@ -344,7 +347,6 @@ task_detail:
   link_action: Vincular
   delete_title: Excluir tarefa
   delete_text: Apaga a tarefa e todo o tempo registrado nela.
-  delete_confirm: Excluir de vez?
   saved: Tarefa salva.
 
 time:
@@ -352,7 +354,6 @@ time:
   set_rate_before: Defina o seu na aba
   set_rate_after: "."
   ask_admin: Peça a um admin para definir.
-  loading: Carregando…
   running: Em andamento
   since: "· desde as {{.time}}"
   other_project: Esta sessão é de outro projeto. Pare antes de iniciar uma tarefa daqui.
@@ -399,6 +400,90 @@ time:
   col_duration: Duração
   open: em andamento
 
+integrations:
+  intro: Ligue tarefas a issues do GitHub ou do GitLab e a cartões do Trello. O token é validado na plataforma e guardado criptografado.
+  new: Nova integração
+  loading: Carregando integrações…
+  none: Nenhuma integração
+  none_admin: Crie uma para vincular tarefas a issues ou cartões e ver o estado deles aqui.
+  none_member: Um admin pode configurar o GitHub, o GitLab ou o Trello deste projeto.
+  active: Ativa
+  disabled: Desativada
+  edit_title: Editar integração
+  edit_label: "Editar a integração {{.name}}"
+  token: Token
+  created_at: Criada em
+  incomplete: Faltam dados desta integração, e os itens vinculados não são buscados.
+  complete_admin: Edite para completar.
+  complete_member: Peça a um admin para completar.
+  platform: Plataforma
+  name_placeholder: "Ex.: Repositório do app"
+  token_label: Token de acesso
+  keep_token: Em branco, mantém o token atual
+  enabled_hint: Desativada, mantém os vínculos das tarefas, mas deixa de buscar os itens.
+  delete_question: Excluir a integração? As tarefas vinculadas perdem o vínculo.
+  delete: Excluir integração
+  saving: Salvando…
+  validating: Validando conexão…
+  create: Criar integração
+  name_required: Informe o nome da integração.
+  created: Integração criada. A conexão foi validada na plataforma.
+  saved: Integração salva.
+  deleted: Integração excluída.
+
+integration_types:
+  github:
+    about: Issues de um repositório
+    token_hint: Token pessoal com permissão de leitura de issues.
+    item_label: Número da issue
+    item_placeholder: "Ex.: 42"
+    fields:
+      repo:
+        label: Repositório
+        placeholder: dono/repositorio
+        hint: Aceita também o endereço do repositório.
+  gitlab:
+    about: Issues de um projeto
+    token_hint: Token com escopo read_api.
+    item_label: Número da issue
+    item_placeholder: "Ex.: 42"
+    fields:
+      project_url:
+        label: Projeto
+        placeholder: grupo/projeto
+        hint: Aceita também o endereço do projeto no gitlab.com.
+  trello:
+    about: Cartões de um quadro
+    token_hint: Token da API gerado a partir da chave, com permissão de leitura.
+    item_label: Cartão
+    item_placeholder: "Link curto, ex.: H0TZyzbK"
+    fields:
+      api_key:
+        label: Chave da API
+        hint: A chave do seu Power-Up, em trello.com/apps/admin.
+      board_id:
+        label: Quadro
+        placeholder: https://trello.com/b/AbC123xy/nome
+        hint: O endereço do quadro, o link curto ou o id.
+
+project_settings:
+  title: Projeto
+  weekly_hours_hint: Quantas horas por semana se espera de quem trabalha no projeto.
+  daily_hint: Deixe vazio se o time não faz daily.
+  customer: "Cliente:"
+  admin_only: Só admins podem alterar as configurações do projeto.
+  billing_title: Cliente e cobrança
+  no_customer: Nenhum (projeto interno)
+  customers_hint: Cadastre clientes em
+  rate_placeholder: "0,00"
+  bill_rate_hint: O que o cliente paga à organização. Só admins veem. Vazio apaga.
+  save_billing: Salvar cobrança
+  delete_title: Excluir projeto
+  delete_text: Apaga o projeto com todos os times, tarefas, sessões de trabalho e integrações.
+  rate_invalid: Informe um valor, por exemplo 100,00.
+  billing_saved: Cobrança salva.
+  saved: Projeto salvo.
+
 labels:
   not_informed: Não informado
   weekday:
@@ -423,14 +508,6 @@ labels:
     BRL: Real (BRL)
     USD: Dólar americano (USD)
     EUR: Euro (EUR)
-  integration:
-    token: Token de acesso
-    github_token_hint: Token pessoal com permissão de leitura de issues.
-    repo: Repositório
-    repo_placeholder: dono/repositorio
-    gitlab_token_hint: Token com escopo read_api.
-    project: Projeto
-    project_placeholder: grupo/projeto ou https://gitlab.com/grupo/projeto
 
 errors:
   no_connection: Sem conexão com o servidor. Confira a rede e tente de novo.

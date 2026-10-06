@@ -10,9 +10,40 @@ import (
 
 // integrationTypes vai no window.BOOT das páginas que mostram integrações: o que
 // cada tipo pede (campos do metadata, rótulos). A tela se desenha a partir disso,
-// então um tipo novo no adapter aparece sem mexer no JavaScript.
-func integrationTypes() map[string]any {
-	return map[string]any{"integration_types": adapter.Descriptors()}
+// então um tipo novo no adapter aparece sem mexer no JavaScript. Os textos vêm do
+// catálogo, no idioma da requisição: integration_types.<tipo>.
+func (h *Handler) integrationTypes(c *echo.Context) map[string]any {
+	lang := h.deps.I18n.Lang(c)
+	types := adapter.Descriptors()
+	for i := range types {
+		h.localizeDescriptor(&types[i], lang)
+	}
+	return map[string]any{"integration_types": types}
+}
+
+// localizeDescriptor preenche os textos de um tipo de integração. A descrição, a dica
+// do token e os rótulos são obrigatórios (um teste confere); o placeholder e a dica de
+// um campo só existem em alguns.
+func (h *Handler) localizeDescriptor(d *adapter.Descriptor, lang string) {
+	cat := h.deps.I18n
+	base := "integration_types." + d.Type + "."
+	d.Description = cat.T(lang, base+"about")
+	d.TokenHint = cat.T(lang, base+"token_hint")
+	d.ItemLabel = cat.T(lang, base+"item_label")
+	if cat.Has(lang, base+"item_placeholder") {
+		d.ItemPlaceholder = cat.T(lang, base+"item_placeholder")
+	}
+	for i := range d.Metadata {
+		f := &d.Metadata[i]
+		fb := base + "fields." + f.Key + "."
+		f.Label = cat.T(lang, fb+"label")
+		if cat.Has(lang, fb+"placeholder") {
+			f.Placeholder = cat.T(lang, fb+"placeholder")
+		}
+		if cat.Has(lang, fb+"hint") {
+			f.Hint = cat.T(lang, fb+"hint")
+		}
+	}
 }
 
 // projectPage monta a página de uma aba do projeto. O middleware de rota já
@@ -41,7 +72,7 @@ func (h *Handler) Project(c *echo.Context) error {
 
 // Tasks é a lista de tarefas do projeto (S9.1).
 func (h *Handler) Tasks(c *echo.Context) error {
-	return h.projectPage(c, "project_tasks", "titles.tasks", "tasks", integrationTypes())
+	return h.projectPage(c, "project_tasks", "titles.tasks", "tasks", h.integrationTypes(c))
 }
 
 // TimeTracking é o ponto do projeto: clock-in/out, sessões e totais (S9.3, S9.4).
@@ -78,7 +109,7 @@ func (h *Handler) Teams(c *echo.Context) error {
 
 // Integrations configura as integrações do projeto com GitHub, GitLab e Trello (S10.1, S23).
 func (h *Handler) Integrations(c *echo.Context) error {
-	return h.projectPage(c, "project_integrations", "titles.integrations", "integrations", integrationTypes())
+	return h.projectPage(c, "project_integrations", "titles.integrations", "integrations", h.integrationTypes(c))
 }
 
 func (h *Handler) ProjectSettings(c *echo.Context) error {

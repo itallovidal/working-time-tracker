@@ -14,7 +14,7 @@
 
   <div class="grid-aside items-stretch">
     <section class="clock" aria-live="polite">
-      <p class="muted" x-show="!$store.clock.ready">{{.T "time.loading"}}</p>
+      <p class="muted" x-show="!$store.clock.ready">{{.T "common.loading"}}</p>
 
       <template x-if="$store.clock.ready && $store.clock.session">
         <div class="stack">

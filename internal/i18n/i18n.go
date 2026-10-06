@@ -175,6 +175,23 @@ func (c *Catalog) Hash(lang string) string {
 	return c.scripts[lang].hash
 }
 
+// Has diz se a chave tem texto no idioma. Serve a textos opcionais, como o
+// placeholder de um campo, que só existe em alguns.
+func (c *Catalog) Has(lang, key string) bool {
+	var node any = c.trees[lang]
+	for _, part := range strings.Split(key, ".") {
+		m, ok := node.(map[string]any)
+		if !ok {
+			return false
+		}
+		if node, ok = m[part]; !ok {
+			return false
+		}
+	}
+	_, ok := node.(string)
+	return ok
+}
+
 // Tree devolve o YAML do idioma já lido, para os testes conferirem as chaves.
 func (c *Catalog) Tree(lang string) map[string]any {
 	return c.trees[lang]

@@ -25,6 +25,8 @@ common:
   optional: Optional
   description_label: Description
   clear_filters: Clear filters
+  loading: Loading…
+  delete_confirm: Delete for good?
 
 titles:
   login: Sign in
@@ -224,13 +226,7 @@ org:
     new: New project
     internal: Internal project
     customer: Customer
-    bill_rate: "Rate billed per hour ({{.unit}})"
     admins_only_hint: The customer and the billed rate are only visible to admins and can be changed later in the project settings.
-    sprint_days: Sprint length (days)
-    weekly_hours: Weekly hours
-    daily_time: Daily time
-    weekly_day: Weekly day
-    no_weekly: No weekly
     create: Create project
     loading: Loading projects…
     empty: No projects yet
@@ -263,6 +259,13 @@ project:
     teams: Collaborators
     integrations: Integrations
     settings: Settings
+  fields:
+    sprint_days: Sprint length (days)
+    weekly_hours: Weekly hours
+    daily_time: Daily time
+    weekly_day: Weekly day
+    no_weekly: No weekly
+    bill_rate: "Rate billed per hour ({{.unit}})"
 
 tasks:
   search_placeholder: Search by name
@@ -334,7 +337,6 @@ task_detail:
   link_action: Link
   delete_title: Delete task
   delete_text: Deletes the task and all the time tracked on it.
-  delete_confirm: Delete for good?
   saved: Task saved.
 
 time:
@@ -342,7 +344,6 @@ time:
   set_rate_before: Set yours on the
   set_rate_after: " tab."
   ask_admin: Ask an admin to set it.
-  loading: Loading…
   running: In progress
   since: "· since {{.time}}"
   other_project: This session belongs to another project. Stop it before starting a task from here.
@@ -389,6 +390,90 @@ time:
   col_duration: Duration
   open: in progress
 
+integrations:
+  intro: Link tasks to GitHub or GitLab issues and to Trello cards. The token is validated on the platform and stored encrypted.
+  new: New integration
+  loading: Loading integrations…
+  none: No integrations
+  none_admin: Create one to link tasks to issues or cards and see their state here.
+  none_member: An admin can set up GitHub, GitLab or Trello for this project.
+  active: Active
+  disabled: Disabled
+  edit_title: Edit integration
+  edit_label: "Edit the integration {{.name}}"
+  token: Token
+  created_at: Created on
+  incomplete: This integration is missing details, and its linked items are not fetched.
+  complete_admin: Edit it to complete.
+  complete_member: Ask an admin to complete it.
+  platform: Platform
+  name_placeholder: "E.g.: App repository"
+  token_label: Access token
+  keep_token: Leave empty to keep the current token
+  enabled_hint: When disabled, tasks keep their links, but the items are no longer fetched.
+  delete_question: Delete the integration? Linked tasks lose the link.
+  delete: Delete integration
+  saving: Saving…
+  validating: Validating connection…
+  create: Create integration
+  name_required: Enter the integration name.
+  created: Integration created. The connection was validated on the platform.
+  saved: Integration saved.
+  deleted: Integration deleted.
+
+integration_types:
+  github:
+    about: Issues of a repository
+    token_hint: Personal token with permission to read issues.
+    item_label: Issue number
+    item_placeholder: "E.g.: 42"
+    fields:
+      repo:
+        label: Repository
+        placeholder: owner/repository
+        hint: The repository address is accepted too.
+  gitlab:
+    about: Issues of a project
+    token_hint: Token with the read_api scope.
+    item_label: Issue number
+    item_placeholder: "E.g.: 42"
+    fields:
+      project_url:
+        label: Project
+        placeholder: group/project
+        hint: The project address on gitlab.com is accepted too.
+  trello:
+    about: Cards of a board
+    token_hint: API token generated from the key, with read permission.
+    item_label: Card
+    item_placeholder: "Short link, e.g.: H0TZyzbK"
+    fields:
+      api_key:
+        label: API key
+        hint: The key of your Power-Up, at trello.com/apps/admin.
+      board_id:
+        label: Board
+        placeholder: https://trello.com/b/AbC123xy/name
+        hint: The board address, the short link or the id.
+
+project_settings:
+  title: Project
+  weekly_hours_hint: How many hours a week are expected from whoever works on the project.
+  daily_hint: Leave empty if the team has no daily.
+  customer: "Customer:"
+  admin_only: Only admins can change the project settings.
+  billing_title: Customer and billing
+  no_customer: None (internal project)
+  customers_hint: Add customers under
+  rate_placeholder: "0.00"
+  bill_rate_hint: What the customer pays the organization. Only admins see it. Empty clears it.
+  save_billing: Save billing
+  delete_title: Delete project
+  delete_text: Deletes the project with all its teams, tasks, work sessions and integrations.
+  rate_invalid: Enter a value, for example 100.00.
+  billing_saved: Billing saved.
+  saved: Project saved.
+
 labels:
   not_informed: Not provided
   weekday:
@@ -413,14 +498,6 @@ labels:
     BRL: Brazilian real (BRL)
     USD: US dollar (USD)
     EUR: Euro (EUR)
-  integration:
-    token: Access token
-    github_token_hint: Personal token with permission to read issues.
-    repo: Repository
-    repo_placeholder: owner/repository
-    gitlab_token_hint: Token with the read_api scope.
-    project: Project
-    project_placeholder: group/project or https://gitlab.com/group/project
 
 errors:
   no_connection: Can't reach the server. Check your network and try again.
