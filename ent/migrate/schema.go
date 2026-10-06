@@ -147,9 +147,8 @@ var (
 		{Name: "state", Type: field.TypeString, Nullable: true},
 		{Name: "postal_code", Type: field.TypeString, Nullable: true},
 		{Name: "country", Type: field.TypeString, Nullable: true},
+		{Name: "work_mode", Type: field.TypeString, Nullable: true},
 		{Name: "timezone", Type: field.TypeString, Default: "America/Sao_Paulo"},
-		{Name: "weekly_hours", Type: field.TypeInt, Nullable: true},
-		{Name: "default_sprint_days", Type: field.TypeInt, Default: 14},
 		{Name: "currency", Type: field.TypeString, Default: "BRL"},
 		{Name: "created_at", Type: field.TypeTime},
 	}
@@ -198,6 +197,7 @@ var (
 		{Name: "github_repo_url", Type: field.TypeString, Nullable: true},
 		{Name: "gitlab_repo_url", Type: field.TypeString, Nullable: true},
 		{Name: "sprint_duration_days", Type: field.TypeInt, Default: 14},
+		{Name: "weekly_hours", Type: field.TypeInt, Nullable: true},
 		{Name: "daily_time", Type: field.TypeString, Nullable: true},
 		{Name: "weekly_sync_day", Type: field.TypeString, Nullable: true},
 		{Name: "bill_rate_cents", Type: field.TypeInt, Nullable: true},
@@ -213,13 +213,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "projects_customers_projects",
-				Columns:    []*schema.Column{ProjectsColumns[10]},
+				Columns:    []*schema.Column{ProjectsColumns[11]},
 				RefColumns: []*schema.Column{CustomersColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "projects_organizations_projects",
-				Columns:    []*schema.Column{ProjectsColumns[11]},
+				Columns:    []*schema.Column{ProjectsColumns[12]},
 				RefColumns: []*schema.Column{OrganizationsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},

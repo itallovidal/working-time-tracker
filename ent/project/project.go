@@ -27,6 +27,8 @@ const (
 	FieldGitlabRepoURL = "gitlab_repo_url"
 	// FieldSprintDurationDays holds the string denoting the sprint_duration_days field in the database.
 	FieldSprintDurationDays = "sprint_duration_days"
+	// FieldWeeklyHours holds the string denoting the weekly_hours field in the database.
+	FieldWeeklyHours = "weekly_hours"
 	// FieldDailyTime holds the string denoting the daily_time field in the database.
 	FieldDailyTime = "daily_time"
 	// FieldWeeklySyncDay holds the string denoting the weekly_sync_day field in the database.
@@ -104,6 +106,7 @@ var Columns = []string{
 	FieldGithubRepoURL,
 	FieldGitlabRepoURL,
 	FieldSprintDurationDays,
+	FieldWeeklyHours,
 	FieldDailyTime,
 	FieldWeeklySyncDay,
 	FieldCustomerID,
@@ -168,6 +171,11 @@ func ByGitlabRepoURL(opts ...sql.OrderTermOption) OrderOption {
 // BySprintDurationDays orders the results by the sprint_duration_days field.
 func BySprintDurationDays(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldSprintDurationDays, opts...).ToFunc()
+}
+
+// ByWeeklyHours orders the results by the weekly_hours field.
+func ByWeeklyHours(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldWeeklyHours, opts...).ToFunc()
 }
 
 // ByDailyTime orders the results by the daily_time field.

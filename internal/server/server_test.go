@@ -267,7 +267,7 @@ func TestOrganization_Profile(t *testing.T) {
 	member := invite(t, e, admin, "bia@test.com", "member")
 	path := "/api/orgs/" + admin.orgID
 
-	rec := do(e, "PATCH", path, `{"summary":"Entregas no mesmo dia","website":"acme.com.br","cnpj":"11.222.333/0001-81","currency":"USD","default_sprint_days":7}`, admin.session)
+	rec := do(e, "PATCH", path, `{"summary":"Entregas no mesmo dia","website":"acme.com.br","cnpj":"11.222.333/0001-81","currency":"USD","work_mode":"hybrid"}`, admin.session)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("admin PATCH = %d: %s", rec.Code, rec.Body.String())
 	}
@@ -279,7 +279,7 @@ func TestOrganization_Profile(t *testing.T) {
 	org := decode(t, rec)
 	for field, want := range map[string]any{
 		"name": "Org", "summary": "Entregas no mesmo dia", "website": "https://acme.com.br",
-		"cnpj": "11222333000181", "currency": "USD", "timezone": "America/Sao_Paulo", "default_sprint_days": float64(7),
+		"cnpj": "11222333000181", "currency": "USD", "timezone": "America/Sao_Paulo", "work_mode": "hybrid",
 	} {
 		if org[field] != want {
 			t.Errorf("%s = %v, want %v", field, org[field], want)
@@ -290,10 +290,20 @@ func TestOrganization_Profile(t *testing.T) {
 		t.Errorf("organization_currency in /auth/me = %v, want USD", got)
 	}
 
-	// Projeto novo sem duração usa a sprint padrão da organização.
-	rec = do(e, "POST", path+"/projects", `{"name":"Projeto"}`, admin.session)
-	if got := decode(t, rec)["sprint_duration_days"]; got != float64(7) {
-		t.Errorf("sprint_duration_days = %v, want the organization default 7", got)
+	// Jornada e sprint não são da organização: cada projeto tem as suas.
+	for _, gone := range []string{"weekly_hours", "default_sprint_days"} {
+		if _, ok := org[gone]; ok {
+			t.Errorf("organization still has %s", gone)
+		}
+	}
+	rec = do(e, "POST", path+"/projects", `{"name":"Projeto","weekly_hours":30}`, admin.session)
+	created := decode(t, rec)
+	if created["sprint_duration_days"] != float64(14) || created["weekly_hours"] != float64(30) {
+		t.Errorf("new project = sprint %v, weekly hours %v; want 14 and 30", created["sprint_duration_days"], created["weekly_hours"])
+	}
+	rec = do(e, "PATCH", "/api/projects/"+created["id"].(string), `{"name":"Projeto","weekly_hours":0}`, admin.session)
+	if got := decode(t, rec)["weekly_hours"]; rec.Code != http.StatusOK || got != nil {
+		t.Errorf("PATCH project clearing weekly hours = %d, weekly_hours %v; want 200 and null", rec.Code, got)
 	}
 
 	if rec := do(e, "PATCH", path, `{"website":"javascript:alert(1)"}`, admin.session); rec.Code != http.StatusBadRequest {

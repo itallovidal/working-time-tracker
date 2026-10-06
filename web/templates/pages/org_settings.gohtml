@@ -112,8 +112,17 @@
       </section>
 
       <section class="card">
-        <div class="card-head"><h2>Padrões</h2></div>
+        <div class="card-head"><h2>Como trabalhamos</h2></div>
         <div class="fields">
+          <div class="field">
+            <label for="org-work-mode">Regime de trabalho</label>
+            <select id="org-work-mode" x-model="form.work_mode">
+              <option value="">Não informado</option>
+              <template x-for="m in WTT.workModes" :key="m.value">
+                <option :value="m.value" x-text="m.label" :selected="m.value === form.work_mode"></option>
+              </template>
+            </select>
+          </div>
           <div class="field">
             <label for="org-timezone">Fuso horário</label>
             <select id="org-timezone" x-model="form.timezone">
@@ -131,17 +140,7 @@
             </select>
           </div>
         </div>
-        <div class="fields">
-          <div class="field">
-            <label for="org-weekly-hours">Jornada semanal (horas)</label>
-            <input id="org-weekly-hours" type="number" min="1" max="168" x-model="form.weekly_hours">
-          </div>
-          <div class="field">
-            <label for="org-sprint">Sprint padrão (dias)</label>
-            <input id="org-sprint" type="number" min="1" max="90" x-model="form.default_sprint_days">
-            <span class="hint">Vale para os projetos novos. Em branco, volta para 14 dias.</span>
-          </div>
-        </div>
+        <p class="muted small">A jornada semanal e a duração da sprint ficam nas configurações de cada projeto.</p>
       </section>
 
       <p class="form-error" x-show="errors.org" x-text="errors.org" role="alert"></p>

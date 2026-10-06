@@ -43,10 +43,10 @@ func (Organization) Fields() []ent.Field {
 		field.String("postal_code").Optional(),
 		field.String("country").Optional(),
 
-		// Padrões de operação
+		// Como a organização trabalha. Jornada e sprint ficam no projeto, porque
+		// projetos diferentes podem trabalhar de formas diferentes.
+		field.String("work_mode").Optional(),
 		field.String("timezone").Default("America/Sao_Paulo"),
-		field.Int("weekly_hours").Optional().Nillable(),
-		field.Int("default_sprint_days").Default(14),
 		field.String("currency").Default("BRL"),
 
 		field.Time("created_at").Default(time.Now).Immutable(),

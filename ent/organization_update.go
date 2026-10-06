@@ -413,6 +413,26 @@ func (_u *OrganizationUpdate) ClearCountry() *OrganizationUpdate {
 	return _u
 }
 
+// SetWorkMode sets the "work_mode" field.
+func (_u *OrganizationUpdate) SetWorkMode(v string) *OrganizationUpdate {
+	_u.mutation.SetWorkMode(v)
+	return _u
+}
+
+// SetNillableWorkMode sets the "work_mode" field if the given value is not nil.
+func (_u *OrganizationUpdate) SetNillableWorkMode(v *string) *OrganizationUpdate {
+	if v != nil {
+		_u.SetWorkMode(*v)
+	}
+	return _u
+}
+
+// ClearWorkMode clears the value of the "work_mode" field.
+func (_u *OrganizationUpdate) ClearWorkMode() *OrganizationUpdate {
+	_u.mutation.ClearWorkMode()
+	return _u
+}
+
 // SetTimezone sets the "timezone" field.
 func (_u *OrganizationUpdate) SetTimezone(v string) *OrganizationUpdate {
 	_u.mutation.SetTimezone(v)
@@ -424,54 +444,6 @@ func (_u *OrganizationUpdate) SetNillableTimezone(v *string) *OrganizationUpdate
 	if v != nil {
 		_u.SetTimezone(*v)
 	}
-	return _u
-}
-
-// SetWeeklyHours sets the "weekly_hours" field.
-func (_u *OrganizationUpdate) SetWeeklyHours(v int) *OrganizationUpdate {
-	_u.mutation.ResetWeeklyHours()
-	_u.mutation.SetWeeklyHours(v)
-	return _u
-}
-
-// SetNillableWeeklyHours sets the "weekly_hours" field if the given value is not nil.
-func (_u *OrganizationUpdate) SetNillableWeeklyHours(v *int) *OrganizationUpdate {
-	if v != nil {
-		_u.SetWeeklyHours(*v)
-	}
-	return _u
-}
-
-// AddWeeklyHours adds value to the "weekly_hours" field.
-func (_u *OrganizationUpdate) AddWeeklyHours(v int) *OrganizationUpdate {
-	_u.mutation.AddWeeklyHours(v)
-	return _u
-}
-
-// ClearWeeklyHours clears the value of the "weekly_hours" field.
-func (_u *OrganizationUpdate) ClearWeeklyHours() *OrganizationUpdate {
-	_u.mutation.ClearWeeklyHours()
-	return _u
-}
-
-// SetDefaultSprintDays sets the "default_sprint_days" field.
-func (_u *OrganizationUpdate) SetDefaultSprintDays(v int) *OrganizationUpdate {
-	_u.mutation.ResetDefaultSprintDays()
-	_u.mutation.SetDefaultSprintDays(v)
-	return _u
-}
-
-// SetNillableDefaultSprintDays sets the "default_sprint_days" field if the given value is not nil.
-func (_u *OrganizationUpdate) SetNillableDefaultSprintDays(v *int) *OrganizationUpdate {
-	if v != nil {
-		_u.SetDefaultSprintDays(*v)
-	}
-	return _u
-}
-
-// AddDefaultSprintDays adds value to the "default_sprint_days" field.
-func (_u *OrganizationUpdate) AddDefaultSprintDays(v int) *OrganizationUpdate {
-	_u.mutation.AddDefaultSprintDays(v)
 	return _u
 }
 
@@ -788,23 +760,14 @@ func (_u *OrganizationUpdate) sqlSave(ctx context.Context) (_node int, err error
 	if _u.mutation.CountryCleared() {
 		_spec.ClearField(organization.FieldCountry, field.TypeString)
 	}
+	if value, ok := _u.mutation.WorkMode(); ok {
+		_spec.SetField(organization.FieldWorkMode, field.TypeString, value)
+	}
+	if _u.mutation.WorkModeCleared() {
+		_spec.ClearField(organization.FieldWorkMode, field.TypeString)
+	}
 	if value, ok := _u.mutation.Timezone(); ok {
 		_spec.SetField(organization.FieldTimezone, field.TypeString, value)
-	}
-	if value, ok := _u.mutation.WeeklyHours(); ok {
-		_spec.SetField(organization.FieldWeeklyHours, field.TypeInt, value)
-	}
-	if value, ok := _u.mutation.AddedWeeklyHours(); ok {
-		_spec.AddField(organization.FieldWeeklyHours, field.TypeInt, value)
-	}
-	if _u.mutation.WeeklyHoursCleared() {
-		_spec.ClearField(organization.FieldWeeklyHours, field.TypeInt)
-	}
-	if value, ok := _u.mutation.DefaultSprintDays(); ok {
-		_spec.SetField(organization.FieldDefaultSprintDays, field.TypeInt, value)
-	}
-	if value, ok := _u.mutation.AddedDefaultSprintDays(); ok {
-		_spec.AddField(organization.FieldDefaultSprintDays, field.TypeInt, value)
 	}
 	if value, ok := _u.mutation.Currency(); ok {
 		_spec.SetField(organization.FieldCurrency, field.TypeString, value)
@@ -1390,6 +1353,26 @@ func (_u *OrganizationUpdateOne) ClearCountry() *OrganizationUpdateOne {
 	return _u
 }
 
+// SetWorkMode sets the "work_mode" field.
+func (_u *OrganizationUpdateOne) SetWorkMode(v string) *OrganizationUpdateOne {
+	_u.mutation.SetWorkMode(v)
+	return _u
+}
+
+// SetNillableWorkMode sets the "work_mode" field if the given value is not nil.
+func (_u *OrganizationUpdateOne) SetNillableWorkMode(v *string) *OrganizationUpdateOne {
+	if v != nil {
+		_u.SetWorkMode(*v)
+	}
+	return _u
+}
+
+// ClearWorkMode clears the value of the "work_mode" field.
+func (_u *OrganizationUpdateOne) ClearWorkMode() *OrganizationUpdateOne {
+	_u.mutation.ClearWorkMode()
+	return _u
+}
+
 // SetTimezone sets the "timezone" field.
 func (_u *OrganizationUpdateOne) SetTimezone(v string) *OrganizationUpdateOne {
 	_u.mutation.SetTimezone(v)
@@ -1401,54 +1384,6 @@ func (_u *OrganizationUpdateOne) SetNillableTimezone(v *string) *OrganizationUpd
 	if v != nil {
 		_u.SetTimezone(*v)
 	}
-	return _u
-}
-
-// SetWeeklyHours sets the "weekly_hours" field.
-func (_u *OrganizationUpdateOne) SetWeeklyHours(v int) *OrganizationUpdateOne {
-	_u.mutation.ResetWeeklyHours()
-	_u.mutation.SetWeeklyHours(v)
-	return _u
-}
-
-// SetNillableWeeklyHours sets the "weekly_hours" field if the given value is not nil.
-func (_u *OrganizationUpdateOne) SetNillableWeeklyHours(v *int) *OrganizationUpdateOne {
-	if v != nil {
-		_u.SetWeeklyHours(*v)
-	}
-	return _u
-}
-
-// AddWeeklyHours adds value to the "weekly_hours" field.
-func (_u *OrganizationUpdateOne) AddWeeklyHours(v int) *OrganizationUpdateOne {
-	_u.mutation.AddWeeklyHours(v)
-	return _u
-}
-
-// ClearWeeklyHours clears the value of the "weekly_hours" field.
-func (_u *OrganizationUpdateOne) ClearWeeklyHours() *OrganizationUpdateOne {
-	_u.mutation.ClearWeeklyHours()
-	return _u
-}
-
-// SetDefaultSprintDays sets the "default_sprint_days" field.
-func (_u *OrganizationUpdateOne) SetDefaultSprintDays(v int) *OrganizationUpdateOne {
-	_u.mutation.ResetDefaultSprintDays()
-	_u.mutation.SetDefaultSprintDays(v)
-	return _u
-}
-
-// SetNillableDefaultSprintDays sets the "default_sprint_days" field if the given value is not nil.
-func (_u *OrganizationUpdateOne) SetNillableDefaultSprintDays(v *int) *OrganizationUpdateOne {
-	if v != nil {
-		_u.SetDefaultSprintDays(*v)
-	}
-	return _u
-}
-
-// AddDefaultSprintDays adds value to the "default_sprint_days" field.
-func (_u *OrganizationUpdateOne) AddDefaultSprintDays(v int) *OrganizationUpdateOne {
-	_u.mutation.AddDefaultSprintDays(v)
 	return _u
 }
 
@@ -1795,23 +1730,14 @@ func (_u *OrganizationUpdateOne) sqlSave(ctx context.Context) (_node *Organizati
 	if _u.mutation.CountryCleared() {
 		_spec.ClearField(organization.FieldCountry, field.TypeString)
 	}
+	if value, ok := _u.mutation.WorkMode(); ok {
+		_spec.SetField(organization.FieldWorkMode, field.TypeString, value)
+	}
+	if _u.mutation.WorkModeCleared() {
+		_spec.ClearField(organization.FieldWorkMode, field.TypeString)
+	}
 	if value, ok := _u.mutation.Timezone(); ok {
 		_spec.SetField(organization.FieldTimezone, field.TypeString, value)
-	}
-	if value, ok := _u.mutation.WeeklyHours(); ok {
-		_spec.SetField(organization.FieldWeeklyHours, field.TypeInt, value)
-	}
-	if value, ok := _u.mutation.AddedWeeklyHours(); ok {
-		_spec.AddField(organization.FieldWeeklyHours, field.TypeInt, value)
-	}
-	if _u.mutation.WeeklyHoursCleared() {
-		_spec.ClearField(organization.FieldWeeklyHours, field.TypeInt)
-	}
-	if value, ok := _u.mutation.DefaultSprintDays(); ok {
-		_spec.SetField(organization.FieldDefaultSprintDays, field.TypeInt, value)
-	}
-	if value, ok := _u.mutation.AddedDefaultSprintDays(); ok {
-		_spec.AddField(organization.FieldDefaultSprintDays, field.TypeInt, value)
 	}
 	if value, ok := _u.mutation.Currency(); ok {
 		_spec.SetField(organization.FieldCurrency, field.TypeString, value)

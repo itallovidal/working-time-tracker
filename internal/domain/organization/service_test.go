@@ -100,10 +100,7 @@ func TestService_Create_Defaults(t *testing.T) {
 	if org.Timezone != organization.DefaultTimezone || org.Currency != organization.DefaultCurrency {
 		t.Errorf("defaults = %q, %q; want %q, %q", org.Timezone, org.Currency, organization.DefaultTimezone, organization.DefaultCurrency)
 	}
-	if org.DefaultSprintDays != organization.DefaultSprintDays {
-		t.Errorf("default_sprint_days = %d, want %d", org.DefaultSprintDays, organization.DefaultSprintDays)
-	}
-	if org.FoundedYear != nil || org.WeeklyHours != nil || org.Summary != "" {
+	if org.FoundedYear != nil || org.WorkMode != "" || org.Summary != "" {
 		t.Errorf("optional fields should start empty: %+v", org)
 	}
 }
@@ -115,24 +112,23 @@ func TestService_Update_Profile(t *testing.T) {
 	id := created.ID.String()
 
 	_, err := svc.Update(id, organization.UpdateInput{
-		Summary:           ptr("Entregas no mesmo dia\n  para lojas de bairro."),
-		Description:       ptr("  Primeira linha.\nSegunda linha.  "),
-		Industry:          ptr("Logística"),
-		FoundedYear:       ptr(2015),
-		Size:              ptr("11-50"),
-		Website:           ptr("acme.com.br"),
-		ContactEmail:      ptr(" Contato@Acme.com.br "),
-		Phone:             ptr("+55 (11) 4002-8922"),
-		LinkedinURL:       ptr("https://www.linkedin.com/company/acme"),
-		LegalName:         ptr("Acme Entregas Ltda"),
-		CNPJ:              ptr("11.222.333/0001-81"),
-		City:              ptr("São Paulo"),
-		State:             ptr("SP"),
-		Country:           ptr("Brasil"),
-		Timezone:          ptr("America/Recife"),
-		WeeklyHours:       ptr(40),
-		DefaultSprintDays: ptr(7),
-		Currency:          ptr("usd"),
+		Summary:      ptr("Entregas no mesmo dia\n  para lojas de bairro."),
+		Description:  ptr("  Primeira linha.\nSegunda linha.  "),
+		Industry:     ptr("Logística"),
+		FoundedYear:  ptr(2015),
+		Size:         ptr("11-50"),
+		Website:      ptr("acme.com.br"),
+		ContactEmail: ptr(" Contato@Acme.com.br "),
+		Phone:        ptr("+55 (11) 4002-8922"),
+		LinkedinURL:  ptr("https://www.linkedin.com/company/acme"),
+		LegalName:    ptr("Acme Entregas Ltda"),
+		CNPJ:         ptr("11.222.333/0001-81"),
+		City:         ptr("São Paulo"),
+		State:        ptr("SP"),
+		Country:      ptr("Brasil"),
+		WorkMode:     ptr(" Hybrid "),
+		Timezone:     ptr("America/Recife"),
+		Currency:     ptr("usd"),
 	})
 	if err != nil {
 		t.Fatalf("update failed: %v", err)
@@ -158,6 +154,7 @@ func TestService_Update_Profile(t *testing.T) {
 		"legal_name":    {got.LegalName, "Acme Entregas Ltda"},
 		"cnpj":          {got.CNPJ, "11222333000181"},
 		"city":          {got.City, "São Paulo"},
+		"work_mode":     {got.WorkMode, "hybrid"},
 		"timezone":      {got.Timezone, "America/Recife"},
 		"currency":      {got.Currency, "USD"},
 	} {
@@ -168,37 +165,23 @@ func TestService_Update_Profile(t *testing.T) {
 	if got.FoundedYear == nil || *got.FoundedYear != 2015 {
 		t.Errorf("founded_year = %v, want 2015", got.FoundedYear)
 	}
-	if got.WeeklyHours == nil || *got.WeeklyHours != 40 {
-		t.Errorf("weekly_hours = %v, want 40", got.WeeklyHours)
-	}
-	if got.DefaultSprintDays != 7 {
-		t.Errorf("default_sprint_days = %d, want 7", got.DefaultSprintDays)
-	}
 
 	// Texto vazio e zero apagam; o que não vem continua como estava.
 	if _, err := svc.Update(id, organization.UpdateInput{
-		Summary: ptr(""), CNPJ: ptr(""), Website: ptr(""), FoundedYear: ptr(0), WeeklyHours: ptr(0),
+		Summary: ptr(""), CNPJ: ptr(""), Website: ptr(""), FoundedYear: ptr(0), WorkMode: ptr(""),
 		Timezone: ptr(""), Currency: ptr(""),
 	}); err != nil {
 		t.Fatalf("clearing failed: %v", err)
 	}
 	got, _ = svc.Get(id)
-	if got.Summary != "" || got.CNPJ != "" || got.Website != "" || got.FoundedYear != nil || got.WeeklyHours != nil {
+	if got.Summary != "" || got.CNPJ != "" || got.Website != "" || got.FoundedYear != nil || got.WorkMode != "" {
 		t.Errorf("fields were not cleared: %+v", got)
 	}
 	if got.Timezone != organization.DefaultTimezone || got.Currency != organization.DefaultCurrency {
 		t.Errorf("empty timezone and currency should go back to the defaults, got %q and %q", got.Timezone, got.Currency)
 	}
-	if got.Industry != "Logística" || got.DefaultSprintDays != 7 || got.LegalName != "Acme Entregas Ltda" {
+	if got.Industry != "Logística" || got.Size != "11-50" || got.LegalName != "Acme Entregas Ltda" {
 		t.Errorf("fields that were not sent changed: %+v", got)
-	}
-
-	// A sprint padrão nunca fica em branco: zero volta para os 14 dias.
-	if _, err := svc.Update(id, organization.UpdateInput{DefaultSprintDays: ptr(0)}); err != nil {
-		t.Fatalf("resetting the default sprint failed: %v", err)
-	}
-	if got, _ = svc.Get(id); got.DefaultSprintDays != organization.DefaultSprintDays {
-		t.Errorf("default_sprint_days after clearing = %d, want %d", got.DefaultSprintDays, organization.DefaultSprintDays)
 	}
 }
 
@@ -225,9 +208,7 @@ func TestService_Update_Validation(t *testing.T) {
 		{"cnpj", organization.UpdateInput{CNPJ: ptr("11.222.333/0001-80")}, organization.ErrInvalidCNPJ},
 		{"timezone", organization.UpdateInput{Timezone: ptr("Marte/Olympus")}, organization.ErrInvalidTimezone},
 		{"timezone local", organization.UpdateInput{Timezone: ptr("Local")}, organization.ErrInvalidTimezone},
-		{"weekly hours", organization.UpdateInput{WeeklyHours: ptr(169)}, organization.ErrInvalidWeeklyHours},
-		{"sprint", organization.UpdateInput{DefaultSprintDays: ptr(91)}, organization.ErrInvalidSprint},
-		{"negative sprint", organization.UpdateInput{DefaultSprintDays: ptr(-1)}, organization.ErrInvalidSprint},
+		{"work mode", organization.UpdateInput{WorkMode: ptr("nômade")}, organization.ErrInvalidWorkMode},
 		{"currency", organization.UpdateInput{Currency: ptr("BTC")}, organization.ErrInvalidCurrency},
 	}
 	for _, c := range cases {

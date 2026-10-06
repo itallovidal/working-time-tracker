@@ -32,8 +32,8 @@ func setup(t *testing.T) fixture {
 	}
 	org, _ := orgSvc.Create("Org")
 	f.orgID = org.ID.String()
-	x, _ := f.projSvc.Create(f.orgID, "Projeto X", "", 0, nil, nil)
-	y, _ := f.projSvc.Create(f.orgID, "Projeto Y", "", 0, nil, nil)
+	x, _ := f.projSvc.Create(f.orgID, "Projeto X", "", 0, nil, nil, nil)
+	y, _ := f.projSvc.Create(f.orgID, "Projeto Y", "", 0, nil, nil, nil)
 	ana, _ := f.personSvc.Create(f.orgID, "Ana", "ana@test.com")
 	bruno, err := f.personSvc.Create(f.orgID, "Bruno", "bruno@test.com")
 	if err != nil {

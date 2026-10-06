@@ -283,6 +283,20 @@ func (_c *OrganizationCreate) SetNillableCountry(v *string) *OrganizationCreate 
 	return _c
 }
 
+// SetWorkMode sets the "work_mode" field.
+func (_c *OrganizationCreate) SetWorkMode(v string) *OrganizationCreate {
+	_c.mutation.SetWorkMode(v)
+	return _c
+}
+
+// SetNillableWorkMode sets the "work_mode" field if the given value is not nil.
+func (_c *OrganizationCreate) SetNillableWorkMode(v *string) *OrganizationCreate {
+	if v != nil {
+		_c.SetWorkMode(*v)
+	}
+	return _c
+}
+
 // SetTimezone sets the "timezone" field.
 func (_c *OrganizationCreate) SetTimezone(v string) *OrganizationCreate {
 	_c.mutation.SetTimezone(v)
@@ -293,34 +307,6 @@ func (_c *OrganizationCreate) SetTimezone(v string) *OrganizationCreate {
 func (_c *OrganizationCreate) SetNillableTimezone(v *string) *OrganizationCreate {
 	if v != nil {
 		_c.SetTimezone(*v)
-	}
-	return _c
-}
-
-// SetWeeklyHours sets the "weekly_hours" field.
-func (_c *OrganizationCreate) SetWeeklyHours(v int) *OrganizationCreate {
-	_c.mutation.SetWeeklyHours(v)
-	return _c
-}
-
-// SetNillableWeeklyHours sets the "weekly_hours" field if the given value is not nil.
-func (_c *OrganizationCreate) SetNillableWeeklyHours(v *int) *OrganizationCreate {
-	if v != nil {
-		_c.SetWeeklyHours(*v)
-	}
-	return _c
-}
-
-// SetDefaultSprintDays sets the "default_sprint_days" field.
-func (_c *OrganizationCreate) SetDefaultSprintDays(v int) *OrganizationCreate {
-	_c.mutation.SetDefaultSprintDays(v)
-	return _c
-}
-
-// SetNillableDefaultSprintDays sets the "default_sprint_days" field if the given value is not nil.
-func (_c *OrganizationCreate) SetNillableDefaultSprintDays(v *int) *OrganizationCreate {
-	if v != nil {
-		_c.SetDefaultSprintDays(*v)
 	}
 	return _c
 }
@@ -466,10 +452,6 @@ func (_c *OrganizationCreate) defaults() {
 		v := organization.DefaultTimezone
 		_c.mutation.SetTimezone(v)
 	}
-	if _, ok := _c.mutation.DefaultSprintDays(); !ok {
-		v := organization.DefaultDefaultSprintDays
-		_c.mutation.SetDefaultSprintDays(v)
-	}
 	if _, ok := _c.mutation.Currency(); !ok {
 		v := organization.DefaultCurrency
 		_c.mutation.SetCurrency(v)
@@ -491,9 +473,6 @@ func (_c *OrganizationCreate) check() error {
 	}
 	if _, ok := _c.mutation.Timezone(); !ok {
 		return &ValidationError{Name: "timezone", err: errors.New(`ent: missing required field "Organization.timezone"`)}
-	}
-	if _, ok := _c.mutation.DefaultSprintDays(); !ok {
-		return &ValidationError{Name: "default_sprint_days", err: errors.New(`ent: missing required field "Organization.default_sprint_days"`)}
 	}
 	if _, ok := _c.mutation.Currency(); !ok {
 		return &ValidationError{Name: "currency", err: errors.New(`ent: missing required field "Organization.currency"`)}
@@ -612,17 +591,13 @@ func (_c *OrganizationCreate) createSpec() (*Organization, *sqlgraph.CreateSpec)
 		_spec.SetField(organization.FieldCountry, field.TypeString, value)
 		_node.Country = value
 	}
+	if value, ok := _c.mutation.WorkMode(); ok {
+		_spec.SetField(organization.FieldWorkMode, field.TypeString, value)
+		_node.WorkMode = value
+	}
 	if value, ok := _c.mutation.Timezone(); ok {
 		_spec.SetField(organization.FieldTimezone, field.TypeString, value)
 		_node.Timezone = value
-	}
-	if value, ok := _c.mutation.WeeklyHours(); ok {
-		_spec.SetField(organization.FieldWeeklyHours, field.TypeInt, value)
-		_node.WeeklyHours = &value
-	}
-	if value, ok := _c.mutation.DefaultSprintDays(); ok {
-		_spec.SetField(organization.FieldDefaultSprintDays, field.TypeInt, value)
-		_node.DefaultSprintDays = value
 	}
 	if value, ok := _c.mutation.Currency(); ok {
 		_spec.SetField(organization.FieldCurrency, field.TypeString, value)

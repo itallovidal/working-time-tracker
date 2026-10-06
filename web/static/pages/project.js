@@ -371,7 +371,7 @@ document.addEventListener('alpine:init', () => {
   Alpine.data('projectSettings', () => ({
     ...form(),
     loading: true,
-    form: { name: '', description: '', sprint_duration_days: 14, daily_time: '', weekly_sync_day: '' },
+    form: { name: '', description: '', sprint_duration_days: 14, weekly_hours: '', daily_time: '', weekly_sync_day: '' },
     customerName: '',
     customers: [],
     billing: { customer_id: '', rate: '' },
@@ -383,6 +383,7 @@ document.addEventListener('alpine:init', () => {
           name: p.name,
           description: p.description || '',
           sprint_duration_days: p.sprint_duration_days,
+          weekly_hours: p.weekly_hours || '',
           daily_time: p.daily_time || '',
           weekly_sync_day: p.weekly_sync_day || '',
         };
@@ -419,11 +420,13 @@ document.addEventListener('alpine:init', () => {
     },
     save() {
       return this.run('save', async () => {
-        // Texto vazio apaga daily e weekly; a API mantém o que não vier no corpo.
+        // Texto vazio apaga daily e weekly, e zero apaga a jornada; a API mantém
+        // o que não vier no corpo.
         const p = await api('PATCH', '/api/projects/' + project.id, {
           name: this.form.name,
           description: this.form.description,
           sprint_duration_days: Number(this.form.sprint_duration_days) || 0,
+          weekly_hours: Number(this.form.weekly_hours) || 0,
           daily_time: this.form.daily_time || '',
           weekly_sync_day: this.form.weekly_sync_day || '',
         });

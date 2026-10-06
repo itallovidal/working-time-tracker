@@ -77,18 +77,13 @@ func (s *Store) Update(org *Organization) error {
 		SetState(org.State).
 		SetPostalCode(org.PostalCode).
 		SetCountry(org.Country).
+		SetWorkMode(org.WorkMode).
 		SetTimezone(org.Timezone).
-		SetDefaultSprintDays(org.DefaultSprintDays).
 		SetCurrency(org.Currency)
 	if org.FoundedYear != nil {
 		q = q.SetFoundedYear(*org.FoundedYear)
 	} else {
 		q = q.ClearFoundedYear()
-	}
-	if org.WeeklyHours != nil {
-		q = q.SetWeeklyHours(*org.WeeklyHours)
-	} else {
-		q = q.ClearWeeklyHours()
 	}
 	_, err := q.Save(context.Background())
 	return err
@@ -121,31 +116,30 @@ func toDomainOrg(e *ent.Organization) *Organization {
 		return nil
 	}
 	return &Organization{
-		ID:                e.ID,
-		Name:              e.Name,
-		Summary:           e.Summary,
-		Description:       e.Description,
-		Industry:          e.Industry,
-		FoundedYear:       e.FoundedYear,
-		Size:              e.Size,
-		Website:           e.Website,
-		ContactEmail:      e.ContactEmail,
-		Phone:             e.Phone,
-		LinkedinURL:       e.LinkedinURL,
-		InstagramURL:      e.InstagramURL,
-		LegalName:         e.LegalName,
-		CNPJ:              e.Cnpj,
-		AddressLine1:      e.AddressLine1,
-		AddressLine2:      e.AddressLine2,
-		City:              e.City,
-		State:             e.State,
-		PostalCode:        e.PostalCode,
-		Country:           e.Country,
-		Timezone:          e.Timezone,
-		WeeklyHours:       e.WeeklyHours,
-		DefaultSprintDays: e.DefaultSprintDays,
-		Currency:          e.Currency,
-		CreatedAt:         e.CreatedAt,
+		ID:           e.ID,
+		Name:         e.Name,
+		Summary:      e.Summary,
+		Description:  e.Description,
+		Industry:     e.Industry,
+		FoundedYear:  e.FoundedYear,
+		Size:         e.Size,
+		Website:      e.Website,
+		ContactEmail: e.ContactEmail,
+		Phone:        e.Phone,
+		LinkedinURL:  e.LinkedinURL,
+		InstagramURL: e.InstagramURL,
+		LegalName:    e.LegalName,
+		CNPJ:         e.Cnpj,
+		AddressLine1: e.AddressLine1,
+		AddressLine2: e.AddressLine2,
+		City:         e.City,
+		State:        e.State,
+		PostalCode:   e.PostalCode,
+		Country:      e.Country,
+		WorkMode:     e.WorkMode,
+		Timezone:     e.Timezone,
+		Currency:     e.Currency,
+		CreatedAt:    e.CreatedAt,
 	}
 }
 

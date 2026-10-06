@@ -56,12 +56,10 @@ type Organization struct {
 	PostalCode string `json:"postal_code,omitempty"`
 	// Country holds the value of the "country" field.
 	Country string `json:"country,omitempty"`
+	// WorkMode holds the value of the "work_mode" field.
+	WorkMode string `json:"work_mode,omitempty"`
 	// Timezone holds the value of the "timezone" field.
 	Timezone string `json:"timezone,omitempty"`
-	// WeeklyHours holds the value of the "weekly_hours" field.
-	WeeklyHours *int `json:"weekly_hours,omitempty"`
-	// DefaultSprintDays holds the value of the "default_sprint_days" field.
-	DefaultSprintDays int `json:"default_sprint_days,omitempty"`
 	// Currency holds the value of the "currency" field.
 	Currency string `json:"currency,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
@@ -128,9 +126,9 @@ func (*Organization) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case organization.FieldFoundedYear, organization.FieldWeeklyHours, organization.FieldDefaultSprintDays:
+		case organization.FieldFoundedYear:
 			values[i] = new(sql.NullInt64)
-		case organization.FieldName, organization.FieldSummary, organization.FieldDescription, organization.FieldIndustry, organization.FieldSize, organization.FieldWebsite, organization.FieldContactEmail, organization.FieldPhone, organization.FieldLinkedinURL, organization.FieldInstagramURL, organization.FieldLegalName, organization.FieldCnpj, organization.FieldAddressLine1, organization.FieldAddressLine2, organization.FieldCity, organization.FieldState, organization.FieldPostalCode, organization.FieldCountry, organization.FieldTimezone, organization.FieldCurrency:
+		case organization.FieldName, organization.FieldSummary, organization.FieldDescription, organization.FieldIndustry, organization.FieldSize, organization.FieldWebsite, organization.FieldContactEmail, organization.FieldPhone, organization.FieldLinkedinURL, organization.FieldInstagramURL, organization.FieldLegalName, organization.FieldCnpj, organization.FieldAddressLine1, organization.FieldAddressLine2, organization.FieldCity, organization.FieldState, organization.FieldPostalCode, organization.FieldCountry, organization.FieldWorkMode, organization.FieldTimezone, organization.FieldCurrency:
 			values[i] = new(sql.NullString)
 		case organization.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
@@ -272,24 +270,17 @@ func (_m *Organization) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.Country = value.String
 			}
+		case organization.FieldWorkMode:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field work_mode", values[i])
+			} else if value.Valid {
+				_m.WorkMode = value.String
+			}
 		case organization.FieldTimezone:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field timezone", values[i])
 			} else if value.Valid {
 				_m.Timezone = value.String
-			}
-		case organization.FieldWeeklyHours:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field weekly_hours", values[i])
-			} else if value.Valid {
-				_m.WeeklyHours = new(int)
-				*_m.WeeklyHours = int(value.Int64)
-			}
-		case organization.FieldDefaultSprintDays:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field default_sprint_days", values[i])
-			} else if value.Valid {
-				_m.DefaultSprintDays = int(value.Int64)
 			}
 		case organization.FieldCurrency:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -418,16 +409,11 @@ func (_m *Organization) String() string {
 	builder.WriteString("country=")
 	builder.WriteString(_m.Country)
 	builder.WriteString(", ")
+	builder.WriteString("work_mode=")
+	builder.WriteString(_m.WorkMode)
+	builder.WriteString(", ")
 	builder.WriteString("timezone=")
 	builder.WriteString(_m.Timezone)
-	builder.WriteString(", ")
-	if v := _m.WeeklyHours; v != nil {
-		builder.WriteString("weekly_hours=")
-		builder.WriteString(fmt.Sprintf("%v", *v))
-	}
-	builder.WriteString(", ")
-	builder.WriteString("default_sprint_days=")
-	builder.WriteString(fmt.Sprintf("%v", _m.DefaultSprintDays))
 	builder.WriteString(", ")
 	builder.WriteString("currency=")
 	builder.WriteString(_m.Currency)

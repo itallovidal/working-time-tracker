@@ -28,6 +28,7 @@ func (s *Store) Create(p *Project) error {
 		SetNillableGithubRepoURL(p.GithubRepoURL).
 		SetNillableGitlabRepoURL(p.GitlabRepoURL).
 		SetSprintDurationDays(p.SprintDurationDays).
+		SetNillableWeeklyHours(p.WeeklyHours).
 		SetNillableDailyTime(p.DailyTime).
 		SetNillableWeeklySyncDay(p.WeeklySyncDay).
 		Save(context.Background())
@@ -37,21 +38,6 @@ func (s *Store) Create(p *Project) error {
 	p.ID = created.ID
 	p.CreatedAt = created.CreatedAt
 	return nil
-}
-
-// DefaultSprintDays devolve a duração de sprint que a organização usa em
-// projetos novos (14 dias, se ela não mudou).
-func (s *Store) DefaultSprintDays(orgID uuid.UUID) (int, error) {
-	org, err := s.client.Organization.Get(context.Background(), orgID)
-	if ent.IsNotFound(err) {
-		// Qualquer duração válida serve: o Create falha em seguida pela chave
-		// estrangeira.
-		return 14, nil
-	}
-	if err != nil {
-		return 0, err
-	}
-	return org.DefaultSprintDays, nil
 }
 
 func (s *Store) ListByOrg(orgID string) ([]Project, error) {
@@ -149,6 +135,11 @@ func (s *Store) Update(p *Project) error {
 	} else {
 		q = q.ClearGitlabRepoURL()
 	}
+	if p.WeeklyHours != nil {
+		q = q.SetWeeklyHours(*p.WeeklyHours)
+	} else {
+		q = q.ClearWeeklyHours()
+	}
 	if p.DailyTime != nil {
 		q = q.SetDailyTime(*p.DailyTime)
 	} else {
@@ -183,6 +174,7 @@ func toDomainProject(e *ent.Project) *Project {
 		GithubRepoURL:      e.GithubRepoURL,
 		GitlabRepoURL:      e.GitlabRepoURL,
 		SprintDurationDays: e.SprintDurationDays,
+		WeeklyHours:        e.WeeklyHours,
 		DailyTime:          e.DailyTime,
 		WeeklySyncDay:      e.WeeklySyncDay,
 		Customer:           customerRef(e),

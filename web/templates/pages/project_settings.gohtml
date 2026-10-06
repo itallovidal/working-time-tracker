@@ -20,6 +20,11 @@
           <input id="ps-sprint" type="number" min="1" max="90" x-model.number="form.sprint_duration_days" {{if not .IsAdmin}}disabled{{end}}>
         </div>
         <div class="field">
+          <label for="ps-weekly-hours">Jornada semanal (horas)</label>
+          <input id="ps-weekly-hours" type="number" min="1" max="168" x-model="form.weekly_hours" {{if not .IsAdmin}}disabled placeholder="Não informado"{{end}}>
+          <span class="hint">Quantas horas por semana se espera de quem trabalha no projeto.</span>
+        </div>
+        <div class="field">
           <label for="ps-daily">Horário da daily</label>
           <input id="ps-daily" type="time" x-model="form.daily_time" {{if not .IsAdmin}}disabled{{end}}>
           <span class="hint">Deixe vazio se o time não faz daily.</span>

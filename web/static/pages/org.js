@@ -11,16 +11,16 @@ document.addEventListener('alpine:init', () => {
   const org = WTT.boot.org || { name: me.organization_name };
 
   const blankProject = () => ({
-    name: '', description: '', sprint_duration_days: org.default_sprint_days || 14, daily_time: '', weekly_sync_day: '',
+    name: '', description: '', sprint_duration_days: 14, weekly_hours: '', daily_time: '', weekly_sync_day: '',
   });
 
   const orgTexts = [
     'name', 'summary', 'description', 'industry', 'size',
     'website', 'contact_email', 'phone', 'linkedin_url', 'instagram_url',
     'legal_name', 'cnpj', 'address_line1', 'address_line2', 'city', 'state', 'postal_code', 'country',
-    'timezone', 'currency',
+    'work_mode', 'timezone', 'currency',
   ];
-  const orgNumbers = ['founded_year', 'weekly_hours', 'default_sprint_days'];
+  const orgNumbers = ['founded_year'];
 
   // orgForm copia a organização para o formulário: campo sem valor vira texto vazio.
   function orgForm(o) {
@@ -40,8 +40,11 @@ document.addEventListener('alpine:init', () => {
     return current && !zones.includes(current) ? [current, ...zones] : zones;
   }
 
-  // rows tira de uma lista de [rótulo, valor, extras] as linhas sem valor.
-  const rows = (list) => list.filter((r) => r[1]).map((r) => ({ label: r[0], value: r[1], ...(r[2] || {}) }));
+  // rows monta as linhas de uma lista de [rótulo, valor, extras]. Uma linha sem
+  // valor aparece como "Não informado", sem link.
+  const rows = (list) => list.map((r) => (r[1]
+    ? { label: r[0], value: r[1], ...(r[2] || {}) }
+    : { label: r[0], value: WTT.notInformed, empty: true }));
   const bareURL = (url) => (url || '').replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
 
   Alpine.data('orgProjects', () => ({
@@ -70,6 +73,7 @@ document.addEventListener('alpine:init', () => {
           name: this.draft.name,
           description: this.draft.description,
           sprint_duration_days: Number(this.draft.sprint_duration_days) || 0,
+          weekly_hours: Number(this.draft.weekly_hours) || 0,
           daily_time: this.draft.daily_time || null,
           weekly_sync_day: this.draft.weekly_sync_day || null,
         });
@@ -190,15 +194,14 @@ document.addEventListener('alpine:init', () => {
     },
     defaults() {
       return rows([
+        ['Regime', WTT.fmt.workMode(org.work_mode)],
         ['Fuso horário', org.timezone],
         ['Moeda', WTT.fmt.currency(org.currency)],
-        ['Jornada semanal', org.weekly_hours ? org.weekly_hours + ' horas' : ''],
-        ['Sprint padrão', org.default_sprint_days + ' dias'],
       ]);
     },
     // Fuso e moeda sempre têm valor, então não contam como perfil preenchido.
     isEmpty() {
-      return !org.description && this.identity().length + this.contact().length + this.legal().length === 0;
+      return !org.description && [...this.identity(), ...this.contact(), ...this.legal()].every((f) => f.empty);
     },
   }));
 

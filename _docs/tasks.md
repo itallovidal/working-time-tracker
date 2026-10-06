@@ -178,11 +178,13 @@
 
 ### Sprint 11: Organization Profile
 
-- [X] S11.1 Add profile fields to the Organization schema (identity, contact, legal data, operating defaults) with validation: CNPJ check digits (numeric and alphanumeric), http/https links, IANA timezone, currency
+- [X] S11.1 Add profile fields to the Organization schema (identity, contact, legal data, and how it works: work mode, timezone, currency) with validation: CNPJ check digits (numeric and alphanumeric), http/https links, IANA timezone, currency
 - [X] S11.2 Make `PATCH /api/orgs/:orgId` a partial update of the profile; `GET` returns the full profile to any member
-- [X] S11.3 Use the organization's default sprint length for new projects and expose the organization currency in the logged-in identity
+- [X] S11.3 Expose the organization currency in the logged-in identity
 - [X] S11.4 Build the organization settings form (identity, contact, legal data, defaults) and the "Sobre" tab that every member can read; show the summary in the organization header
 - [X] S11.5 Tests for validators, service, handler, router access and pages; seed the demo organization profile; update README, design and API reference
+- [X] S11.6 Keep weekly hours and sprint length on the project instead of the organization, since projects can work differently: add `weekly_hours` to the project (create, edit and card badge)
+- [X] S11.7 Show "Não informado" for empty profile fields on the "Sobre" tab and the customers table instead of hiding them
 
 ---
 

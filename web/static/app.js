@@ -83,6 +83,13 @@
     { value: '500+', label: 'Mais de 500 pessoas' },
   ];
 
+  // Os regimes de trabalho que o backend aceita (internal/domain/organization).
+  const workModes = [
+    { value: 'remote', label: 'Remoto' },
+    { value: 'hybrid', label: 'Híbrido' },
+    { value: 'onsite', label: 'Presencial' },
+  ];
+
   // As moedas que o backend aceita (internal/domain/organization).
   const currencies = [
     { value: 'BRL', label: 'Real (BRL)' },
@@ -152,6 +159,10 @@
       const c = currencies.find((x) => x.value === value);
       return c ? c.label : value;
     },
+    workMode(value) {
+      const m = workModes.find((x) => x.value === value);
+      return m ? m.label : value;
+    },
     // Centavos na moeda da organização: 2050 -> "R$ 20,50". Sem valor, um travessão.
     money(cents) {
       if (cents === null || cents === undefined) return '—';
@@ -215,7 +226,10 @@
     },
   ];
 
-  window.WTT = { api, ApiError, form, fmt, toCents, copyText, weekdays, orgSizes, currencies, integrationTypes, boot: window.BOOT || {} };
+  // O que as telas mostram no lugar de um campo de cadastro sem valor.
+  const notInformed = 'Não informado';
+
+  window.WTT = { api, ApiError, form, fmt, toCents, copyText, notInformed, weekdays, orgSizes, workModes, currencies, integrationTypes, boot: window.BOOT || {} };
 
   document.addEventListener('alpine:init', () => {
     Alpine.store('toast', {

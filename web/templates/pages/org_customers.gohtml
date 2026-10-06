@@ -24,10 +24,14 @@
             <template x-for="c in customers" :key="c.id">
               <tr>
                 <td class="nowrap" x-text="c.name"></td>
-                <td class="mono num nowrap" x-text="WTT.fmt.cnpj(c.document) || '—'"></td>
+                <td class="nowrap">
+                  <span class="mono num" x-show="c.document" x-text="WTT.fmt.cnpj(c.document)"></span>
+                  <span class="muted" x-show="!c.document" x-text="WTT.notInformed"></span>
+                </td>
                 <td>
-                  <div x-text="c.contact_name || '—'"></div>
+                  <div x-show="c.contact_name" x-text="c.contact_name"></div>
                   <div class="muted small" x-show="c.contact_email || c.contact_phone" x-text="[c.contact_email, c.contact_phone].filter(Boolean).join(' · ')"></div>
+                  <span class="muted" x-show="!c.contact_name && !c.contact_email && !c.contact_phone" x-text="WTT.notInformed"></span>
                 </td>
                 <td class="num" x-text="c.project_count"></td>
                 <td class="actions">

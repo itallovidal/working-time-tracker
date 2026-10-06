@@ -22,11 +22,12 @@ func (h *Handler) Create(c *echo.Context) error {
 		SprintDurationDays int     `json:"sprint_duration_days"`
 		DailyTime          *string `json:"daily_time"`
 		WeeklySyncDay      *string `json:"weekly_sync_day"`
+		WeeklyHours        *int    `json:"weekly_hours"`
 	}
 	if err := c.Bind(&body); err != nil {
 		return c.JSON(400, map[string]string{"error": "corpo da requisição inválido"})
 	}
-	project, err := h.svc.Create(orgID, body.Name, body.Description, body.SprintDurationDays, body.DailyTime, body.WeeklySyncDay)
+	project, err := h.svc.Create(orgID, body.Name, body.Description, body.SprintDurationDays, body.DailyTime, body.WeeklySyncDay, body.WeeklyHours)
 	if err != nil {
 		return c.JSON(400, map[string]string{"error": err.Error()})
 	}
@@ -62,11 +63,12 @@ func (h *Handler) Update(c *echo.Context) error {
 		SprintDurationDays int     `json:"sprint_duration_days"`
 		DailyTime          *string `json:"daily_time"`
 		WeeklySyncDay      *string `json:"weekly_sync_day"`
+		WeeklyHours        *int    `json:"weekly_hours"`
 	}
 	if err := c.Bind(&body); err != nil {
 		return c.JSON(400, map[string]string{"error": "corpo da requisição inválido"})
 	}
-	project, err := h.svc.Update(id, body.Name, body.Description, body.SprintDurationDays, body.DailyTime, body.WeeklySyncDay)
+	project, err := h.svc.Update(id, body.Name, body.Description, body.SprintDurationDays, body.DailyTime, body.WeeklySyncDay, body.WeeklyHours)
 	if err != nil {
 		return c.JSON(400, map[string]string{"error": err.Error()})
 	}

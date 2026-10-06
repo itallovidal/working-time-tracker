@@ -119,7 +119,7 @@ A organização é criada pelo signup, e o `organization_id` vem no `/api/auth/m
 
 ### Perfil da organização
 
-O `GET` devolve todos os campos para qualquer membro. No `PATCH`, **campo que não vem no corpo fica como está**; texto vazio (`""`) ou número zero apaga o valor. `timezone`, `currency` e `default_sprint_days` são a exceção: nunca ficam sem valor, e vazios voltam para o padrão. `{"name": "…"}` sozinho continua renomeando.
+O `GET` devolve todos os campos para qualquer membro. No `PATCH`, **campo que não vem no corpo fica como está**; texto vazio (`""`) ou número zero apaga o valor. `timezone` e `currency` são a exceção: nunca ficam sem valor, e vazios voltam para o padrão. `{"name": "…"}` sozinho continua renomeando.
 
 | Campo | Regra |
 |---|---|
@@ -134,10 +134,11 @@ O `GET` devolve todos os campos para qualquer membro. No `PATCH`, **campo que n�
 | `legal_name` | Razão social, até 200 caracteres |
 | `cnpj` | Com ou sem máscara. Os dígitos verificadores são conferidos, inclusive no formato alfanumérico. A resposta traz sem máscara |
 | `address_line1`, `address_line2`, `city`, `state`, `postal_code`, `country` | Texto livre |
+| `work_mode` | Regime de trabalho: `remote`, `hybrid` ou `onsite` |
 | `timezone` | Nome IANA, por exemplo `America/Sao_Paulo` (o padrão) |
 | `currency` | `BRL` (o padrão), `USD` ou `EUR` |
-| `weekly_hours` | Jornada semanal, de 1 a 168 |
-| `default_sprint_days` | De 1 a 90, `14` por padrão. Vale para projetos criados sem `sprint_duration_days` |
+
+A jornada semanal e a duração da sprint não são da organização: ficam em cada projeto (`weekly_hours` e `sprint_duration_days`).
 
 ```http
 PATCH /api/orgs/:orgId
@@ -147,7 +148,7 @@ Content-Type: application/json
   "summary": "Entregas no mesmo dia para o comércio de bairro.",
   "website": "acme-delivery.example",
   "cnpj": "11.222.333/0001-81",
-  "default_sprint_days": 7
+  "work_mode": "hybrid"
 }
 ```
 
@@ -227,15 +228,17 @@ Content-Type: application/json
   "name": "App de Pedidos",
   "description": "Opcional",
   "sprint_duration_days": 14,
+  "weekly_hours": 40,
   "daily_time": "09:30",
   "weekly_sync_day": "friday"
 }
 ```
 - `sprint_duration_days` vai de 1 a 90, e o padrão é 14.
+- `weekly_hours` é a jornada semanal esperada no projeto, de 1 a 168. É opcional.
 - `daily_time` usa o formato `HH:MM`.
 - `weekly_sync_day` vai de `monday` a `sunday`.
 
-No `PATCH`, um campo omitido mantém o valor atual, e `""` apaga `daily_time` ou `weekly_sync_day`.
+No `PATCH`, um campo omitido mantém o valor atual, `""` apaga `daily_time` ou `weekly_sync_day`, e `0` apaga `weekly_hours`.
 
 O projeto traz `customer` (`{"id", "name"}` ou `null`) para qualquer membro. O valor cobrado nunca vem aqui: ele fica em `/billing`.
 

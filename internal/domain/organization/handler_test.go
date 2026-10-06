@@ -89,15 +89,15 @@ func TestHandler_UpdateProfile(t *testing.T) {
 		return rec
 	}
 
-	if rec := patch(`{"summary":"Entregas rápidas","cnpj":"12.ABC.345/01DE-35","weekly_hours":44}`); rec.Code != http.StatusOK {
+	if rec := patch(`{"summary":"Entregas rápidas","cnpj":"12.ABC.345/01DE-35","work_mode":"remote"}`); rec.Code != http.StatusOK {
 		t.Fatalf("update expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
 	rec := httptest.NewRecorder()
 	e.ServeHTTP(rec, httptest.NewRequest("GET", path, nil))
 	body := rec.Body.String()
 	for _, want := range []string{
-		`"name":"Org"`, `"summary":"Entregas rápidas"`, `"cnpj":"12ABC34501DE35"`, `"weekly_hours":44`,
-		`"founded_year":null`, `"timezone":"America/Sao_Paulo"`, `"currency":"BRL"`, `"default_sprint_days":14`,
+		`"name":"Org"`, `"summary":"Entregas rápidas"`, `"cnpj":"12ABC34501DE35"`, `"work_mode":"remote"`,
+		`"founded_year":null`, `"timezone":"America/Sao_Paulo"`, `"currency":"BRL"`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("GET body does not contain %s: %s", want, body)

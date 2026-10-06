@@ -20,14 +20,14 @@ var (
 	ErrInvalidEmail       = errors.New("informe um email de contato válido")
 	ErrInvalidPhone       = errors.New("telefone inválido: use números, espaços, +, parênteses e hífen")
 	ErrInvalidCNPJ        = errors.New("CNPJ inválido: confira os números e os dígitos verificadores")
+	ErrInvalidWorkMode    = errors.New("regime de trabalho inválido: use remote, hybrid ou onsite")
 	ErrInvalidTimezone    = errors.New("fuso horário inválido: use um nome como America/Sao_Paulo")
-	ErrInvalidWeeklyHours = errors.New("a jornada semanal deve ficar entre 1 e 168 horas")
-	ErrInvalidSprint      = errors.New("a sprint padrão precisa ter entre 1 e 90 dias")
 	ErrInvalidCurrency    = errors.New("moeda inválida: use BRL, USD ou EUR")
 )
 
 var (
 	sizes      = map[string]bool{"1-10": true, "11-50": true, "51-200": true, "201-500": true, "500+": true}
+	workModes  = map[string]bool{"remote": true, "hybrid": true, "onsite": true}
 	currencies = map[string]bool{"BRL": true, "USD": true, "EUR": true}
 )
 
@@ -190,24 +190,15 @@ func apply(org *Organization, in UpdateInput) error {
 		}
 		org.FoundedYear = nilIfZero(*in.FoundedYear)
 	}
-	if in.WeeklyHours != nil {
-		if *in.WeeklyHours < 0 || *in.WeeklyHours > 168 {
-			return ErrInvalidWeeklyHours
+	if in.WorkMode != nil {
+		v := strings.ToLower(strings.TrimSpace(*in.WorkMode))
+		if v != "" && !workModes[v] {
+			return ErrInvalidWorkMode
 		}
-		org.WeeklyHours = nilIfZero(*in.WeeklyHours)
+		org.WorkMode = v
 	}
 
-	// Sprint padrão, fuso e moeda sempre têm valor: vazio volta para o padrão.
-	if in.DefaultSprintDays != nil {
-		v := *in.DefaultSprintDays
-		if v == 0 {
-			v = DefaultSprintDays
-		}
-		if v < 1 || v > 90 {
-			return ErrInvalidSprint
-		}
-		org.DefaultSprintDays = v
-	}
+	// Fuso e moeda sempre têm valor: vazio volta para o padrão.
 	if in.Timezone != nil {
 		v := strings.TrimSpace(*in.Timezone)
 		if v == "" {

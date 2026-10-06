@@ -33,6 +33,10 @@
         <input id="project-sprint" type="number" min="1" max="90" x-model.number="draft.sprint_duration_days">
       </div>
       <div class="field">
+        <label for="project-weekly-hours">Jornada semanal (horas)</label>
+        <input id="project-weekly-hours" type="number" min="1" max="168" placeholder="Opcional" x-model="draft.weekly_hours">
+      </div>
+      <div class="field">
         <label for="project-daily">Horário da daily</label>
         <input id="project-daily" type="time" x-model="draft.daily_time">
       </div>
@@ -77,6 +81,7 @@
         <p class="muted small" x-show="p.description" x-text="p.description"></p>
         <div class="project-meta">
           <span class="badge num" x-text="'Sprint de ' + p.sprint_duration_days + ' dias'"></span>
+          <span class="badge num" x-show="p.weekly_hours" x-text="p.weekly_hours + 'h por semana'"></span>
           <span class="badge num" x-show="p.daily_time" x-text="'Daily ' + p.daily_time"></span>
           <span class="badge" x-show="p.weekly_sync_day" x-text="'Weekly ' + WTT.fmt.weekday(p.weekly_sync_day)"></span>
         </div>

@@ -20,7 +20,7 @@ func TestService_Create(t *testing.T) {
 	svc := integration.NewService(integration.NewStore(testClient), "test-32-byte-encryption-key!!!!")
 
 	org, _ := orgSvc.Create("Org")
-	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil)
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
 
 	it, err := svc.Create(proj.ID.String(), "github", "My GitHub", map[string]interface{}{
 		"token": "ghp_test",
@@ -44,7 +44,7 @@ func TestService_Create_InvalidType(t *testing.T) {
 	svc := integration.NewService(integration.NewStore(testClient), "test-32-byte-encryption-key!!!!")
 
 	org, _ := orgSvc.Create("Org")
-	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil)
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
 
 	_, err := svc.Create(proj.ID.String(), "invalid-type", "Bad", nil, true)
 	if err == nil {
@@ -59,7 +59,7 @@ func TestService_Get_NoCredentials(t *testing.T) {
 	svc := integration.NewService(integration.NewStore(testClient), "test-32-byte-encryption-key!!!!")
 
 	org, _ := orgSvc.Create("Org")
-	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil)
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
 
 	created, err := svc.Create(proj.ID.String(), "github", "My GitHub", map[string]interface{}{
 		"token": "ghp_test",
@@ -85,7 +85,7 @@ func TestService_List_NoCredentials(t *testing.T) {
 	svc := integration.NewService(integration.NewStore(testClient), "test-32-byte-encryption-key!!!!")
 
 	org, _ := orgSvc.Create("Org")
-	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil)
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
 
 	svc.Create(proj.ID.String(), "github", "GitHub", map[string]interface{}{
 		"token": "ghp_test",
@@ -110,7 +110,7 @@ func TestService_Update(t *testing.T) {
 	svc := integration.NewService(integration.NewStore(testClient), "test-32-byte-encryption-key!!!!")
 
 	org, _ := orgSvc.Create("Org")
-	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil)
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
 
 	created, err := svc.Create(proj.ID.String(), "github", "Old Name", map[string]interface{}{
 		"token": "ghp_test",
@@ -137,7 +137,7 @@ func TestService_Delete(t *testing.T) {
 	svc := integration.NewService(integration.NewStore(testClient), "test-32-byte-encryption-key!!!!")
 
 	org, _ := orgSvc.Create("Org")
-	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil)
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
 
 	created, err := svc.Create(proj.ID.String(), "github", "Test", map[string]interface{}{
 		"token": "ghp_test",
@@ -165,7 +165,7 @@ func TestService_Create_InvalidToken(t *testing.T) {
 	svc := integration.NewService(integration.NewStore(testClient), "test-32-byte-encryption-key!!!!")
 
 	org, _ := orgSvc.Create("Org")
-	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil)
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
 
 	_, err := svc.Create(proj.ID.String(), "github", "GitHub", map[string]interface{}{
 		"token": invalidGitHubToken,
@@ -183,7 +183,7 @@ func TestService_FetchItemDetails(t *testing.T) {
 	svc := integration.NewService(integration.NewStore(testClient), "test-32-byte-encryption-key!!!!")
 
 	org, _ := orgSvc.Create("Org")
-	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil)
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
 
 	created, err := svc.Create(proj.ID.String(), "github", "GitHub", map[string]interface{}{
 		"token": "ghp_test",
@@ -218,7 +218,7 @@ func TestService_HasConfigAndDisabledFetch(t *testing.T) {
 	svc := integration.NewService(integration.NewStore(testClient), "test-32-byte-encryption-key!!!!")
 
 	org, _ := orgSvc.Create("Org")
-	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil)
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
 
 	// Criada desativada: has_config tem que refletir a credencial, não o enabled.
 	created, err := svc.Create(proj.ID.String(), "github", "GitHub", map[string]interface{}{

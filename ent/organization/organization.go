@@ -53,12 +53,10 @@ const (
 	FieldPostalCode = "postal_code"
 	// FieldCountry holds the string denoting the country field in the database.
 	FieldCountry = "country"
+	// FieldWorkMode holds the string denoting the work_mode field in the database.
+	FieldWorkMode = "work_mode"
 	// FieldTimezone holds the string denoting the timezone field in the database.
 	FieldTimezone = "timezone"
-	// FieldWeeklyHours holds the string denoting the weekly_hours field in the database.
-	FieldWeeklyHours = "weekly_hours"
-	// FieldDefaultSprintDays holds the string denoting the default_sprint_days field in the database.
-	FieldDefaultSprintDays = "default_sprint_days"
 	// FieldCurrency holds the string denoting the currency field in the database.
 	FieldCurrency = "currency"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
@@ -125,9 +123,8 @@ var Columns = []string{
 	FieldState,
 	FieldPostalCode,
 	FieldCountry,
+	FieldWorkMode,
 	FieldTimezone,
-	FieldWeeklyHours,
-	FieldDefaultSprintDays,
 	FieldCurrency,
 	FieldCreatedAt,
 }
@@ -145,8 +142,6 @@ func ValidColumn(column string) bool {
 var (
 	// DefaultTimezone holds the default value on creation for the "timezone" field.
 	DefaultTimezone string
-	// DefaultDefaultSprintDays holds the default value on creation for the "default_sprint_days" field.
-	DefaultDefaultSprintDays int
 	// DefaultCurrency holds the default value on creation for the "currency" field.
 	DefaultCurrency string
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
@@ -258,19 +253,14 @@ func ByCountry(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCountry, opts...).ToFunc()
 }
 
+// ByWorkMode orders the results by the work_mode field.
+func ByWorkMode(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldWorkMode, opts...).ToFunc()
+}
+
 // ByTimezone orders the results by the timezone field.
 func ByTimezone(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldTimezone, opts...).ToFunc()
-}
-
-// ByWeeklyHours orders the results by the weekly_hours field.
-func ByWeeklyHours(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldWeeklyHours, opts...).ToFunc()
-}
-
-// ByDefaultSprintDays orders the results by the default_sprint_days field.
-func ByDefaultSprintDays(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldDefaultSprintDays, opts...).ToFunc()
 }
 
 // ByCurrency orders the results by the currency field.

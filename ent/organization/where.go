@@ -151,19 +151,14 @@ func Country(v string) predicate.Organization {
 	return predicate.Organization(sql.FieldEQ(FieldCountry, v))
 }
 
+// WorkMode applies equality check predicate on the "work_mode" field. It's identical to WorkModeEQ.
+func WorkMode(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldWorkMode, v))
+}
+
 // Timezone applies equality check predicate on the "timezone" field. It's identical to TimezoneEQ.
 func Timezone(v string) predicate.Organization {
 	return predicate.Organization(sql.FieldEQ(FieldTimezone, v))
-}
-
-// WeeklyHours applies equality check predicate on the "weekly_hours" field. It's identical to WeeklyHoursEQ.
-func WeeklyHours(v int) predicate.Organization {
-	return predicate.Organization(sql.FieldEQ(FieldWeeklyHours, v))
-}
-
-// DefaultSprintDays applies equality check predicate on the "default_sprint_days" field. It's identical to DefaultSprintDaysEQ.
-func DefaultSprintDays(v int) predicate.Organization {
-	return predicate.Organization(sql.FieldEQ(FieldDefaultSprintDays, v))
 }
 
 // Currency applies equality check predicate on the "currency" field. It's identical to CurrencyEQ.
@@ -1566,6 +1561,81 @@ func CountryContainsFold(v string) predicate.Organization {
 	return predicate.Organization(sql.FieldContainsFold(FieldCountry, v))
 }
 
+// WorkModeEQ applies the EQ predicate on the "work_mode" field.
+func WorkModeEQ(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldWorkMode, v))
+}
+
+// WorkModeNEQ applies the NEQ predicate on the "work_mode" field.
+func WorkModeNEQ(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldNEQ(FieldWorkMode, v))
+}
+
+// WorkModeIn applies the In predicate on the "work_mode" field.
+func WorkModeIn(vs ...string) predicate.Organization {
+	return predicate.Organization(sql.FieldIn(FieldWorkMode, vs...))
+}
+
+// WorkModeNotIn applies the NotIn predicate on the "work_mode" field.
+func WorkModeNotIn(vs ...string) predicate.Organization {
+	return predicate.Organization(sql.FieldNotIn(FieldWorkMode, vs...))
+}
+
+// WorkModeGT applies the GT predicate on the "work_mode" field.
+func WorkModeGT(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldGT(FieldWorkMode, v))
+}
+
+// WorkModeGTE applies the GTE predicate on the "work_mode" field.
+func WorkModeGTE(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldGTE(FieldWorkMode, v))
+}
+
+// WorkModeLT applies the LT predicate on the "work_mode" field.
+func WorkModeLT(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldLT(FieldWorkMode, v))
+}
+
+// WorkModeLTE applies the LTE predicate on the "work_mode" field.
+func WorkModeLTE(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldLTE(FieldWorkMode, v))
+}
+
+// WorkModeContains applies the Contains predicate on the "work_mode" field.
+func WorkModeContains(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldContains(FieldWorkMode, v))
+}
+
+// WorkModeHasPrefix applies the HasPrefix predicate on the "work_mode" field.
+func WorkModeHasPrefix(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldHasPrefix(FieldWorkMode, v))
+}
+
+// WorkModeHasSuffix applies the HasSuffix predicate on the "work_mode" field.
+func WorkModeHasSuffix(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldHasSuffix(FieldWorkMode, v))
+}
+
+// WorkModeIsNil applies the IsNil predicate on the "work_mode" field.
+func WorkModeIsNil() predicate.Organization {
+	return predicate.Organization(sql.FieldIsNull(FieldWorkMode))
+}
+
+// WorkModeNotNil applies the NotNil predicate on the "work_mode" field.
+func WorkModeNotNil() predicate.Organization {
+	return predicate.Organization(sql.FieldNotNull(FieldWorkMode))
+}
+
+// WorkModeEqualFold applies the EqualFold predicate on the "work_mode" field.
+func WorkModeEqualFold(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEqualFold(FieldWorkMode, v))
+}
+
+// WorkModeContainsFold applies the ContainsFold predicate on the "work_mode" field.
+func WorkModeContainsFold(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldContainsFold(FieldWorkMode, v))
+}
+
 // TimezoneEQ applies the EQ predicate on the "timezone" field.
 func TimezoneEQ(v string) predicate.Organization {
 	return predicate.Organization(sql.FieldEQ(FieldTimezone, v))
@@ -1629,96 +1699,6 @@ func TimezoneEqualFold(v string) predicate.Organization {
 // TimezoneContainsFold applies the ContainsFold predicate on the "timezone" field.
 func TimezoneContainsFold(v string) predicate.Organization {
 	return predicate.Organization(sql.FieldContainsFold(FieldTimezone, v))
-}
-
-// WeeklyHoursEQ applies the EQ predicate on the "weekly_hours" field.
-func WeeklyHoursEQ(v int) predicate.Organization {
-	return predicate.Organization(sql.FieldEQ(FieldWeeklyHours, v))
-}
-
-// WeeklyHoursNEQ applies the NEQ predicate on the "weekly_hours" field.
-func WeeklyHoursNEQ(v int) predicate.Organization {
-	return predicate.Organization(sql.FieldNEQ(FieldWeeklyHours, v))
-}
-
-// WeeklyHoursIn applies the In predicate on the "weekly_hours" field.
-func WeeklyHoursIn(vs ...int) predicate.Organization {
-	return predicate.Organization(sql.FieldIn(FieldWeeklyHours, vs...))
-}
-
-// WeeklyHoursNotIn applies the NotIn predicate on the "weekly_hours" field.
-func WeeklyHoursNotIn(vs ...int) predicate.Organization {
-	return predicate.Organization(sql.FieldNotIn(FieldWeeklyHours, vs...))
-}
-
-// WeeklyHoursGT applies the GT predicate on the "weekly_hours" field.
-func WeeklyHoursGT(v int) predicate.Organization {
-	return predicate.Organization(sql.FieldGT(FieldWeeklyHours, v))
-}
-
-// WeeklyHoursGTE applies the GTE predicate on the "weekly_hours" field.
-func WeeklyHoursGTE(v int) predicate.Organization {
-	return predicate.Organization(sql.FieldGTE(FieldWeeklyHours, v))
-}
-
-// WeeklyHoursLT applies the LT predicate on the "weekly_hours" field.
-func WeeklyHoursLT(v int) predicate.Organization {
-	return predicate.Organization(sql.FieldLT(FieldWeeklyHours, v))
-}
-
-// WeeklyHoursLTE applies the LTE predicate on the "weekly_hours" field.
-func WeeklyHoursLTE(v int) predicate.Organization {
-	return predicate.Organization(sql.FieldLTE(FieldWeeklyHours, v))
-}
-
-// WeeklyHoursIsNil applies the IsNil predicate on the "weekly_hours" field.
-func WeeklyHoursIsNil() predicate.Organization {
-	return predicate.Organization(sql.FieldIsNull(FieldWeeklyHours))
-}
-
-// WeeklyHoursNotNil applies the NotNil predicate on the "weekly_hours" field.
-func WeeklyHoursNotNil() predicate.Organization {
-	return predicate.Organization(sql.FieldNotNull(FieldWeeklyHours))
-}
-
-// DefaultSprintDaysEQ applies the EQ predicate on the "default_sprint_days" field.
-func DefaultSprintDaysEQ(v int) predicate.Organization {
-	return predicate.Organization(sql.FieldEQ(FieldDefaultSprintDays, v))
-}
-
-// DefaultSprintDaysNEQ applies the NEQ predicate on the "default_sprint_days" field.
-func DefaultSprintDaysNEQ(v int) predicate.Organization {
-	return predicate.Organization(sql.FieldNEQ(FieldDefaultSprintDays, v))
-}
-
-// DefaultSprintDaysIn applies the In predicate on the "default_sprint_days" field.
-func DefaultSprintDaysIn(vs ...int) predicate.Organization {
-	return predicate.Organization(sql.FieldIn(FieldDefaultSprintDays, vs...))
-}
-
-// DefaultSprintDaysNotIn applies the NotIn predicate on the "default_sprint_days" field.
-func DefaultSprintDaysNotIn(vs ...int) predicate.Organization {
-	return predicate.Organization(sql.FieldNotIn(FieldDefaultSprintDays, vs...))
-}
-
-// DefaultSprintDaysGT applies the GT predicate on the "default_sprint_days" field.
-func DefaultSprintDaysGT(v int) predicate.Organization {
-	return predicate.Organization(sql.FieldGT(FieldDefaultSprintDays, v))
-}
-
-// DefaultSprintDaysGTE applies the GTE predicate on the "default_sprint_days" field.
-func DefaultSprintDaysGTE(v int) predicate.Organization {
-	return predicate.Organization(sql.FieldGTE(FieldDefaultSprintDays, v))
-}
-
-// DefaultSprintDaysLT applies the LT predicate on the "default_sprint_days" field.
-func DefaultSprintDaysLT(v int) predicate.Organization {
-	return predicate.Organization(sql.FieldLT(FieldDefaultSprintDays, v))
-}
-
-// DefaultSprintDaysLTE applies the LTE predicate on the "default_sprint_days" field.
-func DefaultSprintDaysLTE(v int) predicate.Organization {
-	return predicate.Organization(sql.FieldLTE(FieldDefaultSprintDays, v))
 }
 
 // CurrencyEQ applies the EQ predicate on the "currency" field.

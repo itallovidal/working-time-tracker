@@ -70,23 +70,22 @@ func main() {
 		Description: text("A Acme Delivery liga lojas de bairro a entregadores parceiros. " +
 			"O lojista pede a coleta pelo aplicativo e acompanha a entrega até a porta do cliente.\n\n" +
 			"Atendemos a Grande São Paulo, de segunda a sábado."),
-		Industry:          text("Logística"),
-		FoundedYear:       number(2019),
-		Size:              text("11-50"),
-		Website:           text("https://acme-delivery.example"),
-		ContactEmail:      text("contato@acme-delivery.example"),
-		Phone:             text("+55 (11) 4002-8922"),
-		LinkedinURL:       text("https://www.linkedin.com/company/acme-delivery"),
-		LegalName:         text("Acme Delivery Logística Ltda"),
-		CNPJ:              text("11.222.333/0001-81"),
-		AddressLine1:      text("Av. Paulista, 1000"),
-		AddressLine2:      text("Conjunto 42, Bela Vista"),
-		City:              text("São Paulo"),
-		State:             text("SP"),
-		PostalCode:        text("01310-100"),
-		Country:           text("Brasil"),
-		WeeklyHours:       number(40),
-		DefaultSprintDays: number(14),
+		Industry:     text("Logística"),
+		FoundedYear:  number(2019),
+		Size:         text("11-50"),
+		Website:      text("https://acme-delivery.example"),
+		ContactEmail: text("contato@acme-delivery.example"),
+		Phone:        text("+55 (11) 4002-8922"),
+		LinkedinURL:  text("https://www.linkedin.com/company/acme-delivery"),
+		LegalName:    text("Acme Delivery Logística Ltda"),
+		CNPJ:         text("11.222.333/0001-81"),
+		AddressLine1: text("Av. Paulista, 1000"),
+		AddressLine2: text("Conjunto 42, Bela Vista"),
+		City:         text("São Paulo"),
+		State:        text("SP"),
+		PostalCode:   text("01310-100"),
+		Country:      text("Brasil"),
+		WorkMode:     text("hybrid"),
 	})
 	must(err)
 
@@ -101,7 +100,7 @@ func main() {
 
 	daily, weekly := "09:30", "friday"
 	prj, err := projectSvc.Create(ana.OrganizationID.String(), "App de Pedidos",
-		"Aplicativo para clientes pedirem e acompanharem entregas.", 14, &daily, &weekly)
+		"Aplicativo para clientes pedirem e acompanharem entregas.", 14, &daily, &weekly, number(40))
 	must(err)
 
 	tm, err := teamSvc.Create(prj.ID.String(), "Produto")
@@ -124,7 +123,7 @@ func main() {
 	clienteID := cliente.ID.String()
 
 	painel, err := projectSvc.Create(ana.OrganizationID.String(), "Painel do Lojista",
-		"Painel web para o lojista acompanhar pedidos, repasses e avaliações.", 0, nil, nil)
+		"Painel web para o lojista acompanhar pedidos, repasses e avaliações.", 21, nil, nil, number(20))
 	must(err)
 	painelTime, err := teamSvc.Create(painel.ID.String(), "Web")
 	must(err)

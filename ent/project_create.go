@@ -95,6 +95,20 @@ func (_c *ProjectCreate) SetNillableSprintDurationDays(v *int) *ProjectCreate {
 	return _c
 }
 
+// SetWeeklyHours sets the "weekly_hours" field.
+func (_c *ProjectCreate) SetWeeklyHours(v int) *ProjectCreate {
+	_c.mutation.SetWeeklyHours(v)
+	return _c
+}
+
+// SetNillableWeeklyHours sets the "weekly_hours" field if the given value is not nil.
+func (_c *ProjectCreate) SetNillableWeeklyHours(v *int) *ProjectCreate {
+	if v != nil {
+		_c.SetWeeklyHours(*v)
+	}
+	return _c
+}
+
 // SetDailyTime sets the "daily_time" field.
 func (_c *ProjectCreate) SetDailyTime(v string) *ProjectCreate {
 	_c.mutation.SetDailyTime(v)
@@ -374,6 +388,10 @@ func (_c *ProjectCreate) createSpec() (*Project, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.SprintDurationDays(); ok {
 		_spec.SetField(project.FieldSprintDurationDays, field.TypeInt, value)
 		_node.SprintDurationDays = value
+	}
+	if value, ok := _c.mutation.WeeklyHours(); ok {
+		_spec.SetField(project.FieldWeeklyHours, field.TypeInt, value)
+		_node.WeeklyHours = &value
 	}
 	if value, ok := _c.mutation.DailyTime(); ok {
 		_spec.SetField(project.FieldDailyTime, field.TypeString, value)

@@ -48,12 +48,14 @@ Organization: id (UUID PK), name, created_at,
                        website, contact_email, phone, linkedin_url, instagram_url,
                        legal_name, cnpj, address_line1, address_line2, city, state,
                        postal_code, country (all optional)
-              defaults: timezone (default America/Sao_Paulo), currency (default BRL),
-                        default_sprint_days (default 14) — these three always have
-                        a value; weekly_hours (optional)
+              how it works: work_mode (remote | hybrid | onsite, optional),
+                            timezone (default America/Sao_Paulo), currency (default BRL)
+              (weekly hours and sprint length are per project, not per organization:
+               different projects can work differently)
 Project: id (UUID PK), organization_id (FK Organization), name, description,
          github_repo_url (nullable), gitlab_repo_url (nullable),
          sprint_duration_days (int, default 14),
+         weekly_hours (int, nullable — expected hours per week in the project),
          daily_time (TIME nullable), weekly_sync_day (VARCHAR nullable),
          customer_id (FK Customer, nullable — internal projects have none),
          bill_rate_cents (int, nullable — what the customer pays per hour;

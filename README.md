@@ -7,10 +7,10 @@ Ponto por tarefa para equipes que trabalham por projeto, de qualquer área. A pe
 ## O que dá para fazer
 
 - **Contas e organizações.** O signup cria uma organização com você como admin. Outras pessoas entram por **link de convite** (uso único, válido por 7 dias, opcionalmente preso a um email).
-- **Perfil da organização.** Resumo, descrição, segmento, contato, dados jurídicos (razão social, CNPJ, endereço) e padrões de operação (fuso, moeda, jornada semanal e sprint padrão). O admin edita; todos os membros leem na aba **Sobre**.
+- **Perfil da organização.** Resumo, descrição, segmento, contato, dados jurídicos (razão social, CNPJ, endereço) e como ela trabalha (regime remoto, híbrido ou presencial, fuso e moeda). O admin edita; todos os membros leem na aba **Sobre**, onde campo sem valor aparece como "Não informado".
 - **Papéis.** Admins gerenciam a organização, as pessoas, os clientes, os projetos, os times, os valores e as integrações. Membros gerenciam tarefas e batem o próprio ponto.
 - **Clientes e valores por hora.** Cada projeto pode ter um cliente e o **valor cobrado** dele por hora. Cada pessoa tem um **valor pago** por hora em cada projeto, então a mesma pessoa pode receber 20 num projeto e 25 em outro. O admin vê e altera tudo, com a margem por hora; o membro vê só o que ele mesmo recebe.
-- **Projetos** com duração da sprint (a padrão da organização, se você não informar), horário da daily e dia da weekly.
+- **Projetos** com duração da sprint, jornada semanal, horário da daily e dia da weekly. Esses valores são de cada projeto, não da organização, porque projetos diferentes podem trabalhar de formas diferentes.
 - **Times** dentro de cada projeto. Só quem está em algum time do projeto pode ser responsável por tarefas.
 - **Tarefas** com responsável, prazo (7 dias por padrão, com destaque quando está atrasada ou perto de vencer) e vínculo opcional com uma issue.
 - **Ponto.** Clock-in e clock-out com cronômetro ao vivo no topo de todas as páginas, sessões filtradas por tarefa e pessoa, totais do filtro e o seu tempo de hoje e da semana. O banco garante uma única sessão aberta por pessoa.
@@ -73,7 +73,7 @@ A interface segue a Decision 8 de `_docs/design.md`. O servidor renderiza a casc
 | `/` | Leva para a organização de quem está logado |
 | `/orgs/:orgId` | Projetos da organização (admin cria) |
 | `/orgs/:orgId/about` | Organização, aba Sobre: o perfil da organização, para todos os membros |
-| `/orgs/:orgId/settings` | Organização, aba Geral: perfil, padrões e exclusão da organização (só admins) |
+| `/orgs/:orgId/settings` | Organização, aba Geral: perfil, regime, fuso, moeda e exclusão da organização (só admins) |
 | `/orgs/:orgId/people` | Organização, aba Pessoas: pessoas, papéis e convites (só admins) |
 | `/orgs/:orgId/customers` | Organização, aba Clientes: quem contrata os projetos (só admins) |
 | `/orgs/:orgId/projects` | Organização, aba Projetos: a mesma lista de projetos da página inicial (só admins) |
@@ -193,10 +193,10 @@ _test/                    # referência da API e coleção do Insomnia
 ## Modelo de dados
 
 ```
-Organization                          nome, perfil (resumo, contato, dados jurídicos) e padrões (fuso, moeda, jornada, sprint)
+Organization                          nome, perfil (resumo, contato, dados jurídicos) e como trabalha (regime, fuso, moeda)
 Organization (1) ── (N) Customer      cliente: nome, CNPJ e contato
 Customer  (0..1) ── (N) Project       projeto interno fica sem cliente; o projeto guarda o valor cobrado por hora
-Organization (1) ── (N) Project
+Organization (1) ── (N) Project       sprint, jornada semanal, daily e weekly são do projeto
 Organization (1) ── (N) Person        email único no sistema, senha (bcrypt), papel admin|member
 Organization (1) ── (N) Invite        token (hash), email opcional, papel, expira em 7 dias, uso único
 Person       (1) ── (N) Session       token (hash), expira em 7 dias
