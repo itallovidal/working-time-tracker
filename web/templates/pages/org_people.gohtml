@@ -5,33 +5,33 @@
   <section class="stack">
     <div class="toolbar">
       <div class="stack stack-tight flex-1">
-        <h2>Integrantes</h2>
-        <p class="muted">Quem faz parte da organização. Para pôr alguém num projeto e montar os times, use a aba Colaboradores do projeto.</p>
+        <h2>{{.T "org.people.title"}}</h2>
+        <p class="muted">{{.T "org.people.intro"}}</p>
       </div>
-      <button type="button" class="btn" @click="openInvite()">{{template "icon" "user-plus"}} Adicionar colaborador</button>
+      <button type="button" class="btn" @click="openInvite()">{{template "icon" "user-plus"}} {{.T "org.people.add"}}</button>
     </div>
 
-    <p class="muted" x-show="loading">Carregando colaboradores…</p>
+    <p class="muted" x-show="loading">{{.T "org.people.loading"}}</p>
     <p class="form-error" x-cloak x-show="errors.load" x-text="errors.load"></p>
     <p class="form-error" x-cloak x-show="errors.role" x-text="errors.role" role="alert"></p>
     <div class="table-wrap" x-show="people.length > 0">
       <table>
         <thead>
-          <tr><th>Nome</th><th>Email</th><th>Papel</th><th class="actions"><span class="sr-only">Ações</span></th></tr>
+          <tr><th>{{.T "common.name"}}</th><th>{{.T "common.email"}}</th><th>{{.T "common.role"}}</th><th class="actions"><span class="sr-only">{{.T "common.actions"}}</span></th></tr>
         </thead>
         <tbody>
           <template x-for="p in people" :key="p.id">
             <tr>
               <td>
                 <span x-text="p.name"></span>
-                <span class="badge" x-show="p.id === me.id">você</span>
+                <span class="badge" x-show="p.id === me.id">{{.T "org.people.you"}}</span>
               </td>
               <td class="muted" x-text="p.email"></td>
               <td><span class="badge" :class="p.role === 'admin' && 'badge-accent'" x-text="WTT.fmt.role(p.role)"></span></td>
               <td class="actions">
                 <button type="button" class="btn btn-ghost btn-sm" :disabled="pending"
                         @click="setRole(p, p.role === 'admin' ? 'member' : 'admin')"
-                        x-text="p.role === 'admin' ? 'Tornar membro' : 'Tornar admin'"></button>
+                        x-text="p.role === 'admin' ? $t('org.people.make_member') : $t('org.people.make_admin')"></button>
               </td>
             </tr>
           </template>
@@ -42,34 +42,34 @@
 
   <section class="stack">
     <div class="stack stack-tight">
-      <h2>Convites pendentes</h2>
-      <p class="muted">Links gerados que ainda não foram usados. Cada um vale por 7 dias e funciona uma vez.</p>
+      <h2>{{.T "org.people.pending_title"}}</h2>
+      <p class="muted">{{.T "org.people.pending_intro"}}</p>
     </div>
 
     <p class="form-error" x-cloak x-show="errors.revoke" x-text="errors.revoke" role="alert"></p>
 
     <div class="empty" x-cloak x-show="!loading && !errors.load && invites.length === 0">
       {{template "icon" "envelope-open-text"}}
-      <strong>Nenhum convite pendente</strong>
-      <span>Quando você adicionar um colaborador, o convite dele fica aqui até ser aceito.</span>
+      <strong>{{.T "org.people.no_invites"}}</strong>
+      <span>{{.T "org.people.no_invites_text"}}</span>
     </div>
 
     <div class="table-wrap" x-cloak x-show="invites.length > 0">
       <table>
         <thead>
-          <tr><th>Email</th><th>Papel</th><th>Expira em</th><th class="actions"><span class="sr-only">Ações</span></th></tr>
+          <tr><th>{{.T "common.email"}}</th><th>{{.T "common.role"}}</th><th>{{.T "org.people.expires"}}</th><th class="actions"><span class="sr-only">{{.T "common.actions"}}</span></th></tr>
         </thead>
         <tbody>
           <template x-for="inv in invites" :key="inv.id">
             <tr>
               <td>
                 <span x-show="inv.email" x-text="inv.email"></span>
-                <span class="muted" x-show="!inv.email">Qualquer email</span>
+                <span class="muted" x-show="!inv.email">{{.T "org.people.any_email"}}</span>
               </td>
               <td><span class="badge" :class="inv.role === 'admin' && 'badge-accent'" x-text="WTT.fmt.role(inv.role)"></span></td>
               <td class="nowrap num" x-text="WTT.fmt.date(inv.expires_at)"></td>
               <td class="actions">
-                <button type="button" class="btn btn-danger-ghost btn-sm" :disabled="pending" @click="revoke(inv)">{{template "icon" "ban"}} Revogar</button>
+                <button type="button" class="btn btn-danger-ghost btn-sm" :disabled="pending" @click="revoke(inv)">{{template "icon" "ban"}} {{.T "org.people.revoke"}}</button>
               </td>
             </tr>
           </template>
@@ -83,35 +83,35 @@
   <template x-teleport="#modal-root">
     <form class="stack" x-show="$store.modal.name === 'invite'" @submit.prevent="createInvite()">
       <div class="stack" x-show="!lastLink">
-        <p class="muted small">A pessoa entra na organização por um link de convite, que você envia para ela.</p>
+        <p class="muted small">{{.T "org.people.invite_intro"}}</p>
         <div class="field">
-          <label for="invite-email">Email</label>
-          <input id="invite-email" type="email" placeholder="Opcional" x-model="invite.email" data-autofocus>
-          <span class="hint">Com email, só essa pessoa consegue usar o link.</span>
+          <label for="invite-email">{{.T "common.email"}}</label>
+          <input id="invite-email" type="email" placeholder="{{.T "common.optional"}}" x-model="invite.email" data-autofocus>
+          <span class="hint">{{.T "org.people.invite_email_hint"}}</span>
         </div>
         <div class="field">
-          <label for="invite-role">Papel</label>
+          <label for="invite-role">{{.T "common.role"}}</label>
           <select id="invite-role" x-model="invite.role">
-            <option value="member">Membro</option>
-            <option value="admin">Admin</option>
+            <option value="member">{{.T "roles.member"}}</option>
+            <option value="admin">{{.T "roles.admin"}}</option>
           </select>
         </div>
         <p class="form-error" x-show="errors.invite" x-text="errors.invite" role="alert"></p>
         <div class="row row-end">
-          <button type="button" class="btn btn-secondary" @click="$store.modal.dismiss()">Cancelar</button>
-          <button type="submit" class="btn" :disabled="pending">{{template "icon" "link"}} Gerar link de convite</button>
+          <button type="button" class="btn btn-secondary" @click="$store.modal.dismiss()">{{.T "common.cancel"}}</button>
+          <button type="submit" class="btn" :disabled="pending">{{template "icon" "link"}} {{.T "org.people.generate"}}</button>
         </div>
       </div>
 
       <div class="stack" x-cloak x-show="lastLink" x-transition.opacity>
         <div class="field">
-          <label for="invite-link">Link do convite</label>
+          <label for="invite-link">{{.T "org.people.link_label"}}</label>
           <input id="invite-link" type="text" readonly :value="lastLink" x-ref="link" @focus="$event.target.select()">
-          <span class="hint">Copie agora: o link não aparece de novo. Ele vale por 7 dias e funciona uma vez.</span>
+          <span class="hint">{{.T "org.people.link_hint"}}</span>
         </div>
         <div class="row row-end">
-          <button type="button" class="btn btn-secondary" @click="copyLink()">{{template "icon" "copy"}} Copiar link</button>
-          <button type="button" class="btn" @click="$store.modal.dismiss()">Concluir</button>
+          <button type="button" class="btn btn-secondary" @click="copyLink()">{{template "icon" "copy"}} {{.T "org.people.copy"}}</button>
+          <button type="button" class="btn" @click="$store.modal.dismiss()">{{.T "org.people.done"}}</button>
         </div>
       </div>
     </form>

@@ -12,6 +12,17 @@ lang:
 common:
   close: Close
   per_hour: per hour
+  cancel: Cancel
+  save: Save
+  delete: Delete
+  edit: Edit
+  back: Back
+  name: Name
+  email: Email
+  phone: Phone
+  role: Role
+  actions: Actions
+  optional: Optional
 
 titles:
   login: Sign in
@@ -19,6 +30,12 @@ titles:
   invite: Invitation
   profile: Your profile
   not_found: Page not found
+  projects: Projects
+  org_about: About · Organization
+  org_settings: Edit · Organization
+  org_projects: Projects · Organization
+  org_customers: Customers · Organization
+  org_people: Collaborators · Organization
 
 nav:
   label: Organization
@@ -37,7 +54,6 @@ session:
   stopped: Time tracking stopped.
 
 auth:
-  email: Email
   password: Password
   password_hint: At least 8 characters.
   your_name: Your name
@@ -93,6 +109,143 @@ profile:
     next_hint: At least 8 characters. Your other sessions will be signed out.
     submit: Change password
     changed: Password changed. Your other sessions were signed out.
+
+org:
+  head:
+    title: Organization
+    sections: Organization sections
+    about: About
+    people: Collaborators
+    customers: Customers
+    projects: Projects
+  fields:
+    segment: Industry
+    size: Size
+    description_label: Description
+    website: Website
+    linkedin: LinkedIn
+    instagram: Instagram
+    legal_name: Legal name
+    cnpj: CNPJ
+    address: Address
+    timezone: Time zone
+    currency: Currency
+  about:
+    intro: What every member reads about the organization.
+    empty_profile: The organization profile is still empty.
+    fill_profile: Fill in the details so the team can see them here.
+    identity: About
+    how_we_work: How we work
+    contact: Contact
+    company: Company details
+    founded: Founded
+    location: Location
+    work_mode: Work mode
+  settings:
+    title: Edit organization
+    identity: Identity
+    summary: Summary
+    summary_hint: A single line shown in the organization header.
+    description_hint: What the organization does and for whom. Every member reads it on the About tab.
+    industry_placeholder: "E.g.: logistics, healthcare, technology"
+    founded_year: Year founded
+    contact: Contact
+    contact_email: Contact email
+    website_placeholder: https://example.com
+    phone_placeholder: +1 (555) 010-0100
+    linkedin_placeholder: https://www.linkedin.com/company/…
+    instagram_placeholder: https://www.instagram.com/…
+    legal: Legal details
+    cnpj_placeholder: 00.000.000/0000-00
+    address_placeholder: Street and number
+    address2: Complement and neighborhood
+    city: City
+    state: State
+    postal_code: Postal code
+    country: Country
+    how_we_work: How we work
+    work_mode: Work mode
+    hours_note: The weekly hours and the sprint length are set in each project's settings.
+    delete_title: Delete organization
+    delete_warning: Deletes the organization, all people and invitations. Only possible after every project is deleted.
+    delete_confirm: Delete for good? This cannot be undone.
+    saved: Organization saved.
+  people:
+    title: People
+    intro: Who belongs to the organization. To put someone on a project and build the teams, use the project's Collaborators tab.
+    add: Add collaborator
+    loading: Loading collaborators…
+    you: you
+    make_member: Make member
+    make_admin: Make admin
+    now_member: "{{.name}} is now a member."
+    now_admin: "{{.name}} is now an admin."
+    pending_title: Pending invitations
+    pending_intro: Links that were generated and not used yet. Each one is valid for 7 days and works once.
+    no_invites: No pending invitations
+    no_invites_text: When you add a collaborator, their invitation stays here until it is accepted.
+    any_email: Any email
+    expires: Expires on
+    revoke: Revoke
+    revoked: Invitation revoked.
+    invite_intro: The person joins the organization through an invitation link that you send them.
+    invite_email_hint: With an email, only that person can use the link.
+    generate: Generate invitation link
+    link_label: Invitation link
+    link_hint: "Copy it now: the link will not be shown again. It is valid for 7 days and works once."
+    copy: Copy link
+    done: Done
+    link_copied: Link copied.
+    copy_failed: Could not copy. Select the link and copy it manually.
+  customers:
+    intro: Who hires the organization. Each project can have a customer and a rate billed per hour, set in the project settings.
+    new: New customer
+    edit_title: Edit customer
+    loading: Loading customers…
+    empty: No customers yet
+    empty_text: Add the first customer to link to projects.
+    customer: Customer
+    contact: Contact
+    projects: Projects
+    delete_question: Delete?
+    contact_person: Contact person
+    create: Create customer
+    saved: Customer saved.
+    created: Customer created.
+    deleted: Customer deleted.
+  projects:
+    intro: Each project has its own teams, tasks and time tracking.
+    new: New project
+    internal: Internal project
+    customer: Customer
+    bill_rate: "Rate billed per hour ({{.unit}})"
+    admins_only_hint: The customer and the billed rate are only visible to admins and can be changed later in the project settings.
+    sprint_days: Sprint length (days)
+    weekly_hours: Weekly hours
+    daily_time: Daily time
+    weekly_day: Weekly day
+    no_weekly: No weekly
+    create: Create project
+    loading: Loading projects…
+    empty: No projects yet
+    empty_admin: Create the first project to set up the teams and start tracking time.
+    empty_member: When an admin creates a project, it shows up here.
+    col_project: Project
+    col_customer: Customer
+    col_people: People
+    col_people_title: "Project collaborators: whoever is on a team or has an hourly rate on it"
+    col_tasks: Tasks
+    sprint_badge:
+      one: "{{.count}}-day sprint"
+      other: "{{.count}}-day sprint"
+    hours_badge: "{{.hours}}h per week"
+    daily_badge: "Daily {{.time}}"
+    weekly_badge: "Weekly {{.day}}"
+    customers_load_failed: "Could not load the customers: {{.error}}"
+    rate_invalid: Enter the rate billed per hour, for example 150.00.
+    rate_too_high: The rate billed per hour must be between 0 and 1,000,000.00.
+    created: Project created.
+    created_no_billing: "Project created, but the customer and the rate were not saved: {{.error}}"
 
 labels:
   not_informed: Not provided

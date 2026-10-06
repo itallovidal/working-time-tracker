@@ -68,12 +68,12 @@ document.addEventListener('alpine:init', () => {
     async openCreate() {
       this.draft = blankProject();
       this.errors.create = '';
-      Alpine.store('modal').open('project', 'Novo projeto', () => !this.pending);
+      Alpine.store('modal').open('project', WTT.t('org.projects.new'), () => !this.pending);
       if (this.customers !== null) return;
       try {
         this.customers = (await api('GET', '/api/orgs/' + orgId + '/customers')) || [];
       } catch (e) {
-        this.errors.create = 'Não deu para carregar os clientes: ' + e.message;
+        this.errors.create = WTT.t('org.projects.customers_load_failed', { error: e.message });
       }
     },
     // create cria o projeto e, se houver cliente ou valor, grava a cobrança logo em seguida.
@@ -82,8 +82,8 @@ document.addEventListener('alpine:init', () => {
         // O valor só vale com cliente (o campo some no projeto interno) e é conferido antes:
         // depois de criado, um erro na cobrança deixaria o projeto sem ela.
         const cents = this.draft.customer_id ? WTT.toCents(this.draft.rate) : null;
-        if (this.draft.customer_id && cents === null && String(this.draft.rate).trim() !== '') throw new Error('Informe o valor cobrado por hora, por exemplo 150,00.');
-        if (cents !== null && cents > 100000000) throw new Error('O valor cobrado por hora deve ficar entre 0 e 1.000.000,00.');
+        if (this.draft.customer_id && cents === null && String(this.draft.rate).trim() !== '') throw new Error(WTT.t('org.projects.rate_invalid'));
+        if (cents !== null && cents > 100000000) throw new Error(WTT.t('org.projects.rate_too_high'));
         const p = await api('POST', '/api/orgs/' + orgId + '/projects', {
           name: this.draft.name,
           description: this.draft.description,
@@ -97,12 +97,12 @@ document.addEventListener('alpine:init', () => {
             await api('PUT', '/api/projects/' + p.id + '/billing', { customer_id: this.draft.customer_id || null, bill_rate_cents: cents });
           } catch (e) {
             // O projeto já existe: as configurações dele são o lugar de definir a cobrança de novo.
-            Alpine.store('toast').flash('Projeto criado, mas o cliente e o valor não foram salvos: ' + e.message, 'error');
+            Alpine.store('toast').flash(WTT.t('org.projects.created_no_billing', { error: e.message }), 'error');
             location.href = '/projects/' + p.id + '/settings';
             return;
           }
         }
-        Alpine.store('toast').flash('Projeto criado.');
+        Alpine.store('toast').flash(WTT.t('org.projects.created'));
         location.href = '/projects/' + p.id;
       });
     },
@@ -134,7 +134,7 @@ document.addEventListener('alpine:init', () => {
       return this.run('role', async () => {
         const updated = await api('PATCH', '/api/persons/' + person.id + '/role', { role });
         person.role = updated.role;
-        toast(person.name + ' agora é ' + WTT.fmt.role(updated.role).toLowerCase() + '.');
+        toast(WTT.t(updated.role === 'admin' ? 'org.people.now_admin' : 'org.people.now_member', { name: person.name }));
         // Quem tirou o próprio admin perde o acesso a esta página.
         if (person.id === me.id && updated.role !== 'admin') location.href = '/';
       });
@@ -144,7 +144,7 @@ document.addEventListener('alpine:init', () => {
       this.invite = { email: '', role: 'member' };
       this.lastLink = '';
       this.errors.invite = '';
-      Alpine.store('modal').open('invite', 'Adicionar colaborador', () => !this.pending);
+      Alpine.store('modal').open('invite', WTT.t('org.people.add'), () => !this.pending);
     },
     // O modal fica aberto depois de gerar o convite: o link só aparece nesta hora.
     createInvite() {
@@ -159,13 +159,13 @@ document.addEventListener('alpine:init', () => {
     },
     async copyLink() {
       const ok = await WTT.copyText(this.lastLink);
-      toast(ok ? 'Link copiado.' : 'Não deu para copiar. Selecione o link e copie manualmente.', ok ? 'info' : 'error');
+      toast(ok ? WTT.t('org.people.link_copied') : WTT.t('org.people.copy_failed'), ok ? 'info' : 'error');
     },
     revoke(inv) {
       return this.run('revoke', async () => {
         await api('DELETE', '/api/invites/' + inv.id);
         this.invites = this.invites.filter((i) => i.id !== inv.id);
-        toast('Convite revogado.');
+        toast(WTT.t('org.people.revoked'));
       });
     },
   }));
@@ -184,7 +184,7 @@ document.addEventListener('alpine:init', () => {
         orgNumbers.forEach((k) => { body[k] = Number(this.form[k]) || 0; });
         await api('PATCH', '/api/orgs/' + orgId, body);
         // A edição volta para a aba Sobre, que recarrega com os dados novos e mostra o toast.
-        Alpine.store('toast').flash('Organização salva.');
+        Alpine.store('toast').flash(WTT.t('org.settings.saved'));
         location.href = '/orgs/' + orgId + '/about';
       });
     },
@@ -200,33 +200,33 @@ document.addEventListener('alpine:init', () => {
     org,
     identity() {
       return rows([
-        ['Segmento', org.industry],
-        ['Porte', WTT.fmt.orgSize(org.size)],
-        ['Fundação', org.founded_year ? String(org.founded_year) : ''],
-        ['Localização', [org.city, org.state, org.country].filter(Boolean).join(', ')],
+        [WTT.t('org.fields.segment'), org.industry],
+        [WTT.t('org.fields.size'), WTT.fmt.orgSize(org.size)],
+        [WTT.t('org.about.founded'), org.founded_year ? String(org.founded_year) : ''],
+        [WTT.t('org.about.location'), [org.city, org.state, org.country].filter(Boolean).join(', ')],
       ]);
     },
     contact() {
       return rows([
-        ['Site', bareURL(org.website), { href: org.website, external: true }],
-        ['Email', org.contact_email, { href: 'mailto:' + org.contact_email }],
-        ['Telefone', org.phone, { href: 'tel:' + (org.phone || '').replace(/[^0-9+]/g, '') }],
-        ['LinkedIn', bareURL(org.linkedin_url), { href: org.linkedin_url, external: true }],
-        ['Instagram', bareURL(org.instagram_url), { href: org.instagram_url, external: true }],
+        [WTT.t('org.fields.website'), bareURL(org.website), { href: org.website, external: true }],
+        [WTT.t('common.email'), org.contact_email, { href: 'mailto:' + org.contact_email }],
+        [WTT.t('common.phone'), org.phone, { href: 'tel:' + (org.phone || '').replace(/[^0-9+]/g, '') }],
+        [WTT.t('org.fields.linkedin'), bareURL(org.linkedin_url), { href: org.linkedin_url, external: true }],
+        [WTT.t('org.fields.instagram'), bareURL(org.instagram_url), { href: org.instagram_url, external: true }],
       ]);
     },
     legal() {
       return rows([
-        ['Razão social', org.legal_name],
-        ['CNPJ', WTT.fmt.cnpj(org.cnpj), { mono: true }],
-        ['Endereço', [org.address_line1, org.address_line2, org.postal_code].filter(Boolean).join(' · ')],
+        [WTT.t('org.fields.legal_name'), org.legal_name],
+        [WTT.t('org.fields.cnpj'), WTT.fmt.cnpj(org.cnpj), { mono: true }],
+        [WTT.t('org.fields.address'), [org.address_line1, org.address_line2, org.postal_code].filter(Boolean).join(' · ')],
       ]);
     },
     defaults() {
       return rows([
-        ['Regime', WTT.fmt.workMode(org.work_mode)],
-        ['Fuso horário', org.timezone],
-        ['Moeda', WTT.fmt.currency(org.currency)],
+        [WTT.t('org.about.work_mode'), WTT.fmt.workMode(org.work_mode)],
+        [WTT.t('org.fields.timezone'), org.timezone],
+        [WTT.t('org.fields.currency'), WTT.fmt.currency(org.currency)],
       ]);
     },
     // Fuso e moeda sempre têm valor, então não contam como perfil preenchido.
@@ -266,17 +266,17 @@ document.addEventListener('alpine:init', () => {
       } : blankCustomer();
       this.errors.save = '';
       // Enquanto salva, o modal não fecha: um erro do servidor ficaria sem ter onde aparecer.
-      Alpine.store('modal').open('customer', c ? 'Editar cliente' : 'Novo cliente', () => !this.pending);
+      Alpine.store('modal').open('customer', c ? WTT.t('org.customers.edit_title') : WTT.t('org.customers.new'), () => !this.pending);
     },
     save() {
       return this.run('save', async () => {
         if (this.editing) {
           const saved = await api('PATCH', '/api/customers/' + this.editing, this.draft);
           this.customers = this.customers.map((c) => (c.id === saved.id ? saved : c));
-          toast('Cliente salvo.');
+          toast(WTT.t('org.customers.saved'));
         } else {
           this.customers = [...this.customers, await api('POST', '/api/orgs/' + orgId + '/customers', this.draft)];
-          toast('Cliente criado.');
+          toast(WTT.t('org.customers.created'));
         }
         this.customers.sort((a, b) => a.name.localeCompare(b.name, WTT.lang));
         Alpine.store('modal').close();
@@ -287,7 +287,7 @@ document.addEventListener('alpine:init', () => {
         this.confirming = null;
         await api('DELETE', '/api/customers/' + c.id);
         this.customers = this.customers.filter((x) => x.id !== c.id);
-        toast('Cliente excluído.');
+        toast(WTT.t('org.customers.deleted'));
       });
     },
   }));

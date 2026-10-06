@@ -3,6 +3,7 @@ package server_test
 import (
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -223,5 +224,64 @@ func TestLanguage_LoggedInPersonFollowsTheCookie(t *testing.T) {
 	}
 	if !strings.Contains(en, "Personal details") || strings.Contains(en, "Dados pessoais") {
 		t.Error("profile should follow the English cookie")
+	}
+}
+
+var (
+	scriptBlock  = regexp.MustCompile(`(?s)<script.*?</script>`)
+	accentedWord = regexp.MustCompile(`[\p{L}]*[À-ÿ][\p{L}]*`)
+)
+
+// portugueseLeftovers devolve as palavras com acento que sobraram no HTML visível.
+// O inglês não tem acento, então qualquer uma é texto que ficou sem tradução. Os
+// scripts (os dados iniciais da página) e o nome "Português" do toggle ficam de fora.
+func portugueseLeftovers(body string) []string {
+	body = scriptBlock.ReplaceAllString(body, "")
+	var words []string
+	for _, w := range accentedWord.FindAllString(body, -1) {
+		if w != "Português" {
+			words = append(words, w)
+		}
+	}
+	return words
+}
+
+// migratedPages são as páginas cujo texto já vem do catálogo. A lista cresce a cada
+// etapa da migração; uma página nova entra aqui junto com a sua tradução.
+func migratedPages(admin account) []string {
+	return []string{
+		"/profile",
+		"/orgs/" + admin.orgID,
+		"/orgs/" + admin.orgID + "/about",
+		"/orgs/" + admin.orgID + "/settings",
+		"/orgs/" + admin.orgID + "/people",
+		"/orgs/" + admin.orgID + "/customers",
+		"/orgs/" + admin.orgID + "/projects",
+	}
+}
+
+func TestLanguage_MigratedPagesHaveNoPortugueseInEnglish(t *testing.T) {
+	e := newServer(t)
+	admin := signup(t, e, "Org", "ana@test.com")
+	member := invite(t, e, admin, "bia@test.com", "member")
+
+	for _, who := range []account{admin, member} {
+		for _, path := range migratedPages(admin) {
+			rec := getPage(e, path, who.session, "en", "")
+			if rec.Code == http.StatusNotFound {
+				continue // abas de gestão são só de admins
+			}
+			if rec.Code != http.StatusOK {
+				t.Errorf("GET %s = %d", path, rec.Code)
+				continue
+			}
+			if words := portugueseLeftovers(rec.Body.String()); len(words) > 0 {
+				t.Errorf("GET %s in English still has: %v", path, words)
+			}
+			// E o mesmo caminho em português não pode ter perdido o acento por engano.
+			if pt := getPage(e, path, who.session, "", "").Body.String(); len(portugueseLeftovers(pt)) == 0 {
+				t.Errorf("GET %s in Portuguese has no accented word: is it rendering keys?", path)
+			}
+		}
 	}
 }

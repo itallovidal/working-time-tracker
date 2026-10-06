@@ -6,19 +6,19 @@
   <div class="stack" x-cloak>
     {{if .IsAdmin}}
     <div class="toolbar">
-      <p class="muted flex-1">O que todos os membros leem sobre a organização.</p>
-      <a class="btn btn-secondary" href="/orgs/{{.OrgID}}/settings">{{template "icon" "pen"}} Editar</a>
+      <p class="muted flex-1">{{.T "org.about.intro"}}</p>
+      <a class="btn btn-secondary" href="/orgs/{{.OrgID}}/settings">{{template "icon" "pen"}} {{.T "common.edit"}}</a>
     </div>
     <p class="alert" x-show="isEmpty()">
-      O perfil da organização ainda está vazio. <a href="/orgs/{{.OrgID}}/settings">Preencha os dados</a> para o time ver aqui.
+      {{.T "org.about.empty_profile"}} <a href="/orgs/{{.OrgID}}/settings">{{.T "org.about.fill_profile"}}</a>
     </p>
     {{end}}
 
     <section class="card">
-      <div class="card-head"><h2>Sobre</h2></div>
+      <div class="card-head"><h2>{{.T "org.about.identity"}}</h2></div>
       <p class="prose" x-show="org.description" x-text="org.description"></p>
       <dl class="facts">
-        <div class="fact" x-show="!org.description"><dt>Descrição</dt><dd class="muted" x-text="WTT.notInformed"></dd></div>
+        <div class="fact" x-show="!org.description"><dt>{{.T "org.fields.description_label"}}</dt><dd class="muted" x-text="WTT.notInformed"></dd></div>
         <template x-for="f in identity()" :key="f.label">
           <div class="fact"><dt x-text="f.label"></dt><dd :class="f.empty && 'muted'" x-text="f.value"></dd></div>
         </template>
@@ -26,7 +26,7 @@
     </section>
 
     <section class="card">
-      <div class="card-head"><h2>Como trabalhamos</h2></div>
+      <div class="card-head"><h2>{{.T "org.about.how_we_work"}}</h2></div>
       <dl class="facts">
         <template x-for="f in defaults()" :key="f.label">
           <div class="fact"><dt x-text="f.label"></dt><dd :class="f.empty && 'muted'" x-text="f.value"></dd></div>
@@ -35,7 +35,7 @@
     </section>
 
     <section class="card">
-      <div class="card-head"><h2>Contato</h2></div>
+      <div class="card-head"><h2>{{.T "org.about.contact"}}</h2></div>
       <dl class="facts">
         <template x-for="f in contact()" :key="f.label">
           <div class="fact">
@@ -50,7 +50,7 @@
     </section>
 
     <section class="card">
-      <div class="card-head"><h2>Dados da empresa</h2></div>
+      <div class="card-head"><h2>{{.T "org.about.company"}}</h2></div>
       <dl class="facts">
         <template x-for="f in legal()" :key="f.label">
           <div class="fact"><dt x-text="f.label"></dt><dd :class="{ mono: f.mono, muted: f.empty }" x-text="f.value"></dd></div>

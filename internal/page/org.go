@@ -24,17 +24,17 @@ func (h *Handler) orgData(c *echo.Context, d Data) Data {
 
 // Org é a página inicial da organização: a lista de projetos (S8.4).
 func (h *Handler) Org(c *echo.Context) error {
-	return h.render(c, "org_projects", h.orgData(c, Data{Title: "Projetos", Section: "projects"}))
+	return h.render(c, "org_projects", h.orgData(c, Data{TitleKey: "titles.projects", Section: "projects"}))
 }
 
 // orgPage monta a página de uma aba da organização.
-func (h *Handler) orgPage(c *echo.Context, name, title, tab string) error {
-	return h.render(c, name, h.orgData(c, Data{Title: title, Section: "organization", Tab: tab}))
+func (h *Handler) orgPage(c *echo.Context, name, titleKey, tab string) error {
+	return h.render(c, name, h.orgData(c, Data{TitleKey: titleKey, Section: "organization", Tab: tab}))
 }
 
 // About é a aba Sobre: o perfil da organização, que todos os membros leem (S11.4).
 func (h *Handler) About(c *echo.Context) error {
-	return h.orgPage(c, "org_about", "Sobre · Organização", "about")
+	return h.orgPage(c, "org_about", "titles.org_about", "about")
 }
 
 // OrgSettings é a tela de edição da organização: os dados dela e a exclusão (S8.2).
@@ -42,21 +42,21 @@ func (h *Handler) About(c *echo.Context) error {
 // quem está logado ficam em Profile. Esta tela e as abas seguintes são só de admins;
 // o middleware de rota garante isso.
 func (h *Handler) OrgSettings(c *echo.Context) error {
-	return h.orgPage(c, "org_settings", "Editar · Organização", "about")
+	return h.orgPage(c, "org_settings", "titles.org_settings", "about")
 }
 
 // OrgProjects é a aba Projetos: a mesma lista da página inicial, dentro da
 // organização.
 func (h *Handler) OrgProjects(c *echo.Context) error {
-	return h.orgPage(c, "org_projects", "Projetos · Organização", "projects")
+	return h.orgPage(c, "org_projects", "titles.org_projects", "projects")
 }
 
 // Customers é a aba Clientes: quem contrata os projetos da organização (S12.4).
 func (h *Handler) Customers(c *echo.Context) error {
-	return h.orgPage(c, "org_customers", "Clientes · Organização", "customers")
+	return h.orgPage(c, "org_customers", "titles.org_customers", "customers")
 }
 
 // People é a aba Colaboradores: as pessoas da organização, os papéis e os convites (S8.3).
 func (h *Handler) People(c *echo.Context) error {
-	return h.orgPage(c, "org_people", "Colaboradores · Organização", "people")
+	return h.orgPage(c, "org_people", "titles.org_people", "people")
 }

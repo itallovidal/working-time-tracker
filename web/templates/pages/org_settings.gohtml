@@ -5,39 +5,39 @@
   {{/* A tela de edição abre pelo botão Editar da aba Sobre e volta para ela, na mesma largura. */}}
   <div class="stack">
     <div class="toolbar">
-      <h2>Editar organização</h2>
-      <a class="btn btn-ghost btn-sm" href="/orgs/{{.OrgID}}/about">{{template "icon" "arrow-left"}} Voltar</a>
+      <h2>{{.T "org.settings.title"}}</h2>
+      <a class="btn btn-ghost btn-sm" href="/orgs/{{.OrgID}}/about">{{template "icon" "arrow-left"}} {{.T "common.back"}}</a>
     </div>
     <form class="stack" @submit.prevent="saveOrg()">
       <section class="card">
-        <div class="card-head"><h2>Identidade</h2></div>
+        <div class="card-head"><h2>{{.T "org.settings.identity"}}</h2></div>
         <div class="field">
-          <label for="org-name">Nome</label>
+          <label for="org-name">{{.T "common.name"}}</label>
           <input id="org-name" type="text" required maxlength="120" x-model="form.name">
         </div>
         <div class="field">
-          <label for="org-summary">Resumo</label>
+          <label for="org-summary">{{.T "org.settings.summary"}}</label>
           <input id="org-summary" type="text" maxlength="160" x-model="form.summary">
-          <span class="hint">Uma linha que aparece no cabeçalho da organização. <span class="num" x-text="form.summary.length + '/160'"></span></span>
+          <span class="hint">{{.T "org.settings.summary_hint"}} <span class="num" x-text="form.summary.length + '/160'"></span></span>
         </div>
         <div class="field">
-          <label for="org-description">Descrição</label>
+          <label for="org-description">{{.T "org.fields.description_label"}}</label>
           <textarea id="org-description" rows="5" maxlength="2000" x-model="form.description"></textarea>
-          <span class="hint">O que a organização faz e para quem. Todos os membros leem na aba Sobre.</span>
+          <span class="hint">{{.T "org.settings.description_hint"}}</span>
         </div>
         <div class="fields">
           <div class="field">
-            <label for="org-industry">Segmento</label>
-            <input id="org-industry" type="text" maxlength="100" placeholder="Ex.: logística, saúde, tecnologia" x-model="form.industry">
+            <label for="org-industry">{{.T "org.fields.segment"}}</label>
+            <input id="org-industry" type="text" maxlength="100" placeholder="{{.T "org.settings.industry_placeholder"}}" x-model="form.industry">
           </div>
           <div class="field">
-            <label for="org-founded">Ano de fundação</label>
+            <label for="org-founded">{{.T "org.settings.founded_year"}}</label>
             <input id="org-founded" type="number" min="1900" :max="thisYear" x-model="form.founded_year">
           </div>
           <div class="field">
-            <label for="org-size">Porte</label>
+            <label for="org-size">{{.T "org.fields.size"}}</label>
             <select id="org-size" x-model="form.size">
-              <option value="">Não informado</option>
+              <option value="">{{.T "labels.not_informed"}}</option>
               <template x-for="s in WTT.orgSizes" :key="s.value">
                 <option :value="s.value" x-text="s.label" :selected="s.value === form.size"></option>
               </template>
@@ -47,89 +47,89 @@
       </section>
 
       <section class="card">
-        <div class="card-head"><h2>Contato</h2></div>
+        <div class="card-head"><h2>{{.T "org.settings.contact"}}</h2></div>
         <div class="fields">
           <div class="field">
-            <label for="org-website">Site</label>
-            <input id="org-website" type="text" inputmode="url" maxlength="255" placeholder="https://exemplo.com.br" x-model="form.website">
+            <label for="org-website">{{.T "org.fields.website"}}</label>
+            <input id="org-website" type="text" inputmode="url" maxlength="255" placeholder="{{.T "org.settings.website_placeholder"}}" x-model="form.website">
           </div>
           <div class="field">
-            <label for="org-email">Email de contato</label>
+            <label for="org-email">{{.T "org.settings.contact_email"}}</label>
             <input id="org-email" type="email" maxlength="255" x-model="form.contact_email">
           </div>
           <div class="field">
-            <label for="org-phone">Telefone</label>
-            <input id="org-phone" type="tel" maxlength="32" placeholder="+55 (11) 4002-8922" x-model="form.phone">
+            <label for="org-phone">{{.T "common.phone"}}</label>
+            <input id="org-phone" type="tel" maxlength="32" placeholder="{{.T "org.settings.phone_placeholder"}}" x-model="form.phone">
           </div>
         </div>
         <div class="fields">
           <div class="field">
-            <label for="org-linkedin">LinkedIn</label>
-            <input id="org-linkedin" type="text" inputmode="url" maxlength="255" placeholder="https://www.linkedin.com/company/…" x-model="form.linkedin_url">
+            <label for="org-linkedin">{{.T "org.fields.linkedin"}}</label>
+            <input id="org-linkedin" type="text" inputmode="url" maxlength="255" placeholder="{{.T "org.settings.linkedin_placeholder"}}" x-model="form.linkedin_url">
           </div>
           <div class="field">
-            <label for="org-instagram">Instagram</label>
-            <input id="org-instagram" type="text" inputmode="url" maxlength="255" placeholder="https://www.instagram.com/…" x-model="form.instagram_url">
+            <label for="org-instagram">{{.T "org.fields.instagram"}}</label>
+            <input id="org-instagram" type="text" inputmode="url" maxlength="255" placeholder="{{.T "org.settings.instagram_placeholder"}}" x-model="form.instagram_url">
           </div>
         </div>
       </section>
 
       <section class="card">
-        <div class="card-head"><h2>Dados jurídicos</h2></div>
+        <div class="card-head"><h2>{{.T "org.settings.legal"}}</h2></div>
         <div class="fields">
           <div class="field">
-            <label for="org-legal-name">Razão social</label>
+            <label for="org-legal-name">{{.T "org.fields.legal_name"}}</label>
             <input id="org-legal-name" type="text" maxlength="200" x-model="form.legal_name">
           </div>
           <div class="field">
-            <label for="org-cnpj">CNPJ</label>
-            <input id="org-cnpj" type="text" class="mono" maxlength="18" placeholder="00.000.000/0000-00" x-model="form.cnpj">
+            <label for="org-cnpj">{{.T "org.fields.cnpj"}}</label>
+            <input id="org-cnpj" type="text" class="mono" maxlength="18" placeholder="{{.T "org.settings.cnpj_placeholder"}}" x-model="form.cnpj">
           </div>
         </div>
         <div class="fields">
           <div class="field">
-            <label for="org-address1">Endereço</label>
-            <input id="org-address1" type="text" maxlength="200" placeholder="Rua e número" x-model="form.address_line1">
+            <label for="org-address1">{{.T "org.fields.address"}}</label>
+            <input id="org-address1" type="text" maxlength="200" placeholder="{{.T "org.settings.address_placeholder"}}" x-model="form.address_line1">
           </div>
           <div class="field">
-            <label for="org-address2">Complemento e bairro</label>
+            <label for="org-address2">{{.T "org.settings.address2"}}</label>
             <input id="org-address2" type="text" maxlength="200" x-model="form.address_line2">
           </div>
         </div>
         <div class="fields">
           <div class="field">
-            <label for="org-city">Cidade</label>
+            <label for="org-city">{{.T "org.settings.city"}}</label>
             <input id="org-city" type="text" maxlength="100" x-model="form.city">
           </div>
           <div class="field">
-            <label for="org-state">Estado</label>
+            <label for="org-state">{{.T "org.settings.state"}}</label>
             <input id="org-state" type="text" maxlength="100" x-model="form.state">
           </div>
           <div class="field">
-            <label for="org-postal">CEP</label>
+            <label for="org-postal">{{.T "org.settings.postal_code"}}</label>
             <input id="org-postal" type="text" maxlength="16" x-model="form.postal_code">
           </div>
           <div class="field">
-            <label for="org-country">País</label>
+            <label for="org-country">{{.T "org.settings.country"}}</label>
             <input id="org-country" type="text" maxlength="100" x-model="form.country">
           </div>
         </div>
       </section>
 
       <section class="card">
-        <div class="card-head"><h2>Como trabalhamos</h2></div>
+        <div class="card-head"><h2>{{.T "org.settings.how_we_work"}}</h2></div>
         <div class="fields">
           <div class="field">
-            <label for="org-work-mode">Regime de trabalho</label>
+            <label for="org-work-mode">{{.T "org.settings.work_mode"}}</label>
             <select id="org-work-mode" x-model="form.work_mode">
-              <option value="">Não informado</option>
+              <option value="">{{.T "labels.not_informed"}}</option>
               <template x-for="m in WTT.workModes" :key="m.value">
                 <option :value="m.value" x-text="m.label" :selected="m.value === form.work_mode"></option>
               </template>
             </select>
           </div>
           <div class="field">
-            <label for="org-timezone">Fuso horário</label>
+            <label for="org-timezone">{{.T "org.fields.timezone"}}</label>
             <select id="org-timezone" x-model="form.timezone">
               <template x-for="tz in timezones" :key="tz">
                 <option :value="tz" x-text="tz" :selected="tz === form.timezone"></option>
@@ -137,7 +137,7 @@
             </select>
           </div>
           <div class="field">
-            <label for="org-currency">Moeda</label>
+            <label for="org-currency">{{.T "org.fields.currency"}}</label>
             <select id="org-currency" x-model="form.currency">
               <template x-for="c in WTT.currencies" :key="c.value">
                 <option :value="c.value" x-text="c.label" :selected="c.value === form.currency"></option>
@@ -145,27 +145,27 @@
             </select>
           </div>
         </div>
-        <p class="muted small">A jornada semanal e a duração da sprint ficam nas configurações de cada projeto.</p>
+        <p class="muted small">{{.T "org.settings.hours_note"}}</p>
       </section>
 
       <p class="form-error" x-show="errors.org" x-text="errors.org" role="alert"></p>
       <div class="row row-end">
-        <a class="btn btn-secondary" href="/orgs/{{.OrgID}}/about">Cancelar</a>
-        <button type="submit" class="btn" :disabled="pending">Salvar</button>
+        <a class="btn btn-secondary" href="/orgs/{{.OrgID}}/about">{{.T "common.cancel"}}</a>
+        <button type="submit" class="btn" :disabled="pending">{{.T "common.save"}}</button>
       </div>
     </form>
 
     <section class="card">
-      <div class="card-head"><h2>Excluir organização</h2></div>
-      <p class="muted small">Apaga a organização, todas as pessoas e os convites. Só é possível depois de excluir todos os projetos.</p>
+      <div class="card-head"><h2>{{.T "org.settings.delete_title"}}</h2></div>
+      <p class="muted small">{{.T "org.settings.delete_warning"}}</p>
       <p class="form-error" x-show="errors.delete" x-text="errors.delete" role="alert"></p>
       <div class="row" x-show="!confirmDelete">
-        <button type="button" class="btn btn-danger-ghost" @click="confirmDelete = true">{{template "icon" "trash"}} Excluir organização</button>
+        <button type="button" class="btn btn-danger-ghost" @click="confirmDelete = true">{{template "icon" "trash"}} {{.T "org.settings.delete_title"}}</button>
       </div>
       <div class="confirm" x-cloak x-show="confirmDelete">
-        <span>Excluir de vez? Isso não pode ser desfeito.</span>
-        <button type="button" class="btn btn-danger btn-sm" :disabled="pending" @click="deleteOrg()">Excluir</button>
-        <button type="button" class="btn btn-ghost btn-sm" @click="confirmDelete = false">Cancelar</button>
+        <span>{{.T "org.settings.delete_confirm"}}</span>
+        <button type="button" class="btn btn-danger btn-sm" :disabled="pending" @click="deleteOrg()">{{.T "common.delete"}}</button>
+        <button type="button" class="btn btn-ghost btn-sm" @click="confirmDelete = false">{{.T "common.cancel"}}</button>
       </div>
     </section>
   </div>
