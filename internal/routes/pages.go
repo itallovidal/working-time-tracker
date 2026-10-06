@@ -33,7 +33,6 @@ func RegisterPages(e *echo.Echo, p *page.Handler, m *auth.Middleware) {
 	g.GET("/projects/:projectId/tasks", p.Tasks, prj)
 	g.GET("/projects/:projectId/time-tracking", p.TimeTracking, prj)
 	g.GET("/projects/:projectId/teams", p.Teams, prj)
-	g.GET("/projects/:projectId/rates", p.Rates, prj, admin)
 	g.GET("/projects/:projectId/integrations", p.Integrations, prj)
 	g.GET("/projects/:projectId/settings", p.ProjectSettings, prj)
 

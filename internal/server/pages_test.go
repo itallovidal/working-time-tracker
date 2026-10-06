@@ -241,37 +241,64 @@ func TestPages_OrgSettingsAndProfileAreSeparate(t *testing.T) {
 	}
 }
 
-// A aba Valores do projeto é só de admins, como o cartão de cobrança das
-// configurações.
-func TestPages_ProjectRatesAreAdminOnly(t *testing.T) {
+// A aba Colaboradores do projeto ficou no lugar de Times e de Valores. Todo
+// mundo a abre; só o admin vê nela os valores por hora e as ações, com os
+// formulários de adicionar pessoa e de novo time no modal. A aba Valores não
+// existe mais, e o cartão de cobrança das configurações segue só de admins.
+func TestPages_ProjectCollaboratorsTab(t *testing.T) {
 	e := newServer(t)
 	admin := signup(t, e, "Org", "ana@test.com")
 	member := invite(t, e, admin, "bia@test.com", "member")
 	other := signup(t, e, "Outra", "caio@outra.com")
 	projectID := createProject(t, e, admin, "Projeto Alfa")
+	tab := "/projects/" + projectID + "/teams"
 	rates := "/projects/" + projectID + "/rates"
-	link := `href="` + rates + `"`
 
-	if rec := do(e, "GET", rates, "", admin.session); rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "Projeto Alfa") {
-		t.Errorf("admin GET %s = %d, want 200 with the project name", rates, rec.Code)
-	}
-	for who, session := range map[string]string{"member": member.session, "other organization": other.session} {
-		if rec := do(e, "GET", rates, "", session); rec.Code != http.StatusNotFound {
-			t.Errorf("%s GET %s = %d, want 404", who, rates, rec.Code)
+	adminPage := do(e, "GET", tab, "", admin.session).Body.String()
+	memberPage := do(e, "GET", tab, "", member.session).Body.String()
+	for who, body := range map[string]string{"admin": adminPage, "member": memberPage} {
+		if !strings.Contains(body, `href="`+tab+`" aria-current="page"`) || !strings.Contains(body, " Colaboradores</a>") {
+			t.Errorf("%s: the tab bar does not show Colaboradores as the current tab", who)
+		}
+		if strings.Contains(body, `href="`+rates+`"`) || strings.Contains(body, " Valores</a>") || strings.Contains(body, " Times</a>") {
+			t.Errorf("%s: the tab bar still shows the Times or the Valores tab", who)
+		}
+		for _, want := range []string{"<h2>Pessoas</h2>", "<h2>Times</h2>", "Sem time", `aria-label="Buscar colaborador por nome ou e-mail"`} {
+			if !strings.Contains(body, want) {
+				t.Errorf("%s: the page does not contain %q", who, want)
+			}
 		}
 	}
-	if rec := do(e, "GET", rates, "", ""); rec.Code != http.StatusSeeOther {
-		t.Errorf("GET %s without session = %d, want 303", rates, rec.Code)
+	for _, adminOnly := range []string{
+		"Adicionar pessoa", "Novo time", `x-teleport="#modal-root"`, `id="collab-search"`, `id="collab-rate"`, `id="collab-team"`, `id="team-name"`,
+		"Valor por hora (", "Margem por hora", "Sem valor por hora", "saveRate(",
+		// Renomear, excluir e remover são botões só de ícone, com o nome da ação.
+		`title="Renomear"`, `title="Excluir"`, `title="Remover do time"`, `title="Remover do projeto"`,
+		`:aria-label="'Excluir o time ' + team.name"`, "btn-icon",
+	} {
+		if !strings.Contains(adminPage, adminOnly) {
+			t.Errorf("admin does not see %q on the collaborators tab", adminOnly)
+		}
+		if strings.Contains(memberPage, adminOnly) {
+			t.Errorf("member sees %q on the collaborators tab", adminOnly)
+		}
+	}
+
+	if rec := do(e, "GET", tab, "", other.session); rec.Code != http.StatusNotFound {
+		t.Errorf("another organization GET %s = %d, want 404", tab, rec.Code)
+	}
+	for who, session := range map[string]string{"admin": admin.session, "member": member.session} {
+		if rec := do(e, "GET", rates, "", session); rec.Code != http.StatusNotFound {
+			t.Errorf("%s GET %s = %d, want 404: the tab is gone", who, rates, rec.Code)
+		}
 	}
 
 	settings := "/projects/" + projectID + "/settings"
-	adminPage := do(e, "GET", settings, "", admin.session).Body.String()
-	memberPage := do(e, "GET", settings, "", member.session).Body.String()
-	if !strings.Contains(adminPage, link) || !strings.Contains(adminPage, `id="ps-bill-rate"`) {
-		t.Error("admin does not see the rates tab and the billing card")
+	if body := do(e, "GET", settings, "", admin.session).Body.String(); !strings.Contains(body, `id="ps-bill-rate"`) {
+		t.Error("admin does not see the billing card on the project settings")
 	}
-	if strings.Contains(memberPage, link) || strings.Contains(memberPage, `id="ps-bill-rate"`) {
-		t.Error("member sees the rates tab or the billing card")
+	if body := do(e, "GET", settings, "", member.session).Body.String(); strings.Contains(body, `id="ps-bill-rate"`) {
+		t.Error("member sees the billing card on the project settings")
 	}
 }
 
@@ -320,7 +347,7 @@ func TestPages_AllTemplatesLoad(t *testing.T) {
 	for _, name := range []string{
 		"login", "signup", "invite", "notfound",
 		"org_projects", "org_people", "org_settings", "org_about", "org_customers", "profile",
-		"project_tasks", "project_time", "project_teams", "project_rates", "project_integrations", "project_settings", "task_detail",
+		"project_tasks", "project_time", "project_teams", "project_integrations", "project_settings", "task_detail",
 	} {
 		i := sort.SearchStrings(got, name)
 		if i == len(got) || got[i] != name {

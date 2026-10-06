@@ -581,119 +581,156 @@ document.addEventListener('alpine:init', () => {
     },
   }));
 
-  Alpine.data('projectRates', () => ({
+  // fold tira acentos e maiúsculas, para a busca achar "Mônica" com "monica".
+  const fold = (s) => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const matches = (person, query) => !query || fold(person.name).includes(query) || fold(person.email).includes(query);
+
+  // A aba Colaboradores: quem está no projeto, com o valor por hora de cada
+  // pessoa, e os times. Colaborador é quem tem valor aqui ou está em algum time.
+  Alpine.data('projectTeams', () => ({
     ...form(),
+    meId: me.id,
     loading: true,
-    billing: { customer: null, bill_rate_cents: null },
-    rows: [], // um vínculo por pessoa, com o texto do campo em draft
-    people: [], // todas as pessoas da organização
-    teamMembers: [], // quem está em algum time do projeto
-    add: { person_id: '', rate: '' },
-    confirming: null,
+    collaborators: [], // { person, teams, pay_rate_cents, draft }; draft é o texto do campo de valor
+    teams: [],
+    billing: { customer: null, bill_rate_cents: null }, // o que o cliente paga; só admins recebem
+    people: [], // todas as pessoas da organização, para os admins adicionarem
+    search: '',
+    confirming: null, // 'person-<id>' ou 'team-<id>'
+    editing: null,
+    editName: '',
+    adding: {}, // por time, a pessoa escolhida no seletor
+    add: { search: '', person_id: '', rate: '', team_id: '' },
+    newTeam: '',
     async init() {
       try {
-        const [billing, allocations, people, teamMembers] = await Promise.all([
-          api('GET', '/api/projects/' + project.id + '/billing'),
-          api('GET', '/api/projects/' + project.id + '/allocations'),
-          api('GET', '/api/orgs/' + me.organization_id + '/persons'),
-          api('GET', '/api/projects/' + project.id + '/members'),
+        const admin = me.role === 'admin';
+        const [collaborators, teams, billing, people] = await Promise.all([
+          api('GET', '/api/projects/' + project.id + '/collaborators'),
+          api('GET', '/api/projects/' + project.id + '/teams'),
+          // O valor cobrado e a lista de quem pode entrar só servem às ações de admin.
+          admin ? api('GET', '/api/projects/' + project.id + '/billing') : null,
+          admin ? api('GET', '/api/orgs/' + me.organization_id + '/persons') : null,
         ]);
-        this.billing = billing;
-        this.rows = (allocations || []).map((a) => this.toRow(a));
+        this.setCollaborators(collaborators);
+        this.teams = teams || [];
+        if (billing) this.billing = billing;
         this.people = people || [];
-        this.teamMembers = teamMembers || [];
       } catch (e) {
         this.errors.load = e.message;
       } finally {
         this.loading = false;
       }
     },
-    toRow(a) {
-      return { ...a, draft: WTT.fmt.moneyInput(a.pay_rate_cents) };
+    // setCollaborators troca a lista e mantém o que foi digitado, e ainda não
+    // salvo, no campo de valor de cada pessoa.
+    setCollaborators(list) {
+      const typed = new Map(this.collaborators.filter((c) => this.dirty(c)).map((c) => [c.person.id, c.draft]));
+      this.collaborators = (list || []).map((c) => ({
+        ...c,
+        draft: typed.has(c.person.id) ? typed.get(c.person.id) : WTT.fmt.moneyInput(c.pay_rate_cents),
+      }));
     },
-    has(personId) {
-      return this.rows.some((r) => r.person_id === personId);
+    // reload busca os colaboradores de novo: quem entra ou sai de um time, ou do
+    // projeto, muda a tabela de pessoas e os cartões dos times de uma vez.
+    async reload() {
+      this.setCollaborators(await api('GET', '/api/projects/' + project.id + '/collaborators'));
     },
-    inTeam(p) {
-      return this.teamMembers.some((m) => m.id === p.id);
+    rows() {
+      const query = fold(this.search.trim());
+      return this.collaborators.filter((c) => matches(c.person, query));
     },
-    // Quem está nos times vem primeiro: é quem mais provavelmente falta.
-    candidates() {
-      return this.people.filter((p) => !this.has(p.id))
-        .sort((a, b) => (this.inTeam(b) - this.inTeam(a)) || a.name.localeCompare(b.name));
+    summary() {
+      return {
+        people: this.collaborators.length,
+        noTeam: this.collaborators.filter((c) => c.teams.length === 0).length,
+        teams: this.teams.length,
+        noRate: this.missing().length,
+      };
     },
+    // Quem está no projeto sem valor por hora: não bate ponto até um admin definir.
     missing() {
-      return this.teamMembers.filter((m) => !this.has(m.id));
+      return this.collaborators.filter((c) => c.pay_rate_cents === null);
     },
-    dirty(row) {
-      return WTT.toCents(row.draft) !== row.pay_rate_cents;
+    membersOf(team) {
+      return this.collaborators.filter((c) => c.teams.some((t) => t.id === team.id));
     },
-    margin(row) {
-      return this.billing.bill_rate_cents === null ? null : this.billing.bill_rate_cents - row.pay_rate_cents;
+    inProject(person) {
+      return this.collaborators.some((c) => c.person.id === person.id);
     },
-    async put(personId, text) {
-      const cents = WTT.toCents(text);
-      if (cents === null) throw new Error('Informe um valor, por exemplo 20,00.');
-      return api('PUT', '/api/projects/' + project.id + '/allocations/' + personId, { pay_rate_cents: cents });
+    dirty(c) {
+      return WTT.toCents(c.draft) !== c.pay_rate_cents;
     },
-    save(row) {
-      return this.run('row-' + row.person_id, async () => {
-        Object.assign(row, this.toRow(await this.put(row.person_id, row.draft)));
-        toast('Valor de ' + row.person.name + ' salvo.');
+    margin(c) {
+      if (this.billing.bill_rate_cents === null || c.pay_rate_cents === null) return null;
+      return this.billing.bill_rate_cents - c.pay_rate_cents;
+    },
+    saveRate(c) {
+      return this.run('person-' + c.person.id, async () => {
+        const cents = WTT.toCents(c.draft);
+        if (cents === null) throw new Error('Informe um valor, por exemplo 20,00.');
+        const a = await api('PUT', '/api/projects/' + project.id + '/allocations/' + c.person.id, { pay_rate_cents: cents });
+        c.pay_rate_cents = a.pay_rate_cents;
+        c.draft = WTT.fmt.moneyInput(a.pay_rate_cents);
+        toast('Valor de ' + c.person.name + ' salvo.');
       });
+    },
+    removePerson(c) {
+      return this.run('person-' + c.person.id, async () => {
+        await api('DELETE', '/api/projects/' + project.id + '/collaborators/' + c.person.id);
+        this.confirming = null;
+        await this.reload();
+        toast(c.person.name + ' saiu do projeto.');
+      });
+    },
+    // Quem pode entrar no projeto: as pessoas da organização que ainda não estão nele.
+    addCandidates() {
+      const query = fold(this.add.search.trim());
+      return this.people.filter((p) => !this.inProject(p) && matches(p, query));
+    },
+    // pruneAdd desfaz a escolha quando a busca tira da lista a pessoa escolhida.
+    pruneAdd() {
+      if (!this.addCandidates().some((p) => p.id === this.add.person_id)) this.add.person_id = '';
+    },
+    openAdd() {
+      this.add = { search: '', person_id: '', rate: '', team_id: '' };
+      this.errors.add = '';
+      Alpine.store('modal').open('collab-add', 'Adicionar pessoa ao projeto', () => !this.pending);
     },
     addPerson() {
       return this.run('add', async () => {
-        const a = await this.put(this.add.person_id, this.add.rate);
-        this.rows = [...this.rows, this.toRow(a)].sort((x, y) => x.person.name.localeCompare(y.person.name));
-        this.add = { person_id: '', rate: '' };
+        const person = this.addCandidates().find((p) => p.id === this.add.person_id);
+        if (!person) throw new Error('Escolha uma pessoa.');
+        const cents = WTT.toCents(this.add.rate);
+        if (cents === null) throw new Error('Informe o valor por hora, por exemplo 20,00.');
+        await api('PUT', '/api/projects/' + project.id + '/allocations/' + person.id, { pay_rate_cents: cents });
+        // Daqui em diante a pessoa já está no projeto: se o time falhar, ela
+        // fica sem time e a tela avisa, em vez de parecer que nada aconteceu.
+        let teamError = '';
+        if (this.add.team_id) {
+          try {
+            await api('POST', '/api/teams/' + this.add.team_id + '/members', { person_id: person.id });
+          } catch (e) {
+            teamError = e.message;
+          }
+        }
+        await this.reload();
+        Alpine.store('modal').close();
+        if (teamError) Alpine.store('toast').error(person.name + ' entrou no projeto, mas não no time: ' + teamError);
+        else toast(person.name + ' entrou no projeto.');
       });
     },
-    remove(row) {
-      return this.run('row-' + row.person_id, async () => {
-        await api('DELETE', '/api/projects/' + project.id + '/allocations/' + row.person_id);
-        this.rows = this.rows.filter((r) => r.person_id !== row.person_id);
-        this.confirming = null;
-      });
-    },
-  }));
-
-  Alpine.data('projectTeams', () => ({
-    ...form(),
-    loading: true,
-    teams: [],
-    people: [],
-    newTeam: '',
-    editing: null,
-    editName: '',
-    confirming: null,
-    adding: {},
-    async init() {
-      try {
-        const [teams, people] = await Promise.all([
-          api('GET', '/api/projects/' + project.id + '/teams'),
-          api('GET', '/api/orgs/' + me.organization_id + '/persons'),
-        ]);
-        this.people = people || [];
-        this.teams = await Promise.all((teams || []).map(async (t) => ({
-          ...t,
-          members: (await api('GET', '/api/teams/' + t.id + '/members')) || [],
-        })));
-      } catch (e) {
-        this.errors.load = e.message;
-      } finally {
-        this.loading = false;
-      }
-    },
-    candidates(team) {
-      const inTeam = new Set(team.members.map((m) => m.person_id));
-      return this.people.filter((p) => !inTeam.has(p.id));
+    openTeam() {
+      this.newTeam = '';
+      this.errors.create = '';
+      Alpine.store('modal').open('team-new', 'Novo time', () => !this.pending);
     },
     createTeam() {
       return this.run('create', async () => {
         const t = await api('POST', '/api/projects/' + project.id + '/teams', { name: this.newTeam });
-        this.teams = [{ ...t, members: [] }, ...this.teams];
-        this.newTeam = '';
+        this.teams = [t, ...this.teams];
+        Alpine.store('modal').close();
+        toast('Time criado.');
       });
     },
     startRename(team) {
@@ -705,6 +742,7 @@ document.addEventListener('alpine:init', () => {
         const t = await api('PATCH', '/api/teams/' + team.id, { name: this.editName });
         team.name = t.name;
         this.editing = null;
+        await this.reload(); // o nome do time também aparece na tabela de pessoas
       });
     },
     removeTeam(team) {
@@ -712,22 +750,30 @@ document.addEventListener('alpine:init', () => {
         await api('DELETE', '/api/teams/' + team.id);
         this.teams = this.teams.filter((t) => t.id !== team.id);
         this.confirming = null;
+        await this.reload(); // quem só estava neste time, sem valor, deixa de ser do projeto
         toast('Time excluído.');
       });
+    },
+    // Quem pode entrar no time: qualquer pessoa da organização que não esteja
+    // nele, com quem já é do projeto primeiro.
+    teamCandidates(team) {
+      const inTeam = new Set(this.membersOf(team).map((c) => c.person.id));
+      return this.people.filter((p) => !inTeam.has(p.id))
+        .sort((a, b) => (this.inProject(b) - this.inProject(a)) || a.name.localeCompare(b.name));
     },
     addMember(team) {
       const personId = this.adding[team.id];
       if (!personId) return undefined;
       return this.run('team-' + team.id, async () => {
         await api('POST', '/api/teams/' + team.id + '/members', { person_id: personId });
-        team.members = (await api('GET', '/api/teams/' + team.id + '/members')) || [];
         this.adding[team.id] = '';
+        await this.reload();
       });
     },
     removeMember(team, member) {
       return this.run('team-' + team.id, async () => {
-        await api('DELETE', '/api/teams/' + team.id + '/members', { person_id: member.person_id });
-        team.members = team.members.filter((m) => m.person_id !== member.person_id);
+        await api('DELETE', '/api/teams/' + team.id + '/members', { person_id: member.person.id });
+        await this.reload();
       });
     },
   }));

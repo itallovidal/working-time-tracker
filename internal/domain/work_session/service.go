@@ -13,7 +13,7 @@ import (
 )
 
 // ErrNoRate barra o ponto de quem ainda não tem valor por hora no projeto.
-var ErrNoRate = errors.New("esta pessoa ainda não tem valor por hora neste projeto; um admin precisa definir na aba Valores antes do ponto")
+var ErrNoRate = errors.New("esta pessoa ainda não tem valor por hora neste projeto; um admin precisa definir na aba Colaboradores antes do ponto")
 
 type Service struct {
 	sessionStore *Store

@@ -73,6 +73,8 @@ Allocation: id (UUID PK), project_id (FK Project), person_id (FK Person),
             (unique constraint on project_id + person_id; the rate lives here and
              not on TeamMembership because one person can be in two teams of the
              same project)
+            A collaborator of a project is a person with an Allocation or a
+            TeamMembership in it; the two are independent and no table joins them.
 Integration: id (UUID PK), project_id (FK Project), type (VARCHAR — e.g. github,
              gitlab, slack, trello), display_name, config (JSONB, encrypted),
              enabled (boolean, default true), created_at
@@ -164,6 +166,7 @@ Each integration type implements a common interface:
 - `POST /api/projects/:projectId/teams` / `GET /api/projects/:projectId/teams` — team CRUD
 - `GET /api/teams/:teamId` / `PATCH /api/teams/:teamId` / `DELETE /api/teams/:teamId`
 - `POST /api/teams/:teamId/members` / `DELETE /api/teams/:teamId/members` — team membership
+- `GET /api/projects/:projectId/collaborators` / `DELETE /api/projects/:projectId/collaborators/:personId` — who is in the project (hourly rate or team) / remove a person from both
 - `POST /api/orgs/:orgId/persons` / `GET /api/orgs/:orgId/persons` — person CRUD scoped to org
 - `GET /api/persons/:personId` / `PATCH /api/persons/:personId`
 - `POST /api/projects/:projectId/tasks` / `GET /api/projects/:projectId/tasks` — task CRUD scoped to project (list filters: q, assignee_id, deadline_to; pages: page, per_page)
@@ -186,6 +189,7 @@ Each integration type implements a common interface:
 **Icons (Sprint 14):** UI icons are the one exception to "everything is vendored": Font Awesome Free is loaded from cdnjs with Subresource Integrity, as the CSS + webfont build. It is the only third-party request the pages make. In a deployment without internet access the icons do not render; every control keeps its text label, so the interface stays usable. Templates use the `icon` partial (`{{template "icon" "pen"}}`) instead of writing the markup.
 **Modal (Sprint 14):** There is a single modal, in the base layout, built with Alpine and CSS (`x-show`, `x-transition`), with no native `<dialog>` and no Alpine plugin. Pages hand it content with `x-teleport` and open it through `Alpine.store('modal')`; the teleported content stays in the scope of the page component, so a form in the modal still reads and writes that component's state. While it is open the rest of the page is `inert`, which keeps focus inside without a focus-trap plugin.
 **Task list (Sprint 16):** The task list is the first one that filters and paginates on the server instead of loading everything and filtering in the browser. `GET /api/projects/:projectId/tasks` takes `q`, `assignee_id`, `deadline_to`, `page` and `per_page`. Without `page` it still returns the plain array, because the time tracking screen needs every task of the project; with `page` it returns `{items, total, page, per_page, assignees}`. The browser turns a deadline shortcut ("until the end of next week") into an instant in the viewer's time zone and sends that, so the server never interprets a date. The page keeps the search, the filters and the page number in its own URL, so a reload, a shared link or the way back from a task lands on the same place.
+**Collaborators tab (Sprint 17):** A person is tied to a project in two independent ways: an Allocation (the hourly rate, which allows clocking in) and a TeamMembership (which allows being assigned tasks). The project used to show them on two tabs, "Times" and "Valores", so adding someone meant visiting both. The "Colaboradores" tab shows one list: a collaborator is whoever has at least one of the two. There is no table for it; `GET /api/projects/:projectId/collaborators` computes the union, and `DELETE .../collaborators/:personId` removes both ties in one transaction. Adding a person reuses the existing calls (`PUT .../allocations/:personId`, then `POST /api/teams/:teamId/members` when a team was chosen): the state between the two is valid, a collaborator without a team. The tab keeps the `/teams` route. Members open it and see people and teams; rates, margins and every action are for admins. The customer's bill rate is edited in the project settings.
 **Alternatives considered:**
 - HTMX instead of Alpine.js: also viable and build-free; Alpine.js chosen for finer-grained client state (e.g., active-session elapsed timer, inline validation feedback, multi-step forms for integration config).
 - Pure server-rendered forms with full page reloads: simpler but poorer UX for clock in/out and live totals.

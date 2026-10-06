@@ -11,7 +11,7 @@ Ponto por tarefa para equipes que trabalham por projeto. Foi pensado principalme
 - **Papéis.** Admins gerenciam a organização, as pessoas, os clientes, os projetos, os times, os valores e as integrações. Membros gerenciam tarefas e batem o próprio ponto.
 - **Clientes e valores por hora.** Cada projeto pode ter um cliente e o **valor cobrado** dele por hora. Cada pessoa tem um **valor pago** por hora em cada projeto, então a mesma pessoa pode receber 20 num projeto e 25 em outro. O admin vê e altera tudo, com a margem por hora; o membro vê só o que ele mesmo recebe.
 - **Projetos** com duração da sprint, jornada semanal, horário da daily e dia da weekly. Esses valores são de cada projeto, não da organização, porque projetos diferentes podem trabalhar de formas diferentes.
-- **Times** dentro de cada projeto. Só quem está em algum time do projeto pode ser responsável por tarefas.
+- **Colaboradores e times** de cada projeto. A aba Colaboradores mostra quem trabalha no projeto, em que times está e, para o admin, quanto recebe por hora e a margem. O admin adiciona pessoas, muda valores, monta os times e tira alguém do projeto de uma vez. Só quem está em algum time do projeto pode ser responsável por tarefas.
 - **Tarefas** com responsável, prazo (7 dias por padrão, com destaque quando está atrasada ou perto de vencer) e vínculo opcional com uma issue. A lista tem busca por nome, filtro por responsável, filtro por prazo (atrasadas, até hoje, até o fim desta semana ou da próxima, ou até uma data) e 10 tarefas por página.
 - **Ponto.** Clock-in e clock-out com cronômetro ao vivo no topo de todas as páginas, sessões filtradas por tarefa e pessoa, totais do filtro e o seu tempo de hoje e da semana. O banco garante uma única sessão aberta por pessoa.
 - **Horas em dinheiro.** Cada sessão guarda os valores por hora de quando o ponto abriu, então **mudar um valor só vale dali em diante**. Quem não tem valor definido no projeto **não bate ponto**. Na tela de ponto, o membro vê quanto ganhou; o admin vê custo, receita e margem.
@@ -42,7 +42,7 @@ Abra **http://localhost:8080**. O seed cria a **Jatobá Software**, uma software
 | Admin | `ana@example.com` | `demo12345` |
 | Membro | `bruno@example.com`, `carla@example.com`, `diego@example.com` ou `elisa@example.com` | `demo12345` |
 
-O Bruno trabalha em quatro projetos e recebe mais na API de Cobranças; a Elisa trabalha em um só. O Diego está no time do Portal do Paciente ainda sem valor definido, para mostrar o aviso da aba Valores e o ponto bloqueado.
+O Bruno trabalha em quatro projetos e recebe mais na API de Cobranças; a Elisa trabalha em um só. O Diego está no time do Portal do Paciente ainda sem valor definido, para mostrar o aviso da aba Colaboradores e o ponto bloqueado. No Painel do Lojista, a Elisa já tem valor e ainda não entrou em nenhum time. O App de Pedidos tem mais de uma página de tarefas.
 
 Sem o seed, clique em **Crie uma organização** na tela de login.
 
@@ -78,14 +78,13 @@ A interface segue a Decision 8 de `_docs/design.md`. O servidor renderiza a casc
 | `/orgs/:orgId/settings` | Organização, tela de edição aberta pelo botão Editar da aba Sobre: perfil, regime, fuso, moeda e exclusão da organização (só admins) |
 | `/orgs/:orgId/people` | Organização, aba Colaboradores: integrantes e papéis, convites pendentes e o botão Adicionar colaborador, que gera o link de convite num modal (só admins) |
 | `/orgs/:orgId/customers` | Organização, aba Clientes: quem contrata os projetos, com cadastro e edição num modal (só admins) |
-| `/orgs/:orgId/projects` | Organização, aba Projetos: tabela de gestão com o cliente, as pessoas nos times e as tarefas de cada projeto; a linha abre o projeto (só admins) |
+| `/orgs/:orgId/projects` | Organização, aba Projetos: tabela de gestão com o cliente, os colaboradores e as tarefas de cada projeto; a linha abre o projeto (só admins) |
 | `/profile` | Seu nome, seu email, sua senha e quanto você recebe por hora em cada projeto |
 | `/projects/:projectId` | Leva para a aba Tarefas |
 | `/projects/:projectId/tasks` | Tarefas, com busca, filtros, paginação e início de ponto em um clique |
 | `/tasks/:taskId` | Edição da tarefa, vínculo com issue e tempo registrado |
 | `/projects/:projectId/time-tracking` | Cronômetro, sessões, filtros e totais em tempo e em dinheiro |
-| `/projects/:projectId/teams` | Times e membros |
-| `/projects/:projectId/rates` | Valores: o que o cliente paga e o que cada pessoa recebe por hora (só admins) |
+| `/projects/:projectId/teams` | Colaboradores: as pessoas do projeto, com busca, e os times. Para admins, também o valor por hora de cada pessoa, a margem e as ações de adicionar, tirar e montar times |
 | `/projects/:projectId/integrations` | Integrações com GitHub e GitLab |
 | `/projects/:projectId/settings` | Configurações e exclusão do projeto; para admins, também o cliente e o valor cobrado |
 
@@ -94,7 +93,7 @@ Sem sessão, qualquer página leva ao login, e a pessoa volta para a página ped
 ### Navegação
 
 - A **barra superior** mostra a organização, o menu (Projetos e Organização), o **indicador do ponto aberto** com cronômetro e botão Parar, quem está logado (o nome leva ao **perfil**) e o botão Sair.
-- As páginas de projeto têm **abas**: Tarefas, Ponto, Times, Valores (só admins), Integrações e Configurações.
+- As páginas de projeto têm **abas**: Tarefas, Ponto, Colaboradores, Integrações e Configurações. A aba Colaboradores juntou as antigas Times e Valores; o endereço dela continua `/teams`. O valor cobrado do cliente fica em Configurações.
 - A página **Organização** abre na aba Sobre, que todos os membros leem. Nela o admin tem o botão **Editar**, que leva à tela de edição; salvar volta para a Sobre. As abas Colaboradores, Clientes e Projetos são só de admins.
 - Ações de admin não aparecem para membros. A API continua sendo quem garante as permissões.
 - A lista de **tarefas** guarda a busca, os filtros e a página na URL (`?q=`, `?assignee=`, `?due=`, `?page=`). Recarregar mantém o que estava na tela, o link pode ser compartilhado, e o botão Voltar de uma tarefa leva de volta ao mesmo ponto da lista.
@@ -118,7 +117,7 @@ internal/template/renderer.go  # um conjunto de templates por página, carregado
 
 Para atualizar o Alpine, troque `web/static/alpine.min.js` e o hash em `web/embed_test.go` juntos. O teste existe porque a cópia vendorizada já esteve corrompida sem ninguém perceber.
 
-**Ícones.** `{{template "icon" "pen"}}` emite o ícone do Font Awesome com esse nome (sem o prefixo `fa-`). O ícone é decorativo: o botão mantém o texto, e um botão só de ícone leva `aria-label`. Num botão com texto dinâmico, ponha o texto num `<span x-text>`, porque um `x-text` no botão apagaria o ícone. Para trocar a versão, mude a URL e o `integrity` em `base.gohtml` juntos; o hash vem de `https://api.cdnjs.com/libraries/font-awesome/<versão>?fields=sri`.
+**Ícones.** `{{template "icon" "pen"}}` emite o ícone do Font Awesome com esse nome (sem o prefixo `fa-`). O ícone é decorativo: o botão mantém o texto. Um botão só de ícone, como os de renomear, excluir e remover da aba Colaboradores, leva a classe `btn-icon` e o nome da ação em `aria-label` e em `title`. Num botão com texto dinâmico, ponha o texto num `<span x-text>`, porque um `x-text` no botão apagaria o ícone. Para trocar a versão, mude a URL e o `integrity` em `base.gohtml` juntos; o hash vem de `https://api.cdnjs.com/libraries/font-awesome/<versão>?fields=sri`.
 
 **Modal.** Há um só, no layout base (`partials/modal.gohtml`), controlado por `Alpine.store('modal')`. A página entrega o conteúdo e continua dona dele:
 
@@ -135,7 +134,7 @@ Para atualizar o Alpine, troque `web/static/alpine.min.js` e o hash em `web/embe
 
 O conteúdo aparece dentro do modal, mas segue no escopo do componente da página (`x-model`, `save()`, `errors`). O `<template>` precisa de um único elemento raiz. `open(nome, título, guarda)` abre e foca o campo com `data-autofocus`; `close()` fecha; `dismiss()` é o fechamento pedido pela pessoa (Esc, clique no fundo, X, Cancelar) e respeita a guarda, uma função que devolve `false` enquanto o modal não pode fechar, por exemplo durante um salvamento.
 
-Hoje usam o modal o cadastro de cliente, o Adicionar colaborador e o Novo projeto. Para focar um campo que acabou de aparecer dentro do modal (como o link do convite depois de gerado), dê ao bloco um `x-transition`: sem transição, o `x-show` só mostra o elemento no ciclo seguinte e o `$nextTick` chega antes de ele aceitar foco.
+Hoje usam o modal o cadastro de cliente, o Adicionar colaborador, o Novo projeto e, na aba Colaboradores do projeto, o Adicionar pessoa e o Novo time. Para focar um campo que acabou de aparecer dentro do modal (como o link do convite depois de gerado), dê ao bloco um `x-transition`: sem transição, o `x-show` só mostra o elemento no ciclo seguinte e o `$nextTick` chega antes de ele aceitar foco.
 
 ## API
 
@@ -149,7 +148,7 @@ Resumo dos grupos de rotas:
 | Organização | `/api/orgs/:orgId` (+ `persons`, `projects`, `customers`, `invites`) |
 | Clientes | `/api/customers/:customerId` |
 | Pessoas | `/api/persons/:personId` (+ `role`, `allocations`) |
-| Projetos | `/api/projects/:projectId` (+ `teams`, `tasks`, `members`, `integrations`, `work-sessions`) |
+| Projetos | `/api/projects/:projectId` (+ `teams`, `tasks`, `members`, `collaborators`, `integrations`, `work-sessions`) |
 | Valores | `/api/projects/:projectId/billing`, `/api/projects/:projectId/allocations` (+ `/:personId`) |
 | Times | `/api/teams/:teamId` (+ `members`) |
 | Tarefas | `/api/tasks/:taskId` (+ `link-external-item`, `external-details`) |
@@ -162,7 +161,7 @@ Resumo dos grupos de rotas:
 - **Sessões e convites** usam tokens aleatórios de 32 bytes, e o banco guarda só o sha256 deles. Trocar a senha encerra as outras sessões.
 - **Cookie** `wtt_session` HttpOnly e SameSite=Lax, com `Secure` via `COOKIE_SECURE`. Como a API só aceita corpo JSON em `POST`, `PUT` e `PATCH`, um formulário de outro site não consegue agir em nome de quem está logado.
 - **Isolamento entre organizações.** Cada rota com ID confere se o recurso é da organização de quem chama e responde 404 caso não seja.
-- **Valores.** O valor cobrado do cliente só existe em rotas de admin: ele não entra no JSON do projeto. Na lista de valores de um projeto, um membro recebe só a própria linha. Nas sessões de ponto, a API apaga o valor pago das sessões de outras pessoas e todo valor cobrado antes de responder a quem não é admin.
+- **Valores.** O valor cobrado do cliente só existe em rotas de admin: ele não entra no JSON do projeto. Na lista de valores de um projeto, um membro recebe só a própria linha, e na de colaboradores, só o próprio valor. Nas sessões de ponto, a API apaga o valor pago das sessões de outras pessoas e todo valor cobrado antes de responder a quem não é admin.
 - **Limite de tentativas** por IP em signup, login e convites.
 - **Credenciais de integração** criptografadas com AES-GCM (`INTEGRATION_ENCRYPTION_KEY`) e nunca devolvidas pela API.
 
@@ -201,7 +200,7 @@ internal/
   database/               # conexão, arquivos de migração (migrations/) e quem os aplica
   domain/
     auth/                 # signup, login, sessões, convites, middlewares e acesso por organização
-    organization/  customer/  person/  project/  team/  allocation/  task/  work_session/  integration/
+    organization/  customer/  person/  project/  team/  allocation/  collaborator/  task/  work_session/  integration/
                           # cada domínio com model, store (Ent), service e handler
   page/                   # páginas HTML
   routes/                 # rotas da API (routes.go) e das páginas (pages.go)
@@ -231,6 +230,8 @@ Project      (1) ── (N) Task ── (N) WorkSession   a sessão guarda o val
 Project      (1) ── (N) Integration   config criptografada
 Task      (0..1) ── (0..1) Integration  via external_integration_id
 ```
+
+Uma pessoa se liga a um projeto de duas formas independentes: pelo **valor por hora** (`Allocation`), que libera o ponto, e por um **time** (`TeamMembership`), que permite ser responsável por tarefas. Colaborador do projeto é quem tem pelo menos uma das duas; não há uma tabela só para isso. Tirar alguém do projeto apaga as duas e mantém as tarefas e as sessões da pessoa.
 
 Excluir um projeto apaga os times, os valores, as tarefas, as sessões e as integrações dele. Excluir um cliente só é permitido quando nenhum projeto aponta para ele. Excluir uma organização só é permitido sem projetos, e apaga as pessoas, os clientes e os convites. O índice único parcial `one_active_session` em `work_sessions (person_id) WHERE end_at IS NULL` garante uma sessão aberta por pessoa.
 

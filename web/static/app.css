@@ -231,6 +231,9 @@ input[aria-invalid="true"] { border-color: var(--danger); }
 .btn-danger-ghost:hover { background: var(--danger-soft); filter: none; }
 .btn-sm { padding: 5px 10px; font-size: 0.85rem; }
 .btn-block { width: 100%; }
+/* Botão só de ícone: quadrado, para uma fileira deles alinhar. Quem usa dá o
+   nome da ação em aria-label e em title. */
+.btn-icon { width: 32px; height: 32px; padding: 0; }
 
 .form-error {
   background: var(--danger-soft); color: var(--danger); border-radius: var(--radius-sm);
@@ -264,6 +267,13 @@ td.actions { text-align: right; white-space: nowrap; }
 .list > li { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--rule); }
 .list > li:last-child { border-bottom: 0; }
 .list .grow { flex: 1; min-width: 0; }
+/* Lista para escolher uma pessoa: rola por dentro, e a linha inteira marca a opção. */
+.picker { max-height: 232px; overflow-y: auto; border: 1px solid var(--rule); border-radius: var(--radius-sm); }
+.picker > li { padding: 0; }
+.pick { display: flex; align-items: center; gap: 12px; padding: 8px 12px; flex: 1; min-width: 0; cursor: pointer; }
+.pick:hover, .pick:has(:checked) { background: var(--surface-2); }
+.pick input { width: auto; flex: none; accent-color: var(--accent); }
+.pick .grow { display: flex; flex-direction: column; }
 
 .empty {
   border: 1px dashed var(--rule-strong); border-radius: var(--radius); padding: 28px 20px;

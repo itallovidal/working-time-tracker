@@ -76,21 +76,25 @@ func (s *Store) GetByID(id string) (*Project, error) {
 }
 
 // withCounts carrega o que MemberCount e TaskCount precisam: os times com as
-// pessoas e, das tarefas, só o bastante para contar.
+// pessoas, os valores por hora e, das tarefas, só o bastante para contar.
 func withCounts(q *ent.ProjectQuery) *ent.ProjectQuery {
 	return q.
 		WithTeams(func(t *ent.TeamQuery) { t.WithMemberships() }).
+		WithAllocations().
 		WithTasks(func(t *ent.TaskQuery) { t.Select(enttask.FieldID, enttask.FieldProjectID) })
 }
 
-// memberCount conta as pessoas dos times do projeto; quem está em mais de um time
-// conta uma vez.
+// memberCount conta os colaboradores do projeto: quem está em algum time dele
+// ou tem valor por hora nele. Cada pessoa conta uma vez.
 func memberCount(e *ent.Project) int {
 	people := map[uuid.UUID]bool{}
 	for _, team := range e.Edges.Teams {
 		for _, m := range team.Edges.Memberships {
 			people[m.PersonID] = true
 		}
+	}
+	for _, a := range e.Edges.Allocations {
+		people[a.PersonID] = true
 	}
 	return len(people)
 }

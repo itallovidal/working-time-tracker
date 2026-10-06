@@ -39,7 +39,7 @@
           <p class="alert alert-warn" x-show="!loading && !errors.load && myRate === null">
             Você ainda não tem valor por hora neste projeto, então o ponto está bloqueado.
             {{if .IsAdmin}}
-            Defina o seu na aba <a href="/projects/{{.Project.ID}}/rates">Valores</a>.
+            Defina o seu na aba <a href="/projects/{{.Project.ID}}/teams">Colaboradores</a>.
             {{else}}
             Peça a um admin para definir.
             {{end}}

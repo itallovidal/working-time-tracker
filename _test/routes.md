@@ -240,7 +240,7 @@ Content-Type: application/json
 
 No `PATCH`, um campo omitido mantém o valor atual, `""` apaga `daily_time` ou `weekly_sync_day`, e `0` apaga `weekly_hours`.
 
-O projeto traz `member_count`, as pessoas que estão em algum time dele, sem repetir (a mesma conta de `/members`), e `task_count`, as tarefas dele. Os dois vêm na lista e no detalhe.
+O projeto traz `member_count`, os colaboradores dele (quem está em algum time ou tem valor por hora, cada pessoa uma vez: a mesma conta de `/collaborators`), e `task_count`, as tarefas dele. Os dois vêm na lista e no detalhe.
 
 O projeto traz `customer` (`{"id", "name"}` ou `null`) para qualquer membro. O valor cobrado nunca vem aqui: ele fica em `/billing`.
 
@@ -267,9 +267,39 @@ O vínculo de uma pessoa com o projeto e quanto ela recebe por hora nele. Há um
 |---|---|---|---|
 | GET | `/api/projects/:projectId/allocations` | logado | Um admin recebe todos os valores; um membro recebe só o dele, ou `[]` |
 | PUT | `/api/projects/:projectId/allocations/:personId` | admin | Define o valor da pessoa: `{"pay_rate_cents": 2000}`. Cria o vínculo ou troca o valor |
-| DELETE | `/api/projects/:projectId/allocations/:personId` | admin | Tira a pessoa do projeto |
+| DELETE | `/api/projects/:projectId/allocations/:personId` | admin | Apaga só o valor da pessoa. Ela continua nos times e deixa de bater ponto no projeto |
 
 `pay_rate_cents` vai de `0` a `100000000`. Zero vale: é alguém que trabalha no projeto sem receber por hora. A pessoa precisa ser da mesma organização do projeto.
+
+### Colaboradores
+
+Quem está no projeto. Uma pessoa é colaboradora quando tem valor por hora nele **ou** está em algum time dele; são dois vínculos independentes, e esta rota mostra os dois juntos.
+
+| Método | Rota | Acesso | Descrição |
+|---|---|---|---|
+| GET | `/api/projects/:projectId/collaborators` | logado | Colaboradores do projeto, por nome, com os times e o valor de cada um |
+| DELETE | `/api/projects/:projectId/collaborators/:personId` | admin | Tira a pessoa do projeto: apaga o valor e a tira de todos os times dele |
+
+```json
+[
+  {
+    "person": { "id": "…", "name": "Bruno Lima", "email": "bruno@example.com" },
+    "teams": [{ "id": "…", "name": "Web" }],
+    "pay_rate_cents": 5500
+  },
+  {
+    "person": { "id": "…", "name": "Elisa Prado", "email": "elisa@example.com" },
+    "teams": [],
+    "pay_rate_cents": 4000
+  }
+]
+```
+- `teams` traz só os times deste projeto, por nome. Vem vazio para quem tem valor e ainda não entrou em nenhum time; essa pessoa bate ponto, mas não pode ser responsável por tarefa.
+- `pay_rate_cents` é `null` para quem está num time e ainda não tem valor; essa pessoa não bate ponto. Um membro recebe o próprio valor e `null` no dos colegas.
+
+O `DELETE` faz as duas remoções numa transação e responde `204`. As tarefas e as sessões de trabalho da pessoa ficam como estão. Se ela não tinha valor nem time no projeto, a resposta é `404`.
+
+Para **pôr** alguém no projeto, use o `PUT` de `/allocations/:personId` acima e, se quiser, `POST /api/teams/:teamId/members`.
 
 ---
 

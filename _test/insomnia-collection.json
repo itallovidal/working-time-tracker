@@ -1045,7 +1045,7 @@
       "_id": "req_09_09",
       "_type": "request",
       "parentId": "fld_09",
-      "name": "Remover pessoa do projeto",
+      "name": "Apagar valor da pessoa",
       "method": "DELETE",
       "url": "{{base_url}}/api/projects/{{project_id}}/allocations/{{person_id}}",
       "authentication": {},
@@ -1062,6 +1062,30 @@
       "url": "{{base_url}}/api/persons/{{person_id}}/allocations",
       "authentication": {},
       "metaSortKey": 10,
+      "headers": [],
+      "body": {}
+    },
+    {
+      "_id": "req_09_11",
+      "_type": "request",
+      "parentId": "fld_09",
+      "name": "Colaboradores do projeto",
+      "method": "GET",
+      "url": "{{base_url}}/api/projects/{{project_id}}/collaborators",
+      "authentication": {},
+      "metaSortKey": 11,
+      "headers": [],
+      "body": {}
+    },
+    {
+      "_id": "req_09_12",
+      "_type": "request",
+      "parentId": "fld_09",
+      "name": "Tirar pessoa do projeto",
+      "method": "DELETE",
+      "url": "{{base_url}}/api/projects/{{project_id}}/collaborators/{{person_id}}",
+      "authentication": {},
+      "metaSortKey": 12,
       "headers": [],
       "body": {}
     }

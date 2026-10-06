@@ -57,14 +57,11 @@ func (h *Handler) TaskDetail(c *echo.Context) error {
 	})
 }
 
+// Teams é a aba Colaboradores: quem está no projeto, os times e, para admins,
+// quanto cada pessoa recebe por hora (S17). A rota segue /teams, de quando a
+// aba só tinha os times.
 func (h *Handler) Teams(c *echo.Context) error {
-	return h.projectPage(c, "project_teams", "Times", "teams")
-}
-
-// Rates é a aba Valores: quanto o cliente paga e quanto cada pessoa recebe por
-// hora no projeto (S12.4). Só admins chegam aqui; o middleware de rota garante.
-func (h *Handler) Rates(c *echo.Context) error {
-	return h.projectPage(c, "project_rates", "Valores", "rates")
+	return h.projectPage(c, "project_teams", "Colaboradores", "teams")
 }
 
 // Integrations configura as integrações do projeto com GitHub e GitLab (S10.1).

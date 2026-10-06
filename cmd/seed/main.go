@@ -63,11 +63,13 @@ var projects = []struct {
 		rates: map[string]int{"ana": 9000, "bruno": 5500, "diego": 6000},
 	},
 	{
+		// A Elisa acabou de ser alocada: já tem valor, mas ainda não entrou em
+		// nenhum time. A aba Colaboradores mostra ela como "sem time".
 		key: "painel", customer: "bompreco", name: "Painel do Lojista",
 		description: "Painel web para cada loja acompanhar pedidos, repasses e avaliações.",
 		sprintDays:  14, weeklyHours: 20, billRate: 12000,
 		teams: map[string][]string{"Web": {"carla", "bruno"}},
-		rates: map[string]int{"bruno": 5500, "carla": 5000},
+		rates: map[string]int{"bruno": 5500, "carla": 5000, "elisa": 4000},
 	},
 	{
 		key: "agenda", customer: "vidaplena", name: "Agendamento Online",
@@ -77,8 +79,8 @@ var projects = []struct {
 		rates: map[string]int{"carla": 5000, "diego": 5800, "elisa": 4000},
 	},
 	{
-		// O Diego está no time, mas ainda sem valor: a aba Valores avisa, e ele
-		// não consegue bater ponto aqui até um admin definir.
+		// O Diego está no time, mas ainda sem valor: a aba Colaboradores avisa, e
+		// ele não consegue bater ponto aqui até um admin definir.
 		key: "portal", customer: "vidaplena", name: "Portal do Paciente",
 		description: "Resultados de exames e histórico de consultas para o paciente.",
 		sprintDays:  14, weeklyHours: 20, billRate: 11500,

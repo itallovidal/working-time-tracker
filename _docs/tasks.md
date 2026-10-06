@@ -240,6 +240,18 @@
 
 ---
 
+### Sprint 17: Project Collaborators
+
+- [X] S17.1 Collaborators API: `GET /api/projects/:projectId/collaborators` lists who has an hourly rate in the project or is in one of its teams, with the teams and the rate (colleagues' rates only for admins); `DELETE .../collaborators/:personId` removes the rate and every team membership of the project in one transaction
+- [X] S17.2 Rename the "Times" tab to "Colaboradores" (same route): summary tiles, a people table with search, the hourly rate edited inline and the margin, and removal from the project
+- [X] S17.3 "Adicionar pessoa" in the modal, with a search over the people of the organization, the hourly rate and an optional team; "Novo time" in the modal
+- [X] S17.4 Icon-only buttons for renaming and deleting a team and for removing a member, with `aria-label` and `title`
+- [X] S17.5 Remove the "Valores" tab (template, page route and component); the customer's bill rate stays in the project settings
+- [X] S17.6 `member_count` of a project counts its collaborators, not only the people in teams
+- [X] S17.7 Tests for the union, the visibility by role and the removal; a person with a rate and no team in the seed; update README, design and routes
+
+---
+
 ### Refatoração: Domain-First Architecture (pré-Sprint 9)
 
 - [X] R1 Reorganizar código de layered-flat para domain-first: `internal/domain/<dominio>/` com `model.go`, `store.go`, `service.go`, `handler.go` por domínio

@@ -11,6 +11,7 @@ import (
 	"working-time-tracker/ent"
 	"working-time-tracker/internal/domain/allocation"
 	"working-time-tracker/internal/domain/auth"
+	"working-time-tracker/internal/domain/collaborator"
 	"working-time-tracker/internal/domain/customer"
 	"working-time-tracker/internal/domain/integration"
 	"working-time-tracker/internal/domain/organization"
@@ -57,6 +58,7 @@ func New(client *ent.Client, opts Options) (*echo.Echo, error) {
 	teamSvc := team.NewService(teamStore)
 	membershipSvc := team.NewMembershipService(membershipStore)
 	allocationSvc := allocation.NewService(allocationStore)
+	collaboratorSvc := collaborator.NewService(collaborator.NewStore(client))
 	integrationSvc := integration.NewService(integrationStore, opts.EncryptKey)
 	taskSvc := task.NewService(taskStore, membershipStore, integrationSvc)
 	workSessionSvc := work_session.NewService(sessionStore, taskStore, allocationStore)
@@ -70,6 +72,7 @@ func New(client *ent.Client, opts Options) (*echo.Echo, error) {
 		Project:      project.NewHandler(projectSvc),
 		Team:         team.NewHandler(teamSvc, membershipSvc),
 		Allocation:   allocation.NewHandler(allocationSvc),
+		Collaborator: collaborator.NewHandler(collaboratorSvc),
 		Task:         task.NewHandler(taskSvc),
 		WorkSession:  work_session.NewHandler(workSessionSvc),
 		Integration:  integration.NewHandler(integrationSvc),

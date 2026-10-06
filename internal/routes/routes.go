@@ -5,6 +5,7 @@ import (
 
 	"working-time-tracker/internal/domain/allocation"
 	"working-time-tracker/internal/domain/auth"
+	"working-time-tracker/internal/domain/collaborator"
 	"working-time-tracker/internal/domain/customer"
 	"working-time-tracker/internal/domain/integration"
 	"working-time-tracker/internal/domain/organization"
@@ -23,6 +24,7 @@ type Handlers struct {
 	Project      *project.Handler
 	Team         *team.Handler
 	Allocation   *allocation.Handler
+	Collaborator *collaborator.Handler
 	Task         *task.Handler
 	WorkSession  *work_session.Handler
 	Integration  *integration.Handler
@@ -91,6 +93,10 @@ func RegisterRoutes(e *echo.Echo, h Handlers, m *auth.Middleware, authLimiter ec
 	r.GET("/projects/:projectId/allocations", h.Allocation.ListByProject, prj)
 	r.PUT("/projects/:projectId/allocations/:personId", h.Allocation.Set, prj, per, admin)
 	r.DELETE("/projects/:projectId/allocations/:personId", h.Allocation.Remove, prj, per, admin)
+	// Quem está no projeto, pelo valor por hora ou por um time. O handler só
+	// entrega o valor dos colegas a admins.
+	r.GET("/projects/:projectId/collaborators", h.Collaborator.ListByProject, prj)
+	r.DELETE("/projects/:projectId/collaborators/:personId", h.Collaborator.Remove, prj, per, admin)
 	r.POST("/projects/:projectId/tasks", h.Task.Create, prj)
 	r.GET("/projects/:projectId/tasks", h.Task.ListByProject, prj)
 	r.POST("/projects/:projectId/work-sessions/clock-in", h.WorkSession.ClockIn, prj)

@@ -2,88 +2,290 @@
 <main class="page" x-data="projectTeams">
   {{template "project_head" .}}
 
-  {{if .IsAdmin}}
-  <form class="row" @submit.prevent="createTeam()">
-    <div class="field flex-1">
-      <label for="team-name">Novo time</label>
-      <input id="team-name" type="text" placeholder="Ex.: Backend" x-model="newTeam">
-    </div>
-    <button type="submit" class="btn self-end" :disabled="pending">Criar time</button>
-  </form>
-  <p class="form-error" x-cloak x-show="errors.create" x-text="errors.create" role="alert"></p>
-  {{end}}
-
-  <p class="muted" x-show="loading">Carregando times…</p>
+  <p class="muted" x-show="loading">Carregando colaboradores…</p>
   <p class="form-error" x-cloak x-show="errors.load" x-text="errors.load"></p>
 
-  <div class="empty" x-cloak x-show="!loading && !errors.load && teams.length === 0">
-    <strong>Nenhum time neste projeto</strong>
+  <div class="totals" x-cloak x-show="!loading && !errors.load">
+    <div class="total">
+      <div class="v" x-text="summary().people"></div>
+      <div class="k" x-text="summary().people === 1 ? 'Colaborador' : 'Colaboradores'"></div>
+    </div>
+    <div class="total">
+      <div class="v" x-text="summary().noTeam"></div>
+      <div class="k">Sem time</div>
+    </div>
+    <div class="total">
+      <div class="v" x-text="summary().teams"></div>
+      <div class="k" x-text="summary().teams === 1 ? 'Time' : 'Times'"></div>
+    </div>
     {{if .IsAdmin}}
-    <span>Crie um time e adicione as pessoas. Só membros de algum time podem ser responsáveis por tarefas.</span>
-    {{else}}
-    <span>Um admin precisa criar os times deste projeto.</span>
+    <div class="total">
+      <div class="v" x-text="summary().noRate"></div>
+      <div class="k">Sem valor por hora</div>
+    </div>
     {{end}}
   </div>
 
-  <div class="grid-2" x-show="teams.length > 0">
-    <template x-for="team in teams" :key="team.id">
-      <section class="card">
-        <div class="card-head">
-          <template x-if="editing !== team.id">
-            <h2 x-text="team.name"></h2>
+  {{if .IsAdmin}}
+  <p class="alert alert-warn" x-cloak x-show="!loading && missing().length > 0">
+    <strong x-text="missing().length === 1 ? '1 pessoa está' : missing().length + ' pessoas estão'"></strong>
+    neste projeto sem valor por hora:
+    <span x-text="missing().map((c) => c.person.name).join(', ')"></span>.
+    Sem valor, o ponto fica bloqueado.
+  </p>
+  {{end}}
+
+  <section class="stack" x-cloak x-show="!loading && !errors.load">
+    <div class="toolbar">
+      <div class="stack stack-tight flex-1">
+        <h2>Pessoas</h2>
+        <p class="muted">Quem trabalha neste projeto: quem está em algum time ou tem valor por hora aqui.</p>
+      </div>
+      <div class="row filters">
+        <input type="search" placeholder="Buscar por nome ou e-mail" aria-label="Buscar colaborador por nome ou e-mail"
+               x-model="search" x-show="collaborators.length > 0">
+        {{if .IsAdmin}}
+        <button type="button" class="btn" @click="openAdd()">{{template "icon" "user-plus"}} Adicionar pessoa</button>
+        {{end}}
+      </div>
+    </div>
+
+    <div class="empty" x-show="collaborators.length === 0">
+      {{template "icon" "users"}}
+      <strong>Ninguém neste projeto ainda</strong>
+      {{if .IsAdmin}}
+      <span>Adicione as pessoas que trabalham aqui e quanto cada uma recebe por hora.</span>
+      {{else}}
+      <span>Um admin precisa adicionar as pessoas deste projeto.</span>
+      {{end}}
+    </div>
+    <div class="empty" x-show="collaborators.length > 0 && rows().length === 0">
+      <strong>Ninguém com esse nome ou e-mail</strong>
+      <button type="button" class="btn btn-secondary btn-sm" @click="search = ''">Limpar a busca</button>
+    </div>
+
+    <div class="table-wrap" x-show="rows().length > 0">
+      <table>
+        <thead>
+          <tr>
+            <th>Pessoa</th>
+            <th>Times</th>
+            {{if .IsAdmin}}
+            <th>Valor por hora (<span x-text="WTT.fmt.moneyUnit()"></span>)</th>
+            <th>Margem por hora</th>
+            <th class="actions"><span class="sr-only">Ações</span></th>
+            {{end}}
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="c in rows()" :key="c.person.id">
+            <tr>
+              <td>
+                <div>
+                  <span x-text="c.person.name"></span>
+                  <span class="badge" x-show="c.person.id === meId">você</span>
+                </div>
+                <div class="muted small" x-text="c.person.email"></div>
+              </td>
+              <td>
+                <div class="row row-tight">
+                  <template x-for="t in c.teams" :key="t.id">
+                    <span class="badge" x-text="t.name"></span>
+                  </template>
+                  <span class="muted" x-show="c.teams.length === 0">Sem time</span>
+                </div>
+              </td>
+              {{if .IsAdmin}}
+              <td>
+                <form class="row row-tight" @submit.prevent="saveRate(c)">
+                  <input type="text" inputmode="decimal" class="num input-money" placeholder="Sem valor"
+                         x-model="c.draft" :aria-label="'Valor por hora de ' + c.person.name">
+                  <button type="submit" class="btn btn-sm" x-show="dirty(c)" :disabled="pending">Salvar</button>
+                </form>
+                <p class="form-error" x-show="errors['person-' + c.person.id]" x-text="errors['person-' + c.person.id]" role="alert"></p>
+              </td>
+              <td class="num">
+                <span :class="margin(c) < 0 && 'text-danger'" x-text="WTT.fmt.money(margin(c))"></span>
+              </td>
+              <td class="actions">
+                <button type="button" class="btn btn-danger-ghost btn-sm btn-icon" title="Remover do projeto"
+                        :aria-label="'Remover ' + c.person.name + ' do projeto'"
+                        x-show="confirming !== 'person-' + c.person.id" @click="confirming = 'person-' + c.person.id">{{template "icon" "user-minus"}}</button>
+                <span class="confirm" x-cloak x-show="confirming === 'person-' + c.person.id">
+                  <span>Tirar do projeto? Sai dos times e perde o valor.</span>
+                  <button type="button" class="btn btn-danger btn-sm" :disabled="pending" @click="removePerson(c)">Remover</button>
+                  <button type="button" class="btn btn-ghost btn-sm" @click="confirming = null">Cancelar</button>
+                </span>
+              </td>
+              {{end}}
+            </tr>
           </template>
-          <template x-if="editing === team.id">
-            <form class="row flex-1" @submit.prevent="rename(team)">
-              <input type="text" class="flex-1" x-model="editName" aria-label="Nome do time">
-              <button type="submit" class="btn btn-sm" :disabled="pending">Salvar</button>
-              <button type="button" class="btn btn-ghost btn-sm" @click="editing = null">Cancelar</button>
-            </form>
-          </template>
+        </tbody>
+      </table>
+    </div>
+
+    {{if .IsAdmin}}
+    <p class="muted small" x-show="collaborators.length > 0">
+      <span x-show="billing.bill_rate_cents !== null">O cliente paga <strong class="num" x-text="WTT.fmt.money(billing.bill_rate_cents)"></strong> por hora neste projeto; a margem é a diferença para o que cada pessoa recebe.</span>
+      <span x-show="billing.bill_rate_cents === null">Sem valor cobrado do cliente, a margem de cada pessoa não é calculada.</span>
+      <a href="/projects/{{.Project.ID}}/settings">Alterar em Configurações</a>
+    </p>
+    {{end}}
+  </section>
+
+  <section class="stack" x-cloak x-show="!loading && !errors.load">
+    <div class="toolbar">
+      <div class="stack stack-tight flex-1">
+        <h2>Times</h2>
+        <p class="muted">Só quem está em algum time pode ser responsável por tarefas.</p>
+      </div>
+      {{if .IsAdmin}}
+      <button type="button" class="btn btn-secondary" @click="openTeam()">{{template "icon" "plus"}} Novo time</button>
+      {{end}}
+    </div>
+
+    <div class="empty" x-show="teams.length === 0">
+      {{template "icon" "people-group"}}
+      <strong>Nenhum time neste projeto</strong>
+      {{if .IsAdmin}}
+      <span>Crie um time e ponha as pessoas nele.</span>
+      {{else}}
+      <span>Um admin precisa criar os times deste projeto.</span>
+      {{end}}
+    </div>
+
+    <div class="grid-2" x-show="teams.length > 0">
+      <template x-for="team in teams" :key="team.id">
+        <section class="card">
+          <div class="card-head">
+            <template x-if="editing !== team.id">
+              <h3 x-text="team.name"></h3>
+            </template>
+            {{if .IsAdmin}}
+            <template x-if="editing === team.id">
+              <form class="row flex-1" @submit.prevent="rename(team)">
+                <input type="text" class="flex-1" x-model="editName" :aria-label="'Novo nome do time ' + team.name">
+                <button type="submit" class="btn btn-sm" :disabled="pending">Salvar</button>
+                <button type="button" class="btn btn-ghost btn-sm" @click="editing = null">Cancelar</button>
+              </form>
+            </template>
+            <div class="row row-tight" x-show="editing !== team.id && confirming !== 'team-' + team.id">
+              <button type="button" class="btn btn-ghost btn-sm btn-icon" title="Renomear"
+                      :aria-label="'Renomear o time ' + team.name" @click="startRename(team)">{{template "icon" "pen"}}</button>
+              <button type="button" class="btn btn-danger-ghost btn-sm btn-icon" title="Excluir"
+                      :aria-label="'Excluir o time ' + team.name" @click="confirming = 'team-' + team.id">{{template "icon" "trash"}}</button>
+            </div>
+            {{end}}
+          </div>
           {{if .IsAdmin}}
-          <div class="row" x-show="editing !== team.id && confirming !== team.id">
-            <button type="button" class="btn btn-ghost btn-sm" @click="startRename(team)">Renomear</button>
-            <button type="button" class="btn btn-danger-ghost btn-sm" @click="confirming = team.id">Excluir</button>
+          <div class="confirm" x-cloak x-show="confirming === 'team-' + team.id">
+            <span>Excluir o time? As pessoas continuam na organização.</span>
+            <button type="button" class="btn btn-danger btn-sm" :disabled="pending" @click="removeTeam(team)">Excluir</button>
+            <button type="button" class="btn btn-ghost btn-sm" @click="confirming = null">Cancelar</button>
           </div>
           {{end}}
-        </div>
-        {{if .IsAdmin}}
-        <div class="confirm" x-cloak x-show="confirming === team.id">
-          <span>Excluir o time? As pessoas continuam na organização.</span>
-          <button type="button" class="btn btn-danger btn-sm" :disabled="pending" @click="removeTeam(team)">Excluir</button>
-          <button type="button" class="btn btn-ghost btn-sm" @click="confirming = null">Cancelar</button>
-        </div>
-        {{end}}
-        <p class="form-error" x-show="errors['team-' + team.id]" x-text="errors['team-' + team.id]" role="alert"></p>
+          <p class="form-error" x-show="errors['team-' + team.id]" x-text="errors['team-' + team.id]" role="alert"></p>
 
-        <p class="muted small" x-show="team.members.length === 0">Nenhum membro ainda.</p>
-        <ul class="list" x-show="team.members.length > 0">
-          <template x-for="m in team.members" :key="m.person_id">
-            <li>
-              <span class="avatar" aria-hidden="true" x-text="WTT.fmt.initials(m.person && m.person.name)"></span>
-              <div class="grow">
-                <div x-text="m.person ? m.person.name : m.person_id"></div>
-                <div class="muted small" x-text="m.person ? m.person.email : ''"></div>
-              </div>
-              {{if .IsAdmin}}
-              <button type="button" class="btn btn-danger-ghost btn-sm" :disabled="pending" @click="removeMember(team, m)">Remover</button>
-              {{end}}
-            </li>
-          </template>
-        </ul>
+          <p class="muted small" x-show="membersOf(team).length === 0">Nenhum membro ainda.</p>
+          <ul class="list" x-show="membersOf(team).length > 0">
+            <template x-for="m in membersOf(team)" :key="m.person.id">
+              <li>
+                <span class="avatar" aria-hidden="true" x-text="WTT.fmt.initials(m.person.name)"></span>
+                <div class="grow">
+                  <div x-text="m.person.name"></div>
+                  <div class="muted small" x-text="m.person.email"></div>
+                </div>
+                {{if .IsAdmin}}
+                <button type="button" class="btn btn-danger-ghost btn-sm btn-icon" title="Remover do time" :disabled="pending"
+                        :aria-label="'Remover ' + m.person.name + ' do time ' + team.name"
+                        @click="removeMember(team, m)">{{template "icon" "xmark"}}</button>
+                {{end}}
+              </li>
+            </template>
+          </ul>
 
-        {{if .IsAdmin}}
-        <form class="row" @submit.prevent="addMember(team)" x-show="candidates(team).length > 0">
-          <select class="flex-1" x-model="adding[team.id]" aria-label="Pessoa para adicionar">
-            <option value="">Adicionar pessoa…</option>
-            <template x-for="p in candidates(team)" :key="p.id">
-              <option :value="p.id" x-text="p.name"></option>
+          {{if .IsAdmin}}
+          <form class="row" @submit.prevent="addMember(team)" x-show="teamCandidates(team).length > 0">
+            <select class="flex-1" x-model="adding[team.id]" :aria-label="'Pessoa para adicionar ao time ' + team.name">
+              <option value="">Adicionar pessoa…</option>
+              <template x-for="p in teamCandidates(team)" :key="p.id">
+                <option :value="p.id" x-text="p.name + (inProject(p) ? '' : ' (fora do projeto)')"></option>
+              </template>
+            </select>
+            <button type="submit" class="btn btn-secondary btn-sm" :disabled="pending || !adding[team.id]">Adicionar</button>
+          </form>
+          {{end}}
+        </section>
+      </template>
+    </div>
+  </section>
+
+  {{if .IsAdmin}}
+  {{/* Os dois formulários aparecem no modal do layout base e continuam no escopo de projectTeams. */}}
+  <template x-teleport="#modal-root">
+    <form class="stack" x-show="$store.modal.name === 'collab-add'" @submit.prevent="addPerson()">
+      <div class="field">
+        <label for="collab-search">Pessoa</label>
+        <input id="collab-search" type="search" placeholder="Buscar por nome ou e-mail" autocomplete="off"
+               x-model="add.search" @input="pruneAdd()" data-autofocus>
+      </div>
+      <ul class="list picker" role="radiogroup" aria-label="Pessoas da organização fora deste projeto" x-show="addCandidates().length > 0">
+        <template x-for="p in addCandidates()" :key="p.id">
+          <li>
+            <label class="pick">
+              <input type="radio" name="collab-person" :value="p.id" x-model="add.person_id">
+              <span class="avatar" aria-hidden="true" x-text="WTT.fmt.initials(p.name)"></span>
+              <span class="grow">
+                <span x-text="p.name"></span>
+                <span class="muted small" x-text="p.email"></span>
+              </span>
+            </label>
+          </li>
+        </template>
+      </ul>
+      <p class="muted small" x-show="addCandidates().length === 0 && add.search.trim()">Ninguém com esse nome ou e-mail fora do projeto.</p>
+      <p class="muted small" x-show="addCandidates().length === 0 && !add.search.trim()">
+        Todas as pessoas da organização já estão neste projeto.
+        <a href="/orgs/{{.OrgID}}/people">Convidar alguém para a organização</a>
+      </p>
+      <div class="fields">
+        <div class="field">
+          <label for="collab-rate">Valor por hora (<span x-text="WTT.fmt.moneyUnit()"></span>)</label>
+          <input id="collab-rate" type="text" inputmode="decimal" class="num input-money" placeholder="0,00" x-model="add.rate">
+          <span class="hint">Quanto a pessoa recebe aqui. Sem valor, ela não bate ponto.</span>
+        </div>
+        <div class="field">
+          <label for="collab-team">Time</label>
+          <select id="collab-team" x-model="add.team_id">
+            <option value="">Sem time por enquanto</option>
+            <template x-for="t in teams" :key="t.id">
+              <option :value="t.id" x-text="t.name"></option>
             </template>
           </select>
-          <button type="submit" class="btn btn-secondary btn-sm" :disabled="pending || !adding[team.id]">Adicionar</button>
-        </form>
-        {{end}}
-      </section>
-    </template>
-  </div>
+          <span class="hint">Quem está num time pode receber tarefas.</span>
+        </div>
+      </div>
+      <p class="form-error" x-show="errors.add" x-text="errors.add" role="alert"></p>
+      <div class="row row-end">
+        <button type="button" class="btn btn-secondary" @click="$store.modal.dismiss()">Cancelar</button>
+        <button type="submit" class="btn" :disabled="pending || !add.person_id">{{template "icon" "user-plus"}} Adicionar ao projeto</button>
+      </div>
+    </form>
+  </template>
+
+  <template x-teleport="#modal-root">
+    <form class="stack" x-show="$store.modal.name === 'team-new'" @submit.prevent="createTeam()">
+      <div class="field">
+        <label for="team-name">Nome do time</label>
+        <input id="team-name" type="text" placeholder="Ex.: Backend" x-model="newTeam" data-autofocus>
+      </div>
+      <p class="form-error" x-show="errors.create" x-text="errors.create" role="alert"></p>
+      <div class="row row-end">
+        <button type="button" class="btn btn-secondary" @click="$store.modal.dismiss()">Cancelar</button>
+        <button type="submit" class="btn" :disabled="pending">Criar time</button>
+      </div>
+    </form>
+  </template>
+  {{end}}
 </main>
 {{end}}

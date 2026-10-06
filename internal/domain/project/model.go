@@ -33,8 +33,8 @@ type Project struct {
 	WeeklySyncDay *string `json:"weekly_sync_day,omitempty"`
 	// Customer é nil em projetos internos.
 	Customer *CustomerRef `json:"customer"`
-	// MemberCount conta as pessoas que estão em algum time do projeto, sem repetir;
-	// TaskCount, as tarefas do projeto.
+	// MemberCount conta os colaboradores do projeto, sem repetir: quem está em
+	// algum time dele ou tem valor por hora nele. TaskCount, as tarefas do projeto.
 	MemberCount int       `json:"member_count"`
 	TaskCount   int       `json:"task_count"`
 	CreatedAt   time.Time `json:"created_at"`

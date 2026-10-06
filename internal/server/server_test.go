@@ -310,12 +310,14 @@ func TestOrganization_Profile(t *testing.T) {
 	}
 }
 
-// A lista de projetos e o detalhe trazem quantas pessoas estão nos times, sem
-// repetir quem está em mais de um, e quantas tarefas o projeto tem.
+// A lista de projetos e o detalhe trazem quantos colaboradores o projeto tem
+// (quem está em algum time ou tem valor por hora, cada pessoa uma vez) e
+// quantas tarefas.
 func TestProjects_MemberAndTaskCounts(t *testing.T) {
 	e := newServer(t)
 	admin := signup(t, e, "Org", "ana@test.com")
 	member := invite(t, e, admin, "bia@test.com", "member")
+	unteamed := invite(t, e, admin, "caio@test.com", "member")
 	busy := createProject(t, e, admin, "Projeto Alfa")
 	idle := createProject(t, e, admin, "Projeto Beta")
 
@@ -333,6 +335,9 @@ func TestProjects_MemberAndTaskCounts(t *testing.T) {
 	post("/api/teams/"+backend+"/members", `{"person_id":"`+admin.id+`"}`)
 	post("/api/teams/"+backend+"/members", `{"person_id":"`+member.id+`"}`)
 	post("/api/teams/"+frontend+"/members", `{"person_id":"`+member.id+`"}`)
+	// A Bia também tem valor, e o Caio tem valor sem estar em time nenhum.
+	allocate(t, e, admin, busy, member.id, 5000)
+	allocate(t, e, admin, busy, unteamed.id, 4000)
 	for _, name := range []string{"Login", "Cadastro", "Relatório"} {
 		post("/api/projects/"+busy+"/tasks", `{"name":"`+name+`","assignee_id":"`+admin.id+`"}`)
 	}
@@ -342,16 +347,16 @@ func TestProjects_MemberAndTaskCounts(t *testing.T) {
 	for _, p := range decodeList(t, do(e, "GET", "/api/orgs/"+admin.orgID+"/projects", "", member.session)) {
 		got[p["id"].(string)] = counts{p["member_count"], p["task_count"]}
 	}
-	if got[busy] != (counts{float64(2), float64(3)}) {
-		t.Errorf("project with two teams and three tasks: got %+v, want 2 members and 3 tasks", got[busy])
+	if got[busy] != (counts{float64(3), float64(3)}) {
+		t.Errorf("project with two teams, a person with only a rate and three tasks: got %+v, want 3 members and 3 tasks", got[busy])
 	}
 	if got[idle] != (counts{float64(0), float64(0)}) {
 		t.Errorf("project without teams or tasks: got %+v, want zeros", got[idle])
 	}
 
 	detail := decode(t, do(e, "GET", "/api/projects/"+busy, "", member.session))
-	if detail["member_count"] != float64(2) || detail["task_count"] != float64(3) {
-		t.Errorf("project detail: member_count=%v task_count=%v, want 2 and 3", detail["member_count"], detail["task_count"])
+	if detail["member_count"] != float64(3) || detail["task_count"] != float64(3) {
+		t.Errorf("project detail: member_count=%v task_count=%v, want 3 and 3", detail["member_count"], detail["task_count"])
 	}
 }
 
@@ -770,6 +775,8 @@ func TestRoutes_Table(t *testing.T) {
 		"GET /api/projects/:projectId/allocations",
 		"PUT /api/projects/:projectId/allocations/:personId",
 		"DELETE /api/projects/:projectId/allocations/:personId",
+		"GET /api/projects/:projectId/collaborators",
+		"DELETE /api/projects/:projectId/collaborators/:personId",
 		"POST /api/projects/:projectId/tasks",
 		"GET /api/projects/:projectId/tasks",
 		"POST /api/projects/:projectId/work-sessions/clock-in",
@@ -854,6 +861,111 @@ func TestAPI_ActiveSessionAndProjectMembers(t *testing.T) {
 	task, _ := active["task"].(map[string]any)
 	if task == nil || task["id"] != taskID || task["project_id"] != projectID {
 		t.Errorf("active session = %v, want task %s of project %s", active, taskID, projectID)
+	}
+}
+
+// Todos no projeto veem quem são os colaboradores e os times de cada um. O
+// valor por hora dos colegas é só de admins. Só um admin tira alguém do
+// projeto: a pessoa perde o valor e sai de todos os times, e as tarefas ficam.
+func TestCollaborators_VisibilityAndRemoval(t *testing.T) {
+	e := newServer(t)
+	admin := signup(t, e, "Org", "ana@test.com")
+	member := invite(t, e, admin, "bia@test.com", "member")
+	colleague := invite(t, e, admin, "caio@test.com", "member")
+	outsider := signup(t, e, "Outra", "zeca@test.com")
+	projectID := createProject(t, e, admin, "Projeto")
+
+	post := func(path, body string) map[string]any {
+		t.Helper()
+		rec := do(e, "POST", path, body, admin.session)
+		if rec.Code >= 300 {
+			t.Fatalf("POST %s = %d: %s", path, rec.Code, rec.Body.String())
+		}
+		return decode(t, rec)
+	}
+	// A Bia está em dois times e tem valor; o Caio tem valor e nenhum time.
+	backend := post("/api/projects/"+projectID+"/teams", `{"name":"Backend"}`)["id"].(string)
+	mobile := post("/api/projects/"+projectID+"/teams", `{"name":"Mobile"}`)["id"].(string)
+	post("/api/teams/"+backend+"/members", `{"person_id":"`+member.id+`"}`)
+	post("/api/teams/"+mobile+"/members", `{"person_id":"`+member.id+`"}`)
+	allocate(t, e, admin, projectID, member.id, 5000)
+	allocate(t, e, admin, projectID, colleague.id, 7000)
+	taskID := post("/api/projects/"+projectID+"/tasks", `{"name":"Tarefa","assignee_id":"`+member.id+`"}`)["id"].(string)
+
+	base := "/api/projects/" + projectID + "/collaborators"
+	// collaborators devolve, por pessoa, o valor e quantos times ela tem.
+	type row struct {
+		rate  any
+		teams int
+	}
+	collaborators := func(session string) map[string]row {
+		t.Helper()
+		rec := do(e, "GET", base, "", session)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("GET collaborators = %d: %s", rec.Code, rec.Body.String())
+		}
+		rows := map[string]row{}
+		for _, c := range decodeList(t, rec) {
+			teams, _ := c["teams"].([]any)
+			rows[c["person"].(map[string]any)["id"].(string)] = row{c["pay_rate_cents"], len(teams)}
+		}
+		return rows
+	}
+
+	asAdmin := collaborators(admin.session)
+	if len(asAdmin) != 2 || asAdmin[member.id] != (row{float64(5000), 2}) || asAdmin[colleague.id] != (row{float64(7000), 0}) {
+		t.Errorf("admin sees %+v, want Bia with 5000 and two teams and Caio with 7000 and none", asAdmin)
+	}
+	asMember := collaborators(member.session)
+	if len(asMember) != 2 || asMember[member.id] != (row{float64(5000), 2}) || asMember[colleague.id] != (row{nil, 0}) {
+		t.Errorf("member sees %+v, want her own rate and no rate for the colleague", asMember)
+	}
+
+	if rec := do(e, "GET", base, "", outsider.session); rec.Code != http.StatusNotFound {
+		t.Errorf("collaborators of another organization = %d, want 404", rec.Code)
+	}
+	if rec := do(e, "GET", base, "", ""); rec.Code != http.StatusUnauthorized {
+		t.Errorf("collaborators without session = %d, want 401", rec.Code)
+	}
+	if rec := do(e, "DELETE", base+"/"+colleague.id, "", member.session); rec.Code != http.StatusForbidden {
+		t.Errorf("member removing a colleague = %d, want 403", rec.Code)
+	}
+	if rec := do(e, "DELETE", base+"/"+member.id, "", outsider.session); rec.Code != http.StatusNotFound {
+		t.Errorf("another organization removing a collaborator = %d, want 404", rec.Code)
+	}
+	if rec := do(e, "DELETE", base+"/"+outsider.id, "", admin.session); rec.Code != http.StatusNotFound {
+		t.Errorf("removing a person of another organization = %d, want 404", rec.Code)
+	}
+	if rec := do(e, "DELETE", base+"/"+admin.id, "", admin.session); rec.Code != http.StatusNotFound {
+		t.Errorf("removing someone who is not in the project = %d, want 404", rec.Code)
+	}
+
+	if rec := do(e, "DELETE", base+"/"+member.id, "", admin.session); rec.Code != http.StatusNoContent {
+		t.Fatalf("admin removing a collaborator = %d: %s", rec.Code, rec.Body.String())
+	}
+	if left := collaborators(admin.session); len(left) != 1 || left[colleague.id].rate != float64(7000) {
+		t.Errorf("after the removal the project has %+v, want only Caio", left)
+	}
+	if members := decodeList(t, do(e, "GET", "/api/projects/"+projectID+"/members", "", admin.session)); len(members) != 0 {
+		t.Errorf("project members after the removal = %v, want none", members)
+	}
+	for _, teamID := range []string{backend, mobile} {
+		if members := decodeList(t, do(e, "GET", "/api/teams/"+teamID+"/members", "", admin.session)); len(members) != 0 {
+			t.Errorf("team %s still has members after the removal: %v", teamID, members)
+		}
+	}
+	if rates := decodeList(t, do(e, "GET", "/api/projects/"+projectID+"/allocations", "", admin.session)); len(rates) != 1 {
+		t.Errorf("rates after the removal = %v, want only Caio's", rates)
+	}
+	// A tarefa continua com ela, mas sem valor ela não bate mais ponto aqui.
+	if task := decode(t, do(e, "GET", "/api/tasks/"+taskID, "", admin.session)); task["assignee_id"] != member.id {
+		t.Errorf("task assignee after the removal = %v, want it unchanged", task["assignee_id"])
+	}
+	if rec := do(e, "POST", "/api/projects/"+projectID+"/work-sessions/clock-in", `{"task_id":"`+taskID+`"}`, member.session); rec.Code != http.StatusBadRequest {
+		t.Errorf("clock-in after the removal = %d, want 400", rec.Code)
+	}
+	if rec := do(e, "DELETE", base+"/"+member.id, "", admin.session); rec.Code != http.StatusNotFound {
+		t.Errorf("removing the same person twice = %d, want 404", rec.Code)
 	}
 }
 
