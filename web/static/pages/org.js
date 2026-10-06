@@ -12,6 +12,7 @@ document.addEventListener('alpine:init', () => {
 
   const blankProject = () => ({
     name: '', description: '', sprint_duration_days: 14, weekly_hours: '', daily_time: '', weekly_sync_day: '',
+    customer_id: '', rate: '',
   });
 
   const orgTexts = [
@@ -51,7 +52,7 @@ document.addEventListener('alpine:init', () => {
     ...form(),
     loading: true,
     projects: [],
-    creating: false,
+    customers: null, // só carregados quando o modal de novo projeto abre pela primeira vez
     draft: blankProject(),
     async init() {
       try {
@@ -62,13 +63,27 @@ document.addEventListener('alpine:init', () => {
         this.loading = false;
       }
     },
-    openCreate() {
+    // openCreate abre o modal de novo projeto. Só admins criam projeto, e só eles podem
+    // listar os clientes; por isso a lista vem aqui, e não no init.
+    async openCreate() {
       this.draft = blankProject();
-      this.creating = true;
-      this.$nextTick(() => this.$refs.name && this.$refs.name.focus());
+      this.errors.create = '';
+      Alpine.store('modal').open('project', 'Novo projeto', () => !this.pending);
+      if (this.customers !== null) return;
+      try {
+        this.customers = (await api('GET', '/api/orgs/' + orgId + '/customers')) || [];
+      } catch (e) {
+        this.errors.create = 'Não deu para carregar os clientes: ' + e.message;
+      }
     },
+    // create cria o projeto e, se houver cliente ou valor, grava a cobrança logo em seguida.
     create() {
       return this.run('create', async () => {
+        // O valor só vale com cliente (o campo some no projeto interno) e é conferido antes:
+        // depois de criado, um erro na cobrança deixaria o projeto sem ela.
+        const cents = this.draft.customer_id ? WTT.toCents(this.draft.rate) : null;
+        if (this.draft.customer_id && cents === null && String(this.draft.rate).trim() !== '') throw new Error('Informe o valor cobrado por hora, por exemplo 150,00.');
+        if (cents !== null && cents > 100000000) throw new Error('O valor cobrado por hora deve ficar entre 0 e 1.000.000,00.');
         const p = await api('POST', '/api/orgs/' + orgId + '/projects', {
           name: this.draft.name,
           description: this.draft.description,
@@ -77,6 +92,17 @@ document.addEventListener('alpine:init', () => {
           daily_time: this.draft.daily_time || null,
           weekly_sync_day: this.draft.weekly_sync_day || null,
         });
+        if (this.draft.customer_id) {
+          try {
+            await api('PUT', '/api/projects/' + p.id + '/billing', { customer_id: this.draft.customer_id || null, bill_rate_cents: cents });
+          } catch (e) {
+            // O projeto já existe: as configurações dele são o lugar de definir a cobrança de novo.
+            Alpine.store('toast').flash('Projeto criado, mas o cliente e o valor não foram salvos: ' + e.message, 'error');
+            location.href = '/projects/' + p.id + '/settings';
+            return;
+          }
+        }
+        Alpine.store('toast').flash('Projeto criado.');
         location.href = '/projects/' + p.id;
       });
     },

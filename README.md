@@ -73,7 +73,7 @@ A interface segue a Decision 8 de `_docs/design.md`. O servidor renderiza a casc
 | `/login`, `/signup` | Entrar e criar organização |
 | `/invite/:token` | Aceitar um convite e criar a conta |
 | `/` | Leva para a organização de quem está logado |
-| `/orgs/:orgId` | Projetos da organização em cartões, para quem entra para trabalhar num deles (admin cria) |
+| `/orgs/:orgId` | Projetos da organização em cartões, para quem entra para trabalhar num deles. O admin cria projeto num modal, já com o cliente e, quando há cliente, o valor cobrado por hora |
 | `/orgs/:orgId/about` | Organização, aba Sobre: o perfil da organização, para todos os membros |
 | `/orgs/:orgId/settings` | Organização, tela de edição aberta pelo botão Editar da aba Sobre: perfil, regime, fuso, moeda e exclusão da organização (só admins) |
 | `/orgs/:orgId/people` | Organização, aba Colaboradores: integrantes e papéis, convites pendentes e o botão Adicionar colaborador, que gera o link de convite num modal (só admins) |
@@ -134,7 +134,7 @@ Para atualizar o Alpine, troque `web/static/alpine.min.js` e o hash em `web/embe
 
 O conteúdo aparece dentro do modal, mas segue no escopo do componente da página (`x-model`, `save()`, `errors`). O `<template>` precisa de um único elemento raiz. `open(nome, título, guarda)` abre e foca o campo com `data-autofocus`; `close()` fecha; `dismiss()` é o fechamento pedido pela pessoa (Esc, clique no fundo, X, Cancelar) e respeita a guarda, uma função que devolve `false` enquanto o modal não pode fechar, por exemplo durante um salvamento.
 
-Hoje usam o modal o cadastro de cliente e o Adicionar colaborador. Para focar um campo que acabou de aparecer dentro do modal (como o link do convite depois de gerado), dê ao bloco um `x-transition`: sem transição, o `x-show` só mostra o elemento no ciclo seguinte e o `$nextTick` chega antes de ele aceitar foco.
+Hoje usam o modal o cadastro de cliente, o Adicionar colaborador e o Novo projeto. Para focar um campo que acabou de aparecer dentro do modal (como o link do convite depois de gerado), dê ao bloco um `x-transition`: sem transição, o `x-show` só mostra o elemento no ciclo seguinte e o `$nextTick` chega antes de ele aceitar foco.
 
 ## API
 
