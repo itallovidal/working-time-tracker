@@ -568,9 +568,10 @@ document.addEventListener('alpine:init', () => {
     ...form(),
     loading: true,
     tasks: [],
-    // A ordem de quem organiza o dia: o que está andando primeiro, e o que já fechou por último.
-    statuses: ['in_progress', 'backlog', 'awaiting_closure', 'closed'].map((v) => WTT.taskStatuses.find((s) => s.value === v)),
-    open: { in_progress: true, backlog: true, awaiting_closure: true, closed: false },
+    // A ordem em que o trabalho anda: registrada e ainda não começada (backlog), em progresso,
+    // aguardando fechamento e fechada. É a mesma ordem dos filtros de status da lista.
+    statuses: WTT.taskStatuses,
+    open: { backlog: true, in_progress: true, awaiting_closure: true, closed: false },
     async init() {
       await this.load();
       this.loading = false;

@@ -516,7 +516,7 @@
 - [X] S42.1 The Quadro de tarefas tab becomes **Lista de tarefas** (menu, page title, back link and the texts that named it), in both languages
 - [X] S42.2 `assignee_id=any` in the task list filter (only tasks with an assignee, of anyone), next to `none`; `ListFilter.Assigned`
 - [X] S42.3 The task list page opens with a sentence saying what it is and has two lists, each with its own page and URL parameter (`free_page`, `taken_page`): **Sem responsável**, for the team to pick up, and **Com responsável**; picking a person in the filter hides the first; the "Sem responsável" option leaves the assignee select
-- [X] S42.4 **Minhas tarefas** tab (`/projects/:projectId/my-tasks`), between Início and Lista de tarefas: the person's tasks in one list per status (Em progresso, Backlog, Aguardando fechamento, Fechada), the closed one collapsed, each list foldable, a Start button on the open ones, and an empty state that points to the task list
+- [X] S42.4 **Minhas tarefas** tab (`/projects/:projectId/my-tasks`), between Início and Lista de tarefas: the person's tasks in one list per status (Backlog, Em progresso, Aguardando fechamento, Fechada, the order the work moves), the closed one collapsed, each list foldable, a Start button on the open ones, and an empty state that points to the task list
 - [X] S42.5 Tests for the filter (service and API), both pages' markup and the tab order; update README, design, routes and the Insomnia collection
 
 ---
