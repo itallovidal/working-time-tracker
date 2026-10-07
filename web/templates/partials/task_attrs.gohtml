@@ -6,18 +6,18 @@
 <template x-if="hasStatus">
   <div class="field">
     <label for="task-status">{{.T "tasks.col_status"}}</label>
-    <select id="task-status" x-model="draft.status">
+    <select id="task-status" class="select-tone" :class="statusClass(draft.status)" x-model="draft.status">
       <template x-for="s in WTT.taskStatuses" :key="s.value">
-        <option :value="s.value" x-text="s.label" :selected="s.value === draft.status"></option>
+        <option :class="statusClass(s.value)" :value="s.value" x-text="s.label" :selected="s.value === draft.status"></option>
       </template>
     </select>
   </div>
 </template>
 <div class="field">
   <label for="task-priority">{{.T "tasks.col_priority"}}</label>
-  <select id="task-priority" x-model="draft.priority">
+  <select id="task-priority" class="select-tone" :class="priorityClass(draft.priority)" x-model="draft.priority">
     <template x-for="p in WTT.priorities" :key="p.value">
-      <option :value="p.value" x-text="p.label" :selected="p.value === draft.priority"></option>
+      <option :class="priorityClass(p.value)" :value="p.value" x-text="p.label" :selected="p.value === draft.priority"></option>
     </template>
   </select>
 </div>

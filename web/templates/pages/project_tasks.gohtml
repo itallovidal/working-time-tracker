@@ -29,13 +29,13 @@
       <div class="row filter-chips" role="group" aria-label="{{.T "tasks.priority_filter"}}">
         <span class="muted small">{{.T "tasks.col_priority"}}</span>
         <template x-for="p in WTT.priorities" :key="p.value">
-          <button type="button" class="chip" :aria-pressed="filters.priority.includes(p.value)" @click="toggleFilter('priority', p.value)" x-text="p.label"></button>
+          <button type="button" class="chip" :class="priorityClass(p.value)" :aria-pressed="filters.priority.includes(p.value)" @click="toggleFilter('priority', p.value)" x-text="p.label"></button>
         </template>
       </div>
       <div class="row filter-chips" role="group" aria-label="{{.T "tasks.status_filter"}}">
         <span class="muted small">{{.T "tasks.col_status"}}</span>
         <template x-for="s in WTT.taskStatuses" :key="s.value">
-          <button type="button" class="chip" :aria-pressed="filters.status.includes(s.value)" @click="toggleFilter('status', s.value)" x-text="s.label"></button>
+          <button type="button" class="chip" :class="statusClass(s.value)" :aria-pressed="filters.status.includes(s.value)" @click="toggleFilter('status', s.value)" x-text="s.label"></button>
         </template>
       </div>
       <div class="row filter-chips" x-cloak x-show="labels.length > 0" role="group" aria-label="{{.T "tasks.labels_filter"}}">
@@ -106,8 +106,7 @@
                     <span class="badge" :class="statusClass(t.status)" x-text="WTT.fmt.taskStatus(t.status)"></span>
                   </td>
                   <td>
-                    <span class="badge" :class="priorityClass(t.priority)" x-show="t.priority !== 'none'" x-text="WTT.fmt.priority(t.priority)"></span>
-                    <span class="muted" x-show="t.priority === 'none'">—</span>
+                    <span class="badge" :class="priorityClass(t.priority)" x-text="WTT.fmt.priority(t.priority)"></span>
                   </td>
                   <td x-show="key === 'taken'">
                     <span x-text="t.assignee ? t.assignee.name : ''"></span>

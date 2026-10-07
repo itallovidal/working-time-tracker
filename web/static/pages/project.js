@@ -7,10 +7,11 @@ document.addEventListener('alpine:init', () => {
   const clock = () => Alpine.store('clock');
   const DAY = 24 * 60 * 60 * 1000;
 
-  // priorityClass é a cor do selo de prioridade; "sem prioridade" não tem selo.
-  const priorityClass = (p) => ({ urgent: 'badge-danger', high: 'badge-warn', medium: 'badge-accent' }[p] || '');
-  // statusClass é a cor do selo de status: o backlog fica neutro, e o andamento esquenta até fechar.
-  const statusClass = (s) => ({ in_progress: 'badge-accent', awaiting_closure: 'badge-warn', closed: 'badge-ok' }[s] || '');
+  // priorityClass e statusClass dão a cor de uma prioridade e de um status (`.tone` e a variante,
+  // em app.css), no selo, no chip do filtro e no select. Uma tarefa sem valor conhecido cai em
+  // "sem prioridade" e em "backlog", os padrões da API.
+  const priorityClass = (p) => 'tone prio-' + (['urgent', 'high', 'medium', 'low'].includes(p) ? p : 'none');
+  const statusClass = (s) => 'tone status-' + (['in_progress', 'awaiting_closure', 'closed'].includes(s) ? s : 'backlog');
   const byLabelName = (a, b) => a.name.localeCompare(b.name, WTT.lang);
 
   // Grupos de permissões que a API tem e as telas não oferecem.

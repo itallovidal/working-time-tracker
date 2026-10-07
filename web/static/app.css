@@ -20,6 +20,22 @@
   --warn-soft: #fcefd9;
   --danger: #b42318;
   --danger-soft: #fbe3e0;
+  /* Cores de prioridade e de status (ver .tone): um par texto/fundo suave por cor. */
+  --orange: #b53a08;
+  --orange-soft: #ffe6d2;
+  --green: #15743a;
+  --green-soft: #dcf2e3;
+  --blue: #1d63c4;
+  --blue-soft: #e1ecfb;
+  --teal: #0a7580;
+  --teal-soft: #d5f1f2;
+  --gold: #7c5e00;
+  --gold-soft: #fbf0bf;
+  --purple: #6b3fc4;
+  --purple-soft: #ebe3fb;
+  --slate: #46535d;
+  --slate-soft: #e9edf0;
+  --on-tone: #ffffff;
   --shadow: 0 1px 2px rgba(23, 32, 38, 0.06), 0 4px 16px rgba(23, 32, 38, 0.06);
   --scrim: rgba(23, 32, 38, 0.45);
 
@@ -50,6 +66,21 @@
     --warn-soft: #36270f;
     --danger: #f3857a;
     --danger-soft: #3b1a17;
+    --orange: #fb9d5a;
+    --orange-soft: #3b2110;
+    --green: #4fca80;
+    --green-soft: #14301f;
+    --blue: #7cb3f7;
+    --blue-soft: #14263f;
+    --teal: #4fd1d9;
+    --teal-soft: #0f3033;
+    --gold: #f0cf55;
+    --gold-soft: #342b0b;
+    --purple: #b99cf5;
+    --purple-soft: #2b2048;
+    --slate: #aab6bf;
+    --slate-soft: #222b31;
+    --on-tone: #0e1214;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.25);
     --scrim: rgba(0, 0, 0, 0.6);
   }
@@ -417,6 +448,34 @@ td.actions { text-align: right; white-space: nowrap; }
 .badge-ok { background: var(--ok-soft); color: var(--ok); border-color: transparent; }
 .badge-warn { background: var(--warn-soft); color: var(--warn); border-color: transparent; }
 .badge-danger { background: var(--danger-soft); color: var(--danger); border-color: transparent; }
+
+/* Prioridade e status têm cores próprias, e nenhuma cor se repete entre os dois grupos.
+   Prioridade: urgente vermelha, alta laranja, média verde, baixa azul e sem prioridade branca,
+   de borda pontilhada. Status: backlog cinza, em progresso turquesa, aguardando fechamento
+   amarelo e fechada roxa. `.tone` mais uma variante (.prio-* ou .status-*) pinta o selo, o chip
+   do filtro e o select; o selo e o chip desmarcado usam o fundo suave, e o chip marcado enche. */
+.tone { --tone: var(--slate); --tone-soft: var(--slate-soft); }
+.prio-urgent { --tone: var(--danger); --tone-soft: var(--danger-soft); }
+.prio-high { --tone: var(--orange); --tone-soft: var(--orange-soft); }
+.prio-medium { --tone: var(--green); --tone-soft: var(--green-soft); }
+.prio-low { --tone: var(--blue); --tone-soft: var(--blue-soft); }
+.prio-none { --tone: var(--ink-2); --tone-soft: var(--surface); --tone-line: var(--rule-strong); --tone-style: dashed; }
+.status-backlog { --tone: var(--slate); --tone-soft: var(--slate-soft); }
+.status-in_progress { --tone: var(--teal); --tone-soft: var(--teal-soft); }
+.status-awaiting_closure { --tone: var(--gold); --tone-soft: var(--gold-soft); }
+.status-closed { --tone: var(--purple); --tone-soft: var(--purple-soft); }
+.badge.tone {
+  background: var(--tone-soft); color: var(--tone);
+  border-color: var(--tone-line, transparent); border-style: var(--tone-style, solid);
+}
+.chip.tone, .select-tone {
+  background-color: var(--tone-soft); color: var(--tone);
+  border-color: var(--tone-line, color-mix(in srgb, var(--tone) 35%, transparent)); border-style: var(--tone-style, solid);
+}
+.chip.tone:hover { background: var(--tone-soft); filter: brightness(0.96); }
+.chip.tone[aria-pressed="true"] { background: var(--tone); color: var(--on-tone); border-color: var(--tone); border-style: solid; }
+.select-tone { font-weight: 600; }
+.select-tone option { background-color: var(--tone-soft); color: var(--tone); }
 
 /* Cartões de projeto na visão da organização */
 .project-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }

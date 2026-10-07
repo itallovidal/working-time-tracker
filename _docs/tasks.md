@@ -541,6 +541,15 @@
 
 ---
 
+### Sprint 45: Colors for Priority and Status
+
+- [X] S45.1 A palette of tokens for the light and the dark theme (orange, green, blue, turquoise, yellow, purple and grey, next to the red that already existed), each with a soft background and a contrast of at least 4.5:1 (light) and 6:1 (dark), and `.tone` with `.prio-*` and `.status-*` variants
+- [X] S45.2 Priority: urgent red, high orange, medium green, low blue, none white with a dashed border; status: backlog grey, in progress turquoise, awaiting closure yellow, closed purple; no colour shared between the two groups
+- [X] S45.3 Everywhere they appear: the filter chips (soft when off, filled when on), the badges of the task list, My tasks (rows and the count of each status) and the task page, and the Status and Prioridade selects of the New and Edit task modals; "sem prioridade" has a (dashed) badge instead of a dash
+- [X] S45.4 Test that reads `app.css` and `app.js` (every priority and status has a colour, none repeats, each exists in both themes) and test of the markup of the four pages; checked in the browser (light and dark, filters on and off, the modal, My tasks); update README and design; no API change
+
+---
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open

@@ -81,8 +81,7 @@
           <div class="detail-row">
             <dt>{{.T "tasks.col_priority"}}</dt>
             <dd>
-              <span class="badge" :class="priorityClass(task && task.priority)" x-show="task && task.priority !== 'none'" x-text="task && WTT.fmt.priority(task.priority)"></span>
-              <span class="muted" x-show="task && task.priority === 'none'" x-text="WTT.fmt.priority('none')"></span>
+              <span class="badge" :class="priorityClass(task && task.priority)" x-text="task && WTT.fmt.priority(task.priority)"></span>
             </dd>
           </div>
           <div class="detail-row">

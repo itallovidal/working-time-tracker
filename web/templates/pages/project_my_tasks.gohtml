@@ -45,8 +45,7 @@
                       </div>
                     </td>
                     <td>
-                      <span class="badge" :class="priorityClass(t.priority)" x-show="t.priority !== 'none'" x-text="WTT.fmt.priority(t.priority)"></span>
-                      <span class="muted" x-show="t.priority === 'none'">—</span>
+                      <span class="badge" :class="priorityClass(t.priority)" x-text="WTT.fmt.priority(t.priority)"></span>
                     </td>
                     <td><span class="badge num" :class="deadlineClass(t)" x-text="deadlineLabel(t)"></span></td>
                     <td class="actions">

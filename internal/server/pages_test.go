@@ -454,10 +454,15 @@ func TestPages_ProjectMyTasksTab(t *testing.T) {
 			`class="fold-toggle"`, "Você não tem tarefas neste projeto.", "Ver a lista de tarefas", `@click="start(t)"`,
 			// A aba é a atual, e fica entre o Início e a Lista de tarefas.
 			`/my-tasks" aria-current="page"`, "Minhas tarefas",
+			// A prioridade e o status têm cor própria; "sem prioridade" também tem selo (pontilhado).
+			`class="badge" :class="priorityClass(t.priority)" x-text="WTT.fmt.priority(t.priority)"`, `class="badge num" :class="statusClass(s.value)"`,
 		} {
 			if !strings.Contains(body, want) {
 				t.Errorf("%s: the my tasks tab does not contain %q", who, want)
 			}
+		}
+		if strings.Contains(body, `x-show="t.priority !== 'none'"`) {
+			t.Errorf("%s: the my tasks tab still hides the priority badge when there is none", who)
 		}
 		home, mineTab, list := strings.Index(body, ">Início</a>"), strings.Index(body, `/my-tasks"`), strings.Index(body, `/tasks"`)
 		if !(home < mineTab && mineTab < list) {
@@ -869,10 +874,16 @@ func TestPages_ProjectIntegrationsTab(t *testing.T) {
 	for _, want := range []string{
 		`class="task-layout"`, `class="card task-main"`, `class="card task-details"`, `class="detail-list"`, `class="task-description"`,
 		"<h2 id=\"task-details-title\">Detalhes</h2>", "<dt>Status</dt>", "<dt>Prioridade</dt>", "<dt>Responsável</dt>", "<dt>Prazo</dt>", "<dt>Etiquetas</dt>", "<dt>Criada em</dt>",
+		// Prioridade e status com cor própria, no selo e nos selects do modal Editar tarefa.
+		`:class="statusClass(task && task.status)"`, `:class="priorityClass(task && task.priority)" x-text="task && WTT.fmt.priority(task.priority)"`,
+		`class="select-tone" :class="statusClass(draft.status)"`, `class="select-tone" :class="priorityClass(draft.priority)"`,
 	} {
 		if !strings.Contains(detail, want) {
 			t.Errorf("the task page does not contain %q", want)
 		}
+	}
+	if strings.Contains(detail, `x-show="task && task.priority !== 'none'"`) {
+		t.Error("the task page still hides the priority badge when there is none")
 	}
 	// A tarefa é uma tela própria: tem cabeçalho com o caminho, o título e as ações, e não mostra a
 	// barra de abas do projeto nem o nome do projeto como título da página.
@@ -918,6 +929,20 @@ func TestPages_ProjectIntegrationsTab(t *testing.T) {
 	}
 	if !strings.Contains(board, "Clique em uma tarefa para abrir os detalhes.") {
 		t.Error("the board does not say that clicking a task opens it")
+	}
+	// Os chips dos filtros, os selos das linhas e os selects do modal Nova tarefa levam a cor de
+	// cada prioridade e de cada status; "sem prioridade" tem selo, e não um traço.
+	for _, want := range []string{
+		`class="chip" :class="priorityClass(p.value)"`, `class="chip" :class="statusClass(s.value)"`,
+		`class="badge" :class="priorityClass(t.priority)" x-text="WTT.fmt.priority(t.priority)"`, `class="badge" :class="statusClass(t.status)"`,
+		`class="select-tone" :class="priorityClass(draft.priority)"`,
+	} {
+		if !strings.Contains(board, want) {
+			t.Errorf("the board does not contain %q", want)
+		}
+	}
+	if strings.Contains(board, `x-show="t.priority !== 'none'"`) {
+		t.Error("the board still hides the priority badge when there is none")
 	}
 	if home := do(e, "GET", "/projects/"+projectID+"/overview", "", member.session).Body.String(); strings.Contains(home, "integration_types") {
 		t.Error("the Início tab gets the integration types without using them")
