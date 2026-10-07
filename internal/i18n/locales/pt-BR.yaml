@@ -471,7 +471,12 @@ tasks:
   col_assignee: Responsável
   col_deadline: Prazo
   col_details: Detalhes
+  col_actions: Ações
   details: Detalhes
+  claim: Pegar
+  claim_title: Associar a tarefa a mim, sem iniciar o ponto
+  claim_label: "Pegar a tarefa {{.name}}"
+  claimed: "Você pegou \"{{.name}}\". Ela está em Minhas tarefas."
   running: Em andamento
   start: Iniciar
   pager: Páginas da lista de tarefas
@@ -511,6 +516,13 @@ my_tasks:
 task_detail:
   loading: Carregando a tarefa…
   edit_title: Editar tarefa
+  claim: Pegar tarefa
+  claim_title: Associar a tarefa a mim, sem iniciar o ponto
+  claimed: Você pegou a tarefa. Ela está em Minhas tarefas.
+  quick: Atualização rápida
+  quick_title: Atualização rápida
+  quick_hint: Muda só o status, a prioridade e as etiquetas. Para o resto, use Editar tarefa.
+  quick_saved: Tarefa atualizada.
   back: Voltar à lista
   breadcrumb: Você está em
   no_description: Esta tarefa não tem descrição.
@@ -1040,6 +1052,7 @@ errors:
     integration_other_project: "a integração é de outro projeto"
     integrations_unavailable: "integrações indisponíveis"
     invalid_assignee: "responsável inválido"
+    already_assigned: "esta tarefa já tem responsável"
     invalid_assignee_filter: "responsável inválido (assignee_id)"
     invalid_deadline_filter: "prazo inválido (deadline_to): use data e hora, como 2026-10-12T23:59:59Z"
     invalid_label_filter: "etiqueta inválida (label_id): use ids separados por vírgula"

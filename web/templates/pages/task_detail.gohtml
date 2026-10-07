@@ -16,13 +16,18 @@
       <div class="row" x-cloak x-show="task">
         <span class="badge badge-ok" x-show="isRunning()">{{.T "tasks.running"}}</span>
         <button type="button" class="btn btn-secondary btn-sm" x-show="isRunning()" @click="openSession()">{{template "icon" "list-check"}} {{.T "session.details"}}</button>
+        {{/* Sem responsável, dá para pegar a tarefa sem bater o ponto: ela passa a ser da pessoa e o ponto fica para depois. */}}
+        <button type="button" class="btn btn-secondary btn-sm" x-show="task && !task.assignee_id" :disabled="pending" title="{{.T "task_detail.claim_title"}}" @click="claim()">{{template "icon" "user-plus"}} {{.T "task_detail.claim"}}</button>
         {{/* Parado, inicia o ponto; com o ponto aberto neste projeto, põe a tarefa na sessão; num outro projeto, fica de fora. */}}
         <button type="button" class="btn btn-secondary btn-sm" x-show="!isRunning() && !sessionHere()" :disabled="pending || otherProject()" @click="start()">{{template "icon" "play"}} {{.T "tasks.start"}}</button>
         <button type="button" class="btn btn-secondary btn-sm" x-show="!isRunning() && sessionHere()" :disabled="pending" @click="addToSession()">{{template "icon" "plus"}} {{.T "session.add_to_session"}}</button>
+        {{/* Só o status, a prioridade e as etiquetas, sem abrir a edição da tarefa inteira. */}}
+        <button type="button" class="btn btn-secondary btn-sm" title="{{.T "task_detail.quick_hint"}}" @click="openQuick()">{{template "icon" "bolt"}} {{.T "task_detail.quick"}}</button>
         <button type="button" class="btn btn-ghost btn-sm" aria-label="{{.T "task_detail.edit_title"}}" title="{{.T "task_detail.edit_title"}}" @click="openEdit()">{{template "icon" "pen"}}</button>
       </div>
     </div>
     <p class="form-error" x-show="errors.clock" x-text="errors.clock" role="alert"></p>
+    <p class="form-error" x-cloak x-show="errors.claim" x-text="errors.claim" role="alert"></p>
     <p class="muted small" x-cloak x-show="otherProject()">{{.T "time.other_project"}}</p>
   </header>
 
@@ -178,6 +183,20 @@
       </section>
     </div>
   </div>
+
+  {{/* Atualização rápida: só o status, a prioridade e as etiquetas (os mesmos campos da edição, com outro prefixo
+       de id porque os dois modais estão na página). Nada vai para o servidor antes de Salvar. */}}
+  <template x-teleport="#modal-root">
+    <form class="stack" novalidate x-show="$store.modal.name === 'task-quick'" @submit.prevent="saveQuick()">
+      <p class="muted small">{{.T "task_detail.quick_hint"}}</p>
+      {{template "task_attrs" (.WithIDPrefix "quick-")}}
+      <p class="form-error" x-show="errors.quick" x-text="errors.quick" role="alert"></p>
+      <div class="row row-end">
+        <button type="button" class="btn btn-secondary" @click="$store.modal.dismiss()">{{.T "common.cancel"}}</button>
+        <button type="submit" class="btn" :disabled="pending">{{.T "common.save"}}</button>
+      </div>
+    </form>
+  </template>
 
   {{/* Editar tarefa: nada vai para o servidor antes de Salvar, então Cancelar desfaz tudo. */}}
   <template x-teleport="#modal-root">

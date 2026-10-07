@@ -14,6 +14,7 @@ var (
 	ErrDescriptionTooLong      = apperr.New("task.description_too_long", http.StatusBadRequest, "max")
 	ErrAssigneeNotInTeam       = apperr.New("task.assignee_not_in_team", http.StatusBadRequest)
 	ErrInvalidAssignee         = apperr.New("task.invalid_assignee", http.StatusBadRequest)
+	ErrAlreadyAssigned         = apperr.New("task.already_assigned", http.StatusConflict)
 	ErrIntegrationNotFound     = apperr.New("task.integration_not_found", http.StatusBadRequest)
 	ErrIntegrationOtherProject = apperr.New("task.integration_other_project", http.StatusBadRequest)
 	ErrNoExternalItem          = apperr.New("task.no_external_item", http.StatusBadRequest)

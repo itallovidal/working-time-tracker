@@ -234,10 +234,38 @@ func (s *Store) Update(t *Task) error {
 // responsável. O UPDATE condicional decide a disputa no banco: de dois pontos
 // batidos juntos na mesma tarefa livre, só o primeiro a leva.
 func (s *Store) ClaimIfUnassigned(taskID, personID uuid.UUID) error {
-	_, err := s.client.Task.Update().
+	_, err := s.TryClaim(taskID, personID)
+	return err
+}
+
+// TryClaim é o ClaimIfUnassigned que diz se a pessoa levou a tarefa: false quando ela já
+// tinha responsável (de dois pedidos juntos, só um recebe true).
+func (s *Store) TryClaim(taskID, personID uuid.UUID) (bool, error) {
+	n, err := s.client.Task.Update().
 		Where(task.IDEQ(taskID), task.AssigneeIDIsNil()).
 		SetAssigneeID(personID).
 		Save(context.Background())
+	return n > 0, err
+}
+
+// UpdateAttrs grava só a prioridade, o status e as etiquetas que vierem (nil mantém), sem
+// reescrever o resto da tarefa: uma atualização rápida não desfaz uma edição ou um responsável
+// que chegaram no meio.
+func (s *Store) UpdateAttrs(id uuid.UUID, priority, status *string, labels *[]Label) error {
+	q := s.client.Task.UpdateOneID(id)
+	if priority != nil {
+		q = q.SetPriority(priorityOf(*priority))
+	}
+	if status != nil {
+		q = q.SetStatus(statusOf(*status))
+	}
+	if labels != nil {
+		q = q.ClearLabels().AddLabelIDs(labelIDs(*labels)...)
+	}
+	_, err := q.Save(context.Background())
+	if ent.IsNotFound(err) {
+		return database.ErrNotFound
+	}
 	return err
 }
 

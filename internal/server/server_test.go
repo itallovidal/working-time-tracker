@@ -865,6 +865,8 @@ func TestRoutes_Table(t *testing.T) {
 
 		"GET /api/tasks/:taskId",
 		"PATCH /api/tasks/:taskId",
+		"POST /api/tasks/:taskId/claim",
+		"PATCH /api/tasks/:taskId/attributes",
 		"DELETE /api/tasks/:taskId",
 		"POST /api/tasks/:taskId/link-external-item",
 		"DELETE /api/tasks/:taskId/link-external-item",
@@ -1464,6 +1466,137 @@ func TestTasks_OthersList(t *testing.T) {
 	if got := names(member.session, "?page=1&assignee_id="+member.id); len(got) != 1 || got[0] != "Da Bia" {
 		t.Errorf("Bia asking for her own tasks = %v, want only Da Bia", got)
 	}
+}
+
+// Pegar a tarefa pela API: POST /api/tasks/:taskId/claim passa uma tarefa sem responsável para quem está
+// logado, sem bater o ponto e sem mexer no status; quem a pega de novo não muda nada, e uma tarefa que já é
+// de outra pessoa responde 409.
+func TestTasks_Claim(t *testing.T) {
+	e := newServer(t)
+	admin := signup(t, e, "Org", "ana@test.com")
+	member := invite(t, e, admin, "bia@test.com", "member")
+	outsider := signup(t, e, "Outra", "zeca@test.com")
+	projectID := createProject(t, e, admin, "Alpha")
+	allocate(t, e, admin, projectID, member.id, 5000)
+	tasks := "/api/projects/" + projectID + "/tasks"
+
+	id := decode(t, do(e, "POST", tasks, `{"name":"Livre"}`, member.session))["id"].(string)
+	claim := "/api/tasks/" + id + "/claim"
+
+	if rec := do(e, "POST", claim, "", ""); rec.Code != http.StatusUnauthorized {
+		t.Errorf("claiming without a session = %d, want 401", rec.Code)
+	}
+	if rec := do(e, "POST", claim, "", outsider.session); rec.Code != http.StatusNotFound {
+		t.Errorf("claiming a task of another organization = %d, want 404", rec.Code)
+	}
+	if rec := do(e, "POST", "/api/tasks/00000000-0000-4000-8000-000000000000/claim", "", member.session); rec.Code != http.StatusNotFound {
+		t.Errorf("claiming a task that does not exist = %d, want 404", rec.Code)
+	}
+
+	rec := do(e, "POST", claim, "", member.session)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("claim = %d: %s", rec.Code, rec.Body.String())
+	}
+	got := decode(t, rec)
+	if got["assignee_id"] != member.id || got["status"] != "backlog" {
+		t.Errorf("after the claim: assignee %v and status %v, want the member and backlog (claiming is not starting)", got["assignee_id"], got["status"])
+	}
+	if rec := do(e, "POST", claim, "", member.session); rec.Code != http.StatusOK {
+		t.Errorf("claiming a task that is already yours = %d, want 200", rec.Code)
+	}
+	if rec := do(e, "POST", claim, "", admin.session); rec.Code != http.StatusConflict || !strings.Contains(rec.Body.String(), "task.already_assigned") {
+		t.Errorf("claiming the task of another person = %d: %s, want 409 task.already_assigned", rec.Code, rec.Body.String())
+	}
+	if after := decode(t, do(e, "GET", "/api/tasks/"+id, "", admin.session)); after["assignee_id"] != member.id {
+		t.Errorf("the refused claim moved the task to %v", after["assignee_id"])
+	}
+
+	// Pegar não bate o ponto: a pessoa não fica com sessão, e a tarefa sai das sem responsável e passa às dela.
+	if sessions := decodeList(t, do(e, "GET", "/api/projects/"+projectID+"/work-sessions?person_id="+member.id, "", member.session)); len(sessions) != 0 {
+		t.Errorf("claiming opened %d sessions, want none", len(sessions))
+	}
+	total := func(query string) int {
+		t.Helper()
+		return int(decode(t, do(e, "GET", tasks+query, "", member.session))["total"].(float64))
+	}
+	if free, mine := total("?page=1&assignee_id=none"), total("?page=1&assignee_id="+member.id); free != 0 || mine != 1 {
+		t.Errorf("after the claim: %d unassigned and %d of the member, want 0 and 1", free, mine)
+	}
+}
+
+// A atualização rápida pela API: PATCH /api/tasks/:taskId/attributes muda só a prioridade, o status e as
+// etiquetas que vierem, e deixa o nome, a descrição, o responsável e o prazo como estão (o PATCH da tarefa
+// exige o nome e troca a descrição).
+func TestTasks_UpdateAttributes(t *testing.T) {
+	e := newServer(t)
+	admin := signup(t, e, "Org", "ana@test.com")
+	member := invite(t, e, admin, "bia@test.com", "member")
+	outsider := signup(t, e, "Outra", "zeca@test.com")
+	projectID := createProject(t, e, admin, "Alpha")
+	otherProject := createProject(t, e, admin, "Outro")
+	allocate(t, e, admin, projectID, member.id, 5000)
+	labels := "/api/projects/" + projectID + "/labels"
+	bug := decode(t, do(e, "POST", labels, `{"name":"bug"}`, admin.session))["id"].(string)
+	foreign := decode(t, do(e, "POST", "/api/projects/"+otherProject+"/labels", `{"name":"bug"}`, admin.session))["id"].(string)
+
+	body := fmt.Sprintf(`{"name":"Tarefa","description":"Detalhes importantes","assignee_id":"%s","priority":"low"}`, member.id)
+	created := decode(t, do(e, "POST", "/api/projects/"+projectID+"/tasks", body, member.session))
+	id := created["id"].(string)
+	attrs := "/api/tasks/" + id + "/attributes"
+	untouched := func(step string, task map[string]any) {
+		t.Helper()
+		if task["name"] != "Tarefa" || task["description"] != "Detalhes importantes" || task["assignee_id"] != member.id || task["deadline"] != created["deadline"] {
+			t.Errorf("%s changed what the quick update does not own: %v %v %v %v", step, task["name"], task["description"], task["assignee_id"], task["deadline"])
+		}
+	}
+
+	rec := do(e, "PATCH", attrs, `{"status":"awaiting_closure"}`, member.session)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("update the status = %d: %s", rec.Code, rec.Body.String())
+	}
+	got := decode(t, rec)
+	if got["status"] != "awaiting_closure" || got["priority"] != "low" {
+		t.Errorf("only the status should change: %v and %v", got["status"], got["priority"])
+	}
+	untouched("the status", got)
+
+	rec = do(e, "PATCH", attrs, fmt.Sprintf(`{"priority":"urgent","label_ids":["%s"]}`, bug), admin.session)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("update the priority and the labels = %d: %s", rec.Code, rec.Body.String())
+	}
+	got = decode(t, rec)
+	if got["priority"] != "urgent" || got["status"] != "awaiting_closure" || len(got["labels"].([]any)) != 1 {
+		t.Errorf("priority and labels should change and the status stay: %v %v %v", got["priority"], got["status"], got["labels"])
+	}
+	untouched("the priority and the labels", got)
+
+	if got = decode(t, do(e, "PATCH", attrs, `{"label_ids":[]}`, member.session)); len(got["labels"].([]any)) != 0 {
+		t.Errorf("an empty label_ids left %v, want the labels cleared", got["labels"])
+	}
+
+	for name, c := range map[string]struct{ body, code string }{
+		"invalid priority":       {`{"priority":"critical"}`, "task.invalid_priority"},
+		"invalid status":         {`{"status":"done"}`, "task.invalid_status"},
+		"label of other project": {fmt.Sprintf(`{"label_ids":["%s"]}`, foreign), "task.label_other_project"},
+	} {
+		if rec := do(e, "PATCH", attrs, c.body, member.session); rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), c.code) {
+			t.Errorf("%s = %d: %s, want 400 %s", name, rec.Code, rec.Body.String(), c.code)
+		}
+	}
+	if rec := do(e, "PATCH", attrs, `{"status":`, member.session); rec.Code != http.StatusBadRequest {
+		t.Errorf("a malformed body = %d, want 400", rec.Code)
+	}
+	if rec := do(e, "PATCH", attrs, `{"status":"closed"}`, outsider.session); rec.Code != http.StatusNotFound {
+		t.Errorf("another organization updating the attributes = %d, want 404", rec.Code)
+	}
+	if rec := do(e, "PATCH", attrs, `{"status":"closed"}`, ""); rec.Code != http.StatusUnauthorized {
+		t.Errorf("updating without a session = %d, want 401", rec.Code)
+	}
+	after := decode(t, do(e, "GET", "/api/tasks/"+id, "", member.session))
+	if after["status"] != "awaiting_closure" || after["priority"] != "urgent" {
+		t.Errorf("a refused update changed the task: %v and %v", after["status"], after["priority"])
+	}
+	untouched("the refused updates", after)
 }
 
 // O status pela API: a tarefa nasce em backlog mesmo que o corpo peça outro, só o PATCH

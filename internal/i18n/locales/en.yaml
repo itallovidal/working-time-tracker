@@ -461,7 +461,12 @@ tasks:
   col_assignee: Assignee
   col_deadline: Deadline
   col_details: Details
+  col_actions: Actions
   details: Details
+  claim: Take
+  claim_title: Assign the task to me, without starting the clock
+  claim_label: "Take the task {{.name}}"
+  claimed: "You took \"{{.name}}\". It is in My tasks."
   running: In progress
   start: Start
   pager: Task list pages
@@ -501,6 +506,13 @@ my_tasks:
 task_detail:
   loading: Loading the task…
   edit_title: Edit task
+  claim: Take task
+  claim_title: Assign the task to me, without starting the clock
+  claimed: You took the task. It is in My tasks.
+  quick: Quick update
+  quick_title: Quick update
+  quick_hint: Changes only the status, the priority and the labels. For everything else, use Edit task.
+  quick_saved: Task updated.
   back: Back to the list
   breadcrumb: You are here
   no_description: This task has no description.
@@ -1030,6 +1042,7 @@ errors:
     integration_other_project: "the integration belongs to another project"
     integrations_unavailable: "integrations unavailable"
     invalid_assignee: "invalid assignee"
+    already_assigned: "this task already has an assignee"
     invalid_assignee_filter: "invalid assignee (assignee_id)"
     invalid_deadline_filter: "invalid deadline (deadline_to): use date and time, like 2026-10-12T23:59:59Z"
     invalid_label_filter: "invalid label (label_id): use ids separated by commas"

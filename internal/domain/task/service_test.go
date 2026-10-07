@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -969,5 +970,222 @@ func TestService_ListPage(t *testing.T) {
 	}
 	if !slices.Equal(names, []string{"John", "Maria"}) {
 		t.Errorf("assignees = %v, want [John Maria]", names)
+	}
+}
+
+// Pegar a tarefa passa uma sem responsável para quem pediu, sem mexer no status; quem a pega de novo não
+// muda nada, e uma tarefa que já é de outra pessoa não é tomada.
+func TestService_Claim(t *testing.T) {
+	orgSvc, personSvc, projSvc, _, _, taskSvc := setupDeps(t)
+	org, _ := orgSvc.Create("Org")
+	ana, _ := personSvc.Create(org.ID.String(), "Ana", "ana@test.com")
+	bia, _ := personSvc.Create(org.ID.String(), "Bia", "bia@test.com")
+	proj, _ := projSvc.Create(org.ID.String(), "P", "", 0, project.Routine{})
+	pid := proj.ID.String()
+
+	free, _ := taskSvc.Create(pid, "livre", "", "", nil)
+	got, err := taskSvc.Claim(ana.ID.String(), free.ID.String())
+	if err != nil {
+		t.Fatalf("claim a free task: %v", err)
+	}
+	if got.AssigneeID == nil || *got.AssigneeID != ana.ID {
+		t.Errorf("assignee after the claim = %v, want Ana", got.AssigneeID)
+	}
+	if got.Status != "backlog" {
+		t.Errorf("status after the claim = %q, want it untouched (backlog): claiming is not starting", got.Status)
+	}
+
+	if again, err := taskSvc.Claim(ana.ID.String(), free.ID.String()); err != nil || again.AssigneeID == nil || *again.AssigneeID != ana.ID {
+		t.Errorf("claiming a task that is already yours = %v, %v; want it unchanged and no error", again, err)
+	}
+	if _, err := taskSvc.Claim(bia.ID.String(), free.ID.String()); !errors.Is(err, task.ErrAlreadyAssigned) {
+		t.Errorf("claiming the task of another person: %v, want ErrAlreadyAssigned", err)
+	}
+	if after, _ := taskSvc.Get(free.ID.String()); after.AssigneeID == nil || *after.AssigneeID != ana.ID {
+		t.Errorf("the refused claim took the task from Ana: %v", after.AssigneeID)
+	}
+	if _, err := taskSvc.Claim("", free.ID.String()); !errors.Is(err, task.ErrInvalidAssignee) {
+		t.Errorf("claiming without a person: %v, want ErrInvalidAssignee", err)
+	}
+	if _, err := taskSvc.Claim(ana.ID.String(), uuid.NewString()); err == nil {
+		t.Error("claiming a task that does not exist did not fail")
+	}
+}
+
+// De dois pedidos juntos para a mesma tarefa livre, só um leva: o UPDATE condicional decide no banco, e o
+// outro recebe ErrAlreadyAssigned.
+func TestService_Claim_Race(t *testing.T) {
+	orgSvc, personSvc, projSvc, _, _, taskSvc := setupDeps(t)
+	org, _ := orgSvc.Create("Org")
+	proj, _ := projSvc.Create(org.ID.String(), "P", "", 0, project.Routine{})
+	pid := proj.ID.String()
+	people := make([]string, 6)
+	for i := range people {
+		p, _ := personSvc.Create(org.ID.String(), fmt.Sprintf("P%d", i), fmt.Sprintf("p%d@test.com", i))
+		people[i] = p.ID.String()
+	}
+	free, _ := taskSvc.Create(pid, "disputada", "", "", nil)
+
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	var won []string
+	var refused int
+	for _, who := range people {
+		wg.Add(1)
+		go func(who string) {
+			defer wg.Done()
+			_, err := taskSvc.Claim(who, free.ID.String())
+			mu.Lock()
+			defer mu.Unlock()
+			switch {
+			case err == nil:
+				won = append(won, who)
+			case errors.Is(err, task.ErrAlreadyAssigned):
+				refused++
+			default:
+				t.Errorf("claim: %v", err)
+			}
+		}(who)
+	}
+	wg.Wait()
+	if len(won) != 1 || refused != len(people)-1 {
+		t.Fatalf("%d people won and %d were refused, want exactly one winner and the rest refused", len(won), refused)
+	}
+	if after, _ := taskSvc.Get(free.ID.String()); after.AssigneeID == nil || after.AssigneeID.String() != won[0] {
+		t.Errorf("the task ended with %v, want the winner %s", after.AssigneeID, won[0])
+	}
+}
+
+// A atomicidade mora no UPDATE condicional do store: de vários TryClaim ao mesmo tempo na mesma tarefa livre,
+// exatamente um recebe true, sem leitura antes para atrapalhar. O teste de cima passa pelo serviço, onde a
+// leitura prévia pode deixar as chamadas em fila antes do UPDATE.
+func TestStore_TryClaim_Atomic(t *testing.T) {
+	orgSvc, personSvc, projSvc, _, _, taskSvc := setupDeps(t)
+	org, _ := orgSvc.Create("Org")
+	proj, _ := projSvc.Create(org.ID.String(), "P", "", 0, project.Routine{})
+	free, _ := taskSvc.Create(proj.ID.String(), "disputada", "", "", nil)
+	store := task.NewStore(testClient)
+
+	const callers = 12
+	people := make([]uuid.UUID, callers)
+	for i := range people {
+		p, _ := personSvc.Create(org.ID.String(), fmt.Sprintf("P%d", i), fmt.Sprintf("p%d@test.com", i))
+		people[i] = p.ID
+	}
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	var winners []uuid.UUID
+	start := make(chan struct{})
+	for _, who := range people {
+		wg.Add(1)
+		go func(who uuid.UUID) {
+			defer wg.Done()
+			<-start
+			claimed, err := store.TryClaim(free.ID, who)
+			if err != nil {
+				t.Errorf("TryClaim: %v", err)
+				return
+			}
+			if claimed {
+				mu.Lock()
+				winners = append(winners, who)
+				mu.Unlock()
+			}
+		}(who)
+	}
+	close(start)
+	wg.Wait()
+	if len(winners) != 1 {
+		t.Fatalf("%d callers got the task, want exactly one", len(winners))
+	}
+	if after, _ := taskSvc.Get(free.ID.String()); after.AssigneeID == nil || *after.AssigneeID != winners[0] {
+		t.Errorf("the task ended with %v, want the winner %s", after.AssigneeID, winners[0])
+	}
+	if claimed, _ := store.TryClaim(free.ID, people[0]); claimed {
+		t.Error("a task that already has an assignee was claimed again")
+	}
+}
+
+// A atualização rápida muda só a prioridade, o status e as etiquetas que vierem: o que faltar fica como
+// está, e o nome, a descrição, o responsável e o prazo nunca são tocados.
+func TestService_UpdateAttrs(t *testing.T) {
+	orgSvc, personSvc, projSvc, _, _, taskSvc := setupDeps(t)
+	org, _ := orgSvc.Create("Org")
+	ana, _ := personSvc.Create(org.ID.String(), "Ana", "ana@test.com")
+	proj, _ := projSvc.Create(org.ID.String(), "P", "", 0, project.Routine{})
+	other, _ := projSvc.Create(org.ID.String(), "Outro", "", 0, project.Routine{})
+	pid := proj.ID.String()
+	bug, _ := taskSvc.CreateLabel(pid, "bug")
+	ux, _ := taskSvc.CreateLabel(pid, "ux")
+	foreign, _ := taskSvc.CreateLabel(other.ID.String(), "bug")
+
+	deadline := time.Date(2026, 11, 20, 12, 0, 0, 0, time.UTC)
+	bugIDs := []string{bug.ID.String()}
+	created, err := taskSvc.CreateAs(ana.ID.String(), pid, "Nome", "Descrição", ana.ID.String(), &deadline, task.Attrs{LabelIDs: &bugIDs})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	id := created.ID.String()
+	str := func(s string) *string { return &s }
+	labelNames := func(tk *task.Task) string {
+		names := []string{}
+		for _, l := range tk.Labels {
+			names = append(names, l.Name)
+		}
+		sort.Strings(names)
+		return strings.Join(names, ",")
+	}
+	untouched := func(step string, tk *task.Task) {
+		t.Helper()
+		if tk.Name != "Nome" || tk.Description != "Descrição" || tk.AssigneeID == nil || *tk.AssigneeID != ana.ID || !tk.Deadline.Equal(deadline) {
+			t.Errorf("%s changed what the quick update does not own: %q %q %v %v", step, tk.Name, tk.Description, tk.AssigneeID, tk.Deadline)
+		}
+	}
+
+	got, err := taskSvc.UpdateAttrs(id, task.Attrs{Status: str("closed")})
+	if err != nil {
+		t.Fatalf("update the status: %v", err)
+	}
+	if got.Status != "closed" || got.Priority != "none" || labelNames(got) != "bug" {
+		t.Errorf("only the status should change: %q %q %q", got.Status, got.Priority, labelNames(got))
+	}
+	untouched("the status", got)
+
+	uxIDs := []string{ux.ID.String()}
+	got, err = taskSvc.UpdateAttrs(id, task.Attrs{Priority: str("urgent"), LabelIDs: &uxIDs})
+	if err != nil {
+		t.Fatalf("update the priority and the labels: %v", err)
+	}
+	if got.Priority != "urgent" || labelNames(got) != "ux" || got.Status != "closed" {
+		t.Errorf("priority and labels should change and the status stay: %q %q %q", got.Priority, labelNames(got), got.Status)
+	}
+	untouched("the priority and the labels", got)
+
+	none := []string{}
+	if got, err = taskSvc.UpdateAttrs(id, task.Attrs{LabelIDs: &none}); err != nil || labelNames(got) != "" {
+		t.Errorf("an empty list of labels = %q, %v; want the labels cleared", labelNames(got), err)
+	}
+	if got, err = taskSvc.UpdateAttrs(id, task.Attrs{}); err != nil || got.Priority != "urgent" || got.Status != "closed" {
+		t.Errorf("an update with nothing to change = %v, %v; want the task as it is", got, err)
+	}
+
+	foreignIDs := []string{foreign.ID.String()}
+	for name, c := range map[string]struct {
+		attrs task.Attrs
+		want  error
+	}{
+		"invalid priority":       {task.Attrs{Priority: str("critical")}, task.ErrInvalidPriority},
+		"invalid status":         {task.Attrs{Status: str("done")}, task.ErrInvalidStatus},
+		"label of other project": {task.Attrs{LabelIDs: &foreignIDs}, task.ErrLabelOtherProject},
+	} {
+		if _, err := taskSvc.UpdateAttrs(id, c.attrs); !errors.Is(err, c.want) {
+			t.Errorf("%s: %v, want %v", name, err, c.want)
+		}
+	}
+	if after, _ := taskSvc.Get(id); after.Priority != "urgent" || after.Status != "closed" {
+		t.Errorf("a refused update changed the task: %q %q", after.Priority, after.Status)
+	}
+	if _, err := taskSvc.UpdateAttrs(uuid.NewString(), task.Attrs{Status: str("closed")}); err == nil {
+		t.Error("updating a task that does not exist did not fail")
 	}
 }

@@ -887,6 +887,10 @@ func TestPages_ProjectIntegrationsTab(t *testing.T) {
 		// Prioridade e status com cor própria, no selo e nos selects do modal Editar tarefa.
 		`:class="statusClass(task && task.status)"`, `:class="priorityClass(task && task.priority)" x-text="task && WTT.fmt.priority(task.priority)"`,
 		`class="select-tone" :class="statusClass(draft.status)"`, `class="select-tone" :class="priorityClass(draft.priority)"`,
+		// Pegar a tarefa sem bater o ponto, e a atualização rápida: um modal só com status, prioridade e etiquetas.
+		`@click="claim()"`, `x-show="task && !task.assignee_id"`, "Pegar tarefa", `@click="openQuick()"`, "Atualização rápida",
+		`x-show="$store.modal.name === 'task-quick'"`, `@submit.prevent="saveQuick()"`, `x-show="errors.claim"`,
+		`id="quick-task-status"`, `id="quick-task-priority"`, `for="quick-task-priority"`, `id="quick-task-labels-label"`,
 	} {
 		if !strings.Contains(detail, want) {
 			t.Errorf("the task page does not contain %q", want)
@@ -894,6 +898,13 @@ func TestPages_ProjectIntegrationsTab(t *testing.T) {
 	}
 	if strings.Contains(detail, `x-show="task && task.priority !== 'none'"`) {
 		t.Error("the task page still hides the priority badge when there is none")
+	}
+	// Os campos de atributos estão no modal Editar e no de atualização rápida, na mesma página: cada id
+	// aparece uma vez só (o do segundo leva o prefixo quick-), senão o `for` dos rótulos aponta para o errado.
+	for _, id := range []string{"task-status", "task-priority", "task-labels-label", "quick-task-status", "quick-task-priority", "quick-task-labels-label"} {
+		if n := strings.Count(detail, `id="`+id+`"`); n != 1 {
+			t.Errorf("the task page has id=%q %d times, want once", id, n)
+		}
 	}
 	// A tarefa é uma tela própria: tem cabeçalho com o caminho, o título e as ações, e não mostra a
 	// barra de abas do projeto nem o nome do projeto como título da página.
@@ -929,8 +940,14 @@ func TestPages_ProjectIntegrationsTab(t *testing.T) {
 	// A linha da lista inteira leva à página da tarefa, sem botão Detalhes, sem Iniciar e sem a
 	// coluna do item externo; a dica acima da tabela diz que a linha abre a tarefa.
 	board := do(e, "GET", "/projects/"+projectID+"/tasks", "", member.session).Body.String()
-	if !strings.Contains(board, `class="row-link" @click="if (!$event.target.closest('a')) location.href = '/tasks/' + t.id"`) {
-		t.Error("the board row does not open the task page when clicked")
+	if !strings.Contains(board, `class="row-link" @click="if (!$event.target.closest('a, button')) location.href = '/tasks/' + t.id"`) {
+		t.Error("the board row does not open the task page when clicked, or opens it when the Pegar button is clicked")
+	}
+	// Pegar a tarefa, só na lista das sem responsável: associa a tarefa à pessoa sem bater o ponto.
+	for _, want := range []string{`<td class="actions" x-show="key === 'free'">`, `@click="claim(t)"`, `<th class="actions" x-show="key === 'free'">`, `x-show="errors.claim"`, " Pegar</button>"} {
+		if !strings.Contains(board, want) {
+			t.Errorf("the board does not contain %q", want)
+		}
 	}
 	for _, not := range []string{`>Detalhes <`, `@click="start(t)"`, "<th>Item externo</th>", "t.external_item_id", "externalLabel", "integration_types"} {
 		if strings.Contains(board, not) {

@@ -45,6 +45,7 @@
   <p class="muted" x-show="loading">{{.T "tasks.loading"}}</p>
   <p class="form-error" x-cloak x-show="errors.load || errors.members" x-text="errors.load || errors.members"></p>
   <p class="form-error" x-cloak x-show="errors.clock" x-text="errors.clock" role="alert"></p>
+  <p class="form-error" x-cloak x-show="errors.claim" x-text="errors.claim" role="alert"></p>
 
   <div class="row" x-cloak x-show="!loading && hasFilters()">
     <button type="button" class="btn btn-secondary btn-sm" @click="clear()">{{.T "common.clear_filters"}}</button>
@@ -85,12 +86,13 @@
                 <th>{{.T "tasks.col_task"}}</th><th>{{.T "tasks.col_status"}}</th><th>{{.T "tasks.col_priority"}}</th>
                 <th x-show="key === 'taken'">{{.T "tasks.col_assignee"}}</th>
                 <th>{{.T "tasks.col_deadline"}}</th>
+                <th class="actions" x-show="key === 'free'"><span class="sr-only">{{.T "tasks.col_actions"}}</span></th>
               </tr>
             </thead>
             <tbody>
               <template x-for="t in lists[key].tasks" :key="t.id">
-                {{/* A linha inteira abre a tarefa; o nome continua um link, para o teclado e para abrir em outra aba. */}}
-                <tr class="row-link" @click="if (!$event.target.closest('a')) location.href = '/tasks/' + t.id">
+                {{/* A linha inteira abre a tarefa; o nome continua um link, para o teclado e para abrir em outra aba, e o botão Pegar não abre. */}}
+                <tr class="row-link" @click="if (!$event.target.closest('a, button')) location.href = '/tasks/' + t.id">
                   <td>
                     <div class="row row-tight">
                       <a :href="'/tasks/' + t.id" x-text="t.name"></a>
@@ -108,6 +110,10 @@
                   </td>
                   <td>
                     <span class="badge num" :class="deadlineClass(t)" x-text="deadlineLabel(t)"></span>
+                  </td>
+                  {{/* Pegar é ficar com a tarefa sem bater o ponto: ela sai desta lista e vai para Minhas tarefas. */}}
+                  <td class="actions" x-show="key === 'free'">
+                    <button type="button" class="btn btn-secondary btn-sm" :disabled="pending" :title="$t('tasks.claim_title')" :aria-label="$t('tasks.claim_label', { name: t.name })" @click="claim(t)">{{template "icon" "user-plus"}} {{.T "tasks.claim"}}</button>
                   </td>
                 </tr>
               </template>

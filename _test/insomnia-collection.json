@@ -936,6 +936,38 @@
       "body": {}
     },
     {
+      "_id": "req_06_18c",
+      "_type": "request",
+      "parentId": "fld_06",
+      "name": "Pegar a tarefa (sem bater o ponto)",
+      "method": "POST",
+      "url": "{{base_url}}/api/tasks/{{task_id}}/claim",
+      "authentication": {},
+      "metaSortKey": 18.6,
+      "headers": [],
+      "body": {}
+    },
+    {
+      "_id": "req_06_18d",
+      "_type": "request",
+      "parentId": "fld_06",
+      "name": "Atualização rápida (status, prioridade e etiquetas)",
+      "method": "PATCH",
+      "url": "{{base_url}}/api/tasks/{{task_id}}/attributes",
+      "authentication": {},
+      "metaSortKey": 18.7,
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"status\": \"in_progress\",\n  \"priority\": \"high\",\n  \"label_ids\": [\"{{label_id}}\"]\n}"
+      }
+    },
+    {
       "_id": "req_06_18b",
       "_type": "request",
       "parentId": "fld_06",

@@ -1,6 +1,8 @@
 package task
 
 import (
+	"errors"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -175,6 +177,36 @@ func (h *Handler) Update(c *echo.Context) error {
 	}
 	task, err := h.svc.UpdateAs(selfID(c), id, body.Name, body.Description, body.AssigneeID, body.Deadline,
 		Attrs{Priority: body.Priority, Status: body.Status, LabelIDs: body.LabelIDs})
+	if err != nil {
+		return apperr.Respond(c, 400, err)
+	}
+	return c.JSON(200, task)
+}
+
+// Claim é "pegar a tarefa": passa uma tarefa sem responsável para quem está logado, sem bater o ponto.
+// Uma tarefa que já é de outra pessoa responde 409.
+func (h *Handler) Claim(c *echo.Context) error {
+	task, err := h.svc.Claim(selfID(c), c.Param("taskId"))
+	if err != nil {
+		if errors.Is(err, ErrAlreadyAssigned) {
+			return apperr.Respond(c, http.StatusConflict, err)
+		}
+		return apperr.Respond(c, 400, err)
+	}
+	return c.JSON(200, task)
+}
+
+// UpdateAttrs é a atualização rápida: prioridade, status e etiquetas, cada um opcional.
+func (h *Handler) UpdateAttrs(c *echo.Context) error {
+	var body struct {
+		Priority *string   `json:"priority"`
+		Status   *string   `json:"status"`
+		LabelIDs *[]string `json:"label_ids"`
+	}
+	if err := c.Bind(&body); err != nil {
+		return apperr.Respond(c, 400, apperr.ErrInvalidBody)
+	}
+	task, err := h.svc.UpdateAttrs(c.Param("taskId"), Attrs{Priority: body.Priority, Status: body.Status, LabelIDs: body.LabelIDs})
 	if err != nil {
 		return apperr.Respond(c, 400, err)
 	}

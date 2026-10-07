@@ -203,6 +203,65 @@ func (s *Service) UpdateAs(selfID, id, name, description string, assigneeID *str
 	return s.taskStore.GetByID(id)
 }
 
+// Claim passa a tarefa para quem pediu, sem bater o ponto e sem mexer no status: é pegar a tarefa para
+// fazer depois. Só vale para uma tarefa sem responsável (ErrAlreadyAssigned se já é de outra pessoa); quem
+// pega a que já é sua não muda nada, e de dois pedidos juntos só um leva (o outro recebe o conflito).
+func (s *Service) Claim(selfID, id string) (*Task, error) {
+	person, err := uuid.Parse(selfID)
+	if err != nil {
+		return nil, ErrInvalidAssignee
+	}
+	t, err := s.taskStore.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+	if t.AssigneeID != nil {
+		if *t.AssigneeID == person {
+			return t, nil
+		}
+		return nil, ErrAlreadyAssigned
+	}
+	claimed, err := s.taskStore.TryClaim(t.ID, person)
+	if err != nil {
+		return nil, err
+	}
+	t, err = s.taskStore.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+	if !claimed && (t.AssigneeID == nil || *t.AssigneeID != person) {
+		return nil, ErrAlreadyAssigned // outra pessoa levou entre a leitura e o UPDATE
+	}
+	return t, nil
+}
+
+// UpdateAttrs é a atualização rápida: muda só a prioridade, o status e as etiquetas que vierem (as que
+// faltam ficam como estão), sem o nome, a descrição, o responsável e o prazo da edição completa.
+func (s *Service) UpdateAttrs(id string, attrs Attrs) (*Task, error) {
+	if attrs.Priority != nil && !validPriority(*attrs.Priority) {
+		return nil, ErrInvalidPriority
+	}
+	if attrs.Status != nil && !validStatus(*attrs.Status) {
+		return nil, ErrInvalidStatus
+	}
+	t, err := s.taskStore.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+	var labels *[]Label
+	if attrs.LabelIDs != nil {
+		resolved, err := s.resolveLabels(t.ProjectID.String(), *attrs.LabelIDs)
+		if err != nil {
+			return nil, err
+		}
+		labels = &resolved
+	}
+	if err := s.taskStore.UpdateAttrs(t.ID, attrs.Priority, attrs.Status, labels); err != nil {
+		return nil, err
+	}
+	return s.taskStore.GetByID(id)
+}
+
 func (s *Service) Delete(id string) error {
 	return s.taskStore.Delete(id)
 }

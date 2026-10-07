@@ -567,6 +567,21 @@ document.addEventListener('alpine:init', () => {
     isRunning(t) {
       return clock().isRunning(t.id);
     },
+    // claim pega uma tarefa sem responsável para a pessoa, sem bater o ponto: ela sai da lista das sem
+    // responsável e passa para Minhas tarefas. Se outra pessoa chegou antes, a lista é recarregada e o
+    // erro (a tarefa já tem responsável) aparece no alto.
+    claim(t) {
+      return this.run('claim', async () => {
+        try {
+          await api('POST', '/api/tasks/' + t.id + '/claim');
+        } catch (e) {
+          await this.load();
+          throw e;
+        }
+        await this.load();
+        toast(WTT.t('tasks.claimed', { name: t.name }));
+      });
+    },
     deadlineClass: (t) => deadlineInfo(t.deadline).cls,
     deadlineLabel: (t) => deadlineInfo(t.deadline).label,
   }));
@@ -722,6 +737,42 @@ document.addEventListener('alpine:init', () => {
       this.confirmDelete = false;
       this.resetWizard();
       Alpine.store('modal').open('task-edit', WTT.t('task_detail.edit_title'), () => !this.pending);
+    },
+    // A atualização rápida abre um modal só com o status, a prioridade e as etiquetas, sem a edição
+    // da tarefa inteira; usa o mesmo rascunho da edição, refeito a partir da tarefa a cada abertura.
+    openQuick() {
+      this.setTask(this.task);
+      this.errors.quick = '';
+      this.errors.label = '';
+      this.newLabel = '';
+      Alpine.store('modal').open('task-quick', WTT.t('task_detail.quick_title'), () => !this.pending);
+    },
+    // saveQuick manda só esses três campos, pela rota própria: o nome, a descrição, o responsável e o prazo
+    // não vão, então não há como desfazer uma edição feita por outra pessoa.
+    saveQuick() {
+      return this.run('quick', async () => {
+        const t = await api('PATCH', '/api/tasks/' + this.taskId + '/attributes', {
+          status: this.draft.status,
+          priority: this.draft.priority,
+          label_ids: this.draft.label_ids,
+        });
+        this.setTask(t);
+        Alpine.store('modal').close();
+        toast(WTT.t('task_detail.quick_saved'));
+      });
+    },
+    // claim pega a tarefa sem responsável para a pessoa, sem bater o ponto: ela passa a ser dela e o ponto
+    // fica para quando quiser. Se outra pessoa chegou antes, a tarefa é recarregada e o erro aparece.
+    claim() {
+      return this.run('claim', async () => {
+        try {
+          this.setTask(await api('POST', '/api/tasks/' + this.taskId + '/claim'));
+        } catch (e) {
+          this.setTask(await api('GET', '/api/tasks/' + this.taskId));
+          throw e;
+        }
+        toast(WTT.t('task_detail.claimed'));
+      });
     },
     // Outra pessoa só pode ser responsável se estiver no projeto; quem saiu dele
     // continua aparecendo enquanto for o responsável atual (ver setTask).

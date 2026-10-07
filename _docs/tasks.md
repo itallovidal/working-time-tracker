@@ -576,6 +576,16 @@
 
 ---
 
+### Sprint 49: Take a Task and Quick Update
+
+- [X] S49.1 `POST /api/tasks/:taskId/claim`: sets the assignee to the logged-in person only if the task has none, without clocking in and without touching the status; a task that is already yours comes back as it is, and one that is someone else's is 409 `task.already_assigned` (new error code, texts in both languages and the generated error docs); `Store.TryClaim` decides a simultaneous claim in the database (the clock-in's `ClaimIfUnassigned` now uses it)
+- [X] S49.2 **Pegar** in the rows of the Sem responsável list (a column of actions only there; the row click ignores buttons) and **Pegar tarefa** in the task header while the task has no assignee: the list reloads and the toast says the task is in Minhas tarefas, and when someone was faster the screen reloads and shows the error
+- [X] S49.3 `PATCH /api/tasks/:taskId/attributes`: only `priority`, `status` and `label_ids`, each optional, written by `Store.UpdateAttrs` without rewriting the rest of the task (the task `PATCH` requires the name and replaces the description)
+- [X] S49.4 **Atualização rápida** on the task page: a modal with the status, the priority and the labels (the same fields as the edit modal, which keeps them), with `Data.WithIDPrefix` so the two modals do not repeat an `id`
+- [X] S49.5 Tests for the service (claim, the rules, the race, the store-level atomicity checked by mutation, the quick update leaving name, description, assignee and deadline alone), the API (claim 200, repeated 200, 409, 404 for another organization, 401, no session opened; the attributes, partial and invalid bodies) and the markup of the list and the task page (no repeated id); checked in the browser with two people (claim from the list and the page, a task taken by someone else first, the quick update and its cancel, light and dark); update README, design, routes, error codes and the Insomnia collection
+
+---
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open

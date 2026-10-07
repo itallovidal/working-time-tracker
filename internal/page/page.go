@@ -46,7 +46,19 @@ type Data struct {
 	Lang string // idioma da requisição: pt-BR ou en
 	Path string // caminho e query da página, para o toggle de idioma voltar para ela
 
+	// IDPrefix vai na frente dos id dos campos de um parcial que a página repete (os campos de
+	// atributos da tarefa estão no modal Editar e no de atualização rápida): dois id iguais na
+	// mesma página quebram o `for` dos rótulos. Vem de WithIDPrefix; o padrão é vazio.
+	IDPrefix string
+
 	cat *i18n.Catalog
+}
+
+// WithIDPrefix devolve os mesmos dados com um prefixo para os id dos campos de um parcial:
+// {{template "task_attrs" (.WithIDPrefix "quick-")}}.
+func (d Data) WithIDPrefix(prefix string) Data {
+	d.IDPrefix = prefix
+	return d
 }
 
 // T traduz uma chave do catálogo no idioma da página. Os argumentos são pares

@@ -141,6 +141,8 @@ func RegisterRoutes(e *echo.Echo, h Handlers, m *auth.Middleware, authLimiter ec
 
 	r.GET("/tasks/:taskId", h.Task.Get, tsk)
 	r.PATCH("/tasks/:taskId", h.Task.Update, tsk)
+	r.POST("/tasks/:taskId/claim", h.Task.Claim, tsk)
+	r.PATCH("/tasks/:taskId/attributes", h.Task.UpdateAttrs, tsk)
 	r.DELETE("/tasks/:taskId", h.Task.Delete, tsk)
 	r.POST("/tasks/:taskId/link-external-item", h.Task.LinkExternalItem, tsk)
 	r.DELETE("/tasks/:taskId/link-external-item", h.Task.UnlinkExternalItem, tsk)

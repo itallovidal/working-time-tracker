@@ -407,6 +407,8 @@ A pessoa precisa ser da mesma organização do projeto e já estar nele, com val
 | DELETE | `/api/projects/:projectId/labels/:labelId` | `labels.manage` | Exclui a etiqueta; as tarefas só a perdem |
 | GET | `/api/tasks/:taskId` | logado | Detalhes da tarefa |
 | PATCH | `/api/tasks/:taskId` | logado | Altera a tarefa |
+| POST | `/api/tasks/:taskId/claim` | logado | Pega a tarefa para quem está logado, sem bater o ponto e sem mexer no status: só vale se ela não tem responsável (se já é sua, volta como está; se é de outra pessoa, 409 `task.already_assigned`) |
+| PATCH | `/api/tasks/:taskId/attributes` | logado | Atualização rápida: só `priority`, `status` e `label_ids`, cada um opcional; não toca no nome, na descrição, no responsável nem no prazo |
 | DELETE | `/api/tasks/:taskId` | logado | Exclui a tarefa e as sessões dela |
 | POST | `/api/tasks/:taskId/link-external-item` | logado | Vincula a uma issue ou a um cartão |
 | DELETE | `/api/tasks/:taskId/link-external-item` | logado | Desfaz o vínculo |
@@ -457,6 +459,16 @@ Sem `page`, a resposta é o array com todas as tarefas que passam pelos filtros,
 }
 ```
 `total` conta tudo o que passa pelos filtros. Uma `page` além do fim devolve a última, e o campo `page` diz qual foi. `assignees` lista quem é responsável por alguma tarefa do projeto, mesmo que já tenha saído dos times. Um parâmetro inválido responde `400`.
+
+```http
+POST /api/tasks/:taskId/claim
+
+PATCH /api/tasks/:taskId/attributes
+Content-Type: application/json
+
+{ "status": "in_progress", "priority": "high", "label_ids": ["…"] }
+```
+O `claim` não tem corpo e não abre sessão: é só ficar com a tarefa para fazer depois. De dois pedidos juntos, um só leva, e o outro recebe 409. O `attributes` troca as etiquetas pela lista enviada (`[]` tira todas), e um valor que falta fica como está; prioridade, status ou etiqueta inválidos dão 400 (`task.invalid_priority`, `task.invalid_status`, `task.label_other_project`). Ao contrário do `PATCH /api/tasks/:taskId`, que exige o nome e troca a descrição, ele é seguro para uma edição parcial.
 
 ```http
 POST /api/tasks/:taskId/link-external-item

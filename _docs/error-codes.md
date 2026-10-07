@@ -207,6 +207,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 
 | Código | Status | Parâmetros | pt-BR | en |
 |---|---|---|---|---|
+| `task.already_assigned` | 409 | — | `esta tarefa já tem responsável` | `this task already has an assignee` |
 | `task.assignee_not_in_team` | 400 | — | `o responsável precisa estar neste projeto` | `the assignee must be on this project` |
 | `task.description_too_long` | 400 | `max` | `a descrição aceita até {{.max}} caracteres` | `the description accepts up to {{.max}} characters` |
 | `task.integration_not_found` | 400 | — | `integração não encontrada` | `integration not found` |
