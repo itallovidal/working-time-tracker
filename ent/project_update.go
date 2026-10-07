@@ -143,33 +143,6 @@ func (_u *ProjectUpdate) AddSprintDurationDays(v int) *ProjectUpdate {
 	return _u
 }
 
-// SetWeeklyHours sets the "weekly_hours" field.
-func (_u *ProjectUpdate) SetWeeklyHours(v int) *ProjectUpdate {
-	_u.mutation.ResetWeeklyHours()
-	_u.mutation.SetWeeklyHours(v)
-	return _u
-}
-
-// SetNillableWeeklyHours sets the "weekly_hours" field if the given value is not nil.
-func (_u *ProjectUpdate) SetNillableWeeklyHours(v *int) *ProjectUpdate {
-	if v != nil {
-		_u.SetWeeklyHours(*v)
-	}
-	return _u
-}
-
-// AddWeeklyHours adds value to the "weekly_hours" field.
-func (_u *ProjectUpdate) AddWeeklyHours(v int) *ProjectUpdate {
-	_u.mutation.AddWeeklyHours(v)
-	return _u
-}
-
-// ClearWeeklyHours clears the value of the "weekly_hours" field.
-func (_u *ProjectUpdate) ClearWeeklyHours() *ProjectUpdate {
-	_u.mutation.ClearWeeklyHours()
-	return _u
-}
-
 // SetDailyTime sets the "daily_time" field.
 func (_u *ProjectUpdate) SetDailyTime(v string) *ProjectUpdate {
 	_u.mutation.SetDailyTime(v)
@@ -506,15 +479,6 @@ func (_u *ProjectUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.AddedSprintDurationDays(); ok {
 		_spec.AddField(project.FieldSprintDurationDays, field.TypeInt, value)
-	}
-	if value, ok := _u.mutation.WeeklyHours(); ok {
-		_spec.SetField(project.FieldWeeklyHours, field.TypeInt, value)
-	}
-	if value, ok := _u.mutation.AddedWeeklyHours(); ok {
-		_spec.AddField(project.FieldWeeklyHours, field.TypeInt, value)
-	}
-	if _u.mutation.WeeklyHoursCleared() {
-		_spec.ClearField(project.FieldWeeklyHours, field.TypeInt)
 	}
 	if value, ok := _u.mutation.DailyTime(); ok {
 		_spec.SetField(project.FieldDailyTime, field.TypeString, value)
@@ -904,33 +868,6 @@ func (_u *ProjectUpdateOne) AddSprintDurationDays(v int) *ProjectUpdateOne {
 	return _u
 }
 
-// SetWeeklyHours sets the "weekly_hours" field.
-func (_u *ProjectUpdateOne) SetWeeklyHours(v int) *ProjectUpdateOne {
-	_u.mutation.ResetWeeklyHours()
-	_u.mutation.SetWeeklyHours(v)
-	return _u
-}
-
-// SetNillableWeeklyHours sets the "weekly_hours" field if the given value is not nil.
-func (_u *ProjectUpdateOne) SetNillableWeeklyHours(v *int) *ProjectUpdateOne {
-	if v != nil {
-		_u.SetWeeklyHours(*v)
-	}
-	return _u
-}
-
-// AddWeeklyHours adds value to the "weekly_hours" field.
-func (_u *ProjectUpdateOne) AddWeeklyHours(v int) *ProjectUpdateOne {
-	_u.mutation.AddWeeklyHours(v)
-	return _u
-}
-
-// ClearWeeklyHours clears the value of the "weekly_hours" field.
-func (_u *ProjectUpdateOne) ClearWeeklyHours() *ProjectUpdateOne {
-	_u.mutation.ClearWeeklyHours()
-	return _u
-}
-
 // SetDailyTime sets the "daily_time" field.
 func (_u *ProjectUpdateOne) SetDailyTime(v string) *ProjectUpdateOne {
 	_u.mutation.SetDailyTime(v)
@@ -1297,15 +1234,6 @@ func (_u *ProjectUpdateOne) sqlSave(ctx context.Context) (_node *Project, err er
 	}
 	if value, ok := _u.mutation.AddedSprintDurationDays(); ok {
 		_spec.AddField(project.FieldSprintDurationDays, field.TypeInt, value)
-	}
-	if value, ok := _u.mutation.WeeklyHours(); ok {
-		_spec.SetField(project.FieldWeeklyHours, field.TypeInt, value)
-	}
-	if value, ok := _u.mutation.AddedWeeklyHours(); ok {
-		_spec.AddField(project.FieldWeeklyHours, field.TypeInt, value)
-	}
-	if _u.mutation.WeeklyHoursCleared() {
-		_spec.ClearField(project.FieldWeeklyHours, field.TypeInt)
 	}
 	if value, ok := _u.mutation.DailyTime(); ok {
 		_spec.SetField(project.FieldDailyTime, field.TypeString, value)

@@ -47,12 +47,12 @@
       <span class="muted small">{{.T "org.projects.admins_only_hint"}}</span>
       <div class="fields">
         <div class="field">
-          <label for="project-sprint">{{.T "project.fields.sprint_days"}}</label>
-          <input id="project-sprint" type="number" min="1" max="90" x-model.number="draft.sprint_duration_days">
-        </div>
-        <div class="field">
-          <label for="project-weekly-hours">{{.T "project.fields.weekly_hours"}}</label>
-          <input id="project-weekly-hours" type="number" min="1" max="168" placeholder="{{.T "common.optional"}}" x-model="draft.weekly_hours">
+          <label for="project-sprint">{{.T "project.fields.sprint"}}</label>
+          <select id="project-sprint" x-model.number="draft.sprint_duration_days">
+            <template x-for="o in WTT.sprintOptions" :key="o.value">
+              <option :value="o.value" x-text="o.label" :selected="o.value === draft.sprint_duration_days"></option>
+            </template>
+          </select>
         </div>
         <div class="field">
           <label for="project-daily">{{.T "project.fields.daily_time"}}</label>
@@ -126,7 +126,6 @@
         <p class="muted small" x-show="p.description" x-text="p.description"></p>
         <div class="project-meta">
           <span class="badge num" x-text="$t('org.projects.sprint_badge', { count: p.sprint_duration_days })"></span>
-          <span class="badge num" x-show="p.weekly_hours" x-text="$t('org.projects.hours_badge', { hours: p.weekly_hours })"></span>
           <span class="badge num" x-show="p.daily_time" x-text="$t('org.projects.daily_badge', { time: p.daily_time })"></span>
           <span class="badge" x-show="p.weekly_sync_day" x-text="$t('org.projects.weekly_badge', { day: WTT.fmt.weekday(p.weekly_sync_day) })"></span>
         </div>

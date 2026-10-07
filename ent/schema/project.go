@@ -23,8 +23,6 @@ func (Project) Fields() []ent.Field {
 		field.String("github_repo_url").Optional().Nillable(),
 		field.String("gitlab_repo_url").Optional().Nillable(),
 		field.Int("sprint_duration_days").Default(14),
-		// Jornada semanal esperada de quem trabalha no projeto, em horas.
-		field.Int("weekly_hours").Optional().Nillable(),
 		field.String("daily_time").Optional().Nillable(),
 		field.String("weekly_sync_day").Optional().Nillable(),
 		// Projeto interno fica sem cliente e sem valor cobrado.

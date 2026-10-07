@@ -24,6 +24,9 @@ func (Person) Fields() []ent.Field {
 		// Pessoas criadas antes do login existir não têm senha e não conseguem entrar.
 		field.String("password_hash").Optional().Nillable().Sensitive(),
 		field.Enum("role").Values("admin", "member").Default("member"),
+		// Jornada semanal combinada com a pessoa, em horas. Vale para a organização
+		// toda, e não por projeto.
+		field.Int("weekly_hours").Optional().Nillable(),
 		field.Time("created_at").Default(time.Now).Immutable(),
 	}
 }

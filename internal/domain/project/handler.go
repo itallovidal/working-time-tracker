@@ -23,12 +23,11 @@ func (h *Handler) Create(c *echo.Context) error {
 		SprintDurationDays int     `json:"sprint_duration_days"`
 		DailyTime          *string `json:"daily_time"`
 		WeeklySyncDay      *string `json:"weekly_sync_day"`
-		WeeklyHours        *int    `json:"weekly_hours"`
 	}
 	if err := c.Bind(&body); err != nil {
 		return apperr.Respond(c, 400, apperr.ErrInvalidBody)
 	}
-	project, err := h.svc.Create(orgID, body.Name, body.Description, body.SprintDurationDays, body.DailyTime, body.WeeklySyncDay, body.WeeklyHours)
+	project, err := h.svc.Create(orgID, body.Name, body.Description, body.SprintDurationDays, body.DailyTime, body.WeeklySyncDay)
 	if err != nil {
 		return apperr.Respond(c, 400, err)
 	}
@@ -64,12 +63,11 @@ func (h *Handler) Update(c *echo.Context) error {
 		SprintDurationDays int     `json:"sprint_duration_days"`
 		DailyTime          *string `json:"daily_time"`
 		WeeklySyncDay      *string `json:"weekly_sync_day"`
-		WeeklyHours        *int    `json:"weekly_hours"`
 	}
 	if err := c.Bind(&body); err != nil {
 		return apperr.Respond(c, 400, apperr.ErrInvalidBody)
 	}
-	project, err := h.svc.Update(id, body.Name, body.Description, body.SprintDurationDays, body.DailyTime, body.WeeklySyncDay, body.WeeklyHours)
+	project, err := h.svc.Update(id, body.Name, body.Description, body.SprintDurationDays, body.DailyTime, body.WeeklySyncDay)
 	if err != nil {
 		return apperr.Respond(c, 400, err)
 	}

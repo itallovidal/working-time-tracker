@@ -74,3 +74,23 @@ func (h *Handler) SetRole(c *echo.Context) error {
 	}
 	return c.JSON(http.StatusOK, person)
 }
+
+// SetWeeklyHours define a jornada semanal da pessoa. A rota é só de admins: a
+// jornada é o que a organização combinou com ela.
+func (h *Handler) SetWeeklyHours(c *echo.Context) error {
+	id := c.Param("personId")
+	var body struct {
+		WeeklyHours *int `json:"weekly_hours"`
+	}
+	if err := c.Bind(&body); err != nil {
+		return apperr.Respond(c, http.StatusBadRequest, apperr.ErrInvalidBody)
+	}
+	person, err := h.svc.SetWeeklyHours(id, body.WeeklyHours)
+	if err != nil {
+		if err == database.ErrNotFound {
+			return apperr.Respond(c, http.StatusNotFound, ErrNotFound)
+		}
+		return apperr.Respond(c, http.StatusBadRequest, err)
+	}
+	return c.JSON(http.StatusOK, person)
+}

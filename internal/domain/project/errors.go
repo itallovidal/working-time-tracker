@@ -12,7 +12,6 @@ var (
 	ErrNotFound            = apperr.New("project.not_found", http.StatusNotFound)
 	ErrNameRequired        = apperr.New("project.name_required", http.StatusBadRequest)
 	ErrInvalidSprint       = apperr.New("project.invalid_sprint", http.StatusBadRequest)
-	ErrInvalidWeekHours    = apperr.New("project.invalid_week_hours", http.StatusBadRequest)
 	ErrInvalidDailyTime    = apperr.New("project.invalid_daily_time", http.StatusBadRequest)
 	ErrInvalidWeekday      = apperr.New("project.invalid_weekday", http.StatusBadRequest)
 	ErrInvalidBillRate     = apperr.New("project.invalid_bill_rate", http.StatusBadRequest)

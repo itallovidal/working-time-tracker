@@ -13,14 +13,14 @@
 
     <p class="muted" x-show="loading">{{.T "org.people.loading"}}</p>
     <p class="form-error" x-cloak x-show="errors.load" x-text="errors.load"></p>
-    <p class="form-error" x-cloak x-show="errors.role" x-text="errors.role" role="alert"></p>
     <div class="table-wrap" x-show="people.length > 0">
       <table>
         <thead>
-          <tr><th>{{.T "common.name"}}</th><th>{{.T "common.email"}}</th><th>{{.T "common.role"}}</th><th class="actions"><span class="sr-only">{{.T "common.actions"}}</span></th></tr>
+          <tr><th>{{.T "common.name"}}</th><th>{{.T "common.email"}}</th><th>{{.T "common.role"}}</th><th>{{.T "org.people.weekly_hours"}}</th><th class="actions"><span class="sr-only">{{.T "common.actions"}}</span></th></tr>
         </thead>
         <tbody>
           <template x-for="p in people" :key="p.id">
+            {{/* O papel muda direto na linha. A jornada semanal muda no modal, pelo lápis. */}}
             <tr>
               <td>
                 <span x-text="p.name"></span>
@@ -28,10 +28,13 @@
               </td>
               <td class="muted" x-text="p.email"></td>
               <td><span class="badge" :class="p.role === 'admin' && 'badge-accent'" x-text="WTT.fmt.role(p.role)"></span></td>
+              <td class="nowrap num" :class="!p.weekly_hours && 'muted'" x-text="WTT.fmt.weeklyHours(p.weekly_hours) || $t('labels.weekly_hours_none')"></td>
               <td class="actions">
                 <button type="button" class="btn btn-ghost btn-sm" :disabled="pending"
                         @click="setRole(p, p.role === 'admin' ? 'member' : 'admin')"
                         x-text="p.role === 'admin' ? $t('org.people.make_member') : $t('org.people.make_admin')"></button>
+                <button type="button" class="btn btn-ghost btn-sm btn-icon" title="{{.T "org.people.edit_title"}}"
+                        :aria-label="$t('org.people.edit_label', { name: p.name })" @click="openEdit(p)">{{template "icon" "pen"}}</button>
               </td>
             </tr>
           </template>
@@ -77,6 +80,30 @@
       </table>
     </div>
   </section>
+
+  {{/* Jornada semanal da pessoa. Nada vai para o servidor antes de Salvar. */}}
+  <template x-teleport="#modal-root">
+    <form class="stack" x-show="$store.modal.name === 'person-edit'" @submit.prevent="savePerson()">
+      <div class="row" x-show="editing">
+        <span class="avatar" aria-hidden="true" x-text="WTT.fmt.initials(editing && editing.name)"></span>
+        <div>
+          <div><strong x-text="editing && editing.name"></strong> <span class="badge" x-show="editing && editing.id === me.id">{{.T "common.you"}}</span></div>
+          <div class="muted small" x-text="editing && editing.email"></div>
+        </div>
+      </div>
+      <div class="field">
+        <label for="person-weekly-hours">{{.T "org.people.weekly_hours_label"}}</label>
+        <input id="person-weekly-hours" type="number" min="1" max="168" step="1" class="num" placeholder="{{.T "labels.weekly_hours_none"}}"
+               x-model="draft.weekly_hours" data-autofocus>
+        <span class="hint">{{.T "org.people.weekly_hours_hint"}}</span>
+      </div>
+      <p class="form-error" x-show="errors.edit" x-text="errors.edit" role="alert"></p>
+      <div class="row row-end">
+        <button type="button" class="btn btn-secondary" @click="$store.modal.dismiss()">{{.T "common.cancel"}}</button>
+        <button type="submit" class="btn" :disabled="pending">{{.T "common.save"}}</button>
+      </div>
+    </form>
+  </template>
 
   {{/* O formulário aparece no modal do layout base, mas continua no escopo de orgPeople.
        Hoje a única forma de adicionar alguém é o link de convite. */}}

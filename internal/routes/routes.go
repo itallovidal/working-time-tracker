@@ -80,6 +80,7 @@ func RegisterRoutes(e *echo.Echo, h Handlers, m *auth.Middleware, authLimiter ec
 	r.GET("/persons/:personId", h.Person.Get, per)
 	r.PATCH("/persons/:personId", h.Person.Update, per, m.RequireSelfOrAdmin("personId"))
 	r.PATCH("/persons/:personId/role", h.Person.SetRole, per, admin)
+	r.PATCH("/persons/:personId/weekly-hours", h.Person.SetWeeklyHours, per, admin)
 	// O handler só entrega os valores à própria pessoa ou a um admin.
 	r.GET("/persons/:personId/allocations", h.Allocation.ListByPerson, per)
 

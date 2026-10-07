@@ -111,6 +111,33 @@ func (_u *PersonUpdate) SetNillableRole(v *person.Role) *PersonUpdate {
 	return _u
 }
 
+// SetWeeklyHours sets the "weekly_hours" field.
+func (_u *PersonUpdate) SetWeeklyHours(v int) *PersonUpdate {
+	_u.mutation.ResetWeeklyHours()
+	_u.mutation.SetWeeklyHours(v)
+	return _u
+}
+
+// SetNillableWeeklyHours sets the "weekly_hours" field if the given value is not nil.
+func (_u *PersonUpdate) SetNillableWeeklyHours(v *int) *PersonUpdate {
+	if v != nil {
+		_u.SetWeeklyHours(*v)
+	}
+	return _u
+}
+
+// AddWeeklyHours adds value to the "weekly_hours" field.
+func (_u *PersonUpdate) AddWeeklyHours(v int) *PersonUpdate {
+	_u.mutation.AddWeeklyHours(v)
+	return _u
+}
+
+// ClearWeeklyHours clears the value of the "weekly_hours" field.
+func (_u *PersonUpdate) ClearWeeklyHours() *PersonUpdate {
+	_u.mutation.ClearWeeklyHours()
+	return _u
+}
+
 // SetOrganization sets the "organization" edge to the Organization entity.
 func (_u *PersonUpdate) SetOrganization(v *Organization) *PersonUpdate {
 	return _u.SetOrganizationID(v.ID)
@@ -409,6 +436,15 @@ func (_u *PersonUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.Role(); ok {
 		_spec.SetField(person.FieldRole, field.TypeEnum, value)
+	}
+	if value, ok := _u.mutation.WeeklyHours(); ok {
+		_spec.SetField(person.FieldWeeklyHours, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedWeeklyHours(); ok {
+		_spec.AddField(person.FieldWeeklyHours, field.TypeInt, value)
+	}
+	if _u.mutation.WeeklyHoursCleared() {
+		_spec.ClearField(person.FieldWeeklyHours, field.TypeInt)
 	}
 	if _u.mutation.OrganizationCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -805,6 +841,33 @@ func (_u *PersonUpdateOne) SetNillableRole(v *person.Role) *PersonUpdateOne {
 	return _u
 }
 
+// SetWeeklyHours sets the "weekly_hours" field.
+func (_u *PersonUpdateOne) SetWeeklyHours(v int) *PersonUpdateOne {
+	_u.mutation.ResetWeeklyHours()
+	_u.mutation.SetWeeklyHours(v)
+	return _u
+}
+
+// SetNillableWeeklyHours sets the "weekly_hours" field if the given value is not nil.
+func (_u *PersonUpdateOne) SetNillableWeeklyHours(v *int) *PersonUpdateOne {
+	if v != nil {
+		_u.SetWeeklyHours(*v)
+	}
+	return _u
+}
+
+// AddWeeklyHours adds value to the "weekly_hours" field.
+func (_u *PersonUpdateOne) AddWeeklyHours(v int) *PersonUpdateOne {
+	_u.mutation.AddWeeklyHours(v)
+	return _u
+}
+
+// ClearWeeklyHours clears the value of the "weekly_hours" field.
+func (_u *PersonUpdateOne) ClearWeeklyHours() *PersonUpdateOne {
+	_u.mutation.ClearWeeklyHours()
+	return _u
+}
+
 // SetOrganization sets the "organization" edge to the Organization entity.
 func (_u *PersonUpdateOne) SetOrganization(v *Organization) *PersonUpdateOne {
 	return _u.SetOrganizationID(v.ID)
@@ -1133,6 +1196,15 @@ func (_u *PersonUpdateOne) sqlSave(ctx context.Context) (_node *Person, err erro
 	}
 	if value, ok := _u.mutation.Role(); ok {
 		_spec.SetField(person.FieldRole, field.TypeEnum, value)
+	}
+	if value, ok := _u.mutation.WeeklyHours(); ok {
+		_spec.SetField(person.FieldWeeklyHours, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedWeeklyHours(); ok {
+		_spec.AddField(person.FieldWeeklyHours, field.TypeInt, value)
+	}
+	if _u.mutation.WeeklyHoursCleared() {
+		_spec.ClearField(person.FieldWeeklyHours, field.TypeInt)
 	}
 	if _u.mutation.OrganizationCleared() {
 		edge := &sqlgraph.EdgeSpec{

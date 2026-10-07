@@ -606,26 +606,19 @@ document.addEventListener('alpine:init', () => {
     },
   }));
 
+  // A aba Configurações só mostra o projeto. Quem altera é o modal Editar projeto,
+  // só de admins: ele edita um rascunho, e nada vai para o servidor antes de Salvar.
   Alpine.data('projectSettings', () => ({
     ...form(),
     loading: true,
-    form: { name: '', description: '', sprint_duration_days: 14, weekly_hours: '', daily_time: '', weekly_sync_day: '' },
-    customerName: '',
+    current: { name: '', description: '', sprint_duration_days: 14, customer: null }, // o projeto como está no servidor
+    billRateCents: null, // o valor cobrado; só admins recebem
     customers: [],
-    billing: { customer_id: '', rate: '' },
+    draft: { name: '', description: '', sprint_duration_days: 14, daily_time: '', weekly_sync_day: '', customer_id: '', rate: '' },
     confirmDelete: false,
     async init() {
       try {
-        const p = await api('GET', '/api/projects/' + project.id);
-        this.form = {
-          name: p.name,
-          description: p.description || '',
-          sprint_duration_days: p.sprint_duration_days,
-          weekly_hours: p.weekly_hours || '',
-          daily_time: p.daily_time || '',
-          weekly_sync_day: p.weekly_sync_day || '',
-        };
-        this.customerName = p.customer ? p.customer.name : '';
+        this.current = await api('GET', '/api/projects/' + project.id);
         // O valor cobrado e a lista de clientes são rotas de admin.
         if (me.role === 'admin') {
           const [billing, customers] = await Promise.all([
@@ -633,43 +626,76 @@ document.addEventListener('alpine:init', () => {
             api('GET', '/api/orgs/' + me.organization_id + '/customers'),
           ]);
           this.customers = customers || [];
-          this.setBilling(billing);
+          this.billRateCents = billing.bill_rate_cents;
         }
       } catch (e) {
-        this.errors.save = e.message;
+        this.errors.load = e.message;
       } finally {
         this.loading = false;
       }
     },
-    setBilling(b) {
-      this.billing = { customer_id: b.customer ? b.customer.id : '', rate: WTT.fmt.moneyInput(b.bill_rate_cents) };
-      this.customerName = b.customer ? b.customer.name : '';
+    // As linhas do cartão do projeto. Sem daily ou sem weekly é uma resposta, e
+    // não um campo por preencher: o time pode não fazer.
+    routine() {
+      const p = this.current;
+      return [
+        { label: WTT.t('project.fields.sprint'), value: WTT.fmt.sprint(p.sprint_duration_days) },
+        { label: WTT.t('project.fields.daily_time'), value: p.daily_time || WTT.t('project_settings.no_daily'), empty: !p.daily_time },
+        { label: WTT.t('project.fields.weekly_day'), value: p.weekly_sync_day ? WTT.fmt.weekday(p.weekly_sync_day) : WTT.t('project.fields.no_weekly'), empty: !p.weekly_sync_day },
+      ];
     },
-    saveBilling() {
-      return this.run('billing', async () => {
-        const cents = WTT.toCents(this.billing.rate);
-        if (cents === null && String(this.billing.rate).trim() !== '') throw new Error(WTT.t('project_settings.rate_invalid'));
-        this.setBilling(await api('PUT', '/api/projects/' + project.id + '/billing', {
-          customer_id: this.billing.customer_id || null,
-          bill_rate_cents: cents,
-        }));
-        toast(WTT.t('project_settings.billing_saved'));
-      });
+    sprintChoices() {
+      return WTT.sprintChoices(this.current.sprint_duration_days);
     },
+    openEdit() {
+      const p = this.current;
+      this.draft = {
+        name: p.name,
+        description: p.description || '',
+        sprint_duration_days: p.sprint_duration_days,
+        daily_time: p.daily_time || '',
+        weekly_sync_day: p.weekly_sync_day || '',
+        customer_id: p.customer ? p.customer.id : '',
+        rate: WTT.fmt.moneyInput(this.billRateCents),
+      };
+      this.errors.save = '';
+      this.errors.delete = '';
+      this.confirmDelete = false;
+      // Enquanto salva, o modal não fecha: um erro do servidor ficaria sem ter onde aparecer.
+      Alpine.store('modal').open('project-edit', WTT.t('project_settings.edit_title'), () => !this.pending);
+    },
+    // save manda o projeto e, se o cliente ou o valor mudou, a cobrança, que é
+    // outra rota. Se a segunda falhar, a primeira já valeu: a aba atrás do modal
+    // mostra o que foi salvo, e Salvar de novo só repete o que faltou.
     save() {
       return this.run('save', async () => {
-        // Texto vazio apaga daily e weekly, e zero apaga a jornada; a API mantém
-        // o que não vier no corpo.
-        const p = await api('PATCH', '/api/projects/' + project.id, {
-          name: this.form.name,
-          description: this.form.description,
-          sprint_duration_days: Number(this.form.sprint_duration_days) || 0,
-          weekly_hours: Number(this.form.weekly_hours) || 0,
-          daily_time: this.form.daily_time || '',
-          weekly_sync_day: this.form.weekly_sync_day || '',
+        const d = this.draft;
+        // O valor é conferido antes de qualquer chamada. Vazio apaga.
+        const cents = WTT.toCents(d.rate);
+        if (cents === null && String(d.rate).trim() !== '') throw new Error(WTT.t('org.projects.rate_invalid'));
+        if (cents !== null && cents > 100000000) throw new Error(WTT.t('org.projects.rate_too_high'));
+
+        // Texto vazio apaga daily e weekly; a API mantém o que não vier no corpo.
+        this.current = await api('PATCH', '/api/projects/' + project.id, {
+          name: d.name,
+          description: d.description,
+          sprint_duration_days: Number(d.sprint_duration_days) || 0,
+          daily_time: d.daily_time || '',
+          weekly_sync_day: d.weekly_sync_day || '',
         });
-        document.querySelectorAll('[data-project-name]').forEach((el) => { el.textContent = p.name; });
+        document.querySelectorAll('[data-project-name]').forEach((el) => { el.textContent = this.current.name; });
+
+        const customerId = this.current.customer ? this.current.customer.id : '';
+        if (d.customer_id !== customerId || cents !== this.billRateCents) {
+          const billing = await api('PUT', '/api/projects/' + project.id + '/billing', {
+            customer_id: d.customer_id || null,
+            bill_rate_cents: cents,
+          });
+          this.current.customer = billing.customer;
+          this.billRateCents = billing.bill_rate_cents;
+        }
         toast(WTT.t('project_settings.saved'));
+        Alpine.store('modal').close();
       });
     },
     remove() {

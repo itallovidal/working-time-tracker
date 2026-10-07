@@ -238,6 +238,7 @@ func TestAccess_MemberCannotUseAdminRoutes(t *testing.T) {
 		{"POST", "/api/projects/" + projectID + "/teams", `{"name":"T"}`},
 		{"POST", "/api/orgs/" + admin.orgID + "/invites", `{}`},
 		{"PATCH", "/api/persons/" + member.id + "/role", `{"role":"admin"}`},
+		{"PATCH", "/api/persons/" + member.id + "/weekly-hours", `{"weekly_hours":10}`},
 		{"PATCH", "/api/persons/" + admin.id, `{"name":"Hacker","email":"x@test.com"}`},
 	}
 	for _, tc := range forbidden {
@@ -286,7 +287,8 @@ func TestOrganization_Profile(t *testing.T) {
 		t.Errorf("organization_currency in /auth/me = %v, want USD", got)
 	}
 
-	// Jornada e sprint não são da organização: cada projeto tem as suas.
+	// Jornada e sprint não são da organização: a sprint é de cada projeto, e a
+	// jornada, de cada pessoa. O projeto ignora uma jornada que venha no corpo.
 	for _, gone := range []string{"weekly_hours", "default_sprint_days"} {
 		if _, ok := org[gone]; ok {
 			t.Errorf("organization still has %s", gone)
@@ -294,12 +296,11 @@ func TestOrganization_Profile(t *testing.T) {
 	}
 	rec = do(e, "POST", path+"/projects", `{"name":"Projeto","weekly_hours":30}`, admin.session)
 	created := decode(t, rec)
-	if created["sprint_duration_days"] != float64(14) || created["weekly_hours"] != float64(30) {
-		t.Errorf("new project = sprint %v, weekly hours %v; want 14 and 30", created["sprint_duration_days"], created["weekly_hours"])
+	if created["sprint_duration_days"] != float64(14) {
+		t.Errorf("new project = sprint %v, want 14", created["sprint_duration_days"])
 	}
-	rec = do(e, "PATCH", "/api/projects/"+created["id"].(string), `{"name":"Projeto","weekly_hours":0}`, admin.session)
-	if got := decode(t, rec)["weekly_hours"]; rec.Code != http.StatusOK || got != nil {
-		t.Errorf("PATCH project clearing weekly hours = %d, weekly_hours %v; want 200 and null", rec.Code, got)
+	if _, ok := created["weekly_hours"]; ok {
+		t.Errorf("project still has weekly_hours: %s", rec.Body.String())
 	}
 
 	if rec := do(e, "PATCH", path, `{"website":"javascript:alert(1)"}`, admin.session); rec.Code != http.StatusBadRequest {
@@ -762,6 +763,7 @@ func TestRoutes_Table(t *testing.T) {
 		"GET /api/persons/:personId",
 		"PATCH /api/persons/:personId",
 		"PATCH /api/persons/:personId/role",
+		"PATCH /api/persons/:personId/weekly-hours",
 		"GET /api/persons/:personId/allocations",
 
 		"GET /api/projects/:projectId",
@@ -1027,5 +1029,60 @@ func TestTasks_ListFiltersAndPages(t *testing.T) {
 	}
 	if rec := do(e, "GET", base+"?page=0", "", member.session); rec.Code != http.StatusBadRequest {
 		t.Errorf("page=0 = %d, want 400", rec.Code)
+	}
+}
+
+// A jornada semanal é da pessoa, vale para a organização toda e só um admin
+// define. Todos da organização leem.
+func TestPersons_WeeklyHours(t *testing.T) {
+	e := newServer(t)
+	admin := signup(t, e, "Org", "ana@test.com")
+	bia := invite(t, e, admin, "bia@test.com", "member")
+	outsider := signup(t, e, "Outra", "zeca@test.com")
+	path := "/api/persons/" + bia.id + "/weekly-hours"
+
+	if got, ok := decode(t, do(e, "GET", "/api/persons/"+bia.id, "", bia.session))["weekly_hours"]; !ok || got != nil {
+		t.Errorf("new person weekly_hours = %v (present: %v), want null", got, ok)
+	}
+
+	rec := do(e, "PATCH", path, `{"weekly_hours":30}`, admin.session)
+	if got := decode(t, rec)["weekly_hours"]; rec.Code != http.StatusOK || got != float64(30) {
+		t.Fatalf("admin PATCH = %d, weekly_hours %v; want 200 and 30: %s", rec.Code, got, rec.Body.String())
+	}
+	// A própria pessoa e os colegas veem a jornada na lista da organização.
+	for _, p := range decodeList(t, do(e, "GET", "/api/orgs/"+admin.orgID+"/persons", "", bia.session)) {
+		want := any(nil)
+		if p["id"] == bia.id {
+			want = float64(30)
+		}
+		if p["weekly_hours"] != want {
+			t.Errorf("list: weekly_hours of %v = %v, want %v", p["email"], p["weekly_hours"], want)
+		}
+	}
+	// Mudar nome e email não mexe na jornada.
+	rec = do(e, "PATCH", "/api/persons/"+bia.id, `{"name":"Bia Souza","email":"bia@test.com"}`, bia.session)
+	if got := decode(t, rec)["weekly_hours"]; rec.Code != http.StatusOK || got != float64(30) {
+		t.Errorf("PATCH profile = %d, weekly_hours %v; want 200 and 30", rec.Code, got)
+	}
+
+	for _, bad := range []string{`{"weekly_hours":169}`, `{"weekly_hours":-1}`} {
+		if rec := do(e, "PATCH", path, bad, admin.session); rec.Code != http.StatusBadRequest {
+			t.Errorf("PATCH %s = %d, want 400", bad, rec.Code)
+		}
+	}
+	if rec := do(e, "PATCH", path, `{"weekly_hours":20}`, bia.session); rec.Code != http.StatusForbidden {
+		t.Errorf("member setting own weekly hours = %d, want 403", rec.Code)
+	}
+	if rec := do(e, "PATCH", path, `{"weekly_hours":20}`, outsider.session); rec.Code != http.StatusNotFound {
+		t.Errorf("admin of another organization = %d, want 404", rec.Code)
+	}
+
+	// Zero e null apagam.
+	for _, none := range []string{`{"weekly_hours":0}`, `{"weekly_hours":null}`} {
+		do(e, "PATCH", path, `{"weekly_hours":30}`, admin.session)
+		rec := do(e, "PATCH", path, none, admin.session)
+		if got := decode(t, rec)["weekly_hours"]; rec.Code != http.StatusOK || got != nil {
+			t.Errorf("PATCH %s = %d, weekly_hours %v; want 200 and null", none, rec.Code, got)
+		}
 	}
 }

@@ -152,6 +152,21 @@
   const numberParts = new Intl.NumberFormat(lang).formatToParts(1234.5);
   const groupSeparator = (numberParts.find((p) => p.type === 'group') || {}).value || ',';
 
+  // As durações de sprint que as telas oferecem. A API aceita de 1 a 90 dias, e um
+  // projeto que já tem outra duração continua com ela (sprintChoices).
+  const sprintOptions = [7, 14, 30].map((days) => ({
+    value: days,
+    label: t('labels.sprint.long_' + days),
+    short: t('labels.sprint.short_' + days),
+  }));
+
+  // sprintChoices são as opções do campo de duração da sprint. Quando o projeto
+  // tem uma duração fora da lista, ela entra como opção, para salvar não a trocar.
+  function sprintChoices(current) {
+    if (!current || sprintOptions.some((o) => o.value === current)) return sprintOptions;
+    return [...sprintOptions, { value: current, label: fmt.sprint(current) }].sort((a, b) => a.value - b.value);
+  }
+
   const fmt = {
     // 3725 -> "01:02:05"
     clock(seconds) {
@@ -199,6 +214,15 @@
     weekday(value) {
       const d = weekdays.find((w) => w.value === value);
       return d ? d.label : value;
+    },
+    // 14 -> "14 dias"; 30 -> "1 mês"
+    sprint(days) {
+      const o = sprintOptions.find((x) => x.value === days);
+      return o ? o.short : t('labels.sprint.days', { count: days });
+    },
+    // 40 -> "40h por semana"; sem jornada, texto vazio
+    weeklyHours(hours) {
+      return hours ? t('labels.weekly_hours', { hours }) : '';
     },
     // "11222333000181" -> "11.222.333/0001-81"
     cnpj(value) {
@@ -282,7 +306,7 @@
   // O que as telas mostram no lugar de um campo de cadastro sem valor.
   const notInformed = t('labels.not_informed');
 
-  window.WTT = { t, lang, errorText, api, ApiError, form, fmt, toCents, copyText, notInformed, weekdays, orgSizes, workModes, currencies, boot: window.BOOT || {} };
+  window.WTT = { t, lang, errorText, api, ApiError, form, fmt, toCents, copyText, notInformed, weekdays, sprintOptions, sprintChoices, orgSizes, workModes, currencies, boot: window.BOOT || {} };
 
   // Onde flash() deixa a mensagem para a página seguinte.
   const flashKey = 'wtt:flash';

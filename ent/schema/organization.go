@@ -43,7 +43,7 @@ func (Organization) Fields() []ent.Field {
 		field.String("postal_code").Optional(),
 		field.String("country").Optional(),
 
-		// Como a organização trabalha. Jornada e sprint ficam no projeto, porque
+		// Como a organização trabalha. Sprint, daily e weekly ficam no projeto, porque
 		// projetos diferentes podem trabalhar de formas diferentes.
 		field.String("work_mode").Optional(),
 		field.String("timezone").Default("America/Sao_Paulo"),

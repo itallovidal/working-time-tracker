@@ -130,6 +130,28 @@ func (s *Store) SetRole(id, role string) (*Person, error) {
 	return toDomainPerson(p), nil
 }
 
+// SetWeeklyHours grava a jornada semanal da pessoa; nil apaga.
+func (s *Store) SetWeeklyHours(id string, hours *int) (*Person, error) {
+	uid, err := uuid.Parse(id)
+	if err != nil {
+		return nil, database.ErrNotFound
+	}
+	q := s.client.Person.UpdateOneID(uid)
+	if hours != nil {
+		q = q.SetWeeklyHours(*hours)
+	} else {
+		q = q.ClearWeeklyHours()
+	}
+	p, err := q.Save(context.Background())
+	if ent.IsNotFound(err) {
+		return nil, database.ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return toDomainPerson(p), nil
+}
+
 // EmailInUse diz se o email já pertence a outra pessoa. exceptID permite
 // ignorar a própria pessoa num update.
 func (s *Store) EmailInUse(email string, exceptID *uuid.UUID) (bool, error) {
@@ -151,6 +173,7 @@ func toDomainPerson(e *ent.Person) *Person {
 		Email:          e.Email,
 		OrganizationID: e.OrganizationID,
 		Role:           string(e.Role),
+		WeeklyHours:    e.WeeklyHours,
 		CreatedAt:      e.CreatedAt,
 	}
 }

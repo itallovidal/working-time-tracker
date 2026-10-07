@@ -166,6 +166,7 @@ var (
 		{Name: "email", Type: field.TypeString},
 		{Name: "password_hash", Type: field.TypeString, Nullable: true},
 		{Name: "role", Type: field.TypeEnum, Enums: []string{"admin", "member"}, Default: "member"},
+		{Name: "weekly_hours", Type: field.TypeInt, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "organization_id", Type: field.TypeUUID},
 	}
@@ -177,7 +178,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "persons_organizations_persons",
-				Columns:    []*schema.Column{PersonsColumns[6]},
+				Columns:    []*schema.Column{PersonsColumns[7]},
 				RefColumns: []*schema.Column{OrganizationsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -198,7 +199,6 @@ var (
 		{Name: "github_repo_url", Type: field.TypeString, Nullable: true},
 		{Name: "gitlab_repo_url", Type: field.TypeString, Nullable: true},
 		{Name: "sprint_duration_days", Type: field.TypeInt, Default: 14},
-		{Name: "weekly_hours", Type: field.TypeInt, Nullable: true},
 		{Name: "daily_time", Type: field.TypeString, Nullable: true},
 		{Name: "weekly_sync_day", Type: field.TypeString, Nullable: true},
 		{Name: "bill_rate_cents", Type: field.TypeInt, Nullable: true},
@@ -214,13 +214,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "projects_customers_projects",
-				Columns:    []*schema.Column{ProjectsColumns[11]},
+				Columns:    []*schema.Column{ProjectsColumns[10]},
 				RefColumns: []*schema.Column{CustomersColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "projects_organizations_projects",
-				Columns:    []*schema.Column{ProjectsColumns[12]},
+				Columns:    []*schema.Column{ProjectsColumns[11]},
 				RefColumns: []*schema.Column{OrganizationsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},

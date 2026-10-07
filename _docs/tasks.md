@@ -271,6 +271,18 @@
 
 ---
 
+### Sprint 22: Project Settings as a Read-Only Tab, Weekly Hours on the Person
+
+- [X] S22.1 The project settings tab only shows the project, like the organization's "Sobre" tab: a card with the description, the sprint, the daily and the weekly, and a card with the customer and, for admins, the bill rate
+- [X] S22.2 "Editar projeto" in the modal, opened by a single "Editar" button for admins: every field, in the order of "Novo projeto", and "Excluir projeto" with a confirmation; nothing is sent before "Salvar", and the billing is only sent when the customer or the rate changed
+- [X] S22.3 The sprint length is a list in "Novo projeto" and "Editar projeto": 7 days, 14 days (the default) and one month (30 days); a project with another length keeps it as one more option
+- [X] S22.4 Weekly hours leave the project and go to the person: `persons.weekly_hours`, `PATCH /api/persons/:personId/weekly-hours` (admin only), and a migration that adds the column and drops `projects.weekly_hours`
+- [X] S22.5 Organization "Colaboradores" tab: a weekly hours column and a pencil that opens a modal with the hours; the role still changes with the button on the row. The profile shows the person's own hours
+- [X] S22.6 Seed: weekly hours on the people instead of the projects
+- [X] S22.7 Tests for the route, the permissions and the pages; update README, design, routes and the Insomnia collection
+
+---
+
 ### Sprint 23: Integrations Modal, Trello and a Shared Structure with Metadata
 
 - [X] S23.1 One body for every integration type: `{type, display_name, enabled, token, metadata}`, with the fields of each platform in `metadata`; the answer carries `has_token` and the `metadata`, never the token
