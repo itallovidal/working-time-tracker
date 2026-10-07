@@ -24,10 +24,12 @@
           <div class="field">
             <label for="td-assignee">{{.T "tasks.col_assignee"}}</label>
             <select id="td-assignee" x-model="form.assignee_id">
+              <option value="">{{.T "tasks.unassigned"}}</option>
               <template x-for="m in members" :key="m.id">
                 <option :value="m.id" x-text="m.name" :selected="m.id === form.assignee_id"></option>
               </template>
             </select>
+            <span class="hint">{{.T "tasks.unassigned_hint"}}</span>
           </div>
           <div class="field">
             <label for="td-deadline">{{.T "tasks.col_deadline"}}</label>

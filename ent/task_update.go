@@ -95,6 +95,12 @@ func (_u *TaskUpdate) SetNillableAssigneeID(v *uuid.UUID) *TaskUpdate {
 	return _u
 }
 
+// ClearAssigneeID clears the value of the "assignee_id" field.
+func (_u *TaskUpdate) ClearAssigneeID() *TaskUpdate {
+	_u.mutation.ClearAssigneeID()
+	return _u
+}
+
 // SetDeadline sets the "deadline" field.
 func (_u *TaskUpdate) SetDeadline(v time.Time) *TaskUpdate {
 	_u.mutation.SetDeadline(v)
@@ -280,9 +286,6 @@ func (_u *TaskUpdate) ExecX(ctx context.Context) {
 func (_u *TaskUpdate) check() error {
 	if _u.mutation.ProjectCleared() && len(_u.mutation.ProjectIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "Task.project"`)
-	}
-	if _u.mutation.AssigneeCleared() && len(_u.mutation.AssigneeIDs()) > 0 {
-		return errors.New(`ent: clearing a required unique edge "Task.assignee"`)
 	}
 	return nil
 }
@@ -540,6 +543,12 @@ func (_u *TaskUpdateOne) SetNillableAssigneeID(v *uuid.UUID) *TaskUpdateOne {
 	return _u
 }
 
+// ClearAssigneeID clears the value of the "assignee_id" field.
+func (_u *TaskUpdateOne) ClearAssigneeID() *TaskUpdateOne {
+	_u.mutation.ClearAssigneeID()
+	return _u
+}
+
 // SetDeadline sets the "deadline" field.
 func (_u *TaskUpdateOne) SetDeadline(v time.Time) *TaskUpdateOne {
 	_u.mutation.SetDeadline(v)
@@ -738,9 +747,6 @@ func (_u *TaskUpdateOne) ExecX(ctx context.Context) {
 func (_u *TaskUpdateOne) check() error {
 	if _u.mutation.ProjectCleared() && len(_u.mutation.ProjectIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "Task.project"`)
-	}
-	if _u.mutation.AssigneeCleared() && len(_u.mutation.AssigneeIDs()) > 0 {
-		return errors.New(`ent: clearing a required unique edge "Task.assignee"`)
 	}
 	return nil
 }

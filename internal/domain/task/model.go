@@ -22,7 +22,7 @@ type Task struct {
 	ProjectID             uuid.UUID    `json:"project_id"`
 	Name                  string       `json:"name"`
 	Description           string       `json:"description"`
-	AssigneeID            uuid.UUID    `json:"assignee_id"`
+	AssigneeID            *uuid.UUID   `json:"assignee_id"`
 	Assignee              *Person      `json:"assignee,omitempty"`
 	Deadline              time.Time    `json:"deadline"`
 	ExternalIntegrationID *uuid.UUID   `json:"external_integration_id,omitempty"`
@@ -36,6 +36,7 @@ type Task struct {
 type ListFilter struct {
 	Query      string     // trecho do nome, sem diferenciar maiúsculas
 	AssigneeID *uuid.UUID // só as tarefas desta pessoa
+	Unassigned bool       // só as tarefas sem responsável; vale no lugar de AssigneeID
 	DeadlineTo *time.Time // só as com prazo até este instante, inclusive
 	Page       int        // a partir de 1; zero é a lista inteira
 	PerPage    int

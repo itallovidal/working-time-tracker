@@ -409,7 +409,7 @@ Content-Type: application/json
   "deadline": "2026-10-05T23:59:00-03:00"
 }
 ```
-O responsável precisa estar em algum time do projeto. Sem `deadline`, o prazo fica em 7 dias a partir de agora.
+O `assignee_id` é opcional: sem ele a tarefa fica disponível, e quem bater o ponto nela passa a ser o responsável. Um responsável escolhido precisa estar em algum time do projeto. Sem `deadline`, o prazo fica em 7 dias a partir de agora.
 
 ```http
 GET /api/projects/:projectId/tasks?q=frete&assignee_id=…&deadline_to=2026-10-12T02:59:59Z&page=1&per_page=10
@@ -417,7 +417,7 @@ GET /api/projects/:projectId/tasks?q=frete&assignee_id=…&deadline_to=2026-10-1
 Todos os parâmetros são opcionais:
 
 - `q` busca no nome, sem diferenciar maiúsculas de minúsculas (acentos contam), com até 100 caracteres.
-- `assignee_id` traz só as tarefas daquela pessoa.
+- `assignee_id` traz só as tarefas daquela pessoa; `none` traz só as sem responsável.
 - `deadline_to` traz as tarefas com prazo até aquele instante, inclusive. É uma data com hora em RFC 3339; num fuso escrito com `+`, use `%2B` na URL.
 - `page` começa em 1. `per_page` vale 10 por padrão, vai até 100 e só é lido junto de `page`.
 

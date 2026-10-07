@@ -52,7 +52,7 @@ titles:
   org_customers: Clientes · Organização
   org_people: Colaboradores · Organização
   overview: Visão geral
-  tasks: Tarefas
+  tasks: Quadro de tarefas
   time: Ponto
   teams: Colaboradores
   integrations: Integrações
@@ -271,7 +271,7 @@ project:
     projects: Projetos
     sections: Seções do projeto
     overview: Visão geral
-    tasks: Tarefas
+    tasks: Quadro de tarefas
     time: Ponto
     teams: Colaboradores
     integrations: Integrações
@@ -291,12 +291,11 @@ tasks:
   due_filter: Filtrar por prazo
   any_due: Qualquer prazo
   due_date: Prazo até a data
+  unassigned: Sem responsável
+  unassigned_hint: "Sem responsável, a tarefa fica disponível: quem bater o ponto nela passa a ser o responsável."
   only_mine: Só as minhas tarefas
   new: Nova tarefa
   loading: Carregando tarefas…
-  no_members: Ninguém nos times deste projeto
-  no_members_text: Só quem está em algum time pode ser responsável por tarefas.
-  build_teams: Montar os times
   none_filtered: Nenhuma tarefa com esses filtros
   none: Nenhuma tarefa ainda
   none_text: Crie uma tarefa para começar a registrar tempo nela.
@@ -820,7 +819,6 @@ errors:
     too_many_attempts: "muitas tentativas seguidas; espere um minuto e tente de novo"
   task:
     assignee_not_in_team: "o responsável precisa estar em algum time deste projeto"
-    assignee_required: "escolha o responsável"
     integration_not_found: "integração não encontrada"
     integration_other_project: "a integração é de outro projeto"
     integrations_unavailable: "integrações indisponíveis"

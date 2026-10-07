@@ -571,7 +571,10 @@ func (_q *TaskQuery) loadAssignee(ctx context.Context, query *PersonQuery, nodes
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Task)
 	for i := range nodes {
-		fk := nodes[i].AssigneeID
+		if nodes[i].AssigneeID == nil {
+			continue
+		}
+		fk := *nodes[i].AssigneeID
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}

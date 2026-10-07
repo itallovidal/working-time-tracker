@@ -43,7 +43,8 @@ func (h *Handler) Create(c *echo.Context) error {
 const maxQueryLen = 100
 
 // parseListFilter lê os filtros da lista na query string: q, assignee_id,
-// deadline_to, page e per_page. Todos são opcionais.
+// deadline_to, page e per_page. Todos são opcionais. assignee_id=none lista só
+// as tarefas sem responsável.
 func parseListFilter(c *echo.Context) (ListFilter, error) {
 	var f ListFilter
 
@@ -51,7 +52,9 @@ func parseListFilter(c *echo.Context) (ListFilter, error) {
 	if utf8.RuneCountInString(f.Query) > maxQueryLen {
 		return f, ErrQueryTooLong.With("max", maxQueryLen)
 	}
-	if v := c.QueryParam("assignee_id"); v != "" {
+	if v := c.QueryParam("assignee_id"); v == "none" {
+		f.Unassigned = true
+	} else if v != "" {
 		id, err := uuid.Parse(v)
 		if err != nil {
 			return f, ErrInvalidAssigneeFilter

@@ -57,6 +57,14 @@ func (_c *TaskCreate) SetAssigneeID(v uuid.UUID) *TaskCreate {
 	return _c
 }
 
+// SetNillableAssigneeID sets the "assignee_id" field if the given value is not nil.
+func (_c *TaskCreate) SetNillableAssigneeID(v *uuid.UUID) *TaskCreate {
+	if v != nil {
+		_c.SetAssigneeID(*v)
+	}
+	return _c
+}
+
 // SetDeadline sets the "deadline" field.
 func (_c *TaskCreate) SetDeadline(v time.Time) *TaskCreate {
 	_c.mutation.SetDeadline(v)
@@ -224,17 +232,11 @@ func (_c *TaskCreate) check() error {
 	if _, ok := _c.mutation.Name(); !ok {
 		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "Task.name"`)}
 	}
-	if _, ok := _c.mutation.AssigneeID(); !ok {
-		return &ValidationError{Name: "assignee_id", err: errors.New(`ent: missing required field "Task.assignee_id"`)}
-	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "Task.created_at"`)}
 	}
 	if len(_c.mutation.ProjectIDs()) == 0 {
 		return &ValidationError{Name: "project", err: errors.New(`ent: missing required edge "Task.project"`)}
-	}
-	if len(_c.mutation.AssigneeIDs()) == 0 {
-		return &ValidationError{Name: "assignee", err: errors.New(`ent: missing required edge "Task.assignee"`)}
 	}
 	return nil
 }
@@ -326,7 +328,7 @@ func (_c *TaskCreate) createSpec() (*Task, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.AssigneeID = nodes[0]
+		_node.AssigneeID = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := _c.mutation.ExternalIntegrationIDs(); len(nodes) > 0 {

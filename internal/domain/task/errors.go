@@ -11,7 +11,6 @@ import (
 var (
 	ErrNotFound                = apperr.New("task.not_found", http.StatusNotFound)
 	ErrNameRequired            = apperr.New("task.name_required", http.StatusBadRequest)
-	ErrAssigneeRequired        = apperr.New("task.assignee_required", http.StatusBadRequest)
 	ErrAssigneeNotInTeam       = apperr.New("task.assignee_not_in_team", http.StatusBadRequest)
 	ErrInvalidAssignee         = apperr.New("task.invalid_assignee", http.StatusBadRequest)
 	ErrIntegrationNotFound     = apperr.New("task.integration_not_found", http.StatusBadRequest)

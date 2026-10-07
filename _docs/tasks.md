@@ -358,6 +358,18 @@
 
 ---
 
+### Sprint 27: Tasks Without an Assignee and the Task Board
+
+- [X] S27.1 `tasks.assignee_id` is nullable (migration `task_assignee_optional`, with the foreign key still `NO ACTION`); `task.assignee_required` is removed
+- [X] S27.2 Create a task without an assignee; `PATCH` with an empty `assignee_id` clears it; a chosen assignee is still checked against the project teams
+- [X] S27.3 `assignee_id=none` filters the available tasks
+- [X] S27.4 Clocking in on an unassigned task makes the person its assignee, team or not, with a conditional update; a refused clock-in takes nothing
+- [X] S27.5 The "Tarefas" tab is the "Quadro de tarefas": "Sem responsável" in the new task modal (not required), in the assignee filter and as a badge in the list; new tasks no longer wait for team members; the list reloads when a clock opens
+- [X] S27.6 Task detail can clear the assignee; seed with two available tasks
+- [X] S27.7 Tests for the domain, the claim, the API and the page; update README, design, routes and the error codes
+
+---
+
 ### Refatoração: Domain-First Architecture (pré-Sprint 9)
 
 - [X] R1 Reorganizar código de layered-flat para domain-first: `internal/domain/<dominio>/` com `model.go`, `store.go`, `service.go`, `handler.go` por domínio

@@ -113,7 +113,8 @@ var projects = []struct {
 	},
 }
 
-// As tarefas, com o prazo em dias a partir de hoje (negativo é atrasada). O App
+// As tarefas, com o prazo em dias a partir de hoje (negativo é atrasada); assignee
+// vazio é uma tarefa sem responsável. O App
 // de Pedidos tem mais de uma página delas, com prazos espalhados, para a busca,
 // os filtros e a paginação da lista terem o que mostrar.
 var tasks = []struct {
@@ -145,6 +146,9 @@ var tasks = []struct {
 	{"conciliacao", "api", "Conciliação diária de Pix", "", "bruno", 7},
 	{"recorrencia", "api", "Modelo de dados de cobranças recorrentes", "", "ana", -1},
 	{"cases", "site", "Página de cases", "", "carla", 15},
+	// Sem responsável: ficam disponíveis no quadro, e quem bater o ponto nelas as pega.
+	{"boasvindas", "app", "Fluxo de boas-vindas do app", "Telas de apresentação no primeiro acesso.", "", 8},
+	{"acessibilidade", "painel", "Revisão de acessibilidade do painel", "", "", 18},
 }
 
 // As sessões de trabalho já encerradas: quantos dias atrás, e o horário de
@@ -368,7 +372,11 @@ func main() {
 	for _, t := range tasks {
 		prj := seeded[t.project]
 		deadline := now.Add(time.Duration(t.deadlineDays * 24 * float64(time.Hour)))
-		created, err := taskSvc.Create(prj.id, t.name, t.description, person[t.assignee].PersonID.String(), &deadline)
+		assignee := "" // sem responsável
+		if t.assignee != "" {
+			assignee = person[t.assignee].PersonID.String()
+		}
+		created, err := taskSvc.Create(prj.id, t.name, t.description, assignee, &deadline)
 		must(err)
 		seededTasks[t.key] = seededTask{task: created, project: prj}
 	}

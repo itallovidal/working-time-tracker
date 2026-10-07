@@ -9140,7 +9140,7 @@ func (m *TaskMutation) AssigneeID() (r uuid.UUID, exists bool) {
 // OldAssigneeID returns the old "assignee_id" field's value of the Task entity.
 // If the Task object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *TaskMutation) OldAssigneeID(ctx context.Context) (v uuid.UUID, err error) {
+func (m *TaskMutation) OldAssigneeID(ctx context.Context) (v *uuid.UUID, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldAssigneeID is only allowed on UpdateOne operations")
 	}
@@ -9154,9 +9154,22 @@ func (m *TaskMutation) OldAssigneeID(ctx context.Context) (v uuid.UUID, err erro
 	return oldValue.AssigneeID, nil
 }
 
+// ClearAssigneeID clears the value of the "assignee_id" field.
+func (m *TaskMutation) ClearAssigneeID() {
+	m.assignee = nil
+	m.clearedFields[task.FieldAssigneeID] = struct{}{}
+}
+
+// AssigneeIDCleared returns if the "assignee_id" field was cleared in this mutation.
+func (m *TaskMutation) AssigneeIDCleared() bool {
+	_, ok := m.clearedFields[task.FieldAssigneeID]
+	return ok
+}
+
 // ResetAssigneeID resets all changes to the "assignee_id" field.
 func (m *TaskMutation) ResetAssigneeID() {
 	m.assignee = nil
+	delete(m.clearedFields, task.FieldAssigneeID)
 }
 
 // SetDeadline sets the "deadline" field.
@@ -9426,7 +9439,7 @@ func (m *TaskMutation) ClearAssignee() {
 
 // AssigneeCleared reports if the "assignee" edge to the Person entity was cleared.
 func (m *TaskMutation) AssigneeCleared() bool {
-	return m.clearedassignee
+	return m.AssigneeIDCleared() || m.clearedassignee
 }
 
 // AssigneeIDs returns the "assignee" edge IDs in the mutation.
@@ -9746,6 +9759,9 @@ func (m *TaskMutation) ClearedFields() []string {
 	if m.FieldCleared(task.FieldDescription) {
 		fields = append(fields, task.FieldDescription)
 	}
+	if m.FieldCleared(task.FieldAssigneeID) {
+		fields = append(fields, task.FieldAssigneeID)
+	}
 	if m.FieldCleared(task.FieldDeadline) {
 		fields = append(fields, task.FieldDeadline)
 	}
@@ -9774,6 +9790,9 @@ func (m *TaskMutation) ClearField(name string) error {
 	switch name {
 	case task.FieldDescription:
 		m.ClearDescription()
+		return nil
+	case task.FieldAssigneeID:
+		m.ClearAssigneeID()
 		return nil
 	case task.FieldDeadline:
 		m.ClearDeadline()

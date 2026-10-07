@@ -77,6 +77,13 @@ func (s *Service) ClockIn(projectID, taskID, personID string) (*WorkSession, err
 		}
 		return nil, err
 	}
+	// Bater o ponto numa tarefa sem responsável a torna de quem bateu. Fica depois
+	// da sessão criada para um ponto recusado não levar a tarefa.
+	if task.AssigneeID == nil {
+		if err := s.taskStore.ClaimIfUnassigned(task.ID, personUID); err != nil {
+			return nil, err
+		}
+	}
 	session.fillAmounts(session.StartAt)
 	return session, nil
 }

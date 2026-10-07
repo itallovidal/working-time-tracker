@@ -281,6 +281,16 @@ func AssigneeIDNotIn(vs ...uuid.UUID) predicate.Task {
 	return predicate.Task(sql.FieldNotIn(FieldAssigneeID, vs...))
 }
 
+// AssigneeIDIsNil applies the IsNil predicate on the "assignee_id" field.
+func AssigneeIDIsNil() predicate.Task {
+	return predicate.Task(sql.FieldIsNull(FieldAssigneeID))
+}
+
+// AssigneeIDNotNil applies the NotNil predicate on the "assignee_id" field.
+func AssigneeIDNotNil() predicate.Task {
+	return predicate.Task(sql.FieldNotNull(FieldAssigneeID))
+}
+
 // DeadlineEQ applies the EQ predicate on the "deadline" field.
 func DeadlineEQ(v time.Time) predicate.Task {
 	return predicate.Task(sql.FieldEQ(FieldDeadline, v))

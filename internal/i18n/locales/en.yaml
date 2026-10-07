@@ -42,7 +42,7 @@ titles:
   org_customers: Customers · Organization
   org_people: Collaborators · Organization
   overview: Overview
-  tasks: Tasks
+  tasks: Task board
   time: Time tracking
   teams: Collaborators
   integrations: Integrations
@@ -261,7 +261,7 @@ project:
     projects: Projects
     sections: Project sections
     overview: Overview
-    tasks: Tasks
+    tasks: Task board
     time: Time tracking
     teams: Collaborators
     integrations: Integrations
@@ -281,12 +281,11 @@ tasks:
   due_filter: Filter by deadline
   any_due: Any deadline
   due_date: Deadline up to the date
+  unassigned: Unassigned
+  unassigned_hint: "Without an assignee the task is available: whoever clocks in on it becomes the assignee."
   only_mine: Only my tasks
   new: New task
   loading: Loading tasks…
-  no_members: Nobody on this project's teams
-  no_members_text: Only people on a team can be assigned tasks.
-  build_teams: Build the teams
   none_filtered: No tasks match these filters
   none: No tasks yet
   none_text: Create a task to start tracking time on it.
@@ -810,7 +809,6 @@ errors:
     too_many_attempts: "too many attempts in a row; wait a minute and try again"
   task:
     assignee_not_in_team: "the assignee must be on a team of this project"
-    assignee_required: "choose the assignee"
     integration_not_found: "integration not found"
     integration_other_project: "the integration belongs to another project"
     integrations_unavailable: "integrations unavailable"

@@ -28,7 +28,7 @@ type Task struct {
 	// Description holds the value of the "description" field.
 	Description string `json:"description,omitempty"`
 	// AssigneeID holds the value of the "assignee_id" field.
-	AssigneeID uuid.UUID `json:"assignee_id,omitempty"`
+	AssigneeID *uuid.UUID `json:"assignee_id,omitempty"`
 	// Deadline holds the value of the "deadline" field.
 	Deadline time.Time `json:"deadline,omitempty"`
 	// ExternalIntegrationID holds the value of the "external_integration_id" field.
@@ -107,13 +107,13 @@ func (*Task) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case task.FieldExternalIntegrationID:
+		case task.FieldAssigneeID, task.FieldExternalIntegrationID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case task.FieldName, task.FieldDescription, task.FieldExternalItemID, task.FieldExternalItemURL:
 			values[i] = new(sql.NullString)
 		case task.FieldDeadline, task.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
-		case task.FieldID, task.FieldProjectID, task.FieldAssigneeID:
+		case task.FieldID, task.FieldProjectID:
 			values[i] = new(uuid.UUID)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -155,10 +155,11 @@ func (_m *Task) assignValues(columns []string, values []any) error {
 				_m.Description = value.String
 			}
 		case task.FieldAssigneeID:
-			if value, ok := values[i].(*uuid.UUID); !ok {
+			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field assignee_id", values[i])
-			} else if value != nil {
-				_m.AssigneeID = *value
+			} else if value.Valid {
+				_m.AssigneeID = new(uuid.UUID)
+				*_m.AssigneeID = *value.S.(*uuid.UUID)
 			}
 		case task.FieldDeadline:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -258,8 +259,10 @@ func (_m *Task) String() string {
 	builder.WriteString("description=")
 	builder.WriteString(_m.Description)
 	builder.WriteString(", ")
-	builder.WriteString("assignee_id=")
-	builder.WriteString(fmt.Sprintf("%v", _m.AssigneeID))
+	if v := _m.AssigneeID; v != nil {
+		builder.WriteString("assignee_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
 	builder.WriteString(", ")
 	builder.WriteString("deadline=")
 	builder.WriteString(_m.Deadline.Format(time.ANSIC))

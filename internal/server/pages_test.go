@@ -373,10 +373,15 @@ func TestPages_ProjectTasksTab(t *testing.T) {
 			`aria-label="Buscar tarefa pelo nome"`, `aria-label="Filtrar por responsável"`, `aria-label="Filtrar por prazo"`,
 			"Só as minhas tarefas", `class="pager"`,
 			"Nova tarefa", `x-teleport="#modal-root"`, `x-show="$store.modal.name === 'task-new'"`, `id="task-name"`, `id="task-assignee"`,
+			// Uma tarefa pode ficar sem responsável, e o quadro lista o que está disponível.
+			"Quadro de tarefas", `<option value="none"`, `<option value="">Sem responsável</option>`,
 		} {
 			if !strings.Contains(body, want) {
 				t.Errorf("%s: the tasks tab does not contain %q", who, want)
 			}
+		}
+		if strings.Contains(body, `id="task-assignee" required`) {
+			t.Errorf("%s: the assignee of a new task is still required", who)
 		}
 		if n := strings.Count(body, `:disabled="filters.mine"`); n != 2 {
 			t.Errorf("%s: %d fields are turned off by the 'only mine' box, want the search and the assignee filter", who, n)

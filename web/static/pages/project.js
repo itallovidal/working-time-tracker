@@ -180,6 +180,8 @@ document.addEventListener('alpine:init', () => {
         .catch((e) => { this.errors.members = e.message; });
       await Promise.all([members, this.load()]);
       this.loading = false;
+      // Bater o ponto numa tarefa sem responsável a passa para quem bateu.
+      window.addEventListener('wtt:sessions-changed', () => this.load());
     },
     // A URL guarda os filtros e a página, para recarregar ou voltar do detalhe
     // de uma tarefa sem perder o lugar. O prazo vai como o nome do atalho ou a
@@ -188,7 +190,7 @@ document.addEventListener('alpine:init', () => {
       const p = new URLSearchParams(location.search);
       const due = p.get('due') || '';
       const isDate = /^\d{4}-\d{2}-\d{2}$/.test(due);
-      const assignee = /^[0-9a-f-]{36}$/i.test(p.get('assignee') || '') ? p.get('assignee') : '';
+      const assignee = /^([0-9a-f-]{36}|none)$/i.test(p.get('assignee') || '') ? p.get('assignee') : '';
       const mine = p.get('mine') === '1';
       this.filters = {
         q: mine ? '' : (p.get('q') || ''),
@@ -285,7 +287,7 @@ document.addEventListener('alpine:init', () => {
       return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name, WTT.lang));
     },
     openCreate() {
-      const self = this.members.find((m) => m.id === me.id) || this.members[0];
+      const self = this.members.find((m) => m.id === me.id);
       this.draft = { name: '', description: '', assignee_id: self ? self.id : '', deadline: '' };
       this.errors.create = '';
       Alpine.store('modal').open('task-new', WTT.t('tasks.new'), () => !this.pending);
@@ -357,7 +359,7 @@ document.addEventListener('alpine:init', () => {
       this.form = {
         name: t.name,
         description: t.description || '',
-        assignee_id: t.assignee_id,
+        assignee_id: t.assignee_id || '', // vazio: sem responsável
         deadline: WTT.fmt.dateInput(t.deadline),
       };
       // Quem saiu dos times continua aparecendo como responsável atual.

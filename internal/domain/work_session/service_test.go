@@ -81,6 +81,53 @@ func TestService_ClockInSuccess(t *testing.T) {
 	}
 }
 
+// Bater o ponto numa tarefa sem responsável a torna de quem bateu, mesmo sem time;
+// quem bate depois, numa tarefa que já tem dono, não a leva.
+func TestService_ClockIn_ClaimsAnUnassignedTask(t *testing.T) {
+	orgSvc, personSvc, projSvc, _, _, taskSvc, wsSvc := setupDeps(t)
+
+	org, _ := orgSvc.Create("Org")
+	ana, _ := personSvc.Create(org.ID.String(), "Ana", "ana@test.com")
+	bia, _ := personSvc.Create(org.ID.String(), "Bia", "bia@test.com")
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil)
+	free, _ := taskSvc.Create(proj.ID.String(), "Free", "", "", nil)
+	setRate(t, proj.ID.String(), ana.ID.String(), 2000)
+	setRate(t, proj.ID.String(), bia.ID.String(), 2000)
+
+	if _, err := wsSvc.ClockIn(proj.ID.String(), free.ID.String(), ana.ID.String()); err != nil {
+		t.Fatalf("clock in: %v", err)
+	}
+	got, _ := taskSvc.Get(free.ID.String())
+	if got.AssigneeID == nil || *got.AssigneeID != ana.ID {
+		t.Fatalf("assignee after the clock in = %v, want Ana", got.AssigneeID)
+	}
+
+	if _, err := wsSvc.ClockIn(proj.ID.String(), free.ID.String(), bia.ID.String()); err != nil {
+		t.Fatalf("second clock in: %v", err)
+	}
+	got, _ = taskSvc.Get(free.ID.String())
+	if got.AssigneeID == nil || *got.AssigneeID != ana.ID {
+		t.Errorf("assignee after another person clocked in = %v, want still Ana", got.AssigneeID)
+	}
+}
+
+// Um ponto recusado não leva a tarefa.
+func TestService_ClockIn_RefusedDoesNotClaim(t *testing.T) {
+	orgSvc, personSvc, projSvc, _, _, taskSvc, wsSvc := setupDeps(t)
+
+	org, _ := orgSvc.Create("Org")
+	ana, _ := personSvc.Create(org.ID.String(), "Ana", "ana@test.com")
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil)
+	free, _ := taskSvc.Create(proj.ID.String(), "Free", "", "", nil)
+
+	if _, err := wsSvc.ClockIn(proj.ID.String(), free.ID.String(), ana.ID.String()); !errors.Is(err, work_session.ErrNoRate) {
+		t.Fatalf("err = %v, want ErrNoRate", err)
+	}
+	if got, _ := taskSvc.Get(free.ID.String()); got.AssigneeID != nil {
+		t.Errorf("assignee after a refused clock in = %v, want none", got.AssigneeID)
+	}
+}
+
 func TestService_ClockIn_MissingTask(t *testing.T) {
 	_, _, _, _, _, _, wsSvc := setupDeps(t)
 

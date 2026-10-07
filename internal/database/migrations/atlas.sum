@@ -1,4 +1,5 @@
-h1:0NfoufhAQ6bHqLf7ymGljd9WqTjxANeqjo9qUWwvdzo=
+h1:du3xBcF8rB7GzjtQj7jEemhxEodXpajLwOQGL1q0xUo=
 20261006010705_baseline.sql h1:In26R+bkQHX0yTBQ3cHUfkq0TyExXFWtzWiAp+CXcPk=
 20261006053300_integration_credentials_metadata.sql h1:o/Eet/4UpJcK+X/j0/hx8u5DPKRFuIPzq5e0spWIBX4=
 20261006220500_move_weekly_hours_to_person.sql h1:FSjx+g6ZU9ynL4VqWDbgWEb2QdpiaQV4ZE/YuC/imyI=
+20261007015254_task_assignee_optional.sql h1:VEImiKeSY4XpedREUC+8ZuCAvrK2iziuTDQ90zgKBjA=

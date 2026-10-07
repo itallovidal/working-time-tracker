@@ -83,7 +83,7 @@ func setupTestApp(t *testing.T) *testApp {
 	}
 }
 
-func TestHandler_Create_MissingAssignee(t *testing.T) {
+func TestHandler_Create_WithoutAssignee(t *testing.T) {
 	cleanup(t)
 	e := echo.New()
 	e.Use(middleware.Recover())
@@ -118,8 +118,11 @@ func TestHandler_Create_MissingAssignee(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 	e.ServeHTTP(rec, req)
-	if rec.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d: %s", rec.Code, rec.Body.String())
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), `"assignee_id":null`) {
+		t.Errorf("body = %s, want assignee_id null", rec.Body.String())
 	}
 }
 

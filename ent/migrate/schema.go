@@ -258,7 +258,7 @@ var (
 		{Name: "external_item_url", Type: field.TypeString, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "external_integration_id", Type: field.TypeUUID, Nullable: true},
-		{Name: "assignee_id", Type: field.TypeUUID},
+		{Name: "assignee_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "project_id", Type: field.TypeUUID},
 	}
 	// TasksTable holds the schema information for the "tasks" table.

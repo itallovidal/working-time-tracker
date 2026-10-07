@@ -2,6 +2,7 @@ package task_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"testing"
@@ -120,15 +121,68 @@ func TestService_Create_AssigneeNotTeamMember(t *testing.T) {
 	}
 }
 
-func TestService_Create_MissingAssignee(t *testing.T) {
+// Uma tarefa nasce sem responsável: fica disponível para quem bater o ponto nela.
+func TestService_Create_WithoutAssignee(t *testing.T) {
 	orgSvc, _, projSvc, _, _, taskSvc := setupDeps(t)
 
 	org, _ := orgSvc.Create("Org")
 	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil)
 
-	_, err := taskSvc.Create(proj.ID.String(), "Task A", "", "", nil)
-	if err == nil {
-		t.Fatal("expected error for empty assignee, got nil")
+	tk, err := taskSvc.Create(proj.ID.String(), "Task A", "", "", nil)
+	if err != nil {
+		t.Fatalf("create without assignee: %v", err)
+	}
+	if tk.AssigneeID != nil || tk.Assignee != nil {
+		t.Errorf("assignee = %v / %v, want none", tk.AssigneeID, tk.Assignee)
+	}
+}
+
+func TestService_Create_InvalidAssignee(t *testing.T) {
+	orgSvc, _, projSvc, _, _, taskSvc := setupDeps(t)
+
+	org, _ := orgSvc.Create("Org")
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil)
+
+	if _, err := taskSvc.Create(proj.ID.String(), "Task A", "", "not-a-uuid", nil); !errors.Is(err, task.ErrInvalidAssignee) {
+		t.Errorf("err = %v, want ErrInvalidAssignee", err)
+	}
+}
+
+// Um assignee vazio no PATCH desvincula, e a tarefa entra no filtro "sem responsável".
+func TestService_Update_UnassignAndFilter(t *testing.T) {
+	orgSvc, personSvc, projSvc, teamSvc, memberSvc, taskSvc := setupDeps(t)
+
+	org, _ := orgSvc.Create("Org")
+	p, _ := personSvc.Create(org.ID.String(), "John", "john@test.com")
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil)
+	tm, _ := teamSvc.Create(proj.ID.String(), "Team")
+	join(t, memberSvc, tm, p.ID.String())
+
+	assigned, _ := taskSvc.Create(proj.ID.String(), "Assigned", "", p.ID.String(), nil)
+	free, _ := taskSvc.Create(proj.ID.String(), "Free", "", "", nil)
+
+	empty := ""
+	updated, err := taskSvc.Update(assigned.ID.String(), "Assigned", "", &empty, nil)
+	if err != nil {
+		t.Fatalf("unassign: %v", err)
+	}
+	if updated.AssigneeID != nil || updated.Assignee != nil {
+		t.Errorf("assignee after unassign = %v, want none", updated.AssigneeID)
+	}
+
+	none, err := taskSvc.ListByProject(proj.ID.String(), task.ListFilter{Unassigned: true})
+	if err != nil || len(none) != 2 {
+		t.Fatalf("unassigned = %d tasks (%v), want 2", len(none), err)
+	}
+
+	// Voltar a pôr um responsável continua exigindo que ele esteja num time.
+	pid := p.ID.String()
+	if _, err := taskSvc.Update(free.ID.String(), "Free", "", &pid, nil); err != nil {
+		t.Fatalf("assign again: %v", err)
+	}
+	none, _ = taskSvc.ListByProject(proj.ID.String(), task.ListFilter{Unassigned: true})
+	if len(none) != 1 {
+		t.Errorf("unassigned after assigning = %d, want 1", len(none))
 	}
 }
 

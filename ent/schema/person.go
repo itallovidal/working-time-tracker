@@ -34,7 +34,7 @@ func (Person) Fields() []ent.Field {
 func (Person) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("organization", Organization.Type).Ref("persons").Field("organization_id").Unique().Required(),
-		edge.To("tasks", Task.Type),
+		edge.To("tasks", Task.Type).Annotations(entsql.OnDelete(entsql.NoAction)),
 		edge.To("team_memberships", TeamMembership.Type),
 		edge.To("work_sessions", WorkSession.Type),
 		edge.To("sessions", Session.Type).Annotations(entsql.OnDelete(entsql.Cascade)),

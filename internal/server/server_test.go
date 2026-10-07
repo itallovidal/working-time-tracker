@@ -1106,3 +1106,51 @@ func TestPersons_WeeklyHours(t *testing.T) {
 		}
 	}
 }
+
+// Uma tarefa pode nascer sem responsável. Ela aparece no filtro "none", e quem
+// bate o ponto nela, mesmo sem estar num time, passa a ser o responsável.
+func TestTasks_WithoutAssigneeIsClaimedByTheFirstClockIn(t *testing.T) {
+	e := newServer(t)
+	admin := signup(t, e, "Org", "ana@test.com")
+	member := invite(t, e, admin, "bia@test.com", "member")
+	projectID := createProject(t, e, admin, "Alpha")
+	allocate(t, e, admin, projectID, member.id, 5000)
+
+	rec := do(e, "POST", "/api/projects/"+projectID+"/tasks", `{"name":"Livre"}`, member.session)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("create without assignee = %d: %s", rec.Code, rec.Body.String())
+	}
+	created := decode(t, rec)
+	taskID := created["id"].(string)
+	if created["assignee_id"] != nil {
+		t.Errorf("assignee_id = %v, want null", created["assignee_id"])
+	}
+
+	free := func() int {
+		rec := do(e, "GET", "/api/projects/"+projectID+"/tasks?assignee_id=none&page=1", "", member.session)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("list unassigned = %d: %s", rec.Code, rec.Body.String())
+		}
+		return int(decode(t, rec)["total"].(float64))
+	}
+	if n := free(); n != 1 {
+		t.Fatalf("unassigned before the clock in = %d, want 1", n)
+	}
+
+	if rec := do(e, "POST", "/api/projects/"+projectID+"/work-sessions/clock-in", `{"task_id":"`+taskID+`"}`, member.session); rec.Code != http.StatusCreated {
+		t.Fatalf("clock in = %d: %s", rec.Code, rec.Body.String())
+	}
+	if n := free(); n != 0 {
+		t.Errorf("unassigned after the clock in = %d, want 0", n)
+	}
+	rec = do(e, "GET", "/api/tasks/"+taskID, "", member.session)
+	if got := decode(t, rec)["assignee_id"]; got != member.id {
+		t.Errorf("assignee_id after the clock in = %v, want %s", got, member.id)
+	}
+
+	// Um PATCH com assignee_id vazio desvincula de novo.
+	rec = do(e, "PATCH", "/api/tasks/"+taskID, `{"name":"Livre","assignee_id":""}`, admin.session)
+	if rec.Code != http.StatusOK || decode(t, rec)["assignee_id"] != nil {
+		t.Errorf("unassign = %d %s, want 200 with a null assignee", rec.Code, rec.Body.String())
+	}
+}

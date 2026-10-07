@@ -32,16 +32,21 @@ func (s *Service) Create(projectID, name, description, assigneeID string, deadli
 	if name == "" {
 		return nil, ErrNameRequired
 	}
-	if assigneeID == "" {
-		return nil, ErrAssigneeRequired
-	}
-
-	isMember, err := s.membershipStore.IsPersonInProject(assigneeID, projectID)
-	if err != nil {
-		return nil, err
-	}
-	if !isMember {
-		return nil, ErrAssigneeNotInTeam
+	// Sem responsável, a tarefa fica disponível: quem bater o ponto nela a pega.
+	var assignee *uuid.UUID
+	if assigneeID != "" {
+		uid, err := uuid.Parse(assigneeID)
+		if err != nil {
+			return nil, ErrInvalidAssignee
+		}
+		isMember, err := s.membershipStore.IsPersonInProject(assigneeID, projectID)
+		if err != nil {
+			return nil, err
+		}
+		if !isMember {
+			return nil, ErrAssigneeNotInTeam
+		}
+		assignee = &uid
 	}
 
 	var dl time.Time
@@ -55,7 +60,7 @@ func (s *Service) Create(projectID, name, description, assigneeID string, deadli
 		ProjectID:   uuid.MustParse(projectID),
 		Name:        name,
 		Description: description,
-		AssigneeID:  uuid.MustParse(assigneeID),
+		AssigneeID:  assignee,
 		Deadline:    dl,
 	}
 	if err := s.taskStore.Create(task); err != nil {
@@ -112,12 +117,14 @@ func (s *Service) Update(id, name, description string, assigneeID *string, deadl
 	}
 	task.Name = name
 	task.Description = description
-	if assigneeID != nil {
+	if assigneeID != nil && *assigneeID == "" {
+		task.AssigneeID = nil // vazio desvincula: a tarefa volta a ficar disponível
+	} else if assigneeID != nil {
 		uid, err := uuid.Parse(*assigneeID)
 		if err != nil {
 			return nil, ErrInvalidAssignee
 		}
-		if uid != task.AssigneeID {
+		if task.AssigneeID == nil || uid != *task.AssigneeID {
 			isMember, err := s.membershipStore.IsPersonInProject(*assigneeID, task.ProjectID.String())
 			if err != nil {
 				return nil, err
@@ -126,7 +133,7 @@ func (s *Service) Update(id, name, description string, assigneeID *string, deadl
 				return nil, ErrAssigneeNotInTeam
 			}
 		}
-		task.AssigneeID = uid
+		task.AssigneeID = &uid
 	}
 	if deadline != nil {
 		task.Deadline = *deadline

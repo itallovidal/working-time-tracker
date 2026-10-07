@@ -9,6 +9,7 @@
                x-model="filters.q" @input.debounce.300ms="apply()" :disabled="filters.mine">
         <select aria-label="{{.T "tasks.assignee_filter"}}" x-model="filters.assignee" @change="apply()" :disabled="filters.mine">
           <option value="">{{.T "tasks.all_assignees"}}</option>
+          <option value="none" :selected="filters.assignee === 'none'">{{.T "tasks.unassigned"}}</option>
           <template x-for="p in assigneeOptions()" :key="p.id">
             <option :value="p.id" x-text="p.name" :selected="p.id === filters.assignee"></option>
           </template>
@@ -29,23 +30,18 @@
         </label>
       </div>
     </div>
-    <button type="button" class="btn self-start" @click="openCreate()" :disabled="members.length === 0">{{template "icon" "plus"}} {{.T "tasks.new"}}</button>
+    <button type="button" class="btn self-start" @click="openCreate()">{{template "icon" "plus"}} {{.T "tasks.new"}}</button>
   </div>
 
   <p class="muted" x-show="loading">{{.T "tasks.loading"}}</p>
   <p class="form-error" x-cloak x-show="errors.load || errors.members" x-text="errors.load || errors.members"></p>
   <p class="form-error" x-cloak x-show="errors.clock" x-text="errors.clock" role="alert"></p>
 
-  <div class="empty" x-cloak x-show="!loading && !errors.load && !errors.members && members.length === 0">
-    <strong>{{.T "tasks.no_members"}}</strong>
-    <span>{{.T "tasks.no_members_text"}}</span>
-    <a class="btn btn-secondary" href="/projects/{{.Project.ID}}/teams">{{.T "tasks.build_teams"}}</a>
-  </div>
   <div class="empty" x-cloak x-show="!loading && !errors.load && total === 0 && hasFilters()">
     <strong>{{.T "tasks.none_filtered"}}</strong>
     <button type="button" class="btn btn-secondary btn-sm" @click="clear()">{{.T "common.clear_filters"}}</button>
   </div>
-  <div class="empty" x-cloak x-show="!loading && !errors.load && members.length > 0 && total === 0 && !hasFilters()">
+  <div class="empty" x-cloak x-show="!loading && !errors.load && total === 0 && !hasFilters()">
     <strong>{{.T "tasks.none"}}</strong>
     <span>{{.T "tasks.none_text"}}</span>
   </div>
@@ -59,7 +55,10 @@
         <template x-for="t in tasks" :key="t.id">
           <tr>
             <td><a :href="'/tasks/' + t.id" x-text="t.name"></a></td>
-            <td x-text="t.assignee ? t.assignee.name : '—'"></td>
+            <td>
+              <span x-show="t.assignee" x-text="t.assignee ? t.assignee.name : ''"></span>
+              <span class="badge" x-show="!t.assignee">{{.T "tasks.unassigned"}}</span>
+            </td>
             <td>
               <span class="badge num" :class="deadlineClass(t)" x-text="deadlineLabel(t)"></span>
             </td>
@@ -98,11 +97,13 @@
       <div class="fields">
         <div class="field">
           <label for="task-assignee">{{.T "tasks.col_assignee"}}</label>
-          <select id="task-assignee" required x-model="draft.assignee_id">
+          <select id="task-assignee" x-model="draft.assignee_id">
+            <option value="">{{.T "tasks.unassigned"}}</option>
             <template x-for="m in members" :key="m.id">
               <option :value="m.id" x-text="m.name" :selected="m.id === draft.assignee_id"></option>
             </template>
           </select>
+          <span class="hint">{{.T "tasks.unassigned_hint"}}</span>
         </div>
         <div class="field">
           <label for="task-deadline">{{.T "tasks.col_deadline"}}</label>

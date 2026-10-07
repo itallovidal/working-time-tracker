@@ -25,7 +25,7 @@ func (s *Store) Create(t *Task) error {
 		SetProjectID(t.ProjectID).
 		SetName(t.Name).
 		SetDescription(t.Description).
-		SetAssigneeID(t.AssigneeID).
+		SetNillableAssigneeID(t.AssigneeID).
 		SetDeadline(t.Deadline)
 	if t.ExternalIntegrationID != nil {
 		q = q.SetExternalIntegrationID(*t.ExternalIntegrationID)
@@ -55,7 +55,9 @@ func (s *Store) filtered(projectID uuid.UUID, f ListFilter) *ent.TaskQuery {
 	if f.Query != "" {
 		q = q.Where(task.NameContainsFold(f.Query))
 	}
-	if f.AssigneeID != nil {
+	if f.Unassigned {
+		q = q.Where(task.AssigneeIDIsNil())
+	} else if f.AssigneeID != nil {
 		q = q.Where(task.AssigneeIDEQ(*f.AssigneeID))
 	}
 	if f.DeadlineTo != nil {
@@ -141,8 +143,13 @@ func (s *Store) Update(t *Task) error {
 	q := s.client.Task.UpdateOneID(t.ID).
 		SetName(t.Name).
 		SetDescription(t.Description).
-		SetAssigneeID(t.AssigneeID).
 		SetDeadline(t.Deadline)
+	// Sem responsável, a coluna fica nula: Clear* é a única forma de desvincular.
+	if t.AssigneeID != nil {
+		q = q.SetAssigneeID(*t.AssigneeID)
+	} else {
+		q = q.ClearAssigneeID()
+	}
 	if t.ExternalIntegrationID != nil {
 		q = q.SetExternalIntegrationID(*t.ExternalIntegrationID)
 	} else {
@@ -160,6 +167,17 @@ func (s *Store) Update(t *Task) error {
 		q = q.ClearExternalItemURL()
 	}
 	_, err := q.Save(context.Background())
+	return err
+}
+
+// ClaimIfUnassigned passa a tarefa para a pessoa só se ela ainda não tem
+// responsável. O UPDATE condicional decide a disputa no banco: de dois pontos
+// batidos juntos na mesma tarefa livre, só o primeiro a leva.
+func (s *Store) ClaimIfUnassigned(taskID, personID uuid.UUID) error {
+	_, err := s.client.Task.Update().
+		Where(task.IDEQ(taskID), task.AssigneeIDIsNil()).
+		SetAssigneeID(personID).
+		Save(context.Background())
 	return err
 }
 
