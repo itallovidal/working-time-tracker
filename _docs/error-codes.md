@@ -174,12 +174,14 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 
 | Código | Status | Parâmetros | pt-BR | en |
 |---|---|---|---|---|
+| `project.customer_meeting_time_without_day` | 400 | — | `o horário da reunião com o cliente precisa do dia da reunião` | `the customer meeting time needs the meeting day` |
 | `project.customer_not_found` | 400 | — | `cliente não encontrado nesta organização` | `customer not found in this organization` |
 | `project.invalid_bill_rate` | 400 | — | `o valor cobrado por hora deve ficar entre 0 e 1.000.000,00` | `the rate billed per hour must be between 0 and 1,000,000.00` |
+| `project.invalid_customer_meeting_time` | 400 | — | `o horário da reunião com o cliente deve estar no formato HH:MM, por exemplo 10:30` | `the customer meeting time must use the HH:MM format, for example 10:30` |
 | `project.invalid_daily_time` | 400 | — | `o horário da daily deve estar no formato HH:MM, por exemplo 09:30` | `the daily time must use the HH:MM format, for example 09:30` |
 | `project.invalid_organization` | 400 | — | `organização inválida` | `invalid organization` |
 | `project.invalid_sprint` | 400 | — | `a sprint precisa ter entre 1 e 90 dias` | `the sprint must be between 1 and 90 days long` |
-| `project.invalid_weekday` | 400 | — | `dia da weekly inválido: use monday, tuesday, wednesday, thursday, friday, saturday ou sunday` | `invalid weekly day: use monday, tuesday, wednesday, thursday, friday, saturday or sunday` |
+| `project.invalid_weekday` | 400 | — | `dia da semana inválido: use monday, tuesday, wednesday, thursday, friday, saturday ou sunday` | `invalid weekday: use monday, tuesday, wednesday, thursday, friday, saturday or sunday` |
 | `project.invalid_weekly_time` | 400 | — | `o horário da weekly deve estar no formato HH:MM, por exemplo 13:00` | `the weekly time must use the HH:MM format, for example 13:00` |
 | `project.name_required` | 400 | — | `informe o nome do projeto` | `enter the project name` |
 | `project.not_found` | 404 | — | `projeto não encontrado` | `project not found` |

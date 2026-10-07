@@ -458,6 +458,16 @@
 
 ---
 
+### Sprint 37: Weekly Meeting with the Customer
+
+- [X] S37.1 `projects.customer_meeting_day` and `customer_meeting_time` (optional), with a migration; `project.Routine` replaces the loose daily and weekly arguments of `Create` and `Update`
+- [X] S37.2 Same rules as the weekly: weekday and `HH:MM` checked, no time without the day, an omitted field keeps the value and empty text clears it; new codes `project.invalid_customer_meeting_time` and `project.customer_meeting_time_without_day`
+- [X] S37.3 Taking the customer off a project (`PUT .../billing` with no customer) clears the meeting
+- [X] S37.4 "Possui reunião semanal com o cliente" in the "Cliente e cobrança" group of the New project and Edit project modals, shown only with a customer chosen; the meeting in the Configurações customer card and a badge on the project card
+- [X] S37.5 Seed with meetings in four projects; tests for the service, the API and the page markup; README, design, routes, error codes and the Insomnia collection updated; checked in the browser
+
+---
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open

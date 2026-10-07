@@ -71,7 +71,7 @@ func TestService_Create_DefaultDeadline(t *testing.T) {
 
 	org, _ := orgSvc.Create("Org")
 	p, _ := personSvc.Create(org.ID.String(), "John", "john@test.com")
-	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, project.Routine{})
 	tm, _ := teamSvc.Create(proj.ID.String(), "Team")
 	join(t, memberSvc, tm, p.ID.String())
 
@@ -96,7 +96,7 @@ func TestService_Create_ExplicitDeadline(t *testing.T) {
 
 	org, _ := orgSvc.Create("Org")
 	p, _ := personSvc.Create(org.ID.String(), "John", "john@test.com")
-	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, project.Routine{})
 	tm, _ := teamSvc.Create(proj.ID.String(), "Team")
 	join(t, memberSvc, tm, p.ID.String())
 
@@ -116,7 +116,7 @@ func TestService_Create_AssigneeNotTeamMember(t *testing.T) {
 
 	org, _ := orgSvc.Create("Org")
 	p, _ := personSvc.Create(org.ID.String(), "John", "john@test.com")
-	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, project.Routine{})
 
 	_, err := taskSvc.Create(proj.ID.String(), "Task A", "", p.ID.String(), nil)
 	if err == nil {
@@ -132,7 +132,7 @@ func TestService_AssignToSelfWithoutTeam(t *testing.T) {
 	org, _ := orgSvc.Create("Org")
 	me, _ := personSvc.Create(org.ID.String(), "Ana", "ana@test.com")
 	other, _ := personSvc.Create(org.ID.String(), "Bia", "bia@test.com")
-	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, project.Routine{})
 	pid, meID, otherID := proj.ID.String(), me.ID.String(), other.ID.String()
 
 	own, err := taskSvc.CreateAs(meID, pid, "Minha", "", meID, nil, task.Attrs{})
@@ -162,7 +162,7 @@ func TestService_AssignToCollaboratorWithoutTeam(t *testing.T) {
 
 	org, _ := orgSvc.Create("Org")
 	bruno, _ := personSvc.Create(org.ID.String(), "Bruno", "bruno@test.com")
-	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, project.Routine{})
 	pid, bid := proj.ID.String(), bruno.ID.String()
 
 	if _, err := taskSvc.Create(pid, "Antes", "", bid, nil); err == nil {
@@ -179,7 +179,7 @@ func TestService_AssignToCollaboratorWithoutTeam(t *testing.T) {
 func TestService_DescriptionLimit(t *testing.T) {
 	orgSvc, _, projSvc, _, _, taskSvc := setupDeps(t)
 	org, _ := orgSvc.Create("Org")
-	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, project.Routine{})
 	pid := proj.ID.String()
 
 	exact := strings.Repeat("é", task.MaxDescriptionLen) // 10.000 caracteres, 20.000 bytes
@@ -199,7 +199,7 @@ func TestService_DescriptionLimit(t *testing.T) {
 func TestService_Priority(t *testing.T) {
 	orgSvc, _, projSvc, _, _, taskSvc := setupDeps(t)
 	org, _ := orgSvc.Create("Org")
-	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, project.Routine{})
 	pid := proj.ID.String()
 
 	plain, err := taskSvc.Create(pid, "Sem nada", "", "", nil)
@@ -234,8 +234,8 @@ func TestService_Priority(t *testing.T) {
 func TestService_Labels(t *testing.T) {
 	orgSvc, _, projSvc, _, _, taskSvc := setupDeps(t)
 	org, _ := orgSvc.Create("Org")
-	a, _ := projSvc.Create(org.ID.String(), "A", "", 0, nil, nil, nil)
-	b, _ := projSvc.Create(org.ID.String(), "B", "", 0, nil, nil, nil)
+	a, _ := projSvc.Create(org.ID.String(), "A", "", 0, project.Routine{})
+	b, _ := projSvc.Create(org.ID.String(), "B", "", 0, project.Routine{})
 	aid, bid := a.ID.String(), b.ID.String()
 
 	bug, err := taskSvc.CreateLabel(aid, "  bug ")
@@ -318,7 +318,7 @@ func TestService_Labels(t *testing.T) {
 func TestService_ListFilters_PriorityAndLabels(t *testing.T) {
 	orgSvc, _, projSvc, _, _, taskSvc := setupDeps(t)
 	org, _ := orgSvc.Create("Org")
-	proj, _ := projSvc.Create(org.ID.String(), "P", "", 0, nil, nil, nil)
+	proj, _ := projSvc.Create(org.ID.String(), "P", "", 0, project.Routine{})
 	pid := proj.ID.String()
 	bug, _ := taskSvc.CreateLabel(pid, "bug")
 	ux, _ := taskSvc.CreateLabel(pid, "ux")
@@ -378,7 +378,7 @@ func TestService_Create_WithoutAssignee(t *testing.T) {
 	orgSvc, _, projSvc, _, _, taskSvc := setupDeps(t)
 
 	org, _ := orgSvc.Create("Org")
-	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, project.Routine{})
 
 	tk, err := taskSvc.Create(proj.ID.String(), "Task A", "", "", nil)
 	if err != nil {
@@ -393,7 +393,7 @@ func TestService_Create_InvalidAssignee(t *testing.T) {
 	orgSvc, _, projSvc, _, _, taskSvc := setupDeps(t)
 
 	org, _ := orgSvc.Create("Org")
-	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, project.Routine{})
 
 	if _, err := taskSvc.Create(proj.ID.String(), "Task A", "", "not-a-uuid", nil); !errors.Is(err, task.ErrInvalidAssignee) {
 		t.Errorf("err = %v, want ErrInvalidAssignee", err)
@@ -406,7 +406,7 @@ func TestService_Update_UnassignAndFilter(t *testing.T) {
 
 	org, _ := orgSvc.Create("Org")
 	p, _ := personSvc.Create(org.ID.String(), "John", "john@test.com")
-	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, project.Routine{})
 	tm, _ := teamSvc.Create(proj.ID.String(), "Team")
 	join(t, memberSvc, tm, p.ID.String())
 
@@ -443,7 +443,7 @@ func TestService_Create_MissingName(t *testing.T) {
 
 	org, _ := orgSvc.Create("Org")
 	p, _ := personSvc.Create(org.ID.String(), "John", "john@test.com")
-	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, project.Routine{})
 	tm, _ := teamSvc.Create(proj.ID.String(), "Team")
 	join(t, memberSvc, tm, p.ID.String())
 
@@ -458,7 +458,7 @@ func TestService_Update(t *testing.T) {
 
 	org, _ := orgSvc.Create("Org")
 	p, _ := personSvc.Create(org.ID.String(), "John", "john@test.com")
-	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, project.Routine{})
 	tm, _ := teamSvc.Create(proj.ID.String(), "Team")
 	join(t, memberSvc, tm, p.ID.String())
 
@@ -480,7 +480,7 @@ func TestService_Delete(t *testing.T) {
 
 	org, _ := orgSvc.Create("Org")
 	p, _ := personSvc.Create(org.ID.String(), "John", "john@test.com")
-	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, project.Routine{})
 	tm, _ := teamSvc.Create(proj.ID.String(), "Team")
 	join(t, memberSvc, tm, p.ID.String())
 
@@ -501,7 +501,7 @@ func TestService_LinkUnlinkExternalItem(t *testing.T) {
 
 	org, _ := orgSvc.Create("Org")
 	p, _ := personSvc.Create(org.ID.String(), "John", "john@test.com")
-	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, project.Routine{})
 	tm, _ := teamSvc.Create(proj.ID.String(), "Team")
 	join(t, memberSvc, tm, p.ID.String())
 
@@ -530,7 +530,7 @@ func TestService_Delete_CascadesWorkSessions(t *testing.T) {
 
 	org, _ := orgSvc.Create("Org")
 	p, _ := personSvc.Create(org.ID.String(), "John", "john@test.com")
-	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, project.Routine{})
 	tm, _ := teamSvc.Create(proj.ID.String(), "Team")
 	join(t, memberSvc, tm, p.ID.String())
 	task1, _ := taskSvc.Create(proj.ID.String(), "Task A", "", p.ID.String(), nil)
@@ -553,8 +553,8 @@ func TestService_LinkExternalItem_IntegrationFromAnotherProject(t *testing.T) {
 
 	org, _ := orgSvc.Create("Org")
 	p, _ := personSvc.Create(org.ID.String(), "John", "john@test.com")
-	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
-	otherProj, _ := projSvc.Create(org.ID.String(), "Other", "", 0, nil, nil, nil)
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, project.Routine{})
+	otherProj, _ := projSvc.Create(org.ID.String(), "Other", "", 0, project.Routine{})
 	tm, _ := teamSvc.Create(proj.ID.String(), "Team")
 	join(t, memberSvc, tm, p.ID.String())
 	task1, _ := taskSvc.Create(proj.ID.String(), "Task A", "", p.ID.String(), nil)
@@ -574,7 +574,7 @@ func TestService_Update_AssigneeMustBeProjectMember(t *testing.T) {
 	org, _ := orgSvc.Create("Org")
 	p, _ := personSvc.Create(org.ID.String(), "John", "john@test.com")
 	outsider, _ := personSvc.Create(org.ID.String(), "Maria", "maria@test.com")
-	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, project.Routine{})
 	tm, _ := teamSvc.Create(proj.ID.String(), "Team")
 	join(t, memberSvc, tm, p.ID.String())
 	task1, _ := taskSvc.Create(proj.ID.String(), "Task A", "", p.ID.String(), nil)
@@ -597,7 +597,7 @@ func TestService_LinkSurvivesReadAndUpdate(t *testing.T) {
 
 	org, _ := orgSvc.Create("Org")
 	p, _ := personSvc.Create(org.ID.String(), "John", "john@test.com")
-	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, project.Routine{})
 	tm, _ := teamSvc.Create(proj.ID.String(), "Team")
 	join(t, memberSvc, tm, p.ID.String())
 	task1, _ := taskSvc.Create(proj.ID.String(), "Task A", "", p.ID.String(), nil)
@@ -642,8 +642,8 @@ func TestService_ListByProject_Filters(t *testing.T) {
 	org, _ := orgSvc.Create("Org")
 	john, _ := personSvc.Create(org.ID.String(), "John", "john@test.com")
 	maria, _ := personSvc.Create(org.ID.String(), "Maria", "maria@test.com")
-	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
-	other, _ := projSvc.Create(org.ID.String(), "Other", "", 0, nil, nil, nil)
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, project.Routine{})
+	other, _ := projSvc.Create(org.ID.String(), "Other", "", 0, project.Routine{})
 	for _, p := range []string{proj.ID.String(), other.ID.String()} {
 		tm, _ := teamSvc.Create(p, "Team")
 		join(t, memberSvc, tm, john.ID.String())
@@ -703,7 +703,7 @@ func TestService_ListByProject_DeadlineFilterSkipsTasksWithoutDeadline(t *testin
 
 	org, _ := orgSvc.Create("Org")
 	p, _ := personSvc.Create(org.ID.String(), "John", "john@test.com")
-	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, project.Routine{})
 	tm, _ := teamSvc.Create(proj.ID.String(), "Team")
 	join(t, memberSvc, tm, p.ID.String())
 
@@ -730,7 +730,7 @@ func TestService_ListPage(t *testing.T) {
 	john, _ := personSvc.Create(org.ID.String(), "John", "john@test.com")
 	maria, _ := personSvc.Create(org.ID.String(), "Maria", "maria@test.com")
 	idle, _ := personSvc.Create(org.ID.String(), "Zed", "zed@test.com")
-	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, project.Routine{})
 	tm, _ := teamSvc.Create(proj.ID.String(), "Team")
 	for _, p := range []string{john.ID.String(), maria.ID.String(), idle.ID.String()} {
 		join(t, memberSvc, tm, p)

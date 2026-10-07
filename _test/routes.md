@@ -234,15 +234,18 @@ Content-Type: application/json
   "sprint_duration_days": 14,
   "daily_time": "09:30",
   "weekly_sync_day": "friday",
-  "weekly_sync_time": "14:00"
+  "weekly_sync_time": "14:00",
+  "customer_meeting_day": "wednesday",
+  "customer_meeting_time": "10:30"
 }
 ```
 - `sprint_duration_days` vai de 1 a 90, e o padrão é 14. As telas oferecem 7, 14 e 30 (um mês); um projeto com outra duração continua com ela.
 - `daily_time` usa o formato `HH:MM`. Sem ele, o projeto não tem daily.
 - `weekly_sync_day` vai de `monday` a `sunday`. Sem ele, o projeto não tem weekly.
 - `weekly_sync_time` usa o formato `HH:MM` e só existe com o dia: sem `weekly_sync_day` é `400 project.weekly_time_without_day`. Weeklies antigas podem ter o dia sem o horário.
+- `customer_meeting_day` e `customer_meeting_time` são a reunião semanal com o cliente, com as mesmas regras da weekly: o dia vai de `monday` a `sunday` (outro valor é `400 project.invalid_weekday`), o horário usa `HH:MM` (`400 project.invalid_customer_meeting_time`) e só existe com o dia (`400 project.customer_meeting_time_without_day`). Não dependem da weekly do time. Qualquer pessoa do projeto lê os dois campos; só admin altera. Tirar o cliente do projeto (`PUT /api/projects/:projectId/billing` com `customer_id` nulo) apaga a reunião. As telas só oferecem a reunião num projeto com cliente, mas a API não exige o cliente ao gravar o dia.
 
-No `PATCH`, um campo omitido mantém o valor atual, e `""` apaga `daily_time`, `weekly_sync_day` ou `weekly_sync_time`. Apagar o dia da weekly apaga o horário junto. O projeto não tem jornada semanal: ela é da pessoa (`PATCH /api/persons/:personId/weekly-hours`).
+No `PATCH`, um campo omitido mantém o valor atual, e `""` apaga `daily_time`, `weekly_sync_day`, `weekly_sync_time`, `customer_meeting_day` ou `customer_meeting_time`. Apagar o dia da weekly ou da reunião apaga o horário junto. O projeto não tem jornada semanal: ela é da pessoa (`PATCH /api/persons/:personId/weekly-hours`).
 
 O projeto traz `member_count`, os colaboradores dele (quem tem valor por hora nele, cada pessoa uma vez: a mesma conta de `/collaborators`), e `task_count`, as tarefas dele. Os dois vêm na lista e no detalhe.
 

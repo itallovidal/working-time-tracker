@@ -33,7 +33,7 @@ func TestService_Create(t *testing.T) {
 	svc := team.NewService(team.NewStore(testClient))
 
 	org, _ := orgSvc.Create("Test Org")
-	proj, _ := projSvc.Create(org.ID.String(), "Project A", "", 0, nil, nil, nil)
+	proj, _ := projSvc.Create(org.ID.String(), "Project A", "", 0, project.Routine{})
 
 	tm, err := svc.Create(proj.ID.String(), "Team A")
 	if err != nil {
@@ -51,7 +51,7 @@ func TestService_ListByProject(t *testing.T) {
 	svc := team.NewService(team.NewStore(testClient))
 
 	org, _ := orgSvc.Create("Test Org")
-	proj, _ := projSvc.Create(org.ID.String(), "Project A", "", 0, nil, nil, nil)
+	proj, _ := projSvc.Create(org.ID.String(), "Project A", "", 0, project.Routine{})
 	svc.Create(proj.ID.String(), "Team A")
 	svc.Create(proj.ID.String(), "Team B")
 
@@ -74,7 +74,7 @@ func TestService_AddRemoveMembers(t *testing.T) {
 
 	org, _ := orgSvc.Create("Test Org")
 	p, _ := personSvc.Create(org.ID.String(), "John", "john@test.com")
-	proj, _ := projSvc.Create(org.ID.String(), "Project A", "", 0, nil, nil, nil)
+	proj, _ := projSvc.Create(org.ID.String(), "Project A", "", 0, project.Routine{})
 	tm, _ := teamSvc.Create(proj.ID.String(), "Team A")
 	setRate(t, proj.ID.String(), p.ID.String())
 
@@ -118,7 +118,7 @@ func TestMembership_DuplicateRejected(t *testing.T) {
 
 	org, _ := orgSvc.Create("Test Org")
 	p, _ := personSvc.Create(org.ID.String(), "John", "john@test.com")
-	proj, _ := projSvc.Create(org.ID.String(), "Project A", "", 0, nil, nil, nil)
+	proj, _ := projSvc.Create(org.ID.String(), "Project A", "", 0, project.Routine{})
 	tm, _ := teamSvc.Create(proj.ID.String(), "Team A")
 	setRate(t, proj.ID.String(), p.ID.String())
 
@@ -143,8 +143,8 @@ func TestMembership_RequiresRateInTheProject(t *testing.T) {
 
 	org, _ := orgSvc.Create("Org")
 	p, _ := personSvc.Create(org.ID.String(), "Ana", "ana@test.com")
-	proj, _ := projSvc.Create(org.ID.String(), "Projeto", "", 0, nil, nil, nil)
-	other, _ := projSvc.Create(org.ID.String(), "Outro", "", 0, nil, nil, nil)
+	proj, _ := projSvc.Create(org.ID.String(), "Projeto", "", 0, project.Routine{})
+	other, _ := projSvc.Create(org.ID.String(), "Outro", "", 0, project.Routine{})
 	tm, _ := teamSvc.Create(proj.ID.String(), "Time")
 	setRate(t, other.ID.String(), p.ID.String())
 
@@ -175,7 +175,7 @@ func TestService_Delete_CascadesMemberships(t *testing.T) {
 
 	org, _ := orgSvc.Create("Org")
 	p, _ := personSvc.Create(org.ID.String(), "Ana", "ana@test.com")
-	proj, _ := projSvc.Create(org.ID.String(), "Projeto", "", 0, nil, nil, nil)
+	proj, _ := projSvc.Create(org.ID.String(), "Projeto", "", 0, project.Routine{})
 	tm, _ := svc.Create(proj.ID.String(), "Time")
 	setRate(t, proj.ID.String(), p.ID.String())
 	if _, err := memberSvc.Add(tm.ID.String(), p.ID.String()); err != nil {
@@ -204,7 +204,7 @@ func TestMembership_PersonFromAnotherOrgRejected(t *testing.T) {
 	org, _ := orgSvc.Create("Org")
 	other, _ := orgSvc.Create("Outra Org")
 	outsider, _ := personSvc.Create(other.ID.String(), "Caio", "caio@test.com")
-	proj, _ := projSvc.Create(org.ID.String(), "Projeto", "", 0, nil, nil, nil)
+	proj, _ := projSvc.Create(org.ID.String(), "Projeto", "", 0, project.Routine{})
 	tm, _ := svc.Create(proj.ID.String(), "Time")
 
 	if _, err := memberSvc.Add(tm.ID.String(), outsider.ID.String()); err == nil {

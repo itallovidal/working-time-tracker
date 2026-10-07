@@ -101,6 +101,16 @@ func WeeklySyncTime(v string) predicate.Project {
 	return predicate.Project(sql.FieldEQ(FieldWeeklySyncTime, v))
 }
 
+// CustomerMeetingDay applies equality check predicate on the "customer_meeting_day" field. It's identical to CustomerMeetingDayEQ.
+func CustomerMeetingDay(v string) predicate.Project {
+	return predicate.Project(sql.FieldEQ(FieldCustomerMeetingDay, v))
+}
+
+// CustomerMeetingTime applies equality check predicate on the "customer_meeting_time" field. It's identical to CustomerMeetingTimeEQ.
+func CustomerMeetingTime(v string) predicate.Project {
+	return predicate.Project(sql.FieldEQ(FieldCustomerMeetingTime, v))
+}
+
 // CustomerID applies equality check predicate on the "customer_id" field. It's identical to CustomerIDEQ.
 func CustomerID(v uuid.UUID) predicate.Project {
 	return predicate.Project(sql.FieldEQ(FieldCustomerID, v))
@@ -689,6 +699,156 @@ func WeeklySyncTimeEqualFold(v string) predicate.Project {
 // WeeklySyncTimeContainsFold applies the ContainsFold predicate on the "weekly_sync_time" field.
 func WeeklySyncTimeContainsFold(v string) predicate.Project {
 	return predicate.Project(sql.FieldContainsFold(FieldWeeklySyncTime, v))
+}
+
+// CustomerMeetingDayEQ applies the EQ predicate on the "customer_meeting_day" field.
+func CustomerMeetingDayEQ(v string) predicate.Project {
+	return predicate.Project(sql.FieldEQ(FieldCustomerMeetingDay, v))
+}
+
+// CustomerMeetingDayNEQ applies the NEQ predicate on the "customer_meeting_day" field.
+func CustomerMeetingDayNEQ(v string) predicate.Project {
+	return predicate.Project(sql.FieldNEQ(FieldCustomerMeetingDay, v))
+}
+
+// CustomerMeetingDayIn applies the In predicate on the "customer_meeting_day" field.
+func CustomerMeetingDayIn(vs ...string) predicate.Project {
+	return predicate.Project(sql.FieldIn(FieldCustomerMeetingDay, vs...))
+}
+
+// CustomerMeetingDayNotIn applies the NotIn predicate on the "customer_meeting_day" field.
+func CustomerMeetingDayNotIn(vs ...string) predicate.Project {
+	return predicate.Project(sql.FieldNotIn(FieldCustomerMeetingDay, vs...))
+}
+
+// CustomerMeetingDayGT applies the GT predicate on the "customer_meeting_day" field.
+func CustomerMeetingDayGT(v string) predicate.Project {
+	return predicate.Project(sql.FieldGT(FieldCustomerMeetingDay, v))
+}
+
+// CustomerMeetingDayGTE applies the GTE predicate on the "customer_meeting_day" field.
+func CustomerMeetingDayGTE(v string) predicate.Project {
+	return predicate.Project(sql.FieldGTE(FieldCustomerMeetingDay, v))
+}
+
+// CustomerMeetingDayLT applies the LT predicate on the "customer_meeting_day" field.
+func CustomerMeetingDayLT(v string) predicate.Project {
+	return predicate.Project(sql.FieldLT(FieldCustomerMeetingDay, v))
+}
+
+// CustomerMeetingDayLTE applies the LTE predicate on the "customer_meeting_day" field.
+func CustomerMeetingDayLTE(v string) predicate.Project {
+	return predicate.Project(sql.FieldLTE(FieldCustomerMeetingDay, v))
+}
+
+// CustomerMeetingDayContains applies the Contains predicate on the "customer_meeting_day" field.
+func CustomerMeetingDayContains(v string) predicate.Project {
+	return predicate.Project(sql.FieldContains(FieldCustomerMeetingDay, v))
+}
+
+// CustomerMeetingDayHasPrefix applies the HasPrefix predicate on the "customer_meeting_day" field.
+func CustomerMeetingDayHasPrefix(v string) predicate.Project {
+	return predicate.Project(sql.FieldHasPrefix(FieldCustomerMeetingDay, v))
+}
+
+// CustomerMeetingDayHasSuffix applies the HasSuffix predicate on the "customer_meeting_day" field.
+func CustomerMeetingDayHasSuffix(v string) predicate.Project {
+	return predicate.Project(sql.FieldHasSuffix(FieldCustomerMeetingDay, v))
+}
+
+// CustomerMeetingDayIsNil applies the IsNil predicate on the "customer_meeting_day" field.
+func CustomerMeetingDayIsNil() predicate.Project {
+	return predicate.Project(sql.FieldIsNull(FieldCustomerMeetingDay))
+}
+
+// CustomerMeetingDayNotNil applies the NotNil predicate on the "customer_meeting_day" field.
+func CustomerMeetingDayNotNil() predicate.Project {
+	return predicate.Project(sql.FieldNotNull(FieldCustomerMeetingDay))
+}
+
+// CustomerMeetingDayEqualFold applies the EqualFold predicate on the "customer_meeting_day" field.
+func CustomerMeetingDayEqualFold(v string) predicate.Project {
+	return predicate.Project(sql.FieldEqualFold(FieldCustomerMeetingDay, v))
+}
+
+// CustomerMeetingDayContainsFold applies the ContainsFold predicate on the "customer_meeting_day" field.
+func CustomerMeetingDayContainsFold(v string) predicate.Project {
+	return predicate.Project(sql.FieldContainsFold(FieldCustomerMeetingDay, v))
+}
+
+// CustomerMeetingTimeEQ applies the EQ predicate on the "customer_meeting_time" field.
+func CustomerMeetingTimeEQ(v string) predicate.Project {
+	return predicate.Project(sql.FieldEQ(FieldCustomerMeetingTime, v))
+}
+
+// CustomerMeetingTimeNEQ applies the NEQ predicate on the "customer_meeting_time" field.
+func CustomerMeetingTimeNEQ(v string) predicate.Project {
+	return predicate.Project(sql.FieldNEQ(FieldCustomerMeetingTime, v))
+}
+
+// CustomerMeetingTimeIn applies the In predicate on the "customer_meeting_time" field.
+func CustomerMeetingTimeIn(vs ...string) predicate.Project {
+	return predicate.Project(sql.FieldIn(FieldCustomerMeetingTime, vs...))
+}
+
+// CustomerMeetingTimeNotIn applies the NotIn predicate on the "customer_meeting_time" field.
+func CustomerMeetingTimeNotIn(vs ...string) predicate.Project {
+	return predicate.Project(sql.FieldNotIn(FieldCustomerMeetingTime, vs...))
+}
+
+// CustomerMeetingTimeGT applies the GT predicate on the "customer_meeting_time" field.
+func CustomerMeetingTimeGT(v string) predicate.Project {
+	return predicate.Project(sql.FieldGT(FieldCustomerMeetingTime, v))
+}
+
+// CustomerMeetingTimeGTE applies the GTE predicate on the "customer_meeting_time" field.
+func CustomerMeetingTimeGTE(v string) predicate.Project {
+	return predicate.Project(sql.FieldGTE(FieldCustomerMeetingTime, v))
+}
+
+// CustomerMeetingTimeLT applies the LT predicate on the "customer_meeting_time" field.
+func CustomerMeetingTimeLT(v string) predicate.Project {
+	return predicate.Project(sql.FieldLT(FieldCustomerMeetingTime, v))
+}
+
+// CustomerMeetingTimeLTE applies the LTE predicate on the "customer_meeting_time" field.
+func CustomerMeetingTimeLTE(v string) predicate.Project {
+	return predicate.Project(sql.FieldLTE(FieldCustomerMeetingTime, v))
+}
+
+// CustomerMeetingTimeContains applies the Contains predicate on the "customer_meeting_time" field.
+func CustomerMeetingTimeContains(v string) predicate.Project {
+	return predicate.Project(sql.FieldContains(FieldCustomerMeetingTime, v))
+}
+
+// CustomerMeetingTimeHasPrefix applies the HasPrefix predicate on the "customer_meeting_time" field.
+func CustomerMeetingTimeHasPrefix(v string) predicate.Project {
+	return predicate.Project(sql.FieldHasPrefix(FieldCustomerMeetingTime, v))
+}
+
+// CustomerMeetingTimeHasSuffix applies the HasSuffix predicate on the "customer_meeting_time" field.
+func CustomerMeetingTimeHasSuffix(v string) predicate.Project {
+	return predicate.Project(sql.FieldHasSuffix(FieldCustomerMeetingTime, v))
+}
+
+// CustomerMeetingTimeIsNil applies the IsNil predicate on the "customer_meeting_time" field.
+func CustomerMeetingTimeIsNil() predicate.Project {
+	return predicate.Project(sql.FieldIsNull(FieldCustomerMeetingTime))
+}
+
+// CustomerMeetingTimeNotNil applies the NotNil predicate on the "customer_meeting_time" field.
+func CustomerMeetingTimeNotNil() predicate.Project {
+	return predicate.Project(sql.FieldNotNull(FieldCustomerMeetingTime))
+}
+
+// CustomerMeetingTimeEqualFold applies the EqualFold predicate on the "customer_meeting_time" field.
+func CustomerMeetingTimeEqualFold(v string) predicate.Project {
+	return predicate.Project(sql.FieldEqualFold(FieldCustomerMeetingTime, v))
+}
+
+// CustomerMeetingTimeContainsFold applies the ContainsFold predicate on the "customer_meeting_time" field.
+func CustomerMeetingTimeContainsFold(v string) predicate.Project {
+	return predicate.Project(sql.FieldContainsFold(FieldCustomerMeetingTime, v))
 }
 
 // CustomerIDEQ applies the EQ predicate on the "customer_id" field.

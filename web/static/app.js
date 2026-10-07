@@ -202,21 +202,32 @@
     return [...sprintOptions, { value: current, label: fmt.sprint(current) }].sort((a, b) => a.value - b.value);
   }
 
-  // A daily e a weekly são decisões do projeto: ele pode ter uma, as duas ou nenhuma.
-  // O formulário guarda isso numa marca (has_daily, has_weekly) e mantém o horário
-  // digitado quando a marca é desligada, para religar sem perder o que estava lá.
+  // A daily, a weekly e a reunião com o cliente são decisões do projeto: ele pode ter
+  // qualquer uma, todas ou nenhuma. O formulário guarda isso numa marca (has_daily,
+  // has_weekly, has_meeting) e mantém o horário digitado quando a marca é desligada,
+  // para religar sem perder o que estava lá. A reunião é com o cliente: sem cliente
+  // escolhido no rascunho (customer_id) ela não vai.
   const routine = {
-    blank: () => ({ has_daily: false, daily_time: '', has_weekly: false, weekly_sync_day: '', weekly_sync_time: '' }),
+    blank: () => ({
+      has_daily: false, daily_time: '', has_weekly: false, weekly_sync_day: '', weekly_sync_time: '',
+      has_meeting: false, customer_meeting_day: '', customer_meeting_time: '',
+    }),
     fromProject: (p) => ({
       has_daily: !!p.daily_time, daily_time: p.daily_time || '',
       has_weekly: !!p.weekly_sync_day, weekly_sync_day: p.weekly_sync_day || '', weekly_sync_time: p.weekly_sync_time || '',
+      has_meeting: !!p.customer_meeting_day, customer_meeting_day: p.customer_meeting_day || '', customer_meeting_time: p.customer_meeting_time || '',
     }),
-    // Texto vazio é o que apaga na API; o horário da weekly sai junto com o dia.
-    payload: (d) => ({
-      daily_time: d.has_daily ? d.daily_time : '',
-      weekly_sync_day: d.has_weekly ? d.weekly_sync_day : '',
-      weekly_sync_time: d.has_weekly ? d.weekly_sync_time : '',
-    }),
+    // Texto vazio é o que apaga na API; o horário de cada dia sai junto com ele.
+    payload: (d) => {
+      const meeting = d.has_meeting && d.customer_id;
+      return {
+        daily_time: d.has_daily ? d.daily_time : '',
+        weekly_sync_day: d.has_weekly ? d.weekly_sync_day : '',
+        weekly_sync_time: d.has_weekly ? d.weekly_sync_time : '',
+        customer_meeting_day: meeting ? d.customer_meeting_day : '',
+        customer_meeting_time: meeting ? d.customer_meeting_time : '',
+      };
+    },
   };
 
   const fmt = {

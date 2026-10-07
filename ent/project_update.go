@@ -204,6 +204,46 @@ func (_u *ProjectUpdate) ClearWeeklySyncTime() *ProjectUpdate {
 	return _u
 }
 
+// SetCustomerMeetingDay sets the "customer_meeting_day" field.
+func (_u *ProjectUpdate) SetCustomerMeetingDay(v string) *ProjectUpdate {
+	_u.mutation.SetCustomerMeetingDay(v)
+	return _u
+}
+
+// SetNillableCustomerMeetingDay sets the "customer_meeting_day" field if the given value is not nil.
+func (_u *ProjectUpdate) SetNillableCustomerMeetingDay(v *string) *ProjectUpdate {
+	if v != nil {
+		_u.SetCustomerMeetingDay(*v)
+	}
+	return _u
+}
+
+// ClearCustomerMeetingDay clears the value of the "customer_meeting_day" field.
+func (_u *ProjectUpdate) ClearCustomerMeetingDay() *ProjectUpdate {
+	_u.mutation.ClearCustomerMeetingDay()
+	return _u
+}
+
+// SetCustomerMeetingTime sets the "customer_meeting_time" field.
+func (_u *ProjectUpdate) SetCustomerMeetingTime(v string) *ProjectUpdate {
+	_u.mutation.SetCustomerMeetingTime(v)
+	return _u
+}
+
+// SetNillableCustomerMeetingTime sets the "customer_meeting_time" field if the given value is not nil.
+func (_u *ProjectUpdate) SetNillableCustomerMeetingTime(v *string) *ProjectUpdate {
+	if v != nil {
+		_u.SetCustomerMeetingTime(*v)
+	}
+	return _u
+}
+
+// ClearCustomerMeetingTime clears the value of the "customer_meeting_time" field.
+func (_u *ProjectUpdate) ClearCustomerMeetingTime() *ProjectUpdate {
+	_u.mutation.ClearCustomerMeetingTime()
+	return _u
+}
+
 // SetCustomerID sets the "customer_id" field.
 func (_u *ProjectUpdate) SetCustomerID(v uuid.UUID) *ProjectUpdate {
 	_u.mutation.SetCustomerID(v)
@@ -554,6 +594,18 @@ func (_u *ProjectUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.WeeklySyncTimeCleared() {
 		_spec.ClearField(project.FieldWeeklySyncTime, field.TypeString)
+	}
+	if value, ok := _u.mutation.CustomerMeetingDay(); ok {
+		_spec.SetField(project.FieldCustomerMeetingDay, field.TypeString, value)
+	}
+	if _u.mutation.CustomerMeetingDayCleared() {
+		_spec.ClearField(project.FieldCustomerMeetingDay, field.TypeString)
+	}
+	if value, ok := _u.mutation.CustomerMeetingTime(); ok {
+		_spec.SetField(project.FieldCustomerMeetingTime, field.TypeString, value)
+	}
+	if _u.mutation.CustomerMeetingTimeCleared() {
+		_spec.ClearField(project.FieldCustomerMeetingTime, field.TypeString)
 	}
 	if value, ok := _u.mutation.BillRateCents(); ok {
 		_spec.SetField(project.FieldBillRateCents, field.TypeInt, value)
@@ -1036,6 +1088,46 @@ func (_u *ProjectUpdateOne) ClearWeeklySyncTime() *ProjectUpdateOne {
 	return _u
 }
 
+// SetCustomerMeetingDay sets the "customer_meeting_day" field.
+func (_u *ProjectUpdateOne) SetCustomerMeetingDay(v string) *ProjectUpdateOne {
+	_u.mutation.SetCustomerMeetingDay(v)
+	return _u
+}
+
+// SetNillableCustomerMeetingDay sets the "customer_meeting_day" field if the given value is not nil.
+func (_u *ProjectUpdateOne) SetNillableCustomerMeetingDay(v *string) *ProjectUpdateOne {
+	if v != nil {
+		_u.SetCustomerMeetingDay(*v)
+	}
+	return _u
+}
+
+// ClearCustomerMeetingDay clears the value of the "customer_meeting_day" field.
+func (_u *ProjectUpdateOne) ClearCustomerMeetingDay() *ProjectUpdateOne {
+	_u.mutation.ClearCustomerMeetingDay()
+	return _u
+}
+
+// SetCustomerMeetingTime sets the "customer_meeting_time" field.
+func (_u *ProjectUpdateOne) SetCustomerMeetingTime(v string) *ProjectUpdateOne {
+	_u.mutation.SetCustomerMeetingTime(v)
+	return _u
+}
+
+// SetNillableCustomerMeetingTime sets the "customer_meeting_time" field if the given value is not nil.
+func (_u *ProjectUpdateOne) SetNillableCustomerMeetingTime(v *string) *ProjectUpdateOne {
+	if v != nil {
+		_u.SetCustomerMeetingTime(*v)
+	}
+	return _u
+}
+
+// ClearCustomerMeetingTime clears the value of the "customer_meeting_time" field.
+func (_u *ProjectUpdateOne) ClearCustomerMeetingTime() *ProjectUpdateOne {
+	_u.mutation.ClearCustomerMeetingTime()
+	return _u
+}
+
 // SetCustomerID sets the "customer_id" field.
 func (_u *ProjectUpdateOne) SetCustomerID(v uuid.UUID) *ProjectUpdateOne {
 	_u.mutation.SetCustomerID(v)
@@ -1416,6 +1508,18 @@ func (_u *ProjectUpdateOne) sqlSave(ctx context.Context) (_node *Project, err er
 	}
 	if _u.mutation.WeeklySyncTimeCleared() {
 		_spec.ClearField(project.FieldWeeklySyncTime, field.TypeString)
+	}
+	if value, ok := _u.mutation.CustomerMeetingDay(); ok {
+		_spec.SetField(project.FieldCustomerMeetingDay, field.TypeString, value)
+	}
+	if _u.mutation.CustomerMeetingDayCleared() {
+		_spec.ClearField(project.FieldCustomerMeetingDay, field.TypeString)
+	}
+	if value, ok := _u.mutation.CustomerMeetingTime(); ok {
+		_spec.SetField(project.FieldCustomerMeetingTime, field.TypeString, value)
+	}
+	if _u.mutation.CustomerMeetingTimeCleared() {
+		_spec.ClearField(project.FieldCustomerMeetingTime, field.TypeString)
 	}
 	if value, ok := _u.mutation.BillRateCents(); ok {
 		_spec.SetField(project.FieldBillRateCents, field.TypeInt, value)

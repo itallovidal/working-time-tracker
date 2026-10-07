@@ -18,17 +18,15 @@ func NewHandler(svc *Service) *Handler {
 func (h *Handler) Create(c *echo.Context) error {
 	orgID := c.Param("orgId")
 	var body struct {
-		Name               string  `json:"name"`
-		Description        string  `json:"description"`
-		SprintDurationDays int     `json:"sprint_duration_days"`
-		DailyTime          *string `json:"daily_time"`
-		WeeklySyncDay      *string `json:"weekly_sync_day"`
-		WeeklySyncTime     *string `json:"weekly_sync_time"`
+		Name               string `json:"name"`
+		Description        string `json:"description"`
+		SprintDurationDays int    `json:"sprint_duration_days"`
+		Routine
 	}
 	if err := c.Bind(&body); err != nil {
 		return apperr.Respond(c, 400, apperr.ErrInvalidBody)
 	}
-	project, err := h.svc.Create(orgID, body.Name, body.Description, body.SprintDurationDays, body.DailyTime, body.WeeklySyncDay, body.WeeklySyncTime)
+	project, err := h.svc.Create(orgID, body.Name, body.Description, body.SprintDurationDays, body.Routine)
 	if err != nil {
 		return apperr.Respond(c, 400, err)
 	}
@@ -59,17 +57,15 @@ func (h *Handler) Get(c *echo.Context) error {
 func (h *Handler) Update(c *echo.Context) error {
 	id := c.Param("projectId")
 	var body struct {
-		Name               string  `json:"name"`
-		Description        string  `json:"description"`
-		SprintDurationDays int     `json:"sprint_duration_days"`
-		DailyTime          *string `json:"daily_time"`
-		WeeklySyncDay      *string `json:"weekly_sync_day"`
-		WeeklySyncTime     *string `json:"weekly_sync_time"`
+		Name               string `json:"name"`
+		Description        string `json:"description"`
+		SprintDurationDays int    `json:"sprint_duration_days"`
+		Routine
 	}
 	if err := c.Bind(&body); err != nil {
 		return apperr.Respond(c, 400, apperr.ErrInvalidBody)
 	}
-	project, err := h.svc.Update(id, body.Name, body.Description, body.SprintDurationDays, body.DailyTime, body.WeeklySyncDay, body.WeeklySyncTime)
+	project, err := h.svc.Update(id, body.Name, body.Description, body.SprintDurationDays, body.Routine)
 	if err != nil {
 		return apperr.Respond(c, 400, err)
 	}

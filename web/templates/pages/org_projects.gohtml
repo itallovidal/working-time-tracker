@@ -53,6 +53,7 @@
             <input id="project-bill-rate" type="text" inputmode="decimal" class="num" placeholder="{{.T "common.optional"}}" x-model="draft.rate">
           </div>
         </div>
+        {{template "project_customer_meeting" .}}
         <span class="hint">{{.T "org.projects.admins_only_hint"}}</span>
       </fieldset>
       <fieldset class="form-group">
@@ -123,6 +124,7 @@
           <span class="badge num" x-text="$t('org.projects.sprint_badge', { count: p.sprint_duration_days })"></span>
           <span class="badge num" x-show="p.daily_time" x-text="$t('org.projects.daily_badge', { time: p.daily_time })"></span>
           <span class="badge" x-show="p.weekly_sync_day" x-text="$t('org.projects.weekly_badge', { slot: WTT.fmt.weeklySlot(p.weekly_sync_day, p.weekly_sync_time) })"></span>
+          <span class="badge" x-show="p.customer_meeting_day" x-text="$t('org.projects.meeting_badge', { slot: WTT.fmt.weeklySlot(p.customer_meeting_day, p.customer_meeting_time) })"></span>
         </div>
       </a>
     </template>

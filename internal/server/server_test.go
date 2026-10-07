@@ -1103,6 +1103,66 @@ func TestTasks_ListFiltersAndPages(t *testing.T) {
 
 // A jornada semanal é da pessoa, vale para a organização toda e só um admin
 // define. Todos da organização leem.
+// A reunião semanal com o cliente é um dia e um horário do projeto: o admin cria e
+// altera, todos os membros leem, e tirar o cliente do projeto apaga a reunião.
+func TestProjects_CustomerMeeting(t *testing.T) {
+	e := newServer(t)
+	admin := signup(t, e, "Org", "ana@test.com")
+	member := invite(t, e, admin, "bia@test.com", "member")
+	cust := decode(t, do(e, "POST", "/api/orgs/"+admin.orgID+"/customers", `{"name":"Empresa A"}`, admin.session))["id"].(string)
+
+	rec := do(e, "POST", "/api/orgs/"+admin.orgID+"/projects",
+		`{"name":"Alfa","customer_meeting_day":"Wednesday","customer_meeting_time":"10:30"}`, admin.session)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("create = %d: %s", rec.Code, rec.Body.String())
+	}
+	created := decode(t, rec)
+	id := created["id"].(string)
+	if created["customer_meeting_day"] != "wednesday" || created["customer_meeting_time"] != "10:30" {
+		t.Errorf("created meeting = %v %v, want wednesday 10:30", created["customer_meeting_day"], created["customer_meeting_time"])
+	}
+	if rec := do(e, "PUT", "/api/projects/"+id+"/billing", `{"customer_id":"`+cust+`","bill_rate_cents":9000}`, admin.session); rec.Code != http.StatusOK {
+		t.Fatalf("set customer = %d: %s", rec.Code, rec.Body.String())
+	}
+
+	// Quem não é admin lê a reunião, mas não altera o projeto.
+	read := decode(t, do(e, "GET", "/api/projects/"+id, "", member.session))
+	if read["customer_meeting_day"] != "wednesday" || read["customer_meeting_time"] != "10:30" {
+		t.Errorf("member reads the meeting as %v %v", read["customer_meeting_day"], read["customer_meeting_time"])
+	}
+	if rec := do(e, "PATCH", "/api/projects/"+id, `{"name":"Alfa","customer_meeting_day":"friday"}`, member.session); rec.Code != http.StatusForbidden {
+		t.Errorf("member PATCH = %d, want 403", rec.Code)
+	}
+
+	// Trocar só o horário mantém o dia; as respostas inválidas trazem o código do erro.
+	rec = do(e, "PATCH", "/api/projects/"+id, `{"name":"Alfa","customer_meeting_time":"16:00"}`, admin.session)
+	if got := decode(t, rec); rec.Code != http.StatusOK || got["customer_meeting_day"] != "wednesday" || got["customer_meeting_time"] != "16:00" {
+		t.Fatalf("PATCH time only = %d: %s", rec.Code, rec.Body.String())
+	}
+	for body, code := range map[string]string{
+		`{"name":"Alfa","customer_meeting_time":"25:00"}`:                           "project.invalid_customer_meeting_time",
+		`{"name":"Alfa","customer_meeting_day":"someday"}`:                          "project.invalid_weekday",
+		`{"name":"Alfa","customer_meeting_day":"","customer_meeting_time":"10:00"}`: "project.customer_meeting_time_without_day",
+	} {
+		rec := do(e, "PATCH", "/api/projects/"+id, body, admin.session)
+		if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), code) {
+			t.Errorf("PATCH %s = %d %s, want 400 %s", body, rec.Code, rec.Body.String(), code)
+		}
+	}
+
+	// Sem cliente não há reunião: tirar o cliente apaga o dia e o horário.
+	if rec := do(e, "PUT", "/api/projects/"+id+"/billing", `{"customer_id":null,"bill_rate_cents":null}`, admin.session); rec.Code != http.StatusOK {
+		t.Fatalf("clear customer = %d: %s", rec.Code, rec.Body.String())
+	}
+	read = decode(t, do(e, "GET", "/api/projects/"+id, "", admin.session))
+	if _, ok := read["customer_meeting_day"]; ok {
+		t.Errorf("an internal project still has a meeting day: %v", read["customer_meeting_day"])
+	}
+	if _, ok := read["customer_meeting_time"]; ok {
+		t.Errorf("an internal project still has a meeting time: %v", read["customer_meeting_time"])
+	}
+}
+
 func TestPersons_WeeklyHours(t *testing.T) {
 	e := newServer(t)
 	admin := signup(t, e, "Org", "ana@test.com")

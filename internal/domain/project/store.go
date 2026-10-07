@@ -32,6 +32,8 @@ func (s *Store) Create(p *Project) error {
 		SetNillableDailyTime(p.DailyTime).
 		SetNillableWeeklySyncDay(p.WeeklySyncDay).
 		SetNillableWeeklySyncTime(p.WeeklySyncTime).
+		SetNillableCustomerMeetingDay(p.CustomerMeetingDay).
+		SetNillableCustomerMeetingTime(p.CustomerMeetingTime).
 		Save(context.Background())
 	if err != nil {
 		return err
@@ -119,7 +121,8 @@ func (s *Store) SetBilling(projectID uuid.UUID, customerID *uuid.UUID, billRateC
 	if customerID != nil {
 		q = q.SetCustomerID(*customerID)
 	} else {
-		q = q.ClearCustomer()
+		// Sem cliente não há reunião com ele.
+		q = q.ClearCustomer().ClearCustomerMeetingDay().ClearCustomerMeetingTime()
 	}
 	if billRateCents != nil {
 		q = q.SetBillRateCents(*billRateCents)
@@ -175,6 +178,16 @@ func (s *Store) Update(p *Project) error {
 	} else {
 		q = q.ClearWeeklySyncTime()
 	}
+	if p.CustomerMeetingDay != nil {
+		q = q.SetCustomerMeetingDay(*p.CustomerMeetingDay)
+	} else {
+		q = q.ClearCustomerMeetingDay()
+	}
+	if p.CustomerMeetingTime != nil {
+		q = q.SetCustomerMeetingTime(*p.CustomerMeetingTime)
+	} else {
+		q = q.ClearCustomerMeetingTime()
+	}
 	_, err := q.Save(context.Background())
 	return err
 }
@@ -192,20 +205,22 @@ func toDomainProject(e *ent.Project) *Project {
 		return nil
 	}
 	return &Project{
-		ID:                 e.ID,
-		OrganizationID:     e.OrganizationID,
-		Name:               e.Name,
-		Description:        e.Description,
-		GithubRepoURL:      e.GithubRepoURL,
-		GitlabRepoURL:      e.GitlabRepoURL,
-		SprintDurationDays: e.SprintDurationDays,
-		DailyTime:          e.DailyTime,
-		WeeklySyncDay:      e.WeeklySyncDay,
-		WeeklySyncTime:     e.WeeklySyncTime,
-		Customer:           customerRef(e),
-		MemberCount:        memberCount(e),
-		TaskCount:          len(e.Edges.Tasks),
-		CreatedAt:          e.CreatedAt,
+		ID:                  e.ID,
+		OrganizationID:      e.OrganizationID,
+		Name:                e.Name,
+		Description:         e.Description,
+		GithubRepoURL:       e.GithubRepoURL,
+		GitlabRepoURL:       e.GitlabRepoURL,
+		SprintDurationDays:  e.SprintDurationDays,
+		DailyTime:           e.DailyTime,
+		WeeklySyncDay:       e.WeeklySyncDay,
+		WeeklySyncTime:      e.WeeklySyncTime,
+		CustomerMeetingDay:  e.CustomerMeetingDay,
+		CustomerMeetingTime: e.CustomerMeetingTime,
+		Customer:            customerRef(e),
+		MemberCount:         memberCount(e),
+		TaskCount:           len(e.Edges.Tasks),
+		CreatedAt:           e.CreatedAt,
 	}
 }
 

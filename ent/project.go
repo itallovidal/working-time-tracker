@@ -38,6 +38,10 @@ type Project struct {
 	WeeklySyncDay *string `json:"weekly_sync_day,omitempty"`
 	// WeeklySyncTime holds the value of the "weekly_sync_time" field.
 	WeeklySyncTime *string `json:"weekly_sync_time,omitempty"`
+	// CustomerMeetingDay holds the value of the "customer_meeting_day" field.
+	CustomerMeetingDay *string `json:"customer_meeting_day,omitempty"`
+	// CustomerMeetingTime holds the value of the "customer_meeting_time" field.
+	CustomerMeetingTime *string `json:"customer_meeting_time,omitempty"`
 	// CustomerID holds the value of the "customer_id" field.
 	CustomerID *uuid.UUID `json:"customer_id,omitempty"`
 	// BillRateCents holds the value of the "bill_rate_cents" field.
@@ -147,7 +151,7 @@ func (*Project) scanValues(columns []string) ([]any, error) {
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case project.FieldSprintDurationDays, project.FieldBillRateCents:
 			values[i] = new(sql.NullInt64)
-		case project.FieldName, project.FieldDescription, project.FieldGithubRepoURL, project.FieldGitlabRepoURL, project.FieldDailyTime, project.FieldWeeklySyncDay, project.FieldWeeklySyncTime:
+		case project.FieldName, project.FieldDescription, project.FieldGithubRepoURL, project.FieldGitlabRepoURL, project.FieldDailyTime, project.FieldWeeklySyncDay, project.FieldWeeklySyncTime, project.FieldCustomerMeetingDay, project.FieldCustomerMeetingTime:
 			values[i] = new(sql.NullString)
 		case project.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
@@ -232,6 +236,20 @@ func (_m *Project) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.WeeklySyncTime = new(string)
 				*_m.WeeklySyncTime = value.String
+			}
+		case project.FieldCustomerMeetingDay:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field customer_meeting_day", values[i])
+			} else if value.Valid {
+				_m.CustomerMeetingDay = new(string)
+				*_m.CustomerMeetingDay = value.String
+			}
+		case project.FieldCustomerMeetingTime:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field customer_meeting_time", values[i])
+			} else if value.Valid {
+				_m.CustomerMeetingTime = new(string)
+				*_m.CustomerMeetingTime = value.String
 			}
 		case project.FieldCustomerID:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -358,6 +376,16 @@ func (_m *Project) String() string {
 	builder.WriteString(", ")
 	if v := _m.WeeklySyncTime; v != nil {
 		builder.WriteString("weekly_sync_time=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.CustomerMeetingDay; v != nil {
+		builder.WriteString("customer_meeting_day=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.CustomerMeetingTime; v != nil {
+		builder.WriteString("customer_meeting_time=")
 		builder.WriteString(*v)
 	}
 	builder.WriteString(", ")

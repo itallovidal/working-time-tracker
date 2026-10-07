@@ -35,6 +35,10 @@
           <dt>{{.T "org.projects.customer"}}</dt>
           <dd :class="!current.customer && 'muted'" x-text="current.customer ? current.customer.name : $t('project_settings.internal')"></dd>
         </div>
+        <div class="fact" x-show="current.customer">
+          <dt>{{.T "project.fields.meeting"}}</dt>
+          <dd :class="!current.customer_meeting_day && 'muted'" x-text="meeting()"></dd>
+        </div>
         {{if .IsAdmin}}
         <div class="fact">
           <dt>{{.T "project_settings.bill_rate_fact"}}</dt>
@@ -83,6 +87,7 @@
             <span class="hint">{{.T "project_settings.bill_rate_hint"}}</span>
           </div>
         </div>
+        {{template "project_customer_meeting" .}}
       </fieldset>
       <fieldset class="form-group">
         <legend>{{.T "project.groups.routine"}}</legend>

@@ -26,6 +26,9 @@ func (Project) Fields() []ent.Field {
 		field.String("daily_time").Optional().Nillable(),
 		field.String("weekly_sync_day").Optional().Nillable(),
 		field.String("weekly_sync_time").Optional().Nillable(),
+		// A reunião semanal com o cliente: só faz sentido num projeto com cliente.
+		field.String("customer_meeting_day").Optional().Nillable(),
+		field.String("customer_meeting_time").Optional().Nillable(),
 		// Projeto interno fica sem cliente e sem valor cobrado.
 		field.UUID("customer_id", uuid.UUID{}).Optional().Nillable(),
 		// O que o cliente paga à organização por hora neste projeto.

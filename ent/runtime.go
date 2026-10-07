@@ -119,11 +119,11 @@ func init() {
 	// project.DefaultSprintDurationDays holds the default value on creation for the sprint_duration_days field.
 	project.DefaultSprintDurationDays = projectDescSprintDurationDays.Default.(int)
 	// projectDescBillRateCents is the schema descriptor for bill_rate_cents field.
-	projectDescBillRateCents := projectFields[11].Descriptor()
+	projectDescBillRateCents := projectFields[13].Descriptor()
 	// project.BillRateCentsValidator is a validator for the "bill_rate_cents" field. It is called by the builders before save.
 	project.BillRateCentsValidator = projectDescBillRateCents.Validators[0].(func(int) error)
 	// projectDescCreatedAt is the schema descriptor for created_at field.
-	projectDescCreatedAt := projectFields[12].Descriptor()
+	projectDescCreatedAt := projectFields[14].Descriptor()
 	// project.DefaultCreatedAt holds the default value on creation for the created_at field.
 	project.DefaultCreatedAt = projectDescCreatedAt.Default.(func() time.Time)
 	// projectDescID is the schema descriptor for id field.

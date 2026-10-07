@@ -840,6 +840,11 @@ document.addEventListener('alpine:init', () => {
         { label: WTT.t('project.fields.weekly'), value: p.weekly_sync_day ? WTT.fmt.weeklySlot(p.weekly_sync_day, p.weekly_sync_time) : WTT.t('project.fields.no_weekly'), empty: !p.weekly_sync_day },
       ];
     },
+    // A reunião com o cliente aparece no cartão do cliente, e só com um cliente.
+    meeting() {
+      const p = this.current;
+      return p.customer_meeting_day ? WTT.fmt.weeklySlot(p.customer_meeting_day, p.customer_meeting_time) : WTT.t('project.fields.no_meeting');
+    },
     sprintChoices() {
       return WTT.sprintChoices(this.current.sprint_duration_days);
     },

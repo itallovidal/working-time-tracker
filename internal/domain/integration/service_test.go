@@ -29,7 +29,7 @@ func setup(t *testing.T) (*integration.Service, string) {
 	if err != nil {
 		t.Fatalf("create org: %v", err)
 	}
-	proj, err := project.NewService(project.NewStore(testClient)).Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
+	proj, err := project.NewService(project.NewStore(testClient)).Create(org.ID.String(), "Project", "", 0, project.Routine{})
 	if err != nil {
 		t.Fatalf("create project: %v", err)
 	}

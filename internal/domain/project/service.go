@@ -38,17 +38,63 @@ func optional(v *string) *string {
 	return &t
 }
 
-func validateSchedule(dailyTime, weeklySyncDay, weeklySyncTime *string) error {
-	if dailyTime != nil && *dailyTime != "" && !timePattern.MatchString(*dailyTime) {
+// validate confere os formatos: HH:MM nos horários e um dia da semana em inglês nos dias.
+func (r Routine) validate() error {
+	if r.DailyTime != nil && *r.DailyTime != "" && !timePattern.MatchString(*r.DailyTime) {
 		return ErrInvalidDailyTime
 	}
-	if weeklySyncDay != nil && *weeklySyncDay != "" && !weekdays[strings.ToLower(*weeklySyncDay)] {
+	if err := validateSlot(r.WeeklySyncDay, r.WeeklySyncTime, ErrInvalidWeeklyTime); err != nil {
+		return err
+	}
+	return validateSlot(r.CustomerMeetingDay, r.CustomerMeetingTime, ErrInvalidMeetingTime)
+}
+
+// validateSlot confere um dia da semana e um horário, cada um só se vier preenchido.
+func validateSlot(day, at *string, errTime error) error {
+	if day != nil && *day != "" && !weekdays[strings.ToLower(*day)] {
 		return ErrInvalidWeekday
 	}
-	if weeklySyncTime != nil && *weeklySyncTime != "" && !timePattern.MatchString(*weeklySyncTime) {
-		return ErrInvalidWeeklyTime
+	if at != nil && *at != "" && !timePattern.MatchString(*at) {
+		return errTime
 	}
 	return nil
+}
+
+// normalized apara os textos e põe os dias em minúsculas; nil continua nil.
+func (r Routine) normalized() Routine {
+	lower := func(v *string) *string {
+		if v = optional(v); v != nil {
+			l := strings.ToLower(*v)
+			return &l
+		}
+		return nil
+	}
+	return Routine{
+		DailyTime:           optional(r.DailyTime),
+		WeeklySyncDay:       lower(r.WeeklySyncDay),
+		WeeklySyncTime:      optional(r.WeeklySyncTime),
+		CustomerMeetingDay:  lower(r.CustomerMeetingDay),
+		CustomerMeetingTime: optional(r.CustomerMeetingTime),
+	}
+}
+
+// mergeSlot aplica um dia e um horário (nil mantém, vazio apaga) sobre os do
+// projeto. O horário não existe sem o dia: quem apagou o dia não deixa um horário
+// solto, e quem manda um horário precisa ter o dia.
+func mergeSlot(curDay, curTime, day, at *string, errWithoutDay error) (*string, *string, error) {
+	if day != nil {
+		curDay = nilIfEmpty(day)
+	}
+	if at != nil {
+		curTime = nilIfEmpty(at)
+	}
+	if curDay == nil {
+		if nilIfEmpty(at) != nil {
+			return nil, nil, errWithoutDay
+		}
+		curTime = nil
+	}
+	return curDay, curTime, nil
 }
 
 func nilIfEmpty(v *string) *string {
@@ -58,10 +104,10 @@ func nilIfEmpty(v *string) *string {
 	return v
 }
 
-// Create cria o projeto. Sprint zerada vira 14 dias. Daily e weekly são
-// opcionais: sem horário da daily o projeto não tem daily, e sem dia da weekly
-// não tem weekly (e então o horário da weekly não vale).
-func (s *Service) Create(orgID, name, description string, sprintDurationDays int, dailyTime, weeklySyncDay, weeklySyncTime *string) (*Project, error) {
+// Create cria o projeto. Sprint zerada vira 14 dias. Daily, weekly e reunião com o
+// cliente são opcionais: sem horário da daily o projeto não tem daily, e sem dia da
+// weekly ou da reunião não tem uma nem outra (e então o horário delas não vale).
+func (s *Service) Create(orgID, name, description string, sprintDurationDays int, routine Routine) (*Project, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
 		return nil, ErrNameRequired
@@ -76,25 +122,22 @@ func (s *Service) Create(orgID, name, description string, sprintDurationDays int
 	if sprintDurationDays < 1 || sprintDurationDays > 90 {
 		return nil, ErrInvalidSprint
 	}
-	dailyTime, weeklySyncDay, weeklySyncTime = optional(dailyTime), optional(weeklySyncDay), optional(weeklySyncTime)
-	if err := validateSchedule(dailyTime, weeklySyncDay, weeklySyncTime); err != nil {
+	routine = routine.normalized()
+	if err := routine.validate(); err != nil {
 		return nil, err
-	}
-	if weeklySyncDay != nil {
-		lower := strings.ToLower(*weeklySyncDay)
-		weeklySyncDay = &lower
-	}
-	if nilIfEmpty(weeklySyncDay) == nil && nilIfEmpty(weeklySyncTime) != nil {
-		return nil, ErrWeeklyTimeWithoutDay
 	}
 	project := &Project{
 		OrganizationID:     orgUID,
 		Name:               name,
 		Description:        strings.TrimSpace(description),
 		SprintDurationDays: sprintDurationDays,
-		DailyTime:          nilIfEmpty(dailyTime),
-		WeeklySyncDay:      nilIfEmpty(weeklySyncDay),
-		WeeklySyncTime:     nilIfEmpty(weeklySyncTime),
+		DailyTime:          nilIfEmpty(routine.DailyTime),
+	}
+	if project.WeeklySyncDay, project.WeeklySyncTime, err = mergeSlot(nil, nil, routine.WeeklySyncDay, routine.WeeklySyncTime, ErrWeeklyTimeWithoutDay); err != nil {
+		return nil, err
+	}
+	if project.CustomerMeetingDay, project.CustomerMeetingTime, err = mergeSlot(nil, nil, routine.CustomerMeetingDay, routine.CustomerMeetingTime, ErrMeetingTimeWithoutDay); err != nil {
+		return nil, err
 	}
 	if err := s.store.Create(project); err != nil {
 		return nil, err
@@ -112,8 +155,8 @@ func (s *Service) Get(id string) (*Project, error) {
 
 // Update altera o projeto. Nos campos opcionais, nil mantém o valor atual e
 // texto vazio apaga; sprintDurationDays igual a zero mantém a duração atual.
-// Apagar o dia da weekly apaga também o horário dela.
-func (s *Service) Update(id, name, description string, sprintDurationDays int, dailyTime, weeklySyncDay, weeklySyncTime *string) (*Project, error) {
+// Apagar o dia da weekly ou da reunião apaga também o horário.
+func (s *Service) Update(id, name, description string, sprintDurationDays int, routine Routine) (*Project, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
 		return nil, ErrNameRequired
@@ -121,8 +164,8 @@ func (s *Service) Update(id, name, description string, sprintDurationDays int, d
 	if sprintDurationDays < 0 || sprintDurationDays > 90 {
 		return nil, ErrInvalidSprint
 	}
-	dailyTime, weeklySyncDay, weeklySyncTime = optional(dailyTime), optional(weeklySyncDay), optional(weeklySyncTime)
-	if err := validateSchedule(dailyTime, weeklySyncDay, weeklySyncTime); err != nil {
+	routine = routine.normalized()
+	if err := routine.validate(); err != nil {
 		return nil, err
 	}
 	project, err := s.store.GetByID(id)
@@ -134,23 +177,14 @@ func (s *Service) Update(id, name, description string, sprintDurationDays int, d
 	if sprintDurationDays > 0 {
 		project.SprintDurationDays = sprintDurationDays
 	}
-	if dailyTime != nil {
-		project.DailyTime = nilIfEmpty(dailyTime)
+	if routine.DailyTime != nil {
+		project.DailyTime = nilIfEmpty(routine.DailyTime)
 	}
-	if weeklySyncDay != nil {
-		lower := strings.ToLower(*weeklySyncDay)
-		project.WeeklySyncDay = nilIfEmpty(&lower)
+	if project.WeeklySyncDay, project.WeeklySyncTime, err = mergeSlot(project.WeeklySyncDay, project.WeeklySyncTime, routine.WeeklySyncDay, routine.WeeklySyncTime, ErrWeeklyTimeWithoutDay); err != nil {
+		return nil, err
 	}
-	if weeklySyncTime != nil {
-		project.WeeklySyncTime = nilIfEmpty(weeklySyncTime)
-	}
-	// O horário da weekly não existe sem o dia: quem apagou a weekly não deixa
-	// um horário solto, e quem manda um horário precisa ter o dia.
-	if project.WeeklySyncDay == nil {
-		if nilIfEmpty(weeklySyncTime) != nil {
-			return nil, ErrWeeklyTimeWithoutDay
-		}
-		project.WeeklySyncTime = nil
+	if project.CustomerMeetingDay, project.CustomerMeetingTime, err = mergeSlot(project.CustomerMeetingDay, project.CustomerMeetingTime, routine.CustomerMeetingDay, routine.CustomerMeetingTime, ErrMeetingTimeWithoutDay); err != nil {
+		return nil, err
 	}
 	if err := s.store.Update(project); err != nil {
 		return nil, err

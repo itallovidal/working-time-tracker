@@ -33,6 +33,10 @@ const (
 	FieldWeeklySyncDay = "weekly_sync_day"
 	// FieldWeeklySyncTime holds the string denoting the weekly_sync_time field in the database.
 	FieldWeeklySyncTime = "weekly_sync_time"
+	// FieldCustomerMeetingDay holds the string denoting the customer_meeting_day field in the database.
+	FieldCustomerMeetingDay = "customer_meeting_day"
+	// FieldCustomerMeetingTime holds the string denoting the customer_meeting_time field in the database.
+	FieldCustomerMeetingTime = "customer_meeting_time"
 	// FieldCustomerID holds the string denoting the customer_id field in the database.
 	FieldCustomerID = "customer_id"
 	// FieldBillRateCents holds the string denoting the bill_rate_cents field in the database.
@@ -118,6 +122,8 @@ var Columns = []string{
 	FieldDailyTime,
 	FieldWeeklySyncDay,
 	FieldWeeklySyncTime,
+	FieldCustomerMeetingDay,
+	FieldCustomerMeetingTime,
 	FieldCustomerID,
 	FieldBillRateCents,
 	FieldCreatedAt,
@@ -195,6 +201,16 @@ func ByWeeklySyncDay(opts ...sql.OrderTermOption) OrderOption {
 // ByWeeklySyncTime orders the results by the weekly_sync_time field.
 func ByWeeklySyncTime(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldWeeklySyncTime, opts...).ToFunc()
+}
+
+// ByCustomerMeetingDay orders the results by the customer_meeting_day field.
+func ByCustomerMeetingDay(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCustomerMeetingDay, opts...).ToFunc()
+}
+
+// ByCustomerMeetingTime orders the results by the customer_meeting_time field.
+func ByCustomerMeetingTime(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCustomerMeetingTime, opts...).ToFunc()
 }
 
 // ByCustomerID orders the results by the customer_id field.

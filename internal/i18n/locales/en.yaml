@@ -251,6 +251,7 @@ org:
       other: "{{.count}}-day sprint"
     daily_badge: "Daily {{.time}}"
     weekly_badge: "Weekly {{.slot}}"
+    meeting_badge: "Meeting {{.slot}}"
     customers_load_failed: "Could not load the customers: {{.error}}"
     rate_invalid: Enter the rate billed per hour, for example 150.00.
     rate_too_high: The rate billed per hour must be between 0 and 1,000,000.00.
@@ -285,6 +286,11 @@ project:
     pick_day: Pick the day
     no_daily: No daily
     no_weekly: No weekly
+    has_meeting: Has a weekly meeting with the customer
+    meeting: Customer meeting
+    meeting_day: Meeting day
+    meeting_time: Meeting time
+    no_meeting: No meeting
     bill_rate: "Rate billed per hour ({{.unit}})"
 
 tasks:
@@ -849,7 +855,9 @@ errors:
     invalid_daily_time: "the daily time must use the HH:MM format, for example 09:30"
     invalid_organization: "invalid organization"
     invalid_sprint: "the sprint must be between 1 and 90 days long"
-    invalid_weekday: "invalid weekly day: use monday, tuesday, wednesday, thursday, friday, saturday or sunday"
+    invalid_weekday: "invalid weekday: use monday, tuesday, wednesday, thursday, friday, saturday or sunday"
+    invalid_customer_meeting_time: "the customer meeting time must use the HH:MM format, for example 10:30"
+    customer_meeting_time_without_day: "the customer meeting time needs the meeting day"
     invalid_weekly_time: "the weekly time must use the HH:MM format, for example 13:00"
     weekly_time_without_day: "the weekly time needs the weekly day"
     name_required: "enter the project name"

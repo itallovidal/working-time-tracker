@@ -261,6 +261,7 @@ org:
       other: "Sprint de {{.count}} dias"
     daily_badge: "Daily {{.time}}"
     weekly_badge: "Weekly {{.slot}}"
+    meeting_badge: "Reunião {{.slot}}"
     customers_load_failed: "Não deu para carregar os clientes: {{.error}}"
     rate_invalid: Informe o valor cobrado por hora, por exemplo 150,00.
     rate_too_high: O valor cobrado por hora deve ficar entre 0 e 1.000.000,00.
@@ -295,6 +296,11 @@ project:
     pick_day: Escolha o dia
     no_daily: Sem daily
     no_weekly: Sem weekly
+    has_meeting: Possui reunião semanal com o cliente
+    meeting: Reunião com o cliente
+    meeting_day: Dia da reunião
+    meeting_time: Horário da reunião
+    no_meeting: Sem reunião
     bill_rate: "Valor cobrado por hora ({{.unit}})"
 
 tasks:
@@ -859,7 +865,9 @@ errors:
     invalid_daily_time: "o horário da daily deve estar no formato HH:MM, por exemplo 09:30"
     invalid_organization: "organização inválida"
     invalid_sprint: "a sprint precisa ter entre 1 e 90 dias"
-    invalid_weekday: "dia da weekly inválido: use monday, tuesday, wednesday, thursday, friday, saturday ou sunday"
+    invalid_weekday: "dia da semana inválido: use monday, tuesday, wednesday, thursday, friday, saturday ou sunday"
+    invalid_customer_meeting_time: "o horário da reunião com o cliente deve estar no formato HH:MM, por exemplo 10:30"
+    customer_meeting_time_without_day: "o horário da reunião com o cliente precisa do dia da reunião"
     invalid_weekly_time: "o horário da weekly deve estar no formato HH:MM, por exemplo 13:00"
     weekly_time_without_day: "o horário da weekly precisa do dia da weekly"
     name_required: "informe o nome do projeto"

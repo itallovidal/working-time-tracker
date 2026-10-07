@@ -99,7 +99,7 @@ func TestService_DeleteRefusedWithProjects(t *testing.T) {
 	svc, projSvc, orgID := setup(t)
 	created, _ := svc.Create(orgID, customer.Input{Name: ptr("Empresa A")})
 	id := created.ID.String()
-	proj, _ := projSvc.Create(orgID, "Projeto X", "", 0, nil, nil, nil)
+	proj, _ := projSvc.Create(orgID, "Projeto X", "", 0, project.Routine{})
 	if _, err := projSvc.SetBilling(proj.ID.String(), &id, ptr(10000)); err != nil {
 		t.Fatalf("set billing: %v", err)
 	}

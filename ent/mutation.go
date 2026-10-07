@@ -7407,6 +7407,8 @@ type ProjectMutation struct {
 	daily_time              *string
 	weekly_sync_day         *string
 	weekly_sync_time        *string
+	customer_meeting_day    *string
+	customer_meeting_time   *string
 	bill_rate_cents         *int
 	addbill_rate_cents      *int
 	created_at              *time.Time
@@ -7961,6 +7963,104 @@ func (m *ProjectMutation) ResetWeeklySyncTime() {
 	delete(m.clearedFields, project.FieldWeeklySyncTime)
 }
 
+// SetCustomerMeetingDay sets the "customer_meeting_day" field.
+func (m *ProjectMutation) SetCustomerMeetingDay(s string) {
+	m.customer_meeting_day = &s
+}
+
+// CustomerMeetingDay returns the value of the "customer_meeting_day" field in the mutation.
+func (m *ProjectMutation) CustomerMeetingDay() (r string, exists bool) {
+	v := m.customer_meeting_day
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCustomerMeetingDay returns the old "customer_meeting_day" field's value of the Project entity.
+// If the Project object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProjectMutation) OldCustomerMeetingDay(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCustomerMeetingDay is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCustomerMeetingDay requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCustomerMeetingDay: %w", err)
+	}
+	return oldValue.CustomerMeetingDay, nil
+}
+
+// ClearCustomerMeetingDay clears the value of the "customer_meeting_day" field.
+func (m *ProjectMutation) ClearCustomerMeetingDay() {
+	m.customer_meeting_day = nil
+	m.clearedFields[project.FieldCustomerMeetingDay] = struct{}{}
+}
+
+// CustomerMeetingDayCleared returns if the "customer_meeting_day" field was cleared in this mutation.
+func (m *ProjectMutation) CustomerMeetingDayCleared() bool {
+	_, ok := m.clearedFields[project.FieldCustomerMeetingDay]
+	return ok
+}
+
+// ResetCustomerMeetingDay resets all changes to the "customer_meeting_day" field.
+func (m *ProjectMutation) ResetCustomerMeetingDay() {
+	m.customer_meeting_day = nil
+	delete(m.clearedFields, project.FieldCustomerMeetingDay)
+}
+
+// SetCustomerMeetingTime sets the "customer_meeting_time" field.
+func (m *ProjectMutation) SetCustomerMeetingTime(s string) {
+	m.customer_meeting_time = &s
+}
+
+// CustomerMeetingTime returns the value of the "customer_meeting_time" field in the mutation.
+func (m *ProjectMutation) CustomerMeetingTime() (r string, exists bool) {
+	v := m.customer_meeting_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCustomerMeetingTime returns the old "customer_meeting_time" field's value of the Project entity.
+// If the Project object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProjectMutation) OldCustomerMeetingTime(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCustomerMeetingTime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCustomerMeetingTime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCustomerMeetingTime: %w", err)
+	}
+	return oldValue.CustomerMeetingTime, nil
+}
+
+// ClearCustomerMeetingTime clears the value of the "customer_meeting_time" field.
+func (m *ProjectMutation) ClearCustomerMeetingTime() {
+	m.customer_meeting_time = nil
+	m.clearedFields[project.FieldCustomerMeetingTime] = struct{}{}
+}
+
+// CustomerMeetingTimeCleared returns if the "customer_meeting_time" field was cleared in this mutation.
+func (m *ProjectMutation) CustomerMeetingTimeCleared() bool {
+	_, ok := m.clearedFields[project.FieldCustomerMeetingTime]
+	return ok
+}
+
+// ResetCustomerMeetingTime resets all changes to the "customer_meeting_time" field.
+func (m *ProjectMutation) ResetCustomerMeetingTime() {
+	m.customer_meeting_time = nil
+	delete(m.clearedFields, project.FieldCustomerMeetingTime)
+}
+
 // SetCustomerID sets the "customer_id" field.
 func (m *ProjectMutation) SetCustomerID(u uuid.UUID) {
 	m.customer = &u
@@ -8474,7 +8574,7 @@ func (m *ProjectMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ProjectMutation) Fields() []string {
-	fields := make([]string, 0, 12)
+	fields := make([]string, 0, 14)
 	if m.organization != nil {
 		fields = append(fields, project.FieldOrganizationID)
 	}
@@ -8501,6 +8601,12 @@ func (m *ProjectMutation) Fields() []string {
 	}
 	if m.weekly_sync_time != nil {
 		fields = append(fields, project.FieldWeeklySyncTime)
+	}
+	if m.customer_meeting_day != nil {
+		fields = append(fields, project.FieldCustomerMeetingDay)
+	}
+	if m.customer_meeting_time != nil {
+		fields = append(fields, project.FieldCustomerMeetingTime)
 	}
 	if m.customer != nil {
 		fields = append(fields, project.FieldCustomerID)
@@ -8537,6 +8643,10 @@ func (m *ProjectMutation) Field(name string) (ent.Value, bool) {
 		return m.WeeklySyncDay()
 	case project.FieldWeeklySyncTime:
 		return m.WeeklySyncTime()
+	case project.FieldCustomerMeetingDay:
+		return m.CustomerMeetingDay()
+	case project.FieldCustomerMeetingTime:
+		return m.CustomerMeetingTime()
 	case project.FieldCustomerID:
 		return m.CustomerID()
 	case project.FieldBillRateCents:
@@ -8570,6 +8680,10 @@ func (m *ProjectMutation) OldField(ctx context.Context, name string) (ent.Value,
 		return m.OldWeeklySyncDay(ctx)
 	case project.FieldWeeklySyncTime:
 		return m.OldWeeklySyncTime(ctx)
+	case project.FieldCustomerMeetingDay:
+		return m.OldCustomerMeetingDay(ctx)
+	case project.FieldCustomerMeetingTime:
+		return m.OldCustomerMeetingTime(ctx)
 	case project.FieldCustomerID:
 		return m.OldCustomerID(ctx)
 	case project.FieldBillRateCents:
@@ -8647,6 +8761,20 @@ func (m *ProjectMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetWeeklySyncTime(v)
+		return nil
+	case project.FieldCustomerMeetingDay:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCustomerMeetingDay(v)
+		return nil
+	case project.FieldCustomerMeetingTime:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCustomerMeetingTime(v)
 		return nil
 	case project.FieldCustomerID:
 		v, ok := value.(uuid.UUID)
@@ -8744,6 +8872,12 @@ func (m *ProjectMutation) ClearedFields() []string {
 	if m.FieldCleared(project.FieldWeeklySyncTime) {
 		fields = append(fields, project.FieldWeeklySyncTime)
 	}
+	if m.FieldCleared(project.FieldCustomerMeetingDay) {
+		fields = append(fields, project.FieldCustomerMeetingDay)
+	}
+	if m.FieldCleared(project.FieldCustomerMeetingTime) {
+		fields = append(fields, project.FieldCustomerMeetingTime)
+	}
 	if m.FieldCleared(project.FieldCustomerID) {
 		fields = append(fields, project.FieldCustomerID)
 	}
@@ -8781,6 +8915,12 @@ func (m *ProjectMutation) ClearField(name string) error {
 		return nil
 	case project.FieldWeeklySyncTime:
 		m.ClearWeeklySyncTime()
+		return nil
+	case project.FieldCustomerMeetingDay:
+		m.ClearCustomerMeetingDay()
+		return nil
+	case project.FieldCustomerMeetingTime:
+		m.ClearCustomerMeetingTime()
 		return nil
 	case project.FieldCustomerID:
 		m.ClearCustomerID()
@@ -8822,6 +8962,12 @@ func (m *ProjectMutation) ResetField(name string) error {
 		return nil
 	case project.FieldWeeklySyncTime:
 		m.ResetWeeklySyncTime()
+		return nil
+	case project.FieldCustomerMeetingDay:
+		m.ResetCustomerMeetingDay()
+		return nil
+	case project.FieldCustomerMeetingTime:
+		m.ResetCustomerMeetingTime()
 		return nil
 	case project.FieldCustomerID:
 		m.ResetCustomerID()
