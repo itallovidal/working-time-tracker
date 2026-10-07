@@ -26,40 +26,21 @@
   </template>
 
   <template x-if="data">
-    <div class="totals">
-      <div class="total">
-        <div class="v" x-text="data.people.total"></div>
-        <div class="k">
-          <span x-text="$t('overview.people', { count: data.people.total })"></span><span x-show="data.people.without_team > 0" x-text="$t('overview.without_team', { count: data.people.without_team })"></span>
-        </div>
-      </div>
-      <div class="total">
-        <div class="v" x-text="data.teams.total"></div>
-        <div class="k" x-text="$t('overview.teams', { count: data.teams.total })"></div>
-      </div>
-      <div class="total">
-        <div class="v" x-text="WTT.fmt.hours(data.time.total_seconds)"></div>
-        <div class="k">{{.T "overview.hours"}}</div>
-      </div>
-      <div class="total">
-        <div class="v" x-text="WTT.fmt.money(data.money.bill_amount_cents)"></div>
-        <div class="k">{{.T "overview.revenue"}}</div>
-      </div>
-      <div class="total">
-        <div class="v" x-text="WTT.fmt.money(data.money.pay_amount_cents)"></div>
-        <div class="k">{{.T "overview.cost"}}</div>
-      </div>
-      <div class="total">
-        <div class="v" :class="data.money.margin_cents < 0 && 'text-danger'" x-text="WTT.fmt.money(data.money.margin_cents)"></div>
-        <div class="k">{{.T "overview.margin"}}<span x-show="marginShare() !== null" x-text="$t('overview.margin_share', { percent: marginShare() })"></span></div>
-      </div>
-    </div>
-  </template>
-
-  <template x-if="data">
     <div class="grid-2 items-stretch">
       <section class="card">
-        <div class="card-head"><h2>{{.T "overview.age_title"}}</h2></div>
+        <div class="card-head"><h2>{{.T "overview.project_title"}}</h2></div>
+        <div class="totals">
+          <div class="total">
+            <div class="v" x-text="data.people.total"></div>
+            <div class="k">
+              <span x-text="$t('overview.people', { count: data.people.total })"></span><span x-show="data.people.without_team > 0" x-text="$t('overview.without_team', { count: data.people.without_team })"></span>
+            </div>
+          </div>
+          <div class="total">
+            <div class="v" x-text="data.teams.total"></div>
+            <div class="k" x-text="$t('overview.teams', { count: data.teams.total })"></div>
+          </div>
+        </div>
         <div class="totals">
           <div class="total">
             <div class="v" x-text="data.project.age.days"></div>
@@ -218,7 +199,7 @@
           </div>
           <div class="total">
             <div class="v" :class="filteredMargin() < 0 && 'text-danger'" x-text="WTT.fmt.money(filteredMargin())"></div>
-            <div class="k">{{.T "time.margin"}}</div>
+            <div class="k">{{.T "time.margin"}}<span x-show="filteredMarginShare() !== null" x-text="$t('overview.margin_share', { percent: filteredMarginShare() })"></span></div>
           </div>
         </div>
       </section>

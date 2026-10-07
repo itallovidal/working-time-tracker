@@ -450,6 +450,14 @@
 
 ---
 
+### Sprint 36: Gestão Overview Without Repeated Numbers
+
+- [X] S36.1 The strip of six totals leaves the top of the Gestão overview; the "Tempo de projeto" card becomes **Projeto** with people, teams, age and dates
+- [X] S36.2 Hours, revenue, cost and margin stay only in the sessions' Totais card, with the margin share of the revenue computed from the filtered totals
+- [X] S36.3 Test for the page (no repeated cards), locale keys cleaned up, README and design updated; checked in the browser
+
+---
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open

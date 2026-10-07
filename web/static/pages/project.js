@@ -304,11 +304,11 @@ document.addEventListener('alpine:init', () => {
         this.sessions = sessions || [];
       });
     },
-    // marginShare é a margem como parte da receita, em por cento inteiro; null
-    // quando não há receita.
-    marginShare() {
-      const margin = this.data.money.margin_cents;
-      const bill = this.data.money.bill_amount_cents;
+    // filteredMarginShare é a margem dos totais da tela como parte da receita, em por
+    // cento inteiro; null quando não há receita.
+    filteredMarginShare() {
+      const margin = this.filteredMargin();
+      const bill = this.filteredAmount('bill');
       return margin === null || !bill ? null : Math.round(margin / bill * 100);
     },
     workingNames() {

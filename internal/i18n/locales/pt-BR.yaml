@@ -673,12 +673,8 @@ overview:
   teams:
     one: Time
     other: Times
-  hours: Horas registradas
-  revenue: Receita
-  cost: Custo
-  margin: Margem (receita menos custo)
   margin_share: " · {{.percent}}% da receita"
-  age_title: Tempo de projeto
+  project_title: Projeto
   days:
     one: Dia
     other: Dias

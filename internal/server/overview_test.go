@@ -130,8 +130,7 @@ func TestPages_ProjectOverviewTab(t *testing.T) {
 	}
 	for _, want := range []string{
 		"Projeto Alfa", `x-data="projectOverview"`, "Atualizar",
-		"Horas registradas", `<div class="k">Receita</div>`, `<div class="k">Custo</div>`, "Margem (receita menos custo)",
-		"<h2>Tempo de projeto</h2>", "<h2>Atividade</h2>", "<h2>Integrações</h2>", "<h2>Tarefas e cliente</h2>", "<h2>Sessões</h2>", `aria-label="Filtrar por pessoa"`, `aria-label="Filtrar por data"`, `aria-label="Filtrar por tarefa"`, "<h3>Totais</h3>", "<th>Pessoa</th>",
+		"<h2>Projeto</h2>", "<h2>Atividade</h2>", "<h2>Integrações</h2>", "<h2>Tarefas e cliente</h2>", "<h2>Sessões</h2>", `aria-label="Filtrar por pessoa"`, `aria-label="Filtrar por data"`, `aria-label="Filtrar por tarefa"`, "<h3>Totais</h3>", "<th>Pessoa</th>",
 		`href="/projects/` + projectID + `/tasks?due=overdue"`, `class="pager"`,
 		// Os tipos de integração vão no BOOT, para a lista mostrar o nome da plataforma.
 		`"integration_types"`,
@@ -139,6 +138,16 @@ func TestPages_ProjectOverviewTab(t *testing.T) {
 		if !strings.Contains(body, want) {
 			t.Errorf("the overview page does not contain %q", want)
 		}
+	}
+	// Receita, custo e margem existem uma vez só como cartão: nos Totais das sessões, e não
+	// também numa faixa no topo que repetiria os mesmos números.
+	for _, card := range []string{`<div class="k">Receita</div>`, `<div class="k">Custo</div>`} {
+		if n := strings.Count(body, card); n != 1 {
+			t.Errorf("the overview page has %d cards %s, want 1", n, card)
+		}
+	}
+	if strings.Contains(body, "Horas registradas") || strings.Contains(body, "Tempo de projeto") {
+		t.Error("the overview page still has the old top strip of totals")
 	}
 	if n := strings.Count(body, `id="modal-root"`); n != 1 {
 		t.Errorf("the overview page has %d modal hosts, want 1", n)

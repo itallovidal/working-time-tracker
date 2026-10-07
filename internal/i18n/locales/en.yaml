@@ -663,12 +663,8 @@ overview:
   teams:
     one: Team
     other: Teams
-  hours: Hours tracked
-  revenue: Revenue
-  cost: Cost
-  margin: Margin (revenue minus cost)
   margin_share: " · {{.percent}}% of the revenue"
-  age_title: Project age
+  project_title: Project
   days:
     one: Day
     other: Days
