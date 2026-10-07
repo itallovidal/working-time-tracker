@@ -122,6 +122,14 @@ document.addEventListener('alpine:init', () => {
     return { label: WTT.fmt.date(iso), cls: '' };
   }
 
+  // taskBadges são as cores e o prazo de uma tarefa para os selos, em todas as telas que os mostram.
+  const taskBadges = {
+    priorityClass,
+    statusClass,
+    deadlineClass: (t) => deadlineInfo(t.deadline).cls,
+    deadlineLabel: (t) => deadlineInfo(t.deadline).label,
+  };
+
   // Atalhos do filtro de prazo da lista de tarefas. 'date' abre o campo de data.
   // "Qualquer prazo" fica fixo no template: uma opção de valor vazio criada por
   // x-for fica sem o atributo value e passa a valer o próprio rótulo.
@@ -642,10 +650,7 @@ document.addEventListener('alpine:init', () => {
       const s = clock().session;
       return !!s && s.project_id !== project.id;
     },
-    priorityClass,
-    statusClass,
-    deadlineClass: (t) => deadlineInfo(t.deadline).cls,
-    deadlineLabel: (t) => deadlineInfo(t.deadline).label,
+    ...taskBadges,
   }));
 
   Alpine.data('taskDetail', () => ({
@@ -964,6 +969,12 @@ document.addEventListener('alpine:init', () => {
     loading: true,
     tasks: [], // só as tarefas da pessoa logada
     taskId: '',
+    ...taskBadges,
+    // O cartão só mostra o prazo que existe, e o de uma tarefa fechada é só a data: "atrasada" ou
+    // "vence amanhã" não se aplicam ao que já terminou.
+    hasDeadline: (t) => !!t.deadline && new Date(t.deadline).getFullYear() >= 1971,
+    cardDeadlineClass: (t) => (t.status === 'closed' ? '' : deadlineInfo(t.deadline).cls),
+    cardDeadlineLabel: (t) => (t.status === 'closed' ? WTT.fmt.date(t.deadline) : deadlineInfo(t.deadline).label),
     myRate: null, // quanto a pessoa logada recebe por hora aqui; null se ainda não tem valor
     async init() {
       this.watchSessionFilters();

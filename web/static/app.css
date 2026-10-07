@@ -564,12 +564,20 @@ td.actions { text-align: right; white-space: nowrap; }
 .clock-face.running { color: var(--accent); }
 .clock-value { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 1.4rem; font-weight: 600; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .clock-value .small { font-family: inherit; font-weight: 400; }
-/* As tarefas da pessoa no Início: um cartão pequeno por tarefa. */
-.task-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+/* As tarefas da pessoa no Início: um cartão por tarefa, com a linha da esquerda na cor da prioridade
+   (as mesmas `.tone` e `.prio-*` dos selos; sem prioridade, a linha é cinza), o selo de status, o
+   prazo e as etiquetas. */
+.task-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 12px; }
 .task-card {
-  background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius);
-  padding: 14px 16px; display: flex; flex-direction: column; justify-content: space-between; gap: 12px; min-width: 0;
+  background: var(--surface); border: 1px solid var(--rule); border-left: 4px solid var(--tone-line, var(--tone));
+  border-radius: var(--radius);
+  padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; min-width: 0;
 }
+.task-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.task-card-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.task-card .label-list { margin-top: 0; }
+/* Os botões ficam no pé do cartão, e o resto junto no topo, qualquer que seja a altura da fileira. */
+.task-card-actions { margin-top: auto; padding-top: 2px; }
 /* Etiquetas: os selos sob o nome da tarefa e as caixas de escolha dos modais. */
 .label-list { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
 .label-picks { display: flex; flex-wrap: wrap; gap: 6px; }

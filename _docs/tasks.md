@@ -626,6 +626,15 @@
 
 ---
 
+### Sprint 54: Richer Task Cards on the Project Início
+
+- [X] S54.1 The task cards of "Suas tarefas" on the project Início have a left line (4px) in the priority colour (`.tone` and `.prio-*`, the same as the badges; no priority is the grey line), the priority name in the card's `title` and in a screen-reader-only text, the name, the status badge (`.status-*`), the deadline and the labels
+- [X] S54.2 The deadline badge shows only when there is one, with the overdue (red) and due-in-48h (yellow) cues of the lists; on a closed task it is only the date, because "overdue" does not apply to what is finished
+- [X] S54.3 The running badge moves to the top right of the card, the buttons stay at the bottom whatever the height of the row (`task-card-actions`), the cards are at least 270px wide, and the priority, status and deadline helpers are one `taskBadges` shared by the Início and Minhas tarefas
+- [X] S54.4 Tests that read `app.css`, the template and `project.js` (the left line is the priority colour and no literal colour, the card shows priority, status, deadline and labels, and every name the card calls exists in the script), with three mutation checks; checked in the browser (every priority and status, overdue, due soon, far, none and closed deadlines, no and several labels, running, light, dark, English, phone); update README and design; no API, route or migration change
+
+---
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open
