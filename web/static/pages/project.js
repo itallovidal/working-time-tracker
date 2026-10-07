@@ -347,14 +347,17 @@ document.addEventListener('alpine:init', () => {
     },
   }));
 
+  // As duas listas da página de tarefas: as que ninguém pegou e as que já têm responsável.
+  const taskLists = ['free', 'taken'];
+  const emptyList = () => ({ tasks: [], total: 0, page: 1, perPage: 10 });
+
   Alpine.data('projectTasks', () => ({
     ...form(),
     ...taskWizard(),
     loading: true,
-    tasks: [], // só a página em uso; os filtros e a paginação rodam no servidor
-    total: 0,
-    page: 1,
-    perPage: 10,
+    // Cada lista guarda só a página em uso; os filtros e a paginação rodam no servidor.
+    lists: { free: emptyList(), taken: emptyList() },
+    taskLists,
     ...labelTools(),
     members: [], // quem está no projeto: pode ser responsável por tarefa nova
     assignees: [], // quem já é responsável por alguma tarefa, mesmo fora dos times
@@ -379,14 +382,14 @@ document.addEventListener('alpine:init', () => {
       // Bater o ponto numa tarefa sem responsável a passa para quem bateu.
       window.addEventListener('wtt:sessions-changed', () => this.load());
     },
-    // A URL guarda os filtros e a página, para recarregar ou voltar do detalhe
+    // A URL guarda os filtros e a página de cada lista, para recarregar ou voltar do detalhe
     // de uma tarefa sem perder o lugar. O prazo vai como o nome do atalho ou a
     // data escolhida, nunca como instante.
     readURL() {
       const p = new URLSearchParams(location.search);
       const due = p.get('due') || '';
       const isDate = /^\d{4}-\d{2}-\d{2}$/.test(due);
-      const assignee = /^([0-9a-f-]{36}|none)$/i.test(p.get('assignee') || '') ? p.get('assignee') : '';
+      const assignee = /^[0-9a-f-]{36}$/i.test(p.get('assignee') || '') ? p.get('assignee') : '';
       const mine = p.get('mine') === '1';
       this.filters = {
         q: mine ? '' : (p.get('q') || ''),
@@ -398,7 +401,9 @@ document.addEventListener('alpine:init', () => {
         status: (p.get('status') || '').split(',').filter((v) => WTT.taskStatuses.some((o) => o.value === v)),
         label: (p.get('label') || '').split(',').filter((v) => /^[0-9a-f-]{36}$/i.test(v)),
       };
-      this.page = Math.max(1, parseInt(p.get('page'), 10) || 1);
+      taskLists.forEach((key) => {
+        this.lists[key].page = Math.max(1, parseInt(p.get(key + '_page'), 10) || 1);
+      });
     },
     writeURL() {
       const f = this.filters;
@@ -414,7 +419,9 @@ document.addEventListener('alpine:init', () => {
       if (f.priority.length) p.set('priority', f.priority.join(','));
       if (f.status.length) p.set('status', f.status.join(','));
       if (f.label.length) p.set('label', f.label.join(','));
-      if (this.page > 1) p.set('page', this.page);
+      taskLists.forEach((key) => {
+        if (this.lists[key].page > 1) p.set(key + '_page', this.lists[key].page);
+      });
       const query = p.toString();
       history.replaceState(null, '', location.pathname + (query ? '?' + query : ''));
       try {
@@ -423,41 +430,60 @@ document.addEventListener('alpine:init', () => {
         // Sem sessionStorage o Voltar da tarefa só deixa de lembrar os filtros.
       }
     },
-    // load busca a página em uso. Não passa por run(), que descartaria uma
-    // troca de filtro feita durante outra ação, e ignora a resposta de um
-    // pedido mais antigo que o último.
-    async load() {
-      const seq = ++this.seq;
+    // A lista das sem responsável some quando se escolhe uma pessoa: ela já tem dono.
+    listShown(key) {
+      return key === 'taken' || !this.filters.assignee;
+    },
+    // loadList busca a página em uso de uma lista: a das sem responsável pede assignee_id=none,
+    // e a das com responsável, a pessoa escolhida ou qualquer uma (any).
+    async loadList(key) {
       const f = this.filters;
-      const p = new URLSearchParams({ page: this.page });
+      const list = this.lists[key];
+      const p = new URLSearchParams({ page: list.page });
       if (f.q.trim()) p.set('q', f.q.trim());
-      if (f.assignee) p.set('assignee_id', f.assignee);
+      p.set('assignee_id', key === 'free' ? 'none' : (f.assignee || 'any'));
       const limit = dueLimit(f.due, f.date);
       if (limit) p.set('deadline_to', limit);
       if (f.priority.length) p.set('priority', f.priority.join(','));
       if (f.status.length) p.set('status', f.status.join(','));
       if (f.label.length) p.set('label_id', f.label.join(','));
+      return api('GET', '/api/projects/' + project.id + '/tasks?' + p);
+    },
+    // load busca a página em uso das duas listas. Não passa por run(), que descartaria uma
+    // troca de filtro feita durante outra ação, e ignora a resposta de um
+    // pedido mais antigo que o último.
+    async load() {
+      const seq = ++this.seq;
       try {
-        const res = await api('GET', '/api/projects/' + project.id + '/tasks?' + p);
+        const keys = taskLists.filter((key) => this.listShown(key));
+        const results = await Promise.all(keys.map((key) => this.loadList(key)));
         if (seq !== this.seq) return;
-        this.tasks = res.items || [];
-        this.total = res.total;
-        this.page = res.page; // o servidor devolve a última quando a pedida não existe mais
-        this.perPage = res.per_page;
-        this.assignees = res.assignees || [];
+        taskLists.forEach((key) => {
+          if (!keys.includes(key)) this.lists[key] = { ...emptyList(), page: 1 };
+        });
+        keys.forEach((key, i) => {
+          const res = results[i];
+          this.lists[key] = {
+            tasks: res.items || [],
+            total: res.total,
+            page: res.page, // o servidor devolve a última quando a pedida não existe mais
+            perPage: res.per_page,
+          };
+          this.assignees = res.assignees || [];
+        });
         this.errors.load = '';
         this.writeURL();
       } catch (e) {
         if (seq === this.seq) this.errors.load = e.message;
       }
     },
-    // apply é o que os filtros chamam ao mudar: volta para a primeira página.
+    // apply é o que os filtros chamam ao mudar: as duas listas voltam para a primeira página.
     apply() {
-      this.page = 1;
+      taskLists.forEach((key) => { this.lists[key].page = 1; });
       return this.load();
     },
-    go(page) {
-      this.page = page;
+    go(key, page) {
+      this.lists[key].page = page;
       return this.load();
     },
     clear() {
@@ -484,11 +510,12 @@ document.addEventListener('alpine:init', () => {
       const f = this.filters;
       return !!(f.q.trim() || f.assignee || dueLimit(f.due, f.date) || f.priority.length || f.status.length || f.label.length);
     },
-    pages() {
-      return Math.max(1, Math.ceil(this.total / this.perPage));
+    pages(key) {
+      const l = this.lists[key];
+      return Math.max(1, Math.ceil(l.total / l.perPage));
     },
-    summary() {
-      return WTT.t('tasks.summary', { page: this.page, pages: this.pages(), count: this.total });
+    summary(key) {
+      return WTT.t('tasks.summary', { page: this.lists[key].page, pages: this.pages(key), count: this.lists[key].total });
     },
     // Quem aparece no filtro de responsável: os times, quem tem tarefa aqui e a
     // própria pessoa, para o campo mostrar o nome dela com "Só as minhas" ligada.
@@ -520,9 +547,9 @@ document.addEventListener('alpine:init', () => {
           label_ids: this.draft.label_ids,
         });
         Alpine.store('modal').close();
-        // A tarefa nova é a primeira da lista, se os filtros em uso a mostrarem.
+        // A tarefa nova é a primeira da lista dela, se os filtros em uso a mostrarem.
         await this.apply();
-        const shown = this.tasks.some((x) => x.id === t.id);
+        const shown = taskLists.some((key) => this.lists[key].tasks.some((x) => x.id === t.id));
         toast(shown ? WTT.t('tasks.created') : WTT.t('tasks.created_hidden'));
       });
     },
@@ -533,6 +560,53 @@ document.addEventListener('alpine:init', () => {
     deadlineClass: (t) => deadlineInfo(t.deadline).cls,
     deadlineLabel: (t) => deadlineInfo(t.deadline).label,
     externalLabel,
+  }));
+
+  // Minhas tarefas: as tarefas de que a pessoa é responsável, numa lista por status, na ordem
+  // em que o trabalho costuma andar. O que já fechou começa recolhido, porque só cresce.
+  Alpine.data('projectMyTasks', () => ({
+    ...form(),
+    loading: true,
+    tasks: [],
+    // A ordem de quem organiza o dia: o que está andando primeiro, e o que já fechou por último.
+    statuses: ['in_progress', 'backlog', 'awaiting_closure', 'closed'].map((v) => WTT.taskStatuses.find((s) => s.value === v)),
+    open: { in_progress: true, backlog: true, awaiting_closure: true, closed: false },
+    async init() {
+      await this.load();
+      this.loading = false;
+      // Bater o ponto ou parar mexe no status das tarefas daqui.
+      window.addEventListener('wtt:sessions-changed', () => this.load());
+    },
+    async load() {
+      try {
+        this.tasks = (await api('GET', '/api/projects/' + project.id + '/tasks?assignee_id=' + me.id)) || [];
+        this.errors.load = '';
+      } catch (e) {
+        this.errors.load = e.message;
+      }
+    },
+    // inStatus devolve as tarefas de um status, com o prazo mais perto primeiro.
+    inStatus(status) {
+      const time = (t) => (new Date(t.deadline).getFullYear() < 1971 ? Infinity : new Date(t.deadline).getTime());
+      return this.tasks.filter((t) => t.status === status).sort((a, b) => time(a) - time(b));
+    },
+    toggle(status) {
+      this.open[status] = !this.open[status];
+    },
+    start(t) {
+      return this.run('clock', async () => {
+        await clock().clockIn(project.id, t.id);
+        toast(WTT.t('tasks.started', { name: t.name }));
+      });
+    },
+    isRunning(t) {
+      const s = clock().session;
+      return !!s && s.task_id === t.id;
+    },
+    priorityClass,
+    statusClass,
+    deadlineClass: (t) => deadlineInfo(t.deadline).cls,
+    deadlineLabel: (t) => deadlineInfo(t.deadline).label,
   }));
 
   Alpine.data('taskDetail', () => ({

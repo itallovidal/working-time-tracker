@@ -910,6 +910,42 @@
       "body": {}
     },
     {
+      "_id": "req_06_17",
+      "_type": "request",
+      "parentId": "fld_06",
+      "name": "Listar tarefas sem responsável",
+      "method": "GET",
+      "url": "{{base_url}}/api/projects/{{project_id}}/tasks?assignee_id=none&page=1",
+      "authentication": {},
+      "metaSortKey": 17,
+      "headers": [],
+      "body": {}
+    },
+    {
+      "_id": "req_06_18",
+      "_type": "request",
+      "parentId": "fld_06",
+      "name": "Listar tarefas com responsável",
+      "method": "GET",
+      "url": "{{base_url}}/api/projects/{{project_id}}/tasks?assignee_id=any&page=1",
+      "authentication": {},
+      "metaSortKey": 18,
+      "headers": [],
+      "body": {}
+    },
+    {
+      "_id": "req_06_19",
+      "_type": "request",
+      "parentId": "fld_06",
+      "name": "Minhas tarefas (todas, sem página)",
+      "method": "GET",
+      "url": "{{base_url}}/api/projects/{{project_id}}/tasks?assignee_id={{person_id}}",
+      "authentication": {},
+      "metaSortKey": 19,
+      "headers": [],
+      "body": {}
+    },
+    {
       "_id": "fld_07",
       "_type": "request_group",
       "parentId": "__workspace__",

@@ -54,7 +54,8 @@ titles:
   overview: Gestão · Visão geral
   my_overview: Início
   collaborators: Colaboradores
-  tasks: Quadro de tarefas
+  tasks: Lista de tarefas
+  my_tasks: Minhas tarefas
   teams: Gestão · Colaboradores
   integrations: Gestão · Integrações
   project_settings: Gestão · Configurações
@@ -336,7 +337,8 @@ project:
     projects: Projetos
     sections: Seções do projeto
     overview: Visão geral
-    tasks: Quadro de tarefas
+    tasks: Lista de tarefas
+    my_tasks: Minhas tarefas
     home: Início
     teams: Colaboradores
     integrations: Integrações
@@ -419,8 +421,15 @@ tasks:
   new: Nova tarefa
   loading: Carregando tarefas…
   none_filtered: Nenhuma tarefa com esses filtros
-  none: Nenhuma tarefa ainda
-  none_text: Crie uma tarefa para começar a registrar tempo nela.
+  lede: Aqui estão as tarefas que ninguém pegou, para o time escolher e bater o ponto, e logo abaixo as que já têm responsável.
+  section_free: Sem responsável
+  section_free_hint: Ninguém pegou estas tarefas. Quem bater o ponto numa delas passa a ser o responsável.
+  section_taken: Com responsável
+  section_taken_hint: Tarefas que já estão com alguém.
+  free_none: Nenhuma tarefa livre. Todas as tarefas do projeto têm responsável.
+  taken_none: Nenhuma tarefa com responsável ainda.
+  pager_free: Páginas das tarefas sem responsável
+  pager_taken: Páginas das tarefas com responsável
   col_task: Tarefa
   col_assignee: Responsável
   col_deadline: Prazo
@@ -451,10 +460,21 @@ tasks:
     next_week: Até o fim da semana que vem
     date: Até uma data…
 
+my_tasks:
+  lede: Tudo o que está com você, separado por status, para organizar o seu trabalho. O que ninguém pegou fica na lista de tarefas.
+  none: Você não tem tarefas neste projeto.
+  none_text: Pegue uma disponível na lista de tarefas.
+  none_link: Ver a lista de tarefas
+  empty: Nenhuma tarefa neste status.
+  count:
+    one: "{{.count}} tarefa"
+    other: "{{.count}} tarefas"
+  loading: Carregando as suas tarefas…
+
 task_detail:
   loading: Carregando a tarefa…
   edit_title: Editar tarefa
-  back: Voltar ao quadro
+  back: Voltar à lista
   breadcrumb: Você está em
   no_description: Esta tarefa não tem descrição.
   delete_confirm: Excluir a tarefa? O tempo registrado nela também é apagado.
@@ -494,7 +514,7 @@ time:
   stop: Parar
   stopped: Parado
   no_tasks: Você não tem tarefas neste projeto.
-  create_task: Pegue uma disponível no quadro de tarefas.
+  create_task: Pegue uma disponível na lista de tarefas.
   task: Tarefa
   start: Iniciar
   yours: Seu tempo neste projeto

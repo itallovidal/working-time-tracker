@@ -85,6 +85,11 @@ func (h *Handler) Tasks(c *echo.Context) error {
 	return h.projectPage(c, "project_tasks", "titles.tasks", "tasks", h.integrationTypes(c))
 }
 
+// MyTasks é a aba Minhas tarefas: as tarefas de que a pessoa é responsável, em listas por status.
+func (h *Handler) MyTasks(c *echo.Context) error {
+	return h.projectPage(c, "project_my_tasks", "titles.my_tasks", "mine", nil)
+}
+
 // ToHome é o caminho antigo do Ponto, que passou para o Início do projeto.
 func (h *Handler) ToHome(c *echo.Context) error {
 	return c.Redirect(http.StatusSeeOther, "/projects/"+c.Param("projectId")+"/"+projectHome())

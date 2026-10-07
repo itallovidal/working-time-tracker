@@ -2,6 +2,9 @@
 <main class="page" x-data="projectTasks">
   {{template "project_head" .}}
 
+  {{/* O que esta página é: onde o time acha o que ninguém pegou e, logo abaixo, o que já tem dono. */}}
+  <p class="lede muted">{{.T "tasks.lede"}}</p>
+
   <div class="toolbar">
     <div class="stack">
       <div class="row filters">
@@ -9,7 +12,6 @@
                x-model="filters.q" @input.debounce.300ms="apply()" :disabled="filters.mine">
         <select aria-label="{{.T "tasks.assignee_filter"}}" x-model="filters.assignee" @change="apply()" :disabled="filters.mine">
           <option value="">{{.T "tasks.all_assignees"}}</option>
-          <option value="none" :selected="filters.assignee === 'none'">{{.T "tasks.unassigned"}}</option>
           <template x-for="p in assigneeOptions()" :key="p.id">
             <option :value="p.id" x-text="p.name" :selected="p.id === filters.assignee"></option>
           </template>
@@ -56,67 +58,86 @@
   <p class="form-error" x-cloak x-show="errors.load || errors.members" x-text="errors.load || errors.members"></p>
   <p class="form-error" x-cloak x-show="errors.clock" x-text="errors.clock" role="alert"></p>
 
-  <div class="empty" x-cloak x-show="!loading && !errors.load && total === 0 && hasFilters()">
-    <strong>{{.T "tasks.none_filtered"}}</strong>
+  <div class="row" x-cloak x-show="!loading && hasFilters()">
     <button type="button" class="btn btn-secondary btn-sm" @click="clear()">{{.T "common.clear_filters"}}</button>
   </div>
-  <div class="empty" x-cloak x-show="!loading && !errors.load && total === 0 && !hasFilters()">
-    <strong>{{.T "tasks.none"}}</strong>
-    <span>{{.T "tasks.none_text"}}</span>
-  </div>
 
-  <div class="table-wrap" x-show="tasks.length > 0">
-    <table>
-      <thead>
-        <tr><th>{{.T "tasks.col_task"}}</th><th>{{.T "tasks.col_status"}}</th><th>{{.T "tasks.col_priority"}}</th><th>{{.T "tasks.col_assignee"}}</th><th>{{.T "tasks.col_deadline"}}</th><th>{{.T "tasks.col_external"}}</th><th class="actions"><span class="sr-only">{{.T "tasks.col_details"}}</span></th></tr>
-      </thead>
-      <tbody>
-        <template x-for="t in tasks" :key="t.id">
-          <tr>
-            <td>
-              <a :href="'/tasks/' + t.id" x-text="t.name"></a>
-              <div class="label-list" x-show="t.labels && t.labels.length > 0">
-                <template x-for="l in t.labels" :key="l.id"><span class="badge" x-text="l.name"></span></template>
-              </div>
-            </td>
-            <td>
-              <span class="badge" :class="statusClass(t.status)" x-text="WTT.fmt.taskStatus(t.status)"></span>
-            </td>
-            <td>
-              <span class="badge" :class="priorityClass(t.priority)" x-show="t.priority !== 'none'" x-text="WTT.fmt.priority(t.priority)"></span>
-              <span class="muted" x-show="t.priority === 'none'">—</span>
-            </td>
-            <td>
-              <span x-show="t.assignee" x-text="t.assignee ? t.assignee.name : ''"></span>
-              <span class="badge" x-show="!t.assignee">{{.T "tasks.unassigned"}}</span>
-            </td>
-            <td>
-              <span class="badge num" :class="deadlineClass(t)" x-text="deadlineLabel(t)"></span>
-            </td>
-            <td>
-              <template x-if="t.external_item_id">
-                <a class="badge badge-accent" :href="t.external_item_url" target="_blank" rel="noopener"
-                   x-text="externalLabel(t)"></a>
+  {{/* Duas listas, cada uma com a sua página: as sem responsável, para o time pegar, e as que já têm dono.
+       Escolher uma pessoa no filtro esconde a primeira, que por definição não tem dono. */}}
+  <div class="stack stack-sections" x-cloak x-show="!loading">
+    <template x-for="key in taskLists" :key="key">
+      <section class="stack" x-show="listShown(key)" :aria-labelledby="'tasks-' + key + '-title'">
+        <div class="section-head">
+          <div class="row row-tight">
+            <h2 :id="'tasks-' + key + '-title'" x-text="key === 'free' ? $t('tasks.section_free') : $t('tasks.section_taken')"></h2>
+            <span class="badge num" x-text="lists[key].total"></span>
+          </div>
+          <p class="muted small" x-text="key === 'free' ? $t('tasks.section_free_hint') : $t('tasks.section_taken_hint')"></p>
+        </div>
+
+        <div class="empty" x-show="lists[key].total === 0">
+          <strong x-text="hasFilters() ? $t('tasks.none_filtered') : (key === 'free' ? $t('tasks.free_none') : $t('tasks.taken_none'))"></strong>
+        </div>
+
+        <div class="table-wrap" x-show="lists[key].tasks.length > 0">
+          <table>
+            <thead>
+              <tr>
+                <th>{{.T "tasks.col_task"}}</th><th>{{.T "tasks.col_status"}}</th><th>{{.T "tasks.col_priority"}}</th>
+                <th x-show="key === 'taken'">{{.T "tasks.col_assignee"}}</th>
+                <th>{{.T "tasks.col_deadline"}}</th><th>{{.T "tasks.col_external"}}</th>
+                <th class="actions"><span class="sr-only">{{.T "tasks.col_details"}}</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="t in lists[key].tasks" :key="t.id">
+                <tr>
+                  <td>
+                    <a :href="'/tasks/' + t.id" x-text="t.name"></a>
+                    <div class="label-list" x-show="t.labels && t.labels.length > 0">
+                      <template x-for="l in t.labels" :key="l.id"><span class="badge" x-text="l.name"></span></template>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="badge" :class="statusClass(t.status)" x-text="WTT.fmt.taskStatus(t.status)"></span>
+                  </td>
+                  <td>
+                    <span class="badge" :class="priorityClass(t.priority)" x-show="t.priority !== 'none'" x-text="WTT.fmt.priority(t.priority)"></span>
+                    <span class="muted" x-show="t.priority === 'none'">—</span>
+                  </td>
+                  <td x-show="key === 'taken'">
+                    <span x-text="t.assignee ? t.assignee.name : ''"></span>
+                  </td>
+                  <td>
+                    <span class="badge num" :class="deadlineClass(t)" x-text="deadlineLabel(t)"></span>
+                  </td>
+                  <td>
+                    <template x-if="t.external_item_id">
+                      <a class="badge badge-accent" :href="t.external_item_url" target="_blank" rel="noopener"
+                         x-text="externalLabel(t)"></a>
+                    </template>
+                    <span class="muted" x-show="!t.external_item_id">—</span>
+                  </td>
+                  <td class="actions">
+                    <span class="badge badge-ok" x-show="isRunning(t)">{{.T "tasks.running"}}</span>
+                    <a class="btn btn-secondary btn-sm" :href="'/tasks/' + t.id">{{.T "tasks.details"}} {{template "icon" "arrow-right"}}</a>
+                  </td>
+                </tr>
               </template>
-              <span class="muted" x-show="!t.external_item_id">—</span>
-            </td>
-            <td class="actions">
-              <span class="badge badge-ok" x-show="isRunning(t)">{{.T "tasks.running"}}</span>
-              <a class="btn btn-secondary btn-sm" :href="'/tasks/' + t.id">{{.T "tasks.details"}} {{template "icon" "arrow-right"}}</a>
-            </td>
-          </tr>
-        </template>
-      </tbody>
-    </table>
-  </div>
+            </tbody>
+          </table>
+        </div>
 
-  <nav class="pager" aria-label="{{.T "tasks.pager"}}" x-cloak x-show="total > 0">
-    <span class="muted small" x-text="summary()"></span>
-    <div class="row row-tight" x-show="pages() > 1">
-      <button type="button" class="btn btn-secondary btn-sm" :disabled="page <= 1" @click="go(page - 1)">{{template "icon" "chevron-left"}} {{.T "tasks.prev"}}</button>
-      <button type="button" class="btn btn-secondary btn-sm" :disabled="page >= pages()" @click="go(page + 1)">{{.T "tasks.next"}} {{template "icon" "chevron-right"}}</button>
-    </div>
-  </nav>
+        <nav class="pager" :aria-label="key === 'free' ? $t('tasks.pager_free') : $t('tasks.pager_taken')" x-cloak x-show="lists[key].total > 0">
+          <span class="muted small" x-text="summary(key)"></span>
+          <div class="row row-tight" x-show="pages(key) > 1">
+            <button type="button" class="btn btn-secondary btn-sm" :disabled="lists[key].page <= 1" @click="go(key, lists[key].page - 1)">{{template "icon" "chevron-left"}} {{.T "tasks.prev"}}</button>
+            <button type="button" class="btn btn-secondary btn-sm" :disabled="lists[key].page >= pages(key)" @click="go(key, lists[key].page + 1)">{{.T "tasks.next"}} {{template "icon" "chevron-right"}}</button>
+          </div>
+        </nav>
+      </section>
+    </template>
+  </div>
 
   {{/* O formulário aparece no modal do layout base e continua no escopo de projectTasks. */}}
   <template x-teleport="#modal-root">

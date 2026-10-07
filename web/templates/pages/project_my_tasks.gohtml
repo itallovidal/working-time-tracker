@@ -1,0 +1,67 @@
+{{define "content"}}
+<main class="page" x-data="projectMyTasks">
+  {{template "project_head" .}}
+
+  <p class="lede muted">{{.T "my_tasks.lede"}}</p>
+
+  <p class="form-error" x-cloak x-show="errors.load" x-text="errors.load"></p>
+  <p class="form-error" x-cloak x-show="errors.clock" x-text="errors.clock" role="alert"></p>
+  <p class="muted" x-show="loading">{{.T "my_tasks.loading"}}</p>
+
+  <div class="empty" x-cloak x-show="!loading && !errors.load && tasks.length === 0">
+    <strong>{{.T "my_tasks.none"}}</strong>
+    <span>{{.T "my_tasks.none_text"}}</span>
+    <a class="btn btn-secondary btn-sm" href="/projects/{{.Project.ID}}/tasks">{{.T "my_tasks.none_link"}}</a>
+  </div>
+
+  {{/* Uma lista por status, na ordem em que o trabalho anda. Cada cabeçalho recolhe a sua lista. */}}
+  <div class="stack stack-sections" x-cloak x-show="!loading && !errors.load && tasks.length > 0">
+    <template x-for="s in statuses" :key="s.value">
+      <section class="stack" :aria-labelledby="'mine-' + s.value + '-title'">
+        <h2 class="fold-head" :id="'mine-' + s.value + '-title'">
+          <button type="button" class="fold-toggle" :aria-expanded="open[s.value].toString()" :aria-controls="'mine-' + s.value + '-body'" @click="toggle(s.value)">
+            <span class="fold-icon" aria-hidden="true">{{template "icon" "chevron-down"}}</span>
+            <span x-text="s.label"></span>
+            <span class="badge num" :class="statusClass(s.value)" x-text="inStatus(s.value).length"></span>
+          </button>
+        </h2>
+        <div class="stack" :id="'mine-' + s.value + '-body'" x-show="open[s.value]">
+          <p class="muted small" x-show="inStatus(s.value).length === 0">{{.T "my_tasks.empty"}}</p>
+          <div class="table-wrap" x-show="inStatus(s.value).length > 0">
+            <table>
+              <thead>
+                <tr>
+                  <th>{{.T "tasks.col_task"}}</th><th>{{.T "tasks.col_priority"}}</th><th>{{.T "tasks.col_deadline"}}</th>
+                  <th class="actions"><span class="sr-only">{{.T "tasks.col_details"}}</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="t in inStatus(s.value)" :key="t.id">
+                  <tr>
+                    <td>
+                      <a :href="'/tasks/' + t.id" x-text="t.name"></a>
+                      <div class="label-list" x-show="t.labels && t.labels.length > 0">
+                        <template x-for="l in t.labels" :key="l.id"><span class="badge" x-text="l.name"></span></template>
+                      </div>
+                    </td>
+                    <td>
+                      <span class="badge" :class="priorityClass(t.priority)" x-show="t.priority !== 'none'" x-text="WTT.fmt.priority(t.priority)"></span>
+                      <span class="muted" x-show="t.priority === 'none'">—</span>
+                    </td>
+                    <td><span class="badge num" :class="deadlineClass(t)" x-text="deadlineLabel(t)"></span></td>
+                    <td class="actions">
+                      <span class="badge badge-ok" x-show="isRunning(t)">{{.T "tasks.running"}}</span>
+                      <button type="button" class="btn btn-secondary btn-sm" x-show="!isRunning(t) && s.value !== 'closed'" :disabled="pending" @click="start(t)">{{template "icon" "play"}} {{.T "tasks.start"}}</button>
+                      <a class="btn btn-ghost btn-sm" :href="'/tasks/' + t.id">{{.T "tasks.details"}} {{template "icon" "arrow-right"}}</a>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </template>
+  </div>
+</main>
+{{end}}

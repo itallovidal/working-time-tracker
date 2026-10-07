@@ -564,3 +564,19 @@ html.modal-open { overflow: hidden; }
 }
 /* Dentro de uma célula de tabela, a confirmação acompanha os botões da linha. */
 td .confirm { display: inline-flex; }
+
+/* Cabeçalho recolhível de uma lista (Minhas tarefas): o título inteiro é o botão. */
+.fold-head { margin: 0; font-size: 1.05rem; }
+.fold-toggle {
+  font: inherit; font-weight: 650; color: var(--ink); cursor: pointer; text-align: left;
+  display: inline-flex; align-items: center; gap: 9px; padding: 4px 6px 4px 0;
+  background: transparent; border: 0; border-radius: var(--radius-sm);
+}
+.fold-toggle:hover { color: var(--accent); }
+.fold-icon { display: inline-block; transition: transform 0.15s; font-size: 0.8em; color: var(--muted); }
+.fold-toggle[aria-expanded="false"] .fold-icon { transform: rotate(-90deg); }
+@media (prefers-reduced-motion: reduce) { .fold-icon { transition: none; } }
+/* Título de uma seção com o que ela é logo abaixo, e a frase que abre uma página de listas. */
+.section-head { display: flex; flex-direction: column; gap: 2px; }
+.section-head h2 { margin: 0; }
+.lede { margin: 0; max-width: 72ch; }

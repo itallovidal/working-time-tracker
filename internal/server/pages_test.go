@@ -399,8 +399,10 @@ func TestPages_ProjectTasksTab(t *testing.T) {
 			`aria-label="Buscar tarefa pelo nome"`, `aria-label="Filtrar por responsável"`, `aria-label="Filtrar por prazo"`,
 			"Só as minhas tarefas", `class="pager"`,
 			"Nova tarefa", `x-teleport="#modal-root"`, `x-show="$store.modal.name === 'task-new'"`, `id="task-name"`, `id="task-assignee"`,
-			// Uma tarefa pode ficar sem responsável, e o quadro lista o que está disponível.
-			"Quadro de tarefas", `<option value="none"`, "Atribuir a mim", "Outra pessoa", `value="none" x-model="draft.assign"`,
+			// A página diz o que é e tem duas listas, cada uma com a sua página: as sem responsável e as que têm.
+			`class="lede muted"`, "Aqui estão as tarefas que ninguém pegou", `x-for="key in taskLists"`, `listShown(key)`, `go(key, lists[key].page + 1)`,
+			// Uma tarefa pode ficar sem responsável, e a lista mostra o que está disponível.
+			"Lista de tarefas", "Atribuir a mim", "Outra pessoa", `value="none" x-model="draft.assign"`,
 			// Prioridade e etiqueta: os filtros (várias de cada), a coluna e os campos do modal.
 			`role="group" aria-label="Filtrar por prioridade"`, `role="group" aria-label="Filtrar por etiqueta"`, `toggleFilter('priority', p.value)`,
 			`toggleFilter('label', l.id)`, "<th>Prioridade</th>", `id="task-priority"`, `x-model="draft.label_ids"`,
@@ -427,6 +429,47 @@ func TestPages_ProjectTasksTab(t *testing.T) {
 		if !(filters < mine && mine < table) {
 			t.Errorf("%s: the 'only mine' box is not between the filters and the table", who)
 		}
+	}
+}
+
+// Minhas tarefas é uma aba do dia a dia, igual para admin e membro: uma lista por status, na
+// ordem em que o trabalho anda, com a de fechadas recolhida. Está entre o Início e a Lista de
+// tarefas na barra de abas, e outra organização recebe 404.
+func TestPages_ProjectMyTasksTab(t *testing.T) {
+	e := newServer(t)
+	admin := signup(t, e, "Org", "ana@test.com")
+	member := invite(t, e, admin, "bia@test.com", "member")
+	outsider := signup(t, e, "Outra", "zeca@test.com")
+	projectID := createProject(t, e, admin, "Projeto Alfa")
+	mine := "/projects/" + projectID + "/my-tasks"
+
+	for who, session := range map[string]string{"admin": admin.session, "member": member.session} {
+		rec := do(e, "GET", mine, "", session)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("%s: GET my-tasks = %d, want 200", who, rec.Code)
+		}
+		body := rec.Body.String()
+		for _, want := range []string{
+			`x-data="projectMyTasks"`, "Tudo o que está com você", `x-for="s in statuses"`, `:aria-expanded="open[s.value].toString()"`,
+			`class="fold-toggle"`, "Você não tem tarefas neste projeto.", "Ver a lista de tarefas", `@click="start(t)"`,
+			// A aba é a atual, e fica entre o Início e a Lista de tarefas.
+			`/my-tasks" aria-current="page"`, "Minhas tarefas",
+		} {
+			if !strings.Contains(body, want) {
+				t.Errorf("%s: the my tasks tab does not contain %q", who, want)
+			}
+		}
+		home, mineTab, list := strings.Index(body, ">Início</a>"), strings.Index(body, `/my-tasks"`), strings.Index(body, `/tasks"`)
+		if !(home < mineTab && mineTab < list) {
+			t.Errorf("%s: the tabs are not Início, Minhas tarefas, Lista de tarefas", who)
+		}
+		// As outras abas do projeto também levam a ela.
+		if other := do(e, "GET", "/projects/"+projectID+"/tasks", "", session).Body.String(); !strings.Contains(other, `href="/projects/`+projectID+`/my-tasks"`) {
+			t.Errorf("%s: the task list has no link to Minhas tarefas", who)
+		}
+	}
+	if rec := do(e, "GET", mine, "", outsider.session); rec.Code != http.StatusNotFound {
+		t.Errorf("another organization GET my-tasks = %d, want 404", rec.Code)
 	}
 }
 
@@ -813,7 +856,7 @@ func TestPages_ProjectIntegrationsTab(t *testing.T) {
 	}
 	// A página da tarefa só mostra: o formulário de edição fica num modal, aberto pelo lápis.
 	for _, want := range []string{
-		`x-show="$store.modal.name === 'task-edit'"`, `aria-label="Editar tarefa"`, `@click="openEdit()"`, `id="task-name"`, "Voltar ao quadro",
+		`x-show="$store.modal.name === 'task-edit'"`, `aria-label="Editar tarefa"`, `@click="openEdit()"`, `id="task-name"`, "Voltar à lista",
 		// A descrição é Markdown: a página a renderiza e o modal tem as duas etapas e a prévia.
 		`x-html="WTT.markdown(task && task.description)"`, `class="wizard-steps"`, `submitStep('save')`, `id="task-preview"`, "Pré-visualizar",
 	} {
@@ -833,7 +876,7 @@ func TestPages_ProjectIntegrationsTab(t *testing.T) {
 	}
 	// A tarefa é uma tela própria: tem cabeçalho com o caminho, o título e as ações, e não mostra a
 	// barra de abas do projeto nem o nome do projeto como título da página.
-	for _, want := range []string{`class="task-head"`, `aria-label="Você está em"`, `<h1 class="task-title"`, ">Tela de login</h1>", "Voltar ao quadro"} {
+	for _, want := range []string{`class="task-head"`, `aria-label="Você está em"`, `<h1 class="task-title"`, ">Tela de login</h1>", "Voltar à lista"} {
 		if !strings.Contains(detail, want) {
 			t.Errorf("the task page does not contain %q", want)
 		}

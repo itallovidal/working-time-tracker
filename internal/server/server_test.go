@@ -1360,6 +1360,50 @@ func TestTasks_WithoutAssigneeIsClaimedByTheFirstClockIn(t *testing.T) {
 	}
 }
 
+// A lista de tarefas se divide em duas pela API: assignee_id=none traz as sem responsável,
+// assignee_id=any as que têm, e uma pessoa traz só as dela.
+func TestTasks_AssignedAndUnassignedLists(t *testing.T) {
+	e := newServer(t)
+	admin := signup(t, e, "Org", "ana@test.com")
+	member := invite(t, e, admin, "bia@test.com", "member")
+	projectID := createProject(t, e, admin, "Alpha")
+	allocate(t, e, admin, projectID, member.id, 5000)
+	tasks := "/api/projects/" + projectID + "/tasks"
+
+	do(e, "POST", tasks, `{"name":"Livre 1"}`, member.session)
+	do(e, "POST", tasks, `{"name":"Livre 2"}`, member.session)
+	do(e, "POST", tasks, `{"name":"Da Bia","assignee_id":"`+member.id+`"}`, member.session)
+
+	total := func(query string) int {
+		t.Helper()
+		rec := do(e, "GET", tasks+query, "", member.session)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("GET tasks%s = %d: %s", query, rec.Code, rec.Body.String())
+		}
+		return int(decode(t, rec)["total"].(float64))
+	}
+	for query, want := range map[string]int{
+		"?page=1":                          3,
+		"?page=1&assignee_id=none":         2,
+		"?page=1&assignee_id=any":          1,
+		"?page=1&assignee_id=" + member.id: 1,
+		"?page=1&assignee_id=" + admin.id:  0,
+		"?page=1&assignee_id=any&q=livre":  0,
+	} {
+		if got := total(query); got != want {
+			t.Errorf("GET tasks%s: total %d, want %d", query, got, want)
+		}
+	}
+	// Sem page, a lista inteira vem num array: é o que a aba Minhas tarefas pede.
+	mine := decodeList(t, do(e, "GET", tasks+"?assignee_id="+member.id, "", member.session))
+	if len(mine) != 1 || mine[0]["name"] != "Da Bia" {
+		t.Errorf("my tasks = %v, want only Da Bia", mine)
+	}
+	if rec := do(e, "GET", tasks+"?assignee_id=qualquer", "", member.session); rec.Code != http.StatusBadRequest {
+		t.Errorf("an invalid assignee_id = %d, want 400", rec.Code)
+	}
+}
+
 // O status pela API: a tarefa nasce em backlog mesmo que o corpo peça outro, só o PATCH
 // muda, um valor fora dos quatro é recusado, e a lista filtra por um ou mais status.
 func TestTasks_Status(t *testing.T) {

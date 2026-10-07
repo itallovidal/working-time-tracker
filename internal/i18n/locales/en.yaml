@@ -44,7 +44,8 @@ titles:
   overview: Management · Overview
   my_overview: Home
   collaborators: Collaborators
-  tasks: Task board
+  tasks: Task list
+  my_tasks: My tasks
   teams: Management · Collaborators
   integrations: Management · Integrations
   project_settings: Management · Settings
@@ -326,7 +327,8 @@ project:
     projects: Projects
     sections: Project sections
     overview: Overview
-    tasks: Task board
+    tasks: Task list
+    my_tasks: My tasks
     home: Home
     teams: Collaborators
     integrations: Integrations
@@ -409,8 +411,15 @@ tasks:
   new: New task
   loading: Loading tasks…
   none_filtered: No tasks match these filters
-  none: No tasks yet
-  none_text: Create a task to start tracking time on it.
+  lede: Here are the tasks nobody has picked up, for the team to choose and clock in, and below them the ones that already have an assignee.
+  section_free: Unassigned
+  section_free_hint: Nobody has picked these tasks up. Whoever clocks in on one becomes its assignee.
+  section_taken: Assigned
+  section_taken_hint: Tasks that are already with someone.
+  free_none: No free tasks. Every task in the project has an assignee.
+  taken_none: No assigned tasks yet.
+  pager_free: Pages of the unassigned tasks
+  pager_taken: Pages of the assigned tasks
   col_task: Task
   col_assignee: Assignee
   col_deadline: Deadline
@@ -441,10 +450,21 @@ tasks:
     next_week: Until the end of next week
     date: Until a date…
 
+my_tasks:
+  lede: Everything that is with you, split by status, to organize your work. What nobody has picked up stays on the task list.
+  none: You have no tasks in this project.
+  none_text: Pick an available one on the task list.
+  none_link: See the task list
+  empty: No tasks in this status.
+  count:
+    one: "{{.count}} task"
+    other: "{{.count}} tasks"
+  loading: Loading your tasks…
+
 task_detail:
   loading: Loading the task…
   edit_title: Edit task
-  back: Back to the board
+  back: Back to the list
   breadcrumb: You are here
   no_description: This task has no description.
   delete_confirm: Delete the task? The time tracked on it is deleted too.
@@ -484,7 +504,7 @@ time:
   stop: Stop
   stopped: Stopped
   no_tasks: You have no tasks on this project.
-  create_task: Pick an available one on the task board.
+  create_task: Pick an available one on the task list.
   task: Task
   start: Start
   yours: Your time on this project

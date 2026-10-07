@@ -438,7 +438,7 @@ GET /api/projects/:projectId/tasks?q=frete&assignee_id=…&deadline_to=2026-10-1
 Todos os parâmetros são opcionais:
 
 - `q` busca no nome, sem diferenciar maiúsculas de minúsculas (acentos contam), com até 100 caracteres.
-- `assignee_id` traz só as tarefas daquela pessoa; `none` traz só as sem responsável.
+- `assignee_id` traz só as tarefas daquela pessoa; `none` traz só as sem responsável, e `any`, só as que têm responsável, de qualquer pessoa. É com `none` e `any` que a Lista de tarefas monta as duas listas, e com o id da pessoa logada, sem `page`, que a aba Minhas tarefas traz tudo o que é dela.
 - `deadline_to` traz as tarefas com prazo até aquele instante, inclusive. É uma data com hora em RFC 3339; num fuso escrito com `+`, use `%2B` na URL.
 - `priority` traz as tarefas com qualquer uma das prioridades, separadas por vírgula: `priority=urgent,high`.
 - `status` traz as tarefas com qualquer um dos status, separados por vírgula: `status=in_progress,awaiting_closure`. Um valor fora dos quatro responde `400 task.invalid_status_filter`.

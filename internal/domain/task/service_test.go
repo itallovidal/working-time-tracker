@@ -524,6 +524,50 @@ func TestService_Update_UnassignAndFilter(t *testing.T) {
 	}
 }
 
+// A lista se divide em duas: as sem responsável (Unassigned) e as que têm (Assigned), de qualquer
+// pessoa; uma pessoa escolhida só traz as dela, e Unassigned vence Assigned.
+func TestService_ListFilters_AssignedAndUnassigned(t *testing.T) {
+	orgSvc, personSvc, projSvc, teamSvc, memberSvc, taskSvc := setupDeps(t)
+	org, _ := orgSvc.Create("Org")
+	ana, _ := personSvc.Create(org.ID.String(), "Ana", "ana@test.com")
+	bia, _ := personSvc.Create(org.ID.String(), "Bia", "bia@test.com")
+	proj, _ := projSvc.Create(org.ID.String(), "P", "", 0, project.Routine{})
+	pid := proj.ID.String()
+	tm, _ := teamSvc.Create(pid, "Team")
+	join(t, memberSvc, tm, ana.ID.String())
+	join(t, memberSvc, tm, bia.ID.String())
+
+	taskSvc.Create(pid, "a", "", ana.ID.String(), nil)
+	taskSvc.Create(pid, "b", "", ana.ID.String(), nil)
+	taskSvc.Create(pid, "c", "", bia.ID.String(), nil)
+	taskSvc.Create(pid, "d", "", "", nil)
+
+	total := func(f task.ListFilter) int {
+		t.Helper()
+		page, err := taskSvc.ListPage(pid, f)
+		if err != nil {
+			t.Fatalf("list: %v", err)
+		}
+		return page.Total
+	}
+	for name, c := range map[string]struct {
+		f    task.ListFilter
+		want int
+	}{
+		"all":                           {task.ListFilter{}, 4},
+		"unassigned":                    {task.ListFilter{Unassigned: true}, 1},
+		"assigned, anyone":              {task.ListFilter{Assigned: true}, 3},
+		"one person":                    {task.ListFilter{AssigneeID: &ana.ID}, 2},
+		"unassigned beats assigned":     {task.ListFilter{Unassigned: true, Assigned: true}, 1},
+		"assigned with a name filter":   {task.ListFilter{Assigned: true, Query: "c"}, 1},
+		"unassigned with a name filter": {task.ListFilter{Unassigned: true, Query: "c"}, 0},
+	} {
+		if got := total(c.f); got != c.want {
+			t.Errorf("%s: total %d, want %d", name, got, c.want)
+		}
+	}
+}
+
 func TestService_Create_MissingName(t *testing.T) {
 	orgSvc, personSvc, projSvc, teamSvc, memberSvc, taskSvc := setupDeps(t)
 
