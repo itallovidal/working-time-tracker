@@ -6,9 +6,6 @@
       <h1>{{.T "nav.home"}}</h1>
       <p class="lede">{{if and .Org .Org.Summary}}{{.Org.Summary}}{{else if .IsAdmin}}{{.T "home.intro"}}{{else}}{{.T "home.intro_member"}}{{end}}</p>
     </div>
-    {{if .Can "projects.create"}}
-    <button type="button" class="btn" @click="openCreate()">{{template "icon" "plus"}} {{.T "org.projects.new"}}</button>
-    {{end}}
   </div>
 
   {{if .IsAdmin}}
@@ -94,7 +91,11 @@
               <p class="muted small">{{.T "home.team.intro"}}</p>
             </div>
             {{if .Can "people.manage"}}
-            <a class="btn btn-ghost btn-sm" href="/orgs/{{.OrgID}}/people">{{template "icon" "users"}} {{.T "home.team.see_people"}}</a>
+            {{/* "Adicionar" chega à página de colaboradores com o modal do convite já aberto (?add=1). */}}
+            <div class="row row-tight">
+              <a class="btn btn-ghost btn-sm" href="/orgs/{{.OrgID}}/people">{{template "icon" "users"}} {{.T "home.team.see_people"}}</a>
+              <a class="btn btn-secondary btn-sm" href="/orgs/{{.OrgID}}/people?add=1">{{template "icon" "user-plus"}} {{.T "org.people.add"}}</a>
+            </div>
             {{end}}
           </div>
           <p class="muted" x-show="current().seconds === 0">{{.T "home.team.nobody_worked"}}</p>
@@ -127,9 +128,14 @@
   {{end}}
 
   <section class="stack" aria-labelledby="home-projects-title">
-    <div class="row row-tight">
-      <h2 id="home-projects-title">{{.T "home.projects.title"}}</h2>
-      <span class="badge num" x-cloak x-show="!loading" x-text="total"></span>
+    <div class="toolbar">
+      <div class="row row-tight">
+        <h2 id="home-projects-title">{{.T "home.projects.title"}}</h2>
+        <span class="badge num" x-cloak x-show="!loading" x-text="total"></span>
+      </div>
+      {{if .Can "projects.create"}}
+      <button type="button" class="btn" @click="openCreate()">{{template "icon" "plus"}} {{.T "org.projects.new"}}</button>
+      {{end}}
     </div>
 
     <p class="muted" x-show="loading">{{.T "org.projects.loading"}}</p>

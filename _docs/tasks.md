@@ -606,6 +606,16 @@
 
 ---
 
+### Sprint 52: A Calmer Home and Two Shortcuts
+
+- [X] S52.1 The project cards of the home page are neutral: no stripe, the initials square a soft tint of the project's hue, the counts muted chips with the icon in the hue, and the border takes the hue only on hover and focus (the owner found them too colourful)
+- [X] S52.2 `TestProjectCardsStayCalm` (fails if the stripe, a solid-tone initials square or tinted chips come back) and the contrast test no longer asks for white over the tone; checked that both fail with the old CSS
+- [X] S52.3 The **Novo projeto** button moves from the page header to the projects section, next to its title and count; test of where it sits for admins, and for the member who has no button
+- [X] S52.4 **Adicionar colaborador** beside Ver colaboradores in the team block (`people.manage`): link to `/orgs/:orgId/people?add=1`; the people page opens the invite modal on load with that parameter and removes it from the address, so a reload does not reopen it
+- [X] S52.5 Test that the home link and `org.js` agree on the parameter, and that the people page answers with the invite form; checked in the browser (light, dark, English, phone, the member's view, the modal opening and not reopening after a reload); update README and design; no route, API, permission or migration change
+
+---
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open

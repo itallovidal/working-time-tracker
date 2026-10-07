@@ -292,6 +292,12 @@ document.addEventListener('alpine:init', () => {
       } finally {
         this.loading = false;
       }
+      // O atalho "Adicionar colaborador" da página inicial chega com ?add=1: abre o modal do
+      // convite e tira o parâmetro, para recarregar ou voltar não abrir o modal de novo.
+      if (new URLSearchParams(location.search).has('add')) {
+        history.replaceState(null, '', location.pathname);
+        this.openInvite();
+      }
     },
     setRole(person, role) {
       return this.run('role', async () => {

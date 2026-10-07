@@ -111,8 +111,8 @@ func contrast(t *testing.T, a, b string) float64 {
 // A página inicial dá cor aos cartões de projeto e aos números da visão geral com as classes
 // `.hue-*`, que não têm o sentido de prioridade nem de status. O teste cuida do que o navegador
 // não avisa: um tom sorteado por app.js que não existe no app.css, um tom usado no modelo sem
-// classe, uma cor que falta num dos temas e texto que não se lê em cima da cor (a sigla do
-// projeto, branca sobre o tom, e o tom sobre o fundo suave, nos selos e ícones).
+// classe, uma cor que falta num dos temas e texto que não se lê em cima da cor (o tom sobre o
+// fundo suave, que é como a sigla do projeto e os ícones da visão geral aparecem).
 func TestHomeHuesAreColoredAndReadable(t *testing.T) {
 	read := func(name string) string {
 		t.Helper()
@@ -149,17 +149,57 @@ func TestHomeHuesAreColoredAndReadable(t *testing.T) {
 			colors[m[1]] = m[2]
 		}
 		for h := range hues {
-			tone, soft, on := colors[h], colors[h+"-soft"], colors["on-tone"]
-			if tone == "" || soft == "" || on == "" {
-				t.Errorf("%s theme: --%s, --%s-soft or --on-tone is not defined", theme, h, h)
+			tone, soft := colors[h], colors[h+"-soft"]
+			if tone == "" || soft == "" {
+				t.Errorf("%s theme: --%s or --%s-soft is not defined", theme, h, h)
 				continue
-			}
-			if c := contrast(t, on, tone); c < 4.5 {
-				t.Errorf("%s theme: the initials (--on-tone %s) on the %s tone %s have a contrast of %.2f:1, want at least 4.5:1", theme, on, h, tone, c)
 			}
 			if c := contrast(t, tone, soft); c < 4.5 {
 				t.Errorf("%s theme: the %s tone %s on its soft background %s has a contrast of %.2f:1, want at least 4.5:1", theme, h, tone, soft, c)
 			}
 		}
+	}
+}
+
+// Os cartões de projeto levam cor só num toque: a sigla em tom suave, os ícones e a borda ao
+// passar o mouse. Faixa no topo, sigla de fundo cheio e selos coloridos deixaram a lista muito
+// colorida e foram tirados; o teste segura isso, para um ajuste de estilo não trazê-los de volta.
+func TestProjectCardsStayCalm(t *testing.T) {
+	raw, err := FS.ReadFile("static/app.css")
+	if err != nil {
+		t.Fatal(err)
+	}
+	css := string(raw)
+	rule := func(selector string) (string, bool) {
+		m := regexp.MustCompile(`(?m)^` + regexp.QuoteMeta(selector) + ` \{([^}]*)\}`).FindStringSubmatch(css)
+		if m == nil {
+			return "", false
+		}
+		return m[1], true
+	}
+
+	if _, found := rule(".project-card::before"); found {
+		t.Error("the project card has a colored stripe (.project-card::before): the cards should be neutral")
+	}
+	card, found := rule(".project-card")
+	if !found {
+		t.Fatal("app.css has no .project-card")
+	}
+	if !strings.Contains(card, "background: var(--surface);") {
+		t.Errorf("the project card background is not the neutral surface: %s", card)
+	}
+	mark, found := rule(".project-mark")
+	if !found {
+		t.Fatal("app.css has no .project-mark")
+	}
+	if !strings.Contains(mark, "background: var(--tone-soft);") || strings.Contains(mark, "background: var(--tone);") {
+		t.Errorf("the project mark should be a soft tint with the tone as text, not a solid fill: %s", mark)
+	}
+	stat, found := rule(".project-stat")
+	if !found {
+		t.Fatal("app.css has no .project-stat")
+	}
+	if strings.Contains(stat, "var(--tone") {
+		t.Errorf("the people and task counts should be neutral chips, not tinted: %s", stat)
 	}
 }

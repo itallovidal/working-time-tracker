@@ -487,23 +487,23 @@ td.actions { text-align: right; white-space: nowrap; }
 .hue-orange { --tone: var(--orange); --tone-soft: var(--orange-soft); }
 .hue-gold { --tone: var(--gold); --tone-soft: var(--gold-soft); }
 
-/* Cartões de projeto na página inicial: uma faixa e a sigla na cor do projeto, o nome, o
-   cliente e só o que ajuda a escolher (quantas pessoas e tarefas). */
+/* Cartões de projeto na página inicial: fundo neutro e a cor do projeto só num toque, a sigla
+   em tom suave, os ícones e a borda ao passar o mouse. O nome, o cliente e só o que ajuda a
+   escolher (quantas pessoas e tarefas). Nada de faixa nem de fundo cheio: a lista não pode virar
+   um arco-íris. */
 .project-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
 .project-card {
-  position: relative; overflow: hidden;
   background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius);
-  padding: 20px 18px 16px; display: flex; flex-direction: column; gap: 12px;
+  padding: 16px 18px; display: flex; flex-direction: column; gap: 10px;
   text-decoration: none; color: inherit;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
-.project-card::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 4px; background: var(--tone); }
 .project-card:hover { border-color: var(--tone); box-shadow: var(--shadow); }
 .project-card:focus-visible { outline: 2px solid var(--tone); outline-offset: 2px; }
 .project-top { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .project-mark {
-  width: 44px; height: 44px; border-radius: 10px; flex: none; display: grid; place-items: center;
-  background: var(--tone); color: var(--on-tone); font-weight: 700; font-size: 0.95rem; letter-spacing: 0.02em;
+  width: 40px; height: 40px; border-radius: 10px; flex: none; display: grid; place-items: center;
+  background: var(--tone-soft); color: var(--tone); font-weight: 700; font-size: 0.9rem; letter-spacing: 0.02em;
 }
 .project-title { min-width: 0; }
 .project-card h3 { color: var(--ink); overflow-wrap: anywhere; }
@@ -515,8 +515,9 @@ td.actions { text-align: right; white-space: nowrap; }
 .project-stats { display: flex; gap: 8px; flex-wrap: wrap; margin-top: auto; padding-top: 4px; }
 .project-stat {
   display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 600;
-  padding: 3px 10px; border-radius: 999px; background: var(--tone-soft); color: var(--tone);
+  padding: 3px 10px; border-radius: 999px; background: var(--surface-2); color: var(--muted);
 }
+.project-stat i { color: var(--tone); }
 
 /* A visão geral da organização: seis números, três por linha, cada um com o ícone na sua cor. */
 .kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
