@@ -1,81 +1,13 @@
 {{define "content"}}
 <main class="page" x-data="orgProjects">
-  {{if .Tab}}
   {{template "org_head" .}}
 
   <div class="toolbar">
     <p class="muted">{{.T "org.projects.intro"}}</p>
     <button type="button" class="btn" @click="openCreate()">{{template "icon" "plus"}} {{.T "org.projects.new"}}</button>
   </div>
-  {{else}}
-  <div class="page-head">
-    <div>
-      <div class="eyebrow">{{.Me.OrganizationName}}</div>
-      <h1>{{.T "org.head.projects"}}</h1>
-      <p class="lede">{{if and .Org .Org.Summary}}{{.Org.Summary}}{{else}}{{.T "org.projects.intro"}}{{end}}</p>
-    </div>
-    {{if .Can "projects.create"}}
-    <button type="button" class="btn" @click="openCreate()">{{template "icon" "plus"}} {{.T "org.projects.new"}}</button>
-    {{end}}
-  </div>
-  {{end}}
 
-  {{if .Can "projects.create"}}
-  {{/* O formulário aparece no modal do layout base, mas continua no escopo de orgProjects. */}}
-  <template x-teleport="#modal-root">
-    <form class="stack" x-show="$store.modal.name === 'project'" @submit.prevent="create()">
-      <fieldset class="form-group">
-        <legend>{{.T "project.groups.about"}}</legend>
-        <div class="field">
-          <label for="project-name">{{.T "common.name"}}</label>
-          <input id="project-name" type="text" required x-model="draft.name" data-autofocus>
-        </div>
-        <div class="field">
-          <label for="project-description">{{.T "common.description_label"}}</label>
-          <textarea id="project-description" x-model="draft.description" placeholder="{{.T "common.optional"}}"></textarea>
-        </div>
-      </fieldset>
-      <fieldset class="form-group">
-        <legend>{{.T "project.groups.billing"}}</legend>
-        <div class="fields">
-          <div class="field">
-            <label for="project-customer">{{.T "org.projects.customer"}}</label>
-            <select id="project-customer" x-model="draft.customer_id">
-              <option value="">{{.T "org.projects.internal"}}</option>
-              <template x-for="c in customers || []" :key="c.id">
-                <option :value="c.id" x-text="c.name"></option>
-              </template>
-            </select>
-          </div>
-          {{/* Projeto interno não tem quem pague: o valor só aparece com um cliente escolhido. */}}
-          <div class="field" x-show="draft.customer_id">
-            <label for="project-bill-rate" x-text="$t('project.fields.bill_rate', { unit: WTT.fmt.moneyUnit() })"></label>
-            <input id="project-bill-rate" type="text" inputmode="decimal" class="num" placeholder="{{.T "common.optional"}}" x-model="draft.rate">
-          </div>
-        </div>
-        {{template "project_customer_meeting" .}}
-        <span class="hint">{{.T "org.projects.admins_only_hint"}}</span>
-      </fieldset>
-      <fieldset class="form-group">
-        <legend>{{.T "project.groups.routine"}}</legend>
-        <div class="field">
-          <label for="project-sprint">{{.T "project.fields.sprint"}}</label>
-          <select id="project-sprint" x-model.number="draft.sprint_duration_days">
-            <template x-for="o in WTT.sprintOptions" :key="o.value">
-              <option :value="o.value" x-text="o.label" :selected="o.value === draft.sprint_duration_days"></option>
-            </template>
-          </select>
-        </div>
-        {{template "project_routine" .}}
-      </fieldset>
-      <p class="form-error" x-show="errors.create" x-text="errors.create" role="alert"></p>
-      <div class="row row-end">
-        <button type="button" class="btn btn-secondary" @click="$store.modal.dismiss()">{{.T "common.cancel"}}</button>
-        <button type="submit" class="btn" :disabled="pending">{{.T "org.projects.create"}}</button>
-      </div>
-    </form>
-  </template>
-  {{end}}
+  {{template "project_form" .}}
 
   <p class="muted" x-show="loading">{{.T "org.projects.loading"}}</p>
   <p class="form-error" x-cloak x-show="errors.load" x-text="errors.load"></p>
@@ -83,14 +15,9 @@
   <div class="empty" x-cloak x-show="!loading && !errors.load && projects.length === 0">
     {{template "icon" "diagram-project"}}
     <strong>{{.T "org.projects.empty"}}</strong>
-    {{if .Can "projects.create"}}
     <span>{{.T "org.projects.empty_admin"}}</span>
-    {{else}}
-    <span>{{.T "org.projects.empty_member"}}</span>
-    {{end}}
   </div>
 
-  {{if .Tab}}
   {{/* A aba do admin é uma tabela de gestão; os cartões ficam na página inicial, para quem
        entra para trabalhar num projeto. */}}
   <div class="table-wrap" x-cloak x-show="projects.length > 0">
@@ -114,21 +41,5 @@
       </tbody>
     </table>
   </div>
-  {{else}}
-  <div class="project-grid" x-show="projects.length > 0">
-    <template x-for="p in projects" :key="p.id">
-      <a class="project-card" :href="'/projects/' + p.id">
-        <h3 x-text="p.name"></h3>
-        <p class="muted small" x-show="p.description" x-text="p.description"></p>
-        <div class="project-meta">
-          <span class="badge num" x-text="$t('org.projects.sprint_badge', { count: p.sprint_duration_days })"></span>
-          <span class="badge num" x-show="p.daily_time" x-text="$t('org.projects.daily_badge', { time: p.daily_time })"></span>
-          <span class="badge" x-show="p.weekly_sync_day" x-text="$t('org.projects.weekly_badge', { slot: WTT.fmt.weeklySlot(p.weekly_sync_day, p.weekly_sync_time) })"></span>
-          <span class="badge" x-show="p.customer_meeting_day" x-text="$t('org.projects.meeting_badge', { slot: WTT.fmt.weeklySlot(p.customer_meeting_day, p.customer_meeting_time) })"></span>
-        </div>
-      </a>
-    </template>
-  </div>
-  {{end}}
 </main>
 {{end}}

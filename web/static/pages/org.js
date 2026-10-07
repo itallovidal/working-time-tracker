@@ -48,21 +48,12 @@ document.addEventListener('alpine:init', () => {
     : { label: r[0], value: WTT.notInformed, empty: true }));
   const bareURL = (url) => (url || '').replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
 
-  Alpine.data('orgProjects', () => ({
+  // projectCreation é o que a página inicial e a aba Projetos têm em comum: o modal de novo projeto
+  // (o formulário é o parcial project_form) e a criação. Cada componente o espalha no seu objeto.
+  const projectCreation = () => ({
     ...form(),
-    loading: true,
-    projects: [],
     customers: null, // só carregados quando o modal de novo projeto abre pela primeira vez
     draft: blankProject(),
-    async init() {
-      try {
-        this.projects = (await api('GET', '/api/orgs/' + orgId + '/projects')) || [];
-      } catch (e) {
-        this.errors.load = e.message;
-      } finally {
-        this.loading = false;
-      }
-    },
     // openCreate abre o modal de novo projeto. Só admins criam projeto, e só eles podem
     // listar os clientes; por isso a lista vem aqui, e não no init.
     async openCreate() {
@@ -103,6 +94,175 @@ document.addEventListener('alpine:init', () => {
         Alpine.store('toast').flash(WTT.t('org.projects.created'));
         location.href = '/projects/' + p.id;
       });
+    },
+  });
+
+  // A aba Projetos da organização: todos os projetos numa tabela de gestão.
+  Alpine.data('orgProjects', () => ({
+    ...projectCreation(),
+    loading: true,
+    projects: [],
+    async init() {
+      try {
+        this.projects = (await api('GET', '/api/orgs/' + orgId + '/projects')) || [];
+      } catch (e) {
+        this.errors.load = e.message;
+      } finally {
+        this.loading = false;
+      }
+    },
+  }));
+
+  // Tons dos cartões de projeto: só enfeite (as classes .hue-* do app.css), sorteados pelo id para
+  // o projeto ter sempre a mesma cor, em qualquer lugar.
+  const projectHues = ['teal', 'blue', 'purple', 'green', 'orange', 'gold'];
+  const hueOf = (id) => {
+    let h = 0;
+    for (const c of String(id)) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+    return projectHues[h % projectHues.length];
+  };
+  // initialsOf são as iniciais das duas primeiras palavras, como a do canto da barra superior:
+  // "Ana Souza" -> "AS".
+  const initialsOf = (name) => String(name || '').trim().split(/\s+/).filter(Boolean).slice(0, 2).map((w) => Array.from(w)[0].toUpperCase()).join('') || '?';
+  // markOf é a sigla do cartão do projeto. As palavras curtas e minúsculas que ligam o nome ("da",
+  // "de", "do") ficam de fora, para "Site da Jatobá" dar "SJ" e não "SD"; um nome de uma palavra só
+  // usa as duas primeiras letras dela.
+  const markOf = (name) => {
+    const words = String(name || '').trim().split(/\s+/).filter(Boolean);
+    const main = words.filter((w) => !(w.length <= 3 && w === w.toLowerCase() && w !== w.toUpperCase()));
+    const picked = main.length ? main : words;
+    const letters = picked.length > 1 ? picked.slice(0, 2).map((w) => Array.from(w)[0]) : Array.from(picked[0] || '?').slice(0, 2);
+    return letters.join('').toUpperCase();
+  };
+
+  const HOME_PROJECTS_PER_PAGE = 6;
+  const HOME_TEAM_PER_PAGE = 5; // listas de pessoas ficam em cinco por vez
+  // As três janelas da visão geral: a chave é a da API, o campo é o tempo da pessoa nela.
+  const periodFields = { last_7_days: 'last_7_days_seconds', last_30_days: 'last_30_days_seconds', all_time: 'total_seconds' };
+
+  // A página inicial: para admins, a visão geral da organização (tempo e dinheiro de todos os
+  // projetos) e, para todos, os projetos em cartões, seis por página.
+  Alpine.data('orgHome', () => ({
+    ...projectCreation(),
+    loading: true,
+    projects: [],
+    total: 0,
+    page: 1,
+    stats: null,
+    statsLoading: false,
+    period: 'last_30_days',
+    peoplePage: 1,
+    periods: [
+      { key: 'last_7_days', label: WTT.t('home.stats.last_7') },
+      { key: 'last_30_days', label: WTT.t('home.stats.last_30') },
+      { key: 'all_time', label: WTT.t('home.stats.all_time') },
+    ],
+    hueOf,
+    initialsOf,
+    markOf,
+    init() {
+      const wanted = parseInt(new URLSearchParams(location.search).get('page'), 10);
+      this.page = wanted > 0 ? wanted : 1;
+      this.loadProjects();
+      if (me.role === 'admin') this.loadStats();
+    },
+
+    // Os projetos: uma página por vez, vinda do servidor, que corrige uma página que não existe mais.
+    loadProjects() {
+      return this.run('page', async () => {
+        this.errors.load = '';
+        try {
+          const res = await api('GET', '/api/orgs/' + orgId + '/projects?page=' + this.page + '&per_page=' + HOME_PROJECTS_PER_PAGE);
+          this.projects = res.items || [];
+          this.total = res.total;
+          this.page = res.page;
+          this.syncURL();
+        } catch (e) {
+          this.errors.load = e.message;
+        } finally {
+          this.loading = false;
+        }
+      });
+    },
+    go(page) {
+      this.page = page;
+      return this.loadProjects();
+    },
+    pages() {
+      return Math.max(1, Math.ceil(this.total / HOME_PROJECTS_PER_PAGE));
+    },
+    summary() {
+      return WTT.t('home.projects.summary', { page: this.page, pages: this.pages(), count: this.total });
+    },
+    // A página fica no endereço, para recarregar ou voltar cair onde a pessoa estava.
+    syncURL() {
+      const url = new URL(location.href);
+      if (this.page > 1) url.searchParams.set('page', this.page);
+      else url.searchParams.delete('page');
+      history.replaceState(null, '', url);
+    },
+
+    // A visão geral: o servidor manda as três janelas de uma vez, e trocar de janela não pede nada.
+    async loadStats() {
+      this.statsLoading = true;
+      this.errors.stats = '';
+      try {
+        this.stats = await api('GET', '/api/orgs/' + orgId + '/overview');
+      } catch (e) {
+        this.errors.stats = e.message;
+      } finally {
+        this.statsLoading = false;
+      }
+    },
+    setPeriod(key) {
+      this.period = key;
+      this.peoplePage = 1;
+    },
+    current() {
+      return this.stats.periods[this.period];
+    },
+    scopeText() {
+      return WTT.t({ last_7_days: 'home.stats.scope_7', last_30_days: 'home.stats.scope_30', all_time: 'home.stats.scope_all' }[this.period]);
+    },
+    // O tempo da equipe são as horas dos outros; somadas às suas dão o total de todos.
+    teamSeconds() {
+      const p = this.current();
+      return Math.max(0, p.seconds - p.my_seconds);
+    },
+    mineShare() {
+      const p = this.current();
+      return p.seconds > 0 ? Math.round(p.my_seconds / p.seconds * 100) : null;
+    },
+    marginShare() {
+      const m = this.current().money;
+      return m.margin_cents === null || !m.bill_amount_cents ? null : Math.round(m.margin_cents / m.bill_amount_cents * 100);
+    },
+    marginNegative() {
+      const m = this.current().money.margin_cents;
+      return m !== null && m < 0;
+    },
+    workingNames() {
+      return this.stats.by_person.filter((p) => p.working_now).map((p) => p.person.name).join(', ');
+    },
+
+    // A equipe: todos, de quem mais trabalhou na janela para quem menos, cinco por página.
+    secondsOf(p) {
+      return p[periodFields[this.period]];
+    },
+    teamRows() {
+      return [...this.stats.by_person].sort((a, b) => this.secondsOf(b) - this.secondsOf(a) || a.person.name.localeCompare(b.person.name));
+    },
+    teamPage() {
+      const rows = this.teamRows();
+      const pages = Math.max(1, Math.ceil(rows.length / HOME_TEAM_PER_PAGE));
+      const page = Math.min(Math.max(1, this.peoplePage), pages);
+      const start = (page - 1) * HOME_TEAM_PER_PAGE;
+      return { rows: rows.slice(start, start + HOME_TEAM_PER_PAGE), page, pages, total: rows.length, from: rows.length ? start + 1 : 0, to: Math.min(start + HOME_TEAM_PER_PAGE, rows.length) };
+    },
+    // A barra é a proporção de quem mais trabalhou; quem trabalhou algo nunca fica sem barra.
+    barWidth(p) {
+      const max = Math.max(0, ...this.stats.by_person.map((x) => this.secondsOf(x)));
+      return max > 0 && this.secondsOf(p) > 0 ? Math.max(3, Math.round(this.secondsOf(p) / max * 100)) : 0;
     },
   }));
 

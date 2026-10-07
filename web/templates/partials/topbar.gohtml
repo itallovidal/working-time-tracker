@@ -6,7 +6,7 @@
       <span data-org-name>{{.Me.OrganizationName}}</span>
     </a>
     <nav class="mainnav" aria-label="{{.T "nav.label"}}">
-      <a href="/orgs/{{.OrgID}}" {{if eq .Section "projects"}}aria-current="page"{{end}}>{{.T "nav.projects"}}</a>
+      <a href="/orgs/{{.OrgID}}" {{if eq .Section "home"}}aria-current="page"{{end}}>{{.T "nav.home"}}</a>
       <a href="/orgs/{{.OrgID}}/about" {{if eq .Section "organization"}}aria-current="page"{{end}}>{{.T "nav.organization"}}</a>
     </nav>
     <div class="topbar-right">

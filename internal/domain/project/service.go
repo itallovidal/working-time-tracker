@@ -149,6 +149,38 @@ func (s *Service) ListByOrg(orgID string) ([]Project, error) {
 	return s.store.ListByOrg(orgID)
 }
 
+// CountByOrg conta os projetos da organização.
+func (s *Service) CountByOrg(orgID string) (int, error) {
+	return s.store.CountByOrg(orgID)
+}
+
+// Tamanho da página da lista de projetos quando quem chama não diz, e o maior que aceita.
+const (
+	DefaultPerPage = 10
+	MaxPerPage     = 100
+)
+
+// ListPage devolve uma página da lista de projetos com o total. perPage zero vale
+// DefaultPerPage e acima de MaxPerPage vale MaxPerPage; uma página além da última volta como
+// a última, e a organização sem projetos volta como a página 1, vazia.
+func (s *Service) ListPage(orgID string, page, perPage int) (*Page, error) {
+	if perPage <= 0 {
+		perPage = DefaultPerPage
+	}
+	perPage = min(perPage, MaxPerPage)
+	total, err := s.store.CountByOrg(orgID)
+	if err != nil {
+		return nil, err
+	}
+	last := max(1, (total+perPage-1)/perPage)
+	page = min(max(page, 1), last)
+	items, err := s.store.ListPageByOrg(orgID, page, perPage)
+	if err != nil {
+		return nil, err
+	}
+	return &Page{Items: items, Total: total, Page: page, PerPage: perPage}, nil
+}
+
 func (s *Service) Get(id string) (*Project, error) {
 	return s.store.GetByID(id)
 }

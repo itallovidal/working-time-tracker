@@ -21,4 +21,6 @@ var (
 	ErrInvalidBillRate       = apperr.New("project.invalid_bill_rate", http.StatusBadRequest)
 	ErrCustomerNotFound      = apperr.New("project.customer_not_found", http.StatusBadRequest)
 	ErrInvalidOrganization   = apperr.New("project.invalid_organization", http.StatusBadRequest)
+	ErrInvalidPage           = apperr.New("project.invalid_page", http.StatusBadRequest)
+	ErrInvalidPerPage        = apperr.New("project.invalid_per_page", http.StatusBadRequest)
 )

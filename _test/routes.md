@@ -111,12 +111,62 @@ Se o convite foi criado com email, só esse email consegue aceitar. Um convite v
 | PATCH | `/api/orgs/:orgId` | admin | Altera o nome e o perfil. Veja os campos abaixo |
 | DELETE | `/api/orgs/:orgId` | dono | Exclui a organização com as pessoas e os convites. Falha se ainda houver projetos |
 | GET | `/api/orgs/:orgId/persons` | logado | Pessoas da organização |
+| GET | `/api/orgs/:orgId/overview` | admin | Visão geral da organização: o tempo e o dinheiro de todos os projetos em três janelas, e as horas de cada pessoa. Veja abaixo |
 | POST | `/api/orgs/:orgId/projects` | `projects.create` | Cria um projeto |
-| GET | `/api/orgs/:orgId/projects` | logado | Projetos da organização |
+| GET | `/api/orgs/:orgId/projects` | logado | Projetos da organização, do mais novo para o mais antigo. Sem `page`, todos num array; com `page`, uma página. Veja abaixo |
 | POST | `/api/orgs/:orgId/customers` | `customers.manage` | Cria um cliente |
 | GET | `/api/orgs/:orgId/customers` | `customers.manage` | Clientes da organização, em ordem alfabética |
 
 A organização é criada pelo signup, e o `organization_id` vem no `/api/auth/me`, junto com `organization_currency`.
+
+### Lista de projetos paginada
+
+`GET /api/orgs/:orgId/projects` sem `page` devolve o array de sempre. Com `page` (a partir de 1), devolve uma página:
+
+```json
+{
+  "items": [ { "id": "…", "name": "App de Pedidos", "customer": { "id": "…", "name": "Clínica Vida Plena" }, "member_count": 5, "task_count": 6, "…": "…" } ],
+  "total": 8,
+  "page": 1,
+  "per_page": 6
+}
+```
+
+- `per_page` só vale junto de `page`: o padrão é 10 e o teto, 100 (um valor maior vale 100).
+- Os projetos vêm do mais novo para o mais antigo, e o id desempata, então duas páginas seguidas não repetem nem pulam um projeto.
+- Uma página além da última volta como a última (`page` na resposta é a que valeu), e uma organização sem projetos volta como a página 1, vazia.
+- `page` ou `per_page` que não seja um número a partir de 1 é `400 project.invalid_page` ou `400 project.invalid_per_page`.
+- Qualquer membro da organização lista; o cliente de cada projeto vem só com o nome.
+
+### Visão geral da organização
+
+`GET /api/orgs/:orgId/overview` é só de admins (`403` para um membro, `404` para outra organização, `401` sem sessão). Soma as sessões de todos os projetos da organização e lê as pessoas dela, e responde com **as três janelas de uma vez**:
+
+```json
+{
+  "people": { "total": 12, "working_now": 2 },
+  "projects": { "total": 8 },
+  "periods": {
+    "last_7_days": {
+      "seconds": 856080, "my_seconds": 91200, "session_count": 121,
+      "money": { "pay_amount_cents": 1938200, "bill_amount_cents": 3683361, "margin_cents": 1745161 }
+    },
+    "last_30_days": { "…": "…" },
+    "all_time": { "…": "…" }
+  },
+  "by_person": [
+    { "person": { "id": "…", "name": "Helena Costa" }, "working_now": false,
+      "last_7_days_seconds": 123000, "last_30_days_seconds": 552840, "total_seconds": 1322400 }
+  ],
+  "generated_at": "2026-10-07T16:33:00-03:00"
+}
+```
+
+- **Janelas.** `last_7_days` e `last_30_days` contam só o trecho de cada sessão que caiu dentro delas, e `all_time`, tudo. Uma sessão toda dentro da janela vale os mesmos valores dela; a que atravessa a borda vale o tempo de dentro vezes os valores por hora dela, arredondado ao centavo. A sessão aberta conta até `generated_at`, o mesmo instante das janelas.
+- `seconds` é o tempo de todos e `my_seconds` o de quem pediu (o dono vê o dele); `session_count` são as sessões com algum tempo na janela.
+- `money` segue a visão geral do projeto: `pay_amount_cents` (custo) e `bill_amount_cents` (receita) são `null` quando nenhuma sessão da janela tem aquele valor por hora, e `margin_cents` é a receita menos o custo, `null` sem receita. As horas do dono têm custo `0`, então entram inteiras na margem.
+- `by_person` traz **todas** as pessoas da organização, também as que ainda não bateram ponto (com zeros), da que mais trabalhou no total para a que menos; a soma de cada janela é a das linhas. `working_now` marca quem tem uma sessão aberta em qualquer projeto, e `people.working_now` conta essas pessoas.
+- O total de `all_time` é a soma das visões gerais dos projetos (`GET /api/projects/:projectId/overview`).
 
 ### Perfil da organização
 

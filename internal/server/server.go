@@ -73,6 +73,7 @@ func New(client *ent.Client, opts Options) (*echo.Echo, error) {
 		Sessions:      workSessionSvc,
 		Integrations:  integrationSvc,
 		Tasks:         taskStore,
+		People:        personSvc,
 	})
 	authSvc := auth.NewService(authStore)
 

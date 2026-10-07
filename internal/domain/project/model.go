@@ -53,3 +53,12 @@ type Project struct {
 	TaskCount   int       `json:"task_count"`
 	CreatedAt   time.Time `json:"created_at"`
 }
+
+// Page é uma página da lista de projetos da organização. Total conta todos os projetos, e
+// Page e PerPage são os valores que valeram (uma página além da última volta como a última).
+type Page struct {
+	Items   []Project `json:"items"`
+	Total   int       `json:"total"`
+	Page    int       `json:"page"`
+	PerPage int       `json:"per_page"`
+}

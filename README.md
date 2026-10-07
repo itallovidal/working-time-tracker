@@ -8,6 +8,7 @@ Ponto por tarefa para equipes que trabalham por projeto. Foi pensado principalme
 
 - **Contas e organizações.** O signup cria uma organização com você como admin e **dono** dela. Outras pessoas entram por **link de convite** (uso único, válido por 7 dias, opcionalmente preso a um email).
 - **Perfil da organização.** Resumo, descrição, segmento, contato, dados jurídicos (razão social, CNPJ, endereço) e como ela trabalha (regime remoto, híbrido ou presencial, fuso e moeda). O admin edita; todos os membros leem na aba **Sobre**, onde campo sem valor aparece como "Não informado".
+- **Início da organização.** A página inicial é um painel. Para **admins**, abre com a **Visão geral** de todos os projetos somados, numa janela de **7 dias, 30 dias ou tudo** (30 dias ao abrir; trocar de janela não pede nada ao servidor): as **suas horas**, as **horas da equipe** (as dos outros; o total de todos vai na dica), quem está com o ponto aberto, a **receita**, o **custo** e a **margem** (com a parte da receita que ela é), e a **Equipe**, com as horas de cada pessoa na janela, de quem mais trabalhou para quem menos, cinco por página e com um atalho para os colaboradores. As horas e os valores seguem a regra do projeto, cada sessão arredondada ao centavo, e a sessão que atravessa a borda da janela conta só o trecho de dentro; por isso o total da organização é a soma dos projetos. Para **todos**, vêm os **projetos em cartões coloridos**, **seis por página**, cada um com a faixa e a sigla na cor dele (sorteada pelo id, sempre a mesma), o nome, o cliente (ou "Projeto interno"), a descrição em duas linhas e quantas pessoas e tarefas tem; a sprint, a daily, a weekly e a reunião saíram do cartão e continuam nas configurações do projeto. A página fica no endereço (`?page=2`).
 - **Papéis.** Admins gerenciam a organização, as pessoas, os clientes, os projetos, os times, os valores e as integrações. Membros gerenciam tarefas e batem o próprio ponto, e fazem mais só se receberem **permissões**: num projeto, por **grupo** (colaborador, gerente de projeto, financeiro ou administrador do projeto, escolhido ao pôr a pessoa nele), ou na organização (criar projetos, cuidar dos clientes e das pessoas, liberadas pelo dono). A lista está em [`_docs/permissions.md`](_docs/permissions.md). O **dono** é o admin que criou a organização: um só por organização, sempre admin, e as horas dele valem o valor cobrado, sem custo, em vez de um valor pago (o que ele tira do projeto é a margem). Ele entra sozinho nos projetos que cria e nos que passa a trabalhar.
 - **Jornada semanal** de cada pessoa. É o que a organização combinou com ela, em horas por semana, e vale para todos os projetos em que trabalha. O admin informa na aba Colaboradores da organização; a pessoa lê no perfil.
 - **Clientes e valores por hora.** Cada projeto pode ter um cliente e o **valor cobrado** dele por hora. Cada pessoa tem um **valor pago** por hora em cada projeto, então a mesma pessoa pode receber 20 num projeto e 25 em outro. O admin vê e altera tudo, com a margem por hora; o membro vê só o que ele mesmo recebe.
@@ -86,7 +87,7 @@ A interface segue a Decision 8 de `_docs/design.md`. O servidor renderiza a casc
 | `/login`, `/signup` | Entrar e criar organização |
 | `/invite/:token` | Aceitar um convite e criar a conta |
 | `/` | Leva para a organização de quem está logado |
-| `/orgs/:orgId` | Projetos da organização em cartões, para quem entra para trabalhar num deles. O admin cria projeto num modal, já com o cliente e, quando há cliente, o valor cobrado por hora |
+| `/orgs/:orgId` | O **Início**: para admins, a visão geral da organização (horas, receita, custo e margem de todos os projetos, em 7 dias, 30 dias ou tudo, e a equipe); para todos, os projetos em cartões coloridos, seis por página (`?page=`). Quem pode cria projeto num modal, já com o cliente e, quando há cliente, o valor cobrado por hora |
 | `/orgs/:orgId/about` | Organização, aba Sobre: o perfil da organização, para todos os membros |
 | `/orgs/:orgId/settings` | Organização, tela de edição aberta pelo botão Editar da aba Sobre: perfil, regime, fuso, moeda e exclusão da organização (só admins) |
 | `/orgs/:orgId/people` | Organização, aba Colaboradores: os integrantes, com o papel (que muda no botão da linha) e a jornada semanal de cada um (que muda num modal, pelo lápis); os convites pendentes e o botão Adicionar colaborador, que gera o link de convite num modal (só admins) |
@@ -112,7 +113,7 @@ Sem sessão, qualquer página leva ao login, e a pessoa volta para a página ped
 
 ### Navegação
 
-- A **barra superior** mostra a organização, o menu (Projetos e Organização), o **indicador do ponto aberto** com cronômetro e botão Parar, o **toggle de idioma** (PT | EN), quem está logado (o nome leva ao **perfil**) e o botão Sair. Sem login, o toggle fica no canto da tela.
+- A **barra superior** mostra a organização, o menu (Início e Organização), o **indicador do ponto aberto** com cronômetro e botão Parar, o **toggle de idioma** (PT | EN), quem está logado (o nome leva ao **perfil**) e o botão Sair. Sem login, o toggle fica no canto da tela.
 - As páginas de projeto têm duas barras de **abas**. Para todos: Início (o relógio, as suas tarefas e as suas sessões), Minhas tarefas, Lista de tarefas e Colaboradores (só para ler), e o projeto abre no Início. Para admins, o botão Gestão abre a outra: Visão geral, Colaboradores, Integrações e Configurações, em `/projects/:id/management/...`. A aba Colaboradores juntou as antigas Times e Valores. O valor cobrado do cliente fica em Configurações.
 - A página **Organização** abre na aba Sobre, que todos os membros leem. Nela o admin tem o botão **Editar**, que leva à tela de edição; salvar volta para a Sobre. As abas Colaboradores, Clientes e Projetos são só de admins.
 - Ações de admin não aparecem para membros. A API continua sendo quem garante as permissões.
@@ -185,7 +186,7 @@ Resumo dos grupos de rotas:
 | Grupo | Rotas |
 |---|---|
 | Autenticação | `/api/auth/signup`, `login`, `logout`, `me`, `password`, `invites/:token` |
-| Organização | `/api/orgs/:orgId` (+ `persons`, `projects`, `customers`, `invites`) |
+| Organização | `/api/orgs/:orgId` (+ `persons`, `projects`, `overview`, `customers`, `invites`) |
 | Clientes | `/api/customers/:customerId` |
 | Pessoas | `/api/persons/:personId` (+ `role`, `weekly-hours`, `allocations`) |
 | Projetos | `/api/projects/:projectId` (+ `overview`, `teams`, `tasks`, `labels`, `members`, `collaborators`, `integrations`, `work-sessions`) |
@@ -262,7 +263,7 @@ internal/
     auth/                 # signup, login, sessões, convites, middlewares e acesso por organização
     organization/  customer/  person/  project/  team/  allocation/  collaborator/  task/  work_session/  integration/
                           # cada domínio com model, store (Ent), service e handler
-    overview/             # visão geral do projeto: só lê os outros domínios, sem tabela nem store
+    overview/             # visão geral do projeto e da organização: só lê os outros domínios, sem tabela nem store
   page/                   # páginas HTML
   routes/                 # rotas da API (routes.go) e das páginas (pages.go)
   server/                 # monta o servidor completo; usado pelo main e pelos testes

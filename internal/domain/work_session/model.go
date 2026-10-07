@@ -70,6 +70,22 @@ func (w *WorkSession) Seconds(now time.Time) float64 {
 	return math.Max(0, end.Sub(w.StartAt).Seconds())
 }
 
+// Within é o que caiu da sessão de since até now: o tempo e os dois valores, arredondados ao
+// centavo como os da sessão inteira (uma sessão toda dentro da janela dá os mesmos valores
+// dela, e só a que atravessa a borda é cortada). Um since zerado é a sessão inteira. A sessão
+// aberta conta até now.
+func (w *WorkSession) Within(since, now time.Time) (seconds float64, pay, bill *int) {
+	start, end := w.StartAt, now
+	if w.EndAt != nil {
+		end = *w.EndAt
+	}
+	if start.Before(since) {
+		start = since
+	}
+	seconds = math.Max(0, end.Sub(start).Seconds())
+	return seconds, amount(seconds, w.PayRateCents), amount(seconds, w.BillRateCents)
+}
+
 // taskSeconds é o tempo do intervalo dentro da sessão: o intervalo recortado entre o
 // início e o fim dela (ou now, se está aberta).
 func (w *WorkSession) taskSeconds(l *SessionTask, now time.Time) float64 {

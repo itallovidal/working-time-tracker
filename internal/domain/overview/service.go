@@ -11,6 +11,7 @@ import (
 	"working-time-tracker/internal/database"
 	"working-time-tracker/internal/domain/collaborator"
 	"working-time-tracker/internal/domain/integration"
+	"working-time-tracker/internal/domain/person"
 	"working-time-tracker/internal/domain/project"
 	"working-time-tracker/internal/domain/task"
 	"working-time-tracker/internal/domain/team"
@@ -27,6 +28,11 @@ type Deps struct {
 	Sessions      *work_session.Service
 	Integrations  *integration.Service
 	Tasks         *task.Store
+	// People serve à visão geral da organização, que lista todas as pessoas dela.
+	People *person.Service
+	// Now é o relógio da conta; sem ele vale time.Now. Os testes fixam o instante para as
+	// janelas de 7 e 30 dias e as sessões abertas darem sempre o mesmo número.
+	Now func() time.Time
 }
 
 type Service struct {
@@ -35,6 +41,13 @@ type Service struct {
 
 func NewService(deps Deps) *Service {
 	return &Service{deps: deps}
+}
+
+func (s *Service) now() time.Time {
+	if s.deps.Now != nil {
+		return s.deps.Now()
+	}
+	return time.Now()
 }
 
 // Get monta a visão geral do projeto. Um ID malformado vale como "não encontrado".
@@ -68,7 +81,7 @@ func (s *Service) Get(projectID string) (*Overview, error) {
 	}
 	// Um instante só para a resposta inteira, tirado depois de ler as sessões: os
 	// valores das sessões abertas já vieram calculados até a leitura.
-	now := time.Now()
+	now := s.now()
 	overdue, err := s.deps.Tasks.CountByProject(projectID, task.ListFilter{DeadlineTo: &now})
 	if err != nil {
 		return nil, err
@@ -159,14 +172,7 @@ func (o *Overview) addSessions(sessions []work_session.WorkSession, inProject ma
 		}
 	}
 
-	// Margem é a receita menos o custo. Sem receita não há margem para mostrar.
-	if bill := o.Money.BillAmountCents; bill != nil {
-		margin := *bill
-		if pay := o.Money.PayAmountCents; pay != nil {
-			margin -= *pay
-		}
-		o.Money.MarginCents = &margin
-	}
+	o.Money.addMargin()
 
 	o.ByPerson = make([]PersonTotal, 0, len(byPerson))
 	for _, pt := range byPerson {

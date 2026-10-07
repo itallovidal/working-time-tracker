@@ -187,6 +187,8 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `project.invalid_customer_meeting_time` | 400 | — | `o horário da reunião com o cliente deve estar no formato HH:MM, por exemplo 10:30` | `the customer meeting time must use the HH:MM format, for example 10:30` |
 | `project.invalid_daily_time` | 400 | — | `o horário da daily deve estar no formato HH:MM, por exemplo 09:30` | `the daily time must use the HH:MM format, for example 09:30` |
 | `project.invalid_organization` | 400 | — | `organização inválida` | `invalid organization` |
+| `project.invalid_page` | 400 | — | `página inválida (page): use um número a partir de 1` | `invalid page (page): use a number from 1` |
+| `project.invalid_per_page` | 400 | — | `tamanho de página inválido (per_page): use um número a partir de 1` | `invalid page size (per_page): use a number from 1` |
 | `project.invalid_sprint` | 400 | — | `a sprint precisa ter entre 1 e 90 dias` | `the sprint must be between 1 and 90 days long` |
 | `project.invalid_weekday` | 400 | — | `dia da semana inválido: use monday, tuesday, wednesday, thursday, friday, saturday ou sunday` | `invalid weekday: use monday, tuesday, wednesday, thursday, friday, saturday or sunday` |
 | `project.invalid_weekly_time` | 400 | — | `o horário da weekly deve estar no formato HH:MM, por exemplo 13:00` | `the weekly time must use the HH:MM format, for example 13:00` |

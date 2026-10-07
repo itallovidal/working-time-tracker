@@ -73,6 +73,8 @@ func RegisterRoutes(e *echo.Echo, h Handlers, m *auth.Middleware, authLimiter ec
 	r.GET("/orgs/:orgId/persons", h.Person.ListByOrg, org)
 	r.POST("/orgs/:orgId/projects", h.Project.Create, org, orgCan(permission.ProjectsCreate))
 	r.GET("/orgs/:orgId/projects", h.Project.ListByOrg, org)
+	// A visão geral da organização soma o dinheiro de todos os projetos e o tempo de cada pessoa: só dos admins.
+	r.GET("/orgs/:orgId/overview", h.Overview.Organization, org, admin)
 	r.POST("/orgs/:orgId/invites", h.Auth.CreateInvite, org, orgCan(permission.PeopleManage))
 	r.GET("/orgs/:orgId/invites", h.Auth.ListInvites, org, orgCan(permission.PeopleManage))
 	r.DELETE("/invites/:inviteId", h.Auth.RevokeInvite, inv, orgCan(permission.PeopleManage))

@@ -260,6 +260,18 @@
       "body": {}
     },
     {
+      "_id": "req_02_03b",
+      "_type": "request",
+      "parentId": "fld_02",
+      "name": "Visão geral da organização (admin: 7 dias, 30 dias e tudo)",
+      "method": "GET",
+      "url": "{{base_url}}/api/orgs/{{org_id}}/overview",
+      "authentication": {},
+      "metaSortKey": 3.5,
+      "headers": [],
+      "body": {}
+    },
+    {
       "_id": "req_02_04",
       "_type": "request",
       "parentId": "fld_02",
@@ -438,6 +450,18 @@
       "url": "{{base_url}}/api/orgs/{{org_id}}/projects",
       "authentication": {},
       "metaSortKey": 1,
+      "headers": [],
+      "body": {}
+    },
+    {
+      "_id": "req_04_01b",
+      "_type": "request",
+      "parentId": "fld_04",
+      "name": "Listar projetos, uma página (6 por vez)",
+      "method": "GET",
+      "url": "{{base_url}}/api/orgs/{{org_id}}/projects?page=1&per_page=6",
+      "authentication": {},
+      "metaSortKey": 1.5,
       "headers": [],
       "body": {}
     },

@@ -211,8 +211,11 @@ func TestPages_OrgSummaryInHeader(t *testing.T) {
 	member := invite(t, e, admin, "bia@test.com", "member")
 	orgPath := "/orgs/" + admin.orgID
 
-	if body := do(e, "GET", orgPath, "", member.session).Body.String(); !strings.Contains(body, "Cada projeto tem seus times") {
-		t.Error("home page without a summary does not show the default lede")
+	// Sem resumo, a página inicial diz o que cada um encontra nela: o admin, a visão geral; o membro, os projetos.
+	for who, want := range map[string]string{member.session: "Os projetos da organização.", admin.session: "Como a organização está indo"} {
+		if body := do(e, "GET", orgPath, "", who).Body.String(); !strings.Contains(body, want) {
+			t.Errorf("home page without a summary does not show the default lede %q", want)
+		}
 	}
 
 	rec := do(e, "PATCH", "/api/orgs/"+admin.orgID, `{"summary":"Entregas <rápidas> no mesmo dia","industry":"Logística"}`, admin.session)

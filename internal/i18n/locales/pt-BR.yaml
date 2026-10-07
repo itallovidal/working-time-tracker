@@ -45,7 +45,7 @@ titles:
   invite: Convite
   profile: Seu perfil
   not_found: Página não encontrada
-  projects: Projetos
+  home: Início
   org_about: Sobre · Organização
   org_settings: Editar · Organização
   org_projects: Projetos · Organização
@@ -62,10 +62,65 @@ titles:
 
 nav:
   label: Organização
-  projects: Projetos
+  home: Início
   organization: Organização
   profile_sr: "Seu perfil:"
   logout: Sair
+
+home:
+  intro: Como a organização está indo e os projetos que ela toca.
+  intro_member: Os projetos da organização.
+  stats:
+    title: Visão geral
+    scope_7: Soma de todos os projetos nos últimos 7 dias.
+    scope_30: Soma de todos os projetos nos últimos 30 dias.
+    scope_all: Soma de todos os projetos desde o início.
+    period: Período
+    last_7: 7 dias
+    last_30: 30 dias
+    all_time: Tudo
+    updated: "Atualizado às {{.time}}"
+    refresh: Atualizar
+    loading: Carregando a visão geral…
+    mine: Suas horas
+    mine_hint: "{{.percent}}% das horas de todos"
+    no_hours: Nenhuma hora neste período
+    team: Horas da equipe
+    team_hint: "Sem as suas. Todos juntos: {{.time}}"
+    working_now: Trabalhando agora
+    nobody_open: Ninguém com o ponto aberto
+    revenue: Receita
+    revenue_hint: O que os clientes pagam pelas horas
+    cost: Custo
+    cost_hint: O que as pessoas recebem pelas horas
+    margin: Margem
+    margin_share: "{{.percent}}% da receita"
+    no_revenue: Nenhuma hora com valor cobrado
+    no_cost: Nenhuma hora com valor pago
+  team:
+    title: Equipe
+    intro: Horas de cada pessoa no período, de quem mais trabalhou para quem menos.
+    nobody_worked: Ninguém bateu ponto neste período.
+    working: Trabalhando agora
+    see_people: Ver colaboradores
+    pager: Páginas da equipe
+    prev: Anterior
+    next: Próxima
+    range: "{{.from}}–{{.to}} de {{.total}}"
+  projects:
+    title: Projetos
+    pager: Páginas da lista de projetos
+    prev: Anterior
+    next: Próxima
+    summary:
+      one: "Página {{.page}} de {{.pages}} · {{.count}} projeto"
+      other: "Página {{.page}} de {{.pages}} · {{.count}} projetos"
+    people:
+      one: "{{.count}} pessoa"
+      other: "{{.count}} pessoas"
+    tasks:
+      one: "{{.count}} tarefa"
+      other: "{{.count}} tarefas"
 
 permissions:
   keys:
@@ -357,12 +412,6 @@ org:
     col_people: Pessoas
     col_people_title: "Colaboradores do projeto: quem está em algum time ou tem valor por hora nele"
     col_tasks: Tarefas
-    sprint_badge:
-      one: "Sprint de {{.count}} dia"
-      other: "Sprint de {{.count}} dias"
-    daily_badge: "Daily {{.time}}"
-    weekly_badge: "Weekly {{.slot}}"
-    meeting_badge: "Reunião {{.slot}}"
     customers_load_failed: "Não deu para carregar os clientes: {{.error}}"
     rate_invalid: Informe o valor cobrado por hora, por exemplo 150,00.
     rate_too_high: O valor cobrado por hora deve ficar entre 0 e 1.000.000,00.
@@ -1040,6 +1089,8 @@ errors:
     weekly_time_without_day: "o horário da weekly precisa do dia da weekly"
     name_required: "informe o nome do projeto"
     not_found: "projeto não encontrado"
+    invalid_page: "página inválida (page): use um número a partir de 1"
+    invalid_per_page: "tamanho de página inválido (per_page): use um número a partir de 1"
   request:
     invalid_body: "corpo da requisição inválido"
     json_required: "envie o corpo como JSON (Content-Type: application/json)"

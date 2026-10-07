@@ -148,6 +148,12 @@ func (s *Service) ListByProject(projectID string, taskID, personID *string) ([]W
 	return sessions, nil
 }
 
+// ListByOrganization devolve as sessões de todos os projetos da organização, sem as tarefas e
+// sem os valores calculados: quem soma usa Within, que corta cada sessão na janela que quer.
+func (s *Service) ListByOrganization(orgID string) ([]WorkSession, error) {
+	return s.sessionStore.ListByOrganization(orgID)
+}
+
 // TotalTimeResult soma as sessões de um filtro. Os dois valores ficam nil quando
 // nenhuma sessão do filtro tem valor por hora.
 type TotalTimeResult struct {

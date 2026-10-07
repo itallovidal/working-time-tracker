@@ -1,6 +1,9 @@
 package project
 
 import (
+	"net/http"
+	"strconv"
+
 	"github.com/labstack/echo/v5"
 
 	"working-time-tracker/internal/apperr"
@@ -48,13 +51,42 @@ func (h *Handler) Create(c *echo.Context) error {
 	return c.JSON(201, project)
 }
 
+// ListByOrg lista os projetos da organização. Sem page, devolve todos num array; com page,
+// uma página com o total (per_page só vale junto de page).
 func (h *Handler) ListByOrg(c *echo.Context) error {
 	orgID := c.Param("orgId")
+	page, perPage, err := pageParams(c)
+	if err != nil {
+		return apperr.Respond(c, http.StatusBadRequest, err)
+	}
+	if page > 0 {
+		out, err := h.svc.ListPage(orgID, page, perPage)
+		if err != nil {
+			return apperr.Respond(c, 500, err)
+		}
+		return c.JSON(200, out)
+	}
 	projects, err := h.svc.ListByOrg(orgID)
 	if err != nil {
 		return apperr.Respond(c, 500, err)
 	}
 	return c.JSON(200, projects)
+}
+
+// pageParams lê page e per_page; zero é "não veio". Um valor que não é um número a partir de 1
+// é recusado, em vez de virar o padrão sem aviso.
+func pageParams(c *echo.Context) (page, perPage int, err error) {
+	if v := c.QueryParam("page"); v != "" {
+		if page, err = strconv.Atoi(v); err != nil || page < 1 {
+			return 0, 0, ErrInvalidPage
+		}
+	}
+	if v := c.QueryParam("per_page"); v != "" {
+		if perPage, err = strconv.Atoi(v); err != nil || perPage < 1 {
+			return 0, 0, ErrInvalidPerPage
+		}
+	}
+	return page, perPage, nil
 }
 
 func (h *Handler) Get(c *echo.Context) error {

@@ -65,6 +65,8 @@ func setup(t *testing.T) *fixture {
 		Sessions:      work_session.NewService(work_session.NewStore(testClient), taskStore, allocationStore),
 		Integrations:  integration.NewService(integration.NewStore(testClient), "test-key"),
 		Tasks:         taskStore,
+		People:        person.NewService(person.NewStore(testClient)),
+		Now:           func() time.Time { return f.now },
 	})
 	org, err := organization.NewService(organization.NewStore(testClient)).Create("Org")
 	if err != nil {

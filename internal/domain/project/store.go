@@ -48,15 +48,48 @@ func (s *Store) ListByOrg(orgID string) ([]Project, error) {
 	if err != nil {
 		return nil, err
 	}
-	projects, err := withCounts(s.client.Project.Query().
+	projects, err := newestFirst(withCounts(s.client.Project.Query().
 		Where(project.OrganizationIDEQ(uid)).
-		WithCustomer()).
-		Order(ent.Desc(project.FieldCreatedAt)).
+		WithCustomer())).
 		All(context.Background())
 	if err != nil {
 		return nil, err
 	}
 	return toDomainProjects(projects), nil
+}
+
+// CountByOrg conta os projetos da organização.
+func (s *Store) CountByOrg(orgID string) (int, error) {
+	uid, err := uuid.Parse(orgID)
+	if err != nil {
+		return 0, err
+	}
+	return s.client.Project.Query().Where(project.OrganizationIDEQ(uid)).Count(context.Background())
+}
+
+// ListPageByOrg devolve uma página dos projetos da organização, do mais novo para o mais
+// antigo. page começa em 1.
+func (s *Store) ListPageByOrg(orgID string, page, perPage int) ([]Project, error) {
+	uid, err := uuid.Parse(orgID)
+	if err != nil {
+		return nil, err
+	}
+	projects, err := newestFirst(withCounts(s.client.Project.Query().
+		Where(project.OrganizationIDEQ(uid)).
+		WithCustomer())).
+		Offset((page - 1) * perPage).
+		Limit(perPage).
+		All(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	return toDomainProjects(projects), nil
+}
+
+// newestFirst ordena do projeto mais novo para o mais antigo. O id desempata, para duas
+// páginas seguidas nunca repetirem nem pularem um projeto criado no mesmo instante.
+func newestFirst(q *ent.ProjectQuery) *ent.ProjectQuery {
+	return q.Order(ent.Desc(project.FieldCreatedAt), ent.Asc(project.FieldID))
 }
 
 func (s *Store) GetByID(id string) (*Project, error) {

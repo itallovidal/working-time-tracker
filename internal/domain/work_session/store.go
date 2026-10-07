@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 
 	"working-time-tracker/ent"
+	entproject "working-time-tracker/ent/project"
 	"working-time-tracker/ent/worksession"
 	"working-time-tracker/ent/worksessiontask"
 	"working-time-tracker/internal/database"
@@ -181,6 +182,24 @@ func (s *Store) ListByProject(projectID string, taskID, personID *string) ([]Wor
 		return nil, err
 	}
 
+	return toDomainSessions(sessions), nil
+}
+
+// ListByOrganization devolve as sessões de todos os projetos da organização, da mais recente
+// para a mais antiga, sem as tarefas nem a pessoa: serve a quem soma o tempo e os valores de
+// tudo e não precisa do que cada sessão trabalhou.
+func (s *Store) ListByOrganization(orgID string) ([]WorkSession, error) {
+	uid, err := uuid.Parse(orgID)
+	if err != nil {
+		return nil, err
+	}
+	sessions, err := s.client.WorkSession.Query().
+		Where(worksession.HasProjectWith(entproject.OrganizationIDEQ(uid))).
+		Order(ent.Desc(worksession.FieldStartAt)).
+		All(context.Background())
+	if err != nil {
+		return nil, err
+	}
 	return toDomainSessions(sessions), nil
 }
 

@@ -214,7 +214,7 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
   border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--muted); white-space: nowrap;
 }
 .segmented button:hover { color: var(--ink); }
-.segmented button[aria-selected="true"] { background: var(--surface); color: var(--accent); box-shadow: 0 0 0 1px var(--rule-strong); }
+.segmented button[aria-selected="true"], .segmented button[aria-pressed="true"] { background: var(--surface); color: var(--accent); box-shadow: 0 0 0 1px var(--rule-strong); }
 
 /* ---------- Superfícies ---------- */
 .card {
@@ -477,16 +477,73 @@ td.actions { text-align: right; white-space: nowrap; }
 .select-tone { font-weight: 600; }
 .select-tone option { background-color: var(--tone-soft); color: var(--tone); }
 
-/* Cartões de projeto na visão da organização */
-.project-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+/* Tons só de enfeite, para dar cor aos cartões da página inicial: não carregam o sentido de
+   prioridade nem de status. O cartão de projeto sorteia um pelo id, e os números da visão geral
+   têm o seu. Usam as mesmas cores da paleta, nos dois temas. */
+.hue-teal { --tone: var(--teal); --tone-soft: var(--teal-soft); }
+.hue-blue { --tone: var(--blue); --tone-soft: var(--blue-soft); }
+.hue-purple { --tone: var(--purple); --tone-soft: var(--purple-soft); }
+.hue-green { --tone: var(--green); --tone-soft: var(--green-soft); }
+.hue-orange { --tone: var(--orange); --tone-soft: var(--orange-soft); }
+.hue-gold { --tone: var(--gold); --tone-soft: var(--gold-soft); }
+
+/* Cartões de projeto na página inicial: uma faixa e a sigla na cor do projeto, o nome, o
+   cliente e só o que ajuda a escolher (quantas pessoas e tarefas). */
+.project-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
 .project-card {
+  position: relative; overflow: hidden;
   background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius);
-  padding: 16px 18px; display: flex; flex-direction: column; gap: 8px;
+  padding: 20px 18px 16px; display: flex; flex-direction: column; gap: 12px;
   text-decoration: none; color: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
-.project-card:hover { border-color: var(--accent); }
-.project-card h3 { color: var(--ink); }
-.project-meta { display: flex; gap: 6px; flex-wrap: wrap; margin-top: auto; padding-top: 6px; }
+.project-card::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 4px; background: var(--tone); }
+.project-card:hover { border-color: var(--tone); box-shadow: var(--shadow); }
+.project-card:focus-visible { outline: 2px solid var(--tone); outline-offset: 2px; }
+.project-top { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.project-mark {
+  width: 44px; height: 44px; border-radius: 10px; flex: none; display: grid; place-items: center;
+  background: var(--tone); color: var(--on-tone); font-weight: 700; font-size: 0.95rem; letter-spacing: 0.02em;
+}
+.project-title { min-width: 0; }
+.project-card h3 { color: var(--ink); overflow-wrap: anywhere; }
+.project-customer { margin: 2px 0 0; font-size: 0.85rem; color: var(--muted); overflow-wrap: anywhere; }
+.project-desc {
+  margin: 0; color: var(--ink-2); font-size: 0.9rem;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.project-stats { display: flex; gap: 8px; flex-wrap: wrap; margin-top: auto; padding-top: 4px; }
+.project-stat {
+  display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 600;
+  padding: 3px 10px; border-radius: 999px; background: var(--tone-soft); color: var(--tone);
+}
+
+/* A visão geral da organização: seis números, três por linha, cada um com o ícone na sua cor. */
+.kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 900px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .kpis { grid-template-columns: minmax(0, 1fr); } }
+.kpi {
+  background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius);
+  padding: 16px 18px; display: flex; align-items: flex-start; gap: 14px; min-width: 0;
+}
+.kpi-icon {
+  width: 42px; height: 42px; border-radius: 50%; flex: none; display: grid; place-items: center;
+  background: var(--tone-soft); color: var(--tone); font-size: 1.05rem;
+}
+.kpi-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.kpi-label { font-size: 0.82rem; font-weight: 600; color: var(--muted); }
+.kpi-value { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 1.6rem; font-weight: 600; line-height: 1.25; color: var(--ink); overflow-wrap: anywhere; }
+.kpi-hint { font-size: 0.8rem; color: var(--muted); overflow-wrap: anywhere; }
+
+/* A equipe: cada pessoa com as horas do período e uma barra do tamanho delas, na proporção de
+   quem mais trabalhou. */
+.team-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.team-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; }
+.team-who { min-width: 0; }
+.team-name { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-weight: 550; overflow-wrap: anywhere; }
+.team-bar { height: 8px; margin-top: 6px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+.team-bar > span { display: block; height: 100%; border-radius: inherit; background: var(--tone); }
+.team-hours { font-family: var(--mono); font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
 
 /* ---------- Registro de tempo ---------- */
 .clock {
