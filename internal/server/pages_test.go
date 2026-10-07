@@ -526,7 +526,7 @@ func TestPages_ProjectMyOverviewTab(t *testing.T) {
 		}
 		pages[who] = body
 		for _, want := range []string{
-			`class="grid-aside items-stretch"`, "Suas tarefas", `class="task-cards"`, "Ver detalhes", "startTask(t)", "sessionValue()", "nesta sessão", "Início</a>",
+			`class="grid-aside items-stretch"`, "Suas tarefas", `class="task-cards"`, `class="task-card card-link"`, "startTask(t)", "sessionValue()", "nesta sessão", "Início</a>",
 			`x-data="projectMyOverview"`, "Seu tempo neste projeto", "Nesta semana",
 			`aria-label="Filtrar por data"`, `aria-label="Filtrar por tarefa"`, "<h3>Totais</h3>", `<div class="k">Tempo</div>`, `<div class="k">Seu valor</div>`,
 			`class="pager"`, "<table>",
@@ -535,9 +535,15 @@ func TestPages_ProjectMyOverviewTab(t *testing.T) {
 				t.Errorf("%s: the overview does not contain %q", who, want)
 			}
 		}
-		// Os cartões de tarefa levam só o nome e as ações, sem o prazo.
-		if strings.Contains(body, "deadlineLabel(t)") {
-			t.Errorf("%s: the task cards still show the deadline", who)
+		// O cartão de tarefa é o link: não tem o botão Ver detalhes. Mostra o status, a prioridade, o
+		// prazo e as etiquetas (a ordem e os estilos ficam no teste do pacote web).
+		if strings.Contains(body, "Ver detalhes") {
+			t.Errorf("%s: the task cards still have the View details button", who)
+		}
+		for _, want := range []string{"statusClass(t.status)", "priorityClass(t.priority)", "cardDeadlineLabel(t)", "t.labels", "Sem etiquetas"} {
+			if !strings.Contains(body, want) {
+				t.Errorf("%s: the task cards do not contain %q", who, want)
+			}
 		}
 		for _, gone := range []string{`aria-label="Filtrar por pessoa"`, `<div class="k">Custo</div>`, `<div class="k">Receita</div>`, "Margem (receita menos custo)", "<th>Pessoa</th>"} {
 			if strings.Contains(body, gone) {

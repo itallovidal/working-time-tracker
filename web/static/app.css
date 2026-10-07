@@ -5,6 +5,8 @@
   --ground: #f3f5f4;
   --surface: #ffffff;
   --surface-2: #f8faf9;
+  /* O fundo de um cartão clicável sob o mouse: mais escuro que o cartão, nos dois temas. */
+  --surface-hover: #edf1f0;
   --ink: #172026;
   --ink-2: #3b4751;
   --muted: #5f6c76;
@@ -51,6 +53,7 @@
     --ground: #0e1214;
     --surface: #151b1e;
     --surface-2: #1a2125;
+    --surface-hover: #0f1417;
     --ink: #e5ebee;
     --ink-2: #c1ccd2;
     --muted: #92a0a9;
@@ -564,20 +567,33 @@ td.actions { text-align: right; white-space: nowrap; }
 .clock-face.running { color: var(--accent); }
 .clock-value { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 1.4rem; font-weight: 600; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .clock-value .small { font-family: inherit; font-weight: 400; }
-/* As tarefas da pessoa no Início: um cartão por tarefa, com a linha da esquerda na cor da prioridade
-   (as mesmas `.tone` e `.prio-*` dos selos; sem prioridade, a linha é cinza), o selo de status, o
-   prazo e as etiquetas. */
+/* As tarefas da pessoa no Início: um cartão por tarefa, que abre a tarefa por inteiro. De cima para
+   baixo: o nome; o status e a prioridade (selos, nas cores de `.tone`); o prazo e o Iniciar, no pé do
+   corpo; uma divisória; e as etiquetas. O corpo cresce, então o prazo e o Iniciar ficam alinhados
+   entre cartões de alturas diferentes. */
 .task-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 12px; }
 .task-card {
-  background: var(--surface); border: 1px solid var(--rule); border-left: 4px solid var(--tone-line, var(--tone));
-  border-radius: var(--radius);
+  background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius);
   padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; min-width: 0;
 }
-.task-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
-.task-card-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.task-card-name { font-weight: 600; color: var(--ink); text-decoration: none; overflow-wrap: anywhere; }
+.task-card-badges { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.task-card-bottom { margin-top: auto; padding-top: 18px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.task-card-go { margin-left: auto; }
+.task-card-foot { border-top: 1px solid var(--rule); padding-top: 10px; min-height: 2.6rem; }
 .task-card .label-list { margin-top: 0; }
-/* Os botões ficam no pé do cartão, e o resto junto no topo, qualquer que seja a altura da fileira. */
-.task-card-actions { margin-top: auto; padding-top: 2px; }
+/* Com subgrid, as quatro partes de cada cartão (nome, selos, prazo e Iniciar, etiquetas) ficam nas
+   mesmas linhas da grade dos cartões vizinhos: o prazo e o Iniciar de uma fileira saem alinhados, mesmo
+   que um cartão tenha etiquetas que quebram em três linhas. O `span 4` é o número de filhos do cartão
+   (um teste confere). Sem subgrid, vale o desenho de coluna acima, com o corpo crescendo. */
+@supports (grid-template-rows: subgrid) {
+  .task-card { display: grid; grid-row: span 4; grid-template-rows: subgrid; row-gap: 10px; }
+  .task-card-bottom { margin-top: 0; align-self: end; }
+}
+/* Cartão que leva a outra página: o link fica no nome e o cartão inteiro aceita o clique. */
+.card-link { cursor: pointer; transition: background-color 0.12s, border-color 0.12s; }
+.card-link:hover { background: var(--surface-hover); border-color: var(--rule-strong); }
+.card-link:has(a:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
 /* Etiquetas: os selos sob o nome da tarefa e as caixas de escolha dos modais. */
 .label-list { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
 .label-picks { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -590,7 +606,6 @@ td.actions { text-align: right; white-space: nowrap; }
 .label-pick:hover, .chip:hover { background: var(--surface-2); }
 .label-pick:has(:checked), .chip[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
 .filter-chips { gap: 6px; }
-.task-card-name { font-weight: 600; color: var(--ink); overflow-wrap: anywhere; }
 .clock-status { display: flex; align-items: center; gap: 8px; font-weight: 600; }
 .pulse {
   width: 9px; height: 9px; border-radius: 50%; background: var(--accent); flex: none;

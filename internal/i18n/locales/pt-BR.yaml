@@ -667,7 +667,7 @@ time:
   col_details: Detalhes
   open: em andamento
   my_tasks: Suas tarefas
-  view_details: Ver detalhes
+  no_labels: Sem etiquetas
   session_value: nesta sessão
   sessions_intro_own: As suas sessões neste projeto.
   empty_own: Quando você bater o ponto neste projeto, a sessão aparece aqui.

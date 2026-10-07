@@ -91,10 +91,9 @@
     </section>
     </div>
 
-    {{/* As tarefas da pessoa. Cada cartão tem uma linha na cor da prioridade (a cor sozinha não diz nada
-         a quem não a vê: o nome da prioridade vai no title e num texto só para leitor de tela), o nome,
-         o selo de status, o prazo (só quando há; o de uma tarefa fechada não alarma), as etiquetas e os
-         botões de ver e de iniciar. */}}
+    {{/* As tarefas da pessoa. O cartão inteiro abre a tarefa (o nome continua um link, para o teclado e para abrir em
+         outra aba; o botão Iniciar não abre). De cima para baixo: o nome; o status e a prioridade; um respiro; o prazo
+         (só quando há) e o Iniciar, ou o "Em andamento" no lugar dele; uma divisória; e as etiquetas. */}}
     <section class="stack">
       <h2>{{.T "time.my_tasks"}}</h2>
       <p class="muted small" x-cloak x-show="!loading && tasks.length === 0">
@@ -102,24 +101,24 @@
       </p>
       <div class="task-cards" x-show="tasks.length > 0">
         <template x-for="t in tasks" :key="t.id">
-          <div class="task-card" :class="priorityClass(t.priority)" :title="$t('tasks.col_priority') + ': ' + WTT.fmt.priority(t.priority)">
-            <div class="task-card-top">
-              <a class="task-card-name" :href="'/tasks/' + t.id" x-text="t.name"></a>
-              <span class="badge badge-ok" x-show="isRunning(t)">{{.T "time.running"}}</span>
-            </div>
-            <span class="sr-only" x-text="$t('tasks.col_priority') + ': ' + WTT.fmt.priority(t.priority)"></span>
-            <div class="task-card-meta">
+          <div class="task-card card-link" @click="if (!$event.target.closest('a, button')) location.href = '/tasks/' + t.id">
+            <a class="task-card-name" :href="'/tasks/' + t.id" x-text="t.name"></a>
+            <div class="task-card-badges">
               <span class="badge" :class="statusClass(t.status)" x-text="WTT.fmt.taskStatus(t.status)"></span>
+              <span class="badge" :class="priorityClass(t.priority)" x-text="WTT.fmt.priority(t.priority)"></span>
+            </div>
+            <div class="task-card-bottom">
               <span class="badge num" :class="cardDeadlineClass(t)" x-show="hasDeadline(t)">{{template "icon" "calendar-day"}} <span x-text="cardDeadlineLabel(t)"></span></span>
-            </div>
-            <div class="label-list" x-show="t.labels && t.labels.length > 0">
-              <template x-for="l in t.labels" :key="l.id"><span class="badge" x-text="l.name"></span></template>
-            </div>
-            <div class="row task-card-actions">
-              <a class="btn btn-secondary btn-sm" :href="'/tasks/' + t.id">{{.T "time.view_details"}}</a>
+              <span class="badge badge-ok task-card-go" x-show="isRunning(t)">{{.T "time.running"}}</span>
               {{/* Com o ponto aberto neste projeto, o botão põe a tarefa na sessão; com ele aberto em outro, fica desabilitado. */}}
-              <button type="button" class="btn btn-sm" x-show="!isRunning(t)"
+              <button type="button" class="btn btn-sm task-card-go" x-show="!isRunning(t)"
                       :disabled="pending || noRate() || !$store.clock.ready || (!!$store.clock.session && !sessionHere())" @click="startTask(t)">{{template "icon" "play"}} <span x-text="sessionHere() ? $t('session.add_to_session') : $t('time.start')"></span></button>
+            </div>
+            <div class="task-card-foot">
+              <div class="label-list" x-show="t.labels && t.labels.length > 0">
+                <template x-for="l in t.labels" :key="l.id"><span class="badge" x-text="l.name"></span></template>
+              </div>
+              <span class="muted small" x-show="!t.labels || t.labels.length === 0">{{.T "time.no_labels"}}</span>
             </div>
           </div>
         </template>

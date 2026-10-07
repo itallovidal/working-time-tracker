@@ -635,6 +635,16 @@
 
 ---
 
+### Sprint 55: The Task Card Is the Link
+
+- [X] S55.1 The left priority line is gone (the owner did not like it): the priority is a badge next to the status, in the same colours as the list
+- [X] S55.2 The whole task card opens the task (`card-link`: pointer cursor, a darker background on hover, border a notch stronger, focus outline when the name is focused by keyboard); the name has no underline and the **Ver detalhes** button is removed (`time.view_details` too); clicks on the Iniciar button and on the name's link do not double-navigate
+- [X] S55.3 New layout, top to bottom: name; status and priority; air; deadline on the left and Iniciar on the right (the "Em andamento" badge takes the button's place); a divider; the labels ("Sem etiquetas" when none, new key `time.no_labels`)
+- [X] S55.4 `--surface-hover` token, darker than the card in both themes (the test compares the luminance); the four parts of every card sit on the same grid lines as the neighbours (subgrid with `span 4`, which a test ties to the number of children of the card) so deadline and Iniciar line up in a row even when one card's labels wrap to three lines
+- [X] S55.5 Tests: the order of the parts, the styles (no left line, no underline, pointer, hover token in both themes, no literal colour), the subgrid span, the names the card calls, and the old Início page test brought up to date; four mutation checks plus one on the span; checked in the browser (hover, click on the body, on the name and on Iniciar, keyboard focus, running, light, dark, English, phone); update README and design; no API, route or migration change
+
+---
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open

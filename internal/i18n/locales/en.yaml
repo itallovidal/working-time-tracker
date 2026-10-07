@@ -657,7 +657,7 @@ time:
   col_details: Details
   open: in progress
   my_tasks: Your tasks
-  view_details: View details
+  no_labels: No labels
   session_value: this session
   sessions_intro_own: Your sessions on this project.
   empty_own: When you clock in on this project, the session shows up here.
