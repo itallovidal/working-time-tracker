@@ -661,6 +661,15 @@
 
 ---
 
+### Sprint 58: One Task Table, Clickable Session Rows and a Session Modal in Cards
+
+- [X] S58.1 The task table is one partial, `task_table`, used by the Lista de tarefas (Sem responsável with Pegar, Com responsável with the assignee column) and by each status of Minhas tarefas (task, status, priority, deadline and Iniciar; the assignee column is off because it is always the person); the whole row opens the task; the labels under the name and the Detalhes link of Minhas tarefas are gone; partials take several arguments through a new `dict` template function
+- [X] S58.2 On the Início, the whole row of a session opens its modal (pointer cursor, hover as in the task rows); the eye column is gone, the start time is the button for the keyboard, and the task names in the row are plain text; the Gestão overview and the task page still have the eye button
+- [X] S58.3 The session modal is wider (780px) and is split in groups with the name on the border, like the new project modal: Resumo, Tarefas da sessão (one card per task with the name, the running badge, the time, the interval line and range, an **Abrir tarefa** button with an icon and the edit pencil) and Adicionar tarefa; the task name in the modal is no longer a link
+- [X] S58.4 No front-end tests were added, as the owner asked; the existing assertions follow the markup (the escaped quotes of the expressions that the partial writes, the row Iniciar of Minhas tarefas); checked in the browser (both tables, row clicks, the Iniciar button not navigating, keyboard Enter on the start time, the modal in light, dark and phone, Abrir tarefa, the pencil)
+
+---
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open

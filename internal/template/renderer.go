@@ -21,7 +21,7 @@ type Renderer struct {
 // New lê templates/layouts/*, templates/partials/* e cada templates/pages/*.gohtml.
 // Um template com erro faz a inicialização falhar, e não a primeira requisição.
 func New(fsys fs.FS) (*Renderer, error) {
-	base, err := template.New("").ParseFS(fsys, "templates/layouts/*.gohtml", "templates/partials/*.gohtml")
+	base, err := template.New("").Funcs(template.FuncMap{"dict": dict}).ParseFS(fsys, "templates/layouts/*.gohtml", "templates/partials/*.gohtml")
 	if err != nil {
 		return nil, fmt.Errorf("parse layouts: %w", err)
 	}
@@ -41,6 +41,24 @@ func New(fsys fs.FS) (*Renderer, error) {
 		pages[strings.TrimSuffix(path.Base(f), ".gohtml")] = t
 	}
 	return &Renderer{pages: pages}, nil
+}
+
+// dict monta o mapa que um partial recebe quando precisa de mais de um argumento:
+// {{template "task_table" (dict "Data" . "Rows" "lists[key].tasks")}}. Os valores que são
+// expressões do Alpine vão como texto e o partial os põe nos atributos.
+func dict(pairs ...any) (map[string]any, error) {
+	if len(pairs)%2 != 0 {
+		return nil, fmt.Errorf("dict: %d arguments, want name/value pairs", len(pairs))
+	}
+	m := make(map[string]any, len(pairs)/2)
+	for i := 0; i < len(pairs); i += 2 {
+		key, ok := pairs[i].(string)
+		if !ok {
+			return nil, fmt.Errorf("dict: argument %d is %T, want a string name", i, pairs[i])
+		}
+		m[key] = pairs[i+1]
+	}
+	return m, nil
 }
 
 // Pages lista as páginas carregadas, para os testes conferirem que todas existem.

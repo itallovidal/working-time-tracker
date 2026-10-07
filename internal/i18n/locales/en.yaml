@@ -204,6 +204,9 @@ session:
     now: now
     tasks: Session tasks
     parallel_hint: Parallel tasks each count the full time. The session, the person and the project count it once.
+    summary: Summary
+    open_task: Open task
+    open_task_label: "Open task {{.name}}"
     no_tasks: This session has no tasks left, because the ones it had were deleted. Its time still counts.
     edit: Edit the interval
     edit_title: "Interval of {{.name}}"

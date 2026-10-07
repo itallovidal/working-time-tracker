@@ -92,27 +92,27 @@
         <table>
           <thead>
             <tr>
-              <th>{{.T "time.col_tasks"}}</th><th>{{.T "time.col_start"}}</th><th>{{.T "time.col_end"}}</th><th class="actions">{{.T "time.col_duration"}}</th><th class="actions">{{.T "time.your_value"}}</th><th class="actions"><span class="sr-only">{{.T "time.col_details"}}</span></th>
+              <th>{{.T "time.col_tasks"}}</th><th>{{.T "time.col_start"}}</th><th>{{.T "time.col_end"}}</th><th class="actions">{{.T "time.col_duration"}}</th><th class="actions">{{.T "time.your_value"}}</th>
             </tr>
           </thead>
           <tbody>
             <template x-for="s in sessionRows()" :key="s.id">
-              <tr>
+              {{/* A linha inteira abre o modal da sessão, que tem as tarefas e o caminho para cada uma; o horário é um botão, para o teclado. */}}
+              <tr class="row-link" @click="if (!$event.target.closest('a, button')) openSession(s)">
                 <td>
                   <div class="task-chips">
-                    <template x-for="t in firstTasks(s)" :key="t.id"><a :href="'/tasks/' + t.id" x-text="t.name"></a></template>
+                    <template x-for="t in firstTasks(s)" :key="t.id"><span class="task-chip" x-text="t.name"></span></template>
                     <span class="badge" x-show="moreTasks(s) > 0" x-text="'+' + moreTasks(s)"></span>
                     <span class="muted small" x-show="s.tasks.length === 0">{{.T "session.deleted_tasks"}}</span>
                   </div>
                 </td>
-                <td class="num" x-text="WTT.fmt.dateTime(s.start_at)"></td>
+                <td class="num"><button type="button" class="row-open" :aria-label="$t('session.details') + ': ' + WTT.fmt.dateTime(s.start_at)" @click="openSession(s)" x-text="WTT.fmt.dateTime(s.start_at)"></button></td>
                 <td class="num">
                   <span x-show="s.end_at" x-text="WTT.fmt.dateTime(s.end_at)"></span>
                   <span class="badge badge-ok" x-show="!s.end_at">{{.T "time.open"}}</span>
                 </td>
                 <td class="actions mono num" x-text="WTT.fmt.clock(seconds(s))"></td>
                 <td class="actions num" x-text="WTT.fmt.money(earnedAmount(s))"></td>
-                <td class="actions"><button type="button" class="btn btn-ghost btn-sm" aria-label="{{.T "session.details"}}" title="{{.T "session.details"}}" @click="openSession(s)">{{template "icon" "eye"}}</button></td>
               </tr>
             </template>
           </tbody>

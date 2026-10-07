@@ -953,7 +953,7 @@ func TestPages_ProjectIntegrationsTab(t *testing.T) {
 		t.Error("the board row does not open the task page when clicked, or opens it when the Pegar button is clicked")
 	}
 	// Pegar a tarefa, só na lista das sem responsável: associa a tarefa à pessoa sem bater o ponto.
-	for _, want := range []string{`<td class="actions" x-show="key === 'free'">`, `@click="claim(t)"`, `<th class="actions" x-show="key === 'free'">`, `x-show="errors.claim"`, " Pegar</button>"} {
+	for _, want := range []string{`<td class="actions" x-show="key === &#39;free&#39;">`, `@click="claim(t)"`, `<th class="actions" x-show="key === &#39;free&#39;">`, `x-show="errors.claim"`, " Pegar</button>"} {
 		if !strings.Contains(board, want) {
 			t.Errorf("the board does not contain %q", want)
 		}

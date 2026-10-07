@@ -29,37 +29,7 @@
         </h2>
         <div class="stack" :id="'mine-' + s.value + '-body'" x-show="open[s.value]">
           <p class="muted small" x-show="inStatus(s.value).length === 0">{{.T "my_tasks.empty"}}</p>
-          <div class="table-wrap" x-show="inStatus(s.value).length > 0">
-            <table>
-              <thead>
-                <tr>
-                  <th>{{.T "tasks.col_task"}}</th><th>{{.T "tasks.col_priority"}}</th><th>{{.T "tasks.col_deadline"}}</th>
-                  <th class="actions"><span class="sr-only">{{.T "tasks.col_details"}}</span></th>
-                </tr>
-              </thead>
-              <tbody>
-                <template x-for="t in inStatus(s.value)" :key="t.id">
-                  <tr>
-                    <td>
-                      <a :href="'/tasks/' + t.id" x-text="t.name"></a>
-                      <div class="label-list" x-show="t.labels && t.labels.length > 0">
-                        <template x-for="l in t.labels" :key="l.id"><span class="badge" x-text="l.name"></span></template>
-                      </div>
-                    </td>
-                    <td>
-                      <span class="badge" :class="priorityClass(t.priority)" x-text="WTT.fmt.priority(t.priority)"></span>
-                    </td>
-                    <td><span class="badge num" :class="deadlineClass(t)" x-text="deadlineLabel(t)"></span></td>
-                    <td class="actions">
-                      <span class="badge badge-ok" x-show="isRunning(t)">{{.T "tasks.running"}}</span>
-                      <button type="button" class="btn btn-secondary btn-sm" x-show="!isRunning(t) && s.value !== 'closed'" :disabled="pending || otherProject()" @click="startTask(t)">{{template "icon" "play"}} <span x-text="sessionHere() ? $t('session.add_to_session') : $t('tasks.start')"></span></button>
-                      <a class="btn btn-ghost btn-sm" :href="'/tasks/' + t.id">{{.T "tasks.details"}} {{template "icon" "arrow-right"}}</a>
-                    </td>
-                  </tr>
-                </template>
-              </tbody>
-            </table>
-          </div>
+          {{template "task_table" (dict "Data" . "Rows" "inStatus(s.value)" "Assignee" "false" "Action" "start" "ActionShow" "true")}}
         </div>
       </section>
     </template>

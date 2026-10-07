@@ -1,0 +1,62 @@
+{{/* A tabela de tarefas, a mesma na Lista de tarefas (Sem responsável e Com responsável) e em Minhas tarefas (uma
+     por status). A linha inteira abre a tarefa; o nome continua um link, para o teclado e para abrir em outra
+     aba, e o botão da última coluna não abre. Recebe um dict:
+       Data        os dados da página (para os textos)
+       Rows        a expressão do Alpine com as tarefas da tabela, por exemplo lists[key].tasks
+       Assignee    a expressão que liga a coluna do responsável (false quando é sempre a própria pessoa)
+       Action      "claim" (Pegar, na lista Sem responsável), "start" (Iniciar ou Adicionar à sessão, em Minhas
+                   tarefas) ou "" (sem coluna de ação)
+       ActionShow  a expressão que liga a coluna de ação
+     A página tem de ter o que as linhas chamam: isRunning, statusClass, priorityClass, deadlineClass,
+     deadlineLabel e, conforme a ação, claim ou startTask, otherProject e sessionHere. */}}
+{{define "task_table"}}
+{{with .Data}}
+<div class="table-wrap" x-show="{{$.Rows}}.length > 0">
+  <table>
+    <thead>
+      <tr>
+        <th>{{.T "tasks.col_task"}}</th><th>{{.T "tasks.col_status"}}</th><th>{{.T "tasks.col_priority"}}</th>
+        <th x-show="{{$.Assignee}}">{{.T "tasks.col_assignee"}}</th>
+        <th>{{.T "tasks.col_deadline"}}</th>
+        {{if $.Action}}<th class="actions" x-show="{{$.ActionShow}}"><span class="sr-only">{{.T "tasks.col_actions"}}</span></th>{{end}}
+      </tr>
+    </thead>
+    <tbody>
+      <template x-for="t in {{$.Rows}}" :key="t.id">
+        <tr class="row-link" @click="if (!$event.target.closest('a, button')) location.href = '/tasks/' + t.id">
+          <td>
+            <div class="row row-tight">
+              <a :href="'/tasks/' + t.id" x-text="t.name"></a>
+              <span class="badge badge-ok" x-show="isRunning(t)">{{.T "tasks.running"}}</span>
+            </div>
+          </td>
+          <td>
+            <span class="badge" :class="statusClass(t.status)" x-text="WTT.fmt.taskStatus(t.status)"></span>
+          </td>
+          <td>
+            <span class="badge" :class="priorityClass(t.priority)" x-text="WTT.fmt.priority(t.priority)"></span>
+          </td>
+          <td x-show="{{$.Assignee}}">
+            <span x-text="t.assignee ? t.assignee.name : ''"></span>
+          </td>
+          <td>
+            <span class="badge num" :class="deadlineClass(t)" x-text="deadlineLabel(t)"></span>
+          </td>
+          {{if eq $.Action "claim"}}
+          {{/* Pegar é ficar com a tarefa sem bater o ponto: ela sai desta lista e vai para Minhas tarefas. */}}
+          <td class="actions" x-show="{{$.ActionShow}}">
+            <button type="button" class="btn btn-secondary btn-sm" :disabled="pending" :title="$t('tasks.claim_title')" :aria-label="$t('tasks.claim_label', { name: t.name })" @click="claim(t)">{{template "icon" "user-plus"}} {{.T "tasks.claim"}}</button>
+          </td>
+          {{else if eq $.Action "start"}}
+          {{/* Com o ponto aberto neste projeto, o botão põe a tarefa na sessão; com ele aberto em outro, fica desabilitado. */}}
+          <td class="actions" x-show="{{$.ActionShow}}">
+            <button type="button" class="btn btn-secondary btn-sm" x-show="!isRunning(t) && t.status !== 'closed'" :disabled="pending || otherProject()" @click="startTask(t)">{{template "icon" "play"}} <span x-text="sessionHere() ? $t('session.add_to_session') : $t('tasks.start')"></span></button>
+          </td>
+          {{end}}
+        </tr>
+      </template>
+    </tbody>
+  </table>
+</div>
+{{end}}
+{{end}}

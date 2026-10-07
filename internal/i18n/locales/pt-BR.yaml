@@ -214,6 +214,9 @@ session:
     now: agora
     tasks: Tarefas da sessão
     parallel_hint: Tarefas em paralelo contam o tempo cheio, cada uma. A sessão, a pessoa e o projeto contam uma vez só.
+    summary: Resumo
+    open_task: Abrir tarefa
+    open_task_label: "Abrir a tarefa {{.name}}"
     no_tasks: Esta sessão ficou sem tarefas, porque as que ela tinha foram excluídas. O tempo dela continua contando.
     edit: Editar o intervalo
     edit_title: "Intervalo de {{.name}}"

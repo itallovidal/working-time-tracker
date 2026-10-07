@@ -412,6 +412,10 @@ td.actions { text-align: right; white-space: nowrap; }
 .row-link { cursor: pointer; }
 .row-link a { color: var(--ink); font-weight: 600; text-decoration: none; }
 .row-link:hover a, .row-link a:focus-visible { color: var(--accent); }
+/* O botão de uma linha que abre um modal (o horário da sessão): com cara de texto, e um alvo para o teclado. */
+.row-open { font: inherit; font-weight: 600; color: var(--ink); background: none; border: 0; padding: 0; cursor: pointer; text-align: left; }
+.row-link:hover .row-open, .row-open:focus-visible { color: var(--accent); }
+.task-chip { font-weight: 600; color: var(--ink); }
 .list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .list > li { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--rule); }
 .list > li:last-child { border-bottom: 0; }
@@ -646,7 +650,16 @@ td.actions { text-align: right; white-space: nowrap; }
 .session-facts dd { margin: 0; font-weight: 600; }
 .timeline { position: relative; height: 6px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--rule); overflow: hidden; }
 .timeline-fill { position: absolute; top: 0; bottom: 0; background: var(--accent); border-radius: 999px; }
-.session-tasks .row { flex-wrap: wrap; }
+/* As tarefas da sessão no modal: um cartão simples por tarefa, com o tempo, a linha do intervalo e o caminho para ela. */
+.session-task-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
+.session-task {
+  display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 12px 14px;
+  background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius);
+}
+.session-task-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
+.session-task-name { min-width: 0; overflow-wrap: anywhere; }
+.session-task-time { margin-left: auto; font-weight: 600; }
+.session-task-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 2px; }
 /* As tarefas de uma sessão numa célula de tabela ou de lista: os nomes e o "+N" das outras. */
 .task-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; }
 /* Na tabela a célula tem largura mínima: em tela estreita a tabela rola na horizontal, em vez de espremer os nomes. */
@@ -719,7 +732,7 @@ html.modal-open { overflow: hidden; }
   background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; box-shadow: var(--shadow);
 }
 .modal-panel:focus-visible { outline: none; }
-.modal-panel-wide { max-width: 560px; }
+.modal-panel-wide { max-width: 780px; }
 .modal-head {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   padding: 14px 14px 14px 20px; border-bottom: 1px solid var(--rule);
