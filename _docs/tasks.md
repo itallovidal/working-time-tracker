@@ -424,6 +424,7 @@
 - [X] S33.1 The Ponto tab is removed: the clock, the rate warning and "Suas tarefas" are the top of the personal overview, which is renamed Início (house icon)
 - [X] S33.2 `/projects/:projectId/time-tracking` redirects to `/overview`; the links that used it (profile, clock pill, Gestão back link) point to the Início
 - [X] S33.3 `timeTracking` is merged into `projectMyOverview`; tests for the page, the missing tab and the redirect; update README and design
+- [X] S33.4 The clock card shows the value of the open session next to the timer; "Suas tarefas" moves below the clock as small cards (name, Ver detalhes, Iniciar, no deadline) and "Seu tempo neste projeto" sits beside the clock
 
 ---
 

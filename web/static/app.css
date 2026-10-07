@@ -365,6 +365,15 @@ td.actions { text-align: right; white-space: nowrap; }
   font-weight: 600; letter-spacing: 0.02em; line-height: 1; color: var(--ink);
 }
 .clock-face.running { color: var(--accent); }
+.clock-value { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 1.4rem; font-weight: 600; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.clock-value .small { font-family: inherit; font-weight: 400; }
+/* As tarefas da pessoa no Início: um cartão pequeno por tarefa. */
+.task-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.task-card {
+  background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius);
+  padding: 14px 16px; display: flex; flex-direction: column; justify-content: space-between; gap: 12px; min-width: 0;
+}
+.task-card-name { font-weight: 600; color: var(--ink); overflow-wrap: anywhere; }
 .clock-status { display: flex; align-items: center; gap: 8px; font-weight: 600; }
 .pulse {
   width: 9px; height: 9px; border-radius: 50%; background: var(--accent); flex: none;

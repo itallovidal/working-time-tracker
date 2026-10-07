@@ -662,8 +662,13 @@ document.addEventListener('alpine:init', () => {
       const s = clock().session;
       return !!s && s.task_id === t.id;
     },
-    deadlineClass: (t) => deadlineInfo(t.deadline).cls,
-    deadlineLabel: (t) => deadlineInfo(t.deadline).label,
+    // sessionValue é quanto a sessão aberta já rendeu: o tempo corrido vezes o valor por
+    // hora travado no clock-in, com o arredondamento do servidor. null sem valor.
+    sessionValue() {
+      const s = clock().session;
+      if (!s || s.pay_rate_cents === null || s.pay_rate_cents === undefined) return null;
+      return Math.round(clock().elapsed(s) * s.pay_rate_cents / 3600);
+    },
   }));
 
   // A aba Configurações só mostra o projeto. Quem altera é o modal Editar projeto,

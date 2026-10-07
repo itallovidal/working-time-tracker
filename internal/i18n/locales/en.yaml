@@ -415,6 +415,8 @@ time:
   col_duration: Duration
   open: in progress
   my_tasks: Your tasks
+  view_details: View details
+  session_value: this session
   sessions_intro_own: Your sessions on this project.
   empty_own: When you clock in on this project, the session shows up here.
   pager: Session pages

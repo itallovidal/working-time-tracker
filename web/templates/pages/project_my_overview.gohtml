@@ -16,6 +16,7 @@
       {{end}}
     </p>
 
+    {{/* O relógio e, ao lado, o tempo de hoje e da semana. As tarefas da pessoa vêm logo abaixo. */}}
     <div class="grid-aside items-stretch">
       <section class="clock" aria-live="polite">
         <p class="muted" x-show="!$store.clock.ready">{{.T "common.loading"}}</p>
@@ -24,6 +25,11 @@
           <div class="stack">
             <div class="clock-status"><span class="pulse" aria-hidden="true"></span> {{.T "time.running"}}</div>
             <div class="clock-face running" x-text="WTT.fmt.clock($store.clock.elapsed())"></div>
+            {{/* O valor da sessão sobe junto com o cronômetro, pelo valor por hora travado no clock-in. */}}
+            <div class="clock-value" x-show="sessionValue() !== null">
+              <span class="num" x-text="WTT.fmt.money(sessionValue())"></span>
+              <span class="muted small">{{.T "time.session_value"}}</span>
+            </div>
             <div>
               <a :href="'/tasks/' + $store.clock.session.task.id" x-text="$store.clock.session.task.name"></a>
               <span class="muted" x-text="$t('time.since', { time: WTT.fmt.time($store.clock.session.start_at) })"></span>
@@ -39,6 +45,10 @@
           <form class="stack" @submit.prevent="start()">
             <div class="clock-status muted">{{.T "time.stopped"}}</div>
             <div class="clock-face">00:00:00</div>
+            <div class="clock-value muted" x-show="myRate !== null">
+              <span class="num" x-text="WTT.fmt.money(0)"></span>
+              <span class="small">{{.T "time.session_value"}}</span>
+            </div>
             <p class="muted" x-show="tasks.length === 0 && !loading">
               {{.T "time.no_tasks"}} <a href="/projects/{{.Project.ID}}/tasks">{{.T "time.create_task"}}</a>
             </p>
@@ -56,27 +66,6 @@
       </section>
 
       <section class="card">
-        <div class="card-head"><h2>{{.T "time.my_tasks"}}</h2></div>
-        <p class="muted small" x-cloak x-show="!loading && tasks.length === 0">
-          {{.T "time.no_tasks"}} <a href="/projects/{{.Project.ID}}/tasks">{{.T "time.create_task"}}</a>
-        </p>
-        <ul class="list" x-show="tasks.length > 0">
-          <template x-for="t in tasks" :key="t.id">
-            <li>
-              <div class="grow">
-                <a :href="'/tasks/' + t.id" x-text="t.name"></a>
-                <span class="badge num" :class="deadlineClass(t)" x-text="deadlineLabel(t)"></span>
-              </div>
-              <span class="badge badge-ok" x-show="isRunning(t)">{{.T "time.running"}}</span>
-              <button type="button" class="btn btn-secondary btn-sm" x-show="!isRunning(t)"
-                      :disabled="pending || myRate === null || !$store.clock.ready || !!$store.clock.session" @click="startTask(t)">{{.T "time.start"}}</button>
-            </li>
-          </template>
-        </ul>
-      </section>
-    </div>
-
-    <section class="card">
       <div class="card-head"><h2>{{.T "time.yours"}}</h2></div>
       <div class="totals">
         <div class="total">
@@ -91,6 +80,28 @@
       <p class="muted small" x-cloak x-show="myRate !== null">
         {{.T "time.your_rate_before"}} <strong class="num" x-text="WTT.fmt.money(myRate)"></strong> {{.T "time.your_rate_after"}}
       </p>
+    </section>
+    </div>
+
+    {{/* As tarefas da pessoa: o nome, o caminho para a página dela e o botão de iniciar. */}}
+    <section class="stack">
+      <h2>{{.T "time.my_tasks"}}</h2>
+      <p class="muted small" x-cloak x-show="!loading && tasks.length === 0">
+        {{.T "time.no_tasks"}} <a href="/projects/{{.Project.ID}}/tasks">{{.T "time.create_task"}}</a>
+      </p>
+      <div class="task-cards" x-show="tasks.length > 0">
+        <template x-for="t in tasks" :key="t.id">
+          <div class="task-card">
+            <a class="task-card-name" :href="'/tasks/' + t.id" x-text="t.name"></a>
+            <div class="row">
+              <a class="btn btn-secondary btn-sm" :href="'/tasks/' + t.id">{{.T "time.view_details"}}</a>
+              <span class="badge badge-ok" x-show="isRunning(t)">{{.T "time.running"}}</span>
+              <button type="button" class="btn btn-sm" x-show="!isRunning(t)"
+                      :disabled="pending || myRate === null || !$store.clock.ready || !!$store.clock.session" @click="startTask(t)">{{template "icon" "play"}} {{.T "time.start"}}</button>
+            </div>
+          </div>
+        </template>
+      </div>
     </section>
 
     <section class="stack">
