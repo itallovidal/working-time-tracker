@@ -5,7 +5,7 @@
   <p class="form-error" x-cloak x-show="errors.load" x-text="errors.load"></p>
   <p class="muted" x-show="loading">{{.T "common.loading"}}</p>
 
-  <div x-cloak x-show="!loading && !errors.load" class="stack">
+  <div x-cloak x-show="!loading && !errors.load" class="stack stack-sections">
     {{/* O aviso fica acima dos cartões: dentro do relógio ele deixava um cartão mais alto que o outro. */}}
     <p class="alert alert-warn" x-cloak x-show="!loading && !errors.load && myRate === null">
       {{.T "time.no_rate"}}
