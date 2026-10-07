@@ -675,13 +675,25 @@ time:
     other: "Page {{.page}} of {{.pages}} · {{.count}} sessions"
 
 integrations:
-  intro: Link tasks to GitHub issues. The token is validated on the platform and stored encrypted. GitLab and Trello are coming soon.
+  intro: Link tasks to GitHub issues. You authorize on GitHub itself and pick the repository; the access is stored encrypted. GitLab and Trello are coming soon.
   new: New integration
   loading: Loading integrations…
   none: No integrations
   none_admin: Create one to link tasks to issues or cards and see their state here.
   none_member: An admin can set up GitHub for this project.
   coming_soon: Coming soon
+  connect: Connect with {{.platform}}
+  connect_about: You will go to {{.platform}} to authorize the access and come back to pick the repository.
+  connect_unconfigured: The GitHub connection is not set up on this server. Whoever runs it must define GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET and PUBLIC_URL.
+  reconnect: Reconnect with {{.platform}}
+  reconnect_hint: Authorize again if the access was revoked or to use another account.
+  reconnected: Access renewed.
+  connection: Connection
+  connected: Authorized
+  pick_repo_title: Pick the repository
+  pick_repo_hint: The list shows the repositories your account can see. If a repository of an organization does not show up, the organization owner must approve the app in the organization settings, under third-party application access.
+  repos_failed: Could not list the repositories. Type the name or reconnect.
+  private_repo: private
   active: Active
   disabled: Disabled
   edit_title: Edit integration
@@ -1027,6 +1039,10 @@ errors:
     field_not_text: "the \"{{.field}}\" field of {{.provider}} must be text"
     field_required: "enter the \"{{.field}}\" field of {{.provider}}"
     github_invalid_repo: "invalid GitHub repository: use owner/repository"
+    github_oauth_denied: "the authorization on GitHub was cancelled"
+    github_oauth_exchange: "GitHub did not accept the authorization: try connecting again"
+    github_oauth_not_configured: "the GitHub connection is not set up on this server: whoever runs it must define GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET and PUBLIC_URL"
+    github_oauth_state: "the GitHub connection expired or could not be confirmed: try again"
     github_repo_not_found: "GitHub repository not found, or the token has no access to it"
     gitlab_forbidden: "the GitLab token has no permission to read the project"
     gitlab_invalid_project: "invalid GitLab project: use group/project"
@@ -1035,7 +1051,9 @@ errors:
     invalid_token: "invalid {{.provider}} token"
     item_not_found: "item {{.item}} not found"
     name_required: "enter the integration name"
-    no_credential: "the integration has no credential: edit it and enter the token"
+    no_credential: "the integration has no credential: edit it and connect again"
+    no_repositories: "this integration does not list repositories"
+    not_connectable: "this platform does not connect through an authorization"
     not_found: "integration not found"
     provider_status: "{{.provider}} responded with status {{.status}}"
     provider_unreachable: "could not reach {{.provider}}"
@@ -1050,7 +1068,7 @@ errors:
     type_coming_soon: "the {{.provider}} integration is not available yet"
     type_required: "enter the integration type"
     unexpected_response: "unexpected response from {{.provider}}"
-    unreadable_credential: "could not read the stored credential: edit the integration and enter the token again"
+    unreadable_credential: "could not read the stored credential: edit the integration and connect again"
     unsupported_type: "integration type not supported: {{.type}}"
   internal:
     server_error: "internal error, please try again"

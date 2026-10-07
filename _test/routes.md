@@ -614,6 +614,14 @@ Na lista de tarefas e no detalhe, a tarefa vinculada traz `external_integration`
 | GET | `/api/integrations/:integrationId` | logado | Detalhes |
 | PATCH | `/api/integrations/:integrationId` | `integrations.manage` | Altera nome, token, `metadata` ou `enabled` |
 | DELETE | `/api/integrations/:integrationId` | `integrations.manage` | Exclui. As tarefas vinculadas perdem o vínculo |
+| GET | `/api/integrations/:integrationId/repositories` | `integrations.manage` | Lista `[{"full_name","private"}]` o que o token guardado enxerga (GitHub). `400` `integration.no_repositories` nos tipos que não listam |
+
+**Conectar com o GitHub** são duas rotas de página (GET e redirecionamentos, fora do `/api`), que o navegador percorre; não há como chamá-las pela API:
+
+| Método | Rota | Acesso | Descrição |
+|---|---|---|---|
+| GET | `/projects/:projectId/management/integrations/github/connect` | `integrations.manage` | Grava o cookie `wtt_oauth` e responde `302` para o GitHub. `?integration=<id>` reconecta uma integração GitHub do mesmo projeto |
+| GET | `/integrations/github/callback?code&state` | logado | O endereço cadastrado no app do GitHub. Confere cookie, `state`, pessoa e permissão; guarda a integração (desativada e sem repositório) e responde `303` para `/projects/:projectId/management/integrations?github=<id>`. Em erro, `?github_error=<código>` (`integration.github_oauth_state`, `_denied`, `_exchange`, `_not_configured`, `integration.not_found`); sem conexão em andamento, `303` para `/` |
 
 O corpo é o mesmo para todas as plataformas. O que é comum fica no primeiro nível, e os campos próprios de cada uma vão em `metadata`:
 

@@ -679,6 +679,28 @@
 
 ---
 
+### Sprint 60: The Session Bubble
+
+- [X] S60.1 The open-session pill leaves the top bar: `active_session` is now `.session-dock`, a bubble fixed at the bottom right of every page of a logged-in person (`layouts/base.gohtml`), closed as one green strip "Sessão ativa • cronômetro" with the pulse and a chevron
+- [X] S60.2 Clicking it opens, upwards, one card per task in progress with the task's own time in the session and an arrow (the card is the link to the task), and at the bottom Tarefas da sessão and Parar; Escape and a click outside close it, and it closes when the session ends (`sessionDock` in `app.js`; `clock.label()`, `labelTitle()` and `session.no_task` removed, `session.active` added)
+- [X] S60.3 With a session open the `body` gets `has-dock`: more bottom padding on the pages and the toasts rise above the bubble, whatever its height (`--dock-h`, written by a `ResizeObserver`); the top bar no longer overflows a 390 px screen
+- [X] S60.4 No front-end tests added, as the owner asked; the session pages test now looks for the bubble outside the top bar; checked in the browser (closed and open, light and dark, phone, a toast over it, the modal over it, Esc, click outside, the task link, Parar, navigating between pages); update README and `design.md`
+
+---
+
+### Sprint 60: Connect with GitHub
+
+- [X] S60.1 `Descriptor.Auth` (`token` by default, `oauth` for GitHub) and `Configured` (filled by the page: the server has the OAuth app); optional adapter capabilities `AccountLookup` (who the token is) and `RepositoryLister`, implemented by GitHub only
+- [X] S60.2 Config: `PUBLIC_URL`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` and, for a GitHub Enterprise or a fake, `GITHUB_URL` and `GITHUB_API_URL`; all optional, and without them the button says the connection is not set up
+- [X] S60.3 `GitHubOAuth` client (authorization URL with scope `repo`, code exchange that reads the `error` GitHub sends with a 200) and `GitHubIntegration.Account` and `ListRepositories` (100 most recently pushed)
+- [X] S60.4 `GET .../integrations/github/connect` and `GET /integrations/github/callback`: sealed cookie with the `state`, the person, the project and the integration to reconnect (10 minutes, one use); the callback re-checks the state, the person, the organization and `integrations.manage`, and sends every failure back to the tab with `?github_error=<code>`
+- [X] S60.5 `Service.Connect` (the integration is born disabled and without a repository, named `GitHub · @login`, token sealed), `Reauthorize` (replaces the token only, validating it against the repository when there is one) and `Repositories`; `GET /api/integrations/:id/repositories`
+- [X] S60.6 Modal: for an OAuth type creating is only the **Conectar com o GitHub** button; the return opens "Escolha o repositório" (repository offered from a `datalist`, "Ativa" already checked), editing has **Reconectar** instead of the token field, and the card shows "Conexão: Autorizada"; a reconnect of a complete integration only toasts "Acesso renovado."
+- [X] S60.7 Tests: the OAuth client and the account and repositories calls against the fake GitHub, `Connect`, `Reauthorize` and `Repositories` in the service, and the whole flow through the real router (full path, every refusal, permissions lost on the way, reconnect, server without the app); no front-end tests added; the existing page assertion follows the token field
+- [X] S60.8 README (variables, how to register the app, caveats), design, routes, the Insomnia collection and `.env.example`; checked in the browser against a fake GitHub (connect, pick the repository, reconnect, cancel)
+
+---
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open

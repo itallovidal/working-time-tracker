@@ -9,6 +9,7 @@ import (
 	"github.com/labstack/echo/v5/middleware"
 
 	"working-time-tracker/ent"
+	"working-time-tracker/internal/adapter"
 	"working-time-tracker/internal/apperr"
 	"working-time-tracker/internal/domain/allocation"
 	"working-time-tracker/internal/domain/auth"
@@ -36,6 +37,9 @@ type Options struct {
 	// AuthRateLimit é o limite de requisições por segundo, por IP, nas rotas
 	// públicas de autenticação. Zero usa o padrão (10 por minuto, rajada de 10).
 	AuthRateLimit float64
+	// GitHubOAuth é o app OAuth do GitHub deste servidor. Nulo ou sem credenciais, o botão
+	// Conectar com o GitHub avisa que não está configurado.
+	GitHubOAuth *adapter.GitHubOAuth
 }
 
 // New monta o servidor HTTP completo (stores, services, handlers, middlewares e rotas).
@@ -92,7 +96,9 @@ func New(client *ent.Client, opts Options) (*echo.Echo, error) {
 		WorkSession:  work_session.NewHandler(workSessionSvc),
 		Integration:  integration.NewHandler(integrationSvc),
 	}
-	authMW := auth.NewMiddleware(authSvc, auth.NewResolver(client), opts.CookieSecure)
+	resolver := auth.NewResolver(client)
+	authMW := auth.NewMiddleware(authSvc, resolver, opts.CookieSecure)
+	oauthHandler := integration.NewOAuthHandler(integrationSvc, opts.GitHubOAuth, resolver, opts.EncryptKey, opts.CookieSecure)
 	catalog, err := i18n.Load()
 	if err != nil {
 		return nil, err
@@ -100,6 +106,7 @@ func New(client *ent.Client, opts Options) (*echo.Echo, error) {
 	pages := page.NewHandler(page.Deps{
 		Orgs: orgSvc, Projects: projectSvc, Tasks: taskSvc,
 		I18n: catalog, CookieSecure: opts.CookieSecure,
+		OAuthConfigured: map[string]bool{"github": opts.GitHubOAuth.Configured()},
 	})
 
 	renderer, err := tmpl.New(web.FS)
@@ -138,7 +145,7 @@ func New(client *ent.Client, opts Options) (*echo.Echo, error) {
 
 	routes.HealthcheckRoutesRegister(e)
 	routes.RegisterRoutes(e, handlers, authMW, authRateLimiter(opts.AuthRateLimit))
-	routes.RegisterPages(e, pages, authMW)
+	routes.RegisterPages(e, pages, authMW, oauthHandler)
 
 	return e, nil
 }

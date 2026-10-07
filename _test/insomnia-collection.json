@@ -1254,6 +1254,18 @@
       "body": {}
     },
     {
+      "_id": "req_08_08",
+      "_type": "request",
+      "parentId": "fld_08",
+      "name": "Listar repositórios da integração (GitHub conectado)",
+      "method": "GET",
+      "url": "{{base_url}}/api/integrations/{{integration_id}}/repositories",
+      "authentication": {},
+      "metaSortKey": 4.5,
+      "headers": [],
+      "body": {}
+    },
+    {
       "_id": "req_08_07",
       "_type": "request",
       "parentId": "fld_08",

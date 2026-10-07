@@ -4,13 +4,14 @@ import (
 	"github.com/labstack/echo/v5"
 
 	"working-time-tracker/internal/domain/auth"
+	"working-time-tracker/internal/domain/integration"
 	"working-time-tracker/internal/domain/permission"
 	"working-time-tracker/internal/page"
 )
 
 // RegisterPages monta as páginas HTML. As públicas mandam quem já está logado
 // para o início; as outras mandam quem não está para o login.
-func RegisterPages(e *echo.Echo, p *page.Handler, m *auth.Middleware) {
+func RegisterPages(e *echo.Echo, p *page.Handler, m *auth.Middleware, oauth *integration.OAuthHandler) {
 	// O idioma vale para todo mundo, logado ou não.
 	e.GET("/lang/:code", p.SetLanguage)
 	e.GET("/i18n/:file", p.I18nScript)
@@ -50,6 +51,10 @@ func RegisterPages(e *echo.Echo, p *page.Handler, m *auth.Middleware) {
 	g.GET("/projects/:projectId/management/overview", p.Overview, prj, can(permission.BillingView))
 	g.GET("/projects/:projectId/management/teams", p.Teams, prj, can(permission.CollaboratorsManage, permission.TeamsManage, permission.RatesView, permission.RatesManage))
 	g.GET("/projects/:projectId/management/integrations", p.Integrations, prj, can(permission.IntegrationsManage))
+	// Conectar com o GitHub: a ida leva a pessoa a autorizar lá (a mesma permissão da aba), a volta
+	// cai num endereço fixo, o que está cadastrado no app, e confere tudo de novo pelo cookie.
+	g.GET("/projects/:projectId/management/integrations/github/connect", oauth.GitHubConnect, prj, can(permission.IntegrationsManage))
+	g.GET(integration.CallbackPath, oauth.GitHubCallback)
 	g.GET("/projects/:projectId/management/settings", p.ProjectSettings, prj, can(permission.ProjectEdit, permission.BillingView, permission.BillingManage))
 	// Os caminhos de antes da Gestão continuam levando às mesmas abas.
 	g.GET("/projects/:projectId/teams", p.ToManagement("teams"), prj)

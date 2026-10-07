@@ -17,6 +17,7 @@ func (h *Handler) integrationTypes(c *echo.Context) map[string]any {
 	types := adapter.Descriptors()
 	for i := range types {
 		h.localizeDescriptor(&types[i], lang)
+		types[i].Configured = h.deps.OAuthConfigured[types[i].Type]
 	}
 	return map[string]any{"integration_types": types}
 }

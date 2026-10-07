@@ -3,6 +3,7 @@ package adapter
 import (
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"reflect"
 	"strings"
 	"sync/atomic"
@@ -150,6 +151,105 @@ func TestGitHub_ValidateAndFetch(t *testing.T) {
 	}
 	if after := hits.Load(); after != before {
 		t.Errorf("%d request(s) reached the platform for input that should be refused before it", after-before)
+	}
+}
+
+// A conexão OAuth: o endereço de autorização leva o que o GitHub precisa, o código da volta
+// vira um token, e o token diz quem é e quais repositórios enxerga.
+func TestGitHubOAuth_AuthorizeAndExchange(t *testing.T) {
+	srv := httptest.NewServer(testutil.FakeGitHub())
+	defer srv.Close()
+	oauth := &GitHubOAuth{
+		ClientID: testutil.GitHubClientID, ClientSecret: testutil.GitHubClientSecret,
+		RedirectURL: "http://wtt.test/integrations/github/callback", SiteURL: srv.URL,
+	}
+	if !oauth.Configured() {
+		t.Fatal("an app with id, secret and redirect URL is not configured")
+	}
+	for name, o := range map[string]*GitHubOAuth{
+		"nil":          nil,
+		"no id":        {ClientSecret: "s", RedirectURL: "http://x/cb"},
+		"no secret":    {ClientID: "i", RedirectURL: "http://x/cb"},
+		"no redirect":  {ClientID: "i", ClientSecret: "s"},
+		"empty struct": {},
+	} {
+		if o.Configured() {
+			t.Errorf("%s: Configured() = true", name)
+		}
+	}
+
+	u, err := url.Parse(oauth.AuthorizeURL("the-state"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	q := u.Query()
+	if u.Path != "/login/oauth/authorize" || q.Get("client_id") != testutil.GitHubClientID ||
+		q.Get("redirect_uri") != oauth.RedirectURL || q.Get("scope") != "repo" || q.Get("state") != "the-state" {
+		t.Errorf("authorize URL = %s", u)
+	}
+
+	token, err := oauth.Exchange(testutil.GitHubOAuthCode)
+	if err != nil || token != testutil.GitHubOAuthToken {
+		t.Errorf("exchange = %q, %v, want the fake's token", token, err)
+	}
+	// O GitHub responde 200 também quando recusa: o motivo vem no corpo.
+	if _, err := oauth.Exchange("expired-code"); err == nil || !strings.Contains(err.Error(), "integration.github_oauth_exchange") {
+		t.Errorf("exchange with a bad code: %v", err)
+	}
+	wrong := *oauth
+	wrong.ClientSecret = "wrong"
+	if _, err := wrong.Exchange(testutil.GitHubOAuthCode); err == nil || !strings.Contains(err.Error(), "integration.github_oauth_exchange") {
+		t.Errorf("exchange with a wrong secret: %v", err)
+	}
+	srv.Close()
+	if _, err := oauth.Exchange(testutil.GitHubOAuthCode); err == nil || !strings.Contains(err.Error(), "integration.provider_unreachable") {
+		t.Errorf("exchange with the site down: %v", err)
+	}
+}
+
+func TestGitHub_AccountAndRepositories(t *testing.T) {
+	srv := httptest.NewServer(testutil.FakeGitHub())
+	defer srv.Close()
+	g := &GitHubIntegration{BaseURL: srv.URL}
+	conn := Connection{Token: testutil.GitHubOAuthToken}
+
+	login, err := g.Account(conn)
+	if err != nil || login != testutil.GitHubLogin {
+		t.Errorf("account = %q, %v, want %q", login, err, testutil.GitHubLogin)
+	}
+	repos, err := g.ListRepositories(conn)
+	want := []Repository{{FullName: "owner/repo", Private: true}, {FullName: "owner/other"}}
+	if err != nil || !reflect.DeepEqual(repos, want) {
+		t.Errorf("repositories = %v, %v, want %v", repos, err, want)
+	}
+
+	bad := Connection{Token: testutil.InvalidToken}
+	if _, err := g.Account(bad); err == nil || !strings.Contains(err.Error(), "integration.invalid_token") {
+		t.Errorf("account with an invalid token: %v", err)
+	}
+	if _, err := g.ListRepositories(bad); err == nil || !strings.Contains(err.Error(), "integration.invalid_token") {
+		t.Errorf("repositories with an invalid token: %v", err)
+	}
+	if _, err := g.Account(Connection{}); err == nil || !strings.Contains(err.Error(), "integration.token_required") {
+		t.Errorf("account without a token: %v", err)
+	}
+
+	// O GitHub é o único tipo que se autoriza no site e que sabe listar; GitLab e Trello não.
+	var _ AccountLookup = g
+	var _ RepositoryLister = g
+	if d := g.Descriptor(); d.Auth != AuthOAuth || d.ComingSoon {
+		t.Errorf("github descriptor: auth %q, coming soon %v", d.Auth, d.ComingSoon)
+	}
+	for _, other := range []Integration{&GitLabIntegration{}, &TrelloIntegration{}} {
+		if _, ok := other.(AccountLookup); ok {
+			t.Errorf("%s looks up accounts", other.Descriptor().Type)
+		}
+		if _, ok := other.(RepositoryLister); ok {
+			t.Errorf("%s lists repositories", other.Descriptor().Type)
+		}
+		if d := other.Descriptor(); d.Auth == AuthOAuth || !d.ComingSoon {
+			t.Errorf("%s descriptor: auth %q, coming soon %v", d.Type, d.Auth, d.ComingSoon)
+		}
 	}
 }
 

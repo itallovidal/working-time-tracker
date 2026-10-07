@@ -16,4 +16,8 @@ var (
 	ErrDisabled             = apperr.New("integration.disabled", http.StatusBadRequest)
 	ErrNoCredential         = apperr.New("integration.no_credential", http.StatusBadRequest)
 	ErrUnreadableCredential = apperr.New("integration.unreadable_credential", http.StatusBadRequest)
+	// ErrNotConnectable e ErrNoRepositories são do tipo que não tem a capacidade pedida:
+	// conectar por OAuth, listar repositórios.
+	ErrNotConnectable = apperr.New("integration.not_connectable", http.StatusBadRequest)
+	ErrNoRepositories = apperr.New("integration.no_repositories", http.StatusBadRequest)
 )

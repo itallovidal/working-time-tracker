@@ -17,6 +17,8 @@ var githubDescriptor = Descriptor{
 		{Key: "repo", Required: true, Summary: true},
 	},
 	ItemNumeric: true,
+	// O acesso vem da autorização no GitHub (github_oauth.go), sem token colado.
+	Auth: AuthOAuth,
 }
 
 // GitHubIntegration fala com a API do GitHub. BaseURL e Client são opcionais e
@@ -156,4 +158,63 @@ func (g *GitHubIntegration) FetchItemDetails(conn Connection, itemID string) (*I
 		State: body.State,
 		URL:   body.HTMLURL,
 	}, nil
+}
+
+// Account devolve o login de quem o token representa. A conexão OAuth o usa para
+// conferir o token recém-obtido e para nomear a integração.
+func (g *GitHubIntegration) Account(conn Connection) (string, error) {
+	resp, err := g.get(conn, "/user")
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+	case http.StatusUnauthorized:
+		return "", ErrInvalidToken.With("provider", "GitHub")
+	default:
+		return "", ErrProviderStatus.With("provider", "GitHub", "status", resp.StatusCode)
+	}
+
+	var body struct {
+		Login string `json:"login"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil || body.Login == "" {
+		return "", ErrUnexpectedResponse.With("provider", "GitHub").Wrap(err)
+	}
+	return body.Login, nil
+}
+
+// ListRepositories devolve os repositórios que o token enxerga, os mexidos há menos
+// tempo primeiro. É uma página de 100: quem tem mais digita o nome, que o campo aceita.
+func (g *GitHubIntegration) ListRepositories(conn Connection) ([]Repository, error) {
+	resp, err := g.get(conn, "/user/repos?per_page=100&sort=pushed&affiliation=owner,collaborator,organization_member")
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+	case http.StatusUnauthorized:
+		return nil, ErrInvalidToken.With("provider", "GitHub")
+	default:
+		return nil, ErrProviderStatus.With("provider", "GitHub", "status", resp.StatusCode)
+	}
+
+	var body []struct {
+		FullName string `json:"full_name"`
+		Private  bool   `json:"private"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		return nil, ErrUnexpectedResponse.With("provider", "GitHub").Wrap(err)
+	}
+	repos := make([]Repository, 0, len(body))
+	for _, r := range body {
+		if r.FullName != "" {
+			repos = append(repos, Repository{FullName: r.FullName, Private: r.Private})
+		}
+	}
+	return repos, nil
 }

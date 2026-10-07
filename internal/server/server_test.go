@@ -874,6 +874,7 @@ func TestRoutes_Table(t *testing.T) {
 		"GET /api/tasks/:taskId/external-details",
 
 		"GET /api/integrations/:integrationId",
+		"GET /api/integrations/:integrationId/repositories",
 		"PATCH /api/integrations/:integrationId",
 		"DELETE /api/integrations/:integrationId",
 

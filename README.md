@@ -22,7 +22,7 @@ Ponto por tarefa para equipes que trabalham por projeto. Foi pensado principalme
 - **Ponto e Visão geral pessoal.** Clock-in e clock-out com cronômetro ao vivo no topo de todas as páginas. **Uma sessão pode ter várias tarefas:** o ponto começa por uma, e outras entram depois, pela pílula do topo (que mostra a primeira tarefa e "+N" das outras e abre a sessão), pelo botão Adicionar à sessão no Início e na página da tarefa, ou pelo modal da sessão, que mostra cada tarefa com o intervalo em que esteve nela, numa barra de tempo. O tempo vale para a sessão e para cada tarefa (tarefas em paralelo contam o tempo cheio cada uma; a pessoa, o projeto e os valores contam a sessão uma vez só), e as tarefas se mexem também depois de a sessão terminar (quem bateu o ponto e os admins). O **Início**, a primeira aba e a mesma tela para admin e membro, tem o **painel do timer** (o cronômetro, que mostra também quanto a sessão aberta já rendeu), ao lado do seu tempo de hoje e da semana. Ao clicar em Iniciar numa tarefa, o cartão dela vai para dentro do painel, que mostra as tarefas em andamento como cartões e, embaixo, desde que horas o ponto está aberto e os botões Parar e Tarefas da sessão; parado, o painel convida a iniciar uma das tarefas abaixo. As **suas tarefas** (as de que você é o responsável e que ainda não estão na sessão; ao parar, elas voltam), em cartões que abrem a tarefa inteiros (o mouse vira mão e o fundo escurece; sem botão Ver detalhes). De cima para baixo: o nome, o selo de status e o de prioridade (nas mesmas cores da lista), o prazo à esquerda (só quando há; atrasado em vermelho, vencendo em 48 horas em amarelo, e o de uma tarefa fechada é só a data) e o botão Iniciar à direita (com a tarefa na sessão aberta, o "Em andamento" ocupa o lugar dele), uma divisória e as etiquetas ("Sem etiquetas" quando não há). O nome, o status, o prazo e as etiquetas ficam nas mesmas alturas nos cartões de uma fileira (para pegar uma tarefa disponível, use o quadro de tarefas); e as **suas sessões**, cada uma com as suas tarefas, na tabela em que a linha inteira abre o modal dela (o horário é o botão para o teclado; não há mais o olhinho). O modal é grande e tem três grupos, cada um com o nome na borda como o de novo projeto: o Resumo, as Tarefas da sessão (um cartãozinho por tarefa, com o tempo, a linha do intervalo e o botão Abrir tarefa, que leva a ela) e, para quem pode mudar a sessão, o Adicionar tarefa. A tabela tem filtros de data e tarefa (com uma tarefa no filtro, o tempo e o valor da linha e dos totais são os dela na sessão), os totais do filtro num cartão à parte e dez sessões por página. O membro só enxerga as próprias sessões, e isso vale no servidor; o admin vê as de todos na Gestão. O banco garante uma única sessão aberta por pessoa.
 - **Horas em dinheiro.** Cada sessão guarda os valores por hora de quando o ponto abriu, então **mudar um valor só vale dali em diante**. Quem não tem valor definido no projeto **não bate ponto**. Na tela de ponto, o membro vê quanto ganhou; o admin vê custo, receita e margem.
 - **Gestão do projeto**, só para admins. Um botão **Gestão**, no fim da barra de abas, leva a uma área com abas próprias (Visão geral, Colaboradores, Integrações e Configurações) e a um link para voltar ao projeto; o membro não vê o botão e recebe "Página não encontrada" nos endereços da Gestão. A **Visão geral** da Gestão mostra, numa tela só: quantas pessoas e quantos times trabalham no projeto, as horas registradas, a receita, o custo e a margem; há quanto tempo o projeto existe, em dias, semanas e meses, contados do dia em que foi cadastrado; as integrações configuradas e se estão ativas; a atividade dos últimos 7 e 30 dias e quem está com o ponto aberto; as tarefas atrasadas; e as horas, o custo e a receita de cada pessoa. É uma fotografia da hora em que foi lida, com um botão para atualizar.
-- **Integrações** com GitHub, GitLab e Trello; por enquanto só o GitHub se oferece, e GitLab e Trello aparecem no modal como "Em breve" (o código deles funciona, mas a API recusa criar integração nova; as que já existem seguem valendo e se editam). Todas usam a mesma estrutura: nome, token e, em `metadata`, os campos próprios da plataforma (o repositório, o projeto, a chave e o quadro), que cada integração confere antes de falar com ela. O token é validado na plataforma, guardado criptografado e nunca volta nas respostas. O admin cria e edita num modal só, que desenha os campos da plataforma escolhida; o cartão de cada integração é só de leitura, e desativar ou excluir também ficam no modal. Os detalhes do item (o título e o estado da issue, ou a lista em que o cartão está) são buscados na hora, e se a plataforma não responde a tela mostra o motivo, sem quebrar.
+- **Integrações** com GitHub, GitLab e Trello; por enquanto só o GitHub se oferece, e GitLab e Trello aparecem no modal como "Em breve" (o código deles funciona, mas a API recusa criar integração nova; as que já existem seguem valendo e se editam). Todas usam a mesma estrutura: nome, o acesso (um token, validado na plataforma, guardado criptografado e que nunca volta nas respostas) e, em `metadata`, os campos próprios da plataforma (o repositório, o projeto, a chave e o quadro), que cada integração confere antes de falar com ela. **O GitHub se conecta por autorização, sem token para colar:** o botão **Conectar com o GitHub** leva ao site dele e, na volta, o modal pede o repositório numa lista dos que a conta enxerga (a integração nasce desativada e só é ativada ao escolher um; **Reconectar** renova o acesso ou troca de conta). Isso pede o app OAuth cadastrado no GitHub, ver [Conectar com o GitHub](#conectar-com-o-github); sem ele o botão avisa que não está configurado. O admin cria e edita num modal só, que desenha os campos da plataforma escolhida; o cartão de cada integração é só de leitura, e desativar ou excluir também ficam no modal. Os detalhes do item (o título e o estado da issue, ou a lista em que o cartão está) são buscados na hora, e se a plataforma não responde a tela mostra o motivo, sem quebrar.
 
 ## Como rodar
 
@@ -72,7 +72,25 @@ Para gerar o binário: `go build -o wtt ./cmd && ./wtt`. Templates e arquivos es
 | `DATABASE_URL` | sim | Conexão com o PostgreSQL |
 | `INTEGRATION_ENCRYPTION_KEY` | sim | Chave da criptografia AES-GCM dos tokens de integração. Trocá-la torna os tokens salvos ilegíveis: cada integração pede o token de novo na edição, e o resto dela (nome e `metadata`) continua |
 | `COOKIE_SECURE` | não | `true` marca o cookie de sessão como `Secure`. Use em produção, atrás de HTTPS |
+| `PUBLIC_URL` | para conectar o GitHub | O endereço em que as pessoas abrem o sistema, sem barra no fim (`http://localhost:8080`). O GitHub devolve a pessoa a `PUBLIC_URL/integrations/github/callback` |
+| `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | para conectar o GitHub | O Client ID e o Client secret do app OAuth cadastrado no GitHub. Sem eles, o botão Conectar com o GitHub avisa que não está configurado |
+| `GITHUB_URL`, `GITHUB_API_URL` | não | Para um GitHub Enterprise (ou um servidor fake): o site (`https://github.com`) e a API (`https://api.github.com`), que são os padrões |
 | `TEST_DATABASE_URL` | só nos testes | Banco usado por `go test`. O nome precisa terminar em `_test` |
+
+### Conectar com o GitHub
+
+O botão **Conectar com o GitHub** usa um **OAuth App** do GitHub, que se cadastra uma vez por servidor:
+
+1. Em github.com/settings/developers, **New OAuth App**. *Homepage URL*: o `PUBLIC_URL` (`http://localhost:8080`). *Authorization callback URL*: `PUBLIC_URL/integrations/github/callback` (`http://localhost:8080/integrations/github/callback`).
+2. Copie o **Client ID** e gere um **Client secret**. No `.env`: `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` e `PUBLIC_URL`. Reinicie o servidor.
+3. Em Gestão, Integrações, **Nova integração**, GitHub, **Conectar com o GitHub**: autorize no GitHub, volte e escolha o repositório.
+
+Pontos de atenção:
+
+- Um OAuth App tem **uma URL de retorno só**: um app serve um endereço do sistema. Para desenvolvimento e produção, dois apps.
+- O escopo pedido é `repo`, o único que dá acesso a repositório privado num OAuth App. Ele também permite escrita, que o sistema **não usa** (só lê issues); o token fica criptografado e nunca sai do servidor. Se isso for um problema para quem usa, a saída é um GitHub App, de permissões mais finas.
+- Se um repositório de uma **organização** não aparecer na lista, o dono da organização precisa aprovar o app, nas configurações dela, em acesso de aplicativos de terceiros.
+- A lista traz os 100 repositórios mexidos há menos tempo; os outros se digitam no campo.
 
 O servidor e o seed aplicam as migrações pendentes ao iniciar. São arquivos SQL versionados, e só eles mudam o schema: veja [Migrações do banco](#migrações-do-banco).
 
@@ -106,7 +124,9 @@ A interface segue a Decision 8 de `_docs/design.md`. O servidor renderiza a casc
 | `/tasks/:taskId` | A página da tarefa, uma **tela própria**, sem as abas do projeto: um cabeçalho com o botão Voltar à lista, o caminho (Projetos / o projeto), o título e as ações (Pegar tarefa, Iniciar, Atualização rápida e o lápis). Só para ler, em quatro cartões: a **Descrição**, os **Detalhes** (status, prioridade, responsável com o email, prazo, etiquetas e a data de criação), o tempo registrado e o item externo vinculado. Em tela estreita os cartões ficam numa coluna, nessa ordem. No cabeçalho ficam o **Pegar tarefa** (só quando ela não tem responsável: passa a tarefa para você sem bater o ponto), o Iniciar, a **Atualização rápida** (um modal só com status, prioridade e etiquetas) e o lápis, que abre o modal Editar tarefa (com o Excluir tarefa). A lista de tarefas leva a ela ao clicar na linha |
 | `/projects/:projectId/time-tracking` | O endereço do antigo Ponto: redireciona para o Início |
 | `/projects/:projectId/management/teams` | Gestão, Colaboradores, em duas visões: Pessoas (a lista, com busca) e Times (os cartões; `?view=teams` abre nela), com cinco pessoas por página. Para admins, também o valor por hora de cada pessoa, a margem e os modais de adicionar pessoa, do colaborador, de novo time e de editar time |
-| `/projects/:projectId/management/integrations` | Gestão, Integrações (GitHub; GitLab e Trello aparecem como "Em breve"): um cartão por integração e, para admins, o modal de criar e editar |
+| `/projects/:projectId/management/integrations` | Gestão, Integrações (GitHub; GitLab e Trello aparecem como "Em breve"): um cartão por integração e, para admins, o modal de criar e editar. Na volta do GitHub a aba recebe `?github=<id>` (abre a escolha do repositório, ou só avisa que o acesso foi renovado) ou `?github_error=<código>` (mostra o motivo) |
+| `/projects/:projectId/management/integrations/github/connect` | Começa a conexão com o GitHub (`?integration=<id>` reconecta uma que já existe): grava o cookie da conexão e redireciona para o GitHub. Mesma permissão da aba |
+| `/integrations/github/callback` | Onde o GitHub devolve a pessoa (o endereço cadastrado no app). Confere o cookie, o `state`, a pessoa e a permissão, troca o código por um token e guarda a integração; redireciona para a aba |
 | `/projects/:projectId/management/settings` | Gestão, Configurações: a descrição, a sprint, a daily, a weekly (dia e horário), o cliente e a reunião com o cliente (dia e horário), só para ler. Para admins, também o valor cobrado e o botão Editar, que abre o modal Editar projeto, onde ficam todos os campos e a exclusão |
 
 Sem sessão, qualquer página leva ao login, e a pessoa volta para a página pedida depois de entrar. Uma página de outra organização mostra "Página não encontrada".
@@ -194,7 +214,7 @@ Resumo dos grupos de rotas:
 | Times | `/api/teams/:teamId` (+ `members`) |
 | Tarefas | `/api/tasks/:taskId` (+ `claim`, `attributes`, `link-external-item`, `external-details`) |
 | Ponto | `/api/projects/:projectId/work-sessions/*`, `/api/work-sessions/active` |
-| Integrações | `/api/integrations/:integrationId` |
+| Integrações | `/api/integrations/:integrationId` (+ `repositories`) |
 
 **Integrações.** O corpo é o mesmo para qualquer plataforma. O que muda de uma para outra vai em `metadata`:
 
@@ -209,9 +229,11 @@ Resumo dos grupos de rotas:
 
 | `type` | `token` | `metadata` |
 |---|---|---|
-| `github` | token pessoal com leitura de issues | `repo`: `dono/repositorio` ou o endereço |
+| `github` | na tela, vem da autorização no GitHub (Conectar com o GitHub); a API também aceita um token pessoal com leitura de issues | `repo`: `dono/repositorio` ou o endereço |
 | `gitlab` | token com escopo `read_api` | `project_url`: `grupo/projeto` ou o endereço |
 | `trello` | token da API | `api_key`: a chave do Power-Up; `board_id`: o endereço do quadro, o link curto ou o id |
+
+`GET /api/integrations/:integrationId/repositories` (`integrations.manage`) lista o que o token guardado enxerga (`[{"full_name": "dono/repo", "private": true}]`), para a tela oferecer a escolha; só os tipos que implementam `RepositoryLister` (o GitHub) respondem, e o token nunca sai do servidor. O `Descriptor` diz como cada tipo dá acesso: `Auth: "oauth"` (o GitHub: a tela mostra o botão Conectar, sem campo de token) ou o padrão, token.
 
 `gitlab` e `trello` têm `ComingSoon: true` no `Descriptor`: o `POST` de um deles responde `400` com `integration.type_coming_soon`, e a tela mostra o tipo desabilitado com o selo "Em breve". Tirar a flag os oferece de novo, sem outra mudança.
 
@@ -225,6 +247,7 @@ Um tipo novo é um arquivo em `internal/adapter` que implementa `Integration` e 
 - **Isolamento entre organizações.** Cada rota com ID confere se o recurso é da organização de quem chama e responde 404 caso não seja.
 - **Valores.** O valor cobrado do cliente só existe em rotas de admin: ele não entra no JSON do projeto. Na lista de valores de um projeto, um membro recebe só a própria linha, e na de colaboradores, só o próprio valor. Nas sessões de ponto, a API apaga o valor pago das sessões de outras pessoas e todo valor cobrado antes de responder a quem não é admin. A visão geral do projeto, que soma o custo e a receita de todos, é uma rota só de admins, e a página dela responde "Página não encontrada" a um membro.
 - **Limite de tentativas** por IP em signup, login e convites.
+- **Conectar com o GitHub** usa um `state` aleatório, selado (AES-GCM) num cookie `wtt_oauth` HttpOnly, SameSite=Lax, limitado ao caminho do callback e válido por 10 minutos, que serve para uma volta só. Na volta o servidor confere o `state` em tempo constante e que a pessoa e a permissão `integrations.manage` no projeto continuam valendo. Como é uma navegação GET e não uma chamada da API, a proteção contra CSRF dessas duas rotas é esse `state`, e não o `JSONOnly`.
 - **Tokens de integração** criptografados com AES-GCM (`INTEGRATION_ENCRYPTION_KEY`) e nunca devolvidos pela API. O `metadata` de uma integração fica em claro e volta nas respostas, então não é lugar de segredo: cada tipo só guarda nele os campos que declara. O que vem de quem usa e entra numa URL da plataforma (o repositório, o quadro, o número da issue, o cartão) é conferido antes.
 
 ## Testes

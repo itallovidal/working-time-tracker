@@ -848,7 +848,7 @@ func TestPages_ProjectIntegrationsTab(t *testing.T) {
 	for _, adminOnly := range []string{
 		"Nova integração", `x-teleport="#modal-root"`, `x-show="$store.modal.name === 'integration-form'"`,
 		`role="radiogroup" aria-label="Plataforma"`, `x-model="draft.type"`,
-		`id="int-name"`, `id="int-token"`, `autocomplete="new-password"`, `:required="!draft.id"`,
+		`id="int-name"`, `id="int-token"`, `autocomplete="new-password"`, `:required="!draft.id && !isOAuth(draft.type)"`,
 		`x-for="f in typeOf(draft.type).metadata"`, `x-model="draft.metadata[f.key]"`, `x-model="draft.enabled"`,
 		`@click="openEdit(it)"`, `title="Editar integração"`, "Excluir integração", `@click="remove()"`,
 	} {

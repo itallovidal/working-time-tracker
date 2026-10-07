@@ -87,6 +87,108 @@ func (s *Service) Create(projectID, integrationType, displayName, token string, 
 	return it, nil
 }
 
+// accountLookup acha o adapter do tipo e a capacidade de dizer quem o token representa,
+// que é o que uma conexão por OAuth precisa.
+func accountLookup(integrationType string) (adapter.Integration, adapter.AccountLookup, error) {
+	impl, err := adapter.GetIntegration(integrationType)
+	if err != nil {
+		return nil, nil, err
+	}
+	lookup, ok := impl.(adapter.AccountLookup)
+	if !ok {
+		return nil, nil, ErrNotConnectable
+	}
+	return impl, lookup, nil
+}
+
+// Connect guarda uma conexão feita por OAuth: o token que a plataforma acabou de dar.
+// A integração nasce desativada e sem os campos da plataforma (o repositório): a pessoa
+// os escolhe editando, e é aí que ela é ativada e a conexão validada contra o que foi
+// escolhido. O nome sugerido leva o login de quem autorizou.
+func (s *Service) Connect(projectID, integrationType, token string) (*Integration, error) {
+	impl, lookup, err := accountLookup(integrationType)
+	if err != nil {
+		return nil, err
+	}
+	token = strings.TrimSpace(token)
+	login, err := lookup.Account(adapter.Connection{Token: token})
+	if err != nil {
+		return nil, err
+	}
+	credentials, err := s.seal(token)
+	if err != nil {
+		return nil, err
+	}
+
+	it := &Integration{
+		ProjectID:   uuid.MustParse(projectID),
+		Type:        integrationType,
+		DisplayName: impl.Descriptor().Label + " · @" + login,
+		Credentials: credentials,
+		Metadata:    map[string]interface{}{},
+		Enabled:     false,
+	}
+	if err := s.store.Create(it); err != nil {
+		return nil, err
+	}
+	redact(it)
+	return it, nil
+}
+
+// Reauthorize troca o token de uma integração que já existe pelo de uma nova conexão
+// OAuth. Se ela já tem o repositório, o token novo é validado contra ele antes de
+// valer: quem reconecta com outra conta, que não enxerga o repositório, é avisado em
+// vez de ficar com uma integração quebrada.
+func (s *Service) Reauthorize(id, token string) (*Integration, error) {
+	existing, err := s.store.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+	impl, lookup, err := accountLookup(existing.Type)
+	if err != nil {
+		return nil, err
+	}
+	token = strings.TrimSpace(token)
+	if _, err := lookup.Account(adapter.Connection{Token: token}); err != nil {
+		return nil, err
+	}
+	if meta, err := impl.CheckMetadata(existing.Metadata); err == nil {
+		if err := impl.Validate(adapter.Connection{Token: token, Metadata: meta}); err != nil {
+			return nil, err
+		}
+	}
+	if existing.Credentials, err = s.seal(token); err != nil {
+		return nil, err
+	}
+	if err := s.store.Update(existing); err != nil {
+		return nil, err
+	}
+	redact(existing)
+	return existing, nil
+}
+
+// Repositories lista o que o token guardado da integração enxerga. O token fica no
+// servidor: quem chama recebe só os nomes.
+func (s *Service) Repositories(id string) ([]adapter.Repository, error) {
+	existing, err := s.store.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+	impl, err := adapter.GetIntegration(existing.Type)
+	if err != nil {
+		return nil, err
+	}
+	lister, ok := impl.(adapter.RepositoryLister)
+	if !ok {
+		return nil, ErrNoRepositories
+	}
+	token, err := s.open(existing)
+	if err != nil {
+		return nil, err
+	}
+	return lister.ListRepositories(adapter.Connection{Token: token, Metadata: existing.Metadata})
+}
+
 func (s *Service) ListByProject(projectID string) ([]Integration, error) {
 	integrations, err := s.store.ListByProject(projectID)
 	if err != nil {

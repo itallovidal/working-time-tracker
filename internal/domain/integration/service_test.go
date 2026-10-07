@@ -449,3 +449,135 @@ func TestService_Trello(t *testing.T) {
 		t.Error("expected error for an invalid Trello token")
 	}
 }
+
+// Uma conexão por OAuth nasce desativada e sem repositório, com o token cifrado e o nome
+// sugerido pelo login. Escolher o repositório (um Update com o metadata) a valida contra o
+// token guardado e é o que a deixa pronta.
+func TestService_Connect(t *testing.T) {
+	svc, projectID := setup(t)
+
+	it, err := svc.Connect(projectID, "github", testutil.GitHubOAuthToken)
+	if err != nil {
+		t.Fatalf("connect: %v", err)
+	}
+	if want := "GitHub · @" + testutil.GitHubLogin; it.DisplayName != want {
+		t.Errorf("display_name = %q, want %q", it.DisplayName, want)
+	}
+	if it.Enabled || !it.HasToken || it.Credentials != nil || len(it.Metadata) != 0 {
+		t.Errorf("connected = enabled %v, has_token %v, credentials %v, metadata %v; want disabled, with token, no credentials, no metadata",
+			it.Enabled, it.HasToken, it.Credentials, it.Metadata)
+	}
+	row := testClient.Integration.GetX(context.Background(), it.ID)
+	secrets, err := adapter.DecryptConfig(row.Credentials, testKey)
+	if err != nil || secrets["token"] != testutil.GitHubOAuthToken {
+		t.Errorf("stored secrets = %v, %v, want the OAuth token", secrets, err)
+	}
+
+	// Sem repositório, a integração aparece incompleta: os itens vinculados não são buscados.
+	if res, err := svc.FetchItemDetails(it.ID.String(), "42"); err != nil || res.Details != nil || res.Error == nil {
+		t.Errorf("fetch on a disabled, incomplete integration = %+v, %v, want details nil with a reason", res, err)
+	}
+
+	// Escolher o repositório valida a conexão com o token guardado e ativa a integração.
+	enabled := true
+	done, err := svc.Update(it.ID.String(), "", "", githubMetadata(), &enabled)
+	if err != nil || !done.Enabled || !reflect.DeepEqual(done.Metadata, githubMetadata()) {
+		t.Fatalf("finish = %+v, %v, want enabled with the repository", done, err)
+	}
+	if res, err := svc.FetchItemDetails(it.ID.String(), "42"); err != nil || res.Details == nil || res.Details.Title != "Corrigir login" {
+		t.Errorf("fetch after finishing = %+v, %v", res, err)
+	}
+	// Um repositório que o token não enxerga é recusado, e a integração continua como estava.
+	if _, err := svc.Update(it.ID.String(), "", "", map[string]interface{}{"repo": "owner/missing"}, nil); err == nil ||
+		!strings.Contains(err.Error(), "integration.github_repo_not_found") {
+		t.Errorf("update with a repository the token cannot see: %v", err)
+	}
+}
+
+func TestService_Connect_Refused(t *testing.T) {
+	svc, projectID := setup(t)
+
+	if _, err := svc.Connect(projectID, "github", testutil.InvalidToken); err == nil || !strings.Contains(err.Error(), "integration.invalid_token") {
+		t.Errorf("connect with a token GitHub rejects: %v", err)
+	}
+	// GitLab e Trello não se conectam por autorização.
+	for _, typ := range []string{"gitlab", "trello"} {
+		if _, err := svc.Connect(projectID, typ, "x"); err == nil || !strings.Contains(err.Error(), "integration.not_connectable") {
+			t.Errorf("connect %s: %v, want integration.not_connectable", typ, err)
+		}
+	}
+	if _, err := svc.Connect(projectID, "nope", "x"); err == nil || !strings.Contains(err.Error(), "integration.unsupported_type") {
+		t.Errorf("connect an unknown type: %v", err)
+	}
+	if list, err := svc.ListByProject(projectID); err != nil || len(list) != 0 {
+		t.Errorf("refused connections left %d integration(s) behind (%v)", len(list), err)
+	}
+}
+
+// Reconectar troca o token e nada mais, e um token que não vale (ou que não enxerga o
+// repositório) não chega a trocar.
+func TestService_Reauthorize(t *testing.T) {
+	svc, projectID := setup(t)
+	it, err := svc.Connect(projectID, "github", testutil.GitHubOAuthToken)
+	if err != nil {
+		t.Fatalf("connect: %v", err)
+	}
+	enabled := true
+	if _, err := svc.Update(it.ID.String(), "Meu repositório", "", githubMetadata(), &enabled); err != nil {
+		t.Fatalf("finish: %v", err)
+	}
+
+	again, err := svc.Reauthorize(it.ID.String(), testutil.GitHubSecondOAuthToken)
+	if err != nil {
+		t.Fatalf("reauthorize: %v", err)
+	}
+	if again.DisplayName != "Meu repositório" || !again.Enabled || !reflect.DeepEqual(again.Metadata, githubMetadata()) || again.Credentials != nil {
+		t.Errorf("reauthorized = %+v, want the name, state and repository untouched and no credentials", again)
+	}
+	row := testClient.Integration.GetX(context.Background(), it.ID)
+	if secrets, err := adapter.DecryptConfig(row.Credentials, testKey); err != nil || secrets["token"] != testutil.GitHubSecondOAuthToken {
+		t.Errorf("stored secrets = %v, %v, want the new token", secrets, err)
+	}
+	// O token novo é o que lista: o fake responde outros repositórios para ele.
+	if repos, err := svc.Repositories(it.ID.String()); err != nil || len(repos) != 1 || repos[0].FullName != "owner/second" {
+		t.Errorf("repositories after reconnecting = %v, %v, want the ones of the new token", repos, err)
+	}
+
+	if _, err := svc.Reauthorize(it.ID.String(), testutil.InvalidToken); err == nil || !strings.Contains(err.Error(), "integration.invalid_token") {
+		t.Errorf("reauthorize with an invalid token: %v", err)
+	}
+	row = testClient.Integration.GetX(context.Background(), it.ID)
+	if secrets, _ := adapter.DecryptConfig(row.Credentials, testKey); secrets["token"] != testutil.GitHubSecondOAuthToken {
+		t.Errorf("a refused reconnection changed the stored token to %v", secrets["token"])
+	}
+	if _, err := svc.Reauthorize(uuid.NewString(), testutil.GitHubOAuthToken); err == nil {
+		t.Error("reauthorize an integration that does not exist: no error")
+	}
+}
+
+func TestService_Repositories(t *testing.T) {
+	svc, projectID := setup(t)
+	it, err := svc.Connect(projectID, "github", testutil.GitHubOAuthToken)
+	if err != nil {
+		t.Fatalf("connect: %v", err)
+	}
+	repos, err := svc.Repositories(it.ID.String())
+	if err != nil || len(repos) != 2 || repos[0].FullName != "owner/repo" || !repos[0].Private {
+		t.Errorf("repositories = %v, %v", repos, err)
+	}
+
+	// Sem credencial guardada (uma integração de antes) não há com o que listar.
+	bare := testClient.Integration.Create().SetProjectID(uuid.MustParse(projectID)).SetType("github").
+		SetDisplayName("Sem credencial").SaveX(context.Background())
+	if _, err := svc.Repositories(bare.ID.String()); err == nil || !strings.Contains(err.Error(), "integration.no_credential") {
+		t.Errorf("repositories without a credential: %v", err)
+	}
+	// Um tipo que não lista repositórios.
+	gl, err := svc.Create(projectID, "gitlab", "GitLab", "glpat-test", map[string]interface{}{"project_url": "group/project"}, true)
+	if err != nil {
+		t.Fatalf("create gitlab: %v", err)
+	}
+	if _, err := svc.Repositories(gl.ID.String()); err == nil || !strings.Contains(err.Error(), "integration.no_repositories") {
+		t.Errorf("repositories of a GitLab integration: %v", err)
+	}
+}

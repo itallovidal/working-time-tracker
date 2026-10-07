@@ -103,6 +103,16 @@ func (h *Handler) Get(c *echo.Context) error {
 	return c.JSON(200, toIntegrationResponse(it))
 }
 
+// Repositories lista o que a conexão da integração enxerga, para a tela oferecer a
+// escolha. O token fica no servidor: a resposta traz só os nomes.
+func (h *Handler) Repositories(c *echo.Context) error {
+	repos, err := h.svc.Repositories(c.Param("integrationId"))
+	if err != nil {
+		return apperr.Respond(c, 400, err)
+	}
+	return c.JSON(200, repos)
+}
+
 func (h *Handler) Update(c *echo.Context) error {
 	id := c.Param("integrationId")
 	var body struct {

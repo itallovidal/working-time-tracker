@@ -685,13 +685,25 @@ time:
     other: "Página {{.page}} de {{.pages}} · {{.count}} sessões"
 
 integrations:
-  intro: Ligue tarefas a issues do GitHub. O token é validado na plataforma e guardado criptografado. GitLab e Trello chegam em breve.
+  intro: Ligue tarefas a issues do GitHub. Você autoriza no próprio GitHub e escolhe o repositório; o acesso fica guardado criptografado. GitLab e Trello chegam em breve.
   new: Nova integração
   loading: Carregando integrações…
   none: Nenhuma integração
   none_admin: Crie uma para vincular tarefas a issues ou cartões e ver o estado deles aqui.
   none_member: Um admin pode configurar o GitHub deste projeto.
   coming_soon: Em breve
+  connect: Conectar com o {{.platform}}
+  connect_about: Você vai ao {{.platform}} autorizar o acesso e volta para escolher o repositório.
+  connect_unconfigured: A conexão com o GitHub não está configurada neste servidor. Quem administra precisa definir GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET e PUBLIC_URL.
+  reconnect: Reconectar com o {{.platform}}
+  reconnect_hint: Autorize de novo se o acesso foi revogado ou para usar outra conta.
+  reconnected: Acesso renovado.
+  connection: Conexão
+  connected: Autorizada
+  pick_repo_title: Escolha o repositório
+  pick_repo_hint: A lista traz os repositórios que a sua conta enxerga. Se um repositório de uma organização não aparecer, o dono da organização precisa aprovar o app nas configurações dela, em acesso de aplicativos de terceiros.
+  repos_failed: Não foi possível listar os repositórios. Digite o nome ou reconecte.
+  private_repo: privado
   active: Ativa
   disabled: Desativada
   edit_title: Editar integração
@@ -1037,6 +1049,10 @@ errors:
     field_not_text: "o campo \"{{.field}}\" do {{.provider}} precisa ser um texto"
     field_required: "informe o campo \"{{.field}}\" do {{.provider}}"
     github_invalid_repo: "repositório do GitHub inválido: use dono/repositorio"
+    github_oauth_denied: "a autorização no GitHub foi cancelada"
+    github_oauth_exchange: "o GitHub não aceitou a autorização: tente conectar de novo"
+    github_oauth_not_configured: "a conexão com o GitHub não está configurada neste servidor: quem administra precisa definir GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET e PUBLIC_URL"
+    github_oauth_state: "a conexão com o GitHub venceu ou não pôde ser confirmada: tente de novo"
     github_repo_not_found: "repositório do GitHub não encontrado ou o token não tem acesso a ele"
     gitlab_forbidden: "o token do GitLab não tem permissão para ler o projeto"
     gitlab_invalid_project: "projeto do GitLab inválido: use grupo/projeto"
@@ -1045,7 +1061,9 @@ errors:
     invalid_token: "token do {{.provider}} inválido"
     item_not_found: "item {{.item}} não encontrado"
     name_required: "informe o nome da integração"
-    no_credential: "a integração está sem credencial: edite-a e informe o token"
+    no_credential: "a integração está sem credencial: edite-a e conecte de novo"
+    no_repositories: "esta integração não lista repositórios"
+    not_connectable: "esta plataforma não se conecta por autorização"
     not_found: "integração não encontrada"
     provider_status: "o {{.provider}} respondeu com status {{.status}}"
     provider_unreachable: "não foi possível falar com o {{.provider}}"
@@ -1060,7 +1078,7 @@ errors:
     type_coming_soon: "a integração com o {{.provider}} ainda não está disponível"
     type_required: "informe o tipo da integração"
     unexpected_response: "resposta inesperada do {{.provider}}"
-    unreadable_credential: "não foi possível ler a credencial guardada: edite a integração e informe o token de novo"
+    unreadable_credential: "não foi possível ler a credencial guardada: edite a integração e conecte de novo"
     unsupported_type: "tipo de integração não suportado: {{.type}}"
   internal:
     server_error: "erro interno, tente de novo"

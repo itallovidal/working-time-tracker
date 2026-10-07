@@ -11,6 +11,7 @@
 
   <p class="muted" x-show="loading">{{.T "integrations.loading"}}</p>
   <p class="form-error" x-cloak x-show="errors.load" x-text="errors.load"></p>
+  <p class="form-error" x-cloak x-show="errors.connect" x-text="errors.connect" role="alert"></p>
 
   <div class="empty" x-cloak x-show="!loading && !errors.load && items.length === 0">
     <strong>{{.T "integrations.none"}}</strong>
@@ -47,8 +48,9 @@
               <dd :class="f.value ? '' : 'muted'" x-text="f.value || WTT.notInformed"></dd>
             </div>
           </template>
-          <dt>{{.T "integrations.token"}}</dt>
-          <dd :class="it.has_token ? 'mono' : 'muted'" x-text="it.has_token ? '••••••••••••' : WTT.notInformed"></dd>
+          <dt x-text="isOAuth(it.type) ? $t('integrations.connection') : $t('integrations.token')"></dt>
+          <dd :class="it.has_token && !isOAuth(it.type) ? 'mono' : (it.has_token ? '' : 'muted')"
+              x-text="it.has_token ? (isOAuth(it.type) ? $t('integrations.connected') : '••••••••••••') : WTT.notInformed"></dd>
           <dt>{{.T "integrations.created_at"}}</dt>
           <dd x-text="WTT.fmt.date(it.created_at)"></dd>
         </dl>
@@ -86,29 +88,55 @@
         {{.T "integrations.platform"}}: <span class="badge badge-accent" x-text="typeOf(draft.type).label"></span>
       </p>
 
-      <div class="field">
-        <label for="int-name">{{.T "common.name"}}</label>
-        <input id="int-name" type="text" required placeholder="{{.T "integrations.name_placeholder"}}" x-model="draft.display_name" data-autofocus>
-      </div>
-      <div class="field">
-        <label for="int-token">{{.T "integrations.token_label"}}</label>
-        {{/* new-password: com "off" o navegador ainda oferece a senha salva do site. */}}
-        <input id="int-token" type="password" autocomplete="new-password" :required="!draft.id"
-               :placeholder="draft.id && draft.has_token ? $t('integrations.keep_token') : ''" x-model="draft.token">
-        <span class="hint" x-show="typeOf(draft.type).token_hint" x-text="typeOf(draft.type).token_hint"></span>
-      </div>
-      <template x-for="f in typeOf(draft.type).metadata" :key="draft.type + '-' + f.key">
-        <div class="field">
-          <label :for="'int-meta-' + f.key" x-text="f.label"></label>
-          <input :id="'int-meta-' + f.key" type="text" autocomplete="off" spellcheck="false" :required="f.required"
-                 :placeholder="f.placeholder || ''" x-model="draft.metadata[f.key]">
-          <span class="hint" x-show="f.hint" x-text="f.hint"></span>
+      {{/* Plataforma que se autoriza no site dela (o GitHub): criar é só o botão, que leva à
+           autorização e volta para a escolha do repositório. Nome e repositório vêm depois. */}}
+      <div class="stack" x-cloak x-show="connectStep()">
+        <p class="muted" x-text="$t('integrations.connect_about', { platform: typeOf(draft.type).label })"></p>
+        <p class="alert alert-warn" x-cloak x-show="!typeOf(draft.type).configured">{{.T "integrations.connect_unconfigured"}}</p>
+        <div x-cloak x-show="typeOf(draft.type).configured">
+          <a class="btn" :href="connectURL()">{{template "icon" "link"}} <span x-text="$t('integrations.connect', { platform: typeOf(draft.type).label })"></span></a>
         </div>
-      </template>
-      {{/* Uma integração nasce ativa; desativar é coisa de quem edita. */}}
-      <div class="stack stack-tight" x-show="draft.id">
-        <label class="check"><input type="checkbox" x-model="draft.enabled"> {{.T "integrations.active"}}</label>
-        <span class="muted small">{{.T "integrations.enabled_hint"}}</span>
+      </div>
+
+      <div class="stack" x-show="!connectStep()">
+        <div class="field">
+          <label for="int-name">{{.T "common.name"}}</label>
+          <input id="int-name" type="text" required placeholder="{{.T "integrations.name_placeholder"}}" x-model="draft.display_name" data-autofocus>
+        </div>
+        {{/* Quem se autoriza no site da plataforma não tem token para colar. */}}
+        <div class="field" x-show="!isOAuth(draft.type)">
+          <label for="int-token">{{.T "integrations.token_label"}}</label>
+          {{/* new-password: com "off" o navegador ainda oferece a senha salva do site. */}}
+          <input id="int-token" type="password" autocomplete="new-password" :required="!draft.id && !isOAuth(draft.type)"
+                 :placeholder="draft.id && draft.has_token ? $t('integrations.keep_token') : ''" x-model="draft.token">
+          <span class="hint" x-show="typeOf(draft.type).token_hint" x-text="typeOf(draft.type).token_hint"></span>
+        </div>
+        <template x-for="f in typeOf(draft.type).metadata" :key="draft.type + '-' + f.key">
+          <div class="field">
+            <label :for="'int-meta-' + f.key" x-text="f.label"></label>
+            <input :id="'int-meta-' + f.key" type="text" autocomplete="off" spellcheck="false" :required="f.required"
+                   :placeholder="f.placeholder || ''" :list="isOAuth(draft.type) && f.summary ? 'int-repos' : null" x-model="draft.metadata[f.key]">
+            <span class="hint" x-show="f.hint" x-text="f.hint"></span>
+          </div>
+        </template>
+        {{/* Os repositórios que a conta autorizada enxerga: o campo os oferece, e aceita digitar outro. */}}
+        <datalist id="int-repos">
+          <template x-for="r in repos" :key="r.full_name">
+            <option :value="r.full_name" :label="r.private ? $t('integrations.private_repo') : ''"></option>
+          </template>
+        </datalist>
+        <p class="muted small" x-cloak x-show="draft.id && isOAuth(draft.type)">{{.T "integrations.pick_repo_hint"}}</p>
+        <p class="form-error" x-cloak x-show="errors.repos" x-text="errors.repos"></p>
+        {{/* Uma integração nasce ativa; desativar é coisa de quem edita. */}}
+        <div class="stack stack-tight" x-show="draft.id">
+          <label class="check"><input type="checkbox" x-model="draft.enabled"> {{.T "integrations.active"}}</label>
+          <span class="muted small">{{.T "integrations.enabled_hint"}}</span>
+        </div>
+        {{/* Sem campo de token, trocar o acesso é autorizar de novo. */}}
+        <div class="stack stack-tight" x-cloak x-show="draft.id && isOAuth(draft.type) && typeOf(draft.type).configured">
+          <div><a class="btn btn-secondary btn-sm" :href="connectURL()">{{template "icon" "rotate"}} <span x-text="$t('integrations.reconnect', { platform: typeOf(draft.type).label })"></span></a></div>
+          <span class="muted small">{{.T "integrations.reconnect_hint"}}</span>
+        </div>
       </div>
 
       <p class="form-error" x-show="errors.save || errors.remove" x-text="errors.save || errors.remove" role="alert"></p>
@@ -124,7 +152,7 @@
         </span>
         <div class="row">
           <button type="button" class="btn btn-secondary" @click="$store.modal.dismiss()">{{.T "common.cancel"}}</button>
-          <button type="submit" class="btn" :disabled="pending">
+          <button type="submit" class="btn" x-show="!connectStep()" :disabled="pending">
             <span x-text="draft.id ? (pending === 'save' ? $t('integrations.saving') : $t('common.save')) : (pending === 'save' ? $t('integrations.validating') : $t('integrations.create'))">{{.T "integrations.create"}}</span>
           </button>
         </div>

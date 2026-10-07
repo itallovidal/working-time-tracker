@@ -18,4 +18,8 @@ type Deps struct {
 	// I18n traduz os textos das páginas; CookieSecure marca o cookie de idioma.
 	I18n         *i18n.Catalog
 	CookieSecure bool
+
+	// OAuthConfigured diz, por tipo de integração, se o servidor tem o app OAuth dele
+	// cadastrado. A tela de integrações avisa quando o botão Conectar não pode funcionar.
+	OAuthConfigured map[string]bool
 }

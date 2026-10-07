@@ -60,6 +60,37 @@ type Descriptor struct {
 	// mostra "em breve" e a API recusa criar uma integração nova dele. As que já
 	// existem continuam funcionando e podem ser editadas.
 	ComingSoon bool `json:"coming_soon"`
+	// Auth diz como a pessoa dá acesso: AuthToken (padrão, ela cola um token) ou
+	// AuthOAuth (ela autoriza no site da plataforma e volta; não há campo de token).
+	Auth string `json:"auth,omitempty"`
+	// Configured é preenchido pela página: o servidor tem o app OAuth deste tipo
+	// cadastrado. Só faz sentido para AuthOAuth.
+	Configured bool `json:"configured"`
+}
+
+// Os modos de dar acesso a uma plataforma (Descriptor.Auth).
+const (
+	AuthToken = "token"
+	AuthOAuth = "oauth"
+)
+
+// Repository é um repositório que a conexão enxerga, para a pessoa escolher em vez de
+// digitar o nome.
+type Repository struct {
+	FullName string `json:"full_name"`
+	Private  bool   `json:"private"`
+}
+
+// RepositoryLister é a capacidade opcional de um tipo que sabe listar o que a conexão
+// enxerga. A API de repositórios responde 400 para o tipo que não a tem.
+type RepositoryLister interface {
+	ListRepositories(conn Connection) ([]Repository, error)
+}
+
+// AccountLookup é a capacidade opcional de dizer quem o token representa. A conexão
+// OAuth a usa para conferir o token recém-obtido e para nomear a integração.
+type AccountLookup interface {
+	Account(conn Connection) (login string, err error)
 }
 
 type Integration interface {

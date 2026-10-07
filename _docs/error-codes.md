@@ -102,6 +102,10 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `integration.field_not_text` | 400 | `field`, `provider` | `o campo "{{.field}}" do {{.provider}} precisa ser um texto` | `the "{{.field}}" field of {{.provider}} must be text` |
 | `integration.field_required` | 400 | `field`, `provider` | `informe o campo "{{.field}}" do {{.provider}}` | `enter the "{{.field}}" field of {{.provider}}` |
 | `integration.github_invalid_repo` | 400 | — | `repositório do GitHub inválido: use dono/repositorio` | `invalid GitHub repository: use owner/repository` |
+| `integration.github_oauth_denied` | 400 | — | `a autorização no GitHub foi cancelada` | `the authorization on GitHub was cancelled` |
+| `integration.github_oauth_exchange` | 400 | — | `o GitHub não aceitou a autorização: tente conectar de novo` | `GitHub did not accept the authorization: try connecting again` |
+| `integration.github_oauth_not_configured` | 400 | — | `a conexão com o GitHub não está configurada neste servidor: quem administra precisa definir GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET e PUBLIC_URL` | `the GitHub connection is not set up on this server: whoever runs it must define GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET and PUBLIC_URL` |
+| `integration.github_oauth_state` | 400 | — | `a conexão com o GitHub venceu ou não pôde ser confirmada: tente de novo` | `the GitHub connection expired or could not be confirmed: try again` |
 | `integration.github_repo_not_found` | 400 | — | `repositório do GitHub não encontrado ou o token não tem acesso a ele` | `GitHub repository not found, or the token has no access to it` |
 | `integration.gitlab_forbidden` | 400 | — | `o token do GitLab não tem permissão para ler o projeto` | `the GitLab token has no permission to read the project` |
 | `integration.gitlab_invalid_project` | 400 | — | `projeto do GitLab inválido: use grupo/projeto` | `invalid GitLab project: use group/project` |
@@ -110,7 +114,9 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `integration.invalid_token` | 400 | `provider` | `token do {{.provider}} inválido` | `invalid {{.provider}} token` |
 | `integration.item_not_found` | 400 | `item` | `item {{.item}} não encontrado` | `item {{.item}} not found` |
 | `integration.name_required` | 400 | — | `informe o nome da integração` | `enter the integration name` |
-| `integration.no_credential` | 400 | — | `a integração está sem credencial: edite-a e informe o token` | `the integration has no credential: edit it and enter the token` |
+| `integration.no_credential` | 400 | — | `a integração está sem credencial: edite-a e conecte de novo` | `the integration has no credential: edit it and connect again` |
+| `integration.no_repositories` | 400 | — | `esta integração não lista repositórios` | `this integration does not list repositories` |
+| `integration.not_connectable` | 400 | — | `esta plataforma não se conecta por autorização` | `this platform does not connect through an authorization` |
 | `integration.not_found` | 404 | — | `integração não encontrada` | `integration not found` |
 | `integration.provider_status` | 400 | `provider`, `status` | `o {{.provider}} respondeu com status {{.status}}` | `{{.provider}} responded with status {{.status}}` |
 | `integration.provider_unreachable` | 400 | `provider` | `não foi possível falar com o {{.provider}}` | `could not reach {{.provider}}` |
@@ -125,7 +131,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `integration.type_coming_soon` | 400 | `provider` | `a integração com o {{.provider}} ainda não está disponível` | `the {{.provider}} integration is not available yet` |
 | `integration.type_required` | 400 | — | `informe o tipo da integração` | `enter the integration type` |
 | `integration.unexpected_response` | 400 | `provider` | `resposta inesperada do {{.provider}}` | `unexpected response from {{.provider}}` |
-| `integration.unreadable_credential` | 400 | — | `não foi possível ler a credencial guardada: edite a integração e informe o token de novo` | `could not read the stored credential: edit the integration and enter the token again` |
+| `integration.unreadable_credential` | 400 | — | `não foi possível ler a credencial guardada: edite a integração e conecte de novo` | `could not read the stored credential: edit the integration and connect again` |
 | `integration.unsupported_type` | 400 | `type` | `tipo de integração não suportado: {{.type}}` | `integration type not supported: {{.type}}` |
 
 ### internal

@@ -13,6 +13,16 @@ type Config struct {
 	DatabaseURL           string
 	IntegrationEncryptKey string
 	CookieSecure          bool
+
+	// O app OAuth do GitHub, para o botão "Conectar com o GitHub". São opcionais: sem
+	// eles a tela avisa que a conexão não está configurada.
+	PublicURL          string
+	GitHubClientID     string
+	GitHubClientSecret string
+	// GitHubURL e GitHubAPIURL só se mudam para apontar para um GitHub Enterprise ou
+	// para um servidor fake. Vazios, valem github.com e api.github.com.
+	GitHubURL    string
+	GitHubAPIURL string
 }
 
 func Load() (*Config, error) {
@@ -23,6 +33,11 @@ func Load() (*Config, error) {
 		DatabaseURL:           os.Getenv("DATABASE_URL"),
 		IntegrationEncryptKey: os.Getenv("INTEGRATION_ENCRYPTION_KEY"),
 		CookieSecure:          os.Getenv("COOKIE_SECURE") == "true",
+		PublicURL:             strings.TrimRight(strings.TrimSpace(os.Getenv("PUBLIC_URL")), "/"),
+		GitHubClientID:        strings.TrimSpace(os.Getenv("GITHUB_CLIENT_ID")),
+		GitHubClientSecret:    strings.TrimSpace(os.Getenv("GITHUB_CLIENT_SECRET")),
+		GitHubURL:             strings.TrimRight(strings.TrimSpace(os.Getenv("GITHUB_URL")), "/"),
+		GitHubAPIURL:          strings.TrimRight(strings.TrimSpace(os.Getenv("GITHUB_API_URL")), "/"),
 	}
 
 	var missing []string

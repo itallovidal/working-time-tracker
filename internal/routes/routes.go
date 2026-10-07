@@ -151,6 +151,8 @@ func RegisterRoutes(e *echo.Echo, h Handlers, m *auth.Middleware, authLimiter ec
 	r.GET("/tasks/:taskId/external-details", h.Task.GetExternalDetails, tsk)
 
 	r.GET("/integrations/:integrationId", h.Integration.Get, integ)
+	// O que a conexão enxerga (os repositórios do GitHub), para a pessoa escolher em vez de digitar.
+	r.GET("/integrations/:integrationId/repositories", h.Integration.Repositories, integ, can(permission.IntegrationsManage))
 	r.PATCH("/integrations/:integrationId", h.Integration.Update, integ, can(permission.IntegrationsManage))
 	r.DELETE("/integrations/:integrationId", h.Integration.Delete, integ, can(permission.IntegrationsManage))
 

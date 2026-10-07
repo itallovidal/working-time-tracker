@@ -959,6 +959,8 @@ document.addEventListener('alpine:init', () => {
     // o servidor antes de Salvar.
     draft: { id: null, type: '', display_name: '', token: '', metadata: {}, enabled: true, has_token: false },
     confirming: false,
+    // Os repositórios que a conta autorizada enxerga, para o campo do repositório oferecer.
+    repos: [],
     async init() {
       try {
         this.items = (await api('GET', '/api/projects/' + project.id + '/integrations')) || [];
@@ -967,9 +969,50 @@ document.addEventListener('alpine:init', () => {
       } finally {
         this.loading = false;
       }
+      this.handleReturn();
     },
     typeOf(type) {
       return integrationType(type) || { type, label: type, metadata: [] };
+    },
+    // Quem se autoriza no site da plataforma (o GitHub) não tem token para colar.
+    isOAuth(type) {
+      return this.typeOf(type).auth === 'oauth';
+    },
+    // Criar uma integração dessas é só o botão que leva à autorização; o resto vem na volta.
+    connectStep() {
+      return !this.draft.id && this.isOAuth(this.draft.type);
+    },
+    connectURL() {
+      const base = '/projects/' + project.id + '/management/integrations/' + this.draft.type + '/connect';
+      return this.draft.id ? base + '?integration=' + encodeURIComponent(this.draft.id) : base;
+    },
+    // O GitHub devolve a pessoa a esta aba com ?github=<id> ou ?github_error=<código>. Uma
+    // integração que ainda não tem o repositório acabou de ser conectada: abre a escolha dele.
+    // Uma que já tem foi só reconectada: o acesso está renovado, e o resto fica como estava.
+    handleReturn() {
+      const q = new URLSearchParams(location.search);
+      const id = q.get('github');
+      const err = q.get('github_error');
+      if (!id && !err) return;
+      history.replaceState(null, '', location.pathname);
+      if (err) {
+        this.errors.connect = WTT.errorText({ code: err });
+        return;
+      }
+      const it = this.items.find((x) => x.id === id);
+      if (!it) return;
+      if (this.incomplete(it)) this.$nextTick(() => this.openEdit(it, true));
+      else toast(WTT.t('integrations.reconnected'));
+    },
+    async loadRepos(it) {
+      this.repos = [];
+      this.errors.repos = '';
+      if (!this.isOAuth(it.type) || !it.has_token) return;
+      try {
+        this.repos = (await api('GET', '/api/integrations/' + it.id + '/repositories')) || [];
+      } catch (e) {
+        this.errors.repos = WTT.t('integrations.repos_failed');
+      }
     },
     // facts são os campos que identificam a conexão no cartão: o repositório, o quadro.
     facts(it) {
@@ -982,21 +1025,27 @@ document.addEventListener('alpine:init', () => {
     },
     openCreate() {
       // Um tipo "em breve" não se escolhe: o modal abre no primeiro que está disponível.
+      this.repos = [];
+      this.errors.repos = '';
       const first = this.types.find((t) => !t.coming_soon);
       this.draft = { id: null, type: first ? first.type : '', display_name: '', token: '', metadata: {}, enabled: true, has_token: false };
       this.openForm(WTT.t('integrations.new'));
     },
-    openEdit(it) {
+    // pickRepo é a volta da conexão: a integração nasceu desativada e sem repositório, e o
+    // modal abre pedindo o repositório, já com "Ativa" marcada.
+    openEdit(it, pickRepo = false) {
       this.draft = {
         id: it.id, type: it.type, display_name: it.display_name, token: '',
-        metadata: { ...(it.metadata || {}) }, enabled: it.enabled, has_token: it.has_token,
+        metadata: { ...(it.metadata || {}) }, enabled: pickRepo ? true : it.enabled, has_token: it.has_token,
       };
-      this.openForm(WTT.t('integrations.edit_title'));
+      this.openForm(WTT.t(pickRepo ? 'integrations.pick_repo_title' : 'integrations.edit_title'));
+      this.loadRepos(it);
     },
     openForm(title) {
       this.confirming = false;
       this.errors.save = '';
       this.errors.remove = '';
+      this.errors.connect = '';
       Alpine.store('modal').open('integration-form', title, () => !this.pending);
     },
     // Cada plataforma tem os seus campos: trocar de uma para outra começa do zero.
