@@ -24,6 +24,7 @@ import (
 	"working-time-tracker/internal/domain/auth"
 	"working-time-tracker/internal/domain/customer"
 	"working-time-tracker/internal/domain/organization"
+	"working-time-tracker/internal/domain/person"
 	"working-time-tracker/internal/domain/project"
 	"working-time-tracker/internal/domain/task"
 	"working-time-tracker/internal/domain/team"
@@ -32,13 +33,18 @@ import (
 const password = "demo12345"
 
 // As pessoas da software house. A primeira cria a organização e é a admin; as
-// outras entram por convite, como membros.
-var people = []struct{ key, name, email string }{
-	{"ana", "Ana Souza", "ana@example.com"},
-	{"bruno", "Bruno Lima", "bruno@example.com"},
-	{"carla", "Carla Mendes", "carla@example.com"},
-	{"diego", "Diego Rocha", "diego@example.com"},
-	{"elisa", "Elisa Prado", "elisa@example.com"},
+// outras entram por convite, como membros. weeklyHours é a jornada semanal
+// combinada com cada uma, que vale para todos os projetos: a Ana, sócia, não tem
+// jornada definida, e a Elisa trabalha meio período.
+var people = []struct {
+	key, name, email string
+	weeklyHours      int
+}{
+	{"ana", "Ana Souza", "ana@example.com", 0},
+	{"bruno", "Bruno Lima", "bruno@example.com", 40},
+	{"carla", "Carla Mendes", "carla@example.com", 40},
+	{"diego", "Diego Rocha", "diego@example.com", 30},
+	{"elisa", "Elisa Prado", "elisa@example.com", 20},
 }
 
 var customers = []struct{ key, name, document, contact, email, phone string }{
@@ -52,7 +58,7 @@ var customers = []struct{ key, name, document, contact, email, phone string }{
 // recebe mais na API de Cobranças, que é mais complexa, do que nos outros.
 var projects = []struct {
 	key, customer, name, description string
-	sprintDays, weeklyHours          int
+	sprintDays                       int
 	daily, weekly                    string
 	billRate                         int
 	teams                            map[string][]string
@@ -61,7 +67,7 @@ var projects = []struct {
 	{
 		key: "app", customer: "bompreco", name: "App de Pedidos",
 		description: "Aplicativo para os clientes da rede pedirem e acompanharem as entregas.",
-		sprintDays:  14, weeklyHours: 40, daily: "09:30", weekly: "friday", billRate: 14000,
+		sprintDays:  14, daily: "09:30", weekly: "friday", billRate: 14000,
 		teams: map[string][]string{"Mobile": {"diego", "ana"}, "Backend": {"bruno"}},
 		rates: map[string]int{"ana": 9000, "bruno": 5500, "diego": 6000},
 	},
@@ -70,14 +76,14 @@ var projects = []struct {
 		// nenhum time. A aba Colaboradores mostra ela como "sem time".
 		key: "painel", customer: "bompreco", name: "Painel do Lojista",
 		description: "Painel web para cada loja acompanhar pedidos, repasses e avaliações.",
-		sprintDays:  14, weeklyHours: 20, billRate: 12000,
+		sprintDays:  14, billRate: 12000,
 		teams: map[string][]string{"Web": {"carla", "bruno"}},
 		rates: map[string]int{"bruno": 5500, "carla": 5000, "elisa": 4000},
 	},
 	{
 		key: "agenda", customer: "vidaplena", name: "Agendamento Online",
 		description: "Marcação de consultas pelo site e pelo WhatsApp, com confirmação automática.",
-		sprintDays:  7, weeklyHours: 30, daily: "10:00", weekly: "monday", billRate: 11000,
+		sprintDays:  7, daily: "10:00", weekly: "monday", billRate: 11000,
 		teams: map[string][]string{"Produto": {"carla", "diego", "elisa"}},
 		rates: map[string]int{"carla": 5000, "diego": 5800, "elisa": 4000},
 	},
@@ -86,14 +92,14 @@ var projects = []struct {
 		// ele não consegue bater ponto aqui até um admin definir.
 		key: "portal", customer: "vidaplena", name: "Portal do Paciente",
 		description: "Resultados de exames e histórico de consultas para o paciente.",
-		sprintDays:  14, weeklyHours: 20, billRate: 11500,
+		sprintDays:  14, billRate: 11500,
 		teams: map[string][]string{"Web": {"carla", "bruno", "diego"}},
 		rates: map[string]int{"bruno": 5500, "carla": 5200},
 	},
 	{
 		key: "api", customer: "pagai", name: "API de Cobranças",
 		description: "API de boletos e Pix, com conciliação diária.",
-		sprintDays:  14, weeklyHours: 40, daily: "09:00", weekly: "wednesday", billRate: 18000,
+		sprintDays:  14, daily: "09:00", weekly: "wednesday", billRate: 18000,
 		teams: map[string][]string{"Backend": {"bruno", "ana"}},
 		rates: map[string]int{"ana": 11000, "bruno": 7000},
 	},
@@ -224,6 +230,7 @@ func main() {
 	authSvc := auth.NewService(auth.NewStore(db.Client))
 	orgSvc := organization.NewService(organization.NewStore(db.Client))
 	customerSvc := customer.NewService(customer.NewStore(db.Client))
+	personSvc := person.NewService(person.NewStore(db.Client))
 	allocationSvc := allocation.NewService(allocation.NewStore(db.Client))
 	projectSvc := project.NewService(project.NewStore(db.Client))
 	teamSvc := team.NewService(team.NewStore(db.Client))
@@ -261,6 +268,10 @@ func main() {
 		_, token, err := authSvc.CreateInvite(admin, p.email, "member")
 		must(err)
 		person[p.key], _, err = authSvc.AcceptInvite(token, auth.AcceptInviteInput{Name: p.name, Email: p.email, Password: password})
+		must(err)
+	}
+	for _, p := range people {
+		_, err := personSvc.SetWeeklyHours(person[p.key].PersonID.String(), optionalNumber(p.weeklyHours))
 		must(err)
 	}
 
@@ -311,7 +322,7 @@ func main() {
 	seeded := map[string]seededProject{}
 	for _, p := range projects {
 		created, err := projectSvc.Create(orgID, p.name, p.description, p.sprintDays,
-			optionalText(p.daily), optionalText(p.weekly), optionalNumber(p.weeklyHours))
+			optionalText(p.daily), optionalText(p.weekly))
 		must(err)
 		id := created.ID.String()
 

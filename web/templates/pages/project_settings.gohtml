@@ -3,89 +3,121 @@
   {{template "project_head" .}}
 
   <p class="muted" x-show="loading">{{.T "common.loading"}}</p>
-  <div class="grid-aside" x-cloak x-show="!loading">
-    <form class="card" @submit.prevent="save()">
+  <p class="form-error" x-cloak x-show="errors.load" x-text="errors.load"></p>
+
+  {{/* A aba só mostra o projeto, como a aba Sobre da organização. Quem altera é o modal
+       Editar projeto, aberto pelo botão Editar. */}}
+  <div class="stack" x-cloak x-show="!loading && !errors.load">
+    <div class="toolbar">
+      {{if .IsAdmin}}
+      <p class="muted flex-1">{{.T "project_settings.intro_admin"}}</p>
+      <button type="button" class="btn btn-secondary" @click="openEdit()">{{template "icon" "pen"}} {{.T "common.edit"}}</button>
+      {{else}}
+      <p class="muted flex-1">{{.T "project_settings.intro_member"}}</p>
+      {{end}}
+    </div>
+
+    <section class="card">
       <div class="card-head"><h2>{{.T "project_settings.title"}}</h2></div>
+      <p class="prose" x-show="current.description" x-text="current.description"></p>
+      <dl class="facts">
+        <div class="fact" x-show="!current.description"><dt>{{.T "common.description_label"}}</dt><dd class="muted" x-text="WTT.notInformed"></dd></div>
+        <template x-for="f in routine()" :key="f.label">
+          <div class="fact"><dt x-text="f.label"></dt><dd :class="f.empty && 'muted'" x-text="f.value"></dd></div>
+        </template>
+      </dl>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h2>{{if .IsAdmin}}{{.T "project_settings.billing_title"}}{{else}}{{.T "org.projects.customer"}}{{end}}</h2></div>
+      <dl class="facts">
+        <div class="fact">
+          <dt>{{.T "org.projects.customer"}}</dt>
+          <dd :class="!current.customer && 'muted'" x-text="current.customer ? current.customer.name : $t('project_settings.internal')"></dd>
+        </div>
+        {{if .IsAdmin}}
+        <div class="fact">
+          <dt>{{.T "project_settings.bill_rate_fact"}}</dt>
+          <dd class="num" :class="billRateCents === null && 'muted'" x-text="billRateCents === null ? WTT.notInformed : WTT.fmt.money(billRateCents)"></dd>
+        </div>
+        {{end}}
+      </dl>
+      {{if .IsAdmin}}
+      <p class="muted small">{{.T "project_settings.bill_rate_note"}}</p>
+      {{end}}
+    </section>
+  </div>
+
+  {{if .IsAdmin}}
+  {{/* Editar projeto: nada vai para o servidor antes de Salvar, então Cancelar desfaz tudo.
+       Os campos seguem a ordem do modal Novo projeto. */}}
+  <template x-teleport="#modal-root">
+    <form class="stack" x-show="$store.modal.name === 'project-edit'" @submit.prevent="save()">
       <div class="field">
         <label for="ps-name">{{.T "common.name"}}</label>
-        <input id="ps-name" type="text" required x-model="form.name" {{if not .IsAdmin}}disabled{{end}}>
-      </div>
-      <div class="field">
-        <label for="ps-description">{{.T "common.description_label"}}</label>
-        <textarea id="ps-description" x-model="form.description" {{if not .IsAdmin}}disabled{{end}}></textarea>
+        <input id="ps-name" type="text" required x-model="draft.name" data-autofocus>
       </div>
       <div class="fields">
         <div class="field">
-          <label for="ps-sprint">{{.T "project.fields.sprint_days"}}</label>
-          <input id="ps-sprint" type="number" min="1" max="90" x-model.number="form.sprint_duration_days" {{if not .IsAdmin}}disabled{{end}}>
+          <label for="ps-customer">{{.T "org.projects.customer"}}</label>
+          <select id="ps-customer" x-model="draft.customer_id">
+            <option value="">{{.T "project_settings.internal"}}</option>
+            <template x-for="c in customers" :key="c.id">
+              <option :value="c.id" x-text="c.name" :selected="c.id === draft.customer_id"></option>
+            </template>
+          </select>
+          <span class="hint">{{.T "project_settings.customers_hint"}} <a href="/orgs/{{.OrgID}}/customers">{{.T "org.head.title"}} › {{.T "org.head.customers"}}</a>.</span>
         </div>
         <div class="field">
-          <label for="ps-weekly-hours">{{.T "project.fields.weekly_hours"}}</label>
-          <input id="ps-weekly-hours" type="number" min="1" max="168" x-model="form.weekly_hours" {{if not .IsAdmin}}disabled placeholder="{{.T "labels.not_informed"}}"{{end}}>
-          <span class="hint">{{.T "project_settings.weekly_hours_hint"}}</span>
+          <label for="ps-bill-rate" x-text="$t('project.fields.bill_rate', { unit: WTT.fmt.moneyUnit() })"></label>
+          <input id="ps-bill-rate" type="text" inputmode="decimal" class="num" placeholder="{{.T "project_settings.rate_placeholder"}}" x-model="draft.rate">
+          <span class="hint">{{.T "project_settings.bill_rate_hint"}}</span>
+        </div>
+      </div>
+      <div class="fields">
+        <div class="field">
+          <label for="ps-sprint">{{.T "project.fields.sprint"}}</label>
+          <select id="ps-sprint" x-model.number="draft.sprint_duration_days">
+            <template x-for="o in sprintChoices()" :key="o.value">
+              <option :value="o.value" x-text="o.label" :selected="o.value === draft.sprint_duration_days"></option>
+            </template>
+          </select>
         </div>
         <div class="field">
           <label for="ps-daily">{{.T "project.fields.daily_time"}}</label>
-          <input id="ps-daily" type="time" x-model="form.daily_time" {{if not .IsAdmin}}disabled{{end}}>
+          <input id="ps-daily" type="time" x-model="draft.daily_time">
           <span class="hint">{{.T "project_settings.daily_hint"}}</span>
         </div>
         <div class="field">
           <label for="ps-weekly">{{.T "project.fields.weekly_day"}}</label>
-          <select id="ps-weekly" x-model="form.weekly_sync_day" {{if not .IsAdmin}}disabled{{end}}>
+          <select id="ps-weekly" x-model="draft.weekly_sync_day">
             <option value="">{{.T "project.fields.no_weekly"}}</option>
             <template x-for="d in WTT.weekdays" :key="d.value">
-              <option :value="d.value" x-text="d.label" :selected="d.value === form.weekly_sync_day"></option>
+              <option :value="d.value" x-text="d.label" :selected="d.value === draft.weekly_sync_day"></option>
             </template>
           </select>
         </div>
       </div>
-      <p class="muted small" x-cloak x-show="customerName">{{.T "project_settings.customer"}} <strong x-text="customerName"></strong></p>
-      {{if .IsAdmin}}
+      <div class="field">
+        <label for="ps-description">{{.T "common.description_label"}}</label>
+        <textarea id="ps-description" x-model="draft.description" placeholder="{{.T "common.optional"}}"></textarea>
+      </div>
       <p class="form-error" x-show="errors.save" x-text="errors.save" role="alert"></p>
-      <div class="row row-end"><button type="submit" class="btn" :disabled="pending">{{.T "common.save"}}</button></div>
-      {{else}}
-      <p class="muted small">{{.T "project_settings.admin_only"}}</p>
-      {{end}}
-    </form>
-
-    {{if .IsAdmin}}
-    <div class="stack">
-    <form class="card" @submit.prevent="saveBilling()">
-      <div class="card-head"><h2>{{.T "project_settings.billing_title"}}</h2></div>
-      <div class="field">
-        <label for="ps-customer">{{.T "org.projects.customer"}}</label>
-        <select id="ps-customer" x-model="billing.customer_id">
-          <option value="">{{.T "project_settings.no_customer"}}</option>
-          <template x-for="c in customers" :key="c.id">
-            <option :value="c.id" x-text="c.name" :selected="c.id === billing.customer_id"></option>
-          </template>
-        </select>
-        <span class="hint">{{.T "project_settings.customers_hint"}} <a href="/orgs/{{.OrgID}}/customers">{{.T "org.head.title"}} › {{.T "org.head.customers"}}</a>.</span>
-      </div>
-      <div class="field">
-        <label for="ps-bill-rate" x-text="$t('project.fields.bill_rate', { unit: WTT.fmt.moneyUnit() })"></label>
-        <input id="ps-bill-rate" type="text" inputmode="decimal" class="num" placeholder="{{.T "project_settings.rate_placeholder"}}" x-model="billing.rate">
-        <span class="hint">{{.T "project_settings.bill_rate_hint"}}</span>
-      </div>
-      <p class="form-error" x-show="errors.billing" x-text="errors.billing" role="alert"></p>
-      <div class="row row-end"><button type="submit" class="btn" :disabled="pending">{{.T "project_settings.save_billing"}}</button></div>
-    </form>
-
-    <section class="card">
-      <div class="card-head"><h2>{{.T "project_settings.delete_title"}}</h2></div>
-      <p class="muted small">{{.T "project_settings.delete_text"}}</p>
       <p class="form-error" x-show="errors.delete" x-text="errors.delete" role="alert"></p>
-      <div class="row" x-show="!confirmDelete">
-        <button type="button" class="btn btn-danger-ghost" @click="confirmDelete = true">{{.T "project_settings.delete_title"}}</button>
-      </div>
       <div class="confirm" x-cloak x-show="confirmDelete">
-        <span>{{.T "common.delete_confirm"}}</span>
+        <span>{{.T "project_settings.delete_confirm"}}</span>
         <button type="button" class="btn btn-danger btn-sm" :disabled="pending" @click="remove()">{{.T "common.delete"}}</button>
         <button type="button" class="btn btn-ghost btn-sm" @click="confirmDelete = false">{{.T "common.cancel"}}</button>
       </div>
-    </section>
-    </div>
-    {{end}}
-  </div>
+      <div class="toolbar" x-show="!confirmDelete">
+        <button type="button" class="btn btn-danger-ghost" @click="confirmDelete = true">{{template "icon" "trash"}} {{.T "project_settings.delete_title"}}</button>
+        <div class="row">
+          <button type="button" class="btn btn-secondary" @click="$store.modal.dismiss()">{{.T "common.cancel"}}</button>
+          <button type="submit" class="btn" :disabled="pending">{{.T "common.save"}}</button>
+        </div>
+      </div>
+    </form>
+  </template>
+  {{end}}
 </main>
 {{end}}

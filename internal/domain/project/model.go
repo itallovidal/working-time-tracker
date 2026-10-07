@@ -27,10 +27,8 @@ type Project struct {
 	GithubRepoURL      *string   `json:"github_repo_url,omitempty"`
 	GitlabRepoURL      *string   `json:"gitlab_repo_url,omitempty"`
 	SprintDurationDays int       `json:"sprint_duration_days"`
-	// WeeklyHours é a jornada semanal esperada no projeto; nil quando não foi informada.
-	WeeklyHours   *int    `json:"weekly_hours"`
-	DailyTime     *string `json:"daily_time,omitempty"`
-	WeeklySyncDay *string `json:"weekly_sync_day,omitempty"`
+	DailyTime          *string   `json:"daily_time,omitempty"`
+	WeeklySyncDay      *string   `json:"weekly_sync_day,omitempty"`
 	// Customer é nil em projetos internos.
 	Customer *CustomerRef `json:"customer"`
 	// MemberCount conta os colaboradores do projeto, sem repetir: quem está em

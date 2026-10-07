@@ -391,6 +391,113 @@ func TestPages_ProjectTimeTab(t *testing.T) {
 	}
 }
 
+// A aba Configurações do projeto só mostra: os campos ficam no modal Editar
+// projeto, só de admins, junto com a exclusão. A duração da sprint é uma lista
+// de opções, e a jornada semanal saiu do projeto: é da pessoa, e aparece na aba
+// Colaboradores da organização e no perfil.
+func TestPages_ProjectSettingsAndWeeklyHours(t *testing.T) {
+	e := newServer(t)
+	admin := signup(t, e, "Org", "ana@test.com")
+	member := invite(t, e, admin, "bia@test.com", "member")
+	projectID := createProject(t, e, admin, "Projeto Alfa")
+	settings := "/projects/" + projectID + "/settings"
+
+	adminPage := do(e, "GET", settings, "", admin.session).Body.String()
+	memberPage := do(e, "GET", settings, "", member.session).Body.String()
+	for who, body := range map[string]string{"admin": adminPage, "member": memberPage} {
+		for _, want := range []string{`x-data="projectSettings"`, `<dl class="facts">`, `x-for="f in routine()"`, "<dt>Cliente</dt>"} {
+			if !strings.Contains(body, want) {
+				t.Errorf("%s: the settings tab does not contain %q", who, want)
+			}
+		}
+		for _, gone := range []string{"Jornada semanal", "weekly_hours", `type="number"`, `class="grid-aside"`} {
+			if strings.Contains(body, gone) {
+				t.Errorf("%s: the settings tab still contains %q", who, gone)
+			}
+		}
+	}
+
+	// Só o admin tem o botão Editar e o modal, que fica fora da página, no #modal-root.
+	modal := strings.Index(adminPage, `x-show="$store.modal.name === 'project-edit'"`)
+	if modal < 0 || !strings.Contains(adminPage, `@click="openEdit()"`) {
+		t.Fatal("admin does not have the edit button and the edit project modal")
+	}
+	if teleport := strings.LastIndex(adminPage[:modal], `<template x-teleport="#modal-root">`); teleport < 0 {
+		t.Error("the edit project form is not teleported to the modal")
+	}
+	for _, field := range []string{
+		`<input id="ps-name"`, `<select id="ps-customer"`, `<input id="ps-bill-rate"`,
+		`<select id="ps-sprint" x-model.number="draft.sprint_duration_days">`, `x-for="o in sprintChoices()"`,
+		`<input id="ps-daily"`, `<select id="ps-weekly"`, `<textarea id="ps-description"`,
+		"Excluir projeto", "<dt>Valor cobrado por hora</dt>",
+	} {
+		at := strings.Index(adminPage, field)
+		if at < 0 {
+			t.Errorf("admin: the settings tab does not contain %q", field)
+		} else if at < modal && strings.HasPrefix(field, "<") && !strings.HasPrefix(field, "<dt>") {
+			t.Errorf("admin: %q is on the page, outside the modal", field)
+		}
+		if strings.Contains(memberPage, field) {
+			t.Errorf("member sees %q on the settings tab", field)
+		}
+	}
+	if strings.Contains(memberPage, "project-edit") || strings.Contains(memberPage, "openEdit()") {
+		t.Error("member has the edit button or the edit project modal")
+	}
+	if !strings.Contains(memberPage, "Só admins alteram as configurações") {
+		t.Error("member is not told that only admins change the settings")
+	}
+
+	// O Novo projeto oferece as mesmas durações e não pergunta a jornada.
+	for _, path := range []string{"/orgs/" + admin.orgID, "/orgs/" + admin.orgID + "/projects"} {
+		body := do(e, "GET", path, "", admin.session).Body.String()
+		if !strings.Contains(body, `<select id="project-sprint" x-model.number="draft.sprint_duration_days">`) || !strings.Contains(body, `x-for="o in WTT.sprintOptions"`) {
+			t.Errorf("%s: the new project form does not offer the sprint durations in a select", path)
+		}
+		if strings.Contains(body, "project-weekly-hours") || strings.Contains(body, "weekly_hours") {
+			t.Errorf("%s: the new project form or the project card still has the weekly hours", path)
+		}
+	}
+
+	// A jornada é da pessoa: a lista mostra, e um modal aberto pelo lápis altera.
+	// O papel continua mudando pelo botão da linha, e o modal não o tem.
+	people := do(e, "GET", "/orgs/"+admin.orgID+"/people", "", admin.session).Body.String()
+	for _, want := range []string{
+		"<th>Jornada semanal</th>", `x-show="$store.modal.name === 'person-edit'"`,
+		`<input id="person-weekly-hours" type="number" min="1" max="168"`, `@click="openEdit(p)"`,
+	} {
+		if !strings.Contains(people, want) {
+			t.Errorf("the organization people tab does not contain %q", want)
+		}
+	}
+	if !strings.Contains(people, "setRole(") || strings.Contains(people, `id="person-role"`) {
+		t.Error("the role should change on the row button, and not in the weekly hours modal")
+	}
+
+	// Cada pessoa lê a própria jornada no perfil, sem campo para alterar.
+	profile := do(e, "GET", "/profile", "", member.session).Body.String()
+	if !strings.Contains(profile, "<dt>Jornada semanal</dt>") || strings.Contains(profile, "weekly-hours") {
+		t.Error("the profile should show the weekly hours as text, without a field")
+	}
+
+	// O JavaScript que as páginas carregam conhece as opções e a rota nova.
+	for path, wants := range map[string][]string{
+		"/static/app.js":           {"sprintOptions", "labels.sprint.long_", "labels.sprint.short_"},
+		"/static/pages/project.js": {"'project-edit'", "sprintChoices()"},
+		"/static/pages/org.js":     {"/weekly-hours'", "'person-edit'"},
+	} {
+		body := do(e, "GET", path, "", "").Body.String()
+		for _, want := range wants {
+			if !strings.Contains(body, want) {
+				t.Errorf("%s does not contain %q", path, want)
+			}
+		}
+		if strings.Contains(body, "weekly_hours: Number(this.draft.weekly_hours)") || strings.Contains(body, "form.weekly_hours") {
+			t.Errorf("%s still sends the weekly hours of a project", path)
+		}
+	}
+}
+
 func TestPages_RedirectWithoutSession(t *testing.T) {
 	e := newServer(t)
 	admin := signup(t, e, "Org", "ana@test.com")

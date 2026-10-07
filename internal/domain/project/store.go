@@ -29,7 +29,6 @@ func (s *Store) Create(p *Project) error {
 		SetNillableGithubRepoURL(p.GithubRepoURL).
 		SetNillableGitlabRepoURL(p.GitlabRepoURL).
 		SetSprintDurationDays(p.SprintDurationDays).
-		SetNillableWeeklyHours(p.WeeklyHours).
 		SetNillableDailyTime(p.DailyTime).
 		SetNillableWeeklySyncDay(p.WeeklySyncDay).
 		Save(context.Background())
@@ -160,11 +159,6 @@ func (s *Store) Update(p *Project) error {
 	} else {
 		q = q.ClearGitlabRepoURL()
 	}
-	if p.WeeklyHours != nil {
-		q = q.SetWeeklyHours(*p.WeeklyHours)
-	} else {
-		q = q.ClearWeeklyHours()
-	}
 	if p.DailyTime != nil {
 		q = q.SetDailyTime(*p.DailyTime)
 	} else {
@@ -199,7 +193,6 @@ func toDomainProject(e *ent.Project) *Project {
 		GithubRepoURL:      e.GithubRepoURL,
 		GitlabRepoURL:      e.GitlabRepoURL,
 		SprintDurationDays: e.SprintDurationDays,
-		WeeklyHours:        e.WeeklyHours,
 		DailyTime:          e.DailyTime,
 		WeeklySyncDay:      e.WeeklySyncDay,
 		Customer:           customerRef(e),

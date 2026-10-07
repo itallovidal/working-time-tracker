@@ -107,3 +107,14 @@ func (s *Service) SetRole(id, role string) (*Person, error) {
 	}
 	return s.store.SetRole(id, role)
 }
+
+// SetWeeklyHours define a jornada semanal da pessoa. nil ou zero apaga.
+func (s *Service) SetWeeklyHours(id string, hours *int) (*Person, error) {
+	if hours != nil && (*hours < 0 || *hours > 168) {
+		return nil, ErrInvalidWeekHours
+	}
+	if hours != nil && *hours == 0 {
+		hours = nil
+	}
+	return s.store.SetWeeklyHours(id, hours)
+}

@@ -5,6 +5,9 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/google/uuid"
+
+	"working-time-tracker/internal/database"
 	"working-time-tracker/internal/domain/organization"
 	"working-time-tracker/internal/domain/person"
 	"working-time-tracker/testutil"
@@ -206,5 +209,74 @@ func TestOrganizationDelete_CascadesPersons(t *testing.T) {
 	}
 	if n := testClient.Person.Query().CountX(ctx); n != 1 {
 		t.Errorf("persons: %d rows, want 1 (only the other organization's person)", n)
+	}
+}
+
+// A jornada semanal é da pessoa e é opcional: nil ou zero apagam.
+func TestService_SetWeeklyHours(t *testing.T) {
+	cleanup(t)
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	svc := person.NewService(person.NewStore(testClient))
+
+	org, _ := orgSvc.Create("Org")
+	ana, _ := svc.Create(org.ID.String(), "Ana", "ana@test.com")
+	bia, _ := svc.Create(org.ID.String(), "Bia", "bia@test.com")
+	id := ana.ID.String()
+
+	hours := func(id string) *int {
+		t.Helper()
+		p, err := svc.Get(id)
+		if err != nil {
+			t.Fatalf("get failed: %v", err)
+		}
+		return p.WeeklyHours
+	}
+	if h := hours(id); h != nil {
+		t.Errorf("weekly_hours of a new person = %d, want none", *h)
+	}
+
+	forty, zero := 40, 0
+	updated, err := svc.SetWeeklyHours(id, &forty)
+	if err != nil {
+		t.Fatalf("set failed: %v", err)
+	}
+	if updated.WeeklyHours == nil || *updated.WeeklyHours != 40 {
+		t.Errorf("returned weekly_hours = %v, want 40", updated.WeeklyHours)
+	}
+	if h := hours(id); h == nil || *h != 40 {
+		t.Errorf("weekly_hours = %v, want 40", h)
+	}
+	if h := hours(bia.ID.String()); h != nil {
+		t.Errorf("weekly_hours of another person = %d, want none", *h)
+	}
+
+	// Mudar nome e email mantém a jornada.
+	if _, err := svc.Update(id, "Ana Souza", "ana@test.com"); err != nil {
+		t.Fatalf("update failed: %v", err)
+	}
+	if h := hours(id); h == nil || *h != 40 {
+		t.Errorf("weekly_hours after a profile update = %v, want 40", h)
+	}
+
+	for _, bad := range []int{-1, 169} {
+		if _, err := svc.SetWeeklyHours(id, &bad); err != person.ErrInvalidWeekHours {
+			t.Errorf("set %d hours: err = %v, want ErrInvalidWeekHours", bad, err)
+		}
+	}
+
+	for name, none := range map[string]*int{"zero": &zero, "nil": nil} {
+		if _, err := svc.SetWeeklyHours(id, &forty); err != nil {
+			t.Fatalf("set failed: %v", err)
+		}
+		if _, err := svc.SetWeeklyHours(id, none); err != nil {
+			t.Fatalf("clearing with %s failed: %v", name, err)
+		}
+		if h := hours(id); h != nil {
+			t.Errorf("weekly_hours after clearing with %s = %d, want none", name, *h)
+		}
+	}
+
+	if _, err := svc.SetWeeklyHours(uuid.NewString(), &forty); err != database.ErrNotFound {
+		t.Errorf("unknown person: err = %v, want ErrNotFound", err)
 	}
 }

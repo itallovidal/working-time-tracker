@@ -103,6 +103,7 @@ not_found:
 profile:
   eyebrow: Your account
   title: Your profile
+  weekly_hours: Weekly hours
   personal:
     title: Personal details
     name: Name
@@ -175,13 +176,19 @@ org:
     country: Country
     how_we_work: How we work
     work_mode: Work mode
-    hours_note: The weekly hours and the sprint length are set in each project's settings.
+    hours_note: The sprint length is set in each project, and the weekly hours on each person.
     delete_title: Delete organization
     delete_warning: Deletes the organization, all people and invitations. Only possible after every project is deleted.
     delete_confirm: Delete for good? This cannot be undone.
     saved: Organization saved.
   people:
     title: People
+    weekly_hours: Weekly hours
+    edit_title: Weekly hours
+    edit_label: "Edit {{.name}}'s weekly hours"
+    weekly_hours_label: Weekly hours
+    weekly_hours_hint: How many hours a week were agreed with the person. Applies to every project. Empty clears it.
+    hours_saved: "{{.name}}'s weekly hours saved."
     intro: Who belongs to the organization. To put someone on a project and build the teams, use the project's Collaborators tab.
     add: Add collaborator
     loading: Loading collaborators…
@@ -241,7 +248,6 @@ org:
     sprint_badge:
       one: "{{.count}}-day sprint"
       other: "{{.count}}-day sprint"
-    hours_badge: "{{.hours}}h per week"
     daily_badge: "Daily {{.time}}"
     weekly_badge: "Weekly {{.day}}"
     customers_load_failed: "Could not load the customers: {{.error}}"
@@ -261,8 +267,7 @@ project:
     integrations: Integrations
     settings: Settings
   fields:
-    sprint_days: Sprint length (days)
-    weekly_hours: Weekly hours
+    sprint: Sprint length
     daily_time: Daily time
     weekly_day: Weekly day
     no_weekly: No weekly
@@ -459,20 +464,21 @@ integration_types:
 
 project_settings:
   title: Project
-  weekly_hours_hint: How many hours a week are expected from whoever works on the project.
+  intro_admin: How the project works and who pays for it.
+  intro_member: How the project works. Only admins change the settings.
+  internal: Internal project
+  bill_rate_fact: Rate billed per hour
+  bill_rate_note: The billed rate is what the customer pays the organization. Only admins see it.
+  edit_title: Edit project
+  no_daily: No daily
+  delete_confirm: Delete the project? Its teams, tasks, work sessions and integrations are deleted.
   daily_hint: Leave empty if the team has no daily.
-  customer: "Customer:"
-  admin_only: Only admins can change the project settings.
   billing_title: Customer and billing
-  no_customer: None (internal project)
   customers_hint: Add customers under
   rate_placeholder: "0.00"
   bill_rate_hint: What the customer pays the organization. Only admins see it. Empty clears it.
-  save_billing: Save billing
   delete_title: Delete project
   delete_text: Deletes the project with all its teams, tasks, work sessions and integrations.
-  rate_invalid: Enter a value, for example 100.00.
-  billing_saved: Billing saved.
   saved: Project saved.
 
 collab:
@@ -638,6 +644,18 @@ overview:
 
 labels:
   not_informed: Not provided
+  sprint:
+    long_7: 7 days (1 week)
+    long_14: 14 days (2 weeks)
+    long_30: 1 month (30 days)
+    short_7: 7 days
+    short_14: 14 days
+    short_30: 1 month
+    days:
+      one: "{{.count}} day"
+      other: "{{.count}} days"
+  weekly_hours: "{{.hours}}h per week"
+  weekly_hours_none: Not set
   weekday:
     monday: Monday
     tuesday: Tuesday
@@ -749,6 +767,7 @@ errors:
     invalid_organization: "invalid organization"
     invalid_role: "invalid role: use admin or member"
     last_admin: "the organization needs at least one admin"
+    invalid_week_hours: "the weekly hours must be between 1 and 168"
     name_required: "enter the name"
     not_found: "person not found"
   project:
@@ -757,7 +776,6 @@ errors:
     invalid_daily_time: "the daily time must use the HH:MM format, for example 09:30"
     invalid_organization: "invalid organization"
     invalid_sprint: "the sprint must be between 1 and 90 days long"
-    invalid_week_hours: "the weekly hours must be between 1 and 168"
     invalid_weekday: "invalid weekly day: use monday, tuesday, wednesday, thursday, friday, saturday or sunday"
     name_required: "enter the project name"
     not_found: "project not found"

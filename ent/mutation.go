@@ -5533,6 +5533,8 @@ type PersonMutation struct {
 	email                   *string
 	password_hash           *string
 	role                    *person.Role
+	weekly_hours            *int
+	addweekly_hours         *int
 	created_at              *time.Time
 	clearedFields           map[string]struct{}
 	organization            *uuid.UUID
@@ -5855,6 +5857,76 @@ func (m *PersonMutation) OldRole(ctx context.Context) (v person.Role, err error)
 // ResetRole resets all changes to the "role" field.
 func (m *PersonMutation) ResetRole() {
 	m.role = nil
+}
+
+// SetWeeklyHours sets the "weekly_hours" field.
+func (m *PersonMutation) SetWeeklyHours(i int) {
+	m.weekly_hours = &i
+	m.addweekly_hours = nil
+}
+
+// WeeklyHours returns the value of the "weekly_hours" field in the mutation.
+func (m *PersonMutation) WeeklyHours() (r int, exists bool) {
+	v := m.weekly_hours
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldWeeklyHours returns the old "weekly_hours" field's value of the Person entity.
+// If the Person object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PersonMutation) OldWeeklyHours(ctx context.Context) (v *int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldWeeklyHours is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldWeeklyHours requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldWeeklyHours: %w", err)
+	}
+	return oldValue.WeeklyHours, nil
+}
+
+// AddWeeklyHours adds i to the "weekly_hours" field.
+func (m *PersonMutation) AddWeeklyHours(i int) {
+	if m.addweekly_hours != nil {
+		*m.addweekly_hours += i
+	} else {
+		m.addweekly_hours = &i
+	}
+}
+
+// AddedWeeklyHours returns the value that was added to the "weekly_hours" field in this mutation.
+func (m *PersonMutation) AddedWeeklyHours() (r int, exists bool) {
+	v := m.addweekly_hours
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearWeeklyHours clears the value of the "weekly_hours" field.
+func (m *PersonMutation) ClearWeeklyHours() {
+	m.weekly_hours = nil
+	m.addweekly_hours = nil
+	m.clearedFields[person.FieldWeeklyHours] = struct{}{}
+}
+
+// WeeklyHoursCleared returns if the "weekly_hours" field was cleared in this mutation.
+func (m *PersonMutation) WeeklyHoursCleared() bool {
+	_, ok := m.clearedFields[person.FieldWeeklyHours]
+	return ok
+}
+
+// ResetWeeklyHours resets all changes to the "weekly_hours" field.
+func (m *PersonMutation) ResetWeeklyHours() {
+	m.weekly_hours = nil
+	m.addweekly_hours = nil
+	delete(m.clearedFields, person.FieldWeeklyHours)
 }
 
 // SetCreatedAt sets the "created_at" field.
@@ -6278,7 +6350,7 @@ func (m *PersonMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *PersonMutation) Fields() []string {
-	fields := make([]string, 0, 6)
+	fields := make([]string, 0, 7)
 	if m.name != nil {
 		fields = append(fields, person.FieldName)
 	}
@@ -6293,6 +6365,9 @@ func (m *PersonMutation) Fields() []string {
 	}
 	if m.role != nil {
 		fields = append(fields, person.FieldRole)
+	}
+	if m.weekly_hours != nil {
+		fields = append(fields, person.FieldWeeklyHours)
 	}
 	if m.created_at != nil {
 		fields = append(fields, person.FieldCreatedAt)
@@ -6315,6 +6390,8 @@ func (m *PersonMutation) Field(name string) (ent.Value, bool) {
 		return m.PasswordHash()
 	case person.FieldRole:
 		return m.Role()
+	case person.FieldWeeklyHours:
+		return m.WeeklyHours()
 	case person.FieldCreatedAt:
 		return m.CreatedAt()
 	}
@@ -6336,6 +6413,8 @@ func (m *PersonMutation) OldField(ctx context.Context, name string) (ent.Value, 
 		return m.OldPasswordHash(ctx)
 	case person.FieldRole:
 		return m.OldRole(ctx)
+	case person.FieldWeeklyHours:
+		return m.OldWeeklyHours(ctx)
 	case person.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	}
@@ -6382,6 +6461,13 @@ func (m *PersonMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetRole(v)
 		return nil
+	case person.FieldWeeklyHours:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetWeeklyHours(v)
+		return nil
 	case person.FieldCreatedAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -6396,13 +6482,21 @@ func (m *PersonMutation) SetField(name string, value ent.Value) error {
 // AddedFields returns all numeric fields that were incremented/decremented during
 // this mutation.
 func (m *PersonMutation) AddedFields() []string {
-	return nil
+	var fields []string
+	if m.addweekly_hours != nil {
+		fields = append(fields, person.FieldWeeklyHours)
+	}
+	return fields
 }
 
 // AddedField returns the numeric value that was incremented/decremented on a field
 // with the given name. The second boolean return value indicates that this field
 // was not set, or was not defined in the schema.
 func (m *PersonMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case person.FieldWeeklyHours:
+		return m.AddedWeeklyHours()
+	}
 	return nil, false
 }
 
@@ -6411,6 +6505,13 @@ func (m *PersonMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *PersonMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case person.FieldWeeklyHours:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddWeeklyHours(v)
+		return nil
 	}
 	return fmt.Errorf("unknown Person numeric field %s", name)
 }
@@ -6421,6 +6522,9 @@ func (m *PersonMutation) ClearedFields() []string {
 	var fields []string
 	if m.FieldCleared(person.FieldPasswordHash) {
 		fields = append(fields, person.FieldPasswordHash)
+	}
+	if m.FieldCleared(person.FieldWeeklyHours) {
+		fields = append(fields, person.FieldWeeklyHours)
 	}
 	return fields
 }
@@ -6438,6 +6542,9 @@ func (m *PersonMutation) ClearField(name string) error {
 	switch name {
 	case person.FieldPasswordHash:
 		m.ClearPasswordHash()
+		return nil
+	case person.FieldWeeklyHours:
+		m.ClearWeeklyHours()
 		return nil
 	}
 	return fmt.Errorf("unknown Person nullable field %s", name)
@@ -6461,6 +6568,9 @@ func (m *PersonMutation) ResetField(name string) error {
 		return nil
 	case person.FieldRole:
 		m.ResetRole()
+		return nil
+	case person.FieldWeeklyHours:
+		m.ResetWeeklyHours()
 		return nil
 	case person.FieldCreatedAt:
 		m.ResetCreatedAt()
@@ -6713,8 +6823,6 @@ type ProjectMutation struct {
 	gitlab_repo_url         *string
 	sprint_duration_days    *int
 	addsprint_duration_days *int
-	weekly_hours            *int
-	addweekly_hours         *int
 	daily_time              *string
 	weekly_sync_day         *string
 	bill_rate_cents         *int
@@ -7119,76 +7227,6 @@ func (m *ProjectMutation) AddedSprintDurationDays() (r int, exists bool) {
 func (m *ProjectMutation) ResetSprintDurationDays() {
 	m.sprint_duration_days = nil
 	m.addsprint_duration_days = nil
-}
-
-// SetWeeklyHours sets the "weekly_hours" field.
-func (m *ProjectMutation) SetWeeklyHours(i int) {
-	m.weekly_hours = &i
-	m.addweekly_hours = nil
-}
-
-// WeeklyHours returns the value of the "weekly_hours" field in the mutation.
-func (m *ProjectMutation) WeeklyHours() (r int, exists bool) {
-	v := m.weekly_hours
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldWeeklyHours returns the old "weekly_hours" field's value of the Project entity.
-// If the Project object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ProjectMutation) OldWeeklyHours(ctx context.Context) (v *int, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldWeeklyHours is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldWeeklyHours requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldWeeklyHours: %w", err)
-	}
-	return oldValue.WeeklyHours, nil
-}
-
-// AddWeeklyHours adds i to the "weekly_hours" field.
-func (m *ProjectMutation) AddWeeklyHours(i int) {
-	if m.addweekly_hours != nil {
-		*m.addweekly_hours += i
-	} else {
-		m.addweekly_hours = &i
-	}
-}
-
-// AddedWeeklyHours returns the value that was added to the "weekly_hours" field in this mutation.
-func (m *ProjectMutation) AddedWeeklyHours() (r int, exists bool) {
-	v := m.addweekly_hours
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// ClearWeeklyHours clears the value of the "weekly_hours" field.
-func (m *ProjectMutation) ClearWeeklyHours() {
-	m.weekly_hours = nil
-	m.addweekly_hours = nil
-	m.clearedFields[project.FieldWeeklyHours] = struct{}{}
-}
-
-// WeeklyHoursCleared returns if the "weekly_hours" field was cleared in this mutation.
-func (m *ProjectMutation) WeeklyHoursCleared() bool {
-	_, ok := m.clearedFields[project.FieldWeeklyHours]
-	return ok
-}
-
-// ResetWeeklyHours resets all changes to the "weekly_hours" field.
-func (m *ProjectMutation) ResetWeeklyHours() {
-	m.weekly_hours = nil
-	m.addweekly_hours = nil
-	delete(m.clearedFields, project.FieldWeeklyHours)
 }
 
 // SetDailyTime sets the "daily_time" field.
@@ -7748,7 +7786,7 @@ func (m *ProjectMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ProjectMutation) Fields() []string {
-	fields := make([]string, 0, 12)
+	fields := make([]string, 0, 11)
 	if m.organization != nil {
 		fields = append(fields, project.FieldOrganizationID)
 	}
@@ -7766,9 +7804,6 @@ func (m *ProjectMutation) Fields() []string {
 	}
 	if m.sprint_duration_days != nil {
 		fields = append(fields, project.FieldSprintDurationDays)
-	}
-	if m.weekly_hours != nil {
-		fields = append(fields, project.FieldWeeklyHours)
 	}
 	if m.daily_time != nil {
 		fields = append(fields, project.FieldDailyTime)
@@ -7805,8 +7840,6 @@ func (m *ProjectMutation) Field(name string) (ent.Value, bool) {
 		return m.GitlabRepoURL()
 	case project.FieldSprintDurationDays:
 		return m.SprintDurationDays()
-	case project.FieldWeeklyHours:
-		return m.WeeklyHours()
 	case project.FieldDailyTime:
 		return m.DailyTime()
 	case project.FieldWeeklySyncDay:
@@ -7838,8 +7871,6 @@ func (m *ProjectMutation) OldField(ctx context.Context, name string) (ent.Value,
 		return m.OldGitlabRepoURL(ctx)
 	case project.FieldSprintDurationDays:
 		return m.OldSprintDurationDays(ctx)
-	case project.FieldWeeklyHours:
-		return m.OldWeeklyHours(ctx)
 	case project.FieldDailyTime:
 		return m.OldDailyTime(ctx)
 	case project.FieldWeeklySyncDay:
@@ -7901,13 +7932,6 @@ func (m *ProjectMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetSprintDurationDays(v)
 		return nil
-	case project.FieldWeeklyHours:
-		v, ok := value.(int)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetWeeklyHours(v)
-		return nil
 	case project.FieldDailyTime:
 		v, ok := value.(string)
 		if !ok {
@@ -7954,9 +7978,6 @@ func (m *ProjectMutation) AddedFields() []string {
 	if m.addsprint_duration_days != nil {
 		fields = append(fields, project.FieldSprintDurationDays)
 	}
-	if m.addweekly_hours != nil {
-		fields = append(fields, project.FieldWeeklyHours)
-	}
 	if m.addbill_rate_cents != nil {
 		fields = append(fields, project.FieldBillRateCents)
 	}
@@ -7970,8 +7991,6 @@ func (m *ProjectMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
 	case project.FieldSprintDurationDays:
 		return m.AddedSprintDurationDays()
-	case project.FieldWeeklyHours:
-		return m.AddedWeeklyHours()
 	case project.FieldBillRateCents:
 		return m.AddedBillRateCents()
 	}
@@ -7989,13 +8008,6 @@ func (m *ProjectMutation) AddField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddSprintDurationDays(v)
-		return nil
-	case project.FieldWeeklyHours:
-		v, ok := value.(int)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddWeeklyHours(v)
 		return nil
 	case project.FieldBillRateCents:
 		v, ok := value.(int)
@@ -8020,9 +8032,6 @@ func (m *ProjectMutation) ClearedFields() []string {
 	}
 	if m.FieldCleared(project.FieldGitlabRepoURL) {
 		fields = append(fields, project.FieldGitlabRepoURL)
-	}
-	if m.FieldCleared(project.FieldWeeklyHours) {
-		fields = append(fields, project.FieldWeeklyHours)
 	}
 	if m.FieldCleared(project.FieldDailyTime) {
 		fields = append(fields, project.FieldDailyTime)
@@ -8058,9 +8067,6 @@ func (m *ProjectMutation) ClearField(name string) error {
 		return nil
 	case project.FieldGitlabRepoURL:
 		m.ClearGitlabRepoURL()
-		return nil
-	case project.FieldWeeklyHours:
-		m.ClearWeeklyHours()
 		return nil
 	case project.FieldDailyTime:
 		m.ClearDailyTime()
@@ -8099,9 +8105,6 @@ func (m *ProjectMutation) ResetField(name string) error {
 		return nil
 	case project.FieldSprintDurationDays:
 		m.ResetSprintDurationDays()
-		return nil
-	case project.FieldWeeklyHours:
-		m.ResetWeeklyHours()
 		return nil
 	case project.FieldDailyTime:
 		m.ResetDailyTime()

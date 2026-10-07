@@ -47,20 +47,6 @@ func validateSchedule(dailyTime, weeklySyncDay *string) error {
 	return nil
 }
 
-func validateWeeklyHours(v *int) error {
-	if v != nil && (*v < 0 || *v > 168) {
-		return ErrInvalidWeekHours
-	}
-	return nil
-}
-
-func nilIfZero(v *int) *int {
-	if v == nil || *v == 0 {
-		return nil
-	}
-	return v
-}
-
 func nilIfEmpty(v *string) *string {
 	if v == nil || *v == "" {
 		return nil
@@ -68,9 +54,8 @@ func nilIfEmpty(v *string) *string {
 	return v
 }
 
-// Create cria o projeto. Sprint zerada vira 14 dias; jornada semanal nil ou zero
-// fica sem valor.
-func (s *Service) Create(orgID, name, description string, sprintDurationDays int, dailyTime, weeklySyncDay *string, weeklyHours *int) (*Project, error) {
+// Create cria o projeto. Sprint zerada vira 14 dias.
+func (s *Service) Create(orgID, name, description string, sprintDurationDays int, dailyTime, weeklySyncDay *string) (*Project, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
 		return nil, ErrNameRequired
@@ -85,9 +70,6 @@ func (s *Service) Create(orgID, name, description string, sprintDurationDays int
 	if sprintDurationDays < 1 || sprintDurationDays > 90 {
 		return nil, ErrInvalidSprint
 	}
-	if err := validateWeeklyHours(weeklyHours); err != nil {
-		return nil, err
-	}
 	dailyTime, weeklySyncDay = optional(dailyTime), optional(weeklySyncDay)
 	if err := validateSchedule(dailyTime, weeklySyncDay); err != nil {
 		return nil, err
@@ -101,7 +83,6 @@ func (s *Service) Create(orgID, name, description string, sprintDurationDays int
 		Name:               name,
 		Description:        strings.TrimSpace(description),
 		SprintDurationDays: sprintDurationDays,
-		WeeklyHours:        nilIfZero(weeklyHours),
 		DailyTime:          nilIfEmpty(dailyTime),
 		WeeklySyncDay:      nilIfEmpty(weeklySyncDay),
 	}
@@ -120,18 +101,14 @@ func (s *Service) Get(id string) (*Project, error) {
 }
 
 // Update altera o projeto. Nos campos opcionais, nil mantém o valor atual e
-// texto vazio (ou jornada zero) apaga; sprintDurationDays igual a zero mantém a
-// duração atual.
-func (s *Service) Update(id, name, description string, sprintDurationDays int, dailyTime, weeklySyncDay *string, weeklyHours *int) (*Project, error) {
+// texto vazio apaga; sprintDurationDays igual a zero mantém a duração atual.
+func (s *Service) Update(id, name, description string, sprintDurationDays int, dailyTime, weeklySyncDay *string) (*Project, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
 		return nil, ErrNameRequired
 	}
 	if sprintDurationDays < 0 || sprintDurationDays > 90 {
 		return nil, ErrInvalidSprint
-	}
-	if err := validateWeeklyHours(weeklyHours); err != nil {
-		return nil, err
 	}
 	dailyTime, weeklySyncDay = optional(dailyTime), optional(weeklySyncDay)
 	if err := validateSchedule(dailyTime, weeklySyncDay); err != nil {
@@ -145,9 +122,6 @@ func (s *Service) Update(id, name, description string, sprintDurationDays int, d
 	project.Description = strings.TrimSpace(description)
 	if sprintDurationDays > 0 {
 		project.SprintDurationDays = sprintDurationDays
-	}
-	if weeklyHours != nil {
-		project.WeeklyHours = nilIfZero(weeklyHours)
 	}
 	if dailyTime != nil {
 		project.DailyTime = nilIfEmpty(dailyTime)

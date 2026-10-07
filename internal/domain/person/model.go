@@ -17,5 +17,8 @@ type Person struct {
 	Email          string    `json:"email"`
 	OrganizationID uuid.UUID `json:"organization_id"`
 	Role           string    `json:"role"`
-	CreatedAt      time.Time `json:"created_at"`
+	// WeeklyHours é a jornada semanal combinada com a pessoa, em horas; nil quando
+	// não foi informada. Vale para a organização toda, e não por projeto.
+	WeeklyHours *int      `json:"weekly_hours"`
+	CreatedAt   time.Time `json:"created_at"`
 }

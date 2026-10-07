@@ -29,6 +29,8 @@ type Person struct {
 	PasswordHash *string `json:"-"`
 	// Role holds the value of the "role" field.
 	Role person.Role `json:"role,omitempty"`
+	// WeeklyHours holds the value of the "weekly_hours" field.
+	WeeklyHours *int `json:"weekly_hours,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -128,6 +130,8 @@ func (*Person) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
+		case person.FieldWeeklyHours:
+			values[i] = new(sql.NullInt64)
 		case person.FieldName, person.FieldEmail, person.FieldPasswordHash, person.FieldRole:
 			values[i] = new(sql.NullString)
 		case person.FieldCreatedAt:
@@ -185,6 +189,13 @@ func (_m *Person) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field role", values[i])
 			} else if value.Valid {
 				_m.Role = person.Role(value.String)
+			}
+		case person.FieldWeeklyHours:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field weekly_hours", values[i])
+			} else if value.Valid {
+				_m.WeeklyHours = new(int)
+				*_m.WeeklyHours = int(value.Int64)
 			}
 		case person.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -276,6 +287,11 @@ func (_m *Person) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("role=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Role))
+	builder.WriteString(", ")
+	if v := _m.WeeklyHours; v != nil {
+		builder.WriteString("weekly_hours=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))

@@ -9,8 +9,9 @@ Ponto por tarefa para equipes que trabalham por projeto. Foi pensado principalme
 - **Contas e organizações.** O signup cria uma organização com você como admin. Outras pessoas entram por **link de convite** (uso único, válido por 7 dias, opcionalmente preso a um email).
 - **Perfil da organização.** Resumo, descrição, segmento, contato, dados jurídicos (razão social, CNPJ, endereço) e como ela trabalha (regime remoto, híbrido ou presencial, fuso e moeda). O admin edita; todos os membros leem na aba **Sobre**, onde campo sem valor aparece como "Não informado".
 - **Papéis.** Admins gerenciam a organização, as pessoas, os clientes, os projetos, os times, os valores e as integrações. Membros gerenciam tarefas e batem o próprio ponto.
+- **Jornada semanal** de cada pessoa. É o que a organização combinou com ela, em horas por semana, e vale para todos os projetos em que trabalha. O admin informa na aba Colaboradores da organização; a pessoa lê no perfil.
 - **Clientes e valores por hora.** Cada projeto pode ter um cliente e o **valor cobrado** dele por hora. Cada pessoa tem um **valor pago** por hora em cada projeto, então a mesma pessoa pode receber 20 num projeto e 25 em outro. O admin vê e altera tudo, com a margem por hora; o membro vê só o que ele mesmo recebe.
-- **Projetos** com duração da sprint, jornada semanal, horário da daily e dia da weekly. Esses valores são de cada projeto, não da organização, porque projetos diferentes podem trabalhar de formas diferentes.
+- **Projetos** com duração da sprint (7 dias, 14 dias ou 1 mês), horário da daily e dia da weekly. Esses valores são de cada projeto, não da organização, porque projetos diferentes podem trabalhar de formas diferentes. A aba Configurações só mostra o projeto; o admin altera tudo no modal Editar projeto.
 - **Colaboradores e times** de cada projeto. A aba Colaboradores mostra quem trabalha no projeto, em que times está e, para o admin, quanto recebe por hora e a margem. O admin adiciona pessoas, muda valores, monta os times e tira alguém do projeto de uma vez. O cartão de cada time mostra só o nome e os integrantes; o lápis abre o modal Editar time, onde o admin troca o nome, marca quem faz parte e exclui o time. Só quem está em algum time do projeto pode ser responsável por tarefas.
 - **Tarefas** com responsável, prazo (7 dias por padrão, com destaque quando está atrasada ou perto de vencer) e vínculo opcional com uma issue. A lista tem busca por nome, filtro por responsável, filtro por prazo (atrasadas, até hoje, até o fim desta semana ou da próxima, ou até uma data) e 10 tarefas por página. A caixa "Só as minhas tarefas", abaixo dos filtros, mostra as suas e desliga a busca e o filtro de responsável: só o de prazo continua valendo. A tarefa nova é criada num modal.
 - **Ponto.** Clock-in e clock-out com cronômetro ao vivo no topo de todas as páginas, sessões filtradas por pessoa, data e tarefa, os totais do filtro num cartão à parte e o seu tempo de hoje e da semana. O banco garante uma única sessão aberta por pessoa.
@@ -47,6 +48,8 @@ O Bruno trabalha em quatro projetos e recebe mais na API de Cobranças; a Elisa 
 
 Os projetos foram cadastrados de um mês a quase um ano atrás e têm sessões de ponto das últimas semanas, para a Visão geral mostrar tempos de projeto e totais diferentes entre si. O App de Pedidos e a API de Cobranças têm integrações de demonstração **sem credencial**: elas aparecem nas telas, mas só buscam issues depois que você edita e informa um token seu.
 
+Cada pessoa tem a sua jornada semanal: 40 horas o Bruno e a Carla, 30 o Diego e 20 a Elisa. A Ana, sócia, fica sem jornada definida.
+
 Sem o seed, clique em **Crie uma organização** na tela de login.
 
 Se a porta 5432 já estiver ocupada, suba o banco com `POSTGRES_PORT=5433 docker compose up -d` e ajuste a porta no `.env`.
@@ -79,10 +82,10 @@ A interface segue a Decision 8 de `_docs/design.md`. O servidor renderiza a casc
 | `/orgs/:orgId` | Projetos da organização em cartões, para quem entra para trabalhar num deles. O admin cria projeto num modal, já com o cliente e, quando há cliente, o valor cobrado por hora |
 | `/orgs/:orgId/about` | Organização, aba Sobre: o perfil da organização, para todos os membros |
 | `/orgs/:orgId/settings` | Organização, tela de edição aberta pelo botão Editar da aba Sobre: perfil, regime, fuso, moeda e exclusão da organização (só admins) |
-| `/orgs/:orgId/people` | Organização, aba Colaboradores: integrantes e papéis, convites pendentes e o botão Adicionar colaborador, que gera o link de convite num modal (só admins) |
+| `/orgs/:orgId/people` | Organização, aba Colaboradores: os integrantes, com o papel (que muda no botão da linha) e a jornada semanal de cada um (que muda num modal, pelo lápis); os convites pendentes e o botão Adicionar colaborador, que gera o link de convite num modal (só admins) |
 | `/orgs/:orgId/customers` | Organização, aba Clientes: quem contrata os projetos, com cadastro e edição num modal (só admins) |
 | `/orgs/:orgId/projects` | Organização, aba Projetos: tabela de gestão com o cliente, os colaboradores e as tarefas de cada projeto; a linha abre o projeto (só admins) |
-| `/profile` | Seu nome, seu email, sua senha e quanto você recebe por hora em cada projeto |
+| `/profile` | Seu nome, seu email, sua senha, sua jornada semanal (só para ler) e quanto você recebe por hora em cada projeto |
 | `/lang/:code` | Troca o idioma (`pt-BR` ou `en`): grava o cookie e volta para `?next=` |
 | `/i18n/:idioma.js` | Os textos do idioma para o JavaScript (`window.I18N`) |
 | `/projects/:projectId` | Leva o admin para a aba Visão geral e o membro para a aba Tarefas |
@@ -92,7 +95,7 @@ A interface segue a Decision 8 de `_docs/design.md`. O servidor renderiza a casc
 | `/projects/:projectId/time-tracking` | Cronômetro, sessões, filtros e totais em tempo e em dinheiro |
 | `/projects/:projectId/teams` | Colaboradores: as pessoas do projeto, com busca, e os times. Para admins, também o valor por hora de cada pessoa, a margem e as ações de adicionar, tirar e montar times; cada time é editado num modal |
 | `/projects/:projectId/integrations` | Integrações com GitHub, GitLab e Trello: um cartão por integração e, para admins, o modal de criar e editar |
-| `/projects/:projectId/settings` | Configurações e exclusão do projeto; para admins, também o cliente e o valor cobrado |
+| `/projects/:projectId/settings` | Configurações: a descrição, a sprint, a daily, a weekly e o cliente do projeto, só para ler. Para admins, também o valor cobrado e o botão Editar, que abre o modal Editar projeto, onde ficam todos os campos e a exclusão |
 
 Sem sessão, qualquer página leva ao login, e a pessoa volta para a página pedida depois de entrar. Uma página de outra organização mostra "Página não encontrada".
 
@@ -156,7 +159,7 @@ Para atualizar o Alpine, troque `web/static/alpine.min.js` e o hash em `web/embe
 
 O conteúdo aparece dentro do modal, mas segue no escopo do componente da página (`x-model`, `save()`, `errors`). O `<template>` precisa de um único elemento raiz. `open(nome, título, guarda)` abre e foca o campo com `data-autofocus`; `close()` fecha; `dismiss()` é o fechamento pedido pela pessoa (Esc, clique no fundo, X, Cancelar) e respeita a guarda, uma função que devolve `false` enquanto o modal não pode fechar, por exemplo durante um salvamento.
 
-Hoje usam o modal o cadastro de cliente, o Adicionar colaborador, o Novo projeto, a Nova tarefa e, na aba Colaboradores do projeto, o Adicionar pessoa, o Novo time e o Editar time, e, na aba Integrações, o formulário único de criar e editar integração. Para focar um campo que acabou de aparecer dentro do modal (como o link do convite depois de gerado), dê ao bloco um `x-transition`: sem transição, o `x-show` só mostra o elemento no ciclo seguinte e o `$nextTick` chega antes de ele aceitar foco.
+Hoje usam o modal o cadastro de cliente, o Adicionar colaborador, a Jornada semanal da pessoa, o Novo projeto, o Editar projeto, a Nova tarefa e, na aba Colaboradores do projeto, o Adicionar pessoa, o Novo time e o Editar time, e, na aba Integrações, o formulário único de criar e editar integração. Para focar um campo que acabou de aparecer dentro do modal (como o link do convite depois de gerado), dê ao bloco um `x-transition`: sem transição, o `x-show` só mostra o elemento no ciclo seguinte e o `$nextTick` chega antes de ele aceitar foco.
 
 ## API
 
@@ -169,7 +172,7 @@ Resumo dos grupos de rotas:
 | Autenticação | `/api/auth/signup`, `login`, `logout`, `me`, `password`, `invites/:token` |
 | Organização | `/api/orgs/:orgId` (+ `persons`, `projects`, `customers`, `invites`) |
 | Clientes | `/api/customers/:customerId` |
-| Pessoas | `/api/persons/:personId` (+ `role`, `allocations`) |
+| Pessoas | `/api/persons/:personId` (+ `role`, `weekly-hours`, `allocations`) |
 | Projetos | `/api/projects/:projectId` (+ `overview`, `teams`, `tasks`, `members`, `collaborators`, `integrations`, `work-sessions`) |
 | Valores | `/api/projects/:projectId/billing`, `/api/projects/:projectId/allocations` (+ `/:personId`) |
 | Times | `/api/teams/:teamId` (+ `members`) |
@@ -263,8 +266,8 @@ _test/                    # referência da API e coleção do Insomnia
 Organization                          nome, perfil (resumo, contato, dados jurídicos) e como trabalha (regime, fuso, moeda)
 Organization (1) ── (N) Customer      cliente: nome, CNPJ e contato
 Customer  (0..1) ── (N) Project       projeto interno fica sem cliente; o projeto guarda o valor cobrado por hora
-Organization (1) ── (N) Project       sprint, jornada semanal, daily e weekly são do projeto
-Organization (1) ── (N) Person        email único no sistema, senha (bcrypt), papel admin|member
+Organization (1) ── (N) Project       sprint, daily e weekly são do projeto
+Organization (1) ── (N) Person        email único no sistema, senha (bcrypt), papel admin|member, jornada semanal
 Organization (1) ── (N) Invite        token (hash), email opcional, papel, expira em 7 dias, uso único
 Person       (1) ── (N) Session       token (hash), expira em 7 dias
 Project      (1) ── (N) Team ── (N) Person   via TeamMembership

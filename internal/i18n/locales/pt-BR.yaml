@@ -113,6 +113,7 @@ not_found:
 profile:
   eyebrow: Sua conta
   title: Seu perfil
+  weekly_hours: Jornada semanal
   personal:
     title: Dados pessoais
     name: Nome
@@ -185,13 +186,19 @@ org:
     country: País
     how_we_work: Como trabalhamos
     work_mode: Regime de trabalho
-    hours_note: A jornada semanal e a duração da sprint ficam nas configurações de cada projeto.
+    hours_note: A duração da sprint fica nas configurações de cada projeto, e a jornada semanal, no cadastro de cada pessoa.
     delete_title: Excluir organização
     delete_warning: Apaga a organização, todas as pessoas e os convites. Só é possível depois de excluir todos os projetos.
     delete_confirm: Excluir de vez? Isso não pode ser desfeito.
     saved: Organização salva.
   people:
     title: Integrantes
+    weekly_hours: Jornada semanal
+    edit_title: Jornada semanal
+    edit_label: "Editar a jornada semanal de {{.name}}"
+    weekly_hours_label: Jornada semanal (horas)
+    weekly_hours_hint: Quantas horas por semana foram combinadas com a pessoa. Vale para todos os projetos. Vazio apaga.
+    hours_saved: "Jornada de {{.name}} salva."
     intro: Quem faz parte da organização. Para pôr alguém num projeto e montar os times, use a aba Colaboradores do projeto.
     add: Adicionar colaborador
     loading: Carregando colaboradores…
@@ -251,7 +258,6 @@ org:
     sprint_badge:
       one: "Sprint de {{.count}} dia"
       other: "Sprint de {{.count}} dias"
-    hours_badge: "{{.hours}}h por semana"
     daily_badge: "Daily {{.time}}"
     weekly_badge: "Weekly {{.day}}"
     customers_load_failed: "Não deu para carregar os clientes: {{.error}}"
@@ -271,8 +277,7 @@ project:
     integrations: Integrações
     settings: Configurações
   fields:
-    sprint_days: Duração da sprint (dias)
-    weekly_hours: Jornada semanal (horas)
+    sprint: Duração da sprint
     daily_time: Horário da daily
     weekly_day: Dia da weekly
     no_weekly: Sem weekly
@@ -469,20 +474,21 @@ integration_types:
 
 project_settings:
   title: Projeto
-  weekly_hours_hint: Quantas horas por semana se espera de quem trabalha no projeto.
+  intro_admin: Como o projeto trabalha e quem paga por ele.
+  intro_member: Como o projeto trabalha. Só admins alteram as configurações.
+  internal: Projeto interno
+  bill_rate_fact: Valor cobrado por hora
+  bill_rate_note: O valor cobrado é o que o cliente paga à organização. Só admins veem.
+  edit_title: Editar projeto
+  no_daily: Sem daily
+  delete_confirm: Excluir o projeto? Os times, as tarefas, as sessões de trabalho e as integrações dele são apagados.
   daily_hint: Deixe vazio se o time não faz daily.
-  customer: "Cliente:"
-  admin_only: Só admins podem alterar as configurações do projeto.
   billing_title: Cliente e cobrança
-  no_customer: Nenhum (projeto interno)
   customers_hint: Cadastre clientes em
   rate_placeholder: "0,00"
   bill_rate_hint: O que o cliente paga à organização. Só admins veem. Vazio apaga.
-  save_billing: Salvar cobrança
   delete_title: Excluir projeto
   delete_text: Apaga o projeto com todos os times, tarefas, sessões de trabalho e integrações.
-  rate_invalid: Informe um valor, por exemplo 100,00.
-  billing_saved: Cobrança salva.
   saved: Projeto salvo.
 
 collab:
@@ -648,6 +654,18 @@ overview:
 
 labels:
   not_informed: Não informado
+  sprint:
+    long_7: 7 dias (1 semana)
+    long_14: 14 dias (2 semanas)
+    long_30: 1 mês (30 dias)
+    short_7: 7 dias
+    short_14: 14 dias
+    short_30: 1 mês
+    days:
+      one: "{{.count}} dia"
+      other: "{{.count}} dias"
+  weekly_hours: "{{.hours}}h por semana"
+  weekly_hours_none: Não informada
   weekday:
     monday: Segunda-feira
     tuesday: Terça-feira
@@ -759,6 +777,7 @@ errors:
     invalid_organization: "organização inválida"
     invalid_role: "papel inválido: use admin ou member"
     last_admin: "a organização precisa de pelo menos um admin"
+    invalid_week_hours: "a jornada semanal deve ficar entre 1 e 168 horas"
     name_required: "informe o nome"
     not_found: "pessoa não encontrada"
   project:
@@ -767,7 +786,6 @@ errors:
     invalid_daily_time: "o horário da daily deve estar no formato HH:MM, por exemplo 09:30"
     invalid_organization: "organização inválida"
     invalid_sprint: "a sprint precisa ter entre 1 e 90 dias"
-    invalid_week_hours: "a jornada semanal deve ficar entre 1 e 168 horas"
     invalid_weekday: "dia da weekly inválido: use monday, tuesday, wednesday, thursday, friday, saturday ou sunday"
     name_required: "informe o nome do projeto"
     not_found: "projeto não encontrado"

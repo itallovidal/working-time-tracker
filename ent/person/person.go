@@ -26,6 +26,8 @@ const (
 	FieldPasswordHash = "password_hash"
 	// FieldRole holds the string denoting the role field in the database.
 	FieldRole = "role"
+	// FieldWeeklyHours holds the string denoting the weekly_hours field in the database.
+	FieldWeeklyHours = "weekly_hours"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// EdgeOrganization holds the string denoting the organization edge name in mutations.
@@ -103,6 +105,7 @@ var Columns = []string{
 	FieldOrganizationID,
 	FieldPasswordHash,
 	FieldRole,
+	FieldWeeklyHours,
 	FieldCreatedAt,
 }
 
@@ -180,6 +183,11 @@ func ByPasswordHash(opts ...sql.OrderTermOption) OrderOption {
 // ByRole orders the results by the role field.
 func ByRole(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldRole, opts...).ToFunc()
+}
+
+// ByWeeklyHours orders the results by the weekly_hours field.
+func ByWeeklyHours(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldWeeklyHours, opts...).ToFunc()
 }
 
 // ByCreatedAt orders the results by the created_at field.

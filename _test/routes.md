@@ -138,7 +138,7 @@ O `GET` devolve todos os campos para qualquer membro. No `PATCH`, **campo que n�
 | `timezone` | Nome IANA, por exemplo `America/Sao_Paulo` (o padrão) |
 | `currency` | `BRL` (o padrão), `USD` ou `EUR` |
 
-A jornada semanal e a duração da sprint não são da organização: ficam em cada projeto (`weekly_hours` e `sprint_duration_days`).
+A duração da sprint e a jornada semanal não são da organização: a sprint fica em cada projeto (`sprint_duration_days`) e a jornada, em cada pessoa (`weekly_hours`).
 
 ```http
 PATCH /api/orgs/:orgId
@@ -205,9 +205,12 @@ Só `name` é obrigatório. `document` é o CNPJ, com ou sem máscara: os dígit
 | GET | `/api/persons/:personId` | logado | Detalhes da pessoa |
 | PATCH | `/api/persons/:personId` | a própria pessoa ou admin | Altera nome e email |
 | PATCH | `/api/persons/:personId/role` | admin | Muda o papel: `{"role": "admin"}` ou `{"role": "member"}` |
+| PATCH | `/api/persons/:personId/weekly-hours` | admin | Define a jornada semanal: `{"weekly_hours": 40}` |
 | GET | `/api/persons/:personId/allocations` | a própria pessoa ou admin | Quanto a pessoa recebe por hora em cada projeto |
 
 A organização nunca fica sem admin: rebaixar o último admin responde `400`. Pessoas entram na organização pelo signup ou por convite.
+
+A pessoa traz `weekly_hours`, a jornada semanal combinada com ela, em horas: vale para a organização toda, e não por projeto. Vai de 1 a 168 e vem `null` enquanto nenhum admin informou. Só um admin altera, e `0` ou `null` apagam; o `PATCH` de nome e email não mexe nela. Todos da organização leem.
 
 ---
 
@@ -229,17 +232,15 @@ Content-Type: application/json
   "name": "App de Pedidos",
   "description": "Opcional",
   "sprint_duration_days": 14,
-  "weekly_hours": 40,
   "daily_time": "09:30",
   "weekly_sync_day": "friday"
 }
 ```
-- `sprint_duration_days` vai de 1 a 90, e o padrão é 14.
-- `weekly_hours` é a jornada semanal esperada no projeto, de 1 a 168. É opcional.
+- `sprint_duration_days` vai de 1 a 90, e o padrão é 14. As telas oferecem 7, 14 e 30 (um mês); um projeto com outra duração continua com ela.
 - `daily_time` usa o formato `HH:MM`.
 - `weekly_sync_day` vai de `monday` a `sunday`.
 
-No `PATCH`, um campo omitido mantém o valor atual, `""` apaga `daily_time` ou `weekly_sync_day`, e `0` apaga `weekly_hours`.
+No `PATCH`, um campo omitido mantém o valor atual, e `""` apaga `daily_time` ou `weekly_sync_day`. O projeto não tem jornada semanal: ela é da pessoa (`PATCH /api/persons/:personId/weekly-hours`).
 
 O projeto traz `member_count`, os colaboradores dele (quem está em algum time ou tem valor por hora, cada pessoa uma vez: a mesma conta de `/collaborators`), e `task_count`, as tarefas dele. Os dois vêm na lista e no detalhe.
 

@@ -11,7 +11,7 @@ document.addEventListener('alpine:init', () => {
   const org = WTT.boot.org || { name: me.organization_name };
 
   const blankProject = () => ({
-    name: '', description: '', sprint_duration_days: 14, weekly_hours: '', daily_time: '', weekly_sync_day: '',
+    name: '', description: '', sprint_duration_days: 14, daily_time: '', weekly_sync_day: '',
     customer_id: '', rate: '',
   });
 
@@ -88,7 +88,6 @@ document.addEventListener('alpine:init', () => {
           name: this.draft.name,
           description: this.draft.description,
           sprint_duration_days: Number(this.draft.sprint_duration_days) || 0,
-          weekly_hours: Number(this.draft.weekly_hours) || 0,
           daily_time: this.draft.daily_time || null,
           weekly_sync_day: this.draft.weekly_sync_day || null,
         });
@@ -116,6 +115,8 @@ document.addEventListener('alpine:init', () => {
     invites: [],
     invite: { email: '', role: 'member' },
     lastLink: '',
+    editing: null, // a pessoa aberta no modal da jornada semanal
+    draft: { weekly_hours: '' },
     async init() {
       try {
         const [people, invites] = await Promise.all([
@@ -137,6 +138,28 @@ document.addEventListener('alpine:init', () => {
         toast(WTT.t(updated.role === 'admin' ? 'org.people.now_admin' : 'org.people.now_member', { name: person.name }));
         // Quem tirou o próprio admin perde o acesso a esta página.
         if (person.id === me.id && updated.role !== 'admin') location.href = '/';
+      });
+    },
+    // openEdit abre o modal com a jornada da pessoa. Ele edita um rascunho: nada vai
+    // para o servidor antes de Salvar. O papel muda direto na linha, pelo botão.
+    openEdit(person) {
+      this.editing = person;
+      this.draft = { weekly_hours: person.weekly_hours || '' };
+      this.errors.edit = '';
+      Alpine.store('modal').open('person-edit', WTT.t('org.people.edit_title'), () => !this.pending);
+    },
+    savePerson() {
+      return this.run('edit', async () => {
+        const person = this.editing;
+        const text = String(this.draft.weekly_hours).trim();
+        const hours = text === '' ? 0 : Number(text);
+        if (!Number.isInteger(hours) || hours < 0 || hours > 168) throw new Error(WTT.t('errors.person.invalid_week_hours'));
+        if (hours !== (person.weekly_hours || 0)) {
+          const updated = await api('PATCH', '/api/persons/' + person.id + '/weekly-hours', { weekly_hours: hours });
+          person.weekly_hours = updated.weekly_hours;
+        }
+        toast(WTT.t('org.people.hours_saved', { name: person.name }));
+        Alpine.store('modal').close();
       });
     },
     // openInvite abre o modal de adicionar colaborador, sempre com o formulário zerado.
@@ -298,7 +321,10 @@ document.addEventListener('alpine:init', () => {
     password: { current: '', next: '' },
     rates: [],
     ratesLoaded: false,
+    weeklyHours: undefined, // a jornada da pessoa; null quando nenhum admin informou
     async init() {
+      // A jornada é só para ler: sem ela, o cartão deixa de mostrar a linha.
+      api('GET', '/api/persons/' + me.id).then((p) => { this.weeklyHours = p.weekly_hours; }).catch(() => {});
       try {
         this.rates = (await api('GET', '/api/persons/' + me.id + '/allocations')) || [];
       } catch (e) {

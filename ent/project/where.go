@@ -86,11 +86,6 @@ func SprintDurationDays(v int) predicate.Project {
 	return predicate.Project(sql.FieldEQ(FieldSprintDurationDays, v))
 }
 
-// WeeklyHours applies equality check predicate on the "weekly_hours" field. It's identical to WeeklyHoursEQ.
-func WeeklyHours(v int) predicate.Project {
-	return predicate.Project(sql.FieldEQ(FieldWeeklyHours, v))
-}
-
 // DailyTime applies equality check predicate on the "daily_time" field. It's identical to DailyTimeEQ.
 func DailyTime(v string) predicate.Project {
 	return predicate.Project(sql.FieldEQ(FieldDailyTime, v))
@@ -464,56 +459,6 @@ func SprintDurationDaysLT(v int) predicate.Project {
 // SprintDurationDaysLTE applies the LTE predicate on the "sprint_duration_days" field.
 func SprintDurationDaysLTE(v int) predicate.Project {
 	return predicate.Project(sql.FieldLTE(FieldSprintDurationDays, v))
-}
-
-// WeeklyHoursEQ applies the EQ predicate on the "weekly_hours" field.
-func WeeklyHoursEQ(v int) predicate.Project {
-	return predicate.Project(sql.FieldEQ(FieldWeeklyHours, v))
-}
-
-// WeeklyHoursNEQ applies the NEQ predicate on the "weekly_hours" field.
-func WeeklyHoursNEQ(v int) predicate.Project {
-	return predicate.Project(sql.FieldNEQ(FieldWeeklyHours, v))
-}
-
-// WeeklyHoursIn applies the In predicate on the "weekly_hours" field.
-func WeeklyHoursIn(vs ...int) predicate.Project {
-	return predicate.Project(sql.FieldIn(FieldWeeklyHours, vs...))
-}
-
-// WeeklyHoursNotIn applies the NotIn predicate on the "weekly_hours" field.
-func WeeklyHoursNotIn(vs ...int) predicate.Project {
-	return predicate.Project(sql.FieldNotIn(FieldWeeklyHours, vs...))
-}
-
-// WeeklyHoursGT applies the GT predicate on the "weekly_hours" field.
-func WeeklyHoursGT(v int) predicate.Project {
-	return predicate.Project(sql.FieldGT(FieldWeeklyHours, v))
-}
-
-// WeeklyHoursGTE applies the GTE predicate on the "weekly_hours" field.
-func WeeklyHoursGTE(v int) predicate.Project {
-	return predicate.Project(sql.FieldGTE(FieldWeeklyHours, v))
-}
-
-// WeeklyHoursLT applies the LT predicate on the "weekly_hours" field.
-func WeeklyHoursLT(v int) predicate.Project {
-	return predicate.Project(sql.FieldLT(FieldWeeklyHours, v))
-}
-
-// WeeklyHoursLTE applies the LTE predicate on the "weekly_hours" field.
-func WeeklyHoursLTE(v int) predicate.Project {
-	return predicate.Project(sql.FieldLTE(FieldWeeklyHours, v))
-}
-
-// WeeklyHoursIsNil applies the IsNil predicate on the "weekly_hours" field.
-func WeeklyHoursIsNil() predicate.Project {
-	return predicate.Project(sql.FieldIsNull(FieldWeeklyHours))
-}
-
-// WeeklyHoursNotNil applies the NotNil predicate on the "weekly_hours" field.
-func WeeklyHoursNotNil() predicate.Project {
-	return predicate.Project(sql.FieldNotNull(FieldWeeklyHours))
 }
 
 // DailyTimeEQ applies the EQ predicate on the "daily_time" field.

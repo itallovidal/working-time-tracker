@@ -156,6 +156,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `person.invalid_email` | 400 | — | `informe um email válido` | `enter a valid email` |
 | `person.invalid_organization` | 400 | — | `organização inválida` | `invalid organization` |
 | `person.invalid_role` | 400 | — | `papel inválido: use admin ou member` | `invalid role: use admin or member` |
+| `person.invalid_week_hours` | 400 | — | `a jornada semanal deve ficar entre 1 e 168 horas` | `the weekly hours must be between 1 and 168` |
 | `person.last_admin` | 400 | — | `a organização precisa de pelo menos um admin` | `the organization needs at least one admin` |
 | `person.name_required` | 400 | — | `informe o nome` | `enter the name` |
 | `person.not_found` | 404 | — | `pessoa não encontrada` | `person not found` |
@@ -169,7 +170,6 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `project.invalid_daily_time` | 400 | — | `o horário da daily deve estar no formato HH:MM, por exemplo 09:30` | `the daily time must use the HH:MM format, for example 09:30` |
 | `project.invalid_organization` | 400 | — | `organização inválida` | `invalid organization` |
 | `project.invalid_sprint` | 400 | — | `a sprint precisa ter entre 1 e 90 dias` | `the sprint must be between 1 and 90 days long` |
-| `project.invalid_week_hours` | 400 | — | `a jornada semanal deve ficar entre 1 e 168 horas` | `the weekly hours must be between 1 and 168` |
 | `project.invalid_weekday` | 400 | — | `dia da weekly inválido: use monday, tuesday, wednesday, thursday, friday, saturday ou sunday` | `invalid weekly day: use monday, tuesday, wednesday, thursday, friday, saturday or sunday` |
 | `project.name_required` | 400 | — | `informe o nome do projeto` | `enter the project name` |
 | `project.not_found` | 404 | — | `projeto não encontrado` | `project not found` |

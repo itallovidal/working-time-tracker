@@ -19,6 +19,13 @@
         <input id="me-email" type="email" autocomplete="email" required x-model="profile.email">
         <span class="hint">{{.T "profile.personal.email_hint"}}</span>
       </div>
+      {{/* A jornada é combinada com a organização: a pessoa lê, e um admin altera. */}}
+      <dl class="facts" x-cloak x-show="weeklyHours !== undefined">
+        <div class="fact">
+          <dt>{{.T "profile.weekly_hours"}}</dt>
+          <dd :class="!weeklyHours && 'muted'" x-text="WTT.fmt.weeklyHours(weeklyHours) || $t('labels.weekly_hours_none')"></dd>
+        </div>
+      </dl>
       <p class="form-error" x-show="errors.profile" x-text="errors.profile" role="alert"></p>
       <div class="row row-end"><button type="submit" class="btn" :disabled="pending">{{.T "profile.personal.submit"}}</button></div>
     </form>

@@ -32,8 +32,6 @@ type Project struct {
 	GitlabRepoURL *string `json:"gitlab_repo_url,omitempty"`
 	// SprintDurationDays holds the value of the "sprint_duration_days" field.
 	SprintDurationDays int `json:"sprint_duration_days,omitempty"`
-	// WeeklyHours holds the value of the "weekly_hours" field.
-	WeeklyHours *int `json:"weekly_hours,omitempty"`
 	// DailyTime holds the value of the "daily_time" field.
 	DailyTime *string `json:"daily_time,omitempty"`
 	// WeeklySyncDay holds the value of the "weekly_sync_day" field.
@@ -134,7 +132,7 @@ func (*Project) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case project.FieldCustomerID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case project.FieldSprintDurationDays, project.FieldWeeklyHours, project.FieldBillRateCents:
+		case project.FieldSprintDurationDays, project.FieldBillRateCents:
 			values[i] = new(sql.NullInt64)
 		case project.FieldName, project.FieldDescription, project.FieldGithubRepoURL, project.FieldGitlabRepoURL, project.FieldDailyTime, project.FieldWeeklySyncDay:
 			values[i] = new(sql.NullString)
@@ -200,13 +198,6 @@ func (_m *Project) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field sprint_duration_days", values[i])
 			} else if value.Valid {
 				_m.SprintDurationDays = int(value.Int64)
-			}
-		case project.FieldWeeklyHours:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field weekly_hours", values[i])
-			} else if value.Valid {
-				_m.WeeklyHours = new(int)
-				*_m.WeeklyHours = int(value.Int64)
 			}
 		case project.FieldDailyTime:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -329,11 +320,6 @@ func (_m *Project) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("sprint_duration_days=")
 	builder.WriteString(fmt.Sprintf("%v", _m.SprintDurationDays))
-	builder.WriteString(", ")
-	if v := _m.WeeklyHours; v != nil {
-		builder.WriteString("weekly_hours=")
-		builder.WriteString(fmt.Sprintf("%v", *v))
-	}
 	builder.WriteString(", ")
 	if v := _m.DailyTime; v != nil {
 		builder.WriteString("daily_time=")

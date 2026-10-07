@@ -76,6 +76,11 @@ func PasswordHash(v string) predicate.Person {
 	return predicate.Person(sql.FieldEQ(FieldPasswordHash, v))
 }
 
+// WeeklyHours applies equality check predicate on the "weekly_hours" field. It's identical to WeeklyHoursEQ.
+func WeeklyHours(v int) predicate.Person {
+	return predicate.Person(sql.FieldEQ(FieldWeeklyHours, v))
+}
+
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.Person {
 	return predicate.Person(sql.FieldEQ(FieldCreatedAt, v))
@@ -324,6 +329,56 @@ func RoleIn(vs ...Role) predicate.Person {
 // RoleNotIn applies the NotIn predicate on the "role" field.
 func RoleNotIn(vs ...Role) predicate.Person {
 	return predicate.Person(sql.FieldNotIn(FieldRole, vs...))
+}
+
+// WeeklyHoursEQ applies the EQ predicate on the "weekly_hours" field.
+func WeeklyHoursEQ(v int) predicate.Person {
+	return predicate.Person(sql.FieldEQ(FieldWeeklyHours, v))
+}
+
+// WeeklyHoursNEQ applies the NEQ predicate on the "weekly_hours" field.
+func WeeklyHoursNEQ(v int) predicate.Person {
+	return predicate.Person(sql.FieldNEQ(FieldWeeklyHours, v))
+}
+
+// WeeklyHoursIn applies the In predicate on the "weekly_hours" field.
+func WeeklyHoursIn(vs ...int) predicate.Person {
+	return predicate.Person(sql.FieldIn(FieldWeeklyHours, vs...))
+}
+
+// WeeklyHoursNotIn applies the NotIn predicate on the "weekly_hours" field.
+func WeeklyHoursNotIn(vs ...int) predicate.Person {
+	return predicate.Person(sql.FieldNotIn(FieldWeeklyHours, vs...))
+}
+
+// WeeklyHoursGT applies the GT predicate on the "weekly_hours" field.
+func WeeklyHoursGT(v int) predicate.Person {
+	return predicate.Person(sql.FieldGT(FieldWeeklyHours, v))
+}
+
+// WeeklyHoursGTE applies the GTE predicate on the "weekly_hours" field.
+func WeeklyHoursGTE(v int) predicate.Person {
+	return predicate.Person(sql.FieldGTE(FieldWeeklyHours, v))
+}
+
+// WeeklyHoursLT applies the LT predicate on the "weekly_hours" field.
+func WeeklyHoursLT(v int) predicate.Person {
+	return predicate.Person(sql.FieldLT(FieldWeeklyHours, v))
+}
+
+// WeeklyHoursLTE applies the LTE predicate on the "weekly_hours" field.
+func WeeklyHoursLTE(v int) predicate.Person {
+	return predicate.Person(sql.FieldLTE(FieldWeeklyHours, v))
+}
+
+// WeeklyHoursIsNil applies the IsNil predicate on the "weekly_hours" field.
+func WeeklyHoursIsNil() predicate.Person {
+	return predicate.Person(sql.FieldIsNull(FieldWeeklyHours))
+}
+
+// WeeklyHoursNotNil applies the NotNil predicate on the "weekly_hours" field.
+func WeeklyHoursNotNil() predicate.Person {
+	return predicate.Person(sql.FieldNotNull(FieldWeeklyHours))
 }
 
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.

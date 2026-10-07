@@ -20,7 +20,7 @@ func TestService_Create(t *testing.T) {
 	svc := project.NewService(project.NewStore(testClient))
 
 	org, _ := orgSvc.Create("Test Org")
-	proj, err := svc.Create(org.ID.String(), "Project A", "desc", 0, nil, nil, nil)
+	proj, err := svc.Create(org.ID.String(), "Project A", "desc", 0, nil, nil)
 	if err != nil {
 		t.Fatalf("create failed: %v", err)
 	}
@@ -38,7 +38,7 @@ func TestService_Create_EmptyName(t *testing.T) {
 	svc := project.NewService(project.NewStore(testClient))
 
 	org, _ := orgSvc.Create("Test Org")
-	_, err := svc.Create(org.ID.String(), "", "desc", 0, nil, nil, nil)
+	_, err := svc.Create(org.ID.String(), "", "desc", 0, nil, nil)
 	if err == nil {
 		t.Fatal("expected error for empty name, got nil")
 	}
@@ -50,71 +50,12 @@ func TestService_Create_DefaultSprintDuration(t *testing.T) {
 	svc := project.NewService(project.NewStore(testClient))
 
 	org, _ := orgSvc.Create("Test Org")
-	proj, err := svc.Create(org.ID.String(), "Project A", "", 0, nil, nil, nil)
+	proj, err := svc.Create(org.ID.String(), "Project A", "", 0, nil, nil)
 	if err != nil {
 		t.Fatalf("create failed: %v", err)
 	}
 	if proj.SprintDurationDays != 14 {
 		t.Errorf("sprint_duration_days = %d, want 14", proj.SprintDurationDays)
-	}
-}
-
-// A jornada semanal é do projeto: dois projetos da mesma organização podem ter
-// jornadas diferentes, e ela é opcional.
-func TestService_WeeklyHours(t *testing.T) {
-	cleanup(t)
-	orgSvc := organization.NewService(organization.NewStore(testClient))
-	svc := project.NewService(project.NewStore(testClient))
-	org, _ := orgSvc.Create("Test Org")
-	orgID := org.ID.String()
-
-	forty, twenty, zero := 40, 20, 0
-	full, err := svc.Create(orgID, "Integral", "", 0, nil, nil, &forty)
-	if err != nil {
-		t.Fatalf("create failed: %v", err)
-	}
-	half, _ := svc.Create(orgID, "Meio período", "", 0, nil, nil, &twenty)
-	none, _ := svc.Create(orgID, "Sem jornada", "", 0, nil, nil, nil)
-
-	hours := func(id string) *int {
-		t.Helper()
-		p, err := svc.Get(id)
-		if err != nil {
-			t.Fatalf("get failed: %v", err)
-		}
-		return p.WeeklyHours
-	}
-	if h := hours(full.ID.String()); h == nil || *h != 40 {
-		t.Errorf("weekly_hours = %v, want 40", h)
-	}
-	if h := hours(half.ID.String()); h == nil || *h != 20 {
-		t.Errorf("weekly_hours = %v, want 20", h)
-	}
-	if h := hours(none.ID.String()); h != nil {
-		t.Errorf("weekly_hours = %v, want none", *h)
-	}
-
-	// No Update, nil mantém e zero apaga.
-	if _, err := svc.Update(full.ID.String(), "Integral", "", 0, nil, nil, nil); err != nil {
-		t.Fatalf("update failed: %v", err)
-	}
-	if h := hours(full.ID.String()); h == nil || *h != 40 {
-		t.Errorf("weekly_hours after an update without it = %v, want 40", h)
-	}
-	if _, err := svc.Update(full.ID.String(), "Integral", "", 0, nil, nil, &zero); err != nil {
-		t.Fatalf("clearing failed: %v", err)
-	}
-	if h := hours(full.ID.String()); h != nil {
-		t.Errorf("weekly_hours after clearing = %v, want none", *h)
-	}
-
-	for _, bad := range []int{-1, 169} {
-		if _, err := svc.Create(orgID, "P", "", 0, nil, nil, &bad); err != project.ErrInvalidWeekHours {
-			t.Errorf("create with %d hours: err = %v, want ErrInvalidWeekHours", bad, err)
-		}
-		if _, err := svc.Update(half.ID.String(), "P", "", 0, nil, nil, &bad); err != project.ErrInvalidWeekHours {
-			t.Errorf("update with %d hours: err = %v, want ErrInvalidWeekHours", bad, err)
-		}
 	}
 }
 
@@ -124,7 +65,7 @@ func TestService_Create_ExplicitSprintDuration(t *testing.T) {
 	svc := project.NewService(project.NewStore(testClient))
 
 	org, _ := orgSvc.Create("Test Org")
-	proj, err := svc.Create(org.ID.String(), "Project A", "", 21, nil, nil, nil)
+	proj, err := svc.Create(org.ID.String(), "Project A", "", 21, nil, nil)
 	if err != nil {
 		t.Fatalf("create failed: %v", err)
 	}
@@ -139,8 +80,8 @@ func TestService_Update(t *testing.T) {
 	svc := project.NewService(project.NewStore(testClient))
 
 	org, _ := orgSvc.Create("Test Org")
-	created, _ := svc.Create(org.ID.String(), "Old Name", "", 0, nil, nil, nil)
-	updated, err := svc.Update(created.ID.String(), "New Name", "new desc", 10, nil, nil, nil)
+	created, _ := svc.Create(org.ID.String(), "Old Name", "", 0, nil, nil)
+	updated, err := svc.Update(created.ID.String(), "New Name", "new desc", 10, nil, nil)
 	if err != nil {
 		t.Fatalf("update failed: %v", err)
 	}
@@ -161,7 +102,7 @@ func TestService_Delete(t *testing.T) {
 	svc := project.NewService(project.NewStore(testClient))
 
 	org, _ := orgSvc.Create("Test Org")
-	proj, _ := svc.Create(org.ID.String(), "Project A", "", 0, nil, nil, nil)
+	proj, _ := svc.Create(org.ID.String(), "Project A", "", 0, nil, nil)
 
 	err := svc.Delete(proj.ID.String())
 	if err != nil {
@@ -183,7 +124,7 @@ func TestService_OrgDeletionBlockedByProjects(t *testing.T) {
 	projSvc := project.NewService(project.NewStore(testClient))
 
 	org, _ := orgSvc.Create("Test Org")
-	projSvc.Create(org.ID.String(), "Project A", "", 0, nil, nil, nil)
+	projSvc.Create(org.ID.String(), "Project A", "", 0, nil, nil)
 
 	err := orgSvc.Delete(org.ID.String())
 	if err == nil {
@@ -199,7 +140,7 @@ func TestService_Delete_CascadesChildren(t *testing.T) {
 	svc := project.NewService(project.NewStore(testClient))
 
 	org, _ := orgSvc.Create("Org")
-	proj, _ := svc.Create(org.ID.String(), "Projeto", "", 0, nil, nil, nil)
+	proj, _ := svc.Create(org.ID.String(), "Projeto", "", 0, nil, nil)
 
 	p := testClient.Person.Create().SetName("Ana").SetEmail("ana@test.com").SetOrganizationID(org.ID).SaveX(ctx)
 	tm := testClient.Team.Create().SetName("Time").SetProjectID(proj.ID).SaveX(ctx)
@@ -239,7 +180,7 @@ func TestService_Update_OptionalScheduleFields(t *testing.T) {
 
 	org, _ := orgSvc.Create("Org")
 	daily, weekly := "09:30", "Friday"
-	proj, err := svc.Create(org.ID.String(), "Projeto", "", 0, &daily, &weekly, nil)
+	proj, err := svc.Create(org.ID.String(), "Projeto", "", 0, &daily, &weekly)
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
@@ -247,7 +188,7 @@ func TestService_Update_OptionalScheduleFields(t *testing.T) {
 		t.Errorf("weekly_sync_day = %v, want friday", proj.WeeklySyncDay)
 	}
 
-	kept, err := svc.Update(proj.ID.String(), "Projeto", "", 0, nil, nil, nil)
+	kept, err := svc.Update(proj.ID.String(), "Projeto", "", 0, nil, nil)
 	if err != nil {
 		t.Fatalf("update keeping fields: %v", err)
 	}
@@ -256,7 +197,7 @@ func TestService_Update_OptionalScheduleFields(t *testing.T) {
 	}
 
 	empty := ""
-	cleared, err := svc.Update(proj.ID.String(), "Projeto", "", 0, &empty, &empty, nil)
+	cleared, err := svc.Update(proj.ID.String(), "Projeto", "", 0, &empty, &empty)
 	if err != nil {
 		t.Fatalf("update clearing fields: %v", err)
 	}
@@ -273,13 +214,13 @@ func TestService_Create_InvalidSchedule(t *testing.T) {
 	org, _ := orgSvc.Create("Org")
 
 	badTime, badDay := "25:00", "someday"
-	if _, err := svc.Create(org.ID.String(), "P", "", 0, &badTime, nil, nil); err != project.ErrInvalidDailyTime {
+	if _, err := svc.Create(org.ID.String(), "P", "", 0, &badTime, nil); err != project.ErrInvalidDailyTime {
 		t.Errorf("invalid daily time: err = %v", err)
 	}
-	if _, err := svc.Create(org.ID.String(), "P", "", 0, nil, &badDay, nil); err != project.ErrInvalidWeekday {
+	if _, err := svc.Create(org.ID.String(), "P", "", 0, nil, &badDay); err != project.ErrInvalidWeekday {
 		t.Errorf("invalid weekday: err = %v", err)
 	}
-	if _, err := svc.Create(org.ID.String(), "P", "", 120, nil, nil, nil); err != project.ErrInvalidSprint {
+	if _, err := svc.Create(org.ID.String(), "P", "", 120, nil, nil); err != project.ErrInvalidSprint {
 		t.Errorf("invalid sprint: err = %v", err)
 	}
 }
@@ -292,7 +233,7 @@ func TestService_Billing(t *testing.T) {
 	svc := project.NewService(project.NewStore(testClient))
 	org, _ := orgSvc.Create("Org")
 	other, _ := orgSvc.Create("Outra")
-	proj, _ := svc.Create(org.ID.String(), "Projeto X", "", 0, nil, nil, nil)
+	proj, _ := svc.Create(org.ID.String(), "Projeto X", "", 0, nil, nil)
 	id := proj.ID.String()
 
 	ctx := context.Background()
@@ -318,7 +259,7 @@ func TestService_Billing(t *testing.T) {
 		t.Errorf("project customer = %+v, want Empresa A", got.Customer)
 	}
 	// Editar o projeto não mexe no cliente nem no valor.
-	if _, err := svc.Update(id, "Projeto X2", "", 0, nil, nil, nil); err != nil {
+	if _, err := svc.Update(id, "Projeto X2", "", 0, nil, nil); err != nil {
 		t.Fatalf("update: %v", err)
 	}
 	if after, _ := svc.Billing(id); after.Customer == nil || after.BillRateCents == nil || *after.BillRateCents != 10000 {
