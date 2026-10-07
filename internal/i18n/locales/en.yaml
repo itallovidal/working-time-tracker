@@ -42,6 +42,7 @@ titles:
   org_customers: Customers · Organization
   org_people: Collaborators · Organization
   overview: Management · Overview
+  my_overview: Overview
   tasks: Task board
   time: Time tracking
   teams: Management · Collaborators
@@ -356,8 +357,8 @@ time:
   other_project: This session belongs to another project. Stop it before starting a task from here.
   stop: Stop
   stopped: Stopped
-  no_tasks: This project has no tasks yet.
-  create_task: Create one to clock in.
+  no_tasks: You have no tasks on this project.
+  create_task: Pick an available one on the task board.
   task: Task
   start: Start
   yours: Your time on this project
@@ -367,7 +368,6 @@ time:
   your_rate_after: per hour. Only you and the admins can see it.
   sessions: Sessions
   sessions_intro_admin: Everyone's time on this project.
-  sessions_intro_member: The time of whoever works on this project.
   totals_follow: The totals follow the filters.
   person_filter: Filter by person
   all_people: All people
@@ -386,7 +386,7 @@ time:
   cost: Cost
   revenue: Revenue
   margin: Margin (revenue minus cost)
-  your_value: Your rate
+  your_value: Your earnings
   empty: No sessions
   empty_filtered: Nothing matches these filters.
   empty_text: When someone clocks in on this project, the session shows up here.
@@ -396,6 +396,15 @@ time:
   col_end: End
   col_duration: Duration
   open: in progress
+  my_tasks: Your tasks
+  sessions_intro_own: Your sessions on this project.
+  empty_own: When you clock in on this project, the session shows up here.
+  pager: Session pages
+  prev: Previous
+  next: Next
+  page_summary:
+    one: "Page {{.page}} of {{.pages}} · {{.count}} session"
+    other: "Page {{.page}} of {{.pages}} · {{.count}} sessions"
 
 integrations:
   intro: Link tasks to GitHub or GitLab issues and to Trello cards. The token is validated on the platform and stored encrypted.
@@ -656,16 +665,6 @@ overview:
   bill_rate: Rate billed per hour
   no_bill_rate: No billed rate
   tasks_note: Overdue is a task past its deadline. The revenue adds up the billed rate that applied when each clock-in was made.
-  by_person: Hours per person
-  by_person_intro: Who tracked time on this project, from whoever worked the most to the least. The rows add up to the totals at the top.
-  nobody_title: Nobody has clocked in yet
-  nobody_text: When someone tracks time on this project, each person's hours, cost and revenue show up here.
-  col_hours: Hours
-  left: left the project
-  pager: Hours per person pages
-  person_summary:
-    one: "Page {{.page}} of {{.pages}} · {{.count}} person"
-    other: "Page {{.page}} of {{.pages}} · {{.count}} people"
 
 labels:
   not_informed: Not provided

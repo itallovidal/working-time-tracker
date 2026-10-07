@@ -52,6 +52,7 @@ titles:
   org_customers: Clientes · Organização
   org_people: Colaboradores · Organização
   overview: Gestão · Visão geral
+  my_overview: Visão geral
   tasks: Quadro de tarefas
   time: Ponto
   teams: Gestão · Colaboradores
@@ -366,8 +367,8 @@ time:
   other_project: Esta sessão é de outro projeto. Pare antes de iniciar uma tarefa daqui.
   stop: Parar
   stopped: Parado
-  no_tasks: Este projeto ainda não tem tarefas.
-  create_task: Crie uma para bater o ponto.
+  no_tasks: Você não tem tarefas neste projeto.
+  create_task: Pegue uma disponível no quadro de tarefas.
   task: Tarefa
   start: Iniciar
   yours: Seu tempo neste projeto
@@ -377,7 +378,6 @@ time:
   your_rate_after: por hora. Só você e os admins veem.
   sessions: Sessões
   sessions_intro_admin: O ponto de todo mundo neste projeto.
-  sessions_intro_member: O ponto de quem trabalha neste projeto.
   totals_follow: Os totais acompanham os filtros.
   person_filter: Filtrar por pessoa
   all_people: Todas as pessoas
@@ -406,6 +406,15 @@ time:
   col_end: Fim
   col_duration: Duração
   open: em andamento
+  my_tasks: Suas tarefas
+  sessions_intro_own: As suas sessões neste projeto.
+  empty_own: Quando você bater o ponto neste projeto, a sessão aparece aqui.
+  pager: Páginas das sessões
+  prev: Anterior
+  next: Próxima
+  page_summary:
+    one: "Página {{.page}} de {{.pages}} · {{.count}} sessão"
+    other: "Página {{.page}} de {{.pages}} · {{.count}} sessões"
 
 integrations:
   intro: Ligue tarefas a issues do GitHub ou do GitLab e a cartões do Trello. O token é validado na plataforma e guardado criptografado.
@@ -666,16 +675,6 @@ overview:
   bill_rate: Valor cobrado por hora
   no_bill_rate: Sem valor cobrado
   tasks_note: Atrasada é a tarefa com o prazo vencido. A receita soma o valor cobrado que valia quando cada ponto foi batido.
-  by_person: Horas por pessoa
-  by_person_intro: Quem registrou ponto neste projeto, de quem mais trabalhou para quem menos. A soma das linhas dá os totais do topo.
-  nobody_title: Ninguém bateu ponto ainda
-  nobody_text: Quando alguém registrar tempo neste projeto, as horas, o custo e a receita de cada pessoa aparecem aqui.
-  col_hours: Horas
-  left: saiu do projeto
-  pager: Páginas das horas por pessoa
-  person_summary:
-    one: "Página {{.page}} de {{.pages}} · {{.count}} pessoa"
-    other: "Página {{.page}} de {{.pages}} · {{.count}} pessoas"
 
 labels:
   not_informed: Não informado

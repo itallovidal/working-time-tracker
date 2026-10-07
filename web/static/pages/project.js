@@ -104,39 +104,108 @@ document.addEventListener('alpine:init', () => {
     }, 0);
   }
 
-  // projectOverview é a Visão geral, só de admins: os números do projeto lidos de
-  // uma vez em /overview. É uma fotografia do instante em generated_at, sem
+  // sessionList é o que as telas de sessões têm em comum: a lista, os filtros de
+  // pessoa, data e tarefa, os totais, que seguem os filtros, e as páginas. Quem usa
+  // põe as sessões em this.sessions e chama watchSessionFilters() no init.
+  const SESSIONS_PER_PAGE = 10;
+  const sessionList = () => ({
+    sessions: [],
+    filter: { task: '', person: '', date: '' }, // date é um dia, como "2026-10-06"
+    page: 1,
+    // Um filtro novo volta para a primeira página.
+    watchSessionFilters() {
+      this.$watch('filter', () => { this.page = 1; });
+    },
+    people() {
+      const seen = new Map();
+      this.sessions.forEach((s) => { if (s.person && !seen.has(s.person.id)) seen.set(s.person.id, s.person); });
+      return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name, WTT.lang));
+    },
+    // As tarefas do filtro são as que aparecem nas sessões: uma sessão pode ser de
+    // uma tarefa que já não é de quem olha.
+    sessionTasks() {
+      const seen = new Map();
+      this.sessions.forEach((s) => { if (s.task && !seen.has(s.task.id)) seen.set(s.task.id, s.task); });
+      return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name, WTT.lang));
+    },
+    // filtered aplica os filtros da lista. A data pega as sessões iniciadas
+    // naquele dia, no fuso de quem está olhando.
+    filtered() {
+      return this.sessions.filter((s) =>
+        (!this.filter.task || s.task_id === this.filter.task) &&
+        (!this.filter.person || s.person_id === this.filter.person) &&
+        (!this.filter.date || WTT.fmt.dateInput(s.start_at) === this.filter.date));
+    },
+    hasFilters() {
+      return !!(this.filter.task || this.filter.person || this.filter.date);
+    },
+    clearFilters() {
+      this.filter = { task: '', person: '', date: '' };
+    },
+    sessionPages() {
+      return Math.max(1, Math.ceil(this.filtered().length / SESSIONS_PER_PAGE));
+    },
+    sessionRows() {
+      const start = (Math.min(this.page, this.sessionPages()) - 1) * SESSIONS_PER_PAGE;
+      return this.filtered().slice(start, start + SESSIONS_PER_PAGE);
+    },
+    sessionSummary() {
+      return WTT.t('time.page_summary', { page: Math.min(this.page, this.sessionPages()), pages: this.sessionPages(), count: this.filtered().length });
+    },
+    filteredTotal() {
+      return this.filtered().reduce((sum, s) => sum + clock().elapsed(s), 0);
+    },
+    // mine soma o tempo da pessoa logada hoje ou nesta semana, e earned, quanto
+    // ela ganhou nesse tempo.
+    mine(period) {
+      return secondsWithin(this.sessions.filter((s) => s.person_id === me.id), periodStart(period));
+    },
+    earned(period) {
+      return amountWithin(this.sessions.filter((s) => s.person_id === me.id), periodStart(period));
+    },
+    // amount é o valor de uma sessão: 'pay' é o que a pessoa recebe e 'bill', o
+    // que o cliente paga. A sessão fechada usa o valor que o servidor calculou; a
+    // aberta acompanha o cronômetro. null quando não há valor ou ele não é visível.
+    amount(s, kind) {
+      const rate = s[kind + '_rate_cents'];
+      if (rate === null || rate === undefined) return null;
+      return s.end_at ? s[kind + '_amount_cents'] : Math.round(clock().elapsed(s) * rate / 3600);
+    },
+    filteredAmount(kind) {
+      const values = this.filtered().map((s) => this.amount(s, kind)).filter((v) => v !== null && v !== undefined);
+      return values.length === 0 ? null : values.reduce((sum, v) => sum + v, 0);
+    },
+    filteredMargin() {
+      const bill = this.filteredAmount('bill');
+      return bill === null ? null : bill - (this.filteredAmount('pay') || 0);
+    },
+  });
+
+  // projectOverview é a Visão geral da Gestão, só de admins: os números do projeto lidos de
+  // uma vez em /overview, e as sessões de todos. É uma fotografia do instante em generated_at, sem
   // relógio correndo; o botão Atualizar e um ponto batido nesta aba releem tudo.
   Alpine.data('projectOverview', () => ({
     ...form(),
+    ...sessionList(),
     loading: true,
     data: null,
-    // "Horas por pessoa" mostra cinco por vez. A lista já vem inteira, então as
-    // páginas são cortadas aqui.
-    personPage: 1,
-    perPage: 5,
     async init() {
+      this.watchSessionFilters();
       await this.load();
       this.loading = false;
       window.addEventListener('wtt:sessions-changed', () => this.load());
     },
+    // Os números do projeto e as sessões de todos vêm juntos, para a lista e os
+    // totais da tela serem da mesma hora.
     load() {
       return this.run('load', async () => {
-        this.data = await api('GET', '/api/projects/' + project.id + '/overview');
-        // Uma releitura pode encolher a lista e deixar a página em uso sem linhas.
-        this.personPage = Math.min(this.personPage, this.personPages());
+        const [data, sessions] = await Promise.all([
+          api('GET', '/api/projects/' + project.id + '/overview'),
+          api('GET', '/api/projects/' + project.id + '/work-sessions'),
+        ]);
+        this.data = data;
+        this.sessions = sessions || [];
       });
-    },
-    personPages() {
-      return Math.max(1, Math.ceil(this.data.by_person.length / this.perPage));
-    },
-    personRows() {
-      const start = (this.personPage - 1) * this.perPage;
-      return this.data.by_person.slice(start, start + this.perPage);
-    },
-    personSummary() {
-      const n = this.data.by_person.length;
-      return WTT.t('overview.person_summary', { page: this.personPage, pages: this.personPages(), count: n });
     },
     // marginShare é a margem como parte da receita, em por cento inteiro; null
     // quando não há receita.
@@ -517,29 +586,23 @@ document.addEventListener('alpine:init', () => {
     },
   }));
 
-  Alpine.data('timeTracking', () => ({
+  // A Visão geral de fora é a de quem está olhando, admin ou não: o seu tempo neste
+  // projeto e as suas sessões, que o servidor já limita a quem pede.
+  Alpine.data('projectMyOverview', () => ({
     ...form(),
-    project,
+    ...sessionList(),
     loading: true,
-    tasks: [],
-    sessions: [],
-    taskId: '',
     myRate: null, // quanto a pessoa logada recebe por hora aqui; null se ainda não tem valor
-    filter: { task: '', person: '', date: '' }, // date é um dia, como "2026-10-06"
     async init() {
+      this.watchSessionFilters();
       try {
-        const [tasks, sessions, allocations] = await Promise.all([
-          api('GET', '/api/projects/' + project.id + '/tasks'),
-          api('GET', '/api/projects/' + project.id + '/work-sessions'),
+        const [sessions, allocations] = await Promise.all([
+          api('GET', '/api/projects/' + project.id + '/work-sessions?person_id=' + me.id),
           api('GET', '/api/projects/' + project.id + '/allocations'),
         ]);
-        this.tasks = tasks || [];
         this.sessions = sessions || [];
         const own = (allocations || []).find((a) => a.person_id === me.id);
         this.myRate = own ? own.pay_rate_cents : null;
-        // Sugere uma tarefa da própria pessoa.
-        const mine = this.tasks.find((t) => t.assignee_id === me.id) || this.tasks[0];
-        this.taskId = mine ? mine.id : '';
       } catch (e) {
         this.errors.load = e.message;
       } finally {
@@ -549,63 +612,54 @@ document.addEventListener('alpine:init', () => {
     },
     async reloadSessions() {
       try {
-        this.sessions = (await api('GET', '/api/projects/' + project.id + '/work-sessions')) || [];
+        this.sessions = (await api('GET', '/api/projects/' + project.id + '/work-sessions?person_id=' + me.id)) || [];
       } catch (e) {
         this.errors.load = e.message;
+      }
+    },
+  }));
+
+  // O Ponto é o relógio e as tarefas em que a pessoa está mexendo: as que têm o
+  // nome dela. Pegar uma tarefa disponível é pelo quadro de tarefas.
+  Alpine.data('timeTracking', () => ({
+    ...form(),
+    project,
+    loading: true,
+    tasks: [], // só as tarefas da pessoa logada
+    taskId: '',
+    myRate: null, // quanto a pessoa logada recebe por hora aqui; null se ainda não tem valor
+    async init() {
+      try {
+        const [tasks, allocations] = await Promise.all([
+          api('GET', '/api/projects/' + project.id + '/tasks?assignee_id=' + me.id),
+          api('GET', '/api/projects/' + project.id + '/allocations'),
+        ]);
+        this.tasks = tasks || [];
+        const own = (allocations || []).find((a) => a.person_id === me.id);
+        this.myRate = own ? own.pay_rate_cents : null;
+        this.taskId = this.tasks.length ? this.tasks[0].id : '';
+      } catch (e) {
+        this.errors.load = e.message;
+      } finally {
+        this.loading = false;
       }
     },
     start() {
       return this.run('clock', () => clock().clockIn(project.id, this.taskId));
     },
+    startTask(t) {
+      this.taskId = t.id;
+      return this.start();
+    },
     stop() {
       return this.run('clock', () => clock().clockOut());
     },
-    people() {
-      const seen = new Map();
-      this.sessions.forEach((s) => { if (s.person && !seen.has(s.person.id)) seen.set(s.person.id, s.person); });
-      return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name, WTT.lang));
+    isRunning(t) {
+      const s = clock().session;
+      return !!s && s.task_id === t.id;
     },
-    // filtered aplica os filtros da lista. A data pega as sessões iniciadas
-    // naquele dia, no fuso de quem está olhando.
-    filtered() {
-      return this.sessions.filter((s) =>
-        (!this.filter.task || s.task_id === this.filter.task) &&
-        (!this.filter.person || s.person_id === this.filter.person) &&
-        (!this.filter.date || WTT.fmt.dateInput(s.start_at) === this.filter.date));
-    },
-    hasFilters() {
-      return !!(this.filter.task || this.filter.person || this.filter.date);
-    },
-    clearFilters() {
-      this.filter = { task: '', person: '', date: '' };
-    },
-    filteredTotal() {
-      return this.filtered().reduce((sum, s) => sum + clock().elapsed(s), 0);
-    },
-    // mine soma o tempo da pessoa logada hoje ou nesta semana, e earned, quanto
-    // ela ganhou nesse tempo.
-    mine(period) {
-      return secondsWithin(this.sessions.filter((s) => s.person_id === me.id), periodStart(period));
-    },
-    earned(period) {
-      return amountWithin(this.sessions.filter((s) => s.person_id === me.id), periodStart(period));
-    },
-    // amount é o valor de uma sessão: 'pay' é o que a pessoa recebe e 'bill', o
-    // que o cliente paga. A sessão fechada usa o valor que o servidor calculou; a
-    // aberta acompanha o cronômetro. null quando não há valor ou ele não é visível.
-    amount(s, kind) {
-      const rate = s[kind + '_rate_cents'];
-      if (rate === null || rate === undefined) return null;
-      return s.end_at ? s[kind + '_amount_cents'] : Math.round(clock().elapsed(s) * rate / 3600);
-    },
-    filteredAmount(kind) {
-      const values = this.filtered().map((s) => this.amount(s, kind)).filter((v) => v !== null && v !== undefined);
-      return values.length === 0 ? null : values.reduce((sum, v) => sum + v, 0);
-    },
-    filteredMargin() {
-      const bill = this.filteredAmount('bill');
-      return bill === null ? null : bill - (this.filteredAmount('pay') || 0);
-    },
+    deadlineClass: (t) => deadlineInfo(t.deadline).cls,
+    deadlineLabel: (t) => deadlineInfo(t.deadline).label,
   }));
 
   // A aba Configurações só mostra o projeto. Quem altera é o modal Editar projeto,

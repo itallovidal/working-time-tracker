@@ -131,7 +131,7 @@ func TestPages_ProjectOverviewTab(t *testing.T) {
 	for _, want := range []string{
 		"Projeto Alfa", `x-data="projectOverview"`, "Atualizar",
 		"Horas registradas", `<div class="k">Receita</div>`, `<div class="k">Custo</div>`, "Margem (receita menos custo)",
-		"<h2>Tempo de projeto</h2>", "<h2>Atividade</h2>", "<h2>Integrações</h2>", "<h2>Tarefas e cliente</h2>", "<h2>Horas por pessoa</h2>",
+		"<h2>Tempo de projeto</h2>", "<h2>Atividade</h2>", "<h2>Integrações</h2>", "<h2>Tarefas e cliente</h2>", "<h2>Sessões</h2>", `aria-label="Filtrar por pessoa"`, `aria-label="Filtrar por data"`, `aria-label="Filtrar por tarefa"`, "<h3>Totais</h3>", "<th>Pessoa</th>",
 		`href="/projects/` + projectID + `/tasks?due=overdue"`, `class="pager"`,
 		// Os tipos de integração vão no BOOT, para a lista mostrar o nome da plataforma.
 		`"integration_types"`,
@@ -172,7 +172,8 @@ func TestPages_ProjectOverviewTab(t *testing.T) {
 	}
 }
 
-// O projeto abre no Ponto para todos, e a raiz da Gestão leva à Visão geral dela.
+// O projeto abre na Visão geral de quem olha, para todos, e a raiz da Gestão leva
+// à Visão geral dela.
 // Os caminhos de antes da Gestão continuam levando às mesmas abas, com a query.
 func TestPages_ProjectOpensOnTheRightTab(t *testing.T) {
 	e := newServer(t)
@@ -183,7 +184,7 @@ func TestPages_ProjectOpensOnTheRightTab(t *testing.T) {
 
 	for who, session := range map[string]string{"admin": admin.session, "member": member.session} {
 		rec := do(e, "GET", prefix, "", session)
-		want := prefix + "/time-tracking"
+		want := prefix + "/overview"
 		if rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != want {
 			t.Errorf("%s GET /projects/:id = %d to %q, want 303 to %s", who, rec.Code, rec.Header().Get("Location"), want)
 		}
@@ -195,7 +196,6 @@ func TestPages_ProjectOpensOnTheRightTab(t *testing.T) {
 		t.Errorf("member GET the Gestão root = %d, want 404", rec.Code)
 	}
 	for old, want := range map[string]string{
-		"/overview":         "/management/overview",
 		"/teams?view=teams": "/management/teams?view=teams",
 		"/integrations":     "/management/integrations",
 		"/settings":         "/management/settings",

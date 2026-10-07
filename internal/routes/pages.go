@@ -34,6 +34,7 @@ func RegisterPages(e *echo.Echo, p *page.Handler, m *auth.Middleware) {
 
 	prj := m.RequireOrgPage(auth.KindProject, "projectId", p.NotFound)
 	g.GET("/projects/:projectId", p.Project, prj)
+	g.GET("/projects/:projectId/overview", p.MyOverview, prj)
 	g.GET("/projects/:projectId/tasks", p.Tasks, prj)
 	g.GET("/projects/:projectId/time-tracking", p.TimeTracking, prj)
 	// A Gestão é a área do projeto só de admins: quem não é recebe o 404.
@@ -43,7 +44,6 @@ func RegisterPages(e *echo.Echo, p *page.Handler, m *auth.Middleware) {
 	g.GET("/projects/:projectId/management/integrations", p.Integrations, prj, admin)
 	g.GET("/projects/:projectId/management/settings", p.ProjectSettings, prj, admin)
 	// Os caminhos de antes da Gestão continuam levando às mesmas abas.
-	g.GET("/projects/:projectId/overview", p.ToManagement("overview"), prj)
 	g.GET("/projects/:projectId/teams", p.ToManagement("teams"), prj)
 	g.GET("/projects/:projectId/integrations", p.ToManagement("integrations"), prj)
 	g.GET("/projects/:projectId/settings", p.ToManagement("settings"), prj)

@@ -14,6 +14,7 @@
   <a href="/projects/{{.Project.ID}}/management/settings" {{if eq .Tab "settings"}}aria-current="page"{{end}}>{{template "icon" "gear"}} {{.T "project.head.settings"}}</a>
   <a class="tabs-end" href="/projects/{{.Project.ID}}/time-tracking">{{template "icon" "arrow-left"}} {{.T "project.head.back"}}</a>
   {{else}}
+  <a href="/projects/{{.Project.ID}}/overview" {{if eq .Tab "overview"}}aria-current="page"{{end}}>{{template "icon" "gauge"}} {{.T "project.head.overview"}}</a>
   <a href="/projects/{{.Project.ID}}/tasks" {{if eq .Tab "tasks"}}aria-current="page"{{end}}>{{template "icon" "list-check"}} {{.T "project.head.tasks"}}</a>
   <a href="/projects/{{.Project.ID}}/time-tracking" {{if eq .Tab "time"}}aria-current="page"{{end}}>{{template "icon" "clock"}} {{.T "project.head.time"}}</a>
   {{if .IsAdmin}}<a class="tabs-end" href="/projects/{{.Project.ID}}/management/overview">{{template "icon" "sliders"}} {{.T "project.head.management"}}</a>{{end}}

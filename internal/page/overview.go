@@ -6,9 +6,16 @@ import (
 	"github.com/labstack/echo/v5"
 )
 
-// projectHome é a página em que o projeto abre, para todos: o Ponto.
+// projectHome é a página em que o projeto abre, para todos: a Visão geral de quem
+// está olhando.
 func projectHome() string {
-	return "time-tracking"
+	return "overview"
+}
+
+// MyOverview é a Visão geral de fora, a mesma tela para admin e membro: o seu
+// tempo neste projeto e as suas sessões.
+func (h *Handler) MyOverview(c *echo.Context) error {
+	return h.projectPage(c, "project_my_overview", "titles.my_overview", "overview", nil)
 }
 
 // Overview é a Visão geral da Gestão: pessoas, times, horas, custo, receita,

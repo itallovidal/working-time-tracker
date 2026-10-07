@@ -181,40 +181,82 @@
   <template x-if="data">
     <section class="stack">
       <div class="stack stack-tight">
-        <h2>{{.T "overview.by_person"}}</h2>
-        <p class="muted">{{.T "overview.by_person_intro"}}</p>
+        <h2>{{.T "time.sessions"}}</h2>
+        <p class="muted">{{.T "time.sessions_intro_admin"}} {{.T "time.totals_follow"}}</p>
       </div>
-      <div class="empty" x-show="data.by_person.length === 0">
-        <strong>{{.T "overview.nobody_title"}}</strong>
-        <span>{{.T "overview.nobody_text"}}</span>
+      <div class="row filters">
+        <select x-model="filter.person" aria-label="{{.T "time.person_filter"}}">
+          <option value="">{{.T "time.all_people"}}</option>
+          <template x-for="p in people()" :key="p.id"><option :value="p.id" x-text="p.name"></option></template>
+        </select>
+        <input type="date" x-model="filter.date" aria-label="{{.T "time.date_filter"}}" title="{{.T "time.date_filter_title"}}">
+        <select x-model="filter.task" aria-label="{{.T "time.task_filter"}}">
+          <option value="">{{.T "time.all_tasks"}}</option>
+          <template x-for="t in sessionTasks()" :key="t.id"><option :value="t.id" x-text="t.name"></option></template>
+        </select>
+        <button type="button" class="btn btn-ghost btn-sm" x-cloak x-show="hasFilters()" @click="clearFilters()">{{template "icon" "xmark"}} {{.T "common.clear_filters"}}</button>
       </div>
-      <div class="table-wrap" x-show="data.by_person.length > 0">
+
+      {{/* Os totais ficam num cartão próprio, e a tabela, só com a lista das sessões. */}}
+      <section class="card" x-cloak x-show="filtered().length > 0">
+        <div class="card-head">
+          <h3>{{.T "time.totals"}}</h3>
+          <span class="muted small" x-text="hasFilters() ? $t('time.count_filtered', { count: filtered().length }) : $t('time.count', { count: filtered().length })"></span>
+        </div>
+        <div class="totals">
+          <div class="total">
+            <div class="v" x-text="WTT.fmt.hours(filteredTotal())"></div>
+            <div class="k">{{.T "time.time_total"}}</div>
+          </div>
+          <div class="total">
+            <div class="v" x-text="WTT.fmt.money(filteredAmount('pay'))"></div>
+            <div class="k">{{.T "time.cost"}}</div>
+          </div>
+          <div class="total">
+            <div class="v" x-text="WTT.fmt.money(filteredAmount('bill'))"></div>
+            <div class="k">{{.T "time.revenue"}}</div>
+          </div>
+          <div class="total">
+            <div class="v" :class="filteredMargin() < 0 && 'text-danger'" x-text="WTT.fmt.money(filteredMargin())"></div>
+            <div class="k">{{.T "time.margin"}}</div>
+          </div>
+        </div>
+      </section>
+
+      <div class="empty" x-cloak x-show="filtered().length === 0">
+        <strong>{{.T "time.empty"}}</strong>
+        <span x-text="hasFilters() ? $t('time.empty_filtered') : $t('time.empty_text')"></span>
+      </div>
+      <div class="table-wrap" x-show="filtered().length > 0">
         <table>
           <thead>
-            <tr><th>{{.T "collab.col_person"}}</th><th>{{.T "time.sessions"}}</th><th>{{.T "overview.col_hours"}}</th><th>{{.T "overview.cost"}}</th><th>{{.T "overview.revenue"}}</th></tr>
+            <tr>
+              <th>{{.T "time.col_person"}}</th><th>{{.T "time.col_task"}}</th><th>{{.T "time.col_start"}}</th><th>{{.T "time.col_end"}}</th><th class="actions">{{.T "time.col_duration"}}</th><th class="actions">{{.T "time.cost"}}</th><th class="actions">{{.T "time.revenue"}}</th>
+            </tr>
           </thead>
           <tbody>
-            <template x-for="row in personRows()" :key="row.person.id">
+            <template x-for="s in sessionRows()" :key="s.id">
               <tr>
-                <td>
-                  <span x-text="row.person.name"></span>
-                  <span class="badge badge-ok" x-show="row.working_now">{{.T "time.open"}}</span>
-                  <span class="badge" x-show="!row.in_project">{{.T "overview.left"}}</span>
+                <td x-text="s.person ? s.person.name : ''"></td>
+                <td><a :href="'/tasks/' + s.task_id" x-text="s.task ? s.task.name : ''"></a></td>
+                <td class="num" x-text="WTT.fmt.dateTime(s.start_at)"></td>
+                <td class="num">
+                  <span x-show="s.end_at" x-text="WTT.fmt.dateTime(s.end_at)"></span>
+                  <span class="badge badge-ok" x-show="!s.end_at">{{.T "time.open"}}</span>
                 </td>
-                <td class="num" x-text="row.session_count"></td>
-                <td class="num nowrap" x-text="WTT.fmt.hours(row.total_seconds)"></td>
-                <td class="num nowrap" x-text="WTT.fmt.money(row.pay_amount_cents)"></td>
-                <td class="num nowrap" x-text="WTT.fmt.money(row.bill_amount_cents)"></td>
+                <td class="actions mono num" x-text="WTT.fmt.clock($store.clock.elapsed(s))"></td>
+                <td class="actions num" x-text="WTT.fmt.money(amount(s, 'pay'))"></td>
+                <td class="actions num" x-text="WTT.fmt.money(amount(s, 'bill'))"></td>
               </tr>
             </template>
           </tbody>
         </table>
       </div>
-      <nav class="pager" aria-label="{{.T "overview.pager"}}" x-show="data.by_person.length > 0">
-        <span class="muted small" x-text="personSummary()"></span>
-        <div class="row row-tight" x-show="personPages() > 1">
-          <button type="button" class="btn btn-secondary btn-sm" :disabled="personPage <= 1" @click="personPage--">{{template "icon" "chevron-left"}} {{.T "tasks.prev"}}</button>
-          <button type="button" class="btn btn-secondary btn-sm" :disabled="personPage >= personPages()" @click="personPage++">{{.T "tasks.next"}} {{template "icon" "chevron-right"}}</button>
+      <nav class="pager" aria-label="{{.T "time.pager"}}" x-cloak x-show="filtered().length > 0">
+        <span class="muted small" x-text="sessionSummary()"></span>
+        <div class="row row-tight" x-show="sessionPages() > 1">
+          <button type="button" class="btn btn-secondary btn-sm" :disabled="page <= 1" @click="page = Math.min(page, sessionPages()) - 1">{{template "icon" "chevron-left"}} {{.T "time.prev"}}</button>
+          <button type="button" class="btn btn-secondary btn-sm" :disabled="page >= sessionPages()" @click="page = Math.min(page, sessionPages()) + 1">{{.T "time.next"}} {{template "icon" "chevron-right"}}</button>
         </div>
       </nav>
     </section>

@@ -380,6 +380,17 @@
 
 ---
 
+### Sprint 29: Personal Overview, Ponto and Sessions
+
+- [X] S29.1 The session list and total are limited on the server: a member only gets their own sessions (no `person_id` means theirs, another person's is a 403); admins keep seeing everyone
+- [X] S29.2 `sessionList()` in `project.js`: list, person/date/task filters from the sessions themselves, totals that follow the filters and ten sessions per page, shared by two screens
+- [X] S29.3 "Visão geral" is the first tab of everyone and the page `/projects/:projectId` opens on: today and this week, and the person's own sessions, the same screen for admin and member
+- [X] S29.4 The Ponto is the clock and "Suas tarefas" (assigned to the person, with deadline and a Start button); the sessions and totals left it
+- [X] S29.5 The Gestão overview swaps "Horas por pessoa" for everyone's sessions, with person filter and cost, revenue and margin
+- [X] S29.6 Tests for the member scope, the three screens and the redirects; update README, design and routes
+
+---
+
 ### Refatoração: Domain-First Architecture (pré-Sprint 9)
 
 - [X] R1 Reorganizar código de layered-flat para domain-first: `internal/domain/<dominio>/` com `model.go`, `store.go`, `service.go`, `handler.go` por domínio

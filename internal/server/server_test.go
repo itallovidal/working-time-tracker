@@ -602,37 +602,36 @@ func TestWorkSessions_AmountsByRole(t *testing.T) {
 	// O admin troca o valor da Bia depois que ela já trabalhou.
 	allocate(t, e, admin, projectID, bia.id, 9000)
 
-	byPerson := func(session string) map[string]map[string]any {
+	byPerson := func(session string, want int) map[string]map[string]any {
 		t.Helper()
 		out := map[string]map[string]any{}
 		for _, s := range decodeList(t, do(e, "GET", prj+"/work-sessions", "", session)) {
 			out[s["person_id"].(string)] = s
 		}
-		if len(out) != 2 {
-			t.Fatalf("expected one session per person, got %d", len(out))
+		if len(out) != want {
+			t.Fatalf("expected sessions of %d people, got %d", want, len(out))
 		}
 		return out
 	}
 
-	asBia := byPerson(bia.session)
+	// O membro só recebe as próprias sessões, com o que ele mesmo ganhou e sem o valor cobrado.
+	asBia := byPerson(bia.session, 1)
 	if asBia[bia.id]["pay_rate_cents"] != float64(2000) {
 		t.Errorf("her old session shows rate %v, want the 2000 from when she clocked in", asBia[bia.id]["pay_rate_cents"])
 	}
 	if asBia[bia.id]["pay_amount_cents"] == nil {
 		t.Error("member does not see the amount of her own session")
 	}
-	for _, key := range []string{"pay_rate_cents", "pay_amount_cents", "bill_rate_cents", "bill_amount_cents"} {
-		if v := asBia[caio.id][key]; v != nil {
-			t.Errorf("member sees %s = %v on a colleague's session", key, v)
-		}
-	}
 	for _, key := range []string{"bill_rate_cents", "bill_amount_cents"} {
 		if v := asBia[bia.id][key]; v != nil {
 			t.Errorf("member sees %s = %v on her own session", key, v)
 		}
 	}
+	if rec := do(e, "GET", prj+"/work-sessions?person_id="+bia.id, "", bia.session); len(decodeList(t, rec)) != 1 {
+		t.Errorf("member asking for herself = %s, want her one session", rec.Body.String())
+	}
 
-	asAdmin := byPerson(admin.session)
+	asAdmin := byPerson(admin.session, 2)
 	if asAdmin[bia.id]["pay_rate_cents"] != float64(2000) || asAdmin[caio.id]["pay_rate_cents"] != float64(2500) {
 		t.Errorf("admin sees pay rates %v and %v, want 2000 and 2500", asAdmin[bia.id]["pay_rate_cents"], asAdmin[caio.id]["pay_rate_cents"])
 	}
@@ -649,13 +648,56 @@ func TestWorkSessions_AmountsByRole(t *testing.T) {
 	if got := total("person_id="+bia.id, bia.session); got["pay_amount_cents"] == nil || got["bill_amount_cents"] != nil {
 		t.Errorf("member total of herself = %v, want her earnings and no bill amount", got)
 	}
-	for _, query := range []string{"person_id=" + caio.id, "task_id=" + taskID} {
-		if got := total(query, bia.session); got["pay_amount_cents"] != nil || got["bill_amount_cents"] != nil {
-			t.Errorf("member total with %s = %v, want no amounts", query, got)
-		}
-	}
 	if got := total("task_id="+taskID, admin.session); got["pay_amount_cents"] == nil || got["bill_amount_cents"] == nil {
 		t.Errorf("admin total = %v, want both amounts", got)
+	}
+}
+
+// O membro só enxerga o próprio ponto, e o servidor garante: sem person_id vale o
+// dele, o de outra pessoa é recusado, e um total só por tarefa não soma os outros.
+func TestWorkSessions_MemberOnlySeesOwn(t *testing.T) {
+	e := newServer(t)
+	admin := signup(t, e, "Org", "ana@test.com")
+	bia := invite(t, e, admin, "bia@test.com", "member")
+	caio := invite(t, e, admin, "caio@test.com", "member")
+	projectID := createProject(t, e, admin, "Projeto")
+	prj := "/api/projects/" + projectID
+	allocate(t, e, admin, projectID, bia.id, 2000)
+	allocate(t, e, admin, projectID, caio.id, 2500)
+	taskID := decode(t, do(e, "POST", prj+"/tasks", `{"name":"Livre"}`, admin.session))["id"].(string)
+
+	for _, p := range []account{bia, caio} {
+		do(e, "POST", prj+"/work-sessions/clock-in", `{"task_id":"`+taskID+`"}`, p.session)
+		do(e, "POST", prj+"/work-sessions/clock-out", `{}`, p.session)
+	}
+
+	list := func(query, session string) *httptest.ResponseRecorder {
+		return do(e, "GET", prj+"/work-sessions"+query, "", session)
+	}
+	if rec := list("", bia.session); rec.Code != http.StatusOK || len(decodeList(t, rec)) != 1 || decodeList(t, rec)[0]["person_id"] != bia.id {
+		t.Errorf("member list without filters = %d %s, want only her session", rec.Code, rec.Body.String())
+	}
+	if rec := list("?task_id="+taskID, bia.session); len(decodeList(t, rec)) != 1 {
+		t.Errorf("member list by task = %s, want only her session", rec.Body.String())
+	}
+	for _, path := range []string{"/work-sessions?person_id=" + caio.id, "/work-sessions/total?person_id=" + caio.id} {
+		if rec := do(e, "GET", prj+path, "", bia.session); rec.Code != http.StatusForbidden {
+			t.Errorf("member GET %s = %d, want 403", path, rec.Code)
+		}
+	}
+	// Um total só por tarefa fica restrito ao que é dela.
+	byTask := decode(t, do(e, "GET", prj+"/work-sessions/total?task_id="+taskID, "", bia.session))
+	byBia := decode(t, do(e, "GET", prj+"/work-sessions/total?person_id="+bia.id+"&task_id="+taskID, "", bia.session))
+	if byTask["total_seconds"] != byBia["total_seconds"] || byTask["pay_amount_cents"] != byBia["pay_amount_cents"] {
+		t.Errorf("member total by task = %v, want the same as her own total %v", byTask, byBia)
+	}
+
+	// O admin continua vendo todos, com ou sem filtro.
+	if rec := list("", admin.session); len(decodeList(t, rec)) != 2 {
+		t.Errorf("admin list = %s, want both sessions", rec.Body.String())
+	}
+	if rec := list("?person_id="+caio.id, admin.session); len(decodeList(t, rec)) != 1 {
+		t.Errorf("admin list of one person = %s, want one session", rec.Body.String())
 	}
 }
 

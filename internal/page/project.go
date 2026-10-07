@@ -75,7 +75,7 @@ func (h *Handler) renderProject(c *echo.Context, management bool, name, titleKey
 	})
 }
 
-// Project leva para a página principal do projeto, o Ponto.
+// Project leva para a página principal do projeto, a Visão geral de quem olha.
 func (h *Handler) Project(c *echo.Context) error {
 	return c.Redirect(http.StatusSeeOther, "/projects/"+c.Param("projectId")+"/"+projectHome())
 }
@@ -85,7 +85,7 @@ func (h *Handler) Tasks(c *echo.Context) error {
 	return h.projectPage(c, "project_tasks", "titles.tasks", "tasks", h.integrationTypes(c))
 }
 
-// TimeTracking é o ponto do projeto: clock-in/out, sessões e totais (S9.3, S9.4).
+// TimeTracking é o ponto do projeto: o relógio e as tarefas da pessoa (S9.3, S29).
 func (h *Handler) TimeTracking(c *echo.Context) error {
 	return h.projectPage(c, "project_time", "titles.time", "time", nil)
 }

@@ -18,6 +18,7 @@ func pagePaths(orgID, projectID string) []string {
 		"/orgs/" + orgID,
 		"/orgs/" + orgID + "/about",
 		"/profile",
+		"/projects/" + projectID + "/overview",
 		"/projects/" + projectID + "/tasks",
 		"/projects/" + projectID + "/time-tracking",
 	}
@@ -410,10 +411,9 @@ func TestPages_ProjectTasksTab(t *testing.T) {
 	}
 }
 
-// Na aba Ponto, o aviso de quem está sem valor por hora fica acima dos cartões,
-// e não dentro do relógio. As sessões têm filtro por pessoa, por data e por
-// tarefa, e os totais ficam num cartão próprio, fora da tabela: custo, receita
-// e margem para o admin, e só o próprio valor para o membro.
+// O Ponto é só o relógio e as tarefas de quem olha: o aviso de quem está sem valor
+// por hora fica acima dos cartões, e as sessões e os totais não estão mais aqui. A
+// tela é a mesma para admin e membro, só o aviso muda de quem ajuda.
 func TestPages_ProjectTimeTab(t *testing.T) {
 	e := newServer(t)
 	admin := signup(t, e, "Org", "ana@test.com")
@@ -431,32 +431,60 @@ func TestPages_ProjectTimeTab(t *testing.T) {
 		if at, clock := strings.Index(body, warning), strings.Index(body, `class="clock"`); at < 0 || clock < 0 || at > clock {
 			t.Errorf("%s: the rate warning is not above the clock card", who)
 		}
-		for _, want := range []string{
-			`class="grid-aside items-stretch"`,
-			`aria-label="Filtrar por pessoa"`, `aria-label="Filtrar por data"`, `aria-label="Filtrar por tarefa"`,
-			"<h3>Totais</h3>", `<div class="k">Tempo</div>`,
-		} {
+		for _, want := range []string{`class="grid-aside items-stretch"`, "Suas tarefas", `x-for="t in tasks"`, "startTask(t)"} {
 			if !strings.Contains(body, want) {
 				t.Errorf("%s: the time tracking tab does not contain %q", who, want)
 			}
 		}
-		if strings.Contains(body, "<tfoot>") {
-			t.Errorf("%s: the sessions table still has the totals in its footer", who)
+		// As sessões e os totais foram para a Visão geral.
+		for _, gone := range []string{`aria-label="Filtrar por pessoa"`, `aria-label="Filtrar por data"`, "<h3>Totais</h3>", "<table>", "Seu tempo neste projeto"} {
+			if strings.Contains(body, gone) {
+				t.Errorf("%s: the time tracking tab still has %q", who, gone)
+			}
 		}
-	}
-	for _, adminOnly := range []string{`<div class="k">Custo</div>`, `<div class="k">Receita</div>`, "Margem (receita menos custo)"} {
-		if !strings.Contains(pages["admin"], adminOnly) {
-			t.Errorf("admin does not see %q in the totals card", adminOnly)
-		}
-		if strings.Contains(pages["member"], adminOnly) {
-			t.Errorf("member sees %q in the totals card", adminOnly)
-		}
-	}
-	if !strings.Contains(pages["member"], `<div class="k">Seu valor</div>`) || strings.Contains(pages["admin"], `<div class="k">Seu valor</div>`) {
-		t.Error("the member's own amount should be in the totals card of the member only")
 	}
 	if !strings.Contains(pages["admin"], `href="/projects/`+projectID+`/management/teams">Colaboradores</a>`) || !strings.Contains(pages["member"], "Peça a um admin para definir") {
 		t.Error("the rate warning should send the admin to the collaborators tab and the member to an admin")
+	}
+}
+
+// A Visão geral de fora é a mesma tela para admin e membro: o tempo de quem olha e
+// as suas sessões, com filtros de data e tarefa, páginas e só o valor que a pessoa
+// ganha, sem a coluna de pessoa nem custo, receita e margem.
+func TestPages_ProjectMyOverviewTab(t *testing.T) {
+	e := newServer(t)
+	admin := signup(t, e, "Org", "ana@test.com")
+	member := invite(t, e, admin, "bia@test.com", "member")
+	projectID := createProject(t, e, admin, "Projeto Alfa")
+	overview := "/projects/" + projectID + "/overview"
+
+	for who, session := range map[string]string{"admin": admin.session, "member": member.session} {
+		rec := do(e, "GET", overview, "", session)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("%s GET %s = %d, want 200", who, overview, rec.Code)
+		}
+		body := rec.Body.String()
+		if !strings.Contains(body, `href="`+overview+`" aria-current="page"`) {
+			t.Errorf("%s: the tab bar does not mark Visão geral as the current tab", who)
+		}
+		first, tasks := strings.Index(body, `href="`+overview+`"`), strings.Index(body, `href="/projects/`+projectID+`/tasks"`)
+		if first < 0 || tasks < 0 || first > tasks {
+			t.Errorf("%s: Visão geral is not the first tab", who)
+		}
+		for _, want := range []string{
+			`x-data="projectMyOverview"`, "Seu tempo neste projeto", "Nesta semana",
+			`aria-label="Filtrar por data"`, `aria-label="Filtrar por tarefa"`, "<h3>Totais</h3>", `<div class="k">Tempo</div>`, `<div class="k">Seu valor</div>`,
+			`class="pager"`, "<table>",
+		} {
+			if !strings.Contains(body, want) {
+				t.Errorf("%s: the overview does not contain %q", who, want)
+			}
+		}
+		for _, gone := range []string{`aria-label="Filtrar por pessoa"`, `<div class="k">Custo</div>`, `<div class="k">Receita</div>`, "Margem (receita menos custo)", "<th>Pessoa</th>"} {
+			if strings.Contains(body, gone) {
+				t.Errorf("%s: the personal overview shows %q", who, gone)
+			}
+		}
 	}
 }
 
@@ -572,8 +600,8 @@ func TestPages_RedirectWithoutSession(t *testing.T) {
 			t.Errorf("GET %s without session = %d to %q, want 303 to /login", path, rec.Code, rec.Header().Get("Location"))
 		}
 	}
-	if rec := do(e, "GET", "/projects/"+projectID, "", admin.session); rec.Header().Get("Location") != "/projects/"+projectID+"/time-tracking" {
-		t.Errorf("GET /projects/:id redirects the admin to %q, want the Ponto tab", rec.Header().Get("Location"))
+	if rec := do(e, "GET", "/projects/"+projectID, "", admin.session); rec.Header().Get("Location") != "/projects/"+projectID+"/overview" {
+		t.Errorf("GET /projects/:id redirects the admin to %q, want the Visão geral", rec.Header().Get("Location"))
 	}
 }
 

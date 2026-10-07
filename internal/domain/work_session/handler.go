@@ -35,6 +35,18 @@ func personFor(c *echo.Context, requested string) (string, int, error) {
 	return requested, 0, nil
 }
 
+// visiblePerson decide de quem são as sessões que a lista e o total mostram. Um
+// admin vê as de quem pedir ou, sem filtro, as de todos; quem não é admin só vê
+// as próprias: sem person_id vale o dele, e o de outra pessoa é recusado. Sem
+// login no contexto (handler montado fora do servidor, como nos testes), o
+// filtro fica como veio.
+func visiblePerson(c *echo.Context, requested string) (string, int, error) {
+	if me := auth.CurrentPerson(c); me != nil && !me.IsAdmin() {
+		return personFor(c, requested)
+	}
+	return requested, 0, nil
+}
+
 // redact apaga da sessão os valores que quem chama não pode ver. O valor cobrado
 // do cliente é só de admins; o valor pago é dos admins e da própria pessoa. Sem
 // login no contexto, nada é mostrado.
@@ -94,7 +106,10 @@ func (h *Handler) ClockOut(c *echo.Context) error {
 func (h *Handler) List(c *echo.Context) error {
 	projectID := c.Param("projectId")
 	taskID := c.QueryParam("task_id")
-	personID := c.QueryParam("person_id")
+	personID, status, perr := visiblePerson(c, c.QueryParam("person_id"))
+	if status != 0 {
+		return apperr.Respond(c, status, perr)
+	}
 
 	var taskIDPtr, personIDPtr *string
 	if taskID != "" {
@@ -118,7 +133,10 @@ func (h *Handler) List(c *echo.Context) error {
 func (h *Handler) Total(c *echo.Context) error {
 	projectID := c.Param("projectId")
 	taskID := c.QueryParam("task_id")
-	personID := c.QueryParam("person_id")
+	personID, status, perr := visiblePerson(c, c.QueryParam("person_id"))
+	if status != 0 {
+		return apperr.Respond(c, status, perr)
+	}
 
 	var taskIDPtr, personIDPtr *string
 	if taskID != "" {

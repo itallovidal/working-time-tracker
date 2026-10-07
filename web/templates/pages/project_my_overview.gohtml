@@ -1,0 +1,96 @@
+{{define "content"}}
+<main class="page" x-data="projectMyOverview">
+  {{template "project_head" .}}
+
+  <p class="form-error" x-cloak x-show="errors.load" x-text="errors.load"></p>
+  <p class="muted" x-show="loading">{{.T "common.loading"}}</p>
+
+  <div x-cloak x-show="!loading && !errors.load" class="stack">
+    <section class="card">
+      <div class="card-head"><h2>{{.T "time.yours"}}</h2></div>
+      <div class="totals">
+        <div class="total">
+          <div class="v" x-text="WTT.fmt.hours(mine('today'))"></div>
+          <div class="k">{{.T "time.today"}}<span x-show="myRate !== null"> · <span class="num" x-text="WTT.fmt.money(earned('today'))"></span></span></div>
+        </div>
+        <div class="total">
+          <div class="v" x-text="WTT.fmt.hours(mine('week'))"></div>
+          <div class="k">{{.T "time.this_week"}}<span x-show="myRate !== null"> · <span class="num" x-text="WTT.fmt.money(earned('week'))"></span></span></div>
+        </div>
+      </div>
+      <p class="muted small" x-cloak x-show="myRate !== null">
+        {{.T "time.your_rate_before"}} <strong class="num" x-text="WTT.fmt.money(myRate)"></strong> {{.T "time.your_rate_after"}}
+      </p>
+      <p class="muted small" x-cloak x-show="myRate === null">{{.T "time.no_rate"}}</p>
+    </section>
+
+    <section class="stack">
+      <div class="stack stack-tight">
+        <h2>{{.T "time.sessions"}}</h2>
+        <p class="muted">{{.T "time.sessions_intro_own"}} {{.T "time.totals_follow"}}</p>
+      </div>
+      <div class="row filters">
+        <input type="date" x-model="filter.date" aria-label="{{.T "time.date_filter"}}" title="{{.T "time.date_filter_title"}}">
+        <select x-model="filter.task" aria-label="{{.T "time.task_filter"}}">
+          <option value="">{{.T "time.all_tasks"}}</option>
+          <template x-for="t in sessionTasks()" :key="t.id"><option :value="t.id" x-text="t.name"></option></template>
+        </select>
+        <button type="button" class="btn btn-ghost btn-sm" x-cloak x-show="hasFilters()" @click="clearFilters()">{{template "icon" "xmark"}} {{.T "common.clear_filters"}}</button>
+      </div>
+
+      {{/* Os totais ficam num cartão próprio, e a tabela, só com a lista das sessões. */}}
+      <section class="card" x-cloak x-show="filtered().length > 0">
+        <div class="card-head">
+          <h3>{{.T "time.totals"}}</h3>
+          <span class="muted small" x-text="hasFilters() ? $t('time.count_filtered', { count: filtered().length }) : $t('time.count', { count: filtered().length })"></span>
+        </div>
+        <div class="totals">
+          <div class="total">
+            <div class="v" x-text="WTT.fmt.hours(filteredTotal())"></div>
+            <div class="k">{{.T "time.time_total"}}</div>
+          </div>
+          <div class="total">
+            <div class="v" x-text="WTT.fmt.money(filteredAmount('pay'))"></div>
+            <div class="k">{{.T "time.your_value"}}</div>
+          </div>
+        </div>
+      </section>
+
+      <div class="empty" x-cloak x-show="filtered().length === 0">
+        <strong>{{.T "time.empty"}}</strong>
+        <span x-text="hasFilters() ? $t('time.empty_filtered') : $t('time.empty_own')"></span>
+      </div>
+      <div class="table-wrap" x-show="filtered().length > 0">
+        <table>
+          <thead>
+            <tr>
+              <th>{{.T "time.col_task"}}</th><th>{{.T "time.col_start"}}</th><th>{{.T "time.col_end"}}</th><th class="actions">{{.T "time.col_duration"}}</th><th class="actions">{{.T "time.your_value"}}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="s in sessionRows()" :key="s.id">
+              <tr>
+                <td><a :href="'/tasks/' + s.task_id" x-text="s.task ? s.task.name : ''"></a></td>
+                <td class="num" x-text="WTT.fmt.dateTime(s.start_at)"></td>
+                <td class="num">
+                  <span x-show="s.end_at" x-text="WTT.fmt.dateTime(s.end_at)"></span>
+                  <span class="badge badge-ok" x-show="!s.end_at">{{.T "time.open"}}</span>
+                </td>
+                <td class="actions mono num" x-text="WTT.fmt.clock($store.clock.elapsed(s))"></td>
+                <td class="actions num" x-text="WTT.fmt.money(amount(s, 'pay'))"></td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+      <nav class="pager" aria-label="{{.T "time.pager"}}" x-cloak x-show="filtered().length > 0">
+        <span class="muted small" x-text="sessionSummary()"></span>
+        <div class="row row-tight" x-show="sessionPages() > 1">
+          <button type="button" class="btn btn-secondary btn-sm" :disabled="page <= 1" @click="page = Math.min(page, sessionPages()) - 1">{{template "icon" "chevron-left"}} {{.T "time.prev"}}</button>
+          <button type="button" class="btn btn-secondary btn-sm" :disabled="page >= sessionPages()" @click="page = Math.min(page, sessionPages()) + 1">{{.T "time.next"}} {{template "icon" "chevron-right"}}</button>
+        </div>
+      </nav>
+    </section>
+  </div>
+</main>
+{{end}}

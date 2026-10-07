@@ -52,105 +52,24 @@
     </section>
 
     <section class="card">
-      <div class="card-head"><h2>{{.T "time.yours"}}</h2></div>
-      <div class="totals">
-        <div class="total">
-          <div class="v" x-text="WTT.fmt.hours(mine('today'))"></div>
-          <div class="k">{{.T "time.today"}}<span x-show="myRate !== null"> · <span class="num" x-text="WTT.fmt.money(earned('today'))"></span></span></div>
-        </div>
-        <div class="total">
-          <div class="v" x-text="WTT.fmt.hours(mine('week'))"></div>
-          <div class="k">{{.T "time.this_week"}}<span x-show="myRate !== null"> · <span class="num" x-text="WTT.fmt.money(earned('week'))"></span></span></div>
-        </div>
-      </div>
-      <p class="muted small" x-cloak x-show="myRate !== null">
-        {{.T "time.your_rate_before"}} <strong class="num" x-text="WTT.fmt.money(myRate)"></strong> {{.T "time.your_rate_after"}}
+      <div class="card-head"><h2>{{.T "time.my_tasks"}}</h2></div>
+      <p class="muted small" x-cloak x-show="!loading && tasks.length === 0">
+        {{.T "time.no_tasks"}} <a href="/projects/{{.Project.ID}}/tasks">{{.T "time.create_task"}}</a>
       </p>
+      <ul class="list" x-show="tasks.length > 0">
+        <template x-for="t in tasks" :key="t.id">
+          <li>
+            <div class="grow">
+              <a :href="'/tasks/' + t.id" x-text="t.name"></a>
+              <span class="badge num" :class="deadlineClass(t)" x-text="deadlineLabel(t)"></span>
+            </div>
+            <span class="badge badge-ok" x-show="isRunning(t)">{{.T "time.running"}}</span>
+            <button type="button" class="btn btn-secondary btn-sm" x-show="!isRunning(t)"
+                    :disabled="pending || myRate === null || !$store.clock.ready || !!$store.clock.session" @click="startTask(t)">{{.T "time.start"}}</button>
+          </li>
+        </template>
+      </ul>
     </section>
   </div>
-
-  <section class="stack">
-    <div class="stack stack-tight">
-      <h2>{{.T "time.sessions"}}</h2>
-      <p class="muted">{{if .IsAdmin}}{{.T "time.sessions_intro_admin"}}{{else}}{{.T "time.sessions_intro_member"}}{{end}} {{.T "time.totals_follow"}}</p>
-    </div>
-    <div class="row filters">
-      <select x-model="filter.person" aria-label="{{.T "time.person_filter"}}">
-        <option value="">{{.T "time.all_people"}}</option>
-        <template x-for="p in people()" :key="p.id"><option :value="p.id" x-text="p.name"></option></template>
-      </select>
-      <input type="date" x-model="filter.date" aria-label="{{.T "time.date_filter"}}" title="{{.T "time.date_filter_title"}}">
-      <select x-model="filter.task" aria-label="{{.T "time.task_filter"}}">
-        <option value="">{{.T "time.all_tasks"}}</option>
-        <template x-for="t in tasks" :key="t.id"><option :value="t.id" x-text="t.name"></option></template>
-      </select>
-      <button type="button" class="btn btn-ghost btn-sm" x-cloak x-show="hasFilters()" @click="clearFilters()">{{template "icon" "xmark"}} {{.T "common.clear_filters"}}</button>
-    </div>
-    <p class="form-error" x-cloak x-show="errors.load" x-text="errors.load"></p>
-
-    {{/* Os totais ficam num cartão próprio, e a tabela, só com a lista das sessões. */}}
-    <section class="card" x-cloak x-show="filtered().length > 0">
-      <div class="card-head">
-        <h3>{{.T "time.totals"}}</h3>
-        <span class="muted small" x-text="hasFilters() ? $t('time.count_filtered', { count: filtered().length }) : $t('time.count', { count: filtered().length })"></span>
-      </div>
-      <div class="totals">
-        <div class="total">
-          <div class="v" x-text="WTT.fmt.hours(filteredTotal())"></div>
-          <div class="k">{{.T "time.time_total"}}</div>
-        </div>
-        {{if .IsAdmin}}
-        <div class="total">
-          <div class="v" x-text="WTT.fmt.money(filteredAmount('pay'))"></div>
-          <div class="k">{{.T "time.cost"}}</div>
-        </div>
-        <div class="total">
-          <div class="v" x-text="WTT.fmt.money(filteredAmount('bill'))"></div>
-          <div class="k">{{.T "time.revenue"}}</div>
-        </div>
-        <div class="total">
-          <div class="v" :class="filteredMargin() < 0 && 'text-danger'" x-text="WTT.fmt.money(filteredMargin())"></div>
-          <div class="k">{{.T "time.margin"}}</div>
-        </div>
-        {{else}}
-        <div class="total">
-          <div class="v" x-text="WTT.fmt.money(filteredAmount('pay'))"></div>
-          <div class="k">{{.T "time.your_value"}}</div>
-        </div>
-        {{end}}
-      </div>
-    </section>
-
-    <div class="empty" x-cloak x-show="!loading && filtered().length === 0">
-      <strong>{{.T "time.empty"}}</strong>
-      <span x-text="hasFilters() ? $t('time.empty_filtered') : $t('time.empty_text')"></span>
-    </div>
-    <div class="table-wrap" x-show="filtered().length > 0">
-      <table>
-        <thead>
-          <tr>
-            <th>{{.T "time.col_person"}}</th><th>{{.T "time.col_task"}}</th><th>{{.T "time.col_start"}}</th><th>{{.T "time.col_end"}}</th><th class="actions">{{.T "time.col_duration"}}</th>
-            {{if .IsAdmin}}<th class="actions">{{.T "time.cost"}}</th><th class="actions">{{.T "time.revenue"}}</th>{{else}}<th class="actions">{{.T "time.your_value"}}</th>{{end}}
-          </tr>
-        </thead>
-        <tbody>
-          <template x-for="s in filtered()" :key="s.id">
-            <tr>
-              <td x-text="s.person ? s.person.name : ''"></td>
-              <td><a :href="'/tasks/' + s.task_id" x-text="s.task ? s.task.name : ''"></a></td>
-              <td class="num" x-text="WTT.fmt.dateTime(s.start_at)"></td>
-              <td class="num">
-                <span x-show="s.end_at" x-text="WTT.fmt.dateTime(s.end_at)"></span>
-                <span class="badge badge-ok" x-show="!s.end_at">{{.T "time.open"}}</span>
-              </td>
-              <td class="actions mono num" x-text="WTT.fmt.clock($store.clock.elapsed(s))"></td>
-              <td class="actions num" x-text="WTT.fmt.money(amount(s, 'pay'))"></td>
-              {{if .IsAdmin}}<td class="actions num" x-text="WTT.fmt.money(amount(s, 'bill'))"></td>{{end}}
-            </tr>
-          </template>
-        </tbody>
-      </table>
-    </div>
-  </section>
 </main>
 {{end}}
