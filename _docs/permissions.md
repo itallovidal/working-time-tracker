@@ -51,6 +51,8 @@ fica para depois: ao mexer numa, o grupo passa a `custom`.
 | Financeiro | `finance` | `rates.view`, `rates.manage`, `billing.view`, `billing.manage` |
 | Administrador do projeto | `admin` | todas as do projeto |
 
+As telas oferecem só três: colaborador, gerente de projeto e administrador do projeto. O financeiro existe na API (`preset: "finance"`) e nos testes, mas está escondido das telas (`HIDDEN_PRESETS` em `project.js`). O administrador do projeto aparece como "tudo o que o gerente de projeto faz, e mais:" seguido só do que ele acrescenta (ver e definir o faturamento).
+
 Regra contra escalada: quem dá um grupo precisa ter todas as permissões dele (`allocation.preset_above_yours`). O gerente põe
 colaboradores e outros gerentes, mas não dá o grupo financeiro, que tem o faturamento que ele não vê. Admins podem dar qualquer um.
 

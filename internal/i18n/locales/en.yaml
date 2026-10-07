@@ -615,6 +615,7 @@ collab:
     next: Next
     back: Back
   group_title: Permission group
+  group_inherits: "Everything the {{.name}} can do, plus:"
   group_hint: The group only applies to this project, and you can only give what you can do yourself.
   group_none: There is no group you can choose.
   group_has_all: "{{.name}} already has every permission, so there is no group to choose."

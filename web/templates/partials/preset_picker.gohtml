@@ -1,7 +1,8 @@
 {{/* preset_picker é a escolha do grupo de permissões de uma pessoa num projeto: um cartão por
      grupo, com o nome, o que ele faz e as permissões que traz. Fica nos modais Adicionar pessoa
      (etapa 2) e Editar colaborador. Pede, no componente, `preset` (o grupo marcado),
-     `presetChoices()` (os grupos que quem olha pode dar) e `presetText(chave)`. */}}
+     `presetChoices()` (os grupos que quem olha pode dar), `presetParts(grupo)` (o que mostrar
+     das permissões dele) e `presetText(chave)`. */}}
 {{define "preset_picker"}}
 <div class="presets" role="radiogroup" aria-label="{{.T "collab.group_title"}}">
   <span class="field-label">{{.T "collab.group_title"}}</span>
@@ -11,10 +12,14 @@
       <span class="grow">
         <span class="preset-name" x-text="$t('permissions.presets.' + p.id + '.name')"></span>
         <span class="muted small" x-text="$t('permissions.presets.' + p.id + '.about')"></span>
-        <span class="row row-tight preset-keys" x-show="p.permissions.length > 0">
-          <template x-for="k in p.permissions" :key="k">
-            <span class="badge" x-text="presetText(k)"></span>
-          </template>
+        <span class="preset-keys" x-show="p.permissions.length > 0">
+          <span class="muted small" x-show="presetParts(p).from"
+                x-text="$t('collab.group_inherits', { name: $t('permissions.presets.' + presetParts(p).from + '.name').toLowerCase() })"></span>
+          <span class="row row-tight preset-badges">
+            <template x-for="k in presetParts(p).keys" :key="k">
+              <span class="badge" x-text="presetText(k)"></span>
+            </template>
+          </span>
         </span>
       </span>
     </label>

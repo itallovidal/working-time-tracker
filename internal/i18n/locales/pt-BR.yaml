@@ -625,6 +625,7 @@ collab:
     next: Próximo
     back: Voltar
   group_title: Grupo de permissões
+  group_inherits: "Tudo o que o {{.name}} faz, e mais:"
   group_hint: O grupo vale só neste projeto, e quem dá um grupo só dá o que ele mesmo pode.
   group_none: Nenhum grupo disponível para você escolher.
   group_has_all: "{{.name}} já tem todas as permissões, então não precisa de um grupo."

@@ -11,6 +11,9 @@ document.addEventListener('alpine:init', () => {
   const priorityClass = (p) => ({ urgent: 'badge-danger', high: 'badge-warn', medium: 'badge-accent' }[p] || '');
   const byLabelName = (a, b) => a.name.localeCompare(b.name, WTT.lang);
 
+  // Grupos de permissões que a API tem e as telas não oferecem.
+  const HIDDEN_PRESETS = ['finance'];
+
   // labelTools é o que as telas que escolhem etiquetas têm em comum: a lista do projeto e,
   // para admins, criar uma na hora. O rascunho de quem usa guarda os ids marcados.
   const labelTools = () => ({
@@ -1095,8 +1098,22 @@ document.addEventListener('alpine:init', () => {
     },
     // Os grupos que quem olha pode dar: só os que têm tudo o que ele mesmo pode, porque ninguém
     // concede o que não tem (o servidor confere de novo).
+    // O grupo financeiro existe na API, mas as telas não o oferecem por enquanto.
     presetChoices() {
-      return this.presets.filter((p) => p.permissions.every((k) => WTT.can(k)));
+      return this.presets
+        .filter((p) => !HIDDEN_PRESETS.includes(p.id))
+        .filter((p) => p.permissions.every((k) => WTT.can(k)));
+    },
+    // presetParts diz como mostrar as permissões de um grupo: quando ele traz tudo o que um
+    // grupo menor já traz, aparece só "tudo o que ele faz, e mais:" e o que o grupo acrescenta,
+    // para a diferença entre os dois ficar à vista.
+    presetParts(p) {
+      const shown = this.presets.filter((q) => !HIDDEN_PRESETS.includes(q.id) && q.id !== p.id);
+      const base = shown
+        .filter((q) => q.permissions.length > 0 && q.permissions.every((k) => p.permissions.includes(k)))
+        .sort((a, b) => b.permissions.length - a.permissions.length)[0];
+      if (!base) return { from: '', keys: p.permissions };
+      return { from: base.id, keys: p.permissions.filter((k) => !base.permissions.includes(k)) };
     },
     // presetText é o nome curto de uma permissão do catálogo, para os selos dos grupos.
     presetText(key) {

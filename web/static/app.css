@@ -264,7 +264,8 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 .preset input { width: auto; flex: none; margin-top: 3px; accent-color: var(--accent); }
 .preset .grow { display: flex; flex-direction: column; gap: 4px; }
 .preset-name { font-weight: 600; }
-.preset-keys { flex-wrap: wrap; margin-top: 2px; }
+.preset-keys { display: flex; flex-direction: column; gap: 4px; margin-top: 2px; }
+.preset-badges { flex-wrap: wrap; }
 .text-danger { color: var(--danger); }
 .nowrap { white-space: nowrap; }
 .self-end { align-self: flex-end; }
