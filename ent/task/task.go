@@ -44,8 +44,8 @@ const (
 	EdgeAssignee = "assignee"
 	// EdgeExternalIntegration holds the string denoting the external_integration edge name in mutations.
 	EdgeExternalIntegration = "external_integration"
-	// EdgeWorkSessions holds the string denoting the work_sessions edge name in mutations.
-	EdgeWorkSessions = "work_sessions"
+	// EdgeSessionLinks holds the string denoting the session_links edge name in mutations.
+	EdgeSessionLinks = "session_links"
 	// EdgeLabels holds the string denoting the labels edge name in mutations.
 	EdgeLabels = "labels"
 	// Table holds the table name of the task in the database.
@@ -71,13 +71,13 @@ const (
 	ExternalIntegrationInverseTable = "integrations"
 	// ExternalIntegrationColumn is the table column denoting the external_integration relation/edge.
 	ExternalIntegrationColumn = "external_integration_id"
-	// WorkSessionsTable is the table that holds the work_sessions relation/edge.
-	WorkSessionsTable = "work_sessions"
-	// WorkSessionsInverseTable is the table name for the WorkSession entity.
-	// It exists in this package in order to avoid circular dependency with the "worksession" package.
-	WorkSessionsInverseTable = "work_sessions"
-	// WorkSessionsColumn is the table column denoting the work_sessions relation/edge.
-	WorkSessionsColumn = "task_id"
+	// SessionLinksTable is the table that holds the session_links relation/edge.
+	SessionLinksTable = "work_session_tasks"
+	// SessionLinksInverseTable is the table name for the WorkSessionTask entity.
+	// It exists in this package in order to avoid circular dependency with the "worksessiontask" package.
+	SessionLinksInverseTable = "work_session_tasks"
+	// SessionLinksColumn is the table column denoting the session_links relation/edge.
+	SessionLinksColumn = "task_id"
 	// LabelsTable is the table that holds the labels relation/edge. The primary key declared below.
 	LabelsTable = "task_labels"
 	// LabelsInverseTable is the table name for the Label entity.
@@ -265,17 +265,17 @@ func ByExternalIntegrationField(field string, opts ...sql.OrderTermOption) Order
 	}
 }
 
-// ByWorkSessionsCount orders the results by work_sessions count.
-func ByWorkSessionsCount(opts ...sql.OrderTermOption) OrderOption {
+// BySessionLinksCount orders the results by session_links count.
+func BySessionLinksCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newWorkSessionsStep(), opts...)
+		sqlgraph.OrderByNeighborsCount(s, newSessionLinksStep(), opts...)
 	}
 }
 
-// ByWorkSessions orders the results by work_sessions terms.
-func ByWorkSessions(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+// BySessionLinks orders the results by session_links terms.
+func BySessionLinks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newWorkSessionsStep(), append([]sql.OrderTerm{term}, terms...)...)
+		sqlgraph.OrderByNeighborTerms(s, newSessionLinksStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
 
@@ -313,11 +313,11 @@ func newExternalIntegrationStep() *sqlgraph.Step {
 		sqlgraph.Edge(sqlgraph.M2O, true, ExternalIntegrationTable, ExternalIntegrationColumn),
 	)
 }
-func newWorkSessionsStep() *sqlgraph.Step {
+func newSessionLinksStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(WorkSessionsInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, WorkSessionsTable, WorkSessionsColumn),
+		sqlgraph.To(SessionLinksInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, SessionLinksTable, SessionLinksColumn),
 	)
 }
 func newLabelsStep() *sqlgraph.Step {

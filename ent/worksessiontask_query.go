@@ -4,12 +4,10 @@ package ent
 
 import (
 	"context"
-	"database/sql/driver"
 	"fmt"
 	"math"
-	"working-time-tracker/ent/person"
 	"working-time-tracker/ent/predicate"
-	"working-time-tracker/ent/project"
+	"working-time-tracker/ent/task"
 	"working-time-tracker/ent/worksession"
 	"working-time-tracker/ent/worksessiontask"
 
@@ -21,56 +19,55 @@ import (
 	"github.com/google/uuid"
 )
 
-// WorkSessionQuery is the builder for querying WorkSession entities.
-type WorkSessionQuery struct {
+// WorkSessionTaskQuery is the builder for querying WorkSessionTask entities.
+type WorkSessionTaskQuery struct {
 	config
-	ctx           *QueryContext
-	order         []worksession.OrderOption
-	inters        []Interceptor
-	predicates    []predicate.WorkSession
-	withProject   *ProjectQuery
-	withPerson    *PersonQuery
-	withTaskLinks *WorkSessionTaskQuery
-	modifiers     []func(*sql.Selector)
+	ctx         *QueryContext
+	order       []worksessiontask.OrderOption
+	inters      []Interceptor
+	predicates  []predicate.WorkSessionTask
+	withSession *WorkSessionQuery
+	withTask    *TaskQuery
+	modifiers   []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
 }
 
-// Where adds a new predicate for the WorkSessionQuery builder.
-func (_q *WorkSessionQuery) Where(ps ...predicate.WorkSession) *WorkSessionQuery {
+// Where adds a new predicate for the WorkSessionTaskQuery builder.
+func (_q *WorkSessionTaskQuery) Where(ps ...predicate.WorkSessionTask) *WorkSessionTaskQuery {
 	_q.predicates = append(_q.predicates, ps...)
 	return _q
 }
 
 // Limit the number of records to be returned by this query.
-func (_q *WorkSessionQuery) Limit(limit int) *WorkSessionQuery {
+func (_q *WorkSessionTaskQuery) Limit(limit int) *WorkSessionTaskQuery {
 	_q.ctx.Limit = &limit
 	return _q
 }
 
 // Offset to start from.
-func (_q *WorkSessionQuery) Offset(offset int) *WorkSessionQuery {
+func (_q *WorkSessionTaskQuery) Offset(offset int) *WorkSessionTaskQuery {
 	_q.ctx.Offset = &offset
 	return _q
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
-func (_q *WorkSessionQuery) Unique(unique bool) *WorkSessionQuery {
+func (_q *WorkSessionTaskQuery) Unique(unique bool) *WorkSessionTaskQuery {
 	_q.ctx.Unique = &unique
 	return _q
 }
 
 // Order specifies how the records should be ordered.
-func (_q *WorkSessionQuery) Order(o ...worksession.OrderOption) *WorkSessionQuery {
+func (_q *WorkSessionTaskQuery) Order(o ...worksessiontask.OrderOption) *WorkSessionTaskQuery {
 	_q.order = append(_q.order, o...)
 	return _q
 }
 
-// QueryProject chains the current query on the "project" edge.
-func (_q *WorkSessionQuery) QueryProject() *ProjectQuery {
-	query := (&ProjectClient{config: _q.config}).Query()
+// QuerySession chains the current query on the "session" edge.
+func (_q *WorkSessionTaskQuery) QuerySession() *WorkSessionQuery {
+	query := (&WorkSessionClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -80,9 +77,9 @@ func (_q *WorkSessionQuery) QueryProject() *ProjectQuery {
 			return nil, err
 		}
 		step := sqlgraph.NewStep(
-			sqlgraph.From(worksession.Table, worksession.FieldID, selector),
-			sqlgraph.To(project.Table, project.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, worksession.ProjectTable, worksession.ProjectColumn),
+			sqlgraph.From(worksessiontask.Table, worksessiontask.FieldID, selector),
+			sqlgraph.To(worksession.Table, worksession.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, worksessiontask.SessionTable, worksessiontask.SessionColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -90,9 +87,9 @@ func (_q *WorkSessionQuery) QueryProject() *ProjectQuery {
 	return query
 }
 
-// QueryPerson chains the current query on the "person" edge.
-func (_q *WorkSessionQuery) QueryPerson() *PersonQuery {
-	query := (&PersonClient{config: _q.config}).Query()
+// QueryTask chains the current query on the "task" edge.
+func (_q *WorkSessionTaskQuery) QueryTask() *TaskQuery {
+	query := (&TaskClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -102,9 +99,9 @@ func (_q *WorkSessionQuery) QueryPerson() *PersonQuery {
 			return nil, err
 		}
 		step := sqlgraph.NewStep(
-			sqlgraph.From(worksession.Table, worksession.FieldID, selector),
-			sqlgraph.To(person.Table, person.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, worksession.PersonTable, worksession.PersonColumn),
+			sqlgraph.From(worksessiontask.Table, worksessiontask.FieldID, selector),
+			sqlgraph.To(task.Table, task.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, worksessiontask.TaskTable, worksessiontask.TaskColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -112,43 +109,21 @@ func (_q *WorkSessionQuery) QueryPerson() *PersonQuery {
 	return query
 }
 
-// QueryTaskLinks chains the current query on the "task_links" edge.
-func (_q *WorkSessionQuery) QueryTaskLinks() *WorkSessionTaskQuery {
-	query := (&WorkSessionTaskClient{config: _q.config}).Query()
-	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := _q.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		selector := _q.sqlQuery(ctx)
-		if err := selector.Err(); err != nil {
-			return nil, err
-		}
-		step := sqlgraph.NewStep(
-			sqlgraph.From(worksession.Table, worksession.FieldID, selector),
-			sqlgraph.To(worksessiontask.Table, worksessiontask.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, worksession.TaskLinksTable, worksession.TaskLinksColumn),
-		)
-		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
-		return fromU, nil
-	}
-	return query
-}
-
-// First returns the first WorkSession entity from the query.
-// Returns a *NotFoundError when no WorkSession was found.
-func (_q *WorkSessionQuery) First(ctx context.Context) (*WorkSession, error) {
+// First returns the first WorkSessionTask entity from the query.
+// Returns a *NotFoundError when no WorkSessionTask was found.
+func (_q *WorkSessionTaskQuery) First(ctx context.Context) (*WorkSessionTask, error) {
 	nodes, err := _q.Limit(1).All(setContextOp(ctx, _q.ctx, ent.OpQueryFirst))
 	if err != nil {
 		return nil, err
 	}
 	if len(nodes) == 0 {
-		return nil, &NotFoundError{worksession.Label}
+		return nil, &NotFoundError{worksessiontask.Label}
 	}
 	return nodes[0], nil
 }
 
 // FirstX is like First, but panics if an error occurs.
-func (_q *WorkSessionQuery) FirstX(ctx context.Context) *WorkSession {
+func (_q *WorkSessionTaskQuery) FirstX(ctx context.Context) *WorkSessionTask {
 	node, err := _q.First(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -156,22 +131,22 @@ func (_q *WorkSessionQuery) FirstX(ctx context.Context) *WorkSession {
 	return node
 }
 
-// FirstID returns the first WorkSession ID from the query.
-// Returns a *NotFoundError when no WorkSession ID was found.
-func (_q *WorkSessionQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
+// FirstID returns the first WorkSessionTask ID from the query.
+// Returns a *NotFoundError when no WorkSessionTask ID was found.
+func (_q *WorkSessionTaskQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
 	if ids, err = _q.Limit(1).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryFirstID)); err != nil {
 		return
 	}
 	if len(ids) == 0 {
-		err = &NotFoundError{worksession.Label}
+		err = &NotFoundError{worksessiontask.Label}
 		return
 	}
 	return ids[0], nil
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (_q *WorkSessionQuery) FirstIDX(ctx context.Context) uuid.UUID {
+func (_q *WorkSessionTaskQuery) FirstIDX(ctx context.Context) uuid.UUID {
 	id, err := _q.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -179,10 +154,10 @@ func (_q *WorkSessionQuery) FirstIDX(ctx context.Context) uuid.UUID {
 	return id
 }
 
-// Only returns a single WorkSession entity found by the query, ensuring it only returns one.
-// Returns a *NotSingularError when more than one WorkSession entity is found.
-// Returns a *NotFoundError when no WorkSession entities are found.
-func (_q *WorkSessionQuery) Only(ctx context.Context) (*WorkSession, error) {
+// Only returns a single WorkSessionTask entity found by the query, ensuring it only returns one.
+// Returns a *NotSingularError when more than one WorkSessionTask entity is found.
+// Returns a *NotFoundError when no WorkSessionTask entities are found.
+func (_q *WorkSessionTaskQuery) Only(ctx context.Context) (*WorkSessionTask, error) {
 	nodes, err := _q.Limit(2).All(setContextOp(ctx, _q.ctx, ent.OpQueryOnly))
 	if err != nil {
 		return nil, err
@@ -191,14 +166,14 @@ func (_q *WorkSessionQuery) Only(ctx context.Context) (*WorkSession, error) {
 	case 1:
 		return nodes[0], nil
 	case 0:
-		return nil, &NotFoundError{worksession.Label}
+		return nil, &NotFoundError{worksessiontask.Label}
 	default:
-		return nil, &NotSingularError{worksession.Label}
+		return nil, &NotSingularError{worksessiontask.Label}
 	}
 }
 
 // OnlyX is like Only, but panics if an error occurs.
-func (_q *WorkSessionQuery) OnlyX(ctx context.Context) *WorkSession {
+func (_q *WorkSessionTaskQuery) OnlyX(ctx context.Context) *WorkSessionTask {
 	node, err := _q.Only(ctx)
 	if err != nil {
 		panic(err)
@@ -206,10 +181,10 @@ func (_q *WorkSessionQuery) OnlyX(ctx context.Context) *WorkSession {
 	return node
 }
 
-// OnlyID is like Only, but returns the only WorkSession ID in the query.
-// Returns a *NotSingularError when more than one WorkSession ID is found.
+// OnlyID is like Only, but returns the only WorkSessionTask ID in the query.
+// Returns a *NotSingularError when more than one WorkSessionTask ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (_q *WorkSessionQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
+func (_q *WorkSessionTaskQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
 	if ids, err = _q.Limit(2).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryOnlyID)); err != nil {
 		return
@@ -218,15 +193,15 @@ func (_q *WorkSessionQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error
 	case 1:
 		id = ids[0]
 	case 0:
-		err = &NotFoundError{worksession.Label}
+		err = &NotFoundError{worksessiontask.Label}
 	default:
-		err = &NotSingularError{worksession.Label}
+		err = &NotSingularError{worksessiontask.Label}
 	}
 	return
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (_q *WorkSessionQuery) OnlyIDX(ctx context.Context) uuid.UUID {
+func (_q *WorkSessionTaskQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 	id, err := _q.OnlyID(ctx)
 	if err != nil {
 		panic(err)
@@ -234,18 +209,18 @@ func (_q *WorkSessionQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 	return id
 }
 
-// All executes the query and returns a list of WorkSessions.
-func (_q *WorkSessionQuery) All(ctx context.Context) ([]*WorkSession, error) {
+// All executes the query and returns a list of WorkSessionTasks.
+func (_q *WorkSessionTaskQuery) All(ctx context.Context) ([]*WorkSessionTask, error) {
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryAll)
 	if err := _q.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	qr := querierAll[[]*WorkSession, *WorkSessionQuery]()
-	return withInterceptors[[]*WorkSession](ctx, _q, qr, _q.inters)
+	qr := querierAll[[]*WorkSessionTask, *WorkSessionTaskQuery]()
+	return withInterceptors[[]*WorkSessionTask](ctx, _q, qr, _q.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
-func (_q *WorkSessionQuery) AllX(ctx context.Context) []*WorkSession {
+func (_q *WorkSessionTaskQuery) AllX(ctx context.Context) []*WorkSessionTask {
 	nodes, err := _q.All(ctx)
 	if err != nil {
 		panic(err)
@@ -253,20 +228,20 @@ func (_q *WorkSessionQuery) AllX(ctx context.Context) []*WorkSession {
 	return nodes
 }
 
-// IDs executes the query and returns a list of WorkSession IDs.
-func (_q *WorkSessionQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+// IDs executes the query and returns a list of WorkSessionTask IDs.
+func (_q *WorkSessionTaskQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
 	if _q.ctx.Unique == nil && _q.path != nil {
 		_q.Unique(true)
 	}
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryIDs)
-	if err = _q.Select(worksession.FieldID).Scan(ctx, &ids); err != nil {
+	if err = _q.Select(worksessiontask.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (_q *WorkSessionQuery) IDsX(ctx context.Context) []uuid.UUID {
+func (_q *WorkSessionTaskQuery) IDsX(ctx context.Context) []uuid.UUID {
 	ids, err := _q.IDs(ctx)
 	if err != nil {
 		panic(err)
@@ -275,16 +250,16 @@ func (_q *WorkSessionQuery) IDsX(ctx context.Context) []uuid.UUID {
 }
 
 // Count returns the count of the given query.
-func (_q *WorkSessionQuery) Count(ctx context.Context) (int, error) {
+func (_q *WorkSessionTaskQuery) Count(ctx context.Context) (int, error) {
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryCount)
 	if err := _q.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return withInterceptors[int](ctx, _q, querierCount[*WorkSessionQuery](), _q.inters)
+	return withInterceptors[int](ctx, _q, querierCount[*WorkSessionTaskQuery](), _q.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
-func (_q *WorkSessionQuery) CountX(ctx context.Context) int {
+func (_q *WorkSessionTaskQuery) CountX(ctx context.Context) int {
 	count, err := _q.Count(ctx)
 	if err != nil {
 		panic(err)
@@ -293,7 +268,7 @@ func (_q *WorkSessionQuery) CountX(ctx context.Context) int {
 }
 
 // Exist returns true if the query has elements in the graph.
-func (_q *WorkSessionQuery) Exist(ctx context.Context) (bool, error) {
+func (_q *WorkSessionTaskQuery) Exist(ctx context.Context) (bool, error) {
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryExist)
 	switch _, err := _q.FirstID(ctx); {
 	case IsNotFound(err):
@@ -306,7 +281,7 @@ func (_q *WorkSessionQuery) Exist(ctx context.Context) (bool, error) {
 }
 
 // ExistX is like Exist, but panics if an error occurs.
-func (_q *WorkSessionQuery) ExistX(ctx context.Context) bool {
+func (_q *WorkSessionTaskQuery) ExistX(ctx context.Context) bool {
 	exist, err := _q.Exist(ctx)
 	if err != nil {
 		panic(err)
@@ -314,57 +289,45 @@ func (_q *WorkSessionQuery) ExistX(ctx context.Context) bool {
 	return exist
 }
 
-// Clone returns a duplicate of the WorkSessionQuery builder, including all associated steps. It can be
+// Clone returns a duplicate of the WorkSessionTaskQuery builder, including all associated steps. It can be
 // used to prepare common query builders and use them differently after the clone is made.
-func (_q *WorkSessionQuery) Clone() *WorkSessionQuery {
+func (_q *WorkSessionTaskQuery) Clone() *WorkSessionTaskQuery {
 	if _q == nil {
 		return nil
 	}
-	return &WorkSessionQuery{
-		config:        _q.config,
-		ctx:           _q.ctx.Clone(),
-		order:         append([]worksession.OrderOption{}, _q.order...),
-		inters:        append([]Interceptor{}, _q.inters...),
-		predicates:    append([]predicate.WorkSession{}, _q.predicates...),
-		withProject:   _q.withProject.Clone(),
-		withPerson:    _q.withPerson.Clone(),
-		withTaskLinks: _q.withTaskLinks.Clone(),
+	return &WorkSessionTaskQuery{
+		config:      _q.config,
+		ctx:         _q.ctx.Clone(),
+		order:       append([]worksessiontask.OrderOption{}, _q.order...),
+		inters:      append([]Interceptor{}, _q.inters...),
+		predicates:  append([]predicate.WorkSessionTask{}, _q.predicates...),
+		withSession: _q.withSession.Clone(),
+		withTask:    _q.withTask.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
 	}
 }
 
-// WithProject tells the query-builder to eager-load the nodes that are connected to
-// the "project" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *WorkSessionQuery) WithProject(opts ...func(*ProjectQuery)) *WorkSessionQuery {
-	query := (&ProjectClient{config: _q.config}).Query()
+// WithSession tells the query-builder to eager-load the nodes that are connected to
+// the "session" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *WorkSessionTaskQuery) WithSession(opts ...func(*WorkSessionQuery)) *WorkSessionTaskQuery {
+	query := (&WorkSessionClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	_q.withProject = query
+	_q.withSession = query
 	return _q
 }
 
-// WithPerson tells the query-builder to eager-load the nodes that are connected to
-// the "person" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *WorkSessionQuery) WithPerson(opts ...func(*PersonQuery)) *WorkSessionQuery {
-	query := (&PersonClient{config: _q.config}).Query()
+// WithTask tells the query-builder to eager-load the nodes that are connected to
+// the "task" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *WorkSessionTaskQuery) WithTask(opts ...func(*TaskQuery)) *WorkSessionTaskQuery {
+	query := (&TaskClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	_q.withPerson = query
-	return _q
-}
-
-// WithTaskLinks tells the query-builder to eager-load the nodes that are connected to
-// the "task_links" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *WorkSessionQuery) WithTaskLinks(opts ...func(*WorkSessionTaskQuery)) *WorkSessionQuery {
-	query := (&WorkSessionTaskClient{config: _q.config}).Query()
-	for _, opt := range opts {
-		opt(query)
-	}
-	_q.withTaskLinks = query
+	_q.withTask = query
 	return _q
 }
 
@@ -374,19 +337,19 @@ func (_q *WorkSessionQuery) WithTaskLinks(opts ...func(*WorkSessionTaskQuery)) *
 // Example:
 //
 //	var v []struct {
-//		ProjectID uuid.UUID `json:"project_id,omitempty"`
+//		SessionID uuid.UUID `json:"session_id,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
-//	client.WorkSession.Query().
-//		GroupBy(worksession.FieldProjectID).
+//	client.WorkSessionTask.Query().
+//		GroupBy(worksessiontask.FieldSessionID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-func (_q *WorkSessionQuery) GroupBy(field string, fields ...string) *WorkSessionGroupBy {
+func (_q *WorkSessionTaskQuery) GroupBy(field string, fields ...string) *WorkSessionTaskGroupBy {
 	_q.ctx.Fields = append([]string{field}, fields...)
-	grbuild := &WorkSessionGroupBy{build: _q}
+	grbuild := &WorkSessionTaskGroupBy{build: _q}
 	grbuild.flds = &_q.ctx.Fields
-	grbuild.label = worksession.Label
+	grbuild.label = worksessiontask.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
 }
@@ -397,26 +360,26 @@ func (_q *WorkSessionQuery) GroupBy(field string, fields ...string) *WorkSession
 // Example:
 //
 //	var v []struct {
-//		ProjectID uuid.UUID `json:"project_id,omitempty"`
+//		SessionID uuid.UUID `json:"session_id,omitempty"`
 //	}
 //
-//	client.WorkSession.Query().
-//		Select(worksession.FieldProjectID).
+//	client.WorkSessionTask.Query().
+//		Select(worksessiontask.FieldSessionID).
 //		Scan(ctx, &v)
-func (_q *WorkSessionQuery) Select(fields ...string) *WorkSessionSelect {
+func (_q *WorkSessionTaskQuery) Select(fields ...string) *WorkSessionTaskSelect {
 	_q.ctx.Fields = append(_q.ctx.Fields, fields...)
-	sbuild := &WorkSessionSelect{WorkSessionQuery: _q}
-	sbuild.label = worksession.Label
+	sbuild := &WorkSessionTaskSelect{WorkSessionTaskQuery: _q}
+	sbuild.label = worksessiontask.Label
 	sbuild.flds, sbuild.scan = &_q.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
-// Aggregate returns a WorkSessionSelect configured with the given aggregations.
-func (_q *WorkSessionQuery) Aggregate(fns ...AggregateFunc) *WorkSessionSelect {
+// Aggregate returns a WorkSessionTaskSelect configured with the given aggregations.
+func (_q *WorkSessionTaskQuery) Aggregate(fns ...AggregateFunc) *WorkSessionTaskSelect {
 	return _q.Select().Aggregate(fns...)
 }
 
-func (_q *WorkSessionQuery) prepareQuery(ctx context.Context) error {
+func (_q *WorkSessionTaskQuery) prepareQuery(ctx context.Context) error {
 	for _, inter := range _q.inters {
 		if inter == nil {
 			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
@@ -428,7 +391,7 @@ func (_q *WorkSessionQuery) prepareQuery(ctx context.Context) error {
 		}
 	}
 	for _, f := range _q.ctx.Fields {
-		if !worksession.ValidColumn(f) {
+		if !worksessiontask.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
 	}
@@ -442,21 +405,20 @@ func (_q *WorkSessionQuery) prepareQuery(ctx context.Context) error {
 	return nil
 }
 
-func (_q *WorkSessionQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*WorkSession, error) {
+func (_q *WorkSessionTaskQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*WorkSessionTask, error) {
 	var (
-		nodes       = []*WorkSession{}
+		nodes       = []*WorkSessionTask{}
 		_spec       = _q.querySpec()
-		loadedTypes = [3]bool{
-			_q.withProject != nil,
-			_q.withPerson != nil,
-			_q.withTaskLinks != nil,
+		loadedTypes = [2]bool{
+			_q.withSession != nil,
+			_q.withTask != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
-		return (*WorkSession).scanValues(nil, columns)
+		return (*WorkSessionTask).scanValues(nil, columns)
 	}
 	_spec.Assign = func(columns []string, values []any) error {
-		node := &WorkSession{config: _q.config}
+		node := &WorkSessionTask{config: _q.config}
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
@@ -473,33 +435,26 @@ func (_q *WorkSessionQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := _q.withProject; query != nil {
-		if err := _q.loadProject(ctx, query, nodes, nil,
-			func(n *WorkSession, e *Project) { n.Edges.Project = e }); err != nil {
+	if query := _q.withSession; query != nil {
+		if err := _q.loadSession(ctx, query, nodes, nil,
+			func(n *WorkSessionTask, e *WorkSession) { n.Edges.Session = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := _q.withPerson; query != nil {
-		if err := _q.loadPerson(ctx, query, nodes, nil,
-			func(n *WorkSession, e *Person) { n.Edges.Person = e }); err != nil {
-			return nil, err
-		}
-	}
-	if query := _q.withTaskLinks; query != nil {
-		if err := _q.loadTaskLinks(ctx, query, nodes,
-			func(n *WorkSession) { n.Edges.TaskLinks = []*WorkSessionTask{} },
-			func(n *WorkSession, e *WorkSessionTask) { n.Edges.TaskLinks = append(n.Edges.TaskLinks, e) }); err != nil {
+	if query := _q.withTask; query != nil {
+		if err := _q.loadTask(ctx, query, nodes, nil,
+			func(n *WorkSessionTask, e *Task) { n.Edges.Task = e }); err != nil {
 			return nil, err
 		}
 	}
 	return nodes, nil
 }
 
-func (_q *WorkSessionQuery) loadProject(ctx context.Context, query *ProjectQuery, nodes []*WorkSession, init func(*WorkSession), assign func(*WorkSession, *Project)) error {
+func (_q *WorkSessionTaskQuery) loadSession(ctx context.Context, query *WorkSessionQuery, nodes []*WorkSessionTask, init func(*WorkSessionTask), assign func(*WorkSessionTask, *WorkSession)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
-	nodeids := make(map[uuid.UUID][]*WorkSession)
+	nodeids := make(map[uuid.UUID][]*WorkSessionTask)
 	for i := range nodes {
-		fk := nodes[i].ProjectID
+		fk := nodes[i].SessionID
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -508,7 +463,7 @@ func (_q *WorkSessionQuery) loadProject(ctx context.Context, query *ProjectQuery
 	if len(ids) == 0 {
 		return nil
 	}
-	query.Where(project.IDIn(ids...))
+	query.Where(worksession.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
@@ -516,7 +471,7 @@ func (_q *WorkSessionQuery) loadProject(ctx context.Context, query *ProjectQuery
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "project_id" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "session_id" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -524,11 +479,11 @@ func (_q *WorkSessionQuery) loadProject(ctx context.Context, query *ProjectQuery
 	}
 	return nil
 }
-func (_q *WorkSessionQuery) loadPerson(ctx context.Context, query *PersonQuery, nodes []*WorkSession, init func(*WorkSession), assign func(*WorkSession, *Person)) error {
+func (_q *WorkSessionTaskQuery) loadTask(ctx context.Context, query *TaskQuery, nodes []*WorkSessionTask, init func(*WorkSessionTask), assign func(*WorkSessionTask, *Task)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
-	nodeids := make(map[uuid.UUID][]*WorkSession)
+	nodeids := make(map[uuid.UUID][]*WorkSessionTask)
 	for i := range nodes {
-		fk := nodes[i].PersonID
+		fk := nodes[i].TaskID
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -537,7 +492,7 @@ func (_q *WorkSessionQuery) loadPerson(ctx context.Context, query *PersonQuery, 
 	if len(ids) == 0 {
 		return nil
 	}
-	query.Where(person.IDIn(ids...))
+	query.Where(task.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
@@ -545,46 +500,16 @@ func (_q *WorkSessionQuery) loadPerson(ctx context.Context, query *PersonQuery, 
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "person_id" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "task_id" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
 		}
-	}
-	return nil
-}
-func (_q *WorkSessionQuery) loadTaskLinks(ctx context.Context, query *WorkSessionTaskQuery, nodes []*WorkSession, init func(*WorkSession), assign func(*WorkSession, *WorkSessionTask)) error {
-	fks := make([]driver.Value, 0, len(nodes))
-	nodeids := make(map[uuid.UUID]*WorkSession)
-	for i := range nodes {
-		fks = append(fks, nodes[i].ID)
-		nodeids[nodes[i].ID] = nodes[i]
-		if init != nil {
-			init(nodes[i])
-		}
-	}
-	if len(query.ctx.Fields) > 0 {
-		query.ctx.AppendFieldOnce(worksessiontask.FieldSessionID)
-	}
-	query.Where(predicate.WorkSessionTask(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(worksession.TaskLinksColumn), fks...))
-	}))
-	neighbors, err := query.All(ctx)
-	if err != nil {
-		return err
-	}
-	for _, n := range neighbors {
-		fk := n.SessionID
-		node, ok := nodeids[fk]
-		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "session_id" returned %v for node %v`, fk, n.ID)
-		}
-		assign(node, n)
 	}
 	return nil
 }
 
-func (_q *WorkSessionQuery) sqlCount(ctx context.Context) (int, error) {
+func (_q *WorkSessionTaskQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := _q.querySpec()
 	if len(_q.modifiers) > 0 {
 		_spec.Modifiers = _q.modifiers
@@ -596,8 +521,8 @@ func (_q *WorkSessionQuery) sqlCount(ctx context.Context) (int, error) {
 	return sqlgraph.CountNodes(ctx, _q.driver, _spec)
 }
 
-func (_q *WorkSessionQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := sqlgraph.NewQuerySpec(worksession.Table, worksession.Columns, sqlgraph.NewFieldSpec(worksession.FieldID, field.TypeUUID))
+func (_q *WorkSessionTaskQuery) querySpec() *sqlgraph.QuerySpec {
+	_spec := sqlgraph.NewQuerySpec(worksessiontask.Table, worksessiontask.Columns, sqlgraph.NewFieldSpec(worksessiontask.FieldID, field.TypeUUID))
 	_spec.From = _q.sql
 	if unique := _q.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
@@ -606,17 +531,17 @@ func (_q *WorkSessionQuery) querySpec() *sqlgraph.QuerySpec {
 	}
 	if fields := _q.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
-		_spec.Node.Columns = append(_spec.Node.Columns, worksession.FieldID)
+		_spec.Node.Columns = append(_spec.Node.Columns, worksessiontask.FieldID)
 		for i := range fields {
-			if fields[i] != worksession.FieldID {
+			if fields[i] != worksessiontask.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
 		}
-		if _q.withProject != nil {
-			_spec.Node.AddColumnOnce(worksession.FieldProjectID)
+		if _q.withSession != nil {
+			_spec.Node.AddColumnOnce(worksessiontask.FieldSessionID)
 		}
-		if _q.withPerson != nil {
-			_spec.Node.AddColumnOnce(worksession.FieldPersonID)
+		if _q.withTask != nil {
+			_spec.Node.AddColumnOnce(worksessiontask.FieldTaskID)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {
@@ -642,12 +567,12 @@ func (_q *WorkSessionQuery) querySpec() *sqlgraph.QuerySpec {
 	return _spec
 }
 
-func (_q *WorkSessionQuery) sqlQuery(ctx context.Context) *sql.Selector {
+func (_q *WorkSessionTaskQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(_q.driver.Dialect())
-	t1 := builder.Table(worksession.Table)
+	t1 := builder.Table(worksessiontask.Table)
 	columns := _q.ctx.Fields
 	if len(columns) == 0 {
-		columns = worksession.Columns
+		columns = worksessiontask.Columns
 	}
 	selector := builder.Select(t1.Columns(columns...)...).From(t1)
 	if _q.sql != nil {
@@ -680,7 +605,7 @@ func (_q *WorkSessionQuery) sqlQuery(ctx context.Context) *sql.Selector {
 // ForUpdate locks the selected rows against concurrent updates, and prevent them from being
 // updated, deleted or "selected ... for update" by other sessions, until the transaction is
 // either committed or rolled-back.
-func (_q *WorkSessionQuery) ForUpdate(opts ...sql.LockOption) *WorkSessionQuery {
+func (_q *WorkSessionTaskQuery) ForUpdate(opts ...sql.LockOption) *WorkSessionTaskQuery {
 	if _q.driver.Dialect() == dialect.Postgres {
 		_q.Unique(false)
 	}
@@ -693,7 +618,7 @@ func (_q *WorkSessionQuery) ForUpdate(opts ...sql.LockOption) *WorkSessionQuery 
 // ForShare behaves similarly to ForUpdate, except that it acquires a shared mode lock
 // on any rows that are read. Other sessions can read the rows, but cannot modify them
 // until your transaction commits.
-func (_q *WorkSessionQuery) ForShare(opts ...sql.LockOption) *WorkSessionQuery {
+func (_q *WorkSessionTaskQuery) ForShare(opts ...sql.LockOption) *WorkSessionTaskQuery {
 	if _q.driver.Dialect() == dialect.Postgres {
 		_q.Unique(false)
 	}
@@ -703,28 +628,28 @@ func (_q *WorkSessionQuery) ForShare(opts ...sql.LockOption) *WorkSessionQuery {
 	return _q
 }
 
-// WorkSessionGroupBy is the group-by builder for WorkSession entities.
-type WorkSessionGroupBy struct {
+// WorkSessionTaskGroupBy is the group-by builder for WorkSessionTask entities.
+type WorkSessionTaskGroupBy struct {
 	selector
-	build *WorkSessionQuery
+	build *WorkSessionTaskQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
-func (_g *WorkSessionGroupBy) Aggregate(fns ...AggregateFunc) *WorkSessionGroupBy {
+func (_g *WorkSessionTaskGroupBy) Aggregate(fns ...AggregateFunc) *WorkSessionTaskGroupBy {
 	_g.fns = append(_g.fns, fns...)
 	return _g
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (_g *WorkSessionGroupBy) Scan(ctx context.Context, v any) error {
+func (_g *WorkSessionTaskGroupBy) Scan(ctx context.Context, v any) error {
 	ctx = setContextOp(ctx, _g.build.ctx, ent.OpQueryGroupBy)
 	if err := _g.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*WorkSessionQuery, *WorkSessionGroupBy](ctx, _g.build, _g, _g.build.inters, v)
+	return scanWithInterceptors[*WorkSessionTaskQuery, *WorkSessionTaskGroupBy](ctx, _g.build, _g, _g.build.inters, v)
 }
 
-func (_g *WorkSessionGroupBy) sqlScan(ctx context.Context, root *WorkSessionQuery, v any) error {
+func (_g *WorkSessionTaskGroupBy) sqlScan(ctx context.Context, root *WorkSessionTaskQuery, v any) error {
 	selector := root.sqlQuery(ctx).Select()
 	aggregation := make([]string, 0, len(_g.fns))
 	for _, fn := range _g.fns {
@@ -751,28 +676,28 @@ func (_g *WorkSessionGroupBy) sqlScan(ctx context.Context, root *WorkSessionQuer
 	return sql.ScanSlice(rows, v)
 }
 
-// WorkSessionSelect is the builder for selecting fields of WorkSession entities.
-type WorkSessionSelect struct {
-	*WorkSessionQuery
+// WorkSessionTaskSelect is the builder for selecting fields of WorkSessionTask entities.
+type WorkSessionTaskSelect struct {
+	*WorkSessionTaskQuery
 	selector
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
-func (_s *WorkSessionSelect) Aggregate(fns ...AggregateFunc) *WorkSessionSelect {
+func (_s *WorkSessionTaskSelect) Aggregate(fns ...AggregateFunc) *WorkSessionTaskSelect {
 	_s.fns = append(_s.fns, fns...)
 	return _s
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (_s *WorkSessionSelect) Scan(ctx context.Context, v any) error {
+func (_s *WorkSessionTaskSelect) Scan(ctx context.Context, v any) error {
 	ctx = setContextOp(ctx, _s.ctx, ent.OpQuerySelect)
 	if err := _s.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*WorkSessionQuery, *WorkSessionSelect](ctx, _s.WorkSessionQuery, _s, _s.inters, v)
+	return scanWithInterceptors[*WorkSessionTaskQuery, *WorkSessionTaskSelect](ctx, _s.WorkSessionTaskQuery, _s, _s.inters, v)
 }
 
-func (_s *WorkSessionSelect) sqlScan(ctx context.Context, root *WorkSessionQuery, v any) error {
+func (_s *WorkSessionTaskSelect) sqlScan(ctx context.Context, root *WorkSessionTaskQuery, v any) error {
 	selector := root.sqlQuery(ctx)
 	aggregation := make([]string, 0, len(_s.fns))
 	for _, fn := range _s.fns {

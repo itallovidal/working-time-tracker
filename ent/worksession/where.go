@@ -56,9 +56,9 @@ func IDLTE(id uuid.UUID) predicate.WorkSession {
 	return predicate.WorkSession(sql.FieldLTE(FieldID, id))
 }
 
-// TaskID applies equality check predicate on the "task_id" field. It's identical to TaskIDEQ.
-func TaskID(v uuid.UUID) predicate.WorkSession {
-	return predicate.WorkSession(sql.FieldEQ(FieldTaskID, v))
+// ProjectID applies equality check predicate on the "project_id" field. It's identical to ProjectIDEQ.
+func ProjectID(v uuid.UUID) predicate.WorkSession {
+	return predicate.WorkSession(sql.FieldEQ(FieldProjectID, v))
 }
 
 // PersonID applies equality check predicate on the "person_id" field. It's identical to PersonIDEQ.
@@ -96,24 +96,24 @@ func CreatedAt(v time.Time) predicate.WorkSession {
 	return predicate.WorkSession(sql.FieldEQ(FieldCreatedAt, v))
 }
 
-// TaskIDEQ applies the EQ predicate on the "task_id" field.
-func TaskIDEQ(v uuid.UUID) predicate.WorkSession {
-	return predicate.WorkSession(sql.FieldEQ(FieldTaskID, v))
+// ProjectIDEQ applies the EQ predicate on the "project_id" field.
+func ProjectIDEQ(v uuid.UUID) predicate.WorkSession {
+	return predicate.WorkSession(sql.FieldEQ(FieldProjectID, v))
 }
 
-// TaskIDNEQ applies the NEQ predicate on the "task_id" field.
-func TaskIDNEQ(v uuid.UUID) predicate.WorkSession {
-	return predicate.WorkSession(sql.FieldNEQ(FieldTaskID, v))
+// ProjectIDNEQ applies the NEQ predicate on the "project_id" field.
+func ProjectIDNEQ(v uuid.UUID) predicate.WorkSession {
+	return predicate.WorkSession(sql.FieldNEQ(FieldProjectID, v))
 }
 
-// TaskIDIn applies the In predicate on the "task_id" field.
-func TaskIDIn(vs ...uuid.UUID) predicate.WorkSession {
-	return predicate.WorkSession(sql.FieldIn(FieldTaskID, vs...))
+// ProjectIDIn applies the In predicate on the "project_id" field.
+func ProjectIDIn(vs ...uuid.UUID) predicate.WorkSession {
+	return predicate.WorkSession(sql.FieldIn(FieldProjectID, vs...))
 }
 
-// TaskIDNotIn applies the NotIn predicate on the "task_id" field.
-func TaskIDNotIn(vs ...uuid.UUID) predicate.WorkSession {
-	return predicate.WorkSession(sql.FieldNotIn(FieldTaskID, vs...))
+// ProjectIDNotIn applies the NotIn predicate on the "project_id" field.
+func ProjectIDNotIn(vs ...uuid.UUID) predicate.WorkSession {
+	return predicate.WorkSession(sql.FieldNotIn(FieldProjectID, vs...))
 }
 
 // PersonIDEQ applies the EQ predicate on the "person_id" field.
@@ -376,21 +376,21 @@ func CreatedAtLTE(v time.Time) predicate.WorkSession {
 	return predicate.WorkSession(sql.FieldLTE(FieldCreatedAt, v))
 }
 
-// HasTask applies the HasEdge predicate on the "task" edge.
-func HasTask() predicate.WorkSession {
+// HasProject applies the HasEdge predicate on the "project" edge.
+func HasProject() predicate.WorkSession {
 	return predicate.WorkSession(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, TaskTable, TaskColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, ProjectTable, ProjectColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasTaskWith applies the HasEdge predicate on the "task" edge with a given conditions (other predicates).
-func HasTaskWith(preds ...predicate.Task) predicate.WorkSession {
+// HasProjectWith applies the HasEdge predicate on the "project" edge with a given conditions (other predicates).
+func HasProjectWith(preds ...predicate.Project) predicate.WorkSession {
 	return predicate.WorkSession(func(s *sql.Selector) {
-		step := newTaskStep()
+		step := newProjectStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -414,6 +414,29 @@ func HasPerson() predicate.WorkSession {
 func HasPersonWith(preds ...predicate.Person) predicate.WorkSession {
 	return predicate.WorkSession(func(s *sql.Selector) {
 		step := newPersonStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasTaskLinks applies the HasEdge predicate on the "task_links" edge.
+func HasTaskLinks() predicate.WorkSession {
+	return predicate.WorkSession(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, TaskLinksTable, TaskLinksColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasTaskLinksWith applies the HasEdge predicate on the "task_links" edge with a given conditions (other predicates).
+func HasTaskLinksWith(preds ...predicate.WorkSessionTask) predicate.WorkSession {
+	return predicate.WorkSession(func(s *sql.Selector) {
+		step := newTaskLinksStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

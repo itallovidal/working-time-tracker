@@ -25,7 +25,9 @@
         "integration_id": "",
         "invite_id": "",
         "invite_token": "",
-        "label_id": ""
+        "label_id": "",
+        "session_id": "",
+        "session_task_id": ""
       }
     },
     {
@@ -1037,6 +1039,58 @@
       "url": "{{base_url}}/api/projects/{{project_id}}/work-sessions/total?person_id={{person_id}}",
       "authentication": {},
       "metaSortKey": 5,
+      "headers": [],
+      "body": {}
+    },
+    {
+      "_id": "req_07_06",
+      "_type": "request",
+      "parentId": "fld_07",
+      "name": "Adicionar tarefa à sessão",
+      "method": "POST",
+      "url": "{{base_url}}/api/projects/{{project_id}}/work-sessions/{{session_id}}/tasks",
+      "authentication": {},
+      "metaSortKey": 6,
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"task_id\": \"{{task_id}}\"\n}"
+      }
+    },
+    {
+      "_id": "req_07_07",
+      "_type": "request",
+      "parentId": "fld_07",
+      "name": "Parar de mexer numa tarefa da sessão",
+      "method": "PATCH",
+      "url": "{{base_url}}/api/projects/{{project_id}}/work-sessions/{{session_id}}/tasks/{{session_task_id}}",
+      "authentication": {},
+      "metaSortKey": 7,
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"stop\": true\n}"
+      }
+    },
+    {
+      "_id": "req_07_08",
+      "_type": "request",
+      "parentId": "fld_07",
+      "name": "Tirar tarefa da sessão",
+      "method": "DELETE",
+      "url": "{{base_url}}/api/projects/{{project_id}}/work-sessions/{{session_id}}/tasks/{{session_task_id}}",
+      "authentication": {},
+      "metaSortKey": 8,
       "headers": [],
       "body": {}
     },

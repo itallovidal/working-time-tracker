@@ -44,3 +44,6 @@ type TeamMembership func(*sql.Selector)
 
 // WorkSession is the predicate function for worksession builders.
 type WorkSession func(*sql.Selector)
+
+// WorkSessionTask is the predicate function for worksessiontask builders.
+type WorkSessionTask func(*sql.Selector)

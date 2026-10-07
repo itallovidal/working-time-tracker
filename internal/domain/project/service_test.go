@@ -148,8 +148,8 @@ func TestService_Delete_CascadesChildren(t *testing.T) {
 	it := testClient.Integration.Create().SetProjectID(proj.ID).SetType("github").SetDisplayName("GitHub").SaveX(ctx)
 	task := testClient.Task.Create().SetName("Tarefa").SetProjectID(proj.ID).SetAssigneeID(p.ID).
 		SetExternalIntegrationID(it.ID).SaveX(ctx)
-	testClient.WorkSession.Create().SetTaskID(task.ID).SetPersonID(p.ID).
-		SetStartAt(time.Now().Add(-time.Hour)).SetEndAt(time.Now()).SaveX(ctx)
+	endedAt := time.Now()
+	testutil.Session(t, testClient, task.ID, p.ID, endedAt.Add(-time.Hour), &endedAt, nil, nil)
 
 	if err := svc.Delete(proj.ID.String()); err != nil {
 		t.Fatalf("delete project with children failed: %v", err)

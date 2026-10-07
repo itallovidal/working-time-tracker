@@ -36,7 +36,8 @@ func (Task) Edges() []ent.Edge {
 		edge.From("project", Project.Type).Ref("tasks").Field("project_id").Unique().Required(),
 		edge.From("assignee", Person.Type).Ref("tasks").Field("assignee_id").Unique(),
 		edge.From("external_integration", Integration.Type).Ref("tasks").Field("external_integration_id").Unique(),
-		edge.To("work_sessions", WorkSession.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
+		// Excluir a tarefa a tira das sessões, mas as sessões e as horas ficam.
+		edge.To("session_links", WorkSessionTask.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("labels", Label.Type),
 	}
 }

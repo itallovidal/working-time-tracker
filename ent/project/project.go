@@ -51,6 +51,8 @@ const (
 	EdgeTeams = "teams"
 	// EdgeTasks holds the string denoting the tasks edge name in mutations.
 	EdgeTasks = "tasks"
+	// EdgeWorkSessions holds the string denoting the work_sessions edge name in mutations.
+	EdgeWorkSessions = "work_sessions"
 	// EdgeIntegrations holds the string denoting the integrations edge name in mutations.
 	EdgeIntegrations = "integrations"
 	// EdgeAllocations holds the string denoting the allocations edge name in mutations.
@@ -87,6 +89,13 @@ const (
 	TasksInverseTable = "tasks"
 	// TasksColumn is the table column denoting the tasks relation/edge.
 	TasksColumn = "project_id"
+	// WorkSessionsTable is the table that holds the work_sessions relation/edge.
+	WorkSessionsTable = "work_sessions"
+	// WorkSessionsInverseTable is the table name for the WorkSession entity.
+	// It exists in this package in order to avoid circular dependency with the "worksession" package.
+	WorkSessionsInverseTable = "work_sessions"
+	// WorkSessionsColumn is the table column denoting the work_sessions relation/edge.
+	WorkSessionsColumn = "project_id"
 	// IntegrationsTable is the table that holds the integrations relation/edge.
 	IntegrationsTable = "integrations"
 	// IntegrationsInverseTable is the table name for the Integration entity.
@@ -270,6 +279,20 @@ func ByTasks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
+// ByWorkSessionsCount orders the results by work_sessions count.
+func ByWorkSessionsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newWorkSessionsStep(), opts...)
+	}
+}
+
+// ByWorkSessions orders the results by work_sessions terms.
+func ByWorkSessions(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newWorkSessionsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
 // ByIntegrationsCount orders the results by integrations count.
 func ByIntegrationsCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -337,6 +360,13 @@ func newTasksStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(TasksInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, TasksTable, TasksColumn),
+	)
+}
+func newWorkSessionsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(WorkSessionsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, WorkSessionsTable, WorkSessionsColumn),
 	)
 }
 func newIntegrationsStep() *sqlgraph.Step {

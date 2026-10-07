@@ -670,21 +670,21 @@ func HasExternalIntegrationWith(preds ...predicate.Integration) predicate.Task {
 	})
 }
 
-// HasWorkSessions applies the HasEdge predicate on the "work_sessions" edge.
-func HasWorkSessions() predicate.Task {
+// HasSessionLinks applies the HasEdge predicate on the "session_links" edge.
+func HasSessionLinks() predicate.Task {
 	return predicate.Task(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, WorkSessionsTable, WorkSessionsColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, SessionLinksTable, SessionLinksColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasWorkSessionsWith applies the HasEdge predicate on the "work_sessions" edge with a given conditions (other predicates).
-func HasWorkSessionsWith(preds ...predicate.WorkSession) predicate.Task {
+// HasSessionLinksWith applies the HasEdge predicate on the "session_links" edge with a given conditions (other predicates).
+func HasSessionLinksWith(preds ...predicate.WorkSessionTask) predicate.Task {
 	return predicate.Task(func(s *sql.Selector) {
-		step := newWorkSessionsStep()
+		step := newSessionLinksStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

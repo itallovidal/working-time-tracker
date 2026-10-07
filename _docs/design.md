@@ -93,9 +93,13 @@ Task: id (UUID PK), project_id (FK Project), name, description,
       external_item_id (VARCHAR, nullable),
       external_item_url (TEXT, nullable),
       created_at
-WorkSession: id (UUID PK), task_id (FK Task), person_id (FK Person),
+WorkSession: id (UUID PK), project_id (FK Project), person_id (FK Person),
              start_at (TIMESTAMP), end_at (TIMESTAMP nullable),
              pay_rate_cents (int, nullable), bill_rate_cents (int, nullable),
+             created_at
+WorkSessionTask: id (UUID PK), session_id (FK WorkSession, cascade),
+             task_id (FK Task, cascade), from_at (TIMESTAMP),
+             until_at (TIMESTAMP nullable: until the end of the session),
              created_at
              (the two rates are copied from the Allocation and the Project at
               clock-in, so changing a rate later never rewrites past hours;
@@ -193,6 +197,7 @@ Each integration type implements a common interface (`internal/adapter`):
 - `POST /api/projects/:projectId/tasks` / `GET /api/projects/:projectId/tasks` — task CRUD scoped to project (list filters: q, assignee_id — a person or `none` —, deadline_to; pages: page, per_page)
 - `GET /api/tasks/:taskId` / `PATCH /api/tasks/:taskId` / `DELETE /api/tasks/:taskId`
 - `POST /api/projects/:projectId/work-sessions/clock-in` — clock in (body: task_id, person_id)
+- `POST /api/projects/:projectId/work-sessions/:sessionId/tasks` / `PATCH .../tasks/:linkId` / `DELETE .../tasks/:linkId` — add a task to a session (open or closed), change its interval, remove it
 - `POST /api/projects/:projectId/work-sessions/clock-out` — clock out (body: person_id)
 - `GET /api/projects/:projectId/work-sessions` — list (filters: task_id, person_id)
 - `GET /api/projects/:projectId/work-sessions/total` — total time (filters: task_id, person_id)
@@ -284,6 +289,15 @@ Each integration type implements a common interface (`internal/adapter`):
 - Translate on the server from `Accept-Language`: keeps clients trivial, but every client then depends on the server's wording, the API doc cannot list stable identifiers, and the browser would have two translation paths.
 - Send both the code and a message: easy, but the message would still be in one language and would tempt clients to match on it.
 - One code per field for the length errors: avoids the `field` parameter but multiplies codes that only differ by a noun.
+
+### Decision 12: A session has tasks over time — WorkSessionTask
+**Choice:** A WorkSession belongs to a project (`project_id`) and has one or more tasks through `work_session_tasks`, each with the interval it was in the session (`from_at`, `until_at`; null is "until the session ends"). Clock-in creates the session and its first task in one transaction; more tasks are added to an open or a closed session, and the same task can come back as long as its intervals do not overlap. Tasks of different projects cannot share a session, because the pay and bill rates frozen on the session come from the person's allocation in one project.
+**Rationale:** People work on several tasks in one sitting, sometimes in parallel. The time counts for the session and for each of its tasks: the person, the project and the amounts count the session once, while a task counts the time it was in the session (parallel tasks both count the full overlap). The per-task view is therefore not additive, and nothing sums it across tasks. Changing the tasks of a session does not change its time or its amounts, so it needs no permission of its own: the person who clocked in and admins can do it.
+**Alternatives considered:**
+- Slices per task (switching tasks closes one slice and opens another): exact and additive, but it does not describe parallel work, which is the point.
+- Time split by hand when the session ends: exact per task, but an extra step on every clock-out.
+- Sessions across projects: would need one rate per project inside a session, which forces splitting time per task and reshapes every route and report.
+**Consequences:** Deleting a task removes it from the sessions it was in; the sessions and the hours stay (a session can end up with no task). Sessions that existed before the migration got one interval with their old task, from start to end.
 
 ## Risks / Trade-offs
 

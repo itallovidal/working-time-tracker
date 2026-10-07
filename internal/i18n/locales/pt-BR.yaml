@@ -1024,16 +1024,22 @@ errors:
   work_session:
     already_open: "já existe um ponto aberto para esta pessoa; pare a sessão atual antes de iniciar outra"
     filter_required: "filtre por task_id ou person_id"
+    invalid_interval: "o intervalo precisa começar e terminar dentro da sessão, com o fim depois do começo"
     invalid_person_filter: "pessoa inválida (person_id)"
     invalid_task_filter: "tarefa inválida (task_id)"
+    last_task: "a sessão precisa ficar com ao menos uma tarefa; enquanto aberta, ao menos uma em andamento"
     no_rate: "esta pessoa ainda não tem valor por hora neste projeto; um admin precisa definir na aba Colaboradores antes do ponto"
+    not_found: "sessão não encontrada"
     not_open: "não há ponto aberto para esta pessoa"
+    not_yours: "só quem bateu o ponto, ou um admin, pode mexer nas tarefas desta sessão"
     other_person_admin_only: "só admins podem registrar o ponto de outra pessoa"
     person_not_found: "pessoa não encontrada"
     person_not_in_org: "pessoa não encontrada nesta organização"
     person_required: "informe a pessoa (person_id)"
+    task_link_not_found: "esta tarefa não está na sessão"
     task_not_found: "tarefa não encontrada"
     task_other_project: "a tarefa não é deste projeto"
+    task_overlap: "a tarefa já está na sessão neste período"
     task_required: "informe a tarefa (task_id)"
 
 fields:

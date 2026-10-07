@@ -21,6 +21,7 @@ import (
 	"working-time-tracker/ent/team"
 	"working-time-tracker/ent/teammembership"
 	"working-time-tracker/ent/worksession"
+	"working-time-tracker/ent/worksessiontask"
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
@@ -85,19 +86,20 @@ var (
 func checkColumn(t, c string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
-			allocation.Table:     allocation.ValidColumn,
-			customer.Table:       customer.ValidColumn,
-			integration.Table:    integration.ValidColumn,
-			invite.Table:         invite.ValidColumn,
-			label.Table:          label.ValidColumn,
-			organization.Table:   organization.ValidColumn,
-			person.Table:         person.ValidColumn,
-			project.Table:        project.ValidColumn,
-			session.Table:        session.ValidColumn,
-			task.Table:           task.ValidColumn,
-			team.Table:           team.ValidColumn,
-			teammembership.Table: teammembership.ValidColumn,
-			worksession.Table:    worksession.ValidColumn,
+			allocation.Table:      allocation.ValidColumn,
+			customer.Table:        customer.ValidColumn,
+			integration.Table:     integration.ValidColumn,
+			invite.Table:          invite.ValidColumn,
+			label.Table:           label.ValidColumn,
+			organization.Table:    organization.ValidColumn,
+			person.Table:          person.ValidColumn,
+			project.Table:         project.ValidColumn,
+			session.Table:         session.ValidColumn,
+			task.Table:            task.ValidColumn,
+			team.Table:            team.ValidColumn,
+			teammembership.Table:  teammembership.ValidColumn,
+			worksession.Table:     worksession.ValidColumn,
+			worksessiontask.Table: worksessiontask.ValidColumn,
 		})
 	})
 	return columnCheck(t, c)

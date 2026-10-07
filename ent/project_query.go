@@ -16,6 +16,7 @@ import (
 	"working-time-tracker/ent/project"
 	"working-time-tracker/ent/task"
 	"working-time-tracker/ent/team"
+	"working-time-tracker/ent/worksession"
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect"
@@ -36,6 +37,7 @@ type ProjectQuery struct {
 	withCustomer     *CustomerQuery
 	withTeams        *TeamQuery
 	withTasks        *TaskQuery
+	withWorkSessions *WorkSessionQuery
 	withIntegrations *IntegrationQuery
 	withAllocations  *AllocationQuery
 	withLabels       *LabelQuery
@@ -157,6 +159,28 @@ func (_q *ProjectQuery) QueryTasks() *TaskQuery {
 			sqlgraph.From(project.Table, project.FieldID, selector),
 			sqlgraph.To(task.Table, task.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, project.TasksTable, project.TasksColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryWorkSessions chains the current query on the "work_sessions" edge.
+func (_q *ProjectQuery) QueryWorkSessions() *WorkSessionQuery {
+	query := (&WorkSessionClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(project.Table, project.FieldID, selector),
+			sqlgraph.To(worksession.Table, worksession.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, project.WorkSessionsTable, project.WorkSessionsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -426,6 +450,7 @@ func (_q *ProjectQuery) Clone() *ProjectQuery {
 		withCustomer:     _q.withCustomer.Clone(),
 		withTeams:        _q.withTeams.Clone(),
 		withTasks:        _q.withTasks.Clone(),
+		withWorkSessions: _q.withWorkSessions.Clone(),
 		withIntegrations: _q.withIntegrations.Clone(),
 		withAllocations:  _q.withAllocations.Clone(),
 		withLabels:       _q.withLabels.Clone(),
@@ -476,6 +501,17 @@ func (_q *ProjectQuery) WithTasks(opts ...func(*TaskQuery)) *ProjectQuery {
 		opt(query)
 	}
 	_q.withTasks = query
+	return _q
+}
+
+// WithWorkSessions tells the query-builder to eager-load the nodes that are connected to
+// the "work_sessions" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *ProjectQuery) WithWorkSessions(opts ...func(*WorkSessionQuery)) *ProjectQuery {
+	query := (&WorkSessionClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withWorkSessions = query
 	return _q
 }
 
@@ -590,11 +626,12 @@ func (_q *ProjectQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Proj
 	var (
 		nodes       = []*Project{}
 		_spec       = _q.querySpec()
-		loadedTypes = [7]bool{
+		loadedTypes = [8]bool{
 			_q.withOrganization != nil,
 			_q.withCustomer != nil,
 			_q.withTeams != nil,
 			_q.withTasks != nil,
+			_q.withWorkSessions != nil,
 			_q.withIntegrations != nil,
 			_q.withAllocations != nil,
 			_q.withLabels != nil,
@@ -644,6 +681,13 @@ func (_q *ProjectQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Proj
 		if err := _q.loadTasks(ctx, query, nodes,
 			func(n *Project) { n.Edges.Tasks = []*Task{} },
 			func(n *Project, e *Task) { n.Edges.Tasks = append(n.Edges.Tasks, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withWorkSessions; query != nil {
+		if err := _q.loadWorkSessions(ctx, query, nodes,
+			func(n *Project) { n.Edges.WorkSessions = []*WorkSession{} },
+			func(n *Project, e *WorkSession) { n.Edges.WorkSessions = append(n.Edges.WorkSessions, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -777,6 +821,36 @@ func (_q *ProjectQuery) loadTasks(ctx context.Context, query *TaskQuery, nodes [
 	}
 	query.Where(predicate.Task(func(s *sql.Selector) {
 		s.Where(sql.InValues(s.C(project.TasksColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.ProjectID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "project_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *ProjectQuery) loadWorkSessions(ctx context.Context, query *WorkSessionQuery, nodes []*Project, init func(*Project), assign func(*Project, *WorkSession)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Project)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(worksession.FieldProjectID)
+	}
+	query.Where(predicate.WorkSession(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(project.WorkSessionsColumn), fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {

@@ -43,6 +43,7 @@ func (Project) Edges() []ent.Edge {
 		edge.From("customer", Customer.Type).Ref("projects").Field("customer_id").Unique(),
 		edge.To("teams", Team.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("tasks", Task.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
+		edge.To("work_sessions", WorkSession.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("integrations", Integration.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("allocations", Allocation.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("labels", Label.Type).Annotations(entsql.OnDelete(entsql.Cascade)),

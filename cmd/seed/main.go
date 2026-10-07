@@ -546,7 +546,16 @@ func main() {
 		return time.Date(d.Year(), d.Month(), d.Day(), 0, minutes, 0, 0, d.Location())
 	}
 	rng := rand.New(rand.NewSource(20261006))
+	// Algumas sessões têm uma segunda tarefa em paralelo. Um sorteio à parte, para o histórico
+	// de quem trabalhou quando e quanto continuar o mesmo.
+	rngParallel := rand.New(rand.NewSource(20261008))
+	// links guarda, para cada builder, as tarefas da sessão e o intervalo de cada uma.
+	type seedLink struct {
+		task        uuid.UUID
+		from, until *time.Time
+	}
 	var builders []*ent.WorkSessionCreate
+	var links [][]seedLink
 	closed := 0
 	for daysAgo := 1; daysAgo <= historyDays; daysAgo++ {
 		day := now.AddDate(0, 0, -daysAgo)
@@ -614,13 +623,24 @@ func main() {
 					break
 				}
 				builders = append(builders, db.Client.WorkSession.Create().
-					SetTaskID(pick.task.ID).
+					SetProjectID(uuid.MustParse(seeded[prj.key].id)).
 					SetPersonID(person[who.key].PersonID).
 					SetStartAt(at(daysAgo, startMin)).
 					SetEndAt(at(daysAgo, endMin)).
 					SetPayRateCents(prj.rate).
 					SetNillableBillRateCents(seeded[prj.key].billRate).
 					SetOwnerHours(who.key == people[0].key))
+				from, until := at(daysAgo, startMin), at(daysAgo, endMin)
+				sessionLinks := []seedLink{{task: pick.task.ID, from: &from, until: &until}}
+				if len(pool) > 1 && rngParallel.Float64() < 0.3 {
+					other := pool[rngParallel.Intn(len(pool))]
+					if other.task.ID != pick.task.ID {
+						// A segunda tarefa entra no meio da sessão e vai até o fim dela.
+						joined := at(daysAgo, startMin+length*(30+rngParallel.Intn(30))/100)
+						sessionLinks = append(sessionLinks, seedLink{task: other.task.ID, from: &joined, until: &until})
+					}
+				}
+				links = append(links, sessionLinks)
 				closed++
 				clockMin = endMin + 45 + rng.Intn(75) // pausa até o próximo bloco
 			}
@@ -628,19 +648,31 @@ func main() {
 	}
 	for start := 0; start < len(builders); start += 200 {
 		end := min(start+200, len(builders))
-		db.Client.WorkSession.CreateBulk(builders[start:end]...).ExecX(ctx)
+		created := db.Client.WorkSession.CreateBulk(builders[start:end]...).SaveX(ctx)
+		var linkBuilders []*ent.WorkSessionTaskCreate
+		for i, session := range created {
+			for _, l := range links[start+i] {
+				linkBuilders = append(linkBuilders, db.Client.WorkSessionTask.Create().
+					SetSessionID(session.ID).SetTaskID(l.task).SetFromAt(*l.from).SetNillableUntilAt(l.until))
+			}
+		}
+		db.Client.WorkSessionTask.CreateBulk(linkBuilders...).ExecX(ctx)
 	}
 
 	// Quem está com o ponto aberto agora.
 	for _, o := range openNow {
 		st := byTaskName[o.project+"/"+o.task]
-		db.Client.WorkSession.Create().
-			SetTaskID(st.task.ID).
+		startedAt := now.Add(-time.Duration(o.minutes) * time.Minute)
+		session := db.Client.WorkSession.Create().
+			SetProjectID(uuid.MustParse(seeded[o.project].id)).
 			SetPersonID(person[o.person].PersonID).
-			SetStartAt(now.Add(-time.Duration(o.minutes) * time.Minute)).
+			SetStartAt(startedAt).
 			SetPayRateCents(seeded[o.project].rates[o.person]).
 			SetNillableBillRateCents(seeded[o.project].billRate).
 			SetOwnerHours(o.person == people[0].key).
+			SaveX(ctx)
+		db.Client.WorkSessionTask.Create().
+			SetSessionID(session.ID).SetTaskID(st.task.ID).SetFromAt(startedAt).
 			ExecX(ctx)
 	}
 
@@ -648,8 +680,9 @@ func main() {
 	// quadro ficar coerente, a tarefa com tempo registrado não fica no backlog, e a que está com
 	// o ponto aberto agora está em progresso, seja qual for o status que o seed lhe deu.
 	_, err = db.Raw.ExecContext(ctx, `UPDATE tasks SET status = 'in_progress'
-		WHERE (status = 'backlog' AND id IN (SELECT task_id FROM work_sessions))
-		   OR id IN (SELECT task_id FROM work_sessions WHERE end_at IS NULL)`)
+		WHERE (status = 'backlog' AND id IN (SELECT task_id FROM work_session_tasks))
+		   OR id IN (SELECT l.task_id FROM work_session_tasks l
+		             JOIN work_sessions s ON s.id = l.session_id WHERE s.end_at IS NULL)`)
 	must(err)
 
 	unassigned := 0

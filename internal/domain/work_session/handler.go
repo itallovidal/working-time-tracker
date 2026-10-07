@@ -1,6 +1,10 @@
 package work_session
 
 import (
+	"encoding/json"
+	"errors"
+	"time"
+
 	"github.com/labstack/echo/v5"
 
 	"working-time-tracker/internal/apperr"
@@ -57,9 +61,15 @@ func redact(set permission.Set, me *auth.Identity, s *WorkSession) {
 	}
 	if !set.Has(permission.BillingView) {
 		s.BillRateCents, s.BillAmountCents = nil, nil
+		for i := range s.Tasks {
+			s.Tasks[i].BillAmountCents = nil
+		}
 	}
 	if !set.HasAny(permission.RatesView, permission.RatesManage) && (me == nil || s.PersonID != me.PersonID) {
 		s.PayRateCents, s.PayAmountCents = nil, nil
+		for i := range s.Tasks {
+			s.Tasks[i].PayAmountCents = nil
+		}
 	}
 }
 
@@ -176,5 +186,117 @@ func (h *Handler) Active(c *echo.Context) error {
 		return apperr.Respond(c, 500, err)
 	}
 	redact(auth.ProjectPermissions(c), me, session)
+	return c.JSON(200, session)
+}
+
+// optTime é um horário que pode vir ausente, nulo ou preenchido no corpo: o nulo de until_at
+// quer dizer "até o fim da sessão", e não "não mexa".
+type optTime struct {
+	Set   bool
+	Value *time.Time
+}
+
+func (o *optTime) UnmarshalJSON(b []byte) error {
+	o.Set = true
+	if string(b) == "null" {
+		return nil
+	}
+	var t time.Time
+	if err := json.Unmarshal(b, &t); err != nil {
+		return err
+	}
+	o.Value = &t
+	return nil
+}
+
+// respond responde um erro do serviço: a sessão ou o intervalo que não existem são 404, quem
+// não pode mexer na sessão é 403, o resto é 400.
+func respond(c *echo.Context, err error) error {
+	switch {
+	case errors.Is(err, ErrSessionNotFound), errors.Is(err, ErrTaskLinkNotFound):
+		return apperr.Respond(c, 404, err)
+	case errors.Is(err, ErrSessionNotYours):
+		return apperr.Respond(c, 403, err)
+	}
+	return apperr.Respond(c, 400, err)
+}
+
+// editable confere que a sessão da rota existe e que quem chama pode mexer nas tarefas dela: a
+// própria pessoa e os admins. Mudar as tarefas não muda o tempo nem os valores da sessão,
+// só como o tempo se divide entre elas, então não há permissão própria. Sem login no
+// contexto (handler montado fora do servidor, como nos testes), vale para qualquer um.
+// Devolve o erro sem responder: quem chama o passa a respond e para.
+func (h *Handler) editable(c *echo.Context) error {
+	session, err := h.svc.Get(c.Param("projectId"), c.Param("sessionId"))
+	if err != nil {
+		return err
+	}
+	if me := auth.CurrentPerson(c); me != nil && !me.IsAdmin() && session.PersonID != me.PersonID {
+		return ErrSessionNotYours
+	}
+	return nil
+}
+
+// AddTask põe uma tarefa na sessão, aberta ou encerrada.
+func (h *Handler) AddTask(c *echo.Context) error {
+	var body struct {
+		TaskID  string  `json:"task_id"`
+		FromAt  optTime `json:"from_at"`
+		UntilAt optTime `json:"until_at"`
+	}
+	if err := c.Bind(&body); err != nil {
+		return apperr.Respond(c, 400, apperr.ErrInvalidBody)
+	}
+	if body.TaskID == "" {
+		return apperr.Respond(c, 400, ErrTaskRequired)
+	}
+	if err := h.editable(c); err != nil {
+		return respond(c, err)
+	}
+	session, err := h.svc.AddTask(c.Param("projectId"), c.Param("sessionId"), body.TaskID, body.FromAt.Value, body.UntilAt.Value)
+	if err != nil {
+		return respond(c, err)
+	}
+	redact(auth.ProjectPermissions(c), auth.CurrentPerson(c), session)
+	return c.JSON(201, session)
+}
+
+// UpdateTask muda o intervalo de uma tarefa da sessão, ou o encerra agora com stop.
+func (h *Handler) UpdateTask(c *echo.Context) error {
+	var body struct {
+		FromAt  optTime `json:"from_at"`
+		UntilAt optTime `json:"until_at"`
+		Stop    bool    `json:"stop"`
+	}
+	if err := c.Bind(&body); err != nil {
+		return apperr.Respond(c, 400, apperr.ErrInvalidBody)
+	}
+	if err := h.editable(c); err != nil {
+		return respond(c, err)
+	}
+	change := TaskChange{
+		From:       body.FromAt.Value,
+		Until:      body.UntilAt.Value,
+		ClearUntil: body.UntilAt.Set && body.UntilAt.Value == nil,
+		Stop:       body.Stop,
+	}
+	session, err := h.svc.UpdateTask(c.Param("projectId"), c.Param("sessionId"), c.Param("linkId"), change)
+	if err != nil {
+		return respond(c, err)
+	}
+	redact(auth.ProjectPermissions(c), auth.CurrentPerson(c), session)
+	return c.JSON(200, session)
+}
+
+// RemoveTask tira uma tarefa da sessão e devolve a sessão como ficou.
+func (h *Handler) RemoveTask(c *echo.Context) error {
+	if err := h.editable(c); err != nil {
+		return respond(c, err)
+	}
+	session, err := h.svc.RemoveTask(c.Param("projectId"), c.Param("sessionId"), c.Param("linkId"))
+	if err != nil {
+		return respond(c, err)
+	}
+	redact(auth.ProjectPermissions(c), auth.CurrentPerson(c), session)
 	return c.JSON(200, session)
 }

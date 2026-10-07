@@ -9,8 +9,9 @@ import (
 	"time"
 	"working-time-tracker/ent/person"
 	"working-time-tracker/ent/predicate"
-	"working-time-tracker/ent/task"
+	"working-time-tracker/ent/project"
 	"working-time-tracker/ent/worksession"
+	"working-time-tracker/ent/worksessiontask"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -31,16 +32,16 @@ func (_u *WorkSessionUpdate) Where(ps ...predicate.WorkSession) *WorkSessionUpda
 	return _u
 }
 
-// SetTaskID sets the "task_id" field.
-func (_u *WorkSessionUpdate) SetTaskID(v uuid.UUID) *WorkSessionUpdate {
-	_u.mutation.SetTaskID(v)
+// SetProjectID sets the "project_id" field.
+func (_u *WorkSessionUpdate) SetProjectID(v uuid.UUID) *WorkSessionUpdate {
+	_u.mutation.SetProjectID(v)
 	return _u
 }
 
-// SetNillableTaskID sets the "task_id" field if the given value is not nil.
-func (_u *WorkSessionUpdate) SetNillableTaskID(v *uuid.UUID) *WorkSessionUpdate {
+// SetNillableProjectID sets the "project_id" field if the given value is not nil.
+func (_u *WorkSessionUpdate) SetNillableProjectID(v *uuid.UUID) *WorkSessionUpdate {
 	if v != nil {
-		_u.SetTaskID(*v)
+		_u.SetProjectID(*v)
 	}
 	return _u
 }
@@ -161,9 +162,9 @@ func (_u *WorkSessionUpdate) SetNillableOwnerHours(v *bool) *WorkSessionUpdate {
 	return _u
 }
 
-// SetTask sets the "task" edge to the Task entity.
-func (_u *WorkSessionUpdate) SetTask(v *Task) *WorkSessionUpdate {
-	return _u.SetTaskID(v.ID)
+// SetProject sets the "project" edge to the Project entity.
+func (_u *WorkSessionUpdate) SetProject(v *Project) *WorkSessionUpdate {
+	return _u.SetProjectID(v.ID)
 }
 
 // SetPerson sets the "person" edge to the Person entity.
@@ -171,14 +172,29 @@ func (_u *WorkSessionUpdate) SetPerson(v *Person) *WorkSessionUpdate {
 	return _u.SetPersonID(v.ID)
 }
 
+// AddTaskLinkIDs adds the "task_links" edge to the WorkSessionTask entity by IDs.
+func (_u *WorkSessionUpdate) AddTaskLinkIDs(ids ...uuid.UUID) *WorkSessionUpdate {
+	_u.mutation.AddTaskLinkIDs(ids...)
+	return _u
+}
+
+// AddTaskLinks adds the "task_links" edges to the WorkSessionTask entity.
+func (_u *WorkSessionUpdate) AddTaskLinks(v ...*WorkSessionTask) *WorkSessionUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddTaskLinkIDs(ids...)
+}
+
 // Mutation returns the WorkSessionMutation object of the builder.
 func (_u *WorkSessionUpdate) Mutation() *WorkSessionMutation {
 	return _u.mutation
 }
 
-// ClearTask clears the "task" edge to the Task entity.
-func (_u *WorkSessionUpdate) ClearTask() *WorkSessionUpdate {
-	_u.mutation.ClearTask()
+// ClearProject clears the "project" edge to the Project entity.
+func (_u *WorkSessionUpdate) ClearProject() *WorkSessionUpdate {
+	_u.mutation.ClearProject()
 	return _u
 }
 
@@ -186,6 +202,27 @@ func (_u *WorkSessionUpdate) ClearTask() *WorkSessionUpdate {
 func (_u *WorkSessionUpdate) ClearPerson() *WorkSessionUpdate {
 	_u.mutation.ClearPerson()
 	return _u
+}
+
+// ClearTaskLinks clears all "task_links" edges to the WorkSessionTask entity.
+func (_u *WorkSessionUpdate) ClearTaskLinks() *WorkSessionUpdate {
+	_u.mutation.ClearTaskLinks()
+	return _u
+}
+
+// RemoveTaskLinkIDs removes the "task_links" edge to WorkSessionTask entities by IDs.
+func (_u *WorkSessionUpdate) RemoveTaskLinkIDs(ids ...uuid.UUID) *WorkSessionUpdate {
+	_u.mutation.RemoveTaskLinkIDs(ids...)
+	return _u
+}
+
+// RemoveTaskLinks removes "task_links" edges to WorkSessionTask entities.
+func (_u *WorkSessionUpdate) RemoveTaskLinks(v ...*WorkSessionTask) *WorkSessionUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveTaskLinkIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -227,8 +264,8 @@ func (_u *WorkSessionUpdate) check() error {
 			return &ValidationError{Name: "bill_rate_cents", err: fmt.Errorf(`ent: validator failed for field "WorkSession.bill_rate_cents": %w`, err)}
 		}
 	}
-	if _u.mutation.TaskCleared() && len(_u.mutation.TaskIDs()) > 0 {
-		return errors.New(`ent: clearing a required unique edge "WorkSession.task"`)
+	if _u.mutation.ProjectCleared() && len(_u.mutation.ProjectIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "WorkSession.project"`)
 	}
 	if _u.mutation.PersonCleared() && len(_u.mutation.PersonIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "WorkSession.person"`)
@@ -278,28 +315,28 @@ func (_u *WorkSessionUpdate) sqlSave(ctx context.Context) (_node int, err error)
 	if value, ok := _u.mutation.OwnerHours(); ok {
 		_spec.SetField(worksession.FieldOwnerHours, field.TypeBool, value)
 	}
-	if _u.mutation.TaskCleared() {
+	if _u.mutation.ProjectCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   worksession.TaskTable,
-			Columns: []string{worksession.TaskColumn},
+			Table:   worksession.ProjectTable,
+			Columns: []string{worksession.ProjectColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(task.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(project.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := _u.mutation.TaskIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.ProjectIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   worksession.TaskTable,
-			Columns: []string{worksession.TaskColumn},
+			Table:   worksession.ProjectTable,
+			Columns: []string{worksession.ProjectColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(task.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(project.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -336,6 +373,51 @@ func (_u *WorkSessionUpdate) sqlSave(ctx context.Context) (_node int, err error)
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if _u.mutation.TaskLinksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   worksession.TaskLinksTable,
+			Columns: []string{worksession.TaskLinksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(worksessiontask.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedTaskLinksIDs(); len(nodes) > 0 && !_u.mutation.TaskLinksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   worksession.TaskLinksTable,
+			Columns: []string{worksession.TaskLinksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(worksessiontask.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.TaskLinksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   worksession.TaskLinksTable,
+			Columns: []string{worksession.TaskLinksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(worksessiontask.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{worksession.Label}
@@ -356,16 +438,16 @@ type WorkSessionUpdateOne struct {
 	mutation *WorkSessionMutation
 }
 
-// SetTaskID sets the "task_id" field.
-func (_u *WorkSessionUpdateOne) SetTaskID(v uuid.UUID) *WorkSessionUpdateOne {
-	_u.mutation.SetTaskID(v)
+// SetProjectID sets the "project_id" field.
+func (_u *WorkSessionUpdateOne) SetProjectID(v uuid.UUID) *WorkSessionUpdateOne {
+	_u.mutation.SetProjectID(v)
 	return _u
 }
 
-// SetNillableTaskID sets the "task_id" field if the given value is not nil.
-func (_u *WorkSessionUpdateOne) SetNillableTaskID(v *uuid.UUID) *WorkSessionUpdateOne {
+// SetNillableProjectID sets the "project_id" field if the given value is not nil.
+func (_u *WorkSessionUpdateOne) SetNillableProjectID(v *uuid.UUID) *WorkSessionUpdateOne {
 	if v != nil {
-		_u.SetTaskID(*v)
+		_u.SetProjectID(*v)
 	}
 	return _u
 }
@@ -486,9 +568,9 @@ func (_u *WorkSessionUpdateOne) SetNillableOwnerHours(v *bool) *WorkSessionUpdat
 	return _u
 }
 
-// SetTask sets the "task" edge to the Task entity.
-func (_u *WorkSessionUpdateOne) SetTask(v *Task) *WorkSessionUpdateOne {
-	return _u.SetTaskID(v.ID)
+// SetProject sets the "project" edge to the Project entity.
+func (_u *WorkSessionUpdateOne) SetProject(v *Project) *WorkSessionUpdateOne {
+	return _u.SetProjectID(v.ID)
 }
 
 // SetPerson sets the "person" edge to the Person entity.
@@ -496,14 +578,29 @@ func (_u *WorkSessionUpdateOne) SetPerson(v *Person) *WorkSessionUpdateOne {
 	return _u.SetPersonID(v.ID)
 }
 
+// AddTaskLinkIDs adds the "task_links" edge to the WorkSessionTask entity by IDs.
+func (_u *WorkSessionUpdateOne) AddTaskLinkIDs(ids ...uuid.UUID) *WorkSessionUpdateOne {
+	_u.mutation.AddTaskLinkIDs(ids...)
+	return _u
+}
+
+// AddTaskLinks adds the "task_links" edges to the WorkSessionTask entity.
+func (_u *WorkSessionUpdateOne) AddTaskLinks(v ...*WorkSessionTask) *WorkSessionUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddTaskLinkIDs(ids...)
+}
+
 // Mutation returns the WorkSessionMutation object of the builder.
 func (_u *WorkSessionUpdateOne) Mutation() *WorkSessionMutation {
 	return _u.mutation
 }
 
-// ClearTask clears the "task" edge to the Task entity.
-func (_u *WorkSessionUpdateOne) ClearTask() *WorkSessionUpdateOne {
-	_u.mutation.ClearTask()
+// ClearProject clears the "project" edge to the Project entity.
+func (_u *WorkSessionUpdateOne) ClearProject() *WorkSessionUpdateOne {
+	_u.mutation.ClearProject()
 	return _u
 }
 
@@ -511,6 +608,27 @@ func (_u *WorkSessionUpdateOne) ClearTask() *WorkSessionUpdateOne {
 func (_u *WorkSessionUpdateOne) ClearPerson() *WorkSessionUpdateOne {
 	_u.mutation.ClearPerson()
 	return _u
+}
+
+// ClearTaskLinks clears all "task_links" edges to the WorkSessionTask entity.
+func (_u *WorkSessionUpdateOne) ClearTaskLinks() *WorkSessionUpdateOne {
+	_u.mutation.ClearTaskLinks()
+	return _u
+}
+
+// RemoveTaskLinkIDs removes the "task_links" edge to WorkSessionTask entities by IDs.
+func (_u *WorkSessionUpdateOne) RemoveTaskLinkIDs(ids ...uuid.UUID) *WorkSessionUpdateOne {
+	_u.mutation.RemoveTaskLinkIDs(ids...)
+	return _u
+}
+
+// RemoveTaskLinks removes "task_links" edges to WorkSessionTask entities.
+func (_u *WorkSessionUpdateOne) RemoveTaskLinks(v ...*WorkSessionTask) *WorkSessionUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveTaskLinkIDs(ids...)
 }
 
 // Where appends a list predicates to the WorkSessionUpdate builder.
@@ -565,8 +683,8 @@ func (_u *WorkSessionUpdateOne) check() error {
 			return &ValidationError{Name: "bill_rate_cents", err: fmt.Errorf(`ent: validator failed for field "WorkSession.bill_rate_cents": %w`, err)}
 		}
 	}
-	if _u.mutation.TaskCleared() && len(_u.mutation.TaskIDs()) > 0 {
-		return errors.New(`ent: clearing a required unique edge "WorkSession.task"`)
+	if _u.mutation.ProjectCleared() && len(_u.mutation.ProjectIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "WorkSession.project"`)
 	}
 	if _u.mutation.PersonCleared() && len(_u.mutation.PersonIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "WorkSession.person"`)
@@ -633,28 +751,28 @@ func (_u *WorkSessionUpdateOne) sqlSave(ctx context.Context) (_node *WorkSession
 	if value, ok := _u.mutation.OwnerHours(); ok {
 		_spec.SetField(worksession.FieldOwnerHours, field.TypeBool, value)
 	}
-	if _u.mutation.TaskCleared() {
+	if _u.mutation.ProjectCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   worksession.TaskTable,
-			Columns: []string{worksession.TaskColumn},
+			Table:   worksession.ProjectTable,
+			Columns: []string{worksession.ProjectColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(task.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(project.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := _u.mutation.TaskIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.ProjectIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   worksession.TaskTable,
-			Columns: []string{worksession.TaskColumn},
+			Table:   worksession.ProjectTable,
+			Columns: []string{worksession.ProjectColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(task.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(project.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -684,6 +802,51 @@ func (_u *WorkSessionUpdateOne) sqlSave(ctx context.Context) (_node *WorkSession
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(person.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.TaskLinksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   worksession.TaskLinksTable,
+			Columns: []string{worksession.TaskLinksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(worksessiontask.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedTaskLinksIDs(); len(nodes) > 0 && !_u.mutation.TaskLinksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   worksession.TaskLinksTable,
+			Columns: []string{worksession.TaskLinksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(worksessiontask.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.TaskLinksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   worksession.TaskLinksTable,
+			Columns: []string{worksession.TaskLinksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(worksessiontask.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

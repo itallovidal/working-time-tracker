@@ -13,7 +13,7 @@ import (
 	"working-time-tracker/ent/predicate"
 	"working-time-tracker/ent/project"
 	"working-time-tracker/ent/task"
-	"working-time-tracker/ent/worksession"
+	"working-time-tracker/ent/worksessiontask"
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect"
@@ -33,7 +33,7 @@ type TaskQuery struct {
 	withProject             *ProjectQuery
 	withAssignee            *PersonQuery
 	withExternalIntegration *IntegrationQuery
-	withWorkSessions        *WorkSessionQuery
+	withSessionLinks        *WorkSessionTaskQuery
 	withLabels              *LabelQuery
 	modifiers               []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
@@ -138,9 +138,9 @@ func (_q *TaskQuery) QueryExternalIntegration() *IntegrationQuery {
 	return query
 }
 
-// QueryWorkSessions chains the current query on the "work_sessions" edge.
-func (_q *TaskQuery) QueryWorkSessions() *WorkSessionQuery {
-	query := (&WorkSessionClient{config: _q.config}).Query()
+// QuerySessionLinks chains the current query on the "session_links" edge.
+func (_q *TaskQuery) QuerySessionLinks() *WorkSessionTaskQuery {
+	query := (&WorkSessionTaskClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -151,8 +151,8 @@ func (_q *TaskQuery) QueryWorkSessions() *WorkSessionQuery {
 		}
 		step := sqlgraph.NewStep(
 			sqlgraph.From(task.Table, task.FieldID, selector),
-			sqlgraph.To(worksession.Table, worksession.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, task.WorkSessionsTable, task.WorkSessionsColumn),
+			sqlgraph.To(worksessiontask.Table, worksessiontask.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, task.SessionLinksTable, task.SessionLinksColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -377,7 +377,7 @@ func (_q *TaskQuery) Clone() *TaskQuery {
 		withProject:             _q.withProject.Clone(),
 		withAssignee:            _q.withAssignee.Clone(),
 		withExternalIntegration: _q.withExternalIntegration.Clone(),
-		withWorkSessions:        _q.withWorkSessions.Clone(),
+		withSessionLinks:        _q.withSessionLinks.Clone(),
 		withLabels:              _q.withLabels.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
@@ -418,14 +418,14 @@ func (_q *TaskQuery) WithExternalIntegration(opts ...func(*IntegrationQuery)) *T
 	return _q
 }
 
-// WithWorkSessions tells the query-builder to eager-load the nodes that are connected to
-// the "work_sessions" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *TaskQuery) WithWorkSessions(opts ...func(*WorkSessionQuery)) *TaskQuery {
-	query := (&WorkSessionClient{config: _q.config}).Query()
+// WithSessionLinks tells the query-builder to eager-load the nodes that are connected to
+// the "session_links" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *TaskQuery) WithSessionLinks(opts ...func(*WorkSessionTaskQuery)) *TaskQuery {
+	query := (&WorkSessionTaskClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	_q.withWorkSessions = query
+	_q.withSessionLinks = query
 	return _q
 }
 
@@ -522,7 +522,7 @@ func (_q *TaskQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Task, e
 			_q.withProject != nil,
 			_q.withAssignee != nil,
 			_q.withExternalIntegration != nil,
-			_q.withWorkSessions != nil,
+			_q.withSessionLinks != nil,
 			_q.withLabels != nil,
 		}
 	)
@@ -565,10 +565,10 @@ func (_q *TaskQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Task, e
 			return nil, err
 		}
 	}
-	if query := _q.withWorkSessions; query != nil {
-		if err := _q.loadWorkSessions(ctx, query, nodes,
-			func(n *Task) { n.Edges.WorkSessions = []*WorkSession{} },
-			func(n *Task, e *WorkSession) { n.Edges.WorkSessions = append(n.Edges.WorkSessions, e) }); err != nil {
+	if query := _q.withSessionLinks; query != nil {
+		if err := _q.loadSessionLinks(ctx, query, nodes,
+			func(n *Task) { n.Edges.SessionLinks = []*WorkSessionTask{} },
+			func(n *Task, e *WorkSessionTask) { n.Edges.SessionLinks = append(n.Edges.SessionLinks, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -675,7 +675,7 @@ func (_q *TaskQuery) loadExternalIntegration(ctx context.Context, query *Integra
 	}
 	return nil
 }
-func (_q *TaskQuery) loadWorkSessions(ctx context.Context, query *WorkSessionQuery, nodes []*Task, init func(*Task), assign func(*Task, *WorkSession)) error {
+func (_q *TaskQuery) loadSessionLinks(ctx context.Context, query *WorkSessionTaskQuery, nodes []*Task, init func(*Task), assign func(*Task, *WorkSessionTask)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Task)
 	for i := range nodes {
@@ -686,10 +686,10 @@ func (_q *TaskQuery) loadWorkSessions(ctx context.Context, query *WorkSessionQue
 		}
 	}
 	if len(query.ctx.Fields) > 0 {
-		query.ctx.AppendFieldOnce(worksession.FieldTaskID)
+		query.ctx.AppendFieldOnce(worksessiontask.FieldTaskID)
 	}
-	query.Where(predicate.WorkSession(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(task.WorkSessionsColumn), fks...))
+	query.Where(predicate.WorkSessionTask(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(task.SessionLinksColumn), fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {

@@ -67,6 +67,7 @@ colaboradores e outros gerentes, mas não dá o grupo financeiro, que tem o fatu
 | `PUT /projects/:id/allocations/:personId` | `collaborators.manage` para pôr alguém ou trocar o grupo; `rates.manage` para o valor |
 | `DELETE /projects/:id/collaborators/:personId` | `collaborators.manage` |
 | `GET /projects/:id/allocations`, `GET /projects/:id/collaborators` | todos; o valor dos colegas só com `rates.view` ou `rates.manage` |
+| `POST`/`PATCH`/`DELETE /projects/:id/work-sessions/:sessionId/tasks…` | só quem bateu o ponto e os admins: mudar as tarefas não muda o tempo nem os valores da sessão, então não há permissão própria |
 | `GET /projects/:id/work-sessions`, `.../total` | todos; as sessões dos colegas só com alguma permissão do projeto, e o valor cobrado só com `billing.view` |
 | `POST`/`PATCH`/`DELETE /projects/:id/labels` | `labels.manage` |
 | `POST /projects/:id/integrations`, `PATCH`/`DELETE /integrations/:id` | `integrations.manage` |
@@ -86,5 +87,5 @@ Sem a permissão a API responde `403 auth.permission_required` (ou `auth.owner_o
 ## Ainda não existe
 
 - Editar as permissões avulsas de alguém já no projeto (os grupos mudam todas de uma vez).
-- Editar as horas já batidas: não há rota, e a permissão entra junto com ela.
+- Editar as horas já batidas (o começo e o fim da sessão): não há rota, e a permissão entra junto com ela. As tarefas da sessão já se editam, porque só dividem o tempo.
 - Trocar o dono.

@@ -1063,6 +1063,29 @@ func HasTasksWith(preds ...predicate.Task) predicate.Project {
 	})
 }
 
+// HasWorkSessions applies the HasEdge predicate on the "work_sessions" edge.
+func HasWorkSessions() predicate.Project {
+	return predicate.Project(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, WorkSessionsTable, WorkSessionsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasWorkSessionsWith applies the HasEdge predicate on the "work_sessions" edge with a given conditions (other predicates).
+func HasWorkSessionsWith(preds ...predicate.WorkSession) predicate.Project {
+	return predicate.Project(func(s *sql.Selector) {
+		step := newWorkSessionsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // HasIntegrations applies the HasEdge predicate on the "integrations" edge.
 func HasIntegrations() predicate.Project {
 	return predicate.Project(func(s *sql.Selector) {

@@ -286,7 +286,8 @@ Organization (1) ── (N) Invite        token (hash), email opcional, papel, e
 Person       (1) ── (N) Session       token (hash), expira em 7 dias
 Project      (1) ── (N) Team ── (N) Person   via TeamMembership
 Project      (1) ── (N) Allocation ── (1) Person   valor pago por hora, um por pessoa em cada projeto
-Project      (1) ── (N) Task ── (N) WorkSession   a sessão guarda o valor pago e o cobrado do clock-in
+Project      (1) ── (N) WorkSession   a sessão é do projeto e guarda o valor pago e o cobrado do clock-in
+WorkSession  (1) ── (N) WorkSessionTask ── (1) Task   as tarefas da sessão, cada uma com o intervalo em que esteve nela
 Project      (1) ── (N) Integration   token criptografado (credentials) e metadata em claro
 Task      (0..1) ── (0..1) Integration  via external_integration_id
 ```
@@ -295,7 +296,7 @@ Uma pessoa entra num projeto pelo **valor por hora** (`Allocation`), que é obri
 
 Num banco de antes dessa regra pode haver alguém num time sem valor. Essa pessoa continua aparecendo na aba Colaboradores, com um aviso, até um admin definir o valor ou tirá-la do projeto.
 
-Excluir um projeto apaga os times, os valores, as tarefas, as sessões e as integrações dele. Excluir um cliente só é permitido quando nenhum projeto aponta para ele. Excluir uma organização só é permitido sem projetos, e apaga as pessoas, os clientes e os convites. O índice único parcial `one_active_session` em `work_sessions (person_id) WHERE end_at IS NULL` garante uma sessão aberta por pessoa.
+Uma sessão pertence a um projeto e começa por uma tarefa dele, mas pode ganhar outras, antes ou depois de encerrada; a mesma tarefa pode entrar de novo, desde que não se sobreponha ao intervalo anterior. O tempo vale para a sessão e para cada tarefa dela: tarefas em paralelo contam o tempo cheio cada uma, e a pessoa, o projeto e os valores contam a sessão uma vez só. Excluir uma tarefa a tira das sessões, mas as sessões e as horas ficam. Excluir um projeto apaga os times, os valores, as tarefas, as sessões e as integrações dele. Excluir um cliente só é permitido quando nenhum projeto aponta para ele. Excluir uma organização só é permitido sem projetos, e apaga as pessoas, os clientes e os convites. O índice único parcial `one_active_session` em `work_sessions (person_id) WHERE end_at IS NULL` garante uma sessão aberta por pessoa.
 
 ## Migrações do banco
 

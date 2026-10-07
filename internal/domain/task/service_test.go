@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"working-time-tracker/ent/worksessiontask"
 	"working-time-tracker/internal/domain/allocation"
 	"working-time-tracker/internal/domain/organization"
 	"working-time-tracker/internal/domain/person"
@@ -654,7 +655,9 @@ func TestService_LinkUnlinkExternalItem(t *testing.T) {
 	}
 }
 
-func TestService_Delete_CascadesWorkSessions(t *testing.T) {
+// Excluir a tarefa a tira das sessões, mas as sessões e as horas ficam: o ponto foi batido, e
+// o tempo continua sendo do projeto e de quem trabalhou.
+func TestService_Delete_KeepsTheWorkSessions(t *testing.T) {
 	orgSvc, personSvc, projSvc, teamSvc, memberSvc, taskSvc := setupDeps(t)
 	ctx := context.Background()
 
@@ -664,17 +667,25 @@ func TestService_Delete_CascadesWorkSessions(t *testing.T) {
 	tm, _ := teamSvc.Create(proj.ID.String(), "Team")
 	join(t, memberSvc, tm, p.ID.String())
 	task1, _ := taskSvc.Create(proj.ID.String(), "Task A", "", p.ID.String(), nil)
+	task2, _ := taskSvc.Create(proj.ID.String(), "Task B", "", p.ID.String(), nil)
 
-	testClient.WorkSession.Create().SetTaskID(task1.ID).SetPersonID(p.ID).
-		SetStartAt(time.Now().Add(-time.Hour)).SetEndAt(time.Now()).SaveX(ctx)
-	testClient.WorkSession.Create().SetTaskID(task1.ID).SetPersonID(p.ID).
-		SetStartAt(time.Now()).SaveX(ctx)
+	endedAt := time.Now()
+	only := testutil.Session(t, testClient, task1.ID, p.ID, endedAt.Add(-2*time.Hour), &endedAt, nil, nil)
+	shared := testutil.Session(t, testClient, task1.ID, p.ID, endedAt.Add(-time.Hour), &endedAt, nil, nil)
+	testClient.WorkSessionTask.Create().SetSessionID(shared.ID).SetTaskID(task2.ID).SetFromAt(shared.StartAt).SaveX(ctx)
 
 	if err := taskSvc.Delete(task1.ID.String()); err != nil {
 		t.Fatalf("delete task with work sessions failed: %v", err)
 	}
-	if n := testClient.WorkSession.Query().CountX(ctx); n != 0 {
-		t.Errorf("work_sessions: %d rows left, want 0", n)
+	if n := testClient.WorkSession.Query().CountX(ctx); n != 2 {
+		t.Errorf("work_sessions: %d rows left, want both kept", n)
+	}
+	if n := testClient.WorkSessionTask.Query().Where(worksessiontask.SessionID(only.ID)).CountX(ctx); n != 0 {
+		t.Errorf("the session that only had the deleted task still has %d task rows, want 0", n)
+	}
+	left := testClient.WorkSessionTask.Query().Where(worksessiontask.SessionID(shared.ID)).AllX(ctx)
+	if len(left) != 1 || left[0].TaskID != task2.ID {
+		t.Errorf("the shared session kept %d task rows, want only Task B", len(left))
 	}
 }
 

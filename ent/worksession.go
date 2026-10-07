@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 	"working-time-tracker/ent/person"
-	"working-time-tracker/ent/task"
+	"working-time-tracker/ent/project"
 	"working-time-tracker/ent/worksession"
 
 	"entgo.io/ent"
@@ -20,8 +20,8 @@ type WorkSession struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID uuid.UUID `json:"id,omitempty"`
-	// TaskID holds the value of the "task_id" field.
-	TaskID uuid.UUID `json:"task_id,omitempty"`
+	// ProjectID holds the value of the "project_id" field.
+	ProjectID uuid.UUID `json:"project_id,omitempty"`
 	// PersonID holds the value of the "person_id" field.
 	PersonID uuid.UUID `json:"person_id,omitempty"`
 	// StartAt holds the value of the "start_at" field.
@@ -44,24 +44,26 @@ type WorkSession struct {
 
 // WorkSessionEdges holds the relations/edges for other nodes in the graph.
 type WorkSessionEdges struct {
-	// Task holds the value of the task edge.
-	Task *Task `json:"task,omitempty"`
+	// Project holds the value of the project edge.
+	Project *Project `json:"project,omitempty"`
 	// Person holds the value of the person edge.
 	Person *Person `json:"person,omitempty"`
+	// TaskLinks holds the value of the task_links edge.
+	TaskLinks []*WorkSessionTask `json:"task_links,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
+	loadedTypes [3]bool
 }
 
-// TaskOrErr returns the Task value or an error if the edge
+// ProjectOrErr returns the Project value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e WorkSessionEdges) TaskOrErr() (*Task, error) {
-	if e.Task != nil {
-		return e.Task, nil
+func (e WorkSessionEdges) ProjectOrErr() (*Project, error) {
+	if e.Project != nil {
+		return e.Project, nil
 	} else if e.loadedTypes[0] {
-		return nil, &NotFoundError{label: task.Label}
+		return nil, &NotFoundError{label: project.Label}
 	}
-	return nil, &NotLoadedError{edge: "task"}
+	return nil, &NotLoadedError{edge: "project"}
 }
 
 // PersonOrErr returns the Person value or an error if the edge
@@ -75,6 +77,15 @@ func (e WorkSessionEdges) PersonOrErr() (*Person, error) {
 	return nil, &NotLoadedError{edge: "person"}
 }
 
+// TaskLinksOrErr returns the TaskLinks value or an error if the edge
+// was not loaded in eager-loading.
+func (e WorkSessionEdges) TaskLinksOrErr() ([]*WorkSessionTask, error) {
+	if e.loadedTypes[2] {
+		return e.TaskLinks, nil
+	}
+	return nil, &NotLoadedError{edge: "task_links"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*WorkSession) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
@@ -86,7 +97,7 @@ func (*WorkSession) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullInt64)
 		case worksession.FieldStartAt, worksession.FieldEndAt, worksession.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
-		case worksession.FieldID, worksession.FieldTaskID, worksession.FieldPersonID:
+		case worksession.FieldID, worksession.FieldProjectID, worksession.FieldPersonID:
 			values[i] = new(uuid.UUID)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -109,11 +120,11 @@ func (_m *WorkSession) assignValues(columns []string, values []any) error {
 			} else if value != nil {
 				_m.ID = *value
 			}
-		case worksession.FieldTaskID:
+		case worksession.FieldProjectID:
 			if value, ok := values[i].(*uuid.UUID); !ok {
-				return fmt.Errorf("unexpected type %T for field task_id", values[i])
+				return fmt.Errorf("unexpected type %T for field project_id", values[i])
 			} else if value != nil {
-				_m.TaskID = *value
+				_m.ProjectID = *value
 			}
 		case worksession.FieldPersonID:
 			if value, ok := values[i].(*uuid.UUID); !ok {
@@ -173,14 +184,19 @@ func (_m *WorkSession) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
 }
 
-// QueryTask queries the "task" edge of the WorkSession entity.
-func (_m *WorkSession) QueryTask() *TaskQuery {
-	return NewWorkSessionClient(_m.config).QueryTask(_m)
+// QueryProject queries the "project" edge of the WorkSession entity.
+func (_m *WorkSession) QueryProject() *ProjectQuery {
+	return NewWorkSessionClient(_m.config).QueryProject(_m)
 }
 
 // QueryPerson queries the "person" edge of the WorkSession entity.
 func (_m *WorkSession) QueryPerson() *PersonQuery {
 	return NewWorkSessionClient(_m.config).QueryPerson(_m)
+}
+
+// QueryTaskLinks queries the "task_links" edge of the WorkSession entity.
+func (_m *WorkSession) QueryTaskLinks() *WorkSessionTaskQuery {
+	return NewWorkSessionClient(_m.config).QueryTaskLinks(_m)
 }
 
 // Update returns a builder for updating this WorkSession.
@@ -206,8 +222,8 @@ func (_m *WorkSession) String() string {
 	var builder strings.Builder
 	builder.WriteString("WorkSession(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
-	builder.WriteString("task_id=")
-	builder.WriteString(fmt.Sprintf("%v", _m.TaskID))
+	builder.WriteString("project_id=")
+	builder.WriteString(fmt.Sprintf("%v", _m.ProjectID))
 	builder.WriteString(", ")
 	builder.WriteString("person_id=")
 	builder.WriteString(fmt.Sprintf("%v", _m.PersonID))

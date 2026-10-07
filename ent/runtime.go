@@ -18,6 +18,7 @@ import (
 	"working-time-tracker/ent/team"
 	"working-time-tracker/ent/teammembership"
 	"working-time-tracker/ent/worksession"
+	"working-time-tracker/ent/worksessiontask"
 
 	"github.com/google/uuid"
 )
@@ -196,4 +197,14 @@ func init() {
 	worksessionDescID := worksessionFields[0].Descriptor()
 	// worksession.DefaultID holds the default value on creation for the id field.
 	worksession.DefaultID = worksessionDescID.Default.(func() uuid.UUID)
+	worksessiontaskFields := schema.WorkSessionTask{}.Fields()
+	_ = worksessiontaskFields
+	// worksessiontaskDescCreatedAt is the schema descriptor for created_at field.
+	worksessiontaskDescCreatedAt := worksessiontaskFields[5].Descriptor()
+	// worksessiontask.DefaultCreatedAt holds the default value on creation for the created_at field.
+	worksessiontask.DefaultCreatedAt = worksessiontaskDescCreatedAt.Default.(func() time.Time)
+	// worksessiontaskDescID is the schema descriptor for id field.
+	worksessiontaskDescID := worksessiontaskFields[0].Descriptor()
+	// worksessiontask.DefaultID holds the default value on creation for the id field.
+	worksessiontask.DefaultID = worksessiontaskDescID.Default.(func() uuid.UUID)
 }

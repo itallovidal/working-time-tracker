@@ -1014,16 +1014,22 @@ errors:
   work_session:
     already_open: "this person already has an open clock-in; stop the current session before starting another"
     filter_required: "filter by task_id or person_id"
+    invalid_interval: "the interval must start and end inside the session, with the end after the start"
     invalid_person_filter: "invalid person (person_id)"
     invalid_task_filter: "invalid task (task_id)"
+    last_task: "the session must keep at least one task; while it is open, at least one still in progress"
     no_rate: "this person has no hourly rate on this project yet; an admin must set one on the Collaborators tab before clocking in"
+    not_found: "session not found"
     not_open: "this person has no open clock-in"
+    not_yours: "only the person who clocked in, or an admin, can change the tasks of this session"
     other_person_admin_only: "only admins can clock in for another person"
     person_not_found: "person not found"
     person_not_in_org: "person not found in this organization"
     person_required: "enter the person (person_id)"
+    task_link_not_found: "this task is not in the session"
     task_not_found: "task not found"
     task_other_project: "the task does not belong to this project"
+    task_overlap: "the task is already in the session during this period"
     task_required: "enter the task (task_id)"
 
 fields:

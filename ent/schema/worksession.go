@@ -18,7 +18,9 @@ type WorkSession struct {
 func (WorkSession) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("id", uuid.UUID{}).Default(uuid.New).Immutable(),
-		field.UUID("task_id", uuid.UUID{}),
+		// O projeto é da sessão: todas as tarefas dela são dele, e o valor por hora abaixo
+		// é o da pessoa neste projeto.
+		field.UUID("project_id", uuid.UUID{}),
 		field.UUID("person_id", uuid.UUID{}),
 		field.Time("start_at"),
 		field.Time("end_at").Optional().Nillable(),
@@ -37,8 +39,10 @@ func (WorkSession) Fields() []ent.Field {
 
 func (WorkSession) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.From("task", Task.Type).Ref("work_sessions").Field("task_id").Unique().Required(),
+		edge.From("project", Project.Type).Ref("work_sessions").Field("project_id").Unique().Required(),
 		edge.From("person", Person.Type).Ref("work_sessions").Field("person_id").Unique().Required(),
+		// As tarefas da sessão, com o intervalo de cada uma. Excluir a sessão leva os intervalos.
+		edge.To("task_links", WorkSessionTask.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
 	}
 }
 

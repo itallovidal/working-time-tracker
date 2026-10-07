@@ -15,6 +15,7 @@ import (
 	"working-time-tracker/ent/project"
 	"working-time-tracker/ent/task"
 	"working-time-tracker/ent/team"
+	"working-time-tracker/ent/worksession"
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
@@ -260,6 +261,21 @@ func (_c *ProjectCreate) AddTasks(v ...*Task) *ProjectCreate {
 		ids[i] = v[i].ID
 	}
 	return _c.AddTaskIDs(ids...)
+}
+
+// AddWorkSessionIDs adds the "work_sessions" edge to the WorkSession entity by IDs.
+func (_c *ProjectCreate) AddWorkSessionIDs(ids ...uuid.UUID) *ProjectCreate {
+	_c.mutation.AddWorkSessionIDs(ids...)
+	return _c
+}
+
+// AddWorkSessions adds the "work_sessions" edges to the WorkSession entity.
+func (_c *ProjectCreate) AddWorkSessions(v ...*WorkSession) *ProjectCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddWorkSessionIDs(ids...)
 }
 
 // AddIntegrationIDs adds the "integrations" edge to the Integration entity by IDs.
@@ -520,6 +536,22 @@ func (_c *ProjectCreate) createSpec() (*Project, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(task.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.WorkSessionsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   project.WorkSessionsTable,
+			Columns: []string{project.WorkSessionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(worksession.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

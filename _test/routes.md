@@ -484,12 +484,24 @@ Na lista de tarefas e no detalhe, a tarefa vinculada traz `external_integration`
 | POST | `/api/projects/:projectId/work-sessions/clock-out` | logado | Fecha a sessão aberta: `{}` |
 | GET | `/api/projects/:projectId/work-sessions` | logado | Sessões do projeto. Filtros: `?task_id=` e `?person_id=`. O membro só recebe as próprias: sem `person_id` vale o dele, e o de outra pessoa dá 403 |
 | GET | `/api/projects/:projectId/work-sessions/total` | logado | `{"total_seconds", "pay_amount_cents", "bill_amount_cents"}`. Exige `task_id`, `person_id` ou os dois. Para o membro vale o mesmo recorte das sessões |
-| GET | `/api/work-sessions/active` | logado | A sua sessão aberta, com a tarefa e o projeto, ou `null` |
+| GET | `/api/work-sessions/active` | logado | A sua sessão aberta, com as tarefas e o projeto, ou `null` |
+| POST | `/api/projects/:projectId/work-sessions/:sessionId/tasks` | quem bateu o ponto, ou admin | Põe uma tarefa do projeto na sessão, aberta ou encerrada: `{"task_id": "…"}`, e opcionalmente `from_at` e `until_at`. Responde `201` com a sessão |
+| PATCH | `/api/projects/:projectId/work-sessions/:sessionId/tasks/:linkId` | quem bateu o ponto, ou admin | Muda o intervalo de uma tarefa da sessão: `from_at`, `until_at` (`null` é "até o fim da sessão") ou `{"stop": true}` para encerrar agora. Responde com a sessão |
+| DELETE | `/api/projects/:projectId/work-sessions/:sessionId/tasks/:linkId` | quem bateu o ponto, ou admin | Tira a tarefa da sessão. Responde `200` com a sessão |
 
 - Sem `person_id`, clock-in e clock-out valem para a pessoa logada. Só admins podem mandar o `person_id` de outra pessoa, e ela precisa ser da organização do projeto.
 - O total só soma sessões de tarefas do projeto da rota. Um `task_id` de outro projeto dá `0`.
 - Cada pessoa tem no máximo uma sessão aberta. O banco garante isso com o índice único parcial `one_active_session`, então nem duas requisições simultâneas conseguem abrir duas sessões.
 - Uma sessão aberta conta no total até o momento da consulta.
+
+### Tarefas da sessão
+
+- **A sessão é de um projeto e tem tarefas.** O clock-in cria a sessão com a tarefa dele; as outras entram depois, com `POST .../tasks`. Todas precisam ser do projeto da rota (`work_session.task_other_project`).
+- **Cada tarefa tem um intervalo** (`from_at`, `until_at`) dentro da sessão. `until_at` nulo é "até o fim da sessão", ou até agora se ela está aberta. Numa sessão aberta a tarefa entra agora (e fica em `in_progress`; sem responsável, passa a ser de quem bateu o ponto, como no clock-in); numa encerrada entra do início ao fim, e o status não muda. A mesma tarefa pode voltar, mas não sobreposta a si mesma (`work_session.task_overlap`). Fora da sessão, `work_session.invalid_interval`.
+- **A sessão guarda ao menos uma tarefa** e, aberta, ao menos uma em andamento (sem `until_at`): quem quer parar de vez dá o clock-out (`work_session.last_task`).
+- **O tempo.** `seconds` de cada tarefa é o do intervalo dentro da sessão. Tarefas em paralelo contam o tempo cheio cada uma, e a pessoa, o projeto e os valores contam a sessão uma vez só. `?task_id=` lista as sessões em que a tarefa esteve, cada uma com todas as tarefas, e o `total` por tarefa soma o tempo dela.
+- **Quem mexe.** Quem bateu o ponto e os admins; outra pessoa recebe `403 work_session.not_yours`. Os valores de cada tarefa (`pay_amount_cents`, `bill_amount_cents`) seguem as regras dos valores da sessão.
+- Excluir uma tarefa a tira das sessões, mas as sessões e as horas ficam.
 
 ### Valores nas sessões
 
@@ -503,14 +515,26 @@ Na lista de tarefas e no detalhe, a tarefa vinculada traz `external_integration`
 ```json
 {
   "id": "…",
-  "task_id": "…",
+  "project_id": "…",
   "person_id": "…",
   "start_at": "2026-10-05T09:00:00-03:00",
   "end_at": "2026-10-05T10:30:00-03:00",
   "pay_rate_cents": 2000,
   "pay_amount_cents": 3000,
   "bill_rate_cents": 10000,
-  "bill_amount_cents": 15000
+  "bill_amount_cents": 15000,
+  "tasks": [
+    {
+      "id": "…",
+      "task_id": "…",
+      "task": { "id": "…", "name": "Tela de checkout", "project_id": "…" },
+      "from_at": "2026-10-05T09:00:00-03:00",
+      "until_at": null,
+      "seconds": 5400,
+      "pay_amount_cents": 3000,
+      "bill_amount_cents": 15000
+    }
+  ]
 }
 ```
 
@@ -607,7 +631,7 @@ Qual idioma uma página usa: o cookie `wtt_lang`; sem ele, o `Accept-Language`; 
 6. **Criar time:** `POST /api/projects/:projectId/teams`, e depois `POST /api/teams/:teamId/members` com o seu próprio `id`.
 7. **Criar tarefa:** `POST /api/projects/:projectId/tasks` com você como responsável.
 8. **Cliente e valor cobrado:** `POST /api/orgs/:orgId/customers` e `PUT /api/projects/:projectId/billing` com o cliente e `bill_rate_cents`.
-9. **Bater o ponto:** `clock-in` com `{"task_id": "…"}`, `GET /api/work-sessions/active` e `clock-out`.
+9. **Bater o ponto:** `clock-in` com `{"task_id": "…"}`, `GET /api/work-sessions/active`, `POST .../work-sessions/:sessionId/tasks` com uma segunda tarefa (copie o `id` da sessão para `session_id`) e `clock-out`.
 10. **Totais:** `GET /api/projects/:projectId/work-sessions/total?task_id=…`.
 11. **Convidar alguém:** `POST /api/orgs/:orgId/invites`, depois `POST /api/auth/invites/:token/accept` numa sessão sem cookie (ou após `logout`).
 
@@ -618,6 +642,8 @@ Qual idioma uma página usa: o cookie `wtt_lang`; sem ele, o `Accept-Language`; 
 | `base_url` | URL do servidor, por padrão `http://localhost:8080` |
 | `org_id` | `organization_id` do `/api/auth/me` |
 | `person_id` | `id` do `/api/auth/me` ou de outra pessoa |
+| `session_id` | `id` de uma sessão, da resposta do clock-in |
+| `session_task_id` | `id` de uma tarefa da sessão (`tasks[].id`) |
 | `project_id` | `id` retornado ao criar o projeto |
 | `team_id` | `id` retornado ao criar o time |
 | `customer_id` | `id` retornado ao criar o cliente |

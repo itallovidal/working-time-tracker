@@ -15,8 +15,8 @@ const (
 	Label = "work_session"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
-	// FieldTaskID holds the string denoting the task_id field in the database.
-	FieldTaskID = "task_id"
+	// FieldProjectID holds the string denoting the project_id field in the database.
+	FieldProjectID = "project_id"
 	// FieldPersonID holds the string denoting the person_id field in the database.
 	FieldPersonID = "person_id"
 	// FieldStartAt holds the string denoting the start_at field in the database.
@@ -31,19 +31,21 @@ const (
 	FieldOwnerHours = "owner_hours"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
-	// EdgeTask holds the string denoting the task edge name in mutations.
-	EdgeTask = "task"
+	// EdgeProject holds the string denoting the project edge name in mutations.
+	EdgeProject = "project"
 	// EdgePerson holds the string denoting the person edge name in mutations.
 	EdgePerson = "person"
+	// EdgeTaskLinks holds the string denoting the task_links edge name in mutations.
+	EdgeTaskLinks = "task_links"
 	// Table holds the table name of the worksession in the database.
 	Table = "work_sessions"
-	// TaskTable is the table that holds the task relation/edge.
-	TaskTable = "work_sessions"
-	// TaskInverseTable is the table name for the Task entity.
-	// It exists in this package in order to avoid circular dependency with the "task" package.
-	TaskInverseTable = "tasks"
-	// TaskColumn is the table column denoting the task relation/edge.
-	TaskColumn = "task_id"
+	// ProjectTable is the table that holds the project relation/edge.
+	ProjectTable = "work_sessions"
+	// ProjectInverseTable is the table name for the Project entity.
+	// It exists in this package in order to avoid circular dependency with the "project" package.
+	ProjectInverseTable = "projects"
+	// ProjectColumn is the table column denoting the project relation/edge.
+	ProjectColumn = "project_id"
 	// PersonTable is the table that holds the person relation/edge.
 	PersonTable = "work_sessions"
 	// PersonInverseTable is the table name for the Person entity.
@@ -51,12 +53,19 @@ const (
 	PersonInverseTable = "persons"
 	// PersonColumn is the table column denoting the person relation/edge.
 	PersonColumn = "person_id"
+	// TaskLinksTable is the table that holds the task_links relation/edge.
+	TaskLinksTable = "work_session_tasks"
+	// TaskLinksInverseTable is the table name for the WorkSessionTask entity.
+	// It exists in this package in order to avoid circular dependency with the "worksessiontask" package.
+	TaskLinksInverseTable = "work_session_tasks"
+	// TaskLinksColumn is the table column denoting the task_links relation/edge.
+	TaskLinksColumn = "session_id"
 )
 
 // Columns holds all SQL columns for worksession fields.
 var Columns = []string{
 	FieldID,
-	FieldTaskID,
+	FieldProjectID,
 	FieldPersonID,
 	FieldStartAt,
 	FieldEndAt,
@@ -97,9 +106,9 @@ func ByID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldID, opts...).ToFunc()
 }
 
-// ByTaskID orders the results by the task_id field.
-func ByTaskID(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldTaskID, opts...).ToFunc()
+// ByProjectID orders the results by the project_id field.
+func ByProjectID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldProjectID, opts...).ToFunc()
 }
 
 // ByPersonID orders the results by the person_id field.
@@ -137,10 +146,10 @@ func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCreatedAt, opts...).ToFunc()
 }
 
-// ByTaskField orders the results by task field.
-func ByTaskField(field string, opts ...sql.OrderTermOption) OrderOption {
+// ByProjectField orders the results by project field.
+func ByProjectField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newTaskStep(), sql.OrderByField(field, opts...))
+		sqlgraph.OrderByNeighborTerms(s, newProjectStep(), sql.OrderByField(field, opts...))
 	}
 }
 
@@ -150,11 +159,25 @@ func ByPersonField(field string, opts ...sql.OrderTermOption) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newPersonStep(), sql.OrderByField(field, opts...))
 	}
 }
-func newTaskStep() *sqlgraph.Step {
+
+// ByTaskLinksCount orders the results by task_links count.
+func ByTaskLinksCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newTaskLinksStep(), opts...)
+	}
+}
+
+// ByTaskLinks orders the results by task_links terms.
+func ByTaskLinks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newTaskLinksStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+func newProjectStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(TaskInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.M2O, true, TaskTable, TaskColumn),
+		sqlgraph.To(ProjectInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, ProjectTable, ProjectColumn),
 	)
 }
 func newPersonStep() *sqlgraph.Step {
@@ -162,5 +185,12 @@ func newPersonStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(PersonInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2O, true, PersonTable, PersonColumn),
+	)
+}
+func newTaskLinksStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(TaskLinksInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, TaskLinksTable, TaskLinksColumn),
 	)
 }

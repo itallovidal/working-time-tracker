@@ -64,6 +64,8 @@ type ProjectEdges struct {
 	Teams []*Team `json:"teams,omitempty"`
 	// Tasks holds the value of the tasks edge.
 	Tasks []*Task `json:"tasks,omitempty"`
+	// WorkSessions holds the value of the work_sessions edge.
+	WorkSessions []*WorkSession `json:"work_sessions,omitempty"`
 	// Integrations holds the value of the integrations edge.
 	Integrations []*Integration `json:"integrations,omitempty"`
 	// Allocations holds the value of the allocations edge.
@@ -72,7 +74,7 @@ type ProjectEdges struct {
 	Labels []*Label `json:"labels,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [7]bool
+	loadedTypes [8]bool
 }
 
 // OrganizationOrErr returns the Organization value or an error if the edge
@@ -115,10 +117,19 @@ func (e ProjectEdges) TasksOrErr() ([]*Task, error) {
 	return nil, &NotLoadedError{edge: "tasks"}
 }
 
+// WorkSessionsOrErr returns the WorkSessions value or an error if the edge
+// was not loaded in eager-loading.
+func (e ProjectEdges) WorkSessionsOrErr() ([]*WorkSession, error) {
+	if e.loadedTypes[4] {
+		return e.WorkSessions, nil
+	}
+	return nil, &NotLoadedError{edge: "work_sessions"}
+}
+
 // IntegrationsOrErr returns the Integrations value or an error if the edge
 // was not loaded in eager-loading.
 func (e ProjectEdges) IntegrationsOrErr() ([]*Integration, error) {
-	if e.loadedTypes[4] {
+	if e.loadedTypes[5] {
 		return e.Integrations, nil
 	}
 	return nil, &NotLoadedError{edge: "integrations"}
@@ -127,7 +138,7 @@ func (e ProjectEdges) IntegrationsOrErr() ([]*Integration, error) {
 // AllocationsOrErr returns the Allocations value or an error if the edge
 // was not loaded in eager-loading.
 func (e ProjectEdges) AllocationsOrErr() ([]*Allocation, error) {
-	if e.loadedTypes[5] {
+	if e.loadedTypes[6] {
 		return e.Allocations, nil
 	}
 	return nil, &NotLoadedError{edge: "allocations"}
@@ -136,7 +147,7 @@ func (e ProjectEdges) AllocationsOrErr() ([]*Allocation, error) {
 // LabelsOrErr returns the Labels value or an error if the edge
 // was not loaded in eager-loading.
 func (e ProjectEdges) LabelsOrErr() ([]*Label, error) {
-	if e.loadedTypes[6] {
+	if e.loadedTypes[7] {
 		return e.Labels, nil
 	}
 	return nil, &NotLoadedError{edge: "labels"}
@@ -302,6 +313,11 @@ func (_m *Project) QueryTeams() *TeamQuery {
 // QueryTasks queries the "tasks" edge of the Project entity.
 func (_m *Project) QueryTasks() *TaskQuery {
 	return NewProjectClient(_m.config).QueryTasks(_m)
+}
+
+// QueryWorkSessions queries the "work_sessions" edge of the Project entity.
+func (_m *Project) QueryWorkSessions() *WorkSessionQuery {
+	return NewProjectClient(_m.config).QueryWorkSessions(_m)
 }
 
 // QueryIntegrations queries the "integrations" edge of the Project entity.

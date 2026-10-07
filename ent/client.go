@@ -24,6 +24,7 @@ import (
 	"working-time-tracker/ent/team"
 	"working-time-tracker/ent/teammembership"
 	"working-time-tracker/ent/worksession"
+	"working-time-tracker/ent/worksessiontask"
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect"
@@ -63,6 +64,8 @@ type Client struct {
 	TeamMembership *TeamMembershipClient
 	// WorkSession is the client for interacting with the WorkSession builders.
 	WorkSession *WorkSessionClient
+	// WorkSessionTask is the client for interacting with the WorkSessionTask builders.
+	WorkSessionTask *WorkSessionTaskClient
 }
 
 // NewClient creates a new client configured with the given options.
@@ -87,6 +90,7 @@ func (c *Client) init() {
 	c.Team = NewTeamClient(c.config)
 	c.TeamMembership = NewTeamMembershipClient(c.config)
 	c.WorkSession = NewWorkSessionClient(c.config)
+	c.WorkSessionTask = NewWorkSessionTaskClient(c.config)
 }
 
 type (
@@ -177,21 +181,22 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	cfg := c.config
 	cfg.driver = tx
 	return &Tx{
-		ctx:            ctx,
-		config:         cfg,
-		Allocation:     NewAllocationClient(cfg),
-		Customer:       NewCustomerClient(cfg),
-		Integration:    NewIntegrationClient(cfg),
-		Invite:         NewInviteClient(cfg),
-		Label:          NewLabelClient(cfg),
-		Organization:   NewOrganizationClient(cfg),
-		Person:         NewPersonClient(cfg),
-		Project:        NewProjectClient(cfg),
-		Session:        NewSessionClient(cfg),
-		Task:           NewTaskClient(cfg),
-		Team:           NewTeamClient(cfg),
-		TeamMembership: NewTeamMembershipClient(cfg),
-		WorkSession:    NewWorkSessionClient(cfg),
+		ctx:             ctx,
+		config:          cfg,
+		Allocation:      NewAllocationClient(cfg),
+		Customer:        NewCustomerClient(cfg),
+		Integration:     NewIntegrationClient(cfg),
+		Invite:          NewInviteClient(cfg),
+		Label:           NewLabelClient(cfg),
+		Organization:    NewOrganizationClient(cfg),
+		Person:          NewPersonClient(cfg),
+		Project:         NewProjectClient(cfg),
+		Session:         NewSessionClient(cfg),
+		Task:            NewTaskClient(cfg),
+		Team:            NewTeamClient(cfg),
+		TeamMembership:  NewTeamMembershipClient(cfg),
+		WorkSession:     NewWorkSessionClient(cfg),
+		WorkSessionTask: NewWorkSessionTaskClient(cfg),
 	}, nil
 }
 
@@ -209,21 +214,22 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
-		ctx:            ctx,
-		config:         cfg,
-		Allocation:     NewAllocationClient(cfg),
-		Customer:       NewCustomerClient(cfg),
-		Integration:    NewIntegrationClient(cfg),
-		Invite:         NewInviteClient(cfg),
-		Label:          NewLabelClient(cfg),
-		Organization:   NewOrganizationClient(cfg),
-		Person:         NewPersonClient(cfg),
-		Project:        NewProjectClient(cfg),
-		Session:        NewSessionClient(cfg),
-		Task:           NewTaskClient(cfg),
-		Team:           NewTeamClient(cfg),
-		TeamMembership: NewTeamMembershipClient(cfg),
-		WorkSession:    NewWorkSessionClient(cfg),
+		ctx:             ctx,
+		config:          cfg,
+		Allocation:      NewAllocationClient(cfg),
+		Customer:        NewCustomerClient(cfg),
+		Integration:     NewIntegrationClient(cfg),
+		Invite:          NewInviteClient(cfg),
+		Label:           NewLabelClient(cfg),
+		Organization:    NewOrganizationClient(cfg),
+		Person:          NewPersonClient(cfg),
+		Project:         NewProjectClient(cfg),
+		Session:         NewSessionClient(cfg),
+		Task:            NewTaskClient(cfg),
+		Team:            NewTeamClient(cfg),
+		TeamMembership:  NewTeamMembershipClient(cfg),
+		WorkSession:     NewWorkSessionClient(cfg),
+		WorkSessionTask: NewWorkSessionTaskClient(cfg),
 	}, nil
 }
 
@@ -255,7 +261,7 @@ func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.Allocation, c.Customer, c.Integration, c.Invite, c.Label, c.Organization,
 		c.Person, c.Project, c.Session, c.Task, c.Team, c.TeamMembership,
-		c.WorkSession,
+		c.WorkSession, c.WorkSessionTask,
 	} {
 		n.Use(hooks...)
 	}
@@ -267,7 +273,7 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.Allocation, c.Customer, c.Integration, c.Invite, c.Label, c.Organization,
 		c.Person, c.Project, c.Session, c.Task, c.Team, c.TeamMembership,
-		c.WorkSession,
+		c.WorkSession, c.WorkSessionTask,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -302,6 +308,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.TeamMembership.mutate(ctx, m)
 	case *WorkSessionMutation:
 		return c.WorkSession.mutate(ctx, m)
+	case *WorkSessionTaskMutation:
+		return c.WorkSessionTask.mutate(ctx, m)
 	default:
 		return nil, fmt.Errorf("ent: unknown mutation type %T", m)
 	}
@@ -1746,6 +1754,22 @@ func (c *ProjectClient) QueryTasks(_m *Project) *TaskQuery {
 	return query
 }
 
+// QueryWorkSessions queries the work_sessions edge of a Project.
+func (c *ProjectClient) QueryWorkSessions(_m *Project) *WorkSessionQuery {
+	query := (&WorkSessionClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(project.Table, project.FieldID, id),
+			sqlgraph.To(worksession.Table, worksession.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, project.WorkSessionsTable, project.WorkSessionsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryIntegrations queries the integrations edge of a Project.
 func (c *ProjectClient) QueryIntegrations(_m *Project) *IntegrationQuery {
 	query := (&IntegrationClient{config: c.config}).Query()
@@ -2124,15 +2148,15 @@ func (c *TaskClient) QueryExternalIntegration(_m *Task) *IntegrationQuery {
 	return query
 }
 
-// QueryWorkSessions queries the work_sessions edge of a Task.
-func (c *TaskClient) QueryWorkSessions(_m *Task) *WorkSessionQuery {
-	query := (&WorkSessionClient{config: c.config}).Query()
+// QuerySessionLinks queries the session_links edge of a Task.
+func (c *TaskClient) QuerySessionLinks(_m *Task) *WorkSessionTaskQuery {
+	query := (&WorkSessionTaskClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := _m.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(task.Table, task.FieldID, id),
-			sqlgraph.To(worksession.Table, worksession.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, task.WorkSessionsTable, task.WorkSessionsColumn),
+			sqlgraph.To(worksessiontask.Table, worksessiontask.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, task.SessionLinksTable, task.SessionLinksColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -2619,15 +2643,15 @@ func (c *WorkSessionClient) GetX(ctx context.Context, id uuid.UUID) *WorkSession
 	return obj
 }
 
-// QueryTask queries the task edge of a WorkSession.
-func (c *WorkSessionClient) QueryTask(_m *WorkSession) *TaskQuery {
-	query := (&TaskClient{config: c.config}).Query()
+// QueryProject queries the project edge of a WorkSession.
+func (c *WorkSessionClient) QueryProject(_m *WorkSession) *ProjectQuery {
+	query := (&ProjectClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := _m.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(worksession.Table, worksession.FieldID, id),
-			sqlgraph.To(task.Table, task.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, worksession.TaskTable, worksession.TaskColumn),
+			sqlgraph.To(project.Table, project.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, worksession.ProjectTable, worksession.ProjectColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -2644,6 +2668,22 @@ func (c *WorkSessionClient) QueryPerson(_m *WorkSession) *PersonQuery {
 			sqlgraph.From(worksession.Table, worksession.FieldID, id),
 			sqlgraph.To(person.Table, person.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, worksession.PersonTable, worksession.PersonColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryTaskLinks queries the task_links edge of a WorkSession.
+func (c *WorkSessionClient) QueryTaskLinks(_m *WorkSession) *WorkSessionTaskQuery {
+	query := (&WorkSessionTaskClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(worksession.Table, worksession.FieldID, id),
+			sqlgraph.To(worksessiontask.Table, worksessiontask.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, worksession.TaskLinksTable, worksession.TaskLinksColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -2676,14 +2716,180 @@ func (c *WorkSessionClient) mutate(ctx context.Context, m *WorkSessionMutation) 
 	}
 }
 
+// WorkSessionTaskClient is a client for the WorkSessionTask schema.
+type WorkSessionTaskClient struct {
+	config
+}
+
+// NewWorkSessionTaskClient returns a client for the WorkSessionTask from the given config.
+func NewWorkSessionTaskClient(c config) *WorkSessionTaskClient {
+	return &WorkSessionTaskClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `worksessiontask.Hooks(f(g(h())))`.
+func (c *WorkSessionTaskClient) Use(hooks ...Hook) {
+	c.hooks.WorkSessionTask = append(c.hooks.WorkSessionTask, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `worksessiontask.Intercept(f(g(h())))`.
+func (c *WorkSessionTaskClient) Intercept(interceptors ...Interceptor) {
+	c.inters.WorkSessionTask = append(c.inters.WorkSessionTask, interceptors...)
+}
+
+// Create returns a builder for creating a WorkSessionTask entity.
+func (c *WorkSessionTaskClient) Create() *WorkSessionTaskCreate {
+	mutation := newWorkSessionTaskMutation(c.config, OpCreate)
+	return &WorkSessionTaskCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of WorkSessionTask entities.
+func (c *WorkSessionTaskClient) CreateBulk(builders ...*WorkSessionTaskCreate) *WorkSessionTaskCreateBulk {
+	return &WorkSessionTaskCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *WorkSessionTaskClient) MapCreateBulk(slice any, setFunc func(*WorkSessionTaskCreate, int)) *WorkSessionTaskCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &WorkSessionTaskCreateBulk{err: fmt.Errorf("calling to WorkSessionTaskClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*WorkSessionTaskCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &WorkSessionTaskCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for WorkSessionTask.
+func (c *WorkSessionTaskClient) Update() *WorkSessionTaskUpdate {
+	mutation := newWorkSessionTaskMutation(c.config, OpUpdate)
+	return &WorkSessionTaskUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *WorkSessionTaskClient) UpdateOne(_m *WorkSessionTask) *WorkSessionTaskUpdateOne {
+	mutation := newWorkSessionTaskMutation(c.config, OpUpdateOne, withWorkSessionTask(_m))
+	return &WorkSessionTaskUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *WorkSessionTaskClient) UpdateOneID(id uuid.UUID) *WorkSessionTaskUpdateOne {
+	mutation := newWorkSessionTaskMutation(c.config, OpUpdateOne, withWorkSessionTaskID(id))
+	return &WorkSessionTaskUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for WorkSessionTask.
+func (c *WorkSessionTaskClient) Delete() *WorkSessionTaskDelete {
+	mutation := newWorkSessionTaskMutation(c.config, OpDelete)
+	return &WorkSessionTaskDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *WorkSessionTaskClient) DeleteOne(_m *WorkSessionTask) *WorkSessionTaskDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *WorkSessionTaskClient) DeleteOneID(id uuid.UUID) *WorkSessionTaskDeleteOne {
+	builder := c.Delete().Where(worksessiontask.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &WorkSessionTaskDeleteOne{builder}
+}
+
+// Query returns a query builder for WorkSessionTask.
+func (c *WorkSessionTaskClient) Query() *WorkSessionTaskQuery {
+	return &WorkSessionTaskQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeWorkSessionTask},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a WorkSessionTask entity by its id.
+func (c *WorkSessionTaskClient) Get(ctx context.Context, id uuid.UUID) (*WorkSessionTask, error) {
+	return c.Query().Where(worksessiontask.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *WorkSessionTaskClient) GetX(ctx context.Context, id uuid.UUID) *WorkSessionTask {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QuerySession queries the session edge of a WorkSessionTask.
+func (c *WorkSessionTaskClient) QuerySession(_m *WorkSessionTask) *WorkSessionQuery {
+	query := (&WorkSessionClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(worksessiontask.Table, worksessiontask.FieldID, id),
+			sqlgraph.To(worksession.Table, worksession.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, worksessiontask.SessionTable, worksessiontask.SessionColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryTask queries the task edge of a WorkSessionTask.
+func (c *WorkSessionTaskClient) QueryTask(_m *WorkSessionTask) *TaskQuery {
+	query := (&TaskClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(worksessiontask.Table, worksessiontask.FieldID, id),
+			sqlgraph.To(task.Table, task.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, worksessiontask.TaskTable, worksessiontask.TaskColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *WorkSessionTaskClient) Hooks() []Hook {
+	return c.hooks.WorkSessionTask
+}
+
+// Interceptors returns the client interceptors.
+func (c *WorkSessionTaskClient) Interceptors() []Interceptor {
+	return c.inters.WorkSessionTask
+}
+
+func (c *WorkSessionTaskClient) mutate(ctx context.Context, m *WorkSessionTaskMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&WorkSessionTaskCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&WorkSessionTaskUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&WorkSessionTaskUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&WorkSessionTaskDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown WorkSessionTask mutation op: %q", m.Op())
+	}
+}
+
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
 		Allocation, Customer, Integration, Invite, Label, Organization, Person, Project,
-		Session, Task, Team, TeamMembership, WorkSession []ent.Hook
+		Session, Task, Team, TeamMembership, WorkSession, WorkSessionTask []ent.Hook
 	}
 	inters struct {
 		Allocation, Customer, Integration, Invite, Label, Organization, Person, Project,
-		Session, Task, Team, TeamMembership, WorkSession []ent.Interceptor
+		Session, Task, Team, TeamMembership, WorkSession,
+		WorkSessionTask []ent.Interceptor
 	}
 )

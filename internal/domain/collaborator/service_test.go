@@ -155,8 +155,8 @@ func TestService_Remove(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create task: %v", err)
 	}
-	testClient.WorkSession.Create().SetTaskID(tk.ID).SetPersonID(uuid.MustParse(f.ana)).
-		SetStartAt(time.Now().Add(-time.Hour)).SetEndAt(time.Now()).SaveX(ctx)
+	endedAt := time.Now()
+	testutil.Session(t, testClient, tk.ID, uuid.MustParse(f.ana), endedAt.Add(-time.Hour), &endedAt, nil, nil)
 
 	if err := f.svc.Remove(f.projectX, f.ana); err != nil {
 		t.Fatalf("remove: %v", err)

@@ -73,8 +73,8 @@ func TestService_ClockInSuccess(t *testing.T) {
 	if session.EndAt != nil {
 		t.Error("expected end_at to be nil after clock in")
 	}
-	if session.TaskID.String() != task1.ID.String() {
-		t.Errorf("task id mismatch")
+	if len(session.Tasks) != 1 || session.Tasks[0].TaskID != task1.ID || session.ProjectID != proj.ID {
+		t.Errorf("tasks = %+v, want the one the clock in started on, in the project", session.Tasks)
 	}
 	if session.PersonID.String() != p.ID.String() {
 		t.Errorf("person id mismatch")
@@ -457,11 +457,8 @@ func TestService_Amounts(t *testing.T) {
 	// Sessões com duração exata, criadas direto no banco.
 	start := time.Now().Add(-48 * time.Hour).Truncate(time.Second)
 	create := func(offset, duration time.Duration, pay, bill *int) {
-		testClient.WorkSession.Create().
-			SetTaskID(task1.ID).SetPersonID(p.ID).
-			SetStartAt(start.Add(offset)).SetEndAt(start.Add(offset + duration)).
-			SetNillablePayRateCents(pay).SetNillableBillRateCents(bill).
-			SaveX(context.Background())
+		end := start.Add(offset + duration)
+		testutil.Session(t, testClient, task1.ID, p.ID, start.Add(offset), &end, pay, bill)
 	}
 	pay, bill := 2000, 10000
 	create(0, 90*time.Minute, &pay, &bill)          // 1h30: 30,00 e 150,00

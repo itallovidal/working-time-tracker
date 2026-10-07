@@ -57,8 +57,8 @@ type TaskEdges struct {
 	Assignee *Person `json:"assignee,omitempty"`
 	// ExternalIntegration holds the value of the external_integration edge.
 	ExternalIntegration *Integration `json:"external_integration,omitempty"`
-	// WorkSessions holds the value of the work_sessions edge.
-	WorkSessions []*WorkSession `json:"work_sessions,omitempty"`
+	// SessionLinks holds the value of the session_links edge.
+	SessionLinks []*WorkSessionTask `json:"session_links,omitempty"`
 	// Labels holds the value of the labels edge.
 	Labels []*Label `json:"labels,omitempty"`
 	// loadedTypes holds the information for reporting if a
@@ -99,13 +99,13 @@ func (e TaskEdges) ExternalIntegrationOrErr() (*Integration, error) {
 	return nil, &NotLoadedError{edge: "external_integration"}
 }
 
-// WorkSessionsOrErr returns the WorkSessions value or an error if the edge
+// SessionLinksOrErr returns the SessionLinks value or an error if the edge
 // was not loaded in eager-loading.
-func (e TaskEdges) WorkSessionsOrErr() ([]*WorkSession, error) {
+func (e TaskEdges) SessionLinksOrErr() ([]*WorkSessionTask, error) {
 	if e.loadedTypes[3] {
-		return e.WorkSessions, nil
+		return e.SessionLinks, nil
 	}
-	return nil, &NotLoadedError{edge: "work_sessions"}
+	return nil, &NotLoadedError{edge: "session_links"}
 }
 
 // LabelsOrErr returns the Labels value or an error if the edge
@@ -249,9 +249,9 @@ func (_m *Task) QueryExternalIntegration() *IntegrationQuery {
 	return NewTaskClient(_m.config).QueryExternalIntegration(_m)
 }
 
-// QueryWorkSessions queries the "work_sessions" edge of the Task entity.
-func (_m *Task) QueryWorkSessions() *WorkSessionQuery {
-	return NewTaskClient(_m.config).QueryWorkSessions(_m)
+// QuerySessionLinks queries the "session_links" edge of the Task entity.
+func (_m *Task) QuerySessionLinks() *WorkSessionTaskQuery {
+	return NewTaskClient(_m.config).QuerySessionLinks(_m)
 }
 
 // QueryLabels queries the "labels" edge of the Task entity.

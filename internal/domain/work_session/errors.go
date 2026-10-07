@@ -22,4 +22,12 @@ var (
 	ErrTaskRequired         = apperr.New("work_session.task_required", http.StatusBadRequest)
 	ErrPersonRequired       = apperr.New("work_session.person_required", http.StatusBadRequest)
 	ErrOtherPersonAdminOnly = apperr.New("work_session.other_person_admin_only", http.StatusForbidden)
+
+	// As tarefas da sessão.
+	ErrSessionNotFound  = apperr.New("work_session.not_found", http.StatusNotFound)
+	ErrSessionNotYours  = apperr.New("work_session.not_yours", http.StatusForbidden)
+	ErrTaskLinkNotFound = apperr.New("work_session.task_link_not_found", http.StatusNotFound)
+	ErrTaskOverlap      = apperr.New("work_session.task_overlap", http.StatusBadRequest)
+	ErrLastTask         = apperr.New("work_session.last_task", http.StatusBadRequest)
+	ErrInvalidInterval  = apperr.New("work_session.invalid_interval", http.StatusBadRequest)
 )

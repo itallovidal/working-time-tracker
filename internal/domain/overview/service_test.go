@@ -135,10 +135,8 @@ func (f *fixture) task(projectID string, assignee uuid.UUID, deadline *time.Time
 func (f *fixture) session(taskID, personID uuid.UUID, startedAgo, length time.Duration, payRate, billRate *int) {
 	f.t.Helper()
 	start := f.now.Add(-startedAgo)
-	testClient.WorkSession.Create().SetTaskID(taskID).SetPersonID(personID).
-		SetStartAt(start).SetEndAt(start.Add(length)).
-		SetNillablePayRateCents(payRate).SetNillableBillRateCents(billRate).
-		SaveX(context.Background())
+	end := start.Add(length)
+	testutil.Session(f.t, testClient, taskID, personID, start, &end, payRate, billRate)
 }
 
 func (f *fixture) get(projectID string) *overview.Overview {
@@ -293,8 +291,8 @@ func TestService_OpenSession(t *testing.T) {
 	ana := f.person("Ana")
 	x := f.project("Projeto X")
 	f.rate(x, ana, 6000)
-	testClient.WorkSession.Create().SetTaskID(f.task(x, ana, nil)).SetPersonID(ana).
-		SetStartAt(f.now.Add(-30 * time.Minute)).SetPayRateCents(6000).SaveX(context.Background())
+	pay := 6000
+	testutil.Session(t, testClient, f.task(x, ana, nil), ana, f.now.Add(-30*time.Minute), nil, &pay, nil)
 
 	got := f.get(x)
 

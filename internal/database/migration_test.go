@@ -9,11 +9,13 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"testing/fstest"
 	"time"
 
 	amigrate "ariga.io/atlas/sql/migrate"
 	"ariga.io/atlas/sql/sqltool"
 	"github.com/google/uuid"
+	"github.com/pressly/goose/v3"
 
 	"working-time-tracker/ent"
 	"working-time-tracker/ent/migrate"
@@ -142,27 +144,29 @@ func TestMigrations_SumFileIsCurrent(t *testing.T) {
 
 func TestMigrate_ForeignKeyDeleteRules(t *testing.T) {
 	want := map[string]string{
-		"persons_organizations_persons":             "CASCADE",
-		"integrations_projects_integrations":        "CASCADE",
-		"tasks_projects_tasks":                      "CASCADE",
-		"teams_projects_teams":                      "CASCADE",
-		"team_memberships_teams_memberships":        "CASCADE",
-		"work_sessions_tasks_work_sessions":         "CASCADE",
-		"customers_organizations_customers":         "CASCADE",
-		"allocations_projects_allocations":          "CASCADE",
-		"allocations_persons_allocations":           "CASCADE",
-		"invites_organizations_invites":             "CASCADE",
-		"sessions_persons_sessions":                 "CASCADE",
-		"labels_projects_labels":                    "CASCADE",
-		"task_labels_task_id":                       "CASCADE",
-		"task_labels_label_id":                      "CASCADE",
-		"projects_customers_projects":               "SET NULL",
-		"tasks_integrations_tasks":                  "SET NULL",
-		"invites_persons_created_invites":           "SET NULL",
-		"projects_organizations_projects":           "NO ACTION",
-		"tasks_persons_tasks":                       "NO ACTION",
-		"team_memberships_persons_team_memberships": "NO ACTION",
-		"work_sessions_persons_work_sessions":       "NO ACTION",
+		"persons_organizations_persons":               "CASCADE",
+		"integrations_projects_integrations":          "CASCADE",
+		"tasks_projects_tasks":                        "CASCADE",
+		"teams_projects_teams":                        "CASCADE",
+		"team_memberships_teams_memberships":          "CASCADE",
+		"work_sessions_projects_work_sessions":        "CASCADE",
+		"work_session_tasks_tasks_session_links":      "CASCADE",
+		"work_session_tasks_work_sessions_task_links": "CASCADE",
+		"customers_organizations_customers":           "CASCADE",
+		"allocations_projects_allocations":            "CASCADE",
+		"allocations_persons_allocations":             "CASCADE",
+		"invites_organizations_invites":               "CASCADE",
+		"sessions_persons_sessions":                   "CASCADE",
+		"labels_projects_labels":                      "CASCADE",
+		"task_labels_task_id":                         "CASCADE",
+		"task_labels_label_id":                        "CASCADE",
+		"projects_customers_projects":                 "SET NULL",
+		"tasks_integrations_tasks":                    "SET NULL",
+		"invites_persons_created_invites":             "SET NULL",
+		"projects_organizations_projects":             "NO ACTION",
+		"tasks_persons_tasks":                         "NO ACTION",
+		"team_memberships_persons_team_memberships":   "NO ACTION",
+		"work_sessions_persons_work_sessions":         "NO ACTION",
 	}
 
 	rows, err := testDB.Query(`SELECT constraint_name, delete_rule
@@ -217,11 +221,10 @@ func TestMigrate_DatabaseRejectsSecondOpenSession(t *testing.T) {
 	org := testClient.Organization.Create().SetName("Org").SaveX(ctx)
 	p := testClient.Person.Create().SetName("Ana").SetEmail("ana@test.com").SetOrganizationID(org.ID).SaveX(ctx)
 	proj := testClient.Project.Create().SetName("Projeto").SetOrganizationID(org.ID).SaveX(ctx)
-	task := testClient.Task.Create().SetName("Tarefa").SetProjectID(proj.ID).SetAssigneeID(p.ID).SaveX(ctx)
 
 	open := func() error {
 		_, err := testClient.WorkSession.Create().
-			SetTaskID(task.ID).SetPersonID(p.ID).SetStartAt(time.Now()).
+			SetProjectID(proj.ID).SetPersonID(p.ID).SetStartAt(time.Now()).
 			Save(ctx)
 		return err
 	}
@@ -234,7 +237,7 @@ func TestMigrate_DatabaseRejectsSecondOpenSession(t *testing.T) {
 
 	// Sessões encerradas não contam para o índice.
 	closed := testClient.WorkSession.Create().
-		SetTaskID(task.ID).SetPersonID(p.ID).
+		SetProjectID(proj.ID).SetPersonID(p.ID).
 		SetStartAt(time.Now().Add(-2 * time.Hour)).SetEndAt(time.Now().Add(-time.Hour))
 	if _, err := closed.Save(ctx); err != nil {
 		t.Fatalf("closed session should be allowed alongside an open one: %v", err)
@@ -303,6 +306,103 @@ func TestMigrate_OwnerMigrationPicksTheOldestAdmin(t *testing.T) {
 	owners := queryColumn[string](t, `SELECT email FROM persons WHERE is_owner ORDER BY email`)
 	if !slices.Equal(owners, []string{"admin-old@test.com"}) {
 		t.Errorf("owners = %v, want only the oldest admin of the organization (and none where there is no admin)", owners)
+	}
+}
+
+// A migração das tarefas da sessão roda sobre um banco com sessões de antes: cada uma passa
+// a ser do projeto da tarefa que tinha e ganha um intervalo dessa tarefa, do início ao fim
+// (aberto, se a sessão estava aberta).
+func TestMigrate_SessionTasksMigrationKeepsTheOldSessions(t *testing.T) {
+	ctx := context.Background()
+	defer restoreSchema(t)
+	testutil.ResetSchema(t, testDB)
+
+	const migration = "20261008050000_session_tasks.sql"
+	files, err := os.ReadDir("migrations")
+	if err != nil {
+		t.Fatalf("read migrations: %v", err)
+	}
+	before := fstest.MapFS{}
+	var last string
+	for _, f := range files {
+		if !strings.HasSuffix(f.Name(), ".sql") || f.Name() >= migration {
+			continue
+		}
+		raw, err := os.ReadFile("migrations/" + f.Name())
+		if err != nil {
+			t.Fatalf("read %s: %v", f.Name(), err)
+		}
+		before[f.Name()] = &fstest.MapFile{Data: raw}
+		last = f.Name()
+	}
+	if last == "" {
+		t.Fatal("no migration before the session tasks one")
+	}
+	provider, err := goose.NewProvider(goose.DialectPostgres, testDB, before)
+	if err != nil {
+		t.Fatalf("goose provider: %v", err)
+	}
+	if _, err := provider.Up(ctx); err != nil {
+		t.Fatalf("apply the migrations before %s: %v", migration, err)
+	}
+
+	// O banco como era: a sessão tem task_id e nenhuma tabela de intervalos.
+	org, ana, prjA, prjB := uuid.New(), uuid.New(), uuid.New(), uuid.New()
+	taskA, taskB, closedID, openID := uuid.New(), uuid.New(), uuid.New(), uuid.New()
+	start := time.Now().Add(-3 * time.Hour).Truncate(time.Second).UTC()
+	end := start.Add(time.Hour)
+	for _, q := range []struct {
+		sql  string
+		args []any
+	}{
+		{`INSERT INTO organizations (id, name, created_at) VALUES ($1, 'Org', now())`, []any{org}},
+		{`INSERT INTO persons (id, name, email, organization_id, created_at) VALUES ($1, 'Ana', 'ana@test.com', $2, now())`, []any{ana, org}},
+		{`INSERT INTO projects (id, name, organization_id, created_at) VALUES ($1, 'A', $3, now()), ($2, 'B', $3, now())`, []any{prjA, prjB, org}},
+		{`INSERT INTO tasks (id, name, project_id, created_at) VALUES ($1, 'Tarefa A', $3, now()), ($2, 'Tarefa B', $4, now())`, []any{taskA, taskB, prjA, prjB}},
+		{`INSERT INTO work_sessions (id, person_id, task_id, start_at, end_at, created_at) VALUES ($1, $2, $3, $4, $5, now())`, []any{closedID, ana, taskA, start, end}},
+		{`INSERT INTO work_sessions (id, person_id, task_id, start_at, created_at) VALUES ($1, $2, $3, $4, now())`, []any{openID, ana, taskB, end.Add(time.Hour)}},
+	} {
+		if _, err := testDB.ExecContext(ctx, q.sql, q.args...); err != nil {
+			t.Fatalf("seed the old schema: %v\n%s", err, q.sql)
+		}
+	}
+
+	raw, err := os.ReadFile("migrations/" + migration)
+	if err != nil {
+		t.Fatalf("read migration: %v", err)
+	}
+	if _, err := testDB.ExecContext(ctx, string(raw)); err != nil {
+		t.Fatalf("run %s over the old sessions: %v", migration, err)
+	}
+
+	rows, err := testDB.QueryContext(ctx, `SELECT s.id, s.project_id, l.task_id, l.from_at, l.until_at
+		FROM work_sessions s JOIN work_session_tasks l ON l.session_id = s.id ORDER BY s.start_at`)
+	if err != nil {
+		t.Fatalf("query the migrated sessions: %v", err)
+	}
+	defer rows.Close()
+	type migrated struct {
+		session, project, task uuid.UUID
+		from                   time.Time
+		until                  sql.NullTime
+	}
+	var got []migrated
+	for rows.Next() {
+		var m migrated
+		if err := rows.Scan(&m.session, &m.project, &m.task, &m.from, &m.until); err != nil {
+			t.Fatalf("scan: %v", err)
+		}
+		got = append(got, m)
+	}
+	if len(got) != 2 {
+		t.Fatalf("got %d session-task rows, want one per old session (2)", len(got))
+	}
+	if got[0].session != closedID || got[0].project != prjA || got[0].task != taskA ||
+		!got[0].from.Equal(start) || !got[0].until.Valid || !got[0].until.Time.Equal(end) {
+		t.Errorf("closed session migrated as %+v, want project A, task A from %v until %v", got[0], start, end)
+	}
+	if got[1].session != openID || got[1].project != prjB || got[1].task != taskB || got[1].until.Valid {
+		t.Errorf("open session migrated as %+v, want project B, task B, still open", got[1])
 	}
 }
 

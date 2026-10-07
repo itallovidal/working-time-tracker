@@ -397,7 +397,7 @@ var (
 		{Name: "owner_hours", Type: field.TypeBool, Default: false},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "person_id", Type: field.TypeUUID},
-		{Name: "task_id", Type: field.TypeUUID},
+		{Name: "project_id", Type: field.TypeUUID},
 	}
 	// WorkSessionsTable holds the schema information for the "work_sessions" table.
 	WorkSessionsTable = &schema.Table{
@@ -412,9 +412,9 @@ var (
 				OnDelete:   schema.NoAction,
 			},
 			{
-				Symbol:     "work_sessions_tasks_work_sessions",
+				Symbol:     "work_sessions_projects_work_sessions",
 				Columns:    []*schema.Column{WorkSessionsColumns[8]},
-				RefColumns: []*schema.Column{TasksColumns[0]},
+				RefColumns: []*schema.Column{ProjectsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 		},
@@ -426,6 +426,47 @@ var (
 				Annotation: &entsql.IndexAnnotation{
 					Where: "end_at IS NULL",
 				},
+			},
+		},
+	}
+	// WorkSessionTasksColumns holds the columns for the "work_session_tasks" table.
+	WorkSessionTasksColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "from_at", Type: field.TypeTime},
+		{Name: "until_at", Type: field.TypeTime, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "task_id", Type: field.TypeUUID},
+		{Name: "session_id", Type: field.TypeUUID},
+	}
+	// WorkSessionTasksTable holds the schema information for the "work_session_tasks" table.
+	WorkSessionTasksTable = &schema.Table{
+		Name:       "work_session_tasks",
+		Columns:    WorkSessionTasksColumns,
+		PrimaryKey: []*schema.Column{WorkSessionTasksColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "work_session_tasks_tasks_session_links",
+				Columns:    []*schema.Column{WorkSessionTasksColumns[4]},
+				RefColumns: []*schema.Column{TasksColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "work_session_tasks_work_sessions_task_links",
+				Columns:    []*schema.Column{WorkSessionTasksColumns[5]},
+				RefColumns: []*schema.Column{WorkSessionsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "worksessiontask_session_id",
+				Unique:  false,
+				Columns: []*schema.Column{WorkSessionTasksColumns[5]},
+			},
+			{
+				Name:    "worksessiontask_task_id",
+				Unique:  false,
+				Columns: []*schema.Column{WorkSessionTasksColumns[4]},
 			},
 		},
 	}
@@ -469,6 +510,7 @@ var (
 		TeamsTable,
 		TeamMembershipsTable,
 		WorkSessionsTable,
+		WorkSessionTasksTable,
 		TaskLabelsTable,
 	}
 )
@@ -492,7 +534,9 @@ func init() {
 	TeamMembershipsTable.ForeignKeys[0].RefTable = PersonsTable
 	TeamMembershipsTable.ForeignKeys[1].RefTable = TeamsTable
 	WorkSessionsTable.ForeignKeys[0].RefTable = PersonsTable
-	WorkSessionsTable.ForeignKeys[1].RefTable = TasksTable
+	WorkSessionsTable.ForeignKeys[1].RefTable = ProjectsTable
+	WorkSessionTasksTable.ForeignKeys[0].RefTable = TasksTable
+	WorkSessionTasksTable.ForeignKeys[1].RefTable = WorkSessionsTable
 	TaskLabelsTable.ForeignKeys[0].RefTable = TasksTable
 	TaskLabelsTable.ForeignKeys[1].RefTable = LabelsTable
 }

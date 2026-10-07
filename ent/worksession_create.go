@@ -8,8 +8,9 @@ import (
 	"fmt"
 	"time"
 	"working-time-tracker/ent/person"
-	"working-time-tracker/ent/task"
+	"working-time-tracker/ent/project"
 	"working-time-tracker/ent/worksession"
+	"working-time-tracker/ent/worksessiontask"
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
@@ -23,9 +24,9 @@ type WorkSessionCreate struct {
 	hooks    []Hook
 }
 
-// SetTaskID sets the "task_id" field.
-func (_c *WorkSessionCreate) SetTaskID(v uuid.UUID) *WorkSessionCreate {
-	_c.mutation.SetTaskID(v)
+// SetProjectID sets the "project_id" field.
+func (_c *WorkSessionCreate) SetProjectID(v uuid.UUID) *WorkSessionCreate {
+	_c.mutation.SetProjectID(v)
 	return _c
 }
 
@@ -125,14 +126,29 @@ func (_c *WorkSessionCreate) SetNillableID(v *uuid.UUID) *WorkSessionCreate {
 	return _c
 }
 
-// SetTask sets the "task" edge to the Task entity.
-func (_c *WorkSessionCreate) SetTask(v *Task) *WorkSessionCreate {
-	return _c.SetTaskID(v.ID)
+// SetProject sets the "project" edge to the Project entity.
+func (_c *WorkSessionCreate) SetProject(v *Project) *WorkSessionCreate {
+	return _c.SetProjectID(v.ID)
 }
 
 // SetPerson sets the "person" edge to the Person entity.
 func (_c *WorkSessionCreate) SetPerson(v *Person) *WorkSessionCreate {
 	return _c.SetPersonID(v.ID)
+}
+
+// AddTaskLinkIDs adds the "task_links" edge to the WorkSessionTask entity by IDs.
+func (_c *WorkSessionCreate) AddTaskLinkIDs(ids ...uuid.UUID) *WorkSessionCreate {
+	_c.mutation.AddTaskLinkIDs(ids...)
+	return _c
+}
+
+// AddTaskLinks adds the "task_links" edges to the WorkSessionTask entity.
+func (_c *WorkSessionCreate) AddTaskLinks(v ...*WorkSessionTask) *WorkSessionCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddTaskLinkIDs(ids...)
 }
 
 // Mutation returns the WorkSessionMutation object of the builder.
@@ -186,8 +202,8 @@ func (_c *WorkSessionCreate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (_c *WorkSessionCreate) check() error {
-	if _, ok := _c.mutation.TaskID(); !ok {
-		return &ValidationError{Name: "task_id", err: errors.New(`ent: missing required field "WorkSession.task_id"`)}
+	if _, ok := _c.mutation.ProjectID(); !ok {
+		return &ValidationError{Name: "project_id", err: errors.New(`ent: missing required field "WorkSession.project_id"`)}
 	}
 	if _, ok := _c.mutation.PersonID(); !ok {
 		return &ValidationError{Name: "person_id", err: errors.New(`ent: missing required field "WorkSession.person_id"`)}
@@ -211,8 +227,8 @@ func (_c *WorkSessionCreate) check() error {
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "WorkSession.created_at"`)}
 	}
-	if len(_c.mutation.TaskIDs()) == 0 {
-		return &ValidationError{Name: "task", err: errors.New(`ent: missing required edge "WorkSession.task"`)}
+	if len(_c.mutation.ProjectIDs()) == 0 {
+		return &ValidationError{Name: "project", err: errors.New(`ent: missing required edge "WorkSession.project"`)}
 	}
 	if len(_c.mutation.PersonIDs()) == 0 {
 		return &ValidationError{Name: "person", err: errors.New(`ent: missing required edge "WorkSession.person"`)}
@@ -276,21 +292,21 @@ func (_c *WorkSessionCreate) createSpec() (*WorkSession, *sqlgraph.CreateSpec) {
 		_spec.SetField(worksession.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
 	}
-	if nodes := _c.mutation.TaskIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.ProjectIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   worksession.TaskTable,
-			Columns: []string{worksession.TaskColumn},
+			Table:   worksession.ProjectTable,
+			Columns: []string{worksession.ProjectColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(task.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(project.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.TaskID = nodes[0]
+		_node.ProjectID = nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := _c.mutation.PersonIDs(); len(nodes) > 0 {
@@ -308,6 +324,22 @@ func (_c *WorkSessionCreate) createSpec() (*WorkSession, *sqlgraph.CreateSpec) {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.PersonID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.TaskLinksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   worksession.TaskLinksTable,
+			Columns: []string{worksession.TaskLinksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(worksessiontask.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

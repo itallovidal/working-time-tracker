@@ -246,14 +246,20 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 |---|---|---|---|---|
 | `work_session.already_open` | 400 | — | `já existe um ponto aberto para esta pessoa; pare a sessão atual antes de iniciar outra` | `this person already has an open clock-in; stop the current session before starting another` |
 | `work_session.filter_required` | 400 | — | `filtre por task_id ou person_id` | `filter by task_id or person_id` |
+| `work_session.invalid_interval` | 400 | — | `o intervalo precisa começar e terminar dentro da sessão, com o fim depois do começo` | `the interval must start and end inside the session, with the end after the start` |
 | `work_session.invalid_person_filter` | 400 | — | `pessoa inválida (person_id)` | `invalid person (person_id)` |
 | `work_session.invalid_task_filter` | 400 | — | `tarefa inválida (task_id)` | `invalid task (task_id)` |
+| `work_session.last_task` | 400 | — | `a sessão precisa ficar com ao menos uma tarefa; enquanto aberta, ao menos uma em andamento` | `the session must keep at least one task; while it is open, at least one still in progress` |
 | `work_session.no_rate` | 400 | — | `esta pessoa ainda não tem valor por hora neste projeto; um admin precisa definir na aba Colaboradores antes do ponto` | `this person has no hourly rate on this project yet; an admin must set one on the Collaborators tab before clocking in` |
+| `work_session.not_found` | 404 | — | `sessão não encontrada` | `session not found` |
 | `work_session.not_open` | 400 | — | `não há ponto aberto para esta pessoa` | `this person has no open clock-in` |
+| `work_session.not_yours` | 403 | — | `só quem bateu o ponto, ou um admin, pode mexer nas tarefas desta sessão` | `only the person who clocked in, or an admin, can change the tasks of this session` |
 | `work_session.other_person_admin_only` | 403 | — | `só admins podem registrar o ponto de outra pessoa` | `only admins can clock in for another person` |
 | `work_session.person_not_found` | 400 | — | `pessoa não encontrada` | `person not found` |
 | `work_session.person_not_in_org` | 400 | — | `pessoa não encontrada nesta organização` | `person not found in this organization` |
 | `work_session.person_required` | 400 | — | `informe a pessoa (person_id)` | `enter the person (person_id)` |
+| `work_session.task_link_not_found` | 404 | — | `esta tarefa não está na sessão` | `this task is not in the session` |
 | `work_session.task_not_found` | 400 | — | `tarefa não encontrada` | `task not found` |
 | `work_session.task_other_project` | 400 | — | `a tarefa não é deste projeto` | `the task does not belong to this project` |
+| `work_session.task_overlap` | 400 | — | `a tarefa já está na sessão neste período` | `the task is already in the session during this period` |
 | `work_session.task_required` | 400 | — | `informe a tarefa (task_id)` | `enter the task (task_id)` |

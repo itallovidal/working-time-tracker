@@ -849,6 +849,9 @@ func TestRoutes_Table(t *testing.T) {
 		"POST /api/projects/:projectId/work-sessions/clock-out",
 		"GET /api/projects/:projectId/work-sessions",
 		"GET /api/projects/:projectId/work-sessions/total",
+		"POST /api/projects/:projectId/work-sessions/:sessionId/tasks",
+		"PATCH /api/projects/:projectId/work-sessions/:sessionId/tasks/:linkId",
+		"DELETE /api/projects/:projectId/work-sessions/:sessionId/tasks/:linkId",
 		"GET /api/work-sessions/active",
 		"POST /api/projects/:projectId/integrations",
 		"GET /api/projects/:projectId/integrations",
@@ -926,8 +929,12 @@ func TestAPI_ActiveSessionAndProjectMembers(t *testing.T) {
 	do(e, "POST", "/api/projects/"+projectID+"/work-sessions/clock-in", `{"task_id":"`+taskID+`"}`, admin.session)
 
 	active := decode(t, do(e, "GET", "/api/work-sessions/active", "", admin.session))
-	task, _ := active["task"].(map[string]any)
-	if task == nil || task["id"] != taskID || task["project_id"] != projectID {
+	tasks, _ := active["tasks"].([]any)
+	var task map[string]any
+	if len(tasks) == 1 {
+		task, _ = tasks[0].(map[string]any)["task"].(map[string]any)
+	}
+	if task == nil || task["id"] != taskID || task["project_id"] != projectID || active["project_id"] != projectID {
 		t.Errorf("active session = %v, want task %s of project %s", active, taskID, projectID)
 	}
 }

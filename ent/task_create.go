@@ -12,7 +12,7 @@ import (
 	"working-time-tracker/ent/person"
 	"working-time-tracker/ent/project"
 	"working-time-tracker/ent/task"
-	"working-time-tracker/ent/worksession"
+	"working-time-tracker/ent/worksessiontask"
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
@@ -193,19 +193,19 @@ func (_c *TaskCreate) SetExternalIntegration(v *Integration) *TaskCreate {
 	return _c.SetExternalIntegrationID(v.ID)
 }
 
-// AddWorkSessionIDs adds the "work_sessions" edge to the WorkSession entity by IDs.
-func (_c *TaskCreate) AddWorkSessionIDs(ids ...uuid.UUID) *TaskCreate {
-	_c.mutation.AddWorkSessionIDs(ids...)
+// AddSessionLinkIDs adds the "session_links" edge to the WorkSessionTask entity by IDs.
+func (_c *TaskCreate) AddSessionLinkIDs(ids ...uuid.UUID) *TaskCreate {
+	_c.mutation.AddSessionLinkIDs(ids...)
 	return _c
 }
 
-// AddWorkSessions adds the "work_sessions" edges to the WorkSession entity.
-func (_c *TaskCreate) AddWorkSessions(v ...*WorkSession) *TaskCreate {
+// AddSessionLinks adds the "session_links" edges to the WorkSessionTask entity.
+func (_c *TaskCreate) AddSessionLinks(v ...*WorkSessionTask) *TaskCreate {
 	ids := make([]uuid.UUID, len(v))
 	for i := range v {
 		ids[i] = v[i].ID
 	}
-	return _c.AddWorkSessionIDs(ids...)
+	return _c.AddSessionLinkIDs(ids...)
 }
 
 // AddLabelIDs adds the "labels" edge to the Label entity by IDs.
@@ -424,15 +424,15 @@ func (_c *TaskCreate) createSpec() (*Task, *sqlgraph.CreateSpec) {
 		_node.ExternalIntegrationID = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := _c.mutation.WorkSessionsIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.SessionLinksIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   task.WorkSessionsTable,
-			Columns: []string{task.WorkSessionsColumn},
+			Table:   task.SessionLinksTable,
+			Columns: []string{task.SessionLinksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(worksession.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(worksessiontask.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

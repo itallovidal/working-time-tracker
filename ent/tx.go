@@ -38,6 +38,8 @@ type Tx struct {
 	TeamMembership *TeamMembershipClient
 	// WorkSession is the client for interacting with the WorkSession builders.
 	WorkSession *WorkSessionClient
+	// WorkSessionTask is the client for interacting with the WorkSessionTask builders.
+	WorkSessionTask *WorkSessionTaskClient
 
 	// lazily loaded.
 	client     *Client
@@ -182,6 +184,7 @@ func (tx *Tx) init() {
 	tx.Team = NewTeamClient(tx.config)
 	tx.TeamMembership = NewTeamMembershipClient(tx.config)
 	tx.WorkSession = NewWorkSessionClient(tx.config)
+	tx.WorkSessionTask = NewWorkSessionTaskClient(tx.config)
 }
 
 // txDriver wraps the given dialect.Tx with a nop dialect.Driver implementation.
