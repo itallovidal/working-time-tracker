@@ -5,10 +5,13 @@
   <p class="muted" x-show="loading">{{.T "task_detail.loading"}}</p>
   <p class="form-error" x-cloak x-show="errors.load" x-text="errors.load"></p>
 
-  <div class="grid-aside" x-cloak x-show="!loading && task">
-    <div class="stack">
+  {{/* Quatro cartões em duas colunas: a tarefa (nome e descrição) e o tempo registrado, de um lado;
+       os detalhes e o item externo, do outro. Em tela estreita a coluna some e os cartões seguem a
+       ordem do `order`: a tarefa, os detalhes, o tempo e o item externo. */}}
+  <div class="task-layout" x-cloak x-show="!loading && task">
+    <div class="task-col">
       {{/* A página da tarefa só mostra. Quem altera é o modal Editar tarefa, aberto pelo lápis. */}}
-      <section class="card">
+      <section class="card task-main">
         <div class="card-head">
           <h2 class="task-title" x-text="task && task.name"></h2>
           <div class="row">
@@ -18,47 +21,17 @@
           </div>
         </div>
         <p class="form-error" x-show="errors.clock" x-text="errors.clock" role="alert"></p>
-        <div class="markdown" x-show="task && task.description" x-html="WTT.markdown(task && task.description)"></div>
-        <p class="muted small" x-show="task && !task.description">{{.T "task_detail.no_description"}}</p>
-        <dl class="facts">
-          <div class="fact">
-            <dt>{{.T "tasks.col_assignee"}}</dt>
-            <dd>
-              <span x-show="task && task.assignee" x-text="task && task.assignee ? task.assignee.name : ''"></span>
-              <span class="badge" x-show="task && !task.assignee">{{.T "tasks.unassigned"}}</span>
-            </dd>
-          </div>
-          <div class="fact">
-            <dt>{{.T "tasks.col_status"}}</dt>
-            <dd><span class="badge" :class="statusClass(task && task.status)" x-text="task && WTT.fmt.taskStatus(task.status)"></span></dd>
-          </div>
-          <div class="fact">
-            <dt>{{.T "tasks.col_priority"}}</dt>
-            <dd>
-              <span class="badge" :class="priorityClass(task && task.priority)" x-show="task && task.priority !== 'none'" x-text="task && WTT.fmt.priority(task.priority)"></span>
-              <span class="muted" x-show="task && task.priority === 'none'" x-text="WTT.fmt.priority('none')"></span>
-            </dd>
-          </div>
-          <div class="fact">
-            <dt>{{.T "tasks.labels"}}</dt>
-            <dd>
-              <div class="label-list" x-show="task && task.labels && task.labels.length > 0">
-                <template x-for="l in (task ? task.labels : [])" :key="l.id"><span class="badge" x-text="l.name"></span></template>
-              </div>
-              <span class="muted" x-show="task && (!task.labels || task.labels.length === 0)">{{.T "tasks.no_labels"}}</span>
-            </dd>
-          </div>
-          <div class="fact">
-            <dt>{{.T "tasks.col_deadline"}}</dt>
-            <dd><span class="badge num" :class="deadlineClass()" x-text="deadlineLabel()"></span></dd>
-          </div>
-        </dl>
+        <div class="task-description">
+          <h3 class="section-label">{{.T "common.description_label"}}</h3>
+          <div class="markdown" x-show="task && task.description" x-html="WTT.markdown(task && task.description)"></div>
+          <p class="muted small" x-show="task && !task.description">{{.T "task_detail.no_description"}}</p>
+        </div>
         <div class="row">
           <a class="btn btn-ghost btn-sm" href="/projects/{{.Project.ID}}/tasks" :href="backHref()">{{template "icon" "arrow-left"}} {{.T "task_detail.back"}}</a>
         </div>
       </section>
 
-      <section class="card">
+      <section class="card task-time">
         <div class="card-head">
           <h2>{{.T "task_detail.time_title"}}</h2>
           <span class="mono num" x-text="WTT.fmt.hours(totalSeconds())"></span>
@@ -81,8 +54,59 @@
       </section>
     </div>
 
-    <div class="stack">
-      <section class="card">
+    <div class="task-col">
+      {{/* Os detalhes ficam num cartão à parte do nome e da descrição: cada linha é um atributo da tarefa. */}}
+      <section class="card task-details" aria-labelledby="task-details-title">
+        <div class="card-head"><h2 id="task-details-title">{{.T "task_detail.details_title"}}</h2></div>
+        <dl class="detail-list">
+          <div class="detail-row">
+            <dt>{{.T "tasks.col_status"}}</dt>
+            <dd><span class="badge" :class="statusClass(task && task.status)" x-text="task && WTT.fmt.taskStatus(task.status)"></span></dd>
+          </div>
+          <div class="detail-row">
+            <dt>{{.T "tasks.col_priority"}}</dt>
+            <dd>
+              <span class="badge" :class="priorityClass(task && task.priority)" x-show="task && task.priority !== 'none'" x-text="task && WTT.fmt.priority(task.priority)"></span>
+              <span class="muted" x-show="task && task.priority === 'none'" x-text="WTT.fmt.priority('none')"></span>
+            </dd>
+          </div>
+          <div class="detail-row">
+            <dt>{{.T "tasks.col_assignee"}}</dt>
+            <dd>
+              <div class="person-line" x-show="task && task.assignee">
+                <span class="avatar" aria-hidden="true" x-text="task && task.assignee ? WTT.fmt.initials(task.assignee.name) : ''"></span>
+                <span class="grow">
+                  <span class="person-name" x-text="task && task.assignee ? task.assignee.name : ''"></span>
+                  <span class="muted small person-email" x-text="task && task.assignee ? task.assignee.email : ''"></span>
+                </span>
+              </div>
+              <div x-show="task && !task.assignee">
+                <span class="badge">{{.T "tasks.unassigned"}}</span>
+                <p class="muted small hint-line">{{.T "tasks.unassigned_hint"}}</p>
+              </div>
+            </dd>
+          </div>
+          <div class="detail-row">
+            <dt>{{.T "tasks.col_deadline"}}</dt>
+            <dd><span class="badge num" :class="deadlineClass()" x-text="deadlineLabel()"></span></dd>
+          </div>
+          <div class="detail-row">
+            <dt>{{.T "tasks.labels"}}</dt>
+            <dd>
+              <div class="label-list label-list-flush" x-show="task && task.labels && task.labels.length > 0">
+                <template x-for="l in (task ? task.labels : [])" :key="l.id"><span class="badge" x-text="l.name"></span></template>
+              </div>
+              <span class="muted" x-show="task && (!task.labels || task.labels.length === 0)">{{.T "tasks.no_labels"}}</span>
+            </dd>
+          </div>
+          <div class="detail-row">
+            <dt>{{.T "task_detail.created"}}</dt>
+            <dd class="num" x-text="task ? WTT.fmt.date(task.created_at) : ''"></dd>
+          </div>
+        </dl>
+      </section>
+
+      <section class="card task-external">
         <div class="card-head"><h2>{{.T "task_detail.external"}}</h2></div>
         <template x-if="task && task.external_item_id">
           <div class="stack">

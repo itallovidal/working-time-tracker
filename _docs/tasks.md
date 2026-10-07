@@ -502,6 +502,14 @@
 
 ---
 
+### Sprint 41: Task Page in Cards
+
+- [X] S41.1 The task page splits what the task says from what it has: one card for the name and the description, and a **Detalhes** card with one row each for status, priority, assignee (avatar, name and email, or the "Sem responsável" badge with its hint), deadline, labels and the creation date
+- [X] S41.2 Two columns of cards on a wide screen (task and time tracked; details and linked item), one column on a narrow one, in the order task, details, time, item; light and dark themes and the phone width checked in the browser
+- [X] S41.3 Test of the page markup (the cards, the rows, the details after the description and outside the card with the name); texts in both languages; update README and design; no API change
+
+---
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open

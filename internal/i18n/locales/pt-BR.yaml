@@ -457,6 +457,8 @@ task_detail:
   back: Voltar ao quadro
   no_description: Esta tarefa não tem descrição.
   delete_confirm: Excluir a tarefa? O tempo registrado nela também é apagado.
+  details_title: Detalhes
+  created: Criada em
   time_title: Tempo registrado
   no_time: Ninguém registrou tempo nesta tarefa ainda.
   in_progress: "· em andamento"

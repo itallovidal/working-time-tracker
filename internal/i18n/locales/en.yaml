@@ -447,6 +447,8 @@ task_detail:
   back: Back to the board
   no_description: This task has no description.
   delete_confirm: Delete the task? The time tracked on it is deleted too.
+  details_title: Details
+  created: Created on
   time_title: Time tracked
   no_time: Nobody has tracked time on this task yet.
   in_progress: "· in progress"

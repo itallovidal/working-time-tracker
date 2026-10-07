@@ -821,6 +821,23 @@ func TestPages_ProjectIntegrationsTab(t *testing.T) {
 			t.Errorf("the task page does not contain %q", want)
 		}
 	}
+	// Os detalhes (status, prioridade, responsável, prazo, etiquetas, criação) ficam num cartão à
+	// parte do nome e da descrição, na outra coluna.
+	for _, want := range []string{
+		`class="task-layout"`, `class="card task-main"`, `class="card task-details"`, `class="detail-list"`, `class="task-description"`,
+		"<h2 id=\"task-details-title\">Detalhes</h2>", "<dt>Status</dt>", "<dt>Prioridade</dt>", "<dt>Responsável</dt>", "<dt>Prazo</dt>", "<dt>Etiquetas</dt>", "<dt>Criada em</dt>",
+	} {
+		if !strings.Contains(detail, want) {
+			t.Errorf("the task page does not contain %q", want)
+		}
+	}
+	main, details, description := strings.Index(detail, `class="card task-main"`), strings.Index(detail, `class="card task-details"`), strings.Index(detail, `class="task-description"`)
+	if !(main < description && description < details) {
+		t.Error("the details card is not after the card with the name and the description")
+	}
+	if strings.Contains(detail[main:details], `class="detail-list"`) || strings.Contains(detail[main:details], `<dl class="facts">`) {
+		t.Error("the attributes are still inside the card with the name and the description")
+	}
 	// O marked e o DOMPurify só vêm nas páginas que mostram ou escrevem Markdown.
 	for _, lib := range []string{`/static/marked.min.js`, `/static/purify.min.js`} {
 		if !strings.Contains(detail, lib) {
