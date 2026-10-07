@@ -506,7 +506,8 @@
 
 - [X] S41.1 The task page splits what the task says from what it has: one card for the name and the description, and a **Detalhes** card with one row each for status, priority, assignee (avatar, name and email, or the "Sem responsável" badge with its hint), deadline, labels and the creation date
 - [X] S41.2 Two columns of cards on a wide screen (task and time tracked; details and linked item), one column on a narrow one, in the order task, details, time, item; light and dark themes and the phone width checked in the browser
-- [X] S41.3 Test of the page markup (the cards, the rows, the details after the description and outside the card with the name); texts in both languages; update README and design; no API change
+- [X] S41.3 The task page is its own screen, not a tab of the project: no tab bar and no project name as the title; a header with Voltar ao quadro (back to the board, with its filters), the way (Projetos / the project), the task name as the title and the Start button and the pen; the first card is now only the description
+- [X] S41.4 Test of the page markup (the cards, the rows, the details after the description and outside the card with the name); texts in both languages; update README and design; no API change
 
 ---
 

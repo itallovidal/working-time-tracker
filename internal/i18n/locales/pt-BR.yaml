@@ -455,6 +455,7 @@ task_detail:
   loading: Carregando a tarefa…
   edit_title: Editar tarefa
   back: Voltar ao quadro
+  breadcrumb: Você está em
   no_description: Esta tarefa não tem descrição.
   delete_confirm: Excluir a tarefa? O tempo registrado nela também é apagado.
   details_title: Detalhes

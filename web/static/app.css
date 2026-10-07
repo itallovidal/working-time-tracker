@@ -206,7 +206,8 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
   .task-time { order: 3; }
   .task-external { order: 4; }
 }
-.section-label { margin: 0 0 6px; font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.task-head { display: flex; flex-direction: column; gap: 14px; }
+.task-title { overflow-wrap: anywhere; }
 /* Os atributos da tarefa, uma linha cada, separadas por um filete. */
 .detail-list { margin: 0; display: flex; flex-direction: column; font-size: 0.92rem; }
 .detail-row { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 4px 12px; align-items: start; padding: 11px 0; border-top: 1px solid var(--rule); }

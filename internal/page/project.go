@@ -104,7 +104,7 @@ func (h *Handler) TaskDetail(c *echo.Context) error {
 		Title:   t.Name + " · " + p.Name,
 		Section: "projects",
 		Project: &Crumb{ID: p.ID.String(), Name: p.Name},
-		Tab:     "tasks",
+		Task:    &Crumb{ID: t.ID.String(), Name: t.Name},
 		Script:  "project",
 		Props:   map[string]any{"task_id": t.ID.String(), "integration_types": adapter.Descriptors()},
 	})

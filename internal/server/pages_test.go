@@ -831,6 +831,18 @@ func TestPages_ProjectIntegrationsTab(t *testing.T) {
 			t.Errorf("the task page does not contain %q", want)
 		}
 	}
+	// A tarefa é uma tela própria: tem cabeçalho com o caminho, o título e as ações, e não mostra a
+	// barra de abas do projeto nem o nome do projeto como título da página.
+	for _, want := range []string{`class="task-head"`, `aria-label="Você está em"`, `<h1 class="task-title"`, ">Tela de login</h1>", "Voltar ao quadro"} {
+		if !strings.Contains(detail, want) {
+			t.Errorf("the task page does not contain %q", want)
+		}
+	}
+	for _, not := range []string{`class="tabs"`, `data-project-name`, `/tasks" aria-current="page"`} {
+		if strings.Contains(detail, not) {
+			t.Errorf("the task page still has the project tabs or heading: %q", not)
+		}
+	}
 	main, details, description := strings.Index(detail, `class="card task-main"`), strings.Index(detail, `class="card task-details"`), strings.Index(detail, `class="task-description"`)
 	if !(main < description && description < details) {
 		t.Error("the details card is not after the card with the name and the description")

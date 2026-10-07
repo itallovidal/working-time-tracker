@@ -445,6 +445,7 @@ task_detail:
   loading: Loading the task…
   edit_title: Edit task
   back: Back to the board
+  breadcrumb: You are here
   no_description: This task has no description.
   delete_confirm: Delete the task? The time tracked on it is deleted too.
   details_title: Details

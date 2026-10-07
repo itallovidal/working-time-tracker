@@ -1,33 +1,41 @@
 {{define "content"}}
 <main class="page" x-data="taskDetail">
-  {{template "project_head" .}}
+  {{/* A tarefa é uma tela própria, e não uma aba do projeto: sem a barra de abas, com um cabeçalho que
+       diz de onde se veio (o projeto e o quadro) e leva de volta. O título vem do servidor e passa a
+       ser o da tarefa carregada, para o cabeçalho não pular quando a página termina de carregar. */}}
+  <header class="task-head">
+    <a class="btn btn-ghost btn-sm self-start" href="/projects/{{.Project.ID}}/tasks" :href="backHref()">{{template "icon" "arrow-left"}} {{.T "task_detail.back"}}</a>
+    <div class="page-head">
+      <div>
+        <nav class="eyebrow" aria-label="{{.T "task_detail.breadcrumb"}}">
+          <a href="/orgs/{{.OrgID}}">{{.T "project.head.projects"}}</a> /
+          <a href="/projects/{{.Project.ID}}/overview">{{.Project.Name}}</a>
+        </nav>
+        <h1 class="task-title" x-text="task ? task.name : $el.textContent">{{.Task.Name}}</h1>
+      </div>
+      <div class="row" x-cloak x-show="task">
+        <span class="badge badge-ok" x-show="isRunning()">{{.T "tasks.running"}}</span>
+        <button type="button" class="btn btn-secondary btn-sm" x-show="!isRunning()" :disabled="pending" @click="start()">{{template "icon" "play"}} {{.T "tasks.start"}}</button>
+        <button type="button" class="btn btn-ghost btn-sm" aria-label="{{.T "task_detail.edit_title"}}" title="{{.T "task_detail.edit_title"}}" @click="openEdit()">{{template "icon" "pen"}}</button>
+      </div>
+    </div>
+    <p class="form-error" x-show="errors.clock" x-text="errors.clock" role="alert"></p>
+  </header>
 
   <p class="muted" x-show="loading">{{.T "task_detail.loading"}}</p>
   <p class="form-error" x-cloak x-show="errors.load" x-text="errors.load"></p>
 
-  {{/* Quatro cartões em duas colunas: a tarefa (nome e descrição) e o tempo registrado, de um lado;
+  {{/* Quatro cartões em duas colunas: a descrição e o tempo registrado, de um lado;
        os detalhes e o item externo, do outro. Em tela estreita a coluna some e os cartões seguem a
-       ordem do `order`: a tarefa, os detalhes, o tempo e o item externo. */}}
+       ordem do `order`: a descrição, os detalhes, o tempo e o item externo. */}}
   <div class="task-layout" x-cloak x-show="!loading && task">
     <div class="task-col">
-      {{/* A página da tarefa só mostra. Quem altera é o modal Editar tarefa, aberto pelo lápis. */}}
+      {{/* A página só mostra. Quem altera é o modal Editar tarefa, aberto pelo lápis do cabeçalho. */}}
       <section class="card task-main">
-        <div class="card-head">
-          <h2 class="task-title" x-text="task && task.name"></h2>
-          <div class="row">
-            <span class="badge badge-ok" x-show="isRunning()">{{.T "tasks.running"}}</span>
-            <button type="button" class="btn btn-secondary btn-sm" x-show="!isRunning()" :disabled="pending" @click="start()">{{template "icon" "play"}} {{.T "tasks.start"}}</button>
-            <button type="button" class="btn btn-ghost btn-sm" aria-label="{{.T "task_detail.edit_title"}}" title="{{.T "task_detail.edit_title"}}" @click="openEdit()">{{template "icon" "pen"}}</button>
-          </div>
-        </div>
-        <p class="form-error" x-show="errors.clock" x-text="errors.clock" role="alert"></p>
+        <div class="card-head"><h2>{{.T "common.description_label"}}</h2></div>
         <div class="task-description">
-          <h3 class="section-label">{{.T "common.description_label"}}</h3>
           <div class="markdown" x-show="task && task.description" x-html="WTT.markdown(task && task.description)"></div>
           <p class="muted small" x-show="task && !task.description">{{.T "task_detail.no_description"}}</p>
-        </div>
-        <div class="row">
-          <a class="btn btn-ghost btn-sm" href="/projects/{{.Project.ID}}/tasks" :href="backHref()">{{template "icon" "arrow-left"}} {{.T "task_detail.back"}}</a>
         </div>
       </section>
 
