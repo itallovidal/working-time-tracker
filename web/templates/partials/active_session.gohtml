@@ -3,9 +3,10 @@
   <template x-if="$store.clock.session">
     <div class="session-pill">
       <span class="pulse" aria-hidden="true"></span>
-      <a :href="'/projects/' + $store.clock.session.task.project_id + '/overview'"
-         :title="$t('session.in_progress', { name: $store.clock.session.task.name })"
-         x-text="$store.clock.session.task.name"></a>
+      {{/* O nome é a primeira tarefa em andamento e "+N" das outras; clicar abre a sessão com as tarefas. */}}
+      <button type="button" class="session-pill-open"
+              :title="$t('session.in_progress', { name: $store.clock.labelTitle() })"
+              @click="details()" x-text="$store.clock.label()"></button>
       <span class="mono" x-text="WTT.fmt.clock($store.clock.elapsed())"></span>
       <button type="button" class="btn btn-sm" :disabled="busy" @click="stop()">{{.T "session.stop"}}</button>
     </div>

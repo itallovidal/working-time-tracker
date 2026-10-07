@@ -236,14 +236,35 @@ document.addEventListener('alpine:init', () => {
     // uma tarefa que já não é de quem olha.
     sessionTasks() {
       const seen = new Map();
-      this.sessions.forEach((s) => { if (s.task && !seen.has(s.task.id)) seen.set(s.task.id, s.task); });
+      this.sessions.forEach((s) => s.tasks.forEach((l) => { if (!seen.has(l.task_id)) seen.set(l.task_id, l.task); }));
       return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name, WTT.lang));
+    },
+    // As tarefas de uma sessão, uma vez cada (a mesma pode ter voltado), na ordem em que
+    // entraram. A tabela mostra as duas primeiras e quantas mais há.
+    distinctTasks(s) {
+      const seen = new Map();
+      s.tasks.forEach((l) => { if (!seen.has(l.task_id)) seen.set(l.task_id, l.task); });
+      return [...seen.values()];
+    },
+    firstTasks(s) {
+      return this.distinctTasks(s).slice(0, 2);
+    },
+    moreTasks(s) {
+      return Math.max(0, this.distinctTasks(s).length - 2);
+    },
+    // openSession abre o modal da sessão da linha.
+    openSession(s) {
+      Alpine.store('sessionView').open(s);
+    },
+    // seconds é o tempo da linha: o da sessão ou, com uma tarefa no filtro, o que a tarefa teve nela.
+    seconds(s) {
+      return this.filter.task ? clock().taskElapsed(s, this.filter.task) : clock().elapsed(s);
     },
     // filtered aplica os filtros da lista. A data pega as sessões iniciadas
     // naquele dia, no fuso de quem está olhando.
     filtered() {
       return this.sessions.filter((s) =>
-        (!this.filter.task || s.task_id === this.filter.task) &&
+        (!this.filter.task || s.tasks.some((l) => l.task_id === this.filter.task)) &&
         (!this.filter.person || s.person_id === this.filter.person) &&
         (!this.filter.date || WTT.fmt.dateInput(s.start_at) === this.filter.date));
     },
@@ -264,7 +285,7 @@ document.addEventListener('alpine:init', () => {
       return WTT.t('time.page_summary', { page: Math.min(this.page, this.sessionPages()), pages: this.sessionPages(), count: this.filtered().length });
     },
     filteredTotal() {
-      return this.filtered().reduce((sum, s) => sum + clock().elapsed(s), 0);
+      return this.filtered().reduce((sum, s) => sum + this.seconds(s), 0);
     },
     // mine soma o tempo da pessoa logada hoje ou nesta semana, e earned, quanto
     // ela ganhou nesse tempo.
@@ -276,10 +297,16 @@ document.addEventListener('alpine:init', () => {
     },
     // amount é o valor de uma sessão: 'pay' é o que a pessoa recebe e 'bill', o
     // que o cliente paga. A sessão fechada usa o valor que o servidor calculou; a
-    // aberta acompanha o cronômetro. null quando não há valor ou ele não é visível.
+    // aberta acompanha o cronômetro. null quando não há valor ou ele não é visível. Com uma
+    // tarefa no filtro, é o valor do tempo dela na sessão: a soma dos intervalos, cada um
+    // arredondado como o servidor faz.
     amount(s, kind) {
       const rate = s[kind + '_rate_cents'];
       if (rate === null || rate === undefined) return null;
+      if (this.filter.task) {
+        return s.tasks.filter((l) => l.task_id === this.filter.task).reduce((sum, l) =>
+          sum + (s.end_at ? l[kind + '_amount_cents'] : Math.round(clock().linkElapsed(s, l) * rate / 3600)), 0);
+      }
       return s.end_at ? s[kind + '_amount_cents'] : Math.round(clock().elapsed(s) * rate / 3600);
     },
     filteredAmount(kind) {
@@ -554,8 +581,7 @@ document.addEventListener('alpine:init', () => {
       });
     },
     isRunning(t) {
-      const s = clock().session;
-      return !!s && s.task_id === t.id;
+      return clock().isRunning(t.id);
     },
     deadlineClass: (t) => deadlineInfo(t.deadline).cls,
     deadlineLabel: (t) => deadlineInfo(t.deadline).label,
@@ -594,15 +620,29 @@ document.addEventListener('alpine:init', () => {
     toggle(status) {
       this.open[status] = !this.open[status];
     },
+    // Com o ponto aberto neste projeto, a tarefa entra na sessão em vez de abrir outra.
     start(t) {
       return this.run('clock', async () => {
+        if (this.sessionHere()) {
+          await clock().addTask(t.id);
+          toast(WTT.t('session.modal.added', { name: t.name }));
+          return;
+        }
         await clock().clockIn(project.id, t.id);
         toast(WTT.t('tasks.started', { name: t.name }));
       });
     },
     isRunning(t) {
+      return clock().isRunning(t.id);
+    },
+    sessionHere() {
       const s = clock().session;
-      return !!s && s.task_id === t.id;
+      return !!s && s.project_id === project.id;
+    },
+    // Com o ponto aberto em outro projeto, a tarefa daqui não entra.
+    otherProject() {
+      const s = clock().session;
+      return !!s && s.project_id !== project.id;
     },
     priorityClass,
     statusClass,
@@ -711,9 +751,36 @@ document.addEventListener('alpine:init', () => {
         toast(WTT.t('tasks.started', { name: this.task.name }));
       });
     },
+    // Com o ponto aberto neste projeto, a tarefa entra na sessão em vez de abrir outra.
+    addToSession() {
+      return this.run('clock', async () => {
+        await clock().addTask(this.taskId);
+        toast(WTT.t('session.modal.added', { name: this.task.name }));
+      });
+    },
     isRunning() {
+      return clock().isRunning(this.taskId);
+    },
+    // sessionHere diz se o ponto aberto é deste projeto; num de outro, a tarefa não entra.
+    sessionHere() {
       const s = clock().session;
-      return !!s && s.task_id === this.taskId;
+      return !!s && s.project_id === project.id;
+    },
+    otherProject() {
+      const s = clock().session;
+      return !!s && s.project_id !== project.id;
+    },
+    openSession(s) {
+      Alpine.store('sessionView').open(s || clock().session);
+    },
+    // O tempo da tarefa numa sessão e os nomes das outras tarefas dela.
+    taskTime(s) {
+      return clock().taskElapsed(s, this.taskId);
+    },
+    otherTasks(s) {
+      const seen = new Map();
+      s.tasks.forEach((l) => { if (l.task_id !== this.taskId && !seen.has(l.task_id)) seen.set(l.task_id, l.task.name); });
+      return [...seen.values()].join(', ');
     },
     save() {
       return this.run('save', async () => {
@@ -751,8 +818,9 @@ document.addEventListener('alpine:init', () => {
       });
     },
     backHref: tasksHref,
+    // O tempo da tarefa: o que ela teve em cada sessão em que esteve.
     totalSeconds() {
-      return this.sessions.reduce((sum, s) => sum + clock().elapsed(s), 0);
+      return this.sessions.reduce((sum, s) => sum + this.taskTime(s), 0);
     },
     deadlineClass() { return this.task ? deadlineInfo(this.task.deadline).cls : ''; },
     deadlineLabel() { return this.task ? deadlineInfo(this.task.deadline).label : ''; },
@@ -900,7 +968,9 @@ document.addEventListener('alpine:init', () => {
     start() {
       return this.run('clock', () => clock().clockIn(project.id, this.taskId));
     },
+    // Com o ponto aberto neste projeto, a tarefa entra na sessão em vez de abrir outra.
     startTask(t) {
+      if (this.sessionHere()) return this.run('clock', () => clock().addTask(t.id));
       this.taskId = t.id;
       return this.start();
     },
@@ -908,8 +978,14 @@ document.addEventListener('alpine:init', () => {
       return this.run('clock', () => clock().clockOut());
     },
     isRunning(t) {
+      return clock().isRunning(t.id);
+    },
+    sessionHere() {
       const s = clock().session;
-      return !!s && s.task_id === t.id;
+      return !!s && s.project_id === project.id;
+    },
+    openSession(s) {
+      Alpine.store('sessionView').open(s || clock().session);
     },
     // sessionValue é quanto a sessão aberta já rendeu: o tempo corrido vezes o valor por
     // hora travado no clock-in, com o arredondamento do servidor. null sem valor.

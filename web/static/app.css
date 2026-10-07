@@ -478,6 +478,25 @@ td.actions { text-align: right; white-space: nowrap; }
 .session-pill a { color: inherit; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 180px; }
 .session-pill .mono { font-variant-numeric: tabular-nums; }
 .session-pill .btn { padding: 3px 9px; font-size: 0.8rem; }
+/* O nome na pílula é um botão que abre a sessão, com o aspecto de texto. */
+.session-pill-open {
+  background: none; border: 0; padding: 0; margin: 0; font: inherit; color: inherit; cursor: pointer;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 180px;
+}
+.session-pill-open:hover { text-decoration: underline; }
+
+/* A sessão no modal: os fatos em colunas, e uma barra por tarefa mostrando onde ela entrou e
+   saiu dentro da sessão. */
+.session-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px 16px; margin: 0; }
+.session-facts dt { font-size: 0.78rem; color: var(--muted); }
+.session-facts dd { margin: 0; font-weight: 600; }
+.timeline { position: relative; height: 6px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--rule); overflow: hidden; }
+.timeline-fill { position: absolute; top: 0; bottom: 0; background: var(--accent); border-radius: 999px; }
+.session-tasks .row { flex-wrap: wrap; }
+/* As tarefas de uma sessão numa célula de tabela ou de lista: os nomes e o "+N" das outras. */
+.task-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; }
+/* Na tabela a célula tem largura mínima: em tela estreita a tabela rola na horizontal, em vez de espremer os nomes. */
+td .task-chips { min-width: 200px; }
 .totals { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
 .total { background: var(--surface-2); border-radius: var(--radius-sm); padding: 10px 12px; }
 .total .v { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 1.25rem; font-weight: 600; }
@@ -546,6 +565,7 @@ html.modal-open { overflow: hidden; }
   background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; box-shadow: var(--shadow);
 }
 .modal-panel:focus-visible { outline: none; }
+.modal-panel-wide { max-width: 560px; }
 .modal-head {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   padding: 14px 14px 14px 20px; border-bottom: 1px solid var(--rule);

@@ -122,6 +122,43 @@ session:
   in_progress: "In progress: {{.name}}"
   stop: Stop
   stopped: Time tracking stopped.
+  no_task: Open session
+  details: View the session
+  manage: Session tasks
+  add_to_session: Add to the session
+  deleted_tasks: deleted task
+  modal:
+    title: "Session on {{.date}}"
+    person: Person
+    start: Start
+    end: End
+    duration: Duration
+    now: now
+    tasks: Session tasks
+    parallel_hint: Parallel tasks each count the full time. The session, the person and the project count it once.
+    no_tasks: This session has no tasks left, because the ones it had were deleted. Its time still counts.
+    edit: Edit the interval
+    edit_title: "Interval of {{.name}}"
+    add_title: Add a task
+    add_hint_open: It joins now and moves to in progress.
+    add_hint_closed: It joins from the start to the end of the session. Adjust the interval afterwards if needed.
+    search: Search tasks
+    pick: Task
+    add: Add
+    no_results: No task to add.
+    from: From
+    until: Until
+    until_hint: Leave empty to run until the end of the session.
+    stop_now: Stop working on it now
+    remove: Remove from the session
+    remove_confirm: Remove the task from the session? The session and its hours stay.
+    remove_yes: Remove
+    back: Back
+    saved: Interval saved.
+    added: "{{.name}} joined the session."
+    stopped_task: "Stopped working on {{.name}}."
+    removed: Task removed from the session.
+    read_only: Only the person who clocked in, or an admin, can change the session tasks.
 
 auth:
   password: Password
@@ -467,12 +504,14 @@ task_detail:
   back: Back to the list
   breadcrumb: You are here
   no_description: This task has no description.
-  delete_confirm: Delete the task? The time tracked on it is deleted too.
+  delete_confirm: Delete the task? It leaves the sessions it was in, but the sessions and their hours stay.
   details_title: Details
   created: Created on
   time_title: Time tracked
   no_time: Nobody has tracked time on this task yet.
   in_progress: "· in progress"
+  with_tasks: "with {{.names}}"
+  session_total: "session of {{.time}}"
   external: External item
   loading_details: Fetching details…
   state: "State: {{.state}}"
@@ -541,6 +580,8 @@ time:
   col_start: Start
   col_end: End
   col_duration: Duration
+  col_tasks: Tasks
+  col_details: Details
   open: in progress
   my_tasks: Your tasks
   view_details: View details

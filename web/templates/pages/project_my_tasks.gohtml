@@ -51,7 +51,7 @@
                     <td><span class="badge num" :class="deadlineClass(t)" x-text="deadlineLabel(t)"></span></td>
                     <td class="actions">
                       <span class="badge badge-ok" x-show="isRunning(t)">{{.T "tasks.running"}}</span>
-                      <button type="button" class="btn btn-secondary btn-sm" x-show="!isRunning(t) && s.value !== 'closed'" :disabled="pending" @click="start(t)">{{template "icon" "play"}} {{.T "tasks.start"}}</button>
+                      <button type="button" class="btn btn-secondary btn-sm" x-show="!isRunning(t) && s.value !== 'closed'" :disabled="pending || otherProject()" @click="start(t)">{{template "icon" "play"}} <span x-text="sessionHere() ? $t('session.add_to_session') : $t('tasks.start')"></span></button>
                       <a class="btn btn-ghost btn-sm" :href="'/tasks/' + t.id">{{.T "tasks.details"}} {{template "icon" "arrow-right"}}</a>
                     </td>
                   </tr>

@@ -132,6 +132,43 @@ session:
   in_progress: "Em andamento: {{.name}}"
   stop: Parar
   stopped: Ponto encerrado.
+  no_task: Sessão aberta
+  details: Ver a sessão
+  manage: Tarefas da sessão
+  add_to_session: Adicionar à sessão
+  deleted_tasks: tarefa excluída
+  modal:
+    title: "Sessão de {{.date}}"
+    person: Pessoa
+    start: Início
+    end: Fim
+    duration: Duração
+    now: agora
+    tasks: Tarefas da sessão
+    parallel_hint: Tarefas em paralelo contam o tempo cheio, cada uma. A sessão, a pessoa e o projeto contam uma vez só.
+    no_tasks: Esta sessão ficou sem tarefas, porque as que ela tinha foram excluídas. O tempo dela continua contando.
+    edit: Editar o intervalo
+    edit_title: "Intervalo de {{.name}}"
+    add_title: Adicionar tarefa
+    add_hint_open: Entra agora e fica em progresso.
+    add_hint_closed: Entra do início ao fim da sessão. Ajuste o intervalo depois, se precisar.
+    search: Buscar tarefa
+    pick: Tarefa
+    add: Adicionar
+    no_results: Nenhuma tarefa para adicionar.
+    from: De
+    until: Até
+    until_hint: Deixe vazio para ir até o fim da sessão.
+    stop_now: Parar de mexer agora
+    remove: Tirar da sessão
+    remove_confirm: Tirar a tarefa da sessão? A sessão e as horas ficam.
+    remove_yes: Tirar
+    back: Voltar
+    saved: Intervalo salvo.
+    added: "{{.name}} entrou na sessão."
+    stopped_task: "Parou de mexer em {{.name}}."
+    removed: Tarefa tirada da sessão.
+    read_only: Só quem bateu o ponto, ou um admin, muda as tarefas da sessão.
 
 auth:
   password: Senha
@@ -477,12 +514,14 @@ task_detail:
   back: Voltar à lista
   breadcrumb: Você está em
   no_description: Esta tarefa não tem descrição.
-  delete_confirm: Excluir a tarefa? O tempo registrado nela também é apagado.
+  delete_confirm: Excluir a tarefa? Ela sai das sessões em que esteve, mas as sessões e as horas ficam.
   details_title: Detalhes
   created: Criada em
   time_title: Tempo registrado
   no_time: Ninguém registrou tempo nesta tarefa ainda.
   in_progress: "· em andamento"
+  with_tasks: "com {{.names}}"
+  session_total: "sessão de {{.time}}"
   external: Item externo
   loading_details: Buscando detalhes…
   state: "Estado: {{.state}}"
@@ -551,6 +590,8 @@ time:
   col_start: Início
   col_end: Fim
   col_duration: Duração
+  col_tasks: Tarefas
+  col_details: Detalhes
   open: em andamento
   my_tasks: Suas tarefas
   view_details: Ver detalhes

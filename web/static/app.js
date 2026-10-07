@@ -271,6 +271,16 @@
       if (!value) return null;
       return new Date(value + 'T23:59:00').toISOString();
     },
+    // ISO -> "2026-09-28T14:30" no fuso local, para <input type="datetime-local">
+    dateTimeInput(iso) {
+      if (!iso) return '';
+      const d = new Date(iso);
+      return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+    },
+    // "2026-09-28T14:30" -> ISO; vazio é null
+    fromDateTimeInput(value) {
+      return value ? new Date(value).toISOString() : null;
+    },
     initials(name) {
       return (name || '?').trim().split(/\s+/).slice(0, 2).map((p) => p[0].toUpperCase()).join('');
     },
@@ -490,6 +500,9 @@
 
     // clock guarda a sessão de trabalho aberta da pessoa logada e um relógio que
     // avança a cada segundo. O indicador do cabeçalho e a tela de ponto leem daqui.
+    // A sessão tem tarefas (tasks), cada uma com o intervalo em que esteve nela; as que
+    // estão em andamento são as que ainda não têm fim (until_at).
+    const ms = (iso) => new Date(iso).getTime();
     Alpine.store('clock', {
       session: null,
       now: Date.now(),
@@ -502,8 +515,38 @@
       elapsed(session) {
         const s = session || this.session;
         if (!s) return 0;
-        const end = s.end_at ? new Date(s.end_at).getTime() : this.now;
-        return Math.max(0, (end - new Date(s.start_at).getTime()) / 1000);
+        const end = s.end_at ? ms(s.end_at) : this.now;
+        return Math.max(0, (end - ms(s.start_at)) / 1000);
+      },
+      // linkElapsed é o tempo de um intervalo de tarefa dentro da sessão, como o servidor
+      // calcula: o intervalo recortado entre o início e o fim da sessão (ou agora).
+      linkElapsed(session, link) {
+        const sessionEnd = session.end_at ? ms(session.end_at) : this.now;
+        const start = Math.max(ms(link.from_at), ms(session.start_at));
+        const end = Math.min(link.until_at ? ms(link.until_at) : sessionEnd, sessionEnd);
+        return Math.max(0, end - start) / 1000;
+      },
+      // taskElapsed é o tempo de uma tarefa na sessão, somando os intervalos dela.
+      taskElapsed(session, taskId) {
+        return (session.tasks || []).filter((l) => l.task_id === taskId)
+          .reduce((sum, l) => sum + this.linkElapsed(session, l), 0);
+      },
+      // running são as tarefas em andamento na sessão aberta.
+      running(session) {
+        const s = session || this.session;
+        return s && !s.end_at ? (s.tasks || []).filter((l) => !l.until_at) : [];
+      },
+      isRunning(taskId) {
+        return this.running().some((l) => l.task_id === taskId);
+      },
+      // label é o que o cabeçalho mostra: a primeira tarefa em andamento e quantas mais.
+      label() {
+        const tasks = this.running();
+        if (tasks.length === 0) return t('session.no_task');
+        return tasks[0].task.name + (tasks.length > 1 ? ' +' + (tasks.length - 1) : '');
+      },
+      labelTitle() {
+        return this.running().map((l) => l.task.name).join(', ');
       },
       async refresh() {
         try {
@@ -519,11 +562,165 @@
         await this.refresh();
         window.dispatchEvent(new CustomEvent('wtt:sessions-changed'));
       },
+      // addTask põe uma tarefa na sessão aberta, que passa a contá-la daqui em diante.
+      async addTask(taskId) {
+        if (!this.session) return;
+        await api('POST', '/api/projects/' + this.session.project_id + '/work-sessions/' + this.session.id + '/tasks', { task_id: taskId });
+        await this.refresh();
+        window.dispatchEvent(new CustomEvent('wtt:sessions-changed'));
+      },
       async clockOut() {
         if (!this.session) return;
-        await api('POST', '/api/projects/' + this.session.task.project_id + '/work-sessions/clock-out', {});
+        await api('POST', '/api/projects/' + this.session.project_id + '/work-sessions/clock-out', {});
         this.session = null;
         window.dispatchEvent(new CustomEvent('wtt:sessions-changed'));
+      },
+    });
+
+    // sessionView é o modal de uma sessão (partials/session_modal.gohtml): o resumo, as tarefas
+    // com o intervalo de cada uma e, para quem bateu o ponto e para os admins, o que muda as
+    // tarefas. Abre de qualquer tela com Alpine.store('sessionView').open(sessao); depois de
+    // cada mudança avisa as páginas com wtt:sessions-changed.
+    const sessionApi = (s) => '/api/projects/' + s.project_id + '/work-sessions/' + s.id;
+    Alpine.store('sessionView', {
+      ...form(),
+      session: null,
+      canEdit: false,
+      view: 'overview', // overview, ou interval quando edita o intervalo de uma tarefa
+      link: null, // a tarefa da sessão que o interval edita
+      draft: { from: '', until: '' },
+      start: { from: '', until: '' }, // o rascunho como abriu: só o que mudou vai ao servidor
+      confirmRemove: false,
+      search: '',
+      results: [],
+      pick: '',
+      open(session) {
+        const me = window.WTT.boot.me;
+        this.session = JSON.parse(JSON.stringify(session));
+        this.canEdit = !!me && (me.role === 'admin' || me.id === session.person_id);
+        this.view = 'overview';
+        this.link = null;
+        this.confirmRemove = false;
+        this.search = '';
+        this.errors = {};
+        this.results = [];
+        this.pick = '';
+        Alpine.store('modal').open('session', t('session.modal.title', { date: fmt.date(session.start_at) }), () => !this.pending);
+        if (this.canEdit) this.find();
+      },
+      // Os valores da sessão: a pessoa vê o que ganhou; quem vê o dos outros, o custo e a receita.
+      // Vazio quando não há valor ou ele não é visível. A sessão aberta acompanha o cronômetro.
+      amounts() {
+        const s = this.session;
+        if (!s) return [];
+        const live = (kind) => {
+          const rate = s[kind + '_rate_cents'];
+          if (rate === null || rate === undefined) return null;
+          return s.end_at ? s[kind + '_amount_cents'] : Math.round(Alpine.store('clock').elapsed(s) * rate / 3600);
+        };
+        const me = window.WTT.boot.me;
+        const own = me && me.id === s.person_id;
+        const rows = own
+          ? [{ label: t('time.your_value'), value: live(s.owner_hours ? 'bill' : 'pay') }]
+          : [{ label: t('time.cost'), value: live('pay') }, { label: t('time.revenue'), value: live('bill') }];
+        return rows.filter((r) => r.value !== null && r.value !== undefined);
+      },
+      // A barra de cada tarefa: onde ela começa e termina dentro da sessão, em por cento.
+      bar(l) {
+        const s = this.session;
+        const start = ms(s.start_at);
+        const end = s.end_at ? ms(s.end_at) : Alpine.store('clock').now;
+        const total = Math.max(1, end - start);
+        const from = Math.min(Math.max(ms(l.from_at), start), end);
+        const to = Math.max(from, Math.min(l.until_at ? ms(l.until_at) : end, end));
+        const left = (from - start) / total * 100;
+        const width = Math.min(100 - left, Math.max(1.5, (to - from) / total * 100));
+        return 'left:' + left + '%;width:' + width + '%';
+      },
+      isRunning(l) {
+        return !this.session.end_at && !l.until_at;
+      },
+      range(l) {
+        const s = this.session;
+        const to = l.until_at ? fmt.time(l.until_at) : (s.end_at ? fmt.time(s.end_at) : t('session.modal.now'));
+        return fmt.time(l.from_at) + ' – ' + to;
+      },
+      // Não dá para tirar nem parar a última tarefa: a sessão guarda sempre uma e, aberta, uma em andamento.
+      otherRunning(l) {
+        return this.session.tasks.some((x) => x.id !== l.id && !x.until_at);
+      },
+      canStop(l) {
+        return !this.session.end_at && !l.until_at && this.otherRunning(l);
+      },
+      canRemove(l) {
+        return this.session.tasks.length > 1 && (!!this.session.end_at || !!l.until_at || this.otherRunning(l));
+      },
+      // Tarefas do projeto que ainda não estão na sessão, para o Adicionar. Quem já está tem o
+      // intervalo para editar.
+      async find() {
+        const s = this.session;
+        const q = this.search.trim();
+        try {
+          const page = await api('GET', '/api/projects/' + s.project_id + '/tasks?page=1&per_page=20' + (q ? '&q=' + encodeURIComponent(q) : ''));
+          const inSession = new Set(s.tasks.map((l) => l.task_id));
+          this.results = (page.items || []).filter((x) => !inSession.has(x.id));
+          this.pick = this.results.length ? this.results[0].id : '';
+        } catch (e) {
+          this.errors.add = e.message;
+        }
+      },
+      // changed guarda a sessão que o servidor devolveu, atualiza o relógio (a sessão aberta é a
+      // do cabeçalho) e avisa as páginas.
+      async changed(session) {
+        this.session = session;
+        await Alpine.store('clock').refresh();
+        window.dispatchEvent(new CustomEvent('wtt:sessions-changed'));
+        if (this.canEdit) await this.find();
+      },
+      add() {
+        return this.run('add', async () => {
+          const added = this.results.find((x) => x.id === this.pick);
+          await this.changed(await api('POST', sessionApi(this.session) + '/tasks', { task_id: this.pick }));
+          Alpine.store('toast').show(t('session.modal.added', { name: added ? added.name : '' }));
+        });
+      },
+      edit(l) {
+        this.link = l;
+        this.draft = { from: fmt.dateTimeInput(l.from_at), until: fmt.dateTimeInput(l.until_at) };
+        this.start = { ...this.draft };
+        this.confirmRemove = false;
+        this.errors = {};
+        this.view = 'interval';
+      },
+      back() {
+        this.view = 'overview';
+        this.errors = {};
+      },
+      saveInterval() {
+        return this.run('save', async () => {
+          const body = {};
+          if (this.draft.from !== this.start.from) body.from_at = fmt.fromDateTimeInput(this.draft.from);
+          if (this.draft.until !== this.start.until) body.until_at = fmt.fromDateTimeInput(this.draft.until);
+          if (Object.keys(body).length > 0) {
+            await this.changed(await api('PATCH', sessionApi(this.session) + '/tasks/' + this.link.id, body));
+            Alpine.store('toast').show(t('session.modal.saved'));
+          }
+          this.back();
+        });
+      },
+      stopNow() {
+        return this.run('save', async () => {
+          await this.changed(await api('PATCH', sessionApi(this.session) + '/tasks/' + this.link.id, { stop: true }));
+          Alpine.store('toast').show(t('session.modal.stopped_task', { name: this.link.task.name }));
+          this.back();
+        });
+      },
+      remove() {
+        return this.run('save', async () => {
+          await this.changed(await api('DELETE', sessionApi(this.session) + '/tasks/' + this.link.id));
+          Alpine.store('toast').show(t('session.modal.removed'));
+          this.back();
+        });
       },
     });
 
@@ -550,6 +747,9 @@
 
     Alpine.data('activeSession', () => ({
       busy: false,
+      details() {
+        Alpine.store('sessionView').open(Alpine.store('clock').session);
+      },
       async stop() {
         this.busy = true;
         try {

@@ -521,6 +521,17 @@
 
 ---
 
+### Sprint 42: Sessions with Several Tasks
+
+- [X] S42.1 A session belongs to a project (`work_sessions.project_id`) and has tasks through `work_session_tasks` (`session_id`, `task_id`, `from_at`, `until_at`; null `until_at` is "until the session ends"); the migration moves the existing sessions (one interval with the old task, start to end) and drops `work_sessions.task_id`
+- [X] S42.2 Clock-in creates the session and its first task in one transaction; `POST`/`PATCH`/`DELETE /api/projects/:projectId/work-sessions/:sessionId/tasks[/:linkId]` add a task, change its interval (or `stop` it now) and remove it, on an open or a closed session, for the person who clocked in and for admins; the session keeps at least one task and, while open, one in progress
+- [X] S42.3 The time counts for the session and for each task (parallel tasks both count the overlap; the person, the project and the amounts count the session once): each task carries `seconds` and its amounts, the list filters by task, and `total` by task sums the task's time
+- [X] S42.4 Deleting a task takes it out of the sessions and keeps the sessions and the hours (before, it deleted them)
+- [X] S42.5 The session modal (one for the whole app, inside the layout modal): summary, the tasks with a time bar each, add, edit the interval, stop now, remove with confirmation; opened from the clock pill (first task and "+N"), the Início, the Gestão and the task page; the Início, the My tasks tab and the task page add a task to the open session instead of failing with `already_open`
+- [X] S42.6 Seed with parallel tasks in about three in ten sessions; tests for the migration (old sessions kept), service, API (who can change a session), markup and texts in both languages; checked in the browser (light, English, phone width); update README, design, permissions, routes, error codes and the Insomnia collection
+
+---
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open

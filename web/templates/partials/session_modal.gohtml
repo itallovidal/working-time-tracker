@@ -1,0 +1,117 @@
+{{/* session_modal é o conteúdo do modal de uma sessão, que mostra o resumo, as tarefas com o
+     intervalo de cada uma e, para quem bateu o ponto e para os admins, o que as muda. Fica no
+     modal do layout base (dentro do #modal-root, sem teleporte), porque abre de qualquer tela: o
+     relógio da barra, o Início, a Gestão e a página da tarefa chamam
+     Alpine.store('sessionView').open(sessao). O estado é do store (app.js). */}}
+{{define "session_modal"}}
+<div x-data="{ v: $store.sessionView }" x-cloak>
+  <div class="stack" x-show="$store.modal.name === 'session'">
+    <template x-if="v.session && v.view === 'overview'">
+      <div class="stack">
+        <dl class="session-facts">
+          <div x-show="v.session.person && v.session.person_id !== WTT.boot.me.id">
+            <dt>{{.T "session.modal.person"}}</dt>
+            <dd x-text="v.session.person && v.session.person.name"></dd>
+          </div>
+          <div>
+            <dt>{{.T "session.modal.start"}}</dt>
+            <dd class="num" x-text="WTT.fmt.dateTime(v.session.start_at)"></dd>
+          </div>
+          <div>
+            <dt>{{.T "session.modal.end"}}</dt>
+            <dd class="num">
+              <span x-show="v.session.end_at" x-text="WTT.fmt.dateTime(v.session.end_at)"></span>
+              <span class="badge badge-ok" x-show="!v.session.end_at">{{.T "time.open"}}</span>
+            </dd>
+          </div>
+          <div>
+            <dt>{{.T "session.modal.duration"}}</dt>
+            <dd class="mono num" x-text="WTT.fmt.clock($store.clock.elapsed(v.session))"></dd>
+          </div>
+          <template x-for="a in v.amounts()" :key="a.label">
+            <div>
+              <dt x-text="a.label"></dt>
+              <dd class="num" x-text="WTT.fmt.money(a.value)"></dd>
+            </div>
+          </template>
+        </dl>
+
+        <section class="stack stack-tight">
+          <h3>{{.T "session.modal.tasks"}}</h3>
+          <p class="muted small">{{.T "session.modal.parallel_hint"}}</p>
+          <p class="muted" x-show="v.session.tasks.length === 0">{{.T "session.modal.no_tasks"}}</p>
+          <ul class="list session-tasks">
+            <template x-for="l in v.session.tasks" :key="l.id">
+              <li>
+                <div class="grow stack stack-tight">
+                  <div class="row row-tight">
+                    <a :href="'/tasks/' + l.task_id" x-text="l.task.name"></a>
+                    <span class="badge badge-ok" x-show="v.isRunning(l)">{{.T "time.running"}}</span>
+                  </div>
+                  <div class="timeline" aria-hidden="true"><span class="timeline-fill" :style="v.bar(l)"></span></div>
+                  <div class="muted small" x-text="v.range(l)"></div>
+                </div>
+                <span class="mono num" x-text="WTT.fmt.clock($store.clock.linkElapsed(v.session, l))"></span>
+                <button type="button" class="btn btn-ghost btn-sm" x-show="v.canEdit"
+                        aria-label="{{.T "session.modal.edit"}}" title="{{.T "session.modal.edit"}}" @click="v.edit(l)">{{template "icon" "pen"}}</button>
+              </li>
+            </template>
+          </ul>
+        </section>
+
+        <form class="stack" x-show="v.canEdit" @submit.prevent="v.add()">
+          <h3>{{.T "session.modal.add_title"}}</h3>
+          <p class="muted small" x-text="v.session.end_at ? $t('session.modal.add_hint_closed') : $t('session.modal.add_hint_open')"></p>
+          <div class="field">
+            <label for="session-search">{{.T "session.modal.search"}}</label>
+            <input id="session-search" type="search" x-model="v.search" @input.debounce.300ms="v.find()" autocomplete="off">
+          </div>
+          <p class="muted small" x-show="v.results.length === 0">{{.T "session.modal.no_results"}}</p>
+          <div class="row" x-show="v.results.length > 0">
+            <select class="flex-1" x-model="v.pick" aria-label="{{.T "session.modal.pick"}}">
+              <template x-for="t in v.results" :key="t.id">
+                <option :value="t.id" x-text="t.name" :selected="t.id === v.pick"></option>
+              </template>
+            </select>
+            <button type="submit" class="btn" :disabled="v.pending || !v.pick">{{.T "session.modal.add"}}</button>
+          </div>
+          <p class="form-error" x-show="v.errors.add" x-text="v.errors.add" role="alert"></p>
+        </form>
+        <p class="muted small" x-show="!v.canEdit">{{.T "session.modal.read_only"}}</p>
+      </div>
+    </template>
+
+    {{/* O intervalo de uma tarefa na sessão: nada vai ao servidor antes de Salvar, e tirar pede confirmação. */}}
+    <template x-if="v.session && v.view === 'interval' && v.link">
+      <form class="stack" novalidate @submit.prevent="v.saveInterval()">
+        <h3 x-text="$t('session.modal.edit_title', { name: v.link.task.name })"></h3>
+        <div class="field">
+          <label for="session-from">{{.T "session.modal.from"}}</label>
+          <input id="session-from" type="datetime-local" x-model="v.draft.from" data-autofocus
+                 :min="WTT.fmt.dateTimeInput(v.session.start_at)">
+        </div>
+        <div class="field">
+          <label for="session-until">{{.T "session.modal.until"}}</label>
+          <input id="session-until" type="datetime-local" x-model="v.draft.until"
+                 :min="WTT.fmt.dateTimeInput(v.session.start_at)">
+          <span class="hint">{{.T "session.modal.until_hint"}}</span>
+        </div>
+        <p class="form-error" x-show="v.errors.save" x-text="v.errors.save" role="alert"></p>
+        <div class="confirm" x-show="v.confirmRemove">
+          <span>{{.T "session.modal.remove_confirm"}}</span>
+          <button type="button" class="btn btn-danger btn-sm" :disabled="v.pending" @click="v.remove()">{{.T "session.modal.remove_yes"}}</button>
+          <button type="button" class="btn btn-ghost btn-sm" @click="v.confirmRemove = false">{{.T "common.cancel"}}</button>
+        </div>
+        <div class="toolbar" x-show="!v.confirmRemove">
+          <button type="button" class="btn btn-danger-ghost" x-show="v.canRemove(v.link)" @click="v.confirmRemove = true">{{template "icon" "trash"}} {{.T "session.modal.remove"}}</button>
+          <div class="row">
+            <button type="button" class="btn btn-secondary" x-show="v.canStop(v.link)" :disabled="v.pending" @click="v.stopNow()">{{.T "session.modal.stop_now"}}</button>
+            <button type="button" class="btn btn-secondary" @click="v.back()">{{template "icon" "arrow-left"}} {{.T "session.modal.back"}}</button>
+            <button type="submit" class="btn" :disabled="v.pending">{{.T "common.save"}}</button>
+          </div>
+        </div>
+      </form>
+    </template>
+  </div>
+</div>
+{{end}}

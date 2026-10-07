@@ -30,14 +30,22 @@
               <span class="num" x-text="WTT.fmt.money(sessionValue())"></span>
               <span class="muted small">{{.T "time.session_value"}}</span>
             </div>
-            <div>
-              <a :href="'/tasks/' + $store.clock.session.task.id" x-text="$store.clock.session.task.name"></a>
+            {{/* As tarefas em andamento na sessão; as outras (e o histórico) ficam no modal da sessão. */}}
+            <div class="stack stack-tight">
+              <div class="task-chips">
+                <template x-for="l in $store.clock.running()" :key="l.id">
+                  <a :href="'/tasks/' + l.task_id" x-text="l.task.name"></a>
+                </template>
+              </div>
               <span class="muted" x-text="$t('time.since', { time: WTT.fmt.time($store.clock.session.start_at) })"></span>
             </div>
-            <p class="alert alert-warn" x-show="$store.clock.session.task.project_id !== project.id">
+            <p class="alert alert-warn" x-show="!sessionHere()">
               {{.T "time.other_project"}}
             </p>
-            <div class="row"><button type="button" class="btn btn-danger" :disabled="pending" @click="stop()">{{.T "time.stop"}}</button></div>
+            <div class="row">
+              <button type="button" class="btn btn-danger" :disabled="pending" @click="stop()">{{.T "time.stop"}}</button>
+              <button type="button" class="btn btn-secondary" @click="openSession()">{{template "icon" "list-check"}} {{.T "session.manage"}}</button>
+            </div>
           </div>
         </template>
 
@@ -96,8 +104,9 @@
             <div class="row">
               <a class="btn btn-secondary btn-sm" :href="'/tasks/' + t.id">{{.T "time.view_details"}}</a>
               <span class="badge badge-ok" x-show="isRunning(t)">{{.T "time.running"}}</span>
+              {{/* Com o ponto aberto neste projeto, o botão põe a tarefa na sessão; com ele aberto em outro, fica desabilitado. */}}
               <button type="button" class="btn btn-sm" x-show="!isRunning(t)"
-                      :disabled="pending || noRate() || !$store.clock.ready || !!$store.clock.session" @click="startTask(t)">{{template "icon" "play"}} {{.T "time.start"}}</button>
+                      :disabled="pending || noRate() || !$store.clock.ready || (!!$store.clock.session && !sessionHere())" @click="startTask(t)">{{template "icon" "play"}} <span x-text="sessionHere() ? $t('session.add_to_session') : $t('time.start')"></span></button>
             </div>
           </div>
         </template>
@@ -144,20 +153,27 @@
         <table>
           <thead>
             <tr>
-              <th>{{.T "time.col_task"}}</th><th>{{.T "time.col_start"}}</th><th>{{.T "time.col_end"}}</th><th class="actions">{{.T "time.col_duration"}}</th><th class="actions">{{.T "time.your_value"}}</th>
+              <th>{{.T "time.col_tasks"}}</th><th>{{.T "time.col_start"}}</th><th>{{.T "time.col_end"}}</th><th class="actions">{{.T "time.col_duration"}}</th><th class="actions">{{.T "time.your_value"}}</th><th class="actions"><span class="sr-only">{{.T "time.col_details"}}</span></th>
             </tr>
           </thead>
           <tbody>
             <template x-for="s in sessionRows()" :key="s.id">
               <tr>
-                <td><a :href="'/tasks/' + s.task_id" x-text="s.task ? s.task.name : ''"></a></td>
+                <td>
+                  <div class="task-chips">
+                    <template x-for="t in firstTasks(s)" :key="t.id"><a :href="'/tasks/' + t.id" x-text="t.name"></a></template>
+                    <span class="badge" x-show="moreTasks(s) > 0" x-text="'+' + moreTasks(s)"></span>
+                    <span class="muted small" x-show="s.tasks.length === 0">{{.T "session.deleted_tasks"}}</span>
+                  </div>
+                </td>
                 <td class="num" x-text="WTT.fmt.dateTime(s.start_at)"></td>
                 <td class="num">
                   <span x-show="s.end_at" x-text="WTT.fmt.dateTime(s.end_at)"></span>
                   <span class="badge badge-ok" x-show="!s.end_at">{{.T "time.open"}}</span>
                 </td>
-                <td class="actions mono num" x-text="WTT.fmt.clock($store.clock.elapsed(s))"></td>
+                <td class="actions mono num" x-text="WTT.fmt.clock(seconds(s))"></td>
                 <td class="actions num" x-text="WTT.fmt.money(earnedAmount(s))"></td>
+                <td class="actions"><button type="button" class="btn btn-ghost btn-sm" aria-label="{{.T "session.details"}}" title="{{.T "session.details"}}" @click="openSession(s)">{{template "icon" "eye"}}</button></td>
               </tr>
             </template>
           </tbody>

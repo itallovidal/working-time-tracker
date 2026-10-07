@@ -15,11 +15,15 @@
       </div>
       <div class="row" x-cloak x-show="task">
         <span class="badge badge-ok" x-show="isRunning()">{{.T "tasks.running"}}</span>
-        <button type="button" class="btn btn-secondary btn-sm" x-show="!isRunning()" :disabled="pending" @click="start()">{{template "icon" "play"}} {{.T "tasks.start"}}</button>
+        <button type="button" class="btn btn-secondary btn-sm" x-show="isRunning()" @click="openSession()">{{template "icon" "list-check"}} {{.T "session.details"}}</button>
+        {{/* Parado, inicia o ponto; com o ponto aberto neste projeto, põe a tarefa na sessão; num outro projeto, fica de fora. */}}
+        <button type="button" class="btn btn-secondary btn-sm" x-show="!isRunning() && !sessionHere()" :disabled="pending || otherProject()" @click="start()">{{template "icon" "play"}} {{.T "tasks.start"}}</button>
+        <button type="button" class="btn btn-secondary btn-sm" x-show="!isRunning() && sessionHere()" :disabled="pending" @click="addToSession()">{{template "icon" "plus"}} {{.T "session.add_to_session"}}</button>
         <button type="button" class="btn btn-ghost btn-sm" aria-label="{{.T "task_detail.edit_title"}}" title="{{.T "task_detail.edit_title"}}" @click="openEdit()">{{template "icon" "pen"}}</button>
       </div>
     </div>
     <p class="form-error" x-show="errors.clock" x-text="errors.clock" role="alert"></p>
+    <p class="muted small" x-cloak x-show="otherProject()">{{.T "time.other_project"}}</p>
   </header>
 
   <p class="muted" x-show="loading">{{.T "task_detail.loading"}}</p>
@@ -54,8 +58,11 @@
                   <span x-text="WTT.fmt.dateTime(s.start_at)"></span>
                   <span x-text="s.end_at ? '– ' + WTT.fmt.time(s.end_at) : $t('task_detail.in_progress')"></span>
                 </div>
+                {{/* O tempo da tarefa na sessão, que pode ser parte dela; e o que mais se fez junto. */}}
+                <div class="muted small" x-show="otherTasks(s)" x-text="$t('task_detail.with_tasks', { names: otherTasks(s) }) + ' · ' + $t('task_detail.session_total', { time: WTT.fmt.hours($store.clock.elapsed(s)) })"></div>
               </div>
-              <span class="mono num" x-text="WTT.fmt.clock($store.clock.elapsed(s))"></span>
+              <span class="mono num" x-text="WTT.fmt.clock(taskTime(s))"></span>
+              <button type="button" class="btn btn-ghost btn-sm" aria-label="{{.T "session.details"}}" title="{{.T "session.details"}}" @click="openSession(s)">{{template "icon" "eye"}}</button>
             </li>
           </template>
         </ul>
