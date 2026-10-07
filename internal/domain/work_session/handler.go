@@ -5,6 +5,7 @@ import (
 
 	"working-time-tracker/internal/apperr"
 	"working-time-tracker/internal/domain/auth"
+	"working-time-tracker/internal/domain/permission"
 )
 
 type Handler struct {
@@ -35,27 +36,29 @@ func personFor(c *echo.Context, requested string) (string, int, error) {
 	return requested, 0, nil
 }
 
-// visiblePerson decide de quem são as sessões que a lista e o total mostram. Um
-// admin vê as de quem pedir ou, sem filtro, as de todos; quem não é admin só vê
-// as próprias: sem person_id vale o dele, e o de outra pessoa é recusado. Sem
-// login no contexto (handler montado fora do servidor, como nos testes), o
-// filtro fica como veio.
+// visiblePerson decide de quem são as sessões que a lista e o total mostram. Quem tem
+// alguma permissão no projeto (admins, e quem cuida dele) vê as de quem pedir ou, sem
+// filtro, as de todos; os outros só veem as próprias: sem person_id vale o dele, e o de
+// outra pessoa é recusado. Sem login no contexto (handler montado fora do servidor, como
+// nos testes), o filtro fica como veio.
 func visiblePerson(c *echo.Context, requested string) (string, int, error) {
-	if me := auth.CurrentPerson(c); me != nil && !me.IsAdmin() {
+	if me := auth.CurrentPerson(c); me != nil && !auth.ProjectPermissions(c).Manages() {
 		return personFor(c, requested)
 	}
 	return requested, 0, nil
 }
 
-// redact apaga da sessão os valores que quem chama não pode ver. O valor cobrado
-// do cliente é só de admins; o valor pago é dos admins e da própria pessoa. Sem
-// login no contexto, nada é mostrado.
-func redact(me *auth.Identity, s *WorkSession) {
-	if s == nil || me.IsAdmin() {
+// redact apaga da sessão os valores que quem chama não pode ver. O valor cobrado do
+// cliente é de quem vê o faturamento do projeto; o valor pago é de quem vê o valor dos
+// outros e da própria pessoa. Os admins veem tudo. Sem login no contexto, nada é mostrado.
+func redact(set permission.Set, me *auth.Identity, s *WorkSession) {
+	if s == nil {
 		return
 	}
-	s.BillRateCents, s.BillAmountCents = nil, nil
-	if me == nil || s.PersonID != me.PersonID {
+	if !set.Has(permission.BillingView) {
+		s.BillRateCents, s.BillAmountCents = nil, nil
+	}
+	if !set.HasAny(permission.RatesView, permission.RatesManage) && (me == nil || s.PersonID != me.PersonID) {
 		s.PayRateCents, s.PayAmountCents = nil, nil
 	}
 }
@@ -80,7 +83,7 @@ func (h *Handler) ClockIn(c *echo.Context) error {
 	if err != nil {
 		return apperr.Respond(c, 400, err)
 	}
-	redact(auth.CurrentPerson(c), session)
+	redact(auth.ProjectPermissions(c), auth.CurrentPerson(c), session)
 	return c.JSON(201, session)
 }
 
@@ -99,7 +102,7 @@ func (h *Handler) ClockOut(c *echo.Context) error {
 	if err != nil {
 		return apperr.Respond(c, 400, err)
 	}
-	redact(auth.CurrentPerson(c), session)
+	redact(auth.ProjectPermissions(c), auth.CurrentPerson(c), session)
 	return c.JSON(200, session)
 }
 
@@ -123,9 +126,9 @@ func (h *Handler) List(c *echo.Context) error {
 	if err != nil {
 		return apperr.Respond(c, 500, err)
 	}
-	me := auth.CurrentPerson(c)
+	me, set := auth.CurrentPerson(c), auth.ProjectPermissions(c)
 	for i := range sessions {
-		redact(me, &sessions[i])
+		redact(set, me, &sessions[i])
 	}
 	return c.JSON(200, sessions)
 }
@@ -150,13 +153,14 @@ func (h *Handler) Total(c *echo.Context) error {
 	if err != nil {
 		return apperr.Respond(c, 400, err)
 	}
-	// Os mesmos limites das sessões: um membro só vê quanto ganhou quando o
-	// filtro é ele mesmo, e nunca o valor cobrado.
-	if me := auth.CurrentPerson(c); !me.IsAdmin() {
+	// Os mesmos limites das sessões: quem não vê o valor dos outros só vê quanto ganhou
+	// quando o filtro é ele mesmo, e o valor cobrado só vai para quem vê o faturamento.
+	me, set := auth.CurrentPerson(c), auth.ProjectPermissions(c)
+	if !set.Has(permission.BillingView) {
 		total.BillAmountCents = nil
-		if me == nil || personID != me.PersonID.String() {
-			total.PayAmountCents = nil
-		}
+	}
+	if !set.HasAny(permission.RatesView, permission.RatesManage) && (me == nil || personID != me.PersonID.String()) {
+		total.PayAmountCents = nil
 	}
 	return c.JSON(200, total)
 }
@@ -171,6 +175,6 @@ func (h *Handler) Active(c *echo.Context) error {
 	if err != nil {
 		return apperr.Respond(c, 500, err)
 	}
-	redact(me, session)
+	redact(auth.ProjectPermissions(c), me, session)
 	return c.JSON(200, session)
 }

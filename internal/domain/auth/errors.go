@@ -20,5 +20,7 @@ var (
 	ErrWeakPassword        = apperr.New("auth.weak_password", http.StatusBadRequest)
 	ErrLongPassword        = apperr.New("auth.long_password", http.StatusBadRequest)
 	ErrAdminOnly           = apperr.New("auth.admin_only", http.StatusForbidden)
+	ErrOwnerOnly           = apperr.New("auth.owner_only", http.StatusForbidden)
+	ErrPermissionRequired  = apperr.New("auth.permission_required", http.StatusForbidden)
 	ErrOwnProfileOnly      = apperr.New("auth.own_profile_only", http.StatusForbidden)
 )

@@ -763,6 +763,8 @@ errors:
   http_status: "The server responded with error {{.status}}."
   unknown: "Something went wrong. Please try again."
   allocation:
+    preset_above_yours: "the group gives a permission you do not have"
+    invalid_preset: "unknown permission group"
     invalid_rate: "the hourly rate must be between 0 and 1,000,000.00"
     not_defined: "this person has no rate set on this project"
     own_rates_only: "you can only see your own rates"
@@ -771,6 +773,8 @@ errors:
   auth:
     account_exists: "an account with this email already exists"
     admin_only: "only admins can do this"
+    owner_only: "only the organization owner can do this"
+    permission_required: "you do not have permission to do this"
     invalid_credentials: "wrong email or password"
     invite_email_mismatch: "this invitation was made for another email"
     invite_invalid: "this invitation is not valid: it expired, was revoked or was already used"
@@ -844,6 +848,8 @@ errors:
     name_required: "enter the name"
     not_found: "organization not found"
   person:
+    admin_has_all_permissions: "admins already have every permission"
+    invalid_permission: "unknown organization permission"
     email_in_use: "this email is already in use"
     email_required: "enter the email"
     invalid_email: "enter a valid email"

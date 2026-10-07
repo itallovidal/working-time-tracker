@@ -8,10 +8,12 @@ import (
 	"github.com/labstack/echo/v5"
 
 	"working-time-tracker/ent"
+	entalloc "working-time-tracker/ent/allocation"
 	"working-time-tracker/ent/integration"
 	"working-time-tracker/ent/task"
 	"working-time-tracker/ent/team"
 	"working-time-tracker/internal/apperr"
+	"working-time-tracker/internal/domain/permission"
 )
 
 // Kind é o tipo de recurso de um parâmetro de rota, para descobrir a organização dona.
@@ -92,6 +94,60 @@ func (r *Resolver) OrganizationOf(kind Kind, id string) (uuid.UUID, error) {
 	return uuid.Nil, &ent.NotFoundError{}
 }
 
+// ProjectOf devolve o projeto a que o recurso pertence: ele mesmo, ou o projeto do time,
+// da tarefa ou da integração. Para os outros tipos devolve uuid.Nil.
+func (r *Resolver) ProjectOf(kind Kind, id string) (uuid.UUID, error) {
+	uid, err := uuid.Parse(id)
+	if err != nil {
+		return uuid.Nil, err
+	}
+	ctx := context.Background()
+	switch kind {
+	case KindProject:
+		return uid, nil
+	case KindTeam:
+		t, err := r.client.Team.Get(ctx, uid)
+		if err != nil {
+			return uuid.Nil, err
+		}
+		return t.ProjectID, nil
+	case KindTask:
+		t, err := r.client.Task.Get(ctx, uid)
+		if err != nil {
+			return uuid.Nil, err
+		}
+		return t.ProjectID, nil
+	case KindIntegration:
+		i, err := r.client.Integration.Get(ctx, uid)
+		if err != nil {
+			return uuid.Nil, err
+		}
+		return i.ProjectID, nil
+	}
+	return uuid.Nil, nil
+}
+
+// ProjectSet devolve o que a pessoa pode fazer no projeto: tudo, para os admins, e o que
+// a alocação dela no projeto libera, para os outros.
+func (r *Resolver) ProjectSet(me *Identity, projectID uuid.UUID) (permission.Set, error) {
+	if me.IsAdmin() {
+		return permission.Set{All: true}, nil
+	}
+	if me == nil {
+		return permission.Set{}, nil
+	}
+	a, err := r.client.Allocation.Query().
+		Where(entalloc.ProjectIDEQ(projectID), entalloc.PersonIDEQ(me.PersonID)).
+		Only(context.Background())
+	if ent.IsNotFound(err) {
+		return permission.Set{}, nil
+	}
+	if err != nil {
+		return permission.Set{}, err
+	}
+	return permission.Set{Keys: permission.Normalize(a.Permissions, permission.ProjectKeys)}, nil
+}
+
 // SameOrganization diz se o recurso existe e é da organização da pessoa logada.
 func (r *Resolver) SameOrganization(c *echo.Context, kind Kind, id string) bool {
 	me := CurrentPerson(c)
@@ -120,6 +176,18 @@ func (m *Middleware) requireOrg(kind Kind, param string, deny echo.HandlerFunc) 
 		return func(c *echo.Context) error {
 			if !m.resolver.SameOrganization(c, kind, c.Param(param)) {
 				return deny(c)
+			}
+			// Num recurso de projeto, as permissões da pessoa nele ficam à mão das rotas e dos
+			// handlers que vêm depois. Os admins têm tudo em todos os projetos: para eles
+			// nada se consulta.
+			if me := CurrentPerson(c); !me.IsAdmin() {
+				if projectID, err := m.resolver.ProjectOf(kind, c.Param(param)); err == nil && projectID != uuid.Nil {
+					set, err := m.resolver.ProjectSet(me, projectID)
+					if err != nil {
+						return err
+					}
+					c.Set(projectSetKey, set)
+				}
 			}
 			return next(c)
 		}

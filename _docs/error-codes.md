@@ -47,10 +47,12 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 
 | Código | Status | Parâmetros | pt-BR | en |
 |---|---|---|---|---|
+| `allocation.invalid_preset` | 400 | — | `grupo de permissões desconhecido` | `unknown permission group` |
 | `allocation.invalid_rate` | 400 | — | `o valor por hora deve ficar entre 0 e 1.000.000,00` | `the hourly rate must be between 0 and 1,000,000.00` |
 | `allocation.not_defined` | 404 | — | `esta pessoa não tem valor definido neste projeto` | `this person has no rate set on this project` |
 | `allocation.own_rates_only` | 403 | — | `você só pode ver os seus próprios valores` | `you can only see your own rates` |
 | `allocation.person_not_in_org` | 400 | — | `pessoa não encontrada nesta organização` | `person not found in this organization` |
+| `allocation.preset_above_yours` | 403 | — | `o grupo dá uma permissão que você não tem` | `the group gives a permission you do not have` |
 | `allocation.rate_required` | 400 | — | `informe o valor por hora` | `enter the hourly rate` |
 
 ### auth
@@ -66,6 +68,8 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `auth.name_required` | 400 | — | `informe o seu nome` | `enter your name` |
 | `auth.org_name_required` | 400 | — | `informe o nome da organização` | `enter the organization name` |
 | `auth.own_profile_only` | 403 | — | `você só pode alterar o seu próprio perfil` | `you can only change your own profile` |
+| `auth.owner_only` | 403 | — | `só o dono da organização pode fazer isso` | `only the organization owner can do this` |
+| `auth.permission_required` | 403 | — | `você não tem permissão para fazer isso` | `you do not have permission to do this` |
 | `auth.unauthenticated` | 401 | — | `faça login para continuar` | `sign in to continue` |
 | `auth.weak_password` | 400 | — | `a senha precisa ter pelo menos 8 caracteres` | `the password needs at least 8 characters` |
 | `auth.wrong_password` | 400 | — | `a senha atual está incorreta` | `the current password is wrong` |
@@ -160,10 +164,12 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 
 | Código | Status | Parâmetros | pt-BR | en |
 |---|---|---|---|---|
+| `person.admin_has_all_permissions` | 400 | — | `os admins já têm todas as permissões` | `admins already have every permission` |
 | `person.email_in_use` | 409 | — | `este email já está em uso` | `this email is already in use` |
 | `person.email_required` | 400 | — | `informe o email` | `enter the email` |
 | `person.invalid_email` | 400 | — | `informe um email válido` | `enter a valid email` |
 | `person.invalid_organization` | 400 | — | `organização inválida` | `invalid organization` |
+| `person.invalid_permission` | 400 | — | `permissão da organização desconhecida` | `unknown organization permission` |
 | `person.invalid_role` | 400 | — | `papel inválido: use admin ou member` | `invalid role: use admin or member` |
 | `person.invalid_week_hours` | 400 | — | `a jornada semanal deve ficar entre 1 e 168 horas` | `the weekly hours must be between 1 and 168` |
 | `person.last_admin` | 400 | — | `a organização precisa de pelo menos um admin` | `the organization needs at least one admin` |

@@ -377,7 +377,13 @@
   // O que as telas mostram no lugar de um campo de cadastro sem valor.
   const notInformed = t('labels.not_informed');
 
-  window.WTT = { t, lang, errorText, api, ApiError, form, fmt, toCents, copyText, notInformed, weekdays, priorities, markdown, routine, sprintOptions, sprintChoices, orgSizes, workModes, currencies, boot: window.BOOT || {} };
+  // can diz se quem está logado pode o que a permissão libera, no projeto da página (as do
+  // projeto) ou na organização. O servidor confere de novo em toda rota: isto só esconde o
+  // que a pessoa não pode usar.
+  const granted = (window.BOOT && window.BOOT.can) || [];
+  const can = (key) => granted.includes(key);
+
+  window.WTT = { can, t, lang, errorText, api, ApiError, form, fmt, toCents, copyText, notInformed, weekdays, priorities, markdown, routine, sprintOptions, sprintChoices, orgSizes, workModes, currencies, boot: window.BOOT || {} };
 
   // Onde flash() deixa a mensagem para a página seguinte.
   const flashKey = 'wtt:flash';

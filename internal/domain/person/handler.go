@@ -75,6 +75,25 @@ func (h *Handler) SetRole(c *echo.Context) error {
 	return c.JSON(http.StatusOK, person)
 }
 
+// SetPermissions define as permissões da organização de quem não é admin. A rota é só
+// do dono.
+func (h *Handler) SetPermissions(c *echo.Context) error {
+	var body struct {
+		Permissions []string `json:"permissions"`
+	}
+	if err := c.Bind(&body); err != nil {
+		return apperr.Respond(c, http.StatusBadRequest, apperr.ErrInvalidBody)
+	}
+	person, err := h.svc.SetPermissions(c.Param("personId"), body.Permissions)
+	if err != nil {
+		if err == database.ErrNotFound {
+			return apperr.Respond(c, http.StatusNotFound, ErrNotFound)
+		}
+		return apperr.Respond(c, http.StatusBadRequest, err)
+	}
+	return c.JSON(http.StatusOK, person)
+}
+
 // SetWeeklyHours define a jornada semanal da pessoa. A rota é só de admins: a
 // jornada é o que a organização combinou com ela.
 func (h *Handler) SetWeeklyHours(c *echo.Context) error {

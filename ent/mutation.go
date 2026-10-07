@@ -60,6 +60,9 @@ type AllocationMutation struct {
 	id                *uuid.UUID
 	pay_rate_cents    *int
 	addpay_rate_cents *int
+	permissions       *[]string
+	appendpermissions []string
+	preset            *string
 	created_at        *time.Time
 	clearedFields     map[string]struct{}
 	project           *uuid.UUID
@@ -303,6 +306,107 @@ func (m *AllocationMutation) ResetPayRateCents() {
 	m.addpay_rate_cents = nil
 }
 
+// SetPermissions sets the "permissions" field.
+func (m *AllocationMutation) SetPermissions(s []string) {
+	m.permissions = &s
+	m.appendpermissions = nil
+}
+
+// Permissions returns the value of the "permissions" field in the mutation.
+func (m *AllocationMutation) Permissions() (r []string, exists bool) {
+	v := m.permissions
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPermissions returns the old "permissions" field's value of the Allocation entity.
+// If the Allocation object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AllocationMutation) OldPermissions(ctx context.Context) (v []string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPermissions is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPermissions requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPermissions: %w", err)
+	}
+	return oldValue.Permissions, nil
+}
+
+// AppendPermissions adds s to the "permissions" field.
+func (m *AllocationMutation) AppendPermissions(s []string) {
+	m.appendpermissions = append(m.appendpermissions, s...)
+}
+
+// AppendedPermissions returns the list of values that were appended to the "permissions" field in this mutation.
+func (m *AllocationMutation) AppendedPermissions() ([]string, bool) {
+	if len(m.appendpermissions) == 0 {
+		return nil, false
+	}
+	return m.appendpermissions, true
+}
+
+// ClearPermissions clears the value of the "permissions" field.
+func (m *AllocationMutation) ClearPermissions() {
+	m.permissions = nil
+	m.appendpermissions = nil
+	m.clearedFields[allocation.FieldPermissions] = struct{}{}
+}
+
+// PermissionsCleared returns if the "permissions" field was cleared in this mutation.
+func (m *AllocationMutation) PermissionsCleared() bool {
+	_, ok := m.clearedFields[allocation.FieldPermissions]
+	return ok
+}
+
+// ResetPermissions resets all changes to the "permissions" field.
+func (m *AllocationMutation) ResetPermissions() {
+	m.permissions = nil
+	m.appendpermissions = nil
+	delete(m.clearedFields, allocation.FieldPermissions)
+}
+
+// SetPreset sets the "preset" field.
+func (m *AllocationMutation) SetPreset(s string) {
+	m.preset = &s
+}
+
+// Preset returns the value of the "preset" field in the mutation.
+func (m *AllocationMutation) Preset() (r string, exists bool) {
+	v := m.preset
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPreset returns the old "preset" field's value of the Allocation entity.
+// If the Allocation object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AllocationMutation) OldPreset(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPreset is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPreset requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPreset: %w", err)
+	}
+	return oldValue.Preset, nil
+}
+
+// ResetPreset resets all changes to the "preset" field.
+func (m *AllocationMutation) ResetPreset() {
+	m.preset = nil
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (m *AllocationMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
@@ -427,7 +531,7 @@ func (m *AllocationMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *AllocationMutation) Fields() []string {
-	fields := make([]string, 0, 4)
+	fields := make([]string, 0, 6)
 	if m.project != nil {
 		fields = append(fields, allocation.FieldProjectID)
 	}
@@ -436,6 +540,12 @@ func (m *AllocationMutation) Fields() []string {
 	}
 	if m.pay_rate_cents != nil {
 		fields = append(fields, allocation.FieldPayRateCents)
+	}
+	if m.permissions != nil {
+		fields = append(fields, allocation.FieldPermissions)
+	}
+	if m.preset != nil {
+		fields = append(fields, allocation.FieldPreset)
 	}
 	if m.created_at != nil {
 		fields = append(fields, allocation.FieldCreatedAt)
@@ -454,6 +564,10 @@ func (m *AllocationMutation) Field(name string) (ent.Value, bool) {
 		return m.PersonID()
 	case allocation.FieldPayRateCents:
 		return m.PayRateCents()
+	case allocation.FieldPermissions:
+		return m.Permissions()
+	case allocation.FieldPreset:
+		return m.Preset()
 	case allocation.FieldCreatedAt:
 		return m.CreatedAt()
 	}
@@ -471,6 +585,10 @@ func (m *AllocationMutation) OldField(ctx context.Context, name string) (ent.Val
 		return m.OldPersonID(ctx)
 	case allocation.FieldPayRateCents:
 		return m.OldPayRateCents(ctx)
+	case allocation.FieldPermissions:
+		return m.OldPermissions(ctx)
+	case allocation.FieldPreset:
+		return m.OldPreset(ctx)
 	case allocation.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	}
@@ -502,6 +620,20 @@ func (m *AllocationMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetPayRateCents(v)
+		return nil
+	case allocation.FieldPermissions:
+		v, ok := value.([]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPermissions(v)
+		return nil
+	case allocation.FieldPreset:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPreset(v)
 		return nil
 	case allocation.FieldCreatedAt:
 		v, ok := value.(time.Time)
@@ -554,7 +686,11 @@ func (m *AllocationMutation) AddField(name string, value ent.Value) error {
 // ClearedFields returns all nullable fields that were cleared during this
 // mutation.
 func (m *AllocationMutation) ClearedFields() []string {
-	return nil
+	var fields []string
+	if m.FieldCleared(allocation.FieldPermissions) {
+		fields = append(fields, allocation.FieldPermissions)
+	}
+	return fields
 }
 
 // FieldCleared returns a boolean indicating if a field with the given name was
@@ -567,6 +703,11 @@ func (m *AllocationMutation) FieldCleared(name string) bool {
 // ClearField clears the value of the field with the given name. It returns an
 // error if the field is not defined in the schema.
 func (m *AllocationMutation) ClearField(name string) error {
+	switch name {
+	case allocation.FieldPermissions:
+		m.ClearPermissions()
+		return nil
+	}
 	return fmt.Errorf("unknown Allocation nullable field %s", name)
 }
 
@@ -582,6 +723,12 @@ func (m *AllocationMutation) ResetField(name string) error {
 		return nil
 	case allocation.FieldPayRateCents:
 		m.ResetPayRateCents()
+		return nil
+	case allocation.FieldPermissions:
+		m.ResetPermissions()
+		return nil
+	case allocation.FieldPreset:
+		m.ResetPreset()
 		return nil
 	case allocation.FieldCreatedAt:
 		m.ResetCreatedAt()
@@ -6115,6 +6262,8 @@ type PersonMutation struct {
 	password_hash           *string
 	role                    *person.Role
 	is_owner                *bool
+	permissions             *[]string
+	appendpermissions       []string
 	weekly_hours            *int
 	addweekly_hours         *int
 	created_at              *time.Time
@@ -6475,6 +6624,71 @@ func (m *PersonMutation) OldIsOwner(ctx context.Context) (v bool, err error) {
 // ResetIsOwner resets all changes to the "is_owner" field.
 func (m *PersonMutation) ResetIsOwner() {
 	m.is_owner = nil
+}
+
+// SetPermissions sets the "permissions" field.
+func (m *PersonMutation) SetPermissions(s []string) {
+	m.permissions = &s
+	m.appendpermissions = nil
+}
+
+// Permissions returns the value of the "permissions" field in the mutation.
+func (m *PersonMutation) Permissions() (r []string, exists bool) {
+	v := m.permissions
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPermissions returns the old "permissions" field's value of the Person entity.
+// If the Person object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PersonMutation) OldPermissions(ctx context.Context) (v []string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPermissions is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPermissions requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPermissions: %w", err)
+	}
+	return oldValue.Permissions, nil
+}
+
+// AppendPermissions adds s to the "permissions" field.
+func (m *PersonMutation) AppendPermissions(s []string) {
+	m.appendpermissions = append(m.appendpermissions, s...)
+}
+
+// AppendedPermissions returns the list of values that were appended to the "permissions" field in this mutation.
+func (m *PersonMutation) AppendedPermissions() ([]string, bool) {
+	if len(m.appendpermissions) == 0 {
+		return nil, false
+	}
+	return m.appendpermissions, true
+}
+
+// ClearPermissions clears the value of the "permissions" field.
+func (m *PersonMutation) ClearPermissions() {
+	m.permissions = nil
+	m.appendpermissions = nil
+	m.clearedFields[person.FieldPermissions] = struct{}{}
+}
+
+// PermissionsCleared returns if the "permissions" field was cleared in this mutation.
+func (m *PersonMutation) PermissionsCleared() bool {
+	_, ok := m.clearedFields[person.FieldPermissions]
+	return ok
+}
+
+// ResetPermissions resets all changes to the "permissions" field.
+func (m *PersonMutation) ResetPermissions() {
+	m.permissions = nil
+	m.appendpermissions = nil
+	delete(m.clearedFields, person.FieldPermissions)
 }
 
 // SetWeeklyHours sets the "weekly_hours" field.
@@ -6968,7 +7182,7 @@ func (m *PersonMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *PersonMutation) Fields() []string {
-	fields := make([]string, 0, 8)
+	fields := make([]string, 0, 9)
 	if m.name != nil {
 		fields = append(fields, person.FieldName)
 	}
@@ -6986,6 +7200,9 @@ func (m *PersonMutation) Fields() []string {
 	}
 	if m.is_owner != nil {
 		fields = append(fields, person.FieldIsOwner)
+	}
+	if m.permissions != nil {
+		fields = append(fields, person.FieldPermissions)
 	}
 	if m.weekly_hours != nil {
 		fields = append(fields, person.FieldWeeklyHours)
@@ -7013,6 +7230,8 @@ func (m *PersonMutation) Field(name string) (ent.Value, bool) {
 		return m.Role()
 	case person.FieldIsOwner:
 		return m.IsOwner()
+	case person.FieldPermissions:
+		return m.Permissions()
 	case person.FieldWeeklyHours:
 		return m.WeeklyHours()
 	case person.FieldCreatedAt:
@@ -7038,6 +7257,8 @@ func (m *PersonMutation) OldField(ctx context.Context, name string) (ent.Value, 
 		return m.OldRole(ctx)
 	case person.FieldIsOwner:
 		return m.OldIsOwner(ctx)
+	case person.FieldPermissions:
+		return m.OldPermissions(ctx)
 	case person.FieldWeeklyHours:
 		return m.OldWeeklyHours(ctx)
 	case person.FieldCreatedAt:
@@ -7092,6 +7313,13 @@ func (m *PersonMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetIsOwner(v)
+		return nil
+	case person.FieldPermissions:
+		v, ok := value.([]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPermissions(v)
 		return nil
 	case person.FieldWeeklyHours:
 		v, ok := value.(int)
@@ -7155,6 +7383,9 @@ func (m *PersonMutation) ClearedFields() []string {
 	if m.FieldCleared(person.FieldPasswordHash) {
 		fields = append(fields, person.FieldPasswordHash)
 	}
+	if m.FieldCleared(person.FieldPermissions) {
+		fields = append(fields, person.FieldPermissions)
+	}
 	if m.FieldCleared(person.FieldWeeklyHours) {
 		fields = append(fields, person.FieldWeeklyHours)
 	}
@@ -7174,6 +7405,9 @@ func (m *PersonMutation) ClearField(name string) error {
 	switch name {
 	case person.FieldPasswordHash:
 		m.ClearPasswordHash()
+		return nil
+	case person.FieldPermissions:
+		m.ClearPermissions()
 		return nil
 	case person.FieldWeeklyHours:
 		m.ClearWeeklyHours()
@@ -7203,6 +7437,9 @@ func (m *PersonMutation) ResetField(name string) error {
 		return nil
 	case person.FieldIsOwner:
 		m.ResetIsOwner()
+		return nil
+	case person.FieldPermissions:
+		m.ResetPermissions()
 		return nil
 	case person.FieldWeeklyHours:
 		m.ResetWeeklyHours()

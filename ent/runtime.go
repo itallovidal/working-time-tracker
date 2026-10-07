@@ -32,8 +32,12 @@ func init() {
 	allocationDescPayRateCents := allocationFields[3].Descriptor()
 	// allocation.PayRateCentsValidator is a validator for the "pay_rate_cents" field. It is called by the builders before save.
 	allocation.PayRateCentsValidator = allocationDescPayRateCents.Validators[0].(func(int) error)
+	// allocationDescPreset is the schema descriptor for preset field.
+	allocationDescPreset := allocationFields[5].Descriptor()
+	// allocation.DefaultPreset holds the default value on creation for the preset field.
+	allocation.DefaultPreset = allocationDescPreset.Default.(string)
 	// allocationDescCreatedAt is the schema descriptor for created_at field.
-	allocationDescCreatedAt := allocationFields[4].Descriptor()
+	allocationDescCreatedAt := allocationFields[6].Descriptor()
 	// allocation.DefaultCreatedAt holds the default value on creation for the created_at field.
 	allocation.DefaultCreatedAt = allocationDescCreatedAt.Default.(func() time.Time)
 	// allocationDescID is the schema descriptor for id field.
@@ -109,7 +113,7 @@ func init() {
 	// person.DefaultIsOwner holds the default value on creation for the is_owner field.
 	person.DefaultIsOwner = personDescIsOwner.Default.(bool)
 	// personDescCreatedAt is the schema descriptor for created_at field.
-	personDescCreatedAt := personFields[8].Descriptor()
+	personDescCreatedAt := personFields[9].Descriptor()
 	// person.DefaultCreatedAt holds the default value on creation for the created_at field.
 	person.DefaultCreatedAt = personDescCreatedAt.Default.(func() time.Time)
 	// personDescID is the schema descriptor for id field.

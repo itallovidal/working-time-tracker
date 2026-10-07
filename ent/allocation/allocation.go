@@ -21,6 +21,10 @@ const (
 	FieldPersonID = "person_id"
 	// FieldPayRateCents holds the string denoting the pay_rate_cents field in the database.
 	FieldPayRateCents = "pay_rate_cents"
+	// FieldPermissions holds the string denoting the permissions field in the database.
+	FieldPermissions = "permissions"
+	// FieldPreset holds the string denoting the preset field in the database.
+	FieldPreset = "preset"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// EdgeProject holds the string denoting the project edge name in mutations.
@@ -51,6 +55,8 @@ var Columns = []string{
 	FieldProjectID,
 	FieldPersonID,
 	FieldPayRateCents,
+	FieldPermissions,
+	FieldPreset,
 	FieldCreatedAt,
 }
 
@@ -67,6 +73,8 @@ func ValidColumn(column string) bool {
 var (
 	// PayRateCentsValidator is a validator for the "pay_rate_cents" field. It is called by the builders before save.
 	PayRateCentsValidator func(int) error
+	// DefaultPreset holds the default value on creation for the "preset" field.
+	DefaultPreset string
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 	// DefaultID holds the default value on creation for the "id" field.
@@ -94,6 +102,11 @@ func ByPersonID(opts ...sql.OrderTermOption) OrderOption {
 // ByPayRateCents orders the results by the pay_rate_cents field.
 func ByPayRateCents(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldPayRateCents, opts...).ToFunc()
+}
+
+// ByPreset orders the results by the preset field.
+func ByPreset(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPreset, opts...).ToFunc()
 }
 
 // ByCreatedAt orders the results by the created_at field.

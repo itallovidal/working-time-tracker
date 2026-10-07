@@ -478,6 +478,19 @@
 
 ---
 
+### Sprint 39: Permissions by Project and Group
+
+- [X] S39.1 `internal/domain/permission`: the catalog (9 project and 3 organization permissions), the four groups (`member`, `manager`, `finance`, `admin`), `Set`, and `GET /api/permissions`
+- [X] S39.2 `allocations.permissions` and `allocations.preset`, `persons.permissions`, with a migration; `PATCH /api/persons/:personId/permissions` (owner only)
+- [X] S39.3 `RequireOrg` leaves the person's project permissions in the context; `RequireProjectPermission`, `RequireOrgPermission`, `RequireOwner` and the page versions replace `RequireAdmin` route by route
+- [X] S39.4 `PUT .../allocations/:personId` takes `preset`; each change asks for its permission, and nobody gives a group with a permission they lack
+- [X] S39.5 Rates, billed rate and sessions follow the permissions; roles, organization permissions, admin invites and deleting the organization are the owner's
+- [X] S39.6 Pages and buttons follow the permissions (`Data.Can`, `WTT.can`); the Gestão opens on the first tab the person can see
+- [X] S39.7 Seed with managers and a finance person; tests for the catalog, each group, the anti-escalation rule and the organization scope; `_docs/permissions.md`, README, design, routes, error codes and the Insomnia collection
+- [ ] S39.8 The modals: the add-person modal in two steps (who, then the group), the edit-collaborator modal with the group, and the organization permissions on the people page (next)
+
+---
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open

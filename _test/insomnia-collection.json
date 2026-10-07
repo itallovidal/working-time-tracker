@@ -119,6 +119,18 @@
       "body": {}
     },
     {
+      "_id": "req_01_02_perm",
+      "_type": "request",
+      "parentId": "fld_01",
+      "name": "Catálogo de permissões",
+      "method": "GET",
+      "url": "{{base_url}}/api/permissions",
+      "authentication": {},
+      "metaSortKey": 3,
+      "headers": [],
+      "body": {}
+    },
+    {
       "_id": "req_01_03",
       "_type": "request",
       "parentId": "fld_01",
@@ -366,6 +378,26 @@
       "body": {
         "mimeType": "application/json",
         "text": "{\n  \"weekly_hours\": 40\n}"
+      }
+    },
+    {
+      "_id": "req_03_04",
+      "_type": "request",
+      "parentId": "fld_03",
+      "name": "Definir permissões da organização",
+      "method": "PATCH",
+      "url": "{{base_url}}/api/persons/{{person_id}}/permissions",
+      "authentication": {},
+      "metaSortKey": 5,
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"permissions\": [\"projects.create\", \"customers.manage\"]\n}"
       }
     },
     {
@@ -1214,7 +1246,7 @@
       "_id": "req_09_08",
       "_type": "request",
       "parentId": "fld_09",
-      "name": "Definir valor da pessoa",
+      "name": "Pôr a pessoa no projeto (valor e grupo)",
       "method": "PUT",
       "url": "{{base_url}}/api/projects/{{project_id}}/allocations/{{person_id}}",
       "authentication": {},
@@ -1227,7 +1259,7 @@
       ],
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"pay_rate_cents\": 2000\n}"
+        "text": "{\n  \"pay_rate_cents\": 2000,\n  \"preset\": \"member\"\n}"
       }
     },
     {

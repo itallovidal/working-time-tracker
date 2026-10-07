@@ -30,8 +30,8 @@
               <td><span class="badge" :class="p.role === 'admin' && 'badge-accent'" x-text="p.is_owner ? $t('roles.owner') : WTT.fmt.role(p.role)"></span></td>
               <td class="nowrap num" :class="!p.weekly_hours && 'muted'" x-text="WTT.fmt.weeklyHours(p.weekly_hours) || $t('labels.weekly_hours_none')"></td>
               <td class="actions">
-                {{/* O dono é sempre admin: o papel dele não muda. */}}
-                <button type="button" class="btn btn-ghost btn-sm" :disabled="pending" x-show="!p.is_owner"
+                {{/* O papel só muda pelo dono, e o dono é sempre admin. */}}
+                <button type="button" class="btn btn-ghost btn-sm" :disabled="pending" x-show="me.is_owner && !p.is_owner"
                         @click="setRole(p, p.role === 'admin' ? 'member' : 'admin')"
                         x-text="p.role === 'admin' ? $t('org.people.make_member') : $t('org.people.make_admin')"></button>
                 <button type="button" class="btn btn-ghost btn-sm btn-icon" title="{{.T "org.people.edit_title"}}"
@@ -121,7 +121,7 @@
           <label for="invite-role">{{.T "common.role"}}</label>
           <select id="invite-role" x-model="invite.role">
             <option value="member">{{.T "roles.member"}}</option>
-            <option value="admin">{{.T "roles.admin"}}</option>
+            {{if .IsOwner}}<option value="admin">{{.T "roles.admin"}}</option>{{end}}
           </select>
         </div>
         <p class="form-error" x-show="errors.invite" x-text="errors.invite" role="alert"></p>

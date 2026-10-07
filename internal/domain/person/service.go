@@ -4,6 +4,8 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+
+	"working-time-tracker/internal/domain/permission"
 )
 
 // NormalizeEmail tira espaços e deixa o email em minúsculas, para que
@@ -106,6 +108,22 @@ func (s *Service) SetRole(id, role string) (*Person, error) {
 		return nil, ErrInvalidRole
 	}
 	return s.store.SetRole(id, role)
+}
+
+// SetPermissions define as permissões da organização de quem não é admin: admins já
+// têm todas, e guardar uma lista para eles confundiria a tela.
+func (s *Service) SetPermissions(id string, keys []string) (*Person, error) {
+	if !permission.Valid(keys, permission.OrganizationKeys) {
+		return nil, ErrInvalidPermission
+	}
+	p, err := s.store.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+	if p.Role == RoleAdmin {
+		return nil, ErrAdminHasAll
+	}
+	return s.store.SetPermissions(id, permission.Normalize(keys, permission.OrganizationKeys))
 }
 
 // SetWeeklyHours define a jornada semanal da pessoa. nil ou zero apaga.

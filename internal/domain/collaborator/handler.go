@@ -9,6 +9,7 @@ import (
 	"working-time-tracker/internal/apperr"
 	"working-time-tracker/internal/database"
 	"working-time-tracker/internal/domain/auth"
+	"working-time-tracker/internal/domain/permission"
 )
 
 type Handler struct {
@@ -26,10 +27,11 @@ func fail(c *echo.Context, err error) error {
 	return apperr.Respond(c, http.StatusInternalServerError, err)
 }
 
-// redact apaga o valor por hora que quem chama não pode ver: ele é dos admins
-// e da própria pessoa. Sem login no contexto, nada é mostrado.
-func redact(me *auth.Identity, c *Collaborator) {
-	if me.IsAdmin() {
+// redact apaga o valor por hora que quem chama não pode ver: ele é da própria pessoa e de
+// quem vê o valor dos outros (admins e quem tem essa permissão no projeto). Sem login no
+// contexto, nada é mostrado.
+func redact(set permission.Set, me *auth.Identity, c *Collaborator) {
+	if set.HasAny(permission.RatesView, permission.RatesManage) {
 		return
 	}
 	if me == nil || c.Person.ID != me.PersonID {
@@ -38,15 +40,15 @@ func redact(me *auth.Identity, c *Collaborator) {
 }
 
 // ListByProject devolve quem está no projeto. Todos veem as pessoas e os times;
-// o valor por hora dos colegas só vai para admins.
+// o valor por hora dos colegas só vai para quem tem permissão de vê-lo.
 func (h *Handler) ListByProject(c *echo.Context) error {
 	list, err := h.svc.ListByProject(c.Param("projectId"))
 	if err != nil {
 		return fail(c, err)
 	}
-	me := auth.CurrentPerson(c)
+	me, set := auth.CurrentPerson(c), auth.ProjectPermissions(c)
 	for i := range list {
-		redact(me, &list[i])
+		redact(set, me, &list[i])
 	}
 	return c.JSON(http.StatusOK, list)
 }

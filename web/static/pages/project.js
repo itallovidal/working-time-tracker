@@ -839,15 +839,13 @@ document.addEventListener('alpine:init', () => {
     async init() {
       try {
         this.current = await api('GET', '/api/projects/' + project.id);
-        // O valor cobrado e a lista de clientes são rotas de admin.
-        if (me.role === 'admin') {
-          const [billing, customers] = await Promise.all([
-            api('GET', '/api/projects/' + project.id + '/billing'),
-            api('GET', '/api/orgs/' + me.organization_id + '/customers'),
-          ]);
-          this.customers = customers || [];
-          this.billRateCents = billing.bill_rate_cents;
-        }
+        // O valor cobrado é de quem vê o faturamento, e a lista de clientes, de quem cuida deles.
+        const [billing, customers] = await Promise.all([
+          WTT.can('billing.view') ? api('GET', '/api/projects/' + project.id + '/billing') : null,
+          WTT.can('customers.manage') ? api('GET', '/api/orgs/' + me.organization_id + '/customers') : null,
+        ]);
+        this.customers = customers || [];
+        if (billing) this.billRateCents = billing.bill_rate_cents;
       } catch (e) {
         this.errors.load = e.message;
       } finally {
@@ -894,28 +892,41 @@ document.addEventListener('alpine:init', () => {
     save() {
       return this.run('save', async () => {
         const d = this.draft;
+        const editProject = WTT.can('project.edit');
+        const editBilling = WTT.can('billing.manage');
         // O valor é conferido antes de qualquer chamada. Vazio apaga.
-        const cents = WTT.toCents(d.rate);
-        if (cents === null && String(d.rate).trim() !== '') throw new Error(WTT.t('org.projects.rate_invalid'));
-        if (cents !== null && cents > 100000000) throw new Error(WTT.t('org.projects.rate_too_high'));
+        const cents = editBilling ? WTT.toCents(d.rate) : this.billRateCents;
+        if (editBilling) {
+          if (cents === null && String(d.rate).trim() !== '') throw new Error(WTT.t('org.projects.rate_invalid'));
+          if (cents !== null && cents > 100000000) throw new Error(WTT.t('org.projects.rate_too_high'));
+        }
 
-        // Sem daily ou sem weekly vai texto vazio, que apaga; a API mantém o que não vier no corpo.
-        this.current = await api('PATCH', '/api/projects/' + project.id, {
-          name: d.name,
-          description: d.description,
-          sprint_duration_days: Number(d.sprint_duration_days) || 0,
-          ...WTT.routine.payload(d),
-        });
-        document.querySelectorAll('[data-project-name]').forEach((el) => { el.textContent = this.current.name; });
+        // Cada parte vai pela rota da permissão dela: o projeto e a reunião, em project.edit,
+        // e o cliente e o valor cobrado, em billing.manage. Sem daily ou sem weekly vai texto
+        // vazio, que apaga; a API mantém o que não vier no corpo.
+        if (editProject) {
+          this.current = await api('PATCH', '/api/projects/' + project.id, {
+            name: d.name,
+            description: d.description,
+            sprint_duration_days: Number(d.sprint_duration_days) || 0,
+            ...WTT.routine.payload(d),
+          });
+          document.querySelectorAll('[data-project-name]').forEach((el) => { el.textContent = this.current.name; });
+        }
 
         const customerId = this.current.customer ? this.current.customer.id : '';
-        if (d.customer_id !== customerId || cents !== this.billRateCents) {
+        if (editBilling && (d.customer_id !== customerId || cents !== this.billRateCents)) {
           const billing = await api('PUT', '/api/projects/' + project.id + '/billing', {
             customer_id: d.customer_id || null,
             bill_rate_cents: cents,
           });
           this.current.customer = billing.customer;
           this.billRateCents = billing.bill_rate_cents;
+          // Tirar o cliente apaga a reunião com ele, e o servidor devolve o projeto como ficou.
+          if (!billing.customer) {
+            this.current.customer_meeting_day = undefined;
+            this.current.customer_meeting_time = undefined;
+          }
         }
         toast(WTT.t('project_settings.saved'));
         Alpine.store('modal').close();
@@ -987,14 +998,14 @@ document.addEventListener('alpine:init', () => {
       this.$watch('search', () => { this.page = 1; }); // uma busca nova começa da primeira página
       try {
         // Fora da Gestão a aba é só de leitura, para admin também.
-        const admin = me.role === 'admin' && !WTT.boot.readonly;
+        const manage = !WTT.boot.readonly;
         const [collaborators, teams, billing, people, sessions] = await Promise.all([
           api('GET', '/api/projects/' + project.id + '/collaborators'),
           api('GET', '/api/projects/' + project.id + '/teams'),
-          // O valor cobrado, a lista de quem pode entrar e as sessões só servem ao admin.
-          admin ? api('GET', '/api/projects/' + project.id + '/billing') : null,
-          admin ? api('GET', '/api/orgs/' + me.organization_id + '/persons') : null,
-          admin ? api('GET', '/api/projects/' + project.id + '/work-sessions') : null,
+          // O valor cobrado, a lista de quem pode entrar e as sessões só servem a quem cuida do projeto.
+          manage && WTT.can('billing.view') ? api('GET', '/api/projects/' + project.id + '/billing') : null,
+          manage && WTT.can('collaborators.manage') ? api('GET', '/api/orgs/' + me.organization_id + '/persons') : null,
+          manage && WTT.can('rates.view') ? api('GET', '/api/projects/' + project.id + '/work-sessions') : null,
         ]);
         this.collaborators = (collaborators || []).sort(byName);
         this.teams = teams || [];
@@ -1110,19 +1121,22 @@ document.addEventListener('alpine:init', () => {
         const c = this.collaborators.find((x) => x.person.id === this.person.id);
         if (!c) throw new Error(WTT.t('collab.person_gone'));
         // O dono não tem valor pago: as horas dele valem o valor cobrado.
-        const cents = c.person.is_owner ? 0 : WTT.toCents(this.person.rate);
-        if (cents === null) throw new Error(WTT.t('collab.rate_required'));
+        // Quem não define o valor deixa o campo como está: ele nem aparece.
+        const cents = c.person.is_owner || !WTT.can('rates.manage') ? c.pay_rate_cents : WTT.toCents(this.person.rate);
+        if (cents === null && WTT.can('rates.manage')) throw new Error(WTT.t('collab.rate_required'));
         const current = c.teams.map((t) => t.id);
         const wanted = this.person.team_ids;
         const leaving = current.filter((id) => !wanted.includes(id));
         const joining = wanted.filter((id) => !current.includes(id));
         const body = { person_id: c.person.id };
         try {
-          if (!c.person.is_owner && cents !== c.pay_rate_cents) {
+          if (WTT.can('rates.manage') && !c.person.is_owner && cents !== c.pay_rate_cents) {
             await api('PUT', '/api/projects/' + project.id + '/allocations/' + c.person.id, { pay_rate_cents: cents });
           }
-          for (const id of leaving) await api('DELETE', '/api/teams/' + id + '/members', body);
-          for (const id of joining) await api('POST', '/api/teams/' + id + '/members', body);
+          if (WTT.can('teams.manage')) {
+            for (const id of leaving) await api('DELETE', '/api/teams/' + id + '/members', body);
+            for (const id of joining) await api('POST', '/api/teams/' + id + '/members', body);
+          }
         } catch (e) {
           await this.reload().catch(() => {});
           throw e;

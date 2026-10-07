@@ -9,7 +9,7 @@
     {{/* O aviso fica acima dos cartões: dentro do relógio ele deixava um cartão mais alto que o outro. */}}
     <p class="alert alert-warn" x-cloak x-show="!loading && !errors.load && noRate()">
       {{.T "time.no_rate"}}
-      {{if .IsAdmin}}
+      {{if or .IsOwner (.Can "rates.manage") (.Can "collaborators.manage")}}
       {{.T "time.set_rate_before"}} <a href="/projects/{{.Project.ID}}/management/teams">{{.T "project.head.teams"}}</a>{{.T "time.set_rate_after"}}
       {{else}}
       {{.T "time.ask_admin"}}

@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"slices"
 	"time"
 
 	"github.com/google/uuid"
@@ -13,7 +14,10 @@ type Identity struct {
 	Email    string    `json:"email"`
 	Role     string    `json:"role"`
 	// IsOwner marca o dono da organização, que é admin e é um só por organização.
-	IsOwner          bool      `json:"is_owner"`
+	IsOwner bool `json:"is_owner"`
+	// Permissions são as permissões da organização que o dono liberou a esta pessoa;
+	// ficam vazias nos admins, que têm todas.
+	Permissions      []string  `json:"permissions"`
 	OrganizationID   uuid.UUID `json:"organization_id"`
 	OrganizationName string    `json:"organization_name"`
 	// OrganizationCurrency é a moeda dos valores da organização (BRL, USD ou EUR).
@@ -22,6 +26,12 @@ type Identity struct {
 
 func (i *Identity) IsAdmin() bool {
 	return i != nil && i.Role == "admin"
+}
+
+// Can diz se a pessoa pode fazer o que a permissão da organização libera. Os admins
+// podem tudo; os outros, o que o dono liberou a eles.
+func (i *Identity) Can(key string) bool {
+	return i.IsAdmin() || (i != nil && slices.Contains(i.Permissions, key))
 }
 
 type Invite struct {

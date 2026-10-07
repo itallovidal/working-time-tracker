@@ -9,6 +9,7 @@ import (
 	"working-time-tracker/internal/apperr"
 	"working-time-tracker/internal/database"
 	"working-time-tracker/internal/domain/auth"
+	"working-time-tracker/internal/domain/permission"
 )
 
 type Handler struct {
@@ -26,12 +27,13 @@ func fail(c *echo.Context, err error) error {
 	return apperr.Respond(c, http.StatusBadRequest, err)
 }
 
-// ListByProject devolve os valores do projeto. Um admin recebe os de todo
-// mundo; qualquer outra pessoa recebe só o dela, ou uma lista vazia.
+// ListByProject devolve os valores do projeto. Quem vê o valor dos outros (admins e quem
+// tem essa permissão no projeto) recebe os de todo mundo; qualquer outra pessoa recebe
+// só o dela, ou uma lista vazia.
 func (h *Handler) ListByProject(c *echo.Context) error {
 	projectID := c.Param("projectId")
 	me := auth.CurrentPerson(c)
-	if me.IsAdmin() {
+	if auth.ProjectPermissions(c).HasAny(permission.RatesView, permission.RatesManage) {
 		all, err := h.svc.ListByProject(projectID)
 		if err != nil {
 			return fail(c, err)
@@ -66,19 +68,60 @@ func (h *Handler) ListByPerson(c *echo.Context) error {
 	return c.JSON(http.StatusOK, list)
 }
 
+// Set põe a pessoa no projeto, troca o valor dela ou o grupo de permissões. O valor só é
+// obrigatório para quem entra; o grupo, só se vier. Cada mudança pede a sua permissão:
+// pôr alguém no projeto e trocar o grupo, collaborators.manage; definir o valor, rates.manage.
+// Ninguém concede um grupo que tenha permissão que ele mesmo não tem.
 func (h *Handler) Set(c *echo.Context) error {
 	var body struct {
-		PayRateCents *int `json:"pay_rate_cents"`
+		PayRateCents *int   `json:"pay_rate_cents"`
+		Preset       string `json:"preset"`
 	}
 	if err := c.Bind(&body); err != nil {
 		return apperr.Respond(c, http.StatusBadRequest, apperr.ErrInvalidBody)
 	}
-	if body.PayRateCents == nil {
+	projectID, personID := c.Param("projectId"), c.Param("personId")
+	can := auth.ProjectPermissions(c)
+
+	current, err := h.svc.Get(projectID, personID)
+	if err != nil && !errors.Is(err, database.ErrNotFound) {
+		return apperr.Respond(c, http.StatusInternalServerError, err)
+	}
+	isNew := current == nil
+	if body.PayRateCents == nil && (isNew || body.Preset == "") {
 		return fail(c, ErrRateRequired)
 	}
-	a, err := h.svc.Set(c.Param("projectId"), c.Param("personId"), *body.PayRateCents)
-	if err != nil {
-		return fail(c, err)
+	changesRate := body.PayRateCents != nil && (isNew || *body.PayRateCents != current.PayRateCents)
+	changesPreset := body.Preset != "" && (isNew || body.Preset != current.Preset)
+	if (isNew || changesPreset) && !can.Has(permission.CollaboratorsManage) ||
+		changesRate && !can.Has(permission.RatesManage) {
+		return apperr.Respond(c, http.StatusForbidden, auth.ErrPermissionRequired)
+	}
+	var preset permission.Preset
+	if body.Preset != "" {
+		var ok bool
+		if preset, ok = permission.PresetByID(body.Preset); !ok {
+			return fail(c, ErrInvalidPreset)
+		}
+		for _, k := range preset.Permissions {
+			if !can.Has(k) {
+				return apperr.Respond(c, http.StatusForbidden, ErrAbovePermission)
+			}
+		}
+	}
+
+	var a *Allocation
+	if body.PayRateCents != nil {
+		if a, err = h.svc.Set(projectID, personID, *body.PayRateCents); err != nil {
+			return fail(c, err)
+		}
+	} else {
+		a = current
+	}
+	if body.Preset != "" {
+		if a, err = h.svc.SetPreset(projectID, personID, preset.ID); err != nil {
+			return fail(c, err)
+		}
 	}
 	return c.JSON(http.StatusOK, a)
 }

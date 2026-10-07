@@ -4,6 +4,7 @@ import (
 	"github.com/google/uuid"
 
 	"working-time-tracker/internal/database"
+	"working-time-tracker/internal/domain/permission"
 )
 
 type Service struct {
@@ -54,6 +55,23 @@ func (s *Service) Set(projectID, personID string, payRateCents int) (*Allocation
 		payRateCents = 0
 	}
 	if err := s.store.Set(prj, per, payRateCents); err != nil {
+		return nil, err
+	}
+	return s.store.Get(prj, per)
+}
+
+// SetPreset dá à pessoa o grupo de permissões do projeto, que já tem de estar nele. O
+// grupo troca as permissões dela de uma vez: as que vieram de um grupo anterior saem.
+func (s *Service) SetPreset(projectID, personID, presetID string) (*Allocation, error) {
+	preset, ok := permission.PresetByID(presetID)
+	if !ok {
+		return nil, ErrInvalidPreset
+	}
+	prj, per, err := ids(projectID, personID)
+	if err != nil {
+		return nil, ErrPersonNotInOrg
+	}
+	if err := s.store.SetPreset(prj, per, preset.ID, preset.Permissions); err != nil {
 		return nil, err
 	}
 	return s.store.Get(prj, per)

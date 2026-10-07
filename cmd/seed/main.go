@@ -78,6 +78,7 @@ var projects = []struct {
 	sprintDays                       int
 	daily, weekly, weeklyTime        string
 	meetingDay, meetingTime          string
+	presets                          map[string]string // quem tem um grupo de permissões além de colaborador
 	billRate, ageDays                int
 	teams                            map[string][]string
 	rates                            map[string]int
@@ -86,22 +87,25 @@ var projects = []struct {
 		key: "app", customer: "bompreco", name: "App de Pedidos", ageDays: 330,
 		description: "Aplicativo para os clientes da rede pedirem e acompanharem as entregas.",
 		sprintDays:  14, daily: "09:30", weekly: "friday", weeklyTime: "14:00", billRate: 14000, meetingDay: "wednesday", meetingTime: "10:00",
-		teams: map[string][]string{"Mobile": {"diego", "gabriela", "ana"}, "Backend": {"bruno", "henrique", "fabio"}, "Qualidade": {"elisa"}, "Produto": {"isabela", "carla"}},
-		rates: map[string]int{"ana": 9000, "bruno": 5500, "diego": 6000, "gabriela": 5200, "henrique": 4200, "isabela": 6500, "elisa": 4000, "carla": 5000, "fabio": 6200},
+		teams:   map[string][]string{"Mobile": {"diego", "gabriela", "ana"}, "Backend": {"bruno", "henrique", "fabio"}, "Qualidade": {"elisa"}, "Produto": {"isabela", "carla"}},
+		rates:   map[string]int{"ana": 9000, "bruno": 5500, "diego": 6000, "gabriela": 5200, "henrique": 4200, "isabela": 6500, "elisa": 4000, "carla": 5000, "fabio": 6200},
+		presets: map[string]string{"isabela": "manager"},
 	},
 	{
 		key: "painel", customer: "bompreco", name: "Painel do Lojista", ageDays: 214,
 		description: "Painel web para cada loja acompanhar pedidos, repasses e avaliações.",
 		sprintDays:  14, daily: "09:15", weekly: "thursday", weeklyTime: "13:00", billRate: 12000, meetingDay: "monday", meetingTime: "15:00",
-		teams: map[string][]string{"Web": {"carla", "bruno", "henrique"}, "Design": {"gabriela"}},
-		rates: map[string]int{"bruno": 5500, "carla": 5000, "elisa": 4000, "henrique": 4200, "gabriela": 5200},
+		teams:   map[string][]string{"Web": {"carla", "bruno", "henrique"}, "Design": {"gabriela"}},
+		rates:   map[string]int{"bruno": 5500, "carla": 5000, "elisa": 4000, "henrique": 4200, "gabriela": 5200},
+		presets: map[string]string{"carla": "manager"},
 	},
 	{
 		key: "agenda", customer: "vidaplena", name: "Agendamento Online", ageDays: 152,
 		description: "Marcação de consultas pelo site e pelo WhatsApp, com confirmação automática.",
 		sprintDays:  7, daily: "10:00", weekly: "monday", weeklyTime: "11:30", billRate: 11000, meetingDay: "friday", meetingTime: "11:00",
-		teams: map[string][]string{"Produto": {"carla", "diego", "elisa", "isabela"}},
-		rates: map[string]int{"carla": 5000, "diego": 5800, "elisa": 4000, "isabela": 6500, "joao": 2500},
+		teams:   map[string][]string{"Produto": {"carla", "diego", "elisa", "isabela"}},
+		rates:   map[string]int{"carla": 5000, "diego": 5800, "elisa": 4000, "isabela": 6500, "joao": 2500},
+		presets: map[string]string{"isabela": "manager"},
 	},
 	{
 		key: "portal", customer: "vidaplena", name: "Portal do Paciente", ageDays: 96,
@@ -121,8 +125,9 @@ var projects = []struct {
 		key: "dados", customer: "pagai", name: "Dashboard Financeiro", ageDays: 120,
 		description: "Painéis de recebimentos, inadimplência e conciliação para o financeiro da Pagaí.",
 		sprintDays:  14, daily: "11:00", weekly: "thursday", weeklyTime: "16:00", billRate: 15000,
-		teams: map[string][]string{"Dados": {"larissa", "henrique", "fabio"}, "Produto": {"isabela"}},
-		rates: map[string]int{"larissa": 6500, "henrique": 4500, "fabio": 6500, "isabela": 6500},
+		teams:   map[string][]string{"Dados": {"larissa", "henrique", "fabio"}, "Produto": {"isabela"}},
+		rates:   map[string]int{"larissa": 6500, "henrique": 4500, "fabio": 6500, "isabela": 6500},
+		presets: map[string]string{"larissa": "finance"},
 	},
 	{
 		key: "erp", customer: "atacado", name: "Migração do ERP", ageDays: 190,
@@ -431,6 +436,10 @@ func main() {
 				p.rates[who] = 0
 			}
 			_, err := allocationSvc.Set(id, person[who].PersonID.String(), cents)
+			must(err)
+		}
+		for who, preset := range p.presets {
+			_, err := allocationSvc.SetPreset(id, person[who].PersonID.String(), preset)
 			must(err)
 		}
 		for teamName, members := range p.teams {

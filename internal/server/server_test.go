@@ -822,6 +822,7 @@ func TestRoutes_Table(t *testing.T) {
 		"GET /api/persons/:personId",
 		"PATCH /api/persons/:personId",
 		"PATCH /api/persons/:personId/role",
+		"PATCH /api/persons/:personId/permissions",
 		"PATCH /api/persons/:personId/weekly-hours",
 		"GET /api/persons/:personId/allocations",
 
@@ -869,6 +870,8 @@ func TestRoutes_Table(t *testing.T) {
 		"GET /api/integrations/:integrationId",
 		"PATCH /api/integrations/:integrationId",
 		"DELETE /api/integrations/:integrationId",
+
+		"GET /api/permissions",
 	}
 
 	methods := map[string]bool{"GET": true, "POST": true, "PATCH": true, "PUT": true, "DELETE": true}
@@ -1175,10 +1178,14 @@ func TestOwner_EntersItsProjectsAndWorksAtTheBilledRate(t *testing.T) {
 		t.Errorf("after working there the owner is a collaborator: %v", got)
 	}
 
-	// O dono continua admin: outro admin não o rebaixa.
+	// Só o dono muda papéis, e o dono continua admin: nem ele mesmo se rebaixa.
 	rec = do(e, "PATCH", "/api/persons/"+owner.id+"/role", `{"role":"member"}`, other.session)
+	if rec.Code != http.StatusForbidden || !strings.Contains(rec.Body.String(), "auth.owner_only") {
+		t.Errorf("another admin demoting the owner = %d %s, want 403 auth.owner_only", rec.Code, rec.Body.String())
+	}
+	rec = do(e, "PATCH", "/api/persons/"+owner.id+"/role", `{"role":"member"}`, owner.session)
 	if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "person.owner_is_admin") {
-		t.Errorf("demoting the owner = %d %s, want 400 person.owner_is_admin", rec.Code, rec.Body.String())
+		t.Errorf("the owner demoting itself = %d %s, want 400 person.owner_is_admin", rec.Code, rec.Body.String())
 	}
 	people := decodeList(t, do(e, "GET", "/api/orgs/"+owner.orgID+"/persons", "", other.session))
 	owners := 0

@@ -13,6 +13,7 @@ import (
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"entgo.io/ent/dialect/sql/sqljson"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 )
@@ -76,6 +77,38 @@ func (_u *AllocationUpdate) SetNillablePayRateCents(v *int) *AllocationUpdate {
 // AddPayRateCents adds value to the "pay_rate_cents" field.
 func (_u *AllocationUpdate) AddPayRateCents(v int) *AllocationUpdate {
 	_u.mutation.AddPayRateCents(v)
+	return _u
+}
+
+// SetPermissions sets the "permissions" field.
+func (_u *AllocationUpdate) SetPermissions(v []string) *AllocationUpdate {
+	_u.mutation.SetPermissions(v)
+	return _u
+}
+
+// AppendPermissions appends value to the "permissions" field.
+func (_u *AllocationUpdate) AppendPermissions(v []string) *AllocationUpdate {
+	_u.mutation.AppendPermissions(v)
+	return _u
+}
+
+// ClearPermissions clears the value of the "permissions" field.
+func (_u *AllocationUpdate) ClearPermissions() *AllocationUpdate {
+	_u.mutation.ClearPermissions()
+	return _u
+}
+
+// SetPreset sets the "preset" field.
+func (_u *AllocationUpdate) SetPreset(v string) *AllocationUpdate {
+	_u.mutation.SetPreset(v)
+	return _u
+}
+
+// SetNillablePreset sets the "preset" field if the given value is not nil.
+func (_u *AllocationUpdate) SetNillablePreset(v *string) *AllocationUpdate {
+	if v != nil {
+		_u.SetPreset(*v)
+	}
 	return _u
 }
 
@@ -166,6 +199,20 @@ func (_u *AllocationUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	}
 	if value, ok := _u.mutation.AddedPayRateCents(); ok {
 		_spec.AddField(allocation.FieldPayRateCents, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.Permissions(); ok {
+		_spec.SetField(allocation.FieldPermissions, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedPermissions(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, allocation.FieldPermissions, value)
+		})
+	}
+	if _u.mutation.PermissionsCleared() {
+		_spec.ClearField(allocation.FieldPermissions, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.Preset(); ok {
+		_spec.SetField(allocation.FieldPreset, field.TypeString, value)
 	}
 	if _u.mutation.ProjectCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -294,6 +341,38 @@ func (_u *AllocationUpdateOne) AddPayRateCents(v int) *AllocationUpdateOne {
 	return _u
 }
 
+// SetPermissions sets the "permissions" field.
+func (_u *AllocationUpdateOne) SetPermissions(v []string) *AllocationUpdateOne {
+	_u.mutation.SetPermissions(v)
+	return _u
+}
+
+// AppendPermissions appends value to the "permissions" field.
+func (_u *AllocationUpdateOne) AppendPermissions(v []string) *AllocationUpdateOne {
+	_u.mutation.AppendPermissions(v)
+	return _u
+}
+
+// ClearPermissions clears the value of the "permissions" field.
+func (_u *AllocationUpdateOne) ClearPermissions() *AllocationUpdateOne {
+	_u.mutation.ClearPermissions()
+	return _u
+}
+
+// SetPreset sets the "preset" field.
+func (_u *AllocationUpdateOne) SetPreset(v string) *AllocationUpdateOne {
+	_u.mutation.SetPreset(v)
+	return _u
+}
+
+// SetNillablePreset sets the "preset" field if the given value is not nil.
+func (_u *AllocationUpdateOne) SetNillablePreset(v *string) *AllocationUpdateOne {
+	if v != nil {
+		_u.SetPreset(*v)
+	}
+	return _u
+}
+
 // SetProject sets the "project" edge to the Project entity.
 func (_u *AllocationUpdateOne) SetProject(v *Project) *AllocationUpdateOne {
 	return _u.SetProjectID(v.ID)
@@ -411,6 +490,20 @@ func (_u *AllocationUpdateOne) sqlSave(ctx context.Context) (_node *Allocation, 
 	}
 	if value, ok := _u.mutation.AddedPayRateCents(); ok {
 		_spec.AddField(allocation.FieldPayRateCents, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.Permissions(); ok {
+		_spec.SetField(allocation.FieldPermissions, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedPermissions(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, allocation.FieldPermissions, value)
+		})
+	}
+	if _u.mutation.PermissionsCleared() {
+		_spec.ClearField(allocation.FieldPermissions, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.Preset(); ok {
+		_spec.SetField(allocation.FieldPreset, field.TypeString, value)
 	}
 	if _u.mutation.ProjectCleared() {
 		edge := &sqlgraph.EdgeSpec{

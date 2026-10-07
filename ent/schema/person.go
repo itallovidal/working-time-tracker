@@ -27,6 +27,9 @@ func (Person) Fields() []ent.Field {
 		// O dono da organização: quem a criou. É sempre admin, é um só por organização
 		// e as horas dele valem o valor cobrado, sem custo.
 		field.Bool("is_owner").Default(false),
+		// As permissões da organização que o dono liberou a quem não é admin (criar
+		// projetos, cuidar dos clientes e das pessoas). Admins têm todas.
+		field.Strings("permissions").Optional(),
 		// Jornada semanal combinada com a pessoa, em horas. Vale para a organização
 		// toda, e não por projeto.
 		field.Int("weekly_hours").Optional().Nillable(),

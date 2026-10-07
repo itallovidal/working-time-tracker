@@ -71,6 +71,11 @@ func PayRateCents(v int) predicate.Allocation {
 	return predicate.Allocation(sql.FieldEQ(FieldPayRateCents, v))
 }
 
+// Preset applies equality check predicate on the "preset" field. It's identical to PresetEQ.
+func Preset(v string) predicate.Allocation {
+	return predicate.Allocation(sql.FieldEQ(FieldPreset, v))
+}
+
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.Allocation {
 	return predicate.Allocation(sql.FieldEQ(FieldCreatedAt, v))
@@ -154,6 +159,81 @@ func PayRateCentsLT(v int) predicate.Allocation {
 // PayRateCentsLTE applies the LTE predicate on the "pay_rate_cents" field.
 func PayRateCentsLTE(v int) predicate.Allocation {
 	return predicate.Allocation(sql.FieldLTE(FieldPayRateCents, v))
+}
+
+// PermissionsIsNil applies the IsNil predicate on the "permissions" field.
+func PermissionsIsNil() predicate.Allocation {
+	return predicate.Allocation(sql.FieldIsNull(FieldPermissions))
+}
+
+// PermissionsNotNil applies the NotNil predicate on the "permissions" field.
+func PermissionsNotNil() predicate.Allocation {
+	return predicate.Allocation(sql.FieldNotNull(FieldPermissions))
+}
+
+// PresetEQ applies the EQ predicate on the "preset" field.
+func PresetEQ(v string) predicate.Allocation {
+	return predicate.Allocation(sql.FieldEQ(FieldPreset, v))
+}
+
+// PresetNEQ applies the NEQ predicate on the "preset" field.
+func PresetNEQ(v string) predicate.Allocation {
+	return predicate.Allocation(sql.FieldNEQ(FieldPreset, v))
+}
+
+// PresetIn applies the In predicate on the "preset" field.
+func PresetIn(vs ...string) predicate.Allocation {
+	return predicate.Allocation(sql.FieldIn(FieldPreset, vs...))
+}
+
+// PresetNotIn applies the NotIn predicate on the "preset" field.
+func PresetNotIn(vs ...string) predicate.Allocation {
+	return predicate.Allocation(sql.FieldNotIn(FieldPreset, vs...))
+}
+
+// PresetGT applies the GT predicate on the "preset" field.
+func PresetGT(v string) predicate.Allocation {
+	return predicate.Allocation(sql.FieldGT(FieldPreset, v))
+}
+
+// PresetGTE applies the GTE predicate on the "preset" field.
+func PresetGTE(v string) predicate.Allocation {
+	return predicate.Allocation(sql.FieldGTE(FieldPreset, v))
+}
+
+// PresetLT applies the LT predicate on the "preset" field.
+func PresetLT(v string) predicate.Allocation {
+	return predicate.Allocation(sql.FieldLT(FieldPreset, v))
+}
+
+// PresetLTE applies the LTE predicate on the "preset" field.
+func PresetLTE(v string) predicate.Allocation {
+	return predicate.Allocation(sql.FieldLTE(FieldPreset, v))
+}
+
+// PresetContains applies the Contains predicate on the "preset" field.
+func PresetContains(v string) predicate.Allocation {
+	return predicate.Allocation(sql.FieldContains(FieldPreset, v))
+}
+
+// PresetHasPrefix applies the HasPrefix predicate on the "preset" field.
+func PresetHasPrefix(v string) predicate.Allocation {
+	return predicate.Allocation(sql.FieldHasPrefix(FieldPreset, v))
+}
+
+// PresetHasSuffix applies the HasSuffix predicate on the "preset" field.
+func PresetHasSuffix(v string) predicate.Allocation {
+	return predicate.Allocation(sql.FieldHasSuffix(FieldPreset, v))
+}
+
+// PresetEqualFold applies the EqualFold predicate on the "preset" field.
+func PresetEqualFold(v string) predicate.Allocation {
+	return predicate.Allocation(sql.FieldEqualFold(FieldPreset, v))
+}
+
+// PresetContainsFold applies the ContainsFold predicate on the "preset" field.
+func PresetContainsFold(v string) predicate.Allocation {
+	return predicate.Allocation(sql.FieldContainsFold(FieldPreset, v))
 }
 
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.

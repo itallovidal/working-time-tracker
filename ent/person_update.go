@@ -18,6 +18,7 @@ import (
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"entgo.io/ent/dialect/sql/sqljson"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 )
@@ -122,6 +123,24 @@ func (_u *PersonUpdate) SetNillableIsOwner(v *bool) *PersonUpdate {
 	if v != nil {
 		_u.SetIsOwner(*v)
 	}
+	return _u
+}
+
+// SetPermissions sets the "permissions" field.
+func (_u *PersonUpdate) SetPermissions(v []string) *PersonUpdate {
+	_u.mutation.SetPermissions(v)
+	return _u
+}
+
+// AppendPermissions appends value to the "permissions" field.
+func (_u *PersonUpdate) AppendPermissions(v []string) *PersonUpdate {
+	_u.mutation.AppendPermissions(v)
+	return _u
+}
+
+// ClearPermissions clears the value of the "permissions" field.
+func (_u *PersonUpdate) ClearPermissions() *PersonUpdate {
+	_u.mutation.ClearPermissions()
 	return _u
 }
 
@@ -453,6 +472,17 @@ func (_u *PersonUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.IsOwner(); ok {
 		_spec.SetField(person.FieldIsOwner, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.Permissions(); ok {
+		_spec.SetField(person.FieldPermissions, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedPermissions(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, person.FieldPermissions, value)
+		})
+	}
+	if _u.mutation.PermissionsCleared() {
+		_spec.ClearField(person.FieldPermissions, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.WeeklyHours(); ok {
 		_spec.SetField(person.FieldWeeklyHours, field.TypeInt, value)
@@ -872,6 +902,24 @@ func (_u *PersonUpdateOne) SetNillableIsOwner(v *bool) *PersonUpdateOne {
 	return _u
 }
 
+// SetPermissions sets the "permissions" field.
+func (_u *PersonUpdateOne) SetPermissions(v []string) *PersonUpdateOne {
+	_u.mutation.SetPermissions(v)
+	return _u
+}
+
+// AppendPermissions appends value to the "permissions" field.
+func (_u *PersonUpdateOne) AppendPermissions(v []string) *PersonUpdateOne {
+	_u.mutation.AppendPermissions(v)
+	return _u
+}
+
+// ClearPermissions clears the value of the "permissions" field.
+func (_u *PersonUpdateOne) ClearPermissions() *PersonUpdateOne {
+	_u.mutation.ClearPermissions()
+	return _u
+}
+
 // SetWeeklyHours sets the "weekly_hours" field.
 func (_u *PersonUpdateOne) SetWeeklyHours(v int) *PersonUpdateOne {
 	_u.mutation.ResetWeeklyHours()
@@ -1230,6 +1278,17 @@ func (_u *PersonUpdateOne) sqlSave(ctx context.Context) (_node *Person, err erro
 	}
 	if value, ok := _u.mutation.IsOwner(); ok {
 		_spec.SetField(person.FieldIsOwner, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.Permissions(); ok {
+		_spec.SetField(person.FieldPermissions, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedPermissions(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, person.FieldPermissions, value)
+		})
+	}
+	if _u.mutation.PermissionsCleared() {
+		_spec.ClearField(person.FieldPermissions, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.WeeklyHours(); ok {
 		_spec.SetField(person.FieldWeeklyHours, field.TypeInt, value)

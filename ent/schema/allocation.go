@@ -22,6 +22,11 @@ func (Allocation) Fields() []ent.Field {
 		field.UUID("project_id", uuid.UUID{}),
 		field.UUID("person_id", uuid.UUID{}),
 		field.Int("pay_rate_cents").NonNegative(),
+		// O que a pessoa pode fazer neste projeto, além do que todo colaborador faz: as
+		// permissões do catálogo (internal/domain/permission) e o nome do grupo de onde
+		// vieram, ou "custom" quando alguém mexeu numa avulsa.
+		field.Strings("permissions").Optional(),
+		field.String("preset").Default("member"),
 		field.Time("created_at").Default(time.Now).Immutable(),
 	}
 }

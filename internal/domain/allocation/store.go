@@ -48,6 +48,23 @@ func (s *Store) Set(projectID, personID uuid.UUID, payRateCents int) error {
 	return err
 }
 
+// SetPreset grava o grupo da pessoa no projeto e as permissões que ele dá. O vínculo
+// precisa existir.
+func (s *Store) SetPreset(projectID, personID uuid.UUID, preset string, permissions []string) error {
+	n, err := s.client.Allocation.Update().
+		Where(entalloc.ProjectIDEQ(projectID), entalloc.PersonIDEQ(personID)).
+		SetPreset(preset).
+		SetPermissions(permissions).
+		Save(context.Background())
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return database.ErrNotFound
+	}
+	return nil
+}
+
 func (s *Store) Get(projectID, personID uuid.UUID) (*Allocation, error) {
 	a, err := s.client.Allocation.Query().
 		Where(entalloc.ProjectIDEQ(projectID), entalloc.PersonIDEQ(personID)).
@@ -149,6 +166,8 @@ func toDomain(e *ent.Allocation) *Allocation {
 		ProjectID:    e.ProjectID,
 		PersonID:     e.PersonID,
 		PayRateCents: e.PayRateCents,
+		Preset:       e.Preset,
+		Permissions:  append([]string{}, e.Permissions...),
 		CreatedAt:    e.CreatedAt,
 	}
 	if p := e.Edges.Person; p != nil {

@@ -29,6 +29,8 @@ func fail(c *echo.Context, err error) error {
 		status = http.StatusUnauthorized
 	case errors.Is(err, ErrEmailInUse), errors.Is(err, ErrAccountExists):
 		status = http.StatusConflict
+	case errors.Is(err, ErrOwnerOnly):
+		status = http.StatusForbidden
 	case errors.Is(err, ErrInviteInvalid), errors.Is(err, database.ErrNotFound):
 		status = http.StatusNotFound
 	case errors.Is(err, ErrWeakPassword), errors.Is(err, ErrLongPassword),

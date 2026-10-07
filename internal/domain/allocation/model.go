@@ -28,5 +28,9 @@ type Allocation struct {
 	PersonID     uuid.UUID `json:"person_id"`
 	Person       *Person   `json:"person,omitempty"`
 	PayRateCents int       `json:"pay_rate_cents"`
-	CreatedAt    time.Time `json:"created_at"`
+	// Preset é o grupo de permissões da pessoa neste projeto, e Permissions, a lista que
+	// ele deu (ver o pacote permission).
+	Preset      string    `json:"preset"`
+	Permissions []string  `json:"permissions"`
+	CreatedAt   time.Time `json:"created_at"`
 }

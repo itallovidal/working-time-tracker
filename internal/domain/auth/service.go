@@ -142,6 +142,10 @@ func (s *Service) CreateInvite(actor *Identity, email, role string) (*Invite, st
 	if role != person.RoleAdmin && role != person.RoleMember {
 		return nil, "", person.ErrInvalidRole
 	}
+	// Quem convida para admin dá poder sobre a organização inteira: é do dono.
+	if role == person.RoleAdmin && !actor.IsOwner {
+		return nil, "", ErrOwnerOnly
+	}
 	var emailPtr *string
 	if e := person.NormalizeEmail(email); e != "" {
 		if !person.ValidEmail(e) {

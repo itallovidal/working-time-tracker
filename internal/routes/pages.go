@@ -4,6 +4,7 @@ import (
 	"github.com/labstack/echo/v5"
 
 	"working-time-tracker/internal/domain/auth"
+	"working-time-tracker/internal/domain/permission"
 	"working-time-tracker/internal/page"
 )
 
@@ -25,12 +26,14 @@ func RegisterPages(e *echo.Echo, p *page.Handler, m *auth.Middleware) {
 	org := m.RequireOrgPage(auth.KindOrganization, "orgId", p.NotFound)
 	g.GET("/orgs/:orgId", p.Org, org)
 	g.GET("/orgs/:orgId/about", p.About, org)
-	// A tela de edição e as outras abas da organização são só de admins.
+	// A tela de edição da organização é só de admins; as outras abas, de quem cuida do que
+	// elas mostram: pessoas, clientes e projetos.
 	admin := m.RequireAdminPage(p.NotFound)
+	orgCan := func(key string) echo.MiddlewareFunc { return m.RequireOrgPermissionPage(p.NotFound, key) }
 	g.GET("/orgs/:orgId/settings", p.OrgSettings, org, admin)
-	g.GET("/orgs/:orgId/people", p.People, org, admin)
-	g.GET("/orgs/:orgId/customers", p.Customers, org, admin)
-	g.GET("/orgs/:orgId/projects", p.OrgProjects, org, admin)
+	g.GET("/orgs/:orgId/people", p.People, org, orgCan(permission.PeopleManage))
+	g.GET("/orgs/:orgId/customers", p.Customers, org, orgCan(permission.CustomersManage))
+	g.GET("/orgs/:orgId/projects", p.OrgProjects, org, orgCan(permission.ProjectsCreate))
 
 	prj := m.RequireOrgPage(auth.KindProject, "projectId", p.NotFound)
 	g.GET("/projects/:projectId", p.Project, prj)
@@ -39,12 +42,14 @@ func RegisterPages(e *echo.Echo, p *page.Handler, m *auth.Middleware) {
 	// O Ponto foi para o Início do projeto; o endereço antigo continua levando para lá.
 	g.GET("/projects/:projectId/time-tracking", p.ToHome, prj)
 	g.GET("/projects/:projectId/collaborators", p.Collaborators, prj)
-	// A Gestão é a área do projeto só de admins: quem não é recebe o 404.
-	g.GET("/projects/:projectId/management", p.Management, prj, admin)
-	g.GET("/projects/:projectId/management/overview", p.Overview, prj, admin)
-	g.GET("/projects/:projectId/management/teams", p.Teams, prj, admin)
-	g.GET("/projects/:projectId/management/integrations", p.Integrations, prj, admin)
-	g.GET("/projects/:projectId/management/settings", p.ProjectSettings, prj, admin)
+	// A Gestão é a área do projeto de quem cuida dele: cada aba pede a permissão do que
+	// mostra, e quem não tem nenhuma recebe o 404.
+	can := func(keys ...string) echo.MiddlewareFunc { return m.RequireProjectPermissionPage(p.NotFound, keys...) }
+	g.GET("/projects/:projectId/management", p.Management, prj, can(permission.ProjectKeys...))
+	g.GET("/projects/:projectId/management/overview", p.Overview, prj, can(permission.BillingView))
+	g.GET("/projects/:projectId/management/teams", p.Teams, prj, can(permission.CollaboratorsManage, permission.TeamsManage, permission.RatesView, permission.RatesManage))
+	g.GET("/projects/:projectId/management/integrations", p.Integrations, prj, can(permission.IntegrationsManage))
+	g.GET("/projects/:projectId/management/settings", p.ProjectSettings, prj, can(permission.ProjectEdit, permission.BillingView, permission.BillingManage))
 	// Os caminhos de antes da Gestão continuam levando às mesmas abas.
 	g.GET("/projects/:projectId/teams", p.ToManagement("teams"), prj)
 	g.GET("/projects/:projectId/integrations", p.ToManagement("integrations"), prj)

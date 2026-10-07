@@ -9,7 +9,7 @@
        Editar projeto, aberto pelo botão Editar. */}}
   <div class="stack" x-cloak x-show="!loading && !errors.load">
     <div class="toolbar">
-      {{if .IsAdmin}}
+      {{if .CanDoAny "project.edit" "billing.manage"}}
       <p class="muted flex-1">{{.T "project_settings.intro_admin"}}</p>
       <button type="button" class="btn btn-secondary" @click="openEdit()">{{template "icon" "pen"}} {{.T "common.edit"}}</button>
       {{else}}
@@ -29,7 +29,7 @@
     </section>
 
     <section class="card">
-      <div class="card-head"><h2>{{if .IsAdmin}}{{.T "project_settings.billing_title"}}{{else}}{{.T "org.projects.customer"}}{{end}}</h2></div>
+      <div class="card-head"><h2>{{if .CanDo "billing.view"}}{{.T "project_settings.billing_title"}}{{else}}{{.T "org.projects.customer"}}{{end}}</h2></div>
       <dl class="facts">
         <div class="fact">
           <dt>{{.T "org.projects.customer"}}</dt>
@@ -39,24 +39,25 @@
           <dt>{{.T "project.fields.meeting"}}</dt>
           <dd :class="!current.customer_meeting_day && 'muted'" x-text="meeting()"></dd>
         </div>
-        {{if .IsAdmin}}
+        {{if .CanDo "billing.view"}}
         <div class="fact">
           <dt>{{.T "project_settings.bill_rate_fact"}}</dt>
           <dd class="num" :class="billRateCents === null && 'muted'" x-text="billRateCents === null ? WTT.notInformed : WTT.fmt.money(billRateCents)"></dd>
         </div>
         {{end}}
       </dl>
-      {{if .IsAdmin}}
+      {{if .CanDo "billing.view"}}
       <p class="muted small">{{.T "project_settings.bill_rate_note"}}</p>
       {{end}}
     </section>
   </div>
 
-  {{if .IsAdmin}}
+  {{if .CanDoAny "project.edit" "billing.manage"}}
   {{/* Editar projeto: nada vai para o servidor antes de Salvar, então Cancelar desfaz tudo.
        Os campos seguem a ordem do modal Novo projeto. */}}
   <template x-teleport="#modal-root">
     <form class="stack" x-show="$store.modal.name === 'project-edit'" @submit.prevent="save()">
+      {{if .CanDo "project.edit"}}
       <fieldset class="form-group">
         <legend>{{.T "project.groups.about"}}</legend>
         <div class="field">
@@ -68,9 +69,13 @@
           <textarea id="ps-description" x-model="draft.description" placeholder="{{.T "common.optional"}}"></textarea>
         </div>
       </fieldset>
+      {{end}}
+      {{if .CanDoAny "project.edit" "billing.manage"}}
       <fieldset class="form-group">
         <legend>{{.T "project.groups.billing"}}</legend>
+        {{if .CanDo "billing.manage"}}
         <div class="fields">
+          {{if .Can "customers.manage"}}
           <div class="field">
             <label for="ps-customer">{{.T "org.projects.customer"}}</label>
             <select id="ps-customer" x-model="draft.customer_id">
@@ -81,14 +86,20 @@
             </select>
             <span class="hint">{{.T "project_settings.customers_hint"}} <a href="/orgs/{{.OrgID}}/customers">{{.T "org.head.title"}} › {{.T "org.head.customers"}}</a>.</span>
           </div>
+          {{end}}
           <div class="field">
             <label for="ps-bill-rate" x-text="$t('project.fields.bill_rate', { unit: WTT.fmt.moneyUnit() })"></label>
             <input id="ps-bill-rate" type="text" inputmode="decimal" class="num" placeholder="{{.T "project_settings.rate_placeholder"}}" x-model="draft.rate">
             <span class="hint">{{.T "project_settings.bill_rate_hint"}}</span>
           </div>
         </div>
+        {{end}}
+        {{if .CanDo "project.edit"}}
         {{template "project_customer_meeting" .}}
+        {{end}}
       </fieldset>
+      {{end}}
+      {{if .CanDo "project.edit"}}
       <fieldset class="form-group">
         <legend>{{.T "project.groups.routine"}}</legend>
         <div class="field">
@@ -101,6 +112,7 @@
         </div>
         {{template "project_routine" .}}
       </fieldset>
+      {{end}}
       <p class="form-error" x-show="errors.save" x-text="errors.save" role="alert"></p>
       <p class="form-error" x-show="errors.delete" x-text="errors.delete" role="alert"></p>
       <div class="confirm" x-cloak x-show="confirmDelete">

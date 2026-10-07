@@ -346,6 +346,16 @@ func IsOwnerNEQ(v bool) predicate.Person {
 	return predicate.Person(sql.FieldNEQ(FieldIsOwner, v))
 }
 
+// PermissionsIsNil applies the IsNil predicate on the "permissions" field.
+func PermissionsIsNil() predicate.Person {
+	return predicate.Person(sql.FieldIsNull(FieldPermissions))
+}
+
+// PermissionsNotNil applies the NotNil predicate on the "permissions" field.
+func PermissionsNotNil() predicate.Person {
+	return predicate.Person(sql.FieldNotNull(FieldPermissions))
+}
+
 // WeeklyHoursEQ applies the EQ predicate on the "weekly_hours" field.
 func WeeklyHoursEQ(v int) predicate.Person {
 	return predicate.Person(sql.FieldEQ(FieldWeeklyHours, v))

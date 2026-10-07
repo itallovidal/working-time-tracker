@@ -17,7 +17,7 @@
   <a href="/projects/{{.Project.ID}}/overview" {{if eq .Tab "overview"}}aria-current="page"{{end}}>{{template "icon" "house"}} {{.T "project.head.home"}}</a>
   <a href="/projects/{{.Project.ID}}/tasks" {{if eq .Tab "tasks"}}aria-current="page"{{end}}>{{template "icon" "list-check"}} {{.T "project.head.tasks"}}</a>
   <a href="/projects/{{.Project.ID}}/collaborators" {{if eq .Tab "teams"}}aria-current="page"{{end}}>{{template "icon" "people-group"}} {{.T "project.head.teams"}}</a>
-  {{if .IsAdmin}}<a class="tabs-end" href="/projects/{{.Project.ID}}/management/overview">{{template "icon" "sliders"}} {{.T "project.head.management"}}</a>{{end}}
+  {{if .Access.Manages}}<a class="tabs-end" href="/projects/{{.Project.ID}}/management">{{template "icon" "sliders"}} {{.T "project.head.management"}}</a>{{end}}
   {{end}}
 </nav>
 {{end}}

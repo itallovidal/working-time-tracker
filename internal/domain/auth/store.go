@@ -240,6 +240,7 @@ func identityOf(p *ent.Person, org *ent.Organization) *Identity {
 		Email:          p.Email,
 		Role:           string(p.Role),
 		IsOwner:        p.IsOwner,
+		Permissions:    append([]string{}, p.Permissions...),
 		OrganizationID: p.OrganizationID,
 	}
 	if org != nil {

@@ -4,7 +4,7 @@
 
   <div class="toolbar">
     <p class="muted">{{.T "integrations.intro"}}</p>
-    {{if .IsAdmin}}
+    {{if .CanDo "integrations.manage"}}
     <button type="button" class="btn" @click="openCreate()">{{template "icon" "plus"}} {{.T "integrations.new"}}</button>
     {{end}}
   </div>
@@ -14,7 +14,7 @@
 
   <div class="empty" x-cloak x-show="!loading && !errors.load && items.length === 0">
     <strong>{{.T "integrations.none"}}</strong>
-    {{if .IsAdmin}}
+    {{if .CanDo "integrations.manage"}}
     <span>{{.T "integrations.none_admin"}}</span>
     {{else}}
     <span>{{.T "integrations.none_member"}}</span>
@@ -34,7 +34,7 @@
               <span class="badge" :class="it.enabled ? 'badge-ok' : ''" x-text="it.enabled ? $t('integrations.active') : $t('integrations.disabled')"></span>
             </div>
           </div>
-          {{if .IsAdmin}}
+          {{if .CanDo "integrations.manage"}}
           <button type="button" class="btn btn-ghost btn-sm btn-icon" title="{{.T "integrations.edit_title"}}"
                   :aria-label="$t('integrations.edit_label', { name: it.display_name })" @click="openEdit(it)">{{template "icon" "pen"}}</button>
           {{end}}
@@ -55,13 +55,13 @@
 
         <p class="alert alert-warn" x-cloak x-show="incomplete(it)">
           {{.T "integrations.incomplete"}}
-          {{if .IsAdmin}}{{.T "integrations.complete_admin"}}{{else}}{{.T "integrations.complete_member"}}{{end}}
+          {{if .CanDo "integrations.manage"}}{{.T "integrations.complete_admin"}}{{else}}{{.T "integrations.complete_member"}}{{end}}
         </p>
       </section>
     </template>
   </div>
 
-  {{if .IsAdmin}}
+  {{if .CanDo "integrations.manage"}}
   {{/* Criar e editar no mesmo modal. O corpo enviado é igual para todas as plataformas:
        nome, token e, em metadata, os campos que o tipo declara. */}}
   <template x-teleport="#modal-root">

@@ -773,6 +773,8 @@ errors:
   http_status: "O servidor respondeu com erro {{.status}}."
   unknown: "Algo deu errado. Tente de novo."
   allocation:
+    preset_above_yours: "o grupo dá uma permissão que você não tem"
+    invalid_preset: "grupo de permissões desconhecido"
     invalid_rate: "o valor por hora deve ficar entre 0 e 1.000.000,00"
     not_defined: "esta pessoa não tem valor definido neste projeto"
     own_rates_only: "você só pode ver os seus próprios valores"
@@ -781,6 +783,8 @@ errors:
   auth:
     account_exists: "já existe uma conta com este email"
     admin_only: "só admins podem fazer isso"
+    owner_only: "só o dono da organização pode fazer isso"
+    permission_required: "você não tem permissão para fazer isso"
     invalid_credentials: "email ou senha incorretos"
     invite_email_mismatch: "este convite foi feito para outro email"
     invite_invalid: "este convite não é válido: ele expirou, foi revogado ou já foi usado"
@@ -854,6 +858,8 @@ errors:
     name_required: "informe o nome"
     not_found: "organização não encontrada"
   person:
+    admin_has_all_permissions: "os admins já têm todas as permissões"
+    invalid_permission: "permissão da organização desconhecida"
     email_in_use: "este email já está em uso"
     email_required: "informe o email"
     invalid_email: "informe um email válido"

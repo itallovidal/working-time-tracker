@@ -13,6 +13,8 @@ var (
 	AllocationsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "pay_rate_cents", Type: field.TypeInt},
+		{Name: "permissions", Type: field.TypeJSON, Nullable: true},
+		{Name: "preset", Type: field.TypeString, Default: "member"},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "person_id", Type: field.TypeUUID},
 		{Name: "project_id", Type: field.TypeUUID},
@@ -25,13 +27,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "allocations_persons_allocations",
-				Columns:    []*schema.Column{AllocationsColumns[3]},
+				Columns:    []*schema.Column{AllocationsColumns[5]},
 				RefColumns: []*schema.Column{PersonsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "allocations_projects_allocations",
-				Columns:    []*schema.Column{AllocationsColumns[4]},
+				Columns:    []*schema.Column{AllocationsColumns[6]},
 				RefColumns: []*schema.Column{ProjectsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -40,7 +42,7 @@ var (
 			{
 				Name:    "allocation_project_id_person_id",
 				Unique:  true,
-				Columns: []*schema.Column{AllocationsColumns[4], AllocationsColumns[3]},
+				Columns: []*schema.Column{AllocationsColumns[6], AllocationsColumns[5]},
 			},
 		},
 	}
@@ -195,6 +197,7 @@ var (
 		{Name: "password_hash", Type: field.TypeString, Nullable: true},
 		{Name: "role", Type: field.TypeEnum, Enums: []string{"admin", "member"}, Default: "member"},
 		{Name: "is_owner", Type: field.TypeBool, Default: false},
+		{Name: "permissions", Type: field.TypeJSON, Nullable: true},
 		{Name: "weekly_hours", Type: field.TypeInt, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "organization_id", Type: field.TypeUUID},
@@ -207,7 +210,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "persons_organizations_persons",
-				Columns:    []*schema.Column{PersonsColumns[8]},
+				Columns:    []*schema.Column{PersonsColumns[9]},
 				RefColumns: []*schema.Column{OrganizationsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -221,7 +224,7 @@ var (
 			{
 				Name:    "one_owner_per_organization",
 				Unique:  true,
-				Columns: []*schema.Column{PersonsColumns[8]},
+				Columns: []*schema.Column{PersonsColumns[9]},
 				Annotation: &entsql.IndexAnnotation{
 					Where: "is_owner",
 				},

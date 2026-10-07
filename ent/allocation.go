@@ -3,6 +3,7 @@
 package ent
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -26,6 +27,10 @@ type Allocation struct {
 	PersonID uuid.UUID `json:"person_id,omitempty"`
 	// PayRateCents holds the value of the "pay_rate_cents" field.
 	PayRateCents int `json:"pay_rate_cents,omitempty"`
+	// Permissions holds the value of the "permissions" field.
+	Permissions []string `json:"permissions,omitempty"`
+	// Preset holds the value of the "preset" field.
+	Preset string `json:"preset,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -72,8 +77,12 @@ func (*Allocation) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
+		case allocation.FieldPermissions:
+			values[i] = new([]byte)
 		case allocation.FieldPayRateCents:
 			values[i] = new(sql.NullInt64)
+		case allocation.FieldPreset:
+			values[i] = new(sql.NullString)
 		case allocation.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
 		case allocation.FieldID, allocation.FieldProjectID, allocation.FieldPersonID:
@@ -116,6 +125,20 @@ func (_m *Allocation) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field pay_rate_cents", values[i])
 			} else if value.Valid {
 				_m.PayRateCents = int(value.Int64)
+			}
+		case allocation.FieldPermissions:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field permissions", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.Permissions); err != nil {
+					return fmt.Errorf("unmarshal field permissions: %w", err)
+				}
+			}
+		case allocation.FieldPreset:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field preset", values[i])
+			} else if value.Valid {
+				_m.Preset = value.String
 			}
 		case allocation.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -177,6 +200,12 @@ func (_m *Allocation) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("pay_rate_cents=")
 	builder.WriteString(fmt.Sprintf("%v", _m.PayRateCents))
+	builder.WriteString(", ")
+	builder.WriteString("permissions=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Permissions))
+	builder.WriteString(", ")
+	builder.WriteString("preset=")
+	builder.WriteString(_m.Preset)
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))

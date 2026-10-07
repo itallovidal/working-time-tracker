@@ -8,12 +8,25 @@ import (
 	"working-time-tracker/internal/apperr"
 
 	"github.com/labstack/echo/v5"
+
+	"working-time-tracker/internal/domain/permission"
 )
 
 const (
-	identityKey = "auth.identity"
-	tokenKey    = "auth.token"
+	identityKey   = "auth.identity"
+	tokenKey      = "auth.token"
+	projectSetKey = "auth.project_set"
 )
+
+// ProjectPermissions devolve o que a pessoa logada pode fazer no projeto da rota: tudo,
+// para os admins, e o que a alocação dela libera, para os outros. Quem monta isso é o
+// RequireOrg da rota; numa rota sem projeto, só os admins têm algo.
+func ProjectPermissions(c *echo.Context) permission.Set {
+	if set, ok := c.Get(projectSetKey).(permission.Set); ok {
+		return set
+	}
+	return permission.Set{All: CurrentPerson(c).IsAdmin()}
+}
 
 // CurrentPerson devolve a pessoa logada, ou nil quando a requisição não tem sessão.
 func CurrentPerson(c *echo.Context) *Identity {
@@ -101,6 +114,66 @@ func (m *Middleware) RequireAdminPage(notFound echo.HandlerFunc) echo.Middleware
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c *echo.Context) error {
 			if !CurrentPerson(c).IsAdmin() {
+				return notFound(c)
+			}
+			return next(c)
+		}
+	}
+}
+
+// RequireOwner libera a rota só para o dono da organização.
+func (m *Middleware) RequireOwner(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c *echo.Context) error {
+		if me := CurrentPerson(c); me == nil || !me.IsOwner {
+			return apperr.Respond(c, http.StatusForbidden, ErrOwnerOnly)
+		}
+		return next(c)
+	}
+}
+
+// RequireOrgPermission libera a rota para quem tem a permissão da organização: os
+// admins e quem o dono liberou.
+func (m *Middleware) RequireOrgPermission(key string) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c *echo.Context) error {
+			if !CurrentPerson(c).Can(key) {
+				return apperr.Respond(c, http.StatusForbidden, ErrPermissionRequired)
+			}
+			return next(c)
+		}
+	}
+}
+
+// RequireOrgPermissionPage faz a mesma checagem para páginas, com a resposta de 404 dada.
+func (m *Middleware) RequireOrgPermissionPage(notFound echo.HandlerFunc, key string) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c *echo.Context) error {
+			if !CurrentPerson(c).Can(key) {
+				return notFound(c)
+			}
+			return next(c)
+		}
+	}
+}
+
+// RequireProjectPermission libera a rota para quem tem alguma das permissões no projeto
+// dela. Vem depois do RequireOrg do projeto, que descobre o que a pessoa pode nele.
+func (m *Middleware) RequireProjectPermission(keys ...string) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c *echo.Context) error {
+			if !ProjectPermissions(c).HasAny(keys...) {
+				return apperr.Respond(c, http.StatusForbidden, ErrPermissionRequired)
+			}
+			return next(c)
+		}
+	}
+}
+
+// RequireProjectPermissionPage faz a mesma checagem para páginas, com a resposta de 404 dada.
+func (m *Middleware) RequireProjectPermissionPage(notFound echo.HandlerFunc, keys ...string) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c *echo.Context) error {
+			if !ProjectPermissions(c).HasAny(keys...) {
 				return notFound(c)
 			}
 			return next(c)

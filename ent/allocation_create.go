@@ -41,6 +41,26 @@ func (_c *AllocationCreate) SetPayRateCents(v int) *AllocationCreate {
 	return _c
 }
 
+// SetPermissions sets the "permissions" field.
+func (_c *AllocationCreate) SetPermissions(v []string) *AllocationCreate {
+	_c.mutation.SetPermissions(v)
+	return _c
+}
+
+// SetPreset sets the "preset" field.
+func (_c *AllocationCreate) SetPreset(v string) *AllocationCreate {
+	_c.mutation.SetPreset(v)
+	return _c
+}
+
+// SetNillablePreset sets the "preset" field if the given value is not nil.
+func (_c *AllocationCreate) SetNillablePreset(v *string) *AllocationCreate {
+	if v != nil {
+		_c.SetPreset(*v)
+	}
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *AllocationCreate) SetCreatedAt(v time.Time) *AllocationCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -114,6 +134,10 @@ func (_c *AllocationCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (_c *AllocationCreate) defaults() {
+	if _, ok := _c.mutation.Preset(); !ok {
+		v := allocation.DefaultPreset
+		_c.mutation.SetPreset(v)
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := allocation.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
@@ -139,6 +163,9 @@ func (_c *AllocationCreate) check() error {
 		if err := allocation.PayRateCentsValidator(v); err != nil {
 			return &ValidationError{Name: "pay_rate_cents", err: fmt.Errorf(`ent: validator failed for field "Allocation.pay_rate_cents": %w`, err)}
 		}
+	}
+	if _, ok := _c.mutation.Preset(); !ok {
+		return &ValidationError{Name: "preset", err: errors.New(`ent: missing required field "Allocation.preset"`)}
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "Allocation.created_at"`)}
@@ -187,6 +214,14 @@ func (_c *AllocationCreate) createSpec() (*Allocation, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.PayRateCents(); ok {
 		_spec.SetField(allocation.FieldPayRateCents, field.TypeInt, value)
 		_node.PayRateCents = value
+	}
+	if value, ok := _c.mutation.Permissions(); ok {
+		_spec.SetField(allocation.FieldPermissions, field.TypeJSON, value)
+		_node.Permissions = value
+	}
+	if value, ok := _c.mutation.Preset(); ok {
+		_spec.SetField(allocation.FieldPreset, field.TypeString, value)
+		_node.Preset = value
 	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(allocation.FieldCreatedAt, field.TypeTime, value)

@@ -133,6 +133,22 @@ func (s *Store) SetRole(id, role string) (*Person, error) {
 	return toDomainPerson(p), nil
 }
 
+// SetPermissions grava as permissões da organização da pessoa.
+func (s *Store) SetPermissions(id string, permissions []string) (*Person, error) {
+	uid, err := uuid.Parse(id)
+	if err != nil {
+		return nil, database.ErrNotFound
+	}
+	p, err := s.client.Person.UpdateOneID(uid).SetPermissions(permissions).Save(context.Background())
+	if ent.IsNotFound(err) {
+		return nil, database.ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return toDomainPerson(p), nil
+}
+
 // SetWeeklyHours grava a jornada semanal da pessoa; nil apaga.
 func (s *Store) SetWeeklyHours(id string, hours *int) (*Person, error) {
 	uid, err := uuid.Parse(id)
@@ -177,6 +193,7 @@ func toDomainPerson(e *ent.Person) *Person {
 		OrganizationID: e.OrganizationID,
 		Role:           string(e.Role),
 		IsOwner:        e.IsOwner,
+		Permissions:    append([]string{}, e.Permissions...),
 		WeeklyHours:    e.WeeklyHours,
 		CreatedAt:      e.CreatedAt,
 	}

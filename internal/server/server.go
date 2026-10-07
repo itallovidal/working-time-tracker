@@ -17,6 +17,7 @@ import (
 	"working-time-tracker/internal/domain/integration"
 	"working-time-tracker/internal/domain/organization"
 	"working-time-tracker/internal/domain/overview"
+	"working-time-tracker/internal/domain/permission"
 	"working-time-tracker/internal/domain/person"
 	"working-time-tracker/internal/domain/project"
 	"working-time-tracker/internal/domain/task"
@@ -80,6 +81,7 @@ func New(client *ent.Client, opts Options) (*echo.Echo, error) {
 		Organization: organization.NewHandler(orgSvc),
 		Customer:     customer.NewHandler(customerSvc),
 		Person:       person.NewHandler(personSvc),
+		Permission:   permission.NewHandler(),
 		Project:      project.NewHandler(projectSvc, allocationSvc),
 		Team:         team.NewHandler(teamSvc, membershipSvc),
 		Allocation:   allocation.NewHandler(allocationSvc),

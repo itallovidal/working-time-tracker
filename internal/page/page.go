@@ -5,6 +5,7 @@ package page
 
 import (
 	"net/http"
+	"slices"
 	"strings"
 	"unicode"
 
@@ -12,6 +13,7 @@ import (
 
 	"working-time-tracker/internal/domain/auth"
 	"working-time-tracker/internal/domain/organization"
+	"working-time-tracker/internal/domain/permission"
 	"working-time-tracker/internal/i18n"
 )
 
@@ -37,6 +39,8 @@ type Data struct {
 	Script      string // página em /static/pages/<Script>.js com os componentes Alpine
 	Markdown    bool   // a página mostra ou escreve Markdown: carrega o marked e o DOMPurify (ligado em prepare)
 	Props       map[string]any
+	// Access é o que a pessoa pode fazer no projeto da página (tudo, para os admins).
+	Access permission.Set
 
 	Lang string // idioma da requisição: pt-BR ou en
 	Path string // caminho e query da página, para o toggle de idioma voltar para ela
@@ -79,9 +83,28 @@ func (d Data) I18nHash() string {
 	return d.cat.Hash(d.Lang)
 }
 
+// Granted lista as permissões que quem olha tem na página, para o JavaScript esconder o
+// que não pode usar: as do projeto da página e as da organização.
+func (d Data) Granted() []string {
+	out := []string{}
+	if d.Project != nil {
+		for _, k := range permission.ProjectKeys {
+			if d.Access.Has(k) {
+				out = append(out, k)
+			}
+		}
+	}
+	for _, k := range permission.OrganizationKeys {
+		if d.Me.Can(k) {
+			out = append(out, k)
+		}
+	}
+	return out
+}
+
 // Boot vira window.BOOT na página: os dados iniciais que o JavaScript precisa.
 func (d Data) Boot() map[string]any {
-	boot := map[string]any{"me": d.Me, "lang": d.Lang}
+	boot := map[string]any{"me": d.Me, "lang": d.Lang, "can": d.Granted()}
 	if d.Project != nil {
 		boot["project"] = d.Project
 	}
@@ -98,14 +121,32 @@ func (d Data) OrgID() string {
 	return d.Me.OrganizationID.String()
 }
 
-// CanManage diz se a página mostra as ferramentas de admin: só na Gestão, e só
-// para quem é admin. Fora dela, a mesma tela sai só para ler, para todos.
-func (d Data) CanManage() bool {
-	return d.Management && d.IsAdmin()
-}
-
 func (d Data) IsAdmin() bool {
 	return d.Me.IsAdmin()
+}
+
+// Can diz se quem olha pode fazer o que a permissão libera: as do projeto, no projeto da
+// página, e as da organização, em qualquer uma.
+func (d Data) Can(key string) bool {
+	if slices.Contains(permission.OrganizationKeys, key) {
+		return d.Me.Can(key)
+	}
+	return d.Access.Has(key)
+}
+
+// CanDo é Can só dentro da Gestão: fora dela as telas são de leitura, para todos.
+func (d Data) CanDo(key string) bool {
+	return d.Management && d.Can(key)
+}
+
+// CanDoAny diz se alguma das permissões vale na Gestão.
+func (d Data) CanDoAny(keys ...string) bool {
+	for _, k := range keys {
+		if d.CanDo(k) {
+			return true
+		}
+	}
+	return false
 }
 
 // IsOwner diz se quem olha é o dono da organização.
@@ -148,6 +189,7 @@ func (h *Handler) render(c *echo.Context, name string, d Data) error {
 // o título traduzido.
 func (h *Handler) prepare(c *echo.Context, d Data) Data {
 	d.Me = auth.CurrentPerson(c)
+	d.Access = auth.ProjectPermissions(c)
 	d.Lang = h.deps.I18n.Lang(c)
 	d.Path = c.Request().URL.RequestURI()
 	d.cat = h.deps.I18n

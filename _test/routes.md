@@ -9,7 +9,7 @@ Todas as rotas falam JSON. Erros sempre vêm como `{"error": {"code": "dominio.m
 - O login e o signup devolvem um cookie `wtt_session` (HttpOnly, SameSite=Lax, válido por 7 dias). Clientes HTTP como o Insomnia guardam o cookie sozinhos: faça o login uma vez e as próximas chamadas já vão autenticadas.
 - Tudo fora de `/api/auth/*` e `/healthcheck` exige a sessão. Sem ela, a resposta é **401**.
 - Cada pessoa pertence a uma organização. Um recurso de outra organização responde **404**, como se não existisse.
-- Rotas marcadas como **admin** respondem **403** para membros.
+- Rotas marcadas como **admin** respondem **403** para membros. As marcadas com uma permissão (`project.edit`, `billing.view`…) ou **dono** respondem **403** a quem não a tem: admins têm todas, e o dono tem também as que são só dele. A lista está em [`_docs/permissions.md`](../_docs/permissions.md).
 - `POST`, `PUT` e `PATCH` precisam de `Content-Type: application/json`. Outro formato responde **415**, o que também protege contra CSRF.
 - Signup, login e convites têm limite de tentativas por IP. Acima dele, a resposta é **429**.
 
@@ -109,12 +109,12 @@ Se o convite foi criado com email, só esse email consegue aceitar. Um convite v
 |---|---|---|---|
 | GET | `/api/orgs/:orgId` | logado | Detalhes da organização |
 | PATCH | `/api/orgs/:orgId` | admin | Altera o nome e o perfil. Veja os campos abaixo |
-| DELETE | `/api/orgs/:orgId` | admin | Exclui a organização com as pessoas e os convites. Falha se ainda houver projetos |
+| DELETE | `/api/orgs/:orgId` | dono | Exclui a organização com as pessoas e os convites. Falha se ainda houver projetos |
 | GET | `/api/orgs/:orgId/persons` | logado | Pessoas da organização |
-| POST | `/api/orgs/:orgId/projects` | admin | Cria um projeto |
+| POST | `/api/orgs/:orgId/projects` | `projects.create` | Cria um projeto |
 | GET | `/api/orgs/:orgId/projects` | logado | Projetos da organização |
-| POST | `/api/orgs/:orgId/customers` | admin | Cria um cliente |
-| GET | `/api/orgs/:orgId/customers` | admin | Clientes da organização, em ordem alfabética |
+| POST | `/api/orgs/:orgId/customers` | `customers.manage` | Cria um cliente |
+| GET | `/api/orgs/:orgId/customers` | `customers.manage` | Clientes da organização, em ordem alfabética |
 
 A organização é criada pelo signup, e o `organization_id` vem no `/api/auth/me`, junto com `organization_currency`.
 
@@ -157,9 +157,9 @@ Content-Type: application/json
 
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
-| POST | `/api/orgs/:orgId/invites` | admin | Gera um link de convite |
-| GET | `/api/orgs/:orgId/invites` | admin | Convites ainda válidos |
-| DELETE | `/api/invites/:inviteId` | admin | Revoga um convite |
+| POST | `/api/orgs/:orgId/invites` | `people.manage` | Gera um link de convite |
+| GET | `/api/orgs/:orgId/invites` | `people.manage` | Convites ainda válidos |
+| DELETE | `/api/invites/:inviteId` | `people.manage` | Revoga um convite |
 
 ```http
 POST /api/orgs/:orgId/invites
@@ -173,7 +173,7 @@ Content-Type: application/json
 
 ## Clientes
 
-Quem contrata a organização. Todas as rotas são de **admin**.
+Quem contrata a organização. Todas as rotas pedem `customers.manage` (admins têm).
 
 | Método | Rota | Descrição |
 |---|---|---|
@@ -205,11 +205,13 @@ Só `name` é obrigatório. `document` é o CNPJ, com ou sem máscara: os dígit
 |---|---|---|---|
 | GET | `/api/persons/:personId` | logado | Detalhes da pessoa |
 | PATCH | `/api/persons/:personId` | a própria pessoa ou admin | Altera nome e email |
-| PATCH | `/api/persons/:personId/role` | admin | Muda o papel: `{"role": "admin"}` ou `{"role": "member"}` |
-| PATCH | `/api/persons/:personId/weekly-hours` | admin | Define a jornada semanal: `{"weekly_hours": 40}` |
+| PATCH | `/api/persons/:personId/role` | dono | Muda o papel: `{"role": "admin"}` ou `{"role": "member"}` |
+| PATCH | `/api/persons/:personId/permissions` | dono | Define as permissões da organização de quem não é admin: `{"permissions": ["projects.create", "customers.manage"]}`. Admin recusa (`400 person.admin_has_all_permissions`), e uma chave que não é da organização também (`400 person.invalid_permission`). Repetidas saem, e a ordem é a do catálogo |
+| GET | `/api/permissions` | logado | O catálogo: `project` e `organization` (as chaves, na ordem das telas) e `presets` (os grupos do projeto, cada um com `id` e `permissions`) |
+| PATCH | `/api/persons/:personId/weekly-hours` | `people.manage` | Define a jornada semanal: `{"weekly_hours": 40}` |
 | GET | `/api/persons/:personId/allocations` | a própria pessoa ou admin | Quanto a pessoa recebe por hora em cada projeto |
 
-A organização nunca fica sem admin: rebaixar o último admin responde `400`. A pessoa traz `is_owner`: o dono da organização é quem a criou (o signup), é um só por organização e é sempre admin, então rebaixá-lo responde `400 person.owner_is_admin`, mesmo com outros admins. Quem entra por convite nunca é o dono. Pessoas entram na organização pelo signup ou por convite.
+A pessoa traz `permissions`, as da organização que o dono liberou (vazio nos admins, que têm todas), e `/api/auth/me` traz as mesmas. As permissões estão em [`_docs/permissions.md`](../_docs/permissions.md). A organização nunca fica sem admin: rebaixar o último admin responde `400`. A pessoa traz `is_owner`: o dono da organização é quem a criou (o signup), é um só por organização e é sempre admin, então rebaixá-lo responde `400 person.owner_is_admin`, mesmo com outros admins. Quem entra por convite nunca é o dono. Pessoas entram na organização pelo signup ou por convite.
 
 A pessoa traz `weekly_hours`, a jornada semanal combinada com ela, em horas: vale para a organização toda, e não por projeto. Vai de 1 a 168 e vem `null` enquanto nenhum admin informou. Só um admin altera, e `0` ou `null` apagam; o `PATCH` de nome e email não mexe nela. Todos da organização leem.
 
@@ -220,9 +222,9 @@ A pessoa traz `weekly_hours`, a jornada semanal combinada com ela, em horas: val
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
 | GET | `/api/projects/:projectId` | logado | Detalhes do projeto |
-| PATCH | `/api/projects/:projectId` | admin | Altera o projeto |
-| DELETE | `/api/projects/:projectId` | admin | Exclui o projeto com times, tarefas, sessões e integrações |
-| GET | `/api/projects/:projectId/overview` | admin | O projeto em números: pessoas, times, horas, custo, receita, tempo de projeto, tarefas e integrações. Veja [Visão geral](#visão-geral) |
+| PATCH | `/api/projects/:projectId` | `project.edit` | Altera o projeto |
+| DELETE | `/api/projects/:projectId` | `project.edit` | Exclui o projeto com times, tarefas, sessões e integrações |
+| GET | `/api/projects/:projectId/overview` | `billing.view` | O projeto em números: pessoas, times, horas, custo, receita, tempo de projeto, tarefas e integrações. Veja [Visão geral](#visão-geral) |
 | GET | `/api/projects/:projectId/members` | logado | Pessoas que estão no projeto (com valor por hora ou em algum time), sem repetir: são as que podem ser responsáveis por tarefas |
 
 ```http
@@ -256,8 +258,8 @@ O projeto traz `customer` (`{"id", "name"}` ou `null`) para qualquer membro. O v
 
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
-| GET | `/api/projects/:projectId/billing` | admin | Cliente e valor que ele paga por hora |
-| PUT | `/api/projects/:projectId/billing` | admin | Substitui os dois. O que vier `null` é apagado |
+| GET | `/api/projects/:projectId/billing` | `billing.view` | Cliente e valor que ele paga por hora |
+| PUT | `/api/projects/:projectId/billing` | `billing.manage` | Substitui os dois. O que vier `null` é apagado |
 
 ```http
 PUT /api/projects/:projectId/billing
@@ -273,10 +275,12 @@ O vínculo de uma pessoa com o projeto e quanto ela recebe por hora nele. Há um
 
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
-| GET | `/api/projects/:projectId/allocations` | logado | Um admin recebe todos os valores; um membro recebe só o dele, ou `[]` |
-| PUT | `/api/projects/:projectId/allocations/:personId` | admin | Põe a pessoa no projeto com o valor dela, ou troca o valor de quem já está: `{"pay_rate_cents": 2000}` |
+| GET | `/api/projects/:projectId/allocations` | logado | Quem vê o valor dos outros (`rates.view`, `rates.manage` e os admins) recebe todos; um membro recebe só o dele, ou `[]`. Cada vínculo traz `preset` e `permissions` |
+| PUT | `/api/projects/:projectId/allocations/:personId` | `collaborators.manage` ou `rates.manage` | Põe a pessoa no projeto com o valor dela, ou troca o valor de quem já está: `{"pay_rate_cents": 2000}` |
 
-`pay_rate_cents` é obrigatório e vai de `0` a `100000000`. Zero vale: é alguém que trabalha no projeto sem receber por hora. A pessoa precisa ser da mesma organização do projeto.
+`pay_rate_cents` vai de `0` a `100000000` e é obrigatório para quem entra no projeto. Zero vale: é alguém que trabalha no projeto sem receber por hora. A pessoa precisa ser da mesma organização do projeto. Para o dono da organização o valor gravado é sempre `0`.
+
+O corpo aceita também `preset`, o grupo de permissões da pessoa no projeto: `member` (o padrão de quem entra), `manager`, `finance` ou `admin` (outro valor é `400 allocation.invalid_preset`). Pode vir sozinho, para trocar o grupo de quem já está no projeto: `{"preset": "manager"}`. Cada mudança pede a sua permissão: pôr alguém ou trocar o grupo, `collaborators.manage`; trocar o valor, `rates.manage` (`403 auth.permission_required`). Quem dá um grupo precisa ter todas as permissões dele (`403 allocation.preset_above_yours`). Sem valor e sem grupo, `400 allocation.rate_required`.
 
 Não há rota para apagar só o valor: a pessoa ficaria no projeto sem ele. Para tirá-la do projeto, use o `DELETE` de `/collaborators/:personId`, abaixo.
 
@@ -287,7 +291,7 @@ Quem está no projeto. Uma pessoa é colaboradora quando tem valor por hora nele
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
 | GET | `/api/projects/:projectId/collaborators` | logado | Colaboradores do projeto, por nome, com os times e o valor de cada um |
-| DELETE | `/api/projects/:projectId/collaborators/:personId` | admin | Tira a pessoa do projeto: apaga o valor e a tira de todos os times dele |
+| DELETE | `/api/projects/:projectId/collaborators/:personId` | `collaborators.manage` | Tira a pessoa do projeto: apaga o valor e a tira de todos os times dele |
 
 ```json
 [
@@ -316,7 +320,7 @@ Tudo o que a aba Visão geral mostra, numa resposta só. É só de admins, porqu
 
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
-| GET | `/api/projects/:projectId/overview` | admin | Pessoas, times, horas, custo, receita e margem, tempo de projeto, tarefas, integrações e as horas de cada pessoa |
+| GET | `/api/projects/:projectId/overview` | `billing.view` | Pessoas, times, horas, custo, receita e margem, tempo de projeto, tarefas, integrações e as horas de cada pessoa |
 
 ```json
 {
@@ -378,13 +382,13 @@ Tudo o que a aba Visão geral mostra, numa resposta só. É só de admins, porqu
 
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
-| POST | `/api/projects/:projectId/teams` | admin | Cria um time: `{"name": "Backend"}` |
+| POST | `/api/projects/:projectId/teams` | `teams.manage` | Cria um time: `{"name": "Backend"}` |
 | GET | `/api/projects/:projectId/teams` | logado | Times do projeto |
 | GET | `/api/teams/:teamId` | logado | Detalhes do time |
-| PATCH | `/api/teams/:teamId` | admin | Renomeia |
-| DELETE | `/api/teams/:teamId` | admin | Exclui o time e os vínculos dos membros |
-| POST | `/api/teams/:teamId/members` | admin | Adiciona um membro que já está no projeto: `{"person_id": "…"}` |
-| DELETE | `/api/teams/:teamId/members` | admin | Remove um membro: `{"person_id": "…"}` |
+| PATCH | `/api/teams/:teamId` | `teams.manage` | Renomeia |
+| DELETE | `/api/teams/:teamId` | `teams.manage` | Exclui o time e os vínculos dos membros |
+| POST | `/api/teams/:teamId/members` | `teams.manage` | Adiciona um membro que já está no projeto: `{"person_id": "…"}` |
+| DELETE | `/api/teams/:teamId/members` | `teams.manage` | Remove um membro: `{"person_id": "…"}` |
 | GET | `/api/teams/:teamId/members` | logado | Membros do time |
 
 A pessoa precisa ser da mesma organização do projeto e já estar nele, com valor por hora (`PUT /api/projects/:projectId/allocations/:personId`). Sem isso o `POST` de membro responde `400`.
@@ -398,9 +402,9 @@ A pessoa precisa ser da mesma organização do projeto e já estar nele, com val
 | POST | `/api/projects/:projectId/tasks` | logado | Cria uma tarefa |
 | GET | `/api/projects/:projectId/tasks` | logado | Tarefas do projeto. Filtros: `?q=`, `?assignee_id=`, `?deadline_to=`, `?priority=` e `?label_id=`; com `?page=`, uma página por vez |
 | GET | `/api/projects/:projectId/labels` | logado | Etiquetas do projeto, em ordem alfabética |
-| POST | `/api/projects/:projectId/labels` | admin | Cria uma etiqueta: `{"name": "bug"}` |
-| PATCH | `/api/projects/:projectId/labels/:labelId` | admin | Renomeia: `{"name": "defeito"}` |
-| DELETE | `/api/projects/:projectId/labels/:labelId` | admin | Exclui a etiqueta; as tarefas só a perdem |
+| POST | `/api/projects/:projectId/labels` | `labels.manage` | Cria uma etiqueta: `{"name": "bug"}` |
+| PATCH | `/api/projects/:projectId/labels/:labelId` | `labels.manage` | Renomeia: `{"name": "defeito"}` |
+| DELETE | `/api/projects/:projectId/labels/:labelId` | `labels.manage` | Exclui a etiqueta; as tarefas só a perdem |
 | GET | `/api/tasks/:taskId` | logado | Detalhes da tarefa |
 | PATCH | `/api/tasks/:taskId` | logado | Altera a tarefa |
 | DELETE | `/api/tasks/:taskId` | logado | Exclui a tarefa e as sessões dela |
@@ -513,11 +517,11 @@ Na lista de tarefas e no detalhe, a tarefa vinculada traz `external_integration`
 
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
-| POST | `/api/projects/:projectId/integrations` | admin | Cria e valida a conexão na plataforma |
+| POST | `/api/projects/:projectId/integrations` | `integrations.manage` | Cria e valida a conexão na plataforma |
 | GET | `/api/projects/:projectId/integrations` | logado | Integrações do projeto |
 | GET | `/api/integrations/:integrationId` | logado | Detalhes |
-| PATCH | `/api/integrations/:integrationId` | admin | Altera nome, token, `metadata` ou `enabled` |
-| DELETE | `/api/integrations/:integrationId` | admin | Exclui. As tarefas vinculadas perdem o vínculo |
+| PATCH | `/api/integrations/:integrationId` | `integrations.manage` | Altera nome, token, `metadata` ou `enabled` |
+| DELETE | `/api/integrations/:integrationId` | `integrations.manage` | Exclui. As tarefas vinculadas perdem o vínculo |
 
 O corpo é o mesmo para todas as plataformas. O que é comum fica no primeiro nível, e os campos próprios de cada uma vão em `metadata`:
 
