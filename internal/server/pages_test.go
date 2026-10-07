@@ -781,6 +781,21 @@ func TestPages_ProjectIntegrationsTab(t *testing.T) {
 	if all, inTypes := strings.Count(detail, "Número da issue"), strings.Count(detail, `"item_label":"Número da issue"`); all != inTypes {
 		t.Errorf("the task page has the issue label %d time(s) outside the integration types", all-inTypes)
 	}
+	// A página da tarefa só mostra: o formulário de edição fica num modal, aberto pelo lápis.
+	for _, want := range []string{
+		`x-show="$store.modal.name === 'task-edit'"`, `aria-label="Editar tarefa"`, `@click="openEdit()"`, `id="td-name"`, "Voltar ao quadro",
+	} {
+		if !strings.Contains(detail, want) {
+			t.Errorf("the task page does not contain %q", want)
+		}
+	}
+	if at, modal := strings.Index(detail, `id="td-name"`), strings.Index(detail, `x-show="$store.modal.name === 'task-edit'"`); at < modal {
+		t.Error("the task name field is on the page, outside the edit modal")
+	}
+	// O quadro leva à página da tarefa em vez de iniciar o ponto.
+	if board := do(e, "GET", "/projects/"+projectID+"/tasks", "", member.session).Body.String(); !strings.Contains(board, `:href="'/tasks/' + t.id">Detalhes`) || strings.Contains(board, `@click="start(t)"`) {
+		t.Error("the board row does not link to the task page, or still has a Start button")
+	}
 	if tasks := do(e, "GET", "/projects/"+projectID+"/tasks", "", member.session).Body.String(); !strings.Contains(tasks, types[0]) {
 		t.Error("the tasks tab does not get the integration types for the linked item label")
 	}

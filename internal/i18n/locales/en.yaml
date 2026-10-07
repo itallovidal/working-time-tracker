@@ -311,7 +311,8 @@ tasks:
   col_assignee: Assignee
   col_deadline: Deadline
   col_external: External item
-  col_clock: Clock
+  col_details: Details
+  details: Details
   running: In progress
   start: Start
   pager: Task list pages
@@ -338,7 +339,10 @@ tasks:
 
 task_detail:
   loading: Loading the task…
-  card: Task
+  edit_title: Edit task
+  back: Back to the board
+  no_description: This task has no description.
+  delete_confirm: Delete the task? The time tracked on it is deleted too.
   time_title: Time tracked
   no_time: Nobody has tracked time on this task yet.
   in_progress: "· in progress"

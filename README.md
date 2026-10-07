@@ -97,7 +97,7 @@ A interface segue a Decision 8 de `_docs/design.md`. O servidor renderiza a casc
 | `/projects/:projectId/management` | A raiz da Gestão (só admins): leva para a Visão geral dela |
 | `/projects/:projectId/management/overview` | Gestão, Visão geral: pessoas, times, horas, receita, custo e margem, tempo de projeto, integrações, atividade recente, tarefas atrasadas e a lista de sessões de todos, com filtros de pessoa, data e tarefa, totais com custo, receita e margem, e dez por página. Os caminhos antigos `/teams`, `/integrations` e `/settings` redirecionam para a Gestão |
 | `/projects/:projectId/tasks` | Quadro de tarefas, com busca, filtros, paginação e início de ponto em um clique |
-| `/tasks/:taskId` | Edição da tarefa, vínculo com issue e tempo registrado |
+| `/tasks/:taskId` | A página da tarefa: nome, descrição, responsável, prazo, tempo registrado e o item externo vinculado, só para ler. O botão Iniciar e o lápis, que abre o modal Editar tarefa (com o Excluir tarefa), ficam no cartão. O quadro de tarefas leva a ela pelo botão Detalhes |
 | `/projects/:projectId/time-tracking` | Ponto: o cronômetro e as suas tarefas, com o botão Iniciar |
 | `/projects/:projectId/management/teams` | Gestão, Colaboradores, em duas visões: Pessoas (a lista, com busca) e Times (os cartões; `?view=teams` abre nela), com cinco pessoas por página. Para admins, também o valor por hora de cada pessoa, a margem e os modais de adicionar pessoa, do colaborador, de novo time e de editar time |
 | `/projects/:projectId/management/integrations` | Gestão, Integrações com GitHub, GitLab e Trello: um cartão por integração e, para admins, o modal de criar e editar |

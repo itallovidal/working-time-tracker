@@ -410,6 +410,15 @@
 
 ---
 
+### Sprint 32: Task Page and Edit Modal
+
+- [X] S32.1 The board row swaps the Start button for a Details button that opens `/tasks/:taskId`
+- [X] S32.2 The task page only shows the task (description, assignee, deadline, time tracked, linked external item) and has the Start button and a pen in its card
+- [X] S32.3 The pen opens the Edit task modal (name, the three assignee choices, deadline, description) with Delete task and its confirmation inside; nothing goes to the server before Save
+- [X] S32.4 Tests for the board and the page, in both languages; update README and design
+
+---
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open

@@ -383,12 +383,6 @@ document.addEventListener('alpine:init', () => {
       const s = clock().session;
       return !!s && s.task_id === t.id;
     },
-    start(t) {
-      return this.run('clock', async () => {
-        await clock().clockIn(project.id, t.id);
-        toast(WTT.t('tasks.started', { name: t.name }));
-      });
-    },
     deadlineClass: (t) => deadlineInfo(t.deadline).cls,
     deadlineLabel: (t) => deadlineInfo(t.deadline).label,
     externalLabel,
@@ -402,7 +396,7 @@ document.addEventListener('alpine:init', () => {
     members: [],
     integrations: [],
     sessions: [],
-    form: { name: '', description: '', assignee_id: '', deadline: '' },
+    form: { name: '', description: '', assign: 'none', assignee_id: '', deadline: '' }, // assign: me, none ou other
     linkForm: { integration_id: '', external_item_id: '', external_item_url: '' },
     external: { loading: false, details: null, error: '' },
     confirmDelete: false,
@@ -431,7 +425,9 @@ document.addEventListener('alpine:init', () => {
       this.form = {
         name: t.name,
         description: t.description || '',
-        assignee_id: t.assignee_id || '', // vazio: sem responsável
+        // Sem responsável, a própria pessoa, ou outra: é o que o modal pergunta.
+        assign: !t.assignee_id ? 'none' : (t.assignee_id === me.id ? 'me' : 'other'),
+        assignee_id: t.assignee_id && t.assignee_id !== me.id ? t.assignee_id : '',
         deadline: WTT.fmt.dateInput(t.deadline),
       };
       // Quem saiu dos times continua aparecendo como responsável atual.
@@ -457,15 +453,39 @@ document.addEventListener('alpine:init', () => {
         this.external = { loading: false, details: null, error: e.message };
       }
     },
+    // O lápis abre o modal com um rascunho da tarefa; nada vai ao servidor antes de Salvar.
+    openEdit() {
+      this.setTask(this.task);
+      this.errors.save = '';
+      this.errors.delete = '';
+      this.confirmDelete = false;
+      Alpine.store('modal').open('task-edit', WTT.t('task_detail.edit_title'), () => !this.pending);
+    },
+    // Outra pessoa só pode ser responsável se estiver no projeto; quem saiu dele
+    // continua aparecendo enquanto for o responsável atual (ver setTask).
+    otherMembers() {
+      return this.members.filter((m) => m.id !== me.id);
+    },
+    start() {
+      return this.run('clock', async () => {
+        await clock().clockIn(project.id, this.taskId);
+        toast(WTT.t('tasks.started', { name: this.task.name }));
+      });
+    },
+    isRunning() {
+      const s = clock().session;
+      return !!s && s.task_id === this.taskId;
+    },
     save() {
       return this.run('save', async () => {
         const t = await api('PATCH', '/api/tasks/' + this.taskId, {
           name: this.form.name,
           description: this.form.description,
-          assignee_id: this.form.assignee_id,
+          assignee_id: { me: me.id, none: '', other: this.form.assignee_id }[this.form.assign],
           deadline: WTT.fmt.fromDateInput(this.form.deadline),
         });
         this.setTask(t);
+        Alpine.store('modal').close();
         toast(WTT.t('task_detail.saved'));
       });
     },

@@ -321,7 +321,8 @@ tasks:
   col_assignee: Responsável
   col_deadline: Prazo
   col_external: Item externo
-  col_clock: Ponto
+  col_details: Detalhes
+  details: Detalhes
   running: Em andamento
   start: Iniciar
   pager: Páginas da lista de tarefas
@@ -348,7 +349,10 @@ tasks:
 
 task_detail:
   loading: Carregando a tarefa…
-  card: Tarefa
+  edit_title: Editar tarefa
+  back: Voltar ao quadro
+  no_description: Esta tarefa não tem descrição.
+  delete_confirm: Excluir a tarefa? O tempo registrado nela também é apagado.
   time_title: Tempo registrado
   no_time: Ninguém registrou tempo nesta tarefa ainda.
   in_progress: "· em andamento"
