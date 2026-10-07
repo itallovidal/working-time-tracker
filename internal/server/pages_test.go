@@ -20,9 +20,16 @@ func pagePaths(orgID, projectID string) []string {
 		"/profile",
 		"/projects/" + projectID + "/tasks",
 		"/projects/" + projectID + "/time-tracking",
-		"/projects/" + projectID + "/teams",
-		"/projects/" + projectID + "/integrations",
-		"/projects/" + projectID + "/settings",
+	}
+}
+
+// managementPagePaths são as abas da Gestão do projeto, só de admins.
+func managementPagePaths(projectID string) []string {
+	return []string{
+		"/projects/" + projectID + "/management/overview",
+		"/projects/" + projectID + "/management/teams",
+		"/projects/" + projectID + "/management/integrations",
+		"/projects/" + projectID + "/management/settings",
 	}
 }
 
@@ -51,6 +58,16 @@ func TestPages_RenderForAdminAndMember(t *testing.T) {
 			if strings.HasPrefix(path, "/projects/") && !strings.Contains(rec.Body.String(), "Projeto Alfa") {
 				t.Errorf("GET %s does not show the project name", path)
 			}
+		}
+	}
+
+	// A Gestão é só de admins: o membro recebe "Página não encontrada".
+	for _, path := range managementPagePaths(projectID) {
+		if rec := do(e, "GET", path, "", admin.session); rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "Projeto Alfa") {
+			t.Errorf("admin GET %s = %d, want 200 with the project name", path, rec.Code)
+		}
+		if rec := do(e, "GET", path, "", member.session); rec.Code != http.StatusNotFound {
+			t.Errorf("member GET %s = %d, want 404", path, rec.Code)
 		}
 	}
 
@@ -160,7 +177,7 @@ func TestPages_ModalHostAndIcons(t *testing.T) {
 	admin := signup(t, e, "Org", "ana@test.com")
 	projectID := createProject(t, e, admin, "Projeto Alfa")
 
-	for _, path := range append(pagePaths(admin.orgID, projectID), orgPagePaths(admin.orgID)...) {
+	for _, path := range append(append(pagePaths(admin.orgID, projectID), managementPagePaths(projectID)...), orgPagePaths(admin.orgID)...) {
 		body := do(e, "GET", path, "", admin.session).Body.String()
 		if n := strings.Count(body, `id="modal-root"`); n != 1 {
 			t.Errorf("GET %s has %d modal hosts, want 1", path, n)
@@ -257,12 +274,15 @@ func TestPages_ProjectCollaboratorsTab(t *testing.T) {
 	member := invite(t, e, admin, "bia@test.com", "member")
 	other := signup(t, e, "Outra", "caio@outra.com")
 	projectID := createProject(t, e, admin, "Projeto Alfa")
-	tab := "/projects/" + projectID + "/teams"
+	tab := "/projects/" + projectID + "/management/teams"
 	rates := "/projects/" + projectID + "/rates"
 
 	adminPage := do(e, "GET", tab, "", admin.session).Body.String()
-	memberPage := do(e, "GET", tab, "", member.session).Body.String()
-	for who, body := range map[string]string{"admin": adminPage, "member": memberPage} {
+	// A aba mora na Gestão, que é só de admins: o membro recebe o 404.
+	if rec := do(e, "GET", tab, "", member.session); rec.Code != http.StatusNotFound {
+		t.Errorf("member GET %s = %d, want 404", tab, rec.Code)
+	}
+	for who, body := range map[string]string{"admin": adminPage} {
 		if !strings.Contains(body, `href="`+tab+`" aria-current="page"`) || !strings.Contains(body, " Colaboradores</a>") {
 			t.Errorf("%s: the tab bar does not show Colaboradores as the current tab", who)
 		}
@@ -316,9 +336,6 @@ func TestPages_ProjectCollaboratorsTab(t *testing.T) {
 		if !strings.Contains(adminPage, adminOnly) {
 			t.Errorf("admin does not see %q on the collaborators tab", adminOnly)
 		}
-		if strings.Contains(memberPage, adminOnly) {
-			t.Errorf("member sees %q on the collaborators tab", adminOnly)
-		}
 	}
 
 	// O formulário de adicionar pessoa vai da busca até o formulário de novo time.
@@ -349,12 +366,12 @@ func TestPages_ProjectCollaboratorsTab(t *testing.T) {
 		}
 	}
 
-	settings := "/projects/" + projectID + "/settings"
+	settings := "/projects/" + projectID + "/management/settings"
 	if body := do(e, "GET", settings, "", admin.session).Body.String(); !strings.Contains(body, `id="ps-bill-rate"`) {
 		t.Error("admin does not see the billing card on the project settings")
 	}
-	if body := do(e, "GET", settings, "", member.session).Body.String(); strings.Contains(body, `id="ps-bill-rate"`) {
-		t.Error("member sees the billing card on the project settings")
+	if rec := do(e, "GET", settings, "", member.session); rec.Code != http.StatusNotFound {
+		t.Errorf("member GET %s = %d, want 404", settings, rec.Code)
 	}
 }
 
@@ -438,7 +455,7 @@ func TestPages_ProjectTimeTab(t *testing.T) {
 	if !strings.Contains(pages["member"], `<div class="k">Seu valor</div>`) || strings.Contains(pages["admin"], `<div class="k">Seu valor</div>`) {
 		t.Error("the member's own amount should be in the totals card of the member only")
 	}
-	if !strings.Contains(pages["admin"], `href="/projects/`+projectID+`/teams">Colaboradores</a>`) || !strings.Contains(pages["member"], "Peça a um admin para definir") {
+	if !strings.Contains(pages["admin"], `href="/projects/`+projectID+`/management/teams">Colaboradores</a>`) || !strings.Contains(pages["member"], "Peça a um admin para definir") {
 		t.Error("the rate warning should send the admin to the collaborators tab and the member to an admin")
 	}
 }
@@ -452,11 +469,14 @@ func TestPages_ProjectSettingsAndWeeklyHours(t *testing.T) {
 	admin := signup(t, e, "Org", "ana@test.com")
 	member := invite(t, e, admin, "bia@test.com", "member")
 	projectID := createProject(t, e, admin, "Projeto Alfa")
-	settings := "/projects/" + projectID + "/settings"
+	settings := "/projects/" + projectID + "/management/settings"
 
 	adminPage := do(e, "GET", settings, "", admin.session).Body.String()
-	memberPage := do(e, "GET", settings, "", member.session).Body.String()
-	for who, body := range map[string]string{"admin": adminPage, "member": memberPage} {
+	// A aba mora na Gestão, só de admins: o membro recebe o 404.
+	if rec := do(e, "GET", settings, "", member.session); rec.Code != http.StatusNotFound {
+		t.Errorf("member GET %s = %d, want 404", settings, rec.Code)
+	}
+	for who, body := range map[string]string{"admin": adminPage} {
 		for _, want := range []string{`x-data="projectSettings"`, `<dl class="facts">`, `x-for="f in routine()"`, "<dt>Cliente</dt>"} {
 			if !strings.Contains(body, want) {
 				t.Errorf("%s: the settings tab does not contain %q", who, want)
@@ -489,15 +509,6 @@ func TestPages_ProjectSettingsAndWeeklyHours(t *testing.T) {
 		} else if at < modal && strings.HasPrefix(field, "<") && !strings.HasPrefix(field, "<dt>") {
 			t.Errorf("admin: %q is on the page, outside the modal", field)
 		}
-		if strings.Contains(memberPage, field) {
-			t.Errorf("member sees %q on the settings tab", field)
-		}
-	}
-	if strings.Contains(memberPage, "project-edit") || strings.Contains(memberPage, "openEdit()") {
-		t.Error("member has the edit button or the edit project modal")
-	}
-	if !strings.Contains(memberPage, "Só admins alteram as configurações") {
-		t.Error("member is not told that only admins change the settings")
 	}
 
 	// O Novo projeto oferece as mesmas durações e não pergunta a jornada.
@@ -555,14 +566,14 @@ func TestPages_RedirectWithoutSession(t *testing.T) {
 	admin := signup(t, e, "Org", "ana@test.com")
 	projectID := createProject(t, e, admin, "Projeto")
 
-	for _, path := range pagePaths(admin.orgID, projectID) {
+	for _, path := range append(pagePaths(admin.orgID, projectID), managementPagePaths(projectID)...) {
 		rec := do(e, "GET", path, "", "")
 		if rec.Code != http.StatusSeeOther || !strings.HasPrefix(rec.Header().Get("Location"), "/login?next=") {
 			t.Errorf("GET %s without session = %d to %q, want 303 to /login", path, rec.Code, rec.Header().Get("Location"))
 		}
 	}
-	if rec := do(e, "GET", "/projects/"+projectID, "", admin.session); rec.Header().Get("Location") != "/projects/"+projectID+"/overview" {
-		t.Errorf("GET /projects/:id redirects the admin to %q, want the overview tab", rec.Header().Get("Location"))
+	if rec := do(e, "GET", "/projects/"+projectID, "", admin.session); rec.Header().Get("Location") != "/projects/"+projectID+"/time-tracking" {
+		t.Errorf("GET /projects/:id redirects the admin to %q, want the Ponto tab", rec.Header().Get("Location"))
 	}
 }
 
@@ -642,8 +653,11 @@ func TestPages_ProjectIntegrationsTab(t *testing.T) {
 	}
 
 	pages := map[string]string{}
-	for who, session := range map[string]string{"admin": admin.session, "member": member.session} {
-		body := do(e, "GET", "/projects/"+projectID+"/integrations", "", session).Body.String()
+	if rec := do(e, "GET", "/projects/"+projectID+"/management/integrations", "", member.session); rec.Code != http.StatusNotFound {
+		t.Errorf("member GET the integrations tab = %d, want 404 (the tab is in the Gestão)", rec.Code)
+	}
+	for who, session := range map[string]string{"admin": admin.session} {
+		body := do(e, "GET", "/projects/"+projectID+"/management/integrations", "", session).Body.String()
 		pages[who] = body
 		for _, want := range append([]string{`x-for="f in facts(it)"`, `x-show="incomplete(it)"`, "it.has_token"}, types...) {
 			if !strings.Contains(body, want) {
@@ -670,12 +684,6 @@ func TestPages_ProjectIntegrationsTab(t *testing.T) {
 		if !strings.Contains(pages["admin"], adminOnly) {
 			t.Errorf("admin does not see %q in the integrations tab", adminOnly)
 		}
-		if strings.Contains(pages["member"], adminOnly) {
-			t.Errorf("member sees %q in the integrations tab", adminOnly)
-		}
-	}
-	if !strings.Contains(pages["member"], "Um admin pode configurar o GitHub, o GitLab ou o Trello") {
-		t.Error("the empty state does not tell the member who can configure an integration")
 	}
 
 	// Uma tarefa precisa de um responsável que esteja num time do projeto.

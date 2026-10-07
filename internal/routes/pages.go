@@ -34,13 +34,19 @@ func RegisterPages(e *echo.Echo, p *page.Handler, m *auth.Middleware) {
 
 	prj := m.RequireOrgPage(auth.KindProject, "projectId", p.NotFound)
 	g.GET("/projects/:projectId", p.Project, prj)
-	// A Visão geral é a única aba do projeto só de admins.
-	g.GET("/projects/:projectId/overview", p.Overview, prj, admin)
 	g.GET("/projects/:projectId/tasks", p.Tasks, prj)
 	g.GET("/projects/:projectId/time-tracking", p.TimeTracking, prj)
-	g.GET("/projects/:projectId/teams", p.Teams, prj)
-	g.GET("/projects/:projectId/integrations", p.Integrations, prj)
-	g.GET("/projects/:projectId/settings", p.ProjectSettings, prj)
+	// A Gestão é a área do projeto só de admins: quem não é recebe o 404.
+	g.GET("/projects/:projectId/management", p.Management, prj, admin)
+	g.GET("/projects/:projectId/management/overview", p.Overview, prj, admin)
+	g.GET("/projects/:projectId/management/teams", p.Teams, prj, admin)
+	g.GET("/projects/:projectId/management/integrations", p.Integrations, prj, admin)
+	g.GET("/projects/:projectId/management/settings", p.ProjectSettings, prj, admin)
+	// Os caminhos de antes da Gestão continuam levando às mesmas abas.
+	g.GET("/projects/:projectId/overview", p.ToManagement("overview"), prj)
+	g.GET("/projects/:projectId/teams", p.ToManagement("teams"), prj)
+	g.GET("/projects/:projectId/integrations", p.ToManagement("integrations"), prj)
+	g.GET("/projects/:projectId/settings", p.ToManagement("settings"), prj)
 
 	g.GET("/tasks/:taskId", p.TaskDetail, m.RequireOrgPage(auth.KindTask, "taskId", p.NotFound))
 }

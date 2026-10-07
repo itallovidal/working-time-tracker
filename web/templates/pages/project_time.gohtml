@@ -6,7 +6,7 @@
   <p class="alert alert-warn" x-cloak x-show="!loading && !errors.load && myRate === null">
     {{.T "time.no_rate"}}
     {{if .IsAdmin}}
-    {{.T "time.set_rate_before"}} <a href="/projects/{{.Project.ID}}/teams">{{.T "project.head.teams"}}</a>{{.T "time.set_rate_after"}}
+    {{.T "time.set_rate_before"}} <a href="/projects/{{.Project.ID}}/management/teams">{{.T "project.head.teams"}}</a>{{.T "time.set_rate_after"}}
     {{else}}
     {{.T "time.ask_admin"}}
     {{end}}

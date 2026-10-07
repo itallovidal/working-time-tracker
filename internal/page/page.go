@@ -32,6 +32,7 @@ type Data struct {
 	Section     string                     // item ativo da barra superior: projects, organization, profile
 	Org         *organization.Organization // só nas páginas da organização
 	Project     *Crumb
+	Management  bool   // a página é da área de Gestão (só admins): a barra de abas mostra as abas dela
 	Tab         string // aba ativa do projeto (overview, tasks, time, teams, integrations, settings) ou da organização (about, people, customers, projects)
 	Script      string // página em /static/pages/<Script>.js com os componentes Alpine
 	Props       map[string]any

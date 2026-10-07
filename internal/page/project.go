@@ -49,6 +49,16 @@ func (h *Handler) localizeDescriptor(d *adapter.Descriptor, lang string) {
 // projectPage monta a página de uma aba do projeto. O middleware de rota já
 // garantiu que o projeto existe e é da organização de quem está logado.
 func (h *Handler) projectPage(c *echo.Context, name, titleKey, tab string, props map[string]any) error {
+	return h.renderProject(c, false, name, titleKey, tab, props)
+}
+
+// managementPage monta uma página da área de Gestão, só de admins: a barra de
+// abas troca as abas do dia a dia pelas da Gestão.
+func (h *Handler) managementPage(c *echo.Context, name, titleKey, tab string, props map[string]any) error {
+	return h.renderProject(c, true, name, titleKey, tab, props)
+}
+
+func (h *Handler) renderProject(c *echo.Context, management bool, name, titleKey, tab string, props map[string]any) error {
 	p, err := h.deps.Projects.Get(c.Param("projectId"))
 	if err != nil {
 		return h.NotFound(c)
@@ -58,16 +68,16 @@ func (h *Handler) projectPage(c *echo.Context, name, titleKey, tab string, props
 		TitleSuffix: p.Name,
 		Section:     "projects",
 		Project:     &Crumb{ID: p.ID.String(), Name: p.Name},
+		Management:  management,
 		Tab:         tab,
 		Script:      "project",
 		Props:       props,
 	})
 }
 
-// Project leva para a aba principal do projeto: a Visão geral para admins, as
-// Tarefas para os demais.
+// Project leva para a página principal do projeto, o Ponto.
 func (h *Handler) Project(c *echo.Context) error {
-	return c.Redirect(http.StatusSeeOther, "/projects/"+c.Param("projectId")+"/"+projectHome(c))
+	return c.Redirect(http.StatusSeeOther, "/projects/"+c.Param("projectId")+"/"+projectHome())
 }
 
 // Tasks é a lista de tarefas do projeto (S9.1).
@@ -104,14 +114,14 @@ func (h *Handler) TaskDetail(c *echo.Context) error {
 // quanto cada pessoa recebe por hora (S17). A rota segue /teams, de quando a
 // aba só tinha os times.
 func (h *Handler) Teams(c *echo.Context) error {
-	return h.projectPage(c, "project_teams", "titles.teams", "teams", nil)
+	return h.managementPage(c, "project_teams", "titles.teams", "teams", nil)
 }
 
 // Integrations configura as integrações do projeto com GitHub, GitLab e Trello (S10.1, S23).
 func (h *Handler) Integrations(c *echo.Context) error {
-	return h.projectPage(c, "project_integrations", "titles.integrations", "integrations", h.integrationTypes(c))
+	return h.managementPage(c, "project_integrations", "titles.integrations", "integrations", h.integrationTypes(c))
 }
 
 func (h *Handler) ProjectSettings(c *echo.Context) error {
-	return h.projectPage(c, "project_settings", "titles.project_settings", "settings", nil)
+	return h.managementPage(c, "project_settings", "titles.project_settings", "settings", nil)
 }

@@ -97,7 +97,7 @@ document.addEventListener('alpine:init', () => {
           } catch (e) {
             // O projeto já existe: as configurações dele são o lugar de definir a cobrança de novo.
             Alpine.store('toast').flash(WTT.t('org.projects.created_no_billing', { error: e.message }), 'error');
-            location.href = '/projects/' + p.id + '/settings';
+            location.href = '/projects/' + p.id + '/management/settings';
             return;
           }
         }

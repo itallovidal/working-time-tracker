@@ -41,12 +41,12 @@ titles:
   org_projects: Projects · Organization
   org_customers: Customers · Organization
   org_people: Collaborators · Organization
-  overview: Overview
+  overview: Management · Overview
   tasks: Task board
   time: Time tracking
-  teams: Collaborators
-  integrations: Integrations
-  project_settings: Settings
+  teams: Management · Collaborators
+  integrations: Management · Integrations
+  project_settings: Management · Settings
 
 nav:
   label: Organization
@@ -266,6 +266,8 @@ project:
     teams: Collaborators
     integrations: Integrations
     settings: Settings
+    management: Management
+    back: Back to the project
   fields:
     sprint: Sprint length
     daily_time: Daily time

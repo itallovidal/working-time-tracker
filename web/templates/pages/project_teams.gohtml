@@ -163,7 +163,7 @@
       <p class="muted small" x-show="collaborators.length > 0">
         <span x-show="billing.bill_rate_cents !== null">{{.T "collab.bill_info_before"}} <strong class="num" x-text="WTT.fmt.money(billing.bill_rate_cents)"></strong> {{.T "collab.bill_info_after"}}</span>
         <span x-show="billing.bill_rate_cents === null">{{.T "collab.no_bill"}}</span>
-        <a href="/projects/{{.Project.ID}}/settings">{{.T "collab.change_in_settings"}}</a>
+        <a href="/projects/{{.Project.ID}}/management/settings">{{.T "collab.change_in_settings"}}</a>
       </p>
       {{end}}
     </section>

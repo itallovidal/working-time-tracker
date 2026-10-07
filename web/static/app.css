@@ -167,6 +167,8 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
   border-bottom: 2px solid transparent; white-space: nowrap;
 }
 .tabs a:hover { color: var(--ink); }
+/* O link que sai da fileira das abas (Gestão, Voltar ao projeto) vai para o fim dela. */
+.tabs a.tabs-end { margin-left: auto; }
 .tabs a[aria-current="page"] { color: var(--accent); border-bottom-color: var(--accent); }
 
 /* Troca de visão dentro de uma aba: botões lado a lado numa trilha, para não

@@ -51,12 +51,12 @@ titles:
   org_projects: Projetos · Organização
   org_customers: Clientes · Organização
   org_people: Colaboradores · Organização
-  overview: Visão geral
+  overview: Gestão · Visão geral
   tasks: Quadro de tarefas
   time: Ponto
-  teams: Colaboradores
-  integrations: Integrações
-  project_settings: Configurações
+  teams: Gestão · Colaboradores
+  integrations: Gestão · Integrações
+  project_settings: Gestão · Configurações
 
 nav:
   label: Organização
@@ -276,6 +276,8 @@ project:
     teams: Colaboradores
     integrations: Integrações
     settings: Configurações
+    management: Gestão
+    back: Voltar ao projeto
   fields:
     sprint: Duração da sprint
     daily_time: Horário da daily

@@ -94,7 +94,7 @@
           <form class="stack" @submit.prevent="link()">
             <p class="muted small" x-show="integrations.length === 0">
               {{.T "task_detail.no_integrations"}}
-              {{if .IsAdmin}}<a href="/projects/{{.Project.ID}}/integrations">{{.T "task_detail.configure"}}</a>{{else}}{{.T "task_detail.ask_admin"}}{{end}}
+              {{if .IsAdmin}}<a href="/projects/{{.Project.ID}}/management/integrations">{{.T "task_detail.configure"}}</a>{{else}}{{.T "task_detail.ask_admin"}}{{end}}
             </p>
             <template x-if="integrations.length > 0">
               <div class="stack">

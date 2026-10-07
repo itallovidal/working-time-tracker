@@ -252,12 +252,12 @@ func portugueseLeftovers(body string) []string {
 func migratedPages(admin account, projectID, taskID string) []string {
 	return []string{
 		"/profile",
-		"/projects/" + projectID + "/overview",
+		"/projects/" + projectID + "/management/overview",
 		"/projects/" + projectID + "/tasks",
 		"/projects/" + projectID + "/time-tracking",
-		"/projects/" + projectID + "/teams",
-		"/projects/" + projectID + "/integrations",
-		"/projects/" + projectID + "/settings",
+		"/projects/" + projectID + "/management/teams",
+		"/projects/" + projectID + "/management/integrations",
+		"/projects/" + projectID + "/management/settings",
 		"/tasks/" + taskID,
 		"/orgs/" + admin.orgID,
 		"/orgs/" + admin.orgID + "/about",
@@ -329,7 +329,7 @@ func TestLanguage_IntegrationTypesInThePageData(t *testing.T) {
 	e := newServer(t)
 	admin := signup(t, e, "Org", "ana@test.com")
 	projectID := createProject(t, e, admin, "Alpha")
-	path := "/projects/" + projectID + "/integrations"
+	path := "/projects/" + projectID + "/management/integrations"
 
 	en := getPage(e, path, admin.session, "en", "").Body.String()
 	pt := getPage(e, path, admin.session, "", "").Body.String()

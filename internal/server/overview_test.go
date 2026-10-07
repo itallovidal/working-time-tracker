@@ -95,15 +95,16 @@ func TestOverview_AdminOnly(t *testing.T) {
 	}
 }
 
-// A aba Visão geral é a primeira do projeto e só existe para admins: o membro
-// não vê o link em aba nenhuma e recebe "Página não encontrada" no endereço.
+// A Visão geral é a primeira aba da Gestão, que só existe para admins: o membro
+// não vê o botão Gestão em página nenhuma e recebe "Página não encontrada" no
+// endereço.
 func TestPages_ProjectOverviewTab(t *testing.T) {
 	e := newServer(t)
 	admin := signup(t, e, "Org", "ana@test.com")
 	member := invite(t, e, admin, "bia@test.com", "member")
 	other := signup(t, e, "Outra", "caio@outra.com")
 	projectID := createProject(t, e, admin, "Projeto Alfa")
-	overview := "/projects/" + projectID + "/overview"
+	overview := "/projects/" + projectID + "/management/overview"
 	link := `href="` + overview + `"`
 
 	rec := do(e, "GET", overview, "", admin.session)
@@ -114,9 +115,18 @@ func TestPages_ProjectOverviewTab(t *testing.T) {
 	if !strings.Contains(body, link+` aria-current="page"`) || !strings.Contains(body, " Visão geral</a>") {
 		t.Error("the overview page does not mark Visão geral as the current tab")
 	}
-	first, tasks := strings.Index(body, link), strings.Index(body, `href="/projects/`+projectID+`/tasks"`)
-	if first < 0 || tasks < 0 || first > tasks {
-		t.Errorf("the Visão geral tab is not the first one (at %d, Tarefas at %d)", first, tasks)
+	first, teams := strings.Index(body, link), strings.Index(body, `href="/projects/`+projectID+`/management/teams"`)
+	if first < 0 || teams < 0 || first > teams {
+		t.Errorf("the Visão geral tab is not the first one of the Gestão (at %d, Colaboradores at %d)", first, teams)
+	}
+	// Dentro da Gestão não há as abas do dia a dia, e há o caminho de volta.
+	for _, gone := range []string{`href="/projects/` + projectID + `/tasks"`, "Quadro de tarefas"} {
+		if strings.Contains(body, gone) {
+			t.Errorf("the Gestão shows %q in its tab bar", gone)
+		}
+	}
+	if !strings.Contains(body, `href="/projects/`+projectID+`/time-tracking"`) || !strings.Contains(body, "Voltar ao projeto") {
+		t.Error("the Gestão has no way back to the project")
 	}
 	for _, want := range []string{
 		"Projeto Alfa", `x-data="projectOverview"`, "Atualizar",
@@ -137,17 +147,17 @@ func TestPages_ProjectOverviewTab(t *testing.T) {
 		t.Error("the overview page does not load the icon font with SRI")
 	}
 
-	// Nas outras abas, o admin tem o link para chegar aqui, e o membro não.
+	// Nas abas do dia a dia, o admin tem o botão para a Gestão, e o membro não.
 	for _, path := range pagePaths(admin.orgID, projectID) {
 		if !strings.HasPrefix(path, "/projects/") {
 			continue
 		}
 		asAdmin := do(e, "GET", path, "", admin.session).Body.String()
-		if !strings.Contains(asAdmin, link) || strings.Contains(asAdmin, link+` aria-current="page"`) {
-			t.Errorf("admin GET %s does not link to the overview tab, or marks it as current", path)
+		if !strings.Contains(asAdmin, link) || !strings.Contains(asAdmin, " Gestão</a>") {
+			t.Errorf("admin GET %s does not have the Gestão button", path)
 		}
-		if asMember := do(e, "GET", path, "", member.session).Body.String(); strings.Contains(asMember, link) || strings.Contains(asMember, "Visão geral") {
-			t.Errorf("member GET %s shows the overview tab", path)
+		if asMember := do(e, "GET", path, "", member.session).Body.String(); strings.Contains(asMember, "/management/") || strings.Contains(asMember, "Gestão") {
+			t.Errorf("member GET %s shows the Gestão", path)
 		}
 	}
 
@@ -162,22 +172,37 @@ func TestPages_ProjectOverviewTab(t *testing.T) {
 	}
 }
 
-// O projeto abre na Visão geral para o admin e nas Tarefas para o membro, que
-// não tem a primeira aba.
+// O projeto abre no Ponto para todos, e a raiz da Gestão leva à Visão geral dela.
+// Os caminhos de antes da Gestão continuam levando às mesmas abas, com a query.
 func TestPages_ProjectOpensOnTheRightTab(t *testing.T) {
 	e := newServer(t)
 	admin := signup(t, e, "Org", "ana@test.com")
 	member := invite(t, e, admin, "bia@test.com", "member")
 	projectID := createProject(t, e, admin, "Projeto Alfa")
+	prefix := "/projects/" + projectID
 
-	for who, tc := range map[string]struct{ session, tab string }{
-		"admin":  {admin.session, "overview"},
-		"member": {member.session, "tasks"},
-	} {
-		rec := do(e, "GET", "/projects/"+projectID, "", tc.session)
-		want := "/projects/" + projectID + "/" + tc.tab
+	for who, session := range map[string]string{"admin": admin.session, "member": member.session} {
+		rec := do(e, "GET", prefix, "", session)
+		want := prefix + "/time-tracking"
 		if rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != want {
 			t.Errorf("%s GET /projects/:id = %d to %q, want 303 to %s", who, rec.Code, rec.Header().Get("Location"), want)
+		}
+	}
+	if rec := do(e, "GET", prefix+"/management", "", admin.session); rec.Header().Get("Location") != prefix+"/management/overview" {
+		t.Errorf("GET the Gestão root redirects to %q, want its overview", rec.Header().Get("Location"))
+	}
+	if rec := do(e, "GET", prefix+"/management", "", member.session); rec.Code != http.StatusNotFound {
+		t.Errorf("member GET the Gestão root = %d, want 404", rec.Code)
+	}
+	for old, want := range map[string]string{
+		"/overview":         "/management/overview",
+		"/teams?view=teams": "/management/teams?view=teams",
+		"/integrations":     "/management/integrations",
+		"/settings":         "/management/settings",
+	} {
+		rec := do(e, "GET", prefix+old, "", admin.session)
+		if rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != prefix+want {
+			t.Errorf("GET %s = %d to %q, want 303 to %s", old, rec.Code, rec.Header().Get("Location"), prefix+want)
 		}
 	}
 }

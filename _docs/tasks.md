@@ -370,6 +370,16 @@
 
 ---
 
+### Sprint 28: Gestão Area
+
+- [X] S28.1 The admin-only tabs move to `/projects/:projectId/management/{overview,teams,integrations,settings}` behind the admin page guard (404 for members); the API permissions do not change
+- [X] S28.2 Two tab bars: Quadro de tarefas and Ponto for everyone, plus a "Gestão" button for admins; inside the Gestão, Visão geral, Colaboradores, Integrações, Configurações and a "Voltar ao projeto" link
+- [X] S28.3 `/projects/:projectId` opens on the Ponto for everyone; the old tab paths redirect to the new ones with the query string; page titles say "Gestão · ..."
+- [X] S28.4 Internal links updated (rate warnings, settings link, new project redirect, task detail)
+- [X] S28.5 Tests for the redirects, the 404 for members and the two tab bars; update README and design
+
+---
+
 ### Refatoração: Domain-First Architecture (pré-Sprint 9)
 
 - [X] R1 Reorganizar código de layered-flat para domain-first: `internal/domain/<dominio>/` com `model.go`, `store.go`, `service.go`, `handler.go` por domínio

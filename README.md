@@ -16,7 +16,7 @@ Ponto por tarefa para equipes que trabalham por projeto. Foi pensado principalme
 - **Quadro de tarefas.** Cada tarefa tem prazo (7 dias por padrão, com destaque quando está atrasada ou perto de vencer) e vínculo opcional com uma issue, e o **responsável é opcional**: uma tarefa criada sem responsável fica disponível no quadro, com o selo "Sem responsável", e quem bater o ponto nela passa a ser o responsável, mesmo sem estar num time. A lista tem busca por nome, filtro por responsável (com a opção "Sem responsável", que mostra só as disponíveis), filtro por prazo (atrasadas, até hoje, até o fim desta semana ou da próxima, ou até uma data) e 10 tarefas por página. A caixa "Só as minhas tarefas", abaixo dos filtros, mostra as suas e desliga a busca e o filtro de responsável: só o de prazo continua valendo. A tarefa nova é criada num modal.
 - **Ponto.** Clock-in e clock-out com cronômetro ao vivo no topo de todas as páginas, sessões filtradas por pessoa, data e tarefa, os totais do filtro num cartão à parte e o seu tempo de hoje e da semana. O banco garante uma única sessão aberta por pessoa.
 - **Horas em dinheiro.** Cada sessão guarda os valores por hora de quando o ponto abriu, então **mudar um valor só vale dali em diante**. Quem não tem valor definido no projeto **não bate ponto**. Na tela de ponto, o membro vê quanto ganhou; o admin vê custo, receita e margem.
-- **Visão geral do projeto**, a primeira aba e só para admins. Numa tela: quantas pessoas e quantos times trabalham no projeto, as horas registradas, a receita, o custo e a margem; há quanto tempo o projeto existe, em dias, semanas e meses, contados do dia em que foi cadastrado; as integrações configuradas e se estão ativas; a atividade dos últimos 7 e 30 dias e quem está com o ponto aberto; as tarefas atrasadas; e as horas, o custo e a receita de cada pessoa. É uma fotografia da hora em que foi lida, com um botão para atualizar.
+- **Gestão do projeto**, só para admins. Um botão **Gestão**, no fim da barra de abas, leva a uma área com abas próprias (Visão geral, Colaboradores, Integrações e Configurações) e a um link para voltar ao projeto; o membro não vê o botão e recebe "Página não encontrada" nos endereços da Gestão. A **Visão geral** da Gestão mostra, numa tela só: quantas pessoas e quantos times trabalham no projeto, as horas registradas, a receita, o custo e a margem; há quanto tempo o projeto existe, em dias, semanas e meses, contados do dia em que foi cadastrado; as integrações configuradas e se estão ativas; a atividade dos últimos 7 e 30 dias e quem está com o ponto aberto; as tarefas atrasadas; e as horas, o custo e a receita de cada pessoa. É uma fotografia da hora em que foi lida, com um botão para atualizar.
 - **Integrações** com GitHub, GitLab e Trello. Todas usam a mesma estrutura: nome, token e, em `metadata`, os campos próprios da plataforma (o repositório, o projeto, a chave e o quadro), que cada integração confere antes de falar com ela. O token é validado na plataforma, guardado criptografado e nunca volta nas respostas. O admin cria e edita num modal só, que desenha os campos da plataforma escolhida; o cartão de cada integração é só de leitura, e desativar ou excluir também ficam no modal. Os detalhes do item (o título e o estado da issue, ou a lista em que o cartão está) são buscados na hora, e se a plataforma não responde a tela mostra o motivo, sem quebrar.
 
 ## Como rodar
@@ -88,21 +88,22 @@ A interface segue a Decision 8 de `_docs/design.md`. O servidor renderiza a casc
 | `/profile` | Seu nome, seu email, sua senha, sua jornada semanal (só para ler) e quanto você recebe por hora em cada projeto |
 | `/lang/:code` | Troca o idioma (`pt-BR` ou `en`): grava o cookie e volta para `?next=` |
 | `/i18n/:idioma.js` | Os textos do idioma para o JavaScript (`window.I18N`) |
-| `/projects/:projectId` | Leva o admin para a aba Visão geral e o membro para a aba Tarefas |
-| `/projects/:projectId/overview` | Visão geral: pessoas, times, horas, receita, custo e margem, tempo de projeto, integrações, atividade recente, tarefas atrasadas e horas por pessoa (só admins) |
-| `/projects/:projectId/tasks` | Tarefas, com busca, filtros, paginação e início de ponto em um clique |
+| `/projects/:projectId` | Leva todos para o Ponto |
+| `/projects/:projectId/management` | A raiz da Gestão (só admins): leva para a Visão geral dela |
+| `/projects/:projectId/management/overview` | Gestão, Visão geral: pessoas, times, horas, receita, custo e margem, tempo de projeto, integrações, atividade recente, tarefas atrasadas e horas por pessoa. Os caminhos antigos `/overview`, `/teams`, `/integrations` e `/settings` redirecionam para a Gestão |
+| `/projects/:projectId/tasks` | Quadro de tarefas, com busca, filtros, paginação e início de ponto em um clique |
 | `/tasks/:taskId` | Edição da tarefa, vínculo com issue e tempo registrado |
 | `/projects/:projectId/time-tracking` | Cronômetro, sessões, filtros e totais em tempo e em dinheiro |
-| `/projects/:projectId/teams` | Colaboradores, em duas visões: Pessoas (a lista, com busca) e Times (os cartões; `?view=teams` abre nela), com cinco pessoas por página. Para admins, também o valor por hora de cada pessoa, a margem e os modais de adicionar pessoa, do colaborador, de novo time e de editar time |
-| `/projects/:projectId/integrations` | Integrações com GitHub, GitLab e Trello: um cartão por integração e, para admins, o modal de criar e editar |
-| `/projects/:projectId/settings` | Configurações: a descrição, a sprint, a daily, a weekly e o cliente do projeto, só para ler. Para admins, também o valor cobrado e o botão Editar, que abre o modal Editar projeto, onde ficam todos os campos e a exclusão |
+| `/projects/:projectId/management/teams` | Gestão, Colaboradores, em duas visões: Pessoas (a lista, com busca) e Times (os cartões; `?view=teams` abre nela), com cinco pessoas por página. Para admins, também o valor por hora de cada pessoa, a margem e os modais de adicionar pessoa, do colaborador, de novo time e de editar time |
+| `/projects/:projectId/management/integrations` | Gestão, Integrações com GitHub, GitLab e Trello: um cartão por integração e, para admins, o modal de criar e editar |
+| `/projects/:projectId/management/settings` | Gestão, Configurações: a descrição, a sprint, a daily, a weekly e o cliente do projeto, só para ler. Para admins, também o valor cobrado e o botão Editar, que abre o modal Editar projeto, onde ficam todos os campos e a exclusão |
 
 Sem sessão, qualquer página leva ao login, e a pessoa volta para a página pedida depois de entrar. Uma página de outra organização mostra "Página não encontrada".
 
 ### Navegação
 
 - A **barra superior** mostra a organização, o menu (Projetos e Organização), o **indicador do ponto aberto** com cronômetro e botão Parar, o **toggle de idioma** (PT | EN), quem está logado (o nome leva ao **perfil**) e o botão Sair. Sem login, o toggle fica no canto da tela.
-- As páginas de projeto têm **abas**: Visão geral, Tarefas, Ponto, Colaboradores, Integrações e Configurações. A Visão geral é só de admins: o membro não vê a aba, e o projeto abre para ele em Tarefas. A aba Colaboradores juntou as antigas Times e Valores; o endereço dela continua `/teams`. O valor cobrado do cliente fica em Configurações.
+- As páginas de projeto têm duas barras de **abas**. Para todos: Quadro de tarefas e Ponto, e o projeto abre no Ponto. Para admins, o botão Gestão abre a outra: Visão geral, Colaboradores, Integrações e Configurações, em `/projects/:id/management/...`. A aba Colaboradores juntou as antigas Times e Valores. O valor cobrado do cliente fica em Configurações.
 - A página **Organização** abre na aba Sobre, que todos os membros leem. Nela o admin tem o botão **Editar**, que leva à tela de edição; salvar volta para a Sobre. As abas Colaboradores, Clientes e Projetos são só de admins.
 - Ações de admin não aparecem para membros. A API continua sendo quem garante as permissões.
 - A lista de **tarefas** guarda a busca, os filtros e a página na URL (`?q=`, `?assignee=` (um id, ou `none` para as sem responsável), `?due=`, `?page=`, e `?mine=1` para "Só as minhas tarefas"). Recarregar mantém o que estava na tela, o link pode ser compartilhado, e o botão Voltar de uma tarefa leva de volta ao mesmo ponto da lista.
@@ -228,7 +229,7 @@ Cobertura:
 - **Domínios:** services e handlers.
 - **Migrações:** o banco que elas produzem bate com o `ent/schema`, regras de FK, índice parcial, recusa de banco sem histórico e checksum dos arquivos.
 - **Router real:** tabela de rotas, autenticação, permissões e isolamento entre organizações.
-- **Páginas:** toda página renderiza para admin e membro, redireciona sem sessão e dá 404 entre organizações; cada uma tem o modal uma única vez e carrega os ícones com SRI. As abas só de admins (as de gestão da organização e a Visão geral do projeto) dão 404 ao membro e somem do menu dele.
+- **Páginas:** toda página renderiza para admin e membro, redireciona sem sessão e dá 404 entre organizações; cada uma tem o modal uma única vez e carrega os ícones com SRI. As abas só de admins (as de gestão da organização e a Gestão do projeto) dão 404 ao membro e somem do menu dele.
 - **Visão geral:** os totais com valores exatos (o arredondamento por sessão, a sessão aberta, as janelas de 7 e 30 dias, quem saiu do projeto, projeto interno e projeto vazio) e a idade do projeto em dias, semanas e meses.
 - **Alpine vendorizado:** o hash confere com o pacote oficial.
 
