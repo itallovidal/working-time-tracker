@@ -31,7 +31,7 @@
   <span class="hint" x-show="labels.length === 0">{{if .Can "labels.manage"}}{{.T "tasks.no_labels_admin"}}{{else}}{{.T "tasks.no_labels_member"}}{{end}}</span>
   {{if .Can "labels.manage"}}
   <div class="row">
-    <input id="{{.IDPrefix}}task-new-label" class="flex-1" type="text" maxlength="30" autocomplete="off" placeholder="{{.T "tasks.label_new"}}"
+    <input id="{{.IDPrefix}}task-new-label" class="flex-1" type="text" maxlength="50" autocomplete="off" placeholder="{{.T "tasks.label_new"}}"
            aria-label="{{.T "tasks.label_new"}}" x-model="newLabel" @keydown.enter.prevent="createLabel(draft.label_ids)">
     <button type="button" class="btn btn-secondary btn-sm" :disabled="pending || !newLabel.trim()" @click="createLabel(draft.label_ids)">{{template "icon" "plus"}} {{.T "tasks.label_create"}}</button>
   </div>

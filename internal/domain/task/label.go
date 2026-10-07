@@ -12,8 +12,9 @@ import (
 	"working-time-tracker/internal/database"
 )
 
-// maxLabelLen é o tamanho máximo do nome de uma etiqueta, em caracteres.
-const maxLabelLen = 30
+// maxLabelLen é o tamanho máximo do nome de uma etiqueta, em caracteres: o mesmo do nome de uma label do
+// GitHub, para a sincronização não renomear a label de lá ao empurrar uma etiqueta.
+const maxLabelLen = 50
 
 // ListLabels lista as etiquetas do projeto em ordem alfabética.
 func (s *Store) ListLabels(projectID uuid.UUID) ([]Label, error) {

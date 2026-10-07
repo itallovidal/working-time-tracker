@@ -13,9 +13,10 @@ import (
 	"working-time-tracker/internal/domain/team"
 )
 
-// MaxDescriptionLen é o tamanho máximo da descrição de uma tarefa, em caracteres. Ela é
+// MaxDescriptionLen é o tamanho máximo da descrição de uma tarefa, em caracteres: o mesmo do corpo de uma
+// issue do GitHub, para a sincronização não cortar o texto nem num sentido nem no outro. Ela é
 // Markdown e vira HTML no navegador de todo mundo que abre a tarefa.
-const MaxDescriptionLen = 10000
+const MaxDescriptionLen = 65536
 
 // Tamanho de página da lista de tarefas: o padrão e o teto que a API aceita.
 const (

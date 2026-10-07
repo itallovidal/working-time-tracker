@@ -484,7 +484,7 @@ Content-Type: application/json
 
 Toda tarefa nasce em `backlog`: o `POST` não lê `status`. O `PATCH` aceita `status` (`backlog`, `in_progress`, `awaiting_closure` ou `closed`; omitido, mantém) e a tarefa o devolve; outro valor responde `400 task.invalid_status`. Qualquer um do projeto muda o status, e a troca é livre entre os quatro. Além do `PATCH`, o `POST .../work-sessions/clock-in` põe a tarefa em `in_progress`, seja qual for o status dela, depois de criar a sessão (um ponto recusado não muda nada); o clock-out não mexe no status.
 
-As etiquetas são do projeto, não da organização, e o nome é único no projeto sem diferenciar maiúsculas (`label.name_taken`), com até 30 caracteres. Só admins criam, renomeiam e excluem; quem está no projeto lê e escolhe.
+As etiquetas são do projeto, não da organização, e o nome é único no projeto sem diferenciar maiúsculas (`label.name_taken`), com até 50 caracteres. Só admins criam, renomeiam e excluem; quem está no projeto lê e escolhe.
 O `assignee_id` é opcional: sem ele a tarefa fica disponível, e quem bater o ponto nela passa a ser o responsável. Um responsável escolhido precisa estar no projeto, isto é, ter valor por hora nele ou estar em algum time dele (time é opcional). Quem está logado também pode se pôr como responsável (o "atribuir a mim") sem estar no projeto, no `POST` e no `PATCH`. Fora isso, `task.assignee_not_in_team`. Sem `deadline`, o prazo fica em 7 dias a partir de agora.
 
 ```http

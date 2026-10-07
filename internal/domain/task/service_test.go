@@ -184,7 +184,7 @@ func TestService_DescriptionLimit(t *testing.T) {
 	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, project.Routine{})
 	pid := proj.ID.String()
 
-	exact := strings.Repeat("é", task.MaxDescriptionLen) // 10.000 caracteres, 20.000 bytes
+	exact := strings.Repeat("é", task.MaxDescriptionLen) // 65.536 caracteres, 131.072 bytes
 	tk, err := taskSvc.Create(pid, "Longa", exact, "", nil)
 	if err != nil || tk.Description != exact {
 		t.Fatalf("a description at the limit must be accepted: %v", err)
@@ -336,8 +336,8 @@ func TestService_Labels(t *testing.T) {
 	if _, err := taskSvc.CreateLabel(aid, "   "); err != task.ErrLabelNameRequired {
 		t.Errorf("empty name: err = %v", err)
 	}
-	if _, err := taskSvc.CreateLabel(aid, strings.Repeat("x", 31)); err == nil {
-		t.Error("a 31-character name must be refused")
+	if _, err := taskSvc.CreateLabel(aid, strings.Repeat("x", 51)); err == nil {
+		t.Error("a 51-character name must be refused")
 	}
 	design, _ := taskSvc.CreateLabel(aid, "design")
 	other, _ := taskSvc.CreateLabel(bid, "bug") // o mesmo nome em outro projeto vale

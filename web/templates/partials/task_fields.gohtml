@@ -29,7 +29,7 @@
                 @click="setMd('preview')">{{template "icon" "eye"}} {{.T "tasks.md.preview"}}</button>
       </div>
     </div>
-    <textarea id="task-description" rows="8" maxlength="10000" x-show="mdView === 'write'" x-model="draft.description"
+    <textarea id="task-description" rows="8" maxlength="65536" x-show="mdView === 'write'" x-model="draft.description"
               placeholder="{{.T "common.optional"}}"></textarea>
     <div id="task-preview" class="md-preview" role="tabpanel" aria-labelledby="md-preview-tab" x-show="mdView === 'preview'">
       <div class="markdown" x-show="draft.description.trim()" x-html="previewHTML()"></div>
