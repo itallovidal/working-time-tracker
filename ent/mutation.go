@@ -12,6 +12,7 @@ import (
 	"working-time-tracker/ent/customer"
 	"working-time-tracker/ent/integration"
 	"working-time-tracker/ent/invite"
+	"working-time-tracker/ent/issuesync"
 	"working-time-tracker/ent/label"
 	"working-time-tracker/ent/organization"
 	"working-time-tracker/ent/person"
@@ -42,6 +43,7 @@ const (
 	TypeCustomer        = "Customer"
 	TypeIntegration     = "Integration"
 	TypeInvite          = "Invite"
+	TypeIssueSync       = "IssueSync"
 	TypeLabel           = "Label"
 	TypeOrganization    = "Organization"
 	TypePerson          = "Person"
@@ -1708,24 +1710,31 @@ func (m *CustomerMutation) ResetEdge(name string) error {
 // IntegrationMutation represents an operation that mutates the Integration nodes in the graph.
 type IntegrationMutation struct {
 	config
-	op             Op
-	typ            string
-	id             *uuid.UUID
-	_type          *string
-	display_name   *string
-	credentials    *map[string]interface{}
-	metadata       *map[string]interface{}
-	enabled        *bool
-	created_at     *time.Time
-	clearedFields  map[string]struct{}
-	project        *uuid.UUID
-	clearedproject bool
-	tasks          map[uuid.UUID]struct{}
-	removedtasks   map[uuid.UUID]struct{}
-	clearedtasks   bool
-	done           bool
-	oldValue       func(context.Context) (*Integration, error)
-	predicates     []predicate.Integration
+	op                 Op
+	typ                string
+	id                 *uuid.UUID
+	_type              *string
+	display_name       *string
+	credentials        *map[string]interface{}
+	metadata           *map[string]interface{}
+	enabled            *bool
+	sync_issues        *bool
+	sync_cursor        *time.Time
+	last_synced_at     *time.Time
+	last_sync_error    *string
+	created_at         *time.Time
+	clearedFields      map[string]struct{}
+	project            *uuid.UUID
+	clearedproject     bool
+	tasks              map[uuid.UUID]struct{}
+	removedtasks       map[uuid.UUID]struct{}
+	clearedtasks       bool
+	issue_syncs        map[uuid.UUID]struct{}
+	removedissue_syncs map[uuid.UUID]struct{}
+	clearedissue_syncs bool
+	done               bool
+	oldValue           func(context.Context) (*Integration, error)
+	predicates         []predicate.Integration
 }
 
 var _ ent.Mutation = (*IntegrationMutation)(nil)
@@ -2074,6 +2083,176 @@ func (m *IntegrationMutation) ResetEnabled() {
 	m.enabled = nil
 }
 
+// SetSyncIssues sets the "sync_issues" field.
+func (m *IntegrationMutation) SetSyncIssues(b bool) {
+	m.sync_issues = &b
+}
+
+// SyncIssues returns the value of the "sync_issues" field in the mutation.
+func (m *IntegrationMutation) SyncIssues() (r bool, exists bool) {
+	v := m.sync_issues
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSyncIssues returns the old "sync_issues" field's value of the Integration entity.
+// If the Integration object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IntegrationMutation) OldSyncIssues(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSyncIssues is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSyncIssues requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSyncIssues: %w", err)
+	}
+	return oldValue.SyncIssues, nil
+}
+
+// ResetSyncIssues resets all changes to the "sync_issues" field.
+func (m *IntegrationMutation) ResetSyncIssues() {
+	m.sync_issues = nil
+}
+
+// SetSyncCursor sets the "sync_cursor" field.
+func (m *IntegrationMutation) SetSyncCursor(t time.Time) {
+	m.sync_cursor = &t
+}
+
+// SyncCursor returns the value of the "sync_cursor" field in the mutation.
+func (m *IntegrationMutation) SyncCursor() (r time.Time, exists bool) {
+	v := m.sync_cursor
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSyncCursor returns the old "sync_cursor" field's value of the Integration entity.
+// If the Integration object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IntegrationMutation) OldSyncCursor(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSyncCursor is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSyncCursor requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSyncCursor: %w", err)
+	}
+	return oldValue.SyncCursor, nil
+}
+
+// ClearSyncCursor clears the value of the "sync_cursor" field.
+func (m *IntegrationMutation) ClearSyncCursor() {
+	m.sync_cursor = nil
+	m.clearedFields[integration.FieldSyncCursor] = struct{}{}
+}
+
+// SyncCursorCleared returns if the "sync_cursor" field was cleared in this mutation.
+func (m *IntegrationMutation) SyncCursorCleared() bool {
+	_, ok := m.clearedFields[integration.FieldSyncCursor]
+	return ok
+}
+
+// ResetSyncCursor resets all changes to the "sync_cursor" field.
+func (m *IntegrationMutation) ResetSyncCursor() {
+	m.sync_cursor = nil
+	delete(m.clearedFields, integration.FieldSyncCursor)
+}
+
+// SetLastSyncedAt sets the "last_synced_at" field.
+func (m *IntegrationMutation) SetLastSyncedAt(t time.Time) {
+	m.last_synced_at = &t
+}
+
+// LastSyncedAt returns the value of the "last_synced_at" field in the mutation.
+func (m *IntegrationMutation) LastSyncedAt() (r time.Time, exists bool) {
+	v := m.last_synced_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLastSyncedAt returns the old "last_synced_at" field's value of the Integration entity.
+// If the Integration object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IntegrationMutation) OldLastSyncedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLastSyncedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLastSyncedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLastSyncedAt: %w", err)
+	}
+	return oldValue.LastSyncedAt, nil
+}
+
+// ClearLastSyncedAt clears the value of the "last_synced_at" field.
+func (m *IntegrationMutation) ClearLastSyncedAt() {
+	m.last_synced_at = nil
+	m.clearedFields[integration.FieldLastSyncedAt] = struct{}{}
+}
+
+// LastSyncedAtCleared returns if the "last_synced_at" field was cleared in this mutation.
+func (m *IntegrationMutation) LastSyncedAtCleared() bool {
+	_, ok := m.clearedFields[integration.FieldLastSyncedAt]
+	return ok
+}
+
+// ResetLastSyncedAt resets all changes to the "last_synced_at" field.
+func (m *IntegrationMutation) ResetLastSyncedAt() {
+	m.last_synced_at = nil
+	delete(m.clearedFields, integration.FieldLastSyncedAt)
+}
+
+// SetLastSyncError sets the "last_sync_error" field.
+func (m *IntegrationMutation) SetLastSyncError(s string) {
+	m.last_sync_error = &s
+}
+
+// LastSyncError returns the value of the "last_sync_error" field in the mutation.
+func (m *IntegrationMutation) LastSyncError() (r string, exists bool) {
+	v := m.last_sync_error
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLastSyncError returns the old "last_sync_error" field's value of the Integration entity.
+// If the Integration object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IntegrationMutation) OldLastSyncError(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLastSyncError is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLastSyncError requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLastSyncError: %w", err)
+	}
+	return oldValue.LastSyncError, nil
+}
+
+// ResetLastSyncError resets all changes to the "last_sync_error" field.
+func (m *IntegrationMutation) ResetLastSyncError() {
+	m.last_sync_error = nil
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (m *IntegrationMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
@@ -2191,6 +2370,60 @@ func (m *IntegrationMutation) ResetTasks() {
 	m.removedtasks = nil
 }
 
+// AddIssueSyncIDs adds the "issue_syncs" edge to the IssueSync entity by ids.
+func (m *IntegrationMutation) AddIssueSyncIDs(ids ...uuid.UUID) {
+	if m.issue_syncs == nil {
+		m.issue_syncs = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.issue_syncs[ids[i]] = struct{}{}
+	}
+}
+
+// ClearIssueSyncs clears the "issue_syncs" edge to the IssueSync entity.
+func (m *IntegrationMutation) ClearIssueSyncs() {
+	m.clearedissue_syncs = true
+}
+
+// IssueSyncsCleared reports if the "issue_syncs" edge to the IssueSync entity was cleared.
+func (m *IntegrationMutation) IssueSyncsCleared() bool {
+	return m.clearedissue_syncs
+}
+
+// RemoveIssueSyncIDs removes the "issue_syncs" edge to the IssueSync entity by IDs.
+func (m *IntegrationMutation) RemoveIssueSyncIDs(ids ...uuid.UUID) {
+	if m.removedissue_syncs == nil {
+		m.removedissue_syncs = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.issue_syncs, ids[i])
+		m.removedissue_syncs[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedIssueSyncs returns the removed IDs of the "issue_syncs" edge to the IssueSync entity.
+func (m *IntegrationMutation) RemovedIssueSyncsIDs() (ids []uuid.UUID) {
+	for id := range m.removedissue_syncs {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// IssueSyncsIDs returns the "issue_syncs" edge IDs in the mutation.
+func (m *IntegrationMutation) IssueSyncsIDs() (ids []uuid.UUID) {
+	for id := range m.issue_syncs {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetIssueSyncs resets all changes to the "issue_syncs" edge.
+func (m *IntegrationMutation) ResetIssueSyncs() {
+	m.issue_syncs = nil
+	m.clearedissue_syncs = false
+	m.removedissue_syncs = nil
+}
+
 // Where appends a list predicates to the IntegrationMutation builder.
 func (m *IntegrationMutation) Where(ps ...predicate.Integration) {
 	m.predicates = append(m.predicates, ps...)
@@ -2225,7 +2458,7 @@ func (m *IntegrationMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *IntegrationMutation) Fields() []string {
-	fields := make([]string, 0, 7)
+	fields := make([]string, 0, 11)
 	if m.project != nil {
 		fields = append(fields, integration.FieldProjectID)
 	}
@@ -2243,6 +2476,18 @@ func (m *IntegrationMutation) Fields() []string {
 	}
 	if m.enabled != nil {
 		fields = append(fields, integration.FieldEnabled)
+	}
+	if m.sync_issues != nil {
+		fields = append(fields, integration.FieldSyncIssues)
+	}
+	if m.sync_cursor != nil {
+		fields = append(fields, integration.FieldSyncCursor)
+	}
+	if m.last_synced_at != nil {
+		fields = append(fields, integration.FieldLastSyncedAt)
+	}
+	if m.last_sync_error != nil {
+		fields = append(fields, integration.FieldLastSyncError)
 	}
 	if m.created_at != nil {
 		fields = append(fields, integration.FieldCreatedAt)
@@ -2267,6 +2512,14 @@ func (m *IntegrationMutation) Field(name string) (ent.Value, bool) {
 		return m.Metadata()
 	case integration.FieldEnabled:
 		return m.Enabled()
+	case integration.FieldSyncIssues:
+		return m.SyncIssues()
+	case integration.FieldSyncCursor:
+		return m.SyncCursor()
+	case integration.FieldLastSyncedAt:
+		return m.LastSyncedAt()
+	case integration.FieldLastSyncError:
+		return m.LastSyncError()
 	case integration.FieldCreatedAt:
 		return m.CreatedAt()
 	}
@@ -2290,6 +2543,14 @@ func (m *IntegrationMutation) OldField(ctx context.Context, name string) (ent.Va
 		return m.OldMetadata(ctx)
 	case integration.FieldEnabled:
 		return m.OldEnabled(ctx)
+	case integration.FieldSyncIssues:
+		return m.OldSyncIssues(ctx)
+	case integration.FieldSyncCursor:
+		return m.OldSyncCursor(ctx)
+	case integration.FieldLastSyncedAt:
+		return m.OldLastSyncedAt(ctx)
+	case integration.FieldLastSyncError:
+		return m.OldLastSyncError(ctx)
 	case integration.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	}
@@ -2343,6 +2604,34 @@ func (m *IntegrationMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetEnabled(v)
 		return nil
+	case integration.FieldSyncIssues:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSyncIssues(v)
+		return nil
+	case integration.FieldSyncCursor:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSyncCursor(v)
+		return nil
+	case integration.FieldLastSyncedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLastSyncedAt(v)
+		return nil
+	case integration.FieldLastSyncError:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLastSyncError(v)
+		return nil
 	case integration.FieldCreatedAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -2386,6 +2675,12 @@ func (m *IntegrationMutation) ClearedFields() []string {
 	if m.FieldCleared(integration.FieldMetadata) {
 		fields = append(fields, integration.FieldMetadata)
 	}
+	if m.FieldCleared(integration.FieldSyncCursor) {
+		fields = append(fields, integration.FieldSyncCursor)
+	}
+	if m.FieldCleared(integration.FieldLastSyncedAt) {
+		fields = append(fields, integration.FieldLastSyncedAt)
+	}
 	return fields
 }
 
@@ -2405,6 +2700,12 @@ func (m *IntegrationMutation) ClearField(name string) error {
 		return nil
 	case integration.FieldMetadata:
 		m.ClearMetadata()
+		return nil
+	case integration.FieldSyncCursor:
+		m.ClearSyncCursor()
+		return nil
+	case integration.FieldLastSyncedAt:
+		m.ClearLastSyncedAt()
 		return nil
 	}
 	return fmt.Errorf("unknown Integration nullable field %s", name)
@@ -2432,6 +2733,18 @@ func (m *IntegrationMutation) ResetField(name string) error {
 	case integration.FieldEnabled:
 		m.ResetEnabled()
 		return nil
+	case integration.FieldSyncIssues:
+		m.ResetSyncIssues()
+		return nil
+	case integration.FieldSyncCursor:
+		m.ResetSyncCursor()
+		return nil
+	case integration.FieldLastSyncedAt:
+		m.ResetLastSyncedAt()
+		return nil
+	case integration.FieldLastSyncError:
+		m.ResetLastSyncError()
+		return nil
 	case integration.FieldCreatedAt:
 		m.ResetCreatedAt()
 		return nil
@@ -2441,12 +2754,15 @@ func (m *IntegrationMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *IntegrationMutation) AddedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.project != nil {
 		edges = append(edges, integration.EdgeProject)
 	}
 	if m.tasks != nil {
 		edges = append(edges, integration.EdgeTasks)
+	}
+	if m.issue_syncs != nil {
+		edges = append(edges, integration.EdgeIssueSyncs)
 	}
 	return edges
 }
@@ -2465,15 +2781,24 @@ func (m *IntegrationMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case integration.EdgeIssueSyncs:
+		ids := make([]ent.Value, 0, len(m.issue_syncs))
+		for id := range m.issue_syncs {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *IntegrationMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.removedtasks != nil {
 		edges = append(edges, integration.EdgeTasks)
+	}
+	if m.removedissue_syncs != nil {
+		edges = append(edges, integration.EdgeIssueSyncs)
 	}
 	return edges
 }
@@ -2488,18 +2813,27 @@ func (m *IntegrationMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case integration.EdgeIssueSyncs:
+		ids := make([]ent.Value, 0, len(m.removedissue_syncs))
+		for id := range m.removedissue_syncs {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *IntegrationMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.clearedproject {
 		edges = append(edges, integration.EdgeProject)
 	}
 	if m.clearedtasks {
 		edges = append(edges, integration.EdgeTasks)
+	}
+	if m.clearedissue_syncs {
+		edges = append(edges, integration.EdgeIssueSyncs)
 	}
 	return edges
 }
@@ -2512,6 +2846,8 @@ func (m *IntegrationMutation) EdgeCleared(name string) bool {
 		return m.clearedproject
 	case integration.EdgeTasks:
 		return m.clearedtasks
+	case integration.EdgeIssueSyncs:
+		return m.clearedissue_syncs
 	}
 	return false
 }
@@ -2536,6 +2872,9 @@ func (m *IntegrationMutation) ResetEdge(name string) error {
 		return nil
 	case integration.EdgeTasks:
 		m.ResetTasks()
+		return nil
+	case integration.EdgeIssueSyncs:
+		m.ResetIssueSyncs()
 		return nil
 	}
 	return fmt.Errorf("unknown Integration edge %s", name)
@@ -3409,6 +3748,1289 @@ func (m *InviteMutation) ResetEdge(name string) error {
 		return nil
 	}
 	return fmt.Errorf("unknown Invite edge %s", name)
+}
+
+// IssueSyncMutation represents an operation that mutates the IssueSync nodes in the graph.
+type IssueSyncMutation struct {
+	config
+	op                    Op
+	typ                   string
+	id                    *uuid.UUID
+	issue_number          *int
+	addissue_number       *int
+	state                 *issuesync.State
+	title                 *string
+	body                  *string
+	labels                *[]string
+	appendlabels          []string
+	assignee_logins       *[]string
+	appendassignee_logins []string
+	mapped_login          *string
+	mapped_person_id      *uuid.UUID
+	stuck_sig             *string
+	last_error            *string
+	synced_at             *time.Time
+	created_at            *time.Time
+	clearedFields         map[string]struct{}
+	integration           *uuid.UUID
+	clearedintegration    bool
+	task                  *uuid.UUID
+	clearedtask           bool
+	done                  bool
+	oldValue              func(context.Context) (*IssueSync, error)
+	predicates            []predicate.IssueSync
+}
+
+var _ ent.Mutation = (*IssueSyncMutation)(nil)
+
+// issuesyncOption allows management of the mutation configuration using functional options.
+type issuesyncOption func(*IssueSyncMutation)
+
+// newIssueSyncMutation creates new mutation for the IssueSync entity.
+func newIssueSyncMutation(c config, op Op, opts ...issuesyncOption) *IssueSyncMutation {
+	m := &IssueSyncMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeIssueSync,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withIssueSyncID sets the ID field of the mutation.
+func withIssueSyncID(id uuid.UUID) issuesyncOption {
+	return func(m *IssueSyncMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *IssueSync
+		)
+		m.oldValue = func(ctx context.Context) (*IssueSync, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().IssueSync.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withIssueSync sets the old IssueSync of the mutation.
+func withIssueSync(node *IssueSync) issuesyncOption {
+	return func(m *IssueSyncMutation) {
+		m.oldValue = func(context.Context) (*IssueSync, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m IssueSyncMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m IssueSyncMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of IssueSync entities.
+func (m *IssueSyncMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *IssueSyncMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *IssueSyncMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().IssueSync.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetIntegrationID sets the "integration_id" field.
+func (m *IssueSyncMutation) SetIntegrationID(u uuid.UUID) {
+	m.integration = &u
+}
+
+// IntegrationID returns the value of the "integration_id" field in the mutation.
+func (m *IssueSyncMutation) IntegrationID() (r uuid.UUID, exists bool) {
+	v := m.integration
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIntegrationID returns the old "integration_id" field's value of the IssueSync entity.
+// If the IssueSync object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IssueSyncMutation) OldIntegrationID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIntegrationID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIntegrationID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIntegrationID: %w", err)
+	}
+	return oldValue.IntegrationID, nil
+}
+
+// ResetIntegrationID resets all changes to the "integration_id" field.
+func (m *IssueSyncMutation) ResetIntegrationID() {
+	m.integration = nil
+}
+
+// SetTaskID sets the "task_id" field.
+func (m *IssueSyncMutation) SetTaskID(u uuid.UUID) {
+	m.task = &u
+}
+
+// TaskID returns the value of the "task_id" field in the mutation.
+func (m *IssueSyncMutation) TaskID() (r uuid.UUID, exists bool) {
+	v := m.task
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTaskID returns the old "task_id" field's value of the IssueSync entity.
+// If the IssueSync object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IssueSyncMutation) OldTaskID(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTaskID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTaskID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTaskID: %w", err)
+	}
+	return oldValue.TaskID, nil
+}
+
+// ClearTaskID clears the value of the "task_id" field.
+func (m *IssueSyncMutation) ClearTaskID() {
+	m.task = nil
+	m.clearedFields[issuesync.FieldTaskID] = struct{}{}
+}
+
+// TaskIDCleared returns if the "task_id" field was cleared in this mutation.
+func (m *IssueSyncMutation) TaskIDCleared() bool {
+	_, ok := m.clearedFields[issuesync.FieldTaskID]
+	return ok
+}
+
+// ResetTaskID resets all changes to the "task_id" field.
+func (m *IssueSyncMutation) ResetTaskID() {
+	m.task = nil
+	delete(m.clearedFields, issuesync.FieldTaskID)
+}
+
+// SetIssueNumber sets the "issue_number" field.
+func (m *IssueSyncMutation) SetIssueNumber(i int) {
+	m.issue_number = &i
+	m.addissue_number = nil
+}
+
+// IssueNumber returns the value of the "issue_number" field in the mutation.
+func (m *IssueSyncMutation) IssueNumber() (r int, exists bool) {
+	v := m.issue_number
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIssueNumber returns the old "issue_number" field's value of the IssueSync entity.
+// If the IssueSync object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IssueSyncMutation) OldIssueNumber(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIssueNumber is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIssueNumber requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIssueNumber: %w", err)
+	}
+	return oldValue.IssueNumber, nil
+}
+
+// AddIssueNumber adds i to the "issue_number" field.
+func (m *IssueSyncMutation) AddIssueNumber(i int) {
+	if m.addissue_number != nil {
+		*m.addissue_number += i
+	} else {
+		m.addissue_number = &i
+	}
+}
+
+// AddedIssueNumber returns the value that was added to the "issue_number" field in this mutation.
+func (m *IssueSyncMutation) AddedIssueNumber() (r int, exists bool) {
+	v := m.addissue_number
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetIssueNumber resets all changes to the "issue_number" field.
+func (m *IssueSyncMutation) ResetIssueNumber() {
+	m.issue_number = nil
+	m.addissue_number = nil
+}
+
+// SetState sets the "state" field.
+func (m *IssueSyncMutation) SetState(i issuesync.State) {
+	m.state = &i
+}
+
+// State returns the value of the "state" field in the mutation.
+func (m *IssueSyncMutation) State() (r issuesync.State, exists bool) {
+	v := m.state
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldState returns the old "state" field's value of the IssueSync entity.
+// If the IssueSync object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IssueSyncMutation) OldState(ctx context.Context) (v issuesync.State, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldState is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldState requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldState: %w", err)
+	}
+	return oldValue.State, nil
+}
+
+// ResetState resets all changes to the "state" field.
+func (m *IssueSyncMutation) ResetState() {
+	m.state = nil
+}
+
+// SetTitle sets the "title" field.
+func (m *IssueSyncMutation) SetTitle(s string) {
+	m.title = &s
+}
+
+// Title returns the value of the "title" field in the mutation.
+func (m *IssueSyncMutation) Title() (r string, exists bool) {
+	v := m.title
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTitle returns the old "title" field's value of the IssueSync entity.
+// If the IssueSync object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IssueSyncMutation) OldTitle(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTitle is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTitle requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTitle: %w", err)
+	}
+	return oldValue.Title, nil
+}
+
+// ResetTitle resets all changes to the "title" field.
+func (m *IssueSyncMutation) ResetTitle() {
+	m.title = nil
+}
+
+// SetBody sets the "body" field.
+func (m *IssueSyncMutation) SetBody(s string) {
+	m.body = &s
+}
+
+// Body returns the value of the "body" field in the mutation.
+func (m *IssueSyncMutation) Body() (r string, exists bool) {
+	v := m.body
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBody returns the old "body" field's value of the IssueSync entity.
+// If the IssueSync object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IssueSyncMutation) OldBody(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBody is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBody requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBody: %w", err)
+	}
+	return oldValue.Body, nil
+}
+
+// ResetBody resets all changes to the "body" field.
+func (m *IssueSyncMutation) ResetBody() {
+	m.body = nil
+}
+
+// SetLabels sets the "labels" field.
+func (m *IssueSyncMutation) SetLabels(s []string) {
+	m.labels = &s
+	m.appendlabels = nil
+}
+
+// Labels returns the value of the "labels" field in the mutation.
+func (m *IssueSyncMutation) Labels() (r []string, exists bool) {
+	v := m.labels
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLabels returns the old "labels" field's value of the IssueSync entity.
+// If the IssueSync object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IssueSyncMutation) OldLabels(ctx context.Context) (v []string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLabels is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLabels requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLabels: %w", err)
+	}
+	return oldValue.Labels, nil
+}
+
+// AppendLabels adds s to the "labels" field.
+func (m *IssueSyncMutation) AppendLabels(s []string) {
+	m.appendlabels = append(m.appendlabels, s...)
+}
+
+// AppendedLabels returns the list of values that were appended to the "labels" field in this mutation.
+func (m *IssueSyncMutation) AppendedLabels() ([]string, bool) {
+	if len(m.appendlabels) == 0 {
+		return nil, false
+	}
+	return m.appendlabels, true
+}
+
+// ClearLabels clears the value of the "labels" field.
+func (m *IssueSyncMutation) ClearLabels() {
+	m.labels = nil
+	m.appendlabels = nil
+	m.clearedFields[issuesync.FieldLabels] = struct{}{}
+}
+
+// LabelsCleared returns if the "labels" field was cleared in this mutation.
+func (m *IssueSyncMutation) LabelsCleared() bool {
+	_, ok := m.clearedFields[issuesync.FieldLabels]
+	return ok
+}
+
+// ResetLabels resets all changes to the "labels" field.
+func (m *IssueSyncMutation) ResetLabels() {
+	m.labels = nil
+	m.appendlabels = nil
+	delete(m.clearedFields, issuesync.FieldLabels)
+}
+
+// SetAssigneeLogins sets the "assignee_logins" field.
+func (m *IssueSyncMutation) SetAssigneeLogins(s []string) {
+	m.assignee_logins = &s
+	m.appendassignee_logins = nil
+}
+
+// AssigneeLogins returns the value of the "assignee_logins" field in the mutation.
+func (m *IssueSyncMutation) AssigneeLogins() (r []string, exists bool) {
+	v := m.assignee_logins
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAssigneeLogins returns the old "assignee_logins" field's value of the IssueSync entity.
+// If the IssueSync object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IssueSyncMutation) OldAssigneeLogins(ctx context.Context) (v []string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAssigneeLogins is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAssigneeLogins requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAssigneeLogins: %w", err)
+	}
+	return oldValue.AssigneeLogins, nil
+}
+
+// AppendAssigneeLogins adds s to the "assignee_logins" field.
+func (m *IssueSyncMutation) AppendAssigneeLogins(s []string) {
+	m.appendassignee_logins = append(m.appendassignee_logins, s...)
+}
+
+// AppendedAssigneeLogins returns the list of values that were appended to the "assignee_logins" field in this mutation.
+func (m *IssueSyncMutation) AppendedAssigneeLogins() ([]string, bool) {
+	if len(m.appendassignee_logins) == 0 {
+		return nil, false
+	}
+	return m.appendassignee_logins, true
+}
+
+// ClearAssigneeLogins clears the value of the "assignee_logins" field.
+func (m *IssueSyncMutation) ClearAssigneeLogins() {
+	m.assignee_logins = nil
+	m.appendassignee_logins = nil
+	m.clearedFields[issuesync.FieldAssigneeLogins] = struct{}{}
+}
+
+// AssigneeLoginsCleared returns if the "assignee_logins" field was cleared in this mutation.
+func (m *IssueSyncMutation) AssigneeLoginsCleared() bool {
+	_, ok := m.clearedFields[issuesync.FieldAssigneeLogins]
+	return ok
+}
+
+// ResetAssigneeLogins resets all changes to the "assignee_logins" field.
+func (m *IssueSyncMutation) ResetAssigneeLogins() {
+	m.assignee_logins = nil
+	m.appendassignee_logins = nil
+	delete(m.clearedFields, issuesync.FieldAssigneeLogins)
+}
+
+// SetMappedLogin sets the "mapped_login" field.
+func (m *IssueSyncMutation) SetMappedLogin(s string) {
+	m.mapped_login = &s
+}
+
+// MappedLogin returns the value of the "mapped_login" field in the mutation.
+func (m *IssueSyncMutation) MappedLogin() (r string, exists bool) {
+	v := m.mapped_login
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMappedLogin returns the old "mapped_login" field's value of the IssueSync entity.
+// If the IssueSync object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IssueSyncMutation) OldMappedLogin(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMappedLogin is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMappedLogin requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMappedLogin: %w", err)
+	}
+	return oldValue.MappedLogin, nil
+}
+
+// ResetMappedLogin resets all changes to the "mapped_login" field.
+func (m *IssueSyncMutation) ResetMappedLogin() {
+	m.mapped_login = nil
+}
+
+// SetMappedPersonID sets the "mapped_person_id" field.
+func (m *IssueSyncMutation) SetMappedPersonID(u uuid.UUID) {
+	m.mapped_person_id = &u
+}
+
+// MappedPersonID returns the value of the "mapped_person_id" field in the mutation.
+func (m *IssueSyncMutation) MappedPersonID() (r uuid.UUID, exists bool) {
+	v := m.mapped_person_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMappedPersonID returns the old "mapped_person_id" field's value of the IssueSync entity.
+// If the IssueSync object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IssueSyncMutation) OldMappedPersonID(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMappedPersonID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMappedPersonID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMappedPersonID: %w", err)
+	}
+	return oldValue.MappedPersonID, nil
+}
+
+// ClearMappedPersonID clears the value of the "mapped_person_id" field.
+func (m *IssueSyncMutation) ClearMappedPersonID() {
+	m.mapped_person_id = nil
+	m.clearedFields[issuesync.FieldMappedPersonID] = struct{}{}
+}
+
+// MappedPersonIDCleared returns if the "mapped_person_id" field was cleared in this mutation.
+func (m *IssueSyncMutation) MappedPersonIDCleared() bool {
+	_, ok := m.clearedFields[issuesync.FieldMappedPersonID]
+	return ok
+}
+
+// ResetMappedPersonID resets all changes to the "mapped_person_id" field.
+func (m *IssueSyncMutation) ResetMappedPersonID() {
+	m.mapped_person_id = nil
+	delete(m.clearedFields, issuesync.FieldMappedPersonID)
+}
+
+// SetStuckSig sets the "stuck_sig" field.
+func (m *IssueSyncMutation) SetStuckSig(s string) {
+	m.stuck_sig = &s
+}
+
+// StuckSig returns the value of the "stuck_sig" field in the mutation.
+func (m *IssueSyncMutation) StuckSig() (r string, exists bool) {
+	v := m.stuck_sig
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStuckSig returns the old "stuck_sig" field's value of the IssueSync entity.
+// If the IssueSync object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IssueSyncMutation) OldStuckSig(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStuckSig is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStuckSig requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStuckSig: %w", err)
+	}
+	return oldValue.StuckSig, nil
+}
+
+// ResetStuckSig resets all changes to the "stuck_sig" field.
+func (m *IssueSyncMutation) ResetStuckSig() {
+	m.stuck_sig = nil
+}
+
+// SetLastError sets the "last_error" field.
+func (m *IssueSyncMutation) SetLastError(s string) {
+	m.last_error = &s
+}
+
+// LastError returns the value of the "last_error" field in the mutation.
+func (m *IssueSyncMutation) LastError() (r string, exists bool) {
+	v := m.last_error
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLastError returns the old "last_error" field's value of the IssueSync entity.
+// If the IssueSync object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IssueSyncMutation) OldLastError(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLastError is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLastError requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLastError: %w", err)
+	}
+	return oldValue.LastError, nil
+}
+
+// ResetLastError resets all changes to the "last_error" field.
+func (m *IssueSyncMutation) ResetLastError() {
+	m.last_error = nil
+}
+
+// SetSyncedAt sets the "synced_at" field.
+func (m *IssueSyncMutation) SetSyncedAt(t time.Time) {
+	m.synced_at = &t
+}
+
+// SyncedAt returns the value of the "synced_at" field in the mutation.
+func (m *IssueSyncMutation) SyncedAt() (r time.Time, exists bool) {
+	v := m.synced_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSyncedAt returns the old "synced_at" field's value of the IssueSync entity.
+// If the IssueSync object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IssueSyncMutation) OldSyncedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSyncedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSyncedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSyncedAt: %w", err)
+	}
+	return oldValue.SyncedAt, nil
+}
+
+// ResetSyncedAt resets all changes to the "synced_at" field.
+func (m *IssueSyncMutation) ResetSyncedAt() {
+	m.synced_at = nil
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *IssueSyncMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *IssueSyncMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the IssueSync entity.
+// If the IssueSync object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IssueSyncMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *IssueSyncMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// ClearIntegration clears the "integration" edge to the Integration entity.
+func (m *IssueSyncMutation) ClearIntegration() {
+	m.clearedintegration = true
+	m.clearedFields[issuesync.FieldIntegrationID] = struct{}{}
+}
+
+// IntegrationCleared reports if the "integration" edge to the Integration entity was cleared.
+func (m *IssueSyncMutation) IntegrationCleared() bool {
+	return m.clearedintegration
+}
+
+// IntegrationIDs returns the "integration" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// IntegrationID instead. It exists only for internal usage by the builders.
+func (m *IssueSyncMutation) IntegrationIDs() (ids []uuid.UUID) {
+	if id := m.integration; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetIntegration resets all changes to the "integration" edge.
+func (m *IssueSyncMutation) ResetIntegration() {
+	m.integration = nil
+	m.clearedintegration = false
+}
+
+// ClearTask clears the "task" edge to the Task entity.
+func (m *IssueSyncMutation) ClearTask() {
+	m.clearedtask = true
+	m.clearedFields[issuesync.FieldTaskID] = struct{}{}
+}
+
+// TaskCleared reports if the "task" edge to the Task entity was cleared.
+func (m *IssueSyncMutation) TaskCleared() bool {
+	return m.TaskIDCleared() || m.clearedtask
+}
+
+// TaskIDs returns the "task" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// TaskID instead. It exists only for internal usage by the builders.
+func (m *IssueSyncMutation) TaskIDs() (ids []uuid.UUID) {
+	if id := m.task; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetTask resets all changes to the "task" edge.
+func (m *IssueSyncMutation) ResetTask() {
+	m.task = nil
+	m.clearedtask = false
+}
+
+// Where appends a list predicates to the IssueSyncMutation builder.
+func (m *IssueSyncMutation) Where(ps ...predicate.IssueSync) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the IssueSyncMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *IssueSyncMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.IssueSync, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *IssueSyncMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *IssueSyncMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (IssueSync).
+func (m *IssueSyncMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *IssueSyncMutation) Fields() []string {
+	fields := make([]string, 0, 14)
+	if m.integration != nil {
+		fields = append(fields, issuesync.FieldIntegrationID)
+	}
+	if m.task != nil {
+		fields = append(fields, issuesync.FieldTaskID)
+	}
+	if m.issue_number != nil {
+		fields = append(fields, issuesync.FieldIssueNumber)
+	}
+	if m.state != nil {
+		fields = append(fields, issuesync.FieldState)
+	}
+	if m.title != nil {
+		fields = append(fields, issuesync.FieldTitle)
+	}
+	if m.body != nil {
+		fields = append(fields, issuesync.FieldBody)
+	}
+	if m.labels != nil {
+		fields = append(fields, issuesync.FieldLabels)
+	}
+	if m.assignee_logins != nil {
+		fields = append(fields, issuesync.FieldAssigneeLogins)
+	}
+	if m.mapped_login != nil {
+		fields = append(fields, issuesync.FieldMappedLogin)
+	}
+	if m.mapped_person_id != nil {
+		fields = append(fields, issuesync.FieldMappedPersonID)
+	}
+	if m.stuck_sig != nil {
+		fields = append(fields, issuesync.FieldStuckSig)
+	}
+	if m.last_error != nil {
+		fields = append(fields, issuesync.FieldLastError)
+	}
+	if m.synced_at != nil {
+		fields = append(fields, issuesync.FieldSyncedAt)
+	}
+	if m.created_at != nil {
+		fields = append(fields, issuesync.FieldCreatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *IssueSyncMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case issuesync.FieldIntegrationID:
+		return m.IntegrationID()
+	case issuesync.FieldTaskID:
+		return m.TaskID()
+	case issuesync.FieldIssueNumber:
+		return m.IssueNumber()
+	case issuesync.FieldState:
+		return m.State()
+	case issuesync.FieldTitle:
+		return m.Title()
+	case issuesync.FieldBody:
+		return m.Body()
+	case issuesync.FieldLabels:
+		return m.Labels()
+	case issuesync.FieldAssigneeLogins:
+		return m.AssigneeLogins()
+	case issuesync.FieldMappedLogin:
+		return m.MappedLogin()
+	case issuesync.FieldMappedPersonID:
+		return m.MappedPersonID()
+	case issuesync.FieldStuckSig:
+		return m.StuckSig()
+	case issuesync.FieldLastError:
+		return m.LastError()
+	case issuesync.FieldSyncedAt:
+		return m.SyncedAt()
+	case issuesync.FieldCreatedAt:
+		return m.CreatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *IssueSyncMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case issuesync.FieldIntegrationID:
+		return m.OldIntegrationID(ctx)
+	case issuesync.FieldTaskID:
+		return m.OldTaskID(ctx)
+	case issuesync.FieldIssueNumber:
+		return m.OldIssueNumber(ctx)
+	case issuesync.FieldState:
+		return m.OldState(ctx)
+	case issuesync.FieldTitle:
+		return m.OldTitle(ctx)
+	case issuesync.FieldBody:
+		return m.OldBody(ctx)
+	case issuesync.FieldLabels:
+		return m.OldLabels(ctx)
+	case issuesync.FieldAssigneeLogins:
+		return m.OldAssigneeLogins(ctx)
+	case issuesync.FieldMappedLogin:
+		return m.OldMappedLogin(ctx)
+	case issuesync.FieldMappedPersonID:
+		return m.OldMappedPersonID(ctx)
+	case issuesync.FieldStuckSig:
+		return m.OldStuckSig(ctx)
+	case issuesync.FieldLastError:
+		return m.OldLastError(ctx)
+	case issuesync.FieldSyncedAt:
+		return m.OldSyncedAt(ctx)
+	case issuesync.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown IssueSync field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *IssueSyncMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case issuesync.FieldIntegrationID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIntegrationID(v)
+		return nil
+	case issuesync.FieldTaskID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTaskID(v)
+		return nil
+	case issuesync.FieldIssueNumber:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIssueNumber(v)
+		return nil
+	case issuesync.FieldState:
+		v, ok := value.(issuesync.State)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetState(v)
+		return nil
+	case issuesync.FieldTitle:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTitle(v)
+		return nil
+	case issuesync.FieldBody:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBody(v)
+		return nil
+	case issuesync.FieldLabels:
+		v, ok := value.([]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLabels(v)
+		return nil
+	case issuesync.FieldAssigneeLogins:
+		v, ok := value.([]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAssigneeLogins(v)
+		return nil
+	case issuesync.FieldMappedLogin:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMappedLogin(v)
+		return nil
+	case issuesync.FieldMappedPersonID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMappedPersonID(v)
+		return nil
+	case issuesync.FieldStuckSig:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStuckSig(v)
+		return nil
+	case issuesync.FieldLastError:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLastError(v)
+		return nil
+	case issuesync.FieldSyncedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSyncedAt(v)
+		return nil
+	case issuesync.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown IssueSync field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *IssueSyncMutation) AddedFields() []string {
+	var fields []string
+	if m.addissue_number != nil {
+		fields = append(fields, issuesync.FieldIssueNumber)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *IssueSyncMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case issuesync.FieldIssueNumber:
+		return m.AddedIssueNumber()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *IssueSyncMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case issuesync.FieldIssueNumber:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddIssueNumber(v)
+		return nil
+	}
+	return fmt.Errorf("unknown IssueSync numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *IssueSyncMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(issuesync.FieldTaskID) {
+		fields = append(fields, issuesync.FieldTaskID)
+	}
+	if m.FieldCleared(issuesync.FieldLabels) {
+		fields = append(fields, issuesync.FieldLabels)
+	}
+	if m.FieldCleared(issuesync.FieldAssigneeLogins) {
+		fields = append(fields, issuesync.FieldAssigneeLogins)
+	}
+	if m.FieldCleared(issuesync.FieldMappedPersonID) {
+		fields = append(fields, issuesync.FieldMappedPersonID)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *IssueSyncMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *IssueSyncMutation) ClearField(name string) error {
+	switch name {
+	case issuesync.FieldTaskID:
+		m.ClearTaskID()
+		return nil
+	case issuesync.FieldLabels:
+		m.ClearLabels()
+		return nil
+	case issuesync.FieldAssigneeLogins:
+		m.ClearAssigneeLogins()
+		return nil
+	case issuesync.FieldMappedPersonID:
+		m.ClearMappedPersonID()
+		return nil
+	}
+	return fmt.Errorf("unknown IssueSync nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *IssueSyncMutation) ResetField(name string) error {
+	switch name {
+	case issuesync.FieldIntegrationID:
+		m.ResetIntegrationID()
+		return nil
+	case issuesync.FieldTaskID:
+		m.ResetTaskID()
+		return nil
+	case issuesync.FieldIssueNumber:
+		m.ResetIssueNumber()
+		return nil
+	case issuesync.FieldState:
+		m.ResetState()
+		return nil
+	case issuesync.FieldTitle:
+		m.ResetTitle()
+		return nil
+	case issuesync.FieldBody:
+		m.ResetBody()
+		return nil
+	case issuesync.FieldLabels:
+		m.ResetLabels()
+		return nil
+	case issuesync.FieldAssigneeLogins:
+		m.ResetAssigneeLogins()
+		return nil
+	case issuesync.FieldMappedLogin:
+		m.ResetMappedLogin()
+		return nil
+	case issuesync.FieldMappedPersonID:
+		m.ResetMappedPersonID()
+		return nil
+	case issuesync.FieldStuckSig:
+		m.ResetStuckSig()
+		return nil
+	case issuesync.FieldLastError:
+		m.ResetLastError()
+		return nil
+	case issuesync.FieldSyncedAt:
+		m.ResetSyncedAt()
+		return nil
+	case issuesync.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown IssueSync field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *IssueSyncMutation) AddedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.integration != nil {
+		edges = append(edges, issuesync.EdgeIntegration)
+	}
+	if m.task != nil {
+		edges = append(edges, issuesync.EdgeTask)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *IssueSyncMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case issuesync.EdgeIntegration:
+		if id := m.integration; id != nil {
+			return []ent.Value{*id}
+		}
+	case issuesync.EdgeTask:
+		if id := m.task; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *IssueSyncMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 2)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *IssueSyncMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *IssueSyncMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.clearedintegration {
+		edges = append(edges, issuesync.EdgeIntegration)
+	}
+	if m.clearedtask {
+		edges = append(edges, issuesync.EdgeTask)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *IssueSyncMutation) EdgeCleared(name string) bool {
+	switch name {
+	case issuesync.EdgeIntegration:
+		return m.clearedintegration
+	case issuesync.EdgeTask:
+		return m.clearedtask
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *IssueSyncMutation) ClearEdge(name string) error {
+	switch name {
+	case issuesync.EdgeIntegration:
+		m.ClearIntegration()
+		return nil
+	case issuesync.EdgeTask:
+		m.ClearTask()
+		return nil
+	}
+	return fmt.Errorf("unknown IssueSync unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *IssueSyncMutation) ResetEdge(name string) error {
+	switch name {
+	case issuesync.EdgeIntegration:
+		m.ResetIntegration()
+		return nil
+	case issuesync.EdgeTask:
+		m.ResetTask()
+		return nil
+	}
+	return fmt.Errorf("unknown IssueSync edge %s", name)
 }
 
 // LabelMutation represents an operation that mutates the Label nodes in the graph.
@@ -10157,6 +11779,8 @@ type TaskMutation struct {
 	labels                      map[uuid.UUID]struct{}
 	removedlabels               map[uuid.UUID]struct{}
 	clearedlabels               bool
+	issue_sync                  *uuid.UUID
+	clearedissue_sync           bool
 	done                        bool
 	oldValue                    func(context.Context) (*Task, error)
 	predicates                  []predicate.Task
@@ -10929,6 +12553,45 @@ func (m *TaskMutation) ResetLabels() {
 	m.removedlabels = nil
 }
 
+// SetIssueSyncID sets the "issue_sync" edge to the IssueSync entity by id.
+func (m *TaskMutation) SetIssueSyncID(id uuid.UUID) {
+	m.issue_sync = &id
+}
+
+// ClearIssueSync clears the "issue_sync" edge to the IssueSync entity.
+func (m *TaskMutation) ClearIssueSync() {
+	m.clearedissue_sync = true
+}
+
+// IssueSyncCleared reports if the "issue_sync" edge to the IssueSync entity was cleared.
+func (m *TaskMutation) IssueSyncCleared() bool {
+	return m.clearedissue_sync
+}
+
+// IssueSyncID returns the "issue_sync" edge ID in the mutation.
+func (m *TaskMutation) IssueSyncID() (id uuid.UUID, exists bool) {
+	if m.issue_sync != nil {
+		return *m.issue_sync, true
+	}
+	return
+}
+
+// IssueSyncIDs returns the "issue_sync" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// IssueSyncID instead. It exists only for internal usage by the builders.
+func (m *TaskMutation) IssueSyncIDs() (ids []uuid.UUID) {
+	if id := m.issue_sync; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetIssueSync resets all changes to the "issue_sync" edge.
+func (m *TaskMutation) ResetIssueSync() {
+	m.issue_sync = nil
+	m.clearedissue_sync = false
+}
+
 // Where appends a list predicates to the TaskMutation builder.
 func (m *TaskMutation) Where(ps ...predicate.Task) {
 	m.predicates = append(m.predicates, ps...)
@@ -11271,7 +12934,7 @@ func (m *TaskMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *TaskMutation) AddedEdges() []string {
-	edges := make([]string, 0, 5)
+	edges := make([]string, 0, 6)
 	if m.project != nil {
 		edges = append(edges, task.EdgeProject)
 	}
@@ -11286,6 +12949,9 @@ func (m *TaskMutation) AddedEdges() []string {
 	}
 	if m.labels != nil {
 		edges = append(edges, task.EdgeLabels)
+	}
+	if m.issue_sync != nil {
+		edges = append(edges, task.EdgeIssueSync)
 	}
 	return edges
 }
@@ -11318,13 +12984,17 @@ func (m *TaskMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case task.EdgeIssueSync:
+		if id := m.issue_sync; id != nil {
+			return []ent.Value{*id}
+		}
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *TaskMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 5)
+	edges := make([]string, 0, 6)
 	if m.removedsession_links != nil {
 		edges = append(edges, task.EdgeSessionLinks)
 	}
@@ -11356,7 +13026,7 @@ func (m *TaskMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *TaskMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 5)
+	edges := make([]string, 0, 6)
 	if m.clearedproject {
 		edges = append(edges, task.EdgeProject)
 	}
@@ -11371,6 +13041,9 @@ func (m *TaskMutation) ClearedEdges() []string {
 	}
 	if m.clearedlabels {
 		edges = append(edges, task.EdgeLabels)
+	}
+	if m.clearedissue_sync {
+		edges = append(edges, task.EdgeIssueSync)
 	}
 	return edges
 }
@@ -11389,6 +13062,8 @@ func (m *TaskMutation) EdgeCleared(name string) bool {
 		return m.clearedsession_links
 	case task.EdgeLabels:
 		return m.clearedlabels
+	case task.EdgeIssueSync:
+		return m.clearedissue_sync
 	}
 	return false
 }
@@ -11405,6 +13080,9 @@ func (m *TaskMutation) ClearEdge(name string) error {
 		return nil
 	case task.EdgeExternalIntegration:
 		m.ClearExternalIntegration()
+		return nil
+	case task.EdgeIssueSync:
+		m.ClearIssueSync()
 		return nil
 	}
 	return fmt.Errorf("unknown Task unique edge %s", name)
@@ -11428,6 +13106,9 @@ func (m *TaskMutation) ResetEdge(name string) error {
 		return nil
 	case task.EdgeLabels:
 		m.ResetLabels()
+		return nil
+	case task.EdgeIssueSync:
+		m.ResetIssueSync()
 		return nil
 	}
 	return fmt.Errorf("unknown Task edge %s", name)

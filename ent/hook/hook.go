@@ -56,6 +56,18 @@ func (f InviteFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, erro
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.InviteMutation", m)
 }
 
+// The IssueSyncFunc type is an adapter to allow the use of ordinary
+// function as IssueSync mutator.
+type IssueSyncFunc func(context.Context, *ent.IssueSyncMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f IssueSyncFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.IssueSyncMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.IssueSyncMutation", m)
+}
+
 // The LabelFunc type is an adapter to allow the use of ordinary
 // function as Label mutator.
 type LabelFunc func(context.Context, *ent.LabelMutation) (ent.Value, error)

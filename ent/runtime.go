@@ -8,6 +8,7 @@ import (
 	"working-time-tracker/ent/customer"
 	"working-time-tracker/ent/integration"
 	"working-time-tracker/ent/invite"
+	"working-time-tracker/ent/issuesync"
 	"working-time-tracker/ent/label"
 	"working-time-tracker/ent/organization"
 	"working-time-tracker/ent/person"
@@ -61,8 +62,16 @@ func init() {
 	integrationDescEnabled := integrationFields[6].Descriptor()
 	// integration.DefaultEnabled holds the default value on creation for the enabled field.
 	integration.DefaultEnabled = integrationDescEnabled.Default.(bool)
+	// integrationDescSyncIssues is the schema descriptor for sync_issues field.
+	integrationDescSyncIssues := integrationFields[7].Descriptor()
+	// integration.DefaultSyncIssues holds the default value on creation for the sync_issues field.
+	integration.DefaultSyncIssues = integrationDescSyncIssues.Default.(bool)
+	// integrationDescLastSyncError is the schema descriptor for last_sync_error field.
+	integrationDescLastSyncError := integrationFields[10].Descriptor()
+	// integration.DefaultLastSyncError holds the default value on creation for the last_sync_error field.
+	integration.DefaultLastSyncError = integrationDescLastSyncError.Default.(string)
 	// integrationDescCreatedAt is the schema descriptor for created_at field.
-	integrationDescCreatedAt := integrationFields[7].Descriptor()
+	integrationDescCreatedAt := integrationFields[11].Descriptor()
 	// integration.DefaultCreatedAt holds the default value on creation for the created_at field.
 	integration.DefaultCreatedAt = integrationDescCreatedAt.Default.(func() time.Time)
 	// integrationDescID is the schema descriptor for id field.
@@ -79,6 +88,40 @@ func init() {
 	inviteDescID := inviteFields[0].Descriptor()
 	// invite.DefaultID holds the default value on creation for the id field.
 	invite.DefaultID = inviteDescID.Default.(func() uuid.UUID)
+	issuesyncFields := schema.IssueSync{}.Fields()
+	_ = issuesyncFields
+	// issuesyncDescTitle is the schema descriptor for title field.
+	issuesyncDescTitle := issuesyncFields[5].Descriptor()
+	// issuesync.DefaultTitle holds the default value on creation for the title field.
+	issuesync.DefaultTitle = issuesyncDescTitle.Default.(string)
+	// issuesyncDescBody is the schema descriptor for body field.
+	issuesyncDescBody := issuesyncFields[6].Descriptor()
+	// issuesync.DefaultBody holds the default value on creation for the body field.
+	issuesync.DefaultBody = issuesyncDescBody.Default.(string)
+	// issuesyncDescMappedLogin is the schema descriptor for mapped_login field.
+	issuesyncDescMappedLogin := issuesyncFields[9].Descriptor()
+	// issuesync.DefaultMappedLogin holds the default value on creation for the mapped_login field.
+	issuesync.DefaultMappedLogin = issuesyncDescMappedLogin.Default.(string)
+	// issuesyncDescStuckSig is the schema descriptor for stuck_sig field.
+	issuesyncDescStuckSig := issuesyncFields[11].Descriptor()
+	// issuesync.DefaultStuckSig holds the default value on creation for the stuck_sig field.
+	issuesync.DefaultStuckSig = issuesyncDescStuckSig.Default.(string)
+	// issuesyncDescLastError is the schema descriptor for last_error field.
+	issuesyncDescLastError := issuesyncFields[12].Descriptor()
+	// issuesync.DefaultLastError holds the default value on creation for the last_error field.
+	issuesync.DefaultLastError = issuesyncDescLastError.Default.(string)
+	// issuesyncDescSyncedAt is the schema descriptor for synced_at field.
+	issuesyncDescSyncedAt := issuesyncFields[13].Descriptor()
+	// issuesync.DefaultSyncedAt holds the default value on creation for the synced_at field.
+	issuesync.DefaultSyncedAt = issuesyncDescSyncedAt.Default.(func() time.Time)
+	// issuesyncDescCreatedAt is the schema descriptor for created_at field.
+	issuesyncDescCreatedAt := issuesyncFields[14].Descriptor()
+	// issuesync.DefaultCreatedAt holds the default value on creation for the created_at field.
+	issuesync.DefaultCreatedAt = issuesyncDescCreatedAt.Default.(func() time.Time)
+	// issuesyncDescID is the schema descriptor for id field.
+	issuesyncDescID := issuesyncFields[0].Descriptor()
+	// issuesync.DefaultID holds the default value on creation for the id field.
+	issuesync.DefaultID = issuesyncDescID.Default.(func() uuid.UUID)
 	labelFields := schema.Label{}.Fields()
 	_ = labelFields
 	// labelDescCreatedAt is the schema descriptor for created_at field.

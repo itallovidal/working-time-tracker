@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math"
 	"working-time-tracker/ent/integration"
+	"working-time-tracker/ent/issuesync"
 	"working-time-tracker/ent/label"
 	"working-time-tracker/ent/person"
 	"working-time-tracker/ent/predicate"
@@ -35,6 +36,7 @@ type TaskQuery struct {
 	withExternalIntegration *IntegrationQuery
 	withSessionLinks        *WorkSessionTaskQuery
 	withLabels              *LabelQuery
+	withIssueSync           *IssueSyncQuery
 	modifiers               []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -175,6 +177,28 @@ func (_q *TaskQuery) QueryLabels() *LabelQuery {
 			sqlgraph.From(task.Table, task.FieldID, selector),
 			sqlgraph.To(label.Table, label.FieldID),
 			sqlgraph.Edge(sqlgraph.M2M, false, task.LabelsTable, task.LabelsPrimaryKey...),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryIssueSync chains the current query on the "issue_sync" edge.
+func (_q *TaskQuery) QueryIssueSync() *IssueSyncQuery {
+	query := (&IssueSyncClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(task.Table, task.FieldID, selector),
+			sqlgraph.To(issuesync.Table, issuesync.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, task.IssueSyncTable, task.IssueSyncColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -379,6 +403,7 @@ func (_q *TaskQuery) Clone() *TaskQuery {
 		withExternalIntegration: _q.withExternalIntegration.Clone(),
 		withSessionLinks:        _q.withSessionLinks.Clone(),
 		withLabels:              _q.withLabels.Clone(),
+		withIssueSync:           _q.withIssueSync.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -437,6 +462,17 @@ func (_q *TaskQuery) WithLabels(opts ...func(*LabelQuery)) *TaskQuery {
 		opt(query)
 	}
 	_q.withLabels = query
+	return _q
+}
+
+// WithIssueSync tells the query-builder to eager-load the nodes that are connected to
+// the "issue_sync" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *TaskQuery) WithIssueSync(opts ...func(*IssueSyncQuery)) *TaskQuery {
+	query := (&IssueSyncClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withIssueSync = query
 	return _q
 }
 
@@ -518,12 +554,13 @@ func (_q *TaskQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Task, e
 	var (
 		nodes       = []*Task{}
 		_spec       = _q.querySpec()
-		loadedTypes = [5]bool{
+		loadedTypes = [6]bool{
 			_q.withProject != nil,
 			_q.withAssignee != nil,
 			_q.withExternalIntegration != nil,
 			_q.withSessionLinks != nil,
 			_q.withLabels != nil,
+			_q.withIssueSync != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -576,6 +613,12 @@ func (_q *TaskQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Task, e
 		if err := _q.loadLabels(ctx, query, nodes,
 			func(n *Task) { n.Edges.Labels = []*Label{} },
 			func(n *Task, e *Label) { n.Edges.Labels = append(n.Edges.Labels, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withIssueSync; query != nil {
+		if err := _q.loadIssueSync(ctx, query, nodes, nil,
+			func(n *Task, e *IssueSync) { n.Edges.IssueSync = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -763,6 +806,36 @@ func (_q *TaskQuery) loadLabels(ctx context.Context, query *LabelQuery, nodes []
 		for kn := range nodes {
 			assign(kn, n)
 		}
+	}
+	return nil
+}
+func (_q *TaskQuery) loadIssueSync(ctx context.Context, query *IssueSyncQuery, nodes []*Task, init func(*Task), assign func(*Task, *IssueSync)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Task)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(issuesync.FieldTaskID)
+	}
+	query.Where(predicate.IssueSync(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(task.IssueSyncColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.TaskID
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "task_id" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "task_id" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
 	}
 	return nil
 }

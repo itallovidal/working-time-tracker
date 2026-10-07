@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 	"working-time-tracker/ent/integration"
+	"working-time-tracker/ent/issuesync"
 	"working-time-tracker/ent/label"
 	"working-time-tracker/ent/person"
 	"working-time-tracker/ent/project"
@@ -221,6 +222,25 @@ func (_c *TaskCreate) AddLabels(v ...*Label) *TaskCreate {
 		ids[i] = v[i].ID
 	}
 	return _c.AddLabelIDs(ids...)
+}
+
+// SetIssueSyncID sets the "issue_sync" edge to the IssueSync entity by ID.
+func (_c *TaskCreate) SetIssueSyncID(id uuid.UUID) *TaskCreate {
+	_c.mutation.SetIssueSyncID(id)
+	return _c
+}
+
+// SetNillableIssueSyncID sets the "issue_sync" edge to the IssueSync entity by ID if the given value is not nil.
+func (_c *TaskCreate) SetNillableIssueSyncID(id *uuid.UUID) *TaskCreate {
+	if id != nil {
+		_c = _c.SetIssueSyncID(*id)
+	}
+	return _c
+}
+
+// SetIssueSync sets the "issue_sync" edge to the IssueSync entity.
+func (_c *TaskCreate) SetIssueSync(v *IssueSync) *TaskCreate {
+	return _c.SetIssueSyncID(v.ID)
 }
 
 // Mutation returns the TaskMutation object of the builder.
@@ -449,6 +469,22 @@ func (_c *TaskCreate) createSpec() (*Task, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(label.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.IssueSyncIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   task.IssueSyncTable,
+			Columns: []string{task.IssueSyncColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(issuesync.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

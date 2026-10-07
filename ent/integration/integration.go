@@ -27,12 +27,22 @@ const (
 	FieldMetadata = "metadata"
 	// FieldEnabled holds the string denoting the enabled field in the database.
 	FieldEnabled = "enabled"
+	// FieldSyncIssues holds the string denoting the sync_issues field in the database.
+	FieldSyncIssues = "sync_issues"
+	// FieldSyncCursor holds the string denoting the sync_cursor field in the database.
+	FieldSyncCursor = "sync_cursor"
+	// FieldLastSyncedAt holds the string denoting the last_synced_at field in the database.
+	FieldLastSyncedAt = "last_synced_at"
+	// FieldLastSyncError holds the string denoting the last_sync_error field in the database.
+	FieldLastSyncError = "last_sync_error"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// EdgeProject holds the string denoting the project edge name in mutations.
 	EdgeProject = "project"
 	// EdgeTasks holds the string denoting the tasks edge name in mutations.
 	EdgeTasks = "tasks"
+	// EdgeIssueSyncs holds the string denoting the issue_syncs edge name in mutations.
+	EdgeIssueSyncs = "issue_syncs"
 	// Table holds the table name of the integration in the database.
 	Table = "integrations"
 	// ProjectTable is the table that holds the project relation/edge.
@@ -49,6 +59,13 @@ const (
 	TasksInverseTable = "tasks"
 	// TasksColumn is the table column denoting the tasks relation/edge.
 	TasksColumn = "external_integration_id"
+	// IssueSyncsTable is the table that holds the issue_syncs relation/edge.
+	IssueSyncsTable = "issue_syncs"
+	// IssueSyncsInverseTable is the table name for the IssueSync entity.
+	// It exists in this package in order to avoid circular dependency with the "issuesync" package.
+	IssueSyncsInverseTable = "issue_syncs"
+	// IssueSyncsColumn is the table column denoting the issue_syncs relation/edge.
+	IssueSyncsColumn = "integration_id"
 )
 
 // Columns holds all SQL columns for integration fields.
@@ -60,6 +77,10 @@ var Columns = []string{
 	FieldCredentials,
 	FieldMetadata,
 	FieldEnabled,
+	FieldSyncIssues,
+	FieldSyncCursor,
+	FieldLastSyncedAt,
+	FieldLastSyncError,
 	FieldCreatedAt,
 }
 
@@ -76,6 +97,10 @@ func ValidColumn(column string) bool {
 var (
 	// DefaultEnabled holds the default value on creation for the "enabled" field.
 	DefaultEnabled bool
+	// DefaultSyncIssues holds the default value on creation for the "sync_issues" field.
+	DefaultSyncIssues bool
+	// DefaultLastSyncError holds the default value on creation for the "last_sync_error" field.
+	DefaultLastSyncError string
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 	// DefaultID holds the default value on creation for the "id" field.
@@ -110,6 +135,26 @@ func ByEnabled(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldEnabled, opts...).ToFunc()
 }
 
+// BySyncIssues orders the results by the sync_issues field.
+func BySyncIssues(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSyncIssues, opts...).ToFunc()
+}
+
+// BySyncCursor orders the results by the sync_cursor field.
+func BySyncCursor(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSyncCursor, opts...).ToFunc()
+}
+
+// ByLastSyncedAt orders the results by the last_synced_at field.
+func ByLastSyncedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldLastSyncedAt, opts...).ToFunc()
+}
+
+// ByLastSyncError orders the results by the last_sync_error field.
+func ByLastSyncError(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldLastSyncError, opts...).ToFunc()
+}
+
 // ByCreatedAt orders the results by the created_at field.
 func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCreatedAt, opts...).ToFunc()
@@ -135,6 +180,20 @@ func ByTasks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newTasksStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByIssueSyncsCount orders the results by issue_syncs count.
+func ByIssueSyncsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newIssueSyncsStep(), opts...)
+	}
+}
+
+// ByIssueSyncs orders the results by issue_syncs terms.
+func ByIssueSyncs(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newIssueSyncsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newProjectStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -147,5 +206,12 @@ func newTasksStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(TasksInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, TasksTable, TasksColumn),
+	)
+}
+func newIssueSyncsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(IssueSyncsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, IssueSyncsTable, IssueSyncsColumn),
 	)
 }

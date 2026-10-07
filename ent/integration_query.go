@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math"
 	"working-time-tracker/ent/integration"
+	"working-time-tracker/ent/issuesync"
 	"working-time-tracker/ent/predicate"
 	"working-time-tracker/ent/project"
 	"working-time-tracker/ent/task"
@@ -23,13 +24,14 @@ import (
 // IntegrationQuery is the builder for querying Integration entities.
 type IntegrationQuery struct {
 	config
-	ctx         *QueryContext
-	order       []integration.OrderOption
-	inters      []Interceptor
-	predicates  []predicate.Integration
-	withProject *ProjectQuery
-	withTasks   *TaskQuery
-	modifiers   []func(*sql.Selector)
+	ctx            *QueryContext
+	order          []integration.OrderOption
+	inters         []Interceptor
+	predicates     []predicate.Integration
+	withProject    *ProjectQuery
+	withTasks      *TaskQuery
+	withIssueSyncs *IssueSyncQuery
+	modifiers      []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -103,6 +105,28 @@ func (_q *IntegrationQuery) QueryTasks() *TaskQuery {
 			sqlgraph.From(integration.Table, integration.FieldID, selector),
 			sqlgraph.To(task.Table, task.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, integration.TasksTable, integration.TasksColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryIssueSyncs chains the current query on the "issue_syncs" edge.
+func (_q *IntegrationQuery) QueryIssueSyncs() *IssueSyncQuery {
+	query := (&IssueSyncClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(integration.Table, integration.FieldID, selector),
+			sqlgraph.To(issuesync.Table, issuesync.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, integration.IssueSyncsTable, integration.IssueSyncsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -297,13 +321,14 @@ func (_q *IntegrationQuery) Clone() *IntegrationQuery {
 		return nil
 	}
 	return &IntegrationQuery{
-		config:      _q.config,
-		ctx:         _q.ctx.Clone(),
-		order:       append([]integration.OrderOption{}, _q.order...),
-		inters:      append([]Interceptor{}, _q.inters...),
-		predicates:  append([]predicate.Integration{}, _q.predicates...),
-		withProject: _q.withProject.Clone(),
-		withTasks:   _q.withTasks.Clone(),
+		config:         _q.config,
+		ctx:            _q.ctx.Clone(),
+		order:          append([]integration.OrderOption{}, _q.order...),
+		inters:         append([]Interceptor{}, _q.inters...),
+		predicates:     append([]predicate.Integration{}, _q.predicates...),
+		withProject:    _q.withProject.Clone(),
+		withTasks:      _q.withTasks.Clone(),
+		withIssueSyncs: _q.withIssueSyncs.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -329,6 +354,17 @@ func (_q *IntegrationQuery) WithTasks(opts ...func(*TaskQuery)) *IntegrationQuer
 		opt(query)
 	}
 	_q.withTasks = query
+	return _q
+}
+
+// WithIssueSyncs tells the query-builder to eager-load the nodes that are connected to
+// the "issue_syncs" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *IntegrationQuery) WithIssueSyncs(opts ...func(*IssueSyncQuery)) *IntegrationQuery {
+	query := (&IssueSyncClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withIssueSyncs = query
 	return _q
 }
 
@@ -410,9 +446,10 @@ func (_q *IntegrationQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 	var (
 		nodes       = []*Integration{}
 		_spec       = _q.querySpec()
-		loadedTypes = [2]bool{
+		loadedTypes = [3]bool{
 			_q.withProject != nil,
 			_q.withTasks != nil,
+			_q.withIssueSyncs != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -446,6 +483,13 @@ func (_q *IntegrationQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 		if err := _q.loadTasks(ctx, query, nodes,
 			func(n *Integration) { n.Edges.Tasks = []*Task{} },
 			func(n *Integration, e *Task) { n.Edges.Tasks = append(n.Edges.Tasks, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withIssueSyncs; query != nil {
+		if err := _q.loadIssueSyncs(ctx, query, nodes,
+			func(n *Integration) { n.Edges.IssueSyncs = []*IssueSync{} },
+			func(n *Integration, e *IssueSync) { n.Edges.IssueSyncs = append(n.Edges.IssueSyncs, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -509,6 +553,36 @@ func (_q *IntegrationQuery) loadTasks(ctx context.Context, query *TaskQuery, nod
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "external_integration_id" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *IntegrationQuery) loadIssueSyncs(ctx context.Context, query *IssueSyncQuery, nodes []*Integration, init func(*Integration), assign func(*Integration, *IssueSync)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Integration)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(issuesync.FieldIntegrationID)
+	}
+	query.Where(predicate.IssueSync(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(integration.IssueSyncsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.IntegrationID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "integration_id" returned %v for node %v`, fk, n.ID)
 		}
 		assign(node, n)
 	}

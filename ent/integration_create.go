@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 	"working-time-tracker/ent/integration"
+	"working-time-tracker/ent/issuesync"
 	"working-time-tracker/ent/project"
 	"working-time-tracker/ent/task"
 
@@ -67,6 +68,62 @@ func (_c *IntegrationCreate) SetNillableEnabled(v *bool) *IntegrationCreate {
 	return _c
 }
 
+// SetSyncIssues sets the "sync_issues" field.
+func (_c *IntegrationCreate) SetSyncIssues(v bool) *IntegrationCreate {
+	_c.mutation.SetSyncIssues(v)
+	return _c
+}
+
+// SetNillableSyncIssues sets the "sync_issues" field if the given value is not nil.
+func (_c *IntegrationCreate) SetNillableSyncIssues(v *bool) *IntegrationCreate {
+	if v != nil {
+		_c.SetSyncIssues(*v)
+	}
+	return _c
+}
+
+// SetSyncCursor sets the "sync_cursor" field.
+func (_c *IntegrationCreate) SetSyncCursor(v time.Time) *IntegrationCreate {
+	_c.mutation.SetSyncCursor(v)
+	return _c
+}
+
+// SetNillableSyncCursor sets the "sync_cursor" field if the given value is not nil.
+func (_c *IntegrationCreate) SetNillableSyncCursor(v *time.Time) *IntegrationCreate {
+	if v != nil {
+		_c.SetSyncCursor(*v)
+	}
+	return _c
+}
+
+// SetLastSyncedAt sets the "last_synced_at" field.
+func (_c *IntegrationCreate) SetLastSyncedAt(v time.Time) *IntegrationCreate {
+	_c.mutation.SetLastSyncedAt(v)
+	return _c
+}
+
+// SetNillableLastSyncedAt sets the "last_synced_at" field if the given value is not nil.
+func (_c *IntegrationCreate) SetNillableLastSyncedAt(v *time.Time) *IntegrationCreate {
+	if v != nil {
+		_c.SetLastSyncedAt(*v)
+	}
+	return _c
+}
+
+// SetLastSyncError sets the "last_sync_error" field.
+func (_c *IntegrationCreate) SetLastSyncError(v string) *IntegrationCreate {
+	_c.mutation.SetLastSyncError(v)
+	return _c
+}
+
+// SetNillableLastSyncError sets the "last_sync_error" field if the given value is not nil.
+func (_c *IntegrationCreate) SetNillableLastSyncError(v *string) *IntegrationCreate {
+	if v != nil {
+		_c.SetLastSyncError(*v)
+	}
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *IntegrationCreate) SetCreatedAt(v time.Time) *IntegrationCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -115,6 +172,21 @@ func (_c *IntegrationCreate) AddTasks(v ...*Task) *IntegrationCreate {
 	return _c.AddTaskIDs(ids...)
 }
 
+// AddIssueSyncIDs adds the "issue_syncs" edge to the IssueSync entity by IDs.
+func (_c *IntegrationCreate) AddIssueSyncIDs(ids ...uuid.UUID) *IntegrationCreate {
+	_c.mutation.AddIssueSyncIDs(ids...)
+	return _c
+}
+
+// AddIssueSyncs adds the "issue_syncs" edges to the IssueSync entity.
+func (_c *IntegrationCreate) AddIssueSyncs(v ...*IssueSync) *IntegrationCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddIssueSyncIDs(ids...)
+}
+
 // Mutation returns the IntegrationMutation object of the builder.
 func (_c *IntegrationCreate) Mutation() *IntegrationMutation {
 	return _c.mutation
@@ -154,6 +226,14 @@ func (_c *IntegrationCreate) defaults() {
 		v := integration.DefaultEnabled
 		_c.mutation.SetEnabled(v)
 	}
+	if _, ok := _c.mutation.SyncIssues(); !ok {
+		v := integration.DefaultSyncIssues
+		_c.mutation.SetSyncIssues(v)
+	}
+	if _, ok := _c.mutation.LastSyncError(); !ok {
+		v := integration.DefaultLastSyncError
+		_c.mutation.SetLastSyncError(v)
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := integration.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
@@ -177,6 +257,12 @@ func (_c *IntegrationCreate) check() error {
 	}
 	if _, ok := _c.mutation.Enabled(); !ok {
 		return &ValidationError{Name: "enabled", err: errors.New(`ent: missing required field "Integration.enabled"`)}
+	}
+	if _, ok := _c.mutation.SyncIssues(); !ok {
+		return &ValidationError{Name: "sync_issues", err: errors.New(`ent: missing required field "Integration.sync_issues"`)}
+	}
+	if _, ok := _c.mutation.LastSyncError(); !ok {
+		return &ValidationError{Name: "last_sync_error", err: errors.New(`ent: missing required field "Integration.last_sync_error"`)}
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "Integration.created_at"`)}
@@ -239,6 +325,22 @@ func (_c *IntegrationCreate) createSpec() (*Integration, *sqlgraph.CreateSpec) {
 		_spec.SetField(integration.FieldEnabled, field.TypeBool, value)
 		_node.Enabled = value
 	}
+	if value, ok := _c.mutation.SyncIssues(); ok {
+		_spec.SetField(integration.FieldSyncIssues, field.TypeBool, value)
+		_node.SyncIssues = value
+	}
+	if value, ok := _c.mutation.SyncCursor(); ok {
+		_spec.SetField(integration.FieldSyncCursor, field.TypeTime, value)
+		_node.SyncCursor = &value
+	}
+	if value, ok := _c.mutation.LastSyncedAt(); ok {
+		_spec.SetField(integration.FieldLastSyncedAt, field.TypeTime, value)
+		_node.LastSyncedAt = &value
+	}
+	if value, ok := _c.mutation.LastSyncError(); ok {
+		_spec.SetField(integration.FieldLastSyncError, field.TypeString, value)
+		_node.LastSyncError = value
+	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(integration.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
@@ -269,6 +371,22 @@ func (_c *IntegrationCreate) createSpec() (*Integration, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(task.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.IssueSyncsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   integration.IssueSyncsTable,
+			Columns: []string{integration.IssueSyncsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(issuesync.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

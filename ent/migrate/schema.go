@@ -79,6 +79,10 @@ var (
 		{Name: "credentials", Type: field.TypeJSON, Nullable: true},
 		{Name: "metadata", Type: field.TypeJSON, Nullable: true},
 		{Name: "enabled", Type: field.TypeBool, Default: true},
+		{Name: "sync_issues", Type: field.TypeBool, Default: false},
+		{Name: "sync_cursor", Type: field.TypeTime, Nullable: true},
+		{Name: "last_synced_at", Type: field.TypeTime, Nullable: true},
+		{Name: "last_sync_error", Type: field.TypeString, Default: ""},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "project_id", Type: field.TypeUUID},
 	}
@@ -90,7 +94,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "integrations_projects_integrations",
-				Columns:    []*schema.Column{IntegrationsColumns[7]},
+				Columns:    []*schema.Column{IntegrationsColumns[11]},
 				RefColumns: []*schema.Column{ProjectsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -125,6 +129,51 @@ var (
 				Columns:    []*schema.Column{InvitesColumns[8]},
 				RefColumns: []*schema.Column{PersonsColumns[0]},
 				OnDelete:   schema.SetNull,
+			},
+		},
+	}
+	// IssueSyncsColumns holds the columns for the "issue_syncs" table.
+	IssueSyncsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "issue_number", Type: field.TypeInt},
+		{Name: "state", Type: field.TypeEnum, Enums: []string{"open", "closed", "gone"}, Default: "open"},
+		{Name: "title", Type: field.TypeString, Default: ""},
+		{Name: "body", Type: field.TypeString, Default: ""},
+		{Name: "labels", Type: field.TypeJSON, Nullable: true},
+		{Name: "assignee_logins", Type: field.TypeJSON, Nullable: true},
+		{Name: "mapped_login", Type: field.TypeString, Default: ""},
+		{Name: "mapped_person_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "stuck_sig", Type: field.TypeString, Default: ""},
+		{Name: "last_error", Type: field.TypeString, Default: ""},
+		{Name: "synced_at", Type: field.TypeTime},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "integration_id", Type: field.TypeUUID},
+		{Name: "task_id", Type: field.TypeUUID, Unique: true, Nullable: true},
+	}
+	// IssueSyncsTable holds the schema information for the "issue_syncs" table.
+	IssueSyncsTable = &schema.Table{
+		Name:       "issue_syncs",
+		Columns:    IssueSyncsColumns,
+		PrimaryKey: []*schema.Column{IssueSyncsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "issue_syncs_integrations_issue_syncs",
+				Columns:    []*schema.Column{IssueSyncsColumns[13]},
+				RefColumns: []*schema.Column{IntegrationsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "issue_syncs_tasks_issue_sync",
+				Columns:    []*schema.Column{IssueSyncsColumns[14]},
+				RefColumns: []*schema.Column{TasksColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "issuesync_integration_id_issue_number",
+				Unique:  true,
+				Columns: []*schema.Column{IssueSyncsColumns[13], IssueSyncsColumns[1]},
 			},
 		},
 	}
@@ -501,6 +550,7 @@ var (
 		CustomersTable,
 		IntegrationsTable,
 		InvitesTable,
+		IssueSyncsTable,
 		LabelsTable,
 		OrganizationsTable,
 		PersonsTable,
@@ -522,6 +572,8 @@ func init() {
 	IntegrationsTable.ForeignKeys[0].RefTable = ProjectsTable
 	InvitesTable.ForeignKeys[0].RefTable = OrganizationsTable
 	InvitesTable.ForeignKeys[1].RefTable = PersonsTable
+	IssueSyncsTable.ForeignKeys[0].RefTable = IntegrationsTable
+	IssueSyncsTable.ForeignKeys[1].RefTable = TasksTable
 	LabelsTable.ForeignKeys[0].RefTable = ProjectsTable
 	PersonsTable.ForeignKeys[0].RefTable = OrganizationsTable
 	ProjectsTable.ForeignKeys[0].RefTable = CustomersTable

@@ -20,6 +20,8 @@ type Tx struct {
 	Integration *IntegrationClient
 	// Invite is the client for interacting with the Invite builders.
 	Invite *InviteClient
+	// IssueSync is the client for interacting with the IssueSync builders.
+	IssueSync *IssueSyncClient
 	// Label is the client for interacting with the Label builders.
 	Label *LabelClient
 	// Organization is the client for interacting with the Organization builders.
@@ -175,6 +177,7 @@ func (tx *Tx) init() {
 	tx.Customer = NewCustomerClient(tx.config)
 	tx.Integration = NewIntegrationClient(tx.config)
 	tx.Invite = NewInviteClient(tx.config)
+	tx.IssueSync = NewIssueSyncClient(tx.config)
 	tx.Label = NewLabelClient(tx.config)
 	tx.Organization = NewOrganizationClient(tx.config)
 	tx.Person = NewPersonClient(tx.config)

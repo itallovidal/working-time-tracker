@@ -48,6 +48,8 @@ const (
 	EdgeSessionLinks = "session_links"
 	// EdgeLabels holds the string denoting the labels edge name in mutations.
 	EdgeLabels = "labels"
+	// EdgeIssueSync holds the string denoting the issue_sync edge name in mutations.
+	EdgeIssueSync = "issue_sync"
 	// Table holds the table name of the task in the database.
 	Table = "tasks"
 	// ProjectTable is the table that holds the project relation/edge.
@@ -83,6 +85,13 @@ const (
 	// LabelsInverseTable is the table name for the Label entity.
 	// It exists in this package in order to avoid circular dependency with the "label" package.
 	LabelsInverseTable = "labels"
+	// IssueSyncTable is the table that holds the issue_sync relation/edge.
+	IssueSyncTable = "issue_syncs"
+	// IssueSyncInverseTable is the table name for the IssueSync entity.
+	// It exists in this package in order to avoid circular dependency with the "issuesync" package.
+	IssueSyncInverseTable = "issue_syncs"
+	// IssueSyncColumn is the table column denoting the issue_sync relation/edge.
+	IssueSyncColumn = "task_id"
 )
 
 // Columns holds all SQL columns for task fields.
@@ -292,6 +301,13 @@ func ByLabels(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newLabelsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByIssueSyncField orders the results by issue_sync field.
+func ByIssueSyncField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newIssueSyncStep(), sql.OrderByField(field, opts...))
+	}
+}
 func newProjectStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -325,5 +341,12 @@ func newLabelsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(LabelsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2M, false, LabelsTable, LabelsPrimaryKey...),
+	)
+}
+func newIssueSyncStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(IssueSyncInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2O, false, IssueSyncTable, IssueSyncColumn),
 	)
 }

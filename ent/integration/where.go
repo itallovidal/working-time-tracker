@@ -76,6 +76,26 @@ func Enabled(v bool) predicate.Integration {
 	return predicate.Integration(sql.FieldEQ(FieldEnabled, v))
 }
 
+// SyncIssues applies equality check predicate on the "sync_issues" field. It's identical to SyncIssuesEQ.
+func SyncIssues(v bool) predicate.Integration {
+	return predicate.Integration(sql.FieldEQ(FieldSyncIssues, v))
+}
+
+// SyncCursor applies equality check predicate on the "sync_cursor" field. It's identical to SyncCursorEQ.
+func SyncCursor(v time.Time) predicate.Integration {
+	return predicate.Integration(sql.FieldEQ(FieldSyncCursor, v))
+}
+
+// LastSyncedAt applies equality check predicate on the "last_synced_at" field. It's identical to LastSyncedAtEQ.
+func LastSyncedAt(v time.Time) predicate.Integration {
+	return predicate.Integration(sql.FieldEQ(FieldLastSyncedAt, v))
+}
+
+// LastSyncError applies equality check predicate on the "last_sync_error" field. It's identical to LastSyncErrorEQ.
+func LastSyncError(v string) predicate.Integration {
+	return predicate.Integration(sql.FieldEQ(FieldLastSyncError, v))
+}
+
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.Integration {
 	return predicate.Integration(sql.FieldEQ(FieldCreatedAt, v))
@@ -261,6 +281,181 @@ func EnabledNEQ(v bool) predicate.Integration {
 	return predicate.Integration(sql.FieldNEQ(FieldEnabled, v))
 }
 
+// SyncIssuesEQ applies the EQ predicate on the "sync_issues" field.
+func SyncIssuesEQ(v bool) predicate.Integration {
+	return predicate.Integration(sql.FieldEQ(FieldSyncIssues, v))
+}
+
+// SyncIssuesNEQ applies the NEQ predicate on the "sync_issues" field.
+func SyncIssuesNEQ(v bool) predicate.Integration {
+	return predicate.Integration(sql.FieldNEQ(FieldSyncIssues, v))
+}
+
+// SyncCursorEQ applies the EQ predicate on the "sync_cursor" field.
+func SyncCursorEQ(v time.Time) predicate.Integration {
+	return predicate.Integration(sql.FieldEQ(FieldSyncCursor, v))
+}
+
+// SyncCursorNEQ applies the NEQ predicate on the "sync_cursor" field.
+func SyncCursorNEQ(v time.Time) predicate.Integration {
+	return predicate.Integration(sql.FieldNEQ(FieldSyncCursor, v))
+}
+
+// SyncCursorIn applies the In predicate on the "sync_cursor" field.
+func SyncCursorIn(vs ...time.Time) predicate.Integration {
+	return predicate.Integration(sql.FieldIn(FieldSyncCursor, vs...))
+}
+
+// SyncCursorNotIn applies the NotIn predicate on the "sync_cursor" field.
+func SyncCursorNotIn(vs ...time.Time) predicate.Integration {
+	return predicate.Integration(sql.FieldNotIn(FieldSyncCursor, vs...))
+}
+
+// SyncCursorGT applies the GT predicate on the "sync_cursor" field.
+func SyncCursorGT(v time.Time) predicate.Integration {
+	return predicate.Integration(sql.FieldGT(FieldSyncCursor, v))
+}
+
+// SyncCursorGTE applies the GTE predicate on the "sync_cursor" field.
+func SyncCursorGTE(v time.Time) predicate.Integration {
+	return predicate.Integration(sql.FieldGTE(FieldSyncCursor, v))
+}
+
+// SyncCursorLT applies the LT predicate on the "sync_cursor" field.
+func SyncCursorLT(v time.Time) predicate.Integration {
+	return predicate.Integration(sql.FieldLT(FieldSyncCursor, v))
+}
+
+// SyncCursorLTE applies the LTE predicate on the "sync_cursor" field.
+func SyncCursorLTE(v time.Time) predicate.Integration {
+	return predicate.Integration(sql.FieldLTE(FieldSyncCursor, v))
+}
+
+// SyncCursorIsNil applies the IsNil predicate on the "sync_cursor" field.
+func SyncCursorIsNil() predicate.Integration {
+	return predicate.Integration(sql.FieldIsNull(FieldSyncCursor))
+}
+
+// SyncCursorNotNil applies the NotNil predicate on the "sync_cursor" field.
+func SyncCursorNotNil() predicate.Integration {
+	return predicate.Integration(sql.FieldNotNull(FieldSyncCursor))
+}
+
+// LastSyncedAtEQ applies the EQ predicate on the "last_synced_at" field.
+func LastSyncedAtEQ(v time.Time) predicate.Integration {
+	return predicate.Integration(sql.FieldEQ(FieldLastSyncedAt, v))
+}
+
+// LastSyncedAtNEQ applies the NEQ predicate on the "last_synced_at" field.
+func LastSyncedAtNEQ(v time.Time) predicate.Integration {
+	return predicate.Integration(sql.FieldNEQ(FieldLastSyncedAt, v))
+}
+
+// LastSyncedAtIn applies the In predicate on the "last_synced_at" field.
+func LastSyncedAtIn(vs ...time.Time) predicate.Integration {
+	return predicate.Integration(sql.FieldIn(FieldLastSyncedAt, vs...))
+}
+
+// LastSyncedAtNotIn applies the NotIn predicate on the "last_synced_at" field.
+func LastSyncedAtNotIn(vs ...time.Time) predicate.Integration {
+	return predicate.Integration(sql.FieldNotIn(FieldLastSyncedAt, vs...))
+}
+
+// LastSyncedAtGT applies the GT predicate on the "last_synced_at" field.
+func LastSyncedAtGT(v time.Time) predicate.Integration {
+	return predicate.Integration(sql.FieldGT(FieldLastSyncedAt, v))
+}
+
+// LastSyncedAtGTE applies the GTE predicate on the "last_synced_at" field.
+func LastSyncedAtGTE(v time.Time) predicate.Integration {
+	return predicate.Integration(sql.FieldGTE(FieldLastSyncedAt, v))
+}
+
+// LastSyncedAtLT applies the LT predicate on the "last_synced_at" field.
+func LastSyncedAtLT(v time.Time) predicate.Integration {
+	return predicate.Integration(sql.FieldLT(FieldLastSyncedAt, v))
+}
+
+// LastSyncedAtLTE applies the LTE predicate on the "last_synced_at" field.
+func LastSyncedAtLTE(v time.Time) predicate.Integration {
+	return predicate.Integration(sql.FieldLTE(FieldLastSyncedAt, v))
+}
+
+// LastSyncedAtIsNil applies the IsNil predicate on the "last_synced_at" field.
+func LastSyncedAtIsNil() predicate.Integration {
+	return predicate.Integration(sql.FieldIsNull(FieldLastSyncedAt))
+}
+
+// LastSyncedAtNotNil applies the NotNil predicate on the "last_synced_at" field.
+func LastSyncedAtNotNil() predicate.Integration {
+	return predicate.Integration(sql.FieldNotNull(FieldLastSyncedAt))
+}
+
+// LastSyncErrorEQ applies the EQ predicate on the "last_sync_error" field.
+func LastSyncErrorEQ(v string) predicate.Integration {
+	return predicate.Integration(sql.FieldEQ(FieldLastSyncError, v))
+}
+
+// LastSyncErrorNEQ applies the NEQ predicate on the "last_sync_error" field.
+func LastSyncErrorNEQ(v string) predicate.Integration {
+	return predicate.Integration(sql.FieldNEQ(FieldLastSyncError, v))
+}
+
+// LastSyncErrorIn applies the In predicate on the "last_sync_error" field.
+func LastSyncErrorIn(vs ...string) predicate.Integration {
+	return predicate.Integration(sql.FieldIn(FieldLastSyncError, vs...))
+}
+
+// LastSyncErrorNotIn applies the NotIn predicate on the "last_sync_error" field.
+func LastSyncErrorNotIn(vs ...string) predicate.Integration {
+	return predicate.Integration(sql.FieldNotIn(FieldLastSyncError, vs...))
+}
+
+// LastSyncErrorGT applies the GT predicate on the "last_sync_error" field.
+func LastSyncErrorGT(v string) predicate.Integration {
+	return predicate.Integration(sql.FieldGT(FieldLastSyncError, v))
+}
+
+// LastSyncErrorGTE applies the GTE predicate on the "last_sync_error" field.
+func LastSyncErrorGTE(v string) predicate.Integration {
+	return predicate.Integration(sql.FieldGTE(FieldLastSyncError, v))
+}
+
+// LastSyncErrorLT applies the LT predicate on the "last_sync_error" field.
+func LastSyncErrorLT(v string) predicate.Integration {
+	return predicate.Integration(sql.FieldLT(FieldLastSyncError, v))
+}
+
+// LastSyncErrorLTE applies the LTE predicate on the "last_sync_error" field.
+func LastSyncErrorLTE(v string) predicate.Integration {
+	return predicate.Integration(sql.FieldLTE(FieldLastSyncError, v))
+}
+
+// LastSyncErrorContains applies the Contains predicate on the "last_sync_error" field.
+func LastSyncErrorContains(v string) predicate.Integration {
+	return predicate.Integration(sql.FieldContains(FieldLastSyncError, v))
+}
+
+// LastSyncErrorHasPrefix applies the HasPrefix predicate on the "last_sync_error" field.
+func LastSyncErrorHasPrefix(v string) predicate.Integration {
+	return predicate.Integration(sql.FieldHasPrefix(FieldLastSyncError, v))
+}
+
+// LastSyncErrorHasSuffix applies the HasSuffix predicate on the "last_sync_error" field.
+func LastSyncErrorHasSuffix(v string) predicate.Integration {
+	return predicate.Integration(sql.FieldHasSuffix(FieldLastSyncError, v))
+}
+
+// LastSyncErrorEqualFold applies the EqualFold predicate on the "last_sync_error" field.
+func LastSyncErrorEqualFold(v string) predicate.Integration {
+	return predicate.Integration(sql.FieldEqualFold(FieldLastSyncError, v))
+}
+
+// LastSyncErrorContainsFold applies the ContainsFold predicate on the "last_sync_error" field.
+func LastSyncErrorContainsFold(v string) predicate.Integration {
+	return predicate.Integration(sql.FieldContainsFold(FieldLastSyncError, v))
+}
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.Integration {
 	return predicate.Integration(sql.FieldEQ(FieldCreatedAt, v))
@@ -339,6 +534,29 @@ func HasTasks() predicate.Integration {
 func HasTasksWith(preds ...predicate.Task) predicate.Integration {
 	return predicate.Integration(func(s *sql.Selector) {
 		step := newTasksStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasIssueSyncs applies the HasEdge predicate on the "issue_syncs" edge.
+func HasIssueSyncs() predicate.Integration {
+	return predicate.Integration(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, IssueSyncsTable, IssueSyncsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasIssueSyncsWith applies the HasEdge predicate on the "issue_syncs" edge with a given conditions (other predicates).
+func HasIssueSyncsWith(preds ...predicate.IssueSync) predicate.Integration {
+	return predicate.Integration(func(s *sql.Selector) {
+		step := newIssueSyncsStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

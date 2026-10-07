@@ -32,6 +32,14 @@ type Integration struct {
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
 	// Enabled holds the value of the "enabled" field.
 	Enabled bool `json:"enabled,omitempty"`
+	// SyncIssues holds the value of the "sync_issues" field.
+	SyncIssues bool `json:"sync_issues,omitempty"`
+	// SyncCursor holds the value of the "sync_cursor" field.
+	SyncCursor *time.Time `json:"sync_cursor,omitempty"`
+	// LastSyncedAt holds the value of the "last_synced_at" field.
+	LastSyncedAt *time.Time `json:"last_synced_at,omitempty"`
+	// LastSyncError holds the value of the "last_sync_error" field.
+	LastSyncError string `json:"last_sync_error,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -46,9 +54,11 @@ type IntegrationEdges struct {
 	Project *Project `json:"project,omitempty"`
 	// Tasks holds the value of the tasks edge.
 	Tasks []*Task `json:"tasks,omitempty"`
+	// IssueSyncs holds the value of the issue_syncs edge.
+	IssueSyncs []*IssueSync `json:"issue_syncs,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
+	loadedTypes [3]bool
 }
 
 // ProjectOrErr returns the Project value or an error if the edge
@@ -71,6 +81,15 @@ func (e IntegrationEdges) TasksOrErr() ([]*Task, error) {
 	return nil, &NotLoadedError{edge: "tasks"}
 }
 
+// IssueSyncsOrErr returns the IssueSyncs value or an error if the edge
+// was not loaded in eager-loading.
+func (e IntegrationEdges) IssueSyncsOrErr() ([]*IssueSync, error) {
+	if e.loadedTypes[2] {
+		return e.IssueSyncs, nil
+	}
+	return nil, &NotLoadedError{edge: "issue_syncs"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*Integration) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
@@ -78,11 +97,11 @@ func (*Integration) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case integration.FieldCredentials, integration.FieldMetadata:
 			values[i] = new([]byte)
-		case integration.FieldEnabled:
+		case integration.FieldEnabled, integration.FieldSyncIssues:
 			values[i] = new(sql.NullBool)
-		case integration.FieldType, integration.FieldDisplayName:
+		case integration.FieldType, integration.FieldDisplayName, integration.FieldLastSyncError:
 			values[i] = new(sql.NullString)
-		case integration.FieldCreatedAt:
+		case integration.FieldSyncCursor, integration.FieldLastSyncedAt, integration.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
 		case integration.FieldID, integration.FieldProjectID:
 			values[i] = new(uuid.UUID)
@@ -147,6 +166,32 @@ func (_m *Integration) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.Enabled = value.Bool
 			}
+		case integration.FieldSyncIssues:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field sync_issues", values[i])
+			} else if value.Valid {
+				_m.SyncIssues = value.Bool
+			}
+		case integration.FieldSyncCursor:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field sync_cursor", values[i])
+			} else if value.Valid {
+				_m.SyncCursor = new(time.Time)
+				*_m.SyncCursor = value.Time
+			}
+		case integration.FieldLastSyncedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field last_synced_at", values[i])
+			} else if value.Valid {
+				_m.LastSyncedAt = new(time.Time)
+				*_m.LastSyncedAt = value.Time
+			}
+		case integration.FieldLastSyncError:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field last_sync_error", values[i])
+			} else if value.Valid {
+				_m.LastSyncError = value.String
+			}
 		case integration.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
@@ -174,6 +219,11 @@ func (_m *Integration) QueryProject() *ProjectQuery {
 // QueryTasks queries the "tasks" edge of the Integration entity.
 func (_m *Integration) QueryTasks() *TaskQuery {
 	return NewIntegrationClient(_m.config).QueryTasks(_m)
+}
+
+// QueryIssueSyncs queries the "issue_syncs" edge of the Integration entity.
+func (_m *Integration) QueryIssueSyncs() *IssueSyncQuery {
+	return NewIntegrationClient(_m.config).QueryIssueSyncs(_m)
 }
 
 // Update returns a builder for updating this Integration.
@@ -215,6 +265,22 @@ func (_m *Integration) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("enabled=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Enabled))
+	builder.WriteString(", ")
+	builder.WriteString("sync_issues=")
+	builder.WriteString(fmt.Sprintf("%v", _m.SyncIssues))
+	builder.WriteString(", ")
+	if v := _m.SyncCursor; v != nil {
+		builder.WriteString("sync_cursor=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
+	builder.WriteString(", ")
+	if v := _m.LastSyncedAt; v != nil {
+		builder.WriteString("last_synced_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
+	builder.WriteString(", ")
+	builder.WriteString("last_sync_error=")
+	builder.WriteString(_m.LastSyncError)
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))

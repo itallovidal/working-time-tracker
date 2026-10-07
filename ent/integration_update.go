@@ -6,7 +6,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 	"working-time-tracker/ent/integration"
+	"working-time-tracker/ent/issuesync"
 	"working-time-tracker/ent/predicate"
 	"working-time-tracker/ent/project"
 	"working-time-tracker/ent/task"
@@ -110,6 +112,74 @@ func (_u *IntegrationUpdate) SetNillableEnabled(v *bool) *IntegrationUpdate {
 	return _u
 }
 
+// SetSyncIssues sets the "sync_issues" field.
+func (_u *IntegrationUpdate) SetSyncIssues(v bool) *IntegrationUpdate {
+	_u.mutation.SetSyncIssues(v)
+	return _u
+}
+
+// SetNillableSyncIssues sets the "sync_issues" field if the given value is not nil.
+func (_u *IntegrationUpdate) SetNillableSyncIssues(v *bool) *IntegrationUpdate {
+	if v != nil {
+		_u.SetSyncIssues(*v)
+	}
+	return _u
+}
+
+// SetSyncCursor sets the "sync_cursor" field.
+func (_u *IntegrationUpdate) SetSyncCursor(v time.Time) *IntegrationUpdate {
+	_u.mutation.SetSyncCursor(v)
+	return _u
+}
+
+// SetNillableSyncCursor sets the "sync_cursor" field if the given value is not nil.
+func (_u *IntegrationUpdate) SetNillableSyncCursor(v *time.Time) *IntegrationUpdate {
+	if v != nil {
+		_u.SetSyncCursor(*v)
+	}
+	return _u
+}
+
+// ClearSyncCursor clears the value of the "sync_cursor" field.
+func (_u *IntegrationUpdate) ClearSyncCursor() *IntegrationUpdate {
+	_u.mutation.ClearSyncCursor()
+	return _u
+}
+
+// SetLastSyncedAt sets the "last_synced_at" field.
+func (_u *IntegrationUpdate) SetLastSyncedAt(v time.Time) *IntegrationUpdate {
+	_u.mutation.SetLastSyncedAt(v)
+	return _u
+}
+
+// SetNillableLastSyncedAt sets the "last_synced_at" field if the given value is not nil.
+func (_u *IntegrationUpdate) SetNillableLastSyncedAt(v *time.Time) *IntegrationUpdate {
+	if v != nil {
+		_u.SetLastSyncedAt(*v)
+	}
+	return _u
+}
+
+// ClearLastSyncedAt clears the value of the "last_synced_at" field.
+func (_u *IntegrationUpdate) ClearLastSyncedAt() *IntegrationUpdate {
+	_u.mutation.ClearLastSyncedAt()
+	return _u
+}
+
+// SetLastSyncError sets the "last_sync_error" field.
+func (_u *IntegrationUpdate) SetLastSyncError(v string) *IntegrationUpdate {
+	_u.mutation.SetLastSyncError(v)
+	return _u
+}
+
+// SetNillableLastSyncError sets the "last_sync_error" field if the given value is not nil.
+func (_u *IntegrationUpdate) SetNillableLastSyncError(v *string) *IntegrationUpdate {
+	if v != nil {
+		_u.SetLastSyncError(*v)
+	}
+	return _u
+}
+
 // SetProject sets the "project" edge to the Project entity.
 func (_u *IntegrationUpdate) SetProject(v *Project) *IntegrationUpdate {
 	return _u.SetProjectID(v.ID)
@@ -128,6 +198,21 @@ func (_u *IntegrationUpdate) AddTasks(v ...*Task) *IntegrationUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.AddTaskIDs(ids...)
+}
+
+// AddIssueSyncIDs adds the "issue_syncs" edge to the IssueSync entity by IDs.
+func (_u *IntegrationUpdate) AddIssueSyncIDs(ids ...uuid.UUID) *IntegrationUpdate {
+	_u.mutation.AddIssueSyncIDs(ids...)
+	return _u
+}
+
+// AddIssueSyncs adds the "issue_syncs" edges to the IssueSync entity.
+func (_u *IntegrationUpdate) AddIssueSyncs(v ...*IssueSync) *IntegrationUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddIssueSyncIDs(ids...)
 }
 
 // Mutation returns the IntegrationMutation object of the builder.
@@ -160,6 +245,27 @@ func (_u *IntegrationUpdate) RemoveTasks(v ...*Task) *IntegrationUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveTaskIDs(ids...)
+}
+
+// ClearIssueSyncs clears all "issue_syncs" edges to the IssueSync entity.
+func (_u *IntegrationUpdate) ClearIssueSyncs() *IntegrationUpdate {
+	_u.mutation.ClearIssueSyncs()
+	return _u
+}
+
+// RemoveIssueSyncIDs removes the "issue_syncs" edge to IssueSync entities by IDs.
+func (_u *IntegrationUpdate) RemoveIssueSyncIDs(ids ...uuid.UUID) *IntegrationUpdate {
+	_u.mutation.RemoveIssueSyncIDs(ids...)
+	return _u
+}
+
+// RemoveIssueSyncs removes "issue_syncs" edges to IssueSync entities.
+func (_u *IntegrationUpdate) RemoveIssueSyncs(v ...*IssueSync) *IntegrationUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveIssueSyncIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -230,6 +336,24 @@ func (_u *IntegrationUpdate) sqlSave(ctx context.Context) (_node int, err error)
 	if value, ok := _u.mutation.Enabled(); ok {
 		_spec.SetField(integration.FieldEnabled, field.TypeBool, value)
 	}
+	if value, ok := _u.mutation.SyncIssues(); ok {
+		_spec.SetField(integration.FieldSyncIssues, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.SyncCursor(); ok {
+		_spec.SetField(integration.FieldSyncCursor, field.TypeTime, value)
+	}
+	if _u.mutation.SyncCursorCleared() {
+		_spec.ClearField(integration.FieldSyncCursor, field.TypeTime)
+	}
+	if value, ok := _u.mutation.LastSyncedAt(); ok {
+		_spec.SetField(integration.FieldLastSyncedAt, field.TypeTime, value)
+	}
+	if _u.mutation.LastSyncedAtCleared() {
+		_spec.ClearField(integration.FieldLastSyncedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.LastSyncError(); ok {
+		_spec.SetField(integration.FieldLastSyncError, field.TypeString, value)
+	}
 	if _u.mutation.ProjectCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -297,6 +421,51 @@ func (_u *IntegrationUpdate) sqlSave(ctx context.Context) (_node int, err error)
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(task.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.IssueSyncsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   integration.IssueSyncsTable,
+			Columns: []string{integration.IssueSyncsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(issuesync.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedIssueSyncsIDs(); len(nodes) > 0 && !_u.mutation.IssueSyncsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   integration.IssueSyncsTable,
+			Columns: []string{integration.IssueSyncsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(issuesync.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.IssueSyncsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   integration.IssueSyncsTable,
+			Columns: []string{integration.IssueSyncsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(issuesync.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -404,6 +573,74 @@ func (_u *IntegrationUpdateOne) SetNillableEnabled(v *bool) *IntegrationUpdateOn
 	return _u
 }
 
+// SetSyncIssues sets the "sync_issues" field.
+func (_u *IntegrationUpdateOne) SetSyncIssues(v bool) *IntegrationUpdateOne {
+	_u.mutation.SetSyncIssues(v)
+	return _u
+}
+
+// SetNillableSyncIssues sets the "sync_issues" field if the given value is not nil.
+func (_u *IntegrationUpdateOne) SetNillableSyncIssues(v *bool) *IntegrationUpdateOne {
+	if v != nil {
+		_u.SetSyncIssues(*v)
+	}
+	return _u
+}
+
+// SetSyncCursor sets the "sync_cursor" field.
+func (_u *IntegrationUpdateOne) SetSyncCursor(v time.Time) *IntegrationUpdateOne {
+	_u.mutation.SetSyncCursor(v)
+	return _u
+}
+
+// SetNillableSyncCursor sets the "sync_cursor" field if the given value is not nil.
+func (_u *IntegrationUpdateOne) SetNillableSyncCursor(v *time.Time) *IntegrationUpdateOne {
+	if v != nil {
+		_u.SetSyncCursor(*v)
+	}
+	return _u
+}
+
+// ClearSyncCursor clears the value of the "sync_cursor" field.
+func (_u *IntegrationUpdateOne) ClearSyncCursor() *IntegrationUpdateOne {
+	_u.mutation.ClearSyncCursor()
+	return _u
+}
+
+// SetLastSyncedAt sets the "last_synced_at" field.
+func (_u *IntegrationUpdateOne) SetLastSyncedAt(v time.Time) *IntegrationUpdateOne {
+	_u.mutation.SetLastSyncedAt(v)
+	return _u
+}
+
+// SetNillableLastSyncedAt sets the "last_synced_at" field if the given value is not nil.
+func (_u *IntegrationUpdateOne) SetNillableLastSyncedAt(v *time.Time) *IntegrationUpdateOne {
+	if v != nil {
+		_u.SetLastSyncedAt(*v)
+	}
+	return _u
+}
+
+// ClearLastSyncedAt clears the value of the "last_synced_at" field.
+func (_u *IntegrationUpdateOne) ClearLastSyncedAt() *IntegrationUpdateOne {
+	_u.mutation.ClearLastSyncedAt()
+	return _u
+}
+
+// SetLastSyncError sets the "last_sync_error" field.
+func (_u *IntegrationUpdateOne) SetLastSyncError(v string) *IntegrationUpdateOne {
+	_u.mutation.SetLastSyncError(v)
+	return _u
+}
+
+// SetNillableLastSyncError sets the "last_sync_error" field if the given value is not nil.
+func (_u *IntegrationUpdateOne) SetNillableLastSyncError(v *string) *IntegrationUpdateOne {
+	if v != nil {
+		_u.SetLastSyncError(*v)
+	}
+	return _u
+}
+
 // SetProject sets the "project" edge to the Project entity.
 func (_u *IntegrationUpdateOne) SetProject(v *Project) *IntegrationUpdateOne {
 	return _u.SetProjectID(v.ID)
@@ -422,6 +659,21 @@ func (_u *IntegrationUpdateOne) AddTasks(v ...*Task) *IntegrationUpdateOne {
 		ids[i] = v[i].ID
 	}
 	return _u.AddTaskIDs(ids...)
+}
+
+// AddIssueSyncIDs adds the "issue_syncs" edge to the IssueSync entity by IDs.
+func (_u *IntegrationUpdateOne) AddIssueSyncIDs(ids ...uuid.UUID) *IntegrationUpdateOne {
+	_u.mutation.AddIssueSyncIDs(ids...)
+	return _u
+}
+
+// AddIssueSyncs adds the "issue_syncs" edges to the IssueSync entity.
+func (_u *IntegrationUpdateOne) AddIssueSyncs(v ...*IssueSync) *IntegrationUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddIssueSyncIDs(ids...)
 }
 
 // Mutation returns the IntegrationMutation object of the builder.
@@ -454,6 +706,27 @@ func (_u *IntegrationUpdateOne) RemoveTasks(v ...*Task) *IntegrationUpdateOne {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveTaskIDs(ids...)
+}
+
+// ClearIssueSyncs clears all "issue_syncs" edges to the IssueSync entity.
+func (_u *IntegrationUpdateOne) ClearIssueSyncs() *IntegrationUpdateOne {
+	_u.mutation.ClearIssueSyncs()
+	return _u
+}
+
+// RemoveIssueSyncIDs removes the "issue_syncs" edge to IssueSync entities by IDs.
+func (_u *IntegrationUpdateOne) RemoveIssueSyncIDs(ids ...uuid.UUID) *IntegrationUpdateOne {
+	_u.mutation.RemoveIssueSyncIDs(ids...)
+	return _u
+}
+
+// RemoveIssueSyncs removes "issue_syncs" edges to IssueSync entities.
+func (_u *IntegrationUpdateOne) RemoveIssueSyncs(v ...*IssueSync) *IntegrationUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveIssueSyncIDs(ids...)
 }
 
 // Where appends a list predicates to the IntegrationUpdate builder.
@@ -554,6 +827,24 @@ func (_u *IntegrationUpdateOne) sqlSave(ctx context.Context) (_node *Integration
 	if value, ok := _u.mutation.Enabled(); ok {
 		_spec.SetField(integration.FieldEnabled, field.TypeBool, value)
 	}
+	if value, ok := _u.mutation.SyncIssues(); ok {
+		_spec.SetField(integration.FieldSyncIssues, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.SyncCursor(); ok {
+		_spec.SetField(integration.FieldSyncCursor, field.TypeTime, value)
+	}
+	if _u.mutation.SyncCursorCleared() {
+		_spec.ClearField(integration.FieldSyncCursor, field.TypeTime)
+	}
+	if value, ok := _u.mutation.LastSyncedAt(); ok {
+		_spec.SetField(integration.FieldLastSyncedAt, field.TypeTime, value)
+	}
+	if _u.mutation.LastSyncedAtCleared() {
+		_spec.ClearField(integration.FieldLastSyncedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.LastSyncError(); ok {
+		_spec.SetField(integration.FieldLastSyncError, field.TypeString, value)
+	}
 	if _u.mutation.ProjectCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -621,6 +912,51 @@ func (_u *IntegrationUpdateOne) sqlSave(ctx context.Context) (_node *Integration
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(task.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.IssueSyncsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   integration.IssueSyncsTable,
+			Columns: []string{integration.IssueSyncsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(issuesync.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedIssueSyncsIDs(); len(nodes) > 0 && !_u.mutation.IssueSyncsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   integration.IssueSyncsTable,
+			Columns: []string{integration.IssueSyncsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(issuesync.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.IssueSyncsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   integration.IssueSyncsTable,
+			Columns: []string{integration.IssueSyncsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(issuesync.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

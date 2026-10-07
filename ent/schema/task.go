@@ -39,5 +39,7 @@ func (Task) Edges() []ent.Edge {
 		// Excluir a tarefa a tira das sessões, mas as sessões e as horas ficam.
 		edge.To("session_links", WorkSessionTask.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("labels", Label.Type),
+		// A issue do GitHub a que a tarefa está ligada pela sincronização, se estiver.
+		edge.To("issue_sync", IssueSync.Type).Unique(),
 	}
 }

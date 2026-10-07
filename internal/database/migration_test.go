@@ -18,8 +18,10 @@ import (
 	"github.com/pressly/goose/v3"
 
 	"working-time-tracker/ent"
+	"working-time-tracker/ent/issuesync"
 	"working-time-tracker/ent/migrate"
 	entperson "working-time-tracker/ent/person"
+	enttask "working-time-tracker/ent/task"
 	"working-time-tracker/internal/database"
 	"working-time-tracker/testutil"
 )
@@ -162,6 +164,8 @@ func TestMigrate_ForeignKeyDeleteRules(t *testing.T) {
 		"task_labels_label_id":                        "CASCADE",
 		"projects_customers_projects":                 "SET NULL",
 		"tasks_integrations_tasks":                    "SET NULL",
+		"issue_syncs_integrations_issue_syncs":        "CASCADE",
+		"issue_syncs_tasks_issue_sync":                "SET NULL",
 		"invites_persons_created_invites":             "SET NULL",
 		"projects_organizations_projects":             "NO ACTION",
 		"tasks_persons_tasks":                         "NO ACTION",
@@ -444,4 +448,53 @@ func queryColumn[T any](t *testing.T, query string) []T {
 		t.Fatalf("rows: %v", err)
 	}
 	return values
+}
+
+// O vínculo issue ↔ tarefa: uma issue por número e integração, uma tarefa por issue; excluir a tarefa
+// deixa a linha como lápide (task_id nulo, a issue não volta) e excluir a integração leva as linhas.
+func TestMigrate_IssueSyncRules(t *testing.T) {
+	testutil.Truncate(t, testDB)
+	ctx := context.Background()
+
+	org := testClient.Organization.Create().SetName("Org").SaveX(ctx)
+	proj := testClient.Project.Create().SetName("Projeto").SetOrganizationID(org.ID).SaveX(ctx)
+	integ := testClient.Integration.Create().SetProjectID(proj.ID).SetType("github").SetDisplayName("GitHub").SaveX(ctx)
+	task := func(name string) *ent.Task {
+		return testClient.Task.Create().SetProjectID(proj.ID).SetName(name).SaveX(ctx)
+	}
+	link := func(number int, taskID *uuid.UUID) error {
+		_, err := testClient.IssueSync.Create().SetIntegrationID(integ.ID).SetIssueNumber(number).SetNillableTaskID(taskID).Save(ctx)
+		return err
+	}
+
+	a, b := task("A"), task("B")
+	if err := link(1, &a.ID); err != nil {
+		t.Fatalf("first link: %v", err)
+	}
+	if err := link(1, &b.ID); err == nil {
+		t.Error("the database must refuse two links for the same issue number of an integration")
+	}
+	if err := link(2, &a.ID); err == nil {
+		t.Error("the database must refuse two issues for the same task")
+	}
+	if err := link(3, nil); err != nil {
+		t.Errorf("a tombstone (no task) must be allowed: %v", err)
+	}
+	if err := link(4, nil); err != nil {
+		t.Errorf("several tombstones must be allowed: %v", err)
+	}
+
+	testClient.Task.DeleteOneID(a.ID).ExecX(ctx)
+	row := testClient.IssueSync.Query().Where(issuesync.IssueNumberEQ(1)).OnlyX(ctx)
+	if row.TaskID != nil {
+		t.Errorf("deleting the task must leave the link with no task, got %v", row.TaskID)
+	}
+
+	testClient.Integration.DeleteOneID(integ.ID).ExecX(ctx)
+	if n := testClient.IssueSync.Query().CountX(ctx); n != 0 {
+		t.Errorf("deleting the integration must delete its links, %d left", n)
+	}
+	if !testClient.Task.Query().Where(enttask.IDEQ(b.ID)).ExistX(ctx) {
+		t.Error("deleting the integration must keep the tasks")
+	}
 }

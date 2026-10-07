@@ -716,6 +716,29 @@ func HasLabelsWith(preds ...predicate.Label) predicate.Task {
 	})
 }
 
+// HasIssueSync applies the HasEdge predicate on the "issue_sync" edge.
+func HasIssueSync() predicate.Task {
+	return predicate.Task(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, IssueSyncTable, IssueSyncColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasIssueSyncWith applies the HasEdge predicate on the "issue_sync" edge with a given conditions (other predicates).
+func HasIssueSyncWith(preds ...predicate.IssueSync) predicate.Task {
+	return predicate.Task(func(s *sql.Selector) {
+		step := newIssueSyncStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.Task) predicate.Task {
 	return predicate.Task(sql.AndPredicates(predicates...))

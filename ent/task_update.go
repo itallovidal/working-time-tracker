@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 	"working-time-tracker/ent/integration"
+	"working-time-tracker/ent/issuesync"
 	"working-time-tracker/ent/label"
 	"working-time-tracker/ent/person"
 	"working-time-tracker/ent/predicate"
@@ -255,6 +256,25 @@ func (_u *TaskUpdate) AddLabels(v ...*Label) *TaskUpdate {
 	return _u.AddLabelIDs(ids...)
 }
 
+// SetIssueSyncID sets the "issue_sync" edge to the IssueSync entity by ID.
+func (_u *TaskUpdate) SetIssueSyncID(id uuid.UUID) *TaskUpdate {
+	_u.mutation.SetIssueSyncID(id)
+	return _u
+}
+
+// SetNillableIssueSyncID sets the "issue_sync" edge to the IssueSync entity by ID if the given value is not nil.
+func (_u *TaskUpdate) SetNillableIssueSyncID(id *uuid.UUID) *TaskUpdate {
+	if id != nil {
+		_u = _u.SetIssueSyncID(*id)
+	}
+	return _u
+}
+
+// SetIssueSync sets the "issue_sync" edge to the IssueSync entity.
+func (_u *TaskUpdate) SetIssueSync(v *IssueSync) *TaskUpdate {
+	return _u.SetIssueSyncID(v.ID)
+}
+
 // Mutation returns the TaskMutation object of the builder.
 func (_u *TaskUpdate) Mutation() *TaskMutation {
 	return _u.mutation
@@ -318,6 +338,12 @@ func (_u *TaskUpdate) RemoveLabels(v ...*Label) *TaskUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveLabelIDs(ids...)
+}
+
+// ClearIssueSync clears the "issue_sync" edge to the IssueSync entity.
+func (_u *TaskUpdate) ClearIssueSync() *TaskUpdate {
+	_u.mutation.ClearIssueSync()
+	return _u
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -587,6 +613,35 @@ func (_u *TaskUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if _u.mutation.IssueSyncCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   task.IssueSyncTable,
+			Columns: []string{task.IssueSyncColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(issuesync.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.IssueSyncIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   task.IssueSyncTable,
+			Columns: []string{task.IssueSyncColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(issuesync.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{task.Label}
@@ -828,6 +883,25 @@ func (_u *TaskUpdateOne) AddLabels(v ...*Label) *TaskUpdateOne {
 	return _u.AddLabelIDs(ids...)
 }
 
+// SetIssueSyncID sets the "issue_sync" edge to the IssueSync entity by ID.
+func (_u *TaskUpdateOne) SetIssueSyncID(id uuid.UUID) *TaskUpdateOne {
+	_u.mutation.SetIssueSyncID(id)
+	return _u
+}
+
+// SetNillableIssueSyncID sets the "issue_sync" edge to the IssueSync entity by ID if the given value is not nil.
+func (_u *TaskUpdateOne) SetNillableIssueSyncID(id *uuid.UUID) *TaskUpdateOne {
+	if id != nil {
+		_u = _u.SetIssueSyncID(*id)
+	}
+	return _u
+}
+
+// SetIssueSync sets the "issue_sync" edge to the IssueSync entity.
+func (_u *TaskUpdateOne) SetIssueSync(v *IssueSync) *TaskUpdateOne {
+	return _u.SetIssueSyncID(v.ID)
+}
+
 // Mutation returns the TaskMutation object of the builder.
 func (_u *TaskUpdateOne) Mutation() *TaskMutation {
 	return _u.mutation
@@ -891,6 +965,12 @@ func (_u *TaskUpdateOne) RemoveLabels(v ...*Label) *TaskUpdateOne {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveLabelIDs(ids...)
+}
+
+// ClearIssueSync clears the "issue_sync" edge to the IssueSync entity.
+func (_u *TaskUpdateOne) ClearIssueSync() *TaskUpdateOne {
+	_u.mutation.ClearIssueSync()
+	return _u
 }
 
 // Where appends a list predicates to the TaskUpdate builder.
@@ -1183,6 +1263,35 @@ func (_u *TaskUpdateOne) sqlSave(ctx context.Context) (_node *Task, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(label.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.IssueSyncCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   task.IssueSyncTable,
+			Columns: []string{task.IssueSyncColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(issuesync.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.IssueSyncIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   task.IssueSyncTable,
+			Columns: []string{task.IssueSyncColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(issuesync.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

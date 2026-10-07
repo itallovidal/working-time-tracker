@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 	"working-time-tracker/ent/integration"
+	"working-time-tracker/ent/issuesync"
 	"working-time-tracker/ent/person"
 	"working-time-tracker/ent/project"
 	"working-time-tracker/ent/task"
@@ -61,9 +62,11 @@ type TaskEdges struct {
 	SessionLinks []*WorkSessionTask `json:"session_links,omitempty"`
 	// Labels holds the value of the labels edge.
 	Labels []*Label `json:"labels,omitempty"`
+	// IssueSync holds the value of the issue_sync edge.
+	IssueSync *IssueSync `json:"issue_sync,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [5]bool
+	loadedTypes [6]bool
 }
 
 // ProjectOrErr returns the Project value or an error if the edge
@@ -115,6 +118,17 @@ func (e TaskEdges) LabelsOrErr() ([]*Label, error) {
 		return e.Labels, nil
 	}
 	return nil, &NotLoadedError{edge: "labels"}
+}
+
+// IssueSyncOrErr returns the IssueSync value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e TaskEdges) IssueSyncOrErr() (*IssueSync, error) {
+	if e.IssueSync != nil {
+		return e.IssueSync, nil
+	} else if e.loadedTypes[5] {
+		return nil, &NotFoundError{label: issuesync.Label}
+	}
+	return nil, &NotLoadedError{edge: "issue_sync"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -257,6 +271,11 @@ func (_m *Task) QuerySessionLinks() *WorkSessionTaskQuery {
 // QueryLabels queries the "labels" edge of the Task entity.
 func (_m *Task) QueryLabels() *LabelQuery {
 	return NewTaskClient(_m.config).QueryLabels(_m)
+}
+
+// QueryIssueSync queries the "issue_sync" edge of the Task entity.
+func (_m *Task) QueryIssueSync() *IssueSyncQuery {
+	return NewTaskClient(_m.config).QueryIssueSync(_m)
 }
 
 // Update returns a builder for updating this Task.

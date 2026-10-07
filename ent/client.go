@@ -15,6 +15,7 @@ import (
 	"working-time-tracker/ent/customer"
 	"working-time-tracker/ent/integration"
 	"working-time-tracker/ent/invite"
+	"working-time-tracker/ent/issuesync"
 	"working-time-tracker/ent/label"
 	"working-time-tracker/ent/organization"
 	"working-time-tracker/ent/person"
@@ -46,6 +47,8 @@ type Client struct {
 	Integration *IntegrationClient
 	// Invite is the client for interacting with the Invite builders.
 	Invite *InviteClient
+	// IssueSync is the client for interacting with the IssueSync builders.
+	IssueSync *IssueSyncClient
 	// Label is the client for interacting with the Label builders.
 	Label *LabelClient
 	// Organization is the client for interacting with the Organization builders.
@@ -81,6 +84,7 @@ func (c *Client) init() {
 	c.Customer = NewCustomerClient(c.config)
 	c.Integration = NewIntegrationClient(c.config)
 	c.Invite = NewInviteClient(c.config)
+	c.IssueSync = NewIssueSyncClient(c.config)
 	c.Label = NewLabelClient(c.config)
 	c.Organization = NewOrganizationClient(c.config)
 	c.Person = NewPersonClient(c.config)
@@ -187,6 +191,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		Customer:        NewCustomerClient(cfg),
 		Integration:     NewIntegrationClient(cfg),
 		Invite:          NewInviteClient(cfg),
+		IssueSync:       NewIssueSyncClient(cfg),
 		Label:           NewLabelClient(cfg),
 		Organization:    NewOrganizationClient(cfg),
 		Person:          NewPersonClient(cfg),
@@ -220,6 +225,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		Customer:        NewCustomerClient(cfg),
 		Integration:     NewIntegrationClient(cfg),
 		Invite:          NewInviteClient(cfg),
+		IssueSync:       NewIssueSyncClient(cfg),
 		Label:           NewLabelClient(cfg),
 		Organization:    NewOrganizationClient(cfg),
 		Person:          NewPersonClient(cfg),
@@ -259,9 +265,9 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
-		c.Allocation, c.Customer, c.Integration, c.Invite, c.Label, c.Organization,
-		c.Person, c.Project, c.Session, c.Task, c.Team, c.TeamMembership,
-		c.WorkSession, c.WorkSessionTask,
+		c.Allocation, c.Customer, c.Integration, c.Invite, c.IssueSync, c.Label,
+		c.Organization, c.Person, c.Project, c.Session, c.Task, c.Team,
+		c.TeamMembership, c.WorkSession, c.WorkSessionTask,
 	} {
 		n.Use(hooks...)
 	}
@@ -271,9 +277,9 @@ func (c *Client) Use(hooks ...Hook) {
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
-		c.Allocation, c.Customer, c.Integration, c.Invite, c.Label, c.Organization,
-		c.Person, c.Project, c.Session, c.Task, c.Team, c.TeamMembership,
-		c.WorkSession, c.WorkSessionTask,
+		c.Allocation, c.Customer, c.Integration, c.Invite, c.IssueSync, c.Label,
+		c.Organization, c.Person, c.Project, c.Session, c.Task, c.Team,
+		c.TeamMembership, c.WorkSession, c.WorkSessionTask,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -290,6 +296,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Integration.mutate(ctx, m)
 	case *InviteMutation:
 		return c.Invite.mutate(ctx, m)
+	case *IssueSyncMutation:
+		return c.IssueSync.mutate(ctx, m)
 	case *LabelMutation:
 		return c.Label.mutate(ctx, m)
 	case *OrganizationMutation:
@@ -785,6 +793,22 @@ func (c *IntegrationClient) QueryTasks(_m *Integration) *TaskQuery {
 	return query
 }
 
+// QueryIssueSyncs queries the issue_syncs edge of a Integration.
+func (c *IntegrationClient) QueryIssueSyncs(_m *Integration) *IssueSyncQuery {
+	query := (&IssueSyncClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(integration.Table, integration.FieldID, id),
+			sqlgraph.To(issuesync.Table, issuesync.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, integration.IssueSyncsTable, integration.IssueSyncsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *IntegrationClient) Hooks() []Hook {
 	return c.hooks.Integration
@@ -972,6 +996,171 @@ func (c *InviteClient) mutate(ctx context.Context, m *InviteMutation) (Value, er
 		return (&InviteDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown Invite mutation op: %q", m.Op())
+	}
+}
+
+// IssueSyncClient is a client for the IssueSync schema.
+type IssueSyncClient struct {
+	config
+}
+
+// NewIssueSyncClient returns a client for the IssueSync from the given config.
+func NewIssueSyncClient(c config) *IssueSyncClient {
+	return &IssueSyncClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `issuesync.Hooks(f(g(h())))`.
+func (c *IssueSyncClient) Use(hooks ...Hook) {
+	c.hooks.IssueSync = append(c.hooks.IssueSync, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `issuesync.Intercept(f(g(h())))`.
+func (c *IssueSyncClient) Intercept(interceptors ...Interceptor) {
+	c.inters.IssueSync = append(c.inters.IssueSync, interceptors...)
+}
+
+// Create returns a builder for creating a IssueSync entity.
+func (c *IssueSyncClient) Create() *IssueSyncCreate {
+	mutation := newIssueSyncMutation(c.config, OpCreate)
+	return &IssueSyncCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of IssueSync entities.
+func (c *IssueSyncClient) CreateBulk(builders ...*IssueSyncCreate) *IssueSyncCreateBulk {
+	return &IssueSyncCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *IssueSyncClient) MapCreateBulk(slice any, setFunc func(*IssueSyncCreate, int)) *IssueSyncCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &IssueSyncCreateBulk{err: fmt.Errorf("calling to IssueSyncClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*IssueSyncCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &IssueSyncCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for IssueSync.
+func (c *IssueSyncClient) Update() *IssueSyncUpdate {
+	mutation := newIssueSyncMutation(c.config, OpUpdate)
+	return &IssueSyncUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *IssueSyncClient) UpdateOne(_m *IssueSync) *IssueSyncUpdateOne {
+	mutation := newIssueSyncMutation(c.config, OpUpdateOne, withIssueSync(_m))
+	return &IssueSyncUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *IssueSyncClient) UpdateOneID(id uuid.UUID) *IssueSyncUpdateOne {
+	mutation := newIssueSyncMutation(c.config, OpUpdateOne, withIssueSyncID(id))
+	return &IssueSyncUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for IssueSync.
+func (c *IssueSyncClient) Delete() *IssueSyncDelete {
+	mutation := newIssueSyncMutation(c.config, OpDelete)
+	return &IssueSyncDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *IssueSyncClient) DeleteOne(_m *IssueSync) *IssueSyncDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *IssueSyncClient) DeleteOneID(id uuid.UUID) *IssueSyncDeleteOne {
+	builder := c.Delete().Where(issuesync.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &IssueSyncDeleteOne{builder}
+}
+
+// Query returns a query builder for IssueSync.
+func (c *IssueSyncClient) Query() *IssueSyncQuery {
+	return &IssueSyncQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeIssueSync},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a IssueSync entity by its id.
+func (c *IssueSyncClient) Get(ctx context.Context, id uuid.UUID) (*IssueSync, error) {
+	return c.Query().Where(issuesync.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *IssueSyncClient) GetX(ctx context.Context, id uuid.UUID) *IssueSync {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryIntegration queries the integration edge of a IssueSync.
+func (c *IssueSyncClient) QueryIntegration(_m *IssueSync) *IntegrationQuery {
+	query := (&IntegrationClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(issuesync.Table, issuesync.FieldID, id),
+			sqlgraph.To(integration.Table, integration.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, issuesync.IntegrationTable, issuesync.IntegrationColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryTask queries the task edge of a IssueSync.
+func (c *IssueSyncClient) QueryTask(_m *IssueSync) *TaskQuery {
+	query := (&TaskClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(issuesync.Table, issuesync.FieldID, id),
+			sqlgraph.To(task.Table, task.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, issuesync.TaskTable, issuesync.TaskColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *IssueSyncClient) Hooks() []Hook {
+	return c.hooks.IssueSync
+}
+
+// Interceptors returns the client interceptors.
+func (c *IssueSyncClient) Interceptors() []Interceptor {
+	return c.inters.IssueSync
+}
+
+func (c *IssueSyncClient) mutate(ctx context.Context, m *IssueSyncMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&IssueSyncCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&IssueSyncUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&IssueSyncUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&IssueSyncDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown IssueSync mutation op: %q", m.Op())
 	}
 }
 
@@ -2180,6 +2369,22 @@ func (c *TaskClient) QueryLabels(_m *Task) *LabelQuery {
 	return query
 }
 
+// QueryIssueSync queries the issue_sync edge of a Task.
+func (c *TaskClient) QueryIssueSync(_m *Task) *IssueSyncQuery {
+	query := (&IssueSyncClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(task.Table, task.FieldID, id),
+			sqlgraph.To(issuesync.Table, issuesync.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, task.IssueSyncTable, task.IssueSyncColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *TaskClient) Hooks() []Hook {
 	return c.hooks.Task
@@ -2884,12 +3089,13 @@ func (c *WorkSessionTaskClient) mutate(ctx context.Context, m *WorkSessionTaskMu
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		Allocation, Customer, Integration, Invite, Label, Organization, Person, Project,
-		Session, Task, Team, TeamMembership, WorkSession, WorkSessionTask []ent.Hook
+		Allocation, Customer, Integration, Invite, IssueSync, Label, Organization,
+		Person, Project, Session, Task, Team, TeamMembership, WorkSession,
+		WorkSessionTask []ent.Hook
 	}
 	inters struct {
-		Allocation, Customer, Integration, Invite, Label, Organization, Person, Project,
-		Session, Task, Team, TeamMembership, WorkSession,
+		Allocation, Customer, Integration, Invite, IssueSync, Label, Organization,
+		Person, Project, Session, Task, Team, TeamMembership, WorkSession,
 		WorkSessionTask []ent.Interceptor
 	}
 )
