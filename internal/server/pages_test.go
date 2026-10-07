@@ -20,7 +20,6 @@ func pagePaths(orgID, projectID string) []string {
 		"/profile",
 		"/projects/" + projectID + "/overview",
 		"/projects/" + projectID + "/tasks",
-		"/projects/" + projectID + "/time-tracking",
 		"/projects/" + projectID + "/collaborators",
 	}
 }
@@ -412,52 +411,19 @@ func TestPages_ProjectTasksTab(t *testing.T) {
 	}
 }
 
-// O Ponto é só o relógio e as tarefas de quem olha: o aviso de quem está sem valor
-// por hora fica acima dos cartões, e as sessões e os totais não estão mais aqui. A
-// tela é a mesma para admin e membro, só o aviso muda de quem ajuda.
-func TestPages_ProjectTimeTab(t *testing.T) {
-	e := newServer(t)
-	admin := signup(t, e, "Org", "ana@test.com")
-	member := invite(t, e, admin, "bia@test.com", "member")
-	projectID := createProject(t, e, admin, "Projeto Alfa")
-	const warning = "ainda não tem valor por hora neste projeto"
-
-	pages := map[string]string{}
-	for who, session := range map[string]string{"admin": admin.session, "member": member.session} {
-		body := do(e, "GET", "/projects/"+projectID+"/time-tracking", "", session).Body.String()
-		pages[who] = body
-		if n := strings.Count(body, warning); n != 1 {
-			t.Errorf("%s: the page has the rate warning %d times, want once", who, n)
-		}
-		if at, clock := strings.Index(body, warning), strings.Index(body, `class="clock"`); at < 0 || clock < 0 || at > clock {
-			t.Errorf("%s: the rate warning is not above the clock card", who)
-		}
-		for _, want := range []string{`class="grid-aside items-stretch"`, "Suas tarefas", `x-for="t in tasks"`, "startTask(t)"} {
-			if !strings.Contains(body, want) {
-				t.Errorf("%s: the time tracking tab does not contain %q", who, want)
-			}
-		}
-		// As sessões e os totais foram para a Visão geral.
-		for _, gone := range []string{`aria-label="Filtrar por pessoa"`, `aria-label="Filtrar por data"`, "<h3>Totais</h3>", "<table>", "Seu tempo neste projeto"} {
-			if strings.Contains(body, gone) {
-				t.Errorf("%s: the time tracking tab still has %q", who, gone)
-			}
-		}
-	}
-	if !strings.Contains(pages["admin"], `href="/projects/`+projectID+`/management/teams">Colaboradores</a>`) || !strings.Contains(pages["member"], "Peça a um admin para definir") {
-		t.Error("the rate warning should send the admin to the collaborators tab and the member to an admin")
-	}
-}
-
-// A Visão geral de fora é a mesma tela para admin e membro: o tempo de quem olha e
-// as suas sessões, com filtros de data e tarefa, páginas e só o valor que a pessoa
-// ganha, sem a coluna de pessoa nem custo, receita e margem.
+// O Início do projeto é a mesma tela para admin e membro: o relógio e as tarefas de
+// quem olha (o aviso de quem está sem valor por hora fica acima dos cartões), o tempo
+// dele e as suas sessões, com filtros de data e tarefa, páginas e só o valor que a
+// pessoa ganha, sem a coluna de pessoa nem custo, receita e margem. O Ponto, que era
+// outra aba, está aqui dentro, e o endereço dele leva para cá.
 func TestPages_ProjectMyOverviewTab(t *testing.T) {
 	e := newServer(t)
 	admin := signup(t, e, "Org", "ana@test.com")
 	member := invite(t, e, admin, "bia@test.com", "member")
 	projectID := createProject(t, e, admin, "Projeto Alfa")
 	overview := "/projects/" + projectID + "/overview"
+	const warning = "ainda não tem valor por hora neste projeto"
+	pages := map[string]string{}
 
 	for who, session := range map[string]string{"admin": admin.session, "member": member.session} {
 		rec := do(e, "GET", overview, "", session)
@@ -472,7 +438,15 @@ func TestPages_ProjectMyOverviewTab(t *testing.T) {
 		if first < 0 || tasks < 0 || first > tasks {
 			t.Errorf("%s: Visão geral is not the first tab", who)
 		}
+		if n := strings.Count(body, warning); n != 1 {
+			t.Errorf("%s: the page has the rate warning %d times, want once", who, n)
+		}
+		if at, clock := strings.Index(body, warning), strings.Index(body, `class="clock"`); at < 0 || clock < 0 || at > clock {
+			t.Errorf("%s: the rate warning is not above the clock card", who)
+		}
+		pages[who] = body
 		for _, want := range []string{
+			`class="grid-aside items-stretch"`, "Suas tarefas", `x-for="t in tasks"`, "startTask(t)", "Início</a>",
 			`x-data="projectMyOverview"`, "Seu tempo neste projeto", "Nesta semana",
 			`aria-label="Filtrar por data"`, `aria-label="Filtrar por tarefa"`, "<h3>Totais</h3>", `<div class="k">Tempo</div>`, `<div class="k">Seu valor</div>`,
 			`class="pager"`, "<table>",
@@ -486,6 +460,17 @@ func TestPages_ProjectMyOverviewTab(t *testing.T) {
 				t.Errorf("%s: the personal overview shows %q", who, gone)
 			}
 		}
+		// A aba Ponto deixou de existir: nem na barra, nem como página.
+		if strings.Contains(body, `/time-tracking`) || strings.Contains(body, ">Ponto</a>") {
+			t.Errorf("%s: the tab bar still links to the Ponto tab", who)
+		}
+		old := do(e, "GET", "/projects/"+projectID+"/time-tracking", "", session)
+		if old.Code != http.StatusSeeOther || old.Header().Get("Location") != overview {
+			t.Errorf("%s: the old Ponto address answers %d to %q, want a redirect to %s", who, old.Code, old.Header().Get("Location"), overview)
+		}
+	}
+	if !strings.Contains(pages["admin"], `href="/projects/`+projectID+`/management/teams">Colaboradores</a>`) || !strings.Contains(pages["member"], "Peça a um admin para definir") {
+		t.Error("the rate warning should send the admin to the collaborators tab and the member to an admin")
 	}
 }
 
@@ -680,7 +665,7 @@ func TestPages_AllTemplatesLoad(t *testing.T) {
 	for _, name := range []string{
 		"login", "signup", "invite", "notfound",
 		"org_projects", "org_people", "org_settings", "org_about", "org_customers", "profile",
-		"project_overview", "project_tasks", "project_time", "project_teams", "project_integrations", "project_settings", "task_detail",
+		"project_overview", "project_my_overview", "project_tasks", "project_teams", "project_integrations", "project_settings", "task_detail",
 	} {
 		i := sort.SearchStrings(got, name)
 		if i == len(got) || got[i] != name {
@@ -799,7 +784,7 @@ func TestPages_ProjectIntegrationsTab(t *testing.T) {
 	if tasks := do(e, "GET", "/projects/"+projectID+"/tasks", "", member.session).Body.String(); !strings.Contains(tasks, types[0]) {
 		t.Error("the tasks tab does not get the integration types for the linked item label")
 	}
-	if clock := do(e, "GET", "/projects/"+projectID+"/time-tracking", "", member.session).Body.String(); strings.Contains(clock, "integration_types") {
-		t.Error("the time tracking tab gets the integration types without using them")
+	if home := do(e, "GET", "/projects/"+projectID+"/overview", "", member.session).Body.String(); strings.Contains(home, "integration_types") {
+		t.Error("the Início tab gets the integration types without using them")
 	}
 }

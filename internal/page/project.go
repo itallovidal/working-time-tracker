@@ -85,9 +85,9 @@ func (h *Handler) Tasks(c *echo.Context) error {
 	return h.projectPage(c, "project_tasks", "titles.tasks", "tasks", h.integrationTypes(c))
 }
 
-// TimeTracking é o ponto do projeto: o relógio e as tarefas da pessoa (S9.3, S29).
-func (h *Handler) TimeTracking(c *echo.Context) error {
-	return h.projectPage(c, "project_time", "titles.time", "time", nil)
+// ToHome é o caminho antigo do Ponto, que passou para o Início do projeto.
+func (h *Handler) ToHome(c *echo.Context) error {
+	return c.Redirect(http.StatusSeeOther, "/projects/"+c.Param("projectId")+"/"+projectHome())
 }
 
 // TaskDetail edita uma tarefa e o vínculo com o item externo (S9.2).

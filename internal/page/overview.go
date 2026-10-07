@@ -12,8 +12,8 @@ func projectHome() string {
 	return "overview"
 }
 
-// MyOverview é a Visão geral de fora, a mesma tela para admin e membro: o seu
-// tempo neste projeto e as suas sessões.
+// MyOverview é o Início do projeto, a mesma tela para admin e membro: o relógio,
+// as suas tarefas, o seu tempo neste projeto e as suas sessões.
 func (h *Handler) MyOverview(c *echo.Context) error {
 	return h.projectPage(c, "project_my_overview", "titles.my_overview", "overview", nil)
 }

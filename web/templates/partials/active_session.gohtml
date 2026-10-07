@@ -3,7 +3,7 @@
   <template x-if="$store.clock.session">
     <div class="session-pill">
       <span class="pulse" aria-hidden="true"></span>
-      <a :href="'/projects/' + $store.clock.session.task.project_id + '/time-tracking'"
+      <a :href="'/projects/' + $store.clock.session.task.project_id + '/overview'"
          :title="$t('session.in_progress', { name: $store.clock.session.task.name })"
          x-text="$store.clock.session.task.name"></a>
       <span class="mono" x-text="WTT.fmt.clock($store.clock.elapsed())"></span>

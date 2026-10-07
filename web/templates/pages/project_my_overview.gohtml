@@ -6,6 +6,76 @@
   <p class="muted" x-show="loading">{{.T "common.loading"}}</p>
 
   <div x-cloak x-show="!loading && !errors.load" class="stack">
+    {{/* O aviso fica acima dos cartões: dentro do relógio ele deixava um cartão mais alto que o outro. */}}
+    <p class="alert alert-warn" x-cloak x-show="!loading && !errors.load && myRate === null">
+      {{.T "time.no_rate"}}
+      {{if .IsAdmin}}
+      {{.T "time.set_rate_before"}} <a href="/projects/{{.Project.ID}}/management/teams">{{.T "project.head.teams"}}</a>{{.T "time.set_rate_after"}}
+      {{else}}
+      {{.T "time.ask_admin"}}
+      {{end}}
+    </p>
+
+    <div class="grid-aside items-stretch">
+      <section class="clock" aria-live="polite">
+        <p class="muted" x-show="!$store.clock.ready">{{.T "common.loading"}}</p>
+
+        <template x-if="$store.clock.ready && $store.clock.session">
+          <div class="stack">
+            <div class="clock-status"><span class="pulse" aria-hidden="true"></span> {{.T "time.running"}}</div>
+            <div class="clock-face running" x-text="WTT.fmt.clock($store.clock.elapsed())"></div>
+            <div>
+              <a :href="'/tasks/' + $store.clock.session.task.id" x-text="$store.clock.session.task.name"></a>
+              <span class="muted" x-text="$t('time.since', { time: WTT.fmt.time($store.clock.session.start_at) })"></span>
+            </div>
+            <p class="alert alert-warn" x-show="$store.clock.session.task.project_id !== project.id">
+              {{.T "time.other_project"}}
+            </p>
+            <div class="row"><button type="button" class="btn btn-danger" :disabled="pending" @click="stop()">{{.T "time.stop"}}</button></div>
+          </div>
+        </template>
+
+        <template x-if="$store.clock.ready && !$store.clock.session">
+          <form class="stack" @submit.prevent="start()">
+            <div class="clock-status muted">{{.T "time.stopped"}}</div>
+            <div class="clock-face">00:00:00</div>
+            <p class="muted" x-show="tasks.length === 0 && !loading">
+              {{.T "time.no_tasks"}} <a href="/projects/{{.Project.ID}}/tasks">{{.T "time.create_task"}}</a>
+            </p>
+            <div class="row" x-show="tasks.length > 0">
+              <select class="flex-1" x-model="taskId" aria-label="{{.T "time.task"}}">
+                <template x-for="t in tasks" :key="t.id">
+                  <option :value="t.id" x-text="t.name" :selected="t.id === taskId"></option>
+                </template>
+              </select>
+              <button type="submit" class="btn" :disabled="pending || !taskId || myRate === null">{{.T "time.start"}}</button>
+            </div>
+          </form>
+        </template>
+        <p class="form-error" x-cloak x-show="errors.clock" x-text="errors.clock" role="alert"></p>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><h2>{{.T "time.my_tasks"}}</h2></div>
+        <p class="muted small" x-cloak x-show="!loading && tasks.length === 0">
+          {{.T "time.no_tasks"}} <a href="/projects/{{.Project.ID}}/tasks">{{.T "time.create_task"}}</a>
+        </p>
+        <ul class="list" x-show="tasks.length > 0">
+          <template x-for="t in tasks" :key="t.id">
+            <li>
+              <div class="grow">
+                <a :href="'/tasks/' + t.id" x-text="t.name"></a>
+                <span class="badge num" :class="deadlineClass(t)" x-text="deadlineLabel(t)"></span>
+              </div>
+              <span class="badge badge-ok" x-show="isRunning(t)">{{.T "time.running"}}</span>
+              <button type="button" class="btn btn-secondary btn-sm" x-show="!isRunning(t)"
+                      :disabled="pending || myRate === null || !$store.clock.ready || !!$store.clock.session" @click="startTask(t)">{{.T "time.start"}}</button>
+            </li>
+          </template>
+        </ul>
+      </section>
+    </div>
+
     <section class="card">
       <div class="card-head"><h2>{{.T "time.yours"}}</h2></div>
       <div class="totals">
@@ -21,7 +91,6 @@
       <p class="muted small" x-cloak x-show="myRate !== null">
         {{.T "time.your_rate_before"}} <strong class="num" x-text="WTT.fmt.money(myRate)"></strong> {{.T "time.your_rate_after"}}
       </p>
-      <p class="muted small" x-cloak x-show="myRate === null">{{.T "time.no_rate"}}</p>
     </section>
 
     <section class="stack">

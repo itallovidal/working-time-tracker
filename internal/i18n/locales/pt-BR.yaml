@@ -52,10 +52,9 @@ titles:
   org_customers: Clientes · Organização
   org_people: Colaboradores · Organização
   overview: Gestão · Visão geral
-  my_overview: Visão geral
+  my_overview: Início
   collaborators: Colaboradores
   tasks: Quadro de tarefas
-  time: Ponto
   teams: Gestão · Colaboradores
   integrations: Gestão · Integrações
   project_settings: Gestão · Configurações
@@ -274,7 +273,7 @@ project:
     sections: Seções do projeto
     overview: Visão geral
     tasks: Quadro de tarefas
-    time: Ponto
+    home: Início
     teams: Colaboradores
     integrations: Integrações
     settings: Configurações

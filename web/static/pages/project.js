@@ -609,21 +609,29 @@ document.addEventListener('alpine:init', () => {
     },
   }));
 
-  // A Visão geral de fora é a de quem está olhando, admin ou não: o seu tempo neste
-  // projeto e as suas sessões, que o servidor já limita a quem pede.
+  // O Início do projeto é o de quem está olhando, admin ou não: o relógio, as tarefas em
+  // que a pessoa está mexendo (as que têm o nome dela; pegar uma disponível é pelo quadro
+  // de tarefas), o seu tempo neste projeto e as suas sessões, que o servidor já limita a
+  // quem pede.
   Alpine.data('projectMyOverview', () => ({
     ...form(),
     ...sessionList(),
+    project,
     loading: true,
+    tasks: [], // só as tarefas da pessoa logada
+    taskId: '',
     myRate: null, // quanto a pessoa logada recebe por hora aqui; null se ainda não tem valor
     async init() {
       this.watchSessionFilters();
       try {
-        const [sessions, allocations] = await Promise.all([
+        const [sessions, allocations, tasks] = await Promise.all([
           api('GET', '/api/projects/' + project.id + '/work-sessions?person_id=' + me.id),
           api('GET', '/api/projects/' + project.id + '/allocations'),
+          api('GET', '/api/projects/' + project.id + '/tasks?assignee_id=' + me.id),
         ]);
         this.sessions = sessions || [];
+        this.tasks = tasks || [];
+        this.taskId = this.tasks.length ? this.tasks[0].id : '';
         const own = (allocations || []).find((a) => a.person_id === me.id);
         this.myRate = own ? own.pay_rate_cents : null;
       } catch (e) {
@@ -638,33 +646,6 @@ document.addEventListener('alpine:init', () => {
         this.sessions = (await api('GET', '/api/projects/' + project.id + '/work-sessions?person_id=' + me.id)) || [];
       } catch (e) {
         this.errors.load = e.message;
-      }
-    },
-  }));
-
-  // O Ponto é o relógio e as tarefas em que a pessoa está mexendo: as que têm o
-  // nome dela. Pegar uma tarefa disponível é pelo quadro de tarefas.
-  Alpine.data('timeTracking', () => ({
-    ...form(),
-    project,
-    loading: true,
-    tasks: [], // só as tarefas da pessoa logada
-    taskId: '',
-    myRate: null, // quanto a pessoa logada recebe por hora aqui; null se ainda não tem valor
-    async init() {
-      try {
-        const [tasks, allocations] = await Promise.all([
-          api('GET', '/api/projects/' + project.id + '/tasks?assignee_id=' + me.id),
-          api('GET', '/api/projects/' + project.id + '/allocations'),
-        ]);
-        this.tasks = tasks || [];
-        const own = (allocations || []).find((a) => a.person_id === me.id);
-        this.myRate = own ? own.pay_rate_cents : null;
-        this.taskId = this.tasks.length ? this.tasks[0].id : '';
-      } catch (e) {
-        this.errors.load = e.message;
-      } finally {
-        this.loading = false;
       }
     },
     start() {

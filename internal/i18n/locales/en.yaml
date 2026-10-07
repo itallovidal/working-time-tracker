@@ -42,10 +42,9 @@ titles:
   org_customers: Customers · Organization
   org_people: Collaborators · Organization
   overview: Management · Overview
-  my_overview: Overview
+  my_overview: Home
   collaborators: Collaborators
   tasks: Task board
-  time: Time tracking
   teams: Management · Collaborators
   integrations: Management · Integrations
   project_settings: Management · Settings
@@ -264,7 +263,7 @@ project:
     sections: Project sections
     overview: Overview
     tasks: Task board
-    time: Time tracking
+    home: Home
     teams: Collaborators
     integrations: Integrations
     settings: Settings

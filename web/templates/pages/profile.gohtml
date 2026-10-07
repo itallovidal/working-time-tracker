@@ -38,7 +38,7 @@
       <ul class="list" x-cloak x-show="rates.length > 0">
         <template x-for="r in rates" :key="r.project_id">
           <li>
-            <a class="grow" :href="'/projects/' + r.project_id + '/time-tracking'" x-text="r.project.name"></a>
+            <a class="grow" :href="'/projects/' + r.project_id + '/overview'" x-text="r.project.name"></a>
             <span class="num"><strong x-text="WTT.fmt.money(r.pay_rate_cents)"></strong> <span class="muted small">{{.T "common.per_hour"}}</span></span>
           </li>
         </template>

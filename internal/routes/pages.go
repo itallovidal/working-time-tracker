@@ -36,7 +36,8 @@ func RegisterPages(e *echo.Echo, p *page.Handler, m *auth.Middleware) {
 	g.GET("/projects/:projectId", p.Project, prj)
 	g.GET("/projects/:projectId/overview", p.MyOverview, prj)
 	g.GET("/projects/:projectId/tasks", p.Tasks, prj)
-	g.GET("/projects/:projectId/time-tracking", p.TimeTracking, prj)
+	// O Ponto foi para o Início do projeto; o endereço antigo continua levando para lá.
+	g.GET("/projects/:projectId/time-tracking", p.ToHome, prj)
 	g.GET("/projects/:projectId/collaborators", p.Collaborators, prj)
 	// A Gestão é a área do projeto só de admins: quem não é recebe o 404.
 	g.GET("/projects/:projectId/management", p.Management, prj, admin)

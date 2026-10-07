@@ -419,6 +419,14 @@
 
 ---
 
+### Sprint 33: The Ponto Tab Folds into the Início
+
+- [X] S33.1 The Ponto tab is removed: the clock, the rate warning and "Suas tarefas" are the top of the personal overview, which is renamed Início (house icon)
+- [X] S33.2 `/projects/:projectId/time-tracking` redirects to `/overview`; the links that used it (profile, clock pill, Gestão back link) point to the Início
+- [X] S33.3 `timeTracking` is merged into `projectMyOverview`; tests for the page, the missing tab and the redirect; update README and design
+
+---
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open

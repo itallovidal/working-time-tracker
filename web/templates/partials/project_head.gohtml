@@ -12,11 +12,10 @@
   <a href="/projects/{{.Project.ID}}/management/teams" {{if eq .Tab "teams"}}aria-current="page"{{end}}>{{template "icon" "people-group"}} {{.T "project.head.teams"}}</a>
   <a href="/projects/{{.Project.ID}}/management/integrations" {{if eq .Tab "integrations"}}aria-current="page"{{end}}>{{template "icon" "plug"}} {{.T "project.head.integrations"}}</a>
   <a href="/projects/{{.Project.ID}}/management/settings" {{if eq .Tab "settings"}}aria-current="page"{{end}}>{{template "icon" "gear"}} {{.T "project.head.settings"}}</a>
-  <a class="tabs-end" href="/projects/{{.Project.ID}}/time-tracking">{{template "icon" "arrow-left"}} {{.T "project.head.back"}}</a>
+  <a class="tabs-end" href="/projects/{{.Project.ID}}/overview">{{template "icon" "arrow-left"}} {{.T "project.head.back"}}</a>
   {{else}}
-  <a href="/projects/{{.Project.ID}}/overview" {{if eq .Tab "overview"}}aria-current="page"{{end}}>{{template "icon" "gauge"}} {{.T "project.head.overview"}}</a>
+  <a href="/projects/{{.Project.ID}}/overview" {{if eq .Tab "overview"}}aria-current="page"{{end}}>{{template "icon" "house"}} {{.T "project.head.home"}}</a>
   <a href="/projects/{{.Project.ID}}/tasks" {{if eq .Tab "tasks"}}aria-current="page"{{end}}>{{template "icon" "list-check"}} {{.T "project.head.tasks"}}</a>
-  <a href="/projects/{{.Project.ID}}/time-tracking" {{if eq .Tab "time"}}aria-current="page"{{end}}>{{template "icon" "clock"}} {{.T "project.head.time"}}</a>
   <a href="/projects/{{.Project.ID}}/collaborators" {{if eq .Tab "teams"}}aria-current="page"{{end}}>{{template "icon" "people-group"}} {{.T "project.head.teams"}}</a>
   {{if .IsAdmin}}<a class="tabs-end" href="/projects/{{.Project.ID}}/management/overview">{{template "icon" "sliders"}} {{.T "project.head.management"}}</a>{{end}}
   {{end}}

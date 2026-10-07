@@ -125,7 +125,7 @@ func TestPages_ProjectOverviewTab(t *testing.T) {
 			t.Errorf("the Gestão shows %q in its tab bar", gone)
 		}
 	}
-	if !strings.Contains(body, `href="/projects/`+projectID+`/time-tracking"`) || !strings.Contains(body, "Voltar ao projeto") {
+	if !strings.Contains(body, `href="/projects/`+projectID+`/overview"`) || !strings.Contains(body, "Voltar ao projeto") {
 		t.Error("the Gestão has no way back to the project")
 	}
 	for _, want := range []string{
