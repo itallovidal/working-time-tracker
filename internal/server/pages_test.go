@@ -21,6 +21,7 @@ func pagePaths(orgID, projectID string) []string {
 		"/projects/" + projectID + "/overview",
 		"/projects/" + projectID + "/tasks",
 		"/projects/" + projectID + "/time-tracking",
+		"/projects/" + projectID + "/collaborators",
 	}
 }
 
@@ -483,6 +484,41 @@ func TestPages_ProjectMyOverviewTab(t *testing.T) {
 		for _, gone := range []string{`aria-label="Filtrar por pessoa"`, `<div class="k">Custo</div>`, `<div class="k">Receita</div>`, "Margem (receita menos custo)", "<th>Pessoa</th>"} {
 			if strings.Contains(body, gone) {
 				t.Errorf("%s: the personal overview shows %q", who, gone)
+			}
+		}
+	}
+}
+
+// A aba Colaboradores de fora da Gestão é a mesma para todos, e só para ler: as
+// duas visões e as páginas, sem valor por hora, sem margem e sem nenhuma ação,
+// nem para o admin, que edita na Gestão.
+func TestPages_CollaboratorsTabIsReadOnly(t *testing.T) {
+	e := newServer(t)
+	admin := signup(t, e, "Org", "ana@test.com")
+	member := invite(t, e, admin, "bia@test.com", "member")
+	projectID := createProject(t, e, admin, "Projeto Alfa")
+	tab := "/projects/" + projectID + "/collaborators"
+
+	for who, session := range map[string]string{"admin": admin.session, "member": member.session} {
+		rec := do(e, "GET", tab, "", session)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("%s GET %s = %d, want 200", who, tab, rec.Code)
+		}
+		body := rec.Body.String()
+		if !strings.Contains(body, `href="`+tab+`" aria-current="page"`) {
+			t.Errorf("%s: the tab bar does not mark Colaboradores as the current tab", who)
+		}
+		for _, want := range []string{`x-data="projectTeams"`, `role="tablist"`, `id="view-people"`, `id="view-teams"`, `x-for="c in peoplePage().rows"`, `"readonly":true`} {
+			if !strings.Contains(body, want) {
+				t.Errorf("%s: the read-only tab does not contain %q", who, want)
+			}
+		}
+		for _, gone := range []string{
+			"Adicionar pessoa", "Novo time", `x-teleport="#modal-root"`, "Margem por hora", "Valor das horas registradas",
+			`title="Editar time"`, `title="Editar colaborador"`, "openPerson(", "openEdit(",
+		} {
+			if strings.Contains(body, gone) {
+				t.Errorf("%s: the read-only collaborators tab still has %q", who, gone)
 			}
 		}
 	}

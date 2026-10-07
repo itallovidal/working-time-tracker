@@ -18,7 +18,7 @@
       <div class="v" x-text="summary().teams"></div>
       <div class="k" x-text="$t('collab.teams_count', { count: summary().teams })"></div>
     </div>
-    {{if .IsAdmin}}
+    {{if .CanManage}}
     {{/* O dinheiro do projeto, só para admins: o que ele ganha por hora hoje, com todo mundo
          trabalhando, e o que as horas já fechadas valem. A conta de cada um fica na dica. */}}
     <div class="total has-tip" x-data="tip" @keydown.escape="open = false" @click.outside="open = false" @resize.window="open = false">
@@ -48,7 +48,7 @@
     {{end}}
   </div>
 
-  {{if .IsAdmin}}
+  {{if .CanManage}}
   {{/* Só aparece para quem entrou num time antes de o valor por hora ser obrigatório. */}}
   <p class="alert alert-warn" x-cloak x-show="!loading && missing().length > 0">
     <strong x-text="$t('collab.missing_count', { count: missing().length })"></strong>
@@ -74,7 +74,7 @@
       <div class="row filters">
         <input type="search" placeholder="{{.T "collab.search_placeholder"}}" aria-label="{{.T "collab.search_label"}}"
                x-model="search" x-show="view === 'people' && collaborators.length > 0">
-        {{if .IsAdmin}}
+        {{if .CanManage}}
         <button type="button" class="btn" x-show="view === 'people'" @click="openAdd()">{{template "icon" "user-plus"}} {{.T "collab.add_person"}}</button>
         <button type="button" class="btn" x-show="view === 'teams'" @click="openTeam()">{{template "icon" "plus"}} {{.T "collab.new_team"}}</button>
         {{end}}
@@ -87,7 +87,7 @@
       <div class="empty" x-show="collaborators.length === 0">
         {{template "icon" "users"}}
         <strong>{{.T "collab.none"}}</strong>
-        {{if .IsAdmin}}
+        {{if .CanManage}}
         <span>{{.T "collab.none_admin"}}</span>
         {{else}}
         <span>{{.T "collab.none_member"}}</span>
@@ -106,7 +106,7 @@
             <tr>
               <th>{{.T "collab.col_person"}}</th>
               <th>{{.T "collab.col_teams"}}</th>
-              {{if .IsAdmin}}
+              {{if .CanManage}}
               <th x-text="$t('collab.col_rate', { unit: WTT.fmt.moneyUnit() })"></th>
               <th>{{.T "collab.col_margin"}}</th>
               <th class="actions"><span class="sr-only">{{.T "common.actions"}}</span></th>
@@ -116,7 +116,7 @@
           <tbody>
             <template x-for="c in peoplePage().rows" :key="c.person.id">
               {{/* Para o admin a linha inteira abre o colaborador; o lápis faz o mesmo pelo teclado. */}}
-              <tr {{if .IsAdmin}}class="row-link" @click="if (!$event.target.closest('button')) openPerson(c)"{{end}}>
+              <tr {{if .CanManage}}class="row-link" @click="if (!$event.target.closest('button')) openPerson(c)"{{end}}>
                 <td>
                   <div>
                     <span x-text="c.person.name"></span>
@@ -132,7 +132,7 @@
                     <span class="muted" x-show="c.teams.length === 0">{{.T "collab.no_team"}}</span>
                   </div>
                 </td>
-                {{if .IsAdmin}}
+                {{if .CanManage}}
                 <td class="num">
                   <span x-show="c.pay_rate_cents !== null" x-text="WTT.fmt.money(c.pay_rate_cents)"></span>
                   <span class="badge badge-warn" x-show="c.pay_rate_cents === null">{{.T "collab.no_rate_badge"}}</span>
@@ -159,7 +159,7 @@
         </div>
       </nav>
 
-      {{if .IsAdmin}}
+      {{if .CanManage}}
       <p class="muted small" x-show="collaborators.length > 0">
         <span x-show="billing.bill_rate_cents !== null">{{.T "collab.bill_info_before"}} <strong class="num" x-text="WTT.fmt.money(billing.bill_rate_cents)"></strong> {{.T "collab.bill_info_after"}}</span>
         <span x-show="billing.bill_rate_cents === null">{{.T "collab.no_bill"}}</span>
@@ -174,7 +174,7 @@
       <div class="empty" x-show="teams.length === 0">
         {{template "icon" "people-group"}}
         <strong>{{.T "collab.no_teams"}}</strong>
-        {{if .IsAdmin}}
+        {{if .CanManage}}
         <span>{{.T "collab.no_teams_admin"}}</span>
         {{else}}
         <span>{{.T "collab.no_teams_member"}}</span>
@@ -188,7 +188,7 @@
           <section class="card">
             <div class="card-head">
               <h3 x-text="team.name"></h3>
-              {{if .IsAdmin}}
+              {{if .CanManage}}
               <button type="button" class="btn btn-ghost btn-sm btn-icon" title="{{.T "collab.edit_team"}}"
                       :aria-label="$t('collab.edit_team_label', { name: team.name })" @click="openEdit(team)">{{template "icon" "pen"}}</button>
               {{end}}
@@ -198,7 +198,7 @@
             <ul class="list" x-show="membersOf(team).length > 0">
               <template x-for="m in teamPage(team).rows" :key="m.person.id">
                 <li>
-                  {{if .IsAdmin}}
+                  {{if .CanManage}}
                   <button type="button" class="list-btn" title="{{.T "collab.edit_person"}}" @click="openPerson(m)">
                     <span class="avatar" aria-hidden="true" x-text="WTT.fmt.initials(m.person.name)"></span>
                     <span class="grow">
@@ -234,7 +234,7 @@
     </section>
   </div>
 
-  {{if .IsAdmin}}
+  {{if .CanManage}}
   {{/* Os quatro formulários aparecem no modal do layout base e continuam no escopo de projectTeams. */}}
   <template x-teleport="#modal-root">
     <form class="stack" x-show="$store.modal.name === 'collab-add'" @submit.prevent="addPerson()">

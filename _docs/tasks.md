@@ -391,6 +391,14 @@
 
 ---
 
+### Sprint 30: Read-Only Collaborators Tab for Everyone
+
+- [X] S30.1 `/projects/:projectId/collaborators`, for everyone, between Ponto and the Gestão button: people (with search) and teams, five per page, nothing to edit, not even for admins
+- [X] S30.2 `Data.CanManage()` gates the admin tools of the collaborators template (only in the Gestão, only for admins); with `readonly` in the boot data the component skips the admin-only calls
+- [X] S30.3 Tests for the page by role and in both languages; update README and design
+
+---
+
 ### Refatoração: Domain-First Architecture (pré-Sprint 9)
 
 - [X] R1 Reorganizar código de layered-flat para domain-first: `internal/domain/<dominio>/` com `model.go`, `store.go`, `service.go`, `handler.go` por domínio

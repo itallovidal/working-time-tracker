@@ -90,6 +90,7 @@ A interface segue a Decision 8 de `_docs/design.md`. O servidor renderiza a casc
 | `/i18n/:idioma.js` | Os textos do idioma para o JavaScript (`window.I18N`) |
 | `/projects/:projectId` | Leva todos para a Visão geral |
 | `/projects/:projectId/overview` | Visão geral pessoal, igual para admin e membro: o seu tempo de hoje e da semana e as suas sessões, com filtros de data e tarefa, totais e páginas |
+| `/projects/:projectId/collaborators` | Colaboradores para todos, só para ler: as pessoas (com busca) e os times, cinco por página, sem valor por hora, margem nem ações, nem para o admin. Quem edita é a aba da Gestão |
 | `/projects/:projectId/management` | A raiz da Gestão (só admins): leva para a Visão geral dela |
 | `/projects/:projectId/management/overview` | Gestão, Visão geral: pessoas, times, horas, receita, custo e margem, tempo de projeto, integrações, atividade recente, tarefas atrasadas e a lista de sessões de todos, com filtros de pessoa, data e tarefa, totais com custo, receita e margem, e dez por página. Os caminhos antigos `/teams`, `/integrations` e `/settings` redirecionam para a Gestão |
 | `/projects/:projectId/tasks` | Quadro de tarefas, com busca, filtros, paginação e início de ponto em um clique |
@@ -104,7 +105,7 @@ Sem sessão, qualquer página leva ao login, e a pessoa volta para a página ped
 ### Navegação
 
 - A **barra superior** mostra a organização, o menu (Projetos e Organização), o **indicador do ponto aberto** com cronômetro e botão Parar, o **toggle de idioma** (PT | EN), quem está logado (o nome leva ao **perfil**) e o botão Sair. Sem login, o toggle fica no canto da tela.
-- As páginas de projeto têm duas barras de **abas**. Para todos: Visão geral (a sua), Quadro de tarefas e Ponto, e o projeto abre na Visão geral. Para admins, o botão Gestão abre a outra: Visão geral, Colaboradores, Integrações e Configurações, em `/projects/:id/management/...`. A aba Colaboradores juntou as antigas Times e Valores. O valor cobrado do cliente fica em Configurações.
+- As páginas de projeto têm duas barras de **abas**. Para todos: Visão geral (a sua), Quadro de tarefas, Ponto e Colaboradores (só para ler), e o projeto abre na Visão geral. Para admins, o botão Gestão abre a outra: Visão geral, Colaboradores, Integrações e Configurações, em `/projects/:id/management/...`. A aba Colaboradores juntou as antigas Times e Valores. O valor cobrado do cliente fica em Configurações.
 - A página **Organização** abre na aba Sobre, que todos os membros leem. Nela o admin tem o botão **Editar**, que leva à tela de edição; salvar volta para a Sobre. As abas Colaboradores, Clientes e Projetos são só de admins.
 - Ações de admin não aparecem para membros. A API continua sendo quem garante as permissões.
 - A lista de **tarefas** guarda a busca, os filtros e a página na URL (`?q=`, `?assignee=` (um id, ou `none` para as sem responsável), `?due=`, `?page=`, e `?mine=1` para "Só as minhas tarefas"). Recarregar mantém o que estava na tela, o link pode ser compartilhado, e o botão Voltar de uma tarefa leva de volta ao mesmo ponto da lista.

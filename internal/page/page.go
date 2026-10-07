@@ -97,6 +97,12 @@ func (d Data) OrgID() string {
 	return d.Me.OrganizationID.String()
 }
 
+// CanManage diz se a página mostra as ferramentas de admin: só na Gestão, e só
+// para quem é admin. Fora dela, a mesma tela sai só para ler, para todos.
+func (d Data) CanManage() bool {
+	return d.Management && d.IsAdmin()
+}
+
 func (d Data) IsAdmin() bool {
 	return d.Me.IsAdmin()
 }

@@ -819,7 +819,8 @@ document.addEventListener('alpine:init', () => {
     async init() {
       this.$watch('search', () => { this.page = 1; }); // uma busca nova começa da primeira página
       try {
-        const admin = me.role === 'admin';
+        // Fora da Gestão a aba é só de leitura, para admin também.
+        const admin = me.role === 'admin' && !WTT.boot.readonly;
         const [collaborators, teams, billing, people, sessions] = await Promise.all([
           api('GET', '/api/projects/' + project.id + '/collaborators'),
           api('GET', '/api/projects/' + project.id + '/teams'),

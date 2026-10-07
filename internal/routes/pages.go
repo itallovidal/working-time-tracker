@@ -37,6 +37,7 @@ func RegisterPages(e *echo.Echo, p *page.Handler, m *auth.Middleware) {
 	g.GET("/projects/:projectId/overview", p.MyOverview, prj)
 	g.GET("/projects/:projectId/tasks", p.Tasks, prj)
 	g.GET("/projects/:projectId/time-tracking", p.TimeTracking, prj)
+	g.GET("/projects/:projectId/collaborators", p.Collaborators, prj)
 	// A Gestão é a área do projeto só de admins: quem não é recebe o 404.
 	g.GET("/projects/:projectId/management", p.Management, prj, admin)
 	g.GET("/projects/:projectId/management/overview", p.Overview, prj, admin)

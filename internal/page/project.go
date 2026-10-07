@@ -117,6 +117,12 @@ func (h *Handler) Teams(c *echo.Context) error {
 	return h.managementPage(c, "project_teams", "titles.teams", "teams", nil)
 }
 
+// Collaborators é a aba Colaboradores de fora da Gestão: as pessoas e os times
+// do projeto, só para ler, igual para admin e membro. O admin edita na Gestão.
+func (h *Handler) Collaborators(c *echo.Context) error {
+	return h.projectPage(c, "project_teams", "titles.collaborators", "teams", map[string]any{"readonly": true})
+}
+
 // Integrations configura as integrações do projeto com GitHub, GitLab e Trello (S10.1, S23).
 func (h *Handler) Integrations(c *echo.Context) error {
 	return h.managementPage(c, "project_integrations", "titles.integrations", "integrations", h.integrationTypes(c))
