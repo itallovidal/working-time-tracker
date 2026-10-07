@@ -1,10 +1,10 @@
-// Command seed popula um banco vazio com dados de demonstração: uma software
-// house com o perfil preenchido, cinco pessoas, três clientes e seis projetos
-// (um deles interno). Cada projeto tem o valor cobrado do cliente, e cada pessoa
-// tem um valor por hora em cada projeto em que trabalha. Há também times,
-// tarefas e sessões de trabalho das últimas semanas, já com os valores. Os
-// projetos foram cadastrados de um mês a quase um ano atrás, e dois deles têm
-// integrações, para a Visão geral ter o que mostrar.
+// Command seed popula um banco vazio com dados de demonstração para as telas
+// ficarem cheias: uma software house com doze pessoas, quatro clientes e oito
+// projetos (um interno), cada um com o valor cobrado do cliente, times, o valor
+// por hora de cada pessoa e tarefas com prazos espalhados, atrasadas e sem
+// responsável. Há ainda cerca de dois meses de sessões de trabalho já fechadas,
+// geradas por uma sequência fixa (o mesmo seed dá sempre o mesmo banco), duas
+// pessoas com o ponto aberto e integrações com itens vinculados a tarefas.
 //
 // Uso: go run ./cmd/seed (lê DATABASE_URL do ambiente ou do .env)
 package main
@@ -13,12 +13,15 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 
+	"working-time-tracker/ent"
 	"working-time-tracker/internal/database"
 	"working-time-tracker/internal/domain/allocation"
 	"working-time-tracker/internal/domain/auth"
@@ -32,178 +35,198 @@ import (
 
 const password = "demo12345"
 
-// As pessoas da software house. A primeira cria a organização e é a admin; as
-// outras entram por convite, como membros. weeklyHours é a jornada semanal
-// combinada com cada uma, que vale para todos os projetos: a Ana, sócia, não tem
-// jornada definida, e a Elisa trabalha meio período.
+// historyDays é até onde as sessões voltam no tempo.
+const historyDays = 75
+
+// As pessoas da software house. A primeira cria a organização e é admin; as
+// outras entram por convite, com o papel indicado. weeklyHours é a jornada
+// semanal combinada com cada uma, que vale para todos os projetos: a Ana, sócia,
+// não tem jornada definida, e a Elisa e o João trabalham meio período.
 var people = []struct {
-	key, name, email string
-	weeklyHours      int
+	key, name, email, role string
+	weeklyHours            int
 }{
-	{"ana", "Ana Souza", "ana@example.com", 0},
-	{"bruno", "Bruno Lima", "bruno@example.com", 40},
-	{"carla", "Carla Mendes", "carla@example.com", 40},
-	{"diego", "Diego Rocha", "diego@example.com", 30},
-	{"elisa", "Elisa Prado", "elisa@example.com", 20},
+	{"ana", "Ana Souza", "ana@example.com", "admin", 0},
+	{"helena", "Helena Costa", "helena@example.com", "admin", 40},
+	{"bruno", "Bruno Lima", "bruno@example.com", "member", 40},
+	{"carla", "Carla Mendes", "carla@example.com", "member", 40},
+	{"diego", "Diego Rocha", "diego@example.com", "member", 30},
+	{"elisa", "Elisa Prado", "elisa@example.com", "member", 20},
+	{"fabio", "Fábio Teixeira", "fabio@example.com", "member", 40},
+	{"gabriela", "Gabriela Nunes", "gabriela@example.com", "member", 30},
+	{"henrique", "Henrique Barros", "henrique@example.com", "member", 40},
+	{"isabela", "Isabela Cardoso", "isabela@example.com", "member", 40},
+	{"joao", "João Pedro Alves", "joao@example.com", "member", 20},
+	{"larissa", "Larissa Freitas", "larissa@example.com", "member", 40},
 }
 
 var customers = []struct{ key, name, document, contact, email, phone string }{
 	{"bompreco", "Rede Bom Preço", "12.ABC.345/01DE-35", "Marcos Dias", "marcos@bompreco.example", "+55 (11) 3003-1000"},
 	{"vidaplena", "Clínica Vida Plena", "11.444.777/0001-61", "Renata Alves", "renata@vidaplena.example", "+55 (48) 3003-2200"},
 	{"pagai", "Pagaí Pagamentos", "", "Tiago Nunes", "tiago@pagai.example", ""},
+	{"atacado", "Atacado Norte", "45.723.174/0001-10", "Sérgio Matos", "sergio@atacadonorte.example", "+55 (92) 3003-4400"},
 }
 
 // Os projetos. customer vazio é um projeto interno, sem valor cobrado. Em rates
-// está quem trabalha no projeto e quanto recebe por hora nele, em centavos: o
-// Bruno recebe mais na API de Cobranças, que é mais complexa, do que nos outros.
-// Os times só têm gente que está em rates.
+// está quem trabalha no projeto e quanto recebe por hora nele, em centavos. Os
+// times só têm gente que está em rates, e quem está em rates sem time aparece
+// como "sem time". Na Migração do ERP o valor cobrado é menor que o que a maioria
+// recebe, de propósito: a margem fica negativa e a tela mostra isso em vermelho.
 var projects = []struct {
 	key, customer, name, description string
 	sprintDays                       int
 	daily, weekly                    string
-	billRate                         int
+	billRate, ageDays                int
 	teams                            map[string][]string
 	rates                            map[string]int
 }{
 	{
-		key: "app", customer: "bompreco", name: "App de Pedidos",
+		key: "app", customer: "bompreco", name: "App de Pedidos", ageDays: 330,
 		description: "Aplicativo para os clientes da rede pedirem e acompanharem as entregas.",
 		sprintDays:  14, daily: "09:30", weekly: "friday", billRate: 14000,
-		teams: map[string][]string{"Mobile": {"diego", "ana"}, "Backend": {"bruno"}},
-		rates: map[string]int{"ana": 9000, "bruno": 5500, "diego": 6000},
+		teams: map[string][]string{"Mobile": {"diego", "gabriela", "ana"}, "Backend": {"bruno", "henrique", "fabio"}, "Qualidade": {"elisa"}, "Produto": {"isabela", "carla"}},
+		rates: map[string]int{"ana": 9000, "bruno": 5500, "diego": 6000, "gabriela": 5200, "henrique": 4200, "isabela": 6500, "elisa": 4000, "carla": 5000, "fabio": 6200},
 	},
 	{
-		// A Elisa acabou de ser alocada: já tem valor, mas ainda não entrou em
-		// nenhum time. A aba Colaboradores mostra ela como "sem time".
-		key: "painel", customer: "bompreco", name: "Painel do Lojista",
+		key: "painel", customer: "bompreco", name: "Painel do Lojista", ageDays: 214,
 		description: "Painel web para cada loja acompanhar pedidos, repasses e avaliações.",
-		sprintDays:  14, billRate: 12000,
-		teams: map[string][]string{"Web": {"carla", "bruno"}},
-		rates: map[string]int{"bruno": 5500, "carla": 5000, "elisa": 4000},
+		sprintDays:  14, daily: "09:15", weekly: "thursday", billRate: 12000,
+		teams: map[string][]string{"Web": {"carla", "bruno", "henrique"}, "Design": {"gabriela"}},
+		rates: map[string]int{"bruno": 5500, "carla": 5000, "elisa": 4000, "henrique": 4200, "gabriela": 5200},
 	},
 	{
-		key: "agenda", customer: "vidaplena", name: "Agendamento Online",
+		key: "agenda", customer: "vidaplena", name: "Agendamento Online", ageDays: 152,
 		description: "Marcação de consultas pelo site e pelo WhatsApp, com confirmação automática.",
 		sprintDays:  7, daily: "10:00", weekly: "monday", billRate: 11000,
-		teams: map[string][]string{"Produto": {"carla", "diego", "elisa"}},
-		rates: map[string]int{"carla": 5000, "diego": 5800, "elisa": 4000},
+		teams: map[string][]string{"Produto": {"carla", "diego", "elisa", "isabela"}},
+		rates: map[string]int{"carla": 5000, "diego": 5800, "elisa": 4000, "isabela": 6500, "joao": 2500},
 	},
 	{
-		// O Diego não está neste projeto: a aba Ponto daqui mostra a ele o ponto
-		// bloqueado, por falta de valor por hora.
-		key: "portal", customer: "vidaplena", name: "Portal do Paciente",
+		key: "portal", customer: "vidaplena", name: "Portal do Paciente", ageDays: 96,
 		description: "Resultados de exames e histórico de consultas para o paciente.",
 		sprintDays:  14, billRate: 11500,
-		teams: map[string][]string{"Web": {"carla", "bruno"}},
-		rates: map[string]int{"bruno": 5500, "carla": 5200},
+		teams: map[string][]string{"Web": {"bruno", "carla"}, "Dados": {"larissa"}, "Design": {"gabriela"}},
+		rates: map[string]int{"bruno": 5500, "carla": 5200, "larissa": 6000, "gabriela": 5200},
 	},
 	{
-		key: "api", customer: "pagai", name: "API de Cobranças",
+		key: "api", customer: "pagai", name: "API de Cobranças", ageDays: 68,
 		description: "API de boletos e Pix, com conciliação diária.",
 		sprintDays:  14, daily: "09:00", weekly: "wednesday", billRate: 18000,
-		teams: map[string][]string{"Backend": {"bruno", "ana"}},
-		rates: map[string]int{"ana": 11000, "bruno": 7000},
+		teams: map[string][]string{"Backend": {"bruno", "ana", "fabio"}, "Infra": {"fabio", "henrique"}, "Gestão": {"helena"}},
+		rates: map[string]int{"ana": 11000, "bruno": 7000, "fabio": 7200, "henrique": 4800, "helena": 12000},
 	},
 	{
-		key: "site", name: "Site da Jatobá",
+		key: "dados", customer: "pagai", name: "Dashboard Financeiro", ageDays: 120,
+		description: "Painéis de recebimentos, inadimplência e conciliação para o financeiro da Pagaí.",
+		sprintDays:  14, daily: "11:00", weekly: "thursday", billRate: 15000,
+		teams: map[string][]string{"Dados": {"larissa", "henrique", "fabio"}, "Produto": {"isabela"}},
+		rates: map[string]int{"larissa": 6500, "henrique": 4500, "fabio": 6500, "isabela": 6500},
+	},
+	{
+		key: "erp", customer: "atacado", name: "Migração do ERP", ageDays: 190,
+		description: "Migração do ERP legado do Atacado Norte para um sistema novo, com carga de dados e homologação.",
+		sprintDays:  30, daily: "08:45", weekly: "friday", billRate: 9000,
+		teams: map[string][]string{"Migração": {"bruno", "fabio", "larissa"}, "Gestão": {"ana"}},
+		rates: map[string]int{"bruno": 9500, "fabio": 8000, "larissa": 7500, "ana": 11500, "joao": 3000},
+	},
+	{
+		key: "site", name: "Site da Jatobá", ageDays: 37,
 		description: "Site institucional e blog da própria Jatobá.",
 		sprintDays:  14,
-		teams:       map[string][]string{"Marketing": {"carla"}},
-		rates:       map[string]int{"carla": 4500},
+		teams:       map[string][]string{"Marketing": {"carla", "gabriela"}},
+		rates:       map[string]int{"carla": 4500, "gabriela": 4800, "joao": 2500},
 	},
 }
 
-// As tarefas, com o prazo em dias a partir de hoje (negativo é atrasada); assignee
-// vazio é uma tarefa sem responsável. O App
-// de Pedidos tem mais de uma página delas, com prazos espalhados, para a busca,
-// os filtros e a paginação da lista terem o que mostrar.
+// As tarefas, com o prazo em dias a partir de hoje (negativo é atrasada).
+// assignee vazio é uma tarefa sem responsável: fica disponível no quadro, e quem
+// bater o ponto nela a pega. link, quando há, vincula a tarefa a um item da
+// integração do projeto: "gh:42" (issue do GitHub), "gl:17" (issue do GitLab) ou
+// "tr:AbCd1234" (cartão do Trello).
 var tasks = []struct {
-	key, project, name, description, assignee string
-	deadlineDays                              float64
+	project, name, description, assignee string
+	deadlineDays                         float64
+	link                                 string
 }{
-	{"checkout", "app", "Tela de checkout", "Resumo do pedido, endereço e pagamento em uma tela só.", "diego", 5},
-	{"push", "app", "Notificações de status do pedido", "Push quando o pedido sai para entrega e quando chega.", "diego", 9},
-	{"frete", "app", "Endpoint de cálculo de frete", "Frete por distância, com frete grátis acima de R$ 100.", "bruno", -2},
-	{"arquitetura", "app", "Revisão de arquitetura do app", "", "ana", 0.8},
-	{"carrinho", "app", "Carrinho com itens salvos", "O carrinho continua como estava quando o cliente volta ao app.", "diego", 2},
-	{"historico", "app", "Histórico de pedidos", "", "diego", 11},
-	{"sms", "app", "Login com telefone e código por SMS", "", "bruno", 1},
-	{"mapa", "app", "Rastreamento da entrega no mapa", "Posição do entregador atualizada a cada 30 segundos.", "diego", 16},
-	{"cupom", "app", "Cupom de desconto no checkout", "", "bruno", 6},
-	{"avaliacao", "app", "Avaliação do pedido entregue", "", "diego", 20},
-	{"repetir", "app", "Endpoint de repetir pedido", "Monta um carrinho novo com os itens de um pedido anterior.", "bruno", 13},
-	{"carga", "app", "Testes de carga da API de pedidos", "", "bruno", -4},
-	{"privacidade", "app", "Política de privacidade no app", "", "ana", 3},
-	{"lojas", "app", "Publicação nas lojas de aplicativos", "", "ana", 25},
-	{"repasses", "painel", "Relatório de repasses", "Totais por dia, com exportação em CSV.", "carla", 6},
-	{"avaliacoes", "painel", "API de avaliações das lojas", "", "bruno", 12},
-	{"calendario", "agenda", "Calendário de horários disponíveis", "Horários por médico e por unidade.", "carla", 4},
-	{"whatsapp", "agenda", "Confirmação por WhatsApp", "Mensagem na véspera, com opção de remarcar.", "diego", 8},
-	{"testes", "agenda", "Plano de testes do agendamento", "", "elisa", 3},
-	{"login", "portal", "Login com CPF e data de nascimento", "", "bruno", 10},
-	{"exames", "portal", "Tela de resultados de exames", "", "carla", 14},
-	{"webhook", "api", "Webhook de pagamento confirmado", "Avisa o sistema do cliente quando o boleto ou o Pix compensa.", "bruno", 3},
-	{"conciliacao", "api", "Conciliação diária de Pix", "", "bruno", 7},
-	{"recorrencia", "api", "Modelo de dados de cobranças recorrentes", "", "ana", -1},
-	{"cases", "site", "Página de cases", "", "carla", 15},
-	// Sem responsável: ficam disponíveis no quadro, e quem bater o ponto nelas as pega.
-	{"boasvindas", "app", "Fluxo de boas-vindas do app", "Telas de apresentação no primeiro acesso.", "", 8},
-	{"acessibilidade", "painel", "Revisão de acessibilidade do painel", "", "", 18},
+	// App de Pedidos: mais de uma página, com prazos espalhados.
+	{"app", "Tela de checkout", "Resumo do pedido, endereço e pagamento em uma tela só.", "diego", 5, "gh:142"},
+	{"app", "Notificações de status do pedido", "Push quando o pedido sai para entrega e quando chega.", "diego", 9, "gh:151"},
+	{"app", "Endpoint de cálculo de frete", "Frete por distância, com frete grátis acima de R$ 100.", "bruno", -2, "gh:138"},
+	{"app", "Revisão de arquitetura do app", "", "ana", 0.8, ""},
+	{"app", "Carrinho com itens salvos", "O carrinho continua como estava quando o cliente volta ao app.", "diego", 2, "gh:149"},
+	{"app", "Histórico de pedidos", "", "gabriela", 11, "tr:Hq4Lm8Zp"},
+	{"app", "Login com telefone e código por SMS", "", "bruno", 1, "gh:131"},
+	{"app", "Rastreamento da entrega no mapa", "Posição do entregador atualizada a cada 30 segundos.", "diego", 16, "gh:160"},
+	{"app", "Cupom de desconto no checkout", "", "henrique", 6, "gh:155"},
+	{"app", "Avaliação do pedido entregue", "", "gabriela", 20, ""},
+	{"app", "Endpoint de repetir pedido", "Monta um carrinho novo com os itens de um pedido anterior.", "henrique", 13, "gh:158"},
+	{"app", "Testes de carga da API de pedidos", "", "fabio", -4, ""},
+	{"app", "Política de privacidade no app", "", "isabela", 3, ""},
+	{"app", "Publicação nas lojas de aplicativos", "", "ana", 25, ""},
+	{"app", "Plano de testes da release 2.4", "Casos de regressão para checkout, cupom e rastreamento.", "elisa", 4, "tr:Xr7Tn2Ka"},
+	{"app", "Pipeline de build e distribuição interna", "", "fabio", 7, "gh:129"},
+	{"app", "Pesquisa de satisfação pós-entrega", "Duas perguntas e um campo livre, depois da avaliação.", "isabela", 18, ""},
+	{"app", "Fluxo de boas-vindas do app", "Telas de apresentação no primeiro acesso.", "", 8, ""},
+	{"app", "Modo escuro", "", "", 30, ""},
+	{"app", "Acessibilidade das telas de pedido", "Leitor de tela e contraste em todo o fluxo de compra.", "", -1, ""},
+	// Painel do Lojista
+	{"painel", "Relatório de repasses", "Totais por dia, com exportação em CSV.", "carla", 6, ""},
+	{"painel", "API de avaliações das lojas", "", "bruno", 12, ""},
+	{"painel", "Filtros do painel de pedidos", "Período, status e forma de pagamento.", "henrique", 3, ""},
+	{"painel", "Novo layout da home do painel", "", "gabriela", 9, ""},
+	{"painel", "Testes de aceitação do painel", "", "carla", -3, ""},
+	{"painel", "Revisão de acessibilidade do painel", "", "", 18, ""},
+	{"painel", "Perfis de acesso por loja", "Gerente, caixa e financeiro.", "carla", 21, ""},
+	{"painel", "Exportação de pedidos em planilha", "", "", 5, ""},
+	// Agendamento Online
+	{"agenda", "Calendário de horários disponíveis", "Horários por médico e por unidade.", "carla", 4, "tr:Wd3Kp9Qe"},
+	{"agenda", "Confirmação por WhatsApp", "Mensagem na véspera, com opção de remarcar.", "diego", 8, "tr:Nb6Vx1Rt"},
+	{"agenda", "Plano de testes do agendamento", "", "elisa", 3, ""},
+	{"agenda", "Fila de espera para cancelamentos", "Avisa quem está na fila quando um horário abre.", "isabela", 10, ""},
+	{"agenda", "Página de ajuda para pacientes", "", "elisa", 2, ""},
+	{"agenda", "Lembrete por e-mail", "", "", 6, ""},
+	// Portal do Paciente
+	{"portal", "Login com CPF e data de nascimento", "", "bruno", 10, ""},
+	{"portal", "Tela de resultados de exames", "", "carla", 14, ""},
+	{"portal", "Modelo de dados do histórico de consultas", "", "larissa", 5, ""},
+	{"portal", "Identidade visual do portal", "", "gabriela", -2, ""},
+	{"portal", "Download de laudos em PDF", "", "", 22, ""},
+	// API de Cobranças
+	{"api", "Webhook de pagamento confirmado", "Avisa o sistema do cliente quando o boleto ou o Pix compensa.", "bruno", 3, "gl:41"},
+	{"api", "Conciliação diária de Pix", "", "fabio", 7, "gl:44"},
+	{"api", "Modelo de dados de cobranças recorrentes", "", "ana", -1, "gl:37"},
+	{"api", "Limite de requisições por cliente", "", "henrique", 5, "gl:46"},
+	{"api", "Painel de métricas da API", "", "fabio", 12, ""},
+	{"api", "Revisão da documentação pública", "", "helena", 9, "gh:12"},
+	{"api", "Autenticação por chave rotativa", "", "bruno", 16, "gl:49"},
+	{"api", "Ambiente de sandbox para clientes", "", "", 19, ""},
+	// Dashboard Financeiro
+	{"dados", "Modelagem do data mart de recebimentos", "", "larissa", 6, "gh:8"},
+	{"dados", "Gráfico de inadimplência por faixa de atraso", "", "henrique", 11, ""},
+	{"dados", "Pipeline noturno de carga", "", "fabio", -5, "gh:5"},
+	{"dados", "Definição dos indicadores com o financeiro", "", "isabela", 4, ""},
+	{"dados", "Exportação do painel em PDF", "", "", 24, ""},
+	// Migração do ERP
+	{"erp", "Mapeamento de tabelas do legado", "Planilha com cada tabela de origem e o destino.", "larissa", -8, "gh:3"},
+	{"erp", "Script de carga de clientes e fornecedores", "", "bruno", 2, "gh:9"},
+	{"erp", "Validação dos saldos migrados", "Comparar saldos do legado e do novo, conta a conta.", "fabio", 6, "gh:14"},
+	{"erp", "Plano de virada e retorno", "", "ana", 14, ""},
+	{"erp", "Treinamento dos usuários do financeiro", "", "ana", 20, ""},
+	{"erp", "Homologação do módulo fiscal", "", "", 28, ""},
+	// Site da Jatobá
+	{"site", "Página de cases", "", "carla", 15, ""},
+	{"site", "Artigo sobre a migração do ERP", "", "gabriela", 8, ""},
+	{"site", "Atualizar fotos da equipe", "", "gabriela", 12, ""},
+	{"site", "Formulário de contato com anti-spam", "", "", 10, ""},
 }
 
-// As sessões de trabalho já encerradas: quantos dias atrás, e o horário de
-// início e de fim.
-var sessions = []struct {
-	task, person       string
-	daysAgo            int
-	startH, startM     int
-	finishH, finishMin int
-}{
-	{"checkout", "diego", 3, 9, 0, 12, 0},
-	{"checkout", "diego", 2, 9, 0, 11, 30},
-	{"checkout", "diego", 1, 9, 10, 12, 5},
-	{"whatsapp", "diego", 2, 14, 0, 17, 0},
-	{"whatsapp", "diego", 1, 14, 0, 16, 30},
-	{"webhook", "bruno", 3, 9, 0, 12, 30},
-	{"frete", "bruno", 3, 14, 0, 15, 20},
-	{"webhook", "bruno", 2, 9, 0, 12, 0},
-	{"avaliacoes", "bruno", 2, 14, 0, 16, 0},
-	{"conciliacao", "bruno", 1, 9, 0, 11, 45},
-	{"login", "bruno", 1, 14, 0, 16, 10},
-	{"repasses", "carla", 3, 9, 30, 12, 0},
-	{"calendario", "carla", 3, 13, 30, 17, 30},
-	{"calendario", "carla", 2, 9, 0, 12, 30},
-	{"exames", "carla", 2, 14, 0, 16, 0},
-	{"repasses", "carla", 1, 9, 0, 11, 0},
-	{"cases", "carla", 1, 15, 0, 16, 30},
-	{"testes", "elisa", 2, 10, 0, 12, 0},
-	{"testes", "elisa", 1, 10, 0, 12, 30},
-	{"arquitetura", "ana", 2, 10, 0, 12, 30},
-	{"recorrencia", "ana", 2, 14, 0, 17, 15},
-	{"recorrencia", "ana", 1, 14, 0, 16, 0},
-	// Mais antigas, para os últimos 7 dias, os últimos 30 dias e o total da Visão
-	// geral de um projeto não darem o mesmo número.
-	{"repasses", "carla", 9, 9, 0, 12, 0},
-	{"frete", "bruno", 12, 9, 0, 12, 0},
-	{"checkout", "diego", 12, 14, 0, 17, 30},
-	{"calendario", "carla", 15, 9, 0, 12, 0},
-	{"exames", "carla", 16, 14, 0, 17, 0},
-	{"arquitetura", "ana", 19, 10, 0, 12, 0},
-	{"webhook", "bruno", 23, 13, 30, 17, 0},
-	{"checkout", "diego", 26, 9, 0, 12, 15},
-	{"carga", "bruno", 44, 9, 0, 11, 30},
-	{"recorrencia", "ana", 51, 14, 0, 16, 30},
-}
-
-// Há quantos dias cada projeto foi cadastrado, que é o início dele na Visão
-// geral. Todos começam antes da sessão mais antiga que têm.
-var projectAgeDays = map[string]int{
-	"app": 330, "painel": 214, "agenda": 152, "portal": 96, "api": 68, "site": 37,
-}
+// Há quantos dias cada projeto foi cadastrado vem de projects (ageDays), que é o
+// início dele na Visão geral. Todos começam antes da sessão mais antiga que têm.
 
 // As integrações de demonstração. Não têm credencial, porque o token é de cada
 // um: aparecem na aba Integrações e na Visão geral, e só buscam os itens depois
-// que alguém edita e informa o token.
+// que alguém edita e informa o token. Os itens vinculados às tarefas (link) usam
+// a primeira integração do tipo no projeto.
 var integrations = []struct {
 	project, kind, name string
 	metadata            map[string]interface{}
@@ -211,7 +234,23 @@ var integrations = []struct {
 }{
 	{"app", "github", "Repositório do app", map[string]interface{}{"repo": "jatoba-software/app-pedidos"}, true},
 	{"app", "gitlab", "Espelho no GitLab", map[string]interface{}{"project_url": "jatoba-software/app-pedidos"}, false},
+	{"app", "trello", "Quadro de sprint do app", map[string]interface{}{"api_key": "demo-key-app-0001", "board_id": "AbCd1234"}, true},
+	{"agenda", "trello", "Quadro do agendamento", map[string]interface{}{"api_key": "demo-key-agenda-0002", "board_id": "Ef5Gh678"}, true},
 	{"api", "gitlab", "Repositório da API", map[string]interface{}{"project_url": "jatoba-software/api-cobrancas"}, true},
+	{"api", "github", "Documentação pública", map[string]interface{}{"repo": "jatoba-software/api-docs"}, true},
+	{"dados", "github", "Pipelines de dados", map[string]interface{}{"repo": "jatoba-software/financeiro-dados"}, true},
+	{"erp", "github", "Scripts de migração", map[string]interface{}{"repo": "jatoba-software/erp-migracao"}, true},
+}
+
+// As duas pessoas que estão com o ponto aberto agora, numa tarefa em que são
+// responsáveis, e há quantos minutos começaram. O ponto fica aberto até alguém
+// parar; se o banco for visto dias depois, a sessão terá crescido.
+var openNow = []struct {
+	person, project, task string
+	minutes               int
+}{
+	{"bruno", "app", "Login com telefone e código por SMS", 95},
+	{"carla", "painel", "Relatório de repasses", 40},
 }
 
 func main() {
@@ -270,7 +309,7 @@ func main() {
 	orgID := admin.OrganizationID.String()
 	person := map[string]*auth.Identity{people[0].key: admin}
 	for _, p := range people[1:] {
-		_, token, err := authSvc.CreateInvite(admin, p.email, "member")
+		_, token, err := authSvc.CreateInvite(admin, p.email, p.role)
 		must(err)
 		person[p.key], _, err = authSvc.AcceptInvite(token, auth.AcceptInviteInput{Name: p.name, Email: p.email, Password: password})
 		must(err)
@@ -358,17 +397,36 @@ func main() {
 	// O cadastro de cada projeto volta no tempo. O service grava a data de hoje e
 	// ela não se altera depois, então sem isto todo projeto teria começado depois
 	// das próprias sessões.
-	for key, days := range projectAgeDays {
-		_, err := db.Raw.ExecContext(ctx, `UPDATE projects SET created_at = $1 WHERE id = $2`, now.AddDate(0, 0, -days), seeded[key].id)
+	projectAge := map[string]int{}
+	for _, p := range projects {
+		projectAge[p.key] = p.ageDays
+		_, err := db.Raw.ExecContext(ctx, `UPDATE projects SET created_at = $1 WHERE id = $2`, now.AddDate(0, 0, -p.ageDays), seeded[p.key].id)
 		must(err)
 	}
 
-	// As tarefas.
-	type seededTask struct {
-		task    *task.Task
-		project seededProject
+	// As integrações vão direto ao banco: o service valida o token na plataforma,
+	// e aqui não há token. A primeira de cada tipo, em cada projeto, recebe os itens.
+	integrationOf := map[string]*ent.Integration{}
+	for _, it := range integrations {
+		created := db.Client.Integration.Create().
+			SetProjectID(uuid.MustParse(seeded[it.project].id)).
+			SetType(it.kind).
+			SetDisplayName(it.name).
+			SetMetadata(it.metadata).
+			SetEnabled(it.enabled).
+			SaveX(ctx)
+		if _, ok := integrationOf[it.project+"/"+it.kind]; !ok {
+			integrationOf[it.project+"/"+it.kind] = created
+		}
 	}
-	seededTasks := map[string]seededTask{}
+
+	// As tarefas. Guarda as que têm responsável, por projeto, para as sessões.
+	type seededTask struct {
+		task     *task.Task
+		assignee string
+	}
+	byProject := map[string][]seededTask{}
+	byTaskName := map[string]seededTask{}
 	for _, t := range tasks {
 		prj := seeded[t.project]
 		deadline := now.Add(time.Duration(t.deadlineDays * 24 * float64(time.Hour)))
@@ -378,50 +436,169 @@ func main() {
 		}
 		created, err := taskSvc.Create(prj.id, t.name, t.description, assignee, &deadline)
 		must(err)
-		seededTasks[t.key] = seededTask{task: created, project: prj}
+		st := seededTask{task: created, assignee: t.assignee}
+		byTaskName[t.project+"/"+t.name] = st
+		if t.assignee != "" {
+			byProject[t.project] = append(byProject[t.project], st)
+		}
+		if t.link != "" {
+			linkTask(ctx, db.Client, integrationOf, t.project, created.ID, t.link)
+		}
 	}
 
 	// As sessões guardam os valores por hora de quando o ponto abriu, como o
 	// clock-in faz: o que a pessoa recebe e o que o cliente paga.
-	at := func(daysAgo, hour, minute int) time.Time {
+	at := func(daysAgo int, minutes int) time.Time {
 		d := now.AddDate(0, 0, -daysAgo)
-		return time.Date(d.Year(), d.Month(), d.Day(), hour, minute, 0, 0, d.Location())
+		return time.Date(d.Year(), d.Month(), d.Day(), 0, minutes, 0, 0, d.Location())
 	}
-	for _, s := range sessions {
-		t := seededTasks[s.task]
+	rng := rand.New(rand.NewSource(20261006))
+	var builders []*ent.WorkSessionCreate
+	closed := 0
+	for daysAgo := 1; daysAgo <= historyDays; daysAgo++ {
+		day := now.AddDate(0, 0, -daysAgo)
+		weekend := day.Weekday() == time.Saturday || day.Weekday() == time.Sunday
+		for _, who := range people {
+			if weekend && rng.Float64() > 0.08 {
+				continue
+			}
+			if rng.Float64() < 0.05 { // falta, folga ou férias
+				continue
+			}
+			var mine []struct {
+				key  string
+				rate int
+			}
+			for _, p := range projects {
+				if rate, ok := p.rates[who.key]; ok && projectAge[p.key] > daysAgo+1 && len(byProject[p.key]) > 0 {
+					mine = append(mine, struct {
+						key  string
+						rate int
+					}{p.key, rate})
+				}
+			}
+			if len(mine) == 0 {
+				continue
+			}
+			// A meta do dia vem da jornada: a Ana, sem jornada, trabalha seis horas.
+			target := 6.0
+			if who.weeklyHours > 0 {
+				target = float64(who.weeklyHours) / 5
+			}
+			target *= 0.7 + rng.Float64()*0.45
+			blocks := 2
+			if rng.Float64() < 0.3 {
+				blocks = 3
+			}
+			clockMin := 8*60 + 15 + rng.Intn(100)
+			for b := 0; b < blocks; b++ {
+				// O primeiro projeto da pessoa pesa mais.
+				idx := 0
+				if len(mine) > 1 && rng.Float64() > 0.55 {
+					idx = rng.Intn(len(mine))
+				}
+				prj := mine[idx]
+				pool := byProject[prj.key]
+				var pick seededTask
+				var own []seededTask
+				for _, st := range pool {
+					if st.assignee == who.key {
+						own = append(own, st)
+					}
+				}
+				if len(own) > 0 && rng.Float64() < 0.8 {
+					pick = own[rng.Intn(len(own))]
+				} else {
+					pick = pool[rng.Intn(len(pool))]
+				}
+				share := target / float64(blocks)
+				length := int((share*(0.6+rng.Float64()*0.8))*60/5) * 5
+				if length < 30 {
+					length = 30
+				}
+				startMin, endMin := clockMin, clockMin+length
+				if endMin > 21*60 {
+					break
+				}
+				builders = append(builders, db.Client.WorkSession.Create().
+					SetTaskID(pick.task.ID).
+					SetPersonID(person[who.key].PersonID).
+					SetStartAt(at(daysAgo, startMin)).
+					SetEndAt(at(daysAgo, endMin)).
+					SetPayRateCents(prj.rate).
+					SetNillableBillRateCents(seeded[prj.key].billRate))
+				closed++
+				clockMin = endMin + 45 + rng.Intn(75) // pausa até o próximo bloco
+			}
+		}
+	}
+	for start := 0; start < len(builders); start += 200 {
+		end := min(start+200, len(builders))
+		db.Client.WorkSession.CreateBulk(builders[start:end]...).ExecX(ctx)
+	}
+
+	// Quem está com o ponto aberto agora.
+	for _, o := range openNow {
+		st := byTaskName[o.project+"/"+o.task]
 		db.Client.WorkSession.Create().
-			SetTaskID(t.task.ID).
-			SetPersonID(person[s.person].PersonID).
-			SetStartAt(at(s.daysAgo, s.startH, s.startM)).
-			SetEndAt(at(s.daysAgo, s.finishH, s.finishMin)).
-			SetPayRateCents(t.project.rates[s.person]).
-			SetNillableBillRateCents(t.project.billRate).
-			SaveX(ctx)
+			SetTaskID(st.task.ID).
+			SetPersonID(person[o.person].PersonID).
+			SetStartAt(now.Add(-time.Duration(o.minutes) * time.Minute)).
+			SetPayRateCents(seeded[o.project].rates[o.person]).
+			SetNillableBillRateCents(seeded[o.project].billRate).
+			ExecX(ctx)
 	}
 
-	// As integrações vão direto ao banco: o service valida o token na plataforma,
-	// e aqui não há token.
-	for _, it := range integrations {
-		db.Client.Integration.Create().
-			SetProjectID(uuid.MustParse(seeded[it.project].id)).
-			SetType(it.kind).
-			SetDisplayName(it.name).
-			SetMetadata(it.metadata).
-			SetEnabled(it.enabled).
-			SaveX(ctx)
+	unassigned := 0
+	for _, t := range tasks {
+		if t.assignee == "" {
+			unassigned++
+		}
 	}
-
 	fmt.Println("Dados de demonstração criados.")
 	fmt.Println()
-	fmt.Println("  Organização: Jatobá Software, uma software house")
-	fmt.Printf("  %d clientes, %d projetos (um interno), %d tarefas e %d sessões de trabalho\n",
-		len(customers), len(projects), len(tasks), len(sessions))
+	fmt.Printf("  Organização: Jatobá Software, uma software house com %d pessoas\n", len(people))
+	fmt.Printf("  %d clientes, %d projetos (um interno), %d tarefas (%d sem responsável)\n",
+		len(customers), len(projects), len(tasks), unassigned)
+	fmt.Printf("  %d sessões fechadas nos últimos %d dias e %d com o ponto aberto agora\n", closed, historyDays, len(openNow))
 	fmt.Printf("  %d integrações sem credencial: informe o token na aba Integrações para usá-las\n", len(integrations))
 	fmt.Println()
 	fmt.Printf("  Admin:   %s / %s\n", people[0].email, password)
 	for _, p := range people[1:] {
-		fmt.Printf("  Membro:  %s / %s\n", p.email, password)
+		role := "Membro: "
+		if p.role == "admin" {
+			role = "Admin:  "
+		}
+		fmt.Printf("  %s %s / %s\n", role, p.email, password)
 	}
+}
+
+// linkTask vincula a tarefa a um item da integração do projeto. link tem o
+// formato "gh:42", "gl:17" ou "tr:AbCd1234".
+func linkTask(ctx context.Context, client *ent.Client, integrationOf map[string]*ent.Integration, projectKey string, taskID uuid.UUID, link string) {
+	kinds := map[string]string{"gh": "github", "gl": "gitlab", "tr": "trello"}
+	kind, item := kinds[link[:2]], link[3:]
+	it, ok := integrationOf[projectKey+"/"+kind]
+	if !ok {
+		log.Fatalf("o projeto %s não tem integração %s para o item %s", projectKey, kind, link)
+	}
+	var url string
+	switch kind {
+	case "github":
+		url = "https://github.com/" + it.Metadata["repo"].(string) + "/issues/" + item
+	case "gitlab":
+		url = "https://gitlab.com/" + it.Metadata["project_url"].(string) + "/-/issues/" + item
+	default:
+		url = "https://trello.com/c/" + item
+	}
+	if _, err := strconv.Atoi(item); kind != "trello" && err != nil {
+		log.Fatalf("item inválido: %s", link)
+	}
+	client.Task.UpdateOneID(taskID).
+		SetExternalIntegrationID(it.ID).
+		SetExternalItemID(item).
+		SetExternalItemURL(url).
+		ExecX(ctx)
 }
 
 func must(err error) {

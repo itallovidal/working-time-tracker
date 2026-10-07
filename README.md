@@ -37,18 +37,21 @@ go run ./cmd/seed
 go run ./cmd
 ```
 
-Abra **http://localhost:8080**. O seed cria a **Jatobá Software**, uma software house com três clientes e seis projetos (um deles interno), em que cada pessoa tem um valor por hora diferente conforme o projeto. Entre como:
+Abra **http://localhost:8080**. O seed cria a **Jatobá Software**, uma software house com doze pessoas, quatro clientes e oito projetos (um deles interno), em que cada pessoa tem um valor por hora diferente conforme o projeto. Entre como:
 
 | Papel | Email | Senha |
 |---|---|---|
-| Admin | `ana@example.com` | `demo12345` |
-| Membro | `bruno@example.com`, `carla@example.com`, `diego@example.com` ou `elisa@example.com` | `demo12345` |
+| Admin | `ana@example.com` ou `helena@example.com` | `demo12345` |
+| Membro | `bruno`, `carla`, `diego`, `elisa`, `fabio`, `gabriela`, `henrique`, `isabela`, `joao` ou `larissa`, seguidos de `@example.com` | `demo12345` |
 
-O Bruno trabalha em quatro projetos e recebe mais na API de Cobranças; a Elisa trabalha em um só. O Diego não está no Portal do Paciente: a aba Ponto desse projeto mostra a ele o ponto bloqueado, por falta de valor por hora. No Painel do Lojista, a Elisa já tem valor e ainda não entrou em nenhum time. O App de Pedidos tem mais de uma página de tarefas.
+O que o seed põe nas telas, para elas aparecerem cheias:
 
-Os projetos foram cadastrados de um mês a quase um ano atrás e têm sessões de ponto das últimas semanas, para a Visão geral mostrar tempos de projeto e totais diferentes entre si. O App de Pedidos e a API de Cobranças têm integrações de demonstração **sem credencial**: elas aparecem nas telas, mas só buscam issues depois que você edita e informa um token seu.
-
-Cada pessoa tem a sua jornada semanal: 40 horas o Bruno e a Carla, 30 o Diego e 20 a Elisa. A Ana, sócia, fica sem jornada definida.
+- **Pessoas e times.** O App de Pedidos tem nove pessoas em quatro times, então a aba Colaboradores passa de uma página. O Painel do Lojista tem a Elisa com valor e sem time, e o João está sem time em três projetos.
+- **Tarefas.** 62, com prazos de ontem a um mês: algumas atrasadas, algumas para hoje e onze **sem responsável**, disponíveis no Quadro de tarefas. Vinte e quatro estão vinculadas a itens do GitHub, do GitLab e do Trello.
+- **Dinheiro.** Cada projeto tem o seu valor cobrado, e cada pessoa, o seu valor pago. A Migração do ERP cobra menos do que a maioria recebe, e a margem fica negativa; o projeto interno não tem receita.
+- **Sessões.** Cerca de 1.400 sessões fechadas nos últimos 75 dias, geradas por uma sequência fixa e seguindo a jornada de cada um. O mesmo seed dá sempre o mesmo banco. O Bruno e a Carla estão com o ponto aberto, então a Visão geral mostra "Trabalhando agora"; essas sessões ficam abertas até alguém parar.
+- **Integrações.** Oito, de demonstração e **sem credencial**: aparecem nas telas, mas só buscam issues depois que você edita e informa um token seu.
+- **Jornada.** 40 horas para a maioria, 30 para o Diego e a Gabriela, 20 para a Elisa e o João; a Ana, sócia, fica sem jornada definida.
 
 Sem o seed, clique em **Crie uma organização** na tela de login.
 
