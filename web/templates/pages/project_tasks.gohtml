@@ -94,22 +94,26 @@
         <label for="task-name">{{.T "common.name"}}</label>
         <input id="task-name" type="text" required x-model="draft.name" data-autofocus>
       </div>
-      <div class="fields">
-        <div class="field">
-          <label for="task-assignee">{{.T "tasks.col_assignee"}}</label>
-          <select id="task-assignee" x-model="draft.assignee_id">
-            <option value="">{{.T "tasks.unassigned"}}</option>
-            <template x-for="m in members" :key="m.id">
-              <option :value="m.id" x-text="m.name" :selected="m.id === draft.assignee_id"></option>
-            </template>
-          </select>
-          <span class="hint">{{.T "tasks.unassigned_hint"}}</span>
-        </div>
-        <div class="field">
-          <label for="task-deadline">{{.T "tasks.col_deadline"}}</label>
-          <input id="task-deadline" type="date" x-model="draft.deadline">
-          <span class="hint">{{.T "tasks.deadline_hint"}}</span>
-        </div>
+      {{/* Três escolhas, e não uma lista só: sem responsável e atribuir a mim são o que quase
+           sempre se quer. "Outra pessoa" lista quem está nos times do projeto; atribuir a si mesmo
+           vale para qualquer um. */}}
+      <div class="field" role="radiogroup" aria-labelledby="task-assign-label">
+        <span class="field-label" id="task-assign-label">{{.T "tasks.col_assignee"}}</span>
+        <label class="toggle"><input type="radio" name="task-assign" value="me" x-model="draft.assign"> {{.T "tasks.assign_me"}}</label>
+        <label class="toggle"><input type="radio" name="task-assign" value="none" x-model="draft.assign"> {{.T "tasks.unassigned"}}</label>
+        <label class="toggle"><input type="radio" name="task-assign" value="other" x-model="draft.assign" :disabled="otherMembers().length === 0"> {{.T "tasks.assign_other"}}</label>
+        <select id="task-assignee" x-show="draft.assign === 'other'" :required="draft.assign === 'other'" x-model="draft.assignee_id" aria-label="{{.T "tasks.col_assignee"}}">
+          <option value="" disabled>{{.T "tasks.pick_person"}}</option>
+          <template x-for="m in otherMembers()" :key="m.id">
+            <option :value="m.id" x-text="m.name" :selected="m.id === draft.assignee_id"></option>
+          </template>
+        </select>
+        <span class="hint" x-show="draft.assign === 'none'">{{.T "tasks.unassigned_hint"}}</span>
+      </div>
+      <div class="field">
+        <label for="task-deadline">{{.T "tasks.col_deadline"}}</label>
+        <input id="task-deadline" type="date" x-model="draft.deadline">
+        <span class="hint">{{.T "tasks.deadline_hint"}}</span>
       </div>
       <div class="field">
         <label for="task-description">{{.T "common.description_label"}}</label>

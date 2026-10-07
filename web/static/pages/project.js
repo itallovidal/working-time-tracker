@@ -241,7 +241,7 @@ document.addEventListener('alpine:init', () => {
     filters: { q: '', assignee: '', due: '', date: '', mine: false },
     dueOptions,
     seq: 0,
-    draft: { name: '', description: '', assignee_id: '', deadline: '' },
+    draft: { name: '', description: '', assign: 'none', assignee_id: '', deadline: '' }, // assign: me, none ou other
     async init() {
       this.readURL();
       const members = api('GET', '/api/projects/' + project.id + '/members')
@@ -355,9 +355,12 @@ document.addEventListener('alpine:init', () => {
       [...this.assignees, ...this.members].forEach((p) => byId.set(p.id, p));
       return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name, WTT.lang));
     },
+    // Outra pessoa só pode ser responsável se estiver num time do projeto; a própria, não precisa.
+    otherMembers() {
+      return this.members.filter((m) => m.id !== me.id);
+    },
     openCreate() {
-      const self = this.members.find((m) => m.id === me.id);
-      this.draft = { name: '', description: '', assignee_id: self ? self.id : '', deadline: '' };
+      this.draft = { name: '', description: '', assign: 'me', assignee_id: '', deadline: '' };
       this.errors.create = '';
       Alpine.store('modal').open('task-new', WTT.t('tasks.new'), () => !this.pending);
     },
@@ -366,7 +369,7 @@ document.addEventListener('alpine:init', () => {
         const t = await api('POST', '/api/projects/' + project.id + '/tasks', {
           name: this.draft.name,
           description: this.draft.description,
-          assignee_id: this.draft.assignee_id,
+          assignee_id: { me: me.id, none: '', other: this.draft.assignee_id }[this.draft.assign],
           deadline: WTT.fmt.fromDateInput(this.draft.deadline),
         });
         Alpine.store('modal').close();

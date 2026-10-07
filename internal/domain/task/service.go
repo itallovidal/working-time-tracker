@@ -29,6 +29,13 @@ func NewService(taskStore *Store, membershipStore *team.MembershipStore, integra
 }
 
 func (s *Service) Create(projectID, name, description, assigneeID string, deadline *time.Time) (*Task, error) {
+	return s.CreateAs("", projectID, name, description, assigneeID, deadline)
+}
+
+// CreateAs cria a tarefa em nome de quem está logado. Quem escolhe a si mesmo
+// como responsável pode, mesmo fora dos times: é o "atribuir a mim". Qualquer
+// outra pessoa precisa estar em algum time do projeto.
+func (s *Service) CreateAs(selfID, projectID, name, description, assigneeID string, deadline *time.Time) (*Task, error) {
 	if name == "" {
 		return nil, ErrNameRequired
 	}
@@ -39,12 +46,14 @@ func (s *Service) Create(projectID, name, description, assigneeID string, deadli
 		if err != nil {
 			return nil, ErrInvalidAssignee
 		}
-		isMember, err := s.membershipStore.IsPersonInProject(assigneeID, projectID)
-		if err != nil {
-			return nil, err
-		}
-		if !isMember {
-			return nil, ErrAssigneeNotInTeam
+		if assigneeID != selfID {
+			isMember, err := s.membershipStore.IsPersonInProject(assigneeID, projectID)
+			if err != nil {
+				return nil, err
+			}
+			if !isMember {
+				return nil, ErrAssigneeNotInTeam
+			}
 		}
 		assignee = &uid
 	}
@@ -108,6 +117,11 @@ func (s *Service) Get(id string) (*Task, error) {
 }
 
 func (s *Service) Update(id, name, description string, assigneeID *string, deadline *time.Time) (*Task, error) {
+	return s.UpdateAs("", id, name, description, assigneeID, deadline)
+}
+
+// UpdateAs altera a tarefa em nome de quem está logado; a regra do responsável é a do CreateAs.
+func (s *Service) UpdateAs(selfID, id, name, description string, assigneeID *string, deadline *time.Time) (*Task, error) {
 	if name == "" {
 		return nil, ErrNameRequired
 	}
@@ -124,7 +138,7 @@ func (s *Service) Update(id, name, description string, assigneeID *string, deadl
 		if err != nil {
 			return nil, ErrInvalidAssignee
 		}
-		if task.AssigneeID == nil || uid != *task.AssigneeID {
+		if (task.AssigneeID == nil || uid != *task.AssigneeID) && *assigneeID != selfID {
 			isMember, err := s.membershipStore.IsPersonInProject(*assigneeID, task.ProjectID.String())
 			if err != nil {
 				return nil, err

@@ -393,7 +393,7 @@ func TestPages_ProjectTasksTab(t *testing.T) {
 			"Só as minhas tarefas", `class="pager"`,
 			"Nova tarefa", `x-teleport="#modal-root"`, `x-show="$store.modal.name === 'task-new'"`, `id="task-name"`, `id="task-assignee"`,
 			// Uma tarefa pode ficar sem responsável, e o quadro lista o que está disponível.
-			"Quadro de tarefas", `<option value="none"`, `<option value="">Sem responsável</option>`,
+			"Quadro de tarefas", `<option value="none"`, "Atribuir a mim", "Outra pessoa", `value="none" x-model="draft.assign"`,
 		} {
 			if !strings.Contains(body, want) {
 				t.Errorf("%s: the tasks tab does not contain %q", who, want)

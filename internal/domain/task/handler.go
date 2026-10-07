@@ -11,6 +11,7 @@ import (
 
 	"working-time-tracker/internal/apperr"
 	"working-time-tracker/internal/database"
+	"working-time-tracker/internal/domain/auth"
 )
 
 type Handler struct {
@@ -32,7 +33,7 @@ func (h *Handler) Create(c *echo.Context) error {
 	if err := c.Bind(&body); err != nil {
 		return apperr.Respond(c, 400, apperr.ErrInvalidBody)
 	}
-	task, err := h.svc.Create(projectID, body.Name, body.Description, body.AssigneeID, body.Deadline)
+	task, err := h.svc.CreateAs(selfID(c), projectID, body.Name, body.Description, body.AssigneeID, body.Deadline)
 	if err != nil {
 		return apperr.Respond(c, 400, err)
 	}
@@ -130,7 +131,7 @@ func (h *Handler) Update(c *echo.Context) error {
 	if err := c.Bind(&body); err != nil {
 		return apperr.Respond(c, 400, apperr.ErrInvalidBody)
 	}
-	task, err := h.svc.Update(id, body.Name, body.Description, body.AssigneeID, body.Deadline)
+	task, err := h.svc.UpdateAs(selfID(c), id, body.Name, body.Description, body.AssigneeID, body.Deadline)
 	if err != nil {
 		return apperr.Respond(c, 400, err)
 	}
@@ -184,4 +185,12 @@ func (h *Handler) GetExternalDetails(c *echo.Context) error {
 		return apperr.Respond(c, 400, err)
 	}
 	return c.JSON(200, result)
+}
+
+// selfID é o id de quem está logado, ou vazio sem sessão.
+func selfID(c *echo.Context) string {
+	if me := auth.CurrentPerson(c); me != nil {
+		return me.PersonID.String()
+	}
+	return ""
 }

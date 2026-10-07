@@ -307,6 +307,9 @@ tasks:
   any_due: Qualquer prazo
   due_date: Prazo até a data
   unassigned: Sem responsável
+  assign_me: Atribuir a mim
+  assign_other: Outra pessoa
+  pick_person: Escolha a pessoa
   unassigned_hint: "Sem responsável, a tarefa fica disponível: quem bater o ponto nela passa a ser o responsável."
   only_mine: Só as minhas tarefas
   new: Nova tarefa
@@ -545,7 +548,7 @@ collab:
   no_bill: Sem valor cobrado do cliente, a margem de cada pessoa não é calculada.
   change_in_settings: Alterar em Configurações
   teams_title: Times
-  teams_intro: "Os times são montados com quem já está no projeto. Só quem está em algum time pode ser responsável por tarefas."
+  teams_intro: "Os times são montados com quem já está no projeto. Quem está em algum time pode ser responsável por tarefas, e cada pessoa pode atribuir a si mesma."
   new_team: Novo time
   no_teams: Nenhum time neste projeto
   no_teams_admin: Crie um time e ponha as pessoas nele.

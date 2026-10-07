@@ -411,7 +411,7 @@ Content-Type: application/json
   "deadline": "2026-10-05T23:59:00-03:00"
 }
 ```
-O `assignee_id` é opcional: sem ele a tarefa fica disponível, e quem bater o ponto nela passa a ser o responsável. Um responsável escolhido precisa estar em algum time do projeto. Sem `deadline`, o prazo fica em 7 dias a partir de agora.
+O `assignee_id` é opcional: sem ele a tarefa fica disponível, e quem bater o ponto nela passa a ser o responsável. Um responsável escolhido precisa estar em algum time do projeto, com uma exceção: quem está logado pode se pôr como responsável (o "atribuir a mim") mesmo fora dos times, no `POST` e no `PATCH`. Sem `deadline`, o prazo fica em 7 dias a partir de agora.
 
 ```http
 GET /api/projects/:projectId/tasks?q=frete&assignee_id=…&deadline_to=2026-10-12T02:59:59Z&page=1&per_page=10

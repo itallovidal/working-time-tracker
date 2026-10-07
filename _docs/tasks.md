@@ -406,6 +406,7 @@
 - [X] S31.3 The two modals group their fields in Projeto, Cliente e cobrança and Rotina do time; the daily and weekly markup is the `project_routine` partial
 - [X] S31.4 The settings card and the project card badge show "Weekly Sexta às 14:00" and "Sem daily"/"Sem weekly"; the seed has a project with only a weekly and one with only a daily
 - [X] S31.5 Tests for the service rules and the modals; update README, design, routes, error codes and the Insomnia collection
+- [X] S31.6 "Nova tarefa" asks the assignee with three choices, "Atribuir a mim", "Sem responsável" and "Outra pessoa" (people in the project's teams); assigning to oneself works outside the teams (`CreateAs`/`UpdateAs`), anyone else still has to be on a team
 
 ---
 

@@ -121,6 +121,38 @@ func TestService_Create_AssigneeNotTeamMember(t *testing.T) {
 	}
 }
 
+// "Atribuir a mim" vale para quem está logado mesmo fora dos times; outra pessoa
+// fora dos times continua recusada, na criação e na edição.
+func TestService_AssignToSelfWithoutTeam(t *testing.T) {
+	orgSvc, personSvc, projSvc, _, _, taskSvc := setupDeps(t)
+
+	org, _ := orgSvc.Create("Org")
+	me, _ := personSvc.Create(org.ID.String(), "Ana", "ana@test.com")
+	other, _ := personSvc.Create(org.ID.String(), "Bia", "bia@test.com")
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
+	pid, meID, otherID := proj.ID.String(), me.ID.String(), other.ID.String()
+
+	task, err := taskSvc.CreateAs(meID, pid, "Minha", "", meID, nil)
+	if err != nil || task.Assignee == nil || task.Assignee.ID != me.ID {
+		t.Fatalf("create assigned to the caller outside any team: %v, %+v", err, task)
+	}
+	if _, err := taskSvc.CreateAs(meID, pid, "Dela", "", otherID, nil); err == nil {
+		t.Error("assigning to someone else outside the teams must fail")
+	}
+	if _, err := taskSvc.Create(pid, "Sem sessão", "", meID, nil); err == nil {
+		t.Error("without a caller, assigning to a person outside the teams must fail")
+	}
+
+	free, _ := taskSvc.Create(pid, "Livre", "", "", nil)
+	if _, err := taskSvc.UpdateAs(otherID, free.ID.String(), "Livre", "", &meID, nil); err == nil {
+		t.Error("update: assigning to someone who is not the caller and is outside the teams must fail")
+	}
+	updated, err := taskSvc.UpdateAs(meID, free.ID.String(), "Livre", "", &meID, nil)
+	if err != nil || updated.Assignee == nil || updated.Assignee.ID != me.ID {
+		t.Errorf("update assigned to the caller: %v, %+v", err, updated)
+	}
+}
+
 // Uma tarefa nasce sem responsável: fica disponível para quem bater o ponto nela.
 func TestService_Create_WithoutAssignee(t *testing.T) {
 	orgSvc, _, projSvc, _, _, taskSvc := setupDeps(t)
