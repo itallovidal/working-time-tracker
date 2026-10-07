@@ -375,6 +375,18 @@ td.actions { text-align: right; white-space: nowrap; }
   background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius);
   padding: 14px 16px; display: flex; flex-direction: column; justify-content: space-between; gap: 12px; min-width: 0;
 }
+/* Etiquetas: os selos sob o nome da tarefa e as caixas de escolha dos modais. */
+.label-list { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.label-picks { display: flex; flex-wrap: wrap; gap: 6px; }
+.label-pick, .chip {
+  font: inherit; font-size: 0.86rem; font-weight: 500; color: var(--ink-2); cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px; padding: 3px 11px; line-height: 1.5;
+  border: 1px solid var(--rule-strong); border-radius: 999px; background: var(--surface);
+}
+.label-pick input { width: auto; flex: none; accent-color: var(--accent); margin: 0; }
+.label-pick:hover, .chip:hover { background: var(--surface-2); }
+.label-pick:has(:checked), .chip[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.filter-chips { gap: 6px; }
 .task-card-name { font-weight: 600; color: var(--ink); overflow-wrap: anywhere; }
 .clock-status { display: flex; align-items: center; gap: 8px; font-weight: 600; }
 .pulse {

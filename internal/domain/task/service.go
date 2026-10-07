@@ -29,15 +29,29 @@ func NewService(taskStore *Store, membershipStore *team.MembershipStore, integra
 }
 
 func (s *Service) Create(projectID, name, description, assigneeID string, deadline *time.Time) (*Task, error) {
-	return s.CreateAs("", projectID, name, description, assigneeID, deadline)
+	return s.CreateAs("", projectID, name, description, assigneeID, deadline, Attrs{})
 }
 
 // CreateAs cria a tarefa em nome de quem está logado. Quem escolhe a si mesmo
 // como responsável pode, mesmo fora dos times: é o "atribuir a mim". Qualquer
 // outra pessoa precisa estar em algum time do projeto.
-func (s *Service) CreateAs(selfID, projectID, name, description, assigneeID string, deadline *time.Time) (*Task, error) {
+func (s *Service) CreateAs(selfID, projectID, name, description, assigneeID string, deadline *time.Time, attrs Attrs) (*Task, error) {
 	if name == "" {
 		return nil, ErrNameRequired
+	}
+	priority := "none"
+	if attrs.Priority != nil && *attrs.Priority != "" {
+		if !validPriority(*attrs.Priority) {
+			return nil, ErrInvalidPriority
+		}
+		priority = *attrs.Priority
+	}
+	labels := []Label{}
+	if attrs.LabelIDs != nil {
+		var err error
+		if labels, err = s.resolveLabels(projectID, *attrs.LabelIDs); err != nil {
+			return nil, err
+		}
 	}
 	// Sem responsável, a tarefa fica disponível: quem bater o ponto nela a pega.
 	var assignee *uuid.UUID
@@ -69,6 +83,8 @@ func (s *Service) CreateAs(selfID, projectID, name, description, assigneeID stri
 		ProjectID:   uuid.MustParse(projectID),
 		Name:        name,
 		Description: description,
+		Priority:    priority,
+		Labels:      labels,
 		AssigneeID:  assignee,
 		Deadline:    dl,
 	}
@@ -117,13 +133,16 @@ func (s *Service) Get(id string) (*Task, error) {
 }
 
 func (s *Service) Update(id, name, description string, assigneeID *string, deadline *time.Time) (*Task, error) {
-	return s.UpdateAs("", id, name, description, assigneeID, deadline)
+	return s.UpdateAs("", id, name, description, assigneeID, deadline, Attrs{})
 }
 
 // UpdateAs altera a tarefa em nome de quem está logado; a regra do responsável é a do CreateAs.
-func (s *Service) UpdateAs(selfID, id, name, description string, assigneeID *string, deadline *time.Time) (*Task, error) {
+func (s *Service) UpdateAs(selfID, id, name, description string, assigneeID *string, deadline *time.Time, attrs Attrs) (*Task, error) {
 	if name == "" {
 		return nil, ErrNameRequired
+	}
+	if attrs.Priority != nil && !validPriority(*attrs.Priority) {
+		return nil, ErrInvalidPriority
 	}
 	task, err := s.taskStore.GetByID(id)
 	if err != nil {
@@ -131,6 +150,14 @@ func (s *Service) UpdateAs(selfID, id, name, description string, assigneeID *str
 	}
 	task.Name = name
 	task.Description = description
+	if attrs.Priority != nil {
+		task.Priority = *attrs.Priority
+	}
+	if attrs.LabelIDs != nil {
+		if task.Labels, err = s.resolveLabels(task.ProjectID.String(), *attrs.LabelIDs); err != nil {
+			return nil, err
+		}
+	}
 	if assigneeID != nil && *assigneeID == "" {
 		task.AssigneeID = nil // vazio desvincula: a tarefa volta a ficar disponível
 	} else if assigneeID != nil {

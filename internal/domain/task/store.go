@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 
 	"working-time-tracker/ent"
+	entlabel "working-time-tracker/ent/label"
 	entperson "working-time-tracker/ent/person"
 	"working-time-tracker/ent/task"
 	"working-time-tracker/internal/database"
@@ -25,6 +26,8 @@ func (s *Store) Create(t *Task) error {
 		SetProjectID(t.ProjectID).
 		SetName(t.Name).
 		SetDescription(t.Description).
+		SetPriority(priorityOf(t.Priority)).
+		AddLabelIDs(labelIDs(t.Labels)...).
 		SetNillableAssigneeID(t.AssigneeID).
 		SetDeadline(t.Deadline)
 	if t.ExternalIntegrationID != nil {
@@ -63,7 +66,38 @@ func (s *Store) filtered(projectID uuid.UUID, f ListFilter) *ent.TaskQuery {
 	if f.DeadlineTo != nil {
 		q = q.Where(task.DeadlineLTE(*f.DeadlineTo), task.DeadlineGTE(noDeadline))
 	}
+	if len(f.Priorities) > 0 {
+		ps := make([]task.Priority, len(f.Priorities))
+		for i, p := range f.Priorities {
+			ps[i] = priorityOf(p)
+		}
+		q = q.Where(task.PriorityIn(ps...))
+	}
+	if len(f.LabelIDs) > 0 {
+		q = q.Where(task.HasLabelsWith(entlabel.IDIn(f.LabelIDs...)))
+	}
 	return q
+}
+
+// priorityOf converte a prioridade do domínio para a do Ent; vazio é sem prioridade.
+func priorityOf(p string) task.Priority {
+	if p == "" {
+		return task.PriorityNone
+	}
+	return task.Priority(p)
+}
+
+func labelIDs(ls []Label) []uuid.UUID {
+	ids := make([]uuid.UUID, len(ls))
+	for i, l := range ls {
+		ids[i] = l.ID
+	}
+	return ids
+}
+
+// withLabels carrega as etiquetas da tarefa em ordem alfabética.
+func withLabels(q *ent.LabelQuery) {
+	q.Order(ent.Asc(entlabel.FieldName))
 }
 
 // ListByProject lista as tarefas do projeto, da mais nova para a mais antiga.
@@ -79,6 +113,7 @@ func (s *Store) ListByProject(projectID string, f ListFilter) ([]Task, error) {
 	q := s.filtered(uid, f).
 		WithAssignee().
 		WithExternalIntegration().
+		WithLabels(withLabels).
 		Order(ent.Desc(task.FieldCreatedAt, task.FieldID))
 	if f.Page > 0 {
 		q = q.Limit(f.PerPage).Offset((f.Page - 1) * f.PerPage)
@@ -129,6 +164,7 @@ func (s *Store) GetByID(id string) (*Task, error) {
 		Where(task.IDEQ(uid)).
 		WithAssignee().
 		WithExternalIntegration().
+		WithLabels(withLabels).
 		Only(context.Background())
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -143,6 +179,9 @@ func (s *Store) Update(t *Task) error {
 	q := s.client.Task.UpdateOneID(t.ID).
 		SetName(t.Name).
 		SetDescription(t.Description).
+		SetPriority(priorityOf(t.Priority)).
+		ClearLabels().
+		AddLabelIDs(labelIDs(t.Labels)...).
 		SetDeadline(t.Deadline)
 	// Sem responsável, a coluna fica nula: Clear* é a única forma de desvincular.
 	if t.AssigneeID != nil {
@@ -210,6 +249,8 @@ func toDomainTask(e *ent.Task) *Task {
 		ProjectID:             e.ProjectID,
 		Name:                  e.Name,
 		Description:           e.Description,
+		Priority:              string(e.Priority),
+		Labels:                []Label{},
 		AssigneeID:            e.AssigneeID,
 		Deadline:              e.Deadline,
 		ExternalIntegrationID: e.ExternalIntegrationID,
@@ -223,6 +264,9 @@ func toDomainTask(e *ent.Task) *Task {
 			Name:  e.Edges.Assignee.Name,
 			Email: e.Edges.Assignee.Email,
 		}
+	}
+	for _, l := range e.Edges.Labels {
+		t.Labels = append(t.Labels, Label{ID: l.ID, Name: l.Name})
 	}
 	if e.Edges.ExternalIntegration != nil {
 		t.ExternalIntegration = &Integration{

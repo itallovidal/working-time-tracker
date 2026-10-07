@@ -20,6 +20,7 @@ func (Task) Fields() []ent.Field {
 		field.UUID("project_id", uuid.UUID{}),
 		field.String("name"),
 		field.String("description").Optional(),
+		field.Enum("priority").Values("urgent", "high", "medium", "low", "none").Default("none"),
 		field.UUID("assignee_id", uuid.UUID{}).Optional().Nillable(),
 		field.Time("deadline").Optional(),
 		field.UUID("external_integration_id", uuid.UUID{}).Optional().Nillable(),
@@ -35,5 +36,6 @@ func (Task) Edges() []ent.Edge {
 		edge.From("assignee", Person.Type).Ref("tasks").Field("assignee_id").Unique(),
 		edge.From("external_integration", Integration.Type).Ref("tasks").Field("external_integration_id").Unique(),
 		edge.To("work_sessions", WorkSession.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
+		edge.To("labels", Label.Type),
 	}
 }

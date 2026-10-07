@@ -23,6 +23,19 @@
         <input type="date" aria-label="{{.T "tasks.due_date"}}" x-cloak x-show="filters.due === 'date'"
                x-model="filters.date" @change="apply()">
       </div>
+      {{/* Prioridade e etiqueta aceitam várias: a tarefa passa se tem qualquer uma das marcadas. */}}
+      <div class="row filter-chips" role="group" aria-label="{{.T "tasks.priority_filter"}}">
+        <span class="muted small">{{.T "tasks.col_priority"}}</span>
+        <template x-for="p in WTT.priorities" :key="p.value">
+          <button type="button" class="chip" :aria-pressed="filters.priority.includes(p.value)" @click="toggleFilter('priority', p.value)" x-text="p.label"></button>
+        </template>
+      </div>
+      <div class="row filter-chips" x-cloak x-show="labels.length > 0" role="group" aria-label="{{.T "tasks.labels_filter"}}">
+        <span class="muted small">{{.T "tasks.labels"}}</span>
+        <template x-for="l in labels" :key="l.id">
+          <button type="button" class="chip" :aria-pressed="filters.label.includes(l.id)" @click="toggleFilter('label', l.id)" x-text="l.name"></button>
+        </template>
+      </div>
       {{/* Marcada, a caixa desliga a busca e o filtro de responsável: só o prazo continua valendo. */}}
       <div>
         <label class="check">
@@ -49,12 +62,21 @@
   <div class="table-wrap" x-show="tasks.length > 0">
     <table>
       <thead>
-        <tr><th>{{.T "tasks.col_task"}}</th><th>{{.T "tasks.col_assignee"}}</th><th>{{.T "tasks.col_deadline"}}</th><th>{{.T "tasks.col_external"}}</th><th class="actions"><span class="sr-only">{{.T "tasks.col_details"}}</span></th></tr>
+        <tr><th>{{.T "tasks.col_task"}}</th><th>{{.T "tasks.col_priority"}}</th><th>{{.T "tasks.col_assignee"}}</th><th>{{.T "tasks.col_deadline"}}</th><th>{{.T "tasks.col_external"}}</th><th class="actions"><span class="sr-only">{{.T "tasks.col_details"}}</span></th></tr>
       </thead>
       <tbody>
         <template x-for="t in tasks" :key="t.id">
           <tr>
-            <td><a :href="'/tasks/' + t.id" x-text="t.name"></a></td>
+            <td>
+              <a :href="'/tasks/' + t.id" x-text="t.name"></a>
+              <div class="label-list" x-show="t.labels && t.labels.length > 0">
+                <template x-for="l in t.labels" :key="l.id"><span class="badge" x-text="l.name"></span></template>
+              </div>
+            </td>
+            <td>
+              <span class="badge" :class="priorityClass(t.priority)" x-show="t.priority !== 'none'" x-text="WTT.fmt.priority(t.priority)"></span>
+              <span class="muted" x-show="t.priority === 'none'">—</span>
+            </td>
             <td>
               <span x-show="t.assignee" x-text="t.assignee ? t.assignee.name : ''"></span>
               <span class="badge" x-show="!t.assignee">{{.T "tasks.unassigned"}}</span>
@@ -115,6 +137,7 @@
         <input id="task-deadline" type="date" x-model="draft.deadline">
         <span class="hint">{{.T "tasks.deadline_hint"}}</span>
       </div>
+      {{template "task_attrs" .}}
       <div class="field">
         <label for="task-description">{{.T "common.description_label"}}</label>
         <textarea id="task-description" x-model="draft.description" placeholder="{{.T "common.optional"}}"></textarea>

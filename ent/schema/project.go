@@ -42,5 +42,6 @@ func (Project) Edges() []ent.Edge {
 		edge.To("tasks", Task.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("integrations", Integration.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("allocations", Allocation.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
+		edge.To("labels", Label.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
 	}
 }

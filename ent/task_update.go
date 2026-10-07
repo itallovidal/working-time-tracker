@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 	"working-time-tracker/ent/integration"
+	"working-time-tracker/ent/label"
 	"working-time-tracker/ent/person"
 	"working-time-tracker/ent/predicate"
 	"working-time-tracker/ent/project"
@@ -78,6 +79,20 @@ func (_u *TaskUpdate) SetNillableDescription(v *string) *TaskUpdate {
 // ClearDescription clears the value of the "description" field.
 func (_u *TaskUpdate) ClearDescription() *TaskUpdate {
 	_u.mutation.ClearDescription()
+	return _u
+}
+
+// SetPriority sets the "priority" field.
+func (_u *TaskUpdate) SetPriority(v task.Priority) *TaskUpdate {
+	_u.mutation.SetPriority(v)
+	return _u
+}
+
+// SetNillablePriority sets the "priority" field if the given value is not nil.
+func (_u *TaskUpdate) SetNillablePriority(v *task.Priority) *TaskUpdate {
+	if v != nil {
+		_u.SetPriority(*v)
+	}
 	return _u
 }
 
@@ -211,6 +226,21 @@ func (_u *TaskUpdate) AddWorkSessions(v ...*WorkSession) *TaskUpdate {
 	return _u.AddWorkSessionIDs(ids...)
 }
 
+// AddLabelIDs adds the "labels" edge to the Label entity by IDs.
+func (_u *TaskUpdate) AddLabelIDs(ids ...uuid.UUID) *TaskUpdate {
+	_u.mutation.AddLabelIDs(ids...)
+	return _u
+}
+
+// AddLabels adds the "labels" edges to the Label entity.
+func (_u *TaskUpdate) AddLabels(v ...*Label) *TaskUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddLabelIDs(ids...)
+}
+
 // Mutation returns the TaskMutation object of the builder.
 func (_u *TaskUpdate) Mutation() *TaskMutation {
 	return _u.mutation
@@ -255,6 +285,27 @@ func (_u *TaskUpdate) RemoveWorkSessions(v ...*WorkSession) *TaskUpdate {
 	return _u.RemoveWorkSessionIDs(ids...)
 }
 
+// ClearLabels clears all "labels" edges to the Label entity.
+func (_u *TaskUpdate) ClearLabels() *TaskUpdate {
+	_u.mutation.ClearLabels()
+	return _u
+}
+
+// RemoveLabelIDs removes the "labels" edge to Label entities by IDs.
+func (_u *TaskUpdate) RemoveLabelIDs(ids ...uuid.UUID) *TaskUpdate {
+	_u.mutation.RemoveLabelIDs(ids...)
+	return _u
+}
+
+// RemoveLabels removes "labels" edges to Label entities.
+func (_u *TaskUpdate) RemoveLabels(v ...*Label) *TaskUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveLabelIDs(ids...)
+}
+
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (_u *TaskUpdate) Save(ctx context.Context) (int, error) {
 	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
@@ -284,6 +335,11 @@ func (_u *TaskUpdate) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *TaskUpdate) check() error {
+	if v, ok := _u.mutation.Priority(); ok {
+		if err := task.PriorityValidator(v); err != nil {
+			return &ValidationError{Name: "priority", err: fmt.Errorf(`ent: validator failed for field "Task.priority": %w`, err)}
+		}
+	}
 	if _u.mutation.ProjectCleared() && len(_u.mutation.ProjectIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "Task.project"`)
 	}
@@ -310,6 +366,9 @@ func (_u *TaskUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.DescriptionCleared() {
 		_spec.ClearField(task.FieldDescription, field.TypeString)
+	}
+	if value, ok := _u.mutation.Priority(); ok {
+		_spec.SetField(task.FieldPriority, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Deadline(); ok {
 		_spec.SetField(task.FieldDeadline, field.TypeTime, value)
@@ -461,6 +520,51 @@ func (_u *TaskUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if _u.mutation.LabelsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   task.LabelsTable,
+			Columns: task.LabelsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(label.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedLabelsIDs(); len(nodes) > 0 && !_u.mutation.LabelsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   task.LabelsTable,
+			Columns: task.LabelsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(label.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.LabelsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   task.LabelsTable,
+			Columns: task.LabelsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(label.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{task.Label}
@@ -526,6 +630,20 @@ func (_u *TaskUpdateOne) SetNillableDescription(v *string) *TaskUpdateOne {
 // ClearDescription clears the value of the "description" field.
 func (_u *TaskUpdateOne) ClearDescription() *TaskUpdateOne {
 	_u.mutation.ClearDescription()
+	return _u
+}
+
+// SetPriority sets the "priority" field.
+func (_u *TaskUpdateOne) SetPriority(v task.Priority) *TaskUpdateOne {
+	_u.mutation.SetPriority(v)
+	return _u
+}
+
+// SetNillablePriority sets the "priority" field if the given value is not nil.
+func (_u *TaskUpdateOne) SetNillablePriority(v *task.Priority) *TaskUpdateOne {
+	if v != nil {
+		_u.SetPriority(*v)
+	}
 	return _u
 }
 
@@ -659,6 +777,21 @@ func (_u *TaskUpdateOne) AddWorkSessions(v ...*WorkSession) *TaskUpdateOne {
 	return _u.AddWorkSessionIDs(ids...)
 }
 
+// AddLabelIDs adds the "labels" edge to the Label entity by IDs.
+func (_u *TaskUpdateOne) AddLabelIDs(ids ...uuid.UUID) *TaskUpdateOne {
+	_u.mutation.AddLabelIDs(ids...)
+	return _u
+}
+
+// AddLabels adds the "labels" edges to the Label entity.
+func (_u *TaskUpdateOne) AddLabels(v ...*Label) *TaskUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddLabelIDs(ids...)
+}
+
 // Mutation returns the TaskMutation object of the builder.
 func (_u *TaskUpdateOne) Mutation() *TaskMutation {
 	return _u.mutation
@@ -703,6 +836,27 @@ func (_u *TaskUpdateOne) RemoveWorkSessions(v ...*WorkSession) *TaskUpdateOne {
 	return _u.RemoveWorkSessionIDs(ids...)
 }
 
+// ClearLabels clears all "labels" edges to the Label entity.
+func (_u *TaskUpdateOne) ClearLabels() *TaskUpdateOne {
+	_u.mutation.ClearLabels()
+	return _u
+}
+
+// RemoveLabelIDs removes the "labels" edge to Label entities by IDs.
+func (_u *TaskUpdateOne) RemoveLabelIDs(ids ...uuid.UUID) *TaskUpdateOne {
+	_u.mutation.RemoveLabelIDs(ids...)
+	return _u
+}
+
+// RemoveLabels removes "labels" edges to Label entities.
+func (_u *TaskUpdateOne) RemoveLabels(v ...*Label) *TaskUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveLabelIDs(ids...)
+}
+
 // Where appends a list predicates to the TaskUpdate builder.
 func (_u *TaskUpdateOne) Where(ps ...predicate.Task) *TaskUpdateOne {
 	_u.mutation.Where(ps...)
@@ -745,6 +899,11 @@ func (_u *TaskUpdateOne) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *TaskUpdateOne) check() error {
+	if v, ok := _u.mutation.Priority(); ok {
+		if err := task.PriorityValidator(v); err != nil {
+			return &ValidationError{Name: "priority", err: fmt.Errorf(`ent: validator failed for field "Task.priority": %w`, err)}
+		}
+	}
 	if _u.mutation.ProjectCleared() && len(_u.mutation.ProjectIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "Task.project"`)
 	}
@@ -788,6 +947,9 @@ func (_u *TaskUpdateOne) sqlSave(ctx context.Context) (_node *Task, err error) {
 	}
 	if _u.mutation.DescriptionCleared() {
 		_spec.ClearField(task.FieldDescription, field.TypeString)
+	}
+	if value, ok := _u.mutation.Priority(); ok {
+		_spec.SetField(task.FieldPriority, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Deadline(); ok {
 		_spec.SetField(task.FieldDeadline, field.TypeTime, value)
@@ -932,6 +1094,51 @@ func (_u *TaskUpdateOne) sqlSave(ctx context.Context) (_node *Task, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(worksession.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.LabelsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   task.LabelsTable,
+			Columns: task.LabelsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(label.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedLabelsIDs(); len(nodes) > 0 && !_u.mutation.LabelsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   task.LabelsTable,
+			Columns: task.LabelsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(label.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.LabelsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   task.LabelsTable,
+			Columns: task.LabelsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(label.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

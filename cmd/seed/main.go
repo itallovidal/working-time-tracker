@@ -16,6 +16,7 @@ import (
 	"math/rand"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -143,6 +144,48 @@ var projects = []struct {
 // bater o ponto nela a pega. link, quando há, vincula a tarefa a um item da
 // integração do projeto: "gh:42" (issue do GitHub), "gl:17" (issue do GitLab) ou
 // "tr:AbCd1234" (cartão do Trello).
+// priorityFor e labelsFor dão a prioridade e as etiquetas de cada tarefa a partir do que ela
+// já diz: o prazo (a atrasada é urgente) e o assunto do nome. Assim a lista de tarefas
+// não precisa carregar dois campos a mais em cada linha.
+func priorityFor(deadlineDays float64) string {
+	switch {
+	case deadlineDays < 0:
+		return "urgent"
+	case deadlineDays <= 3:
+		return "high"
+	case deadlineDays <= 10:
+		return "medium"
+	case deadlineDays <= 20:
+		return "low"
+	}
+	return "none"
+}
+
+var labelKeywords = []struct {
+	label string
+	words []string
+}{
+	{"backend", []string{"endpoint", "api ", "api de", "repasses", "perfis de acesso"}},
+	{"frontend", []string{"tela", "layout", "modo escuro", "fluxo", "filtros", "home"}},
+	{"design", []string{"layout", "modo escuro", "acessibilidade", "boas-vindas"}},
+	{"qualidade", []string{"teste", "revisão", "acessibilidade"}},
+	{"infra", []string{"pipeline", "build", "carga", "publicação"}},
+}
+
+func labelsFor(name string) []string {
+	lower := strings.ToLower(name) + " "
+	var out []string
+	for _, k := range labelKeywords {
+		for _, w := range k.words {
+			if strings.Contains(lower, w) {
+				out = append(out, k.label)
+				break
+			}
+		}
+	}
+	return out
+}
+
 var tasks = []struct {
 	project, name, description, assignee string
 	deadlineDays                         float64
@@ -426,6 +469,7 @@ func main() {
 		assignee string
 	}
 	byProject := map[string][]seededTask{}
+	labelID := map[string]string{} // projeto/etiqueta -> id
 	byTaskName := map[string]seededTask{}
 	for _, t := range tasks {
 		prj := seeded[t.project]
@@ -434,7 +478,20 @@ func main() {
 		if t.assignee != "" {
 			assignee = person[t.assignee].PersonID.String()
 		}
-		created, err := taskSvc.Create(prj.id, t.name, t.description, assignee, &deadline)
+		// As etiquetas do projeto nascem quando a primeira tarefa as usa.
+		ids := []string{}
+		for _, l := range labelsFor(t.name) {
+			key := t.project + "/" + l
+			if _, ok := labelID[key]; !ok {
+				created, err := taskSvc.CreateLabel(prj.id, l)
+				must(err)
+				labelID[key] = created.ID.String()
+			}
+			ids = append(ids, labelID[key])
+		}
+		priority := priorityFor(t.deadlineDays)
+		created, err := taskSvc.CreateAs("", prj.id, t.name, t.description, assignee, &deadline,
+			task.Attrs{Priority: &priority, LabelIDs: &ids})
 		must(err)
 		st := seededTask{task: created, assignee: t.assignee}
 		byTaskName[t.project+"/"+t.name] = st

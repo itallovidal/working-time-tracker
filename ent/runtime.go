@@ -8,6 +8,7 @@ import (
 	"working-time-tracker/ent/customer"
 	"working-time-tracker/ent/integration"
 	"working-time-tracker/ent/invite"
+	"working-time-tracker/ent/label"
 	"working-time-tracker/ent/organization"
 	"working-time-tracker/ent/person"
 	"working-time-tracker/ent/project"
@@ -73,6 +74,16 @@ func init() {
 	inviteDescID := inviteFields[0].Descriptor()
 	// invite.DefaultID holds the default value on creation for the id field.
 	invite.DefaultID = inviteDescID.Default.(func() uuid.UUID)
+	labelFields := schema.Label{}.Fields()
+	_ = labelFields
+	// labelDescCreatedAt is the schema descriptor for created_at field.
+	labelDescCreatedAt := labelFields[3].Descriptor()
+	// label.DefaultCreatedAt holds the default value on creation for the created_at field.
+	label.DefaultCreatedAt = labelDescCreatedAt.Default.(func() time.Time)
+	// labelDescID is the schema descriptor for id field.
+	labelDescID := labelFields[0].Descriptor()
+	// label.DefaultID holds the default value on creation for the id field.
+	label.DefaultID = labelDescID.Default.(func() uuid.UUID)
 	organizationFields := schema.Organization{}.Fields()
 	_ = organizationFields
 	// organizationDescTimezone is the schema descriptor for timezone field.
@@ -132,7 +143,7 @@ func init() {
 	taskFields := schema.Task{}.Fields()
 	_ = taskFields
 	// taskDescCreatedAt is the schema descriptor for created_at field.
-	taskDescCreatedAt := taskFields[9].Descriptor()
+	taskDescCreatedAt := taskFields[10].Descriptor()
 	// task.DefaultCreatedAt holds the default value on creation for the created_at field.
 	task.DefaultCreatedAt = taskDescCreatedAt.Default.(func() time.Time)
 	// taskDescID is the schema descriptor for id field.

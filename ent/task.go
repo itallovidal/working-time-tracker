@@ -27,6 +27,8 @@ type Task struct {
 	Name string `json:"name,omitempty"`
 	// Description holds the value of the "description" field.
 	Description string `json:"description,omitempty"`
+	// Priority holds the value of the "priority" field.
+	Priority task.Priority `json:"priority,omitempty"`
 	// AssigneeID holds the value of the "assignee_id" field.
 	AssigneeID *uuid.UUID `json:"assignee_id,omitempty"`
 	// Deadline holds the value of the "deadline" field.
@@ -55,9 +57,11 @@ type TaskEdges struct {
 	ExternalIntegration *Integration `json:"external_integration,omitempty"`
 	// WorkSessions holds the value of the work_sessions edge.
 	WorkSessions []*WorkSession `json:"work_sessions,omitempty"`
+	// Labels holds the value of the labels edge.
+	Labels []*Label `json:"labels,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [4]bool
+	loadedTypes [5]bool
 }
 
 // ProjectOrErr returns the Project value or an error if the edge
@@ -102,6 +106,15 @@ func (e TaskEdges) WorkSessionsOrErr() ([]*WorkSession, error) {
 	return nil, &NotLoadedError{edge: "work_sessions"}
 }
 
+// LabelsOrErr returns the Labels value or an error if the edge
+// was not loaded in eager-loading.
+func (e TaskEdges) LabelsOrErr() ([]*Label, error) {
+	if e.loadedTypes[4] {
+		return e.Labels, nil
+	}
+	return nil, &NotLoadedError{edge: "labels"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*Task) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
@@ -109,7 +122,7 @@ func (*Task) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case task.FieldAssigneeID, task.FieldExternalIntegrationID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case task.FieldName, task.FieldDescription, task.FieldExternalItemID, task.FieldExternalItemURL:
+		case task.FieldName, task.FieldDescription, task.FieldPriority, task.FieldExternalItemID, task.FieldExternalItemURL:
 			values[i] = new(sql.NullString)
 		case task.FieldDeadline, task.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
@@ -153,6 +166,12 @@ func (_m *Task) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field description", values[i])
 			} else if value.Valid {
 				_m.Description = value.String
+			}
+		case task.FieldPriority:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field priority", values[i])
+			} else if value.Valid {
+				_m.Priority = task.Priority(value.String)
 			}
 		case task.FieldAssigneeID:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -227,6 +246,11 @@ func (_m *Task) QueryWorkSessions() *WorkSessionQuery {
 	return NewTaskClient(_m.config).QueryWorkSessions(_m)
 }
 
+// QueryLabels queries the "labels" edge of the Task entity.
+func (_m *Task) QueryLabels() *LabelQuery {
+	return NewTaskClient(_m.config).QueryLabels(_m)
+}
+
 // Update returns a builder for updating this Task.
 // Note that you need to call Task.Unwrap() before calling this method if this Task
 // was returned from a transaction, and the transaction was committed or rolled back.
@@ -258,6 +282,9 @@ func (_m *Task) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("description=")
 	builder.WriteString(_m.Description)
+	builder.WriteString(", ")
+	builder.WriteString("priority=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Priority))
 	builder.WriteString(", ")
 	if v := _m.AssigneeID; v != nil {
 		builder.WriteString("assignee_id=")

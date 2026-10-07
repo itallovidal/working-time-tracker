@@ -3,6 +3,7 @@
 package task
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -21,6 +22,8 @@ const (
 	FieldName = "name"
 	// FieldDescription holds the string denoting the description field in the database.
 	FieldDescription = "description"
+	// FieldPriority holds the string denoting the priority field in the database.
+	FieldPriority = "priority"
 	// FieldAssigneeID holds the string denoting the assignee_id field in the database.
 	FieldAssigneeID = "assignee_id"
 	// FieldDeadline holds the string denoting the deadline field in the database.
@@ -41,6 +44,8 @@ const (
 	EdgeExternalIntegration = "external_integration"
 	// EdgeWorkSessions holds the string denoting the work_sessions edge name in mutations.
 	EdgeWorkSessions = "work_sessions"
+	// EdgeLabels holds the string denoting the labels edge name in mutations.
+	EdgeLabels = "labels"
 	// Table holds the table name of the task in the database.
 	Table = "tasks"
 	// ProjectTable is the table that holds the project relation/edge.
@@ -71,6 +76,11 @@ const (
 	WorkSessionsInverseTable = "work_sessions"
 	// WorkSessionsColumn is the table column denoting the work_sessions relation/edge.
 	WorkSessionsColumn = "task_id"
+	// LabelsTable is the table that holds the labels relation/edge. The primary key declared below.
+	LabelsTable = "task_labels"
+	// LabelsInverseTable is the table name for the Label entity.
+	// It exists in this package in order to avoid circular dependency with the "label" package.
+	LabelsInverseTable = "labels"
 )
 
 // Columns holds all SQL columns for task fields.
@@ -79,6 +89,7 @@ var Columns = []string{
 	FieldProjectID,
 	FieldName,
 	FieldDescription,
+	FieldPriority,
 	FieldAssigneeID,
 	FieldDeadline,
 	FieldExternalIntegrationID,
@@ -86,6 +97,12 @@ var Columns = []string{
 	FieldExternalItemURL,
 	FieldCreatedAt,
 }
+
+var (
+	// LabelsPrimaryKey and LabelsColumn2 are the table columns denoting the
+	// primary key for the labels relation (M2M).
+	LabelsPrimaryKey = []string{"task_id", "label_id"}
+)
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
@@ -103,6 +120,35 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// Priority defines the type for the "priority" enum field.
+type Priority string
+
+// PriorityNone is the default value of the Priority enum.
+const DefaultPriority = PriorityNone
+
+// Priority values.
+const (
+	PriorityUrgent Priority = "urgent"
+	PriorityHigh   Priority = "high"
+	PriorityMedium Priority = "medium"
+	PriorityLow    Priority = "low"
+	PriorityNone   Priority = "none"
+)
+
+func (pr Priority) String() string {
+	return string(pr)
+}
+
+// PriorityValidator is a validator for the "priority" field enum values. It is called by the builders before save.
+func PriorityValidator(pr Priority) error {
+	switch pr {
+	case PriorityUrgent, PriorityHigh, PriorityMedium, PriorityLow, PriorityNone:
+		return nil
+	default:
+		return fmt.Errorf("task: invalid enum value for priority field: %q", pr)
+	}
+}
 
 // OrderOption defines the ordering options for the Task queries.
 type OrderOption func(*sql.Selector)
@@ -125,6 +171,11 @@ func ByName(opts ...sql.OrderTermOption) OrderOption {
 // ByDescription orders the results by the description field.
 func ByDescription(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldDescription, opts...).ToFunc()
+}
+
+// ByPriority orders the results by the priority field.
+func ByPriority(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPriority, opts...).ToFunc()
 }
 
 // ByAssigneeID orders the results by the assignee_id field.
@@ -191,6 +242,20 @@ func ByWorkSessions(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newWorkSessionsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByLabelsCount orders the results by labels count.
+func ByLabelsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newLabelsStep(), opts...)
+	}
+}
+
+// ByLabels orders the results by labels terms.
+func ByLabels(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newLabelsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newProjectStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -217,5 +282,12 @@ func newWorkSessionsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(WorkSessionsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, WorkSessionsTable, WorkSessionsColumn),
+	)
+}
+func newLabelsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(LabelsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2M, false, LabelsTable, LabelsPrimaryKey...),
 	)
 }

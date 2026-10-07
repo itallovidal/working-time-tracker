@@ -129,6 +129,15 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 |---|---|---|---|---|
 | `internal.server_error` | 500 | — | `erro interno, tente de novo` | `internal error, please try again` |
 
+### label
+
+| Código | Status | Parâmetros | pt-BR | en |
+|---|---|---|---|---|
+| `label.name_required` | 400 | — | `informe o nome da etiqueta` | `enter the label name` |
+| `label.name_taken` | 400 | — | `o projeto já tem uma etiqueta com este nome` | `the project already has a label with this name` |
+| `label.name_too_long` | 400 | `max` | `o nome da etiqueta aceita até {{.max}} caracteres` | `the label name accepts up to {{.max}} characters` |
+| `label.not_found` | 404 | — | `etiqueta não encontrada` | `label not found` |
+
 ### organization
 
 | Código | Status | Parâmetros | pt-BR | en |
@@ -196,8 +205,12 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `task.invalid_assignee` | 400 | — | `responsável inválido` | `invalid assignee` |
 | `task.invalid_assignee_filter` | 400 | — | `responsável inválido (assignee_id)` | `invalid assignee (assignee_id)` |
 | `task.invalid_deadline_filter` | 400 | — | `prazo inválido (deadline_to): use data e hora, como 2026-10-12T23:59:59Z` | `invalid deadline (deadline_to): use date and time, like 2026-10-12T23:59:59Z` |
+| `task.invalid_label_filter` | 400 | — | `etiqueta inválida (label_id): use ids separados por vírgula` | `invalid label (label_id): use ids separated by commas` |
 | `task.invalid_page` | 400 | — | `página inválida (page): use um número a partir de 1` | `invalid page (page): use a number from 1` |
 | `task.invalid_per_page` | 400 | — | `tamanho de página inválido (per_page): use um número a partir de 1` | `invalid page size (per_page): use a number from 1` |
+| `task.invalid_priority` | 400 | — | `prioridade inválida: use urgent, high, medium, low ou none` | `invalid priority: use urgent, high, medium, low or none` |
+| `task.invalid_priority_filter` | 400 | — | `prioridade inválida (priority): use urgent, high, medium, low ou none, separadas por vírgula` | `invalid priority (priority): use urgent, high, medium, low or none, separated by commas` |
+| `task.label_other_project` | 400 | — | `uma das etiquetas não existe neste projeto` | `one of the labels does not exist in this project` |
 | `task.link_fields_required` | 400 | — | `informe a integração, o item e o link` | `enter the integration, the item and the link` |
 | `task.name_required` | 400 | — | `informe o nome` | `enter the name` |
 | `task.no_external_item` | 400 | — | `a tarefa não tem item externo vinculado` | `the task has no linked external item` |

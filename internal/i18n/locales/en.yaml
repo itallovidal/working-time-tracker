@@ -298,6 +298,21 @@ tasks:
   unassigned: Unassigned
   assign_me: Assign to me
   assign_other: Someone else
+  col_priority: Priority
+  priority_filter: Filter by priority
+  priority:
+    urgent: Urgent
+    high: High
+    medium: Medium
+    low: Low
+    none: No priority
+  labels: Labels
+  labels_filter: Filter by label
+  no_labels: None
+  no_labels_admin: The project has no labels yet. Create the first one below.
+  no_labels_member: The project has no labels yet. Ask an admin to create them.
+  label_new: New label
+  label_create: Create
   pick_person: Pick the person
   unassigned_hint: "Without an assignee the task is available: whoever clocks in on it becomes the assignee."
   only_mine: Only my tasks
@@ -789,6 +804,11 @@ errors:
     unsupported_type: "integration type not supported: {{.type}}"
   internal:
     server_error: "internal error, please try again"
+  label:
+    name_required: "enter the label name"
+    name_taken: "the project already has a label with this name"
+    name_too_long: "the label name accepts up to {{.max}} characters"
+    not_found: "label not found"
   organization:
     field_too_long: "{{.field}} can have up to {{.max}} characters"
     has_projects: "delete all projects before deleting the organization"
@@ -837,8 +857,12 @@ errors:
     invalid_assignee: "invalid assignee"
     invalid_assignee_filter: "invalid assignee (assignee_id)"
     invalid_deadline_filter: "invalid deadline (deadline_to): use date and time, like 2026-10-12T23:59:59Z"
+    invalid_label_filter: "invalid label (label_id): use ids separated by commas"
     invalid_page: "invalid page (page): use a number from 1"
     invalid_per_page: "invalid page size (per_page): use a number from 1"
+    invalid_priority: "invalid priority: use urgent, high, medium, low or none"
+    invalid_priority_filter: "invalid priority (priority): use urgent, high, medium, low or none, separated by commas"
+    label_other_project: "one of the labels does not exist in this project"
     link_fields_required: "enter the integration, the item and the link"
     name_required: "enter the name"
     no_external_item: "the task has no linked external item"

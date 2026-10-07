@@ -12,6 +12,7 @@ import (
 	"working-time-tracker/ent/customer"
 	"working-time-tracker/ent/integration"
 	"working-time-tracker/ent/invite"
+	"working-time-tracker/ent/label"
 	"working-time-tracker/ent/organization"
 	"working-time-tracker/ent/person"
 	"working-time-tracker/ent/project"
@@ -88,6 +89,7 @@ func checkColumn(t, c string) error {
 			customer.Table:       customer.ValidColumn,
 			integration.Table:    integration.ValidColumn,
 			invite.Table:         invite.ValidColumn,
+			label.Table:          label.ValidColumn,
 			organization.Table:   organization.ValidColumn,
 			person.Table:         person.ValidColumn,
 			project.Table:        project.ValidColumn,

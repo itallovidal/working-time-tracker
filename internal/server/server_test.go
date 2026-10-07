@@ -208,6 +208,7 @@ func TestAccess_OtherOrganizationIsNotFound(t *testing.T) {
 		"/api/orgs/" + b.orgID + "/persons",
 		"/api/projects/" + projectB,
 		"/api/projects/" + projectB + "/tasks",
+		"/api/projects/" + projectB + "/labels",
 		"/api/persons/" + b.id,
 		"/api/projects/not-a-uuid",
 	}
@@ -827,6 +828,10 @@ func TestRoutes_Table(t *testing.T) {
 		"DELETE /api/projects/:projectId/collaborators/:personId",
 		"POST /api/projects/:projectId/tasks",
 		"GET /api/projects/:projectId/tasks",
+		"GET /api/projects/:projectId/labels",
+		"POST /api/projects/:projectId/labels",
+		"PATCH /api/projects/:projectId/labels/:labelId",
+		"DELETE /api/projects/:projectId/labels/:labelId",
 		"POST /api/projects/:projectId/work-sessions/clock-in",
 		"POST /api/projects/:projectId/work-sessions/clock-out",
 		"GET /api/projects/:projectId/work-sessions",
@@ -1196,5 +1201,116 @@ func TestTasks_WithoutAssigneeIsClaimedByTheFirstClockIn(t *testing.T) {
 	rec = do(e, "PATCH", "/api/tasks/"+taskID, `{"name":"Livre","assignee_id":""}`, admin.session)
 	if rec.Code != http.StatusOK || decode(t, rec)["assignee_id"] != nil {
 		t.Errorf("unassign = %d %s, want 200 with a null assignee", rec.Code, rec.Body.String())
+	}
+}
+
+// Prioridade e etiquetas pela API: só admin cria etiqueta, a tarefa guarda e devolve as
+// duas, os filtros combinam, e uma etiqueta de outro projeto ou outra organização é recusada.
+func TestTasks_PriorityAndLabels(t *testing.T) {
+	e := newServer(t)
+	admin := signup(t, e, "Org", "ana@test.com")
+	member := invite(t, e, admin, "bia@test.com", "member")
+	outsider := signup(t, e, "Outra", "zeca@test.com")
+	projectID := createProject(t, e, admin, "Projeto")
+	otherProject := createProject(t, e, admin, "Outro")
+	labels := "/api/projects/" + projectID + "/labels"
+
+	if rec := do(e, "POST", labels, `{"name":"bug"}`, member.session); rec.Code != http.StatusForbidden {
+		t.Errorf("a member creating a label = %d, want 403", rec.Code)
+	}
+	if rec := do(e, "POST", labels, `{"name":"bug"}`, outsider.session); rec.Code != http.StatusNotFound {
+		t.Errorf("another organization creating a label = %d, want 404", rec.Code)
+	}
+	rec := do(e, "POST", labels, `{"name":"bug"}`, admin.session)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("admin creating a label = %d: %s", rec.Code, rec.Body.String())
+	}
+	bug := decode(t, rec)["id"].(string)
+	design := decode(t, do(e, "POST", labels, `{"name":"design"}`, admin.session))["id"].(string)
+	foreign := decode(t, do(e, "POST", "/api/projects/"+otherProject+"/labels", `{"name":"bug"}`, admin.session))["id"].(string)
+	if rec := do(e, "POST", labels, `{"name":"BUG"}`, admin.session); rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "label.name_taken") {
+		t.Errorf("a repeated name = %d: %s", rec.Code, rec.Body.String())
+	}
+	if list := decodeList(t, do(e, "GET", labels, "", member.session)); len(list) != 2 {
+		t.Errorf("a member reads %d labels, want 2", len(list))
+	}
+
+	tasks := "/api/projects/" + projectID + "/tasks"
+	body := fmt.Sprintf(`{"name":"Com tudo","priority":"urgent","label_ids":["%s","%s"]}`, bug, design)
+	rec = do(e, "POST", tasks, body, member.session)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("create a task with priority and labels = %d: %s", rec.Code, rec.Body.String())
+	}
+	created := decode(t, rec)
+	if created["priority"] != "urgent" || len(created["labels"].([]any)) != 2 {
+		t.Errorf("the task came back with %v and %v", created["priority"], created["labels"])
+	}
+	taskID := created["id"].(string)
+	do(e, "POST", tasks, `{"name":"Simples"}`, member.session)
+	do(e, "POST", tasks, fmt.Sprintf(`{"name":"Só bug","priority":"low","label_ids":["%s"]}`, bug), member.session)
+
+	if rec := do(e, "POST", tasks, `{"name":"X","priority":"critical"}`, member.session); rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "task.invalid_priority") {
+		t.Errorf("an invalid priority = %d: %s", rec.Code, rec.Body.String())
+	}
+	if rec := do(e, "POST", tasks, fmt.Sprintf(`{"name":"X","label_ids":["%s"]}`, foreign), member.session); rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "task.label_other_project") {
+		t.Errorf("a label of another project = %d: %s", rec.Code, rec.Body.String())
+	}
+
+	count := func(query string) int {
+		t.Helper()
+		rec := do(e, "GET", tasks+query, "", member.session)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("GET tasks%s = %d: %s", query, rec.Code, rec.Body.String())
+		}
+		return int(decode(t, rec)["total"].(float64))
+	}
+	for query, want := range map[string]int{
+		"?page=1":                                 3,
+		"?page=1&priority=urgent":                 1,
+		"?page=1&priority=urgent,low":             2,
+		"?page=1&priority=none":                   1,
+		"?page=1&label_id=" + bug:                 2,
+		"?page=1&label_id=" + design:              1,
+		"?page=1&label_id=" + bug + "," + design:  2,
+		"?page=1&priority=low&label_id=" + design: 0,
+		"?page=1&priority=low&label_id=" + bug:    1,
+	} {
+		if got := count(query); got != want {
+			t.Errorf("GET tasks%s: total %d, want %d", query, got, want)
+		}
+	}
+	for _, bad := range []string{"?priority=critical", "?label_id=nao-e-uuid"} {
+		if rec := do(e, "GET", tasks+bad, "", member.session); rec.Code != http.StatusBadRequest {
+			t.Errorf("GET tasks%s = %d, want 400", bad, rec.Code)
+		}
+	}
+
+	// Editar: omitir mantém, e uma lista vazia tira as etiquetas.
+	one := "/api/tasks/" + taskID
+	if rec := do(e, "PATCH", one, `{"name":"Com tudo 2"}`, member.session); rec.Code != http.StatusOK {
+		t.Fatalf("patch without priority and labels = %d: %s", rec.Code, rec.Body.String())
+	} else if got := decode(t, rec); got["priority"] != "urgent" || len(got["labels"].([]any)) != 2 {
+		t.Errorf("an update without them changed them: %v %v", got["priority"], got["labels"])
+	}
+	rec = do(e, "PATCH", one, `{"name":"Com tudo 2","priority":"none","label_ids":[]}`, member.session)
+	if got := decode(t, rec); got["priority"] != "none" || len(got["labels"].([]any)) != 0 {
+		t.Errorf("clearing came back with %v %v", got["priority"], got["labels"])
+	}
+
+	// Renomear e excluir são do admin; excluir deixa as tarefas.
+	if rec := do(e, "PATCH", labels+"/"+bug, `{"name":"defeito"}`, member.session); rec.Code != http.StatusForbidden {
+		t.Errorf("a member renaming a label = %d, want 403", rec.Code)
+	}
+	if rec := do(e, "PATCH", labels+"/"+bug, `{"name":"defeito"}`, admin.session); rec.Code != http.StatusOK {
+		t.Errorf("admin renaming a label = %d: %s", rec.Code, rec.Body.String())
+	}
+	if rec := do(e, "DELETE", labels+"/"+foreign, "", admin.session); rec.Code != http.StatusNotFound {
+		t.Errorf("deleting a label through another project = %d, want 404", rec.Code)
+	}
+	if rec := do(e, "DELETE", labels+"/"+bug, "", admin.session); rec.Code != http.StatusNoContent {
+		t.Errorf("admin deleting a label = %d: %s", rec.Code, rec.Body.String())
+	}
+	if got := count("?page=1"); got != 3 {
+		t.Errorf("after deleting a label the project has %d tasks, want 3", got)
 	}
 }

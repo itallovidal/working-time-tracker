@@ -9,6 +9,7 @@ import (
 	"working-time-tracker/ent/allocation"
 	"working-time-tracker/ent/customer"
 	"working-time-tracker/ent/integration"
+	"working-time-tracker/ent/label"
 	"working-time-tracker/ent/organization"
 	"working-time-tracker/ent/predicate"
 	"working-time-tracker/ent/project"
@@ -320,6 +321,21 @@ func (_u *ProjectUpdate) AddAllocations(v ...*Allocation) *ProjectUpdate {
 	return _u.AddAllocationIDs(ids...)
 }
 
+// AddLabelIDs adds the "labels" edge to the Label entity by IDs.
+func (_u *ProjectUpdate) AddLabelIDs(ids ...uuid.UUID) *ProjectUpdate {
+	_u.mutation.AddLabelIDs(ids...)
+	return _u
+}
+
+// AddLabels adds the "labels" edges to the Label entity.
+func (_u *ProjectUpdate) AddLabels(v ...*Label) *ProjectUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddLabelIDs(ids...)
+}
+
 // Mutation returns the ProjectMutation object of the builder.
 func (_u *ProjectUpdate) Mutation() *ProjectMutation {
 	return _u.mutation
@@ -419,6 +435,27 @@ func (_u *ProjectUpdate) RemoveAllocations(v ...*Allocation) *ProjectUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveAllocationIDs(ids...)
+}
+
+// ClearLabels clears all "labels" edges to the Label entity.
+func (_u *ProjectUpdate) ClearLabels() *ProjectUpdate {
+	_u.mutation.ClearLabels()
+	return _u
+}
+
+// RemoveLabelIDs removes the "labels" edge to Label entities by IDs.
+func (_u *ProjectUpdate) RemoveLabelIDs(ids ...uuid.UUID) *ProjectUpdate {
+	_u.mutation.RemoveLabelIDs(ids...)
+	return _u
+}
+
+// RemoveLabels removes "labels" edges to Label entities.
+func (_u *ProjectUpdate) RemoveLabels(v ...*Label) *ProjectUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveLabelIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -765,6 +802,51 @@ func (_u *ProjectUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if _u.mutation.LabelsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   project.LabelsTable,
+			Columns: []string{project.LabelsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(label.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedLabelsIDs(); len(nodes) > 0 && !_u.mutation.LabelsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   project.LabelsTable,
+			Columns: []string{project.LabelsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(label.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.LabelsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   project.LabelsTable,
+			Columns: []string{project.LabelsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(label.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{project.Label}
@@ -1071,6 +1153,21 @@ func (_u *ProjectUpdateOne) AddAllocations(v ...*Allocation) *ProjectUpdateOne {
 	return _u.AddAllocationIDs(ids...)
 }
 
+// AddLabelIDs adds the "labels" edge to the Label entity by IDs.
+func (_u *ProjectUpdateOne) AddLabelIDs(ids ...uuid.UUID) *ProjectUpdateOne {
+	_u.mutation.AddLabelIDs(ids...)
+	return _u
+}
+
+// AddLabels adds the "labels" edges to the Label entity.
+func (_u *ProjectUpdateOne) AddLabels(v ...*Label) *ProjectUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddLabelIDs(ids...)
+}
+
 // Mutation returns the ProjectMutation object of the builder.
 func (_u *ProjectUpdateOne) Mutation() *ProjectMutation {
 	return _u.mutation
@@ -1170,6 +1267,27 @@ func (_u *ProjectUpdateOne) RemoveAllocations(v ...*Allocation) *ProjectUpdateOn
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveAllocationIDs(ids...)
+}
+
+// ClearLabels clears all "labels" edges to the Label entity.
+func (_u *ProjectUpdateOne) ClearLabels() *ProjectUpdateOne {
+	_u.mutation.ClearLabels()
+	return _u
+}
+
+// RemoveLabelIDs removes the "labels" edge to Label entities by IDs.
+func (_u *ProjectUpdateOne) RemoveLabelIDs(ids ...uuid.UUID) *ProjectUpdateOne {
+	_u.mutation.RemoveLabelIDs(ids...)
+	return _u
+}
+
+// RemoveLabels removes "labels" edges to Label entities.
+func (_u *ProjectUpdateOne) RemoveLabels(v ...*Label) *ProjectUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveLabelIDs(ids...)
 }
 
 // Where appends a list predicates to the ProjectUpdate builder.
@@ -1539,6 +1657,51 @@ func (_u *ProjectUpdateOne) sqlSave(ctx context.Context) (_node *Project, err er
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(allocation.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.LabelsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   project.LabelsTable,
+			Columns: []string{project.LabelsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(label.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedLabelsIDs(); len(nodes) > 0 && !_u.mutation.LabelsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   project.LabelsTable,
+			Columns: []string{project.LabelsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(label.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.LabelsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   project.LabelsTable,
+			Columns: []string{project.LabelsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(label.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

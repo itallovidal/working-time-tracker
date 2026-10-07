@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math"
 	"working-time-tracker/ent/integration"
+	"working-time-tracker/ent/label"
 	"working-time-tracker/ent/person"
 	"working-time-tracker/ent/predicate"
 	"working-time-tracker/ent/project"
@@ -33,6 +34,7 @@ type TaskQuery struct {
 	withAssignee            *PersonQuery
 	withExternalIntegration *IntegrationQuery
 	withWorkSessions        *WorkSessionQuery
+	withLabels              *LabelQuery
 	modifiers               []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -151,6 +153,28 @@ func (_q *TaskQuery) QueryWorkSessions() *WorkSessionQuery {
 			sqlgraph.From(task.Table, task.FieldID, selector),
 			sqlgraph.To(worksession.Table, worksession.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, task.WorkSessionsTable, task.WorkSessionsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryLabels chains the current query on the "labels" edge.
+func (_q *TaskQuery) QueryLabels() *LabelQuery {
+	query := (&LabelClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(task.Table, task.FieldID, selector),
+			sqlgraph.To(label.Table, label.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, task.LabelsTable, task.LabelsPrimaryKey...),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -354,6 +378,7 @@ func (_q *TaskQuery) Clone() *TaskQuery {
 		withAssignee:            _q.withAssignee.Clone(),
 		withExternalIntegration: _q.withExternalIntegration.Clone(),
 		withWorkSessions:        _q.withWorkSessions.Clone(),
+		withLabels:              _q.withLabels.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -401,6 +426,17 @@ func (_q *TaskQuery) WithWorkSessions(opts ...func(*WorkSessionQuery)) *TaskQuer
 		opt(query)
 	}
 	_q.withWorkSessions = query
+	return _q
+}
+
+// WithLabels tells the query-builder to eager-load the nodes that are connected to
+// the "labels" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *TaskQuery) WithLabels(opts ...func(*LabelQuery)) *TaskQuery {
+	query := (&LabelClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withLabels = query
 	return _q
 }
 
@@ -482,11 +518,12 @@ func (_q *TaskQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Task, e
 	var (
 		nodes       = []*Task{}
 		_spec       = _q.querySpec()
-		loadedTypes = [4]bool{
+		loadedTypes = [5]bool{
 			_q.withProject != nil,
 			_q.withAssignee != nil,
 			_q.withExternalIntegration != nil,
 			_q.withWorkSessions != nil,
+			_q.withLabels != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -532,6 +569,13 @@ func (_q *TaskQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Task, e
 		if err := _q.loadWorkSessions(ctx, query, nodes,
 			func(n *Task) { n.Edges.WorkSessions = []*WorkSession{} },
 			func(n *Task, e *WorkSession) { n.Edges.WorkSessions = append(n.Edges.WorkSessions, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withLabels; query != nil {
+		if err := _q.loadLabels(ctx, query, nodes,
+			func(n *Task) { n.Edges.Labels = []*Label{} },
+			func(n *Task, e *Label) { n.Edges.Labels = append(n.Edges.Labels, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -658,6 +702,67 @@ func (_q *TaskQuery) loadWorkSessions(ctx context.Context, query *WorkSessionQue
 			return fmt.Errorf(`unexpected referenced foreign-key "task_id" returned %v for node %v`, fk, n.ID)
 		}
 		assign(node, n)
+	}
+	return nil
+}
+func (_q *TaskQuery) loadLabels(ctx context.Context, query *LabelQuery, nodes []*Task, init func(*Task), assign func(*Task, *Label)) error {
+	edgeIDs := make([]driver.Value, len(nodes))
+	byID := make(map[uuid.UUID]*Task)
+	nids := make(map[uuid.UUID]map[*Task]struct{})
+	for i, node := range nodes {
+		edgeIDs[i] = node.ID
+		byID[node.ID] = node
+		if init != nil {
+			init(node)
+		}
+	}
+	query.Where(func(s *sql.Selector) {
+		joinT := sql.Table(task.LabelsTable)
+		s.Join(joinT).On(s.C(label.FieldID), joinT.C(task.LabelsPrimaryKey[1]))
+		s.Where(sql.InValues(joinT.C(task.LabelsPrimaryKey[0]), edgeIDs...))
+		columns := s.SelectedColumns()
+		s.Select(joinT.C(task.LabelsPrimaryKey[0]))
+		s.AppendSelect(columns...)
+		s.SetDistinct(false)
+	})
+	if err := query.prepareQuery(ctx); err != nil {
+		return err
+	}
+	qr := QuerierFunc(func(ctx context.Context, q Query) (Value, error) {
+		return query.sqlAll(ctx, func(_ context.Context, spec *sqlgraph.QuerySpec) {
+			assign := spec.Assign
+			values := spec.ScanValues
+			spec.ScanValues = func(columns []string) ([]any, error) {
+				values, err := values(columns[1:])
+				if err != nil {
+					return nil, err
+				}
+				return append([]any{new(uuid.UUID)}, values...), nil
+			}
+			spec.Assign = func(columns []string, values []any) error {
+				outValue := *values[0].(*uuid.UUID)
+				inValue := *values[1].(*uuid.UUID)
+				if nids[inValue] == nil {
+					nids[inValue] = map[*Task]struct{}{byID[outValue]: {}}
+					return assign(columns[1:], values[1:])
+				}
+				nids[inValue][byID[outValue]] = struct{}{}
+				return nil
+			}
+		})
+	})
+	neighbors, err := withInterceptors[[]*Label](ctx, query, qr, query.inters)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected "labels" node returned %v`, n.ID)
+		}
+		for kn := range nodes {
+			assign(kn, n)
+		}
 	}
 	return nil
 }

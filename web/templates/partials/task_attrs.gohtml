@@ -1,0 +1,30 @@
+{{/* task_attrs é a prioridade e as etiquetas de uma tarefa, nos modais Nova tarefa e Editar
+     tarefa. Pede o rascunho em `draft` (priority, label_ids) e os métodos de labelTools
+     (labels, newLabel, createLabel). Só admins criam etiqueta; quem não é, só escolhe. */}}
+{{define "task_attrs"}}
+<div class="field">
+  <label for="task-priority">{{.T "tasks.col_priority"}}</label>
+  <select id="task-priority" x-model="draft.priority">
+    <template x-for="p in WTT.priorities" :key="p.value">
+      <option :value="p.value" x-text="p.label" :selected="p.value === draft.priority"></option>
+    </template>
+  </select>
+</div>
+<div class="field" role="group" aria-labelledby="task-labels-label">
+  <span class="field-label" id="task-labels-label">{{.T "tasks.labels"}}</span>
+  <div class="label-picks" x-show="labels.length > 0">
+    <template x-for="l in labels" :key="l.id">
+      <label class="label-pick"><input type="checkbox" :value="l.id" x-model="draft.label_ids"> <span x-text="l.name"></span></label>
+    </template>
+  </div>
+  <span class="hint" x-show="labels.length === 0">{{if .IsAdmin}}{{.T "tasks.no_labels_admin"}}{{else}}{{.T "tasks.no_labels_member"}}{{end}}</span>
+  {{if .IsAdmin}}
+  <div class="row">
+    <input id="task-new-label" class="flex-1" type="text" maxlength="30" autocomplete="off" placeholder="{{.T "tasks.label_new"}}"
+           aria-label="{{.T "tasks.label_new"}}" x-model="newLabel" @keydown.enter.prevent="createLabel(draft.label_ids)">
+    <button type="button" class="btn btn-secondary btn-sm" :disabled="pending || !newLabel.trim()" @click="createLabel(draft.label_ids)">{{template "icon" "plus"}} {{.T "tasks.label_create"}}</button>
+  </div>
+  <p class="form-error" x-show="errors.label" x-text="errors.label" role="alert"></p>
+  {{end}}
+</div>
+{{end}}

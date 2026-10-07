@@ -5,6 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"sort"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -132,11 +135,11 @@ func TestService_AssignToSelfWithoutTeam(t *testing.T) {
 	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
 	pid, meID, otherID := proj.ID.String(), me.ID.String(), other.ID.String()
 
-	task, err := taskSvc.CreateAs(meID, pid, "Minha", "", meID, nil)
-	if err != nil || task.Assignee == nil || task.Assignee.ID != me.ID {
-		t.Fatalf("create assigned to the caller outside any team: %v, %+v", err, task)
+	own, err := taskSvc.CreateAs(meID, pid, "Minha", "", meID, nil, task.Attrs{})
+	if err != nil || own.Assignee == nil || own.Assignee.ID != me.ID {
+		t.Fatalf("create assigned to the caller outside any team: %v, %+v", err, own)
 	}
-	if _, err := taskSvc.CreateAs(meID, pid, "Dela", "", otherID, nil); err == nil {
+	if _, err := taskSvc.CreateAs(meID, pid, "Dela", "", otherID, nil, task.Attrs{}); err == nil {
 		t.Error("assigning to someone else outside the teams must fail")
 	}
 	if _, err := taskSvc.Create(pid, "Sem sessão", "", meID, nil); err == nil {
@@ -144,10 +147,10 @@ func TestService_AssignToSelfWithoutTeam(t *testing.T) {
 	}
 
 	free, _ := taskSvc.Create(pid, "Livre", "", "", nil)
-	if _, err := taskSvc.UpdateAs(otherID, free.ID.String(), "Livre", "", &meID, nil); err == nil {
+	if _, err := taskSvc.UpdateAs(otherID, free.ID.String(), "Livre", "", &meID, nil, task.Attrs{}); err == nil {
 		t.Error("update: assigning to someone who is not the caller and is outside the teams must fail")
 	}
-	updated, err := taskSvc.UpdateAs(meID, free.ID.String(), "Livre", "", &meID, nil)
+	updated, err := taskSvc.UpdateAs(meID, free.ID.String(), "Livre", "", &meID, nil, task.Attrs{})
 	if err != nil || updated.Assignee == nil || updated.Assignee.ID != me.ID {
 		t.Errorf("update assigned to the caller: %v, %+v", err, updated)
 	}
@@ -169,6 +172,184 @@ func TestService_AssignToCollaboratorWithoutTeam(t *testing.T) {
 	task, err := taskSvc.Create(pid, "Depois", "", bid, nil)
 	if err != nil || task.Assignee == nil || task.Assignee.ID != bruno.ID {
 		t.Fatalf("assigning to a collaborator without a team: %v, %+v", err, task)
+	}
+}
+
+// A prioridade padrão é "sem prioridade", só as cinco são aceitas, e omitir mantém.
+func TestService_Priority(t *testing.T) {
+	orgSvc, _, projSvc, _, _, taskSvc := setupDeps(t)
+	org, _ := orgSvc.Create("Org")
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
+	pid := proj.ID.String()
+
+	plain, err := taskSvc.Create(pid, "Sem nada", "", "", nil)
+	if err != nil || plain.Priority != "none" || plain.Labels == nil || len(plain.Labels) != 0 {
+		t.Fatalf("a new task has priority %q and labels %v (err %v), want none and an empty list", plain.Priority, plain.Labels, err)
+	}
+	urgent := "urgent"
+	tk, err := taskSvc.CreateAs("", pid, "Fogo", "", "", nil, task.Attrs{Priority: &urgent})
+	if err != nil || tk.Priority != "urgent" {
+		t.Fatalf("create with priority: %v, %+v", err, tk)
+	}
+	bad := "critical"
+	if _, err := taskSvc.CreateAs("", pid, "X", "", "", nil, task.Attrs{Priority: &bad}); err != task.ErrInvalidPriority {
+		t.Errorf("invalid priority on create: err = %v", err)
+	}
+	if _, err := taskSvc.UpdateAs("", tk.ID.String(), "Fogo", "", nil, nil, task.Attrs{Priority: &bad}); err != task.ErrInvalidPriority {
+		t.Errorf("invalid priority on update: err = %v", err)
+	}
+	kept, err := taskSvc.Update(tk.ID.String(), "Fogo 2", "", nil, nil)
+	if err != nil || kept.Priority != "urgent" {
+		t.Errorf("an update without priority must keep it, got %q (%v)", kept.Priority, err)
+	}
+	low := "low"
+	moved, _ := taskSvc.UpdateAs("", tk.ID.String(), "Fogo 2", "", nil, nil, task.Attrs{Priority: &low})
+	if moved.Priority != "low" {
+		t.Errorf("priority after the update = %q, want low", moved.Priority)
+	}
+}
+
+// As etiquetas são do projeto: criar, achar nome repetido sem diferenciar maiúsculas, dar
+// a uma tarefa, recusar a de outro projeto, trocar, manter ao omitir e limpar.
+func TestService_Labels(t *testing.T) {
+	orgSvc, _, projSvc, _, _, taskSvc := setupDeps(t)
+	org, _ := orgSvc.Create("Org")
+	a, _ := projSvc.Create(org.ID.String(), "A", "", 0, nil, nil, nil)
+	b, _ := projSvc.Create(org.ID.String(), "B", "", 0, nil, nil, nil)
+	aid, bid := a.ID.String(), b.ID.String()
+
+	bug, err := taskSvc.CreateLabel(aid, "  bug ")
+	if err != nil || bug.Name != "bug" {
+		t.Fatalf("create label: %v, %+v", err, bug)
+	}
+	if _, err := taskSvc.CreateLabel(aid, "BUG"); err != task.ErrLabelNameTaken {
+		t.Errorf("same name with another case: err = %v, want taken", err)
+	}
+	if _, err := taskSvc.CreateLabel(aid, "   "); err != task.ErrLabelNameRequired {
+		t.Errorf("empty name: err = %v", err)
+	}
+	if _, err := taskSvc.CreateLabel(aid, strings.Repeat("x", 31)); err == nil {
+		t.Error("a 31-character name must be refused")
+	}
+	design, _ := taskSvc.CreateLabel(aid, "design")
+	other, _ := taskSvc.CreateLabel(bid, "bug") // o mesmo nome em outro projeto vale
+	if other == nil {
+		t.Fatal("the same name in another project must be allowed")
+	}
+	if list, _ := taskSvc.ListLabels(aid); len(list) != 2 || list[0].Name != "bug" || list[1].Name != "design" {
+		t.Errorf("labels of A = %+v, want bug and design in order", list)
+	}
+
+	ids := []string{bug.ID.String(), design.ID.String(), bug.ID.String()}
+	tk, err := taskSvc.CreateAs("", aid, "Com etiquetas", "", "", nil, task.Attrs{LabelIDs: &ids})
+	if err != nil || len(tk.Labels) != 2 || tk.Labels[0].Name != "bug" || tk.Labels[1].Name != "design" {
+		t.Fatalf("create with labels (a repeated id counts once): %v, %+v", err, tk.Labels)
+	}
+	foreign := []string{other.ID.String()}
+	if _, err := taskSvc.CreateAs("", aid, "X", "", "", nil, task.Attrs{LabelIDs: &foreign}); err != task.ErrLabelOtherProject {
+		t.Errorf("a label of another project on create: err = %v", err)
+	}
+	if _, err := taskSvc.UpdateAs("", tk.ID.String(), "X", "", nil, nil, task.Attrs{LabelIDs: &foreign}); err != task.ErrLabelOtherProject {
+		t.Errorf("a label of another project on update: err = %v", err)
+	}
+
+	kept, _ := taskSvc.Update(tk.ID.String(), "Renomeada", "", nil, nil)
+	if len(kept.Labels) != 2 {
+		t.Errorf("an update without label_ids must keep the labels, got %+v", kept.Labels)
+	}
+	one := []string{design.ID.String()}
+	swapped, _ := taskSvc.UpdateAs("", tk.ID.String(), "Renomeada", "", nil, nil, task.Attrs{LabelIDs: &one})
+	if len(swapped.Labels) != 1 || swapped.Labels[0].Name != "design" {
+		t.Errorf("labels after the swap = %+v, want only design", swapped.Labels)
+	}
+	none := []string{}
+	cleared, _ := taskSvc.UpdateAs("", tk.ID.String(), "Renomeada", "", nil, nil, task.Attrs{LabelIDs: &none})
+	if len(cleared.Labels) != 0 || cleared.Labels == nil {
+		t.Errorf("labels after clearing = %+v, want an empty list", cleared.Labels)
+	}
+
+	// Renomear confere o nome; excluir tira a etiqueta das tarefas e deixa as tarefas.
+	if _, err := taskSvc.RenameLabel(aid, design.ID.String(), "BUG"); err != task.ErrLabelNameTaken {
+		t.Errorf("renaming onto an existing name: err = %v", err)
+	}
+	if _, err := taskSvc.RenameLabel(bid, design.ID.String(), "x"); err == nil {
+		t.Error("renaming a label through another project must fail")
+	}
+	renamed, err := taskSvc.RenameLabel(aid, design.ID.String(), "Design")
+	if err != nil || renamed.Name != "Design" {
+		t.Errorf("rename: %v, %+v", err, renamed)
+	}
+	both := []string{bug.ID.String(), design.ID.String()}
+	taskSvc.UpdateAs("", tk.ID.String(), "Renomeada", "", nil, nil, task.Attrs{LabelIDs: &both})
+	if err := taskSvc.DeleteLabel(bid, bug.ID.String()); err == nil {
+		t.Error("deleting a label through another project must fail")
+	}
+	if err := taskSvc.DeleteLabel(aid, bug.ID.String()); err != nil {
+		t.Fatalf("delete label: %v", err)
+	}
+	left, err := taskSvc.Get(tk.ID.String())
+	if err != nil || len(left.Labels) != 1 || left.Labels[0].Name != "Design" {
+		t.Errorf("the task after deleting a label = %+v (%v), want it kept with Design only", left, err)
+	}
+}
+
+// O filtro de prioridade aceita várias, o de etiqueta vale para a tarefa que tem
+// qualquer uma delas, e os dois juntos se somam; o total e a página seguem o filtro.
+func TestService_ListFilters_PriorityAndLabels(t *testing.T) {
+	orgSvc, _, projSvc, _, _, taskSvc := setupDeps(t)
+	org, _ := orgSvc.Create("Org")
+	proj, _ := projSvc.Create(org.ID.String(), "P", "", 0, nil, nil, nil)
+	pid := proj.ID.String()
+	bug, _ := taskSvc.CreateLabel(pid, "bug")
+	ux, _ := taskSvc.CreateLabel(pid, "ux")
+
+	mk := func(name, priority string, labels ...uuid.UUID) {
+		ids := []string{}
+		for _, l := range labels {
+			ids = append(ids, l.String())
+		}
+		if _, err := taskSvc.CreateAs("", pid, name, "", "", nil, task.Attrs{Priority: &priority, LabelIDs: &ids}); err != nil {
+			t.Fatalf("create %s: %v", name, err)
+		}
+	}
+	mk("a", "urgent", bug.ID)
+	mk("b", "high", ux.ID)
+	mk("c", "high", bug.ID, ux.ID)
+	mk("d", "low")
+	mk("e", "none")
+
+	names := func(f task.ListFilter) string {
+		page, err := taskSvc.ListPage(pid, f)
+		if err != nil {
+			t.Fatalf("list: %v", err)
+		}
+		got := []string{}
+		for _, it := range page.Items {
+			got = append(got, it.Name)
+		}
+		sort.Strings(got)
+		return strings.Join(got, "") + "/" + strconv.Itoa(page.Total)
+	}
+	cases := []struct {
+		name string
+		f    task.ListFilter
+		want string
+	}{
+		{"one priority", task.ListFilter{Priorities: []string{"high"}}, "bc/2"},
+		{"two priorities", task.ListFilter{Priorities: []string{"urgent", "low"}}, "ad/2"},
+		{"one label", task.ListFilter{LabelIDs: []uuid.UUID{bug.ID}}, "ac/2"},
+		{"any of two labels, a task counts once", task.ListFilter{LabelIDs: []uuid.UUID{bug.ID, ux.ID}}, "abc/3"},
+		{"priority and label together", task.ListFilter{Priorities: []string{"high"}, LabelIDs: []uuid.UUID{bug.ID}}, "c/1"},
+		{"no match", task.ListFilter{Priorities: []string{"medium"}}, "/0"},
+		{"paged", task.ListFilter{LabelIDs: []uuid.UUID{bug.ID, ux.ID}, Page: 1, PerPage: 2}, ""},
+	}
+	for _, c := range cases[:6] {
+		if got := names(c.f); got != c.want {
+			t.Errorf("%s: got %q, want %q", c.name, got, c.want)
+		}
+	}
+	if page, _ := taskSvc.ListPage(pid, cases[6].f); page.Total != 3 || len(page.Items) != 2 {
+		t.Errorf("paged: total %d with %d items, want 3 and 2", page.Total, len(page.Items))
 	}
 }
 

@@ -393,10 +393,17 @@ func TestPages_ProjectTasksTab(t *testing.T) {
 			"Nova tarefa", `x-teleport="#modal-root"`, `x-show="$store.modal.name === 'task-new'"`, `id="task-name"`, `id="task-assignee"`,
 			// Uma tarefa pode ficar sem responsável, e o quadro lista o que está disponível.
 			"Quadro de tarefas", `<option value="none"`, "Atribuir a mim", "Outra pessoa", `value="none" x-model="draft.assign"`,
+			// Prioridade e etiqueta: os filtros (várias de cada), a coluna e os campos do modal.
+			`role="group" aria-label="Filtrar por prioridade"`, `role="group" aria-label="Filtrar por etiqueta"`, `toggleFilter('priority', p.value)`,
+			`toggleFilter('label', l.id)`, "<th>Prioridade</th>", `id="task-priority"`, `x-model="draft.label_ids"`,
 		} {
 			if !strings.Contains(body, want) {
 				t.Errorf("%s: the tasks tab does not contain %q", who, want)
 			}
+		}
+		// Só admins criam etiqueta: o membro só escolhe.
+		if has := strings.Contains(body, `id="task-new-label"`); has != (who == "admin") {
+			t.Errorf("%s: the new label field is present = %v", who, has)
 		}
 		if strings.Contains(body, `id="task-assignee" required`) {
 			t.Errorf("%s: the assignee of a new task is still required", who)

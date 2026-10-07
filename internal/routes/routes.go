@@ -104,6 +104,11 @@ func RegisterRoutes(e *echo.Echo, h Handlers, m *auth.Middleware, authLimiter ec
 	r.DELETE("/projects/:projectId/collaborators/:personId", h.Collaborator.Remove, prj, per, admin)
 	r.POST("/projects/:projectId/tasks", h.Task.Create, prj)
 	r.GET("/projects/:projectId/tasks", h.Task.ListByProject, prj)
+	// As etiquetas são do projeto: todos leem e escolhem, só admins criam, renomeiam e excluem.
+	r.GET("/projects/:projectId/labels", h.Task.ListLabels, prj)
+	r.POST("/projects/:projectId/labels", h.Task.CreateLabel, prj, admin)
+	r.PATCH("/projects/:projectId/labels/:labelId", h.Task.RenameLabel, prj, admin)
+	r.DELETE("/projects/:projectId/labels/:labelId", h.Task.DeleteLabel, prj, admin)
 	r.POST("/projects/:projectId/work-sessions/clock-in", h.WorkSession.ClockIn, prj)
 	r.POST("/projects/:projectId/work-sessions/clock-out", h.WorkSession.ClockOut, prj)
 	r.GET("/projects/:projectId/work-sessions", h.WorkSession.List, prj)

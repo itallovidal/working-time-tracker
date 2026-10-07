@@ -392,7 +392,11 @@ A pessoa precisa ser da mesma organização do projeto e já estar nele, com val
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
 | POST | `/api/projects/:projectId/tasks` | logado | Cria uma tarefa |
-| GET | `/api/projects/:projectId/tasks` | logado | Tarefas do projeto. Filtros: `?q=`, `?assignee_id=` e `?deadline_to=`; com `?page=`, uma página por vez |
+| GET | `/api/projects/:projectId/tasks` | logado | Tarefas do projeto. Filtros: `?q=`, `?assignee_id=`, `?deadline_to=`, `?priority=` e `?label_id=`; com `?page=`, uma página por vez |
+| GET | `/api/projects/:projectId/labels` | logado | Etiquetas do projeto, em ordem alfabética |
+| POST | `/api/projects/:projectId/labels` | admin | Cria uma etiqueta: `{"name": "bug"}` |
+| PATCH | `/api/projects/:projectId/labels/:labelId` | admin | Renomeia: `{"name": "defeito"}` |
+| DELETE | `/api/projects/:projectId/labels/:labelId` | admin | Exclui a etiqueta; as tarefas só a perdem |
 | GET | `/api/tasks/:taskId` | logado | Detalhes da tarefa |
 | PATCH | `/api/tasks/:taskId` | logado | Altera a tarefa |
 | DELETE | `/api/tasks/:taskId` | logado | Exclui a tarefa e as sessões dela |
@@ -408,9 +412,14 @@ Content-Type: application/json
   "name": "Tela de checkout",
   "description": "Opcional",
   "assignee_id": "…",
-  "deadline": "2026-10-05T23:59:00-03:00"
+  "deadline": "2026-10-05T23:59:00-03:00",
+  "priority": "high",
+  "label_ids": ["…", "…"]
 }
 ```
+`priority` é `urgent`, `high`, `medium`, `low` ou `none` (o padrão, sem prioridade). `label_ids` são etiquetas do próprio projeto: uma de outro projeto responde `400 task.label_other_project`, e um id repetido conta uma vez. A tarefa devolve `priority` e `labels` (`[{"id", "name"}]`, sempre uma lista). No `PATCH`, campo omitido mantém o valor, e `label_ids: []` tira todas as etiquetas.
+
+As etiquetas são do projeto, não da organização, e o nome é único no projeto sem diferenciar maiúsculas (`label.name_taken`), com até 30 caracteres. Só admins criam, renomeiam e excluem; quem está no projeto lê e escolhe.
 O `assignee_id` é opcional: sem ele a tarefa fica disponível, e quem bater o ponto nela passa a ser o responsável. Um responsável escolhido precisa estar no projeto, isto é, ter valor por hora nele ou estar em algum time dele (time é opcional). Quem está logado também pode se pôr como responsável (o "atribuir a mim") sem estar no projeto, no `POST` e no `PATCH`. Fora isso, `task.assignee_not_in_team`. Sem `deadline`, o prazo fica em 7 dias a partir de agora.
 
 ```http
@@ -421,6 +430,8 @@ Todos os parâmetros são opcionais:
 - `q` busca no nome, sem diferenciar maiúsculas de minúsculas (acentos contam), com até 100 caracteres.
 - `assignee_id` traz só as tarefas daquela pessoa; `none` traz só as sem responsável.
 - `deadline_to` traz as tarefas com prazo até aquele instante, inclusive. É uma data com hora em RFC 3339; num fuso escrito com `+`, use `%2B` na URL.
+- `priority` traz as tarefas com qualquer uma das prioridades, separadas por vírgula: `priority=urgent,high`.
+- `label_id` traz as tarefas que têm qualquer uma das etiquetas, separadas por vírgula; uma tarefa com duas delas conta uma vez. Junto de `priority`, valem os dois.
 - `page` começa em 1. `per_page` vale 10 por padrão, vai até 100 e só é lido junto de `page`.
 
 Sem `page`, a resposta é o array com todas as tarefas que passam pelos filtros, da mais nova para a mais antiga. Com `page`, vem uma página:

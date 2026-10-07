@@ -18,6 +18,9 @@ type Integration func(*sql.Selector)
 // Invite is the predicate function for invite builders.
 type Invite func(*sql.Selector)
 
+// Label is the predicate function for label builders.
+type Label func(*sql.Selector)
+
 // Organization is the predicate function for organization builders.
 type Organization func(*sql.Selector)
 

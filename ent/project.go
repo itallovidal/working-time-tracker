@@ -64,9 +64,11 @@ type ProjectEdges struct {
 	Integrations []*Integration `json:"integrations,omitempty"`
 	// Allocations holds the value of the allocations edge.
 	Allocations []*Allocation `json:"allocations,omitempty"`
+	// Labels holds the value of the labels edge.
+	Labels []*Label `json:"labels,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [6]bool
+	loadedTypes [7]bool
 }
 
 // OrganizationOrErr returns the Organization value or an error if the edge
@@ -125,6 +127,15 @@ func (e ProjectEdges) AllocationsOrErr() ([]*Allocation, error) {
 		return e.Allocations, nil
 	}
 	return nil, &NotLoadedError{edge: "allocations"}
+}
+
+// LabelsOrErr returns the Labels value or an error if the edge
+// was not loaded in eager-loading.
+func (e ProjectEdges) LabelsOrErr() ([]*Label, error) {
+	if e.loadedTypes[6] {
+		return e.Labels, nil
+	}
+	return nil, &NotLoadedError{edge: "labels"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -283,6 +294,11 @@ func (_m *Project) QueryIntegrations() *IntegrationQuery {
 // QueryAllocations queries the "allocations" edge of the Project entity.
 func (_m *Project) QueryAllocations() *AllocationQuery {
 	return NewProjectClient(_m.config).QueryAllocations(_m)
+}
+
+// QueryLabels queries the "labels" edge of the Project entity.
+func (_m *Project) QueryLabels() *LabelQuery {
+	return NewProjectClient(_m.config).QueryLabels(_m)
 }
 
 // Update returns a builder for updating this Project.

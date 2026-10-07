@@ -29,11 +29,14 @@ func (h *Handler) Create(c *echo.Context) error {
 		Description string     `json:"description"`
 		AssigneeID  string     `json:"assignee_id"`
 		Deadline    *time.Time `json:"deadline"`
+		Priority    *string    `json:"priority"`
+		LabelIDs    *[]string  `json:"label_ids"`
 	}
 	if err := c.Bind(&body); err != nil {
 		return apperr.Respond(c, 400, apperr.ErrInvalidBody)
 	}
-	task, err := h.svc.CreateAs(selfID(c), projectID, body.Name, body.Description, body.AssigneeID, body.Deadline)
+	task, err := h.svc.CreateAs(selfID(c), projectID, body.Name, body.Description, body.AssigneeID, body.Deadline,
+		Attrs{Priority: body.Priority, LabelIDs: body.LabelIDs})
 	if err != nil {
 		return apperr.Respond(c, 400, err)
 	}
@@ -44,8 +47,10 @@ func (h *Handler) Create(c *echo.Context) error {
 const maxQueryLen = 100
 
 // parseListFilter lê os filtros da lista na query string: q, assignee_id,
-// deadline_to, page e per_page. Todos são opcionais. assignee_id=none lista só
-// as tarefas sem responsável.
+// deadline_to, priority, label_id, page e per_page. Todos são opcionais.
+// assignee_id=none lista só as tarefas sem responsável; priority e label_id
+// aceitam vários valores separados por vírgula, e valem para a tarefa que tem
+// qualquer um deles.
 func parseListFilter(c *echo.Context) (ListFilter, error) {
 	var f ListFilter
 
@@ -68,6 +73,23 @@ func parseListFilter(c *echo.Context) (ListFilter, error) {
 			return f, ErrInvalidDeadlineFilter
 		}
 		f.DeadlineTo = &t
+	}
+	if v := c.QueryParam("priority"); v != "" {
+		for _, p := range strings.Split(v, ",") {
+			if !validPriority(p) {
+				return f, ErrInvalidPriorityFilter
+			}
+			f.Priorities = append(f.Priorities, p)
+		}
+	}
+	if v := c.QueryParam("label_id"); v != "" {
+		for _, l := range strings.Split(v, ",") {
+			id, err := uuid.Parse(l)
+			if err != nil {
+				return f, ErrInvalidLabelFilter
+			}
+			f.LabelIDs = append(f.LabelIDs, id)
+		}
 	}
 	if v := c.QueryParam("page"); v != "" {
 		n, err := strconv.Atoi(v)
@@ -127,11 +149,14 @@ func (h *Handler) Update(c *echo.Context) error {
 		Description string     `json:"description"`
 		AssigneeID  *string    `json:"assignee_id"`
 		Deadline    *time.Time `json:"deadline"`
+		Priority    *string    `json:"priority"`
+		LabelIDs    *[]string  `json:"label_ids"`
 	}
 	if err := c.Bind(&body); err != nil {
 		return apperr.Respond(c, 400, apperr.ErrInvalidBody)
 	}
-	task, err := h.svc.UpdateAs(selfID(c), id, body.Name, body.Description, body.AssigneeID, body.Deadline)
+	task, err := h.svc.UpdateAs(selfID(c), id, body.Name, body.Description, body.AssigneeID, body.Deadline,
+		Attrs{Priority: body.Priority, LabelIDs: body.LabelIDs})
 	if err != nil {
 		return apperr.Respond(c, 400, err)
 	}
@@ -193,4 +218,63 @@ func selfID(c *echo.Context) string {
 		return me.PersonID.String()
 	}
 	return ""
+}
+
+// labelFail responde ao erro de uma rota de etiqueta: um projeto ou uma etiqueta
+// que não existe é 404; os erros de validação, 400.
+func labelFail(c *echo.Context, err error) error {
+	if err == database.ErrNotFound {
+		return apperr.Respond(c, 404, ErrLabelNotFound)
+	}
+	if _, ok := err.(*apperr.Error); ok {
+		return apperr.Respond(c, 400, err)
+	}
+	return apperr.Respond(c, 500, err)
+}
+
+// ListLabels lista as etiquetas do projeto. Todos do projeto leem.
+func (h *Handler) ListLabels(c *echo.Context) error {
+	labels, err := h.svc.ListLabels(c.Param("projectId"))
+	if err != nil {
+		return labelFail(c, err)
+	}
+	return c.JSON(200, labels)
+}
+
+// CreateLabel cria uma etiqueta no projeto. A rota é só de admins.
+func (h *Handler) CreateLabel(c *echo.Context) error {
+	var body struct {
+		Name string `json:"name"`
+	}
+	if err := c.Bind(&body); err != nil {
+		return apperr.Respond(c, 400, apperr.ErrInvalidBody)
+	}
+	label, err := h.svc.CreateLabel(c.Param("projectId"), body.Name)
+	if err != nil {
+		return labelFail(c, err)
+	}
+	return c.JSON(201, label)
+}
+
+// RenameLabel troca o nome de uma etiqueta. A rota é só de admins.
+func (h *Handler) RenameLabel(c *echo.Context) error {
+	var body struct {
+		Name string `json:"name"`
+	}
+	if err := c.Bind(&body); err != nil {
+		return apperr.Respond(c, 400, apperr.ErrInvalidBody)
+	}
+	label, err := h.svc.RenameLabel(c.Param("projectId"), c.Param("labelId"), body.Name)
+	if err != nil {
+		return labelFail(c, err)
+	}
+	return c.JSON(200, label)
+}
+
+// DeleteLabel exclui uma etiqueta; as tarefas só a perdem. A rota é só de admins.
+func (h *Handler) DeleteLabel(c *echo.Context) error {
+	if err := h.svc.DeleteLabel(c.Param("projectId"), c.Param("labelId")); err != nil {
+		return labelFail(c, err)
+	}
+	return c.NoContent(204)
 }

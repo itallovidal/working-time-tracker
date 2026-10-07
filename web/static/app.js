@@ -126,6 +126,9 @@
     { value: 'sunday', label: t('labels.weekday.sunday') },
   ];
 
+  // As prioridades de uma tarefa, da mais para a menos urgente. O value é o código do backend.
+  const priorities = ['urgent', 'high', 'medium', 'low', 'none'].map((value) => ({ value, label: t('tasks.priority.' + value) }));
+
   const orgSizes = [
     { value: '1-10', label: t('labels.org_size.s1_10') },
     { value: '11-50', label: t('labels.org_size.s11_50') },
@@ -228,6 +231,10 @@
     role(role) {
       return t(role === 'admin' ? 'roles.admin' : 'roles.member');
     },
+    priority(value) {
+      const p = priorities.find((x) => x.value === value);
+      return p ? p.label : value;
+    },
     weekday(value) {
       const d = weekdays.find((w) => w.value === value);
       return d ? d.label : value;
@@ -327,7 +334,7 @@
   // O que as telas mostram no lugar de um campo de cadastro sem valor.
   const notInformed = t('labels.not_informed');
 
-  window.WTT = { t, lang, errorText, api, ApiError, form, fmt, toCents, copyText, notInformed, weekdays, routine, sprintOptions, sprintChoices, orgSizes, workModes, currencies, boot: window.BOOT || {} };
+  window.WTT = { t, lang, errorText, api, ApiError, form, fmt, toCents, copyText, notInformed, weekdays, priorities, routine, sprintOptions, sprintChoices, orgSizes, workModes, currencies, boot: window.BOOT || {} };
 
   // Onde flash() deixa a mensagem para a página seguinte.
   const flashKey = 'wtt:flash';

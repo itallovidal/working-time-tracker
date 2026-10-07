@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 	"working-time-tracker/ent/integration"
+	"working-time-tracker/ent/label"
 	"working-time-tracker/ent/person"
 	"working-time-tracker/ent/project"
 	"working-time-tracker/ent/task"
@@ -47,6 +48,20 @@ func (_c *TaskCreate) SetDescription(v string) *TaskCreate {
 func (_c *TaskCreate) SetNillableDescription(v *string) *TaskCreate {
 	if v != nil {
 		_c.SetDescription(*v)
+	}
+	return _c
+}
+
+// SetPriority sets the "priority" field.
+func (_c *TaskCreate) SetPriority(v task.Priority) *TaskCreate {
+	_c.mutation.SetPriority(v)
+	return _c
+}
+
+// SetNillablePriority sets the "priority" field if the given value is not nil.
+func (_c *TaskCreate) SetNillablePriority(v *task.Priority) *TaskCreate {
+	if v != nil {
+		_c.SetPriority(*v)
 	}
 	return _c
 }
@@ -179,6 +194,21 @@ func (_c *TaskCreate) AddWorkSessions(v ...*WorkSession) *TaskCreate {
 	return _c.AddWorkSessionIDs(ids...)
 }
 
+// AddLabelIDs adds the "labels" edge to the Label entity by IDs.
+func (_c *TaskCreate) AddLabelIDs(ids ...uuid.UUID) *TaskCreate {
+	_c.mutation.AddLabelIDs(ids...)
+	return _c
+}
+
+// AddLabels adds the "labels" edges to the Label entity.
+func (_c *TaskCreate) AddLabels(v ...*Label) *TaskCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddLabelIDs(ids...)
+}
+
 // Mutation returns the TaskMutation object of the builder.
 func (_c *TaskCreate) Mutation() *TaskMutation {
 	return _c.mutation
@@ -214,6 +244,10 @@ func (_c *TaskCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (_c *TaskCreate) defaults() {
+	if _, ok := _c.mutation.Priority(); !ok {
+		v := task.DefaultPriority
+		_c.mutation.SetPriority(v)
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := task.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
@@ -231,6 +265,14 @@ func (_c *TaskCreate) check() error {
 	}
 	if _, ok := _c.mutation.Name(); !ok {
 		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "Task.name"`)}
+	}
+	if _, ok := _c.mutation.Priority(); !ok {
+		return &ValidationError{Name: "priority", err: errors.New(`ent: missing required field "Task.priority"`)}
+	}
+	if v, ok := _c.mutation.Priority(); ok {
+		if err := task.PriorityValidator(v); err != nil {
+			return &ValidationError{Name: "priority", err: fmt.Errorf(`ent: validator failed for field "Task.priority": %w`, err)}
+		}
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "Task.created_at"`)}
@@ -280,6 +322,10 @@ func (_c *TaskCreate) createSpec() (*Task, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Description(); ok {
 		_spec.SetField(task.FieldDescription, field.TypeString, value)
 		_node.Description = value
+	}
+	if value, ok := _c.mutation.Priority(); ok {
+		_spec.SetField(task.FieldPriority, field.TypeEnum, value)
+		_node.Priority = value
 	}
 	if value, ok := _c.mutation.Deadline(); ok {
 		_spec.SetField(task.FieldDeadline, field.TypeTime, value)
@@ -357,6 +403,22 @@ func (_c *TaskCreate) createSpec() (*Task, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(worksession.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.LabelsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   task.LabelsTable,
+			Columns: task.LabelsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(label.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

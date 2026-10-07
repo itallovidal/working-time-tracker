@@ -126,6 +126,34 @@ var (
 			},
 		},
 	}
+	// LabelsColumns holds the columns for the "labels" table.
+	LabelsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "name", Type: field.TypeString},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "project_id", Type: field.TypeUUID},
+	}
+	// LabelsTable holds the schema information for the "labels" table.
+	LabelsTable = &schema.Table{
+		Name:       "labels",
+		Columns:    LabelsColumns,
+		PrimaryKey: []*schema.Column{LabelsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "labels_projects_labels",
+				Columns:    []*schema.Column{LabelsColumns[3]},
+				RefColumns: []*schema.Column{ProjectsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "label_project_id_name",
+				Unique:  true,
+				Columns: []*schema.Column{LabelsColumns[3], LabelsColumns[1]},
+			},
+		},
+	}
 	// OrganizationsColumns holds the columns for the "organizations" table.
 	OrganizationsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -254,6 +282,7 @@ var (
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "name", Type: field.TypeString},
 		{Name: "description", Type: field.TypeString, Nullable: true},
+		{Name: "priority", Type: field.TypeEnum, Enums: []string{"urgent", "high", "medium", "low", "none"}, Default: "none"},
 		{Name: "deadline", Type: field.TypeTime, Nullable: true},
 		{Name: "external_item_id", Type: field.TypeString, Nullable: true},
 		{Name: "external_item_url", Type: field.TypeString, Nullable: true},
@@ -270,19 +299,19 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "tasks_integrations_tasks",
-				Columns:    []*schema.Column{TasksColumns[7]},
+				Columns:    []*schema.Column{TasksColumns[8]},
 				RefColumns: []*schema.Column{IntegrationsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "tasks_persons_tasks",
-				Columns:    []*schema.Column{TasksColumns[8]},
+				Columns:    []*schema.Column{TasksColumns[9]},
 				RefColumns: []*schema.Column{PersonsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "tasks_projects_tasks",
-				Columns:    []*schema.Column{TasksColumns[9]},
+				Columns:    []*schema.Column{TasksColumns[10]},
 				RefColumns: []*schema.Column{ProjectsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -384,12 +413,38 @@ var (
 			},
 		},
 	}
+	// TaskLabelsColumns holds the columns for the "task_labels" table.
+	TaskLabelsColumns = []*schema.Column{
+		{Name: "task_id", Type: field.TypeUUID},
+		{Name: "label_id", Type: field.TypeUUID},
+	}
+	// TaskLabelsTable holds the schema information for the "task_labels" table.
+	TaskLabelsTable = &schema.Table{
+		Name:       "task_labels",
+		Columns:    TaskLabelsColumns,
+		PrimaryKey: []*schema.Column{TaskLabelsColumns[0], TaskLabelsColumns[1]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "task_labels_task_id",
+				Columns:    []*schema.Column{TaskLabelsColumns[0]},
+				RefColumns: []*schema.Column{TasksColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "task_labels_label_id",
+				Columns:    []*schema.Column{TaskLabelsColumns[1]},
+				RefColumns: []*schema.Column{LabelsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		AllocationsTable,
 		CustomersTable,
 		IntegrationsTable,
 		InvitesTable,
+		LabelsTable,
 		OrganizationsTable,
 		PersonsTable,
 		ProjectsTable,
@@ -398,6 +453,7 @@ var (
 		TeamsTable,
 		TeamMembershipsTable,
 		WorkSessionsTable,
+		TaskLabelsTable,
 	}
 )
 
@@ -408,6 +464,7 @@ func init() {
 	IntegrationsTable.ForeignKeys[0].RefTable = ProjectsTable
 	InvitesTable.ForeignKeys[0].RefTable = OrganizationsTable
 	InvitesTable.ForeignKeys[1].RefTable = PersonsTable
+	LabelsTable.ForeignKeys[0].RefTable = ProjectsTable
 	PersonsTable.ForeignKeys[0].RefTable = OrganizationsTable
 	ProjectsTable.ForeignKeys[0].RefTable = CustomersTable
 	ProjectsTable.ForeignKeys[1].RefTable = OrganizationsTable
@@ -420,4 +477,6 @@ func init() {
 	TeamMembershipsTable.ForeignKeys[1].RefTable = TeamsTable
 	WorkSessionsTable.ForeignKeys[0].RefTable = PersonsTable
 	WorkSessionsTable.ForeignKeys[1].RefTable = TasksTable
+	TaskLabelsTable.ForeignKeys[0].RefTable = TasksTable
+	TaskLabelsTable.ForeignKeys[1].RefTable = LabelsTable
 }

@@ -51,6 +51,8 @@ const (
 	EdgeIntegrations = "integrations"
 	// EdgeAllocations holds the string denoting the allocations edge name in mutations.
 	EdgeAllocations = "allocations"
+	// EdgeLabels holds the string denoting the labels edge name in mutations.
+	EdgeLabels = "labels"
 	// Table holds the table name of the project in the database.
 	Table = "projects"
 	// OrganizationTable is the table that holds the organization relation/edge.
@@ -95,6 +97,13 @@ const (
 	AllocationsInverseTable = "allocations"
 	// AllocationsColumn is the table column denoting the allocations relation/edge.
 	AllocationsColumn = "project_id"
+	// LabelsTable is the table that holds the labels relation/edge.
+	LabelsTable = "labels"
+	// LabelsInverseTable is the table name for the Label entity.
+	// It exists in this package in order to avoid circular dependency with the "label" package.
+	LabelsInverseTable = "labels"
+	// LabelsColumn is the table column denoting the labels relation/edge.
+	LabelsColumn = "project_id"
 )
 
 // Columns holds all SQL columns for project fields.
@@ -272,6 +281,20 @@ func ByAllocations(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newAllocationsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByLabelsCount orders the results by labels count.
+func ByLabelsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newLabelsStep(), opts...)
+	}
+}
+
+// ByLabels orders the results by labels terms.
+func ByLabels(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newLabelsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newOrganizationStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -312,5 +335,12 @@ func newAllocationsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(AllocationsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, AllocationsTable, AllocationsColumn),
+	)
+}
+func newLabelsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(LabelsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, LabelsTable, LabelsColumn),
 	)
 }

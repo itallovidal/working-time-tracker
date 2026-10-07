@@ -56,6 +56,18 @@ func (f InviteFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, erro
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.InviteMutation", m)
 }
 
+// The LabelFunc type is an adapter to allow the use of ordinary
+// function as Label mutator.
+type LabelFunc func(context.Context, *ent.LabelMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f LabelFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.LabelMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.LabelMutation", m)
+}
+
 // The OrganizationFunc type is an adapter to allow the use of ordinary
 // function as Organization mutator.
 type OrganizationFunc func(context.Context, *ent.OrganizationMutation) (ent.Value, error)

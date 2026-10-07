@@ -428,6 +428,17 @@
 
 ---
 
+### Sprint 34: Priority and Labels on Tasks
+
+- [X] S34.1 `tasks.priority` (enum, default `none`) and the `labels` / `task_labels` tables, with a migration; labels belong to a project, with a unique name (case-insensitive in the service)
+- [X] S34.2 `GET/POST /api/projects/:projectId/labels` and `PATCH/DELETE .../labels/:labelId` (create, rename and delete are admin only); `priority` and `label_ids` in the task create/update bodies, `priority` and `labels` in the task JSON
+- [X] S34.3 The task list filters by `priority` and `label_id`, each with several comma-separated values (any of them), alone or together
+- [X] S34.4 The board: rows of toggle chips for priority and label, a priority column, labels under the task name; filters kept in the URL
+- [X] S34.5 New task and Edit task modals: priority select and label checkboxes, and, for admins, a field that creates a label on the spot; the task page shows both
+- [X] S34.6 Seed with priorities and labels; tests for the service, the API, the page markup and the migration; update README, design, routes, error codes and the Insomnia collection
+
+---
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open

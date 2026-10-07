@@ -12,6 +12,7 @@ import (
 	"working-time-tracker/ent/customer"
 	"working-time-tracker/ent/integration"
 	"working-time-tracker/ent/invite"
+	"working-time-tracker/ent/label"
 	"working-time-tracker/ent/organization"
 	"working-time-tracker/ent/person"
 	"working-time-tracker/ent/predicate"
@@ -40,6 +41,7 @@ const (
 	TypeCustomer       = "Customer"
 	TypeIntegration    = "Integration"
 	TypeInvite         = "Invite"
+	TypeLabel          = "Label"
 	TypeOrganization   = "Organization"
 	TypePerson         = "Person"
 	TypeProject        = "Project"
@@ -3258,6 +3260,585 @@ func (m *InviteMutation) ResetEdge(name string) error {
 		return nil
 	}
 	return fmt.Errorf("unknown Invite edge %s", name)
+}
+
+// LabelMutation represents an operation that mutates the Label nodes in the graph.
+type LabelMutation struct {
+	config
+	op             Op
+	typ            string
+	id             *uuid.UUID
+	name           *string
+	created_at     *time.Time
+	clearedFields  map[string]struct{}
+	project        *uuid.UUID
+	clearedproject bool
+	tasks          map[uuid.UUID]struct{}
+	removedtasks   map[uuid.UUID]struct{}
+	clearedtasks   bool
+	done           bool
+	oldValue       func(context.Context) (*Label, error)
+	predicates     []predicate.Label
+}
+
+var _ ent.Mutation = (*LabelMutation)(nil)
+
+// labelOption allows management of the mutation configuration using functional options.
+type labelOption func(*LabelMutation)
+
+// newLabelMutation creates new mutation for the Label entity.
+func newLabelMutation(c config, op Op, opts ...labelOption) *LabelMutation {
+	m := &LabelMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeLabel,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withLabelID sets the ID field of the mutation.
+func withLabelID(id uuid.UUID) labelOption {
+	return func(m *LabelMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *Label
+		)
+		m.oldValue = func(ctx context.Context) (*Label, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().Label.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withLabel sets the old Label of the mutation.
+func withLabel(node *Label) labelOption {
+	return func(m *LabelMutation) {
+		m.oldValue = func(context.Context) (*Label, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m LabelMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m LabelMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of Label entities.
+func (m *LabelMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *LabelMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *LabelMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().Label.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetProjectID sets the "project_id" field.
+func (m *LabelMutation) SetProjectID(u uuid.UUID) {
+	m.project = &u
+}
+
+// ProjectID returns the value of the "project_id" field in the mutation.
+func (m *LabelMutation) ProjectID() (r uuid.UUID, exists bool) {
+	v := m.project
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldProjectID returns the old "project_id" field's value of the Label entity.
+// If the Label object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LabelMutation) OldProjectID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldProjectID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldProjectID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldProjectID: %w", err)
+	}
+	return oldValue.ProjectID, nil
+}
+
+// ResetProjectID resets all changes to the "project_id" field.
+func (m *LabelMutation) ResetProjectID() {
+	m.project = nil
+}
+
+// SetName sets the "name" field.
+func (m *LabelMutation) SetName(s string) {
+	m.name = &s
+}
+
+// Name returns the value of the "name" field in the mutation.
+func (m *LabelMutation) Name() (r string, exists bool) {
+	v := m.name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldName returns the old "name" field's value of the Label entity.
+// If the Label object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LabelMutation) OldName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldName: %w", err)
+	}
+	return oldValue.Name, nil
+}
+
+// ResetName resets all changes to the "name" field.
+func (m *LabelMutation) ResetName() {
+	m.name = nil
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *LabelMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *LabelMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the Label entity.
+// If the Label object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LabelMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *LabelMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// ClearProject clears the "project" edge to the Project entity.
+func (m *LabelMutation) ClearProject() {
+	m.clearedproject = true
+	m.clearedFields[label.FieldProjectID] = struct{}{}
+}
+
+// ProjectCleared reports if the "project" edge to the Project entity was cleared.
+func (m *LabelMutation) ProjectCleared() bool {
+	return m.clearedproject
+}
+
+// ProjectIDs returns the "project" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ProjectID instead. It exists only for internal usage by the builders.
+func (m *LabelMutation) ProjectIDs() (ids []uuid.UUID) {
+	if id := m.project; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetProject resets all changes to the "project" edge.
+func (m *LabelMutation) ResetProject() {
+	m.project = nil
+	m.clearedproject = false
+}
+
+// AddTaskIDs adds the "tasks" edge to the Task entity by ids.
+func (m *LabelMutation) AddTaskIDs(ids ...uuid.UUID) {
+	if m.tasks == nil {
+		m.tasks = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.tasks[ids[i]] = struct{}{}
+	}
+}
+
+// ClearTasks clears the "tasks" edge to the Task entity.
+func (m *LabelMutation) ClearTasks() {
+	m.clearedtasks = true
+}
+
+// TasksCleared reports if the "tasks" edge to the Task entity was cleared.
+func (m *LabelMutation) TasksCleared() bool {
+	return m.clearedtasks
+}
+
+// RemoveTaskIDs removes the "tasks" edge to the Task entity by IDs.
+func (m *LabelMutation) RemoveTaskIDs(ids ...uuid.UUID) {
+	if m.removedtasks == nil {
+		m.removedtasks = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.tasks, ids[i])
+		m.removedtasks[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedTasks returns the removed IDs of the "tasks" edge to the Task entity.
+func (m *LabelMutation) RemovedTasksIDs() (ids []uuid.UUID) {
+	for id := range m.removedtasks {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// TasksIDs returns the "tasks" edge IDs in the mutation.
+func (m *LabelMutation) TasksIDs() (ids []uuid.UUID) {
+	for id := range m.tasks {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetTasks resets all changes to the "tasks" edge.
+func (m *LabelMutation) ResetTasks() {
+	m.tasks = nil
+	m.clearedtasks = false
+	m.removedtasks = nil
+}
+
+// Where appends a list predicates to the LabelMutation builder.
+func (m *LabelMutation) Where(ps ...predicate.Label) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the LabelMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *LabelMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.Label, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *LabelMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *LabelMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (Label).
+func (m *LabelMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *LabelMutation) Fields() []string {
+	fields := make([]string, 0, 3)
+	if m.project != nil {
+		fields = append(fields, label.FieldProjectID)
+	}
+	if m.name != nil {
+		fields = append(fields, label.FieldName)
+	}
+	if m.created_at != nil {
+		fields = append(fields, label.FieldCreatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *LabelMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case label.FieldProjectID:
+		return m.ProjectID()
+	case label.FieldName:
+		return m.Name()
+	case label.FieldCreatedAt:
+		return m.CreatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *LabelMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case label.FieldProjectID:
+		return m.OldProjectID(ctx)
+	case label.FieldName:
+		return m.OldName(ctx)
+	case label.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown Label field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *LabelMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case label.FieldProjectID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetProjectID(v)
+		return nil
+	case label.FieldName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetName(v)
+		return nil
+	case label.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown Label field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *LabelMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *LabelMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *LabelMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown Label numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *LabelMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *LabelMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *LabelMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown Label nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *LabelMutation) ResetField(name string) error {
+	switch name {
+	case label.FieldProjectID:
+		m.ResetProjectID()
+		return nil
+	case label.FieldName:
+		m.ResetName()
+		return nil
+	case label.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown Label field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *LabelMutation) AddedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.project != nil {
+		edges = append(edges, label.EdgeProject)
+	}
+	if m.tasks != nil {
+		edges = append(edges, label.EdgeTasks)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *LabelMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case label.EdgeProject:
+		if id := m.project; id != nil {
+			return []ent.Value{*id}
+		}
+	case label.EdgeTasks:
+		ids := make([]ent.Value, 0, len(m.tasks))
+		for id := range m.tasks {
+			ids = append(ids, id)
+		}
+		return ids
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *LabelMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.removedtasks != nil {
+		edges = append(edges, label.EdgeTasks)
+	}
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *LabelMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case label.EdgeTasks:
+		ids := make([]ent.Value, 0, len(m.removedtasks))
+		for id := range m.removedtasks {
+			ids = append(ids, id)
+		}
+		return ids
+	}
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *LabelMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.clearedproject {
+		edges = append(edges, label.EdgeProject)
+	}
+	if m.clearedtasks {
+		edges = append(edges, label.EdgeTasks)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *LabelMutation) EdgeCleared(name string) bool {
+	switch name {
+	case label.EdgeProject:
+		return m.clearedproject
+	case label.EdgeTasks:
+		return m.clearedtasks
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *LabelMutation) ClearEdge(name string) error {
+	switch name {
+	case label.EdgeProject:
+		m.ClearProject()
+		return nil
+	}
+	return fmt.Errorf("unknown Label unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *LabelMutation) ResetEdge(name string) error {
+	switch name {
+	case label.EdgeProject:
+		m.ResetProject()
+		return nil
+	case label.EdgeTasks:
+		m.ResetTasks()
+		return nil
+	}
+	return fmt.Errorf("unknown Label edge %s", name)
 }
 
 // OrganizationMutation represents an operation that mutates the Organization nodes in the graph.
@@ -6846,6 +7427,9 @@ type ProjectMutation struct {
 	allocations             map[uuid.UUID]struct{}
 	removedallocations      map[uuid.UUID]struct{}
 	clearedallocations      bool
+	labels                  map[uuid.UUID]struct{}
+	removedlabels           map[uuid.UUID]struct{}
+	clearedlabels           bool
 	done                    bool
 	oldValue                func(context.Context) (*Project, error)
 	predicates              []predicate.Project
@@ -7802,6 +8386,60 @@ func (m *ProjectMutation) ResetAllocations() {
 	m.removedallocations = nil
 }
 
+// AddLabelIDs adds the "labels" edge to the Label entity by ids.
+func (m *ProjectMutation) AddLabelIDs(ids ...uuid.UUID) {
+	if m.labels == nil {
+		m.labels = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.labels[ids[i]] = struct{}{}
+	}
+}
+
+// ClearLabels clears the "labels" edge to the Label entity.
+func (m *ProjectMutation) ClearLabels() {
+	m.clearedlabels = true
+}
+
+// LabelsCleared reports if the "labels" edge to the Label entity was cleared.
+func (m *ProjectMutation) LabelsCleared() bool {
+	return m.clearedlabels
+}
+
+// RemoveLabelIDs removes the "labels" edge to the Label entity by IDs.
+func (m *ProjectMutation) RemoveLabelIDs(ids ...uuid.UUID) {
+	if m.removedlabels == nil {
+		m.removedlabels = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.labels, ids[i])
+		m.removedlabels[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedLabels returns the removed IDs of the "labels" edge to the Label entity.
+func (m *ProjectMutation) RemovedLabelsIDs() (ids []uuid.UUID) {
+	for id := range m.removedlabels {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// LabelsIDs returns the "labels" edge IDs in the mutation.
+func (m *ProjectMutation) LabelsIDs() (ids []uuid.UUID) {
+	for id := range m.labels {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetLabels resets all changes to the "labels" edge.
+func (m *ProjectMutation) ResetLabels() {
+	m.labels = nil
+	m.clearedlabels = false
+	m.removedlabels = nil
+}
+
 // Where appends a list predicates to the ProjectMutation builder.
 func (m *ProjectMutation) Where(ps ...predicate.Project) {
 	m.predicates = append(m.predicates, ps...)
@@ -8200,7 +8838,7 @@ func (m *ProjectMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ProjectMutation) AddedEdges() []string {
-	edges := make([]string, 0, 6)
+	edges := make([]string, 0, 7)
 	if m.organization != nil {
 		edges = append(edges, project.EdgeOrganization)
 	}
@@ -8218,6 +8856,9 @@ func (m *ProjectMutation) AddedEdges() []string {
 	}
 	if m.allocations != nil {
 		edges = append(edges, project.EdgeAllocations)
+	}
+	if m.labels != nil {
+		edges = append(edges, project.EdgeLabels)
 	}
 	return edges
 }
@@ -8258,13 +8899,19 @@ func (m *ProjectMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case project.EdgeLabels:
+		ids := make([]ent.Value, 0, len(m.labels))
+		for id := range m.labels {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ProjectMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 6)
+	edges := make([]string, 0, 7)
 	if m.removedteams != nil {
 		edges = append(edges, project.EdgeTeams)
 	}
@@ -8276,6 +8923,9 @@ func (m *ProjectMutation) RemovedEdges() []string {
 	}
 	if m.removedallocations != nil {
 		edges = append(edges, project.EdgeAllocations)
+	}
+	if m.removedlabels != nil {
+		edges = append(edges, project.EdgeLabels)
 	}
 	return edges
 }
@@ -8308,13 +8958,19 @@ func (m *ProjectMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case project.EdgeLabels:
+		ids := make([]ent.Value, 0, len(m.removedlabels))
+		for id := range m.removedlabels {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ProjectMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 6)
+	edges := make([]string, 0, 7)
 	if m.clearedorganization {
 		edges = append(edges, project.EdgeOrganization)
 	}
@@ -8332,6 +8988,9 @@ func (m *ProjectMutation) ClearedEdges() []string {
 	}
 	if m.clearedallocations {
 		edges = append(edges, project.EdgeAllocations)
+	}
+	if m.clearedlabels {
+		edges = append(edges, project.EdgeLabels)
 	}
 	return edges
 }
@@ -8352,6 +9011,8 @@ func (m *ProjectMutation) EdgeCleared(name string) bool {
 		return m.clearedintegrations
 	case project.EdgeAllocations:
 		return m.clearedallocations
+	case project.EdgeLabels:
+		return m.clearedlabels
 	}
 	return false
 }
@@ -8391,6 +9052,9 @@ func (m *ProjectMutation) ResetEdge(name string) error {
 		return nil
 	case project.EdgeAllocations:
 		m.ResetAllocations()
+		return nil
+	case project.EdgeLabels:
+		m.ResetLabels()
 		return nil
 	}
 	return fmt.Errorf("unknown Project edge %s", name)
@@ -8952,6 +9616,7 @@ type TaskMutation struct {
 	id                          *uuid.UUID
 	name                        *string
 	description                 *string
+	priority                    *task.Priority
 	deadline                    *time.Time
 	external_item_id            *string
 	external_item_url           *string
@@ -8966,6 +9631,9 @@ type TaskMutation struct {
 	work_sessions               map[uuid.UUID]struct{}
 	removedwork_sessions        map[uuid.UUID]struct{}
 	clearedwork_sessions        bool
+	labels                      map[uuid.UUID]struct{}
+	removedlabels               map[uuid.UUID]struct{}
+	clearedlabels               bool
 	done                        bool
 	oldValue                    func(context.Context) (*Task, error)
 	predicates                  []predicate.Task
@@ -9194,6 +9862,42 @@ func (m *TaskMutation) DescriptionCleared() bool {
 func (m *TaskMutation) ResetDescription() {
 	m.description = nil
 	delete(m.clearedFields, task.FieldDescription)
+}
+
+// SetPriority sets the "priority" field.
+func (m *TaskMutation) SetPriority(t task.Priority) {
+	m.priority = &t
+}
+
+// Priority returns the value of the "priority" field in the mutation.
+func (m *TaskMutation) Priority() (r task.Priority, exists bool) {
+	v := m.priority
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPriority returns the old "priority" field's value of the Task entity.
+// If the Task object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TaskMutation) OldPriority(ctx context.Context) (v task.Priority, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPriority is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPriority requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPriority: %w", err)
+	}
+	return oldValue.Priority, nil
+}
+
+// ResetPriority resets all changes to the "priority" field.
+func (m *TaskMutation) ResetPriority() {
+	m.priority = nil
 }
 
 // SetAssigneeID sets the "assignee_id" field.
@@ -9612,6 +10316,60 @@ func (m *TaskMutation) ResetWorkSessions() {
 	m.removedwork_sessions = nil
 }
 
+// AddLabelIDs adds the "labels" edge to the Label entity by ids.
+func (m *TaskMutation) AddLabelIDs(ids ...uuid.UUID) {
+	if m.labels == nil {
+		m.labels = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.labels[ids[i]] = struct{}{}
+	}
+}
+
+// ClearLabels clears the "labels" edge to the Label entity.
+func (m *TaskMutation) ClearLabels() {
+	m.clearedlabels = true
+}
+
+// LabelsCleared reports if the "labels" edge to the Label entity was cleared.
+func (m *TaskMutation) LabelsCleared() bool {
+	return m.clearedlabels
+}
+
+// RemoveLabelIDs removes the "labels" edge to the Label entity by IDs.
+func (m *TaskMutation) RemoveLabelIDs(ids ...uuid.UUID) {
+	if m.removedlabels == nil {
+		m.removedlabels = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.labels, ids[i])
+		m.removedlabels[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedLabels returns the removed IDs of the "labels" edge to the Label entity.
+func (m *TaskMutation) RemovedLabelsIDs() (ids []uuid.UUID) {
+	for id := range m.removedlabels {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// LabelsIDs returns the "labels" edge IDs in the mutation.
+func (m *TaskMutation) LabelsIDs() (ids []uuid.UUID) {
+	for id := range m.labels {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetLabels resets all changes to the "labels" edge.
+func (m *TaskMutation) ResetLabels() {
+	m.labels = nil
+	m.clearedlabels = false
+	m.removedlabels = nil
+}
+
 // Where appends a list predicates to the TaskMutation builder.
 func (m *TaskMutation) Where(ps ...predicate.Task) {
 	m.predicates = append(m.predicates, ps...)
@@ -9646,7 +10404,7 @@ func (m *TaskMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *TaskMutation) Fields() []string {
-	fields := make([]string, 0, 9)
+	fields := make([]string, 0, 10)
 	if m.project != nil {
 		fields = append(fields, task.FieldProjectID)
 	}
@@ -9655,6 +10413,9 @@ func (m *TaskMutation) Fields() []string {
 	}
 	if m.description != nil {
 		fields = append(fields, task.FieldDescription)
+	}
+	if m.priority != nil {
+		fields = append(fields, task.FieldPriority)
 	}
 	if m.assignee != nil {
 		fields = append(fields, task.FieldAssigneeID)
@@ -9688,6 +10449,8 @@ func (m *TaskMutation) Field(name string) (ent.Value, bool) {
 		return m.Name()
 	case task.FieldDescription:
 		return m.Description()
+	case task.FieldPriority:
+		return m.Priority()
 	case task.FieldAssigneeID:
 		return m.AssigneeID()
 	case task.FieldDeadline:
@@ -9715,6 +10478,8 @@ func (m *TaskMutation) OldField(ctx context.Context, name string) (ent.Value, er
 		return m.OldName(ctx)
 	case task.FieldDescription:
 		return m.OldDescription(ctx)
+	case task.FieldPriority:
+		return m.OldPriority(ctx)
 	case task.FieldAssigneeID:
 		return m.OldAssigneeID(ctx)
 	case task.FieldDeadline:
@@ -9756,6 +10521,13 @@ func (m *TaskMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetDescription(v)
+		return nil
+	case task.FieldPriority:
+		v, ok := value.(task.Priority)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPriority(v)
 		return nil
 	case task.FieldAssigneeID:
 		v, ok := value.(uuid.UUID)
@@ -9896,6 +10668,9 @@ func (m *TaskMutation) ResetField(name string) error {
 	case task.FieldDescription:
 		m.ResetDescription()
 		return nil
+	case task.FieldPriority:
+		m.ResetPriority()
+		return nil
 	case task.FieldAssigneeID:
 		m.ResetAssigneeID()
 		return nil
@@ -9920,7 +10695,7 @@ func (m *TaskMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *TaskMutation) AddedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.project != nil {
 		edges = append(edges, task.EdgeProject)
 	}
@@ -9932,6 +10707,9 @@ func (m *TaskMutation) AddedEdges() []string {
 	}
 	if m.work_sessions != nil {
 		edges = append(edges, task.EdgeWorkSessions)
+	}
+	if m.labels != nil {
+		edges = append(edges, task.EdgeLabels)
 	}
 	return edges
 }
@@ -9958,15 +10736,24 @@ func (m *TaskMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case task.EdgeLabels:
+		ids := make([]ent.Value, 0, len(m.labels))
+		for id := range m.labels {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *TaskMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.removedwork_sessions != nil {
 		edges = append(edges, task.EdgeWorkSessions)
+	}
+	if m.removedlabels != nil {
+		edges = append(edges, task.EdgeLabels)
 	}
 	return edges
 }
@@ -9981,13 +10768,19 @@ func (m *TaskMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case task.EdgeLabels:
+		ids := make([]ent.Value, 0, len(m.removedlabels))
+		for id := range m.removedlabels {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *TaskMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.clearedproject {
 		edges = append(edges, task.EdgeProject)
 	}
@@ -9999,6 +10792,9 @@ func (m *TaskMutation) ClearedEdges() []string {
 	}
 	if m.clearedwork_sessions {
 		edges = append(edges, task.EdgeWorkSessions)
+	}
+	if m.clearedlabels {
+		edges = append(edges, task.EdgeLabels)
 	}
 	return edges
 }
@@ -10015,6 +10811,8 @@ func (m *TaskMutation) EdgeCleared(name string) bool {
 		return m.clearedexternal_integration
 	case task.EdgeWorkSessions:
 		return m.clearedwork_sessions
+	case task.EdgeLabels:
+		return m.clearedlabels
 	}
 	return false
 }
@@ -10051,6 +10849,9 @@ func (m *TaskMutation) ResetEdge(name string) error {
 		return nil
 	case task.EdgeWorkSessions:
 		m.ResetWorkSessions()
+		return nil
+	case task.EdgeLabels:
+		m.ResetLabels()
 		return nil
 	}
 	return fmt.Errorf("unknown Task edge %s", name)

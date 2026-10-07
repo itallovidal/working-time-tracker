@@ -308,6 +308,21 @@ tasks:
   unassigned: Sem responsável
   assign_me: Atribuir a mim
   assign_other: Outra pessoa
+  col_priority: Prioridade
+  priority_filter: Filtrar por prioridade
+  priority:
+    urgent: Urgente
+    high: Alta
+    medium: Média
+    low: Baixa
+    none: Sem prioridade
+  labels: Etiquetas
+  labels_filter: Filtrar por etiqueta
+  no_labels: Nenhuma
+  no_labels_admin: O projeto ainda não tem etiquetas. Crie a primeira abaixo.
+  no_labels_member: O projeto ainda não tem etiquetas. Peça a um admin para criar.
+  label_new: Nova etiqueta
+  label_create: Criar
   pick_person: Escolha a pessoa
   unassigned_hint: "Sem responsável, a tarefa fica disponível: quem bater o ponto nela passa a ser o responsável."
   only_mine: Só as minhas tarefas
@@ -799,6 +814,11 @@ errors:
     unsupported_type: "tipo de integração não suportado: {{.type}}"
   internal:
     server_error: "erro interno, tente de novo"
+  label:
+    name_required: "informe o nome da etiqueta"
+    name_taken: "o projeto já tem uma etiqueta com este nome"
+    name_too_long: "o nome da etiqueta aceita até {{.max}} caracteres"
+    not_found: "etiqueta não encontrada"
   organization:
     field_too_long: "{{.field}} pode ter até {{.max}} caracteres"
     has_projects: "exclua todos os projetos antes de excluir a organização"
@@ -847,8 +867,12 @@ errors:
     invalid_assignee: "responsável inválido"
     invalid_assignee_filter: "responsável inválido (assignee_id)"
     invalid_deadline_filter: "prazo inválido (deadline_to): use data e hora, como 2026-10-12T23:59:59Z"
+    invalid_label_filter: "etiqueta inválida (label_id): use ids separados por vírgula"
     invalid_page: "página inválida (page): use um número a partir de 1"
     invalid_per_page: "tamanho de página inválido (per_page): use um número a partir de 1"
+    invalid_priority: "prioridade inválida: use urgent, high, medium, low ou none"
+    invalid_priority_filter: "prioridade inválida (priority): use urgent, high, medium, low ou none, separadas por vírgula"
+    label_other_project: "uma das etiquetas não existe neste projeto"
     link_fields_required: "informe a integração, o item e o link"
     name_required: "informe o nome"
     no_external_item: "a tarefa não tem item externo vinculado"

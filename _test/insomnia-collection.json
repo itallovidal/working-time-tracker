@@ -24,7 +24,8 @@
         "task_id": "",
         "integration_id": "",
         "invite_id": "",
-        "invite_token": ""
+        "invite_token": "",
+        "label_id": ""
       }
     },
     {
@@ -745,6 +746,102 @@
       "url": "{{base_url}}/api/projects/{{project_id}}/tasks?q=tela&assignee_id={{person_id}}&deadline_to=2030-01-01T02:59:59Z&page=1&per_page=10",
       "authentication": {},
       "metaSortKey": 8,
+      "headers": [],
+      "body": {}
+    },
+    {
+      "_id": "req_06_09",
+      "_type": "request",
+      "parentId": "fld_06",
+      "name": "Listar etiquetas do projeto",
+      "method": "GET",
+      "url": "{{base_url}}/api/projects/{{project_id}}/labels",
+      "authentication": {},
+      "metaSortKey": 9,
+      "headers": [],
+      "body": {}
+    },
+    {
+      "_id": "req_06_10",
+      "_type": "request",
+      "parentId": "fld_06",
+      "name": "Criar etiqueta (admin)",
+      "method": "POST",
+      "url": "{{base_url}}/api/projects/{{project_id}}/labels",
+      "authentication": {},
+      "metaSortKey": 10,
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"bug\"\n}"
+      }
+    },
+    {
+      "_id": "req_06_11",
+      "_type": "request",
+      "parentId": "fld_06",
+      "name": "Renomear etiqueta (admin)",
+      "method": "PATCH",
+      "url": "{{base_url}}/api/projects/{{project_id}}/labels/{{label_id}}",
+      "authentication": {},
+      "metaSortKey": 11,
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"defeito\"\n}"
+      }
+    },
+    {
+      "_id": "req_06_12",
+      "_type": "request",
+      "parentId": "fld_06",
+      "name": "Excluir etiqueta (admin)",
+      "method": "DELETE",
+      "url": "{{base_url}}/api/projects/{{project_id}}/labels/{{label_id}}",
+      "authentication": {},
+      "metaSortKey": 12,
+      "headers": [],
+      "body": {}
+    },
+    {
+      "_id": "req_06_13",
+      "_type": "request",
+      "parentId": "fld_06",
+      "name": "Criar tarefa com prioridade e etiquetas",
+      "method": "POST",
+      "url": "{{base_url}}/api/projects/{{project_id}}/tasks",
+      "authentication": {},
+      "metaSortKey": 13,
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Corrigir o frete\",\n  \"priority\": \"high\",\n  \"label_ids\": [\n    \"{{label_id}}\"\n  ]\n}"
+      }
+    },
+    {
+      "_id": "req_06_14",
+      "_type": "request",
+      "parentId": "fld_06",
+      "name": "Listar tarefas por prioridade e etiqueta",
+      "method": "GET",
+      "url": "{{base_url}}/api/projects/{{project_id}}/tasks?priority=urgent,high&label_id={{label_id}}&page=1",
+      "authentication": {},
+      "metaSortKey": 14,
       "headers": [],
       "body": {}
     },

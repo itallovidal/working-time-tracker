@@ -7,6 +7,44 @@ document.addEventListener('alpine:init', () => {
   const clock = () => Alpine.store('clock');
   const DAY = 24 * 60 * 60 * 1000;
 
+  // priorityClass é a cor do selo de prioridade; "sem prioridade" não tem selo.
+  const priorityClass = (p) => ({ urgent: 'badge-danger', high: 'badge-warn', medium: 'badge-accent' }[p] || '');
+  const byLabelName = (a, b) => a.name.localeCompare(b.name, WTT.lang);
+
+  // labelTools é o que as telas que escolhem etiquetas têm em comum: a lista do projeto e,
+  // para admins, criar uma na hora. O rascunho de quem usa guarda os ids marcados.
+  const labelTools = () => ({
+    labels: [], // as etiquetas do projeto
+    newLabel: '',
+    isAdmin: me.role === 'admin',
+    async loadLabels() {
+      try {
+        this.labels = ((await api('GET', '/api/projects/' + project.id + '/labels')) || []).sort(byLabelName);
+      } catch (e) {
+        this.errors.label = e.message;
+      }
+    },
+    // createLabel cria a etiqueta digitada (só admins) e a marca em ids. Um nome que o
+    // projeto já tem só marca a que existe, sem diferenciar maiúsculas.
+    createLabel(ids) {
+      const name = this.newLabel.trim();
+      if (!name) return undefined;
+      const existing = this.labels.find((l) => l.name.toLowerCase() === name.toLowerCase());
+      if (existing) {
+        if (!ids.includes(existing.id)) ids.push(existing.id);
+        this.newLabel = '';
+        return undefined;
+      }
+      return this.run('label', async () => {
+        const l = await api('POST', '/api/projects/' + project.id + '/labels', { name });
+        this.labels = [...this.labels, l].sort(byLabelName);
+        ids.push(l.id);
+        this.newLabel = '';
+      });
+    },
+    priorityClass,
+  });
+
   // deadlineInfo descreve o prazo de uma tarefa para o badge: atrasada, vencendo
   // nas próximas 48 horas ou só a data.
   function deadlineInfo(iso) {
@@ -234,20 +272,26 @@ document.addEventListener('alpine:init', () => {
     total: 0,
     page: 1,
     perPage: 10,
-    members: [], // quem está nos times: pode ser responsável por tarefa nova
+    ...labelTools(),
+    members: [], // quem está no projeto: pode ser responsável por tarefa nova
     assignees: [], // quem já é responsável por alguma tarefa, mesmo fora dos times
     // mine é a caixa "Só as minhas tarefas": ligada, prende o responsável em
     // quem está logado e desliga a busca e o filtro de responsável.
-    filters: { q: '', assignee: '', due: '', date: '', mine: false },
+    // priority e label são listas: a tarefa passa se tem qualquer uma das marcadas.
+    filters: { q: '', assignee: '', due: '', date: '', mine: false, priority: [], label: [] },
     dueOptions,
     seq: 0,
-    draft: { name: '', description: '', assign: 'none', assignee_id: '', deadline: '' }, // assign: me, none ou other
+    draft: { name: '', description: '', assign: 'none', assignee_id: '', deadline: '', priority: 'none', label_ids: [] }, // assign: me, none ou other
     async init() {
       this.readURL();
       const members = api('GET', '/api/projects/' + project.id + '/members')
         .then((list) => { this.members = list || []; })
         .catch((e) => { this.errors.members = e.message; });
-      await Promise.all([members, this.load()]);
+      // As etiquetas vêm antes da primeira busca: uma etiqueta excluída que ainda está na
+      // URL sai do filtro, em vez de zerar a lista.
+      await Promise.all([members, this.loadLabels()]);
+      this.filters.label = this.filters.label.filter((id) => this.labels.some((l) => l.id === id));
+      await this.load();
       this.loading = false;
       // Bater o ponto numa tarefa sem responsável a passa para quem bateu.
       window.addEventListener('wtt:sessions-changed', () => this.load());
@@ -267,6 +311,8 @@ document.addEventListener('alpine:init', () => {
         due: isDate ? 'date' : (dueOptions.some((o) => o.value === due) ? due : ''),
         date: isDate ? due : '',
         mine,
+        priority: (p.get('priority') || '').split(',').filter((v) => WTT.priorities.some((o) => o.value === v)),
+        label: (p.get('label') || '').split(',').filter((v) => /^[0-9a-f-]{36}$/i.test(v)),
       };
       this.page = Math.max(1, parseInt(p.get('page'), 10) || 1);
     },
@@ -281,6 +327,8 @@ document.addEventListener('alpine:init', () => {
       }
       const due = f.due === 'date' ? f.date : f.due;
       if (due) p.set('due', due);
+      if (f.priority.length) p.set('priority', f.priority.join(','));
+      if (f.label.length) p.set('label', f.label.join(','));
       if (this.page > 1) p.set('page', this.page);
       const query = p.toString();
       history.replaceState(null, '', location.pathname + (query ? '?' + query : ''));
@@ -301,6 +349,8 @@ document.addEventListener('alpine:init', () => {
       if (f.assignee) p.set('assignee_id', f.assignee);
       const limit = dueLimit(f.due, f.date);
       if (limit) p.set('deadline_to', limit);
+      if (f.priority.length) p.set('priority', f.priority.join(','));
+      if (f.label.length) p.set('label_id', f.label.join(','));
       try {
         const res = await api('GET', '/api/projects/' + project.id + '/tasks?' + p);
         if (seq !== this.seq) return;
@@ -325,7 +375,13 @@ document.addEventListener('alpine:init', () => {
       return this.load();
     },
     clear() {
-      this.filters = { q: '', assignee: '', due: '', date: '', mine: false };
+      this.filters = { q: '', assignee: '', due: '', date: '', mine: false, priority: [], label: [] };
+      return this.apply();
+    },
+    // toggleFilter marca ou desmarca uma prioridade ou etiqueta do filtro.
+    toggleFilter(kind, value) {
+      const list = this.filters[kind];
+      this.filters[kind] = list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
       return this.apply();
     },
     // toggleMine liga ou desliga "Só as minhas tarefas". Ligada, a busca é
@@ -340,7 +396,7 @@ document.addEventListener('alpine:init', () => {
     },
     hasFilters() {
       const f = this.filters;
-      return !!(f.q.trim() || f.assignee || dueLimit(f.due, f.date));
+      return !!(f.q.trim() || f.assignee || dueLimit(f.due, f.date) || f.priority.length || f.label.length);
     },
     pages() {
       return Math.max(1, Math.ceil(this.total / this.perPage));
@@ -360,8 +416,10 @@ document.addEventListener('alpine:init', () => {
       return this.members.filter((m) => m.id !== me.id);
     },
     openCreate() {
-      this.draft = { name: '', description: '', assign: 'me', assignee_id: '', deadline: '' };
+      this.draft = { name: '', description: '', assign: 'me', assignee_id: '', deadline: '', priority: 'none', label_ids: [] };
+      this.newLabel = '';
       this.errors.create = '';
+      this.errors.label = '';
       Alpine.store('modal').open('task-new', WTT.t('tasks.new'), () => !this.pending);
     },
     create() {
@@ -371,6 +429,8 @@ document.addEventListener('alpine:init', () => {
           description: this.draft.description,
           assignee_id: { me: me.id, none: '', other: this.draft.assignee_id }[this.draft.assign],
           deadline: WTT.fmt.fromDateInput(this.draft.deadline),
+          priority: this.draft.priority,
+          label_ids: this.draft.label_ids,
         });
         Alpine.store('modal').close();
         // A tarefa nova é a primeira da lista, se os filtros em uso a mostrarem.
@@ -396,7 +456,8 @@ document.addEventListener('alpine:init', () => {
     members: [],
     integrations: [],
     sessions: [],
-    form: { name: '', description: '', assign: 'none', assignee_id: '', deadline: '' }, // assign: me, none ou other
+    ...labelTools(),
+    draft: { name: '', description: '', assign: 'none', assignee_id: '', deadline: '', priority: 'none', label_ids: [] }, // assign: me, none ou other
     linkForm: { integration_id: '', external_item_id: '', external_item_url: '' },
     external: { loading: false, details: null, error: '' },
     confirmDelete: false,
@@ -407,6 +468,7 @@ document.addEventListener('alpine:init', () => {
           api('GET', '/api/projects/' + project.id + '/members'),
           api('GET', '/api/projects/' + project.id + '/integrations'),
           api('GET', '/api/projects/' + project.id + '/work-sessions?task_id=' + this.taskId),
+          this.loadLabels(),
         ]);
         this.members = members || [];
         this.integrations = (integrations || []).filter((i) => i.enabled);
@@ -422,13 +484,15 @@ document.addEventListener('alpine:init', () => {
     },
     setTask(t) {
       this.task = t;
-      this.form = {
+      this.draft = {
         name: t.name,
         description: t.description || '',
         // Sem responsável, a própria pessoa, ou outra: é o que o modal pergunta.
         assign: !t.assignee_id ? 'none' : (t.assignee_id === me.id ? 'me' : 'other'),
         assignee_id: t.assignee_id && t.assignee_id !== me.id ? t.assignee_id : '',
         deadline: WTT.fmt.dateInput(t.deadline),
+        priority: t.priority || 'none',
+        label_ids: (t.labels || []).map((l) => l.id),
       };
       // Quem saiu dos times continua aparecendo como responsável atual.
       if (t.assignee && !this.members.some((m) => m.id === t.assignee_id)) {
@@ -458,6 +522,8 @@ document.addEventListener('alpine:init', () => {
       this.setTask(this.task);
       this.errors.save = '';
       this.errors.delete = '';
+      this.errors.label = '';
+      this.newLabel = '';
       this.confirmDelete = false;
       Alpine.store('modal').open('task-edit', WTT.t('task_detail.edit_title'), () => !this.pending);
     },
@@ -479,10 +545,12 @@ document.addEventListener('alpine:init', () => {
     save() {
       return this.run('save', async () => {
         const t = await api('PATCH', '/api/tasks/' + this.taskId, {
-          name: this.form.name,
-          description: this.form.description,
-          assignee_id: { me: me.id, none: '', other: this.form.assignee_id }[this.form.assign],
-          deadline: WTT.fmt.fromDateInput(this.form.deadline),
+          name: this.draft.name,
+          description: this.draft.description,
+          assignee_id: { me: me.id, none: '', other: this.draft.assignee_id }[this.draft.assign],
+          deadline: WTT.fmt.fromDateInput(this.draft.deadline),
+          priority: this.draft.priority,
+          label_ids: this.draft.label_ids,
         });
         this.setTask(t);
         Alpine.store('modal').close();

@@ -10,6 +10,7 @@ import (
 	"working-time-tracker/ent/allocation"
 	"working-time-tracker/ent/customer"
 	"working-time-tracker/ent/integration"
+	"working-time-tracker/ent/label"
 	"working-time-tracker/ent/organization"
 	"working-time-tracker/ent/predicate"
 	"working-time-tracker/ent/project"
@@ -37,6 +38,7 @@ type ProjectQuery struct {
 	withTasks        *TaskQuery
 	withIntegrations *IntegrationQuery
 	withAllocations  *AllocationQuery
+	withLabels       *LabelQuery
 	modifiers        []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -199,6 +201,28 @@ func (_q *ProjectQuery) QueryAllocations() *AllocationQuery {
 			sqlgraph.From(project.Table, project.FieldID, selector),
 			sqlgraph.To(allocation.Table, allocation.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, project.AllocationsTable, project.AllocationsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryLabels chains the current query on the "labels" edge.
+func (_q *ProjectQuery) QueryLabels() *LabelQuery {
+	query := (&LabelClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(project.Table, project.FieldID, selector),
+			sqlgraph.To(label.Table, label.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, project.LabelsTable, project.LabelsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -404,6 +428,7 @@ func (_q *ProjectQuery) Clone() *ProjectQuery {
 		withTasks:        _q.withTasks.Clone(),
 		withIntegrations: _q.withIntegrations.Clone(),
 		withAllocations:  _q.withAllocations.Clone(),
+		withLabels:       _q.withLabels.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -473,6 +498,17 @@ func (_q *ProjectQuery) WithAllocations(opts ...func(*AllocationQuery)) *Project
 		opt(query)
 	}
 	_q.withAllocations = query
+	return _q
+}
+
+// WithLabels tells the query-builder to eager-load the nodes that are connected to
+// the "labels" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *ProjectQuery) WithLabels(opts ...func(*LabelQuery)) *ProjectQuery {
+	query := (&LabelClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withLabels = query
 	return _q
 }
 
@@ -554,13 +590,14 @@ func (_q *ProjectQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Proj
 	var (
 		nodes       = []*Project{}
 		_spec       = _q.querySpec()
-		loadedTypes = [6]bool{
+		loadedTypes = [7]bool{
 			_q.withOrganization != nil,
 			_q.withCustomer != nil,
 			_q.withTeams != nil,
 			_q.withTasks != nil,
 			_q.withIntegrations != nil,
 			_q.withAllocations != nil,
+			_q.withLabels != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -621,6 +658,13 @@ func (_q *ProjectQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Proj
 		if err := _q.loadAllocations(ctx, query, nodes,
 			func(n *Project) { n.Edges.Allocations = []*Allocation{} },
 			func(n *Project, e *Allocation) { n.Edges.Allocations = append(n.Edges.Allocations, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withLabels; query != nil {
+		if err := _q.loadLabels(ctx, query, nodes,
+			func(n *Project) { n.Edges.Labels = []*Label{} },
+			func(n *Project, e *Label) { n.Edges.Labels = append(n.Edges.Labels, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -793,6 +837,36 @@ func (_q *ProjectQuery) loadAllocations(ctx context.Context, query *AllocationQu
 	}
 	query.Where(predicate.Allocation(func(s *sql.Selector) {
 		s.Where(sql.InValues(s.C(project.AllocationsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.ProjectID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "project_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *ProjectQuery) loadLabels(ctx context.Context, query *LabelQuery, nodes []*Project, init func(*Project), assign func(*Project, *Label)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Project)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(label.FieldProjectID)
+	}
+	query.Where(predicate.Label(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(project.LabelsColumn), fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
