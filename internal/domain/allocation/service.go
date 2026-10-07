@@ -27,9 +27,10 @@ func ids(projectID, personID string) (uuid.UUID, uuid.UUID, error) {
 	return prj, per, nil
 }
 
-// Set vincula a pessoa ao projeto com o valor dado, ou troca o valor de quem
-// já está vinculado. Zero vale: é alguém que trabalha no projeto sem receber
-// por hora.
+// Set põe a pessoa no projeto com o valor dado, ou troca o valor de quem já
+// está nele. Zero vale: é alguém que trabalha no projeto sem receber por hora.
+// Para tirar a pessoa do projeto, o caminho é collaborator.Service.Remove, que
+// apaga o valor e os times juntos: não há como ficar no projeto sem valor.
 func (s *Service) Set(projectID, personID string, payRateCents int) (*Allocation, error) {
 	if payRateCents < 0 || payRateCents > MaxRateCents {
 		return nil, ErrInvalidRate
@@ -49,14 +50,6 @@ func (s *Service) Set(projectID, personID string, payRateCents int) (*Allocation
 		return nil, err
 	}
 	return s.store.Get(prj, per)
-}
-
-func (s *Service) Remove(projectID, personID string) error {
-	prj, per, err := ids(projectID, personID)
-	if err != nil {
-		return err
-	}
-	return s.store.Delete(prj, per)
 }
 
 func (s *Service) ListByProject(projectID string) ([]Allocation, error) {

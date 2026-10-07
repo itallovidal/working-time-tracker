@@ -82,10 +82,3 @@ func (h *Handler) Set(c *echo.Context) error {
 	}
 	return c.JSON(http.StatusOK, a)
 }
-
-func (h *Handler) Remove(c *echo.Context) error {
-	if err := h.svc.Remove(c.Param("projectId"), c.Param("personId")); err != nil {
-		return fail(c, err)
-	}
-	return c.NoContent(http.StatusNoContent)
-}

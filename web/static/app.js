@@ -443,6 +443,27 @@
       },
     });
 
+    // tip é a dica de um número ou de um rótulo: um botão pequeno abre a
+    // explicação num balão, que fecha com Esc, com um clique fora e quando a
+    // janela muda de tamanho. O balão nasce alinhado à esquerda do bloco que
+    // o contém; place() o puxa de volta quando ele passaria da borda direita
+    // da fileira em que o bloco está, ou da tela.
+    Alpine.data('tip', () => ({
+      open: false,
+      toggle() {
+        this.open = !this.open;
+        if (this.open) this.$nextTick(() => this.place());
+      },
+      place() {
+        const pop = this.$refs.pop;
+        pop.style.left = '0px';
+        const row = this.$root.parentElement.getBoundingClientRect();
+        const limit = Math.min(row.right, document.documentElement.clientWidth - 16);
+        const over = pop.getBoundingClientRect().right - limit;
+        if (over > 0) pop.style.left = -over + 'px';
+      },
+    }));
+
     Alpine.data('activeSession', () => ({
       busy: false,
       async stop() {

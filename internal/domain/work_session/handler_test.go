@@ -70,15 +70,15 @@ func setupTestApp(t *testing.T) *testApp {
 	teamObj := mustCreate(t, e, "POST", "/api/projects/"+projectID+"/teams", `{"name":"Team A"}`)
 	teamID := jsonPath(teamObj, "id")
 
+	// A pessoa entra no projeto com o valor por hora: sem ele não entra no time
+	// nem bate ponto.
+	if _, err := allocation.NewService(allocation.NewStore(testClient)).Set(projectID, personID, 2000); err != nil {
+		t.Fatalf("set rate: %v", err)
+	}
 	mustCreate(t, e, "POST", "/api/teams/"+teamID+"/members", `{"person_id":"`+personID+`"}`)
 
 	taskObj := mustCreate(t, e, "POST", "/api/projects/"+projectID+"/tasks", `{"name":"Task A","assignee_id":"`+personID+`"}`)
 	taskID := jsonPath(taskObj, "id")
-
-	// Sem valor por hora no projeto a pessoa não bate ponto.
-	if _, err := allocation.NewService(allocation.NewStore(testClient)).Set(projectID, personID, 2000); err != nil {
-		t.Fatalf("set rate: %v", err)
-	}
 
 	return &testApp{
 		e:         e,

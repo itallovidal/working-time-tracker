@@ -54,8 +54,9 @@ var customers = []struct{ key, name, document, contact, email, phone string }{
 }
 
 // Os projetos. customer vazio é um projeto interno, sem valor cobrado. Em rates
-// está quanto cada pessoa recebe por hora no projeto, em centavos: o Bruno
-// recebe mais na API de Cobranças, que é mais complexa, do que nos outros.
+// está quem trabalha no projeto e quanto recebe por hora nele, em centavos: o
+// Bruno recebe mais na API de Cobranças, que é mais complexa, do que nos outros.
+// Os times só têm gente que está em rates.
 var projects = []struct {
 	key, customer, name, description string
 	sprintDays                       int
@@ -88,12 +89,12 @@ var projects = []struct {
 		rates: map[string]int{"carla": 5000, "diego": 5800, "elisa": 4000},
 	},
 	{
-		// O Diego está no time, mas ainda sem valor: a aba Colaboradores avisa, e
-		// ele não consegue bater ponto aqui até um admin definir.
+		// O Diego não está neste projeto: a aba Ponto daqui mostra a ele o ponto
+		// bloqueado, por falta de valor por hora.
 		key: "portal", customer: "vidaplena", name: "Portal do Paciente",
 		description: "Resultados de exames e histórico de consultas para o paciente.",
 		sprintDays:  14, billRate: 11500,
-		teams: map[string][]string{"Web": {"carla", "bruno", "diego"}},
+		teams: map[string][]string{"Web": {"carla", "bruno"}},
 		rates: map[string]int{"bruno": 5500, "carla": 5200},
 	},
 	{
@@ -332,6 +333,11 @@ func main() {
 			_, err := projectSvc.SetBilling(id, &cid, billRate)
 			must(err)
 		}
+		// O valor vem antes do time: é ele que põe a pessoa no projeto.
+		for who, cents := range p.rates {
+			_, err := allocationSvc.Set(id, person[who].PersonID.String(), cents)
+			must(err)
+		}
 		for teamName, members := range p.teams {
 			tm, err := teamSvc.Create(id, teamName)
 			must(err)
@@ -339,10 +345,6 @@ func main() {
 				_, err := membershipSvc.Add(tm.ID.String(), person[m].PersonID.String())
 				must(err)
 			}
-		}
-		for who, cents := range p.rates {
-			_, err := allocationSvc.Set(id, person[who].PersonID.String(), cents)
-			must(err)
 		}
 		seeded[p.key] = seededProject{id: id, billRate: billRate, rates: p.rates}
 	}

@@ -20,6 +20,13 @@ func (s *MembershipService) Add(teamID, personID string) (*TeamMembership, error
 	if !sameOrg {
 		return nil, ErrPersonNotInOrg
 	}
+	hasRate, err := s.store.HasRate(teamID, personID)
+	if err != nil {
+		return nil, err
+	}
+	if !hasRate {
+		return nil, ErrNoRate
+	}
 	exists, err := s.store.Exists(teamID, personID)
 	if err != nil {
 		return nil, err

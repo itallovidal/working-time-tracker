@@ -169,6 +169,20 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 .tabs a:hover { color: var(--ink); }
 .tabs a[aria-current="page"] { color: var(--accent); border-bottom-color: var(--accent); }
 
+/* Troca de visão dentro de uma aba: botões lado a lado numa trilha, para não
+   repetir o sublinhado das abas logo abaixo delas. */
+.segmented {
+  display: inline-flex; gap: 2px; padding: 3px;
+  background: var(--surface-2); border: 1px solid var(--rule); border-radius: var(--radius);
+}
+.segmented button {
+  font: inherit; font-weight: 550; font-size: 0.92rem; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 7px; padding: 6px 14px;
+  border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--muted); white-space: nowrap;
+}
+.segmented button:hover { color: var(--ink); }
+.segmented button[aria-selected="true"] { background: var(--surface); color: var(--accent); box-shadow: 0 0 0 1px var(--rule-strong); }
+
 /* ---------- Superfícies ---------- */
 .card {
   background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius);
@@ -213,7 +227,7 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 
 /* ---------- Formulários ---------- */
 .field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
-.field label { font-size: 0.84rem; font-weight: 600; color: var(--ink-2); }
+.field label, .field-label { font-size: 0.84rem; font-weight: 600; color: var(--ink-2); }
 .field .hint { font-size: 0.8rem; color: var(--muted); }
 .fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
 input, select, textarea {
@@ -222,8 +236,6 @@ input, select, textarea {
   padding: 8px 10px; width: 100%; min-width: 0;
 }
 textarea { resize: vertical; min-height: 72px; }
-/* Campo de valor em dinheiro: estreito e alinhado à direita, como numa planilha. */
-.input-money { width: 130px; text-align: right; }
 input:focus, select:focus, textarea:focus { outline: 2px solid var(--focus); outline-offset: -1px; border-color: transparent; }
 input[aria-invalid="true"] { border-color: var(--danger); }
 /* Campo desligado: sem isto ele fica igual aos outros, porque as cores acima
@@ -283,6 +295,15 @@ td.actions { text-align: right; white-space: nowrap; }
 .list > li { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--rule); }
 .list > li:last-child { border-bottom: 0; }
 .list .grow { flex: 1; min-width: 0; }
+/* Item de lista que abre algo: o botão ocupa a linha inteira, com a seta no fim. */
+.list-btn {
+  font: inherit; color: inherit; text-align: left; cursor: pointer;
+  display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0;
+  margin: -10px -8px; padding: 10px 8px; border: 0; border-radius: var(--radius-sm); background: transparent;
+}
+.list-btn:hover { background: var(--surface-2); }
+.list-btn .grow { display: flex; flex-direction: column; }
+.list-btn > i { color: var(--muted); font-size: 0.8rem; }
 /* Lista para escolher uma pessoa: rola por dentro, e a linha inteira marca a opção. */
 .picker { max-height: 232px; overflow-y: auto; border: 1px solid var(--rule); border-radius: var(--radius-sm); }
 .picker > li { padding: 0; }
@@ -290,6 +311,8 @@ td.actions { text-align: right; white-space: nowrap; }
 .pick:hover, .pick:has(:checked) { background: var(--surface-2); }
 .pick input { width: auto; flex: none; accent-color: var(--accent); }
 .pick .grow { display: flex; flex-direction: column; }
+/* Dentro de um campo, a opção não herda o estilo do rótulo do campo. */
+.field .pick { font-size: inherit; font-weight: inherit; color: inherit; }
 
 .empty {
   border: 1px dashed var(--rule-strong); border-radius: var(--radius); padding: 28px 20px;
@@ -351,6 +374,24 @@ td.actions { text-align: right; white-space: nowrap; }
 .total { background: var(--surface-2); border-radius: var(--radius-sm); padding: 10px 12px; }
 .total .v { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 1.25rem; font-weight: 600; }
 .total .k { font-size: 0.78rem; color: var(--muted); }
+
+/* Dica: um botão pequeno ao lado de um rótulo abre a explicação num balão, preso
+   a quem leva a classe has-tip. O componente tip, do app.js, abre, fecha e
+   mantém o balão dentro da tela. */
+.has-tip { position: relative; }
+.tip-btn {
+  font: inherit; font-size: 0.86rem; cursor: pointer; vertical-align: middle;
+  display: inline-grid; place-items: center; width: 20px; height: 20px; padding: 0;
+  border: 0; border-radius: 50%; background: transparent; color: var(--muted);
+}
+.tip-btn:hover, .tip-btn[aria-expanded="true"] { color: var(--accent); }
+.tip-pop {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 10;
+  width: max-content; max-width: min(300px, calc(100vw - 32px));
+  padding: 10px 12px; border: 1px solid var(--rule-strong); border-radius: var(--radius-sm);
+  background: var(--surface); color: var(--ink-2); box-shadow: var(--shadow);
+  font-size: 0.84rem; line-height: 1.45;
+}
 
 /* ---------- Autenticação ---------- */
 .auth-page { min-height: 100vh; display: grid; place-items: center; padding: 32px 16px; }

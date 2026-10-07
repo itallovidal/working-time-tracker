@@ -1,7 +1,10 @@
-// Package collaborator junta os dois vínculos de uma pessoa com um projeto: o
-// valor por hora (allocation), que libera o ponto, e os times, que deixam a
-// pessoa ser responsável por tarefas. Colaborador do projeto é quem tem pelo
-// menos um dos dois.
+// Package collaborator mostra quem está num projeto. A pessoa entra com o valor
+// por hora dela (allocation), que libera o ponto, e só então pode entrar nos
+// times, que a deixam ser responsável por tarefas.
+//
+// Antes dessa regra dava para pôr num time alguém sem valor. Quem ficou assim
+// num banco antigo continua na lista, sem valor, até um admin definir o valor
+// ou tirar a pessoa do projeto.
 package collaborator
 
 import "github.com/google/uuid"
@@ -20,9 +23,10 @@ type Team struct {
 type Collaborator struct {
 	Person Person `json:"person"`
 	// Teams são os times deste projeto em que a pessoa está, por nome. Fica
-	// vazio para quem tem valor e ainda não entrou em nenhum time.
+	// vazio para quem ainda não entrou em nenhum time.
 	Teams []Team `json:"teams"`
-	// PayRateCents é quanto a pessoa recebe por hora no projeto; nil quando ela
-	// ainda não tem valor, ou quando quem pergunta não pode ver.
+	// PayRateCents é quanto a pessoa recebe por hora no projeto; nil quando quem
+	// pergunta não pode ver, ou em quem entrou num time antes de o valor ser
+	// obrigatório.
 	PayRateCents *int `json:"pay_rate_cents"`
 }

@@ -107,16 +107,6 @@ func (s *Store) Rates(personID, projectID uuid.UUID) (payRateCents int, billRate
 	return a.PayRateCents, a.Edges.Project.BillRateCents, true, nil
 }
 
-func (s *Store) Delete(projectID, personID uuid.UUID) error {
-	n, err := s.client.Allocation.Delete().
-		Where(entalloc.ProjectIDEQ(projectID), entalloc.PersonIDEQ(personID)).
-		Exec(context.Background())
-	if err == nil && n == 0 {
-		return database.ErrNotFound
-	}
-	return err
-}
-
 // PersonInProjectOrganization diz se a pessoa existe e é da organização do projeto.
 func (s *Store) PersonInProjectOrganization(personID, projectID uuid.UUID) (bool, error) {
 	return s.client.Person.Query().

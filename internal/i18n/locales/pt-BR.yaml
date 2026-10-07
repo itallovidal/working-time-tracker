@@ -500,14 +500,13 @@ collab:
     one: Time
     other: Times
   no_team: Sem time
-  no_rate: Sem valor por hora
   missing_count:
     one: "{{.count}} pessoa está"
     other: "{{.count}} pessoas estão"
   missing_text: "neste projeto sem valor por hora:"
-  missing_blocked: Sem valor, o ponto fica bloqueado.
+  missing_blocked: "Abra a pessoa para definir o valor ou tirá-la do projeto: sem valor, o ponto fica bloqueado."
   people_title: Pessoas
-  people_intro: "Quem trabalha neste projeto: quem está em algum time ou tem valor por hora aqui."
+  people_intro: "Quem trabalha neste projeto. Cada pessoa entra com o valor que recebe por hora aqui."
   search_placeholder: Buscar por nome ou e-mail
   search_label: Buscar colaborador por nome ou e-mail
   add_person: Adicionar pessoa
@@ -520,18 +519,13 @@ collab:
   col_teams: Times
   col_rate: "Valor por hora ({{.unit}})"
   col_margin: Margem por hora
-  rate_placeholder: Sem valor
-  rate_label: "Valor por hora de {{.name}}"
-  remove_title: Remover do projeto
-  remove_label: "Remover {{.name}} do projeto"
-  remove_confirm: Tirar do projeto? Sai dos times e perde o valor.
-  remove: Remover
+  remove_confirm: "Tirar do projeto? Sai dos times e perde o valor. As tarefas e as horas ficam."
   bill_info_before: O cliente paga
   bill_info_after: "por hora neste projeto; a margem é a diferença para o que cada pessoa recebe."
   no_bill: Sem valor cobrado do cliente, a margem de cada pessoa não é calculada.
   change_in_settings: Alterar em Configurações
   teams_title: Times
-  teams_intro: Só quem está em algum time pode ser responsável por tarefas.
+  teams_intro: "Os times são montados com quem já está no projeto. Só quem está em algum time pode ser responsável por tarefas."
   new_team: Novo time
   no_teams: Nenhum time neste projeto
   no_teams_admin: Crie um time e ponha as pessoas nele.
@@ -545,24 +539,20 @@ collab:
   none_outside_search: Ninguém com esse nome ou e-mail fora do projeto.
   all_in: Todas as pessoas da organização já estão neste projeto.
   invite_link: Convidar alguém para a organização
-  rate_hint: Quanto a pessoa recebe aqui. Sem valor, ela não bate ponto.
+  rate_hint: "Obrigatório. Quanto a pessoa recebe por hora neste projeto."
   team: Time
   no_team_yet: Sem time por enquanto
-  team_hint: Quem está num time pode receber tarefas.
+  team_hint: "Opcional. Quem está num time pode receber tarefas."
   add_submit: Adicionar ao projeto
   team_name: Nome do time
   team_name_placeholder: "Ex.: Backend"
   create_team: Criar time
   members_label: Integrantes
   members_aria: Integrantes do time
-  outside: fora do projeto
-  no_match_short: Ninguém com esse nome ou e-mail.
-  edit_hint: Quem está num time pode receber tarefas. Quem vem de fora do projeto entra nele sem valor por hora.
+  edit_hint: "Quem está num time pode receber tarefas. A lista traz quem já está no projeto: quem é de fora entra antes por \"Adicionar pessoa\", com o valor por hora."
   delete_team_confirm: Excluir o time? As pessoas continuam na organização.
   delete_team: Excluir time
-  rate_invalid: Informe um valor, por exemplo 20,00.
   rate_required: Informe o valor por hora, por exemplo 20,00.
-  rate_saved: "Valor de {{.name}} salvo."
   left: "{{.name}} saiu do projeto."
   choose_person: Escolha uma pessoa.
   joined: "{{.name}} entrou no projeto."
@@ -571,6 +561,40 @@ collab:
   team_name_required: Informe o nome do time.
   team_saved: Time salvo.
   team_deleted: Time excluído.
+  margin_total: Margem por hora somada atual
+  margin_total_label: O que é a margem por hora somada atual
+  margin_total_tip: "A soma da margem por hora de cada pessoa do projeto, com os valores de hoje: o que o cliente paga por hora menos o que a pessoa recebe. É quanto o projeto ganha numa hora em que todos trabalham."
+  margin_total_no_bill: "Este projeto não tem valor cobrado do cliente, então não há margem para somar."
+  recorded: Valor das horas registradas
+  recorded_label: O que é o valor das horas registradas
+  recorded_tip: "A soma de todas as sessões de ponto já fechadas neste projeto: o tempo de cada uma vezes o valor por hora que a pessoa tinha quando bateu o ponto. Sessão em andamento só entra depois do clock-out."
+  recorded_so_far: "Até agora são {{.hours}} registradas."
+  view_label: Como ver quem está no projeto
+  no_rate_badge: Sem valor
+  edit_person: Editar colaborador
+  edit_person_label: "Editar {{.name}}"
+  pager: Páginas da lista de pessoas
+  prev: Anterior
+  next: Próxima
+  team_pager: "Páginas dos integrantes do time {{.name}}"
+  team_range: "{{.from}}–{{.to}} de {{.total}}"
+  members_prev: Integrantes anteriores
+  members_prev_label: "Integrantes anteriores do time {{.name}}"
+  members_next: Próximos integrantes
+  members_next_label: "Próximos integrantes do time {{.name}}"
+  no_match_project: "Ninguém com esse nome ou e-mail neste projeto."
+  person_rate_hint: Quanto a pessoa recebe por hora neste projeto.
+  margin_before: Margem de
+  margin_after: por hora.
+  team_tasks_hint: Quem está num time pode receber tarefas.
+  no_teams_yet: Este projeto ainda não tem times.
+  leave: Tirar
+  leave_project: Tirar do projeto
+  person_gone: "Esta pessoa não está mais no projeto."
+  person_saved: "Dados de {{.name}} salvos."
+  people_page:
+    one: "Página {{.page}} de {{.pages}} · {{.count}} pessoa"
+    other: "Página {{.page}} de {{.pages}} · {{.count}} pessoas"
 
 overview:
   intro: "O projeto em números: quem trabalha nele, quanto tempo foi registrado e o que esse tempo custou e rendeu."
@@ -815,6 +839,7 @@ errors:
     name_required: "informe o nome"
     not_found: "time não encontrado"
     person_not_in_org: "pessoa não encontrada nesta organização"
+    no_rate: "esta pessoa ainda não está no projeto: adicione-a com o valor por hora antes de colocá-la num time"
     person_required: "informe a pessoa (person_id)"
   work_session:
     already_open: "já existe um ponto aberto para esta pessoa; pare a sessão atual antes de iniciar outra"

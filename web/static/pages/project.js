@@ -710,70 +710,137 @@ document.addEventListener('alpine:init', () => {
   const fold = (s) => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
   const matches = (person, query) => !query || fold(person.name).includes(query) || fold(person.email).includes(query);
 
+  // byName ordena colaboradores pelo nome como se lê no idioma da tela. A API ordena
+  // pelos bytes, o que joga "Íris" para depois de "Nuno"; com a lista em
+  // páginas, a pessoa iria parar na página errada.
+  const byName = (a, b) => a.person.name.localeCompare(b.person.name, WTT.lang);
+
+  // As listas de pessoas da aba Colaboradores mostram no máximo cinco por vez:
+  // a tabela e os integrantes de cada cartão de time.
+  const PEOPLE_PER_PAGE = 5;
+
+  // paginate corta a lista na página pedida. Quando a lista encolheu (uma
+  // busca, alguém que saiu), a página pedida pode não existir mais, e vale a última.
+  function paginate(list, page) {
+    const pages = Math.max(1, Math.ceil(list.length / PEOPLE_PER_PAGE));
+    const current = Math.min(Math.max(1, page || 1), pages);
+    const start = (current - 1) * PEOPLE_PER_PAGE;
+    return {
+      rows: list.slice(start, start + PEOPLE_PER_PAGE),
+      page: current,
+      pages,
+      total: list.length,
+      from: list.length ? start + 1 : 0,
+      to: Math.min(start + PEOPLE_PER_PAGE, list.length),
+    };
+  }
+
   // A aba Colaboradores: quem está no projeto, com o valor por hora de cada
-  // pessoa, e os times. Colaborador é quem tem valor aqui ou está em algum time.
+  // pessoa, e os times. A pessoa entra no projeto com o valor dela e só depois
+  // pode entrar num time. As mesmas pessoas aparecem em duas visões, a lista de
+  // todas e os times, e tudo de uma pessoa muda no modal do colaborador.
   Alpine.data('projectTeams', () => ({
     ...form(),
     meId: me.id,
     loading: true,
-    collaborators: [], // { person, teams, pay_rate_cents, draft }; draft é o texto do campo de valor
+    view: new URLSearchParams(location.search).get('view') === 'teams' ? 'teams' : 'people',
+    collaborators: [], // { person, teams, pay_rate_cents }
     teams: [],
     billing: { customer: null, bill_rate_cents: null }, // o que o cliente paga; só admins recebem
     people: [], // todas as pessoas da organização, para os admins adicionarem
+    sessions: [], // as sessões de ponto do projeto, para o admin ver quanto as horas valem
     search: '',
+    page: 1, // a página da tabela de pessoas
+    teamPages: {}, // por time, a página dos integrantes no cartão
     confirming: null, // 'person-<id>' ou 'team-<id>'
     add: { search: '', person_id: '', rate: '', team_id: '' },
     newTeam: '',
-    // O rascunho do modal Editar time: o nome, quem está marcado e, em people, a
-    // organização inteira na ordem em que a lista aparece.
+    // O rascunho do modal Editar time: o nome, quem está marcado e, em people,
+    // quem está no projeto, na ordem em que a lista aparece.
     edit: { id: '', name: '', search: '', member_ids: [], people: [] },
+    // O rascunho do modal do colaborador: o valor por hora como texto e os times marcados.
+    person: { id: '', name: '', email: '', rate: '', team_ids: [] },
     async init() {
+      this.$watch('search', () => { this.page = 1; }); // uma busca nova começa da primeira página
       try {
         const admin = me.role === 'admin';
-        const [collaborators, teams, billing, people] = await Promise.all([
+        const [collaborators, teams, billing, people, sessions] = await Promise.all([
           api('GET', '/api/projects/' + project.id + '/collaborators'),
           api('GET', '/api/projects/' + project.id + '/teams'),
-          // O valor cobrado e a lista de quem pode entrar só servem às ações de admin.
+          // O valor cobrado, a lista de quem pode entrar e as sessões só servem ao admin.
           admin ? api('GET', '/api/projects/' + project.id + '/billing') : null,
           admin ? api('GET', '/api/orgs/' + me.organization_id + '/persons') : null,
+          admin ? api('GET', '/api/projects/' + project.id + '/work-sessions') : null,
         ]);
-        this.setCollaborators(collaborators);
+        this.collaborators = (collaborators || []).sort(byName);
         this.teams = teams || [];
         if (billing) this.billing = billing;
         this.people = people || [];
+        this.sessions = sessions || [];
       } catch (e) {
         this.errors.load = e.message;
       } finally {
         this.loading = false;
       }
     },
-    // setCollaborators troca a lista e mantém o que foi digitado, e ainda não
-    // salvo, no campo de valor de cada pessoa.
-    setCollaborators(list) {
-      const typed = new Map(this.collaborators.filter((c) => this.dirty(c)).map((c) => [c.person.id, c.draft]));
-      this.collaborators = (list || []).map((c) => ({
-        ...c,
-        draft: typed.has(c.person.id) ? typed.get(c.person.id) : WTT.fmt.moneyInput(c.pay_rate_cents),
-      }));
-    },
     // reload busca os colaboradores de novo: quem entra ou sai de um time, ou do
     // projeto, muda a tabela de pessoas e os cartões dos times de uma vez.
     async reload() {
-      this.setCollaborators(await api('GET', '/api/projects/' + project.id + '/collaborators'));
+      this.collaborators = ((await api('GET', '/api/projects/' + project.id + '/collaborators')) || []).sort(byName);
+    },
+    // setView troca entre a lista de pessoas e os times, e guarda a escolha na
+    // URL para um recarregamento cair na mesma visão.
+    setView(view) {
+      this.view = view;
+      history.replaceState(null, '', location.pathname + (view === 'teams' ? '?view=teams' : ''));
+    },
+    // focusView é a troca pelas setas do teclado: o foco acompanha a aba escolhida.
+    focusView(view) {
+      this.setView(view);
+      this.$nextTick(() => this.$refs[view === 'teams' ? 'tabTeams' : 'tabPeople'].focus());
     },
     rows() {
       const query = fold(this.search.trim());
       return this.collaborators.filter((c) => matches(c.person, query));
     },
+    peoplePage() {
+      return paginate(this.rows(), this.page);
+    },
+    peopleSummary() {
+      const p = this.peoplePage();
+      return WTT.t('collab.people_page', { page: p.page, pages: p.pages, count: p.total });
+    },
+    teamPage(team) {
+      return paginate(this.membersOf(team), this.teamPages[team.id]);
+    },
+    // margin é a soma das margens por hora de quem tem valor, com os valores
+    // de hoje: o que o projeto ganha numa hora em que todos trabalham. null sem
+    // valor cobrado do cliente.
     summary() {
+      const bill = this.billing.bill_rate_cents;
       return {
         people: this.collaborators.length,
         noTeam: this.collaborators.filter((c) => c.teams.length === 0).length,
         teams: this.teams.length,
-        noRate: this.missing().length,
+        margin: bill === null ? null : this.collaborators
+          .filter((c) => c.pay_rate_cents !== null)
+          .reduce((sum, c) => sum + bill - c.pay_rate_cents, 0),
       };
     },
-    // Quem está no projeto sem valor por hora: não bate ponto até um admin definir.
+    // recorded soma as sessões de ponto já fechadas do projeto e quanto elas
+    // valem: o tempo de cada uma vezes o valor por hora que a pessoa tinha
+    // quando o ponto abriu, na conta que o servidor fez ao fechar. A sessão em
+    // andamento fica de fora até o clock-out.
+    recorded() {
+      return this.sessions.reduce((total, s) => {
+        if (!s.end_at) return total;
+        total.seconds += clock().elapsed(s);
+        if (s.pay_amount_cents !== null && s.pay_amount_cents !== undefined) total.cents += s.pay_amount_cents;
+        return total;
+      }, { seconds: 0, cents: 0 });
+    },
+    // Quem entrou num time antes de o valor por hora ser obrigatório e ficou
+    // sem valor: não bate ponto até um admin definir. Hoje ninguém entra assim.
     missing() {
       return this.collaborators.filter((c) => c.pay_rate_cents === null);
     },
@@ -783,29 +850,69 @@ document.addEventListener('alpine:init', () => {
     inProject(person) {
       return this.collaborators.some((c) => c.person.id === person.id);
     },
-    dirty(c) {
-      return WTT.toCents(c.draft) !== c.pay_rate_cents;
-    },
     margin(c) {
       if (this.billing.bill_rate_cents === null || c.pay_rate_cents === null) return null;
       return this.billing.bill_rate_cents - c.pay_rate_cents;
     },
-    saveRate(c) {
-      return this.run('person-' + c.person.id, async () => {
-        const cents = WTT.toCents(c.draft);
-        if (cents === null) throw new Error(WTT.t('collab.rate_invalid'));
-        const a = await api('PUT', '/api/projects/' + project.id + '/allocations/' + c.person.id, { pay_rate_cents: cents });
-        c.pay_rate_cents = a.pay_rate_cents;
-        c.draft = WTT.fmt.moneyInput(a.pay_rate_cents);
-        toast(WTT.t('collab.rate_saved', { name: c.person.name }));
+    // openPerson abre o modal do colaborador com um rascunho do valor e dos
+    // times. Abre da linha da tabela e da pessoa no cartão de um time.
+    openPerson(c) {
+      this.person = {
+        id: c.person.id,
+        name: c.person.name,
+        email: c.person.email,
+        rate: WTT.fmt.moneyInput(c.pay_rate_cents),
+        team_ids: c.teams.map((t) => t.id),
+      };
+      this.confirming = null;
+      this.errors.person = '';
+      Alpine.store('modal').open('collab-edit', WTT.t('collab.edit_person'), () => !this.pending);
+    },
+    // A margem com o valor que está digitado no modal, ou null sem valor cobrado
+    // do cliente ou sem um valor válido no campo.
+    personMargin() {
+      const cents = WTT.toCents(this.person.rate);
+      if (this.billing.bill_rate_cents === null || cents === null) return null;
+      return this.billing.bill_rate_cents - cents;
+    },
+    // savePerson aplica o rascunho com as rotas que já existiam: o valor e,
+    // time a time, de onde a pessoa saiu e onde entrou. O valor vai primeiro,
+    // porque um time só aceita quem tem valor no projeto. Se uma chamada
+    // falhar, o que já foi aplicado continua valendo e o modal fica aberto com
+    // o erro; salvar de novo só repete o que faltou.
+    savePerson() {
+      return this.run('person', async () => {
+        const c = this.collaborators.find((x) => x.person.id === this.person.id);
+        if (!c) throw new Error(WTT.t('collab.person_gone'));
+        const cents = WTT.toCents(this.person.rate);
+        if (cents === null) throw new Error(WTT.t('collab.rate_required'));
+        const current = c.teams.map((t) => t.id);
+        const wanted = this.person.team_ids;
+        const leaving = current.filter((id) => !wanted.includes(id));
+        const joining = wanted.filter((id) => !current.includes(id));
+        const body = { person_id: c.person.id };
+        try {
+          if (cents !== c.pay_rate_cents) {
+            await api('PUT', '/api/projects/' + project.id + '/allocations/' + c.person.id, { pay_rate_cents: cents });
+          }
+          for (const id of leaving) await api('DELETE', '/api/teams/' + id + '/members', body);
+          for (const id of joining) await api('POST', '/api/teams/' + id + '/members', body);
+        } catch (e) {
+          await this.reload().catch(() => {});
+          throw e;
+        }
+        await this.reload();
+        Alpine.store('modal').close();
+        toast(WTT.t('collab.person_saved', { name: c.person.name }));
       });
     },
-    removePerson(c) {
-      return this.run('person-' + c.person.id, async () => {
-        await api('DELETE', '/api/projects/' + project.id + '/collaborators/' + c.person.id);
-        this.confirming = null;
+    removePerson() {
+      return this.run('person', async () => {
+        const { id, name } = this.person;
+        await api('DELETE', '/api/projects/' + project.id + '/collaborators/' + id);
+        Alpine.store('modal').close();
+        toast(WTT.t('collab.left', { name }));
         await this.reload();
-        toast(WTT.t('collab.left', { name: c.person.name }));
       });
     },
     // Quem pode entrar no projeto: as pessoas da organização que ainda não estão nele.
@@ -840,6 +947,9 @@ document.addEventListener('alpine:init', () => {
           }
         }
         await this.reload();
+        // A tabela vai para a página em que a pessoa ficou, pela ordem dos nomes.
+        const at = this.rows().findIndex((c) => c.person.id === person.id);
+        if (at >= 0) this.page = Math.floor(at / PEOPLE_PER_PAGE) + 1;
         Alpine.store('modal').close();
         if (teamError) Alpine.store('toast').error(WTT.t('collab.joined_no_team', { name: person.name, error: teamError }));
         else toast(WTT.t('collab.joined', { name: person.name }));
@@ -859,14 +969,16 @@ document.addEventListener('alpine:init', () => {
       });
     },
     // openEdit abre o modal Editar time com um rascunho do nome e dos integrantes.
-    // A lista traz a organização inteira: quem já está no time, depois quem é do
-    // projeto, depois o resto. A ordem é fixada aqui, para as linhas não trocarem
-    // de lugar a cada caixa marcada.
+    // A lista traz quem já está no time e, depois, o resto de quem está no
+    // projeto: um time só aceita quem já entrou no projeto, com valor por hora.
+    // A ordem é fixada aqui, para as linhas não trocarem de lugar a cada caixa
+    // marcada.
     openEdit(team) {
       const members = this.membersOf(team).map((c) => c.person);
       const inTeam = new Set(members.map((p) => p.id));
-      const others = this.people.filter((p) => !inTeam.has(p.id))
-        .sort((a, b) => (this.inProject(b) - this.inProject(a)) || a.name.localeCompare(b.name, WTT.lang));
+      const others = this.collaborators
+        .filter((c) => c.pay_rate_cents !== null && !inTeam.has(c.person.id))
+        .map((c) => c.person);
       this.edit = { id: team.id, name: team.name, search: '', member_ids: [...inTeam], people: [...members, ...others] };
       this.confirming = null;
       this.errors.team = '';
@@ -914,7 +1026,7 @@ document.addEventListener('alpine:init', () => {
         this.teams = this.teams.filter((t) => t.id !== id);
         Alpine.store('modal').close();
         toast(WTT.t('collab.team_deleted'));
-        await this.reload(); // quem só estava neste time, sem valor, deixa de ser do projeto
+        await this.reload(); // o time sai da linha de cada pessoa que estava nele
       });
     },
   }));

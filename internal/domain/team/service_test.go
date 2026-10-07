@@ -2,8 +2,10 @@ package team_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 
+	"working-time-tracker/internal/domain/allocation"
 	"working-time-tracker/internal/domain/organization"
 	"working-time-tracker/internal/domain/person"
 	"working-time-tracker/internal/domain/project"
@@ -13,6 +15,15 @@ import (
 
 func cleanup(t *testing.T) {
 	testutil.Truncate(t, testDB)
+}
+
+// setRate põe a pessoa no projeto, com um valor por hora: é o que a deixa
+// entrar num time dele.
+func setRate(t *testing.T, projectID, personID string) {
+	t.Helper()
+	if _, err := allocation.NewService(allocation.NewStore(testClient)).Set(projectID, personID, 1000); err != nil {
+		t.Fatalf("set rate: %v", err)
+	}
 }
 
 func TestService_Create(t *testing.T) {
@@ -65,6 +76,7 @@ func TestService_AddRemoveMembers(t *testing.T) {
 	p, _ := personSvc.Create(org.ID.String(), "John", "john@test.com")
 	proj, _ := projSvc.Create(org.ID.String(), "Project A", "", 0, nil, nil)
 	tm, _ := teamSvc.Create(proj.ID.String(), "Team A")
+	setRate(t, proj.ID.String(), p.ID.String())
 
 	membership, err := memberSvc.Add(tm.ID.String(), p.ID.String())
 	if err != nil {
@@ -108,11 +120,47 @@ func TestMembership_DuplicateRejected(t *testing.T) {
 	p, _ := personSvc.Create(org.ID.String(), "John", "john@test.com")
 	proj, _ := projSvc.Create(org.ID.String(), "Project A", "", 0, nil, nil)
 	tm, _ := teamSvc.Create(proj.ID.String(), "Team A")
+	setRate(t, proj.ID.String(), p.ID.String())
 
-	memberSvc.Add(tm.ID.String(), p.ID.String())
+	if _, err := memberSvc.Add(tm.ID.String(), p.ID.String()); err != nil {
+		t.Fatalf("add member: %v", err)
+	}
 	_, err := memberSvc.Add(tm.ID.String(), p.ID.String())
 	if err == nil {
 		t.Fatal("expected error for duplicate membership, got nil")
+	}
+}
+
+// Um time só aceita quem já está no projeto dele, com valor por hora. Ter
+// valor em outro projeto não conta.
+func TestMembership_RequiresRateInTheProject(t *testing.T) {
+	cleanup(t)
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	personSvc := person.NewService(person.NewStore(testClient))
+	projSvc := project.NewService(project.NewStore(testClient))
+	teamSvc := team.NewService(team.NewStore(testClient))
+	memberSvc := team.NewMembershipService(team.NewMembershipStore(testClient))
+
+	org, _ := orgSvc.Create("Org")
+	p, _ := personSvc.Create(org.ID.String(), "Ana", "ana@test.com")
+	proj, _ := projSvc.Create(org.ID.String(), "Projeto", "", 0, nil, nil)
+	other, _ := projSvc.Create(org.ID.String(), "Outro", "", 0, nil, nil)
+	tm, _ := teamSvc.Create(proj.ID.String(), "Time")
+	setRate(t, other.ID.String(), p.ID.String())
+
+	if _, err := memberSvc.Add(tm.ID.String(), p.ID.String()); !errors.Is(err, team.ErrNoRate) {
+		t.Fatalf("add a person without a rate in the project: err = %v, want ErrNoRate", err)
+	}
+	if members, _ := memberSvc.ListByTeam(tm.ID.String()); len(members) != 0 {
+		t.Errorf("the refused person is in the team: %+v", members)
+	}
+
+	// Zero é um valor: a pessoa está no projeto, só não recebe por hora.
+	if _, err := allocation.NewService(allocation.NewStore(testClient)).Set(proj.ID.String(), p.ID.String(), 0); err != nil {
+		t.Fatalf("set a zero rate: %v", err)
+	}
+	if _, err := memberSvc.Add(tm.ID.String(), p.ID.String()); err != nil {
+		t.Errorf("add a person with a zero rate: %v", err)
 	}
 }
 
@@ -129,6 +177,7 @@ func TestService_Delete_CascadesMemberships(t *testing.T) {
 	p, _ := personSvc.Create(org.ID.String(), "Ana", "ana@test.com")
 	proj, _ := projSvc.Create(org.ID.String(), "Projeto", "", 0, nil, nil)
 	tm, _ := svc.Create(proj.ID.String(), "Time")
+	setRate(t, proj.ID.String(), p.ID.String())
 	if _, err := memberSvc.Add(tm.ID.String(), p.ID.String()); err != nil {
 		t.Fatalf("add member: %v", err)
 	}

@@ -209,6 +209,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 |---|---|---|---|---|
 | `team.already_member` | 400 | — | `a pessoa já está neste time` | `the person is already on this team` |
 | `team.name_required` | 400 | — | `informe o nome` | `enter the name` |
+| `team.no_rate` | 400 | — | `esta pessoa ainda não está no projeto: adicione-a com o valor por hora antes de colocá-la num time` | `this person is not on the project yet: add them with an hourly rate before putting them on a team` |
 | `team.not_found` | 404 | — | `time não encontrado` | `team not found` |
 | `team.person_not_in_org` | 400 | — | `pessoa não encontrada nesta organização` | `person not found in this organization` |
 | `team.person_required` | 400 | — | `informe a pessoa (person_id)` | `enter the person (person_id)` |

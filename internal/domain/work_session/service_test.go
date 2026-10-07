@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"working-time-tracker/internal/domain/allocation"
+	"working-time-tracker/internal/domain/collaborator"
 	"working-time-tracker/internal/domain/organization"
 	"working-time-tracker/internal/domain/person"
 	"working-time-tracker/internal/domain/project"
@@ -39,6 +40,17 @@ func setRate(t *testing.T, projectID, personID string, cents int) {
 	}
 }
 
+// join põe a pessoa no time. Um time só aceita quem já está no projeto, então
+// ela recebe antes um valor por hora nele; os testes que dependem do valor
+// trocam por outro com setRate.
+func join(t *testing.T, memberSvc *team.MembershipService, tm *team.Team, personID string) {
+	t.Helper()
+	setRate(t, tm.ProjectID.String(), personID, 1000)
+	if _, err := memberSvc.Add(tm.ID.String(), personID); err != nil {
+		t.Fatalf("add member: %v", err)
+	}
+}
+
 func cleanup(t *testing.T) {
 	testutil.Truncate(t, testDB)
 }
@@ -50,7 +62,7 @@ func TestService_ClockInSuccess(t *testing.T) {
 	p, _ := personSvc.Create(org.ID.String(), "John", "john@test.com")
 	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil)
 	tm, _ := teamSvc.Create(proj.ID.String(), "Team")
-	memberSvc.Add(tm.ID.String(), p.ID.String())
+	join(t, memberSvc, tm, p.ID.String())
 	task1, _ := taskSvc.Create(proj.ID.String(), "Task", "", p.ID.String(), nil)
 	setRate(t, proj.ID.String(), p.ID.String(), 2000)
 
@@ -86,7 +98,7 @@ func TestService_ClockIn_DifferentProject(t *testing.T) {
 	projA, _ := projSvc.Create(org.ID.String(), "Project A", "", 0, nil, nil)
 	projB, _ := projSvc.Create(org.ID.String(), "Project B", "", 0, nil, nil)
 	tm, _ := teamSvc.Create(projA.ID.String(), "Team")
-	memberSvc.Add(tm.ID.String(), p.ID.String())
+	join(t, memberSvc, tm, p.ID.String())
 	task1, _ := taskSvc.Create(projA.ID.String(), "Task", "", p.ID.String(), nil)
 
 	_, err := wsSvc.ClockIn(projB.ID.String(), task1.ID.String(), p.ID.String())
@@ -102,7 +114,7 @@ func TestService_ClockOut_Success(t *testing.T) {
 	p, _ := personSvc.Create(org.ID.String(), "John", "john@test.com")
 	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil)
 	tm, _ := teamSvc.Create(proj.ID.String(), "Team")
-	memberSvc.Add(tm.ID.String(), p.ID.String())
+	join(t, memberSvc, tm, p.ID.String())
 	task1, _ := taskSvc.Create(proj.ID.String(), "Task", "", p.ID.String(), nil)
 	setRate(t, proj.ID.String(), p.ID.String(), 2000)
 
@@ -154,7 +166,7 @@ func TestService_OverlappingSessionRejected(t *testing.T) {
 	p, _ := personSvc.Create(org.ID.String(), "John", "john@test.com")
 	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil)
 	tm, _ := teamSvc.Create(proj.ID.String(), "Team")
-	memberSvc.Add(tm.ID.String(), p.ID.String())
+	join(t, memberSvc, tm, p.ID.String())
 	taskA, _ := taskSvc.Create(proj.ID.String(), "Task A", "", p.ID.String(), nil)
 	taskB, _ := taskSvc.Create(proj.ID.String(), "Task B", "", p.ID.String(), nil)
 	setRate(t, proj.ID.String(), p.ID.String(), 2000)
@@ -173,7 +185,7 @@ func TestService_TotalTime(t *testing.T) {
 	p, _ := personSvc.Create(org.ID.String(), "John", "john@test.com")
 	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil)
 	tm, _ := teamSvc.Create(proj.ID.String(), "Team")
-	memberSvc.Add(tm.ID.String(), p.ID.String())
+	join(t, memberSvc, tm, p.ID.String())
 	task1, _ := taskSvc.Create(proj.ID.String(), "Task", "", p.ID.String(), nil)
 	setRate(t, proj.ID.String(), p.ID.String(), 2000)
 
@@ -192,7 +204,8 @@ func TestService_TotalTime(t *testing.T) {
 	}
 }
 
-// Quem não tem valor por hora no projeto não bate ponto.
+// Quem não tem valor por hora no projeto não bate ponto. É o caso de quem foi
+// tirado do projeto e ficou com uma tarefa dele.
 func TestService_ClockIn_RequiresRate(t *testing.T) {
 	orgSvc, personSvc, projSvc, teamSvc, memberSvc, taskSvc, wsSvc := setupDeps(t)
 
@@ -201,8 +214,11 @@ func TestService_ClockIn_RequiresRate(t *testing.T) {
 	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil)
 	other, _ := projSvc.Create(org.ID.String(), "Other", "", 0, nil, nil)
 	tm, _ := teamSvc.Create(proj.ID.String(), "Team")
-	memberSvc.Add(tm.ID.String(), p.ID.String())
+	join(t, memberSvc, tm, p.ID.String())
 	task1, _ := taskSvc.Create(proj.ID.String(), "Task", "", p.ID.String(), nil)
+	if err := collaborator.NewService(collaborator.NewStore(testClient)).Remove(proj.ID.String(), p.ID.String()); err != nil {
+		t.Fatalf("remove from the project: %v", err)
+	}
 
 	// Ter valor em outro projeto não libera este.
 	setRate(t, other.ID.String(), p.ID.String(), 2000)
@@ -235,7 +251,7 @@ func TestService_RateIsSnapshottedAtClockIn(t *testing.T) {
 	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil)
 	projectID, personID := proj.ID.String(), p.ID.String()
 	tm, _ := teamSvc.Create(projectID, "Team")
-	memberSvc.Add(tm.ID.String(), personID)
+	join(t, memberSvc, tm, personID)
 	task1, _ := taskSvc.Create(projectID, "Task", "", personID, nil)
 
 	// Projeto interno: a sessão tem valor pago, mas não tem valor cobrado.
@@ -285,7 +301,7 @@ func TestService_Amounts(t *testing.T) {
 	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil)
 	projectID, personID := proj.ID.String(), p.ID.String()
 	tm, _ := teamSvc.Create(projectID, "Team")
-	memberSvc.Add(tm.ID.String(), personID)
+	join(t, memberSvc, tm, personID)
 	task1, _ := taskSvc.Create(projectID, "Task", "", personID, nil)
 
 	// Sessões com duração exata, criadas direto no banco.

@@ -312,8 +312,8 @@ func TestOrganization_Profile(t *testing.T) {
 }
 
 // A lista de projetos e o detalhe trazem quantos colaboradores o projeto tem
-// (quem está em algum time ou tem valor por hora, cada pessoa uma vez) e
-// quantas tarefas.
+// (quem tem valor por hora nele, cada pessoa uma vez, esteja em quantos times
+// estiver) e quantas tarefas.
 func TestProjects_MemberAndTaskCounts(t *testing.T) {
 	e := newServer(t)
 	admin := signup(t, e, "Org", "ana@test.com")
@@ -330,15 +330,16 @@ func TestProjects_MemberAndTaskCounts(t *testing.T) {
 		}
 		return decode(t, rec)
 	}
+	// Os três entram no projeto com um valor por hora; o Caio não entra em time nenhum.
+	allocate(t, e, admin, busy, admin.id, 0)
+	allocate(t, e, admin, busy, member.id, 5000)
+	allocate(t, e, admin, busy, unteamed.id, 4000)
 	// Dois times no mesmo projeto; a Bia está nos dois.
 	backend := post("/api/projects/"+busy+"/teams", `{"name":"Backend"}`)["id"].(string)
 	frontend := post("/api/projects/"+busy+"/teams", `{"name":"Frontend"}`)["id"].(string)
 	post("/api/teams/"+backend+"/members", `{"person_id":"`+admin.id+`"}`)
 	post("/api/teams/"+backend+"/members", `{"person_id":"`+member.id+`"}`)
 	post("/api/teams/"+frontend+"/members", `{"person_id":"`+member.id+`"}`)
-	// A Bia também tem valor, e o Caio tem valor sem estar em time nenhum.
-	allocate(t, e, admin, busy, member.id, 5000)
-	allocate(t, e, admin, busy, unteamed.id, 4000)
 	for _, name := range []string{"Login", "Cadastro", "Relatório"} {
 		post("/api/projects/"+busy+"/tasks", `{"name":"`+name+`","assignee_id":"`+admin.id+`"}`)
 	}
@@ -397,7 +398,6 @@ func TestRates_VisibilityByRole(t *testing.T) {
 		{"PATCH", "/api/customers/" + customerID, `{"name":"X"}`},
 		{"DELETE", "/api/customers/" + customerID, ""},
 		{"PUT", prj + "/allocations/" + bia.id, `{"pay_rate_cents":999999}`},
-		{"DELETE", prj + "/allocations/" + caio.id, ""},
 		{"GET", "/api/persons/" + caio.id + "/allocations", ""},
 		{"GET", "/api/persons/" + admin.id + "/allocations", ""},
 	}
@@ -481,7 +481,6 @@ func TestRates_StayInOrganization(t *testing.T) {
 		{"PUT", "/api/projects/" + projectA + "/billing", `{"bill_rate_cents":1}`},
 		{"GET", "/api/projects/" + projectA + "/allocations", ""},
 		{"PUT", "/api/projects/" + projectA + "/allocations/" + a.id, `{"pay_rate_cents":1}`},
-		{"DELETE", "/api/projects/" + projectA + "/allocations/" + a.id, ""},
 		{"GET", "/api/persons/" + a.id + "/allocations", ""},
 		// Projeto de B com uma pessoa de A.
 		{"PUT", "/api/projects/" + projectB + "/allocations/" + a.id, `{"pay_rate_cents":1}`},
@@ -511,13 +510,13 @@ func TestWorkSessions_UseLoggedInPerson(t *testing.T) {
 
 	rec := do(e, "POST", "/api/projects/"+projectID+"/teams", `{"name":"Time"}`, admin.session)
 	teamID := decode(t, rec)["id"].(string)
+	allocate(t, e, admin, projectID, member.id, 2000)
 	do(e, "POST", "/api/teams/"+teamID+"/members", `{"person_id":"`+member.id+`"}`, admin.session)
 	rec = do(e, "POST", "/api/projects/"+projectID+"/tasks", `{"name":"Tarefa","assignee_id":"`+member.id+`"}`, member.session)
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("create task = %d: %s", rec.Code, rec.Body.String())
 	}
 	taskID := decode(t, rec)["id"].(string)
-	allocate(t, e, admin, projectID, member.id, 2000)
 
 	rec = do(e, "POST", "/api/projects/"+projectID+"/work-sessions/clock-in", `{"task_id":"`+taskID+`"}`, member.session)
 	if rec.Code != http.StatusCreated || decode(t, rec)["person_id"] != member.id {
@@ -533,7 +532,8 @@ func TestWorkSessions_UseLoggedInPerson(t *testing.T) {
 	}
 }
 
-// Sem valor por hora no projeto ninguém bate ponto, nem um admin por outra pessoa.
+// Sem valor por hora no projeto ninguém bate ponto, nem um admin por outra
+// pessoa. É o caso de quem foi tirado do projeto e ficou com uma tarefa dele.
 func TestWorkSessions_RequireRate(t *testing.T) {
 	e := newServer(t)
 	admin := signup(t, e, "Org", "ana@test.com")
@@ -542,8 +542,12 @@ func TestWorkSessions_RequireRate(t *testing.T) {
 	prj := "/api/projects/" + projectID
 
 	teamID := decode(t, do(e, "POST", prj+"/teams", `{"name":"Time"}`, admin.session))["id"].(string)
+	allocate(t, e, admin, projectID, member.id, 2000)
 	do(e, "POST", "/api/teams/"+teamID+"/members", `{"person_id":"`+member.id+`"}`, admin.session)
 	taskID := decode(t, do(e, "POST", prj+"/tasks", `{"name":"Tarefa","assignee_id":"`+member.id+`"}`, admin.session))["id"].(string)
+	if rec := do(e, "DELETE", prj+"/collaborators/"+member.id, "", admin.session); rec.Code != http.StatusNoContent {
+		t.Fatalf("remove from the project = %d: %s", rec.Code, rec.Body.String())
+	}
 
 	for who, tc := range map[string]struct{ body, session string }{
 		"member":             {`{"task_id":"` + taskID + `"}`, member.session},
@@ -575,6 +579,8 @@ func TestWorkSessions_AmountsByRole(t *testing.T) {
 	prj := "/api/projects/" + projectID
 
 	teamID := decode(t, do(e, "POST", prj+"/teams", `{"name":"Time"}`, admin.session))["id"].(string)
+	allocate(t, e, admin, projectID, bia.id, 2000)
+	allocate(t, e, admin, projectID, caio.id, 2500)
 	for _, p := range []account{bia, caio} {
 		do(e, "POST", "/api/teams/"+teamID+"/members", `{"person_id":"`+p.id+`"}`, admin.session)
 	}
@@ -582,8 +588,6 @@ func TestWorkSessions_AmountsByRole(t *testing.T) {
 	if rec := do(e, "PUT", prj+"/billing", `{"bill_rate_cents":10000}`, admin.session); rec.Code != http.StatusOK {
 		t.Fatalf("set billing = %d: %s", rec.Code, rec.Body.String())
 	}
-	allocate(t, e, admin, projectID, bia.id, 2000)
-	allocate(t, e, admin, projectID, caio.id, 2500)
 
 	clockIn := `{"task_id":"` + taskID + `"}`
 	rec := do(e, "POST", prj+"/work-sessions/clock-in", clockIn, bia.session)
@@ -667,10 +671,10 @@ func TestAccess_IDsInBodyAndQueryStayInOrganization(t *testing.T) {
 
 	rec := do(e, "POST", "/api/projects/"+projectB+"/teams", `{"name":"Time B"}`, b.session)
 	teamB := decode(t, rec)["id"].(string)
+	allocate(t, e, b, projectB, b.id, 2000)
 	do(e, "POST", "/api/teams/"+teamB+"/members", `{"person_id":"`+b.id+`"}`, b.session)
 	rec = do(e, "POST", "/api/projects/"+projectB+"/tasks", `{"name":"Tarefa B","assignee_id":"`+b.id+`"}`, b.session)
 	taskB := decode(t, rec)["id"].(string)
-	allocate(t, e, b, projectB, b.id, 2000)
 	if rec := do(e, "POST", "/api/projects/"+projectB+"/work-sessions/clock-in", `{"task_id":"`+taskB+`"}`, b.session); rec.Code != http.StatusCreated {
 		t.Fatalf("clock-in in org B = %d: %s", rec.Code, rec.Body.String())
 	}
@@ -777,7 +781,6 @@ func TestRoutes_Table(t *testing.T) {
 		"PUT /api/projects/:projectId/billing",
 		"GET /api/projects/:projectId/allocations",
 		"PUT /api/projects/:projectId/allocations/:personId",
-		"DELETE /api/projects/:projectId/allocations/:personId",
 		"GET /api/projects/:projectId/collaborators",
 		"DELETE /api/projects/:projectId/collaborators/:personId",
 		"POST /api/projects/:projectId/tasks",
@@ -845,6 +848,7 @@ func TestAPI_ActiveSessionAndProjectMembers(t *testing.T) {
 	teamA := decode(t, rec)["id"].(string)
 	rec = do(e, "POST", "/api/projects/"+projectID+"/teams", `{"name":"B"}`, admin.session)
 	teamB := decode(t, rec)["id"].(string)
+	allocate(t, e, admin, projectID, admin.id, 0)
 	do(e, "POST", "/api/teams/"+teamA+"/members", `{"person_id":"`+admin.id+`"}`, admin.session)
 	do(e, "POST", "/api/teams/"+teamB+"/members", `{"person_id":"`+admin.id+`"}`, admin.session)
 
@@ -857,7 +861,6 @@ func TestAPI_ActiveSessionAndProjectMembers(t *testing.T) {
 
 	rec = do(e, "POST", "/api/projects/"+projectID+"/tasks", `{"name":"Tarefa","assignee_id":"`+admin.id+`"}`, admin.session)
 	taskID := decode(t, rec)["id"].(string)
-	allocate(t, e, admin, projectID, admin.id, 0)
 	do(e, "POST", "/api/projects/"+projectID+"/work-sessions/clock-in", `{"task_id":"`+taskID+`"}`, admin.session)
 
 	active := decode(t, do(e, "GET", "/api/work-sessions/active", "", admin.session))
@@ -868,8 +871,10 @@ func TestAPI_ActiveSessionAndProjectMembers(t *testing.T) {
 }
 
 // Todos no projeto veem quem são os colaboradores e os times de cada um. O
-// valor por hora dos colegas é só de admins. Só um admin tira alguém do
-// projeto: a pessoa perde o valor e sai de todos os times, e as tarefas ficam.
+// valor por hora dos colegas é só de admins. A pessoa entra no projeto com o
+// valor por hora, e um time recusa quem ainda não entrou. Só um admin tira
+// alguém do projeto: a pessoa perde o valor e sai de todos os times, e as
+// tarefas ficam.
 func TestCollaborators_VisibilityAndRemoval(t *testing.T) {
 	e := newServer(t)
 	admin := signup(t, e, "Org", "ana@test.com")
@@ -886,13 +891,27 @@ func TestCollaborators_VisibilityAndRemoval(t *testing.T) {
 		}
 		return decode(t, rec)
 	}
-	// A Bia está em dois times e tem valor; o Caio tem valor e nenhum time.
 	backend := post("/api/projects/"+projectID+"/teams", `{"name":"Backend"}`)["id"].(string)
 	mobile := post("/api/projects/"+projectID+"/teams", `{"name":"Mobile"}`)["id"].(string)
-	post("/api/teams/"+backend+"/members", `{"person_id":"`+member.id+`"}`)
-	post("/api/teams/"+mobile+"/members", `{"person_id":"`+member.id+`"}`)
+
+	// Sem valor por hora no projeto a pessoa não entra em time, e continua fora dele.
+	rec := do(e, "POST", "/api/teams/"+backend+"/members", `{"person_id":"`+member.id+`"}`, admin.session)
+	if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "team.no_rate") {
+		t.Errorf("adding to a team a person without a rate = %d %s, want 400 team.no_rate", rec.Code, rec.Body.String())
+	}
+	if rec := do(e, "GET", "/api/projects/"+projectID+"/collaborators", "", admin.session); strings.TrimSpace(rec.Body.String()) != "[]" {
+		t.Errorf("collaborators after the refused team = %s, want []", rec.Body.String())
+	}
+	// Apagar só o valor deixaria a pessoa no time sem ele: essa rota não existe mais.
+	if rec := do(e, "DELETE", "/api/projects/"+projectID+"/allocations/"+member.id, "", admin.session); rec.Code < 400 {
+		t.Errorf("DELETE of a rate alone = %d, want the route gone", rec.Code)
+	}
+
+	// A Bia entra com valor e vai para dois times; o Caio entra com valor e nenhum time.
 	allocate(t, e, admin, projectID, member.id, 5000)
 	allocate(t, e, admin, projectID, colleague.id, 7000)
+	post("/api/teams/"+backend+"/members", `{"person_id":"`+member.id+`"}`)
+	post("/api/teams/"+mobile+"/members", `{"person_id":"`+member.id+`"}`)
 	taskID := post("/api/projects/"+projectID+"/tasks", `{"name":"Tarefa","assignee_id":"`+member.id+`"}`)["id"].(string)
 
 	base := "/api/projects/" + projectID + "/collaborators"
@@ -983,6 +1002,7 @@ func TestTasks_ListFiltersAndPages(t *testing.T) {
 
 	teamID := decode(t, do(e, "POST", "/api/projects/"+projectID+"/teams", `{"name":"A"}`, admin.session))["id"].(string)
 	for _, id := range []string{admin.id, member.id} {
+		allocate(t, e, admin, projectID, id, 1000)
 		do(e, "POST", "/api/teams/"+teamID+"/members", `{"person_id":"`+id+`"}`, admin.session)
 	}
 	for i := range 12 {

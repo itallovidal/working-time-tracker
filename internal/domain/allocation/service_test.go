@@ -3,7 +3,6 @@ package allocation_test
 import (
 	"testing"
 
-	"working-time-tracker/internal/database"
 	"working-time-tracker/internal/domain/allocation"
 	"working-time-tracker/internal/domain/organization"
 	"working-time-tracker/internal/domain/person"
@@ -104,21 +103,6 @@ func TestService_Validation(t *testing.T) {
 	}
 	if _, err := f.svc.Set(f.projectX, "não-é-uuid", 1000); err != allocation.ErrPersonNotInOrg {
 		t.Errorf("bad id: err = %v, want ErrPersonNotInOrg", err)
-	}
-}
-
-func TestService_Remove(t *testing.T) {
-	f := setup(t)
-	f.svc.Set(f.projectX, f.bruno, 2000)
-
-	if err := f.svc.Remove(f.projectX, f.bruno); err != nil {
-		t.Fatalf("remove: %v", err)
-	}
-	if _, err := f.svc.Get(f.projectX, f.bruno); err != database.ErrNotFound {
-		t.Errorf("get after remove: err = %v, want ErrNotFound", err)
-	}
-	if err := f.svc.Remove(f.projectX, f.bruno); err != database.ErrNotFound {
-		t.Errorf("remove twice: err = %v, want ErrNotFound", err)
 	}
 }
 

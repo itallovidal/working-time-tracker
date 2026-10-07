@@ -271,6 +271,29 @@
 
 ---
 
+### Sprint 20: Hourly Rate Required to Join a Project
+
+- [X] S20.1 A person joins a project with an hourly rate: `POST /api/teams/:teamId/members` refuses a person without an allocation in the team's project
+- [X] S20.2 Remove `DELETE /api/projects/:projectId/allocations/:personId`: deleting only the rate left the person in the teams without one; `DELETE .../collaborators/:personId` is the way out
+- [X] S20.3 "Adicionar pessoa" form: the hourly rate is a required field and sits above the team, one field per line
+- [X] S20.4 The "Editar time" modal only lists people who are already in the project, without the "fora do projeto" badge; the "Sem valor por hora" tile is gone, and the warning stays for rows from before the rule
+- [X] S20.5 Seed: rates before teams, and nobody in a team without a rate
+- [X] S20.6 Tests for the refusal and the form; fixtures give a rate before a team; update README, design and routes
+
+---
+
+### Sprint 21: Collaborators Tab Views and Collaborator Modal
+
+- [X] S21.1 A switch below the summary tiles chooses between two views of the same people: "Pessoas" (the table) and "Times" (the cards); the choice is kept in the URL (`?view=teams`) and the switch works with the arrow keys
+- [X] S21.2 No list shows more than five people at a time: the people table has pages, and so does each team card
+- [X] S21.3 "Editar colaborador" in the modal: the hourly rate, the teams as checkboxes and "Tirar do projeto" with a confirmation; nothing is sent before "Salvar", and the rate goes before the teams
+- [X] S21.4 The table row no longer has the rate field or the remove button; for admins the row and its pencil open the modal, and so does a person inside a team card
+- [X] S21.5 Names are sorted in Portuguese order in the browser, so an accented initial lands on the right page
+- [X] S21.6 Page test for the views, the pages and the modal; update README and design
+- [X] S21.7 Two more summary tiles for admins: the sum of the hourly margins at today's rates and what the recorded hours are worth (the closed sessions, time multiplied by the rate stored on each); the explanation of each sits behind an info button
+
+---
+
 ### Sprint 22: Project Settings as a Read-Only Tab, Weekly Hours on the Person
 
 - [X] S22.1 The project settings tab only shows the project, like the organization's "Sobre" tab: a card with the description, the sprint, the daily and the weekly, and a card with the customer and, for admins, the bill rate

@@ -242,10 +242,15 @@ func TestPages_OrgSettingsAndProfileAreSeparate(t *testing.T) {
 }
 
 // A aba Colaboradores do projeto ficou no lugar de Times e de Valores. Todo
-// mundo a abre; só o admin vê nela os valores por hora e as ações, com os
-// formulários de adicionar pessoa, de novo time e de editar time no modal. O
-// cartão de um time só mostra o nome e os integrantes. A aba Valores não
-// existe mais, e o cartão de cobrança das configurações segue só de admins.
+// mundo a abre e escolhe entre duas visões, a lista de pessoas e os times,
+// com as pessoas em páginas nas duas. Só o admin vê os valores por hora e as
+// ações: os formulários de adicionar pessoa, de novo time, de editar time e do
+// colaborador ficam no modal. A linha da tabela e o cartão do time não têm
+// campo nem ação direta: o valor, os times e a saída do projeto mudam no modal
+// do colaborador. No de adicionar pessoa o valor por hora é obrigatório e fica
+// acima do time, e o de editar time só lista quem já está no projeto. A aba
+// Valores não existe mais, e o cartão de cobrança das configurações segue só
+// de admins.
 func TestPages_ProjectCollaboratorsTab(t *testing.T) {
 	e := newServer(t)
 	admin := signup(t, e, "Org", "ana@test.com")
@@ -264,23 +269,46 @@ func TestPages_ProjectCollaboratorsTab(t *testing.T) {
 		if strings.Contains(body, `href="`+rates+`"`) || strings.Contains(body, " Valores</a>") || strings.Contains(body, " Times</a>") {
 			t.Errorf("%s: the tab bar still shows the Times or the Valores tab", who)
 		}
-		for _, want := range []string{"<h2>Pessoas</h2>", "<h2>Times</h2>", "Sem time", `aria-label="Buscar colaborador por nome ou e-mail"`} {
+		for _, want := range []string{
+			"Sem time", `aria-label="Buscar colaborador por nome ou e-mail"`,
+			// As duas visões, cada uma no seu painel.
+			`role="tablist"`, `id="view-people-tab"`, `id="view-teams-tab"`,
+			`id="view-people" role="tabpanel"`, `id="view-teams" role="tabpanel"`,
+			// As pessoas vêm em páginas na tabela e em cada cartão de time.
+			`x-for="c in peoplePage().rows"`, `aria-label="Páginas da lista de pessoas"`,
+			`x-for="m in teamPage(team).rows"`, `title="Próximos integrantes"`,
+		} {
 			if !strings.Contains(body, want) {
 				t.Errorf("%s: the page does not contain %q", who, want)
 			}
 		}
-		// Renomear, excluir e pôr ou tirar gente saíram do cartão do time.
-		for _, gone := range []string{`title="Renomear"`, `title="Remover do time"`, "Adicionar pessoa…", "addMember(", "removeMember(", "rename("} {
+		// Renomear, excluir e pôr ou tirar gente saíram do cartão do time, e o
+		// campo de valor e o botão de remover saíram da linha da pessoa.
+		for _, gone := range []string{
+			`title="Renomear"`, `title="Remover do time"`, "Adicionar pessoa…", "addMember(", "removeMember(", "rename(",
+			"saveRate(", `title="Remover do projeto"`, "input-money", "<h2>Pessoas</h2>", "<h2>Times</h2>",
+		} {
 			if strings.Contains(body, gone) {
-				t.Errorf("%s: the team card still has %q", who, gone)
+				t.Errorf("%s: the collaborators tab still has %q", who, gone)
 			}
 		}
 	}
 	for _, adminOnly := range []string{
 		"Adicionar pessoa", "Novo time", `x-teleport="#modal-root"`, `id="collab-search"`, `id="collab-rate"`, `id="collab-team"`, `id="team-name"`,
-		`$t('collab.col_rate'`, "Margem por hora", "Sem valor por hora", "saveRate(",
-		// Editar o time e tirar do projeto são botões só de ícone, com o nome da ação.
-		`title="Editar time"`, `:aria-label="$t('collab.edit_team_label', { name: team.name })"`, `title="Remover do projeto"`, "btn-icon",
+		`$t('collab.col_rate'`, "Margem por hora",
+		// Os dois blocos de dinheiro do resumo, cada um com a conta explicada numa dica.
+		"Margem por hora somada atual", "Valor das horas registradas",
+		`x-data="tip"`, `aria-label="O que é a margem por hora somada atual"`, `aria-label="O que é o valor das horas registradas"`,
+		`id="tip-margin" role="note"`, `id="tip-recorded" role="note"`,
+		// Editar o time é um botão só de ícone, com o nome da ação.
+		`title="Editar time"`, `:aria-label="$t('collab.edit_team_label', { name: team.name })"`,
+		// O colaborador abre pela linha da tabela, pelo lápis dela e pela pessoa no cartão do time.
+		`class="row-link" @click="if (!$event.target.closest('button')) openPerson(c)"`,
+		`title="Editar colaborador"`, `class="list-btn" title="Editar colaborador" @click="openPerson(m)"`,
+		// O modal do colaborador: o valor, os times em caixas de marcar e a saída do projeto.
+		`x-show="$store.modal.name === 'collab-edit'"`,
+		`id="collab-edit-rate" type="text" inputmode="decimal" class="num" placeholder="0,00" required`,
+		`type="checkbox" :value="t.id" x-model="person.team_ids"`, "Tirar do projeto", "savePerson()", "removePerson()",
 		// O modal de editar time: o nome, os integrantes em caixas de marcar e a exclusão.
 		`x-show="$store.modal.name === 'team-edit'"`, `id="team-edit-name"`, `id="team-edit-search"`,
 		`type="checkbox" :value="p.id" x-model="edit.member_ids"`, "Excluir time", "saveTeam()", "removeTeam()",
@@ -290,6 +318,25 @@ func TestPages_ProjectCollaboratorsTab(t *testing.T) {
 		}
 		if strings.Contains(memberPage, adminOnly) {
 			t.Errorf("member sees %q on the collaborators tab", adminOnly)
+		}
+	}
+
+	// O formulário de adicionar pessoa vai da busca até o formulário de novo time.
+	addForm := adminPage[strings.Index(adminPage, `id="collab-search"`):strings.Index(adminPage, `id="team-name"`)]
+	if !strings.Contains(addForm, `id="collab-rate" type="text" inputmode="decimal" class="num" placeholder="0,00" required`) {
+		t.Error("the hourly rate is not a required field of the add person form")
+	}
+	if rate, team := strings.Index(addForm, `id="collab-rate"`), strings.Index(addForm, `id="collab-team"`); rate < 0 || team < rate {
+		t.Error("the add person form does not show the hourly rate above the team")
+	}
+	if strings.Contains(addForm, `class="fields"`) {
+		t.Error("the add person form puts the hourly rate and the team side by side")
+	}
+	// Ninguém entra no projeto sem valor: o modal de editar time só lista quem
+	// já está nele, e não há mais o que contar em "sem valor por hora".
+	for _, gone := range []string{">fora do projeto<", "entra nele sem valor por hora", "Sem valor por hora<", "ela não bate ponto"} {
+		if strings.Contains(adminPage, gone) {
+			t.Errorf("the collaborators tab still shows %q", gone)
 		}
 	}
 
@@ -559,6 +606,7 @@ func TestPages_TaskDetail(t *testing.T) {
 	projectID := createProject(t, e, admin, "Projeto Alfa")
 	rec := do(e, "POST", "/api/projects/"+projectID+"/teams", `{"name":"Time"}`, admin.session)
 	teamID := decode(t, rec)["id"].(string)
+	allocate(t, e, admin, projectID, admin.id, 0)
 	do(e, "POST", "/api/teams/"+teamID+"/members", `{"person_id":"`+admin.id+`"}`, admin.session)
 	rec = do(e, "POST", "/api/projects/"+projectID+"/tasks", `{"name":"Tela de login","assignee_id":"`+admin.id+`"}`, admin.session)
 	taskID := decode(t, rec)["id"].(string)

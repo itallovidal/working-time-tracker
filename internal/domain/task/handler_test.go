@@ -12,6 +12,7 @@ import (
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
 
+	"working-time-tracker/internal/domain/allocation"
 	"working-time-tracker/internal/domain/integration"
 	"working-time-tracker/internal/domain/organization"
 	"working-time-tracker/internal/domain/person"
@@ -64,6 +65,10 @@ func setupTestApp(t *testing.T) *testApp {
 	projectID := jsonPath(projObj, "id")
 	teamObj := mustCreate(t, e, "POST", "/api/projects/"+projectID+"/teams", `{"name":"Team A"}`)
 	teamID := jsonPath(teamObj, "id")
+	// Um time só aceita quem já está no projeto, com valor por hora.
+	if _, err := allocation.NewService(allocation.NewStore(testClient)).Set(projectID, personID, 1000); err != nil {
+		t.Fatalf("set rate: %v", err)
+	}
 	mustCreate(t, e, "POST", "/api/teams/"+teamID+"/members", `{"person_id":"`+personID+`"}`)
 	taskObj := mustCreate(t, e, "POST", "/api/projects/"+projectID+"/tasks", `{"name":"Task A","assignee_id":"`+personID+`"}`)
 	taskID := jsonPath(taskObj, "id")

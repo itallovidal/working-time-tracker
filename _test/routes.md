@@ -242,7 +242,7 @@ Content-Type: application/json
 
 No `PATCH`, um campo omitido mantém o valor atual, e `""` apaga `daily_time` ou `weekly_sync_day`. O projeto não tem jornada semanal: ela é da pessoa (`PATCH /api/persons/:personId/weekly-hours`).
 
-O projeto traz `member_count`, os colaboradores dele (quem está em algum time ou tem valor por hora, cada pessoa uma vez: a mesma conta de `/collaborators`), e `task_count`, as tarefas dele. Os dois vêm na lista e no detalhe.
+O projeto traz `member_count`, os colaboradores dele (quem tem valor por hora nele, cada pessoa uma vez: a mesma conta de `/collaborators`), e `task_count`, as tarefas dele. Os dois vêm na lista e no detalhe.
 
 O projeto traz `customer` (`{"id", "name"}` ou `null`) para qualquer membro. O valor cobrado nunca vem aqui: ele fica em `/billing`.
 
@@ -263,19 +263,20 @@ Os valores são sempre em **centavos**, na moeda da organização: `10000` é 10
 
 ### Valor pago a cada pessoa
 
-O vínculo de uma pessoa com o projeto e quanto ela recebe por hora nele. Há um valor por pessoa em cada projeto.
+O vínculo de uma pessoa com o projeto e quanto ela recebe por hora nele. Há um valor por pessoa em cada projeto, e é ele que põe a pessoa no projeto: sem valor ela não entra em time nem bate ponto.
 
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
 | GET | `/api/projects/:projectId/allocations` | logado | Um admin recebe todos os valores; um membro recebe só o dele, ou `[]` |
-| PUT | `/api/projects/:projectId/allocations/:personId` | admin | Define o valor da pessoa: `{"pay_rate_cents": 2000}`. Cria o vínculo ou troca o valor |
-| DELETE | `/api/projects/:projectId/allocations/:personId` | admin | Apaga só o valor da pessoa. Ela continua nos times e deixa de bater ponto no projeto |
+| PUT | `/api/projects/:projectId/allocations/:personId` | admin | Põe a pessoa no projeto com o valor dela, ou troca o valor de quem já está: `{"pay_rate_cents": 2000}` |
 
-`pay_rate_cents` vai de `0` a `100000000`. Zero vale: é alguém que trabalha no projeto sem receber por hora. A pessoa precisa ser da mesma organização do projeto.
+`pay_rate_cents` é obrigatório e vai de `0` a `100000000`. Zero vale: é alguém que trabalha no projeto sem receber por hora. A pessoa precisa ser da mesma organização do projeto.
+
+Não há rota para apagar só o valor: a pessoa ficaria no projeto sem ele. Para tirá-la do projeto, use o `DELETE` de `/collaborators/:personId`, abaixo.
 
 ### Colaboradores
 
-Quem está no projeto. Uma pessoa é colaboradora quando tem valor por hora nele **ou** está em algum time dele; são dois vínculos independentes, e esta rota mostra os dois juntos.
+Quem está no projeto. Uma pessoa é colaboradora quando tem valor por hora nele; os times vêm depois, e só aceitam quem já é colaborador. Esta rota mostra o valor e os times juntos.
 
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
@@ -296,12 +297,12 @@ Quem está no projeto. Uma pessoa é colaboradora quando tem valor por hora nele
   }
 ]
 ```
-- `teams` traz só os times deste projeto, por nome. Vem vazio para quem tem valor e ainda não entrou em nenhum time; essa pessoa bate ponto, mas não pode ser responsável por tarefa.
-- `pay_rate_cents` é `null` para quem está num time e ainda não tem valor; essa pessoa não bate ponto. Um membro recebe o próprio valor e `null` no dos colegas.
+- `teams` traz só os times deste projeto, por nome. Vem vazio para quem ainda não entrou em nenhum time; essa pessoa bate ponto, mas não pode ser responsável por tarefa.
+- `pay_rate_cents` é o valor da pessoa. Um membro recebe o próprio valor e `null` no dos colegas. Para um admin, `null` só aparece em quem entrou num time antes de o valor ser obrigatório: essa pessoa não bate ponto até receber um valor (o `PUT` acima) ou sair do projeto.
 
 O `DELETE` faz as duas remoções numa transação e responde `204`. As tarefas e as sessões de trabalho da pessoa ficam como estão. Se ela não tinha valor nem time no projeto, a resposta é `404`.
 
-Para **pôr** alguém no projeto, use o `PUT` de `/allocations/:personId` acima e, se quiser, `POST /api/teams/:teamId/members`.
+Para **pôr** alguém no projeto, use o `PUT` de `/allocations/:personId` acima e, depois, se quiser, `POST /api/teams/:teamId/members`. Nessa ordem: o time recusa quem ainda não tem valor.
 
 ### Visão geral
 
@@ -376,11 +377,11 @@ Tudo o que a aba Visão geral mostra, numa resposta só. É só de admins, porqu
 | GET | `/api/teams/:teamId` | logado | Detalhes do time |
 | PATCH | `/api/teams/:teamId` | admin | Renomeia |
 | DELETE | `/api/teams/:teamId` | admin | Exclui o time e os vínculos dos membros |
-| POST | `/api/teams/:teamId/members` | admin | Adiciona um membro: `{"person_id": "…"}` |
+| POST | `/api/teams/:teamId/members` | admin | Adiciona um membro que já está no projeto: `{"person_id": "…"}` |
 | DELETE | `/api/teams/:teamId/members` | admin | Remove um membro: `{"person_id": "…"}` |
 | GET | `/api/teams/:teamId/members` | logado | Membros do time |
 
-A pessoa precisa ser da mesma organização do projeto.
+A pessoa precisa ser da mesma organização do projeto e já estar nele, com valor por hora (`PUT /api/projects/:projectId/allocations/:personId`). Sem isso o `POST` de membro responde `400`.
 
 ---
 
@@ -468,7 +469,7 @@ Na lista de tarefas e no detalhe, a tarefa vinculada traz `external_integration`
 
 ### Valores nas sessões
 
-- **Sem valor, sem ponto.** O clock-in responde `400` quando a pessoa não tem valor por hora no projeto (`PUT /api/projects/:projectId/allocations/:personId`). Vale também para um admin batendo o ponto de outra pessoa.
+- **Sem valor, sem ponto.** O clock-in responde `400` quando a pessoa não tem valor por hora no projeto (`PUT /api/projects/:projectId/allocations/:personId`). É o caso de quem foi tirado do projeto e ficou com uma tarefa dele. Vale também para um admin batendo o ponto de outra pessoa.
 - **O valor é travado no clock-in.** A sessão guarda `pay_rate_cents` (o que a pessoa recebe por hora) e `bill_rate_cents` (o que o cliente paga; `null` em projeto sem valor cobrado). Mudar um valor depois só afeta as sessões seguintes.
 - Cada sessão traz também `pay_amount_cents` e `bill_amount_cents`: o tempo da sessão vezes o valor por hora, arredondado para o centavo. O total soma as sessões já arredondadas.
 - **Quem vê o quê.** Um admin recebe os quatro campos de todas as sessões. Um membro recebe `pay_rate_cents` e `pay_amount_cents` só nas próprias sessões; nas dos colegas, e sempre nos dois campos de `bill`, vem `null`. No total, um membro só recebe `pay_amount_cents` quando filtra por ele mesmo (`?person_id=` o próprio id).
@@ -577,12 +578,13 @@ Qual idioma uma página usa: o cookie `wtt_lang`; sem ele, o `Accept-Language`; 
 2. **Signup:** `POST /api/auth/signup`. O cliente guarda o cookie.
 3. **Quem sou eu:** `GET /api/auth/me`. Copie o `organization_id` para `org_id`.
 4. **Criar projeto:** `POST /api/orgs/:orgId/projects`. Copie o `id` para `project_id`.
-5. **Criar time:** `POST /api/projects/:projectId/teams`, e depois `POST /api/teams/:teamId/members` com o seu próprio `id`.
-6. **Criar tarefa:** `POST /api/projects/:projectId/tasks` com você como responsável.
-7. **Cliente e valores:** `POST /api/orgs/:orgId/customers`, `PUT /api/projects/:projectId/billing` com o cliente e `bill_rate_cents`, e `PUT /api/projects/:projectId/allocations/:personId` com o seu `id` e `pay_rate_cents`. Sem esse último passo o ponto não abre.
-8. **Bater o ponto:** `clock-in` com `{"task_id": "…"}`, `GET /api/work-sessions/active` e `clock-out`.
-9. **Totais:** `GET /api/projects/:projectId/work-sessions/total?task_id=…`.
-10. **Convidar alguém:** `POST /api/orgs/:orgId/invites`, depois `POST /api/auth/invites/:token/accept` numa sessão sem cookie (ou após `logout`).
+5. **Entrar no projeto:** `PUT /api/projects/:projectId/allocations/:personId` com o seu `id` e `pay_rate_cents`. Sem esse passo você não entra em time nem bate ponto.
+6. **Criar time:** `POST /api/projects/:projectId/teams`, e depois `POST /api/teams/:teamId/members` com o seu próprio `id`.
+7. **Criar tarefa:** `POST /api/projects/:projectId/tasks` com você como responsável.
+8. **Cliente e valor cobrado:** `POST /api/orgs/:orgId/customers` e `PUT /api/projects/:projectId/billing` com o cliente e `bill_rate_cents`.
+9. **Bater o ponto:** `clock-in` com `{"task_id": "…"}`, `GET /api/work-sessions/active` e `clock-out`.
+10. **Totais:** `GET /api/projects/:projectId/work-sessions/total?task_id=…`.
+11. **Convidar alguém:** `POST /api/orgs/:orgId/invites`, depois `POST /api/auth/invites/:token/accept` numa sessão sem cookie (ou após `logout`).
 
 ## Variáveis de ambiente (Insomnia)
 

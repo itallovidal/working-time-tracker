@@ -275,6 +275,7 @@ func TestLanguage_MigratedPagesHaveNoPortugueseInEnglish(t *testing.T) {
 	projectID := createProject(t, e, admin, "Alpha")
 	rec := do(e, "POST", "/api/projects/"+projectID+"/teams", `{"name":"Core"}`, admin.session)
 	teamID := decode(t, rec)["id"].(string)
+	do(e, "PUT", "/api/projects/"+projectID+"/allocations/"+admin.id, `{"pay_rate_cents":0}`, admin.session)
 	do(e, "POST", "/api/teams/"+teamID+"/members", `{"person_id":"`+admin.id+`"}`, admin.session)
 	rec = do(e, "POST", "/api/projects/"+projectID+"/tasks", `{"name":"Login screen","assignee_id":"`+admin.id+`"}`, admin.session)
 	taskID := decode(t, rec)["id"].(string)

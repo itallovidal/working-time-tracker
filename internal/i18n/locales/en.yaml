@@ -490,14 +490,13 @@ collab:
     one: Team
     other: Teams
   no_team: No team
-  no_rate: No hourly rate
   missing_count:
     one: "{{.count}} person is"
     other: "{{.count}} people are"
   missing_text: "on this project without an hourly rate:"
-  missing_blocked: Without a rate, clocking in is blocked.
+  missing_blocked: "Open the person to set the rate or remove them from the project: without a rate, clocking in is blocked."
   people_title: People
-  people_intro: "Who works on this project: whoever is on a team or has an hourly rate here."
+  people_intro: "Who works on this project. Each person joins with the hourly rate they earn here."
   search_placeholder: Search by name or email
   search_label: Search collaborators by name or email
   add_person: Add person
@@ -510,18 +509,13 @@ collab:
   col_teams: Teams
   col_rate: "Hourly rate ({{.unit}})"
   col_margin: Margin per hour
-  rate_placeholder: No rate
-  rate_label: "Hourly rate of {{.name}}"
-  remove_title: Remove from the project
-  remove_label: "Remove {{.name}} from the project"
-  remove_confirm: Remove from the project? They leave the teams and lose the rate.
-  remove: Remove
+  remove_confirm: "Remove from the project? They leave the teams and lose the rate. Their tasks and hours stay."
   bill_info_before: The customer pays
   bill_info_after: "per hour on this project; the margin is the difference from what each person earns."
   no_bill: Without a rate billed to the customer, each person's margin is not calculated.
   change_in_settings: Change in Settings
   teams_title: Teams
-  teams_intro: Only people on a team can be assigned tasks.
+  teams_intro: "Teams are built from people already on the project. Only people on a team can be assigned tasks."
   new_team: New team
   no_teams: No teams on this project
   no_teams_admin: Create a team and put people in it.
@@ -535,24 +529,20 @@ collab:
   none_outside_search: Nobody with that name or email outside the project.
   all_in: Everyone in the organization is already on this project.
   invite_link: Invite someone to the organization
-  rate_hint: How much the person earns here. Without a rate, they cannot clock in.
+  rate_hint: "Required. How much the person earns per hour on this project."
   team: Team
   no_team_yet: No team for now
-  team_hint: People on a team can be assigned tasks.
+  team_hint: "Optional. People on a team can be assigned tasks."
   add_submit: Add to the project
   team_name: Team name
   team_name_placeholder: "E.g.: Backend"
   create_team: Create team
   members_label: Members
   members_aria: Team members
-  outside: outside the project
-  no_match_short: Nobody with that name or email.
-  edit_hint: People on a team can be assigned tasks. Someone from outside the project joins it without an hourly rate.
+  edit_hint: "People on a team can be assigned tasks. The list has the people already on the project: someone from outside joins first through \"Add person\", with an hourly rate."
   delete_team_confirm: Delete the team? The people stay in the organization.
   delete_team: Delete team
-  rate_invalid: Enter a value, for example 20.00.
   rate_required: Enter the hourly rate, for example 20.00.
-  rate_saved: "{{.name}}'s rate saved."
   left: "{{.name}} left the project."
   choose_person: Choose a person.
   joined: "{{.name}} joined the project."
@@ -561,6 +551,40 @@ collab:
   team_name_required: Enter the team name.
   team_saved: Team saved.
   team_deleted: Team deleted.
+  margin_total: Combined hourly margin today
+  margin_total_label: What the combined hourly margin is
+  margin_total_tip: "The sum of every person's hourly margin on the project, at today's rates: what the customer pays per hour minus what the person earns. It is what the project earns in an hour when everyone works."
+  margin_total_no_bill: "This project has no rate billed to the customer, so there is no margin to add up."
+  recorded: Value of the recorded hours
+  recorded_label: What the value of the recorded hours is
+  recorded_tip: "The sum of every closed time session on this project: the time of each one times the hourly rate the person had when they clocked in. A running session only counts after the clock-out."
+  recorded_so_far: "So far that is {{.hours}} recorded."
+  view_label: How to see who is on the project
+  no_rate_badge: No rate
+  edit_person: Edit collaborator
+  edit_person_label: "Edit {{.name}}"
+  pager: Pages of the people list
+  prev: Previous
+  next: Next
+  team_pager: "Pages of the members of the team {{.name}}"
+  team_range: "{{.from}}–{{.to}} of {{.total}}"
+  members_prev: Previous members
+  members_prev_label: "Previous members of the team {{.name}}"
+  members_next: Next members
+  members_next_label: "Next members of the team {{.name}}"
+  no_match_project: "Nobody with that name or email on this project."
+  person_rate_hint: How much the person earns per hour on this project.
+  margin_before: Margin of
+  margin_after: per hour.
+  team_tasks_hint: People on a team can be assigned tasks.
+  no_teams_yet: This project has no teams yet.
+  leave: Remove
+  leave_project: Remove from the project
+  person_gone: "This person is no longer on the project."
+  person_saved: "{{.name}}'s details saved."
+  people_page:
+    one: "Page {{.page}} of {{.pages}} · {{.count}} person"
+    other: "Page {{.page}} of {{.pages}} · {{.count}} people"
 
 overview:
   intro: "The project in numbers: who works on it, how much time was tracked and what that time cost and earned."
@@ -805,6 +829,7 @@ errors:
     name_required: "enter the name"
     not_found: "team not found"
     person_not_in_org: "person not found in this organization"
+    no_rate: "this person is not on the project yet: add them with an hourly rate before putting them on a team"
     person_required: "enter the person (person_id)"
   work_session:
     already_open: "this person already has an open clock-in; stop the current session before starting another"

@@ -22,8 +22,9 @@ import (
 )
 
 // O cenário: no Projeto X, a Ana tem valor e está em dois times, o Bruno só
-// tem valor, a Carla só está num time e o Diego está fora. No Projeto Y, a Ana
-// tem outro valor e está num time, que não pode aparecer no X.
+// tem valor e o Diego está fora. A Carla está num time sem valor, o que só
+// existe em banco de antes de o valor ser obrigatório. No Projeto Y, a Ana tem
+// outro valor e está num time, que não pode aparecer no X.
 type fixture struct {
 	svc                       *collaborator.Service
 	allocationSvc             *allocation.Service
@@ -78,11 +79,6 @@ func setup(t *testing.T) fixture {
 	// Mobile é criado antes de Backend: a lista tem que vir por nome, não por criação.
 	f.mobile, f.backend, f.backendY = newTeam(f.projectX, "Mobile"), newTeam(f.projectX, "Backend"), newTeam(f.projectY, "Backend Y")
 
-	for _, m := range [][2]string{{f.mobile, f.ana}, {f.backend, f.ana}, {f.backend, f.carla}, {f.backendY, f.ana}} {
-		if _, err := f.memberSvc.Add(m[0], m[1]); err != nil {
-			t.Fatalf("fixture member: %v", err)
-		}
-	}
 	for _, a := range []struct {
 		project, person string
 		cents           int
@@ -91,6 +87,16 @@ func setup(t *testing.T) fixture {
 			t.Fatalf("fixture rate: %v", err)
 		}
 	}
+	for _, m := range [][2]string{{f.mobile, f.ana}, {f.backend, f.ana}, {f.backendY, f.ana}} {
+		if _, err := f.memberSvc.Add(m[0], m[1]); err != nil {
+			t.Fatalf("fixture member: %v", err)
+		}
+	}
+	// A Carla entra direto pelo Ent: o service já não deixa pôr num time quem
+	// não tem valor.
+	testClient.TeamMembership.Create().
+		SetTeamID(uuid.MustParse(f.backend)).SetPersonID(uuid.MustParse(f.carla)).
+		SaveX(context.Background())
 	return f
 }
 
@@ -107,8 +113,9 @@ func describe(c collaborator.Collaborator) string {
 	return fmt.Sprintf("%s: %s, teams %v", c.Person.Name, rate, teams)
 }
 
-// Colaborador é quem tem valor por hora no projeto ou está em algum time dele.
-func TestService_ListByProject_UnionOfRatesAndTeams(t *testing.T) {
+// A lista traz quem tem valor por hora no projeto, com os times de cada um, e
+// também quem ficou num time sem valor, para um admin poder resolver.
+func TestService_ListByProject_RatesAndTeams(t *testing.T) {
 	f := setup(t)
 
 	list, err := f.svc.ListByProject(f.projectX)
@@ -122,7 +129,7 @@ func TestService_ListByProject_UnionOfRatesAndTeams(t *testing.T) {
 	want := []string{
 		"Ana: rate 9000, teams [Backend Mobile]", // valor e dois times, só os deste projeto
 		"Bruno: rate 0, teams []",                // valor zero é valor; sem time
-		"Carla: no rate, teams [Backend]",        // só no time, ainda sem valor
+		"Carla: no rate, teams [Backend]",        // num time sem valor, de antes da regra
 	}
 	if !slices.Equal(got, want) {
 		t.Errorf("collaborators of X:\n got %q\nwant %q", got, want)
@@ -174,7 +181,7 @@ func TestService_Remove(t *testing.T) {
 		t.Errorf("work sessions after removal = %d, want 1", n)
 	}
 
-	// Quem só estava num time, sem valor, também sai.
+	// Quem ficou num time sem valor também sai.
 	if err := f.svc.Remove(f.projectX, f.carla); err != nil {
 		t.Errorf("remove a person with only a team: %v", err)
 	}

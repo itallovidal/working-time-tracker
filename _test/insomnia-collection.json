@@ -1134,18 +1134,6 @@
       }
     },
     {
-      "_id": "req_09_09",
-      "_type": "request",
-      "parentId": "fld_09",
-      "name": "Apagar valor da pessoa",
-      "method": "DELETE",
-      "url": "{{base_url}}/api/projects/{{project_id}}/allocations/{{person_id}}",
-      "authentication": {},
-      "metaSortKey": 9,
-      "headers": [],
-      "body": {}
-    },
-    {
       "_id": "req_09_10",
       "_type": "request",
       "parentId": "fld_09",

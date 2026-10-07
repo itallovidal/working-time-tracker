@@ -97,8 +97,8 @@ func RegisterRoutes(e *echo.Echo, h Handlers, m *auth.Middleware, authLimiter ec
 	// Um membro recebe só o próprio valor; o handler filtra.
 	r.GET("/projects/:projectId/allocations", h.Allocation.ListByProject, prj)
 	r.PUT("/projects/:projectId/allocations/:personId", h.Allocation.Set, prj, per, admin)
-	r.DELETE("/projects/:projectId/allocations/:personId", h.Allocation.Remove, prj, per, admin)
-	// Quem está no projeto, pelo valor por hora ou por um time. O handler só
+	// Quem está no projeto: a pessoa entra com o valor por hora (o PUT acima) e
+	// sai pelo DELETE daqui, que apaga o valor e a tira dos times. O handler só
 	// entrega o valor dos colegas a admins.
 	r.GET("/projects/:projectId/collaborators", h.Collaborator.ListByProject, prj)
 	r.DELETE("/projects/:projectId/collaborators/:personId", h.Collaborator.Remove, prj, per, admin)

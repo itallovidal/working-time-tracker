@@ -22,8 +22,9 @@ func NewStore(client *ent.Client) *Store {
 	return &Store{client: client}
 }
 
-// ListByProject lista, por nome, quem tem valor por hora no projeto ou está em
-// algum time dele, com os times e o valor de cada pessoa.
+// ListByProject lista, por nome, quem tem valor por hora no projeto, com os
+// times e o valor de cada pessoa. Quem está num time sem valor, de antes de o
+// valor ser obrigatório, também vem, para um admin poder resolver.
 func (s *Store) ListByProject(projectID uuid.UUID) ([]Collaborator, error) {
 	hasRate := entalloc.ProjectIDEQ(projectID)
 	inTeam := enttm.HasTeamWith(entteam.ProjectIDEQ(projectID))

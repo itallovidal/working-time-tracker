@@ -6,7 +6,9 @@ import (
 	"github.com/google/uuid"
 
 	"working-time-tracker/ent"
+	entalloc "working-time-tracker/ent/allocation"
 	entperson "working-time-tracker/ent/person"
+	entproject "working-time-tracker/ent/project"
 	"working-time-tracker/ent/team"
 	enttm "working-time-tracker/ent/teammembership"
 )
@@ -99,6 +101,22 @@ func (s *MembershipStore) SameOrganization(teamID, personID string) (bool, error
 		return false, err
 	}
 	return p.OrganizationID == prj.OrganizationID, nil
+}
+
+// HasRate diz se a pessoa tem valor por hora no projeto do time. É o valor que
+// põe a pessoa no projeto.
+func (s *MembershipStore) HasRate(teamID, personID string) (bool, error) {
+	tuid, err := uuid.Parse(teamID)
+	if err != nil {
+		return false, nil
+	}
+	puid, err := uuid.Parse(personID)
+	if err != nil {
+		return false, nil
+	}
+	return s.client.Allocation.Query().
+		Where(entalloc.PersonIDEQ(puid), entalloc.HasProjectWith(entproject.HasTeamsWith(team.IDEQ(tuid)))).
+		Exist(context.Background())
 }
 
 // ListPersonsInProject lista, sem repetir, as pessoas que estão em algum time do projeto.
