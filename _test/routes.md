@@ -222,7 +222,7 @@ A pessoa traz `weekly_hours`, a jornada semanal combinada com ela, em horas: val
 | PATCH | `/api/projects/:projectId` | admin | Altera o projeto |
 | DELETE | `/api/projects/:projectId` | admin | Exclui o projeto com times, tarefas, sessões e integrações |
 | GET | `/api/projects/:projectId/overview` | admin | O projeto em números: pessoas, times, horas, custo, receita, tempo de projeto, tarefas e integrações. Veja [Visão geral](#visão-geral) |
-| GET | `/api/projects/:projectId/members` | logado | Pessoas que estão em algum time do projeto, sem repetir |
+| GET | `/api/projects/:projectId/members` | logado | Pessoas que estão no projeto (com valor por hora ou em algum time), sem repetir: são as que podem ser responsáveis por tarefas |
 
 ```http
 POST /api/orgs/:orgId/projects
@@ -411,7 +411,7 @@ Content-Type: application/json
   "deadline": "2026-10-05T23:59:00-03:00"
 }
 ```
-O `assignee_id` é opcional: sem ele a tarefa fica disponível, e quem bater o ponto nela passa a ser o responsável. Um responsável escolhido precisa estar em algum time do projeto, com uma exceção: quem está logado pode se pôr como responsável (o "atribuir a mim") mesmo fora dos times, no `POST` e no `PATCH`. Sem `deadline`, o prazo fica em 7 dias a partir de agora.
+O `assignee_id` é opcional: sem ele a tarefa fica disponível, e quem bater o ponto nela passa a ser o responsável. Um responsável escolhido precisa estar no projeto, isto é, ter valor por hora nele ou estar em algum time dele (time é opcional). Quem está logado também pode se pôr como responsável (o "atribuir a mim") sem estar no projeto, no `POST` e no `PATCH`. Fora isso, `task.assignee_not_in_team`. Sem `deadline`, o prazo fica em 7 dias a partir de agora.
 
 ```http
 GET /api/projects/:projectId/tasks?q=frete&assignee_id=…&deadline_to=2026-10-12T02:59:59Z&page=1&per_page=10

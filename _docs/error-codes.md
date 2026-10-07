@@ -189,7 +189,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 
 | Código | Status | Parâmetros | pt-BR | en |
 |---|---|---|---|---|
-| `task.assignee_not_in_team` | 400 | — | `o responsável precisa estar em algum time deste projeto` | `the assignee must be on a team of this project` |
+| `task.assignee_not_in_team` | 400 | — | `o responsável precisa estar neste projeto` | `the assignee must be on this project` |
 | `task.integration_not_found` | 400 | — | `integração não encontrada` | `integration not found` |
 | `task.integration_other_project` | 400 | — | `a integração é de outro projeto` | `the integration belongs to another project` |
 | `task.integrations_unavailable` | 400 | — | `integrações indisponíveis` | `integrations unavailable` |

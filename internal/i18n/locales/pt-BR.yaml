@@ -548,7 +548,7 @@ collab:
   no_bill: Sem valor cobrado do cliente, a margem de cada pessoa não é calculada.
   change_in_settings: Alterar em Configurações
   teams_title: Times
-  teams_intro: "Os times são montados com quem já está no projeto. Quem está em algum time pode ser responsável por tarefas, e cada pessoa pode atribuir a si mesma."
+  teams_intro: "Os times são montados com quem já está no projeto. Quem está no projeto pode ser responsável por tarefas, tenha time ou não."
   new_team: Novo time
   no_teams: Nenhum time neste projeto
   no_teams_admin: Crie um time e ponha as pessoas nele.
@@ -835,7 +835,7 @@ errors:
     not_found: "não encontrado"
     too_many_attempts: "muitas tentativas seguidas; espere um minuto e tente de novo"
   task:
-    assignee_not_in_team: "o responsável precisa estar em algum time deste projeto"
+    assignee_not_in_team: "o responsável precisa estar neste projeto"
     integration_not_found: "integração não encontrada"
     integration_other_project: "a integração é de outro projeto"
     integrations_unavailable: "integrações indisponíveis"

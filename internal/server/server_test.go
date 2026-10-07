@@ -1010,8 +1010,10 @@ func TestCollaborators_VisibilityAndRemoval(t *testing.T) {
 	if left := collaborators(admin.session); len(left) != 1 || left[colleague.id].rate != float64(7000) {
 		t.Errorf("after the removal the project has %+v, want only Caio", left)
 	}
-	if members := decodeList(t, do(e, "GET", "/api/projects/"+projectID+"/members", "", admin.session)); len(members) != 0 {
-		t.Errorf("project members after the removal = %v, want none", members)
+	// /members lista quem pode ser responsável por tarefa: quem está no projeto, com time ou
+	// não. Depois da remoção sobra o Caio, que tem valor e nenhum time.
+	if members := decodeList(t, do(e, "GET", "/api/projects/"+projectID+"/members", "", admin.session)); len(members) != 1 || members[0]["id"] != colleague.id {
+		t.Errorf("project members after the removal = %v, want only Caio", members)
 	}
 	for _, teamID := range []string{backend, mobile} {
 		if members := decodeList(t, do(e, "GET", "/api/teams/"+teamID+"/members", "", admin.session)); len(members) != 0 {

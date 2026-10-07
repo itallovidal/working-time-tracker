@@ -153,6 +153,25 @@ func TestService_AssignToSelfWithoutTeam(t *testing.T) {
 	}
 }
 
+// Quem tem valor por hora no projeto, mesmo sem time, pode ser responsável.
+func TestService_AssignToCollaboratorWithoutTeam(t *testing.T) {
+	orgSvc, personSvc, projSvc, _, _, taskSvc := setupDeps(t)
+
+	org, _ := orgSvc.Create("Org")
+	bruno, _ := personSvc.Create(org.ID.String(), "Bruno", "bruno@test.com")
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
+	pid, bid := proj.ID.String(), bruno.ID.String()
+
+	if _, err := taskSvc.Create(pid, "Antes", "", bid, nil); err == nil {
+		t.Fatal("a person outside the project must not be assignable")
+	}
+	testClient.Allocation.Create().SetProjectID(proj.ID).SetPersonID(bruno.ID).SetPayRateCents(5000).SaveX(context.Background())
+	task, err := taskSvc.Create(pid, "Depois", "", bid, nil)
+	if err != nil || task.Assignee == nil || task.Assignee.ID != bruno.ID {
+		t.Fatalf("assigning to a collaborator without a team: %v, %+v", err, task)
+	}
+}
+
 // Uma tarefa nasce sem responsável: fica disponível para quem bater o ponto nela.
 func TestService_Create_WithoutAssignee(t *testing.T) {
 	orgSvc, _, projSvc, _, _, taskSvc := setupDeps(t)

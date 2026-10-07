@@ -538,7 +538,7 @@ collab:
   no_bill: Without a rate billed to the customer, each person's margin is not calculated.
   change_in_settings: Change in Settings
   teams_title: Teams
-  teams_intro: "Teams are built from people already on the project. People on a team can be assigned tasks, and anyone can assign a task to themselves."
+  teams_intro: "Teams are built from people already on the project. Anyone on the project can be assigned tasks, with or without a team."
   new_team: New team
   no_teams: No teams on this project
   no_teams_admin: Create a team and put people in it.
@@ -825,7 +825,7 @@ errors:
     not_found: "not found"
     too_many_attempts: "too many attempts in a row; wait a minute and try again"
   task:
-    assignee_not_in_team: "the assignee must be on a team of this project"
+    assignee_not_in_team: "the assignee must be on this project"
     integration_not_found: "integration not found"
     integration_other_project: "the integration belongs to another project"
     integrations_unavailable: "integrations unavailable"

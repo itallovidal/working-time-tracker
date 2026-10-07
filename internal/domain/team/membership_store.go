@@ -8,6 +8,7 @@ import (
 	"working-time-tracker/ent"
 	entalloc "working-time-tracker/ent/allocation"
 	entperson "working-time-tracker/ent/person"
+	"working-time-tracker/ent/predicate"
 	entproject "working-time-tracker/ent/project"
 	"working-time-tracker/ent/team"
 	enttm "working-time-tracker/ent/teammembership"
@@ -119,14 +120,15 @@ func (s *MembershipStore) HasRate(teamID, personID string) (bool, error) {
 		Exist(context.Background())
 }
 
-// ListPersonsInProject lista, sem repetir, as pessoas que estão em algum time do projeto.
+// ListPersonsInProject lista, sem repetir, as pessoas que estão no projeto, em
+// algum time ou não: são elas que podem ser responsáveis por tarefas.
 func (s *MembershipStore) ListPersonsInProject(projectID string) ([]Person, error) {
 	prjid, err := uuid.Parse(projectID)
 	if err != nil {
 		return nil, err
 	}
 	persons, err := s.client.Person.Query().
-		Where(entperson.HasTeamMembershipsWith(enttm.HasTeamWith(team.ProjectIDEQ(prjid)))).
+		Where(inProject(prjid)).
 		Order(ent.Asc(entperson.FieldName)).
 		All(context.Background())
 	if err != nil {
@@ -148,12 +150,19 @@ func (s *MembershipStore) IsPersonInProject(personID, projectID string) (bool, e
 	if err != nil {
 		return false, err
 	}
-	count, err := s.client.TeamMembership.Query().
-		Where(enttm.PersonIDEQ(puid)).
-		QueryTeam().
-		Where(team.ProjectIDEQ(prjid)).
-		Count(context.Background())
-	return count > 0, err
+	return s.client.Person.Query().
+		Where(entperson.IDEQ(puid), inProject(prjid)).
+		Exist(context.Background())
+}
+
+// inProject é quem está no projeto: tem valor por hora nele ou está em algum
+// dos times dele. Desde que o valor passou a ser obrigatório para entrar num
+// time, quem está num time tem valor; a segunda parte cobre os bancos antigos.
+func inProject(projectID uuid.UUID) predicate.Person {
+	return entperson.Or(
+		entperson.HasAllocationsWith(entalloc.ProjectIDEQ(projectID)),
+		entperson.HasTeamMembershipsWith(enttm.HasTeamWith(team.ProjectIDEQ(projectID))),
+	)
 }
 
 func toDomainMembership(e *ent.TeamMembership) TeamMembership {
