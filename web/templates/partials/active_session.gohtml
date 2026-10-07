@@ -14,7 +14,7 @@
   </button>
   <div id="session-dock-panel" class="session-dock-panel" x-show="open">
     <template x-for="l in $store.clock.running()" :key="l.id">
-      {{/* O cartão é o link para a tarefa. */}}
+      {{/* O cartão é o link para a tarefa; o botão ao lado para só ela (um botão não vai dentro do link). */}}
       <div class="session-dock-item">
         <a class="session-dock-task" :href="'/tasks/' + l.task_id">
           <span class="session-dock-task-name" x-text="l.task.name"></span>
@@ -22,6 +22,8 @@
           <span class="mono num" x-text="WTT.fmt.clock($store.clock.taskElapsed($store.clock.session, l.task_id))"></span>
           {{template "icon" "arrow-right"}}
         </a>
+        <button type="button" class="btn btn-ghost btn-icon" :disabled="busy"
+                :aria-label="$t('session.stop_task_label', { name: l.task.name })" title="{{.T "session.stop_task_hint"}}" @click="stopTask(l)">{{template "icon" "stop"}}</button>
       </div>
     </template>
     <div class="session-dock-foot">

@@ -560,6 +560,22 @@
         await this.refresh();
         window.dispatchEvent(new CustomEvent('wtt:sessions-changed'));
       },
+      // stopTask para uma tarefa só: o intervalo dela fecha agora e a sessão segue com as outras. A sessão
+      // aberta guarda sempre uma tarefa em andamento (o servidor recusa parar a última por aqui), então
+      // parar a única em andamento é encerrar o ponto. O aviso é daqui porque todas as telas chamam.
+      async stopTask(taskId) {
+        const link = this.running().find((l) => l.task_id === taskId);
+        if (!link) return;
+        if (this.running().length === 1) {
+          await this.clockOut();
+          Alpine.store('toast').show(t('session.stopped'));
+          return;
+        }
+        await api('PATCH', '/api/projects/' + this.session.project_id + '/work-sessions/' + this.session.id + '/tasks/' + link.id, { stop: true });
+        await this.refresh();
+        window.dispatchEvent(new CustomEvent('wtt:sessions-changed'));
+        Alpine.store('toast').show(t('session.modal.stopped_task', { name: link.task.name }));
+      },
       async clockOut() {
         if (!this.session) return;
         await api('POST', '/api/projects/' + this.session.project_id + '/work-sessions/clock-out', {});
@@ -754,6 +770,17 @@
         try {
           await Alpine.store('clock').clockOut();
           Alpine.store('toast').show(t('session.stopped'));
+        } catch (e) {
+          Alpine.store('toast').error(e.message);
+        } finally {
+          this.busy = false;
+        }
+      },
+      // stopTask para só a tarefa do cartão; sendo a única em andamento, é o mesmo que Parar.
+      async stopTask(l) {
+        this.busy = true;
+        try {
+          await Alpine.store('clock').stopTask(l.task_id);
         } catch (e) {
           Alpine.store('toast').error(e.message);
         } finally {

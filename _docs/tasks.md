@@ -701,6 +701,15 @@
 
 ---
 
+### Sprint 62: Stop One Task of the Session
+
+- [X] S62.1 `clock.stopTask(taskId)` in `app.js`: sends `PATCH .../work-sessions/:sessionId/tasks/:linkId` with `{"stop": true}` for the running interval of the task, refreshes the clock and fires `wtt:sessions-changed`; when the task is the only one running it calls the clock-out instead (the server still refuses it with `work_session.last_task`) and says "Ponto encerrado."; `stopTask` in the `taskClock()` mixin, in `taskDetail` and in `sessionDock`
+- [X] S62.2 **Parar tarefa** (`stop` icon, secondary style) on the task page in the place of Iniciar and Adicionar à sessão, on the task card of the timer panel in the place of the "Em andamento" badge, on the row of Minhas tarefas, and as an icon button on each card of the session bubble (`.session-dock-item`: the link and the button side by side, since a button cannot go inside a link)
+- [X] S62.3 Texts `session.stop_task`, `session.stop_task_label` and `session.stop_task_hint` in both languages; no API, route, permission or migration changed
+- [X] S62.4 No front-end tests added, as the owner asked; checked in the browser (each of the four places with two tasks running, the session keeps going with the other one, the task offers Adicionar à sessão again and can be added back, the last task ends the session, light, dark, phone); update README and `design.md`
+
+---
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open

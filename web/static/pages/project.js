@@ -222,6 +222,10 @@ document.addEventListener('alpine:init', () => {
     stop() {
       return this.run('clock', () => clock().clockOut());
     },
+    // stopTask para só a tarefa do cartão ou da linha; a sessão segue com as outras, e a última encerra o ponto.
+    stopTask(t) {
+      return this.run('clock', () => clock().stopTask(t.id));
+    },
     openSession(s) {
       Alpine.store('sessionView').open(s || clock().session);
     },
@@ -869,6 +873,10 @@ document.addEventListener('alpine:init', () => {
         await clock().addTask(this.taskId);
         toast(WTT.t('session.modal.added', { name: this.task.name }));
       });
+    },
+    // Para só esta tarefa; a sessão segue com as outras, e sendo a única em andamento o ponto é encerrado.
+    stopTask() {
+      return this.run('clock', () => clock().stopTask(this.taskId));
     },
     isRunning() {
       return clock().isRunning(this.taskId);

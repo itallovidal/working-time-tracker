@@ -194,6 +194,9 @@ session:
   details: View the session
   manage: Session tasks
   add_to_session: Add to the session
+  stop_task: Stop task
+  stop_task_label: "Stop task {{.name}}"
+  stop_task_hint: Stops only this task and the session goes on. If it is the only one in progress, time tracking stops.
   deleted_tasks: deleted task
   modal:
     title: "Session on {{.date}}"

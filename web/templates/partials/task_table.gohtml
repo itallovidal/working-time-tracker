@@ -51,6 +51,8 @@
           {{/* Com o ponto aberto neste projeto, o botão põe a tarefa na sessão; com ele aberto em outro, fica desabilitado. */}}
           <td class="actions" x-show="{{$.ActionShow}}">
             <button type="button" class="btn btn-secondary btn-sm" x-show="!isRunning(t) && t.status !== 'closed'" :disabled="pending || otherProject()" @click="startTask(t)">{{template "icon" "play"}} <span x-text="sessionHere() ? $t('session.add_to_session') : $t('tasks.start')"></span></button>
+            {{/* Em andamento, para só esta tarefa: a sessão segue com as outras, e sendo a única o ponto é encerrado. */}}
+            <button type="button" class="btn btn-secondary btn-sm" x-show="isRunning(t)" :disabled="pending" :aria-label="$t('session.stop_task_label', { name: t.name })" title="{{.T "session.stop_task_hint"}}" @click="stopTask(t)">{{template "icon" "stop"}} {{.T "session.stop_task"}}</button>
           </td>
           {{end}}
         </tr>

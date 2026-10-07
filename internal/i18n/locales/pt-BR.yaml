@@ -204,6 +204,9 @@ session:
   details: Ver a sessão
   manage: Tarefas da sessão
   add_to_session: Adicionar à sessão
+  stop_task: Parar tarefa
+  stop_task_label: "Parar a tarefa {{.name}}"
+  stop_task_hint: Para só esta tarefa e a sessão continua. Se for a única em andamento, o ponto é encerrado.
   deleted_tasks: tarefa excluída
   modal:
     title: "Sessão de {{.date}}"

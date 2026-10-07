@@ -651,7 +651,7 @@ td.actions { text-align: right; white-space: nowrap; }
 .session-dock-chevron { margin-left: auto; font-size: 0.8em; transition: transform 0.15s; }
 .session-dock.is-open .session-dock-chevron { transform: rotate(180deg); }
 .session-dock-panel { display: flex; flex-direction: column; gap: 6px; }
-/* O cartão de uma tarefa: o link para ela, esticado. */
+/* O cartão de uma tarefa: o link para ela, esticado, e ao lado o botão de parar só ela. */
 .session-dock-item {
   display: flex; align-items: center; gap: 2px; min-width: 0; padding-right: 4px;
   background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius);

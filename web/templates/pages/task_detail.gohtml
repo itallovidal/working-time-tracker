@@ -21,6 +21,8 @@
         {{/* Parado, inicia o ponto; com o ponto aberto neste projeto, põe a tarefa na sessão; num outro projeto, fica de fora. */}}
         <button type="button" class="btn btn-secondary btn-sm" x-show="!isRunning() && !sessionHere()" :disabled="pending || otherProject()" @click="start()">{{template "icon" "play"}} {{.T "tasks.start"}}</button>
         <button type="button" class="btn btn-secondary btn-sm" x-show="!isRunning() && sessionHere()" :disabled="pending" @click="addToSession()">{{template "icon" "plus"}} {{.T "session.add_to_session"}}</button>
+        {{/* Em andamento, para só esta tarefa: a sessão segue com as outras, e sendo a única o ponto é encerrado. */}}
+        <button type="button" class="btn btn-secondary btn-sm" x-show="isRunning()" :disabled="pending" title="{{.T "session.stop_task_hint"}}" @click="stopTask()">{{template "icon" "stop"}} {{.T "session.stop_task"}}</button>
         {{/* Só o status, a prioridade e as etiquetas, sem abrir a edição da tarefa inteira. */}}
         <button type="button" class="btn btn-secondary btn-sm" title="{{.T "task_detail.quick_hint"}}" @click="openQuick()">{{template "icon" "bolt"}} {{.T "task_detail.quick"}}</button>
         <button type="button" class="btn btn-ghost btn-sm" aria-label="{{.T "task_detail.edit_title"}}" title="{{.T "task_detail.edit_title"}}" @click="openEdit()">{{template "icon" "pen"}}</button>
