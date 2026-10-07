@@ -71,11 +71,12 @@
           <template x-for="t in types" :key="t.type">
             <li>
               <label class="pick">
-                <input type="radio" name="int-type" :value="t.type" x-model="draft.type" @change="pickType()">
+                <input type="radio" name="int-type" :value="t.type" x-model="draft.type" @change="pickType()" :disabled="t.coming_soon">
                 <span class="grow">
                   <span x-text="t.label"></span>
                   <span class="muted small" x-text="t.description"></span>
                 </span>
+                <span class="badge" x-show="t.coming_soon">{{.T "integrations.coming_soon"}}</span>
               </label>
             </li>
           </template>

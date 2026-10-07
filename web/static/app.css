@@ -434,6 +434,9 @@ td.actions { text-align: right; white-space: nowrap; }
 .picker > li { padding: 0; }
 .pick { display: flex; align-items: center; gap: 12px; padding: 8px 12px; flex: 1; min-width: 0; cursor: pointer; }
 .pick:hover, .pick:has(:checked) { background: var(--surface-2); }
+/* Opção que ainda não se oferece (um tipo "em breve"): esmaecida, sem destaque ao passar o mouse. */
+.pick:has(input:disabled) { cursor: default; opacity: 0.6; }
+.pick:has(input:disabled):hover { background: transparent; }
 .pick input { width: auto; flex: none; accent-color: var(--accent); }
 .pick .grow { display: flex; flex-direction: column; }
 /* Dentro de um campo, a opção não herda o estilo do rótulo do campo. */

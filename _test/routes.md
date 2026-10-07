@@ -651,6 +651,7 @@ Resposta (`201`), igual em todas as rotas de integração:
 }
 ```
 
+- `gitlab` e `trello` estão "em breve": o `POST` deles responde `400` com `integration.type_coming_soon` (`provider` no `params`). O `PATCH` e o `GET` das que já existem seguem como antes.
 - Cada tipo confere o próprio `metadata` antes de falar com a plataforma. Faltando um campo, a resposta é `400` com o nome dele, por exemplo `informe o campo "Quadro" do Trello`. Chave que o tipo não declara é descartada, e o valor é guardado normalizado (o endereço do repositório vira `dono/repositorio`; o do quadro, o link curto).
 - A conexão é validada na plataforma antes de salvar. O token fica criptografado (AES-GCM) no banco e nunca volta nas respostas: elas mostram só `has_token`. O `metadata` fica em claro e volta, então não é lugar de segredo.
 - Sem `enabled` no corpo, a integração nasce ativa.

@@ -56,6 +56,10 @@ type Descriptor struct {
 	ItemLabel       string `json:"item_label"`
 	ItemPlaceholder string `json:"item_placeholder,omitempty"`
 	ItemNumeric     bool   `json:"item_numeric"`
+	// ComingSoon marca o tipo que existe no adapter mas ainda não se oferece: a tela
+	// mostra "em breve" e a API recusa criar uma integração nova dele. As que já
+	// existem continuam funcionando e podem ser editadas.
+	ComingSoon bool `json:"coming_soon"`
 }
 
 type Integration interface {

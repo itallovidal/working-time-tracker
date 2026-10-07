@@ -675,12 +675,13 @@ time:
     other: "Page {{.page}} of {{.pages}} · {{.count}} sessions"
 
 integrations:
-  intro: Link tasks to GitHub or GitLab issues and to Trello cards. The token is validated on the platform and stored encrypted.
+  intro: Link tasks to GitHub issues. The token is validated on the platform and stored encrypted. GitLab and Trello are coming soon.
   new: New integration
   loading: Loading integrations…
   none: No integrations
   none_admin: Create one to link tasks to issues or cards and see their state here.
-  none_member: An admin can set up GitHub, GitLab or Trello for this project.
+  none_member: An admin can set up GitHub for this project.
+  coming_soon: Coming soon
   active: Active
   disabled: Disabled
   edit_title: Edit integration
@@ -1046,6 +1047,7 @@ errors:
     trello_invalid_key: "invalid Trello API key"
     trello_no_access_board: "invalid Trello key or token, or no access to the board"
     trello_no_access_card: "invalid Trello key or token, or no access to the card"
+    type_coming_soon: "the {{.provider}} integration is not available yet"
     type_required: "enter the integration type"
     unexpected_response: "unexpected response from {{.provider}}"
     unreadable_credential: "could not read the stored credential: edit the integration and enter the token again"

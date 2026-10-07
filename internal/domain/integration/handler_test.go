@@ -134,6 +134,47 @@ func TestHandler_Create_InvalidType(t *testing.T) {
 	}
 }
 
+// GitLab e Trello estão "em breve": o adapter funciona, mas a API não cria integração
+// nova deles, nem com um corpo que passaria na validação.
+func TestHandler_Create_ComingSoonType(t *testing.T) {
+	cleanup(t)
+	e := echo.New()
+	e.Use(middleware.Recover())
+
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	projSvc := project.NewService(project.NewStore(testClient))
+	integSvc := integration.NewService(integration.NewStore(testClient), "test-32-byte-encryption-key!!!!")
+	registerRoutes(e, organization.NewHandler(orgSvc), project.NewHandler(projSvc, nil), integration.NewHandler(integSvc))
+
+	org, err := orgSvc.Create("Org")
+	if err != nil {
+		t.Fatalf("create org: %v", err)
+	}
+	proj := mustCreate(t, e, "POST", "/api/orgs/"+org.ID.String()+"/projects", `{"name":"Project"}`)
+	projectID := jsonPath(proj, "id")
+
+	bodies := map[string]string{
+		"GitLab": `{"type":"gitlab","display_name":"App","token":"glpat-x","metadata":{"project_url":"grupo/projeto"}}`,
+		"Trello": `{"type":"trello","display_name":"Quadro","token":"t","metadata":{"api_key":"k","board_id":"AbC123xy"}}`,
+	}
+	for provider, body := range bodies {
+		req := httptest.NewRequest("POST", "/api/projects/"+projectID+"/integrations", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+		e.ServeHTTP(rec, req)
+		if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), `"integration.type_coming_soon"`) ||
+			!strings.Contains(rec.Body.String(), `"provider":"`+provider+`"`) {
+			t.Errorf("%s: got %d %s, want 400 integration.type_coming_soon naming the provider", provider, rec.Code, rec.Body.String())
+		}
+	}
+
+	list := httptest.NewRecorder()
+	e.ServeHTTP(list, httptest.NewRequest("GET", "/api/projects/"+projectID+"/integrations", nil))
+	if strings.TrimSpace(list.Body.String()) != "[]" {
+		t.Errorf("refused types left integrations behind: %s", list.Body.String())
+	}
+}
+
 func registerRoutes(
 	e *echo.Echo,
 	orgH *organization.Handler,

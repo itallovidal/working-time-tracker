@@ -122,6 +122,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `integration.trello_invalid_key` | 400 | — | `chave da API do Trello inválida` | `invalid Trello API key` |
 | `integration.trello_no_access_board` | 400 | — | `chave ou token do Trello inválido, ou sem acesso ao quadro` | `invalid Trello key or token, or no access to the board` |
 | `integration.trello_no_access_card` | 400 | — | `chave ou token do Trello inválido, ou sem acesso ao cartão` | `invalid Trello key or token, or no access to the card` |
+| `integration.type_coming_soon` | 400 | `provider` | `a integração com o {{.provider}} ainda não está disponível` | `the {{.provider}} integration is not available yet` |
 | `integration.type_required` | 400 | — | `informe o tipo da integração` | `enter the integration type` |
 | `integration.unexpected_response` | 400 | `provider` | `resposta inesperada do {{.provider}}` | `unexpected response from {{.provider}}` |
 | `integration.unreadable_credential` | 400 | — | `não foi possível ler a credencial guardada: edite a integração e informe o token de novo` | `could not read the stored credential: edit the integration and enter the token again` |

@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v5"
 
+	"working-time-tracker/internal/adapter"
 	"working-time-tracker/internal/apperr"
 	"working-time-tracker/internal/database"
 )
@@ -66,6 +67,11 @@ func (h *Handler) Create(c *echo.Context) error {
 	}
 	if body.Type == "" {
 		return apperr.Respond(c, 400, ErrTypeRequired)
+	}
+	// Um tipo "em breve" não ganha integração nova pela API. Fica no handler e não no
+	// service: as que já existem seguem funcionando, e reativar o tipo é virar a flag.
+	if impl, err := adapter.GetIntegration(body.Type); err == nil && impl.Descriptor().ComingSoon {
+		return apperr.Respond(c, 400, ErrTypeComingSoon.With("provider", impl.Descriptor().Label))
 	}
 	// Sem enabled no corpo, a integração nasce ativa.
 	enabled := body.Enabled == nil || *body.Enabled

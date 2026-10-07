@@ -685,12 +685,13 @@ time:
     other: "Página {{.page}} de {{.pages}} · {{.count}} sessões"
 
 integrations:
-  intro: Ligue tarefas a issues do GitHub ou do GitLab e a cartões do Trello. O token é validado na plataforma e guardado criptografado.
+  intro: Ligue tarefas a issues do GitHub. O token é validado na plataforma e guardado criptografado. GitLab e Trello chegam em breve.
   new: Nova integração
   loading: Carregando integrações…
   none: Nenhuma integração
   none_admin: Crie uma para vincular tarefas a issues ou cartões e ver o estado deles aqui.
-  none_member: Um admin pode configurar o GitHub, o GitLab ou o Trello deste projeto.
+  none_member: Um admin pode configurar o GitHub deste projeto.
+  coming_soon: Em breve
   active: Ativa
   disabled: Desativada
   edit_title: Editar integração
@@ -1056,6 +1057,7 @@ errors:
     trello_invalid_key: "chave da API do Trello inválida"
     trello_no_access_board: "chave ou token do Trello inválido, ou sem acesso ao quadro"
     trello_no_access_card: "chave ou token do Trello inválido, ou sem acesso ao cartão"
+    type_coming_soon: "a integração com o {{.provider}} ainda não está disponível"
     type_required: "informe o tipo da integração"
     unexpected_response: "resposta inesperada do {{.provider}}"
     unreadable_credential: "não foi possível ler a credencial guardada: edite a integração e informe o token de novo"

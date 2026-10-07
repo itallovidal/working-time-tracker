@@ -18,6 +18,7 @@ var gitlabDescriptor = Descriptor{
 		{Key: "project_url", Required: true, Summary: true},
 	},
 	ItemNumeric: true,
+	ComingSoon:  true,
 }
 
 // GitLabIntegration fala com a API do GitLab. BaseURL e Client são opcionais e

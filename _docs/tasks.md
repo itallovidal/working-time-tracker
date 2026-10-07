@@ -670,6 +670,15 @@
 
 ---
 
+### Sprint 59: GitLab and Trello Coming Soon
+
+- [X] S59.1 `Descriptor.ComingSoon` (in `window.BOOT.integration_types` as `coming_soon`), set for GitLab and Trello; the adapters, their tests and the integrations that already exist (the seed has some) are untouched
+- [X] S59.2 `POST /api/projects/:projectId/integrations` refuses a coming-soon type with `integration.type_coming_soon` (400, names the provider); the check is in the handler, not in the service, so reactivating a type is one flag
+- [X] S59.3 "Nova integração": the coming-soon platforms are disabled in the picker, dimmed, with a neutral "Em breve" badge, and the modal opens on the first available one; the intro and the empty-state texts name only GitHub
+- [X] S59.4 Handler test for the refusal (both types, nothing left behind); no front-end tests added; update README and `error-codes.md`
+
+---
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open

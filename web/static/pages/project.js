@@ -981,7 +981,9 @@ document.addEventListener('alpine:init', () => {
       return this.typeOf(it.type).metadata.some((f) => f.required && !(it.metadata || {})[f.key]);
     },
     openCreate() {
-      this.draft = { id: null, type: this.types.length ? this.types[0].type : '', display_name: '', token: '', metadata: {}, enabled: true, has_token: false };
+      // Um tipo "em breve" não se escolhe: o modal abre no primeiro que está disponível.
+      const first = this.types.find((t) => !t.coming_soon);
+      this.draft = { id: null, type: first ? first.type : '', display_name: '', token: '', metadata: {}, enabled: true, has_token: false };
       this.openForm(WTT.t('integrations.new'));
     },
     openEdit(it) {

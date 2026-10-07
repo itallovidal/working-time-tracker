@@ -18,6 +18,7 @@ var trelloDescriptor = Descriptor{
 		{Key: "api_key", Required: true},
 		{Key: "board_id", Required: true, Summary: true},
 	},
+	ComingSoon: true,
 }
 
 // TrelloIntegration fala com a API do Trello. BaseURL e Client são opcionais e
