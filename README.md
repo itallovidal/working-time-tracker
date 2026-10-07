@@ -90,7 +90,7 @@ A interface segue a Decision 8 de `_docs/design.md`. O servidor renderiza a casc
 | `/orgs/:orgId` | O **Início**: para admins, a visão geral da organização (horas, receita, custo e margem de todos os projetos, em 7 dias, 30 dias ou tudo, e a equipe); para todos, os projetos em cartões coloridos, seis por página (`?page=`). Quem pode cria projeto num modal, já com o cliente e, quando há cliente, o valor cobrado por hora |
 | `/orgs/:orgId/about` | Organização, aba Sobre: o perfil da organização, para todos os membros |
 | `/orgs/:orgId/settings` | Organização, tela de edição aberta pelo botão Editar da aba Sobre: perfil, regime, fuso, moeda e exclusão da organização (só admins) |
-| `/orgs/:orgId/people` | Organização, aba Colaboradores: os integrantes, com o papel (que muda no botão da linha) e a jornada semanal de cada um (que muda num modal, pelo lápis); os convites pendentes e o botão Adicionar colaborador, que gera o link de convite num modal (só admins) |
+| `/orgs/:orgId/people` | Colaboradores (item próprio da barra superior, que também é a aba da Organização): os integrantes, com o papel (que muda no botão da linha) e a jornada semanal de cada um (que muda num modal, pelo lápis); os convites pendentes e o botão Adicionar colaborador, que gera o link de convite num modal (só admins) |
 | `/orgs/:orgId/customers` | Organização, aba Clientes: quem contrata os projetos, com cadastro e edição num modal (só admins) |
 | `/orgs/:orgId/projects` | Organização, aba Projetos: tabela de gestão com o cliente, os colaboradores e as tarefas de cada projeto; a linha abre o projeto (só admins) |
 | `/profile` | Seu nome, seu email, sua senha, sua jornada semanal (só para ler) e quanto você recebe por hora em cada projeto |
@@ -113,7 +113,7 @@ Sem sessão, qualquer página leva ao login, e a pessoa volta para a página ped
 
 ### Navegação
 
-- A **barra superior** mostra a organização, o menu (Início e Organização), o **indicador do ponto aberto** com cronômetro e botão Parar, o **toggle de idioma** (PT | EN), quem está logado (o nome leva ao **perfil**) e o botão Sair. Sem login, o toggle fica no canto da tela.
+- A **barra superior** mostra a organização, o menu (Início, Colaboradores e Organização; o Colaboradores só aparece para quem cuida das pessoas, admins e quem recebeu essa permissão, e leva direto à configuração delas), o **indicador do ponto aberto** com cronômetro e botão Parar, o **toggle de idioma** (PT | EN), quem está logado (o nome leva ao **perfil**) e o botão Sair. Sem login, o toggle fica no canto da tela.
 - As páginas de projeto têm duas barras de **abas**. Para todos: Início (o relógio, as suas tarefas e as suas sessões), Minhas tarefas, Lista de tarefas e Colaboradores (só para ler), e o projeto abre no Início. Para admins, o botão Gestão abre a outra: Visão geral, Colaboradores, Integrações e Configurações, em `/projects/:id/management/...`. A aba Colaboradores juntou as antigas Times e Valores. O valor cobrado do cliente fica em Configurações.
 - A página **Organização** abre na aba Sobre, que todos os membros leem. Nela o admin tem o botão **Editar**, que leva à tela de edição; salvar volta para a Sobre. As abas Colaboradores, Clientes e Projetos são só de admins.
 - Ações de admin não aparecem para membros. A API continua sendo quem garante as permissões.

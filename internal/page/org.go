@@ -28,9 +28,14 @@ func (h *Handler) Org(c *echo.Context) error {
 	return h.render(c, "org_home", h.orgData(c, Data{TitleKey: "titles.home", Section: "home"}))
 }
 
-// orgPage monta a página de uma aba da organização.
+// orgPage monta a página de uma aba da organização. A aba Colaboradores tem o próprio item na
+// barra superior; as outras ficam sob Organização.
 func (h *Handler) orgPage(c *echo.Context, name, titleKey, tab string) error {
-	return h.render(c, name, h.orgData(c, Data{TitleKey: titleKey, Section: "organization", Tab: tab}))
+	section := "organization"
+	if tab == "people" {
+		section = "people"
+	}
+	return h.render(c, name, h.orgData(c, Data{TitleKey: titleKey, Section: section, Tab: tab}))
 }
 
 // About é a aba Sobre: o perfil da organização, que todos os membros leem (S11.4).

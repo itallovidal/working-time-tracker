@@ -598,6 +598,14 @@
 
 ---
 
+### Sprint 51: Colaboradores in the Top Bar
+
+- [X] S51.1 The top bar is **Início, Colaboradores, Organização** (the first was "Projetos"): Colaboradores goes straight to `/orgs/:orgId/people`, shown only to who can open it (`people.manage`, always true for admins), so a member without it sees no link to a 404
+- [X] S51.2 `Data.Section` has the value `people`, set for the people tab only: the Colaboradores item is the lit one there, and Organização stays lit on About, Customers, Projects and the edit screen; the Organização tab bar keeps its own Colaboradores tab
+- [X] S51.3 Test of the bar in every case (admin on the home page, on the people tab, on About, on Customers and inside a project; a member without the permission; a member the owner allowed to manage people); checked in the browser; update README and design; no route, API or permission change
+
+---
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open

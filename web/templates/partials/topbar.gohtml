@@ -7,6 +7,8 @@
     </a>
     <nav class="mainnav" aria-label="{{.T "nav.label"}}">
       <a href="/orgs/{{.OrgID}}" {{if eq .Section "home"}}aria-current="page"{{end}}>{{.T "nav.home"}}</a>
+      {{/* Quem cuida das pessoas vai direto à configuração dos colaboradores. */}}
+      {{if .Can "people.manage"}}<a href="/orgs/{{.OrgID}}/people" {{if eq .Section "people"}}aria-current="page"{{end}}>{{.T "nav.people"}}</a>{{end}}
       <a href="/orgs/{{.OrgID}}/about" {{if eq .Section "organization"}}aria-current="page"{{end}}>{{.T "nav.organization"}}</a>
     </nav>
     <div class="topbar-right">

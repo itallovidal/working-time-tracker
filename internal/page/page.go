@@ -31,7 +31,7 @@ type Data struct {
 	TitleKey    string
 	TitleSuffix string
 	Me          *auth.Identity
-	Section     string                     // item ativo da barra superior: home, organization, profile
+	Section     string                     // item ativo da barra superior: home, people, organization, profile
 	Org         *organization.Organization // só nas páginas da organização
 	Project     *Crumb
 	Task        *Crumb // só na página da tarefa, que tem cabeçalho próprio, sem as abas do projeto

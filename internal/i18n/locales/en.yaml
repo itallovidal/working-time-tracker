@@ -53,6 +53,7 @@ titles:
 nav:
   label: Organization
   home: Home
+  people: Collaborators
   organization: Organization
   profile_sr: "Your profile:"
   logout: Sign out

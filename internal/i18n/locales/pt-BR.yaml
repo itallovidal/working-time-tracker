@@ -63,6 +63,7 @@ titles:
 nav:
   label: Organização
   home: Início
+  people: Colaboradores
   organization: Organização
   profile_sr: "Seu perfil:"
   logout: Sair
