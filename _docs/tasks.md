@@ -568,6 +568,14 @@
 
 ---
 
+### Sprint 48: No Labels in the List Rows
+
+- [X] S48.1 The rows of the **Lista de tarefas** (both lists) no longer show the labels under the task name; each row is the name (with the running badge), status, priority and deadline, plus the assignee in the Com responsável list; the Etiquetas filter stays
+- [X] S48.2 Minhas tarefas and the task page keep showing the labels; no API change (the list still carries `labels`)
+- [X] S48.3 Test of the page markup (the list rows have no label badges, and the label filter is still there); checked in the browser; update README and design
+
+---
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open

@@ -956,6 +956,10 @@ func TestPages_ProjectIntegrationsTab(t *testing.T) {
 	if strings.Contains(board, `x-show="t.priority !== 'none'"`) {
 		t.Error("the board still hides the priority badge when there is none")
 	}
+	// As etiquetas só servem de filtro na lista: as linhas não as desenham sob o nome.
+	if strings.Contains(board, `class="label-list"`) || strings.Contains(board, `x-for="l in t.labels"`) {
+		t.Error("the board rows still draw the labels of each task")
+	}
 	if home := do(e, "GET", "/projects/"+projectID+"/overview", "", member.session).Body.String(); strings.Contains(home, "integration_types") {
 		t.Error("the Início tab gets the integration types without using them")
 	}
