@@ -86,8 +86,8 @@
 
         {{/* A equipe: quem está com o ponto aberto agora e em que tarefa, quem trabalha agora primeiro e
              depois por nome. De propósito não há horas, barras nem ordem por tempo: veja partials/team_hours. */}}
-        <section class="card" aria-labelledby="home-team-title">
-          <div class="card-head">
+        <section class="stack" aria-labelledby="home-team-title">
+          <div class="toolbar">
             <div class="section-head">
               <h3 id="home-team-title">{{.T "home.team.title"}}</h3>
               <p class="muted small">{{.T "home.team.intro"}}</p>
@@ -97,7 +97,8 @@
           <p class="muted" x-show="stats.people.working_now === 0">{{.T "home.team.nobody_working"}}</p>
           <ul class="team-list">
             <template x-for="p in teamView().rows" :key="p.person.id">
-              <li class="team-row" :class="p.working_now ? 'hue-green' : 'tone'">
+              {{/* Cada pessoa é um cartão de ponta a ponta: o avatar e o nome de um lado e, do outro, o ícone que abre a tarefa. */}}
+              <li class="team-row team-card" :class="p.working_now ? 'hue-green' : 'tone'">
                 <span class="avatar" aria-hidden="true" x-text="initialsOf(p.person.name)"></span>
                 <div class="team-who">
                   <div class="team-name">
@@ -107,7 +108,7 @@
                   <template x-if="p.working_now && p.working_on.length > 0">
                     <p class="team-doing">
                       <span class="muted">{{.T "home.team.on_task"}}</span>
-                      <a :href="'/tasks/' + p.working_on[0].task.id" x-text="p.working_on[0].task.name"></a>
+                      <strong x-text="p.working_on[0].task.name"></strong>
                       <span class="muted">· <span x-text="p.working_on[0].project.name"></span></span>
                       <span class="muted" x-show="p.working_on.length > 1" :title="moreTasks(p)" x-text="$t('home.team.more_tasks', { count: p.working_on.length - 1 })"></span>
                     </p>
@@ -115,6 +116,9 @@
                   <p class="team-doing muted" x-show="p.working_now && p.working_on.length === 0">{{.T "home.team.no_task"}}</p>
                   <p class="team-doing muted" x-show="!p.working_now">{{.T "home.team.idle"}}</p>
                 </div>
+                <template x-if="p.working_now && p.working_on.length > 0">
+                  <a class="btn btn-ghost btn-icon team-open" :href="'/tasks/' + p.working_on[0].task.id" :aria-label="$t('home.team.open_task', { name: p.working_on[0].task.name })" :title="$t('home.team.open_task', { name: p.working_on[0].task.name })">{{template "icon" "arrow-up-right-from-square"}}</a>
+                </template>
               </li>
             </template>
           </ul>

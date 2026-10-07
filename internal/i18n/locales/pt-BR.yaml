@@ -104,6 +104,7 @@ home:
     nobody_working: Ninguém está com o ponto aberto agora.
     working: Trabalhando agora
     on_task: Na tarefa
+    open_task: "Abrir a tarefa {{.name}}"
     more_tasks:
       one: "e mais {{.count}} tarefa"
       other: "e mais {{.count}} tarefas"

@@ -654,6 +654,13 @@
 
 ---
 
+### Sprint 57: Each Person of the Team in a Card
+
+- [X] S57.1 On the Início overview, each person of the Equipe block is a full-width card (avatar, name, "Trabalhando agora", the task and the project, or "Sem ponto aberto"); the block itself lost its frame, like the Projetos section
+- [X] S57.2 The task is plain text in the card, and the link is an icon at the other end (`arrow-up-right-from-square`, `aria-label` and `title` "Abrir a tarefa <nome>"), only for who is working on a task; no front-end tests added, as the owner asked
+
+---
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open

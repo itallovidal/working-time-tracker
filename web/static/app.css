@@ -546,9 +546,15 @@ td.actions { text-align: right; white-space: nowrap; }
 .team-row .avatar { width: 36px; height: 36px; background: var(--tone-soft); color: var(--tone); }
 .team-who { min-width: 0; }
 .team-name { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-weight: 550; overflow-wrap: anywhere; }
-/* O que a pessoa faz agora: a tarefa (que abre a página dela), o projeto e quantas outras tem na sessão. */
+/* O que a pessoa faz agora: a tarefa, o projeto e quantas outras tem na sessão. O link para a tarefa é
+   o ícone na outra ponta do cartão (`.team-open`), e não o nome. */
 .team-doing { margin: 2px 0 0; font-size: 0.88rem; color: var(--ink-2); overflow-wrap: anywhere; }
-.team-doing a { font-weight: 600; }
+.team-doing strong { color: var(--ink); font-weight: 600; }
+/* Cada pessoa da equipe num cartão de ponta a ponta: avatar, quem é e o que faz, e o ícone que abre a tarefa. */
+.team-card {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  padding: 12px 16px; background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius);
+}
 /* O ranking por horas guardado em partials/team_hours.gohtml: ganha a coluna das horas. */
 .team-row-ranked { grid-template-columns: auto minmax(0, 1fr) auto; }
 .team-bar { height: 8px; margin-top: 6px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }

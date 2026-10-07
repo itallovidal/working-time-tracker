@@ -94,6 +94,7 @@ home:
     nobody_working: Nobody has the clock running right now.
     working: Working now
     on_task: On task
+    open_task: "Open task {{.name}}"
     more_tasks:
       one: "and {{.count}} more task"
       other: "and {{.count}} more tasks"
