@@ -83,7 +83,7 @@ func TestPages_SessionTasksOnTheScreens(t *testing.T) {
 		[]string{"<th>Tarefas</th>", `x-for="t in firstTasks(s)"`, `@click="openSession(s)"`, "seconds(s)"},
 		append(oldShape, "<th>Tarefa</th>"))
 	check("/projects/"+projectID+"/my-tasks",
-		[]string{"sessionHere()", "otherProject()", "$t('session.add_to_session')", `@click="start(t)"`},
+		[]string{"sessionHere()", "otherProject()", "$t('session.add_to_session')", `@click="startTask(t)"`},
 		oldShape)
 	check("/tasks/"+taskID,
 		[]string{`@click="addToSession()"`, `@click="openSession()"`, `@click="openSession(s)"`, "taskTime(s)", "otherTasks(s)", "otherProject()", "Adicionar à sessão"},

@@ -130,6 +130,111 @@ document.addEventListener('alpine:init', () => {
     deadlineLabel: (t) => deadlineInfo(t.deadline).label,
   };
 
+  // taskClock é o que o painel do timer (partials/clock_card.gohtml) e o cartão da tarefa
+  // (partials/task_card.gohtml) pedem da página, a mesma no Início e em Minhas tarefas: as tarefas da
+  // pessoa (`tasks`), o valor por hora, o que o cartão mostra (as cores, o prazo) e o que iniciar, parar e
+  // abrir a sessão fazem. A página tem de ter `...form()` (run, pending, errors) e chamar `loadTasks()`,
+  // `loadMyRate()` e `watchClock()` no init, e `loadTasks()` de novo quando o ponto mudar.
+  const taskClock = () => ({
+    tasks: [], // só as tarefas da pessoa logada
+    taskCache: {}, // as tarefas da sessão que não são dela, buscadas inteiras para montar o cartão
+    myRate: null, // quanto a pessoa logada recebe por hora aqui; null se ainda não tem valor
+    ...taskBadges,
+    // O cartão só mostra o prazo que existe, e o de uma tarefa fechada é só a data: "atrasada" ou
+    // "vence amanhã" não se aplicam ao que já terminou.
+    hasDeadline: (t) => !!t.deadline && new Date(t.deadline).getFullYear() >= 1971,
+    cardDeadlineClass: (t) => (t.status === 'closed' ? '' : deadlineInfo(t.deadline).cls),
+    cardDeadlineLabel: (t) => (t.status === 'closed' ? WTT.fmt.date(t.deadline) : deadlineInfo(t.deadline).label),
+
+    async loadTasks() {
+      try {
+        this.tasks = (await api('GET', '/api/projects/' + project.id + '/tasks?assignee_id=' + me.id)) || [];
+        this.taskCache = {};
+        this.errors.load = '';
+        await this.loadRunning();
+      } catch (e) {
+        this.errors.load = e.message;
+      }
+    },
+    async loadMyRate() {
+      try {
+        const [allocations, billing] = await Promise.all([
+          api('GET', '/api/projects/' + project.id + '/allocations'),
+          // O dono ganha o valor cobrado, que só os admins leem.
+          me.is_owner ? api('GET', '/api/projects/' + project.id + '/billing') : null,
+        ]);
+        const own = (allocations || []).find((a) => a.person_id === me.id);
+        this.myRate = me.is_owner ? billing.bill_rate_cents : (own ? own.pay_rate_cents : null);
+      } catch (e) {
+        this.errors.load = e.message;
+      }
+    },
+    // A sessão pode ter tarefas que não são da pessoa (ou de outro projeto): o cartão delas precisa da
+    // tarefa inteira, e a lista da pessoa não a tem. Sem acesso, o cartão não aparece e a sessão segue.
+    async loadRunning() {
+      const missing = clock().running().map((l) => l.task_id)
+        .filter((id) => !this.tasks.some((t) => t.id === id) && !this.taskCache[id]);
+      await Promise.all(missing.map(async (id) => {
+        try {
+          this.taskCache[id] = await api('GET', '/api/tasks/' + id);
+        } catch (e) { /* o modal da sessão ainda mostra a tarefa */ }
+      }));
+    },
+    watchClock() {
+      this.$watch('$store.clock.session', () => this.loadRunning());
+    },
+    // As tarefas na sessão aberta, inteiras e na ordem em que entraram, e as da pessoa que ainda não estão nela.
+    runningTasks() {
+      return clock().running().map((l) => this.tasks.find((t) => t.id === l.task_id) || this.taskCache[l.task_id]).filter(Boolean);
+    },
+    idleTasks() {
+      return this.tasks.filter((t) => !this.isRunning(t));
+    },
+    // noRate é quem não pode bater ponto por falta de valor por hora. O dono bate sem
+    // valor pago: num projeto sem valor cobrado, só conta o tempo.
+    noRate() {
+      return !me.is_owner && this.myRate === null;
+    },
+    isRunning(t) {
+      return clock().isRunning(t.id);
+    },
+    sessionHere() {
+      const s = clock().session;
+      return !!s && s.project_id === project.id;
+    },
+    // Com o ponto aberto em outro projeto, a tarefa daqui não entra.
+    otherProject() {
+      const s = clock().session;
+      return !!s && s.project_id !== project.id;
+    },
+    // Com o ponto aberto neste projeto, a tarefa entra na sessão em vez de abrir outra.
+    startTask(t) {
+      return this.run('clock', async () => {
+        if (this.sessionHere()) {
+          await clock().addTask(t.id);
+          toast(WTT.t('session.modal.added', { name: t.name }));
+          return;
+        }
+        await clock().clockIn(project.id, t.id);
+        toast(WTT.t('tasks.started', { name: t.name }));
+      });
+    },
+    stop() {
+      return this.run('clock', () => clock().clockOut());
+    },
+    openSession(s) {
+      Alpine.store('sessionView').open(s || clock().session);
+    },
+    // sessionValue é quanto a sessão aberta já rendeu: o tempo corrido vezes o valor por
+    // hora travado no clock-in, com o arredondamento do servidor. null sem valor.
+    sessionValue() {
+      const s = clock().session;
+      const rate = s ? earnedRate(s) : null;
+      if (rate === null || rate === undefined) return null;
+      return Math.round(clock().elapsed(s) * rate / 3600);
+    },
+  });
+
   // Atalhos do filtro de prazo da lista de tarefas. 'date' abre o campo de data.
   // "Qualquer prazo" fica fixo no template: uma opção de valor vazio criada por
   // x-for fica sem o atributo value e passa a valer o próprio rótulo.
@@ -598,25 +703,18 @@ document.addEventListener('alpine:init', () => {
   // em que o trabalho costuma andar. O que já fechou começa recolhido, porque só cresce.
   Alpine.data('projectMyTasks', () => ({
     ...form(),
+    ...taskClock(),
     loading: true,
-    tasks: [],
     // A ordem em que o trabalho anda: registrada e ainda não começada (backlog), em progresso,
     // aguardando fechamento e fechada. É a mesma ordem dos filtros de status da lista.
     statuses: WTT.taskStatuses,
     open: { backlog: true, in_progress: true, awaiting_closure: true, closed: false },
     async init() {
-      await this.load();
+      await Promise.all([this.loadTasks(), this.loadMyRate()]);
       this.loading = false;
+      this.watchClock();
       // Bater o ponto ou parar mexe no status das tarefas daqui.
-      window.addEventListener('wtt:sessions-changed', () => this.load());
-    },
-    async load() {
-      try {
-        this.tasks = (await api('GET', '/api/projects/' + project.id + '/tasks?assignee_id=' + me.id)) || [];
-        this.errors.load = '';
-      } catch (e) {
-        this.errors.load = e.message;
-      }
+      window.addEventListener('wtt:sessions-changed', () => this.loadTasks());
     },
     // inStatus devolve as tarefas de um status, com o prazo mais perto primeiro.
     inStatus(status) {
@@ -626,31 +724,6 @@ document.addEventListener('alpine:init', () => {
     toggle(status) {
       this.open[status] = !this.open[status];
     },
-    // Com o ponto aberto neste projeto, a tarefa entra na sessão em vez de abrir outra.
-    start(t) {
-      return this.run('clock', async () => {
-        if (this.sessionHere()) {
-          await clock().addTask(t.id);
-          toast(WTT.t('session.modal.added', { name: t.name }));
-          return;
-        }
-        await clock().clockIn(project.id, t.id);
-        toast(WTT.t('tasks.started', { name: t.name }));
-      });
-    },
-    isRunning(t) {
-      return clock().isRunning(t.id);
-    },
-    sessionHere() {
-      const s = clock().session;
-      return !!s && s.project_id === project.id;
-    },
-    // Com o ponto aberto em outro projeto, a tarefa daqui não entra.
-    otherProject() {
-      const s = clock().session;
-      return !!s && s.project_id !== project.id;
-    },
-    ...taskBadges,
   }));
 
   Alpine.data('taskDetail', () => ({
@@ -965,43 +1038,26 @@ document.addEventListener('alpine:init', () => {
   Alpine.data('projectMyOverview', () => ({
     ...form(),
     ...sessionList(),
+    ...taskClock(),
     project,
     loading: true,
-    tasks: [], // só as tarefas da pessoa logada
-    taskId: '',
-    ...taskBadges,
-    // O cartão só mostra o prazo que existe, e o de uma tarefa fechada é só a data: "atrasada" ou
-    // "vence amanhã" não se aplicam ao que já terminou.
-    hasDeadline: (t) => !!t.deadline && new Date(t.deadline).getFullYear() >= 1971,
-    cardDeadlineClass: (t) => (t.status === 'closed' ? '' : deadlineInfo(t.deadline).cls),
-    cardDeadlineLabel: (t) => (t.status === 'closed' ? WTT.fmt.date(t.deadline) : deadlineInfo(t.deadline).label),
-    myRate: null, // quanto a pessoa logada recebe por hora aqui; null se ainda não tem valor
     async init() {
       this.watchSessionFilters();
       try {
-        const [sessions, allocations, tasks, billing] = await Promise.all([
+        const [sessions] = await Promise.all([
           api('GET', '/api/projects/' + project.id + '/work-sessions?person_id=' + me.id),
-          api('GET', '/api/projects/' + project.id + '/allocations'),
-          api('GET', '/api/projects/' + project.id + '/tasks?assignee_id=' + me.id),
-          // O dono ganha o valor cobrado, que só os admins leem.
-          me.is_owner ? api('GET', '/api/projects/' + project.id + '/billing') : null,
+          this.loadTasks(),
+          this.loadMyRate(),
         ]);
         this.sessions = sessions || [];
-        this.tasks = tasks || [];
-        this.taskId = this.tasks.length ? this.tasks[0].id : '';
-        const own = (allocations || []).find((a) => a.person_id === me.id);
-        this.myRate = me.is_owner ? billing.bill_rate_cents : (own ? own.pay_rate_cents : null);
       } catch (e) {
         this.errors.load = e.message;
       } finally {
         this.loading = false;
       }
-      window.addEventListener('wtt:sessions-changed', () => this.reloadSessions());
-    },
-    // noRate é quem não pode bater ponto por falta de valor por hora. O dono bate sem
-    // valor pago: num projeto sem valor cobrado, só conta o tempo.
-    noRate() {
-      return !me.is_owner && this.myRate === null;
+      this.watchClock();
+      // Bater o ponto ou parar mexe nas sessões e no status das tarefas, e põe os cartões num lugar ou noutro.
+      window.addEventListener('wtt:sessions-changed', () => { this.reloadSessions(); this.loadTasks(); });
     },
     async reloadSessions() {
       try {
@@ -1009,36 +1065,6 @@ document.addEventListener('alpine:init', () => {
       } catch (e) {
         this.errors.load = e.message;
       }
-    },
-    start() {
-      return this.run('clock', () => clock().clockIn(project.id, this.taskId));
-    },
-    // Com o ponto aberto neste projeto, a tarefa entra na sessão em vez de abrir outra.
-    startTask(t) {
-      if (this.sessionHere()) return this.run('clock', () => clock().addTask(t.id));
-      this.taskId = t.id;
-      return this.start();
-    },
-    stop() {
-      return this.run('clock', () => clock().clockOut());
-    },
-    isRunning(t) {
-      return clock().isRunning(t.id);
-    },
-    sessionHere() {
-      const s = clock().session;
-      return !!s && s.project_id === project.id;
-    },
-    openSession(s) {
-      Alpine.store('sessionView').open(s || clock().session);
-    },
-    // sessionValue é quanto a sessão aberta já rendeu: o tempo corrido vezes o valor por
-    // hora travado no clock-in, com o arredondamento do servidor. null sem valor.
-    sessionValue() {
-      const s = clock().session;
-      const rate = s ? earnedRate(s) : null;
-      if (rate === null || rate === undefined) return null;
-      return Math.round(clock().elapsed(s) * rate / 3600);
     },
   }));
 

@@ -565,6 +565,8 @@ td.actions { text-align: right; white-space: nowrap; }
   font-weight: 600; letter-spacing: 0.02em; line-height: 1; color: var(--ink);
 }
 .clock-face.running { color: var(--accent); }
+/* Embaixo do painel do timer: desde quando, e os botões Parar e Tarefas da sessão. */
+.clock-bottom { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
 .clock-value { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 1.4rem; font-weight: 600; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .clock-value .small { font-family: inherit; font-weight: 400; }
 /* As tarefas da pessoa no Início: um cartão por tarefa, que abre a tarefa por inteiro. De cima para

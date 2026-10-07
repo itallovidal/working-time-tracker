@@ -645,6 +645,15 @@
 
 ---
 
+### Sprint 56: The Timer Panel Holds the Tasks in Progress
+
+- [X] S56.1 Starting a task from a card moves the card into the **timer panel** (`clock_card`): the clock, the value of the session, the cards of the tasks in the open session and, at the bottom, "Desde as HH:MM", Parar and Tarefas da sessão; stopped, the panel shows 00:00:00 and invites to start one of the tasks below
+- [X] S56.2 "Suas tarefas" on the Início lists only the person's tasks that are not in the session (a note says when all of them are); stopping puts the cards back, and the cards of the session that are not the person's (or are from another project) are fetched whole so they have their badges
+- [X] S56.3 The timer panel is one partial used by the Início (next to "Seu tempo neste projeto") and by Minhas tarefas, where it spans the full width above the lists; the task card is one partial (`task_card`) used by the Início list and inside the panel; the select that started a task is gone
+- [X] S56.4 The state the two pages share is one mixin, `taskClock()` in `project.js` (tasks, rate, start, stop, session value, running and idle tasks, the card's colours and deadline), and the row Iniciar of Minhas tarefas is the same `startTask`; `time.since` reads "Desde as …" and there are two new texts; the front-end tests were not extended at the owner's request (the card test only follows the markup to the partial)
+
+---
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open

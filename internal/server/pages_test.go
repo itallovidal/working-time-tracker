@@ -464,7 +464,7 @@ func TestPages_ProjectMyTasksTab(t *testing.T) {
 		body := rec.Body.String()
 		for _, want := range []string{
 			`x-data="projectMyTasks"`, "Tudo o que está com você", `x-for="s in statuses"`, `:aria-expanded="open[s.value].toString()"`,
-			`class="fold-toggle"`, "Você não tem tarefas neste projeto.", "Ver a lista de tarefas", `@click="start(t)"`,
+			`class="fold-toggle"`, "Você não tem tarefas neste projeto.", "Ver a lista de tarefas", `@click="startTask(t)"`, `class="clock"`,
 			// A aba é a atual, e fica entre o Início e a Lista de tarefas.
 			`/my-tasks" aria-current="page"`, "Minhas tarefas",
 			// A prioridade e o status têm cor própria; "sem prioridade" também tem selo (pontilhado).

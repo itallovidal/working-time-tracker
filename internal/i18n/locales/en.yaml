@@ -611,7 +611,9 @@ time:
   set_rate_after: " tab."
   ask_admin: Ask an admin to set it.
   running: In progress
-  since: "· since {{.time}}"
+  since: "Since {{.time}}"
+  start_hint: Click Start on one of the tasks below to start counting time.
+  all_in_session: All your tasks are in the session.
   other_project: This session belongs to another project. Stop it before starting a task from here.
   stop: Stop
   stopped: Stopped

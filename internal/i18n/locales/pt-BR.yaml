@@ -621,7 +621,9 @@ time:
   set_rate_after: "."
   ask_admin: Peça a um admin para definir.
   running: Em andamento
-  since: "· desde as {{.time}}"
+  since: "Desde as {{.time}}"
+  start_hint: Clique em Iniciar numa das tarefas abaixo para começar a contar o tempo.
+  all_in_session: Todas as suas tarefas estão na sessão.
   other_project: Esta sessão é de outro projeto. Pare antes de iniciar uma tarefa daqui.
   stop: Parar
   stopped: Parado

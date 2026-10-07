@@ -21,14 +21,14 @@ func TestTaskCardsFollowTheirLayout(t *testing.T) {
 		}
 		return string(raw)
 	}
-	css, page, js := read("static/app.css"), read("templates/pages/project_my_overview.gohtml"), read("static/pages/project.js")
+	css, partial, js := read("static/app.css"), read("templates/partials/task_card.gohtml"), read("static/pages/project.js")
 
-	start := strings.Index(page, `<div class="task-cards"`)
+	// O cartão é o parcial `task_card`, usado no Início e dentro do painel do timer.
+	start := strings.Index(partial, `{{define "task_card"}}`)
 	if start < 0 {
-		t.Fatal("the project home has no task cards")
+		t.Fatal("there is no task_card partial")
 	}
-	cards := page[start:]
-	cards = cards[:strings.Index(cards, "</section>")]
+	cards := partial[start:]
 
 	// A ordem de cima para baixo: nome, status, prioridade, prazo, Iniciar, divisória, etiquetas.
 	order := []string{
@@ -137,9 +137,11 @@ func TestTaskCardsFollowTheirLayout(t *testing.T) {
 			t.Errorf("the task card calls %s, which project.js does not define", name)
 		}
 	}
-	home := js[strings.Index(js, "Alpine.data('projectMyOverview'"):]
-	home = home[:strings.Index(home, "\n  }));")]
-	if !strings.Contains(home, "...taskBadges") {
-		t.Error("projectMyOverview does not spread taskBadges, which has priorityClass and statusClass")
+	for _, page := range []string{"projectMyOverview", "projectMyTasks"} {
+		component := js[strings.Index(js, "Alpine.data('"+page+"'"):]
+		component = component[:strings.Index(component, "\n  }));")]
+		if !strings.Contains(component, "...taskClock()") {
+			t.Errorf("%s does not spread taskClock(), which has what the task card calls", page)
+		}
 	}
 }

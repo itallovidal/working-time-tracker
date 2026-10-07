@@ -1,0 +1,53 @@
+{{/* O painel do timer, no Início e em Minhas tarefas (nesta, de ponta a ponta). Com o ponto aberto: o cronômetro, o
+     valor da sessão, os cartões das tarefas em andamento e, embaixo, desde quando, Parar e Tarefas da sessão. Parado:
+     o cronômetro zerado e um convite para iniciar uma tarefa da lista logo abaixo. A página tem de ter o `taskClock()`
+     de project.js e a lista `tasks`. */}}
+{{define "clock_card"}}
+<section class="clock" aria-live="polite">
+  <p class="muted" x-show="!$store.clock.ready">{{.T "common.loading"}}</p>
+
+  <template x-if="$store.clock.ready && $store.clock.session">
+    <div class="stack">
+      <div class="clock-status"><span class="pulse" aria-hidden="true"></span> {{.T "time.running"}}</div>
+      <div class="clock-face running" x-text="WTT.fmt.clock($store.clock.elapsed())"></div>
+      {{/* O valor da sessão sobe junto com o cronômetro, pelo valor por hora travado no clock-in. */}}
+      <div class="clock-value" x-show="sessionValue() !== null">
+        <span class="num" x-text="WTT.fmt.money(sessionValue())"></span>
+        <span class="muted small">{{.T "time.session_value"}}</span>
+      </div>
+      {{/* As tarefas em andamento na sessão, como cartões; as que saíram e o histórico ficam no modal da sessão. */}}
+      <div class="task-cards" x-show="runningTasks().length > 0">
+        <template x-for="t in runningTasks()" :key="t.id">
+          {{template "task_card" .}}
+        </template>
+      </div>
+      <p class="alert alert-warn" x-show="!sessionHere()">
+        {{.T "time.other_project"}}
+      </p>
+      <div class="clock-bottom">
+        <span class="muted" x-text="$t('time.since', { time: WTT.fmt.time($store.clock.session.start_at) })"></span>
+        <div class="row">
+          <button type="button" class="btn btn-danger" :disabled="pending" @click="stop()">{{.T "time.stop"}}</button>
+          <button type="button" class="btn btn-secondary" @click="openSession()">{{template "icon" "list-check"}} {{.T "session.manage"}}</button>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <template x-if="$store.clock.ready && !$store.clock.session">
+    <div class="stack">
+      <div class="clock-status muted">{{.T "time.stopped"}}</div>
+      <div class="clock-face">00:00:00</div>
+      <div class="clock-value muted" x-show="myRate !== null">
+        <span class="num" x-text="WTT.fmt.money(0)"></span>
+        <span class="small">{{.T "time.session_value"}}</span>
+      </div>
+      <p class="muted" x-show="tasks.length === 0 && !loading">
+        {{.T "time.no_tasks"}} <a href="/projects/{{.Project.ID}}/tasks">{{.T "time.create_task"}}</a>
+      </p>
+      <p class="muted" x-show="tasks.length > 0">{{.T "time.start_hint"}}</p>
+    </div>
+  </template>
+  <p class="form-error" x-cloak x-show="errors.clock" x-text="errors.clock" role="alert"></p>
+</section>
+{{end}}

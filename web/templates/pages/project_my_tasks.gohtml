@@ -4,8 +4,10 @@
 
   <p class="lede muted">{{.T "my_tasks.lede"}}</p>
 
+  {{/* O mesmo painel do timer do Início, aqui de ponta a ponta: logo abaixo vem a lista, e não outro cartão. */}}
+  {{template "clock_card" .}}
+
   <p class="form-error" x-cloak x-show="errors.load" x-text="errors.load"></p>
-  <p class="form-error" x-cloak x-show="errors.clock" x-text="errors.clock" role="alert"></p>
   <p class="muted" x-show="loading">{{.T "my_tasks.loading"}}</p>
 
   <div class="empty" x-cloak x-show="!loading && !errors.load && tasks.length === 0">
@@ -50,7 +52,7 @@
                     <td><span class="badge num" :class="deadlineClass(t)" x-text="deadlineLabel(t)"></span></td>
                     <td class="actions">
                       <span class="badge badge-ok" x-show="isRunning(t)">{{.T "tasks.running"}}</span>
-                      <button type="button" class="btn btn-secondary btn-sm" x-show="!isRunning(t) && s.value !== 'closed'" :disabled="pending || otherProject()" @click="start(t)">{{template "icon" "play"}} <span x-text="sessionHere() ? $t('session.add_to_session') : $t('tasks.start')"></span></button>
+                      <button type="button" class="btn btn-secondary btn-sm" x-show="!isRunning(t) && s.value !== 'closed'" :disabled="pending || otherProject()" @click="startTask(t)">{{template "icon" "play"}} <span x-text="sessionHere() ? $t('session.add_to_session') : $t('tasks.start')"></span></button>
                       <a class="btn btn-ghost btn-sm" :href="'/tasks/' + t.id">{{.T "tasks.details"}} {{template "icon" "arrow-right"}}</a>
                     </td>
                   </tr>
