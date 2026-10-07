@@ -154,6 +154,65 @@ func TestService_ClockIn_DifferentProject(t *testing.T) {
 	}
 }
 
+// Bater o ponto numa tarefa a põe em progresso, seja qual for o status; parar ou pausar
+// (o clock-out) não a tira de lá, e um ponto recusado não a move.
+func TestService_ClockIn_StartsTheTask(t *testing.T) {
+	orgSvc, personSvc, projSvc, _, _, taskSvc, wsSvc := setupDeps(t)
+
+	org, _ := orgSvc.Create("Org")
+	ana, _ := personSvc.Create(org.ID.String(), "Ana", "ana@test.com")
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, project.Routine{})
+	pid := proj.ID.String()
+	fresh, _ := taskSvc.Create(pid, "Nova", "", "", nil)
+	if fresh.Status != "backlog" {
+		t.Fatalf("a new task has status %q, want backlog", fresh.Status)
+	}
+
+	// Sem valor por hora o ponto é recusado, e a tarefa continua no backlog.
+	if _, err := wsSvc.ClockIn(pid, fresh.ID.String(), ana.ID.String()); !errors.Is(err, work_session.ErrNoRate) {
+		t.Fatalf("err = %v, want ErrNoRate", err)
+	}
+	if got, _ := taskSvc.Get(fresh.ID.String()); got.Status != "backlog" {
+		t.Fatalf("status after a refused clock in = %q, want backlog", got.Status)
+	}
+
+	setRate(t, pid, ana.ID.String(), 2000)
+	status := func(id string) string {
+		t.Helper()
+		got, err := taskSvc.Get(id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return got.Status
+	}
+	if _, err := wsSvc.ClockIn(pid, fresh.ID.String(), ana.ID.String()); err != nil {
+		t.Fatalf("clock in: %v", err)
+	}
+	if got := status(fresh.ID.String()); got != "in_progress" {
+		t.Errorf("status after the clock in = %q, want in_progress", got)
+	}
+	if _, err := wsSvc.ClockOut(pid, ana.ID.String()); err != nil {
+		t.Fatalf("clock out: %v", err)
+	}
+	if got := status(fresh.ID.String()); got != "in_progress" {
+		t.Errorf("status after the clock out = %q, want it to stay in_progress", got)
+	}
+
+	// Retomar uma tarefa que já estava aguardando fechamento ou fechada a põe em progresso de novo.
+	for _, from := range []string{"awaiting_closure", "closed"} {
+		if _, err := taskSvc.UpdateAs("", fresh.ID.String(), "Nova", "", nil, nil, task.Attrs{Status: &from}); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := wsSvc.ClockIn(pid, fresh.ID.String(), ana.ID.String()); err != nil {
+			t.Fatalf("clock in on a %s task: %v", from, err)
+		}
+		if got := status(fresh.ID.String()); got != "in_progress" {
+			t.Errorf("status after clocking in on a %s task = %q, want in_progress", from, got)
+		}
+		wsSvc.ClockOut(pid, ana.ID.String())
+	}
+}
+
 func TestService_ClockOut_Success(t *testing.T) {
 	orgSvc, personSvc, projSvc, teamSvc, memberSvc, taskSvc, wsSvc := setupDeps(t)
 

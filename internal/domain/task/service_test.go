@@ -229,6 +229,92 @@ func TestService_Priority(t *testing.T) {
 	}
 }
 
+// Toda tarefa nasce em backlog, mesmo que a criação peça outro status; só a edição muda o
+// status, só os quatro são aceitos, e omitir mantém.
+func TestService_Status(t *testing.T) {
+	orgSvc, _, projSvc, _, _, taskSvc := setupDeps(t)
+	org, _ := orgSvc.Create("Org")
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, project.Routine{})
+	pid := proj.ID.String()
+
+	plain, err := taskSvc.Create(pid, "Nova", "", "", nil)
+	if err != nil || plain.Status != "backlog" {
+		t.Fatalf("a new task has status %q (err %v), want backlog", plain.Status, err)
+	}
+	closed := "closed"
+	asked, err := taskSvc.CreateAs("", pid, "Já fechada?", "", "", nil, task.Attrs{Status: &closed})
+	if err != nil || asked.Status != "backlog" {
+		t.Fatalf("a task created asking for %q has status %q (err %v), want backlog", closed, asked.Status, err)
+	}
+
+	id := plain.ID.String()
+	for _, s := range task.Statuses {
+		moved, err := taskSvc.UpdateAs("", id, "Nova", "", nil, nil, task.Attrs{Status: &s})
+		if err != nil || moved.Status != s {
+			t.Fatalf("update to %q: status %q (err %v)", s, moved.Status, err)
+		}
+	}
+	progress := "in_progress"
+	if _, err := taskSvc.UpdateAs("", id, "Nova", "", nil, nil, task.Attrs{Status: &progress}); err != nil {
+		t.Fatal(err)
+	}
+	kept, err := taskSvc.Update(id, "Nova 2", "", nil, nil)
+	if err != nil || kept.Status != "in_progress" {
+		t.Errorf("an update without status must keep it, got %q (%v)", kept.Status, err)
+	}
+	bad := "done"
+	if _, err := taskSvc.UpdateAs("", id, "Nova", "", nil, nil, task.Attrs{Status: &bad}); err != task.ErrInvalidStatus {
+		t.Errorf("invalid status on update: err = %v", err)
+	}
+	if got, _ := taskSvc.Get(id); got.Status != "in_progress" {
+		t.Errorf("a refused update changed the status to %q", got.Status)
+	}
+}
+
+// O filtro de status aceita vários valores e combina com os outros.
+func TestService_ListFilters_Status(t *testing.T) {
+	orgSvc, _, projSvc, _, _, taskSvc := setupDeps(t)
+	org, _ := orgSvc.Create("Org")
+	proj, _ := projSvc.Create(org.ID.String(), "P", "", 0, project.Routine{})
+	pid := proj.ID.String()
+
+	for name, status := range map[string]string{"a": "backlog", "b": "in_progress", "c": "in_progress", "d": "awaiting_closure", "e": "closed"} {
+		tk, err := taskSvc.Create(pid, name, "", "", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := taskSvc.UpdateAs("", tk.ID.String(), name, "", nil, nil, task.Attrs{Status: &status}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	names := func(f task.ListFilter) string {
+		page, err := taskSvc.ListPage(pid, f)
+		if err != nil {
+			t.Fatalf("list: %v", err)
+		}
+		got := []string{}
+		for _, it := range page.Items {
+			got = append(got, it.Name)
+		}
+		sort.Strings(got)
+		return strings.Join(got, "") + "/" + strconv.Itoa(page.Total)
+	}
+	for name, c := range map[string]struct {
+		f    task.ListFilter
+		want string
+	}{
+		"one status":       {task.ListFilter{Statuses: []string{"in_progress"}}, "bc/2"},
+		"two statuses":     {task.ListFilter{Statuses: []string{"backlog", "closed"}}, "ae/2"},
+		"with a name":      {task.ListFilter{Statuses: []string{"in_progress"}, Query: "c"}, "c/1"},
+		"no filter":        {task.ListFilter{}, "abcde/5"},
+		"without any task": {task.ListFilter{Statuses: []string{"awaiting_closure"}, Query: "a"}, "/0"},
+	} {
+		if got := names(c.f); got != c.want {
+			t.Errorf("%s: got %q, want %q", name, got, c.want)
+		}
+	}
+}
+
 // As etiquetas são do projeto: criar, achar nome repetido sem diferenciar maiúsculas, dar
 // a uma tarefa, recusar a de outro projeto, trocar, manter ao omitir e limpar.
 func TestService_Labels(t *testing.T) {

@@ -491,6 +491,17 @@
 
 ---
 
+### Sprint 40: Task Status
+
+- [X] S40.1 `tasks.status` (enum `backlog`, `in_progress`, `awaiting_closure`, `closed`; default `backlog`, so existing tasks land in the backlog), with a migration
+- [X] S40.2 Every new task is created in `backlog` (the create body does not read `status`); `PATCH /api/tasks/:taskId` takes `status` (omitted keeps it; another value is `task.invalid_status`); `status` in the task JSON
+- [X] S40.3 The task list filters by `status`, with several comma-separated values (any of them), alone or with the other filters
+- [X] S40.4 The board: a row of status chips (kept in the URL) and a Status column; the task page shows the status; the Edit task modal has a status select, and New task does not
+- [X] S40.5 Clocking in on a task sets it to `in_progress` from any status (after the session exists, so a refused clock-in moves nothing); clocking out leaves it; the task page reloads the task when the clock changes
+- [X] S40.6 Seed with tasks in the four statuses; tests for the service, the clock-in and the API, and the page markup; update README, design, routes, error codes and the Insomnia collection
+
+---
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open

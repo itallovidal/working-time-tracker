@@ -24,6 +24,8 @@ const (
 	FieldDescription = "description"
 	// FieldPriority holds the string denoting the priority field in the database.
 	FieldPriority = "priority"
+	// FieldStatus holds the string denoting the status field in the database.
+	FieldStatus = "status"
 	// FieldAssigneeID holds the string denoting the assignee_id field in the database.
 	FieldAssigneeID = "assignee_id"
 	// FieldDeadline holds the string denoting the deadline field in the database.
@@ -90,6 +92,7 @@ var Columns = []string{
 	FieldName,
 	FieldDescription,
 	FieldPriority,
+	FieldStatus,
 	FieldAssigneeID,
 	FieldDeadline,
 	FieldExternalIntegrationID,
@@ -150,6 +153,34 @@ func PriorityValidator(pr Priority) error {
 	}
 }
 
+// Status defines the type for the "status" enum field.
+type Status string
+
+// StatusBacklog is the default value of the Status enum.
+const DefaultStatus = StatusBacklog
+
+// Status values.
+const (
+	StatusBacklog         Status = "backlog"
+	StatusInProgress      Status = "in_progress"
+	StatusAwaitingClosure Status = "awaiting_closure"
+	StatusClosed          Status = "closed"
+)
+
+func (s Status) String() string {
+	return string(s)
+}
+
+// StatusValidator is a validator for the "status" field enum values. It is called by the builders before save.
+func StatusValidator(s Status) error {
+	switch s {
+	case StatusBacklog, StatusInProgress, StatusAwaitingClosure, StatusClosed:
+		return nil
+	default:
+		return fmt.Errorf("task: invalid enum value for status field: %q", s)
+	}
+}
+
 // OrderOption defines the ordering options for the Task queries.
 type OrderOption func(*sql.Selector)
 
@@ -176,6 +207,11 @@ func ByDescription(opts ...sql.OrderTermOption) OrderOption {
 // ByPriority orders the results by the priority field.
 func ByPriority(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldPriority, opts...).ToFunc()
+}
+
+// ByStatus orders the results by the status field.
+func ByStatus(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldStatus, opts...).ToFunc()
 }
 
 // ByAssigneeID orders the results by the assignee_id field.

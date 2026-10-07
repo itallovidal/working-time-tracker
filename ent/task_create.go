@@ -66,6 +66,20 @@ func (_c *TaskCreate) SetNillablePriority(v *task.Priority) *TaskCreate {
 	return _c
 }
 
+// SetStatus sets the "status" field.
+func (_c *TaskCreate) SetStatus(v task.Status) *TaskCreate {
+	_c.mutation.SetStatus(v)
+	return _c
+}
+
+// SetNillableStatus sets the "status" field if the given value is not nil.
+func (_c *TaskCreate) SetNillableStatus(v *task.Status) *TaskCreate {
+	if v != nil {
+		_c.SetStatus(*v)
+	}
+	return _c
+}
+
 // SetAssigneeID sets the "assignee_id" field.
 func (_c *TaskCreate) SetAssigneeID(v uuid.UUID) *TaskCreate {
 	_c.mutation.SetAssigneeID(v)
@@ -248,6 +262,10 @@ func (_c *TaskCreate) defaults() {
 		v := task.DefaultPriority
 		_c.mutation.SetPriority(v)
 	}
+	if _, ok := _c.mutation.Status(); !ok {
+		v := task.DefaultStatus
+		_c.mutation.SetStatus(v)
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := task.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
@@ -272,6 +290,14 @@ func (_c *TaskCreate) check() error {
 	if v, ok := _c.mutation.Priority(); ok {
 		if err := task.PriorityValidator(v); err != nil {
 			return &ValidationError{Name: "priority", err: fmt.Errorf(`ent: validator failed for field "Task.priority": %w`, err)}
+		}
+	}
+	if _, ok := _c.mutation.Status(); !ok {
+		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "Task.status"`)}
+	}
+	if v, ok := _c.mutation.Status(); ok {
+		if err := task.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Task.status": %w`, err)}
 		}
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
@@ -326,6 +352,10 @@ func (_c *TaskCreate) createSpec() (*Task, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Priority(); ok {
 		_spec.SetField(task.FieldPriority, field.TypeEnum, value)
 		_node.Priority = value
+	}
+	if value, ok := _c.mutation.Status(); ok {
+		_spec.SetField(task.FieldStatus, field.TypeEnum, value)
+		_node.Status = value
 	}
 	if value, ok := _c.mutation.Deadline(); ok {
 		_spec.SetField(task.FieldDeadline, field.TypeTime, value)

@@ -297,6 +297,7 @@ var (
 		{Name: "name", Type: field.TypeString},
 		{Name: "description", Type: field.TypeString, Nullable: true},
 		{Name: "priority", Type: field.TypeEnum, Enums: []string{"urgent", "high", "medium", "low", "none"}, Default: "none"},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"backlog", "in_progress", "awaiting_closure", "closed"}, Default: "backlog"},
 		{Name: "deadline", Type: field.TypeTime, Nullable: true},
 		{Name: "external_item_id", Type: field.TypeString, Nullable: true},
 		{Name: "external_item_url", Type: field.TypeString, Nullable: true},
@@ -313,19 +314,19 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "tasks_integrations_tasks",
-				Columns:    []*schema.Column{TasksColumns[8]},
+				Columns:    []*schema.Column{TasksColumns[9]},
 				RefColumns: []*schema.Column{IntegrationsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "tasks_persons_tasks",
-				Columns:    []*schema.Column{TasksColumns[9]},
+				Columns:    []*schema.Column{TasksColumns[10]},
 				RefColumns: []*schema.Column{PersonsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "tasks_projects_tasks",
-				Columns:    []*schema.Column{TasksColumns[10]},
+				Columns:    []*schema.Column{TasksColumns[11]},
 				RefColumns: []*schema.Column{ProjectsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},

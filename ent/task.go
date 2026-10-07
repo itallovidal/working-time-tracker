@@ -29,6 +29,8 @@ type Task struct {
 	Description string `json:"description,omitempty"`
 	// Priority holds the value of the "priority" field.
 	Priority task.Priority `json:"priority,omitempty"`
+	// Status holds the value of the "status" field.
+	Status task.Status `json:"status,omitempty"`
 	// AssigneeID holds the value of the "assignee_id" field.
 	AssigneeID *uuid.UUID `json:"assignee_id,omitempty"`
 	// Deadline holds the value of the "deadline" field.
@@ -122,7 +124,7 @@ func (*Task) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case task.FieldAssigneeID, task.FieldExternalIntegrationID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case task.FieldName, task.FieldDescription, task.FieldPriority, task.FieldExternalItemID, task.FieldExternalItemURL:
+		case task.FieldName, task.FieldDescription, task.FieldPriority, task.FieldStatus, task.FieldExternalItemID, task.FieldExternalItemURL:
 			values[i] = new(sql.NullString)
 		case task.FieldDeadline, task.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
@@ -172,6 +174,12 @@ func (_m *Task) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field priority", values[i])
 			} else if value.Valid {
 				_m.Priority = task.Priority(value.String)
+			}
+		case task.FieldStatus:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field status", values[i])
+			} else if value.Valid {
+				_m.Status = task.Status(value.String)
 			}
 		case task.FieldAssigneeID:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -285,6 +293,9 @@ func (_m *Task) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("priority=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Priority))
+	builder.WriteString(", ")
+	builder.WriteString("status=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Status))
 	builder.WriteString(", ")
 	if v := _m.AssigneeID; v != nil {
 		builder.WriteString("assignee_id=")

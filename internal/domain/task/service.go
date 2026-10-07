@@ -92,6 +92,7 @@ func (s *Service) CreateAs(selfID, projectID, name, description, assigneeID stri
 		Name:        name,
 		Description: description,
 		Priority:    priority,
+		Status:      StatusBacklog,
 		Labels:      labels,
 		AssigneeID:  assignee,
 		Deadline:    dl,
@@ -155,6 +156,9 @@ func (s *Service) UpdateAs(selfID, id, name, description string, assigneeID *str
 	if attrs.Priority != nil && !validPriority(*attrs.Priority) {
 		return nil, ErrInvalidPriority
 	}
+	if attrs.Status != nil && !validStatus(*attrs.Status) {
+		return nil, ErrInvalidStatus
+	}
 	task, err := s.taskStore.GetByID(id)
 	if err != nil {
 		return nil, err
@@ -163,6 +167,9 @@ func (s *Service) UpdateAs(selfID, id, name, description string, assigneeID *str
 	task.Description = description
 	if attrs.Priority != nil {
 		task.Priority = *attrs.Priority
+	}
+	if attrs.Status != nil {
+		task.Status = *attrs.Status
 	}
 	if attrs.LabelIDs != nil {
 		if task.Labels, err = s.resolveLabels(task.ProjectID.String(), *attrs.LabelIDs); err != nil {

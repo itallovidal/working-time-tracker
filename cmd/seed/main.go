@@ -167,6 +167,19 @@ func priorityFor(deadlineDays float64) string {
 	return "none"
 }
 
+// statusFor dá o status de cada tarefa a partir do que ela já diz: a sem responsável está no
+// backlog, a atrasada ou a que vence logo está em progresso, e as demais se espalham pelos
+// quatro status, na ordem em que aparecem, para o quadro mostrar todos.
+func statusFor(i int, assigned bool, deadlineDays float64) string {
+	switch {
+	case !assigned:
+		return "backlog"
+	case deadlineDays <= 3:
+		return "in_progress"
+	}
+	return task.Statuses[i%len(task.Statuses)]
+}
+
 var labelKeywords = []struct {
 	label string
 	words []string
@@ -489,7 +502,7 @@ func main() {
 	byProject := map[string][]seededTask{}
 	labelID := map[string]string{} // projeto/etiqueta -> id
 	byTaskName := map[string]seededTask{}
-	for _, t := range tasks {
+	for i, t := range tasks {
 		prj := seeded[t.project]
 		deadline := now.Add(time.Duration(t.deadlineDays * 24 * float64(time.Hour)))
 		assignee := "" // sem responsável
@@ -511,6 +524,11 @@ func main() {
 		created, err := taskSvc.CreateAs("", prj.id, t.name, t.description, assignee, &deadline,
 			task.Attrs{Priority: &priority, LabelIDs: &ids})
 		must(err)
+		// Toda tarefa nasce em backlog; o seed a leva ao status que a tela deve mostrar.
+		if status := statusFor(i, t.assignee != "", t.deadlineDays); status != task.StatusBacklog {
+			created, err = taskSvc.UpdateAs("", created.ID.String(), created.Name, created.Description, nil, nil, task.Attrs{Status: &status})
+			must(err)
+		}
 		st := seededTask{task: created, assignee: t.assignee}
 		byTaskName[t.project+"/"+t.name] = st
 		if t.assignee != "" {
@@ -625,6 +643,14 @@ func main() {
 			SetOwnerHours(o.person == people[0].key).
 			ExecX(ctx)
 	}
+
+	// Bater o ponto põe a tarefa em progresso, mas o seed grava as sessões direto no banco. Para o
+	// quadro ficar coerente, a tarefa com tempo registrado não fica no backlog, e a que está com
+	// o ponto aberto agora está em progresso, seja qual for o status que o seed lhe deu.
+	_, err = db.Raw.ExecContext(ctx, `UPDATE tasks SET status = 'in_progress'
+		WHERE (status = 'backlog' AND id IN (SELECT task_id FROM work_sessions))
+		   OR id IN (SELECT task_id FROM work_sessions WHERE end_at IS NULL)`)
+	must(err)
 
 	unassigned := 0
 	for _, t := range tasks {

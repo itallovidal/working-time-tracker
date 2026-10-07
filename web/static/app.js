@@ -161,6 +161,9 @@
   // As prioridades de uma tarefa, da mais para a menos urgente. O value é o código do backend.
   const priorities = ['urgent', 'high', 'medium', 'low', 'none'].map((value) => ({ value, label: t('tasks.priority.' + value) }));
 
+  // Os status de uma tarefa, na ordem em que ela costuma passar por eles. O value é o código do backend.
+  const taskStatuses = ['backlog', 'in_progress', 'awaiting_closure', 'closed'].map((value) => ({ value, label: t('tasks.status.' + value) }));
+
   const orgSizes = [
     { value: '1-10', label: t('labels.org_size.s1_10') },
     { value: '11-50', label: t('labels.org_size.s11_50') },
@@ -278,6 +281,10 @@
       const p = priorities.find((x) => x.value === value);
       return p ? p.label : value;
     },
+    taskStatus(value) {
+      const s = taskStatuses.find((x) => x.value === value);
+      return s ? s.label : value;
+    },
     weekday(value) {
       const d = weekdays.find((w) => w.value === value);
       return d ? d.label : value;
@@ -383,7 +390,7 @@
   const granted = (window.BOOT && window.BOOT.can) || [];
   const can = (key) => granted.includes(key);
 
-  window.WTT = { can, t, lang, errorText, api, ApiError, form, fmt, toCents, copyText, notInformed, weekdays, priorities, markdown, routine, sprintOptions, sprintChoices, orgSizes, workModes, currencies, boot: window.BOOT || {} };
+  window.WTT = { can, t, lang, errorText, api, ApiError, form, fmt, toCents, copyText, notInformed, weekdays, priorities, taskStatuses, markdown, routine, sprintOptions, sprintChoices, orgSizes, workModes, currencies, boot: window.BOOT || {} };
 
   // Onde flash() deixa a mensagem para a página seguinte.
   const flashKey = 'wtt:flash';

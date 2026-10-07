@@ -24,6 +24,8 @@ var (
 	ErrInvalidDeadlineFilter   = apperr.New("task.invalid_deadline_filter", http.StatusBadRequest)
 	ErrInvalidPriority         = apperr.New("task.invalid_priority", http.StatusBadRequest)
 	ErrInvalidPriorityFilter   = apperr.New("task.invalid_priority_filter", http.StatusBadRequest)
+	ErrInvalidStatus           = apperr.New("task.invalid_status", http.StatusBadRequest)
+	ErrInvalidStatusFilter     = apperr.New("task.invalid_status_filter", http.StatusBadRequest)
 	ErrInvalidLabelFilter      = apperr.New("task.invalid_label_filter", http.StatusBadRequest)
 	ErrLabelOtherProject       = apperr.New("task.label_other_project", http.StatusBadRequest)
 	ErrLabelNameRequired       = apperr.New("label.name_required", http.StatusBadRequest)

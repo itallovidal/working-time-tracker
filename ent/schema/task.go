@@ -21,6 +21,7 @@ func (Task) Fields() []ent.Field {
 		field.String("name"),
 		field.String("description").Optional(),
 		field.Enum("priority").Values("urgent", "high", "medium", "low", "none").Default("none"),
+		field.Enum("status").Values("backlog", "in_progress", "awaiting_closure", "closed").Default("backlog"),
 		field.UUID("assignee_id", uuid.UUID{}).Optional().Nillable(),
 		field.Time("deadline").Optional(),
 		field.UUID("external_integration_id", uuid.UUID{}).Optional().Nillable(),

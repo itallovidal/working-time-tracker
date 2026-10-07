@@ -151,7 +151,7 @@ func init() {
 	taskFields := schema.Task{}.Fields()
 	_ = taskFields
 	// taskDescCreatedAt is the schema descriptor for created_at field.
-	taskDescCreatedAt := taskFields[10].Descriptor()
+	taskDescCreatedAt := taskFields[11].Descriptor()
 	// task.DefaultCreatedAt holds the default value on creation for the created_at field.
 	task.DefaultCreatedAt = taskDescCreatedAt.Default.(func() time.Time)
 	// taskDescID is the schema descriptor for id field.

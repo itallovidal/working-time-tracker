@@ -9,6 +9,8 @@ document.addEventListener('alpine:init', () => {
 
   // priorityClass é a cor do selo de prioridade; "sem prioridade" não tem selo.
   const priorityClass = (p) => ({ urgent: 'badge-danger', high: 'badge-warn', medium: 'badge-accent' }[p] || '');
+  // statusClass é a cor do selo de status: o backlog fica neutro, e o andamento esquenta até fechar.
+  const statusClass = (s) => ({ in_progress: 'badge-accent', awaiting_closure: 'badge-warn', closed: 'badge-ok' }[s] || '');
   const byLabelName = (a, b) => a.name.localeCompare(b.name, WTT.lang);
 
   // Grupos de permissões que a API tem e as telas não oferecem.
@@ -46,6 +48,7 @@ document.addEventListener('alpine:init', () => {
       });
     },
     priorityClass,
+    statusClass,
   });
 
   // taskWizard é o passo a passo dos modais Nova tarefa e Editar tarefa: a etapa 1 é o nome e
@@ -54,6 +57,7 @@ document.addEventListener('alpine:init', () => {
   // valida sozinho (novalidate): quem confere cada etapa é submitStep.
   const taskWizard = () => ({
     step: 1,
+    hasStatus: false, // o status só se escolhe ao editar; a tarefa nova nasce em backlog
     mdView: 'write', // write ou preview
     resetWizard() {
       this.step = 1;
@@ -356,8 +360,8 @@ document.addEventListener('alpine:init', () => {
     assignees: [], // quem já é responsável por alguma tarefa, mesmo fora dos times
     // mine é a caixa "Só as minhas tarefas": ligada, prende o responsável em
     // quem está logado e desliga a busca e o filtro de responsável.
-    // priority e label são listas: a tarefa passa se tem qualquer uma das marcadas.
-    filters: { q: '', assignee: '', due: '', date: '', mine: false, priority: [], label: [] },
+    // priority, status e label são listas: a tarefa passa se tem qualquer uma das marcadas.
+    filters: { q: '', assignee: '', due: '', date: '', mine: false, priority: [], status: [], label: [] },
     dueOptions,
     seq: 0,
     draft: { name: '', description: '', assign: 'none', assignee_id: '', deadline: '', priority: 'none', label_ids: [] }, // assign: me, none ou other
@@ -391,6 +395,7 @@ document.addEventListener('alpine:init', () => {
         date: isDate ? due : '',
         mine,
         priority: (p.get('priority') || '').split(',').filter((v) => WTT.priorities.some((o) => o.value === v)),
+        status: (p.get('status') || '').split(',').filter((v) => WTT.taskStatuses.some((o) => o.value === v)),
         label: (p.get('label') || '').split(',').filter((v) => /^[0-9a-f-]{36}$/i.test(v)),
       };
       this.page = Math.max(1, parseInt(p.get('page'), 10) || 1);
@@ -407,6 +412,7 @@ document.addEventListener('alpine:init', () => {
       const due = f.due === 'date' ? f.date : f.due;
       if (due) p.set('due', due);
       if (f.priority.length) p.set('priority', f.priority.join(','));
+      if (f.status.length) p.set('status', f.status.join(','));
       if (f.label.length) p.set('label', f.label.join(','));
       if (this.page > 1) p.set('page', this.page);
       const query = p.toString();
@@ -429,6 +435,7 @@ document.addEventListener('alpine:init', () => {
       const limit = dueLimit(f.due, f.date);
       if (limit) p.set('deadline_to', limit);
       if (f.priority.length) p.set('priority', f.priority.join(','));
+      if (f.status.length) p.set('status', f.status.join(','));
       if (f.label.length) p.set('label_id', f.label.join(','));
       try {
         const res = await api('GET', '/api/projects/' + project.id + '/tasks?' + p);
@@ -454,10 +461,10 @@ document.addEventListener('alpine:init', () => {
       return this.load();
     },
     clear() {
-      this.filters = { q: '', assignee: '', due: '', date: '', mine: false, priority: [], label: [] };
+      this.filters = { q: '', assignee: '', due: '', date: '', mine: false, priority: [], status: [], label: [] };
       return this.apply();
     },
-    // toggleFilter marca ou desmarca uma prioridade ou etiqueta do filtro.
+    // toggleFilter marca ou desmarca uma prioridade, um status ou uma etiqueta do filtro.
     toggleFilter(kind, value) {
       const list = this.filters[kind];
       this.filters[kind] = list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
@@ -475,7 +482,7 @@ document.addEventListener('alpine:init', () => {
     },
     hasFilters() {
       const f = this.filters;
-      return !!(f.q.trim() || f.assignee || dueLimit(f.due, f.date) || f.priority.length || f.label.length);
+      return !!(f.q.trim() || f.assignee || dueLimit(f.due, f.date) || f.priority.length || f.status.length || f.label.length);
     },
     pages() {
       return Math.max(1, Math.ceil(this.total / this.perPage));
@@ -532,13 +539,14 @@ document.addEventListener('alpine:init', () => {
     ...form(),
     ...taskWizard(),
     taskId: WTT.boot.task_id,
+    hasStatus: true,
     loading: true,
     task: null,
     members: [],
     integrations: [],
     sessions: [],
     ...labelTools(),
-    draft: { name: '', description: '', assign: 'none', assignee_id: '', deadline: '', priority: 'none', label_ids: [] }, // assign: me, none ou other
+    draft: { name: '', description: '', assign: 'none', assignee_id: '', deadline: '', priority: 'none', status: 'backlog', label_ids: [] }, // assign: me, none ou other
     linkForm: { integration_id: '', external_item_id: '', external_item_url: '' },
     external: { loading: false, details: null, error: '' },
     confirmDelete: false,
@@ -573,6 +581,7 @@ document.addEventListener('alpine:init', () => {
         assignee_id: t.assignee_id && t.assignee_id !== me.id ? t.assignee_id : '',
         deadline: WTT.fmt.dateInput(t.deadline),
         priority: t.priority || 'none',
+        status: t.status || 'backlog',
         label_ids: (t.labels || []).map((l) => l.id),
       };
       // Quem saiu dos times continua aparecendo como responsável atual.
@@ -582,9 +591,16 @@ document.addEventListener('alpine:init', () => {
       if (t.external_item_id) this.loadExternal();
       else this.external = { loading: false, details: null, error: '' };
     },
+    // O ponto mudou: recarrega as sessões e a tarefa, que bater o ponto põe em progresso (e,
+    // sem responsável, passa para quem bateu). Só os dados mostrados: o rascunho do modal fica.
     async reloadSessions() {
       try {
-        this.sessions = (await api('GET', '/api/projects/' + project.id + '/work-sessions?task_id=' + this.taskId)) || [];
+        const [sessions, task] = await Promise.all([
+          api('GET', '/api/projects/' + project.id + '/work-sessions?task_id=' + this.taskId),
+          api('GET', '/api/tasks/' + this.taskId),
+        ]);
+        this.sessions = sessions || [];
+        this.task = task;
       } catch (e) {
         // Mantém a lista anterior; a próxima ação mostra o erro.
       }
@@ -632,6 +648,7 @@ document.addEventListener('alpine:init', () => {
           assignee_id: { me: me.id, none: '', other: this.draft.assignee_id }[this.draft.assign],
           deadline: WTT.fmt.fromDateInput(this.draft.deadline),
           priority: this.draft.priority,
+          status: this.draft.status,
           label_ids: this.draft.label_ids,
         });
         this.setTask(t);

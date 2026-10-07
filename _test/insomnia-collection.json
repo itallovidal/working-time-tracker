@@ -878,6 +878,38 @@
       "body": {}
     },
     {
+      "_id": "req_06_15",
+      "_type": "request",
+      "parentId": "fld_06",
+      "name": "Mudar o status da tarefa",
+      "method": "PATCH",
+      "url": "{{base_url}}/api/tasks/{{task_id}}",
+      "authentication": {},
+      "metaSortKey": 15,
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Tela de checkout\",\n  \"status\": \"in_progress\"\n}"
+      }
+    },
+    {
+      "_id": "req_06_16",
+      "_type": "request",
+      "parentId": "fld_06",
+      "name": "Listar tarefas por status",
+      "method": "GET",
+      "url": "{{base_url}}/api/projects/{{project_id}}/tasks?status=in_progress,awaiting_closure&page=1",
+      "authentication": {},
+      "metaSortKey": 16,
+      "headers": [],
+      "body": {}
+    },
+    {
       "_id": "fld_07",
       "_type": "request_group",
       "parentId": "__workspace__",

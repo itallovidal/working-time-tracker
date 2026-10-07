@@ -220,6 +220,8 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `task.invalid_per_page` | 400 | — | `tamanho de página inválido (per_page): use um número a partir de 1` | `invalid page size (per_page): use a number from 1` |
 | `task.invalid_priority` | 400 | — | `prioridade inválida: use urgent, high, medium, low ou none` | `invalid priority: use urgent, high, medium, low or none` |
 | `task.invalid_priority_filter` | 400 | — | `prioridade inválida (priority): use urgent, high, medium, low ou none, separadas por vírgula` | `invalid priority (priority): use urgent, high, medium, low or none, separated by commas` |
+| `task.invalid_status` | 400 | — | `status inválido: use backlog, in_progress, awaiting_closure ou closed` | `invalid status: use backlog, in_progress, awaiting_closure or closed` |
+| `task.invalid_status_filter` | 400 | — | `status inválido (status): use backlog, in_progress, awaiting_closure ou closed, separados por vírgula` | `invalid status (status): use backlog, in_progress, awaiting_closure or closed, separated by commas` |
 | `task.label_other_project` | 400 | — | `uma das etiquetas não existe neste projeto` | `one of the labels does not exist in this project` |
 | `task.link_fields_required` | 400 | — | `informe a integração, o item e o link` | `enter the integration, the item and the link` |
 | `task.name_required` | 400 | — | `informe o nome` | `enter the name` |

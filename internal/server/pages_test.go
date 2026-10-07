@@ -404,6 +404,8 @@ func TestPages_ProjectTasksTab(t *testing.T) {
 			// Prioridade e etiqueta: os filtros (várias de cada), a coluna e os campos do modal.
 			`role="group" aria-label="Filtrar por prioridade"`, `role="group" aria-label="Filtrar por etiqueta"`, `toggleFilter('priority', p.value)`,
 			`toggleFilter('label', l.id)`, "<th>Prioridade</th>", `id="task-priority"`, `x-model="draft.label_ids"`,
+			// O status: o filtro, a coluna e o campo do modal (que só aparece ao editar).
+			`role="group" aria-label="Filtrar por status"`, `toggleFilter('status', s.value)`, "<th>Status</th>", `id="task-status"`, `<template x-if="hasStatus">`,
 			// O modal é um passo a passo: nome e descrição (em Markdown, com prévia), e depois o resto.
 			`class="wizard-steps"`, `submitStep('create')`, "Escrever", "Pré-visualizar", `id="task-preview"`, "Próximo", "Voltar", `id="task-deadline"`,
 		} {

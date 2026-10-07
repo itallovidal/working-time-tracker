@@ -1,7 +1,18 @@
 {{/* task_attrs é a prioridade e as etiquetas de uma tarefa, nos modais Nova tarefa e Editar
-     tarefa. Pede o rascunho em `draft` (priority, label_ids) e os métodos de labelTools
+     tarefa. Pede o rascunho em `draft` (priority, status na edição, label_ids) e os métodos de labelTools
      (labels, newLabel, createLabel). Só admins criam etiqueta; quem não é, só escolhe. */}}
 {{define "task_attrs"}}
+{{/* O status só aparece ao editar (hasStatus): a tarefa nova nasce em backlog. */}}
+<template x-if="hasStatus">
+  <div class="field">
+    <label for="task-status">{{.T "tasks.col_status"}}</label>
+    <select id="task-status" x-model="draft.status">
+      <template x-for="s in WTT.taskStatuses" :key="s.value">
+        <option :value="s.value" x-text="s.label" :selected="s.value === draft.status"></option>
+      </template>
+    </select>
+  </div>
+</template>
 <div class="field">
   <label for="task-priority">{{.T "tasks.col_priority"}}</label>
   <select id="task-priority" x-model="draft.priority">

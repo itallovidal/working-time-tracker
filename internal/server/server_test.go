@@ -1360,6 +1360,64 @@ func TestTasks_WithoutAssigneeIsClaimedByTheFirstClockIn(t *testing.T) {
 	}
 }
 
+// O status pela API: a tarefa nasce em backlog mesmo que o corpo peça outro, só o PATCH
+// muda, um valor fora dos quatro é recusado, e a lista filtra por um ou mais status.
+func TestTasks_Status(t *testing.T) {
+	e := newServer(t)
+	admin := signup(t, e, "Org", "ana@test.com")
+	member := invite(t, e, admin, "bia@test.com", "member")
+	projectID := createProject(t, e, admin, "Projeto")
+	tasks := "/api/projects/" + projectID + "/tasks"
+
+	rec := do(e, "POST", tasks, `{"name":"Nova","status":"closed"}`, member.session)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("create = %d: %s", rec.Code, rec.Body.String())
+	}
+	created := decode(t, rec)
+	if created["status"] != "backlog" {
+		t.Errorf("a new task came back with status %v, want backlog", created["status"])
+	}
+	one := "/api/tasks/" + created["id"].(string)
+	do(e, "POST", tasks, `{"name":"Outra"}`, member.session)
+
+	if rec := do(e, "PATCH", one, `{"name":"Nova","status":"in_progress"}`, member.session); rec.Code != http.StatusOK || decode(t, rec)["status"] != "in_progress" {
+		t.Fatalf("patch to in_progress = %d: %s", rec.Code, rec.Body.String())
+	}
+	if rec := do(e, "PATCH", one, `{"name":"Nova 2"}`, member.session); rec.Code != http.StatusOK || decode(t, rec)["status"] != "in_progress" {
+		t.Errorf("a patch without status changed it: %d %s", rec.Code, rec.Body.String())
+	}
+	if rec := do(e, "PATCH", one, `{"name":"Nova","status":"done"}`, member.session); rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "task.invalid_status") {
+		t.Errorf("an invalid status = %d: %s", rec.Code, rec.Body.String())
+	}
+	if got := decode(t, do(e, "GET", one, "", member.session)); got["status"] != "in_progress" {
+		t.Errorf("a refused patch left status %v, want in_progress", got["status"])
+	}
+
+	count := func(query string) int {
+		t.Helper()
+		rec := do(e, "GET", tasks+query, "", member.session)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("GET tasks%s = %d: %s", query, rec.Code, rec.Body.String())
+		}
+		return int(decode(t, rec)["total"].(float64))
+	}
+	for query, want := range map[string]int{
+		"?page=1":                            2,
+		"?page=1&status=backlog":             1,
+		"?page=1&status=in_progress":         1,
+		"?page=1&status=backlog,in_progress": 2,
+		"?page=1&status=closed":              0,
+		"?page=1&status=in_progress&q=outra": 0,
+	} {
+		if got := count(query); got != want {
+			t.Errorf("GET tasks%s: total %d, want %d", query, got, want)
+		}
+	}
+	if rec := do(e, "GET", tasks+"?status=done", "", member.session); rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "task.invalid_status_filter") {
+		t.Errorf("GET tasks?status=done = %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
 // Prioridade e etiquetas pela API: só admin cria etiqueta, a tarefa guarda e devolve as
 // duas, os filtros combinam, e uma etiqueta de outro projeto ou outra organização é recusada.
 func TestTasks_PriorityAndLabels(t *testing.T) {

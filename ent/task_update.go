@@ -96,6 +96,20 @@ func (_u *TaskUpdate) SetNillablePriority(v *task.Priority) *TaskUpdate {
 	return _u
 }
 
+// SetStatus sets the "status" field.
+func (_u *TaskUpdate) SetStatus(v task.Status) *TaskUpdate {
+	_u.mutation.SetStatus(v)
+	return _u
+}
+
+// SetNillableStatus sets the "status" field if the given value is not nil.
+func (_u *TaskUpdate) SetNillableStatus(v *task.Status) *TaskUpdate {
+	if v != nil {
+		_u.SetStatus(*v)
+	}
+	return _u
+}
+
 // SetAssigneeID sets the "assignee_id" field.
 func (_u *TaskUpdate) SetAssigneeID(v uuid.UUID) *TaskUpdate {
 	_u.mutation.SetAssigneeID(v)
@@ -340,6 +354,11 @@ func (_u *TaskUpdate) check() error {
 			return &ValidationError{Name: "priority", err: fmt.Errorf(`ent: validator failed for field "Task.priority": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Status(); ok {
+		if err := task.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Task.status": %w`, err)}
+		}
+	}
 	if _u.mutation.ProjectCleared() && len(_u.mutation.ProjectIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "Task.project"`)
 	}
@@ -369,6 +388,9 @@ func (_u *TaskUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.Priority(); ok {
 		_spec.SetField(task.FieldPriority, field.TypeEnum, value)
+	}
+	if value, ok := _u.mutation.Status(); ok {
+		_spec.SetField(task.FieldStatus, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Deadline(); ok {
 		_spec.SetField(task.FieldDeadline, field.TypeTime, value)
@@ -647,6 +669,20 @@ func (_u *TaskUpdateOne) SetNillablePriority(v *task.Priority) *TaskUpdateOne {
 	return _u
 }
 
+// SetStatus sets the "status" field.
+func (_u *TaskUpdateOne) SetStatus(v task.Status) *TaskUpdateOne {
+	_u.mutation.SetStatus(v)
+	return _u
+}
+
+// SetNillableStatus sets the "status" field if the given value is not nil.
+func (_u *TaskUpdateOne) SetNillableStatus(v *task.Status) *TaskUpdateOne {
+	if v != nil {
+		_u.SetStatus(*v)
+	}
+	return _u
+}
+
 // SetAssigneeID sets the "assignee_id" field.
 func (_u *TaskUpdateOne) SetAssigneeID(v uuid.UUID) *TaskUpdateOne {
 	_u.mutation.SetAssigneeID(v)
@@ -904,6 +940,11 @@ func (_u *TaskUpdateOne) check() error {
 			return &ValidationError{Name: "priority", err: fmt.Errorf(`ent: validator failed for field "Task.priority": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Status(); ok {
+		if err := task.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Task.status": %w`, err)}
+		}
+	}
 	if _u.mutation.ProjectCleared() && len(_u.mutation.ProjectIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "Task.project"`)
 	}
@@ -950,6 +991,9 @@ func (_u *TaskUpdateOne) sqlSave(ctx context.Context) (_node *Task, err error) {
 	}
 	if value, ok := _u.mutation.Priority(); ok {
 		_spec.SetField(task.FieldPriority, field.TypeEnum, value)
+	}
+	if value, ok := _u.mutation.Status(); ok {
+		_spec.SetField(task.FieldStatus, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Deadline(); ok {
 		_spec.SetField(task.FieldDeadline, field.TypeTime, value)

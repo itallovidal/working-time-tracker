@@ -85,6 +85,11 @@ func (s *Service) ClockIn(projectID, taskID, personID string) (*WorkSession, err
 			return nil, err
 		}
 	}
+	// E a tarefa em que se bateu o ponto passa a estar em progresso, de qualquer status. O
+	// clock-out não a tira de lá: parar ou pausar não é terminar.
+	if err := s.taskStore.StartProgress(task.ID); err != nil {
+		return nil, err
+	}
 	session.fillAmounts(session.StartAt)
 	return session, nil
 }

@@ -47,8 +47,8 @@ func (h *Handler) Create(c *echo.Context) error {
 const maxQueryLen = 100
 
 // parseListFilter lê os filtros da lista na query string: q, assignee_id,
-// deadline_to, priority, label_id, page e per_page. Todos são opcionais.
-// assignee_id=none lista só as tarefas sem responsável; priority e label_id
+// deadline_to, priority, status, label_id, page e per_page. Todos são opcionais.
+// assignee_id=none lista só as tarefas sem responsável; priority, status e label_id
 // aceitam vários valores separados por vírgula, e valem para a tarefa que tem
 // qualquer um deles.
 func parseListFilter(c *echo.Context) (ListFilter, error) {
@@ -80,6 +80,14 @@ func parseListFilter(c *echo.Context) (ListFilter, error) {
 				return f, ErrInvalidPriorityFilter
 			}
 			f.Priorities = append(f.Priorities, p)
+		}
+	}
+	if v := c.QueryParam("status"); v != "" {
+		for _, st := range strings.Split(v, ",") {
+			if !validStatus(st) {
+				return f, ErrInvalidStatusFilter
+			}
+			f.Statuses = append(f.Statuses, st)
 		}
 	}
 	if v := c.QueryParam("label_id"); v != "" {
@@ -150,13 +158,14 @@ func (h *Handler) Update(c *echo.Context) error {
 		AssigneeID  *string    `json:"assignee_id"`
 		Deadline    *time.Time `json:"deadline"`
 		Priority    *string    `json:"priority"`
+		Status      *string    `json:"status"`
 		LabelIDs    *[]string  `json:"label_ids"`
 	}
 	if err := c.Bind(&body); err != nil {
 		return apperr.Respond(c, 400, apperr.ErrInvalidBody)
 	}
 	task, err := h.svc.UpdateAs(selfID(c), id, body.Name, body.Description, body.AssigneeID, body.Deadline,
-		Attrs{Priority: body.Priority, LabelIDs: body.LabelIDs})
+		Attrs{Priority: body.Priority, Status: body.Status, LabelIDs: body.LabelIDs})
 	if err != nil {
 		return apperr.Respond(c, 400, err)
 	}

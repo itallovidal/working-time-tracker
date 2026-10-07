@@ -385,6 +385,13 @@ tasks:
     medium: Média
     low: Baixa
     none: Sem prioridade
+  col_status: Status
+  status_filter: Filtrar por status
+  status:
+    backlog: Backlog
+    in_progress: Em progresso
+    awaiting_closure: Aguardando fechamento
+    closed: Fechada
   labels: Etiquetas
   wizard:
     label: Etapas
@@ -975,6 +982,8 @@ errors:
     invalid_page: "página inválida (page): use um número a partir de 1"
     invalid_per_page: "tamanho de página inválido (per_page): use um número a partir de 1"
     invalid_priority: "prioridade inválida: use urgent, high, medium, low ou none"
+    invalid_status: "status inválido: use backlog, in_progress, awaiting_closure ou closed"
+    invalid_status_filter: "status inválido (status): use backlog, in_progress, awaiting_closure ou closed, separados por vírgula"
     invalid_priority_filter: "prioridade inválida (priority): use urgent, high, medium, low ou none, separadas por vírgula"
     label_other_project: "uma das etiquetas não existe neste projeto"
     link_fields_required: "informe a integração, o item e o link"

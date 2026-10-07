@@ -27,6 +27,7 @@ func (s *Store) Create(t *Task) error {
 		SetName(t.Name).
 		SetDescription(t.Description).
 		SetPriority(priorityOf(t.Priority)).
+		SetStatus(statusOf(t.Status)).
 		AddLabelIDs(labelIDs(t.Labels)...).
 		SetNillableAssigneeID(t.AssigneeID).
 		SetDeadline(t.Deadline)
@@ -73,6 +74,13 @@ func (s *Store) filtered(projectID uuid.UUID, f ListFilter) *ent.TaskQuery {
 		}
 		q = q.Where(task.PriorityIn(ps...))
 	}
+	if len(f.Statuses) > 0 {
+		ss := make([]task.Status, len(f.Statuses))
+		for i, st := range f.Statuses {
+			ss[i] = statusOf(st)
+		}
+		q = q.Where(task.StatusIn(ss...))
+	}
 	if len(f.LabelIDs) > 0 {
 		q = q.Where(task.HasLabelsWith(entlabel.IDIn(f.LabelIDs...)))
 	}
@@ -85,6 +93,14 @@ func priorityOf(p string) task.Priority {
 		return task.PriorityNone
 	}
 	return task.Priority(p)
+}
+
+// statusOf converte o status do domínio para o do Ent; vazio é backlog.
+func statusOf(s string) task.Status {
+	if s == "" {
+		return task.StatusBacklog
+	}
+	return task.Status(s)
 }
 
 func labelIDs(ls []Label) []uuid.UUID {
@@ -180,6 +196,7 @@ func (s *Store) Update(t *Task) error {
 		SetName(t.Name).
 		SetDescription(t.Description).
 		SetPriority(priorityOf(t.Priority)).
+		SetStatus(statusOf(t.Status)).
 		ClearLabels().
 		AddLabelIDs(labelIDs(t.Labels)...).
 		SetDeadline(t.Deadline)
@@ -220,6 +237,16 @@ func (s *Store) ClaimIfUnassigned(taskID, personID uuid.UUID) error {
 	return err
 }
 
+// StartProgress põe a tarefa em progresso, seja qual for o status atual: bater o ponto
+// nela é começar (ou retomar) o trabalho. Quem para ou pausa não a tira de lá.
+func (s *Store) StartProgress(taskID uuid.UUID) error {
+	_, err := s.client.Task.Update().
+		Where(task.IDEQ(taskID), task.StatusNEQ(task.StatusInProgress)).
+		SetStatus(task.StatusInProgress).
+		Save(context.Background())
+	return err
+}
+
 // IntegrationProjectID devolve o projeto dono da integração, ou database.ErrNotFound.
 func (s *Store) IntegrationProjectID(integrationID uuid.UUID) (uuid.UUID, error) {
 	it, err := s.client.Integration.Get(context.Background(), integrationID)
@@ -250,6 +277,7 @@ func toDomainTask(e *ent.Task) *Task {
 		Name:                  e.Name,
 		Description:           e.Description,
 		Priority:              string(e.Priority),
+		Status:                string(e.Status),
 		Labels:                []Label{},
 		AssigneeID:            e.AssigneeID,
 		Deadline:              e.Deadline,

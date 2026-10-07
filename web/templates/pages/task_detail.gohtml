@@ -29,6 +29,10 @@
             </dd>
           </div>
           <div class="fact">
+            <dt>{{.T "tasks.col_status"}}</dt>
+            <dd><span class="badge" :class="statusClass(task && task.status)" x-text="task && WTT.fmt.taskStatus(task.status)"></span></dd>
+          </div>
+          <div class="fact">
             <dt>{{.T "tasks.col_priority"}}</dt>
             <dd>
               <span class="badge" :class="priorityClass(task && task.priority)" x-show="task && task.priority !== 'none'" x-text="task && WTT.fmt.priority(task.priority)"></span>

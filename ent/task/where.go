@@ -281,6 +281,26 @@ func PriorityNotIn(vs ...Priority) predicate.Task {
 	return predicate.Task(sql.FieldNotIn(FieldPriority, vs...))
 }
 
+// StatusEQ applies the EQ predicate on the "status" field.
+func StatusEQ(v Status) predicate.Task {
+	return predicate.Task(sql.FieldEQ(FieldStatus, v))
+}
+
+// StatusNEQ applies the NEQ predicate on the "status" field.
+func StatusNEQ(v Status) predicate.Task {
+	return predicate.Task(sql.FieldNEQ(FieldStatus, v))
+}
+
+// StatusIn applies the In predicate on the "status" field.
+func StatusIn(vs ...Status) predicate.Task {
+	return predicate.Task(sql.FieldIn(FieldStatus, vs...))
+}
+
+// StatusNotIn applies the NotIn predicate on the "status" field.
+func StatusNotIn(vs ...Status) predicate.Task {
+	return predicate.Task(sql.FieldNotIn(FieldStatus, vs...))
+}
+
 // AssigneeIDEQ applies the EQ predicate on the "assignee_id" field.
 func AssigneeIDEQ(v uuid.UUID) predicate.Task {
 	return predicate.Task(sql.FieldEQ(FieldAssigneeID, v))

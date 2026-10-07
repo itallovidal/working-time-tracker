@@ -375,6 +375,13 @@ tasks:
     medium: Medium
     low: Low
     none: No priority
+  col_status: Status
+  status_filter: Filter by status
+  status:
+    backlog: Backlog
+    in_progress: In progress
+    awaiting_closure: Awaiting closure
+    closed: Closed
   labels: Labels
   wizard:
     label: Steps
@@ -965,6 +972,8 @@ errors:
     invalid_page: "invalid page (page): use a number from 1"
     invalid_per_page: "invalid page size (per_page): use a number from 1"
     invalid_priority: "invalid priority: use urgent, high, medium, low or none"
+    invalid_status: "invalid status: use backlog, in_progress, awaiting_closure or closed"
+    invalid_status_filter: "invalid status (status): use backlog, in_progress, awaiting_closure or closed, separated by commas"
     invalid_priority_filter: "invalid priority (priority): use urgent, high, medium, low or none, separated by commas"
     label_other_project: "one of the labels does not exist in this project"
     link_fields_required: "enter the integration, the item and the link"
