@@ -74,7 +74,7 @@
       <div class="row filters">
         <input type="search" placeholder="{{.T "collab.search_placeholder"}}" aria-label="{{.T "collab.search_label"}}"
                x-model="search" x-show="view === 'people' && collaborators.length > 0">
-        {{if .CanDo "collaborators.manage"}}
+        {{if and (.CanDo "collaborators.manage") (.CanDo "rates.manage")}}
         <button type="button" class="btn" x-show="view === 'people'" @click="openAdd()">{{template "icon" "user-plus"}} {{.T "collab.add_person"}}</button>
         {{end}}
         {{if .CanDo "teams.manage"}}
@@ -242,51 +242,66 @@
   {{if .CanDoAny "collaborators.manage" "rates.manage" "teams.manage"}}
   {{/* Os quatro formulários aparecem no modal do layout base e continuam no escopo de projectTeams. */}}
   <template x-teleport="#modal-root">
-    <form class="stack" x-show="$store.modal.name === 'collab-add'" @submit.prevent="addPerson()">
-      <div class="field">
-        <label for="collab-search">{{.T "collab.person"}}</label>
-        <input id="collab-search" type="search" placeholder="{{.T "collab.search_placeholder"}}" autocomplete="off"
-               x-model="add.search" @input="pruneAdd()" data-autofocus>
-      </div>
-      <ul class="list picker" role="radiogroup" aria-label="{{.T "collab.picker_label"}}" x-show="addCandidates().length > 0">
-        <template x-for="p in addCandidates()" :key="p.id">
-          <li>
-            <label class="pick">
-              <input type="radio" name="collab-person" :value="p.id" x-model="add.person_id">
-              <span class="avatar" aria-hidden="true" x-text="WTT.fmt.initials(p.name)"></span>
-              <span class="grow">
-                <span x-text="p.name"></span>
-                <span class="muted small" x-text="p.email"></span>
-              </span>
-            </label>
-          </li>
-        </template>
-      </ul>
-      <p class="muted small" x-show="addCandidates().length === 0 && add.search.trim()">{{.T "collab.none_outside_search"}}</p>
-      <p class="muted small" x-show="addCandidates().length === 0 && !add.search.trim()">
-        {{.T "collab.all_in"}}
-        <a href="/orgs/{{.OrgID}}/people">{{.T "collab.invite_link"}}</a>
-      </p>
-      <p class="muted small" x-show="addIsOwner()">{{.T "collab.owner_rate_hint"}}</p>
-      <div class="field" x-show="!addIsOwner()">
-        <label for="collab-rate" x-text="$t('collab.col_rate', { unit: WTT.fmt.moneyUnit() })"></label>
-        <input id="collab-rate" type="text" inputmode="decimal" class="num" placeholder="{{.T "project_settings.rate_placeholder"}}" :required="!addIsOwner()" x-model="add.rate">
-        <span class="hint">{{.T "collab.rate_hint"}}</span>
-      </div>
-      <div class="field">
-        <label for="collab-team">{{.T "collab.team"}}</label>
-        <select id="collab-team" x-model="add.team_id">
-          <option value="">{{.T "collab.no_team_yet"}}</option>
-          <template x-for="t in teams" :key="t.id">
-            <option :value="t.id" x-text="t.name"></option>
+    {{/* Em dois passos: quem entra (a pessoa, o valor e o time) e o grupo de permissões dela. Quem não
+         precisa de grupo (o dono e os admins) grava já no primeiro passo. */}}
+    <form class="stack" novalidate x-show="$store.modal.name === 'collab-add'" @submit.prevent="addSubmit()">
+      <ol class="wizard-steps" aria-label="{{.T "collab.wizard.label"}}">
+        <li :class="addStep === 1 && 'current'" :aria-current="addStep === 1 ? 'step' : false"><span class="n">1</span> {{.T "collab.wizard.step_person"}}</li>
+        <li :class="addStep === 2 && 'current'" :aria-current="addStep === 2 ? 'step' : false"><span class="n">2</span> {{.T "collab.wizard.step_group"}}</li>
+      </ol>
+      <div class="stack" x-show="addStep === 1">
+        <div class="field">
+          <label for="collab-search">{{.T "collab.person"}}</label>
+          <input id="collab-search" type="search" placeholder="{{.T "collab.search_placeholder"}}" autocomplete="off"
+                 x-model="add.search" @input="pruneAdd()" data-autofocus>
+        </div>
+        <ul class="list picker" role="radiogroup" aria-label="{{.T "collab.picker_label"}}" x-show="addCandidates().length > 0">
+          <template x-for="p in addCandidates()" :key="p.id">
+            <li>
+              <label class="pick">
+                <input type="radio" name="collab-person" :value="p.id" x-model="add.person_id">
+                <span class="avatar" aria-hidden="true" x-text="WTT.fmt.initials(p.name)"></span>
+                <span class="grow">
+                  <span x-text="p.name"></span>
+                  <span class="muted small" x-text="p.email"></span>
+                </span>
+              </label>
+            </li>
           </template>
-        </select>
-        <span class="hint">{{.T "collab.team_hint"}}</span>
+        </ul>
+        <p class="muted small" x-show="addCandidates().length === 0 && add.search.trim()">{{.T "collab.none_outside_search"}}</p>
+        <p class="muted small" x-show="addCandidates().length === 0 && !add.search.trim()">
+          {{.T "collab.all_in"}}
+          <a href="/orgs/{{.OrgID}}/people">{{.T "collab.invite_link"}}</a>
+        </p>
+        <p class="muted small" x-show="addIsOwner()">{{.T "collab.owner_rate_hint"}}</p>
+        <div class="field" x-show="!addIsOwner()">
+          <label for="collab-rate" x-text="$t('collab.col_rate', { unit: WTT.fmt.moneyUnit() })"></label>
+          <input id="collab-rate" type="text" inputmode="decimal" class="num" placeholder="{{.T "project_settings.rate_placeholder"}}" :required="!addIsOwner()" x-model="add.rate">
+          <span class="hint">{{.T "collab.rate_hint"}}</span>
+        </div>
+        <div class="field">
+          <label for="collab-team">{{.T "collab.team"}}</label>
+          <select id="collab-team" x-model="add.team_id">
+            <option value="">{{.T "collab.no_team_yet"}}</option>
+            <template x-for="t in teams" :key="t.id">
+              <option :value="t.id" x-text="t.name"></option>
+            </template>
+          </select>
+          <span class="hint">{{.T "collab.team_hint"}}</span>
+        </div>
+      </div>
+      <div class="stack" x-show="addStep === 2">
+        <p class="muted small" x-show="addTarget()" x-text="addTarget() ? addTarget().name + ' · ' + addTarget().email : ''"></p>
+        {{template "preset_picker" .}}
       </div>
       <p class="form-error" x-show="errors.add" x-text="errors.add" role="alert"></p>
       <div class="row row-end">
-        <button type="button" class="btn btn-secondary" @click="$store.modal.dismiss()">{{.T "common.cancel"}}</button>
-        <button type="submit" class="btn" :disabled="pending || !add.person_id">{{template "icon" "user-plus"}} {{.T "collab.add_submit"}}</button>
+        <button type="button" class="btn btn-secondary" x-show="addStep === 1" @click="$store.modal.dismiss()">{{.T "common.cancel"}}</button>
+        <button type="button" class="btn btn-secondary" x-show="addStep === 2" @click="addBack()">{{template "icon" "arrow-left"}} {{.T "collab.wizard.back"}}</button>
+        <button type="submit" class="btn" x-show="addStep === 1 && !addNeedsGroup()" :disabled="pending || !add.person_id">{{template "icon" "user-plus"}} {{.T "collab.add_submit"}}</button>
+        <button type="submit" class="btn" x-show="addStep === 1 && addNeedsGroup()" :disabled="!add.person_id">{{.T "collab.wizard.next"}} {{template "icon" "arrow-right"}}</button>
+        <button type="submit" class="btn" x-show="addStep === 2" :disabled="pending">{{template "icon" "user-plus"}} {{.T "collab.add_submit"}}</button>
       </div>
     </form>
   </template>
@@ -371,6 +386,13 @@
           {{.T "collab.person_rate_hint"}}
           <span x-show="personMargin() !== null">{{.T "collab.margin_before"}} <strong class="num" :class="personMargin() < 0 && 'text-danger'" x-text="WTT.fmt.money(personMargin())"></strong> {{.T "collab.margin_after"}}</span>
         </span>
+      </div>
+      {{end}}
+      {{if .CanDo "collaborators.manage"}}
+      <p class="muted small" x-show="person.is_admin" x-text="$t('collab.group_has_all', { name: person.name })"></p>
+      <div class="stack" x-show="!person.is_admin">
+        <p class="muted small" x-show="person.preset === 'custom'">{{.T "collab.group_custom_note"}}</p>
+        {{template "preset_picker" .}}
       </div>
       {{end}}
       {{if .CanDo "teams.manage"}}

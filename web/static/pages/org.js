@@ -114,16 +114,19 @@ document.addEventListener('alpine:init', () => {
     invites: [],
     invite: { email: '', role: 'member' },
     lastLink: '',
-    editing: null, // a pessoa aberta no modal da jornada semanal
-    draft: { weekly_hours: '' },
+    editing: null, // a pessoa aberta no modal da jornada semanal e das permissões
+    draft: { weekly_hours: '', permissions: [] },
+    orgKeys: [], // as permissões da organização do catálogo, para o dono liberar
     async init() {
       try {
-        const [people, invites] = await Promise.all([
+        const [people, invites, catalog] = await Promise.all([
           api('GET', '/api/orgs/' + orgId + '/persons'),
           api('GET', '/api/orgs/' + orgId + '/invites'),
+          me.is_owner ? api('GET', '/api/permissions') : null,
         ]);
         this.people = people || [];
         this.invites = invites || [];
+        if (catalog) this.orgKeys = catalog.organization;
       } catch (e) {
         this.errors.load = e.message;
       } finally {
@@ -139,11 +142,15 @@ document.addEventListener('alpine:init', () => {
         if (person.id === me.id && updated.role !== 'admin') location.href = '/';
       });
     },
-    // openEdit abre o modal com a jornada da pessoa. Ele edita um rascunho: nada vai
-    // para o servidor antes de Salvar. O papel muda direto na linha, pelo botão.
+    // As permissões da organização só se liberam a quem não é admin, e só o dono as dá.
+    canGrant(person) {
+      return !!me.is_owner && !!person && person.role !== 'admin' && !person.is_owner;
+    },
+    // openEdit abre o modal com a jornada e as permissões da pessoa. Ele edita um rascunho:
+    // nada vai para o servidor antes de Salvar. O papel muda direto na linha, pelo botão.
     openEdit(person) {
       this.editing = person;
-      this.draft = { weekly_hours: person.weekly_hours || '' };
+      this.draft = { weekly_hours: person.weekly_hours || '', permissions: [...(person.permissions || [])] };
       this.errors.edit = '';
       Alpine.store('modal').open('person-edit', WTT.t('org.people.edit_title'), () => !this.pending);
     },
@@ -153,9 +160,14 @@ document.addEventListener('alpine:init', () => {
         const text = String(this.draft.weekly_hours).trim();
         const hours = text === '' ? 0 : Number(text);
         if (!Number.isInteger(hours) || hours < 0 || hours > 168) throw new Error(WTT.t('errors.person.invalid_week_hours'));
-        if (hours !== (person.weekly_hours || 0)) {
+        if (WTT.can('people.manage') && hours !== (person.weekly_hours || 0)) {
           const updated = await api('PATCH', '/api/persons/' + person.id + '/weekly-hours', { weekly_hours: hours });
           person.weekly_hours = updated.weekly_hours;
+        }
+        const before = [...(person.permissions || [])].sort().join();
+        if (this.canGrant(person) && [...this.draft.permissions].sort().join() !== before) {
+          const updated = await api('PATCH', '/api/persons/' + person.id + '/permissions', { permissions: this.draft.permissions });
+          person.permissions = updated.permissions;
         }
         toast(WTT.t('org.people.hours_saved', { name: person.name }));
         Alpine.store('modal').close();

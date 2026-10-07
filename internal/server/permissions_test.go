@@ -347,3 +347,22 @@ func TestPermissions_CatalogAndIdentity(t *testing.T) {
 		t.Errorf("/auth/me permissions = %v, want [people.manage]", me["permissions"])
 	}
 }
+
+// A lista de colaboradores diz o grupo de cada um: é o que o modal do colaborador marca.
+func TestPermissions_CollaboratorsCarryTheirGroup(t *testing.T) {
+	e := newServer(t)
+	admin := signup(t, e, "Org", "ana@test.com")
+	manager := invite(t, e, admin, "gabi@test.com", "member")
+	plain := invite(t, e, admin, "caio@test.com", "member")
+	prj := createProject(t, e, admin, "Alfa")
+	withPreset(t, e, admin, prj, manager.id, "manager")
+	allocate(t, e, admin, prj, plain.id, 2000)
+
+	got := map[string]any{}
+	for _, c := range decodeList(t, do(e, "GET", "/api/projects/"+prj+"/collaborators", "", plain.session)) {
+		got[c["person"].(map[string]any)["id"].(string)] = c["preset"]
+	}
+	if got[manager.id] != "manager" || got[plain.id] != "member" || got[admin.id] != "member" {
+		t.Errorf("groups = %v, want the manager as manager and the others as member", got)
+	}
+}

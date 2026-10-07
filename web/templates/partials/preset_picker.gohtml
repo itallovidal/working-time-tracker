@@ -1,0 +1,25 @@
+{{/* preset_picker é a escolha do grupo de permissões de uma pessoa num projeto: um cartão por
+     grupo, com o nome, o que ele faz e as permissões que traz. Fica nos modais Adicionar pessoa
+     (etapa 2) e Editar colaborador. Pede, no componente, `preset` (o grupo marcado),
+     `presetChoices()` (os grupos que quem olha pode dar) e `presetText(chave)`. */}}
+{{define "preset_picker"}}
+<div class="presets" role="radiogroup" aria-label="{{.T "collab.group_title"}}">
+  <span class="field-label">{{.T "collab.group_title"}}</span>
+  <template x-for="p in presetChoices()" :key="p.id">
+    <label class="preset">
+      <input type="radio" name="preset" :value="p.id" x-model="preset">
+      <span class="grow">
+        <span class="preset-name" x-text="$t('permissions.presets.' + p.id + '.name')"></span>
+        <span class="muted small" x-text="$t('permissions.presets.' + p.id + '.about')"></span>
+        <span class="row row-tight preset-keys" x-show="p.permissions.length > 0">
+          <template x-for="k in p.permissions" :key="k">
+            <span class="badge" x-text="presetText(k)"></span>
+          </template>
+        </span>
+      </span>
+    </label>
+  </template>
+  <span class="hint" x-show="presetChoices().length === 0">{{.T "collab.group_none"}}</span>
+  <span class="hint" x-show="presetChoices().length > 0">{{.T "collab.group_hint"}}</span>
+</div>
+{{end}}

@@ -76,6 +76,11 @@ colaboradores e outros gerentes, mas não dá o grupo financeiro, que tem o fatu
 
 Sem a permissão a API responde `403 auth.permission_required` (ou `auth.owner_only`, ou `auth.admin_only`), e a página, `404`.
 
+## Onde se escolhe
+
+- **Grupo do projeto**: no passo 2 de Adicionar pessoa e no modal Editar colaborador (aba Colaboradores da Gestão).
+- **Permissões da organização**: no modal Jornada e permissões, na aba Colaboradores da organização, só para o dono e só para quem não é admin.
+
 ## Ainda não existe
 
 - Editar as permissões avulsas de alguém já no projeto (os grupos mudam todas de uma vez).

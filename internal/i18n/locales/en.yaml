@@ -56,6 +56,62 @@ nav:
   profile_sr: "Your profile:"
   logout: Sign out
 
+permissions:
+  keys:
+    project_edit:
+      name: Edit the project
+      about: Name, description, sprint, daily, weekly and the customer meeting, and deleting the project.
+    teams_manage:
+      name: Manage teams
+      about: Create, edit and delete teams and choose who is in each one.
+    collaborators_manage:
+      name: Add and remove people
+      about: Add collaborators, remove them from the project and choose each one's group.
+    rates_view:
+      name: See colleagues' rates
+      about: The hourly rate each person earns and everyone's hours.
+    rates_manage:
+      name: Set hourly rates
+      about: How much each person earns per hour in this project.
+    billing_view:
+      name: See the billing
+      about: The customer, the billed rate and the Overview, with revenue, cost and margin.
+    billing_manage:
+      name: Set the customer and the billed rate
+      about: Change the project's customer and what they pay per hour.
+    labels_manage:
+      name: Manage labels
+      about: Create, rename and delete the project's labels.
+    integrations_manage:
+      name: Manage integrations
+      about: Connect GitHub, GitLab and Trello, and change or delete the connections.
+    projects_create:
+      name: Create projects
+      about: Create new projects in the organization.
+    customers_manage:
+      name: Manage customers
+      about: Register, change and delete the organization's customers.
+    people_manage:
+      name: Manage people
+      about: Invite people, revoke invites and set the weekly hours.
+  presets:
+    member:
+      name: Collaborator
+      about: Works on the project, sees their own tasks and their own clock.
+    manager:
+      name: Project manager
+      about: Runs the project, its teams, its people, its labels and its integrations.
+    finance:
+      name: Finance
+      about: "Runs the project's money: hourly rates, customer and billing."
+    admin:
+      name: Project administrator
+      about: Everything that can be done in this project.
+    custom:
+      name: Custom
+      about: A mix of permissions that matches no group.
+  has: "{{.count}} permissions"
+
 roles:
   admin: Admin
   owner: Owner
@@ -187,11 +243,16 @@ org:
   people:
     title: People
     weekly_hours: Weekly hours
-    edit_title: Weekly hours
+    edit_title: Hours and permissions
     edit_label: "Edit {{.name}}'s weekly hours"
     weekly_hours_label: Weekly hours
     weekly_hours_hint: How many hours a week were agreed with the person. Applies to every project. Empty clears it.
     hours_saved: "{{.name}}'s weekly hours saved."
+    permissions_title: Organization permissions
+    permissions_hint: Only the owner gives these, and they apply to every project. The permissions of each project are given when the person is added to it.
+    permissions_admin: Admins already have every organization permission.
+    permissions_owner: The owner has every permission.
+    permissions_saved: "{{.name}}'s permissions saved."
     intro: Who belongs to the organization. To put someone on a project and build the teams, use the project's Collaborators tab.
     add: Add collaborator
     loading: Loading collaborators…
@@ -547,6 +608,18 @@ project_settings:
   saved: Project saved.
 
 collab:
+  wizard:
+    label: Steps to add the person
+    step_person: Who joins
+    step_group: Permissions
+    next: Next
+    back: Back
+  group_title: Permission group
+  group_hint: The group only applies to this project, and you can only give what you can do yourself.
+  group_none: There is no group you can choose.
+  group_has_all: "{{.name}} already has every permission, so there is no group to choose."
+  group_custom_note: This person's permissions are custom and match no group. Choosing a group replaces all of them.
+  group_badge: Group
   loading: Loading collaborators…
   collaborators:
     one: Collaborator

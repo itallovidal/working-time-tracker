@@ -12,6 +12,7 @@ import (
 	entteam "working-time-tracker/ent/team"
 	enttm "working-time-tracker/ent/teammembership"
 	"working-time-tracker/internal/database"
+	"working-time-tracker/internal/domain/permission"
 )
 
 type Store struct {
@@ -46,10 +47,12 @@ func (s *Store) ListByProject(projectID uuid.UUID) ([]Collaborator, error) {
 		c := Collaborator{
 			Person: Person{ID: p.ID, Name: p.Name, Email: p.Email, IsOwner: p.IsOwner},
 			Teams:  make([]Team, 0, len(p.Edges.TeamMemberships)),
+			Preset: permission.PresetMember,
 		}
 		for _, a := range p.Edges.Allocations {
 			rate := a.PayRateCents
 			c.PayRateCents = &rate
+			c.Preset = a.Preset
 		}
 		for _, m := range p.Edges.TeamMemberships {
 			c.Teams = append(c.Teams, Team{ID: m.Edges.Team.ID, Name: m.Edges.Team.Name})

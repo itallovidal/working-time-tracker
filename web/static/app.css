@@ -252,6 +252,19 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 }
 .wizard-steps li.current { color: var(--ink); }
 .wizard-steps li.current .n { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+/* A escolha do grupo de permissões: um cartão por grupo, o marcado em destaque. */
+.presets { display: flex; flex-direction: column; gap: 8px; }
+.preset {
+  display: flex; align-items: flex-start; gap: 12px; padding: 10px 12px; cursor: pointer;
+  border: 1px solid var(--rule); border-radius: var(--radius-sm); background: var(--surface);
+}
+.preset:hover { background: var(--surface-2); }
+.preset:has(:checked) { border-color: var(--accent); background: var(--surface-2); }
+.preset:has(:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.preset input { width: auto; flex: none; margin-top: 3px; accent-color: var(--accent); }
+.preset .grow { display: flex; flex-direction: column; gap: 4px; }
+.preset-name { font-weight: 600; }
+.preset-keys { flex-wrap: wrap; margin-top: 2px; }
 .text-danger { color: var(--danger); }
 .nowrap { white-space: nowrap; }
 .self-end { align-self: flex-end; }

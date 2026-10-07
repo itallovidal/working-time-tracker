@@ -66,6 +66,62 @@ nav:
   profile_sr: "Seu perfil:"
   logout: Sair
 
+permissions:
+  keys:
+    project_edit:
+      name: Alterar o projeto
+      about: Nome, descrição, sprint, daily, weekly e a reunião com o cliente, e excluir o projeto.
+    teams_manage:
+      name: Cuidar dos times
+      about: Criar, editar e excluir times e escolher quem está em cada um.
+    collaborators_manage:
+      name: Pôr e tirar pessoas do projeto
+      about: Adicionar colaboradores, tirá-los do projeto e escolher o grupo de cada um.
+    rates_view:
+      name: Ver o valor dos colegas
+      about: O valor por hora que cada um recebe e as horas de todos.
+    rates_manage:
+      name: Definir o valor por hora
+      about: Quanto cada pessoa recebe por hora neste projeto.
+    billing_view:
+      name: Ver o faturamento
+      about: O cliente, o valor cobrado e a Visão geral, com receita, custo e margem.
+    billing_manage:
+      name: Definir o cliente e o valor cobrado
+      about: Trocar o cliente do projeto e o valor que ele paga por hora.
+    labels_manage:
+      name: Cuidar das etiquetas
+      about: Criar, renomear e excluir as etiquetas do projeto.
+    integrations_manage:
+      name: Cuidar das integrações
+      about: Conectar o GitHub, o GitLab e o Trello, e alterar ou excluir as conexões.
+    projects_create:
+      name: Criar projetos
+      about: Criar projetos novos na organização.
+    customers_manage:
+      name: Cuidar dos clientes
+      about: Cadastrar, alterar e excluir os clientes da organização.
+    people_manage:
+      name: Cuidar das pessoas
+      about: Convidar pessoas, revogar convites e definir a jornada semanal.
+  presets:
+    member:
+      name: Colaborador
+      about: Trabalha no projeto, vê as próprias tarefas e o próprio ponto.
+    manager:
+      name: Gerente de projeto
+      about: Cuida do projeto, dos times, das pessoas, das etiquetas e das integrações.
+    finance:
+      name: Financeiro
+      about: "Cuida do dinheiro do projeto: valores por hora, cliente e faturamento."
+    admin:
+      name: Administrador do projeto
+      about: Tudo o que dá para fazer neste projeto.
+    custom:
+      name: Personalizado
+      about: Uma combinação de permissões que não é de nenhum grupo.
+  has: "{{.count}} permissões"
+
 roles:
   admin: Admin
   owner: Dono
@@ -197,11 +253,16 @@ org:
   people:
     title: Integrantes
     weekly_hours: Jornada semanal
-    edit_title: Jornada semanal
+    edit_title: Jornada e permissões
     edit_label: "Editar a jornada semanal de {{.name}}"
     weekly_hours_label: Jornada semanal (horas)
     weekly_hours_hint: Quantas horas por semana foram combinadas com a pessoa. Vale para todos os projetos. Vazio apaga.
     hours_saved: "Jornada de {{.name}} salva."
+    permissions_title: Permissões da organização
+    permissions_hint: Só o dono libera, e valem em todos os projetos. As permissões de cada projeto são dadas ao pôr a pessoa nele.
+    permissions_admin: Admins já têm todas as permissões da organização.
+    permissions_owner: O dono tem todas as permissões.
+    permissions_saved: "Permissões de {{.name}} salvas."
     intro: Quem faz parte da organização. Para pôr alguém num projeto e montar os times, use a aba Colaboradores do projeto.
     add: Adicionar colaborador
     loading: Carregando colaboradores…
@@ -557,6 +618,18 @@ project_settings:
   saved: Projeto salvo.
 
 collab:
+  wizard:
+    label: Etapas para adicionar a pessoa
+    step_person: Quem entra
+    step_group: Permissões
+    next: Próximo
+    back: Voltar
+  group_title: Grupo de permissões
+  group_hint: O grupo vale só neste projeto, e quem dá um grupo só dá o que ele mesmo pode.
+  group_none: Nenhum grupo disponível para você escolher.
+  group_has_all: "{{.name}} já tem todas as permissões, então não precisa de um grupo."
+  group_custom_note: As permissões desta pessoa são personalizadas e não são de nenhum grupo. Escolher um grupo troca todas.
+  group_badge: Grupo
   loading: Carregando colaboradores…
   collaborators:
     one: Colaborador

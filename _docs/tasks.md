@@ -487,7 +487,7 @@
 - [X] S39.5 Rates, billed rate and sessions follow the permissions; roles, organization permissions, admin invites and deleting the organization are the owner's
 - [X] S39.6 Pages and buttons follow the permissions (`Data.Can`, `WTT.can`); the Gestão opens on the first tab the person can see
 - [X] S39.7 Seed with managers and a finance person; tests for the catalog, each group, the anti-escalation rule and the organization scope; `_docs/permissions.md`, README, design, routes, error codes and the Insomnia collection
-- [ ] S39.8 The modals: the add-person modal in two steps (who, then the group), the edit-collaborator modal with the group, and the organization permissions on the people page (next)
+- [X] S39.8 The modals: Adicionar pessoa in two steps (who, then the group), Editar colaborador with the group, and the organization permissions in the people modal (owner only); checked in the browser
 
 ---
 

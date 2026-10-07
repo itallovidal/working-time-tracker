@@ -92,12 +92,36 @@
           <div class="muted small" x-text="editing && editing.email"></div>
         </div>
       </div>
+      {{if .Can "people.manage"}}
       <div class="field">
         <label for="person-weekly-hours">{{.T "org.people.weekly_hours_label"}}</label>
         <input id="person-weekly-hours" type="number" min="1" max="168" step="1" class="num" placeholder="{{.T "labels.weekly_hours_none"}}"
                x-model="draft.weekly_hours" data-autofocus>
         <span class="hint">{{.T "org.people.weekly_hours_hint"}}</span>
       </div>
+      {{end}}
+      {{/* As permissões da organização: só o dono libera, e só a quem não é admin. */}}
+      {{if .IsOwner}}
+      <div class="field" role="group" aria-labelledby="person-permissions-label" x-show="editing">
+        <span class="field-label" id="person-permissions-label">{{.T "org.people.permissions_title"}}</span>
+        <p class="muted small" x-show="editing && editing.is_owner">{{.T "org.people.permissions_owner"}}</p>
+        <p class="muted small" x-show="editing && !editing.is_owner && editing.role === 'admin'">{{.T "org.people.permissions_admin"}}</p>
+        <ul class="list picker" x-show="canGrant(editing)">
+          <template x-for="k in orgKeys" :key="k">
+            <li>
+              <label class="pick">
+                <input type="checkbox" :value="k" x-model="draft.permissions">
+                <span class="grow">
+                  <span x-text="$t('permissions.keys.' + k.replace('.', '_') + '.name')"></span>
+                  <span class="muted small" x-text="$t('permissions.keys.' + k.replace('.', '_') + '.about')"></span>
+                </span>
+              </label>
+            </li>
+          </template>
+        </ul>
+        <span class="hint" x-show="canGrant(editing)">{{.T "org.people.permissions_hint"}}</span>
+      </div>
+      {{end}}
       <p class="form-error" x-show="errors.edit" x-text="errors.edit" role="alert"></p>
       <div class="row row-end">
         <button type="button" class="btn btn-secondary" @click="$store.modal.dismiss()">{{.T "common.cancel"}}</button>

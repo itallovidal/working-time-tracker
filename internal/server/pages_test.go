@@ -330,6 +330,9 @@ func TestPages_ProjectCollaboratorsTab(t *testing.T) {
 		`x-show="$store.modal.name === 'collab-edit'"`,
 		`id="collab-edit-rate" type="text" inputmode="decimal" class="num" placeholder="0,00" :required="!person.is_owner"`,
 		`type="checkbox" :value="t.id" x-model="person.team_ids"`, "Tirar do projeto", "savePerson()", "removePerson()",
+		// O grupo de permissões: o modal do colaborador escolhe, e adicionar pessoa é em dois passos.
+		`class="presets" role="radiogroup"`, `x-for="p in presetChoices()"`, `x-model="preset"`,
+		`class="wizard-steps"`, `x-show="addStep === 1"`, `x-show="addStep === 2"`, "Quem entra", "Permissões", "addSubmit()",
 		// O modal de editar time: o nome, os integrantes em caixas de marcar e a exclusão.
 		`x-show="$store.modal.name === 'team-edit'"`, `id="team-edit-name"`, `id="team-edit-search"`,
 		`type="checkbox" :value="p.id" x-model="edit.member_ids"`, "Excluir time", "saveTeam()", "removeTeam()",
@@ -339,8 +342,13 @@ func TestPages_ProjectCollaboratorsTab(t *testing.T) {
 		}
 	}
 
-	// O formulário de adicionar pessoa vai da busca até o formulário de novo time.
+	// O formulário de adicionar pessoa vai da busca até o formulário de novo time. O valor e o
+	// time ficam no primeiro passo, e o grupo, no segundo.
 	addForm := adminPage[strings.Index(adminPage, `id="collab-search"`):strings.Index(adminPage, `id="team-name"`)]
+	steps := adminPage[strings.Index(adminPage, `x-show="$store.modal.name === 'collab-add'"`):strings.Index(adminPage, `id="team-name"`)]
+	if first, second, group := strings.Index(steps, `<div class="stack" x-show="addStep === 1">`), strings.Index(steps, `<div class="stack" x-show="addStep === 2">`), strings.Index(steps, `class="presets"`); first < 0 || second < first || group < second {
+		t.Errorf("the add person form does not put the group in the second step (steps at %d and %d, group at %d)", first, second, group)
+	}
 	if !strings.Contains(addForm, `id="collab-rate" type="text" inputmode="decimal" class="num" placeholder="0,00" :required="!addIsOwner()"`) {
 		t.Error("the hourly rate is not a required field of the add person form (except for the owner)")
 	}
@@ -614,6 +622,19 @@ func TestPages_ProjectSettingsAndWeeklyHours(t *testing.T) {
 	}
 	if !strings.Contains(people, "setRole(") || strings.Contains(people, `id="person-role"`) {
 		t.Error("the role should change on the row button, and not in the weekly hours modal")
+	}
+
+	// As permissões da organização estão no mesmo modal, mas só o dono as vê: um admin que
+	// não é o dono edita a jornada e nada mais.
+	for _, want := range []string{`id="person-permissions-label"`, `x-model="draft.permissions"`, "canGrant(editing)"} {
+		if !strings.Contains(people, want) {
+			t.Errorf("the owner does not see %q in the people modal", want)
+		}
+	}
+	otherAdmin := invite(t, e, admin, "outro-admin@test.com", "admin")
+	if peopleAsAdmin := do(e, "GET", "/orgs/"+admin.orgID+"/people", "", otherAdmin.session).Body.String(); strings.Contains(peopleAsAdmin, "person-permissions-label") ||
+		strings.Contains(peopleAsAdmin, `<option value="admin">`) || !strings.Contains(peopleAsAdmin, `id="person-weekly-hours"`) {
+		t.Error("an admin who is not the owner should edit the weekly hours only, and not the permissions or the admin role")
 	}
 
 	// Cada pessoa lê a própria jornada no perfil, sem campo para alterar.

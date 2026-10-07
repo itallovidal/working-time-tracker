@@ -988,12 +988,15 @@ document.addEventListener('alpine:init', () => {
     teamPages: {}, // por time, a página dos integrantes no cartão
     confirming: null, // 'person-<id>' ou 'team-<id>'
     add: { search: '', person_id: '', rate: '', team_id: '' },
+    addStep: 1, // 1: quem entra, o valor e o time; 2: o grupo de permissões
+    presets: [], // os grupos do catálogo da API
+    preset: 'member', // o grupo marcado no modal aberto (Adicionar pessoa ou Editar colaborador)
     newTeam: '',
     // O rascunho do modal Editar time: o nome, quem está marcado e, em people,
     // quem está no projeto, na ordem em que a lista aparece.
     edit: { id: '', name: '', search: '', member_ids: [], people: [] },
     // O rascunho do modal do colaborador: o valor por hora como texto e os times marcados.
-    person: { id: '', name: '', email: '', is_owner: false, rate: '', team_ids: [] },
+    person: { id: '', name: '', email: '', is_owner: false, is_admin: false, preset: 'member', rate: '', team_ids: [] },
     async init() {
       this.$watch('search', () => { this.page = 1; }); // uma busca nova começa da primeira página
       try {
@@ -1012,6 +1015,7 @@ document.addEventListener('alpine:init', () => {
         if (billing) this.billing = billing;
         this.people = people || [];
         this.sessions = sessions || [];
+        if (WTT.can('collaborators.manage') && manage) this.presets = (await api('GET', '/api/permissions')).presets;
       } catch (e) {
         this.errors.load = e.message;
       } finally {
@@ -1089,17 +1093,34 @@ document.addEventListener('alpine:init', () => {
       if (this.billing.bill_rate_cents === null || c.pay_rate_cents === null) return null;
       return this.billing.bill_rate_cents - c.pay_rate_cents;
     },
-    // openPerson abre o modal do colaborador com um rascunho do valor e dos
+    // Os grupos que quem olha pode dar: só os que têm tudo o que ele mesmo pode, porque ninguém
+    // concede o que não tem (o servidor confere de novo).
+    presetChoices() {
+      return this.presets.filter((p) => p.permissions.every((k) => WTT.can(k)));
+    },
+    // presetText é o nome curto de uma permissão do catálogo, para os selos dos grupos.
+    presetText(key) {
+      return WTT.t('permissions.keys.' + key.replace('.', '_') + '.name');
+    },
+    // O dono e os admins já têm todas as permissões: para eles não há grupo a escolher.
+    hasAll(person) {
+      return !!person && (!!person.is_owner || person.role === 'admin');
+    },
+    // openPerson abre o modal do colaborador com um rascunho do valor, do grupo e dos
     // times. Abre da linha da tabela e da pessoa no cartão de um time.
     openPerson(c) {
+      const full = this.people.find((p) => p.id === c.person.id);
       this.person = {
         id: c.person.id,
         name: c.person.name,
         email: c.person.email,
         is_owner: !!c.person.is_owner,
+        is_admin: this.hasAll(full),
+        preset: c.preset || 'member',
         rate: WTT.fmt.moneyInput(c.pay_rate_cents),
         team_ids: c.teams.map((t) => t.id),
       };
+      this.preset = this.person.preset;
       this.confirming = null;
       this.errors.person = '';
       Alpine.store('modal').open('collab-edit', WTT.t('collab.edit_person'), () => !this.pending);
@@ -1130,8 +1151,12 @@ document.addEventListener('alpine:init', () => {
         const joining = wanted.filter((id) => !current.includes(id));
         const body = { person_id: c.person.id };
         try {
-          if (WTT.can('rates.manage') && !c.person.is_owner && cents !== c.pay_rate_cents) {
-            await api('PUT', '/api/projects/' + project.id + '/allocations/' + c.person.id, { pay_rate_cents: cents });
+          // O valor e o grupo vão pela mesma rota, só com o que mudou: cada um pede a sua permissão.
+          const allocation = {};
+          if (WTT.can('rates.manage') && !c.person.is_owner && cents !== c.pay_rate_cents) allocation.pay_rate_cents = cents;
+          if (WTT.can('collaborators.manage') && !this.person.is_admin && this.preset !== this.person.preset && this.preset !== 'custom') allocation.preset = this.preset;
+          if (Object.keys(allocation).length) {
+            await api('PUT', '/api/projects/' + project.id + '/allocations/' + c.person.id, allocation);
           }
           if (WTT.can('teams.manage')) {
             for (const id of leaving) await api('DELETE', '/api/teams/' + id + '/members', body);
@@ -1171,20 +1196,56 @@ document.addEventListener('alpine:init', () => {
     },
     openAdd() {
       this.add = { search: '', person_id: '', rate: '', team_id: '' };
+      this.addStep = 1;
+      this.preset = 'member';
       this.errors.add = '';
       Alpine.store('modal').open('collab-add', WTT.t('collab.add_title'), () => !this.pending);
     },
+    // A pessoa escolhida na etapa 1, com o papel e o dono, para saber se ela precisa de um grupo.
+    addTarget() {
+      return this.addCandidates().find((p) => p.id === this.add.person_id);
+    },
+    addNeedsGroup() {
+      const p = this.addTarget();
+      return !!p && !this.hasAll(p) && this.presetChoices().length > 0;
+    },
+    // addNext confere a etapa 1 e, quando a pessoa precisa de um grupo, vai para a 2; senão grava direto.
+    addNext() {
+      const person = this.addTarget();
+      if (!person) {
+        this.errors.add = WTT.t('collab.choose_person');
+        return undefined;
+      }
+      if (!person.is_owner && WTT.toCents(this.add.rate) === null) {
+        this.errors.add = WTT.t('collab.rate_required');
+        return undefined;
+      }
+      this.errors.add = '';
+      if (!this.addNeedsGroup()) return this.addPerson();
+      this.addStep = 2;
+      return undefined;
+    },
+    addBack() {
+      this.addStep = 1;
+      this.errors.add = '';
+    },
+    // addSubmit é o envio do formulário: na etapa 1 avança, na 2 grava.
+    addSubmit() {
+      return this.addStep === 1 ? this.addNext() : this.addPerson();
+    },
     addPerson() {
       return this.run('add', async () => {
-        const person = this.addCandidates().find((p) => p.id === this.add.person_id);
+        const person = this.addTarget();
         if (!person) throw new Error(WTT.t('collab.choose_person'));
         const cents = person.is_owner ? 0 : WTT.toCents(this.add.rate);
         if (cents === null) throw new Error(WTT.t('collab.rate_required'));
-        await api('PUT', '/api/projects/' + project.id + '/allocations/' + person.id, { pay_rate_cents: cents });
+        const body = { pay_rate_cents: cents };
+        if (this.addNeedsGroup() && this.preset !== 'member') body.preset = this.preset;
+        await api('PUT', '/api/projects/' + project.id + '/allocations/' + person.id, body);
         // Daqui em diante a pessoa já está no projeto: se o time falhar, ela
         // fica sem time e a tela avisa, em vez de parecer que nada aconteceu.
         let teamError = '';
-        if (this.add.team_id) {
+        if (this.add.team_id && WTT.can('teams.manage')) {
           try {
             await api('POST', '/api/teams/' + this.add.team_id + '/members', { person_id: person.id });
           } catch (e) {
