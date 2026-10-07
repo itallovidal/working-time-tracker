@@ -73,6 +73,7 @@
             <span class="badge num" x-text="lists[key].total"></span>
           </div>
           <p class="muted small" x-text="key === 'free' ? $t('tasks.section_free_hint') : $t('tasks.section_taken_hint')"></p>
+          <p class="muted small" x-show="lists[key].tasks.length > 0">{{.T "tasks.row_hint"}}</p>
         </div>
 
         <div class="empty" x-show="lists[key].total === 0">
@@ -85,15 +86,18 @@
               <tr>
                 <th>{{.T "tasks.col_task"}}</th><th>{{.T "tasks.col_status"}}</th><th>{{.T "tasks.col_priority"}}</th>
                 <th x-show="key === 'taken'">{{.T "tasks.col_assignee"}}</th>
-                <th>{{.T "tasks.col_deadline"}}</th><th>{{.T "tasks.col_external"}}</th>
-                <th class="actions"><span class="sr-only">{{.T "tasks.col_details"}}</span></th>
+                <th>{{.T "tasks.col_deadline"}}</th>
               </tr>
             </thead>
             <tbody>
               <template x-for="t in lists[key].tasks" :key="t.id">
-                <tr>
+                {{/* A linha inteira abre a tarefa; o nome continua um link, para o teclado e para abrir em outra aba. */}}
+                <tr class="row-link" @click="if (!$event.target.closest('a')) location.href = '/tasks/' + t.id">
                   <td>
-                    <a :href="'/tasks/' + t.id" x-text="t.name"></a>
+                    <div class="row row-tight">
+                      <a :href="'/tasks/' + t.id" x-text="t.name"></a>
+                      <span class="badge badge-ok" x-show="isRunning(t)">{{.T "tasks.running"}}</span>
+                    </div>
                     <div class="label-list" x-show="t.labels && t.labels.length > 0">
                       <template x-for="l in t.labels" :key="l.id"><span class="badge" x-text="l.name"></span></template>
                     </div>
@@ -110,17 +114,6 @@
                   </td>
                   <td>
                     <span class="badge num" :class="deadlineClass(t)" x-text="deadlineLabel(t)"></span>
-                  </td>
-                  <td>
-                    <template x-if="t.external_item_id">
-                      <a class="badge badge-accent" :href="t.external_item_url" target="_blank" rel="noopener"
-                         x-text="externalLabel(t)"></a>
-                    </template>
-                    <span class="muted" x-show="!t.external_item_id">—</span>
-                  </td>
-                  <td class="actions">
-                    <span class="badge badge-ok" x-show="isRunning(t)">{{.T "tasks.running"}}</span>
-                    <a class="btn btn-secondary btn-sm" :href="'/tasks/' + t.id">{{.T "tasks.details"}} {{template "icon" "arrow-right"}}</a>
                   </td>
                 </tr>
               </template>

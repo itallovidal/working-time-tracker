@@ -905,12 +905,19 @@ func TestPages_ProjectIntegrationsTab(t *testing.T) {
 	if at, modal := strings.Index(detail, `id="task-name"`), strings.Index(detail, `x-show="$store.modal.name === 'task-edit'"`); at < modal {
 		t.Error("the task name field is on the page, outside the edit modal")
 	}
-	// O quadro leva à página da tarefa em vez de iniciar o ponto.
-	if board := do(e, "GET", "/projects/"+projectID+"/tasks", "", member.session).Body.String(); !strings.Contains(board, `:href="'/tasks/' + t.id">Detalhes`) || strings.Contains(board, `@click="start(t)"`) {
-		t.Error("the board row does not link to the task page, or still has a Start button")
+	// A linha da lista inteira leva à página da tarefa, sem botão Detalhes, sem Iniciar e sem a
+	// coluna do item externo; a dica acima da tabela diz que a linha abre a tarefa.
+	board := do(e, "GET", "/projects/"+projectID+"/tasks", "", member.session).Body.String()
+	if !strings.Contains(board, `class="row-link" @click="if (!$event.target.closest('a')) location.href = '/tasks/' + t.id"`) {
+		t.Error("the board row does not open the task page when clicked")
 	}
-	if tasks := do(e, "GET", "/projects/"+projectID+"/tasks", "", member.session).Body.String(); !strings.Contains(tasks, types[0]) {
-		t.Error("the tasks tab does not get the integration types for the linked item label")
+	for _, not := range []string{`>Detalhes <`, `@click="start(t)"`, "<th>Item externo</th>", "t.external_item_id", "externalLabel", "integration_types"} {
+		if strings.Contains(board, not) {
+			t.Errorf("the board still has %q", not)
+		}
+	}
+	if !strings.Contains(board, "Clique em uma tarefa para abrir os detalhes.") {
+		t.Error("the board does not say that clicking a task opens it")
 	}
 	if home := do(e, "GET", "/projects/"+projectID+"/overview", "", member.session).Body.String(); strings.Contains(home, "integration_types") {
 		t.Error("the Início tab gets the integration types without using them")

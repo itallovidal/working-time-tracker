@@ -455,12 +455,12 @@ tasks:
   section_taken_hint: Tasks that are already with someone.
   free_none: No free tasks. Every task in the project has an assignee.
   taken_none: No assigned tasks yet.
+  row_hint: Click a task to open its details.
   pager_free: Pages of the unassigned tasks
   pager_taken: Pages of the assigned tasks
   col_task: Task
   col_assignee: Assignee
   col_deadline: Deadline
-  col_external: External item
   col_details: Details
   details: Details
   running: In progress

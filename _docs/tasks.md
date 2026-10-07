@@ -532,6 +532,15 @@
 
 ---
 
+### Sprint 44: Task List Rows Open the Task
+
+- [X] S44.1 In both tables of the **Lista de tarefas** (Sem responsável and Com responsável) the whole row opens the task page (`row-link`: pointer cursor, hover colour, click anywhere but on a link); the **Detalhes** button is removed and the task name is bold text that takes the accent colour on hover, no longer an underlined link
+- [X] S44.2 A hint above each table (`tasks.row_hint`, in both languages, hidden when the list is empty) says that clicking a task opens its details; the running badge moves next to the name
+- [X] S44.3 The **Item externo** column is removed from the list (the link stays on the task page); the tasks tab no longer gets `integration_types`
+- [X] S44.4 Test of the board markup (the row click, no Details button, no Start button, no external item column, the hint, no integration types); checked in the browser (pointer cursor, click on the name, on a cell of each table and with the clock running, light and dark, English, phone width); update README and design; no API change
+
+---
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open

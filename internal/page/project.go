@@ -82,7 +82,7 @@ func (h *Handler) Project(c *echo.Context) error {
 
 // Tasks é a lista de tarefas do projeto (S9.1).
 func (h *Handler) Tasks(c *echo.Context) error {
-	return h.projectPage(c, "project_tasks", "titles.tasks", "tasks", h.integrationTypes(c))
+	return h.projectPage(c, "project_tasks", "titles.tasks", "tasks", nil)
 }
 
 // MyTasks é a aba Minhas tarefas: as tarefas de que a pessoa é responsável, em listas por status.

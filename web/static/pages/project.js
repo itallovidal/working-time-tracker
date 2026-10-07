@@ -585,7 +585,6 @@ document.addEventListener('alpine:init', () => {
     },
     deadlineClass: (t) => deadlineInfo(t.deadline).cls,
     deadlineLabel: (t) => deadlineInfo(t.deadline).label,
-    externalLabel,
   }));
 
   // Minhas tarefas: as tarefas de que a pessoa é responsável, numa lista por status, na ordem
