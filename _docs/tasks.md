@@ -439,6 +439,17 @@
 
 ---
 
+### Sprint 35: Markdown Descriptions and Task Modals in Steps
+
+- [X] S35.1 marked and DOMPurify vendored with a hash test each; loaded only on the board and the task page
+- [X] S35.2 `WTT.markdown()`: a fixed list of tags, no images, links only to http, https and mailto and opened in another tab; the task page shows the description rendered
+- [X] S35.3 New task and Edit task in two steps (name and description, then deadline, priority, labels and assignee), with the shared `task_fields` partial and the `taskWizard()` mixin
+- [X] S35.4 A Write / Preview toggle for the description in both modals
+- [X] S35.5 Description limit of 10,000 characters (`task.description_too_long`)
+- [X] S35.6 Tests (hashes, page markup, the limit) and docs; checked in the browser with a hostile description (script, onerror, javascript: and data: links, image, iframe)
+
+---
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open

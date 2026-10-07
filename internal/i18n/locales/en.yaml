@@ -307,6 +307,20 @@ tasks:
     low: Low
     none: No priority
   labels: Labels
+  wizard:
+    label: Steps
+    step_task: Task
+    step_details: Details
+    next: Next
+    back: Back
+    name_required: Enter the task name.
+    pick_person: Choose the assignee.
+  md:
+    label: Description mode
+    write: Write
+    preview: Preview
+    empty: Nothing to preview.
+    hint: "Supports Markdown: **bold**, lists, `code`, [links](https://…). No images."
   labels_filter: Filter by label
   no_labels: None
   no_labels_admin: The project has no labels yet. Create the first one below.
@@ -851,6 +865,7 @@ errors:
     too_many_attempts: "too many attempts in a row; wait a minute and try again"
   task:
     assignee_not_in_team: "the assignee must be on this project"
+    description_too_long: "the description accepts up to {{.max}} characters"
     integration_not_found: "integration not found"
     integration_other_project: "the integration belongs to another project"
     integrations_unavailable: "integrations unavailable"

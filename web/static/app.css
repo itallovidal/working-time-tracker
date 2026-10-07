@@ -220,6 +220,38 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 /* .fact agrupa um par dt/dd gerado por x-for sem quebrar a grade do .facts. */
 .fact { display: contents; }
 .prose { white-space: pre-line; color: var(--ink-2); }
+/* Descrição em Markdown, já sanitizada: o texto corre como numa página, e os títulos ficam
+   pequenos para não competir com o da tarefa. */
+.markdown { color: var(--ink-2); overflow-wrap: anywhere; line-height: 1.55; }
+.markdown > :first-child { margin-top: 0; }
+.markdown > :last-child { margin-bottom: 0; }
+.markdown p, .markdown ul, .markdown ol, .markdown pre, .markdown blockquote, .markdown table { margin: 0 0 0.75em; }
+.markdown h1, .markdown h2, .markdown h3, .markdown h4, .markdown h5, .markdown h6 { color: var(--ink); font-size: 1rem; margin: 1em 0 0.4em; }
+.markdown h1, .markdown h2 { font-size: 1.1rem; }
+.markdown ul, .markdown ol { padding-left: 1.4em; }
+.markdown li { margin: 0.15em 0; }
+.markdown a { color: var(--accent); }
+.markdown code { font-family: var(--mono); font-size: 0.88em; background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+.markdown pre { background: var(--surface-2); border: 1px solid var(--rule); border-radius: var(--radius-sm); padding: 10px 12px; overflow-x: auto; }
+.markdown pre code { background: none; padding: 0; }
+.markdown blockquote { border-left: 3px solid var(--rule-strong); padding-left: 12px; color: var(--muted); }
+.markdown table { border-collapse: collapse; display: block; overflow-x: auto; font-size: 0.92em; }
+.markdown th, .markdown td { border: 1px solid var(--rule); padding: 4px 10px; text-align: left; }
+.markdown th { background: var(--surface-2); color: var(--ink); }
+.markdown hr { border: 0; border-top: 1px solid var(--rule); margin: 1em 0; }
+/* Escrever e Pré-visualizar: o rótulo de um lado e a trilha do outro. A prévia ocupa o
+   lugar do campo, com a mesma altura mínima. */
+.md-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.md-preview { min-height: 12.5rem; padding: 10px 12px; border: 1px solid var(--rule-strong); border-radius: var(--radius-sm); background: var(--surface); }
+/* As etapas do modal: dois passos numerados, o atual em destaque. */
+.wizard-steps { display: flex; gap: 18px; list-style: none; margin: 0 0 4px; padding: 0 0 10px; border-bottom: 1px solid var(--rule); }
+.wizard-steps li { display: inline-flex; align-items: center; gap: 8px; font-size: 0.88rem; font-weight: 600; color: var(--muted); }
+.wizard-steps .n {
+  display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%;
+  border: 1.5px solid var(--rule-strong); font-size: 0.78rem;
+}
+.wizard-steps li.current { color: var(--ink); }
+.wizard-steps li.current .n { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 .text-danger { color: var(--danger); }
 .nowrap { white-space: nowrap; }
 .self-end { align-self: flex-end; }

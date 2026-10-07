@@ -1,0 +1,66 @@
+{{/* task_fields são os campos de uma tarefa em duas etapas, nos modais Nova tarefa e Editar
+     tarefa: a etapa 1 é o nome e a descrição (em Markdown, com pré-visualização) e a etapa 2,
+     o prazo, a prioridade, as etiquetas e o responsável. As duas etapas ficam na página, e a
+     que não está à vista só é escondida: o HTML inicial tem todos os campos. Pede o rascunho
+     em `draft`, o mixin taskWizard (step, mdView, next, back...) e labelTools. */}}
+{{define "task_fields"}}
+<ol class="wizard-steps" aria-label="{{.T "tasks.wizard.label"}}">
+  <li :class="step === 1 && 'current'" :aria-current="step === 1 ? 'step' : false"><span class="n">1</span> {{.T "tasks.wizard.step_task"}}</li>
+  <li :class="step === 2 && 'current'" :aria-current="step === 2 ? 'step' : false"><span class="n">2</span> {{.T "tasks.wizard.step_details"}}</li>
+</ol>
+
+<div class="stack" x-show="step === 1">
+  <div class="field">
+    <label for="task-name">{{.T "common.name"}}</label>
+    <input id="task-name" type="text" required x-model="draft.name" @input="errors.name = ''" data-autofocus :aria-invalid="errors.name ? 'true' : 'false'">
+    <p class="form-error" x-show="errors.name" x-text="errors.name" role="alert"></p>
+  </div>
+  <div class="field">
+    <div class="md-head">
+      <label for="task-description">{{.T "common.description_label"}}</label>
+      {{/* Escrever e Pré-visualizar: a mesma trilha das visões da aba Colaboradores. */}}
+      <div class="segmented" role="tablist" aria-label="{{.T "tasks.md.label"}}"
+           @keydown.arrow-right.prevent="setMd('preview', true)" @keydown.arrow-left.prevent="setMd('write', true)">
+        <button type="button" role="tab" id="md-write-tab" aria-controls="task-description" x-ref="mdWrite"
+                :aria-selected="(mdView === 'write').toString()" :tabindex="mdView === 'write' ? 0 : -1"
+                @click="setMd('write')">{{template "icon" "pen"}} {{.T "tasks.md.write"}}</button>
+        <button type="button" role="tab" id="md-preview-tab" aria-controls="task-preview" x-ref="mdPreview"
+                :aria-selected="(mdView === 'preview').toString()" :tabindex="mdView === 'preview' ? 0 : -1"
+                @click="setMd('preview')">{{template "icon" "eye"}} {{.T "tasks.md.preview"}}</button>
+      </div>
+    </div>
+    <textarea id="task-description" rows="8" maxlength="10000" x-show="mdView === 'write'" x-model="draft.description"
+              placeholder="{{.T "common.optional"}}"></textarea>
+    <div id="task-preview" class="md-preview" role="tabpanel" aria-labelledby="md-preview-tab" x-show="mdView === 'preview'">
+      <div class="markdown" x-show="draft.description.trim()" x-html="previewHTML()"></div>
+      <p class="muted small" x-show="!draft.description.trim()">{{.T "tasks.md.empty"}}</p>
+    </div>
+    <span class="hint">{{.T "tasks.md.hint"}}</span>
+  </div>
+</div>
+
+<div class="stack" x-show="step === 2">
+  <div class="field">
+    <label for="task-deadline">{{.T "tasks.col_deadline"}}</label>
+    <input id="task-deadline" type="date" x-model="draft.deadline">
+    <span class="hint">{{.T "tasks.deadline_hint"}}</span>
+  </div>
+  {{template "task_attrs" .}}
+  {{/* Três escolhas, e não uma lista só: sem responsável e atribuir a mim são o que quase
+       sempre se quer. "Outra pessoa" lista quem está no projeto; atribuir a si mesmo vale para qualquer um. */}}
+  <div class="field" role="radiogroup" aria-labelledby="task-assign-label">
+    <span class="field-label" id="task-assign-label">{{.T "tasks.col_assignee"}}</span>
+    <label class="toggle"><input type="radio" name="task-assign" value="me" x-model="draft.assign"> {{.T "tasks.assign_me"}}</label>
+    <label class="toggle"><input type="radio" name="task-assign" value="none" x-model="draft.assign"> {{.T "tasks.unassigned"}}</label>
+    <label class="toggle"><input type="radio" name="task-assign" value="other" x-model="draft.assign" :disabled="otherMembers().length === 0"> {{.T "tasks.assign_other"}}</label>
+    <select id="task-assignee" x-show="draft.assign === 'other'" :required="draft.assign === 'other'" x-model="draft.assignee_id" aria-label="{{.T "tasks.col_assignee"}}">
+      <option value="" disabled>{{.T "tasks.pick_person"}}</option>
+      <template x-for="m in otherMembers()" :key="m.id">
+        <option :value="m.id" x-text="m.name" :selected="m.id === draft.assignee_id"></option>
+      </template>
+    </select>
+    <p class="form-error" x-show="errors.assignee" x-text="errors.assignee" role="alert"></p>
+    <span class="hint" x-show="draft.assign === 'none'">{{.T "tasks.unassigned_hint"}}</span>
+  </div>
+</div>
+{{end}}

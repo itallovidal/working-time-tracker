@@ -126,6 +126,38 @@
     { value: 'sunday', label: t('labels.weekday.sunday') },
   ];
 
+  // markdown transforma o texto de uma descrição em HTML seguro para x-html. O marked
+  // gera o HTML e o DOMPurify é a única defesa contra XSS: só as tags da lista passam,
+  // sem imagem nem HTML cru, e os links só vão para http, https e mailto, abrem em outra
+  // aba e não passam o referenciador. Uma imagem vira o texto alternativo. Sem as
+  // bibliotecas (a página não as carregou, ou falharam), devolve o texto escapado.
+  const escapeHTML = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const markdownTags = ['p', 'br', 'strong', 'em', 'del', 'code', 'pre', 'blockquote', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'a', 'hr', 'table', 'thead', 'tbody', 'tr', 'th', 'td'];
+  let markdownReady = false;
+  function markdown(text) {
+    const source = String(text || '');
+    if (!source.trim()) return '';
+    if (!window.marked || !window.DOMPurify) return escapeHTML(source);
+    if (!markdownReady) {
+      markdownReady = true;
+      window.DOMPurify.addHook('afterSanitizeAttributes', (node) => {
+        if (node.tagName === 'A') {
+          node.setAttribute('target', '_blank');
+          node.setAttribute('rel', 'noopener noreferrer');
+        }
+      });
+    }
+    const renderer = new window.marked.Renderer();
+    renderer.image = (token) => escapeHTML(token.text || '');
+    const html = window.marked.parse(source, { gfm: true, breaks: true, async: false, renderer });
+    return window.DOMPurify.sanitize(html, {
+      ALLOWED_TAGS: markdownTags,
+      ALLOWED_ATTR: ['href', 'title', 'align'],
+      ALLOWED_URI_REGEXP: /^(?:https?|mailto):/i,
+      ALLOW_DATA_ATTR: false,
+    });
+  }
+
   // As prioridades de uma tarefa, da mais para a menos urgente. O value é o código do backend.
   const priorities = ['urgent', 'high', 'medium', 'low', 'none'].map((value) => ({ value, label: t('tasks.priority.' + value) }));
 
@@ -334,7 +366,7 @@
   // O que as telas mostram no lugar de um campo de cadastro sem valor.
   const notInformed = t('labels.not_informed');
 
-  window.WTT = { t, lang, errorText, api, ApiError, form, fmt, toCents, copyText, notInformed, weekdays, priorities, routine, sprintOptions, sprintChoices, orgSizes, workModes, currencies, boot: window.BOOT || {} };
+  window.WTT = { t, lang, errorText, api, ApiError, form, fmt, toCents, copyText, notInformed, weekdays, priorities, markdown, routine, sprintOptions, sprintChoices, orgSizes, workModes, currencies, boot: window.BOOT || {} };
 
   // Onde flash() deixa a mensagem para a página seguinte.
   const flashKey = 'wtt:flash';

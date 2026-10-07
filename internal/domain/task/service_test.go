@@ -175,6 +175,26 @@ func TestService_AssignToCollaboratorWithoutTeam(t *testing.T) {
 	}
 }
 
+// A descrição é Markdown e vira HTML para todo mundo: tem um teto, contado em caracteres.
+func TestService_DescriptionLimit(t *testing.T) {
+	orgSvc, _, projSvc, _, _, taskSvc := setupDeps(t)
+	org, _ := orgSvc.Create("Org")
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
+	pid := proj.ID.String()
+
+	exact := strings.Repeat("é", task.MaxDescriptionLen) // 10.000 caracteres, 20.000 bytes
+	tk, err := taskSvc.Create(pid, "Longa", exact, "", nil)
+	if err != nil || tk.Description != exact {
+		t.Fatalf("a description at the limit must be accepted: %v", err)
+	}
+	if _, err := taskSvc.Create(pid, "Longa demais", exact+"x", "", nil); err == nil {
+		t.Error("a description over the limit must be refused on create")
+	}
+	if _, err := taskSvc.Update(tk.ID.String(), "Longa", exact+"x", nil, nil); err == nil {
+		t.Error("a description over the limit must be refused on update")
+	}
+}
+
 // A prioridade padrão é "sem prioridade", só as cinco são aceitas, e omitir mantém.
 func TestService_Priority(t *testing.T) {
 	orgSvc, _, projSvc, _, _, taskSvc := setupDeps(t)

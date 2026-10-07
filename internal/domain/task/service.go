@@ -3,6 +3,7 @@ package task
 import (
 	"errors"
 	"time"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
 
@@ -11,6 +12,10 @@ import (
 	"working-time-tracker/internal/domain/integration"
 	"working-time-tracker/internal/domain/team"
 )
+
+// MaxDescriptionLen é o tamanho máximo da descrição de uma tarefa, em caracteres. Ela é
+// Markdown e vira HTML no navegador de todo mundo que abre a tarefa.
+const MaxDescriptionLen = 10000
 
 // Tamanho de página da lista de tarefas: o padrão e o teto que a API aceita.
 const (
@@ -38,6 +43,9 @@ func (s *Service) Create(projectID, name, description, assigneeID string, deadli
 func (s *Service) CreateAs(selfID, projectID, name, description, assigneeID string, deadline *time.Time, attrs Attrs) (*Task, error) {
 	if name == "" {
 		return nil, ErrNameRequired
+	}
+	if utf8.RuneCountInString(description) > MaxDescriptionLen {
+		return nil, ErrDescriptionTooLong.With("max", MaxDescriptionLen)
 	}
 	priority := "none"
 	if attrs.Priority != nil && *attrs.Priority != "" {
@@ -140,6 +148,9 @@ func (s *Service) Update(id, name, description string, assigneeID *string, deadl
 func (s *Service) UpdateAs(selfID, id, name, description string, assigneeID *string, deadline *time.Time, attrs Attrs) (*Task, error) {
 	if name == "" {
 		return nil, ErrNameRequired
+	}
+	if utf8.RuneCountInString(description) > MaxDescriptionLen {
+		return nil, ErrDescriptionTooLong.With("max", MaxDescriptionLen)
 	}
 	if attrs.Priority != nil && !validPriority(*attrs.Priority) {
 		return nil, ErrInvalidPriority

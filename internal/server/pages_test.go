@@ -396,6 +396,8 @@ func TestPages_ProjectTasksTab(t *testing.T) {
 			// Prioridade e etiqueta: os filtros (várias de cada), a coluna e os campos do modal.
 			`role="group" aria-label="Filtrar por prioridade"`, `role="group" aria-label="Filtrar por etiqueta"`, `toggleFilter('priority', p.value)`,
 			`toggleFilter('label', l.id)`, "<th>Prioridade</th>", `id="task-priority"`, `x-model="draft.label_ids"`,
+			// O modal é um passo a passo: nome e descrição (em Markdown, com prévia), e depois o resto.
+			`class="wizard-steps"`, `submitStep('create')`, "Escrever", "Pré-visualizar", `id="task-preview"`, "Próximo", "Voltar", `id="task-deadline"`,
 		} {
 			if !strings.Contains(body, want) {
 				t.Errorf("%s: the tasks tab does not contain %q", who, want)
@@ -653,6 +655,8 @@ func TestPages_StaticAssets(t *testing.T) {
 		"/static/app.css":          "text/css",
 		"/static/app.js":           "javascript",
 		"/static/alpine.min.js":    "javascript",
+		"/static/marked.min.js":    "javascript",
+		"/static/purify.min.js":    "javascript",
 		"/static/pages/auth.js":    "javascript",
 		"/static/pages/org.js":     "javascript",
 		"/static/pages/project.js": "javascript",
@@ -779,13 +783,24 @@ func TestPages_ProjectIntegrationsTab(t *testing.T) {
 	}
 	// A página da tarefa só mostra: o formulário de edição fica num modal, aberto pelo lápis.
 	for _, want := range []string{
-		`x-show="$store.modal.name === 'task-edit'"`, `aria-label="Editar tarefa"`, `@click="openEdit()"`, `id="td-name"`, "Voltar ao quadro",
+		`x-show="$store.modal.name === 'task-edit'"`, `aria-label="Editar tarefa"`, `@click="openEdit()"`, `id="task-name"`, "Voltar ao quadro",
+		// A descrição é Markdown: a página a renderiza e o modal tem as duas etapas e a prévia.
+		`x-html="WTT.markdown(task && task.description)"`, `class="wizard-steps"`, `submitStep('save')`, `id="task-preview"`, "Pré-visualizar",
 	} {
 		if !strings.Contains(detail, want) {
 			t.Errorf("the task page does not contain %q", want)
 		}
 	}
-	if at, modal := strings.Index(detail, `id="td-name"`), strings.Index(detail, `x-show="$store.modal.name === 'task-edit'"`); at < modal {
+	// O marked e o DOMPurify só vêm nas páginas que mostram ou escrevem Markdown.
+	for _, lib := range []string{`/static/marked.min.js`, `/static/purify.min.js`} {
+		if !strings.Contains(detail, lib) {
+			t.Errorf("the task page does not load %s", lib)
+		}
+		if home := do(e, "GET", "/projects/"+projectID+"/overview", "", member.session).Body.String(); strings.Contains(home, lib) {
+			t.Errorf("the Início page loads %s without using it", lib)
+		}
+	}
+	if at, modal := strings.Index(detail, `id="task-name"`), strings.Index(detail, `x-show="$store.modal.name === 'task-edit'"`); at < modal {
 		t.Error("the task name field is on the page, outside the edit modal")
 	}
 	// O quadro leva à página da tarefa em vez de iniciar o ponto.

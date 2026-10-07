@@ -111,41 +111,15 @@
 
   {{/* O formulário aparece no modal do layout base e continua no escopo de projectTasks. */}}
   <template x-teleport="#modal-root">
-    <form class="stack" x-show="$store.modal.name === 'task-new'" @submit.prevent="create()">
-      <div class="field">
-        <label for="task-name">{{.T "common.name"}}</label>
-        <input id="task-name" type="text" required x-model="draft.name" data-autofocus>
-      </div>
-      {{/* Três escolhas, e não uma lista só: sem responsável e atribuir a mim são o que quase
-           sempre se quer. "Outra pessoa" lista quem está nos times do projeto; atribuir a si mesmo
-           vale para qualquer um. */}}
-      <div class="field" role="radiogroup" aria-labelledby="task-assign-label">
-        <span class="field-label" id="task-assign-label">{{.T "tasks.col_assignee"}}</span>
-        <label class="toggle"><input type="radio" name="task-assign" value="me" x-model="draft.assign"> {{.T "tasks.assign_me"}}</label>
-        <label class="toggle"><input type="radio" name="task-assign" value="none" x-model="draft.assign"> {{.T "tasks.unassigned"}}</label>
-        <label class="toggle"><input type="radio" name="task-assign" value="other" x-model="draft.assign" :disabled="otherMembers().length === 0"> {{.T "tasks.assign_other"}}</label>
-        <select id="task-assignee" x-show="draft.assign === 'other'" :required="draft.assign === 'other'" x-model="draft.assignee_id" aria-label="{{.T "tasks.col_assignee"}}">
-          <option value="" disabled>{{.T "tasks.pick_person"}}</option>
-          <template x-for="m in otherMembers()" :key="m.id">
-            <option :value="m.id" x-text="m.name" :selected="m.id === draft.assignee_id"></option>
-          </template>
-        </select>
-        <span class="hint" x-show="draft.assign === 'none'">{{.T "tasks.unassigned_hint"}}</span>
-      </div>
-      <div class="field">
-        <label for="task-deadline">{{.T "tasks.col_deadline"}}</label>
-        <input id="task-deadline" type="date" x-model="draft.deadline">
-        <span class="hint">{{.T "tasks.deadline_hint"}}</span>
-      </div>
-      {{template "task_attrs" .}}
-      <div class="field">
-        <label for="task-description">{{.T "common.description_label"}}</label>
-        <textarea id="task-description" x-model="draft.description" placeholder="{{.T "common.optional"}}"></textarea>
-      </div>
+    {{/* novalidate: a etapa que não está à vista tem campos escondidos, e o navegador não os valida; quem confere é submitStep. */}}
+    <form class="stack" novalidate x-show="$store.modal.name === 'task-new'" @submit.prevent="submitStep('create')">
+      {{template "task_fields" .}}
       <p class="form-error" x-show="errors.create" x-text="errors.create" role="alert"></p>
       <div class="row row-end">
-        <button type="button" class="btn btn-secondary" @click="$store.modal.dismiss()">{{.T "common.cancel"}}</button>
-        <button type="submit" class="btn" :disabled="pending">{{.T "tasks.create"}}</button>
+        <button type="button" class="btn btn-secondary" x-show="step === 1" @click="$store.modal.dismiss()">{{.T "common.cancel"}}</button>
+        <button type="button" class="btn btn-secondary" x-show="step === 2" @click="back()">{{template "icon" "arrow-left"}} {{.T "tasks.wizard.back"}}</button>
+        <button type="submit" class="btn" x-show="step === 1">{{.T "tasks.wizard.next"}} {{template "icon" "arrow-right"}}</button>
+        <button type="submit" class="btn" x-show="step === 2" :disabled="pending">{{.T "tasks.create"}}</button>
       </div>
     </form>
   </template>

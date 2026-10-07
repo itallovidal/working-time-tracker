@@ -317,6 +317,20 @@ tasks:
     low: Baixa
     none: Sem prioridade
   labels: Etiquetas
+  wizard:
+    label: Etapas
+    step_task: Tarefa
+    step_details: Detalhes
+    next: Próximo
+    back: Voltar
+    name_required: Informe o nome da tarefa.
+    pick_person: Escolha a pessoa responsável.
+  md:
+    label: Modo da descrição
+    write: Escrever
+    preview: Pré-visualizar
+    empty: Nada para visualizar.
+    hint: "Aceita Markdown: **negrito**, listas, `código`, [links](https://…). Sem imagens."
   labels_filter: Filtrar por etiqueta
   no_labels: Nenhuma
   no_labels_admin: O projeto ainda não tem etiquetas. Crie a primeira abaixo.
@@ -861,6 +875,7 @@ errors:
     too_many_attempts: "muitas tentativas seguidas; espere um minuto e tente de novo"
   task:
     assignee_not_in_team: "o responsável precisa estar neste projeto"
+    description_too_long: "a descrição aceita até {{.max}} caracteres"
     integration_not_found: "integração não encontrada"
     integration_other_project: "a integração é de outro projeto"
     integrations_unavailable: "integrações indisponíveis"

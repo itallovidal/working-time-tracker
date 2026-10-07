@@ -35,6 +35,7 @@ type Data struct {
 	Management  bool   // a página é da área de Gestão (só admins): a barra de abas mostra as abas dela
 	Tab         string // aba ativa do projeto (overview, tasks, time, teams, integrations, settings) ou da organização (about, people, customers, projects)
 	Script      string // página em /static/pages/<Script>.js com os componentes Alpine
+	Markdown    bool   // a página mostra ou escreve Markdown: carrega o marked e o DOMPurify (ligado em prepare)
 	Props       map[string]any
 
 	Lang string // idioma da requisição: pt-BR ou en
@@ -130,7 +131,11 @@ func NewHandler(deps Deps) *Handler {
 	return &Handler{deps: deps}
 }
 
+// markdownPages são as páginas que renderizam Markdown (a descrição da tarefa).
+var markdownPages = map[string]bool{"project_tasks": true, "task_detail": true}
+
 func (h *Handler) render(c *echo.Context, name string, d Data) error {
+	d.Markdown = markdownPages[name]
 	return c.Render(http.StatusOK, name, h.prepare(c, d))
 }
 

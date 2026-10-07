@@ -8,6 +8,10 @@
   <link rel="stylesheet" href="/static/app.css">
   <script>window.BOOT = {{.Boot}};</script>
   <script src="/i18n/{{.Lang}}.js?v={{.I18nHash}}"></script>
+  {{- if .Markdown}}
+  <script src="/static/marked.min.js" defer></script>
+  <script src="/static/purify.min.js" defer></script>
+  {{- end}}
   <script src="/static/app.js" defer></script>
   {{- if .Script}}
   <script src="/static/pages/{{.Script}}.js" defer></script>

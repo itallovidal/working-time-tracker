@@ -45,6 +45,65 @@ document.addEventListener('alpine:init', () => {
     priorityClass,
   });
 
+  // taskWizard é o passo a passo dos modais Nova tarefa e Editar tarefa: a etapa 1 é o nome e
+  // a descrição (em Markdown, com pré-visualização) e a etapa 2, o resto. Quem usa tem um
+  // `draft` e labelTools. As duas etapas ficam na página, só escondidas, e o formulário não
+  // valida sozinho (novalidate): quem confere cada etapa é submitStep.
+  const taskWizard = () => ({
+    step: 1,
+    mdView: 'write', // write ou preview
+    resetWizard() {
+      this.step = 1;
+      this.mdView = 'write';
+      this.errors.name = '';
+      this.errors.assignee = '';
+    },
+    previewHTML() {
+      return WTT.markdown(this.draft.description);
+    },
+    // setMd troca entre Escrever e Pré-visualizar; com `focus`, leva o foco para o botão (setas).
+    setMd(view, focus) {
+      this.mdView = view;
+      if (focus) this.$nextTick(() => (view === 'write' ? this.$refs.mdWrite : this.$refs.mdPreview).focus());
+    },
+    // focusStep põe o foco no primeiro campo da etapa: o store do modal só foca ao abrir.
+    focusStep() {
+      this.$nextTick(() => {
+        const el = document.getElementById(this.step === 1 ? 'task-name' : 'task-deadline');
+        if (el) el.focus();
+      });
+    },
+    next() {
+      if (!this.draft.name.trim()) {
+        this.errors.name = WTT.t('tasks.wizard.name_required');
+        this.focusStep();
+        return false;
+      }
+      this.errors.name = '';
+      this.step = 2;
+      this.focusStep();
+      return true;
+    },
+    back() {
+      this.step = 1;
+      this.focusStep();
+    },
+    // submitStep é o envio do formulário (Enter ou o botão): na etapa 1 avança, na 2 confere
+    // o responsável e chama o método que grava (create ou save).
+    submitStep(finish) {
+      if (this.step === 1) {
+        this.next();
+        return undefined;
+      }
+      if (this.draft.assign === 'other' && !this.draft.assignee_id) {
+        this.errors.assignee = WTT.t('tasks.wizard.pick_person');
+        return undefined;
+      }
+      this.errors.assignee = '';
+      return this[finish]();
+    },
+  });
+
   // deadlineInfo descreve o prazo de uma tarefa para o badge: atrasada, vencendo
   // nas próximas 48 horas ou só a data.
   function deadlineInfo(iso) {
@@ -267,6 +326,7 @@ document.addEventListener('alpine:init', () => {
 
   Alpine.data('projectTasks', () => ({
     ...form(),
+    ...taskWizard(),
     loading: true,
     tasks: [], // só a página em uso; os filtros e a paginação rodam no servidor
     total: 0,
@@ -420,6 +480,7 @@ document.addEventListener('alpine:init', () => {
       this.newLabel = '';
       this.errors.create = '';
       this.errors.label = '';
+      this.resetWizard();
       Alpine.store('modal').open('task-new', WTT.t('tasks.new'), () => !this.pending);
     },
     create() {
@@ -450,6 +511,7 @@ document.addEventListener('alpine:init', () => {
 
   Alpine.data('taskDetail', () => ({
     ...form(),
+    ...taskWizard(),
     taskId: WTT.boot.task_id,
     loading: true,
     task: null,
@@ -525,6 +587,7 @@ document.addEventListener('alpine:init', () => {
       this.errors.label = '';
       this.newLabel = '';
       this.confirmDelete = false;
+      this.resetWizard();
       Alpine.store('modal').open('task-edit', WTT.t('task_detail.edit_title'), () => !this.pending);
     },
     // Outra pessoa só pode ser responsável se estiver no projeto; quem saiu dele
