@@ -452,9 +452,10 @@ tasks:
   section_free: Unassigned
   section_free_hint: Nobody has picked these tasks up. Whoever clocks in on one becomes its assignee.
   section_taken: Assigned
-  section_taken_hint: Tasks that are already with someone.
+  section_taken_hint: Tasks that are already with someone who is not you.
+  section_mine_hint: Tasks that are with you.
   free_none: No free tasks. Every task in the project has an assignee.
-  taken_none: No assigned tasks yet.
+  taken_none: No tasks with other people yet.
   row_hint: Click a task to open its details.
   pager_free: Pages of the unassigned tasks
   pager_taken: Pages of the assigned tasks
@@ -475,6 +476,7 @@ tasks:
   create: Create task
   created: Task created.
   created_hidden: Task created. The filters in use do not show it.
+  created_mine: Task created. It is in My tasks.
   started: "Clocked in on \"{{.name}}\"."
   no_deadline: No deadline
   overdue: "Overdue · {{.date}}"

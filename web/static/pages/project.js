@@ -462,14 +462,20 @@ document.addEventListener('alpine:init', () => {
     listShown(key) {
       return key === 'taken' || !this.filters.assignee;
     },
+    // takenHint diz o que a lista Com responsável mostra: as tarefas de outras pessoas, ou as da
+    // própria pessoa quando ela as escolhe no filtro ("Só as minhas tarefas" ou o responsável).
+    takenHint() {
+      return WTT.t(this.filters.assignee === me.id ? 'tasks.section_mine_hint' : 'tasks.section_taken_hint');
+    },
     // loadList busca a página em uso de uma lista: a das sem responsável pede assignee_id=none,
-    // e a das com responsável, a pessoa escolhida ou qualquer uma (any).
+    // e a das com responsável, a pessoa escolhida ou, sem escolha, as de outras pessoas (others):
+    // as de quem está logado ficam na aba Minhas tarefas.
     async loadList(key) {
       const f = this.filters;
       const list = this.lists[key];
       const p = new URLSearchParams({ page: list.page });
       if (f.q.trim()) p.set('q', f.q.trim());
-      p.set('assignee_id', key === 'free' ? 'none' : (f.assignee || 'any'));
+      p.set('assignee_id', key === 'free' ? 'none' : (f.assignee || 'others'));
       const limit = dueLimit(f.due, f.date);
       if (limit) p.set('deadline_to', limit);
       if (f.priority.length) p.set('priority', f.priority.join(','));
@@ -578,7 +584,8 @@ document.addEventListener('alpine:init', () => {
         // A tarefa nova é a primeira da lista dela, se os filtros em uso a mostrarem.
         await this.apply();
         const shown = taskLists.some((key) => this.lists[key].tasks.some((x) => x.id === t.id));
-        toast(shown ? WTT.t('tasks.created') : WTT.t('tasks.created_hidden'));
+        // Uma tarefa sua não aparece nesta página, que mostra as de outras pessoas: está em Minhas tarefas.
+        toast(WTT.t(shown ? 'tasks.created' : (t.assignee_id === me.id ? 'tasks.created_mine' : 'tasks.created_hidden')));
       });
     },
     isRunning(t) {

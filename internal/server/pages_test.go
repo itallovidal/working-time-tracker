@@ -936,6 +936,8 @@ func TestPages_ProjectIntegrationsTab(t *testing.T) {
 		`class="chip" :class="priorityClass(p.value)"`, `class="chip" :class="statusClass(s.value)"`,
 		`class="badge" :class="priorityClass(t.priority)" x-text="WTT.fmt.priority(t.priority)"`, `class="badge" :class="statusClass(t.status)"`,
 		`class="select-tone" :class="priorityClass(draft.priority)"`,
+		// A descrição da seção Com responsável é do script: ela diz que são tarefas de outras pessoas.
+		`x-text="key === 'free' ? $t('tasks.section_free_hint') : takenHint()"`,
 	} {
 		if !strings.Contains(board, want) {
 			t.Errorf("the board does not contain %q", want)

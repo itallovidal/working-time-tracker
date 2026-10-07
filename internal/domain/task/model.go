@@ -86,6 +86,7 @@ type ListFilter struct {
 	AssigneeID *uuid.UUID  // só as tarefas desta pessoa
 	Unassigned bool        // só as tarefas sem responsável; vale no lugar de AssigneeID
 	Assigned   bool        // só as tarefas que têm responsável, de qualquer pessoa; vale no lugar de AssigneeID e perde para Unassigned
+	OthersOf   *uuid.UUID  // só as tarefas que têm responsável e não é esta pessoa; vale no lugar de AssigneeID e perde para Unassigned e Assigned
 	DeadlineTo *time.Time  // só as com prazo até este instante, inclusive
 	Priorities []string    // só as com uma destas prioridades
 	Statuses   []string    // só as com um destes status

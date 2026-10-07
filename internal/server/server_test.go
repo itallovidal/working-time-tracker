@@ -1411,6 +1411,61 @@ func TestTasks_AssignedAndUnassignedLists(t *testing.T) {
 	}
 }
 
+// assignee_id=others traz as tarefas que têm responsável e não é quem pergunta: a lista Com responsável
+// da Lista de tarefas, que deixa as da própria pessoa para a aba Minhas tarefas. O total e as páginas
+// já vêm sem as dela, e o resultado muda com quem pergunta.
+func TestTasks_OthersList(t *testing.T) {
+	e := newServer(t)
+	admin := signup(t, e, "Org", "ana@test.com")
+	member := invite(t, e, admin, "bia@test.com", "member")
+	projectID := createProject(t, e, admin, "Alpha")
+	allocate(t, e, admin, projectID, member.id, 5000)
+	tasks := "/api/projects/" + projectID + "/tasks"
+
+	do(e, "POST", tasks, `{"name":"Livre"}`, member.session)
+	do(e, "POST", tasks, `{"name":"Da Ana 1","assignee_id":"`+admin.id+`"}`, admin.session)
+	do(e, "POST", tasks, `{"name":"Da Ana 2","assignee_id":"`+admin.id+`"}`, admin.session)
+	do(e, "POST", tasks, `{"name":"Da Bia","assignee_id":"`+member.id+`"}`, member.session)
+
+	names := func(session, query string) []string {
+		t.Helper()
+		rec := do(e, "GET", tasks+query, "", session)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("GET tasks%s = %d: %s", query, rec.Code, rec.Body.String())
+		}
+		var out []string
+		for _, it := range decode(t, rec)["items"].([]any) {
+			out = append(out, it.(map[string]any)["name"].(string))
+		}
+		return out
+	}
+	// A Bia vê as duas da Ana, e não a dela nem a livre; a Ana vê só a da Bia.
+	if got := names(member.session, "?page=1&assignee_id=others&per_page=1"); len(got) != 1 {
+		t.Errorf("page of one for Bia = %v, want one task", got)
+	}
+	rec := do(e, "GET", tasks+"?page=1&assignee_id=others&per_page=1", "", member.session)
+	if total := int(decode(t, rec)["total"].(float64)); total != 2 {
+		t.Errorf("total of the others for Bia = %d, want 2 (the pages count without her own)", total)
+	}
+	for who, c := range map[string]struct {
+		session string
+		want    []string
+	}{
+		"Bia": {member.session, []string{"Da Ana 1", "Da Ana 2"}},
+		"Ana": {admin.session, []string{"Da Bia"}},
+	} {
+		got := names(c.session, "?page=1&assignee_id=others&per_page=10")
+		sort.Strings(got)
+		if strings.Join(got, ",") != strings.Join(c.want, ",") {
+			t.Errorf("others for %s = %v, want %v", who, got, c.want)
+		}
+	}
+	// Quem escolhe uma pessoa pelo id continua vendo as tarefas dela, inclusive as da própria pessoa.
+	if got := names(member.session, "?page=1&assignee_id="+member.id); len(got) != 1 || got[0] != "Da Bia" {
+		t.Errorf("Bia asking for her own tasks = %v, want only Da Bia", got)
+	}
+}
+
 // O status pela API: a tarefa nasce em backlog mesmo que o corpo peça outro, só o PATCH
 // muda, um valor fora dos quatro é recusado, e a lista filtra por um ou mais status.
 func TestTasks_Status(t *testing.T) {

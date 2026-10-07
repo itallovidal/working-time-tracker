@@ -63,6 +63,8 @@ func (s *Store) filtered(projectID uuid.UUID, f ListFilter) *ent.TaskQuery {
 		q = q.Where(task.AssigneeIDIsNil())
 	} else if f.Assigned {
 		q = q.Where(task.AssigneeIDNotNil())
+	} else if f.OthersOf != nil {
+		q = q.Where(task.AssigneeIDNotNil(), task.AssigneeIDNEQ(*f.OthersOf))
 	} else if f.AssigneeID != nil {
 		q = q.Where(task.AssigneeIDEQ(*f.AssigneeID))
 	}

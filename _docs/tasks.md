@@ -550,6 +550,15 @@
 
 ---
 
+### Sprint 46: Com Responsável Is for Other People
+
+- [X] S46.1 `assignee_id=others` in the task list filter (only tasks that have an assignee who is not the person asking, taken from the session), next to `none` and `any`; `ListFilter.OthersOf`, applied in the query so the total and the pages are right; `Unassigned` and `Assigned` win over it, and it wins over one person
+- [X] S46.2 The **Com responsável** list of the Lista de tarefas asks for `others` when no person is chosen, so the logged-in person's own tasks stay in Minhas tarefas; choosing a person (the person included) or ticking "Só as minhas tarefas" still shows that person's tasks
+- [X] S46.3 Texts in both languages: the description "Tarefas que já estão com alguém que não é você" (and "Tarefas que estão com você" when the filter is the person), the empty state "Nenhuma tarefa com outras pessoas ainda", and the notice "Tarefa criada. Ela está em Minhas tarefas." for a new task of the person
+- [X] S46.4 Tests for the service (the new filter and its precedence) and the API (different answers for two people, total and pages without their own tasks) and the page markup; checked in the browser (the default view, "Só as minhas tarefas", a chosen person and creating a task for oneself); update README, design, routes and the Insomnia collection
+
+---
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open

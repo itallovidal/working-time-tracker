@@ -72,7 +72,7 @@
             <h2 :id="'tasks-' + key + '-title'" x-text="key === 'free' ? $t('tasks.section_free') : $t('tasks.section_taken')"></h2>
             <span class="badge num" x-text="lists[key].total"></span>
           </div>
-          <p class="muted small" x-text="key === 'free' ? $t('tasks.section_free_hint') : $t('tasks.section_taken_hint')"></p>
+          <p class="muted small" x-text="key === 'free' ? $t('tasks.section_free_hint') : takenHint()"></p>
           <p class="muted small" x-show="lists[key].tasks.length > 0">{{.T "tasks.row_hint"}}</p>
         </div>
 

@@ -48,7 +48,8 @@ const maxQueryLen = 100
 
 // parseListFilter lê os filtros da lista na query string: q, assignee_id,
 // deadline_to, priority, status, label_id, page e per_page. Todos são opcionais.
-// assignee_id=none lista só as tarefas sem responsável, e assignee_id=any, só as que têm; priority, status e label_id
+// assignee_id=none lista só as tarefas sem responsável, assignee_id=any, só as que têm, e
+// assignee_id=others, só as que têm responsável e não é quem pede; priority, status e label_id
 // aceitam vários valores separados por vírgula, e valem para a tarefa que tem
 // qualquer um deles.
 func parseListFilter(c *echo.Context) (ListFilter, error) {
@@ -62,6 +63,12 @@ func parseListFilter(c *echo.Context) (ListFilter, error) {
 		f.Unassigned = true
 	} else if v == "any" {
 		f.Assigned = true
+	} else if v == "others" {
+		me, err := uuid.Parse(selfID(c))
+		if err != nil {
+			return f, ErrInvalidAssigneeFilter
+		}
+		f.OthersOf = &me
 	} else if v != "" {
 		id, err := uuid.Parse(v)
 		if err != nil {

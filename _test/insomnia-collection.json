@@ -936,6 +936,18 @@
       "body": {}
     },
     {
+      "_id": "req_06_18b",
+      "_type": "request",
+      "parentId": "fld_06",
+      "name": "Listar tarefas de outras pessoas (com responsável que não é você)",
+      "method": "GET",
+      "url": "{{base_url}}/api/projects/{{project_id}}/tasks?assignee_id=others&page=1",
+      "authentication": {},
+      "metaSortKey": 18.5,
+      "headers": [],
+      "body": {}
+    },
+    {
       "_id": "req_06_19",
       "_type": "request",
       "parentId": "fld_06",

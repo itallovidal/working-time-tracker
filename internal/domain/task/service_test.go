@@ -526,12 +526,14 @@ func TestService_Update_UnassignAndFilter(t *testing.T) {
 }
 
 // A lista se divide em duas: as sem responsável (Unassigned) e as que têm (Assigned), de qualquer
-// pessoa; uma pessoa escolhida só traz as dela, e Unassigned vence Assigned.
+// pessoa; uma pessoa escolhida só traz as dela, e Unassigned vence Assigned. OthersOf traz as que têm
+// responsável e não é a pessoa dada: perde para Unassigned e para Assigned, e vence AssigneeID.
 func TestService_ListFilters_AssignedAndUnassigned(t *testing.T) {
 	orgSvc, personSvc, projSvc, teamSvc, memberSvc, taskSvc := setupDeps(t)
 	org, _ := orgSvc.Create("Org")
 	ana, _ := personSvc.Create(org.ID.String(), "Ana", "ana@test.com")
 	bia, _ := personSvc.Create(org.ID.String(), "Bia", "bia@test.com")
+	caio, _ := personSvc.Create(org.ID.String(), "Caio", "caio@test.com")
 	proj, _ := projSvc.Create(org.ID.String(), "P", "", 0, project.Routine{})
 	pid := proj.ID.String()
 	tm, _ := teamSvc.Create(pid, "Team")
@@ -562,6 +564,14 @@ func TestService_ListFilters_AssignedAndUnassigned(t *testing.T) {
 		"unassigned beats assigned":     {task.ListFilter{Unassigned: true, Assigned: true}, 1},
 		"assigned with a name filter":   {task.ListFilter{Assigned: true, Query: "c"}, 1},
 		"unassigned with a name filter": {task.ListFilter{Unassigned: true, Query: "c"}, 0},
+		"others of Ana":                 {task.ListFilter{OthersOf: &ana.ID}, 1},
+		"others of Bia":                 {task.ListFilter{OthersOf: &bia.ID}, 2},
+		"others of someone with none":   {task.ListFilter{OthersOf: &caio.ID}, 3},
+		"others, never the unassigned":  {task.ListFilter{OthersOf: &ana.ID, Query: "d"}, 0},
+		"others with a name filter":     {task.ListFilter{OthersOf: &ana.ID, Query: "c"}, 1},
+		"unassigned beats others":       {task.ListFilter{Unassigned: true, OthersOf: &ana.ID}, 1},
+		"assigned beats others":         {task.ListFilter{Assigned: true, OthersOf: &ana.ID}, 3},
+		"others beats one person":       {task.ListFilter{OthersOf: &ana.ID, AssigneeID: &ana.ID}, 1},
 	} {
 		if got := total(c.f); got != c.want {
 			t.Errorf("%s: total %d, want %d", name, got, c.want)
