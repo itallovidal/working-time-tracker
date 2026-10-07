@@ -31,6 +31,7 @@ func (s *Store) Create(p *Project) error {
 		SetSprintDurationDays(p.SprintDurationDays).
 		SetNillableDailyTime(p.DailyTime).
 		SetNillableWeeklySyncDay(p.WeeklySyncDay).
+		SetNillableWeeklySyncTime(p.WeeklySyncTime).
 		Save(context.Background())
 	if err != nil {
 		return err
@@ -169,6 +170,11 @@ func (s *Store) Update(p *Project) error {
 	} else {
 		q = q.ClearWeeklySyncDay()
 	}
+	if p.WeeklySyncTime != nil {
+		q = q.SetWeeklySyncTime(*p.WeeklySyncTime)
+	} else {
+		q = q.ClearWeeklySyncTime()
+	}
 	_, err := q.Save(context.Background())
 	return err
 }
@@ -195,6 +201,7 @@ func toDomainProject(e *ent.Project) *Project {
 		SprintDurationDays: e.SprintDurationDays,
 		DailyTime:          e.DailyTime,
 		WeeklySyncDay:      e.WeeklySyncDay,
+		WeeklySyncTime:     e.WeeklySyncTime,
 		Customer:           customerRef(e),
 		MemberCount:        memberCount(e),
 		TaskCount:          len(e.Edges.Tasks),

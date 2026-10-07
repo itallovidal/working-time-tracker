@@ -89,7 +89,7 @@ func (f *fixture) person(name string) uuid.UUID {
 // Create ser acertada num ponto só.
 func (f *fixture) project(name string) string {
 	f.t.Helper()
-	p, err := f.projects.Create(f.orgID, name, "", 0, nil, nil)
+	p, err := f.projects.Create(f.orgID, name, "", 0, nil, nil, nil)
 	if err != nil {
 		f.t.Fatalf("fixture project %s: %v", name, err)
 	}

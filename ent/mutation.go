@@ -6825,6 +6825,7 @@ type ProjectMutation struct {
 	addsprint_duration_days *int
 	daily_time              *string
 	weekly_sync_day         *string
+	weekly_sync_time        *string
 	bill_rate_cents         *int
 	addbill_rate_cents      *int
 	created_at              *time.Time
@@ -7327,6 +7328,55 @@ func (m *ProjectMutation) ResetWeeklySyncDay() {
 	delete(m.clearedFields, project.FieldWeeklySyncDay)
 }
 
+// SetWeeklySyncTime sets the "weekly_sync_time" field.
+func (m *ProjectMutation) SetWeeklySyncTime(s string) {
+	m.weekly_sync_time = &s
+}
+
+// WeeklySyncTime returns the value of the "weekly_sync_time" field in the mutation.
+func (m *ProjectMutation) WeeklySyncTime() (r string, exists bool) {
+	v := m.weekly_sync_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldWeeklySyncTime returns the old "weekly_sync_time" field's value of the Project entity.
+// If the Project object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProjectMutation) OldWeeklySyncTime(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldWeeklySyncTime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldWeeklySyncTime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldWeeklySyncTime: %w", err)
+	}
+	return oldValue.WeeklySyncTime, nil
+}
+
+// ClearWeeklySyncTime clears the value of the "weekly_sync_time" field.
+func (m *ProjectMutation) ClearWeeklySyncTime() {
+	m.weekly_sync_time = nil
+	m.clearedFields[project.FieldWeeklySyncTime] = struct{}{}
+}
+
+// WeeklySyncTimeCleared returns if the "weekly_sync_time" field was cleared in this mutation.
+func (m *ProjectMutation) WeeklySyncTimeCleared() bool {
+	_, ok := m.clearedFields[project.FieldWeeklySyncTime]
+	return ok
+}
+
+// ResetWeeklySyncTime resets all changes to the "weekly_sync_time" field.
+func (m *ProjectMutation) ResetWeeklySyncTime() {
+	m.weekly_sync_time = nil
+	delete(m.clearedFields, project.FieldWeeklySyncTime)
+}
+
 // SetCustomerID sets the "customer_id" field.
 func (m *ProjectMutation) SetCustomerID(u uuid.UUID) {
 	m.customer = &u
@@ -7786,7 +7836,7 @@ func (m *ProjectMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ProjectMutation) Fields() []string {
-	fields := make([]string, 0, 11)
+	fields := make([]string, 0, 12)
 	if m.organization != nil {
 		fields = append(fields, project.FieldOrganizationID)
 	}
@@ -7810,6 +7860,9 @@ func (m *ProjectMutation) Fields() []string {
 	}
 	if m.weekly_sync_day != nil {
 		fields = append(fields, project.FieldWeeklySyncDay)
+	}
+	if m.weekly_sync_time != nil {
+		fields = append(fields, project.FieldWeeklySyncTime)
 	}
 	if m.customer != nil {
 		fields = append(fields, project.FieldCustomerID)
@@ -7844,6 +7897,8 @@ func (m *ProjectMutation) Field(name string) (ent.Value, bool) {
 		return m.DailyTime()
 	case project.FieldWeeklySyncDay:
 		return m.WeeklySyncDay()
+	case project.FieldWeeklySyncTime:
+		return m.WeeklySyncTime()
 	case project.FieldCustomerID:
 		return m.CustomerID()
 	case project.FieldBillRateCents:
@@ -7875,6 +7930,8 @@ func (m *ProjectMutation) OldField(ctx context.Context, name string) (ent.Value,
 		return m.OldDailyTime(ctx)
 	case project.FieldWeeklySyncDay:
 		return m.OldWeeklySyncDay(ctx)
+	case project.FieldWeeklySyncTime:
+		return m.OldWeeklySyncTime(ctx)
 	case project.FieldCustomerID:
 		return m.OldCustomerID(ctx)
 	case project.FieldBillRateCents:
@@ -7945,6 +8002,13 @@ func (m *ProjectMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetWeeklySyncDay(v)
+		return nil
+	case project.FieldWeeklySyncTime:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetWeeklySyncTime(v)
 		return nil
 	case project.FieldCustomerID:
 		v, ok := value.(uuid.UUID)
@@ -8039,6 +8103,9 @@ func (m *ProjectMutation) ClearedFields() []string {
 	if m.FieldCleared(project.FieldWeeklySyncDay) {
 		fields = append(fields, project.FieldWeeklySyncDay)
 	}
+	if m.FieldCleared(project.FieldWeeklySyncTime) {
+		fields = append(fields, project.FieldWeeklySyncTime)
+	}
 	if m.FieldCleared(project.FieldCustomerID) {
 		fields = append(fields, project.FieldCustomerID)
 	}
@@ -8073,6 +8140,9 @@ func (m *ProjectMutation) ClearField(name string) error {
 		return nil
 	case project.FieldWeeklySyncDay:
 		m.ClearWeeklySyncDay()
+		return nil
+	case project.FieldWeeklySyncTime:
+		m.ClearWeeklySyncTime()
 		return nil
 	case project.FieldCustomerID:
 		m.ClearCustomerID()
@@ -8111,6 +8181,9 @@ func (m *ProjectMutation) ResetField(name string) error {
 		return nil
 	case project.FieldWeeklySyncDay:
 		m.ResetWeeklySyncDay()
+		return nil
+	case project.FieldWeeklySyncTime:
+		m.ResetWeeklySyncTime()
 		return nil
 	case project.FieldCustomerID:
 		m.ResetCustomerID()

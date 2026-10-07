@@ -60,7 +60,7 @@ func TestService_ClockInSuccess(t *testing.T) {
 
 	org, _ := orgSvc.Create("Org")
 	p, _ := personSvc.Create(org.ID.String(), "John", "john@test.com")
-	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil)
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
 	tm, _ := teamSvc.Create(proj.ID.String(), "Team")
 	join(t, memberSvc, tm, p.ID.String())
 	task1, _ := taskSvc.Create(proj.ID.String(), "Task", "", p.ID.String(), nil)
@@ -89,7 +89,7 @@ func TestService_ClockIn_ClaimsAnUnassignedTask(t *testing.T) {
 	org, _ := orgSvc.Create("Org")
 	ana, _ := personSvc.Create(org.ID.String(), "Ana", "ana@test.com")
 	bia, _ := personSvc.Create(org.ID.String(), "Bia", "bia@test.com")
-	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil)
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
 	free, _ := taskSvc.Create(proj.ID.String(), "Free", "", "", nil)
 	setRate(t, proj.ID.String(), ana.ID.String(), 2000)
 	setRate(t, proj.ID.String(), bia.ID.String(), 2000)
@@ -117,7 +117,7 @@ func TestService_ClockIn_RefusedDoesNotClaim(t *testing.T) {
 
 	org, _ := orgSvc.Create("Org")
 	ana, _ := personSvc.Create(org.ID.String(), "Ana", "ana@test.com")
-	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil)
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
 	free, _ := taskSvc.Create(proj.ID.String(), "Free", "", "", nil)
 
 	if _, err := wsSvc.ClockIn(proj.ID.String(), free.ID.String(), ana.ID.String()); !errors.Is(err, work_session.ErrNoRate) {
@@ -142,8 +142,8 @@ func TestService_ClockIn_DifferentProject(t *testing.T) {
 
 	org, _ := orgSvc.Create("Org")
 	p, _ := personSvc.Create(org.ID.String(), "John", "john@test.com")
-	projA, _ := projSvc.Create(org.ID.String(), "Project A", "", 0, nil, nil)
-	projB, _ := projSvc.Create(org.ID.String(), "Project B", "", 0, nil, nil)
+	projA, _ := projSvc.Create(org.ID.String(), "Project A", "", 0, nil, nil, nil)
+	projB, _ := projSvc.Create(org.ID.String(), "Project B", "", 0, nil, nil, nil)
 	tm, _ := teamSvc.Create(projA.ID.String(), "Team")
 	join(t, memberSvc, tm, p.ID.String())
 	task1, _ := taskSvc.Create(projA.ID.String(), "Task", "", p.ID.String(), nil)
@@ -159,7 +159,7 @@ func TestService_ClockOut_Success(t *testing.T) {
 
 	org, _ := orgSvc.Create("Org")
 	p, _ := personSvc.Create(org.ID.String(), "John", "john@test.com")
-	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil)
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
 	tm, _ := teamSvc.Create(proj.ID.String(), "Team")
 	join(t, memberSvc, tm, p.ID.String())
 	task1, _ := taskSvc.Create(proj.ID.String(), "Task", "", p.ID.String(), nil)
@@ -185,7 +185,7 @@ func TestService_ClockOut_NoActiveSession(t *testing.T) {
 
 	org, _ := orgSvc.Create("Org")
 	p, _ := personSvc.Create(org.ID.String(), "John", "john@test.com")
-	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil)
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
 
 	_, err := wsSvc.ClockOut(proj.ID.String(), p.ID.String())
 	if !errors.Is(err, work_session.ErrNotOpen) {
@@ -198,7 +198,7 @@ func TestService_ClockOut_PersonFromAnotherOrganization(t *testing.T) {
 
 	orgA, _ := orgSvc.Create("Org A")
 	orgB, _ := orgSvc.Create("Org B")
-	projA, _ := projSvc.Create(orgA.ID.String(), "Project A", "", 0, nil, nil)
+	projA, _ := projSvc.Create(orgA.ID.String(), "Project A", "", 0, nil, nil, nil)
 	personB, _ := personSvc.Create(orgB.ID.String(), "Bia", "bia@test.com")
 
 	if _, err := wsSvc.ClockOut(projA.ID.String(), personB.ID.String()); err == nil {
@@ -211,7 +211,7 @@ func TestService_OverlappingSessionRejected(t *testing.T) {
 
 	org, _ := orgSvc.Create("Org")
 	p, _ := personSvc.Create(org.ID.String(), "John", "john@test.com")
-	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil)
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
 	tm, _ := teamSvc.Create(proj.ID.String(), "Team")
 	join(t, memberSvc, tm, p.ID.String())
 	taskA, _ := taskSvc.Create(proj.ID.String(), "Task A", "", p.ID.String(), nil)
@@ -230,7 +230,7 @@ func TestService_TotalTime(t *testing.T) {
 
 	org, _ := orgSvc.Create("Org")
 	p, _ := personSvc.Create(org.ID.String(), "John", "john@test.com")
-	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil)
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
 	tm, _ := teamSvc.Create(proj.ID.String(), "Team")
 	join(t, memberSvc, tm, p.ID.String())
 	task1, _ := taskSvc.Create(proj.ID.String(), "Task", "", p.ID.String(), nil)
@@ -258,8 +258,8 @@ func TestService_ClockIn_RequiresRate(t *testing.T) {
 
 	org, _ := orgSvc.Create("Org")
 	p, _ := personSvc.Create(org.ID.String(), "John", "john@test.com")
-	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil)
-	other, _ := projSvc.Create(org.ID.String(), "Other", "", 0, nil, nil)
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
+	other, _ := projSvc.Create(org.ID.String(), "Other", "", 0, nil, nil, nil)
 	tm, _ := teamSvc.Create(proj.ID.String(), "Team")
 	join(t, memberSvc, tm, p.ID.String())
 	task1, _ := taskSvc.Create(proj.ID.String(), "Task", "", p.ID.String(), nil)
@@ -295,7 +295,7 @@ func TestService_RateIsSnapshottedAtClockIn(t *testing.T) {
 
 	org, _ := orgSvc.Create("Org")
 	p, _ := personSvc.Create(org.ID.String(), "John", "john@test.com")
-	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil)
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
 	projectID, personID := proj.ID.String(), p.ID.String()
 	tm, _ := teamSvc.Create(projectID, "Team")
 	join(t, memberSvc, tm, personID)
@@ -345,7 +345,7 @@ func TestService_Amounts(t *testing.T) {
 
 	org, _ := orgSvc.Create("Org")
 	p, _ := personSvc.Create(org.ID.String(), "John", "john@test.com")
-	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil)
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, nil, nil, nil)
 	projectID, personID := proj.ID.String(), p.ID.String()
 	tm, _ := teamSvc.Create(projectID, "Team")
 	join(t, memberSvc, tm, personID)

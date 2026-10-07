@@ -167,6 +167,23 @@
     return [...sprintOptions, { value: current, label: fmt.sprint(current) }].sort((a, b) => a.value - b.value);
   }
 
+  // A daily e a weekly são decisões do projeto: ele pode ter uma, as duas ou nenhuma.
+  // O formulário guarda isso numa marca (has_daily, has_weekly) e mantém o horário
+  // digitado quando a marca é desligada, para religar sem perder o que estava lá.
+  const routine = {
+    blank: () => ({ has_daily: false, daily_time: '', has_weekly: false, weekly_sync_day: '', weekly_sync_time: '' }),
+    fromProject: (p) => ({
+      has_daily: !!p.daily_time, daily_time: p.daily_time || '',
+      has_weekly: !!p.weekly_sync_day, weekly_sync_day: p.weekly_sync_day || '', weekly_sync_time: p.weekly_sync_time || '',
+    }),
+    // Texto vazio é o que apaga na API; o horário da weekly sai junto com o dia.
+    payload: (d) => ({
+      daily_time: d.has_daily ? d.daily_time : '',
+      weekly_sync_day: d.has_weekly ? d.weekly_sync_day : '',
+      weekly_sync_time: d.has_weekly ? d.weekly_sync_time : '',
+    }),
+  };
+
   const fmt = {
     // 3725 -> "01:02:05"
     clock(seconds) {
@@ -214,6 +231,10 @@
     weekday(value) {
       const d = weekdays.find((w) => w.value === value);
       return d ? d.label : value;
+    },
+    // ("friday", "14:00") -> "Sexta às 14:00"; weekly antiga, sem horário, fica só com o dia
+    weeklySlot(day, time) {
+      return time ? t('labels.weekly_slot', { day: fmt.weekday(day), time }) : fmt.weekday(day);
     },
     // 14 -> "14 dias"; 30 -> "1 mês"
     sprint(days) {
@@ -306,7 +327,7 @@
   // O que as telas mostram no lugar de um campo de cadastro sem valor.
   const notInformed = t('labels.not_informed');
 
-  window.WTT = { t, lang, errorText, api, ApiError, form, fmt, toCents, copyText, notInformed, weekdays, sprintOptions, sprintChoices, orgSizes, workModes, currencies, boot: window.BOOT || {} };
+  window.WTT = { t, lang, errorText, api, ApiError, form, fmt, toCents, copyText, notInformed, weekdays, routine, sprintOptions, sprintChoices, orgSizes, workModes, currencies, boot: window.BOOT || {} };
 
   // Onde flash() deixa a mensagem para a página seguinte.
   const flashKey = 'wtt:flash';

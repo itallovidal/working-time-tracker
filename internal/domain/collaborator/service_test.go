@@ -65,8 +65,8 @@ func setup(t *testing.T) fixture {
 	}
 	f.ana, f.bruno, f.carla, f.diego = create("Ana"), create("Bruno"), create("Carla"), create("Diego")
 
-	x, _ := projSvc.Create(orgID, "Projeto X", "", 0, nil, nil)
-	y, _ := projSvc.Create(orgID, "Projeto Y", "", 0, nil, nil)
+	x, _ := projSvc.Create(orgID, "Projeto X", "", 0, nil, nil, nil)
+	y, _ := projSvc.Create(orgID, "Projeto Y", "", 0, nil, nil, nil)
 	f.projectX, f.projectY = x.ID.String(), y.ID.String()
 	newTeam := func(projectID, name string) string {
 		t.Helper()

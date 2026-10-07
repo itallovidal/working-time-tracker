@@ -36,6 +36,8 @@ type Project struct {
 	DailyTime *string `json:"daily_time,omitempty"`
 	// WeeklySyncDay holds the value of the "weekly_sync_day" field.
 	WeeklySyncDay *string `json:"weekly_sync_day,omitempty"`
+	// WeeklySyncTime holds the value of the "weekly_sync_time" field.
+	WeeklySyncTime *string `json:"weekly_sync_time,omitempty"`
 	// CustomerID holds the value of the "customer_id" field.
 	CustomerID *uuid.UUID `json:"customer_id,omitempty"`
 	// BillRateCents holds the value of the "bill_rate_cents" field.
@@ -134,7 +136,7 @@ func (*Project) scanValues(columns []string) ([]any, error) {
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case project.FieldSprintDurationDays, project.FieldBillRateCents:
 			values[i] = new(sql.NullInt64)
-		case project.FieldName, project.FieldDescription, project.FieldGithubRepoURL, project.FieldGitlabRepoURL, project.FieldDailyTime, project.FieldWeeklySyncDay:
+		case project.FieldName, project.FieldDescription, project.FieldGithubRepoURL, project.FieldGitlabRepoURL, project.FieldDailyTime, project.FieldWeeklySyncDay, project.FieldWeeklySyncTime:
 			values[i] = new(sql.NullString)
 		case project.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
@@ -212,6 +214,13 @@ func (_m *Project) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.WeeklySyncDay = new(string)
 				*_m.WeeklySyncDay = value.String
+			}
+		case project.FieldWeeklySyncTime:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field weekly_sync_time", values[i])
+			} else if value.Valid {
+				_m.WeeklySyncTime = new(string)
+				*_m.WeeklySyncTime = value.String
 			}
 		case project.FieldCustomerID:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -328,6 +337,11 @@ func (_m *Project) String() string {
 	builder.WriteString(", ")
 	if v := _m.WeeklySyncDay; v != nil {
 		builder.WriteString("weekly_sync_day=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.WeeklySyncTime; v != nil {
+		builder.WriteString("weekly_sync_time=")
 		builder.WriteString(*v)
 	}
 	builder.WriteString(", ")

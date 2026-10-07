@@ -391,7 +391,7 @@
       ],
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"name\": \"App de Pedidos\",\n  \"description\": \"Aplicativo de entregas\",\n  \"sprint_duration_days\": 14,\n  \"daily_time\": \"09:30\",\n  \"weekly_sync_day\": \"friday\"\n}"
+        "text": "{\n  \"name\": \"App de Pedidos\",\n  \"description\": \"Aplicativo de entregas\",\n  \"sprint_duration_days\": 14,\n  \"daily_time\": \"09:30\",\n  \"weekly_sync_day\": \"friday\",\n  \"weekly_sync_time\": \"14:00\"\n}"
       }
     },
     {

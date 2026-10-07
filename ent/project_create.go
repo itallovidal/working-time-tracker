@@ -123,6 +123,20 @@ func (_c *ProjectCreate) SetNillableWeeklySyncDay(v *string) *ProjectCreate {
 	return _c
 }
 
+// SetWeeklySyncTime sets the "weekly_sync_time" field.
+func (_c *ProjectCreate) SetWeeklySyncTime(v string) *ProjectCreate {
+	_c.mutation.SetWeeklySyncTime(v)
+	return _c
+}
+
+// SetNillableWeeklySyncTime sets the "weekly_sync_time" field if the given value is not nil.
+func (_c *ProjectCreate) SetNillableWeeklySyncTime(v *string) *ProjectCreate {
+	if v != nil {
+		_c.SetWeeklySyncTime(*v)
+	}
+	return _c
+}
+
 // SetCustomerID sets the "customer_id" field.
 func (_c *ProjectCreate) SetCustomerID(v uuid.UUID) *ProjectCreate {
 	_c.mutation.SetCustomerID(v)
@@ -382,6 +396,10 @@ func (_c *ProjectCreate) createSpec() (*Project, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.WeeklySyncDay(); ok {
 		_spec.SetField(project.FieldWeeklySyncDay, field.TypeString, value)
 		_node.WeeklySyncDay = &value
+	}
+	if value, ok := _c.mutation.WeeklySyncTime(); ok {
+		_spec.SetField(project.FieldWeeklySyncTime, field.TypeString, value)
+		_node.WeeklySyncTime = &value
 	}
 	if value, ok := _c.mutation.BillRateCents(); ok {
 		_spec.SetField(project.FieldBillRateCents, field.TypeInt, value)

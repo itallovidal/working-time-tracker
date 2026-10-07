@@ -11,7 +11,7 @@ document.addEventListener('alpine:init', () => {
   const org = WTT.boot.org || { name: me.organization_name };
 
   const blankProject = () => ({
-    name: '', description: '', sprint_duration_days: 14, daily_time: '', weekly_sync_day: '',
+    name: '', description: '', sprint_duration_days: 14, ...WTT.routine.blank(),
     customer_id: '', rate: '',
   });
 
@@ -88,8 +88,7 @@ document.addEventListener('alpine:init', () => {
           name: this.draft.name,
           description: this.draft.description,
           sprint_duration_days: Number(this.draft.sprint_duration_days) || 0,
-          daily_time: this.draft.daily_time || null,
-          weekly_sync_day: this.draft.weekly_sync_day || null,
+          ...WTT.routine.payload(this.draft),
         });
         if (this.draft.customer_id) {
           try {

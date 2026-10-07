@@ -251,7 +251,7 @@ org:
       one: "{{.count}}-day sprint"
       other: "{{.count}}-day sprint"
     daily_badge: "Daily {{.time}}"
-    weekly_badge: "Weekly {{.day}}"
+    weekly_badge: "Weekly {{.slot}}"
     customers_load_failed: "Could not load the customers: {{.error}}"
     rate_invalid: Enter the rate billed per hour, for example 150.00.
     rate_too_high: The rate billed per hour must be between 0 and 1,000,000.00.
@@ -270,10 +270,21 @@ project:
     settings: Settings
     management: Management
     back: Back to the project
+  groups:
+    about: Project
+    billing: Customer and billing
+    routine: Team routine
   fields:
     sprint: Sprint length
+    daily: Daily
+    weekly: Weekly
+    has_daily: The project has a daily
+    has_weekly: The project has a weekly
     daily_time: Daily time
     weekly_day: Weekly day
+    weekly_time: Weekly time
+    pick_day: Pick the day
+    no_daily: No daily
     no_weekly: No weekly
     bill_rate: "Rate billed per hour ({{.unit}})"
 
@@ -481,9 +492,7 @@ project_settings:
   bill_rate_fact: Rate billed per hour
   bill_rate_note: The billed rate is what the customer pays the organization. Only admins see it.
   edit_title: Edit project
-  no_daily: No daily
   delete_confirm: Delete the project? Its teams, tasks, work sessions and integrations are deleted.
-  daily_hint: Leave empty if the team has no daily.
   billing_title: Customer and billing
   customers_hint: Add customers under
   rate_placeholder: "0.00"
@@ -680,6 +689,7 @@ labels:
       one: "{{.count}} day"
       other: "{{.count}} days"
   weekly_hours: "{{.hours}}h per week"
+  weekly_slot: "{{.day}} at {{.time}}"
   weekly_hours_none: Not set
   weekday:
     monday: Monday
@@ -802,6 +812,8 @@ errors:
     invalid_organization: "invalid organization"
     invalid_sprint: "the sprint must be between 1 and 90 days long"
     invalid_weekday: "invalid weekly day: use monday, tuesday, wednesday, thursday, friday, saturday or sunday"
+    invalid_weekly_time: "the weekly time must use the HH:MM format, for example 13:00"
+    weekly_time_without_day: "the weekly time needs the weekly day"
     name_required: "enter the project name"
     not_found: "project not found"
   request:

@@ -201,6 +201,7 @@ var (
 		{Name: "sprint_duration_days", Type: field.TypeInt, Default: 14},
 		{Name: "daily_time", Type: field.TypeString, Nullable: true},
 		{Name: "weekly_sync_day", Type: field.TypeString, Nullable: true},
+		{Name: "weekly_sync_time", Type: field.TypeString, Nullable: true},
 		{Name: "bill_rate_cents", Type: field.TypeInt, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "customer_id", Type: field.TypeUUID, Nullable: true},
@@ -214,13 +215,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "projects_customers_projects",
-				Columns:    []*schema.Column{ProjectsColumns[10]},
+				Columns:    []*schema.Column{ProjectsColumns[11]},
 				RefColumns: []*schema.Column{CustomersColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "projects_organizations_projects",
-				Columns:    []*schema.Column{ProjectsColumns[11]},
+				Columns:    []*schema.Column{ProjectsColumns[12]},
 				RefColumns: []*schema.Column{OrganizationsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},

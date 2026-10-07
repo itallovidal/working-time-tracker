@@ -24,28 +24,39 @@
   {{/* O formulário aparece no modal do layout base, mas continua no escopo de orgProjects. */}}
   <template x-teleport="#modal-root">
     <form class="stack" x-show="$store.modal.name === 'project'" @submit.prevent="create()">
-      <div class="field">
-        <label for="project-name">{{.T "common.name"}}</label>
-        <input id="project-name" type="text" required x-model="draft.name" data-autofocus>
-      </div>
-      <div class="fields">
+      <fieldset class="form-group">
+        <legend>{{.T "project.groups.about"}}</legend>
         <div class="field">
-          <label for="project-customer">{{.T "org.projects.customer"}}</label>
-          <select id="project-customer" x-model="draft.customer_id">
-            <option value="">{{.T "org.projects.internal"}}</option>
-            <template x-for="c in customers || []" :key="c.id">
-              <option :value="c.id" x-text="c.name"></option>
-            </template>
-          </select>
+          <label for="project-name">{{.T "common.name"}}</label>
+          <input id="project-name" type="text" required x-model="draft.name" data-autofocus>
         </div>
-        {{/* Projeto interno não tem quem pague: o valor só aparece com um cliente escolhido. */}}
-        <div class="field" x-show="draft.customer_id">
-          <label for="project-bill-rate" x-text="$t('project.fields.bill_rate', { unit: WTT.fmt.moneyUnit() })"></label>
-          <input id="project-bill-rate" type="text" inputmode="decimal" class="num" placeholder="{{.T "common.optional"}}" x-model="draft.rate">
+        <div class="field">
+          <label for="project-description">{{.T "common.description_label"}}</label>
+          <textarea id="project-description" x-model="draft.description" placeholder="{{.T "common.optional"}}"></textarea>
         </div>
-      </div>
-      <span class="muted small">{{.T "org.projects.admins_only_hint"}}</span>
-      <div class="fields">
+      </fieldset>
+      <fieldset class="form-group">
+        <legend>{{.T "project.groups.billing"}}</legend>
+        <div class="fields">
+          <div class="field">
+            <label for="project-customer">{{.T "org.projects.customer"}}</label>
+            <select id="project-customer" x-model="draft.customer_id">
+              <option value="">{{.T "org.projects.internal"}}</option>
+              <template x-for="c in customers || []" :key="c.id">
+                <option :value="c.id" x-text="c.name"></option>
+              </template>
+            </select>
+          </div>
+          {{/* Projeto interno não tem quem pague: o valor só aparece com um cliente escolhido. */}}
+          <div class="field" x-show="draft.customer_id">
+            <label for="project-bill-rate" x-text="$t('project.fields.bill_rate', { unit: WTT.fmt.moneyUnit() })"></label>
+            <input id="project-bill-rate" type="text" inputmode="decimal" class="num" placeholder="{{.T "common.optional"}}" x-model="draft.rate">
+          </div>
+        </div>
+        <span class="hint">{{.T "org.projects.admins_only_hint"}}</span>
+      </fieldset>
+      <fieldset class="form-group">
+        <legend>{{.T "project.groups.routine"}}</legend>
         <div class="field">
           <label for="project-sprint">{{.T "project.fields.sprint"}}</label>
           <select id="project-sprint" x-model.number="draft.sprint_duration_days">
@@ -54,24 +65,8 @@
             </template>
           </select>
         </div>
-        <div class="field">
-          <label for="project-daily">{{.T "project.fields.daily_time"}}</label>
-          <input id="project-daily" type="time" x-model="draft.daily_time">
-        </div>
-        <div class="field">
-          <label for="project-weekly">{{.T "project.fields.weekly_day"}}</label>
-          <select id="project-weekly" x-model="draft.weekly_sync_day">
-            <option value="">{{.T "project.fields.no_weekly"}}</option>
-            <template x-for="d in WTT.weekdays" :key="d.value">
-              <option :value="d.value" x-text="d.label"></option>
-            </template>
-          </select>
-        </div>
-      </div>
-      <div class="field">
-        <label for="project-description">{{.T "common.description_label"}}</label>
-        <textarea id="project-description" x-model="draft.description" placeholder="{{.T "common.optional"}}"></textarea>
-      </div>
+        {{template "project_routine" .}}
+      </fieldset>
       <p class="form-error" x-show="errors.create" x-text="errors.create" role="alert"></p>
       <div class="row row-end">
         <button type="button" class="btn btn-secondary" @click="$store.modal.dismiss()">{{.T "common.cancel"}}</button>
@@ -127,7 +122,7 @@
         <div class="project-meta">
           <span class="badge num" x-text="$t('org.projects.sprint_badge', { count: p.sprint_duration_days })"></span>
           <span class="badge num" x-show="p.daily_time" x-text="$t('org.projects.daily_badge', { time: p.daily_time })"></span>
-          <span class="badge" x-show="p.weekly_sync_day" x-text="$t('org.projects.weekly_badge', { day: WTT.fmt.weekday(p.weekly_sync_day) })"></span>
+          <span class="badge" x-show="p.weekly_sync_day" x-text="$t('org.projects.weekly_badge', { slot: WTT.fmt.weeklySlot(p.weekly_sync_day, p.weekly_sync_time) })"></span>
         </div>
       </a>
     </template>

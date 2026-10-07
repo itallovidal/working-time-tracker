@@ -75,7 +75,7 @@ var customers = []struct{ key, name, document, contact, email, phone string }{
 var projects = []struct {
 	key, customer, name, description string
 	sprintDays                       int
-	daily, weekly                    string
+	daily, weekly, weeklyTime        string
 	billRate, ageDays                int
 	teams                            map[string][]string
 	rates                            map[string]int
@@ -83,58 +83,58 @@ var projects = []struct {
 	{
 		key: "app", customer: "bompreco", name: "App de Pedidos", ageDays: 330,
 		description: "Aplicativo para os clientes da rede pedirem e acompanharem as entregas.",
-		sprintDays:  14, daily: "09:30", weekly: "friday", billRate: 14000,
+		sprintDays:  14, daily: "09:30", weekly: "friday", weeklyTime: "14:00", billRate: 14000,
 		teams: map[string][]string{"Mobile": {"diego", "gabriela", "ana"}, "Backend": {"bruno", "henrique", "fabio"}, "Qualidade": {"elisa"}, "Produto": {"isabela", "carla"}},
 		rates: map[string]int{"ana": 9000, "bruno": 5500, "diego": 6000, "gabriela": 5200, "henrique": 4200, "isabela": 6500, "elisa": 4000, "carla": 5000, "fabio": 6200},
 	},
 	{
 		key: "painel", customer: "bompreco", name: "Painel do Lojista", ageDays: 214,
 		description: "Painel web para cada loja acompanhar pedidos, repasses e avaliações.",
-		sprintDays:  14, daily: "09:15", weekly: "thursday", billRate: 12000,
+		sprintDays:  14, daily: "09:15", weekly: "thursday", weeklyTime: "13:00", billRate: 12000,
 		teams: map[string][]string{"Web": {"carla", "bruno", "henrique"}, "Design": {"gabriela"}},
 		rates: map[string]int{"bruno": 5500, "carla": 5000, "elisa": 4000, "henrique": 4200, "gabriela": 5200},
 	},
 	{
 		key: "agenda", customer: "vidaplena", name: "Agendamento Online", ageDays: 152,
 		description: "Marcação de consultas pelo site e pelo WhatsApp, com confirmação automática.",
-		sprintDays:  7, daily: "10:00", weekly: "monday", billRate: 11000,
+		sprintDays:  7, daily: "10:00", weekly: "monday", weeklyTime: "11:30", billRate: 11000,
 		teams: map[string][]string{"Produto": {"carla", "diego", "elisa", "isabela"}},
 		rates: map[string]int{"carla": 5000, "diego": 5800, "elisa": 4000, "isabela": 6500, "joao": 2500},
 	},
 	{
 		key: "portal", customer: "vidaplena", name: "Portal do Paciente", ageDays: 96,
 		description: "Resultados de exames e histórico de consultas para o paciente.",
-		sprintDays:  14, billRate: 11500,
+		sprintDays:  14, weekly: "tuesday", weeklyTime: "11:00", billRate: 11500,
 		teams: map[string][]string{"Web": {"bruno", "carla"}, "Dados": {"larissa"}, "Design": {"gabriela"}},
 		rates: map[string]int{"bruno": 5500, "carla": 5200, "larissa": 6000, "gabriela": 5200},
 	},
 	{
 		key: "api", customer: "pagai", name: "API de Cobranças", ageDays: 68,
 		description: "API de boletos e Pix, com conciliação diária.",
-		sprintDays:  14, daily: "09:00", weekly: "wednesday", billRate: 18000,
+		sprintDays:  14, daily: "09:00", weekly: "wednesday", weeklyTime: "15:00", billRate: 18000,
 		teams: map[string][]string{"Backend": {"bruno", "ana", "fabio"}, "Infra": {"fabio", "henrique"}, "Gestão": {"helena"}},
 		rates: map[string]int{"ana": 11000, "bruno": 7000, "fabio": 7200, "henrique": 4800, "helena": 12000},
 	},
 	{
 		key: "dados", customer: "pagai", name: "Dashboard Financeiro", ageDays: 120,
 		description: "Painéis de recebimentos, inadimplência e conciliação para o financeiro da Pagaí.",
-		sprintDays:  14, daily: "11:00", weekly: "thursday", billRate: 15000,
+		sprintDays:  14, daily: "11:00", weekly: "thursday", weeklyTime: "16:00", billRate: 15000,
 		teams: map[string][]string{"Dados": {"larissa", "henrique", "fabio"}, "Produto": {"isabela"}},
 		rates: map[string]int{"larissa": 6500, "henrique": 4500, "fabio": 6500, "isabela": 6500},
 	},
 	{
 		key: "erp", customer: "atacado", name: "Migração do ERP", ageDays: 190,
 		description: "Migração do ERP legado do Atacado Norte para um sistema novo, com carga de dados e homologação.",
-		sprintDays:  30, daily: "08:45", weekly: "friday", billRate: 9000,
+		sprintDays:  30, daily: "08:45", weekly: "friday", weeklyTime: "10:00", billRate: 9000,
 		teams: map[string][]string{"Migração": {"bruno", "fabio", "larissa"}, "Gestão": {"ana"}},
 		rates: map[string]int{"bruno": 9500, "fabio": 8000, "larissa": 7500, "ana": 11500, "joao": 3000},
 	},
 	{
 		key: "site", name: "Site da Jatobá", ageDays: 37,
 		description: "Site institucional e blog da própria Jatobá.",
-		sprintDays:  14,
-		teams:       map[string][]string{"Marketing": {"carla", "gabriela"}},
-		rates:       map[string]int{"carla": 4500, "gabriela": 4800, "joao": 2500},
+		sprintDays:  14, daily: "10:30",
+		teams: map[string][]string{"Marketing": {"carla", "gabriela"}},
+		rates: map[string]int{"carla": 4500, "gabriela": 4800, "joao": 2500},
 	},
 }
 
@@ -366,7 +366,7 @@ func main() {
 	seeded := map[string]seededProject{}
 	for _, p := range projects {
 		created, err := projectSvc.Create(orgID, p.name, p.description, p.sprintDays,
-			optionalText(p.daily), optionalText(p.weekly))
+			optionalText(p.daily), optionalText(p.weekly), optionalText(p.weeklyTime))
 		must(err)
 		id := created.ID.String()
 

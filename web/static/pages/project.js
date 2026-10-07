@@ -670,7 +670,7 @@ document.addEventListener('alpine:init', () => {
     current: { name: '', description: '', sprint_duration_days: 14, customer: null }, // o projeto como está no servidor
     billRateCents: null, // o valor cobrado; só admins recebem
     customers: [],
-    draft: { name: '', description: '', sprint_duration_days: 14, daily_time: '', weekly_sync_day: '', customer_id: '', rate: '' },
+    draft: { name: '', description: '', sprint_duration_days: 14, ...WTT.routine.blank(), customer_id: '', rate: '' },
     confirmDelete: false,
     async init() {
       try {
@@ -696,8 +696,8 @@ document.addEventListener('alpine:init', () => {
       const p = this.current;
       return [
         { label: WTT.t('project.fields.sprint'), value: WTT.fmt.sprint(p.sprint_duration_days) },
-        { label: WTT.t('project.fields.daily_time'), value: p.daily_time || WTT.t('project_settings.no_daily'), empty: !p.daily_time },
-        { label: WTT.t('project.fields.weekly_day'), value: p.weekly_sync_day ? WTT.fmt.weekday(p.weekly_sync_day) : WTT.t('project.fields.no_weekly'), empty: !p.weekly_sync_day },
+        { label: WTT.t('project.fields.daily'), value: p.daily_time || WTT.t('project.fields.no_daily'), empty: !p.daily_time },
+        { label: WTT.t('project.fields.weekly'), value: p.weekly_sync_day ? WTT.fmt.weeklySlot(p.weekly_sync_day, p.weekly_sync_time) : WTT.t('project.fields.no_weekly'), empty: !p.weekly_sync_day },
       ];
     },
     sprintChoices() {
@@ -709,8 +709,7 @@ document.addEventListener('alpine:init', () => {
         name: p.name,
         description: p.description || '',
         sprint_duration_days: p.sprint_duration_days,
-        daily_time: p.daily_time || '',
-        weekly_sync_day: p.weekly_sync_day || '',
+        ...WTT.routine.fromProject(p),
         customer_id: p.customer ? p.customer.id : '',
         rate: WTT.fmt.moneyInput(this.billRateCents),
       };
@@ -731,13 +730,12 @@ document.addEventListener('alpine:init', () => {
         if (cents === null && String(d.rate).trim() !== '') throw new Error(WTT.t('org.projects.rate_invalid'));
         if (cents !== null && cents > 100000000) throw new Error(WTT.t('org.projects.rate_too_high'));
 
-        // Texto vazio apaga daily e weekly; a API mantém o que não vier no corpo.
+        // Sem daily ou sem weekly vai texto vazio, que apaga; a API mantém o que não vier no corpo.
         this.current = await api('PATCH', '/api/projects/' + project.id, {
           name: d.name,
           description: d.description,
           sprint_duration_days: Number(d.sprint_duration_days) || 0,
-          daily_time: d.daily_time || '',
-          weekly_sync_day: d.weekly_sync_day || '',
+          ...WTT.routine.payload(d),
         });
         document.querySelectorAll('[data-project-name]').forEach((el) => { el.textContent = this.current.name; });
 

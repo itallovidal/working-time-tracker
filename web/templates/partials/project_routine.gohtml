@@ -1,0 +1,32 @@
+{{/* project_routine é a daily e a weekly do projeto, nos modais Novo projeto e Editar
+     projeto. Não ter daily ou weekly é uma escolha do projeto, e não um campo em branco:
+     a marca liga o horário, e desligada o servidor recebe texto vazio, que apaga.
+     Pede o rascunho em `draft` (has_daily, daily_time, has_weekly, weekly_sync_day,
+     weekly_sync_time) e só aparece uma vez por página, por causa dos ids. */}}
+{{define "project_routine"}}
+<div class="routine">
+  <label class="toggle"><input type="checkbox" x-model="draft.has_daily"> {{.T "project.fields.has_daily"}}</label>
+  <div class="field" x-show="draft.has_daily">
+    <label for="routine-daily">{{.T "project.fields.daily_time"}}</label>
+    <input id="routine-daily" type="time" :required="draft.has_daily" x-model="draft.daily_time">
+  </div>
+</div>
+<div class="routine">
+  <label class="toggle"><input type="checkbox" x-model="draft.has_weekly"> {{.T "project.fields.has_weekly"}}</label>
+  <div class="fields" x-show="draft.has_weekly">
+    <div class="field">
+      <label for="routine-weekly-day">{{.T "project.fields.weekly_day"}}</label>
+      <select id="routine-weekly-day" :required="draft.has_weekly" x-model="draft.weekly_sync_day">
+        <option value="" disabled>{{.T "project.fields.pick_day"}}</option>
+        <template x-for="d in WTT.weekdays" :key="d.value">
+          <option :value="d.value" x-text="d.label" :selected="d.value === draft.weekly_sync_day"></option>
+        </template>
+      </select>
+    </div>
+    <div class="field">
+      <label for="routine-weekly-time">{{.T "project.fields.weekly_time"}}</label>
+      <input id="routine-weekly-time" type="time" :required="draft.has_weekly" x-model="draft.weekly_sync_time">
+    </div>
+  </div>
+</div>
+{{end}}

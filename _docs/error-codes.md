@@ -171,8 +171,10 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `project.invalid_organization` | 400 | — | `organização inválida` | `invalid organization` |
 | `project.invalid_sprint` | 400 | — | `a sprint precisa ter entre 1 e 90 dias` | `the sprint must be between 1 and 90 days long` |
 | `project.invalid_weekday` | 400 | — | `dia da weekly inválido: use monday, tuesday, wednesday, thursday, friday, saturday ou sunday` | `invalid weekly day: use monday, tuesday, wednesday, thursday, friday, saturday or sunday` |
+| `project.invalid_weekly_time` | 400 | — | `o horário da weekly deve estar no formato HH:MM, por exemplo 13:00` | `the weekly time must use the HH:MM format, for example 13:00` |
 | `project.name_required` | 400 | — | `informe o nome do projeto` | `enter the project name` |
 | `project.not_found` | 404 | — | `projeto não encontrado` | `project not found` |
+| `project.weekly_time_without_day` | 400 | — | `o horário da weekly precisa do dia da weekly` | `the weekly time needs the weekly day` |
 
 ### request
 

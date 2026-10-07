@@ -261,7 +261,7 @@ org:
       one: "Sprint de {{.count}} dia"
       other: "Sprint de {{.count}} dias"
     daily_badge: "Daily {{.time}}"
-    weekly_badge: "Weekly {{.day}}"
+    weekly_badge: "Weekly {{.slot}}"
     customers_load_failed: "Não deu para carregar os clientes: {{.error}}"
     rate_invalid: Informe o valor cobrado por hora, por exemplo 150,00.
     rate_too_high: O valor cobrado por hora deve ficar entre 0 e 1.000.000,00.
@@ -280,10 +280,21 @@ project:
     settings: Configurações
     management: Gestão
     back: Voltar ao projeto
+  groups:
+    about: Projeto
+    billing: Cliente e cobrança
+    routine: Rotina do time
   fields:
     sprint: Duração da sprint
+    daily: Daily
+    weekly: Weekly
+    has_daily: O projeto tem daily
+    has_weekly: O projeto tem weekly
     daily_time: Horário da daily
     weekly_day: Dia da weekly
+    weekly_time: Horário da weekly
+    pick_day: Escolha o dia
+    no_daily: Sem daily
     no_weekly: Sem weekly
     bill_rate: "Valor cobrado por hora ({{.unit}})"
 
@@ -491,9 +502,7 @@ project_settings:
   bill_rate_fact: Valor cobrado por hora
   bill_rate_note: O valor cobrado é o que o cliente paga à organização. Só admins veem.
   edit_title: Editar projeto
-  no_daily: Sem daily
   delete_confirm: Excluir o projeto? Os times, as tarefas, as sessões de trabalho e as integrações dele são apagados.
-  daily_hint: Deixe vazio se o time não faz daily.
   billing_title: Cliente e cobrança
   customers_hint: Cadastre clientes em
   rate_placeholder: "0,00"
@@ -690,6 +699,7 @@ labels:
       one: "{{.count}} dia"
       other: "{{.count}} dias"
   weekly_hours: "{{.hours}}h por semana"
+  weekly_slot: "{{.day}} às {{.time}}"
   weekly_hours_none: Não informada
   weekday:
     monday: Segunda-feira
@@ -812,6 +822,8 @@ errors:
     invalid_organization: "organização inválida"
     invalid_sprint: "a sprint precisa ter entre 1 e 90 dias"
     invalid_weekday: "dia da weekly inválido: use monday, tuesday, wednesday, thursday, friday, saturday ou sunday"
+    invalid_weekly_time: "o horário da weekly deve estar no formato HH:MM, por exemplo 13:00"
+    weekly_time_without_day: "o horário da weekly precisa do dia da weekly"
     name_required: "informe o nome do projeto"
     not_found: "projeto não encontrado"
   request:

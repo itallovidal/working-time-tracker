@@ -183,6 +183,26 @@ func (_u *ProjectUpdate) ClearWeeklySyncDay() *ProjectUpdate {
 	return _u
 }
 
+// SetWeeklySyncTime sets the "weekly_sync_time" field.
+func (_u *ProjectUpdate) SetWeeklySyncTime(v string) *ProjectUpdate {
+	_u.mutation.SetWeeklySyncTime(v)
+	return _u
+}
+
+// SetNillableWeeklySyncTime sets the "weekly_sync_time" field if the given value is not nil.
+func (_u *ProjectUpdate) SetNillableWeeklySyncTime(v *string) *ProjectUpdate {
+	if v != nil {
+		_u.SetWeeklySyncTime(*v)
+	}
+	return _u
+}
+
+// ClearWeeklySyncTime clears the value of the "weekly_sync_time" field.
+func (_u *ProjectUpdate) ClearWeeklySyncTime() *ProjectUpdate {
+	_u.mutation.ClearWeeklySyncTime()
+	return _u
+}
+
 // SetCustomerID sets the "customer_id" field.
 func (_u *ProjectUpdate) SetCustomerID(v uuid.UUID) *ProjectUpdate {
 	_u.mutation.SetCustomerID(v)
@@ -491,6 +511,12 @@ func (_u *ProjectUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.WeeklySyncDayCleared() {
 		_spec.ClearField(project.FieldWeeklySyncDay, field.TypeString)
+	}
+	if value, ok := _u.mutation.WeeklySyncTime(); ok {
+		_spec.SetField(project.FieldWeeklySyncTime, field.TypeString, value)
+	}
+	if _u.mutation.WeeklySyncTimeCleared() {
+		_spec.ClearField(project.FieldWeeklySyncTime, field.TypeString)
 	}
 	if value, ok := _u.mutation.BillRateCents(); ok {
 		_spec.SetField(project.FieldBillRateCents, field.TypeInt, value)
@@ -908,6 +934,26 @@ func (_u *ProjectUpdateOne) ClearWeeklySyncDay() *ProjectUpdateOne {
 	return _u
 }
 
+// SetWeeklySyncTime sets the "weekly_sync_time" field.
+func (_u *ProjectUpdateOne) SetWeeklySyncTime(v string) *ProjectUpdateOne {
+	_u.mutation.SetWeeklySyncTime(v)
+	return _u
+}
+
+// SetNillableWeeklySyncTime sets the "weekly_sync_time" field if the given value is not nil.
+func (_u *ProjectUpdateOne) SetNillableWeeklySyncTime(v *string) *ProjectUpdateOne {
+	if v != nil {
+		_u.SetWeeklySyncTime(*v)
+	}
+	return _u
+}
+
+// ClearWeeklySyncTime clears the value of the "weekly_sync_time" field.
+func (_u *ProjectUpdateOne) ClearWeeklySyncTime() *ProjectUpdateOne {
+	_u.mutation.ClearWeeklySyncTime()
+	return _u
+}
+
 // SetCustomerID sets the "customer_id" field.
 func (_u *ProjectUpdateOne) SetCustomerID(v uuid.UUID) *ProjectUpdateOne {
 	_u.mutation.SetCustomerID(v)
@@ -1246,6 +1292,12 @@ func (_u *ProjectUpdateOne) sqlSave(ctx context.Context) (_node *Project, err er
 	}
 	if _u.mutation.WeeklySyncDayCleared() {
 		_spec.ClearField(project.FieldWeeklySyncDay, field.TypeString)
+	}
+	if value, ok := _u.mutation.WeeklySyncTime(); ok {
+		_spec.SetField(project.FieldWeeklySyncTime, field.TypeString, value)
+	}
+	if _u.mutation.WeeklySyncTimeCleared() {
+		_spec.ClearField(project.FieldWeeklySyncTime, field.TypeString)
 	}
 	if value, ok := _u.mutation.BillRateCents(); ok {
 		_spec.SetField(project.FieldBillRateCents, field.TypeInt, value)

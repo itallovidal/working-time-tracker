@@ -232,6 +232,17 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 .field label, .field-label { font-size: 0.84rem; font-weight: 600; color: var(--ink-2); }
 .field .hint { font-size: 0.8rem; color: var(--muted); }
 .fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+/* Um grupo de campos de um formulário longo, com o nome dele na borda. */
+.form-group {
+  display: flex; flex-direction: column; gap: 12px; min-width: 0; margin: 0;
+  padding: 14px 16px 16px; border: 1px solid var(--rule); border-radius: var(--radius);
+}
+.form-group > legend { padding: 0 6px; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+.form-group > .hint { font-size: 0.8rem; color: var(--muted); }
+/* Daily ou weekly: a marca que diz se o projeto tem, e o horário que ela liga. */
+.routine { display: flex; flex-direction: column; gap: 10px; padding-top: 12px; border-top: 1px solid var(--rule); }
+.toggle { display: flex; align-items: center; gap: 10px; font-size: 0.92rem; font-weight: 600; color: var(--ink); cursor: pointer; }
+.toggle input { width: auto; flex: none; accent-color: var(--accent); }
 input, select, textarea {
   font: inherit; color: var(--ink); background: var(--surface);
   border: 1px solid var(--rule-strong); border-radius: var(--radius-sm);

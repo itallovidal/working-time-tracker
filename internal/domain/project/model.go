@@ -29,6 +29,7 @@ type Project struct {
 	SprintDurationDays int       `json:"sprint_duration_days"`
 	DailyTime          *string   `json:"daily_time,omitempty"`
 	WeeklySyncDay      *string   `json:"weekly_sync_day,omitempty"`
+	WeeklySyncTime     *string   `json:"weekly_sync_time,omitempty"`
 	// Customer é nil em projetos internos.
 	Customer *CustomerRef `json:"customer"`
 	// MemberCount conta os colaboradores do projeto, sem repetir: quem está em

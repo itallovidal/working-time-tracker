@@ -53,28 +53,39 @@
        Os campos seguem a ordem do modal Novo projeto. */}}
   <template x-teleport="#modal-root">
     <form class="stack" x-show="$store.modal.name === 'project-edit'" @submit.prevent="save()">
-      <div class="field">
-        <label for="ps-name">{{.T "common.name"}}</label>
-        <input id="ps-name" type="text" required x-model="draft.name" data-autofocus>
-      </div>
-      <div class="fields">
+      <fieldset class="form-group">
+        <legend>{{.T "project.groups.about"}}</legend>
         <div class="field">
-          <label for="ps-customer">{{.T "org.projects.customer"}}</label>
-          <select id="ps-customer" x-model="draft.customer_id">
-            <option value="">{{.T "project_settings.internal"}}</option>
-            <template x-for="c in customers" :key="c.id">
-              <option :value="c.id" x-text="c.name" :selected="c.id === draft.customer_id"></option>
-            </template>
-          </select>
-          <span class="hint">{{.T "project_settings.customers_hint"}} <a href="/orgs/{{.OrgID}}/customers">{{.T "org.head.title"}} › {{.T "org.head.customers"}}</a>.</span>
+          <label for="ps-name">{{.T "common.name"}}</label>
+          <input id="ps-name" type="text" required x-model="draft.name" data-autofocus>
         </div>
         <div class="field">
-          <label for="ps-bill-rate" x-text="$t('project.fields.bill_rate', { unit: WTT.fmt.moneyUnit() })"></label>
-          <input id="ps-bill-rate" type="text" inputmode="decimal" class="num" placeholder="{{.T "project_settings.rate_placeholder"}}" x-model="draft.rate">
-          <span class="hint">{{.T "project_settings.bill_rate_hint"}}</span>
+          <label for="ps-description">{{.T "common.description_label"}}</label>
+          <textarea id="ps-description" x-model="draft.description" placeholder="{{.T "common.optional"}}"></textarea>
         </div>
-      </div>
-      <div class="fields">
+      </fieldset>
+      <fieldset class="form-group">
+        <legend>{{.T "project.groups.billing"}}</legend>
+        <div class="fields">
+          <div class="field">
+            <label for="ps-customer">{{.T "org.projects.customer"}}</label>
+            <select id="ps-customer" x-model="draft.customer_id">
+              <option value="">{{.T "project_settings.internal"}}</option>
+              <template x-for="c in customers" :key="c.id">
+                <option :value="c.id" x-text="c.name" :selected="c.id === draft.customer_id"></option>
+              </template>
+            </select>
+            <span class="hint">{{.T "project_settings.customers_hint"}} <a href="/orgs/{{.OrgID}}/customers">{{.T "org.head.title"}} › {{.T "org.head.customers"}}</a>.</span>
+          </div>
+          <div class="field">
+            <label for="ps-bill-rate" x-text="$t('project.fields.bill_rate', { unit: WTT.fmt.moneyUnit() })"></label>
+            <input id="ps-bill-rate" type="text" inputmode="decimal" class="num" placeholder="{{.T "project_settings.rate_placeholder"}}" x-model="draft.rate">
+            <span class="hint">{{.T "project_settings.bill_rate_hint"}}</span>
+          </div>
+        </div>
+      </fieldset>
+      <fieldset class="form-group">
+        <legend>{{.T "project.groups.routine"}}</legend>
         <div class="field">
           <label for="ps-sprint">{{.T "project.fields.sprint"}}</label>
           <select id="ps-sprint" x-model.number="draft.sprint_duration_days">
@@ -83,25 +94,8 @@
             </template>
           </select>
         </div>
-        <div class="field">
-          <label for="ps-daily">{{.T "project.fields.daily_time"}}</label>
-          <input id="ps-daily" type="time" x-model="draft.daily_time">
-          <span class="hint">{{.T "project_settings.daily_hint"}}</span>
-        </div>
-        <div class="field">
-          <label for="ps-weekly">{{.T "project.fields.weekly_day"}}</label>
-          <select id="ps-weekly" x-model="draft.weekly_sync_day">
-            <option value="">{{.T "project.fields.no_weekly"}}</option>
-            <template x-for="d in WTT.weekdays" :key="d.value">
-              <option :value="d.value" x-text="d.label" :selected="d.value === draft.weekly_sync_day"></option>
-            </template>
-          </select>
-        </div>
-      </div>
-      <div class="field">
-        <label for="ps-description">{{.T "common.description_label"}}</label>
-        <textarea id="ps-description" x-model="draft.description" placeholder="{{.T "common.optional"}}"></textarea>
-      </div>
+        {{template "project_routine" .}}
+      </fieldset>
       <p class="form-error" x-show="errors.save" x-text="errors.save" role="alert"></p>
       <p class="form-error" x-show="errors.delete" x-text="errors.delete" role="alert"></p>
       <div class="confirm" x-cloak x-show="confirmDelete">

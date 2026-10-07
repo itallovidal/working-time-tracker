@@ -399,6 +399,16 @@
 
 ---
 
+### Sprint 31: Optional Daily and Weekly, Weekly Time
+
+- [X] S31.1 `projects.weekly_sync_time` (nullable `HH:MM`) with a migration; `weekly_sync_time` in the project create/update API, cleared with the day, refused without it (`project.invalid_weekly_time`, `project.weekly_time_without_day`)
+- [X] S31.2 "O projeto tem daily" and "O projeto tem weekly" in the New project and Edit project modals: the time (and the weekly day) only appear when the project has the meeting, and are required then
+- [X] S31.3 The two modals group their fields in Projeto, Cliente e cobrança and Rotina do time; the daily and weekly markup is the `project_routine` partial
+- [X] S31.4 The settings card and the project card badge show "Weekly Sexta às 14:00" and "Sem daily"/"Sem weekly"; the seed has a project with only a weekly and one with only a daily
+- [X] S31.5 Tests for the service rules and the modals; update README, design, routes, error codes and the Insomnia collection
+
+---
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open

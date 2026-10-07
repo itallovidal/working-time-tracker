@@ -96,6 +96,11 @@ func WeeklySyncDay(v string) predicate.Project {
 	return predicate.Project(sql.FieldEQ(FieldWeeklySyncDay, v))
 }
 
+// WeeklySyncTime applies equality check predicate on the "weekly_sync_time" field. It's identical to WeeklySyncTimeEQ.
+func WeeklySyncTime(v string) predicate.Project {
+	return predicate.Project(sql.FieldEQ(FieldWeeklySyncTime, v))
+}
+
 // CustomerID applies equality check predicate on the "customer_id" field. It's identical to CustomerIDEQ.
 func CustomerID(v uuid.UUID) predicate.Project {
 	return predicate.Project(sql.FieldEQ(FieldCustomerID, v))
@@ -609,6 +614,81 @@ func WeeklySyncDayEqualFold(v string) predicate.Project {
 // WeeklySyncDayContainsFold applies the ContainsFold predicate on the "weekly_sync_day" field.
 func WeeklySyncDayContainsFold(v string) predicate.Project {
 	return predicate.Project(sql.FieldContainsFold(FieldWeeklySyncDay, v))
+}
+
+// WeeklySyncTimeEQ applies the EQ predicate on the "weekly_sync_time" field.
+func WeeklySyncTimeEQ(v string) predicate.Project {
+	return predicate.Project(sql.FieldEQ(FieldWeeklySyncTime, v))
+}
+
+// WeeklySyncTimeNEQ applies the NEQ predicate on the "weekly_sync_time" field.
+func WeeklySyncTimeNEQ(v string) predicate.Project {
+	return predicate.Project(sql.FieldNEQ(FieldWeeklySyncTime, v))
+}
+
+// WeeklySyncTimeIn applies the In predicate on the "weekly_sync_time" field.
+func WeeklySyncTimeIn(vs ...string) predicate.Project {
+	return predicate.Project(sql.FieldIn(FieldWeeklySyncTime, vs...))
+}
+
+// WeeklySyncTimeNotIn applies the NotIn predicate on the "weekly_sync_time" field.
+func WeeklySyncTimeNotIn(vs ...string) predicate.Project {
+	return predicate.Project(sql.FieldNotIn(FieldWeeklySyncTime, vs...))
+}
+
+// WeeklySyncTimeGT applies the GT predicate on the "weekly_sync_time" field.
+func WeeklySyncTimeGT(v string) predicate.Project {
+	return predicate.Project(sql.FieldGT(FieldWeeklySyncTime, v))
+}
+
+// WeeklySyncTimeGTE applies the GTE predicate on the "weekly_sync_time" field.
+func WeeklySyncTimeGTE(v string) predicate.Project {
+	return predicate.Project(sql.FieldGTE(FieldWeeklySyncTime, v))
+}
+
+// WeeklySyncTimeLT applies the LT predicate on the "weekly_sync_time" field.
+func WeeklySyncTimeLT(v string) predicate.Project {
+	return predicate.Project(sql.FieldLT(FieldWeeklySyncTime, v))
+}
+
+// WeeklySyncTimeLTE applies the LTE predicate on the "weekly_sync_time" field.
+func WeeklySyncTimeLTE(v string) predicate.Project {
+	return predicate.Project(sql.FieldLTE(FieldWeeklySyncTime, v))
+}
+
+// WeeklySyncTimeContains applies the Contains predicate on the "weekly_sync_time" field.
+func WeeklySyncTimeContains(v string) predicate.Project {
+	return predicate.Project(sql.FieldContains(FieldWeeklySyncTime, v))
+}
+
+// WeeklySyncTimeHasPrefix applies the HasPrefix predicate on the "weekly_sync_time" field.
+func WeeklySyncTimeHasPrefix(v string) predicate.Project {
+	return predicate.Project(sql.FieldHasPrefix(FieldWeeklySyncTime, v))
+}
+
+// WeeklySyncTimeHasSuffix applies the HasSuffix predicate on the "weekly_sync_time" field.
+func WeeklySyncTimeHasSuffix(v string) predicate.Project {
+	return predicate.Project(sql.FieldHasSuffix(FieldWeeklySyncTime, v))
+}
+
+// WeeklySyncTimeIsNil applies the IsNil predicate on the "weekly_sync_time" field.
+func WeeklySyncTimeIsNil() predicate.Project {
+	return predicate.Project(sql.FieldIsNull(FieldWeeklySyncTime))
+}
+
+// WeeklySyncTimeNotNil applies the NotNil predicate on the "weekly_sync_time" field.
+func WeeklySyncTimeNotNil() predicate.Project {
+	return predicate.Project(sql.FieldNotNull(FieldWeeklySyncTime))
+}
+
+// WeeklySyncTimeEqualFold applies the EqualFold predicate on the "weekly_sync_time" field.
+func WeeklySyncTimeEqualFold(v string) predicate.Project {
+	return predicate.Project(sql.FieldEqualFold(FieldWeeklySyncTime, v))
+}
+
+// WeeklySyncTimeContainsFold applies the ContainsFold predicate on the "weekly_sync_time" field.
+func WeeklySyncTimeContainsFold(v string) predicate.Project {
+	return predicate.Project(sql.FieldContainsFold(FieldWeeklySyncTime, v))
 }
 
 // CustomerIDEQ applies the EQ predicate on the "customer_id" field.

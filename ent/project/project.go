@@ -31,6 +31,8 @@ const (
 	FieldDailyTime = "daily_time"
 	// FieldWeeklySyncDay holds the string denoting the weekly_sync_day field in the database.
 	FieldWeeklySyncDay = "weekly_sync_day"
+	// FieldWeeklySyncTime holds the string denoting the weekly_sync_time field in the database.
+	FieldWeeklySyncTime = "weekly_sync_time"
 	// FieldCustomerID holds the string denoting the customer_id field in the database.
 	FieldCustomerID = "customer_id"
 	// FieldBillRateCents holds the string denoting the bill_rate_cents field in the database.
@@ -106,6 +108,7 @@ var Columns = []string{
 	FieldSprintDurationDays,
 	FieldDailyTime,
 	FieldWeeklySyncDay,
+	FieldWeeklySyncTime,
 	FieldCustomerID,
 	FieldBillRateCents,
 	FieldCreatedAt,
@@ -178,6 +181,11 @@ func ByDailyTime(opts ...sql.OrderTermOption) OrderOption {
 // ByWeeklySyncDay orders the results by the weekly_sync_day field.
 func ByWeeklySyncDay(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldWeeklySyncDay, opts...).ToFunc()
+}
+
+// ByWeeklySyncTime orders the results by the weekly_sync_time field.
+func ByWeeklySyncTime(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldWeeklySyncTime, opts...).ToFunc()
 }
 
 // ByCustomerID orders the results by the customer_id field.
