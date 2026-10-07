@@ -454,7 +454,6 @@ tasks:
   label_create: Criar
   pick_person: Escolha a pessoa
   unassigned_hint: "Sem responsável, a tarefa fica disponível: quem bater o ponto nela passa a ser o responsável."
-  only_mine: Só as minhas tarefas
   new: Nova tarefa
   loading: Carregando tarefas…
   none_filtered: Nenhuma tarefa com esses filtros
@@ -463,7 +462,6 @@ tasks:
   section_free_hint: Ninguém pegou estas tarefas. Quem bater o ponto numa delas passa a ser o responsável.
   section_taken: Com responsável
   section_taken_hint: Tarefas que já estão com alguém que não é você.
-  section_mine_hint: Tarefas que estão com você.
   free_none: Nenhuma tarefa livre. Todas as tarefas do projeto têm responsável.
   taken_none: Nenhuma tarefa com outras pessoas ainda.
   row_hint: Clique em uma tarefa para abrir os detalhes.

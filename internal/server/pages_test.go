@@ -384,9 +384,9 @@ func TestPages_ProjectCollaboratorsTab(t *testing.T) {
 	}
 }
 
-// A aba Tarefas tem a linha de filtros, a caixa "Só as minhas tarefas" logo
-// abaixo dela, desligando a busca e o filtro de responsável, e o formulário de
-// nova tarefa no modal. Admin e membro veem a mesma tela.
+// A aba Tarefas tem a linha de filtros (busca, prazo, prioridade, status e etiqueta), o filtro de
+// responsável dentro da lista Com responsável, sem a caixa "Só as minhas tarefas" (as suas ficam em
+// Minhas tarefas), e o formulário de nova tarefa no modal. Admin e membro veem a mesma tela.
 func TestPages_ProjectTasksTab(t *testing.T) {
 	e := newServer(t)
 	admin := signup(t, e, "Org", "ana@test.com")
@@ -397,10 +397,10 @@ func TestPages_ProjectTasksTab(t *testing.T) {
 		body := do(e, "GET", "/projects/"+projectID+"/tasks", "", session).Body.String()
 		for _, want := range []string{
 			`aria-label="Buscar tarefa pelo nome"`, `aria-label="Filtrar por responsável"`, `aria-label="Filtrar por prazo"`,
-			"Só as minhas tarefas", `class="pager"`,
+			`class="pager"`,
 			"Nova tarefa", `x-teleport="#modal-root"`, `x-show="$store.modal.name === 'task-new'"`, `id="task-name"`, `id="task-assignee"`,
 			// A página diz o que é e tem duas listas, cada uma com a sua página: as sem responsável e as que têm.
-			`class="lede muted"`, "Aqui estão as tarefas que ninguém pegou", `x-for="key in taskLists"`, `listShown(key)`, `go(key, lists[key].page + 1)`,
+			`class="lede muted"`, "Aqui estão as tarefas que ninguém pegou", `x-for="key in taskLists"`, `go(key, lists[key].page + 1)`,
 			// Uma tarefa pode ficar sem responsável, e a lista mostra o que está disponível.
 			"Lista de tarefas", "Atribuir a mim", "Outra pessoa", `value="none" x-model="draft.assign"`,
 			// Prioridade e etiqueta: os filtros (várias de cada), a coluna e os campos do modal.
@@ -422,12 +422,22 @@ func TestPages_ProjectTasksTab(t *testing.T) {
 		if strings.Contains(body, `id="task-assignee" required`) {
 			t.Errorf("%s: the assignee of a new task is still required", who)
 		}
-		if n := strings.Count(body, `:disabled="filters.mine"`); n != 2 {
-			t.Errorf("%s: %d fields are turned off by the 'only mine' box, want the search and the assignee filter", who, n)
+		// Sem a caixa "Só as minhas tarefas": ela desligava a busca e o responsável, e as tarefas da pessoa já
+		// têm a aba delas. Nada na tela fica desligado por ela, e o script não guarda mais o estado.
+		for _, not := range []string{"Só as minhas tarefas", "toggleMine", "filters.mine", `:disabled="filters.`, "listShown"} {
+			if strings.Contains(body, not) {
+				t.Errorf("%s: the tasks tab still has %q", who, not)
+			}
 		}
-		filters, mine, table := strings.Index(body, `aria-label="Filtrar por prazo"`), strings.Index(body, "Só as minhas tarefas"), strings.Index(body, "<table>")
-		if !(filters < mine && mine < table) {
-			t.Errorf("%s: the 'only mine' box is not between the filters and the table", who)
+		// O responsável filtra só a lista Com responsável: o select fica dentro dela, depois dos filtros do
+		// topo e antes da tabela, e só aparece nessa lista.
+		due, list, assignee, table := strings.Index(body, `aria-label="Filtrar por prazo"`), strings.Index(body, `x-for="key in taskLists"`),
+			strings.Index(body, `aria-label="Filtrar por responsável"`), strings.Index(body, "<table>")
+		if !(due < list && list < assignee && assignee < table) {
+			t.Errorf("%s: the assignee filter is not inside the lists, between the top filters and the table", who)
+		}
+		if !strings.Contains(body, `x-show="key === 'taken' && (lists.taken.total > 0 || filters.assignee)"`) {
+			t.Errorf("%s: the assignee filter is not limited to the list of the tasks with an assignee", who)
 		}
 	}
 }
@@ -936,8 +946,8 @@ func TestPages_ProjectIntegrationsTab(t *testing.T) {
 		`class="chip" :class="priorityClass(p.value)"`, `class="chip" :class="statusClass(s.value)"`,
 		`class="badge" :class="priorityClass(t.priority)" x-text="WTT.fmt.priority(t.priority)"`, `class="badge" :class="statusClass(t.status)"`,
 		`class="select-tone" :class="priorityClass(draft.priority)"`,
-		// A descrição da seção Com responsável é do script: ela diz que são tarefas de outras pessoas.
-		`x-text="key === 'free' ? $t('tasks.section_free_hint') : takenHint()"`,
+		// A descrição da seção Com responsável diz que são tarefas de quem não é a pessoa.
+		`x-text="key === 'free' ? $t('tasks.section_free_hint') : $t('tasks.section_taken_hint')"`,
 	} {
 		if !strings.Contains(board, want) {
 			t.Errorf("the board does not contain %q", want)

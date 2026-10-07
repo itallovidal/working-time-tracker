@@ -444,7 +444,6 @@ tasks:
   label_create: Create
   pick_person: Pick the person
   unassigned_hint: "Without an assignee the task is available: whoever clocks in on it becomes the assignee."
-  only_mine: Only my tasks
   new: New task
   loading: Loading tasks…
   none_filtered: No tasks match these filters
@@ -453,7 +452,6 @@ tasks:
   section_free_hint: Nobody has picked these tasks up. Whoever clocks in on one becomes its assignee.
   section_taken: Assigned
   section_taken_hint: Tasks that are already with someone who is not you.
-  section_mine_hint: Tasks that are with you.
   free_none: No free tasks. Every task in the project has an assignee.
   taken_none: No tasks with other people yet.
   row_hint: Click a task to open its details.

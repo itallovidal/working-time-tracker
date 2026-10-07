@@ -559,6 +559,15 @@
 
 ---
 
+### Sprint 47: Filters by List
+
+- [X] S47.1 The "Só as minhas tarefas" box is removed from the Lista de tarefas (state, URL parameter `mine`, texts), since the person's tasks have their own tab; this replaces the part of S46.2 and S46.3 about choosing yourself
+- [X] S47.2 The assignee filter moves into the **Com responsável** section and filters only that list; the **Sem responsável** list is no longer filtered by it nor hidden when a person is chosen; the select does not list the logged-in person, and an `assignee` with the person's own id in the URL is ignored
+- [X] S47.3 At the top stay the filters of both lists: search by name, deadline, priority, status and label; the empty message of each list considers only the filters that apply to it
+- [X] S47.4 Test of the page markup (no box, nothing turned off, the select inside the lists and only for the list with an assignee); checked in the browser (the top bar, the people in the select, a chosen person with the free list untouched, Limpar filtros, old URLs with `mine=1` and the person's id, and the search over both lists); update README and design; no API change
+
+---
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open

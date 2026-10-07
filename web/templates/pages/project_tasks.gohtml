@@ -9,13 +9,7 @@
     <div class="stack">
       <div class="row filters">
         <input type="search" placeholder="{{.T "tasks.search_placeholder"}}" aria-label="{{.T "tasks.search_label"}}"
-               x-model="filters.q" @input.debounce.300ms="apply()" :disabled="filters.mine">
-        <select aria-label="{{.T "tasks.assignee_filter"}}" x-model="filters.assignee" @change="apply()" :disabled="filters.mine">
-          <option value="">{{.T "tasks.all_assignees"}}</option>
-          <template x-for="p in assigneeOptions()" :key="p.id">
-            <option :value="p.id" x-text="p.name" :selected="p.id === filters.assignee"></option>
-          </template>
-        </select>
+               x-model="filters.q" @input.debounce.300ms="apply()">
         <select aria-label="{{.T "tasks.due_filter"}}" x-model="filters.due" @change="apply()">
           <option value="">{{.T "tasks.any_due"}}</option>
           <template x-for="o in dueOptions" :key="o.value">
@@ -44,12 +38,6 @@
           <button type="button" class="chip" :aria-pressed="filters.label.includes(l.id)" @click="toggleFilter('label', l.id)" x-text="l.name"></button>
         </template>
       </div>
-      {{/* Marcada, a caixa desliga a busca e o filtro de responsável: só o prazo continua valendo. */}}
-      <div>
-        <label class="check">
-          <input type="checkbox" :checked="filters.mine" @change="toggleMine($event.target.checked)"> {{.T "tasks.only_mine"}}
-        </label>
-      </div>
     </div>
     <button type="button" class="btn self-start" @click="openCreate()">{{template "icon" "plus"}} {{.T "tasks.new"}}</button>
   </div>
@@ -66,18 +54,28 @@
        Escolher uma pessoa no filtro esconde a primeira, que por definição não tem dono. */}}
   <div class="stack stack-sections" x-cloak x-show="!loading">
     <template x-for="key in taskLists" :key="key">
-      <section class="stack" x-show="listShown(key)" :aria-labelledby="'tasks-' + key + '-title'">
+      <section class="stack" :aria-labelledby="'tasks-' + key + '-title'">
         <div class="section-head">
           <div class="row row-tight">
             <h2 :id="'tasks-' + key + '-title'" x-text="key === 'free' ? $t('tasks.section_free') : $t('tasks.section_taken')"></h2>
             <span class="badge num" x-text="lists[key].total"></span>
           </div>
-          <p class="muted small" x-text="key === 'free' ? $t('tasks.section_free_hint') : takenHint()"></p>
+          <p class="muted small" x-text="key === 'free' ? $t('tasks.section_free_hint') : $t('tasks.section_taken_hint')"></p>
           <p class="muted small" x-show="lists[key].tasks.length > 0">{{.T "tasks.row_hint"}}</p>
         </div>
 
+        {{/* O responsável só filtra a lista dos que têm um, e não inclui você: as suas ficam em Minhas tarefas. */}}
+        <div class="row filters" x-cloak x-show="key === 'taken' && (lists.taken.total > 0 || filters.assignee)">
+          <select aria-label="{{.T "tasks.assignee_filter"}}" x-model="filters.assignee" @change="apply()">
+            <option value="">{{.T "tasks.all_assignees"}}</option>
+            <template x-for="p in assigneeOptions()" :key="p.id">
+              <option :value="p.id" x-text="p.name" :selected="p.id === filters.assignee"></option>
+            </template>
+          </select>
+        </div>
+
         <div class="empty" x-show="lists[key].total === 0">
-          <strong x-text="hasFilters() ? $t('tasks.none_filtered') : (key === 'free' ? $t('tasks.free_none') : $t('tasks.taken_none'))"></strong>
+          <strong x-text="listFiltered(key) ? $t('tasks.none_filtered') : (key === 'free' ? $t('tasks.free_none') : $t('tasks.taken_none'))"></strong>
         </div>
 
         <div class="table-wrap" x-show="lists[key].tasks.length > 0">

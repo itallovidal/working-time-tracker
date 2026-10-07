@@ -389,10 +389,9 @@ document.addEventListener('alpine:init', () => {
     ...labelTools(),
     members: [], // quem está no projeto: pode ser responsável por tarefa nova
     assignees: [], // quem já é responsável por alguma tarefa, mesmo fora dos times
-    // mine é a caixa "Só as minhas tarefas": ligada, prende o responsável em
-    // quem está logado e desliga a busca e o filtro de responsável.
     // priority, status e label são listas: a tarefa passa se tem qualquer uma das marcadas.
-    filters: { q: '', assignee: '', due: '', date: '', mine: false, priority: [], status: [], label: [] },
+    // assignee só vale para a lista Com responsável: a das sem responsável não tem dono.
+    filters: { q: '', assignee: '', due: '', date: '', priority: [], status: [], label: [] },
     dueOptions,
     seq: 0,
     draft: { name: '', description: '', assign: 'none', assignee_id: '', deadline: '', priority: 'none', label_ids: [] }, // assign: me, none ou other
@@ -417,14 +416,13 @@ document.addEventListener('alpine:init', () => {
       const p = new URLSearchParams(location.search);
       const due = p.get('due') || '';
       const isDate = /^\d{4}-\d{2}-\d{2}$/.test(due);
-      const assignee = /^[0-9a-f-]{36}$/i.test(p.get('assignee') || '') ? p.get('assignee') : '';
-      const mine = p.get('mine') === '1';
+      // As tarefas de quem está logado ficam em Minhas tarefas: a lista não as mostra.
+      const assignee = /^[0-9a-f-]{36}$/i.test(p.get('assignee') || '') && p.get('assignee') !== me.id ? p.get('assignee') : '';
       this.filters = {
-        q: mine ? '' : (p.get('q') || ''),
-        assignee: mine ? me.id : assignee,
+        q: p.get('q') || '',
+        assignee,
         due: isDate ? 'date' : (dueOptions.some((o) => o.value === due) ? due : ''),
         date: isDate ? due : '',
-        mine,
         priority: (p.get('priority') || '').split(',').filter((v) => WTT.priorities.some((o) => o.value === v)),
         status: (p.get('status') || '').split(',').filter((v) => WTT.taskStatuses.some((o) => o.value === v)),
         label: (p.get('label') || '').split(',').filter((v) => /^[0-9a-f-]{36}$/i.test(v)),
@@ -436,12 +434,8 @@ document.addEventListener('alpine:init', () => {
     writeURL() {
       const f = this.filters;
       const p = new URLSearchParams();
-      if (f.mine) {
-        p.set('mine', '1');
-      } else {
-        if (f.q.trim()) p.set('q', f.q.trim());
-        if (f.assignee) p.set('assignee', f.assignee);
-      }
+      if (f.q.trim()) p.set('q', f.q.trim());
+      if (f.assignee) p.set('assignee', f.assignee);
       const due = f.due === 'date' ? f.date : f.due;
       if (due) p.set('due', due);
       if (f.priority.length) p.set('priority', f.priority.join(','));
@@ -457,15 +451,6 @@ document.addEventListener('alpine:init', () => {
       } catch (e) {
         // Sem sessionStorage o Voltar da tarefa só deixa de lembrar os filtros.
       }
-    },
-    // A lista das sem responsável some quando se escolhe uma pessoa: ela já tem dono.
-    listShown(key) {
-      return key === 'taken' || !this.filters.assignee;
-    },
-    // takenHint diz o que a lista Com responsável mostra: as tarefas de outras pessoas, ou as da
-    // própria pessoa quando ela as escolhe no filtro ("Só as minhas tarefas" ou o responsável).
-    takenHint() {
-      return WTT.t(this.filters.assignee === me.id ? 'tasks.section_mine_hint' : 'tasks.section_taken_hint');
     },
     // loadList busca a página em uso de uma lista: a das sem responsável pede assignee_id=none,
     // e a das com responsável, a pessoa escolhida ou, sem escolha, as de outras pessoas (others):
@@ -489,13 +474,9 @@ document.addEventListener('alpine:init', () => {
     async load() {
       const seq = ++this.seq;
       try {
-        const keys = taskLists.filter((key) => this.listShown(key));
-        const results = await Promise.all(keys.map((key) => this.loadList(key)));
+        const results = await Promise.all(taskLists.map((key) => this.loadList(key)));
         if (seq !== this.seq) return;
-        taskLists.forEach((key) => {
-          if (!keys.includes(key)) this.lists[key] = { ...emptyList(), page: 1 };
-        });
-        keys.forEach((key, i) => {
+        taskLists.forEach((key, i) => {
           const res = results[i];
           this.lists[key] = {
             tasks: res.items || [],
@@ -521,7 +502,7 @@ document.addEventListener('alpine:init', () => {
       return this.load();
     },
     clear() {
-      this.filters = { q: '', assignee: '', due: '', date: '', mine: false, priority: [], status: [], label: [] };
+      this.filters = { q: '', assignee: '', due: '', date: '', priority: [], status: [], label: [] };
       return this.apply();
     },
     // toggleFilter marca ou desmarca uma prioridade, um status ou uma etiqueta do filtro.
@@ -530,19 +511,14 @@ document.addEventListener('alpine:init', () => {
       this.filters[kind] = list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
       return this.apply();
     },
-    // toggleMine liga ou desliga "Só as minhas tarefas". Ligada, a busca é
-    // apagada e o responsável passa a ser quem está logado; os dois campos ficam
-    // desligados na tela e só o prazo continua valendo. Desligada, tudo volta a
-    // "Todos os responsáveis".
-    toggleMine(on) {
-      this.filters.mine = on;
-      this.filters.q = '';
-      this.filters.assignee = on ? me.id : '';
-      return this.apply();
-    },
     hasFilters() {
       const f = this.filters;
       return !!(f.q.trim() || f.assignee || dueLimit(f.due, f.date) || f.priority.length || f.status.length || f.label.length);
+    },
+    // listFiltered diz se algum filtro vale para a lista: o responsável só vale para a dos que têm um.
+    listFiltered(key) {
+      const f = this.filters;
+      return key === 'taken' ? this.hasFilters() : !!(f.q.trim() || dueLimit(f.due, f.date) || f.priority.length || f.status.length || f.label.length);
     },
     pages(key) {
       const l = this.lists[key];
@@ -551,11 +527,11 @@ document.addEventListener('alpine:init', () => {
     summary(key) {
       return WTT.t('tasks.summary', { page: this.lists[key].page, pages: this.pages(key), count: this.lists[key].total });
     },
-    // Quem aparece no filtro de responsável: os times, quem tem tarefa aqui e a
-    // própria pessoa, para o campo mostrar o nome dela com "Só as minhas" ligada.
+    // Quem aparece no filtro de responsável: os times e quem tem tarefa aqui, menos a própria
+    // pessoa, cujas tarefas ficam em Minhas tarefas.
     assigneeOptions() {
-      const byId = new Map([[me.id, { id: me.id, name: me.name }]]);
-      [...this.assignees, ...this.members].forEach((p) => byId.set(p.id, p));
+      const byId = new Map();
+      [...this.assignees, ...this.members].forEach((p) => { if (p.id !== me.id) byId.set(p.id, p); });
       return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name, WTT.lang));
     },
     // Outra pessoa só pode ser responsável se estiver num time do projeto; a própria, não precisa.
