@@ -190,7 +190,7 @@ session:
   in_progress: "In progress: {{.name}}"
   stop: Stop
   stopped: Time tracking stopped.
-  no_task: Open session
+  active: Active session
   details: View the session
   manage: Session tasks
   add_to_session: Add to the session

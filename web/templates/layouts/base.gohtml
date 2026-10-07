@@ -25,6 +25,9 @@
 <div class="lang-float">{{template "lang_switch" .}}</div>
 {{- end}}
 {{template "content" .}}
+{{- if .Me}}
+{{template "active_session" .}}
+{{- end}}
 {{template "modal" .}}
 {{template "toasts" .}}
 </body>

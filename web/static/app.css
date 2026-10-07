@@ -631,20 +631,42 @@ td.actions { text-align: right; white-space: nowrap; }
   70% { box-shadow: 0 0 0 8px transparent; }
   100% { box-shadow: 0 0 0 0 transparent; }
 }
-.session-pill {
-  display: inline-flex; align-items: center; gap: 8px; padding: 4px 6px 4px 10px;
-  border-radius: 999px; background: var(--accent-soft); color: var(--accent);
-  font-size: 0.86rem; font-weight: 600; max-width: 100%;
+/* O balão da sessão aberta (partials/active_session.gohtml): preso ao canto de baixo à direita, em todas as telas, acima
+   da barra (20) e abaixo do modal (40). Fechado é só a faixa verde; aberto ganha a moldura e os cartões das tarefas,
+   que crescem para cima. Com ele no ar, o body leva has-dock: a página ganha respiro embaixo e os avisos sobem para
+   acima dele (--dock-h é a altura dele, posta pelo sessionDock). */
+.session-dock {
+  position: fixed; right: 16px; bottom: 16px; z-index: 30;
+  width: min(300px, calc(100vw - 32px)); display: flex; flex-direction: column; gap: 6px;
+  border-radius: 12px;
 }
-.session-pill a { color: inherit; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 180px; }
-.session-pill .mono { font-variant-numeric: tabular-nums; }
-.session-pill .btn { padding: 3px 9px; font-size: 0.8rem; }
-/* O nome na pílula é um botão que abre a sessão, com o aspecto de texto. */
-.session-pill-open {
-  background: none; border: 0; padding: 0; margin: 0; font: inherit; color: inherit; cursor: pointer;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 180px;
+.session-dock.is-open { padding: 6px; background: var(--surface); border: 1px solid var(--rule-strong); box-shadow: var(--shadow); }
+.session-dock-toggle {
+  display: flex; align-items: center; gap: 8px; width: 100%; padding: 9px 12px;
+  font: inherit; font-size: 0.86rem; font-weight: 600; text-align: left; cursor: pointer;
+  color: var(--accent); background: var(--surface); border: 1px solid var(--accent); border-radius: var(--radius);
 }
-.session-pill-open:hover { text-decoration: underline; }
+.session-dock:not(.is-open) .session-dock-toggle { box-shadow: var(--shadow); }
+.session-dock-toggle:hover { background: var(--accent-soft); }
+.session-dock-chevron { margin-left: auto; font-size: 0.8em; transition: transform 0.15s; }
+.session-dock.is-open .session-dock-chevron { transform: rotate(180deg); }
+.session-dock-panel { display: flex; flex-direction: column; gap: 6px; }
+/* O cartão de uma tarefa: o link para ela, esticado. */
+.session-dock-item {
+  display: flex; align-items: center; gap: 2px; min-width: 0; padding-right: 4px;
+  background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius);
+}
+.session-dock-item:hover { background: var(--surface-2); border-color: var(--rule-strong); }
+.session-dock-task {
+  display: flex; flex: 1; align-items: center; gap: 8px; min-width: 0; padding: 9px 4px 9px 12px;
+  font-size: 0.88rem; color: var(--ink); text-decoration: none;
+}
+.session-dock-task-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.session-dock-task .fa-arrow-right { margin-left: auto; flex: none; color: var(--muted); }
+.session-dock-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 2px 2px 0; }
+.has-dock .page { padding-bottom: 96px; }
+.has-dock .toasts { bottom: calc(var(--dock-h, 44px) + 28px); }
+@media (prefers-reduced-motion: reduce) { .session-dock-chevron { transition: none; } }
 
 /* A sessão no modal: os fatos em colunas, e uma barra por tarefa mostrando onde ela entrou e
    saiu dentro da sessão. */

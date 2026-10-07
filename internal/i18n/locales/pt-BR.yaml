@@ -200,7 +200,7 @@ session:
   in_progress: "Em andamento: {{.name}}"
   stop: Parar
   stopped: Ponto encerrado.
-  no_task: Sessão aberta
+  active: Sessão ativa
   details: Ver a sessão
   manage: Tarefas da sessão
   add_to_session: Adicionar à sessão

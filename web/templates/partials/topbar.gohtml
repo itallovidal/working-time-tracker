@@ -12,7 +12,6 @@
       <a href="/orgs/{{.OrgID}}/about" {{if eq .Section "organization"}}aria-current="page"{{end}}>{{.T "nav.organization"}}</a>
     </nav>
     <div class="topbar-right">
-      {{template "active_session" .}}
       {{template "lang_switch" .}}
       <a class="me" href="/profile" title="{{.Me.Email}}" {{if eq .Section "profile"}}aria-current="page"{{end}}>
         <span class="sr-only">{{.T "nav.profile_sr"}}</span>

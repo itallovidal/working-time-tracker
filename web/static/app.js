@@ -499,7 +499,7 @@
     });
 
     // clock guarda a sessão de trabalho aberta da pessoa logada e um relógio que
-    // avança a cada segundo. O indicador do cabeçalho e a tela de ponto leem daqui.
+    // avança a cada segundo. O balão da sessão e a tela de ponto leem daqui.
     // A sessão tem tarefas (tasks), cada uma com o intervalo em que esteve nela; as que
     // estão em andamento são as que ainda não têm fim (until_at).
     const ms = (iso) => new Date(iso).getTime();
@@ -538,15 +538,6 @@
       },
       isRunning(taskId) {
         return this.running().some((l) => l.task_id === taskId);
-      },
-      // label é o que o cabeçalho mostra: a primeira tarefa em andamento e quantas mais.
-      label() {
-        const tasks = this.running();
-        if (tasks.length === 0) return t('session.no_task');
-        return tasks[0].task.name + (tasks.length > 1 ? ' +' + (tasks.length - 1) : '');
-      },
-      labelTitle() {
-        return this.running().map((l) => l.task.name).join(', ');
       },
       async refresh() {
         try {
@@ -745,8 +736,16 @@
       },
     }));
 
-    Alpine.data('activeSession', () => ({
+    // sessionDock é o balão da sessão aberta (partials/active_session.gohtml): aberto, lista as tarefas
+    // em andamento; Tarefas da sessão e Parar ficam no rodapé dele. Ao acabar a sessão, volta a fechado.
+    Alpine.data('sessionDock', () => ({
+      open: false,
       busy: false,
+      init() {
+        this.$watch('$store.clock.session', (s) => { if (!s) this.open = false; });
+        // Os avisos sobem acima do balão, que cresce com as tarefas: a altura vai para o CSS.
+        new ResizeObserver(() => document.documentElement.style.setProperty('--dock-h', this.$root.offsetHeight + 'px')).observe(this.$root);
+      },
       details() {
         Alpine.store('sessionView').open(Alpine.store('clock').session);
       },

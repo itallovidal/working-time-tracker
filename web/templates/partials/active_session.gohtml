@@ -1,15 +1,33 @@
+{{/* O balão da sessão aberta: fica no canto de baixo à direita de todas as telas de quem está logado
+     (layouts/base.gohtml), com "Sessão ativa" e o cronômetro. Clicar nele abre, para cima, um cartão por tarefa em
+     andamento, com o tempo dela na sessão e o caminho para ela, e no rodapé o que a pílula da barra fazia: Tarefas da
+     sessão e Parar. O estado é o do componente sessionDock (app.js); o relógio vem do store clock. */}}
 {{define "active_session"}}
-<div x-data="activeSession" x-cloak x-show="$store.clock.session">
-  <template x-if="$store.clock.session">
-    <div class="session-pill">
-      <span class="pulse" aria-hidden="true"></span>
-      {{/* O nome é a primeira tarefa em andamento e "+N" das outras; clicar abre a sessão com as tarefas. */}}
-      <button type="button" class="session-pill-open"
-              :title="$t('session.in_progress', { name: $store.clock.labelTitle() })"
-              @click="details()" x-text="$store.clock.label()"></button>
-      <span class="mono" x-text="WTT.fmt.clock($store.clock.elapsed())"></span>
-      <button type="button" class="btn btn-sm" :disabled="busy" @click="stop()">{{.T "session.stop"}}</button>
+<div class="session-dock" :class="open && 'is-open'" x-data="sessionDock" x-cloak x-show="$store.clock.session"
+     x-effect="document.body.classList.toggle('has-dock', !!$store.clock.session)"
+     @keydown.escape.window="open = false" @click.outside="open = false">
+  <button type="button" class="session-dock-toggle" aria-controls="session-dock-panel" :aria-expanded="open" @click="open = !open">
+    <span class="pulse" aria-hidden="true"></span>
+    <span>{{.T "session.active"}} •</span>
+    <span class="mono num" x-text="WTT.fmt.clock($store.clock.elapsed())"></span>
+    <span class="session-dock-chevron">{{template "icon" "chevron-up"}}</span>
+  </button>
+  <div id="session-dock-panel" class="session-dock-panel" x-show="open">
+    <template x-for="l in $store.clock.running()" :key="l.id">
+      {{/* O cartão é o link para a tarefa. */}}
+      <div class="session-dock-item">
+        <a class="session-dock-task" :href="'/tasks/' + l.task_id">
+          <span class="session-dock-task-name" x-text="l.task.name"></span>
+          <span>•</span>
+          <span class="mono num" x-text="WTT.fmt.clock($store.clock.taskElapsed($store.clock.session, l.task_id))"></span>
+          {{template "icon" "arrow-right"}}
+        </a>
+      </div>
+    </template>
+    <div class="session-dock-foot">
+      <button type="button" class="btn btn-secondary btn-sm" @click="details()">{{template "icon" "list-check"}} {{.T "session.manage"}}</button>
+      <button type="button" class="btn btn-danger btn-sm" :disabled="busy" @click="stop()">{{.T "session.stop"}}</button>
     </div>
-  </template>
+  </div>
 </div>
 {{end}}

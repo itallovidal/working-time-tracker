@@ -7,7 +7,7 @@ import (
 )
 
 // O modal da sessão mora no modal do layout, dentro do #modal-root e sem teleporte, e só em páginas
-// de quem está logado; a pílula da barra abre a sessão em vez de levar ao Início.
+// de quem está logado; o balão da sessão, fora da barra, abre a sessão e para o ponto.
 func TestPages_SessionModalIsInTheLayout(t *testing.T) {
 	e := newServer(t)
 	admin := signup(t, e, "Org", "ana@test.com")
@@ -25,10 +25,13 @@ func TestPages_SessionModalIsInTheLayout(t *testing.T) {
 			if root < 0 || at < root {
 				t.Errorf("%s %s: the session modal is not inside #modal-root", who, path)
 			}
-			for _, want := range []string{`class="session-pill-open"`, `@click="details()"`, "labelTitle()"} {
+			for _, want := range []string{`class="session-dock"`, `@click="details()"`, `@click="stop()"`} {
 				if !strings.Contains(body, want) {
-					t.Errorf("%s %s: the active session pill does not contain %q", who, path, want)
+					t.Errorf("%s %s: the active session dock does not contain %q", who, path, want)
 				}
+			}
+			if dock, topbar := strings.Index(body, `class="session-dock"`), strings.Index(body, "</header>"); dock < topbar {
+				t.Errorf("%s %s: the session dock is inside the top bar", who, path)
 			}
 			if strings.Contains(body, "session.task.name") {
 				t.Errorf("%s %s: the page still reads the old session.task", who, path)
