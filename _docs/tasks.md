@@ -688,16 +688,16 @@
 
 ---
 
-### Sprint 60: Connect with GitHub
+### Sprint 61: Connect with GitHub
 
-- [X] S60.1 `Descriptor.Auth` (`token` by default, `oauth` for GitHub) and `Configured` (filled by the page: the server has the OAuth app); optional adapter capabilities `AccountLookup` (who the token is) and `RepositoryLister`, implemented by GitHub only
-- [X] S60.2 Config: `PUBLIC_URL`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` and, for a GitHub Enterprise or a fake, `GITHUB_URL` and `GITHUB_API_URL`; all optional, and without them the button says the connection is not set up
-- [X] S60.3 `GitHubOAuth` client (authorization URL with scope `repo`, code exchange that reads the `error` GitHub sends with a 200) and `GitHubIntegration.Account` and `ListRepositories` (100 most recently pushed)
-- [X] S60.4 `GET .../integrations/github/connect` and `GET /integrations/github/callback`: sealed cookie with the `state`, the person, the project and the integration to reconnect (10 minutes, one use); the callback re-checks the state, the person, the organization and `integrations.manage`, and sends every failure back to the tab with `?github_error=<code>`
-- [X] S60.5 `Service.Connect` (the integration is born disabled and without a repository, named `GitHub · @login`, token sealed), `Reauthorize` (replaces the token only, validating it against the repository when there is one) and `Repositories`; `GET /api/integrations/:id/repositories`
-- [X] S60.6 Modal: for an OAuth type creating is only the **Conectar com o GitHub** button; the return opens "Escolha o repositório" (repository offered from a `datalist`, "Ativa" already checked), editing has **Reconectar** instead of the token field, and the card shows "Conexão: Autorizada"; a reconnect of a complete integration only toasts "Acesso renovado."
-- [X] S60.7 Tests: the OAuth client and the account and repositories calls against the fake GitHub, `Connect`, `Reauthorize` and `Repositories` in the service, and the whole flow through the real router (full path, every refusal, permissions lost on the way, reconnect, server without the app); no front-end tests added; the existing page assertion follows the token field
-- [X] S60.8 README (variables, how to register the app, caveats), design, routes, the Insomnia collection and `.env.example`; checked in the browser against a fake GitHub (connect, pick the repository, reconnect, cancel)
+- [X] S61.1 `Descriptor.Auth` (`token` by default, `oauth` for GitHub) and `Configured` (filled by the page: the server has the OAuth app); optional adapter capabilities `AccountLookup` (who the token is) and `RepositoryLister`, implemented by GitHub only
+- [X] S61.2 Config: `PUBLIC_URL`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` and, for a GitHub Enterprise or a fake, `GITHUB_URL` and `GITHUB_API_URL`; all optional, and without them the button says the connection is not set up
+- [X] S61.3 `GitHubOAuth` client (authorization URL with scope `repo`, code exchange that reads the `error` GitHub sends with a 200) and `GitHubIntegration.Account` and `ListRepositories` (100 most recently pushed)
+- [X] S61.4 `GET .../integrations/github/connect` and `GET /integrations/github/callback`: sealed cookie with the `state`, the person, the project and the integration to reconnect (10 minutes, one use); the callback re-checks the state, the person, the organization and `integrations.manage`, and sends every failure back to the tab with `?github_error=<code>`
+- [X] S61.5 `Service.Connect` (the integration is born disabled and without a repository, named `GitHub · @login`, token sealed), `Reauthorize` (replaces the token only, validating it against the repository when there is one) and `Repositories`; `GET /api/integrations/:id/repositories`
+- [X] S61.6 Modal: for an OAuth type creating is only the **Conectar com o GitHub** button; the return opens "Escolha o repositório" (repository offered from a `datalist`, "Ativa" already checked), editing has **Reconectar** instead of the token field, and the card shows "Conexão: Autorizada"; a reconnect of a complete integration only toasts "Acesso renovado."
+- [X] S61.7 Tests: the OAuth client and the account and repositories calls against the fake GitHub, `Connect`, `Reauthorize` and `Repositories` in the service, and the whole flow through the real router (full path, every refusal, permissions lost on the way, reconnect, server without the app); no front-end tests added; the existing page assertion follows the token field
+- [X] S61.8 README (variables, how to register the app, caveats), design, routes, the Insomnia collection and `.env.example`; checked in the browser against a fake GitHub (connect, pick the repository, reconnect, cancel)
 
 ---
 
