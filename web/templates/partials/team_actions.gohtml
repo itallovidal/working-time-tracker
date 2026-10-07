@@ -1,0 +1,10 @@
+{{/* Os atalhos do bloco da Equipe, para quem cuida das pessoas: ver os colaboradores e adicionar um.
+     "Adicionar" chega à página de colaboradores com o modal do convite já aberto (?add=1). */}}
+{{define "team_actions"}}
+{{if .Can "people.manage"}}
+<div class="row row-tight">
+  <a class="btn btn-ghost btn-sm" href="/orgs/{{.OrgID}}/people">{{template "icon" "users"}} {{.T "home.team.see_people"}}</a>
+  <a class="btn btn-secondary btn-sm" href="/orgs/{{.OrgID}}/people?add=1">{{template "icon" "user-plus"}} {{.T "org.people.add"}}</a>
+</div>
+{{end}}
+{{end}}

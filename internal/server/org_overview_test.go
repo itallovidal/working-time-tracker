@@ -86,6 +86,19 @@ func TestOrgOverview_AdminOnly(t *testing.T) {
 	if second := rows[1].(map[string]any); second["person"].(map[string]any)["id"] != admin.id || second["total_seconds"] != float64(0) {
 		t.Errorf("by_person[1] = %v, want the owner with no time", second)
 	}
+	// A tela mostra no que cada um trabalha agora: a Bia, na tarefa e no projeto em que bateu o
+	// ponto (com id e nome, para o link); o dono, que está sem ponto, com a lista vazia e não nula.
+	workingOn, _ := rows[0].(map[string]any)["working_on"].([]any)
+	if len(workingOn) != 1 {
+		t.Fatalf("Bia's working_on = %v, want her one task", rows[0].(map[string]any)["working_on"])
+	}
+	on := workingOn[0].(map[string]any)
+	if task, project := section(on, "task"), section(on, "project"); task["id"] != taskID || task["name"] != "Tarefa" || project["id"] != projectID || project["name"] != "Projeto Alfa" {
+		t.Errorf("Bia's working_on = %v, want the task %s (Tarefa) of the project %s (Projeto Alfa)", on, taskID, projectID)
+	}
+	if ownerOn, ok := rows[1].(map[string]any)["working_on"].([]any); !ok || len(ownerOn) != 0 {
+		t.Errorf("the owner's working_on = %v, want an empty list (not null)", rows[1].(map[string]any)["working_on"])
+	}
 
 	// Quem pede é quem tem o "meu tempo": a Bia não abre a rota, mas o dono vê o dele depois de bater o ponto.
 	if rec := do(e, "GET", path, "", bia.session); rec.Code != http.StatusForbidden {

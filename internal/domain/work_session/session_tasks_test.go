@@ -1,8 +1,10 @@
 package work_session_test
 
 import (
+	"context"
 	"errors"
 	"math"
+	"slices"
 	"testing"
 	"time"
 
@@ -310,3 +312,74 @@ func TestSessionTasks_Scope(t *testing.T) {
 }
 
 func ptr[T any](v T) *T { return &v }
+
+// ListOpenByOrganization serve ao painel de quem trabalha agora: só as sessões abertas da
+// organização, a que começou primeiro na frente, cada uma com todas as suas tarefas na ordem
+// em que entraram. Uma sessão fechada e a de outra organização não entram.
+func TestService_ListOpenByOrganization(t *testing.T) {
+	orgSvc, personSvc, projSvc, _, _, taskSvc, wsSvc := setupDeps(t)
+	ctx := context.Background()
+
+	orgA, _ := orgSvc.Create("Org A")
+	orgB, _ := orgSvc.Create("Org B")
+	ana, _ := personSvc.Create(orgA.ID.String(), "Ana", "ana@test.com")
+	bruno, _ := personSvc.Create(orgA.ID.String(), "Bruno", "bruno@test.com")
+	carla, _ := personSvc.Create(orgA.ID.String(), "Carla", "carla@test.com")
+	zed, _ := personSvc.Create(orgB.ID.String(), "Zed", "zed@test.com")
+	x, _ := projSvc.Create(orgA.ID.String(), "Projeto X", "", 0, project.Routine{})
+	y, _ := projSvc.Create(orgA.ID.String(), "Projeto Y", "", 0, project.Routine{})
+	z, _ := projSvc.Create(orgB.ID.String(), "Projeto Z", "", 0, project.Routine{})
+	login, _ := taskSvc.Create(x.ID.String(), "Login", "", "", nil)
+	report, _ := taskSvc.Create(x.ID.String(), "Relatório", "", "", nil)
+	review, _ := taskSvc.Create(x.ID.String(), "Revisão", "", "", nil)
+	slips, _ := taskSvc.Create(y.ID.String(), "Boletos", "", "", nil)
+	other, _ := taskSvc.Create(z.ID.String(), "Da outra", "", "", nil)
+
+	now := time.Now().Truncate(time.Second)
+	// A Ana está há 2h numa sessão com três tarefas: Login desde o início, Relatório entrou 30
+	// min depois e Revisão já saiu.
+	start := now.Add(-2 * time.Hour)
+	open := testutil.Session(t, testClient, login.ID, ana.ID, start, nil, nil, nil)
+	testClient.WorkSessionTask.Create().SetSessionID(open.ID).SetTaskID(review.ID).
+		SetFromAt(start.Add(10 * time.Minute)).SetUntilAt(start.Add(20 * time.Minute)).SaveX(ctx)
+	testClient.WorkSessionTask.Create().SetSessionID(open.ID).SetTaskID(report.ID).
+		SetFromAt(start.Add(30 * time.Minute)).SaveX(ctx)
+	// O Bruno abriu o ponto depois da Ana.
+	testutil.Session(t, testClient, slips.ID, bruno.ID, now.Add(-time.Hour), nil, nil, nil)
+	// A Carla já fechou o dela, e o Zed, de outra organização, está com o ponto aberto.
+	closed := now.Add(-30 * time.Minute)
+	testutil.Session(t, testClient, login.ID, carla.ID, now.Add(-3*time.Hour), &closed, nil, nil)
+	testutil.Session(t, testClient, other.ID, zed.ID, now.Add(-time.Hour), nil, nil, nil)
+
+	got, err := wsSvc.ListOpenByOrganization(orgA.ID.String())
+	if err != nil {
+		t.Fatalf("list open sessions: %v", err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("got %d open sessions, want 2 (Ana's and Bruno's): the closed one and the other organization's stay out", len(got))
+	}
+	if got[0].PersonID != ana.ID || got[1].PersonID != bruno.ID {
+		t.Errorf("order = %s, %s; want the one that started first (Ana) and then Bruno", got[0].PersonID, got[1].PersonID)
+	}
+	var tasks []string
+	for _, l := range got[0].Tasks {
+		state := "open"
+		if l.UntilAt != nil {
+			state = "left"
+		}
+		if l.Task == nil {
+			t.Fatalf("task link %s came without the task", l.ID)
+		}
+		tasks = append(tasks, l.Task.Name+":"+state)
+	}
+	if want := []string{"Login:open", "Revisão:left", "Relatório:open"}; !slices.Equal(tasks, want) {
+		t.Errorf("Ana's tasks = %q, want %q (in the order they entered, with the name)", tasks, want)
+	}
+	if got[1].ProjectID != y.ID || len(got[1].Tasks) != 1 || got[1].Tasks[0].Task.Name != "Boletos" {
+		t.Errorf("Bruno's session = project %s, %d tasks; want Projeto Y with Boletos", got[1].ProjectID, len(got[1].Tasks))
+	}
+
+	if _, err := wsSvc.ListOpenByOrganization("not-a-uuid"); err == nil {
+		t.Error("an invalid organization id should fail")
+	}
+}

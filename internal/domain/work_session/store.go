@@ -203,6 +203,25 @@ func (s *Store) ListByOrganization(orgID string) ([]WorkSession, error) {
 	return toDomainSessions(sessions), nil
 }
 
+// ListOpenByOrganization devolve as sessões abertas dos projetos da organização, da que
+// começou primeiro para a última, cada uma com as suas tarefas (os intervalos, na ordem em
+// que entraram, com o nome). Serve a quem mostra quem está trabalhando agora e em quê.
+func (s *Store) ListOpenByOrganization(orgID string) ([]WorkSession, error) {
+	uid, err := uuid.Parse(orgID)
+	if err != nil {
+		return nil, err
+	}
+	sessions, err := s.client.WorkSession.Query().
+		Where(worksession.EndAtIsNil(), worksession.HasProjectWith(entproject.OrganizationIDEQ(uid))).
+		WithTaskLinks(withTasks).
+		Order(ent.Asc(worksession.FieldStartAt)).
+		All(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	return toDomainSessions(sessions), nil
+}
+
 // AddTask põe a tarefa na sessão pelo intervalo dado e devolve o intervalo criado.
 func (s *Store) AddTask(sessionID, taskID uuid.UUID, from time.Time, until *time.Time) (uuid.UUID, error) {
 	link, err := s.client.WorkSessionTask.Create().

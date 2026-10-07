@@ -155,7 +155,10 @@ A organização é criada pelo signup, e o `organization_id` vem no `/api/auth/m
     "all_time": { "…": "…" }
   },
   "by_person": [
-    { "person": { "id": "…", "name": "Helena Costa" }, "working_now": false,
+    { "person": { "id": "…", "name": "Helena Costa" }, "working_now": true,
+      "working_on": [
+        { "task": { "id": "…", "name": "Relatório de repasses" }, "project": { "id": "…", "name": "Painel do Lojista" } }
+      ],
       "last_7_days_seconds": 123000, "last_30_days_seconds": 552840, "total_seconds": 1322400 }
   ],
   "generated_at": "2026-10-07T16:33:00-03:00"
@@ -165,7 +168,7 @@ A organização é criada pelo signup, e o `organization_id` vem no `/api/auth/m
 - **Janelas.** `last_7_days` e `last_30_days` contam só o trecho de cada sessão que caiu dentro delas, e `all_time`, tudo. Uma sessão toda dentro da janela vale os mesmos valores dela; a que atravessa a borda vale o tempo de dentro vezes os valores por hora dela, arredondado ao centavo. A sessão aberta conta até `generated_at`, o mesmo instante das janelas.
 - `seconds` é o tempo de todos e `my_seconds` o de quem pediu (o dono vê o dele); `session_count` são as sessões com algum tempo na janela.
 - `money` segue a visão geral do projeto: `pay_amount_cents` (custo) e `bill_amount_cents` (receita) são `null` quando nenhuma sessão da janela tem aquele valor por hora, e `margin_cents` é a receita menos o custo, `null` sem receita. As horas do dono têm custo `0`, então entram inteiras na margem.
-- `by_person` traz **todas** as pessoas da organização, também as que ainda não bateram ponto (com zeros), da que mais trabalhou no total para a que menos; a soma de cada janela é a das linhas. `working_now` marca quem tem uma sessão aberta em qualquer projeto, e `people.working_now` conta essas pessoas.
+- `by_person` traz **todas** as pessoas da organização, também as que ainda não bateram ponto (com zeros), da que mais trabalhou no total para a que menos; a soma de cada janela é a das linhas. `working_now` marca quem tem uma sessão aberta em qualquer projeto, e `people.working_now` conta essas pessoas. `working_on` são as tarefas que a pessoa tem na sessão aberta neste instante (os intervalos que ainda não terminaram), na ordem em que entraram, cada uma com o projeto, com id e nome para a tela levar até elas; vem `[]`, nunca `null`, para quem não trabalha agora e para quem abriu uma sessão que ficou sem tarefa. A tela da página inicial usa isso e não ordena nem compara as pessoas pelas horas.
 - O total de `all_time` é a soma das visões gerais dos projetos (`GET /api/projects/:projectId/overview`).
 
 ### Perfil da organização

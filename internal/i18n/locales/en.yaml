@@ -90,14 +90,25 @@ home:
     no_cost: No hours with a pay rate
   team:
     title: Team
-    intro: Each person's hours in the period, from who worked the most to who worked the least.
-    nobody_worked: Nobody clocked in during this period.
+    intro: Who has the clock running right now, and on which task.
+    nobody_working: Nobody has the clock running right now.
     working: Working now
+    on_task: On task
+    more_tasks:
+      one: "and {{.count}} more task"
+      other: "and {{.count}} more tasks"
+    no_task: No task in the session
+    idle: Clock not running
     see_people: See collaborators
     pager: Team pages
     prev: Previous
     next: Next
     range: "{{.from}}–{{.to}} of {{.total}}"
+  # The hours ranking, kept in partials/team_hours.gohtml and unused for now.
+  ranking:
+    title: Team
+    intro: Each person's hours in the period, from who worked the most to who worked the least.
+    nobody_worked: Nobody clocked in during this period.
   projects:
     title: Projects
     pager: Project list pages

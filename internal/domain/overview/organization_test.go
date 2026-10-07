@@ -1,12 +1,18 @@
 package overview_test
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
+
+	"working-time-tracker/ent/worksessiontask"
 	"working-time-tracker/internal/database"
 	"working-time-tracker/internal/domain/organization"
 	"working-time-tracker/internal/domain/overview"
@@ -158,6 +164,102 @@ func TestOrganization_MalformedIDs(t *testing.T) {
 	} {
 		if _, err := f.svc.Organization(ids[0], ids[1]); !errors.Is(err, database.ErrNotFound) {
 			t.Errorf("malformed %s id = %v, want ErrNotFound", name, err)
+		}
+	}
+}
+
+// Quem está com o ponto aberto vem com as tarefas em que trabalha agora, cada uma com o projeto:
+// as que estão na sessão neste instante, na ordem em que entraram. Uma tarefa que já saiu da
+// sessão não conta, e uma sessão sem tarefa nenhuma ainda é "trabalhando agora", com a lista
+// vazia. Quem não trabalha agora vem com a lista vazia, e nunca nula, e a sessão de outra
+// organização não aparece.
+func TestOrganization_WorkingOn(t *testing.T) {
+	f := setup(t)
+	ana, bruno, carla, diego, elisa := f.person("Ana"), f.person("Bruno"), f.person("Carla"), f.person("Diego"), f.person("Elisa")
+	f.person("Fabio") // sem ponto nenhum
+	x, y := f.project("Projeto X"), f.project("Projeto Y")
+	named := func(projectID, name string) uuid.UUID {
+		id := f.task(projectID, ana, nil)
+		testClient.Task.UpdateOneID(id).SetName(name).ExecX(context.Background())
+		return id
+	}
+	login, report, review := named(x, "Login"), named(x, "Relatório"), named(x, "Revisão")
+	slips := named(y, "Boletos")
+	ctx := context.Background()
+	start := f.now.Add(-2 * time.Hour)
+
+	// A Carla entrou no Login, pôs o Relatório 30 min depois e a Revisão passou e saiu.
+	carlaSession := testutil.Session(t, testClient, login, carla, start, nil, nil, nil)
+	testClient.WorkSessionTask.Create().SetSessionID(carlaSession.ID).SetTaskID(review).
+		SetFromAt(start.Add(10 * time.Minute)).SetUntilAt(start.Add(20 * time.Minute)).SaveX(ctx)
+	testClient.WorkSessionTask.Create().SetSessionID(carlaSession.ID).SetTaskID(report).
+		SetFromAt(start.Add(30 * time.Minute)).SaveX(ctx)
+	// O Bruno trabalha em outro projeto.
+	testutil.Session(t, testClient, slips, bruno, f.now.Add(-time.Hour), nil, nil, nil)
+	// O Diego abriu o ponto e a tarefa dele saiu da sessão; a da Elisa foi excluída.
+	diegoSession := testutil.Session(t, testClient, login, diego, f.now.Add(-time.Hour), nil, nil, nil)
+	testClient.WorkSessionTask.Update().Where(worksessiontask.SessionID(diegoSession.ID)).SetUntilAt(f.now.Add(-10 * time.Minute)).ExecX(ctx)
+	elisaSession := testutil.Session(t, testClient, login, elisa, f.now.Add(-time.Hour), nil, nil, nil)
+	testClient.WorkSessionTask.Delete().Where(worksessiontask.SessionID(elisaSession.ID)).ExecX(ctx)
+	// A Ana já fechou o ponto dela.
+	closed := f.now.Add(-time.Hour)
+	testutil.Session(t, testClient, login, ana, f.now.Add(-3*time.Hour), &closed, nil, nil)
+
+	// Outra organização com o ponto aberto: não entra em nada.
+	otherOrg, err := organization.NewService(organization.NewStore(testClient)).Create("Outra")
+	if err != nil {
+		t.Fatalf("other org: %v", err)
+	}
+	zed, err := person.NewService(person.NewStore(testClient)).Create(otherOrg.ID.String(), "Zed", "zed@outra.com")
+	if err != nil {
+		t.Fatalf("other person: %v", err)
+	}
+	z, err := f.projects.Create(otherOrg.ID.String(), "Projeto Z", "", 0, project.Routine{})
+	if err != nil {
+		t.Fatalf("other project: %v", err)
+	}
+	tz := f.task(z.ID.String(), zed.ID, nil)
+	testutil.Session(t, testClient, tz, zed.ID, f.now.Add(-time.Hour), nil, nil, nil)
+
+	got, err := f.svc.Organization(f.orgID, ana.String())
+	if err != nil {
+		t.Fatalf("organization overview: %v", err)
+	}
+	if got.People.WorkingNow != 4 {
+		t.Errorf("working now = %d, want 4 (Bruno, Carla, Diego and Elisa)", got.People.WorkingNow)
+	}
+	rows := map[string]string{}
+	for _, p := range got.ByPerson {
+		var on []string
+		for _, w := range p.WorkingOn {
+			on = append(on, w.Task.Name+" @ "+w.Project.Name)
+		}
+		rows[p.Person.Name] = fmt.Sprintf("now=%v %q", p.WorkingNow, on)
+		if p.WorkingOn == nil {
+			t.Errorf("%s: working_on is nil, want an empty list so the JSON says [] and not null", p.Person.Name)
+		}
+	}
+	want := map[string]string{
+		"Ana":   `now=false []`,
+		"Bruno": `now=true ["Boletos @ Projeto Y"]`,
+		"Carla": `now=true ["Login @ Projeto X" "Relatório @ Projeto X"]`,
+		"Diego": `now=true []`,
+		"Elisa": `now=true []`,
+		"Fabio": `now=false []`,
+	}
+	if !maps.Equal(rows, want) {
+		t.Errorf("working on = %v\nwant        %v", rows, want)
+	}
+
+	// O JSON leva a tarefa e o projeto com id e nome, para a tela montar o link.
+	for _, p := range got.ByPerson {
+		if p.Person.Name != "Bruno" {
+			continue
+		}
+		raw, _ := json.Marshal(p.WorkingOn)
+		wantJSON := fmt.Sprintf(`[{"task":{"id":"%s","name":"Boletos"},"project":{"id":"%s","name":"Projeto Y"}}]`, slips, y)
+		if string(raw) != wantJSON {
+			t.Errorf("working_on JSON = %s\nwant            %s", raw, wantJSON)
 		}
 	}
 }

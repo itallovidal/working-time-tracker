@@ -1,0 +1,41 @@
+{{/* GUARDADO, SEM USO. A página inicial já mostrou a equipe por horas, de quem mais trabalhou para quem
+     menos, e deixou de mostrar (7 out 2026): comparar tempo dá a entender que quem trabalhou mais
+     é quem mais merece reconhecimento, e o valor entregue nem sempre vem das horas. O bloco ficou
+     aqui, inteiro, para o dia em que fizer sentido de novo, por exemplo num relatório.
+     Para voltar a usá-lo: espalhe `...teamHours()` no componente da página (orgHome, em org.js) e
+     ponha {{template "team_hours" .}} na página. Ele lê `stats`, `period` e `current()` do orgHome.
+     Os testes em internal/server/home_page_test.go cuidam de que ele continue de pé. */}}
+{{define "team_hours"}}
+<section class="card" aria-labelledby="home-ranking-title">
+  <div class="card-head">
+    <div class="section-head">
+      <h3 id="home-ranking-title">{{.T "home.ranking.title"}}</h3>
+      <p class="muted small">{{.T "home.ranking.intro"}}</p>
+    </div>
+    {{template "team_actions" .}}
+  </div>
+  <p class="muted" x-show="current().seconds === 0">{{.T "home.ranking.nobody_worked"}}</p>
+  <ul class="team-list">
+    <template x-for="p in rankingView().rows" :key="p.person.id">
+      <li class="team-row team-row-ranked hue-teal">
+        <span class="avatar" aria-hidden="true" x-text="initialsOf(p.person.name)"></span>
+        <div class="team-who">
+          <div class="team-name">
+            <span x-text="p.person.name"></span>
+            <span class="badge badge-ok" x-show="p.working_now">{{.T "home.team.working"}}</span>
+          </div>
+          <div class="team-bar" aria-hidden="true"><span :style="{ width: barWidth(p) + '%' }"></span></div>
+        </div>
+        <span class="team-hours" x-text="WTT.fmt.hours(secondsOf(p))"></span>
+      </li>
+    </template>
+  </ul>
+  <nav class="pager" aria-label="{{.T "home.team.pager"}}" x-show="rankingView().pages > 1">
+    <span class="muted small" x-text="$t('home.team.range', { from: rankingView().from, to: rankingView().to, total: rankingView().total })"></span>
+    <div class="row row-tight">
+      <button type="button" class="btn btn-secondary btn-sm" :disabled="rankingView().page <= 1" @click="rankingAt = rankingView().page - 1">{{template "icon" "chevron-left"}} {{.T "home.team.prev"}}</button>
+      <button type="button" class="btn btn-secondary btn-sm" :disabled="rankingView().page >= rankingView().pages" @click="rankingAt = rankingView().page + 1">{{.T "home.team.next"}} {{template "icon" "chevron-right"}}</button>
+    </div>
+  </nav>
+</section>
+{{end}}

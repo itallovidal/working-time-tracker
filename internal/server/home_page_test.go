@@ -39,6 +39,19 @@ func TestPages_HomeIsAnOverviewWithProjectCards(t *testing.T) {
 	}
 	team := adminPage[strings.Index(adminPage, `id="home-team-title"`):]
 	team = team[:strings.Index(team, `class="team-list"`)]
+	// A equipe mostra quem trabalha agora e em quê, e não compara o tempo de ninguém: sem horas,
+	// sem barras e sem a ordem por quem trabalhou mais, que ficaram guardadas no parcial team_hours.
+	teamCard := adminPage[strings.Index(adminPage, `id="home-team-title"`):strings.Index(adminPage, `id="home-projects-title"`)]
+	for _, want := range []string{"Equipe", "Quem está com o ponto aberto agora e em que tarefa.", "Na tarefa", "Trabalhando agora", "Sem ponto aberto", "Ninguém está com o ponto aberto agora.", `teamView()`, `'/tasks/' + p.working_on[0].task.id`} {
+		if !strings.Contains(teamCard, want) {
+			t.Errorf("the team card does not contain %q", want)
+		}
+	}
+	for _, gone := range []string{`team-bar`, `team-hours`, `barWidth`, `secondsOf`, `rankingView`, "Horas de cada pessoa", "quem mais trabalhou", "Ninguém bateu ponto neste período"} {
+		if strings.Contains(teamCard, gone) {
+			t.Errorf("the team card still has %q: the home page must not compare how long each person worked", gone)
+		}
+	}
 	if !strings.Contains(team, `href="`+home+`/people"`) || !strings.Contains(team, `href="`+home+`/people?add=1"`) {
 		t.Errorf("the team block does not have both Ver colaboradores and Adicionar colaborador links: %s", team)
 	}

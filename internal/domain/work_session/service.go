@@ -154,6 +154,11 @@ func (s *Service) ListByOrganization(orgID string) ([]WorkSession, error) {
 	return s.sessionStore.ListByOrganization(orgID)
 }
 
+// ListOpenByOrganization devolve as sessões abertas da organização com as tarefas de cada uma.
+func (s *Service) ListOpenByOrganization(orgID string) ([]WorkSession, error) {
+	return s.sessionStore.ListOpenByOrganization(orgID)
+}
+
 // TotalTimeResult soma as sessões de um filtro. Os dois valores ficam nil quando
 // nenhuma sessão do filtro tem valor por hora.
 type TotalTimeResult struct {

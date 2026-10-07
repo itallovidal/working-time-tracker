@@ -2,6 +2,7 @@ package overview
 
 import (
 	"cmp"
+	"errors"
 	"slices"
 	"time"
 
@@ -56,13 +57,30 @@ type Period struct {
 	Money        Money `json:"money"`
 }
 
-// OrgPersonTotal é o tempo de uma pessoa em cada janela.
+// OrgPersonTotal é o tempo de uma pessoa em cada janela e, se está com o ponto aberto, no
+// que ela trabalha agora.
 type OrgPersonTotal struct {
-	Person            Person  `json:"person"`
-	WorkingNow        bool    `json:"working_now"`
-	Last7DaysSeconds  float64 `json:"last_7_days_seconds"`
-	Last30DaysSeconds float64 `json:"last_30_days_seconds"`
-	TotalSeconds      float64 `json:"total_seconds"`
+	Person     Person `json:"person"`
+	WorkingNow bool   `json:"working_now"`
+	// WorkingOn são as tarefas que a pessoa tem na sessão aberta neste instante, na ordem em
+	// que entraram, cada uma com o projeto. Vem vazia (nunca nula) para quem não trabalha agora
+	// e para quem abriu uma sessão que já ficou sem tarefa.
+	WorkingOn         []WorkingOn `json:"working_on"`
+	Last7DaysSeconds  float64     `json:"last_7_days_seconds"`
+	Last30DaysSeconds float64     `json:"last_30_days_seconds"`
+	TotalSeconds      float64     `json:"total_seconds"`
+}
+
+// Ref é um recurso com o nome, para a tela mostrar e levar até ele sem outra chamada.
+type Ref struct {
+	ID   uuid.UUID `json:"id"`
+	Name string    `json:"name"`
+}
+
+// WorkingOn é uma tarefa em que alguém trabalha agora, com o projeto dela.
+type WorkingOn struct {
+	Task    Ref `json:"task"`
+	Project Ref `json:"project"`
 }
 
 // Organization monta a visão geral da organização para quem a pede (viewerID, a pessoa
@@ -94,6 +112,7 @@ func (s *Service) Organization(orgID, viewerID string) (*OrgOverview, error) {
 	byPerson := make(map[uuid.UUID]*OrgPersonTotal, len(people))
 	for i, p := range people {
 		totals[i].Person = Person{ID: p.ID, Name: p.Name}
+		totals[i].WorkingOn = []WorkingOn{}
 		byPerson[p.ID] = &totals[i]
 	}
 	o := &OrgOverview{
@@ -141,6 +160,11 @@ func (s *Service) Organization(orgID, viewerID string) (*OrgOverview, error) {
 	for _, w := range windows {
 		w.period.Money.addMargin()
 	}
+	if o.People.WorkingNow > 0 {
+		if err := s.addWorkingOn(orgID, byPerson); err != nil {
+			return nil, err
+		}
+	}
 
 	slices.SortFunc(o.ByPerson, func(a, b OrgPersonTotal) int {
 		return cmp.Or(
@@ -150,6 +174,49 @@ func (s *Service) Organization(orgID, viewerID string) (*OrgOverview, error) {
 		)
 	})
 	return o, nil
+}
+
+// addWorkingOn põe em cada pessoa com o ponto aberto as tarefas que estão na sessão dela agora
+// (os intervalos sem fim), com o nome do projeto. Só olha as pessoas que a conta principal já
+// marcou como trabalhando, para working_on nunca vir cheio sem working_now. Um projeto
+// excluído no meio do caminho deixa de aparecer, sem derrubar a resposta.
+func (s *Service) addWorkingOn(orgID string, byPerson map[uuid.UUID]*OrgPersonTotal) error {
+	open, err := s.deps.Sessions.ListOpenByOrganization(orgID)
+	if err != nil {
+		return err
+	}
+	projects := map[uuid.UUID]*Ref{} // nil: o projeto não existe mais
+	for i := range open {
+		sess := &open[i]
+		pt := byPerson[sess.PersonID]
+		if pt == nil || !pt.WorkingNow {
+			continue
+		}
+		project, seen := projects[sess.ProjectID]
+		if !seen {
+			p, err := s.deps.Projects.Get(sess.ProjectID.String())
+			switch {
+			case err == nil:
+				project = &Ref{ID: p.ID, Name: p.Name}
+			case !errors.Is(err, database.ErrNotFound):
+				return err
+			}
+			projects[sess.ProjectID] = project
+		}
+		if project == nil {
+			continue
+		}
+		for _, link := range sess.Tasks {
+			if link.UntilAt != nil || link.Task == nil {
+				continue
+			}
+			pt.WorkingOn = append(pt.WorkingOn, WorkingOn{
+				Task:    Ref{ID: link.Task.ID, Name: link.Task.Name},
+				Project: *project,
+			})
+		}
+	}
+	return nil
 }
 
 // addMargin calcula a margem: a receita menos o custo. Sem receita não há margem para mostrar.

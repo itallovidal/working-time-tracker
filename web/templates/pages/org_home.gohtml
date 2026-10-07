@@ -84,41 +84,45 @@
           </div>
         </div>
 
+        {{/* A equipe: quem está com o ponto aberto agora e em que tarefa, quem trabalha agora primeiro e
+             depois por nome. De propósito não há horas, barras nem ordem por tempo: veja partials/team_hours. */}}
         <section class="card" aria-labelledby="home-team-title">
           <div class="card-head">
             <div class="section-head">
               <h3 id="home-team-title">{{.T "home.team.title"}}</h3>
               <p class="muted small">{{.T "home.team.intro"}}</p>
             </div>
-            {{if .Can "people.manage"}}
-            {{/* "Adicionar" chega à página de colaboradores com o modal do convite já aberto (?add=1). */}}
-            <div class="row row-tight">
-              <a class="btn btn-ghost btn-sm" href="/orgs/{{.OrgID}}/people">{{template "icon" "users"}} {{.T "home.team.see_people"}}</a>
-              <a class="btn btn-secondary btn-sm" href="/orgs/{{.OrgID}}/people?add=1">{{template "icon" "user-plus"}} {{.T "org.people.add"}}</a>
-            </div>
-            {{end}}
+            {{template "team_actions" .}}
           </div>
-          <p class="muted" x-show="current().seconds === 0">{{.T "home.team.nobody_worked"}}</p>
+          <p class="muted" x-show="stats.people.working_now === 0">{{.T "home.team.nobody_working"}}</p>
           <ul class="team-list">
-            <template x-for="p in teamPage().rows" :key="p.person.id">
-              <li class="team-row hue-teal">
+            <template x-for="p in teamView().rows" :key="p.person.id">
+              <li class="team-row" :class="p.working_now ? 'hue-green' : 'tone'">
                 <span class="avatar" aria-hidden="true" x-text="initialsOf(p.person.name)"></span>
                 <div class="team-who">
                   <div class="team-name">
                     <span x-text="p.person.name"></span>
                     <span class="badge badge-ok" x-show="p.working_now">{{.T "home.team.working"}}</span>
                   </div>
-                  <div class="team-bar" aria-hidden="true"><span :style="{ width: barWidth(p) + '%' }"></span></div>
+                  <template x-if="p.working_now && p.working_on.length > 0">
+                    <p class="team-doing">
+                      <span class="muted">{{.T "home.team.on_task"}}</span>
+                      <a :href="'/tasks/' + p.working_on[0].task.id" x-text="p.working_on[0].task.name"></a>
+                      <span class="muted">· <span x-text="p.working_on[0].project.name"></span></span>
+                      <span class="muted" x-show="p.working_on.length > 1" :title="moreTasks(p)" x-text="$t('home.team.more_tasks', { count: p.working_on.length - 1 })"></span>
+                    </p>
+                  </template>
+                  <p class="team-doing muted" x-show="p.working_now && p.working_on.length === 0">{{.T "home.team.no_task"}}</p>
+                  <p class="team-doing muted" x-show="!p.working_now">{{.T "home.team.idle"}}</p>
                 </div>
-                <span class="team-hours" x-text="WTT.fmt.hours(secondsOf(p))"></span>
               </li>
             </template>
           </ul>
-          <nav class="pager" aria-label="{{.T "home.team.pager"}}" x-show="teamPage().pages > 1">
-            <span class="muted small" x-text="$t('home.team.range', { from: teamPage().from, to: teamPage().to, total: teamPage().total })"></span>
+          <nav class="pager" aria-label="{{.T "home.team.pager"}}" x-show="teamView().pages > 1">
+            <span class="muted small" x-text="$t('home.team.range', { from: teamView().from, to: teamView().to, total: teamView().total })"></span>
             <div class="row row-tight">
-              <button type="button" class="btn btn-secondary btn-sm" :disabled="teamPage().page <= 1" @click="peoplePage = teamPage().page - 1">{{template "icon" "chevron-left"}} {{.T "home.team.prev"}}</button>
-              <button type="button" class="btn btn-secondary btn-sm" :disabled="teamPage().page >= teamPage().pages" @click="peoplePage = teamPage().page + 1">{{.T "home.team.next"}} {{template "icon" "chevron-right"}}</button>
+              <button type="button" class="btn btn-secondary btn-sm" :disabled="teamView().page <= 1" @click="teamAt = teamView().page - 1">{{template "icon" "chevron-left"}} {{.T "home.team.prev"}}</button>
+              <button type="button" class="btn btn-secondary btn-sm" :disabled="teamView().page >= teamView().pages" @click="teamAt = teamView().page + 1">{{.T "home.team.next"}} {{template "icon" "chevron-right"}}</button>
             </div>
           </nav>
         </section>

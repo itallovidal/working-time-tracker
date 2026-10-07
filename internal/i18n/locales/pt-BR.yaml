@@ -100,14 +100,25 @@ home:
     no_cost: Nenhuma hora com valor pago
   team:
     title: Equipe
-    intro: Horas de cada pessoa no período, de quem mais trabalhou para quem menos.
-    nobody_worked: Ninguém bateu ponto neste período.
+    intro: Quem está com o ponto aberto agora e em que tarefa.
+    nobody_working: Ninguém está com o ponto aberto agora.
     working: Trabalhando agora
+    on_task: Na tarefa
+    more_tasks:
+      one: "e mais {{.count}} tarefa"
+      other: "e mais {{.count}} tarefas"
+    no_task: Sem tarefa na sessão
+    idle: Sem ponto aberto
     see_people: Ver colaboradores
     pager: Páginas da equipe
     prev: Anterior
     next: Próxima
     range: "{{.from}}–{{.to}} de {{.total}}"
+  # O ranking por horas, guardado em partials/team_hours.gohtml e hoje sem uso.
+  ranking:
+    title: Equipe
+    intro: Horas de cada pessoa no período, de quem mais trabalhou para quem menos.
+    nobody_worked: Ninguém bateu ponto neste período.
   projects:
     title: Projetos
     pager: Páginas da lista de projetos

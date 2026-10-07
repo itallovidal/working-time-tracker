@@ -140,6 +140,40 @@ document.addEventListener('alpine:init', () => {
   // As três janelas da visão geral: a chave é a da API, o campo é o tempo da pessoa nela.
   const periodFields = { last_7_days: 'last_7_days_seconds', last_30_days: 'last_30_days_seconds', all_time: 'total_seconds' };
 
+  // pageOf recorta uma página de uma lista e corrige o número dela se a lista encolheu.
+  const pageOf = (rows, wanted, perPage) => {
+    const pages = Math.max(1, Math.ceil(rows.length / perPage));
+    const page = Math.min(Math.max(1, wanted), pages);
+    const start = (page - 1) * perPage;
+    return { rows: rows.slice(start, start + perPage), page, pages, total: rows.length, from: rows.length ? start + 1 : 0, to: Math.min(start + perPage, rows.length) };
+  };
+
+  // GUARDADO, SEM USO. A equipe por horas, de quem mais trabalhou na janela para quem menos, que a
+  // página inicial deixou de mostrar em 7 out 2026: comparar o tempo de cada um dá a entender que
+  // quem trabalhou mais é quem mais merece reconhecimento, e o valor entregue nem sempre vem das
+  // horas. Vai com o parcial partials/team_hours.gohtml; para voltar a usar, espalhe
+  // `...teamHours()` no orgHome e inclua o parcial na página.
+  const teamHours = () => ({
+    rankingAt: 1,
+    secondsOf(p) {
+      return p[periodFields[this.period]];
+    },
+    rankingRows() {
+      return [...this.stats.by_person].sort((a, b) => this.secondsOf(b) - this.secondsOf(a) || a.person.name.localeCompare(b.person.name));
+    },
+    rankingView() {
+      return pageOf(this.rankingRows(), this.rankingAt, HOME_TEAM_PER_PAGE);
+    },
+    rankingReset() {
+      this.rankingAt = 1;
+    },
+    // A barra é a proporção de quem mais trabalhou; quem trabalhou algo nunca fica sem barra.
+    barWidth(p) {
+      const max = Math.max(0, ...this.stats.by_person.map((x) => this.secondsOf(x)));
+      return max > 0 && this.secondsOf(p) > 0 ? Math.max(3, Math.round(this.secondsOf(p) / max * 100)) : 0;
+    },
+  });
+
   // A página inicial: para admins, a visão geral da organização (tempo e dinheiro de todos os
   // projetos) e, para todos, os projetos em cartões, seis por página.
   Alpine.data('orgHome', () => ({
@@ -151,7 +185,7 @@ document.addEventListener('alpine:init', () => {
     stats: null,
     statsLoading: false,
     period: 'last_30_days',
-    peoplePage: 1,
+    teamAt: 1,
     periods: [
       { key: 'last_7_days', label: WTT.t('home.stats.last_7') },
       { key: 'last_30_days', label: WTT.t('home.stats.last_30') },
@@ -216,7 +250,7 @@ document.addEventListener('alpine:init', () => {
     },
     setPeriod(key) {
       this.period = key;
-      this.peoplePage = 1;
+      if (this.rankingReset) this.rankingReset(); // só existe com o ranking por horas, hoje guardado
     },
     current() {
       return this.stats.periods[this.period];
@@ -245,24 +279,17 @@ document.addEventListener('alpine:init', () => {
       return this.stats.by_person.filter((p) => p.working_now).map((p) => p.person.name).join(', ');
     },
 
-    // A equipe: todos, de quem mais trabalhou na janela para quem menos, cinco por página.
-    secondsOf(p) {
-      return p[periodFields[this.period]];
-    },
+    // A equipe: todas as pessoas, cinco por página, com quem trabalha agora primeiro e depois por
+    // nome. Não há ordem por horas de propósito (veja teamHours).
     teamRows() {
-      return [...this.stats.by_person].sort((a, b) => this.secondsOf(b) - this.secondsOf(a) || a.person.name.localeCompare(b.person.name));
+      return [...this.stats.by_person].sort((a, b) => Number(b.working_now) - Number(a.working_now) || a.person.name.localeCompare(b.person.name));
     },
-    teamPage() {
-      const rows = this.teamRows();
-      const pages = Math.max(1, Math.ceil(rows.length / HOME_TEAM_PER_PAGE));
-      const page = Math.min(Math.max(1, this.peoplePage), pages);
-      const start = (page - 1) * HOME_TEAM_PER_PAGE;
-      return { rows: rows.slice(start, start + HOME_TEAM_PER_PAGE), page, pages, total: rows.length, from: rows.length ? start + 1 : 0, to: Math.min(start + HOME_TEAM_PER_PAGE, rows.length) };
+    teamView() {
+      return pageOf(this.teamRows(), this.teamAt, HOME_TEAM_PER_PAGE);
     },
-    // A barra é a proporção de quem mais trabalhou; quem trabalhou algo nunca fica sem barra.
-    barWidth(p) {
-      const max = Math.max(0, ...this.stats.by_person.map((x) => this.secondsOf(x)));
-      return max > 0 && this.secondsOf(p) > 0 ? Math.max(3, Math.round(this.secondsOf(p) / max * 100)) : 0;
+    // As outras tarefas da sessão, além da que aparece na linha, para a dica de quem tem mais de uma.
+    moreTasks(p) {
+      return p.working_on.slice(1).map((w) => w.task.name + ' · ' + w.project.name).join('\n');
     },
   }));
 

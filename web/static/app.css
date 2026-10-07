@@ -536,12 +536,18 @@ td.actions { text-align: right; white-space: nowrap; }
 .kpi-value { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 1.6rem; font-weight: 600; line-height: 1.25; color: var(--ink); overflow-wrap: anywhere; }
 .kpi-hint { font-size: 0.8rem; color: var(--muted); overflow-wrap: anywhere; }
 
-/* A equipe: cada pessoa com as horas do período e uma barra do tamanho delas, na proporção de
-   quem mais trabalhou. */
+/* A equipe da página inicial: cada pessoa, com a tarefa em que trabalha agora quando está com o
+   ponto aberto. A barra e as horas, abaixo, são do ranking guardado e hoje sem uso. */
 .team-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
-.team-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; }
+.team-row { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 12px; }
+.team-row .avatar { width: 36px; height: 36px; background: var(--tone-soft); color: var(--tone); }
 .team-who { min-width: 0; }
 .team-name { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-weight: 550; overflow-wrap: anywhere; }
+/* O que a pessoa faz agora: a tarefa (que abre a página dela), o projeto e quantas outras tem na sessão. */
+.team-doing { margin: 2px 0 0; font-size: 0.88rem; color: var(--ink-2); overflow-wrap: anywhere; }
+.team-doing a { font-weight: 600; }
+/* O ranking por horas guardado em partials/team_hours.gohtml: ganha a coluna das horas. */
+.team-row-ranked { grid-template-columns: auto minmax(0, 1fr) auto; }
 .team-bar { height: 8px; margin-top: 6px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
 .team-bar > span { display: block; height: 100%; border-radius: inherit; background: var(--tone); }
 .team-hours { font-family: var(--mono); font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
