@@ -288,6 +288,50 @@ func TestService_ClockIn_RequiresRate(t *testing.T) {
 	}
 }
 
+// O dono da organização bate ponto sem valor por hora: a sessão guarda valor pago zero
+// e o valor cobrado do projeto, e ele passa a ser colaborador do projeto.
+func TestService_ClockIn_OwnerWorksAtTheBilledRate(t *testing.T) {
+	orgSvc, personSvc, projSvc, _, _, taskSvc, wsSvc := setupDeps(t)
+
+	org, _ := orgSvc.Create("Org")
+	owner, _ := personSvc.Create(org.ID.String(), "Ana", "ana@test.com")
+	testClient.Person.UpdateOneID(owner.ID).SetIsOwner(true).ExecX(context.Background())
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, project.Routine{})
+	rate := 8000
+	if _, err := projSvc.SetBilling(proj.ID.String(), nil, &rate); err != nil {
+		t.Fatalf("set billing: %v", err)
+	}
+	task1, err := taskSvc.Create(proj.ID.String(), "Task", "", "", nil)
+	if err != nil {
+		t.Fatalf("create task: %v", err)
+	}
+
+	session, err := wsSvc.ClockIn(proj.ID.String(), task1.ID.String(), owner.ID.String())
+	if err != nil {
+		t.Fatalf("the owner clocks in without a rate: %v", err)
+	}
+	if !session.OwnerHours || session.PayRateCents == nil || *session.PayRateCents != 0 ||
+		session.BillRateCents == nil || *session.BillRateCents != 8000 {
+		t.Errorf("owner session = owner %v, pay %v, bill %v; want owner, 0 and 8000", session.OwnerHours, session.PayRateCents, session.BillRateCents)
+	}
+
+	// Quem trabalha no projeto é colaborador dele, com valor zero.
+	list, err := collaborator.NewService(collaborator.NewStore(testClient)).ListByProject(proj.ID.String())
+	if err != nil || len(list) != 1 || !list[0].Person.IsOwner || list[0].PayRateCents == nil || *list[0].PayRateCents != 0 {
+		t.Errorf("collaborators after the owner clocked in = %+v, %v; want the owner with a zero rate", list, err)
+	}
+
+	// Outra pessoa sem valor continua sem bater ponto.
+	other, _ := personSvc.Create(org.ID.String(), "Bia", "bia@test.com")
+	task2, err := taskSvc.Create(proj.ID.String(), "Task 2", "", "", nil)
+	if err != nil {
+		t.Fatalf("create task 2: %v", err)
+	}
+	if _, err := wsSvc.ClockIn(proj.ID.String(), task2.ID.String(), other.ID.String()); err != work_session.ErrNoRate {
+		t.Errorf("a non-owner without a rate: err = %v, want ErrNoRate", err)
+	}
+}
+
 // O valor é copiado para a sessão no clock-in. Mudar o valor depois vale só
 // para as sessões seguintes.
 func TestService_RateIsSnapshottedAtClockIn(t *testing.T) {

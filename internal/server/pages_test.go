@@ -328,7 +328,7 @@ func TestPages_ProjectCollaboratorsTab(t *testing.T) {
 		`title="Editar colaborador"`, `class="list-btn" title="Editar colaborador" @click="openPerson(m)"`,
 		// O modal do colaborador: o valor, os times em caixas de marcar e a saída do projeto.
 		`x-show="$store.modal.name === 'collab-edit'"`,
-		`id="collab-edit-rate" type="text" inputmode="decimal" class="num" placeholder="0,00" required`,
+		`id="collab-edit-rate" type="text" inputmode="decimal" class="num" placeholder="0,00" :required="!person.is_owner"`,
 		`type="checkbox" :value="t.id" x-model="person.team_ids"`, "Tirar do projeto", "savePerson()", "removePerson()",
 		// O modal de editar time: o nome, os integrantes em caixas de marcar e a exclusão.
 		`x-show="$store.modal.name === 'team-edit'"`, `id="team-edit-name"`, `id="team-edit-search"`,
@@ -341,8 +341,8 @@ func TestPages_ProjectCollaboratorsTab(t *testing.T) {
 
 	// O formulário de adicionar pessoa vai da busca até o formulário de novo time.
 	addForm := adminPage[strings.Index(adminPage, `id="collab-search"`):strings.Index(adminPage, `id="team-name"`)]
-	if !strings.Contains(addForm, `id="collab-rate" type="text" inputmode="decimal" class="num" placeholder="0,00" required`) {
-		t.Error("the hourly rate is not a required field of the add person form")
+	if !strings.Contains(addForm, `id="collab-rate" type="text" inputmode="decimal" class="num" placeholder="0,00" :required="!addIsOwner()"`) {
+		t.Error("the hourly rate is not a required field of the add person form (except for the owner)")
 	}
 	if rate, team := strings.Index(addForm, `id="collab-rate"`), strings.Index(addForm, `id="collab-team"`); rate < 0 || team < rate {
 		t.Error("the add person form does not show the hourly rate above the team")

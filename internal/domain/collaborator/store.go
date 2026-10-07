@@ -44,7 +44,7 @@ func (s *Store) ListByProject(projectID uuid.UUID) ([]Collaborator, error) {
 	result := make([]Collaborator, len(people))
 	for i, p := range people {
 		c := Collaborator{
-			Person: Person{ID: p.ID, Name: p.Name, Email: p.Email},
+			Person: Person{ID: p.ID, Name: p.Name, Email: p.Email, IsOwner: p.IsOwner},
 			Teams:  make([]Team, 0, len(p.Edges.TeamMemberships)),
 		}
 		for _, a := range p.Edges.Allocations {

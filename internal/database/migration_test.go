@@ -13,9 +13,11 @@ import (
 
 	amigrate "ariga.io/atlas/sql/migrate"
 	"ariga.io/atlas/sql/sqltool"
+	"github.com/google/uuid"
 
 	"working-time-tracker/ent"
 	"working-time-tracker/ent/migrate"
+	entperson "working-time-tracker/ent/person"
 	"working-time-tracker/internal/database"
 	"working-time-tracker/testutil"
 )
@@ -236,6 +238,71 @@ func TestMigrate_DatabaseRejectsSecondOpenSession(t *testing.T) {
 		SetStartAt(time.Now().Add(-2 * time.Hour)).SetEndAt(time.Now().Add(-time.Hour))
 	if _, err := closed.Save(ctx); err != nil {
 		t.Fatalf("closed session should be allowed alongside an open one: %v", err)
+	}
+}
+
+// Uma organização tem no máximo um dono: o índice parcial barra o segundo, e quem não é
+// dono não conta.
+func TestMigrate_OneOwnerPerOrganization(t *testing.T) {
+	testutil.Truncate(t, testDB)
+	ctx := context.Background()
+
+	org := testClient.Organization.Create().SetName("Org").SaveX(ctx)
+	other := testClient.Organization.Create().SetName("Outra").SaveX(ctx)
+	person := func(orgID uuid.UUID, email string, owner bool) error {
+		_, err := testClient.Person.Create().SetName(email).SetEmail(email).SetOrganizationID(orgID).SetIsOwner(owner).Save(ctx)
+		return err
+	}
+	if err := person(org.ID, "ana@test.com", true); err != nil {
+		t.Fatalf("first owner: %v", err)
+	}
+	if err := person(org.ID, "bia@test.com", true); err == nil {
+		t.Error("expected the database to reject a second owner in the same organization")
+	}
+	if err := person(org.ID, "caio@test.com", false); err != nil {
+		t.Errorf("people who are not the owner are unlimited: %v", err)
+	}
+	if err := person(other.ID, "zeca@test.com", true); err != nil {
+		t.Errorf("another organization has its own owner: %v", err)
+	}
+}
+
+// A migração torna dono o admin mais antigo de cada organização que já existia. O
+// teste roda o UPDATE do arquivo de migração sobre pessoas sem dono.
+func TestMigrate_OwnerMigrationPicksTheOldestAdmin(t *testing.T) {
+	testutil.Truncate(t, testDB)
+	ctx := context.Background()
+
+	raw, err := os.ReadFile("migrations/20261008020000_organization_owner.sql")
+	if err != nil {
+		t.Fatalf("read migration: %v", err)
+	}
+	text := string(raw)
+	from := strings.Index(text, `UPDATE "persons"`)
+	to := strings.Index(text[from:], ");")
+	if from < 0 || to < 0 {
+		t.Fatal("the owner migration has no UPDATE statement to test")
+	}
+	update := text[from : from+to+1]
+
+	now := time.Now()
+	org := testClient.Organization.Create().SetName("Org").SaveX(ctx)
+	other := testClient.Organization.Create().SetName("Outra").SaveX(ctx)
+	person := func(orgID uuid.UUID, email, role string, age time.Duration) {
+		testClient.Person.Create().SetName(email).SetEmail(email).SetOrganizationID(orgID).
+			SetRole(entperson.Role(role)).SetCreatedAt(now.Add(-age)).SaveX(ctx)
+	}
+	person(org.ID, "member-old@test.com", "member", 10*time.Hour)
+	person(org.ID, "admin-old@test.com", "admin", 9*time.Hour)
+	person(org.ID, "admin-new@test.com", "admin", time.Hour)
+	person(other.ID, "only-member@test.com", "member", time.Hour)
+
+	if _, err := testDB.ExecContext(ctx, update); err != nil {
+		t.Fatalf("run the owner update: %v", err)
+	}
+	owners := queryColumn[string](t, `SELECT email FROM persons WHERE is_owner ORDER BY email`)
+	if !slices.Equal(owners, []string{"admin-old@test.com"}) {
+		t.Errorf("owners = %v, want only the oldest admin of the organization (and none where there is no admin)", owners)
 	}
 }
 

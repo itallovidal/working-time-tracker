@@ -28,6 +28,9 @@ func (WorkSession) Fields() []ent.Field {
 		// valores, e projetos sem valor cobrado, ficam com nulo.
 		field.Int("pay_rate_cents").Optional().Nillable().NonNegative(),
 		field.Int("bill_rate_cents").Optional().Nillable().NonNegative(),
+		// Sessão do dono da organização: o valor pago é zero, porque o que ele tira do
+		// projeto é a margem, e a tela mostra o valor cobrado como o que ele ganhou.
+		field.Bool("owner_hours").Default(false),
 		field.Time("created_at").Default(time.Now).Immutable(),
 	}
 }

@@ -86,6 +86,11 @@ func BillRateCents(v int) predicate.WorkSession {
 	return predicate.WorkSession(sql.FieldEQ(FieldBillRateCents, v))
 }
 
+// OwnerHours applies equality check predicate on the "owner_hours" field. It's identical to OwnerHoursEQ.
+func OwnerHours(v bool) predicate.WorkSession {
+	return predicate.WorkSession(sql.FieldEQ(FieldOwnerHours, v))
+}
+
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.WorkSession {
 	return predicate.WorkSession(sql.FieldEQ(FieldCreatedAt, v))
@@ -319,6 +324,16 @@ func BillRateCentsIsNil() predicate.WorkSession {
 // BillRateCentsNotNil applies the NotNil predicate on the "bill_rate_cents" field.
 func BillRateCentsNotNil() predicate.WorkSession {
 	return predicate.WorkSession(sql.FieldNotNull(FieldBillRateCents))
+}
+
+// OwnerHoursEQ applies the EQ predicate on the "owner_hours" field.
+func OwnerHoursEQ(v bool) predicate.WorkSession {
+	return predicate.WorkSession(sql.FieldEQ(FieldOwnerHours, v))
+}
+
+// OwnerHoursNEQ applies the NEQ predicate on the "owner_hours" field.
+func OwnerHoursNEQ(v bool) predicate.WorkSession {
+	return predicate.WorkSession(sql.FieldNEQ(FieldOwnerHours, v))
 }
 
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.

@@ -58,6 +58,7 @@ nav:
 
 roles:
   admin: Admin
+  owner: Owner
   member: Member
 
 session:
@@ -112,6 +113,7 @@ profile:
     submit: Save profile
     saved: Profile saved.
   rates:
+    owner: "Owner: earns the rate billed to the customer"
     title: My rates
     intro: How much you earn per hour on each project. Only you and the admins can see it.
     empty: You don't have a rate set on any project yet.
@@ -624,6 +626,8 @@ collab:
   recorded_so_far: "So far that is {{.hours}} recorded."
   view_label: How to see who is on the project
   no_rate_badge: No rate
+  owner_badge: Owner
+  owner_rate_hint: "The owner earns the rate billed to the customer: their hours count as revenue for the project and have no cost."
   edit_person: Edit collaborator
   edit_person_label: "Edit {{.name}}"
   pager: Pages of the people list
@@ -846,6 +850,7 @@ errors:
     invalid_organization: "invalid organization"
     invalid_role: "invalid role: use admin or member"
     last_admin: "the organization needs at least one admin"
+    owner_is_admin: "the organization owner is always an admin"
     invalid_week_hours: "the weekly hours must be between 1 and 168"
     name_required: "enter the name"
     not_found: "person not found"

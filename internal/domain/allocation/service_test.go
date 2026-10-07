@@ -1,7 +1,10 @@
 package allocation_test
 
 import (
+	"context"
 	"testing"
+
+	"github.com/google/uuid"
 
 	"working-time-tracker/internal/domain/allocation"
 	"working-time-tracker/internal/domain/organization"
@@ -41,6 +44,24 @@ func setup(t *testing.T) fixture {
 	f.projectX, f.projectY = x.ID.String(), y.ID.String()
 	f.ana, f.bruno = ana.ID.String(), bruno.ID.String()
 	return f
+}
+
+// O dono da organização não recebe valor por hora: o que ele tira do projeto é a margem,
+// então qualquer valor que venha vira zero.
+func TestService_Set_OwnerAlwaysZero(t *testing.T) {
+	f := setup(t)
+	testClient.Person.UpdateOneID(uuid.MustParse(f.ana)).SetIsOwner(true).ExecX(context.Background())
+
+	a, err := f.svc.Set(f.projectX, f.ana, 9000)
+	if err != nil {
+		t.Fatalf("set the owner: %v", err)
+	}
+	if a.PayRateCents != 0 {
+		t.Errorf("owner pay rate = %d, want 0", a.PayRateCents)
+	}
+	if b, _ := f.svc.Set(f.projectX, f.bruno, 9000); b.PayRateCents != 9000 {
+		t.Errorf("someone else's rate = %d, want 9000", b.PayRateCents)
+	}
 }
 
 // A mesma pessoa tem um valor diferente em cada projeto.

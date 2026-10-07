@@ -108,6 +108,11 @@ func (d Data) IsAdmin() bool {
 	return d.Me.IsAdmin()
 }
 
+// IsOwner diz se quem olha é o dono da organização.
+func (d Data) IsOwner() bool {
+	return d.Me != nil && d.Me.IsOwner
+}
+
 func (d Data) Initials() string {
 	if d.Me == nil {
 		return ""

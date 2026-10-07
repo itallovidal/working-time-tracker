@@ -16,7 +16,7 @@
         <span class="sr-only">{{.T "nav.profile_sr"}}</span>
         <span class="avatar" aria-hidden="true">{{.Initials}}</span>
         <span class="name" data-me-name>{{.Me.Name}}</span>
-        {{if .IsAdmin}}<span class="badge badge-accent">{{.T "roles.admin"}}</span>{{end}}
+        {{if .IsOwner}}<span class="badge badge-accent">{{.T "roles.owner"}}</span>{{else if .IsAdmin}}<span class="badge badge-accent">{{.T "roles.admin"}}</span>{{end}}
       </a>
       <span x-data="logoutButton">
         <button type="button" class="btn btn-ghost btn-sm" @click="logout()" :disabled="busy">{{.T "nav.logout"}}</button>

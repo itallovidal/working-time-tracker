@@ -194,6 +194,7 @@ var (
 		{Name: "email", Type: field.TypeString},
 		{Name: "password_hash", Type: field.TypeString, Nullable: true},
 		{Name: "role", Type: field.TypeEnum, Enums: []string{"admin", "member"}, Default: "member"},
+		{Name: "is_owner", Type: field.TypeBool, Default: false},
 		{Name: "weekly_hours", Type: field.TypeInt, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "organization_id", Type: field.TypeUUID},
@@ -206,7 +207,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "persons_organizations_persons",
-				Columns:    []*schema.Column{PersonsColumns[7]},
+				Columns:    []*schema.Column{PersonsColumns[8]},
 				RefColumns: []*schema.Column{OrganizationsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -216,6 +217,14 @@ var (
 				Name:    "person_email",
 				Unique:  true,
 				Columns: []*schema.Column{PersonsColumns[2]},
+			},
+			{
+				Name:    "one_owner_per_organization",
+				Unique:  true,
+				Columns: []*schema.Column{PersonsColumns[8]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "is_owner",
+				},
 			},
 		},
 	}
@@ -381,6 +390,7 @@ var (
 		{Name: "end_at", Type: field.TypeTime, Nullable: true},
 		{Name: "pay_rate_cents", Type: field.TypeInt, Nullable: true},
 		{Name: "bill_rate_cents", Type: field.TypeInt, Nullable: true},
+		{Name: "owner_hours", Type: field.TypeBool, Default: false},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "person_id", Type: field.TypeUUID},
 		{Name: "task_id", Type: field.TypeUUID},
@@ -393,13 +403,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "work_sessions_persons_work_sessions",
-				Columns:    []*schema.Column{WorkSessionsColumns[6]},
+				Columns:    []*schema.Column{WorkSessionsColumns[7]},
 				RefColumns: []*schema.Column{PersonsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "work_sessions_tasks_work_sessions",
-				Columns:    []*schema.Column{WorkSessionsColumns[7]},
+				Columns:    []*schema.Column{WorkSessionsColumns[8]},
 				RefColumns: []*schema.Column{TasksColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -408,7 +418,7 @@ var (
 			{
 				Name:    "one_active_session",
 				Unique:  true,
-				Columns: []*schema.Column{WorkSessionsColumns[6]},
+				Columns: []*schema.Column{WorkSessionsColumns[7]},
 				Annotation: &entsql.IndexAnnotation{
 					Where: "end_at IS NULL",
 				},

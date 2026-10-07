@@ -25,7 +25,8 @@ func (s *Store) Create(session *WorkSession) error {
 		SetPersonID(session.PersonID).
 		SetStartAt(session.StartAt).
 		SetNillablePayRateCents(session.PayRateCents).
-		SetNillableBillRateCents(session.BillRateCents)
+		SetNillableBillRateCents(session.BillRateCents).
+		SetOwnerHours(session.OwnerHours)
 	if session.EndAt != nil {
 		q = q.SetEndAt(*session.EndAt)
 	}
@@ -139,6 +140,7 @@ func toDomainSession(e *ent.WorkSession) *WorkSession {
 		EndAt:     e.EndAt,
 		CreatedAt: e.CreatedAt,
 
+		OwnerHours:    e.OwnerHours,
 		PayRateCents:  e.PayRateCents,
 		BillRateCents: e.BillRateCents,
 	}

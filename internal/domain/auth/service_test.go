@@ -40,6 +40,9 @@ func TestSignup_CreatesAdminWithSession(t *testing.T) {
 	if id.Role != person.RoleAdmin || id.Email != "ana@acme.com" || id.OrganizationName != "Acme" {
 		t.Errorf("identity = %+v, want admin ana@acme.com in Acme", id)
 	}
+	if !id.IsOwner {
+		t.Error("who creates the organization is its owner")
+	}
 	got, err := svc.Authenticate(token)
 	if err != nil || got.PersonID != id.PersonID {
 		t.Fatalf("authenticate new session: %v", err)
@@ -128,6 +131,9 @@ func TestInvite_AcceptOnce(t *testing.T) {
 	}
 	if member.OrganizationID != admin.OrganizationID || member.Role != person.RoleMember {
 		t.Errorf("member = %+v, want member of the admin's org", member)
+	}
+	if member.IsOwner {
+		t.Error("an invited person is never the owner")
 	}
 
 	if _, _, err := svc.AcceptInvite(token, AcceptInviteInput{Name: "Caio", Email: "caio@acme.com", Password: "senha-forte-3"}); !errors.Is(err, ErrInviteInvalid) {

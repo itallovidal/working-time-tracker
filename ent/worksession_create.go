@@ -83,6 +83,20 @@ func (_c *WorkSessionCreate) SetNillableBillRateCents(v *int) *WorkSessionCreate
 	return _c
 }
 
+// SetOwnerHours sets the "owner_hours" field.
+func (_c *WorkSessionCreate) SetOwnerHours(v bool) *WorkSessionCreate {
+	_c.mutation.SetOwnerHours(v)
+	return _c
+}
+
+// SetNillableOwnerHours sets the "owner_hours" field if the given value is not nil.
+func (_c *WorkSessionCreate) SetNillableOwnerHours(v *bool) *WorkSessionCreate {
+	if v != nil {
+		_c.SetOwnerHours(*v)
+	}
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *WorkSessionCreate) SetCreatedAt(v time.Time) *WorkSessionCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -156,6 +170,10 @@ func (_c *WorkSessionCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (_c *WorkSessionCreate) defaults() {
+	if _, ok := _c.mutation.OwnerHours(); !ok {
+		v := worksession.DefaultOwnerHours
+		_c.mutation.SetOwnerHours(v)
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := worksession.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
@@ -186,6 +204,9 @@ func (_c *WorkSessionCreate) check() error {
 		if err := worksession.BillRateCentsValidator(v); err != nil {
 			return &ValidationError{Name: "bill_rate_cents", err: fmt.Errorf(`ent: validator failed for field "WorkSession.bill_rate_cents": %w`, err)}
 		}
+	}
+	if _, ok := _c.mutation.OwnerHours(); !ok {
+		return &ValidationError{Name: "owner_hours", err: errors.New(`ent: missing required field "WorkSession.owner_hours"`)}
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "WorkSession.created_at"`)}
@@ -246,6 +267,10 @@ func (_c *WorkSessionCreate) createSpec() (*WorkSession, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.BillRateCents(); ok {
 		_spec.SetField(worksession.FieldBillRateCents, field.TypeInt, value)
 		_node.BillRateCents = &value
+	}
+	if value, ok := _c.mutation.OwnerHours(); ok {
+		_spec.SetField(worksession.FieldOwnerHours, field.TypeBool, value)
+		_node.OwnerHours = value
 	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(worksession.FieldCreatedAt, field.TypeTime, value)

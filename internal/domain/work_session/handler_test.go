@@ -46,7 +46,7 @@ func setupTestApp(t *testing.T) *testApp {
 	registerRoutes(e,
 		organization.NewHandler(orgSvc),
 		person.NewHandler(personSvc),
-		project.NewHandler(projSvc),
+		project.NewHandler(projSvc, nil),
 		team.NewHandler(teamSvc, memberSvc),
 		task.NewHandler(taskSvc),
 		work_session.NewHandler(wsSvc),

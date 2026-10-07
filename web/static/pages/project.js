@@ -169,13 +169,20 @@ document.addEventListener('alpine:init', () => {
     return start.getTime();
   }
 
+  // earnedRate é o valor por hora que a sessão rendeu a quem trabalhou nela: o que a
+  // pessoa recebe, ou, para o dono da organização, o valor cobrado do cliente.
+  function earnedRate(s) {
+    return s.owner_hours ? s.bill_rate_cents : s.pay_rate_cents;
+  }
+
   // amountWithin soma quanto a pessoa ganhou depois de "since": o tempo de cada
   // sessão dentro do período vezes o valor por hora daquela sessão. Usa o mesmo
   // arredondamento do servidor, por sessão.
   function amountWithin(sessions, since) {
     return sessions.reduce((sum, s) => {
-      if (s.pay_rate_cents === null || s.pay_rate_cents === undefined) return sum;
-      return sum + Math.round(secondsWithin([s], since) * s.pay_rate_cents / 3600);
+      const rate = earnedRate(s);
+      if (rate === null || rate === undefined) return sum;
+      return sum + Math.round(secondsWithin([s], since) * rate / 3600);
     }, 0);
   }
 
@@ -270,6 +277,15 @@ document.addEventListener('alpine:init', () => {
     },
     filteredAmount(kind) {
       const values = this.filtered().map((s) => this.amount(s, kind)).filter((v) => v !== null && v !== undefined);
+      return values.length === 0 ? null : values.reduce((sum, v) => sum + v, 0);
+    },
+    // earnedAmount é o que a sessão rendeu a quem trabalhou nela: o valor pago, ou, para o
+    // dono da organização, o valor cobrado. filteredEarned soma o das sessões da tela.
+    earnedAmount(s) {
+      return this.amount(s, s.owner_hours ? 'bill' : 'pay');
+    },
+    filteredEarned() {
+      const values = this.filtered().map((s) => this.earnedAmount(s)).filter((v) => v !== null && v !== undefined);
       return values.length === 0 ? null : values.reduce((sum, v) => sum + v, 0);
     },
     filteredMargin() {
@@ -755,22 +771,29 @@ document.addEventListener('alpine:init', () => {
     async init() {
       this.watchSessionFilters();
       try {
-        const [sessions, allocations, tasks] = await Promise.all([
+        const [sessions, allocations, tasks, billing] = await Promise.all([
           api('GET', '/api/projects/' + project.id + '/work-sessions?person_id=' + me.id),
           api('GET', '/api/projects/' + project.id + '/allocations'),
           api('GET', '/api/projects/' + project.id + '/tasks?assignee_id=' + me.id),
+          // O dono ganha o valor cobrado, que só os admins leem.
+          me.is_owner ? api('GET', '/api/projects/' + project.id + '/billing') : null,
         ]);
         this.sessions = sessions || [];
         this.tasks = tasks || [];
         this.taskId = this.tasks.length ? this.tasks[0].id : '';
         const own = (allocations || []).find((a) => a.person_id === me.id);
-        this.myRate = own ? own.pay_rate_cents : null;
+        this.myRate = me.is_owner ? billing.bill_rate_cents : (own ? own.pay_rate_cents : null);
       } catch (e) {
         this.errors.load = e.message;
       } finally {
         this.loading = false;
       }
       window.addEventListener('wtt:sessions-changed', () => this.reloadSessions());
+    },
+    // noRate é quem não pode bater ponto por falta de valor por hora. O dono bate sem
+    // valor pago: num projeto sem valor cobrado, só conta o tempo.
+    noRate() {
+      return !me.is_owner && this.myRate === null;
     },
     async reloadSessions() {
       try {
@@ -797,8 +820,9 @@ document.addEventListener('alpine:init', () => {
     // hora travado no clock-in, com o arredondamento do servidor. null sem valor.
     sessionValue() {
       const s = clock().session;
-      if (!s || s.pay_rate_cents === null || s.pay_rate_cents === undefined) return null;
-      return Math.round(clock().elapsed(s) * s.pay_rate_cents / 3600);
+      const rate = s ? earnedRate(s) : null;
+      if (rate === null || rate === undefined) return null;
+      return Math.round(clock().elapsed(s) * rate / 3600);
     },
   }));
 
@@ -958,7 +982,7 @@ document.addEventListener('alpine:init', () => {
     // quem está no projeto, na ordem em que a lista aparece.
     edit: { id: '', name: '', search: '', member_ids: [], people: [] },
     // O rascunho do modal do colaborador: o valor por hora como texto e os times marcados.
-    person: { id: '', name: '', email: '', rate: '', team_ids: [] },
+    person: { id: '', name: '', email: '', is_owner: false, rate: '', team_ids: [] },
     async init() {
       this.$watch('search', () => { this.page = 1; }); // uma busca nova começa da primeira página
       try {
@@ -1061,6 +1085,7 @@ document.addEventListener('alpine:init', () => {
         id: c.person.id,
         name: c.person.name,
         email: c.person.email,
+        is_owner: !!c.person.is_owner,
         rate: WTT.fmt.moneyInput(c.pay_rate_cents),
         team_ids: c.teams.map((t) => t.id),
       };
@@ -1084,7 +1109,8 @@ document.addEventListener('alpine:init', () => {
       return this.run('person', async () => {
         const c = this.collaborators.find((x) => x.person.id === this.person.id);
         if (!c) throw new Error(WTT.t('collab.person_gone'));
-        const cents = WTT.toCents(this.person.rate);
+        // O dono não tem valor pago: as horas dele valem o valor cobrado.
+        const cents = c.person.is_owner ? 0 : WTT.toCents(this.person.rate);
         if (cents === null) throw new Error(WTT.t('collab.rate_required'));
         const current = c.teams.map((t) => t.id);
         const wanted = this.person.team_ids;
@@ -1092,7 +1118,7 @@ document.addEventListener('alpine:init', () => {
         const joining = wanted.filter((id) => !current.includes(id));
         const body = { person_id: c.person.id };
         try {
-          if (cents !== c.pay_rate_cents) {
+          if (!c.person.is_owner && cents !== c.pay_rate_cents) {
             await api('PUT', '/api/projects/' + project.id + '/allocations/' + c.person.id, { pay_rate_cents: cents });
           }
           for (const id of leaving) await api('DELETE', '/api/teams/' + id + '/members', body);
@@ -1120,6 +1146,11 @@ document.addEventListener('alpine:init', () => {
       const query = fold(this.add.search.trim());
       return this.people.filter((p) => !this.inProject(p) && matches(p, query));
     },
+    // addIsOwner diz se a pessoa escolhida é o dono, que entra sem valor por hora.
+    addIsOwner() {
+      const p = this.people.find((x) => x.id === this.add.person_id);
+      return !!p && !!p.is_owner;
+    },
     // pruneAdd desfaz a escolha quando a busca tira da lista a pessoa escolhida.
     pruneAdd() {
       if (!this.addCandidates().some((p) => p.id === this.add.person_id)) this.add.person_id = '';
@@ -1133,7 +1164,7 @@ document.addEventListener('alpine:init', () => {
       return this.run('add', async () => {
         const person = this.addCandidates().find((p) => p.id === this.add.person_id);
         if (!person) throw new Error(WTT.t('collab.choose_person'));
-        const cents = WTT.toCents(this.add.rate);
+        const cents = person.is_owner ? 0 : WTT.toCents(this.add.rate);
         if (cents === null) throw new Error(WTT.t('collab.rate_required'));
         await api('PUT', '/api/projects/' + project.id + '/allocations/' + person.id, { pay_rate_cents: cents });
         // Daqui em diante a pessoa já está no projeto: se o time falhar, ela

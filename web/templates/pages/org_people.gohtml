@@ -27,10 +27,11 @@
                 <span class="badge" x-show="p.id === me.id">{{.T "common.you"}}</span>
               </td>
               <td class="muted" x-text="p.email"></td>
-              <td><span class="badge" :class="p.role === 'admin' && 'badge-accent'" x-text="WTT.fmt.role(p.role)"></span></td>
+              <td><span class="badge" :class="p.role === 'admin' && 'badge-accent'" x-text="p.is_owner ? $t('roles.owner') : WTT.fmt.role(p.role)"></span></td>
               <td class="nowrap num" :class="!p.weekly_hours && 'muted'" x-text="WTT.fmt.weeklyHours(p.weekly_hours) || $t('labels.weekly_hours_none')"></td>
               <td class="actions">
-                <button type="button" class="btn btn-ghost btn-sm" :disabled="pending"
+                {{/* O dono é sempre admin: o papel dele não muda. */}}
+                <button type="button" class="btn btn-ghost btn-sm" :disabled="pending" x-show="!p.is_owner"
                         @click="setRole(p, p.role === 'admin' ? 'member' : 'admin')"
                         x-text="p.role === 'admin' ? $t('org.people.make_member') : $t('org.people.make_admin')"></button>
                 <button type="button" class="btn btn-ghost btn-sm btn-icon" title="{{.T "org.people.edit_title"}}"

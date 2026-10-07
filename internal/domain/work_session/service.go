@@ -46,11 +46,11 @@ func (s *Service) ClockIn(projectID, taskID, personID string) (*WorkSession, err
 	// O valor por hora é conferido aqui e copiado para a sessão: quem não tem
 	// valor no projeto não bate ponto, e uma mudança de valor depois não altera
 	// esta sessão.
-	payRate, billRate, hasRate, err := s.rates.Rates(personUID, task.ProjectID)
+	rates, err := s.rates.Rates(personUID, task.ProjectID)
 	if err != nil {
 		return nil, err
 	}
-	if !hasRate {
+	if !rates.Found {
 		return nil, ErrNoRate
 	}
 
@@ -66,8 +66,9 @@ func (s *Service) ClockIn(projectID, taskID, personID string) (*WorkSession, err
 		TaskID:        task.ID,
 		PersonID:      personUID,
 		StartAt:       time.Now(),
-		PayRateCents:  &payRate,
-		BillRateCents: billRate,
+		OwnerHours:    rates.Owner,
+		PayRateCents:  &rates.PayRateCents,
+		BillRateCents: rates.BillRateCents,
 	}
 	if err := s.sessionStore.Create(session); err != nil {
 		// Duas requisições simultâneas passam pela checagem acima; o índice

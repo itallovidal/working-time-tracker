@@ -29,6 +29,8 @@ type Person struct {
 	PasswordHash *string `json:"-"`
 	// Role holds the value of the "role" field.
 	Role person.Role `json:"role,omitempty"`
+	// IsOwner holds the value of the "is_owner" field.
+	IsOwner bool `json:"is_owner,omitempty"`
 	// WeeklyHours holds the value of the "weekly_hours" field.
 	WeeklyHours *int `json:"weekly_hours,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
@@ -130,6 +132,8 @@ func (*Person) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
+		case person.FieldIsOwner:
+			values[i] = new(sql.NullBool)
 		case person.FieldWeeklyHours:
 			values[i] = new(sql.NullInt64)
 		case person.FieldName, person.FieldEmail, person.FieldPasswordHash, person.FieldRole:
@@ -189,6 +193,12 @@ func (_m *Person) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field role", values[i])
 			} else if value.Valid {
 				_m.Role = person.Role(value.String)
+			}
+		case person.FieldIsOwner:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field is_owner", values[i])
+			} else if value.Valid {
+				_m.IsOwner = value.Bool
 			}
 		case person.FieldWeeklyHours:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -287,6 +297,9 @@ func (_m *Person) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("role=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Role))
+	builder.WriteString(", ")
+	builder.WriteString("is_owner=")
+	builder.WriteString(fmt.Sprintf("%v", _m.IsOwner))
 	builder.WriteString(", ")
 	if v := _m.WeeklyHours; v != nil {
 		builder.WriteString("weekly_hours=")

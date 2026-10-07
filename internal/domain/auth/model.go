@@ -8,10 +8,12 @@ import (
 
 // Identity é a pessoa logada, como os handlers e as páginas enxergam.
 type Identity struct {
-	PersonID         uuid.UUID `json:"id"`
-	Name             string    `json:"name"`
-	Email            string    `json:"email"`
-	Role             string    `json:"role"`
+	PersonID uuid.UUID `json:"id"`
+	Name     string    `json:"name"`
+	Email    string    `json:"email"`
+	Role     string    `json:"role"`
+	// IsOwner marca o dono da organização, que é admin e é um só por organização.
+	IsOwner          bool      `json:"is_owner"`
 	OrganizationID   uuid.UUID `json:"organization_id"`
 	OrganizationName string    `json:"organization_name"`
 	// OrganizationCurrency é a moeda dos valores da organização (BRL, USD ou EUR).

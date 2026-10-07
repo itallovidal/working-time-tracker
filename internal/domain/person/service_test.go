@@ -148,6 +148,35 @@ func TestService_SetRole_LastAdmin(t *testing.T) {
 	}
 }
 
+// O dono da organização é sempre admin: nem com outro admin ele pode virar membro.
+func TestService_SetRole_OwnerStaysAdmin(t *testing.T) {
+	cleanup(t)
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	svc := person.NewService(person.NewStore(testClient))
+
+	org, _ := orgSvc.Create("Org")
+	ana, _ := svc.Create(org.ID.String(), "Ana", "ana@test.com")
+	bia, _ := svc.Create(org.ID.String(), "Bia", "bia@test.com")
+	if _, err := svc.SetRole(ana.ID.String(), person.RoleAdmin); err != nil {
+		t.Fatalf("promote ana: %v", err)
+	}
+	testClient.Person.UpdateOneID(ana.ID).SetIsOwner(true).ExecX(context.Background())
+	if _, err := svc.SetRole(bia.ID.String(), person.RoleAdmin); err != nil {
+		t.Fatalf("promote bia: %v", err)
+	}
+
+	if _, err := svc.SetRole(ana.ID.String(), person.RoleMember); err != person.ErrOwnerRole {
+		t.Errorf("demoting the owner with another admin around: err = %v, want ErrOwnerRole", err)
+	}
+	if got, _ := svc.Get(ana.ID.String()); got.Role != person.RoleAdmin || !got.IsOwner {
+		t.Errorf("the owner = %+v, want an admin and owner", got)
+	}
+	// Quem não é dono continua podendo ser rebaixado.
+	if _, err := svc.SetRole(bia.ID.String(), person.RoleMember); err != nil {
+		t.Errorf("demoting a non-owner admin: %v", err)
+	}
+}
+
 // Com dois admins, dois rebaixamentos simultâneos não podem passar os dois:
 // um deles precisa receber ErrLastAdmin e a org continua com um admin.
 func TestService_SetRole_ConcurrentDemotionsKeepOneAdmin(t *testing.T) {

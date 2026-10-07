@@ -24,6 +24,9 @@ func (Person) Fields() []ent.Field {
 		// Pessoas criadas antes do login existir não têm senha e não conseguem entrar.
 		field.String("password_hash").Optional().Nillable().Sensitive(),
 		field.Enum("role").Values("admin", "member").Default("member"),
+		// O dono da organização: quem a criou. É sempre admin, é um só por organização
+		// e as horas dele valem o valor cobrado, sem custo.
+		field.Bool("is_owner").Default(false),
 		// Jornada semanal combinada com a pessoa, em horas. Vale para a organização
 		// toda, e não por projeto.
 		field.Int("weekly_hours").Optional().Nillable(),
@@ -47,5 +50,10 @@ func (Person) Indexes() []ent.Index {
 	return []ent.Index{
 		// O email identifica a conta no login, então é único no sistema todo.
 		index.Fields("email").Unique(),
+		// No máximo um dono por organização.
+		index.Fields("organization_id").
+			Unique().
+			StorageKey("one_owner_per_organization").
+			Annotations(entsql.IndexWhere("is_owner")),
 	}
 }

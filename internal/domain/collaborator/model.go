@@ -13,6 +13,9 @@ type Person struct {
 	ID    uuid.UUID `json:"id"`
 	Name  string    `json:"name"`
 	Email string    `json:"email"`
+	// IsOwner marca o dono da organização: o valor dele no projeto é o cobrado, e não um
+	// valor pago.
+	IsOwner bool `json:"is_owner"`
 }
 
 type Team struct {

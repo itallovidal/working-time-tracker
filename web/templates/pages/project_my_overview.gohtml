@@ -7,7 +7,7 @@
 
   <div x-cloak x-show="!loading && !errors.load" class="stack stack-sections">
     {{/* O aviso fica acima dos cartões: dentro do relógio ele deixava um cartão mais alto que o outro. */}}
-    <p class="alert alert-warn" x-cloak x-show="!loading && !errors.load && myRate === null">
+    <p class="alert alert-warn" x-cloak x-show="!loading && !errors.load && noRate()">
       {{.T "time.no_rate"}}
       {{if .IsAdmin}}
       {{.T "time.set_rate_before"}} <a href="/projects/{{.Project.ID}}/management/teams">{{.T "project.head.teams"}}</a>{{.T "time.set_rate_after"}}
@@ -58,7 +58,7 @@
                   <option :value="t.id" x-text="t.name" :selected="t.id === taskId"></option>
                 </template>
               </select>
-              <button type="submit" class="btn" :disabled="pending || !taskId || myRate === null">{{.T "time.start"}}</button>
+              <button type="submit" class="btn" :disabled="pending || !taskId || noRate()">{{.T "time.start"}}</button>
             </div>
           </form>
         </template>
@@ -97,7 +97,7 @@
               <a class="btn btn-secondary btn-sm" :href="'/tasks/' + t.id">{{.T "time.view_details"}}</a>
               <span class="badge badge-ok" x-show="isRunning(t)">{{.T "time.running"}}</span>
               <button type="button" class="btn btn-sm" x-show="!isRunning(t)"
-                      :disabled="pending || myRate === null || !$store.clock.ready || !!$store.clock.session" @click="startTask(t)">{{template "icon" "play"}} {{.T "time.start"}}</button>
+                      :disabled="pending || noRate() || !$store.clock.ready || !!$store.clock.session" @click="startTask(t)">{{template "icon" "play"}} {{.T "time.start"}}</button>
             </div>
           </div>
         </template>
@@ -130,7 +130,7 @@
             <div class="k">{{.T "time.time_total"}}</div>
           </div>
           <div class="total">
-            <div class="v" x-text="WTT.fmt.money(filteredAmount('pay'))"></div>
+            <div class="v" x-text="WTT.fmt.money(filteredEarned())"></div>
             <div class="k">{{.T "time.your_value"}}</div>
           </div>
         </div>
@@ -157,7 +157,7 @@
                   <span class="badge badge-ok" x-show="!s.end_at">{{.T "time.open"}}</span>
                 </td>
                 <td class="actions mono num" x-text="WTT.fmt.clock($store.clock.elapsed(s))"></td>
-                <td class="actions num" x-text="WTT.fmt.money(amount(s, 'pay'))"></td>
+                <td class="actions num" x-text="WTT.fmt.money(earnedAmount(s))"></td>
               </tr>
             </template>
           </tbody>

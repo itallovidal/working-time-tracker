@@ -46,6 +46,13 @@ func (s *Service) Set(projectID, personID string, payRateCents int) (*Allocation
 	if !inOrg {
 		return nil, ErrPersonNotInOrg
 	}
+	// O dono não recebe valor por hora: o que ele tira do projeto é a margem, e as horas
+	// dele valem o valor cobrado. Quem o adiciona ao projeto não escolhe um valor.
+	if owner, err := s.store.IsOwner(per); err != nil {
+		return nil, err
+	} else if owner {
+		payRateCents = 0
+	}
 	if err := s.store.Set(prj, per, payRateCents); err != nil {
 		return nil, err
 	}

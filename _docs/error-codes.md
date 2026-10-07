@@ -169,6 +169,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `person.last_admin` | 400 | — | `a organização precisa de pelo menos um admin` | `the organization needs at least one admin` |
 | `person.name_required` | 400 | — | `informe o nome` | `enter the name` |
 | `person.not_found` | 404 | — | `pessoa não encontrada` | `person not found` |
+| `person.owner_is_admin` | 400 | — | `o dono da organização é sempre admin` | `the organization owner is always an admin` |
 
 ### project
 

@@ -104,8 +104,12 @@ func init() {
 	organization.DefaultID = organizationDescID.Default.(func() uuid.UUID)
 	personFields := schema.Person{}.Fields()
 	_ = personFields
+	// personDescIsOwner is the schema descriptor for is_owner field.
+	personDescIsOwner := personFields[6].Descriptor()
+	// person.DefaultIsOwner holds the default value on creation for the is_owner field.
+	person.DefaultIsOwner = personDescIsOwner.Default.(bool)
 	// personDescCreatedAt is the schema descriptor for created_at field.
-	personDescCreatedAt := personFields[7].Descriptor()
+	personDescCreatedAt := personFields[8].Descriptor()
 	// person.DefaultCreatedAt holds the default value on creation for the created_at field.
 	person.DefaultCreatedAt = personDescCreatedAt.Default.(func() time.Time)
 	// personDescID is the schema descriptor for id field.
@@ -176,8 +180,12 @@ func init() {
 	worksessionDescBillRateCents := worksessionFields[6].Descriptor()
 	// worksession.BillRateCentsValidator is a validator for the "bill_rate_cents" field. It is called by the builders before save.
 	worksession.BillRateCentsValidator = worksessionDescBillRateCents.Validators[0].(func(int) error)
+	// worksessionDescOwnerHours is the schema descriptor for owner_hours field.
+	worksessionDescOwnerHours := worksessionFields[7].Descriptor()
+	// worksession.DefaultOwnerHours holds the default value on creation for the owner_hours field.
+	worksession.DefaultOwnerHours = worksessionDescOwnerHours.Default.(bool)
 	// worksessionDescCreatedAt is the schema descriptor for created_at field.
-	worksessionDescCreatedAt := worksessionFields[7].Descriptor()
+	worksessionDescCreatedAt := worksessionFields[8].Descriptor()
 	// worksession.DefaultCreatedAt holds the default value on creation for the created_at field.
 	worksession.DefaultCreatedAt = worksessionDescCreatedAt.Default.(func() time.Time)
 	// worksessionDescID is the schema descriptor for id field.

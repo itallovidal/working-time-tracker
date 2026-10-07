@@ -109,6 +109,9 @@ func (s *Store) SetRole(id, role string) (*Person, error) {
 		return rollback(err)
 	}
 
+	if p.IsOwner && role == RoleMember {
+		return rollback(ErrOwnerRole)
+	}
 	if p.Role == person.RoleAdmin && role == RoleMember {
 		admins, err := tx.Person.Query().
 			Where(person.OrganizationIDEQ(p.OrganizationID), person.RoleEQ(person.RoleAdmin)).
@@ -173,6 +176,7 @@ func toDomainPerson(e *ent.Person) *Person {
 		Email:          e.Email,
 		OrganizationID: e.OrganizationID,
 		Role:           string(e.Role),
+		IsOwner:        e.IsOwner,
 		WeeklyHours:    e.WeeklyHours,
 		CreatedAt:      e.CreatedAt,
 	}

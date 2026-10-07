@@ -90,21 +90,48 @@ func (s *Store) ListByPerson(personID uuid.UUID) ([]Allocation, error) {
 	return result, nil
 }
 
-// Rates devolve os dois valores por hora de uma pessoa num projeto: o que ela
-// recebe e o que o cliente paga (nil em projeto sem valor cobrado). found é
-// false quando a pessoa não tem vínculo com o projeto.
-func (s *Store) Rates(personID, projectID uuid.UUID) (payRateCents int, billRateCents *int, found bool, err error) {
+// RateSet são os valores por hora de uma pessoa num projeto: o que ela recebe e o que
+// o cliente paga (nil em projeto sem valor cobrado). Found é false quando a pessoa não
+// tem vínculo com o projeto. Owner marca o dono da organização: para ele o valor pago é
+// zero, porque o que ele tira do projeto é a margem, e Found vale sempre.
+type RateSet struct {
+	PayRateCents  int
+	BillRateCents *int
+	Found         bool
+	Owner         bool
+}
+
+// Rates devolve os valores por hora da pessoa no projeto. O dono entra no projeto aqui,
+// com valor zero, se ainda não estava: quem trabalha num projeto é colaborador dele.
+func (s *Store) Rates(personID, projectID uuid.UUID) (RateSet, error) {
+	ctx := context.Background()
+	owner, err := s.IsOwner(personID)
+	if err != nil {
+		return RateSet{}, err
+	}
+	if owner {
+		if err := s.Set(projectID, personID, 0); err != nil {
+			return RateSet{}, err
+		}
+	}
 	a, err := s.client.Allocation.Query().
 		Where(entalloc.ProjectIDEQ(projectID), entalloc.PersonIDEQ(personID)).
 		WithProject().
-		Only(context.Background())
+		Only(ctx)
 	if ent.IsNotFound(err) {
-		return 0, nil, false, nil
+		return RateSet{}, nil
 	}
 	if err != nil {
-		return 0, nil, false, err
+		return RateSet{}, err
 	}
-	return a.PayRateCents, a.Edges.Project.BillRateCents, true, nil
+	return RateSet{PayRateCents: a.PayRateCents, BillRateCents: a.Edges.Project.BillRateCents, Found: true, Owner: owner}, nil
+}
+
+// IsOwner diz se a pessoa é o dono da organização.
+func (s *Store) IsOwner(personID uuid.UUID) (bool, error) {
+	return s.client.Person.Query().
+		Where(entperson.IDEQ(personID), entperson.IsOwner(true)).
+		Exist(context.Background())
 }
 
 // PersonInProjectOrganization diz se a pessoa existe e é da organização do projeto.

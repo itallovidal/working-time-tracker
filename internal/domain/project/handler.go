@@ -5,14 +5,23 @@ import (
 
 	"working-time-tracker/internal/apperr"
 	"working-time-tracker/internal/database"
+	"working-time-tracker/internal/domain/allocation"
+	"working-time-tracker/internal/domain/auth"
 )
 
-type Handler struct {
-	svc *Service
+// OwnerEnroller põe uma pessoa num projeto como colaboradora. O dono da organização que
+// cria um projeto já entra nele, para aparecer nas listas e poder ser responsável por tarefas.
+type OwnerEnroller interface {
+	Set(projectID, personID string, payRateCents int) (*allocation.Allocation, error)
 }
 
-func NewHandler(svc *Service) *Handler {
-	return &Handler{svc: svc}
+type Handler struct {
+	svc      *Service
+	enroller OwnerEnroller
+}
+
+func NewHandler(svc *Service, enroller OwnerEnroller) *Handler {
+	return &Handler{svc: svc, enroller: enroller}
 }
 
 func (h *Handler) Create(c *echo.Context) error {
@@ -29,6 +38,12 @@ func (h *Handler) Create(c *echo.Context) error {
 	project, err := h.svc.Create(orgID, body.Name, body.Description, body.SprintDurationDays, body.Routine)
 	if err != nil {
 		return apperr.Respond(c, 400, err)
+	}
+	// O valor não importa: para o dono a alocação sempre sai com zero.
+	if me := auth.CurrentPerson(c); me != nil && me.IsOwner {
+		if _, err := h.enroller.Set(project.ID.String(), me.PersonID.String(), 0); err != nil {
+			return apperr.Respond(c, 500, err)
+		}
 	}
 	return c.JSON(201, project)
 }

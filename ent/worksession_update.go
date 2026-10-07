@@ -147,6 +147,20 @@ func (_u *WorkSessionUpdate) ClearBillRateCents() *WorkSessionUpdate {
 	return _u
 }
 
+// SetOwnerHours sets the "owner_hours" field.
+func (_u *WorkSessionUpdate) SetOwnerHours(v bool) *WorkSessionUpdate {
+	_u.mutation.SetOwnerHours(v)
+	return _u
+}
+
+// SetNillableOwnerHours sets the "owner_hours" field if the given value is not nil.
+func (_u *WorkSessionUpdate) SetNillableOwnerHours(v *bool) *WorkSessionUpdate {
+	if v != nil {
+		_u.SetOwnerHours(*v)
+	}
+	return _u
+}
+
 // SetTask sets the "task" edge to the Task entity.
 func (_u *WorkSessionUpdate) SetTask(v *Task) *WorkSessionUpdate {
 	return _u.SetTaskID(v.ID)
@@ -260,6 +274,9 @@ func (_u *WorkSessionUpdate) sqlSave(ctx context.Context) (_node int, err error)
 	}
 	if _u.mutation.BillRateCentsCleared() {
 		_spec.ClearField(worksession.FieldBillRateCents, field.TypeInt)
+	}
+	if value, ok := _u.mutation.OwnerHours(); ok {
+		_spec.SetField(worksession.FieldOwnerHours, field.TypeBool, value)
 	}
 	if _u.mutation.TaskCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -455,6 +472,20 @@ func (_u *WorkSessionUpdateOne) ClearBillRateCents() *WorkSessionUpdateOne {
 	return _u
 }
 
+// SetOwnerHours sets the "owner_hours" field.
+func (_u *WorkSessionUpdateOne) SetOwnerHours(v bool) *WorkSessionUpdateOne {
+	_u.mutation.SetOwnerHours(v)
+	return _u
+}
+
+// SetNillableOwnerHours sets the "owner_hours" field if the given value is not nil.
+func (_u *WorkSessionUpdateOne) SetNillableOwnerHours(v *bool) *WorkSessionUpdateOne {
+	if v != nil {
+		_u.SetOwnerHours(*v)
+	}
+	return _u
+}
+
 // SetTask sets the "task" edge to the Task entity.
 func (_u *WorkSessionUpdateOne) SetTask(v *Task) *WorkSessionUpdateOne {
 	return _u.SetTaskID(v.ID)
@@ -598,6 +629,9 @@ func (_u *WorkSessionUpdateOne) sqlSave(ctx context.Context) (_node *WorkSession
 	}
 	if _u.mutation.BillRateCentsCleared() {
 		_spec.ClearField(worksession.FieldBillRateCents, field.TypeInt)
+	}
+	if value, ok := _u.mutation.OwnerHours(); ok {
+		_spec.SetField(worksession.FieldOwnerHours, field.TypeBool, value)
 	}
 	if _u.mutation.TaskCleared() {
 		edge := &sqlgraph.EdgeSpec{

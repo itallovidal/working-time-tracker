@@ -27,6 +27,8 @@ const (
 	FieldPayRateCents = "pay_rate_cents"
 	// FieldBillRateCents holds the string denoting the bill_rate_cents field in the database.
 	FieldBillRateCents = "bill_rate_cents"
+	// FieldOwnerHours holds the string denoting the owner_hours field in the database.
+	FieldOwnerHours = "owner_hours"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// EdgeTask holds the string denoting the task edge name in mutations.
@@ -60,6 +62,7 @@ var Columns = []string{
 	FieldEndAt,
 	FieldPayRateCents,
 	FieldBillRateCents,
+	FieldOwnerHours,
 	FieldCreatedAt,
 }
 
@@ -78,6 +81,8 @@ var (
 	PayRateCentsValidator func(int) error
 	// BillRateCentsValidator is a validator for the "bill_rate_cents" field. It is called by the builders before save.
 	BillRateCentsValidator func(int) error
+	// DefaultOwnerHours holds the default value on creation for the "owner_hours" field.
+	DefaultOwnerHours bool
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 	// DefaultID holds the default value on creation for the "id" field.
@@ -120,6 +125,11 @@ func ByPayRateCents(opts ...sql.OrderTermOption) OrderOption {
 // ByBillRateCents orders the results by the bill_rate_cents field.
 func ByBillRateCents(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldBillRateCents, opts...).ToFunc()
+}
+
+// ByOwnerHours orders the results by the owner_hours field.
+func ByOwnerHours(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldOwnerHours, opts...).ToFunc()
 }
 
 // ByCreatedAt orders the results by the created_at field.

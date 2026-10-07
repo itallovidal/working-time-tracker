@@ -126,6 +126,18 @@ func createProject(t *testing.T, e *echo.Echo, admin account, name string) strin
 	return decode(t, rec)["id"].(string)
 }
 
+// createEmptyProject cria o projeto e tira o dono dele. Quem cria um projeto sendo o dono
+// da organização já entra nele; os testes que contam quem está no projeto partem de um
+// projeto sem ninguém.
+func createEmptyProject(t *testing.T, e *echo.Echo, admin account, name string) string {
+	t.Helper()
+	id := createProject(t, e, admin, name)
+	if rec := do(e, "DELETE", "/api/projects/"+id+"/collaborators/"+admin.id, "", admin.session); rec.Code != http.StatusNoContent {
+		t.Fatalf("remove the owner from the new project = %d: %s", rec.Code, rec.Body.String())
+	}
+	return id
+}
+
 // allocate define, como admin, quanto a pessoa recebe por hora no projeto. Sem
 // isso ela não bate ponto.
 func allocate(t *testing.T, e *echo.Echo, admin account, projectID, personID string, cents int) {
@@ -320,8 +332,8 @@ func TestProjects_MemberAndTaskCounts(t *testing.T) {
 	admin := signup(t, e, "Org", "ana@test.com")
 	member := invite(t, e, admin, "bia@test.com", "member")
 	unteamed := invite(t, e, admin, "caio@test.com", "member")
-	busy := createProject(t, e, admin, "Projeto Alfa")
-	idle := createProject(t, e, admin, "Projeto Beta")
+	busy := createEmptyProject(t, e, admin, "Projeto Alfa")
+	idle := createEmptyProject(t, e, admin, "Projeto Beta")
 
 	post := func(path, body string) map[string]any {
 		t.Helper()
@@ -882,7 +894,7 @@ func TestRoutes_Table(t *testing.T) {
 func TestAPI_ActiveSessionAndProjectMembers(t *testing.T) {
 	e := newServer(t)
 	admin := signup(t, e, "Org", "ana@test.com")
-	projectID := createProject(t, e, admin, "Projeto")
+	projectID := createEmptyProject(t, e, admin, "Projeto")
 
 	if rec := do(e, "GET", "/api/work-sessions/active", "", admin.session); rec.Code != http.StatusOK || strings.TrimSpace(rec.Body.String()) != "null" {
 		t.Fatalf("active without session = %d %q, want 200 null", rec.Code, rec.Body.String())
@@ -928,7 +940,7 @@ func TestCollaborators_VisibilityAndRemoval(t *testing.T) {
 	member := invite(t, e, admin, "bia@test.com", "member")
 	colleague := invite(t, e, admin, "caio@test.com", "member")
 	outsider := signup(t, e, "Outra", "zeca@test.com")
-	projectID := createProject(t, e, admin, "Projeto")
+	projectID := createEmptyProject(t, e, admin, "Projeto")
 
 	post := func(path, body string) map[string]any {
 		t.Helper()
@@ -1103,6 +1115,83 @@ func TestTasks_ListFiltersAndPages(t *testing.T) {
 
 // A jornada semanal é da pessoa, vale para a organização toda e só um admin
 // define. Todos da organização leem.
+// O dono da organização (quem a criou) entra nos projetos que cria, com valor pago zero, e
+// as horas dele valem o valor cobrado. Outro admin não é dono: não entra sozinho no projeto,
+// precisa de valor para bater ponto, e não rebaixa o dono.
+func TestOwner_EntersItsProjectsAndWorksAtTheBilledRate(t *testing.T) {
+	e := newServer(t)
+	owner := signup(t, e, "Org", "ana@test.com")
+	other := invite(t, e, owner, "bia@test.com", "admin")
+
+	me := decode(t, do(e, "GET", "/api/auth/me", "", owner.session))
+	if me["is_owner"] != true || me["role"] != "admin" {
+		t.Errorf("the account that created the organization = role %v, is_owner %v; want admin and owner", me["role"], me["is_owner"])
+	}
+	if got := decode(t, do(e, "GET", "/api/auth/me", "", other.session)); got["is_owner"] != false {
+		t.Errorf("an invited admin has is_owner = %v, want false", got["is_owner"])
+	}
+
+	collaborators := func(projectID, session string) []map[string]any {
+		t.Helper()
+		return decodeList(t, do(e, "GET", "/api/projects/"+projectID+"/collaborators", "", session))
+	}
+	mine := createProject(t, e, owner, "Do dono")
+	got := collaborators(mine, owner.session)
+	if len(got) != 1 || got[0]["person"].(map[string]any)["id"] != owner.id ||
+		got[0]["person"].(map[string]any)["is_owner"] != true || got[0]["pay_rate_cents"] != float64(0) {
+		t.Errorf("collaborators of the owner's project = %v, want the owner with a zero rate", got)
+	}
+	// Outro admin que cria um projeto não entra nele, e quem o cria não o torna dono.
+	theirs := createProject(t, e, other, "Do outro admin")
+	if got := collaborators(theirs, owner.session); len(got) != 0 {
+		t.Errorf("collaborators of another admin's project = %v, want none", got)
+	}
+
+	// Escolher um valor para o dono não muda nada: ele recebe o valor cobrado.
+	allocate(t, e, other, mine, owner.id, 9000)
+	if got := collaborators(mine, owner.session); got[0]["pay_rate_cents"] != float64(0) {
+		t.Errorf("owner rate after asking for 9000 = %v, want 0", got[0]["pay_rate_cents"])
+	}
+
+	// O dono bate ponto sem que ninguém o tenha adicionado num projeto sem ele: a sessão
+	// guarda valor pago zero e o valor cobrado, e o outro admin, sem valor, não bate.
+	if rec := do(e, "PUT", "/api/projects/"+theirs+"/billing", `{"bill_rate_cents":12000}`, other.session); rec.Code != http.StatusOK {
+		t.Fatalf("set billing = %d: %s", rec.Code, rec.Body.String())
+	}
+	taskID := decode(t, do(e, "POST", "/api/projects/"+theirs+"/tasks", `{"name":"Tarefa"}`, owner.session))["id"].(string)
+	clock := "/api/projects/" + theirs + "/work-sessions/clock-in"
+	if rec := do(e, "POST", clock, `{"task_id":"`+taskID+`"}`, other.session); rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "work_session.no_rate") {
+		t.Errorf("another admin without a rate clocks in = %d %s, want 400 work_session.no_rate", rec.Code, rec.Body.String())
+	}
+	rec := do(e, "POST", clock, `{"task_id":"`+taskID+`"}`, owner.session)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("owner clock-in = %d: %s", rec.Code, rec.Body.String())
+	}
+	session := decode(t, rec)
+	if session["owner_hours"] != true || session["pay_rate_cents"] != float64(0) || session["bill_rate_cents"] != float64(12000) {
+		t.Errorf("owner session = owner %v, pay %v, bill %v; want owner, 0 and 12000", session["owner_hours"], session["pay_rate_cents"], session["bill_rate_cents"])
+	}
+	if got := collaborators(theirs, owner.session); len(got) != 1 || got[0]["person"].(map[string]any)["id"] != owner.id {
+		t.Errorf("after working there the owner is a collaborator: %v", got)
+	}
+
+	// O dono continua admin: outro admin não o rebaixa.
+	rec = do(e, "PATCH", "/api/persons/"+owner.id+"/role", `{"role":"member"}`, other.session)
+	if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "person.owner_is_admin") {
+		t.Errorf("demoting the owner = %d %s, want 400 person.owner_is_admin", rec.Code, rec.Body.String())
+	}
+	people := decodeList(t, do(e, "GET", "/api/orgs/"+owner.orgID+"/persons", "", other.session))
+	owners := 0
+	for _, p := range people {
+		if p["is_owner"] == true {
+			owners++
+		}
+	}
+	if owners != 1 {
+		t.Errorf("the organization has %d owners in the people list, want 1", owners)
+	}
+}
+
 // A reunião semanal com o cliente é um dia e um horário do projeto: o admin cria e
 // altera, todos os membros leem, e tirar o cliente do projeto apaga a reunião.
 func TestProjects_CustomerMeeting(t *testing.T) {

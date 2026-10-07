@@ -134,8 +134,9 @@
                 </td>
                 {{if .CanManage}}
                 <td class="num">
-                  <span x-show="c.pay_rate_cents !== null" x-text="WTT.fmt.money(c.pay_rate_cents)"></span>
-                  <span class="badge badge-warn" x-show="c.pay_rate_cents === null">{{.T "collab.no_rate_badge"}}</span>
+                  <span class="badge badge-accent" x-show="c.person.is_owner" title="{{.T "collab.owner_rate_hint"}}">{{.T "collab.owner_badge"}}</span>
+                  <span x-show="!c.person.is_owner && c.pay_rate_cents !== null" x-text="WTT.fmt.money(c.pay_rate_cents)"></span>
+                  <span class="badge badge-warn" x-show="!c.person.is_owner && c.pay_rate_cents === null">{{.T "collab.no_rate_badge"}}</span>
                 </td>
                 <td class="num">
                   <span :class="margin(c) < 0 && 'text-danger'" x-text="WTT.fmt.money(margin(c))"></span>
@@ -262,9 +263,10 @@
         {{.T "collab.all_in"}}
         <a href="/orgs/{{.OrgID}}/people">{{.T "collab.invite_link"}}</a>
       </p>
-      <div class="field">
+      <p class="muted small" x-show="addIsOwner()">{{.T "collab.owner_rate_hint"}}</p>
+      <div class="field" x-show="!addIsOwner()">
         <label for="collab-rate" x-text="$t('collab.col_rate', { unit: WTT.fmt.moneyUnit() })"></label>
-        <input id="collab-rate" type="text" inputmode="decimal" class="num" placeholder="{{.T "project_settings.rate_placeholder"}}" required x-model="add.rate">
+        <input id="collab-rate" type="text" inputmode="decimal" class="num" placeholder="{{.T "project_settings.rate_placeholder"}}" :required="!addIsOwner()" x-model="add.rate">
         <span class="hint">{{.T "collab.rate_hint"}}</span>
       </div>
       <div class="field">
@@ -356,9 +358,10 @@
           <div class="muted small" x-text="person.email"></div>
         </div>
       </div>
-      <div class="field">
+      <p class="muted small" x-show="person.is_owner">{{.T "collab.owner_rate_hint"}}</p>
+      <div class="field" x-show="!person.is_owner">
         <label for="collab-edit-rate" x-text="$t('collab.col_rate', { unit: WTT.fmt.moneyUnit() })"></label>
-        <input id="collab-edit-rate" type="text" inputmode="decimal" class="num" placeholder="{{.T "project_settings.rate_placeholder"}}" required x-model="person.rate" data-autofocus>
+        <input id="collab-edit-rate" type="text" inputmode="decimal" class="num" placeholder="{{.T "project_settings.rate_placeholder"}}" :required="!person.is_owner" x-model="person.rate" data-autofocus>
         <span class="hint">
           {{.T "collab.person_rate_hint"}}
           <span x-show="personMargin() !== null">{{.T "collab.margin_before"}} <strong class="num" :class="personMargin() < 0 && 'text-danger'" x-text="WTT.fmt.money(personMargin())"></strong> {{.T "collab.margin_after"}}</span>

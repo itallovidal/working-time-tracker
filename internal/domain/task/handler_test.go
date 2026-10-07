@@ -46,7 +46,7 @@ func setupTestApp(t *testing.T) *testApp {
 	registerRoutes(e,
 		organization.NewHandler(orgSvc),
 		person.NewHandler(personSvc),
-		project.NewHandler(projSvc),
+		project.NewHandler(projSvc, nil),
 		team.NewHandler(teamSvc, memberSvc),
 		task.NewHandler(taskSvc),
 	)
@@ -98,7 +98,7 @@ func TestHandler_Create_WithoutAssignee(t *testing.T) {
 
 	orgH := organization.NewHandler(orgSvc)
 	personH := person.NewHandler(personSvc)
-	projH := project.NewHandler(projSvc)
+	projH := project.NewHandler(projSvc, nil)
 	teamH := team.NewHandler(teamSvc, memberSvc)
 	taskH := task.NewHandler(taskSvc)
 	registerRoutes(e, orgH, personH, projH, teamH, taskH)

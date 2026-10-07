@@ -6114,6 +6114,7 @@ type PersonMutation struct {
 	email                   *string
 	password_hash           *string
 	role                    *person.Role
+	is_owner                *bool
 	weekly_hours            *int
 	addweekly_hours         *int
 	created_at              *time.Time
@@ -6438,6 +6439,42 @@ func (m *PersonMutation) OldRole(ctx context.Context) (v person.Role, err error)
 // ResetRole resets all changes to the "role" field.
 func (m *PersonMutation) ResetRole() {
 	m.role = nil
+}
+
+// SetIsOwner sets the "is_owner" field.
+func (m *PersonMutation) SetIsOwner(b bool) {
+	m.is_owner = &b
+}
+
+// IsOwner returns the value of the "is_owner" field in the mutation.
+func (m *PersonMutation) IsOwner() (r bool, exists bool) {
+	v := m.is_owner
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIsOwner returns the old "is_owner" field's value of the Person entity.
+// If the Person object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PersonMutation) OldIsOwner(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIsOwner is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIsOwner requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIsOwner: %w", err)
+	}
+	return oldValue.IsOwner, nil
+}
+
+// ResetIsOwner resets all changes to the "is_owner" field.
+func (m *PersonMutation) ResetIsOwner() {
+	m.is_owner = nil
 }
 
 // SetWeeklyHours sets the "weekly_hours" field.
@@ -6931,7 +6968,7 @@ func (m *PersonMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *PersonMutation) Fields() []string {
-	fields := make([]string, 0, 7)
+	fields := make([]string, 0, 8)
 	if m.name != nil {
 		fields = append(fields, person.FieldName)
 	}
@@ -6946,6 +6983,9 @@ func (m *PersonMutation) Fields() []string {
 	}
 	if m.role != nil {
 		fields = append(fields, person.FieldRole)
+	}
+	if m.is_owner != nil {
+		fields = append(fields, person.FieldIsOwner)
 	}
 	if m.weekly_hours != nil {
 		fields = append(fields, person.FieldWeeklyHours)
@@ -6971,6 +7011,8 @@ func (m *PersonMutation) Field(name string) (ent.Value, bool) {
 		return m.PasswordHash()
 	case person.FieldRole:
 		return m.Role()
+	case person.FieldIsOwner:
+		return m.IsOwner()
 	case person.FieldWeeklyHours:
 		return m.WeeklyHours()
 	case person.FieldCreatedAt:
@@ -6994,6 +7036,8 @@ func (m *PersonMutation) OldField(ctx context.Context, name string) (ent.Value, 
 		return m.OldPasswordHash(ctx)
 	case person.FieldRole:
 		return m.OldRole(ctx)
+	case person.FieldIsOwner:
+		return m.OldIsOwner(ctx)
 	case person.FieldWeeklyHours:
 		return m.OldWeeklyHours(ctx)
 	case person.FieldCreatedAt:
@@ -7041,6 +7085,13 @@ func (m *PersonMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetRole(v)
+		return nil
+	case person.FieldIsOwner:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIsOwner(v)
 		return nil
 	case person.FieldWeeklyHours:
 		v, ok := value.(int)
@@ -7149,6 +7200,9 @@ func (m *PersonMutation) ResetField(name string) error {
 		return nil
 	case person.FieldRole:
 		m.ResetRole()
+		return nil
+	case person.FieldIsOwner:
+		m.ResetIsOwner()
 		return nil
 	case person.FieldWeeklyHours:
 		m.ResetWeeklyHours()
@@ -12128,6 +12182,7 @@ type WorkSessionMutation struct {
 	addpay_rate_cents  *int
 	bill_rate_cents    *int
 	addbill_rate_cents *int
+	owner_hours        *bool
 	created_at         *time.Time
 	clearedFields      map[string]struct{}
 	task               *uuid.UUID
@@ -12540,6 +12595,42 @@ func (m *WorkSessionMutation) ResetBillRateCents() {
 	delete(m.clearedFields, worksession.FieldBillRateCents)
 }
 
+// SetOwnerHours sets the "owner_hours" field.
+func (m *WorkSessionMutation) SetOwnerHours(b bool) {
+	m.owner_hours = &b
+}
+
+// OwnerHours returns the value of the "owner_hours" field in the mutation.
+func (m *WorkSessionMutation) OwnerHours() (r bool, exists bool) {
+	v := m.owner_hours
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOwnerHours returns the old "owner_hours" field's value of the WorkSession entity.
+// If the WorkSession object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *WorkSessionMutation) OldOwnerHours(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOwnerHours is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOwnerHours requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOwnerHours: %w", err)
+	}
+	return oldValue.OwnerHours, nil
+}
+
+// ResetOwnerHours resets all changes to the "owner_hours" field.
+func (m *WorkSessionMutation) ResetOwnerHours() {
+	m.owner_hours = nil
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (m *WorkSessionMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
@@ -12664,7 +12755,7 @@ func (m *WorkSessionMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *WorkSessionMutation) Fields() []string {
-	fields := make([]string, 0, 7)
+	fields := make([]string, 0, 8)
 	if m.task != nil {
 		fields = append(fields, worksession.FieldTaskID)
 	}
@@ -12682,6 +12773,9 @@ func (m *WorkSessionMutation) Fields() []string {
 	}
 	if m.bill_rate_cents != nil {
 		fields = append(fields, worksession.FieldBillRateCents)
+	}
+	if m.owner_hours != nil {
+		fields = append(fields, worksession.FieldOwnerHours)
 	}
 	if m.created_at != nil {
 		fields = append(fields, worksession.FieldCreatedAt)
@@ -12706,6 +12800,8 @@ func (m *WorkSessionMutation) Field(name string) (ent.Value, bool) {
 		return m.PayRateCents()
 	case worksession.FieldBillRateCents:
 		return m.BillRateCents()
+	case worksession.FieldOwnerHours:
+		return m.OwnerHours()
 	case worksession.FieldCreatedAt:
 		return m.CreatedAt()
 	}
@@ -12729,6 +12825,8 @@ func (m *WorkSessionMutation) OldField(ctx context.Context, name string) (ent.Va
 		return m.OldPayRateCents(ctx)
 	case worksession.FieldBillRateCents:
 		return m.OldBillRateCents(ctx)
+	case worksession.FieldOwnerHours:
+		return m.OldOwnerHours(ctx)
 	case worksession.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	}
@@ -12781,6 +12879,13 @@ func (m *WorkSessionMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetBillRateCents(v)
+		return nil
+	case worksession.FieldOwnerHours:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOwnerHours(v)
 		return nil
 	case worksession.FieldCreatedAt:
 		v, ok := value.(time.Time)
@@ -12903,6 +13008,9 @@ func (m *WorkSessionMutation) ResetField(name string) error {
 		return nil
 	case worksession.FieldBillRateCents:
 		m.ResetBillRateCents()
+		return nil
+	case worksession.FieldOwnerHours:
+		m.ResetOwnerHours()
 		return nil
 	case worksession.FieldCreatedAt:
 		m.ResetCreatedAt()

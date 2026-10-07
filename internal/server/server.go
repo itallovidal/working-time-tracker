@@ -80,7 +80,7 @@ func New(client *ent.Client, opts Options) (*echo.Echo, error) {
 		Organization: organization.NewHandler(orgSvc),
 		Customer:     customer.NewHandler(customerSvc),
 		Person:       person.NewHandler(personSvc),
-		Project:      project.NewHandler(projectSvc),
+		Project:      project.NewHandler(projectSvc, allocationSvc),
 		Team:         team.NewHandler(teamSvc, membershipSvc),
 		Allocation:   allocation.NewHandler(allocationSvc),
 		Collaborator: collaborator.NewHandler(collaboratorSvc),

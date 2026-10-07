@@ -68,6 +68,7 @@ nav:
 
 roles:
   admin: Admin
+  owner: Dono
   member: Membro
 
 session:
@@ -122,6 +123,7 @@ profile:
     submit: Salvar perfil
     saved: Perfil salvo.
   rates:
+    owner: "Dono: recebe o valor cobrado do cliente"
     title: Meus valores
     intro: Quanto você recebe por hora em cada projeto. Só você e os admins veem.
     empty: Você ainda não tem valor definido em nenhum projeto.
@@ -634,6 +636,8 @@ collab:
   recorded_so_far: "Até agora são {{.hours}} registradas."
   view_label: Como ver quem está no projeto
   no_rate_badge: Sem valor
+  owner_badge: Dono
+  owner_rate_hint: "O dono recebe o valor cobrado do cliente: as horas dele entram na receita do projeto e não têm custo."
   edit_person: Editar colaborador
   edit_person_label: "Editar {{.name}}"
   pager: Páginas da lista de pessoas
@@ -856,6 +860,7 @@ errors:
     invalid_organization: "organização inválida"
     invalid_role: "papel inválido: use admin ou member"
     last_admin: "a organização precisa de pelo menos um admin"
+    owner_is_admin: "o dono da organização é sempre admin"
     invalid_week_hours: "a jornada semanal deve ficar entre 1 e 168 horas"
     name_required: "informe o nome"
     not_found: "pessoa não encontrada"

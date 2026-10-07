@@ -111,6 +111,20 @@ func (_u *PersonUpdate) SetNillableRole(v *person.Role) *PersonUpdate {
 	return _u
 }
 
+// SetIsOwner sets the "is_owner" field.
+func (_u *PersonUpdate) SetIsOwner(v bool) *PersonUpdate {
+	_u.mutation.SetIsOwner(v)
+	return _u
+}
+
+// SetNillableIsOwner sets the "is_owner" field if the given value is not nil.
+func (_u *PersonUpdate) SetNillableIsOwner(v *bool) *PersonUpdate {
+	if v != nil {
+		_u.SetIsOwner(*v)
+	}
+	return _u
+}
+
 // SetWeeklyHours sets the "weekly_hours" field.
 func (_u *PersonUpdate) SetWeeklyHours(v int) *PersonUpdate {
 	_u.mutation.ResetWeeklyHours()
@@ -436,6 +450,9 @@ func (_u *PersonUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.Role(); ok {
 		_spec.SetField(person.FieldRole, field.TypeEnum, value)
+	}
+	if value, ok := _u.mutation.IsOwner(); ok {
+		_spec.SetField(person.FieldIsOwner, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.WeeklyHours(); ok {
 		_spec.SetField(person.FieldWeeklyHours, field.TypeInt, value)
@@ -841,6 +858,20 @@ func (_u *PersonUpdateOne) SetNillableRole(v *person.Role) *PersonUpdateOne {
 	return _u
 }
 
+// SetIsOwner sets the "is_owner" field.
+func (_u *PersonUpdateOne) SetIsOwner(v bool) *PersonUpdateOne {
+	_u.mutation.SetIsOwner(v)
+	return _u
+}
+
+// SetNillableIsOwner sets the "is_owner" field if the given value is not nil.
+func (_u *PersonUpdateOne) SetNillableIsOwner(v *bool) *PersonUpdateOne {
+	if v != nil {
+		_u.SetIsOwner(*v)
+	}
+	return _u
+}
+
 // SetWeeklyHours sets the "weekly_hours" field.
 func (_u *PersonUpdateOne) SetWeeklyHours(v int) *PersonUpdateOne {
 	_u.mutation.ResetWeeklyHours()
@@ -1196,6 +1227,9 @@ func (_u *PersonUpdateOne) sqlSave(ctx context.Context) (_node *Person, err erro
 	}
 	if value, ok := _u.mutation.Role(); ok {
 		_spec.SetField(person.FieldRole, field.TypeEnum, value)
+	}
+	if value, ok := _u.mutation.IsOwner(); ok {
+		_spec.SetField(person.FieldIsOwner, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.WeeklyHours(); ok {
 		_spec.SetField(person.FieldWeeklyHours, field.TypeInt, value)

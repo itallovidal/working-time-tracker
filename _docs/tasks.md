@@ -468,6 +468,16 @@
 
 ---
 
+### Sprint 38: Organization Owner
+
+- [X] S38.1 `persons.is_owner` (a partial unique index: one per organization) and `work_sessions.owner_hours`, with a migration that makes the oldest admin of each organization its owner
+- [X] S38.2 Signup creates the owner; an invite never does; the owner cannot be demoted (`person.owner_is_admin`); `is_owner` in the identity, the person and the collaborator JSON
+- [X] S38.3 The owner has no paid rate: `Set` stores 0, the clock-in needs no allocation and snapshots `pay 0`, the project's billed rate and `owner_hours`; creating a project enrolls the owner
+- [X] S38.4 Screens: the owner's hours count as what they earned (Início clock and totals, own sessions), the Colaboradores tab shows "Dono" without a rate field, the people page and the top bar say "Dono", the profile explains it
+- [X] S38.5 Seed with Ana as the owner; tests for the service, the API and the migration; README, design, routes and error codes updated; checked in the browser
+
+---
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open

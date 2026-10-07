@@ -57,6 +57,7 @@ func (s *Service) Signup(in SignupInput) (*Identity, string, error) {
 		Email:            email,
 		PasswordHash:     hash,
 		Role:             person.RoleAdmin,
+		IsOwner:          true,
 		SessionHash:      tokenHash,
 		SessionExpires:   now.Add(SessionTTL),
 		Now:              now,

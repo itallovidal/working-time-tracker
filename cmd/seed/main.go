@@ -39,7 +39,7 @@ const password = "demo12345"
 // historyDays é até onde as sessões voltam no tempo.
 const historyDays = 75
 
-// As pessoas da software house. A primeira cria a organização e é admin; as
+// As pessoas da software house. A primeira cria a organização, é admin e dona dela; as
 // outras entram por convite, com o papel indicado. weeklyHours é a jornada
 // semanal combinada com cada uma, que vale para todos os projetos: a Ana, sócia,
 // não tem jornada definida, e a Elisa e o João trabalham meio período.
@@ -424,6 +424,12 @@ func main() {
 		}
 		// O valor vem antes do time: é ele que põe a pessoa no projeto.
 		for who, cents := range p.rates {
+			// A Ana é a dona da organização: não recebe valor por hora, as horas dela
+			// valem o valor cobrado. O serviço grava zero; a tabela segue o mesmo valor.
+			if who == people[0].key {
+				cents = 0
+				p.rates[who] = 0
+			}
 			_, err := allocationSvc.Set(id, person[who].PersonID.String(), cents)
 			must(err)
 		}
@@ -586,7 +592,8 @@ func main() {
 					SetStartAt(at(daysAgo, startMin)).
 					SetEndAt(at(daysAgo, endMin)).
 					SetPayRateCents(prj.rate).
-					SetNillableBillRateCents(seeded[prj.key].billRate))
+					SetNillableBillRateCents(seeded[prj.key].billRate).
+					SetOwnerHours(who.key == people[0].key))
 				closed++
 				clockMin = endMin + 45 + rng.Intn(75) // pausa até o próximo bloco
 			}
@@ -606,6 +613,7 @@ func main() {
 			SetStartAt(now.Add(-time.Duration(o.minutes) * time.Minute)).
 			SetPayRateCents(seeded[o.project].rates[o.person]).
 			SetNillableBillRateCents(seeded[o.project].billRate).
+			SetOwnerHours(o.person == people[0].key).
 			ExecX(ctx)
 	}
 
@@ -623,7 +631,7 @@ func main() {
 	fmt.Printf("  %d sessões fechadas nos últimos %d dias e %d com o ponto aberto agora\n", closed, historyDays, len(openNow))
 	fmt.Printf("  %d integrações sem credencial: informe o token na aba Integrações para usá-las\n", len(integrations))
 	fmt.Println()
-	fmt.Printf("  Admin:   %s / %s\n", people[0].email, password)
+	fmt.Printf("  Dono:    %s / %s\n", people[0].email, password)
 	for _, p := range people[1:] {
 		role := "Membro: "
 		if p.role == "admin" {

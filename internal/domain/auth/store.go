@@ -29,6 +29,7 @@ type NewAccount struct {
 	Email            string
 	PasswordHash     string
 	Role             string
+	IsOwner          bool // só o signup cria o dono, junto com a organização
 	SessionHash      string
 	SessionExpires   time.Time
 	InviteID         *uuid.UUID // convite a marcar como aceito na mesma transação
@@ -78,6 +79,7 @@ func (s *Store) CreateAccount(a NewAccount) (*Identity, error) {
 		SetOrganizationID(org.ID).
 		SetPasswordHash(a.PasswordHash).
 		SetRole(person.Role(a.Role)).
+		SetIsOwner(a.IsOwner).
 		Save(ctx)
 	if err != nil {
 		if ent.IsConstraintError(err) {
@@ -237,6 +239,7 @@ func identityOf(p *ent.Person, org *ent.Organization) *Identity {
 		Name:           p.Name,
 		Email:          p.Email,
 		Role:           string(p.Role),
+		IsOwner:        p.IsOwner,
 		OrganizationID: p.OrganizationID,
 	}
 	if org != nil {

@@ -25,7 +25,7 @@ func TestHandler_Create(t *testing.T) {
 	integSvc := integration.NewService(integration.NewStore(testClient), "test-32-byte-encryption-key!!!!")
 
 	orgH := organization.NewHandler(orgSvc)
-	projH := project.NewHandler(projSvc)
+	projH := project.NewHandler(projSvc, nil)
 	integH := integration.NewHandler(integSvc)
 	registerRoutes(e, orgH, projH, integH)
 
@@ -112,7 +112,7 @@ func TestHandler_Create_InvalidType(t *testing.T) {
 	integSvc := integration.NewService(integration.NewStore(testClient), "test-32-byte-encryption-key!!!!")
 
 	orgH := organization.NewHandler(orgSvc)
-	projH := project.NewHandler(projSvc)
+	projH := project.NewHandler(projSvc, nil)
 	integH := integration.NewHandler(integSvc)
 	registerRoutes(e, orgH, projH, integH)
 

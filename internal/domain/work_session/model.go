@@ -32,6 +32,9 @@ type WorkSession struct {
 	// Os dois Amount são o tempo da sessão vezes cada valor; numa sessão aberta,
 	// contam até agora. Tudo fica nil quando a sessão não tem valor ou quando
 	// quem pede não pode ver (o handler apaga antes de responder).
+	// OwnerHours marca a sessão do dono da organização: o valor pago é zero, e a tela
+	// mostra o valor cobrado como o que ele ganhou.
+	OwnerHours      bool `json:"owner_hours"`
 	PayRateCents    *int `json:"pay_rate_cents"`
 	BillRateCents   *int `json:"bill_rate_cents"`
 	PayAmountCents  *int `json:"pay_amount_cents"`

@@ -76,6 +76,11 @@ func PasswordHash(v string) predicate.Person {
 	return predicate.Person(sql.FieldEQ(FieldPasswordHash, v))
 }
 
+// IsOwner applies equality check predicate on the "is_owner" field. It's identical to IsOwnerEQ.
+func IsOwner(v bool) predicate.Person {
+	return predicate.Person(sql.FieldEQ(FieldIsOwner, v))
+}
+
 // WeeklyHours applies equality check predicate on the "weekly_hours" field. It's identical to WeeklyHoursEQ.
 func WeeklyHours(v int) predicate.Person {
 	return predicate.Person(sql.FieldEQ(FieldWeeklyHours, v))
@@ -329,6 +334,16 @@ func RoleIn(vs ...Role) predicate.Person {
 // RoleNotIn applies the NotIn predicate on the "role" field.
 func RoleNotIn(vs ...Role) predicate.Person {
 	return predicate.Person(sql.FieldNotIn(FieldRole, vs...))
+}
+
+// IsOwnerEQ applies the EQ predicate on the "is_owner" field.
+func IsOwnerEQ(v bool) predicate.Person {
+	return predicate.Person(sql.FieldEQ(FieldIsOwner, v))
+}
+
+// IsOwnerNEQ applies the NEQ predicate on the "is_owner" field.
+func IsOwnerNEQ(v bool) predicate.Person {
+	return predicate.Person(sql.FieldNEQ(FieldIsOwner, v))
 }
 
 // WeeklyHoursEQ applies the EQ predicate on the "weekly_hours" field.

@@ -26,6 +26,8 @@ const (
 	FieldPasswordHash = "password_hash"
 	// FieldRole holds the string denoting the role field in the database.
 	FieldRole = "role"
+	// FieldIsOwner holds the string denoting the is_owner field in the database.
+	FieldIsOwner = "is_owner"
 	// FieldWeeklyHours holds the string denoting the weekly_hours field in the database.
 	FieldWeeklyHours = "weekly_hours"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
@@ -105,6 +107,7 @@ var Columns = []string{
 	FieldOrganizationID,
 	FieldPasswordHash,
 	FieldRole,
+	FieldIsOwner,
 	FieldWeeklyHours,
 	FieldCreatedAt,
 }
@@ -120,6 +123,8 @@ func ValidColumn(column string) bool {
 }
 
 var (
+	// DefaultIsOwner holds the default value on creation for the "is_owner" field.
+	DefaultIsOwner bool
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 	// DefaultID holds the default value on creation for the "id" field.
@@ -183,6 +188,11 @@ func ByPasswordHash(opts ...sql.OrderTermOption) OrderOption {
 // ByRole orders the results by the role field.
 func ByRole(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldRole, opts...).ToFunc()
+}
+
+// ByIsOwner orders the results by the is_owner field.
+func ByIsOwner(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldIsOwner, opts...).ToFunc()
 }
 
 // ByWeeklyHours orders the results by the weekly_hours field.

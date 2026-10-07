@@ -74,6 +74,20 @@ func (_c *PersonCreate) SetNillableRole(v *person.Role) *PersonCreate {
 	return _c
 }
 
+// SetIsOwner sets the "is_owner" field.
+func (_c *PersonCreate) SetIsOwner(v bool) *PersonCreate {
+	_c.mutation.SetIsOwner(v)
+	return _c
+}
+
+// SetNillableIsOwner sets the "is_owner" field if the given value is not nil.
+func (_c *PersonCreate) SetNillableIsOwner(v *bool) *PersonCreate {
+	if v != nil {
+		_c.SetIsOwner(*v)
+	}
+	return _c
+}
+
 // SetWeeklyHours sets the "weekly_hours" field.
 func (_c *PersonCreate) SetWeeklyHours(v int) *PersonCreate {
 	_c.mutation.SetWeeklyHours(v)
@@ -250,6 +264,10 @@ func (_c *PersonCreate) defaults() {
 		v := person.DefaultRole
 		_c.mutation.SetRole(v)
 	}
+	if _, ok := _c.mutation.IsOwner(); !ok {
+		v := person.DefaultIsOwner
+		_c.mutation.SetIsOwner(v)
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := person.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
@@ -278,6 +296,9 @@ func (_c *PersonCreate) check() error {
 		if err := person.RoleValidator(v); err != nil {
 			return &ValidationError{Name: "role", err: fmt.Errorf(`ent: validator failed for field "Person.role": %w`, err)}
 		}
+	}
+	if _, ok := _c.mutation.IsOwner(); !ok {
+		return &ValidationError{Name: "is_owner", err: errors.New(`ent: missing required field "Person.is_owner"`)}
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "Person.created_at"`)}
@@ -335,6 +356,10 @@ func (_c *PersonCreate) createSpec() (*Person, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Role(); ok {
 		_spec.SetField(person.FieldRole, field.TypeEnum, value)
 		_node.Role = value
+	}
+	if value, ok := _c.mutation.IsOwner(); ok {
+		_spec.SetField(person.FieldIsOwner, field.TypeBool, value)
+		_node.IsOwner = value
 	}
 	if value, ok := _c.mutation.WeeklyHours(); ok {
 		_spec.SetField(person.FieldWeeklyHours, field.TypeInt, value)

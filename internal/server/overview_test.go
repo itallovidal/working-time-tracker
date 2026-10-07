@@ -13,7 +13,7 @@ func TestOverview_AdminOnly(t *testing.T) {
 	admin := signup(t, e, "Org", "ana@test.com")
 	bia := invite(t, e, admin, "bia@test.com", "member")
 	other := signup(t, e, "Outra", "caio@outra.com")
-	projectID := createProject(t, e, admin, "Projeto Alfa")
+	projectID := createEmptyProject(t, e, admin, "Projeto Alfa")
 	prj := "/api/projects/" + projectID
 
 	// A Bia entra no projeto (o valor antes do time), ganha uma tarefa e bate o ponto.

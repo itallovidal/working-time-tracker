@@ -68,6 +68,7 @@ Resposta `201` (e o cookie `wtt_session`):
   "name": "Ana Souza",
   "email": "ana@empresa.com",
   "role": "admin",
+  "is_owner": true,
   "organization_id": "…",
   "organization_name": "Minha Empresa"
 }
@@ -208,7 +209,7 @@ Só `name` é obrigatório. `document` é o CNPJ, com ou sem máscara: os dígit
 | PATCH | `/api/persons/:personId/weekly-hours` | admin | Define a jornada semanal: `{"weekly_hours": 40}` |
 | GET | `/api/persons/:personId/allocations` | a própria pessoa ou admin | Quanto a pessoa recebe por hora em cada projeto |
 
-A organização nunca fica sem admin: rebaixar o último admin responde `400`. Pessoas entram na organização pelo signup ou por convite.
+A organização nunca fica sem admin: rebaixar o último admin responde `400`. A pessoa traz `is_owner`: o dono da organização é quem a criou (o signup), é um só por organização e é sempre admin, então rebaixá-lo responde `400 person.owner_is_admin`, mesmo com outros admins. Quem entra por convite nunca é o dono. Pessoas entram na organização pelo signup ou por convite.
 
 A pessoa traz `weekly_hours`, a jornada semanal combinada com ela, em horas: vale para a organização toda, e não por projeto. Vai de 1 a 168 e vem `null` enquanto nenhum admin informou. Só um admin altera, e `0` ou `null` apagam; o `PATCH` de nome e email não mexe nela. Todos da organização leem.
 
@@ -490,6 +491,7 @@ Na lista de tarefas e no detalhe, a tarefa vinculada traz `external_integration`
 - Cada sessão traz também `pay_amount_cents` e `bill_amount_cents`: o tempo da sessão vezes o valor por hora, arredondado para o centavo. O total soma as sessões já arredondadas.
 - **Quem vê o quê.** Um admin recebe os quatro campos de todas as sessões. Um membro recebe `pay_rate_cents` e `pay_amount_cents` só nas próprias sessões; nas dos colegas, e sempre nos dois campos de `bill`, vem `null`. No total, um membro só recebe `pay_amount_cents` quando filtra por ele mesmo (`?person_id=` o próprio id).
 - Sessões criadas antes dos valores existirem ficam com tudo `null`.
+- **O dono não tem valor pago.** O clock-in do dono (`is_owner`) não exige valor por hora: a sessão guarda `pay_rate_cents` `0`, `bill_rate_cents` do projeto e `owner_hours` `true`, e ele entra no projeto (com valor `0`) se ainda não estava. O custo dessas horas é zero e a receita é o valor cobrado, então a margem do projeto soma o que o dono trabalha. `PUT .../allocations/:personId` no dono grava `0` seja qual for o valor enviado, e `POST /api/orgs/:orgId/projects` feito pelo dono já o põe no projeto. As telas mostram o valor cobrado como o que o dono ganhou.
 
 ```json
 {

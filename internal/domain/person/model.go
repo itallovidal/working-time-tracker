@@ -17,6 +17,9 @@ type Person struct {
 	Email          string    `json:"email"`
 	OrganizationID uuid.UUID `json:"organization_id"`
 	Role           string    `json:"role"`
+	// IsOwner marca o dono da organização: quem a criou. É admin, um só por organização,
+	// e não perde o papel.
+	IsOwner bool `json:"is_owner"`
 	// WeeklyHours é a jornada semanal combinada com a pessoa, em horas; nil quando
 	// não foi informada. Vale para a organização toda, e não por projeto.
 	WeeklyHours *int      `json:"weekly_hours"`

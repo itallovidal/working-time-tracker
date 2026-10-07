@@ -32,6 +32,8 @@ type WorkSession struct {
 	PayRateCents *int `json:"pay_rate_cents,omitempty"`
 	// BillRateCents holds the value of the "bill_rate_cents" field.
 	BillRateCents *int `json:"bill_rate_cents,omitempty"`
+	// OwnerHours holds the value of the "owner_hours" field.
+	OwnerHours bool `json:"owner_hours,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -78,6 +80,8 @@ func (*WorkSession) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
+		case worksession.FieldOwnerHours:
+			values[i] = new(sql.NullBool)
 		case worksession.FieldPayRateCents, worksession.FieldBillRateCents:
 			values[i] = new(sql.NullInt64)
 		case worksession.FieldStartAt, worksession.FieldEndAt, worksession.FieldCreatedAt:
@@ -143,6 +147,12 @@ func (_m *WorkSession) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.BillRateCents = new(int)
 				*_m.BillRateCents = int(value.Int64)
+			}
+		case worksession.FieldOwnerHours:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field owner_hours", values[i])
+			} else if value.Valid {
+				_m.OwnerHours = value.Bool
 			}
 		case worksession.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -219,6 +229,9 @@ func (_m *WorkSession) String() string {
 		builder.WriteString("bill_rate_cents=")
 		builder.WriteString(fmt.Sprintf("%v", *v))
 	}
+	builder.WriteString(", ")
+	builder.WriteString("owner_hours=")
+	builder.WriteString(fmt.Sprintf("%v", _m.OwnerHours))
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))

@@ -39,7 +39,8 @@
         <template x-for="r in rates" :key="r.project_id">
           <li>
             <a class="grow" :href="'/projects/' + r.project_id + '/overview'" x-text="r.project.name"></a>
-            <span class="num"><strong x-text="WTT.fmt.money(r.pay_rate_cents)"></strong> <span class="muted small">{{.T "common.per_hour"}}</span></span>
+            <span class="num" x-show="!WTT.boot.me.is_owner"><strong x-text="WTT.fmt.money(r.pay_rate_cents)"></strong> <span class="muted small">{{.T "common.per_hour"}}</span></span>
+            <span class="muted small" x-show="WTT.boot.me.is_owner">{{.T "profile.rates.owner"}}</span>
           </li>
         </template>
       </ul>
