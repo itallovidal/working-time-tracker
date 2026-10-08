@@ -1146,6 +1146,7 @@ errors:
     trello_invalid_key: "chave da API do Trello inválida"
     trello_no_access_board: "chave ou token do Trello inválido, ou sem acesso ao quadro"
     trello_no_access_card: "chave ou token do Trello inválido, ou sem acesso ao cartão"
+    trello_no_list: "o quadro do Trello não tem lista aberta: crie uma para os cartões poderem ser adicionados"
     type_coming_soon: "a integração com o {{.provider}} ainda não está disponível"
     type_required: "informe o tipo da integração"
     unexpected_response: "resposta inesperada do {{.provider}}"
@@ -1154,12 +1155,12 @@ errors:
   internal:
     server_error: "erro interno, tente de novo"
   issue_sync:
-    label_refused: "o token do GitHub não pode criar etiquetas neste repositório: a etiqueta nova fica só aqui"
+    label_refused: "o token não pode criar etiquetas do outro lado: a etiqueta nova fica só aqui"
     no_login: "não achei o usuário do GitHub de quem é responsável aqui: ele precisa ter o e-mail público no perfil do GitHub"
-    push_discarded: "o GitHub ignorou uma mudança desta issue (o token pode não ter permissão de escrita): ela fica só aqui"
-    push_rejected: "o GitHub recusou uma mudança desta issue: ela fica só aqui"
-    read_only: "o token não escreve neste repositório: as issues só vêm para cá, e as mudanças daqui não vão para o GitHub"
-    publish_read_only: "o token desta integração não escreve no repositório: a issue sairia sem as etiquetas e o responsável, então a tarefa não foi postada"
+    push_discarded: "a plataforma ignorou uma mudança deste item (o token pode não ter permissão de escrita): ela fica só aqui"
+    push_rejected: "a plataforma recusou uma mudança deste item: ela fica só aqui"
+    read_only: "o token não escreve neste repositório ou quadro: os itens só vêm para cá, e as mudanças daqui não saem"
+    publish_read_only: "o token desta integração não escreve no repositório ou quadro: o item novo sairia sem parte dos dados, então a tarefa não foi postada"
   label:
     name_required: "informe o nome da etiqueta"
     name_taken: "o projeto já tem uma etiqueta com este nome"

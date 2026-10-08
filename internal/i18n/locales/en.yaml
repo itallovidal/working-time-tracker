@@ -1136,6 +1136,7 @@ errors:
     trello_invalid_key: "invalid Trello API key"
     trello_no_access_board: "invalid Trello key or token, or no access to the board"
     trello_no_access_card: "invalid Trello key or token, or no access to the card"
+    trello_no_list: "the Trello board has no open list: create one so the cards can be added to it"
     type_coming_soon: "the {{.provider}} integration is not available yet"
     type_required: "enter the integration type"
     unexpected_response: "unexpected response from {{.provider}}"
@@ -1144,12 +1145,12 @@ errors:
   internal:
     server_error: "internal error, please try again"
   issue_sync:
-    label_refused: "the GitHub token cannot create labels in this repository: the new label stays here only"
+    label_refused: "the token cannot create labels on the other side: the new label stays here only"
     no_login: "could not find the GitHub user of the person assigned here: they need a public email on their GitHub profile"
-    push_discarded: "GitHub ignored a change to this issue (the token may lack write permission): it stays here only"
-    push_rejected: "GitHub refused a change to this issue: it stays here only"
-    read_only: "the token cannot write to this repository: issues only come here, and changes made here do not go to GitHub"
-    publish_read_only: "the token of this integration cannot write to the repository: the issue would come out without the labels and the assignee, so the task was not posted"
+    push_discarded: "the platform ignored a change to this item (the token may lack write permission): it stays here only"
+    push_rejected: "the platform refused a change to this item: it stays here only"
+    read_only: "the token cannot write to this repository or board: items only come here, and changes made here do not go out"
+    publish_read_only: "the token of this integration cannot write to the repository or board: the new item would come out without some of its data, so the task was not posted"
   label:
     name_required: "enter the label name"
     name_taken: "the project already has a label with this name"

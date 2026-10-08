@@ -762,6 +762,17 @@
 
 ---
 
+### Sprint 68: Trello Cards as an IssueSyncer (the adapter, still "Em breve")
+
+- [X] S68.1 Trello adapter as an `IssueSyncer`: `Repo` (the board and whether the token writes: a member of the board as admin or normal, an observer does not), `ListIssues` (one call, `GET /boards/{b}/cards/open`), `GetIssue`, `UpdateIssue` (one `PUT /cards/{id}` with only what changed), `CreateIssue` (the first open list by position), `ListLabels`/`CreateLabel`; the card key is its short link, `NormalizeItemID` takes it from a pasted card URL; JSON bodies, no redirect followed, the key and the token only in the `Authorization` header
+- [X] S68.2 What is mirrored: name, description, labels (a label with no name appears by its color; the ones the board lacks are created, with a color taken from the name), due date (to the second, null clears it) and the creation date of the card (from its id) into `tasks.created_at` on import. **Closed** is an archived card **or** a card whose due date is marked done: closing the task archives the card and, if it has a due date, completes it; reopening undoes both. No assignee (Trello does not show member emails) and no lists yet
+- [X] S68.3 `AccountLookup` (`GET /members/me`) and `RepositoryLister` (`GET /members/me/boards`, with the workspace) for the connection of Sprint 69; `FetchItemDetails` now answers `open`/`closed` instead of the list name and two Portuguese words; the descriptor says `Sync` with `Caps{Deadline, AutoPublish}` (still `ComingSoon`)
+- [X] S68.4 Errors: `integration.trello_no_list` (a board with no open list); the `issue_sync.*` warnings that said "GitHub" are worded for any platform (they are stored as a code, with no parameters, so the text cannot name the platform); `_docs/error-codes.md` regenerated
+- [X] S68.5 `testutil.Trello`, a Trello with state in the mold of the fake GitHub (boards, lists, labels, cards, `members/me`, the authorization that returns the token in the URL fragment, the board that the token does not see or cannot write to, a token revoked, a PUT that drops fields, a card deleted or moved, rate limit, request log), served at the root and under `/1`; `cmd/faketrello` (port 8092, panel in `/_fake`, a seeded board)
+- [X] S68.6 Tests: the adapter (every method, the label resolution, close and reopen, the errors, no redirect followed, the rate limit) and the sync core against the fake (import, changes in, changes out, Trello wins, gone cards, read-only token, silent discard, revoked token, every round is a full one, a hand-linked task, posting a task); no front-end; README and design
+
+---
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open

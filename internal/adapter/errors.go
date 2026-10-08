@@ -55,4 +55,6 @@ var (
 	ErrTrelloInvalidCard    = apperr.New("integration.trello_invalid_card", http.StatusBadRequest)
 	ErrTrelloNoAccessCard   = apperr.New("integration.trello_no_access_card", http.StatusBadRequest)
 	ErrTrelloCardOtherBoard = apperr.New("integration.trello_card_other_board", http.StatusBadRequest, "card")
+	// ErrTrelloNoList é o quadro sem nenhuma lista aberta: o Trello só cria um cartão numa lista.
+	ErrTrelloNoList = apperr.New("integration.trello_no_list", http.StatusBadRequest)
 )

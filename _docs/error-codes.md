@@ -139,6 +139,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `integration.trello_invalid_key` | 400 | — | `chave da API do Trello inválida` | `invalid Trello API key` |
 | `integration.trello_no_access_board` | 400 | — | `chave ou token do Trello inválido, ou sem acesso ao quadro` | `invalid Trello key or token, or no access to the board` |
 | `integration.trello_no_access_card` | 400 | — | `chave ou token do Trello inválido, ou sem acesso ao cartão` | `invalid Trello key or token, or no access to the card` |
+| `integration.trello_no_list` | 400 | — | `o quadro do Trello não tem lista aberta: crie uma para os cartões poderem ser adicionados` | `the Trello board has no open list: create one so the cards can be added to it` |
 | `integration.type_coming_soon` | 400 | `provider` | `a integração com o {{.provider}} ainda não está disponível` | `the {{.provider}} integration is not available yet` |
 | `integration.type_required` | 400 | — | `informe o tipo da integração` | `enter the integration type` |
 | `integration.unexpected_response` | 400 | `provider` | `resposta inesperada do {{.provider}}` | `unexpected response from {{.provider}}` |
@@ -155,12 +156,12 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 
 | Código | Status | Parâmetros | pt-BR | en |
 |---|---|---|---|---|
-| `issue_sync.label_refused` | 400 | — | `o token do GitHub não pode criar etiquetas neste repositório: a etiqueta nova fica só aqui` | `the GitHub token cannot create labels in this repository: the new label stays here only` |
+| `issue_sync.label_refused` | 400 | — | `o token não pode criar etiquetas do outro lado: a etiqueta nova fica só aqui` | `the token cannot create labels on the other side: the new label stays here only` |
 | `issue_sync.no_login` | 400 | — | `não achei o usuário do GitHub de quem é responsável aqui: ele precisa ter o e-mail público no perfil do GitHub` | `could not find the GitHub user of the person assigned here: they need a public email on their GitHub profile` |
-| `issue_sync.publish_read_only` | 400 | — | `o token desta integração não escreve no repositório: a issue sairia sem as etiquetas e o responsável, então a tarefa não foi postada` | `the token of this integration cannot write to the repository: the issue would come out without the labels and the assignee, so the task was not posted` |
-| `issue_sync.push_discarded` | 400 | — | `o GitHub ignorou uma mudança desta issue (o token pode não ter permissão de escrita): ela fica só aqui` | `GitHub ignored a change to this issue (the token may lack write permission): it stays here only` |
-| `issue_sync.push_rejected` | 400 | — | `o GitHub recusou uma mudança desta issue: ela fica só aqui` | `GitHub refused a change to this issue: it stays here only` |
-| `issue_sync.read_only` | 400 | — | `o token não escreve neste repositório: as issues só vêm para cá, e as mudanças daqui não vão para o GitHub` | `the token cannot write to this repository: issues only come here, and changes made here do not go to GitHub` |
+| `issue_sync.publish_read_only` | 400 | — | `o token desta integração não escreve no repositório ou quadro: o item novo sairia sem parte dos dados, então a tarefa não foi postada` | `the token of this integration cannot write to the repository or board: the new item would come out without some of its data, so the task was not posted` |
+| `issue_sync.push_discarded` | 400 | — | `a plataforma ignorou uma mudança deste item (o token pode não ter permissão de escrita): ela fica só aqui` | `the platform ignored a change to this item (the token may lack write permission): it stays here only` |
+| `issue_sync.push_rejected` | 400 | — | `a plataforma recusou uma mudança deste item: ela fica só aqui` | `the platform refused a change to this item: it stays here only` |
+| `issue_sync.read_only` | 400 | — | `o token não escreve neste repositório ou quadro: os itens só vêm para cá, e as mudanças daqui não saem` | `the token cannot write to this repository or board: items only come here, and changes made here do not go out` |
 
 ### label
 

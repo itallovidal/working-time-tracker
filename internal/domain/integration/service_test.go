@@ -435,9 +435,9 @@ func TestService_Trello(t *testing.T) {
 	}
 	id := created.ID.String()
 
-	// O estado de um cartão é a lista em que ele está.
+	// O estado de um cartão é aberto ou fechado (arquivado ou com a data de entrega concluída); as listas ficam de fora.
 	res, err := svc.FetchItemDetails(id, "H0TZyzbK")
-	if err != nil || res.Details == nil || res.Details.Title != "Corrigir login" || res.Details.State != "Em andamento" {
+	if err != nil || res.Details == nil || res.Details.Title != "Corrigir login" || res.Details.State != "open" {
 		t.Errorf("fetch = %+v, %v", res, err)
 	}
 	other, err := svc.FetchItemDetails(id, "OutroQdr")
@@ -530,8 +530,9 @@ func TestService_Connect_Refused(t *testing.T) {
 	if _, err := svc.Connect(projectID, "github", testutil.InvalidToken); err == nil || !strings.Contains(err.Error(), "integration.invalid_token") {
 		t.Errorf("connect with a token GitHub rejects: %v", err)
 	}
-	// GitLab e Trello não se conectam por autorização.
-	for _, typ := range []string{"gitlab", "trello"} {
+	// O GitLab não se conecta por autorização. (O Trello sabe dizer quem o token representa e, no fim da
+	// Sprint 69, também se conecta; aqui sem a chave do app a conexão não chega a existir.)
+	for _, typ := range []string{"gitlab"} {
 		if _, err := svc.Connect(projectID, typ, "x"); err == nil || !strings.Contains(err.Error(), "integration.not_connectable") {
 			t.Errorf("connect %s: %v, want integration.not_connectable", typ, err)
 		}

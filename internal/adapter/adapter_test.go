@@ -242,13 +242,14 @@ func TestGitHub_AccountAndRepositories(t *testing.T) {
 	if d := g.Descriptor(); d.Auth != AuthOAuth || d.ComingSoon {
 		t.Errorf("github descriptor: auth %q, coming soon %v", d.Auth, d.ComingSoon)
 	}
-	for _, other := range []Integration{&GitLabIntegration{}, &TrelloIntegration{}} {
-		if _, ok := other.(AccountLookup); ok {
-			t.Errorf("%s looks up accounts", other.Descriptor().Type)
-		}
-		if _, ok := other.(RepositoryLister); ok {
-			t.Errorf("%s lists repositories", other.Descriptor().Type)
-		}
+	gitlab := &GitLabIntegration{}
+	if _, ok := Integration(gitlab).(AccountLookup); ok {
+		t.Error("gitlab looks up accounts")
+	}
+	if _, ok := Integration(gitlab).(RepositoryLister); ok {
+		t.Error("gitlab lists repositories")
+	}
+	for _, other := range []Integration{gitlab, &TrelloIntegration{}} {
 		if d := other.Descriptor(); d.Auth == AuthOAuth || !d.ComingSoon {
 			t.Errorf("%s descriptor: auth %q, coming soon %v", d.Type, d.Auth, d.ComingSoon)
 		}
@@ -330,7 +331,7 @@ func TestTrello_FetchItemDetails(t *testing.T) {
 			if err != nil {
 				t.Fatalf("board %q, item %q: %v", board, item, err)
 			}
-			want := ItemDetails{Title: "Corrigir login", State: "Em andamento", URL: "https://trello.com/c/H0TZyzbK"}
+			want := ItemDetails{Title: "Corrigir login", State: "open", URL: "https://trello.com/c/H0TZyzbK"}
 			if *details != want {
 				t.Errorf("board %q, item %q: details = %+v, want %+v", board, item, *details, want)
 			}
@@ -340,8 +341,8 @@ func TestTrello_FetchItemDetails(t *testing.T) {
 		if err != nil {
 			t.Fatalf("archived card: %v", err)
 		}
-		if archived.State != "arquivado" {
-			t.Errorf("archived card state = %q, want %q", archived.State, "arquivado")
+		if archived.State != "closed" {
+			t.Errorf("archived card state = %q, want %q", archived.State, "closed")
 		}
 
 		cases := []struct{ item, wantErr string }{

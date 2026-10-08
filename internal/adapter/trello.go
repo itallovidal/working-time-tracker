@@ -1,9 +1,13 @@
 package adapter
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 	"time"
@@ -18,6 +22,11 @@ var trelloDescriptor = Descriptor{
 		{Key: "api_key", Required: true},
 		{Key: "board_id", Required: true, Summary: true},
 	},
+	// Cada cartão do quadro é uma tarefa (as listas ficam de fora por ora), e a tarefa criada aqui vira um
+	// cartão sozinha. O Trello não expõe o e-mail dos membros, então o responsável não se liga, e não filtra
+	// os cartões por data, então toda rodada olha o quadro inteiro.
+	Sync:       true,
+	Caps:       SyncCaps{Deadline: true, AutoPublish: true},
 	ComingSoon: true,
 }
 
@@ -89,6 +98,13 @@ func (t *TrelloIntegration) CheckMetadata(raw map[string]any) (map[string]any, e
 
 // get manda a chave e o token no cabeçalho, para o token não aparecer na URL.
 func (t *TrelloIntegration) get(conn Connection, meta *trelloMetadata, path string) (*http.Response, error) {
+	return t.do(context.Background(), conn, meta.APIKey, "GET", path, nil)
+}
+
+// do faz uma requisição à API. target é o caminho, já com a query. O corpo, quando há, vai em JSON. Não
+// segue redirecionamento: o net/http transformaria um PUT em GET ao seguir um 301 e daria "200" sem ter
+// gravado nada.
+func (t *TrelloIntegration) do(ctx context.Context, conn Connection, apiKey, method, target string, body any) (*http.Response, error) {
 	token, err := trelloDescriptor.token(conn)
 	if err != nil {
 		return nil, err
@@ -96,18 +112,43 @@ func (t *TrelloIntegration) get(conn Connection, meta *trelloMetadata, path stri
 	if strings.ContainsAny(token, "\"\\ \t\r\n") {
 		return nil, ErrInvalidToken.With("provider", "Trello")
 	}
-	req, err := http.NewRequest("GET", t.baseURL()+path, nil)
+	var payload io.Reader
+	if body != nil {
+		raw, err := json.Marshal(body)
+		if err != nil {
+			return nil, err
+		}
+		payload = bytes.NewReader(raw)
+	}
+	req, err := http.NewRequestWithContext(ctx, method, t.baseURL()+target, payload)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Authorization", fmt.Sprintf(`OAuth oauth_consumer_key="%s", oauth_token="%s"`, meta.APIKey, token))
+	req.Header.Set("Authorization", fmt.Sprintf(`OAuth oauth_consumer_key="%s", oauth_token="%s"`, apiKey, token))
 	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", "working-time-tracker")
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
 
-	resp, err := t.client().Do(req)
+	client := *t.client()
+	client.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+	resp, err := client.Do(req)
 	if err != nil {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
 		return nil, ErrProviderUnreachable.With("provider", "Trello").Wrap(err)
 	}
 	return resp, nil
+}
+
+// withQuery junta a query ao caminho.
+func withQuery(path string, q url.Values) string {
+	if len(q) == 0 {
+		return path
+	}
+	return path + "?" + q.Encode()
 }
 
 func (t *TrelloIntegration) Validate(conn Connection) error {
@@ -148,8 +189,8 @@ func (t *TrelloIntegration) FetchItemDetails(conn Connection, itemID string) (*I
 		return nil, ErrTrelloInvalidCard
 	}
 
-	// Uma chamada só: o cartão com a lista e o quadro dele aninhados.
-	resp, err := t.get(conn, meta, "/cards/"+card+"?fields=name,closed,shortUrl,idBoard&list=true&board=true&board_fields=shortLink")
+	// Uma chamada só: o cartão com o quadro dele aninhado.
+	resp, err := t.get(conn, meta, "/cards/"+card+"?fields=name,closed,due,dueComplete,shortUrl,idBoard&board=true&board_fields=shortLink")
 	if err != nil {
 		return nil, err
 	}
@@ -166,14 +207,13 @@ func (t *TrelloIntegration) FetchItemDetails(conn Connection, itemID string) (*I
 	}
 
 	var body struct {
-		Name     string `json:"name"`
-		Closed   bool   `json:"closed"`
-		ShortURL string `json:"shortUrl"`
-		IDBoard  string `json:"idBoard"`
-		List     struct {
-			Name string `json:"name"`
-		} `json:"list"`
-		Board struct {
+		Name        string  `json:"name"`
+		Closed      bool    `json:"closed"`
+		Due         *string `json:"due"`
+		DueComplete bool    `json:"dueComplete"`
+		ShortURL    string  `json:"shortUrl"`
+		IDBoard     string  `json:"idBoard"`
+		Board       struct {
 			ID        string `json:"id"`
 			ShortLink string `json:"shortLink"`
 		} `json:"board"`
@@ -189,12 +229,11 @@ func (t *TrelloIntegration) FetchItemDetails(conn Connection, itemID string) (*I
 		return nil, ErrTrelloCardOtherBoard.With("card", card)
 	}
 
-	// O estado de um cartão é a lista em que ele está.
-	state := body.List.Name
-	if body.Closed {
-		state = "arquivado"
-	} else if state == "" {
-		state = "aberto"
+	// Fechado é o cartão arquivado ou o que teve a data de entrega marcada como concluída: as duas fecham a
+	// tarefa. As listas ficam de fora por ora.
+	state := "open"
+	if body.Closed || (body.Due != nil && body.DueComplete) {
+		state = "closed"
 	}
 	return &ItemDetails{
 		Title: body.Name,
