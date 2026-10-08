@@ -196,6 +196,9 @@ func (s *Service) ListByProject(projectID string) ([]Integration, error) {
 	}
 	for i := range integrations {
 		redact(&integrations[i])
+		if err := s.fillSync(&integrations[i]); err != nil {
+			return nil, err
+		}
 	}
 	return integrations, nil
 }
@@ -206,35 +209,108 @@ func (s *Service) Get(id string) (*Integration, error) {
 		return nil, err
 	}
 	redact(it)
+	if err := s.fillSync(it); err != nil {
+		return nil, err
+	}
 	return it, nil
 }
 
-// Update muda só o que veio: token vazio mantém o guardado e metadata nulo mantém o
-// atual. A plataforma só é consultada quando a conexão muda (token novo ou metadata
-// diferente), então renomear ou desativar não depende de o token ainda valer.
+// fillSync calcula o que só a tela da integração com a sincronização ligada mostra.
+func (s *Service) fillSync(it *Integration) error {
+	if !it.SyncIssues {
+		return nil
+	}
+	n, err := s.store.Unmatched(it.ID)
+	it.SyncUnmatched = n
+	return err
+}
+
+// Connection devolve a credencial e os campos da plataforma de uma integração, prontos para falar com
+// ela. É o único jeito de o token sair do service, e só em memória: quem chama é a sincronização, que
+// nunca o guarda nem o devolve.
+func (s *Service) Connection(id string) (adapter.Connection, *Integration, error) {
+	it, err := s.store.GetByID(id)
+	if err != nil {
+		return adapter.Connection{}, nil, err
+	}
+	token, err := s.open(it)
+	if err != nil {
+		return adapter.Connection{}, nil, err
+	}
+	redact(it)
+	return adapter.Connection{Token: token, Metadata: it.Metadata}, it, nil
+}
+
+// ListSyncing lista as integrações ativas com a sincronização das issues ligada.
+func (s *Service) ListSyncing() ([]Integration, error) {
+	integrations, err := s.store.ListSyncing()
+	if err != nil {
+		return nil, err
+	}
+	for i := range integrations {
+		redact(&integrations[i])
+	}
+	return integrations, nil
+}
+
+// RecordSync guarda o resultado de uma rodada de sincronização na integração.
+func (s *Service) RecordSync(id uuid.UUID, r SyncResult) error {
+	return s.store.SetSyncResult(id, r)
+}
+
+// EditInput é o que a edição de uma integração pode mudar; o que não vem fica como está: token vazio
+// mantém o guardado, metadata nulo mantém o atual.
+type EditInput struct {
+	DisplayName string
+	Token       string
+	Metadata    map[string]interface{}
+	Enabled     *bool
+	// SyncIssues liga ou desliga a sincronização das issues com as tarefas.
+	SyncIssues *bool
+}
+
+// Update muda só o que veio: token vazio mantém o guardado e metadata nulo mantém o atual. A
+// plataforma só é consultada quando a conexão muda (token novo ou metadata diferente), então renomear
+// ou desativar não depende de o token ainda valer.
 func (s *Service) Update(id, displayName, token string, metadata map[string]interface{}, enabled *bool) (*Integration, error) {
+	return s.Edit(id, EditInput{DisplayName: displayName, Token: token, Metadata: metadata, Enabled: enabled})
+}
+
+// Edit é o Update com tudo o que a edição pode trazer. Ligar a sincronização das issues pede um
+// tipo que as lê e escreve, o repositório já escolhido e a integração ativa; com ela ligada o
+// repositório não troca (desligue, troque, ligue), e trocá-lo com ela desligada esquece o vínculo
+// das issues do repositório antigo.
+func (s *Service) Edit(id string, in EditInput) (*Integration, error) {
 	existing, err := s.store.GetByID(id)
 	if err != nil {
 		return nil, err
 	}
+	// O tipo só é preciso para conferir a conexão e a sincronização: renomear ou ativar não depende dele.
+	impl, implErr := adapter.GetIntegration(existing.Type)
 
-	if displayName != "" {
-		existing.DisplayName = displayName
+	if in.DisplayName != "" {
+		existing.DisplayName = in.DisplayName
 	}
 
-	token = strings.TrimSpace(token)
-	if token != "" || metadata != nil {
-		impl, err := adapter.GetIntegration(existing.Type)
-		if err != nil {
-			return nil, err
+	wasSyncing := existing.SyncIssues
+	repoChanged := false
+	token := strings.TrimSpace(in.Token)
+	if token != "" || in.Metadata != nil {
+		if implErr != nil {
+			return nil, implErr
 		}
 		meta := existing.Metadata
-		if metadata != nil {
-			if meta, err = impl.CheckMetadata(metadata); err != nil {
+		if in.Metadata != nil {
+			if meta, err = impl.CheckMetadata(in.Metadata); err != nil {
 				return nil, err
 			}
 		}
 		if token != "" || !reflect.DeepEqual(meta, existing.Metadata) {
+			if in.SyncIssues == nil || *in.SyncIssues {
+				if wasSyncing && meta["repo"] != existing.Metadata["repo"] {
+					return nil, ErrSyncRepoLocked
+				}
+			}
 			if token == "" {
 				if token, err = s.open(existing); err != nil {
 					return nil, err
@@ -246,19 +322,50 @@ func (s *Service) Update(id, displayName, token string, metadata map[string]inte
 			if existing.Credentials, err = s.seal(token); err != nil {
 				return nil, err
 			}
+			repoChanged = meta["repo"] != existing.Metadata["repo"]
 			existing.Metadata = meta
 		}
 	}
 
-	if enabled != nil {
-		existing.Enabled = *enabled
+	if in.Enabled != nil {
+		existing.Enabled = *in.Enabled
+	}
+
+	if in.SyncIssues != nil {
+		turningOn := *in.SyncIssues && !wasSyncing
+		if turningOn {
+			if implErr != nil {
+				return nil, implErr
+			}
+			if _, ok := impl.(adapter.IssueSyncer); !ok {
+				return nil, ErrSyncUnsupported.With("provider", impl.Descriptor().Label)
+			}
+			if _, err := impl.CheckMetadata(existing.Metadata); err != nil {
+				return nil, ErrSyncNeedsRepo
+			}
+			if !existing.Enabled {
+				return nil, ErrSyncNeedsEnabled
+			}
+			if len(existing.Credentials) == 0 {
+				return nil, ErrNoCredential
+			}
+		}
+		existing.SyncIssues = *in.SyncIssues
 	}
 
 	if err := s.store.Update(existing); err != nil {
 		return nil, err
 	}
-	redact(existing)
-	return existing, nil
+	if repoChanged {
+		if err := s.store.ResetSync(existing.ID); err != nil {
+			return nil, err
+		}
+	}
+	saved, err := s.Get(id)
+	if err != nil {
+		return nil, err
+	}
+	return saved, nil
 }
 
 func (s *Service) Delete(id string) error {

@@ -70,6 +70,11 @@ func (s *Service) Get(id string) (*Person, error) {
 	return s.store.GetByID(id)
 }
 
+// FindByEmailInOrg devolve a pessoa da organização com este e-mail, ou database.ErrNotFound.
+func (s *Service) FindByEmailInOrg(orgID uuid.UUID, email string) (*Person, error) {
+	return s.store.FindByEmailInOrg(orgID, email)
+}
+
 func (s *Service) Update(id, name, email string) (*Person, error) {
 	name = strings.TrimSpace(name)
 	email = NormalizeEmail(email)

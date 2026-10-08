@@ -124,6 +124,10 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `integration.provider_status` | 400 | `provider`, `status` | `o {{.provider}} respondeu com status {{.status}}` | `{{.provider}} responded with status {{.status}}` |
 | `integration.provider_unreachable` | 400 | `provider` | `não foi possível falar com o {{.provider}}` | `could not reach {{.provider}}` |
 | `integration.rate_limited` | 429 | `provider` | `o {{.provider}} limitou as requisições: tente de novo mais tarde` | `{{.provider}} limited the requests: try again later` |
+| `integration.sync_needs_enabled` | 400 | — | `ative a integração antes de ligar a sincronização das issues` | `enable the integration before turning the issue sync on` |
+| `integration.sync_needs_repo` | 400 | — | `escolha o repositório antes de ligar a sincronização das issues` | `pick the repository before turning the issue sync on` |
+| `integration.sync_repo_locked` | 400 | — | `com a sincronização das issues ligada o repositório não muda: desligue a sincronização, troque o repositório e ligue de novo` | `with the issue sync on the repository cannot change: turn the sync off, change the repository and turn it on again` |
+| `integration.sync_unsupported` | 400 | `provider` | `o {{.provider}} não tem sincronização de issues` | `{{.provider}} has no issue sync` |
 | `integration.token_required` | 400 | `provider` | `informe o token do {{.provider}}` | `enter the {{.provider}} token` |
 | `integration.trello_board_not_found` | 400 | — | `quadro do Trello não encontrado` | `Trello board not found` |
 | `integration.trello_card_other_board` | 400 | `card` | `o cartão {{.card}} é de outro quadro` | `card {{.card}} belongs to another board` |

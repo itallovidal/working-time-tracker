@@ -20,4 +20,12 @@ var (
 	// conectar por OAuth, listar repositórios.
 	ErrNotConnectable = apperr.New("integration.not_connectable", http.StatusBadRequest)
 	ErrNoRepositories = apperr.New("integration.no_repositories", http.StatusBadRequest)
+
+	// A sincronização das issues: só o tipo que lê e escreve issues a tem, pede o repositório e a
+	// integração ativa para ligar, e com ela ligada o repositório não troca (as issues ligadas
+	// seriam de outro lugar).
+	ErrSyncUnsupported  = apperr.New("integration.sync_unsupported", http.StatusBadRequest, "provider")
+	ErrSyncNeedsRepo    = apperr.New("integration.sync_needs_repo", http.StatusBadRequest)
+	ErrSyncNeedsEnabled = apperr.New("integration.sync_needs_enabled", http.StatusBadRequest)
+	ErrSyncRepoLocked   = apperr.New("integration.sync_repo_locked", http.StatusBadRequest)
 )

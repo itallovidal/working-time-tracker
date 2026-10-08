@@ -15,6 +15,7 @@ import (
 
 type Store struct {
 	client *ent.Client
+	changeHook
 }
 
 func NewStore(client *ent.Client) *Store {
@@ -226,8 +227,11 @@ func (s *Store) Update(t *Task) error {
 	} else {
 		q = q.ClearExternalItemURL()
 	}
-	_, err := q.Save(context.Background())
-	return err
+	if _, err := q.Save(context.Background()); err != nil {
+		return err
+	}
+	s.changed(t.ID)
+	return nil
 }
 
 // ClaimIfUnassigned passa a tarefa para a pessoa só se ela ainda não tem
@@ -245,6 +249,9 @@ func (s *Store) TryClaim(taskID, personID uuid.UUID) (bool, error) {
 		Where(task.IDEQ(taskID), task.AssigneeIDIsNil()).
 		SetAssigneeID(personID).
 		Save(context.Background())
+	if n > 0 {
+		s.changed(taskID)
+	}
 	return n > 0, err
 }
 
@@ -266,16 +273,22 @@ func (s *Store) UpdateAttrs(id uuid.UUID, priority, status *string, labels *[]La
 	if ent.IsNotFound(err) {
 		return database.ErrNotFound
 	}
+	if err == nil {
+		s.changed(id)
+	}
 	return err
 }
 
 // StartProgress põe a tarefa em progresso, seja qual for o status atual: bater o ponto
 // nela é começar (ou retomar) o trabalho. Quem para ou pausa não a tira de lá.
 func (s *Store) StartProgress(taskID uuid.UUID) error {
-	_, err := s.client.Task.Update().
+	n, err := s.client.Task.Update().
 		Where(task.IDEQ(taskID), task.StatusNEQ(task.StatusInProgress)).
 		SetStatus(task.StatusInProgress).
 		Save(context.Background())
+	if n > 0 {
+		s.changed(taskID)
+	}
 	return err
 }
 

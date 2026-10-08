@@ -2,6 +2,7 @@ package person_test
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"testing"
 
@@ -307,5 +308,32 @@ func TestService_SetWeeklyHours(t *testing.T) {
 
 	if _, err := svc.SetWeeklyHours(uuid.NewString(), &forty); err != database.ErrNotFound {
 		t.Errorf("unknown person: err = %v, want ErrNotFound", err)
+	}
+}
+
+// O e-mail é único no sistema, então a busca por e-mail sempre é de uma organização: a mesma pessoa
+// não pode aparecer para quem pergunta de outra.
+func TestService_FindByEmailInOrg(t *testing.T) {
+	cleanup(t)
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	svc := person.NewService(person.NewStore(testClient))
+
+	org, _ := orgSvc.Create("Org")
+	other, _ := orgSvc.Create("Outra")
+	ana, _ := svc.Create(org.ID.String(), "Ana", "ana@test.com")
+
+	for _, email := range []string{"ana@test.com", "  ANA@Test.com ", "Ana@TEST.COM"} {
+		got, err := svc.FindByEmailInOrg(org.ID, email)
+		if err != nil || got.ID != ana.ID {
+			t.Errorf("find %q = %v, %v, want Ana", email, got, err)
+		}
+	}
+	if _, err := svc.FindByEmailInOrg(other.ID, "ana@test.com"); !errors.Is(err, database.ErrNotFound) {
+		t.Errorf("another organization found the person: err = %v", err)
+	}
+	for _, email := range []string{"", "   ", "ninguem@test.com"} {
+		if _, err := svc.FindByEmailInOrg(org.ID, email); !errors.Is(err, database.ErrNotFound) {
+			t.Errorf("find %q: err = %v, want not found", email, err)
+		}
 	}
 }

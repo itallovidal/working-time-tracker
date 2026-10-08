@@ -182,6 +182,26 @@ func (s *Store) EmailInUse(email string, exceptID *uuid.UUID) (bool, error) {
 	return count > 0, err
 }
 
+// FindByEmailInOrg acha a pessoa da organização com este e-mail, sem diferenciar maiúsculas, ou
+// database.ErrNotFound. O e-mail é único no sistema inteiro: sem o filtro da organização, o e-mail
+// público de um usuário do GitHub ligaria a tarefa a alguém de outra empresa.
+func (s *Store) FindByEmailInOrg(orgID uuid.UUID, email string) (*Person, error) {
+	email = NormalizeEmail(email)
+	if email == "" {
+		return nil, database.ErrNotFound
+	}
+	p, err := s.client.Person.Query().
+		Where(person.OrganizationIDEQ(orgID), person.EmailEqualFold(email)).
+		Only(context.Background())
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, database.ErrNotFound
+		}
+		return nil, err
+	}
+	return toDomainPerson(p), nil
+}
+
 func toDomainPerson(e *ent.Person) *Person {
 	if e == nil {
 		return nil

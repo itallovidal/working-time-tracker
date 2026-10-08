@@ -148,6 +148,7 @@ func (s *Service) RenameLabel(projectID, labelID, name string) (*Label, error) {
 	if err != nil {
 		return nil, err
 	}
+	s.notifyLabel(lid)
 	return &Label{ID: saved.ID, Name: saved.Name}, nil
 }
 
@@ -160,7 +161,23 @@ func (s *Service) DeleteLabel(projectID, labelID string) error {
 	if _, err := s.taskStore.labelOfProject(pid, lid); err != nil {
 		return err
 	}
-	return s.taskStore.client.Label.DeleteOneID(lid).Exec(context.Background())
+	// As tarefas que tinham a etiqueta são avisadas depois: a etiqueta que some também sai das issues.
+	affected, _ := s.taskStore.taskIDsWithLabel(lid)
+	if err := s.taskStore.client.Label.DeleteOneID(lid).Exec(context.Background()); err != nil {
+		return err
+	}
+	for _, id := range affected {
+		s.taskStore.changed(id)
+	}
+	return nil
+}
+
+// notifyLabel avisa o gancho de cada tarefa que tem a etiqueta, que mudou de nome.
+func (s *Service) notifyLabel(labelID uuid.UUID) {
+	ids, _ := s.taskStore.taskIDsWithLabel(labelID)
+	for _, id := range ids {
+		s.taskStore.changed(id)
+	}
 }
 
 func parseLabelIDs(projectID, labelID string) (uuid.UUID, uuid.UUID, error) {

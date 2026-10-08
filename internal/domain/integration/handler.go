@@ -21,7 +21,13 @@ type integrationResponse struct {
 	HasToken    bool                   `json:"has_token"`
 	Metadata    map[string]interface{} `json:"metadata"`
 	Enabled     bool                   `json:"enabled"`
-	CreatedAt   time.Time              `json:"created_at"`
+	// A sincronização das issues com as tarefas (só o GitHub): se está ligada, quando terminou a última
+	// rodada, o código do erro dela e quantas issues têm responsável sem correspondência aqui.
+	SyncIssues    bool       `json:"sync_issues"`
+	LastSyncedAt  *time.Time `json:"last_synced_at"`
+	LastSyncError string     `json:"last_sync_error"`
+	SyncUnmatched int        `json:"sync_unmatched"`
+	CreatedAt     time.Time  `json:"created_at"`
 }
 
 func toIntegrationResponse(m *Integration) integrationResponse {
@@ -33,7 +39,12 @@ func toIntegrationResponse(m *Integration) integrationResponse {
 		HasToken:    m.HasToken,
 		Metadata:    m.Metadata,
 		Enabled:     m.Enabled,
-		CreatedAt:   m.CreatedAt,
+
+		SyncIssues:    m.SyncIssues,
+		LastSyncedAt:  m.LastSyncedAt,
+		LastSyncError: m.LastSyncError,
+		SyncUnmatched: m.SyncUnmatched,
+		CreatedAt:     m.CreatedAt,
 	}
 }
 
@@ -120,11 +131,15 @@ func (h *Handler) Update(c *echo.Context) error {
 		Token       string                 `json:"token"`
 		Metadata    map[string]interface{} `json:"metadata"`
 		Enabled     *bool                  `json:"enabled"`
+		SyncIssues  *bool                  `json:"sync_issues"`
 	}
 	if err := c.Bind(&body); err != nil {
 		return apperr.Respond(c, 400, apperr.ErrInvalidBody)
 	}
-	it, err := h.svc.Update(id, body.DisplayName, body.Token, body.Metadata, body.Enabled)
+	it, err := h.svc.Edit(id, EditInput{
+		DisplayName: body.DisplayName, Token: body.Token, Metadata: body.Metadata,
+		Enabled: body.Enabled, SyncIssues: body.SyncIssues,
+	})
 	if err != nil {
 		return apperr.Respond(c, 400, err)
 	}
