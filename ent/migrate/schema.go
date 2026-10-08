@@ -106,6 +106,7 @@ var (
 		{Name: "token_hash", Type: field.TypeString, Unique: true},
 		{Name: "email", Type: field.TypeString, Nullable: true},
 		{Name: "role", Type: field.TypeEnum, Enums: []string{"admin", "member"}, Default: "member"},
+		{Name: "clerk_invitation_id", Type: field.TypeString, Nullable: true},
 		{Name: "expires_at", Type: field.TypeTime},
 		{Name: "accepted_at", Type: field.TypeTime, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
@@ -120,13 +121,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "invites_organizations_invites",
-				Columns:    []*schema.Column{InvitesColumns[7]},
+				Columns:    []*schema.Column{InvitesColumns[8]},
 				RefColumns: []*schema.Column{OrganizationsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "invites_persons_created_invites",
-				Columns:    []*schema.Column{InvitesColumns[8]},
+				Columns:    []*schema.Column{InvitesColumns[9]},
 				RefColumns: []*schema.Column{PersonsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},

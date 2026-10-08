@@ -23,6 +23,9 @@ func (Invite) Fields() []ent.Field {
 		// Quando preenchido, só esse email pode aceitar o convite.
 		field.String("email").Optional().Nillable(),
 		field.Enum("role").Values("admin", "member").Default("member"),
+		// O convite que o Clerk criou para esse email (ele manda o e-mail com o link). Serve para cancelá-lo lá
+		// quando o convite é revogado ou substituído.
+		field.String("clerk_invitation_id").Optional().Nillable(),
 		field.UUID("created_by_id", uuid.UUID{}).Optional().Nillable(),
 		field.Time("expires_at"),
 		field.Time("accepted_at").Optional().Nillable(),

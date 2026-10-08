@@ -244,7 +244,7 @@ Content-Type: application/json
 
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
-| POST | `/api/orgs/:orgId/invites` | `people.manage` | Gera um link de convite |
+| POST | `/api/orgs/:orgId/invites` | `people.manage` | Cria um convite: com email e o Clerk ligado, o Clerk manda o email; senão, só o link |
 | GET | `/api/orgs/:orgId/invites` | `people.manage` | Convites ainda válidos |
 | DELETE | `/api/invites/:inviteId` | `people.manage` | Revoga um convite |
 
@@ -254,7 +254,9 @@ Content-Type: application/json
 
 { "email": "bruno@empresa.com", "role": "member" }
 ```
-`email` é opcional, e `role` é `admin` ou `member` (o padrão é `member`). A resposta traz `token` e `path` (`/invite/<token>`). **O token só aparece nesta resposta**: o banco guarda apenas o hash dele.
+`email` é opcional, e `role` é `admin` ou `member` (o padrão é `member`). A resposta (201) traz `token` e `path` (`/invite/<token>`) e `delivery`, que diz como o convite chega: `email` (o Clerk manda o email), `terminal` (`INVITE_DELIVERY=terminal`: não mandou, o link está no log do servidor) ou `link` (sem email, ou sem o Clerk: só o link). **O token só aparece nesta resposta**: o banco guarda apenas o hash dele; `delivery` também só vem aqui.
+
+Com o Clerk ligado e um email, o convite é criado no Clerk primeiro (com validade de 7 dias e `redirect_url` no `/invite/<token>`) e só então gravado: se o Clerk recusar, a resposta é **502** `auth.clerk_invite_failed`; se não responder, **502** `auth.clerk_unavailable`, e nada fica gravado. Um novo convite para o mesmo email na organização **substitui** o anterior (apagado aqui e cancelado no Clerk). `DELETE /api/invites/:inviteId` também cancela o convite no Clerk (um problema lá não impede de revogar).
 
 ---
 

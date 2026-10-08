@@ -28,6 +28,8 @@ type Invite struct {
 	Email *string `json:"email,omitempty"`
 	// Role holds the value of the "role" field.
 	Role invite.Role `json:"role,omitempty"`
+	// ClerkInvitationID holds the value of the "clerk_invitation_id" field.
+	ClerkInvitationID *string `json:"clerk_invitation_id,omitempty"`
 	// CreatedByID holds the value of the "created_by_id" field.
 	CreatedByID *uuid.UUID `json:"created_by_id,omitempty"`
 	// ExpiresAt holds the value of the "expires_at" field.
@@ -82,7 +84,7 @@ func (*Invite) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case invite.FieldCreatedByID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case invite.FieldTokenHash, invite.FieldEmail, invite.FieldRole:
+		case invite.FieldTokenHash, invite.FieldEmail, invite.FieldRole, invite.FieldClerkInvitationID:
 			values[i] = new(sql.NullString)
 		case invite.FieldExpiresAt, invite.FieldAcceptedAt, invite.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
@@ -133,6 +135,13 @@ func (_m *Invite) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field role", values[i])
 			} else if value.Valid {
 				_m.Role = invite.Role(value.String)
+			}
+		case invite.FieldClerkInvitationID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field clerk_invitation_id", values[i])
+			} else if value.Valid {
+				_m.ClerkInvitationID = new(string)
+				*_m.ClerkInvitationID = value.String
 			}
 		case invite.FieldCreatedByID:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -218,6 +227,11 @@ func (_m *Invite) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("role=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Role))
+	builder.WriteString(", ")
+	if v := _m.ClerkInvitationID; v != nil {
+		builder.WriteString("clerk_invitation_id=")
+		builder.WriteString(*v)
+	}
 	builder.WriteString(", ")
 	if v := _m.CreatedByID; v != nil {
 		builder.WriteString("created_by_id=")

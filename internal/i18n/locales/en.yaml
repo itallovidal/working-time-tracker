@@ -369,6 +369,8 @@ help:
       title: Invite the team
       text: "Generate an invitation link, copy it and send it to the person any way you like: the app does not send email. Whoever opens the link enters their name, picks a password and joins the organization with the role you chose."
       tip: "The link is valid for 7 days and works once. It is only shown at that moment, so copy it before closing. If you enter an email, only that person can use it. Invitations not used yet stay under “Pending invitations”."
+      text_email: "Under “Add collaborator”, enter the person’s email and the role: the invitation goes out by email, they click the link in the message, sign in (or create the account) and are in the organization with the role you chose."
+      tip_email: "The invitation is valid for 7 days and works once. Inviting the same email again cancels the previous one. If the email does not arrive, the link is also shown on screen, and you can copy it and send it any way you like. Invitations not accepted yet stay under “Pending invitations”."
     rates:
       title: People on the project and the hourly rate
       text: "Inviting is not enough: each person must be added to every project they will work on, with the amount they earn per hour there. Pick the person, enter the hourly rate (required), a team (optional) and the permission group: Collaborator, Project manager or Project administrator."
@@ -402,6 +404,7 @@ help:
       title: "Organization: Collaborators"
       text: "Who belongs to the organization, with the role (Owner, Admin or Member) and the weekly hours. The tab only appears for whoever looks after people: admins and anyone the owner allowed."
       add: "“Add collaborator” generates an invitation link. Pick the role (only the owner invites admins) and, if you want, enter the email so that only that person can use the link."
+      add_email: "“Add collaborator” sends the invitation by email. Pick the role (only the owner invites admins) and enter the email; without an email it only generates a link for you to copy and send."
       pending: "“Pending invitations” lists the links not used yet, each one valid for 7 days. You can revoke them."
       edit: "The pencil on the row opens “Hours and permissions”: the hours agreed per week and, for the owner, the organization permissions of people who are not admins."
       role: "Only the owner makes someone an admin, or back to a member."
@@ -505,6 +508,7 @@ help:
     invite:
       q: The invitation did not arrive by email
       a: "The app does not send email: copy the link when it is generated and send it yourself. If it expired (7 days) or was already used, generate another one."
+      a_email: "Ask them to check the spam folder and make sure the email is right. The invitation link is also shown on screen when you create it: copy it and send it yourself. Inviting the same email again cancels the previous invitation and sends another; if it expired (7 days) or was already used, generate another one."
     export:
       q: Can I export reports?
       a: "Not yet. The numbers are in the organization and project Overviews."
@@ -589,7 +593,7 @@ org:
     now_member: "{{.name}} is now a member."
     now_admin: "{{.name}} is now an admin."
     pending_title: Pending invitations
-    pending_intro: Links that were generated and not used yet. Each one is valid for 7 days and works once.
+    pending_intro: Invitations that were not accepted yet. Each one is valid for 7 days and works once.
     no_invites: No pending invitations
     no_invites_text: When you add a collaborator, their invitation stays here until it is accepted.
     any_email: Any email
@@ -598,6 +602,12 @@ org:
     revoked: Invitation revoked.
     invite_intro: The person joins the organization through an invitation link that you send them.
     invite_email_hint: With an email, only that person can use the link.
+    invite_email_hint_email: The invitation goes to this email, and only that person can use it.
+    invite_intro_email: "The invitation goes by email: the person clicks the link in the message and joins the organization. Without an email, you generate a link and send it any way you like."
+    send_by_email: Send invitation by email
+    sent_to: "Invitation sent to {{.email}}. The person clicks the link in the message and joins the organization."
+    terminal_note: "The email was not sent: the server is in development mode (INVITE_DELIVERY=terminal) and showed the link in its log."
+    link_hint_email: "If the email does not arrive, send this link. It is valid for 7 days and works once."
     generate: Generate invitation link
     link_label: Invitation link
     link_hint: "Copy it now: the link will not be shown again. It is valid for 7 days and works once."
@@ -1316,6 +1326,7 @@ errors:
     account_exists: "an account with this email already exists"
     admin_only: "only admins can do this"
     clerk_account_linked: "this email is already linked to another sign-in user"
+    clerk_invite_failed: "the sign-in service did not accept the invitation. Check the email and try again"
     clerk_disabled: "external sign-in is not turned on on this server"
     clerk_email_unverified: "your email has not been verified yet. Verify it and try again"
     clerk_token_invalid: "could not confirm your sign-in. Sign in again"

@@ -2,6 +2,7 @@ package server_test
 
 import (
 	"encoding/base64"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/labstack/echo/v5"
 
+	"working-time-tracker/internal/adapter"
 	"working-time-tracker/internal/adapter/clerkfake"
 	"working-time-tracker/internal/domain/auth"
 	"working-time-tracker/internal/server"
@@ -20,16 +22,28 @@ var clerkKey = "pk_test_" + base64.RawStdEncoding.EncodeToString([]byte("clerk.t
 
 func newClerkServer(t *testing.T) (*echo.Echo, *clerkfake.Fake) {
 	t.Helper()
+	e, fake, _ := newClerkServerWith(t, "")
+	return e, fake
+}
+
+// newClerkServerWith sobe o servidor com o Clerk falso e o modo de entrega dos convites dado ("" é e-mail), e
+// devolve o que o servidor mandou ao log do convite.
+func newClerkServerWith(t *testing.T, delivery string) (*echo.Echo, *clerkfake.Fake, *[]string) {
+	t.Helper()
 	testutil.Truncate(t, testDB)
 	fake := clerkfake.New()
+	var logged []string
 	e, err := server.New(testClient, server.Options{
 		EncryptKey: "test-key", AuthRateLimit: 1000,
-		Clerk: &server.ClerkOptions{Provider: fake, PublishableKey: clerkKey},
+		Clerk: &server.ClerkOptions{
+			Provider: fake, PublishableKey: clerkKey, PublicURL: "http://localhost:8080", InviteDelivery: delivery,
+			InviteLog: func(msg string, args ...any) { logged = append(logged, fmt.Sprint(append([]any{msg}, args...)...)) },
+		},
 	})
 	if err != nil {
 		t.Fatalf("server.New: %v", err)
 	}
-	return e, fake
+	return e, fake, &logged
 }
 
 // clerkDo faz uma requisição de quem acabou de entrar no Clerk: o token de sessão dele vai em Authorization.
@@ -244,5 +258,97 @@ func TestClerk_SignupValidation(t *testing.T) {
 	e.ServeHTTP(rec, req)
 	if rec.Code != http.StatusUnsupportedMediaType {
 		t.Errorf("form body = %d, want 415", rec.Code)
+	}
+}
+
+// O convite com e-mail sai pelo Clerk: a resposta diz como chegou, o convite fica na lista e, ao revogar, é
+// cancelado no Clerk. Sem e-mail é só o link.
+func TestClerk_InviteByEmailThroughTheAPI(t *testing.T) {
+	e, fake, logged := newClerkServerWith(t, "email")
+	admin := signup(t, e, "Acme", "ana@test.com")
+
+	rec := do(e, "POST", "/api/orgs/"+admin.orgID+"/invites", `{"email":"Caio@Test.com","role":"member"}`, admin.session)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("create invite = %d: %s", rec.Code, rec.Body.String())
+	}
+	body := decode(t, rec)
+	if body["delivery"] != "email" || body["email"] != "caio@test.com" || body["token"] == "" || body["path"] == "" {
+		t.Errorf("invite = %v, want delivery email for caio, with the token and the path", body)
+	}
+	sent := fake.Invitations()
+	if len(sent) != 1 || !sent[0].Params.Notify || sent[0].Params.RedirectURL != "http://localhost:8080"+body["path"].(string) {
+		t.Errorf("Clerk invitations = %+v, want one that notifies and redirects to the invite page", sent)
+	}
+	if len(*logged) != 0 {
+		t.Errorf("the link must not be logged in email mode: %v", *logged)
+	}
+
+	// A lista não repete o delivery (ele só vem na criação).
+	list := decodeList(t, do(e, "GET", "/api/orgs/"+admin.orgID+"/invites", "", admin.session))
+	if len(list) != 1 || list[0]["delivery"] != nil {
+		t.Errorf("invites = %v, want one, without a delivery", list)
+	}
+
+	if rec := do(e, "DELETE", "/api/invites/"+body["id"].(string), "", admin.session); rec.Code != http.StatusNoContent {
+		t.Fatalf("revoke = %d", rec.Code)
+	}
+	if got := fake.Invitations(); len(got) != 1 || !got[0].Revoked {
+		t.Errorf("Clerk invitations = %+v, want the one cancelled", got)
+	}
+
+	rec = do(e, "POST", "/api/orgs/"+admin.orgID+"/invites", `{"role":"member"}`, admin.session)
+	if body := decode(t, rec); rec.Code != http.StatusCreated || body["delivery"] != "link" {
+		t.Errorf("without email = %d %v, want 201 and delivery link", rec.Code, body)
+	}
+	if n := len(fake.Invitations()); n != 1 {
+		t.Errorf("the Clerk got %d invitations in all, want only the one with an email", n)
+	}
+}
+
+// No modo terminal o e-mail não sai e o link vai para o log.
+func TestClerk_InviteTerminalMode(t *testing.T) {
+	e, fake, logged := newClerkServerWith(t, "terminal")
+	admin := signup(t, e, "Acme", "ana@test.com")
+
+	rec := do(e, "POST", "/api/orgs/"+admin.orgID+"/invites", `{"email":"caio@test.com"}`, admin.session)
+	body := decode(t, rec)
+	if rec.Code != http.StatusCreated || body["delivery"] != "terminal" {
+		t.Fatalf("invite = %d %v, want 201 and delivery terminal", rec.Code, body)
+	}
+	if sent := fake.Invitations(); len(sent) != 1 || sent[0].Params.Notify {
+		t.Errorf("Clerk invitations = %+v, want one that does not notify", sent)
+	}
+	if len(*logged) != 1 || !strings.Contains((*logged)[0], "caio@test.com") || !strings.Contains((*logged)[0], "https://clerk.test/v1/tickets/accept") {
+		t.Errorf("log = %v, want caio's email and the link", *logged)
+	}
+}
+
+func TestClerk_InviteFailuresAre502AndStoreNothing(t *testing.T) {
+	e, fake, _ := newClerkServerWith(t, "email")
+	admin := signup(t, e, "Acme", "ana@test.com")
+
+	fake.FailInvitations(fmt.Errorf("%w: refused", adapter.ErrClerkRejected))
+	rec := do(e, "POST", "/api/orgs/"+admin.orgID+"/invites", `{"email":"caio@test.com"}`, admin.session)
+	if rec.Code != http.StatusBadGateway || errorCode(t, rec) != "auth.clerk_invite_failed" {
+		t.Errorf("rejected = %d %s, want 502 auth.clerk_invite_failed", rec.Code, rec.Body.String())
+	}
+	fake.FailInvitations(nil)
+	fake.SetDown(true)
+	rec = do(e, "POST", "/api/orgs/"+admin.orgID+"/invites", `{"email":"caio@test.com"}`, admin.session)
+	if rec.Code != http.StatusBadGateway || errorCode(t, rec) != "auth.clerk_unavailable" {
+		t.Errorf("Clerk down = %d %s, want 502 auth.clerk_unavailable", rec.Code, rec.Body.String())
+	}
+	if list := decodeList(t, do(e, "GET", "/api/orgs/"+admin.orgID+"/invites", "", admin.session)); len(list) != 0 {
+		t.Errorf("invites = %v, want none stored", list)
+	}
+}
+
+// Sem o Clerk o convite segue só com o link, com o e-mail ou sem.
+func TestInvite_WithoutClerkIsLinkOnly(t *testing.T) {
+	e := newServer(t)
+	admin := signup(t, e, "Acme", "ana@test.com")
+	rec := do(e, "POST", "/api/orgs/"+admin.orgID+"/invites", `{"email":"caio@test.com"}`, admin.session)
+	if body := decode(t, rec); rec.Code != http.StatusCreated || body["delivery"] != "link" {
+		t.Errorf("invite = %d %v, want 201 and delivery link", rec.Code, body)
 	}
 }

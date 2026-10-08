@@ -130,16 +130,16 @@
     </form>
   </template>
 
-  {{/* O formulário aparece no modal do layout base, mas continua no escopo de orgPeople.
-       Hoje a única forma de adicionar alguém é o link de convite. */}}
+  {{/* O formulário aparece no modal do layout base, mas continua no escopo de orgPeople. Com o Clerk ligado
+       (emailInvites) o convite com email sai por email; sem email, ou sem o Clerk, é o link para copiar. */}}
   <template x-teleport="#modal-root">
     <form class="stack" x-show="$store.modal.name === 'invite'" @submit.prevent="createInvite()">
       <div class="stack" x-show="!lastLink">
-        <p class="muted small">{{.T "org.people.invite_intro"}}</p>
+        <p class="muted small">{{if .Props.emailInvites}}{{.T "org.people.invite_intro_email"}}{{else}}{{.T "org.people.invite_intro"}}{{end}}</p>
         <div class="field">
           <label for="invite-email">{{.T "common.email"}}</label>
           <input id="invite-email" type="email" placeholder="{{.T "common.optional"}}" x-model="invite.email" data-autofocus>
-          <span class="hint">{{.T "org.people.invite_email_hint"}}</span>
+          <span class="hint">{{if .Props.emailInvites}}{{.T "org.people.invite_email_hint_email"}}{{else}}{{.T "org.people.invite_email_hint"}}{{end}}</span>
         </div>
         <div class="field">
           <label for="invite-role">{{.T "common.role"}}</label>
@@ -151,15 +151,25 @@
         <p class="form-error" x-show="errors.invite" x-text="errors.invite" role="alert"></p>
         <div class="row row-end">
           <button type="button" class="btn btn-secondary" @click="$store.modal.dismiss()">{{.T "common.cancel"}}</button>
+          {{- if .Props.emailInvites}}
+          <button type="submit" class="btn" :disabled="pending">
+            <span x-cloak x-show="invite.email">{{template "icon" "paper-plane"}} {{.T "org.people.send_by_email"}}</span>
+            <span x-show="!invite.email">{{template "icon" "link"}} {{.T "org.people.generate"}}</span>
+          </button>
+          {{- else}}
           <button type="submit" class="btn" :disabled="pending">{{template "icon" "link"}} {{.T "org.people.generate"}}</button>
+          {{- end}}
         </div>
       </div>
 
       <div class="stack" x-cloak x-show="lastLink" x-transition.opacity>
+        <p class="muted small" x-cloak x-show="lastDelivery === 'email'" x-text="$t('org.people.sent_to', { email: lastEmail })"></p>
+        <p class="muted small" x-cloak x-show="lastDelivery === 'terminal'">{{.T "org.people.terminal_note"}}</p>
         <div class="field">
           <label for="invite-link">{{.T "org.people.link_label"}}</label>
           <input id="invite-link" type="text" readonly :value="lastLink" x-ref="link" @focus="$event.target.select()">
-          <span class="hint">{{.T "org.people.link_hint"}}</span>
+          <span class="hint" x-show="lastDelivery === 'link'">{{.T "org.people.link_hint"}}</span>
+          <span class="hint" x-cloak x-show="lastDelivery !== 'link'">{{.T "org.people.link_hint_email"}}</span>
         </div>
         <div class="row row-end">
           <button type="button" class="btn btn-secondary" @click="copyLink()">{{template "icon" "copy"}} {{.T "org.people.copy"}}</button>

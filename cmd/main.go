@@ -70,6 +70,8 @@ func main() {
 				AuthorizedParties: ENV.ClerkAuthorizedParties,
 			}),
 			PublishableKey: ENV.ClerkPublishableKey,
+			PublicURL:      ENV.PublicURL,
+			InviteDelivery: ENV.InviteDelivery,
 		}
 	}
 
@@ -111,7 +113,12 @@ func main() {
 	}
 	e.Logger.Info("trello", "api", trelloAPI, "site", trelloSite, "connection_configured", trello.Configured())
 	if clerkOpts != nil {
-		e.Logger.Info("clerk", "enabled", true, "frontend_api", adapter.ClerkFrontendAPI(ENV.ClerkPublishableKey), "authorized_parties", ENV.ClerkAuthorizedParties)
+		e.Logger.Info("clerk", "enabled", true, "frontend_api", adapter.ClerkFrontendAPI(ENV.ClerkPublishableKey), "authorized_parties", ENV.ClerkAuthorizedParties, "invite_delivery", ENV.InviteDelivery)
+		// O modo terminal imprime o link de cada convite no log: é para desenvolver, e com o cookie Secure o
+		// sistema está atrás de HTTPS, ou seja, em produção.
+		if ENV.InviteDelivery == "terminal" && ENV.CookieSecure {
+			e.Logger.Warn("INVITE_DELIVERY=terminal with COOKIE_SECURE=true: the invites are not emailed and their links go to this log; this is for development")
+		}
 	} else {
 		e.Logger.Info("clerk", "enabled", false)
 	}

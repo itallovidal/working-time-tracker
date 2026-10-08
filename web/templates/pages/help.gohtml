@@ -122,9 +122,10 @@
 
         <section class="card help-section" id="invite-team" data-help-section>
           <h3>{{.T "help.steps.invite.title"}}</h3>
-          <p>{{.T "help.steps.invite.text"}}</p>
-          <ol class="help-path" aria-label="{{.T "help.path_label"}}"><li>{{.T "nav.people"}}</li><li>{{.T "org.people.add"}}</li><li>{{.T "org.people.generate"}}</li></ol>
-          <p class="help-tip">{{.T "help.steps.invite.tip"}}</p>
+          {{/* Com o Clerk ligado no servidor (emailInvites) o convite sai por email; sem ele, é o link para copiar. */}}
+          <p>{{if .Props.emailInvites}}{{.T "help.steps.invite.text_email"}}{{else}}{{.T "help.steps.invite.text"}}{{end}}</p>
+          <ol class="help-path" aria-label="{{.T "help.path_label"}}"><li>{{.T "nav.people"}}</li><li>{{.T "org.people.add"}}</li><li>{{if .Props.emailInvites}}{{.T "org.people.send_by_email"}}{{else}}{{.T "org.people.generate"}}{{end}}</li></ol>
+          <p class="help-tip">{{if .Props.emailInvites}}{{.T "help.steps.invite.tip_email"}}{{else}}{{.T "help.steps.invite.tip"}}{{end}}</p>
         </section>
 
         <section class="card help-section" id="people-and-rates" data-help-section>
@@ -189,7 +190,7 @@
           <h3>{{.T "help.screens.org_people.title"}}</h3>
           <p>{{.T "help.screens.org_people.text"}}</p>
           <ul class="help-list">
-            <li>{{.T "help.screens.org_people.add"}}</li>
+            <li>{{if .Props.emailInvites}}{{.T "help.screens.org_people.add_email"}}{{else}}{{.T "help.screens.org_people.add"}}{{end}}</li>
             <li>{{.T "help.screens.org_people.pending"}}</li>
             <li>{{.T "help.screens.org_people.edit"}}</li>
             <li>{{.T "help.screens.org_people.role"}}</li>
@@ -361,7 +362,7 @@
 
         <section class="card help-section" id="faq-invite-email" data-help-section>
           <h3>{{.T "help.faq.invite.q"}}</h3>
-          <p>{{.T "help.faq.invite.a"}}</p>
+          <p>{{if .Props.emailInvites}}{{.T "help.faq.invite.a_email"}}{{else}}{{.T "help.faq.invite.a"}}{{end}}</p>
         </section>
 
         <section class="card help-section" id="faq-export" data-help-section>

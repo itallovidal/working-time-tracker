@@ -37,15 +37,26 @@ func (i *Identity) Can(key string) bool {
 	return i.IsAdmin() || (i != nil && slices.Contains(i.Permissions, key))
 }
 
+// As formas de entrega de um convite (ver Invite.Delivery).
+const (
+	DeliveryEmail    = "email"
+	DeliveryTerminal = "terminal"
+	DeliveryLink     = "link"
+)
+
 type Invite struct {
-	ID             uuid.UUID  `json:"id"`
-	OrganizationID uuid.UUID  `json:"organization_id"`
-	Email          *string    `json:"email"`
-	Role           string     `json:"role"`
-	CreatedByName  string     `json:"created_by_name,omitempty"`
-	ExpiresAt      time.Time  `json:"expires_at"`
-	AcceptedAt     *time.Time `json:"accepted_at,omitempty"`
-	CreatedAt      time.Time  `json:"created_at"`
+	ID             uuid.UUID `json:"id"`
+	OrganizationID uuid.UUID `json:"organization_id"`
+	Email          *string   `json:"email"`
+	Role           string    `json:"role"`
+	CreatedByName  string    `json:"created_by_name,omitempty"`
+	// Delivery diz como o convite chega à pessoa e só vem na resposta que o cria: DeliveryEmail (o Clerk manda
+	// o e-mail), DeliveryTerminal (não mandou: o link está no log do servidor) ou DeliveryLink (só o link, para
+	// copiar). Não é guardado.
+	Delivery   string     `json:"delivery,omitempty"`
+	ExpiresAt  time.Time  `json:"expires_at"`
+	AcceptedAt *time.Time `json:"accepted_at,omitempty"`
+	CreatedAt  time.Time  `json:"created_at"`
 }
 
 // InviteInfo é o que a página pública do convite mostra antes do aceite.

@@ -214,8 +214,10 @@ document.addEventListener('alpine:init', () => {
     clerk: !!WTT.boot.clerk,
     showPassword: !WTT.boot.clerk,
     clerkLoading: !!WTT.boot.clerk,
-    // O Clerk mostra o cadastro (quem é novo) ou a entrada (quem já tem conta lá); a pessoa troca por um link.
-    clerkMode: 'signUp',
+    // O Clerk mostra o cadastro (quem é novo) ou a entrada (quem já tem conta lá); a pessoa troca por um botão.
+    // Pelo link do email o Clerk volta com __clerk_status: sign_in é quem já tem usuário lá, e o componente
+    // montado já aproveita o __clerk_ticket da URL sozinho (o email do convite chega verificado).
+    clerkMode: new URLSearchParams(location.search).get('__clerk_status') === 'sign_in' ? 'signIn' : 'signUp',
     async init() {
       try {
         this.info = await api('GET', '/api/auth/invites/' + encodeURIComponent(WTT.boot.token));

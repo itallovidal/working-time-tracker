@@ -27,6 +27,7 @@ type Fake struct {
 	invitations []*Invitation
 	down        bool
 	inviteErr   error
+	omitURL     bool
 	seq         int
 }
 
@@ -81,6 +82,13 @@ func (f *Fake) FailInvitations(err error) {
 	f.inviteErr = err
 }
 
+// OmitInvitationURL faz o Clerk falso devolver o convite sem o campo url, como o Clerk de verdade pode fazer.
+func (f *Fake) OmitInvitationURL(omit bool) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.omitURL = omit
+}
+
 // Invitations devolve os convites pedidos até agora, do primeiro ao último.
 func (f *Fake) Invitations() []Invitation {
 	f.mu.Lock()
@@ -132,7 +140,11 @@ func (f *Fake) CreateInvitation(_ context.Context, p adapter.ClerkInviteParams) 
 	f.seq++
 	inv := &Invitation{ID: fmt.Sprintf("inv_%d", f.seq), Params: p}
 	f.invitations = append(f.invitations, inv)
-	return &adapter.ClerkInvitation{ID: inv.ID, URL: "https://clerk.test/v1/tickets/accept?ticket=" + inv.ID}, nil
+	url := "https://clerk.test/v1/tickets/accept?ticket=" + inv.ID
+	if f.omitURL {
+		url = ""
+	}
+	return &adapter.ClerkInvitation{ID: inv.ID, URL: url}, nil
 }
 
 func (f *Fake) RevokeInvitation(_ context.Context, id string) error {

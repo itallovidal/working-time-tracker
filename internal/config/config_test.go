@@ -100,7 +100,7 @@ func TestLoad_TrelloSettings(t *testing.T) {
 
 func clearClerk(t *testing.T) {
 	t.Helper()
-	for _, name := range []string{"CLERK_SECRET_KEY", "CLERK_PUBLISHABLE_KEY", "CLERK_API_URL", "CLERK_AUTHORIZED_PARTIES", "PUBLIC_URL"} {
+	for _, name := range []string{"CLERK_SECRET_KEY", "CLERK_PUBLISHABLE_KEY", "CLERK_API_URL", "CLERK_AUTHORIZED_PARTIES", "INVITE_DELIVERY", "PUBLIC_URL"} {
 		t.Setenv(name, "")
 	}
 }
@@ -112,8 +112,8 @@ func TestLoad_ClerkSettings(t *testing.T) {
 	clearClerk(t)
 
 	cfg, err := Load()
-	if err != nil || cfg.ClerkEnabled() || len(cfg.ClerkAuthorizedParties) != 0 {
-		t.Fatalf("defaults = enabled %v, parties %v, %v; want off, none", cfg.ClerkEnabled(), cfg.ClerkAuthorizedParties, err)
+	if err != nil || cfg.ClerkEnabled() || len(cfg.ClerkAuthorizedParties) != 0 || cfg.InviteDelivery != "email" {
+		t.Fatalf("defaults = enabled %v, parties %v, delivery %q, %v; want off, none, email", cfg.ClerkEnabled(), cfg.ClerkAuthorizedParties, cfg.InviteDelivery, err)
 	}
 
 	t.Setenv("CLERK_SECRET_KEY", " sk_test_abc ")
@@ -132,6 +132,11 @@ func TestLoad_ClerkSettings(t *testing.T) {
 	if err != nil || len(cfg.ClerkAuthorizedParties) != 2 || cfg.ClerkAuthorizedParties[1] != "http://localhost:8090" {
 		t.Errorf("listed parties = %v, %v; want the two origins without slashes", cfg.ClerkAuthorizedParties, err)
 	}
+
+	t.Setenv("INVITE_DELIVERY", " Terminal ")
+	if cfg, err = Load(); err != nil || cfg.InviteDelivery != "terminal" {
+		t.Errorf("INVITE_DELIVERY = %q, %v; want terminal", cfg.InviteDelivery, err)
+	}
 }
 
 // Um engano na configuração do Clerk derruba a subida.
@@ -141,6 +146,7 @@ func TestLoad_ClerkMisconfigurationIsRefused(t *testing.T) {
 		"only the secret":      {"CLERK_SECRET_KEY": "sk_test_a"},
 		"only the publishable": {"CLERK_PUBLISHABLE_KEY": "pk_test_a"},
 		"no PUBLIC_URL":        {"CLERK_SECRET_KEY": "sk_test_a", "CLERK_PUBLISHABLE_KEY": "pk_test_a"},
+		"bad delivery":         {"INVITE_DELIVERY": "carrier-pigeon"},
 		"swapped keys":         {"CLERK_SECRET_KEY": "pk_test_a", "CLERK_PUBLISHABLE_KEY": "sk_test_a", "PUBLIC_URL": "http://localhost:8080"},
 		"relative PUBLIC_URL":  {"CLERK_SECRET_KEY": "sk_test_a", "CLERK_PUBLISHABLE_KEY": "pk_test_a", "PUBLIC_URL": "localhost:8080"},
 	} {

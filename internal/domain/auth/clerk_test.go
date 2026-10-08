@@ -3,7 +3,11 @@ package auth
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 	"testing"
+
+	"github.com/google/uuid"
 
 	"working-time-tracker/internal/adapter"
 	"working-time-tracker/internal/adapter/clerkfake"
@@ -16,7 +20,7 @@ func newClerkService(t *testing.T) (*Service, *clerkfake.Fake) {
 	t.Helper()
 	svc, _ := newService(t)
 	fake := clerkfake.New()
-	svc.SetClerk(fake)
+	svc.SetClerk(fake, ClerkSettings{PublicURL: "http://localhost:8080"})
 	return svc, fake
 }
 
@@ -197,11 +201,11 @@ func TestClerkLogin_NoAccountListsPendingInvites(t *testing.T) {
 	svc, fake := newClerkService(t)
 	owner, _ := mustSignup(t, svc, "ana@acme.com")
 	other, _ := mustSignup(t, svc, "bia@beta.com")
-	inv1, _, err := svc.CreateInvite(owner, "caio@mail.com", "member")
+	inv1, _, err := svc.CreateInvite(bg, owner, "caio@mail.com", "member")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := svc.CreateInvite(other, "caio@mail.com", "member"); err != nil {
+	if _, _, err := svc.CreateInvite(bg, other, "caio@mail.com", "member"); err != nil {
 		t.Fatal(err)
 	}
 	token := clerkUser(fake, "user_c", "caio@mail.com", "Caio")
@@ -231,8 +235,8 @@ func TestClerkLogin_NoAccountListsPendingInvites(t *testing.T) {
 func TestClerkJoin_OnlyTheInviteOfTheVerifiedEmail(t *testing.T) {
 	svc, fake := newClerkService(t)
 	owner, _ := mustSignup(t, svc, "ana@acme.com")
-	forCaio, _, _ := svc.CreateInvite(owner, "caio@mail.com", "member")
-	open, _, _ := svc.CreateInvite(owner, "", "member")
+	forCaio, _, _ := svc.CreateInvite(bg, owner, "caio@mail.com", "member")
+	open, _, _ := svc.CreateInvite(bg, owner, "", "member")
 	other := clerkUser(fake, "user_d", "duda@mail.com", "Duda")
 
 	if _, err := svc.ClerkJoin(bg, other, ClerkJoinInput{InviteID: forCaio.ID.String()}); !errors.Is(err, ErrInviteEmailMismatch) {
@@ -251,7 +255,7 @@ func TestClerkJoin_OnlyTheInviteOfTheVerifiedEmail(t *testing.T) {
 func TestClerkLogin_InviteTokenJoinsDirectly(t *testing.T) {
 	svc, fake := newClerkService(t)
 	owner, _ := mustSignup(t, svc, "ana@acme.com")
-	_, invToken, err := svc.CreateInvite(owner, "caio@mail.com", "admin")
+	_, invToken, err := svc.CreateInvite(bg, owner, "caio@mail.com", "admin")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -283,7 +287,7 @@ func TestClerkLogin_InviteTokenJoinsDirectly(t *testing.T) {
 func TestClerkLogin_OpenInviteTokenAcceptsAnyVerifiedEmail(t *testing.T) {
 	svc, fake := newClerkService(t)
 	owner, _ := mustSignup(t, svc, "ana@acme.com")
-	_, invToken, _ := svc.CreateInvite(owner, "", "member")
+	_, invToken, _ := svc.CreateInvite(bg, owner, "", "member")
 
 	res, err := svc.ClerkLogin(bg, clerkUser(fake, "user_e", "eva@mail.com", "Eva"), ClerkLoginInput{InviteToken: invToken})
 	if err != nil || !res.Created || res.Identity.OrganizationName != "Acme" {
@@ -296,7 +300,7 @@ func TestClerkLogin_MemberOfAnotherOrganizationCannotUseAnInvite(t *testing.T) {
 	svc, fake := newClerkService(t)
 	mustSignup(t, svc, "ana@acme.com")
 	other, _ := mustSignup(t, svc, "bia@beta.com")
-	_, invToken, _ := svc.CreateInvite(other, "", "member")
+	_, invToken, _ := svc.CreateInvite(bg, other, "", "member")
 	ana := clerkUser(fake, "user_a", "ana@acme.com", "Ana")
 
 	_, err := svc.ClerkLogin(bg, ana, ClerkLoginInput{InviteToken: invToken, Password: "senha-forte-1"})
@@ -304,7 +308,7 @@ func TestClerkLogin_MemberOfAnotherOrganizationCannotUseAnInvite(t *testing.T) {
 		t.Errorf("err = %v, want ErrAccountExists", err)
 	}
 	// Quem já é da organização do convite só entra.
-	_, ownToken, _ := svc.CreateInvite(other, "", "member")
+	_, ownToken, _ := svc.CreateInvite(bg, other, "", "member")
 	bia := clerkUser(fake, "user_b", "bia@beta.com", "Bia")
 	res, err := svc.ClerkLogin(bg, bia, ClerkLoginInput{InviteToken: ownToken, Password: "senha-forte-1"})
 	if err != nil || res.Status != ClerkOK || res.Created {
@@ -363,5 +367,227 @@ func TestClerkErrors_KeepTheCause(t *testing.T) {
 	_, err := svc.ClerkLogin(bg, "x", ClerkLoginInput{})
 	if !errors.Is(err, ErrClerkUnavailable) || !errors.Is(err, adapter.ErrClerkUnavailable) {
 		t.Errorf("err = %v, want the domain code wrapping the adapter error", err)
+	}
+}
+
+// ---------- O convite por e-mail pelo Clerk ----------
+
+// logLines guarda o que o serviço manda ao log, como o log do servidor faria.
+type logLines struct{ lines []string }
+
+func (l *logLines) log(msg string, args ...any) {
+	l.lines = append(l.lines, fmt.Sprint(append([]any{msg}, args...)...))
+}
+
+func newInviteService(t *testing.T, delivery string) (*Service, *clerkfake.Fake, *logLines) {
+	t.Helper()
+	svc, _ := newService(t)
+	fake := clerkfake.New()
+	logs := &logLines{}
+	svc.SetClerk(fake, ClerkSettings{PublicURL: "http://localhost:8080", InviteDelivery: delivery, Log: logs.log})
+	return svc, fake, logs
+}
+
+// Com o Clerk ligado, o convite com e-mail é criado lá com o link do sistema, a validade do convite e o pedido para
+// mandar o e-mail; o id do convite do Clerk fica guardado.
+func TestCreateInvite_IsEmailedThroughClerk(t *testing.T) {
+	svc, fake, logs := newInviteService(t, "email")
+	owner, _ := mustSignup(t, svc, "ana@acme.com")
+
+	inv, token, err := svc.CreateInvite(bg, owner, " Caio@Mail.com ", "member")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if inv.Delivery != DeliveryEmail {
+		t.Errorf("delivery = %q, want %q", inv.Delivery, DeliveryEmail)
+	}
+	sent := fake.Invitations()
+	if len(sent) != 1 {
+		t.Fatalf("the Clerk got %d invitations, want 1", len(sent))
+	}
+	p := sent[0].Params
+	if p.Email != "caio@mail.com" || p.RedirectURL != "http://localhost:8080/invite/"+token || !p.Notify || p.ExpiresInDays != 7 {
+		t.Errorf("invitation = %+v, want caio's normalized email, the system's link, notify and 7 days", p)
+	}
+	stored, err := testClient.Invite.Get(bg, inv.ID)
+	if err != nil || stored.ClerkInvitationID == nil || *stored.ClerkInvitationID != sent[0].ID {
+		t.Errorf("stored clerk invitation id = %v, %v; want %s", stored.ClerkInvitationID, err, sent[0].ID)
+	}
+	if len(logs.lines) != 0 {
+		t.Errorf("the email mode must not print the link: %v", logs.lines)
+	}
+}
+
+// No modo terminal o Clerk não manda o e-mail e o link vai para o log: o link do próprio Clerk, ou o do sistema
+// quando ele não o devolve.
+func TestCreateInvite_TerminalModePrintsTheLink(t *testing.T) {
+	svc, fake, logs := newInviteService(t, "terminal")
+	owner, _ := mustSignup(t, svc, "ana@acme.com")
+
+	inv, _, err := svc.CreateInvite(bg, owner, "caio@mail.com", "member")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if inv.Delivery != DeliveryTerminal {
+		t.Errorf("delivery = %q, want %q", inv.Delivery, DeliveryTerminal)
+	}
+	sent := fake.Invitations()
+	if len(sent) != 1 || sent[0].Params.Notify {
+		t.Fatalf("invitations = %+v, want one, with notify off", sent)
+	}
+	if len(logs.lines) != 1 || !strings.Contains(logs.lines[0], "https://clerk.test/v1/tickets/accept?ticket="+sent[0].ID) || !strings.Contains(logs.lines[0], "caio@mail.com") {
+		t.Errorf("log = %v, want caio's email and the Clerk link", logs.lines)
+	}
+
+	fake.OmitInvitationURL(true)
+	logs.lines = nil
+	_, token, err := svc.CreateInvite(bg, owner, "duda@mail.com", "member")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(logs.lines) != 1 || !strings.Contains(logs.lines[0], "http://localhost:8080/invite/"+token) {
+		t.Errorf("log = %v, want the system's link when the Clerk gives none", logs.lines)
+	}
+}
+
+// Sem e-mail, ou sem o Clerk, o convite é só o link, como sempre foi, e o Clerk não é chamado.
+func TestCreateInvite_LinkOnlyWithoutEmailOrWithoutClerk(t *testing.T) {
+	svc, fake, _ := newInviteService(t, "email")
+	owner, _ := mustSignup(t, svc, "ana@acme.com")
+	inv, token, err := svc.CreateInvite(bg, owner, "", "member")
+	if err != nil || inv.Delivery != DeliveryLink || token == "" {
+		t.Fatalf("without email = %+v, %v; want a link", inv, err)
+	}
+	if n := len(fake.Invitations()); n != 0 {
+		t.Errorf("the Clerk got %d invitations for an invite without email, want 0", n)
+	}
+
+	off, _ := newService(t)
+	owner2, _ := mustSignup(t, off, "bia@beta.com")
+	inv, _, err = off.CreateInvite(bg, owner2, "caio@mail.com", "member")
+	if err != nil || inv.Delivery != DeliveryLink {
+		t.Errorf("without the Clerk = %+v, %v; want a link", inv, err)
+	}
+}
+
+// Um e-mail que já tem conta não vira convite, e o Clerk nem é chamado.
+func TestCreateInvite_ExistingAccountDoesNotReachClerk(t *testing.T) {
+	svc, fake, _ := newInviteService(t, "email")
+	owner, _ := mustSignup(t, svc, "ana@acme.com")
+	if _, _, err := svc.CreateInvite(bg, owner, "ana@acme.com", "member"); !errors.Is(err, ErrAccountExists) {
+		t.Errorf("err = %v, want ErrAccountExists", err)
+	}
+	if n := len(fake.Invitations()); n != 0 {
+		t.Errorf("the Clerk got %d invitations, want 0", n)
+	}
+}
+
+// Se o Clerk falha, nada é gravado: um convite sem e-mail e sem como saber disso seria um convite fantasma.
+func TestCreateInvite_ClerkFailureStoresNothing(t *testing.T) {
+	svc, fake, _ := newInviteService(t, "email")
+	owner, _ := mustSignup(t, svc, "ana@acme.com")
+
+	fake.FailInvitations(fmt.Errorf("%w: the email is not accepted", adapter.ErrClerkRejected))
+	if _, _, err := svc.CreateInvite(bg, owner, "caio@mail.com", "member"); !errors.Is(err, ErrClerkInviteFailed) {
+		t.Errorf("rejected: err = %v, want ErrClerkInviteFailed", err)
+	}
+	fake.FailInvitations(nil)
+	fake.SetDown(true)
+	if _, _, err := svc.CreateInvite(bg, owner, "caio@mail.com", "member"); !errors.Is(err, ErrClerkUnavailable) {
+		t.Errorf("Clerk down: err = %v, want ErrClerkUnavailable", err)
+	}
+	pending, err := svc.ListInvites(owner.OrganizationID)
+	if err != nil || len(pending) != 0 {
+		t.Errorf("pending invites = %d, %v; want none", len(pending), err)
+	}
+}
+
+// Se o convite não pôde ser gravado depois de criado no Clerk, ele é cancelado lá.
+func TestCreateInvite_StoreFailureCancelsAtClerk(t *testing.T) {
+	svc, fake, _ := newInviteService(t, "email")
+	// Uma organização que não existe: a gravação falha pela chave estrangeira.
+	ghost := &Identity{PersonID: uuid.New(), OrganizationID: uuid.New(), IsOwner: true}
+	if _, _, err := svc.CreateInvite(bg, ghost, "caio@mail.com", "member"); err == nil {
+		t.Fatal("want an error for an organization that does not exist")
+	}
+	sent := fake.Invitations()
+	if len(sent) != 1 || !sent[0].Revoked {
+		t.Errorf("invitations = %+v, want the one created to be cancelled", sent)
+	}
+}
+
+// Convidar o mesmo e-mail de novo cancela o convite anterior (aqui e no Clerk): é o "reenviar". Os convites de
+// outro e-mail e de outra organização ficam como estão.
+func TestCreateInvite_ResendReplacesThePreviousOne(t *testing.T) {
+	svc, fake, _ := newInviteService(t, "email")
+	owner, _ := mustSignup(t, svc, "ana@acme.com")
+	other, _ := mustSignup(t, svc, "bia@beta.com")
+
+	_, firstToken, _ := svc.CreateInvite(bg, owner, "caio@mail.com", "member")
+	_, _, _ = svc.CreateInvite(bg, owner, "duda@mail.com", "member")
+	_, otherOrgToken, _ := svc.CreateInvite(bg, other, "caio@mail.com", "member")
+
+	_, secondToken, err := svc.CreateInvite(bg, owner, "caio@mail.com", "admin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.InviteInfo(firstToken); !errors.Is(err, ErrInviteInvalid) {
+		t.Errorf("the first link: err = %v, want it replaced (ErrInviteInvalid)", err)
+	}
+	if info, err := svc.InviteInfo(secondToken); err != nil || info.Role != "admin" {
+		t.Errorf("the second link: %+v, %v; want a valid admin invite", info, err)
+	}
+	if _, err := svc.InviteInfo(otherOrgToken); err != nil {
+		t.Errorf("another organization's invite for the same email must stay: %v", err)
+	}
+
+	pending, _ := svc.ListInvites(owner.OrganizationID)
+	if len(pending) != 2 {
+		t.Errorf("pending invites = %d, want duda's and the new one for caio", len(pending))
+	}
+	revoked := 0
+	for _, inv := range fake.Invitations() {
+		if inv.Revoked {
+			revoked++
+		}
+	}
+	if revoked != 1 {
+		t.Errorf("%d Clerk invitations cancelled, want only the first one for caio", revoked)
+	}
+}
+
+// Revogar cancela o convite no Clerk também, e uma falha de lá não impede de revogar aqui.
+func TestRevokeInvite_CancelsAtClerkAndSurvivesItsFailure(t *testing.T) {
+	svc, fake, logs := newInviteService(t, "email")
+	owner, _ := mustSignup(t, svc, "ana@acme.com")
+
+	a, tokenA, _ := svc.CreateInvite(bg, owner, "caio@mail.com", "member")
+	if err := svc.RevokeInvite(bg, a.ID.String()); err != nil {
+		t.Fatal(err)
+	}
+	if got := fake.Invitations(); len(got) != 1 || !got[0].Revoked {
+		t.Errorf("invitations = %+v, want the Clerk's cancelled", got)
+	}
+	if _, err := svc.InviteInfo(tokenA); !errors.Is(err, ErrInviteInvalid) {
+		t.Errorf("revoked link: err = %v, want ErrInviteInvalid", err)
+	}
+
+	b, tokenB, _ := svc.CreateInvite(bg, owner, "duda@mail.com", "member")
+	fake.SetDown(true)
+	if err := svc.RevokeInvite(bg, b.ID.String()); err != nil {
+		t.Errorf("revoke with the Clerk down: %v, want it to work", err)
+	}
+	if _, err := svc.InviteInfo(tokenB); !errors.Is(err, ErrInviteInvalid) {
+		t.Errorf("revoked link: err = %v, want ErrInviteInvalid", err)
+	}
+	if len(logs.lines) != 1 || !strings.Contains(logs.lines[0], "could not cancel the invite at Clerk") {
+		t.Errorf("log = %v, want the failed cancellation noted", logs.lines)
+	}
+
+	// Um convite que não passou pelo Clerk (só o link) se revoga sem chamá-lo.
+	fake.SetDown(false)
+	c, _, _ := svc.CreateInvite(bg, owner, "", "member")
+	if err := svc.RevokeInvite(bg, c.ID.String()); err != nil {
+		t.Errorf("revoke a link-only invite: %v", err)
 	}
 }

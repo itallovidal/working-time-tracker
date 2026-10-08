@@ -372,7 +372,7 @@ func main() {
 	orgID := admin.OrganizationID.String()
 	person := map[string]*auth.Identity{people[0].key: admin}
 	for _, p := range people[1:] {
-		_, token, err := authSvc.CreateInvite(admin, p.email, p.role)
+		_, token, err := authSvc.CreateInvite(context.Background(), admin, p.email, p.role)
 		must(err)
 		person[p.key], _, err = authSvc.AcceptInvite(token, auth.AcceptInviteInput{Name: p.name, Email: p.email, Password: password})
 		must(err)

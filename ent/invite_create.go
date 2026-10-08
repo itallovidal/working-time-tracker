@@ -63,6 +63,20 @@ func (_c *InviteCreate) SetNillableRole(v *invite.Role) *InviteCreate {
 	return _c
 }
 
+// SetClerkInvitationID sets the "clerk_invitation_id" field.
+func (_c *InviteCreate) SetClerkInvitationID(v string) *InviteCreate {
+	_c.mutation.SetClerkInvitationID(v)
+	return _c
+}
+
+// SetNillableClerkInvitationID sets the "clerk_invitation_id" field if the given value is not nil.
+func (_c *InviteCreate) SetNillableClerkInvitationID(v *string) *InviteCreate {
+	if v != nil {
+		_c.SetClerkInvitationID(*v)
+	}
+	return _c
+}
+
 // SetCreatedByID sets the "created_by_id" field.
 func (_c *InviteCreate) SetCreatedByID(v uuid.UUID) *InviteCreate {
 	_c.mutation.SetCreatedByID(v)
@@ -255,6 +269,10 @@ func (_c *InviteCreate) createSpec() (*Invite, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Role(); ok {
 		_spec.SetField(invite.FieldRole, field.TypeEnum, value)
 		_node.Role = value
+	}
+	if value, ok := _c.mutation.ClerkInvitationID(); ok {
+		_spec.SetField(invite.FieldClerkInvitationID, field.TypeString, value)
+		_node.ClerkInvitationID = &value
 	}
 	if value, ok := _c.mutation.ExpiresAt(); ok {
 		_spec.SetField(invite.FieldExpiresAt, field.TypeTime, value)

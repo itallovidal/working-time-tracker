@@ -1,4 +1,4 @@
-h1:9cS++CH4E2pebxyZG3OG0+Z4lTjCD1bGo944C8IL3Mo=
+h1:8PdcbaX/0IkvCqK7z1kwr61FZpQROq0mlYrIepuTyZk=
 20261006010705_baseline.sql h1:In26R+bkQHX0yTBQ3cHUfkq0TyExXFWtzWiAp+CXcPk=
 20261006053300_integration_credentials_metadata.sql h1:o/Eet/4UpJcK+X/j0/hx8u5DPKRFuIPzq5e0spWIBX4=
 20261006220500_move_weekly_hours_to_person.sql h1:FSjx+g6ZU9ynL4VqWDbgWEb2QdpiaQV4ZE/YuC/imyI=
@@ -14,3 +14,4 @@ h1:9cS++CH4E2pebxyZG3OG0+Z4lTjCD1bGo944C8IL3Mo=
 20261008070000_issue_sync_item_id.sql h1:n2TxXRFLoC7+8D0hsm/gfTs4Gmol660saYTQN4E0SYM=
 20261008080000_issue_sync_links.sql h1:qqND0HKzVpkzqgJZVhMwG22Ai0JKns2O6psVqiEv+Cw=
 20261008090000_clerk_user_id.sql h1:LWdxxvzXgGpmWnoSEJ1n8i4f+drH6KVIdA4UfCDzWTE=
+20261008100000_invite_clerk_id.sql h1:aTFPi04ZWy5mudDs/ioNq2KgGOaXMmYSbtinVgo2y1E=

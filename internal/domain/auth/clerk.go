@@ -13,10 +13,29 @@ import (
 	"working-time-tracker/internal/domain/person"
 )
 
-// SetClerk liga o login pelo Clerk. Sem isso (o padrão), as rotas do Clerk respondem que ele está desligado e o
-// login segue só por e-mail e senha.
-func (s *Service) SetClerk(p adapter.ClerkProvider) {
+// ClerkSettings são os ajustes que o convite por e-mail pelo Clerk precisa.
+type ClerkSettings struct {
+	// PublicURL é o endereço do sistema, sem barra no fim: o Clerk leva a pessoa a PublicURL/invite/<token>.
+	PublicURL string
+	// InviteDelivery é DeliveryEmail (o Clerk manda o e-mail) ou DeliveryTerminal (não manda: o link vai para o
+	// log, para desenvolver). Vazio vale e-mail.
+	InviteDelivery string
+	// Log recebe o link do convite no modo terminal e os avisos de falhas que não derrubam o pedido (um convite
+	// que não deu para cancelar no Clerk). Nulo descarta.
+	Log func(msg string, args ...any)
+}
+
+// SetClerk liga o login pelo Clerk e o convite por e-mail. Sem isso (o padrão), as rotas do Clerk respondem que
+// ele está desligado, o login segue só por e-mail e senha e o convite é só o link.
+func (s *Service) SetClerk(p adapter.ClerkProvider, settings ClerkSettings) {
 	s.clerk = p
+	s.clerkSettings = settings
+}
+
+func (s *Service) log(msg string, args ...any) {
+	if s.clerkSettings.Log != nil {
+		s.clerkSettings.Log(msg, args...)
+	}
 }
 
 // ClerkEnabled diz se o login pelo Clerk está ligado.

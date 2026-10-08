@@ -180,11 +180,12 @@ func (s *Store) DeleteExpiredSessions(now time.Time) error {
 	return err
 }
 
-func (s *Store) CreateInvite(orgID, createdBy uuid.UUID, email *string, role, tokenHash string, expiresAt time.Time) (*Invite, error) {
+func (s *Store) CreateInvite(orgID, createdBy uuid.UUID, email *string, role string, clerkInvitationID *string, tokenHash string, expiresAt time.Time) (*Invite, error) {
 	q := s.client.Invite.Create().
 		SetOrganizationID(orgID).
 		SetCreatedByID(createdBy).
 		SetRole(invite.Role(role)).
+		SetNillableClerkInvitationID(clerkInvitationID).
 		SetTokenHash(tokenHash).
 		SetExpiresAt(expiresAt)
 	if email != nil {
@@ -214,12 +215,31 @@ func (s *Store) PendingInvites(orgID uuid.UUID, now time.Time) ([]Invite, error)
 	return result, nil
 }
 
-func (s *Store) DeleteInvite(id uuid.UUID) error {
-	err := s.client.Invite.DeleteOneID(id).Exec(context.Background())
+// DeleteInvite apaga o convite e devolve o id dele no Clerk (nulo quando não foi criado lá).
+func (s *Store) DeleteInvite(id uuid.UUID) (*string, error) {
+	ctx := context.Background()
+	inv, err := s.client.Invite.Get(ctx, id)
 	if ent.IsNotFound(err) {
-		return database.ErrNotFound
+		return nil, database.ErrNotFound
 	}
-	return err
+	if err != nil {
+		return nil, err
+	}
+	if err := s.client.Invite.DeleteOneID(id).Exec(ctx); err != nil {
+		if ent.IsNotFound(err) {
+			return nil, database.ErrNotFound
+		}
+		return nil, err
+	}
+	return inv.ClerkInvitationID, nil
+}
+
+// PendingInvitesOfEmail lista os convites ainda utilizáveis da organização para esse e-mail, menos o dado.
+func (s *Store) PendingInvitesOfEmail(orgID uuid.UUID, email string, now time.Time, except uuid.UUID) ([]*ent.Invite, error) {
+	return s.client.Invite.Query().
+		Where(invite.OrganizationIDEQ(orgID), invite.EmailEQ(email), invite.IDNEQ(except),
+			invite.AcceptedAtIsNil(), invite.ExpiresAtGT(now)).
+		All(context.Background())
 }
 
 // ValidInvite devolve o convite com a organização, ou ErrInviteInvalid quando o

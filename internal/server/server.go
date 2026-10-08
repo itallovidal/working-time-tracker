@@ -56,6 +56,13 @@ type ClerkOptions struct {
 	Provider adapter.ClerkProvider
 	// PublishableKey é a chave pública do app, que o navegador usa para carregar o clerk-js.
 	PublishableKey string
+	// PublicURL é o endereço do sistema, sem barra no fim: o convite por e-mail leva a pessoa a ele.
+	PublicURL string
+	// InviteDelivery é "email" (o Clerk manda o e-mail do convite) ou "terminal" (não manda e mostra o link no
+	// log). Vazio vale "email".
+	InviteDelivery string
+	// InviteLog recebe o link do convite no modo terminal. Nulo usa o log do servidor.
+	InviteLog func(msg string, args ...any)
 }
 
 // App é o servidor montado e a sincronização das issues, que anda ao lado dele: quem sobe o servidor
@@ -117,7 +124,6 @@ func Build(client *ent.Client, opts Options) (*App, error) {
 	authSvc := auth.NewService(authStore)
 	var clerkPage *page.Clerk
 	if opts.Clerk != nil && opts.Clerk.Provider != nil {
-		authSvc.SetClerk(opts.Clerk.Provider)
 		clerkPage = &page.Clerk{
 			PublishableKey: opts.Clerk.PublishableKey,
 			FrontendAPI:    adapter.ClerkFrontendAPI(opts.Clerk.PublishableKey),
@@ -125,6 +131,15 @@ func Build(client *ent.Client, opts Options) (*App, error) {
 	}
 
 	e := echo.New()
+	if opts.Clerk != nil && opts.Clerk.Provider != nil {
+		log := opts.Clerk.InviteLog
+		if log == nil {
+			log = e.Logger.Info
+		}
+		authSvc.SetClerk(opts.Clerk.Provider, auth.ClerkSettings{
+			PublicURL: opts.Clerk.PublicURL, InviteDelivery: opts.Clerk.InviteDelivery, Log: log,
+		})
+	}
 	if opts.Sync.Logger == nil {
 		opts.Sync.Logger = e.Logger
 	}
@@ -164,6 +179,7 @@ func Build(client *ent.Client, opts Options) (*App, error) {
 		I18n: catalog, CookieSecure: opts.CookieSecure,
 		OAuthConfigured: map[string]bool{"github": opts.GitHubOAuth.Configured(), "trello": opts.TrelloAuth.Configured()},
 		Clerk:           clerkPage,
+		InviteByEmail:   clerkPage != nil,
 	})
 
 	renderer, err := tmpl.New(web.FS)

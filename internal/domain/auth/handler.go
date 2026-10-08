@@ -38,7 +38,7 @@ func fail(c *echo.Context, err error) error {
 	case errors.Is(err, ErrClerkTokenInvalid):
 		logClerkCause(c, err)
 		status = http.StatusUnauthorized
-	case errors.Is(err, ErrClerkUnavailable):
+	case errors.Is(err, ErrClerkUnavailable), errors.Is(err, ErrClerkInviteFailed):
 		logClerkCause(c, err)
 		status = http.StatusBadGateway
 	case errors.Is(err, ErrInviteInvalid), errors.Is(err, database.ErrNotFound):
@@ -126,7 +126,7 @@ func (h *Handler) CreateInvite(c *echo.Context) error {
 	if err := c.Bind(&body); err != nil {
 		return badBody(c)
 	}
-	inv, token, err := h.svc.CreateInvite(CurrentPerson(c), body.Email, body.Role)
+	inv, token, err := h.svc.CreateInvite(c.Request().Context(), CurrentPerson(c), body.Email, body.Role)
 	if err != nil {
 		return fail(c, err)
 	}
@@ -142,7 +142,7 @@ func (h *Handler) ListInvites(c *echo.Context) error {
 }
 
 func (h *Handler) RevokeInvite(c *echo.Context) error {
-	if err := h.svc.RevokeInvite(c.Param("inviteId")); err != nil {
+	if err := h.svc.RevokeInvite(c.Request().Context(), c.Param("inviteId")); err != nil {
 		return fail(c, err)
 	}
 	return c.NoContent(http.StatusNoContent)

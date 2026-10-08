@@ -71,6 +71,11 @@ func Email(v string) predicate.Invite {
 	return predicate.Invite(sql.FieldEQ(FieldEmail, v))
 }
 
+// ClerkInvitationID applies equality check predicate on the "clerk_invitation_id" field. It's identical to ClerkInvitationIDEQ.
+func ClerkInvitationID(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldEQ(FieldClerkInvitationID, v))
+}
+
 // CreatedByID applies equality check predicate on the "created_by_id" field. It's identical to CreatedByIDEQ.
 func CreatedByID(v uuid.UUID) predicate.Invite {
 	return predicate.Invite(sql.FieldEQ(FieldCreatedByID, v))
@@ -269,6 +274,81 @@ func RoleIn(vs ...Role) predicate.Invite {
 // RoleNotIn applies the NotIn predicate on the "role" field.
 func RoleNotIn(vs ...Role) predicate.Invite {
 	return predicate.Invite(sql.FieldNotIn(FieldRole, vs...))
+}
+
+// ClerkInvitationIDEQ applies the EQ predicate on the "clerk_invitation_id" field.
+func ClerkInvitationIDEQ(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldEQ(FieldClerkInvitationID, v))
+}
+
+// ClerkInvitationIDNEQ applies the NEQ predicate on the "clerk_invitation_id" field.
+func ClerkInvitationIDNEQ(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldNEQ(FieldClerkInvitationID, v))
+}
+
+// ClerkInvitationIDIn applies the In predicate on the "clerk_invitation_id" field.
+func ClerkInvitationIDIn(vs ...string) predicate.Invite {
+	return predicate.Invite(sql.FieldIn(FieldClerkInvitationID, vs...))
+}
+
+// ClerkInvitationIDNotIn applies the NotIn predicate on the "clerk_invitation_id" field.
+func ClerkInvitationIDNotIn(vs ...string) predicate.Invite {
+	return predicate.Invite(sql.FieldNotIn(FieldClerkInvitationID, vs...))
+}
+
+// ClerkInvitationIDGT applies the GT predicate on the "clerk_invitation_id" field.
+func ClerkInvitationIDGT(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldGT(FieldClerkInvitationID, v))
+}
+
+// ClerkInvitationIDGTE applies the GTE predicate on the "clerk_invitation_id" field.
+func ClerkInvitationIDGTE(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldGTE(FieldClerkInvitationID, v))
+}
+
+// ClerkInvitationIDLT applies the LT predicate on the "clerk_invitation_id" field.
+func ClerkInvitationIDLT(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldLT(FieldClerkInvitationID, v))
+}
+
+// ClerkInvitationIDLTE applies the LTE predicate on the "clerk_invitation_id" field.
+func ClerkInvitationIDLTE(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldLTE(FieldClerkInvitationID, v))
+}
+
+// ClerkInvitationIDContains applies the Contains predicate on the "clerk_invitation_id" field.
+func ClerkInvitationIDContains(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldContains(FieldClerkInvitationID, v))
+}
+
+// ClerkInvitationIDHasPrefix applies the HasPrefix predicate on the "clerk_invitation_id" field.
+func ClerkInvitationIDHasPrefix(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldHasPrefix(FieldClerkInvitationID, v))
+}
+
+// ClerkInvitationIDHasSuffix applies the HasSuffix predicate on the "clerk_invitation_id" field.
+func ClerkInvitationIDHasSuffix(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldHasSuffix(FieldClerkInvitationID, v))
+}
+
+// ClerkInvitationIDIsNil applies the IsNil predicate on the "clerk_invitation_id" field.
+func ClerkInvitationIDIsNil() predicate.Invite {
+	return predicate.Invite(sql.FieldIsNull(FieldClerkInvitationID))
+}
+
+// ClerkInvitationIDNotNil applies the NotNil predicate on the "clerk_invitation_id" field.
+func ClerkInvitationIDNotNil() predicate.Invite {
+	return predicate.Invite(sql.FieldNotNull(FieldClerkInvitationID))
+}
+
+// ClerkInvitationIDEqualFold applies the EqualFold predicate on the "clerk_invitation_id" field.
+func ClerkInvitationIDEqualFold(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldEqualFold(FieldClerkInvitationID, v))
+}
+
+// ClerkInvitationIDContainsFold applies the ContainsFold predicate on the "clerk_invitation_id" field.
+func ClerkInvitationIDContainsFold(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldContainsFold(FieldClerkInvitationID, v))
 }
 
 // CreatedByIDEQ applies the EQ predicate on the "created_by_id" field.

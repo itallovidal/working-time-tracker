@@ -63,5 +63,11 @@ func (h *Handler) Customers(c *echo.Context) error {
 
 // People é a aba Colaboradores: as pessoas da organização, os papéis e os convites (S8.3).
 func (h *Handler) People(c *echo.Context) error {
-	return h.orgPage(c, "org_people", "titles.org_people", "people")
+	d := h.orgData(c, Data{TitleKey: "titles.org_people", Section: "people", Tab: "people"})
+	if d.Props == nil {
+		d.Props = map[string]any{}
+	}
+	// Com o Clerk ligado o convite sai por e-mail: a tela fala em enviar, e não só em copiar o link.
+	d.Props["emailInvites"] = h.deps.InviteByEmail
+	return h.render(c, "org_people", d)
 }

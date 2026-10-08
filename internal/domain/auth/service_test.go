@@ -113,7 +113,7 @@ func TestInvite_AcceptOnce(t *testing.T) {
 	svc, _ := newService(t)
 	admin, _ := mustSignup(t, svc, "ana@acme.com")
 
-	inv, token, err := svc.CreateInvite(admin, "", person.RoleMember)
+	inv, token, err := svc.CreateInvite(bg, admin, "", person.RoleMember)
 	if err != nil {
 		t.Fatalf("create invite: %v", err)
 	}
@@ -148,16 +148,16 @@ func TestInvite_EmailExpiryAndRevoke(t *testing.T) {
 	svc, c := newService(t)
 	admin, _ := mustSignup(t, svc, "ana@acme.com")
 
-	_, token, _ := svc.CreateInvite(admin, "Bia@Acme.com", person.RoleAdmin)
+	_, token, _ := svc.CreateInvite(bg, admin, "Bia@Acme.com", person.RoleAdmin)
 	if _, _, err := svc.AcceptInvite(token, AcceptInviteInput{Name: "Caio", Email: "caio@acme.com", Password: "senha-forte-3"}); !errors.Is(err, ErrInviteEmailMismatch) {
 		t.Errorf("other email: err = %v, want ErrInviteEmailMismatch", err)
 	}
-	if _, _, err := svc.CreateInvite(admin, "ana@acme.com", person.RoleMember); !errors.Is(err, ErrAccountExists) {
+	if _, _, err := svc.CreateInvite(bg, admin, "ana@acme.com", person.RoleMember); !errors.Is(err, ErrAccountExists) {
 		t.Errorf("invite existing account: err = %v, want ErrAccountExists", err)
 	}
 
-	inv, revoked, _ := svc.CreateInvite(admin, "", person.RoleMember)
-	if err := svc.RevokeInvite(inv.ID.String()); err != nil {
+	inv, revoked, _ := svc.CreateInvite(bg, admin, "", person.RoleMember)
+	if err := svc.RevokeInvite(bg, inv.ID.String()); err != nil {
 		t.Fatalf("revoke: %v", err)
 	}
 	if _, err := svc.InviteInfo(revoked); !errors.Is(err, ErrInviteInvalid) {

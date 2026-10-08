@@ -43,6 +43,9 @@ type Config struct {
 	ClerkPublishableKey    string
 	ClerkAPIURL            string
 	ClerkAuthorizedParties []string
+	// InviteDelivery diz o que o convite por e-mail faz: "email" pede ao Clerk que mande o e-mail; "terminal" não
+	// manda e mostra o link no log do servidor (para desenvolver).
+	InviteDelivery string
 
 	// SyncInterval é de quanto em quanto tempo o servidor olha as integrações com a sincronização ligada
 	// (as issues do GitHub, os cartões do Trello). Zero desliga a rotina (o botão e o gancho das tarefas
@@ -80,6 +83,14 @@ func (c *Config) ClerkEnabled() bool {
 // loadClerk confere o que veio do ambiente sobre o Clerk e completa os padrões. Um engano aqui derruba a
 // subida: melhor que rodar com um login que ninguém configurou direito.
 func (c *Config) loadClerk() error {
+	switch c.InviteDelivery {
+	case "":
+		c.InviteDelivery = "email"
+	case "email", "terminal":
+	default:
+		return fmt.Errorf("INVITE_DELIVERY %q is not email or terminal", c.InviteDelivery)
+	}
+
 	if (c.ClerkSecretKey == "") != (c.ClerkPublishableKey == "") {
 		return fmt.Errorf("CLERK_SECRET_KEY and CLERK_PUBLISHABLE_KEY must be set together")
 	}
@@ -140,6 +151,7 @@ func Load() (*Config, error) {
 		ClerkSecretKey:        strings.TrimSpace(os.Getenv("CLERK_SECRET_KEY")),
 		ClerkPublishableKey:   strings.TrimSpace(os.Getenv("CLERK_PUBLISHABLE_KEY")),
 		ClerkAPIURL:           strings.TrimRight(strings.TrimSpace(os.Getenv("CLERK_API_URL")), "/"),
+		InviteDelivery:        strings.ToLower(strings.TrimSpace(os.Getenv("INVITE_DELIVERY"))),
 	}
 	if err := cfg.loadClerk(); err != nil {
 		return nil, err

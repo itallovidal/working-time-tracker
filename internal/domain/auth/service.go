@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"errors"
 	"strings"
 	"time"
@@ -26,7 +27,8 @@ type Service struct {
 	store *Store
 	now   func() time.Time
 	// clerk é o login pelo Clerk; nulo, ele está desligado (ver SetClerk).
-	clerk adapter.ClerkProvider
+	clerk         adapter.ClerkProvider
+	clerkSettings ClerkSettings
 }
 
 func NewService(store *Store) *Service {
@@ -142,9 +144,11 @@ func (s *Service) ChangePassword(actor *Identity, currentToken, current, next st
 	return s.store.DeleteOtherSessions(actor.PersonID, HashToken(currentToken))
 }
 
-// CreateInvite gera um link de convite para a organização de quem convida. O
-// token em claro só existe no retorno desta chamada.
-func (s *Service) CreateInvite(actor *Identity, email, role string) (*Invite, string, error) {
+// CreateInvite gera o convite para a organização de quem convida. O token em claro só existe no retorno desta
+// chamada. Com o Clerk ligado e um e-mail, o convite também é criado no Clerk, que manda o e-mail com o link (no
+// modo terminal ele não manda, e o link vai para o log do servidor), e só é gravado se o Clerk o aceitou; um novo
+// convite para o mesmo e-mail na organização substitui o anterior. Sem e-mail, ou sem o Clerk, é só o link.
+func (s *Service) CreateInvite(ctx context.Context, actor *Identity, email, role string) (*Invite, string, error) {
 	if role == "" {
 		role = person.RoleMember
 	}
@@ -173,24 +177,101 @@ func (s *Service) CreateInvite(actor *Identity, email, role string) (*Invite, st
 	if err != nil {
 		return nil, "", err
 	}
-	inv, err := s.store.CreateInvite(actor.OrganizationID, actor.PersonID, emailPtr, role, tokenHash, s.now().Add(InviteTTL))
+
+	delivery := DeliveryLink
+	var clerkInv *adapter.ClerkInvitation
+	var clerkID *string
+	if emailPtr != nil && s.clerk != nil {
+		notify := s.clerkSettings.InviteDelivery != DeliveryTerminal
+		clerkInv, err = s.clerk.CreateInvitation(ctx, adapter.ClerkInviteParams{
+			Email:         *emailPtr,
+			RedirectURL:   s.clerkSettings.PublicURL + "/invite/" + token,
+			Notify:        notify,
+			ExpiresInDays: int(InviteTTL / (24 * time.Hour)),
+		})
+		if err != nil {
+			if errors.Is(err, adapter.ErrClerkRejected) {
+				return nil, "", ErrClerkInviteFailed.Wrap(err)
+			}
+			return nil, "", ErrClerkUnavailable.Wrap(err)
+		}
+		clerkID = &clerkInv.ID
+		delivery = DeliveryEmail
+		if !notify {
+			delivery = DeliveryTerminal
+		}
+	}
+
+	inv, err := s.store.CreateInvite(actor.OrganizationID, actor.PersonID, emailPtr, role, clerkID, tokenHash, s.now().Add(InviteTTL))
 	if err != nil {
+		if clerkInv != nil {
+			s.revokeAtClerk(ctx, clerkInv.ID)
+		}
 		return nil, "", err
 	}
+	if clerkInv != nil {
+		s.supersedeInvites(ctx, actor.OrganizationID, *emailPtr, inv.ID)
+		if delivery == DeliveryTerminal {
+			link := clerkInv.URL
+			if link == "" {
+				link = s.clerkSettings.PublicURL + "/invite/" + token
+			}
+			s.log("invite not emailed (INVITE_DELIVERY=terminal)", "email", *emailPtr, "role", role, "organization", actor.OrganizationName, "link", link)
+		}
+	}
 	inv.CreatedByName = actor.Name
+	inv.Delivery = delivery
 	return inv, token, nil
+}
+
+// supersedeInvites apaga, e cancela no Clerk, os convites pendentes da organização para o mesmo e-mail: o novo
+// convite é o que vale (é o "reenviar"). Uma falha aqui não desfaz o convite novo.
+func (s *Service) supersedeInvites(ctx context.Context, orgID uuid.UUID, email string, keep uuid.UUID) {
+	old, err := s.store.PendingInvitesOfEmail(orgID, email, s.now(), keep)
+	if err != nil {
+		s.log("could not list the invites to replace", "email", email, "error", err)
+		return
+	}
+	for _, o := range old {
+		if _, err := s.store.DeleteInvite(o.ID); err != nil {
+			s.log("could not replace an invite", "email", email, "error", err)
+			continue
+		}
+		if o.ClerkInvitationID != nil {
+			s.revokeAtClerk(ctx, *o.ClerkInvitationID)
+		}
+	}
+}
+
+// revokeAtClerk cancela um convite no Clerk. É o melhor esforço: o convite daqui já não existe, então um que
+// sobrou no Clerk só cria uma conta lá e não dá acesso a organização nenhuma.
+func (s *Service) revokeAtClerk(ctx context.Context, clerkInvitationID string) {
+	if s.clerk == nil {
+		return
+	}
+	if err := s.clerk.RevokeInvitation(ctx, clerkInvitationID); err != nil {
+		s.log("could not cancel the invite at Clerk", "clerk_invitation_id", clerkInvitationID, "error", err)
+	}
 }
 
 func (s *Service) ListInvites(orgID uuid.UUID) ([]Invite, error) {
 	return s.store.PendingInvites(orgID, s.now())
 }
 
-func (s *Service) RevokeInvite(id string) error {
+// RevokeInvite apaga o convite e, se ele foi criado no Clerk, o cancela lá.
+func (s *Service) RevokeInvite(ctx context.Context, id string) error {
 	uid, err := uuid.Parse(id)
 	if err != nil {
 		return database.ErrNotFound
 	}
-	return s.store.DeleteInvite(uid)
+	clerkID, err := s.store.DeleteInvite(uid)
+	if err != nil {
+		return err
+	}
+	if clerkID != nil {
+		s.revokeAtClerk(ctx, *clerkID)
+	}
+	return nil
 }
 
 func (s *Service) InviteInfo(token string) (*InviteInfo, error) {

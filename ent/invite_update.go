@@ -93,6 +93,26 @@ func (_u *InviteUpdate) SetNillableRole(v *invite.Role) *InviteUpdate {
 	return _u
 }
 
+// SetClerkInvitationID sets the "clerk_invitation_id" field.
+func (_u *InviteUpdate) SetClerkInvitationID(v string) *InviteUpdate {
+	_u.mutation.SetClerkInvitationID(v)
+	return _u
+}
+
+// SetNillableClerkInvitationID sets the "clerk_invitation_id" field if the given value is not nil.
+func (_u *InviteUpdate) SetNillableClerkInvitationID(v *string) *InviteUpdate {
+	if v != nil {
+		_u.SetClerkInvitationID(*v)
+	}
+	return _u
+}
+
+// ClearClerkInvitationID clears the value of the "clerk_invitation_id" field.
+func (_u *InviteUpdate) ClearClerkInvitationID() *InviteUpdate {
+	_u.mutation.ClearClerkInvitationID()
+	return _u
+}
+
 // SetCreatedByID sets the "created_by_id" field.
 func (_u *InviteUpdate) SetCreatedByID(v uuid.UUID) *InviteUpdate {
 	_u.mutation.SetCreatedByID(v)
@@ -237,6 +257,12 @@ func (_u *InviteUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.Role(); ok {
 		_spec.SetField(invite.FieldRole, field.TypeEnum, value)
+	}
+	if value, ok := _u.mutation.ClerkInvitationID(); ok {
+		_spec.SetField(invite.FieldClerkInvitationID, field.TypeString, value)
+	}
+	if _u.mutation.ClerkInvitationIDCleared() {
+		_spec.ClearField(invite.FieldClerkInvitationID, field.TypeString)
 	}
 	if value, ok := _u.mutation.ExpiresAt(); ok {
 		_spec.SetField(invite.FieldExpiresAt, field.TypeTime, value)
@@ -384,6 +410,26 @@ func (_u *InviteUpdateOne) SetNillableRole(v *invite.Role) *InviteUpdateOne {
 	if v != nil {
 		_u.SetRole(*v)
 	}
+	return _u
+}
+
+// SetClerkInvitationID sets the "clerk_invitation_id" field.
+func (_u *InviteUpdateOne) SetClerkInvitationID(v string) *InviteUpdateOne {
+	_u.mutation.SetClerkInvitationID(v)
+	return _u
+}
+
+// SetNillableClerkInvitationID sets the "clerk_invitation_id" field if the given value is not nil.
+func (_u *InviteUpdateOne) SetNillableClerkInvitationID(v *string) *InviteUpdateOne {
+	if v != nil {
+		_u.SetClerkInvitationID(*v)
+	}
+	return _u
+}
+
+// ClearClerkInvitationID clears the value of the "clerk_invitation_id" field.
+func (_u *InviteUpdateOne) ClearClerkInvitationID() *InviteUpdateOne {
+	_u.mutation.ClearClerkInvitationID()
 	return _u
 }
 
@@ -561,6 +607,12 @@ func (_u *InviteUpdateOne) sqlSave(ctx context.Context) (_node *Invite, err erro
 	}
 	if value, ok := _u.mutation.Role(); ok {
 		_spec.SetField(invite.FieldRole, field.TypeEnum, value)
+	}
+	if value, ok := _u.mutation.ClerkInvitationID(); ok {
+		_spec.SetField(invite.FieldClerkInvitationID, field.TypeString, value)
+	}
+	if _u.mutation.ClerkInvitationIDCleared() {
+		_spec.ClearField(invite.FieldClerkInvitationID, field.TypeString)
 	}
 	if value, ok := _u.mutation.ExpiresAt(); ok {
 		_spec.SetField(invite.FieldExpiresAt, field.TypeTime, value)

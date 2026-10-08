@@ -10,7 +10,7 @@ import (
 // É pública, para dar o link a quem ainda vai se cadastrar; quem está logado a vê com a
 // barra superior.
 func (h *Handler) Help(c *echo.Context) error {
-	return h.render(c, "help", Data{TitleKey: "titles.help", Section: "help", Script: "help"})
+	return h.render(c, "help", Data{TitleKey: "titles.help", Section: "help", Script: "help", Props: map[string]any{"emailInvites": h.deps.InviteByEmail}})
 }
 
 // ToHelp leva o endereço em português para a ajuda.

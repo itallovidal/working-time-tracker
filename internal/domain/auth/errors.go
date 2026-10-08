@@ -30,4 +30,5 @@ var (
 	ErrClerkEmailUnverified = apperr.New("auth.clerk_email_unverified", http.StatusForbidden)
 	ErrClerkAccountLinked   = apperr.New("auth.clerk_account_linked", http.StatusConflict)
 	ErrClerkUnavailable     = apperr.New("auth.clerk_unavailable", http.StatusBadGateway)
+	ErrClerkInviteFailed    = apperr.New("auth.clerk_invite_failed", http.StatusBadGateway)
 )

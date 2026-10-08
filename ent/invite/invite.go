@@ -24,6 +24,8 @@ const (
 	FieldEmail = "email"
 	// FieldRole holds the string denoting the role field in the database.
 	FieldRole = "role"
+	// FieldClerkInvitationID holds the string denoting the clerk_invitation_id field in the database.
+	FieldClerkInvitationID = "clerk_invitation_id"
 	// FieldCreatedByID holds the string denoting the created_by_id field in the database.
 	FieldCreatedByID = "created_by_id"
 	// FieldExpiresAt holds the string denoting the expires_at field in the database.
@@ -61,6 +63,7 @@ var Columns = []string{
 	FieldTokenHash,
 	FieldEmail,
 	FieldRole,
+	FieldClerkInvitationID,
 	FieldCreatedByID,
 	FieldExpiresAt,
 	FieldAcceptedAt,
@@ -136,6 +139,11 @@ func ByEmail(opts ...sql.OrderTermOption) OrderOption {
 // ByRole orders the results by the role field.
 func ByRole(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldRole, opts...).ToFunc()
+}
+
+// ByClerkInvitationID orders the results by the clerk_invitation_id field.
+func ByClerkInvitationID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldClerkInvitationID, opts...).ToFunc()
 }
 
 // ByCreatedByID orders the results by the created_by_id field.

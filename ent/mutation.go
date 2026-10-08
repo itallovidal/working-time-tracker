@@ -2806,6 +2806,7 @@ type InviteMutation struct {
 	token_hash          *string
 	email               *string
 	role                *invite.Role
+	clerk_invitation_id *string
 	expires_at          *time.Time
 	accepted_at         *time.Time
 	created_at          *time.Time
@@ -3080,6 +3081,55 @@ func (m *InviteMutation) ResetRole() {
 	m.role = nil
 }
 
+// SetClerkInvitationID sets the "clerk_invitation_id" field.
+func (m *InviteMutation) SetClerkInvitationID(s string) {
+	m.clerk_invitation_id = &s
+}
+
+// ClerkInvitationID returns the value of the "clerk_invitation_id" field in the mutation.
+func (m *InviteMutation) ClerkInvitationID() (r string, exists bool) {
+	v := m.clerk_invitation_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldClerkInvitationID returns the old "clerk_invitation_id" field's value of the Invite entity.
+// If the Invite object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *InviteMutation) OldClerkInvitationID(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldClerkInvitationID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldClerkInvitationID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldClerkInvitationID: %w", err)
+	}
+	return oldValue.ClerkInvitationID, nil
+}
+
+// ClearClerkInvitationID clears the value of the "clerk_invitation_id" field.
+func (m *InviteMutation) ClearClerkInvitationID() {
+	m.clerk_invitation_id = nil
+	m.clearedFields[invite.FieldClerkInvitationID] = struct{}{}
+}
+
+// ClerkInvitationIDCleared returns if the "clerk_invitation_id" field was cleared in this mutation.
+func (m *InviteMutation) ClerkInvitationIDCleared() bool {
+	_, ok := m.clearedFields[invite.FieldClerkInvitationID]
+	return ok
+}
+
+// ResetClerkInvitationID resets all changes to the "clerk_invitation_id" field.
+func (m *InviteMutation) ResetClerkInvitationID() {
+	m.clerk_invitation_id = nil
+	delete(m.clearedFields, invite.FieldClerkInvitationID)
+}
+
 // SetCreatedByID sets the "created_by_id" field.
 func (m *InviteMutation) SetCreatedByID(u uuid.UUID) {
 	m.created_by = &u
@@ -3338,7 +3388,7 @@ func (m *InviteMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *InviteMutation) Fields() []string {
-	fields := make([]string, 0, 8)
+	fields := make([]string, 0, 9)
 	if m.organization != nil {
 		fields = append(fields, invite.FieldOrganizationID)
 	}
@@ -3350,6 +3400,9 @@ func (m *InviteMutation) Fields() []string {
 	}
 	if m.role != nil {
 		fields = append(fields, invite.FieldRole)
+	}
+	if m.clerk_invitation_id != nil {
+		fields = append(fields, invite.FieldClerkInvitationID)
 	}
 	if m.created_by != nil {
 		fields = append(fields, invite.FieldCreatedByID)
@@ -3379,6 +3432,8 @@ func (m *InviteMutation) Field(name string) (ent.Value, bool) {
 		return m.Email()
 	case invite.FieldRole:
 		return m.Role()
+	case invite.FieldClerkInvitationID:
+		return m.ClerkInvitationID()
 	case invite.FieldCreatedByID:
 		return m.CreatedByID()
 	case invite.FieldExpiresAt:
@@ -3404,6 +3459,8 @@ func (m *InviteMutation) OldField(ctx context.Context, name string) (ent.Value, 
 		return m.OldEmail(ctx)
 	case invite.FieldRole:
 		return m.OldRole(ctx)
+	case invite.FieldClerkInvitationID:
+		return m.OldClerkInvitationID(ctx)
 	case invite.FieldCreatedByID:
 		return m.OldCreatedByID(ctx)
 	case invite.FieldExpiresAt:
@@ -3448,6 +3505,13 @@ func (m *InviteMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetRole(v)
+		return nil
+	case invite.FieldClerkInvitationID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetClerkInvitationID(v)
 		return nil
 	case invite.FieldCreatedByID:
 		v, ok := value.(uuid.UUID)
@@ -3510,6 +3574,9 @@ func (m *InviteMutation) ClearedFields() []string {
 	if m.FieldCleared(invite.FieldEmail) {
 		fields = append(fields, invite.FieldEmail)
 	}
+	if m.FieldCleared(invite.FieldClerkInvitationID) {
+		fields = append(fields, invite.FieldClerkInvitationID)
+	}
 	if m.FieldCleared(invite.FieldCreatedByID) {
 		fields = append(fields, invite.FieldCreatedByID)
 	}
@@ -3532,6 +3599,9 @@ func (m *InviteMutation) ClearField(name string) error {
 	switch name {
 	case invite.FieldEmail:
 		m.ClearEmail()
+		return nil
+	case invite.FieldClerkInvitationID:
+		m.ClearClerkInvitationID()
 		return nil
 	case invite.FieldCreatedByID:
 		m.ClearCreatedByID()
@@ -3558,6 +3628,9 @@ func (m *InviteMutation) ResetField(name string) error {
 		return nil
 	case invite.FieldRole:
 		m.ResetRole()
+		return nil
+	case invite.FieldClerkInvitationID:
+		m.ResetClerkInvitationID()
 		return nil
 	case invite.FieldCreatedByID:
 		m.ResetCreatedByID()

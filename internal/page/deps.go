@@ -26,6 +26,9 @@ type Deps struct {
 	// Clerk são os dados que as páginas de entrada precisam para montar o Clerk no navegador. Nulo, o login
 	// pelo Clerk está desligado e as páginas ficam como eram.
 	Clerk *Clerk
+	// InviteByEmail diz que o convite sai por e-mail (o Clerk está ligado): a tela de colaboradores e a ajuda
+	// falam em enviar o convite, e não só em copiar o link.
+	InviteByEmail bool
 }
 
 // Clerk é o que o navegador precisa para carregar o clerk-js: a chave pública do app (ela não é segredo) e o

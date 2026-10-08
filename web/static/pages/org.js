@@ -301,6 +301,9 @@ document.addEventListener('alpine:init', () => {
     invites: [],
     invite: { email: '', role: 'member' },
     lastLink: '',
+    // Como o último convite chegou (email, terminal ou link) e para quem, para o modal dizer o que aconteceu.
+    lastDelivery: '',
+    lastEmail: '',
     editing: null, // a pessoa aberta no modal da jornada semanal e das permissões
     draft: { weekly_hours: '', permissions: [] },
     orgKeys: [], // as permissões da organização do catálogo, para o dono liberar
@@ -370,6 +373,8 @@ document.addEventListener('alpine:init', () => {
     openInvite() {
       this.invite = { email: '', role: 'member' };
       this.lastLink = '';
+      this.lastDelivery = '';
+      this.lastEmail = '';
       this.errors.invite = '';
       Alpine.store('modal').open('invite', WTT.t('org.people.add'), () => !this.pending);
     },
@@ -378,6 +383,8 @@ document.addEventListener('alpine:init', () => {
       return this.run('invite', async () => {
         const inv = await api('POST', '/api/orgs/' + orgId + '/invites', { email: this.invite.email, role: this.invite.role });
         this.lastLink = location.origin + inv.path;
+        this.lastDelivery = inv.delivery;
+        this.lastEmail = inv.email || '';
         this.invites = [inv, ...this.invites];
         // O bloco do link entra com x-transition, e o Alpine segura o $nextTick até ele
         // aparecer. Sem a transição o campo ainda estaria escondido e não aceitaria o foco.

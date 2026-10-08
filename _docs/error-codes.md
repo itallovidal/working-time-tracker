@@ -64,6 +64,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `auth.clerk_account_linked` | 409 | — | `este email já está ligado a outro usuário do login` | `this email is already linked to another sign-in user` |
 | `auth.clerk_disabled` | 404 | — | `o login externo não está ligado neste servidor` | `external sign-in is not turned on on this server` |
 | `auth.clerk_email_unverified` | 403 | — | `o seu email ainda não foi verificado. Verifique-o e tente de novo` | `your email has not been verified yet. Verify it and try again` |
+| `auth.clerk_invite_failed` | 502 | — | `o serviço de login não aceitou o convite. Confira o email e tente de novo` | `the sign-in service did not accept the invitation. Check the email and try again` |
 | `auth.clerk_token_invalid` | 401 | — | `não foi possível confirmar o seu login. Entre de novo` | `could not confirm your sign-in. Sign in again` |
 | `auth.clerk_unavailable` | 502 | — | `o serviço de login não respondeu. Tente de novo em instantes` | `the sign-in service did not answer. Try again in a moment` |
 | `auth.invalid_credentials` | 401 | — | `email ou senha incorretos` | `wrong email or password` |
