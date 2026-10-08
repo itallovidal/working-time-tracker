@@ -721,11 +721,16 @@ document.addEventListener('alpine:init', () => {
       return t ? t.label : type;
     },
     brandIcon: (type) => brandIcons[type] || 'fa-solid fa-link',
-    // Só dá para postar numa integração do tipo que sabe criar issues e com a sincronização ligada: é ela
-    // que mantém a tarefa e a issue iguais depois.
+    // Só dá para postar à mão numa integração do tipo que sabe criar issues e com a sincronização ligada: é ela
+    // que mantém a tarefa e a issue iguais depois. As que postam a tarefa nova sozinhas (o Trello) não têm caixa.
     canPublish(i) {
       const t = integrationType(i.type);
-      return !!(t && t.sync && i.sync_issues);
+      return !!(t && t.sync && i.sync_issues && !(t.caps && t.caps.auto_publish));
+    },
+    // autoPublish diz se a tarefa nova vira um item nesta integração sem a pessoa pedir.
+    autoPublish(i) {
+      const t = integrationType(i.type);
+      return !!(t && t.caps && t.caps.auto_publish && i.sync_issues);
     },
     // O motivo de uma integração não poder receber a tarefa, no selo do cartão.
     publishOff(i) {
@@ -847,6 +852,7 @@ document.addEventListener('alpine:init', () => {
     sessions: [],
     ...labelTools(),
     draft: { name: '', description: '', assign: 'none', assignee_id: '', deadline: '', priority: 'none', status: 'backlog', label_ids: [] }, // assign: me, none ou other
+    deadlineWas: '', // o dia do prazo quando a tarefa foi lida: só se manda o prazo se a pessoa o mudou
     linkForm: { integration_id: '', external_item_id: '', external_item_url: '' },
     external: { loading: false, details: null, error: '' },
     syncProblem: '', // o aviso que a última sincronização da tarefa deixou
@@ -874,6 +880,7 @@ document.addEventListener('alpine:init', () => {
     },
     setTask(t) {
       this.task = t;
+      this.deadlineWas = hasDeadlineDate(t.deadline) ? WTT.fmt.dateInput(t.deadline) : '';
       this.draft = {
         name: t.name,
         description: t.description || '',
@@ -1015,7 +1022,9 @@ document.addEventListener('alpine:init', () => {
           name: this.draft.name,
           description: this.draft.description,
           assignee_id: { me: me.id, none: '', other: this.draft.assignee_id }[this.draft.assign],
-          deadline: WTT.fmt.fromDateInput(this.draft.deadline),
+          // O campo guarda só o dia, e salvar o reescreveria para o fim dele: uma data de entrega que veio do
+          // Trello com hora perderia a hora a cada edição. Só se manda o prazo se a pessoa mudou o dia.
+          deadline: this.draft.deadline === this.deadlineWas ? null : WTT.fmt.fromDateInput(this.draft.deadline),
           priority: this.draft.priority,
           status: this.draft.status,
           label_ids: this.draft.label_ids,

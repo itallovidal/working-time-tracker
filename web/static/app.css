@@ -266,6 +266,9 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 }
 .publish-card:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
 .publish-card.is-off { background: var(--surface-2); color: var(--muted); cursor: not-allowed; }
+/* A integração que posta a tarefa sozinha: sem caixa, só o aviso, com um ícone no lugar dela. */
+.publish-card.is-auto { cursor: default; border-color: var(--accent); background: var(--accent-soft); }
+.publish-auto { margin-top: 3px; width: 13px; color: var(--accent); font-size: 0.95rem; line-height: 1; text-align: center; }
 .publish-card input { margin-top: 3px; }
 .publish-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .publish-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }

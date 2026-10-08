@@ -532,7 +532,7 @@ tasks:
   new: Nova tarefa
   loading: Carregando tarefas…
   sync: Sincronizar
-  sync_title: Busca no GitHub as mudanças das issues e leva o que mudou aqui, sem esperar a rotina de fundo
+  sync_title: Busca na outra plataforma as mudanças e leva o que mudou aqui, sem esperar a rotina de fundo
   publish:
     intro: "Utilizar Integrações?"
     ask: "Postar no {{.provider}}"
@@ -543,6 +543,12 @@ tasks:
     github_sync_off: "Ligue a sincronização das issues nesta integração, na tela de integrações do projeto, para postar tarefas nela."
     soon: Em breve
     sync_off: Sincronização desligada
+    trello_sync_off: "Ligue a sincronização nesta integração, na tela de integrações do projeto, para as tarefas virarem cartões."
+    auto: Automático
+    auto_intro: "A tarefa vira um cartão sozinha, sem nada para marcar."
+    trello_sends: "Vão para o cartão o nome, a descrição, as etiquetas e o prazo (como a data de entrega), e ele é criado na primeira lista do quadro."
+    trello_local: "Prioridade, horas e o responsável ficam só aqui; arquivar o cartão, ou marcar a data de entrega como concluída, fecha a tarefa."
+    auto_other: "Uma tarefa se liga a um item só: se você marcar outra plataforma acima, a tarefa vai para ela e não para o Trello."
     soon_note: "Por enquanto o {{.provider}} só mostra os detalhes de um item que você liga à tarefa. Postar tarefas nele ainda não existe."
     done: "Tarefa postada no {{.provider}}: issue #{{.number}}."
     failed: "A tarefa foi criada, mas não deu para postá-la no {{.provider}}: {{.message}}"
@@ -640,17 +646,17 @@ task_detail:
   delete_title: Excluir tarefa
   delete_text: Apaga a tarefa e todo o tempo registrado nela.
   saved: Tarefa salva.
-  sync_note: "Esta tarefa está ligada a uma issue sincronizada: ao salvar, o nome, a descrição, as etiquetas e o responsável vão para a issue."
-  sync_note_quick: "Esta tarefa está ligada a uma issue sincronizada: o status Fechada e as etiquetas vão para a issue."
+  sync_note: "Esta tarefa está ligada a um item sincronizado (uma issue ou um cartão): ao salvar, as mudanças vão para ele."
+  sync_note_quick: "Esta tarefa está ligada a um item sincronizado (uma issue ou um cartão): o status Fechada e as etiquetas vão para ele."
   integration_eyebrow: Integração
   open_in: "Abrir no {{.provider}}"
   state_open: Aberta
   state_closed: Fechada
   sync: Sincronizar
-  sync_title: Relê a issue no GitHub e deixa a tarefa e a issue iguais, sem esperar a rotina de fundo
+  sync_title: Relê o item na plataforma e deixa a tarefa e o item iguais, sem esperar a rotina de fundo
   refresh: Atualizar
   refresh_title: Busca de novo os detalhes do item
-  sync_nothing: "Tudo igual: a tarefa e a issue já estavam em acordo."
+  sync_nothing: "Tudo igual: a tarefa e o item já estavam em acordo."
   sync_problem: "A sincronização deixou um aviso: {{.message}}"
 
 time:
@@ -1146,12 +1152,12 @@ errors:
     provider_status: "o {{.provider}} respondeu com status {{.status}}"
     provider_unreachable: "não foi possível falar com o {{.provider}}"
     rate_limited: "o {{.provider}} limitou as requisições: tente de novo mais tarde"
-    sync_needs_enabled: "ative a integração antes de ligar a sincronização das issues"
-    sync_needs_repo: "escolha o repositório antes de ligar a sincronização das issues"
-    sync_off: "a sincronização das issues está desligada nesta integração"
-    sync_repo_locked: "com a sincronização das issues ligada o repositório não muda: desligue a sincronização, troque o repositório e ligue de novo"
+    sync_needs_enabled: "ative a integração antes de ligar a sincronização"
+    sync_needs_repo: "escolha o repositório ou o quadro antes de ligar a sincronização"
+    sync_off: "a sincronização está desligada nesta integração"
+    sync_repo_locked: "com a sincronização ligada o repositório ou o quadro não muda: desligue a sincronização, troque e ligue de novo"
     sync_running: "já há uma sincronização em andamento nesta integração"
-    sync_unsupported: "o {{.provider}} não tem sincronização de issues"
+    sync_unsupported: "o {{.provider}} não tem sincronização"
     token_required: "informe o token do {{.provider}}"
     trello_board_not_found: "quadro do Trello não encontrado"
     trello_card_other_board: "o cartão {{.card}} é de outro quadro"

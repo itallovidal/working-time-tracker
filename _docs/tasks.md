@@ -782,6 +782,17 @@
 
 ---
 
+### Sprint 70: A Task Made Here Becomes a Trello Card by Itself
+
+- [X] S70.1 `task.Store.SetCreateHook` (fired by `Service.CreateAs`, never by `CreateImported`, the sync or the seed) and `Syncer.NotifyCreated`; the sync queue keeps the new tasks apart from the changed ones (`Pending()` still counts only the changed), and the worker drains both
+- [X] S70.2 `autoPublish` (`issuesync/autopublish.go`): a task made here, not yet linked, in a project with an enabled integration that syncs and declares `Caps.AutoPublish` (Trello), is posted with the same `Publish` as the button, in the background (creating the task does not wait for Trello); a task already linked (the modal posted it to GitHub first) or with nothing to post to is left alone; what Trello refuses by itself (no open list, a token that only observes) is recorded as the warning of the integration and not retried; what is temporary (the platform down, the token refused, the rate limit) backs the integration off and parks the task, which the background routine and the Sincronizar button retry (ten times at most; the queue lives in memory, so a restart forgets it and the publish route posts by hand)
+- [X] S70.3 New task modal, step Integrações: the Trello card with the sync on has no checkbox, an "Automático" badge and what happens (name, description, labels and deadline go, the card is made on the first list, priority, hours and the assignee stay, archiving or completing the due date closes the task, and a task links to one item only); a Trello with the sync off shows the reason; GitHub is as before
+- [X] S70.4 The task edit no longer rewrites the deadline: the date field holds only the day, so saving sent the end of that day and a due date that came from Trello with a time lost it on every edit; the deadline is sent only when the person changed the day
+- [X] S70.5 The texts that said "GitHub" or "issue" for every platform are neutral (the task page sync texts and notes, the sync errors); `_docs/error-codes.md` regenerated
+- [X] S70.6 Tests: the create hook; a new task posted by itself with its fields, a second Flush and a round that write nothing, and the imported card not coming back; nothing to post (already linked, sync off, integration disabled); Trello refusing; Trello waiting and the button posting it after the wait, once; and end to end through the API with the real router (create, edit, close, a card made on Trello, an archived card, GitHub winning the single link, Trello down not blocking the task); no front-end tests, checked in the browser against `cmd/faketrello` (the step, the card appearing within seconds, editing a task with a due time); README, design, routes
+
+---
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open

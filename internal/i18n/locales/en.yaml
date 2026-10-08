@@ -522,7 +522,7 @@ tasks:
   new: New task
   loading: Loading tasks…
   sync: Sync
-  sync_title: Fetches the issue changes from GitHub and sends what changed here, without waiting for the background job
+  sync_title: Fetches the changes from the other platform and sends what changed here, without waiting for the background job
   publish:
     intro: "Use integrations?"
     ask: "Post to {{.provider}}"
@@ -533,6 +533,12 @@ tasks:
     github_sync_off: "Turn on the issue sync on this integration, on the project's integrations screen, to post tasks to it."
     soon: Coming soon
     sync_off: Sync off
+    trello_sync_off: "Turn on the sync on this integration, on the project's integrations screen, so tasks become cards."
+    auto: Automatic
+    auto_intro: "The task becomes a card on its own, with nothing to tick."
+    trello_sends: "The name, the description, the labels and the deadline (as the due date) go to the card, created on the first list of the board."
+    trello_local: "Priority, hours and the assignee stay here only; archiving the card, or marking its due date as done, closes the task."
+    auto_other: "A task links to one item only: if you tick another platform above, the task goes there and not to Trello."
     soon_note: "For now {{.provider}} only shows the details of an item you link to the task. Posting tasks to it does not exist yet."
     done: "Task posted to {{.provider}}: issue #{{.number}}."
     failed: "The task was created, but it could not be posted to {{.provider}}: {{.message}}"
@@ -630,17 +636,17 @@ task_detail:
   delete_title: Delete task
   delete_text: Deletes the task and all the time tracked on it.
   saved: Task saved.
-  sync_note: "This task is linked to a synced issue: on save, the name, description, labels and assignee go to the issue."
-  sync_note_quick: "This task is linked to a synced issue: the Closed status and the labels go to the issue."
+  sync_note: "This task is linked to a synced item (an issue or a card): on save, the changes go to it."
+  sync_note_quick: "This task is linked to a synced item (an issue or a card): the Closed status and the labels go to it."
   integration_eyebrow: Integration
   open_in: "Open in {{.provider}}"
   state_open: Open
   state_closed: Closed
   sync: Sync
-  sync_title: Rereads the issue on GitHub and makes the task and the issue match, without waiting for the background job
+  sync_title: Rereads the item on the platform and makes the task and the item match, without waiting for the background job
   refresh: Refresh
   refresh_title: Fetches the item's details again
-  sync_nothing: "All the same: the task and the issue already matched."
+  sync_nothing: "All the same: the task and the item already matched."
   sync_problem: "The sync left a warning: {{.message}}"
 
 time:
@@ -1136,12 +1142,12 @@ errors:
     provider_status: "{{.provider}} responded with status {{.status}}"
     provider_unreachable: "could not reach {{.provider}}"
     rate_limited: "{{.provider}} limited the requests: try again later"
-    sync_needs_enabled: "enable the integration before turning the issue sync on"
-    sync_needs_repo: "pick the repository before turning the issue sync on"
-    sync_off: "the issue sync is off on this integration"
-    sync_repo_locked: "with the issue sync on the repository cannot change: turn the sync off, change the repository and turn it on again"
+    sync_needs_enabled: "enable the integration before turning the sync on"
+    sync_needs_repo: "pick the repository or the board before turning the sync on"
+    sync_off: "the sync is off on this integration"
+    sync_repo_locked: "with the sync on the repository or board cannot change: turn the sync off, change it and turn it on again"
     sync_running: "a sync is already running on this integration"
-    sync_unsupported: "{{.provider}} has no issue sync"
+    sync_unsupported: "{{.provider}} has no sync"
     token_required: "enter the {{.provider}} token"
     trello_board_not_found: "Trello board not found"
     trello_card_other_board: "card {{.card}} belongs to another board"

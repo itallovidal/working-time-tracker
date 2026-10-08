@@ -29,6 +29,26 @@ func (s *Store) SetChangeHook(hook func(taskID uuid.UUID)) {
 	s.hook = hook
 }
 
+// SetCreateHook registra a função chamada, com o id da tarefa, depois que uma tarefa é criada por dentro do
+// sistema (a tela, a API). É um aviso à parte do de mudança: a sincronização o usa para postar a tarefa nova
+// na plataforma que as recebe sozinha (o Trello). A tarefa que a própria sincronização importa não o dispara,
+// nem a do seed. Quem registra recebe só o aviso e não pode bloquear.
+func (s *Store) SetCreateHook(hook func(taskID uuid.UUID)) {
+	s.hookMu.Lock()
+	defer s.hookMu.Unlock()
+	s.createHook = hook
+}
+
+// created avisa o gancho de criação, se há um.
+func (s *Store) created(id uuid.UUID) {
+	s.hookMu.RLock()
+	hook := s.createHook
+	s.hookMu.RUnlock()
+	if hook != nil {
+		hook(id)
+	}
+}
+
 func (s *Store) changed(id uuid.UUID) {
 	s.hookMu.RLock()
 	hook := s.hook
@@ -39,8 +59,9 @@ func (s *Store) changed(id uuid.UUID) {
 }
 
 type changeHook struct {
-	hookMu sync.RWMutex
-	hook   func(uuid.UUID)
+	hookMu     sync.RWMutex
+	hook       func(uuid.UUID)
+	createHook func(uuid.UUID)
 }
 
 // RemotePatch é o que a sincronização grava numa tarefa: só os campos que vierem.

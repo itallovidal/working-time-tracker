@@ -116,6 +116,7 @@ func Build(client *ent.Client, opts Options) (*App, error) {
 		Members: membershipStore, Rows: issuesync.NewStore(client),
 	}, opts.Sync)
 	taskStore.SetChangeHook(syncer.Notify)
+	taskStore.SetCreateHook(syncer.NotifyCreated)
 
 	handlers := routes.Handlers{
 		Auth:         auth.NewHandler(authSvc, opts.CookieSecure),

@@ -126,6 +126,15 @@ func (s *Syncer) lock(id uuid.UUID) *sync.Mutex {
 // SyncNow é a rodada que a pessoa pede pelo botão: completa, e perguntando tudo de novo ao GitHub (o
 // que ela acabou de mudar no perfil dele conta). Recusa se já há uma rodada nesta integração.
 func (s *Syncer) SyncNow(ctx context.Context, id uuid.UUID) (*Summary, error) {
+	sum, err := s.syncNow(ctx, id)
+	if !errors.Is(err, ErrSyncRunning) {
+		// Quem aperta o botão também quer as tarefas novas que ainda não saíram: depois da rodada, sem o cadeado dela.
+		s.retryParked(ctx)
+	}
+	return sum, err
+}
+
+func (s *Syncer) syncNow(ctx context.Context, id uuid.UUID) (*Summary, error) {
 	lock := s.lock(id)
 	if !lock.TryLock() {
 		return nil, ErrSyncRunning

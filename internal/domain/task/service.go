@@ -101,6 +101,7 @@ func (s *Service) CreateAs(selfID, projectID, name, description, assigneeID stri
 	if err := s.taskStore.Create(task); err != nil {
 		return nil, err
 	}
+	s.taskStore.created(task.ID)
 	return s.taskStore.GetByID(task.ID.String())
 }
 

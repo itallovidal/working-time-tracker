@@ -68,6 +68,8 @@ func newTrelloEnv(t *testing.T, cfg issuesync.Config) *tenv {
 		Integrations: e.integ, Tasks: e.tasks, People: person.NewStore(testClient),
 		Members: team.NewMembershipStore(testClient), Rows: e.rows,
 	}, cfg)
+	// Como no servidor: criar uma tarefa avisa a sincronização, que a posta se há onde.
+	e.tasks.SetCreateHook(e.syncer.NotifyCreated)
 	e.fake.Reset()
 	return e
 }

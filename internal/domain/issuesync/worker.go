@@ -21,13 +21,86 @@ import (
 const flushBatch = 50
 
 type queue struct {
-	mu   sync.Mutex
-	ids  map[uuid.UUID]struct{}
-	wake chan struct{}
+	mu  sync.Mutex
+	ids map[uuid.UUID]struct{}
+	// created são as tarefas criadas aqui que esperam ser postadas na plataforma que as recebe sozinha;
+	// parked, as que não deu para postar ainda (a plataforma fora do ar, o limite de requisições), com o
+	// número de tentativas. A rotina de fundo e o botão Sincronizar tentam de novo as de parked.
+	created map[uuid.UUID]struct{}
+	parked  map[uuid.UUID]int
+	wake    chan struct{}
 }
 
 func newQueue() *queue {
-	return &queue{ids: map[uuid.UUID]struct{}{}, wake: make(chan struct{}, 1)}
+	return &queue{
+		ids: map[uuid.UUID]struct{}{}, created: map[uuid.UUID]struct{}{}, parked: map[uuid.UUID]int{},
+		wake: make(chan struct{}, 1),
+	}
+}
+
+func (q *queue) addCreated(id uuid.UUID) {
+	q.mu.Lock()
+	q.created[id] = struct{}{}
+	q.mu.Unlock()
+	select {
+	case q.wake <- struct{}{}:
+	default:
+	}
+}
+
+// takeCreated tira até max tarefas novas da fila.
+func (q *queue) takeCreated(max int) []uuid.UUID {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	out := make([]uuid.UUID, 0, min(max, len(q.created)))
+	for id := range q.created {
+		if len(out) == max {
+			break
+		}
+		out = append(out, id)
+		delete(q.created, id)
+	}
+	return out
+}
+
+// maxPublishAttempts é quantas vezes uma tarefa nova que não saiu é tentada de novo antes de a
+// sincronização desistir dela.
+const maxPublishAttempts = 10
+
+// park guarda a tarefa para a próxima rodada de tentativas e diz se ainda vale tentar.
+func (q *queue) park(id uuid.UUID) bool {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	q.parked[id]++
+	if q.parked[id] > maxPublishAttempts {
+		delete(q.parked, id)
+		return false
+	}
+	return true
+}
+
+// release tira a tarefa das que esperam: foi postada, ou não há mais o que postar.
+func (q *queue) release(id uuid.UUID) {
+	q.mu.Lock()
+	delete(q.parked, id)
+	q.mu.Unlock()
+}
+
+func (q *queue) parkedIDs() []uuid.UUID {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	out := make([]uuid.UUID, 0, len(q.parked))
+	for id := range q.parked {
+		out = append(out, id)
+	}
+	return out
+}
+
+// work diz quantas tarefas esperam o worker: as mudadas e as novas.
+func (q *queue) work() int {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	return len(q.ids) + len(q.created)
 }
 
 func (q *queue) add(id uuid.UUID) {
@@ -65,22 +138,32 @@ func (q *queue) len() int {
 // Flush) cuida do resto. É o que o gancho do task.Store chama.
 func (s *Syncer) Notify(taskID uuid.UUID) { s.queue.add(taskID) }
 
+// NotifyCreated avisa que a tarefa foi criada aqui. Como Notify, só anota: se há uma integração que posta as
+// tarefas novas sozinha (o Trello), o worker a posta pouco depois, sem a pessoa esperar a plataforma.
+func (s *Syncer) NotifyCreated(taskID uuid.UUID) { s.queue.addCreated(taskID) }
+
 // Pending diz quantas tarefas esperam para ser sincronizadas pelo gancho.
 func (s *Syncer) Pending() int { return s.queue.len() }
 
 // Flush sincroniza o próximo lote de tarefas avisadas e devolve quantas issues tocou. As que não têm
 // issue ligada (a maioria) saem da fila sem custo.
 func (s *Syncer) Flush(ctx context.Context) int {
+	touched := 0
+	for _, id := range s.queue.takeCreated(flushBatch) {
+		if ctx.Err() != nil {
+			return touched
+		}
+		touched += s.autoPublish(ctx, id)
+	}
 	ids := s.queue.take(flushBatch)
 	if len(ids) == 0 {
-		return 0
+		return touched
 	}
 	rows, err := s.d.Rows.ByTasks(ids)
 	if err != nil {
 		s.cfg.Logger.Error("issue sync: finding the linked issues", "error", err)
-		return 0
+		return touched
 	}
-	touched := 0
 	for _, row := range rows {
 		if ctx.Err() != nil {
 			return touched
@@ -108,7 +191,7 @@ func (s *Syncer) worker(ctx context.Context) {
 			return
 		case <-s.queue.wake:
 		}
-		for s.queue.len() > 0 {
+		for s.queue.work() > 0 {
 			select {
 			case <-ctx.Done():
 				return
@@ -159,6 +242,7 @@ func (s *Syncer) afterRun(id uuid.UUID, err error) {
 // tick olha as integrações com a sincronização ligada, uma de cada vez. Faz a rodada completa na
 // primeira vez, quando não há cursor, e de FullEvery em FullEvery; entre elas, a incremental.
 func (s *Syncer) tick(ctx context.Context) {
+	s.retryParked(ctx)
 	list, err := s.d.Integrations.ListSyncing()
 	if err != nil {
 		s.cfg.Logger.Error("issue sync: listing the integrations", "error", err)

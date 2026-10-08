@@ -292,3 +292,54 @@ func TestStore_DeadlineAndCreationDateFromThePlatform(t *testing.T) {
 		t.Errorf("the zero time must leave the task with no deadline, got %v", after.Deadline)
 	}
 }
+
+// Criar uma tarefa por dentro do sistema avisa o gancho de criação; a tarefa que a sincronização importa não.
+func TestStore_CreateHook(t *testing.T) {
+	f := newHookFixture(t)
+	var mu sync.Mutex
+	var created []uuid.UUID
+	f.store.SetCreateHook(func(id uuid.UUID) {
+		mu.Lock()
+		defer mu.Unlock()
+		created = append(created, id)
+	})
+	got := func() []uuid.UUID {
+		mu.Lock()
+		defer mu.Unlock()
+		out := created
+		created = nil
+		return out
+	}
+
+	f.took()
+	tk, err := f.svc.CreateAs(f.person, f.project, "Nova", "", "", nil, task.Attrs{})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	if ids := got(); len(ids) != 1 || ids[0] != tk.ID {
+		t.Errorf("create hook calls = %v, want one for %s", ids, tk.ID)
+	}
+	if f.took() != 0 {
+		t.Error("creating a task must not tell the change hook")
+	}
+	// Editar não é criar.
+	if _, err := f.svc.UpdateAs(f.person, tk.ID.String(), "Nova (editada)", "", nil, nil, task.Attrs{}); err != nil {
+		t.Fatalf("update: %v", err)
+	}
+	if ids := got(); len(ids) != 0 {
+		t.Errorf("an edit told the create hook: %v", ids)
+	}
+	// A que a sincronização importa não avisa, e sem gancho registrado criar segue funcionando.
+	pid := uuid.MustParse(f.project)
+	integ := uuid.MustParse(createIntegration(t, f.project))
+	if _, err := f.store.CreateImported(task.Imported{ProjectID: pid, IntegrationID: integ, ItemID: "Abc12345", Name: "Importada"}); err != nil {
+		t.Fatalf("create imported: %v", err)
+	}
+	if ids := got(); len(ids) != 0 {
+		t.Errorf("an imported task told the create hook: %v", ids)
+	}
+	f.store.SetCreateHook(nil)
+	if _, err := f.svc.CreateAs(f.person, f.project, "Sem gancho", "", "", nil, task.Attrs{}); err != nil {
+		t.Errorf("create with no hook: %v", err)
+	}
+}
