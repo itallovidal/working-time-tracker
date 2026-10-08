@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 	"sync"
+	"time"
 	"unicode/utf8"
 
 	"github.com/google/uuid"
@@ -51,6 +52,8 @@ type RemotePatch struct {
 	SetAssignee bool
 	AssigneeID  *uuid.UUID
 	Labels      *[]Label
+	// Deadline é o prazo novo; apontar para o tempo zero deixa a tarefa sem prazo.
+	Deadline *time.Time
 }
 
 // ApplyRemote grava o que veio da plataforma na tarefa, sem o gancho e sem as regras de quem edita
@@ -76,6 +79,9 @@ func (s *Store) ApplyRemote(id uuid.UUID, p RemotePatch) error {
 	if p.Labels != nil {
 		q = q.ClearLabels().AddLabelIDs(labelIDs(*p.Labels)...)
 	}
+	if p.Deadline != nil {
+		q = q.SetDeadline(*p.Deadline)
+	}
 	_, err := q.Save(context.Background())
 	if ent.IsNotFound(err) {
 		return database.ErrNotFound
@@ -93,10 +99,15 @@ type Imported struct {
 	Description   string
 	Labels        []Label
 	AssigneeID    *uuid.UUID
+	// Deadline é o prazo da tarefa; zero é sem prazo (a issue não tem um). CreatedAt é quando o item
+	// nasceu na plataforma; zero deixa a tarefa nascer agora.
+	Deadline  time.Time
+	CreatedAt time.Time
 }
 
-// CreateImported cria a tarefa de uma issue: em backlog, sem prazo (a issue não tem um) e já ligada a
-// ela. Não passa pelas regras de CreateAs: o responsável já foi conferido por quem importa.
+// CreateImported cria a tarefa de uma issue: em backlog, sem prazo (a menos que o item traga uma data de
+// entrega) e já ligada a ela. Não passa pelas regras de CreateAs: o responsável já foi conferido por
+// quem importa.
 func (s *Store) CreateImported(in Imported) (*Task, error) {
 	t := &Task{
 		ProjectID:             in.ProjectID,
@@ -106,6 +117,8 @@ func (s *Store) CreateImported(in Imported) (*Task, error) {
 		Status:                StatusBacklog,
 		Labels:                in.Labels,
 		AssigneeID:            in.AssigneeID,
+		Deadline:              in.Deadline,
+		CreatedAt:             in.CreatedAt,
 		ExternalIntegrationID: &in.IntegrationID,
 		ExternalItemID:        &in.ItemID,
 		ExternalItemURL:       &in.URL,

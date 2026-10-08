@@ -25,8 +25,8 @@ type IssueSync struct {
 	IntegrationID uuid.UUID `json:"integration_id,omitempty"`
 	// TaskID holds the value of the "task_id" field.
 	TaskID *uuid.UUID `json:"task_id,omitempty"`
-	// IssueNumber holds the value of the "issue_number" field.
-	IssueNumber int `json:"issue_number,omitempty"`
+	// ItemID holds the value of the "item_id" field.
+	ItemID string `json:"item_id,omitempty"`
 	// State holds the value of the "state" field.
 	State issuesync.State `json:"state,omitempty"`
 	// Title holds the value of the "title" field.
@@ -41,6 +41,8 @@ type IssueSync struct {
 	MappedLogin string `json:"mapped_login,omitempty"`
 	// MappedPersonID holds the value of the "mapped_person_id" field.
 	MappedPersonID *uuid.UUID `json:"mapped_person_id,omitempty"`
+	// Deadline holds the value of the "deadline" field.
+	Deadline *time.Time `json:"deadline,omitempty"`
 	// StuckSig holds the value of the "stuck_sig" field.
 	StuckSig string `json:"stuck_sig,omitempty"`
 	// LastError holds the value of the "last_error" field.
@@ -97,11 +99,9 @@ func (*IssueSync) scanValues(columns []string) ([]any, error) {
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case issuesync.FieldLabels, issuesync.FieldAssigneeLogins:
 			values[i] = new([]byte)
-		case issuesync.FieldIssueNumber:
-			values[i] = new(sql.NullInt64)
-		case issuesync.FieldState, issuesync.FieldTitle, issuesync.FieldBody, issuesync.FieldMappedLogin, issuesync.FieldStuckSig, issuesync.FieldLastError:
+		case issuesync.FieldItemID, issuesync.FieldState, issuesync.FieldTitle, issuesync.FieldBody, issuesync.FieldMappedLogin, issuesync.FieldStuckSig, issuesync.FieldLastError:
 			values[i] = new(sql.NullString)
-		case issuesync.FieldSyncedAt, issuesync.FieldCreatedAt:
+		case issuesync.FieldDeadline, issuesync.FieldSyncedAt, issuesync.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
 		case issuesync.FieldID, issuesync.FieldIntegrationID:
 			values[i] = new(uuid.UUID)
@@ -139,11 +139,11 @@ func (_m *IssueSync) assignValues(columns []string, values []any) error {
 				_m.TaskID = new(uuid.UUID)
 				*_m.TaskID = *value.S.(*uuid.UUID)
 			}
-		case issuesync.FieldIssueNumber:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field issue_number", values[i])
+		case issuesync.FieldItemID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field item_id", values[i])
 			} else if value.Valid {
-				_m.IssueNumber = int(value.Int64)
+				_m.ItemID = value.String
 			}
 		case issuesync.FieldState:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -191,6 +191,13 @@ func (_m *IssueSync) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.MappedPersonID = new(uuid.UUID)
 				*_m.MappedPersonID = *value.S.(*uuid.UUID)
+			}
+		case issuesync.FieldDeadline:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field deadline", values[i])
+			} else if value.Valid {
+				_m.Deadline = new(time.Time)
+				*_m.Deadline = value.Time
 			}
 		case issuesync.FieldStuckSig:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -270,8 +277,8 @@ func (_m *IssueSync) String() string {
 		builder.WriteString(fmt.Sprintf("%v", *v))
 	}
 	builder.WriteString(", ")
-	builder.WriteString("issue_number=")
-	builder.WriteString(fmt.Sprintf("%v", _m.IssueNumber))
+	builder.WriteString("item_id=")
+	builder.WriteString(_m.ItemID)
 	builder.WriteString(", ")
 	builder.WriteString("state=")
 	builder.WriteString(fmt.Sprintf("%v", _m.State))
@@ -294,6 +301,11 @@ func (_m *IssueSync) String() string {
 	if v := _m.MappedPersonID; v != nil {
 		builder.WriteString("mapped_person_id=")
 		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	if v := _m.Deadline; v != nil {
+		builder.WriteString("deadline=")
+		builder.WriteString(v.Format(time.ANSIC))
 	}
 	builder.WriteString(", ")
 	builder.WriteString("stuck_sig=")

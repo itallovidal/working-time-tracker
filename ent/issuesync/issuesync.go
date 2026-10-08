@@ -20,8 +20,8 @@ const (
 	FieldIntegrationID = "integration_id"
 	// FieldTaskID holds the string denoting the task_id field in the database.
 	FieldTaskID = "task_id"
-	// FieldIssueNumber holds the string denoting the issue_number field in the database.
-	FieldIssueNumber = "issue_number"
+	// FieldItemID holds the string denoting the item_id field in the database.
+	FieldItemID = "item_id"
 	// FieldState holds the string denoting the state field in the database.
 	FieldState = "state"
 	// FieldTitle holds the string denoting the title field in the database.
@@ -36,6 +36,8 @@ const (
 	FieldMappedLogin = "mapped_login"
 	// FieldMappedPersonID holds the string denoting the mapped_person_id field in the database.
 	FieldMappedPersonID = "mapped_person_id"
+	// FieldDeadline holds the string denoting the deadline field in the database.
+	FieldDeadline = "deadline"
 	// FieldStuckSig holds the string denoting the stuck_sig field in the database.
 	FieldStuckSig = "stuck_sig"
 	// FieldLastError holds the string denoting the last_error field in the database.
@@ -71,7 +73,7 @@ var Columns = []string{
 	FieldID,
 	FieldIntegrationID,
 	FieldTaskID,
-	FieldIssueNumber,
+	FieldItemID,
 	FieldState,
 	FieldTitle,
 	FieldBody,
@@ -79,6 +81,7 @@ var Columns = []string{
 	FieldAssigneeLogins,
 	FieldMappedLogin,
 	FieldMappedPersonID,
+	FieldDeadline,
 	FieldStuckSig,
 	FieldLastError,
 	FieldSyncedAt,
@@ -159,9 +162,9 @@ func ByTaskID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldTaskID, opts...).ToFunc()
 }
 
-// ByIssueNumber orders the results by the issue_number field.
-func ByIssueNumber(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldIssueNumber, opts...).ToFunc()
+// ByItemID orders the results by the item_id field.
+func ByItemID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldItemID, opts...).ToFunc()
 }
 
 // ByState orders the results by the state field.
@@ -187,6 +190,11 @@ func ByMappedLogin(opts ...sql.OrderTermOption) OrderOption {
 // ByMappedPersonID orders the results by the mapped_person_id field.
 func ByMappedPersonID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldMappedPersonID, opts...).ToFunc()
+}
+
+// ByDeadline orders the results by the deadline field.
+func ByDeadline(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDeadline, opts...).ToFunc()
 }
 
 // ByStuckSig orders the results by the stuck_sig field.

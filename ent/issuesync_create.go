@@ -43,9 +43,9 @@ func (_c *IssueSyncCreate) SetNillableTaskID(v *uuid.UUID) *IssueSyncCreate {
 	return _c
 }
 
-// SetIssueNumber sets the "issue_number" field.
-func (_c *IssueSyncCreate) SetIssueNumber(v int) *IssueSyncCreate {
-	_c.mutation.SetIssueNumber(v)
+// SetItemID sets the "item_id" field.
+func (_c *IssueSyncCreate) SetItemID(v string) *IssueSyncCreate {
+	_c.mutation.SetItemID(v)
 	return _c
 }
 
@@ -127,6 +127,20 @@ func (_c *IssueSyncCreate) SetMappedPersonID(v uuid.UUID) *IssueSyncCreate {
 func (_c *IssueSyncCreate) SetNillableMappedPersonID(v *uuid.UUID) *IssueSyncCreate {
 	if v != nil {
 		_c.SetMappedPersonID(*v)
+	}
+	return _c
+}
+
+// SetDeadline sets the "deadline" field.
+func (_c *IssueSyncCreate) SetDeadline(v time.Time) *IssueSyncCreate {
+	_c.mutation.SetDeadline(v)
+	return _c
+}
+
+// SetNillableDeadline sets the "deadline" field if the given value is not nil.
+func (_c *IssueSyncCreate) SetNillableDeadline(v *time.Time) *IssueSyncCreate {
+	if v != nil {
+		_c.SetDeadline(*v)
 	}
 	return _c
 }
@@ -289,8 +303,8 @@ func (_c *IssueSyncCreate) check() error {
 	if _, ok := _c.mutation.IntegrationID(); !ok {
 		return &ValidationError{Name: "integration_id", err: errors.New(`ent: missing required field "IssueSync.integration_id"`)}
 	}
-	if _, ok := _c.mutation.IssueNumber(); !ok {
-		return &ValidationError{Name: "issue_number", err: errors.New(`ent: missing required field "IssueSync.issue_number"`)}
+	if _, ok := _c.mutation.ItemID(); !ok {
+		return &ValidationError{Name: "item_id", err: errors.New(`ent: missing required field "IssueSync.item_id"`)}
 	}
 	if _, ok := _c.mutation.State(); !ok {
 		return &ValidationError{Name: "state", err: errors.New(`ent: missing required field "IssueSync.state"`)}
@@ -359,9 +373,9 @@ func (_c *IssueSyncCreate) createSpec() (*IssueSync, *sqlgraph.CreateSpec) {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if value, ok := _c.mutation.IssueNumber(); ok {
-		_spec.SetField(issuesync.FieldIssueNumber, field.TypeInt, value)
-		_node.IssueNumber = value
+	if value, ok := _c.mutation.ItemID(); ok {
+		_spec.SetField(issuesync.FieldItemID, field.TypeString, value)
+		_node.ItemID = value
 	}
 	if value, ok := _c.mutation.State(); ok {
 		_spec.SetField(issuesync.FieldState, field.TypeEnum, value)
@@ -390,6 +404,10 @@ func (_c *IssueSyncCreate) createSpec() (*IssueSync, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.MappedPersonID(); ok {
 		_spec.SetField(issuesync.FieldMappedPersonID, field.TypeUUID, value)
 		_node.MappedPersonID = &value
+	}
+	if value, ok := _c.mutation.Deadline(); ok {
+		_spec.SetField(issuesync.FieldDeadline, field.TypeTime, value)
+		_node.Deadline = &value
 	}
 	if value, ok := _c.mutation.StuckSig(); ok {
 		_spec.SetField(issuesync.FieldStuckSig, field.TypeString, value)

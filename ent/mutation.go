@@ -3756,8 +3756,7 @@ type IssueSyncMutation struct {
 	op                    Op
 	typ                   string
 	id                    *uuid.UUID
-	issue_number          *int
-	addissue_number       *int
+	item_id               *string
 	state                 *issuesync.State
 	title                 *string
 	body                  *string
@@ -3767,6 +3766,7 @@ type IssueSyncMutation struct {
 	appendassignee_logins []string
 	mapped_login          *string
 	mapped_person_id      *uuid.UUID
+	deadline              *time.Time
 	stuck_sig             *string
 	last_error            *string
 	synced_at             *time.Time
@@ -3970,60 +3970,40 @@ func (m *IssueSyncMutation) ResetTaskID() {
 	delete(m.clearedFields, issuesync.FieldTaskID)
 }
 
-// SetIssueNumber sets the "issue_number" field.
-func (m *IssueSyncMutation) SetIssueNumber(i int) {
-	m.issue_number = &i
-	m.addissue_number = nil
+// SetItemID sets the "item_id" field.
+func (m *IssueSyncMutation) SetItemID(s string) {
+	m.item_id = &s
 }
 
-// IssueNumber returns the value of the "issue_number" field in the mutation.
-func (m *IssueSyncMutation) IssueNumber() (r int, exists bool) {
-	v := m.issue_number
+// ItemID returns the value of the "item_id" field in the mutation.
+func (m *IssueSyncMutation) ItemID() (r string, exists bool) {
+	v := m.item_id
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldIssueNumber returns the old "issue_number" field's value of the IssueSync entity.
+// OldItemID returns the old "item_id" field's value of the IssueSync entity.
 // If the IssueSync object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *IssueSyncMutation) OldIssueNumber(ctx context.Context) (v int, err error) {
+func (m *IssueSyncMutation) OldItemID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldIssueNumber is only allowed on UpdateOne operations")
+		return v, errors.New("OldItemID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldIssueNumber requires an ID field in the mutation")
+		return v, errors.New("OldItemID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldIssueNumber: %w", err)
+		return v, fmt.Errorf("querying old value for OldItemID: %w", err)
 	}
-	return oldValue.IssueNumber, nil
+	return oldValue.ItemID, nil
 }
 
-// AddIssueNumber adds i to the "issue_number" field.
-func (m *IssueSyncMutation) AddIssueNumber(i int) {
-	if m.addissue_number != nil {
-		*m.addissue_number += i
-	} else {
-		m.addissue_number = &i
-	}
-}
-
-// AddedIssueNumber returns the value that was added to the "issue_number" field in this mutation.
-func (m *IssueSyncMutation) AddedIssueNumber() (r int, exists bool) {
-	v := m.addissue_number
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// ResetIssueNumber resets all changes to the "issue_number" field.
-func (m *IssueSyncMutation) ResetIssueNumber() {
-	m.issue_number = nil
-	m.addissue_number = nil
+// ResetItemID resets all changes to the "item_id" field.
+func (m *IssueSyncMutation) ResetItemID() {
+	m.item_id = nil
 }
 
 // SetState sets the "state" field.
@@ -4349,6 +4329,55 @@ func (m *IssueSyncMutation) ResetMappedPersonID() {
 	delete(m.clearedFields, issuesync.FieldMappedPersonID)
 }
 
+// SetDeadline sets the "deadline" field.
+func (m *IssueSyncMutation) SetDeadline(t time.Time) {
+	m.deadline = &t
+}
+
+// Deadline returns the value of the "deadline" field in the mutation.
+func (m *IssueSyncMutation) Deadline() (r time.Time, exists bool) {
+	v := m.deadline
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDeadline returns the old "deadline" field's value of the IssueSync entity.
+// If the IssueSync object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IssueSyncMutation) OldDeadline(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDeadline is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDeadline requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDeadline: %w", err)
+	}
+	return oldValue.Deadline, nil
+}
+
+// ClearDeadline clears the value of the "deadline" field.
+func (m *IssueSyncMutation) ClearDeadline() {
+	m.deadline = nil
+	m.clearedFields[issuesync.FieldDeadline] = struct{}{}
+}
+
+// DeadlineCleared returns if the "deadline" field was cleared in this mutation.
+func (m *IssueSyncMutation) DeadlineCleared() bool {
+	_, ok := m.clearedFields[issuesync.FieldDeadline]
+	return ok
+}
+
+// ResetDeadline resets all changes to the "deadline" field.
+func (m *IssueSyncMutation) ResetDeadline() {
+	m.deadline = nil
+	delete(m.clearedFields, issuesync.FieldDeadline)
+}
+
 // SetStuckSig sets the "stuck_sig" field.
 func (m *IssueSyncMutation) SetStuckSig(s string) {
 	m.stuck_sig = &s
@@ -4581,15 +4610,15 @@ func (m *IssueSyncMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *IssueSyncMutation) Fields() []string {
-	fields := make([]string, 0, 14)
+	fields := make([]string, 0, 15)
 	if m.integration != nil {
 		fields = append(fields, issuesync.FieldIntegrationID)
 	}
 	if m.task != nil {
 		fields = append(fields, issuesync.FieldTaskID)
 	}
-	if m.issue_number != nil {
-		fields = append(fields, issuesync.FieldIssueNumber)
+	if m.item_id != nil {
+		fields = append(fields, issuesync.FieldItemID)
 	}
 	if m.state != nil {
 		fields = append(fields, issuesync.FieldState)
@@ -4611,6 +4640,9 @@ func (m *IssueSyncMutation) Fields() []string {
 	}
 	if m.mapped_person_id != nil {
 		fields = append(fields, issuesync.FieldMappedPersonID)
+	}
+	if m.deadline != nil {
+		fields = append(fields, issuesync.FieldDeadline)
 	}
 	if m.stuck_sig != nil {
 		fields = append(fields, issuesync.FieldStuckSig)
@@ -4636,8 +4668,8 @@ func (m *IssueSyncMutation) Field(name string) (ent.Value, bool) {
 		return m.IntegrationID()
 	case issuesync.FieldTaskID:
 		return m.TaskID()
-	case issuesync.FieldIssueNumber:
-		return m.IssueNumber()
+	case issuesync.FieldItemID:
+		return m.ItemID()
 	case issuesync.FieldState:
 		return m.State()
 	case issuesync.FieldTitle:
@@ -4652,6 +4684,8 @@ func (m *IssueSyncMutation) Field(name string) (ent.Value, bool) {
 		return m.MappedLogin()
 	case issuesync.FieldMappedPersonID:
 		return m.MappedPersonID()
+	case issuesync.FieldDeadline:
+		return m.Deadline()
 	case issuesync.FieldStuckSig:
 		return m.StuckSig()
 	case issuesync.FieldLastError:
@@ -4673,8 +4707,8 @@ func (m *IssueSyncMutation) OldField(ctx context.Context, name string) (ent.Valu
 		return m.OldIntegrationID(ctx)
 	case issuesync.FieldTaskID:
 		return m.OldTaskID(ctx)
-	case issuesync.FieldIssueNumber:
-		return m.OldIssueNumber(ctx)
+	case issuesync.FieldItemID:
+		return m.OldItemID(ctx)
 	case issuesync.FieldState:
 		return m.OldState(ctx)
 	case issuesync.FieldTitle:
@@ -4689,6 +4723,8 @@ func (m *IssueSyncMutation) OldField(ctx context.Context, name string) (ent.Valu
 		return m.OldMappedLogin(ctx)
 	case issuesync.FieldMappedPersonID:
 		return m.OldMappedPersonID(ctx)
+	case issuesync.FieldDeadline:
+		return m.OldDeadline(ctx)
 	case issuesync.FieldStuckSig:
 		return m.OldStuckSig(ctx)
 	case issuesync.FieldLastError:
@@ -4720,12 +4756,12 @@ func (m *IssueSyncMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetTaskID(v)
 		return nil
-	case issuesync.FieldIssueNumber:
-		v, ok := value.(int)
+	case issuesync.FieldItemID:
+		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetIssueNumber(v)
+		m.SetItemID(v)
 		return nil
 	case issuesync.FieldState:
 		v, ok := value.(issuesync.State)
@@ -4776,6 +4812,13 @@ func (m *IssueSyncMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetMappedPersonID(v)
 		return nil
+	case issuesync.FieldDeadline:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDeadline(v)
+		return nil
 	case issuesync.FieldStuckSig:
 		v, ok := value.(string)
 		if !ok {
@@ -4811,21 +4854,13 @@ func (m *IssueSyncMutation) SetField(name string, value ent.Value) error {
 // AddedFields returns all numeric fields that were incremented/decremented during
 // this mutation.
 func (m *IssueSyncMutation) AddedFields() []string {
-	var fields []string
-	if m.addissue_number != nil {
-		fields = append(fields, issuesync.FieldIssueNumber)
-	}
-	return fields
+	return nil
 }
 
 // AddedField returns the numeric value that was incremented/decremented on a field
 // with the given name. The second boolean return value indicates that this field
 // was not set, or was not defined in the schema.
 func (m *IssueSyncMutation) AddedField(name string) (ent.Value, bool) {
-	switch name {
-	case issuesync.FieldIssueNumber:
-		return m.AddedIssueNumber()
-	}
 	return nil, false
 }
 
@@ -4834,13 +4869,6 @@ func (m *IssueSyncMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *IssueSyncMutation) AddField(name string, value ent.Value) error {
 	switch name {
-	case issuesync.FieldIssueNumber:
-		v, ok := value.(int)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddIssueNumber(v)
-		return nil
 	}
 	return fmt.Errorf("unknown IssueSync numeric field %s", name)
 }
@@ -4860,6 +4888,9 @@ func (m *IssueSyncMutation) ClearedFields() []string {
 	}
 	if m.FieldCleared(issuesync.FieldMappedPersonID) {
 		fields = append(fields, issuesync.FieldMappedPersonID)
+	}
+	if m.FieldCleared(issuesync.FieldDeadline) {
+		fields = append(fields, issuesync.FieldDeadline)
 	}
 	return fields
 }
@@ -4887,6 +4918,9 @@ func (m *IssueSyncMutation) ClearField(name string) error {
 	case issuesync.FieldMappedPersonID:
 		m.ClearMappedPersonID()
 		return nil
+	case issuesync.FieldDeadline:
+		m.ClearDeadline()
+		return nil
 	}
 	return fmt.Errorf("unknown IssueSync nullable field %s", name)
 }
@@ -4901,8 +4935,8 @@ func (m *IssueSyncMutation) ResetField(name string) error {
 	case issuesync.FieldTaskID:
 		m.ResetTaskID()
 		return nil
-	case issuesync.FieldIssueNumber:
-		m.ResetIssueNumber()
+	case issuesync.FieldItemID:
+		m.ResetItemID()
 		return nil
 	case issuesync.FieldState:
 		m.ResetState()
@@ -4924,6 +4958,9 @@ func (m *IssueSyncMutation) ResetField(name string) error {
 		return nil
 	case issuesync.FieldMappedPersonID:
 		m.ResetMappedPersonID()
+		return nil
+	case issuesync.FieldDeadline:
+		m.ResetDeadline()
 		return nil
 	case issuesync.FieldStuckSig:
 		m.ResetStuckSig()

@@ -66,24 +66,17 @@ func (_u *IssueSyncUpdate) ClearTaskID() *IssueSyncUpdate {
 	return _u
 }
 
-// SetIssueNumber sets the "issue_number" field.
-func (_u *IssueSyncUpdate) SetIssueNumber(v int) *IssueSyncUpdate {
-	_u.mutation.ResetIssueNumber()
-	_u.mutation.SetIssueNumber(v)
+// SetItemID sets the "item_id" field.
+func (_u *IssueSyncUpdate) SetItemID(v string) *IssueSyncUpdate {
+	_u.mutation.SetItemID(v)
 	return _u
 }
 
-// SetNillableIssueNumber sets the "issue_number" field if the given value is not nil.
-func (_u *IssueSyncUpdate) SetNillableIssueNumber(v *int) *IssueSyncUpdate {
+// SetNillableItemID sets the "item_id" field if the given value is not nil.
+func (_u *IssueSyncUpdate) SetNillableItemID(v *string) *IssueSyncUpdate {
 	if v != nil {
-		_u.SetIssueNumber(*v)
+		_u.SetItemID(*v)
 	}
-	return _u
-}
-
-// AddIssueNumber adds value to the "issue_number" field.
-func (_u *IssueSyncUpdate) AddIssueNumber(v int) *IssueSyncUpdate {
-	_u.mutation.AddIssueNumber(v)
 	return _u
 }
 
@@ -196,6 +189,26 @@ func (_u *IssueSyncUpdate) SetNillableMappedPersonID(v *uuid.UUID) *IssueSyncUpd
 // ClearMappedPersonID clears the value of the "mapped_person_id" field.
 func (_u *IssueSyncUpdate) ClearMappedPersonID() *IssueSyncUpdate {
 	_u.mutation.ClearMappedPersonID()
+	return _u
+}
+
+// SetDeadline sets the "deadline" field.
+func (_u *IssueSyncUpdate) SetDeadline(v time.Time) *IssueSyncUpdate {
+	_u.mutation.SetDeadline(v)
+	return _u
+}
+
+// SetNillableDeadline sets the "deadline" field if the given value is not nil.
+func (_u *IssueSyncUpdate) SetNillableDeadline(v *time.Time) *IssueSyncUpdate {
+	if v != nil {
+		_u.SetDeadline(*v)
+	}
+	return _u
+}
+
+// ClearDeadline clears the value of the "deadline" field.
+func (_u *IssueSyncUpdate) ClearDeadline() *IssueSyncUpdate {
+	_u.mutation.ClearDeadline()
 	return _u
 }
 
@@ -320,11 +333,8 @@ func (_u *IssueSyncUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			}
 		}
 	}
-	if value, ok := _u.mutation.IssueNumber(); ok {
-		_spec.SetField(issuesync.FieldIssueNumber, field.TypeInt, value)
-	}
-	if value, ok := _u.mutation.AddedIssueNumber(); ok {
-		_spec.AddField(issuesync.FieldIssueNumber, field.TypeInt, value)
+	if value, ok := _u.mutation.ItemID(); ok {
+		_spec.SetField(issuesync.FieldItemID, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.State(); ok {
 		_spec.SetField(issuesync.FieldState, field.TypeEnum, value)
@@ -365,6 +375,12 @@ func (_u *IssueSyncUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.MappedPersonIDCleared() {
 		_spec.ClearField(issuesync.FieldMappedPersonID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.Deadline(); ok {
+		_spec.SetField(issuesync.FieldDeadline, field.TypeTime, value)
+	}
+	if _u.mutation.DeadlineCleared() {
+		_spec.ClearField(issuesync.FieldDeadline, field.TypeTime)
 	}
 	if value, ok := _u.mutation.StuckSig(); ok {
 		_spec.SetField(issuesync.FieldStuckSig, field.TypeString, value)
@@ -487,24 +503,17 @@ func (_u *IssueSyncUpdateOne) ClearTaskID() *IssueSyncUpdateOne {
 	return _u
 }
 
-// SetIssueNumber sets the "issue_number" field.
-func (_u *IssueSyncUpdateOne) SetIssueNumber(v int) *IssueSyncUpdateOne {
-	_u.mutation.ResetIssueNumber()
-	_u.mutation.SetIssueNumber(v)
+// SetItemID sets the "item_id" field.
+func (_u *IssueSyncUpdateOne) SetItemID(v string) *IssueSyncUpdateOne {
+	_u.mutation.SetItemID(v)
 	return _u
 }
 
-// SetNillableIssueNumber sets the "issue_number" field if the given value is not nil.
-func (_u *IssueSyncUpdateOne) SetNillableIssueNumber(v *int) *IssueSyncUpdateOne {
+// SetNillableItemID sets the "item_id" field if the given value is not nil.
+func (_u *IssueSyncUpdateOne) SetNillableItemID(v *string) *IssueSyncUpdateOne {
 	if v != nil {
-		_u.SetIssueNumber(*v)
+		_u.SetItemID(*v)
 	}
-	return _u
-}
-
-// AddIssueNumber adds value to the "issue_number" field.
-func (_u *IssueSyncUpdateOne) AddIssueNumber(v int) *IssueSyncUpdateOne {
-	_u.mutation.AddIssueNumber(v)
 	return _u
 }
 
@@ -617,6 +626,26 @@ func (_u *IssueSyncUpdateOne) SetNillableMappedPersonID(v *uuid.UUID) *IssueSync
 // ClearMappedPersonID clears the value of the "mapped_person_id" field.
 func (_u *IssueSyncUpdateOne) ClearMappedPersonID() *IssueSyncUpdateOne {
 	_u.mutation.ClearMappedPersonID()
+	return _u
+}
+
+// SetDeadline sets the "deadline" field.
+func (_u *IssueSyncUpdateOne) SetDeadline(v time.Time) *IssueSyncUpdateOne {
+	_u.mutation.SetDeadline(v)
+	return _u
+}
+
+// SetNillableDeadline sets the "deadline" field if the given value is not nil.
+func (_u *IssueSyncUpdateOne) SetNillableDeadline(v *time.Time) *IssueSyncUpdateOne {
+	if v != nil {
+		_u.SetDeadline(*v)
+	}
+	return _u
+}
+
+// ClearDeadline clears the value of the "deadline" field.
+func (_u *IssueSyncUpdateOne) ClearDeadline() *IssueSyncUpdateOne {
+	_u.mutation.ClearDeadline()
 	return _u
 }
 
@@ -771,11 +800,8 @@ func (_u *IssueSyncUpdateOne) sqlSave(ctx context.Context) (_node *IssueSync, er
 			}
 		}
 	}
-	if value, ok := _u.mutation.IssueNumber(); ok {
-		_spec.SetField(issuesync.FieldIssueNumber, field.TypeInt, value)
-	}
-	if value, ok := _u.mutation.AddedIssueNumber(); ok {
-		_spec.AddField(issuesync.FieldIssueNumber, field.TypeInt, value)
+	if value, ok := _u.mutation.ItemID(); ok {
+		_spec.SetField(issuesync.FieldItemID, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.State(); ok {
 		_spec.SetField(issuesync.FieldState, field.TypeEnum, value)
@@ -816,6 +842,12 @@ func (_u *IssueSyncUpdateOne) sqlSave(ctx context.Context) (_node *IssueSync, er
 	}
 	if _u.mutation.MappedPersonIDCleared() {
 		_spec.ClearField(issuesync.FieldMappedPersonID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.Deadline(); ok {
+		_spec.SetField(issuesync.FieldDeadline, field.TypeTime, value)
+	}
+	if _u.mutation.DeadlineCleared() {
+		_spec.ClearField(issuesync.FieldDeadline, field.TypeTime)
 	}
 	if value, ok := _u.mutation.StuckSig(); ok {
 		_spec.SetField(issuesync.FieldStuckSig, field.TypeString, value)

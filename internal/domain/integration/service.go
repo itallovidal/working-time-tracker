@@ -106,12 +106,18 @@ func accountLookup(integrationType string) (adapter.Integration, adapter.Account
 // os escolhe editando, e é aí que ela é ativada e a conexão validada contra o que foi
 // escolhido. O nome sugerido leva o login de quem autorizou.
 func (s *Service) Connect(projectID, integrationType, token string) (*Integration, error) {
+	return s.ConnectWith(projectID, integrationType, token, nil)
+}
+
+// ConnectWith é o Connect de um tipo que traz do app, e não da pessoa, parte do metadata (a chave do app
+// no Trello): app entra na consulta de quem o token representa e fica guardado no metadata da integração.
+func (s *Service) ConnectWith(projectID, integrationType, token string, app map[string]interface{}) (*Integration, error) {
 	impl, lookup, err := accountLookup(integrationType)
 	if err != nil {
 		return nil, err
 	}
 	token = strings.TrimSpace(token)
-	login, err := lookup.Account(adapter.Connection{Token: token})
+	login, err := lookup.Account(adapter.Connection{Token: token, Metadata: app})
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +131,7 @@ func (s *Service) Connect(projectID, integrationType, token string) (*Integratio
 		Type:        integrationType,
 		DisplayName: impl.Descriptor().Label + " · @" + login,
 		Credentials: credentials,
-		Metadata:    map[string]interface{}{},
+		Metadata:    mergeMetadata(nil, app),
 		Enabled:     false,
 	}
 	if err := s.store.Create(it); err != nil {
@@ -140,6 +146,12 @@ func (s *Service) Connect(projectID, integrationType, token string) (*Integratio
 // valer: quem reconecta com outra conta, que não enxerga o repositório, é avisado em
 // vez de ficar com uma integração quebrada.
 func (s *Service) Reauthorize(id, token string) (*Integration, error) {
+	return s.ReauthorizeWith(id, token, nil)
+}
+
+// ReauthorizeWith é o Reauthorize de um tipo que traz do app parte do metadata: app vale sobre o que a
+// integração tinha (reconectar com a chave atual do app) e fica guardado.
+func (s *Service) ReauthorizeWith(id, token string, app map[string]interface{}) (*Integration, error) {
 	existing, err := s.store.GetByID(id)
 	if err != nil {
 		return nil, err
@@ -149,10 +161,11 @@ func (s *Service) Reauthorize(id, token string) (*Integration, error) {
 		return nil, err
 	}
 	token = strings.TrimSpace(token)
-	if _, err := lookup.Account(adapter.Connection{Token: token}); err != nil {
+	merged := mergeMetadata(existing.Metadata, app)
+	if _, err := lookup.Account(adapter.Connection{Token: token, Metadata: merged}); err != nil {
 		return nil, err
 	}
-	if meta, err := impl.CheckMetadata(existing.Metadata); err == nil {
+	if meta, err := impl.CheckMetadata(merged); err == nil {
 		if err := impl.Validate(adapter.Connection{Token: token, Metadata: meta}); err != nil {
 			return nil, err
 		}
@@ -160,11 +173,49 @@ func (s *Service) Reauthorize(id, token string) (*Integration, error) {
 	if existing.Credentials, err = s.seal(token); err != nil {
 		return nil, err
 	}
+	if len(app) > 0 {
+		existing.Metadata = merged
+	}
 	if err := s.store.Update(existing); err != nil {
 		return nil, err
 	}
 	redact(existing)
 	return existing, nil
+}
+
+// mergeMetadata junta os campos do app aos que a integração já tem; os do app valem. Devolve sempre um
+// mapa novo (nunca nulo), para o chamador poder guardá-lo.
+func mergeMetadata(base, app map[string]interface{}) map[string]interface{} {
+	out := make(map[string]interface{}, len(base)+len(app))
+	for k, v := range base {
+		out[k] = v
+	}
+	for k, v := range app {
+		out[k] = v
+	}
+	return out
+}
+
+// keepInternal devolve o metadata que chegou na edição com os campos internos do tipo (os que a conexão
+// guarda por conta própria) trocados pelo que já estava guardado: quem edita não os muda. Sem campo
+// interno no tipo, o metadata sai como chegou.
+func keepInternal(d adapter.Descriptor, incoming, stored map[string]interface{}) map[string]interface{} {
+	var out map[string]interface{}
+	for _, f := range d.Metadata {
+		if !f.Internal {
+			continue
+		}
+		if v, ok := stored[f.Key]; ok && v != "" {
+			if out == nil {
+				out = mergeMetadata(incoming, nil)
+			}
+			out[f.Key] = v
+		}
+	}
+	if out == nil {
+		return incoming
+	}
+	return out
 }
 
 // Repositories lista o que o token guardado da integração enxerga. O token fica no
@@ -300,14 +351,17 @@ func (s *Service) Edit(id string, in EditInput) (*Integration, error) {
 			return nil, implErr
 		}
 		meta := existing.Metadata
+		desc := impl.Descriptor()
+		// O que identifica a conexão (o repositório, o quadro) é o que a sincronização não deixa trocar.
+		summary := desc.SummaryKey()
 		if in.Metadata != nil {
-			if meta, err = impl.CheckMetadata(in.Metadata); err != nil {
+			if meta, err = impl.CheckMetadata(keepInternal(desc, in.Metadata, existing.Metadata)); err != nil {
 				return nil, err
 			}
 		}
 		if token != "" || !reflect.DeepEqual(meta, existing.Metadata) {
 			if in.SyncIssues == nil || *in.SyncIssues {
-				if wasSyncing && meta["repo"] != existing.Metadata["repo"] {
+				if wasSyncing && meta[summary] != existing.Metadata[summary] {
 					return nil, ErrSyncRepoLocked
 				}
 			}
@@ -322,7 +376,7 @@ func (s *Service) Edit(id string, in EditInput) (*Integration, error) {
 			if existing.Credentials, err = s.seal(token); err != nil {
 				return nil, err
 			}
-			repoChanged = meta["repo"] != existing.Metadata["repo"]
+			repoChanged = meta[summary] != existing.Metadata[summary]
 			existing.Metadata = meta
 		}
 	}

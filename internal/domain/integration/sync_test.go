@@ -3,6 +3,7 @@ package integration_test
 import (
 	"context"
 	"errors"
+	"strconv"
 	"testing"
 	"time"
 
@@ -111,7 +112,7 @@ func TestService_SyncIssues_RepositoryLock(t *testing.T) {
 	if err := svc.RecordSync(uid, integration.SyncResult{At: time.Now(), Cursor: &cursor}); err != nil {
 		t.Fatalf("record: %v", err)
 	}
-	testClient.IssueSync.Create().SetIntegrationID(uid).SetIssueNumber(7).SaveX(context.Background())
+	testClient.IssueSync.Create().SetIntegrationID(uid).SetItemID("7").SaveX(context.Background())
 
 	if _, err := svc.Edit(id, integration.EditInput{Metadata: other}); !errors.Is(err, integration.ErrSyncRepoLocked) {
 		t.Fatalf("changing the repository with the sync on: err = %v, want sync_repo_locked", err)
@@ -215,7 +216,7 @@ func TestService_SyncUnmatched(t *testing.T) {
 	svc.Edit(it.ID.String(), integration.EditInput{SyncIssues: yes()})
 	ctx := context.Background()
 	mk := func(n int, state issuesync.State, logins []string, mapped string, withTask bool) {
-		q := testClient.IssueSync.Create().SetIntegrationID(it.ID).SetIssueNumber(n).SetState(state).
+		q := testClient.IssueSync.Create().SetIntegrationID(it.ID).SetItemID(strconv.Itoa(n)).SetState(state).
 			SetAssigneeLogins(logins).SetMappedLogin(mapped)
 		if withTask {
 			tk := testClient.Task.Create().SetProjectID(it.ProjectID).SetName("t").SaveX(ctx)

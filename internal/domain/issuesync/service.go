@@ -145,14 +145,20 @@ func (s *Syncer) Sync(ctx context.Context, id uuid.UUID, mode Mode) (*Summary, e
 	return s.runLocked(ctx, id, mode)
 }
 
-// run é uma rodada: a integração, a conexão com o GitHub e o que ela leu do banco.
+// run é uma rodada: a integração, a conexão com a plataforma e o que ela leu do banco.
 type run struct {
 	s     *Syncer
 	ctx   context.Context
 	integ *integration.Integration
 	conn  adapter.Connection
-	gh    adapter.IssueSyncer
+	src   adapter.IssueSyncer
 	orgID uuid.UUID
+	// caps é o que o tipo sabe sincronizar além do básico; k liga o id guardado na tarefa à chave do vínculo;
+	// label e numeric nomeiam o item quando ele chega sem título.
+	caps    adapter.SyncCaps
+	k       keyer
+	label   string
+	numeric bool
 
 	readOnly bool
 	sum      Summary
@@ -160,24 +166,43 @@ type run struct {
 	// problem é o pior aviso da rodada (o código que a integração mostra), sem ser um erro que parou tudo.
 	problem string
 
-	rows   map[int]*Row
+	rows   map[string]*Row
 	tasks  map[uuid.UUID]*task.Task
-	linked map[int][]*task.Task // tarefas ligadas à mão a cada número, as mais antigas primeiro
-	bound  map[uuid.UUID]bool   // tarefas que já têm vínculo
-	labels map[string]bool      // as etiquetas que o repositório tem, carregadas na primeira vez que se precisa
+	linked map[string][]*task.Task // tarefas ligadas à mão a cada item, as mais antigas primeiro
+	bound  map[uuid.UUID]bool      // tarefas que já têm vínculo
+	labels map[string]bool         // as etiquetas que o repositório tem, carregadas na primeira vez que se precisa
 }
 
-// stop é o erro que acaba a rodada inteira, e não só a issue: o GitHub recusou o token, mandou parar
-// de pedir, ou a rodada foi cancelada.
-func stop(err error) bool {
-	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-		return true
-	}
-	if _, limited := adapter.RateLimitedUntil(err); limited {
-		return true
-	}
-	return errors.Is(err, adapter.ErrInvalidToken) || errors.Is(err, adapter.ErrGitHubRepoNotFound) || errors.Is(err, adapter.ErrProviderUnreachable)
+// keyer liga o id de item guardado numa tarefa à chave do vínculo (adapter.Issue.ID). Nos tipos com id
+// numérico, o que não é número não é de item nenhum.
+type keyer struct {
+	numeric bool
+	norm    adapter.ItemNormalizer
 }
+
+func newKeyer(impl adapter.Integration) keyer {
+	k := keyer{numeric: impl.Descriptor().ItemNumeric}
+	k.norm, _ = impl.(adapter.ItemNormalizer)
+	return k
+}
+
+// key devolve a chave do item e se o id guardado serve de chave.
+func (k keyer) key(raw string) (string, bool) {
+	id := raw
+	if k.norm != nil {
+		id = k.norm.NormalizeItemID(raw)
+	}
+	if k.numeric {
+		if _, err := strconv.Atoi(id); err != nil {
+			return "", false
+		}
+	}
+	return id, id != ""
+}
+
+// stop é o erro que acaba a rodada inteira, e não só o item: a plataforma recusou o token, mandou parar
+// de pedir, ou a rodada foi cancelada.
+func stop(err error) bool { return adapter.StopsSync(err) }
 
 // newRun lê a integração e fala com o GitHub o bastante para saber se pode seguir: o repositório existe
 // e o token escreve nele ou não.
@@ -193,7 +218,7 @@ func (s *Syncer) newRun(ctx context.Context, id uuid.UUID, cachedRepo bool) (*ru
 	if err != nil {
 		return nil, err
 	}
-	gh, ok := impl.(adapter.IssueSyncer)
+	src, ok := impl.(adapter.IssueSyncer)
 	if !ok {
 		return nil, ErrSyncOff
 	}
@@ -201,14 +226,16 @@ func (s *Syncer) newRun(ctx context.Context, id uuid.UUID, cachedRepo bool) (*ru
 	if err != nil {
 		return nil, err
 	}
+	desc := impl.Descriptor()
 	r := &run{
-		s: s, ctx: ctx, integ: integ, conn: conn, gh: gh, orgID: orgID,
-		rows: map[int]*Row{}, tasks: map[uuid.UUID]*task.Task{}, linked: map[int][]*task.Task{}, bound: map[uuid.UUID]bool{},
+		s: s, ctx: ctx, integ: integ, conn: conn, src: src, orgID: orgID,
+		caps: desc.Caps, k: newKeyer(impl), label: desc.Label, numeric: desc.ItemNumeric,
+		rows: map[string]*Row{}, tasks: map[uuid.UUID]*task.Task{}, linked: map[string][]*task.Task{}, bound: map[uuid.UUID]bool{},
 	}
 
 	// O repositório é lido a cada rodada; a do gancho, que é uma issue só, confia no que a última viu.
 	readRepo := func() (string, error) {
-		repo, err := gh.Repo(ctx, conn)
+		repo, err := src.Repo(ctx, conn)
 		if err != nil {
 			return "", err
 		}
@@ -270,7 +297,7 @@ func (r *run) load() error {
 	}
 	r.rows = rows
 	r.tasks = make(map[uuid.UUID]*task.Task, len(linked))
-	r.linked = map[int][]*task.Task{}
+	r.linked = map[string][]*task.Task{}
 	r.bound = map[uuid.UUID]bool{}
 	for _, row := range rows {
 		if row.TaskID != nil {
@@ -280,8 +307,8 @@ func (r *run) load() error {
 	for i := range linked {
 		t := &linked[i]
 		r.tasks[t.ID] = t
-		if n, err := strconv.Atoi(*t.ExternalItemID); err == nil && !r.bound[t.ID] {
-			r.linked[n] = append(r.linked[n], t)
+		if id, ok := r.k.key(*t.ExternalItemID); ok && !r.bound[t.ID] {
+			r.linked[id] = append(r.linked[id], t)
 		}
 	}
 	return nil
@@ -301,19 +328,20 @@ func (s *Syncer) runLocked(ctx context.Context, id uuid.UUID, mode Mode) (*Summa
 	}
 
 	cursor := r.integ.SyncCursor
-	if cursor == nil {
+	if cursor == nil || !r.caps.ServerSince {
+		// Sem filtro por data na plataforma não há rodada incremental: toda rodada olha tudo.
 		mode = Full
 	}
 	opts := adapter.ListIssuesOptions{State: "open"}
 	if mode == Incremental {
 		opts = adapter.ListIssuesOptions{State: "all", Since: *cursor, ByUpdated: true}
 	}
-	list, listErr := r.gh.ListIssues(ctx, r.conn, opts)
+	list, listErr := r.src.ListIssues(ctx, r.conn, opts)
 
-	seen := map[int]bool{}
+	seen := map[string]bool{}
 	var fatal error
 	for _, issue := range list.Issues {
-		seen[issue.Number] = true
+		seen[issue.ID] = true
 		if fatal = r.handleListed(issue); fatal != nil {
 			break
 		}
@@ -417,20 +445,20 @@ func (r *run) settle(err error) error {
 // handle decide o que é a issue para o sistema: uma tarefa nova, uma tarefa ligada à mão que passa a ser
 // sincronizada, uma issue descartada, ou uma que já tem tarefa.
 func (r *run) handle(issue adapter.Issue) error {
-	row := r.rows[issue.Number]
+	row := r.rows[issue.ID]
 	switch {
 	case row == nil:
 		if issue.State != stateOpen {
 			return nil // só as abertas viram tarefa
 		}
-		if t := r.manualLink(issue.Number); t != nil {
+		if t := r.manualLink(issue.ID); t != nil {
 			return r.adopt(nil, t, issue)
 		}
 		return r.importIssue(issue)
 	case row.TaskID == nil:
 		// A tarefa foi excluída aqui, e a issue não volta. Só uma tarefa ligada de novo à mão a traz de volta.
 		if issue.State == stateOpen {
-			if t := r.manualLink(issue.Number); t != nil {
+			if t := r.manualLink(issue.ID); t != nil {
 				return r.adopt(row, t, issue)
 			}
 		}
@@ -441,8 +469,8 @@ func (r *run) handle(issue adapter.Issue) error {
 }
 
 // manualLink é a tarefa mais antiga ligada à mão a esta issue que ainda não é de nenhum vínculo.
-func (r *run) manualLink(number int) *task.Task {
-	for _, t := range r.linked[number] {
+func (r *run) manualLink(id string) *task.Task {
+	for _, t := range r.linked[id] {
 		if !r.bound[t.ID] {
 			return t
 		}
@@ -451,9 +479,9 @@ func (r *run) manualLink(number int) *task.Task {
 }
 
 // checkUnseen confere as issues ligadas e abertas na última rodada que a lista de abertas não trouxe.
-func (r *run) checkUnseen(seen map[int]bool) error {
-	for number, row := range r.rows {
-		if row.TaskID == nil || seen[number] || row.State == stateGone {
+func (r *run) checkUnseen(seen map[string]bool) error {
+	for id, row := range r.rows {
+		if row.TaskID == nil || seen[id] || row.State == stateGone {
 			continue
 		}
 		// A issue fechada não está na lista de abertas e só interessa se a tarefa mudou aqui desde o
@@ -465,7 +493,7 @@ func (r *run) checkUnseen(seen map[int]bool) error {
 		if err := r.ctx.Err(); err != nil {
 			return err
 		}
-		issue, err := r.gh.GetIssue(r.ctx, r.conn, number)
+		issue, err := r.src.GetIssue(r.ctx, r.conn, id)
 		if errors.Is(err, adapter.ErrIssueGone) {
 			r.markGone(row)
 			continue
@@ -490,12 +518,13 @@ func (r *run) checkUnseen(seen map[int]bool) error {
 // dirty diz se a tarefa ligada ao vínculo difere do último acordo em algo que vai para o GitHub.
 func (r *run) dirty(row *Row) bool {
 	t := r.tasks[*row.TaskID]
-	if t == nil || !linkedTo(t, r.integ.ID, row.Number) {
+	if t == nil || !r.linkedTo(t, row.ItemID) {
 		return t != nil // desvinculada: o vínculo precisa ser solto
 	}
 	l, b := toLocal(t), row.snapshot()
 	return norm(l.Title) != norm(b.Title) || norm(l.Body) != norm(b.Body) || l.Closed != b.Closed ||
-		!sameKeys(keyed(l.Labels), keyed(b.Labels)) || !samePerson(l.Person, b.MappedPerson)
+		!sameKeys(keyed(l.Labels), keyed(b.Labels)) || (r.caps.Assignee && !samePerson(l.Person, b.MappedPerson)) ||
+		(r.caps.Deadline && !normDeadline(l.Deadline).Equal(normDeadline(b.Deadline)))
 }
 
 // markGone anota que a issue sumiu do repositório (apagada ou transferida). A tarefa fica como está.
@@ -506,7 +535,7 @@ func (r *run) markGone(row *Row) {
 	row.State = stateGone
 	row.SyncedAt = r.s.cfg.Now()
 	if err := r.s.d.Rows.Save(row); err != nil {
-		r.s.cfg.Logger.Error("issue sync: marking an issue as gone", "issue", row.Number, "error", err)
+		r.s.cfg.Logger.Error("issue sync: marking an issue as gone", "issue", row.ItemID, "error", err)
 	}
 }
 
@@ -536,9 +565,9 @@ func (s *Syncer) syncTaskLocked(ctx context.Context, row *Row) error {
 	if err != nil {
 		return err
 	}
-	r.rows = map[int]*Row{rows.Number: rows}
+	r.rows = map[string]*Row{rows.ItemID: rows}
 	r.tasks = map[uuid.UUID]*task.Task{t.ID: t}
-	issue, err := r.gh.GetIssue(ctx, r.conn, rows.Number)
+	issue, err := r.src.GetIssue(ctx, r.conn, rows.ItemID)
 	if errors.Is(err, adapter.ErrIssueGone) {
 		r.markGone(rows)
 		return nil
@@ -628,9 +657,13 @@ func (s *Syncer) SyncTaskNow(ctx context.Context, taskID uuid.UUID) (*TaskSummar
 	if t.ExternalIntegrationID == nil || t.ExternalItemID == nil {
 		return nil, task.ErrNoExternalItem
 	}
-	number, err := strconv.Atoi(*t.ExternalItemID)
-	if err != nil {
-		return nil, task.ErrNoExternalItem
+	// Nos tipos com id numérico, o id que não é número não é de item nenhum, e nem se espera a vez da integração.
+	if t.ExternalIntegration != nil {
+		if impl, err := adapter.GetIntegration(t.ExternalIntegration.Type); err == nil {
+			if _, ok := newKeyer(impl).key(*t.ExternalItemID); !ok {
+				return nil, task.ErrNoExternalItem
+			}
+		}
 	}
 	id := *t.ExternalIntegrationID
 	lock := s.lock(id)
@@ -647,9 +680,13 @@ func (s *Syncer) SyncTaskNow(ctx context.Context, taskID uuid.UUID) (*TaskSummar
 	if err := r.load(); err != nil {
 		return nil, err
 	}
-	issue, err := r.gh.GetIssue(ctx, r.conn, number)
+	itemID, ok := r.k.key(*t.ExternalItemID)
+	if !ok {
+		return nil, task.ErrNoExternalItem
+	}
+	issue, err := r.src.GetIssue(ctx, r.conn, itemID)
 	if errors.Is(err, adapter.ErrIssueGone) {
-		if row := r.rows[number]; row != nil {
+		if row := r.rows[itemID]; row != nil {
 			r.markGone(row)
 		}
 		return nil, err
@@ -658,7 +695,7 @@ func (s *Syncer) SyncTaskNow(ctx context.Context, taskID uuid.UUID) (*TaskSummar
 		return nil, err
 	}
 	if issue.PullRequest {
-		if row := r.rows[number]; row != nil {
+		if row := r.rows[itemID]; row != nil {
 			r.markGone(row)
 		}
 		return nil, adapter.ErrIssueGone

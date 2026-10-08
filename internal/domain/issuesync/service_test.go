@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -130,7 +131,7 @@ func (e *env) row(number int) *issuesync.Row {
 	e.t.Helper()
 	rows, err := e.rows.ByIntegration(e.it.ID)
 	must(e.t, err)
-	return rows[number]
+	return rows[strconv.Itoa(number)]
 }
 
 // taskFor devolve a tarefa que a sincronização ligou à issue.

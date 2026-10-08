@@ -14,11 +14,11 @@ import (
 )
 
 func toRemote(i adapter.Issue) Remote {
-	return Remote{Title: i.Title, Body: i.Body, Closed: i.State == stateClosed, Labels: i.Labels, Assignee: i.Assignees}
+	return Remote{Title: i.Title, Body: i.Body, Closed: i.State == stateClosed, Labels: i.Labels, Assignee: i.Assignees, Deadline: i.Deadline}
 }
 
 func toLocal(t *task.Task) Local {
-	l := Local{Title: t.Name, Body: t.Description, Closed: t.Status == "closed", Person: t.AssigneeID}
+	l := Local{Title: t.Name, Body: t.Description, Closed: t.Status == "closed", Person: t.AssigneeID, Deadline: t.Deadline}
 	for _, label := range t.Labels {
 		l.Labels = append(l.Labels, label.Name)
 	}
@@ -35,6 +35,7 @@ func snapshotFrom(i adapter.Issue, m Mapping) Snapshot {
 		Logins:       append([]string{}, i.Assignees...),
 		MappedLogin:  m.Login,
 		MappedPerson: m.Person,
+		Deadline:     normDeadline(i.Deadline),
 	}
 }
 
@@ -46,7 +47,19 @@ func stateOf(i adapter.Issue) string {
 }
 
 func toPatch(p Push) adapter.IssuePatch {
-	return adapter.IssuePatch{Title: p.Title, Body: p.Body, State: p.State, StateReason: p.StateReason, Labels: p.Labels, Assignees: p.Assignees}
+	return adapter.IssuePatch{Title: p.Title, Body: p.Body, State: p.State, StateReason: p.StateReason, Labels: p.Labels, Assignees: p.Assignees, Deadline: p.Deadline}
+}
+
+// mergeOptions diz à fusão o que o tipo da integração sabe sincronizar.
+func (r *run) mergeOptions() []MergeOption {
+	var opts []MergeOption
+	if r.caps.Deadline {
+		opts = append(opts, WithDeadline())
+	}
+	if !r.caps.Assignee {
+		opts = append(opts, WithoutAssignee())
+	}
+	return opts
 }
 
 // matches diz se a issue ficou com tudo o que se mandou. Um campo que o GitHub descarta sem avisar
@@ -57,17 +70,21 @@ func matches(after adapter.Issue, p Push) bool {
 		p.Body != nil && norm(after.Body) != *p.Body,
 		p.State != nil && after.State != *p.State,
 		p.Labels != nil && !sameKeys(keyed(after.Labels), keyed(*p.Labels)),
-		p.Assignees != nil && !sameKeys(keyed(after.Assignees), keyed(*p.Assignees)):
+		p.Assignees != nil && !sameKeys(keyed(after.Assignees), keyed(*p.Assignees)),
+		p.Deadline != nil && !normDeadline(after.Deadline).Equal(normDeadline(*p.Deadline)):
 		return false
 	}
 	return true
 }
 
-// linkedTo diz se a tarefa ainda está ligada a esta issue desta integração. Quem a desvincula, ou a liga a
-// outra, tira a tarefa da sincronização.
-func linkedTo(t *task.Task, integrationID uuid.UUID, number int) bool {
-	return t.ExternalIntegrationID != nil && *t.ExternalIntegrationID == integrationID &&
-		t.ExternalItemID != nil && *t.ExternalItemID == itoa(number)
+// linkedTo diz se a tarefa ainda está ligada a este item desta integração. Quem a desvincula, ou a liga a
+// outro, tira a tarefa da sincronização.
+func (r *run) linkedTo(t *task.Task, id string) bool {
+	if t.ExternalIntegrationID == nil || *t.ExternalIntegrationID != r.integ.ID || t.ExternalItemID == nil {
+		return false
+	}
+	key, ok := r.k.key(*t.ExternalItemID)
+	return ok && key == id
 }
 
 func sameRow(a, b *Row) bool {
@@ -75,6 +92,7 @@ func sameRow(a, b *Row) bool {
 	return a.State == b.State && same(a.TaskID, b.TaskID) && norm(a.Title) == norm(b.Title) && norm(a.Body) == norm(b.Body) &&
 		sameKeys(keyed(a.Labels), keyed(b.Labels)) && sameKeys(keyed(a.Logins), keyed(b.Logins)) &&
 		a.MappedLogin == b.MappedLogin && same(a.MappedPerson, b.MappedPerson) &&
+		normDeadline(a.Deadline).Equal(normDeadline(b.Deadline)) &&
 		a.StuckSig == b.StuckSig && a.LastError == b.LastError
 }
 
@@ -86,29 +104,39 @@ func (r *run) importIssue(issue adapter.Issue) error {
 	}
 	res := resolver{r}
 	var mapped Mapping
-	for _, login := range issue.Assignees {
-		p, err := res.PersonFor(r.ctx, login)
-		if err != nil {
-			return err
-		}
-		if p != nil {
-			mapped = Mapping{Login: login, Person: p}
-			break
+	if r.caps.Assignee {
+		for _, login := range issue.Assignees {
+			p, err := res.PersonFor(r.ctx, login)
+			if err != nil {
+				return err
+			}
+			if p != nil {
+				mapped = Mapping{Login: login, Person: p}
+				break
+			}
 		}
 	}
 	name := strings.TrimSpace(lf(issue.Title))
 	if name == "" {
-		name = "Issue #" + itoa(issue.Number)
+		if r.numeric {
+			name = "Issue #" + issue.ID
+		} else {
+			name = r.label + " " + issue.ID
+		}
 	}
-	created, err := r.s.d.Tasks.CreateImported(task.Imported{
-		ProjectID: r.integ.ProjectID, IntegrationID: r.integ.ID, ItemID: itoa(issue.Number), URL: issue.URL,
-		Name: name, Description: lf(issue.Body), Labels: labels, AssigneeID: mapped.Person,
-	})
+	imported := task.Imported{
+		ProjectID: r.integ.ProjectID, IntegrationID: r.integ.ID, ItemID: issue.ID, URL: issue.URL,
+		Name: name, Description: lf(issue.Body), Labels: labels, AssigneeID: mapped.Person, CreatedAt: issue.CreatedAt,
+	}
+	if r.caps.Deadline {
+		imported.Deadline = normDeadline(issue.Deadline)
+	}
+	created, err := r.s.d.Tasks.CreateImported(imported)
 	if err != nil {
 		return err
 	}
 	row := &Row{
-		IntegrationID: r.integ.ID, TaskID: &created.ID, Number: issue.Number, State: stateOf(issue),
+		IntegrationID: r.integ.ID, TaskID: &created.ID, ItemID: issue.ID, State: stateOf(issue),
 		Snapshot: snapshotFrom(issue, mapped), SyncedAt: r.s.cfg.Now(),
 	}
 	if err := r.s.d.Rows.Create(row); err != nil {
@@ -116,7 +144,7 @@ func (r *run) importIssue(issue adapter.Issue) error {
 		r.s.d.Tasks.Delete(created.ID.String())
 		return err
 	}
-	r.rows[issue.Number] = row
+	r.rows[issue.ID] = row
 	r.tasks[created.ID] = created
 	r.bound[created.ID] = true
 	r.sum.Created++
@@ -127,7 +155,7 @@ func (r *run) importIssue(issue adapter.Issue) error {
 // vence no título e no corpo, as etiquetas dos dois lados se somam, e o responsável da tarefa fica como está.
 func (r *run) adopt(row *Row, t *task.Task, issue adapter.Issue) error {
 	if row == nil {
-		row = &Row{IntegrationID: r.integ.ID, Number: issue.Number}
+		row = &Row{IntegrationID: r.integ.ID, ItemID: issue.ID}
 	}
 	b := Snapshot{Logins: issue.Assignees, MappedPerson: t.AssigneeID}
 	if err := r.apply(row, t, issue, b); err != nil {
@@ -149,7 +177,7 @@ func (r *run) reconcile(row *Row, issue adapter.Issue) error {
 		}
 		t = got
 	}
-	if !linkedTo(t, r.integ.ID, row.Number) {
+	if !r.linkedTo(t, row.ItemID) {
 		return r.release(row)
 	}
 	return r.apply(row, t, issue, row.snapshot())
@@ -170,7 +198,7 @@ func (r *run) release(row *Row) error {
 func (r *run) apply(row *Row, t *task.Task, issue adapter.Issue, b Snapshot) error {
 	res := resolver{r}
 	local := toLocal(t)
-	plan, err := Merge(r.ctx, b, toRemote(issue), local, res)
+	plan, err := Merge(r.ctx, b, toRemote(issue), local, res, r.mergeOptions()...)
 	if err != nil {
 		return err
 	}
@@ -188,7 +216,7 @@ func (r *run) apply(row *Row, t *task.Task, issue adapter.Issue, b Snapshot) err
 			r.sum.Partial = true
 		default:
 			// A lista pode ter alguns instantes: relê a issue para não passar por cima de quem mexeu depois.
-			fresh, err := r.gh.GetIssue(r.ctx, r.conn, issue.Number)
+			fresh, err := r.src.GetIssue(r.ctx, r.conn, issue.ID)
 			if errors.Is(err, adapter.ErrIssueGone) || (err == nil && fresh.PullRequest) {
 				return r.gone(row)
 			}
@@ -196,7 +224,7 @@ func (r *run) apply(row *Row, t *task.Task, issue adapter.Issue, b Snapshot) err
 				return err
 			}
 			issue = *fresh
-			if plan, err = Merge(r.ctx, b, toRemote(issue), local, res); err != nil {
+			if plan, err = Merge(r.ctx, b, toRemote(issue), local, res, r.mergeOptions()...); err != nil {
 				return err
 			}
 			push = plan.Push
@@ -225,7 +253,7 @@ func (r *run) apply(row *Row, t *task.Task, issue adapter.Issue, b Snapshot) err
 		if push.Labels != nil {
 			r.ensureLabels(*push.Labels)
 		}
-		updated, err := r.gh.UpdateIssue(r.ctx, r.conn, issue.Number, toPatch(push))
+		updated, err := r.src.UpdateIssue(r.ctx, r.conn, issue.ID, toPatch(push))
 		switch {
 		case errors.Is(err, adapter.ErrIssueGone):
 			return r.gone(row)
@@ -276,7 +304,7 @@ func (r *run) apply(row *Row, t *task.Task, issue adapter.Issue, b Snapshot) err
 		return err
 	}
 	*row = next
-	r.rows[row.Number] = row
+	r.rows[row.ItemID] = row
 	r.bound[t.ID] = true
 	return nil
 }
@@ -309,6 +337,7 @@ func (r *run) localPatch(t *task.Task, c LocalChange) (task.RemotePatch, error) 
 	p.Description = c.Body
 	p.Status = c.Status
 	p.SetAssignee, p.AssigneeID = c.SetAssignee, c.Person
+	p.Deadline = c.Deadline
 	if c.Labels != nil {
 		labels, err := r.s.d.Tasks.FindOrCreateLabels(t.ProjectID, *c.Labels)
 		if err != nil {
@@ -327,7 +356,7 @@ func (r *run) localPatch(t *task.Task, c LocalChange) (task.RemotePatch, error) 
 // o PATCH mostra o descarte.
 func (r *run) ensureLabels(names []string) {
 	if r.labels == nil {
-		have, err := r.gh.ListLabels(r.ctx, r.conn)
+		have, err := r.src.ListLabels(r.ctx, r.conn)
 		if err != nil {
 			r.s.cfg.Logger.Warn("issue sync: listing the repository labels", "integration", r.integ.ID, "error", err)
 			return
@@ -340,7 +369,7 @@ func (r *run) ensureLabels(names []string) {
 	for _, name := range names {
 		if k := key(name); k == "" || r.labels[k] {
 			continue
-		} else if err := r.gh.CreateLabel(r.ctx, r.conn, name); err != nil {
+		} else if err := r.src.CreateLabel(r.ctx, r.conn, name); err != nil {
 			if errors.Is(err, adapter.ErrForbidden) {
 				r.note(ErrLabelRefused.Code)
 			} else {
@@ -361,7 +390,7 @@ type resolver struct{ r *run }
 func (x resolver) PersonFor(ctx context.Context, login string) (*uuid.UUID, error) {
 	r := x.r
 	email, err := r.s.cache.get(r.integ.ID.String()+"/user/"+key(login), cacheFound, cacheMissing, func() (string, error) {
-		return r.gh.UserEmail(ctx, r.conn, login)
+		return r.src.UserEmail(ctx, r.conn, login)
 	})
 	if err != nil || email == "" {
 		return nil, err
@@ -391,6 +420,6 @@ func (x resolver) LoginFor(ctx context.Context, personID uuid.UUID) (string, err
 		return "", err
 	}
 	return r.s.cache.get(r.integ.ID.String()+"/email/"+key(p.Email), cacheFound, cacheMissing, func() (string, error) {
-		return r.gh.FindLoginByEmail(ctx, r.conn, p.Email)
+		return r.src.FindLoginByEmail(ctx, r.conn, p.Email)
 	})
 }

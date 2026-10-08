@@ -19,13 +19,14 @@ const (
 	stateGone   = "gone"
 )
 
-// Row é o vínculo de uma issue com uma tarefa e o snapshot do último acordo.
+// Row é o vínculo de uma issue (ou de um cartão) com uma tarefa e o snapshot do último acordo.
 type Row struct {
 	ID            uuid.UUID
 	IntegrationID uuid.UUID
 	// TaskID é nulo na issue descartada: a tarefa foi excluída aqui e a issue não volta.
 	TaskID *uuid.UUID
-	Number int
+	// ItemID é a chave do item na plataforma (adapter.Issue.ID): o número da issue, o link curto do cartão.
+	ItemID string
 	// State é o estado da issue na última rodada: aberta, fechada ou sumida (apagada ou transferida).
 	State string
 
@@ -53,7 +54,7 @@ func toRow(e *ent.IssueSync) *Row {
 		ID:            e.ID,
 		IntegrationID: e.IntegrationID,
 		TaskID:        e.TaskID,
-		Number:        e.IssueNumber,
+		ItemID:        e.ItemID,
 		State:         string(e.State),
 		Snapshot: Snapshot{
 			Title:        e.Title,
@@ -63,6 +64,7 @@ func toRow(e *ent.IssueSync) *Row {
 			Logins:       append([]string{}, e.AssigneeLogins...),
 			MappedLogin:  e.MappedLogin,
 			MappedPerson: e.MappedPersonID,
+			Deadline:     deref(e.Deadline),
 		},
 		StuckSig:  e.StuckSig,
 		LastError: e.LastError,
@@ -70,17 +72,17 @@ func toRow(e *ent.IssueSync) *Row {
 	}
 }
 
-// ByIntegration lista os vínculos da integração, pelo número da issue.
-func (s *Store) ByIntegration(integrationID uuid.UUID) (map[int]*Row, error) {
+// ByIntegration lista os vínculos da integração, pela chave do item.
+func (s *Store) ByIntegration(integrationID uuid.UUID) (map[string]*Row, error) {
 	rows, err := s.client.IssueSync.Query().
 		Where(issuesync.IntegrationIDEQ(integrationID)).
 		All(context.Background())
 	if err != nil {
 		return nil, err
 	}
-	out := make(map[int]*Row, len(rows))
+	out := make(map[string]*Row, len(rows))
 	for _, e := range rows {
-		out[e.IssueNumber] = toRow(e)
+		out[e.ItemID] = toRow(e)
 	}
 	return out, nil
 }
@@ -113,12 +115,12 @@ func (s *Store) ByTasks(taskIDs []uuid.UUID) ([]*Row, error) {
 	return out, nil
 }
 
-// Create grava um vínculo novo. O índice único (integração, número) barra duas rodadas criando o mesmo.
+// Create grava um vínculo novo. O índice único (integração, item) barra duas rodadas criando o mesmo.
 func (s *Store) Create(r *Row) error {
 	created, err := s.client.IssueSync.Create().
 		SetIntegrationID(r.IntegrationID).
 		SetNillableTaskID(r.TaskID).
-		SetIssueNumber(r.Number).
+		SetItemID(r.ItemID).
 		SetState(issuesync.State(r.State)).
 		SetTitle(r.Title).
 		SetBody(r.Body).
@@ -126,6 +128,7 @@ func (s *Store) Create(r *Row) error {
 		SetAssigneeLogins(r.Logins).
 		SetMappedLogin(r.MappedLogin).
 		SetNillableMappedPersonID(r.MappedPerson).
+		SetNillableDeadline(ptr(r.Deadline)).
 		SetStuckSig(r.StuckSig).
 		SetLastError(r.LastError).
 		SetSyncedAt(r.SyncedAt).
@@ -159,8 +162,28 @@ func (s *Store) Save(r *Row) error {
 	} else {
 		q = q.ClearMappedPersonID()
 	}
+	if d := ptr(r.Deadline); d != nil {
+		q = q.SetDeadline(*d)
+	} else {
+		q = q.ClearDeadline()
+	}
 	_, err := q.Save(context.Background())
 	return err
+}
+
+// ptr guarda o prazo como nulo quando é o "sem prazo" (o tempo zero), e deref faz o caminho de volta.
+func ptr(t time.Time) *time.Time {
+	if t.IsZero() {
+		return nil
+	}
+	return &t
+}
+
+func deref(t *time.Time) time.Time {
+	if t == nil {
+		return time.Time{}
+	}
+	return *t
 }
 
 // OrganizationOf devolve a organização do projeto: o e-mail de quem é responsável no GitHub só vale

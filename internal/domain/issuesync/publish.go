@@ -62,7 +62,7 @@ func (s *Syncer) Publish(ctx context.Context, taskID, integrationID uuid.UUID) (
 	}
 	r.ensureLabels(labels)
 	var assignees []string
-	if t.AssigneeID != nil {
+	if t.AssigneeID != nil && r.caps.Assignee {
 		login, err := resolver{r}.LoginFor(ctx, *t.AssigneeID)
 		if err != nil && !stop(err) {
 			login = "" // a busca do usuário falhou: a issue sai sem responsável, e o aviso diz
@@ -76,7 +76,11 @@ func (s *Syncer) Publish(ctx context.Context, taskID, integrationID uuid.UUID) (
 		}
 	}
 
-	issue, err := r.gh.CreateIssue(ctx, r.conn, adapter.NewIssue{Title: t.Name, Body: t.Description, Labels: labels, Assignees: assignees})
+	in := adapter.NewIssue{Title: t.Name, Body: t.Description, Labels: labels, Assignees: assignees}
+	if r.caps.Deadline {
+		in.Deadline = normDeadline(t.Deadline)
+	}
+	issue, err := r.src.CreateIssue(ctx, r.conn, in)
 	if err != nil {
 		return nil, err
 	}
@@ -87,8 +91,7 @@ func (s *Syncer) Publish(ctx context.Context, taskID, integrationID uuid.UUID) (
 
 	// Liga a tarefa à issue e deixa o vínculo de sincronização pronto. Se isto falhasse depois de a issue
 	// existir, a próxima rodada completa a importaria como uma tarefa nova: o erro volta para quem chamou.
-	number := issue.Number
-	itemID, url := itoa(number), issue.URL
+	itemID, url := issue.ID, issue.URL
 	t.ExternalIntegrationID, t.ExternalItemID, t.ExternalItemURL = &integrationID, &itemID, &url
 	if err := s.d.Tasks.Update(t); err != nil {
 		return nil, err

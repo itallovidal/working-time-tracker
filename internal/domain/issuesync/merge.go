@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -29,6 +30,7 @@ type Remote struct {
 	Closed   bool
 	Labels   []string
 	Assignee []string // logins
+	Deadline time.Time
 }
 
 // Local é a tarefa.
@@ -38,6 +40,8 @@ type Local struct {
 	Closed bool // status "closed"; os outros três contam como aberta
 	Labels []string
 	Person *uuid.UUID // o responsável
+	// Deadline é o prazo da tarefa; zero (ou antes de 1971) é sem prazo.
+	Deadline time.Time
 }
 
 // Snapshot é o último acordo entre os dois lados.
@@ -51,6 +55,8 @@ type Snapshot struct {
 	Logins       []string
 	MappedLogin  string
 	MappedPerson *uuid.UUID
+	// Deadline é o prazo que os dois lados tinham no acordo; zero é sem prazo.
+	Deadline time.Time
 }
 
 // Resolver liga um login do GitHub a uma pessoa daqui, e o contrário. Os dois podem falar com a rede.
@@ -70,11 +76,13 @@ type LocalChange struct {
 	// SetAssignee diz que o responsável passa a ser Person (nulo é sem responsável).
 	SetAssignee bool
 	Person      *uuid.UUID
+	// Deadline é o prazo novo da tarefa; apontar para o tempo zero a deixa sem prazo.
+	Deadline *time.Time
 }
 
 // Empty diz se não há nada a gravar na tarefa.
 func (c LocalChange) Empty() bool {
-	return c.Title == nil && c.Body == nil && c.Status == nil && c.Labels == nil && !c.SetAssignee
+	return c.Title == nil && c.Body == nil && c.Status == nil && c.Labels == nil && !c.SetAssignee && c.Deadline == nil
 }
 
 // Push é o que a issue passa a ter por vir daqui; os campos nulos não vão no PATCH.
@@ -85,11 +93,13 @@ type Push struct {
 	StateReason *string
 	Labels      *[]string
 	Assignees   *[]string
+	// Deadline é a data de entrega nova do item; apontar para o tempo zero a tira.
+	Deadline *time.Time
 }
 
 // Empty diz se não há nada a mandar.
 func (p Push) Empty() bool {
-	return p.Title == nil && p.Body == nil && p.State == nil && p.Labels == nil && p.Assignees == nil
+	return p.Title == nil && p.Body == nil && p.State == nil && p.Labels == nil && p.Assignees == nil && p.Deadline == nil
 }
 
 // Signature identifica o conteúdo do que se manda. Uma mudança que o GitHub descarta sem avisar
@@ -102,7 +112,8 @@ func (p Push) Signature() string {
 	raw, _ := json.Marshal(struct {
 		T, B, S *string
 		L, A    *[]string
-	}{p.Title, p.Body, p.State, sortedPtr(p.Labels), sortedPtr(p.Assignees)})
+		D       *time.Time `json:",omitempty"` // fora da assinatura quando não há prazo, como antes dele existir
+	}{p.Title, p.Body, p.State, sortedPtr(p.Labels), sortedPtr(p.Assignees), p.Deadline})
 	sum := sha256.Sum256(raw)
 	return hex.EncodeToString(sum[:8])
 }
@@ -179,9 +190,38 @@ func samePerson(a, b *uuid.UUID) bool {
 	return *a == *b
 }
 
+// MergeOption liga ou desliga o que um tipo de integração sabe sincronizar além do título, do corpo, do
+// estado e das etiquetas.
+type MergeOption func(*mergeOpts)
+
+type mergeOpts struct {
+	deadline bool
+	noAssign bool
+}
+
+// WithDeadline faz o prazo da tarefa e a data de entrega do item se espelharem.
+func WithDeadline() MergeOption { return func(o *mergeOpts) { o.deadline = true } }
+
+// WithoutAssignee deixa o responsável de fora: o tipo não o liga a ninguém, e a fusão nem o procura.
+func WithoutAssignee() MergeOption { return func(o *mergeOpts) { o.noAssign = true } }
+
+// normDeadline é o prazo como se compara: em UTC, em segundos, e o tempo zero (ou qualquer data antes de
+// 1971, como a tarefa guarda o "sem prazo") vira o zero. A plataforma devolve milissegundos e o que
+// guardamos tem outra precisão; sem isto o mesmo instante pareceria mudar a cada rodada.
+func normDeadline(t time.Time) time.Time {
+	if t.IsZero() || t.Year() < 1971 {
+		return time.Time{}
+	}
+	return t.UTC().Truncate(time.Second)
+}
+
 // Merge decide o que fazer com uma issue e a tarefa ligada a ela. Não grava nada.
-func Merge(ctx context.Context, b Snapshot, r Remote, l Local, res Resolver) (Plan, error) {
+func Merge(ctx context.Context, b Snapshot, r Remote, l Local, res Resolver, opts ...MergeOption) (Plan, error) {
 	var plan Plan
+	var o mergeOpts
+	for _, opt := range opts {
+		opt(&o)
+	}
 
 	// Título e corpo: o GitHub vence; senão, a tarefa segue para a issue.
 	if t := norm(r.Title); t != norm(b.Title) {
@@ -226,10 +266,29 @@ func Merge(ctx context.Context, b Snapshot, r Remote, l Local, res Resolver) (Pl
 
 	mergeLabels(&plan, b, r, l)
 
-	if err := mergeAssignee(ctx, &plan, b, r, l, res); err != nil {
-		return Plan{}, err
+	if o.deadline {
+		mergeDeadline(&plan, b, r, l)
+	}
+	if !o.noAssign {
+		if err := mergeAssignee(ctx, &plan, b, r, l, res); err != nil {
+			return Plan{}, err
+		}
 	}
 	return plan, nil
+}
+
+// mergeDeadline: o prazo segue a regra do título. Se o item mudou a data desde o acordo, ele vence e a
+// tarefa a adota (sem data a deixa sem prazo); senão, a data da tarefa, se mudou, vai para o item.
+func mergeDeadline(plan *Plan, b Snapshot, r Remote, l Local) {
+	rd, ld, bd := normDeadline(r.Deadline), normDeadline(l.Deadline), normDeadline(b.Deadline)
+	switch {
+	case !rd.Equal(bd):
+		if !rd.Equal(ld) {
+			plan.Local.Deadline = &rd
+		}
+	case !ld.Equal(bd):
+		plan.Push.Deadline = &ld
+	}
 }
 
 // mergeLabels: o resultado é (R ∪ (L∖B)) ∖ (B∖L): parte do que o GitHub tem, soma o que a tarefa

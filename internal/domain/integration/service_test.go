@@ -494,6 +494,36 @@ func TestService_Connect(t *testing.T) {
 	}
 }
 
+// Um tipo que traz do app parte do metadata (a chave do app, no Trello) a recebe na conexão e na
+// reconexão; o Connect e o Reauthorize de sempre não mexem nele.
+func TestService_ConnectWithAppFields(t *testing.T) {
+	svc, projectID := setup(t)
+
+	it, err := svc.ConnectWith(projectID, "github", testutil.GitHubOAuthToken, map[string]interface{}{"app_key": "k1"})
+	if err != nil {
+		t.Fatalf("connect with: %v", err)
+	}
+	if !reflect.DeepEqual(it.Metadata, map[string]interface{}{"app_key": "k1"}) {
+		t.Errorf("metadata after connecting = %v, want the app field", it.Metadata)
+	}
+
+	again, err := svc.ReauthorizeWith(it.ID.String(), testutil.GitHubSecondOAuthToken, map[string]interface{}{"app_key": "k2"})
+	if err != nil || again.Metadata["app_key"] != "k2" {
+		t.Fatalf("reauthorize with = %+v, %v, want the app field replaced", again, err)
+	}
+	plain, err := svc.Reauthorize(it.ID.String(), testutil.GitHubOAuthToken)
+	if err != nil || plain.Metadata["app_key"] != "k2" {
+		t.Errorf("a plain reauthorize = %+v, %v, want the metadata untouched", plain, err)
+	}
+	// Um token que a plataforma recusa não troca nada.
+	if _, err := svc.ReauthorizeWith(it.ID.String(), testutil.InvalidToken, map[string]interface{}{"app_key": "k3"}); err == nil {
+		t.Error("a rejected token must fail")
+	}
+	if got, _ := svc.Get(it.ID.String()); got.Metadata["app_key"] != "k2" {
+		t.Errorf("a rejected reauthorize changed the metadata: %v", got.Metadata)
+	}
+}
+
 func TestService_Connect_Refused(t *testing.T) {
 	svc, projectID := setup(t)
 

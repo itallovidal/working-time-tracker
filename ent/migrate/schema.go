@@ -135,7 +135,7 @@ var (
 	// IssueSyncsColumns holds the columns for the "issue_syncs" table.
 	IssueSyncsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
-		{Name: "issue_number", Type: field.TypeInt},
+		{Name: "item_id", Type: field.TypeString},
 		{Name: "state", Type: field.TypeEnum, Enums: []string{"open", "closed", "gone"}, Default: "open"},
 		{Name: "title", Type: field.TypeString, Default: ""},
 		{Name: "body", Type: field.TypeString, Default: ""},
@@ -143,6 +143,7 @@ var (
 		{Name: "assignee_logins", Type: field.TypeJSON, Nullable: true},
 		{Name: "mapped_login", Type: field.TypeString, Default: ""},
 		{Name: "mapped_person_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "deadline", Type: field.TypeTime, Nullable: true},
 		{Name: "stuck_sig", Type: field.TypeString, Default: ""},
 		{Name: "last_error", Type: field.TypeString, Default: ""},
 		{Name: "synced_at", Type: field.TypeTime},
@@ -158,22 +159,22 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "issue_syncs_integrations_issue_syncs",
-				Columns:    []*schema.Column{IssueSyncsColumns[13]},
+				Columns:    []*schema.Column{IssueSyncsColumns[14]},
 				RefColumns: []*schema.Column{IntegrationsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "issue_syncs_tasks_issue_sync",
-				Columns:    []*schema.Column{IssueSyncsColumns[14]},
+				Columns:    []*schema.Column{IssueSyncsColumns[15]},
 				RefColumns: []*schema.Column{TasksColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 		},
 		Indexes: []*schema.Index{
 			{
-				Name:    "issuesync_integration_id_issue_number",
+				Name:    "issuesync_integration_id_item_id",
 				Unique:  true,
-				Columns: []*schema.Column{IssueSyncsColumns[13], IssueSyncsColumns[1]},
+				Columns: []*schema.Column{IssueSyncsColumns[14], IssueSyncsColumns[1]},
 			},
 		},
 	}

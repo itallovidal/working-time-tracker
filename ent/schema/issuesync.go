@@ -10,12 +10,13 @@ import (
 	"github.com/google/uuid"
 )
 
-// IssueSync é o vínculo de uma issue do GitHub com uma tarefa, na sincronização das issues de um
-// repositório. Guarda também o snapshot do último acordo entre os dois lados (título, corpo, etiquetas,
-// responsáveis): é contra ele que se vê quem mudou o quê desde a última rodada.
+// IssueSync é o vínculo de um item da plataforma (uma issue do GitHub, um cartão do Trello) com uma
+// tarefa, na sincronização das issues de um repositório ou dos cartões de um quadro. Guarda também o
+// snapshot do último acordo entre os dois lados (título, corpo, etiquetas, responsáveis, prazo): é contra
+// ele que se vê quem mudou o quê desde a última rodada.
 //
-// task_id nulo é uma issue descartada: a tarefa foi excluída aqui, e a linha fica para a issue não ser
-// importada de novo.
+// task_id nulo é um item descartado: a tarefa foi excluída aqui, e a linha fica para o item não ser
+// importado de novo.
 type IssueSync struct {
 	ent.Schema
 }
@@ -25,7 +26,8 @@ func (IssueSync) Fields() []ent.Field {
 		field.UUID("id", uuid.UUID{}).Default(uuid.New).Immutable(),
 		field.UUID("integration_id", uuid.UUID{}),
 		field.UUID("task_id", uuid.UUID{}).Optional().Nillable(),
-		field.Int("issue_number"),
+		// A chave do item na plataforma, em texto: o número da issue, o link curto do cartão.
+		field.String("item_id"),
 		// O estado da issue na última rodada. "gone" é a issue que sumiu do repositório (apagada ou
 		// transferida): a tarefa fica como estava.
 		field.Enum("state").Values("open", "closed", "gone").Default("open"),
@@ -39,6 +41,8 @@ func (IssueSync) Fields() []ent.Field {
 		// ligou. Sem chave estrangeira: a pessoa pode sair, e o snapshot só serve de comparação.
 		field.String("mapped_login").Default(""),
 		field.UUID("mapped_person_id", uuid.UUID{}).Optional().Nillable(),
+		// O prazo do último acordo; nulo é sem prazo (e todo tipo que não espelha o prazo).
+		field.Time("deadline").Optional().Nillable(),
 
 		// stuck_sig é a assinatura do último empurrão que o GitHub descartou sem erro; igual à do
 		// empurrão de agora, não se tenta de novo (senão a rodada nunca acaba de empurrar). last_error
@@ -60,6 +64,6 @@ func (IssueSync) Edges() []ent.Edge {
 
 func (IssueSync) Indexes() []ent.Index {
 	return []ent.Index{
-		index.Fields("integration_id", "issue_number").Unique(),
+		index.Fields("integration_id", "item_id").Unique(),
 	}
 }

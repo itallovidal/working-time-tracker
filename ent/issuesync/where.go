@@ -66,9 +66,9 @@ func TaskID(v uuid.UUID) predicate.IssueSync {
 	return predicate.IssueSync(sql.FieldEQ(FieldTaskID, v))
 }
 
-// IssueNumber applies equality check predicate on the "issue_number" field. It's identical to IssueNumberEQ.
-func IssueNumber(v int) predicate.IssueSync {
-	return predicate.IssueSync(sql.FieldEQ(FieldIssueNumber, v))
+// ItemID applies equality check predicate on the "item_id" field. It's identical to ItemIDEQ.
+func ItemID(v string) predicate.IssueSync {
+	return predicate.IssueSync(sql.FieldEQ(FieldItemID, v))
 }
 
 // Title applies equality check predicate on the "title" field. It's identical to TitleEQ.
@@ -89,6 +89,11 @@ func MappedLogin(v string) predicate.IssueSync {
 // MappedPersonID applies equality check predicate on the "mapped_person_id" field. It's identical to MappedPersonIDEQ.
 func MappedPersonID(v uuid.UUID) predicate.IssueSync {
 	return predicate.IssueSync(sql.FieldEQ(FieldMappedPersonID, v))
+}
+
+// Deadline applies equality check predicate on the "deadline" field. It's identical to DeadlineEQ.
+func Deadline(v time.Time) predicate.IssueSync {
+	return predicate.IssueSync(sql.FieldEQ(FieldDeadline, v))
 }
 
 // StuckSig applies equality check predicate on the "stuck_sig" field. It's identical to StuckSigEQ.
@@ -161,44 +166,69 @@ func TaskIDNotNil() predicate.IssueSync {
 	return predicate.IssueSync(sql.FieldNotNull(FieldTaskID))
 }
 
-// IssueNumberEQ applies the EQ predicate on the "issue_number" field.
-func IssueNumberEQ(v int) predicate.IssueSync {
-	return predicate.IssueSync(sql.FieldEQ(FieldIssueNumber, v))
+// ItemIDEQ applies the EQ predicate on the "item_id" field.
+func ItemIDEQ(v string) predicate.IssueSync {
+	return predicate.IssueSync(sql.FieldEQ(FieldItemID, v))
 }
 
-// IssueNumberNEQ applies the NEQ predicate on the "issue_number" field.
-func IssueNumberNEQ(v int) predicate.IssueSync {
-	return predicate.IssueSync(sql.FieldNEQ(FieldIssueNumber, v))
+// ItemIDNEQ applies the NEQ predicate on the "item_id" field.
+func ItemIDNEQ(v string) predicate.IssueSync {
+	return predicate.IssueSync(sql.FieldNEQ(FieldItemID, v))
 }
 
-// IssueNumberIn applies the In predicate on the "issue_number" field.
-func IssueNumberIn(vs ...int) predicate.IssueSync {
-	return predicate.IssueSync(sql.FieldIn(FieldIssueNumber, vs...))
+// ItemIDIn applies the In predicate on the "item_id" field.
+func ItemIDIn(vs ...string) predicate.IssueSync {
+	return predicate.IssueSync(sql.FieldIn(FieldItemID, vs...))
 }
 
-// IssueNumberNotIn applies the NotIn predicate on the "issue_number" field.
-func IssueNumberNotIn(vs ...int) predicate.IssueSync {
-	return predicate.IssueSync(sql.FieldNotIn(FieldIssueNumber, vs...))
+// ItemIDNotIn applies the NotIn predicate on the "item_id" field.
+func ItemIDNotIn(vs ...string) predicate.IssueSync {
+	return predicate.IssueSync(sql.FieldNotIn(FieldItemID, vs...))
 }
 
-// IssueNumberGT applies the GT predicate on the "issue_number" field.
-func IssueNumberGT(v int) predicate.IssueSync {
-	return predicate.IssueSync(sql.FieldGT(FieldIssueNumber, v))
+// ItemIDGT applies the GT predicate on the "item_id" field.
+func ItemIDGT(v string) predicate.IssueSync {
+	return predicate.IssueSync(sql.FieldGT(FieldItemID, v))
 }
 
-// IssueNumberGTE applies the GTE predicate on the "issue_number" field.
-func IssueNumberGTE(v int) predicate.IssueSync {
-	return predicate.IssueSync(sql.FieldGTE(FieldIssueNumber, v))
+// ItemIDGTE applies the GTE predicate on the "item_id" field.
+func ItemIDGTE(v string) predicate.IssueSync {
+	return predicate.IssueSync(sql.FieldGTE(FieldItemID, v))
 }
 
-// IssueNumberLT applies the LT predicate on the "issue_number" field.
-func IssueNumberLT(v int) predicate.IssueSync {
-	return predicate.IssueSync(sql.FieldLT(FieldIssueNumber, v))
+// ItemIDLT applies the LT predicate on the "item_id" field.
+func ItemIDLT(v string) predicate.IssueSync {
+	return predicate.IssueSync(sql.FieldLT(FieldItemID, v))
 }
 
-// IssueNumberLTE applies the LTE predicate on the "issue_number" field.
-func IssueNumberLTE(v int) predicate.IssueSync {
-	return predicate.IssueSync(sql.FieldLTE(FieldIssueNumber, v))
+// ItemIDLTE applies the LTE predicate on the "item_id" field.
+func ItemIDLTE(v string) predicate.IssueSync {
+	return predicate.IssueSync(sql.FieldLTE(FieldItemID, v))
+}
+
+// ItemIDContains applies the Contains predicate on the "item_id" field.
+func ItemIDContains(v string) predicate.IssueSync {
+	return predicate.IssueSync(sql.FieldContains(FieldItemID, v))
+}
+
+// ItemIDHasPrefix applies the HasPrefix predicate on the "item_id" field.
+func ItemIDHasPrefix(v string) predicate.IssueSync {
+	return predicate.IssueSync(sql.FieldHasPrefix(FieldItemID, v))
+}
+
+// ItemIDHasSuffix applies the HasSuffix predicate on the "item_id" field.
+func ItemIDHasSuffix(v string) predicate.IssueSync {
+	return predicate.IssueSync(sql.FieldHasSuffix(FieldItemID, v))
+}
+
+// ItemIDEqualFold applies the EqualFold predicate on the "item_id" field.
+func ItemIDEqualFold(v string) predicate.IssueSync {
+	return predicate.IssueSync(sql.FieldEqualFold(FieldItemID, v))
+}
+
+// ItemIDContainsFold applies the ContainsFold predicate on the "item_id" field.
+func ItemIDContainsFold(v string) predicate.IssueSync {
+	return predicate.IssueSync(sql.FieldContainsFold(FieldItemID, v))
 }
 
 // StateEQ applies the EQ predicate on the "state" field.
@@ -484,6 +514,56 @@ func MappedPersonIDIsNil() predicate.IssueSync {
 // MappedPersonIDNotNil applies the NotNil predicate on the "mapped_person_id" field.
 func MappedPersonIDNotNil() predicate.IssueSync {
 	return predicate.IssueSync(sql.FieldNotNull(FieldMappedPersonID))
+}
+
+// DeadlineEQ applies the EQ predicate on the "deadline" field.
+func DeadlineEQ(v time.Time) predicate.IssueSync {
+	return predicate.IssueSync(sql.FieldEQ(FieldDeadline, v))
+}
+
+// DeadlineNEQ applies the NEQ predicate on the "deadline" field.
+func DeadlineNEQ(v time.Time) predicate.IssueSync {
+	return predicate.IssueSync(sql.FieldNEQ(FieldDeadline, v))
+}
+
+// DeadlineIn applies the In predicate on the "deadline" field.
+func DeadlineIn(vs ...time.Time) predicate.IssueSync {
+	return predicate.IssueSync(sql.FieldIn(FieldDeadline, vs...))
+}
+
+// DeadlineNotIn applies the NotIn predicate on the "deadline" field.
+func DeadlineNotIn(vs ...time.Time) predicate.IssueSync {
+	return predicate.IssueSync(sql.FieldNotIn(FieldDeadline, vs...))
+}
+
+// DeadlineGT applies the GT predicate on the "deadline" field.
+func DeadlineGT(v time.Time) predicate.IssueSync {
+	return predicate.IssueSync(sql.FieldGT(FieldDeadline, v))
+}
+
+// DeadlineGTE applies the GTE predicate on the "deadline" field.
+func DeadlineGTE(v time.Time) predicate.IssueSync {
+	return predicate.IssueSync(sql.FieldGTE(FieldDeadline, v))
+}
+
+// DeadlineLT applies the LT predicate on the "deadline" field.
+func DeadlineLT(v time.Time) predicate.IssueSync {
+	return predicate.IssueSync(sql.FieldLT(FieldDeadline, v))
+}
+
+// DeadlineLTE applies the LTE predicate on the "deadline" field.
+func DeadlineLTE(v time.Time) predicate.IssueSync {
+	return predicate.IssueSync(sql.FieldLTE(FieldDeadline, v))
+}
+
+// DeadlineIsNil applies the IsNil predicate on the "deadline" field.
+func DeadlineIsNil() predicate.IssueSync {
+	return predicate.IssueSync(sql.FieldIsNull(FieldDeadline))
+}
+
+// DeadlineNotNil applies the NotNil predicate on the "deadline" field.
+func DeadlineNotNil() predicate.IssueSync {
+	return predicate.IssueSync(sql.FieldNotNull(FieldDeadline))
 }
 
 // StuckSigEQ applies the EQ predicate on the "stuck_sig" field.

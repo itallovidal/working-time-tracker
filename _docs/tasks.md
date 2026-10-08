@@ -752,6 +752,16 @@
 
 ---
 
+### Sprint 67: Generalize the Sync Core (for Trello)
+
+- [X] S67.1 `issue_syncs.issue_number` (bigint) became `item_id` (text) and gained a nullable `deadline`, with a hand-written migration (`RENAME COLUMN`, `ALTER ... TYPE ... USING`, `RENAME` of the unique index) that keeps every existing link, tombstone and the unique index; `TestMigrate_IssueSyncItemIDKeepsTheLinks` replays the old schema with data and runs the migration over it
+- [X] S67.2 Adapter contract: `Descriptor.Caps` (`SyncCaps`: deadline, assignee, server-side since, auto publish), `Field.Internal` and `Field.Picker`, `Issue.ID` (the key of the item as text; GitHub fills it with the number) with `Deadline` and `CreatedAt`, `IssuePatch`/`NewIssue` with a deadline, `GetIssue`/`UpdateIssue` take the id as text, `Repository.ID`, the optional `ItemNormalizer`, `StopsSync(err)` (the sync core delegates to it) and `Descriptor.SummaryKey()`; the GitHub adapter sets `Caps{Assignee, ServerSince}`
+- [X] S67.3 Sync core: the rows, the maps of a round and the hand-made links are keyed by the item id (`Row.ItemID`, `run.src`, a `keyer` that turns the id stored on the task into the key); `Merge` takes options (`WithDeadline`, `WithoutAssignee`) and mirrors the deadline with the same remote-wins rule as the title (compared in UTC, to the second, and "no deadline" is the zero time or any date before 1971); a type without `ServerSince` always runs a full round; import and publish carry the deadline and the creation date when the type has them. No behavior change for GitHub
+- [X] S67.4 `task.Store`: `RemotePatch.Deadline`, `Imported.Deadline` and `Imported.CreatedAt` (a task imported from an item is born with the date the item was); `integration.Service`: `ConnectWith`/`ReauthorizeWith` (the app brings part of the metadata, e.g. the Trello key), `keepInternal` (an edit cannot change an internal field) and the lock of the sync now follows the summary field of the type instead of `repo`
+- [X] S67.5 Tests: the GitHub suite passes unchanged (only the call sites of the id got a `strconv.Itoa`); new cases for the deadline in `Merge` (remote wins, task pushes, milliseconds and zones, year-1 task, off without the option, assignee skipped), the signature, the task store, `StopsSync`, `SummaryKey`, `keepInternal`, `ConnectWith`; no front-end; design and this list
+
+---
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open

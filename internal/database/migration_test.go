@@ -7,6 +7,7 @@ import (
 	"errors"
 	"os"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -410,6 +411,92 @@ func TestMigrate_SessionTasksMigrationKeepsTheOldSessions(t *testing.T) {
 	}
 }
 
+// A migração que troca o número da issue pela chave do item (texto) não pode perder os vínculos que já
+// existem, nem o índice que impede dois vínculos para o mesmo item, nem a tarefa solta que vira lápide.
+func TestMigrate_IssueSyncItemIDKeepsTheLinks(t *testing.T) {
+	ctx := context.Background()
+	defer restoreSchema(t)
+	testutil.ResetSchema(t, testDB)
+
+	const migration = "20261008070000_issue_sync_item_id.sql"
+	files, err := os.ReadDir("migrations")
+	if err != nil {
+		t.Fatalf("read migrations: %v", err)
+	}
+	before := fstest.MapFS{}
+	for _, f := range files {
+		if !strings.HasSuffix(f.Name(), ".sql") || f.Name() >= migration {
+			continue
+		}
+		raw, err := os.ReadFile("migrations/" + f.Name())
+		if err != nil {
+			t.Fatalf("read %s: %v", f.Name(), err)
+		}
+		before[f.Name()] = &fstest.MapFile{Data: raw}
+	}
+	provider, err := goose.NewProvider(goose.DialectPostgres, testDB, before)
+	if err != nil {
+		t.Fatalf("goose provider: %v", err)
+	}
+	if _, err := provider.Up(ctx); err != nil {
+		t.Fatalf("apply the migrations before %s: %v", migration, err)
+	}
+
+	// O banco como era: o vínculo guarda o número da issue.
+	org, prj, integ, taskA := uuid.New(), uuid.New(), uuid.New(), uuid.New()
+	linkA, tombstone := uuid.New(), uuid.New()
+	for _, q := range []struct {
+		sql  string
+		args []any
+	}{
+		{`INSERT INTO organizations (id, name, created_at) VALUES ($1, 'Org', now())`, []any{org}},
+		{`INSERT INTO projects (id, name, organization_id, created_at) VALUES ($1, 'A', $2, now())`, []any{prj, org}},
+		{`INSERT INTO integrations (id, type, display_name, project_id, created_at) VALUES ($1, 'github', 'GitHub', $2, now())`, []any{integ, prj}},
+		{`INSERT INTO tasks (id, name, project_id, created_at) VALUES ($1, 'Tarefa A', $2, now())`, []any{taskA, prj}},
+		{`INSERT INTO issue_syncs (id, issue_number, title, integration_id, task_id, synced_at, created_at) VALUES ($1, 7, 'Sete', $2, $3, now(), now())`, []any{linkA, integ, taskA}},
+		{`INSERT INTO issue_syncs (id, issue_number, integration_id, synced_at, created_at) VALUES ($1, 12, $2, now(), now())`, []any{tombstone, integ}},
+	} {
+		if _, err := testDB.ExecContext(ctx, q.sql, q.args...); err != nil {
+			t.Fatalf("seed the old schema: %v\n%s", err, q.sql)
+		}
+	}
+
+	raw, err := os.ReadFile("migrations/" + migration)
+	if err != nil {
+		t.Fatalf("read migration: %v", err)
+	}
+	if _, err := testDB.ExecContext(ctx, string(raw)); err != nil {
+		t.Fatalf("run %s over the old links: %v", migration, err)
+	}
+
+	type link struct {
+		item     string
+		title    string
+		task     uuid.NullUUID
+		deadline sql.NullTime
+	}
+	read := func(id uuid.UUID) link {
+		var l link
+		if err := testDB.QueryRowContext(ctx, `SELECT item_id, title, task_id, deadline FROM issue_syncs WHERE id = $1`, id).
+			Scan(&l.item, &l.title, &l.task, &l.deadline); err != nil {
+			t.Fatalf("read the migrated link: %v", err)
+		}
+		return l
+	}
+	if got := read(linkA); got.item != "7" || got.title != "Sete" || !got.task.Valid || got.task.UUID != taskA || got.deadline.Valid {
+		t.Errorf("link migrated as %+v, want item 7 kept with its task and no deadline", got)
+	}
+	if got := read(tombstone); got.item != "12" || got.task.Valid {
+		t.Errorf("tombstone migrated as %+v, want item 12 with no task", got)
+	}
+	if _, err := testDB.ExecContext(ctx, `INSERT INTO issue_syncs (id, item_id, integration_id, synced_at, created_at) VALUES ($1, '7', $2, now(), now())`, uuid.New(), integ); err == nil {
+		t.Error("the unique index must still refuse a second link for the same item of the integration")
+	}
+	if _, err := testDB.ExecContext(ctx, `INSERT INTO issue_syncs (id, item_id, integration_id, synced_at, created_at) VALUES ($1, 'H0TZyzbK', $2, now(), now())`, uuid.New(), integ); err != nil {
+		t.Errorf("an alphanumeric item key (a Trello card) must be accepted: %v", err)
+	}
+}
+
 // restoreSchema devolve o banco ao estado que os outros testes esperam.
 func restoreSchema(t *testing.T) {
 	t.Helper()
@@ -463,7 +550,7 @@ func TestMigrate_IssueSyncRules(t *testing.T) {
 		return testClient.Task.Create().SetProjectID(proj.ID).SetName(name).SaveX(ctx)
 	}
 	link := func(number int, taskID *uuid.UUID) error {
-		_, err := testClient.IssueSync.Create().SetIntegrationID(integ.ID).SetIssueNumber(number).SetNillableTaskID(taskID).Save(ctx)
+		_, err := testClient.IssueSync.Create().SetIntegrationID(integ.ID).SetItemID(strconv.Itoa(number)).SetNillableTaskID(taskID).Save(ctx)
 		return err
 	}
 
@@ -485,7 +572,7 @@ func TestMigrate_IssueSyncRules(t *testing.T) {
 	}
 
 	testClient.Task.DeleteOneID(a.ID).ExecX(ctx)
-	row := testClient.IssueSync.Query().Where(issuesync.IssueNumberEQ(1)).OnlyX(ctx)
+	row := testClient.IssueSync.Query().Where(issuesync.ItemIDEQ("1")).OnlyX(ctx)
 	if row.TaskID != nil {
 		t.Errorf("deleting the task must leave the link with no task, got %v", row.TaskID)
 	}

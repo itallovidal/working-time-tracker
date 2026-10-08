@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -155,10 +156,10 @@ func TestGitHubSync_GoneIssues(t *testing.T) {
 
 	title := "novo"
 	for name, number := range map[string]int{"deleted": deleted, "moved": moved, "never existed": 999} {
-		if _, err := g.GetIssue(ctx, conn, number); !errors.Is(err, ErrIssueGone) {
+		if _, err := g.GetIssue(ctx, conn, strconv.Itoa(number)); !errors.Is(err, ErrIssueGone) {
 			t.Errorf("get %s: err = %v, want gone", name, err)
 		}
-		if _, err := g.UpdateIssue(ctx, conn, number, IssuePatch{Title: &title}); !errors.Is(err, ErrIssueGone) {
+		if _, err := g.UpdateIssue(ctx, conn, strconv.Itoa(number), IssuePatch{Title: &title}); !errors.Is(err, ErrIssueGone) {
 			t.Errorf("update %s: err = %v, want gone", name, err)
 		}
 	}
@@ -174,7 +175,7 @@ func TestGitHubSync_GetIssue(t *testing.T) {
 	})
 	pr := fake.AddIssue("owner/repo", testutil.GitHubIssue{Title: "PR", PullRequest: true})
 
-	issue, err := g.GetIssue(context.Background(), conn, n)
+	issue, err := g.GetIssue(context.Background(), conn, strconv.Itoa(n))
 	if err != nil {
 		t.Fatalf("get: %v", err)
 	}
@@ -183,10 +184,10 @@ func TestGitHubSync_GetIssue(t *testing.T) {
 		t.Errorf("issue = %+v", issue)
 	}
 	empty := fake.AddIssue("owner/repo", testutil.GitHubIssue{Title: "Sem corpo"})
-	if issue, _ = g.GetIssue(context.Background(), conn, empty); issue.Body != "" || issue.Labels == nil || issue.Assignees == nil {
+	if issue, _ = g.GetIssue(context.Background(), conn, strconv.Itoa(empty)); issue.Body != "" || issue.Labels == nil || issue.Assignees == nil {
 		t.Errorf("an empty issue must come with an empty body and empty (not nil) lists: %+v", issue)
 	}
-	if issue, _ = g.GetIssue(context.Background(), conn, pr); !issue.PullRequest {
+	if issue, _ = g.GetIssue(context.Background(), conn, strconv.Itoa(pr)); !issue.PullRequest {
 		t.Error("a pull request number must say so")
 	}
 }
@@ -200,7 +201,7 @@ func TestGitHubSync_UpdateIssue(t *testing.T) {
 
 	title, body, state, reason := "Nova", "outro texto", "closed", "completed"
 	labels, assignees := []string{"bug"}, []string{"ana-dev"}
-	issue, err := g.UpdateIssue(ctx, conn, n, IssuePatch{Title: &title, Body: &body, State: &state, StateReason: &reason, Labels: &labels, Assignees: &assignees})
+	issue, err := g.UpdateIssue(ctx, conn, strconv.Itoa(n), IssuePatch{Title: &title, Body: &body, State: &state, StateReason: &reason, Labels: &labels, Assignees: &assignees})
 	if err != nil {
 		t.Fatalf("update: %v", err)
 	}
@@ -212,7 +213,7 @@ func TestGitHubSync_UpdateIssue(t *testing.T) {
 	// Só os campos pedidos vão: o resto não é tocado.
 	fake.Reset()
 	empty := []string{}
-	if _, err := g.UpdateIssue(ctx, conn, n, IssuePatch{Labels: &empty, Assignees: &empty}); err != nil {
+	if _, err := g.UpdateIssue(ctx, conn, strconv.Itoa(n), IssuePatch{Labels: &empty, Assignees: &empty}); err != nil {
 		t.Fatalf("clear lists: %v", err)
 	}
 	req := fake.Requests()[0]
@@ -225,14 +226,14 @@ func TestGitHubSync_UpdateIssue(t *testing.T) {
 
 	// Uma etiqueta que o repositório não tem é descartada pelo GitHub; o resultado diz.
 	unknown := []string{"nao-existe"}
-	issue, _ = g.UpdateIssue(ctx, conn, n, IssuePatch{Labels: &unknown})
+	issue, _ = g.UpdateIssue(ctx, conn, strconv.Itoa(n), IssuePatch{Labels: &unknown})
 	if len(issue.Labels) != 0 {
 		t.Errorf("the label the repo does not have must not stick: %+v", issue.Labels)
 	}
 	// E um responsável que o GitHub não aceita também.
 	fake.Unassignable("bia")
 	who := []string{"bia", "ana-dev"}
-	issue, _ = g.UpdateIssue(ctx, conn, n, IssuePatch{Assignees: &who})
+	issue, _ = g.UpdateIssue(ctx, conn, strconv.Itoa(n), IssuePatch{Assignees: &who})
 	if !reflect.DeepEqual(issue.Assignees, []string{"ana-dev"}) {
 		t.Errorf("assignees = %v, want the one GitHub accepts", issue.Assignees)
 	}
@@ -240,13 +241,13 @@ func TestGitHubSync_UpdateIssue(t *testing.T) {
 	// Descarte silencioso: 200, issue como estava.
 	fake.Discard("owner/repo", "title")
 	other := "ignorado"
-	if issue, err = g.UpdateIssue(ctx, conn, n, IssuePatch{Title: &other}); err != nil || issue.Title != "Nova" {
+	if issue, err = g.UpdateIssue(ctx, conn, strconv.Itoa(n), IssuePatch{Title: &other}); err != nil || issue.Title != "Nova" {
 		t.Errorf("silently discarded title = %q, %v", issue.Title, err)
 	}
 
 	// Sem permissão de escrita é 403.
 	fake.SetPush("owner/repo", false)
-	if _, err := g.UpdateIssue(ctx, conn, n, IssuePatch{Title: &other}); !errors.Is(err, ErrForbidden) {
+	if _, err := g.UpdateIssue(ctx, conn, strconv.Itoa(n), IssuePatch{Title: &other}); !errors.Is(err, ErrForbidden) {
 		t.Errorf("no push access: err = %v, want forbidden", err)
 	}
 }

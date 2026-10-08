@@ -183,6 +183,7 @@ type githubIssue struct {
 
 func (i githubIssue) toIssue() Issue {
 	out := Issue{
+		ID:          strconv.Itoa(i.Number),
 		Number:      i.Number,
 		Title:       i.Title,
 		State:       i.State,
@@ -308,12 +309,15 @@ func (g *GitHubIntegration) ListIssues(ctx context.Context, conn Connection, opt
 	return list, nil
 }
 
-func (g *GitHubIntegration) GetIssue(ctx context.Context, conn Connection, number int) (*Issue, error) {
+func (g *GitHubIntegration) GetIssue(ctx context.Context, conn Connection, id string) (*Issue, error) {
 	path, err := g.repoPath(conn)
 	if err != nil {
 		return nil, err
 	}
-	n := strconv.Itoa(number)
+	n, err := issueNumber(id)
+	if err != nil {
+		return nil, err
+	}
 	resp, err := g.call(ctx, conn, "GET", path+"/issues/"+n, nil)
 	if err != nil {
 		return nil, err
@@ -329,8 +333,12 @@ func (g *GitHubIntegration) GetIssue(ctx context.Context, conn Connection, numbe
 	return &issue, nil
 }
 
-func (g *GitHubIntegration) UpdateIssue(ctx context.Context, conn Connection, number int, patch IssuePatch) (*Issue, error) {
+func (g *GitHubIntegration) UpdateIssue(ctx context.Context, conn Connection, id string, patch IssuePatch) (*Issue, error) {
 	path, err := g.repoPath(conn)
+	if err != nil {
+		return nil, err
+	}
+	n, err := issueNumber(id)
 	if err != nil {
 		return nil, err
 	}
@@ -353,7 +361,6 @@ func (g *GitHubIntegration) UpdateIssue(ctx context.Context, conn Connection, nu
 	if patch.Assignees != nil {
 		body["assignees"] = nonNil(*patch.Assignees)
 	}
-	n := strconv.Itoa(number)
 	resp, err := g.call(ctx, conn, "PATCH", path+"/issues/"+n, body)
 	if err != nil {
 		return nil, err

@@ -2,6 +2,7 @@ package adapter
 
 import (
 	"context"
+	"errors"
 	"regexp"
 	"strings"
 	"time"
@@ -43,6 +44,27 @@ type Field struct {
 	// Summary marca o campo que identifica a conexão (o repositório, o quadro): é o
 	// que o cartão da integração mostra.
 	Summary bool `json:"summary"`
+	// Internal marca o campo que a conexão guarda por conta própria (a chave do app, no Trello): a
+	// tela não o mostra, e a edição mantém o valor que já estava guardado.
+	Internal bool `json:"internal,omitempty"`
+	// Picker diz como a tela deixa escolher o valor entre o que a conexão enxerga: "datalist" (o campo
+	// de texto com sugestões, o repositório) ou "select" (uma lista fechada, o quadro). Vazio é só
+	// digitar.
+	Picker string `json:"picker,omitempty"`
+}
+
+// SyncCaps diz o que a sincronização de um tipo sabe fazer além do básico (título, corpo, etiquetas e
+// estado, que todo tipo com IssueSyncer faz).
+type SyncCaps struct {
+	// Deadline: o prazo da tarefa e a data de entrega do item se espelham.
+	Deadline bool `json:"deadline"`
+	// Assignee: o responsável da tarefa e o do item se ligam (pelo e-mail público, no GitHub).
+	Assignee bool `json:"assignee"`
+	// ServerSince: a plataforma filtra a listagem pelo instante da última mudança, e por isso a rodada
+	// de fundo pode ser incremental. Sem isso toda rodada olha tudo.
+	ServerSince bool `json:"server_since"`
+	// AutoPublish: a tarefa criada aqui vira um item sozinha, sem a pessoa marcar.
+	AutoPublish bool `json:"auto_publish"`
 }
 
 // Descriptor diz o que um tipo de integração é e o que ele pede. A tela desenha o
@@ -66,6 +88,8 @@ type Descriptor struct {
 	// Sync diz que o tipo sabe sincronizar as issues do repositório com as tarefas (IssueSyncer): a
 	// tela só oferece a caixa para quem a tem.
 	Sync bool `json:"sync"`
+	// Caps diz o que a sincronização do tipo faz além do básico. Só faz sentido para quem tem Sync.
+	Caps SyncCaps `json:"caps"`
 	// Auth diz como a pessoa dá acesso: AuthToken (padrão, ela cola um token) ou
 	// AuthOAuth (ela autoriza no site da plataforma e volta; não há campo de token).
 	Auth string `json:"auth,omitempty"`
@@ -80,9 +104,10 @@ const (
 	AuthOAuth = "oauth"
 )
 
-// Repository é um repositório que a conexão enxerga, para a pessoa escolher em vez de
-// digitar o nome.
+// Repository é um repositório (ou um quadro) que a conexão enxerga, para a pessoa escolher em vez de
+// digitar o nome. ID é o que se guarda quando o nome não basta (o quadro do Trello); vazio, vale o FullName.
 type Repository struct {
+	ID       string `json:"id,omitempty"`
 	FullName string `json:"full_name"`
 	Private  bool   `json:"private"`
 }
@@ -109,6 +134,10 @@ type IssueRepo struct {
 
 // Issue é uma issue da plataforma, no que a sincronização usa dela.
 type Issue struct {
+	// ID é a chave do item na plataforma, em texto: o número da issue no GitHub, o link curto do cartão
+	// no Trello. É por ela que a sincronização acha o vínculo.
+	ID string
+	// Number é o número da issue, para quem o tem (o GitHub); os outros tipos o deixam zero.
 	Number      int
 	Title       string
 	Body        string
@@ -118,6 +147,10 @@ type Issue struct {
 	Assignees   []string // logins
 	URL         string
 	UpdatedAt   time.Time
+	// Deadline é a data de entrega do item, para quem a tem (Caps.Deadline); zero é sem data.
+	Deadline time.Time
+	// CreatedAt é quando o item nasceu na plataforma, para quem o informa; zero é desconhecido.
+	CreatedAt time.Time
 	// PullRequest marca o número que é de um pull request. A lista nunca traz um; a leitura de um
 	// número só o traz se o número for de um.
 	PullRequest bool
@@ -150,6 +183,8 @@ type IssuePatch struct {
 	StateReason *string
 	Labels      *[]string
 	Assignees   *[]string
+	// Deadline muda a data de entrega; apontar para o tempo zero a tira.
+	Deadline *time.Time
 }
 
 // NewIssue é o que se manda para criar uma issue.
@@ -157,7 +192,8 @@ type NewIssue struct {
 	Title     string
 	Body      string
 	Labels    []string
-	Assignees []string // logins
+	Assignees []string  // logins
+	Deadline  time.Time // zero é sem data
 }
 
 // IssueSyncer é a capacidade opcional de um tipo que sabe ler e escrever as issues do repositório
@@ -167,11 +203,11 @@ type IssueSyncer interface {
 	Repo(ctx context.Context, conn Connection) (*IssueRepo, error)
 	// ListIssues percorre todas as páginas. As issues que são pull requests ficam de fora.
 	ListIssues(ctx context.Context, conn Connection, opts ListIssuesOptions) (*IssueList, error)
-	// GetIssue devolve ErrIssueGone quando a issue foi apagada ou transferida.
-	GetIssue(ctx context.Context, conn Connection, number int) (*Issue, error)
+	// GetIssue devolve ErrIssueGone quando a issue foi apagada ou transferida. O id é o Issue.ID.
+	GetIssue(ctx context.Context, conn Connection, id string) (*Issue, error)
 	// UpdateIssue aplica a mudança e devolve a issue como ficou, que pode ser diferente do pedido:
 	// a plataforma descarta sem avisar o que o token não pode mudar.
-	UpdateIssue(ctx context.Context, conn Connection, number int, patch IssuePatch) (*Issue, error)
+	UpdateIssue(ctx context.Context, conn Connection, id string, patch IssuePatch) (*Issue, error)
 	// CreateIssue cria a issue e devolve como ela ficou, que pode ser diferente do pedido: quem não tem
 	// permissão de escrita no repositório tem as etiquetas e os responsáveis descartados sem aviso.
 	CreateIssue(ctx context.Context, conn Connection, issue NewIssue) (*Issue, error)
@@ -183,6 +219,44 @@ type IssueSyncer interface {
 	// FindLoginByEmail devolve o login do único usuário que publica este e-mail, ou vazio se não
 	// há nenhum ou há mais de um.
 	FindLoginByEmail(ctx context.Context, conn Connection, email string) (string, error)
+}
+
+// ItemNormalizer é a capacidade opcional de um tipo cujo id de item pode ser escrito de mais de um jeito
+// (o link do cartão no lugar do link curto): devolve a forma que o IssueSyncer usa em Issue.ID. Quem não
+// a tem tem o id comparado como foi guardado.
+type ItemNormalizer interface {
+	NormalizeItemID(raw string) string
+}
+
+// StopsSync diz se o erro acaba a rodada inteira, e não só o item: a plataforma recusou o token, o
+// repositório ou o quadro não existe mais (ou o token não o enxerga), ela está fora do ar ou mandou
+// parar de pedir, ou a rodada foi cancelada.
+func StopsSync(err error) bool {
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return true
+	}
+	if _, limited := RateLimitedUntil(err); limited {
+		return true
+	}
+	for _, stop := range []*apperr.Error{
+		ErrInvalidToken, ErrProviderUnreachable, ErrGitHubRepoNotFound, ErrTrelloBoardMissing, ErrTrelloNoAccessBoard,
+	} {
+		if errors.Is(err, stop) {
+			return true
+		}
+	}
+	return false
+}
+
+// SummaryKey é a chave do campo que identifica a conexão (o repositório, o quadro): mudá-la com a
+// sincronização ligada trocaria o que está sendo sincronizado. Vazia se o tipo não tem um.
+func (d Descriptor) SummaryKey() string {
+	for _, f := range d.Metadata {
+		if f.Summary {
+			return f.Key
+		}
+	}
+	return ""
 }
 
 type Integration interface {

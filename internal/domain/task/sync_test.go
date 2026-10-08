@@ -243,3 +243,52 @@ func TestStore_FindOrCreateLabels(t *testing.T) {
 		}
 	}
 }
+
+// O prazo e a data de criação vindos da plataforma (o Trello tem as duas): a sincronização grava o prazo
+// sem avisar o gancho, e a tarefa importada nasce com a data em que o cartão nasceu.
+func TestStore_DeadlineAndCreationDateFromThePlatform(t *testing.T) {
+	f := newHookFixture(t)
+	pid := uuid.MustParse(f.project)
+	integ := uuid.MustParse(createIntegration(t, f.project))
+	due := time.Date(2026, 11, 3, 17, 30, 0, 0, time.UTC)
+	born := time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)
+
+	got, err := f.store.CreateImported(task.Imported{
+		ProjectID: pid, IntegrationID: integ, ItemID: "H0TZyzbK", Name: "Cartão", Deadline: due, CreatedAt: born,
+	})
+	if err != nil {
+		t.Fatalf("create imported: %v", err)
+	}
+	if !got.Deadline.Equal(due) || !got.CreatedAt.Equal(born) {
+		t.Errorf("imported task: deadline = %v, created_at = %v, want %v and %v", got.Deadline, got.CreatedAt, due, born)
+	}
+	// Sem as datas, a tarefa nasce agora e sem prazo, como a de uma issue.
+	plain, _ := f.store.CreateImported(task.Imported{ProjectID: pid, IntegrationID: integ, ItemID: "OutroQdr", Name: "Sem datas"})
+	if time.Since(plain.CreatedAt) > time.Minute || plain.Deadline.After(time.Date(1971, 1, 1, 0, 0, 0, 0, time.UTC)) {
+		t.Errorf("a task imported without dates: deadline = %v, created_at = %v", plain.Deadline, plain.CreatedAt)
+	}
+
+	f.took()
+	next := due.Add(48 * time.Hour)
+	if err := f.store.ApplyRemote(got.ID, task.RemotePatch{Deadline: &next}); err != nil || f.took() != 0 {
+		t.Fatalf("apply deadline: err = %v; it must not tell the hook", err)
+	}
+	if after, _ := f.store.GetByID(got.ID.String()); !after.Deadline.Equal(next) || after.Name != "Cartão" {
+		t.Errorf("after applying a deadline: %+v", after)
+	}
+	// O tempo zero tira o prazo; sem Deadline no patch ele não é tocado.
+	other := "Outro nome"
+	if err := f.store.ApplyRemote(got.ID, task.RemotePatch{Name: &other}); err != nil {
+		t.Fatalf("apply name: %v", err)
+	}
+	if after, _ := f.store.GetByID(got.ID.String()); !after.Deadline.Equal(next) {
+		t.Errorf("a patch without a deadline changed it to %v", after.Deadline)
+	}
+	var cleared time.Time
+	if err := f.store.ApplyRemote(got.ID, task.RemotePatch{Deadline: &cleared}); err != nil {
+		t.Fatalf("clear deadline: %v", err)
+	}
+	if after, _ := f.store.GetByID(got.ID.String()); after.Deadline.After(time.Date(1971, 1, 1, 0, 0, 0, 0, time.UTC)) {
+		t.Errorf("the zero time must leave the task with no deadline, got %v", after.Deadline)
+	}
+}

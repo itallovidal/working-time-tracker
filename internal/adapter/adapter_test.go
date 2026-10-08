@@ -1,6 +1,8 @@
 package adapter
 
 import (
+	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -353,5 +355,47 @@ func TestTrello_FetchItemDetails(t *testing.T) {
 				t.Errorf("board %q, item %q: error = %v, want one containing %q", board, tc.item, err, tc.wantErr)
 			}
 		}
+	}
+}
+
+func TestStopsSync(t *testing.T) {
+	stops := []error{
+		context.Canceled, context.DeadlineExceeded,
+		ErrInvalidToken.With("provider", "GitHub"), ErrProviderUnreachable.With("provider", "Trello"),
+		ErrGitHubRepoNotFound, ErrTrelloBoardMissing, ErrTrelloNoAccessBoard,
+		ErrRateLimited.With("provider", "Trello", "until", int64(0)),
+	}
+	for _, err := range stops {
+		if !StopsSync(err) {
+			t.Errorf("StopsSync(%v) = false, want true", err)
+		}
+	}
+	keeps := []error{nil, ErrIssueGone, ErrForbidden, ErrListTooLong, ErrProviderStatus.With("provider", "GitHub", "status", 422), errors.New("boom")}
+	for _, err := range keeps {
+		if StopsSync(err) {
+			t.Errorf("StopsSync(%v) = true, want false", err)
+		}
+	}
+}
+
+func TestDescriptor_SummaryKey(t *testing.T) {
+	for typ, want := range map[string]string{"github": "repo", "trello": "board_id"} {
+		impl, err := GetIntegration(typ)
+		if err != nil {
+			t.Fatalf("get %s: %v", typ, err)
+		}
+		if got := impl.Descriptor().SummaryKey(); got != want {
+			t.Errorf("%s summary key = %q, want %q", typ, got, want)
+		}
+	}
+	if got := (Descriptor{Metadata: []Field{{Key: "x"}}}).SummaryKey(); got != "" {
+		t.Errorf("a type with no summary field has key %q, want none", got)
+	}
+}
+
+func TestGitHubDescriptor_SyncCaps(t *testing.T) {
+	caps := githubDescriptor.Caps
+	if !caps.Assignee || !caps.ServerSince || caps.Deadline || caps.AutoPublish {
+		t.Errorf("github caps = %+v, want assignee and server-side since only", caps)
 	}
 }

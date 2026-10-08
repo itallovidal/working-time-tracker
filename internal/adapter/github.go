@@ -14,10 +14,12 @@ var githubDescriptor = Descriptor{
 	Type:  "github",
 	Label: "GitHub",
 	Metadata: []Field{
-		{Key: "repo", Required: true, Summary: true},
+		{Key: "repo", Required: true, Summary: true, Picker: "datalist"},
 	},
 	ItemNumeric: true,
 	Sync:        true,
+	// O GitHub liga o responsável pelo e-mail público e filtra a listagem pelo instante da última mudança.
+	Caps: SyncCaps{Assignee: true, ServerSince: true},
 	// O acesso vem da autorização no GitHub (github_oauth.go), sem token colado.
 	Auth: AuthOAuth,
 }

@@ -32,6 +32,10 @@ func (s *Store) Create(t *Task) error {
 		AddLabelIDs(labelIDs(t.Labels)...).
 		SetNillableAssigneeID(t.AssigneeID).
 		SetDeadline(t.Deadline)
+	// A tarefa importada nasce com a data de criação do item, e não com a de agora.
+	if !t.CreatedAt.IsZero() {
+		q = q.SetCreatedAt(t.CreatedAt)
+	}
 	if t.ExternalIntegrationID != nil {
 		q = q.SetExternalIntegrationID(*t.ExternalIntegrationID)
 	}
