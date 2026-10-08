@@ -661,6 +661,7 @@ task_detail:
   refresh_title: Fetches the item's details again
   sync_nothing: "All the same: the task and the item already matched."
   sync_problem: "The sync left a warning: {{.message}}"
+  sync_stopped: "The sync with {{.provider}} is stopped ({{.message}}). Whatever you change here is kept and goes there once it is back."
 
 time:
   no_rate: You don't have an hourly rate on this project yet, so the clock is blocked.

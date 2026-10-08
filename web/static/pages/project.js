@@ -359,6 +359,14 @@ document.addEventListener('alpine:init', () => {
   // os campos do metadata e os rótulos. Um tipo novo lá aparece aqui sem mudança.
   const integrationTypes = WTT.boot.integration_types || [];
   const integrationType = (type) => integrationTypes.find((t) => t.type === type);
+  // Os códigos que param a sincronização de uma integração inteira (o token recusado, o limite de requisições, a plataforma
+  // fora do ar, o repositório ou o quadro que sumiu). Enquanto o último resultado da integração é um deles, o que se muda
+  // aqui espera, guardado, até ela voltar.
+  const syncStopped = new Set([
+    'integration.invalid_token', 'integration.rate_limited', 'integration.provider_unreachable',
+    'integration.github_repo_not_found', 'integration.trello_no_access_board', 'integration.trello_board_not_found',
+  ]);
+
   // linkLabel descreve um item vinculado: "GitHub #42", "Trello H0TZyzbK".
   function linkLabel(link) {
     const type = link.integration ? link.integration.type : '';
@@ -1107,7 +1115,13 @@ document.addEventListener('alpine:init', () => {
           await this.loadExternal(link.id);
           return;
         }
-        const sum = await api('POST', '/api/tasks/' + this.taskId + '/sync?integration_id=' + link.id);
+        let sum;
+        try {
+          sum = await api('POST', '/api/tasks/' + this.taskId + '/sync?integration_id=' + link.id);
+        } finally {
+          // Dando certo ou não, o estado da integração mudou (a espera acabou, ou o motivo da parada apareceu).
+          await this.reloadIntegrations();
+        }
         const [task] = await Promise.all([api('GET', '/api/tasks/' + this.taskId), this.loadLabels()]);
         this.setTask(task);
         if (sum.problem) {
@@ -1191,6 +1205,12 @@ document.addEventListener('alpine:init', () => {
         const read = this.external[l.integration_id];
         const warning = this.syncProblems[l.integration_id]
           || (l.last_error ? WTT.t('task_detail.sync_problem', { message: WTT.errorText({ code: l.last_error, params: { provider: known ? known.label : '' } }) }) : '');
+        // A integração parada explica por que uma edição daqui não chegou lá: ela espera, guardada.
+        const it = this.integrations.find((i) => i.id === l.integration_id);
+        const provider = known ? known.label : ((link && link.type) || '');
+        const stopped = it && syncStopped.has(it.last_sync_error)
+          ? WTT.t('task_detail.sync_stopped', { provider, message: WTT.errorText({ code: it.last_sync_error, params: { provider } }) })
+          : '';
         return {
           id: l.integration_id,
           type: link ? link.type : '',
@@ -1199,8 +1219,18 @@ document.addEventListener('alpine:init', () => {
           item: (known && known.item_numeric ? '#' : '') + l.item_id,
           url: (read && read.details && read.details.url) || l.url || '',
           warning,
+          stopped,
         };
       });
+    },
+    // reloadIntegrations relê as integrações do projeto: o estado delas (a sincronização parada) muda sem a página saber.
+    async reloadIntegrations() {
+      try {
+        const list = (await api('GET', '/api/projects/' + project.id + '/integrations')) || [];
+        this.integrations = list.filter((i) => i.enabled);
+      } catch (e) {
+        // Fica a lista de antes.
+      }
     },
     // linkable são as integrações ativas a que a tarefa ainda não está ligada: as que aceitam um vínculo à mão.
     linkable() {

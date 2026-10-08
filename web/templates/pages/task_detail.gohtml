@@ -168,6 +168,7 @@
               <p class="alert alert-warn" x-show="ext(link).error">
                 {{.T "task_detail.fetch_failed"}} <span x-text="ext(link).error"></span>
               </p>
+              <p class="alert alert-warn" x-cloak x-show="link.stopped" x-text="link.stopped"></p>
               <p class="alert alert-warn" x-cloak x-show="link.warning" x-text="link.warning"></p>
               <p class="form-error" x-cloak x-show="errors['sync:' + link.id]" x-text="errors['sync:' + link.id]" role="alert"></p>
             </div>

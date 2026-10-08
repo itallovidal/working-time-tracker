@@ -671,6 +671,7 @@ task_detail:
   refresh_title: Busca de novo os detalhes do item
   sync_nothing: "Tudo igual: a tarefa e o item já estavam em acordo."
   sync_problem: "A sincronização deixou um aviso: {{.message}}"
+  sync_stopped: "A sincronização com o {{.provider}} está parada ({{.message}}). O que você mudar aqui fica guardado e vai para ele quando ela voltar."
 
 time:
   no_rate: Você ainda não tem valor por hora neste projeto, então o ponto está bloqueado.
