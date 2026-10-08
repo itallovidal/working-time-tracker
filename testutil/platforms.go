@@ -1,7 +1,6 @@
 package testutil
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -13,7 +12,7 @@ const InvalidToken = "invalid-token"
 // TrelloKey é a única chave de API que o Trello fake aceita.
 const TrelloKey = "0123456789abcdef0123456789abcdef"
 
-// O app OAuth e a conta que o GitHub fake conhece, e o token em que cada código de
+// O app OAuth e a conta que o GitHub fake (github.go) conhece, e o token em que cada código de
 // retorno se troca. O segundo código existe para os testes de reconexão: o token novo lista
 // outros repositórios, e é assim que se vê que ele substituiu o antigo.
 const (
@@ -31,65 +30,6 @@ const (
 	TrelloBoardID        = "5abbe4b7ddc1b351ef961414"
 	TrelloBoardShortLink = "AbC123xy"
 )
-
-// FakeGitHub imita o que o adapter e a conexão OAuth pedem ao GitHub: validar o
-// repositório, buscar uma issue, trocar o código de retorno por um token, dizer quem é o
-// dono do token e listar os repositórios dele. Conhece os repositórios owner/repo e
-// owner/other e a issue 42 do primeiro. Serve o site (login/oauth) e a API no mesmo
-// endereço.
-func FakeGitHub() http.Handler {
-	mux := http.NewServeMux()
-	auth := func(next http.HandlerFunc) http.HandlerFunc {
-		return func(w http.ResponseWriter, r *http.Request) {
-			if r.Header.Get("Authorization") == "Bearer "+InvalidToken {
-				http.Error(w, `{"message":"Bad credentials"}`, http.StatusUnauthorized)
-				return
-			}
-			next(w, r)
-		}
-	}
-	mux.HandleFunc("GET /repos/owner/repo", auth(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`{"full_name":"owner/repo"}`))
-	}))
-	mux.HandleFunc("GET /repos/owner/other", auth(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`{"full_name":"owner/other"}`))
-	}))
-	mux.HandleFunc("GET /repos/owner/repo/issues/42", auth(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`{"title":"Corrigir login","state":"open","html_url":"https://github.com/owner/repo/issues/42"}`))
-	}))
-
-	// A volta do OAuth: o GitHub responde 200 também quando recusa, com o motivo em error.
-	mux.HandleFunc("POST /login/oauth/access_token", func(w http.ResponseWriter, r *http.Request) {
-		var body struct {
-			ClientID     string `json:"client_id"`
-			ClientSecret string `json:"client_secret"`
-			Code         string `json:"code"`
-		}
-		json.NewDecoder(r.Body).Decode(&body)
-		w.Header().Set("Content-Type", "application/json")
-		switch {
-		case body.ClientID != GitHubClientID || body.ClientSecret != GitHubClientSecret:
-			w.Write([]byte(`{"error":"incorrect_client_credentials"}`))
-		case body.Code == GitHubOAuthCode:
-			fmt.Fprintf(w, `{"access_token":%q,"token_type":"bearer","scope":"repo"}`, GitHubOAuthToken)
-		case body.Code == GitHubSecondOAuthCode:
-			fmt.Fprintf(w, `{"access_token":%q,"token_type":"bearer","scope":"repo"}`, GitHubSecondOAuthToken)
-		default:
-			w.Write([]byte(`{"error":"bad_verification_code"}`))
-		}
-	})
-	mux.HandleFunc("GET /user", auth(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, `{"login":%q}`, GitHubLogin)
-	}))
-	mux.HandleFunc("GET /user/repos", auth(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("Authorization") == "Bearer "+GitHubSecondOAuthToken {
-			w.Write([]byte(`[{"full_name":"owner/second","private":false}]`))
-			return
-		}
-		w.Write([]byte(`[{"full_name":"owner/repo","private":true},{"full_name":"owner/other","private":false}]`))
-	}))
-	return mux
-}
 
 // FakeGitLab conhece o projeto group/project e a issue 7 dele. O adapter manda o
 // caminho do projeto escapado num segmento só, como a API do GitLab pede.

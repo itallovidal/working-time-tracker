@@ -20,6 +20,8 @@ import (
 // pacote garante que os testes rodam sobre o que os arquivos de migração produzem
 // hoje, e não sobre o que sobrou de uma execução anterior.
 func Setup() (*ent.Client, *sql.DB) {
+	// Nenhum teste fala com a internet: o GitHub, o GitLab e o Trello de verdade ficam fora do alcance.
+	BlockExternalHTTP()
 	dsn := os.Getenv("TEST_DATABASE_URL")
 	if dsn == "" {
 		dsn = "postgres://localhost:5432/working_time_tracker_test?sslmode=disable"
