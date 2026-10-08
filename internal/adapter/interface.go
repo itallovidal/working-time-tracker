@@ -1,8 +1,11 @@
 package adapter
 
 import (
+	"context"
 	"regexp"
 	"strings"
+	"time"
+
 	"working-time-tracker/internal/apperr"
 )
 
@@ -91,6 +94,81 @@ type RepositoryLister interface {
 // OAuth a usa para conferir o token recém-obtido e para nomear a integração.
 type AccountLookup interface {
 	Account(conn Connection) (login string, err error)
+}
+
+// IssueRepo é o repositório como a sincronização de issues o enxerga.
+type IssueRepo struct {
+	FullName string
+	Archived bool
+	// CanPush diz se o token escreve nas issues. Sem isso a sincronização só traz as issues para cá.
+	CanPush bool
+}
+
+// Issue é uma issue da plataforma, no que a sincronização usa dela.
+type Issue struct {
+	Number      int
+	Title       string
+	Body        string
+	State       string // "open" ou "closed"
+	StateReason string // "completed", "not_planned", "reopened" ou vazio
+	Labels      []string
+	Assignees   []string // logins
+	URL         string
+	UpdatedAt   time.Time
+	// PullRequest marca o número que é de um pull request. A lista nunca traz um; a leitura de um
+	// número só o traz se o número for de um.
+	PullRequest bool
+}
+
+// ListIssuesOptions diz quais issues listar.
+type ListIssuesOptions struct {
+	State string // "open" (padrão) ou "all"
+	// Since limita às issues mexidas depois deste instante; zero é sem limite.
+	Since time.Time
+	// ByUpdated ordena pelas mexidas há mais tempo primeiro; senão, pelas mais antigas primeiro.
+	ByUpdated bool
+}
+
+// IssueList é o resultado de uma listagem. Quando ela para no meio (limite de requisições, erro de
+// rede), o erro vem junto com as issues que já tinham chegado.
+type IssueList struct {
+	Issues []Issue
+	// ServerTime é o relógio da plataforma quando a listagem começou: o ponto de onde a próxima
+	// rodada incremental pode continuar sem perder o que mudou durante esta.
+	ServerTime time.Time
+}
+
+// IssuePatch é a mudança numa issue; um campo nulo fica como está. Labels e Assignees substituem o
+// conjunto inteiro, como a plataforma faz.
+type IssuePatch struct {
+	Title       *string
+	Body        *string
+	State       *string
+	StateReason *string
+	Labels      *[]string
+	Assignees   *[]string
+}
+
+// IssueSyncer é a capacidade opcional de um tipo que sabe ler e escrever as issues do repositório
+// da integração, para a sincronização com as tarefas. Todos os métodos aceitam o contexto, porque a
+// rodada é de longa duração e pode ser cancelada.
+type IssueSyncer interface {
+	Repo(ctx context.Context, conn Connection) (*IssueRepo, error)
+	// ListIssues percorre todas as páginas. As issues que são pull requests ficam de fora.
+	ListIssues(ctx context.Context, conn Connection, opts ListIssuesOptions) (*IssueList, error)
+	// GetIssue devolve ErrIssueGone quando a issue foi apagada ou transferida.
+	GetIssue(ctx context.Context, conn Connection, number int) (*Issue, error)
+	// UpdateIssue aplica a mudança e devolve a issue como ficou, que pode ser diferente do pedido:
+	// a plataforma descarta sem avisar o que o token não pode mudar.
+	UpdateIssue(ctx context.Context, conn Connection, number int, patch IssuePatch) (*Issue, error)
+	ListLabels(ctx context.Context, conn Connection) ([]string, error)
+	// CreateLabel cria a etiqueta; uma que já existe não é erro.
+	CreateLabel(ctx context.Context, conn Connection, name string) error
+	// UserEmail devolve o e-mail público do usuário, ou vazio se ele não publica um (ou não existe).
+	UserEmail(ctx context.Context, conn Connection, login string) (string, error)
+	// FindLoginByEmail devolve o login do único usuário que publica este e-mail, ou vazio se não
+	// há nenhum ou há mais de um.
+	FindLoginByEmail(ctx context.Context, conn Connection, email string) (string, error)
 }
 
 type Integration interface {

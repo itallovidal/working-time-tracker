@@ -21,6 +21,16 @@ var (
 	ErrFieldNotText        = apperr.New("integration.field_not_text", http.StatusBadRequest, "field", "provider")
 	ErrInvalidIssueNumber  = apperr.New("integration.invalid_issue_number", http.StatusBadRequest)
 
+	// ErrIssueGone é a issue que a plataforma não tem mais (apagada) ou que mudou de repositório.
+	ErrIssueGone = apperr.New("integration.issue_gone", http.StatusNotFound, "item")
+	// ErrRateLimited é o limite de requisições da plataforma; "until" é o instante (segundos Unix) em
+	// que ele acaba, quando a plataforma o informa.
+	ErrRateLimited = apperr.New("integration.rate_limited", http.StatusTooManyRequests, "provider")
+	// ErrForbidden é o token sem permissão para o que se pediu.
+	ErrForbidden = apperr.New("integration.forbidden", http.StatusForbidden, "provider")
+	// ErrListTooLong é a listagem que passou do teto de páginas.
+	ErrListTooLong = apperr.New("integration.list_too_long", http.StatusBadRequest, "provider")
+
 	ErrGitHubInvalidRepo  = apperr.New("integration.github_invalid_repo", http.StatusBadRequest)
 	ErrGitHubRepoNotFound = apperr.New("integration.github_repo_not_found", http.StatusBadRequest)
 

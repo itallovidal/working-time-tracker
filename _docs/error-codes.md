@@ -101,6 +101,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `integration.disabled` | 400 | — | `a integração está desativada` | `the integration is disabled` |
 | `integration.field_not_text` | 400 | `field`, `provider` | `o campo "{{.field}}" do {{.provider}} precisa ser um texto` | `the "{{.field}}" field of {{.provider}} must be text` |
 | `integration.field_required` | 400 | `field`, `provider` | `informe o campo "{{.field}}" do {{.provider}}` | `enter the "{{.field}}" field of {{.provider}}` |
+| `integration.forbidden` | 403 | `provider` | `o token do {{.provider}} não tem permissão para isso` | `the {{.provider}} token has no permission for that` |
 | `integration.github_invalid_repo` | 400 | — | `repositório do GitHub inválido: use dono/repositorio` | `invalid GitHub repository: use owner/repository` |
 | `integration.github_oauth_denied` | 400 | — | `a autorização no GitHub foi cancelada` | `the authorization on GitHub was cancelled` |
 | `integration.github_oauth_exchange` | 400 | — | `o GitHub não aceitou a autorização: tente conectar de novo` | `GitHub did not accept the authorization: try connecting again` |
@@ -112,7 +113,9 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `integration.gitlab_project_not_found` | 400 | — | `projeto do GitLab não encontrado ou o token não tem acesso a ele` | `GitLab project not found, or the token has no access to it` |
 | `integration.invalid_issue_number` | 400 | — | `o número da issue precisa ter só dígitos` | `the issue number must contain only digits` |
 | `integration.invalid_token` | 400 | `provider` | `token do {{.provider}} inválido` | `invalid {{.provider}} token` |
+| `integration.issue_gone` | 404 | `item` | `a issue {{.item}} não existe mais ou mudou de repositório` | `issue {{.item}} no longer exists or moved to another repository` |
 | `integration.item_not_found` | 400 | `item` | `item {{.item}} não encontrado` | `item {{.item}} not found` |
+| `integration.list_too_long` | 400 | `provider` | `o {{.provider}} tem itens demais para listar de uma vez` | `{{.provider}} has too many items to list at once` |
 | `integration.name_required` | 400 | — | `informe o nome da integração` | `enter the integration name` |
 | `integration.no_credential` | 400 | — | `a integração está sem credencial: edite-a e conecte de novo` | `the integration has no credential: edit it and connect again` |
 | `integration.no_repositories` | 400 | — | `esta integração não lista repositórios` | `this integration does not list repositories` |
@@ -120,6 +123,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `integration.not_found` | 404 | — | `integração não encontrada` | `integration not found` |
 | `integration.provider_status` | 400 | `provider`, `status` | `o {{.provider}} respondeu com status {{.status}}` | `{{.provider}} responded with status {{.status}}` |
 | `integration.provider_unreachable` | 400 | `provider` | `não foi possível falar com o {{.provider}}` | `could not reach {{.provider}}` |
+| `integration.rate_limited` | 429 | `provider` | `o {{.provider}} limitou as requisições: tente de novo mais tarde` | `{{.provider}} limited the requests: try again later` |
 | `integration.token_required` | 400 | `provider` | `informe o token do {{.provider}}` | `enter the {{.provider}} token` |
 | `integration.trello_board_not_found` | 400 | — | `quadro do Trello não encontrado` | `Trello board not found` |
 | `integration.trello_card_other_board` | 400 | `card` | `o cartão {{.card}} é de outro quadro` | `card {{.card}} belongs to another board` |
