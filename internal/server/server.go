@@ -16,6 +16,7 @@ import (
 	"working-time-tracker/internal/domain/collaborator"
 	"working-time-tracker/internal/domain/customer"
 	"working-time-tracker/internal/domain/integration"
+	"working-time-tracker/internal/domain/issuesync"
 	"working-time-tracker/internal/domain/organization"
 	"working-time-tracker/internal/domain/overview"
 	"working-time-tracker/internal/domain/permission"
@@ -40,11 +41,33 @@ type Options struct {
 	// GitHubOAuth é o app OAuth do GitHub deste servidor. Nulo ou sem credenciais, o botão
 	// Conectar com o GitHub avisa que não está configurado.
 	GitHubOAuth *adapter.GitHubOAuth
+	// Sync são os ajustes da sincronização das issues. O valor zero serve: sem Interval a rotina de
+	// fundo não olha o GitHub (só o botão e o gancho das tarefas).
+	Sync issuesync.Config
+}
+
+// App é o servidor montado e a sincronização das issues, que anda ao lado dele: quem sobe o servidor
+// também chama Sync.Run, e espera por ele antes de fechar o banco.
+type App struct {
+	Echo *echo.Echo
+	Sync *issuesync.Syncer
 }
 
 // New monta o servidor HTTP completo (stores, services, handlers, middlewares e rotas).
-// É usado pelo cmd/main.go e pelos testes que precisam exercitar o router real.
+// É usado pelos testes que precisam exercitar o router real; o cmd/main.go usa Build, que também
+// devolve a sincronização das issues.
 func New(client *ent.Client, opts Options) (*echo.Echo, error) {
+	app, err := Build(client, opts)
+	if err != nil {
+		return nil, err
+	}
+	return app.Echo, nil
+}
+
+// Build monta o servidor HTTP completo e a sincronização das issues, e liga uma à outra: toda tarefa
+// que muda por dentro do sistema avisa a sincronização (que só anota; quem fala com o GitHub é o
+// Sync.Run ou, nos testes, o Sync.Flush).
+func Build(client *ent.Client, opts Options) (*App, error) {
 	// Stores
 	orgStore := organization.NewStore(client)
 	customerStore := customer.NewStore(client)
@@ -81,6 +104,16 @@ func New(client *ent.Client, opts Options) (*echo.Echo, error) {
 	})
 	authSvc := auth.NewService(authStore)
 
+	e := echo.New()
+	if opts.Sync.Logger == nil {
+		opts.Sync.Logger = e.Logger
+	}
+	syncer := issuesync.New(issuesync.Deps{
+		Integrations: integrationSvc, Tasks: taskStore, People: personStore,
+		Members: membershipStore, Rows: issuesync.NewStore(client),
+	}, opts.Sync)
+	taskStore.SetChangeHook(syncer.Notify)
+
 	handlers := routes.Handlers{
 		Auth:         auth.NewHandler(authSvc, opts.CookieSecure),
 		Organization: organization.NewHandler(orgSvc),
@@ -95,6 +128,7 @@ func New(client *ent.Client, opts Options) (*echo.Echo, error) {
 		Task:         task.NewHandler(taskSvc),
 		WorkSession:  work_session.NewHandler(workSessionSvc),
 		Integration:  integration.NewHandler(integrationSvc),
+		Sync:         issuesync.NewHandler(syncer),
 	}
 	resolver := auth.NewResolver(client)
 	authMW := auth.NewMiddleware(authSvc, resolver, opts.CookieSecure)
@@ -114,7 +148,6 @@ func New(client *ent.Client, opts Options) (*echo.Echo, error) {
 		return nil, err
 	}
 
-	e := echo.New()
 	e.Renderer = renderer
 	e.HTTPErrorHandler = errorHandler(pages)
 
@@ -147,7 +180,7 @@ func New(client *ent.Client, opts Options) (*echo.Echo, error) {
 	routes.RegisterRoutes(e, handlers, authMW, authRateLimiter(opts.AuthRateLimit))
 	routes.RegisterPages(e, pages, authMW, oauthHandler)
 
-	return e, nil
+	return &App{Echo: e, Sync: syncer}, nil
 }
 
 func authRateLimiter(perSecond float64) echo.MiddlewareFunc {

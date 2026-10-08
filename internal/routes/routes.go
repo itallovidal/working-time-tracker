@@ -8,6 +8,7 @@ import (
 	"working-time-tracker/internal/domain/collaborator"
 	"working-time-tracker/internal/domain/customer"
 	"working-time-tracker/internal/domain/integration"
+	"working-time-tracker/internal/domain/issuesync"
 	"working-time-tracker/internal/domain/organization"
 	"working-time-tracker/internal/domain/overview"
 	"working-time-tracker/internal/domain/permission"
@@ -32,6 +33,8 @@ type Handlers struct {
 	Task         *task.Handler
 	WorkSession  *work_session.Handler
 	Integration  *integration.Handler
+	// Sync é o botão Sincronizar agora das issues de uma integração.
+	Sync *issuesync.Handler
 }
 
 // RegisterRoutes monta a API JSON. Tudo fora de /api/auth exige login, e cada
@@ -153,6 +156,8 @@ func RegisterRoutes(e *echo.Echo, h Handlers, m *auth.Middleware, authLimiter ec
 	r.GET("/integrations/:integrationId", h.Integration.Get, integ)
 	// O que a conexão enxerga (os repositórios do GitHub), para a pessoa escolher em vez de digitar.
 	r.GET("/integrations/:integrationId/repositories", h.Integration.Repositories, integ, can(permission.IntegrationsManage))
+	// Uma rodada completa de sincronização das issues com as tarefas, na hora.
+	r.POST("/integrations/:integrationId/sync", h.Sync.Sync, integ, can(permission.IntegrationsManage))
 	r.PATCH("/integrations/:integrationId", h.Integration.Update, integ, can(permission.IntegrationsManage))
 	r.DELETE("/integrations/:integrationId", h.Integration.Delete, integ, can(permission.IntegrationsManage))
 

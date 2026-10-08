@@ -1076,7 +1076,9 @@ errors:
     rate_limited: "o {{.provider}} limitou as requisições: tente de novo mais tarde"
     sync_needs_enabled: "ative a integração antes de ligar a sincronização das issues"
     sync_needs_repo: "escolha o repositório antes de ligar a sincronização das issues"
+    sync_off: "a sincronização das issues está desligada nesta integração"
     sync_repo_locked: "com a sincronização das issues ligada o repositório não muda: desligue a sincronização, troque o repositório e ligue de novo"
+    sync_running: "já há uma sincronização em andamento nesta integração"
     sync_unsupported: "o {{.provider}} não tem sincronização de issues"
     token_required: "informe o token do {{.provider}}"
     trello_board_not_found: "quadro do Trello não encontrado"
@@ -1093,6 +1095,12 @@ errors:
     unsupported_type: "tipo de integração não suportado: {{.type}}"
   internal:
     server_error: "erro interno, tente de novo"
+  issue_sync:
+    label_refused: "o token do GitHub não pode criar etiquetas neste repositório: a etiqueta nova fica só aqui"
+    no_login: "não achei o usuário do GitHub de quem é responsável aqui: ele precisa ter o e-mail público no perfil do GitHub"
+    push_discarded: "o GitHub ignorou uma mudança desta issue (o token pode não ter permissão de escrita): ela fica só aqui"
+    push_rejected: "o GitHub recusou uma mudança desta issue: ela fica só aqui"
+    read_only: "o token não escreve neste repositório: as issues só vêm para cá, e as mudanças daqui não vão para o GitHub"
   label:
     name_required: "informe o nome da etiqueta"
     name_taken: "o projeto já tem uma etiqueta com este nome"

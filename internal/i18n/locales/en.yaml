@@ -1066,7 +1066,9 @@ errors:
     rate_limited: "{{.provider}} limited the requests: try again later"
     sync_needs_enabled: "enable the integration before turning the issue sync on"
     sync_needs_repo: "pick the repository before turning the issue sync on"
+    sync_off: "the issue sync is off on this integration"
     sync_repo_locked: "with the issue sync on the repository cannot change: turn the sync off, change the repository and turn it on again"
+    sync_running: "a sync is already running on this integration"
     sync_unsupported: "{{.provider}} has no issue sync"
     token_required: "enter the {{.provider}} token"
     trello_board_not_found: "Trello board not found"
@@ -1083,6 +1085,12 @@ errors:
     unsupported_type: "integration type not supported: {{.type}}"
   internal:
     server_error: "internal error, please try again"
+  issue_sync:
+    label_refused: "the GitHub token cannot create labels in this repository: the new label stays here only"
+    no_login: "could not find the GitHub user of the person assigned here: they need a public email on their GitHub profile"
+    push_discarded: "GitHub ignored a change to this issue (the token may lack write permission): it stays here only"
+    push_rejected: "GitHub refused a change to this issue: it stays here only"
+    read_only: "the token cannot write to this repository: issues only come here, and changes made here do not go to GitHub"
   label:
     name_required: "enter the label name"
     name_taken: "the project already has a label with this name"

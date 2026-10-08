@@ -1,0 +1,38 @@
+package issuesync
+
+import (
+	"errors"
+
+	"github.com/google/uuid"
+	"github.com/labstack/echo/v5"
+
+	"working-time-tracker/internal/apperr"
+	"working-time-tracker/internal/database"
+)
+
+type Handler struct {
+	syncer *Syncer
+}
+
+func NewHandler(syncer *Syncer) *Handler { return &Handler{syncer: syncer} }
+
+// Sync é o botão Sincronizar agora: faz uma rodada completa e responde o que ela fez. Com outra rodada
+// em andamento na mesma integração, responde 409 em vez de esperar.
+func (h *Handler) Sync(c *echo.Context) error {
+	sum, err := h.syncer.SyncNow(c.Request().Context(), parseID(c.Param("integrationId")))
+	switch {
+	case err == nil:
+		return c.JSON(200, sum)
+	case errors.Is(err, ErrSyncRunning):
+		return apperr.Respond(c, 409, err)
+	case errors.Is(err, database.ErrNotFound):
+		return apperr.Respond(c, 404, err)
+	}
+	return apperr.Respond(c, 400, err)
+}
+
+// parseID lê o id da rota; um id que não é um UUID não é de nenhuma integração.
+func parseID(raw string) uuid.UUID {
+	id, _ := uuid.Parse(raw)
+	return id
+}
