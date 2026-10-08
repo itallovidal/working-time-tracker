@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -34,6 +35,15 @@ type Config struct {
 	TrelloURL     string
 	TrelloAPIURL  string
 
+	// O Clerk, para entrar e para convidar por e-mail (CLERK_SECRET_KEY e CLERK_PUBLISHABLE_KEY, do app no
+	// painel do Clerk). Opcional: sem as duas chaves o login é só por e-mail e senha e o convite é só o link.
+	// ClerkAPIURL só se muda para apontar para um servidor fake. ClerkAuthorizedParties são as origens
+	// (esquema, endereço e porta) cujas sessões do Clerk o servidor aceita; vazio vale a origem do PUBLIC_URL.
+	ClerkSecretKey         string
+	ClerkPublishableKey    string
+	ClerkAPIURL            string
+	ClerkAuthorizedParties []string
+
 	// SyncInterval é de quanto em quanto tempo o servidor olha as integrações com a sincronização ligada
 	// (as issues do GitHub, os cartões do Trello). Zero desliga a rotina (o botão e o gancho das tarefas
 	// seguem valendo). SyncIntervals tem, por plataforma ("github", "trello"), o intervalo próprio de quem o
@@ -62,6 +72,54 @@ func parseInterval(name string) (d time.Duration, set bool, err error) {
 	return d, true, nil
 }
 
+// ClerkEnabled diz se o servidor tem as duas chaves do Clerk. Sem elas o login e o convite seguem como eram.
+func (c *Config) ClerkEnabled() bool {
+	return c.ClerkSecretKey != "" && c.ClerkPublishableKey != ""
+}
+
+// loadClerk confere o que veio do ambiente sobre o Clerk e completa os padrões. Um engano aqui derruba a
+// subida: melhor que rodar com um login que ninguém configurou direito.
+func (c *Config) loadClerk() error {
+	if (c.ClerkSecretKey == "") != (c.ClerkPublishableKey == "") {
+		return fmt.Errorf("CLERK_SECRET_KEY and CLERK_PUBLISHABLE_KEY must be set together")
+	}
+	if !c.ClerkEnabled() {
+		return nil
+	}
+	if !strings.HasPrefix(c.ClerkSecretKey, "sk_") {
+		return fmt.Errorf("CLERK_SECRET_KEY must be the secret key of the app (it starts with sk_)")
+	}
+	if !strings.HasPrefix(c.ClerkPublishableKey, "pk_") {
+		return fmt.Errorf("CLERK_PUBLISHABLE_KEY must be the publishable key of the app (it starts with pk_)")
+	}
+	// O Clerk volta para o endereço do sistema e o convite leva o link dele: sem PUBLIC_URL não há como montá-los.
+	if c.PublicURL == "" {
+		return fmt.Errorf("PUBLIC_URL is required when the Clerk keys are set")
+	}
+	origin, err := originOf(c.PublicURL)
+	if err != nil {
+		return fmt.Errorf("PUBLIC_URL: %w", err)
+	}
+	for raw := range strings.SplitSeq(os.Getenv("CLERK_AUTHORIZED_PARTIES"), ",") {
+		if raw = strings.TrimRight(strings.TrimSpace(raw), "/"); raw != "" {
+			c.ClerkAuthorizedParties = append(c.ClerkAuthorizedParties, raw)
+		}
+	}
+	if len(c.ClerkAuthorizedParties) == 0 {
+		c.ClerkAuthorizedParties = []string{origin}
+	}
+	return nil
+}
+
+// originOf é a origem de um endereço: esquema, nome e porta, sem caminho.
+func originOf(raw string) (string, error) {
+	u, err := url.Parse(raw)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+		return "", fmt.Errorf("%q is not an http(s) address", raw)
+	}
+	return u.Scheme + "://" + u.Host, nil
+}
+
 func Load() (*Config, error) {
 	godotenv.Load()
 
@@ -79,6 +137,12 @@ func Load() (*Config, error) {
 		TrelloAppName:         strings.TrimSpace(os.Getenv("TRELLO_APP_NAME")),
 		TrelloURL:             strings.TrimRight(strings.TrimSpace(os.Getenv("TRELLO_URL")), "/"),
 		TrelloAPIURL:          strings.TrimRight(strings.TrimSpace(os.Getenv("TRELLO_API_URL")), "/"),
+		ClerkSecretKey:        strings.TrimSpace(os.Getenv("CLERK_SECRET_KEY")),
+		ClerkPublishableKey:   strings.TrimSpace(os.Getenv("CLERK_PUBLISHABLE_KEY")),
+		ClerkAPIURL:           strings.TrimRight(strings.TrimSpace(os.Getenv("CLERK_API_URL")), "/"),
+	}
+	if err := cfg.loadClerk(); err != nil {
+		return nil, err
 	}
 	// A chave vai no cabeçalho das requisições ao Trello: uma que não é só letras e dígitos é um erro de
 	// quem configurou, e melhor aparecer na subida.

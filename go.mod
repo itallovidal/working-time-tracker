@@ -5,6 +5,8 @@ go 1.26.4
 require (
 	ariga.io/atlas v1.2.3
 	entgo.io/ent v0.14.6
+	github.com/clerk/clerk-sdk-go/v2 v2.7.0
+	github.com/go-jose/go-jose/v3 v3.0.4
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/joho/godotenv v1.5.1

@@ -24,6 +24,8 @@ func RegisterPages(e *echo.Echo, p *page.Handler, m *auth.Middleware, oauth *int
 	e.GET("/login", p.Login, m.RedirectIfAuthenticated)
 	e.GET("/signup", p.Signup, m.RedirectIfAuthenticated)
 	e.GET("/invite/:token", p.Invite, m.RedirectIfAuthenticated)
+	// Para onde o Clerk volta depois de entrar: a página troca o token dele por uma sessão daqui.
+	e.GET("/auth/clerk/continue", p.ClerkContinue, m.RedirectIfAuthenticated)
 
 	g := e.Group("", m.RequirePage)
 	g.GET("/", p.Home)

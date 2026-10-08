@@ -15,30 +15,45 @@
     </template>
 
     <template x-if="info">
-      <form class="stack" @submit.prevent="submit()">
+      <div class="stack">
         <div class="stack">
           <h1 x-text="$t('auth.invite.join', { name: info.organization_name })"></h1>
-          <p class="muted">{{.T "auth.invite.invited_as"}} <strong x-text="WTT.fmt.role(info.role)"></strong>. {{.T "auth.invite.create_to_accept"}}</p>
+          <p class="muted">{{.T "auth.invite.invited_as"}} <strong x-text="WTT.fmt.role(info.role)"></strong>. {{if .Props.clerk}}<span x-show="!showPassword">{{.T "auth.clerk.invite_to_accept"}}</span><span x-cloak x-show="showPassword">{{.T "auth.invite.create_to_accept"}}</span>{{else}}{{.T "auth.invite.create_to_accept"}}{{end}}</p>
         </div>
-        <div class="field">
-          <label for="invite-name">{{.T "auth.your_name"}}</label>
-          <input id="invite-name" type="text" autocomplete="name" required x-model="name">
+        {{- if .Props.clerk}}
+        <div class="stack" x-show="!showPassword">
+          <p class="muted" x-show="clerkLoading">{{.T "auth.clerk.loading"}}</p>
+          <div class="clerk-mount" x-ref="clerk"></div>
+          <p class="form-error" x-cloak x-show="errors.clerk" x-text="errors.clerk" role="alert"></p>
+          <button class="btn btn-ghost btn-block" type="button" x-cloak x-show="clerkMode === 'signUp'" @click="switchMode('signIn')">{{.T "auth.clerk.have_account"}}</button>
+          <button class="btn btn-ghost btn-block" type="button" x-cloak x-show="clerkMode === 'signIn'" @click="switchMode('signUp')">{{.T "auth.clerk.new_account"}}</button>
+          <button class="btn btn-ghost btn-block" type="button" x-cloak @click="showPassword = true">{{.T "auth.clerk.invite_with_password"}}</button>
         </div>
-        <div class="field">
-          <label for="invite-email">{{.T "common.email"}}</label>
-          <input id="invite-email" type="email" autocomplete="email" required x-model="email" :readonly="!!info.email">
-          <span class="hint" x-show="info.email">{{.T "auth.invite.email_only"}}</span>
-        </div>
-        <div class="field">
-          <label for="invite-password">{{.T "auth.password"}}</label>
-          <input id="invite-password" type="password" autocomplete="new-password" minlength="8" required x-model="password">
-          <span class="hint">{{.T "auth.password_hint"}}</span>
-        </div>
-        <p class="form-error" x-cloak x-show="errors.accept" x-text="errors.accept" role="alert"></p>
-        <button class="btn btn-block" type="submit" :disabled="pending">
-          <span x-text="pending ? $t('auth.invite.pending') : $t('auth.invite.submit')">{{.T "auth.invite.submit"}}</span>
-        </button>
-      </form>
+        {{- end}}
+        <form class="stack" {{if .Props.clerk}}x-cloak x-show="showPassword" {{end}}@submit.prevent="submit()">
+          <div class="field">
+            <label for="invite-name">{{.T "auth.your_name"}}</label>
+            <input id="invite-name" type="text" autocomplete="name" required x-model="name">
+          </div>
+          <div class="field">
+            <label for="invite-email">{{.T "common.email"}}</label>
+            <input id="invite-email" type="email" autocomplete="email" required x-model="email" :readonly="!!info.email">
+            <span class="hint" x-show="info.email">{{.T "auth.invite.email_only"}}</span>
+          </div>
+          <div class="field">
+            <label for="invite-password">{{.T "auth.password"}}</label>
+            <input id="invite-password" type="password" autocomplete="new-password" minlength="8" required x-model="password">
+            <span class="hint">{{.T "auth.password_hint"}}</span>
+          </div>
+          <p class="form-error" x-cloak x-show="errors.accept" x-text="errors.accept" role="alert"></p>
+          <button class="btn btn-block" type="submit" :disabled="pending">
+            <span x-text="pending ? $t('auth.invite.pending') : $t('auth.invite.submit')">{{.T "auth.invite.submit"}}</span>
+          </button>
+          {{- if .Props.clerk}}
+          <button class="btn btn-ghost btn-block" type="button" @click="showPassword = false">{{.T "auth.clerk.use_clerk"}}</button>
+          {{- end}}
+        </form>
+      </div>
     </template>
   </div>
 </main>

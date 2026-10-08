@@ -60,6 +60,20 @@ func (_c *PersonCreate) SetNillablePasswordHash(v *string) *PersonCreate {
 	return _c
 }
 
+// SetClerkUserID sets the "clerk_user_id" field.
+func (_c *PersonCreate) SetClerkUserID(v string) *PersonCreate {
+	_c.mutation.SetClerkUserID(v)
+	return _c
+}
+
+// SetNillableClerkUserID sets the "clerk_user_id" field if the given value is not nil.
+func (_c *PersonCreate) SetNillableClerkUserID(v *string) *PersonCreate {
+	if v != nil {
+		_c.SetClerkUserID(*v)
+	}
+	return _c
+}
+
 // SetRole sets the "role" field.
 func (_c *PersonCreate) SetRole(v person.Role) *PersonCreate {
 	_c.mutation.SetRole(v)
@@ -358,6 +372,10 @@ func (_c *PersonCreate) createSpec() (*Person, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.PasswordHash(); ok {
 		_spec.SetField(person.FieldPasswordHash, field.TypeString, value)
 		_node.PasswordHash = &value
+	}
+	if value, ok := _c.mutation.ClerkUserID(); ok {
+		_spec.SetField(person.FieldClerkUserID, field.TypeString, value)
+		_node.ClerkUserID = &value
 	}
 	if value, ok := _c.mutation.Role(); ok {
 		_spec.SetField(person.FieldRole, field.TypeEnum, value)

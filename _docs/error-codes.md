@@ -61,6 +61,11 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 |---|---|---|---|---|
 | `auth.account_exists` | 409 | — | `já existe uma conta com este email` | `an account with this email already exists` |
 | `auth.admin_only` | 403 | — | `só admins podem fazer isso` | `only admins can do this` |
+| `auth.clerk_account_linked` | 409 | — | `este email já está ligado a outro usuário do login` | `this email is already linked to another sign-in user` |
+| `auth.clerk_disabled` | 404 | — | `o login externo não está ligado neste servidor` | `external sign-in is not turned on on this server` |
+| `auth.clerk_email_unverified` | 403 | — | `o seu email ainda não foi verificado. Verifique-o e tente de novo` | `your email has not been verified yet. Verify it and try again` |
+| `auth.clerk_token_invalid` | 401 | — | `não foi possível confirmar o seu login. Entre de novo` | `could not confirm your sign-in. Sign in again` |
+| `auth.clerk_unavailable` | 502 | — | `o serviço de login não respondeu. Tente de novo em instantes` | `the sign-in service did not answer. Try again in a moment` |
 | `auth.invalid_credentials` | 401 | — | `email ou senha incorretos` | `wrong email or password` |
 | `auth.invite_email_mismatch` | 400 | — | `este convite foi feito para outro email` | `this invitation was made for another email` |
 | `auth.invite_invalid` | 404 | — | `este convite não é válido: ele expirou, foi revogado ou já foi usado` | `this invitation is not valid: it expired, was revoked or was already used` |

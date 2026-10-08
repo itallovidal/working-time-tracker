@@ -28,6 +28,8 @@ type Person struct {
 	OrganizationID uuid.UUID `json:"organization_id,omitempty"`
 	// PasswordHash holds the value of the "password_hash" field.
 	PasswordHash *string `json:"-"`
+	// ClerkUserID holds the value of the "clerk_user_id" field.
+	ClerkUserID *string `json:"clerk_user_id,omitempty"`
 	// Role holds the value of the "role" field.
 	Role person.Role `json:"role,omitempty"`
 	// IsOwner holds the value of the "is_owner" field.
@@ -141,7 +143,7 @@ func (*Person) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullBool)
 		case person.FieldWeeklyHours:
 			values[i] = new(sql.NullInt64)
-		case person.FieldName, person.FieldEmail, person.FieldPasswordHash, person.FieldRole:
+		case person.FieldName, person.FieldEmail, person.FieldPasswordHash, person.FieldClerkUserID, person.FieldRole:
 			values[i] = new(sql.NullString)
 		case person.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
@@ -192,6 +194,13 @@ func (_m *Person) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.PasswordHash = new(string)
 				*_m.PasswordHash = value.String
+			}
+		case person.FieldClerkUserID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field clerk_user_id", values[i])
+			} else if value.Valid {
+				_m.ClerkUserID = new(string)
+				*_m.ClerkUserID = value.String
 			}
 		case person.FieldRole:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -307,6 +316,11 @@ func (_m *Person) String() string {
 	builder.WriteString(fmt.Sprintf("%v", _m.OrganizationID))
 	builder.WriteString(", ")
 	builder.WriteString("password_hash=<sensitive>")
+	builder.WriteString(", ")
+	if v := _m.ClerkUserID; v != nil {
+		builder.WriteString("clerk_user_id=")
+		builder.WriteString(*v)
+	}
 	builder.WriteString(", ")
 	builder.WriteString("role=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Role))

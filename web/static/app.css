@@ -765,6 +765,8 @@ td .task-chips { min-width: 200px; }
 }
 .auth-card .brand { font-size: 1.05rem; }
 .auth-foot { text-align: center; font-size: 0.9rem; color: var(--muted); }
+/* O Clerk se desenha aqui dentro; o cartão e o título dele ficam escondidos, são os da página. */
+.clerk-mount { min-height: 24px; }
 
 /* ---------- Toasts ---------- */
 .toasts {

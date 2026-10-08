@@ -7892,6 +7892,7 @@ type PersonMutation struct {
 	name                    *string
 	email                   *string
 	password_hash           *string
+	clerk_user_id           *string
 	role                    *person.Role
 	is_owner                *bool
 	permissions             *[]string
@@ -8184,6 +8185,55 @@ func (m *PersonMutation) PasswordHashCleared() bool {
 func (m *PersonMutation) ResetPasswordHash() {
 	m.password_hash = nil
 	delete(m.clearedFields, person.FieldPasswordHash)
+}
+
+// SetClerkUserID sets the "clerk_user_id" field.
+func (m *PersonMutation) SetClerkUserID(s string) {
+	m.clerk_user_id = &s
+}
+
+// ClerkUserID returns the value of the "clerk_user_id" field in the mutation.
+func (m *PersonMutation) ClerkUserID() (r string, exists bool) {
+	v := m.clerk_user_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldClerkUserID returns the old "clerk_user_id" field's value of the Person entity.
+// If the Person object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PersonMutation) OldClerkUserID(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldClerkUserID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldClerkUserID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldClerkUserID: %w", err)
+	}
+	return oldValue.ClerkUserID, nil
+}
+
+// ClearClerkUserID clears the value of the "clerk_user_id" field.
+func (m *PersonMutation) ClearClerkUserID() {
+	m.clerk_user_id = nil
+	m.clearedFields[person.FieldClerkUserID] = struct{}{}
+}
+
+// ClerkUserIDCleared returns if the "clerk_user_id" field was cleared in this mutation.
+func (m *PersonMutation) ClerkUserIDCleared() bool {
+	_, ok := m.clearedFields[person.FieldClerkUserID]
+	return ok
+}
+
+// ResetClerkUserID resets all changes to the "clerk_user_id" field.
+func (m *PersonMutation) ResetClerkUserID() {
+	m.clerk_user_id = nil
+	delete(m.clearedFields, person.FieldClerkUserID)
 }
 
 // SetRole sets the "role" field.
@@ -8814,7 +8864,7 @@ func (m *PersonMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *PersonMutation) Fields() []string {
-	fields := make([]string, 0, 9)
+	fields := make([]string, 0, 10)
 	if m.name != nil {
 		fields = append(fields, person.FieldName)
 	}
@@ -8826,6 +8876,9 @@ func (m *PersonMutation) Fields() []string {
 	}
 	if m.password_hash != nil {
 		fields = append(fields, person.FieldPasswordHash)
+	}
+	if m.clerk_user_id != nil {
+		fields = append(fields, person.FieldClerkUserID)
 	}
 	if m.role != nil {
 		fields = append(fields, person.FieldRole)
@@ -8858,6 +8911,8 @@ func (m *PersonMutation) Field(name string) (ent.Value, bool) {
 		return m.OrganizationID()
 	case person.FieldPasswordHash:
 		return m.PasswordHash()
+	case person.FieldClerkUserID:
+		return m.ClerkUserID()
 	case person.FieldRole:
 		return m.Role()
 	case person.FieldIsOwner:
@@ -8885,6 +8940,8 @@ func (m *PersonMutation) OldField(ctx context.Context, name string) (ent.Value, 
 		return m.OldOrganizationID(ctx)
 	case person.FieldPasswordHash:
 		return m.OldPasswordHash(ctx)
+	case person.FieldClerkUserID:
+		return m.OldClerkUserID(ctx)
 	case person.FieldRole:
 		return m.OldRole(ctx)
 	case person.FieldIsOwner:
@@ -8931,6 +8988,13 @@ func (m *PersonMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetPasswordHash(v)
+		return nil
+	case person.FieldClerkUserID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetClerkUserID(v)
 		return nil
 	case person.FieldRole:
 		v, ok := value.(person.Role)
@@ -9015,6 +9079,9 @@ func (m *PersonMutation) ClearedFields() []string {
 	if m.FieldCleared(person.FieldPasswordHash) {
 		fields = append(fields, person.FieldPasswordHash)
 	}
+	if m.FieldCleared(person.FieldClerkUserID) {
+		fields = append(fields, person.FieldClerkUserID)
+	}
 	if m.FieldCleared(person.FieldPermissions) {
 		fields = append(fields, person.FieldPermissions)
 	}
@@ -9037,6 +9104,9 @@ func (m *PersonMutation) ClearField(name string) error {
 	switch name {
 	case person.FieldPasswordHash:
 		m.ClearPasswordHash()
+		return nil
+	case person.FieldClerkUserID:
+		m.ClearClerkUserID()
 		return nil
 	case person.FieldPermissions:
 		m.ClearPermissions()
@@ -9063,6 +9133,9 @@ func (m *PersonMutation) ResetField(name string) error {
 		return nil
 	case person.FieldPasswordHash:
 		m.ResetPasswordHash()
+		return nil
+	case person.FieldClerkUserID:
+		m.ResetClerkUserID()
 		return nil
 	case person.FieldRole:
 		m.ResetRole()

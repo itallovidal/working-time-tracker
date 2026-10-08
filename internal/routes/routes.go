@@ -48,6 +48,10 @@ func RegisterRoutes(e *echo.Echo, h Handlers, m *auth.Middleware, authLimiter ec
 	api.POST("/auth/login", h.Auth.Login, authLimiter)
 	api.GET("/auth/invites/:token", h.Auth.InviteInfo, authLimiter)
 	api.POST("/auth/invites/:token/accept", h.Auth.AcceptInvite, authLimiter)
+	// O login pelo Clerk: o corpo é JSON e quem fala é o token de sessão do Clerk, em Authorization: Bearer.
+	api.POST("/auth/clerk/login", h.Auth.ClerkLogin, authLimiter)
+	api.POST("/auth/clerk/signup", h.Auth.ClerkSignup, authLimiter)
+	api.POST("/auth/clerk/join", h.Auth.ClerkJoin, authLimiter)
 
 	// Logadas
 	r := api.Group("", m.RequireAPI)

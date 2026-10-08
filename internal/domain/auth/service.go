@@ -7,6 +7,8 @@ import (
 
 	"github.com/google/uuid"
 
+	"working-time-tracker/ent"
+	"working-time-tracker/internal/adapter"
 	"working-time-tracker/internal/database"
 	"working-time-tracker/internal/domain/person"
 )
@@ -23,6 +25,8 @@ var (
 type Service struct {
 	store *Store
 	now   func() time.Time
+	// clerk é o login pelo Clerk; nulo, ele está desligado (ver SetClerk).
+	clerk adapter.ClerkProvider
 }
 
 func NewService(store *Store) *Service {
@@ -55,7 +59,7 @@ func (s *Service) Signup(in SignupInput) (*Identity, string, error) {
 		OrganizationName: orgName,
 		Name:             name,
 		Email:            email,
-		PasswordHash:     hash,
+		PasswordHash:     &hash,
 		Role:             person.RoleAdmin,
 		IsOwner:          true,
 		SessionHash:      tokenHash,
@@ -81,7 +85,12 @@ func (s *Service) Login(email, password string) (*Identity, string, error) {
 	if !CheckPassword(*p.PasswordHash, password) {
 		return nil, "", ErrInvalidCredentials
 	}
+	return s.openSession(p)
+}
 
+// openSession abre uma sessão para a pessoa e devolve a identidade dela com o token do cookie. É o que o
+// login por senha e o login pelo Clerk fazem depois de provar quem a pessoa é.
+func (s *Service) openSession(p *ent.Person) (*Identity, string, error) {
 	token, tokenHash, err := NewToken()
 	if err != nil {
 		return nil, "", err
@@ -226,7 +235,7 @@ func (s *Service) AcceptInvite(token string, in AcceptInviteInput) (*Identity, s
 		OrganizationID: &orgID,
 		Name:           name,
 		Email:          email,
-		PasswordHash:   hash,
+		PasswordHash:   &hash,
 		Role:           string(inv.Role),
 		SessionHash:    sessionHash,
 		SessionExpires: now.Add(SessionTTL),

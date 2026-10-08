@@ -23,6 +23,8 @@ func (Person) Fields() []ent.Field {
 		field.UUID("organization_id", uuid.UUID{}),
 		// Pessoas criadas antes do login existir não têm senha e não conseguem entrar.
 		field.String("password_hash").Optional().Nillable().Sensitive(),
+		// O usuário da pessoa no Clerk, quando ela entra por lá. É único (o Postgres aceita vários nulos).
+		field.String("clerk_user_id").Optional().Nillable().Unique(),
 		field.Enum("role").Values("admin", "member").Default("member"),
 		// O dono da organização: quem a criou. É sempre admin, é um só por organização
 		// e as horas dele valem o valor cobrado, sem custo.

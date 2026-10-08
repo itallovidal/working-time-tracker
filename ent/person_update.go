@@ -98,6 +98,26 @@ func (_u *PersonUpdate) ClearPasswordHash() *PersonUpdate {
 	return _u
 }
 
+// SetClerkUserID sets the "clerk_user_id" field.
+func (_u *PersonUpdate) SetClerkUserID(v string) *PersonUpdate {
+	_u.mutation.SetClerkUserID(v)
+	return _u
+}
+
+// SetNillableClerkUserID sets the "clerk_user_id" field if the given value is not nil.
+func (_u *PersonUpdate) SetNillableClerkUserID(v *string) *PersonUpdate {
+	if v != nil {
+		_u.SetClerkUserID(*v)
+	}
+	return _u
+}
+
+// ClearClerkUserID clears the value of the "clerk_user_id" field.
+func (_u *PersonUpdate) ClearClerkUserID() *PersonUpdate {
+	_u.mutation.ClearClerkUserID()
+	return _u
+}
+
 // SetRole sets the "role" field.
 func (_u *PersonUpdate) SetRole(v person.Role) *PersonUpdate {
 	_u.mutation.SetRole(v)
@@ -466,6 +486,12 @@ func (_u *PersonUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.PasswordHashCleared() {
 		_spec.ClearField(person.FieldPasswordHash, field.TypeString)
+	}
+	if value, ok := _u.mutation.ClerkUserID(); ok {
+		_spec.SetField(person.FieldClerkUserID, field.TypeString, value)
+	}
+	if _u.mutation.ClerkUserIDCleared() {
+		_spec.ClearField(person.FieldClerkUserID, field.TypeString)
 	}
 	if value, ok := _u.mutation.Role(); ok {
 		_spec.SetField(person.FieldRole, field.TypeEnum, value)
@@ -874,6 +900,26 @@ func (_u *PersonUpdateOne) ClearPasswordHash() *PersonUpdateOne {
 	return _u
 }
 
+// SetClerkUserID sets the "clerk_user_id" field.
+func (_u *PersonUpdateOne) SetClerkUserID(v string) *PersonUpdateOne {
+	_u.mutation.SetClerkUserID(v)
+	return _u
+}
+
+// SetNillableClerkUserID sets the "clerk_user_id" field if the given value is not nil.
+func (_u *PersonUpdateOne) SetNillableClerkUserID(v *string) *PersonUpdateOne {
+	if v != nil {
+		_u.SetClerkUserID(*v)
+	}
+	return _u
+}
+
+// ClearClerkUserID clears the value of the "clerk_user_id" field.
+func (_u *PersonUpdateOne) ClearClerkUserID() *PersonUpdateOne {
+	_u.mutation.ClearClerkUserID()
+	return _u
+}
+
 // SetRole sets the "role" field.
 func (_u *PersonUpdateOne) SetRole(v person.Role) *PersonUpdateOne {
 	_u.mutation.SetRole(v)
@@ -1272,6 +1318,12 @@ func (_u *PersonUpdateOne) sqlSave(ctx context.Context) (_node *Person, err erro
 	}
 	if _u.mutation.PasswordHashCleared() {
 		_spec.ClearField(person.FieldPasswordHash, field.TypeString)
+	}
+	if value, ok := _u.mutation.ClerkUserID(); ok {
+		_spec.SetField(person.FieldClerkUserID, field.TypeString, value)
+	}
+	if _u.mutation.ClerkUserIDCleared() {
+		_spec.ClearField(person.FieldClerkUserID, field.TypeString)
 	}
 	if value, ok := _u.mutation.Role(); ok {
 		_spec.SetField(person.FieldRole, field.TypeEnum, value)

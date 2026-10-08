@@ -251,6 +251,7 @@ var (
 		{Name: "name", Type: field.TypeString},
 		{Name: "email", Type: field.TypeString},
 		{Name: "password_hash", Type: field.TypeString, Nullable: true},
+		{Name: "clerk_user_id", Type: field.TypeString, Unique: true, Nullable: true},
 		{Name: "role", Type: field.TypeEnum, Enums: []string{"admin", "member"}, Default: "member"},
 		{Name: "is_owner", Type: field.TypeBool, Default: false},
 		{Name: "permissions", Type: field.TypeJSON, Nullable: true},
@@ -266,7 +267,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "persons_organizations_persons",
-				Columns:    []*schema.Column{PersonsColumns[9]},
+				Columns:    []*schema.Column{PersonsColumns[10]},
 				RefColumns: []*schema.Column{OrganizationsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -280,7 +281,7 @@ var (
 			{
 				Name:    "one_owner_per_organization",
 				Unique:  true,
-				Columns: []*schema.Column{PersonsColumns[9]},
+				Columns: []*schema.Column{PersonsColumns[10]},
 				Annotation: &entsql.IndexAnnotation{
 					Where: "is_owner",
 				},

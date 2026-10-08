@@ -60,11 +60,25 @@ func main() {
 		})
 	}
 
+	// O Clerk só liga com as duas chaves (o config.Load já recusou uma só, e exigiu o PUBLIC_URL).
+	var clerkOpts *server.ClerkOptions
+	if ENV.ClerkEnabled() {
+		clerkOpts = &server.ClerkOptions{
+			Provider: adapter.NewClerk(adapter.ClerkConfig{
+				SecretKey:         ENV.ClerkSecretKey,
+				APIURL:            ENV.ClerkAPIURL,
+				AuthorizedParties: ENV.ClerkAuthorizedParties,
+			}),
+			PublishableKey: ENV.ClerkPublishableKey,
+		}
+	}
+
 	app, err := server.Build(db.Client, server.Options{
 		EncryptKey:   ENV.IntegrationEncryptKey,
 		CookieSecure: ENV.CookieSecure,
 		GitHubOAuth:  github,
 		TrelloAuth:   trello,
+		Clerk:        clerkOpts,
 		Sync:         issuesync.Config{Interval: ENV.SyncInterval, Intervals: ENV.SyncIntervals},
 	})
 	if err != nil {
@@ -96,6 +110,11 @@ func main() {
 		trelloSite = "https://trello.com"
 	}
 	e.Logger.Info("trello", "api", trelloAPI, "site", trelloSite, "connection_configured", trello.Configured())
+	if clerkOpts != nil {
+		e.Logger.Info("clerk", "enabled", true, "frontend_api", adapter.ClerkFrontendAPI(ENV.ClerkPublishableKey), "authorized_parties", ENV.ClerkAuthorizedParties)
+	} else {
+		e.Logger.Info("clerk", "enabled", false)
+	}
 
 	// Ctrl+C e SIGTERM acabam o servidor e a sincronização, que termina a rodada em andamento antes de
 	// o banco fechar.

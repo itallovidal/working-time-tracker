@@ -759,6 +759,10 @@ func TestPages_AuthPagesRender(t *testing.T) {
 			t.Errorf("GET %s = %d %s, want 200 html", path, rec.Code, rec.Header().Get("Content-Type"))
 		}
 	}
+	// Sem o Clerk ligado não há o que continuar: a página de retorno leva ao login.
+	if rec := do(e, "GET", "/auth/clerk/continue", "", ""); rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != "/login" {
+		t.Errorf("GET /auth/clerk/continue without the Clerk = %d to %q, want 303 to /login", rec.Code, rec.Header().Get("Location"))
+	}
 	a := signup(t, e, "Org", "ana@test.com")
 	if rec := do(e, "GET", "/login", "", a.session); rec.Code != http.StatusSeeOther {
 		t.Errorf("GET /login logged in = %d, want 303 to /", rec.Code)
@@ -800,6 +804,9 @@ func TestRoutes_Table(t *testing.T) {
 		"POST /api/auth/login",
 		"GET /api/auth/invites/:token",
 		"POST /api/auth/invites/:token/accept",
+		"POST /api/auth/clerk/login",
+		"POST /api/auth/clerk/signup",
+		"POST /api/auth/clerk/join",
 		"POST /api/auth/logout",
 		"GET /api/auth/me",
 		"POST /api/auth/password",

@@ -44,9 +44,18 @@ type Options struct {
 	// TrelloAuth é a autorização do Trello deste servidor (a chave do app). Nulo ou sem chave, o botão
 	// Conectar com o Trello avisa que não está configurado.
 	TrelloAuth *adapter.TrelloAuth
+	// Clerk liga o login pelo Clerk. Nulo, ele fica desligado: o login é só por e-mail e senha.
+	Clerk *ClerkOptions
 	// Sync são os ajustes da sincronização das issues. O valor zero serve: sem Interval a rotina de
 	// fundo não olha o GitHub (só o botão e o gancho das tarefas).
 	Sync issuesync.Config
+}
+
+// ClerkOptions são os dados do login pelo Clerk.
+type ClerkOptions struct {
+	Provider adapter.ClerkProvider
+	// PublishableKey é a chave pública do app, que o navegador usa para carregar o clerk-js.
+	PublishableKey string
 }
 
 // App é o servidor montado e a sincronização das issues, que anda ao lado dele: quem sobe o servidor
@@ -106,6 +115,14 @@ func Build(client *ent.Client, opts Options) (*App, error) {
 		People:        personSvc,
 	})
 	authSvc := auth.NewService(authStore)
+	var clerkPage *page.Clerk
+	if opts.Clerk != nil && opts.Clerk.Provider != nil {
+		authSvc.SetClerk(opts.Clerk.Provider)
+		clerkPage = &page.Clerk{
+			PublishableKey: opts.Clerk.PublishableKey,
+			FrontendAPI:    adapter.ClerkFrontendAPI(opts.Clerk.PublishableKey),
+		}
+	}
 
 	e := echo.New()
 	if opts.Sync.Logger == nil {
@@ -146,6 +163,7 @@ func Build(client *ent.Client, opts Options) (*App, error) {
 		Orgs: orgSvc, Projects: projectSvc, Tasks: taskSvc,
 		I18n: catalog, CookieSecure: opts.CookieSecure,
 		OAuthConfigured: map[string]bool{"github": opts.GitHubOAuth.Configured(), "trello": opts.TrelloAuth.Configured()},
+		Clerk:           clerkPage,
 	})
 
 	renderer, err := tmpl.New(web.FS)

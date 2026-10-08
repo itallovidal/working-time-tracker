@@ -75,13 +75,41 @@ Para gerar o binário: `go build -o wtt ./cmd && ./wtt`. Templates e arquivos es
 | `DATABASE_URL` | sim | Conexão com o PostgreSQL |
 | `INTEGRATION_ENCRYPTION_KEY` | sim | Chave da criptografia AES-GCM dos tokens de integração. Trocá-la torna os tokens salvos ilegíveis: cada integração pede o token de novo na edição, e o resto dela (nome e `metadata`) continua |
 | `COOKIE_SECURE` | não | `true` marca o cookie de sessão como `Secure`. Use em produção, atrás de HTTPS |
-| `PUBLIC_URL` | para conectar o GitHub ou o Trello | O endereço em que as pessoas abrem o sistema, sem barra no fim (`http://localhost:8080`). O GitHub devolve a pessoa a `PUBLIC_URL/integrations/github/callback`, e o Trello a `PUBLIC_URL/integrations/trello/callback` |
+| `PUBLIC_URL` | para conectar o GitHub ou o Trello, ou entrar pelo Clerk | O endereço em que as pessoas abrem o sistema, sem barra no fim (`http://localhost:8080`). O GitHub devolve a pessoa a `PUBLIC_URL/integrations/github/callback`, e o Trello a `PUBLIC_URL/integrations/trello/callback` |
 | `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | para conectar o GitHub | O Client ID e o Client secret do app OAuth cadastrado no GitHub. Sem eles, o botão Conectar com o GitHub avisa que não está configurado |
 | `GITHUB_URL`, `GITHUB_API_URL` | não | Para um GitHub Enterprise (ou um servidor fake): o site (`https://github.com`) e a API (`https://api.github.com`), que são os padrões |
 | `TRELLO_API_KEY` | para conectar o Trello | A chave de API do app do Trello (só letras e dígitos). Sem ela, o botão Conectar com o Trello avisa que não está configurado. `TRELLO_APP_NAME` muda o nome que a tela de autorização do Trello mostra (padrão "Working Time Tracker") |
 | `TRELLO_URL`, `TRELLO_API_URL` | não | Para um servidor fake: o site (`https://trello.com`) e a API (`https://api.trello.com/1`), que são os padrões |
 | `SYNC_INTERVAL`, `GITHUB_SYNC_INTERVAL`, `TRELLO_SYNC_INTERVAL` | não | De quanto em quanto tempo a rotina de fundo olha as integrações com a sincronização ligada (`5m`, `30s`...). `SYNC_INTERVAL` vale para todas as plataformas (padrão `5m`), e `GITHUB_SYNC_INTERVAL` e `TRELLO_SYNC_INTERVAL` valem só para a delas, sobre o comum; `0` desliga a rotina de fundo (de todas, ou só daquela plataforma), e o botão Sincronizar agora e a sincronização das tarefas que mudam seguem valendo. A rotina acorda no menor dos intervalos e olha cada integração quando passou o do tipo dela. O Trello não avisa quando um cartão muda, então o que muda lá chega no próximo intervalo (ou no botão); o que muda aqui vai em poucos segundos |
+| `CLERK_SECRET_KEY`, `CLERK_PUBLISHABLE_KEY` | para entrar pelo Clerk | As duas chaves do app no Clerk (`sk_…` e `pk_…`). Sem elas o login é só por email e senha, como sempre. Uma só das duas, ou as duas sem `PUBLIC_URL`, derrubam a subida. Ver [Entrar com o Clerk](#entrar-com-o-clerk) |
+| `CLERK_AUTHORIZED_PARTIES` | não | As origens (`http://localhost:8080`, sem barra) cujas sessões do Clerk o servidor aceita, separadas por vírgula. O padrão é a origem do `PUBLIC_URL`. Quem sobe o sistema em duas portas (a sua e a de uma conferência) lista as duas |
+| `CLERK_API_URL` | não | Só para um servidor fake: o endereço da Backend API do Clerk, sem o `/v1`. O padrão é `https://api.clerk.com` |
 | `TEST_DATABASE_URL` | só nos testes | Banco usado por `go test`. O nome precisa terminar em `_test` |
+
+### Entrar com o Clerk
+
+Com as chaves do [Clerk](https://clerk.com) no `.env`, o login, o cadastro e a página do convite mostram o Clerk (e-mail com código, Google, o que o app dele tiver ligado), e o e-mail e a senha do sistema ficam atrás do botão **Entrar com email e senha do sistema**. Sem as chaves, nada muda. O Clerk só diz **quem a pessoa é**; as organizações, os papéis e os convites continuam daqui, porque uma pessoa pertence a uma só organização e o email é único no sistema.
+
+**Configurar**
+
+1. No painel do Clerk, crie o app (ou, com o CLI, `npm install -g clerk`, `clerk auth login` e `clerk link --app <id>`). Copie a *Publishable key* e a *Secret key* para `CLERK_PUBLISHABLE_KEY` e `CLERK_SECRET_KEY` no `.env` (o `clerk env pull --file <arquivo>` escreve as duas num arquivo à parte), e defina `PUBLIC_URL`.
+2. Em *User & authentication*: o email como identificador, com a **verificação obrigatória** no cadastro (é ela que prova que a pessoa é dona da caixa; o sistema só confia em email verificado) e o cadastro **Public** (qualquer pessoa pode criar a própria organização). Organizations do Clerk ficam desligadas.
+3. Reinicie o servidor. O log mostra `clerk enabled=true`, o endereço do Frontend API e as origens aceitas. Num app de desenvolvimento do Clerk, os emails `qualquer+clerk_test@example.com` aceitam o código `424242`, sem mandar email de verdade.
+
+**Como funciona.** Depois de entrar no Clerk, o navegador chega em `/auth/clerk/continue`, que pega o token de sessão do Clerk (vale 60 segundos) e o manda ao servidor em `Authorization: Bearer`. O servidor confere a assinatura, o prazo e a origem (`azp`), busca o usuário no Clerk e abre a **sessão do sistema**, o cookie de sempre: o resto da aplicação não sabe que o Clerk existe, e as páginas internas não carregam o clerk-js.
+
+| Situação | O que acontece |
+|---|---|
+| O usuário do Clerk já está ligado a uma pessoa | Entra |
+| Há uma conta com o mesmo email verificado, **sem senha** | É ligada e entra |
+| Há uma conta com o mesmo email, **com senha** | Pede a senha dela, uma vez, e só então liga. O cadastro por senha não verifica o email: sem essa prova, quem cadastrou o email de outra pessoa com uma senha dele ficaria com a conta |
+| Não há conta | Mostra os convites pendentes para o email, para a pessoa escolher, ou pede o nome da organização para criar a dela. Nada é aceito sozinho: entrar numa organização não se desfaz |
+| A pessoa chegou pelo link de um convite (`invite_token`) | Entra direto na organização dele; se o convite tem email, o email verificado do Clerk precisa ser o mesmo |
+| A conta está ligada a outro usuário do Clerk que ainda existe | Recusa (`auth.clerk_account_linked`); se esse usuário foi apagado, religa |
+
+**Sair** leva a `/login?out=1`, e a página também desconecta do Clerk: sem isso ele entraria de novo sozinho. Com o Clerk ainda logado, uma sessão do sistema que expirou volta sozinha, para a página que a pessoa abriu. `/auth/clerk/continue` nunca manda de volta ao login em círculo: em erro mostra o motivo e deixa tentar de novo ou entrar com outra conta.
+
+**Limites.** O email não é sincronizado entre o Clerk e o sistema (mudar o email no perfil não muda o do Clerk). Quem entra só pelo Clerk não tem senha do sistema, e o perfil não mostra a troca de senha. Os textos do Clerk em português vêm de `web/static/clerk-pt-BR.js` (o `@clerk/localizations`, licença MIT); o inglês é o do próprio Clerk.
 
 ### Conectar com o GitHub
 
@@ -169,8 +197,9 @@ A interface segue a Decision 8 de `_docs/design.md`. O servidor renderiza a casc
 
 | Rota | Tela |
 |---|---|
-| `/login`, `/signup` | Entrar e criar organização |
-| `/invite/:token` | Aceitar um convite e criar a conta |
+| `/login`, `/signup` | Entrar e criar organização. Com o Clerk ligado, mostram o Clerk e deixam o email e a senha do sistema atrás de um botão; `/login?out=1` é o login depois de sair |
+| `/invite/:token` | Aceitar um convite e criar a conta (com o Clerk ligado, entrando ou criando a conta nele; o botão Já tenho conta troca o cadastro pela entrada sem perder o convite) |
+| `/auth/clerk/continue` | Para onde o Clerk volta depois de entrar: troca o token dele por uma sessão do sistema. Pede a senha de uma conta antiga, mostra os convites pendentes ou pede o nome da organização. Sem o Clerk ligado, leva ao login. Aceita `?next=` e `?invite=` |
 | `/help`, `/ajuda` | A ajuda, **pública** (não pede sessão): o passo a passo do primeiro uso e o que cada tela faz, numa página só, com o sumário fixo à esquerda. `/ajuda` redireciona para `/help` |
 | `/` | Leva para a organização de quem está logado |
 | `/orgs/:orgId` | O **Início**: para admins, a visão geral da organização (horas, receita, custo e margem de todos os projetos, em 7 dias, 30 dias ou tudo, e a equipe); para todos, os projetos em cartões discretos, seis por página (`?page=`). Quem pode cria projeto num modal, pelo botão junto da lista, já com o cliente e, quando há cliente, o valor cobrado por hora |
@@ -179,7 +208,7 @@ A interface segue a Decision 8 de `_docs/design.md`. O servidor renderiza a casc
 | `/orgs/:orgId/people` | Colaboradores (item próprio da barra superior, que também é a aba da Organização): os integrantes, com o papel (que muda no botão da linha) e a jornada semanal de cada um (que muda num modal, pelo lápis); os convites pendentes e o botão Adicionar colaborador, que gera o link de convite num modal (só admins). Com `?add=1` a página abre com esse modal já aberto: é o atalho do Início |
 | `/orgs/:orgId/customers` | Organização, aba Clientes: quem contrata os projetos, com cadastro e edição num modal (só admins) |
 | `/orgs/:orgId/projects` | Organização, aba Projetos: tabela de gestão com o cliente, os colaboradores e as tarefas de cada projeto; a linha abre o projeto (só admins) |
-| `/profile` | Seu nome, seu email, sua senha, sua jornada semanal (só para ler) e quanto você recebe por hora em cada projeto |
+| `/profile` | Seu nome, seu email, sua senha (quem entra só pelo Clerk não tem), sua jornada semanal (só para ler) e quanto você recebe por hora em cada projeto |
 | `/lang/:code` | Troca o idioma (`pt-BR` ou `en`): grava o cookie e volta para `?next=` |
 | `/i18n/:idioma.js` | Os textos do idioma para o JavaScript (`window.I18N`) |
 | `/projects/:projectId` | Leva todos para a Visão geral |
@@ -276,7 +305,7 @@ Resumo dos grupos de rotas:
 
 | Grupo | Rotas |
 |---|---|
-| Autenticação | `/api/auth/signup`, `login`, `logout`, `me`, `password`, `invites/:token` |
+| Autenticação | `/api/auth/signup`, `login`, `logout`, `me`, `password`, `invites/:token`, `clerk/login`, `clerk/signup`, `clerk/join` |
 | Organização | `/api/orgs/:orgId` (+ `persons`, `projects`, `overview`, `customers`, `invites`) |
 | Clientes | `/api/customers/:customerId` |
 | Pessoas | `/api/persons/:personId` (+ `role`, `weekly-hours`, `allocations`) |
@@ -315,6 +344,7 @@ Um tipo novo é um arquivo em `internal/adapter` que implementa `Integration` e 
 ## Segurança
 
 - **Senhas** com bcrypt. Contas sem senha (criadas antes do login existir) não conseguem entrar.
+- **Entrar pelo Clerk.** O token de sessão dele só vale se a assinatura confere com as chaves públicas do app, se não venceu (com uma folga de 10 segundos), se vem de uma origem em `CLERK_AUTHORIZED_PARTIES` (um token sem origem, ou de outro app da mesma instância, é recusado) e se o usuário existe e não está bloqueado. Só o email **primário e verificado** vale, e uma conta que já tem senha só é ligada ao Clerk com a senha. As rotas `/api/auth/clerk/*` levam o token em `Authorization`, não em cookie, então um site de fora não consegue chamá-las em nome de ninguém, e têm o mesmo limite de tentativas do login. A chave secreta fica só no servidor e nenhum token vai para o log. Uma sessão do sistema já aberta não cai quando o usuário é bloqueado ou apagado no Clerk (ela vale até 7 dias), e uma que expirou volta sozinha enquanto o Clerk estiver logado.
 - **Sessões e convites** usam tokens aleatórios de 32 bytes, e o banco guarda só o sha256 deles. Trocar a senha encerra as outras sessões.
 - **Cookie** `wtt_session` HttpOnly e SameSite=Lax, com `Secure` via `COOKIE_SECURE`. Como a API só aceita corpo JSON em `POST`, `PUT` e `PATCH`, um formulário de outro site não consegue agir em nome de quem está logado.
 - **Isolamento entre organizações.** Cada rota com ID confere se o recurso é da organização de quem chama e responde 404 caso não seja.
@@ -385,7 +415,7 @@ Organization                          nome, perfil (resumo, contato, dados jurí
 Organization (1) ── (N) Customer      cliente: nome, CNPJ e contato
 Customer  (0..1) ── (N) Project       projeto interno fica sem cliente; o projeto guarda o valor cobrado por hora
 Organization (1) ── (N) Project       sprint, daily e weekly são do projeto
-Organization (1) ── (N) Person        email único no sistema, senha (bcrypt), papel admin|member, jornada semanal
+Organization (1) ── (N) Person        email único no sistema, senha (bcrypt, opcional), usuário do Clerk (opcional, único), papel admin|member, jornada semanal
 Organization (1) ── (N) Invite        token (hash), email opcional, papel, expira em 7 dias, uso único
 Person       (1) ── (N) Session       token (hash), expira em 7 dias
 Project      (1) ── (N) Team ── (N) Person   via TeamMembership

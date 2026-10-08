@@ -1,33 +1,47 @@
 {{define "content"}}
 <main class="auth-page">
-  <form class="auth-card" x-data="signupForm" @submit.prevent="submit()">
+  <div class="auth-card" x-data="signupForm">
     <span class="brand"><span class="brand-mark" aria-hidden="true"></span>Working Time Tracker</span>
     <div class="stack">
       <h1>{{.T "auth.signup.title"}}</h1>
       <p class="muted">{{.T "auth.signup.subtitle"}}</p>
     </div>
-    <div class="field">
-      <label for="signup-org">{{.T "auth.signup.org_name"}}</label>
-      <input id="signup-org" type="text" autocomplete="organization" required x-model="organization_name" autofocus>
+    {{- if .Props.clerk}}
+    {{/* Com o Clerk ligado a conta nasce nele; o nome da organização é pedido na volta, na página de retorno. */}}
+    <div class="stack" x-show="!showPassword">
+      <p class="muted" x-show="loading">{{.T "auth.clerk.loading"}}</p>
+      <div class="clerk-mount" x-ref="clerk"></div>
+      <p class="form-error" x-cloak x-show="errors.clerk" x-text="errors.clerk" role="alert"></p>
+      <button class="btn btn-ghost btn-block" type="button" x-cloak @click="showPassword = true">{{.T "auth.clerk.signup_with_password"}}</button>
     </div>
-    <div class="field">
-      <label for="signup-name">{{.T "auth.your_name"}}</label>
-      <input id="signup-name" type="text" autocomplete="name" required x-model="name">
-    </div>
-    <div class="field">
-      <label for="signup-email">{{.T "common.email"}}</label>
-      <input id="signup-email" type="email" autocomplete="email" required x-model="email">
-    </div>
-    <div class="field">
-      <label for="signup-password">{{.T "auth.password"}}</label>
-      <input id="signup-password" type="password" autocomplete="new-password" minlength="8" required x-model="password">
-      <span class="hint">{{.T "auth.password_hint"}}</span>
-    </div>
-    <p class="form-error" x-cloak x-show="errors.signup" x-text="errors.signup" role="alert"></p>
-    <button class="btn btn-block" type="submit" :disabled="pending">
-      <span x-text="pending ? $t('auth.signup.pending') : $t('auth.signup.submit')">{{.T "auth.signup.submit"}}</span>
-    </button>
+    {{- end}}
+    <form class="stack" {{if .Props.clerk}}x-cloak x-show="showPassword" {{end}}@submit.prevent="submit()">
+      <div class="field">
+        <label for="signup-org">{{.T "auth.signup.org_name"}}</label>
+        <input id="signup-org" type="text" autocomplete="organization" required x-model="organization_name" {{if not .Props.clerk}}autofocus{{end}}>
+      </div>
+      <div class="field">
+        <label for="signup-name">{{.T "auth.your_name"}}</label>
+        <input id="signup-name" type="text" autocomplete="name" required x-model="name">
+      </div>
+      <div class="field">
+        <label for="signup-email">{{.T "common.email"}}</label>
+        <input id="signup-email" type="email" autocomplete="email" required x-model="email">
+      </div>
+      <div class="field">
+        <label for="signup-password">{{.T "auth.password"}}</label>
+        <input id="signup-password" type="password" autocomplete="new-password" minlength="8" required x-model="password">
+        <span class="hint">{{.T "auth.password_hint"}}</span>
+      </div>
+      <p class="form-error" x-cloak x-show="errors.signup" x-text="errors.signup" role="alert"></p>
+      <button class="btn btn-block" type="submit" :disabled="pending">
+        <span x-text="pending ? $t('auth.signup.pending') : $t('auth.signup.submit')">{{.T "auth.signup.submit"}}</span>
+      </button>
+      {{- if .Props.clerk}}
+      <button class="btn btn-ghost btn-block" type="button" @click="showPassword = false">{{.T "auth.clerk.use_clerk"}}</button>
+      {{- end}}
+    </form>
     <p class="auth-foot">{{.T "auth.signup.has_account"}} <a href="/login">{{.T "auth.signup.login"}}</a></p>
-  </form>
+  </div>
 </main>
 {{end}}

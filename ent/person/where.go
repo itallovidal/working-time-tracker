@@ -76,6 +76,11 @@ func PasswordHash(v string) predicate.Person {
 	return predicate.Person(sql.FieldEQ(FieldPasswordHash, v))
 }
 
+// ClerkUserID applies equality check predicate on the "clerk_user_id" field. It's identical to ClerkUserIDEQ.
+func ClerkUserID(v string) predicate.Person {
+	return predicate.Person(sql.FieldEQ(FieldClerkUserID, v))
+}
+
 // IsOwner applies equality check predicate on the "is_owner" field. It's identical to IsOwnerEQ.
 func IsOwner(v bool) predicate.Person {
 	return predicate.Person(sql.FieldEQ(FieldIsOwner, v))
@@ -314,6 +319,81 @@ func PasswordHashEqualFold(v string) predicate.Person {
 // PasswordHashContainsFold applies the ContainsFold predicate on the "password_hash" field.
 func PasswordHashContainsFold(v string) predicate.Person {
 	return predicate.Person(sql.FieldContainsFold(FieldPasswordHash, v))
+}
+
+// ClerkUserIDEQ applies the EQ predicate on the "clerk_user_id" field.
+func ClerkUserIDEQ(v string) predicate.Person {
+	return predicate.Person(sql.FieldEQ(FieldClerkUserID, v))
+}
+
+// ClerkUserIDNEQ applies the NEQ predicate on the "clerk_user_id" field.
+func ClerkUserIDNEQ(v string) predicate.Person {
+	return predicate.Person(sql.FieldNEQ(FieldClerkUserID, v))
+}
+
+// ClerkUserIDIn applies the In predicate on the "clerk_user_id" field.
+func ClerkUserIDIn(vs ...string) predicate.Person {
+	return predicate.Person(sql.FieldIn(FieldClerkUserID, vs...))
+}
+
+// ClerkUserIDNotIn applies the NotIn predicate on the "clerk_user_id" field.
+func ClerkUserIDNotIn(vs ...string) predicate.Person {
+	return predicate.Person(sql.FieldNotIn(FieldClerkUserID, vs...))
+}
+
+// ClerkUserIDGT applies the GT predicate on the "clerk_user_id" field.
+func ClerkUserIDGT(v string) predicate.Person {
+	return predicate.Person(sql.FieldGT(FieldClerkUserID, v))
+}
+
+// ClerkUserIDGTE applies the GTE predicate on the "clerk_user_id" field.
+func ClerkUserIDGTE(v string) predicate.Person {
+	return predicate.Person(sql.FieldGTE(FieldClerkUserID, v))
+}
+
+// ClerkUserIDLT applies the LT predicate on the "clerk_user_id" field.
+func ClerkUserIDLT(v string) predicate.Person {
+	return predicate.Person(sql.FieldLT(FieldClerkUserID, v))
+}
+
+// ClerkUserIDLTE applies the LTE predicate on the "clerk_user_id" field.
+func ClerkUserIDLTE(v string) predicate.Person {
+	return predicate.Person(sql.FieldLTE(FieldClerkUserID, v))
+}
+
+// ClerkUserIDContains applies the Contains predicate on the "clerk_user_id" field.
+func ClerkUserIDContains(v string) predicate.Person {
+	return predicate.Person(sql.FieldContains(FieldClerkUserID, v))
+}
+
+// ClerkUserIDHasPrefix applies the HasPrefix predicate on the "clerk_user_id" field.
+func ClerkUserIDHasPrefix(v string) predicate.Person {
+	return predicate.Person(sql.FieldHasPrefix(FieldClerkUserID, v))
+}
+
+// ClerkUserIDHasSuffix applies the HasSuffix predicate on the "clerk_user_id" field.
+func ClerkUserIDHasSuffix(v string) predicate.Person {
+	return predicate.Person(sql.FieldHasSuffix(FieldClerkUserID, v))
+}
+
+// ClerkUserIDIsNil applies the IsNil predicate on the "clerk_user_id" field.
+func ClerkUserIDIsNil() predicate.Person {
+	return predicate.Person(sql.FieldIsNull(FieldClerkUserID))
+}
+
+// ClerkUserIDNotNil applies the NotNil predicate on the "clerk_user_id" field.
+func ClerkUserIDNotNil() predicate.Person {
+	return predicate.Person(sql.FieldNotNull(FieldClerkUserID))
+}
+
+// ClerkUserIDEqualFold applies the EqualFold predicate on the "clerk_user_id" field.
+func ClerkUserIDEqualFold(v string) predicate.Person {
+	return predicate.Person(sql.FieldEqualFold(FieldClerkUserID, v))
+}
+
+// ClerkUserIDContainsFold applies the ContainsFold predicate on the "clerk_user_id" field.
+func ClerkUserIDContainsFold(v string) predicate.Person {
+	return predicate.Person(sql.FieldContainsFold(FieldClerkUserID, v))
 }
 
 // RoleEQ applies the EQ predicate on the "role" field.

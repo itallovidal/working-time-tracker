@@ -32,6 +32,7 @@ common:
 titles:
   login: Sign in
   signup: Create account
+  clerk_continue: Signing in
   invite: Invitation
   profile: Your profile
   not_found: Page not found
@@ -267,6 +268,33 @@ auth:
     email_only: This invitation is only for this email.
     submit: Accept invitation
     pending: Creating account…
+  clerk:
+    loading: Loading the sign-in…
+    load_failed: Could not load the sign-in. Check your connection and try again, or sign in with email and password.
+    use_password: Sign in with email and password
+    use_clerk: Back
+    signup_with_password: Create the account with email and password
+    have_account: I already have an account
+    new_account: Create an account
+    invite_to_accept: Sign in or create your account to accept.
+    invite_with_password: Accept with email and password
+    stuck: You already signed in, but the system did not open your session. Try again or sign in with another account.
+    try_again: Try again
+    other_account: Sign in with another account
+    finishing: Finishing the sign-in…
+    finishing_text: Just a moment.
+    noscript: This page needs JavaScript to finish the sign-in.
+    error_title: Could not sign in
+    no_session: The sign-in session was not found. Sign in again.
+    cookie_blocked: The browser did not keep the system session. Check that cookies are allowed for this address and try again.
+    confirm_password_title: Confirm your password
+    confirm_password_text: "There is already an account with the email {{.email}}. Type its password, just once, to link it to this sign-in."
+    confirm_password_submit: Confirm and sign in
+    no_account_title: You do not have an account here yet
+    no_account_text: "Join an organization that invited {{.email}} or create your own. If you got an invitation by email, open its link."
+    join_org: "Join {{.name}} as {{.role}}"
+    or_create: or
+    create_org: Create an organization
 
 trello_callback:
   title: Finishing the connection with Trello…
@@ -300,6 +328,7 @@ profile:
     next_hint: At least 8 characters. Your other sessions will be signed out.
     submit: Change password
     changed: Password changed. Your other sessions were signed out.
+    managed: You sign in without a system password, so there is no password to change here.
 
 # The help (/help): a single page with the first-use walkthrough and what each screen does.
 # The labels a person clicks appear in the texts between quotes, as they are on screen; the
@@ -1286,6 +1315,11 @@ errors:
   auth:
     account_exists: "an account with this email already exists"
     admin_only: "only admins can do this"
+    clerk_account_linked: "this email is already linked to another sign-in user"
+    clerk_disabled: "external sign-in is not turned on on this server"
+    clerk_email_unverified: "your email has not been verified yet. Verify it and try again"
+    clerk_token_invalid: "could not confirm your sign-in. Sign in again"
+    clerk_unavailable: "the sign-in service did not answer. Try again in a moment"
     owner_only: "only the organization owner can do this"
     permission_required: "you do not have permission to do this"
     invalid_credentials: "wrong email or password"

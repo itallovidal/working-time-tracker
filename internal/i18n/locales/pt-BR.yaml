@@ -42,6 +42,7 @@ common:
 titles:
   login: Entrar
   signup: Criar conta
+  clerk_continue: Entrando
   invite: Convite
   profile: Seu perfil
   not_found: Página não encontrada
@@ -277,6 +278,33 @@ auth:
     email_only: Este convite é só para este email.
     submit: Aceitar convite
     pending: Criando conta…
+  clerk:
+    loading: Carregando o login…
+    load_failed: Não foi possível carregar o login. Verifique a conexão e tente de novo, ou entre com email e senha.
+    use_password: Entrar com email e senha do sistema
+    use_clerk: Voltar
+    signup_with_password: Criar a conta com email e senha do sistema
+    have_account: Já tenho conta
+    new_account: Criar uma conta
+    invite_to_accept: Entre ou crie sua conta para aceitar.
+    invite_with_password: Aceitar com email e senha do sistema
+    stuck: Você já entrou no login, mas o sistema não abriu a sua sessão. Tente de novo ou entre com outra conta.
+    try_again: Tentar de novo
+    other_account: Entrar com outra conta
+    finishing: Terminando a entrada…
+    finishing_text: Só um instante.
+    noscript: Esta página precisa de JavaScript para terminar a entrada.
+    error_title: Não foi possível entrar
+    no_session: A sessão do login não foi encontrada. Entre de novo.
+    cookie_blocked: O navegador não guardou a sessão do sistema. Confira se os cookies estão liberados para este endereço e tente de novo.
+    confirm_password_title: Confirme a sua senha
+    confirm_password_text: "Já existe uma conta com o email {{.email}}. Digite a senha dela, uma vez só, para ligá-la a este login."
+    confirm_password_submit: Confirmar e entrar
+    no_account_title: Você ainda não tem conta aqui
+    no_account_text: "Entre numa organização que convidou {{.email}} ou crie a sua. Se recebeu um convite por email, abra o link dele."
+    join_org: "Entrar em {{.name}} como {{.role}}"
+    or_create: ou
+    create_org: Criar uma organização
 
 trello_callback:
   title: Terminando a conexão com o Trello…
@@ -310,6 +338,7 @@ profile:
     next_hint: Pelo menos 8 caracteres. As suas outras sessões serão encerradas.
     submit: Trocar senha
     changed: Senha trocada. As outras sessões foram encerradas.
+    managed: Você entra sem uma senha do sistema, então não há senha para trocar aqui.
 
 # A ajuda (/help): uma página só, com o passo a passo do primeiro uso e o que cada tela faz.
 # Os rótulos que a pessoa clica aparecem nos textos entre aspas, como estão na tela; os
@@ -1296,6 +1325,11 @@ errors:
   auth:
     account_exists: "já existe uma conta com este email"
     admin_only: "só admins podem fazer isso"
+    clerk_account_linked: "este email já está ligado a outro usuário do login"
+    clerk_disabled: "o login externo não está ligado neste servidor"
+    clerk_email_unverified: "o seu email ainda não foi verificado. Verifique-o e tente de novo"
+    clerk_token_invalid: "não foi possível confirmar o seu login. Entre de novo"
+    clerk_unavailable: "o serviço de login não respondeu. Tente de novo em instantes"
     owner_only: "só o dono da organização pode fazer isso"
     permission_required: "você não tem permissão para fazer isso"
     invalid_credentials: "email ou senha incorretos"

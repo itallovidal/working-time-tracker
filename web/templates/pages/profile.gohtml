@@ -46,6 +46,7 @@
       </ul>
     </section>
 
+    {{- if .Me.HasPassword}}
     <form class="card" @submit.prevent="changePassword()">
       <div class="card-head"><h2>{{.T "profile.password.title"}}</h2></div>
       <div class="field">
@@ -60,6 +61,13 @@
       <p class="form-error" x-show="errors.password" x-text="errors.password" role="alert"></p>
       <div class="row row-end"><button type="submit" class="btn" :disabled="pending">{{.T "profile.password.submit"}}</button></div>
     </form>
+    {{- else}}
+    {{/* Quem entra só pelo Clerk não tem senha do sistema: não há o que trocar. */}}
+    <section class="card">
+      <div class="card-head"><h2>{{.T "profile.password.title"}}</h2></div>
+      <p class="muted">{{.T "profile.password.managed"}}</p>
+    </section>
+    {{- end}}
   </div>
 </main>
 {{end}}

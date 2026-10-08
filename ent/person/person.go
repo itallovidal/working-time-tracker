@@ -24,6 +24,8 @@ const (
 	FieldOrganizationID = "organization_id"
 	// FieldPasswordHash holds the string denoting the password_hash field in the database.
 	FieldPasswordHash = "password_hash"
+	// FieldClerkUserID holds the string denoting the clerk_user_id field in the database.
+	FieldClerkUserID = "clerk_user_id"
 	// FieldRole holds the string denoting the role field in the database.
 	FieldRole = "role"
 	// FieldIsOwner holds the string denoting the is_owner field in the database.
@@ -108,6 +110,7 @@ var Columns = []string{
 	FieldEmail,
 	FieldOrganizationID,
 	FieldPasswordHash,
+	FieldClerkUserID,
 	FieldRole,
 	FieldIsOwner,
 	FieldPermissions,
@@ -186,6 +189,11 @@ func ByOrganizationID(opts ...sql.OrderTermOption) OrderOption {
 // ByPasswordHash orders the results by the password_hash field.
 func ByPasswordHash(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldPasswordHash, opts...).ToFunc()
+}
+
+// ByClerkUserID orders the results by the clerk_user_id field.
+func ByClerkUserID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldClerkUserID, opts...).ToFunc()
 }
 
 // ByRole orders the results by the role field.

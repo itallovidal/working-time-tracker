@@ -48,6 +48,40 @@ Todas as rotas falam JSON. Erros sempre vêm como `{"error": {"code": "dominio.m
 | POST | `/api/auth/password` | logado | Troca a senha e encerra as suas outras sessões |
 | GET | `/api/auth/invites/:token` | público | Mostra para qual organização e papel é o convite |
 | POST | `/api/auth/invites/:token/accept` | público | Cria a conta pelo convite e abre a sessão |
+| POST | `/api/auth/clerk/login` | público, token do Clerk | Entra pelo Clerk (ver abaixo) |
+| POST | `/api/auth/clerk/signup` | público, token do Clerk | Cria uma organização para quem entrou pelo Clerk |
+| POST | `/api/auth/clerk/join` | público, token do Clerk | Aceita um convite pendente feito para o email do Clerk |
+
+### Entrar pelo Clerk
+
+Só existem com `CLERK_SECRET_KEY` e `CLERK_PUBLISHABLE_KEY` no servidor; sem eles respondem **404** `auth.clerk_disabled`. Quem chama é o navegador, depois de entrar no Clerk (`/auth/clerk/continue`): o token de sessão do Clerk vai em `Authorization: Bearer <jwt>` (vale 60 segundos), e o corpo é JSON. A resposta abre a sessão do sistema (cookie `wtt_session`) quando há `Token`; os estados que não abrem sessão voltam em **200** sem cookie.
+
+```http
+POST /api/auth/clerk/login
+Authorization: Bearer eyJhbGciOi...
+Content-Type: application/json
+
+{ "invite_token": "…", "password": "…" }   // os dois são opcionais
+```
+
+| Resposta | Quando |
+|---|---|
+| `200 {"status":"ok","identity":{…}}` + cookie | Entrou: o usuário do Clerk já estava ligado, ou a conta com o mesmo email verificado foi ligada agora |
+| `201 {"status":"ok","identity":{…}}` + cookie | O `invite_token` criou a conta na organização do convite |
+| `200 {"status":"needs_password","email":"…"}` | Há uma conta com esse email e senha; repita com `password` para ligá-la. Senha errada: 401 `auth.invalid_credentials` |
+| `200 {"status":"no_account","email":"…","name":"…","invites":[{"id","organization_name","role"}]}` | Não há conta. `invites` são os convites pendentes para o email; nada é aceito sozinho |
+| 401 `auth.clerk_token_invalid` | Assinatura, prazo ou origem (`azp`) não conferem, ou o usuário não existe mais |
+| 403 `auth.clerk_email_unverified` | O email primário do Clerk não foi verificado |
+| 404 `auth.invite_invalid` / 400 `auth.invite_email_mismatch` | O `invite_token` não vale, ou o convite é para outro email |
+| 409 `auth.account_exists` / `auth.clerk_account_linked` | O email já é de uma conta em outra organização (convite de outra), ou a conta está ligada a outro usuário do Clerk que ainda existe |
+| 502 `auth.clerk_unavailable` | O Clerk não respondeu; tente de novo |
+
+```http
+POST /api/auth/clerk/signup          { "organization_name": "Minha Empresa", "name": "Ana Souza" }   // name é opcional
+POST /api/auth/clerk/join            { "invite_id": "<uuid de um convite de no_account.invites>", "name": "…" }
+```
+
+`signup` e `join` respondem **201** com o mesmo corpo e o cookie. `signup`: 400 `auth.org_name_required`, 409 `auth.account_exists` (já há conta para esse usuário ou email). `join`: o convite precisa ter email e ser o email verificado do Clerk (convite sem email só entra pelo `invite_token` do `login`).
 
 ### Signup
 ```http

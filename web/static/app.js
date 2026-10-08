@@ -58,11 +58,12 @@
     }
   }
 
-  // api chama a API JSON do próprio servidor. Em erro, lança ApiError: o servidor
+  // api chama a API JSON do próprio servidor (headers são cabeçalhos a mais, como o Authorization do login
+  // pelo Clerk). Em erro, lança ApiError: o servidor
   // manda só um código, em {"error": {"code": "...", "params": {...}}}, e a mensagem
   // é montada aqui, no idioma da página.
-  async function api(method, path, body) {
-    const opts = { method, credentials: 'same-origin', headers: { Accept: 'application/json' } };
+  async function api(method, path, body, headers) {
+    const opts = { method, credentials: 'same-origin', headers: { Accept: 'application/json', ...headers } };
     if (body !== undefined) {
       opts.headers['Content-Type'] = 'application/json';
       opts.body = JSON.stringify(body);
@@ -796,7 +797,8 @@
         try {
           await api('POST', '/api/auth/logout');
         } finally {
-          location.href = '/login';
+          // out=1 avisa o login que foi uma saída: com o Clerk ligado, ele também desconecta de lá.
+          location.href = '/login?out=1';
         }
       },
     }));

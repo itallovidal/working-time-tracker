@@ -27,7 +27,8 @@ type NewAccount struct {
 	OrganizationName string
 	Name             string
 	Email            string
-	PasswordHash     string
+	PasswordHash     *string // nil: a conta entra só pelo Clerk, sem senha
+	ClerkUserID      *string
 	Role             string
 	IsOwner          bool // só o signup cria o dono, junto com a organização
 	SessionHash      string
@@ -73,14 +74,15 @@ func (s *Store) CreateAccount(a NewAccount) (*Identity, error) {
 		return rollback(err)
 	}
 
-	p, err := tx.Person.Create().
+	create := tx.Person.Create().
 		SetName(a.Name).
 		SetEmail(a.Email).
 		SetOrganizationID(org.ID).
-		SetPasswordHash(a.PasswordHash).
+		SetNillablePasswordHash(a.PasswordHash).
+		SetNillableClerkUserID(a.ClerkUserID).
 		SetRole(person.Role(a.Role)).
-		SetIsOwner(a.IsOwner).
-		Save(ctx)
+		SetIsOwner(a.IsOwner)
+	p, err := create.Save(ctx)
 	if err != nil {
 		if ent.IsConstraintError(err) {
 			return rollback(ErrEmailInUse)
@@ -235,6 +237,7 @@ func (s *Store) ValidInvite(tokenHash string, now time.Time) (*ent.Invite, error
 
 func identityOf(p *ent.Person, org *ent.Organization) *Identity {
 	id := &Identity{
+		HasPassword:    p.PasswordHash != nil,
 		PersonID:       p.ID,
 		Name:           p.Name,
 		Email:          p.Email,
@@ -264,4 +267,55 @@ func toDomainInvite(e *ent.Invite) *Invite {
 		inv.CreatedByName = e.Edges.CreatedBy.Name
 	}
 	return inv
+}
+
+// PersonByClerkID devolve a pessoa ligada ao usuário do Clerk, com a organização, ou database.ErrNotFound.
+func (s *Store) PersonByClerkID(clerkID string) (*ent.Person, error) {
+	p, err := s.client.Person.Query().
+		Where(person.ClerkUserIDEQ(clerkID)).
+		WithOrganization().
+		Only(context.Background())
+	if ent.IsNotFound(err) {
+		return nil, database.ErrNotFound
+	}
+	return p, err
+}
+
+// LinkClerk liga a pessoa ao usuário do Clerk. Só liga uma pessoa que não está ligada a ninguém ou, quando
+// replacing não é vazio, que está ligada a esse usuário (o antigo, que já não existe). Devolve false quando a
+// pessoa já mudou nesse meio tempo (outra requisição ligou antes).
+func (s *Store) LinkClerk(personID uuid.UUID, clerkID, replacing string) (bool, error) {
+	q := s.client.Person.Update().Where(person.IDEQ(personID))
+	if replacing == "" {
+		q = q.Where(person.ClerkUserIDIsNil())
+	} else {
+		q = q.Where(person.ClerkUserIDEQ(replacing))
+	}
+	n, err := q.SetClerkUserID(clerkID).Save(context.Background())
+	if ent.IsConstraintError(err) {
+		return false, ErrAccountExists
+	}
+	return n == 1, err
+}
+
+// PendingInvitesForEmail lista os convites ainda utilizáveis feitos para esse e-mail, com a organização, do mais
+// novo para o mais antigo.
+func (s *Store) PendingInvitesForEmail(email string, now time.Time) ([]*ent.Invite, error) {
+	return s.client.Invite.Query().
+		Where(invite.EmailEQ(email), invite.AcceptedAtIsNil(), invite.ExpiresAtGT(now)).
+		WithOrganization().
+		Order(ent.Desc(invite.FieldCreatedAt)).
+		All(context.Background())
+}
+
+// InviteByID devolve o convite ainda utilizável, com a organização, ou ErrInviteInvalid.
+func (s *Store) InviteByID(id uuid.UUID, now time.Time) (*ent.Invite, error) {
+	inv, err := s.client.Invite.Query().
+		Where(invite.IDEQ(id), invite.AcceptedAtIsNil(), invite.ExpiresAtGT(now)).
+		WithOrganization().
+		Only(context.Background())
+	if ent.IsNotFound(err) {
+		return nil, ErrInviteInvalid
+	}
+	return inv, err
 }

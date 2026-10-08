@@ -1,0 +1,60 @@
+{{define "content"}}
+{{/* A volta do Clerk: o token de sessão dele vira, aqui, uma sessão do sistema. Ver clerkContinue em auth.js. */}}
+<main class="auth-page">
+  <div class="auth-card" x-data="clerkContinue">
+    <span class="brand"><span class="brand-mark" aria-hidden="true"></span>Working Time Tracker</span>
+
+    <div class="stack" x-show="state === 'working'">
+      <h1>{{.T "auth.clerk.finishing"}}</h1>
+      <p class="muted">{{.T "auth.clerk.finishing_text"}}</p>
+      <noscript><p class="form-error">{{.T "auth.clerk.noscript"}}</p></noscript>
+    </div>
+
+    <form class="stack" x-cloak x-show="state === 'password'" @submit.prevent="submitPassword()">
+      <h1>{{.T "auth.clerk.confirm_password_title"}}</h1>
+      <p class="muted" x-text="$t('auth.clerk.confirm_password_text', { email })"></p>
+      <div class="field">
+        <label for="clerk-password">{{.T "auth.password"}}</label>
+        <input id="clerk-password" type="password" autocomplete="current-password" required x-model="password">
+      </div>
+      <p class="form-error" x-cloak x-show="errors.password" x-text="errors.password" role="alert"></p>
+      <button class="btn btn-block" type="submit" :disabled="pending">{{.T "auth.clerk.confirm_password_submit"}}</button>
+      <button class="btn btn-ghost btn-block" type="button" @click="otherAccount()">{{.T "auth.clerk.other_account"}}</button>
+    </form>
+
+    <div class="stack" x-cloak x-show="state === 'choose'">
+      <h1>{{.T "auth.clerk.no_account_title"}}</h1>
+      <p class="muted" x-text="$t('auth.clerk.no_account_text', { email })"></p>
+      <template x-if="invites.length > 0">
+        <div class="stack">
+          <template x-for="inv in invites" :key="inv.id">
+            <button class="btn btn-block" type="button" :disabled="pending" @click="join(inv)"
+                    x-text="$t('auth.clerk.join_org', { name: inv.organization_name, role: WTT.fmt.role(inv.role) })"></button>
+          </template>
+          <p class="auth-foot">{{.T "auth.clerk.or_create"}}</p>
+        </div>
+      </template>
+      <form class="stack" @submit.prevent="createOrg()">
+        <div class="field">
+          <label for="clerk-org">{{.T "auth.signup.org_name"}}</label>
+          <input id="clerk-org" type="text" autocomplete="organization" required x-model="organization_name">
+        </div>
+        <div class="field">
+          <label for="clerk-name">{{.T "auth.your_name"}}</label>
+          <input id="clerk-name" type="text" autocomplete="name" x-model="name">
+        </div>
+        <p class="form-error" x-cloak x-show="errors.choose" x-text="errors.choose" role="alert"></p>
+        <button class="btn btn-block" :class="invites.length > 0 && 'btn-secondary'" type="submit" :disabled="pending">{{.T "auth.clerk.create_org"}}</button>
+      </form>
+      <button class="btn btn-ghost btn-block" type="button" @click="otherAccount()">{{.T "auth.clerk.other_account"}}</button>
+    </div>
+
+    <div class="stack" x-cloak x-show="state === 'error'">
+      <h1>{{.T "auth.clerk.error_title"}}</h1>
+      <p class="form-error" x-text="message" role="alert"></p>
+      <button class="btn btn-block" type="button" @click="retry()">{{.T "auth.clerk.try_again"}}</button>
+      <button class="btn btn-secondary btn-block" type="button" @click="otherAccount()">{{.T "auth.clerk.other_account"}}</button>
+    </div>
+  </div>
+</main>
+{{end}}

@@ -1,24 +1,48 @@
 {{define "content"}}
 <main class="auth-page">
-  <form class="auth-card" x-data="loginForm" @submit.prevent="submit()">
+  <div class="auth-card" x-data="loginForm">
     <span class="brand"><span class="brand-mark" aria-hidden="true"></span>Working Time Tracker</span>
     <div class="stack">
       <h1>{{.T "auth.login.title"}}</h1>
+      {{- if not .Props.clerk}}
       <p class="muted">{{.T "auth.login.subtitle"}}</p>
+      {{- end}}
     </div>
-    <div class="field">
-      <label for="login-email">{{.T "common.email"}}</label>
-      <input id="login-email" type="email" autocomplete="email" required x-model="email" autofocus>
+    {{- if .Props.clerk}}
+    {{/* Com o Clerk ligado ele é o jeito de entrar; o e-mail e a senha do sistema ficam atrás de um botão. */}}
+    <div class="stack" x-show="!showPassword">
+      <p class="muted" x-show="loading">{{.T "auth.clerk.loading"}}</p>
+      <div class="stack" x-cloak x-show="stuck">
+        <p class="muted">{{.T "auth.clerk.stuck"}}</p>
+        <button class="btn btn-block" type="button" @click="retry()">{{.T "auth.clerk.try_again"}}</button>
+        <button class="btn btn-secondary btn-block" type="button" @click="otherAccount()">{{.T "auth.clerk.other_account"}}</button>
+      </div>
+      <div class="clerk-mount" x-ref="clerk" x-show="!stuck"></div>
+      <p class="form-error" x-cloak x-show="errors.clerk" x-text="errors.clerk" role="alert"></p>
+      <button class="btn btn-ghost btn-block" type="button" x-cloak x-show="!stuck" @click="showPassword = true">{{.T "auth.clerk.use_password"}}</button>
     </div>
-    <div class="field">
-      <label for="login-password">{{.T "auth.password"}}</label>
-      <input id="login-password" type="password" autocomplete="current-password" required x-model="password">
-    </div>
-    <p class="form-error" x-cloak x-show="errors.login" x-text="errors.login" role="alert"></p>
-    <button class="btn btn-block" type="submit" :disabled="pending">
-      <span x-text="pending ? $t('auth.login.pending') : $t('auth.login.submit')">{{.T "auth.login.submit"}}</span>
-    </button>
+    {{- end}}
+    <form class="stack" {{if .Props.clerk}}x-cloak x-show="showPassword" {{end}}@submit.prevent="submit()">
+      {{- if .Props.clerk}}
+      <p class="muted">{{.T "auth.login.subtitle"}}</p>
+      {{- end}}
+      <div class="field">
+        <label for="login-email">{{.T "common.email"}}</label>
+        <input id="login-email" type="email" autocomplete="email" required x-model="email" {{if not .Props.clerk}}autofocus{{end}}>
+      </div>
+      <div class="field">
+        <label for="login-password">{{.T "auth.password"}}</label>
+        <input id="login-password" type="password" autocomplete="current-password" required x-model="password">
+      </div>
+      <p class="form-error" x-cloak x-show="errors.login" x-text="errors.login" role="alert"></p>
+      <button class="btn btn-block" type="submit" :disabled="pending">
+        <span x-text="pending ? $t('auth.login.pending') : $t('auth.login.submit')">{{.T "auth.login.submit"}}</span>
+      </button>
+      {{- if .Props.clerk}}
+      <button class="btn btn-ghost btn-block" type="button" @click="showPassword = false">{{.T "auth.clerk.use_clerk"}}</button>
+      {{- end}}
+    </form>
     <p class="auth-foot">{{.T "auth.login.no_account"}} <a href="/signup">{{.T "auth.login.create_org"}}</a></p>
-  </form>
+  </div>
 </main>
 {{end}}

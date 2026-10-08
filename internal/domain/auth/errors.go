@@ -23,4 +23,11 @@ var (
 	ErrOwnerOnly           = apperr.New("auth.owner_only", http.StatusForbidden)
 	ErrPermissionRequired  = apperr.New("auth.permission_required", http.StatusForbidden)
 	ErrOwnProfileOnly      = apperr.New("auth.own_profile_only", http.StatusForbidden)
+
+	// O login pelo Clerk.
+	ErrClerkDisabled        = apperr.New("auth.clerk_disabled", http.StatusNotFound)
+	ErrClerkTokenInvalid    = apperr.New("auth.clerk_token_invalid", http.StatusUnauthorized)
+	ErrClerkEmailUnverified = apperr.New("auth.clerk_email_unverified", http.StatusForbidden)
+	ErrClerkAccountLinked   = apperr.New("auth.clerk_account_linked", http.StatusConflict)
+	ErrClerkUnavailable     = apperr.New("auth.clerk_unavailable", http.StatusBadGateway)
 )

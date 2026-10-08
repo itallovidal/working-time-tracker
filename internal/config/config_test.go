@@ -97,3 +97,59 @@ func TestLoad_TrelloSettings(t *testing.T) {
 		t.Errorf("no key is fine (the connection just says it is not configured): %+v, %v", cfg, err)
 	}
 }
+
+func clearClerk(t *testing.T) {
+	t.Helper()
+	for _, name := range []string{"CLERK_SECRET_KEY", "CLERK_PUBLISHABLE_KEY", "CLERK_API_URL", "CLERK_AUTHORIZED_PARTIES", "PUBLIC_URL"} {
+		t.Setenv(name, "")
+	}
+}
+
+// Sem as chaves o Clerk fica desligado. Com as duas, o sistema precisa do PUBLIC_URL, e as origens aceitas são a
+// dele, a menos que se diga outras.
+func TestLoad_ClerkSettings(t *testing.T) {
+	setRequired(t)
+	clearClerk(t)
+
+	cfg, err := Load()
+	if err != nil || cfg.ClerkEnabled() || len(cfg.ClerkAuthorizedParties) != 0 {
+		t.Fatalf("defaults = enabled %v, parties %v, %v; want off, none", cfg.ClerkEnabled(), cfg.ClerkAuthorizedParties, err)
+	}
+
+	t.Setenv("CLERK_SECRET_KEY", " sk_test_abc ")
+	t.Setenv("CLERK_PUBLISHABLE_KEY", "pk_test_abc")
+	t.Setenv("PUBLIC_URL", "http://localhost:8080/")
+	cfg, err = Load()
+	if err != nil || !cfg.ClerkEnabled() || cfg.ClerkSecretKey != "sk_test_abc" {
+		t.Fatalf("both keys = enabled %v, secret %q, %v; want on, trimmed", cfg.ClerkEnabled(), cfg.ClerkSecretKey, err)
+	}
+	if got := cfg.ClerkAuthorizedParties; len(got) != 1 || got[0] != "http://localhost:8080" {
+		t.Errorf("authorized parties = %v, want the origin of PUBLIC_URL", got)
+	}
+
+	t.Setenv("CLERK_AUTHORIZED_PARTIES", "http://localhost:8080/, http://localhost:8090 ,")
+	cfg, err = Load()
+	if err != nil || len(cfg.ClerkAuthorizedParties) != 2 || cfg.ClerkAuthorizedParties[1] != "http://localhost:8090" {
+		t.Errorf("listed parties = %v, %v; want the two origins without slashes", cfg.ClerkAuthorizedParties, err)
+	}
+}
+
+// Um engano na configuração do Clerk derruba a subida.
+func TestLoad_ClerkMisconfigurationIsRefused(t *testing.T) {
+	setRequired(t)
+	for name, env := range map[string]map[string]string{
+		"only the secret":      {"CLERK_SECRET_KEY": "sk_test_a"},
+		"only the publishable": {"CLERK_PUBLISHABLE_KEY": "pk_test_a"},
+		"no PUBLIC_URL":        {"CLERK_SECRET_KEY": "sk_test_a", "CLERK_PUBLISHABLE_KEY": "pk_test_a"},
+		"swapped keys":         {"CLERK_SECRET_KEY": "pk_test_a", "CLERK_PUBLISHABLE_KEY": "sk_test_a", "PUBLIC_URL": "http://localhost:8080"},
+		"relative PUBLIC_URL":  {"CLERK_SECRET_KEY": "sk_test_a", "CLERK_PUBLISHABLE_KEY": "pk_test_a", "PUBLIC_URL": "localhost:8080"},
+	} {
+		clearClerk(t)
+		for k, v := range env {
+			t.Setenv(k, v)
+		}
+		if _, err := Load(); err == nil {
+			t.Errorf("%s must be refused", name)
+		}
+	}
+}
