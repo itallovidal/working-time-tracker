@@ -23,6 +23,8 @@ var (
 
 	// ErrIssueGone é a issue que a plataforma não tem mais (apagada) ou que mudou de repositório.
 	ErrIssueGone = apperr.New("integration.issue_gone", http.StatusNotFound, "item")
+	// ErrIssuesDisabled é o repositório que desligou as issues: não há onde criar uma.
+	ErrIssuesDisabled = apperr.New("integration.issues_disabled", http.StatusBadRequest, "provider")
 	// ErrRateLimited é o limite de requisições da plataforma; "until" é o instante (segundos Unix) em
 	// que ele acaba, quando a plataforma o informa.
 	ErrRateLimited = apperr.New("integration.rate_limited", http.StatusTooManyRequests, "provider")

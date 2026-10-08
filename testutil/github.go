@@ -70,6 +70,7 @@ type ghRepo struct {
 	moved      map[int]bool      // issues transferidas: 301
 	gone       map[int]bool      // issues apagadas: 410
 	labelError int               // status que a criação de etiqueta devolve, se não for zero
+	noIssues   bool              // o repositório desligou as issues: criar uma devolve 410
 }
 
 type ghFault struct {
@@ -142,6 +143,13 @@ func (g *GitHub) Unassignable(login string) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	g.nologin[login] = true
+}
+
+// DisableIssues desliga as issues do repositório: criar uma passa a devolver 410, como o GitHub.
+func (g *GitHub) DisableIssues(repo string) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.repo(repo).noIssues = true
 }
 
 // AddIssue cria uma issue. Number zero pega o próximo número do repositório; o estado vazio é
@@ -379,6 +387,7 @@ func (g *GitHub) routes() *http.ServeMux {
 	mux.HandleFunc("GET /repos/{owner}/{repo}", auth(g.getRepo))
 	mux.HandleFunc("GET /repos/{owner}/{repo}/issues", auth(g.listIssues))
 	mux.HandleFunc("GET /repos/{owner}/{repo}/issues/{number}", auth(g.getIssue))
+	mux.HandleFunc("POST /repos/{owner}/{repo}/issues", auth(g.createIssue))
 	mux.HandleFunc("PATCH /repos/{owner}/{repo}/issues/{number}", auth(g.patchIssue))
 	mux.HandleFunc("GET /repos/{owner}/{repo}/labels", auth(g.listLabels))
 	mux.HandleFunc("POST /repos/{owner}/{repo}/labels", auth(g.createLabel))
@@ -616,6 +625,57 @@ func (g *GitHub) getIssue(w http.ResponseWriter, r *http.Request) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	writeJSON(w, http.StatusOK, issueJSON(repo.name, issue))
+}
+
+// createIssue abre uma issue. Como no GitHub, quem não tem permissão de escrita tem as etiquetas e os
+// responsáveis descartados sem aviso, e uma etiqueta que o repositório não tem também é descartada.
+func (g *GitHub) createIssue(w http.ResponseWriter, r *http.Request) {
+	repo := g.lookup(w, r)
+	if repo == nil {
+		return
+	}
+	var in struct {
+		Title     string   `json:"title"`
+		Body      *string  `json:"body"`
+		Labels    []string `json:"labels"`
+		Assignees []string `json:"assignees"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		http.Error(w, `{"message":"Problems parsing JSON"}`, http.StatusBadRequest)
+		return
+	}
+
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	if repo.noIssues {
+		http.Error(w, `{"message":"Issues are disabled for this repo"}`, http.StatusGone)
+		return
+	}
+	if strings.TrimSpace(in.Title) == "" {
+		http.Error(w, `{"message":"Validation Failed"}`, http.StatusUnprocessableEntity)
+		return
+	}
+	issue := &GitHubIssue{Number: repo.next, Title: in.Title, State: "open"}
+	if in.Body != nil {
+		issue.Body = *in.Body
+	}
+	if repo.push && !repo.archived {
+		for _, n := range in.Labels {
+			if known, ok := repo.labels[strings.ToLower(n)]; ok {
+				issue.Labels = append(issue.Labels, known)
+			}
+		}
+		for _, l := range in.Assignees {
+			if _, ok := g.users[l]; ok && !g.nologin[l] {
+				issue.Assignees = append(issue.Assignees, l)
+			}
+		}
+	}
+	repo.next++
+	issue.CreatedAt = g.bump()
+	issue.UpdatedAt = issue.CreatedAt
+	repo.issues = append(repo.issues, issue)
+	writeJSON(w, http.StatusCreated, issueJSON(repo.name, issue))
 }
 
 func (g *GitHub) patchIssue(w http.ResponseWriter, r *http.Request) {

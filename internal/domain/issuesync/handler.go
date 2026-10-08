@@ -63,6 +63,28 @@ func (h *Handler) SyncTask(c *echo.Context) error {
 	return apperr.Respond(c, 400, err)
 }
 
+// publishBody é o corpo de POST /api/tasks/:taskId/publish.
+type publishBody struct {
+	IntegrationID string `json:"integration_id"`
+}
+
+// Publish posta uma tarefa como issue nova: é o passo Integrações do modal Nova tarefa. Qualquer pessoa
+// que veja a tarefa pode, como no botão Sincronizar dela.
+func (h *Handler) Publish(c *echo.Context) error {
+	var body publishBody
+	if err := c.Bind(&body); err != nil {
+		return apperr.Respond(c, 400, apperr.ErrInvalidBody)
+	}
+	published, err := h.syncer.Publish(c.Request().Context(), parseID(c.Param("taskId")), parseID(body.IntegrationID))
+	switch {
+	case err == nil:
+		return c.JSON(200, published)
+	case errors.Is(err, database.ErrNotFound):
+		return apperr.Respond(c, 404, err)
+	}
+	return apperr.Respond(c, 400, err)
+}
+
 // parseID lê o id da rota; um id que não é um UUID não é de nenhuma integração.
 func parseID(raw string) uuid.UUID {
 	id, _ := uuid.Parse(raw)

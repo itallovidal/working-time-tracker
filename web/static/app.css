@@ -258,6 +258,20 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 .integration-link-text strong { font-weight: 600; }
 .integration-go { color: var(--muted); font-size: 0.85rem; }
 .integration-link:hover .integration-go { color: var(--accent); }
+/* O passo Integrações da tarefa nova: um cartão para cada integração, que se marca como uma opção. As que
+   ainda não recebem tarefas ficam apagadas, com o motivo num selo. */
+.publish-card {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: start; padding: 12px 14px;
+  background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius-sm); cursor: pointer;
+}
+.publish-card:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.publish-card.is-off { background: var(--surface-2); color: var(--muted); cursor: not-allowed; }
+.publish-card input { margin-top: 3px; }
+.publish-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.publish-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.publish-head > i { font-size: 1.15rem; }
+.publish-ask { font-size: 0.92rem; }
+.publish-points { margin: 2px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 3px; }
 .task-head { display: flex; flex-direction: column; gap: 14px; }
 .task-title { overflow-wrap: anywhere; }
 /* Os atributos da tarefa, uma linha cada, separadas por um filete. */

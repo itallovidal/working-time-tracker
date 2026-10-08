@@ -114,6 +114,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `integration.invalid_issue_number` | 400 | — | `o número da issue precisa ter só dígitos` | `the issue number must contain only digits` |
 | `integration.invalid_token` | 400 | `provider` | `token do {{.provider}} inválido` | `invalid {{.provider}} token` |
 | `integration.issue_gone` | 404 | `item` | `a issue {{.item}} não existe mais ou mudou de repositório` | `issue {{.item}} no longer exists or moved to another repository` |
+| `integration.issues_disabled` | 400 | `provider` | `o repositório do {{.provider}} está com as issues desligadas, então não há onde criar uma` | `the {{.provider}} repository has issues turned off, so there is nowhere to create one` |
 | `integration.item_not_found` | 400 | `item` | `item {{.item}} não encontrado` | `item {{.item}} not found` |
 | `integration.list_too_long` | 400 | `provider` | `o {{.provider}} tem itens demais para listar de uma vez` | `{{.provider}} has too many items to list at once` |
 | `integration.name_required` | 400 | — | `informe o nome da integração` | `enter the integration name` |
@@ -156,6 +157,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 |---|---|---|---|---|
 | `issue_sync.label_refused` | 400 | — | `o token do GitHub não pode criar etiquetas neste repositório: a etiqueta nova fica só aqui` | `the GitHub token cannot create labels in this repository: the new label stays here only` |
 | `issue_sync.no_login` | 400 | — | `não achei o usuário do GitHub de quem é responsável aqui: ele precisa ter o e-mail público no perfil do GitHub` | `could not find the GitHub user of the person assigned here: they need a public email on their GitHub profile` |
+| `issue_sync.publish_read_only` | 400 | — | `o token desta integração não escreve no repositório: a issue sairia sem as etiquetas e o responsável, então a tarefa não foi postada` | `the token of this integration cannot write to the repository: the issue would come out without the labels and the assignee, so the task was not posted` |
 | `issue_sync.push_discarded` | 400 | — | `o GitHub ignorou uma mudança desta issue (o token pode não ter permissão de escrita): ela fica só aqui` | `GitHub ignored a change to this issue (the token may lack write permission): it stays here only` |
 | `issue_sync.push_rejected` | 400 | — | `o GitHub recusou uma mudança desta issue: ela fica só aqui` | `GitHub refused a change to this issue: it stays here only` |
 | `issue_sync.read_only` | 400 | — | `o token não escreve neste repositório: as issues só vêm para cá, e as mudanças daqui não vão para o GitHub` | `the token cannot write to this repository: issues only come here, and changes made here do not go to GitHub` |
@@ -237,6 +239,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | Código | Status | Parâmetros | pt-BR | en |
 |---|---|---|---|---|
 | `task.already_assigned` | 409 | — | `esta tarefa já tem responsável` | `this task already has an assignee` |
+| `task.already_linked` | 400 | — | `a tarefa já está ligada a um item externo` | `the task is already linked to an external item` |
 | `task.assignee_not_in_team` | 400 | — | `o responsável precisa estar neste projeto` | `the assignee must be on this project` |
 | `task.description_too_long` | 400 | `max` | `a descrição aceita até {{.max}} caracteres` | `the description accepts up to {{.max}} characters` |
 | `task.integration_not_found` | 400 | — | `integração não encontrada` | `integration not found` |

@@ -494,6 +494,7 @@ tasks:
     label: Steps
     step_task: Task
     step_details: Details
+    step_integrations: Integrations
     next: Next
     back: Back
     name_required: Enter the task name.
@@ -516,6 +517,19 @@ tasks:
   loading: Loading tasks…
   sync: Sync
   sync_title: Fetches the issue changes from GitHub and sends what changed here, without waiting for the background job
+  publish:
+    intro: "Use integrations?"
+    ask: "Post to {{.provider}}"
+    github_sends: "The name (the title), the description and the labels go to the issue; labels are created in the repository if it lacks them."
+    github_local: "Deadline and priority do not exist on an issue: they stay here only."
+    github_assignee: "The assignee only goes if the public email of their GitHub user is the same email registered here; otherwise the issue comes out unassigned."
+    github_after: "Once posted, the task and the issue stay in sync in both directions."
+    github_sync_off: "Turn on the issue sync on this integration, on the project's integrations screen, to post tasks to it."
+    soon: Coming soon
+    sync_off: Sync off
+    soon_note: "For now {{.provider}} only shows the details of an item you link to the task. Posting tasks to it does not exist yet."
+    done: "Task posted to {{.provider}}: issue #{{.number}}."
+    failed: "The task was created, but it could not be posted to {{.provider}}: {{.message}}"
   none_filtered: No tasks match these filters
   lede: Here are the tasks nobody has picked up, for the team to choose and clock in, and below them the ones that already have an assignee.
   section_free: Unassigned
@@ -1085,6 +1099,7 @@ errors:
     field_not_text: "the \"{{.field}}\" field of {{.provider}} must be text"
     field_required: "enter the \"{{.field}}\" field of {{.provider}}"
     forbidden: "the {{.provider}} token has no permission for that"
+    issues_disabled: "the {{.provider}} repository has issues turned off, so there is nowhere to create one"
     github_invalid_repo: "invalid GitHub repository: use owner/repository"
     github_oauth_denied: "the authorization on GitHub was cancelled"
     github_oauth_exchange: "GitHub did not accept the authorization: try connecting again"
@@ -1134,6 +1149,7 @@ errors:
     push_discarded: "GitHub ignored a change to this issue (the token may lack write permission): it stays here only"
     push_rejected: "GitHub refused a change to this issue: it stays here only"
     read_only: "the token cannot write to this repository: issues only come here, and changes made here do not go to GitHub"
+    publish_read_only: "the token of this integration cannot write to the repository: the issue would come out without the labels and the assignee, so the task was not posted"
   label:
     name_required: "enter the label name"
     name_taken: "the project already has a label with this name"
@@ -1194,6 +1210,7 @@ errors:
     integrations_unavailable: "integrations unavailable"
     invalid_assignee: "invalid assignee"
     already_assigned: "this task already has an assignee"
+    already_linked: "the task is already linked to an external item"
     invalid_assignee_filter: "invalid assignee (assignee_id)"
     invalid_deadline_filter: "invalid deadline (deadline_to): use date and time, like 2026-10-12T23:59:59Z"
     invalid_label_filter: "invalid label (label_id): use ids separated by commas"

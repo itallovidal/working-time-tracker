@@ -101,12 +101,14 @@
     {{/* novalidate: a etapa que não está à vista tem campos escondidos, e o navegador não os valida; quem confere é submitStep. */}}
     <form class="stack" novalidate x-show="$store.modal.name === 'task-new'" @submit.prevent="submitStep('create')">
       {{template "task_fields" .}}
+      {{template "task_publish" .}}
       <p class="form-error" x-show="errors.create" x-text="errors.create" role="alert"></p>
       <div class="row row-end">
         <button type="button" class="btn btn-secondary" x-show="step === 1" @click="$store.modal.dismiss()">{{.T "common.cancel"}}</button>
-        <button type="button" class="btn btn-secondary" x-show="step === 2" @click="back()">{{template "icon" "arrow-left"}} {{.T "tasks.wizard.back"}}</button>
-        <button type="submit" class="btn" x-show="step === 1">{{.T "tasks.wizard.next"}} {{template "icon" "arrow-right"}}</button>
-        <button type="submit" class="btn" x-show="step === 2" :disabled="pending">{{.T "tasks.create"}}</button>
+        <button type="button" class="btn btn-secondary" x-show="step > 1" @click="back()">{{template "icon" "arrow-left"}} {{.T "tasks.wizard.back"}}</button>
+        {{/* Com a etapa Integrações, a 2 também segue em frente, e quem cria é a 3. */}}
+        <button type="submit" class="btn" x-show="step === 1 || (step === 2 && publishStep)">{{.T "tasks.wizard.next"}} {{template "icon" "arrow-right"}}</button>
+        <button type="submit" class="btn" x-show="(step === 2 && !publishStep) || step === 3" :disabled="pending">{{.T "tasks.create"}}</button>
       </div>
     </form>
   </template>

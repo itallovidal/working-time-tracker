@@ -369,6 +369,41 @@ func (g *GitHubIntegration) UpdateIssue(ctx context.Context, conn Connection, nu
 	return &issue, nil
 }
 
+// CreateIssue abre uma issue no repositório. O GitHub só grava as etiquetas que o repositório tem e os
+// responsáveis que podem ser designados (e só para quem tem permissão de escrita): o que ele descarta
+// não é erro, e quem chama vê o que sobrou na issue devolvida.
+func (g *GitHubIntegration) CreateIssue(ctx context.Context, conn Connection, in NewIssue) (*Issue, error) {
+	path, err := g.repoPath(conn)
+	if err != nil {
+		return nil, err
+	}
+	body := map[string]any{"title": in.Title, "body": in.Body}
+	if len(in.Labels) > 0 {
+		body["labels"] = in.Labels
+	}
+	if len(in.Assignees) > 0 {
+		body["assignees"] = in.Assignees
+	}
+	resp, err := g.call(ctx, conn, "POST", path+"/issues", body)
+	if err != nil {
+		return nil, err
+	}
+	// 410 é o repositório com as issues desligadas; o check trataria como "não achei".
+	if resp.StatusCode == http.StatusGone {
+		resp.Body.Close()
+		return nil, ErrIssuesDisabled.With("provider", "GitHub")
+	}
+	if err := check(resp, ErrGitHubRepoNotFound); err != nil {
+		return nil, err
+	}
+	var row githubIssue
+	if err := decode(resp, &row); err != nil {
+		return nil, err
+	}
+	issue := row.toIssue()
+	return &issue, nil
+}
+
 // nonNil troca a lista nula por uma vazia: o JSON "null" não esvazia as etiquetas, o "[]" sim.
 func nonNil(list []string) []string {
 	if list == nil {

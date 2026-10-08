@@ -57,10 +57,12 @@ document.addEventListener('alpine:init', () => {
   // veio. Só aparece com uma dessas ligada. Quem usa define afterSync(), que recarrega a lista dele.
   const projectSync = () => ({
     syncOn: false,
+    integrations: [], // as integrações ativas do projeto
     async loadSync() {
       try {
         const list = (await api('GET', '/api/projects/' + project.id + '/integrations')) || [];
-        this.syncOn = list.some((i) => i.enabled && i.sync_issues);
+        this.integrations = list.filter((i) => i.enabled);
+        this.syncOn = this.integrations.some((i) => i.sync_issues);
       } catch (e) {
         this.syncOn = false; // sem a lista, o botão só não aparece
       }
@@ -81,6 +83,9 @@ document.addEventListener('alpine:init', () => {
   const taskWizard = () => ({
     step: 1,
     hasStatus: false, // o status só se escolhe ao editar; a tarefa nova nasce em backlog
+    // A etapa 3, Integrações, só existe ao criar uma tarefa num projeto com integração ativa: quem a usa
+    // define publishStep. Ao editar fica false, e o modal tem as duas etapas de sempre.
+    publishStep: false,
     mdView: 'write', // write ou preview
     resetWizard() {
       this.step = 1;
@@ -99,7 +104,7 @@ document.addEventListener('alpine:init', () => {
     // focusStep põe o foco no primeiro campo da etapa: o store do modal só foca ao abrir.
     focusStep() {
       this.$nextTick(() => {
-        const el = document.getElementById(this.step === 1 ? 'task-name' : 'task-deadline');
+        const el = document.getElementById({ 1: 'task-name', 2: 'task-deadline', 3: 'task-publish-0' }[this.step]);
         if (el) el.focus();
       });
     },
@@ -115,11 +120,11 @@ document.addEventListener('alpine:init', () => {
       return true;
     },
     back() {
-      this.step = 1;
+      this.step = Math.max(1, this.step - 1);
       this.focusStep();
     },
-    // submitStep é o envio do formulário (Enter ou o botão): na etapa 1 avança, na 2 confere
-    // o responsável e chama o método que grava (create ou save).
+    // submitStep é o envio do formulário (Enter ou o botão): na etapa 1 avança, na 2 confere o responsável
+    // e avança para as integrações, se houver essa etapa, ou chama o método que grava (create ou save).
     submitStep(finish) {
       if (this.step === 1) {
         this.next();
@@ -130,6 +135,11 @@ document.addEventListener('alpine:init', () => {
         return undefined;
       }
       this.errors.assignee = '';
+      if (this.step === 2 && this.publishStep) {
+        this.step = 3;
+        this.focusStep();
+        return undefined;
+      }
       return this[finish]();
     },
   });
@@ -555,7 +565,9 @@ document.addEventListener('alpine:init', () => {
     filters: { q: '', assignee: '', due: '', date: '', priority: [], status: [], label: [] },
     dueOptions,
     seq: 0,
-    draft: { name: '', description: '', assign: 'none', assignee_id: '', deadline: '', priority: 'none', label_ids: [] }, // assign: me, none ou other
+    draft: { name: '', description: '', assign: 'none', assignee_id: '', deadline: '', priority: 'none', label_ids: [], publish_to: [] }, // assign: me, none ou other
+    // Com integração ativa, a tarefa nova tem uma terceira etapa: postá-la numa delas.
+    get publishStep() { return this.integrations.length > 0; },
     async init() {
       this.readURL();
       const members = api('GET', '/api/projects/' + project.id + '/members')
@@ -704,8 +716,28 @@ document.addEventListener('alpine:init', () => {
     otherMembers() {
       return this.members.filter((m) => m.id !== me.id);
     },
+    typeLabel(type) {
+      const t = integrationType(type);
+      return t ? t.label : type;
+    },
+    brandIcon: (type) => brandIcons[type] || 'fa-solid fa-link',
+    // Só dá para postar numa integração do tipo que sabe criar issues e com a sincronização ligada: é ela
+    // que mantém a tarefa e a issue iguais depois.
+    canPublish(i) {
+      const t = integrationType(i.type);
+      return !!(t && t.sync && i.sync_issues);
+    },
+    // O motivo de uma integração não poder receber a tarefa, no selo do cartão.
+    publishOff(i) {
+      const t = integrationType(i.type);
+      return WTT.t(t && t.sync ? 'tasks.publish.sync_off' : 'tasks.publish.soon');
+    },
+    // Uma tarefa se liga a um item só: marcar uma integração desmarca a outra.
+    pickPublish(i, checked) {
+      this.draft.publish_to = checked ? [i.id] : [];
+    },
     openCreate() {
-      this.draft = { name: '', description: '', assign: 'me', assignee_id: '', deadline: '', priority: 'none', label_ids: [] };
+      this.draft = { name: '', description: '', assign: 'me', assignee_id: '', deadline: '', priority: 'none', label_ids: [], publish_to: [] };
       this.newLabel = '';
       this.errors.create = '';
       this.errors.label = '';
@@ -722,12 +754,31 @@ document.addEventListener('alpine:init', () => {
           priority: this.draft.priority,
           label_ids: this.draft.label_ids,
         });
+        // Postar como issue vem depois de criar: se falhar, a tarefa existe e o aviso diz o que houve.
+        const target = this.integrations.find((i) => i.id === this.draft.publish_to[0]);
+        let published = null;
+        let publishError = '';
+        if (target) {
+          try {
+            published = await api('POST', '/api/tasks/' + t.id + '/publish', { integration_id: target.id });
+          } catch (e) {
+            publishError = e.message;
+          }
+        }
         Alpine.store('modal').close();
         // A tarefa nova é a primeira da lista dela, se os filtros em uso a mostrarem.
         await this.apply();
         const shown = taskLists.some((key) => this.lists[key].tasks.some((x) => x.id === t.id));
         // Uma tarefa sua não aparece nesta página, que mostra as de outras pessoas: está em Minhas tarefas.
         toast(WTT.t(shown ? 'tasks.created' : (t.assignee_id === me.id ? 'tasks.created_mine' : 'tasks.created_hidden')));
+        const provider = target ? this.typeLabel(target.type) : '';
+        if (publishError) {
+          toast(WTT.t('tasks.publish.failed', { provider, message: publishError }), 'error');
+        } else if (published) {
+          let text = WTT.t('tasks.publish.done', { provider, number: published.task.external_item_id });
+          if (published.problem) text += ' ' + WTT.errorText({ code: published.problem, params: { provider } });
+          toast(text, published.problem ? 'error' : undefined);
+        }
       });
     },
     isRunning(t) {

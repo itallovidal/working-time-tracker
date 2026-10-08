@@ -379,3 +379,53 @@ func TestGitHubSync_CancelledContext(t *testing.T) {
 		t.Errorf("err = %v, want context canceled", err)
 	}
 }
+
+func TestGitHubSync_CreateIssue(t *testing.T) {
+	g, conn, fake := syncFixture(t)
+	ctx := context.Background()
+	fake.AddUser("ana-dev", "ana@test.com")
+	if err := g.CreateLabel(ctx, conn, "bug"); err != nil {
+		t.Fatal(err)
+	}
+
+	// A etiqueta que o repositório tem e o usuário que existe ficam; a etiqueta que ele não tem é descartada.
+	issue, err := g.CreateIssue(ctx, conn, NewIssue{Title: "Corrigir login", Body: "texto", Labels: []string{"bug", "ux"}, Assignees: []string{"ana-dev", "ninguem"}})
+	if err != nil {
+		t.Fatalf("CreateIssue: %v", err)
+	}
+	if issue.Number != 1 || issue.Title != "Corrigir login" || issue.Body != "texto" || issue.State != "open" ||
+		!reflect.DeepEqual(issue.Labels, []string{"bug"}) || !reflect.DeepEqual(issue.Assignees, []string{"ana-dev"}) {
+		t.Errorf("issue = %+v", issue)
+	}
+	if stored, _ := fake.Issue("owner/repo", 1); stored.Title != "Corrigir login" {
+		t.Errorf("the fake stored %+v", stored)
+	}
+
+	// Sem os campos opcionais, a issue sai só com título e corpo.
+	if issue, err = g.CreateIssue(ctx, conn, NewIssue{Title: "Só o título"}); err != nil || issue.Number != 2 || len(issue.Labels) != 0 {
+		t.Errorf("minimal issue = %+v, %v", issue, err)
+	}
+
+	// Sem permissão de escrita, o GitHub abre a issue e joga fora as etiquetas e o responsável sem avisar.
+	fake.SetPush("owner/repo", false)
+	issue, err = g.CreateIssue(ctx, conn, NewIssue{Title: "De quem só lê", Labels: []string{"bug"}, Assignees: []string{"ana-dev"}})
+	if err != nil || len(issue.Labels) != 0 || len(issue.Assignees) != 0 {
+		t.Errorf("read-only issue = %+v, %v", issue, err)
+	}
+	fake.SetPush("owner/repo", true)
+
+	// As issues desligadas, um repositório que não existe e um token recusado.
+	fake.DisableIssues("owner/repo")
+	if _, err := g.CreateIssue(ctx, conn, NewIssue{Title: "x"}); !errors.Is(err, ErrIssuesDisabled) {
+		t.Errorf("issues disabled: err = %v", err)
+	}
+	conn.Metadata = map[string]any{"repo": "owner/missing"}
+	if _, err := g.CreateIssue(ctx, conn, NewIssue{Title: "x"}); !errors.Is(err, ErrGitHubRepoNotFound) {
+		t.Errorf("missing repo: err = %v", err)
+	}
+	conn.Metadata = map[string]any{"repo": "owner/repo"}
+	conn.Token = testutil.InvalidToken
+	if _, err := g.CreateIssue(ctx, conn, NewIssue{Title: "x"}); !errors.Is(err, ErrInvalidToken) {
+		t.Errorf("bad token: err = %v", err)
+	}
+}

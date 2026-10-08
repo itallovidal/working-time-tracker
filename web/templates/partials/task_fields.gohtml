@@ -1,12 +1,14 @@
 {{/* task_fields são os campos de uma tarefa em duas etapas, nos modais Nova tarefa e Editar
      tarefa: a etapa 1 é o nome e a descrição (em Markdown, com pré-visualização) e a etapa 2,
-     o prazo, a prioridade, as etiquetas e o responsável. As duas etapas ficam na página, e a
+     o prazo, a prioridade, as etiquetas e o responsável (a etapa 3, Integrações, é de task_publish). As duas etapas ficam na página, e a
      que não está à vista só é escondida: o HTML inicial tem todos os campos. Pede o rascunho
      em `draft`, o mixin taskWizard (step, mdView, next, back...) e labelTools. */}}
 {{define "task_fields"}}
 <ol class="wizard-steps" aria-label="{{.T "tasks.wizard.label"}}">
   <li :class="step === 1 && 'current'" :aria-current="step === 1 ? 'step' : false"><span class="n">1</span> {{.T "tasks.wizard.step_task"}}</li>
   <li :class="step === 2 && 'current'" :aria-current="step === 2 ? 'step' : false"><span class="n">2</span> {{.T "tasks.wizard.step_details"}}</li>
+  {{/* A etapa Integrações só existe ao criar uma tarefa num projeto com integração ativa (publishStep). */}}
+  <li x-cloak x-show="publishStep" :class="step === 3 && 'current'" :aria-current="step === 3 ? 'step' : false"><span class="n">3</span> {{.T "tasks.wizard.step_integrations"}}</li>
 </ol>
 
 <div class="stack" x-show="step === 1">

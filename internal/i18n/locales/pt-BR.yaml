@@ -504,6 +504,7 @@ tasks:
     label: Etapas
     step_task: Tarefa
     step_details: Detalhes
+    step_integrations: Integrações
     next: Próximo
     back: Voltar
     name_required: Informe o nome da tarefa.
@@ -526,6 +527,19 @@ tasks:
   loading: Carregando tarefas…
   sync: Sincronizar
   sync_title: Busca no GitHub as mudanças das issues e leva o que mudou aqui, sem esperar a rotina de fundo
+  publish:
+    intro: "Utilizar Integrações?"
+    ask: "Postar no {{.provider}}"
+    github_sends: "Vão para a issue o nome (o título), a descrição e as etiquetas, que são criadas no repositório se ele não as tem."
+    github_local: "Prazo e prioridade não existem numa issue: ficam só aqui."
+    github_assignee: "O responsável só vai se o e-mail público do usuário dele no GitHub for o mesmo e-mail cadastrado aqui; senão a issue sai sem responsável."
+    github_after: "Depois de postada, a tarefa e a issue ficam sincronizadas nos dois sentidos."
+    github_sync_off: "Ligue a sincronização das issues nesta integração, na tela de integrações do projeto, para postar tarefas nela."
+    soon: Em breve
+    sync_off: Sincronização desligada
+    soon_note: "Por enquanto o {{.provider}} só mostra os detalhes de um item que você liga à tarefa. Postar tarefas nele ainda não existe."
+    done: "Tarefa postada no {{.provider}}: issue #{{.number}}."
+    failed: "A tarefa foi criada, mas não deu para postá-la no {{.provider}}: {{.message}}"
   none_filtered: Nenhuma tarefa com esses filtros
   lede: Aqui estão as tarefas que ninguém pegou, para o time escolher e bater o ponto, e logo abaixo as que já têm responsável.
   section_free: Sem responsável
@@ -1095,6 +1109,7 @@ errors:
     field_not_text: "o campo \"{{.field}}\" do {{.provider}} precisa ser um texto"
     field_required: "informe o campo \"{{.field}}\" do {{.provider}}"
     forbidden: "o token do {{.provider}} não tem permissão para isso"
+    issues_disabled: "o repositório do {{.provider}} está com as issues desligadas, então não há onde criar uma"
     github_invalid_repo: "repositório do GitHub inválido: use dono/repositorio"
     github_oauth_denied: "a autorização no GitHub foi cancelada"
     github_oauth_exchange: "o GitHub não aceitou a autorização: tente conectar de novo"
@@ -1144,6 +1159,7 @@ errors:
     push_discarded: "o GitHub ignorou uma mudança desta issue (o token pode não ter permissão de escrita): ela fica só aqui"
     push_rejected: "o GitHub recusou uma mudança desta issue: ela fica só aqui"
     read_only: "o token não escreve neste repositório: as issues só vêm para cá, e as mudanças daqui não vão para o GitHub"
+    publish_read_only: "o token desta integração não escreve no repositório: a issue sairia sem as etiquetas e o responsável, então a tarefa não foi postada"
   label:
     name_required: "informe o nome da etiqueta"
     name_taken: "o projeto já tem uma etiqueta com este nome"
@@ -1204,6 +1220,7 @@ errors:
     integrations_unavailable: "integrações indisponíveis"
     invalid_assignee: "responsável inválido"
     already_assigned: "esta tarefa já tem responsável"
+    already_linked: "a tarefa já está ligada a um item externo"
     invalid_assignee_filter: "responsável inválido (assignee_id)"
     invalid_deadline_filter: "prazo inválido (deadline_to): use data e hora, como 2026-10-12T23:59:59Z"
     invalid_label_filter: "etiqueta inválida (label_id): use ids separados por vírgula"

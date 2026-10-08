@@ -346,6 +346,136 @@ func TestIssueSync_ProjectButton(t *testing.T) {
 	}
 }
 
+// O passo Integrações do modal Nova tarefa: postar a tarefa como uma issue nova e ligá-la a ela.
+func TestIssueSync_PublishTask(t *testing.T) {
+	app, fake := syncServer(t)
+	e := app.Echo
+	admin := signup(t, e, "Org", "ana@test.com")
+	member := invite(t, e, admin, "bia@test.com", "member")
+	carla := invite(t, e, admin, "carla@test.com", "member") // sem usuário no GitHub
+	prj := createProject(t, e, admin, "Alfa")
+	allocate(t, e, admin, prj, member.id, 5000)
+	allocate(t, e, admin, prj, carla.id, 5000)
+
+	rec := do(e, "POST", "/api/projects/"+prj+"/labels", `{"name":"bug"}`, admin.session)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("create label = %d: %s", rec.Code, rec.Body.String())
+	}
+	label := decode(t, rec)["id"].(string)
+	rec = do(e, "POST", "/api/projects/"+prj+"/integrations", `{"type":"github","display_name":"Repo","token":"tok","metadata":{"repo":"owner/repo"}}`, admin.session)
+	integ := decode(t, rec)["id"].(string)
+
+	newTask := func(body string) string {
+		t.Helper()
+		rec := do(e, "POST", "/api/projects/"+prj+"/tasks", body, admin.session)
+		if rec.Code != http.StatusCreated {
+			t.Fatalf("create task = %d: %s", rec.Code, rec.Body.String())
+		}
+		return decode(t, rec)["id"].(string)
+	}
+	publish := func(task, integration, session string) *httptest.ResponseRecorder {
+		return do(e, "POST", "/api/tasks/"+task+"/publish", `{"integration_id":"`+integration+`"}`, session)
+	}
+	withSync := `{"sync_issues":true}`
+
+	first := newTask(`{"name":"Corrigir login","description":"texto longo","assignee_id":"` + admin.id + `","priority":"high","deadline":"2030-01-02T00:00:00Z","label_ids":["` + label + `"]}`)
+
+	// Com a sincronização desligada, não há o que postar: é ela que mantém as duas iguais.
+	if rec = publish(first, integ, member.session); rec.Code != http.StatusBadRequest || errorCode(t, rec) != "integration.sync_off" {
+		t.Errorf("publish with the sync off = %d %s", rec.Code, rec.Body.String())
+	}
+	do(e, "PATCH", "/api/integrations/"+integ, withSync, admin.session)
+
+	// A integração de outro projeto não vale.
+	otherPrj := createProject(t, e, admin, "Beta")
+	rec = do(e, "POST", "/api/projects/"+otherPrj+"/integrations", `{"type":"github","display_name":"Outro","token":"tok","metadata":{"repo":"owner/repo"}}`, admin.session)
+	if rec = publish(first, decode(t, rec)["id"].(string), member.session); rec.Code != http.StatusBadRequest || errorCode(t, rec) != "task.integration_other_project" {
+		t.Errorf("publish to another project's integration = %d %s", rec.Code, rec.Body.String())
+	}
+
+	// Postar: título, corpo, etiqueta (criada no repositório) e o responsável achado pelo e-mail público.
+	rec = publish(first, integ, member.session)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("publish = %d: %s", rec.Code, rec.Body.String())
+	}
+	out := decode(t, rec)
+	linked := out["task"].(map[string]any)
+	if linked["external_item_id"] != "1" || linked["external_integration_id"] != integ || linked["priority"] != "high" || out["problem"] != nil {
+		t.Errorf("published task = %v, problem %v", linked, out["problem"])
+	}
+	if url, _ := linked["external_item_url"].(string); url == "" {
+		t.Errorf("the task has no issue URL: %v", linked)
+	}
+	issue, ok := fake.Issue("owner/repo", 1)
+	if !ok || issue.Title != "Corrigir login" || issue.Body != "texto longo" || issue.State != "open" ||
+		len(issue.Labels) != 1 || issue.Labels[0] != "bug" || len(issue.Assignees) != 1 || issue.Assignees[0] != "ana-dev" {
+		t.Errorf("issue = %+v", issue)
+	}
+
+	// A tarefa e a issue já saem em acordo: uma rodada completa não escreve nada nem importa a issue de novo.
+	fake.Reset()
+	rec = do(e, "POST", "/api/integrations/"+integ+"/sync", "", admin.session)
+	if sum := decode(t, rec); rec.Code != http.StatusOK || sum["created"] != 0.0 || sum["pushed"] != 0.0 || sum["updated"] != 0.0 {
+		t.Errorf("round after publishing = %d %v, want nothing to do", rec.Code, sum)
+	}
+	if fake.Writes() != 0 {
+		t.Errorf("the round after publishing wrote to GitHub: %v", fake.Requests())
+	}
+	if tasks := decodeList(t, do(e, "GET", "/api/projects/"+prj+"/tasks", "", admin.session)); len(tasks) != 1 {
+		t.Errorf("%d tasks after publishing and a round, want 1", len(tasks))
+	}
+
+	// Postar de novo a mesma tarefa não vale.
+	if rec = publish(first, integ, member.session); rec.Code != http.StatusBadRequest || errorCode(t, rec) != "task.already_linked" {
+		t.Errorf("publish twice = %d %s", rec.Code, rec.Body.String())
+	}
+
+	// Um responsável sem usuário no GitHub: a issue sai sem responsável, a tarefa fica com ele e o aviso diz.
+	second := newTask(`{"name":"Sem usuário","assignee_id":"` + carla.id + `"}`)
+	rec = publish(second, integ, member.session)
+	if rec.Code != http.StatusOK || decode(t, rec)["problem"] != "issue_sync.no_login" {
+		t.Fatalf("publish with an unmapped assignee = %d %s", rec.Code, rec.Body.String())
+	}
+	if issue, _ = fake.Issue("owner/repo", 2); len(issue.Assignees) != 0 {
+		t.Errorf("assignees on GitHub = %v, want none", issue.Assignees)
+	}
+	if got := decode(t, do(e, "GET", "/api/tasks/"+second, "", admin.session)); got["assignee_id"] != carla.id {
+		t.Errorf("the task lost its assignee: %v", got["assignee_id"])
+	}
+
+	// Sem permissão de escrita a issue sairia diferente da tarefa: não posta, e a tarefa fica solta.
+	third := newTask(`{"name":"Só leitura"}`)
+	fake.SetPush("owner/repo", false)
+	if rec = publish(third, integ, member.session); rec.Code != http.StatusBadRequest || errorCode(t, rec) != "issue_sync.publish_read_only" {
+		t.Errorf("publish read-only = %d %s", rec.Code, rec.Body.String())
+	}
+	fake.SetPush("owner/repo", true)
+	if _, ok := fake.Issue("owner/repo", 3); ok {
+		t.Error("a read-only publish created an issue")
+	}
+	if got := decode(t, do(e, "GET", "/api/tasks/"+third, "", admin.session)); got["external_item_id"] != nil {
+		t.Errorf("a refused publish linked the task: %v", got["external_item_id"])
+	}
+
+	// O repositório sem issues.
+	fake.DisableIssues("owner/repo")
+	if rec = publish(third, integ, member.session); rec.Code != http.StatusBadRequest || errorCode(t, rec) != "integration.issues_disabled" {
+		t.Errorf("publish with issues off = %d %s", rec.Code, rec.Body.String())
+	}
+
+	// De outra organização a tarefa não existe; sem sessão, nem entra.
+	other := signup(t, e, "Outra org", "outro@test.com")
+	if rec = publish(third, integ, other.session); rec.Code != http.StatusNotFound {
+		t.Errorf("another organization published: %d, want 404", rec.Code)
+	}
+	if rec = publish(third, integ, ""); rec.Code != http.StatusUnauthorized {
+		t.Errorf("without a session: %d", rec.Code)
+	}
+	if rec = do(e, "POST", "/api/tasks/"+third+"/publish", `{`, admin.session); rec.Code != http.StatusBadRequest {
+		t.Errorf("broken body: %d", rec.Code)
+	}
+}
+
 // Só roda uma rodada de cada vez: o botão responde 409 enquanto outra está em andamento.
 func TestIssueSync_ButtonRefusesWhileRunning(t *testing.T) {
 	app, fake := syncServer(t)

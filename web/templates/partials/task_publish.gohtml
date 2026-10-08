@@ -1,0 +1,35 @@
+{{/* task_publish é a etapa 3 do modal Nova tarefa, só em projeto com integração ativa: um cartão para cada
+     integração, para a pessoa marcar em qual postar a tarefa como uma issue. As que ainda não recebem tarefas
+     (o GitLab e o Trello, ou o GitHub com a sincronização desligada) aparecem desativadas, com o motivo.
+     Pede o mixin taskWizard, projectSync (integrations) e os métodos canPublish, pickPublish e publishOff. */}}
+{{define "task_publish"}}
+<div class="stack" x-show="step === 3">
+  <p class="muted small">{{.T "tasks.publish.intro"}}</p>
+  <template x-for="(i, n) in integrations" :key="i.id">
+    <label class="publish-card" :class="!canPublish(i) && 'is-off'" :for="'task-publish-' + n">
+      <input type="checkbox" :id="'task-publish-' + n" :checked="draft.publish_to.includes(i.id)" :disabled="!canPublish(i)"
+             @change="pickPublish(i, $event.target.checked)">
+      <span class="publish-body">
+        <span class="publish-head">
+          <i :class="brandIcon(i.type)" aria-hidden="true"></i>
+          <strong x-text="typeLabel(i.type)"></strong>
+          <span class="muted small" x-text="i.display_name"></span>
+          <span class="badge" x-show="!canPublish(i)" x-text="publishOff(i)"></span>
+        </span>
+        <span class="publish-ask" x-text="$t('tasks.publish.ask', { provider: typeLabel(i.type) })"></span>
+        {{/* O que cada plataforma faz com a tarefa é diferente: o aviso é de cada uma. */}}
+        <template x-if="canPublish(i) && i.type === 'github'">
+          <ul class="publish-points small muted">
+            <li>{{.T "tasks.publish.github_sends"}}</li>
+            <li>{{.T "tasks.publish.github_local"}}</li>
+            <li>{{.T "tasks.publish.github_assignee"}}</li>
+            <li>{{.T "tasks.publish.github_after"}}</li>
+          </ul>
+        </template>
+        <span class="small muted" x-show="!canPublish(i) && i.type === 'github'">{{.T "tasks.publish.github_sync_off"}}</span>
+        <span class="small muted" x-show="i.type !== 'github' && !canPublish(i)" x-text="$t('tasks.publish.soon_note', { provider: typeLabel(i.type) })"></span>
+      </span>
+    </label>
+  </template>
+</div>
+{{end}}

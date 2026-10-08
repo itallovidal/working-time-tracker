@@ -784,6 +784,26 @@
       "body": {}
     },
     {
+      "_id": "req_06_05c",
+      "_type": "request",
+      "parentId": "fld_06",
+      "name": "Postar a tarefa como issue (passo Integrações do modal Nova tarefa)",
+      "method": "POST",
+      "url": "{{base_url}}/api/tasks/{{task_id}}/publish",
+      "authentication": {},
+      "metaSortKey": 5.6,
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"integration_id\": \"{{integration_id}}\"\n}"
+      }
+    },
+    {
       "_id": "req_06_06",
       "_type": "request",
       "parentId": "fld_06",

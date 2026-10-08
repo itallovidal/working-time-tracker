@@ -152,6 +152,14 @@ type IssuePatch struct {
 	Assignees   *[]string
 }
 
+// NewIssue é o que se manda para criar uma issue.
+type NewIssue struct {
+	Title     string
+	Body      string
+	Labels    []string
+	Assignees []string // logins
+}
+
 // IssueSyncer é a capacidade opcional de um tipo que sabe ler e escrever as issues do repositório
 // da integração, para a sincronização com as tarefas. Todos os métodos aceitam o contexto, porque a
 // rodada é de longa duração e pode ser cancelada.
@@ -164,6 +172,9 @@ type IssueSyncer interface {
 	// UpdateIssue aplica a mudança e devolve a issue como ficou, que pode ser diferente do pedido:
 	// a plataforma descarta sem avisar o que o token não pode mudar.
 	UpdateIssue(ctx context.Context, conn Connection, number int, patch IssuePatch) (*Issue, error)
+	// CreateIssue cria a issue e devolve como ela ficou, que pode ser diferente do pedido: quem não tem
+	// permissão de escrita no repositório tem as etiquetas e os responsáveis descartados sem aviso.
+	CreateIssue(ctx context.Context, conn Connection, issue NewIssue) (*Issue, error)
 	ListLabels(ctx context.Context, conn Connection) ([]string, error)
 	// CreateLabel cria a etiqueta; uma que já existe não é erro.
 	CreateLabel(ctx context.Context, conn Connection, name string) error

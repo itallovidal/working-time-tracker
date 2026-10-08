@@ -15,6 +15,12 @@ var (
 	// ErrSyncOff é a integração que não está com a sincronização ligada (ou está desativada).
 	ErrSyncOff = apperr.New("integration.sync_off", http.StatusBadRequest)
 
+	// ErrAlreadyLinked é a tarefa que já está ligada a um item externo: não há o que postar.
+	ErrAlreadyLinked = apperr.New("task.already_linked", http.StatusBadRequest)
+	// ErrPublishReadOnly: o token da integração não escreve no repositório, e a issue sairia sem as
+	// etiquetas e o responsável (o GitHub os descarta sem avisar), então a tarefa não é postada.
+	ErrPublishReadOnly = apperr.New("issue_sync.publish_read_only", http.StatusBadRequest)
+
 	// ErrReadOnly: o token não escreve no repositório (ou ele está arquivado), então as issues só
 	// vêm para cá e as mudanças daqui ficam daqui.
 	ErrReadOnly = apperr.New("issue_sync.read_only", http.StatusBadRequest)

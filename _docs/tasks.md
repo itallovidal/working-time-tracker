@@ -743,6 +743,15 @@
 
 ---
 
+### Sprint 66: Post a New Task as an Issue
+
+- [X] S66.1 Adapter: `IssueSyncer.CreateIssue` (`POST /repos/{o}/{r}/issues`, `NewIssue`), `ErrIssuesDisabled` (410); the fake GitHub got the POST route (labels and assignees dropped without push), `DisableIssues`; tested in the adapter
+- [X] S66.2 `Syncer.Publish` and `POST /api/tasks/:taskId/publish`: refuses a read-only token, creates the missing labels, maps the assignee by public email, creates the issue, links the task and adopts it so the next round writes nothing; `task.already_linked`, `integration.sync_off`, `task.integration_other_project`, `issue_sync.publish_read_only`, `integration.issues_disabled`; the answer carries `problem`; error texts in both languages and in `_docs/error-codes.md`; tested against the fake (the issue's title, body, label and assignee, a round after it with zero writes, posting twice, an assignee with no GitHub user, a read-only token, issues off, another project, another organization, no session) and in the route table
+- [X] S66.3 New task modal: the **Integrações** step (only with an active integration; the edit modal keeps two steps), one card per integration with the checkbox, the platform disclaimer (deadline and priority do not go, the assignee only by public email, labels do) and, disabled with the reason, GitLab, Trello and a GitHub with the sync off; the task is created and then posted, with a toast for the result or the failure; texts in both languages
+- [X] S66.4 No front-end tests added; checked in the browser against `cmd/fakegithub` (a project with no integration keeps two steps, the disabled cards, posting a task with description and assignee, the failure toast, light, dark, phone); README, design, routes and the Insomnia collection
+
+---
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open

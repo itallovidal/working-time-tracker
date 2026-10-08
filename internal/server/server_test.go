@@ -874,6 +874,7 @@ func TestRoutes_Table(t *testing.T) {
 		"DELETE /api/tasks/:taskId/link-external-item",
 		"GET /api/tasks/:taskId/external-details",
 		"POST /api/tasks/:taskId/sync",
+		"POST /api/tasks/:taskId/publish",
 
 		"GET /api/integrations/:integrationId",
 		"GET /api/integrations/:integrationId/repositories",
