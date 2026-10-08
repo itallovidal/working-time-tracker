@@ -89,13 +89,19 @@ Para gerar o binário: `go build -o wtt ./cmd && ./wtt`. Templates e arquivos es
 
 ### Entrar com o Clerk
 
-Com as chaves do [Clerk](https://clerk.com) no `.env`, o login, o cadastro e a página do convite mostram o Clerk (e-mail com código, Google, o que o app dele tiver ligado), e o e-mail e a senha do sistema ficam atrás do botão **Entrar com email e senha do sistema**. Sem as chaves, nada muda. O Clerk só diz **quem a pessoa é**; as organizações, os papéis e os convites continuam daqui, porque uma pessoa pertence a uma só organização e o email é único no sistema.
+Com as chaves do [Clerk](https://clerk.com) no `.env`, o login, o cadastro e a página do convite oferecem **dois jeitos de entrar**: o **email e a senha do sistema**, em cima, e o **Google**, logo abaixo de um "ou" (é o Clerk que faz o Google). O email e a senha do próprio Clerk não são oferecidos. Sem as chaves, nada muda: só o email e a senha do sistema. O Clerk só diz **quem a pessoa é**; as organizações, os papéis e os convites continuam daqui, porque uma pessoa pertence a uma só organização e o email é único no sistema.
 
 **Configurar**
 
 1. No painel do Clerk, crie o app (ou, com o CLI, `npm install -g clerk`, `clerk auth login` e `clerk link --app <id>`). Copie a *Publishable key* e a *Secret key* para `CLERK_PUBLISHABLE_KEY` e `CLERK_SECRET_KEY` no `.env` (o `clerk env pull --file <arquivo>` escreve as duas num arquivo à parte), e defina `PUBLIC_URL`.
-2. Em *User & authentication*: o email como identificador, com a **verificação obrigatória** no cadastro (é ela que prova que a pessoa é dona da caixa; o sistema só confia em email verificado) e o cadastro **Public** (qualquer pessoa pode criar a própria organização). Organizations do Clerk ficam desligadas.
-3. Reinicie o servidor. O log mostra `clerk enabled=true`, o endereço do Frontend API e as origens aceitas. Num app de desenvolvimento do Clerk, os emails `qualquer+clerk_test@example.com` aceitam o código `424242`, sem mandar email de verdade.
+2. No painel do Clerk, em *User & authentication*, deixe o app só com o Google:
+   - aba **Email**, o bloco de baixo, **Sign-in with email**: **desligado**. É ele que faz o Clerk mostrar o campo de email e o "Continuar" junto do botão do Google;
+   - aba **Password**: **desligada**. A senha é só a do sistema;
+   - aba **Email**, o bloco de cima (**Sign-up with email**, **Require email address** e **Verify at sign-up**): **ligado, não mexa**. O sistema só confia em email **verificado**, e é esse bloco que faz o Clerk guardar, como email principal e já verificado, o que o Google informa;
+   - em *Social connections*, o **Google** ligado, e o cadastro **Public** (qualquer pessoa pode criar a própria organização). Organizations do Clerk ficam desligadas.
+
+   Num app de desenvolvimento o Google usa as credenciais compartilhadas do Clerk; em produção é preciso cadastrar as do próprio projeto no Google.
+3. Reinicie o servidor. O log mostra `clerk enabled=true`, o endereço do Frontend API e as origens aceitas. Se o campo de email do Clerk ainda aparece abaixo do botão do Google, a opção **Sign-in with email** do passo 2 continua ligada no painel.
 
 **Como funciona.** Depois de entrar no Clerk, o navegador chega em `/auth/clerk/continue`, que pega o token de sessão do Clerk (vale 60 segundos) e o manda ao servidor em `Authorization: Bearer`. O servidor confere a assinatura, o prazo e a origem (`azp`), busca o usuário no Clerk e abre a **sessão do sistema**, o cookie de sempre: o resto da aplicação não sabe que o Clerk existe, e as páginas internas não carregam o clerk-js.
 
@@ -108,7 +114,7 @@ Com as chaves do [Clerk](https://clerk.com) no `.env`, o login, o cadastro e a p
 | A pessoa chegou pelo link de um convite (`invite_token`) | Entra direto na organização dele; se o convite tem email, o email verificado do Clerk precisa ser o mesmo |
 | A conta está ligada a outro usuário do Clerk que ainda existe | Recusa (`auth.clerk_account_linked`); se esse usuário foi apagado, religa |
 
-**Convidar por email.** Em Colaboradores, **Adicionar colaborador** com um email envia o convite pelo Clerk (o botão passa a dizer **Enviar convite por email**): o servidor cria um convite do Clerk para esse email, com `redirect_url` no `/invite/<token>` do sistema, e só grava o convite daqui se o Clerk o aceitou (se não, a tela mostra o erro e nada fica gravado). A pessoa abre o link da mensagem, o Clerk a leva ao convite com o email já verificado (`__clerk_ticket`) e o `<SignUp>` (ou o `<SignIn>`, quando o email já tem usuário no Clerk, `__clerk_status=sign_in`) aproveita o ticket sozinho; na volta, `/auth/clerk/continue?invite=<token>` entra na organização com o papel do convite. O link do sistema continua aparecendo no modal: se o email não chegar, dá para copiá-lo e mandar à mão (a pessoa então verifica o email com o código do Clerk). Convidar o mesmo email de novo **substitui** o convite anterior (aqui e no Clerk): é o "reenviar". Revogar um convite o cancela no Clerk também (um problema lá não impede de revogar aqui). Sem email, ou sem o Clerk, o convite é só o link, como sempre foi.
+**Convidar por email.** Em Colaboradores, **Adicionar colaborador** com um email envia o convite pelo Clerk (o botão passa a dizer **Enviar convite por email**): o servidor cria um convite do Clerk para esse email, com `redirect_url` no `/invite/<token>` do sistema, e só grava o convite daqui se o Clerk o aceitou (se não, a tela mostra o erro e nada fica gravado). A pessoa abre o link da mensagem e o Clerk a leva ao `/invite/<token>` do sistema, que mostra o formulário do convite (nome, email travado no do convite e senha **do sistema**) e, abaixo, o Google. O `__clerk_ticket` que o Clerk acrescenta à URL **não é usado**: sai da URL antes de o Clerk carregar, porque aproveitá-lo abriria um cadastro com email do próprio Clerk. Pelo Google, a pessoa volta em `/auth/clerk/continue?invite=<token>` e entra na organização com o papel do convite, desde que o email da conta Google seja o do convite. Na prática o email do Clerk é só quem entrega o link: o link do sistema também aparece no modal, e se a mensagem não chegar dá para copiá-lo e mandar à mão, com o mesmo resultado. Convidar o mesmo email de novo **substitui** o convite anterior (aqui e no Clerk): é o "reenviar". Revogar um convite o cancela no Clerk também (um problema lá não impede de revogar aqui). Sem email, ou sem o Clerk, o convite é só o link, como sempre foi.
 
 No desenvolvimento, `INVITE_DELIVERY=terminal` faz o servidor **não** pedir o envio do email e escrever no log o email, o papel, a organização e o link do Clerk (o mesmo que iria no email, com o ticket; se o Clerk não o devolver, o link do sistema):
 
@@ -208,8 +214,8 @@ A interface segue a Decision 8 de `_docs/design.md`. O servidor renderiza a casc
 
 | Rota | Tela |
 |---|---|
-| `/login`, `/signup` | Entrar e criar organização. Com o Clerk ligado, mostram o Clerk e deixam o email e a senha do sistema atrás de um botão; `/login?out=1` é o login depois de sair |
-| `/invite/:token` | Aceitar um convite e criar a conta (com o Clerk ligado, entrando ou criando a conta nele; o botão Já tenho conta troca o cadastro pela entrada sem perder o convite) |
+| `/login`, `/signup` | Entrar e criar organização, com o email e a senha do sistema. Com o Clerk ligado, o Google aparece logo abaixo, depois de um "ou"; `/login?out=1` é o login depois de sair |
+| `/invite/:token` | Aceitar um convite e criar a conta, com o email e a senha do sistema (o email vem travado no do convite). Com o Clerk ligado, o Google aparece logo abaixo, e o ticket do Clerk na URL é ignorado |
 | `/auth/clerk/continue` | Para onde o Clerk volta depois de entrar: troca o token dele por uma sessão do sistema. Pede a senha de uma conta antiga, mostra os convites pendentes ou pede o nome da organização. Sem o Clerk ligado, leva ao login. Aceita `?next=` e `?invite=` |
 | `/help`, `/ajuda` | A ajuda, **pública** (não pede sessão): o passo a passo do primeiro uso e o que cada tela faz, numa página só, com o sumário fixo à esquerda. `/ajuda` redireciona para `/help` |
 | `/` | Leva para a organização de quem está logado |

@@ -765,6 +765,9 @@ td .task-chips { min-width: 200px; }
 }
 .auth-card .brand { font-size: 1.05rem; }
 .auth-foot { text-align: center; font-size: 0.9rem; color: var(--muted); }
+/* O "ou" entre o email e a senha do sistema e o Google. */
+.auth-divider { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 0.85rem; }
+.auth-divider::before, .auth-divider::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
 /* O Clerk se desenha aqui dentro; o cartão e o título dele ficam escondidos, são os da página. */
 .clerk-mount { min-height: 24px; }
 

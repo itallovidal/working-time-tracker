@@ -18,19 +18,9 @@
       <div class="stack">
         <div class="stack">
           <h1 x-text="$t('auth.invite.join', { name: info.organization_name })"></h1>
-          <p class="muted">{{.T "auth.invite.invited_as"}} <strong x-text="WTT.fmt.role(info.role)"></strong>. {{if .Props.clerk}}<span x-show="!showPassword">{{.T "auth.clerk.invite_to_accept"}}</span><span x-cloak x-show="showPassword">{{.T "auth.invite.create_to_accept"}}</span>{{else}}{{.T "auth.invite.create_to_accept"}}{{end}}</p>
+          <p class="muted">{{.T "auth.invite.invited_as"}} <strong x-text="WTT.fmt.role(info.role)"></strong>. {{.T "auth.invite.create_to_accept"}}</p>
         </div>
-        {{- if .Props.clerk}}
-        <div class="stack" x-show="!showPassword">
-          <p class="muted" x-show="clerkLoading">{{.T "auth.clerk.loading"}}</p>
-          <div class="clerk-mount" x-ref="clerk"></div>
-          <p class="form-error" x-cloak x-show="errors.clerk" x-text="errors.clerk" role="alert"></p>
-          <button class="btn btn-ghost btn-block" type="button" x-cloak x-show="clerkMode === 'signUp'" @click="switchMode('signIn')">{{.T "auth.clerk.have_account"}}</button>
-          <button class="btn btn-ghost btn-block" type="button" x-cloak x-show="clerkMode === 'signIn'" @click="switchMode('signUp')">{{.T "auth.clerk.new_account"}}</button>
-          <button class="btn btn-ghost btn-block" type="button" x-cloak @click="showPassword = true">{{.T "auth.clerk.invite_with_password"}}</button>
-        </div>
-        {{- end}}
-        <form class="stack" {{if .Props.clerk}}x-cloak x-show="showPassword" {{end}}@submit.prevent="submit()">
+        <form class="stack" @submit.prevent="submit()">
           <div class="field">
             <label for="invite-name">{{.T "auth.your_name"}}</label>
             <input id="invite-name" type="text" autocomplete="name" required x-model="name">
@@ -49,10 +39,17 @@
           <button class="btn btn-block" type="submit" :disabled="pending">
             <span x-text="pending ? $t('auth.invite.pending') : $t('auth.invite.submit')">{{.T "auth.invite.submit"}}</span>
           </button>
-          {{- if .Props.clerk}}
-          <button class="btn btn-ghost btn-block" type="button" @click="showPassword = false">{{.T "auth.clerk.use_clerk"}}</button>
-          {{- end}}
         </form>
+        {{- if .Props.clerk}}
+        {{/* Quem prefere o Google entra pelo Clerk e volta aqui para o convite; com email no convite, o email do
+             Google precisa ser o mesmo. */}}
+        <div class="auth-divider"><span>{{.T "auth.clerk.or"}}</span></div>
+        <div class="stack">
+          <p class="muted" x-show="clerkLoading">{{.T "auth.clerk.loading"}}</p>
+          <div class="clerk-mount" x-ref="clerk"></div>
+          <p class="form-error" x-cloak x-show="errors.clerk" x-text="errors.clerk" role="alert"></p>
+        </div>
+        {{- end}}
       </div>
     </template>
   </div>

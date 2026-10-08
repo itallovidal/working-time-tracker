@@ -6,19 +6,10 @@
       <h1>{{.T "auth.signup.title"}}</h1>
       <p class="muted">{{.T "auth.signup.subtitle"}}</p>
     </div>
-    {{- if .Props.clerk}}
-    {{/* Com o Clerk ligado a conta nasce nele; o nome da organização é pedido na volta, na página de retorno. */}}
-    <div class="stack" x-show="!showPassword">
-      <p class="muted" x-show="loading">{{.T "auth.clerk.loading"}}</p>
-      <div class="clerk-mount" x-ref="clerk"></div>
-      <p class="form-error" x-cloak x-show="errors.clerk" x-text="errors.clerk" role="alert"></p>
-      <button class="btn btn-ghost btn-block" type="button" x-cloak @click="showPassword = true">{{.T "auth.clerk.signup_with_password"}}</button>
-    </div>
-    {{- end}}
-    <form class="stack" {{if .Props.clerk}}x-cloak x-show="showPassword" {{end}}@submit.prevent="submit()">
+    <form class="stack" @submit.prevent="submit()">
       <div class="field">
         <label for="signup-org">{{.T "auth.signup.org_name"}}</label>
-        <input id="signup-org" type="text" autocomplete="organization" required x-model="organization_name" {{if not .Props.clerk}}autofocus{{end}}>
+        <input id="signup-org" type="text" autocomplete="organization" required x-model="organization_name" autofocus>
       </div>
       <div class="field">
         <label for="signup-name">{{.T "auth.your_name"}}</label>
@@ -37,10 +28,16 @@
       <button class="btn btn-block" type="submit" :disabled="pending">
         <span x-text="pending ? $t('auth.signup.pending') : $t('auth.signup.submit')">{{.T "auth.signup.submit"}}</span>
       </button>
-      {{- if .Props.clerk}}
-      <button class="btn btn-ghost btn-block" type="button" @click="showPassword = false">{{.T "auth.clerk.use_clerk"}}</button>
-      {{- end}}
     </form>
+    {{- if .Props.clerk}}
+    {{/* Com o Google a conta nasce no Clerk; o nome da organização é pedido na volta, na página de retorno. */}}
+    <div class="auth-divider"><span>{{.T "auth.clerk.or"}}</span></div>
+    <div class="stack">
+      <p class="muted" x-show="loading">{{.T "auth.clerk.loading"}}</p>
+      <div class="clerk-mount" x-ref="clerk"></div>
+      <p class="form-error" x-cloak x-show="errors.clerk" x-text="errors.clerk" role="alert"></p>
+    </div>
+    {{- end}}
     <p class="auth-foot">{{.T "auth.signup.has_account"}} <a href="/login">{{.T "auth.signup.login"}}</a></p>
   </div>
 </main>

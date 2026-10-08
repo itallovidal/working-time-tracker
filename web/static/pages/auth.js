@@ -3,9 +3,11 @@ document.addEventListener('alpine:init', () => {
   const { api, form, t } = WTT;
 
   // ---------- Clerk no navegador ----------
-  // Com as chaves do Clerk no servidor (WTT.boot.clerk), o login, o cadastro e o convite mostram o Clerk. Ele só
-  // diz quem a pessoa é: depois de entrar lá, /auth/clerk/continue troca o token dele por uma sessão daqui (o
-  // cookie de sempre), e o resto do sistema não sabe que o Clerk existe. O clerk-js vem do Frontend API do app
+  // Com as chaves do Clerk no servidor (WTT.boot.clerk), o login, o cadastro e o convite oferecem também o Google,
+  // que entra pelo Clerk, logo abaixo do email e da senha do sistema (que são o jeito principal de entrar). O Clerk
+  // só diz quem a pessoa é: depois de entrar lá, /auth/clerk/continue troca o token dele por uma sessão daqui (o
+  // cookie de sempre), e o resto do sistema não sabe que o Clerk existe. O email e a senha do próprio Clerk não
+  // são oferecidos: o que ele mostra além do Google vem da configuração do app dele (ver o README). O clerk-js vem do Frontend API do app
   // no Clerk, não do nosso servidor; a versão fica nestas constantes porque uma versão principal nova pode mudar
   // a forma de carregar.
   const CLERK_JS = '@clerk/clerk-js@6';
@@ -26,8 +28,8 @@ document.addEventListener('alpine:init', () => {
     document.head.appendChild(el);
   });
 
-  // appearance pinta o Clerk com as cores do sistema (claro e escuro) e tira o cartão e o título dele: o cartão e
-  // o título são os desta página.
+  // appearance pinta o Clerk com as cores do sistema (claro e escuro) e tira o cartão, o título e o link de
+  // cadastro dele: o cartão, o título e os links são os desta página.
   function appearance() {
     const css = getComputedStyle(document.documentElement);
     const v = (name) => css.getPropertyValue(name).trim();
@@ -49,6 +51,7 @@ document.addEventListener('alpine:init', () => {
         cardBox: flat,
         card: flat,
         header: { display: 'none' },
+        footerAction: { display: 'none' },
         footer: { background: 'transparent' },
       },
     };
@@ -110,6 +113,12 @@ document.addEventListener('alpine:init', () => {
     try { return Date.now() - Number(sessionStorage.getItem(TRIED)) < TRIED_WINDOW_MS; } catch (e) { return false; }
   }
 
+  // mountGoogle desenha o login do Clerk (o Google) no elemento. O Clerk volta para esta mesma página depois do
+  // Google (em #/sso-callback) e termina a entrada sozinho, levando a pessoa a `to`.
+  function mountGoogle(clerk, el, to) {
+    clerk.mountSignIn(el, { forceRedirectUrl: to, signUpForceRedirectUrl: to });
+  }
+
   // leaveClerk desconecta do Clerk e volta ao login. Sem isso, quem saiu do sistema entraria de novo sozinho,
   // porque o Clerk continua logado.
   async function leaveClerk() {
@@ -124,7 +133,6 @@ document.addEventListener('alpine:init', () => {
     email: '',
     password: '',
     clerk: !!WTT.boot.clerk,
-    showPassword: !WTT.boot.clerk,
     loading: !!WTT.boot.clerk,
     stuck: false,
     async init() {
@@ -140,12 +148,10 @@ document.addEventListener('alpine:init', () => {
           location.replace(continueURL());
           return;
         }
-        const to = continueURL();
-        clerk.mountSignIn(this.$refs.clerk, { forceRedirectUrl: to, signUpForceRedirectUrl: to, signUpUrl: '/signup' });
+        mountGoogle(clerk, this.$refs.clerk, continueURL());
       } catch (e) {
         console.error(e);
         this.errors.clerk = t('auth.clerk.load_failed');
-        this.showPassword = true;
       } finally {
         this.loading = false;
       }
@@ -171,7 +177,6 @@ document.addEventListener('alpine:init', () => {
     email: '',
     password: '',
     clerk: !!WTT.boot.clerk,
-    showPassword: !WTT.boot.clerk,
     loading: !!WTT.boot.clerk,
     async init() {
       if (!this.clerk) return;
@@ -180,11 +185,10 @@ document.addEventListener('alpine:init', () => {
         const to = continueURL();
         // Já está no Clerk: a página de retorno cuida do resto (entrar, ou pedir o nome da organização).
         if (clerk.session) { location.replace(to); return; }
-        clerk.mountSignUp(this.$refs.clerk, { forceRedirectUrl: to, signInForceRedirectUrl: to, signInUrl: '/login' });
+        mountGoogle(clerk, this.$refs.clerk, to);
       } catch (e) {
         console.error(e);
         this.errors.clerk = t('auth.clerk.load_failed');
-        this.showPassword = true;
       } finally {
         this.loading = false;
       }
@@ -212,13 +216,18 @@ document.addEventListener('alpine:init', () => {
     email: '',
     password: '',
     clerk: !!WTT.boot.clerk,
-    showPassword: !WTT.boot.clerk,
     clerkLoading: !!WTT.boot.clerk,
-    // O Clerk mostra o cadastro (quem é novo) ou a entrada (quem já tem conta lá); a pessoa troca por um botão.
-    // Pelo link do email o Clerk volta com __clerk_status: sign_in é quem já tem usuário lá, e o componente
-    // montado já aproveita o __clerk_ticket da URL sozinho (o email do convite chega verificado).
-    clerkMode: new URLSearchParams(location.search).get('__clerk_status') === 'sign_in' ? 'signIn' : 'signUp',
     async init() {
+      // O link do email do Clerk volta com um __clerk_ticket. O convite é aceito aqui, com email e senha do sistema
+      // ou com o Google; o ticket abriria o cadastro com email do próprio Clerk, que não é o que se quer. Sai da
+      // URL antes de o Clerk carregar.
+      const query = new URLSearchParams(location.search);
+      if (query.has('__clerk_ticket') || query.has('__clerk_status')) {
+        query.delete('__clerk_ticket');
+        query.delete('__clerk_status');
+        const rest = query.toString();
+        history.replaceState(null, '', location.pathname + (rest ? '?' + rest : '') + location.hash);
+      }
       try {
         this.info = await api('GET', '/api/auth/invites/' + encodeURIComponent(WTT.boot.token));
         this.email = this.info.email || '';
@@ -237,30 +246,13 @@ document.addEventListener('alpine:init', () => {
         const clerk = await loadClerk();
         const to = continueURL(WTT.boot.token);
         if (clerk.session) { location.replace(to); return; }
-        const el = this.$refs.clerk;
-        clerk.unmountSignUp(el);
-        clerk.unmountSignIn(el);
-        // O rodapé do Clerk ("Possui uma conta? Entrar") levaria ao /login e perderia o convite: aqui a troca
-        // é a dos botões da página, que ficam na mesma URL.
-        const appearance = { elements: { footerAction: { display: 'none' } } };
-        if (this.clerkMode === 'signIn') {
-          clerk.mountSignIn(el, { forceRedirectUrl: to, signUpForceRedirectUrl: to, appearance });
-        } else {
-          const props = { forceRedirectUrl: to, signInForceRedirectUrl: to, appearance };
-          if (this.info.email) props.initialValues = { emailAddress: this.info.email };
-          clerk.mountSignUp(el, props);
-        }
+        mountGoogle(clerk, this.$refs.clerk, to);
       } catch (e) {
         console.error(e);
         this.errors.clerk = t('auth.clerk.load_failed');
-        this.showPassword = true;
       } finally {
         this.clerkLoading = false;
       }
-    },
-    switchMode(mode) {
-      this.clerkMode = mode;
-      return this.drawClerk();
     },
     submit() {
       return this.run('accept', async () => {

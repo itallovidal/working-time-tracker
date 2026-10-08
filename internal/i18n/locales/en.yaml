@@ -269,15 +269,9 @@ auth:
     submit: Accept invitation
     pending: Creating account…
   clerk:
-    loading: Loading the sign-in…
-    load_failed: Could not load the sign-in. Check your connection and try again, or sign in with email and password.
-    use_password: Sign in with email and password
-    use_clerk: Back
-    signup_with_password: Create the account with email and password
-    have_account: I already have an account
-    new_account: Create an account
-    invite_to_accept: Sign in or create your account to accept.
-    invite_with_password: Accept with email and password
+    loading: Loading the Google sign-in…
+    load_failed: Could not load the Google sign-in. Sign in with email and password, or try again in a moment.
+    or: or
     stuck: You already signed in, but the system did not open your session. Try again or sign in with another account.
     try_again: Try again
     other_account: Sign in with another account
@@ -369,8 +363,8 @@ help:
       title: Invite the team
       text: "Generate an invitation link, copy it and send it to the person any way you like: the app does not send email. Whoever opens the link enters their name, picks a password and joins the organization with the role you chose."
       tip: "The link is valid for 7 days and works once. It is only shown at that moment, so copy it before closing. If you enter an email, only that person can use it. Invitations not used yet stay under “Pending invitations”."
-      text_email: "Under “Add collaborator”, enter the person’s email and the role: the invitation goes out by email, they click the link in the message, sign in (or create the account) and are in the organization with the role you chose."
-      tip_email: "The invitation is valid for 7 days and works once. Inviting the same email again cancels the previous one. If the email does not arrive, the link is also shown on screen, and you can copy it and send it any way you like. Invitations not accepted yet stay under “Pending invitations”."
+      text_email: "Under “Add collaborator”, enter the person’s email and the role: the invitation goes out by email, they open the link in the message, create the account with email and password (or sign in with Google) and are in the organization with the role you chose."
+      tip_email: "The invitation is valid for 7 days and works once. If it is for an email, only that email can accept it, Google included. Inviting the same email again cancels the previous one. If the email does not arrive, the link is also shown on screen, and you can copy it and send it any way you like. Invitations not accepted yet stay under “Pending invitations”."
     rates:
       title: People on the project and the hourly rate
       text: "Inviting is not enough: each person must be added to every project they will work on, with the amount they earn per hour there. Pick the person, enter the hourly rate (required), a team (optional) and the permission group: Collaborator, Project manager or Project administrator."
@@ -603,7 +597,7 @@ org:
     invite_intro: The person joins the organization through an invitation link that you send them.
     invite_email_hint: With an email, only that person can use the link.
     invite_email_hint_email: The invitation goes to this email, and only that person can use it.
-    invite_intro_email: "The invitation goes by email: the person clicks the link in the message and joins the organization. Without an email, you generate a link and send it any way you like."
+    invite_intro_email: "The invitation goes by email: the person opens the link in the message and creates the account with email and password, or signs in with Google. Without an email, you generate a link and send it any way you like."
     send_by_email: Send invitation by email
     sent_to: "Invitation sent to {{.email}}. The person clicks the link in the message and joins the organization."
     terminal_note: "The email was not sent: the server is in development mode (INVITE_DELIVERY=terminal) and showed the link in its log."

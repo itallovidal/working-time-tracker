@@ -279,15 +279,9 @@ auth:
     submit: Aceitar convite
     pending: Criando conta…
   clerk:
-    loading: Carregando o login…
-    load_failed: Não foi possível carregar o login. Verifique a conexão e tente de novo, ou entre com email e senha.
-    use_password: Entrar com email e senha do sistema
-    use_clerk: Voltar
-    signup_with_password: Criar a conta com email e senha do sistema
-    have_account: Já tenho conta
-    new_account: Criar uma conta
-    invite_to_accept: Entre ou crie sua conta para aceitar.
-    invite_with_password: Aceitar com email e senha do sistema
+    loading: Carregando o login com o Google…
+    load_failed: Não foi possível carregar o login com o Google. Entre com email e senha, ou tente de novo daqui a pouco.
+    or: ou
     stuck: Você já entrou no login, mas o sistema não abriu a sua sessão. Tente de novo ou entre com outra conta.
     try_again: Tentar de novo
     other_account: Entrar com outra conta
@@ -379,8 +373,8 @@ help:
       title: Convide o time
       text: "Gere um link de convite, copie e envie à pessoa por onde preferir: o app não envia email. Quem abrir o link informa o nome, escolhe uma senha e entra na organização com o papel que você escolheu."
       tip: "O link vale por 7 dias e funciona uma vez. Ele só aparece na hora, então copie antes de fechar. Se você informar o email, só aquela pessoa consegue usá-lo. Os convites ainda não usados ficam em “Convites pendentes”."
-      text_email: "Em “Adicionar colaborador”, informe o email da pessoa e o papel: o convite sai por email, ela clica no link da mensagem, entra (ou cria a conta) e já está na organização com o papel que você escolheu."
-      tip_email: "O convite vale por 7 dias e funciona uma vez. Convidar o mesmo email de novo cancela o anterior. Se o email não chegar, o link também aparece na tela, e dá para copiá-lo e mandar por onde preferir. Os convites ainda não aceitos ficam em “Convites pendentes”."
+      text_email: "Em “Adicionar colaborador”, informe o email da pessoa e o papel: o convite sai por email, ela abre o link da mensagem, cria a conta com email e senha (ou entra com o Google) e já está na organização com o papel que você escolheu."
+      tip_email: "O convite vale por 7 dias e funciona uma vez. Se ele é para um email, só esse email o aceita, inclusive pelo Google. Convidar o mesmo email de novo cancela o anterior. Se o email não chegar, o link também aparece na tela, e dá para copiá-lo e mandar por onde preferir. Os convites ainda não aceitos ficam em “Convites pendentes”."
     rates:
       title: Pessoas no projeto e valor por hora
       text: "Convidar não basta: cada pessoa precisa ser adicionada a cada projeto em que vai trabalhar, com o valor que ela recebe por hora ali. Escolha a pessoa, informe o valor por hora (obrigatório), um time (opcional) e o grupo de permissões: Colaborador, Gerente de projeto ou Administrador do projeto."
@@ -613,7 +607,7 @@ org:
     invite_intro: A pessoa entra na organização por um link de convite, que você envia para ela.
     invite_email_hint: Com email, só essa pessoa consegue usar o link.
     invite_email_hint_email: O convite sai para este email, e só essa pessoa consegue usá-lo.
-    invite_intro_email: "O convite vai por email: a pessoa clica no link da mensagem e entra na organização. Sem email, você gera um link e envia por onde preferir."
+    invite_intro_email: "O convite vai por email: a pessoa abre o link da mensagem e cria a conta com email e senha, ou entra com o Google. Sem email, você gera um link e envia por onde preferir."
     send_by_email: Enviar convite por email
     sent_to: "Convite enviado para {{.email}}. A pessoa clica no link da mensagem e entra na organização."
     terminal_note: "O email não foi enviado: o servidor está em modo de desenvolvimento (INVITE_DELIVERY=terminal) e mostrou o link no log dele."
