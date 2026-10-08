@@ -22,6 +22,7 @@ import (
 	"working-time-tracker/internal/domain/permission"
 	"working-time-tracker/internal/domain/person"
 	"working-time-tracker/internal/domain/project"
+	"working-time-tracker/internal/domain/projectinvite"
 	"working-time-tracker/internal/domain/task"
 	"working-time-tracker/internal/domain/team"
 	"working-time-tracker/internal/domain/work_session"
@@ -131,6 +132,8 @@ func Build(client *ent.Client, opts Options) (*App, error) {
 	}
 
 	e := echo.New()
+	// Quem aceita um convite que leva a um projeto entra nele com o valor, o grupo e o time escolhidos.
+	authSvc.SetProjectApplier(projectinvite.NewApplier(allocationSvc, membershipSvc), e.Logger.Warn)
 	if opts.Clerk != nil && opts.Clerk.Provider != nil {
 		log := opts.Clerk.InviteLog
 		if log == nil {
@@ -152,20 +155,21 @@ func Build(client *ent.Client, opts Options) (*App, error) {
 	taskSvc.SetRemover(syncer)
 
 	handlers := routes.Handlers{
-		Auth:         auth.NewHandler(authSvc, opts.CookieSecure),
-		Organization: organization.NewHandler(orgSvc),
-		Customer:     customer.NewHandler(customerSvc),
-		Person:       person.NewHandler(personSvc),
-		Permission:   permission.NewHandler(),
-		Project:      project.NewHandler(projectSvc, allocationSvc),
-		Team:         team.NewHandler(teamSvc, membershipSvc),
-		Allocation:   allocation.NewHandler(allocationSvc),
-		Collaborator: collaborator.NewHandler(collaboratorSvc),
-		Overview:     overview.NewHandler(overviewSvc),
-		Task:         task.NewHandler(taskSvc),
-		WorkSession:  work_session.NewHandler(workSessionSvc),
-		Integration:  integration.NewHandler(integrationSvc),
-		Sync:         issuesync.NewHandler(syncer),
+		Auth:          auth.NewHandler(authSvc, opts.CookieSecure),
+		Organization:  organization.NewHandler(orgSvc),
+		Customer:      customer.NewHandler(customerSvc),
+		Person:        person.NewHandler(personSvc),
+		Permission:    permission.NewHandler(),
+		Project:       project.NewHandler(projectSvc, allocationSvc),
+		Team:          team.NewHandler(teamSvc, membershipSvc),
+		Allocation:    allocation.NewHandler(allocationSvc),
+		Collaborator:  collaborator.NewHandler(collaboratorSvc),
+		Overview:      overview.NewHandler(overviewSvc),
+		Task:          task.NewHandler(taskSvc),
+		WorkSession:   work_session.NewHandler(workSessionSvc),
+		Integration:   integration.NewHandler(integrationSvc),
+		Sync:          issuesync.NewHandler(syncer),
+		ProjectInvite: projectinvite.NewHandler(authSvc, teamSvc),
 	}
 	resolver := auth.NewResolver(client)
 	authMW := auth.NewMiddleware(authSvc, resolver, opts.CookieSecure)

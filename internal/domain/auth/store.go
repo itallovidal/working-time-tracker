@@ -180,7 +180,7 @@ func (s *Store) DeleteExpiredSessions(now time.Time) error {
 	return err
 }
 
-func (s *Store) CreateInvite(orgID, createdBy uuid.UUID, email *string, role string, clerkInvitationID *string, tokenHash string, expiresAt time.Time) (*Invite, error) {
+func (s *Store) CreateInvite(orgID, createdBy uuid.UUID, email *string, role string, setup *ProjectSetup, clerkInvitationID *string, tokenHash string, expiresAt time.Time) (*Invite, error) {
 	q := s.client.Invite.Create().
 		SetOrganizationID(orgID).
 		SetCreatedByID(createdBy).
@@ -190,6 +190,12 @@ func (s *Store) CreateInvite(orgID, createdBy uuid.UUID, email *string, role str
 		SetExpiresAt(expiresAt)
 	if email != nil {
 		q = q.SetEmail(*email)
+	}
+	if setup != nil {
+		q = q.SetProjectID(setup.ProjectID).SetNillablePayRateCents(setup.PayRateCents).SetNillableTeamID(setup.TeamID)
+		if setup.Preset != "" {
+			q = q.SetPreset(setup.Preset)
+		}
 	}
 	inv, err := q.Save(context.Background())
 	if err != nil {
@@ -203,6 +209,28 @@ func (s *Store) PendingInvites(orgID uuid.UUID, now time.Time) ([]Invite, error)
 	invs, err := s.client.Invite.Query().
 		Where(invite.OrganizationIDEQ(orgID), invite.AcceptedAtIsNil(), invite.ExpiresAtGT(now)).
 		WithCreatedBy().
+		WithProject().
+		WithTeam().
+		Order(ent.Desc(invite.FieldCreatedAt)).
+		All(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	result := make([]Invite, len(invs))
+	for i, inv := range invs {
+		result[i] = *toDomainInvite(inv)
+	}
+	return result, nil
+}
+
+// PendingInvitesOfProject lista os convites ainda utilizáveis que levam a pessoa a esse projeto, do mais novo
+// para o mais antigo.
+func (s *Store) PendingInvitesOfProject(projectID uuid.UUID, now time.Time) ([]Invite, error) {
+	invs, err := s.client.Invite.Query().
+		Where(invite.ProjectIDEQ(projectID), invite.AcceptedAtIsNil(), invite.ExpiresAtGT(now)).
+		WithCreatedBy().
+		WithProject().
+		WithTeam().
 		Order(ent.Desc(invite.FieldCreatedAt)).
 		All(context.Background())
 	if err != nil {
@@ -273,6 +301,18 @@ func identityOf(p *ent.Person, org *ent.Organization) *Identity {
 	return id
 }
 
+// projectSetupOf é o que o convite leva para um projeto, ou nulo quando é só para a organização.
+func projectSetupOf(e *ent.Invite) *ProjectSetup {
+	if e.ProjectID == nil {
+		return nil
+	}
+	setup := &ProjectSetup{ProjectID: *e.ProjectID, PayRateCents: e.PayRateCents, TeamID: e.TeamID}
+	if e.Preset != nil {
+		setup.Preset = *e.Preset
+	}
+	return setup
+}
+
 func toDomainInvite(e *ent.Invite) *Invite {
 	inv := &Invite{
 		ID:             e.ID,
@@ -285,6 +325,15 @@ func toDomainInvite(e *ent.Invite) *Invite {
 	}
 	if e.Edges.CreatedBy != nil {
 		inv.CreatedByName = e.Edges.CreatedBy.Name
+	}
+	if setup := projectSetupOf(e); setup != nil {
+		if e.Edges.Project != nil {
+			setup.ProjectName = e.Edges.Project.Name
+		}
+		if e.Edges.Team != nil {
+			setup.TeamName = e.Edges.Team.Name
+		}
+		inv.Project = setup
 	}
 	return inv
 }

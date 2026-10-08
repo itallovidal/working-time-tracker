@@ -958,6 +958,38 @@ func (c *InviteClient) QueryCreatedBy(_m *Invite) *PersonQuery {
 	return query
 }
 
+// QueryProject queries the project edge of a Invite.
+func (c *InviteClient) QueryProject(_m *Invite) *ProjectQuery {
+	query := (&ProjectClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(invite.Table, invite.FieldID, id),
+			sqlgraph.To(project.Table, project.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, invite.ProjectTable, invite.ProjectColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryTeam queries the team edge of a Invite.
+func (c *InviteClient) QueryTeam(_m *Invite) *TeamQuery {
+	query := (&TeamClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(invite.Table, invite.FieldID, id),
+			sqlgraph.To(team.Table, team.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, invite.TeamTable, invite.TeamColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *InviteClient) Hooks() []Hook {
 	return c.hooks.Invite
@@ -1975,6 +2007,22 @@ func (c *ProjectClient) QueryAllocations(_m *Project) *AllocationQuery {
 	return query
 }
 
+// QueryInvites queries the invites edge of a Project.
+func (c *ProjectClient) QueryInvites(_m *Project) *InviteQuery {
+	query := (&InviteClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(project.Table, project.FieldID, id),
+			sqlgraph.To(invite.Table, invite.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, project.InvitesTable, project.InvitesColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryLabels queries the labels edge of a Project.
 func (c *ProjectClient) QueryLabels(_m *Project) *LabelQuery {
 	query := (&LabelClient{config: c.config}).Query()
@@ -2511,6 +2559,22 @@ func (c *TeamClient) QueryMemberships(_m *Team) *TeamMembershipQuery {
 			sqlgraph.From(team.Table, team.FieldID, id),
 			sqlgraph.To(teammembership.Table, teammembership.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, team.MembershipsTable, team.MembershipsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryInvites queries the invites edge of a Team.
+func (c *TeamClient) QueryInvites(_m *Team) *InviteQuery {
+	query := (&InviteClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(team.Table, team.FieldID, id),
+			sqlgraph.To(invite.Table, invite.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, team.InvitesTable, team.InvitesColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil

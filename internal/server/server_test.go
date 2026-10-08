@@ -821,6 +821,8 @@ func TestRoutes_Table(t *testing.T) {
 		"POST /api/orgs/:orgId/invites",
 		"GET /api/orgs/:orgId/invites",
 		"DELETE /api/invites/:inviteId",
+		"POST /api/projects/:projectId/invites",
+		"GET /api/projects/:projectId/invites",
 
 		"POST /api/orgs/:orgId/customers",
 		"GET /api/orgs/:orgId/customers",

@@ -61,7 +61,7 @@
     <div class="table-wrap" x-cloak x-show="invites.length > 0">
       <table>
         <thead>
-          <tr><th>{{.T "common.email"}}</th><th>{{.T "common.role"}}</th><th>{{.T "org.people.expires"}}</th><th class="actions"><span class="sr-only">{{.T "common.actions"}}</span></th></tr>
+          <tr><th>{{.T "common.email"}}</th><th>{{.T "common.role"}}</th><th>{{.T "org.people.col_project"}}</th><th>{{.T "org.people.expires"}}</th><th class="actions"><span class="sr-only">{{.T "common.actions"}}</span></th></tr>
         </thead>
         <tbody>
           <template x-for="inv in invites" :key="inv.id">
@@ -71,6 +71,10 @@
                 <span class="muted" x-show="!inv.email">{{.T "org.people.any_email"}}</span>
               </td>
               <td><span class="badge" :class="inv.role === 'admin' && 'badge-accent'" x-text="WTT.fmt.role(inv.role)"></span></td>
+              <td>
+                <span x-show="inv.project" x-text="inv.project && inv.project.project_name"></span>
+                <span class="muted" x-show="!inv.project">{{.T "org.people.no_project"}}</span>
+              </td>
               <td class="nowrap num" x-text="WTT.fmt.date(inv.expires_at)"></td>
               <td class="actions">
                 <button type="button" class="btn btn-danger-ghost btn-sm" :disabled="pending" @click="revoke(inv)">{{template "icon" "ban"}} {{.T "org.people.revoke"}}</button>

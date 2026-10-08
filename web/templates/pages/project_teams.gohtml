@@ -164,6 +164,46 @@
         </div>
       </nav>
 
+      {{/* Quem foi convidado para o projeto e ainda não aceitou: entra com o valor, o time e o grupo daqui. A
+           linha não tem ação; revogar o convite é na aba Colaboradores da organização. */}}
+      {{if .CanDo "collaborators.manage"}}
+      <section class="stack" x-cloak x-show="invites.length > 0" aria-labelledby="project-invites-title">
+        <div class="stack stack-tight">
+          <h3 id="project-invites-title">{{.T "collab.pending_title"}}</h3>
+          <p class="muted small">{{.T "collab.pending_intro"}}{{if .CanDo "people.manage"}} <a href="/orgs/{{.OrgID}}/people">{{.T "collab.pending_manage"}}</a>{{end}}</p>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>{{.T "common.email"}}</th>
+                <th>{{.T "collab.col_teams"}}</th>
+                <th>{{.T "collab.group_title"}}</th>
+                {{if .CanDo "rates.view"}}<th x-text="$t('collab.col_rate', { unit: WTT.fmt.moneyUnit() })"></th>{{end}}
+                <th>{{.T "org.people.expires"}}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="inv in invites" :key="inv.id">
+                <tr>
+                  <td x-text="inv.email"></td>
+                  <td>
+                    <span class="badge" x-show="inv.project && inv.project.team_name" x-text="inv.project && inv.project.team_name"></span>
+                    <span class="muted" x-show="!(inv.project && inv.project.team_name)">{{.T "collab.no_team"}}</span>
+                  </td>
+                  <td x-text="$t('permissions.presets.' + ((inv.project && inv.project.preset) || 'member') + '.name')"></td>
+                  {{if .CanDo "rates.view"}}
+                  <td class="num"><span x-show="inv.project && inv.project.pay_rate_cents !== undefined" x-text="inv.project && inv.project.pay_rate_cents !== undefined ? WTT.fmt.money(inv.project.pay_rate_cents) : ''"></span></td>
+                  {{end}}
+                  <td class="nowrap num" x-text="WTT.fmt.date(inv.expires_at)"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </section>
+      {{end}}
+
       {{if .CanDo "billing.view"}}
       <p class="muted small" x-show="collaborators.length > 0">
         <span x-show="billing.bill_rate_cents !== null">{{.T "collab.bill_info_before"}} <strong class="num" x-text="WTT.fmt.money(billing.bill_rate_cents)"></strong> {{.T "collab.bill_info_after"}}</span>
@@ -243,9 +283,11 @@
   {{/* Os quatro formulários aparecem no modal do layout base e continuam no escopo de projectTeams. */}}
   <template x-teleport="#modal-root">
     {{/* Em dois passos: quem entra (a pessoa, o valor e o time) e o grupo de permissões dela. Quem não
-         precisa de grupo (o dono e os admins) grava já no primeiro passo. */}}
+         precisa de grupo (o dono e os admins) grava já no primeiro passo. O e-mail de quem ainda não está na
+         organização vira um convite que leva essas escolhas e as aplica quando a pessoa aceita: o terceiro
+         passo diz como ele chegou. */}}
     <form class="stack" novalidate x-show="$store.modal.name === 'collab-add'" @submit.prevent="addSubmit()">
-      <ol class="wizard-steps" aria-label="{{.T "collab.wizard.label"}}">
+      <ol class="wizard-steps" aria-label="{{.T "collab.wizard.label"}}" x-show="addStep !== 3">
         <li :class="addStep === 1 && 'current'" :aria-current="addStep === 1 ? 'step' : false"><span class="n">1</span> {{.T "collab.wizard.step_person"}}</li>
         <li :class="addStep === 2 && 'current'" :aria-current="addStep === 2 ? 'step' : false"><span class="n">2</span> {{.T "collab.wizard.step_group"}}</li>
       </ol>
@@ -254,6 +296,7 @@
           <label for="collab-search">{{.T "collab.person"}}</label>
           <input id="collab-search" type="search" placeholder="{{.T "collab.search_placeholder"}}" autocomplete="off"
                  x-model="add.search" @input="pruneAdd()" data-autofocus>
+          <span class="hint" x-show="canInvite()">{{.T "collab.invite_hint"}}</span>
         </div>
         <ul class="list picker" role="radiogroup" aria-label="{{.T "collab.picker_label"}}" x-show="addCandidates().length > 0">
           <template x-for="p in addCandidates()" :key="p.id">
@@ -269,7 +312,19 @@
             </li>
           </template>
         </ul>
-        <p class="muted small" x-show="addCandidates().length === 0 && add.search.trim()">{{.T "collab.none_outside_search"}}</p>
+        <ul class="list picker" role="radiogroup" aria-label="{{.T "collab.picker_label"}}" x-show="inviteEmail()">
+          <li>
+            <label class="pick">
+              <input type="radio" name="collab-person" value="invite" x-model="add.person_id">
+              <span class="avatar" aria-hidden="true">{{template "icon" "envelope"}}</span>
+              <span class="grow">
+                <span x-text="$t('collab.invite_option', { email: inviteEmail() })"></span>
+                <span class="muted small">{{.T "collab.invite_option_hint"}}</span>
+              </span>
+            </label>
+          </li>
+        </ul>
+        <p class="muted small" x-show="addCandidates().length === 0 && add.search.trim() && !inviteEmail()">{{.T "collab.none_outside_search"}}</p>
         <p class="muted small" x-show="addCandidates().length === 0 && !add.search.trim()">
           {{.T "collab.all_in"}}
           <a href="/orgs/{{.OrgID}}/people">{{.T "collab.invite_link"}}</a>
@@ -292,16 +347,36 @@
         </div>
       </div>
       <div class="stack" x-show="addStep === 2">
-        <p class="muted small" x-show="addTarget()" x-text="addTarget() ? addTarget().name + ' · ' + addTarget().email : ''"></p>
+        <p class="muted small" x-show="addTarget() || addInviting()"
+           x-text="addInviting() ? inviteEmail() : (addTarget() ? addTarget().name + ' · ' + addTarget().email : '')"></p>
         {{template "preset_picker" .}}
+      </div>
+      <div class="stack" x-cloak x-show="addStep === 3">
+        <p class="muted small" x-show="sent && sent.delivery === 'email'" x-text="sent ? $t('org.people.sent_to', { email: sent.email }) : ''"></p>
+        <p class="muted small" x-show="sent && sent.delivery === 'terminal'">{{.T "org.people.terminal_note"}}</p>
+        <p class="muted small" x-text="sent ? $t('collab.invite_applies', { email: sent.email }) : ''"></p>
+        <div class="field">
+          <label for="collab-invite-link">{{.T "org.people.link_label"}}</label>
+          <input id="collab-invite-link" type="text" readonly :value="sent ? sent.link : ''" x-ref="inviteLink" @focus="$event.target.select()">
+          <span class="hint" x-show="sent && sent.delivery === 'link'">{{.T "org.people.link_hint"}}</span>
+          <span class="hint" x-show="sent && sent.delivery !== 'link'">{{.T "org.people.link_hint_email"}}</span>
+        </div>
       </div>
       <p class="form-error" x-show="errors.add" x-text="errors.add" role="alert"></p>
       <div class="row row-end">
         <button type="button" class="btn btn-secondary" x-show="addStep === 1" @click="$store.modal.dismiss()">{{.T "common.cancel"}}</button>
         <button type="button" class="btn btn-secondary" x-show="addStep === 2" @click="addBack()">{{template "icon" "arrow-left"}} {{.T "collab.wizard.back"}}</button>
-        <button type="submit" class="btn" x-show="addStep === 1 && !addNeedsGroup()" :disabled="pending || !add.person_id">{{template "icon" "user-plus"}} {{.T "collab.add_submit"}}</button>
+        <button type="submit" class="btn" x-show="addStep === 1 && !addNeedsGroup()" :disabled="pending || !add.person_id">
+          <span x-show="!addInviting()">{{template "icon" "user-plus"}} {{.T "collab.add_submit"}}</span>
+          <span x-cloak x-show="addInviting()">{{template "icon" "paper-plane"}} {{.T "collab.invite_submit"}}</span>
+        </button>
         <button type="submit" class="btn" x-show="addStep === 1 && addNeedsGroup()" :disabled="!add.person_id">{{.T "collab.wizard.next"}} {{template "icon" "arrow-right"}}</button>
-        <button type="submit" class="btn" x-show="addStep === 2" :disabled="pending">{{template "icon" "user-plus"}} {{.T "collab.add_submit"}}</button>
+        <button type="submit" class="btn" x-show="addStep === 2" :disabled="pending">
+          <span x-show="!addInviting()">{{template "icon" "user-plus"}} {{.T "collab.add_submit"}}</span>
+          <span x-cloak x-show="addInviting()">{{template "icon" "paper-plane"}} {{.T "collab.invite_submit"}}</span>
+        </button>
+        <button type="button" class="btn btn-secondary" x-cloak x-show="addStep === 3" @click="copyInviteLink()">{{template "icon" "copy"}} {{.T "org.people.copy"}}</button>
+        <button type="button" class="btn" x-cloak x-show="addStep === 3" @click="$store.modal.dismiss()">{{.T "org.people.done"}}</button>
       </div>
     </form>
   </template>

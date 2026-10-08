@@ -448,7 +448,7 @@ help:
       who: "Exige a permissão de ver o faturamento."
     mgmt_people:
       title: "Gestão: Colaboradores"
-      text: "Aqui você põe e tira pessoas do projeto, define o valor por hora e o grupo de permissões de cada uma e monta os times (“Novo time”). “Adicionar pessoa” tem dois passos: quem entra, com o valor por hora e o time, e as permissões."
+      text: "Aqui você põe e tira pessoas do projeto, define o valor por hora e o grupo de permissões de cada uma e monta os times (“Novo time”). “Adicionar pessoa” tem dois passos: quem entra, com o valor por hora e o time, e as permissões. Para alguém que ainda não está na organização, digite o e-mail dele: a tela oferece convidá-lo, e quando ele aceitar entra no projeto com o que você escolheu."
       margin: "A coluna “Margem por hora” mostra a diferença entre o valor cobrado do cliente e o valor da pessoa."
       edit: "O lápis da linha abre a edição: valor, grupo, times e “Tirar do projeto” (as tarefas e as horas ficam)."
     mgmt_integrations:
@@ -601,6 +601,8 @@ org:
     no_invites: Nenhum convite pendente
     no_invites_text: Quando você adicionar um colaborador, o convite dele fica aqui até ser aceito.
     any_email: Qualquer email
+    col_project: Projeto
+    no_project: Só a organização
     expires: Expira em
     revoke: Revogar
     revoked: Convite revogado.
@@ -1097,6 +1099,14 @@ collab:
     next: Próximo
     back: Voltar
   group_title: Grupo de permissões
+  invite_hint: Para convidar alguém que ainda não está na organização, digite o e-mail dele.
+  invite_option: "Convidar {{.email}}"
+  invite_option_hint: Ainda não está na organização. Entra no projeto com o que você escolher aqui quando aceitar o convite.
+  invite_submit: Convidar para o projeto
+  invite_applies: "Quando {{.email}} aceitar, entra no projeto com o valor, o time e as permissões que você escolheu."
+  pending_title: Convites pendentes
+  pending_intro: Quem foi convidado para este projeto e ainda não aceitou. Entra com o valor, o time e o grupo abaixo.
+  pending_manage: Revogar convites
   group_inherits: "Tudo o que o {{.name}} faz, e mais:"
   group_hint: O grupo vale só neste projeto, e quem dá um grupo só dá o que ele mesmo pode.
   group_none: Nenhum grupo disponível para você escolher.
@@ -1468,6 +1478,8 @@ errors:
     not_found: "projeto não encontrado"
     invalid_page: "página inválida (page): use um número a partir de 1"
     invalid_per_page: "tamanho de página inválido (per_page): use um número a partir de 1"
+  projectinvite:
+    team_not_in_project: "o time não é deste projeto"
   request:
     invalid_body: "corpo da requisição inválido"
     json_required: "envie o corpo como JSON (Content-Type: application/json)"

@@ -10,6 +10,7 @@ import (
 	"working-time-tracker/ent/allocation"
 	"working-time-tracker/ent/customer"
 	"working-time-tracker/ent/integration"
+	"working-time-tracker/ent/invite"
 	"working-time-tracker/ent/label"
 	"working-time-tracker/ent/organization"
 	"working-time-tracker/ent/project"
@@ -308,6 +309,21 @@ func (_c *ProjectCreate) AddAllocations(v ...*Allocation) *ProjectCreate {
 	return _c.AddAllocationIDs(ids...)
 }
 
+// AddInviteIDs adds the "invites" edge to the Invite entity by IDs.
+func (_c *ProjectCreate) AddInviteIDs(ids ...uuid.UUID) *ProjectCreate {
+	_c.mutation.AddInviteIDs(ids...)
+	return _c
+}
+
+// AddInvites adds the "invites" edges to the Invite entity.
+func (_c *ProjectCreate) AddInvites(v ...*Invite) *ProjectCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddInviteIDs(ids...)
+}
+
 // AddLabelIDs adds the "labels" edge to the Label entity by IDs.
 func (_c *ProjectCreate) AddLabelIDs(ids ...uuid.UUID) *ProjectCreate {
 	_c.mutation.AddLabelIDs(ids...)
@@ -584,6 +600,22 @@ func (_c *ProjectCreate) createSpec() (*Project, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(allocation.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.InvitesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   project.InvitesTable,
+			Columns: []string{project.InvitesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(invite.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

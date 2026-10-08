@@ -44,6 +44,18 @@ const (
 	DeliveryLink     = "link"
 )
 
+// ProjectSetup é o que um convite leva para um projeto: quando a pessoa o aceita, entra nele com este valor por
+// hora, este time (opcional) e este grupo de permissões (vazio é o grupo básico, de membro).
+type ProjectSetup struct {
+	ProjectID   uuid.UUID `json:"project_id"`
+	ProjectName string    `json:"project_name,omitempty"`
+	// PayRateCents é nulo quando a lista que devolve o convite não pode mostrar o valor a quem olha.
+	PayRateCents *int       `json:"pay_rate_cents,omitempty"`
+	TeamID       *uuid.UUID `json:"team_id,omitempty"`
+	TeamName     string     `json:"team_name,omitempty"`
+	Preset       string     `json:"preset,omitempty"`
+}
+
 type Invite struct {
 	ID             uuid.UUID `json:"id"`
 	OrganizationID uuid.UUID `json:"organization_id"`
@@ -53,10 +65,12 @@ type Invite struct {
 	// Delivery diz como o convite chega à pessoa e só vem na resposta que o cria: DeliveryEmail (o Clerk manda
 	// o e-mail), DeliveryTerminal (não mandou: o link está no log do servidor) ou DeliveryLink (só o link, para
 	// copiar). Não é guardado.
-	Delivery   string     `json:"delivery,omitempty"`
-	ExpiresAt  time.Time  `json:"expires_at"`
-	AcceptedAt *time.Time `json:"accepted_at,omitempty"`
-	CreatedAt  time.Time  `json:"created_at"`
+	Delivery string `json:"delivery,omitempty"`
+	// Project é o projeto a que o convite leva a pessoa, quando leva (ver ProjectSetup).
+	Project    *ProjectSetup `json:"project,omitempty"`
+	ExpiresAt  time.Time     `json:"expires_at"`
+	AcceptedAt *time.Time    `json:"accepted_at,omitempty"`
+	CreatedAt  time.Time     `json:"created_at"`
 }
 
 // InviteInfo é o que a página pública do convite mostra antes do aceite.

@@ -438,7 +438,7 @@ help:
       who: "It requires the permission to see the billing."
     mgmt_people:
       title: "Management: Collaborators"
-      text: "Here you add and remove people on the project, set each one's hourly rate and permission group, and build the teams (“New team”). “Add person” has two steps: who joins, with the hourly rate and the team, and the permissions."
+      text: "Here you add and remove people on the project, set each one's hourly rate and permission group, and build the teams (“New team”). “Add person” has two steps: who joins, with the hourly rate and the team, and the permissions. For someone who is not in the organization yet, type their email: the screen offers to invite them, and once they accept they join the project with what you chose."
       margin: "The “Margin per hour” column shows the difference between the rate billed to the customer and the person's rate."
       edit: "The pencil on the row opens the edit: rate, group, teams and “Remove from the project” (the tasks and the hours stay)."
     mgmt_integrations:
@@ -591,6 +591,8 @@ org:
     no_invites: No pending invitations
     no_invites_text: When you add a collaborator, their invitation stays here until it is accepted.
     any_email: Any email
+    col_project: Project
+    no_project: Organization only
     expires: Expires on
     revoke: Revoke
     revoked: Invitation revoked.
@@ -1087,6 +1089,14 @@ collab:
     next: Next
     back: Back
   group_title: Permission group
+  invite_hint: To invite someone who is not in the organization yet, type their email.
+  invite_option: "Invite {{.email}}"
+  invite_option_hint: Not in the organization yet. They join the project with what you choose here once they accept the invitation.
+  invite_submit: Invite to the project
+  invite_applies: "When {{.email}} accepts, they join the project with the rate, team and permissions you chose."
+  pending_title: Pending invitations
+  pending_intro: People invited to this project who have not accepted yet. They join with the rate, team and group below.
+  pending_manage: Revoke invitations
   group_inherits: "Everything the {{.name}} can do, plus:"
   group_hint: The group only applies to this project, and you can only give what you can do yourself.
   group_none: There is no group you can choose.
@@ -1458,6 +1468,8 @@ errors:
     not_found: "project not found"
     invalid_page: "invalid page (page): use a number from 1"
     invalid_per_page: "invalid page size (per_page): use a number from 1"
+  projectinvite:
+    team_not_in_project: "the team is not in this project"
   request:
     invalid_body: "invalid request body"
     json_required: "send the body as JSON (Content-Type: application/json)"

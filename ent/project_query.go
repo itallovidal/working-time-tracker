@@ -10,6 +10,7 @@ import (
 	"working-time-tracker/ent/allocation"
 	"working-time-tracker/ent/customer"
 	"working-time-tracker/ent/integration"
+	"working-time-tracker/ent/invite"
 	"working-time-tracker/ent/label"
 	"working-time-tracker/ent/organization"
 	"working-time-tracker/ent/predicate"
@@ -40,6 +41,7 @@ type ProjectQuery struct {
 	withWorkSessions *WorkSessionQuery
 	withIntegrations *IntegrationQuery
 	withAllocations  *AllocationQuery
+	withInvites      *InviteQuery
 	withLabels       *LabelQuery
 	modifiers        []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
@@ -225,6 +227,28 @@ func (_q *ProjectQuery) QueryAllocations() *AllocationQuery {
 			sqlgraph.From(project.Table, project.FieldID, selector),
 			sqlgraph.To(allocation.Table, allocation.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, project.AllocationsTable, project.AllocationsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryInvites chains the current query on the "invites" edge.
+func (_q *ProjectQuery) QueryInvites() *InviteQuery {
+	query := (&InviteClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(project.Table, project.FieldID, selector),
+			sqlgraph.To(invite.Table, invite.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, project.InvitesTable, project.InvitesColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -453,6 +477,7 @@ func (_q *ProjectQuery) Clone() *ProjectQuery {
 		withWorkSessions: _q.withWorkSessions.Clone(),
 		withIntegrations: _q.withIntegrations.Clone(),
 		withAllocations:  _q.withAllocations.Clone(),
+		withInvites:      _q.withInvites.Clone(),
 		withLabels:       _q.withLabels.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
@@ -534,6 +559,17 @@ func (_q *ProjectQuery) WithAllocations(opts ...func(*AllocationQuery)) *Project
 		opt(query)
 	}
 	_q.withAllocations = query
+	return _q
+}
+
+// WithInvites tells the query-builder to eager-load the nodes that are connected to
+// the "invites" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *ProjectQuery) WithInvites(opts ...func(*InviteQuery)) *ProjectQuery {
+	query := (&InviteClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withInvites = query
 	return _q
 }
 
@@ -626,7 +662,7 @@ func (_q *ProjectQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Proj
 	var (
 		nodes       = []*Project{}
 		_spec       = _q.querySpec()
-		loadedTypes = [8]bool{
+		loadedTypes = [9]bool{
 			_q.withOrganization != nil,
 			_q.withCustomer != nil,
 			_q.withTeams != nil,
@@ -634,6 +670,7 @@ func (_q *ProjectQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Proj
 			_q.withWorkSessions != nil,
 			_q.withIntegrations != nil,
 			_q.withAllocations != nil,
+			_q.withInvites != nil,
 			_q.withLabels != nil,
 		}
 	)
@@ -702,6 +739,13 @@ func (_q *ProjectQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Proj
 		if err := _q.loadAllocations(ctx, query, nodes,
 			func(n *Project) { n.Edges.Allocations = []*Allocation{} },
 			func(n *Project, e *Allocation) { n.Edges.Allocations = append(n.Edges.Allocations, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withInvites; query != nil {
+		if err := _q.loadInvites(ctx, query, nodes,
+			func(n *Project) { n.Edges.Invites = []*Invite{} },
+			func(n *Project, e *Invite) { n.Edges.Invites = append(n.Edges.Invites, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -921,6 +965,39 @@ func (_q *ProjectQuery) loadAllocations(ctx context.Context, query *AllocationQu
 		node, ok := nodeids[fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "project_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *ProjectQuery) loadInvites(ctx context.Context, query *InviteQuery, nodes []*Project, init func(*Project), assign func(*Project, *Invite)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Project)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(invite.FieldProjectID)
+	}
+	query.Where(predicate.Invite(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(project.InvitesColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.ProjectID
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "project_id" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "project_id" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

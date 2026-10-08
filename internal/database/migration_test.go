@@ -167,6 +167,8 @@ func TestMigrate_ForeignKeyDeleteRules(t *testing.T) {
 		"issue_syncs_integrations_issue_syncs":        "CASCADE",
 		"issue_syncs_tasks_issue_syncs":               "SET NULL",
 		"invites_persons_created_invites":             "SET NULL",
+		"invites_projects_invites":                    "SET NULL",
+		"invites_teams_invites":                       "SET NULL",
 		"projects_organizations_projects":             "NO ACTION",
 		"tasks_persons_tasks":                         "NO ACTION",
 		"team_memberships_persons_team_memberships":   "NO ACTION",

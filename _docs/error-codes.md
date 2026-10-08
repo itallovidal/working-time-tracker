@@ -237,6 +237,12 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `project.not_found` | 404 | — | `projeto não encontrado` | `project not found` |
 | `project.weekly_time_without_day` | 400 | — | `o horário da weekly precisa do dia da weekly` | `the weekly time needs the weekly day` |
 
+### projectinvite
+
+| Código | Status | Parâmetros | pt-BR | en |
+|---|---|---|---|---|
+| `projectinvite.team_not_in_project` | 400 | — | `o time não é deste projeto` | `the team is not in this project` |
+
 ### request
 
 | Código | Status | Parâmetros | pt-BR | en |

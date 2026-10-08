@@ -1132,6 +1132,29 @@ func HasAllocationsWith(preds ...predicate.Allocation) predicate.Project {
 	})
 }
 
+// HasInvites applies the HasEdge predicate on the "invites" edge.
+func HasInvites() predicate.Project {
+	return predicate.Project(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, InvitesTable, InvitesColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasInvitesWith applies the HasEdge predicate on the "invites" edge with a given conditions (other predicates).
+func HasInvitesWith(preds ...predicate.Invite) predicate.Project {
+	return predicate.Project(func(s *sql.Selector) {
+		step := newInvitesStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // HasLabels applies the HasEdge predicate on the "labels" edge.
 func HasLabels() predicate.Project {
 	return predicate.Project(func(s *sql.Selector) {

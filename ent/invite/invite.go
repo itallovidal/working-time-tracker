@@ -26,6 +26,14 @@ const (
 	FieldRole = "role"
 	// FieldClerkInvitationID holds the string denoting the clerk_invitation_id field in the database.
 	FieldClerkInvitationID = "clerk_invitation_id"
+	// FieldProjectID holds the string denoting the project_id field in the database.
+	FieldProjectID = "project_id"
+	// FieldPayRateCents holds the string denoting the pay_rate_cents field in the database.
+	FieldPayRateCents = "pay_rate_cents"
+	// FieldTeamID holds the string denoting the team_id field in the database.
+	FieldTeamID = "team_id"
+	// FieldPreset holds the string denoting the preset field in the database.
+	FieldPreset = "preset"
 	// FieldCreatedByID holds the string denoting the created_by_id field in the database.
 	FieldCreatedByID = "created_by_id"
 	// FieldExpiresAt holds the string denoting the expires_at field in the database.
@@ -38,6 +46,10 @@ const (
 	EdgeOrganization = "organization"
 	// EdgeCreatedBy holds the string denoting the created_by edge name in mutations.
 	EdgeCreatedBy = "created_by"
+	// EdgeProject holds the string denoting the project edge name in mutations.
+	EdgeProject = "project"
+	// EdgeTeam holds the string denoting the team edge name in mutations.
+	EdgeTeam = "team"
 	// Table holds the table name of the invite in the database.
 	Table = "invites"
 	// OrganizationTable is the table that holds the organization relation/edge.
@@ -54,6 +66,20 @@ const (
 	CreatedByInverseTable = "persons"
 	// CreatedByColumn is the table column denoting the created_by relation/edge.
 	CreatedByColumn = "created_by_id"
+	// ProjectTable is the table that holds the project relation/edge.
+	ProjectTable = "invites"
+	// ProjectInverseTable is the table name for the Project entity.
+	// It exists in this package in order to avoid circular dependency with the "project" package.
+	ProjectInverseTable = "projects"
+	// ProjectColumn is the table column denoting the project relation/edge.
+	ProjectColumn = "project_id"
+	// TeamTable is the table that holds the team relation/edge.
+	TeamTable = "invites"
+	// TeamInverseTable is the table name for the Team entity.
+	// It exists in this package in order to avoid circular dependency with the "team" package.
+	TeamInverseTable = "teams"
+	// TeamColumn is the table column denoting the team relation/edge.
+	TeamColumn = "team_id"
 )
 
 // Columns holds all SQL columns for invite fields.
@@ -64,6 +90,10 @@ var Columns = []string{
 	FieldEmail,
 	FieldRole,
 	FieldClerkInvitationID,
+	FieldProjectID,
+	FieldPayRateCents,
+	FieldTeamID,
+	FieldPreset,
 	FieldCreatedByID,
 	FieldExpiresAt,
 	FieldAcceptedAt,
@@ -146,6 +176,26 @@ func ByClerkInvitationID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldClerkInvitationID, opts...).ToFunc()
 }
 
+// ByProjectID orders the results by the project_id field.
+func ByProjectID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldProjectID, opts...).ToFunc()
+}
+
+// ByPayRateCents orders the results by the pay_rate_cents field.
+func ByPayRateCents(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPayRateCents, opts...).ToFunc()
+}
+
+// ByTeamID orders the results by the team_id field.
+func ByTeamID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTeamID, opts...).ToFunc()
+}
+
+// ByPreset orders the results by the preset field.
+func ByPreset(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPreset, opts...).ToFunc()
+}
+
 // ByCreatedByID orders the results by the created_by_id field.
 func ByCreatedByID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCreatedByID, opts...).ToFunc()
@@ -179,6 +229,20 @@ func ByCreatedByField(field string, opts ...sql.OrderTermOption) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newCreatedByStep(), sql.OrderByField(field, opts...))
 	}
 }
+
+// ByProjectField orders the results by project field.
+func ByProjectField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newProjectStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByTeamField orders the results by team field.
+func ByTeamField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newTeamStep(), sql.OrderByField(field, opts...))
+	}
+}
 func newOrganizationStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -191,5 +255,19 @@ func newCreatedByStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(CreatedByInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2O, true, CreatedByTable, CreatedByColumn),
+	)
+}
+func newProjectStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ProjectInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, ProjectTable, ProjectColumn),
+	)
+}
+func newTeamStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(TeamInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, TeamTable, TeamColumn),
 	)
 }

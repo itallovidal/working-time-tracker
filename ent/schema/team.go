@@ -27,5 +27,7 @@ func (Team) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("project", Project.Type).Ref("teams").Field("project_id").Unique().Required(),
 		edge.To("memberships", TeamMembership.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
+		// Um convite que levava a pessoa a este time continua valendo, só que sem o time.
+		edge.To("invites", Invite.Type).Annotations(entsql.OnDelete(entsql.SetNull)),
 	}
 }

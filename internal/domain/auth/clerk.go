@@ -154,7 +154,7 @@ func (s *Service) ClerkLogin(ctx context.Context, sessionToken string, in ClerkL
 		if inv.Email != nil && *inv.Email != email {
 			return nil, ErrInviteEmailMismatch
 		}
-		return s.clerkJoin(ident, email, inv, "")
+		return s.clerkJoin(ctx, ident, email, inv, "")
 	}
 	return s.clerkNoAccount(ident, email)
 }
@@ -276,7 +276,7 @@ func (s *Service) ClerkJoin(ctx context.Context, sessionToken string, in ClerkJo
 	if err := s.clerkNoPerson(ident, email); err != nil {
 		return nil, err
 	}
-	return s.clerkJoin(ident, email, inv, in.Name)
+	return s.clerkJoin(ctx, ident, email, inv, in.Name)
 }
 
 // clerkNoPerson confere que não há conta para esse usuário do Clerk nem para o e-mail dele.
@@ -297,7 +297,7 @@ func (s *Service) clerkNoPerson(ident *adapter.ClerkIdentity, email string) erro
 }
 
 // clerkJoin cria a conta da pessoa do Clerk na organização do convite, marca o convite como aceito e abre a sessão.
-func (s *Service) clerkJoin(ident *adapter.ClerkIdentity, email string, inv *ent.Invite, name string) (*ClerkResult, error) {
+func (s *Service) clerkJoin(ctx context.Context, ident *adapter.ClerkIdentity, email string, inv *ent.Invite, name string) (*ClerkResult, error) {
 	token, tokenHash, err := NewToken()
 	if err != nil {
 		return nil, err
@@ -318,6 +318,7 @@ func (s *Service) clerkJoin(ident *adapter.ClerkIdentity, email string, inv *ent
 	if err != nil {
 		return nil, err
 	}
+	s.applyProject(ctx, inv, id.PersonID)
 	return &ClerkResult{Status: ClerkOK, Identity: id, Token: token, Created: true}, nil
 }
 

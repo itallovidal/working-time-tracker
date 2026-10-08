@@ -29,6 +29,9 @@ type Service struct {
 	// clerk é o login pelo Clerk; nulo, ele está desligado (ver SetClerk).
 	clerk         adapter.ClerkProvider
 	clerkSettings ClerkSettings
+	// projects faz a pessoa que aceita um convite com projeto entrar nele (ver SetProjectApplier).
+	projects   ProjectApplier
+	projectLog func(msg string, args ...any)
 }
 
 func NewService(store *Store) *Service {
@@ -149,6 +152,20 @@ func (s *Service) ChangePassword(actor *Identity, currentToken, current, next st
 // modo terminal ele não manda, e o link vai para o log do servidor), e só é gravado se o Clerk o aceitou; um novo
 // convite para o mesmo e-mail na organização substitui o anterior. Sem e-mail, ou sem o Clerk, é só o link.
 func (s *Service) CreateInvite(ctx context.Context, actor *Identity, email, role string) (*Invite, string, error) {
+	return s.createInvite(ctx, actor, email, role, nil)
+}
+
+// CreateProjectInvite é o convite que também leva a pessoa a um projeto: o e-mail é obrigatório, o papel é o de
+// membro, e quando a pessoa aceita entra no projeto com o valor, o time e o grupo de permissões do setup. Quem
+// chama já conferiu o que o setup pede (o handler do projeto, que conhece as permissões dele).
+func (s *Service) CreateProjectInvite(ctx context.Context, actor *Identity, email string, setup ProjectSetup) (*Invite, string, error) {
+	if person.NormalizeEmail(email) == "" {
+		return nil, "", person.ErrInvalidEmail
+	}
+	return s.createInvite(ctx, actor, email, person.RoleMember, &setup)
+}
+
+func (s *Service) createInvite(ctx context.Context, actor *Identity, email, role string, setup *ProjectSetup) (*Invite, string, error) {
 	if role == "" {
 		role = person.RoleMember
 	}
@@ -202,7 +219,7 @@ func (s *Service) CreateInvite(ctx context.Context, actor *Identity, email, role
 		}
 	}
 
-	inv, err := s.store.CreateInvite(actor.OrganizationID, actor.PersonID, emailPtr, role, clerkID, tokenHash, s.now().Add(InviteTTL))
+	inv, err := s.store.CreateInvite(actor.OrganizationID, actor.PersonID, emailPtr, role, setup, clerkID, tokenHash, s.now().Add(InviteTTL))
 	if err != nil {
 		if clerkInv != nil {
 			s.revokeAtClerk(ctx, clerkInv.ID)
@@ -256,6 +273,15 @@ func (s *Service) revokeAtClerk(ctx context.Context, clerkInvitationID string) {
 
 func (s *Service) ListInvites(orgID uuid.UUID) ([]Invite, error) {
 	return s.store.PendingInvites(orgID, s.now())
+}
+
+// ProjectInvites lista os convites pendentes que levam a pessoa a esse projeto.
+func (s *Service) ProjectInvites(projectID string) ([]Invite, error) {
+	id, err := uuid.Parse(projectID)
+	if err != nil {
+		return nil, database.ErrNotFound
+	}
+	return s.store.PendingInvitesOfProject(id, s.now())
 }
 
 // RevokeInvite apaga o convite e, se ele foi criado no Clerk, o cancela lá.
@@ -326,6 +352,7 @@ func (s *Service) AcceptInvite(token string, in AcceptInviteInput) (*Identity, s
 	if err != nil {
 		return nil, "", err
 	}
+	s.applyProject(context.Background(), inv, id.PersonID)
 	return id, sessionToken, nil
 }
 

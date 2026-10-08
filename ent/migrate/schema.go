@@ -107,11 +107,15 @@ var (
 		{Name: "email", Type: field.TypeString, Nullable: true},
 		{Name: "role", Type: field.TypeEnum, Enums: []string{"admin", "member"}, Default: "member"},
 		{Name: "clerk_invitation_id", Type: field.TypeString, Nullable: true},
+		{Name: "pay_rate_cents", Type: field.TypeInt, Nullable: true},
+		{Name: "preset", Type: field.TypeString, Nullable: true},
 		{Name: "expires_at", Type: field.TypeTime},
 		{Name: "accepted_at", Type: field.TypeTime, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "organization_id", Type: field.TypeUUID},
 		{Name: "created_by_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "project_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "team_id", Type: field.TypeUUID, Nullable: true},
 	}
 	// InvitesTable holds the schema information for the "invites" table.
 	InvitesTable = &schema.Table{
@@ -121,14 +125,26 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "invites_organizations_invites",
-				Columns:    []*schema.Column{InvitesColumns[8]},
+				Columns:    []*schema.Column{InvitesColumns[10]},
 				RefColumns: []*schema.Column{OrganizationsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "invites_persons_created_invites",
-				Columns:    []*schema.Column{InvitesColumns[9]},
+				Columns:    []*schema.Column{InvitesColumns[11]},
 				RefColumns: []*schema.Column{PersonsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "invites_projects_invites",
+				Columns:    []*schema.Column{InvitesColumns[12]},
+				RefColumns: []*schema.Column{ProjectsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "invites_teams_invites",
+				Columns:    []*schema.Column{InvitesColumns[13]},
+				RefColumns: []*schema.Column{TeamsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 		},
@@ -572,6 +588,8 @@ func init() {
 	IntegrationsTable.ForeignKeys[0].RefTable = ProjectsTable
 	InvitesTable.ForeignKeys[0].RefTable = OrganizationsTable
 	InvitesTable.ForeignKeys[1].RefTable = PersonsTable
+	InvitesTable.ForeignKeys[2].RefTable = ProjectsTable
+	InvitesTable.ForeignKeys[3].RefTable = TeamsTable
 	IssueSyncsTable.ForeignKeys[0].RefTable = IntegrationsTable
 	IssueSyncsTable.ForeignKeys[1].RefTable = TasksTable
 	LabelsTable.ForeignKeys[0].RefTable = ProjectsTable

@@ -11,6 +11,8 @@ import (
 	"working-time-tracker/ent/organization"
 	"working-time-tracker/ent/person"
 	"working-time-tracker/ent/predicate"
+	"working-time-tracker/ent/project"
+	"working-time-tracker/ent/team"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -113,6 +115,93 @@ func (_u *InviteUpdate) ClearClerkInvitationID() *InviteUpdate {
 	return _u
 }
 
+// SetProjectID sets the "project_id" field.
+func (_u *InviteUpdate) SetProjectID(v uuid.UUID) *InviteUpdate {
+	_u.mutation.SetProjectID(v)
+	return _u
+}
+
+// SetNillableProjectID sets the "project_id" field if the given value is not nil.
+func (_u *InviteUpdate) SetNillableProjectID(v *uuid.UUID) *InviteUpdate {
+	if v != nil {
+		_u.SetProjectID(*v)
+	}
+	return _u
+}
+
+// ClearProjectID clears the value of the "project_id" field.
+func (_u *InviteUpdate) ClearProjectID() *InviteUpdate {
+	_u.mutation.ClearProjectID()
+	return _u
+}
+
+// SetPayRateCents sets the "pay_rate_cents" field.
+func (_u *InviteUpdate) SetPayRateCents(v int) *InviteUpdate {
+	_u.mutation.ResetPayRateCents()
+	_u.mutation.SetPayRateCents(v)
+	return _u
+}
+
+// SetNillablePayRateCents sets the "pay_rate_cents" field if the given value is not nil.
+func (_u *InviteUpdate) SetNillablePayRateCents(v *int) *InviteUpdate {
+	if v != nil {
+		_u.SetPayRateCents(*v)
+	}
+	return _u
+}
+
+// AddPayRateCents adds value to the "pay_rate_cents" field.
+func (_u *InviteUpdate) AddPayRateCents(v int) *InviteUpdate {
+	_u.mutation.AddPayRateCents(v)
+	return _u
+}
+
+// ClearPayRateCents clears the value of the "pay_rate_cents" field.
+func (_u *InviteUpdate) ClearPayRateCents() *InviteUpdate {
+	_u.mutation.ClearPayRateCents()
+	return _u
+}
+
+// SetTeamID sets the "team_id" field.
+func (_u *InviteUpdate) SetTeamID(v uuid.UUID) *InviteUpdate {
+	_u.mutation.SetTeamID(v)
+	return _u
+}
+
+// SetNillableTeamID sets the "team_id" field if the given value is not nil.
+func (_u *InviteUpdate) SetNillableTeamID(v *uuid.UUID) *InviteUpdate {
+	if v != nil {
+		_u.SetTeamID(*v)
+	}
+	return _u
+}
+
+// ClearTeamID clears the value of the "team_id" field.
+func (_u *InviteUpdate) ClearTeamID() *InviteUpdate {
+	_u.mutation.ClearTeamID()
+	return _u
+}
+
+// SetPreset sets the "preset" field.
+func (_u *InviteUpdate) SetPreset(v string) *InviteUpdate {
+	_u.mutation.SetPreset(v)
+	return _u
+}
+
+// SetNillablePreset sets the "preset" field if the given value is not nil.
+func (_u *InviteUpdate) SetNillablePreset(v *string) *InviteUpdate {
+	if v != nil {
+		_u.SetPreset(*v)
+	}
+	return _u
+}
+
+// ClearPreset clears the value of the "preset" field.
+func (_u *InviteUpdate) ClearPreset() *InviteUpdate {
+	_u.mutation.ClearPreset()
+	return _u
+}
+
 // SetCreatedByID sets the "created_by_id" field.
 func (_u *InviteUpdate) SetCreatedByID(v uuid.UUID) *InviteUpdate {
 	_u.mutation.SetCreatedByID(v)
@@ -177,6 +266,16 @@ func (_u *InviteUpdate) SetCreatedBy(v *Person) *InviteUpdate {
 	return _u.SetCreatedByID(v.ID)
 }
 
+// SetProject sets the "project" edge to the Project entity.
+func (_u *InviteUpdate) SetProject(v *Project) *InviteUpdate {
+	return _u.SetProjectID(v.ID)
+}
+
+// SetTeam sets the "team" edge to the Team entity.
+func (_u *InviteUpdate) SetTeam(v *Team) *InviteUpdate {
+	return _u.SetTeamID(v.ID)
+}
+
 // Mutation returns the InviteMutation object of the builder.
 func (_u *InviteUpdate) Mutation() *InviteMutation {
 	return _u.mutation
@@ -191,6 +290,18 @@ func (_u *InviteUpdate) ClearOrganization() *InviteUpdate {
 // ClearCreatedBy clears the "created_by" edge to the Person entity.
 func (_u *InviteUpdate) ClearCreatedBy() *InviteUpdate {
 	_u.mutation.ClearCreatedBy()
+	return _u
+}
+
+// ClearProject clears the "project" edge to the Project entity.
+func (_u *InviteUpdate) ClearProject() *InviteUpdate {
+	_u.mutation.ClearProject()
+	return _u
+}
+
+// ClearTeam clears the "team" edge to the Team entity.
+func (_u *InviteUpdate) ClearTeam() *InviteUpdate {
+	_u.mutation.ClearTeam()
 	return _u
 }
 
@@ -264,6 +375,21 @@ func (_u *InviteUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.ClerkInvitationIDCleared() {
 		_spec.ClearField(invite.FieldClerkInvitationID, field.TypeString)
 	}
+	if value, ok := _u.mutation.PayRateCents(); ok {
+		_spec.SetField(invite.FieldPayRateCents, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedPayRateCents(); ok {
+		_spec.AddField(invite.FieldPayRateCents, field.TypeInt, value)
+	}
+	if _u.mutation.PayRateCentsCleared() {
+		_spec.ClearField(invite.FieldPayRateCents, field.TypeInt)
+	}
+	if value, ok := _u.mutation.Preset(); ok {
+		_spec.SetField(invite.FieldPreset, field.TypeString, value)
+	}
+	if _u.mutation.PresetCleared() {
+		_spec.ClearField(invite.FieldPreset, field.TypeString)
+	}
 	if value, ok := _u.mutation.ExpiresAt(); ok {
 		_spec.SetField(invite.FieldExpiresAt, field.TypeTime, value)
 	}
@@ -324,6 +450,64 @@ func (_u *InviteUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(person.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ProjectCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   invite.ProjectTable,
+			Columns: []string{invite.ProjectColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(project.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ProjectIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   invite.ProjectTable,
+			Columns: []string{invite.ProjectColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(project.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.TeamCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   invite.TeamTable,
+			Columns: []string{invite.TeamColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(team.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.TeamIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   invite.TeamTable,
+			Columns: []string{invite.TeamColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(team.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -433,6 +617,93 @@ func (_u *InviteUpdateOne) ClearClerkInvitationID() *InviteUpdateOne {
 	return _u
 }
 
+// SetProjectID sets the "project_id" field.
+func (_u *InviteUpdateOne) SetProjectID(v uuid.UUID) *InviteUpdateOne {
+	_u.mutation.SetProjectID(v)
+	return _u
+}
+
+// SetNillableProjectID sets the "project_id" field if the given value is not nil.
+func (_u *InviteUpdateOne) SetNillableProjectID(v *uuid.UUID) *InviteUpdateOne {
+	if v != nil {
+		_u.SetProjectID(*v)
+	}
+	return _u
+}
+
+// ClearProjectID clears the value of the "project_id" field.
+func (_u *InviteUpdateOne) ClearProjectID() *InviteUpdateOne {
+	_u.mutation.ClearProjectID()
+	return _u
+}
+
+// SetPayRateCents sets the "pay_rate_cents" field.
+func (_u *InviteUpdateOne) SetPayRateCents(v int) *InviteUpdateOne {
+	_u.mutation.ResetPayRateCents()
+	_u.mutation.SetPayRateCents(v)
+	return _u
+}
+
+// SetNillablePayRateCents sets the "pay_rate_cents" field if the given value is not nil.
+func (_u *InviteUpdateOne) SetNillablePayRateCents(v *int) *InviteUpdateOne {
+	if v != nil {
+		_u.SetPayRateCents(*v)
+	}
+	return _u
+}
+
+// AddPayRateCents adds value to the "pay_rate_cents" field.
+func (_u *InviteUpdateOne) AddPayRateCents(v int) *InviteUpdateOne {
+	_u.mutation.AddPayRateCents(v)
+	return _u
+}
+
+// ClearPayRateCents clears the value of the "pay_rate_cents" field.
+func (_u *InviteUpdateOne) ClearPayRateCents() *InviteUpdateOne {
+	_u.mutation.ClearPayRateCents()
+	return _u
+}
+
+// SetTeamID sets the "team_id" field.
+func (_u *InviteUpdateOne) SetTeamID(v uuid.UUID) *InviteUpdateOne {
+	_u.mutation.SetTeamID(v)
+	return _u
+}
+
+// SetNillableTeamID sets the "team_id" field if the given value is not nil.
+func (_u *InviteUpdateOne) SetNillableTeamID(v *uuid.UUID) *InviteUpdateOne {
+	if v != nil {
+		_u.SetTeamID(*v)
+	}
+	return _u
+}
+
+// ClearTeamID clears the value of the "team_id" field.
+func (_u *InviteUpdateOne) ClearTeamID() *InviteUpdateOne {
+	_u.mutation.ClearTeamID()
+	return _u
+}
+
+// SetPreset sets the "preset" field.
+func (_u *InviteUpdateOne) SetPreset(v string) *InviteUpdateOne {
+	_u.mutation.SetPreset(v)
+	return _u
+}
+
+// SetNillablePreset sets the "preset" field if the given value is not nil.
+func (_u *InviteUpdateOne) SetNillablePreset(v *string) *InviteUpdateOne {
+	if v != nil {
+		_u.SetPreset(*v)
+	}
+	return _u
+}
+
+// ClearPreset clears the value of the "preset" field.
+func (_u *InviteUpdateOne) ClearPreset() *InviteUpdateOne {
+	_u.mutation.ClearPreset()
+	return _u
+}
+
 // SetCreatedByID sets the "created_by_id" field.
 func (_u *InviteUpdateOne) SetCreatedByID(v uuid.UUID) *InviteUpdateOne {
 	_u.mutation.SetCreatedByID(v)
@@ -497,6 +768,16 @@ func (_u *InviteUpdateOne) SetCreatedBy(v *Person) *InviteUpdateOne {
 	return _u.SetCreatedByID(v.ID)
 }
 
+// SetProject sets the "project" edge to the Project entity.
+func (_u *InviteUpdateOne) SetProject(v *Project) *InviteUpdateOne {
+	return _u.SetProjectID(v.ID)
+}
+
+// SetTeam sets the "team" edge to the Team entity.
+func (_u *InviteUpdateOne) SetTeam(v *Team) *InviteUpdateOne {
+	return _u.SetTeamID(v.ID)
+}
+
 // Mutation returns the InviteMutation object of the builder.
 func (_u *InviteUpdateOne) Mutation() *InviteMutation {
 	return _u.mutation
@@ -511,6 +792,18 @@ func (_u *InviteUpdateOne) ClearOrganization() *InviteUpdateOne {
 // ClearCreatedBy clears the "created_by" edge to the Person entity.
 func (_u *InviteUpdateOne) ClearCreatedBy() *InviteUpdateOne {
 	_u.mutation.ClearCreatedBy()
+	return _u
+}
+
+// ClearProject clears the "project" edge to the Project entity.
+func (_u *InviteUpdateOne) ClearProject() *InviteUpdateOne {
+	_u.mutation.ClearProject()
+	return _u
+}
+
+// ClearTeam clears the "team" edge to the Team entity.
+func (_u *InviteUpdateOne) ClearTeam() *InviteUpdateOne {
+	_u.mutation.ClearTeam()
 	return _u
 }
 
@@ -614,6 +907,21 @@ func (_u *InviteUpdateOne) sqlSave(ctx context.Context) (_node *Invite, err erro
 	if _u.mutation.ClerkInvitationIDCleared() {
 		_spec.ClearField(invite.FieldClerkInvitationID, field.TypeString)
 	}
+	if value, ok := _u.mutation.PayRateCents(); ok {
+		_spec.SetField(invite.FieldPayRateCents, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedPayRateCents(); ok {
+		_spec.AddField(invite.FieldPayRateCents, field.TypeInt, value)
+	}
+	if _u.mutation.PayRateCentsCleared() {
+		_spec.ClearField(invite.FieldPayRateCents, field.TypeInt)
+	}
+	if value, ok := _u.mutation.Preset(); ok {
+		_spec.SetField(invite.FieldPreset, field.TypeString, value)
+	}
+	if _u.mutation.PresetCleared() {
+		_spec.ClearField(invite.FieldPreset, field.TypeString)
+	}
 	if value, ok := _u.mutation.ExpiresAt(); ok {
 		_spec.SetField(invite.FieldExpiresAt, field.TypeTime, value)
 	}
@@ -674,6 +982,64 @@ func (_u *InviteUpdateOne) sqlSave(ctx context.Context) (_node *Invite, err erro
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(person.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ProjectCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   invite.ProjectTable,
+			Columns: []string{invite.ProjectColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(project.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ProjectIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   invite.ProjectTable,
+			Columns: []string{invite.ProjectColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(project.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.TeamCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   invite.TeamTable,
+			Columns: []string{invite.TeamColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(team.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.TeamIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   invite.TeamTable,
+			Columns: []string{invite.TeamColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(team.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

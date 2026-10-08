@@ -1669,8 +1669,10 @@ document.addEventListener('alpine:init', () => {
     page: 1, // a página da tabela de pessoas
     teamPages: {}, // por time, a página dos integrantes no cartão
     confirming: null, // 'person-<id>' ou 'team-<id>'
-    add: { search: '', person_id: '', rate: '', team_id: '' },
-    addStep: 1, // 1: quem entra, o valor e o time; 2: o grupo de permissões
+    add: { search: '', person_id: '', rate: '', team_id: '' }, // person_id vale 'invite' para o e-mail novo
+    addStep: 1, // 1: quem entra, o valor e o time; 2: o grupo de permissões; 3: o convite enviado
+    invites: [], // os convites pendentes que levam alguém a este projeto
+    sent: null, // o último convite do modal: { email, delivery, link }
     presets: [], // os grupos do catálogo da API
     preset: 'member', // o grupo marcado no modal aberto (Adicionar pessoa ou Editar colaborador)
     newTeam: '',
@@ -1684,19 +1686,21 @@ document.addEventListener('alpine:init', () => {
       try {
         // Fora da Gestão a aba é só de leitura, para admin também.
         const manage = !WTT.boot.readonly;
-        const [collaborators, teams, billing, people, sessions] = await Promise.all([
+        const [collaborators, teams, billing, people, sessions, invites] = await Promise.all([
           api('GET', '/api/projects/' + project.id + '/collaborators'),
           api('GET', '/api/projects/' + project.id + '/teams'),
           // O valor cobrado, a lista de quem pode entrar e as sessões só servem a quem cuida do projeto.
           manage && WTT.can('billing.view') ? api('GET', '/api/projects/' + project.id + '/billing') : null,
           manage && WTT.can('collaborators.manage') ? api('GET', '/api/orgs/' + me.organization_id + '/persons') : null,
           manage && WTT.can('rates.view') ? api('GET', '/api/projects/' + project.id + '/work-sessions') : null,
+          manage && WTT.can('collaborators.manage') ? api('GET', '/api/projects/' + project.id + '/invites') : null,
         ]);
         this.collaborators = (collaborators || []).sort(byName);
         this.teams = teams || [];
         if (billing) this.billing = billing;
         this.people = people || [];
         this.sessions = sessions || [];
+        this.invites = invites || [];
         if (WTT.can('collaborators.manage') && manage) this.presets = (await api('GET', '/api/permissions')).presets;
       } catch (e) {
         this.errors.load = e.message;
@@ -1888,10 +1892,28 @@ document.addEventListener('alpine:init', () => {
     },
     // pruneAdd desfaz a escolha quando a busca tira da lista a pessoa escolhida.
     pruneAdd() {
-      if (!this.addCandidates().some((p) => p.id === this.add.person_id)) this.add.person_id = '';
+      if (this.add.person_id === 'invite' ? !this.inviteEmail() : !this.addCandidates().some((p) => p.id === this.add.person_id)) this.add.person_id = '';
+    },
+    // O e-mail digitado na busca, quando é de alguém que ainda não está na organização: a tela oferece convidá-lo,
+    // já com o valor, o time e as permissões com que ele entra no projeto quando aceitar. Vazio quando não é um
+    // e-mail, quando já é de alguém da organização (que aparece na lista) ou quando quem olha não pode convidar.
+    inviteEmail() {
+      if (!this.canInvite()) return '';
+      const q = this.add.search.trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(q)) return '';
+      return this.people.some((p) => (p.email || '').toLowerCase() === q) ? '' : q;
+    },
+    // canInvite diz se quem olha pode convidar alguém novo daqui (a organização e o projeto pedem as duas).
+    canInvite() {
+      return WTT.can('people.manage') && WTT.can('rates.manage');
+    },
+    // addInviting diz que a pessoa escolhida é o e-mail novo, a ser convidado.
+    addInviting() {
+      return this.add.person_id === 'invite' && this.inviteEmail() !== '';
     },
     openAdd() {
       this.add = { search: '', person_id: '', rate: '', team_id: '' };
+      this.sent = null;
       this.addStep = 1;
       this.preset = 'member';
       this.errors.add = '';
@@ -1901,12 +1923,27 @@ document.addEventListener('alpine:init', () => {
     addTarget() {
       return this.addCandidates().find((p) => p.id === this.add.person_id);
     },
+    // Quem entra precisa de um grupo de permissões, a menos que já tenha todas (o dono e os admins). Antes de
+    // alguém ser escolhido o botão já diz Próximo, porque quase todo mundo escolhe um grupo; o convidado é sempre
+    // um membro.
     addNeedsGroup() {
+      if (this.presetChoices().length === 0) return false;
+      if (this.addInviting()) return true;
       const p = this.addTarget();
-      return !!p && !this.hasAll(p) && this.presetChoices().length > 0;
+      return !p || !this.hasAll(p);
     },
     // addNext confere a etapa 1 e, quando a pessoa precisa de um grupo, vai para a 2; senão grava direto.
     addNext() {
+      if (this.addInviting()) {
+        if (WTT.toCents(this.add.rate) === null) {
+          this.errors.add = WTT.t('collab.rate_required');
+          return undefined;
+        }
+        this.errors.add = '';
+        if (!this.addNeedsGroup()) return this.inviteSend();
+        this.addStep = 2;
+        return undefined;
+      }
       const person = this.addTarget();
       if (!person) {
         this.errors.add = WTT.t('collab.choose_person');
@@ -1927,7 +1964,31 @@ document.addEventListener('alpine:init', () => {
     },
     // addSubmit é o envio do formulário: na etapa 1 avança, na 2 grava.
     addSubmit() {
-      return this.addStep === 1 ? this.addNext() : this.addPerson();
+      if (this.addStep === 1) return this.addNext();
+      return this.addInviting() ? this.inviteSend() : this.addPerson();
+    },
+    // inviteSend convida o e-mail novo para a organização, levando o valor, o time e o grupo escolhidos: a pessoa
+    // entra no projeto com eles quando aceitar. O modal passa para a etapa 3, que diz como o convite chegou.
+    inviteSend() {
+      return this.run('add', async () => {
+        const email = this.inviteEmail();
+        const cents = WTT.toCents(this.add.rate);
+        if (!email) throw new Error(WTT.t('collab.choose_person'));
+        if (cents === null) throw new Error(WTT.t('collab.rate_required'));
+        const body = { email, pay_rate_cents: cents };
+        if (this.add.team_id && WTT.can('teams.manage')) body.team_id = this.add.team_id;
+        if (this.preset !== 'member') body.preset = this.preset;
+        const inv = await api('POST', '/api/projects/' + project.id + '/invites', body);
+        this.sent = { email: inv.email, delivery: inv.delivery, link: location.origin + inv.path };
+        this.addStep = 3;
+        // A lista do projeto traz os nomes do projeto e do time, que a resposta da criação não tem.
+        this.invites = (await api('GET', '/api/projects/' + project.id + '/invites').catch(() => null)) || this.invites;
+        this.$nextTick(() => this.$refs.inviteLink && this.$refs.inviteLink.focus());
+      });
+    },
+    async copyInviteLink() {
+      const ok = await WTT.copyText(this.sent.link);
+      toast(ok ? WTT.t('org.people.link_copied') : WTT.t('org.people.copy_failed'), ok ? 'info' : 'error');
     },
     addPerson() {
       return this.run('add', async () => {

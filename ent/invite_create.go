@@ -10,6 +10,8 @@ import (
 	"working-time-tracker/ent/invite"
 	"working-time-tracker/ent/organization"
 	"working-time-tracker/ent/person"
+	"working-time-tracker/ent/project"
+	"working-time-tracker/ent/team"
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
@@ -73,6 +75,62 @@ func (_c *InviteCreate) SetClerkInvitationID(v string) *InviteCreate {
 func (_c *InviteCreate) SetNillableClerkInvitationID(v *string) *InviteCreate {
 	if v != nil {
 		_c.SetClerkInvitationID(*v)
+	}
+	return _c
+}
+
+// SetProjectID sets the "project_id" field.
+func (_c *InviteCreate) SetProjectID(v uuid.UUID) *InviteCreate {
+	_c.mutation.SetProjectID(v)
+	return _c
+}
+
+// SetNillableProjectID sets the "project_id" field if the given value is not nil.
+func (_c *InviteCreate) SetNillableProjectID(v *uuid.UUID) *InviteCreate {
+	if v != nil {
+		_c.SetProjectID(*v)
+	}
+	return _c
+}
+
+// SetPayRateCents sets the "pay_rate_cents" field.
+func (_c *InviteCreate) SetPayRateCents(v int) *InviteCreate {
+	_c.mutation.SetPayRateCents(v)
+	return _c
+}
+
+// SetNillablePayRateCents sets the "pay_rate_cents" field if the given value is not nil.
+func (_c *InviteCreate) SetNillablePayRateCents(v *int) *InviteCreate {
+	if v != nil {
+		_c.SetPayRateCents(*v)
+	}
+	return _c
+}
+
+// SetTeamID sets the "team_id" field.
+func (_c *InviteCreate) SetTeamID(v uuid.UUID) *InviteCreate {
+	_c.mutation.SetTeamID(v)
+	return _c
+}
+
+// SetNillableTeamID sets the "team_id" field if the given value is not nil.
+func (_c *InviteCreate) SetNillableTeamID(v *uuid.UUID) *InviteCreate {
+	if v != nil {
+		_c.SetTeamID(*v)
+	}
+	return _c
+}
+
+// SetPreset sets the "preset" field.
+func (_c *InviteCreate) SetPreset(v string) *InviteCreate {
+	_c.mutation.SetPreset(v)
+	return _c
+}
+
+// SetNillablePreset sets the "preset" field if the given value is not nil.
+func (_c *InviteCreate) SetNillablePreset(v *string) *InviteCreate {
+	if v != nil {
+		_c.SetPreset(*v)
 	}
 	return _c
 }
@@ -147,6 +205,16 @@ func (_c *InviteCreate) SetOrganization(v *Organization) *InviteCreate {
 // SetCreatedBy sets the "created_by" edge to the Person entity.
 func (_c *InviteCreate) SetCreatedBy(v *Person) *InviteCreate {
 	return _c.SetCreatedByID(v.ID)
+}
+
+// SetProject sets the "project" edge to the Project entity.
+func (_c *InviteCreate) SetProject(v *Project) *InviteCreate {
+	return _c.SetProjectID(v.ID)
+}
+
+// SetTeam sets the "team" edge to the Team entity.
+func (_c *InviteCreate) SetTeam(v *Team) *InviteCreate {
+	return _c.SetTeamID(v.ID)
 }
 
 // Mutation returns the InviteMutation object of the builder.
@@ -274,6 +342,14 @@ func (_c *InviteCreate) createSpec() (*Invite, *sqlgraph.CreateSpec) {
 		_spec.SetField(invite.FieldClerkInvitationID, field.TypeString, value)
 		_node.ClerkInvitationID = &value
 	}
+	if value, ok := _c.mutation.PayRateCents(); ok {
+		_spec.SetField(invite.FieldPayRateCents, field.TypeInt, value)
+		_node.PayRateCents = &value
+	}
+	if value, ok := _c.mutation.Preset(); ok {
+		_spec.SetField(invite.FieldPreset, field.TypeString, value)
+		_node.Preset = &value
+	}
 	if value, ok := _c.mutation.ExpiresAt(); ok {
 		_spec.SetField(invite.FieldExpiresAt, field.TypeTime, value)
 		_node.ExpiresAt = value
@@ -318,6 +394,40 @@ func (_c *InviteCreate) createSpec() (*Invite, *sqlgraph.CreateSpec) {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.CreatedByID = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ProjectIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   invite.ProjectTable,
+			Columns: []string{invite.ProjectColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(project.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.ProjectID = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.TeamIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   invite.TeamTable,
+			Columns: []string{invite.TeamColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(team.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.TeamID = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

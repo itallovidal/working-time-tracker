@@ -14,6 +14,7 @@ import (
 	"working-time-tracker/internal/domain/permission"
 	"working-time-tracker/internal/domain/person"
 	"working-time-tracker/internal/domain/project"
+	"working-time-tracker/internal/domain/projectinvite"
 	"working-time-tracker/internal/domain/task"
 	"working-time-tracker/internal/domain/team"
 	"working-time-tracker/internal/domain/work_session"
@@ -35,6 +36,8 @@ type Handlers struct {
 	Integration  *integration.Handler
 	// Sync é o botão Sincronizar agora das issues de uma integração.
 	Sync *issuesync.Handler
+	// ProjectInvite é o convite que já deixa pronto o projeto da pessoa.
+	ProjectInvite *projectinvite.Handler
 }
 
 // RegisterRoutes monta a API JSON. Tudo fora de /api/auth exige login, e cada
@@ -85,6 +88,10 @@ func RegisterRoutes(e *echo.Echo, h Handlers, m *auth.Middleware, authLimiter ec
 	r.POST("/orgs/:orgId/invites", h.Auth.CreateInvite, org, orgCan(permission.PeopleManage))
 	r.GET("/orgs/:orgId/invites", h.Auth.ListInvites, org, orgCan(permission.PeopleManage))
 	r.DELETE("/invites/:inviteId", h.Auth.RevokeInvite, inv, orgCan(permission.PeopleManage))
+	// O convite que já deixa pronto o projeto (valor, time e permissões) e a lista dos pendentes dele. Quem
+	// convida precisa da permissão de pessoas da organização e das de pôr alguém no projeto com valor.
+	r.POST("/projects/:projectId/invites", h.ProjectInvite.Create, prj, orgCan(permission.PeopleManage), can(permission.CollaboratorsManage, permission.RatesManage))
+	r.GET("/projects/:projectId/invites", h.ProjectInvite.List, prj, can(permission.CollaboratorsManage))
 
 	// Os clientes são de quem cuida deles: admins e quem recebeu essa permissão.
 	customers := orgCan(permission.CustomersManage)

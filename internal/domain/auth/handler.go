@@ -52,6 +52,10 @@ func fail(c *echo.Context, err error) error {
 	return apperr.Respond(c, status, err)
 }
 
+// Respond traduz um erro do domínio na resposta da API, como os handlers do auth fazem: quem chama é um handler
+// de outro domínio que cria convites (o do projeto).
+func Respond(c *echo.Context, err error) error { return fail(c, err) }
+
 func badBody(c *echo.Context) error {
 	return apperr.Respond(c, http.StatusBadRequest, apperr.ErrInvalidBody)
 }
@@ -111,11 +115,17 @@ func (h *Handler) ChangePassword(c *echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
-type inviteResponse struct {
+// InviteResponse é a resposta que cria um convite.
+type InviteResponse struct {
 	*Invite
 	// Token e Path só aparecem na criação: depois disso o link não pode ser recuperado.
 	Token string `json:"token"`
 	Path  string `json:"path"`
+}
+
+// NewInviteResponse monta a resposta da criação de um convite, com o link dele.
+func NewInviteResponse(inv *Invite, token string) InviteResponse {
+	return InviteResponse{Invite: inv, Token: token, Path: "/invite/" + token}
 }
 
 func (h *Handler) CreateInvite(c *echo.Context) error {
@@ -130,13 +140,18 @@ func (h *Handler) CreateInvite(c *echo.Context) error {
 	if err != nil {
 		return fail(c, err)
 	}
-	return c.JSON(http.StatusCreated, inviteResponse{Invite: inv, Token: token, Path: "/invite/" + token})
+	return c.JSON(http.StatusCreated, NewInviteResponse(inv, token))
 }
 
 func (h *Handler) ListInvites(c *echo.Context) error {
-	invites, err := h.svc.ListInvites(CurrentPerson(c).OrganizationID)
+	me := CurrentPerson(c)
+	invites, err := h.svc.ListInvites(me.OrganizationID)
 	if err != nil {
 		return fail(c, err)
+	}
+	// O valor por hora que um convite leva para o projeto é de quem vê os valores: os admins.
+	if !me.IsAdmin() {
+		HideRates(invites)
 	}
 	return c.JSON(http.StatusOK, invites)
 }
@@ -167,4 +182,15 @@ func (h *Handler) AcceptInvite(c *echo.Context) error {
 	}
 	setSessionCookie(c, token, h.cookieSecure)
 	return c.JSON(http.StatusCreated, id)
+}
+
+// HideRates tira dos convites o valor por hora que eles levam para o projeto, para quem não pode vê-lo.
+func HideRates(invites []Invite) {
+	for i := range invites {
+		if invites[i].Project != nil {
+			p := *invites[i].Project
+			p.PayRateCents = nil
+			invites[i].Project = &p
+		}
+	}
 }

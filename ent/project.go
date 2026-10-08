@@ -70,11 +70,13 @@ type ProjectEdges struct {
 	Integrations []*Integration `json:"integrations,omitempty"`
 	// Allocations holds the value of the allocations edge.
 	Allocations []*Allocation `json:"allocations,omitempty"`
+	// Invites holds the value of the invites edge.
+	Invites []*Invite `json:"invites,omitempty"`
 	// Labels holds the value of the labels edge.
 	Labels []*Label `json:"labels,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [8]bool
+	loadedTypes [9]bool
 }
 
 // OrganizationOrErr returns the Organization value or an error if the edge
@@ -144,10 +146,19 @@ func (e ProjectEdges) AllocationsOrErr() ([]*Allocation, error) {
 	return nil, &NotLoadedError{edge: "allocations"}
 }
 
+// InvitesOrErr returns the Invites value or an error if the edge
+// was not loaded in eager-loading.
+func (e ProjectEdges) InvitesOrErr() ([]*Invite, error) {
+	if e.loadedTypes[7] {
+		return e.Invites, nil
+	}
+	return nil, &NotLoadedError{edge: "invites"}
+}
+
 // LabelsOrErr returns the Labels value or an error if the edge
 // was not loaded in eager-loading.
 func (e ProjectEdges) LabelsOrErr() ([]*Label, error) {
-	if e.loadedTypes[7] {
+	if e.loadedTypes[8] {
 		return e.Labels, nil
 	}
 	return nil, &NotLoadedError{edge: "labels"}
@@ -328,6 +339,11 @@ func (_m *Project) QueryIntegrations() *IntegrationQuery {
 // QueryAllocations queries the "allocations" edge of the Project entity.
 func (_m *Project) QueryAllocations() *AllocationQuery {
 	return NewProjectClient(_m.config).QueryAllocations(_m)
+}
+
+// QueryInvites queries the "invites" edge of the Project entity.
+func (_m *Project) QueryInvites() *InviteQuery {
+	return NewProjectClient(_m.config).QueryInvites(_m)
 }
 
 // QueryLabels queries the "labels" edge of the Project entity.

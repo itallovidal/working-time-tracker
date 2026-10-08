@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"time"
+	"working-time-tracker/ent/invite"
 	"working-time-tracker/ent/project"
 	"working-time-tracker/ent/team"
 	"working-time-tracker/ent/teammembership"
@@ -81,6 +82,21 @@ func (_c *TeamCreate) AddMemberships(v ...*TeamMembership) *TeamCreate {
 		ids[i] = v[i].ID
 	}
 	return _c.AddMembershipIDs(ids...)
+}
+
+// AddInviteIDs adds the "invites" edge to the Invite entity by IDs.
+func (_c *TeamCreate) AddInviteIDs(ids ...uuid.UUID) *TeamCreate {
+	_c.mutation.AddInviteIDs(ids...)
+	return _c
+}
+
+// AddInvites adds the "invites" edges to the Invite entity.
+func (_c *TeamCreate) AddInvites(v ...*Invite) *TeamCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddInviteIDs(ids...)
 }
 
 // Mutation returns the TeamMutation object of the builder.
@@ -211,6 +227,22 @@ func (_c *TeamCreate) createSpec() (*Team, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(teammembership.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.InvitesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   team.InvitesTable,
+			Columns: []string{team.InvitesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(invite.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

@@ -37,9 +37,11 @@ type TeamEdges struct {
 	Project *Project `json:"project,omitempty"`
 	// Memberships holds the value of the memberships edge.
 	Memberships []*TeamMembership `json:"memberships,omitempty"`
+	// Invites holds the value of the invites edge.
+	Invites []*Invite `json:"invites,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
+	loadedTypes [3]bool
 }
 
 // ProjectOrErr returns the Project value or an error if the edge
@@ -60,6 +62,15 @@ func (e TeamEdges) MembershipsOrErr() ([]*TeamMembership, error) {
 		return e.Memberships, nil
 	}
 	return nil, &NotLoadedError{edge: "memberships"}
+}
+
+// InvitesOrErr returns the Invites value or an error if the edge
+// was not loaded in eager-loading.
+func (e TeamEdges) InvitesOrErr() ([]*Invite, error) {
+	if e.loadedTypes[2] {
+		return e.Invites, nil
+	}
+	return nil, &NotLoadedError{edge: "invites"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -133,6 +144,11 @@ func (_m *Team) QueryProject() *ProjectQuery {
 // QueryMemberships queries the "memberships" edge of the Team entity.
 func (_m *Team) QueryMemberships() *TeamMembershipQuery {
 	return NewTeamClient(_m.config).QueryMemberships(_m)
+}
+
+// QueryInvites queries the "invites" edge of the Team entity.
+func (_m *Team) QueryInvites() *InviteQuery {
+	return NewTeamClient(_m.config).QueryInvites(_m)
 }
 
 // Update returns a builder for updating this Team.

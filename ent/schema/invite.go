@@ -26,6 +26,12 @@ func (Invite) Fields() []ent.Field {
 		// O convite que o Clerk criou para esse email (ele manda o e-mail com o link). Serve para cancelá-lo lá
 		// quando o convite é revogado ou substituído.
 		field.String("clerk_invitation_id").Optional().Nillable(),
+		// O convite pode levar a pessoa a um projeto: quando ela o aceita, entra nele com este valor por hora,
+		// este time (opcional) e este grupo de permissões. Sem projeto, é só o convite para a organização.
+		field.UUID("project_id", uuid.UUID{}).Optional().Nillable(),
+		field.Int("pay_rate_cents").Optional().Nillable(),
+		field.UUID("team_id", uuid.UUID{}).Optional().Nillable(),
+		field.String("preset").Optional().Nillable(),
 		field.UUID("created_by_id", uuid.UUID{}).Optional().Nillable(),
 		field.Time("expires_at"),
 		field.Time("accepted_at").Optional().Nillable(),
@@ -37,5 +43,7 @@ func (Invite) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("organization", Organization.Type).Ref("invites").Field("organization_id").Unique().Required(),
 		edge.From("created_by", Person.Type).Ref("created_invites").Field("created_by_id").Unique(),
+		edge.From("project", Project.Type).Ref("invites").Field("project_id").Unique(),
+		edge.From("team", Team.Type).Ref("invites").Field("team_id").Unique(),
 	}
 }

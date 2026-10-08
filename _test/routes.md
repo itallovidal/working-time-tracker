@@ -247,6 +247,8 @@ Content-Type: application/json
 | POST | `/api/orgs/:orgId/invites` | `people.manage` | Cria um convite: com email e o Clerk ligado, o Clerk manda o email; senão, só o link |
 | GET | `/api/orgs/:orgId/invites` | `people.manage` | Convites ainda válidos |
 | DELETE | `/api/invites/:inviteId` | `people.manage` | Revoga um convite |
+| POST | `/api/projects/:projectId/invites` | `people.manage` (organização) e `collaborators.manage` + `rates.manage` (projeto) | Convida para a organização alguém que já entra neste projeto, com o valor, o time e o grupo escolhidos |
+| GET | `/api/projects/:projectId/invites` | `collaborators.manage` (projeto) | Convites pendentes que levam a pessoa a este projeto |
 
 ```http
 POST /api/orgs/:orgId/invites
@@ -257,6 +259,18 @@ Content-Type: application/json
 `email` é opcional, e `role` é `admin` ou `member` (o padrão é `member`). A resposta (201) traz `token` e `path` (`/invite/<token>`) e `delivery`, que diz como o convite chega: `email` (o Clerk manda o email), `terminal` (`INVITE_DELIVERY=terminal`: não mandou, o link está no log do servidor) ou `link` (sem email, ou sem o Clerk: só o link). **O token só aparece nesta resposta**: o banco guarda apenas o hash dele; `delivery` também só vem aqui.
 
 Com o Clerk ligado e um email, o convite é criado no Clerk primeiro (com validade de 7 dias e `redirect_url` no `/invite/<token>`) e só então gravado: se o Clerk recusar, a resposta é **502** `auth.clerk_invite_failed`; se não responder, **502** `auth.clerk_unavailable`, e nada fica gravado. Um novo convite para o mesmo email na organização **substitui** o anterior (apagado aqui e cancelado no Clerk). `DELETE /api/invites/:inviteId` também cancela o convite no Clerk (um problema lá não impede de revogar).
+
+**Convite que já leva ao projeto.** `POST /api/projects/:projectId/invites` é o convite da tela Adicionar pessoa ao projeto para um e-mail que ainda não é de ninguém da organização:
+
+```http
+POST /api/projects/:projectId/invites
+Content-Type: application/json
+
+{ "email": "leo@empresa.com", "pay_rate_cents": 25000, "team_id": "<uuid, opcional>", "preset": "manager" }
+```
+`email` e `pay_rate_cents` são obrigatórios; `preset` é o grupo de permissões (omitido ou `member` é o básico); `team_id` é opcional e tem de ser de um time deste projeto. O papel é sempre `member`. A resposta (201) é a mesma do convite da organização (`token`, `path`, `delivery`) mais `project` (`project_id`, `pay_rate_cents`, `team_id`, `preset`). Quando a pessoa aceita o convite (por senha ou pelo Clerk), entra no projeto com o valor, o grupo e o time; se algum passo falhar, o que deu certo antes fica (o valor, por exemplo), a conta existe do mesmo jeito e a falha vai para o log do servidor. Cada coisa pede a sua permissão, como em `PUT /api/projects/:projectId/allocations/:personId` e `POST /api/teams/:teamId/members`, mais a permissão de pessoas da organização: 403 sem elas, e 403 `allocation.preset_above_yours` para um grupo com permissão que quem convida não tem. Erros: 400 `allocation.rate_required` / `allocation.invalid_rate` / `allocation.invalid_preset`, 400 `projectinvite.team_not_in_project`, 400 `person.invalid_email`, 409 `auth.account_exists`. Se o projeto for excluído antes do aceite, o convite segue valendo só para a organização.
+
+`GET /api/projects/:projectId/invites` devolve os pendentes, do mais novo ao mais antigo, com `project.project_name`, `project.team_name` e, só para quem vê os valores do projeto (`rates.view` ou `rates.manage`), `project.pay_rate_cents`. A lista da organização (`GET /api/orgs/:orgId/invites`) também traz o `project`, sem o valor para quem não é admin.
 
 ---
 

@@ -9,6 +9,8 @@ import (
 	"working-time-tracker/ent/invite"
 	"working-time-tracker/ent/organization"
 	"working-time-tracker/ent/person"
+	"working-time-tracker/ent/project"
+	"working-time-tracker/ent/team"
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
@@ -30,6 +32,14 @@ type Invite struct {
 	Role invite.Role `json:"role,omitempty"`
 	// ClerkInvitationID holds the value of the "clerk_invitation_id" field.
 	ClerkInvitationID *string `json:"clerk_invitation_id,omitempty"`
+	// ProjectID holds the value of the "project_id" field.
+	ProjectID *uuid.UUID `json:"project_id,omitempty"`
+	// PayRateCents holds the value of the "pay_rate_cents" field.
+	PayRateCents *int `json:"pay_rate_cents,omitempty"`
+	// TeamID holds the value of the "team_id" field.
+	TeamID *uuid.UUID `json:"team_id,omitempty"`
+	// Preset holds the value of the "preset" field.
+	Preset *string `json:"preset,omitempty"`
 	// CreatedByID holds the value of the "created_by_id" field.
 	CreatedByID *uuid.UUID `json:"created_by_id,omitempty"`
 	// ExpiresAt holds the value of the "expires_at" field.
@@ -50,9 +60,13 @@ type InviteEdges struct {
 	Organization *Organization `json:"organization,omitempty"`
 	// CreatedBy holds the value of the created_by edge.
 	CreatedBy *Person `json:"created_by,omitempty"`
+	// Project holds the value of the project edge.
+	Project *Project `json:"project,omitempty"`
+	// Team holds the value of the team edge.
+	Team *Team `json:"team,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
+	loadedTypes [4]bool
 }
 
 // OrganizationOrErr returns the Organization value or an error if the edge
@@ -77,14 +91,38 @@ func (e InviteEdges) CreatedByOrErr() (*Person, error) {
 	return nil, &NotLoadedError{edge: "created_by"}
 }
 
+// ProjectOrErr returns the Project value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e InviteEdges) ProjectOrErr() (*Project, error) {
+	if e.Project != nil {
+		return e.Project, nil
+	} else if e.loadedTypes[2] {
+		return nil, &NotFoundError{label: project.Label}
+	}
+	return nil, &NotLoadedError{edge: "project"}
+}
+
+// TeamOrErr returns the Team value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e InviteEdges) TeamOrErr() (*Team, error) {
+	if e.Team != nil {
+		return e.Team, nil
+	} else if e.loadedTypes[3] {
+		return nil, &NotFoundError{label: team.Label}
+	}
+	return nil, &NotLoadedError{edge: "team"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*Invite) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case invite.FieldCreatedByID:
+		case invite.FieldProjectID, invite.FieldTeamID, invite.FieldCreatedByID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case invite.FieldTokenHash, invite.FieldEmail, invite.FieldRole, invite.FieldClerkInvitationID:
+		case invite.FieldPayRateCents:
+			values[i] = new(sql.NullInt64)
+		case invite.FieldTokenHash, invite.FieldEmail, invite.FieldRole, invite.FieldClerkInvitationID, invite.FieldPreset:
 			values[i] = new(sql.NullString)
 		case invite.FieldExpiresAt, invite.FieldAcceptedAt, invite.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
@@ -143,6 +181,34 @@ func (_m *Invite) assignValues(columns []string, values []any) error {
 				_m.ClerkInvitationID = new(string)
 				*_m.ClerkInvitationID = value.String
 			}
+		case invite.FieldProjectID:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field project_id", values[i])
+			} else if value.Valid {
+				_m.ProjectID = new(uuid.UUID)
+				*_m.ProjectID = *value.S.(*uuid.UUID)
+			}
+		case invite.FieldPayRateCents:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field pay_rate_cents", values[i])
+			} else if value.Valid {
+				_m.PayRateCents = new(int)
+				*_m.PayRateCents = int(value.Int64)
+			}
+		case invite.FieldTeamID:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field team_id", values[i])
+			} else if value.Valid {
+				_m.TeamID = new(uuid.UUID)
+				*_m.TeamID = *value.S.(*uuid.UUID)
+			}
+		case invite.FieldPreset:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field preset", values[i])
+			} else if value.Valid {
+				_m.Preset = new(string)
+				*_m.Preset = value.String
+			}
 		case invite.FieldCreatedByID:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field created_by_id", values[i])
@@ -192,6 +258,16 @@ func (_m *Invite) QueryCreatedBy() *PersonQuery {
 	return NewInviteClient(_m.config).QueryCreatedBy(_m)
 }
 
+// QueryProject queries the "project" edge of the Invite entity.
+func (_m *Invite) QueryProject() *ProjectQuery {
+	return NewInviteClient(_m.config).QueryProject(_m)
+}
+
+// QueryTeam queries the "team" edge of the Invite entity.
+func (_m *Invite) QueryTeam() *TeamQuery {
+	return NewInviteClient(_m.config).QueryTeam(_m)
+}
+
 // Update returns a builder for updating this Invite.
 // Note that you need to call Invite.Unwrap() before calling this method if this Invite
 // was returned from a transaction, and the transaction was committed or rolled back.
@@ -230,6 +306,26 @@ func (_m *Invite) String() string {
 	builder.WriteString(", ")
 	if v := _m.ClerkInvitationID; v != nil {
 		builder.WriteString("clerk_invitation_id=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.ProjectID; v != nil {
+		builder.WriteString("project_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	if v := _m.PayRateCents; v != nil {
+		builder.WriteString("pay_rate_cents=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	if v := _m.TeamID; v != nil {
+		builder.WriteString("team_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	if v := _m.Preset; v != nil {
+		builder.WriteString("preset=")
 		builder.WriteString(*v)
 	}
 	builder.WriteString(", ")

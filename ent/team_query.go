@@ -7,6 +7,7 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"math"
+	"working-time-tracker/ent/invite"
 	"working-time-tracker/ent/predicate"
 	"working-time-tracker/ent/project"
 	"working-time-tracker/ent/team"
@@ -29,6 +30,7 @@ type TeamQuery struct {
 	predicates      []predicate.Team
 	withProject     *ProjectQuery
 	withMemberships *TeamMembershipQuery
+	withInvites     *InviteQuery
 	modifiers       []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -103,6 +105,28 @@ func (_q *TeamQuery) QueryMemberships() *TeamMembershipQuery {
 			sqlgraph.From(team.Table, team.FieldID, selector),
 			sqlgraph.To(teammembership.Table, teammembership.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, team.MembershipsTable, team.MembershipsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryInvites chains the current query on the "invites" edge.
+func (_q *TeamQuery) QueryInvites() *InviteQuery {
+	query := (&InviteClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(team.Table, team.FieldID, selector),
+			sqlgraph.To(invite.Table, invite.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, team.InvitesTable, team.InvitesColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -304,6 +328,7 @@ func (_q *TeamQuery) Clone() *TeamQuery {
 		predicates:      append([]predicate.Team{}, _q.predicates...),
 		withProject:     _q.withProject.Clone(),
 		withMemberships: _q.withMemberships.Clone(),
+		withInvites:     _q.withInvites.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -329,6 +354,17 @@ func (_q *TeamQuery) WithMemberships(opts ...func(*TeamMembershipQuery)) *TeamQu
 		opt(query)
 	}
 	_q.withMemberships = query
+	return _q
+}
+
+// WithInvites tells the query-builder to eager-load the nodes that are connected to
+// the "invites" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *TeamQuery) WithInvites(opts ...func(*InviteQuery)) *TeamQuery {
+	query := (&InviteClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withInvites = query
 	return _q
 }
 
@@ -410,9 +446,10 @@ func (_q *TeamQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Team, e
 	var (
 		nodes       = []*Team{}
 		_spec       = _q.querySpec()
-		loadedTypes = [2]bool{
+		loadedTypes = [3]bool{
 			_q.withProject != nil,
 			_q.withMemberships != nil,
+			_q.withInvites != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -446,6 +483,13 @@ func (_q *TeamQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Team, e
 		if err := _q.loadMemberships(ctx, query, nodes,
 			func(n *Team) { n.Edges.Memberships = []*TeamMembership{} },
 			func(n *Team, e *TeamMembership) { n.Edges.Memberships = append(n.Edges.Memberships, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withInvites; query != nil {
+		if err := _q.loadInvites(ctx, query, nodes,
+			func(n *Team) { n.Edges.Invites = []*Invite{} },
+			func(n *Team, e *Invite) { n.Edges.Invites = append(n.Edges.Invites, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -506,6 +550,39 @@ func (_q *TeamQuery) loadMemberships(ctx context.Context, query *TeamMembershipQ
 		node, ok := nodeids[fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "team_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *TeamQuery) loadInvites(ctx context.Context, query *InviteQuery, nodes []*Team, init func(*Team), assign func(*Team, *Invite)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Team)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(invite.FieldTeamID)
+	}
+	query.Where(predicate.Invite(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(team.InvitesColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.TeamID
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "team_id" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "team_id" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

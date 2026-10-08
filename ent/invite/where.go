@@ -76,6 +76,26 @@ func ClerkInvitationID(v string) predicate.Invite {
 	return predicate.Invite(sql.FieldEQ(FieldClerkInvitationID, v))
 }
 
+// ProjectID applies equality check predicate on the "project_id" field. It's identical to ProjectIDEQ.
+func ProjectID(v uuid.UUID) predicate.Invite {
+	return predicate.Invite(sql.FieldEQ(FieldProjectID, v))
+}
+
+// PayRateCents applies equality check predicate on the "pay_rate_cents" field. It's identical to PayRateCentsEQ.
+func PayRateCents(v int) predicate.Invite {
+	return predicate.Invite(sql.FieldEQ(FieldPayRateCents, v))
+}
+
+// TeamID applies equality check predicate on the "team_id" field. It's identical to TeamIDEQ.
+func TeamID(v uuid.UUID) predicate.Invite {
+	return predicate.Invite(sql.FieldEQ(FieldTeamID, v))
+}
+
+// Preset applies equality check predicate on the "preset" field. It's identical to PresetEQ.
+func Preset(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldEQ(FieldPreset, v))
+}
+
 // CreatedByID applies equality check predicate on the "created_by_id" field. It's identical to CreatedByIDEQ.
 func CreatedByID(v uuid.UUID) predicate.Invite {
 	return predicate.Invite(sql.FieldEQ(FieldCreatedByID, v))
@@ -351,6 +371,191 @@ func ClerkInvitationIDContainsFold(v string) predicate.Invite {
 	return predicate.Invite(sql.FieldContainsFold(FieldClerkInvitationID, v))
 }
 
+// ProjectIDEQ applies the EQ predicate on the "project_id" field.
+func ProjectIDEQ(v uuid.UUID) predicate.Invite {
+	return predicate.Invite(sql.FieldEQ(FieldProjectID, v))
+}
+
+// ProjectIDNEQ applies the NEQ predicate on the "project_id" field.
+func ProjectIDNEQ(v uuid.UUID) predicate.Invite {
+	return predicate.Invite(sql.FieldNEQ(FieldProjectID, v))
+}
+
+// ProjectIDIn applies the In predicate on the "project_id" field.
+func ProjectIDIn(vs ...uuid.UUID) predicate.Invite {
+	return predicate.Invite(sql.FieldIn(FieldProjectID, vs...))
+}
+
+// ProjectIDNotIn applies the NotIn predicate on the "project_id" field.
+func ProjectIDNotIn(vs ...uuid.UUID) predicate.Invite {
+	return predicate.Invite(sql.FieldNotIn(FieldProjectID, vs...))
+}
+
+// ProjectIDIsNil applies the IsNil predicate on the "project_id" field.
+func ProjectIDIsNil() predicate.Invite {
+	return predicate.Invite(sql.FieldIsNull(FieldProjectID))
+}
+
+// ProjectIDNotNil applies the NotNil predicate on the "project_id" field.
+func ProjectIDNotNil() predicate.Invite {
+	return predicate.Invite(sql.FieldNotNull(FieldProjectID))
+}
+
+// PayRateCentsEQ applies the EQ predicate on the "pay_rate_cents" field.
+func PayRateCentsEQ(v int) predicate.Invite {
+	return predicate.Invite(sql.FieldEQ(FieldPayRateCents, v))
+}
+
+// PayRateCentsNEQ applies the NEQ predicate on the "pay_rate_cents" field.
+func PayRateCentsNEQ(v int) predicate.Invite {
+	return predicate.Invite(sql.FieldNEQ(FieldPayRateCents, v))
+}
+
+// PayRateCentsIn applies the In predicate on the "pay_rate_cents" field.
+func PayRateCentsIn(vs ...int) predicate.Invite {
+	return predicate.Invite(sql.FieldIn(FieldPayRateCents, vs...))
+}
+
+// PayRateCentsNotIn applies the NotIn predicate on the "pay_rate_cents" field.
+func PayRateCentsNotIn(vs ...int) predicate.Invite {
+	return predicate.Invite(sql.FieldNotIn(FieldPayRateCents, vs...))
+}
+
+// PayRateCentsGT applies the GT predicate on the "pay_rate_cents" field.
+func PayRateCentsGT(v int) predicate.Invite {
+	return predicate.Invite(sql.FieldGT(FieldPayRateCents, v))
+}
+
+// PayRateCentsGTE applies the GTE predicate on the "pay_rate_cents" field.
+func PayRateCentsGTE(v int) predicate.Invite {
+	return predicate.Invite(sql.FieldGTE(FieldPayRateCents, v))
+}
+
+// PayRateCentsLT applies the LT predicate on the "pay_rate_cents" field.
+func PayRateCentsLT(v int) predicate.Invite {
+	return predicate.Invite(sql.FieldLT(FieldPayRateCents, v))
+}
+
+// PayRateCentsLTE applies the LTE predicate on the "pay_rate_cents" field.
+func PayRateCentsLTE(v int) predicate.Invite {
+	return predicate.Invite(sql.FieldLTE(FieldPayRateCents, v))
+}
+
+// PayRateCentsIsNil applies the IsNil predicate on the "pay_rate_cents" field.
+func PayRateCentsIsNil() predicate.Invite {
+	return predicate.Invite(sql.FieldIsNull(FieldPayRateCents))
+}
+
+// PayRateCentsNotNil applies the NotNil predicate on the "pay_rate_cents" field.
+func PayRateCentsNotNil() predicate.Invite {
+	return predicate.Invite(sql.FieldNotNull(FieldPayRateCents))
+}
+
+// TeamIDEQ applies the EQ predicate on the "team_id" field.
+func TeamIDEQ(v uuid.UUID) predicate.Invite {
+	return predicate.Invite(sql.FieldEQ(FieldTeamID, v))
+}
+
+// TeamIDNEQ applies the NEQ predicate on the "team_id" field.
+func TeamIDNEQ(v uuid.UUID) predicate.Invite {
+	return predicate.Invite(sql.FieldNEQ(FieldTeamID, v))
+}
+
+// TeamIDIn applies the In predicate on the "team_id" field.
+func TeamIDIn(vs ...uuid.UUID) predicate.Invite {
+	return predicate.Invite(sql.FieldIn(FieldTeamID, vs...))
+}
+
+// TeamIDNotIn applies the NotIn predicate on the "team_id" field.
+func TeamIDNotIn(vs ...uuid.UUID) predicate.Invite {
+	return predicate.Invite(sql.FieldNotIn(FieldTeamID, vs...))
+}
+
+// TeamIDIsNil applies the IsNil predicate on the "team_id" field.
+func TeamIDIsNil() predicate.Invite {
+	return predicate.Invite(sql.FieldIsNull(FieldTeamID))
+}
+
+// TeamIDNotNil applies the NotNil predicate on the "team_id" field.
+func TeamIDNotNil() predicate.Invite {
+	return predicate.Invite(sql.FieldNotNull(FieldTeamID))
+}
+
+// PresetEQ applies the EQ predicate on the "preset" field.
+func PresetEQ(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldEQ(FieldPreset, v))
+}
+
+// PresetNEQ applies the NEQ predicate on the "preset" field.
+func PresetNEQ(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldNEQ(FieldPreset, v))
+}
+
+// PresetIn applies the In predicate on the "preset" field.
+func PresetIn(vs ...string) predicate.Invite {
+	return predicate.Invite(sql.FieldIn(FieldPreset, vs...))
+}
+
+// PresetNotIn applies the NotIn predicate on the "preset" field.
+func PresetNotIn(vs ...string) predicate.Invite {
+	return predicate.Invite(sql.FieldNotIn(FieldPreset, vs...))
+}
+
+// PresetGT applies the GT predicate on the "preset" field.
+func PresetGT(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldGT(FieldPreset, v))
+}
+
+// PresetGTE applies the GTE predicate on the "preset" field.
+func PresetGTE(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldGTE(FieldPreset, v))
+}
+
+// PresetLT applies the LT predicate on the "preset" field.
+func PresetLT(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldLT(FieldPreset, v))
+}
+
+// PresetLTE applies the LTE predicate on the "preset" field.
+func PresetLTE(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldLTE(FieldPreset, v))
+}
+
+// PresetContains applies the Contains predicate on the "preset" field.
+func PresetContains(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldContains(FieldPreset, v))
+}
+
+// PresetHasPrefix applies the HasPrefix predicate on the "preset" field.
+func PresetHasPrefix(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldHasPrefix(FieldPreset, v))
+}
+
+// PresetHasSuffix applies the HasSuffix predicate on the "preset" field.
+func PresetHasSuffix(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldHasSuffix(FieldPreset, v))
+}
+
+// PresetIsNil applies the IsNil predicate on the "preset" field.
+func PresetIsNil() predicate.Invite {
+	return predicate.Invite(sql.FieldIsNull(FieldPreset))
+}
+
+// PresetNotNil applies the NotNil predicate on the "preset" field.
+func PresetNotNil() predicate.Invite {
+	return predicate.Invite(sql.FieldNotNull(FieldPreset))
+}
+
+// PresetEqualFold applies the EqualFold predicate on the "preset" field.
+func PresetEqualFold(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldEqualFold(FieldPreset, v))
+}
+
+// PresetContainsFold applies the ContainsFold predicate on the "preset" field.
+func PresetContainsFold(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldContainsFold(FieldPreset, v))
+}
+
 // CreatedByIDEQ applies the EQ predicate on the "created_by_id" field.
 func CreatedByIDEQ(v uuid.UUID) predicate.Invite {
 	return predicate.Invite(sql.FieldEQ(FieldCreatedByID, v))
@@ -549,6 +754,52 @@ func HasCreatedBy() predicate.Invite {
 func HasCreatedByWith(preds ...predicate.Person) predicate.Invite {
 	return predicate.Invite(func(s *sql.Selector) {
 		step := newCreatedByStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasProject applies the HasEdge predicate on the "project" edge.
+func HasProject() predicate.Invite {
+	return predicate.Invite(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, ProjectTable, ProjectColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasProjectWith applies the HasEdge predicate on the "project" edge with a given conditions (other predicates).
+func HasProjectWith(preds ...predicate.Project) predicate.Invite {
+	return predicate.Invite(func(s *sql.Selector) {
+		step := newProjectStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasTeam applies the HasEdge predicate on the "team" edge.
+func HasTeam() predicate.Invite {
+	return predicate.Invite(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, TeamTable, TeamColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasTeamWith applies the HasEdge predicate on the "team" edge with a given conditions (other predicates).
+func HasTeamWith(preds ...predicate.Team) predicate.Invite {
+	return predicate.Invite(func(s *sql.Selector) {
+		step := newTeamStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

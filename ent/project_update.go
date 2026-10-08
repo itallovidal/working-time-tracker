@@ -9,6 +9,7 @@ import (
 	"working-time-tracker/ent/allocation"
 	"working-time-tracker/ent/customer"
 	"working-time-tracker/ent/integration"
+	"working-time-tracker/ent/invite"
 	"working-time-tracker/ent/label"
 	"working-time-tracker/ent/organization"
 	"working-time-tracker/ent/predicate"
@@ -377,6 +378,21 @@ func (_u *ProjectUpdate) AddAllocations(v ...*Allocation) *ProjectUpdate {
 	return _u.AddAllocationIDs(ids...)
 }
 
+// AddInviteIDs adds the "invites" edge to the Invite entity by IDs.
+func (_u *ProjectUpdate) AddInviteIDs(ids ...uuid.UUID) *ProjectUpdate {
+	_u.mutation.AddInviteIDs(ids...)
+	return _u
+}
+
+// AddInvites adds the "invites" edges to the Invite entity.
+func (_u *ProjectUpdate) AddInvites(v ...*Invite) *ProjectUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddInviteIDs(ids...)
+}
+
 // AddLabelIDs adds the "labels" edge to the Label entity by IDs.
 func (_u *ProjectUpdate) AddLabelIDs(ids ...uuid.UUID) *ProjectUpdate {
 	_u.mutation.AddLabelIDs(ids...)
@@ -512,6 +528,27 @@ func (_u *ProjectUpdate) RemoveAllocations(v ...*Allocation) *ProjectUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveAllocationIDs(ids...)
+}
+
+// ClearInvites clears all "invites" edges to the Invite entity.
+func (_u *ProjectUpdate) ClearInvites() *ProjectUpdate {
+	_u.mutation.ClearInvites()
+	return _u
+}
+
+// RemoveInviteIDs removes the "invites" edge to Invite entities by IDs.
+func (_u *ProjectUpdate) RemoveInviteIDs(ids ...uuid.UUID) *ProjectUpdate {
+	_u.mutation.RemoveInviteIDs(ids...)
+	return _u
+}
+
+// RemoveInvites removes "invites" edges to Invite entities.
+func (_u *ProjectUpdate) RemoveInvites(v ...*Invite) *ProjectUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveInviteIDs(ids...)
 }
 
 // ClearLabels clears all "labels" edges to the Label entity.
@@ -936,6 +973,51 @@ func (_u *ProjectUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if _u.mutation.InvitesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   project.InvitesTable,
+			Columns: []string{project.InvitesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(invite.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedInvitesIDs(); len(nodes) > 0 && !_u.mutation.InvitesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   project.InvitesTable,
+			Columns: []string{project.InvitesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(invite.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.InvitesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   project.InvitesTable,
+			Columns: []string{project.InvitesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(invite.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if _u.mutation.LabelsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
@@ -1342,6 +1424,21 @@ func (_u *ProjectUpdateOne) AddAllocations(v ...*Allocation) *ProjectUpdateOne {
 	return _u.AddAllocationIDs(ids...)
 }
 
+// AddInviteIDs adds the "invites" edge to the Invite entity by IDs.
+func (_u *ProjectUpdateOne) AddInviteIDs(ids ...uuid.UUID) *ProjectUpdateOne {
+	_u.mutation.AddInviteIDs(ids...)
+	return _u
+}
+
+// AddInvites adds the "invites" edges to the Invite entity.
+func (_u *ProjectUpdateOne) AddInvites(v ...*Invite) *ProjectUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddInviteIDs(ids...)
+}
+
 // AddLabelIDs adds the "labels" edge to the Label entity by IDs.
 func (_u *ProjectUpdateOne) AddLabelIDs(ids ...uuid.UUID) *ProjectUpdateOne {
 	_u.mutation.AddLabelIDs(ids...)
@@ -1477,6 +1574,27 @@ func (_u *ProjectUpdateOne) RemoveAllocations(v ...*Allocation) *ProjectUpdateOn
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveAllocationIDs(ids...)
+}
+
+// ClearInvites clears all "invites" edges to the Invite entity.
+func (_u *ProjectUpdateOne) ClearInvites() *ProjectUpdateOne {
+	_u.mutation.ClearInvites()
+	return _u
+}
+
+// RemoveInviteIDs removes the "invites" edge to Invite entities by IDs.
+func (_u *ProjectUpdateOne) RemoveInviteIDs(ids ...uuid.UUID) *ProjectUpdateOne {
+	_u.mutation.RemoveInviteIDs(ids...)
+	return _u
+}
+
+// RemoveInvites removes "invites" edges to Invite entities.
+func (_u *ProjectUpdateOne) RemoveInvites(v ...*Invite) *ProjectUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveInviteIDs(ids...)
 }
 
 // ClearLabels clears all "labels" edges to the Label entity.
@@ -1924,6 +2042,51 @@ func (_u *ProjectUpdateOne) sqlSave(ctx context.Context) (_node *Project, err er
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(allocation.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.InvitesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   project.InvitesTable,
+			Columns: []string{project.InvitesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(invite.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedInvitesIDs(); len(nodes) > 0 && !_u.mutation.InvitesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   project.InvitesTable,
+			Columns: []string{project.InvitesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(invite.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.InvitesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   project.InvitesTable,
+			Columns: []string{project.InvitesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(invite.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

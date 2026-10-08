@@ -46,6 +46,8 @@ func (Project) Edges() []ent.Edge {
 		edge.To("work_sessions", WorkSession.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("integrations", Integration.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("allocations", Allocation.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
+		// Um convite que levava a pessoa a este projeto continua valendo, só para a organização.
+		edge.To("invites", Invite.Type).Annotations(entsql.OnDelete(entsql.SetNull)),
 		edge.To("labels", Label.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
 	}
 }
