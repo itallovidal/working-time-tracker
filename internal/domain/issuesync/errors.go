@@ -1,0 +1,30 @@
+package issuesync
+
+import (
+	"net/http"
+
+	"working-time-tracker/internal/apperr"
+)
+
+// Erros da sincronização. Os dois primeiros voltam da API; os outros são códigos que a rodada deixa
+// no vínculo da issue e na integração (last_sync_error), para o cartão da integração mostrar o motivo
+// no idioma da pessoa.
+var (
+	// ErrSyncRunning é a rodada que já está em andamento nesta integração.
+	ErrSyncRunning = apperr.New("integration.sync_running", http.StatusConflict)
+	// ErrSyncOff é a integração que não está com a sincronização ligada (ou está desativada).
+	ErrSyncOff = apperr.New("integration.sync_off", http.StatusBadRequest)
+
+	// ErrReadOnly: o token não escreve no repositório (ou ele está arquivado), então as issues só
+	// vêm para cá e as mudanças daqui ficam daqui.
+	ErrReadOnly = apperr.New("issue_sync.read_only", http.StatusBadRequest)
+	// ErrPushDiscarded: o GitHub respondeu 200 mas não gravou o que se mandou, como faz com quem não
+	// tem permissão para mudar etiquetas e responsáveis.
+	ErrPushDiscarded = apperr.New("issue_sync.push_discarded", http.StatusBadRequest)
+	// ErrPushRejected: o GitHub recusou a mudança (por exemplo, um título grande demais).
+	ErrPushRejected = apperr.New("issue_sync.push_rejected", http.StatusBadRequest)
+	// ErrNoLogin: o responsável escolhido aqui não tem usuário do GitHub que se ache pelo e-mail.
+	ErrNoLogin = apperr.New("issue_sync.no_login", http.StatusBadRequest)
+	// ErrLabelRefused: o token não pode criar etiquetas no repositório.
+	ErrLabelRefused = apperr.New("issue_sync.label_refused", http.StatusBadRequest)
+)
