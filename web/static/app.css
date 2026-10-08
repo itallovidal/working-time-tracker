@@ -229,7 +229,7 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 .grid-aside { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 18px; align-items: start; }
 @media (max-width: 860px) { .grid-2, .grid-aside { grid-template-columns: 1fr; } }
 /* A página da tarefa: duas colunas de cartões, e em tela estreita uma coluna só, na ordem
-   tarefa, detalhes, tempo, item externo (as colunas se desfazem e o order assume). */
+   tarefa, detalhes, tempo, integrações (as colunas se desfazem e o order assume). */
 .task-layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 18px; align-items: start; }
 .task-col { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
 @media (max-width: 860px) {
@@ -238,8 +238,26 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
   .task-main { order: 1; }
   .task-details { order: 2; }
   .task-time { order: 3; }
-  .task-external { order: 4; }
+  .task-integrations { order: 4; }
 }
+/* As integrações da tarefa: um cartão para cada. O cartão diz de qual plataforma é, tem o botão que relê o
+   item e um botão grande, com o ícone da plataforma, que leva até ele. */
+.task-integrations { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.integration-names { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.integration-card .card-head { flex-wrap: nowrap; align-items: flex-start; }
+.integration-card .card-head .btn { flex: none; }
+.integration-names p { margin: 0; overflow-wrap: anywhere; }
+.integration-link {
+  display: flex; align-items: center; gap: 12px; padding: 11px 14px; color: var(--ink); text-decoration: none;
+  background: var(--surface); border: 1px solid var(--rule-strong); border-radius: var(--radius-sm);
+}
+.integration-link:hover { background: var(--surface-2); }
+.integration-link:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.integration-brand { font-size: 1.7rem; line-height: 1; }
+.integration-link-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.integration-link-text strong { font-weight: 600; }
+.integration-go { color: var(--muted); font-size: 0.85rem; }
+.integration-link:hover .integration-go { color: var(--accent); }
 .task-head { display: flex; flex-direction: column; gap: 14px; }
 .task-title { overflow-wrap: anywhere; }
 /* Os atributos da tarefa, uma linha cada, separadas por um filete. */

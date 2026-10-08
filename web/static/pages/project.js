@@ -329,6 +329,21 @@ document.addEventListener('alpine:init', () => {
     return t.label + ' ' + (t.item_numeric ? '#' : '') + task.external_item_id;
   }
 
+  // brandIcons são os ícones das plataformas (Font Awesome); uma plataforma sem ícone leva o do elo.
+  const brandIcons = { github: 'fa-brands fa-github', gitlab: 'fa-brands fa-gitlab', trello: 'fa-brands fa-trello' };
+  // syncMessage resume uma rodada em uma frase: o que entrou, o que mudou e o que foi para o GitHub.
+  // `nothing` é o texto de quando nada mudou, que muda do botão da integração para o da tarefa.
+  function syncMessage(sum, nothing) {
+    const parts = [];
+    if (sum.created) parts.push(WTT.t('integrations.sync_created', { count: sum.created }));
+    if (sum.updated) parts.push(WTT.t('integrations.sync_updated', { count: sum.updated }));
+    if (sum.pushed) parts.push(WTT.t('integrations.sync_pushed', { count: sum.pushed }));
+    if (sum.errors) parts.push(WTT.t('integrations.sync_errors', { count: sum.errors }));
+    let text = parts.length ? WTT.t('integrations.sync_done') + ' ' + parts.join(', ') + '.' : WTT.t(nothing);
+    if (sum.partial) text += ' ' + WTT.t('integrations.sync_partial');
+    return text;
+  }
+
   // secondsWithin soma quanto de cada sessão caiu depois de "since", contando
   // a sessão aberta até agora.
   function secondsWithin(sessions, since) {
@@ -752,6 +767,7 @@ document.addEventListener('alpine:init', () => {
     draft: { name: '', description: '', assign: 'none', assignee_id: '', deadline: '', priority: 'none', status: 'backlog', label_ids: [] }, // assign: me, none ou other
     linkForm: { integration_id: '', external_item_id: '', external_item_url: '' },
     external: { loading: false, details: null, error: '' },
+    syncProblem: '', // o aviso que a última sincronização da tarefa deixou
     confirmDelete: false,
     async init() {
       try {
@@ -935,9 +951,24 @@ document.addEventListener('alpine:init', () => {
         this.linkForm.external_item_url = '';
       });
     },
-    unlink() {
-      return this.run('unlink', async () => {
-        this.setTask(await api('DELETE', '/api/tasks/' + this.taskId + '/link-external-item'));
+    // Sincronizar: o GitHub não avisa quando a issue muda, então o botão relê a issue e põe as duas em acordo
+    // (e traz de volta o que mudou, as etiquetas novas junto). Numa integração sem sincronização, só relê
+    // os detalhes do item.
+    syncExternal() {
+      return this.run('sync', async () => {
+        this.syncProblem = '';
+        if (!this.syncs()) {
+          await this.loadExternal();
+          return;
+        }
+        const sum = await api('POST', '/api/tasks/' + this.taskId + '/sync');
+        const [task] = await Promise.all([api('GET', '/api/tasks/' + this.taskId), this.loadLabels()]);
+        this.setTask(task);
+        if (sum.problem) {
+          const message = WTT.errorText({ code: sum.problem, params: { provider: this.typeLabel(task.external_integration && task.external_integration.type) } });
+          this.syncProblem = WTT.t('task_detail.sync_problem', { message });
+        }
+        toast(syncMessage(sum, 'task_detail.sync_nothing'));
       });
     },
     remove() {
@@ -954,6 +985,32 @@ document.addEventListener('alpine:init', () => {
     deadlineClass() { return this.task ? deadlineInfo(this.task.deadline).cls : ''; },
     deadlineLabel() { return this.task ? deadlineInfo(this.task.deadline).label : ''; },
     externalLabel() { return this.task ? externalLabel(this.task) : ''; },
+    // links são os cartões de integração da tarefa: um por integração a que ela está ligada, hoje no máximo um.
+    links() {
+      const t = this.task;
+      if (!t || !t.external_item_id) return [];
+      const link = t.external_integration;
+      const known = link && integrationType(link.type);
+      return [{
+        id: link ? link.id : t.id,
+        type: link ? link.type : '',
+        label: known ? known.label : ((link && link.type) || WTT.t('tasks.item')),
+        name: link ? link.name : '',
+        item: (known && known.item_numeric ? '#' : '') + t.external_item_id,
+        url: (this.external.details && this.external.details.url) || t.external_item_url || '',
+      }];
+    },
+    brandIcon: (type) => brandIcons[type] || 'fa-solid fa-link',
+    // O estado do item vem como a plataforma o chama (open, opened, closed); na tela é Aberta ou Fechada.
+    stateLabel(state) {
+      if (state === 'open' || state === 'opened') return WTT.t('task_detail.state_open');
+      if (state === 'closed') return WTT.t('task_detail.state_closed');
+      return state || '';
+    },
+    stateClass(state) {
+      if (state === 'open' || state === 'opened') return 'badge-ok';
+      return state === 'closed' ? statusClass('closed') : '';
+    },
     // syncs diz se a issue a que a tarefa está ligada é sincronizada: o que se salva aqui vai para ela.
     syncs() {
       const link = this.task && this.task.external_integration;
@@ -1087,17 +1144,7 @@ document.addEventListener('alpine:init', () => {
       const message = WTT.errorText({ code: it.last_sync_error, params: { provider: this.typeOf(it.type).label } });
       return WTT.t('integrations.sync_warning', { message });
     },
-    // syncMessage resume uma rodada em uma frase: o que entrou, o que mudou e o que foi para o GitHub.
-    syncMessage(sum) {
-      const parts = [];
-      if (sum.created) parts.push(WTT.t('integrations.sync_created', { count: sum.created }));
-      if (sum.updated) parts.push(WTT.t('integrations.sync_updated', { count: sum.updated }));
-      if (sum.pushed) parts.push(WTT.t('integrations.sync_pushed', { count: sum.pushed }));
-      if (sum.errors) parts.push(WTT.t('integrations.sync_errors', { count: sum.errors }));
-      let text = parts.length ? WTT.t('integrations.sync_done') + ' ' + parts.join(', ') + '.' : WTT.t('integrations.sync_nothing');
-      if (sum.partial) text += ' ' + WTT.t('integrations.sync_partial');
-      return text;
-    },
+    syncMessage(sum) { return syncMessage(sum, 'integrations.sync_nothing'); },
     // Sincronizar agora: uma rodada completa, que pode demorar com muitas issues. Depois, relê a integração
     // para o cartão mostrar a hora, o aviso e a contagem de quem ficou sem correspondência.
     syncNow(it) {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 	"time"
 
@@ -181,6 +182,105 @@ func TestIssueSync_EndToEnd(t *testing.T) {
 	rec = do(e, "PATCH", "/api/integrations/"+integ, `{"sync_issues":false,"metadata":{"repo":"owner/other"}}`, admin.session)
 	if rec.Code != http.StatusOK {
 		t.Errorf("turn off and change the repository = %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
+// O botão Sincronizar da tela da tarefa: relê a issue dela no GitHub, sem esperar a rodada de fundo.
+func TestIssueSync_TaskButton(t *testing.T) {
+	app, fake := syncServer(t)
+	e := app.Echo
+	admin := signup(t, e, "Org", "ana@test.com")
+	member := invite(t, e, admin, "bia@test.com", "member")
+	prj := createProject(t, e, admin, "Alfa")
+	allocate(t, e, admin, prj, member.id, 5000)
+	one := fake.AddIssue("owner/repo", testutil.GitHubIssue{Title: "Corrigir login", Labels: []string{"bug"}})
+
+	rec := do(e, "POST", "/api/projects/"+prj+"/integrations", `{"type":"github","display_name":"Repo","token":"tok","metadata":{"repo":"owner/repo"}}`, admin.session)
+	integ := decode(t, rec)["id"].(string)
+	do(e, "PATCH", "/api/integrations/"+integ, `{"sync_issues":true}`, admin.session)
+	if rec = do(e, "POST", "/api/integrations/"+integ+"/sync", "", admin.session); rec.Code != http.StatusOK {
+		t.Fatalf("first round = %d: %s", rec.Code, rec.Body.String())
+	}
+	tasks := decodeList(t, do(e, "GET", "/api/projects/"+prj+"/tasks", "", admin.session))
+	if len(tasks) != 1 {
+		t.Fatalf("%d tasks, want 1", len(tasks))
+	}
+	id := tasks[0]["id"].(string)
+	syncURL := "/api/tasks/" + id + "/sync"
+
+	// Mudou no GitHub, e o botão traz. Qualquer pessoa do projeto pode apertá-lo.
+	fake.EditIssue("owner/repo", one, func(i *testutil.GitHubIssue) { i.Title = "Corrigir o login"; i.Labels = []string{"bug", "ux"} })
+	rec = do(e, "POST", syncURL, "", member.session)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("task sync = %d: %s", rec.Code, rec.Body.String())
+	}
+	if sum := decode(t, rec); sum["updated"] != 1.0 || sum["pushed"] != 0.0 || sum["errors"] != 0.0 || sum["problem"] != nil {
+		t.Errorf("summary = %v, want one task updated", sum)
+	}
+	got := decode(t, do(e, "GET", "/api/tasks/"+id, "", admin.session))
+	if got["name"] != "Corrigir o login" || len(got["labels"].([]any)) != 2 {
+		t.Errorf("task after the sync = %v", got)
+	}
+
+	// Igual dos dois lados: nada vai nem vem.
+	fake.Reset()
+	rec = do(e, "POST", syncURL, "", admin.session)
+	if sum := decode(t, rec); rec.Code != http.StatusOK || sum["updated"] != 0.0 || sum["pushed"] != 0.0 {
+		t.Errorf("second press = %d %v, want nothing to do", rec.Code, sum)
+	}
+	if fake.Writes() != 0 {
+		t.Errorf("a press with nothing different wrote to GitHub: %v", fake.Requests())
+	}
+
+	// Fechada no GitHub, fecha a tarefa.
+	fake.EditIssue("owner/repo", one, func(i *testutil.GitHubIssue) { i.State = "closed" })
+	if rec = do(e, "POST", syncURL, "", admin.session); rec.Code != http.StatusOK {
+		t.Fatalf("press after the close = %d: %s", rec.Code, rec.Body.String())
+	}
+	if got := decode(t, do(e, "GET", "/api/tasks/"+id, "", admin.session)); got["status"] != "closed" {
+		t.Errorf("status after the issue closed = %v", got["status"])
+	}
+
+	// Uma tarefa ligada à mão a uma issue aberta passa a ser sincronizada.
+	two := fake.AddIssue("owner/repo", testutil.GitHubIssue{Title: "Livre"})
+	rec = do(e, "POST", "/api/projects/"+prj+"/tasks", `{"name":"Ligada à mão"}`, admin.session)
+	hand := decode(t, rec)["id"].(string)
+	link := `{"integration_id":"` + integ + `","external_item_id":"` + strconv.Itoa(two) + `","external_item_url":"https://github.com/owner/repo/issues/` + strconv.Itoa(two) + `"}`
+	if rec = do(e, "POST", "/api/tasks/"+hand+"/link-external-item", link, admin.session); rec.Code != http.StatusOK {
+		t.Fatalf("link = %d: %s", rec.Code, rec.Body.String())
+	}
+	if rec = do(e, "POST", "/api/tasks/"+hand+"/sync", "", admin.session); rec.Code != http.StatusOK {
+		t.Fatalf("press on a hand-linked task = %d: %s", rec.Code, rec.Body.String())
+	}
+	if got := decode(t, do(e, "GET", "/api/tasks/"+hand, "", admin.session)); got["name"] != "Livre" {
+		t.Errorf("hand-linked task after the press = %v, want the issue's title", got["name"])
+	}
+
+	// A issue que sumiu do GitHub não tem o que sincronizar.
+	fake.DeleteIssue("owner/repo", two)
+	rec = do(e, "POST", "/api/tasks/"+hand+"/sync", "", admin.session)
+	if rec.Code != http.StatusNotFound || errorCode(t, rec) != "integration.issue_gone" {
+		t.Errorf("press on a deleted issue = %d %s", rec.Code, rec.Body.String())
+	}
+
+	// Sem item externo, não há o que sincronizar; de outra organização, a tarefa não existe.
+	rec = do(e, "POST", "/api/projects/"+prj+"/tasks", `{"name":"Solta"}`, admin.session)
+	loose := decode(t, rec)["id"].(string)
+	if rec = do(e, "POST", "/api/tasks/"+loose+"/sync", "", admin.session); rec.Code != http.StatusBadRequest || errorCode(t, rec) != "task.no_external_item" {
+		t.Errorf("press on a task with no link = %d %s", rec.Code, rec.Body.String())
+	}
+	other := signup(t, e, "Outra org", "outro@test.com")
+	if rec = do(e, "POST", syncURL, "", other.session); rec.Code != http.StatusNotFound {
+		t.Errorf("another organization pressed it: %d, want 404", rec.Code)
+	}
+	if rec = do(e, "POST", syncURL, "", ""); rec.Code != http.StatusUnauthorized {
+		t.Errorf("without a session: %d", rec.Code)
+	}
+
+	// Com a sincronização desligada, o botão avisa.
+	do(e, "PATCH", "/api/integrations/"+integ, `{"sync_issues":false}`, admin.session)
+	if rec = do(e, "POST", syncURL, "", admin.session); rec.Code != http.StatusBadRequest || errorCode(t, rec) != "integration.sync_off" {
+		t.Errorf("press with the sync off = %d %s", rec.Code, rec.Body.String())
 	}
 }
 

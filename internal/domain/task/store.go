@@ -345,6 +345,7 @@ func toDomainTask(e *ent.Task) *Task {
 		t.ExternalIntegration = &Integration{
 			ID:   e.Edges.ExternalIntegration.ID,
 			Type: e.Edges.ExternalIntegration.Type,
+			Name: e.Edges.ExternalIntegration.DisplayName,
 		}
 	}
 	return t

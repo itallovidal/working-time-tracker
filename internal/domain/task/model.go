@@ -15,6 +15,8 @@ type Person struct {
 type Integration struct {
 	ID   uuid.UUID `json:"id"`
 	Type string    `json:"type"`
+	// Name é o nome que a integração tem no projeto ("working time tracker repo"), para o cartão dela.
+	Name string `json:"name"`
 }
 
 // Priorities são as prioridades de uma tarefa, da mais para a menos urgente.

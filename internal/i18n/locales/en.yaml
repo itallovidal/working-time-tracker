@@ -592,13 +592,10 @@ task_detail:
   in_progress: "· in progress"
   with_tasks: "with {{.names}}"
   session_total: "session of {{.time}}"
-  external: External item
+  external: Integrations
   loading_details: Fetching details…
-  state: "State: {{.state}}"
   fetch_failed: "Could not fetch the details right now:"
-  open_link: Open the link
   no_response: no response from the integration
-  unlink: Unlink
   no_integrations: This project has no integrations.
   configure: Set one up on the Integrations tab.
   ask_admin: Ask an admin to set one up.
@@ -613,7 +610,16 @@ task_detail:
   saved: Task saved.
   sync_note: "This task is linked to a synced issue: on save, the name, description, labels and assignee go to the issue."
   sync_note_quick: "This task is linked to a synced issue: the Closed status and the labels go to the issue."
-  synced: "Synced with the issue: name, description, labels, assignee and closing follow GitHub in both directions. Unlinking takes the task out of the sync."
+  integration_eyebrow: Integration
+  open_in: "Open in {{.provider}}"
+  state_open: Open
+  state_closed: Closed
+  sync: Sync
+  sync_title: Rereads the issue on GitHub and makes the task and the issue match, without waiting for the background job
+  refresh: Refresh
+  refresh_title: Fetches the item's details again
+  sync_nothing: "All the same: the task and the issue already matched."
+  sync_problem: "The sync left a warning: {{.message}}"
 
 time:
   no_rate: You don't have an hourly rate on this project yet, so the clock is blocked.

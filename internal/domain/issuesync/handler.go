@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v5"
 
+	"working-time-tracker/internal/adapter"
 	"working-time-tracker/internal/apperr"
 	"working-time-tracker/internal/database"
 )
@@ -26,6 +27,21 @@ func (h *Handler) Sync(c *echo.Context) error {
 	case errors.Is(err, ErrSyncRunning):
 		return apperr.Respond(c, 409, err)
 	case errors.Is(err, database.ErrNotFound):
+		return apperr.Respond(c, 404, err)
+	}
+	return apperr.Respond(c, 400, err)
+}
+
+// SyncTask é o botão Sincronizar da tela da tarefa: sincroniza a issue dela e responde o que mudou. Com
+// uma rodada em andamento na integração, responde 409 em vez de esperar.
+func (h *Handler) SyncTask(c *echo.Context) error {
+	sum, err := h.syncer.SyncTaskNow(c.Request().Context(), parseID(c.Param("taskId")))
+	switch {
+	case err == nil:
+		return c.JSON(200, sum)
+	case errors.Is(err, ErrSyncRunning):
+		return apperr.Respond(c, 409, err)
+	case errors.Is(err, database.ErrNotFound), errors.Is(err, adapter.ErrIssueGone):
 		return apperr.Respond(c, 404, err)
 	}
 	return apperr.Respond(c, 400, err)

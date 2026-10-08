@@ -152,6 +152,8 @@ func RegisterRoutes(e *echo.Echo, h Handlers, m *auth.Middleware, authLimiter ec
 	r.POST("/tasks/:taskId/link-external-item", h.Task.LinkExternalItem, tsk)
 	r.DELETE("/tasks/:taskId/link-external-item", h.Task.UnlinkExternalItem, tsk)
 	r.GET("/tasks/:taskId/external-details", h.Task.GetExternalDetails, tsk)
+	// Relê a issue da tarefa no GitHub e põe as duas em acordo, na hora (o GitHub não avisa quando muda).
+	r.POST("/tasks/:taskId/sync", h.Sync.SyncTask, tsk)
 
 	r.GET("/integrations/:integrationId", h.Integration.Get, integ)
 	// O que a conexão enxerga (os repositórios do GitHub), para a pessoa escolher em vez de digitar.

@@ -127,63 +127,81 @@
         </dl>
       </section>
 
-      <section class="card task-external">
-        <div class="card-head"><h2>{{.T "task_detail.external"}}</h2></div>
-        <template x-if="task && task.external_item_id">
-          <div class="stack">
-            <div>
-              <span class="badge badge-accent" x-text="externalLabel()"></span>
-            </div>
-            <p class="muted small" x-cloak x-show="syncs()">{{.T "task_detail.synced"}}</p>
-            <p class="muted small" x-show="external.loading">{{.T "task_detail.loading_details"}}</p>
-            <template x-if="external.details">
-              <div class="stack">
-                <a :href="external.details.url" target="_blank" rel="noopener" x-text="external.details.title"></a>
-                <span class="badge" :class="external.details.state === 'open' || external.details.state === 'opened' ? 'badge-ok' : ''"
-                      x-text="$t('task_detail.state', { state: external.details.state })"></span>
+      {{/* Um cartão para cada integração a que a tarefa está ligada (hoje, uma só). O GitHub não avisa quando
+           algo muda lá, então o cartão tem o botão que relê a issue na hora. Desvincular não é daqui: a
+           integração se desfaz nas configurações do projeto. */}}
+      <div class="task-integrations">
+        <template x-for="link in links()" :key="link.id">
+          <section class="card integration-card" :aria-label="link.label">
+            <div class="card-head">
+              <div class="integration-names">
+                <p class="eyebrow">{{.T "task_detail.integration_eyebrow"}}</p>
+                <h2 x-text="link.label"></h2>
+                <p class="muted small" x-show="link.name" x-text="link.name"></p>
               </div>
-            </template>
-            <p class="alert alert-warn" x-show="external.error">
-              {{.T "task_detail.fetch_failed"}} <span x-text="external.error"></span>
-              <a :href="task.external_item_url" target="_blank" rel="noopener">{{.T "task_detail.open_link"}}</a>
-            </p>
-            <p class="form-error" x-show="errors.unlink" x-text="errors.unlink" role="alert"></p>
-            <div class="row"><button type="button" class="btn btn-danger-ghost" :disabled="pending" @click="unlink()">{{.T "task_detail.unlink"}}</button></div>
-          </div>
+              <button type="button" class="btn btn-secondary btn-sm" :disabled="pending || external.loading" @click="syncExternal()"
+                      :title="syncs() ? $t('task_detail.sync_title') : $t('task_detail.refresh_title')">
+                <i class="fa-solid fa-rotate" :class="pending === 'sync' && 'fa-spin'" aria-hidden="true"></i>
+                <span x-text="syncs() ? $t('task_detail.sync') : $t('task_detail.refresh')"></span>
+              </button>
+            </div>
+            <div class="stack">
+              <a class="integration-link" x-show="link.url" :href="link.url" target="_blank" rel="noopener">
+                <i :class="brandIcon(link.type)" class="integration-brand" aria-hidden="true"></i>
+                <span class="integration-link-text">
+                  <strong x-text="$t('task_detail.open_in', { provider: link.label })"></strong>
+                  <span class="muted small num" x-text="link.item"></span>
+                </span>
+                <i class="fa-solid fa-arrow-up-right-from-square integration-go" aria-hidden="true"></i>
+              </a>
+              <p class="muted small" x-show="external.loading">{{.T "task_detail.loading_details"}}</p>
+              <div x-show="external.details">
+                <span class="badge" :class="stateClass(external.details && external.details.state)" x-text="stateLabel(external.details && external.details.state)"></span>
+              </div>
+              <p class="alert alert-warn" x-show="external.error">
+                {{.T "task_detail.fetch_failed"}} <span x-text="external.error"></span>
+              </p>
+              <p class="alert alert-warn" x-cloak x-show="syncProblem" x-text="syncProblem"></p>
+              <p class="form-error" x-cloak x-show="errors.sync" x-text="errors.sync" role="alert"></p>
+            </div>
+          </section>
         </template>
         <template x-if="task && !task.external_item_id">
-          <form class="stack" @submit.prevent="link()">
-            <p class="muted small" x-show="integrations.length === 0">
-              {{.T "task_detail.no_integrations"}}
-              {{if .Can "integrations.manage"}}<a href="/projects/{{.Project.ID}}/management/integrations">{{.T "task_detail.configure"}}</a>{{else}}{{.T "task_detail.ask_admin"}}{{end}}
-            </p>
-            <template x-if="integrations.length > 0">
-              <div class="stack">
-                <div class="field">
-                  <label for="td-integration">{{.T "task_detail.integration"}}</label>
-                  <select id="td-integration" x-model="linkForm.integration_id">
-                    <template x-for="i in integrations" :key="i.id">
-                      <option :value="i.id" x-text="i.display_name + ' (' + typeLabel(i.type) + ')'" :selected="i.id === linkForm.integration_id"></option>
-                    </template>
-                  </select>
+          <section class="card integration-card">
+            <div class="card-head"><h2>{{.T "task_detail.external"}}</h2></div>
+            <form class="stack" @submit.prevent="link()">
+              <p class="muted small" x-show="integrations.length === 0">
+                {{.T "task_detail.no_integrations"}}
+                {{if .Can "integrations.manage"}}<a href="/projects/{{.Project.ID}}/management/integrations">{{.T "task_detail.configure"}}</a>{{else}}{{.T "task_detail.ask_admin"}}{{end}}
+              </p>
+              <template x-if="integrations.length > 0">
+                <div class="stack">
+                  <div class="field">
+                    <label for="td-integration">{{.T "task_detail.integration"}}</label>
+                    <select id="td-integration" x-model="linkForm.integration_id">
+                      <template x-for="i in integrations" :key="i.id">
+                        <option :value="i.id" x-text="i.display_name + ' (' + typeLabel(i.type) + ')'" :selected="i.id === linkForm.integration_id"></option>
+                      </template>
+                    </select>
+                  </div>
+                  {{/* O que identifica o item muda com a plataforma: o número da issue, o cartão. */}}
+                  <div class="field">
+                    <label for="td-item" x-text="linkType().item_label || $t('tasks.item')">{{.T "tasks.item"}}</label>
+                    <input id="td-item" type="text" autocomplete="off" :inputmode="linkType().item_numeric ? 'numeric' : 'text'"
+                           :placeholder="linkType().item_placeholder || ''" x-model="linkForm.external_item_id">
+                  </div>
+                  <div class="field">
+                    <label for="td-url">{{.T "task_detail.link"}}</label>
+                    <input id="td-url" type="url" placeholder="https://…" x-model="linkForm.external_item_url">
+                  </div>
+                  <p class="form-error" x-show="errors.link" x-text="errors.link" role="alert"></p>
+                  <button type="submit" class="btn btn-secondary" :disabled="pending">{{.T "task_detail.link_action"}}</button>
                 </div>
-                {{/* O que identifica o item muda com a plataforma: o número da issue, o cartão. */}}
-                <div class="field">
-                  <label for="td-item" x-text="linkType().item_label || $t('tasks.item')">{{.T "tasks.item"}}</label>
-                  <input id="td-item" type="text" autocomplete="off" :inputmode="linkType().item_numeric ? 'numeric' : 'text'"
-                         :placeholder="linkType().item_placeholder || ''" x-model="linkForm.external_item_id">
-                </div>
-                <div class="field">
-                  <label for="td-url">{{.T "task_detail.link"}}</label>
-                  <input id="td-url" type="url" placeholder="https://…" x-model="linkForm.external_item_url">
-                </div>
-                <p class="form-error" x-show="errors.link" x-text="errors.link" role="alert"></p>
-                <button type="submit" class="btn btn-secondary" :disabled="pending">{{.T "task_detail.link_action"}}</button>
-              </div>
-            </template>
-          </form>
+              </template>
+            </form>
+          </section>
         </template>
-      </section>
+      </div>
     </div>
   </div>
 

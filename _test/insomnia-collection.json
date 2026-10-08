@@ -772,6 +772,18 @@
       "body": {}
     },
     {
+      "_id": "req_06_05b",
+      "_type": "request",
+      "parentId": "fld_06",
+      "name": "Sincronizar a tarefa com a issue (botão da tela da tarefa)",
+      "method": "POST",
+      "url": "{{base_url}}/api/tasks/{{task_id}}/sync",
+      "authentication": {},
+      "metaSortKey": 5.5,
+      "headers": [],
+      "body": {}
+    },
+    {
       "_id": "req_06_06",
       "_type": "request",
       "parentId": "fld_06",

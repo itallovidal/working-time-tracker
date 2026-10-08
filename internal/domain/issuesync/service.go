@@ -553,4 +553,64 @@ func (s *Syncer) syncTaskLocked(ctx context.Context, row *Row) error {
 	return r.reconcile(rows, *issue)
 }
 
+// TaskSummary é o que o botão Sincronizar de uma tarefa fez: o mesmo resumo da rodada e, quando o GitHub
+// deixou algo de fora (uma mudança descartada, um responsável sem usuário), o código do aviso.
+type TaskSummary struct {
+	Summary
+	Problem string `json:"problem,omitempty"`
+}
+
+// SyncTaskNow é o botão Sincronizar da tela da tarefa: relê a issue dela no GitHub e põe as duas em
+// acordo, sem esperar a rodada de fundo (o GitHub não avisa quando algo muda lá). Serve também à tarefa
+// ligada à mão, que passa a ser sincronizada se a issue está aberta. Recusa se há uma rodada em andamento
+// na integração.
+func (s *Syncer) SyncTaskNow(ctx context.Context, taskID uuid.UUID) (*TaskSummary, error) {
+	t, err := s.d.Tasks.GetByID(taskID.String())
+	if err != nil {
+		return nil, err
+	}
+	if t.ExternalIntegrationID == nil || t.ExternalItemID == nil {
+		return nil, task.ErrNoExternalItem
+	}
+	number, err := strconv.Atoi(*t.ExternalItemID)
+	if err != nil {
+		return nil, task.ErrNoExternalItem
+	}
+	id := *t.ExternalIntegrationID
+	lock := s.lock(id)
+	if !lock.TryLock() {
+		return nil, ErrSyncRunning
+	}
+	defer lock.Unlock()
+	s.cache.forget(id.String() + "/")
+
+	r, err := s.newRun(ctx, id, false)
+	if err != nil {
+		return nil, err
+	}
+	if err := r.load(); err != nil {
+		return nil, err
+	}
+	issue, err := r.gh.GetIssue(ctx, r.conn, number)
+	if errors.Is(err, adapter.ErrIssueGone) {
+		if row := r.rows[number]; row != nil {
+			r.markGone(row)
+		}
+		return nil, err
+	}
+	if err != nil {
+		return nil, err
+	}
+	if issue.PullRequest {
+		if row := r.rows[number]; row != nil {
+			r.markGone(row)
+		}
+		return nil, adapter.ErrIssueGone
+	}
+	if err := r.handle(*issue); err != nil {
+		return nil, err
+	}
+	return &TaskSummary{Summary: r.sum, Problem: r.problem}, nil
+}
+
 func itoa(n int) string { return strconv.Itoa(n) }

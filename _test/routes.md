@@ -466,6 +466,7 @@ A pessoa precisa ser da mesma organização do projeto e já estar nele, com val
 | POST | `/api/tasks/:taskId/link-external-item` | logado | Vincula a uma issue ou a um cartão |
 | DELETE | `/api/tasks/:taskId/link-external-item` | logado | Desfaz o vínculo |
 | GET | `/api/tasks/:taskId/external-details` | logado | Busca título e estado do item na plataforma |
+| POST | `/api/tasks/:taskId/sync` | logado | O botão **Sincronizar** da tela da tarefa: relê a issue dela no GitHub e põe as duas em acordo, na hora. Mesma resposta da rodada (`created`, `updated`, `closed`, `pushed`, `unmapped`, `errors`, `partial`) mais `problem` (o código do aviso, se o GitHub deixou algo de fora); `409` `integration.sync_running` se há uma rodada na integração; `400` `integration.sync_off` com a sincronização desligada e `task.no_external_item` sem item externo; `404` `integration.issue_gone` se a issue sumiu; uma tarefa ligada à mão a uma issue aberta passa a ser sincronizada |
 
 ```http
 POST /api/projects/:projectId/tasks

@@ -725,6 +725,15 @@
 
 ---
 
+### Sprint 64: The Integration Card on the Task
+
+- [X] S64.1 `POST /api/tasks/:taskId/sync` and `Syncer.SyncTaskNow`: rereads the issue of one task and reconciles it like a round does (the integration lock with `TryLock`, `409` while a round runs; `integration.sync_off`, `task.no_external_item`, `integration.issue_gone`; a task linked by hand to an open issue is adopted); the answer is the round summary plus `problem`; tested against the fake (a change on GitHub, nothing to do, closing, adoption, deleted issue, other organization, no session, sync off) and in the route table
+- [X] S64.2 `external_integration.name` in the task JSON (the name the integration has in the project)
+- [X] S64.3 Task page: the "Item externo" card became one **Integração** card per integration (platform and its name, **Sincronizar** or, with no sync, **Atualizar**, the "Abrir no GitHub" tile with the brand icon and the issue number, the state as an Aberta or Fechada pill, the warning a sync left); **Desvincular** removed from the card; the card of a task with no link is "Integrações" with the link form; texts in both languages
+- [X] S64.4 No front-end tests added; checked in the browser against `cmd/fakegithub` (the card, a change and a close made on the fake coming in with the button, the toast, no Desvincular, the unlinked card; light, dark, phone); README, design, routes and the Insomnia collection
+
+---
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open
