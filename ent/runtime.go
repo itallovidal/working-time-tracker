@@ -90,32 +90,36 @@ func init() {
 	invite.DefaultID = inviteDescID.Default.(func() uuid.UUID)
 	issuesyncFields := schema.IssueSync{}.Fields()
 	_ = issuesyncFields
+	// issuesyncDescURL is the schema descriptor for url field.
+	issuesyncDescURL := issuesyncFields[4].Descriptor()
+	// issuesync.DefaultURL holds the default value on creation for the url field.
+	issuesync.DefaultURL = issuesyncDescURL.Default.(string)
 	// issuesyncDescTitle is the schema descriptor for title field.
-	issuesyncDescTitle := issuesyncFields[5].Descriptor()
+	issuesyncDescTitle := issuesyncFields[6].Descriptor()
 	// issuesync.DefaultTitle holds the default value on creation for the title field.
 	issuesync.DefaultTitle = issuesyncDescTitle.Default.(string)
 	// issuesyncDescBody is the schema descriptor for body field.
-	issuesyncDescBody := issuesyncFields[6].Descriptor()
+	issuesyncDescBody := issuesyncFields[7].Descriptor()
 	// issuesync.DefaultBody holds the default value on creation for the body field.
 	issuesync.DefaultBody = issuesyncDescBody.Default.(string)
 	// issuesyncDescMappedLogin is the schema descriptor for mapped_login field.
-	issuesyncDescMappedLogin := issuesyncFields[9].Descriptor()
+	issuesyncDescMappedLogin := issuesyncFields[10].Descriptor()
 	// issuesync.DefaultMappedLogin holds the default value on creation for the mapped_login field.
 	issuesync.DefaultMappedLogin = issuesyncDescMappedLogin.Default.(string)
 	// issuesyncDescStuckSig is the schema descriptor for stuck_sig field.
-	issuesyncDescStuckSig := issuesyncFields[12].Descriptor()
+	issuesyncDescStuckSig := issuesyncFields[13].Descriptor()
 	// issuesync.DefaultStuckSig holds the default value on creation for the stuck_sig field.
 	issuesync.DefaultStuckSig = issuesyncDescStuckSig.Default.(string)
 	// issuesyncDescLastError is the schema descriptor for last_error field.
-	issuesyncDescLastError := issuesyncFields[13].Descriptor()
+	issuesyncDescLastError := issuesyncFields[14].Descriptor()
 	// issuesync.DefaultLastError holds the default value on creation for the last_error field.
 	issuesync.DefaultLastError = issuesyncDescLastError.Default.(string)
 	// issuesyncDescSyncedAt is the schema descriptor for synced_at field.
-	issuesyncDescSyncedAt := issuesyncFields[14].Descriptor()
+	issuesyncDescSyncedAt := issuesyncFields[15].Descriptor()
 	// issuesync.DefaultSyncedAt holds the default value on creation for the synced_at field.
 	issuesync.DefaultSyncedAt = issuesyncDescSyncedAt.Default.(func() time.Time)
 	// issuesyncDescCreatedAt is the schema descriptor for created_at field.
-	issuesyncDescCreatedAt := issuesyncFields[15].Descriptor()
+	issuesyncDescCreatedAt := issuesyncFields[16].Descriptor()
 	// issuesync.DefaultCreatedAt holds the default value on creation for the created_at field.
 	issuesync.DefaultCreatedAt = issuesyncDescCreatedAt.Default.(func() time.Time)
 	// issuesyncDescID is the schema descriptor for id field.
@@ -195,7 +199,7 @@ func init() {
 	taskFields := schema.Task{}.Fields()
 	_ = taskFields
 	// taskDescCreatedAt is the schema descriptor for created_at field.
-	taskDescCreatedAt := taskFields[11].Descriptor()
+	taskDescCreatedAt := taskFields[8].Descriptor()
 	// task.DefaultCreatedAt holds the default value on creation for the created_at field.
 	task.DefaultCreatedAt = taskDescCreatedAt.Default.(func() time.Time)
 	// taskDescID is the schema descriptor for id field.

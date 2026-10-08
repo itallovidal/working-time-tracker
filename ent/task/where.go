@@ -81,21 +81,6 @@ func Deadline(v time.Time) predicate.Task {
 	return predicate.Task(sql.FieldEQ(FieldDeadline, v))
 }
 
-// ExternalIntegrationID applies equality check predicate on the "external_integration_id" field. It's identical to ExternalIntegrationIDEQ.
-func ExternalIntegrationID(v uuid.UUID) predicate.Task {
-	return predicate.Task(sql.FieldEQ(FieldExternalIntegrationID, v))
-}
-
-// ExternalItemID applies equality check predicate on the "external_item_id" field. It's identical to ExternalItemIDEQ.
-func ExternalItemID(v string) predicate.Task {
-	return predicate.Task(sql.FieldEQ(FieldExternalItemID, v))
-}
-
-// ExternalItemURL applies equality check predicate on the "external_item_url" field. It's identical to ExternalItemURLEQ.
-func ExternalItemURL(v string) predicate.Task {
-	return predicate.Task(sql.FieldEQ(FieldExternalItemURL, v))
-}
-
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.Task {
 	return predicate.Task(sql.FieldEQ(FieldCreatedAt, v))
@@ -381,186 +366,6 @@ func DeadlineNotNil() predicate.Task {
 	return predicate.Task(sql.FieldNotNull(FieldDeadline))
 }
 
-// ExternalIntegrationIDEQ applies the EQ predicate on the "external_integration_id" field.
-func ExternalIntegrationIDEQ(v uuid.UUID) predicate.Task {
-	return predicate.Task(sql.FieldEQ(FieldExternalIntegrationID, v))
-}
-
-// ExternalIntegrationIDNEQ applies the NEQ predicate on the "external_integration_id" field.
-func ExternalIntegrationIDNEQ(v uuid.UUID) predicate.Task {
-	return predicate.Task(sql.FieldNEQ(FieldExternalIntegrationID, v))
-}
-
-// ExternalIntegrationIDIn applies the In predicate on the "external_integration_id" field.
-func ExternalIntegrationIDIn(vs ...uuid.UUID) predicate.Task {
-	return predicate.Task(sql.FieldIn(FieldExternalIntegrationID, vs...))
-}
-
-// ExternalIntegrationIDNotIn applies the NotIn predicate on the "external_integration_id" field.
-func ExternalIntegrationIDNotIn(vs ...uuid.UUID) predicate.Task {
-	return predicate.Task(sql.FieldNotIn(FieldExternalIntegrationID, vs...))
-}
-
-// ExternalIntegrationIDIsNil applies the IsNil predicate on the "external_integration_id" field.
-func ExternalIntegrationIDIsNil() predicate.Task {
-	return predicate.Task(sql.FieldIsNull(FieldExternalIntegrationID))
-}
-
-// ExternalIntegrationIDNotNil applies the NotNil predicate on the "external_integration_id" field.
-func ExternalIntegrationIDNotNil() predicate.Task {
-	return predicate.Task(sql.FieldNotNull(FieldExternalIntegrationID))
-}
-
-// ExternalItemIDEQ applies the EQ predicate on the "external_item_id" field.
-func ExternalItemIDEQ(v string) predicate.Task {
-	return predicate.Task(sql.FieldEQ(FieldExternalItemID, v))
-}
-
-// ExternalItemIDNEQ applies the NEQ predicate on the "external_item_id" field.
-func ExternalItemIDNEQ(v string) predicate.Task {
-	return predicate.Task(sql.FieldNEQ(FieldExternalItemID, v))
-}
-
-// ExternalItemIDIn applies the In predicate on the "external_item_id" field.
-func ExternalItemIDIn(vs ...string) predicate.Task {
-	return predicate.Task(sql.FieldIn(FieldExternalItemID, vs...))
-}
-
-// ExternalItemIDNotIn applies the NotIn predicate on the "external_item_id" field.
-func ExternalItemIDNotIn(vs ...string) predicate.Task {
-	return predicate.Task(sql.FieldNotIn(FieldExternalItemID, vs...))
-}
-
-// ExternalItemIDGT applies the GT predicate on the "external_item_id" field.
-func ExternalItemIDGT(v string) predicate.Task {
-	return predicate.Task(sql.FieldGT(FieldExternalItemID, v))
-}
-
-// ExternalItemIDGTE applies the GTE predicate on the "external_item_id" field.
-func ExternalItemIDGTE(v string) predicate.Task {
-	return predicate.Task(sql.FieldGTE(FieldExternalItemID, v))
-}
-
-// ExternalItemIDLT applies the LT predicate on the "external_item_id" field.
-func ExternalItemIDLT(v string) predicate.Task {
-	return predicate.Task(sql.FieldLT(FieldExternalItemID, v))
-}
-
-// ExternalItemIDLTE applies the LTE predicate on the "external_item_id" field.
-func ExternalItemIDLTE(v string) predicate.Task {
-	return predicate.Task(sql.FieldLTE(FieldExternalItemID, v))
-}
-
-// ExternalItemIDContains applies the Contains predicate on the "external_item_id" field.
-func ExternalItemIDContains(v string) predicate.Task {
-	return predicate.Task(sql.FieldContains(FieldExternalItemID, v))
-}
-
-// ExternalItemIDHasPrefix applies the HasPrefix predicate on the "external_item_id" field.
-func ExternalItemIDHasPrefix(v string) predicate.Task {
-	return predicate.Task(sql.FieldHasPrefix(FieldExternalItemID, v))
-}
-
-// ExternalItemIDHasSuffix applies the HasSuffix predicate on the "external_item_id" field.
-func ExternalItemIDHasSuffix(v string) predicate.Task {
-	return predicate.Task(sql.FieldHasSuffix(FieldExternalItemID, v))
-}
-
-// ExternalItemIDIsNil applies the IsNil predicate on the "external_item_id" field.
-func ExternalItemIDIsNil() predicate.Task {
-	return predicate.Task(sql.FieldIsNull(FieldExternalItemID))
-}
-
-// ExternalItemIDNotNil applies the NotNil predicate on the "external_item_id" field.
-func ExternalItemIDNotNil() predicate.Task {
-	return predicate.Task(sql.FieldNotNull(FieldExternalItemID))
-}
-
-// ExternalItemIDEqualFold applies the EqualFold predicate on the "external_item_id" field.
-func ExternalItemIDEqualFold(v string) predicate.Task {
-	return predicate.Task(sql.FieldEqualFold(FieldExternalItemID, v))
-}
-
-// ExternalItemIDContainsFold applies the ContainsFold predicate on the "external_item_id" field.
-func ExternalItemIDContainsFold(v string) predicate.Task {
-	return predicate.Task(sql.FieldContainsFold(FieldExternalItemID, v))
-}
-
-// ExternalItemURLEQ applies the EQ predicate on the "external_item_url" field.
-func ExternalItemURLEQ(v string) predicate.Task {
-	return predicate.Task(sql.FieldEQ(FieldExternalItemURL, v))
-}
-
-// ExternalItemURLNEQ applies the NEQ predicate on the "external_item_url" field.
-func ExternalItemURLNEQ(v string) predicate.Task {
-	return predicate.Task(sql.FieldNEQ(FieldExternalItemURL, v))
-}
-
-// ExternalItemURLIn applies the In predicate on the "external_item_url" field.
-func ExternalItemURLIn(vs ...string) predicate.Task {
-	return predicate.Task(sql.FieldIn(FieldExternalItemURL, vs...))
-}
-
-// ExternalItemURLNotIn applies the NotIn predicate on the "external_item_url" field.
-func ExternalItemURLNotIn(vs ...string) predicate.Task {
-	return predicate.Task(sql.FieldNotIn(FieldExternalItemURL, vs...))
-}
-
-// ExternalItemURLGT applies the GT predicate on the "external_item_url" field.
-func ExternalItemURLGT(v string) predicate.Task {
-	return predicate.Task(sql.FieldGT(FieldExternalItemURL, v))
-}
-
-// ExternalItemURLGTE applies the GTE predicate on the "external_item_url" field.
-func ExternalItemURLGTE(v string) predicate.Task {
-	return predicate.Task(sql.FieldGTE(FieldExternalItemURL, v))
-}
-
-// ExternalItemURLLT applies the LT predicate on the "external_item_url" field.
-func ExternalItemURLLT(v string) predicate.Task {
-	return predicate.Task(sql.FieldLT(FieldExternalItemURL, v))
-}
-
-// ExternalItemURLLTE applies the LTE predicate on the "external_item_url" field.
-func ExternalItemURLLTE(v string) predicate.Task {
-	return predicate.Task(sql.FieldLTE(FieldExternalItemURL, v))
-}
-
-// ExternalItemURLContains applies the Contains predicate on the "external_item_url" field.
-func ExternalItemURLContains(v string) predicate.Task {
-	return predicate.Task(sql.FieldContains(FieldExternalItemURL, v))
-}
-
-// ExternalItemURLHasPrefix applies the HasPrefix predicate on the "external_item_url" field.
-func ExternalItemURLHasPrefix(v string) predicate.Task {
-	return predicate.Task(sql.FieldHasPrefix(FieldExternalItemURL, v))
-}
-
-// ExternalItemURLHasSuffix applies the HasSuffix predicate on the "external_item_url" field.
-func ExternalItemURLHasSuffix(v string) predicate.Task {
-	return predicate.Task(sql.FieldHasSuffix(FieldExternalItemURL, v))
-}
-
-// ExternalItemURLIsNil applies the IsNil predicate on the "external_item_url" field.
-func ExternalItemURLIsNil() predicate.Task {
-	return predicate.Task(sql.FieldIsNull(FieldExternalItemURL))
-}
-
-// ExternalItemURLNotNil applies the NotNil predicate on the "external_item_url" field.
-func ExternalItemURLNotNil() predicate.Task {
-	return predicate.Task(sql.FieldNotNull(FieldExternalItemURL))
-}
-
-// ExternalItemURLEqualFold applies the EqualFold predicate on the "external_item_url" field.
-func ExternalItemURLEqualFold(v string) predicate.Task {
-	return predicate.Task(sql.FieldEqualFold(FieldExternalItemURL, v))
-}
-
-// ExternalItemURLContainsFold applies the ContainsFold predicate on the "external_item_url" field.
-func ExternalItemURLContainsFold(v string) predicate.Task {
-	return predicate.Task(sql.FieldContainsFold(FieldExternalItemURL, v))
-}
-
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.Task {
 	return predicate.Task(sql.FieldEQ(FieldCreatedAt, v))
@@ -647,29 +452,6 @@ func HasAssigneeWith(preds ...predicate.Person) predicate.Task {
 	})
 }
 
-// HasExternalIntegration applies the HasEdge predicate on the "external_integration" edge.
-func HasExternalIntegration() predicate.Task {
-	return predicate.Task(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, ExternalIntegrationTable, ExternalIntegrationColumn),
-		)
-		sqlgraph.HasNeighbors(s, step)
-	})
-}
-
-// HasExternalIntegrationWith applies the HasEdge predicate on the "external_integration" edge with a given conditions (other predicates).
-func HasExternalIntegrationWith(preds ...predicate.Integration) predicate.Task {
-	return predicate.Task(func(s *sql.Selector) {
-		step := newExternalIntegrationStep()
-		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
-			for _, p := range preds {
-				p(s)
-			}
-		})
-	})
-}
-
 // HasSessionLinks applies the HasEdge predicate on the "session_links" edge.
 func HasSessionLinks() predicate.Task {
 	return predicate.Task(func(s *sql.Selector) {
@@ -716,21 +498,21 @@ func HasLabelsWith(preds ...predicate.Label) predicate.Task {
 	})
 }
 
-// HasIssueSync applies the HasEdge predicate on the "issue_sync" edge.
-func HasIssueSync() predicate.Task {
+// HasIssueSyncs applies the HasEdge predicate on the "issue_syncs" edge.
+func HasIssueSyncs() predicate.Task {
 	return predicate.Task(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, IssueSyncTable, IssueSyncColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, IssueSyncsTable, IssueSyncsColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasIssueSyncWith applies the HasEdge predicate on the "issue_sync" edge with a given conditions (other predicates).
-func HasIssueSyncWith(preds ...predicate.IssueSync) predicate.Task {
+// HasIssueSyncsWith applies the HasEdge predicate on the "issue_syncs" edge with a given conditions (other predicates).
+func HasIssueSyncsWith(preds ...predicate.IssueSync) predicate.Task {
 	return predicate.Task(func(s *sql.Selector) {
-		step := newIssueSyncStep()
+		step := newIssueSyncsStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

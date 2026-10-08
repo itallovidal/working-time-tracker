@@ -164,9 +164,8 @@ func TestMigrate_ForeignKeyDeleteRules(t *testing.T) {
 		"task_labels_task_id":                         "CASCADE",
 		"task_labels_label_id":                        "CASCADE",
 		"projects_customers_projects":                 "SET NULL",
-		"tasks_integrations_tasks":                    "SET NULL",
 		"issue_syncs_integrations_issue_syncs":        "CASCADE",
-		"issue_syncs_tasks_issue_sync":                "SET NULL",
+		"issue_syncs_tasks_issue_syncs":               "SET NULL",
 		"invites_persons_created_invites":             "SET NULL",
 		"projects_organizations_projects":             "NO ACTION",
 		"tasks_persons_tasks":                         "NO ACTION",
@@ -497,6 +496,156 @@ func TestMigrate_IssueSyncItemIDKeepsTheLinks(t *testing.T) {
 	}
 }
 
+// A migração que tira o vínculo das colunas da tarefa e o deixa só em issue_syncs não pode perder nenhum
+// vínculo de hoje: o que já tinha linha a mantém (com o endereço), o que foi ligado à mão ganha uma linha
+// pending, o que já não aponta mais para a linha a solta, e a tarefa mais antiga vence quando duas pedem o
+// mesmo item.
+func TestMigrate_IssueSyncLinksKeepsTheLegacyLinks(t *testing.T) {
+	ctx := context.Background()
+	defer restoreSchema(t)
+	testutil.ResetSchema(t, testDB)
+
+	const migration = "20261008080000_issue_sync_links.sql"
+	files, err := os.ReadDir("migrations")
+	if err != nil {
+		t.Fatalf("read migrations: %v", err)
+	}
+	before := fstest.MapFS{}
+	for _, f := range files {
+		if !strings.HasSuffix(f.Name(), ".sql") || f.Name() >= migration {
+			continue
+		}
+		raw, err := os.ReadFile("migrations/" + f.Name())
+		if err != nil {
+			t.Fatalf("read %s: %v", f.Name(), err)
+		}
+		before[f.Name()] = &fstest.MapFile{Data: raw}
+	}
+	provider, err := goose.NewProvider(goose.DialectPostgres, testDB, before)
+	if err != nil {
+		t.Fatalf("goose provider: %v", err)
+	}
+	if _, err := provider.Up(ctx); err != nil {
+		t.Fatalf("apply the migrations before %s: %v", migration, err)
+	}
+
+	exec := func(query string, args ...any) {
+		t.Helper()
+		if _, err := testDB.ExecContext(ctx, query, args...); err != nil {
+			t.Fatalf("seed the old schema: %v\n%s", err, query)
+		}
+	}
+	org, prj, gh, trello := uuid.New(), uuid.New(), uuid.New(), uuid.New()
+	exec(`INSERT INTO organizations (id, name, created_at) VALUES ($1, 'Org', now())`, org)
+	exec(`INSERT INTO projects (id, name, organization_id, created_at) VALUES ($1, 'A', $2, now())`, prj, org)
+	exec(`INSERT INTO integrations (id, type, display_name, project_id, created_at) VALUES ($1, 'github', 'GitHub', $2, now())`, gh, prj)
+	exec(`INSERT INTO integrations (id, type, display_name, project_id, created_at) VALUES ($1, 'trello', 'Trello', $2, now())`, trello, prj)
+
+	day := time.Date(2026, 10, 1, 12, 0, 0, 0, time.UTC)
+	nTask := 0
+	newTask := func(integ *uuid.UUID, item, url string) uuid.UUID {
+		id := uuid.New()
+		nTask++
+		var itemArg, urlArg any
+		if item != "" {
+			itemArg, urlArg = item, url
+		}
+		exec(`INSERT INTO tasks (id, name, project_id, external_integration_id, external_item_id, external_item_url, created_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7)`, id, "T"+strconv.Itoa(nTask), prj, integ, itemArg, urlArg, day.Add(time.Duration(nTask)*time.Hour))
+		return id
+	}
+	newRow := func(integ uuid.UUID, item, title string, taskID *uuid.UUID) {
+		exec(`INSERT INTO issue_syncs (id, item_id, title, integration_id, task_id, synced_at, created_at)
+			VALUES ($1, $2, $3, $4, $5, now(), now())`, uuid.New(), item, title, integ, taskID)
+	}
+
+	// Já sincronizada: a linha existe, o endereço vem da tarefa.
+	bound := newTask(&gh, "7", "https://github.com/o/r/issues/7")
+	newRow(gh, "7", "Sete", &bound)
+	// Ligada à mão no GitHub e no Trello (pela URL do cartão), sem linha.
+	manualGH := newTask(&gh, "9", "https://github.com/o/r/issues/9")
+	manualTrello := newTask(&trello, "https://trello.com/c/AbC123/3-cartao", "https://trello.com/c/AbC123/3-cartao")
+	// Desligada: a linha segue presa à tarefa, que já não aponta para o item.
+	unlinked := newTask(nil, "", "")
+	newRow(gh, "12", "Doze", &unlinked)
+	// Religada a outro item: a linha do antigo é solta e o novo ganha a sua.
+	moved := newTask(&gh, "31", "")
+	newRow(gh, "30", "Trinta", &moved)
+	// Duas tarefas pedem o mesmo item: a mais antiga vence.
+	oldest := newTask(&gh, "20", "")
+	youngest := newTask(&gh, "20", "")
+	// Um item descartado que uma tarefa volta a pedir à mão: é religado, sem o acordo antigo.
+	revived := newTask(&gh, "40", "")
+	newRow(gh, "40", "Quarenta", nil)
+	// A integração do vínculo foi apagada: a coluna ficou nula e o item sem dono.
+	orphan := newTask(nil, "5", "")
+
+	raw, err := os.ReadFile("migrations/" + migration)
+	if err != nil {
+		t.Fatalf("read migration: %v", err)
+	}
+	// O goose roda o arquivo numa transação (a tabela temporária some no commit); aqui, igual.
+	tx, err := testDB.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatalf("begin: %v", err)
+	}
+	if _, err := tx.ExecContext(ctx, string(raw)); err != nil {
+		_ = tx.Rollback()
+		t.Fatalf("run %s over the old links: %v", migration, err)
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatalf("commit: %v", err)
+	}
+
+	type link struct {
+		state, title, url string
+		task              uuid.NullUUID
+		found             bool
+	}
+	read := func(integ uuid.UUID, item string) link {
+		l := link{found: true}
+		err := testDB.QueryRowContext(ctx, `SELECT state, title, url, task_id FROM issue_syncs WHERE integration_id = $1 AND item_id = $2`, integ, item).
+			Scan(&l.state, &l.title, &l.url, &l.task)
+		if errors.Is(err, sql.ErrNoRows) {
+			return link{}
+		}
+		if err != nil {
+			t.Fatalf("read %s: %v", item, err)
+		}
+		return l
+	}
+	want := func(name string, got link, state, title, url string, task *uuid.UUID) {
+		t.Helper()
+		if !got.found {
+			t.Errorf("%s: no link row", name)
+			return
+		}
+		if got.state != state || got.title != title || got.url != url || got.task.Valid != (task != nil) || (task != nil && got.task.UUID != *task) {
+			t.Errorf("%s migrated as %+v, want state %q, title %q, url %q, task %v", name, got, state, title, url, task)
+		}
+	}
+
+	want("bound", read(gh, "7"), "open", "Sete", "https://github.com/o/r/issues/7", &bound)
+	want("hand-linked GitHub", read(gh, "9"), "pending", "", "https://github.com/o/r/issues/9", &manualGH)
+	want("hand-linked Trello", read(trello, "AbC123"), "pending", "", "https://trello.com/c/AbC123/3-cartao", &manualTrello)
+	want("unlinked", read(gh, "12"), "open", "Doze", "", nil)
+	want("moved, old item", read(gh, "30"), "open", "Trinta", "", nil)
+	want("moved, new item", read(gh, "31"), "pending", "", "", &moved)
+	want("wanted twice", read(gh, "20"), "pending", "", "", &oldest)
+	want("revived", read(gh, "40"), "pending", "", "", &revived)
+	if n := queryColumn[int](t, `SELECT count(*) FROM issue_syncs WHERE task_id IN ('`+youngest.String()+`', '`+orphan.String()+`')`); n[0] != 0 {
+		t.Errorf("the younger task of the same item and the task of a deleted integration must end with no link, got %d", n[0])
+	}
+	if n := queryColumn[int](t, `SELECT count(*) FROM issue_syncs`); n[0] != 8 {
+		t.Errorf("want 8 link rows (7, 9, AbC123, 12, 30, 31, 20, 40), got %d", n[0])
+	}
+	for _, col := range []string{"external_integration_id", "external_item_id", "external_item_url"} {
+		if n := queryColumn[int](t, `SELECT count(*) FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'tasks' AND column_name = '`+col+`'`); n[0] != 0 {
+			t.Errorf("tasks.%s must be gone", col)
+		}
+	}
+}
+
 // restoreSchema devolve o banco ao estado que os outros testes esperam.
 func restoreSchema(t *testing.T) {
 	t.Helper()
@@ -537,8 +686,9 @@ func queryColumn[T any](t *testing.T, query string) []T {
 	return values
 }
 
-// O vínculo issue ↔ tarefa: uma issue por número e integração, uma tarefa por issue; excluir a tarefa
-// deixa a linha como lápide (task_id nulo, a issue não volta) e excluir a integração leva as linhas.
+// O vínculo item ↔ tarefa: um item por chave e integração, uma tarefa por item em cada integração (e a mesma
+// tarefa pode estar em integrações diferentes); excluir a tarefa deixa a linha como lápide (task_id nulo, o item
+// não volta) e excluir a integração leva as linhas.
 func TestMigrate_IssueSyncRules(t *testing.T) {
 	testutil.Truncate(t, testDB)
 	ctx := context.Background()
@@ -546,13 +696,15 @@ func TestMigrate_IssueSyncRules(t *testing.T) {
 	org := testClient.Organization.Create().SetName("Org").SaveX(ctx)
 	proj := testClient.Project.Create().SetName("Projeto").SetOrganizationID(org.ID).SaveX(ctx)
 	integ := testClient.Integration.Create().SetProjectID(proj.ID).SetType("github").SetDisplayName("GitHub").SaveX(ctx)
+	other := testClient.Integration.Create().SetProjectID(proj.ID).SetType("trello").SetDisplayName("Trello").SaveX(ctx)
 	task := func(name string) *ent.Task {
 		return testClient.Task.Create().SetProjectID(proj.ID).SetName(name).SaveX(ctx)
 	}
-	link := func(number int, taskID *uuid.UUID) error {
-		_, err := testClient.IssueSync.Create().SetIntegrationID(integ.ID).SetItemID(strconv.Itoa(number)).SetNillableTaskID(taskID).Save(ctx)
+	linkTo := func(in *ent.Integration, item string, taskID *uuid.UUID) error {
+		_, err := testClient.IssueSync.Create().SetIntegrationID(in.ID).SetItemID(item).SetNillableTaskID(taskID).Save(ctx)
 		return err
 	}
+	link := func(number int, taskID *uuid.UUID) error { return linkTo(integ, strconv.Itoa(number), taskID) }
 
 	a, b := task("A"), task("B")
 	if err := link(1, &a.ID); err != nil {
@@ -562,7 +714,13 @@ func TestMigrate_IssueSyncRules(t *testing.T) {
 		t.Error("the database must refuse two links for the same issue number of an integration")
 	}
 	if err := link(2, &a.ID); err == nil {
-		t.Error("the database must refuse two issues for the same task")
+		t.Error("the database must refuse two items of the same integration for the same task")
+	}
+	if err := linkTo(other, "H0TZyzbK", &a.ID); err != nil {
+		t.Errorf("the same task must be allowed one item in each integration: %v", err)
+	}
+	if err := linkTo(other, "Zz9yXwVu", &a.ID); err == nil {
+		t.Error("the database must refuse a second card of the same integration for the task")
 	}
 	if err := link(3, nil); err != nil {
 		t.Errorf("a tombstone (no task) must be allowed: %v", err)
@@ -578,8 +736,11 @@ func TestMigrate_IssueSyncRules(t *testing.T) {
 	}
 
 	testClient.Integration.DeleteOneID(integ.ID).ExecX(ctx)
-	if n := testClient.IssueSync.Query().CountX(ctx); n != 0 {
+	if n := testClient.IssueSync.Query().Where(issuesync.IntegrationID(integ.ID)).CountX(ctx); n != 0 {
 		t.Errorf("deleting the integration must delete its links, %d left", n)
+	}
+	if n := testClient.IssueSync.Query().Where(issuesync.IntegrationID(other.ID)).CountX(ctx); n != 1 {
+		t.Errorf("deleting an integration must keep the links of the other, got %d", n)
 	}
 	if !testClient.Task.Query().Where(enttask.IDEQ(b.ID)).ExistX(ctx) {
 		t.Error("deleting the integration must keep the tasks")

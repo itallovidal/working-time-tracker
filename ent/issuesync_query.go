@@ -101,7 +101,7 @@ func (_q *IssueSyncQuery) QueryTask() *TaskQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(issuesync.Table, issuesync.FieldID, selector),
 			sqlgraph.To(task.Table, task.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, issuesync.TaskTable, issuesync.TaskColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, issuesync.TaskTable, issuesync.TaskColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil

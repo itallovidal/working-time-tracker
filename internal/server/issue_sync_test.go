@@ -113,7 +113,7 @@ func TestIssueSync_EndToEnd(t *testing.T) {
 	if login == nil || free == nil {
 		t.Fatalf("tasks = %v", byName)
 	}
-	if login["assignee_id"] != admin.id || login["external_item_id"] != "1" || login["status"] != "backlog" {
+	if login["assignee_id"] != admin.id || !linkedItem(login, "1") || login["status"] != "backlog" {
 		t.Errorf("imported task = %v", login)
 	}
 	if free["assignee_id"] != nil {
@@ -400,11 +400,14 @@ func TestIssueSync_PublishTask(t *testing.T) {
 	}
 	out := decode(t, rec)
 	linked := out["task"].(map[string]any)
-	if linked["external_item_id"] != "1" || linked["external_integration_id"] != integ || linked["priority"] != "high" || out["problem"] != nil {
+	links := linksOf(linked)
+	if len(links) != 1 || links[0]["item_id"] != "1" || links[0]["integration_id"] != integ || linked["priority"] != "high" || out["problem"] != nil {
 		t.Errorf("published task = %v, problem %v", linked, out["problem"])
 	}
-	if url, _ := linked["external_item_url"].(string); url == "" {
-		t.Errorf("the task has no issue URL: %v", linked)
+	if len(links) == 1 {
+		if url, _ := links[0]["url"].(string); url == "" {
+			t.Errorf("the task has no issue URL: %v", linked)
+		}
 	}
 	issue, ok := fake.Issue("owner/repo", 1)
 	if !ok || issue.Title != "Corrigir login" || issue.Body != "texto longo" || issue.State != "open" ||
@@ -453,8 +456,8 @@ func TestIssueSync_PublishTask(t *testing.T) {
 	if _, ok := fake.Issue("owner/repo", 3); ok {
 		t.Error("a read-only publish created an issue")
 	}
-	if got := decode(t, do(e, "GET", "/api/tasks/"+third, "", admin.session)); got["external_item_id"] != nil {
-		t.Errorf("a refused publish linked the task: %v", got["external_item_id"])
+	if got := decode(t, do(e, "GET", "/api/tasks/"+third, "", admin.session)); len(linksOf(got)) != 0 {
+		t.Errorf("a refused publish linked the task: %v", got["links"])
 	}
 
 	// O repositório sem issues.
@@ -542,4 +545,24 @@ func errorCode(t *testing.T, rec *httptest.ResponseRecorder) string {
 	detail, _ := decode(t, rec)["error"].(map[string]any)
 	code, _ := detail["code"].(string)
 	return code
+}
+
+// linksOf devolve os vínculos de uma tarefa do JSON da API.
+func linksOf(task map[string]any) []map[string]any {
+	raw, _ := task["links"].([]any)
+	out := make([]map[string]any, len(raw))
+	for i, l := range raw {
+		out[i], _ = l.(map[string]any)
+	}
+	return out
+}
+
+// linkedItem diz se a tarefa tem um vínculo com este item (o número da issue, o link curto do cartão).
+func linkedItem(task map[string]any, item string) bool {
+	for _, l := range linksOf(task) {
+		if l["item_id"] == item {
+			return true
+		}
+	}
+	return false
 }

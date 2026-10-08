@@ -1,6 +1,7 @@
 package task_test
 
 import (
+	"errors"
 	"strings"
 	"sync"
 	"testing"
@@ -87,7 +88,7 @@ func TestStore_ChangeHook(t *testing.T) {
 	if err := f.store.ApplyRemote(f.taskID, task.RemotePatch{Name: &name}); err != nil || f.took() != 0 {
 		t.Errorf("ApplyRemote must not tell the hook: err = %v", err)
 	}
-	if _, err := f.store.CreateImported(task.Imported{ProjectID: uuid.MustParse(f.project), IntegrationID: uuid.MustParse(createIntegration(t, f.project)), ItemID: "9", Name: "x"}); err != nil || f.took() != 0 {
+	if _, err := f.store.CreateImported(task.Imported{ProjectID: uuid.MustParse(f.project), Name: "x"}); err != nil || f.took() != 0 {
 		t.Errorf("CreateImported must not tell the hook: err = %v", err)
 	}
 }
@@ -166,35 +167,39 @@ func TestStore_CreateImportedAndLinked(t *testing.T) {
 	assignee := uuid.MustParse(f.person)
 
 	got, err := f.store.CreateImported(task.Imported{
-		ProjectID: pid, IntegrationID: integ, ItemID: "42", URL: "https://github.com/owner/repo/issues/42",
-		Name: "Corrigir login", Description: "corpo", Labels: labels, AssigneeID: &assignee,
+		ProjectID: pid, Name: "Corrigir login", Description: "corpo", Labels: labels, AssigneeID: &assignee,
 	})
 	if err != nil {
 		t.Fatalf("create imported: %v", err)
 	}
 	if got.Status != "backlog" || got.Priority != "none" || got.Name != "Corrigir login" || got.Description != "corpo" ||
-		got.AssigneeID == nil || len(got.Labels) != 1 || got.ExternalIntegration == nil || got.ExternalIntegration.ID != integ ||
-		got.ExternalItemID == nil || *got.ExternalItemID != "42" || got.ExternalItemURL == nil || !strings.HasSuffix(*got.ExternalItemURL, "/issues/42") {
-		t.Errorf("imported task = %+v", got)
+		got.AssigneeID == nil || len(got.Labels) != 1 || len(got.Links) != 0 {
+		t.Errorf("imported task = %+v, want a backlog task with no link (the link belongs to who imports)", got)
 	}
 	if got.Deadline.After(time.Date(1971, 1, 1, 0, 0, 0, 0, time.UTC)) {
 		t.Errorf("an imported task has no deadline, got %v", got.Deadline)
 	}
 
-	// Duas tarefas ligadas à mesma issue à mão: a mais antiga vem primeiro.
-	second, _ := f.store.CreateImported(task.Imported{ProjectID: pid, IntegrationID: integ, ItemID: "42", Name: "Duplicada"})
-	linked, err := f.store.FindLinked(integ, "42")
-	if err != nil || len(linked) != 2 || linked[0].ID != got.ID || linked[1].ID != second.ID {
-		t.Errorf("FindLinked = %v, %v, want the oldest first", linked, err)
+	// Os vínculos entram por LinkItem e saem juntos com a tarefa, da mais antiga para a mais nova.
+	if err := f.store.LinkItem(got.ID, integ, "42", "https://github.com/owner/repo/issues/42"); err != nil {
+		t.Fatalf("link: %v", err)
 	}
-	if none, _ := f.store.FindLinked(integ, "43"); len(none) != 0 {
-		t.Errorf("FindLinked(43) = %d tasks", len(none))
+	second, _ := f.store.CreateImported(task.Imported{ProjectID: pid, Name: "Outra"})
+	if err := f.store.LinkItem(second.ID, integ, "42", "https://github.com/owner/repo/issues/42"); !errors.Is(err, task.ErrItemTaken) {
+		t.Errorf("linking an item that belongs to another task = %v, want task.item_taken", err)
 	}
-	if all, _ := f.store.ListLinked(integ); len(all) != 2 {
-		t.Errorf("ListLinked = %d tasks, want 2 (the task without a link is not one)", len(all))
+	if err := f.store.LinkItem(got.ID, integ, "43", ""); !errors.Is(err, task.ErrAlreadyLinked) {
+		t.Errorf("a second item of the same integration = %v, want task.already_linked", err)
 	}
-	if all, _ := f.store.ListLinked(uuid.New()); len(all) != 0 {
-		t.Errorf("another integration lists %d tasks", len(all))
+	both, err := f.store.ListByIDs([]uuid.UUID{second.ID, got.ID, uuid.New()})
+	if err != nil || len(both) != 2 || both[0].ID != got.ID || both[1].ID != second.ID {
+		t.Fatalf("ListByIDs = %+v, %v, want the two that exist, the oldest first", both, err)
+	}
+	if l := both[0].Links; len(l) != 1 || l[0].ItemID != "42" || !strings.HasSuffix(l[0].URL, "/issues/42") || l[0].Integration == nil || l[0].Integration.ID != integ {
+		t.Errorf("links of the linked task = %+v", l)
+	}
+	if len(both[1].Links) != 0 {
+		t.Errorf("the task without a link has links: %+v", both[1].Links)
 	}
 }
 
@@ -249,12 +254,11 @@ func TestStore_FindOrCreateLabels(t *testing.T) {
 func TestStore_DeadlineAndCreationDateFromThePlatform(t *testing.T) {
 	f := newHookFixture(t)
 	pid := uuid.MustParse(f.project)
-	integ := uuid.MustParse(createIntegration(t, f.project))
 	due := time.Date(2026, 11, 3, 17, 30, 0, 0, time.UTC)
 	born := time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)
 
 	got, err := f.store.CreateImported(task.Imported{
-		ProjectID: pid, IntegrationID: integ, ItemID: "H0TZyzbK", Name: "Cartão", Deadline: due, CreatedAt: born,
+		ProjectID: pid, Name: "Cartão", Deadline: due, CreatedAt: born,
 	})
 	if err != nil {
 		t.Fatalf("create imported: %v", err)
@@ -263,7 +267,7 @@ func TestStore_DeadlineAndCreationDateFromThePlatform(t *testing.T) {
 		t.Errorf("imported task: deadline = %v, created_at = %v, want %v and %v", got.Deadline, got.CreatedAt, due, born)
 	}
 	// Sem as datas, a tarefa nasce agora e sem prazo, como a de uma issue.
-	plain, _ := f.store.CreateImported(task.Imported{ProjectID: pid, IntegrationID: integ, ItemID: "OutroQdr", Name: "Sem datas"})
+	plain, _ := f.store.CreateImported(task.Imported{ProjectID: pid, Name: "Sem datas"})
 	if time.Since(plain.CreatedAt) > time.Minute || plain.Deadline.After(time.Date(1971, 1, 1, 0, 0, 0, 0, time.UTC)) {
 		t.Errorf("a task imported without dates: deadline = %v, created_at = %v", plain.Deadline, plain.CreatedAt)
 	}
@@ -331,8 +335,7 @@ func TestStore_CreateHook(t *testing.T) {
 	}
 	// A que a sincronização importa não avisa, e sem gancho registrado criar segue funcionando.
 	pid := uuid.MustParse(f.project)
-	integ := uuid.MustParse(createIntegration(t, f.project))
-	if _, err := f.store.CreateImported(task.Imported{ProjectID: pid, IntegrationID: integ, ItemID: "Abc12345", Name: "Importada"}); err != nil {
+	if _, err := f.store.CreateImported(task.Imported{ProjectID: pid, Name: "Importada"}); err != nil {
 		t.Fatalf("create imported: %v", err)
 	}
 	if ids := got(); len(ids) != 0 {

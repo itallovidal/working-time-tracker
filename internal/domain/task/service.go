@@ -2,6 +2,7 @@ package task
 
 import (
 	"errors"
+	"strings"
 	"time"
 	"unicode/utf8"
 
@@ -295,8 +296,11 @@ func (s *Service) Delete(id string) error {
 	return s.taskStore.Delete(id)
 }
 
+// LinkExternalItem liga a tarefa, à mão, a um item da integração (uma issue, um cartão). Uma tarefa tem no
+// máximo um item por integração, e um item serve a uma tarefa só. O id vale como a pessoa o escreveu ou, nos
+// tipos que sabem, como o link do cartão colado (a sincronização o lê pela chave).
 func (s *Service) LinkExternalItem(taskID, integrationID, externalItemID, externalItemURL string) (*Task, error) {
-	task, err := s.taskStore.GetByID(taskID)
+	t, err := s.taskStore.GetByID(taskID)
 	if err != nil {
 		return nil, err
 	}
@@ -304,49 +308,71 @@ func (s *Service) LinkExternalItem(taskID, integrationID, externalItemID, extern
 	if err != nil {
 		return nil, ErrIntegrationNotFound
 	}
-	integrationProject, err := s.taskStore.IntegrationProjectID(eid)
+	integrationProject, kind, err := s.taskStore.IntegrationInfo(eid)
 	if errors.Is(err, database.ErrNotFound) {
 		return nil, ErrIntegrationNotFound
 	}
 	if err != nil {
 		return nil, err
 	}
-	if integrationProject != task.ProjectID {
+	if integrationProject != t.ProjectID {
 		return nil, ErrIntegrationOtherProject
 	}
-	task.ExternalIntegrationID = &eid
-	task.ExternalItemID = &externalItemID
-	task.ExternalItemURL = &externalItemURL
-	if err := s.taskStore.Update(task); err != nil {
+	item := strings.TrimSpace(externalItemID)
+	if impl, err := adapter.GetIntegration(kind); err == nil {
+		if key, ok := adapter.NewItemKeyer(impl).Key(item); ok {
+			item = key
+		}
+	}
+	if err := s.taskStore.LinkItem(t.ID, eid, item, strings.TrimSpace(externalItemURL)); err != nil {
 		return nil, err
 	}
 	return s.taskStore.GetByID(taskID)
 }
 
-func (s *Service) UnlinkExternalItem(taskID string) (*Task, error) {
-	task, err := s.taskStore.GetByID(taskID)
+// UnlinkExternalItem solta a tarefa do item da integração. Sem integração, solta o único item que ela
+// tem; com vários, a integração é obrigatória.
+func (s *Service) UnlinkExternalItem(taskID, integrationID string) (*Task, error) {
+	t, err := s.taskStore.GetByID(taskID)
 	if err != nil {
 		return nil, err
 	}
-	task.ExternalIntegrationID = nil
-	task.ExternalItemID = nil
-	task.ExternalItemURL = nil
-	if err := s.taskStore.Update(task); err != nil {
+	link, err := linkOf(t, integrationID)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.taskStore.UnlinkItem(t.ID, link.IntegrationID); err != nil {
 		return nil, err
 	}
 	return s.taskStore.GetByID(taskID)
 }
 
-func (s *Service) GetExternalDetails(taskID string) (*adapter.ExternalDetailsResult, error) {
-	task, err := s.taskStore.GetByID(taskID)
+// GetExternalDetails lê na plataforma o item a que a tarefa está ligada naquela integração (sem integração,
+// o único que ela tem).
+func (s *Service) GetExternalDetails(taskID, integrationID string) (*adapter.ExternalDetailsResult, error) {
+	t, err := s.taskStore.GetByID(taskID)
 	if err != nil {
 		return nil, err
 	}
-	if task.ExternalIntegrationID == nil {
-		return nil, ErrNoExternalItem
+	link, err := linkOf(t, integrationID)
+	if err != nil {
+		return nil, err
 	}
 	if s.integrationSvc == nil {
 		return nil, ErrIntegrationsUnavailable
 	}
-	return s.integrationSvc.FetchItemDetails(task.ExternalIntegrationID.String(), *task.ExternalItemID)
+	return s.integrationSvc.FetchItemDetails(link.IntegrationID.String(), link.ItemID)
+}
+
+// linkOf acha o vínculo pedido. Sem integração, vale o único vínculo da tarefa; com mais de um é preciso
+// dizer qual (a primeira é a mais antiga, mas quem desfaz ou lê um vínculo não deve adivinhar).
+func linkOf(t *Task, integrationID string) (*Link, error) {
+	if integrationID == "" && len(t.Links) > 1 {
+		return nil, ErrLinkFieldsRequired
+	}
+	link := t.LinkFor(integrationID)
+	if link == nil {
+		return nil, ErrNoExternalItem
+	}
+	return link, nil
 }

@@ -136,7 +136,8 @@ var (
 	IssueSyncsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "item_id", Type: field.TypeString},
-		{Name: "state", Type: field.TypeEnum, Enums: []string{"open", "closed", "gone"}, Default: "open"},
+		{Name: "url", Type: field.TypeString, Default: ""},
+		{Name: "state", Type: field.TypeEnum, Enums: []string{"open", "closed", "gone", "pending"}, Default: "open"},
 		{Name: "title", Type: field.TypeString, Default: ""},
 		{Name: "body", Type: field.TypeString, Default: ""},
 		{Name: "labels", Type: field.TypeJSON, Nullable: true},
@@ -149,7 +150,7 @@ var (
 		{Name: "synced_at", Type: field.TypeTime},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "integration_id", Type: field.TypeUUID},
-		{Name: "task_id", Type: field.TypeUUID, Unique: true, Nullable: true},
+		{Name: "task_id", Type: field.TypeUUID, Nullable: true},
 	}
 	// IssueSyncsTable holds the schema information for the "issue_syncs" table.
 	IssueSyncsTable = &schema.Table{
@@ -159,13 +160,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "issue_syncs_integrations_issue_syncs",
-				Columns:    []*schema.Column{IssueSyncsColumns[14]},
+				Columns:    []*schema.Column{IssueSyncsColumns[15]},
 				RefColumns: []*schema.Column{IntegrationsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
-				Symbol:     "issue_syncs_tasks_issue_sync",
-				Columns:    []*schema.Column{IssueSyncsColumns[15]},
+				Symbol:     "issue_syncs_tasks_issue_syncs",
+				Columns:    []*schema.Column{IssueSyncsColumns[16]},
 				RefColumns: []*schema.Column{TasksColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
@@ -174,7 +175,12 @@ var (
 			{
 				Name:    "issuesync_integration_id_item_id",
 				Unique:  true,
-				Columns: []*schema.Column{IssueSyncsColumns[14], IssueSyncsColumns[1]},
+				Columns: []*schema.Column{IssueSyncsColumns[15], IssueSyncsColumns[1]},
+			},
+			{
+				Name:    "issuesync_task_id_integration_id",
+				Unique:  true,
+				Columns: []*schema.Column{IssueSyncsColumns[16], IssueSyncsColumns[15]},
 			},
 		},
 	}
@@ -349,10 +355,7 @@ var (
 		{Name: "priority", Type: field.TypeEnum, Enums: []string{"urgent", "high", "medium", "low", "none"}, Default: "none"},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"backlog", "in_progress", "awaiting_closure", "closed"}, Default: "backlog"},
 		{Name: "deadline", Type: field.TypeTime, Nullable: true},
-		{Name: "external_item_id", Type: field.TypeString, Nullable: true},
-		{Name: "external_item_url", Type: field.TypeString, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
-		{Name: "external_integration_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "assignee_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "project_id", Type: field.TypeUUID},
 	}
@@ -363,20 +366,14 @@ var (
 		PrimaryKey: []*schema.Column{TasksColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "tasks_integrations_tasks",
-				Columns:    []*schema.Column{TasksColumns[9]},
-				RefColumns: []*schema.Column{IntegrationsColumns[0]},
-				OnDelete:   schema.SetNull,
-			},
-			{
 				Symbol:     "tasks_persons_tasks",
-				Columns:    []*schema.Column{TasksColumns[10]},
+				Columns:    []*schema.Column{TasksColumns[7]},
 				RefColumns: []*schema.Column{PersonsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "tasks_projects_tasks",
-				Columns:    []*schema.Column{TasksColumns[11]},
+				Columns:    []*schema.Column{TasksColumns[8]},
 				RefColumns: []*schema.Column{ProjectsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -580,9 +577,8 @@ func init() {
 	ProjectsTable.ForeignKeys[0].RefTable = CustomersTable
 	ProjectsTable.ForeignKeys[1].RefTable = OrganizationsTable
 	SessionsTable.ForeignKeys[0].RefTable = PersonsTable
-	TasksTable.ForeignKeys[0].RefTable = IntegrationsTable
-	TasksTable.ForeignKeys[1].RefTable = PersonsTable
-	TasksTable.ForeignKeys[2].RefTable = ProjectsTable
+	TasksTable.ForeignKeys[0].RefTable = PersonsTable
+	TasksTable.ForeignKeys[1].RefTable = ProjectsTable
 	TeamsTable.ForeignKeys[0].RefTable = ProjectsTable
 	TeamMembershipsTable.ForeignKeys[0].RefTable = PersonsTable
 	TeamMembershipsTable.ForeignKeys[1].RefTable = TeamsTable

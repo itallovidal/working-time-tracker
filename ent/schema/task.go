@@ -24,9 +24,6 @@ func (Task) Fields() []ent.Field {
 		field.Enum("status").Values("backlog", "in_progress", "awaiting_closure", "closed").Default("backlog"),
 		field.UUID("assignee_id", uuid.UUID{}).Optional().Nillable(),
 		field.Time("deadline").Optional(),
-		field.UUID("external_integration_id", uuid.UUID{}).Optional().Nillable(),
-		field.String("external_item_id").Optional().Nillable(),
-		field.String("external_item_url").Optional().Nillable(),
 		field.Time("created_at").Default(time.Now).Immutable(),
 	}
 }
@@ -35,11 +32,11 @@ func (Task) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("project", Project.Type).Ref("tasks").Field("project_id").Unique().Required(),
 		edge.From("assignee", Person.Type).Ref("tasks").Field("assignee_id").Unique(),
-		edge.From("external_integration", Integration.Type).Ref("tasks").Field("external_integration_id").Unique(),
 		// Excluir a tarefa a tira das sessões, mas as sessões e as horas ficam.
 		edge.To("session_links", WorkSessionTask.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("labels", Label.Type),
-		// A issue do GitHub a que a tarefa está ligada pela sincronização, se estiver.
-		edge.To("issue_sync", IssueSync.Type).Unique(),
+		// Os itens externos a que a tarefa está ligada (uma issue, um cartão), no máximo um por integração.
+		// Excluir a tarefa só solta o vínculo (task_id fica nulo).
+		edge.To("issue_syncs", IssueSync.Type),
 	}
 }

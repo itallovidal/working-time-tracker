@@ -157,8 +157,8 @@ func TestTrello_ImportsOpenCards(t *testing.T) {
 	if !rich.CreatedAt.Equal(born) {
 		t.Errorf("created_at = %v, want the date the card was created, %v", rich.CreatedAt, born)
 	}
-	if rich.ExternalItemID == nil || *rich.ExternalItemID != "Rich0001" || rich.ExternalItemURL == nil || *rich.ExternalItemURL != "https://trello.com/c/Rich0001" {
-		t.Errorf("link = %v / %v", rich.ExternalItemID, rich.ExternalItemURL)
+	if len(rich.Links) != 1 || rich.Links[0].ItemID != "Rich0001" || rich.Links[0].URL != "https://trello.com/c/Rich0001" {
+		t.Errorf("links = %+v, want the card Rich0001", rich.Links)
 	}
 	if simple := e.taskFor("Simples1"); !noDeadline(simple.Deadline) || len(simple.Labels) != 0 {
 		t.Errorf("a card with no date and no labels: deadline %v, labels %v", simple.Deadline, labelNames(simple))
@@ -502,7 +502,7 @@ func TestTrello_PublishCreatesTheCard(t *testing.T) {
 	if res.Problem != "" {
 		t.Errorf("problem = %q", res.Problem)
 	}
-	if res.Task.ExternalItemID == nil || res.Task.ExternalIntegration == nil || res.Task.ExternalIntegration.ID != e.it.ID {
+	if len(res.Task.Links) != 1 || res.Task.Links[0].Integration == nil || res.Task.Links[0].Integration.ID != e.it.ID {
 		t.Fatalf("published task = %+v", res.Task)
 	}
 	cards := e.fake.Cards(board)
@@ -510,7 +510,7 @@ func TestTrello_PublishCreatesTheCard(t *testing.T) {
 		t.Fatalf("%d cards on the board, want the one that was posted", len(cards))
 	}
 	c := cards[0]
-	if c.ShortLink != *res.Task.ExternalItemID || c.Name != "Tarefa daqui" || c.Desc != "descrição" || !c.Due.Equal(due) || c.List != entrada || len(c.Labels) != 2 {
+	if c.ShortLink != res.Task.Links[0].ItemID || c.Name != "Tarefa daqui" || c.Desc != "descrição" || !c.Due.Equal(due) || c.List != entrada || len(c.Labels) != 2 {
 		t.Errorf("card = %+v, want name, description, date, the first list and both labels (the missing one is created)", c)
 	}
 	e.fake.Reset()
@@ -527,7 +527,7 @@ func TestTrello_PublishCreatesTheCard(t *testing.T) {
 	if _, err := e.syncer.Publish(context.Background(), second.ID, e.it.ID); err == nil || !strings.Contains(err.Error(), "integration.trello_no_list") {
 		t.Errorf("a board with no list: %v, want trello_no_list", err)
 	}
-	if got, _ := e.tasks.GetByID(second.ID.String()); got.ExternalItemID != nil {
+	if got, _ := e.tasks.GetByID(second.ID.String()); len(got.Links) != 0 {
 		t.Errorf("the task was linked although no card was created: %+v", got)
 	}
 }

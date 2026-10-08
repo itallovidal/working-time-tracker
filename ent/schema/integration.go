@@ -38,8 +38,7 @@ func (Integration) Fields() []ent.Field {
 func (Integration) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("project", Project.Type).Ref("integrations").Field("project_id").Unique().Required(),
-		edge.To("tasks", Task.Type),
-		// Apagar a integração apaga o vínculo das issues; as tarefas ficam.
+		// Apagar a integração apaga o vínculo dos itens; as tarefas ficam.
 		edge.To("issue_syncs", IssueSync.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
 	}
 }

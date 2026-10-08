@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 
 	"working-time-tracker/ent"
+	"working-time-tracker/ent/issuesync"
 	entlabel "working-time-tracker/ent/label"
 	entperson "working-time-tracker/ent/person"
 	"working-time-tracker/ent/task"
@@ -35,15 +36,6 @@ func (s *Store) Create(t *Task) error {
 	// A tarefa importada nasce com a data de criação do item, e não com a de agora.
 	if !t.CreatedAt.IsZero() {
 		q = q.SetCreatedAt(t.CreatedAt)
-	}
-	if t.ExternalIntegrationID != nil {
-		q = q.SetExternalIntegrationID(*t.ExternalIntegrationID)
-	}
-	if t.ExternalItemID != nil {
-		q = q.SetExternalItemID(*t.ExternalItemID)
-	}
-	if t.ExternalItemURL != nil {
-		q = q.SetExternalItemURL(*t.ExternalItemURL)
 	}
 	created, err := q.Save(context.Background())
 	if err != nil {
@@ -125,6 +117,11 @@ func withLabels(q *ent.LabelQuery) {
 	q.Order(ent.Asc(entlabel.FieldName))
 }
 
+// withLinks carrega os vínculos da tarefa com a integração de cada um, do mais antigo para o mais novo.
+func withLinks(q *ent.IssueSyncQuery) {
+	q.WithIntegration().Order(ent.Asc(issuesync.FieldCreatedAt, issuesync.FieldID))
+}
+
 // ListByProject lista as tarefas do projeto, da mais nova para a mais antiga.
 // Com f.Page maior que zero, devolve só aquela página.
 func (s *Store) ListByProject(projectID string, f ListFilter) ([]Task, error) {
@@ -134,10 +131,10 @@ func (s *Store) ListByProject(projectID string, f ListFilter) ([]Task, error) {
 	}
 	// O id desempata tarefas criadas no mesmo instante, para a ordem não mudar
 	// de uma página para a outra.
-	// A integração vem junto para a lista saber de que plataforma é o item vinculado.
+	// Os vínculos vêm junto, com a integração, para a lista saber de que plataformas são os itens.
 	q := s.filtered(uid, f).
 		WithAssignee().
-		WithExternalIntegration().
+		WithIssueSyncs(withLinks).
 		WithLabels(withLabels).
 		Order(ent.Desc(task.FieldCreatedAt, task.FieldID))
 	if f.Page > 0 {
@@ -188,7 +185,7 @@ func (s *Store) GetByID(id string) (*Task, error) {
 	t, err := s.client.Task.Query().
 		Where(task.IDEQ(uid)).
 		WithAssignee().
-		WithExternalIntegration().
+		WithIssueSyncs(withLinks).
 		WithLabels(withLabels).
 		Only(context.Background())
 	if err != nil {
@@ -214,22 +211,6 @@ func (s *Store) Update(t *Task) error {
 		q = q.SetAssigneeID(*t.AssigneeID)
 	} else {
 		q = q.ClearAssigneeID()
-	}
-	if t.ExternalIntegrationID != nil {
-		q = q.SetExternalIntegrationID(*t.ExternalIntegrationID)
-	} else {
-		q = q.ClearExternalIntegrationID()
-	}
-	// SetNillable* ignora nil, então limpar o vínculo exige Clear* explícito.
-	if t.ExternalItemID != nil {
-		q = q.SetExternalItemID(*t.ExternalItemID)
-	} else {
-		q = q.ClearExternalItemID()
-	}
-	if t.ExternalItemURL != nil {
-		q = q.SetExternalItemURL(*t.ExternalItemURL)
-	} else {
-		q = q.ClearExternalItemURL()
 	}
 	if _, err := q.Save(context.Background()); err != nil {
 		return err
@@ -338,19 +319,17 @@ func toDomainTask(e *ent.Task) *Task {
 		return nil
 	}
 	t := &Task{
-		ID:                    e.ID,
-		ProjectID:             e.ProjectID,
-		Name:                  e.Name,
-		Description:           e.Description,
-		Priority:              string(e.Priority),
-		Status:                string(e.Status),
-		Labels:                []Label{},
-		AssigneeID:            e.AssigneeID,
-		Deadline:              e.Deadline,
-		ExternalIntegrationID: e.ExternalIntegrationID,
-		ExternalItemID:        e.ExternalItemID,
-		ExternalItemURL:       e.ExternalItemURL,
-		CreatedAt:             e.CreatedAt,
+		ID:          e.ID,
+		ProjectID:   e.ProjectID,
+		Name:        e.Name,
+		Description: e.Description,
+		Priority:    string(e.Priority),
+		Status:      string(e.Status),
+		Labels:      []Label{},
+		AssigneeID:  e.AssigneeID,
+		Deadline:    e.Deadline,
+		Links:       []Link{},
+		CreatedAt:   e.CreatedAt,
 	}
 	if e.Edges.Assignee != nil {
 		t.Assignee = &Person{
@@ -362,12 +341,12 @@ func toDomainTask(e *ent.Task) *Task {
 	for _, l := range e.Edges.Labels {
 		t.Labels = append(t.Labels, Label{ID: l.ID, Name: l.Name})
 	}
-	if e.Edges.ExternalIntegration != nil {
-		t.ExternalIntegration = &Integration{
-			ID:   e.Edges.ExternalIntegration.ID,
-			Type: e.Edges.ExternalIntegration.Type,
-			Name: e.Edges.ExternalIntegration.DisplayName,
+	for _, row := range e.Edges.IssueSyncs {
+		link := Link{IntegrationID: row.IntegrationID, ItemID: row.ItemID, URL: row.URL, LastError: row.LastError}
+		if in := row.Edges.Integration; in != nil {
+			link.Integration = &Integration{ID: in.ID, Type: in.Type, Name: in.DisplayName}
 		}
+		t.Links = append(t.Links, link)
 	}
 	return t
 }

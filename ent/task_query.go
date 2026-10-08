@@ -7,7 +7,6 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"math"
-	"working-time-tracker/ent/integration"
 	"working-time-tracker/ent/issuesync"
 	"working-time-tracker/ent/label"
 	"working-time-tracker/ent/person"
@@ -27,17 +26,16 @@ import (
 // TaskQuery is the builder for querying Task entities.
 type TaskQuery struct {
 	config
-	ctx                     *QueryContext
-	order                   []task.OrderOption
-	inters                  []Interceptor
-	predicates              []predicate.Task
-	withProject             *ProjectQuery
-	withAssignee            *PersonQuery
-	withExternalIntegration *IntegrationQuery
-	withSessionLinks        *WorkSessionTaskQuery
-	withLabels              *LabelQuery
-	withIssueSync           *IssueSyncQuery
-	modifiers               []func(*sql.Selector)
+	ctx              *QueryContext
+	order            []task.OrderOption
+	inters           []Interceptor
+	predicates       []predicate.Task
+	withProject      *ProjectQuery
+	withAssignee     *PersonQuery
+	withSessionLinks *WorkSessionTaskQuery
+	withLabels       *LabelQuery
+	withIssueSyncs   *IssueSyncQuery
+	modifiers        []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -118,28 +116,6 @@ func (_q *TaskQuery) QueryAssignee() *PersonQuery {
 	return query
 }
 
-// QueryExternalIntegration chains the current query on the "external_integration" edge.
-func (_q *TaskQuery) QueryExternalIntegration() *IntegrationQuery {
-	query := (&IntegrationClient{config: _q.config}).Query()
-	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := _q.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		selector := _q.sqlQuery(ctx)
-		if err := selector.Err(); err != nil {
-			return nil, err
-		}
-		step := sqlgraph.NewStep(
-			sqlgraph.From(task.Table, task.FieldID, selector),
-			sqlgraph.To(integration.Table, integration.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, task.ExternalIntegrationTable, task.ExternalIntegrationColumn),
-		)
-		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
-		return fromU, nil
-	}
-	return query
-}
-
 // QuerySessionLinks chains the current query on the "session_links" edge.
 func (_q *TaskQuery) QuerySessionLinks() *WorkSessionTaskQuery {
 	query := (&WorkSessionTaskClient{config: _q.config}).Query()
@@ -184,8 +160,8 @@ func (_q *TaskQuery) QueryLabels() *LabelQuery {
 	return query
 }
 
-// QueryIssueSync chains the current query on the "issue_sync" edge.
-func (_q *TaskQuery) QueryIssueSync() *IssueSyncQuery {
+// QueryIssueSyncs chains the current query on the "issue_syncs" edge.
+func (_q *TaskQuery) QueryIssueSyncs() *IssueSyncQuery {
 	query := (&IssueSyncClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := _q.prepareQuery(ctx); err != nil {
@@ -198,7 +174,7 @@ func (_q *TaskQuery) QueryIssueSync() *IssueSyncQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(task.Table, task.FieldID, selector),
 			sqlgraph.To(issuesync.Table, issuesync.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, task.IssueSyncTable, task.IssueSyncColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, task.IssueSyncsTable, task.IssueSyncsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -393,17 +369,16 @@ func (_q *TaskQuery) Clone() *TaskQuery {
 		return nil
 	}
 	return &TaskQuery{
-		config:                  _q.config,
-		ctx:                     _q.ctx.Clone(),
-		order:                   append([]task.OrderOption{}, _q.order...),
-		inters:                  append([]Interceptor{}, _q.inters...),
-		predicates:              append([]predicate.Task{}, _q.predicates...),
-		withProject:             _q.withProject.Clone(),
-		withAssignee:            _q.withAssignee.Clone(),
-		withExternalIntegration: _q.withExternalIntegration.Clone(),
-		withSessionLinks:        _q.withSessionLinks.Clone(),
-		withLabels:              _q.withLabels.Clone(),
-		withIssueSync:           _q.withIssueSync.Clone(),
+		config:           _q.config,
+		ctx:              _q.ctx.Clone(),
+		order:            append([]task.OrderOption{}, _q.order...),
+		inters:           append([]Interceptor{}, _q.inters...),
+		predicates:       append([]predicate.Task{}, _q.predicates...),
+		withProject:      _q.withProject.Clone(),
+		withAssignee:     _q.withAssignee.Clone(),
+		withSessionLinks: _q.withSessionLinks.Clone(),
+		withLabels:       _q.withLabels.Clone(),
+		withIssueSyncs:   _q.withIssueSyncs.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -432,17 +407,6 @@ func (_q *TaskQuery) WithAssignee(opts ...func(*PersonQuery)) *TaskQuery {
 	return _q
 }
 
-// WithExternalIntegration tells the query-builder to eager-load the nodes that are connected to
-// the "external_integration" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *TaskQuery) WithExternalIntegration(opts ...func(*IntegrationQuery)) *TaskQuery {
-	query := (&IntegrationClient{config: _q.config}).Query()
-	for _, opt := range opts {
-		opt(query)
-	}
-	_q.withExternalIntegration = query
-	return _q
-}
-
 // WithSessionLinks tells the query-builder to eager-load the nodes that are connected to
 // the "session_links" edge. The optional arguments are used to configure the query builder of the edge.
 func (_q *TaskQuery) WithSessionLinks(opts ...func(*WorkSessionTaskQuery)) *TaskQuery {
@@ -465,14 +429,14 @@ func (_q *TaskQuery) WithLabels(opts ...func(*LabelQuery)) *TaskQuery {
 	return _q
 }
 
-// WithIssueSync tells the query-builder to eager-load the nodes that are connected to
-// the "issue_sync" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *TaskQuery) WithIssueSync(opts ...func(*IssueSyncQuery)) *TaskQuery {
+// WithIssueSyncs tells the query-builder to eager-load the nodes that are connected to
+// the "issue_syncs" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *TaskQuery) WithIssueSyncs(opts ...func(*IssueSyncQuery)) *TaskQuery {
 	query := (&IssueSyncClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	_q.withIssueSync = query
+	_q.withIssueSyncs = query
 	return _q
 }
 
@@ -554,13 +518,12 @@ func (_q *TaskQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Task, e
 	var (
 		nodes       = []*Task{}
 		_spec       = _q.querySpec()
-		loadedTypes = [6]bool{
+		loadedTypes = [5]bool{
 			_q.withProject != nil,
 			_q.withAssignee != nil,
-			_q.withExternalIntegration != nil,
 			_q.withSessionLinks != nil,
 			_q.withLabels != nil,
-			_q.withIssueSync != nil,
+			_q.withIssueSyncs != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -596,12 +559,6 @@ func (_q *TaskQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Task, e
 			return nil, err
 		}
 	}
-	if query := _q.withExternalIntegration; query != nil {
-		if err := _q.loadExternalIntegration(ctx, query, nodes, nil,
-			func(n *Task, e *Integration) { n.Edges.ExternalIntegration = e }); err != nil {
-			return nil, err
-		}
-	}
 	if query := _q.withSessionLinks; query != nil {
 		if err := _q.loadSessionLinks(ctx, query, nodes,
 			func(n *Task) { n.Edges.SessionLinks = []*WorkSessionTask{} },
@@ -616,9 +573,10 @@ func (_q *TaskQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Task, e
 			return nil, err
 		}
 	}
-	if query := _q.withIssueSync; query != nil {
-		if err := _q.loadIssueSync(ctx, query, nodes, nil,
-			func(n *Task, e *IssueSync) { n.Edges.IssueSync = e }); err != nil {
+	if query := _q.withIssueSyncs; query != nil {
+		if err := _q.loadIssueSyncs(ctx, query, nodes,
+			func(n *Task) { n.Edges.IssueSyncs = []*IssueSync{} },
+			func(n *Task, e *IssueSync) { n.Edges.IssueSyncs = append(n.Edges.IssueSyncs, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -679,38 +637,6 @@ func (_q *TaskQuery) loadAssignee(ctx context.Context, query *PersonQuery, nodes
 		nodes, ok := nodeids[n.ID]
 		if !ok {
 			return fmt.Errorf(`unexpected foreign-key "assignee_id" returned %v`, n.ID)
-		}
-		for i := range nodes {
-			assign(nodes[i], n)
-		}
-	}
-	return nil
-}
-func (_q *TaskQuery) loadExternalIntegration(ctx context.Context, query *IntegrationQuery, nodes []*Task, init func(*Task), assign func(*Task, *Integration)) error {
-	ids := make([]uuid.UUID, 0, len(nodes))
-	nodeids := make(map[uuid.UUID][]*Task)
-	for i := range nodes {
-		if nodes[i].ExternalIntegrationID == nil {
-			continue
-		}
-		fk := *nodes[i].ExternalIntegrationID
-		if _, ok := nodeids[fk]; !ok {
-			ids = append(ids, fk)
-		}
-		nodeids[fk] = append(nodeids[fk], nodes[i])
-	}
-	if len(ids) == 0 {
-		return nil
-	}
-	query.Where(integration.IDIn(ids...))
-	neighbors, err := query.All(ctx)
-	if err != nil {
-		return err
-	}
-	for _, n := range neighbors {
-		nodes, ok := nodeids[n.ID]
-		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "external_integration_id" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -809,18 +735,21 @@ func (_q *TaskQuery) loadLabels(ctx context.Context, query *LabelQuery, nodes []
 	}
 	return nil
 }
-func (_q *TaskQuery) loadIssueSync(ctx context.Context, query *IssueSyncQuery, nodes []*Task, init func(*Task), assign func(*Task, *IssueSync)) error {
+func (_q *TaskQuery) loadIssueSyncs(ctx context.Context, query *IssueSyncQuery, nodes []*Task, init func(*Task), assign func(*Task, *IssueSync)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Task)
 	for i := range nodes {
 		fks = append(fks, nodes[i].ID)
 		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
 	}
 	if len(query.ctx.Fields) > 0 {
 		query.ctx.AppendFieldOnce(issuesync.FieldTaskID)
 	}
 	query.Where(predicate.IssueSync(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(task.IssueSyncColumn), fks...))
+		s.Where(sql.InValues(s.C(task.IssueSyncsColumn), fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
@@ -873,9 +802,6 @@ func (_q *TaskQuery) querySpec() *sqlgraph.QuerySpec {
 		}
 		if _q.withAssignee != nil {
 			_spec.Node.AddColumnOnce(task.FieldAssigneeID)
-		}
-		if _q.withExternalIntegration != nil {
-			_spec.Node.AddColumnOnce(task.FieldExternalIntegrationID)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {

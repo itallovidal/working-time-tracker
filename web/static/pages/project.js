@@ -169,8 +169,8 @@ document.addEventListener('alpine:init', () => {
     statusClass,
     deadlineClass: (t) => deadlineInfo(t.deadline).cls,
     deadlineLabel: (t) => deadlineInfo(t.deadline).label,
-    // O selo da issue ou do cartão a que a tarefa está ligada: "GitHub #42".
-    hasExternal: (t) => !!t.external_integration && !!t.external_item_id,
+    // O selo dos itens a que a tarefa está ligada: "GitHub #42", ou "GitHub #42 + Trello H0TZyzbK" nas duas plataformas.
+    hasExternal: (t) => (t.links || []).length > 0,
     externalLabel: (t) => externalLabel(t),
   };
 
@@ -359,12 +359,16 @@ document.addEventListener('alpine:init', () => {
   // os campos do metadata e os rótulos. Um tipo novo lá aparece aqui sem mudança.
   const integrationTypes = WTT.boot.integration_types || [];
   const integrationType = (type) => integrationTypes.find((t) => t.type === type);
-  // externalLabel descreve o item vinculado: "GitHub #42", "Trello H0TZyzbK".
-  function externalLabel(task) {
-    const type = task.external_integration ? task.external_integration.type : '';
+  // linkLabel descreve um item vinculado: "GitHub #42", "Trello H0TZyzbK".
+  function linkLabel(link) {
+    const type = link.integration ? link.integration.type : '';
     const t = integrationType(type);
-    if (!t) return (type || WTT.t('tasks.item')) + ' #' + task.external_item_id;
-    return t.label + ' ' + (t.item_numeric ? '#' : '') + task.external_item_id;
+    if (!t) return (type || WTT.t('tasks.item')) + ' #' + link.item_id;
+    return t.label + ' ' + (t.item_numeric ? '#' : '') + link.item_id;
+  }
+  // externalLabel junta os itens a que a tarefa está ligada, um por plataforma.
+  function externalLabel(task) {
+    return (task.links || []).map(linkLabel).join(' + ');
   }
 
   // brandIcons são os ícones das plataformas (Font Awesome); uma plataforma sem ícone leva o do elo.
@@ -786,7 +790,8 @@ document.addEventListener('alpine:init', () => {
         if (publishError) {
           toast(WTT.t('tasks.publish.failed', { provider, message: publishError }), 'error');
         } else if (published) {
-          let text = WTT.t('tasks.publish.done', { provider, number: published.task.external_item_id });
+          const posted = (published.task.links || []).find((l) => l.integration_id === target.id);
+          let text = WTT.t('tasks.publish.done', { provider, number: posted ? posted.item_id : '' });
           if (published.problem) text += ' ' + WTT.errorText({ code: published.problem, params: { provider } });
           toast(text, published.problem ? 'error' : undefined);
         }
@@ -860,8 +865,10 @@ document.addEventListener('alpine:init', () => {
     deadlineWas: '', // o dia do prazo quando a tarefa foi lida: só se manda o prazo se a pessoa o mudou
     assigneeWas: '', // o responsável quando a tarefa foi lida ('' é nenhum): idem
     linkForm: { integration_id: '', external_item_id: '', external_item_url: '' },
-    external: { loading: false, details: null, error: '' },
-    syncProblem: '', // o aviso que a última sincronização da tarefa deixou
+    // O que se leu de cada item na plataforma e o aviso da última sincronização, por integração (id): cada
+    // cartão da página tem o seu. As entradas são trocadas inteiras para a tela redesenhar.
+    external: {},
+    syncProblems: {},
     async init() {
       try {
         const [task, members, integrations, sessions] = await Promise.all([
@@ -875,7 +882,6 @@ document.addEventListener('alpine:init', () => {
         this.integrations = (integrations || []).filter((i) => i.enabled);
         this.sessions = sessions || [];
         this.setTask(task);
-        if (this.integrations.length > 0) this.linkForm.integration_id = this.integrations[0].id;
       } catch (e) {
         this.errors.load = e.message;
       } finally {
@@ -903,8 +909,12 @@ document.addEventListener('alpine:init', () => {
       if (t.assignee && !this.members.some((m) => m.id === t.assignee_id)) {
         this.members = [t.assignee, ...this.members];
       }
-      if (t.external_item_id) this.loadExternal();
-      else this.external = { loading: false, details: null, error: '' };
+      // Só quem ainda não tem vínculo pode receber um à mão.
+      const free = this.linkable();
+      if (!free.some((i) => i.id === this.linkForm.integration_id)) this.linkForm.integration_id = free.length > 0 ? free[0].id : '';
+      this.external = {};
+      this.syncProblems = {};
+      for (const link of t.links || []) this.loadExternal(link.integration_id);
     },
     // O ponto mudou: recarrega as sessões e a tarefa, que bater o ponto põe em progresso (e,
     // sem responsável, passa para quem bateu). Só os dados mostrados: o rascunho do modal fica.
@@ -920,14 +930,21 @@ document.addEventListener('alpine:init', () => {
         // Mantém a lista anterior; a próxima ação mostra o erro.
       }
     },
-    async loadExternal() {
-      this.external = { loading: true, details: null, error: '' };
+    // loadExternal lê na plataforma o item da tarefa naquela integração (id).
+    async loadExternal(id) {
+      this.external = { ...this.external, [id]: { loading: true, details: null, error: '' } };
+      let next;
       try {
-        const res = await api('GET', '/api/tasks/' + this.taskId + '/external-details');
-        this.external = { loading: false, details: res.details, error: res.details ? '' : (res.error ? WTT.errorText(res.error) : WTT.t('task_detail.no_response')) };
+        const res = await api('GET', '/api/tasks/' + this.taskId + '/external-details?integration_id=' + id);
+        next = { loading: false, details: res.details, error: res.details ? '' : (res.error ? WTT.errorText(res.error) : WTT.t('task_detail.no_response')) };
       } catch (e) {
-        this.external = { loading: false, details: null, error: e.message };
+        next = { loading: false, details: null, error: e.message };
       }
+      this.external = { ...this.external, [id]: next };
+    },
+    // ext é o que se leu do item daquele cartão; antes da leitura, nada.
+    ext(link) {
+      return this.external[link.id] || { loading: false, details: null, error: '' };
     },
     // O lápis ao lado do nome abre o modal com um rascunho do nome e da descrição; nada vai ao servidor antes
     // de Salvar.
@@ -1056,27 +1073,27 @@ document.addEventListener('alpine:init', () => {
     link() {
       return this.run('link', async () => {
         const t = await api('POST', '/api/tasks/' + this.taskId + '/link-external-item', this.linkForm);
-        this.setTask(t);
         this.linkForm.external_item_id = '';
         this.linkForm.external_item_url = '';
+        this.setTask(t);
       });
     },
-    // Sincronizar: o GitHub não avisa quando a issue muda, então o botão relê a issue e põe as duas em acordo
-    // (e traz de volta o que mudou, as etiquetas novas junto). Numa integração sem sincronização, só relê
-    // os detalhes do item.
-    syncExternal() {
-      return this.run('sync', async () => {
-        this.syncProblem = '';
-        if (!this.syncs()) {
-          await this.loadExternal();
+    // Sincronizar: o GitHub não avisa quando a issue muda, então o botão do cartão relê o item e põe os dois em
+    // acordo (e traz de volta o que mudou, as etiquetas novas junto). Numa integração sem sincronização, só
+    // relê os detalhes do item. Cada cartão sincroniza o seu, e a tarefa leva a mudança aos outros.
+    syncExternal(link) {
+      return this.run('sync:' + link.id, async () => {
+        this.syncProblems = { ...this.syncProblems, [link.id]: '' };
+        if (!this.syncs(link)) {
+          await this.loadExternal(link.id);
           return;
         }
-        const sum = await api('POST', '/api/tasks/' + this.taskId + '/sync');
+        const sum = await api('POST', '/api/tasks/' + this.taskId + '/sync?integration_id=' + link.id);
         const [task] = await Promise.all([api('GET', '/api/tasks/' + this.taskId), this.loadLabels()]);
         this.setTask(task);
         if (sum.problem) {
-          const message = WTT.errorText({ code: sum.problem, params: { provider: this.typeLabel(task.external_integration && task.external_integration.type) } });
-          this.syncProblem = WTT.t('task_detail.sync_problem', { message });
+          const message = WTT.errorText({ code: sum.problem, params: { provider: link.label } });
+          this.syncProblems = { ...this.syncProblems, [link.id]: WTT.t('task_detail.sync_problem', { message }) };
         }
         toast(syncMessage(sum, 'task_detail.sync_nothing'));
       });
@@ -1095,20 +1112,33 @@ document.addEventListener('alpine:init', () => {
     deadlineClass() { return this.task ? deadlineInfo(this.task.deadline).cls : ''; },
     deadlineLabel() { return this.task ? deadlineInfo(this.task.deadline).label : ''; },
     externalLabel() { return this.task ? externalLabel(this.task) : ''; },
-    // links são os cartões de integração da tarefa: um por integração a que ela está ligada, hoje no máximo um.
+    // links são os cartões de integração da tarefa: um por integração a que ela está ligada (uma issue do GitHub,
+    // um cartão do Trello). O aviso que a última sincronização deixou no vínculo vem junto, e o do botão Sincronizar
+    // o cobre enquanto a tela está aberta.
     links() {
       const t = this.task;
-      if (!t || !t.external_item_id) return [];
-      const link = t.external_integration;
-      const known = link && integrationType(link.type);
-      return [{
-        id: link ? link.id : t.id,
-        type: link ? link.type : '',
-        label: known ? known.label : ((link && link.type) || WTT.t('tasks.item')),
-        name: link ? link.name : '',
-        item: (known && known.item_numeric ? '#' : '') + t.external_item_id,
-        url: (this.external.details && this.external.details.url) || t.external_item_url || '',
-      }];
+      if (!t) return [];
+      return (t.links || []).map((l) => {
+        const link = l.integration;
+        const known = link && integrationType(link.type);
+        const read = this.external[l.integration_id];
+        const warning = this.syncProblems[l.integration_id]
+          || (l.last_error ? WTT.t('task_detail.sync_problem', { message: WTT.errorText({ code: l.last_error, params: { provider: known ? known.label : '' } }) }) : '');
+        return {
+          id: l.integration_id,
+          type: link ? link.type : '',
+          label: known ? known.label : ((link && link.type) || WTT.t('tasks.item')),
+          name: link ? link.name : '',
+          item: (known && known.item_numeric ? '#' : '') + l.item_id,
+          url: (read && read.details && read.details.url) || l.url || '',
+          warning,
+        };
+      });
+    },
+    // linkable são as integrações ativas a que a tarefa ainda não está ligada: as que aceitam um vínculo à mão.
+    linkable() {
+      const have = new Set(((this.task && this.task.links) || []).map((l) => l.integration_id));
+      return this.integrations.filter((i) => !have.has(i.id));
     },
     brandIcon: (type) => brandIcons[type] || 'fa-solid fa-link',
     // O estado do item vem como a plataforma o chama (open, opened, closed); na tela é Aberta ou Fechada.
@@ -1121,11 +1151,13 @@ document.addEventListener('alpine:init', () => {
       if (state === 'open' || state === 'opened') return 'badge-ok';
       return state === 'closed' ? statusClass('closed') : '';
     },
-    // syncs diz se a issue a que a tarefa está ligada é sincronizada: o que se salva aqui vai para ela.
-    syncs() {
-      const link = this.task && this.task.external_integration;
-      const it = link && this.integrations.find((i) => i.id === link.id);
-      return !!(it && it.sync_issues);
+    // syncs diz se o item de um cartão é sincronizado: o que se salva aqui vai para ele. Sem o cartão, se algum é.
+    syncs(link) {
+      const ids = link ? [link.id] : ((this.task && this.task.links) || []).map((l) => l.integration_id);
+      return ids.some((id) => {
+        const it = this.integrations.find((i) => i.id === id);
+        return !!(it && it.sync_issues);
+      });
     },
     // linkType é o tipo da integração escolhida no vínculo: dele vêm o rótulo e o
     // exemplo do campo do item (o número da issue, o cartão).

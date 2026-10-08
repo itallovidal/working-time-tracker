@@ -49,6 +49,20 @@ func (_c *IssueSyncCreate) SetItemID(v string) *IssueSyncCreate {
 	return _c
 }
 
+// SetURL sets the "url" field.
+func (_c *IssueSyncCreate) SetURL(v string) *IssueSyncCreate {
+	_c.mutation.SetURL(v)
+	return _c
+}
+
+// SetNillableURL sets the "url" field if the given value is not nil.
+func (_c *IssueSyncCreate) SetNillableURL(v *string) *IssueSyncCreate {
+	if v != nil {
+		_c.SetURL(*v)
+	}
+	return _c
+}
+
 // SetState sets the "state" field.
 func (_c *IssueSyncCreate) SetState(v issuesync.State) *IssueSyncCreate {
 	_c.mutation.SetState(v)
@@ -260,6 +274,10 @@ func (_c *IssueSyncCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (_c *IssueSyncCreate) defaults() {
+	if _, ok := _c.mutation.URL(); !ok {
+		v := issuesync.DefaultURL
+		_c.mutation.SetURL(v)
+	}
 	if _, ok := _c.mutation.State(); !ok {
 		v := issuesync.DefaultState
 		_c.mutation.SetState(v)
@@ -305,6 +323,9 @@ func (_c *IssueSyncCreate) check() error {
 	}
 	if _, ok := _c.mutation.ItemID(); !ok {
 		return &ValidationError{Name: "item_id", err: errors.New(`ent: missing required field "IssueSync.item_id"`)}
+	}
+	if _, ok := _c.mutation.URL(); !ok {
+		return &ValidationError{Name: "url", err: errors.New(`ent: missing required field "IssueSync.url"`)}
 	}
 	if _, ok := _c.mutation.State(); !ok {
 		return &ValidationError{Name: "state", err: errors.New(`ent: missing required field "IssueSync.state"`)}
@@ -377,6 +398,10 @@ func (_c *IssueSyncCreate) createSpec() (*IssueSync, *sqlgraph.CreateSpec) {
 		_spec.SetField(issuesync.FieldItemID, field.TypeString, value)
 		_node.ItemID = value
 	}
+	if value, ok := _c.mutation.URL(); ok {
+		_spec.SetField(issuesync.FieldURL, field.TypeString, value)
+		_node.URL = value
+	}
 	if value, ok := _c.mutation.State(); ok {
 		_spec.SetField(issuesync.FieldState, field.TypeEnum, value)
 		_node.State = value
@@ -444,7 +469,7 @@ func (_c *IssueSyncCreate) createSpec() (*IssueSync, *sqlgraph.CreateSpec) {
 	}
 	if nodes := _c.mutation.TaskIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.M2O,
 			Inverse: true,
 			Table:   issuesync.TaskTable,
 			Columns: []string{issuesync.TaskColumn},

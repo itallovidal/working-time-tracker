@@ -519,29 +519,6 @@ func HasProjectWith(preds ...predicate.Project) predicate.Integration {
 	})
 }
 
-// HasTasks applies the HasEdge predicate on the "tasks" edge.
-func HasTasks() predicate.Integration {
-	return predicate.Integration(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, TasksTable, TasksColumn),
-		)
-		sqlgraph.HasNeighbors(s, step)
-	})
-}
-
-// HasTasksWith applies the HasEdge predicate on the "tasks" edge with a given conditions (other predicates).
-func HasTasksWith(preds ...predicate.Task) predicate.Integration {
-	return predicate.Integration(func(s *sql.Selector) {
-		step := newTasksStep()
-		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
-			for _, p := range preds {
-				p(s)
-			}
-		})
-	})
-}
-
 // HasIssueSyncs applies the HasEdge predicate on the "issue_syncs" edge.
 func HasIssueSyncs() predicate.Integration {
 	return predicate.Integration(func(s *sql.Selector) {

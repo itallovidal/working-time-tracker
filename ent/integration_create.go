@@ -10,7 +10,6 @@ import (
 	"working-time-tracker/ent/integration"
 	"working-time-tracker/ent/issuesync"
 	"working-time-tracker/ent/project"
-	"working-time-tracker/ent/task"
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
@@ -155,21 +154,6 @@ func (_c *IntegrationCreate) SetNillableID(v *uuid.UUID) *IntegrationCreate {
 // SetProject sets the "project" edge to the Project entity.
 func (_c *IntegrationCreate) SetProject(v *Project) *IntegrationCreate {
 	return _c.SetProjectID(v.ID)
-}
-
-// AddTaskIDs adds the "tasks" edge to the Task entity by IDs.
-func (_c *IntegrationCreate) AddTaskIDs(ids ...uuid.UUID) *IntegrationCreate {
-	_c.mutation.AddTaskIDs(ids...)
-	return _c
-}
-
-// AddTasks adds the "tasks" edges to the Task entity.
-func (_c *IntegrationCreate) AddTasks(v ...*Task) *IntegrationCreate {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _c.AddTaskIDs(ids...)
 }
 
 // AddIssueSyncIDs adds the "issue_syncs" edge to the IssueSync entity by IDs.
@@ -360,22 +344,6 @@ func (_c *IntegrationCreate) createSpec() (*Integration, *sqlgraph.CreateSpec) {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.ProjectID = nodes[0]
-		_spec.Edges = append(_spec.Edges, edge)
-	}
-	if nodes := _c.mutation.TasksIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   integration.TasksTable,
-			Columns: []string{integration.TasksColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(task.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := _c.mutation.IssueSyncsIDs(); len(nodes) > 0 {

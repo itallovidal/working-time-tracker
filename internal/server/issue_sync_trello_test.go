@@ -83,9 +83,12 @@ func TestTrelloSync_EndToEnd(t *testing.T) {
 	}
 	card := cards[0]
 	task := decode(t, do(e, "GET", "/api/tasks/"+taskID, "", admin.session))
-	link, _ := task["external_integration"].(map[string]any)
-	if task["external_item_id"] != card.ShortLink || link["type"] != "trello" {
-		t.Errorf("task = %v, want it linked to the card %s", task, card.ShortLink)
+	links := linksOf(task)
+	if len(links) != 1 || links[0]["item_id"] != card.ShortLink {
+		t.Fatalf("task = %v, want it linked to the card %s", task, card.ShortLink)
+	}
+	if integ, _ := links[0]["integration"].(map[string]any); integ["type"] != "trello" {
+		t.Errorf("link = %v, want the Trello integration", links[0])
 	}
 
 	// Editar e fechar a tarefa levam o nome e o fechamento para o cartão, pelo gancho.
@@ -118,14 +121,14 @@ func TestTrelloSync_EndToEnd(t *testing.T) {
 	fake.EditCard("NovoCard", func(c *testutil.TrelloCard) { c.Closed = true })
 	do(e, "POST", "/api/integrations/"+integ+"/sync", "", admin.session)
 	for _, tk := range decodeList(t, do(e, "GET", "/api/projects/"+prj+"/tasks", "", admin.session)) {
-		if tk["external_item_id"] == "NovoCard" && tk["status"] != "closed" {
+		if linkedItem(tk, "NovoCard") && tk["status"] != "closed" {
 			t.Errorf("the archived card left its task %v", tk["status"])
 		}
 	}
 }
 
-// Uma integração do GitHub no mesmo projeto não muda isso: a tarefa que a etapa Integrações posta no GitHub fica
-// com ele (uma tarefa se liga a um item só) e não vira cartão; e o Trello fora do ar não impede a tarefa de ser criada.
+// Uma integração do GitHub no mesmo projeto não muda isso: a tarefa que a etapa Integrações posta no GitHub já
+// está ligada, e a postagem automática do Trello não a pega; e o Trello fora do ar não impede a tarefa de ser criada.
 func TestTrelloSync_GitHubChoiceWinsAndTrelloDownDoesNotBlock(t *testing.T) {
 	app, trello := trelloSyncServer(t)
 	e := app.Echo
@@ -157,7 +160,7 @@ func TestTrelloSync_GitHubChoiceWinsAndTrelloDownDoesNotBlock(t *testing.T) {
 	if n := len(trello.Cards(testutil.TrelloBoardID)); n != 0 {
 		t.Errorf("the task that went to GitHub also became %d card(s)", n)
 	}
-	if task := decode(t, do(e, "GET", "/api/tasks/"+taskID, "", admin.session)); task["external_item_id"] != "1" {
+	if task := decode(t, do(e, "GET", "/api/tasks/"+taskID, "", admin.session)); !linkedItem(task, "1") {
 		t.Errorf("task = %v, want it linked to the GitHub issue", task)
 	}
 

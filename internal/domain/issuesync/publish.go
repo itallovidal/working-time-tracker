@@ -3,6 +3,7 @@ package issuesync
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -30,7 +31,7 @@ func (s *Syncer) Publish(ctx context.Context, taskID, integrationID uuid.UUID) (
 	if err != nil {
 		return nil, err
 	}
-	if t.ExternalIntegrationID != nil || t.ExternalItemID != nil {
+	if t.LinkFor(integrationID.String()) != nil {
 		return nil, ErrAlreadyLinked
 	}
 	integ, err := s.d.Integrations.Get(integrationID.String())
@@ -45,6 +46,15 @@ func (s *Syncer) Publish(ctx context.Context, taskID, integrationID uuid.UUID) (
 	lock.Lock()
 	defer lock.Unlock()
 	s.cache.forget(integrationID.String() + "/")
+
+	// A conferência de cima foi antes da espera pela vez da integração, que pode ter sido longa (uma rodada
+	// em andamento): outra postagem ou um vínculo à mão pode ter ligado a tarefa neste meio-tempo.
+	if t, err = s.d.Tasks.GetByID(taskID.String()); err != nil {
+		return nil, err
+	}
+	if t.LinkFor(integrationID.String()) != nil {
+		return nil, ErrAlreadyLinked
+	}
 
 	r, err := s.newRun(ctx, integrationID, false)
 	if err != nil {
@@ -89,16 +99,21 @@ func (s *Syncer) Publish(ctx context.Context, taskID, integrationID uuid.UUID) (
 		r.note(ErrPushDiscarded.Code)
 	}
 
-	// Liga a tarefa à issue e deixa o vínculo de sincronização pronto. Se isto falhasse depois de a issue
-	// existir, a próxima rodada completa a importaria como uma tarefa nova: o erro volta para quem chamou.
-	itemID, url := issue.ID, issue.URL
-	t.ExternalIntegrationID, t.ExternalItemID, t.ExternalItemURL = &integrationID, &itemID, &url
-	if err := s.d.Tasks.Update(t); err != nil {
+	// Liga a tarefa à issue: o vínculo nasce pending, e o handle abaixo o adota (grava o acordo e empurra o
+	// que a plataforma deixou de fora). Se gravar o vínculo falhasse depois de a issue existir, a próxima
+	// rodada completa a importaria como uma tarefa nova: tenta algumas vezes e, se não der, o erro volta para
+	// quem chamou, com o endereço da issue no log.
+	row := &Row{IntegrationID: integrationID, TaskID: &t.ID, ItemID: issue.ID, State: statePending, URL: issue.URL, SyncedAt: s.cfg.Now()}
+	if err := s.createLink(ctx, row); err != nil {
+		s.cfg.Logger.Error("issue sync: posted an item but could not link it", "task", t.ID, "integration", integrationID, "item", issue.URL, "error", err)
 		return nil, err
 	}
-	if err := r.load(); err != nil {
+	// Relê a tarefa para ela já ter o vínculo novo (a sincronização trata diferente a tarefa em mais de um item).
+	if t, err = s.d.Tasks.GetByID(taskID.String()); err != nil {
 		return nil, err
 	}
+	r.rows = map[string]*Row{row.ItemID: row}
+	r.tasks = map[uuid.UUID]*task.Task{t.ID: t}
 	if err := r.handle(*issue); err != nil && !errors.Is(err, context.Canceled) {
 		return nil, err
 	}
@@ -108,4 +123,21 @@ func (s *Syncer) Publish(ctx context.Context, taskID, integrationID uuid.UUID) (
 		return nil, err
 	}
 	return &Published{Task: fresh, Problem: r.problem}, nil
+}
+
+// createLink grava o vínculo de um item recém-postado, tentando de novo se o banco falhar: o item já existe na
+// plataforma, e sem o vínculo ele voltaria como tarefa nova.
+func (s *Syncer) createLink(ctx context.Context, row *Row) error {
+	var err error
+	for attempt := 0; attempt < 3; attempt++ {
+		if err = s.d.Rows.Create(row); err == nil {
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			return err
+		case <-time.After(time.Duration(attempt+1) * 200 * time.Millisecond):
+		}
+	}
+	return err
 }

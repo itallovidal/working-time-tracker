@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"working-time-tracker/internal/apperr"
+	"working-time-tracker/internal/domain/task"
 )
 
 // Erros da sincronização. Os dois primeiros voltam da API; os outros são códigos que a rodada deixa
@@ -15,8 +16,8 @@ var (
 	// ErrSyncOff é a integração que não está com a sincronização ligada (ou está desativada).
 	ErrSyncOff = apperr.New("integration.sync_off", http.StatusBadRequest)
 
-	// ErrAlreadyLinked é a tarefa que já está ligada a um item externo: não há o que postar.
-	ErrAlreadyLinked = apperr.New("task.already_linked", http.StatusBadRequest)
+	// ErrAlreadyLinked é a tarefa que já tem um item nesta integração: não há o que postar nela.
+	ErrAlreadyLinked = task.ErrAlreadyLinked
 	// ErrPublishReadOnly: o token da integração não escreve no repositório, e a issue sairia sem as
 	// etiquetas e o responsável (o GitHub os descarta sem avisar), então a tarefa não é postada.
 	ErrPublishReadOnly = apperr.New("issue_sync.publish_read_only", http.StatusBadRequest)

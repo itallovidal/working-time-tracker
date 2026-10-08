@@ -243,7 +243,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | Código | Status | Parâmetros | pt-BR | en |
 |---|---|---|---|---|
 | `task.already_assigned` | 409 | — | `esta tarefa já tem responsável` | `this task already has an assignee` |
-| `task.already_linked` | 400 | — | `a tarefa já está ligada a um item externo` | `the task is already linked to an external item` |
+| `task.already_linked` | 400 | — | `a tarefa já está ligada a um item desta integração` | `the task is already linked to an item of this integration` |
 | `task.assignee_not_in_team` | 400 | — | `o responsável precisa estar neste projeto` | `the assignee must be on this project` |
 | `task.description_too_long` | 400 | `max` | `a descrição aceita até {{.max}} caracteres` | `the description accepts up to {{.max}} characters` |
 | `task.integration_not_found` | 400 | — | `integração não encontrada` | `integration not found` |
@@ -259,6 +259,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `task.invalid_priority_filter` | 400 | — | `prioridade inválida (priority): use urgent, high, medium, low ou none, separadas por vírgula` | `invalid priority (priority): use urgent, high, medium, low or none, separated by commas` |
 | `task.invalid_status` | 400 | — | `status inválido: use backlog, in_progress, awaiting_closure ou closed` | `invalid status: use backlog, in_progress, awaiting_closure or closed` |
 | `task.invalid_status_filter` | 400 | — | `status inválido (status): use backlog, in_progress, awaiting_closure ou closed, separados por vírgula` | `invalid status (status): use backlog, in_progress, awaiting_closure or closed, separated by commas` |
+| `task.item_taken` | 400 | — | `este item já está ligado a outra tarefa` | `this item is already linked to another task` |
 | `task.label_other_project` | 400 | — | `uma das etiquetas não existe neste projeto` | `one of the labels does not exist in this project` |
 | `task.link_fields_required` | 400 | — | `informe a integração, o item e o link` | `enter the integration, the item and the link` |
 | `task.name_required` | 400 | — | `informe o nome` | `enter the name` |

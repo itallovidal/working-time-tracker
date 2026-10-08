@@ -245,18 +245,20 @@ func (h *Handler) LinkExternalItem(c *echo.Context) error {
 	return c.JSON(200, task)
 }
 
+// UnlinkExternalItem solta a tarefa do item da integração do query integration_id; sem ele, do único que tem.
 func (h *Handler) UnlinkExternalItem(c *echo.Context) error {
 	taskID := c.Param("taskId")
-	task, err := h.svc.UnlinkExternalItem(taskID)
+	task, err := h.svc.UnlinkExternalItem(taskID, c.QueryParam("integration_id"))
 	if err != nil {
 		return apperr.Respond(c, 400, err)
 	}
 	return c.JSON(200, task)
 }
 
+// GetExternalDetails lê o item da integração do query integration_id; sem ele, o único que a tarefa tem.
 func (h *Handler) GetExternalDetails(c *echo.Context) error {
 	taskID := c.Param("taskId")
-	result, err := h.svc.GetExternalDetails(taskID)
+	result, err := h.svc.GetExternalDetails(taskID, c.QueryParam("integration_id"))
 	if err != nil {
 		if err == database.ErrNotFound {
 			return apperr.Respond(c, 404, ErrNotFound)

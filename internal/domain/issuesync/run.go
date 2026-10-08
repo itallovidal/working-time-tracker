@@ -77,19 +77,9 @@ func matches(after adapter.Issue, p Push) bool {
 	return true
 }
 
-// linkedTo diz se a tarefa ainda está ligada a este item desta integração. Quem a desvincula, ou a liga a
-// outro, tira a tarefa da sincronização.
-func (r *run) linkedTo(t *task.Task, id string) bool {
-	if t.ExternalIntegrationID == nil || *t.ExternalIntegrationID != r.integ.ID || t.ExternalItemID == nil {
-		return false
-	}
-	key, ok := r.k.key(*t.ExternalItemID)
-	return ok && key == id
-}
-
 func sameRow(a, b *Row) bool {
 	same := func(x, y *uuid.UUID) bool { return samePerson(x, y) }
-	return a.State == b.State && same(a.TaskID, b.TaskID) && norm(a.Title) == norm(b.Title) && norm(a.Body) == norm(b.Body) &&
+	return a.State == b.State && a.URL == b.URL && same(a.TaskID, b.TaskID) && norm(a.Title) == norm(b.Title) && norm(a.Body) == norm(b.Body) &&
 		sameKeys(keyed(a.Labels), keyed(b.Labels)) && sameKeys(keyed(a.Logins), keyed(b.Logins)) &&
 		a.MappedLogin == b.MappedLogin && same(a.MappedPerson, b.MappedPerson) &&
 		normDeadline(a.Deadline).Equal(normDeadline(b.Deadline)) &&
@@ -125,77 +115,70 @@ func (r *run) importIssue(issue adapter.Issue) error {
 		}
 	}
 	imported := task.Imported{
-		ProjectID: r.integ.ProjectID, IntegrationID: r.integ.ID, ItemID: issue.ID, URL: issue.URL,
-		Name: name, Description: lf(issue.Body), Labels: labels, AssigneeID: mapped.Person, CreatedAt: issue.CreatedAt,
+		ProjectID: r.integ.ProjectID, Name: name, Description: lf(issue.Body), Labels: labels,
+		AssigneeID: mapped.Person, CreatedAt: issue.CreatedAt,
 	}
 	if r.caps.Deadline {
 		imported.Deadline = normDeadline(issue.Deadline)
 	}
-	created, err := r.s.d.Tasks.CreateImported(imported)
-	if err != nil {
-		return err
-	}
 	row := &Row{
-		IntegrationID: r.integ.ID, TaskID: &created.ID, ItemID: issue.ID, State: stateOf(issue),
+		IntegrationID: r.integ.ID, ItemID: issue.ID, State: stateOf(issue), URL: issue.URL,
 		Snapshot: snapshotFrom(issue, mapped), SyncedAt: r.s.cfg.Now(),
 	}
-	if err := r.s.d.Rows.Create(row); err != nil {
-		// Sem o vínculo a tarefa seria importada de novo a cada rodada.
-		r.s.d.Tasks.Delete(created.ID.String())
+	// A tarefa e o vínculo nascem juntos: sem o vínculo, a tarefa seria importada de novo a cada rodada.
+	created, err := r.s.d.Rows.CreateWithTask(r.ctx, imported, row)
+	if err != nil {
 		return err
 	}
 	r.rows[issue.ID] = row
 	r.tasks[created.ID] = created
-	r.bound[created.ID] = true
 	r.sum.Created++
 	return nil
 }
 
-// adopt passa a sincronizar uma tarefa que alguém ligou à mão à issue. Não há acordo anterior: o GitHub
-// vence no título e no corpo, as etiquetas dos dois lados se somam, e o responsável da tarefa fica como está.
+// adopt passa a sincronizar uma tarefa que alguém ligou à mão à issue (o vínculo pending). Não há acordo
+// anterior: o GitHub vence no título e no corpo, as etiquetas dos dois lados se somam, e o responsável da
+// tarefa fica como está.
 func (r *run) adopt(row *Row, t *task.Task, issue adapter.Issue) error {
-	if row == nil {
-		row = &Row{IntegrationID: r.integ.ID, ItemID: issue.ID}
-	}
 	b := Snapshot{Logins: issue.Assignees, MappedPerson: t.AssigneeID}
-	if err := r.apply(row, t, issue, b); err != nil {
-		return err
-	}
-	return nil
+	return r.apply(row, t, issue, b)
 }
 
 // reconcile sincroniza uma issue que já tem tarefa.
 func (r *run) reconcile(row *Row, issue adapter.Issue) error {
-	t := r.tasks[*row.TaskID]
-	if t == nil {
-		got, err := r.s.d.Tasks.GetByID(row.TaskID.String())
-		if errors.Is(err, database.ErrNotFound) {
-			return r.release(row)
-		}
-		if err != nil {
-			return err
-		}
-		t = got
-	}
-	if !r.linkedTo(t, row.ItemID) {
-		return r.release(row)
+	t, err := r.taskOf(row)
+	if err != nil || t == nil {
+		return err
 	}
 	return r.apply(row, t, issue, row.snapshot())
 }
 
 // release solta a tarefa do vínculo: a issue vira uma issue descartada.
 func (r *run) release(row *Row) error {
-	if row.TaskID != nil {
-		delete(r.bound, *row.TaskID)
-	}
+	err := r.s.d.Rows.Release(row)
 	row.TaskID = nil
-	return r.s.d.Rows.Save(row)
+	return err
 }
 
 // apply é a sincronização de uma issue com a tarefa: decide pelo Merge, grava na tarefa o que veio do
 // GitHub, manda para o GitHub o que mudou aqui e guarda o novo acordo. Qualquer erro no meio deixa o
 // acordo como estava: tudo o que se grava na tarefa é repetível, e a próxima rodada refaz.
 func (r *run) apply(row *Row, t *task.Task, issue adapter.Issue, b Snapshot) error {
+	// A tarefa ligada a mais de um item é mexida por rodadas de integrações diferentes, ao mesmo tempo, e a
+	// cópia da tarefa que esta rodada carregou pode ter minutos. Em vez de gravar em cima dela (as etiquetas
+	// são trocadas inteiras), pega a vez da tarefa e a relê. A ordem é sempre integração, depois tarefa.
+	if len(t.Links) > 1 {
+		defer r.s.lockTask(t.ID)()
+		fresh, err := r.s.d.Tasks.GetByID(t.ID.String())
+		if errors.Is(err, database.ErrNotFound) {
+			return r.release(row)
+		}
+		if err != nil {
+			return err
+		}
+		t = fresh
+		r.tasks[t.ID] = t
+	}
 	res := resolver{r}
 	local := toLocal(t)
 	plan, err := Merge(r.ctx, b, toRemote(issue), local, res, r.mergeOptions()...)
@@ -246,6 +229,10 @@ func (r *run) apply(row *Row, t *task.Task, issue adapter.Issue, b Snapshot) err
 		if plan.Local.Status != nil && *plan.Local.Status == "closed" {
 			r.sum.Closed++
 		}
+		// A tarefa também está em outra plataforma, que ainda não sabe: avisa o gancho, que a empurra até lá.
+		if len(t.Links) > 1 {
+			r.s.Notify(t.ID)
+		}
 	}
 
 	after, discarded, rejected := issue, false, false
@@ -292,28 +279,28 @@ func (r *run) apply(row *Row, t *task.Task, issue adapter.Issue, b Snapshot) err
 	r.note(next.LastError)
 	r.note(plan.Problem)
 
-	if row.ID != uuid.Nil && sameRow(row, &next) {
+	next.URL = row.URL
+	if after.URL != "" {
+		next.URL = after.URL
+	}
+	if sameRow(row, &next) {
 		return nil
 	}
 	next.SyncedAt = r.s.cfg.Now()
-	if row.ID == uuid.Nil {
-		if err := r.s.d.Rows.Create(&next); err != nil {
-			return err
+	if err := r.s.d.Rows.Save(&next); err != nil {
+		if errors.Is(err, errLinkDropped) {
+			return nil // alguém desligou a tarefa do item no meio da rodada: o acordo novo não vale
 		}
-	} else if err := r.s.d.Rows.Save(&next); err != nil {
 		return err
 	}
 	*row = next
 	r.rows[row.ItemID] = row
-	r.bound[t.ID] = true
 	return nil
 }
 
-// gone anota que a issue sumiu. O vínculo novo (de uma tarefa que se ia adotar) nem chega a ser criado.
+// gone anota que a issue sumiu.
 func (r *run) gone(row *Row) error {
-	if row.ID != uuid.Nil {
-		r.markGone(row)
-	}
+	r.markGone(row)
 	return nil
 }
 

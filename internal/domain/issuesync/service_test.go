@@ -205,9 +205,9 @@ func TestSync_ImportsOpenIssues(t *testing.T) {
 	if tk.AssigneeID == nil || *tk.AssigneeID != e.ana.ID {
 		t.Errorf("assignee = %v, want Ana (her email is public on GitHub)", tk.AssigneeID)
 	}
-	if tk.ExternalIntegrationID == nil || *tk.ExternalIntegrationID != e.it.ID || tk.ExternalItemID == nil || *tk.ExternalItemID != "1" ||
-		tk.ExternalItemURL == nil || *tk.ExternalItemURL != "https://github.com/owner/repo/issues/1" {
-		t.Errorf("link = %v / %v / %v", tk.ExternalIntegrationID, tk.ExternalItemID, tk.ExternalItemURL)
+	if len(tk.Links) != 1 || tk.Links[0].IntegrationID != e.it.ID || tk.Links[0].ItemID != "1" ||
+		tk.Links[0].URL != "https://github.com/owner/repo/issues/1" {
+		t.Errorf("links = %+v, want the issue 1 on the integration", tk.Links)
 	}
 	if tk.Deadline.After(time.Date(1971, 1, 1, 0, 0, 0, 0, time.UTC)) {
 		t.Errorf("an imported task has no deadline, got %v", tk.Deadline)
@@ -416,7 +416,7 @@ func TestSync_GitHubWinsConflicts(t *testing.T) {
 }
 
 // Uma tarefa que alguém ligou à issue à mão passa a ser sincronizada, em vez de a issue virar uma tarefa
-// nova; havendo duas, a mais antiga.
+// nova; a issue serve a uma tarefa só, e a segunda que pede a mesma é recusada.
 func TestSync_AdoptsManuallyLinkedTask(t *testing.T) {
 	e := newEnv(t, issuesync.Config{})
 	n := e.add(testutil.GitHubIssue{Title: "Do GitHub", Body: "corpo", Labels: []string{"bug"}})
@@ -429,7 +429,9 @@ func TestSync_AdoptsManuallyLinkedTask(t *testing.T) {
 	_, err = e.taskSvc.LinkExternalItem(mine.ID.String(), e.it.ID.String(), "1", "https://github.com/owner/repo/issues/1")
 	must(t, err)
 	dup, _ := e.taskSvc.CreateAs("", e.project, "Duplicada", "", "", nil, task.Attrs{})
-	e.taskSvc.LinkExternalItem(dup.ID.String(), e.it.ID.String(), "1", "https://github.com/owner/repo/issues/1")
+	if _, err := e.taskSvc.LinkExternalItem(dup.ID.String(), e.it.ID.String(), "1", "https://github.com/owner/repo/issues/1"); !errors.Is(err, task.ErrItemTaken) {
+		t.Fatalf("linking a second task to the same issue = %v, want task.item_taken", err)
+	}
 
 	sum := e.sync(issuesync.Full)
 	if sum.Created != 0 || sum.Errors != 0 {
@@ -440,7 +442,7 @@ func TestSync_AdoptsManuallyLinkedTask(t *testing.T) {
 	}
 	row := e.row(n)
 	if row == nil || row.TaskID == nil || *row.TaskID != mine.ID {
-		t.Fatalf("row = %+v, want it bound to the oldest linked task", row)
+		t.Fatalf("row = %+v, want it bound to the task linked by hand", row)
 	}
 	got := e.taskFor(n)
 	if got.Name != "Do GitHub" || got.Description != "corpo" {
@@ -457,7 +459,7 @@ func TestSync_AdoptsManuallyLinkedTask(t *testing.T) {
 		t.Errorf("issue labels = %v; the label of the task goes to the issue", issue.Labels)
 	}
 	if other, _ := e.tasks.GetByID(dup.ID.String()); other.Name != "Duplicada" {
-		t.Errorf("the second linked task was touched: %+v", other)
+		t.Errorf("the task the link was refused to was touched: %+v", other)
 	}
 }
 
@@ -500,7 +502,7 @@ func TestSync_UnlinkedTaskLeavesTheSync(t *testing.T) {
 	n := e.add(testutil.GitHubIssue{Title: "Ligada"})
 	e.sync(issuesync.Full)
 	tk := e.taskFor(n)
-	_, err := e.taskSvc.UnlinkExternalItem(tk.ID.String())
+	_, err := e.taskSvc.UnlinkExternalItem(tk.ID.String(), "")
 	must(t, err)
 
 	e.fake.EditIssue(repo, n, func(i *testutil.GitHubIssue) { i.Title = "Mudou lá" })

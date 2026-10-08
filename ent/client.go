@@ -777,22 +777,6 @@ func (c *IntegrationClient) QueryProject(_m *Integration) *ProjectQuery {
 	return query
 }
 
-// QueryTasks queries the tasks edge of a Integration.
-func (c *IntegrationClient) QueryTasks(_m *Integration) *TaskQuery {
-	query := (&TaskClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(integration.Table, integration.FieldID, id),
-			sqlgraph.To(task.Table, task.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, integration.TasksTable, integration.TasksColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
 // QueryIssueSyncs queries the issue_syncs edge of a Integration.
 func (c *IntegrationClient) QueryIssueSyncs(_m *Integration) *IssueSyncQuery {
 	query := (&IssueSyncClient{config: c.config}).Query()
@@ -1131,7 +1115,7 @@ func (c *IssueSyncClient) QueryTask(_m *IssueSync) *TaskQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(issuesync.Table, issuesync.FieldID, id),
 			sqlgraph.To(task.Table, task.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, issuesync.TaskTable, issuesync.TaskColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, issuesync.TaskTable, issuesync.TaskColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -2321,22 +2305,6 @@ func (c *TaskClient) QueryAssignee(_m *Task) *PersonQuery {
 	return query
 }
 
-// QueryExternalIntegration queries the external_integration edge of a Task.
-func (c *TaskClient) QueryExternalIntegration(_m *Task) *IntegrationQuery {
-	query := (&IntegrationClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(task.Table, task.FieldID, id),
-			sqlgraph.To(integration.Table, integration.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, task.ExternalIntegrationTable, task.ExternalIntegrationColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
 // QuerySessionLinks queries the session_links edge of a Task.
 func (c *TaskClient) QuerySessionLinks(_m *Task) *WorkSessionTaskQuery {
 	query := (&WorkSessionTaskClient{config: c.config}).Query()
@@ -2369,15 +2337,15 @@ func (c *TaskClient) QueryLabels(_m *Task) *LabelQuery {
 	return query
 }
 
-// QueryIssueSync queries the issue_sync edge of a Task.
-func (c *TaskClient) QueryIssueSync(_m *Task) *IssueSyncQuery {
+// QueryIssueSyncs queries the issue_syncs edge of a Task.
+func (c *TaskClient) QueryIssueSyncs(_m *Task) *IssueSyncQuery {
 	query := (&IssueSyncClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := _m.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(task.Table, task.FieldID, id),
 			sqlgraph.To(issuesync.Table, issuesync.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, task.IssueSyncTable, task.IssueSyncColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, task.IssueSyncsTable, task.IssueSyncsColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil

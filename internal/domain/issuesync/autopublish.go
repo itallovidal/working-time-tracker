@@ -53,7 +53,7 @@ func (s *Syncer) autoPublish(ctx context.Context, taskID uuid.UUID) int {
 		return 0
 	}
 	// Já ligada a um item (a etapa Integrações do modal a postou, ou alguém a ligou): não há o que postar.
-	if t.ExternalIntegrationID != nil || t.ExternalItemID != nil {
+	if len(t.Links) > 0 {
 		s.queue.release(taskID)
 		return 0
 	}

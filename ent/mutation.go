@@ -1726,9 +1726,6 @@ type IntegrationMutation struct {
 	clearedFields      map[string]struct{}
 	project            *uuid.UUID
 	clearedproject     bool
-	tasks              map[uuid.UUID]struct{}
-	removedtasks       map[uuid.UUID]struct{}
-	clearedtasks       bool
 	issue_syncs        map[uuid.UUID]struct{}
 	removedissue_syncs map[uuid.UUID]struct{}
 	clearedissue_syncs bool
@@ -2316,60 +2313,6 @@ func (m *IntegrationMutation) ResetProject() {
 	m.clearedproject = false
 }
 
-// AddTaskIDs adds the "tasks" edge to the Task entity by ids.
-func (m *IntegrationMutation) AddTaskIDs(ids ...uuid.UUID) {
-	if m.tasks == nil {
-		m.tasks = make(map[uuid.UUID]struct{})
-	}
-	for i := range ids {
-		m.tasks[ids[i]] = struct{}{}
-	}
-}
-
-// ClearTasks clears the "tasks" edge to the Task entity.
-func (m *IntegrationMutation) ClearTasks() {
-	m.clearedtasks = true
-}
-
-// TasksCleared reports if the "tasks" edge to the Task entity was cleared.
-func (m *IntegrationMutation) TasksCleared() bool {
-	return m.clearedtasks
-}
-
-// RemoveTaskIDs removes the "tasks" edge to the Task entity by IDs.
-func (m *IntegrationMutation) RemoveTaskIDs(ids ...uuid.UUID) {
-	if m.removedtasks == nil {
-		m.removedtasks = make(map[uuid.UUID]struct{})
-	}
-	for i := range ids {
-		delete(m.tasks, ids[i])
-		m.removedtasks[ids[i]] = struct{}{}
-	}
-}
-
-// RemovedTasks returns the removed IDs of the "tasks" edge to the Task entity.
-func (m *IntegrationMutation) RemovedTasksIDs() (ids []uuid.UUID) {
-	for id := range m.removedtasks {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// TasksIDs returns the "tasks" edge IDs in the mutation.
-func (m *IntegrationMutation) TasksIDs() (ids []uuid.UUID) {
-	for id := range m.tasks {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// ResetTasks resets all changes to the "tasks" edge.
-func (m *IntegrationMutation) ResetTasks() {
-	m.tasks = nil
-	m.clearedtasks = false
-	m.removedtasks = nil
-}
-
 // AddIssueSyncIDs adds the "issue_syncs" edge to the IssueSync entity by ids.
 func (m *IntegrationMutation) AddIssueSyncIDs(ids ...uuid.UUID) {
 	if m.issue_syncs == nil {
@@ -2754,12 +2697,9 @@ func (m *IntegrationMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *IntegrationMutation) AddedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 2)
 	if m.project != nil {
 		edges = append(edges, integration.EdgeProject)
-	}
-	if m.tasks != nil {
-		edges = append(edges, integration.EdgeTasks)
 	}
 	if m.issue_syncs != nil {
 		edges = append(edges, integration.EdgeIssueSyncs)
@@ -2775,12 +2715,6 @@ func (m *IntegrationMutation) AddedIDs(name string) []ent.Value {
 		if id := m.project; id != nil {
 			return []ent.Value{*id}
 		}
-	case integration.EdgeTasks:
-		ids := make([]ent.Value, 0, len(m.tasks))
-		for id := range m.tasks {
-			ids = append(ids, id)
-		}
-		return ids
 	case integration.EdgeIssueSyncs:
 		ids := make([]ent.Value, 0, len(m.issue_syncs))
 		for id := range m.issue_syncs {
@@ -2793,10 +2727,7 @@ func (m *IntegrationMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *IntegrationMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 3)
-	if m.removedtasks != nil {
-		edges = append(edges, integration.EdgeTasks)
-	}
+	edges := make([]string, 0, 2)
 	if m.removedissue_syncs != nil {
 		edges = append(edges, integration.EdgeIssueSyncs)
 	}
@@ -2807,12 +2738,6 @@ func (m *IntegrationMutation) RemovedEdges() []string {
 // the given name in this mutation.
 func (m *IntegrationMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
-	case integration.EdgeTasks:
-		ids := make([]ent.Value, 0, len(m.removedtasks))
-		for id := range m.removedtasks {
-			ids = append(ids, id)
-		}
-		return ids
 	case integration.EdgeIssueSyncs:
 		ids := make([]ent.Value, 0, len(m.removedissue_syncs))
 		for id := range m.removedissue_syncs {
@@ -2825,12 +2750,9 @@ func (m *IntegrationMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *IntegrationMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 2)
 	if m.clearedproject {
 		edges = append(edges, integration.EdgeProject)
-	}
-	if m.clearedtasks {
-		edges = append(edges, integration.EdgeTasks)
 	}
 	if m.clearedissue_syncs {
 		edges = append(edges, integration.EdgeIssueSyncs)
@@ -2844,8 +2766,6 @@ func (m *IntegrationMutation) EdgeCleared(name string) bool {
 	switch name {
 	case integration.EdgeProject:
 		return m.clearedproject
-	case integration.EdgeTasks:
-		return m.clearedtasks
 	case integration.EdgeIssueSyncs:
 		return m.clearedissue_syncs
 	}
@@ -2869,9 +2789,6 @@ func (m *IntegrationMutation) ResetEdge(name string) error {
 	switch name {
 	case integration.EdgeProject:
 		m.ResetProject()
-		return nil
-	case integration.EdgeTasks:
-		m.ResetTasks()
 		return nil
 	case integration.EdgeIssueSyncs:
 		m.ResetIssueSyncs()
@@ -3757,6 +3674,7 @@ type IssueSyncMutation struct {
 	typ                   string
 	id                    *uuid.UUID
 	item_id               *string
+	url                   *string
 	state                 *issuesync.State
 	title                 *string
 	body                  *string
@@ -4004,6 +3922,42 @@ func (m *IssueSyncMutation) OldItemID(ctx context.Context) (v string, err error)
 // ResetItemID resets all changes to the "item_id" field.
 func (m *IssueSyncMutation) ResetItemID() {
 	m.item_id = nil
+}
+
+// SetURL sets the "url" field.
+func (m *IssueSyncMutation) SetURL(s string) {
+	m.url = &s
+}
+
+// URL returns the value of the "url" field in the mutation.
+func (m *IssueSyncMutation) URL() (r string, exists bool) {
+	v := m.url
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldURL returns the old "url" field's value of the IssueSync entity.
+// If the IssueSync object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IssueSyncMutation) OldURL(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldURL is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldURL requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldURL: %w", err)
+	}
+	return oldValue.URL, nil
+}
+
+// ResetURL resets all changes to the "url" field.
+func (m *IssueSyncMutation) ResetURL() {
+	m.url = nil
 }
 
 // SetState sets the "state" field.
@@ -4610,7 +4564,7 @@ func (m *IssueSyncMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *IssueSyncMutation) Fields() []string {
-	fields := make([]string, 0, 15)
+	fields := make([]string, 0, 16)
 	if m.integration != nil {
 		fields = append(fields, issuesync.FieldIntegrationID)
 	}
@@ -4619,6 +4573,9 @@ func (m *IssueSyncMutation) Fields() []string {
 	}
 	if m.item_id != nil {
 		fields = append(fields, issuesync.FieldItemID)
+	}
+	if m.url != nil {
+		fields = append(fields, issuesync.FieldURL)
 	}
 	if m.state != nil {
 		fields = append(fields, issuesync.FieldState)
@@ -4670,6 +4627,8 @@ func (m *IssueSyncMutation) Field(name string) (ent.Value, bool) {
 		return m.TaskID()
 	case issuesync.FieldItemID:
 		return m.ItemID()
+	case issuesync.FieldURL:
+		return m.URL()
 	case issuesync.FieldState:
 		return m.State()
 	case issuesync.FieldTitle:
@@ -4709,6 +4668,8 @@ func (m *IssueSyncMutation) OldField(ctx context.Context, name string) (ent.Valu
 		return m.OldTaskID(ctx)
 	case issuesync.FieldItemID:
 		return m.OldItemID(ctx)
+	case issuesync.FieldURL:
+		return m.OldURL(ctx)
 	case issuesync.FieldState:
 		return m.OldState(ctx)
 	case issuesync.FieldTitle:
@@ -4762,6 +4723,13 @@ func (m *IssueSyncMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetItemID(v)
+		return nil
+	case issuesync.FieldURL:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetURL(v)
 		return nil
 	case issuesync.FieldState:
 		v, ok := value.(issuesync.State)
@@ -4937,6 +4905,9 @@ func (m *IssueSyncMutation) ResetField(name string) error {
 		return nil
 	case issuesync.FieldItemID:
 		m.ResetItemID()
+		return nil
+	case issuesync.FieldURL:
+		m.ResetURL()
 		return nil
 	case issuesync.FieldState:
 		m.ResetState()
@@ -11792,35 +11763,32 @@ func (m *SessionMutation) ResetEdge(name string) error {
 // TaskMutation represents an operation that mutates the Task nodes in the graph.
 type TaskMutation struct {
 	config
-	op                          Op
-	typ                         string
-	id                          *uuid.UUID
-	name                        *string
-	description                 *string
-	priority                    *task.Priority
-	status                      *task.Status
-	deadline                    *time.Time
-	external_item_id            *string
-	external_item_url           *string
-	created_at                  *time.Time
-	clearedFields               map[string]struct{}
-	project                     *uuid.UUID
-	clearedproject              bool
-	assignee                    *uuid.UUID
-	clearedassignee             bool
-	external_integration        *uuid.UUID
-	clearedexternal_integration bool
-	session_links               map[uuid.UUID]struct{}
-	removedsession_links        map[uuid.UUID]struct{}
-	clearedsession_links        bool
-	labels                      map[uuid.UUID]struct{}
-	removedlabels               map[uuid.UUID]struct{}
-	clearedlabels               bool
-	issue_sync                  *uuid.UUID
-	clearedissue_sync           bool
-	done                        bool
-	oldValue                    func(context.Context) (*Task, error)
-	predicates                  []predicate.Task
+	op                   Op
+	typ                  string
+	id                   *uuid.UUID
+	name                 *string
+	description          *string
+	priority             *task.Priority
+	status               *task.Status
+	deadline             *time.Time
+	created_at           *time.Time
+	clearedFields        map[string]struct{}
+	project              *uuid.UUID
+	clearedproject       bool
+	assignee             *uuid.UUID
+	clearedassignee      bool
+	session_links        map[uuid.UUID]struct{}
+	removedsession_links map[uuid.UUID]struct{}
+	clearedsession_links bool
+	labels               map[uuid.UUID]struct{}
+	removedlabels        map[uuid.UUID]struct{}
+	clearedlabels        bool
+	issue_syncs          map[uuid.UUID]struct{}
+	removedissue_syncs   map[uuid.UUID]struct{}
+	clearedissue_syncs   bool
+	done                 bool
+	oldValue             func(context.Context) (*Task, error)
+	predicates           []predicate.Task
 }
 
 var _ ent.Mutation = (*TaskMutation)(nil)
@@ -12218,153 +12186,6 @@ func (m *TaskMutation) ResetDeadline() {
 	delete(m.clearedFields, task.FieldDeadline)
 }
 
-// SetExternalIntegrationID sets the "external_integration_id" field.
-func (m *TaskMutation) SetExternalIntegrationID(u uuid.UUID) {
-	m.external_integration = &u
-}
-
-// ExternalIntegrationID returns the value of the "external_integration_id" field in the mutation.
-func (m *TaskMutation) ExternalIntegrationID() (r uuid.UUID, exists bool) {
-	v := m.external_integration
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldExternalIntegrationID returns the old "external_integration_id" field's value of the Task entity.
-// If the Task object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *TaskMutation) OldExternalIntegrationID(ctx context.Context) (v *uuid.UUID, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldExternalIntegrationID is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldExternalIntegrationID requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldExternalIntegrationID: %w", err)
-	}
-	return oldValue.ExternalIntegrationID, nil
-}
-
-// ClearExternalIntegrationID clears the value of the "external_integration_id" field.
-func (m *TaskMutation) ClearExternalIntegrationID() {
-	m.external_integration = nil
-	m.clearedFields[task.FieldExternalIntegrationID] = struct{}{}
-}
-
-// ExternalIntegrationIDCleared returns if the "external_integration_id" field was cleared in this mutation.
-func (m *TaskMutation) ExternalIntegrationIDCleared() bool {
-	_, ok := m.clearedFields[task.FieldExternalIntegrationID]
-	return ok
-}
-
-// ResetExternalIntegrationID resets all changes to the "external_integration_id" field.
-func (m *TaskMutation) ResetExternalIntegrationID() {
-	m.external_integration = nil
-	delete(m.clearedFields, task.FieldExternalIntegrationID)
-}
-
-// SetExternalItemID sets the "external_item_id" field.
-func (m *TaskMutation) SetExternalItemID(s string) {
-	m.external_item_id = &s
-}
-
-// ExternalItemID returns the value of the "external_item_id" field in the mutation.
-func (m *TaskMutation) ExternalItemID() (r string, exists bool) {
-	v := m.external_item_id
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldExternalItemID returns the old "external_item_id" field's value of the Task entity.
-// If the Task object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *TaskMutation) OldExternalItemID(ctx context.Context) (v *string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldExternalItemID is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldExternalItemID requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldExternalItemID: %w", err)
-	}
-	return oldValue.ExternalItemID, nil
-}
-
-// ClearExternalItemID clears the value of the "external_item_id" field.
-func (m *TaskMutation) ClearExternalItemID() {
-	m.external_item_id = nil
-	m.clearedFields[task.FieldExternalItemID] = struct{}{}
-}
-
-// ExternalItemIDCleared returns if the "external_item_id" field was cleared in this mutation.
-func (m *TaskMutation) ExternalItemIDCleared() bool {
-	_, ok := m.clearedFields[task.FieldExternalItemID]
-	return ok
-}
-
-// ResetExternalItemID resets all changes to the "external_item_id" field.
-func (m *TaskMutation) ResetExternalItemID() {
-	m.external_item_id = nil
-	delete(m.clearedFields, task.FieldExternalItemID)
-}
-
-// SetExternalItemURL sets the "external_item_url" field.
-func (m *TaskMutation) SetExternalItemURL(s string) {
-	m.external_item_url = &s
-}
-
-// ExternalItemURL returns the value of the "external_item_url" field in the mutation.
-func (m *TaskMutation) ExternalItemURL() (r string, exists bool) {
-	v := m.external_item_url
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldExternalItemURL returns the old "external_item_url" field's value of the Task entity.
-// If the Task object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *TaskMutation) OldExternalItemURL(ctx context.Context) (v *string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldExternalItemURL is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldExternalItemURL requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldExternalItemURL: %w", err)
-	}
-	return oldValue.ExternalItemURL, nil
-}
-
-// ClearExternalItemURL clears the value of the "external_item_url" field.
-func (m *TaskMutation) ClearExternalItemURL() {
-	m.external_item_url = nil
-	m.clearedFields[task.FieldExternalItemURL] = struct{}{}
-}
-
-// ExternalItemURLCleared returns if the "external_item_url" field was cleared in this mutation.
-func (m *TaskMutation) ExternalItemURLCleared() bool {
-	_, ok := m.clearedFields[task.FieldExternalItemURL]
-	return ok
-}
-
-// ResetExternalItemURL resets all changes to the "external_item_url" field.
-func (m *TaskMutation) ResetExternalItemURL() {
-	m.external_item_url = nil
-	delete(m.clearedFields, task.FieldExternalItemURL)
-}
-
 // SetCreatedAt sets the "created_at" field.
 func (m *TaskMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
@@ -12453,33 +12274,6 @@ func (m *TaskMutation) AssigneeIDs() (ids []uuid.UUID) {
 func (m *TaskMutation) ResetAssignee() {
 	m.assignee = nil
 	m.clearedassignee = false
-}
-
-// ClearExternalIntegration clears the "external_integration" edge to the Integration entity.
-func (m *TaskMutation) ClearExternalIntegration() {
-	m.clearedexternal_integration = true
-	m.clearedFields[task.FieldExternalIntegrationID] = struct{}{}
-}
-
-// ExternalIntegrationCleared reports if the "external_integration" edge to the Integration entity was cleared.
-func (m *TaskMutation) ExternalIntegrationCleared() bool {
-	return m.ExternalIntegrationIDCleared() || m.clearedexternal_integration
-}
-
-// ExternalIntegrationIDs returns the "external_integration" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// ExternalIntegrationID instead. It exists only for internal usage by the builders.
-func (m *TaskMutation) ExternalIntegrationIDs() (ids []uuid.UUID) {
-	if id := m.external_integration; id != nil {
-		ids = append(ids, *id)
-	}
-	return
-}
-
-// ResetExternalIntegration resets all changes to the "external_integration" edge.
-func (m *TaskMutation) ResetExternalIntegration() {
-	m.external_integration = nil
-	m.clearedexternal_integration = false
 }
 
 // AddSessionLinkIDs adds the "session_links" edge to the WorkSessionTask entity by ids.
@@ -12590,43 +12384,58 @@ func (m *TaskMutation) ResetLabels() {
 	m.removedlabels = nil
 }
 
-// SetIssueSyncID sets the "issue_sync" edge to the IssueSync entity by id.
-func (m *TaskMutation) SetIssueSyncID(id uuid.UUID) {
-	m.issue_sync = &id
+// AddIssueSyncIDs adds the "issue_syncs" edge to the IssueSync entity by ids.
+func (m *TaskMutation) AddIssueSyncIDs(ids ...uuid.UUID) {
+	if m.issue_syncs == nil {
+		m.issue_syncs = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.issue_syncs[ids[i]] = struct{}{}
+	}
 }
 
-// ClearIssueSync clears the "issue_sync" edge to the IssueSync entity.
-func (m *TaskMutation) ClearIssueSync() {
-	m.clearedissue_sync = true
+// ClearIssueSyncs clears the "issue_syncs" edge to the IssueSync entity.
+func (m *TaskMutation) ClearIssueSyncs() {
+	m.clearedissue_syncs = true
 }
 
-// IssueSyncCleared reports if the "issue_sync" edge to the IssueSync entity was cleared.
-func (m *TaskMutation) IssueSyncCleared() bool {
-	return m.clearedissue_sync
+// IssueSyncsCleared reports if the "issue_syncs" edge to the IssueSync entity was cleared.
+func (m *TaskMutation) IssueSyncsCleared() bool {
+	return m.clearedissue_syncs
 }
 
-// IssueSyncID returns the "issue_sync" edge ID in the mutation.
-func (m *TaskMutation) IssueSyncID() (id uuid.UUID, exists bool) {
-	if m.issue_sync != nil {
-		return *m.issue_sync, true
+// RemoveIssueSyncIDs removes the "issue_syncs" edge to the IssueSync entity by IDs.
+func (m *TaskMutation) RemoveIssueSyncIDs(ids ...uuid.UUID) {
+	if m.removedissue_syncs == nil {
+		m.removedissue_syncs = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.issue_syncs, ids[i])
+		m.removedissue_syncs[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedIssueSyncs returns the removed IDs of the "issue_syncs" edge to the IssueSync entity.
+func (m *TaskMutation) RemovedIssueSyncsIDs() (ids []uuid.UUID) {
+	for id := range m.removedissue_syncs {
+		ids = append(ids, id)
 	}
 	return
 }
 
-// IssueSyncIDs returns the "issue_sync" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// IssueSyncID instead. It exists only for internal usage by the builders.
-func (m *TaskMutation) IssueSyncIDs() (ids []uuid.UUID) {
-	if id := m.issue_sync; id != nil {
-		ids = append(ids, *id)
+// IssueSyncsIDs returns the "issue_syncs" edge IDs in the mutation.
+func (m *TaskMutation) IssueSyncsIDs() (ids []uuid.UUID) {
+	for id := range m.issue_syncs {
+		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetIssueSync resets all changes to the "issue_sync" edge.
-func (m *TaskMutation) ResetIssueSync() {
-	m.issue_sync = nil
-	m.clearedissue_sync = false
+// ResetIssueSyncs resets all changes to the "issue_syncs" edge.
+func (m *TaskMutation) ResetIssueSyncs() {
+	m.issue_syncs = nil
+	m.clearedissue_syncs = false
+	m.removedissue_syncs = nil
 }
 
 // Where appends a list predicates to the TaskMutation builder.
@@ -12663,7 +12472,7 @@ func (m *TaskMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *TaskMutation) Fields() []string {
-	fields := make([]string, 0, 11)
+	fields := make([]string, 0, 8)
 	if m.project != nil {
 		fields = append(fields, task.FieldProjectID)
 	}
@@ -12684,15 +12493,6 @@ func (m *TaskMutation) Fields() []string {
 	}
 	if m.deadline != nil {
 		fields = append(fields, task.FieldDeadline)
-	}
-	if m.external_integration != nil {
-		fields = append(fields, task.FieldExternalIntegrationID)
-	}
-	if m.external_item_id != nil {
-		fields = append(fields, task.FieldExternalItemID)
-	}
-	if m.external_item_url != nil {
-		fields = append(fields, task.FieldExternalItemURL)
 	}
 	if m.created_at != nil {
 		fields = append(fields, task.FieldCreatedAt)
@@ -12719,12 +12519,6 @@ func (m *TaskMutation) Field(name string) (ent.Value, bool) {
 		return m.AssigneeID()
 	case task.FieldDeadline:
 		return m.Deadline()
-	case task.FieldExternalIntegrationID:
-		return m.ExternalIntegrationID()
-	case task.FieldExternalItemID:
-		return m.ExternalItemID()
-	case task.FieldExternalItemURL:
-		return m.ExternalItemURL()
 	case task.FieldCreatedAt:
 		return m.CreatedAt()
 	}
@@ -12750,12 +12544,6 @@ func (m *TaskMutation) OldField(ctx context.Context, name string) (ent.Value, er
 		return m.OldAssigneeID(ctx)
 	case task.FieldDeadline:
 		return m.OldDeadline(ctx)
-	case task.FieldExternalIntegrationID:
-		return m.OldExternalIntegrationID(ctx)
-	case task.FieldExternalItemID:
-		return m.OldExternalItemID(ctx)
-	case task.FieldExternalItemURL:
-		return m.OldExternalItemURL(ctx)
 	case task.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	}
@@ -12816,27 +12604,6 @@ func (m *TaskMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetDeadline(v)
 		return nil
-	case task.FieldExternalIntegrationID:
-		v, ok := value.(uuid.UUID)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetExternalIntegrationID(v)
-		return nil
-	case task.FieldExternalItemID:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetExternalItemID(v)
-		return nil
-	case task.FieldExternalItemURL:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetExternalItemURL(v)
-		return nil
 	case task.FieldCreatedAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -12883,15 +12650,6 @@ func (m *TaskMutation) ClearedFields() []string {
 	if m.FieldCleared(task.FieldDeadline) {
 		fields = append(fields, task.FieldDeadline)
 	}
-	if m.FieldCleared(task.FieldExternalIntegrationID) {
-		fields = append(fields, task.FieldExternalIntegrationID)
-	}
-	if m.FieldCleared(task.FieldExternalItemID) {
-		fields = append(fields, task.FieldExternalItemID)
-	}
-	if m.FieldCleared(task.FieldExternalItemURL) {
-		fields = append(fields, task.FieldExternalItemURL)
-	}
 	return fields
 }
 
@@ -12914,15 +12672,6 @@ func (m *TaskMutation) ClearField(name string) error {
 		return nil
 	case task.FieldDeadline:
 		m.ClearDeadline()
-		return nil
-	case task.FieldExternalIntegrationID:
-		m.ClearExternalIntegrationID()
-		return nil
-	case task.FieldExternalItemID:
-		m.ClearExternalItemID()
-		return nil
-	case task.FieldExternalItemURL:
-		m.ClearExternalItemURL()
 		return nil
 	}
 	return fmt.Errorf("unknown Task nullable field %s", name)
@@ -12953,15 +12702,6 @@ func (m *TaskMutation) ResetField(name string) error {
 	case task.FieldDeadline:
 		m.ResetDeadline()
 		return nil
-	case task.FieldExternalIntegrationID:
-		m.ResetExternalIntegrationID()
-		return nil
-	case task.FieldExternalItemID:
-		m.ResetExternalItemID()
-		return nil
-	case task.FieldExternalItemURL:
-		m.ResetExternalItemURL()
-		return nil
 	case task.FieldCreatedAt:
 		m.ResetCreatedAt()
 		return nil
@@ -12971,15 +12711,12 @@ func (m *TaskMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *TaskMutation) AddedEdges() []string {
-	edges := make([]string, 0, 6)
+	edges := make([]string, 0, 5)
 	if m.project != nil {
 		edges = append(edges, task.EdgeProject)
 	}
 	if m.assignee != nil {
 		edges = append(edges, task.EdgeAssignee)
-	}
-	if m.external_integration != nil {
-		edges = append(edges, task.EdgeExternalIntegration)
 	}
 	if m.session_links != nil {
 		edges = append(edges, task.EdgeSessionLinks)
@@ -12987,8 +12724,8 @@ func (m *TaskMutation) AddedEdges() []string {
 	if m.labels != nil {
 		edges = append(edges, task.EdgeLabels)
 	}
-	if m.issue_sync != nil {
-		edges = append(edges, task.EdgeIssueSync)
+	if m.issue_syncs != nil {
+		edges = append(edges, task.EdgeIssueSyncs)
 	}
 	return edges
 }
@@ -13005,10 +12742,6 @@ func (m *TaskMutation) AddedIDs(name string) []ent.Value {
 		if id := m.assignee; id != nil {
 			return []ent.Value{*id}
 		}
-	case task.EdgeExternalIntegration:
-		if id := m.external_integration; id != nil {
-			return []ent.Value{*id}
-		}
 	case task.EdgeSessionLinks:
 		ids := make([]ent.Value, 0, len(m.session_links))
 		for id := range m.session_links {
@@ -13021,22 +12754,27 @@ func (m *TaskMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
-	case task.EdgeIssueSync:
-		if id := m.issue_sync; id != nil {
-			return []ent.Value{*id}
+	case task.EdgeIssueSyncs:
+		ids := make([]ent.Value, 0, len(m.issue_syncs))
+		for id := range m.issue_syncs {
+			ids = append(ids, id)
 		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *TaskMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 6)
+	edges := make([]string, 0, 5)
 	if m.removedsession_links != nil {
 		edges = append(edges, task.EdgeSessionLinks)
 	}
 	if m.removedlabels != nil {
 		edges = append(edges, task.EdgeLabels)
+	}
+	if m.removedissue_syncs != nil {
+		edges = append(edges, task.EdgeIssueSyncs)
 	}
 	return edges
 }
@@ -13057,21 +12795,24 @@ func (m *TaskMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case task.EdgeIssueSyncs:
+		ids := make([]ent.Value, 0, len(m.removedissue_syncs))
+		for id := range m.removedissue_syncs {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *TaskMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 6)
+	edges := make([]string, 0, 5)
 	if m.clearedproject {
 		edges = append(edges, task.EdgeProject)
 	}
 	if m.clearedassignee {
 		edges = append(edges, task.EdgeAssignee)
-	}
-	if m.clearedexternal_integration {
-		edges = append(edges, task.EdgeExternalIntegration)
 	}
 	if m.clearedsession_links {
 		edges = append(edges, task.EdgeSessionLinks)
@@ -13079,8 +12820,8 @@ func (m *TaskMutation) ClearedEdges() []string {
 	if m.clearedlabels {
 		edges = append(edges, task.EdgeLabels)
 	}
-	if m.clearedissue_sync {
-		edges = append(edges, task.EdgeIssueSync)
+	if m.clearedissue_syncs {
+		edges = append(edges, task.EdgeIssueSyncs)
 	}
 	return edges
 }
@@ -13093,14 +12834,12 @@ func (m *TaskMutation) EdgeCleared(name string) bool {
 		return m.clearedproject
 	case task.EdgeAssignee:
 		return m.clearedassignee
-	case task.EdgeExternalIntegration:
-		return m.clearedexternal_integration
 	case task.EdgeSessionLinks:
 		return m.clearedsession_links
 	case task.EdgeLabels:
 		return m.clearedlabels
-	case task.EdgeIssueSync:
-		return m.clearedissue_sync
+	case task.EdgeIssueSyncs:
+		return m.clearedissue_syncs
 	}
 	return false
 }
@@ -13114,12 +12853,6 @@ func (m *TaskMutation) ClearEdge(name string) error {
 		return nil
 	case task.EdgeAssignee:
 		m.ClearAssignee()
-		return nil
-	case task.EdgeExternalIntegration:
-		m.ClearExternalIntegration()
-		return nil
-	case task.EdgeIssueSync:
-		m.ClearIssueSync()
 		return nil
 	}
 	return fmt.Errorf("unknown Task unique edge %s", name)
@@ -13135,17 +12868,14 @@ func (m *TaskMutation) ResetEdge(name string) error {
 	case task.EdgeAssignee:
 		m.ResetAssignee()
 		return nil
-	case task.EdgeExternalIntegration:
-		m.ResetExternalIntegration()
-		return nil
 	case task.EdgeSessionLinks:
 		m.ResetSessionLinks()
 		return nil
 	case task.EdgeLabels:
 		m.ResetLabels()
 		return nil
-	case task.EdgeIssueSync:
-		m.ResetIssueSync()
+	case task.EdgeIssueSyncs:
+		m.ResetIssueSyncs()
 		return nil
 	}
 	return fmt.Errorf("unknown Task edge %s", name)

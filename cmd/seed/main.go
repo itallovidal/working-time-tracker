@@ -23,6 +23,7 @@ import (
 	"github.com/joho/godotenv"
 
 	"working-time-tracker/ent"
+	"working-time-tracker/ent/issuesync"
 	"working-time-tracker/internal/database"
 	"working-time-tracker/internal/domain/allocation"
 	"working-time-tracker/internal/domain/auth"
@@ -149,7 +150,7 @@ var projects = []struct {
 // assignee vazio é uma tarefa sem responsável: fica disponível no quadro, e quem
 // bater o ponto nela a pega. link, quando há, vincula a tarefa a um item da
 // integração do projeto: "gh:42" (issue do GitHub), "gl:17" (issue do GitLab) ou
-// "tr:AbCd1234" (cartão do Trello).
+// "tr:AbCd1234" (cartão do Trello); uma tarefa pode estar em mais de uma plataforma: "gh:142,tr:Cz5Pw2Ln".
 // priorityFor e labelsFor dão a prioridade e as etiquetas de cada tarefa a partir do que ela
 // já diz: o prazo (a atrasada é urgente) e o assunto do nome. Assim a lista de tarefas
 // não precisa carregar dois campos a mais em cada linha.
@@ -211,7 +212,7 @@ var tasks = []struct {
 	link                                 string
 }{
 	// App de Pedidos: mais de uma página, com prazos espalhados.
-	{"app", "Tela de checkout", "Resumo do pedido, endereço e pagamento em uma tela só.", "diego", 5, "gh:142"},
+	{"app", "Tela de checkout", "Resumo do pedido, endereço e pagamento em uma tela só.", "diego", 5, "gh:142,tr:Cz5Pw2Ln"},
 	{"app", "Notificações de status do pedido", "Push quando o pedido sai para entrega e quando chega.", "diego", 9, "gh:151"},
 	{"app", "Endpoint de cálculo de frete", "Frete por distância, com frete grátis acima de R$ 100.", "bruno", -2, "gh:138"},
 	{"app", "Revisão de arquitetura do app", "", "ana", 0.8, ""},
@@ -219,7 +220,7 @@ var tasks = []struct {
 	{"app", "Histórico de pedidos", "", "gabriela", 11, "tr:Hq4Lm8Zp"},
 	{"app", "Login com telefone e código por SMS", "", "bruno", 1, "gh:131"},
 	{"app", "Rastreamento da entrega no mapa", "Posição do entregador atualizada a cada 30 segundos.", "diego", 16, "gh:160"},
-	{"app", "Cupom de desconto no checkout", "", "henrique", 6, "gh:155"},
+	{"app", "Cupom de desconto no checkout", "", "henrique", 6, "gh:155,tr:Fy8Mk3Vd"},
 	{"app", "Avaliação do pedido entregue", "", "gabriela", 20, ""},
 	{"app", "Endpoint de repetir pedido", "Monta um carrinho novo com os itens de um pedido anterior.", "henrique", 13, "gh:158"},
 	{"app", "Testes de carga da API de pedidos", "", "fabio", -4, ""},
@@ -709,32 +710,38 @@ func main() {
 	}
 }
 
-// linkTask vincula a tarefa a um item da integração do projeto. link tem o
-// formato "gh:42", "gl:17" ou "tr:AbCd1234".
+// linkTask vincula a tarefa a itens das integrações do projeto. link tem o formato "gh:42", "gl:17" ou
+// "tr:AbCd1234", e vários itens (um por plataforma) se separam por vírgula. O vínculo nasce pending, como o de
+// quem liga à mão: a sincronização o adota quando a integração a liga.
 func linkTask(ctx context.Context, client *ent.Client, integrationOf map[string]*ent.Integration, projectKey string, taskID uuid.UUID, link string) {
-	kinds := map[string]string{"gh": "github", "gl": "gitlab", "tr": "trello"}
-	kind, item := kinds[link[:2]], link[3:]
-	it, ok := integrationOf[projectKey+"/"+kind]
-	if !ok {
-		log.Fatalf("o projeto %s não tem integração %s para o item %s", projectKey, kind, link)
+	for _, one := range strings.Split(link, ",") {
+		kinds := map[string]string{"gh": "github", "gl": "gitlab", "tr": "trello"}
+		kind, item := kinds[one[:2]], one[3:]
+		it, ok := integrationOf[projectKey+"/"+kind]
+		if !ok {
+			log.Fatalf("o projeto %s não tem integração %s para o item %s", projectKey, kind, one)
+		}
+		var url string
+		switch kind {
+		case "github":
+			url = "https://github.com/" + it.Metadata["repo"].(string) + "/issues/" + item
+		case "gitlab":
+			url = "https://gitlab.com/" + it.Metadata["project_url"].(string) + "/-/issues/" + item
+		default:
+			url = "https://trello.com/c/" + item
+		}
+		if _, err := strconv.Atoi(item); kind != "trello" && err != nil {
+			log.Fatalf("item inválido: %s", one)
+		}
+		client.IssueSync.Create().
+			SetIntegrationID(it.ID).
+			SetTaskID(taskID).
+			SetItemID(item).
+			SetURL(url).
+			SetState(issuesync.StatePending).
+			SetSyncedAt(time.Now()).
+			ExecX(ctx)
 	}
-	var url string
-	switch kind {
-	case "github":
-		url = "https://github.com/" + it.Metadata["repo"].(string) + "/issues/" + item
-	case "gitlab":
-		url = "https://gitlab.com/" + it.Metadata["project_url"].(string) + "/-/issues/" + item
-	default:
-		url = "https://trello.com/c/" + item
-	}
-	if _, err := strconv.Atoi(item); kind != "trello" && err != nil {
-		log.Fatalf("item inválido: %s", link)
-	}
-	client.Task.UpdateOneID(taskID).
-		SetExternalIntegrationID(it.ID).
-		SetExternalItemID(item).
-		SetExternalItemURL(url).
-		ExecX(ctx)
 }
 
 func must(err error) {

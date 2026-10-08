@@ -11,7 +11,6 @@ import (
 	"working-time-tracker/ent/issuesync"
 	"working-time-tracker/ent/predicate"
 	"working-time-tracker/ent/project"
-	"working-time-tracker/ent/task"
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect"
@@ -29,7 +28,6 @@ type IntegrationQuery struct {
 	inters         []Interceptor
 	predicates     []predicate.Integration
 	withProject    *ProjectQuery
-	withTasks      *TaskQuery
 	withIssueSyncs *IssueSyncQuery
 	modifiers      []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
@@ -83,28 +81,6 @@ func (_q *IntegrationQuery) QueryProject() *ProjectQuery {
 			sqlgraph.From(integration.Table, integration.FieldID, selector),
 			sqlgraph.To(project.Table, project.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, integration.ProjectTable, integration.ProjectColumn),
-		)
-		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
-		return fromU, nil
-	}
-	return query
-}
-
-// QueryTasks chains the current query on the "tasks" edge.
-func (_q *IntegrationQuery) QueryTasks() *TaskQuery {
-	query := (&TaskClient{config: _q.config}).Query()
-	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := _q.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		selector := _q.sqlQuery(ctx)
-		if err := selector.Err(); err != nil {
-			return nil, err
-		}
-		step := sqlgraph.NewStep(
-			sqlgraph.From(integration.Table, integration.FieldID, selector),
-			sqlgraph.To(task.Table, task.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, integration.TasksTable, integration.TasksColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -327,7 +303,6 @@ func (_q *IntegrationQuery) Clone() *IntegrationQuery {
 		inters:         append([]Interceptor{}, _q.inters...),
 		predicates:     append([]predicate.Integration{}, _q.predicates...),
 		withProject:    _q.withProject.Clone(),
-		withTasks:      _q.withTasks.Clone(),
 		withIssueSyncs: _q.withIssueSyncs.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
@@ -343,17 +318,6 @@ func (_q *IntegrationQuery) WithProject(opts ...func(*ProjectQuery)) *Integratio
 		opt(query)
 	}
 	_q.withProject = query
-	return _q
-}
-
-// WithTasks tells the query-builder to eager-load the nodes that are connected to
-// the "tasks" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *IntegrationQuery) WithTasks(opts ...func(*TaskQuery)) *IntegrationQuery {
-	query := (&TaskClient{config: _q.config}).Query()
-	for _, opt := range opts {
-		opt(query)
-	}
-	_q.withTasks = query
 	return _q
 }
 
@@ -446,9 +410,8 @@ func (_q *IntegrationQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 	var (
 		nodes       = []*Integration{}
 		_spec       = _q.querySpec()
-		loadedTypes = [3]bool{
+		loadedTypes = [2]bool{
 			_q.withProject != nil,
-			_q.withTasks != nil,
 			_q.withIssueSyncs != nil,
 		}
 	)
@@ -476,13 +439,6 @@ func (_q *IntegrationQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 	if query := _q.withProject; query != nil {
 		if err := _q.loadProject(ctx, query, nodes, nil,
 			func(n *Integration, e *Project) { n.Edges.Project = e }); err != nil {
-			return nil, err
-		}
-	}
-	if query := _q.withTasks; query != nil {
-		if err := _q.loadTasks(ctx, query, nodes,
-			func(n *Integration) { n.Edges.Tasks = []*Task{} },
-			func(n *Integration, e *Task) { n.Edges.Tasks = append(n.Edges.Tasks, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -522,39 +478,6 @@ func (_q *IntegrationQuery) loadProject(ctx context.Context, query *ProjectQuery
 		for i := range nodes {
 			assign(nodes[i], n)
 		}
-	}
-	return nil
-}
-func (_q *IntegrationQuery) loadTasks(ctx context.Context, query *TaskQuery, nodes []*Integration, init func(*Integration), assign func(*Integration, *Task)) error {
-	fks := make([]driver.Value, 0, len(nodes))
-	nodeids := make(map[uuid.UUID]*Integration)
-	for i := range nodes {
-		fks = append(fks, nodes[i].ID)
-		nodeids[nodes[i].ID] = nodes[i]
-		if init != nil {
-			init(nodes[i])
-		}
-	}
-	if len(query.ctx.Fields) > 0 {
-		query.ctx.AppendFieldOnce(task.FieldExternalIntegrationID)
-	}
-	query.Where(predicate.Task(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(integration.TasksColumn), fks...))
-	}))
-	neighbors, err := query.All(ctx)
-	if err != nil {
-		return err
-	}
-	for _, n := range neighbors {
-		fk := n.ExternalIntegrationID
-		if fk == nil {
-			return fmt.Errorf(`foreign-key "external_integration_id" is nil for node %v`, n.ID)
-		}
-		node, ok := nodeids[*fk]
-		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "external_integration_id" returned %v for node %v`, *fk, n.ID)
-		}
-		assign(node, n)
 	}
 	return nil
 }

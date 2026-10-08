@@ -51,7 +51,7 @@ func TestTrello_NewTaskIsPostedByItself(t *testing.T) {
 	}
 	linked, err := e.tasks.GetByID(tk.ID.String())
 	must(t, err)
-	if linked.ExternalItemID == nil || *linked.ExternalItemID != c.ShortLink || linked.ExternalIntegration == nil || linked.ExternalIntegration.ID != e.it.ID {
+	if len(linked.Links) != 1 || linked.Links[0].ItemID != c.ShortLink || linked.Links[0].Integration == nil || linked.Links[0].Integration.ID != e.it.ID {
 		t.Errorf("task = %+v, want it linked to the new card", linked)
 	}
 
@@ -91,7 +91,7 @@ func TestTrello_NewTaskIsNotPostedWhenThereIsNothingToDo(t *testing.T) {
 	if _, err := e.integ.Edit(e.it.ID.String(), integration.EditInput{SyncIssues: &yes}); err != nil {
 		t.Fatalf("turn the sync on: %v", err)
 	}
-	if got, _ := e.tasks.GetByID(off.ID.String()); got.ExternalItemID != nil || e.cardsCount() != 1 {
+	if got, _ := e.tasks.GetByID(off.ID.String()); len(got.Links) != 0 || e.cardsCount() != 1 {
 		t.Errorf("a task made with the sync off was posted: %+v, %d cards", got, e.cardsCount())
 	}
 	disabled := false
@@ -125,7 +125,7 @@ func TestTrello_NewTaskTrelloRefuses(t *testing.T) {
 	if got := e.lastError(); got != "integration.trello_no_list" {
 		t.Errorf("integration warning = %q, want integration.trello_no_list", got)
 	}
-	if got, _ := e.tasks.GetByID(tk.ID.String()); got.ExternalItemID != nil {
+	if got, _ := e.tasks.GetByID(tk.ID.String()); len(got.Links) != 0 {
 		t.Errorf("the task was linked although no card was made: %+v", got)
 	}
 	e.fake.AddList(board, "Nova lista", 1)
@@ -148,7 +148,7 @@ func TestTrello_NewTaskWaitsForTrello(t *testing.T) {
 	if got := e.lastError(); got != "integration.rate_limited" {
 		t.Errorf("integration warning = %q, want the rate limit", got)
 	}
-	if got, _ := e.tasks.GetByID(tk.ID.String()); got.ExternalItemID != nil {
+	if got, _ := e.tasks.GetByID(tk.ID.String()); len(got.Links) != 0 {
 		t.Fatal("the task was linked although Trello refused")
 	}
 
@@ -168,7 +168,7 @@ func TestTrello_NewTaskWaitsForTrello(t *testing.T) {
 	if e.cardsCount() != 1 {
 		t.Fatalf("%d cards after the wait, want the waiting task posted", e.cardsCount())
 	}
-	if got, _ := e.tasks.GetByID(tk.ID.String()); got.ExternalItemID == nil {
+	if got, _ := e.tasks.GetByID(tk.ID.String()); len(got.Links) == 0 {
 		t.Error("the task was not linked after the retry")
 	}
 	if _, err := e.syncer.SyncNow(context.Background(), e.it.ID); err != nil || e.cardsCount() != 1 {

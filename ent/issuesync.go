@@ -27,6 +27,8 @@ type IssueSync struct {
 	TaskID *uuid.UUID `json:"task_id,omitempty"`
 	// ItemID holds the value of the "item_id" field.
 	ItemID string `json:"item_id,omitempty"`
+	// URL holds the value of the "url" field.
+	URL string `json:"url,omitempty"`
 	// State holds the value of the "state" field.
 	State issuesync.State `json:"state,omitempty"`
 	// Title holds the value of the "title" field.
@@ -99,7 +101,7 @@ func (*IssueSync) scanValues(columns []string) ([]any, error) {
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case issuesync.FieldLabels, issuesync.FieldAssigneeLogins:
 			values[i] = new([]byte)
-		case issuesync.FieldItemID, issuesync.FieldState, issuesync.FieldTitle, issuesync.FieldBody, issuesync.FieldMappedLogin, issuesync.FieldStuckSig, issuesync.FieldLastError:
+		case issuesync.FieldItemID, issuesync.FieldURL, issuesync.FieldState, issuesync.FieldTitle, issuesync.FieldBody, issuesync.FieldMappedLogin, issuesync.FieldStuckSig, issuesync.FieldLastError:
 			values[i] = new(sql.NullString)
 		case issuesync.FieldDeadline, issuesync.FieldSyncedAt, issuesync.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
@@ -144,6 +146,12 @@ func (_m *IssueSync) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field item_id", values[i])
 			} else if value.Valid {
 				_m.ItemID = value.String
+			}
+		case issuesync.FieldURL:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field url", values[i])
+			} else if value.Valid {
+				_m.URL = value.String
 			}
 		case issuesync.FieldState:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -279,6 +287,9 @@ func (_m *IssueSync) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("item_id=")
 	builder.WriteString(_m.ItemID)
+	builder.WriteString(", ")
+	builder.WriteString("url=")
+	builder.WriteString(_m.URL)
 	builder.WriteString(", ")
 	builder.WriteString("state=")
 	builder.WriteString(fmt.Sprintf("%v", _m.State))

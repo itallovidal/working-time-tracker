@@ -30,26 +30,18 @@ const (
 	FieldAssigneeID = "assignee_id"
 	// FieldDeadline holds the string denoting the deadline field in the database.
 	FieldDeadline = "deadline"
-	// FieldExternalIntegrationID holds the string denoting the external_integration_id field in the database.
-	FieldExternalIntegrationID = "external_integration_id"
-	// FieldExternalItemID holds the string denoting the external_item_id field in the database.
-	FieldExternalItemID = "external_item_id"
-	// FieldExternalItemURL holds the string denoting the external_item_url field in the database.
-	FieldExternalItemURL = "external_item_url"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// EdgeProject holds the string denoting the project edge name in mutations.
 	EdgeProject = "project"
 	// EdgeAssignee holds the string denoting the assignee edge name in mutations.
 	EdgeAssignee = "assignee"
-	// EdgeExternalIntegration holds the string denoting the external_integration edge name in mutations.
-	EdgeExternalIntegration = "external_integration"
 	// EdgeSessionLinks holds the string denoting the session_links edge name in mutations.
 	EdgeSessionLinks = "session_links"
 	// EdgeLabels holds the string denoting the labels edge name in mutations.
 	EdgeLabels = "labels"
-	// EdgeIssueSync holds the string denoting the issue_sync edge name in mutations.
-	EdgeIssueSync = "issue_sync"
+	// EdgeIssueSyncs holds the string denoting the issue_syncs edge name in mutations.
+	EdgeIssueSyncs = "issue_syncs"
 	// Table holds the table name of the task in the database.
 	Table = "tasks"
 	// ProjectTable is the table that holds the project relation/edge.
@@ -66,13 +58,6 @@ const (
 	AssigneeInverseTable = "persons"
 	// AssigneeColumn is the table column denoting the assignee relation/edge.
 	AssigneeColumn = "assignee_id"
-	// ExternalIntegrationTable is the table that holds the external_integration relation/edge.
-	ExternalIntegrationTable = "tasks"
-	// ExternalIntegrationInverseTable is the table name for the Integration entity.
-	// It exists in this package in order to avoid circular dependency with the "integration" package.
-	ExternalIntegrationInverseTable = "integrations"
-	// ExternalIntegrationColumn is the table column denoting the external_integration relation/edge.
-	ExternalIntegrationColumn = "external_integration_id"
 	// SessionLinksTable is the table that holds the session_links relation/edge.
 	SessionLinksTable = "work_session_tasks"
 	// SessionLinksInverseTable is the table name for the WorkSessionTask entity.
@@ -85,13 +70,13 @@ const (
 	// LabelsInverseTable is the table name for the Label entity.
 	// It exists in this package in order to avoid circular dependency with the "label" package.
 	LabelsInverseTable = "labels"
-	// IssueSyncTable is the table that holds the issue_sync relation/edge.
-	IssueSyncTable = "issue_syncs"
-	// IssueSyncInverseTable is the table name for the IssueSync entity.
+	// IssueSyncsTable is the table that holds the issue_syncs relation/edge.
+	IssueSyncsTable = "issue_syncs"
+	// IssueSyncsInverseTable is the table name for the IssueSync entity.
 	// It exists in this package in order to avoid circular dependency with the "issuesync" package.
-	IssueSyncInverseTable = "issue_syncs"
-	// IssueSyncColumn is the table column denoting the issue_sync relation/edge.
-	IssueSyncColumn = "task_id"
+	IssueSyncsInverseTable = "issue_syncs"
+	// IssueSyncsColumn is the table column denoting the issue_syncs relation/edge.
+	IssueSyncsColumn = "task_id"
 )
 
 // Columns holds all SQL columns for task fields.
@@ -104,9 +89,6 @@ var Columns = []string{
 	FieldStatus,
 	FieldAssigneeID,
 	FieldDeadline,
-	FieldExternalIntegrationID,
-	FieldExternalItemID,
-	FieldExternalItemURL,
 	FieldCreatedAt,
 }
 
@@ -233,21 +215,6 @@ func ByDeadline(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldDeadline, opts...).ToFunc()
 }
 
-// ByExternalIntegrationID orders the results by the external_integration_id field.
-func ByExternalIntegrationID(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldExternalIntegrationID, opts...).ToFunc()
-}
-
-// ByExternalItemID orders the results by the external_item_id field.
-func ByExternalItemID(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldExternalItemID, opts...).ToFunc()
-}
-
-// ByExternalItemURL orders the results by the external_item_url field.
-func ByExternalItemURL(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldExternalItemURL, opts...).ToFunc()
-}
-
 // ByCreatedAt orders the results by the created_at field.
 func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCreatedAt, opts...).ToFunc()
@@ -264,13 +231,6 @@ func ByProjectField(field string, opts ...sql.OrderTermOption) OrderOption {
 func ByAssigneeField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
 		sqlgraph.OrderByNeighborTerms(s, newAssigneeStep(), sql.OrderByField(field, opts...))
-	}
-}
-
-// ByExternalIntegrationField orders the results by external_integration field.
-func ByExternalIntegrationField(field string, opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newExternalIntegrationStep(), sql.OrderByField(field, opts...))
 	}
 }
 
@@ -302,10 +262,17 @@ func ByLabels(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
-// ByIssueSyncField orders the results by issue_sync field.
-func ByIssueSyncField(field string, opts ...sql.OrderTermOption) OrderOption {
+// ByIssueSyncsCount orders the results by issue_syncs count.
+func ByIssueSyncsCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newIssueSyncStep(), sql.OrderByField(field, opts...))
+		sqlgraph.OrderByNeighborsCount(s, newIssueSyncsStep(), opts...)
+	}
+}
+
+// ByIssueSyncs orders the results by issue_syncs terms.
+func ByIssueSyncs(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newIssueSyncsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
 func newProjectStep() *sqlgraph.Step {
@@ -322,13 +289,6 @@ func newAssigneeStep() *sqlgraph.Step {
 		sqlgraph.Edge(sqlgraph.M2O, true, AssigneeTable, AssigneeColumn),
 	)
 }
-func newExternalIntegrationStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(ExternalIntegrationInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.M2O, true, ExternalIntegrationTable, ExternalIntegrationColumn),
-	)
-}
 func newSessionLinksStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -343,10 +303,10 @@ func newLabelsStep() *sqlgraph.Step {
 		sqlgraph.Edge(sqlgraph.M2M, false, LabelsTable, LabelsPrimaryKey...),
 	)
 }
-func newIssueSyncStep() *sqlgraph.Step {
+func newIssueSyncsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(IssueSyncInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2O, false, IssueSyncTable, IssueSyncColumn),
+		sqlgraph.To(IssueSyncsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, IssueSyncsTable, IssueSyncsColumn),
 	)
 }

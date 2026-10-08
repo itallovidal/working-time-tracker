@@ -2,6 +2,7 @@ package task_test
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -164,6 +165,65 @@ func TestHandler_LinkUnlinkExternalItem(t *testing.T) {
 	app.e.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("unlink expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
+// Uma tarefa em duas integrações: o vínculo vem em links, e desfazer um pede a integração.
+func TestHandler_LinkTwoIntegrations(t *testing.T) {
+	app := setupTestApp(t)
+	github := createIntegration(t, app.projectID)
+	trello := createIntegrationOf(t, app.projectID, "trello")
+	call := func(method, path, body string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(method, path, strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+		app.e.ServeHTTP(rec, req)
+		return rec
+	}
+	link := "/api/tasks/" + app.taskID + "/link-external-item"
+	for _, body := range []string{
+		`{"integration_id":"` + github + `","external_item_id":"42","external_item_url":"https://github.com/o/r/issues/42"}`,
+		`{"integration_id":"` + trello + `","external_item_id":"AbC123","external_item_url":"https://trello.com/c/AbC123"}`,
+	} {
+		if rec := call("POST", link, body); rec.Code != http.StatusOK {
+			t.Fatalf("link expected 200, got %d: %s", rec.Code, rec.Body.String())
+		}
+	}
+	type linked struct {
+		Links []struct {
+			IntegrationID string `json:"integration_id"`
+			ItemID        string `json:"item_id"`
+			Integration   struct {
+				Type string `json:"type"`
+			} `json:"integration"`
+		} `json:"links"`
+	}
+	read := func() (linked, *httptest.ResponseRecorder, error) {
+		var list []linked
+		rec := call("GET", "/api/projects/"+app.projectID+"/tasks", "")
+		err := json.Unmarshal(rec.Body.Bytes(), &list)
+		if err == nil && len(list) != 1 {
+			err = errors.New("want one task in the list")
+		}
+		if err != nil {
+			return linked{}, rec, err
+		}
+		return list[0], rec, nil
+	}
+	got, rec, err := read()
+	if err != nil || len(got.Links) != 2 ||
+		got.Links[0].Integration.Type != "github" || got.Links[1].Integration.Type != "trello" || got.Links[1].ItemID != "AbC123" {
+		t.Fatalf("tasks = %s (%v), want a GitHub and a Trello link", rec.Body.String(), err)
+	}
+
+	if rec := call("DELETE", link, ""); rec.Code != http.StatusBadRequest {
+		t.Errorf("unlink without saying which of two expected 400, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if rec := call("DELETE", link+"?integration_id="+github, ""); rec.Code != http.StatusOK {
+		t.Fatalf("unlink one expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if got, rec, err = read(); err != nil || len(got.Links) != 1 || got.Links[0].IntegrationID != trello {
+		t.Errorf("tasks after unlinking GitHub = %s (%v), want only the Trello card", rec.Body.String(), err)
 	}
 }
 

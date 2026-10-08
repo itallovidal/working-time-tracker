@@ -22,6 +22,8 @@ const (
 	FieldTaskID = "task_id"
 	// FieldItemID holds the string denoting the item_id field in the database.
 	FieldItemID = "item_id"
+	// FieldURL holds the string denoting the url field in the database.
+	FieldURL = "url"
 	// FieldState holds the string denoting the state field in the database.
 	FieldState = "state"
 	// FieldTitle holds the string denoting the title field in the database.
@@ -74,6 +76,7 @@ var Columns = []string{
 	FieldIntegrationID,
 	FieldTaskID,
 	FieldItemID,
+	FieldURL,
 	FieldState,
 	FieldTitle,
 	FieldBody,
@@ -99,6 +102,8 @@ func ValidColumn(column string) bool {
 }
 
 var (
+	// DefaultURL holds the default value on creation for the "url" field.
+	DefaultURL string
 	// DefaultTitle holds the default value on creation for the "title" field.
 	DefaultTitle string
 	// DefaultBody holds the default value on creation for the "body" field.
@@ -125,9 +130,10 @@ const DefaultState = StateOpen
 
 // State values.
 const (
-	StateOpen   State = "open"
-	StateClosed State = "closed"
-	StateGone   State = "gone"
+	StateOpen    State = "open"
+	StateClosed  State = "closed"
+	StateGone    State = "gone"
+	StatePending State = "pending"
 )
 
 func (s State) String() string {
@@ -137,7 +143,7 @@ func (s State) String() string {
 // StateValidator is a validator for the "state" field enum values. It is called by the builders before save.
 func StateValidator(s State) error {
 	switch s {
-	case StateOpen, StateClosed, StateGone:
+	case StateOpen, StateClosed, StateGone, StatePending:
 		return nil
 	default:
 		return fmt.Errorf("issuesync: invalid enum value for state field: %q", s)
@@ -165,6 +171,11 @@ func ByTaskID(opts ...sql.OrderTermOption) OrderOption {
 // ByItemID orders the results by the item_id field.
 func ByItemID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldItemID, opts...).ToFunc()
+}
+
+// ByURL orders the results by the url field.
+func ByURL(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldURL, opts...).ToFunc()
 }
 
 // ByState orders the results by the state field.
@@ -241,6 +252,6 @@ func newTaskStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(TaskInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2O, true, TaskTable, TaskColumn),
+		sqlgraph.Edge(sqlgraph.M2O, true, TaskTable, TaskColumn),
 	)
 }

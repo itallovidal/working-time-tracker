@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -240,6 +241,34 @@ type IssueSyncer interface {
 // a tem tem o id comparado como foi guardado.
 type ItemNormalizer interface {
 	NormalizeItemID(raw string) string
+}
+
+// ItemKeyer liga o id de item escrito de qualquer jeito (guardado numa tarefa ligada à mão) à chave do
+// vínculo, a forma de Issue.ID. Nos tipos com id numérico, o que não é número não é de item nenhum.
+type ItemKeyer struct {
+	numeric bool
+	norm    ItemNormalizer
+}
+
+// NewItemKeyer monta o ItemKeyer do tipo.
+func NewItemKeyer(impl Integration) ItemKeyer {
+	k := ItemKeyer{numeric: impl.Descriptor().ItemNumeric}
+	k.norm, _ = impl.(ItemNormalizer)
+	return k
+}
+
+// Key devolve a chave do item e se o id escrito serve de chave.
+func (k ItemKeyer) Key(raw string) (string, bool) {
+	id := strings.TrimSpace(raw)
+	if k.norm != nil {
+		id = k.norm.NormalizeItemID(id)
+	}
+	if k.numeric {
+		if _, err := strconv.Atoi(id); err != nil {
+			return "", false
+		}
+	}
+	return id, id != ""
 }
 
 // StopsSync diz se o erro acaba a rodada inteira, e não só o item: a plataforma recusou o token, o

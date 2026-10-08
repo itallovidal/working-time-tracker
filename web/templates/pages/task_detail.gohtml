@@ -134,9 +134,9 @@
            em outro modal. */}}
       <button type="button" class="btn btn-danger-outline btn-block task-delete" @click="openDelete()">{{template "icon" "trash"}} {{.T "task_detail.delete_title"}}</button>
 
-      {{/* Um cartão para cada integração a que a tarefa está ligada (hoje, uma só). O GitHub não avisa quando
-           algo muda lá, então o cartão tem o botão que relê a issue na hora. Desvincular não é daqui: a
-           integração se desfaz nas configurações do projeto. */}}
+      {{/* Um cartão para cada integração a que a tarefa está ligada (a issue do GitHub, o cartão do Trello). O
+           GitHub não avisa quando algo muda lá, então cada cartão tem o botão que relê o item na hora. Desvincular
+           não é daqui: a integração se desfaz nas configurações do projeto. */}}
       <div class="task-integrations">
         <template x-for="link in links()" :key="link.id">
           <section class="card integration-card" :aria-label="link.label">
@@ -146,10 +146,10 @@
                 <h2 x-text="link.label"></h2>
                 <p class="muted small" x-show="link.name" x-text="link.name"></p>
               </div>
-              <button type="button" class="btn btn-secondary btn-sm" :disabled="pending || external.loading" @click="syncExternal()"
-                      :title="syncs() ? $t('task_detail.sync_title') : $t('task_detail.refresh_title')">
-                <i class="fa-solid fa-rotate" :class="pending === 'sync' && 'fa-spin'" aria-hidden="true"></i>
-                <span x-text="syncs() ? $t('task_detail.sync') : $t('task_detail.refresh')"></span>
+              <button type="button" class="btn btn-secondary btn-sm" :disabled="pending || ext(link).loading" @click="syncExternal(link)"
+                      :title="syncs(link) ? $t('task_detail.sync_title') : $t('task_detail.refresh_title')">
+                <i class="fa-solid fa-rotate" :class="pending === 'sync:' + link.id && 'fa-spin'" aria-hidden="true"></i>
+                <span x-text="syncs(link) ? $t('task_detail.sync') : $t('task_detail.refresh')"></span>
               </button>
             </div>
             <div class="stack">
@@ -161,19 +161,20 @@
                 </span>
                 <i class="fa-solid fa-arrow-up-right-from-square integration-go" aria-hidden="true"></i>
               </a>
-              <p class="muted small" x-show="external.loading">{{.T "task_detail.loading_details"}}</p>
-              <div x-show="external.details">
-                <span class="badge" :class="stateClass(external.details && external.details.state)" x-text="stateLabel(external.details && external.details.state)"></span>
+              <p class="muted small" x-show="ext(link).loading">{{.T "task_detail.loading_details"}}</p>
+              <div x-show="ext(link).details">
+                <span class="badge" :class="stateClass(ext(link).details && ext(link).details.state)" x-text="stateLabel(ext(link).details && ext(link).details.state)"></span>
               </div>
-              <p class="alert alert-warn" x-show="external.error">
-                {{.T "task_detail.fetch_failed"}} <span x-text="external.error"></span>
+              <p class="alert alert-warn" x-show="ext(link).error">
+                {{.T "task_detail.fetch_failed"}} <span x-text="ext(link).error"></span>
               </p>
-              <p class="alert alert-warn" x-cloak x-show="syncProblem" x-text="syncProblem"></p>
-              <p class="form-error" x-cloak x-show="errors.sync" x-text="errors.sync" role="alert"></p>
+              <p class="alert alert-warn" x-cloak x-show="link.warning" x-text="link.warning"></p>
+              <p class="form-error" x-cloak x-show="errors['sync:' + link.id]" x-text="errors['sync:' + link.id]" role="alert"></p>
             </div>
           </section>
         </template>
-        <template x-if="task && !task.external_item_id">
+        {{/* Vincular à mão: só enquanto alguma integração ativa ainda não tem item desta tarefa. */}}
+        <template x-if="task && (links().length === 0 || linkable().length > 0)">
           <section class="card integration-card">
             <div class="card-head"><h2>{{.T "task_detail.external"}}</h2></div>
             <form class="stack" @submit.prevent="link()">
@@ -181,12 +182,12 @@
                 {{.T "task_detail.no_integrations"}}
                 {{if .Can "integrations.manage"}}<a href="/projects/{{.Project.ID}}/management/integrations">{{.T "task_detail.configure"}}</a>{{else}}{{.T "task_detail.ask_admin"}}{{end}}
               </p>
-              <template x-if="integrations.length > 0">
+              <template x-if="linkable().length > 0">
                 <div class="stack">
                   <div class="field">
                     <label for="td-integration">{{.T "task_detail.integration"}}</label>
                     <select id="td-integration" x-model="linkForm.integration_id">
-                      <template x-for="i in integrations" :key="i.id">
+                      <template x-for="i in linkable()" :key="i.id">
                         <option :value="i.id" x-text="i.display_name + ' (' + typeLabel(i.type) + ')'" :selected="i.id === linkForm.integration_id"></option>
                       </template>
                     </select>

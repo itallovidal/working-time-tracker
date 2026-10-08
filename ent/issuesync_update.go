@@ -80,6 +80,20 @@ func (_u *IssueSyncUpdate) SetNillableItemID(v *string) *IssueSyncUpdate {
 	return _u
 }
 
+// SetURL sets the "url" field.
+func (_u *IssueSyncUpdate) SetURL(v string) *IssueSyncUpdate {
+	_u.mutation.SetURL(v)
+	return _u
+}
+
+// SetNillableURL sets the "url" field if the given value is not nil.
+func (_u *IssueSyncUpdate) SetNillableURL(v *string) *IssueSyncUpdate {
+	if v != nil {
+		_u.SetURL(*v)
+	}
+	return _u
+}
+
 // SetState sets the "state" field.
 func (_u *IssueSyncUpdate) SetState(v issuesync.State) *IssueSyncUpdate {
 	_u.mutation.SetState(v)
@@ -336,6 +350,9 @@ func (_u *IssueSyncUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if value, ok := _u.mutation.ItemID(); ok {
 		_spec.SetField(issuesync.FieldItemID, field.TypeString, value)
 	}
+	if value, ok := _u.mutation.URL(); ok {
+		_spec.SetField(issuesync.FieldURL, field.TypeString, value)
+	}
 	if value, ok := _u.mutation.State(); ok {
 		_spec.SetField(issuesync.FieldState, field.TypeEnum, value)
 	}
@@ -422,7 +439,7 @@ func (_u *IssueSyncUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.TaskCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.M2O,
 			Inverse: true,
 			Table:   issuesync.TaskTable,
 			Columns: []string{issuesync.TaskColumn},
@@ -435,7 +452,7 @@ func (_u *IssueSyncUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if nodes := _u.mutation.TaskIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.M2O,
 			Inverse: true,
 			Table:   issuesync.TaskTable,
 			Columns: []string{issuesync.TaskColumn},
@@ -513,6 +530,20 @@ func (_u *IssueSyncUpdateOne) SetItemID(v string) *IssueSyncUpdateOne {
 func (_u *IssueSyncUpdateOne) SetNillableItemID(v *string) *IssueSyncUpdateOne {
 	if v != nil {
 		_u.SetItemID(*v)
+	}
+	return _u
+}
+
+// SetURL sets the "url" field.
+func (_u *IssueSyncUpdateOne) SetURL(v string) *IssueSyncUpdateOne {
+	_u.mutation.SetURL(v)
+	return _u
+}
+
+// SetNillableURL sets the "url" field if the given value is not nil.
+func (_u *IssueSyncUpdateOne) SetNillableURL(v *string) *IssueSyncUpdateOne {
+	if v != nil {
+		_u.SetURL(*v)
 	}
 	return _u
 }
@@ -803,6 +834,9 @@ func (_u *IssueSyncUpdateOne) sqlSave(ctx context.Context) (_node *IssueSync, er
 	if value, ok := _u.mutation.ItemID(); ok {
 		_spec.SetField(issuesync.FieldItemID, field.TypeString, value)
 	}
+	if value, ok := _u.mutation.URL(); ok {
+		_spec.SetField(issuesync.FieldURL, field.TypeString, value)
+	}
 	if value, ok := _u.mutation.State(); ok {
 		_spec.SetField(issuesync.FieldState, field.TypeEnum, value)
 	}
@@ -889,7 +923,7 @@ func (_u *IssueSyncUpdateOne) sqlSave(ctx context.Context) (_node *IssueSync, er
 	}
 	if _u.mutation.TaskCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.M2O,
 			Inverse: true,
 			Table:   issuesync.TaskTable,
 			Columns: []string{issuesync.TaskColumn},
@@ -902,7 +936,7 @@ func (_u *IssueSyncUpdateOne) sqlSave(ctx context.Context) (_node *IssueSync, er
 	}
 	if nodes := _u.mutation.TaskIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.M2O,
 			Inverse: true,
 			Table:   issuesync.TaskTable,
 			Columns: []string{issuesync.TaskColumn},

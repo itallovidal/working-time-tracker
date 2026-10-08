@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"strings"
 	"time"
-	"working-time-tracker/ent/integration"
-	"working-time-tracker/ent/issuesync"
 	"working-time-tracker/ent/person"
 	"working-time-tracker/ent/project"
 	"working-time-tracker/ent/task"
@@ -36,12 +34,6 @@ type Task struct {
 	AssigneeID *uuid.UUID `json:"assignee_id,omitempty"`
 	// Deadline holds the value of the "deadline" field.
 	Deadline time.Time `json:"deadline,omitempty"`
-	// ExternalIntegrationID holds the value of the "external_integration_id" field.
-	ExternalIntegrationID *uuid.UUID `json:"external_integration_id,omitempty"`
-	// ExternalItemID holds the value of the "external_item_id" field.
-	ExternalItemID *string `json:"external_item_id,omitempty"`
-	// ExternalItemURL holds the value of the "external_item_url" field.
-	ExternalItemURL *string `json:"external_item_url,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -56,17 +48,15 @@ type TaskEdges struct {
 	Project *Project `json:"project,omitempty"`
 	// Assignee holds the value of the assignee edge.
 	Assignee *Person `json:"assignee,omitempty"`
-	// ExternalIntegration holds the value of the external_integration edge.
-	ExternalIntegration *Integration `json:"external_integration,omitempty"`
 	// SessionLinks holds the value of the session_links edge.
 	SessionLinks []*WorkSessionTask `json:"session_links,omitempty"`
 	// Labels holds the value of the labels edge.
 	Labels []*Label `json:"labels,omitempty"`
-	// IssueSync holds the value of the issue_sync edge.
-	IssueSync *IssueSync `json:"issue_sync,omitempty"`
+	// IssueSyncs holds the value of the issue_syncs edge.
+	IssueSyncs []*IssueSync `json:"issue_syncs,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [6]bool
+	loadedTypes [5]bool
 }
 
 // ProjectOrErr returns the Project value or an error if the edge
@@ -91,21 +81,10 @@ func (e TaskEdges) AssigneeOrErr() (*Person, error) {
 	return nil, &NotLoadedError{edge: "assignee"}
 }
 
-// ExternalIntegrationOrErr returns the ExternalIntegration value or an error if the edge
-// was not loaded in eager-loading, or loaded but was not found.
-func (e TaskEdges) ExternalIntegrationOrErr() (*Integration, error) {
-	if e.ExternalIntegration != nil {
-		return e.ExternalIntegration, nil
-	} else if e.loadedTypes[2] {
-		return nil, &NotFoundError{label: integration.Label}
-	}
-	return nil, &NotLoadedError{edge: "external_integration"}
-}
-
 // SessionLinksOrErr returns the SessionLinks value or an error if the edge
 // was not loaded in eager-loading.
 func (e TaskEdges) SessionLinksOrErr() ([]*WorkSessionTask, error) {
-	if e.loadedTypes[3] {
+	if e.loadedTypes[2] {
 		return e.SessionLinks, nil
 	}
 	return nil, &NotLoadedError{edge: "session_links"}
@@ -114,21 +93,19 @@ func (e TaskEdges) SessionLinksOrErr() ([]*WorkSessionTask, error) {
 // LabelsOrErr returns the Labels value or an error if the edge
 // was not loaded in eager-loading.
 func (e TaskEdges) LabelsOrErr() ([]*Label, error) {
-	if e.loadedTypes[4] {
+	if e.loadedTypes[3] {
 		return e.Labels, nil
 	}
 	return nil, &NotLoadedError{edge: "labels"}
 }
 
-// IssueSyncOrErr returns the IssueSync value or an error if the edge
-// was not loaded in eager-loading, or loaded but was not found.
-func (e TaskEdges) IssueSyncOrErr() (*IssueSync, error) {
-	if e.IssueSync != nil {
-		return e.IssueSync, nil
-	} else if e.loadedTypes[5] {
-		return nil, &NotFoundError{label: issuesync.Label}
+// IssueSyncsOrErr returns the IssueSyncs value or an error if the edge
+// was not loaded in eager-loading.
+func (e TaskEdges) IssueSyncsOrErr() ([]*IssueSync, error) {
+	if e.loadedTypes[4] {
+		return e.IssueSyncs, nil
 	}
-	return nil, &NotLoadedError{edge: "issue_sync"}
+	return nil, &NotLoadedError{edge: "issue_syncs"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -136,9 +113,9 @@ func (*Task) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case task.FieldAssigneeID, task.FieldExternalIntegrationID:
+		case task.FieldAssigneeID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case task.FieldName, task.FieldDescription, task.FieldPriority, task.FieldStatus, task.FieldExternalItemID, task.FieldExternalItemURL:
+		case task.FieldName, task.FieldDescription, task.FieldPriority, task.FieldStatus:
 			values[i] = new(sql.NullString)
 		case task.FieldDeadline, task.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
@@ -208,27 +185,6 @@ func (_m *Task) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.Deadline = value.Time
 			}
-		case task.FieldExternalIntegrationID:
-			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field external_integration_id", values[i])
-			} else if value.Valid {
-				_m.ExternalIntegrationID = new(uuid.UUID)
-				*_m.ExternalIntegrationID = *value.S.(*uuid.UUID)
-			}
-		case task.FieldExternalItemID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field external_item_id", values[i])
-			} else if value.Valid {
-				_m.ExternalItemID = new(string)
-				*_m.ExternalItemID = value.String
-			}
-		case task.FieldExternalItemURL:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field external_item_url", values[i])
-			} else if value.Valid {
-				_m.ExternalItemURL = new(string)
-				*_m.ExternalItemURL = value.String
-			}
 		case task.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
@@ -258,11 +214,6 @@ func (_m *Task) QueryAssignee() *PersonQuery {
 	return NewTaskClient(_m.config).QueryAssignee(_m)
 }
 
-// QueryExternalIntegration queries the "external_integration" edge of the Task entity.
-func (_m *Task) QueryExternalIntegration() *IntegrationQuery {
-	return NewTaskClient(_m.config).QueryExternalIntegration(_m)
-}
-
 // QuerySessionLinks queries the "session_links" edge of the Task entity.
 func (_m *Task) QuerySessionLinks() *WorkSessionTaskQuery {
 	return NewTaskClient(_m.config).QuerySessionLinks(_m)
@@ -273,9 +224,9 @@ func (_m *Task) QueryLabels() *LabelQuery {
 	return NewTaskClient(_m.config).QueryLabels(_m)
 }
 
-// QueryIssueSync queries the "issue_sync" edge of the Task entity.
-func (_m *Task) QueryIssueSync() *IssueSyncQuery {
-	return NewTaskClient(_m.config).QueryIssueSync(_m)
+// QueryIssueSyncs queries the "issue_syncs" edge of the Task entity.
+func (_m *Task) QueryIssueSyncs() *IssueSyncQuery {
+	return NewTaskClient(_m.config).QueryIssueSyncs(_m)
 }
 
 // Update returns a builder for updating this Task.
@@ -323,21 +274,6 @@ func (_m *Task) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("deadline=")
 	builder.WriteString(_m.Deadline.Format(time.ANSIC))
-	builder.WriteString(", ")
-	if v := _m.ExternalIntegrationID; v != nil {
-		builder.WriteString("external_integration_id=")
-		builder.WriteString(fmt.Sprintf("%v", *v))
-	}
-	builder.WriteString(", ")
-	if v := _m.ExternalItemID; v != nil {
-		builder.WriteString("external_item_id=")
-		builder.WriteString(*v)
-	}
-	builder.WriteString(", ")
-	if v := _m.ExternalItemURL; v != nil {
-		builder.WriteString("external_item_url=")
-		builder.WriteString(*v)
-	}
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))

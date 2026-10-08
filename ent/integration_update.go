@@ -11,7 +11,6 @@ import (
 	"working-time-tracker/ent/issuesync"
 	"working-time-tracker/ent/predicate"
 	"working-time-tracker/ent/project"
-	"working-time-tracker/ent/task"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -185,21 +184,6 @@ func (_u *IntegrationUpdate) SetProject(v *Project) *IntegrationUpdate {
 	return _u.SetProjectID(v.ID)
 }
 
-// AddTaskIDs adds the "tasks" edge to the Task entity by IDs.
-func (_u *IntegrationUpdate) AddTaskIDs(ids ...uuid.UUID) *IntegrationUpdate {
-	_u.mutation.AddTaskIDs(ids...)
-	return _u
-}
-
-// AddTasks adds the "tasks" edges to the Task entity.
-func (_u *IntegrationUpdate) AddTasks(v ...*Task) *IntegrationUpdate {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.AddTaskIDs(ids...)
-}
-
 // AddIssueSyncIDs adds the "issue_syncs" edge to the IssueSync entity by IDs.
 func (_u *IntegrationUpdate) AddIssueSyncIDs(ids ...uuid.UUID) *IntegrationUpdate {
 	_u.mutation.AddIssueSyncIDs(ids...)
@@ -224,27 +208,6 @@ func (_u *IntegrationUpdate) Mutation() *IntegrationMutation {
 func (_u *IntegrationUpdate) ClearProject() *IntegrationUpdate {
 	_u.mutation.ClearProject()
 	return _u
-}
-
-// ClearTasks clears all "tasks" edges to the Task entity.
-func (_u *IntegrationUpdate) ClearTasks() *IntegrationUpdate {
-	_u.mutation.ClearTasks()
-	return _u
-}
-
-// RemoveTaskIDs removes the "tasks" edge to Task entities by IDs.
-func (_u *IntegrationUpdate) RemoveTaskIDs(ids ...uuid.UUID) *IntegrationUpdate {
-	_u.mutation.RemoveTaskIDs(ids...)
-	return _u
-}
-
-// RemoveTasks removes "tasks" edges to Task entities.
-func (_u *IntegrationUpdate) RemoveTasks(v ...*Task) *IntegrationUpdate {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.RemoveTaskIDs(ids...)
 }
 
 // ClearIssueSyncs clears all "issue_syncs" edges to the IssueSync entity.
@@ -376,51 +339,6 @@ func (_u *IntegrationUpdate) sqlSave(ctx context.Context) (_node int, err error)
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(project.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if _u.mutation.TasksCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   integration.TasksTable,
-			Columns: []string{integration.TasksColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(task.FieldID, field.TypeUUID),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.RemovedTasksIDs(); len(nodes) > 0 && !_u.mutation.TasksCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   integration.TasksTable,
-			Columns: []string{integration.TasksColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(task.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.TasksIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   integration.TasksTable,
-			Columns: []string{integration.TasksColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(task.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -646,21 +564,6 @@ func (_u *IntegrationUpdateOne) SetProject(v *Project) *IntegrationUpdateOne {
 	return _u.SetProjectID(v.ID)
 }
 
-// AddTaskIDs adds the "tasks" edge to the Task entity by IDs.
-func (_u *IntegrationUpdateOne) AddTaskIDs(ids ...uuid.UUID) *IntegrationUpdateOne {
-	_u.mutation.AddTaskIDs(ids...)
-	return _u
-}
-
-// AddTasks adds the "tasks" edges to the Task entity.
-func (_u *IntegrationUpdateOne) AddTasks(v ...*Task) *IntegrationUpdateOne {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.AddTaskIDs(ids...)
-}
-
 // AddIssueSyncIDs adds the "issue_syncs" edge to the IssueSync entity by IDs.
 func (_u *IntegrationUpdateOne) AddIssueSyncIDs(ids ...uuid.UUID) *IntegrationUpdateOne {
 	_u.mutation.AddIssueSyncIDs(ids...)
@@ -685,27 +588,6 @@ func (_u *IntegrationUpdateOne) Mutation() *IntegrationMutation {
 func (_u *IntegrationUpdateOne) ClearProject() *IntegrationUpdateOne {
 	_u.mutation.ClearProject()
 	return _u
-}
-
-// ClearTasks clears all "tasks" edges to the Task entity.
-func (_u *IntegrationUpdateOne) ClearTasks() *IntegrationUpdateOne {
-	_u.mutation.ClearTasks()
-	return _u
-}
-
-// RemoveTaskIDs removes the "tasks" edge to Task entities by IDs.
-func (_u *IntegrationUpdateOne) RemoveTaskIDs(ids ...uuid.UUID) *IntegrationUpdateOne {
-	_u.mutation.RemoveTaskIDs(ids...)
-	return _u
-}
-
-// RemoveTasks removes "tasks" edges to Task entities.
-func (_u *IntegrationUpdateOne) RemoveTasks(v ...*Task) *IntegrationUpdateOne {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.RemoveTaskIDs(ids...)
 }
 
 // ClearIssueSyncs clears all "issue_syncs" edges to the IssueSync entity.
@@ -867,51 +749,6 @@ func (_u *IntegrationUpdateOne) sqlSave(ctx context.Context) (_node *Integration
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(project.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if _u.mutation.TasksCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   integration.TasksTable,
-			Columns: []string{integration.TasksColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(task.FieldID, field.TypeUUID),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.RemovedTasksIDs(); len(nodes) > 0 && !_u.mutation.TasksCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   integration.TasksTable,
-			Columns: []string{integration.TasksColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(task.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.TasksIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   integration.TasksTable,
-			Columns: []string{integration.TasksColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(task.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

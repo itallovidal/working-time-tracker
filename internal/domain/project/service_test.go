@@ -146,8 +146,8 @@ func TestService_Delete_CascadesChildren(t *testing.T) {
 	tm := testClient.Team.Create().SetName("Time").SetProjectID(proj.ID).SaveX(ctx)
 	testClient.TeamMembership.Create().SetTeamID(tm.ID).SetPersonID(p.ID).SaveX(ctx)
 	it := testClient.Integration.Create().SetProjectID(proj.ID).SetType("github").SetDisplayName("GitHub").SaveX(ctx)
-	task := testClient.Task.Create().SetName("Tarefa").SetProjectID(proj.ID).SetAssigneeID(p.ID).
-		SetExternalIntegrationID(it.ID).SaveX(ctx)
+	task := testClient.Task.Create().SetName("Tarefa").SetProjectID(proj.ID).SetAssigneeID(p.ID).SaveX(ctx)
+	testClient.IssueSync.Create().SetIntegrationID(it.ID).SetTaskID(task.ID).SetItemID("42").SaveX(ctx)
 	endedAt := time.Now()
 	testutil.Session(t, testClient, task.ID, p.ID, endedAt.Add(-time.Hour), &endedAt, nil, nil)
 

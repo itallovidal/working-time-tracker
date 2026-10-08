@@ -110,39 +110,33 @@ func (s *Store) ApplyRemote(id uuid.UUID, p RemotePatch) error {
 	return err
 }
 
-// Imported é a tarefa que nasce de uma issue.
+// Imported é a tarefa que nasce de um item da plataforma. O vínculo com o item é de quem importa: ele grava a
+// linha junto com a tarefa, na mesma transação.
 type Imported struct {
-	ProjectID     uuid.UUID
-	IntegrationID uuid.UUID
-	ItemID        string // o número da issue
-	URL           string
-	Name          string
-	Description   string
-	Labels        []Label
-	AssigneeID    *uuid.UUID
+	ProjectID   uuid.UUID
+	Name        string
+	Description string
+	Labels      []Label
+	AssigneeID  *uuid.UUID
 	// Deadline é o prazo da tarefa; zero é sem prazo (a issue não tem um). CreatedAt é quando o item
 	// nasceu na plataforma; zero deixa a tarefa nascer agora.
 	Deadline  time.Time
 	CreatedAt time.Time
 }
 
-// CreateImported cria a tarefa de uma issue: em backlog, sem prazo (a menos que o item traga uma data de
-// entrega) e já ligada a ela. Não passa pelas regras de CreateAs: o responsável já foi conferido por
-// quem importa.
+// CreateImported cria a tarefa de um item: em backlog, sem prazo (a menos que o item traga uma data de
+// entrega). Não passa pelas regras de CreateAs: o responsável já foi conferido por quem importa.
 func (s *Store) CreateImported(in Imported) (*Task, error) {
 	t := &Task{
-		ProjectID:             in.ProjectID,
-		Name:                  in.Name,
-		Description:           in.Description,
-		Priority:              "none",
-		Status:                StatusBacklog,
-		Labels:                in.Labels,
-		AssigneeID:            in.AssigneeID,
-		Deadline:              in.Deadline,
-		CreatedAt:             in.CreatedAt,
-		ExternalIntegrationID: &in.IntegrationID,
-		ExternalItemID:        &in.ItemID,
-		ExternalItemURL:       &in.URL,
+		ProjectID:   in.ProjectID,
+		Name:        in.Name,
+		Description: in.Description,
+		Priority:    "none",
+		Status:      StatusBacklog,
+		Labels:      in.Labels,
+		AssigneeID:  in.AssigneeID,
+		Deadline:    in.Deadline,
+		CreatedAt:   in.CreatedAt,
 	}
 	if err := s.Create(t); err != nil {
 		return nil, err
@@ -150,31 +144,25 @@ func (s *Store) CreateImported(in Imported) (*Task, error) {
 	return s.GetByID(t.ID.String())
 }
 
-// ListLinked lista as tarefas ligadas a algum item da integração, da mais antiga para a mais nova.
-func (s *Store) ListLinked(integrationID uuid.UUID) ([]Task, error) {
-	rows, err := s.client.Task.Query().
-		Where(task.ExternalIntegrationIDEQ(integrationID), task.ExternalItemIDNotNil()).
-		WithAssignee().WithExternalIntegration().WithLabels(withLabels).
-		Order(ent.Asc(task.FieldCreatedAt, task.FieldID)).
-		All(context.Background())
-	if err != nil {
-		return nil, err
-	}
-	return toDomainTasks(rows), nil
-}
+// listByIDsChunk é quantos ids vão num IN: um repositório grande liga dezenas de milhares de tarefas.
+const listByIDsChunk = 10000
 
-// FindLinked lista as tarefas ligadas a este item da integração (a mais antiga primeiro): pode haver
-// mais de uma, porque o vínculo manual não impede dois.
-func (s *Store) FindLinked(integrationID uuid.UUID, itemID string) ([]Task, error) {
-	rows, err := s.client.Task.Query().
-		Where(task.ExternalIntegrationIDEQ(integrationID), task.ExternalItemIDEQ(itemID)).
-		WithAssignee().WithExternalIntegration().WithLabels(withLabels).
-		Order(ent.Asc(task.FieldCreatedAt, task.FieldID)).
-		All(context.Background())
-	if err != nil {
-		return nil, err
+// ListByIDs lista as tarefas com estes ids (as que não existem mais ficam de fora), com os vínculos.
+func (s *Store) ListByIDs(ids []uuid.UUID) ([]Task, error) {
+	var out []Task
+	for start := 0; start < len(ids); start += listByIDsChunk {
+		end := min(start+listByIDsChunk, len(ids))
+		rows, err := s.client.Task.Query().
+			Where(task.IDIn(ids[start:end]...)).
+			WithAssignee().WithIssueSyncs(withLinks).WithLabels(withLabels).
+			Order(ent.Asc(task.FieldCreatedAt, task.FieldID)).
+			All(context.Background())
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, toDomainTasks(rows)...)
 	}
-	return toDomainTasks(rows), nil
+	return out, nil
 }
 
 // FindOrCreateLabels devolve as etiquetas do projeto com estes nomes, criando as que faltam. O nome

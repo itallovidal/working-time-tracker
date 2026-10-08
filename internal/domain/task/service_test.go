@@ -41,10 +41,16 @@ func setupDeps(t *testing.T) (*organization.Service, *person.Service, *project.S
 // na API externa. Serve para testes que só precisam de uma FK válida.
 func createIntegration(t *testing.T, projectID string) string {
 	t.Helper()
+	return createIntegrationOf(t, projectID, "github")
+}
+
+// createIntegrationOf cria uma integração de um tipo ("github", "trello") no projeto.
+func createIntegrationOf(t *testing.T, projectID, kind string) string {
+	t.Helper()
 	it, err := testClient.Integration.Create().
 		SetProjectID(uuid.MustParse(projectID)).
-		SetType("github").
-		SetDisplayName("GitHub").
+		SetType(kind).
+		SetDisplayName(kind).
 		Save(context.Background())
 	if err != nil {
 		t.Fatalf("create integration: %v", err)
@@ -648,21 +654,75 @@ func TestService_LinkUnlinkExternalItem(t *testing.T) {
 	join(t, memberSvc, tm, p.ID.String())
 
 	task1, _ := taskSvc.Create(proj.ID.String(), "Task A", "", p.ID.String(), nil)
+	github := createIntegration(t, proj.ID.String())
 
-	linked, err := taskSvc.LinkExternalItem(task1.ID.String(), createIntegration(t, proj.ID.String()), "42", "https://example.com/42")
+	linked, err := taskSvc.LinkExternalItem(task1.ID.String(), github, "42", "https://example.com/42")
 	if err != nil {
 		t.Fatalf("link failed: %v", err)
 	}
-	if linked.ExternalItemID == nil || *linked.ExternalItemID != "42" {
-		t.Errorf("external_item_id = %v, want 42", linked.ExternalItemID)
+	if len(linked.Links) != 1 || linked.Links[0].ItemID != "42" || linked.Links[0].URL != "https://example.com/42" ||
+		linked.Links[0].IntegrationID.String() != github || linked.Links[0].Integration == nil || linked.Links[0].Integration.Type != "github" {
+		t.Errorf("links after link = %+v, want the item 42 on the GitHub integration", linked.Links)
 	}
 
-	unlinked, err := taskSvc.UnlinkExternalItem(task1.ID.String())
+	unlinked, err := taskSvc.UnlinkExternalItem(task1.ID.String(), "")
 	if err != nil {
 		t.Fatalf("unlink failed: %v", err)
 	}
-	if unlinked.ExternalItemID != nil {
-		t.Errorf("expected nil external_item_id after unlink, got %v", *unlinked.ExternalItemID)
+	if len(unlinked.Links) != 0 {
+		t.Errorf("expected no links after unlink, got %+v", unlinked.Links)
+	}
+	if _, err := taskSvc.UnlinkExternalItem(task1.ID.String(), ""); !errors.Is(err, task.ErrNoExternalItem) {
+		t.Errorf("unlinking a task with no link = %v, want task.no_external_item", err)
+	}
+}
+
+// Uma tarefa pode estar numa issue e num cartão ao mesmo tempo, mas só num item de cada integração, e um
+// item serve a uma tarefa só.
+func TestService_LinkSeveralIntegrations(t *testing.T) {
+	orgSvc, personSvc, projSvc, teamSvc, memberSvc, taskSvc := setupDeps(t)
+
+	org, _ := orgSvc.Create("Org")
+	p, _ := personSvc.Create(org.ID.String(), "John", "john@test.com")
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, project.Routine{})
+	tm, _ := teamSvc.Create(proj.ID.String(), "Team")
+	join(t, memberSvc, tm, p.ID.String())
+	taskA, _ := taskSvc.Create(proj.ID.String(), "Task A", "", p.ID.String(), nil)
+	taskB, _ := taskSvc.Create(proj.ID.String(), "Task B", "", p.ID.String(), nil)
+	github := createIntegration(t, proj.ID.String())
+	trello := createIntegrationOf(t, proj.ID.String(), "trello")
+	a := taskA.ID.String()
+
+	if _, err := taskSvc.LinkExternalItem(a, github, "42", "https://github.com/o/r/issues/42"); err != nil {
+		t.Fatalf("link GitHub: %v", err)
+	}
+	// O cartão chega colado como a URL: a chave é o link curto.
+	both, err := taskSvc.LinkExternalItem(a, trello, "https://trello.com/c/AbC123/3-cartao", "https://trello.com/c/AbC123/3-cartao")
+	if err != nil {
+		t.Fatalf("link Trello: %v", err)
+	}
+	if len(both.Links) != 2 || both.Links[0].Integration.Type != "github" || both.Links[1].Integration.Type != "trello" || both.Links[1].ItemID != "AbC123" {
+		t.Fatalf("links = %+v, want the GitHub issue then the Trello card AbC123", both.Links)
+	}
+
+	if _, err := taskSvc.LinkExternalItem(a, github, "43", "https://github.com/o/r/issues/43"); !errors.Is(err, task.ErrAlreadyLinked) {
+		t.Errorf("a second issue on the same integration = %v, want task.already_linked", err)
+	}
+	if _, err := taskSvc.LinkExternalItem(taskB.ID.String(), github, "42", "https://github.com/o/r/issues/42"); !errors.Is(err, task.ErrItemTaken) {
+		t.Errorf("an item that belongs to another task = %v, want task.item_taken", err)
+	}
+
+	// Com dois vínculos é preciso dizer qual desfazer, e o outro fica.
+	if _, err := taskSvc.UnlinkExternalItem(a, ""); err == nil {
+		t.Error("unlinking without saying which of two links must fail")
+	}
+	left, err := taskSvc.UnlinkExternalItem(a, github)
+	if err != nil || len(left.Links) != 1 || left.Links[0].Integration.Type != "trello" {
+		t.Fatalf("unlink GitHub: %+v, %v, want only the Trello card left", left, err)
+	}
+	// O que nunca foi adotado some de vez: o item pode ser ligado a outra tarefa.
+	if _, err := taskSvc.LinkExternalItem(taskB.ID.String(), github, "42", "https://github.com/o/r/issues/42"); err != nil {
+		t.Errorf("an item freed by unlinking can be linked to another task: %v", err)
 	}
 }
 
@@ -741,9 +801,8 @@ func TestService_Update_AssigneeMustBeProjectMember(t *testing.T) {
 	}
 }
 
-// O vínculo com a integração precisa sobreviver à leitura e à edição da tarefa.
-// Antes, o store não copiava external_integration_id: /external-details sempre
-// dizia que não havia vínculo, e editar a tarefa apagava a integração.
+// Os vínculos com as integrações precisam sobreviver à leitura e à edição da tarefa (editar a tarefa não pode
+// apagá-los) e a lista os traz, com a integração de cada um.
 func TestService_LinkSurvivesReadAndUpdate(t *testing.T) {
 	orgSvc, personSvc, projSvc, teamSvc, memberSvc, taskSvc := setupDeps(t)
 
@@ -759,12 +818,12 @@ func TestService_LinkSurvivesReadAndUpdate(t *testing.T) {
 		t.Fatalf("link: %v", err)
 	}
 	got, _ := taskSvc.Get(task1.ID.String())
-	if got.ExternalIntegrationID == nil || got.ExternalIntegrationID.String() != integrationID {
-		t.Fatalf("external_integration_id after link = %v, want %s", got.ExternalIntegrationID, integrationID)
+	if len(got.Links) != 1 || got.Links[0].IntegrationID.String() != integrationID {
+		t.Fatalf("links after link = %+v, want one on %s", got.Links, integrationID)
 	}
 	// A lista também traz a integração: é dela que sai a plataforma do rótulo ("GitHub #42").
 	listed, err := taskSvc.ListByProject(proj.ID.String(), task.ListFilter{})
-	if err != nil || len(listed) != 1 || listed[0].ExternalIntegration == nil || listed[0].ExternalIntegration.Type != "github" {
+	if err != nil || len(listed) != 1 || len(listed[0].Links) != 1 || listed[0].Links[0].Integration == nil || listed[0].Links[0].Integration.Type != "github" {
 		t.Errorf("list after link = %+v (%v), want the task with its integration", listed, err)
 	}
 
@@ -772,8 +831,8 @@ func TestService_LinkSurvivesReadAndUpdate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("update: %v", err)
 	}
-	if updated.ExternalIntegrationID == nil || updated.ExternalItemID == nil || *updated.ExternalItemID != "42" {
-		t.Errorf("update dropped the link: integration=%v item=%v", updated.ExternalIntegrationID, updated.ExternalItemID)
+	if len(updated.Links) != 1 || updated.Links[0].ItemID != "42" {
+		t.Errorf("update dropped the link: %+v", updated.Links)
 	}
 }
 

@@ -2,6 +2,7 @@ package issuesync
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
@@ -10,6 +11,7 @@ import (
 	"working-time-tracker/ent/issuesync"
 	"working-time-tracker/ent/project"
 	"working-time-tracker/internal/database"
+	"working-time-tracker/internal/domain/task"
 )
 
 // Estados de uma issue no vínculo.
@@ -17,7 +19,14 @@ const (
 	stateOpen   = "open"
 	stateClosed = "closed"
 	stateGone   = "gone"
+	// statePending é o vínculo feito à mão (ou o item recém-criado por Publish) que a sincronização ainda não
+	// adotou: não há acordo, e o snapshot está vazio.
+	statePending = "pending"
 )
+
+// errLinkDropped diz que o vínculo deixou de ser da tarefa no meio da rodada (alguém a desligou do item): o
+// que a rodada ia gravar nele não vale mais.
+var errLinkDropped = errors.New("issue sync: the link was dropped")
 
 // Row é o vínculo de uma issue (ou de um cartão) com uma tarefa e o snapshot do último acordo.
 type Row struct {
@@ -27,8 +36,11 @@ type Row struct {
 	TaskID *uuid.UUID
 	// ItemID é a chave do item na plataforma (adapter.Issue.ID): o número da issue, o link curto do cartão.
 	ItemID string
-	// State é o estado da issue na última rodada: aberta, fechada ou sumida (apagada ou transferida).
+	// State é o estado da issue na última rodada: aberta, fechada, sumida (apagada ou transferida) ou
+	// pendente (ainda não adotada).
 	State string
+	// URL é o endereço do item na plataforma.
+	URL string
 
 	Snapshot
 	StuckSig  string
@@ -56,6 +68,7 @@ func toRow(e *ent.IssueSync) *Row {
 		TaskID:        e.TaskID,
 		ItemID:        e.ItemID,
 		State:         string(e.State),
+		URL:           e.URL,
 		Snapshot: Snapshot{
 			Title:        e.Title,
 			Body:         e.Body,
@@ -87,9 +100,9 @@ func (s *Store) ByIntegration(integrationID uuid.UUID) (map[string]*Row, error) 
 	return out, nil
 }
 
-// ByTask acha o vínculo da tarefa, ou nil.
-func (s *Store) ByTask(taskID uuid.UUID) (*Row, error) {
-	e, err := s.client.IssueSync.Query().Where(issuesync.TaskIDEQ(taskID)).Only(context.Background())
+// ByID acha o vínculo, ou nil.
+func (s *Store) ByID(id uuid.UUID) (*Row, error) {
+	e, err := s.client.IssueSync.Get(context.Background(), id)
 	if ent.IsNotFound(err) {
 		return nil, nil
 	}
@@ -97,6 +110,25 @@ func (s *Store) ByTask(taskID uuid.UUID) (*Row, error) {
 		return nil, err
 	}
 	return toRow(e), nil
+}
+
+// ByTaskIntegration acha o vínculo da tarefa com a integração, ou nil.
+func (s *Store) ByTaskIntegration(taskID, integrationID uuid.UUID) (*Row, error) {
+	e, err := s.client.IssueSync.Query().
+		Where(issuesync.TaskIDEQ(taskID), issuesync.IntegrationIDEQ(integrationID)).
+		Only(context.Background())
+	if ent.IsNotFound(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return toRow(e), nil
+}
+
+// CountByTask diz a quantos itens a tarefa está ligada.
+func (s *Store) CountByTask(taskID uuid.UUID) (int, error) {
+	return s.client.IssueSync.Query().Where(issuesync.TaskIDEQ(taskID)).Count(context.Background())
 }
 
 // ByTasks acha os vínculos destas tarefas.
@@ -121,6 +153,7 @@ func (s *Store) Create(r *Row) error {
 		SetIntegrationID(r.IntegrationID).
 		SetNillableTaskID(r.TaskID).
 		SetItemID(r.ItemID).
+		SetURL(r.URL).
 		SetState(issuesync.State(r.State)).
 		SetTitle(r.Title).
 		SetBody(r.Body).
@@ -140,10 +173,16 @@ func (s *Store) Create(r *Row) error {
 	return nil
 }
 
-// Save grava o vínculo como está, tarefa e snapshot.
+// Save grava o snapshot e o estado do vínculo de uma tarefa, e só se ele ainda é dela: quem desligou a
+// tarefa do item no meio da rodada não é desfeito (errLinkDropped).
 func (s *Store) Save(r *Row) error {
-	q := s.client.IssueSync.UpdateOneID(r.ID).
+	if r.TaskID == nil {
+		return errLinkDropped
+	}
+	q := s.client.IssueSync.Update().
+		Where(issuesync.IDEQ(r.ID), issuesync.TaskIDEQ(*r.TaskID)).
 		SetState(issuesync.State(r.State)).
+		SetURL(r.URL).
 		SetTitle(r.Title).
 		SetBody(r.Body).
 		SetLabels(r.Labels).
@@ -152,11 +191,6 @@ func (s *Store) Save(r *Row) error {
 		SetStuckSig(r.StuckSig).
 		SetLastError(r.LastError).
 		SetSyncedAt(r.SyncedAt)
-	if r.TaskID != nil {
-		q = q.SetTaskID(*r.TaskID)
-	} else {
-		q = q.ClearTaskID()
-	}
 	if r.MappedPerson != nil {
 		q = q.SetMappedPersonID(*r.MappedPerson)
 	} else {
@@ -167,8 +201,51 @@ func (s *Store) Save(r *Row) error {
 	} else {
 		q = q.ClearDeadline()
 	}
-	_, err := q.Save(context.Background())
+	n, err := q.Save(context.Background())
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return errLinkDropped
+	}
+	return nil
+}
+
+// Release solta a tarefa do vínculo (o item vira descartado), se ele ainda é dela.
+func (s *Store) Release(r *Row) error {
+	if r.TaskID == nil {
+		return nil
+	}
+	_, err := s.client.IssueSync.Update().
+		Where(issuesync.IDEQ(r.ID), issuesync.TaskIDEQ(*r.TaskID)).
+		ClearTaskID().Save(context.Background())
 	return err
+}
+
+// CreateWithTask cria a tarefa de um item e o vínculo dela numa transação só: uma queda no meio não deixa uma
+// tarefa sem vínculo, que viraria uma segunda tarefa do mesmo item na rodada seguinte.
+func (s *Store) CreateWithTask(ctx context.Context, in task.Imported, r *Row) (*task.Task, error) {
+	tx, err := s.client.Tx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	created, err := task.NewStore(tx.Client()).CreateImported(in)
+	if err != nil {
+		_ = tx.Rollback()
+		return nil, err
+	}
+	r.TaskID = &created.ID
+	if err := (&Store{client: tx.Client()}).Create(r); err != nil {
+		_ = tx.Rollback()
+		r.TaskID = nil
+		return nil, err
+	}
+	if err := tx.Commit(); err != nil {
+		r.TaskID = nil
+		return nil, err
+	}
+	// Relê com o vínculo, que a leitura de dentro da transação ainda não tinha.
+	return task.NewStore(s.client).GetByID(created.ID.String())
 }
 
 // ptr guarda o prazo como nulo quando é o "sem prazo" (o tempo zero), e deref faz o caminho de volta.

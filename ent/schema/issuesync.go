@@ -11,12 +11,16 @@ import (
 )
 
 // IssueSync é o vínculo de um item da plataforma (uma issue do GitHub, um cartão do Trello) com uma
-// tarefa, na sincronização das issues de um repositório ou dos cartões de um quadro. Guarda também o
-// snapshot do último acordo entre os dois lados (título, corpo, etiquetas, responsáveis, prazo): é contra
-// ele que se vê quem mudou o quê desde a última rodada.
+// tarefa, e o único lugar onde esse vínculo mora. Uma tarefa tem no máximo um vínculo por integração, então
+// pode estar ao mesmo tempo numa issue e num cartão. Guarda também o snapshot do último acordo entre os dois
+// lados (título, corpo, etiquetas, responsáveis, prazo): é contra ele que se vê quem mudou o quê desde a
+// última rodada.
 //
-// task_id nulo é um item descartado: a tarefa foi excluída aqui, e a linha fica para o item não ser
-// importado de novo.
+// task_id nulo é um item descartado: a tarefa foi excluída aqui (ou desligada do item), e a linha fica para o
+// item não ser importado de novo.
+//
+// state "pending" é o vínculo feito à mão (ou republicado) que ainda não foi adotado pela sincronização:
+// ainda não há acordo, e a primeira rodada em que o item está aberto grava o snapshot.
 type IssueSync struct {
 	ent.Schema
 }
@@ -28,9 +32,12 @@ func (IssueSync) Fields() []ent.Field {
 		field.UUID("task_id", uuid.UUID{}).Optional().Nillable(),
 		// A chave do item na plataforma, em texto: o número da issue, o link curto do cartão.
 		field.String("item_id"),
+		// O endereço do item na plataforma (a página da issue, do cartão), para o cartão da tarefa abrir mesmo
+		// antes de buscar os detalhes. Vazio quando ninguém o informou.
+		field.String("url").Default(""),
 		// O estado da issue na última rodada. "gone" é a issue que sumiu do repositório (apagada ou
-		// transferida): a tarefa fica como estava.
-		field.Enum("state").Values("open", "closed", "gone").Default("open"),
+		// transferida): a tarefa fica como estava. "pending" é o vínculo ainda não adotado.
+		field.Enum("state").Values("open", "closed", "gone", "pending").Default("open"),
 
 		// O snapshot do último acordo.
 		field.String("title").Default(""),
@@ -57,13 +64,15 @@ func (IssueSync) Fields() []ent.Field {
 func (IssueSync) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("integration", Integration.Type).Ref("issue_syncs").Field("integration_id").Unique().Required(),
-		// Uma tarefa tem no máximo uma issue; excluir a tarefa só solta o vínculo (task_id fica nulo).
-		edge.From("task", Task.Type).Ref("issue_sync").Field("task_id").Unique(),
+		// Uma tarefa tem no máximo um item por integração; excluir a tarefa só solta o vínculo (task_id fica nulo).
+		edge.From("task", Task.Type).Ref("issue_syncs").Field("task_id").Unique(),
 	}
 }
 
 func (IssueSync) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("integration_id", "item_id").Unique(),
+		// NULL não conta como igual no Postgres: as linhas descartadas (task_id nulo) não se atrapalham.
+		index.Fields("task_id", "integration_id").Unique(),
 	}
 }

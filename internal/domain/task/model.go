@@ -64,22 +64,43 @@ type Attrs struct {
 	LabelIDs *[]string
 }
 
+// Link é o vínculo da tarefa com um item de uma integração (a issue do GitHub, o cartão do Trello). Uma
+// tarefa tem no máximo um por integração, então pode estar ao mesmo tempo em mais de uma plataforma.
+type Link struct {
+	IntegrationID uuid.UUID    `json:"integration_id"`
+	Integration   *Integration `json:"integration,omitempty"`
+	// ItemID é a chave do item na plataforma: o número da issue, o link curto do cartão.
+	ItemID string `json:"item_id"`
+	URL    string `json:"url"`
+	// LastError é o código do aviso que a última sincronização deixou neste vínculo (uma mudança que a
+	// plataforma descartou, um responsável sem usuário); vazio quando está tudo em ordem.
+	LastError string `json:"last_error,omitempty"`
+}
+
 type Task struct {
-	ID                    uuid.UUID    `json:"id"`
-	ProjectID             uuid.UUID    `json:"project_id"`
-	Name                  string       `json:"name"`
-	Description           string       `json:"description"`
-	Priority              string       `json:"priority"`
-	Status                string       `json:"status"`
-	Labels                []Label      `json:"labels"`
-	AssigneeID            *uuid.UUID   `json:"assignee_id"`
-	Assignee              *Person      `json:"assignee,omitempty"`
-	Deadline              time.Time    `json:"deadline"`
-	ExternalIntegrationID *uuid.UUID   `json:"external_integration_id,omitempty"`
-	ExternalIntegration   *Integration `json:"external_integration,omitempty"`
-	ExternalItemID        *string      `json:"external_item_id,omitempty"`
-	ExternalItemURL       *string      `json:"external_item_url,omitempty"`
-	CreatedAt             time.Time    `json:"created_at"`
+	ID          uuid.UUID  `json:"id"`
+	ProjectID   uuid.UUID  `json:"project_id"`
+	Name        string     `json:"name"`
+	Description string     `json:"description"`
+	Priority    string     `json:"priority"`
+	Status      string     `json:"status"`
+	Labels      []Label    `json:"labels"`
+	AssigneeID  *uuid.UUID `json:"assignee_id"`
+	Assignee    *Person    `json:"assignee,omitempty"`
+	Deadline    time.Time  `json:"deadline"`
+	// Links são os itens externos a que a tarefa está ligada, do mais antigo para o mais novo.
+	Links     []Link    `json:"links"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// LinkFor acha o vínculo com a integração. Com o id vazio devolve o primeiro, para quem só tem um.
+func (t *Task) LinkFor(integrationID string) *Link {
+	for i := range t.Links {
+		if integrationID == "" || t.Links[i].IntegrationID.String() == integrationID {
+			return &t.Links[i]
+		}
+	}
+	return nil
 }
 
 // ListFilter restringe a lista de tarefas de um projeto. O valor zero lista tudo.

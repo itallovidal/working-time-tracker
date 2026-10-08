@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"time"
-	"working-time-tracker/ent/integration"
 	"working-time-tracker/ent/issuesync"
 	"working-time-tracker/ent/label"
 	"working-time-tracker/ent/person"
@@ -109,48 +108,6 @@ func (_c *TaskCreate) SetNillableDeadline(v *time.Time) *TaskCreate {
 	return _c
 }
 
-// SetExternalIntegrationID sets the "external_integration_id" field.
-func (_c *TaskCreate) SetExternalIntegrationID(v uuid.UUID) *TaskCreate {
-	_c.mutation.SetExternalIntegrationID(v)
-	return _c
-}
-
-// SetNillableExternalIntegrationID sets the "external_integration_id" field if the given value is not nil.
-func (_c *TaskCreate) SetNillableExternalIntegrationID(v *uuid.UUID) *TaskCreate {
-	if v != nil {
-		_c.SetExternalIntegrationID(*v)
-	}
-	return _c
-}
-
-// SetExternalItemID sets the "external_item_id" field.
-func (_c *TaskCreate) SetExternalItemID(v string) *TaskCreate {
-	_c.mutation.SetExternalItemID(v)
-	return _c
-}
-
-// SetNillableExternalItemID sets the "external_item_id" field if the given value is not nil.
-func (_c *TaskCreate) SetNillableExternalItemID(v *string) *TaskCreate {
-	if v != nil {
-		_c.SetExternalItemID(*v)
-	}
-	return _c
-}
-
-// SetExternalItemURL sets the "external_item_url" field.
-func (_c *TaskCreate) SetExternalItemURL(v string) *TaskCreate {
-	_c.mutation.SetExternalItemURL(v)
-	return _c
-}
-
-// SetNillableExternalItemURL sets the "external_item_url" field if the given value is not nil.
-func (_c *TaskCreate) SetNillableExternalItemURL(v *string) *TaskCreate {
-	if v != nil {
-		_c.SetExternalItemURL(*v)
-	}
-	return _c
-}
-
 // SetCreatedAt sets the "created_at" field.
 func (_c *TaskCreate) SetCreatedAt(v time.Time) *TaskCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -189,11 +146,6 @@ func (_c *TaskCreate) SetAssignee(v *Person) *TaskCreate {
 	return _c.SetAssigneeID(v.ID)
 }
 
-// SetExternalIntegration sets the "external_integration" edge to the Integration entity.
-func (_c *TaskCreate) SetExternalIntegration(v *Integration) *TaskCreate {
-	return _c.SetExternalIntegrationID(v.ID)
-}
-
 // AddSessionLinkIDs adds the "session_links" edge to the WorkSessionTask entity by IDs.
 func (_c *TaskCreate) AddSessionLinkIDs(ids ...uuid.UUID) *TaskCreate {
 	_c.mutation.AddSessionLinkIDs(ids...)
@@ -224,23 +176,19 @@ func (_c *TaskCreate) AddLabels(v ...*Label) *TaskCreate {
 	return _c.AddLabelIDs(ids...)
 }
 
-// SetIssueSyncID sets the "issue_sync" edge to the IssueSync entity by ID.
-func (_c *TaskCreate) SetIssueSyncID(id uuid.UUID) *TaskCreate {
-	_c.mutation.SetIssueSyncID(id)
+// AddIssueSyncIDs adds the "issue_syncs" edge to the IssueSync entity by IDs.
+func (_c *TaskCreate) AddIssueSyncIDs(ids ...uuid.UUID) *TaskCreate {
+	_c.mutation.AddIssueSyncIDs(ids...)
 	return _c
 }
 
-// SetNillableIssueSyncID sets the "issue_sync" edge to the IssueSync entity by ID if the given value is not nil.
-func (_c *TaskCreate) SetNillableIssueSyncID(id *uuid.UUID) *TaskCreate {
-	if id != nil {
-		_c = _c.SetIssueSyncID(*id)
+// AddIssueSyncs adds the "issue_syncs" edges to the IssueSync entity.
+func (_c *TaskCreate) AddIssueSyncs(v ...*IssueSync) *TaskCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return _c
-}
-
-// SetIssueSync sets the "issue_sync" edge to the IssueSync entity.
-func (_c *TaskCreate) SetIssueSync(v *IssueSync) *TaskCreate {
-	return _c.SetIssueSyncID(v.ID)
+	return _c.AddIssueSyncIDs(ids...)
 }
 
 // Mutation returns the TaskMutation object of the builder.
@@ -381,14 +329,6 @@ func (_c *TaskCreate) createSpec() (*Task, *sqlgraph.CreateSpec) {
 		_spec.SetField(task.FieldDeadline, field.TypeTime, value)
 		_node.Deadline = value
 	}
-	if value, ok := _c.mutation.ExternalItemID(); ok {
-		_spec.SetField(task.FieldExternalItemID, field.TypeString, value)
-		_node.ExternalItemID = &value
-	}
-	if value, ok := _c.mutation.ExternalItemURL(); ok {
-		_spec.SetField(task.FieldExternalItemURL, field.TypeString, value)
-		_node.ExternalItemURL = &value
-	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(task.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
@@ -427,23 +367,6 @@ func (_c *TaskCreate) createSpec() (*Task, *sqlgraph.CreateSpec) {
 		_node.AssigneeID = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := _c.mutation.ExternalIntegrationIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   task.ExternalIntegrationTable,
-			Columns: []string{task.ExternalIntegrationColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(integration.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_node.ExternalIntegrationID = &nodes[0]
-		_spec.Edges = append(_spec.Edges, edge)
-	}
 	if nodes := _c.mutation.SessionLinksIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
@@ -476,12 +399,12 @@ func (_c *TaskCreate) createSpec() (*Task, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := _c.mutation.IssueSyncIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.IssueSyncsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   task.IssueSyncTable,
-			Columns: []string{task.IssueSyncColumn},
+			Table:   task.IssueSyncsTable,
+			Columns: []string{task.IssueSyncsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(issuesync.FieldID, field.TypeUUID),

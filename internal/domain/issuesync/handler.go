@@ -48,10 +48,16 @@ func (h *Handler) SyncProject(c *echo.Context) error {
 	return apperr.Respond(c, 400, err)
 }
 
-// SyncTask é o botão Sincronizar da tela da tarefa: sincroniza a issue dela e responde o que mudou. Com
-// uma rodada em andamento na integração, responde 409 em vez de esperar.
+// SyncTask é o botão Sincronizar da tela da tarefa: sincroniza o item dela (o da integração do query
+// integration_id, ou todos) e responde o que mudou. Com uma rodada em andamento na integração, responde 409
+// em vez de esperar.
 func (h *Handler) SyncTask(c *echo.Context) error {
-	sum, err := h.syncer.SyncTaskNow(c.Request().Context(), parseID(c.Param("taskId")))
+	var integrationID *uuid.UUID
+	if raw := c.QueryParam("integration_id"); raw != "" {
+		id := parseID(raw)
+		integrationID = &id
+	}
+	sum, err := h.syncer.SyncTaskNow(c.Request().Context(), parseID(c.Param("taskId")), integrationID)
 	switch {
 	case err == nil:
 		return c.JSON(200, sum)

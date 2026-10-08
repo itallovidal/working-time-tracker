@@ -52,13 +52,11 @@ type Integration struct {
 type IntegrationEdges struct {
 	// Project holds the value of the project edge.
 	Project *Project `json:"project,omitempty"`
-	// Tasks holds the value of the tasks edge.
-	Tasks []*Task `json:"tasks,omitempty"`
 	// IssueSyncs holds the value of the issue_syncs edge.
 	IssueSyncs []*IssueSync `json:"issue_syncs,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [3]bool
+	loadedTypes [2]bool
 }
 
 // ProjectOrErr returns the Project value or an error if the edge
@@ -72,19 +70,10 @@ func (e IntegrationEdges) ProjectOrErr() (*Project, error) {
 	return nil, &NotLoadedError{edge: "project"}
 }
 
-// TasksOrErr returns the Tasks value or an error if the edge
-// was not loaded in eager-loading.
-func (e IntegrationEdges) TasksOrErr() ([]*Task, error) {
-	if e.loadedTypes[1] {
-		return e.Tasks, nil
-	}
-	return nil, &NotLoadedError{edge: "tasks"}
-}
-
 // IssueSyncsOrErr returns the IssueSyncs value or an error if the edge
 // was not loaded in eager-loading.
 func (e IntegrationEdges) IssueSyncsOrErr() ([]*IssueSync, error) {
-	if e.loadedTypes[2] {
+	if e.loadedTypes[1] {
 		return e.IssueSyncs, nil
 	}
 	return nil, &NotLoadedError{edge: "issue_syncs"}
@@ -214,11 +203,6 @@ func (_m *Integration) Value(name string) (ent.Value, error) {
 // QueryProject queries the "project" edge of the Integration entity.
 func (_m *Integration) QueryProject() *ProjectQuery {
 	return NewIntegrationClient(_m.config).QueryProject(_m)
-}
-
-// QueryTasks queries the "tasks" edge of the Integration entity.
-func (_m *Integration) QueryTasks() *TaskQuery {
-	return NewIntegrationClient(_m.config).QueryTasks(_m)
 }
 
 // QueryIssueSyncs queries the "issue_syncs" edge of the Integration entity.

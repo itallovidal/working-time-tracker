@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"time"
-	"working-time-tracker/ent/integration"
 	"working-time-tracker/ent/issuesync"
 	"working-time-tracker/ent/label"
 	"working-time-tracker/ent/person"
@@ -151,66 +150,6 @@ func (_u *TaskUpdate) ClearDeadline() *TaskUpdate {
 	return _u
 }
 
-// SetExternalIntegrationID sets the "external_integration_id" field.
-func (_u *TaskUpdate) SetExternalIntegrationID(v uuid.UUID) *TaskUpdate {
-	_u.mutation.SetExternalIntegrationID(v)
-	return _u
-}
-
-// SetNillableExternalIntegrationID sets the "external_integration_id" field if the given value is not nil.
-func (_u *TaskUpdate) SetNillableExternalIntegrationID(v *uuid.UUID) *TaskUpdate {
-	if v != nil {
-		_u.SetExternalIntegrationID(*v)
-	}
-	return _u
-}
-
-// ClearExternalIntegrationID clears the value of the "external_integration_id" field.
-func (_u *TaskUpdate) ClearExternalIntegrationID() *TaskUpdate {
-	_u.mutation.ClearExternalIntegrationID()
-	return _u
-}
-
-// SetExternalItemID sets the "external_item_id" field.
-func (_u *TaskUpdate) SetExternalItemID(v string) *TaskUpdate {
-	_u.mutation.SetExternalItemID(v)
-	return _u
-}
-
-// SetNillableExternalItemID sets the "external_item_id" field if the given value is not nil.
-func (_u *TaskUpdate) SetNillableExternalItemID(v *string) *TaskUpdate {
-	if v != nil {
-		_u.SetExternalItemID(*v)
-	}
-	return _u
-}
-
-// ClearExternalItemID clears the value of the "external_item_id" field.
-func (_u *TaskUpdate) ClearExternalItemID() *TaskUpdate {
-	_u.mutation.ClearExternalItemID()
-	return _u
-}
-
-// SetExternalItemURL sets the "external_item_url" field.
-func (_u *TaskUpdate) SetExternalItemURL(v string) *TaskUpdate {
-	_u.mutation.SetExternalItemURL(v)
-	return _u
-}
-
-// SetNillableExternalItemURL sets the "external_item_url" field if the given value is not nil.
-func (_u *TaskUpdate) SetNillableExternalItemURL(v *string) *TaskUpdate {
-	if v != nil {
-		_u.SetExternalItemURL(*v)
-	}
-	return _u
-}
-
-// ClearExternalItemURL clears the value of the "external_item_url" field.
-func (_u *TaskUpdate) ClearExternalItemURL() *TaskUpdate {
-	_u.mutation.ClearExternalItemURL()
-	return _u
-}
-
 // SetProject sets the "project" edge to the Project entity.
 func (_u *TaskUpdate) SetProject(v *Project) *TaskUpdate {
 	return _u.SetProjectID(v.ID)
@@ -219,11 +158,6 @@ func (_u *TaskUpdate) SetProject(v *Project) *TaskUpdate {
 // SetAssignee sets the "assignee" edge to the Person entity.
 func (_u *TaskUpdate) SetAssignee(v *Person) *TaskUpdate {
 	return _u.SetAssigneeID(v.ID)
-}
-
-// SetExternalIntegration sets the "external_integration" edge to the Integration entity.
-func (_u *TaskUpdate) SetExternalIntegration(v *Integration) *TaskUpdate {
-	return _u.SetExternalIntegrationID(v.ID)
 }
 
 // AddSessionLinkIDs adds the "session_links" edge to the WorkSessionTask entity by IDs.
@@ -256,23 +190,19 @@ func (_u *TaskUpdate) AddLabels(v ...*Label) *TaskUpdate {
 	return _u.AddLabelIDs(ids...)
 }
 
-// SetIssueSyncID sets the "issue_sync" edge to the IssueSync entity by ID.
-func (_u *TaskUpdate) SetIssueSyncID(id uuid.UUID) *TaskUpdate {
-	_u.mutation.SetIssueSyncID(id)
+// AddIssueSyncIDs adds the "issue_syncs" edge to the IssueSync entity by IDs.
+func (_u *TaskUpdate) AddIssueSyncIDs(ids ...uuid.UUID) *TaskUpdate {
+	_u.mutation.AddIssueSyncIDs(ids...)
 	return _u
 }
 
-// SetNillableIssueSyncID sets the "issue_sync" edge to the IssueSync entity by ID if the given value is not nil.
-func (_u *TaskUpdate) SetNillableIssueSyncID(id *uuid.UUID) *TaskUpdate {
-	if id != nil {
-		_u = _u.SetIssueSyncID(*id)
+// AddIssueSyncs adds the "issue_syncs" edges to the IssueSync entity.
+func (_u *TaskUpdate) AddIssueSyncs(v ...*IssueSync) *TaskUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return _u
-}
-
-// SetIssueSync sets the "issue_sync" edge to the IssueSync entity.
-func (_u *TaskUpdate) SetIssueSync(v *IssueSync) *TaskUpdate {
-	return _u.SetIssueSyncID(v.ID)
+	return _u.AddIssueSyncIDs(ids...)
 }
 
 // Mutation returns the TaskMutation object of the builder.
@@ -289,12 +219,6 @@ func (_u *TaskUpdate) ClearProject() *TaskUpdate {
 // ClearAssignee clears the "assignee" edge to the Person entity.
 func (_u *TaskUpdate) ClearAssignee() *TaskUpdate {
 	_u.mutation.ClearAssignee()
-	return _u
-}
-
-// ClearExternalIntegration clears the "external_integration" edge to the Integration entity.
-func (_u *TaskUpdate) ClearExternalIntegration() *TaskUpdate {
-	_u.mutation.ClearExternalIntegration()
 	return _u
 }
 
@@ -340,10 +264,25 @@ func (_u *TaskUpdate) RemoveLabels(v ...*Label) *TaskUpdate {
 	return _u.RemoveLabelIDs(ids...)
 }
 
-// ClearIssueSync clears the "issue_sync" edge to the IssueSync entity.
-func (_u *TaskUpdate) ClearIssueSync() *TaskUpdate {
-	_u.mutation.ClearIssueSync()
+// ClearIssueSyncs clears all "issue_syncs" edges to the IssueSync entity.
+func (_u *TaskUpdate) ClearIssueSyncs() *TaskUpdate {
+	_u.mutation.ClearIssueSyncs()
 	return _u
+}
+
+// RemoveIssueSyncIDs removes the "issue_syncs" edge to IssueSync entities by IDs.
+func (_u *TaskUpdate) RemoveIssueSyncIDs(ids ...uuid.UUID) *TaskUpdate {
+	_u.mutation.RemoveIssueSyncIDs(ids...)
+	return _u
+}
+
+// RemoveIssueSyncs removes "issue_syncs" edges to IssueSync entities.
+func (_u *TaskUpdate) RemoveIssueSyncs(v ...*IssueSync) *TaskUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveIssueSyncIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -424,18 +363,6 @@ func (_u *TaskUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.DeadlineCleared() {
 		_spec.ClearField(task.FieldDeadline, field.TypeTime)
 	}
-	if value, ok := _u.mutation.ExternalItemID(); ok {
-		_spec.SetField(task.FieldExternalItemID, field.TypeString, value)
-	}
-	if _u.mutation.ExternalItemIDCleared() {
-		_spec.ClearField(task.FieldExternalItemID, field.TypeString)
-	}
-	if value, ok := _u.mutation.ExternalItemURL(); ok {
-		_spec.SetField(task.FieldExternalItemURL, field.TypeString, value)
-	}
-	if _u.mutation.ExternalItemURLCleared() {
-		_spec.ClearField(task.FieldExternalItemURL, field.TypeString)
-	}
 	if _u.mutation.ProjectCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -487,35 +414,6 @@ func (_u *TaskUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(person.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if _u.mutation.ExternalIntegrationCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   task.ExternalIntegrationTable,
-			Columns: []string{task.ExternalIntegrationColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(integration.FieldID, field.TypeUUID),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.ExternalIntegrationIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   task.ExternalIntegrationTable,
-			Columns: []string{task.ExternalIntegrationColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(integration.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -613,12 +511,12 @@ func (_u *TaskUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if _u.mutation.IssueSyncCleared() {
+	if _u.mutation.IssueSyncsCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   task.IssueSyncTable,
-			Columns: []string{task.IssueSyncColumn},
+			Table:   task.IssueSyncsTable,
+			Columns: []string{task.IssueSyncsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(issuesync.FieldID, field.TypeUUID),
@@ -626,12 +524,28 @@ func (_u *TaskUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := _u.mutation.IssueSyncIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.RemovedIssueSyncsIDs(); len(nodes) > 0 && !_u.mutation.IssueSyncsCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   task.IssueSyncTable,
-			Columns: []string{task.IssueSyncColumn},
+			Table:   task.IssueSyncsTable,
+			Columns: []string{task.IssueSyncsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(issuesync.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.IssueSyncsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   task.IssueSyncsTable,
+			Columns: []string{task.IssueSyncsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(issuesync.FieldID, field.TypeUUID),
@@ -778,66 +692,6 @@ func (_u *TaskUpdateOne) ClearDeadline() *TaskUpdateOne {
 	return _u
 }
 
-// SetExternalIntegrationID sets the "external_integration_id" field.
-func (_u *TaskUpdateOne) SetExternalIntegrationID(v uuid.UUID) *TaskUpdateOne {
-	_u.mutation.SetExternalIntegrationID(v)
-	return _u
-}
-
-// SetNillableExternalIntegrationID sets the "external_integration_id" field if the given value is not nil.
-func (_u *TaskUpdateOne) SetNillableExternalIntegrationID(v *uuid.UUID) *TaskUpdateOne {
-	if v != nil {
-		_u.SetExternalIntegrationID(*v)
-	}
-	return _u
-}
-
-// ClearExternalIntegrationID clears the value of the "external_integration_id" field.
-func (_u *TaskUpdateOne) ClearExternalIntegrationID() *TaskUpdateOne {
-	_u.mutation.ClearExternalIntegrationID()
-	return _u
-}
-
-// SetExternalItemID sets the "external_item_id" field.
-func (_u *TaskUpdateOne) SetExternalItemID(v string) *TaskUpdateOne {
-	_u.mutation.SetExternalItemID(v)
-	return _u
-}
-
-// SetNillableExternalItemID sets the "external_item_id" field if the given value is not nil.
-func (_u *TaskUpdateOne) SetNillableExternalItemID(v *string) *TaskUpdateOne {
-	if v != nil {
-		_u.SetExternalItemID(*v)
-	}
-	return _u
-}
-
-// ClearExternalItemID clears the value of the "external_item_id" field.
-func (_u *TaskUpdateOne) ClearExternalItemID() *TaskUpdateOne {
-	_u.mutation.ClearExternalItemID()
-	return _u
-}
-
-// SetExternalItemURL sets the "external_item_url" field.
-func (_u *TaskUpdateOne) SetExternalItemURL(v string) *TaskUpdateOne {
-	_u.mutation.SetExternalItemURL(v)
-	return _u
-}
-
-// SetNillableExternalItemURL sets the "external_item_url" field if the given value is not nil.
-func (_u *TaskUpdateOne) SetNillableExternalItemURL(v *string) *TaskUpdateOne {
-	if v != nil {
-		_u.SetExternalItemURL(*v)
-	}
-	return _u
-}
-
-// ClearExternalItemURL clears the value of the "external_item_url" field.
-func (_u *TaskUpdateOne) ClearExternalItemURL() *TaskUpdateOne {
-	_u.mutation.ClearExternalItemURL()
-	return _u
-}
-
 // SetProject sets the "project" edge to the Project entity.
 func (_u *TaskUpdateOne) SetProject(v *Project) *TaskUpdateOne {
 	return _u.SetProjectID(v.ID)
@@ -846,11 +700,6 @@ func (_u *TaskUpdateOne) SetProject(v *Project) *TaskUpdateOne {
 // SetAssignee sets the "assignee" edge to the Person entity.
 func (_u *TaskUpdateOne) SetAssignee(v *Person) *TaskUpdateOne {
 	return _u.SetAssigneeID(v.ID)
-}
-
-// SetExternalIntegration sets the "external_integration" edge to the Integration entity.
-func (_u *TaskUpdateOne) SetExternalIntegration(v *Integration) *TaskUpdateOne {
-	return _u.SetExternalIntegrationID(v.ID)
 }
 
 // AddSessionLinkIDs adds the "session_links" edge to the WorkSessionTask entity by IDs.
@@ -883,23 +732,19 @@ func (_u *TaskUpdateOne) AddLabels(v ...*Label) *TaskUpdateOne {
 	return _u.AddLabelIDs(ids...)
 }
 
-// SetIssueSyncID sets the "issue_sync" edge to the IssueSync entity by ID.
-func (_u *TaskUpdateOne) SetIssueSyncID(id uuid.UUID) *TaskUpdateOne {
-	_u.mutation.SetIssueSyncID(id)
+// AddIssueSyncIDs adds the "issue_syncs" edge to the IssueSync entity by IDs.
+func (_u *TaskUpdateOne) AddIssueSyncIDs(ids ...uuid.UUID) *TaskUpdateOne {
+	_u.mutation.AddIssueSyncIDs(ids...)
 	return _u
 }
 
-// SetNillableIssueSyncID sets the "issue_sync" edge to the IssueSync entity by ID if the given value is not nil.
-func (_u *TaskUpdateOne) SetNillableIssueSyncID(id *uuid.UUID) *TaskUpdateOne {
-	if id != nil {
-		_u = _u.SetIssueSyncID(*id)
+// AddIssueSyncs adds the "issue_syncs" edges to the IssueSync entity.
+func (_u *TaskUpdateOne) AddIssueSyncs(v ...*IssueSync) *TaskUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return _u
-}
-
-// SetIssueSync sets the "issue_sync" edge to the IssueSync entity.
-func (_u *TaskUpdateOne) SetIssueSync(v *IssueSync) *TaskUpdateOne {
-	return _u.SetIssueSyncID(v.ID)
+	return _u.AddIssueSyncIDs(ids...)
 }
 
 // Mutation returns the TaskMutation object of the builder.
@@ -916,12 +761,6 @@ func (_u *TaskUpdateOne) ClearProject() *TaskUpdateOne {
 // ClearAssignee clears the "assignee" edge to the Person entity.
 func (_u *TaskUpdateOne) ClearAssignee() *TaskUpdateOne {
 	_u.mutation.ClearAssignee()
-	return _u
-}
-
-// ClearExternalIntegration clears the "external_integration" edge to the Integration entity.
-func (_u *TaskUpdateOne) ClearExternalIntegration() *TaskUpdateOne {
-	_u.mutation.ClearExternalIntegration()
 	return _u
 }
 
@@ -967,10 +806,25 @@ func (_u *TaskUpdateOne) RemoveLabels(v ...*Label) *TaskUpdateOne {
 	return _u.RemoveLabelIDs(ids...)
 }
 
-// ClearIssueSync clears the "issue_sync" edge to the IssueSync entity.
-func (_u *TaskUpdateOne) ClearIssueSync() *TaskUpdateOne {
-	_u.mutation.ClearIssueSync()
+// ClearIssueSyncs clears all "issue_syncs" edges to the IssueSync entity.
+func (_u *TaskUpdateOne) ClearIssueSyncs() *TaskUpdateOne {
+	_u.mutation.ClearIssueSyncs()
 	return _u
+}
+
+// RemoveIssueSyncIDs removes the "issue_syncs" edge to IssueSync entities by IDs.
+func (_u *TaskUpdateOne) RemoveIssueSyncIDs(ids ...uuid.UUID) *TaskUpdateOne {
+	_u.mutation.RemoveIssueSyncIDs(ids...)
+	return _u
+}
+
+// RemoveIssueSyncs removes "issue_syncs" edges to IssueSync entities.
+func (_u *TaskUpdateOne) RemoveIssueSyncs(v ...*IssueSync) *TaskUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveIssueSyncIDs(ids...)
 }
 
 // Where appends a list predicates to the TaskUpdate builder.
@@ -1081,18 +935,6 @@ func (_u *TaskUpdateOne) sqlSave(ctx context.Context) (_node *Task, err error) {
 	if _u.mutation.DeadlineCleared() {
 		_spec.ClearField(task.FieldDeadline, field.TypeTime)
 	}
-	if value, ok := _u.mutation.ExternalItemID(); ok {
-		_spec.SetField(task.FieldExternalItemID, field.TypeString, value)
-	}
-	if _u.mutation.ExternalItemIDCleared() {
-		_spec.ClearField(task.FieldExternalItemID, field.TypeString)
-	}
-	if value, ok := _u.mutation.ExternalItemURL(); ok {
-		_spec.SetField(task.FieldExternalItemURL, field.TypeString, value)
-	}
-	if _u.mutation.ExternalItemURLCleared() {
-		_spec.ClearField(task.FieldExternalItemURL, field.TypeString)
-	}
 	if _u.mutation.ProjectCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -1144,35 +986,6 @@ func (_u *TaskUpdateOne) sqlSave(ctx context.Context) (_node *Task, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(person.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if _u.mutation.ExternalIntegrationCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   task.ExternalIntegrationTable,
-			Columns: []string{task.ExternalIntegrationColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(integration.FieldID, field.TypeUUID),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.ExternalIntegrationIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   task.ExternalIntegrationTable,
-			Columns: []string{task.ExternalIntegrationColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(integration.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1270,12 +1083,12 @@ func (_u *TaskUpdateOne) sqlSave(ctx context.Context) (_node *Task, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if _u.mutation.IssueSyncCleared() {
+	if _u.mutation.IssueSyncsCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   task.IssueSyncTable,
-			Columns: []string{task.IssueSyncColumn},
+			Table:   task.IssueSyncsTable,
+			Columns: []string{task.IssueSyncsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(issuesync.FieldID, field.TypeUUID),
@@ -1283,12 +1096,28 @@ func (_u *TaskUpdateOne) sqlSave(ctx context.Context) (_node *Task, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := _u.mutation.IssueSyncIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.RemovedIssueSyncsIDs(); len(nodes) > 0 && !_u.mutation.IssueSyncsCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   task.IssueSyncTable,
-			Columns: []string{task.IssueSyncColumn},
+			Table:   task.IssueSyncsTable,
+			Columns: []string{task.IssueSyncsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(issuesync.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.IssueSyncsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   task.IssueSyncsTable,
+			Columns: []string{task.IssueSyncsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(issuesync.FieldID, field.TypeUUID),
