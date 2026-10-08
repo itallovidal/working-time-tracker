@@ -26,7 +26,7 @@ func mainNav(t *testing.T, body string) []string {
 	return items
 }
 
-// A barra superior tem Início, Colaboradores e Organização. Colaboradores leva direto à
+// A barra superior tem Início, Colaboradores, Organização e Ajuda. Colaboradores leva direto à
 // configuração das pessoas, e só aparece para quem pode cuidar delas: admins e quem recebeu essa permissão.
 func TestPages_MainNavHasHomePeopleAndOrganization(t *testing.T) {
 	e := newServer(t)
@@ -42,13 +42,14 @@ func TestPages_MainNavHasHomePeopleAndOrganization(t *testing.T) {
 		who, path, session string
 		want               []string
 	}{
-		{"admin on the home page", home, admin.session, []string{"Início " + home + " (current)", "Colaboradores " + home + "/people", "Organização " + home + "/about"}},
-		{"admin on the collaborators tab", home + "/people", admin.session, []string{"Início " + home, "Colaboradores " + home + "/people (current)", "Organização " + home + "/about"}},
-		{"admin on the about tab", home + "/about", admin.session, []string{"Início " + home, "Colaboradores " + home + "/people", "Organização " + home + "/about (current)"}},
-		{"admin on the customers tab", home + "/customers", admin.session, []string{"Início " + home, "Colaboradores " + home + "/people", "Organização " + home + "/about (current)"}},
-		{"admin in a project", "/projects/" + createProject(t, e, admin, "Projeto Alfa") + "/tasks", admin.session, []string{"Início " + home, "Colaboradores " + home + "/people", "Organização " + home + "/about"}},
-		{"member without the permission", home, member.session, []string{"Início " + home + " (current)", "Organização " + home + "/about"}},
-		{"member allowed to manage people", home, carol.session, []string{"Início " + home + " (current)", "Colaboradores " + home + "/people", "Organização " + home + "/about"}},
+		{"admin on the home page", home, admin.session, []string{"Início " + home + " (current)", "Colaboradores " + home + "/people", "Organização " + home + "/about", "Ajuda /help"}},
+		{"admin on the collaborators tab", home + "/people", admin.session, []string{"Início " + home, "Colaboradores " + home + "/people (current)", "Organização " + home + "/about", "Ajuda /help"}},
+		{"admin on the about tab", home + "/about", admin.session, []string{"Início " + home, "Colaboradores " + home + "/people", "Organização " + home + "/about (current)", "Ajuda /help"}},
+		{"admin on the customers tab", home + "/customers", admin.session, []string{"Início " + home, "Colaboradores " + home + "/people", "Organização " + home + "/about (current)", "Ajuda /help"}},
+		{"admin in a project", "/projects/" + createProject(t, e, admin, "Projeto Alfa") + "/tasks", admin.session, []string{"Início " + home, "Colaboradores " + home + "/people", "Organização " + home + "/about", "Ajuda /help"}},
+		{"member without the permission", home, member.session, []string{"Início " + home + " (current)", "Organização " + home + "/about", "Ajuda /help"}},
+		{"member allowed to manage people", home, carol.session, []string{"Início " + home + " (current)", "Colaboradores " + home + "/people", "Organização " + home + "/about", "Ajuda /help"}},
+		{"admin on the help page", "/help", admin.session, []string{"Início " + home, "Colaboradores " + home + "/people", "Organização " + home + "/about", "Ajuda /help (current)"}},
 	} {
 		rec := do(e, "GET", c.path, "", c.session)
 		if rec.Code != http.StatusOK {

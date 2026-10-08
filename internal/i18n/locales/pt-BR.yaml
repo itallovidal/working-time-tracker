@@ -60,12 +60,14 @@ titles:
   integrations: Gestão · Integrações
   trello_callback: Conectando com o Trello
   project_settings: Gestão · Configurações
+  help: Ajuda
 
 nav:
   label: Organização
   home: Início
   people: Colaboradores
   organization: Organização
+  help: Ajuda
   profile_sr: "Seu perfil:"
   logout: Sair
 
@@ -308,6 +310,185 @@ profile:
     next_hint: Pelo menos 8 caracteres. As suas outras sessões serão encerradas.
     submit: Trocar senha
     changed: Senha trocada. As outras sessões foram encerradas.
+
+# A ajuda (/help): uma página só, com o passo a passo do primeiro uso e o que cada tela faz.
+# Os rótulos que a pessoa clica aparecem nos textos entre aspas, como estão na tela; os
+# caminhos (Organização › Sobre › Editar) são montados no template com as chaves da própria tela.
+help:
+  eyebrow: Ajuda
+  title: Como usar o Working Time Tracker
+  lede: "Tudo em uma página só: do primeiro acesso ao primeiro registro de horas e, depois, o que cada tela faz. Use o sumário ao lado para ir direto ao que você procura."
+  toc_title: Sumário
+  toc_label: Sumário da ajuda
+  path_label: Caminho na tela
+  project: Projeto
+  groups:
+    start: Primeiros passos
+    screens: As telas
+    concepts: Para entender melhor
+    faq: Dúvidas rápidas
+  start:
+    intro: "Chegou agora? Siga os passos na ordem. Leva uns dez minutos e, no fim, o seu time já está registrando horas."
+  steps:
+    create_account:
+      title: Crie a conta
+      text: "Abra a tela de cadastro e preencha o nome da organização, o seu nome, o seu email e uma senha com pelo menos 8 caracteres. Você entra como administrador e dono da organização."
+      tip: "Recebeu um convite? Pule este passo: abra o link do convite e crie a sua conta por lá."
+    currency:
+      title: Confira a moeda e o fuso
+      text: "A moeda (real, dólar ou euro) e o fuso horário valem para a organização inteira. Ajuste agora, antes de cadastrar qualquer valor. Aproveite para preencher o perfil: o time inteiro lê a aba Sobre."
+      tip: "A moeda só muda como os valores aparecem; o app não converte entre moedas."
+    customers:
+      title: Cadastre os clientes
+      text: "Cliente é quem contrata o seu time. Só o nome é obrigatório; CNPJ, pessoa de contato, email e telefone são opcionais."
+      tip: "Este passo é opcional: um projeto sem cliente é um projeto interno, e o cliente pode ser escolhido depois, nas configurações do projeto."
+    project:
+      title: Crie o primeiro projeto
+      text: "Informe o nome e, se quiser, uma descrição. Escolha o cliente e o valor cobrado por hora (só administradores veem esses campos) e a duração da sprint: 7, 14 ou 30 dias. Marque “O projeto tem daily” e “O projeto tem weekly” se o time faz essas reuniões."
+      tip: "O valor cobrado por hora é o que o cliente paga pelas horas deste projeto. É com ele que o app calcula a receita."
+    invite:
+      title: Convide o time
+      text: "Gere um link de convite, copie e envie à pessoa por onde preferir: o app não envia email. Quem abrir o link informa o nome, escolhe uma senha e entra na organização com o papel que você escolheu."
+      tip: "O link vale por 7 dias e funciona uma vez. Ele só aparece na hora, então copie antes de fechar. Se você informar o email, só aquela pessoa consegue usá-lo. Os convites ainda não usados ficam em “Convites pendentes”."
+    rates:
+      title: Pessoas no projeto e valor por hora
+      text: "Convidar não basta: cada pessoa precisa ser adicionada a cada projeto em que vai trabalhar, com o valor que ela recebe por hora ali. Escolha a pessoa, informe o valor por hora (obrigatório), um time (opcional) e o grupo de permissões: Colaborador, Gerente de projeto ou Administrador do projeto."
+      tip: "Sem valor por hora, a pessoa não consegue iniciar o ponto. O valor pode ser diferente em cada projeto e mudar depois, mas só vale para as sessões novas."
+    tasks:
+      title: Crie as tarefas
+      text: "Dê um nome à tarefa e, se quiser, uma descrição, o prazo, a prioridade, as etiquetas e o responsável. A tarefa nasce em Backlog; sem prazo, o app usa 7 dias a partir de hoje."
+      tip: "Tarefa sem responsável fica disponível para o time: quem iniciar o ponto nela passa a ser o responsável. O responsável precisa estar no projeto."
+    track:
+      title: Registre as horas
+      text: "No Início do projeto ou em Minhas tarefas, clique em “Iniciar” na tarefa em que vai trabalhar. O cronômetro começa e a “Sessão ativa” fica no canto da tela, em qualquer página. Para encerrar, clique em “Parar”."
+      tip: "Ao iniciar, a tarefa vai para “Em progresso”. Você pode trabalhar em várias tarefas na mesma sessão (“Adicionar à sessão”): cada uma conta o tempo cheio e a sessão conta uma vez só. Só existe um ponto aberto por pessoa."
+    numbers:
+      title: Acompanhe os números
+      text: "Administradores veem, no Início da organização, as horas, a receita, o custo e a margem de todos os projetos, em 7 dias, 30 dias ou tudo. Cada projeto tem a sua “Visão geral” na Gestão, com as sessões de todo mundo e os totais."
+      tip: "As telas mostram quem está trabalhando agora e em qual tarefa, mas não ordenam nem comparam pessoas por horas."
+  screens:
+    intro: "Para cada tela: o que ela mostra e o que dá para fazer nela. Alguns botões só aparecem para quem tem a permissão (veja “Quem vê e faz o quê”)."
+    home:
+      title: Início da organização
+      text: A primeira tela depois de entrar.
+      projects: "Projetos: os projetos da organização, em cartões, seis por página. Clique num cartão para abrir o projeto. Quem pode criar projetos vê o botão “Novo projeto” junto do título."
+      overview: "Visão geral (só administradores): as suas horas, as horas da equipe, a receita, o custo e a margem de todos os projetos juntos, em 7 dias, 30 dias ou tudo."
+      team: "Equipe (só administradores): quem está com o ponto aberto agora e em qual tarefa."
+    org_about:
+      title: "Organização: Sobre"
+      text: "O perfil da organização: descrição, segmento, contato, dados da empresa e como o time trabalha (regime, fuso e moeda). Todo mundo lê. Campo vazio aparece como “Não informado”."
+      edit: "O administrador tem o botão “Editar”, para alterar o perfil, a moeda e o fuso."
+      delete: "No fim da edição está “Excluir organização”: só o dono consegue, e só depois de excluir todos os projetos."
+    org_people:
+      title: "Organização: Colaboradores"
+      text: "Quem faz parte da organização, com o papel (Dono, Admin ou Membro) e a jornada semanal. A aba aparece só para quem cuida das pessoas: administradores e quem o dono liberou."
+      add: "“Adicionar colaborador” gera um link de convite. Escolha o papel (só o dono convida administradores) e, se quiser, informe o email para que só aquela pessoa use o link."
+      pending: "“Convites pendentes” lista os links ainda não usados, cada um com validade de 7 dias. Dá para revogar."
+      edit: "O lápis da linha abre “Jornada e permissões”: as horas combinadas por semana e, para o dono, as permissões de organização de quem não é administrador."
+      role: "Só o dono torna alguém administrador, ou volta a membro."
+    org_customers:
+      title: "Organização: Clientes"
+      text: "O cadastro de quem contrata a organização: nome, CNPJ, pessoa de contato, email e telefone. A aba aparece só para quem cuida dos clientes."
+      actions: "“Novo cliente” cadastra; cada linha tem as ações de editar e excluir."
+      link: "O cliente é ligado a um projeto nas configurações do projeto, junto com o valor cobrado por hora."
+    org_projects:
+      title: "Organização: Projetos"
+      text: "Uma tabela com todos os projetos (projeto, cliente, pessoas e tarefas). Clique numa linha para abrir. O botão “Novo projeto” abre o mesmo formulário do Início. A aba aparece só para quem pode criar projetos."
+    project_home:
+      title: "Projeto: Início"
+      text: "É onde você bate o ponto, e a primeira aba ao abrir um projeto."
+      clock: "O painel do cronômetro mostra se você está parado ou em andamento, o tempo da sessão e quanto ela vale para você."
+      mine: "“Seu tempo neste projeto” soma o que você registrou hoje e na semana."
+      tasks: "“Suas tarefas” lista as tarefas em que você é responsável, cada uma com o botão “Iniciar”."
+      sessions: "“Sessões” é o histórico das suas sessões, com filtro de data e de tarefa. Clique numa sessão para ver as tarefas dela e ajustar os intervalos."
+      blocked: "Se aparecer o aviso de que você não tem valor por hora, o ponto fica bloqueado até um administrador definir o seu."
+    project_my_tasks:
+      title: "Projeto: Minhas tarefas"
+      text: "Tudo o que está com você, separado por status: Backlog, Em progresso, Aguardando fechamento e Fechada (esta começa recolhida). Cada linha mostra prioridade e prazo e tem o botão “Iniciar”. O que ninguém pegou fica na Lista de tarefas."
+    project_tasks:
+      title: "Projeto: Lista de tarefas"
+      text: "Todas as tarefas do projeto em duas listas: “Sem responsável”, as que ninguém pegou, e “Com responsável”. Quem inicia o ponto numa tarefa sem responsável passa a ser o responsável; o botão “Pegar” atribui a tarefa a você sem iniciar o cronômetro."
+      filters: "A busca e os filtros (prazo, prioridade, status e etiquetas) ficam na URL: dá para guardar ou mandar o link da lista filtrada."
+      new: "“Nova tarefa” abre um formulário em passos: a tarefa, os detalhes e, se o projeto tem integrações, as plataformas onde ela também deve existir."
+      open: "Clique numa linha para abrir a tarefa."
+    project_people:
+      title: "Projeto: Colaboradores"
+      text: "Quem trabalha no projeto e em quais times, em duas visões: Pessoas e Times. Aqui é só para ler; para mudar alguma coisa, use a Gestão."
+    mgmt_overview:
+      title: "Gestão: Visão geral"
+      intro: "O botão “Gestão”, no fim das abas do projeto, aparece para quem tem alguma permissão no projeto. Cada aba da Gestão aparece conforme a permissão da pessoa."
+      text: "A Visão geral é o projeto em números: pessoas, times, horas dos últimos 7 e 30 dias, quem está trabalhando agora, tarefas atrasadas, cliente e valor cobrado."
+      sessions: "Abaixo ficam as sessões de todo mundo, com filtros de pessoa, data e tarefa, e os totais de tempo, custo, receita e margem."
+      who: "Exige a permissão de ver o faturamento."
+    mgmt_people:
+      title: "Gestão: Colaboradores"
+      text: "Aqui você põe e tira pessoas do projeto, define o valor por hora e o grupo de permissões de cada uma e monta os times (“Novo time”). “Adicionar pessoa” tem dois passos: quem entra, com o valor por hora e o time, e as permissões."
+      margin: "A coluna “Margem por hora” mostra a diferença entre o valor cobrado do cliente e o valor da pessoa."
+      edit: "O lápis da linha abre a edição: valor, grupo, times e “Tirar do projeto” (as tarefas e as horas ficam)."
+    mgmt_integrations:
+      title: "Gestão: Integrações"
+      text: "Liga o projeto a um repositório do GitHub ou a um quadro do Trello. Veja “Integrações com GitHub e Trello”, mais abaixo."
+    mgmt_settings:
+      title: "Gestão: Configurações"
+      text: "Os dados do projeto (descrição, duração da sprint, daily e weekly), o cliente e o valor cobrado por hora. O botão “Editar” abre o formulário de edição."
+      delete: "Nele fica “Excluir projeto”, que apaga também os times, as tarefas, as sessões de trabalho e as integrações do projeto."
+    task_page:
+      title: Página da tarefa
+      text: "Abre ao clicar numa tarefa, em qualquer lista."
+      head: "No alto: o nome e a descrição (o lápis edita os dois; a descrição aceita Markdown, sem imagens) e os botões “Pegar tarefa”, “Iniciar” (ou “Adicionar à sessão”) e “Parar tarefa”."
+      time: "“Tempo registrado” mostra as sessões e quem trabalhou na tarefa."
+      details: "“Detalhes” traz status, prioridade, responsável, prazo e etiquetas; “Editar” altera."
+      delete: "“Excluir tarefa” tira a tarefa das sessões em que esteve; as sessões e as horas ficam."
+      integrations: "Se o projeto tem integrações, a página mostra o item ligado (issue ou cartão) e deixa publicar a tarefa em outra plataforma."
+    profile:
+      title: Perfil
+      text: "Clique no seu nome, no canto da barra superior."
+      personal: "“Dados pessoais”: nome e email (o email é o que você usa para entrar). A jornada semanal só se lê aqui; quem altera é um administrador."
+      rates: "“Meus valores”: quanto você recebe por hora em cada projeto. Só você e os administradores veem."
+      password: "“Senha”: troque a senha. As suas outras sessões são encerradas."
+      language: "O seletor PT | EN, no alto da tela, troca o idioma, e o navegador lembra a escolha. “Sair” fica ao lado."
+  concepts:
+    rates:
+      title: Valor por hora
+      text: "O app usa dois valores, e os dois são por projeto."
+      paid: "Valor pago (custo): quanto cada pessoa recebe por hora naquele projeto. É definido ao pôr a pessoa no projeto e pode ser diferente de um projeto para outro."
+      billed: "Valor cobrado (receita): quanto o cliente paga por hora naquele projeto. É definido ao criar o projeto ou nas Configurações dele, depois de escolher o cliente."
+      margin: "Margem é a receita menos o custo. As Visões gerais somam tudo; a lista de Colaboradores da Gestão mostra a margem por hora de cada pessoa."
+      history: "Mudar um valor só vale para as sessões novas: as que já foram registradas guardam o valor da época."
+      owner: "O dono não tem custo: o valor das horas dele entra como receita, e ele bate ponto sem ter valor por hora."
+      currency: "A moeda é uma só para a organização e só muda como os valores aparecem."
+    roles:
+      title: Quem vê e faz o quê
+      text: "Todo mundo na organização lê os projetos, cria e edita tarefas e bate o próprio ponto (se tiver valor por hora no projeto). O resto depende do papel e das permissões."
+      owner: "Dono: quem criou a organização. Faz tudo, e só ele troca papéis, convida administradores, libera permissões de organização e exclui a organização."
+      admin: "Admin: tudo, em todos os projetos, menos o que é só do dono."
+      member: "Membro: o dia a dia, com mais acesso só por permissões."
+      groups: "Ao pôr alguém num projeto, você escolhe o grupo dela: “Colaborador” (sem permissões extras), “Gerente de projeto” (cuida do projeto, dos times, das pessoas, das etiquetas e das integrações) ou “Administrador do projeto” (tudo no projeto, inclusive o faturamento). O grupo vale só naquele projeto."
+      org_perms: "O dono também pode liberar, a quem não é administrador, permissões de organização: criar projetos, cuidar dos clientes e cuidar das pessoas. Elas abrem as abas Projetos, Clientes e Colaboradores."
+      money: "Os valores pagos aos colegas e o faturamento só aparecem para quem tem permissão para ver. Cada pessoa sempre vê o próprio valor."
+      missing: "Se uma aba ou um botão não aparece para você, falta permissão: peça a um administrador."
+    integrations:
+      title: Integrações com GitHub e Trello
+      text: "Opcional. Liga o projeto a um repositório do GitHub ou a um quadro do Trello, para que as tarefas andem junto com as issues e os cartões."
+      connect: "Em Gestão › Integrações, clique em “Nova integração” e em “Conectar com o GitHub” (ou com o Trello): você autoriza na plataforma e escolhe o repositório ou o quadro."
+      sync: "Com a sincronização ligada, as issues e os cartões viram tarefas, e as mudanças andam nos dois sentidos."
+      publish: "Ao criar uma tarefa, dá para marcar as plataformas onde ela também deve existir. Numa tarefa que já existe, o botão “Publicar no GitHub” (ou “Publicar no Trello”) a leva para a outra plataforma."
+  faq:
+    no_clock:
+      q: Não consigo iniciar o ponto
+      a: "Quase sempre falta o valor por hora da pessoa naquele projeto: um administrador ou gerente do projeto define em Gestão › Colaboradores. A outra causa é um ponto já aberto em outro projeto; pare-o antes de iniciar este."
+    forgot:
+      q: Esqueci de bater o ponto. Dá para lançar as horas depois?
+      a: "Não. O app só registra o tempo cronometrado: não há lançamento manual, aprovação nem fechamento de período. O que dá para ajustar são os intervalos das tarefas dentro de uma sessão (abra a sessão e use o lápis), sem mudar o tempo total dela."
+    missing_tab:
+      q: Não vejo uma aba ou um botão
+      a: "É permissão. A Gestão do projeto e as abas Colaboradores, Clientes e Projetos da organização aparecem só para quem pode usá-las. Peça a um administrador (veja “Quem vê e faz o quê”)."
+    invite:
+      q: O convite não chegou por email
+      a: "O app não envia email: copie o link na hora em que ele é gerado e mande você mesmo. Se ele venceu (7 dias) ou já foi usado, gere outro."
+    export:
+      q: Dá para exportar relatórios?
+      a: "Ainda não. Os números ficam nas Visões gerais da organização e do projeto."
 
 org:
   head:

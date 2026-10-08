@@ -71,6 +71,7 @@ func TestLanguage_EnglishPagesHaveNoPortugueseLeftovers(t *testing.T) {
 	pages := []struct{ path, session string }{
 		{"/login", ""}, {"/signup", ""}, {"/invite/abc", ""},
 		{"/profile", admin.session}, {"/no-such-page", admin.session}, // 404 só aparece para quem está logado
+		{"/help", ""}, {"/help", admin.session}, // a ajuda é pública, e logado ela leva a barra superior
 	}
 	leftovers := []string{"Entrar", "Sair", "Senha", "Seu perfil", "Voltar ao início", "Fechar", "Página não encontrada", "Parar"}
 	for _, p := range pages {
@@ -105,7 +106,7 @@ func TestLanguage_TitleIsTranslated(t *testing.T) {
 func TestLanguage_ToggleIsOnEveryPage(t *testing.T) {
 	e := newServer(t)
 	admin := signup(t, e, "Org", "ana@test.com")
-	for _, path := range []string{"/login", "/profile"} {
+	for _, path := range []string{"/login", "/profile", "/help"} {
 		session := ""
 		if path == "/profile" {
 			session = admin.session

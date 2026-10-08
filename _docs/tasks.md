@@ -858,6 +858,16 @@
 - [X] S80.2 `linkLabel`, `linkIcon`, `linkProvider` and `linkItem` in `taskBadges`; the inner `x-for` is keyed by `integration_id` (the link has no `id`)
 - [X] S80.3 `.page` and `.topbar-inner` go from 1120 to 1200px, with the side padding as it was
 - [X] S80.4 The Início cards keep the text badge (not asked); the one existing assertion in `pages_test.go` that looked for the badge next to the name follows the column; checked in the browser against a project with GitHub and Trello items (one, both, none, a name long enough for four lines) at 1440, 1100 and 390 px, with no script error; README, design
+
+### Sprint 81: A Help Page
+
+- [X] S81.1 `GET /help`: a single page with all the help, public (no session needed: the global `LoadSession` already puts whoever is logged in on the context, and that person sees the top bar, which gets a new **Ajuda** item); `/ajuda` redirects to it (`page.Help` and `page.ToHelp`, `routes/pages.go`)
+- [X] S81.2 `web/templates/pages/help.gohtml`: a contents column on the left (sticky; it scrolls by itself when taller than the screen; under 860px it becomes a collapsible `<details>` above the text) and the help on the right, in four groups: Getting started (nine steps, from the sign-up to following the numbers, each with the path on screen and a tip), The screens (fifteen), Good to know (the hourly rate, who sees and does what, the integrations) and Quick answers. Every section has a stable anchor (`#new-project`, `#hourly-rate`) that can be sent to someone
+- [X] S81.3 The paths ("Organização › Sobre › Editar") are built in the template from the catalog keys of the screens themselves (`nav.*`, `org.*`, `project.head.*`, `tasks.new`, `time.start`…), so the guide cannot drift from the button names; the labels quoted inside the sentences were checked one by one against the catalog, in both languages
+- [X] S81.4 `web/static/pages/help.js` (`helpPage`): marks in the contents the section being read (the last one whose top passed the reading line); keeps a clicked item marked until the person scrolls on their own, because the last questions cannot reach the top of the page; follows the real height of the top bar (it wraps to 170px on a phone) for both the sticky contents and the scroll margin, so a title never hides behind it; collapses the contents on narrow screens and reopens them when the window grows. Without JavaScript the links are plain anchors
+- [X] S81.5 For a visitor without a session the language switch goes inside the page header (the floating one would cover the cards while scrolling); `html:has(.help)` turns on smooth scrolling for this page only, and `prefers-reduced-motion` turns it off
+- [X] S81.6 `help.*` in `pt-BR.yaml` and `en.yaml` (136 keys each, one per sentence), `titles.help` and `nav.help`; README: the `/help` row in the browser routes, the public-page exception and the Ajuda item in the menu
+- [X] S81.7 The existing tests that list pages follow the change (`help` in `TestPages_AllTemplatesLoad`; `/help` logged out and logged in in the English-leftovers and language-toggle tests); no new screen test, since the front end is still moving. Checked in the browser (Chromium, desktop and 390px wide, light and dark, both languages, with and without a session)
 ---
 
 ### Seed with a Full Demo

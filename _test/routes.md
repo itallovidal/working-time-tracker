@@ -730,6 +730,17 @@ Qual idioma uma página usa: o cookie `wtt_lang`; sem ele, o `Accept-Language`; 
 
 ---
 
+## Ajuda
+
+A ajuda é uma página do navegador, não da API JSON, e não precisa de sessão: serve para mandar o link a quem ainda vai se cadastrar.
+
+| Método | Rota | Descrição |
+|--------|------|-----------|
+| GET | `/help` | A página de ajuda (HTML), no idioma da requisição. **200** com ou sem sessão; com sessão, traz a barra superior com o item Ajuda |
+| GET | `/ajuda` | Responde **303** para `/help` |
+
+---
+
 ## Fluxo de teste sugerido
 
 1. **Healthcheck:** `GET /healthcheck`.

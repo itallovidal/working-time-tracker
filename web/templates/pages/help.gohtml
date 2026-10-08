@@ -1,0 +1,375 @@
+{{/* A ajuda: uma página só, com o sumário à esquerda. Os textos moram em help.* nos catálogos; os
+     caminhos (Organização › Sobre › Editar) usam as chaves da própria tela, para o guia não
+     divergir do que está escrito nos botões. As âncoras (#new-project…) são estáveis: dá para
+     mandar o link de um trecho. O componente helpPage (static/pages/help.js) marca no sumário a
+     seção que está na tela. */}}
+{{define "content"}}
+<main class="page help {{if .Me}}has-topbar{{end}}" x-data="helpPage">
+  {{- if not .Me}}
+  <div class="help-public">
+    <span class="brand"><span class="brand-mark" aria-hidden="true"></span>Working Time Tracker</span>
+    <a class="btn btn-secondary btn-sm" href="/login">{{.T "auth.login.submit"}}</a>
+    <a class="btn btn-sm" href="/signup">{{.T "auth.signup.submit"}}</a>
+    {{/* O toggle flutuante do layout cobriria os cartões ao rolar; aqui ele é parte do cabeçalho. */}}
+    {{template "lang_switch" .}}
+  </div>
+  {{- end}}
+
+  <div class="page-head">
+    <div>
+      <div class="eyebrow">{{.T "help.eyebrow"}}</div>
+      <h1>{{.T "help.title"}}</h1>
+      <p class="lede">{{.T "help.lede"}}</p>
+    </div>
+  </div>
+
+  <div class="help-layout">
+    <details class="help-toc" open data-help-toc>
+      <summary>{{.T "help.toc_title"}}</summary>
+      <nav aria-label="{{.T "help.toc_label"}}" @click="go($event)">
+        <ul>
+          <li>
+            <a class="help-toc-group" href="#getting-started">{{.T "help.groups.start"}}</a>
+            <ol>
+              <li><a href="#create-account">{{.T "help.steps.create_account.title"}}</a></li>
+              <li><a href="#currency">{{.T "help.steps.currency.title"}}</a></li>
+              <li><a href="#customers">{{.T "help.steps.customers.title"}}</a></li>
+              <li><a href="#new-project">{{.T "help.steps.project.title"}}</a></li>
+              <li><a href="#invite-team">{{.T "help.steps.invite.title"}}</a></li>
+              <li><a href="#people-and-rates">{{.T "help.steps.rates.title"}}</a></li>
+              <li><a href="#create-tasks">{{.T "help.steps.tasks.title"}}</a></li>
+              <li><a href="#track-hours">{{.T "help.steps.track.title"}}</a></li>
+              <li><a href="#follow-numbers">{{.T "help.steps.numbers.title"}}</a></li>
+            </ol>
+          </li>
+          <li>
+            <a class="help-toc-group" href="#screens">{{.T "help.groups.screens"}}</a>
+            <ul>
+              <li><a href="#home">{{.T "help.screens.home.title"}}</a></li>
+              <li><a href="#org-about">{{.T "help.screens.org_about.title"}}</a></li>
+              <li><a href="#org-people">{{.T "help.screens.org_people.title"}}</a></li>
+              <li><a href="#org-customers">{{.T "help.screens.org_customers.title"}}</a></li>
+              <li><a href="#org-projects">{{.T "help.screens.org_projects.title"}}</a></li>
+              <li><a href="#project-home">{{.T "help.screens.project_home.title"}}</a></li>
+              <li><a href="#my-tasks">{{.T "help.screens.project_my_tasks.title"}}</a></li>
+              <li><a href="#task-list">{{.T "help.screens.project_tasks.title"}}</a></li>
+              <li><a href="#project-people">{{.T "help.screens.project_people.title"}}</a></li>
+              <li><a href="#mgmt-overview">{{.T "help.screens.mgmt_overview.title"}}</a></li>
+              <li><a href="#mgmt-people">{{.T "help.screens.mgmt_people.title"}}</a></li>
+              <li><a href="#mgmt-integrations">{{.T "help.screens.mgmt_integrations.title"}}</a></li>
+              <li><a href="#mgmt-settings">{{.T "help.screens.mgmt_settings.title"}}</a></li>
+              <li><a href="#task-page">{{.T "help.screens.task_page.title"}}</a></li>
+              <li><a href="#profile">{{.T "help.screens.profile.title"}}</a></li>
+            </ul>
+          </li>
+          <li>
+            <a class="help-toc-group" href="#concepts">{{.T "help.groups.concepts"}}</a>
+            <ul>
+              <li><a href="#hourly-rate">{{.T "help.concepts.rates.title"}}</a></li>
+              <li><a href="#roles">{{.T "help.concepts.roles.title"}}</a></li>
+              <li><a href="#integrations">{{.T "help.concepts.integrations.title"}}</a></li>
+            </ul>
+          </li>
+          <li>
+            <a class="help-toc-group" href="#faq">{{.T "help.groups.faq"}}</a>
+            <ul>
+              <li><a href="#faq-no-clock">{{.T "help.faq.no_clock.q"}}</a></li>
+              <li><a href="#faq-forgot-clock">{{.T "help.faq.forgot.q"}}</a></li>
+              <li><a href="#faq-missing-tab">{{.T "help.faq.missing_tab.q"}}</a></li>
+              <li><a href="#faq-invite-email">{{.T "help.faq.invite.q"}}</a></li>
+              <li><a href="#faq-export">{{.T "help.faq.export.q"}}</a></li>
+            </ul>
+          </li>
+        </ul>
+      </nav>
+    </details>
+
+    <div class="help-content">
+
+      {{/* ---------- Primeiros passos ---------- */}}
+      <section class="help-group help-steps" id="getting-started">
+        <div class="stack-tight">
+          <h2>{{.T "help.groups.start"}}</h2>
+          <p class="muted">{{.T "help.start.intro"}}</p>
+        </div>
+
+        <section class="card help-section" id="create-account" data-help-section>
+          <h3>{{.T "help.steps.create_account.title"}}</h3>
+          <p>{{.T "help.steps.create_account.text"}}</p>
+          <p class="help-tip">{{.T "help.steps.create_account.tip"}}</p>
+        </section>
+
+        <section class="card help-section" id="currency" data-help-section>
+          <h3>{{.T "help.steps.currency.title"}}</h3>
+          <p>{{.T "help.steps.currency.text"}}</p>
+          <ol class="help-path" aria-label="{{.T "help.path_label"}}"><li>{{.T "nav.organization"}}</li><li>{{.T "org.head.about"}}</li><li>{{.T "common.edit"}}</li></ol>
+          <p class="help-tip">{{.T "help.steps.currency.tip"}}</p>
+        </section>
+
+        <section class="card help-section" id="customers" data-help-section>
+          <h3>{{.T "help.steps.customers.title"}}</h3>
+          <p>{{.T "help.steps.customers.text"}}</p>
+          <ol class="help-path" aria-label="{{.T "help.path_label"}}"><li>{{.T "nav.organization"}}</li><li>{{.T "org.head.customers"}}</li><li>{{.T "org.customers.new"}}</li></ol>
+          <p class="help-tip">{{.T "help.steps.customers.tip"}}</p>
+        </section>
+
+        <section class="card help-section" id="new-project" data-help-section>
+          <h3>{{.T "help.steps.project.title"}}</h3>
+          <p>{{.T "help.steps.project.text"}}</p>
+          <ol class="help-path" aria-label="{{.T "help.path_label"}}"><li>{{.T "nav.home"}}</li><li>{{.T "org.projects.new"}}</li></ol>
+          <p class="help-tip">{{.T "help.steps.project.tip"}}</p>
+        </section>
+
+        <section class="card help-section" id="invite-team" data-help-section>
+          <h3>{{.T "help.steps.invite.title"}}</h3>
+          <p>{{.T "help.steps.invite.text"}}</p>
+          <ol class="help-path" aria-label="{{.T "help.path_label"}}"><li>{{.T "nav.people"}}</li><li>{{.T "org.people.add"}}</li><li>{{.T "org.people.generate"}}</li></ol>
+          <p class="help-tip">{{.T "help.steps.invite.tip"}}</p>
+        </section>
+
+        <section class="card help-section" id="people-and-rates" data-help-section>
+          <h3>{{.T "help.steps.rates.title"}}</h3>
+          <p>{{.T "help.steps.rates.text"}}</p>
+          <ol class="help-path" aria-label="{{.T "help.path_label"}}"><li>{{.T "help.project"}}</li><li>{{.T "project.head.management"}}</li><li>{{.T "project.head.teams"}}</li><li>{{.T "collab.add_person"}}</li></ol>
+          <p class="help-tip">{{.T "help.steps.rates.tip"}}</p>
+        </section>
+
+        <section class="card help-section" id="create-tasks" data-help-section>
+          <h3>{{.T "help.steps.tasks.title"}}</h3>
+          <p>{{.T "help.steps.tasks.text"}}</p>
+          <ol class="help-path" aria-label="{{.T "help.path_label"}}"><li>{{.T "help.project"}}</li><li>{{.T "project.head.tasks"}}</li><li>{{.T "tasks.new"}}</li></ol>
+          <p class="help-tip">{{.T "help.steps.tasks.tip"}}</p>
+        </section>
+
+        <section class="card help-section" id="track-hours" data-help-section>
+          <h3>{{.T "help.steps.track.title"}}</h3>
+          <p>{{.T "help.steps.track.text"}}</p>
+          <ol class="help-path" aria-label="{{.T "help.path_label"}}"><li>{{.T "help.project"}}</li><li>{{.T "project.head.home"}}</li><li>{{.T "time.start"}}</li></ol>
+          <p class="help-tip">{{.T "help.steps.track.tip"}}</p>
+        </section>
+
+        <section class="card help-section" id="follow-numbers" data-help-section>
+          <h3>{{.T "help.steps.numbers.title"}}</h3>
+          <p>{{.T "help.steps.numbers.text"}}</p>
+          <div class="help-paths">
+            <ol class="help-path" aria-label="{{.T "help.path_label"}}"><li>{{.T "nav.home"}}</li></ol>
+            <ol class="help-path" aria-label="{{.T "help.path_label"}}"><li>{{.T "help.project"}}</li><li>{{.T "project.head.management"}}</li><li>{{.T "project.head.overview"}}</li></ol>
+          </div>
+          <p class="help-tip">{{.T "help.steps.numbers.tip"}}</p>
+        </section>
+      </section>
+
+      {{/* ---------- As telas ---------- */}}
+      <section class="help-group" id="screens">
+        <div class="stack-tight">
+          <h2>{{.T "help.groups.screens"}}</h2>
+          <p class="muted">{{.T "help.screens.intro"}}</p>
+        </div>
+
+        <section class="card help-section" id="home" data-help-section>
+          <h3>{{.T "help.screens.home.title"}}</h3>
+          <p>{{.T "help.screens.home.text"}}</p>
+          <ul class="help-list">
+            <li>{{.T "help.screens.home.projects"}}</li>
+            <li>{{.T "help.screens.home.overview"}}</li>
+            <li>{{.T "help.screens.home.team"}}</li>
+          </ul>
+        </section>
+
+        <section class="card help-section" id="org-about" data-help-section>
+          <h3>{{.T "help.screens.org_about.title"}}</h3>
+          <p>{{.T "help.screens.org_about.text"}}</p>
+          <ul class="help-list">
+            <li>{{.T "help.screens.org_about.edit"}}</li>
+            <li>{{.T "help.screens.org_about.delete"}}</li>
+          </ul>
+        </section>
+
+        <section class="card help-section" id="org-people" data-help-section>
+          <h3>{{.T "help.screens.org_people.title"}}</h3>
+          <p>{{.T "help.screens.org_people.text"}}</p>
+          <ul class="help-list">
+            <li>{{.T "help.screens.org_people.add"}}</li>
+            <li>{{.T "help.screens.org_people.pending"}}</li>
+            <li>{{.T "help.screens.org_people.edit"}}</li>
+            <li>{{.T "help.screens.org_people.role"}}</li>
+          </ul>
+        </section>
+
+        <section class="card help-section" id="org-customers" data-help-section>
+          <h3>{{.T "help.screens.org_customers.title"}}</h3>
+          <p>{{.T "help.screens.org_customers.text"}}</p>
+          <ul class="help-list">
+            <li>{{.T "help.screens.org_customers.actions"}}</li>
+            <li>{{.T "help.screens.org_customers.link"}}</li>
+          </ul>
+        </section>
+
+        <section class="card help-section" id="org-projects" data-help-section>
+          <h3>{{.T "help.screens.org_projects.title"}}</h3>
+          <p>{{.T "help.screens.org_projects.text"}}</p>
+        </section>
+
+        <section class="card help-section" id="project-home" data-help-section>
+          <h3>{{.T "help.screens.project_home.title"}}</h3>
+          <p>{{.T "help.screens.project_home.text"}}</p>
+          <ul class="help-list">
+            <li>{{.T "help.screens.project_home.clock"}}</li>
+            <li>{{.T "help.screens.project_home.mine"}}</li>
+            <li>{{.T "help.screens.project_home.tasks"}}</li>
+            <li>{{.T "help.screens.project_home.sessions"}}</li>
+          </ul>
+          <p class="help-tip">{{.T "help.screens.project_home.blocked"}}</p>
+        </section>
+
+        <section class="card help-section" id="my-tasks" data-help-section>
+          <h3>{{.T "help.screens.project_my_tasks.title"}}</h3>
+          <p>{{.T "help.screens.project_my_tasks.text"}}</p>
+        </section>
+
+        <section class="card help-section" id="task-list" data-help-section>
+          <h3>{{.T "help.screens.project_tasks.title"}}</h3>
+          <p>{{.T "help.screens.project_tasks.text"}}</p>
+          <ul class="help-list">
+            <li>{{.T "help.screens.project_tasks.filters"}}</li>
+            <li>{{.T "help.screens.project_tasks.new"}}</li>
+            <li>{{.T "help.screens.project_tasks.open"}}</li>
+          </ul>
+        </section>
+
+        <section class="card help-section" id="project-people" data-help-section>
+          <h3>{{.T "help.screens.project_people.title"}}</h3>
+          <p>{{.T "help.screens.project_people.text"}}</p>
+        </section>
+
+        <section class="card help-section" id="mgmt-overview" data-help-section>
+          <h3>{{.T "help.screens.mgmt_overview.title"}}</h3>
+          <p>{{.T "help.screens.mgmt_overview.intro"}}</p>
+          <p>{{.T "help.screens.mgmt_overview.text"}}</p>
+          <ul class="help-list">
+            <li>{{.T "help.screens.mgmt_overview.sessions"}}</li>
+            <li>{{.T "help.screens.mgmt_overview.who"}}</li>
+          </ul>
+        </section>
+
+        <section class="card help-section" id="mgmt-people" data-help-section>
+          <h3>{{.T "help.screens.mgmt_people.title"}}</h3>
+          <p>{{.T "help.screens.mgmt_people.text"}}</p>
+          <ul class="help-list">
+            <li>{{.T "help.screens.mgmt_people.margin"}}</li>
+            <li>{{.T "help.screens.mgmt_people.edit"}}</li>
+          </ul>
+        </section>
+
+        <section class="card help-section" id="mgmt-integrations" data-help-section>
+          <h3>{{.T "help.screens.mgmt_integrations.title"}}</h3>
+          <p>{{.T "help.screens.mgmt_integrations.text"}}</p>
+        </section>
+
+        <section class="card help-section" id="mgmt-settings" data-help-section>
+          <h3>{{.T "help.screens.mgmt_settings.title"}}</h3>
+          <p>{{.T "help.screens.mgmt_settings.text"}}</p>
+          <ul class="help-list">
+            <li>{{.T "help.screens.mgmt_settings.delete"}}</li>
+          </ul>
+        </section>
+
+        <section class="card help-section" id="task-page" data-help-section>
+          <h3>{{.T "help.screens.task_page.title"}}</h3>
+          <p>{{.T "help.screens.task_page.text"}}</p>
+          <ul class="help-list">
+            <li>{{.T "help.screens.task_page.head"}}</li>
+            <li>{{.T "help.screens.task_page.time"}}</li>
+            <li>{{.T "help.screens.task_page.details"}}</li>
+            <li>{{.T "help.screens.task_page.delete"}}</li>
+            <li>{{.T "help.screens.task_page.integrations"}}</li>
+          </ul>
+        </section>
+
+        <section class="card help-section" id="profile" data-help-section>
+          <h3>{{.T "help.screens.profile.title"}}</h3>
+          <p>{{.T "help.screens.profile.text"}}</p>
+          <ul class="help-list">
+            <li>{{.T "help.screens.profile.personal"}}</li>
+            <li>{{.T "help.screens.profile.rates"}}</li>
+            <li>{{.T "help.screens.profile.password"}}</li>
+            <li>{{.T "help.screens.profile.language"}}</li>
+          </ul>
+        </section>
+      </section>
+
+      {{/* ---------- Para entender melhor ---------- */}}
+      <section class="help-group" id="concepts">
+        <h2>{{.T "help.groups.concepts"}}</h2>
+
+        <section class="card help-section" id="hourly-rate" data-help-section>
+          <h3>{{.T "help.concepts.rates.title"}}</h3>
+          <p>{{.T "help.concepts.rates.text"}}</p>
+          <ul class="help-list">
+            <li>{{.T "help.concepts.rates.paid"}}</li>
+            <li>{{.T "help.concepts.rates.billed"}}</li>
+            <li>{{.T "help.concepts.rates.margin"}}</li>
+            <li>{{.T "help.concepts.rates.history"}}</li>
+            <li>{{.T "help.concepts.rates.owner"}}</li>
+            <li>{{.T "help.concepts.rates.currency"}}</li>
+          </ul>
+        </section>
+
+        <section class="card help-section" id="roles" data-help-section>
+          <h3>{{.T "help.concepts.roles.title"}}</h3>
+          <p>{{.T "help.concepts.roles.text"}}</p>
+          <ul class="help-list">
+            <li>{{.T "help.concepts.roles.owner"}}</li>
+            <li>{{.T "help.concepts.roles.admin"}}</li>
+            <li>{{.T "help.concepts.roles.member"}}</li>
+            <li>{{.T "help.concepts.roles.groups"}}</li>
+            <li>{{.T "help.concepts.roles.org_perms"}}</li>
+            <li>{{.T "help.concepts.roles.money"}}</li>
+          </ul>
+          <p class="help-tip">{{.T "help.concepts.roles.missing"}}</p>
+        </section>
+
+        <section class="card help-section" id="integrations" data-help-section>
+          <h3>{{.T "help.concepts.integrations.title"}}</h3>
+          <p>{{.T "help.concepts.integrations.text"}}</p>
+          <ul class="help-list">
+            <li>{{.T "help.concepts.integrations.connect"}}</li>
+            <li>{{.T "help.concepts.integrations.sync"}}</li>
+            <li>{{.T "help.concepts.integrations.publish"}}</li>
+          </ul>
+        </section>
+      </section>
+
+      {{/* ---------- Dúvidas rápidas ---------- */}}
+      <section class="help-group" id="faq">
+        <h2>{{.T "help.groups.faq"}}</h2>
+
+        <section class="card help-section" id="faq-no-clock" data-help-section>
+          <h3>{{.T "help.faq.no_clock.q"}}</h3>
+          <p>{{.T "help.faq.no_clock.a"}}</p>
+        </section>
+
+        <section class="card help-section" id="faq-forgot-clock" data-help-section>
+          <h3>{{.T "help.faq.forgot.q"}}</h3>
+          <p>{{.T "help.faq.forgot.a"}}</p>
+        </section>
+
+        <section class="card help-section" id="faq-missing-tab" data-help-section>
+          <h3>{{.T "help.faq.missing_tab.q"}}</h3>
+          <p>{{.T "help.faq.missing_tab.a"}}</p>
+        </section>
+
+        <section class="card help-section" id="faq-invite-email" data-help-section>
+          <h3>{{.T "help.faq.invite.q"}}</h3>
+          <p>{{.T "help.faq.invite.a"}}</p>
+        </section>
+
+        <section class="card help-section" id="faq-export" data-help-section>
+          <h3>{{.T "help.faq.export.q"}}</h3>
+          <p>{{.T "help.faq.export.a"}}</p>
+        </section>
+      </section>
+    </div>
+  </div>
+</main>
+{{end}}

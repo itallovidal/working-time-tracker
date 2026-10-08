@@ -836,3 +836,97 @@ td .confirm { display: inline-flex; }
 .section-head { display: flex; flex-direction: column; gap: 2px; }
 .section-head h2 { margin: 0; }
 .lede { margin: 0; max-width: 72ch; }
+
+/* ---------- Ajuda ---------- */
+/* A rolagem suave vale só nesta página: o sumário leva ao trecho sem pulo. */
+html:has(.help) { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html:has(.help) { scroll-behavior: auto; } }
+/* --help-top é onde o sumário gruda e quanto espaço sobra acima de um trecho que recebe a rolagem:
+   a barra superior fixa (só existe com login) tem uns 56px. */
+.help { --help-top: 16px; }
+.help.has-topbar { --help-top: 72px; }
+/* Sem login não há barra superior: a marca, os links de entrada e o toggle de idioma abrem a página. */
+body:has(.help) .lang-float { display: none; }
+.help-public { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 12px; }
+.help-public .brand { margin-right: 8px; }
+.help-public .lang-switch { margin-left: auto; }
+.help-layout { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 36px; align-items: start; }
+
+/* O sumário fica à vista enquanto a página rola, e rola sozinho se for maior que a tela. */
+.help-toc {
+  position: sticky; top: var(--help-top);
+  max-height: calc(100vh - var(--help-top) - 16px); overflow-y: auto; overscroll-behavior: contain;
+  font-size: 0.9rem;
+}
+.help-toc summary { display: none; }
+.help-toc ul, .help-toc ol { list-style: none; margin: 0; padding: 0; }
+.help-toc > nav > ul { display: flex; flex-direction: column; gap: 14px; }
+.help-toc a {
+  display: block; padding: 5px 10px; border-radius: var(--radius-sm);
+  color: var(--ink-2); text-decoration: none; line-height: 1.35;
+}
+.help-toc a:hover { background: var(--surface-2); color: var(--ink); }
+.help-toc a[aria-current="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.help-toc a.help-toc-group {
+  font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 650;
+}
+.help-toc a.help-toc-group:hover, .help-toc a.help-toc-group[aria-current="true"] { background: transparent; color: var(--accent); }
+/* Os passos do primeiro uso vão numerados no sumário e nos cartões. */
+.help-toc ol { counter-reset: help-toc; }
+.help-toc ol a { display: flex; gap: 7px; }
+.help-toc ol a::before {
+  counter-increment: help-toc; content: counter(help-toc) ".";
+  color: var(--muted); font-variant-numeric: tabular-nums; min-width: 1.2em; flex: none;
+}
+
+/* Uma coluna de leitura: os cartões não passam muito da largura do texto. */
+.help-content { display: flex; flex-direction: column; gap: 36px; min-width: 0; max-width: 760px; }
+.help-group { display: flex; flex-direction: column; gap: 14px; scroll-margin-top: calc(var(--help-top) + 8px); }
+.help-group > h2 { font-size: 1.25rem; }
+.help-section { scroll-margin-top: calc(var(--help-top) + 8px); }
+.help-section p, .help-list { max-width: 72ch; }
+.help-steps { counter-reset: help-step; }
+.help-steps .help-section h3 { display: flex; align-items: center; gap: 10px; }
+.help-steps .help-section h3::before {
+  counter-increment: help-step; content: counter(help-step);
+  width: 26px; height: 26px; flex: none; border-radius: 50%;
+  display: inline-grid; place-items: center;
+  background: var(--accent-soft); color: var(--accent); font-size: 0.85rem; font-weight: 700;
+}
+/* Onde clicar: "Organização › Sobre › Editar", montado com os rótulos das próprias telas. */
+.help-paths { display: flex; flex-wrap: wrap; gap: 8px; }
+.help-path {
+  list-style: none; margin: 0; padding: 3px 10px; max-width: 100%; align-self: flex-start;
+  display: inline-flex; flex-wrap: wrap; align-items: center;
+  background: var(--surface-2); border: 1px solid var(--rule); border-radius: var(--radius-sm);
+  font-size: 0.85rem; font-weight: 600; color: var(--ink-2);
+}
+.help-path li + li::before { content: "›"; margin: 0 7px; color: var(--muted); font-weight: 400; }
+.help-tip { color: var(--muted); font-size: 0.92rem; padding-left: 12px; border-left: 2px solid var(--rule-strong); }
+.help-list { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 6px; }
+
+/* No celular o sumário vira um bloco recolhível acima do texto (help.js o recolhe ao abrir). */
+@media (max-width: 860px) {
+  .help-layout { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+  .help-toc {
+    position: static; max-height: none; overflow: visible;
+    background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius); padding: 0 8px 8px;
+  }
+  .help-toc summary {
+    display: flex; align-items: center; justify-content: space-between; cursor: pointer;
+    padding: 12px 10px 8px; font-weight: 650; list-style: none;
+  }
+  .help-toc summary::-webkit-details-marker { display: none; }
+  .help-toc summary::after {
+    content: ""; width: 8px; height: 8px; margin-right: 4px; transition: transform 0.15s;
+    border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg);
+  }
+  .help-toc[open] summary::after { transform: rotate(-135deg); }
+  .help-toc:not([open]) summary { padding-bottom: 12px; }
+}
+/* Estreito, sem login: a marca e o idioma na primeira linha, os botões de entrada na segunda. */
+@media (max-width: 640px) {
+  .help-public .brand { order: 1; margin-right: 0; flex: 1 1 calc(100% - 110px); }
+  .help-public .lang-switch { order: 2; margin-left: 0; }
+  .help-public .btn { order: 3; }
+}

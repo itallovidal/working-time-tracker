@@ -50,12 +50,14 @@ titles:
   integrations: Management · Integrations
   trello_callback: Connecting to Trello
   project_settings: Management · Settings
+  help: Help
 
 nav:
   label: Organization
   home: Home
   people: Collaborators
   organization: Organization
+  help: Help
   profile_sr: "Your profile:"
   logout: Sign out
 
@@ -298,6 +300,185 @@ profile:
     next_hint: At least 8 characters. Your other sessions will be signed out.
     submit: Change password
     changed: Password changed. Your other sessions were signed out.
+
+# The help (/help): a single page with the first-use walkthrough and what each screen does.
+# The labels a person clicks appear in the texts between quotes, as they are on screen; the
+# paths (Organization › About › Edit) are built in the template with the screen's own keys.
+help:
+  eyebrow: Help
+  title: How to use Working Time Tracker
+  lede: "Everything on one page: from the first sign-in to the first hours tracked and, after that, what each screen does. Use the contents on the side to jump straight to what you are looking for."
+  toc_title: Contents
+  toc_label: Help contents
+  path_label: Path on screen
+  project: Project
+  groups:
+    start: Getting started
+    screens: The screens
+    concepts: Good to know
+    faq: Quick answers
+  start:
+    intro: "Just arrived? Follow the steps in order. It takes about ten minutes and, at the end, your team is already tracking hours."
+  steps:
+    create_account:
+      title: Create the account
+      text: "Open the sign-up screen and fill in the organization name, your name, your email and a password with at least 8 characters. You join as an admin and the owner of the organization."
+      tip: "Got an invitation? Skip this step: open the invitation link and create your account there."
+    currency:
+      title: Check the currency and time zone
+      text: "The currency (real, dollar or euro) and the time zone apply to the whole organization. Set them now, before registering any amount. Take the chance to fill in the profile: the whole team reads the About tab."
+      tip: "The currency only changes how amounts are shown; the app does not convert between currencies."
+    customers:
+      title: Register the customers
+      text: "A customer is who hires your team. Only the name is required; CNPJ, contact person, email and phone are optional."
+      tip: "This step is optional: a project without a customer is an internal project, and the customer can be picked later, in the project settings."
+    project:
+      title: Create the first project
+      text: "Enter the name and, if you want, a description. Pick the customer and the rate billed per hour (only admins see these fields) and the sprint length: 7, 14 or 30 days. Tick “The project has a daily” and “The project has a weekly” if the team holds those meetings."
+      tip: "The rate billed per hour is what the customer pays for the hours of this project. It is what the app uses to work out the revenue."
+    invite:
+      title: Invite the team
+      text: "Generate an invitation link, copy it and send it to the person any way you like: the app does not send email. Whoever opens the link enters their name, picks a password and joins the organization with the role you chose."
+      tip: "The link is valid for 7 days and works once. It is only shown at that moment, so copy it before closing. If you enter an email, only that person can use it. Invitations not used yet stay under “Pending invitations”."
+    rates:
+      title: People on the project and the hourly rate
+      text: "Inviting is not enough: each person must be added to every project they will work on, with the amount they earn per hour there. Pick the person, enter the hourly rate (required), a team (optional) and the permission group: Collaborator, Project manager or Project administrator."
+      tip: "Without an hourly rate, the person cannot start the clock. The rate can be different on each project and change later, but it only applies to new sessions."
+    tasks:
+      title: Create the tasks
+      text: "Give the task a name and, if you want, a description, deadline, priority, labels and assignee. The task starts in Backlog; with no deadline, the app uses 7 days from today."
+      tip: "A task without an assignee is available to the team: whoever clocks in on it becomes the assignee. The assignee must be on the project."
+    track:
+      title: Track the hours
+      text: "On the project Home or in My tasks, click “Start” on the task you will work on. The timer starts and the “Active session” stays in the corner of the screen, on any page. To finish, click “Stop”."
+      tip: "When you start, the task moves to “In progress”. You can work on several tasks in the same session (“Add to the session”): each one counts the full time and the session counts once. Only one clock can be open per person."
+    numbers:
+      title: Follow the numbers
+      text: "Admins see, on the organization Home, the hours, revenue, cost and margin of all projects, over 7 days, 30 days or all time. Each project has its own “Overview” in Management, with everyone's sessions and the totals."
+      tip: "The screens show who is working right now and on which task, but they do not rank or compare people by hours."
+  screens:
+    intro: "For each screen: what it shows and what you can do there. Some buttons only appear for people with the permission (see “Who sees and does what”)."
+    home:
+      title: Organization home
+      text: The first screen after you sign in.
+      projects: "Projects: the organization's projects, as cards, six per page. Click a card to open the project. Whoever can create projects sees the “New project” button next to the title."
+      overview: "Overview (admins only): your hours, the team's hours, and the revenue, cost and margin of all projects together, over 7 days, 30 days or all time."
+      team: "Team (admins only): who has the clock open right now and on which task."
+    org_about:
+      title: "Organization: About"
+      text: "The organization profile: description, industry, contact, company details and how the team works (work mode, time zone and currency). Everyone reads it. An empty field shows as “Not provided”."
+      edit: "Admins have the “Edit” button, to change the profile, the currency and the time zone."
+      delete: "At the end of the edit screen there is “Delete organization”: only the owner can do it, and only after every project is deleted."
+    org_people:
+      title: "Organization: Collaborators"
+      text: "Who belongs to the organization, with the role (Owner, Admin or Member) and the weekly hours. The tab only appears for whoever looks after people: admins and anyone the owner allowed."
+      add: "“Add collaborator” generates an invitation link. Pick the role (only the owner invites admins) and, if you want, enter the email so that only that person can use the link."
+      pending: "“Pending invitations” lists the links not used yet, each one valid for 7 days. You can revoke them."
+      edit: "The pencil on the row opens “Hours and permissions”: the hours agreed per week and, for the owner, the organization permissions of people who are not admins."
+      role: "Only the owner makes someone an admin, or back to a member."
+    org_customers:
+      title: "Organization: Customers"
+      text: "The register of who hires the organization: name, CNPJ, contact person, email and phone. The tab only appears for whoever looks after customers."
+      actions: "“New customer” registers one; each row has the actions to edit and delete."
+      link: "A customer is linked to a project in the project settings, together with the rate billed per hour."
+    org_projects:
+      title: "Organization: Projects"
+      text: "A table with all the projects (project, customer, people and tasks). Click a row to open it. The “New project” button opens the same form as Home. The tab only appears for whoever can create projects."
+    project_home:
+      title: "Project: Home"
+      text: "This is where you clock in, and the first tab when you open a project."
+      clock: "The timer panel shows whether you are stopped or running, the time of the session and what it is worth to you."
+      mine: "“Your time on this project” adds up what you tracked today and this week."
+      tasks: "“Your tasks” lists the tasks you are assigned to, each with the “Start” button."
+      sessions: "“Sessions” is the history of your sessions, with a date and a task filter. Click a session to see its tasks and adjust the intervals."
+      blocked: "If a notice says you have no hourly rate, the clock stays blocked until an admin sets yours."
+    project_my_tasks:
+      title: "Project: My tasks"
+      text: "Everything that is with you, split by status: Backlog, In progress, Awaiting closure and Closed (this one starts collapsed). Each row shows priority and deadline and has the “Start” button. What nobody has picked up stays on the Task list."
+    project_tasks:
+      title: "Project: Task list"
+      text: "All the project's tasks in two lists: “Unassigned”, the ones nobody has picked up, and “Assigned”. Whoever clocks in on an unassigned task becomes its assignee; the “Take” button assigns the task to you without starting the timer."
+      filters: "The search and the filters (deadline, priority, status and labels) stay in the URL: you can save or send the link to the filtered list."
+      new: "“New task” opens a form in steps: the task, the details and, if the project has integrations, the platforms where it should also exist."
+      open: "Click a row to open the task."
+    project_people:
+      title: "Project: Collaborators"
+      text: "Who works on the project and in which teams, in two views: People and Teams. This is read-only; to change anything, use Management."
+    mgmt_overview:
+      title: "Management: Overview"
+      intro: "The “Management” button, at the end of the project tabs, appears for whoever has some permission on the project. Each Management tab appears according to the person's permission."
+      text: "The Overview is the project in numbers: people, teams, hours over the last 7 and 30 days, who is working right now, overdue tasks, customer and billed rate."
+      sessions: "Below are everyone's sessions, with person, date and task filters, and the totals of time, cost, revenue and margin."
+      who: "It requires the permission to see the billing."
+    mgmt_people:
+      title: "Management: Collaborators"
+      text: "Here you add and remove people on the project, set each one's hourly rate and permission group, and build the teams (“New team”). “Add person” has two steps: who joins, with the hourly rate and the team, and the permissions."
+      margin: "The “Margin per hour” column shows the difference between the rate billed to the customer and the person's rate."
+      edit: "The pencil on the row opens the edit: rate, group, teams and “Remove from the project” (the tasks and the hours stay)."
+    mgmt_integrations:
+      title: "Management: Integrations"
+      text: "Connects the project to a GitHub repository or a Trello board. See “GitHub and Trello integrations”, further down."
+    mgmt_settings:
+      title: "Management: Settings"
+      text: "The project details (description, sprint length, daily and weekly), the customer and the rate billed per hour. The “Edit” button opens the edit form."
+      delete: "It holds “Delete project”, which also deletes the project's teams, tasks, work sessions and integrations."
+    task_page:
+      title: Task page
+      text: "It opens when you click a task, in any list."
+      head: "At the top: the name and the description (the pencil edits both; the description accepts Markdown, no images) and the buttons “Take task”, “Start” (or “Add to the session”) and “Stop task”."
+      time: "“Time tracked” shows the sessions and who worked on the task."
+      details: "“Details” has the status, priority, assignee, deadline and labels; “Edit” changes them."
+      delete: "“Delete task” removes the task from the sessions it was in; the sessions and the hours stay."
+      integrations: "If the project has integrations, the page shows the linked item (an issue or a card) and lets you post the task to another platform."
+    profile:
+      title: Profile
+      text: "Click your name, in the corner of the top bar."
+      personal: "“Personal details”: name and email (the email is the one you sign in with). The weekly hours are read-only here; an admin changes them."
+      rates: "“My rates”: how much you earn per hour on each project. Only you and the admins see it."
+      password: "“Password”: change your password. Your other sessions are signed out."
+      language: "The PT | EN switch, at the top of the screen, changes the language, and the browser remembers the choice. “Sign out” is next to it."
+  concepts:
+    rates:
+      title: Hourly rate
+      text: "The app uses two amounts, and both are per project."
+      paid: "Paid rate (cost): how much each person earns per hour on that project. It is set when the person is added to the project and can differ from one project to another."
+      billed: "Billed rate (revenue): how much the customer pays per hour on that project. It is set when the project is created or in its Settings, after picking the customer."
+      margin: "Margin is revenue minus cost. The Overviews add everything up; the Collaborators list in Management shows each person's margin per hour."
+      history: "Changing a rate only applies to new sessions: the ones already tracked keep the rate of the time."
+      owner: "The owner has no cost: the value of their hours counts as revenue, and they clock in without an hourly rate."
+      currency: "The currency is one for the whole organization and only changes how amounts are shown."
+    roles:
+      title: Who sees and does what
+      text: "Everyone in the organization reads the projects, creates and edits tasks, and clocks in for themselves (if they have an hourly rate on the project). The rest depends on the role and the permissions."
+      owner: "Owner: who created the organization. Can do everything, and only the owner changes roles, invites admins, gives organization permissions and deletes the organization."
+      admin: "Admin: everything, on every project, except what is only for the owner."
+      member: "Member: the day to day, with more access only through permissions."
+      groups: "When you add someone to a project, you pick their group: “Collaborator” (no extra permissions), “Project manager” (runs the project, its teams, its people, its labels and its integrations) or “Project administrator” (everything on the project, billing included). The group only applies to that project."
+      org_perms: "The owner can also give people who are not admins organization permissions: create projects, look after customers and look after people. They open the Projects, Customers and Collaborators tabs."
+      money: "The rates paid to colleagues and the billing only show for whoever has permission to see them. Everyone always sees their own rate."
+      missing: "If a tab or a button does not show up for you, you lack a permission: ask an admin."
+    integrations:
+      title: GitHub and Trello integrations
+      text: "Optional. Connects the project to a GitHub repository or a Trello board, so tasks move along with the issues and the cards."
+      connect: "In Management › Integrations, click “New integration” and “Connect with GitHub” (or with Trello): you authorize on the platform and pick the repository or the board."
+      sync: "With sync on, issues and cards become tasks, and changes go both ways."
+      publish: "When you create a task, you can tick the platforms where it should also exist. On a task that already exists, the “Post to GitHub” (or “Post to Trello”) button sends it to the other platform."
+  faq:
+    no_clock:
+      q: I cannot start the clock
+      a: "Most often the person has no hourly rate on that project: an admin or project manager sets it in Management › Collaborators. The other cause is a clock already open on another project; stop it before starting this one."
+    forgot:
+      q: I forgot to clock in. Can I add the hours afterwards?
+      a: "No. The app only records timed work: there is no manual entry, approval or period closing. What you can adjust are the task intervals inside a session (open the session and use the pencil), without changing the session's total time."
+    missing_tab:
+      q: I do not see a tab or a button
+      a: "It is a permission. Project Management and the organization's Collaborators, Customers and Projects tabs only appear for whoever can use them. Ask an admin (see “Who sees and does what”)."
+    invite:
+      q: The invitation did not arrive by email
+      a: "The app does not send email: copy the link when it is generated and send it yourself. If it expired (7 days) or was already used, generate another one."
+    export:
+      q: Can I export reports?
+      a: "Not yet. The numbers are in the organization and project Overviews."
 
 org:
   head:

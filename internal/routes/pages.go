@@ -16,6 +16,11 @@ func RegisterPages(e *echo.Echo, p *page.Handler, m *auth.Middleware, oauth *int
 	e.GET("/lang/:code", p.SetLanguage)
 	e.GET("/i18n/:file", p.I18nScript)
 
+	// A ajuda é de todos: quem ainda não tem conta também lê. O LoadSession, que roda em toda
+	// rota, já põe quem está logado no contexto, e a barra superior aparece para ele.
+	e.GET("/help", p.Help)
+	e.GET("/ajuda", p.ToHelp)
+
 	e.GET("/login", p.Login, m.RedirectIfAuthenticated)
 	e.GET("/signup", p.Signup, m.RedirectIfAuthenticated)
 	e.GET("/invite/:token", p.Invite, m.RedirectIfAuthenticated)
