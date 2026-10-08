@@ -127,9 +127,10 @@ func TestTrelloSync_EndToEnd(t *testing.T) {
 	}
 }
 
-// Uma integração do GitHub no mesmo projeto não muda isso: a tarefa que a etapa Integrações posta no GitHub já
-// está ligada, e a postagem automática do Trello não a pega; e o Trello fora do ar não impede a tarefa de ser criada.
-func TestTrelloSync_GitHubChoiceWinsAndTrelloDownDoesNotBlock(t *testing.T) {
+// Uma integração do GitHub no mesmo projeto: a tarefa que a etapa Integrações posta no GitHub também vira
+// cartão (a postagem automática é por integração), a não ser que a pessoa tenha desmarcado o Trello
+// (`skip_publish`); e o Trello fora do ar não impede a tarefa de ser criada.
+func TestTrelloSync_GitHubAndTrelloTogetherAndTrelloDownDoesNotBlock(t *testing.T) {
 	app, trello := trelloSyncServer(t)
 	e := app.Echo
 	ctx := context.Background()
@@ -142,7 +143,7 @@ func TestTrelloSync_GitHubChoiceWinsAndTrelloDownDoesNotBlock(t *testing.T) {
 
 	admin := signup(t, e, "Org", "ana@test.com")
 	prj := createProject(t, e, admin, "Alfa")
-	connectTrelloBoard(t, app, admin.session, prj)
+	trelloID := connectTrelloBoard(t, app, admin.session, prj)
 	rec := do(e, "POST", "/api/projects/"+prj+"/integrations", `{"type":"github","display_name":"Repo","token":"tok","metadata":{"repo":"owner/repo"}}`, admin.session)
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("create the GitHub integration = %d: %s", rec.Code, rec.Body.String())
@@ -150,18 +151,39 @@ func TestTrelloSync_GitHubChoiceWinsAndTrelloDownDoesNotBlock(t *testing.T) {
 	ghID := decode(t, rec)["id"].(string)
 	do(e, "PATCH", "/api/integrations/"+ghID, `{"sync_issues":true}`, admin.session)
 
-	// A tela cria a tarefa e posta no GitHub logo em seguida; o worker chega depois e vê a tarefa ligada.
-	rec = do(e, "POST", "/api/projects/"+prj+"/tasks", `{"name":"Para o GitHub"}`, admin.session)
+	// A tela cria a tarefa e posta no GitHub logo em seguida; o worker chega depois e posta o cartão também.
+	rec = do(e, "POST", "/api/projects/"+prj+"/tasks", `{"name":"Nos dois lugares"}`, admin.session)
 	taskID := decode(t, rec)["id"].(string)
 	if rec = do(e, "POST", "/api/tasks/"+taskID+"/publish", `{"integration_id":"`+ghID+`"}`, admin.session); rec.Code != http.StatusOK {
 		t.Fatalf("publish to GitHub = %d: %s", rec.Code, rec.Body.String())
 	}
 	app.Sync.Flush(ctx)
-	if n := len(trello.Cards(testutil.TrelloBoardID)); n != 0 {
-		t.Errorf("the task that went to GitHub also became %d card(s)", n)
+	if n := len(trello.Cards(testutil.TrelloBoardID)); n != 1 {
+		t.Errorf("%d card(s), want the task that went to GitHub to also become one", n)
 	}
-	if task := decode(t, do(e, "GET", "/api/tasks/"+taskID, "", admin.session)); !linkedItem(task, "1") {
-		t.Errorf("task = %v, want it linked to the GitHub issue", task)
+	task := decode(t, do(e, "GET", "/api/tasks/"+taskID, "", admin.session))
+	if links := linksOf(task); len(links) != 2 || !linkedItem(task, "1") {
+		t.Errorf("task = %v, want a link to the GitHub issue and one to the card", task)
+	}
+
+	// A pessoa desmarcou o Trello: a tarefa fica só no GitHub.
+	rec = do(e, "POST", "/api/projects/"+prj+"/tasks", `{"name":"Só no GitHub","skip_publish":["`+trelloID+`"]}`, admin.session)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("create with skip_publish = %d: %s", rec.Code, rec.Body.String())
+	}
+	onlyGH := decode(t, rec)["id"].(string)
+	if rec = do(e, "POST", "/api/tasks/"+onlyGH+"/publish", `{"integration_id":"`+ghID+`"}`, admin.session); rec.Code != http.StatusOK {
+		t.Fatalf("publish to GitHub = %d: %s", rec.Code, rec.Body.String())
+	}
+	app.Sync.Flush(ctx)
+	if n := len(trello.Cards(testutil.TrelloBoardID)); n != 1 {
+		t.Errorf("%d cards, want still the one: the task with the Trello unticked must not become one", n)
+	}
+	if task := decode(t, do(e, "GET", "/api/tasks/"+onlyGH, "", admin.session)); len(linksOf(task)) != 1 {
+		t.Errorf("task = %v, want only the GitHub link", task)
+	}
+	if rec = do(e, "POST", "/api/projects/"+prj+"/tasks", `{"name":"Id ruim","skip_publish":["not-a-uuid"]}`, admin.session); rec.Code != http.StatusBadRequest {
+		t.Errorf("a bad skip_publish id = %d, want 400", rec.Code)
 	}
 
 	// Com o Trello fora do ar a tarefa é criada do mesmo jeito, sem cartão, e o aviso fica na integração.
@@ -171,8 +193,8 @@ func TestTrelloSync_GitHubChoiceWinsAndTrelloDownDoesNotBlock(t *testing.T) {
 		t.Fatalf("create with Trello down = %d: %s", rec.Code, rec.Body.String())
 	}
 	app.Sync.Flush(ctx)
-	if n := len(trello.Cards(testutil.TrelloBoardID)); n != 0 {
-		t.Errorf("%d cards while Trello was refusing", n)
+	if n := len(trello.Cards(testutil.TrelloBoardID)); n != 1 {
+		t.Errorf("%d cards while Trello was refusing, want only the one from before", n)
 	}
 	for _, it := range integrationsOf(t, e, admin.session, prj) {
 		if it["type"] == "trello" && it["last_sync_error"] != "integration.rate_limited" {

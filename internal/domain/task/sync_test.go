@@ -302,10 +302,12 @@ func TestStore_CreateHook(t *testing.T) {
 	f := newHookFixture(t)
 	var mu sync.Mutex
 	var created []uuid.UUID
-	f.store.SetCreateHook(func(id uuid.UUID) {
+	var skipped []uuid.UUID
+	f.store.SetCreateHook(func(id uuid.UUID, skip []uuid.UUID) {
 		mu.Lock()
 		defer mu.Unlock()
 		created = append(created, id)
+		skipped = skip
 	})
 	got := func() []uuid.UUID {
 		mu.Lock()
@@ -326,6 +328,16 @@ func TestStore_CreateHook(t *testing.T) {
 	if f.took() != 0 {
 		t.Error("creating a task must not tell the change hook")
 	}
+	// As integrações que a pessoa desmarcou vão junto no aviso (e não são guardadas na tarefa).
+	off := uuid.New()
+	tk2, err := f.svc.CreateAs(f.person, f.project, "Outra", "", "", nil, task.Attrs{SkipPublish: []uuid.UUID{off}})
+	if err != nil {
+		t.Fatalf("create with a skip: %v", err)
+	}
+	if ids := got(); len(ids) != 1 || ids[0] != tk2.ID || len(skipped) != 1 || skipped[0] != off {
+		t.Errorf("create hook calls = %v with skip %v, want one for %s skipping %s", ids, skipped, tk2.ID, off)
+	}
+	f.took()
 	// Editar não é criar.
 	if _, err := f.svc.UpdateAs(f.person, tk.ID.String(), "Nova (editada)", "", nil, nil, task.Attrs{}); err != nil {
 		t.Fatalf("update: %v", err)

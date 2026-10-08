@@ -33,16 +33,42 @@ func (h *Handler) Create(c *echo.Context) error {
 		Deadline    *time.Time `json:"deadline"`
 		Priority    *string    `json:"priority"`
 		LabelIDs    *[]string  `json:"label_ids"`
+		// SkipPublish são as integrações em que a tarefa nova não deve ser postada sozinha.
+		SkipPublish []string `json:"skip_publish"`
 	}
 	if err := c.Bind(&body); err != nil {
 		return apperr.Respond(c, 400, apperr.ErrInvalidBody)
 	}
+	skip, err := parseSkipPublish(body.SkipPublish)
+	if err != nil {
+		return apperr.Respond(c, 400, err)
+	}
 	task, err := h.svc.CreateAs(selfID(c), projectID, body.Name, body.Description, body.AssigneeID, body.Deadline,
-		Attrs{Priority: body.Priority, LabelIDs: body.LabelIDs})
+		Attrs{Priority: body.Priority, LabelIDs: body.LabelIDs, SkipPublish: skip})
 	if err != nil {
 		return apperr.Respond(c, 400, err)
 	}
 	return c.JSON(201, task)
+}
+
+// maxSkipPublish é quantas integrações o corpo da criação pode pedir para não postar.
+const maxSkipPublish = 20
+
+// parseSkipPublish lê os ids de integração de skip_publish. Um id que não é um UUID não é de nenhuma
+// integração; um id que não existe, ou é de outro projeto, simplesmente não casa com nada.
+func parseSkipPublish(raw []string) ([]uuid.UUID, error) {
+	if len(raw) > maxSkipPublish {
+		return nil, ErrIntegrationNotFound
+	}
+	out := make([]uuid.UUID, 0, len(raw))
+	for _, r := range raw {
+		id, err := uuid.Parse(r)
+		if err != nil {
+			return nil, ErrIntegrationNotFound
+		}
+		out = append(out, id)
+	}
+	return out, nil
 }
 
 // maxQueryLen limita o texto da busca por nome.

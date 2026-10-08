@@ -736,7 +736,7 @@
       ],
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"name\": \"Tela de checkout\",\n  \"description\": \"Resumo, endereço e pagamento\",\n  \"assignee_id\": \"{{person_id}}\"\n}"
+        "text": "{\n  \"name\": \"Tela de checkout\",\n  \"description\": \"Resumo, endereço e pagamento\",\n  \"assignee_id\": \"{{person_id}}\",\n  \"skip_publish\": []\n}"
       }
     },
     {

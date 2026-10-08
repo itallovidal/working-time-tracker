@@ -823,6 +823,16 @@
 
 ---
 
+### Sprint 74: Creating in Both Places
+
+- [X] S74.1 The Integrações step of the New task modal has a box on every card whose integration has the sync on, and the boxes do not exclude each other: the task goes to every ticked integration. The GitHub box starts unticked (the screen posts the issue after creating the task, one platform at a time, with a toast for each and a failure on one not stopping the others) and the Trello box starts **ticked** (the server posts the card by itself); unticking Trello is how a task is made in GitHub only
+- [X] S74.2 `POST /api/projects/:projectId/tasks` takes `skip_publish` (integration ids, optional, not stored, at most 20; a non-UUID is `400 task.integration_not_found`, an id that is not an integration of the project matches nothing): `Attrs.SkipPublish` goes through `Store.SetCreateHook(func(id, skip))` and `Syncer.NotifyCreated(id, skip)` into the queue, and stays with the task through its retries until it is released or given up
+- [X] S74.3 The background post is per integration: the new task is posted to the chosen auto target unless it is in the skip list (no fall to another integration) or the task already has an item in that integration; the issue the modal posted on GitHub no longer keeps the Trello card from being made
+- [X] S74.4 The draft keeps `publish_to` and `skip_publish`, so the Trello box starts ticked without waiting for the integrations; the texts `tasks.publish.auto`, `auto_intro` and `auto_other` and the CSS of the card without a box are gone, `intro` says more than one can be ticked and `trello_after` says the card comes out a few seconds later
+- [X] S74.5 Tests: the create hook carries the skip list, the handler (valid, unknown, bad and too many ids), the background post per integration (a task posted on GitHub also becomes a card, a hand-linked card is not doubled, an unticked Trello is skipped without falling to another, an unknown id skips nothing) and the server end to end (both at once, GitHub only, a bad id, Trello down); checked in the browser (default: Trello only; both; GitHub only; none; the modal reopening with Trello ticked; phone width); README, design, routes, the Insomnia collection
+
+---
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open

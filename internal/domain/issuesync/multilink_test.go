@@ -8,6 +8,8 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/google/uuid"
+
 	"working-time-tracker/internal/adapter"
 	"working-time-tracker/internal/domain/integration"
 	"working-time-tracker/internal/domain/issuesync"
@@ -434,5 +436,63 @@ func TestDual_StaleSaveDoesNotResurrectAnUnlink(t *testing.T) {
 	must(t, err)
 	if got == nil || got.TaskID != nil || got.Title == "acordo velho" {
 		t.Errorf("row after a stale save = %+v, want it still released and untouched", got)
+	}
+}
+
+// A postagem sozinha é por integração: a tarefa que o modal postou no GitHub também vira cartão, e a que já tem
+// um item no Trello (ligado à mão) não ganha outro.
+func TestDual_AutoPostIsPerIntegration(t *testing.T) {
+	d := newDualEnv(t)
+	d.tasks.SetCreateHook(d.syncer.NotifyCreated)
+
+	tk, err := d.taskSvc.CreateAs("", d.project, "Nos dois", "", "", nil, task.Attrs{})
+	must(t, err)
+	_, err = d.syncer.Publish(context.Background(), tk.ID, d.ghIt.ID)
+	must(t, err)
+	d.flush()
+	got := d.reload(tk)
+	if len(got.Links) != 2 || got.LinkFor(d.trIt.ID.String()) == nil {
+		t.Fatalf("links = %+v, want the GitHub issue and the card the background post made", got.Links)
+	}
+	if c := d.card(got); c.Name != "Nos dois" {
+		t.Errorf("card = %+v", c)
+	}
+
+	// Um item ligado à mão no Trello: a postagem sozinha não cria um segundo.
+	d.tr.AddCard(testutil.TrelloCard{ShortLink: "Manual01", Name: "Do Trello"})
+	manual, err := d.taskSvc.CreateAs("", d.project, "Já tem cartão", "", "", nil, task.Attrs{})
+	must(t, err)
+	_, err = d.taskSvc.LinkExternalItem(manual.ID.String(), d.trIt.ID.String(), "Manual01", "")
+	must(t, err)
+	before := len(d.tr.Cards(board))
+	d.flush()
+	if n := len(d.tr.Cards(board)); n != before {
+		t.Errorf("%d cards, want %d: a task with a card of this integration must not get another", n, before)
+	}
+}
+
+// Desmarcar o Trello na criação (skip_publish) deixa a tarefa fora dele, sem cair para outra integração; um id
+// que não é de nenhuma integração do projeto não impede nada.
+func TestDual_UntickedIntegrationIsSkipped(t *testing.T) {
+	d := newDualEnv(t)
+	d.tasks.SetCreateHook(d.syncer.NotifyCreated)
+
+	only, err := d.taskSvc.CreateAs("", d.project, "Só no GitHub", "", "", nil, task.Attrs{SkipPublish: []uuid.UUID{d.trIt.ID}})
+	must(t, err)
+	_, err = d.syncer.Publish(context.Background(), only.ID, d.ghIt.ID)
+	must(t, err)
+	d.flush()
+	if got := d.reload(only); len(got.Links) != 1 || got.LinkFor(d.ghIt.ID.String()) == nil {
+		t.Errorf("links = %+v, want only the GitHub issue", got.Links)
+	}
+	if n := len(d.tr.Cards(board)); n != 0 {
+		t.Errorf("%d cards, want none for a task made with the Trello unticked", n)
+	}
+
+	unknown, err := d.taskSvc.CreateAs("", d.project, "Id desconhecido", "", "", nil, task.Attrs{SkipPublish: []uuid.UUID{uuid.New()}})
+	must(t, err)
+	d.flush()
+	if got := d.reload(unknown); got.LinkFor(d.trIt.ID.String()) == nil {
+		t.Errorf("links = %+v, want the card: an unknown id in skip_publish skips nothing", got.Links)
 	}
 }

@@ -62,6 +62,9 @@ type Attrs struct {
 	Priority *string
 	Status   *string
 	LabelIDs *[]string
+	// SkipPublish são as integrações em que a tarefa nova NÃO deve ser postada sozinha: a pessoa as
+	// desmarcou na etapa Integrações. Só vale na criação (não é guardado) e vai ao gancho de criação.
+	SkipPublish []uuid.UUID
 }
 
 // Link é o vínculo da tarefa com um item de uma integração (a issue do GitHub, o cartão do Trello). Uma

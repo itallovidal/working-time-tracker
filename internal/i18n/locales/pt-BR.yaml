@@ -534,7 +534,7 @@ tasks:
   sync: Sincronizar
   sync_title: Busca na outra plataforma as mudanças e leva o que mudou aqui, sem esperar a rotina de fundo
   publish:
-    intro: "Utilizar Integrações?"
+    intro: "Utilizar Integrações? Marque as plataformas em que a tarefa também deve existir: dá para marcar mais de uma."
     ask: "Postar no {{.provider}}"
     github_sends: "Vão para a issue o nome (o título), a descrição e as etiquetas, que são criadas no repositório se ele não as tem."
     github_local: "Prazo e prioridade não existem numa issue: ficam só aqui."
@@ -544,11 +544,9 @@ tasks:
     soon: Em breve
     sync_off: Sincronização desligada
     trello_sync_off: "Ligue a sincronização nesta integração, na tela de integrações do projeto, para as tarefas virarem cartões."
-    auto: Automático
-    auto_intro: "A tarefa vira um cartão sozinha, sem nada para marcar."
     trello_sends: "Vão para o cartão o nome, a descrição, as etiquetas e o prazo (como a data de entrega), e ele é criado na primeira lista do quadro."
     trello_local: "Prioridade, horas e o responsável ficam só aqui; arquivar o cartão, ou marcar a data de entrega como concluída, fecha a tarefa."
-    auto_other: "Uma tarefa se liga a um item só: se você marcar outra plataforma acima, a tarefa vai para ela e não para o Trello."
+    trello_after: "O cartão sai poucos segundos depois de a tarefa ser criada; depois, a tarefa e o cartão ficam sincronizados nos dois sentidos."
     soon_note: "Por enquanto o {{.provider}} só mostra os detalhes de um item que você liga à tarefa. Postar tarefas nele ainda não existe."
     done: "Tarefa postada no {{.provider}}: issue #{{.number}}."
     failed: "A tarefa foi criada, mas não deu para postá-la no {{.provider}}: {{.message}}"

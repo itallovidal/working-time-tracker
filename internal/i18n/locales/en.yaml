@@ -524,7 +524,7 @@ tasks:
   sync: Sync
   sync_title: Fetches the changes from the other platform and sends what changed here, without waiting for the background job
   publish:
-    intro: "Use integrations?"
+    intro: "Use integrations? Tick the platforms where the task should also exist: you can tick more than one."
     ask: "Post to {{.provider}}"
     github_sends: "The name (the title), the description and the labels go to the issue; labels are created in the repository if it lacks them."
     github_local: "Deadline and priority do not exist on an issue: they stay here only."
@@ -534,11 +534,9 @@ tasks:
     soon: Coming soon
     sync_off: Sync off
     trello_sync_off: "Turn on the sync on this integration, on the project's integrations screen, so tasks become cards."
-    auto: Automatic
-    auto_intro: "The task becomes a card on its own, with nothing to tick."
     trello_sends: "The name, the description, the labels and the deadline (as the due date) go to the card, created on the first list of the board."
     trello_local: "Priority, hours and the assignee stay here only; archiving the card, or marking its due date as done, closes the task."
-    auto_other: "A task links to one item only: if you tick another platform above, the task goes there and not to Trello."
+    trello_after: "The card comes out a few seconds after the task is created; after that, the task and the card stay in sync in both directions."
     soon_note: "For now {{.provider}} only shows the details of an item you link to the task. Posting tasks to it does not exist yet."
     done: "Task posted to {{.provider}}: issue #{{.number}}."
     failed: "The task was created, but it could not be posted to {{.provider}}: {{.message}}"

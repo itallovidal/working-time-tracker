@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
 
@@ -144,6 +145,34 @@ func TestHandler_UpdateAndDelete(t *testing.T) {
 	app.e.ServeHTTP(rec, req)
 	if rec.Code != http.StatusNoContent {
 		t.Fatalf("delete expected 204, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
+// skip_publish na criação: ids de integração; um que não é um UUID, ou lista demais, é 400.
+func TestHandler_CreateSkipPublish(t *testing.T) {
+	app := setupTestApp(t)
+	create := func(body string) int {
+		req := httptest.NewRequest("POST", "/api/projects/"+app.projectID+"/tasks", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+		app.e.ServeHTTP(rec, req)
+		return rec.Code
+	}
+	if code := create(`{"name":"A","skip_publish":["` + createIntegration(t, app.projectID) + `"]}`); code != http.StatusCreated {
+		t.Errorf("a valid skip_publish = %d, want 201", code)
+	}
+	if code := create(`{"name":"B","skip_publish":["` + uuid.NewString() + `"]}`); code != http.StatusCreated {
+		t.Errorf("an unknown integration id in skip_publish = %d, want 201 (it just matches nothing)", code)
+	}
+	if code := create(`{"name":"C","skip_publish":["not-a-uuid"]}`); code != http.StatusBadRequest {
+		t.Errorf("a bad id in skip_publish = %d, want 400", code)
+	}
+	many := make([]string, 21)
+	for i := range many {
+		many[i] = `"` + uuid.NewString() + `"`
+	}
+	if code := create(`{"name":"D","skip_publish":[` + strings.Join(many, ",") + `]}`); code != http.StatusBadRequest {
+		t.Errorf("too many ids in skip_publish = %d, want 400", code)
 	}
 }
 

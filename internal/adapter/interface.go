@@ -70,7 +70,7 @@ type SyncCaps struct {
 	// ServerSince: a plataforma filtra a listagem pelo instante da última mudança, e por isso a rodada
 	// de fundo pode ser incremental. Sem isso toda rodada olha tudo.
 	ServerSince bool `json:"server_since"`
-	// AutoPublish: a tarefa criada aqui vira um item sozinha, sem a pessoa marcar.
+	// AutoPublish: a tarefa criada aqui vira um item sozinha, sem a pessoa pedir (ela pode desmarcar na criação).
 	AutoPublish bool `json:"auto_publish"`
 }
 

@@ -575,7 +575,9 @@ document.addEventListener('alpine:init', () => {
     filters: { q: '', assignee: '', due: '', date: '', priority: [], status: [], label: [] },
     dueOptions,
     seq: 0,
-    draft: { name: '', description: '', assign: 'none', assignee_id: '', deadline: '', priority: 'none', label_ids: [], publish_to: [] }, // assign: me, none ou other
+    // assign: me, none ou other. publish_to são as integrações marcadas que a tela posta depois de criar (o GitHub); skip_publish,
+    // as que o servidor posta sozinho (o Trello) e a pessoa desmarcou: sem isso, a caixa vem marcada.
+    draft: { name: '', description: '', assign: 'none', assignee_id: '', deadline: '', priority: 'none', label_ids: [], publish_to: [], skip_publish: [] },
     // Com integração ativa, a tarefa nova tem uma terceira etapa: postá-la numa delas.
     get publishStep() { return this.integrations.length > 0; },
     async init() {
@@ -731,28 +733,38 @@ document.addEventListener('alpine:init', () => {
       return t ? t.label : type;
     },
     brandIcon: (type) => brandIcons[type] || 'fa-solid fa-link',
-    // Só dá para postar à mão numa integração do tipo que sabe criar issues e com a sincronização ligada: é ela
-    // que mantém a tarefa e a issue iguais depois. As que postam a tarefa nova sozinhas (o Trello) não têm caixa.
+    // Só dá para postar numa integração do tipo que sabe criar issues e cartões e com a sincronização ligada: é ela
+    // que mantém a tarefa e o item iguais depois.
     canPublish(i) {
       const t = integrationType(i.type);
-      return !!(t && t.sync && i.sync_issues && !(t.caps && t.caps.auto_publish));
+      return !!(t && t.sync && i.sync_issues);
     },
-    // autoPublish diz se a tarefa nova vira um item nesta integração sem a pessoa pedir.
+    // autoPublish diz se o servidor posta a tarefa nova nesta integração sozinho (o Trello): a caixa vem marcada, e
+    // desmarcá-la manda skip_publish na criação. Nas outras (o GitHub) a tela posta depois de criar, se marcada.
     autoPublish(i) {
       const t = integrationType(i.type);
       return !!(t && t.caps && t.caps.auto_publish && i.sync_issues);
+    },
+    // ticked diz se a caixa da integração está marcada.
+    ticked(i) {
+      if (!this.canPublish(i)) return false;
+      return this.autoPublish(i) ? !this.draft.skip_publish.includes(i.id) : this.draft.publish_to.includes(i.id);
     },
     // O motivo de uma integração não poder receber a tarefa, no selo do cartão.
     publishOff(i) {
       const t = integrationType(i.type);
       return WTT.t(t && t.sync ? 'tasks.publish.sync_off' : 'tasks.publish.soon');
     },
-    // Uma tarefa se liga a um item só: marcar uma integração desmarca a outra.
+    // As caixas não se excluem: a tarefa pode ir para todas as integrações marcadas.
     pickPublish(i, checked) {
-      this.draft.publish_to = checked ? [i.id] : [];
+      const auto = this.autoPublish(i);
+      const key = auto ? 'skip_publish' : 'publish_to';
+      const listed = auto ? !checked : checked;
+      const others = this.draft[key].filter((id) => id !== i.id);
+      this.draft[key] = listed ? [...others, i.id] : others;
     },
     openCreate() {
-      this.draft = { name: '', description: '', assign: 'me', assignee_id: '', deadline: '', priority: 'none', label_ids: [], publish_to: [] };
+      this.draft = { name: '', description: '', assign: 'me', assignee_id: '', deadline: '', priority: 'none', label_ids: [], publish_to: [], skip_publish: [] };
       this.newLabel = '';
       this.errors.create = '';
       this.errors.label = '';
@@ -761,6 +773,8 @@ document.addEventListener('alpine:init', () => {
     },
     create() {
       return this.run('create', async () => {
+        // As integrações que o servidor posta sozinho (o Trello) e a pessoa desmarcou: ele não as posta.
+        const skip = this.integrations.filter((i) => this.autoPublish(i) && !this.ticked(i)).map((i) => i.id);
         const t = await api('POST', '/api/projects/' + project.id + '/tasks', {
           name: this.draft.name,
           description: this.draft.description,
@@ -768,16 +782,16 @@ document.addEventListener('alpine:init', () => {
           deadline: WTT.fmt.fromDateInput(this.draft.deadline),
           priority: this.draft.priority,
           label_ids: this.draft.label_ids,
+          skip_publish: skip,
         });
-        // Postar como issue vem depois de criar: se falhar, a tarefa existe e o aviso diz o que houve.
-        const target = this.integrations.find((i) => i.id === this.draft.publish_to[0]);
-        let published = null;
-        let publishError = '';
-        if (target) {
+        // Postar vem depois de criar, uma plataforma de cada vez: se uma falhar, a tarefa existe e o aviso diz o
+        // que houve com ela, sem impedir as outras. As que o servidor posta sozinho (o Trello) não passam por aqui.
+        const results = [];
+        for (const target of this.integrations.filter((i) => !this.autoPublish(i) && this.ticked(i))) {
           try {
-            published = await api('POST', '/api/tasks/' + t.id + '/publish', { integration_id: target.id });
+            results.push({ target, published: await api('POST', '/api/tasks/' + t.id + '/publish', { integration_id: target.id }) });
           } catch (e) {
-            publishError = e.message;
+            results.push({ target, error: e.message });
           }
         }
         Alpine.store('modal').close();
@@ -786,10 +800,12 @@ document.addEventListener('alpine:init', () => {
         const shown = taskLists.some((key) => this.lists[key].tasks.some((x) => x.id === t.id));
         // Uma tarefa sua não aparece nesta página, que mostra as de outras pessoas: está em Minhas tarefas.
         toast(WTT.t(shown ? 'tasks.created' : (t.assignee_id === me.id ? 'tasks.created_mine' : 'tasks.created_hidden')));
-        const provider = target ? this.typeLabel(target.type) : '';
-        if (publishError) {
-          toast(WTT.t('tasks.publish.failed', { provider, message: publishError }), 'error');
-        } else if (published) {
+        for (const { target, published, error } of results) {
+          const provider = this.typeLabel(target.type);
+          if (error) {
+            toast(WTT.t('tasks.publish.failed', { provider, message: error }), 'error');
+            continue;
+          }
           const posted = (published.task.links || []).find((l) => l.integration_id === target.id);
           let text = WTT.t('tasks.publish.done', { provider, number: posted ? posted.item_id : '' });
           if (published.problem) text += ' ' + WTT.errorText({ code: published.problem, params: { provider } });

@@ -3,6 +3,7 @@ package issuesync
 import (
 	"context"
 	"errors"
+	"slices"
 
 	"github.com/google/uuid"
 
@@ -12,8 +13,10 @@ import (
 )
 
 // Postar sozinha a tarefa criada aqui: nas plataformas que declaram Caps.AutoPublish (o Trello), toda tarefa
-// nova de um projeto com a sincronização ligada vira um item, sem caixa para marcar. Quem cria a tarefa não
-// espera a plataforma: o gancho de criação só avisa, e o worker posta pouco depois, com Publish.
+// nova de um projeto com a sincronização ligada vira um item, a menos que a pessoa a tenha desmarcado na etapa
+// Integrações (skip_publish na criação). Quem cria a tarefa não espera a plataforma: o gancho de criação só
+// avisa, e o worker posta pouco depois, com Publish. É por integração: a tarefa que o modal já postou no GitHub
+// também vira cartão, e a que já tem um item nesta integração não ganha outro.
 //
 // O que não sai por um motivo que passa (a plataforma fora do ar, o limite de requisições) fica guardado na
 // memória e é tentado de novo pela rotina de fundo e pelo botão Sincronizar, até maxPublishAttempts vezes. Um
@@ -52,17 +55,15 @@ func (s *Syncer) autoPublish(ctx context.Context, taskID uuid.UUID) int {
 		s.queue.release(taskID)
 		return 0
 	}
-	// Já ligada a um item (a etapa Integrações do modal a postou, ou alguém a ligou): não há o que postar.
-	if len(t.Links) > 0 {
-		s.queue.release(taskID)
-		return 0
-	}
 	target, err := s.autoPublishTarget(t.ProjectID.String())
 	if err != nil {
 		s.cfg.Logger.Error("issue sync: finding where to post a new task", "task", taskID, "error", err)
 		return 0
 	}
-	if target == nil {
+	// Não há onde postar, ou a pessoa desmarcou esta integração na etapa Integrações (e não se cai para outra:
+	// desmarcar o Trello não pode postar em um segundo quadro), ou a tarefa já tem um item nela (alguém a
+	// ligou à mão): não há o que postar. Um item em outra integração (a issue que o modal postou) não impede.
+	if target == nil || slices.Contains(s.queue.skipOf(taskID), target.ID) || t.LinkFor(target.ID.String()) != nil {
 		s.queue.release(taskID)
 		return 0
 	}

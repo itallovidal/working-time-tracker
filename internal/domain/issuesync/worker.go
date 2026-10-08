@@ -28,19 +28,25 @@ type queue struct {
 	// número de tentativas. A rotina de fundo e o botão Sincronizar tentam de novo as de parked.
 	created map[uuid.UUID]struct{}
 	parked  map[uuid.UUID]int
-	wake    chan struct{}
+	// skips são, por tarefa nova (esperando ou guardada), as integrações em que a pessoa pediu para não
+	// postá-la: a mesma lista vale na primeira tentativa e nas seguintes.
+	skips map[uuid.UUID][]uuid.UUID
+	wake  chan struct{}
 }
 
 func newQueue() *queue {
 	return &queue{
 		ids: map[uuid.UUID]struct{}{}, created: map[uuid.UUID]struct{}{}, parked: map[uuid.UUID]int{},
-		wake: make(chan struct{}, 1),
+		skips: map[uuid.UUID][]uuid.UUID{}, wake: make(chan struct{}, 1),
 	}
 }
 
-func (q *queue) addCreated(id uuid.UUID) {
+func (q *queue) addCreated(id uuid.UUID, skip []uuid.UUID) {
 	q.mu.Lock()
 	q.created[id] = struct{}{}
+	if len(skip) > 0 {
+		q.skips[id] = skip
+	}
 	q.mu.Unlock()
 	select {
 	case q.wake <- struct{}{}:
@@ -74,15 +80,24 @@ func (q *queue) park(id uuid.UUID) bool {
 	q.parked[id]++
 	if q.parked[id] > maxPublishAttempts {
 		delete(q.parked, id)
+		delete(q.skips, id)
 		return false
 	}
 	return true
+}
+
+// skipOf são as integrações em que a tarefa nova não deve ser postada.
+func (q *queue) skipOf(id uuid.UUID) []uuid.UUID {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	return q.skips[id]
 }
 
 // release tira a tarefa das que esperam: foi postada, ou não há mais o que postar.
 func (q *queue) release(id uuid.UUID) {
 	q.mu.Lock()
 	delete(q.parked, id)
+	delete(q.skips, id)
 	q.mu.Unlock()
 }
 
@@ -139,8 +154,9 @@ func (q *queue) len() int {
 func (s *Syncer) Notify(taskID uuid.UUID) { s.queue.add(taskID) }
 
 // NotifyCreated avisa que a tarefa foi criada aqui. Como Notify, só anota: se há uma integração que posta as
-// tarefas novas sozinha (o Trello), o worker a posta pouco depois, sem a pessoa esperar a plataforma.
-func (s *Syncer) NotifyCreated(taskID uuid.UUID) { s.queue.addCreated(taskID) }
+// tarefas novas sozinha (o Trello), o worker a posta pouco depois, sem a pessoa esperar a plataforma, a não ser
+// que a pessoa a tenha desmarcado (skip).
+func (s *Syncer) NotifyCreated(taskID uuid.UUID, skip []uuid.UUID) { s.queue.addCreated(taskID, skip) }
 
 // Pending diz quantas tarefas esperam para ser sincronizadas pelo gancho.
 func (s *Syncer) Pending() int { return s.queue.len() }
