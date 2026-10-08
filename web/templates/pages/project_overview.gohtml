@@ -124,6 +124,11 @@
                   <span class="badge" :class="it.enabled ? 'badge-ok' : ''" x-text="it.enabled ? $t('integrations.active') : $t('integrations.disabled')"></span>
                   <span class="badge badge-warn" x-show="!it.has_token">{{.T "overview.no_credential"}}</span>
                 </div>
+                <p class="muted small" x-cloak x-show="it.sync_issues">
+                  <span x-text="$t('integrations.sync_state') + ': ' + $t('integrations.sync_on')"></span> ·
+                  <span x-text="it.last_synced_at ? $t('integrations.last_sync') + ' ' + WTT.fmt.dateTime(it.last_synced_at) : $t('integrations.never_synced')"></span>
+                  <span x-show="it.sync_unmatched > 0"> · <span x-text="$t('integrations.unmatched', { count: it.sync_unmatched })"></span></span>
+                </p>
               </div>
             </li>
           </template>

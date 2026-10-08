@@ -125,6 +125,10 @@ func (s *Service) Get(projectID string) (*Overview, error) {
 			Enabled:     it.Enabled,
 			HasToken:    it.HasToken,
 			CreatedAt:   it.CreatedAt,
+
+			SyncIssues:    it.SyncIssues,
+			LastSyncedAt:  it.LastSyncedAt,
+			SyncUnmatched: it.SyncUnmatched,
 		})
 	}
 	o.addSessions(sessions, inProject, now)

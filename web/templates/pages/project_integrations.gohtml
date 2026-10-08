@@ -53,7 +53,26 @@
               x-text="it.has_token ? (isOAuth(it.type) ? $t('integrations.connected') : '••••••••••••') : WTT.notInformed"></dd>
           <dt>{{.T "integrations.created_at"}}</dt>
           <dd x-text="WTT.fmt.date(it.created_at)"></dd>
+          {{/* A sincronização das issues com as tarefas: se está ligada e quando rodou pela última vez. */}}
+          <dt x-show="supportsSync(it)">{{.T "integrations.sync_state"}}</dt>
+          <dd x-show="supportsSync(it)" :class="it.sync_issues ? '' : 'muted'" x-text="it.sync_issues ? $t('integrations.sync_on') : $t('integrations.sync_off')"></dd>
+          <dt x-show="it.sync_issues">{{.T "integrations.last_sync"}}</dt>
+          <dd x-show="it.sync_issues" :class="it.last_synced_at ? 'num' : 'muted'" x-text="it.last_synced_at ? WTT.fmt.dateTime(it.last_synced_at) : $t('integrations.never_synced')"></dd>
         </dl>
+
+        {{/* Quantas issues têm responsável no GitHub que não se liga a ninguém daqui (sem e-mail público, ou o
+             e-mail não é de ninguém do projeto): a tarefa delas fica disponível. */}}
+        <p class="muted small" x-cloak x-show="it.sync_issues && it.sync_unmatched > 0" :title="$t('integrations.unmatched_hint')"
+           x-text="$t('integrations.unmatched', { count: it.sync_unmatched })"></p>
+        <p class="alert alert-warn" x-cloak x-show="it.sync_issues && it.last_sync_error" x-text="syncWarning(it)"></p>
+        {{if .CanDo "integrations.manage"}}
+        <p class="form-error" x-cloak x-show="errors['sync:' + it.id]" x-text="errors['sync:' + it.id]" role="alert"></p>
+        <div class="row" x-cloak x-show="it.sync_issues && it.enabled">
+          <button type="button" class="btn btn-secondary btn-sm" :disabled="pending" :aria-label="$t('integrations.sync_now_label', { name: it.display_name })" @click="syncNow(it)">
+            {{template "icon" "rotate"}} <span x-text="pending === 'sync:' + it.id ? $t('integrations.syncing') : $t('integrations.sync_now')"></span>
+          </button>
+        </div>
+        {{end}}
 
         <p class="alert alert-warn" x-cloak x-show="incomplete(it)">
           {{.T "integrations.incomplete"}}
@@ -115,7 +134,9 @@
           <div class="field">
             <label :for="'int-meta-' + f.key" x-text="f.label"></label>
             <input :id="'int-meta-' + f.key" type="text" autocomplete="off" spellcheck="false" :required="f.required"
-                   :placeholder="f.placeholder || ''" :list="isOAuth(draft.type) && f.summary ? 'int-repos' : null" x-model="draft.metadata[f.key]">
+                   :placeholder="f.placeholder || ''" :list="isOAuth(draft.type) && f.summary ? 'int-repos' : null"
+                   :readonly="f.summary && repoLocked()" x-model="draft.metadata[f.key]">
+            <span class="hint" x-cloak x-show="f.summary && repoLocked()">{{$.T "integrations.sync_locked"}}</span>
             <span class="hint" x-show="f.hint" x-text="f.hint"></span>
           </div>
         </template>
@@ -131,6 +152,13 @@
         <div class="stack stack-tight" x-show="draft.id">
           <label class="check"><input type="checkbox" x-model="draft.enabled"> {{.T "integrations.active"}}</label>
           <span class="muted small">{{.T "integrations.enabled_hint"}}</span>
+        </div>
+        {{/* Sincronizar as issues do repositório com as tarefas. Na volta da conexão (a escolha do repositório) vem
+             marcada; nas integrações que já existem, desmarcada, até a pessoa ligar. */}}
+        <div class="stack stack-tight" x-cloak x-show="draft.id && typeOf(draft.type).sync">
+          <label class="check"><input type="checkbox" x-model="draft.sync_issues" :disabled="!draft.enabled && !draft.sync_was"> {{.T "integrations.sync_label"}}</label>
+          <span class="muted small">{{.T "integrations.sync_hint"}}</span>
+          <span class="muted small" x-cloak x-show="!draft.enabled && !draft.sync_was">{{.T "integrations.sync_needs_active"}}</span>
         </div>
         {{/* Sem campo de token, trocar o acesso é autorizar de novo. */}}
         <div class="stack stack-tight" x-cloak x-show="draft.id && isOAuth(draft.type) && typeOf(draft.type).configured">

@@ -611,6 +611,9 @@ task_detail:
   delete_title: Delete task
   delete_text: Deletes the task and all the time tracked on it.
   saved: Task saved.
+  sync_note: "This task is linked to a synced issue: on save, the name, description, labels and assignee go to the issue."
+  sync_note_quick: "This task is linked to a synced issue: the Closed status and the labels go to the issue."
+  synced: "Synced with the issue: name, description, labels, assignee and closing follow GitHub in both directions. Unlinking takes the task out of the sync."
 
 time:
   no_rate: You don't have an hourly rate on this project yet, so the clock is blocked.
@@ -678,7 +681,7 @@ time:
     other: "Page {{.page}} of {{.pages}} · {{.count}} sessions"
 
 integrations:
-  intro: Link tasks to GitHub issues. You authorize on GitHub itself and pick the repository; the access is stored encrypted. GitLab and Trello are coming soon.
+  intro: Link tasks to GitHub issues, or sync every open issue of a repository with the tasks. You authorize on GitHub itself and pick the repository; the access is stored encrypted. GitLab and Trello are coming soon.
   new: New integration
   loading: Loading integrations…
   none: No integrations
@@ -720,6 +723,38 @@ integrations:
   created: Integration created. The connection was validated on the platform.
   saved: Integration saved.
   deleted: Integration deleted.
+  sync_label: "Sync the issues of this repository with the tasks"
+  sync_hint: "Open issues become tasks, and the name, description, labels, assignee and closing stay the same on both sides, whichever one changes. The assignee is linked by the user's public email on GitHub. If both sides change the same field, GitHub wins. Priority, deadline, hours and the In progress and Awaiting closure statuses stay here only."
+  sync_locked: "With the sync on the repository does not change: turn it off to change it."
+  sync_needs_active: "Activate the integration to turn the sync on."
+  sync_now: "Sync now"
+  sync_now_label: "Sync the integration {{.name}} now"
+  syncing: "Syncing…"
+  sync_state: "Issue sync"
+  sync_on: "On"
+  sync_off: "Off"
+  last_sync: "Last sync"
+  never_synced: "Not synced yet"
+  sync_warning: "Last sync warning: {{.message}}"
+  sync_nothing: "Everything matches: nothing to sync."
+  sync_done: "Synced."
+  sync_partial: "The round stopped before the end (GitHub limit or an error): the rest waits for the next one."
+  unmatched_hint: "The assignee of an issue only becomes the task's if their public GitHub email is someone's on this project. Whoever does not publish an email has no match, and the task stays available."
+  sync_created:
+    one: "{{.count}} new task"
+    other: "{{.count}} new tasks"
+  sync_updated:
+    one: "{{.count}} task updated"
+    other: "{{.count}} tasks updated"
+  sync_pushed:
+    one: "{{.count}} issue updated on GitHub"
+    other: "{{.count}} issues updated on GitHub"
+  sync_errors:
+    one: "{{.count}} with an error"
+    other: "{{.count}} with an error"
+  unmatched:
+    one: "{{.count}} assignee without a match"
+    other: "{{.count}} assignees without a match"
 
 integration_types:
   github:

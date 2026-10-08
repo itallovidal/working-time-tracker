@@ -18,7 +18,7 @@ func projectHome() string {
 // MyOverview é o Início do projeto, a mesma tela para admin e membro: o relógio,
 // as suas tarefas, o seu tempo neste projeto e as suas sessões.
 func (h *Handler) MyOverview(c *echo.Context) error {
-	return h.projectPage(c, "project_my_overview", "titles.my_overview", "overview", nil)
+	return h.projectPage(c, "project_my_overview", "titles.my_overview", "overview", h.integrationTypes(c))
 }
 
 // Overview é a Visão geral da Gestão: pessoas, times, horas, custo, receita,

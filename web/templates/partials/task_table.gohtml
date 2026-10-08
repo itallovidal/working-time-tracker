@@ -28,6 +28,8 @@
             <div class="row row-tight">
               <a :href="'/tasks/' + t.id" x-text="t.name"></a>
               <span class="badge badge-ok" x-show="isRunning(t)">{{.T "tasks.running"}}</span>
+              {{/* A issue do GitHub (ou o cartão) a que a tarefa está ligada, em cinza: é uma informação, não um estado. */}}
+              <span class="badge" x-show="hasExternal(t)" x-text="externalLabel(t)"></span>
             </div>
           </td>
           <td>

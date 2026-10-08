@@ -17,6 +17,7 @@ var githubDescriptor = Descriptor{
 		{Key: "repo", Required: true, Summary: true},
 	},
 	ItemNumeric: true,
+	Sync:        true,
 	// O acesso vem da autorização no GitHub (github_oauth.go), sem token colado.
 	Auth: AuthOAuth,
 }

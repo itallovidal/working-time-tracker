@@ -621,6 +621,9 @@ task_detail:
   delete_title: Excluir tarefa
   delete_text: Apaga a tarefa e todo o tempo registrado nela.
   saved: Tarefa salva.
+  sync_note: "Esta tarefa está ligada a uma issue sincronizada: ao salvar, o nome, a descrição, as etiquetas e o responsável vão para a issue."
+  sync_note_quick: "Esta tarefa está ligada a uma issue sincronizada: o status Fechada e as etiquetas vão para a issue."
+  synced: "Sincronizada com a issue: nome, descrição, etiquetas, responsável e fechamento acompanham o GitHub nos dois sentidos. Desvincular tira a tarefa da sincronização."
 
 time:
   no_rate: Você ainda não tem valor por hora neste projeto, então o ponto está bloqueado.
@@ -688,7 +691,7 @@ time:
     other: "Página {{.page}} de {{.pages}} · {{.count}} sessões"
 
 integrations:
-  intro: Ligue tarefas a issues do GitHub. Você autoriza no próprio GitHub e escolhe o repositório; o acesso fica guardado criptografado. GitLab e Trello chegam em breve.
+  intro: Ligue tarefas a issues do GitHub, ou sincronize com as tarefas todas as issues abertas de um repositório. Você autoriza no próprio GitHub e escolhe o repositório; o acesso fica guardado criptografado. GitLab e Trello chegam em breve.
   new: Nova integração
   loading: Carregando integrações…
   none: Nenhuma integração
@@ -730,6 +733,38 @@ integrations:
   created: Integração criada. A conexão foi validada na plataforma.
   saved: Integração salva.
   deleted: Integração excluída.
+  sync_label: "Sincronizar as issues deste repositório com as tarefas"
+  sync_hint: "As issues abertas viram tarefas, e o nome, a descrição, as etiquetas, o responsável e o fechamento ficam iguais nos dois lados, para qualquer lado que mude. O responsável é ligado pelo e-mail público do usuário no GitHub. Se os dois lados mudarem o mesmo campo, vale o do GitHub. Prioridade, prazo, horas e os status Em progresso e Aguardando fechamento ficam só aqui."
+  sync_locked: "Com a sincronização ligada o repositório não muda: desligue-a para trocar."
+  sync_needs_active: "Ative a integração para ligar a sincronização."
+  sync_now: "Sincronizar agora"
+  sync_now_label: "Sincronizar agora a integração {{.name}}"
+  syncing: "Sincronizando…"
+  sync_state: "Sincronização das issues"
+  sync_on: "Ligada"
+  sync_off: "Desligada"
+  last_sync: "Última sincronização"
+  never_synced: "Ainda não sincronizou"
+  sync_warning: "Último aviso da sincronização: {{.message}}"
+  sync_nothing: "Tudo igual: não havia nada para sincronizar."
+  sync_done: "Sincronizado."
+  sync_partial: "A rodada parou antes do fim (limite do GitHub ou um erro): o resto fica para a próxima."
+  unmatched_hint: "O responsável de uma issue só vira o da tarefa se o e-mail público dele no GitHub for o de alguém deste projeto. Quem não publica o e-mail fica sem correspondência, e a tarefa fica disponível."
+  sync_created:
+    one: "{{.count}} tarefa nova"
+    other: "{{.count}} tarefas novas"
+  sync_updated:
+    one: "{{.count}} tarefa atualizada"
+    other: "{{.count}} tarefas atualizadas"
+  sync_pushed:
+    one: "{{.count}} issue atualizada no GitHub"
+    other: "{{.count}} issues atualizadas no GitHub"
+  sync_errors:
+    one: "{{.count}} com erro"
+    other: "{{.count}} com erro"
+  unmatched:
+    one: "{{.count}} responsável sem correspondência"
+    other: "{{.count}} responsáveis sem correspondência"
 
 integration_types:
   github:

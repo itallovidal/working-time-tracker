@@ -112,10 +112,13 @@ document.addEventListener('alpine:init', () => {
     },
   });
 
+  // Uma tarefa sem prazo guarda o tempo zero do Go (ano 1, uma tarefa importada de uma issue nasce assim):
+  // antes de 1971 não é um prazo.
+  const hasDeadlineDate = (iso) => !!iso && new Date(iso).getFullYear() >= 1971;
   // deadlineInfo descreve o prazo de uma tarefa para o badge: atrasada, vencendo
   // nas próximas 48 horas ou só a data.
   function deadlineInfo(iso) {
-    if (!iso || new Date(iso).getFullYear() < 1971) return { label: WTT.t('tasks.no_deadline'), cls: '' };
+    if (!hasDeadlineDate(iso)) return { label: WTT.t('tasks.no_deadline'), cls: '' };
     const diff = new Date(iso).getTime() - Date.now();
     if (diff < 0) return { label: WTT.t('tasks.overdue', { date: WTT.fmt.date(iso) }), cls: 'badge-danger' };
     if (diff < 2 * DAY) return { label: WTT.t('tasks.due_soon', { date: WTT.fmt.date(iso) }), cls: 'badge-warn' };
@@ -128,6 +131,9 @@ document.addEventListener('alpine:init', () => {
     statusClass,
     deadlineClass: (t) => deadlineInfo(t.deadline).cls,
     deadlineLabel: (t) => deadlineInfo(t.deadline).label,
+    // O selo da issue ou do cartão a que a tarefa está ligada: "GitHub #42".
+    hasExternal: (t) => !!t.external_integration && !!t.external_item_id,
+    externalLabel: (t) => externalLabel(t),
   };
 
   // taskClock é o que o painel do timer (partials/clock_card.gohtml) e o cartão da tarefa
@@ -142,7 +148,7 @@ document.addEventListener('alpine:init', () => {
     ...taskBadges,
     // O cartão só mostra o prazo que existe, e o de uma tarefa fechada é só a data: "atrasada" ou
     // "vence amanhã" não se aplicam ao que já terminou.
-    hasDeadline: (t) => !!t.deadline && new Date(t.deadline).getFullYear() >= 1971,
+    hasDeadline: (t) => hasDeadlineDate(t.deadline),
     cardDeadlineClass: (t) => (t.status === 'closed' ? '' : deadlineInfo(t.deadline).cls),
     cardDeadlineLabel: (t) => (t.status === 'closed' ? WTT.fmt.date(t.deadline) : deadlineInfo(t.deadline).label),
 
@@ -701,6 +707,8 @@ document.addEventListener('alpine:init', () => {
     },
     deadlineClass: (t) => deadlineInfo(t.deadline).cls,
     deadlineLabel: (t) => deadlineInfo(t.deadline).label,
+    hasExternal: taskBadges.hasExternal,
+    externalLabel: taskBadges.externalLabel,
   }));
 
   // Minhas tarefas: as tarefas de que a pessoa é responsável, numa lista por status, na ordem
@@ -774,7 +782,8 @@ document.addEventListener('alpine:init', () => {
         // Sem responsável, a própria pessoa, ou outra: é o que o modal pergunta.
         assign: !t.assignee_id ? 'none' : (t.assignee_id === me.id ? 'me' : 'other'),
         assignee_id: t.assignee_id && t.assignee_id !== me.id ? t.assignee_id : '',
-        deadline: WTT.fmt.dateInput(t.deadline),
+        // Sem prazo, o campo fica vazio: o ano 1 do tempo zero não cabe num <input type="date">.
+        deadline: hasDeadlineDate(t.deadline) ? WTT.fmt.dateInput(t.deadline) : '',
         priority: t.priority || 'none',
         status: t.status || 'backlog',
         label_ids: (t.labels || []).map((l) => l.id),
@@ -945,6 +954,12 @@ document.addEventListener('alpine:init', () => {
     deadlineClass() { return this.task ? deadlineInfo(this.task.deadline).cls : ''; },
     deadlineLabel() { return this.task ? deadlineInfo(this.task.deadline).label : ''; },
     externalLabel() { return this.task ? externalLabel(this.task) : ''; },
+    // syncs diz se a issue a que a tarefa está ligada é sincronizada: o que se salva aqui vai para ela.
+    syncs() {
+      const link = this.task && this.task.external_integration;
+      const it = link && this.integrations.find((i) => i.id === link.id);
+      return !!(it && it.sync_issues);
+    },
     // linkType é o tipo da integração escolhida no vínculo: dele vêm o rótulo e o
     // exemplo do campo do item (o número da issue, o cartão).
     linkType() {
@@ -965,7 +980,7 @@ document.addEventListener('alpine:init', () => {
     // O rascunho do modal, o mesmo para criar e editar (id nulo é criação). O corpo é
     // igual para todos os tipos: o que é da plataforma vai em metadata. Nada vai para
     // o servidor antes de Salvar.
-    draft: { id: null, type: '', display_name: '', token: '', metadata: {}, enabled: true, has_token: false },
+    draft: { id: null, type: '', display_name: '', token: '', metadata: {}, enabled: true, has_token: false, sync_issues: false, sync_was: false },
     confirming: false,
     // Os repositórios que a conta autorizada enxerga, para o campo do repositório oferecer.
     repos: [],
@@ -1036,7 +1051,7 @@ document.addEventListener('alpine:init', () => {
       this.repos = [];
       this.errors.repos = '';
       const first = this.types.find((t) => !t.coming_soon);
-      this.draft = { id: null, type: first ? first.type : '', display_name: '', token: '', metadata: {}, enabled: true, has_token: false };
+      this.draft = { id: null, type: first ? first.type : '', display_name: '', token: '', metadata: {}, enabled: true, has_token: false, sync_issues: false, sync_was: false };
       this.openForm(WTT.t('integrations.new'));
     },
     // pickRepo é a volta da conexão: a integração nasceu desativada e sem repositório, e o
@@ -1045,6 +1060,8 @@ document.addEventListener('alpine:init', () => {
       this.draft = {
         id: it.id, type: it.type, display_name: it.display_name, token: '',
         metadata: { ...(it.metadata || {}) }, enabled: pickRepo ? true : it.enabled, has_token: it.has_token,
+        // Na escolha do repositório a sincronização das issues vem marcada; nas que já existem, como estão.
+        sync_issues: pickRepo ? !!this.typeOf(it.type).sync : !!it.sync_issues, sync_was: !!it.sync_issues,
       };
       this.openForm(WTT.t(pickRepo ? 'integrations.pick_repo_title' : 'integrations.edit_title'));
       this.loadRepos(it);
@@ -1056,6 +1073,48 @@ document.addEventListener('alpine:init', () => {
       this.errors.connect = '';
       Alpine.store('modal').open('integration-form', title, () => !this.pending);
     },
+    // Só o tipo que lê e escreve issues sincroniza (o GitHub).
+    supportsSync(it) {
+      return !!this.typeOf(it.type).sync;
+    },
+    // Com a sincronização ligada o repositório não troca: desligar é um passo à parte (pode ser na mesma edição).
+    repoLocked() {
+      return !!this.draft.id && this.draft.sync_was && this.draft.sync_issues;
+    },
+    // O último aviso da sincronização, no idioma da pessoa: o código vem do servidor.
+    syncWarning(it) {
+      if (!it.last_sync_error) return '';
+      const message = WTT.errorText({ code: it.last_sync_error, params: { provider: this.typeOf(it.type).label } });
+      return WTT.t('integrations.sync_warning', { message });
+    },
+    // syncMessage resume uma rodada em uma frase: o que entrou, o que mudou e o que foi para o GitHub.
+    syncMessage(sum) {
+      const parts = [];
+      if (sum.created) parts.push(WTT.t('integrations.sync_created', { count: sum.created }));
+      if (sum.updated) parts.push(WTT.t('integrations.sync_updated', { count: sum.updated }));
+      if (sum.pushed) parts.push(WTT.t('integrations.sync_pushed', { count: sum.pushed }));
+      if (sum.errors) parts.push(WTT.t('integrations.sync_errors', { count: sum.errors }));
+      let text = parts.length ? WTT.t('integrations.sync_done') + ' ' + parts.join(', ') + '.' : WTT.t('integrations.sync_nothing');
+      if (sum.partial) text += ' ' + WTT.t('integrations.sync_partial');
+      return text;
+    },
+    // Sincronizar agora: uma rodada completa, que pode demorar com muitas issues. Depois, relê a integração
+    // para o cartão mostrar a hora, o aviso e a contagem de quem ficou sem correspondência.
+    syncNow(it) {
+      return this.run('sync:' + it.id, async () => {
+        let sum = null;
+        let failure = null;
+        try {
+          sum = await api('POST', '/api/integrations/' + it.id + '/sync');
+        } catch (e) {
+          failure = e;
+        }
+        const fresh = await api('GET', '/api/integrations/' + it.id);
+        this.items = this.items.map((x) => (x.id === fresh.id ? fresh : x));
+        if (failure) throw failure;
+        toast(this.syncMessage(sum));
+      });
+    },
     // Cada plataforma tem os seus campos: trocar de uma para outra começa do zero.
     pickType() {
       this.draft.metadata = {};
@@ -1066,6 +1125,8 @@ document.addEventListener('alpine:init', () => {
         const d = this.draft;
         const body = { display_name: d.display_name.trim(), enabled: d.enabled, token: d.token.trim(), metadata: { ...d.metadata } };
         if (!body.display_name) throw new Error(WTT.t('integrations.name_required'));
+        // Desativada e sem sincronização antes, não liga agora: a caixa está desabilitada e o servidor recusaria.
+        if (d.id && this.typeOf(d.type).sync) body.sync_issues = d.enabled || d.sync_was ? !!d.sync_issues : false;
         if (d.id) {
           const saved = await api('PATCH', '/api/integrations/' + d.id, body);
           this.items = this.items.map((x) => (x.id === saved.id ? saved : x));

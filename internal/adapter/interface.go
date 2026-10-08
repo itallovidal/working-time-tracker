@@ -63,6 +63,9 @@ type Descriptor struct {
 	// mostra "em breve" e a API recusa criar uma integração nova dele. As que já
 	// existem continuam funcionando e podem ser editadas.
 	ComingSoon bool `json:"coming_soon"`
+	// Sync diz que o tipo sabe sincronizar as issues do repositório com as tarefas (IssueSyncer): a
+	// tela só oferece a caixa para quem a tem.
+	Sync bool `json:"sync"`
 	// Auth diz como a pessoa dá acesso: AuthToken (padrão, ela cola um token) ou
 	// AuthOAuth (ela autoriza no site da plataforma e volta; não há campo de token).
 	Auth string `json:"auth,omitempty"`

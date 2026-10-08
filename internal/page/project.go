@@ -83,12 +83,12 @@ func (h *Handler) Project(c *echo.Context) error {
 
 // Tasks é a lista de tarefas do projeto (S9.1).
 func (h *Handler) Tasks(c *echo.Context) error {
-	return h.projectPage(c, "project_tasks", "titles.tasks", "tasks", nil)
+	return h.projectPage(c, "project_tasks", "titles.tasks", "tasks", h.integrationTypes(c))
 }
 
 // MyTasks é a aba Minhas tarefas: as tarefas de que a pessoa é responsável, em listas por status.
 func (h *Handler) MyTasks(c *echo.Context) error {
-	return h.projectPage(c, "project_my_tasks", "titles.my_tasks", "mine", nil)
+	return h.projectPage(c, "project_my_tasks", "titles.my_tasks", "mine", h.integrationTypes(c))
 }
 
 // ToHome é o caminho antigo do Ponto, que passou para o Início do projeto.

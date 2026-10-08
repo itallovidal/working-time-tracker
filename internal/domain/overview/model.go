@@ -105,6 +105,11 @@ type IntegrationItem struct {
 	Enabled     bool      `json:"enabled"`
 	HasToken    bool      `json:"has_token"`
 	CreatedAt   time.Time `json:"created_at"`
+	// A sincronização das issues com as tarefas: se está ligada, quando rodou pela última vez e quantas
+	// issues têm responsável no GitHub sem correspondência aqui.
+	SyncIssues    bool       `json:"sync_issues"`
+	LastSyncedAt  *time.Time `json:"last_synced_at"`
+	SyncUnmatched int        `json:"sync_unmatched"`
 }
 
 type Person struct {

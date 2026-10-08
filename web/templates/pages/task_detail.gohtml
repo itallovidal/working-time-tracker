@@ -134,6 +134,7 @@
             <div>
               <span class="badge badge-accent" x-text="externalLabel()"></span>
             </div>
+            <p class="muted small" x-cloak x-show="syncs()">{{.T "task_detail.synced"}}</p>
             <p class="muted small" x-show="external.loading">{{.T "task_detail.loading_details"}}</p>
             <template x-if="external.details">
               <div class="stack">
@@ -191,6 +192,7 @@
   <template x-teleport="#modal-root">
     <form class="stack" novalidate x-show="$store.modal.name === 'task-quick'" @submit.prevent="saveQuick()">
       <p class="muted small">{{.T "task_detail.quick_hint"}}</p>
+      <p class="muted small" x-cloak x-show="syncs()">{{.T "task_detail.sync_note_quick"}}</p>
       {{template "task_attrs" (.WithIDPrefix "quick-")}}
       <p class="form-error" x-show="errors.quick" x-text="errors.quick" role="alert"></p>
       <div class="row row-end">
@@ -203,6 +205,8 @@
   {{/* Editar tarefa: nada vai para o servidor antes de Salvar, então Cancelar desfaz tudo. */}}
   <template x-teleport="#modal-root">
     <form class="stack" novalidate x-show="$store.modal.name === 'task-edit'" @submit.prevent="submitStep('save')">
+      {{/* Uma tarefa ligada a uma issue sincronizada leva o que se salva aqui para o GitHub. */}}
+      <p class="muted small" x-cloak x-show="syncs()">{{.T "task_detail.sync_note"}}</p>
       {{template "task_fields" .}}
       <p class="form-error" x-show="errors.save" x-text="errors.save" role="alert"></p>
       <p class="form-error" x-show="errors.delete" x-text="errors.delete" role="alert"></p>

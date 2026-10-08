@@ -958,9 +958,15 @@ func TestPages_ProjectIntegrationsTab(t *testing.T) {
 			t.Errorf("the board does not contain %q", want)
 		}
 	}
-	for _, not := range []string{`>Detalhes <`, `@click="start(t)"`, "<th>Item externo</th>", "t.external_item_id", "externalLabel", "integration_types"} {
+	for _, not := range []string{`>Detalhes <`, `@click="start(t)"`, "<th>Item externo</th>", "t.external_item_id"} {
 		if strings.Contains(board, not) {
 			t.Errorf("the board still has %q", not)
+		}
+	}
+	// O selo da issue ligada ("GitHub #42") vem dos tipos de integração, que a lista passa a receber.
+	for _, want := range []string{`"integration_types"`, `x-show="hasExternal(t)" x-text="externalLabel(t)"`} {
+		if !strings.Contains(board, want) {
+			t.Errorf("the board does not contain %q, needed for the badge of the linked issue", want)
 		}
 	}
 	if !strings.Contains(board, "Clique em uma tarefa para abrir os detalhes.") {
@@ -986,7 +992,8 @@ func TestPages_ProjectIntegrationsTab(t *testing.T) {
 	if strings.Contains(board, `class="label-list"`) || strings.Contains(board, `x-for="l in t.labels"`) {
 		t.Error("the board rows still draw the labels of each task")
 	}
-	if home := do(e, "GET", "/projects/"+projectID+"/overview", "", member.session).Body.String(); strings.Contains(home, "integration_types") {
-		t.Error("the Início tab gets the integration types without using them")
+	// O Início desenha os cartões das tarefas com o mesmo selo.
+	if home := do(e, "GET", "/projects/"+projectID+"/overview", "", member.session).Body.String(); !strings.Contains(home, "integration_types") {
+		t.Error("the Início tab does not get the integration types its task cards need for the badge")
 	}
 }
