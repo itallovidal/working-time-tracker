@@ -2,8 +2,11 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
+	"io"
+	"log"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -18,6 +21,7 @@ import (
 	"entgo.io/ent/dialect/sql/schema"
 
 	entmigrate "working-time-tracker/ent/migrate"
+	"working-time-tracker/internal/database"
 )
 
 var migrationName = regexp.MustCompile(`^[a-z][a-z0-9_]*$`)
@@ -42,15 +46,20 @@ var upOnly = func() amigrate.Formatter {
 // grava a diferença num arquivo novo. Não toca no banco do DATABASE_URL: usa um banco
 // temporário no mesmo servidor.
 func newMigration(ctx context.Context, dsn, name string) error {
+	return generateMigration(ctx, dsn, migrationsDir, name)
+}
+
+// generateMigration é o newMigration com a pasta das migrações à escolha (os testes usam uma cópia).
+func generateMigration(ctx context.Context, dsn, path, name string) error {
 	if !migrationName.MatchString(name) {
 		return fmt.Errorf("nome inválido %q: use minúsculas, dígitos e _ (ex.: add_invoice_number)", name)
 	}
-	dir, err := sqltool.NewGooseDir(migrationsDir)
+	dir, err := sqltool.NewGooseDir(path)
 	if err != nil {
-		return fmt.Errorf("%s: %w (rode da raiz do repositório)", migrationsDir, err)
+		return fmt.Errorf("%s: %w (rode da raiz do repositório)", path, err)
 	}
 	if err := amigrate.Validate(dir); err != nil {
-		return fmt.Errorf("%s: %w (se a edição foi de propósito, rode `go run ./cmd/migrate checksum`)", migrationsDir, err)
+		return fmt.Errorf("%s: %w (se a edição foi de propósito, rode `go run ./cmd/migrate checksum`)", path, err)
 	}
 	before, err := fileNames(dir)
 	if err != nil {
@@ -63,11 +72,18 @@ func newMigration(ctx context.Context, dsn, name string) error {
 	}
 	defer cleanup()
 
+	// O banco temporário recebe as migrações pelo mesmo caminho do servidor (goose, cada arquivo numa
+	// transação), e o Ent compara o que sobrou com o ent/schema. Quem reaplicava os arquivos era o replay
+	// do Atlas, que roda um comando por vez, sem transação: uma migração que depende dela (uma tabela
+	// temporária `ON COMMIT DROP`, por exemplo) funcionava no servidor e quebrava o gerador.
+	if err := applyMigrations(ctx, scratch); err != nil {
+		return err
+	}
+
 	var report diffReport
 	m, err := schema.NewMigrate(entsql.OpenDB(dialect.Postgres, scratch),
 		schema.WithDir(dir),
 		schema.WithFormatter(upOnly),
-		schema.WithMigrationMode(schema.ModeReplay),
 		// Sem estes dois, remover um campo ou um índice do ent/schema não geraria nada.
 		// Aqui o DROP não é aplicado: fica escrito no arquivo, para revisão.
 		schema.WithDropColumn(true),
@@ -95,10 +111,22 @@ func newMigration(ctx context.Context, dsn, name string) error {
 	}
 	for _, f := range after {
 		if !slices.Contains(before, f) {
-			fmt.Printf("criado %s\n", filepath.Join(migrationsDir, f))
+			fmt.Printf("criado %s\n", filepath.Join(path, f))
 		}
 	}
 	fmt.Println("revise o SQL antes de commitar; se editar à mão, rode `go run ./cmd/migrate checksum`")
+	return nil
+}
+
+// applyMigrations aplica no banco todas as migrações, como o servidor faz ao iniciar. O goose escreve uma linha
+// no log por arquivo; aqui isso só atrapalharia a saída do comando.
+func applyMigrations(ctx context.Context, db *sql.DB) error {
+	out := log.Writer()
+	log.SetOutput(io.Discard)
+	defer log.SetOutput(out)
+	if err := database.Migrate(ctx, db); err != nil {
+		return fmt.Errorf("aplicando as migrações no banco temporário: %w", err)
+	}
 	return nil
 }
 

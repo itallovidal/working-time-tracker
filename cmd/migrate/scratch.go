@@ -11,9 +11,8 @@ import (
 )
 
 // createScratch cria um banco vazio no mesmo servidor do DATABASE_URL e devolve a
-// conexão com ele e a função que o apaga. O replay das migrações precisa de um banco
-// limpo e, ao terminar, derruba o schema public inteiro: por isso nunca roda num
-// banco de verdade.
+// conexão com ele e a função que o apaga. É nele que as migrações são aplicadas para
+// gerar a seguinte: o banco de verdade nunca é tocado.
 func createScratch(ctx context.Context, dsn string) (*sql.DB, func(), error) {
 	cfg, err := pgx.ParseConfig(dsn)
 	if err != nil {

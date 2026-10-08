@@ -466,7 +466,7 @@ go run ./cmd/migrate checksum
 
 | Comando | O que faz |
 |---|---|
-| `go run ./cmd/migrate new <nome>` | Gera um arquivo com a diferença entre o que as migrações produzem e o `ent/schema`. Usa um banco temporário no servidor do `DATABASE_URL` e o apaga ao terminar, sem tocar no seu banco |
+| `go run ./cmd/migrate new <nome>` | Gera um arquivo com a diferença entre o que as migrações produzem e o `ent/schema`. Cria um banco temporário no servidor do `DATABASE_URL`, aplica nele as migrações **do mesmo jeito que o servidor** (goose, cada arquivo numa transação) e apaga o banco ao terminar, sem tocar no seu |
 | `go run ./cmd/migrate checksum` | Recalcula o `atlas.sum` depois de uma edição manual |
 | `go run ./cmd/migrate status` | Lista as migrações e quais já foram aplicadas no banco do `DATABASE_URL` |
 | `go run ./cmd/migrate up` | Aplica as pendentes sem subir o servidor |
