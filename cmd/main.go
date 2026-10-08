@@ -49,11 +49,23 @@ func main() {
 		})
 	}
 
+	// A chave do app do Trello também só vale com o endereço público: é para ele que o Trello devolve a pessoa.
+	trello := &adapter.TrelloAuth{APIKey: ENV.TrelloAPIKey, AppName: ENV.TrelloAppName, SiteURL: ENV.TrelloURL}
+	if ENV.PublicURL != "" {
+		trello.RedirectURL = ENV.PublicURL + integration.TrelloCallbackPath
+	}
+	if ENV.TrelloAPIURL != "" {
+		adapter.Register("trello", func() adapter.Integration {
+			return &adapter.TrelloIntegration{BaseURL: ENV.TrelloAPIURL}
+		})
+	}
+
 	app, err := server.Build(db.Client, server.Options{
 		EncryptKey:   ENV.IntegrationEncryptKey,
 		CookieSecure: ENV.CookieSecure,
 		GitHubOAuth:  github,
-		Sync:         issuesync.Config{Interval: ENV.GitHubSyncInterval},
+		TrelloAuth:   trello,
+		Sync:         issuesync.Config{Interval: ENV.SyncInterval},
 	})
 	if err != nil {
 		log.Fatalf("server: %v", err)
@@ -66,7 +78,15 @@ func main() {
 	if siteURL == "" {
 		siteURL = "https://github.com"
 	}
-	e.Logger.Info("github", "api", apiURL, "site", siteURL, "sync_interval", ENV.GitHubSyncInterval.String())
+	e.Logger.Info("github", "api", apiURL, "site", siteURL, "sync_interval", ENV.SyncInterval.String())
+	trelloAPI, trelloSite := ENV.TrelloAPIURL, ENV.TrelloURL
+	if trelloAPI == "" {
+		trelloAPI = "https://api.trello.com/1"
+	}
+	if trelloSite == "" {
+		trelloSite = "https://trello.com"
+	}
+	e.Logger.Info("trello", "api", trelloAPI, "site", trelloSite, "connection_configured", trello.Configured())
 
 	// Ctrl+C e SIGTERM acabam o servidor e a sincronização, que termina a rodada em andamento antes de
 	// o banco fechar.

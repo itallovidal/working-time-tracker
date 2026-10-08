@@ -58,6 +58,7 @@ titles:
   my_tasks: Minhas tarefas
   teams: Gestão · Colaboradores
   integrations: Gestão · Integrações
+  trello_callback: Conectando com o Trello
   project_settings: Gestão · Configurações
 
 nav:
@@ -274,6 +275,11 @@ auth:
     email_only: Este convite é só para este email.
     submit: Aceitar convite
     pending: Criando conta…
+
+trello_callback:
+  title: Terminando a conexão com o Trello…
+  text: "Não feche esta página: você volta para as integrações em instantes."
+  noscript: Esta página precisa de JavaScript para terminar a conexão com o Trello.
 
 not_found:
   title: Página não encontrada
@@ -713,24 +719,22 @@ time:
     other: "Página {{.page}} de {{.pages}} · {{.count}} sessões"
 
 integrations:
-  intro: Ligue tarefas a issues do GitHub, ou sincronize com as tarefas todas as issues abertas de um repositório. Você autoriza no próprio GitHub e escolhe o repositório; o acesso fica guardado criptografado. GitLab e Trello chegam em breve.
+  intro: Ligue tarefas a issues e cartões, ou sincronize com as tarefas todas as issues abertas de um repositório do GitHub, ou todos os cartões de um quadro do Trello. Você autoriza na própria plataforma e escolhe o repositório ou o quadro; o acesso fica guardado criptografado. O GitLab chega em breve.
   new: Nova integração
   loading: Carregando integrações…
   none: Nenhuma integração
   none_admin: Crie uma para vincular tarefas a issues ou cartões e ver o estado deles aqui.
-  none_member: Um admin pode configurar o GitHub deste projeto.
+  none_member: Um admin pode configurar uma integração deste projeto.
   coming_soon: Em breve
   connect: Conectar com o {{.platform}}
-  connect_about: Você vai ao {{.platform}} autorizar o acesso e volta para escolher o repositório.
-  connect_unconfigured: A conexão com o GitHub não está configurada neste servidor. Quem administra precisa definir GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET e PUBLIC_URL.
+  connect_about: Você vai ao {{.platform}} autorizar o acesso e volta para escolher o que sincronizar.
   reconnect: Reconectar com o {{.platform}}
   reconnect_hint: Autorize de novo se o acesso foi revogado ou para usar outra conta.
   reconnected: Acesso renovado.
   connection: Conexão
   connected: Autorizada
-  pick_repo_title: Escolha o repositório
-  pick_repo_hint: A lista traz os repositórios que a sua conta enxerga. Se um repositório de uma organização não aparecer, o dono da organização precisa aprovar o app nas configurações dela, em acesso de aplicativos de terceiros.
-  repos_failed: Não foi possível listar os repositórios. Digite o nome ou reconecte.
+  pick_placeholder: Escolha…
+  repos_failed: Não foi possível listar o que esta conta enxerga. Reconecte e tente de novo.
   private_repo: privado
   active: Ativa
   disabled: Desativada
@@ -755,14 +759,12 @@ integrations:
   created: Integração criada. A conexão foi validada na plataforma.
   saved: Integração salva.
   deleted: Integração excluída.
-  sync_label: "Sincronizar as issues deste repositório com as tarefas"
-  sync_hint: "As issues abertas viram tarefas, e o nome, a descrição, as etiquetas, o responsável e o fechamento ficam iguais nos dois lados, para qualquer lado que mude. O responsável é ligado pelo e-mail público do usuário no GitHub. Se os dois lados mudarem o mesmo campo, vale o do GitHub. Prioridade, prazo, horas e os status Em progresso e Aguardando fechamento ficam só aqui."
-  sync_locked: "Com a sincronização ligada o repositório não muda: desligue-a para trocar."
+  sync_locked: "Com a sincronização ligada isto não muda: desligue-a para trocar."
   sync_needs_active: "Ative a integração para ligar a sincronização."
   sync_now: "Sincronizar agora"
   sync_now_label: "Sincronizar agora a integração {{.name}}"
   syncing: "Sincronizando…"
-  sync_state: "Sincronização das issues"
+  sync_state: "Sincronização"
   sync_on: "Ligada"
   sync_off: "Desligada"
   last_sync: "Última sincronização"
@@ -770,7 +772,7 @@ integrations:
   sync_warning: "Último aviso da sincronização: {{.message}}"
   sync_nothing: "Tudo igual: não havia nada para sincronizar."
   sync_done: "Sincronizado."
-  sync_partial: "A rodada parou antes do fim (limite do GitHub ou um erro): o resto fica para a próxima."
+  sync_partial: "A rodada parou antes do fim (um limite da plataforma ou um erro): o resto fica para a próxima."
   unmatched_hint: "O responsável de uma issue só vira o da tarefa se o e-mail público dele no GitHub for o de alguém deste projeto. Quem não publica o e-mail fica sem correspondência, e a tarefa fica disponível."
   sync_created:
     one: "{{.count}} tarefa nova"
@@ -779,8 +781,8 @@ integrations:
     one: "{{.count}} tarefa atualizada"
     other: "{{.count}} tarefas atualizadas"
   sync_pushed:
-    one: "{{.count}} issue atualizada no GitHub"
-    other: "{{.count}} issues atualizadas no GitHub"
+    one: "{{.count}} item atualizado na plataforma"
+    other: "{{.count}} itens atualizados na plataforma"
   sync_errors:
     one: "{{.count}} com erro"
     other: "{{.count}} com erro"
@@ -794,6 +796,11 @@ integration_types:
     token_hint: Token pessoal com permissão de leitura de issues.
     item_label: Número da issue
     item_placeholder: "Ex.: 42"
+    pick_title: Escolha o repositório
+    pick_hint: A lista traz os repositórios que a sua conta enxerga. Se um repositório de uma organização não aparecer, o dono da organização precisa aprovar o app nas configurações dela, em acesso de aplicativos de terceiros.
+    sync_label: "Sincronizar as issues deste repositório com as tarefas"
+    sync_hint: "As issues abertas viram tarefas, e o nome, a descrição, as etiquetas, o responsável e o fechamento ficam iguais nos dois lados, para qualquer lado que mude. O responsável é ligado pelo e-mail público do usuário no GitHub. Se os dois lados mudarem o mesmo campo, vale o do GitHub. Prioridade, prazo, horas e os status Em progresso e Aguardando fechamento ficam só aqui."
+    connect_unconfigured: A conexão com o GitHub não está configurada neste servidor. Quem administra precisa definir GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET e PUBLIC_URL.
     fields:
       repo:
         label: Repositório
@@ -811,17 +818,24 @@ integration_types:
         hint: Aceita também o endereço do projeto no gitlab.com.
   trello:
     about: Cartões de um quadro
-    token_hint: Token da API gerado a partir da chave, com permissão de leitura.
+    token_hint: Token da API do Trello, gerado a partir da chave, com permissão de leitura e escrita.
     item_label: Cartão
     item_placeholder: "Link curto, ex.: H0TZyzbK"
+    pick_title: Escolha o quadro
+    pick_hint: A lista traz os quadros abertos que a sua conta do Trello enxerga, com o espaço de trabalho de cada um.
+    sync_label: "Sincronizar os cartões deste quadro com as tarefas"
+    sync_hint: "Cada cartão do quadro vira uma tarefa, e o nome, a descrição, as etiquetas e a data de entrega ficam iguais nos dois lados, para qualquer lado que mude. O cartão arquivado, ou com a data de entrega marcada como concluída, fecha a tarefa, e fechar a tarefa arquiva o cartão. Se os dois lados mudarem o mesmo campo, vale o do Trello. As listas, o responsável, a prioridade, as horas e os status Em progresso e Aguardando fechamento ficam fora da sincronização."
+    connect_unconfigured: A conexão com o Trello não está configurada neste servidor. Quem administra precisa definir TRELLO_API_KEY e PUBLIC_URL.
     fields:
       api_key:
         label: Chave da API
-        hint: A chave do seu Power-Up, em trello.com/apps/admin.
+        hint: A chave do app do Trello, definida pela conexão.
       board_id:
         label: Quadro
         placeholder: https://trello.com/b/AbC123xy/nome
         hint: O endereço do quadro, o link curto ou o id.
+      board_name:
+        label: Nome do quadro
 
 project_settings:
   title: Projeto
@@ -1147,6 +1161,9 @@ errors:
     trello_no_access_board: "chave ou token do Trello inválido, ou sem acesso ao quadro"
     trello_no_access_card: "chave ou token do Trello inválido, ou sem acesso ao cartão"
     trello_no_list: "o quadro do Trello não tem lista aberta: crie uma para os cartões poderem ser adicionados"
+    trello_oauth_denied: "o acesso não foi autorizado no Trello"
+    trello_oauth_not_configured: "a conexão com o Trello não está configurada neste servidor"
+    trello_oauth_state: "a volta do Trello não corresponde à conexão que foi iniciada: tente de novo"
     type_coming_soon: "a integração com o {{.provider}} ainda não está disponível"
     type_required: "informe o tipo da integração"
     unexpected_response: "resposta inesperada do {{.provider}}"

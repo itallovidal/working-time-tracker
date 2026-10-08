@@ -19,15 +19,19 @@ var trelloDescriptor = Descriptor{
 	Type:  "trello",
 	Label: "Trello",
 	Metadata: []Field{
-		{Key: "api_key", Required: true},
-		{Key: "board_id", Required: true, Summary: true},
+		// A chave é a do app (TRELLO_API_KEY), guardada pela conexão: a tela não a mostra nem a deixa trocar.
+		{Key: "api_key", Required: true, Internal: true},
+		{Key: "board_id", Required: true, Summary: true, Picker: "select", NameKey: "board_name"},
+		// O nome do quadro, que a tela guarda ao escolher na lista para o cartão mostrar no lugar do id.
+		{Key: "board_name", Hidden: true},
 	},
 	// Cada cartão do quadro é uma tarefa (as listas ficam de fora por ora), e a tarefa criada aqui vira um
 	// cartão sozinha. O Trello não expõe o e-mail dos membros, então o responsável não se liga, e não filtra
 	// os cartões por data, então toda rodada olha o quadro inteiro.
-	Sync:       true,
-	Caps:       SyncCaps{Deadline: true, AutoPublish: true},
-	ComingSoon: true,
+	Sync: true,
+	Caps: SyncCaps{Deadline: true, AutoPublish: true},
+	// A pessoa autoriza no site do Trello e volta (trello_auth.go), sem token para colar.
+	Auth: AuthOAuth,
 }
 
 // TrelloIntegration fala com a API do Trello. BaseURL e Client são opcionais e
@@ -54,9 +58,13 @@ func (t *TrelloIntegration) client() *http.Client {
 // trelloMetadata são os campos que só o Trello tem. A chave identifica o Power-Up e
 // pode ser pública; o segredo é o token.
 type trelloMetadata struct {
-	APIKey  string
-	BoardID string
+	APIKey    string
+	BoardID   string
+	BoardName string // opcional: o nome legível do quadro
 }
+
+// trelloBoardNameLimit é o tamanho máximo do nome do quadro guardado.
+const trelloBoardNameLimit = 200
 
 var (
 	// Ids, links curtos e chaves do Trello só têm letras e dígitos.
@@ -81,7 +89,11 @@ func parseTrelloMetadata(raw map[string]any) (*trelloMetadata, error) {
 	if !trelloID.MatchString(board) {
 		return nil, ErrTrelloInvalidBoard
 	}
-	return &trelloMetadata{APIKey: key, BoardID: board}, nil
+	name := fields["board_name"]
+	if r := []rune(name); len(r) > trelloBoardNameLimit {
+		name = string(r[:trelloBoardNameLimit])
+	}
+	return &trelloMetadata{APIKey: key, BoardID: board, BoardName: name}, nil
 }
 
 func (t *TrelloIntegration) Descriptor() Descriptor {
@@ -93,7 +105,11 @@ func (t *TrelloIntegration) CheckMetadata(raw map[string]any) (map[string]any, e
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"api_key": meta.APIKey, "board_id": meta.BoardID}, nil
+	out := map[string]any{"api_key": meta.APIKey, "board_id": meta.BoardID}
+	if meta.BoardName != "" {
+		out["board_name"] = meta.BoardName
+	}
+	return out, nil
 }
 
 // get manda a chave e o token no cabeçalho, para o token não aparecer na URL.

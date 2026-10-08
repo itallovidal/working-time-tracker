@@ -111,7 +111,7 @@
            autorização e volta para a escolha do repositório. Nome e repositório vêm depois. */}}
       <div class="stack" x-cloak x-show="connectStep()">
         <p class="muted" x-text="$t('integrations.connect_about', { platform: typeOf(draft.type).label })"></p>
-        <p class="alert alert-warn" x-cloak x-show="!typeOf(draft.type).configured">{{.T "integrations.connect_unconfigured"}}</p>
+        <p class="alert alert-warn" x-cloak x-show="!typeOf(draft.type).configured" x-text="typeOf(draft.type).connect_unconfigured"></p>
         <div x-cloak x-show="typeOf(draft.type).configured">
           <a class="btn" :href="connectURL()">{{template "icon" "link"}} <span x-text="$t('integrations.connect', { platform: typeOf(draft.type).label })"></span></a>
         </div>
@@ -130,14 +130,32 @@
                  :placeholder="draft.id && draft.has_token ? $t('integrations.keep_token') : ''" x-model="draft.token">
           <span class="hint" x-show="typeOf(draft.type).token_hint" x-text="typeOf(draft.type).token_hint"></span>
         </div>
+        {{/* Os campos do tipo. Os internos (a chave do app do Trello) a conexão guarda, e a tela não mostra. O que
+             identifica a conexão (o repositório, o quadro) se escolhe entre o que a conta enxerga: numa lista
+             fechada (o quadro) ou num campo que oferece sugestões e aceita digitar outro (o repositório). */}}
         <template x-for="f in typeOf(draft.type).metadata" :key="draft.type + '-' + f.key">
-          <div class="field">
+          <div class="field" x-show="!f.internal && !f.hidden">
             <label :for="'int-meta-' + f.key" x-text="f.label"></label>
-            <input :id="'int-meta-' + f.key" type="text" autocomplete="off" spellcheck="false" :required="f.required"
-                   :placeholder="f.placeholder || ''" :list="isOAuth(draft.type) && f.summary ? 'int-repos' : null"
-                   :readonly="f.summary && repoLocked()" x-model="draft.metadata[f.key]">
+            <template x-if="f.picker === 'select'">
+              <select :id="'int-meta-' + f.key" :required="f.required && !f.internal" :disabled="f.summary && repoLocked()"
+                      @change="draft.metadata[f.key] = $event.target.value; if (f.name_key) draft.metadata[f.name_key] = $event.target.value ? $event.target.selectedOptions[0].textContent.trim() : ''">
+                <option value="" :selected="!draft.metadata[f.key]">{{$.T "integrations.pick_placeholder"}}</option>
+                <template x-for="r in repos" :key="r.id || r.full_name">
+                  <option :value="r.id || r.full_name" :selected="(r.id || r.full_name) === draft.metadata[f.key]" x-text="r.full_name"></option>
+                </template>
+                {{/* O que está guardado e a lista não traz (outra conta, ou o link curto de um quadro) continua escolhível. */}}
+                <template x-if="draft.metadata[f.key] && !repos.some((r) => (r.id || r.full_name) === draft.metadata[f.key])">
+                  <option :value="draft.metadata[f.key]" selected x-text="draft.metadata[f.key]"></option>
+                </template>
+              </select>
+            </template>
+            <template x-if="f.picker !== 'select'">
+              <input :id="'int-meta-' + f.key" type="text" autocomplete="off" spellcheck="false" :required="f.required && !f.internal"
+                     :placeholder="f.placeholder || ''" :list="f.picker === 'datalist' ? 'int-repos' : null"
+                     :readonly="f.summary && repoLocked()" x-model="draft.metadata[f.key]">
+            </template>
             <span class="hint" x-cloak x-show="f.summary && repoLocked()">{{$.T "integrations.sync_locked"}}</span>
-            <span class="hint" x-show="f.hint" x-text="f.hint"></span>
+            <span class="hint" x-show="f.hint && !f.internal && f.picker !== 'select'" x-text="f.hint"></span>
           </div>
         </template>
         {{/* Os repositórios que a conta autorizada enxerga: o campo os oferece, e aceita digitar outro. */}}
@@ -146,7 +164,7 @@
             <option :value="r.full_name" :label="r.private ? $t('integrations.private_repo') : ''"></option>
           </template>
         </datalist>
-        <p class="muted small" x-cloak x-show="draft.id && isOAuth(draft.type)">{{.T "integrations.pick_repo_hint"}}</p>
+        <p class="muted small" x-cloak x-show="draft.id && isOAuth(draft.type) && typeOf(draft.type).pick_hint" x-text="typeOf(draft.type).pick_hint"></p>
         <p class="form-error" x-cloak x-show="errors.repos" x-text="errors.repos"></p>
         {{/* Uma integração nasce ativa; desativar é coisa de quem edita. */}}
         <div class="stack stack-tight" x-show="draft.id">
@@ -156,8 +174,8 @@
         {{/* Sincronizar as issues do repositório com as tarefas. Na volta da conexão (a escolha do repositório) vem
              marcada; nas integrações que já existem, desmarcada, até a pessoa ligar. */}}
         <div class="stack stack-tight" x-cloak x-show="draft.id && typeOf(draft.type).sync">
-          <label class="check"><input type="checkbox" x-model="draft.sync_issues" :disabled="!draft.enabled && !draft.sync_was"> {{.T "integrations.sync_label"}}</label>
-          <span class="muted small">{{.T "integrations.sync_hint"}}</span>
+          <label class="check"><input type="checkbox" x-model="draft.sync_issues" :disabled="!draft.enabled && !draft.sync_was"> <span x-text="typeOf(draft.type).sync_label"></span></label>
+          <span class="muted small" x-text="typeOf(draft.type).sync_hint"></span>
           <span class="muted small" x-cloak x-show="!draft.enabled && !draft.sync_was">{{.T "integrations.sync_needs_active"}}</span>
         </div>
         {{/* Sem campo de token, trocar o acesso é autorizar de novo. */}}

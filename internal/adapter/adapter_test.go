@@ -68,6 +68,12 @@ func TestCheckMetadata(t *testing.T) {
 		{name: "trello board url", typ: "trello",
 			raw:  map[string]any{"api_key": testutil.TrelloKey, "board_id": "https://trello.com/b/AbC123xy/app-do-cliente"},
 			want: map[string]any{"api_key": testutil.TrelloKey, "board_id": "AbC123xy"}},
+		{name: "trello board name", typ: "trello",
+			raw:  map[string]any{"api_key": testutil.TrelloKey, "board_id": "AbC123xy", "board_name": "  Acme / App  "},
+			want: map[string]any{"api_key": testutil.TrelloKey, "board_id": "AbC123xy", "board_name": "Acme / App"}},
+		{name: "trello board name too long", typ: "trello",
+			raw:  map[string]any{"api_key": testutil.TrelloKey, "board_id": "AbC123xy", "board_name": strings.Repeat("é", 300)},
+			want: map[string]any{"api_key": testutil.TrelloKey, "board_id": "AbC123xy", "board_name": strings.Repeat("é", 200)}},
 		{name: "trello missing key", typ: "trello", raw: map[string]any{"board_id": "AbC123xy"}, wantErr: "integration.field_required"},
 		{name: "trello missing board", typ: "trello", raw: map[string]any{"api_key": testutil.TrelloKey}, wantErr: "integration.field_required"},
 		{name: "trello key breaking the header", typ: "trello", raw: map[string]any{"api_key": `abc", oauth_token="x`, "board_id": "AbC123xy"},
@@ -236,7 +242,7 @@ func TestGitHub_AccountAndRepositories(t *testing.T) {
 		t.Errorf("account without a token: %v", err)
 	}
 
-	// O GitHub é o único tipo que se autoriza no site e que sabe listar; GitLab e Trello não.
+	// O GitHub e o Trello se autorizam no site e sabem listar o que a conta enxerga; o GitLab não.
 	var _ AccountLookup = g
 	var _ RepositoryLister = g
 	if d := g.Descriptor(); d.Auth != AuthOAuth || d.ComingSoon {
@@ -249,9 +255,16 @@ func TestGitHub_AccountAndRepositories(t *testing.T) {
 	if _, ok := Integration(gitlab).(RepositoryLister); ok {
 		t.Error("gitlab lists repositories")
 	}
-	for _, other := range []Integration{gitlab, &TrelloIntegration{}} {
-		if d := other.Descriptor(); d.Auth == AuthOAuth || !d.ComingSoon {
-			t.Errorf("%s descriptor: auth %q, coming soon %v", d.Type, d.Auth, d.ComingSoon)
+	if d := gitlab.Descriptor(); d.Auth == AuthOAuth || !d.ComingSoon {
+		t.Errorf("gitlab descriptor: auth %q, coming soon %v", d.Auth, d.ComingSoon)
+	}
+	trello := &TrelloIntegration{}
+	if d := trello.Descriptor(); d.Auth != AuthOAuth || d.ComingSoon || !d.Sync {
+		t.Errorf("trello descriptor: auth %q, coming soon %v, sync %v", d.Auth, d.ComingSoon, d.Sync)
+	}
+	for _, f := range trello.Descriptor().Metadata {
+		if (f.Key == "api_key") != f.Internal || (f.Key == "board_id") != (f.Picker == "select") {
+			t.Errorf("trello field %+v: the key is internal and the board is picked from a list", f)
 		}
 	}
 }

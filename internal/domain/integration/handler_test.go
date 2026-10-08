@@ -134,8 +134,8 @@ func TestHandler_Create_InvalidType(t *testing.T) {
 	}
 }
 
-// GitLab e Trello estão "em breve": o adapter funciona, mas a API não cria integração
-// nova deles, nem com um corpo que passaria na validação.
+// O GitLab está "em breve": o adapter funciona, mas a API não cria integração nova dele, nem com um
+// corpo que passaria na validação. O Trello já não está: o pedido segue para a validação na plataforma.
 func TestHandler_Create_ComingSoonType(t *testing.T) {
 	cleanup(t)
 	e := echo.New()
@@ -155,7 +155,6 @@ func TestHandler_Create_ComingSoonType(t *testing.T) {
 
 	bodies := map[string]string{
 		"GitLab": `{"type":"gitlab","display_name":"App","token":"glpat-x","metadata":{"project_url":"grupo/projeto"}}`,
-		"Trello": `{"type":"trello","display_name":"Quadro","token":"t","metadata":{"api_key":"k","board_id":"AbC123xy"}}`,
 	}
 	for provider, body := range bodies {
 		req := httptest.NewRequest("POST", "/api/projects/"+projectID+"/integrations", strings.NewReader(body))
@@ -166,6 +165,15 @@ func TestHandler_Create_ComingSoonType(t *testing.T) {
 			!strings.Contains(rec.Body.String(), `"provider":"`+provider+`"`) {
 			t.Errorf("%s: got %d %s, want 400 integration.type_coming_soon naming the provider", provider, rec.Code, rec.Body.String())
 		}
+	}
+
+	trello := httptest.NewRequest("POST", "/api/projects/"+projectID+"/integrations",
+		strings.NewReader(`{"type":"trello","display_name":"Quadro","token":"t","metadata":{"api_key":"k","board_id":"AbC123xy"}}`))
+	trello.Header.Set("Content-Type", "application/json")
+	trelloRec := httptest.NewRecorder()
+	e.ServeHTTP(trelloRec, trello)
+	if strings.Contains(trelloRec.Body.String(), "type_coming_soon") {
+		t.Errorf("Trello is no longer coming soon, got %d %s", trelloRec.Code, trelloRec.Body.String())
 	}
 
 	list := httptest.NewRecorder()

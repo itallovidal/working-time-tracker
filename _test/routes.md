@@ -617,15 +617,18 @@ Na lista de tarefas e no detalhe, a tarefa vinculada traz `external_integration`
 | GET | `/api/integrations/:integrationId` | logado | Detalhes |
 | PATCH | `/api/integrations/:integrationId` | `integrations.manage` | Altera nome, token, `metadata`, `enabled` ou `sync_issues` |
 | DELETE | `/api/integrations/:integrationId` | `integrations.manage` | Exclui. As tarefas vinculadas perdem o vínculo |
-| GET | `/api/integrations/:integrationId/repositories` | `integrations.manage` | Lista `[{"full_name","private"}]` o que o token guardado enxerga (GitHub). `400` `integration.no_repositories` nos tipos que não listam |
+| GET | `/api/integrations/:integrationId/repositories` | `integrations.manage` | Lista o que o token guardado enxerga: `[{"full_name","private"}]` no GitHub (repositórios) e `[{"id","full_name","private"}]` no Trello (os quadros abertos, com o espaço de trabalho em `full_name`, e o `id` que vai em `metadata.board_id`). `400` `integration.no_repositories` nos tipos que não listam |
 | POST | `/api/integrations/:integrationId/sync` | `integrations.manage` | Uma rodada completa da sincronização das issues com as tarefas, na hora. `200` `{"created","updated","closed","pushed","unmapped","errors","partial"}`; `409` `integration.sync_running` se já há uma rodada nesta integração; `400` `integration.sync_off` se a sincronização está desligada ou a integração desativada; `404` entre organizações |
 
-**Conectar com o GitHub** são duas rotas de página (GET e redirecionamentos, fora do `/api`), que o navegador percorre; não há como chamá-las pela API:
+**Conectar com o GitHub e com o Trello** são rotas de página (GET e redirecionamentos, fora do `/api`), que o navegador percorre; não há como chamá-las pela API:
 
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
 | GET | `/projects/:projectId/management/integrations/github/connect` | `integrations.manage` | Grava o cookie `wtt_oauth` e responde `302` para o GitHub. `?integration=<id>` reconecta uma integração GitHub do mesmo projeto |
 | GET | `/integrations/github/callback?code&state` | logado | O endereço cadastrado no app do GitHub. Confere cookie, `state`, pessoa e permissão; guarda a integração (desativada e sem repositório) e responde `303` para `/projects/:projectId/management/integrations?github=<id>`. Em erro, `?github_error=<código>` (`integration.github_oauth_state`, `_denied`, `_exchange`, `_not_configured`, `integration.not_found`); sem conexão em andamento, `303` para `/` |
+| GET | `/projects/:projectId/management/integrations/trello/connect` | `integrations.manage` | Grava o cookie `wtt_oauth` (preso a `/integrations/trello`) e responde `302` para `{TRELLO_URL}/1/authorize` com `key`, `name`, `scope=read,write`, `expiration=never`, `response_type=token`, `callback_method=fragment` e o `return_url` (`PUBLIC_URL/integrations/trello/callback?state=<state>`). `?integration=<id>` reconecta uma integração Trello do mesmo projeto. Sem a chave do app, `303` para a aba com `?trello_error=integration.trello_oauth_not_configured` |
+| GET | `/integrations/trello/callback?state` | logado | Onde o Trello devolve a pessoa, com o token no **fragmento** (`#token=…`), que o servidor não recebe. Responde a página de retorno (`Referrer-Policy: no-referrer`, `Cache-Control: no-store`), cujo script lê o token, apaga o endereço do histórico e o entrega à rota abaixo |
+| POST | `/integrations/trello/token` | logado, `Content-Type: application/json` | Corpo `{"state","token"}`. Confere o cookie (preso à plataforma), o `state`, a pessoa e a permissão; guarda a integração (desativada e sem quadro, com a chave do app no `metadata`) ou, com `?integration` na ida, troca o token da que existe (validando com o quadro dela). Responde sempre `200` `{"redirect":"…"}`: a aba com `?trello=<id>` ou `?trello_error=<código>` (`integration.trello_oauth_state`, `_denied`, `invalid_token`, `trello_no_access_board`…), ou `/` quando não há conexão em andamento |
 
 O corpo é o mesmo para todas as plataformas. O que é comum fica no primeiro nível, e os campos próprios de cada uma vão em `metadata`:
 
@@ -646,7 +649,7 @@ Content-Type: application/json
 |---|---|---|
 | `github` | token pessoal com leitura de issues | `repo`: `dono/repositorio` ou o endereço do repositório |
 | `gitlab` | token com escopo `read_api` | `project_url`: `grupo/projeto` ou o endereço do projeto no gitlab.com |
-| `trello` | token da API do Trello, com leitura | `api_key`: a chave do Power-Up (trello.com/apps/admin); `board_id`: o endereço do quadro, o link curto ou o id |
+| `trello` | na tela, vem da autorização no Trello; a API também aceita o token da API do Trello, com leitura e escrita | `api_key`: a chave do app (`TRELLO_API_KEY`; a tela a guarda na conexão e uma edição não a troca); `board_id`: o endereço do quadro, o link curto ou o id; `board_name` (opcional): o nome do quadro, que a tela guarda ao escolher e que o cartão da integração mostra (trocar o quadro sem mandar outro nome o apaga) |
 
 Resposta (`201`), igual em todas as rotas de integração:
 
@@ -667,7 +670,7 @@ Resposta (`201`), igual em todas as rotas de integração:
 }
 ```
 
-- `gitlab` e `trello` estão "em breve": o `POST` deles responde `400` com `integration.type_coming_soon` (`provider` no `params`). O `PATCH` e o `GET` das que já existem seguem como antes.
+- O `gitlab` está "em breve": o `POST` dele responde `400` com `integration.type_coming_soon` (`provider` no `params`). O `PATCH` e o `GET` das que já existem seguem como antes.
 - Cada tipo confere o próprio `metadata` antes de falar com a plataforma. Faltando um campo, a resposta é `400` com o nome dele, por exemplo `informe o campo "Quadro" do Trello`. Chave que o tipo não declara é descartada, e o valor é guardado normalizado (o endereço do repositório vira `dono/repositorio`; o do quadro, o link curto).
 - A conexão é validada na plataforma antes de salvar. O token fica criptografado (AES-GCM) no banco e nunca volta nas respostas: elas mostram só `has_token`. O `metadata` fica em claro e volta, então não é lugar de segredo.
 - Sem `enabled` no corpo, a integração nasce ativa.
@@ -688,7 +691,7 @@ Content-Type: application/json
 - A plataforma só é consultada de novo quando veio um token ou o `metadata` mudou de fato, e a conexão nova é validada com o token guardado quando nenhum veio. Renomear ou desativar não depende de o token ainda valer.
 - Uma integração criada antes do `metadata` aparece com `metadata: {}` e `has_token: true`. Basta um `PATCH` com o `metadata` dela, sem token.
 
-**Sincronização das issues (GitHub).** `sync_issues` liga e desliga pelo `PATCH`, e nasce `false`:
+**Sincronização das issues (GitHub) e dos cartões (Trello).** `sync_issues` liga e desliga pelo `PATCH`, e nasce `false`:
 
 ```http
 PATCH /api/integrations/:integrationId
@@ -697,11 +700,11 @@ Content-Type: application/json
 { "sync_issues": true }
 ```
 
-- Só liga no GitHub (`400` `integration.sync_unsupported` nos outros), com o repositório já escolhido (`integration.sync_needs_repo`), a integração ativa (`integration.sync_needs_enabled`, vale para a mudança de desligada para ligada, e dá para mandar `enabled` e `sync_issues` juntos) e com a credencial guardada.
-- Ligada, o `metadata.repo` **não troca**: `400` `integration.sync_repo_locked`. Desligar e trocar na mesma chamada vale, e trocar o repositório com ela desligada esquece o vínculo das issues do antigo. Trocar só o token com ela ligada vale.
+- Só liga no GitHub e no Trello (`400` `integration.sync_unsupported` nos outros), com o repositório (ou o quadro) já escolhido (`integration.sync_needs_repo`), a integração ativa (`integration.sync_needs_enabled`, vale para a mudança de desligada para ligada, e dá para mandar `enabled` e `sync_issues` juntos) e com a credencial guardada.
+- Ligada, o campo que identifica a conexão (`metadata.repo` no GitHub, `metadata.board_id` no Trello) **não troca**: `400` `integration.sync_repo_locked`. Desligar e trocar na mesma chamada vale, e trocar o repositório com ela desligada esquece o vínculo das issues do antigo. Trocar só o token com ela ligada vale.
 - As respostas trazem `sync_issues`, `last_synced_at` (o fim da última rodada, nulo antes da primeira), `last_sync_error` (o código do último aviso ou erro: `issue_sync.read_only`, `issue_sync.push_discarded`, `issue_sync.push_rejected`, `issue_sync.no_login`, `issue_sync.label_refused`, `integration.rate_limited`, `integration.invalid_token`...; vazio se a última rodada não achou nada) e `sync_unmatched` (quantas issues abertas têm responsável no GitHub sem correspondência aqui; só é calculado com a sincronização ligada).
-- `POST .../sync` leva a rodada à hora, sem esperar o intervalo de `GITHUB_SYNC_INTERVAL`, e responde o que ela fez. `partial: true` é uma rodada que parou antes de olhar tudo (limite de requisições do GitHub, falha de rede): o que fez fica feito, e o resto fica para a seguinte.
-- As tarefas importadas aparecem na lista como qualquer outra, com `external_integration`, `external_item_id` (o número da issue) e `external_item_url`; a tarefa criada por uma issue nasce em `backlog`, sem prazo.
+- `POST .../sync` leva a rodada à hora, sem esperar o intervalo de `SYNC_INTERVAL`, e responde o que ela fez. `partial: true` é uma rodada que parou antes de olhar tudo (limite de requisições do GitHub, falha de rede): o que fez fica feito, e o resto fica para a seguinte.
+- As tarefas importadas aparecem na lista como qualquer outra, com `external_integration`, `external_item_id` (o número da issue; o link curto do cartão no Trello) e `external_item_url`; a tarefa criada por uma issue nasce em `backlog`, sem prazo. A criada por um cartão nasce em `backlog` com o prazo da data de entrega do cartão (ou sem prazo) e `created_at` igual à data de criação do cartão.
 
 ---
 

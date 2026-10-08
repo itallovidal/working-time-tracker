@@ -358,6 +358,10 @@ func (s *Service) Edit(id string, in EditInput) (*Integration, error) {
 			if meta, err = impl.CheckMetadata(keepInternal(desc, in.Metadata, existing.Metadata)); err != nil {
 				return nil, err
 			}
+			// O nome legível guardado é do alvo antigo: se o alvo mudou e o nome não, ele não vale mais.
+			if name := desc.SummaryNameKey(); name != "" && meta[summary] != existing.Metadata[summary] && meta[name] == existing.Metadata[name] {
+				delete(meta, name)
+			}
 		}
 		if token != "" || !reflect.DeepEqual(meta, existing.Metadata) {
 			if in.SyncIssues == nil || *in.SyncIssues {

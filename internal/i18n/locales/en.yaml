@@ -48,6 +48,7 @@ titles:
   my_tasks: My tasks
   teams: Management · Collaborators
   integrations: Management · Integrations
+  trello_callback: Connecting to Trello
   project_settings: Management · Settings
 
 nav:
@@ -264,6 +265,11 @@ auth:
     email_only: This invitation is only for this email.
     submit: Accept invitation
     pending: Creating account…
+
+trello_callback:
+  title: Finishing the connection with Trello…
+  text: "Do not close this page: you will be back at the integrations in a moment."
+  noscript: This page needs JavaScript to finish the connection with Trello.
 
 not_found:
   title: Page not found
@@ -703,24 +709,22 @@ time:
     other: "Page {{.page}} of {{.pages}} · {{.count}} sessions"
 
 integrations:
-  intro: Link tasks to GitHub issues, or sync every open issue of a repository with the tasks. You authorize on GitHub itself and pick the repository; the access is stored encrypted. GitLab and Trello are coming soon.
+  intro: Link tasks to issues and cards, or sync every open issue of a GitHub repository, or every card of a Trello board, with the tasks. You authorize on the platform itself and pick the repository or the board; the access is stored encrypted. GitLab is coming soon.
   new: New integration
   loading: Loading integrations…
   none: No integrations
   none_admin: Create one to link tasks to issues or cards and see their state here.
-  none_member: An admin can set up GitHub for this project.
+  none_member: An admin can set up an integration for this project.
   coming_soon: Coming soon
   connect: Connect with {{.platform}}
-  connect_about: You will go to {{.platform}} to authorize the access and come back to pick the repository.
-  connect_unconfigured: The GitHub connection is not set up on this server. Whoever runs it must define GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET and PUBLIC_URL.
+  connect_about: You will go to {{.platform}} to authorize the access and come back to choose what to sync.
   reconnect: Reconnect with {{.platform}}
   reconnect_hint: Authorize again if the access was revoked or to use another account.
   reconnected: Access renewed.
   connection: Connection
   connected: Authorized
-  pick_repo_title: Pick the repository
-  pick_repo_hint: The list shows the repositories your account can see. If a repository of an organization does not show up, the organization owner must approve the app in the organization settings, under third-party application access.
-  repos_failed: Could not list the repositories. Type the name or reconnect.
+  pick_placeholder: Choose…
+  repos_failed: Could not list what this account can see. Reconnect and try again.
   private_repo: private
   active: Active
   disabled: Disabled
@@ -745,14 +749,12 @@ integrations:
   created: Integration created. The connection was validated on the platform.
   saved: Integration saved.
   deleted: Integration deleted.
-  sync_label: "Sync the issues of this repository with the tasks"
-  sync_hint: "Open issues become tasks, and the name, description, labels, assignee and closing stay the same on both sides, whichever one changes. The assignee is linked by the user's public email on GitHub. If both sides change the same field, GitHub wins. Priority, deadline, hours and the In progress and Awaiting closure statuses stay here only."
-  sync_locked: "With the sync on the repository does not change: turn it off to change it."
+  sync_locked: "With the sync on this cannot change: turn it off to change it."
   sync_needs_active: "Activate the integration to turn the sync on."
   sync_now: "Sync now"
   sync_now_label: "Sync the integration {{.name}} now"
   syncing: "Syncing…"
-  sync_state: "Issue sync"
+  sync_state: "Sync"
   sync_on: "On"
   sync_off: "Off"
   last_sync: "Last sync"
@@ -760,7 +762,7 @@ integrations:
   sync_warning: "Last sync warning: {{.message}}"
   sync_nothing: "Everything matches: nothing to sync."
   sync_done: "Synced."
-  sync_partial: "The round stopped before the end (GitHub limit or an error): the rest waits for the next one."
+  sync_partial: "The round stopped before the end (a limit of the platform or an error): the rest waits for the next one."
   unmatched_hint: "The assignee of an issue only becomes the task's if their public GitHub email is someone's on this project. Whoever does not publish an email has no match, and the task stays available."
   sync_created:
     one: "{{.count}} new task"
@@ -769,8 +771,8 @@ integrations:
     one: "{{.count}} task updated"
     other: "{{.count}} tasks updated"
   sync_pushed:
-    one: "{{.count}} issue updated on GitHub"
-    other: "{{.count}} issues updated on GitHub"
+    one: "{{.count}} item updated on the platform"
+    other: "{{.count}} items updated on the platform"
   sync_errors:
     one: "{{.count}} with an error"
     other: "{{.count}} with an error"
@@ -784,6 +786,11 @@ integration_types:
     token_hint: Personal token with permission to read issues.
     item_label: Issue number
     item_placeholder: "E.g.: 42"
+    pick_title: Pick the repository
+    pick_hint: The list shows the repositories your account can see. If a repository of an organization does not show up, the organization owner must approve the app in the organization settings, under third-party application access.
+    sync_label: "Sync the issues of this repository with the tasks"
+    sync_hint: "Open issues become tasks, and the name, description, labels, assignee and closing stay the same on both sides, whichever one changes. The assignee is linked by the user's public email on GitHub. If both sides change the same field, GitHub wins. Priority, deadline, hours and the In progress and Awaiting closure statuses stay here only."
+    connect_unconfigured: The GitHub connection is not set up on this server. Whoever runs it must define GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET and PUBLIC_URL.
     fields:
       repo:
         label: Repository
@@ -801,17 +808,24 @@ integration_types:
         hint: The project address on gitlab.com is accepted too.
   trello:
     about: Cards of a board
-    token_hint: API token generated from the key, with read permission.
+    token_hint: Token of the Trello API, generated from the key, with read and write permission.
     item_label: Card
     item_placeholder: "Short link, e.g.: H0TZyzbK"
+    pick_title: Pick the board
+    pick_hint: The list shows the open boards your Trello account can see, with their workspace.
+    sync_label: "Sync the cards of this board with the tasks"
+    sync_hint: "Every card of the board becomes a task, and the name, description, labels and due date stay the same on both sides, whichever one changes. An archived card, or one with its due date marked done, closes the task, and closing a task archives the card. If both sides change the same field, Trello wins. The lists, the assignee, priority, hours and the In progress and Awaiting closure statuses stay out of the sync."
+    connect_unconfigured: The Trello connection is not set up on this server. Whoever runs it must define TRELLO_API_KEY and PUBLIC_URL.
     fields:
       api_key:
         label: API key
-        hint: The key of your Power-Up, at trello.com/apps/admin.
+        hint: The key of the Trello app, set by the connection.
       board_id:
         label: Board
         placeholder: https://trello.com/b/AbC123xy/name
         hint: The board address, the short link or the id.
+      board_name:
+        label: Board name
 
 project_settings:
   title: Project
@@ -1137,6 +1151,9 @@ errors:
     trello_no_access_board: "invalid Trello key or token, or no access to the board"
     trello_no_access_card: "invalid Trello key or token, or no access to the card"
     trello_no_list: "the Trello board has no open list: create one so the cards can be added to it"
+    trello_oauth_denied: "the access was not authorized on Trello"
+    trello_oauth_not_configured: "the Trello connection is not set up on this server"
+    trello_oauth_state: "the return from Trello does not match the connection that was started: try again"
     type_coming_soon: "the {{.provider}} integration is not available yet"
     type_required: "enter the integration type"
     unexpected_response: "unexpected response from {{.provider}}"

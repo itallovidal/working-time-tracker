@@ -1,0 +1,12 @@
+{{define "content"}}
+{{/* A volta do Trello: o token está no fragmento da URL, que só o navegador vê. O script da página o entrega
+     ao servidor e segue para a aba das integrações. */}}
+<main class="page">
+  <div class="empty">
+    <strong>{{.T "trello_callback.title"}}</strong>
+    <span>{{.T "trello_callback.text"}}</span>
+    <noscript><span class="form-error">{{.T "trello_callback.noscript"}}</span></noscript>
+    <a class="btn btn-secondary" href="/">{{.T "not_found.back"}}</a>
+  </div>
+</main>
+{{end}}

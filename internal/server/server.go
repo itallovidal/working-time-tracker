@@ -41,6 +41,9 @@ type Options struct {
 	// GitHubOAuth é o app OAuth do GitHub deste servidor. Nulo ou sem credenciais, o botão
 	// Conectar com o GitHub avisa que não está configurado.
 	GitHubOAuth *adapter.GitHubOAuth
+	// TrelloAuth é a autorização do Trello deste servidor (a chave do app). Nulo ou sem chave, o botão
+	// Conectar com o Trello avisa que não está configurado.
+	TrelloAuth *adapter.TrelloAuth
 	// Sync são os ajustes da sincronização das issues. O valor zero serve: sem Interval a rotina de
 	// fundo não olha o GitHub (só o botão e o gancho das tarefas).
 	Sync issuesync.Config
@@ -132,7 +135,7 @@ func Build(client *ent.Client, opts Options) (*App, error) {
 	}
 	resolver := auth.NewResolver(client)
 	authMW := auth.NewMiddleware(authSvc, resolver, opts.CookieSecure)
-	oauthHandler := integration.NewOAuthHandler(integrationSvc, opts.GitHubOAuth, resolver, opts.EncryptKey, opts.CookieSecure)
+	oauthHandler := integration.NewOAuthHandler(integrationSvc, opts.GitHubOAuth, opts.TrelloAuth, resolver, opts.EncryptKey, opts.CookieSecure)
 	catalog, err := i18n.Load()
 	if err != nil {
 		return nil, err
@@ -140,7 +143,7 @@ func Build(client *ent.Client, opts Options) (*App, error) {
 	pages := page.NewHandler(page.Deps{
 		Orgs: orgSvc, Projects: projectSvc, Tasks: taskSvc,
 		I18n: catalog, CookieSecure: opts.CookieSecure,
-		OAuthConfigured: map[string]bool{"github": opts.GitHubOAuth.Configured()},
+		OAuthConfigured: map[string]bool{"github": opts.GitHubOAuth.Configured(), "trello": opts.TrelloAuth.Configured()},
 	})
 
 	renderer, err := tmpl.New(web.FS)

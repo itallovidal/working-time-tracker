@@ -55,6 +55,11 @@ var (
 	ErrTrelloInvalidCard    = apperr.New("integration.trello_invalid_card", http.StatusBadRequest)
 	ErrTrelloNoAccessCard   = apperr.New("integration.trello_no_access_card", http.StatusBadRequest)
 	ErrTrelloCardOtherBoard = apperr.New("integration.trello_card_other_board", http.StatusBadRequest, "card")
+	// A conexão com o Trello: o servidor sem a chave do app, a pessoa que negou a autorização, o retorno que
+	// não bate com o que foi pedido.
+	ErrTrelloOAuthNotConfigured = apperr.New("integration.trello_oauth_not_configured", http.StatusBadRequest)
+	ErrTrelloOAuthDenied        = apperr.New("integration.trello_oauth_denied", http.StatusBadRequest)
+	ErrTrelloOAuthState         = apperr.New("integration.trello_oauth_state", http.StatusBadRequest)
 	// ErrTrelloNoList é o quadro sem nenhuma lista aberta: o Trello só cria um cartão numa lista.
 	ErrTrelloNoList = apperr.New("integration.trello_no_list", http.StatusBadRequest)
 )

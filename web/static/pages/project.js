@@ -1148,13 +1148,17 @@ document.addEventListener('alpine:init', () => {
       const base = '/projects/' + project.id + '/management/integrations/' + this.draft.type + '/connect';
       return this.draft.id ? base + '?integration=' + encodeURIComponent(this.draft.id) : base;
     },
-    // O GitHub devolve a pessoa a esta aba com ?github=<id> ou ?github_error=<código>. Uma
-    // integração que ainda não tem o repositório acabou de ser conectada: abre a escolha dele.
-    // Uma que já tem foi só reconectada: o acesso está renovado, e o resto fica como estava.
+    // A plataforma devolve a pessoa a esta aba com ?<tipo>=<id> ou ?<tipo>_error=<código> (github, trello).
+    // Uma integração que ainda não tem o repositório ou o quadro acabou de ser conectada: abre a escolha
+    // dele. Uma que já tem foi só reconectada: o acesso está renovado, e o resto fica como estava.
     handleReturn() {
       const q = new URLSearchParams(location.search);
-      const id = q.get('github');
-      const err = q.get('github_error');
+      let id = null;
+      let err = null;
+      for (const t of this.types.filter((x) => x.auth === 'oauth')) {
+        id = id || q.get(t.type);
+        err = err || q.get(t.type + '_error');
+      }
       if (!id && !err) return;
       history.replaceState(null, '', location.pathname);
       if (err) {
@@ -1179,7 +1183,7 @@ document.addEventListener('alpine:init', () => {
     // facts são os campos que identificam a conexão no cartão: o repositório, o quadro.
     facts(it) {
       return this.typeOf(it.type).metadata.filter((f) => f.summary)
-        .map((f) => ({ key: f.key, label: f.label, value: (it.metadata || {})[f.key] || '' }));
+        .map((f) => ({ key: f.key, label: f.label, value: (it.metadata || {})[f.name_key] || (it.metadata || {})[f.key] || '' }));
     },
     // Uma integração de antes do metadata não tem os campos da plataforma guardados.
     incomplete(it) {
@@ -1202,7 +1206,7 @@ document.addEventListener('alpine:init', () => {
         // Na escolha do repositório a sincronização das issues vem marcada; nas que já existem, como estão.
         sync_issues: pickRepo ? !!this.typeOf(it.type).sync : !!it.sync_issues, sync_was: !!it.sync_issues,
       };
-      this.openForm(WTT.t(pickRepo ? 'integrations.pick_repo_title' : 'integrations.edit_title'));
+      this.openForm(pickRepo ? (this.typeOf(it.type).pick_title || WTT.t('integrations.edit_title')) : WTT.t('integrations.edit_title'));
       this.loadRepos(it);
     },
     openForm(title) {

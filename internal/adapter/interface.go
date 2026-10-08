@@ -51,6 +51,12 @@ type Field struct {
 	// de texto com sugestões, o repositório) ou "select" (uma lista fechada, o quadro). Vazio é só
 	// digitar.
 	Picker string `json:"picker,omitempty"`
+	// NameKey, no campo Summary, é a chave de outro campo do metadata que guarda o nome legível do que
+	// foi escolhido (o quadro "Acme / App", e não o id dele): a tela o preenche ao escolher na lista e o
+	// cartão da integração o mostra no lugar do id.
+	NameKey string `json:"name_key,omitempty"`
+	// Hidden marca o campo que a tela preenche por conta própria (o nome acima) e que não aparece no formulário.
+	Hidden bool `json:"hidden,omitempty"`
 }
 
 // SyncCaps diz o que a sincronização de um tipo sabe fazer além do básico (título, corpo, etiquetas e
@@ -80,7 +86,15 @@ type Descriptor struct {
 	// O item externo a que uma tarefa se vincula: uma issue, um cartão.
 	ItemLabel       string `json:"item_label"`
 	ItemPlaceholder string `json:"item_placeholder,omitempty"`
-	ItemNumeric     bool   `json:"item_numeric"`
+	// Os textos da conexão e da sincronização que dependem da plataforma (o repositório ou o quadro, a issue ou
+	// o cartão), do catálogo, em integration_types.<tipo>: o título e a dica da escolha do que sincronizar, a
+	// caixa da sincronização e a explicação dela, e o aviso de que o servidor não tem a conexão configurada.
+	PickTitle           string `json:"pick_title,omitempty"`
+	PickHint            string `json:"pick_hint,omitempty"`
+	SyncLabel           string `json:"sync_label,omitempty"`
+	SyncHint            string `json:"sync_hint,omitempty"`
+	ConnectUnconfigured string `json:"connect_unconfigured,omitempty"`
+	ItemNumeric         bool   `json:"item_numeric"`
 	// ComingSoon marca o tipo que existe no adapter mas ainda não se oferece: a tela
 	// mostra "em breve" e a API recusa criar uma integração nova dele. As que já
 	// existem continuam funcionando e podem ser editadas.
@@ -246,6 +260,16 @@ func StopsSync(err error) bool {
 		}
 	}
 	return false
+}
+
+// SummaryNameKey é a chave do campo que guarda o nome legível do que o campo Summary escolhe, ou vazia.
+func (d Descriptor) SummaryNameKey() string {
+	for _, f := range d.Metadata {
+		if f.Summary {
+			return f.NameKey
+		}
+	}
+	return ""
 }
 
 // SummaryKey é a chave do campo que identifica a conexão (o repositório, o quadro): mudá-la com a

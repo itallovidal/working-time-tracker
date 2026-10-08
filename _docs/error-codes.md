@@ -140,6 +140,9 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `integration.trello_no_access_board` | 400 | — | `chave ou token do Trello inválido, ou sem acesso ao quadro` | `invalid Trello key or token, or no access to the board` |
 | `integration.trello_no_access_card` | 400 | — | `chave ou token do Trello inválido, ou sem acesso ao cartão` | `invalid Trello key or token, or no access to the card` |
 | `integration.trello_no_list` | 400 | — | `o quadro do Trello não tem lista aberta: crie uma para os cartões poderem ser adicionados` | `the Trello board has no open list: create one so the cards can be added to it` |
+| `integration.trello_oauth_denied` | 400 | — | `o acesso não foi autorizado no Trello` | `the access was not authorized on Trello` |
+| `integration.trello_oauth_not_configured` | 400 | — | `a conexão com o Trello não está configurada neste servidor` | `the Trello connection is not set up on this server` |
+| `integration.trello_oauth_state` | 400 | — | `a volta do Trello não corresponde à conexão que foi iniciada: tente de novo` | `the return from Trello does not match the connection that was started: try again` |
 | `integration.type_coming_soon` | 400 | `provider` | `a integração com o {{.provider}} ainda não está disponível` | `the {{.provider}} integration is not available yet` |
 | `integration.type_required` | 400 | — | `informe o tipo da integração` | `enter the integration type` |
 | `integration.unexpected_response` | 400 | `provider` | `resposta inesperada do {{.provider}}` | `unexpected response from {{.provider}}` |

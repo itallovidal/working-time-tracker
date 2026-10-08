@@ -34,6 +34,15 @@ func (h *Handler) localizeDescriptor(d *adapter.Descriptor, lang string) {
 	if cat.Has(lang, base+"item_placeholder") {
 		d.ItemPlaceholder = cat.T(lang, base+"item_placeholder")
 	}
+	// Os textos de quem se conecta por autorização e de quem sincroniza dependem da plataforma.
+	for key, into := range map[string]*string{
+		"pick_title": &d.PickTitle, "pick_hint": &d.PickHint, "sync_label": &d.SyncLabel,
+		"sync_hint": &d.SyncHint, "connect_unconfigured": &d.ConnectUnconfigured,
+	} {
+		if cat.Has(lang, base+key) {
+			*into = cat.T(lang, base+key)
+		}
+	}
 	for i := range d.Metadata {
 		f := &d.Metadata[i]
 		fb := base + "fields." + f.Key + "."
@@ -136,4 +145,14 @@ func (h *Handler) Integrations(c *echo.Context) error {
 
 func (h *Handler) ProjectSettings(c *echo.Context) error {
 	return h.managementPage(c, "project_settings", "titles.project_settings", "settings", nil)
+}
+
+// TrelloCallback é a página em que o Trello devolve a pessoa depois de autorizar. O token vem depois do "#"
+// da URL, e só o navegador o vê: o script da página o lê, apaga o endereço do histórico e o entrega ao
+// servidor, que guarda a integração. O fragmento não vai em Referer, mas a resposta nem fica guardada.
+func (h *Handler) TrelloCallback(c *echo.Context) error {
+	res := c.Response().Header()
+	res.Set("Referrer-Policy", "no-referrer")
+	res.Set("Cache-Control", "no-store")
+	return h.render(c, "trello_callback", Data{TitleKey: "titles.trello_callback", Script: "trello_callback"})
 }
