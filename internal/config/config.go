@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/joho/godotenv"
 )
@@ -23,6 +24,10 @@ type Config struct {
 	// para um servidor fake. Vazios, valem github.com e api.github.com.
 	GitHubURL    string
 	GitHubAPIURL string
+
+	// GitHubSyncInterval é de quanto em quanto tempo o servidor olha as integrações com a sincronização
+	// das issues ligada. Zero desliga a rotina (o botão e o gancho das tarefas seguem valendo).
+	GitHubSyncInterval time.Duration
 }
 
 func Load() (*Config, error) {
@@ -38,6 +43,20 @@ func Load() (*Config, error) {
 		GitHubClientSecret:    strings.TrimSpace(os.Getenv("GITHUB_CLIENT_SECRET")),
 		GitHubURL:             strings.TrimRight(strings.TrimSpace(os.Getenv("GITHUB_URL")), "/"),
 		GitHubAPIURL:          strings.TrimRight(strings.TrimSpace(os.Getenv("GITHUB_API_URL")), "/"),
+	}
+
+	// O padrão é cinco minutos; "0" desliga. Um valor que não é uma duração (ex.: "5m", "30s") derruba a
+	// subida: melhor que rodar com um intervalo que ninguém pediu.
+	cfg.GitHubSyncInterval = 5 * time.Minute
+	if raw := strings.TrimSpace(os.Getenv("GITHUB_SYNC_INTERVAL")); raw != "" {
+		d, err := time.ParseDuration(raw)
+		if raw == "0" {
+			d, err = 0, nil
+		}
+		if err != nil || d < 0 {
+			return nil, fmt.Errorf("GITHUB_SYNC_INTERVAL %q is not a duration like 5m, 30s or 0", raw)
+		}
+		cfg.GitHubSyncInterval = d
 	}
 
 	var missing []string
