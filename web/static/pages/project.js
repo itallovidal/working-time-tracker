@@ -172,6 +172,11 @@ document.addEventListener('alpine:init', () => {
     // O selo dos itens a que a tarefa está ligada: "GitHub #42", ou "GitHub #42 + Trello H0TZyzbK" nas duas plataformas.
     hasExternal: (t) => (t.links || []).length > 0,
     externalLabel: (t) => externalLabel(t),
+    // Nas tabelas, cada item ligado é só o ícone da plataforma e o número (ou o id) do item; o nome vai no title e no leitor de tela.
+    linkLabel,
+    linkIcon: (link) => brandIcons[linkType(link)] || 'fa-solid fa-link',
+    linkProvider: (link) => (integrationType(linkType(link)) || {}).label || linkType(link),
+    linkItem: (link) => ((integrationType(linkType(link)) || {}).item_numeric ? '#' : '') + link.item_id,
   };
 
   // taskClock é o que o painel do timer (partials/clock_card.gohtml) e o cartão da tarefa
@@ -367,9 +372,10 @@ document.addEventListener('alpine:init', () => {
     'integration.github_repo_not_found', 'integration.trello_no_access_board', 'integration.trello_board_not_found',
   ]);
 
+  const linkType = (link) => (link.integration ? link.integration.type : '');
   // linkLabel descreve um item vinculado: "GitHub #42", "Trello H0TZyzbK".
   function linkLabel(link) {
-    const type = link.integration ? link.integration.type : '';
+    const type = linkType(link);
     const t = integrationType(type);
     if (!t) return (type || WTT.t('tasks.item')) + ' #' + link.item_id;
     return t.label + ' ' + (t.item_numeric ? '#' : '') + link.item_id;
@@ -841,8 +847,10 @@ document.addEventListener('alpine:init', () => {
     },
     deadlineClass: (t) => deadlineInfo(t.deadline).cls,
     deadlineLabel: (t) => deadlineInfo(t.deadline).label,
-    hasExternal: taskBadges.hasExternal,
-    externalLabel: taskBadges.externalLabel,
+    linkLabel: taskBadges.linkLabel,
+    linkIcon: taskBadges.linkIcon,
+    linkProvider: taskBadges.linkProvider,
+    linkItem: taskBadges.linkItem,
   }));
 
   // Minhas tarefas: as tarefas de que a pessoa é responsável, numa lista por status, na ordem

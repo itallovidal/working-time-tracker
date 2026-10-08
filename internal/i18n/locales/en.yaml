@@ -554,6 +554,7 @@ tasks:
   col_task: Task
   col_assignee: Assignee
   col_deadline: Deadline
+  col_integration: Integration
   col_details: Details
   col_actions: Actions
   details: Details

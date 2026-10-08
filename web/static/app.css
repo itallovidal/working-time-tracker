@@ -121,7 +121,7 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
   z-index: 20;
 }
 .topbar-inner {
-  max-width: 1120px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 10px 20px;
   display: flex;
@@ -184,7 +184,7 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
   display: inline-grid; place-items: center; font-weight: 700; font-size: 0.8rem; flex: none;
 }
 
-.page { max-width: 1120px; margin: 0 auto; padding: 28px 20px 64px; display: flex; flex-direction: column; gap: 22px; }
+.page { max-width: 1200px; margin: 0 auto; padding: 28px 20px 64px; display: flex; flex-direction: column; gap: 22px; }
 .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 .page-head .lede { color: var(--muted); margin-top: 4px; }
 .eyebrow { font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
@@ -494,6 +494,10 @@ td.actions { text-align: right; white-space: nowrap; }
   padding: 2px 8px; border-radius: 999px; background: var(--surface-2); color: var(--ink-2);
   border: 1px solid var(--rule); white-space: nowrap;
 }
+/* Os itens a que a tarefa está ligada nas tabelas (GitHub #42, Trello H0TZyzbK): um selo cinza por plataforma, sempre na
+   mesma linha, para a coluna não crescer para baixo. */
+.task-links { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.task-links .badge > i { font-size: 0.95rem; }
 .badge-accent { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
 .badge-ok { background: var(--ok-soft); color: var(--ok); border-color: transparent; }
 .badge-warn { background: var(--warn-soft); color: var(--warn); border-color: transparent; }

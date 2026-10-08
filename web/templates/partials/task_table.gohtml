@@ -8,7 +8,7 @@
                    tarefas) ou "" (sem coluna de ação)
        ActionShow  a expressão que liga a coluna de ação
      A página tem de ter o que as linhas chamam: isRunning, statusClass, priorityClass, deadlineClass,
-     deadlineLabel e, conforme a ação, claim ou startTask, otherProject e sessionHere. */}}
+     deadlineLabel, linkLabel, linkIcon, linkProvider, linkItem (os quatro vêm de taskBadges) e, conforme a ação, claim ou startTask, otherProject e sessionHere. */}}
 {{define "task_table"}}
 {{with .Data}}
 <div class="table-wrap" x-show="{{$.Rows}}.length > 0">
@@ -18,6 +18,7 @@
         <th>{{.T "tasks.col_task"}}</th><th>{{.T "tasks.col_status"}}</th><th>{{.T "tasks.col_priority"}}</th>
         <th x-show="{{$.Assignee}}">{{.T "tasks.col_assignee"}}</th>
         <th>{{.T "tasks.col_deadline"}}</th>
+        <th>{{.T "tasks.col_integration"}}</th>
         {{if $.Action}}<th class="actions" x-show="{{$.ActionShow}}"><span class="sr-only">{{.T "tasks.col_actions"}}</span></th>{{end}}
       </tr>
     </thead>
@@ -28,8 +29,6 @@
             <div class="row row-tight">
               <a :href="'/tasks/' + t.id" x-text="t.name"></a>
               <span class="badge badge-ok" x-show="isRunning(t)">{{.T "tasks.running"}}</span>
-              {{/* A issue do GitHub (ou o cartão) a que a tarefa está ligada, em cinza: é uma informação, não um estado. */}}
-              <span class="badge" x-show="hasExternal(t)" x-text="externalLabel(t)"></span>
             </div>
           </td>
           <td>
@@ -43,6 +42,16 @@
           </td>
           <td>
             <span class="badge num" :class="deadlineClass(t)" x-text="deadlineLabel(t)"></span>
+          </td>
+          <td>
+            {{/* A issue do GitHub e o cartão do Trello a que a tarefa está ligada, só o ícone da plataforma e o número
+                 ou o id do item, em cinza (é uma informação, não um estado). Numa coluna à parte, porque ao lado de um
+                 nome comprido o selo caía para uma segunda linha e a linha da tabela ficava com duas. */}}
+            <span class="task-links">
+              <template x-for="l in t.links" :key="l.integration_id">
+                <span class="badge" :title="linkLabel(l)"><i :class="linkIcon(l)" aria-hidden="true"></i><span class="sr-only" x-text="linkProvider(l)"></span> <span class="num" x-text="linkItem(l)"></span></span>
+              </template>
+            </span>
           </td>
           {{if eq $.Action "claim"}}
           {{/* Pegar é ficar com a tarefa sem bater o ponto: ela sai desta lista e vai para Minhas tarefas. */}}

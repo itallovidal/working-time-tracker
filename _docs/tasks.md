@@ -851,6 +851,13 @@
 - [X] S79.5 Error codes `issue_sync.remove_read_only` and `issue_sync.remove_only_closed` (both languages, `_docs/error-codes.md`); the fakes gained `POST /graphql`, `node_id`, `admin` and `Deleted` (`testutil.GitHub`) and `/_fake/admin` (`cmd/fakegithub`)
 - [X] S79.6 Tests: the adapters against the fakes (delete as admin, close without admin, already gone, a refused token, the GraphQL address on GitHub Enterprise; archive without touching the due date, gone, forbidden); `TestRemove_*` end to end (both platforms, nothing ticked leaves them alone, only one, a platform the task is not in, without admin, already gone, a failure that does not stop the other nor keep the task, read-only/sync off/refused token, no remover); the service (items read before the delete, handed over after it) and the route (`remove_in` validation, the answer); checked in the browser against the fakes (the boxes, both ticked, nothing ticked, only Trello, GitHub without admin, one platform, no link, English, 390 px); README, design, routes, the Insomnia collection
 
+
+### Sprint 80: An Integration Column and a Wider Page
+
+- [X] S80.1 `task_table` (Lista de tarefas and Minhas tarefas) gets a column **Integração** after the deadline: for each item the task is linked to, a grey badge with the brand icon and the number or id of the item (`#42`, `H0TZyzbK`), the platform name in the `title` and for screen readers; the badge next to the name is gone, so a long name no longer pushes it into a second line (`tasks.col_integration` in both languages, `.task-links`)
+- [X] S80.2 `linkLabel`, `linkIcon`, `linkProvider` and `linkItem` in `taskBadges`; the inner `x-for` is keyed by `integration_id` (the link has no `id`)
+- [X] S80.3 `.page` and `.topbar-inner` go from 1120 to 1200px, with the side padding as it was
+- [X] S80.4 The Início cards keep the text badge (not asked); the one existing assertion in `pages_test.go` that looked for the badge next to the name follows the column; checked in the browser against a project with GitHub and Trello items (one, both, none, a name long enough for four lines) at 1440, 1100 and 390 px, with no script error; README, design
 ---
 
 ### Seed with a Full Demo

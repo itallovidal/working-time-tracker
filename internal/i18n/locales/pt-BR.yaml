@@ -564,6 +564,7 @@ tasks:
   col_task: Tarefa
   col_assignee: Responsável
   col_deadline: Prazo
+  col_integration: Integração
   col_details: Detalhes
   col_actions: Ações
   details: Detalhes

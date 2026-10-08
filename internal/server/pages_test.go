@@ -980,11 +980,15 @@ func TestPages_ProjectIntegrationsTab(t *testing.T) {
 			t.Errorf("the board still has %q", not)
 		}
 	}
-	// O selo da issue ligada ("GitHub #42") vem dos tipos de integração, que a lista passa a receber.
-	for _, want := range []string{`"integration_types"`, `x-show="hasExternal(t)" x-text="externalLabel(t)"`} {
+	// A coluna Integração mostra o ícone da plataforma e o número da issue ligada, e não mais o selo "GitHub #42" ao lado
+	// do nome; o número e o ícone vêm dos tipos de integração, que a lista passa a receber.
+	for _, want := range []string{`"integration_types"`, `<th>Integração</th>`, `x-text="linkItem(l)"`, `:class="linkIcon(l)"`} {
 		if !strings.Contains(board, want) {
-			t.Errorf("the board does not contain %q, needed for the badge of the linked issue", want)
+			t.Errorf("the board does not contain %q, needed for the integration column of the linked issue", want)
 		}
+	}
+	if strings.Contains(board, `x-text="externalLabel(t)"`) {
+		t.Error("the board still has the issue label next to the task name")
 	}
 	if !strings.Contains(board, "Clique em uma tarefa para abrir os detalhes.") {
 		t.Error("the board does not say that clicking a task opens it")
