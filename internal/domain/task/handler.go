@@ -39,7 +39,7 @@ func (h *Handler) Create(c *echo.Context) error {
 	if err := c.Bind(&body); err != nil {
 		return apperr.Respond(c, 400, apperr.ErrInvalidBody)
 	}
-	skip, err := parseSkipPublish(body.SkipPublish)
+	skip, err := parseIntegrationIDs(body.SkipPublish)
 	if err != nil {
 		return apperr.Respond(c, 400, err)
 	}
@@ -51,13 +51,14 @@ func (h *Handler) Create(c *echo.Context) error {
 	return c.JSON(201, task)
 }
 
-// maxSkipPublish é quantas integrações o corpo da criação pode pedir para não postar.
-const maxSkipPublish = 20
+// maxIntegrationIDs é quantas integrações um pedido pode listar (as de skip_publish na criação, as de remove_in
+// na exclusão).
+const maxIntegrationIDs = 20
 
-// parseSkipPublish lê os ids de integração de skip_publish. Um id que não é um UUID não é de nenhuma
+// parseIntegrationIDs lê uma lista de ids de integração. Um id que não é um UUID não é de nenhuma
 // integração; um id que não existe, ou é de outro projeto, simplesmente não casa com nada.
-func parseSkipPublish(raw []string) ([]uuid.UUID, error) {
-	if len(raw) > maxSkipPublish {
+func parseIntegrationIDs(raw []string) ([]uuid.UUID, error) {
+	if len(raw) > maxIntegrationIDs {
 		return nil, ErrIntegrationNotFound
 	}
 	out := make([]uuid.UUID, 0, len(raw))
@@ -243,12 +244,19 @@ func (h *Handler) UpdateAttrs(c *echo.Context) error {
 	return c.JSON(200, task)
 }
 
+// Delete exclui a tarefa. remove_in, repetido na query, lista as integrações em que o item dela também deve sair
+// (a issue do GitHub, o cartão do Trello); a resposta traz, para cada uma, o que se fez, e o que falhou lá não
+// desfaz a exclusão.
 func (h *Handler) Delete(c *echo.Context) error {
-	id := c.Param("taskId")
-	if err := h.svc.Delete(id); err != nil {
+	removeIn, err := parseIntegrationIDs(c.QueryParams()["remove_in"])
+	if err != nil {
 		return apperr.Respond(c, 400, err)
 	}
-	return c.NoContent(204)
+	remote, err := h.svc.Delete(c.Request().Context(), c.Param("taskId"), removeIn)
+	if err != nil {
+		return apperr.Respond(c, 400, err)
+	}
+	return c.JSON(200, map[string]any{"remote": remote})
 }
 
 func (h *Handler) LinkExternalItem(c *echo.Context) error {

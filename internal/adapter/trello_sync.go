@@ -3,6 +3,7 @@ package adapter
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"hash/fnv"
 	"io"
 	"net/http"
@@ -23,6 +24,7 @@ var (
 	_ AccountLookup    = (*TrelloIntegration)(nil)
 	_ RepositoryLister = (*TrelloIntegration)(nil)
 	_ ItemNormalizer   = (*TrelloIntegration)(nil)
+	_ ItemRemover      = (*TrelloIntegration)(nil)
 )
 
 const (
@@ -557,6 +559,32 @@ func (t *TrelloIntegration) UpdateIssue(ctx context.Context, conn Connection, id
 	}
 	issue := updated.toIssue()
 	return &issue, nil
+}
+
+// RemoveItem arquiva o cartão, e não o apaga: o arquivo se desfaz na tela do Trello. Diferente de UpdateIssue, é
+// um PUT só e não mexe na data de entrega.
+func (t *TrelloIntegration) RemoveItem(ctx context.Context, conn Connection, id string) (RemoveOutcome, error) {
+	meta, err := parseTrelloMetadata(conn.Metadata)
+	if err != nil {
+		return "", err
+	}
+	card, err := trelloCardID(id)
+	if err != nil {
+		return "", err
+	}
+	gone := ErrIssueGone.With("item", card)
+	resp, err := t.do(ctx, conn, meta.APIKey, "PUT", "/cards/"+card, map[string]any{"closed": true})
+	if err != nil {
+		return "", err
+	}
+	if err := trelloCheck(resp, trelloErrs{NotFound: gone, BadRequest: gone, Denied: ErrForbidden.With("provider", "Trello")}); err != nil {
+		if errors.Is(err, ErrIssueGone) {
+			return RemoveGone, nil
+		}
+		return "", err
+	}
+	resp.Body.Close()
+	return RemoveArchived, nil
 }
 
 // CreateIssue cria um cartão na primeira lista aberta do quadro (a de menor posição): o Trello só cria

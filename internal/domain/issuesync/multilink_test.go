@@ -83,6 +83,7 @@ func newDualEnvWith(t *testing.T, cfg issuesync.Config) *denv {
 		Members: team.NewMembershipStore(testClient), Rows: d.rows,
 	}, cfg)
 	d.tasks.SetChangeHook(d.syncer.Notify)
+	d.taskSvc.SetRemover(d.syncer)
 	d.gh.Reset()
 	d.tr.Reset()
 	return d
@@ -337,7 +338,8 @@ func TestDual_UnlinkingOneKeepsTheOther(t *testing.T) {
 func TestDual_DeletingTheTaskDiscardsBothItems(t *testing.T) {
 	d := newDualEnv(t)
 	tk := d.posted("Vai embora")
-	must(t, d.taskSvc.Delete(tk.ID.String()))
+	_, err := d.taskSvc.Delete(context.Background(), tk.ID.String(), nil)
+	must(t, err)
 
 	for name, sync := range map[string]func(issuesync.Mode) *issuesync.Summary{"GitHub": d.syncGH, "Trello": d.syncTrello} {
 		if sum := sync(issuesync.Full); sum.Created != 0 {

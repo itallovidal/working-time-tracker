@@ -885,6 +885,8 @@ document.addEventListener('alpine:init', () => {
     // cartão da página tem o seu. As entradas são trocadas inteiras para a tela redesenhar.
     external: {},
     syncProblems: {},
+    // As integrações (id) em cujo item a exclusão também vale, marcadas no modal Excluir tarefa. Começa vazio a cada abertura.
+    removeIn: [],
     async init() {
       try {
         const [task, members, integrations, sessions] = await Promise.all([
@@ -983,6 +985,7 @@ document.addEventListener('alpine:init', () => {
     },
     openDelete() {
       this.errors.delete = '';
+      this.removeIn = [];
       Alpine.store('modal').open('task-delete', WTT.t('task_detail.delete_title'), () => !this.pending);
     },
     // saveDetails manda só os detalhes, pela rota própria: o nome e a descrição não vão, então não há como
@@ -1114,9 +1117,57 @@ document.addEventListener('alpine:init', () => {
         toast(syncMessage(sum, 'task_detail.sync_nothing'));
       });
     },
+    // removable são os itens que a exclusão pode levar junto: um por plataforma a que a tarefa está ligada. Só se
+    // escreve num item se a integração sincroniza (é a mesma regra de postar).
+    removable() {
+      return this.links().map((l) => ({ ...l, canRemove: this.syncs(l) }));
+    },
+    pickRemove(link, checked) {
+      const rest = this.removeIn.filter((id) => id !== link.id);
+      this.removeIn = checked ? [...rest, link.id] : rest;
+    },
+    // removeAsk e removeNote dizem o que a caixa de cada plataforma faz com o item: o GitHub apaga a issue (e só a
+    // fecha se a conta não é admin), o Trello arquiva o cartão, e uma plataforma sem regra própria fecha o item.
+    removeAsk(link) {
+      if (link.type === 'github') return WTT.t('task_detail.delete_remote_github');
+      if (link.type === 'trello') return WTT.t('task_detail.delete_remote_trello');
+      return WTT.t('task_detail.delete_remote_other', { provider: link.label });
+    },
+    removeNote(link) {
+      if (!link.canRemove) return WTT.t('task_detail.delete_remote_off_note');
+      if (link.type === 'github') return WTT.t('task_detail.delete_remote_github_note');
+      if (link.type === 'trello') return WTT.t('task_detail.delete_remote_trello_note');
+      return '';
+    },
+    // removeReport resume, numa mensagem só, o que a exclusão fez em cada plataforma que foi marcada. É um aviso de
+    // erro se alguma não deu certo ou deu menos do que se pediu (a issue que só foi fechada).
+    removeReport(remote) {
+      const labels = Object.fromEntries(this.links().map((l) => [l.id, l.label]));
+      const parts = [WTT.t('task_detail.deleted')];
+      let warn = false;
+      for (const r of remote || []) {
+        const provider = labels[r.integration_id] || r.provider;
+        let text;
+        if (r.problem) {
+          warn = true;
+          text = WTT.errorText({ code: r.problem.code, params: { provider, ...r.problem.params } });
+        } else {
+          text = WTT.t('task_detail.remote_' + r.outcome);
+        }
+        parts.push(provider + ': ' + text + '.');
+      }
+      return { message: parts.join(' '), kind: warn ? 'error' : undefined };
+    },
+    // Excluir: a tarefa sai de qualquer jeito. O que falha numa plataforma não a desfaz, e o resultado de cada uma
+    // aparece na lista de tarefas, para onde a pessoa vai em seguida.
     remove() {
       return this.run('delete', async () => {
-        await api('DELETE', '/api/tasks/' + this.taskId);
+        const query = this.removeIn.map((id) => 'remove_in=' + encodeURIComponent(id)).join('&');
+        const res = await api('DELETE', '/api/tasks/' + this.taskId + (query ? '?' + query : ''));
+        if (res && res.remote && res.remote.length > 0) {
+          const report = this.removeReport(res.remote);
+          Alpine.store('toast').flash(report.message, report.kind);
+        }
         location.href = tasksHref();
       });
     },

@@ -30,6 +30,7 @@ type testApp struct {
 	projectID string
 	teamID    string
 	taskID    string
+	taskSvc   *task.Service
 }
 
 func setupTestApp(t *testing.T) *testApp {
@@ -82,6 +83,7 @@ func setupTestApp(t *testing.T) *testApp {
 		projectID: projectID,
 		teamID:    teamID,
 		taskID:    taskID,
+		taskSvc:   taskSvc,
 	}
 }
 
@@ -143,8 +145,65 @@ func TestHandler_UpdateAndDelete(t *testing.T) {
 	req = httptest.NewRequest("DELETE", "/api/tasks/"+app.taskID, nil)
 	rec = httptest.NewRecorder()
 	app.e.ServeHTTP(rec, req)
-	if rec.Code != http.StatusNoContent {
-		t.Fatalf("delete expected 204, got %d: %s", rec.Code, rec.Body.String())
+	if rec.Code != http.StatusOK {
+		t.Fatalf("delete expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if got := strings.TrimSpace(rec.Body.String()); got != `{"remote":[]}` {
+		t.Errorf("delete body = %s, want an empty remote list", got)
+	}
+}
+
+// Excluir pede, na query, as integrações em que o item da tarefa também deve sair (remove_in, repetido): um valor
+// que não é um UUID, ou lista demais, é 400 e a tarefa fica; a resposta traz o que se fez em cada plataforma.
+func TestHandler_DeleteRemoveIn(t *testing.T) {
+	app := setupTestApp(t)
+	del := func(taskID, query string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest("DELETE", "/api/tasks/"+taskID+query, nil)
+		rec := httptest.NewRecorder()
+		app.e.ServeHTTP(rec, req)
+		return rec
+	}
+	stillThere := func() bool {
+		_, err := app.taskSvc.Get(app.taskID)
+		return err == nil
+	}
+
+	if rec := del(app.taskID, "?remove_in=not-a-uuid"); rec.Code != http.StatusBadRequest || !stillThere() {
+		t.Errorf("a bad id in remove_in = %d (task still there: %v), want 400 and the task kept", rec.Code, stillThere())
+	}
+	var many []string
+	for i := 0; i < 21; i++ {
+		many = append(many, "remove_in="+uuid.NewString())
+	}
+	if rec := del(app.taskID, "?"+strings.Join(many, "&")); rec.Code != http.StatusBadRequest || !stillThere() {
+		t.Errorf("too many ids in remove_in = %d (task still there: %v), want 400 and the task kept", rec.Code, stillThere())
+	}
+
+	// O item dessa integração está na tarefa; a resposta traz o resultado que o Remover deu.
+	github := createIntegration(t, app.projectID)
+	if _, err := app.taskSvc.LinkExternalItem(app.taskID, github, "42", "https://example.com/42"); err != nil {
+		t.Fatalf("link: %v", err)
+	}
+	app.taskSvc.SetRemover(&recorder{taskID: app.taskID, svc: app.taskSvc})
+	rec := del(app.taskID, "?remove_in="+github+"&remove_in="+uuid.NewString())
+	if rec.Code != http.StatusOK {
+		t.Fatalf("delete = %d: %s", rec.Code, rec.Body.String())
+	}
+	var body struct {
+		Remote []struct {
+			IntegrationID string `json:"integration_id"`
+			Provider      string `json:"provider"`
+			Outcome       string `json:"outcome"`
+		} `json:"remote"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("body %q: %v", rec.Body.String(), err)
+	}
+	if len(body.Remote) != 1 || body.Remote[0].IntegrationID != github || body.Remote[0].Provider != "github" || body.Remote[0].Outcome != "deleted" {
+		t.Errorf("remote = %+v, want the one GitHub result (the unknown id matches nothing)", body.Remote)
+	}
+	if stillThere() {
+		t.Error("the task is still there")
 	}
 }
 

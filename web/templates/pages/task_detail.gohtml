@@ -275,6 +275,29 @@
   <template x-teleport="#modal-root">
     <form class="stack" x-show="$store.modal.name === 'task-delete'" @submit.prevent="remove()">
       <p>{{.T "task_detail.delete_confirm"}}</p>
+      {{/* Uma caixa para cada plataforma em que a tarefa está: marcada, a exclusão também vale lá (o GitHub apaga a
+           issue, o Trello arquiva o cartão). Todas começam desmarcadas, e sem nada marcado só a tarefa sai. */}}
+      <template x-if="removable().length > 0">
+        <div class="stack">
+          <p class="muted small">{{.T "task_detail.delete_remote_intro"}}</p>
+          <template x-for="(l, n) in removable()" :key="l.id">
+            <label class="publish-card" :class="!l.canRemove && 'is-off'" :for="'task-remove-' + n">
+              <input type="checkbox" :id="'task-remove-' + n" :checked="removeIn.includes(l.id)" :disabled="!l.canRemove || pending"
+                     @change="pickRemove(l, $event.target.checked)">
+              <span class="publish-body">
+                <span class="publish-head">
+                  <i :class="brandIcon(l.type)" aria-hidden="true"></i>
+                  <strong x-text="l.label"></strong>
+                  <span class="muted small" x-text="l.name"></span>
+                  <span class="badge" x-show="!l.canRemove">{{.T "task_detail.delete_remote_off"}}</span>
+                </span>
+                <span class="publish-ask" x-text="removeAsk(l)"></span>
+                <span class="small muted" x-show="removeNote(l)" x-text="removeNote(l)"></span>
+              </span>
+            </label>
+          </template>
+        </div>
+      </template>
       <p class="form-error" x-show="errors.delete" x-text="errors.delete" role="alert"></p>
       <div class="row row-end">
         <button type="button" class="btn btn-secondary" @click="$store.modal.dismiss()">{{.T "common.cancel"}}</button>

@@ -243,6 +243,28 @@ type ItemNormalizer interface {
 	NormalizeItemID(raw string) string
 }
 
+// RemoveOutcome é o que a plataforma fez com o item quando a tarefa dele foi excluída aqui.
+type RemoveOutcome string
+
+const (
+	// RemoveDeleted: o item foi apagado (a issue do GitHub).
+	RemoveDeleted RemoveOutcome = "deleted"
+	// RemoveArchived: o item foi arquivado, e continua na plataforma (o cartão do Trello).
+	RemoveArchived RemoveOutcome = "archived"
+	// RemoveClosed: o item só foi fechado, porque a plataforma não deixou apagá-lo (a conta não é admin do
+	// repositório do GitHub).
+	RemoveClosed RemoveOutcome = "closed"
+	// RemoveGone: o item já não existia, então não havia o que fazer.
+	RemoveGone RemoveOutcome = "gone"
+)
+
+// ItemRemover é a capacidade opcional de um tipo que sabe tirar um item de cena quando a tarefa ligada a ele
+// é excluída: o GitHub apaga a issue (ou só a fecha, se a conta não pode apagar), o Trello arquiva o cartão.
+// O id é o Issue.ID. Um item que a plataforma já não tem não é erro: volta RemoveGone.
+type ItemRemover interface {
+	RemoveItem(ctx context.Context, conn Connection, id string) (RemoveOutcome, error)
+}
+
 // ItemKeyer liga o id de item escrito de qualquer jeito (guardado numa tarefa ligada à mão) à chave do
 // vínculo, a forma de Issue.ID. Nos tipos com id numérico, o que não é número não é de item nenhum.
 type ItemKeyer struct {

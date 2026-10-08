@@ -547,3 +547,44 @@ func TestTrello_NoEmailsAndHelpers(t *testing.T) {
 		t.Error("an id that is not a timestamp has no creation date")
 	}
 }
+
+// Remover o item arquiva o cartão: um PUT só, com só o closed, e sem marcar a data de entrega como concluída.
+func TestTrelloSync_RemoveItem(t *testing.T) {
+	tr, conn, fake := trelloSyncFixture(t)
+	ctx := context.Background()
+	if _, ok := interface{}(tr).(ItemRemover); !ok {
+		t.Fatal("the Trello adapter must be an ItemRemover")
+	}
+	due := time.Date(2026, 11, 3, 17, 30, 0, 0, time.UTC)
+	id := fake.AddCard(testutil.TrelloCard{ShortLink: "Alvo0001", Name: "Alvo", Due: due})
+
+	fake.Reset()
+	if got, err := tr.RemoveItem(ctx, conn, "Alvo0001"); err != nil || got != RemoveArchived {
+		t.Fatalf("remove = %q, %v, want archived", got, err)
+	}
+	if body := lastWrite(t, fake, "PUT"); !reflect.DeepEqual(body, map[string]any{"closed": true}) {
+		t.Errorf("PUT body = %v, want only closed", body)
+	}
+	if fake.Count("GET", "/cards/") != 0 || fake.Writes() != 1 {
+		t.Errorf("requests = %v, want the one PUT", fake.Requests())
+	}
+	if c, _ := fake.Card(id); !c.Closed || c.DueComplete {
+		t.Errorf("fake card = %+v, want it archived with the deadline left alone", c)
+	}
+
+	// Um cartão que sumiu, ou um id que o Trello não entende, não é erro: já não há o que arquivar.
+	fake.DeleteCard("Alvo0001")
+	if got, err := tr.RemoveItem(ctx, conn, "Alvo0001"); err != nil || got != RemoveGone {
+		t.Errorf("remove a deleted card = %q, %v, want gone", got, err)
+	}
+	if _, err := tr.RemoveItem(ctx, conn, "não é um id"); !errors.Is(err, ErrTrelloInvalidCard) {
+		t.Errorf("a bad id: err = %v", err)
+	}
+
+	// Sem permissão de escrita no quadro, o Trello recusa (401 que não é de credencial): erro de verdade.
+	fake.AddCard(testutil.TrelloCard{ShortLink: "Outro001", Name: "Outro"})
+	fake.SetWrite(testutil.TrelloBoardID, false)
+	if _, err := tr.RemoveItem(ctx, conn, "Outro001"); !errors.Is(err, ErrForbidden) {
+		t.Errorf("a token that cannot write: err = %v, want forbidden", err)
+	}
+}

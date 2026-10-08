@@ -470,7 +470,8 @@ func TestSync_DeletedTaskIsATombstone(t *testing.T) {
 	e.sync(issuesync.Full)
 	tk := e.taskFor(n)
 
-	must(t, e.taskSvc.Delete(tk.ID.String()))
+	_, err := e.taskSvc.Delete(context.Background(), tk.ID.String(), nil)
+	must(t, err)
 	if row := e.row(n); row == nil || row.TaskID != nil {
 		t.Fatalf("row after deleting the task = %+v, want it kept with no task", row)
 	}

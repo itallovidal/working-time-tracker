@@ -22,6 +22,13 @@ var (
 	// etiquetas e o responsável (o GitHub os descarta sem avisar), então a tarefa não é postada.
 	ErrPublishReadOnly = apperr.New("issue_sync.publish_read_only", http.StatusBadRequest)
 
+	// ErrRemoveReadOnly: o token da integração não escreve no repositório ou quadro, então o item de uma tarefa
+	// excluída continua lá.
+	ErrRemoveReadOnly = apperr.New("issue_sync.remove_read_only", http.StatusBadRequest)
+	// ErrRemoveOnlyClosed: a plataforma não deixou apagar o item (no GitHub, só o admin do repositório apaga uma
+	// issue), então ele só foi fechado. Não é uma falha: vai no resultado da exclusão como aviso.
+	ErrRemoveOnlyClosed = apperr.New("issue_sync.remove_only_closed", http.StatusBadRequest)
+
 	// ErrReadOnly: o token não escreve no repositório (ou ele está arquivado), então as issues só
 	// vêm para cá e as mudanças daqui ficam daqui.
 	ErrReadOnly = apperr.New("issue_sync.read_only", http.StatusBadRequest)

@@ -430,3 +430,78 @@ func TestGitHubSync_CreateIssue(t *testing.T) {
 		t.Errorf("bad token: err = %v", err)
 	}
 }
+
+// Remover o item apaga a issue pelo GraphQL (a API comum não apaga) quando a conta é admin; sem ser admin, a
+// issue é só fechada como "não planejada"; uma que já não existe não é erro.
+func TestGitHubSync_RemoveItem(t *testing.T) {
+	g, conn, fake := syncFixture(t)
+	ctx := context.Background()
+	if _, ok := interface{}(g).(ItemRemover); !ok {
+		t.Fatal("the GitHub adapter must be an ItemRemover")
+	}
+
+	// Admin: a issue é apagada, e o GitHub passa a responder 410 por ela.
+	n := fake.AddIssue("owner/repo", testutil.GitHubIssue{Title: "Some"})
+	fake.Reset()
+	if got, err := g.RemoveItem(ctx, conn, strconv.Itoa(n)); err != nil || got != RemoveDeleted {
+		t.Fatalf("remove as admin = %q, %v, want deleted", got, err)
+	}
+	if issue, _ := fake.Issue("owner/repo", n); !issue.Deleted {
+		t.Errorf("issue after removing = %+v, want it deleted", issue)
+	}
+	if fake.Count("PATCH", "/repos/") != 0 {
+		t.Error("a deleted issue must not also be closed")
+	}
+	if _, err := g.GetIssue(ctx, conn, strconv.Itoa(n)); !errors.Is(err, ErrIssueGone) {
+		t.Errorf("get after removing: err = %v, want gone", err)
+	}
+	// De novo: já não existe, e isso serve.
+	if got, err := g.RemoveItem(ctx, conn, strconv.Itoa(n)); err != nil || got != RemoveGone {
+		t.Errorf("remove twice = %q, %v, want gone", got, err)
+	}
+	if got, err := g.RemoveItem(ctx, conn, "999"); err != nil || got != RemoveGone {
+		t.Errorf("remove an issue that never existed = %q, %v, want gone", got, err)
+	}
+
+	// Sem ser admin: o GitHub recusa o delete e a issue é fechada como não planejada.
+	fake.SetAdmin("owner/repo", false)
+	n = fake.AddIssue("owner/repo", testutil.GitHubIssue{Title: "Fica"})
+	if got, err := g.RemoveItem(ctx, conn, strconv.Itoa(n)); err != nil || got != RemoveClosed {
+		t.Fatalf("remove without admin = %q, %v, want closed", got, err)
+	}
+	if issue, _ := fake.Issue("owner/repo", n); issue.Deleted || issue.State != "closed" || issue.StateReason != "not_planned" {
+		t.Errorf("issue = %+v, want it closed as not planned and kept", issue)
+	}
+	// Já fechada e sem poder apagar: continua como está, sem escrever de novo.
+	fake.Reset()
+	if got, err := g.RemoveItem(ctx, conn, strconv.Itoa(n)); err != nil || got != RemoveClosed {
+		t.Errorf("remove a closed issue without admin = %q, %v, want closed", got, err)
+	}
+	if fake.Count("PATCH", "/repos/") != 0 {
+		t.Error("an issue that is already closed must not be patched again")
+	}
+
+	// O token recusado pelo GitHub é erro de verdade, e nada é mexido.
+	conn.Token = testutil.InvalidToken
+	if _, err := g.RemoveItem(ctx, conn, strconv.Itoa(n)); !errors.Is(err, ErrInvalidToken) {
+		t.Errorf("invalid token: err = %v", err)
+	}
+	if _, err := g.RemoveItem(ctx, conn, "abc"); !errors.Is(err, ErrInvalidIssueNumber) {
+		t.Errorf("a bad number: err = %v", err)
+	}
+}
+
+// O GraphQL fica no mesmo servidor da API: api.github.com/graphql no GitHub, <servidor>/api/graphql no Enterprise.
+func TestGitHubSync_GraphQLURL(t *testing.T) {
+	for base, want := range map[string]string{
+		"":                             "https://api.github.com/graphql",
+		"https://api.github.com/":      "https://api.github.com/graphql",
+		"https://git.acme.com/api/v3":  "https://git.acme.com/api/graphql",
+		"https://git.acme.com/api/v3/": "https://git.acme.com/api/graphql",
+		"http://127.0.0.1:8091":        "http://127.0.0.1:8091/graphql",
+	} {
+		if got := (&GitHubIntegration{BaseURL: base}).graphqlURL(); got != want {
+			t.Errorf("base %q: graphql = %q, want %q", base, got, want)
+		}
+	}
+}

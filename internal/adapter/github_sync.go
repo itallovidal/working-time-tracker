@@ -30,7 +30,10 @@ const (
 	githubBodyLimit = 16 << 20
 )
 
-var _ IssueSyncer = (*GitHubIntegration)(nil)
+var (
+	_ IssueSyncer = (*GitHubIntegration)(nil)
+	_ ItemRemover = (*GitHubIntegration)(nil)
+)
 
 // syncClient é o cliente da sincronização: não segue redirecionamento. O net/http transformaria o
 // PATCH em GET ao seguir um 301 e devolveria "200" sem ter gravado nada; e uma issue transferida
@@ -165,6 +168,8 @@ func decode(resp *http.Response, into any) error {
 
 // githubIssue é a issue como a API a devolve.
 type githubIssue struct {
+	// NodeID é o id da issue no GraphQL, o único jeito de apagá-la.
+	NodeID      string  `json:"node_id"`
 	Number      int     `json:"number"`
 	Title       string  `json:"title"`
 	Body        *string `json:"body"`
@@ -409,6 +414,105 @@ func (g *GitHubIntegration) CreateIssue(ctx context.Context, conn Connection, in
 	}
 	issue := row.toIssue()
 	return &issue, nil
+}
+
+// RemoveItem apaga a issue. A API comum do GitHub não apaga issue: só o GraphQL (deleteIssue), e só para quem é
+// admin do repositório. Se ele recusar por permissão, a issue é fechada como "não planejada" e o resultado é
+// RemoveClosed, para quem chamou avisar que ela continua lá.
+func (g *GitHubIntegration) RemoveItem(ctx context.Context, conn Connection, id string) (RemoveOutcome, error) {
+	path, err := g.repoPath(conn)
+	if err != nil {
+		return "", err
+	}
+	n, err := issueNumber(id)
+	if err != nil {
+		return "", err
+	}
+	resp, err := g.call(ctx, conn, "GET", path+"/issues/"+n, nil)
+	if err != nil {
+		return "", err
+	}
+	if err := check(resp, ErrIssueGone.With("item", n)); err != nil {
+		if errors.Is(err, ErrIssueGone) {
+			return RemoveGone, nil
+		}
+		return "", err
+	}
+	var row githubIssue
+	if err := decode(resp, &row); err != nil {
+		return "", err
+	}
+
+	deleted, err := g.deleteIssue(ctx, conn, row.NodeID)
+	if err != nil {
+		return "", err
+	}
+	if deleted {
+		return RemoveDeleted, nil
+	}
+	// Sem permissão para apagar: o mais perto disso que o token faz é fechar a issue.
+	if row.State != "closed" {
+		closed, reason := "closed", "not_planned"
+		if _, err := g.UpdateIssue(ctx, conn, id, IssuePatch{State: &closed, StateReason: &reason}); err != nil {
+			if errors.Is(err, ErrIssueGone) {
+				return RemoveGone, nil
+			}
+			return "", err
+		}
+	}
+	return RemoveClosed, nil
+}
+
+// graphqlURL é o endereço do GraphQL do mesmo servidor da API: api.github.com/graphql no GitHub, e
+// <servidor>/api/graphql no Enterprise (onde a API fica em <servidor>/api/v3).
+func (g *GitHubIntegration) graphqlURL() string {
+	base := g.baseURL()
+	if strings.HasSuffix(base, "/api/v3") {
+		return strings.TrimSuffix(base, "/v3") + "/graphql"
+	}
+	return base + "/graphql"
+}
+
+// deleteIssue apaga a issue pelo GraphQL. Devolve false, sem erro, quando o GitHub não deixa a conta fazer
+// isso (falta de permissão), para quem chamou cair no plano B.
+func (g *GitHubIntegration) deleteIssue(ctx context.Context, conn Connection, nodeID string) (bool, error) {
+	if nodeID == "" {
+		return false, ErrUnexpectedResponse.With("provider", "GitHub")
+	}
+	body := map[string]any{
+		"query":     "mutation($id: ID!) { deleteIssue(input: {issueId: $id}) { clientMutationId } }",
+		"variables": map[string]any{"id": nodeID},
+	}
+	resp, err := g.call(ctx, conn, "POST", g.graphqlURL(), body)
+	if err != nil {
+		return false, err
+	}
+	if err := check(resp, nil); err != nil {
+		if errors.Is(err, ErrForbidden) {
+			return false, nil
+		}
+		return false, err
+	}
+	var out struct {
+		Errors []struct {
+			Type    string `json:"type"`
+			Message string `json:"message"`
+		} `json:"errors"`
+	}
+	if err := decode(resp, &out); err != nil {
+		return false, err
+	}
+	if len(out.Errors) == 0 {
+		return true, nil
+	}
+	for _, e := range out.Errors {
+		// NOT_FOUND vem de quem não enxerga o que apagar; se a issue sumiu agora há pouco, o fechamento acha isso.
+		switch strings.ToUpper(e.Type) {
+		case "FORBIDDEN", "INSUFFICIENT_SCOPES", "NOT_FOUND":
+			return false, nil
+		}
+	}
+	return false, ErrUnexpectedResponse.With("provider", "GitHub")
 }
 
 // nonNil troca a lista nula por uma vazia: o JSON "null" não esvazia as etiquetas, o "[]" sim.

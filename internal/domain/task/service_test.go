@@ -633,14 +633,95 @@ func TestService_Delete(t *testing.T) {
 	join(t, memberSvc, tm, p.ID.String())
 
 	task1, _ := taskSvc.Create(proj.ID.String(), "Task A", "", p.ID.String(), nil)
-	err := taskSvc.Delete(task1.ID.String())
+	remote, err := taskSvc.Delete(context.Background(), task1.ID.String(), nil)
 	if err != nil {
 		t.Fatalf("delete failed: %v", err)
+	}
+	if remote == nil || len(remote) != 0 {
+		t.Errorf("remote = %#v, want an empty list (nothing was asked of a platform)", remote)
 	}
 
 	_, err = taskSvc.Get(task1.ID.String())
 	if err == nil {
 		t.Error("expected error after delete, got nil")
+	}
+}
+
+// recorder é o Remover que guarda o que recebeu e vê se a tarefa já tinha saído quando foi chamado.
+type recorder struct {
+	taskID   string
+	svc      *task.Service
+	calls    int
+	got      []task.RemoteItem
+	goneThen bool
+}
+
+func (r *recorder) Remove(_ context.Context, items []task.RemoteItem) []task.RemoteResult {
+	r.calls++
+	r.got = append(r.got, items...)
+	_, err := r.svc.Get(r.taskID)
+	r.goneThen = err != nil
+	out := make([]task.RemoteResult, 0, len(items))
+	for _, it := range items {
+		out = append(out, task.RemoteResult{IntegrationID: it.IntegrationID, Provider: it.Provider, Outcome: "deleted"})
+	}
+	return out
+}
+
+// Excluir lê os itens antes (depois o vínculo se solta da tarefa), entrega ao Remover só os das integrações
+// pedidas e a que a tarefa está ligada, e o chama depois de a tarefa já ter saído. Sem pedido, ele nem é chamado.
+func TestService_Delete_HandsTheLinkedItemsToTheRemover(t *testing.T) {
+	orgSvc, personSvc, projSvc, teamSvc, memberSvc, taskSvc := setupDeps(t)
+
+	org, _ := orgSvc.Create("Org")
+	p, _ := personSvc.Create(org.ID.String(), "John", "john@test.com")
+	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, project.Routine{})
+	tm, _ := teamSvc.Create(proj.ID.String(), "Team")
+	join(t, memberSvc, tm, p.ID.String())
+	github := createIntegration(t, proj.ID.String())
+	trello := createIntegrationOf(t, proj.ID.String(), "trello")
+	ctx := context.Background()
+
+	task1, _ := taskSvc.Create(proj.ID.String(), "Task A", "", p.ID.String(), nil)
+	for id, item := range map[string]string{github: "42", trello: "H0TZyzbK"} {
+		if _, err := taskSvc.LinkExternalItem(task1.ID.String(), id, item, "https://example.com/"+item); err != nil {
+			t.Fatalf("link: %v", err)
+		}
+	}
+	rec := &recorder{taskID: task1.ID.String(), svc: taskSvc}
+	taskSvc.SetRemover(rec)
+
+	res, err := taskSvc.Delete(ctx, task1.ID.String(), []uuid.UUID{uuid.MustParse(trello), uuid.New()})
+	if err != nil {
+		t.Fatalf("delete: %v", err)
+	}
+	want := task.RemoteItem{IntegrationID: uuid.MustParse(trello), Provider: "trello", ItemID: "H0TZyzbK"}
+	if rec.calls != 1 || len(rec.got) != 1 || rec.got[0] != want {
+		t.Errorf("remover got %+v in %d call(s), want only %+v", rec.got, rec.calls, want)
+	}
+	if !rec.goneThen {
+		t.Error("the task was still there when the remover ran; the items must be handled after it goes")
+	}
+	if len(res) != 1 || res[0].IntegrationID != want.IntegrationID || res[0].Outcome != "deleted" {
+		t.Errorf("results = %+v, want the remover's answer", res)
+	}
+
+	// Sem integração pedida o Remover não é chamado, e a lista volta vazia mas não nula.
+	task2, _ := taskSvc.Create(proj.ID.String(), "Task B", "", p.ID.String(), nil)
+	if _, err := taskSvc.LinkExternalItem(task2.ID.String(), github, "43", "https://example.com/43"); err != nil {
+		t.Fatalf("link: %v", err)
+	}
+	rec = &recorder{taskID: task2.ID.String(), svc: taskSvc}
+	taskSvc.SetRemover(rec)
+	if res, err = taskSvc.Delete(ctx, task2.ID.String(), nil); err != nil || res == nil || len(res) != 0 || rec.calls != 0 {
+		t.Errorf("delete with nothing asked = %v, %v, %d remover call(s); want an empty list and no call", res, err, rec.calls)
+	}
+
+	// Uma tarefa que não existe é erro, e o Remover não é chamado.
+	rec = &recorder{taskID: task2.ID.String(), svc: taskSvc}
+	taskSvc.SetRemover(rec)
+	if _, err = taskSvc.Delete(ctx, uuid.NewString(), []uuid.UUID{uuid.MustParse(github)}); err == nil || rec.calls != 0 {
+		t.Errorf("delete of a missing task: err = %v, %d remover call(s); want an error and no call", err, rec.calls)
 	}
 }
 
@@ -745,7 +826,7 @@ func TestService_Delete_KeepsTheWorkSessions(t *testing.T) {
 	shared := testutil.Session(t, testClient, task1.ID, p.ID, endedAt.Add(-time.Hour), &endedAt, nil, nil)
 	testClient.WorkSessionTask.Create().SetSessionID(shared.ID).SetTaskID(task2.ID).SetFromAt(shared.StartAt).SaveX(ctx)
 
-	if err := taskSvc.Delete(task1.ID.String()); err != nil {
+	if _, err := taskSvc.Delete(context.Background(), task1.ID.String(), nil); err != nil {
 		t.Fatalf("delete task with work sessions failed: %v", err)
 	}
 	if n := testClient.WorkSession.Query().CountX(ctx); n != 2 {

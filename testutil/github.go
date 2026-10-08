@@ -28,6 +28,9 @@ type GitHubIssue struct {
 	PullRequest bool
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
+	// Deleted só vem preenchido por Issue: a issue foi apagada (pelo GraphQL ou por DeleteIssue), e o GitHub
+	// responde 410 por ela.
+	Deleted bool
 }
 
 // GitHubRequest é uma requisição que o GitHub fake recebeu, para o teste contar o que o sistema
@@ -62,6 +65,7 @@ type GitHub struct {
 type ghRepo struct {
 	name       string
 	push       bool
+	admin      bool // a conta é admin do repositório: só ela apaga uma issue (GraphQL deleteIssue)
 	archived   bool
 	issues     []*GitHubIssue
 	next       int
@@ -113,7 +117,7 @@ func (g *GitHub) AddRepo(name string) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	g.repos[name] = &ghRepo{
-		name: name, push: true, next: 1,
+		name: name, push: true, admin: true, next: 1,
 		labels:  map[string]string{},
 		discard: map[string]bool{},
 		moved:   map[int]bool{},
@@ -182,10 +186,12 @@ func (g *GitHub) AddIssue(repo string, in GitHubIssue) int {
 func (g *GitHub) Issue(repo string, number int) (GitHubIssue, bool) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
-	if i := g.find(g.repo(repo), number); i != nil {
+	r := g.repo(repo)
+	if i := g.find(r, number); i != nil {
 		out := *i
 		out.Labels = append([]string(nil), i.Labels...)
 		out.Assignees = append([]string(nil), i.Assignees...)
+		out.Deleted = r.gone[number]
 		return out, true
 	}
 	return GitHubIssue{}, false
@@ -235,6 +241,14 @@ func (g *GitHub) SetPush(repo string, push bool) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	g.repo(repo).push = push
+}
+
+// SetAdmin diz se a conta é admin do repositório. Sem isso o GraphQL recusa deleteIssue (FORBIDDEN), como o GitHub
+// faz, e a issue só pode ser fechada. O padrão de um repositório novo é ser admin.
+func (g *GitHub) SetAdmin(repo string, admin bool) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.repo(repo).admin = admin
 }
 
 // SetArchived arquiva o repositório: ele continua legível e deixa de aceitar escrita.
@@ -389,6 +403,7 @@ func (g *GitHub) routes() *http.ServeMux {
 	mux.HandleFunc("GET /repos/{owner}/{repo}/issues/{number}", auth(g.getIssue))
 	mux.HandleFunc("POST /repos/{owner}/{repo}/issues", auth(g.createIssue))
 	mux.HandleFunc("PATCH /repos/{owner}/{repo}/issues/{number}", auth(g.patchIssue))
+	mux.HandleFunc("POST /graphql", auth(g.graphql))
 	mux.HandleFunc("GET /repos/{owner}/{repo}/labels", auth(g.listLabels))
 	mux.HandleFunc("POST /repos/{owner}/{repo}/labels", auth(g.createLabel))
 	mux.HandleFunc("GET /users/{login}", auth(g.getUser))
@@ -469,10 +484,13 @@ func (g *GitHub) getRepo(w http.ResponseWriter, r *http.Request) {
 		"full_name": repo.name,
 		"archived":  repo.archived,
 		"permissions": map[string]any{
-			"admin": false, "push": repo.push, "pull": true,
+			"admin": repo.admin && repo.push, "push": repo.push, "pull": true,
 		},
 	})
 }
+
+// nodeID é o id da issue no GraphQL. No fake ele leva o repositório e o número, para o deleteIssue achar a issue.
+func nodeID(repo string, number int) string { return "I_" + repo + "#" + strconv.Itoa(number) }
 
 // issueJSON é a issue como a API a devolve.
 func issueJSON(repo string, i *GitHubIssue) map[string]any {
@@ -485,6 +503,7 @@ func issueJSON(repo string, i *GitHubIssue) map[string]any {
 		assignees[n] = map[string]any{"login": a}
 	}
 	out := map[string]any{
+		"node_id":    nodeID(repo, i.Number),
 		"number":     i.Number,
 		"title":      i.Title,
 		"body":       nil,
@@ -676,6 +695,48 @@ func (g *GitHub) createIssue(w http.ResponseWriter, r *http.Request) {
 	issue.UpdatedAt = issue.CreatedAt
 	repo.issues = append(repo.issues, issue)
 	writeJSON(w, http.StatusCreated, issueJSON(repo.name, issue))
+}
+
+// graphql atende a única mutation que o sistema usa, deleteIssue. Como o GitHub, responde 200 com o motivo em
+// errors: FORBIDDEN para quem não é admin do repositório, NOT_FOUND para o id que não existe.
+func (g *GitHub) graphql(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Query     string `json:"query"`
+		Variables struct {
+			ID string `json:"id"`
+		} `json:"variables"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil || !strings.Contains(in.Query, "deleteIssue") {
+		http.Error(w, `{"message":"Problems parsing JSON"}`, http.StatusBadRequest)
+		return
+	}
+	fail := func(kind, message string) {
+		writeJSON(w, http.StatusOK, map[string]any{
+			"data":   map[string]any{"deleteIssue": nil},
+			"errors": []map[string]any{{"type": kind, "path": []string{"deleteIssue"}, "message": message}},
+		})
+	}
+
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	var repo *ghRepo
+	var issue *GitHubIssue
+	if name, number, ok := strings.Cut(strings.TrimPrefix(in.Variables.ID, "I_"), "#"); ok && strings.HasPrefix(in.Variables.ID, "I_") {
+		if n, err := strconv.Atoi(number); err == nil {
+			if repo = g.repos[name]; repo != nil && !repo.gone[n] {
+				issue = g.find(repo, n)
+			}
+		}
+	}
+	switch {
+	case issue == nil:
+		fail("NOT_FOUND", "Could not resolve to a node with the global id of '"+in.Variables.ID+"'")
+	case !repo.admin || !repo.push || repo.archived:
+		fail("FORBIDDEN", "Resource not accessible by personal access token: you do not have the correct permissions to execute `DeleteIssue`")
+	default:
+		repo.gone[issue.Number] = true
+		writeJSON(w, http.StatusOK, map[string]any{"data": map[string]any{"deleteIssue": map[string]any{"clientMutationId": nil}}})
+	}
 }
 
 func (g *GitHub) patchIssue(w http.ResponseWriter, r *http.Request) {

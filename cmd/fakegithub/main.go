@@ -14,6 +14,8 @@
 //	POST /_fake/issues/{n}              {"title","body","labels","assignees","state"}: edita; só o que vier
 //	POST /_fake/users                   {"login","email"}: cadastra um usuário
 //	POST /_fake/push                    {"push":false}: tira ou devolve a permissão de escrita
+//	POST /_fake/admin                   {"admin":false}: tira ou devolve o ser admin do repositório (sem isso,
+//	                                    a issue de uma tarefa excluída só é fechada, e não apagada)
 //	GET  /_fake/requests                o que o servidor pediu
 package main
 
@@ -74,6 +76,12 @@ func main() {
 		var in struct{ Push bool }
 		json.NewDecoder(r.Body).Decode(&in)
 		fake.SetPush(repo, in.Push)
+		write(w, map[string]bool{"ok": true})
+	})
+	mux.HandleFunc("POST /_fake/admin", func(w http.ResponseWriter, r *http.Request) {
+		var in struct{ Admin bool }
+		json.NewDecoder(r.Body).Decode(&in)
+		fake.SetAdmin(repo, in.Admin)
 		write(w, map[string]bool{"ok": true})
 	})
 	mux.HandleFunc("GET /_fake/requests", func(w http.ResponseWriter, r *http.Request) { write(w, fake.Requests()) })

@@ -646,6 +646,18 @@ task_detail:
   published: "Tarefa publicada no {{.provider}}."
   delete_title: Excluir tarefa
   delete_text: Apaga a tarefa e todo o tempo registrado nela.
+  delete_remote_intro: "Esta tarefa também existe em outras plataformas. Marque onde a exclusão deve valer também; sem nada marcado, ela sai só daqui e os itens de lá ficam como estão."
+  delete_remote_github: "Apagar a issue no GitHub"
+  delete_remote_github_note: "Só quem é admin do repositório consegue apagar uma issue. Se a conta conectada não for, a issue é só fechada, como não planejada."
+  delete_remote_trello: "Arquivar o cartão no Trello"
+  delete_remote_trello_note: "O cartão não é apagado: fica arquivado, e dá para restaurá-lo pelo Trello."
+  delete_remote_other: "Fechar o item no {{.provider}}"
+  delete_remote_off: "Sincronização desligada"
+  delete_remote_off_note: "A sincronização desta integração está desligada, então o item de lá fica como está."
+  deleted: "Tarefa excluída."
+  remote_deleted: "apagado"
+  remote_archived: "arquivado"
+  remote_gone: "o item já não existia"
   saved: Tarefa salva.
   sync_note: "Esta tarefa está ligada a um item sincronizado (uma issue ou um cartão): ao salvar, as mudanças vão para ele."
   sync_note_details: "Esta tarefa está ligada a um item sincronizado (uma issue ou um cartão): o status Fechada, as etiquetas e o prazo (onde a plataforma tem) vão para ele."
@@ -1185,6 +1197,8 @@ errors:
     push_rejected: "a plataforma recusou uma mudança deste item: ela fica só aqui"
     read_only: "o token não escreve neste repositório ou quadro: os itens só vêm para cá, e as mudanças daqui não saem"
     publish_read_only: "o token desta integração não escreve no repositório ou quadro: o item novo sairia sem parte dos dados, então a tarefa não foi postada"
+    remove_read_only: "o token desta integração não escreve no repositório ou quadro, então o item continua lá"
+    remove_only_closed: "a plataforma não deixou apagar o item (a conta conectada precisa ser admin do repositório), então ele só foi fechado"
   label:
     name_required: "informe o nome da etiqueta"
     name_taken: "o projeto já tem uma etiqueta com este nome"

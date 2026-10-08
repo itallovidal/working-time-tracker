@@ -828,6 +828,18 @@
       "body": {}
     },
     {
+      "_id": "req_06_07b",
+      "_type": "request",
+      "parentId": "fld_06",
+      "name": "Excluir tarefa e o item dela na integração (GitHub: apaga a issue; Trello: arquiva o cartão)",
+      "method": "DELETE",
+      "url": "{{base_url}}/api/tasks/{{task_id}}?remove_in={{integration_id}}",
+      "authentication": {},
+      "metaSortKey": 7.5,
+      "headers": [],
+      "body": {}
+    },
+    {
       "_id": "req_06_08",
       "_type": "request",
       "parentId": "fld_06",

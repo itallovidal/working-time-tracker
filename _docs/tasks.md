@@ -842,6 +842,17 @@
 
 ---
 
+### Sprint 79: Deleting the Item on the Platforms Too
+
+- [X] S79.1 The delete modal of the task page gets, when the task is in a platform, a box for each one (all unticked; a platform with the sync off is disabled with the reason): **Apagar a issue no GitHub** and **Arquivar o cartão no Trello**, with a note on what each does; with nothing ticked only the task goes (`removable()`, `pickRemove()`, `removeIn`)
+- [X] S79.2 `DELETE /api/tasks/:taskId?remove_in=<integration>` (repeated, up to 20) always answers `200` `{"remote":[{integration_id, provider, outcome, problem}]}` (it was `204`); the links are read before the task is deleted and the platforms are called after, each on its own, so a failure never brings the task back; `task.Service.Delete(ctx, id, removeIn)` and the `Remover` set with `SetRemover` (wired to the `Syncer` in `server.go`)
+- [X] S79.3 `adapter.ItemRemover` (optional): GitHub deletes the issue with the GraphQL `deleteIssue` (the REST API cannot) and, when the account is not a repository admin, closes it as `not_planned` and warns (`issue_sync.remove_only_closed`); Trello archives the card with a `PUT closed=true` that leaves the due date alone; an item already gone is `gone`, not an error; a type with no remover gets the generic fallback of closing the item
+- [X] S79.4 `Syncer.Remove`: the lock of the integration, the same rules as posting (`issue_sync.remove_read_only` for a token that does not write, `integration.sync_off`), a result for each item; the screen turns the answer into one message kept across the redirect with `flash()`
+- [X] S79.5 Error codes `issue_sync.remove_read_only` and `issue_sync.remove_only_closed` (both languages, `_docs/error-codes.md`); the fakes gained `POST /graphql`, `node_id`, `admin` and `Deleted` (`testutil.GitHub`) and `/_fake/admin` (`cmd/fakegithub`)
+- [X] S79.6 Tests: the adapters against the fakes (delete as admin, close without admin, already gone, a refused token, the GraphQL address on GitHub Enterprise; archive without touching the due date, gone, forbidden); `TestRemove_*` end to end (both platforms, nothing ticked leaves them alone, only one, a platform the task is not in, without admin, already gone, a failure that does not stop the other nor keep the task, read-only/sync off/refused token, no remover); the service (items read before the delete, handed over after it) and the route (`remove_in` validation, the answer); checked in the browser against the fakes (the boxes, both ticked, nothing ticked, only Trello, GitHub without admin, one platform, no link, English, 390 px); README, design, routes, the Insomnia collection
+
+---
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open

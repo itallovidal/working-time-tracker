@@ -636,6 +636,18 @@ task_detail:
   published: "Task posted to {{.provider}}."
   delete_title: Delete task
   delete_text: Deletes the task and all the time tracked on it.
+  delete_remote_intro: "This task also exists on other platforms. Tick where the deletion should apply too; with nothing ticked, it leaves only here and the items over there stay as they are."
+  delete_remote_github: "Delete the issue on GitHub"
+  delete_remote_github_note: "Only a repository admin can delete an issue. If the connected account is not one, the issue is only closed, as not planned."
+  delete_remote_trello: "Archive the card on Trello"
+  delete_remote_trello_note: "The card is not deleted: it is archived, and you can restore it from Trello."
+  delete_remote_other: "Close the item on {{.provider}}"
+  delete_remote_off: "Sync off"
+  delete_remote_off_note: "The sync on this integration is off, so the item over there stays as it is."
+  deleted: "Task deleted."
+  remote_deleted: "deleted"
+  remote_archived: "archived"
+  remote_gone: "the item no longer existed"
   saved: Task saved.
   sync_note: "This task is linked to a synced item (an issue or a card): on save, the changes go to it."
   sync_note_details: "This task is linked to a synced item (an issue or a card): the Closed status, the labels and the deadline (where the platform has one) go to it."
@@ -1175,6 +1187,8 @@ errors:
     push_rejected: "the platform refused a change to this item: it stays here only"
     read_only: "the token cannot write to this repository or board: items only come here, and changes made here do not go out"
     publish_read_only: "the token of this integration cannot write to the repository or board: the new item would come out without some of its data, so the task was not posted"
+    remove_read_only: "the token of this integration cannot write to the repository or board, so the item is still there"
+    remove_only_closed: "the platform did not let the item be deleted (the connected account must be an admin of the repository), so it was only closed"
   label:
     name_required: "enter the label name"
     name_taken: "the project already has a label with this name"

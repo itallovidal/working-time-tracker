@@ -165,6 +165,8 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `issue_sync.push_discarded` | 400 | — | `a plataforma ignorou uma mudança deste item (o token pode não ter permissão de escrita): ela fica só aqui` | `the platform ignored a change to this item (the token may lack write permission): it stays here only` |
 | `issue_sync.push_rejected` | 400 | — | `a plataforma recusou uma mudança deste item: ela fica só aqui` | `the platform refused a change to this item: it stays here only` |
 | `issue_sync.read_only` | 400 | — | `o token não escreve neste repositório ou quadro: os itens só vêm para cá, e as mudanças daqui não saem` | `the token cannot write to this repository or board: items only come here, and changes made here do not go out` |
+| `issue_sync.remove_only_closed` | 400 | — | `a plataforma não deixou apagar o item (a conta conectada precisa ser admin do repositório), então ele só foi fechado` | `the platform did not let the item be deleted (the connected account must be an admin of the repository), so it was only closed` |
+| `issue_sync.remove_read_only` | 400 | — | `o token desta integração não escreve no repositório ou quadro, então o item continua lá` | `the token of this integration cannot write to the repository or board, so the item is still there` |
 
 ### label
 

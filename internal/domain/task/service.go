@@ -29,6 +29,7 @@ type Service struct {
 	taskStore       *Store
 	membershipStore *team.MembershipStore
 	integrationSvc  *integration.Service
+	remover         Remover
 }
 
 func NewService(taskStore *Store, membershipStore *team.MembershipStore, integrationSvc *integration.Service) *Service {
@@ -290,10 +291,6 @@ func (s *Service) UpdateAttrsAs(selfID, id string, attrs Attrs, assigneeID *stri
 		return nil, err
 	}
 	return s.taskStore.GetByID(id)
-}
-
-func (s *Service) Delete(id string) error {
-	return s.taskStore.Delete(id)
 }
 
 // LinkExternalItem liga a tarefa, à mão, a um item da integração (uma issue, um cartão). Uma tarefa tem no
