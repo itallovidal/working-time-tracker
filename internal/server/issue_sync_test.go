@@ -284,6 +284,68 @@ func TestIssueSync_TaskButton(t *testing.T) {
 	}
 }
 
+// O botão Sincronizar das listas de tarefas: uma rodada completa em cada integração do projeto com a
+// sincronização ligada, apertado por qualquer pessoa do projeto.
+func TestIssueSync_ProjectButton(t *testing.T) {
+	app, fake := syncServer(t)
+	e := app.Echo
+	admin := signup(t, e, "Org", "ana@test.com")
+	member := invite(t, e, admin, "bia@test.com", "member")
+	prj := createProject(t, e, admin, "Alfa")
+	allocate(t, e, admin, prj, member.id, 5000)
+	fake.AddRepo("owner/other")
+	fake.AddIssue("owner/repo", testutil.GitHubIssue{Title: "Do primeiro"})
+	fake.AddIssue("owner/other", testutil.GitHubIssue{Title: "Do segundo"})
+	syncURL := "/api/projects/" + prj + "/sync"
+
+	// Sem integração com a sincronização ligada, o botão avisa.
+	if rec := do(e, "POST", syncURL, "", member.session); rec.Code != http.StatusBadRequest || errorCode(t, rec) != "integration.sync_off" {
+		t.Errorf("press with no sync on = %d %s", rec.Code, rec.Body.String())
+	}
+
+	// Duas integrações com a sincronização ligada e uma terceira, desligada, que não conta.
+	for _, repo := range []string{"owner/repo", "owner/other"} {
+		rec := do(e, "POST", "/api/projects/"+prj+"/integrations", `{"type":"github","display_name":"`+repo+`","token":"tok","metadata":{"repo":"`+repo+`"}}`, admin.session)
+		if rec.Code != http.StatusCreated {
+			t.Fatalf("create %s = %d: %s", repo, rec.Code, rec.Body.String())
+		}
+		if rec = do(e, "PATCH", "/api/integrations/"+decode(t, rec)["id"].(string), `{"sync_issues":true}`, admin.session); rec.Code != http.StatusOK {
+			t.Fatalf("turn on = %d: %s", rec.Code, rec.Body.String())
+		}
+	}
+	do(e, "POST", "/api/projects/"+prj+"/integrations", `{"type":"github","display_name":"Parada","token":"tok","metadata":{"repo":"owner/repo"}}`, admin.session)
+
+	// Qualquer pessoa do projeto aperta, e a soma das duas rodadas volta.
+	rec := do(e, "POST", syncURL, "", member.session)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("project sync = %d: %s", rec.Code, rec.Body.String())
+	}
+	if sum := decode(t, rec); sum["created"] != 2.0 || sum["errors"] != 0.0 || sum["partial"] != false {
+		t.Errorf("summary = %v, want two tasks created across the two repositories", sum)
+	}
+	if tasks := decodeList(t, do(e, "GET", "/api/projects/"+prj+"/tasks", "", admin.session)); len(tasks) != 2 {
+		t.Errorf("%d tasks after the press, want 2", len(tasks))
+	}
+
+	// Uma segunda rodada sem diferença não escreve nada.
+	fake.Reset()
+	if rec = do(e, "POST", syncURL, "", member.session); rec.Code != http.StatusOK || decode(t, rec)["created"] != 0.0 {
+		t.Errorf("second press = %d %s", rec.Code, rec.Body.String())
+	}
+	if fake.Writes() != 0 {
+		t.Errorf("a press with nothing different wrote to GitHub: %v", fake.Requests())
+	}
+
+	// Quem não é do projeto não aperta; sem sessão também não.
+	other := signup(t, e, "Outra org", "outro@test.com")
+	if rec = do(e, "POST", syncURL, "", other.session); rec.Code != http.StatusNotFound {
+		t.Errorf("another organization pressed it: %d, want 404", rec.Code)
+	}
+	if rec = do(e, "POST", syncURL, "", ""); rec.Code != http.StatusUnauthorized {
+		t.Errorf("without a session: %d", rec.Code)
+	}
+}
+
 // Só roda uma rodada de cada vez: o botão responde 409 enquanto outra está em andamento.
 func TestIssueSync_ButtonRefusesWhileRunning(t *testing.T) {
 	app, fake := syncServer(t)

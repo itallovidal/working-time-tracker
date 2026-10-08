@@ -734,6 +734,15 @@
 
 ---
 
+### Sprint 65: Sincronizar Button on the Task Lists
+
+- [X] S65.1 `POST /api/projects/:projectId/sync` and `Syncer.SyncProject`: a full round on every integration of the project with the sync on, one after the other, with the summaries added up (`partial` when one could not run); `409`, `integration.sync_off` and the first error as described in `_test/routes.md`; open to anyone on the project; tested against the fake with two repositories, a member pressing it, a round with nothing to do writing nothing, another organization, no session, and in the route table
+- [X] S65.2 **Sincronizar** on the task list (next to Nova tarefa) and on Minhas tarefas (above the lists): the `sync_button` partial and the `projectSync()` mixin, shown only when the project has an enabled integration with the sync on; the list and the labels reload after the round, with the toast of the integration button; texts in both languages
+- [X] S65.3 `GITHUB_SYNC_INTERVAL=1m` in the owner's local `.env` (not versioned)
+- [X] S65.4 No front-end tests added; checked in the browser against `cmd/fakegithub` (the button on both lists, a new issue coming in with it and the toast, "Tudo igual" with nothing to do, no button in a project without the sync, phone); README, design, routes and the Insomnia collection
+
+---
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open

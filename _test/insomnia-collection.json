@@ -1318,6 +1318,18 @@
       }
     },
     {
+      "_id": "req_08_09b",
+      "_type": "request",
+      "parentId": "fld_08",
+      "name": "Sincronizar o projeto (botão das listas de tarefas)",
+      "method": "POST",
+      "url": "{{base_url}}/api/projects/{{project_id}}/sync",
+      "authentication": {},
+      "metaSortKey": 5.6,
+      "headers": [],
+      "body": {}
+    },
+    {
       "_id": "req_08_09",
       "_type": "request",
       "parentId": "fld_08",

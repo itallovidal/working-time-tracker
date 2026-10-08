@@ -32,6 +32,22 @@ func (h *Handler) Sync(c *echo.Context) error {
 	return apperr.Respond(c, 400, err)
 }
 
+// SyncProject é o botão Sincronizar das listas de tarefas: uma rodada completa em cada integração do
+// projeto com a sincronização ligada. É de qualquer pessoa do projeto, como mudar uma tarefa, que já
+// leva a mudança ao GitHub. Responde 409 se todas as integrações já estão numa rodada.
+func (h *Handler) SyncProject(c *echo.Context) error {
+	sum, err := h.syncer.SyncProject(c.Request().Context(), parseID(c.Param("projectId")))
+	switch {
+	case err == nil:
+		return c.JSON(200, sum)
+	case errors.Is(err, ErrSyncRunning):
+		return apperr.Respond(c, 409, err)
+	case errors.Is(err, database.ErrNotFound):
+		return apperr.Respond(c, 404, err)
+	}
+	return apperr.Respond(c, 400, err)
+}
+
 // SyncTask é o botão Sincronizar da tela da tarefa: sincroniza a issue dela e responde o que mudou. Com
 // uma rodada em andamento na integração, responde 409 em vez de esperar.
 func (h *Handler) SyncTask(c *echo.Context) error {

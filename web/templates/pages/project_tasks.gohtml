@@ -39,11 +39,15 @@
         </template>
       </div>
     </div>
-    <button type="button" class="btn self-start" @click="openCreate()">{{template "icon" "plus"}} {{.T "tasks.new"}}</button>
+    <div class="row self-start">
+      {{template "sync_button" .}}
+      <button type="button" class="btn" @click="openCreate()">{{template "icon" "plus"}} {{.T "tasks.new"}}</button>
+    </div>
   </div>
 
   <p class="muted" x-show="loading">{{.T "tasks.loading"}}</p>
   <p class="form-error" x-cloak x-show="errors.load || errors.members" x-text="errors.load || errors.members"></p>
+  <p class="form-error" x-cloak x-show="errors.sync" x-text="errors.sync" role="alert"></p>
   <p class="form-error" x-cloak x-show="errors.clock" x-text="errors.clock" role="alert"></p>
   <p class="form-error" x-cloak x-show="errors.claim" x-text="errors.claim" role="alert"></p>
 

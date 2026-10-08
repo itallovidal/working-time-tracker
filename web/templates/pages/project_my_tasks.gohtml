@@ -7,6 +7,12 @@
   {{/* O mesmo painel do timer do Início, aqui de ponta a ponta: logo abaixo vem a lista, e não outro cartão. */}}
   {{template "clock_card" .}}
 
+  {{/* Com a sincronização das issues ligada, o botão traz o que mudou no GitHub sem esperar a rotina de fundo. */}}
+  <div class="row row-end" x-cloak x-show="syncOn">
+    {{template "sync_button" .}}
+  </div>
+  <p class="form-error" x-cloak x-show="errors.sync" x-text="errors.sync" role="alert"></p>
+
   <p class="form-error" x-cloak x-show="errors.load" x-text="errors.load"></p>
   <p class="muted" x-show="loading">{{.T "my_tasks.loading"}}</p>
 

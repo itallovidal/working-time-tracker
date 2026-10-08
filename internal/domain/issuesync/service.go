@@ -553,6 +553,62 @@ func (s *Syncer) syncTaskLocked(ctx context.Context, row *Row) error {
 	return r.reconcile(rows, *issue)
 }
 
+// add soma o que outra rodada fez.
+func (s *Summary) add(o *Summary) {
+	s.Created += o.Created
+	s.Updated += o.Updated
+	s.Closed += o.Closed
+	s.Pushed += o.Pushed
+	s.Unmapped += o.Unmapped
+	s.Errors += o.Errors
+	s.Partial = s.Partial || o.Partial
+}
+
+// SyncProject é o botão Sincronizar das listas de tarefas: uma rodada completa em cada integração do
+// projeto que está com a sincronização ligada, uma depois da outra, e a soma do que fizeram. Se uma não
+// pôde rodar (já havia uma rodada nela, ou o GitHub recusou), a soma sai como parcial; se nenhuma rodou,
+// devolve o motivo da primeira.
+func (s *Syncer) SyncProject(ctx context.Context, projectID uuid.UUID) (*Summary, error) {
+	list, err := s.d.Integrations.ListByProject(projectID.String())
+	if err != nil {
+		return nil, err
+	}
+	var total Summary
+	var considered, ran int
+	var first error
+	running := false
+	for _, it := range list {
+		if !it.SyncIssues || !it.Enabled {
+			continue
+		}
+		considered++
+		sum, err := s.SyncNow(ctx, it.ID)
+		if sum != nil {
+			total.add(sum)
+		}
+		switch {
+		case err == nil:
+			ran++
+		case errors.Is(err, ErrSyncRunning):
+			running = true
+		case first == nil:
+			first = err
+		}
+	}
+	switch {
+	case considered == 0:
+		return nil, ErrSyncOff
+	case ran == 0 && first != nil:
+		return nil, first
+	case ran == 0:
+		return nil, ErrSyncRunning
+	}
+	if first != nil || running {
+		total.Partial = true
+	}
+	return &total, nil
+}
+
 // TaskSummary é o que o botão Sincronizar de uma tarefa fez: o mesmo resumo da rodada e, quando o GitHub
 // deixou algo de fora (uma mudança descartada, um responsável sem usuário), o código do aviso.
 type TaskSummary struct {

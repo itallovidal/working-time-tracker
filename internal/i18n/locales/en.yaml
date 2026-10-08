@@ -514,6 +514,8 @@ tasks:
   unassigned_hint: "Without an assignee the task is available: whoever clocks in on it becomes the assignee."
   new: New task
   loading: Loading tasks…
+  sync: Sync
+  sync_title: Fetches the issue changes from GitHub and sends what changed here, without waiting for the background job
   none_filtered: No tasks match these filters
   lede: Here are the tasks nobody has picked up, for the team to choose and clock in, and below them the ones that already have an assignee.
   section_free: Unassigned

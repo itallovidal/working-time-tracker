@@ -856,6 +856,7 @@ func TestRoutes_Table(t *testing.T) {
 		"GET /api/work-sessions/active",
 		"POST /api/projects/:projectId/integrations",
 		"GET /api/projects/:projectId/integrations",
+		"POST /api/projects/:projectId/sync",
 
 		"GET /api/teams/:teamId",
 		"PATCH /api/teams/:teamId",

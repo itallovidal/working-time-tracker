@@ -612,6 +612,7 @@ Na lista de tarefas e no detalhe, a tarefa vinculada traz `external_integration`
 |---|---|---|---|
 | POST | `/api/projects/:projectId/integrations` | `integrations.manage` | Cria e valida a conexão na plataforma |
 | GET | `/api/projects/:projectId/integrations` | logado | Integrações do projeto |
+| POST | `/api/projects/:projectId/sync` | logado | O botão **Sincronizar** das listas de tarefas e de Minhas tarefas: uma rodada completa em cada integração do projeto com a sincronização ligada, uma depois da outra. Mesma resposta da rodada, somada (`created`, `updated`, `closed`, `pushed`, `unmapped`, `errors`, `partial`; `partial` também quando uma integração não pôde rodar); `409` `integration.sync_running` se todas já estão numa rodada; `400` `integration.sync_off` se nenhuma tem a sincronização ligada, ou o erro da primeira quando nenhuma rodou; `404` entre organizações |
 | GET | `/api/integrations/:integrationId` | logado | Detalhes |
 | PATCH | `/api/integrations/:integrationId` | `integrations.manage` | Altera nome, token, `metadata`, `enabled` ou `sync_issues` |
 | DELETE | `/api/integrations/:integrationId` | `integrations.manage` | Exclui. As tarefas vinculadas perdem o vínculo |

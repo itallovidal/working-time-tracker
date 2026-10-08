@@ -1,0 +1,6 @@
+{{/* sync_button é o botão Sincronizar das listas de tarefas: uma rodada completa nas integrações do projeto
+     com a sincronização das issues ligada, e a lista se recarrega. Só aparece com uma dessas ligada. Quem usa
+     tem o mixin projectSync() (syncOn, syncProject) e mostra errors.sync perto do botão. */}}
+{{define "sync_button"}}<button type="button" class="btn btn-secondary" x-cloak x-show="syncOn" :disabled="pending" title="{{.T "tasks.sync_title"}}" @click="syncProject()">
+  <i class="fa-solid fa-rotate" :class="pending === 'sync' && 'fa-spin'" aria-hidden="true"></i> {{.T "tasks.sync"}}
+</button>{{end}}

@@ -524,6 +524,8 @@ tasks:
   unassigned_hint: "Sem responsável, a tarefa fica disponível: quem bater o ponto nela passa a ser o responsável."
   new: Nova tarefa
   loading: Carregando tarefas…
+  sync: Sincronizar
+  sync_title: Busca no GitHub as mudanças das issues e leva o que mudou aqui, sem esperar a rotina de fundo
   none_filtered: Nenhuma tarefa com esses filtros
   lede: Aqui estão as tarefas que ninguém pegou, para o time escolher e bater o ponto, e logo abaixo as que já têm responsável.
   section_free: Sem responsável

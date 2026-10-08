@@ -52,6 +52,28 @@ document.addEventListener('alpine:init', () => {
     statusClass,
   });
 
+  // projectSync é o botão Sincronizar das listas de tarefas: uma rodada completa nas integrações do projeto
+  // com a sincronização das issues ligada (o servidor soma as rodadas), e a lista se recarrega com o que
+  // veio. Só aparece com uma dessas ligada. Quem usa define afterSync(), que recarrega a lista dele.
+  const projectSync = () => ({
+    syncOn: false,
+    async loadSync() {
+      try {
+        const list = (await api('GET', '/api/projects/' + project.id + '/integrations')) || [];
+        this.syncOn = list.some((i) => i.enabled && i.sync_issues);
+      } catch (e) {
+        this.syncOn = false; // sem a lista, o botão só não aparece
+      }
+    },
+    syncProject() {
+      return this.run('sync', async () => {
+        const sum = await api('POST', '/api/projects/' + project.id + '/sync');
+        await this.afterSync();
+        toast(syncMessage(sum, 'integrations.sync_nothing'));
+      });
+    },
+  });
+
   // taskWizard é o passo a passo dos modais Nova tarefa e Editar tarefa: a etapa 1 é o nome e
   // a descrição (em Markdown, com pré-visualização) e a etapa 2, o resto. Quem usa tem um
   // `draft` e labelTools. As duas etapas ficam na página, só escondidas, e o formulário não
@@ -525,6 +547,7 @@ document.addEventListener('alpine:init', () => {
     lists: { free: emptyList(), taken: emptyList() },
     taskLists,
     ...labelTools(),
+    ...projectSync(),
     members: [], // quem está no projeto: pode ser responsável por tarefa nova
     assignees: [], // quem já é responsável por alguma tarefa, mesmo fora dos times
     // priority, status e label são listas: a tarefa passa se tem qualquer uma das marcadas.
@@ -540,12 +563,17 @@ document.addEventListener('alpine:init', () => {
         .catch((e) => { this.errors.members = e.message; });
       // As etiquetas vêm antes da primeira busca: uma etiqueta excluída que ainda está na
       // URL sai do filtro, em vez de zerar a lista.
+      this.loadSync();
       await Promise.all([members, this.loadLabels()]);
       this.filters.label = this.filters.label.filter((id) => this.labels.some((l) => l.id === id));
       await this.load();
       this.loading = false;
       // Bater o ponto numa tarefa sem responsável a passa para quem bateu.
       window.addEventListener('wtt:sessions-changed', () => this.load());
+    },
+    // Depois de sincronizar entram tarefas e etiquetas novas: a lista e os filtros as mostram.
+    async afterSync() {
+      await Promise.all([this.load(), this.loadLabels()]);
     },
     // A URL guarda os filtros e a página de cada lista, para recarregar ou voltar do detalhe
     // de uma tarefa sem perder o lugar. O prazo vai como o nome do atalho ou a
@@ -731,18 +759,21 @@ document.addEventListener('alpine:init', () => {
   Alpine.data('projectMyTasks', () => ({
     ...form(),
     ...taskClock(),
+    ...projectSync(),
     loading: true,
     // A ordem em que o trabalho anda: registrada e ainda não começada (backlog), em progresso,
     // aguardando fechamento e fechada. É a mesma ordem dos filtros de status da lista.
     statuses: WTT.taskStatuses,
     open: { backlog: true, in_progress: true, awaiting_closure: true, closed: false },
     async init() {
+      this.loadSync();
       await Promise.all([this.loadTasks(), this.loadMyRate()]);
       this.loading = false;
       this.watchClock();
       // Bater o ponto ou parar mexe no status das tarefas daqui.
       window.addEventListener('wtt:sessions-changed', () => this.loadTasks());
     },
+    afterSync() { return this.loadTasks(); },
     // inStatus devolve as tarefas de um status, com o prazo mais perto primeiro.
     inStatus(status) {
       const time = (t) => (new Date(t.deadline).getFullYear() < 1971 ? Infinity : new Date(t.deadline).getTime());

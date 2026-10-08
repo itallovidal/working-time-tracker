@@ -136,6 +136,8 @@ func RegisterRoutes(e *echo.Echo, h Handlers, m *auth.Middleware, authLimiter ec
 	r.GET("/work-sessions/active", h.WorkSession.Active)
 	r.POST("/projects/:projectId/integrations", h.Integration.Create, prj, can(permission.IntegrationsManage))
 	r.GET("/projects/:projectId/integrations", h.Integration.ListByProject, prj)
+	// O botão Sincronizar das listas de tarefas: uma rodada completa nas integrações do projeto com a sincronização ligada.
+	r.POST("/projects/:projectId/sync", h.Sync.SyncProject, prj)
 
 	r.GET("/teams/:teamId", h.Team.Get, tm)
 	r.PATCH("/teams/:teamId", h.Team.Update, tm, can(permission.TeamsManage))
