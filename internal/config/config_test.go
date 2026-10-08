@@ -12,24 +12,42 @@ func setRequired(t *testing.T) {
 	t.Setenv("INTEGRATION_ENCRYPTION_KEY", "k")
 }
 
-// A sincronização olha as integrações de cinco em cinco minutos, a menos que se diga outra coisa; zero a
-// desliga, e o que não é uma duração derruba a subida. SYNC_INTERVAL é o nome de agora; GITHUB_SYNC_INTERVAL,
-// de quando só o GitHub sincronizava, ainda vale se o outro não está definido.
-func TestLoad_SyncInterval(t *testing.T) {
+// A sincronização olha as integrações de cinco em cinco minutos, a menos que se diga outra coisa; zero a desliga, e o
+// que não é uma duração derruba a subida. SYNC_INTERVAL vale para todas as plataformas; GITHUB_SYNC_INTERVAL e
+// TRELLO_SYNC_INTERVAL valem só para a delas, e quem não tem o seu usa o comum.
+func TestLoad_SyncIntervals(t *testing.T) {
 	setRequired(t)
-	for _, name := range []string{"SYNC_INTERVAL", "GITHUB_SYNC_INTERVAL"} {
-		for raw, want := range map[string]time.Duration{"": 5 * time.Minute, "30s": 30 * time.Second, "1h": time.Hour, "0": 0, " 2m ": 2 * time.Minute} {
-			t.Setenv("SYNC_INTERVAL", "")
-			t.Setenv("GITHUB_SYNC_INTERVAL", "")
+	clear := func() {
+		for _, name := range []string{"SYNC_INTERVAL", "GITHUB_SYNC_INTERVAL", "TRELLO_SYNC_INTERVAL"} {
+			t.Setenv(name, "")
+		}
+	}
+
+	for _, name := range []string{"SYNC_INTERVAL", "GITHUB_SYNC_INTERVAL", "TRELLO_SYNC_INTERVAL"} {
+		for raw, want := range map[string]time.Duration{"30s": 30 * time.Second, "1h": time.Hour, "0": 0, " 2m ": 2 * time.Minute} {
+			clear()
 			t.Setenv(name, raw)
 			cfg, err := Load()
-			if err != nil || cfg.SyncInterval != want {
-				t.Errorf("%s=%q: interval = %v, err = %v, want %v", name, raw, cfg.SyncInterval, err, want)
+			if err != nil {
+				t.Errorf("%s=%q: %v", name, raw, err)
+				continue
+			}
+			if name == "SYNC_INTERVAL" {
+				if cfg.SyncInterval != want || len(cfg.SyncIntervals) != 0 {
+					t.Errorf("SYNC_INTERVAL=%q: default %v, per platform %v, want only the default %v", raw, cfg.SyncInterval, cfg.SyncIntervals, want)
+				}
+				continue
+			}
+			platform := map[string]string{"GITHUB_SYNC_INTERVAL": "github", "TRELLO_SYNC_INTERVAL": "trello"}[name]
+			if got, ok := cfg.SyncIntervals[platform]; !ok || got != want || len(cfg.SyncIntervals) != 1 {
+				t.Errorf("%s=%q: per platform %v, want only %s = %v", name, raw, cfg.SyncIntervals, platform, want)
+			}
+			if cfg.SyncInterval != 5*time.Minute {
+				t.Errorf("%s=%q changed the default of the other platforms to %v", name, raw, cfg.SyncInterval)
 			}
 		}
 		for _, raw := range []string{"five minutes", "5", "-1m"} {
-			t.Setenv("SYNC_INTERVAL", "")
-			t.Setenv("GITHUB_SYNC_INTERVAL", "")
+			clear()
 			t.Setenv(name, raw)
 			if _, err := Load(); err == nil {
 				t.Errorf("%s=%q must be refused", name, raw)
@@ -37,11 +55,19 @@ func TestLoad_SyncInterval(t *testing.T) {
 		}
 	}
 
-	// O nome novo vale sobre o antigo.
-	t.Setenv("SYNC_INTERVAL", "10s")
-	t.Setenv("GITHUB_SYNC_INTERVAL", "1h")
-	if cfg, err := Load(); err != nil || cfg.SyncInterval != 10*time.Second {
-		t.Errorf("SYNC_INTERVAL must win over GITHUB_SYNC_INTERVAL: %v, %v", cfg.SyncInterval, err)
+	// Sem nada definido, cinco minutos para todas.
+	clear()
+	if cfg, err := Load(); err != nil || cfg.SyncInterval != 5*time.Minute || len(cfg.SyncIntervals) != 0 {
+		t.Errorf("defaults = %v %v, %v, want five minutes for everyone", cfg.SyncInterval, cfg.SyncIntervals, err)
+	}
+	// Cada uma com o seu, sobre o comum; "0" desliga só a daquela plataforma.
+	clear()
+	t.Setenv("SYNC_INTERVAL", "10m")
+	t.Setenv("GITHUB_SYNC_INTERVAL", "1m")
+	t.Setenv("TRELLO_SYNC_INTERVAL", "0")
+	cfg, err := Load()
+	if err != nil || cfg.SyncInterval != 10*time.Minute || cfg.SyncIntervals["github"] != time.Minute || cfg.SyncIntervals["trello"] != 0 || len(cfg.SyncIntervals) != 2 {
+		t.Errorf("mixed = default %v, per platform %v, %v", cfg.SyncInterval, cfg.SyncIntervals, err)
 	}
 }
 
@@ -50,6 +76,7 @@ func TestLoad_TrelloSettings(t *testing.T) {
 	setRequired(t)
 	t.Setenv("SYNC_INTERVAL", "")
 	t.Setenv("GITHUB_SYNC_INTERVAL", "")
+	t.Setenv("TRELLO_SYNC_INTERVAL", "")
 	t.Setenv("TRELLO_API_KEY", " 0123456789abcdef ")
 	t.Setenv("TRELLO_URL", "http://localhost:8092/")
 	t.Setenv("TRELLO_API_URL", "http://localhost:8092/1/")

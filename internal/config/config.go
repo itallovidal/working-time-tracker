@@ -36,8 +36,30 @@ type Config struct {
 
 	// SyncInterval é de quanto em quanto tempo o servidor olha as integrações com a sincronização ligada
 	// (as issues do GitHub, os cartões do Trello). Zero desliga a rotina (o botão e o gancho das tarefas
-	// seguem valendo).
-	SyncInterval time.Duration
+	// seguem valendo). SyncIntervals tem, por plataforma ("github", "trello"), o intervalo próprio de quem o
+	// definiu (GITHUB_SYNC_INTERVAL, TRELLO_SYNC_INTERVAL); a que não está aí usa SyncInterval.
+	SyncInterval  time.Duration
+	SyncIntervals map[string]time.Duration
+}
+
+// syncIntervalEnv são as variáveis do intervalo de cada plataforma.
+var syncIntervalEnv = map[string]string{"github": "GITHUB_SYNC_INTERVAL", "trello": "TRELLO_SYNC_INTERVAL"}
+
+// parseInterval lê uma duração do ambiente ("5m", "30s"; "0" desliga). Vazio é não definido. O que não é uma
+// duração derruba a subida: melhor que rodar com um intervalo que ninguém pediu.
+func parseInterval(name string) (d time.Duration, set bool, err error) {
+	raw := strings.TrimSpace(os.Getenv(name))
+	if raw == "" {
+		return 0, false, nil
+	}
+	if raw == "0" {
+		return 0, true, nil
+	}
+	d, err = time.ParseDuration(raw)
+	if err != nil || d < 0 {
+		return 0, false, fmt.Errorf("%s %q is not a duration like 5m, 30s or 0", name, raw)
+	}
+	return d, true, nil
 }
 
 func Load() (*Config, error) {
@@ -64,23 +86,25 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("TRELLO_API_KEY must be the key of the app (letters and digits only)")
 	}
 
-	// O padrão é cinco minutos; "0" desliga. Um valor que não é uma duração (ex.: "5m", "30s") derruba a
-	// subida: melhor que rodar com um intervalo que ninguém pediu. SYNC_INTERVAL é o nome de agora;
-	// GITHUB_SYNC_INTERVAL, de quando só o GitHub sincronizava, ainda vale se ele não está definido.
+	// O padrão é cinco minutos; "0" desliga. SYNC_INTERVAL vale para todas as plataformas, e
+	// GITHUB_SYNC_INTERVAL e TRELLO_SYNC_INTERVAL valem só para a delas, sobre o comum.
 	cfg.SyncInterval = 5 * time.Minute
-	name, raw := "SYNC_INTERVAL", strings.TrimSpace(os.Getenv("SYNC_INTERVAL"))
-	if raw == "" {
-		name, raw = "GITHUB_SYNC_INTERVAL", strings.TrimSpace(os.Getenv("GITHUB_SYNC_INTERVAL"))
-	}
-	if raw != "" {
-		d, err := time.ParseDuration(raw)
-		if raw == "0" {
-			d, err = 0, nil
-		}
-		if err != nil || d < 0 {
-			return nil, fmt.Errorf("%s %q is not a duration like 5m, 30s or 0", name, raw)
-		}
+	if d, set, err := parseInterval("SYNC_INTERVAL"); err != nil {
+		return nil, err
+	} else if set {
 		cfg.SyncInterval = d
+	}
+	for platform, name := range syncIntervalEnv {
+		d, set, err := parseInterval(name)
+		if err != nil {
+			return nil, err
+		}
+		if set {
+			if cfg.SyncIntervals == nil {
+				cfg.SyncIntervals = map[string]time.Duration{}
+			}
+			cfg.SyncIntervals[platform] = d
+		}
 	}
 
 	var missing []string

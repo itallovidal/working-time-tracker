@@ -46,6 +46,9 @@ type Summary struct {
 type Config struct {
 	// Interval é de quanto em quanto tempo a rotina de fundo olha as integrações; zero a desliga.
 	Interval time.Duration
+	// Intervals tem, por tipo de integração ("github", "trello"), o intervalo próprio: o tipo que está aí
+	// usa ele (zero desliga a rotina só para esse tipo), e o que não está usa Interval.
+	Intervals map[string]time.Duration
 	// Debounce é quanto o gancho espera, depois da primeira mudança, para juntar as que vierem.
 	Debounce time.Duration
 	// FullEvery é de quanto em quanto tempo a rotina de fundo faz uma rodada completa.
@@ -54,6 +57,34 @@ type Config struct {
 	MaxPushes int
 	Now       func() time.Time
 	Logger    *slog.Logger
+}
+
+// intervalFor é o intervalo da rotina de fundo para um tipo de integração.
+func (c Config) intervalFor(integrationType string) time.Duration {
+	if d, ok := c.Intervals[integrationType]; ok {
+		return d
+	}
+	return c.Interval
+}
+
+// tickEvery é de quanto em quanto tempo a rotina acorda: o menor dos intervalos ligados. Zero é a rotina
+// desligada para todos os tipos.
+func (c Config) tickEvery() time.Duration {
+	var least time.Duration
+	for _, d := range append([]time.Duration{c.Interval}, mapValues(c.Intervals)...) {
+		if d > 0 && (least == 0 || d < least) {
+			least = d
+		}
+	}
+	return least
+}
+
+func mapValues(m map[string]time.Duration) []time.Duration {
+	out := make([]time.Duration, 0, len(m))
+	for _, d := range m {
+		out = append(out, d)
+	}
+	return out
 }
 
 func (c Config) withDefaults() Config {
@@ -93,9 +124,10 @@ type Syncer struct {
 	mu    sync.Mutex
 	locks map[uuid.UUID]*sync.Mutex
 
-	queue   *queue
-	backoff map[uuid.UUID]*backoff
-	lastRun map[uuid.UUID]time.Time // a última rodada completa, por integração
+	queue    *queue
+	backoff  map[uuid.UUID]*backoff
+	lastRun  map[uuid.UUID]time.Time // a última rodada completa, por integração
+	lastTick map[uuid.UUID]time.Time // a última vez que a rotina de fundo olhou a integração
 }
 
 // New monta o sincronizador. Ele não faz nada sozinho: as rodadas vêm do botão (SyncNow), do gancho das
@@ -104,11 +136,12 @@ func New(d Deps, cfg Config) *Syncer {
 	cfg = cfg.withDefaults()
 	return &Syncer{
 		d: d, cfg: cfg,
-		cache:   newCache(cfg.Now),
-		locks:   map[uuid.UUID]*sync.Mutex{},
-		queue:   newQueue(),
-		backoff: map[uuid.UUID]*backoff{},
-		lastRun: map[uuid.UUID]time.Time{},
+		cache:    newCache(cfg.Now),
+		locks:    map[uuid.UUID]*sync.Mutex{},
+		queue:    newQueue(),
+		backoff:  map[uuid.UUID]*backoff{},
+		lastRun:  map[uuid.UUID]time.Time{},
+		lastTick: map[uuid.UUID]time.Time{},
 	}
 }
 

@@ -793,6 +793,14 @@
 
 ---
 
+### Sprint 71: One Polling Interval per Platform
+
+- [X] S71.1 `GITHUB_SYNC_INTERVAL` and `TRELLO_SYNC_INTERVAL` set the interval of one platform and `SYNC_INTERVAL` is the default for the rest (five minutes when nothing is set; `0` turns the background routine off for everyone or for that platform only); `GITHUB_SYNC_INTERVAL` stops being the interval of everything, as it was since Sprint 69. `config.Config.SyncIntervals`, `issuesync.Config.Intervals`
+- [X] S71.2 The routine wakes at the smallest interval that is on and looks at each integration when the interval of its type has passed (`lastTick`); the button and the hook are not affected; the startup log prints the interval of each platform
+- [X] S71.3 Tests: the environment (each variable alone, the precedence, `0`, refusing a bad value) and the routine against the fake Trello (its own short interval with a long default; off with a short default, and the button still working); README, `.env.example`, design
+
+---
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open

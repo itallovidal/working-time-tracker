@@ -255,11 +255,23 @@ func (s *Syncer) tick(ctx context.Context) {
 		if s.backedOff(it.ID) {
 			continue
 		}
+		// Cada tipo tem o seu intervalo: a rotina acorda no menor deles e olha só quem já passou do seu.
+		every := s.cfg.intervalFor(it.Type)
+		s.mu.Lock()
+		last := s.lastTick[it.ID]
+		due := every > 0 && (last.IsZero() || s.cfg.Now().Sub(last) >= every)
+		if due {
+			s.lastTick[it.ID] = s.cfg.Now()
+		}
+		s.mu.Unlock()
+		if !due {
+			continue
+		}
 		mode := Incremental
 		s.mu.Lock()
-		last := s.lastRun[it.ID]
+		lastFull := s.lastRun[it.ID]
 		s.mu.Unlock()
-		if it.SyncCursor == nil || s.cfg.Now().Sub(last) >= s.cfg.FullEvery {
+		if it.SyncCursor == nil || s.cfg.Now().Sub(lastFull) >= s.cfg.FullEvery {
 			mode = Full
 		}
 		_, err := s.Sync(ctx, it.ID, mode)
@@ -285,9 +297,9 @@ func (s *Syncer) Run(ctx context.Context) {
 		defer wg.Done()
 		s.worker(ctx)
 	}()
-	if s.cfg.Interval > 0 {
+	if every := s.cfg.tickEvery(); every > 0 {
 		// A primeira rodada não espera o intervalo inteiro: quem acabou de subir o servidor quer ver as issues.
-		wait := min(s.cfg.Interval, 10*time.Second)
+		wait := min(every, 10*time.Second)
 		for {
 			select {
 			case <-ctx.Done():
@@ -296,7 +308,7 @@ func (s *Syncer) Run(ctx context.Context) {
 			case <-time.After(jitter(wait)):
 			}
 			s.tick(ctx)
-			wait = s.cfg.Interval
+			wait = every
 		}
 	}
 	<-ctx.Done()

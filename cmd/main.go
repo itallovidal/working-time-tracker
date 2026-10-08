@@ -65,7 +65,7 @@ func main() {
 		CookieSecure: ENV.CookieSecure,
 		GitHubOAuth:  github,
 		TrelloAuth:   trello,
-		Sync:         issuesync.Config{Interval: ENV.SyncInterval},
+		Sync:         issuesync.Config{Interval: ENV.SyncInterval, Intervals: ENV.SyncIntervals},
 	})
 	if err != nil {
 		log.Fatalf("server: %v", err)
@@ -78,7 +78,16 @@ func main() {
 	if siteURL == "" {
 		siteURL = "https://github.com"
 	}
-	e.Logger.Info("github", "api", apiURL, "site", siteURL, "sync_interval", ENV.SyncInterval.String())
+	e.Logger.Info("github", "api", apiURL, "site", siteURL)
+	intervals := map[string]string{}
+	for _, platform := range []string{"github", "trello"} {
+		every := ENV.SyncInterval
+		if d, ok := ENV.SyncIntervals[platform]; ok {
+			every = d
+		}
+		intervals[platform] = every.String()
+	}
+	e.Logger.Info("sync intervals (0s is off)", "github", intervals["github"], "trello", intervals["trello"])
 	trelloAPI, trelloSite := ENV.TrelloAPIURL, ENV.TrelloURL
 	if trelloAPI == "" {
 		trelloAPI = "https://api.trello.com/1"

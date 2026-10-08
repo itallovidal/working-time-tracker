@@ -175,3 +175,46 @@ func TestTrello_NewTaskWaitsForTrello(t *testing.T) {
 		t.Errorf("a later round posted again: %v, %d cards", err, e.cardsCount())
 	}
 }
+
+// run sobe a rotina de fundo e devolve quem a para.
+func (e *tenv) run() (stop func()) {
+	ctx, cancel := context.WithCancel(context.Background())
+	stopped := make(chan struct{})
+	go func() { e.syncer.Run(ctx); close(stopped) }()
+	return func() {
+		cancel()
+		<-stopped
+	}
+}
+
+// Cada plataforma tem o seu intervalo na rotina de fundo: o Trello com intervalo próprio é olhado mesmo com o
+// comum longo, e com o seu em zero ele não é olhado, mesmo com o comum curto (o botão e o gancho seguem valendo).
+func TestTrello_ItHasItsOwnPollingInterval(t *testing.T) {
+	// O comum é de uma hora; o do Trello, de 50 ms: o cartão chega sozinho.
+	e := newTrelloEnv(t, issuesync.Config{Interval: time.Hour, Intervals: map[string]time.Duration{"trello": 50 * time.Millisecond}})
+	e.fake.AddCard(testutil.TrelloCard{ShortLink: "Sozinho1", Name: "Chega sozinho"})
+	stop := e.run()
+	deadline := time.Now().Add(20 * time.Second)
+	for e.tasksCount() == 0 {
+		if time.Now().After(deadline) {
+			stop()
+			t.Fatal("the background routine did not poll Trello at its own interval")
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	stop()
+
+	// O comum é curto, mas o do Trello é zero: a rotina não o olha.
+	e = newTrelloEnv(t, issuesync.Config{Interval: 50 * time.Millisecond, Intervals: map[string]time.Duration{"trello": 0}})
+	e.fake.AddCard(testutil.TrelloCard{ShortLink: "Parado01", Name: "Não chega sozinho"})
+	stop = e.run()
+	time.Sleep(1500 * time.Millisecond)
+	stop()
+	if e.tasksCount() != 0 || e.fake.Count("GET", "/boards/"+board+"/cards") != 0 {
+		t.Errorf("the routine polled Trello although its interval is off: %d tasks, %v", e.tasksCount(), e.fake.Requests())
+	}
+	// O botão segue valendo.
+	if sum, err := e.syncer.SyncNow(context.Background(), e.it.ID); err != nil || sum.Created != 1 {
+		t.Errorf("the button with the routine off for Trello: %+v, %v", sum, err)
+	}
+}
