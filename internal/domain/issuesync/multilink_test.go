@@ -496,3 +496,68 @@ func TestDual_UntickedIntegrationIsSkipped(t *testing.T) {
 		t.Errorf("links = %+v, want the card: an unknown id in skip_publish skips nothing", got.Links)
 	}
 }
+
+// Uma issue que veio do GitHub pode ser espelhada no Trello depois (e um cartão do Trello, no GitHub): o item
+// novo nasce com o que a tarefa tem, os dois ficam em acordo, e uma mudança num lado chega ao outro pela tarefa.
+func TestDual_MirrorAnImportedItem(t *testing.T) {
+	d := newDualEnv(t)
+	ctx := context.Background()
+	taskOf := func(it *integration.Integration, item string) *task.Task {
+		t.Helper()
+		rows, err := d.rows.ByIntegration(it.ID)
+		must(t, err)
+		row := rows[item]
+		if row == nil || row.TaskID == nil {
+			t.Fatalf("item %s has no task (row %+v)", item, row)
+		}
+		tk, err := d.tasks.GetByID(row.TaskID.String())
+		must(t, err)
+		return tk
+	}
+
+	// GitHub para o Trello.
+	n := d.gh.AddIssue(repo, testutil.GitHubIssue{Title: "Veio do GitHub", Body: "corpo", Labels: []string{"bug"}})
+	d.syncGH(issuesync.Full)
+	tk := taskOf(d.ghIt, strconv.Itoa(n))
+	if len(tk.Links) != 1 {
+		t.Fatalf("links = %+v, want only the issue it came from", tk.Links)
+	}
+	if _, err := d.syncer.Publish(ctx, tk.ID, d.trIt.ID); err != nil {
+		t.Fatalf("mirror on Trello: %v", err)
+	}
+	tk = d.reload(tk)
+	card := d.card(tk)
+	if len(tk.Links) != 2 || card.Name != "Veio do GitHub" || card.Desc != "corpo" || !eq(d.cardLabels(card), []string{"bug"}) {
+		t.Fatalf("task %+v, card %+v (labels %v), want the card made from the issue", tk.Links, card, d.cardLabels(card))
+	}
+	d.gh.Reset()
+	d.tr.Reset()
+	if sum := d.syncTrello(issuesync.Full); sum.Created != 0 || sum.Pushed != 0 || d.tr.Writes() != 0 {
+		t.Errorf("round after mirroring = %+v with %d writes, want it settled (the card must not come back as a task)", sum, d.tr.Writes())
+	}
+	if n := len(testListTasks(t, d)); n != 1 {
+		t.Errorf("%d tasks, want one", n)
+	}
+	d.tr.EditCard(tk.LinkFor(d.trIt.ID.String()).ItemID, func(c *testutil.TrelloCard) { c.Name = "Mudou no cartão" })
+	d.syncTrello(issuesync.Full)
+	d.flush()
+	if _, issue := d.issue(tk); issue.Title != "Mudou no cartão" {
+		t.Errorf("issue title = %q, want the change on the mirrored card to reach it through the task", issue.Title)
+	}
+
+	// Trello para o GitHub.
+	d.tr.AddCard(testutil.TrelloCard{ShortLink: "Veio0001", Name: "Veio do Trello", Desc: "descrição do cartão"})
+	d.syncTrello(issuesync.Full)
+	fromCard := taskOf(d.trIt, "Veio0001")
+	if _, err := d.syncer.Publish(ctx, fromCard.ID, d.ghIt.ID); err != nil {
+		t.Fatalf("mirror on GitHub: %v", err)
+	}
+	fromCard = d.reload(fromCard)
+	_, issue := d.issue(fromCard)
+	if len(fromCard.Links) != 2 || issue.Title != "Veio do Trello" || issue.Body != "descrição do cartão" {
+		t.Errorf("task %+v, issue %+v, want the issue made from the card", fromCard.Links, issue)
+	}
+	if _, err := d.syncer.Publish(ctx, fromCard.ID, d.ghIt.ID); !errors.Is(err, issuesync.ErrAlreadyLinked) {
+		t.Errorf("mirroring twice = %v, want task.already_linked", err)
+	}
+}

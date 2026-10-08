@@ -639,6 +639,11 @@ task_detail:
   link: Link
   link_placeholder: https://github.com/…/issues/42
   link_action: Vincular
+  publish_intro: "Esta tarefa ainda não está no {{.provider}}."
+  publish_action: "Publicar no {{.provider}}"
+  publish_github_note: "Vão para a issue o nome, a descrição e as etiquetas; prazo e prioridade ficam só aqui, e o responsável só vai se o e-mail público dele no GitHub for o cadastrado aqui. Depois, a tarefa e a issue ficam sincronizadas."
+  publish_trello_note: "Vão para o cartão o nome, a descrição, as etiquetas e o prazo (como data de entrega), na primeira lista do quadro. Depois, a tarefa e o cartão ficam sincronizados."
+  published: "Tarefa publicada no {{.provider}}."
   delete_title: Excluir tarefa
   delete_text: Apaga a tarefa e todo o tempo registrado nela.
   saved: Tarefa salva.

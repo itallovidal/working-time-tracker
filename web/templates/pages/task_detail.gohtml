@@ -173,6 +173,29 @@
             </div>
           </section>
         </template>
+        {{/* Espelhar: um cartão para cada integração ativa, com a sincronização ligada, em que a tarefa ainda não está
+             (uma issue que veio do GitHub pode virar cartão do Trello, e o contrário). O botão cria o item e liga a tarefa a ele. */}}
+        <template x-for="target in mirrorable()" :key="'publish-' + target.id">
+          <section class="card integration-card" :aria-label="$t('task_detail.publish_action', { provider: target.label })">
+            <div class="card-head">
+              <div class="integration-names">
+                <p class="eyebrow">{{.T "task_detail.integration_eyebrow"}}</p>
+                <h2 x-text="target.label"></h2>
+                <p class="muted small" x-show="target.name" x-text="target.name"></p>
+              </div>
+            </div>
+            <div class="stack">
+              <p class="muted small" x-text="$t('task_detail.publish_intro', { provider: target.label })"></p>
+              <p class="muted small" x-show="target.type === 'github'">{{.T "task_detail.publish_github_note"}}</p>
+              <p class="muted small" x-show="target.type === 'trello'">{{.T "task_detail.publish_trello_note"}}</p>
+              <p class="form-error" x-cloak x-show="errors['publish:' + target.id]" x-text="errors['publish:' + target.id]" role="alert"></p>
+              <button type="button" class="btn btn-secondary" :disabled="pending" @click="publish(target)">
+                <i :class="pending === 'publish:' + target.id ? 'fa-solid fa-rotate fa-spin' : brandIcon(target.type)" aria-hidden="true"></i>
+                <span x-text="$t('task_detail.publish_action', { provider: target.label })"></span>
+              </button>
+            </div>
+          </section>
+        </template>
         {{/* Vincular à mão: só enquanto alguma integração ativa ainda não tem item desta tarefa. */}}
         <template x-if="task && (links().length === 0 || linkable().length > 0)">
           <section class="card integration-card">

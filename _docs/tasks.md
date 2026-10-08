@@ -833,6 +833,14 @@
 
 ---
 
+### Sprint 75: Mirroring an Item on the Other Platform
+
+- [X] S75.1 The task page offers, for every enabled integration with the sync on whose type creates items and in which the task has no item yet, a card **Publicar no Trello** / **Publicar no GitHub** with a two-line note of what goes to the item and a button that calls `POST /api/tasks/:taskId/publish`; the new item shows as an integration card at once, and the warning the platform left is toasted (`mirrorable()`, `publish()`)
+- [X] S75.2 The offer is manual and per task: an issue imported from GitHub becomes a Trello card, and a card from Trello a GitHub issue, without the task moving; a closed task gets no offer; an error of the platform (a token that does not write, a board with no list) shows in the card; the automatic option per integration is left out
+- [X] S75.3 Tests: `TestDual_MirrorAnImportedItem` (an issue made into a card and a card into an issue, the round after settled, a change on the mirrored card reaching the other through the task, mirroring twice refused); checked in the browser (the offer, the button, the card made with the name and description, the offer gone, no offer on a closed task, the platform error in the card, English and 390 px); README, design
+
+---
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open

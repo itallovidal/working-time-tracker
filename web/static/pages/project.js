@@ -1156,6 +1156,28 @@ document.addEventListener('alpine:init', () => {
       const have = new Set(((this.task && this.task.links) || []).map((l) => l.integration_id));
       return this.integrations.filter((i) => !have.has(i.id));
     },
+    // mirrorable são as integrações a que a tarefa ainda não está ligada e que a recebem como um item novo: de um
+    // tipo que sabe criar issues e cartões, e com a sincronização ligada (é ela que mantém os dois iguais depois).
+    // A tarefa fechada não é postada: criaria uma issue já fechada ou um cartão arquivado.
+    mirrorable() {
+      if (!this.task || this.task.status === 'closed') return [];
+      return this.linkable()
+        .filter((i) => {
+          const t = integrationType(i.type);
+          return !!(t && t.sync && i.sync_issues);
+        })
+        .map((i) => ({ id: i.id, type: i.type, label: this.typeLabel(i.type), name: i.display_name }));
+    },
+    // publish espelha a tarefa na integração: cria o item (a issue, o cartão) e liga a tarefa a ele.
+    publish(target) {
+      return this.run('publish:' + target.id, async () => {
+        const res = await api('POST', '/api/tasks/' + this.taskId + '/publish', { integration_id: target.id });
+        this.setTask(res.task);
+        let text = WTT.t('task_detail.published', { provider: target.label });
+        if (res.problem) text += ' ' + WTT.errorText({ code: res.problem, params: { provider: target.label } });
+        toast(text, res.problem ? 'error' : undefined);
+      });
+    },
     brandIcon: (type) => brandIcons[type] || 'fa-solid fa-link',
     // O estado do item vem como a plataforma o chama (open, opened, closed); na tela é Aberta ou Fechada.
     stateLabel(state) {

@@ -629,6 +629,11 @@ task_detail:
   link: Link
   link_placeholder: https://github.com/…/issues/42
   link_action: Link
+  publish_intro: "This task is not on {{.provider}} yet."
+  publish_action: "Post to {{.provider}}"
+  publish_github_note: "The name, the description and the labels go to the issue; deadline and priority stay here only, and the assignee only goes if their public GitHub email is the one registered here. After that, the task and the issue stay in sync."
+  publish_trello_note: "The name, the description, the labels and the deadline (as the due date) go to the card, on the first list of the board. After that, the task and the card stay in sync."
+  published: "Task posted to {{.provider}}."
   delete_title: Delete task
   delete_text: Deletes the task and all the time tracked on it.
   saved: Task saved.
