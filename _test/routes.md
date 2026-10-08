@@ -146,6 +146,7 @@ Se o convite foi criado com email, só esse email consegue aceitar. Um convite v
 | DELETE | `/api/orgs/:orgId` | dono | Exclui a organização com as pessoas e os convites. Falha se ainda houver projetos |
 | GET | `/api/orgs/:orgId/persons` | logado | Pessoas da organização |
 | GET | `/api/orgs/:orgId/overview` | admin | Visão geral da organização: o tempo e o dinheiro de todos os projetos em três janelas, e as horas de cada pessoa. Veja abaixo |
+| GET | `/api/orgs/:orgId/working-now` | admin | Quem está com o ponto aberto na organização e em que tarefas, sem tempo nem dinheiro. Veja abaixo |
 | POST | `/api/orgs/:orgId/projects` | `projects.create` | Cria um projeto |
 | GET | `/api/orgs/:orgId/projects` | logado | Projetos da organização, do mais novo para o mais antigo. Sem `page`, todos num array; com `page`, uma página. Veja abaixo |
 | POST | `/api/orgs/:orgId/customers` | `customers.manage` | Cria um cliente |
@@ -204,6 +205,22 @@ A organização é criada pelo signup, e o `organization_id` vem no `/api/auth/m
 - `money` segue a visão geral do projeto: `pay_amount_cents` (custo) e `bill_amount_cents` (receita) são `null` quando nenhuma sessão da janela tem aquele valor por hora, e `margin_cents` é a receita menos o custo, `null` sem receita. As horas do dono têm custo `0`, então entram inteiras na margem.
 - `by_person` traz **todas** as pessoas da organização, também as que ainda não bateram ponto (com zeros), da que mais trabalhou no total para a que menos; a soma de cada janela é a das linhas. `working_now` marca quem tem uma sessão aberta em qualquer projeto, e `people.working_now` conta essas pessoas. `working_on` são as tarefas que a pessoa tem na sessão aberta neste instante (os intervalos que ainda não terminaram), na ordem em que entraram, cada uma com o projeto, com id e nome para a tela levar até elas; vem `[]`, nunca `null`, para quem não trabalha agora e para quem abriu uma sessão que ficou sem tarefa. A tela da página inicial usa isso e não ordena nem compara as pessoas pelas horas.
 - O total de `all_time` é a soma das visões gerais dos projetos (`GET /api/projects/:projectId/overview`).
+
+### Quem está trabalhando agora
+
+`GET /api/orgs/:orgId/working-now` é só de admins (`403` para um membro, `404` para outra organização ou um id malformado, `401` sem sessão). Lê só as sessões abertas, então é leve o bastante para a tela repetir de 30 em 30 segundos: a bolinha da Lista de tarefas e a coluna Agora dos colaboradores leem dela. Devolve um array, vazio (nunca `null`) quando ninguém trabalha, com **uma linha por pessoa com o ponto aberto**, da sessão que começou primeiro para a última; quem não aparece não está trabalhando.
+
+```json
+[
+  { "person_id": "…",
+    "working_on": [
+      { "task": { "id": "…", "name": "Relatório de repasses" }, "project": { "id": "…", "name": "Painel do Lojista" } }
+    ] }
+]
+```
+
+- `working_on` são as tarefas que a pessoa tem na sessão neste instante (os intervalos sem fim), na ordem em que entraram, cada uma com o projeto. Fica `[]` (nunca `null`) numa sessão que já ficou sem tarefa: a pessoa continua "trabalhando agora".
+- É a mesma regra do `working_on` da visão geral da organização, sem somar o tempo de ninguém. Não há tempo de espera: quem esqueceu de bater a saída continua aparecendo até a sessão ser encerrada.
 
 ### Perfil da organização
 

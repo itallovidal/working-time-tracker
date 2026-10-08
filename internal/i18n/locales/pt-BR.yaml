@@ -437,9 +437,11 @@ help:
       filters: "A busca e os filtros (prazo, prioridade, status e etiquetas) ficam na URL: dá para guardar ou mandar o link da lista filtrada."
       new: "“Nova tarefa” abre um formulário em passos: a tarefa, os detalhes e, se o projeto tem integrações, as plataformas onde ela também deve existir."
       open: "Clique numa linha para abrir a tarefa."
+      presence: "Para o dono e os administradores, uma bolinha ao lado do responsável mostra se ele está com o ponto aberto agora: verde, sim; cinza, não. Passe o mouse para ver em que tarefa."
     project_people:
       title: "Projeto: Colaboradores"
       text: "Quem trabalha no projeto e em quais times, em duas visões: Pessoas e Times. Aqui é só para ler; para mudar alguma coisa, use a Gestão."
+      presence: "Para o dono e os administradores, a coluna “Agora” mostra quem está com o ponto aberto e em qual tarefa. Atualiza sozinha a cada 30 segundos."
     mgmt_overview:
       title: "Gestão: Visão geral"
       intro: "O botão “Gestão”, no fim das abas do projeto, aparece para quem tem alguma permissão no projeto. Cada aba da Gestão aparece conforme a permissão da pessoa."
@@ -1090,6 +1092,10 @@ project_settings:
   delete_title: Excluir projeto
   delete_text: Apaga o projeto com todos os times, tarefas, sessões de trabalho e integrações.
   saved: Projeto salvo.
+
+presence:
+  col: Agora
+  working_on: "Trabalhando agora em {{.task}} · {{.project}}"
 
 collab:
   wizard:

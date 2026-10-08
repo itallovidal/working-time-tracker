@@ -7,6 +7,7 @@
        Action      "claim" (Pegar, na lista Sem responsável), "start" (Iniciar ou Adicionar à sessão, em Minhas
                    tarefas) ou "" (sem coluna de ação)
        ActionShow  a expressão que liga a coluna de ação
+     Para o dono e os admins a célula do responsável leva a bolinha de $store.presence (a página chama $store.presence.watch() ao abrir).
      A página tem de ter o que as linhas chamam: isRunning, statusClass, priorityClass, deadlineClass,
      deadlineLabel, linkLabel, linkIcon, linkProvider, linkItem (os quatro vêm de taskBadges) e, conforme a ação, claim ou startTask, otherProject e sessionHere. */}}
 {{define "task_table"}}
@@ -38,7 +39,15 @@
             <span class="badge" :class="priorityClass(t.priority)" x-text="WTT.fmt.priority(t.priority)"></span>
           </td>
           <td x-show="{{$.Assignee}}">
+            {{if .IsAdmin}}
+            {{/* Só o dono e os admins: a bolinha diz se o responsável está com o ponto aberto agora, em qualquer projeto; a dica diz em quê. */}}
+            <span class="presence-cell">
+              <span class="presence-dot" role="img" x-show="t.assignee_id" :class="{ 'is-on': $store.presence.working(t.assignee_id) }" :title="$store.presence.label(t.assignee_id)" :aria-label="$store.presence.label(t.assignee_id)"></span>
+              <span x-text="t.assignee ? t.assignee.name : ''"></span>
+            </span>
+            {{else}}
             <span x-text="t.assignee ? t.assignee.name : ''"></span>
+            {{end}}
           </td>
           <td>
             <span class="badge num" :class="deadlineClass(t)" x-text="deadlineLabel(t)"></span>

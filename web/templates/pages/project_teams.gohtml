@@ -108,6 +108,7 @@
             <tr>
               <th>{{.T "collab.col_person"}}</th>
               <th>{{.T "collab.col_teams"}}</th>
+              {{if .IsAdmin}}<th>{{.T "presence.col"}}</th>{{end}}
               {{if .CanDo "rates.view"}}<th x-text="$t('collab.col_rate', { unit: WTT.fmt.moneyUnit() })"></th>{{end}}
               {{if and (.CanDo "rates.view") (.CanDo "billing.view")}}<th>{{.T "collab.col_margin"}}</th>{{end}}
               {{if .CanDoAny "collaborators.manage" "rates.manage" "teams.manage"}}<th class="actions"><span class="sr-only">{{.T "common.actions"}}</span></th>{{end}}
@@ -132,6 +133,23 @@
                     <span class="muted" x-show="c.teams.length === 0">{{.T "collab.no_team"}}</span>
                   </div>
                 </td>
+                {{if .IsAdmin}}
+                {{/* Só o dono e os admins: se a pessoa está com o ponto aberto agora (em qualquer projeto) e em que tarefa. */}}
+                <td>
+                  <div class="presence-cell">
+                    <span class="presence-dot" role="img" :class="{ 'is-on': $store.presence.working(c.person.id) }" :title="$store.presence.label(c.person.id)" :aria-label="$store.presence.label(c.person.id)"></span>
+                    <span class="muted" x-show="!nowOf(c)">{{.T "home.team.idle"}}</span>
+                    <span class="muted" x-show="nowOf(c) && nowOf(c).working_on.length === 0">{{.T "home.team.no_task"}}</span>
+                    <template x-if="nowOf(c) && nowOf(c).working_on.length > 0">
+                      <span>
+                        <strong x-text="nowOf(c).working_on[0].task.name"></strong>
+                        <span class="muted" x-show="nowElsewhere(nowOf(c).working_on[0])">· <span x-text="nowOf(c).working_on[0].project.name"></span></span>
+                        <span class="muted" x-show="nowOf(c).working_on.length > 1" :title="nowMore(nowOf(c))" x-text="$t('home.team.more_tasks', { count: nowOf(c).working_on.length - 1 })"></span>
+                      </span>
+                    </template>
+                  </div>
+                </td>
+                {{end}}
                 {{if .CanDo "rates.view"}}
                 <td class="num">
                   <span class="badge badge-accent" x-show="c.person.is_owner" title="{{.T "collab.owner_rate_hint"}}">{{.T "collab.owner_badge"}}</span>

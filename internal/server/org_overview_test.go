@@ -1,6 +1,7 @@
 package server_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -112,6 +113,71 @@ func TestOrgOverview_AdminOnly(t *testing.T) {
 	}
 	if rec := do(e, "GET", "/api/orgs/not-a-uuid/overview", "", admin.session); rec.Code != http.StatusNotFound {
 		t.Errorf("GET overview of a malformed org id = %d, want 404", rec.Code)
+	}
+}
+
+// A lista de quem trabalha agora é a da visão geral sem o tempo e sem o dinheiro: só quem está com o ponto
+// aberto, em qualquer projeto, e as tarefas em que está. Quem pede é admin (o membro recebe 403, outra
+// organização 404 e sem sessão 401), e a lista nunca vem nula.
+func TestOrgWorkingNow_AdminOnly(t *testing.T) {
+	e := newServer(t)
+	admin := signup(t, e, "Org", "ana@test.com")
+	bia := invite(t, e, admin, "bia@test.com", "member")
+	other := signup(t, e, "Outra", "caio@outra.com")
+	projectID := createEmptyProject(t, e, admin, "Projeto Alfa")
+	prj := "/api/projects/" + projectID
+	path := "/api/orgs/" + admin.orgID + "/working-now"
+
+	// Ninguém bateu o ponto: a lista vem vazia, e não nula.
+	rec := do(e, "GET", path, "", admin.session)
+	if rec.Code != http.StatusOK || strings.TrimSpace(rec.Body.String()) != "[]" {
+		t.Fatalf("admin GET %s with nobody working = %d %q, want 200 []", path, rec.Code, rec.Body.String())
+	}
+
+	allocate(t, e, admin, projectID, bia.id, 2000)
+	taskID := decode(t, do(e, "POST", prj+"/tasks", `{"name":"Tarefa","assignee_id":"`+bia.id+`"}`, admin.session))["id"].(string)
+	if rec := do(e, "POST", prj+"/work-sessions/clock-in", `{"task_id":"`+taskID+`"}`, bia.session); rec.Code != http.StatusCreated {
+		t.Fatalf("clock-in = %d: %s", rec.Code, rec.Body.String())
+	}
+
+	rec = do(e, "GET", path, "", admin.session)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("admin GET %s = %d: %s", path, rec.Code, rec.Body.String())
+	}
+	var list []struct {
+		PersonID  string `json:"person_id"`
+		WorkingOn []struct {
+			Task    struct{ ID, Name string }
+			Project struct{ ID, Name string }
+		} `json:"working_on"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &list); err != nil {
+		t.Fatalf("decode %s: %v: %s", path, err, rec.Body.String())
+	}
+	if len(list) != 1 || list[0].PersonID != bia.id || len(list[0].WorkingOn) != 1 {
+		t.Fatalf("working now = %s, want only Bia, on her one task", rec.Body.String())
+	}
+	if on := list[0].WorkingOn[0]; on.Task.ID != taskID || on.Task.Name != "Tarefa" || on.Project.ID != projectID || on.Project.Name != "Projeto Alfa" {
+		t.Errorf("Bia's working_on = %+v, want the task %s (Tarefa) of the project %s (Projeto Alfa)", on, taskID, projectID)
+	}
+	// A lista não leva tempo nem dinheiro.
+	for _, leak := range []string{"seconds", "cents", "email"} {
+		if strings.Contains(rec.Body.String(), leak) {
+			t.Errorf("working now leaks %q: %s", leak, rec.Body.String())
+		}
+	}
+
+	if rec := do(e, "GET", path, "", bia.session); rec.Code != http.StatusForbidden {
+		t.Errorf("member GET %s = %d, want 403", path, rec.Code)
+	}
+	if rec := do(e, "GET", path, "", other.session); rec.Code != http.StatusNotFound {
+		t.Errorf("another org GET %s = %d, want 404", path, rec.Code)
+	}
+	if rec := do(e, "GET", path, "", ""); rec.Code != http.StatusUnauthorized {
+		t.Errorf("GET %s without session = %d, want 401", path, rec.Code)
+	}
+	if rec := do(e, "GET", "/api/orgs/not-a-uuid/working-now", "", admin.session); rec.Code != http.StatusNotFound {
+		t.Errorf("GET working-now of a malformed org id = %d, want 404", rec.Code)
 	}
 }
 

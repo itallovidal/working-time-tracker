@@ -427,9 +427,11 @@ help:
       filters: "The search and the filters (deadline, priority, status and labels) stay in the URL: you can save or send the link to the filtered list."
       new: "“New task” opens a form in steps: the task, the details and, if the project has integrations, the platforms where it should also exist."
       open: "Click a row to open the task."
+      presence: "For the owner and the administrators, a dot next to the assignee shows whether they have the clock running right now: green, yes; grey, no. Hover it to see which task."
     project_people:
       title: "Project: Collaborators"
       text: "Who works on the project and in which teams, in two views: People and Teams. This is read-only; to change anything, use Management."
+      presence: "For the owner and the administrators, the “Now” column shows who has the clock running and on which task. It refreshes by itself every 30 seconds."
     mgmt_overview:
       title: "Management: Overview"
       intro: "The “Management” button, at the end of the project tabs, appears for whoever has some permission on the project. Each Management tab appears according to the person's permission."
@@ -1080,6 +1082,10 @@ project_settings:
   delete_title: Delete project
   delete_text: Deletes the project with all its teams, tasks, work sessions and integrations.
   saved: Project saved.
+
+presence:
+  col: Now
+  working_on: "Working now on {{.task}} · {{.project}}"
 
 collab:
   wizard:

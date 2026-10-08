@@ -585,6 +585,54 @@
       },
     });
 
+    // presence guarda quem está com o ponto aberto na organização, para o dono e os admins: a bolinha da
+    // lista de tarefas e a coluna "Agora" dos colaboradores leem daqui. Quem não é admin não chama nada
+    // (o servidor responde 403 de qualquer jeito). A página que usa chama watch(); daí em diante a lista
+    // se atualiza de 30 em 30 segundos enquanto a aba está à vista, e ao voltar para ela. Se uma chamada
+    // falha, vale a última lista.
+    Alpine.store('presence', {
+      enabled: false,
+      byPerson: {},
+      timer: null,
+      init() {
+        const me = window.WTT.boot.me;
+        this.enabled = !!me && me.role === 'admin';
+      },
+      watch() {
+        if (!this.enabled || this.timer) return;
+        this.refresh();
+        this.timer = setInterval(() => { if (document.visibilityState === 'visible') this.refresh(); }, 30000);
+        document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') this.refresh(); });
+        // O ponto que o próprio admin bate ou fecha também muda a bolinha dele.
+        window.addEventListener('wtt:sessions-changed', () => this.refresh());
+      },
+      async refresh() {
+        try {
+          const list = await api('GET', '/api/orgs/' + window.WTT.boot.me.organization_id + '/working-now');
+          this.byPerson = Object.fromEntries(list.map((p) => [p.person_id, p]));
+        } catch (e) {
+          // A bolinha só deixa de mudar; nada a avisar.
+        }
+      },
+      // of é o que a pessoa faz agora (working_on[] com tarefa e projeto), ou null se o ponto está fechado.
+      of(personId) {
+        return this.byPerson[personId] || null;
+      },
+      working(personId) {
+        return !!this.of(personId);
+      },
+      // label é a dica da bolinha: em que a pessoa está, ou que o ponto está fechado.
+      label(personId) {
+        const p = this.of(personId);
+        if (!p) return t('home.team.idle');
+        if (p.working_on.length === 0) return t('home.team.working');
+        const [first, ...rest] = p.working_on;
+        const lines = [t('presence.working_on', { task: first.task.name, project: first.project.name })];
+        if (rest.length > 0) lines.push(t('home.team.more_tasks', { count: rest.length }));
+        return lines.join('\n');
+      },
+    });
+
     // sessionView é o modal de uma sessão (partials/session_modal.gohtml): o resumo, as tarefas
     // com o intervalo de cada uma e, para quem bateu o ponto e para os admins, o que muda as
     // tarefas. Abre de qualquer tela com Alpine.store('sessionView').open(sessao); depois de

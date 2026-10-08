@@ -263,3 +263,92 @@ func TestOrganization_WorkingOn(t *testing.T) {
 		}
 	}
 }
+
+// A lista de quem trabalha agora traz só quem está com o ponto aberto, da sessão que começou primeiro
+// para a última, cada um com as tarefas que tem na sessão neste instante e o projeto delas. Uma sessão
+// sem tarefa ainda é "trabalhando agora", com a lista vazia (e nunca nula); quem fechou o ponto, quem
+// não bateu e a sessão de outra organização não aparecem.
+func TestWorkingNow(t *testing.T) {
+	f := setup(t)
+	ana, bruno, carla, diego := f.person("Ana"), f.person("Bruno"), f.person("Carla"), f.person("Diego")
+	f.person("Elisa") // sem ponto nenhum
+	x, y := f.project("Projeto X"), f.project("Projeto Y")
+	named := func(projectID, name string) uuid.UUID {
+		id := f.task(projectID, ana, nil)
+		testClient.Task.UpdateOneID(id).SetName(name).ExecX(context.Background())
+		return id
+	}
+	login, slips := named(x, "Login"), named(y, "Boletos")
+	ctx := context.Background()
+
+	// O Diego é o primeiro a abrir, e a tarefa dele saiu da sessão; a Carla está no Login; o Bruno, em outro projeto.
+	diegoSession := testutil.Session(t, testClient, login, diego, f.now.Add(-3*time.Hour), nil, nil, nil)
+	testClient.WorkSessionTask.Update().Where(worksessiontask.SessionID(diegoSession.ID)).SetUntilAt(f.now.Add(-10 * time.Minute)).ExecX(ctx)
+	testutil.Session(t, testClient, login, carla, f.now.Add(-2*time.Hour), nil, nil, nil)
+	testutil.Session(t, testClient, slips, bruno, f.now.Add(-time.Hour), nil, nil, nil)
+	// A Ana já fechou o ponto dela.
+	closed := f.now.Add(-time.Hour)
+	testutil.Session(t, testClient, login, ana, f.now.Add(-5*time.Hour), &closed, nil, nil)
+
+	// Outra organização com o ponto aberto: não entra.
+	otherOrg, err := organization.NewService(organization.NewStore(testClient)).Create("Outra")
+	if err != nil {
+		t.Fatalf("other org: %v", err)
+	}
+	zed, err := person.NewService(person.NewStore(testClient)).Create(otherOrg.ID.String(), "Zed", "zed@outra.com")
+	if err != nil {
+		t.Fatalf("other person: %v", err)
+	}
+	z, err := f.projects.Create(otherOrg.ID.String(), "Projeto Z", "", 0, project.Routine{})
+	if err != nil {
+		t.Fatalf("other project: %v", err)
+	}
+	testutil.Session(t, testClient, f.task(z.ID.String(), zed.ID, nil), zed.ID, f.now.Add(-time.Hour), nil, nil, nil)
+
+	got, err := f.svc.WorkingNow(f.orgID)
+	if err != nil {
+		t.Fatalf("working now: %v", err)
+	}
+	var order []uuid.UUID
+	for _, p := range got {
+		order = append(order, p.PersonID)
+		if p.WorkingOn == nil {
+			t.Errorf("%s: working_on is nil, want an empty list so the JSON says [] and not null", p.PersonID)
+		}
+	}
+	if want := []uuid.UUID{diego, carla, bruno}; !slices.Equal(order, want) {
+		t.Fatalf("working now = %v, want Diego, Carla and Bruno in the order they opened", order)
+	}
+	raw, _ := json.Marshal(got)
+	want := fmt.Sprintf(`[{"person_id":"%s","working_on":[]},`+
+		`{"person_id":"%s","working_on":[{"task":{"id":"%s","name":"Login"},"project":{"id":"%s","name":"Projeto X"}}]},`+
+		`{"person_id":"%s","working_on":[{"task":{"id":"%s","name":"Boletos"},"project":{"id":"%s","name":"Projeto Y"}}]}]`,
+		diego, carla, login, x, bruno, slips, y)
+	if string(raw) != want {
+		t.Errorf("working now JSON = %s\nwant               %s", raw, want)
+	}
+
+	// A outra organização só vê o Zed.
+	others, err := f.svc.WorkingNow(otherOrg.ID.String())
+	if err != nil {
+		t.Fatalf("working now (other organization): %v", err)
+	}
+	if len(others) != 1 || others[0].PersonID != zed.ID {
+		t.Errorf("other organization = %v, want only Zed", others)
+	}
+	// Ninguém trabalhando é uma lista vazia, e nunca nula.
+	quiet, err := organization.NewService(organization.NewStore(testClient)).Create("Quieta")
+	if err != nil {
+		t.Fatalf("quiet org: %v", err)
+	}
+	none, err := f.svc.WorkingNow(quiet.ID.String())
+	if err != nil {
+		t.Fatalf("working now (quiet organization): %v", err)
+	}
+	if raw, _ := json.Marshal(none); string(raw) != "[]" {
+		t.Errorf("nobody working JSON = %s, want []", raw)
+	}
+	if _, err := f.svc.WorkingNow("not-a-uuid"); !errors.Is(err, database.ErrNotFound) {
+		t.Errorf("malformed organization id = %v, want ErrNotFound", err)
+	}
+}

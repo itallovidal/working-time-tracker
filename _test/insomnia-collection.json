@@ -272,6 +272,18 @@
       "body": {}
     },
     {
+      "_id": "req_02_03c",
+      "_type": "request",
+      "parentId": "fld_02",
+      "name": "Quem está trabalhando agora (admin: ponto aberto e tarefas)",
+      "method": "GET",
+      "url": "{{base_url}}/api/orgs/{{org_id}}/working-now",
+      "authentication": {},
+      "metaSortKey": 3.6,
+      "headers": [],
+      "body": {}
+    },
+    {
       "_id": "req_02_04",
       "_type": "request",
       "parentId": "fld_02",

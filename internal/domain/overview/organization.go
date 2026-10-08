@@ -176,47 +176,80 @@ func (s *Service) Organization(orgID, viewerID string) (*OrgOverview, error) {
 	return o, nil
 }
 
+// Presence diz que uma pessoa está com o ponto aberto e em que tarefas, para a tela marcar quem
+// trabalha agora sem somar o tempo de ninguém.
+type Presence struct {
+	PersonID uuid.UUID `json:"person_id"`
+	// WorkingOn são as tarefas que a pessoa tem na sessão aberta neste instante, na ordem em que
+	// entraram. Vem vazia (nunca nula) quando a sessão já ficou sem tarefa.
+	WorkingOn []WorkingOn `json:"working_on"`
+}
+
+// WorkingNow devolve quem está com o ponto aberto em qualquer projeto da organização, da sessão
+// que começou primeiro para a última. Quem não aparece não está trabalhando. É bem mais leve que
+// a visão geral: não soma o tempo de nenhuma sessão, então serve a quem consulta de tempos em
+// tempos. Um ID malformado vale como "não encontrado".
+func (s *Service) WorkingNow(orgID string) ([]Presence, error) {
+	if _, err := uuid.Parse(orgID); err != nil {
+		return nil, database.ErrNotFound
+	}
+	return s.openWork(orgID)
+}
+
 // addWorkingOn põe em cada pessoa com o ponto aberto as tarefas que estão na sessão dela agora
 // (os intervalos sem fim), com o nome do projeto. Só olha as pessoas que a conta principal já
-// marcou como trabalhando, para working_on nunca vir cheio sem working_now. Um projeto
-// excluído no meio do caminho deixa de aparecer, sem derrubar a resposta.
+// marcou como trabalhando, para working_on nunca vir cheio sem working_now.
 func (s *Service) addWorkingOn(orgID string, byPerson map[uuid.UUID]*OrgPersonTotal) error {
-	open, err := s.deps.Sessions.ListOpenByOrganization(orgID)
+	open, err := s.openWork(orgID)
 	if err != nil {
 		return err
 	}
-	projects := map[uuid.UUID]*Ref{} // nil: o projeto não existe mais
-	for i := range open {
-		sess := &open[i]
-		pt := byPerson[sess.PersonID]
-		if pt == nil || !pt.WorkingNow {
-			continue
-		}
-		project, seen := projects[sess.ProjectID]
-		if !seen {
-			p, err := s.deps.Projects.Get(sess.ProjectID.String())
-			switch {
-			case err == nil:
-				project = &Ref{ID: p.ID, Name: p.Name}
-			case !errors.Is(err, database.ErrNotFound):
-				return err
-			}
-			projects[sess.ProjectID] = project
-		}
-		if project == nil {
-			continue
-		}
-		for _, link := range sess.Tasks {
-			if link.UntilAt != nil || link.Task == nil {
-				continue
-			}
-			pt.WorkingOn = append(pt.WorkingOn, WorkingOn{
-				Task:    Ref{ID: link.Task.ID, Name: link.Task.Name},
-				Project: *project,
-			})
+	for _, p := range open {
+		if pt := byPerson[p.PersonID]; pt != nil && pt.WorkingNow {
+			pt.WorkingOn = append(pt.WorkingOn, p.WorkingOn...)
 		}
 	}
 	return nil
+}
+
+// openWork lê as sessões abertas da organização e devolve, por pessoa, as tarefas dela agora
+// (os intervalos sem fim), com o nome do projeto. Um projeto excluído no meio do caminho deixa
+// de aparecer, sem derrubar a resposta; a pessoa continua na lista, sem tarefas.
+func (s *Service) openWork(orgID string) ([]Presence, error) {
+	open, err := s.deps.Sessions.ListOpenByOrganization(orgID)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]Presence, 0, len(open))
+	projects := map[uuid.UUID]*Ref{} // nil: o projeto não existe mais
+	for i := range open {
+		sess := &open[i]
+		p := Presence{PersonID: sess.PersonID, WorkingOn: []WorkingOn{}}
+		project, seen := projects[sess.ProjectID]
+		if !seen {
+			got, err := s.deps.Projects.Get(sess.ProjectID.String())
+			switch {
+			case err == nil:
+				project = &Ref{ID: got.ID, Name: got.Name}
+			case !errors.Is(err, database.ErrNotFound):
+				return nil, err
+			}
+			projects[sess.ProjectID] = project
+		}
+		if project != nil {
+			for _, link := range sess.Tasks {
+				if link.UntilAt != nil || link.Task == nil {
+					continue
+				}
+				p.WorkingOn = append(p.WorkingOn, WorkingOn{
+					Task:    Ref{ID: link.Task.ID, Name: link.Task.Name},
+					Project: *project,
+				})
+			}
+		}
+		out = append(out, p)
+	}
+	return out, nil
 }
 
 // addMargin calcula a margem: a receita menos o custo. Sem receita não há margem para mostrar.

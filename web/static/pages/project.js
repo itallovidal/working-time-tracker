@@ -596,6 +596,8 @@ document.addEventListener('alpine:init', () => {
     get publishStep() { return this.integrations.length > 0; },
     async init() {
       this.readURL();
+      // Para o dono e os admins: a bolinha do responsável (partials/task_table.gohtml).
+      Alpine.store('presence').watch();
       const members = api('GET', '/api/projects/' + project.id + '/members')
         .then((list) => { this.members = list || []; })
         .catch((e) => { this.errors.members = e.message; });
@@ -1683,6 +1685,8 @@ document.addEventListener('alpine:init', () => {
     person: { id: '', name: '', email: '', is_owner: false, is_admin: false, preset: 'member', rate: '', team_ids: [] },
     async init() {
       this.$watch('search', () => { this.page = 1; }); // uma busca nova começa da primeira página
+      // Para o dono e os admins: a coluna "Agora" da tabela de pessoas.
+      Alpine.store('presence').watch();
       try {
         // Fora da Gestão a aba é só de leitura, para admin também.
         const manage = !WTT.boot.readonly;
@@ -1707,6 +1711,17 @@ document.addEventListener('alpine:init', () => {
       } finally {
         this.loading = false;
       }
+    },
+    // A coluna "Agora" (só admins): o que a pessoa faz neste instante, lido do store presence. A tarefa só leva o
+    // nome do projeto quando é de outro projeto que o desta página; as outras tarefas da sessão vão na dica.
+    nowOf(c) {
+      return Alpine.store('presence').of(c.person.id);
+    },
+    nowElsewhere(w) {
+      return w.project.id !== project.id;
+    },
+    nowMore(p) {
+      return p.working_on.slice(1).map((w) => w.task.name + ' · ' + w.project.name).join('\n');
     },
     // reload busca os colaboradores de novo: quem entra ou sai de um time, ou do
     // projeto, muda a tabela de pessoas e os cartões dos times de uma vez.

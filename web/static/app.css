@@ -675,6 +675,11 @@ td.actions { text-align: right; white-space: nowrap; }
   70% { box-shadow: 0 0 0 8px transparent; }
   100% { box-shadow: 0 0 0 0 transparent; }
 }
+/* A bolinha de quem trabalha agora (store presence): verde com o ponto aberto, cinza sem ele. Estática de propósito:
+   fica na lista o tempo todo, e o pulso do cabeçalho já é o da própria pessoa. */
+.presence-cell { display: inline-flex; align-items: center; gap: 8px; }
+.presence-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; flex: none; background: var(--rule-strong); }
+.presence-dot.is-on { background: var(--ok); }
 /* O balão da sessão aberta (partials/active_session.gohtml): preso ao canto de baixo à direita, em todas as telas, acima
    da barra (20) e abaixo do modal (40). Fechado é só a faixa verde; aberto ganha a moldura e os cartões das tarefas,
    que crescem para cima. Com ele no ar, o body leva has-dock: a página ganha respiro embaixo e os avisos sobem para
