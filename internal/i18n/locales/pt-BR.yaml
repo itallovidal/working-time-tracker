@@ -611,14 +611,12 @@ my_tasks:
 
 task_detail:
   loading: Carregando a tarefa…
-  edit_title: Editar tarefa
+  edit_title: Editar nome e descrição
+  edit_details: Editar detalhes
+  details_saved: Detalhes atualizados.
   claim: Pegar tarefa
   claim_title: Associar a tarefa a mim, sem iniciar o ponto
   claimed: Você pegou a tarefa. Ela está em Minhas tarefas.
-  quick: Atualização rápida
-  quick_title: Atualização rápida
-  quick_hint: Muda só o status, a prioridade e as etiquetas. Para o resto, use Editar tarefa.
-  quick_saved: Tarefa atualizada.
   back: Voltar à lista
   breadcrumb: Você está em
   no_description: Esta tarefa não tem descrição.
@@ -647,7 +645,7 @@ task_detail:
   delete_text: Apaga a tarefa e todo o tempo registrado nela.
   saved: Tarefa salva.
   sync_note: "Esta tarefa está ligada a um item sincronizado (uma issue ou um cartão): ao salvar, as mudanças vão para ele."
-  sync_note_quick: "Esta tarefa está ligada a um item sincronizado (uma issue ou um cartão): o status Fechada e as etiquetas vão para ele."
+  sync_note_details: "Esta tarefa está ligada a um item sincronizado (uma issue ou um cartão): o status Fechada, as etiquetas e o prazo (onde a plataforma tem) vão para ele."
   integration_eyebrow: Integração
   open_in: "Abrir no {{.provider}}"
   state_open: Aberta

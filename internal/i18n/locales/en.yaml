@@ -601,14 +601,12 @@ my_tasks:
 
 task_detail:
   loading: Loading the task…
-  edit_title: Edit task
+  edit_title: Edit name and description
+  edit_details: Edit details
+  details_saved: Details updated.
   claim: Take task
   claim_title: Assign the task to me, without starting the clock
   claimed: You took the task. It is in My tasks.
-  quick: Quick update
-  quick_title: Quick update
-  quick_hint: Changes only the status, the priority and the labels. For everything else, use Edit task.
-  quick_saved: Task updated.
   back: Back to the list
   breadcrumb: You are here
   no_description: This task has no description.
@@ -637,7 +635,7 @@ task_detail:
   delete_text: Deletes the task and all the time tracked on it.
   saved: Task saved.
   sync_note: "This task is linked to a synced item (an issue or a card): on save, the changes go to it."
-  sync_note_quick: "This task is linked to a synced item (an issue or a card): the Closed status and the labels go to it."
+  sync_note_details: "This task is linked to a synced item (an issue or a card): the Closed status, the labels and the deadline (where the platform has one) go to it."
   integration_eyebrow: Integration
   open_in: "Open in {{.provider}}"
   state_open: Open

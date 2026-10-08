@@ -76,23 +76,10 @@ document.addEventListener('alpine:init', () => {
     },
   });
 
-  // taskWizard é o passo a passo dos modais Nova tarefa e Editar tarefa: a etapa 1 é o nome e
-  // a descrição (em Markdown, com pré-visualização) e a etapa 2, o resto. Quem usa tem um
-  // `draft` e labelTools. As duas etapas ficam na página, só escondidas, e o formulário não
-  // valida sozinho (novalidate): quem confere cada etapa é submitStep.
-  const taskWizard = () => ({
-    step: 1,
-    hasStatus: false, // o status só se escolhe ao editar; a tarefa nova nasce em backlog
-    // A etapa 3, Integrações, só existe ao criar uma tarefa num projeto com integração ativa: quem a usa
-    // define publishStep. Ao editar fica false, e o modal tem as duas etapas de sempre.
-    publishStep: false,
+  // mdTools é o Escrever e Pré-visualizar da descrição de uma tarefa (partials/task_fields.gohtml, task_text),
+  // que o passo a passo da tarefa nova e o modal Editar nome e descrição dividem. Quem usa tem um `draft` com a descrição.
+  const mdTools = () => ({
     mdView: 'write', // write ou preview
-    resetWizard() {
-      this.step = 1;
-      this.mdView = 'write';
-      this.errors.name = '';
-      this.errors.assignee = '';
-    },
     previewHTML() {
       return WTT.markdown(this.draft.description);
     },
@@ -100,6 +87,25 @@ document.addEventListener('alpine:init', () => {
     setMd(view, focus) {
       this.mdView = view;
       if (focus) this.$nextTick(() => (view === 'write' ? this.$refs.mdWrite : this.$refs.mdPreview).focus());
+    },
+  });
+
+  // taskWizard é o passo a passo do modal Nova tarefa: a etapa 1 é o nome e a descrição (em Markdown,
+  // com pré-visualização) e a etapa 2, o resto. Editar uma tarefa não passa por aqui: o nome e a descrição,
+  // e os detalhes, têm um modal cada na página da tarefa. Quem usa tem um
+  // `draft` e labelTools. As duas etapas ficam na página, só escondidas, e o formulário não
+  // valida sozinho (novalidate): quem confere cada etapa é submitStep.
+  const taskWizard = () => ({
+    ...mdTools(),
+    step: 1,
+    // A etapa 3, Integrações, só existe ao criar uma tarefa num projeto com integração ativa: quem a usa
+    // define publishStep.
+    publishStep: false,
+    resetWizard() {
+      this.step = 1;
+      this.mdView = 'write';
+      this.errors.name = '';
+      this.errors.assignee = '';
     },
     // focusStep põe o foco no primeiro campo da etapa: o store do modal só foca ao abrir.
     focusStep() {
@@ -842,9 +848,8 @@ document.addEventListener('alpine:init', () => {
 
   Alpine.data('taskDetail', () => ({
     ...form(),
-    ...taskWizard(),
+    ...mdTools(),
     taskId: WTT.boot.task_id,
-    hasStatus: true,
     loading: true,
     task: null,
     members: [],
@@ -853,10 +858,10 @@ document.addEventListener('alpine:init', () => {
     ...labelTools(),
     draft: { name: '', description: '', assign: 'none', assignee_id: '', deadline: '', priority: 'none', status: 'backlog', label_ids: [] }, // assign: me, none ou other
     deadlineWas: '', // o dia do prazo quando a tarefa foi lida: só se manda o prazo se a pessoa o mudou
+    assigneeWas: '', // o responsável quando a tarefa foi lida ('' é nenhum): idem
     linkForm: { integration_id: '', external_item_id: '', external_item_url: '' },
     external: { loading: false, details: null, error: '' },
     syncProblem: '', // o aviso que a última sincronização da tarefa deixou
-    confirmDelete: false,
     async init() {
       try {
         const [task, members, integrations, sessions] = await Promise.all([
@@ -881,6 +886,7 @@ document.addEventListener('alpine:init', () => {
     setTask(t) {
       this.task = t;
       this.deadlineWas = hasDeadlineDate(t.deadline) ? WTT.fmt.dateInput(t.deadline) : '';
+      this.assigneeWas = t.assignee_id || '';
       this.draft = {
         name: t.name,
         description: t.description || '',
@@ -923,38 +929,51 @@ document.addEventListener('alpine:init', () => {
         this.external = { loading: false, details: null, error: e.message };
       }
     },
-    // O lápis abre o modal com um rascunho da tarefa; nada vai ao servidor antes de Salvar.
+    // O lápis ao lado do nome abre o modal com um rascunho do nome e da descrição; nada vai ao servidor antes
+    // de Salvar.
     openEdit() {
       this.setTask(this.task);
       this.errors.save = '';
-      this.errors.delete = '';
-      this.errors.label = '';
-      this.newLabel = '';
-      this.confirmDelete = false;
-      this.resetWizard();
+      this.errors.name = '';
+      this.mdView = 'write';
       Alpine.store('modal').open('task-edit', WTT.t('task_detail.edit_title'), () => !this.pending);
     },
-    // A atualização rápida abre um modal só com o status, a prioridade e as etiquetas, sem a edição
-    // da tarefa inteira; usa o mesmo rascunho da edição, refeito a partir da tarefa a cada abertura.
-    openQuick() {
+    // O botão do cartão de Detalhes abre o modal com um rascunho do status, da prioridade, do responsável,
+    // do prazo e das etiquetas, refeito a partir da tarefa a cada abertura.
+    openDetails() {
       this.setTask(this.task);
-      this.errors.quick = '';
+      this.errors.details = '';
+      this.errors.assignee = '';
       this.errors.label = '';
       this.newLabel = '';
-      Alpine.store('modal').open('task-quick', WTT.t('task_detail.quick_title'), () => !this.pending);
+      Alpine.store('modal').open('task-details', WTT.t('task_detail.edit_details'), () => !this.pending);
     },
-    // saveQuick manda só esses três campos, pela rota própria: o nome, a descrição, o responsável e o prazo
-    // não vão, então não há como desfazer uma edição feita por outra pessoa.
-    saveQuick() {
-      return this.run('quick', async () => {
+    openDelete() {
+      this.errors.delete = '';
+      Alpine.store('modal').open('task-delete', WTT.t('task_detail.delete_title'), () => !this.pending);
+    },
+    // saveDetails manda só os detalhes, pela rota própria: o nome e a descrição não vão, então não há como
+    // desfazer uma edição feita por outra pessoa. O responsável e o prazo só vão se a pessoa os mudou: um
+    // prazo que veio do Trello com hora perderia a hora (o campo guarda só o dia), e uma tarefa que alguém
+    // acabou de pegar voltaria a quem a tinha quando o modal abriu.
+    saveDetails() {
+      if (this.draft.assign === 'other' && !this.draft.assignee_id) {
+        this.errors.assignee = WTT.t('tasks.wizard.pick_person');
+        return undefined;
+      }
+      this.errors.assignee = '';
+      return this.run('details', async () => {
+        const assignee = { me: me.id, none: '', other: this.draft.assignee_id }[this.draft.assign];
         const t = await api('PATCH', '/api/tasks/' + this.taskId + '/attributes', {
           status: this.draft.status,
           priority: this.draft.priority,
           label_ids: this.draft.label_ids,
+          assignee_id: assignee === this.assigneeWas ? null : assignee,
+          deadline: this.draft.deadline === this.deadlineWas ? null : WTT.fmt.fromDateInput(this.draft.deadline),
         });
         this.setTask(t);
         Alpine.store('modal').close();
-        toast(WTT.t('task_detail.quick_saved'));
+        toast(WTT.t('task_detail.details_saved'));
       });
     },
     // claim pega a tarefa sem responsável para a pessoa, sem bater o ponto: ela passa a ser dela e o ponto
@@ -1016,18 +1035,18 @@ document.addEventListener('alpine:init', () => {
       s.tasks.forEach((l) => { if (l.task_id !== this.taskId && !seen.has(l.task_id)) seen.set(l.task_id, l.task.name); });
       return [...seen.values()].join(', ');
     },
+    // save grava o nome e a descrição pelo PATCH da tarefa, que não mexe no que não vem: o responsável, o prazo,
+    // o status, a prioridade e as etiquetas são dos detalhes.
     save() {
+      if (!this.draft.name.trim()) {
+        this.errors.name = WTT.t('tasks.wizard.name_required');
+        return undefined;
+      }
+      this.errors.name = '';
       return this.run('save', async () => {
         const t = await api('PATCH', '/api/tasks/' + this.taskId, {
           name: this.draft.name,
           description: this.draft.description,
-          assignee_id: { me: me.id, none: '', other: this.draft.assignee_id }[this.draft.assign],
-          // O campo guarda só o dia, e salvar o reescreveria para o fim dele: uma data de entrega que veio do
-          // Trello com hora perderia a hora a cada edição. Só se manda o prazo se a pessoa mudou o dia.
-          deadline: this.draft.deadline === this.deadlineWas ? null : WTT.fmt.fromDateInput(this.draft.deadline),
-          priority: this.draft.priority,
-          status: this.draft.status,
-          label_ids: this.draft.label_ids,
         });
         this.setTask(t);
         Alpine.store('modal').close();

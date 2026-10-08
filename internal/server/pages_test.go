@@ -409,8 +409,8 @@ func TestPages_ProjectTasksTab(t *testing.T) {
 			// Prioridade e etiqueta: os filtros (várias de cada), a coluna e os campos do modal.
 			`role="group" aria-label="Filtrar por prioridade"`, `role="group" aria-label="Filtrar por etiqueta"`, `toggleFilter('priority', p.value)`,
 			`toggleFilter('label', l.id)`, "<th>Prioridade</th>", `id="task-priority"`, `x-model="draft.label_ids"`,
-			// O status: o filtro, a coluna e o campo do modal (que só aparece ao editar).
-			`role="group" aria-label="Filtrar por status"`, `toggleFilter('status', s.value)`, "<th>Status</th>", `id="task-status"`, `<template x-if="hasStatus">`,
+			// O status: o filtro e a coluna (a tarefa nova nasce em backlog, então o modal não tem o campo).
+			`role="group" aria-label="Filtrar por status"`, `toggleFilter('status', s.value)`, "<th>Status</th>",
 			// O modal é um passo a passo: nome e descrição (em Markdown, com prévia), e depois o resto.
 			`class="wizard-steps"`, `submitStep('create')`, "Escrever", "Pré-visualizar", `id="task-preview"`, "Próximo", "Voltar", `id="task-deadline"`,
 		} {
@@ -878,11 +878,12 @@ func TestPages_ProjectIntegrationsTab(t *testing.T) {
 	if all, inTypes := strings.Count(detail, "Número da issue"), strings.Count(detail, `"item_label":"Número da issue"`); all != inTypes {
 		t.Errorf("the task page has the issue label %d time(s) outside the integration types", all-inTypes)
 	}
-	// A página da tarefa só mostra: o formulário de edição fica num modal, aberto pelo lápis.
+	// A página da tarefa só mostra: o nome e a descrição se editam num modal, aberto pelo lápis ao lado do nome, e
+	// sem as etapas da tarefa nova.
 	for _, want := range []string{
-		`x-show="$store.modal.name === 'task-edit'"`, `aria-label="Editar tarefa"`, `@click="openEdit()"`, `id="task-name"`, "Voltar à lista",
-		// A descrição é Markdown: a página a renderiza e o modal tem as duas etapas e a prévia.
-		`x-html="WTT.markdown(task && task.description)"`, `class="wizard-steps"`, `submitStep('save')`, `id="task-preview"`, "Pré-visualizar",
+		`x-show="$store.modal.name === 'task-edit'"`, `aria-label="Editar nome e descrição"`, `@click="openEdit()"`, `id="task-name"`, "Voltar à lista",
+		// A descrição é Markdown: a página a renderiza e o modal tem a prévia.
+		`x-html="WTT.markdown(task && task.description)"`, `@submit.prevent="save()"`, `id="task-preview"`, "Pré-visualizar",
 	} {
 		if !strings.Contains(detail, want) {
 			t.Errorf("the task page does not contain %q", want)
@@ -893,24 +894,40 @@ func TestPages_ProjectIntegrationsTab(t *testing.T) {
 	for _, want := range []string{
 		`class="task-layout"`, `class="card task-main"`, `class="card task-details"`, `class="detail-list"`, `class="task-description"`,
 		"<h2 id=\"task-details-title\">Detalhes</h2>", "<dt>Status</dt>", "<dt>Prioridade</dt>", "<dt>Responsável</dt>", "<dt>Prazo</dt>", "<dt>Etiquetas</dt>", "<dt>Criada em</dt>",
-		// Prioridade e status com cor própria, no selo e nos selects do modal Editar tarefa.
+		// Prioridade e status com cor própria, no selo e nos selects do modal Editar detalhes.
 		`:class="statusClass(task && task.status)"`, `:class="priorityClass(task && task.priority)" x-text="task && WTT.fmt.priority(task.priority)"`,
 		`class="select-tone" :class="statusClass(draft.status)"`, `class="select-tone" :class="priorityClass(draft.priority)"`,
-		// Pegar a tarefa sem bater o ponto, e a atualização rápida: um modal só com status, prioridade e etiquetas.
-		`@click="claim()"`, `x-show="task && !task.assignee_id"`, "Pegar tarefa", `@click="openQuick()"`, "Atualização rápida",
-		`x-show="$store.modal.name === 'task-quick'"`, `@submit.prevent="saveQuick()"`, `x-show="errors.claim"`,
-		`id="quick-task-status"`, `id="quick-task-priority"`, `for="quick-task-priority"`, `id="quick-task-labels-label"`,
+		// Pegar a tarefa sem bater o ponto.
+		`@click="claim()"`, `x-show="task && !task.assignee_id"`, "Pegar tarefa", `x-show="errors.claim"`,
+		// Editar detalhes: o botão do cartão (à vista só "Editar", com o nome acessível completo) e um modal com o status,
+		// a prioridade, o responsável, o prazo e as etiquetas.
+		`@click="openDetails()"`, `aria-label="Editar detalhes"`, `x-show="$store.modal.name === 'task-details'"`, `@submit.prevent="saveDetails()"`,
+		`id="task-status"`, `id="task-priority"`, `for="task-priority"`, `id="task-labels-label"`, `id="task-assignee"`, `id="task-deadline"`,
+		// Excluir é um botão à parte, fora dos modais de edição, que pede confirmação em outro modal.
+		`@click="openDelete()"`, "Excluir tarefa", `x-show="$store.modal.name === 'task-delete'"`, `@submit.prevent="remove()"`,
 	} {
 		if !strings.Contains(detail, want) {
 			t.Errorf("the task page does not contain %q", want)
 		}
 	}
+	// O Excluir tarefa é um botão da largura dos detalhes, entre o cartão de detalhes e o das integrações, e não está
+	// mais no cabeçalho.
+	details, del, integrations, head := strings.Index(detail, `class="card task-details"`), strings.Index(detail, `@click="openDelete()"`),
+		strings.Index(detail, `class="task-integrations"`), strings.Index(detail, `</header>`)
+	if !(head < details && details < del && del < integrations) {
+		t.Errorf("the delete button is not between the details card and the integrations (header %d, details %d, delete %d, integrations %d)", head, details, del, integrations)
+	}
+	if strings.Contains(detail[:head], `openDelete()`) {
+		t.Error("the delete button is still in the header")
+	}
+	if strings.Contains(detail, `class="wizard-steps"`) || strings.Contains(detail, `submitStep(`) {
+		t.Error("the task page still edits the task in the steps of the new task modal")
+	}
 	if strings.Contains(detail, `x-show="task && task.priority !== 'none'"`) {
 		t.Error("the task page still hides the priority badge when there is none")
 	}
-	// Os campos de atributos estão no modal Editar e no de atualização rápida, na mesma página: cada id
-	// aparece uma vez só (o do segundo leva o prefixo quick-), senão o `for` dos rótulos aponta para o errado.
-	for _, id := range []string{"task-status", "task-priority", "task-labels-label", "quick-task-status", "quick-task-priority", "quick-task-labels-label"} {
+	// Cada id da página aparece uma vez só, senão o `for` dos rótulos aponta para o errado.
+	for _, id := range []string{"task-name", "task-description", "task-status", "task-priority", "task-labels-label", "task-assignee", "task-deadline"} {
 		if n := strings.Count(detail, `id="`+id+`"`); n != 1 {
 			t.Errorf("the task page has id=%q %d times, want once", id, n)
 		}
@@ -922,7 +939,7 @@ func TestPages_ProjectIntegrationsTab(t *testing.T) {
 			t.Errorf("the task page does not contain %q", want)
 		}
 	}
-	for _, not := range []string{`class="tabs"`, `data-project-name`, `/tasks" aria-current="page"`} {
+	for _, not := range []string{`class="tabs"`, `data-project-name`, `/tasks" aria-current="page"`, "Atualização rápida", "openQuick"} {
 		if strings.Contains(detail, not) {
 			t.Errorf("the task page still has the project tabs or heading: %q", not)
 		}

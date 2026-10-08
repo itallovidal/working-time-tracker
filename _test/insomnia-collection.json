@@ -1007,7 +1007,7 @@
       "_id": "req_06_18d",
       "_type": "request",
       "parentId": "fld_06",
-      "name": "Atualização rápida (status, prioridade e etiquetas)",
+      "name": "Editar detalhes (status, prioridade, etiquetas, responsável e prazo)",
       "method": "PATCH",
       "url": "{{base_url}}/api/tasks/{{task_id}}/attributes",
       "authentication": {},
@@ -1020,7 +1020,7 @@
       ],
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"status\": \"in_progress\",\n  \"priority\": \"high\",\n  \"label_ids\": [\"{{label_id}}\"]\n}"
+        "text": "{\n  \"status\": \"in_progress\",\n  \"priority\": \"high\",\n  \"label_ids\": [\"{{label_id}}\"],\n  \"assignee_id\": \"{{person_id}}\",\n  \"deadline\": \"2026-11-20T23:59:00Z\"\n}"
       }
     },
     {

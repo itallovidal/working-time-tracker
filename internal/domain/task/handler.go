@@ -196,17 +196,21 @@ func (h *Handler) Claim(c *echo.Context) error {
 	return c.JSON(200, task)
 }
 
-// UpdateAttrs é a atualização rápida: prioridade, status e etiquetas, cada um opcional.
+// UpdateAttrs é a edição dos detalhes da tarefa: prioridade, status, etiquetas, responsável e prazo, cada um
+// opcional. O responsável vazio tira o atual.
 func (h *Handler) UpdateAttrs(c *echo.Context) error {
 	var body struct {
-		Priority *string   `json:"priority"`
-		Status   *string   `json:"status"`
-		LabelIDs *[]string `json:"label_ids"`
+		Priority   *string    `json:"priority"`
+		Status     *string    `json:"status"`
+		LabelIDs   *[]string  `json:"label_ids"`
+		AssigneeID *string    `json:"assignee_id"`
+		Deadline   *time.Time `json:"deadline"`
 	}
 	if err := c.Bind(&body); err != nil {
 		return apperr.Respond(c, 400, apperr.ErrInvalidBody)
 	}
-	task, err := h.svc.UpdateAttrs(c.Param("taskId"), Attrs{Priority: body.Priority, Status: body.Status, LabelIDs: body.LabelIDs})
+	task, err := h.svc.UpdateAttrsAs(selfID(c), c.Param("taskId"),
+		Attrs{Priority: body.Priority, Status: body.Status, LabelIDs: body.LabelIDs}, body.AssigneeID, body.Deadline)
 	if err != nil {
 		return apperr.Respond(c, 400, err)
 	}

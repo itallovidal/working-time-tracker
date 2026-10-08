@@ -178,23 +178,14 @@ func (s *Service) UpdateAs(selfID, id, name, description string, assigneeID *str
 			return nil, err
 		}
 	}
-	if assigneeID != nil && *assigneeID == "" {
-		task.AssigneeID = nil // vazio desvincula: a tarefa volta a ficar disponível
-	} else if assigneeID != nil {
-		uid, err := uuid.Parse(*assigneeID)
-		if err != nil {
-			return nil, ErrInvalidAssignee
-		}
-		if (task.AssigneeID == nil || uid != *task.AssigneeID) && *assigneeID != selfID {
-			isMember, err := s.membershipStore.IsPersonInProject(*assigneeID, task.ProjectID.String())
-			if err != nil {
-				return nil, err
-			}
-			if !isMember {
-				return nil, ErrAssigneeNotInTeam
-			}
-		}
-		task.AssigneeID = &uid
+	assignee, unassign, err := s.checkAssignee(selfID, task, assigneeID)
+	if err != nil {
+		return nil, err
+	}
+	if assignee != nil {
+		task.AssigneeID = assignee
+	} else if unassign {
+		task.AssigneeID = nil
 	}
 	if deadline != nil {
 		task.Deadline = *deadline
@@ -237,9 +228,42 @@ func (s *Service) Claim(selfID, id string) (*Task, error) {
 	return t, nil
 }
 
-// UpdateAttrs é a atualização rápida: muda só a prioridade, o status e as etiquetas que vierem (as que
-// faltam ficam como estão), sem o nome, a descrição, o responsável e o prazo da edição completa.
+// checkAssignee confere o responsável pedido para a tarefa t. Nil mantém o que ela tem, vazio a deixa sem
+// responsável (volta a ficar disponível) e um id só vale para quem está em algum time do projeto, salvo quem
+// pede para si mesmo ou quem já é o responsável. Devolve a pessoa a gravar, ou unassign para tirá-la; com
+// os dois zerados, nada muda.
+func (s *Service) checkAssignee(selfID string, t *Task, assigneeID *string) (assignee *uuid.UUID, unassign bool, err error) {
+	if assigneeID == nil {
+		return nil, false, nil
+	}
+	if *assigneeID == "" {
+		return nil, true, nil
+	}
+	uid, err := uuid.Parse(*assigneeID)
+	if err != nil {
+		return nil, false, ErrInvalidAssignee
+	}
+	if (t.AssigneeID == nil || uid != *t.AssigneeID) && *assigneeID != selfID {
+		isMember, err := s.membershipStore.IsPersonInProject(*assigneeID, t.ProjectID.String())
+		if err != nil {
+			return nil, false, err
+		}
+		if !isMember {
+			return nil, false, ErrAssigneeNotInTeam
+		}
+	}
+	return &uid, false, nil
+}
+
+// UpdateAttrs é UpdateAttrsAs sem responsável e sem prazo, os campos que só quem edita os detalhes manda.
 func (s *Service) UpdateAttrs(id string, attrs Attrs) (*Task, error) {
+	return s.UpdateAttrsAs("", id, attrs, nil, nil)
+}
+
+// UpdateAttrsAs é a edição dos detalhes da tarefa: muda só a prioridade, o status, as etiquetas, o
+// responsável e o prazo que vierem (os que faltam ficam como estão), sem o nome e a descrição. A regra do
+// responsável é a do UpdateAs.
+func (s *Service) UpdateAttrsAs(selfID, id string, attrs Attrs, assigneeID *string, deadline *time.Time) (*Task, error) {
 	if attrs.Priority != nil && !validPriority(*attrs.Priority) {
 		return nil, ErrInvalidPriority
 	}
@@ -250,15 +274,18 @@ func (s *Service) UpdateAttrs(id string, attrs Attrs) (*Task, error) {
 	if err != nil {
 		return nil, err
 	}
-	var labels *[]Label
+	patch := attrsPatch{priority: attrs.Priority, status: attrs.Status, deadline: deadline}
 	if attrs.LabelIDs != nil {
 		resolved, err := s.resolveLabels(t.ProjectID.String(), *attrs.LabelIDs)
 		if err != nil {
 			return nil, err
 		}
-		labels = &resolved
+		patch.labels = &resolved
 	}
-	if err := s.taskStore.UpdateAttrs(t.ID, attrs.Priority, attrs.Status, labels); err != nil {
+	if patch.assignee, patch.unassign, err = s.checkAssignee(selfID, t, assigneeID); err != nil {
+		return nil, err
+	}
+	if err := s.taskStore.UpdateAttrs(t.ID, patch); err != nil {
 		return nil, err
 	}
 	return s.taskStore.GetByID(id)

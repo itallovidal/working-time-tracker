@@ -1106,8 +1106,8 @@ func TestStore_TryClaim_Atomic(t *testing.T) {
 	}
 }
 
-// A atualização rápida muda só a prioridade, o status e as etiquetas que vierem: o que faltar fica como
-// está, e o nome, a descrição, o responsável e o prazo nunca são tocados.
+// Sem responsável nem prazo no pedido, a edição dos detalhes muda só a prioridade, o status e as etiquetas
+// que vierem: o que faltar fica como está, e o nome e a descrição nunca são tocados.
 func TestService_UpdateAttrs(t *testing.T) {
 	orgSvc, personSvc, projSvc, _, _, taskSvc := setupDeps(t)
 	org, _ := orgSvc.Create("Org")
@@ -1138,7 +1138,7 @@ func TestService_UpdateAttrs(t *testing.T) {
 	untouched := func(step string, tk *task.Task) {
 		t.Helper()
 		if tk.Name != "Nome" || tk.Description != "Descrição" || tk.AssigneeID == nil || *tk.AssigneeID != ana.ID || !tk.Deadline.Equal(deadline) {
-			t.Errorf("%s changed what the quick update does not own: %q %q %v %v", step, tk.Name, tk.Description, tk.AssigneeID, tk.Deadline)
+			t.Errorf("%s changed what the update did not ask for: %q %q %v %v", step, tk.Name, tk.Description, tk.AssigneeID, tk.Deadline)
 		}
 	}
 
@@ -1187,5 +1187,71 @@ func TestService_UpdateAttrs(t *testing.T) {
 	}
 	if _, err := taskSvc.UpdateAttrs(uuid.NewString(), task.Attrs{Status: str("closed")}); err == nil {
 		t.Error("updating a task that does not exist did not fail")
+	}
+}
+
+// A edição dos detalhes também troca o responsável e o prazo, sem tocar no nome nem na descrição: vazio tira o
+// responsável, uma pessoa de fora dos times é recusada (salvo quem pede para si mesmo) e o prazo só muda se vier.
+func TestService_UpdateAttrsAs_AssigneeAndDeadline(t *testing.T) {
+	orgSvc, personSvc, projSvc, teamSvc, memberSvc, taskSvc := setupDeps(t)
+	org, _ := orgSvc.Create("Org")
+	ana, _ := personSvc.Create(org.ID.String(), "Ana", "ana@test.com")
+	bia, _ := personSvc.Create(org.ID.String(), "Bia", "bia@test.com")
+	zeca, _ := personSvc.Create(org.ID.String(), "Zeca", "zeca@test.com")
+	proj, _ := projSvc.Create(org.ID.String(), "P", "", 0, project.Routine{})
+	tm, _ := teamSvc.Create(proj.ID.String(), "Team")
+	join(t, memberSvc, tm, ana.ID.String())
+	join(t, memberSvc, tm, bia.ID.String())
+
+	deadline := time.Date(2026, 11, 20, 12, 0, 0, 0, time.UTC)
+	created, err := taskSvc.CreateAs(ana.ID.String(), proj.ID.String(), "Nome", "Descrição", ana.ID.String(), &deadline, task.Attrs{})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	id := created.ID.String()
+	str := func(s string) *string { return &s }
+	self := ana.ID.String()
+
+	// Outra pessoa do projeto assume, e o prazo muda junto; o nome e a descrição ficam.
+	later := time.Date(2026, 12, 1, 12, 0, 0, 0, time.UTC)
+	got, err := taskSvc.UpdateAttrsAs(self, id, task.Attrs{Status: str("in_progress")}, str(bia.ID.String()), &later)
+	if err != nil {
+		t.Fatalf("assign to another member: %v", err)
+	}
+	if got.AssigneeID == nil || *got.AssigneeID != bia.ID || got.Assignee == nil || got.Assignee.Name != "Bia" || !got.Deadline.Equal(later) || got.Status != "in_progress" {
+		t.Errorf("after the update: assignee %v, deadline %v, status %q; want Bia, %v, in_progress", got.AssigneeID, got.Deadline, got.Status, later)
+	}
+	if got.Name != "Nome" || got.Description != "Descrição" {
+		t.Errorf("the update changed the name or the description: %q %q", got.Name, got.Description)
+	}
+
+	// Sem responsável e sem prazo no pedido, os dois ficam como estão.
+	if got, err = taskSvc.UpdateAttrsAs(self, id, task.Attrs{Priority: str("high")}, nil, nil); err != nil || got.AssigneeID == nil || *got.AssigneeID != bia.ID || !got.Deadline.Equal(later) {
+		t.Errorf("an update without assignee and deadline = %v, %v; want Bia and %v kept", got, err, later)
+	}
+
+	// Quem pede para si mesmo entra mesmo fora dos times; outra pessoa fora deles, não.
+	if _, err := taskSvc.UpdateAttrsAs(zeca.ID.String(), id, task.Attrs{}, str(zeca.ID.String()), nil); err != nil {
+		t.Errorf("taking the task for yourself outside the teams: %v", err)
+	}
+	if _, err := taskSvc.UpdateAttrsAs(self, id, task.Attrs{}, str(zeca.ID.String()), nil); err != nil {
+		t.Errorf("the current assignee is not asked to be in a team again: %v", err)
+	}
+	if _, err := taskSvc.UpdateAttrsAs(self, id, task.Attrs{}, str(ana.ID.String()), nil); err != nil {
+		t.Fatalf("assign back to a member: %v", err)
+	}
+	if _, err := taskSvc.UpdateAttrsAs(self, id, task.Attrs{}, str(zeca.ID.String()), nil); !errors.Is(err, task.ErrAssigneeNotInTeam) {
+		t.Errorf("assigning someone outside the teams: %v, want ErrAssigneeNotInTeam", err)
+	}
+	if _, err := taskSvc.UpdateAttrsAs(self, id, task.Attrs{}, str("not-a-uuid"), nil); !errors.Is(err, task.ErrInvalidAssignee) {
+		t.Errorf("an assignee that is not an id: %v, want ErrInvalidAssignee", err)
+	}
+	if after, _ := taskSvc.Get(id); after.AssigneeID == nil || *after.AssigneeID != ana.ID {
+		t.Errorf("a refused update moved the task to %v", after.AssigneeID)
+	}
+
+	// Vazio tira o responsável: a tarefa volta a ficar disponível.
+	if got, err = taskSvc.UpdateAttrsAs(self, id, task.Attrs{}, str(""), nil); err != nil || got.AssigneeID != nil || got.Assignee != nil {
+		t.Errorf("an empty assignee = %v, %v; want the task unassigned", got, err)
 	}
 }

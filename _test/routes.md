@@ -461,7 +461,7 @@ A pessoa precisa ser da mesma organização do projeto e já estar nele, com val
 | GET | `/api/tasks/:taskId` | logado | Detalhes da tarefa |
 | PATCH | `/api/tasks/:taskId` | logado | Altera a tarefa |
 | POST | `/api/tasks/:taskId/claim` | logado | Pega a tarefa para quem está logado, sem bater o ponto e sem mexer no status: só vale se ela não tem responsável (se já é sua, volta como está; se é de outra pessoa, 409 `task.already_assigned`) |
-| PATCH | `/api/tasks/:taskId/attributes` | logado | Atualização rápida: só `priority`, `status` e `label_ids`, cada um opcional; não toca no nome, na descrição, no responsável nem no prazo |
+| PATCH | `/api/tasks/:taskId/attributes` | logado | Edição dos detalhes: `priority`, `status`, `label_ids`, `assignee_id` (vazio tira o responsável) e `deadline`, cada um opcional; não toca no nome nem na descrição |
 | DELETE | `/api/tasks/:taskId` | logado | Exclui a tarefa e as sessões dela |
 | POST | `/api/tasks/:taskId/link-external-item` | logado | Vincula a uma issue ou a um cartão |
 | DELETE | `/api/tasks/:taskId/link-external-item` | logado | Desfaz o vínculo |
@@ -521,9 +521,9 @@ POST /api/tasks/:taskId/claim
 PATCH /api/tasks/:taskId/attributes
 Content-Type: application/json
 
-{ "status": "in_progress", "priority": "high", "label_ids": ["…"] }
+{ "status": "in_progress", "priority": "high", "label_ids": ["…"], "assignee_id": "…", "deadline": "2026-11-20T23:59:00Z" }
 ```
-O `claim` não tem corpo e não abre sessão: é só ficar com a tarefa para fazer depois. De dois pedidos juntos, um só leva, e o outro recebe 409. O `attributes` troca as etiquetas pela lista enviada (`[]` tira todas), e um valor que falta fica como está; prioridade, status ou etiqueta inválidos dão 400 (`task.invalid_priority`, `task.invalid_status`, `task.label_other_project`). Ao contrário do `PATCH /api/tasks/:taskId`, que exige o nome e troca a descrição, ele é seguro para uma edição parcial.
+O `claim` não tem corpo e não abre sessão: é só ficar com a tarefa para fazer depois. De dois pedidos juntos, um só leva, e o outro recebe 409. O `attributes` troca as etiquetas pela lista enviada (`[]` tira todas), e um valor que falta (ou `null`) fica como está; `assignee_id` vazio tira o responsável, e outra pessoa só entra se estiver em algum time do projeto (a própria pessoa e o responsável atual sempre podem); prioridade, status, etiqueta ou responsável inválidos dão 400 (`task.invalid_priority`, `task.invalid_status`, `task.label_other_project`, `task.assignee_not_in_team`, `task.invalid_assignee`). Ao contrário do `PATCH /api/tasks/:taskId`, que exige o nome e troca a descrição, ele é seguro para uma edição parcial.
 
 ```http
 POST /api/tasks/:taskId/link-external-item

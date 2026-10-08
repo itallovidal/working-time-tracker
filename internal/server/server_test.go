@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/labstack/echo/v5"
 
@@ -1530,8 +1531,8 @@ func TestTasks_Claim(t *testing.T) {
 	}
 }
 
-// A atualização rápida pela API: PATCH /api/tasks/:taskId/attributes muda só a prioridade, o status e as
-// etiquetas que vierem, e deixa o nome, a descrição, o responsável e o prazo como estão (o PATCH da tarefa
+// A edição dos detalhes pela API: PATCH /api/tasks/:taskId/attributes muda só a prioridade, o status, as
+// etiquetas, o responsável e o prazo que vierem, e deixa o nome e a descrição como estão (o PATCH da tarefa
 // exige o nome e troca a descrição).
 func TestTasks_UpdateAttributes(t *testing.T) {
 	e := newServer(t)
@@ -1552,7 +1553,7 @@ func TestTasks_UpdateAttributes(t *testing.T) {
 	untouched := func(step string, task map[string]any) {
 		t.Helper()
 		if task["name"] != "Tarefa" || task["description"] != "Detalhes importantes" || task["assignee_id"] != member.id || task["deadline"] != created["deadline"] {
-			t.Errorf("%s changed what the quick update does not own: %v %v %v %v", step, task["name"], task["description"], task["assignee_id"], task["deadline"])
+			t.Errorf("%s changed what the update did not ask for: %v %v %v %v", step, task["name"], task["description"], task["assignee_id"], task["deadline"])
 		}
 	}
 
@@ -1603,6 +1604,36 @@ func TestTasks_UpdateAttributes(t *testing.T) {
 		t.Errorf("a refused update changed the task: %v and %v", after["status"], after["priority"])
 	}
 	untouched("the refused updates", after)
+
+	// O responsável e o prazo vão pela mesma rota, sem tocar no nome nem na descrição.
+	rec = do(e, "PATCH", attrs, `{"assignee_id":"","deadline":"2031-05-20T20:59:00Z"}`, member.session)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("unassign and move the deadline = %d: %s", rec.Code, rec.Body.String())
+	}
+	got = decode(t, rec)
+	// O servidor devolve o instante no fuso do banco: o que vale é o instante, não o texto.
+	newDeadline := time.Date(2031, 5, 20, 20, 59, 0, 0, time.UTC)
+	deadlineIs := func(task map[string]any) bool {
+		at, err := time.Parse(time.RFC3339, task["deadline"].(string))
+		return err == nil && at.Equal(newDeadline)
+	}
+	if got["assignee_id"] != nil || !deadlineIs(got) || got["name"] != "Tarefa" || got["description"] != "Detalhes importantes" {
+		t.Errorf("after unassigning and moving the deadline: assignee %v, deadline %v, name %v, description %v", got["assignee_id"], got["deadline"], got["name"], got["description"])
+	}
+	if got["status"] != "awaiting_closure" || got["priority"] != "urgent" {
+		t.Errorf("unassigning changed the status or the priority: %v %v", got["status"], got["priority"])
+	}
+	if rec := do(e, "PATCH", attrs, fmt.Sprintf(`{"assignee_id":"%s"}`, outsider.id), member.session); rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "task.assignee_not_in_team") {
+		t.Errorf("assigning someone outside the teams = %d: %s, want 400 task.assignee_not_in_team", rec.Code, rec.Body.String())
+	}
+	if rec := do(e, "PATCH", attrs, `{"assignee_id":"not-an-id"}`, member.session); rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "task.invalid_assignee") {
+		t.Errorf("an assignee that is not an id = %d: %s, want 400 task.invalid_assignee", rec.Code, rec.Body.String())
+	}
+	// Quem pede para si mesmo entra, e o prazo que não vem fica.
+	rec = do(e, "PATCH", attrs, fmt.Sprintf(`{"assignee_id":"%s"}`, member.id), member.session)
+	if got = decode(t, rec); rec.Code != http.StatusOK || got["assignee_id"] != member.id || !deadlineIs(got) {
+		t.Errorf("taking the task back = %d: assignee %v, deadline %v, want the member and the new deadline kept", rec.Code, got["assignee_id"], got["deadline"])
+	}
 }
 
 // O status pela API: a tarefa nasce em backlog mesmo que o corpo peça outro, só o PATCH

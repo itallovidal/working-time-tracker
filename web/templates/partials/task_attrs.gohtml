@@ -1,28 +1,38 @@
-{{/* task_attrs é a prioridade e as etiquetas de uma tarefa, nos modais Nova tarefa e Editar
-     tarefa. Pede o rascunho em `draft` (priority, status na edição, label_ids) e os métodos de labelTools
-     (labels, newLabel, createLabel). Só admins criam etiqueta; quem não é, só escolhe. */}}
+{{/* task_attrs é a prioridade e as etiquetas de uma tarefa, juntas, no modal Nova tarefa (a tarefa nova nasce em
+     backlog, então sem status); o modal Editar detalhes usa as peças em separado (task_status, task_priority e
+     task_labels), com o responsável e o prazo entre elas. Pedem o rascunho em `draft` (priority, status,
+     label_ids) e os métodos de labelTools (labels, newLabel, createLabel). Só admins criam etiqueta; quem não
+     é, só escolhe. */}}
 {{define "task_attrs"}}
-{{/* O status só aparece ao editar (hasStatus): a tarefa nova nasce em backlog. */}}
-<template x-if="hasStatus">
-  <div class="field">
-    <label for="{{.IDPrefix}}task-status">{{.T "tasks.col_status"}}</label>
-    <select id="{{.IDPrefix}}task-status" class="select-tone" :class="statusClass(draft.status)" x-model="draft.status">
-      <template x-for="s in WTT.taskStatuses" :key="s.value">
-        <option :class="statusClass(s.value)" :value="s.value" x-text="s.label" :selected="s.value === draft.status"></option>
-      </template>
-    </select>
-  </div>
-</template>
+{{template "task_priority" .}}
+{{template "task_labels" .}}
+{{end}}
+
+{{define "task_status"}}
 <div class="field">
-  <label for="{{.IDPrefix}}task-priority">{{.T "tasks.col_priority"}}</label>
-  <select id="{{.IDPrefix}}task-priority" class="select-tone" :class="priorityClass(draft.priority)" x-model="draft.priority">
+  <label for="task-status">{{.T "tasks.col_status"}}</label>
+  <select id="task-status" class="select-tone" :class="statusClass(draft.status)" x-model="draft.status">
+    <template x-for="s in WTT.taskStatuses" :key="s.value">
+      <option :class="statusClass(s.value)" :value="s.value" x-text="s.label" :selected="s.value === draft.status"></option>
+    </template>
+  </select>
+</div>
+{{end}}
+
+{{define "task_priority"}}
+<div class="field">
+  <label for="task-priority">{{.T "tasks.col_priority"}}</label>
+  <select id="task-priority" class="select-tone" :class="priorityClass(draft.priority)" x-model="draft.priority">
     <template x-for="p in WTT.priorities" :key="p.value">
       <option :class="priorityClass(p.value)" :value="p.value" x-text="p.label" :selected="p.value === draft.priority"></option>
     </template>
   </select>
 </div>
-<div class="field" role="group" aria-labelledby="{{.IDPrefix}}task-labels-label">
-  <span class="field-label" id="{{.IDPrefix}}task-labels-label">{{.T "tasks.labels"}}</span>
+{{end}}
+
+{{define "task_labels"}}
+<div class="field" role="group" aria-labelledby="task-labels-label">
+  <span class="field-label" id="task-labels-label">{{.T "tasks.labels"}}</span>
   <div class="label-picks" x-show="labels.length > 0">
     <template x-for="l in labels" :key="l.id">
       <label class="label-pick"><input type="checkbox" :value="l.id" x-model="draft.label_ids"> <span x-text="l.name"></span></label>
@@ -31,7 +41,7 @@
   <span class="hint" x-show="labels.length === 0">{{if .Can "labels.manage"}}{{.T "tasks.no_labels_admin"}}{{else}}{{.T "tasks.no_labels_member"}}{{end}}</span>
   {{if .Can "labels.manage"}}
   <div class="row">
-    <input id="{{.IDPrefix}}task-new-label" class="flex-1" type="text" maxlength="50" autocomplete="off" placeholder="{{.T "tasks.label_new"}}"
+    <input id="task-new-label" class="flex-1" type="text" maxlength="50" autocomplete="off" placeholder="{{.T "tasks.label_new"}}"
            aria-label="{{.T "tasks.label_new"}}" x-model="newLabel" @keydown.enter.prevent="createLabel(draft.label_ids)">
     <button type="button" class="btn btn-secondary btn-sm" :disabled="pending || !newLabel.trim()" @click="createLabel(draft.label_ids)">{{template "icon" "plus"}} {{.T "tasks.label_create"}}</button>
   </div>

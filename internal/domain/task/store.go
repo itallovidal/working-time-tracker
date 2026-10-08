@@ -259,19 +259,36 @@ func (s *Store) TryClaim(taskID, personID uuid.UUID) (bool, error) {
 	return n > 0, err
 }
 
-// UpdateAttrs grava só a prioridade, o status e as etiquetas que vierem (nil mantém), sem
-// reescrever o resto da tarefa: uma atualização rápida não desfaz uma edição ou um responsável
-// que chegaram no meio.
-func (s *Store) UpdateAttrs(id uuid.UUID, priority, status *string, labels *[]Label) error {
+// attrsPatch é o que Store.UpdateAttrs grava: cada campo nil fica como está. O responsável tem três
+// estados, então não basta o ponteiro: assignee muda para a pessoa e unassign o tira.
+type attrsPatch struct {
+	priority, status *string
+	labels           *[]Label
+	assignee         *uuid.UUID
+	unassign         bool
+	deadline         *time.Time
+}
+
+// UpdateAttrs grava só os campos do patch, sem reescrever o resto da tarefa: uma edição dos detalhes não
+// desfaz o nome, a descrição ou um responsável que chegaram no meio.
+func (s *Store) UpdateAttrs(id uuid.UUID, p attrsPatch) error {
 	q := s.client.Task.UpdateOneID(id)
-	if priority != nil {
-		q = q.SetPriority(priorityOf(*priority))
+	if p.priority != nil {
+		q = q.SetPriority(priorityOf(*p.priority))
 	}
-	if status != nil {
-		q = q.SetStatus(statusOf(*status))
+	if p.status != nil {
+		q = q.SetStatus(statusOf(*p.status))
 	}
-	if labels != nil {
-		q = q.ClearLabels().AddLabelIDs(labelIDs(*labels)...)
+	if p.labels != nil {
+		q = q.ClearLabels().AddLabelIDs(labelIDs(*p.labels)...)
+	}
+	if p.assignee != nil {
+		q = q.SetAssigneeID(*p.assignee)
+	} else if p.unassign {
+		q = q.ClearAssigneeID()
+	}
+	if p.deadline != nil {
+		q = q.SetDeadline(*p.deadline)
 	}
 	_, err := q.Save(context.Background())
 	if ent.IsNotFound(err) {

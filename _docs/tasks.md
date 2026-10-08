@@ -801,6 +801,17 @@
 
 ---
 
+### Sprint 72: Editing a Task in Three Places
+
+- [X] S72.1 The edit modal of the task page was a two-step wizard that kept growing, so the wizard stays for **Nova tarefa** only and the page edits in three places: the pen at the right corner of the name card opens **Editar nome e descrição** (the name, the description with Escrever / Pré-visualizar), the **Editar** button on the Detalhes card (its accessible name is "Editar detalhes") opens a modal with the status, the priority, the assignee, the deadline and the labels, in the order of the card (the creation date is not editable), and a full-width **Excluir tarefa** button, apart from both and from the cards (between the Detalhes card and the integrations; last on a phone), opens a confirmation modal
+- [X] S72.2 The page: the name is the `h1` of the first card (name, then the description under it, the pen at the right corner), the header keeps the way back, the breadcrumb and the clock actions, and the time tracked stays under the description; the **Atualização rápida** button and the pen of the header are gone, with their texts (`task_detail.quick*`, `sync_note_quick`); new texts `edit_details`, `details_saved`, `sync_note_details`; `edit_title` now says "Editar nome e descrição"
+- [X] S72.3 `PATCH /api/tasks/:taskId/attributes` also takes `assignee_id` (empty takes the assignee off, the rule of the task `PATCH`: someone outside the teams is refused unless it is the person asking, or already the assignee) and `deadline`, each optional and written alone by `Store.UpdateAttrs`; `Service.UpdateAttrsAs` (and `UpdateAttrs` as the wrapper without them, like `Update` and `UpdateAs`) and `checkAssignee`, now shared with `UpdateAs`
+- [X] S72.4 The partials: `task_fields` (the wizard) now uses `task_text` (name and description) and `task_assignee`, and `task_attrs` is split into `task_status`, `task_priority` and `task_labels`, so the new modals reuse the same markup; `taskWizard` shares Escrever / Pré-visualizar through `mdTools`; the ID prefix helper (`WithIDPrefix`) and the `hasStatus` switch are removed, since no page has two copies of the fields any more
+- [X] S72.5 The modals send only what they own: the name and the description go through the task `PATCH` with those two fields, and the details through `attributes`; the assignee and the deadline are sent only when the person changed them (the day of the deadline, as since Sprint 70, and the assignee as it was when the modal opened)
+- [X] S72.6 Tests: the service (assigning another member, the deadline, nothing sent keeping both, yourself outside the teams, the current assignee, someone outside the teams, a bad id, unassigning) and the API (unassign and move the deadline, outside the teams 400, a bad id 400, taking it back); the existing task page and tasks page assertions follow the new markup, no new front-end tests; checked in the browser (details with and without a change, "Outra pessoa" without a person, name required, the preview, cancel, delete, light and dark, phone width); README, design, routes, the Insomnia collection
+
+---
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open
