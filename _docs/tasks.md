@@ -710,6 +710,21 @@
 
 ---
 
+### Sprint 63: Sync GitHub Issues with the Tasks
+
+- [X] S63.1 Limits: `MaxDescriptionLen` 10,000 → 65,536 and `maxLabelLen` 30 → 50 (the size of a GitHub issue body and label), in the service and in the `maxlength` of both fields, so importing and pushing back never truncates
+- [X] S63.2 Schema and migration `issue_syncs` (`integration_id` CASCADE, `task_id` unique SET NULL, `issue_number`, `state`, the snapshot, `stuck_sig`, `last_error`) and, on `integrations`, `sync_issues`, `sync_cursor`, `last_synced_at`, `last_sync_error`; FK rules and uniqueness tested
+- [X] S63.3 `testutil.GitHub`: a GitHub fake with state (issues with `updated_at`, `since`, pagination and `Link`, pull requests, labels, assignees, public and private emails, user search, PATCH that silently discards, 403 without push, 404/410/301, 429, request counters) plus `FakeGitHub()`; `testutil.Setup` makes the default HTTP transport refuse non-loopback hosts
+- [X] S63.4 Adapter capability `IssueSyncer` with `context` (`Repo`, `ListIssues`, `GetIssue`, `UpdateIssue`, `ListLabels`, `CreateLabel`, `UserEmail`, `FindLoginByEmail`): no redirects, API version header, next links only on the same server, a stop at the rate-limit reserve, `ErrIssueGone`, `ErrRateLimited`, `ErrForbidden`
+- [X] S63.5 Plugging in: `person.FindByEmailInOrg`; `task.Store.ApplyRemote`, `CreateImported`, `ListLinked`, `FindLinked`, `FindOrCreateLabels` and `SetChangeHook` (fired by `Update`, `UpdateAttrs`, `TryClaim`, `StartProgress`, and by renaming or deleting a label); `integration.Service.Connection`, `ListSyncing`, `RecordSync`, `Edit` with `sync_issues` (GitHub only, repository chosen, integration active; the repository is locked while the sync is on)
+- [X] S63.6 `internal/domain/issuesync`: the pure merge in tables (CRLF, label case, several assignees, the linked login only, the push signature), the round (full and incremental, import, adoption of a task linked by hand, tombstone, gone issues, read-only mode, silent-discard detection, push cap, cursor only after a complete round) and the single-task path for the hook; tested against the fake with the database, with `-race`
+- [X] S63.7 `server.Build` (returns the server and the `Syncer`; `New` stays), the hook wired to the task store, `POST /api/integrations/:integrationId/sync` (`integrations.manage`; `409` `integration.sync_running`, `400` `integration.sync_off`), new error codes in both languages and in `_docs/error-codes.md`, `TestRoutes_Table`
+- [X] S63.8 Background routine in `cmd/main.go` (`GITHUB_SYNC_INTERVAL`, `5m` by default, `0` off; jitter, backoff, a full round every hour), a hook worker that debounces and works in batches, and a shutdown that waits for them (`signal.NotifyContext`, `echo.StartConfig`); the base URL of GitHub in use is logged
+- [X] S63.9 Screen: **Sincronizar agora**, last sync, last warning and "N responsáveis sem correspondência" on the integration card; the sync box in the edit modal and in the repository step (checked after a connection, off on the integrations that already exist; the repository field locks while it is on); the `GitHub #N` badge on the task list, Minhas tarefas and the cards; the sync note in the edit and quick-update modals; the sync line in the Gestão overview; texts in both languages; the existing page assertions adjusted, no new front-end tests; fixed the edit modal of a task with no deadline (the Go zero time broke the date field)
+- [X] S63.10 `cmd/fakegithub` (the fake as a dev server with a control panel under `/_fake`); README, design, routes, the Insomnia collection and `.env.example`; checked in the browser against it (connect, pick the repository, sync, edit here and see it on the fake, edit there and wait for the cycle, close, remove the assignee, read-only warning, phone), and once against the owner's real repository on a copy of the database (import, close and reopen the test issue from here, a second round with nothing to do)
+
+---
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open

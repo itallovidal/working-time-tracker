@@ -13,7 +13,8 @@ import (
 const defaultGitHubSiteURL = "https://github.com"
 
 // githubOAuthScope é o único escopo que dá acesso a repositório privado num OAuth App.
-// Ele também permite escrita, que o sistema não usa: só lê issues.
+// Ele também permite escrita, e a sincronização das issues a usa (github_sync.go): muda título, corpo,
+// etiquetas, responsáveis e estado das issues, e cria etiquetas.
 const githubOAuthScope = "repo"
 
 // GitHubOAuth é o app OAuth que o servidor tem cadastrado no GitHub. Ele só monta o

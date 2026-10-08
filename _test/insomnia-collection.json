@@ -1286,6 +1286,38 @@
       }
     },
     {
+      "_id": "req_08_10",
+      "_type": "request",
+      "parentId": "fld_08",
+      "name": "Ligar a sincronização das issues",
+      "method": "PATCH",
+      "url": "{{base_url}}/api/integrations/{{integration_id}}",
+      "authentication": {},
+      "metaSortKey": 5.2,
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"sync_issues\": true\n}"
+      }
+    },
+    {
+      "_id": "req_08_09",
+      "_type": "request",
+      "parentId": "fld_08",
+      "name": "Sincronizar as issues agora (GitHub com a sincronização ligada)",
+      "method": "POST",
+      "url": "{{base_url}}/api/integrations/{{integration_id}}/sync",
+      "authentication": {},
+      "metaSortKey": 5.5,
+      "headers": [],
+      "body": {}
+    },
+    {
       "_id": "req_08_03",
       "_type": "request",
       "parentId": "fld_08",

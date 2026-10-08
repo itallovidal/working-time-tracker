@@ -612,9 +612,10 @@ Na lista de tarefas e no detalhe, a tarefa vinculada traz `external_integration`
 | POST | `/api/projects/:projectId/integrations` | `integrations.manage` | Cria e valida a conexão na plataforma |
 | GET | `/api/projects/:projectId/integrations` | logado | Integrações do projeto |
 | GET | `/api/integrations/:integrationId` | logado | Detalhes |
-| PATCH | `/api/integrations/:integrationId` | `integrations.manage` | Altera nome, token, `metadata` ou `enabled` |
+| PATCH | `/api/integrations/:integrationId` | `integrations.manage` | Altera nome, token, `metadata`, `enabled` ou `sync_issues` |
 | DELETE | `/api/integrations/:integrationId` | `integrations.manage` | Exclui. As tarefas vinculadas perdem o vínculo |
 | GET | `/api/integrations/:integrationId/repositories` | `integrations.manage` | Lista `[{"full_name","private"}]` o que o token guardado enxerga (GitHub). `400` `integration.no_repositories` nos tipos que não listam |
+| POST | `/api/integrations/:integrationId/sync` | `integrations.manage` | Uma rodada completa da sincronização das issues com as tarefas, na hora. `200` `{"created","updated","closed","pushed","unmapped","errors","partial"}`; `409` `integration.sync_running` se já há uma rodada nesta integração; `400` `integration.sync_off` se a sincronização está desligada ou a integração desativada; `404` entre organizações |
 
 **Conectar com o GitHub** são duas rotas de página (GET e redirecionamentos, fora do `/api`), que o navegador percorre; não há como chamá-las pela API:
 
@@ -655,6 +656,10 @@ Resposta (`201`), igual em todas as rotas de integração:
   "has_token": true,
   "metadata": { "repo": "acme/app" },
   "enabled": true,
+  "sync_issues": false,
+  "last_synced_at": null,
+  "last_sync_error": "",
+  "sync_unmatched": 0,
   "created_at": "2026-10-06T09:00:00-03:00"
 }
 ```
@@ -679,6 +684,21 @@ Content-Type: application/json
 - Todos os campos são opcionais. `token` ausente ou vazio mantém o guardado; `metadata` presente substitui o atual inteiro. O `type` não muda.
 - A plataforma só é consultada de novo quando veio um token ou o `metadata` mudou de fato, e a conexão nova é validada com o token guardado quando nenhum veio. Renomear ou desativar não depende de o token ainda valer.
 - Uma integração criada antes do `metadata` aparece com `metadata: {}` e `has_token: true`. Basta um `PATCH` com o `metadata` dela, sem token.
+
+**Sincronização das issues (GitHub).** `sync_issues` liga e desliga pelo `PATCH`, e nasce `false`:
+
+```http
+PATCH /api/integrations/:integrationId
+Content-Type: application/json
+
+{ "sync_issues": true }
+```
+
+- Só liga no GitHub (`400` `integration.sync_unsupported` nos outros), com o repositório já escolhido (`integration.sync_needs_repo`), a integração ativa (`integration.sync_needs_enabled`, vale para a mudança de desligada para ligada, e dá para mandar `enabled` e `sync_issues` juntos) e com a credencial guardada.
+- Ligada, o `metadata.repo` **não troca**: `400` `integration.sync_repo_locked`. Desligar e trocar na mesma chamada vale, e trocar o repositório com ela desligada esquece o vínculo das issues do antigo. Trocar só o token com ela ligada vale.
+- As respostas trazem `sync_issues`, `last_synced_at` (o fim da última rodada, nulo antes da primeira), `last_sync_error` (o código do último aviso ou erro: `issue_sync.read_only`, `issue_sync.push_discarded`, `issue_sync.push_rejected`, `issue_sync.no_login`, `issue_sync.label_refused`, `integration.rate_limited`, `integration.invalid_token`...; vazio se a última rodada não achou nada) e `sync_unmatched` (quantas issues abertas têm responsável no GitHub sem correspondência aqui; só é calculado com a sincronização ligada).
+- `POST .../sync` leva a rodada à hora, sem esperar o intervalo de `GITHUB_SYNC_INTERVAL`, e responde o que ela fez. `partial: true` é uma rodada que parou antes de olhar tudo (limite de requisições do GitHub, falha de rede): o que fez fica feito, e o resto fica para a seguinte.
+- As tarefas importadas aparecem na lista como qualquer outra, com `external_integration`, `external_item_id` (o número da issue) e `external_item_url`; a tarefa criada por uma issue nasce em `backlog`, sem prazo.
 
 ---
 

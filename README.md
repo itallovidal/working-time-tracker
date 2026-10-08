@@ -21,6 +21,7 @@ Ponto por tarefa para equipes que trabalham por projeto. Foi pensado principalme
 - **Atualização rápida da tarefa.** Na página da tarefa, o botão Atualização rápida abre um modal só com o **status**, a **prioridade** e as **etiquetas** (admins criam etiqueta ali mesmo), para mudar o que anda com o trabalho sem abrir a edição da tarefa inteira; a edição completa continua tendo os mesmos três campos. Vai por `PATCH /api/tasks/:taskId/attributes`, que só toca nesses três e deixa o nome, a descrição, o responsável e o prazo como estão.
 - **Ponto e Visão geral pessoal.** Clock-in e clock-out com cronômetro ao vivo e um **balão da sessão** que acompanha todas as páginas: fechado, é uma faixa verde "Sessão ativa • 00:00:00" no canto de baixo à direita; ao clicar, abre para cima um cartão por tarefa em andamento, com o tempo dela na sessão e uma seta que leva a ela, e embaixo os botões Tarefas da sessão e Parar (Esc ou um clique fora fecham). Cada cartão tem ao lado um botão para parar só aquela tarefa. **Uma sessão pode ter várias tarefas:** o ponto começa por uma, e outras entram e saem depois: entram pelo botão Adicionar à sessão no Início e na página da tarefa, ou pelo modal da sessão, que mostra cada tarefa com o intervalo em que esteve nela, numa barra de tempo. O tempo vale para a sessão e para cada tarefa (tarefas em paralelo contam o tempo cheio cada uma; a pessoa, o projeto e os valores contam a sessão uma vez só), e as tarefas se mexem também depois de a sessão terminar (quem bateu o ponto e os admins). O **Início**, a primeira aba e a mesma tela para admin e membro, tem o **painel do timer** (o cronômetro, que mostra também quanto a sessão aberta já rendeu), ao lado do seu tempo de hoje e da semana. Ao clicar em Iniciar numa tarefa, o cartão dela vai para dentro do painel, que mostra as tarefas em andamento como cartões e, embaixo, desde que horas o ponto está aberto e os botões Parar e Tarefas da sessão; parado, o painel convida a iniciar uma das tarefas abaixo. As **suas tarefas** (as de que você é o responsável e que ainda não estão na sessão; ao parar, elas voltam), em cartões que abrem a tarefa inteiros (o mouse vira mão e o fundo escurece; sem botão Ver detalhes). De cima para baixo: o nome, o selo de status e o de prioridade (nas mesmas cores da lista), o prazo à esquerda (só quando há; atrasado em vermelho, vencendo em 48 horas em amarelo, e o de uma tarefa fechada é só a data) e o botão Iniciar à direita (com a tarefa na sessão aberta, o botão Parar tarefa ocupa o lugar dele), uma divisória e as etiquetas ("Sem etiquetas" quando não há). O nome, o status, o prazo e as etiquetas ficam nas mesmas alturas nos cartões de uma fileira (para pegar uma tarefa disponível, use o quadro de tarefas); e as **suas sessões**, cada uma com as suas tarefas, na tabela em que a linha inteira abre o modal dela (o horário é o botão para o teclado; não há mais o olhinho). O modal é grande e tem três grupos, cada um com o nome na borda como o de novo projeto: o Resumo, as Tarefas da sessão (um cartãozinho por tarefa, com o tempo, a linha do intervalo e o botão Abrir tarefa, que leva a ela) e, para quem pode mudar a sessão, o Adicionar tarefa. A tabela tem filtros de data e tarefa (com uma tarefa no filtro, o tempo e o valor da linha e dos totais são os dela na sessão), os totais do filtro num cartão à parte e dez sessões por página. O membro só enxerga as próprias sessões, e isso vale no servidor; o admin vê as de todos na Gestão. O banco garante uma única sessão aberta por pessoa.
 - **Horas em dinheiro.** Cada sessão guarda os valores por hora de quando o ponto abriu, então **mudar um valor só vale dali em diante**. Quem não tem valor definido no projeto **não bate ponto**. Na tela de ponto, o membro vê quanto ganhou; o admin vê custo, receita e margem.
+- **Sincronização das issues do GitHub com as tarefas**, nos dois sentidos. Com a caixa "Sincronizar as issues deste repositório com as tarefas" ligada na integração, **toda issue aberta do repositório vira uma tarefa** (em backlog, sem prazo, ligada à issue, com o selo "GitHub #42" nas listas, nos cartões e na página da tarefa), e as duas ficam iguais: o **título** é o nome, o **corpo** é a descrição, as **etiquetas** são as etiquetas e o **responsável** é o responsável, ligado pelo **e-mail público** do usuário no perfil do GitHub (quem não publica e-mail fica sem correspondência: a tarefa fica disponível, e o cartão da integração conta quantos são). Fechar vale nos dois sentidos: a tarefa Fechada fecha a issue como concluída, reabrir reabre, e a issue fechada ou reaberta no GitHub muda a tarefa (uma issue reaberta tira a tarefa de Fechada para backlog). Projetos, milestone, comentários e pull requests são ignorados, e prioridade, prazo, horas e os status Em progresso e Aguardando fechamento ficam só aqui. **Se os dois lados mudarem o mesmo campo entre duas sincronizações, vale o GitHub**; as etiquetas não conflitam, cada lado soma e tira o que fez. A sincronização roda **pelo botão Sincronizar agora** do cartão (uma rodada completa), **sozinha** de `GITHUB_SYNC_INTERVAL` em `GITHUB_SYNC_INTERVAL` (5 minutos por padrão; o GitHub não alcança o servidor, então não há webhook) e **na hora**, poucos segundos depois de alguém mudar uma tarefa ligada a uma issue. Ver [Sincronizar as issues com as tarefas](#sincronizar-as-issues-com-as-tarefas).
 - **Gestão do projeto**, só para admins. Um botão **Gestão**, no fim da barra de abas, leva a uma área com abas próprias (Visão geral, Colaboradores, Integrações e Configurações) e a um link para voltar ao projeto; o membro não vê o botão e recebe "Página não encontrada" nos endereços da Gestão. A **Visão geral** da Gestão mostra, numa tela só: quantas pessoas e quantos times trabalham no projeto, as horas registradas, a receita, o custo e a margem; há quanto tempo o projeto existe, em dias, semanas e meses, contados do dia em que foi cadastrado; as integrações configuradas e se estão ativas; a atividade dos últimos 7 e 30 dias e quem está com o ponto aberto; as tarefas atrasadas; e as horas, o custo e a receita de cada pessoa. É uma fotografia da hora em que foi lida, com um botão para atualizar.
 - **Integrações** com GitHub, GitLab e Trello; por enquanto só o GitHub se oferece, e GitLab e Trello aparecem no modal como "Em breve" (o código deles funciona, mas a API recusa criar integração nova; as que já existem seguem valendo e se editam). Todas usam a mesma estrutura: nome, o acesso (um token, validado na plataforma, guardado criptografado e que nunca volta nas respostas) e, em `metadata`, os campos próprios da plataforma (o repositório, o projeto, a chave e o quadro), que cada integração confere antes de falar com ela. **O GitHub se conecta por autorização, sem token para colar:** o botão **Conectar com o GitHub** leva ao site dele e, na volta, o modal pede o repositório numa lista dos que a conta enxerga (a integração nasce desativada e só é ativada ao escolher um; **Reconectar** renova o acesso ou troca de conta). Isso pede o app OAuth cadastrado no GitHub, ver [Conectar com o GitHub](#conectar-com-o-github); sem ele o botão avisa que não está configurado. O admin cria e edita num modal só, que desenha os campos da plataforma escolhida; o cartão de cada integração é só de leitura, e desativar ou excluir também ficam no modal. Os detalhes do item (o título e o estado da issue, ou a lista em que o cartão está) são buscados na hora, e se a plataforma não responde a tela mostra o motivo, sem quebrar.
 
@@ -75,6 +76,7 @@ Para gerar o binário: `go build -o wtt ./cmd && ./wtt`. Templates e arquivos es
 | `PUBLIC_URL` | para conectar o GitHub | O endereço em que as pessoas abrem o sistema, sem barra no fim (`http://localhost:8080`). O GitHub devolve a pessoa a `PUBLIC_URL/integrations/github/callback` |
 | `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | para conectar o GitHub | O Client ID e o Client secret do app OAuth cadastrado no GitHub. Sem eles, o botão Conectar com o GitHub avisa que não está configurado |
 | `GITHUB_URL`, `GITHUB_API_URL` | não | Para um GitHub Enterprise (ou um servidor fake): o site (`https://github.com`) e a API (`https://api.github.com`), que são os padrões |
+| `GITHUB_SYNC_INTERVAL` | não | De quanto em quanto tempo o servidor olha as integrações com a sincronização das issues ligada (`5m`, `30s`...). Padrão `5m`; `0` desliga a rotina de fundo, e o botão Sincronizar agora e a sincronização das tarefas que mudam seguem valendo |
 | `TEST_DATABASE_URL` | só nos testes | Banco usado por `go test`. O nome precisa terminar em `_test` |
 
 ### Conectar com o GitHub
@@ -88,9 +90,34 @@ O botão **Conectar com o GitHub** usa um **OAuth App** do GitHub, que se cadast
 Pontos de atenção:
 
 - Um OAuth App tem **uma URL de retorno só**: um app serve um endereço do sistema. Para desenvolvimento e produção, dois apps.
-- O escopo pedido é `repo`, o único que dá acesso a repositório privado num OAuth App. Ele também permite escrita, que o sistema **não usa** (só lê issues); o token fica criptografado e nunca sai do servidor. Se isso for um problema para quem usa, a saída é um GitHub App, de permissões mais finas.
+- O escopo pedido é `repo`, o único que dá acesso a repositório privado num OAuth App. Ele também permite escrita, e a **sincronização das issues a usa**: com a caixa ligada, o sistema muda título, corpo, etiquetas, responsáveis e estado das issues (e cria etiquetas que o repositório ainda não tem) **com a conta de quem conectou**. Sem a caixa ligada, ele só lê issues. O token fica criptografado e nunca sai do servidor. Se isso for um problema para quem usa, a saída é um GitHub App, de permissões mais finas.
 - Se um repositório de uma **organização** não aparecer na lista, o dono da organização precisa aprovar o app, nas configurações dela, em acesso de aplicativos de terceiros.
 - A lista traz os 100 repositórios mexidos há menos tempo; os outros se digitam no campo.
+
+### Sincronizar as issues com as tarefas
+
+Na edição da integração (e na escolha do repositório, logo depois de conectar, onde a caixa já vem marcada), a caixa **Sincronizar as issues deste repositório com as tarefas** liga a sincronização. Só liga com a integração ativa e o repositório escolhido, e com ela ligada **o repositório não troca** (desligue, troque e ligue de novo; trocar com ela desligada esquece o vínculo das issues do repositório antigo). Quem liga precisa da permissão de integrações, mas **qualquer pessoa do projeto que edita uma tarefa sincronizada escreve no GitHub com a conta de quem conectou**: a página da tarefa avisa isso na edição.
+
+Como funciona, por campo (cada issue guarda o **snapshot do último acordo**, e é contra ele que se vê quem mudou):
+
+- **Nome, descrição:** se o GitHub mudou desde o acordo, a tarefa fica com o valor dele; senão, se a tarefa mudou, a mudança vai para a issue. Finais de linha do Windows e espaços nas pontas não contam como mudança.
+- **Estado:** a tarefa Fechada fecha a issue; reabrir a tarefa reabre. No GitHub, issue fechada fecha a tarefa; issue reaberta tira a tarefa de Fechada para backlog (uma tarefa aberta, em progresso ou aguardando fechamento, não muda).
+- **Etiquetas:** o resultado é o que o GitHub tem, mais o que a tarefa ganhou, menos o que a tarefa perdeu, e vai para os dois lados. Uma etiqueta que o repositório não tem é criada antes de a issue recebê-la (o GitHub a descartaria sem avisar); renomear ou excluir uma etiqueta aqui passa a mexer nas issues das tarefas que a têm.
+- **Responsável:** a tarefa tem um responsável só, e a issue pode ter vários. Só o usuário **ligado** à pessoa é mexido: o `login` do GitHub só se liga a uma pessoa **do projeto** se o **e-mail público** dele, no perfil do GitHub, é o dela (o e-mail é único no sistema, então a busca é sempre dentro da organização). Os outros responsáveis da issue ficam como estão nos dois sentidos. Escolher aqui alguém cujo e-mail não aparece em nenhum perfil do GitHub não manda nada e deixa o aviso "não achei o usuário do GitHub". Tirar o responsável no GitHub tira daqui, e o contrário também. Quem publica o e-mail no GitHub depois passa a ser reconhecido na rodada seguinte (o botão pergunta tudo de novo).
+- **Importação:** só issue **aberta** vira tarefa. Uma tarefa que já estava ligada à issue à mão **passa a ser sincronizada** em vez de a issue virar outra tarefa (o GitHub vence no nome e na descrição, e as etiquetas dos dois lados se somam). **Excluir a tarefa descarta a issue** (ela não volta a ser importada, e a issue não é fechada); **desvincular** a tarefa a tira da sincronização; uma tarefa criada aqui **não cria issue**. Uma issue apagada ou transferida fica marcada como sumida, e a tarefa fica como estava.
+
+Quando roda: o botão **Sincronizar agora** faz uma rodada completa (todas as issues abertas, e a conferência das que já eram ligadas) e responde o que fez (`created`, `updated`, `closed`, `pushed`, `unmapped`, `errors`, `partial`); a rotina de fundo pede só as issues mexidas desde a última rodada, e a cada hora faz uma completa; e o gancho das tarefas empurra para o GitHub, em poucos segundos, o que mudou numa tarefa ligada (editar, mudar status ou etiquetas, pegar uma tarefa livre, bater o ponto nela). Só uma rodada roda por vez em cada integração (o botão responde `409` se já há uma). Uma rodada sem diferença nenhuma não escreve nada no GitHub.
+
+O cartão da integração mostra a última sincronização, quantas issues têm responsável sem correspondência e o último aviso:
+
+- **o token não escreve no repositório** (ou ele está arquivado): as issues só vêm para cá e as mudanças daqui não vão (modo somente leitura);
+- **o GitHub ignorou uma mudança** (`200` sem gravar, o que ele faz com quem não tem permissão para etiquetas ou responsáveis): a mesma mudança não é repetida a cada rodada, só uma mudança nova a tenta de novo;
+- **limite de requisições** do GitHub: a rodada para, o que já fez fica feito, e a rotina espera o limite acabar (o token revogado também faz a rotina esperar, cada vez mais);
+- o GitHub recusou a mudança, ou não deixou criar a etiqueta.
+
+Pontos de atenção: em um repositório **público**, quem abre uma issue cria uma tarefa (o Markdown é limpo ao exibir). A descrição de uma tarefa vai até 65.536 caracteres e uma etiqueta até 50, que são os limites do GitHub, para a sincronização não cortar o texto. Responsável só por e-mail funciona para poucos, porque quase ninguém publica o e-mail no GitHub; um campo "usuário do GitHub" na pessoa resolveria e é um passo pequeno.
+
+Para ver isso numa instância sem tocar no GitHub de verdade, `go run ./cmd/fakegithub -addr :8091` sobe o GitHub falso dos testes (o site, com a autorização, e a API no mesmo endereço) com issues de vários jeitos e um painel em `/_fake` para mexer nelas como se fosse outra pessoa; aponte o servidor para ele com `GITHUB_URL` e `GITHUB_API_URL` e use `GITHUB_CLIENT_ID=test-client-id` e `GITHUB_CLIENT_SECRET=test-client-secret`.
 
 O servidor e o seed aplicam as migrações pendentes ao iniciar. São arquivos SQL versionados, e só eles mudam o schema: veja [Migrações do banco](#migrações-do-banco).
 
@@ -214,7 +241,7 @@ Resumo dos grupos de rotas:
 | Times | `/api/teams/:teamId` (+ `members`) |
 | Tarefas | `/api/tasks/:taskId` (+ `claim`, `attributes`, `link-external-item`, `external-details`) |
 | Ponto | `/api/projects/:projectId/work-sessions/*`, `/api/work-sessions/active` |
-| Integrações | `/api/integrations/:integrationId` (+ `repositories`) |
+| Integrações | `/api/integrations/:integrationId` (+ `repositories`, `sync`) |
 
 **Integrações.** O corpo é o mesmo para qualquer plataforma. O que muda de uma para outra vai em `metadata`:
 
@@ -234,6 +261,8 @@ Resumo dos grupos de rotas:
 | `trello` | token da API | `api_key`: a chave do Power-Up; `board_id`: o endereço do quadro, o link curto ou o id |
 
 `GET /api/integrations/:integrationId/repositories` (`integrations.manage`) lista o que o token guardado enxerga (`[{"full_name": "dono/repo", "private": true}]`), para a tela oferecer a escolha; só os tipos que implementam `RepositoryLister` (o GitHub) respondem, e o token nunca sai do servidor. O `Descriptor` diz como cada tipo dá acesso: `Auth: "oauth"` (o GitHub: a tela mostra o botão Conectar, sem campo de token) ou o padrão, token.
+
+`POST /api/integrations/:integrationId/sync` (`integrations.manage`) faz uma rodada completa da sincronização das issues com as tarefas e responde `{"created","updated","closed","pushed","unmapped","errors","partial"}`; `409` `integration.sync_running` se já há uma rodada na integração, `400` `integration.sync_off` com a sincronização desligada. A sincronização liga e desliga pelo `PATCH /api/integrations/:integrationId` com `{"sync_issues": true}`, e as respostas de integração trazem `sync_issues`, `last_synced_at`, `last_sync_error` e `sync_unmatched`.
 
 `gitlab` e `trello` têm `ComingSoon: true` no `Descriptor`: o `POST` de um deles responde `400` com `integration.type_coming_soon`, e a tela mostra o tipo desabilitado com o selo "Em breve". Tirar a flag os oferece de novo, sem outra mudança.
 
@@ -261,13 +290,14 @@ TEST_DATABASE_URL=postgres://wtt:wtt@localhost:5432/working_time_tracker_test?ss
 
 Cada pacote de teste apaga o schema desse banco e aplica as migrações de novo antes de rodar, então ele não precisa de preparo e os testes sempre veem o que os arquivos de migração produzem hoje. Por segurança, isso só acontece num banco cujo nome termina em `_test`.
 
-O `-p 1` é necessário porque todos os pacotes recriam e usam o mesmo banco. As chamadas ao GitHub, ao GitLab e ao Trello nos testes vão para servidores fake (`httptest`, em `testutil/platforms.go`), então a suíte não depende de rede.
+O `-p 1` é necessário porque todos os pacotes recriam e usam o mesmo banco. As chamadas ao GitHub, ao GitLab e ao Trello nos testes vão para servidores fake (`httptest`, em `testutil/platforms.go` e, o do GitHub, com estado, em `testutil/github.go`), então a suíte não depende de rede, e o transporte HTTP padrão dos testes recusa qualquer endereço que não seja da própria máquina: um teste que apontasse para o GitHub de verdade falha em vez de escrever nas issues de alguém.
 
 Cobertura:
 - **Domínios:** services e handlers.
 - **Migrações:** o banco que elas produzem bate com o `ent/schema`, regras de FK, índice parcial, recusa de banco sem histórico e checksum dos arquivos.
 - **Router real:** tabela de rotas, autenticação, permissões e isolamento entre organizações.
 - **Páginas:** toda página renderiza para admin e membro, redireciona sem sessão e dá 404 entre organizações; cada uma tem o modal uma única vez e carrega os ícones com SRI. As abas só de admins (as de gestão da organização e a Gestão do projeto) dão 404 ao membro e somem do menu dele.
+- **Sincronização das issues:** a regra de conflito em tabelas (`merge_test.go`), a rodada contra o GitHub fake com banco (importar, fechar, edição nos dois sentidos, adoção, issue descartada, sumida, só leitura, descarte silencioso, responsável sem e-mail, rodada interrompida, limite de requisições, uma rodada por vez, rotina de fundo) e a API de ponta a ponta, incluindo o gancho (editar, tirar o responsável, bater o ponto). Uma segunda rodada sem diferença faz **zero** escritas no GitHub.
 - **Visão geral:** os totais com valores exatos (o arredondamento por sessão, a sessão aberta, as janelas de 7 e 30 dias, quem saiu do projeto, projeto interno e projeto vazio) e a idade do projeto em dias, semanas e meses.
 - **Alpine vendorizado:** o hash confere com o pacote oficial.
 
@@ -275,8 +305,9 @@ Cobertura:
 
 ```
 cmd/
-  main.go                 # servidor: config, banco, migrações e server.New
+  main.go                 # servidor: config, banco, migrações, server.Build e a sincronização de fundo
   seed/main.go            # dados de demonstração
+  fakegithub/main.go      # o GitHub falso dos testes como servidor de desenvolvimento, com painel em /_fake
   migrate/                # gera, confere e aplica as migrações do banco
 ent/
   schema/                 # schema do banco (Ent); o resto de ent/ é gerado: go generate ./ent
@@ -288,13 +319,14 @@ internal/
     auth/                 # signup, login, sessões, convites, middlewares e acesso por organização
     organization/  customer/  person/  project/  team/  allocation/  collaborator/  task/  work_session/  integration/
                           # cada domínio com model, store (Ent), service e handler
+    issuesync/            # sincronização das issues do GitHub com as tarefas: a regra de conflito (merge.go), a rodada, o gancho e a rotina de fundo
     overview/             # visão geral do projeto e da organização: só lê os outros domínios, sem tabela nem store
   page/                   # páginas HTML
   routes/                 # rotas da API (routes.go) e das páginas (pages.go)
-  server/                 # monta o servidor completo; usado pelo main e pelos testes
+  server/                 # monta o servidor completo e a sincronização das issues (Build); usado pelo main e pelos testes
   template/               # renderer dos templates
   validate/               # validações de formato usadas por mais de um domínio (CNPJ, links)
-testutil/                 # conexão, schema e limpeza do banco de teste
+testutil/                 # conexão, schema e limpeza do banco de teste, e as plataformas fake (o GitHub com estado)
 web/                      # templates e arquivos estáticos (embutidos no binário)
 docker-compose.yml        # PostgreSQL de dev e de testes
 _docs/                    # proposta, design e plano das sprints
@@ -317,6 +349,7 @@ Project      (1) ── (N) WorkSession   a sessão é do projeto e guarda o val
 WorkSession  (1) ── (N) WorkSessionTask ── (1) Task   as tarefas da sessão, cada uma com o intervalo em que esteve nela
 Project      (1) ── (N) Integration   token criptografado (credentials) e metadata em claro
 Task      (0..1) ── (0..1) Integration  via external_integration_id
+Integration  (1) ── (N) IssueSync     o vínculo de uma issue do GitHub com uma tarefa e o snapshot do último acordo; task_id nulo é a issue descartada
 ```
 
 Uma pessoa entra num projeto pelo **valor por hora** (`Allocation`), que é obrigatório e libera o ponto: colaborador do projeto é quem tem valor nele, e não há outra tabela para isso. Só depois ela pode entrar num **time** (`TeamMembership`), que permite ser responsável por tarefas; a API recusa pôr num time quem não tem valor no projeto. Tirar alguém do projeto apaga o valor e os times de uma vez e mantém as tarefas e as sessões da pessoa. Não há como apagar só o valor.
