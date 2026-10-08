@@ -3,10 +3,13 @@ package issuesync_test
 import (
 	"context"
 	"errors"
+	"net/http"
 	"net/http/httptest"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -38,7 +41,9 @@ type denv struct {
 	project string
 }
 
-func newDualEnv(t *testing.T) *denv {
+func newDualEnv(t *testing.T) *denv { return newDualEnvWith(t, issuesync.Config{}) }
+
+func newDualEnvWith(t *testing.T, cfg issuesync.Config) *denv {
 	t.Helper()
 	testutil.Truncate(t, testDB)
 
@@ -76,7 +81,7 @@ func newDualEnv(t *testing.T) *denv {
 	d.syncer = issuesync.New(issuesync.Deps{
 		Integrations: d.integ, Tasks: d.tasks, People: person.NewStore(testClient),
 		Members: team.NewMembershipStore(testClient), Rows: d.rows,
-	}, issuesync.Config{})
+	}, cfg)
 	d.tasks.SetChangeHook(d.syncer.Notify)
 	d.gh.Reset()
 	d.tr.Reset()
@@ -559,5 +564,84 @@ func TestDual_MirrorAnImportedItem(t *testing.T) {
 	}
 	if _, err := d.syncer.Publish(ctx, fromCard.ID, d.ghIt.ID); !errors.Is(err, issuesync.ErrAlreadyLinked) {
 		t.Errorf("mirroring twice = %v, want task.already_linked", err)
+	}
+}
+
+// Editar a tarefa que está nas duas plataformas leva a edição às duas, pelo gancho: é o que a pessoa espera de
+// uma tarefa sincronizada com o GitHub e com o Trello.
+func TestDual_EditingTheTaskPushesToBothPlatforms(t *testing.T) {
+	d := newDualEnv(t)
+	tk := d.posted("Tarefa nos dois")
+
+	if _, err := d.taskSvc.UpdateAs("", tk.ID.String(), "Tarefa nos dois", "descrição nova", nil, nil, task.Attrs{}); err != nil {
+		t.Fatalf("edit: %v", err)
+	}
+	d.flush()
+	if _, issue := d.issue(tk); issue.Body != "descrição nova" {
+		t.Errorf("issue body = %q, want the edit to reach GitHub", issue.Body)
+	}
+	if c := d.card(tk); c.Desc != "descrição nova" {
+		t.Errorf("card description = %q, want the edit to reach Trello", c.Desc)
+	}
+}
+
+// Uma integração em espera (o token que o GitHub recusou, o limite de requisições) não faz a edição se perder: o
+// que não pôde sair espera, e sai sozinho quando a integração se recupera, sem depender da rodada completa da hora.
+func TestDual_AnEditWaitsOutABackedOffIntegration(t *testing.T) {
+	var now atomic.Int64
+	now.Store(time.Date(2026, 10, 8, 12, 0, 0, 0, time.UTC).UnixNano())
+	clock := func() time.Time { return time.Unix(0, now.Load()).UTC() }
+	// A rotina de fundo olha só o Trello: o GitHub só recebe o que o gancho empurrar.
+	d := newDualEnvWith(t, issuesync.Config{
+		Now: clock, Debounce: 20 * time.Millisecond, Intervals: map[string]time.Duration{"github": 0, "trello": 50 * time.Millisecond},
+	})
+	tk := d.posted("Com o token recusado")
+
+	// O GitHub recusa o token no empurrão: o Trello recebe a edição, o GitHub entra em espera.
+	d.gh.Fail("PATCH", "/repos/"+repo+"/issues", http.StatusUnauthorized, 1)
+	if _, err := d.taskSvc.UpdateAs("", tk.ID.String(), "Com o token recusado", "primeira edição", nil, nil, task.Attrs{}); err != nil {
+		t.Fatalf("edit: %v", err)
+	}
+	d.flush()
+	if c := d.card(tk); c.Desc != "primeira edição" {
+		t.Fatalf("card description = %q, want the first edit on Trello", c.Desc)
+	}
+	if _, issue := d.issue(tk); issue.Body != "descrição" {
+		t.Fatalf("issue body = %q, want GitHub untouched (it refused the token)", issue.Body)
+	}
+
+	// Uma segunda edição com o GitHub em espera: nem tenta, e também não se perde.
+	if _, err := d.taskSvc.UpdateAs("", tk.ID.String(), "Com o token recusado", "segunda edição", nil, nil, task.Attrs{}); err != nil {
+		t.Fatalf("edit: %v", err)
+	}
+	d.gh.Reset()
+	d.flush()
+	if d.gh.Writes() != 0 {
+		t.Errorf("GitHub was written to while backed off: %v", d.gh.Requests())
+	}
+	if _, issue := d.issue(tk); issue.Body != "descrição" {
+		t.Fatalf("issue body = %q, want GitHub still untouched", issue.Body)
+	}
+
+	// A espera passa, e a rotina de fundo devolve à fila o que ficou para depois: o GitHub recebe a edição mais
+	// nova, sem rodada completa dele (a rotina não olha o GitHub).
+	now.Add(int64(30 * time.Minute))
+	ctx, cancel := context.WithCancel(context.Background())
+	stopped := make(chan struct{})
+	go func() { d.syncer.Run(ctx); close(stopped) }()
+	defer func() {
+		cancel()
+		<-stopped
+	}()
+	deadline := time.Now().Add(20 * time.Second)
+	for {
+		if _, issue := d.issue(tk); issue.Body == "segunda edição" {
+			return
+		}
+		if time.Now().After(deadline) {
+			_, issue := d.issue(tk)
+			t.Fatalf("issue body = %q, want the edit that waited to reach GitHub once it recovered", issue.Body)
+		}
+		time.Sleep(50 * time.Millisecond)
 	}
 }

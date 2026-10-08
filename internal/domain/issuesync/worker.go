@@ -31,13 +31,18 @@ type queue struct {
 	// skips são, por tarefa nova (esperando ou guardada), as integrações em que a pessoa pediu para não
 	// postá-la: a mesma lista vale na primeira tentativa e nas seguintes.
 	skips map[uuid.UUID][]uuid.UUID
-	wake  chan struct{}
+	// deferred são, por integração, as tarefas mudadas aqui cujo empurrão não pôde sair porque a integração estava
+	// em espera (o token recusado, o limite de requisições) ou falhou na hora: voltam à fila quando ela se recupera.
+	// Uma rodada de fundo incremental não as revê (só olha o que mudou na plataforma), então sem isto a mudança
+	// esperaria a rodada completa da hora.
+	deferred map[uuid.UUID]map[uuid.UUID]struct{}
+	wake     chan struct{}
 }
 
 func newQueue() *queue {
 	return &queue{
 		ids: map[uuid.UUID]struct{}{}, created: map[uuid.UUID]struct{}{}, parked: map[uuid.UUID]int{},
-		skips: map[uuid.UUID][]uuid.UUID{}, wake: make(chan struct{}, 1),
+		skips: map[uuid.UUID][]uuid.UUID{}, deferred: map[uuid.UUID]map[uuid.UUID]struct{}{}, wake: make(chan struct{}, 1),
 	}
 }
 
@@ -84,6 +89,34 @@ func (q *queue) park(id uuid.UUID) bool {
 		return false
 	}
 	return true
+}
+
+// deferPush guarda a tarefa para a integração: o empurrão dela espera a integração se recuperar.
+func (q *queue) deferPush(integrationID, taskID uuid.UUID) {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	if q.deferred[integrationID] == nil {
+		q.deferred[integrationID] = map[uuid.UUID]struct{}{}
+	}
+	q.deferred[integrationID][taskID] = struct{}{}
+}
+
+// requeueDeferred devolve à fila as tarefas que esperavam a integração e diz quantas eram.
+func (q *queue) requeueDeferred(integrationID uuid.UUID) int {
+	q.mu.Lock()
+	set := q.deferred[integrationID]
+	delete(q.deferred, integrationID)
+	for id := range set {
+		q.ids[id] = struct{}{}
+	}
+	q.mu.Unlock()
+	if len(set) > 0 {
+		select {
+		case q.wake <- struct{}{}:
+		default:
+		}
+	}
+	return len(set)
 }
 
 // skipOf são as integrações em que a tarefa nova não deve ser postada.
@@ -185,11 +218,18 @@ func (s *Syncer) Flush(ctx context.Context) int {
 			return touched
 		}
 		if s.backedOff(row.IntegrationID) {
+			// A integração está em espera: a mudança não se perde, volta quando ela se recuperar.
+			s.queue.deferPush(row.IntegrationID, *row.TaskID)
 			continue
 		}
 		touched++
 		if err := s.SyncTask(ctx, row); err != nil {
 			s.afterRun(row.IntegrationID, err)
+			// Uma falha que para a sincronização (o token recusado, o limite) deixa a integração em espera: o
+			// empurrão que não saiu espera com ela.
+			if adapter.StopsSync(err) && !errors.Is(err, context.Canceled) {
+				s.queue.deferPush(row.IntegrationID, *row.TaskID)
+			}
 			if !errors.Is(err, ErrSyncOff) && !errors.Is(err, context.Canceled) {
 				s.cfg.Logger.Warn("issue sync: pushing a task", "task", row.TaskID, "error", err)
 			}
@@ -239,6 +279,8 @@ func (s *Syncer) afterRun(id uuid.UUID, err error) {
 	defer s.mu.Unlock()
 	if err == nil || errors.Is(err, ErrSyncRunning) || errors.Is(err, ErrSyncOff) || errors.Is(err, context.Canceled) {
 		delete(s.backoff, id)
+		// A integração voltou a responder: o que esperava para ser empurrado vai agora.
+		s.queue.requeueDeferred(id)
 		return
 	}
 	b := s.backoff[id]
@@ -271,6 +313,8 @@ func (s *Syncer) tick(ctx context.Context) {
 		if s.backedOff(it.ID) {
 			continue
 		}
+		// A espera acabou (ou nunca houve): as mudanças que ficaram para depois saem, sem esperar uma rodada completa.
+		s.queue.requeueDeferred(it.ID)
 		// Cada tipo tem o seu intervalo: a rotina acorda no menor deles e olha só quem já passou do seu.
 		every := s.cfg.intervalFor(it.Type)
 		s.mu.Lock()

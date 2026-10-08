@@ -171,6 +171,11 @@ func (s *Syncer) lockTask(id uuid.UUID) (unlock func()) {
 // que ela acabou de mudar no perfil dele conta). Recusa se já há uma rodada nesta integração.
 func (s *Syncer) SyncNow(ctx context.Context, id uuid.UUID) (*Summary, error) {
 	sum, err := s.syncNow(ctx, id)
+	if err == nil {
+		// A integração respondeu: se estava em espera por uma falha de antes (um token que a pessoa acabou de
+		// reconectar), a espera acaba e o que ficou sem empurrar sai.
+		s.afterRun(id, nil)
+	}
 	if !errors.Is(err, ErrSyncRunning) {
 		// Quem aperta o botão também quer as tarefas novas que ainda não saíram: depois da rodada, sem o cadeado dela.
 		s.retryParked(ctx)
@@ -764,6 +769,7 @@ func (s *Syncer) syncLinkNow(ctx context.Context, t *task.Task, l task.Link) (*T
 	if err := r.syncOne(row, t); err != nil {
 		return nil, err
 	}
+	s.afterRun(l.IntegrationID, nil)
 	return &TaskSummary{Summary: r.sum, Problem: r.problem}, nil
 }
 

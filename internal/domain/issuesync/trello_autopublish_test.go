@@ -137,7 +137,7 @@ func TestTrello_NewTaskTrelloRefuses(t *testing.T) {
 }
 
 // O Trello fora do ar (o limite de requisições) não perde a tarefa: ela fica esperando, a integração avisa, e o botão
-// Sincronizar (ou a rotina de fundo) a posta quando passa.
+// Sincronizar (ou a rotina de fundo) a posta quando o Trello volta a responder.
 func TestTrello_NewTaskWaitsForTrello(t *testing.T) {
 	now := time.Now()
 	e := newTrelloEnv(t, issuesync.Config{Now: func() time.Time { return now }})
@@ -152,21 +152,22 @@ func TestTrello_NewTaskWaitsForTrello(t *testing.T) {
 		t.Fatal("the task was linked although Trello refused")
 	}
 
-	// Enquanto a integração espera o limite acabar, a tarefa não é tentada (nem pelo botão).
-	e.fake.RateLimitedFor(0)
-	e.fake.Reset()
-	e.syncer.SyncNow(context.Background(), e.it.ID)
+	// Enquanto o Trello ainda pede para esperar, o botão não o alcança e a tarefa não é tentada.
+	if _, err := e.syncer.SyncNow(context.Background(), e.it.ID); err == nil {
+		t.Error("the button worked while Trello was still limiting")
+	}
 	if e.cardsCount() != 0 {
-		t.Errorf("the task was tried while the integration waits: %d cards", e.cardsCount())
+		t.Errorf("the task was tried while Trello was limiting: %d cards", e.cardsCount())
 	}
 
-	// Passada a espera, o botão posta a tarefa que ficou, uma vez só.
-	now = now.Add(2 * time.Minute)
+	// Quando o Trello volta a responder, o botão que dá certo acaba a espera da integração e posta a tarefa que
+	// ficou, uma vez só.
+	e.fake.RateLimitedFor(0)
 	if _, err := e.syncer.SyncNow(context.Background(), e.it.ID); err != nil {
 		t.Fatalf("sync now: %v", err)
 	}
 	if e.cardsCount() != 1 {
-		t.Fatalf("%d cards after the wait, want the waiting task posted", e.cardsCount())
+		t.Fatalf("%d cards after Trello came back, want the waiting task posted", e.cardsCount())
 	}
 	if got, _ := e.tasks.GetByID(tk.ID.String()); len(got.Links) == 0 {
 		t.Error("the task was not linked after the retry")
