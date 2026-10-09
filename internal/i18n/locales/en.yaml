@@ -30,6 +30,7 @@ common:
   delete_confirm: Delete for good?
 
 titles:
+  payments: Payments
   login: Sign in
   signup: Create account
   clerk_continue: Signing in
@@ -42,6 +43,7 @@ titles:
   org_projects: Projects
   org_customers: Customers
   org_people: Collaborators
+  org_person: Collaborator
   overview: Management · Overview
   my_overview: Home
   collaborators: Collaborators
@@ -59,6 +61,7 @@ nav:
   projects: Projects
   people: Collaborators
   customers: Customers
+  payments: Payments
   settings: Settings
   account_sr: "Your account:"
   profile: Profile
@@ -408,21 +411,73 @@ not_found:
   text: The address does not exist or you do not have access to it.
   back: Back to start
 
+payments:
+  intro: How much to pay, to whom and when, calculated from each person's payment rule and tracked hours. Click a person to open their profile.
+  refresh: Refresh
+  loading: Loading the payments…
+  rule_line: "{{.rule}} · the period closes at midnight ({{.tz}})"
+  next_payment: Next payment
+  today: Pays today
+  days_left:
+    one: "in {{.count}} day"
+    other: "in {{.count}} days"
+  goal: Weekly hours goal
+  goal_hint: "of {{.time}} for the period"
+  project: Project
+  history_empty: No closed period yet.
+  history_note: "Closed periods are calculated from the tracked sessions: nothing is recorded as paid. Changing the rule recalculates where the past periods fall, and deleting a project removes its sessions from the history."
+  total_closed: Total of the closed periods
+  period: Period
+  pay_date: Pay date
+  hours: Hours
+  amount: Amount
+  rule: Rule
+  last_closed: Last closed
+  owner_no_amount: no amount
+  team_to_pay: To pay this period
+  team_to_pay_hint: Up to now, in the running periods
+  team_closing_7: Closing in 7 days
+  team_closing_30: "{{.amount}} in 30 days"
+  team_hours: Team hours
+  team_hours_owner: "{{.time}} by the owner"
+  team_without_rule: People without a rule
+  team_empty: Nobody has a payment rule yet.
+  without_rule_title: "No payment rule:"
+  without_rule_link: Set them in Collaborators
+  calendar: Payment dates
+  calendar_hint: The amount only counts periods that are already running.
+
 profile:
-  eyebrow: Your account
-  title: Your profile
-  weekly_hours: Weekly hours
+  eyebrow: Your profile
+  edit: Edit profile
+  tabs_label: What to edit
+  loading: Loading the profile…
+  no_weekly_hours: Weekly hours not set
+  no_payment_rule: No payment rule
+  no_rule: You have no payment rule yet. Ask an admin to set when you are paid.
+  no_rule_other: This person has no payment rule yet, so there are no periods to show.
+  set_rule: Set the rule
+  this_period: This period
+  lifetime: Since the start
+  lifetime_since: "since {{.date}}"
+  lifetime_empty: No hours tracked
+  history: Payment history
+  upcoming: Upcoming payments
+  projects:
+    title: Projects and rates
+    intro: How much you earn per hour on each project and what you have done on them. Only you and the admins can see it.
+    intro_other: How much the person earns per hour on each project and what they have done on them.
+    empty: You are not on any project yet.
+    empty_other: This person is not on any project yet.
+    rate: Hourly rate
+    period: This period
+    left: left the project
   personal:
     title: Personal details
     name: Name
     email_hint: This is the email you use to sign in.
     submit: Save profile
     saved: Profile saved.
-  rates:
-    owner: "Owner: earns the rate billed to the customer"
-    title: My rates
-    intro: How much you earn per hour on each project. Only you and the admins can see it.
-    empty: You don't have a rate set on any project yet.
   password:
     title: Password
     current: Current password
@@ -497,6 +552,12 @@ help:
       mine: "Your dashboard (everyone): your hours today and this week, your open and completed tasks across every project, and the week day by day with the hours per project. Only what is yours shows: no money and nothing about colleagues. Click a task to open it."
       overview: "Overview (admins only): your hours, the team's hours, and the revenue, cost and margin of all projects together, over 7 days, 30 days or all time."
       team: "Team (admins only): who has the clock open right now and on which task."
+    payments:
+      title: Payments
+      text: "The “Payments” item in the top bar, only for the owner and the admins: it is the view of whoever pays. The amounts are calculated from each person's payment rule and the tracked sessions; nothing is recorded as paid."
+      mine: "Whoever is not an admin does not have this page: each person sees their own payments on their profile (the account menu › “Profile”)."
+      rule: "The rule is set in Collaborators, in the pencil of the row (or in “Edit” on the person's profile), on the “Payment” tab: monthly (a fixed day of the month; in shorter months it pays on the last day) or biweekly (from a start date, every 15 days, paid on the last day of each period). Changing the rule recalculates where the past periods fall."
+      team: "The team: what to pay in the running periods, what closes in 7 days, the team's hours, the payment dates and who has no rule. The table is ordered by pay date, not by hours. Click a row to open the person's profile, with the history and the breakdown by project. The owner shows hours and no amount."
     org_about:
       title: Settings
       text: "The “Settings” item in the top bar. It is the organization profile: description, country, contact, company details and how the team works (work mode, time zone and currency). Everyone reads it. An empty field shows as “Not provided”."
@@ -504,12 +565,13 @@ help:
       delete: "At the end of the edit screen there is “Delete organization”: only the owner can do it, and only after every project is deleted."
     org_people:
       title: Collaborators
-      text: "Who belongs to the organization, with the role (Owner, Admin or Member) and the weekly hours. The page only appears for whoever looks after people: admins and anyone the owner allowed."
+      text: "Who belongs to the organization, with the role (Owner, Admin or Member), the weekly hours and the payment rule. The page only appears for whoever looks after people: admins and anyone the owner allowed."
       add: "“Add collaborator” generates an invitation link. Pick the role (only the owner invites admins) and, if you want, enter the email so that only that person can use the link."
       add_email: "“Add collaborator” sends the invitation by email. Pick the role (only the owner invites admins) and enter the email; without an email it only generates a link for you to copy and send."
       pending: "“Pending invitations” lists the links not used yet, each one valid for 7 days. You can revoke them."
-      edit: "The pencil on the row opens “Hours and permissions”: the hours agreed per week and, for the owner, the organization permissions of people who are not admins."
+      edit: "The pencil on the row opens “Payment and permissions”: the hours agreed per week, when the person is paid and, for the owner, the organization permissions of people who are not admins."
       role: "Only the owner makes someone an admin, or back to a member."
+      profile: "For admins, clicking the row opens the person's profile: the weekly hours and the rule, the hours and amount of the period and since the start, by project, the payment history and the next dates. “Edit” on the profile opens the same modal as the pencil."
     org_customers:
       title: Customers
       text: "The register of who hires the organization: name, country, tax ID (CNPJ in Brazil, EIN in the US), contact person, email and phone. The page only appears for whoever looks after customers."
@@ -568,10 +630,11 @@ help:
       integrations: "If the project has integrations, the page shows the linked item (an issue or a card) and lets you post the task to another platform."
     profile:
       title: Profile
-      text: "Open the account menu (your name, in the corner of the top bar) and choose “Profile”."
-      personal: "“Personal details”: name and email (the email is the one you sign in with). The weekly hours are read-only here; an admin changes them."
-      rates: "“My rates”: how much you earn per hour on each project. Only you and the admins see it."
-      password: "“Password”: change your password. Your other sessions are signed out."
+      text: "Open the account menu (your name, in the corner of the top bar) and choose “Profile”. The page is for reading: what you did and when you are paid."
+      summary: "At the top: your name, role, email, weekly hours and payment rule. The weekly hours and the rule are read-only here; an admin changes them."
+      payments: "The cards show the hours and amount of the current period, the date of the next payment and how many days are left, the progress against your weekly hours and the total since the start. Below, the history of closed periods and the upcoming payments. The period closes on the day of the payment. Without a rule, ask an admin to set when you are paid. The owner is not paid: their profile only has the hours."
+      rates: "“Projects and rates”: how much you earn per hour on each project and what you did on them, in the period and since the start. Only you and the admins see it."
+      edit: "“Edit profile” opens your personal details (name and email, the one you sign in with) and, on the “Password” tab, the password change, which signs out your other sessions."
       language: "The language (PT | EN), “Help” and “Sign out” are in the same account menu, and the browser remembers the language you chose."
   concepts:
     rates:
@@ -608,7 +671,7 @@ help:
       a: "No. The app only records timed work: there is no manual entry, approval or period closing. What you can adjust are the task intervals inside a session (open the session and use the pencil), without changing the session's total time."
     missing_tab:
       q: I do not see a page, a tab or a button
-      a: "It is a permission. Project Management and the Collaborators and Customers pages only appear for whoever can use them. Ask an admin (see “Who sees and does what”)."
+      a: "It is a permission. Project Management and the Collaborators, Customers and Payments pages only appear for whoever can use them. Ask an admin (see “Who sees and does what”)."
     missing_project:
       q: I do not see a project
       a: "Each person sees only the projects they were put in, with an hourly rate (the owner and the admins see all of them). Open “Projects”, in the top bar: the page lists yours. If the project is not there, ask an admin or the project's manager to add you in Management › Collaborators."
@@ -663,11 +726,19 @@ org:
     edit_title: Edit collaborator
     edit_label: "Edit {{.name}}"
     tabs_label: Collaborator details
-    tab_hours: Hours
+    tab_payment: Payment
     tab_permissions: Permissions
     tab_projects: Projects and rates
-    weekly_hours_label: Weekly hours
-    weekly_hours_hint: How many hours a week were agreed with the person. Applies to every project. Empty clears it.
+    payment: Payment
+    payment_label: When to pay
+    payment_none: No rule
+    payment_monthly: Monthly
+    payment_biweekly: Biweekly
+    payment_day_label: Day of the month
+    payment_day_hint: "In shorter months it pays on the last day."
+    payment_start_label: Counting starts on
+    payment_start_hint: "Every 15 days from this date; the payment goes out on the last day of each 15-day period."
+    weekly_hours_label: Minimum weekly hours (hours)
     saved: "{{.name}}'s details saved."
     projects_loading: Loading the projects…
     projects_retry: Try again
@@ -1404,6 +1475,9 @@ labels:
   weekly_hours: "{{.hours}}h per week"
   weekly_slot: "{{.day}} at {{.time}}"
   weekly_hours_none: Not set
+  payment_monthly: "Monthly · day {{.day}}"
+  payment_biweekly: "Biweekly · since {{.date}}"
+  payment_none: No rule
   weekday:
     monday: Monday
     tuesday: Tuesday

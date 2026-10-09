@@ -32,10 +32,11 @@ type Data struct {
 	TitleKey    string
 	TitleSuffix string
 	Me          *auth.Identity
-	Section     string                     // item ativo da barra superior: home, projects, people, customers, organization, profile, help
+	Section     string                     // item ativo da barra superior: home, projects, people, customers, payments, organization, profile, help
 	Org         *organization.Organization // só nas páginas da organização
 	Project     *Crumb
 	Task        *Crumb // só na página da tarefa, que tem cabeçalho próprio, sem as abas do projeto
+	Person      *Crumb // só no perfil de um colaborador, aberto por um admin
 	Management  bool   // a página é da área de Gestão (só admins): a barra de abas mostra as abas dela
 	Tab         string // aba ativa do projeto (overview, tasks, time, teams, integrations, settings)
 	Script      string // página em /static/pages/<Script>.js com os componentes Alpine
@@ -110,6 +111,9 @@ func (d Data) Boot() map[string]any {
 	if d.Project != nil {
 		boot["project"] = d.Project
 	}
+	if d.Person != nil {
+		boot["person"] = d.Person
+	}
 	// O cadastro de países (rótulos, máscaras, estados) vai só às páginas que o desenham: o cadastro, a volta do Clerk e
 	// as páginas da organização, que são as do script org.
 	if d.cat != nil && (d.Script == "auth" || d.Script == "org") {
@@ -166,6 +170,14 @@ func (d Data) Initials() string {
 		return ""
 	}
 	return initialsOf(d.Me.Name)
+}
+
+// PersonInitials são as iniciais da pessoa do perfil aberto por um admin.
+func (d Data) PersonInitials() string {
+	if d.Person == nil {
+		return ""
+	}
+	return initialsOf(d.Person.Name)
 }
 
 // initialsOf são as iniciais das duas primeiras palavras do nome: "Ana Souza" -> "AS".

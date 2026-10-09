@@ -34,6 +34,14 @@ func (h *Handler) Org(c *echo.Context) error {
 	return h.render(c, "org_home", d)
 }
 
+// Payments é a tela de pagamentos da equipe, só de admins: quanto pagar, a quem e quando. O que cada pessoa recebe
+// fica no perfil dela.
+func (h *Handler) Payments(c *echo.Context) error {
+	d := h.orgData(c, Data{TitleKey: "titles.payments", Section: "payments"})
+	d.Script = "payments"
+	return h.render(c, "org_payments", d)
+}
+
 // orgPage monta uma página da organização. Cada uma tem o seu item na barra superior (section).
 func (h *Handler) orgPage(c *echo.Context, name, titleKey, section string) error {
 	return h.render(c, name, h.orgData(c, Data{TitleKey: titleKey, Section: section}))
@@ -70,4 +78,16 @@ func (h *Handler) People(c *echo.Context) error {
 	// Com o Clerk ligado o convite sai por e-mail: a tela fala em enviar, e não só em copiar o link.
 	d.Props["emailInvites"] = h.deps.InviteByEmail
 	return h.render(c, "org_people", d)
+}
+
+// Person é o perfil de um colaborador, aberto por um admin a partir de Colaboradores ou de Pagamentos: o mesmo
+// conteúdo que a pessoa vê no próprio perfil (as horas, o valor e os pagamentos dela), com o botão de editar.
+func (h *Handler) Person(c *echo.Context) error {
+	p, err := h.deps.People.Get(c.Param("personId"))
+	if err != nil {
+		return h.NotFound(c)
+	}
+	d := h.orgData(c, Data{TitleKey: "titles.org_person", TitleSuffix: p.Name, Section: "people"})
+	d.Person = &Crumb{ID: p.ID.String(), Name: p.Name}
+	return h.render(c, "org_person", d)
 }

@@ -1,0 +1,9 @@
+{{define "content"}}
+{{/* O perfil de um colaborador, aberto por um admin pela lista de colaboradores ou pela tela de pagamentos: o mesmo
+     conteúdo que a pessoa vê no próprio perfil, com o Editar que abre o modal do colaborador. Salvar no modal relê
+     a página, porque a jornada e a regra mudam os períodos. */}}
+<main class="page" x-data="orgPerson">
+  {{template "person_profile" .}}
+  {{template "person_edit_modal" .}}
+</main>
+{{end}}

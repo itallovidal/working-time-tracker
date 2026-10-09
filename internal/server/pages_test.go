@@ -35,12 +35,13 @@ func managementPagePaths(projectID string) []string {
 	}
 }
 
-// orgPagePaths são as páginas da organização que um membro sem permissão não abre: Colaboradores e Clientes, de quem
-// cuida deles.
+// orgPagePaths são as páginas da organização que um membro sem permissão não abre: Colaboradores e Clientes (de quem
+// cuida deles) e Pagamentos (só de admins).
 func orgPagePaths(orgID string) []string {
 	return []string{
 		"/orgs/" + orgID + "/people",
 		"/orgs/" + orgID + "/customers",
+		"/orgs/" + orgID + "/payments",
 	}
 }
 
@@ -86,7 +87,7 @@ func TestPages_RenderForAdminAndMember(t *testing.T) {
 	}
 }
 
-// Colaboradores e Clientes não são de todo mundo: um membro sem permissão não vê os links na barra
+// Colaboradores, Clientes e Pagamentos não são de todo mundo: um membro sem permissão não vê os links na barra
 // e recebe "Página não encontrada" se abrir o endereço.
 func TestPages_OrgPagesNeedPermission(t *testing.T) {
 	e := newServer(t)
@@ -664,7 +665,7 @@ func TestPages_ProjectSettingsAndWeeklyHours(t *testing.T) {
 	people := do(e, "GET", "/orgs/"+admin.orgID+"/people", "", admin.session).Body.String()
 	for _, want := range []string{
 		"<th>Jornada semanal</th>", `x-show="$store.modal.name === 'person-edit'"`,
-		`<input id="person-weekly-hours" type="number" min="1" max="168"`, `@click="openEdit(p)"`,
+		`<select id="person-weekly-hours"`, `<option value="40">40</option>`, `@click="openEdit(p)"`,
 	} {
 		if !strings.Contains(people, want) {
 			t.Errorf("the organization people tab does not contain %q", want)
@@ -690,7 +691,7 @@ func TestPages_ProjectSettingsAndWeeklyHours(t *testing.T) {
 	// O modal é em abas, e cada uma só existe para quem pode usá-la: a jornada para quem cuida de pessoas, as permissões
 	// da organização para o dono e os projetos, com o valor por hora, para os admins.
 	tabs := func(page string) (hours, permissions, projects bool) {
-		return strings.Contains(page, `id="person-tab-hours"`), strings.Contains(page, `id="person-tab-permissions"`), strings.Contains(page, `id="person-tab-projects"`)
+		return strings.Contains(page, `id="person-tab-payment"`), strings.Contains(page, `id="person-tab-permissions"`), strings.Contains(page, `id="person-tab-projects"`)
 	}
 	if h, p, pr := tabs(people); !h || !p || !pr || !strings.Contains(people, `role="tablist"`) || !strings.Contains(people, `id="person-panel-projects"`) {
 		t.Errorf("the owner should see the three tabs, got hours %v, permissions %v, projects %v", h, p, pr)
@@ -706,9 +707,9 @@ func TestPages_ProjectSettingsAndWeeklyHours(t *testing.T) {
 		t.Errorf("who only manages people should see the hours tab only, got hours %v, permissions %v, projects %v", h, p, pr)
 	}
 
-	// Cada pessoa lê a própria jornada no perfil, sem campo para alterar.
+	// Cada pessoa lê a própria jornada no perfil (na linha do cabeçalho), sem campo para alterar.
 	profile := do(e, "GET", "/profile", "", member.session).Body.String()
-	if !strings.Contains(profile, "<dt>Jornada semanal</dt>") || strings.Contains(profile, "weekly-hours") {
+	if !strings.Contains(profile, `x-text="summaryLine()"`) || strings.Contains(profile, "weekly-hours") {
 		t.Error("the profile should show the weekly hours as text, without a field")
 	}
 
@@ -776,7 +777,7 @@ func TestPages_AllTemplatesLoad(t *testing.T) {
 	sort.Strings(got)
 	for _, name := range []string{
 		"login", "signup", "invite", "clerk_continue", "notfound", "help",
-		"org_projects", "org_people", "org_settings", "org_about", "org_customers", "profile",
+		"org_projects", "org_people", "org_person", "org_payments", "org_settings", "org_about", "org_customers", "profile",
 		"project_overview", "project_my_overview", "project_tasks", "project_teams", "project_integrations", "project_settings", "task_detail",
 	} {
 		i := sort.SearchStrings(got, name)

@@ -213,6 +213,11 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
   background: var(--accent-soft); color: var(--accent);
   display: inline-grid; place-items: center; font-weight: 700; font-size: 0.8rem; flex: none;
 }
+/* O cabeçalho do perfil de uma pessoa: o avatar grande ao lado do nome, que quebra de linha antes de empurrar a tela. */
+.avatar-lg { width: 52px; height: 52px; font-size: 1.1rem; }
+.person-head { gap: 14px; flex-wrap: nowrap; align-items: center; min-width: 0; }
+.person-head > div { min-width: 0; }
+.person-head h1, .person-head .lede { overflow-wrap: anywhere; }
 
 .page { max-width: 1200px; margin: 0 auto; padding: 28px 20px 64px; display: flex; flex-direction: column; gap: 22px; }
 .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }

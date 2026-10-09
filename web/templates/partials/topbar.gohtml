@@ -10,6 +10,8 @@
       <a href="/orgs/{{.OrgID}}/projects" {{if eq .Section "projects"}}aria-current="page"{{end}}>{{.T "nav.projects"}}</a>
       {{if .Can "people.manage"}}<a href="/orgs/{{.OrgID}}/people" {{if eq .Section "people"}}aria-current="page"{{end}}>{{.T "nav.people"}}</a>{{end}}
       {{if .Can "customers.manage"}}<a href="/orgs/{{.OrgID}}/customers" {{if eq .Section "customers"}}aria-current="page"{{end}}>{{.T "nav.customers"}}</a>{{end}}
+      {{/* Os pagamentos da equipe são dinheiro de todos: só admins. Cada pessoa vê os dela no perfil. */}}
+      {{if .IsAdmin}}<a href="/orgs/{{.OrgID}}/payments" {{if eq .Section "payments"}}aria-current="page"{{end}}>{{.T "nav.payments"}}</a>{{end}}
       <a href="/orgs/{{.OrgID}}/about" {{if eq .Section "organization"}}aria-current="page"{{end}}>{{.T "nav.settings"}}</a>
     </nav>
     <div class="topbar-right">

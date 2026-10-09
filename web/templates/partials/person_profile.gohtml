@@ -1,0 +1,163 @@
+{{/* person_profile é o perfil de uma pessoa: quem ela é, o que fez no período e desde o início, por projeto, e os
+     pagamentos calculados da regra dela. É o mesmo conteúdo no meu perfil (/profile) e no de um colaborador aberto por
+     um admin (.Person vem preenchido): muda só o botão de editar. Lê person, detail, self e projectRows() do componente
+     que o inclui, que espalha personProfile() (org.js). O dono não é pago: no perfil dele ficam só as horas. */}}
+{{define "person_profile"}}
+<div class="page-head">
+  <div class="row person-head">
+    <span class="avatar avatar-lg" aria-hidden="true">{{if .Person}}{{.PersonInitials}}{{else}}{{.Initials}}{{end}}</span>
+    <div>
+      <div class="eyebrow">{{if .Person}}{{.T "nav.people"}}{{else}}{{.T "profile.eyebrow"}}{{end}}</div>
+      <div class="row row-tight">
+        {{/* O nome vem do servidor e passa a ser o da pessoa carregada, para o cabeçalho não pular. */}}
+        <h1 {{if not .Person}}data-me-name{{end}} x-text="person ? person.name : $el.textContent">{{if .Person}}{{.Person.Name}}{{else}}{{.Me.Name}}{{end}}</h1>
+        <span class="badge" x-cloak x-show="person" :class="person && person.role === 'admin' && 'badge-accent'" x-text="person ? (person.is_owner ? $t('roles.owner') : WTT.fmt.role(person.role)) : ''"></span>
+        {{if .Person}}<span class="badge" x-cloak x-show="person && person.id === WTT.boot.me.id">{{.T "common.you"}}</span>{{end}}
+      </div>
+      <p class="lede" x-cloak x-show="person" x-text="person ? person.email : ''"></p>
+      <p class="muted small" x-cloak x-show="person" x-text="summaryLine()"></p>
+    </div>
+  </div>
+  <div class="row">
+    {{if .Person}}
+    <a class="btn btn-ghost btn-sm" href="/orgs/{{.OrgID}}/people">{{template "icon" "arrow-left"}} {{.T "nav.people"}}</a>
+    <button type="button" class="btn btn-secondary" :disabled="!person" @click="openEdit(person)">{{template "icon" "pen"}} {{.T "common.edit"}}</button>
+    {{else}}
+    <button type="button" class="btn btn-secondary" @click="openProfileEdit()">{{template "icon" "pen"}} {{.T "profile.edit"}}</button>
+    {{end}}
+  </div>
+</div>
+
+<p class="muted" x-show="profileLoading && !detail">{{.T "profile.loading"}}</p>
+<p class="form-error" x-cloak x-show="errors.load" x-text="errors.load" role="alert"></p>
+
+<template x-if="detail">
+  <div class="stack stack-sections">
+    <div class="stack">
+      <p class="muted small" x-show="detail.owner">{{.T "collab.owner_rate_hint"}}</p>
+      {{/* Sem regra não há período: o aviso diz a quem pedir (no meu perfil) ou deixa definir (no de um colaborador). */}}
+      <div class="alert" role="status" x-show="!detail.owner && !detail.rule">
+        <p>
+          <span x-text="self ? $t('profile.no_rule') : $t('profile.no_rule_other')"></span>
+          {{if .Person}}<button type="button" class="btn btn-secondary btn-sm" @click="openEdit(person)">{{.T "profile.set_rule"}}</button>{{end}}
+        </p>
+      </div>
+
+      <div class="kpis kpis-4">
+        <div class="kpi hue-teal" x-show="!detail.owner && detail.current">
+          <span class="kpi-icon">{{template "icon" "clock"}}</span>
+          <div class="kpi-body">
+            <span class="kpi-label">{{.T "profile.this_period"}}</span>
+            <span class="kpi-value" x-text="detail.current ? WTT.fmt.hours(detail.current.seconds) : ''"></span>
+            <span class="kpi-hint" x-text="detail.current ? WTT.fmt.money(detail.current.amount_cents) : ''"></span>
+          </div>
+        </div>
+        <div class="kpi hue-green" x-show="!detail.owner && detail.rule">
+          <span class="kpi-icon">{{template "icon" "calendar-check"}}</span>
+          <div class="kpi-body">
+            <span class="kpi-label">{{.T "payments.next_payment"}}</span>
+            <span class="kpi-value" x-text="detail.upcoming.length ? WTT.fmt.day(detail.upcoming[0].pay_date, { day: '2-digit', month: 'short' }) : '—'"></span>
+            <span class="kpi-hint" x-text="WTT.payments.daysLeft(detail.current)"></span>
+          </div>
+        </div>
+        <div class="kpi hue-purple" x-show="!detail.owner && detail.current && detail.current.goal_seconds">
+          <span class="kpi-icon">{{template "icon" "bullseye"}}</span>
+          <div class="kpi-body">
+            <span class="kpi-label">{{.T "payments.goal"}}</span>
+            <span class="kpi-value" x-text="WTT.payments.goalPercent(detail.current) + '%'"></span>
+            <span class="kpi-hint" x-text="detail.current && detail.current.goal_seconds ? $t('payments.goal_hint', { time: WTT.fmt.hours(detail.current.goal_seconds) }) : ''"></span>
+          </div>
+        </div>
+        <div class="kpi hue-blue">
+          <span class="kpi-icon">{{template "icon" "hourglass-half"}}</span>
+          <div class="kpi-body">
+            <span class="kpi-label">{{.T "profile.lifetime"}}</span>
+            <span class="kpi-value" x-text="WTT.fmt.hours(detail.lifetime.seconds)"></span>
+            <span class="kpi-hint" x-text="lifetimeHint()"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <section class="stack stack-tight" aria-labelledby="profile-projects-title">
+      <h2 id="profile-projects-title">{{.T "profile.projects.title"}}</h2>
+      {{/* O dono não tem valor por hora: a frase de cima do perfil já diz por quê. */}}
+      <p class="muted small" x-show="!detail.owner">{{if .Person}}{{.T "profile.projects.intro_other"}}{{else}}{{.T "profile.projects.intro"}}{{end}}</p>
+      <p class="muted" x-show="projectRows().length === 0" x-text="self ? $t('profile.projects.empty') : $t('profile.projects.empty_other')"></p>
+      <div class="table-wrap" x-show="projectRows().length > 0">
+        <table>
+          <thead>
+            <tr>
+              <th>{{.T "payments.project"}}</th>
+              <th class="num" x-show="!detail.owner">{{.T "profile.projects.rate"}}</th>
+              <th class="num" x-show="detail.current">{{.T "profile.projects.period"}}</th>
+              <th class="num">{{.T "profile.lifetime"}}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="r in projectRows()" :key="r.id">
+              <tr>
+                <td>
+                  {{/* Quem saiu do projeto continua com as horas que fez nele, sem o link: a página dele não abre mais. */}}
+                  <a x-show="r.allocated" :href="'/projects/' + r.id + '/overview'" x-text="r.name"></a>
+                  <span x-show="!r.allocated" x-text="r.name"></span>
+                  <span class="badge" x-show="!r.allocated">{{.T "profile.projects.left"}}</span>
+                </td>
+                <td class="nowrap num" x-show="!detail.owner" :class="r.rate === null && 'muted'" x-text="r.rate === null ? '—' : WTT.fmt.money(r.rate)"></td>
+                <td class="nowrap num" x-show="detail.current" :class="!r.period && 'muted'" x-text="shareText(r.period)"></td>
+                <td class="nowrap num" :class="!r.lifetime && 'muted'" x-text="shareText(r.lifetime)"></td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <template x-if="detail.rule && !detail.owner">
+      <div class="stack stack-sections">
+        <section class="stack stack-tight" aria-labelledby="profile-history-title">
+          <h2 id="profile-history-title">{{.T "profile.history"}}</h2>
+          {{/* Só os períodos de depois que a pessoa começou a registrar horas: os anteriores são todos zero. */}}
+          <p class="muted" x-show="historyRows().length === 0">{{.T "payments.history_empty"}}</p>
+          <div class="table-wrap" x-show="historyRows().length > 0">
+            <table>
+              <thead><tr><th>{{.T "payments.period"}}</th><th>{{.T "payments.pay_date"}}</th><th class="num">{{.T "payments.hours"}}</th><th class="num">{{.T "payments.amount"}}</th></tr></thead>
+              <tbody>
+                <template x-for="h in historyRows()" :key="h.pay_date">
+                  <tr>
+                    <td class="nowrap" x-text="WTT.payments.period(h)"></td>
+                    <td class="nowrap" x-text="WTT.fmt.day(h.pay_date)"></td>
+                    <td class="nowrap num" x-text="WTT.fmt.hours(h.seconds)"></td>
+                    <td class="nowrap num" x-text="WTT.fmt.money(h.amount_cents)"></td>
+                  </tr>
+                </template>
+              </tbody>
+              <tfoot>
+                <tr>
+                  <th colspan="2">{{.T "payments.total_closed"}}</th>
+                  <th class="nowrap num" x-text="WTT.fmt.hours(detail.totals.seconds)"></th>
+                  <th class="nowrap num" x-text="WTT.fmt.money(detail.totals.amount_cents)"></th>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          <p class="muted small">{{.T "payments.history_note"}}</p>
+        </section>
+
+        <section class="stack stack-tight" aria-labelledby="profile-upcoming-title">
+          <h2 id="profile-upcoming-title">{{.T "profile.upcoming"}}</h2>
+          <ul class="list">
+            <template x-for="u in detail.upcoming" :key="u.pay_date">
+              <li>
+                <strong x-text="WTT.fmt.day(u.pay_date)"></strong>
+                <span class="muted grow" x-text="WTT.payments.period(u)"></span>
+              </li>
+            </template>
+          </ul>
+          <p class="muted small" x-text="$t('payments.rule_line', { rule: WTT.fmt.paymentRule(detail.rule), tz: detail.timezone })"></p>
+        </section>
+      </div>
+    </template>
+  </div>
+</template>
+{{end}}

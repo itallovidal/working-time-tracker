@@ -26,9 +26,9 @@ func mainNav(t *testing.T, body string) []string {
 	return items
 }
 
-// A barra superior tem uma página por assunto, sem sub-abas: Início, Projetos, Colaboradores, Clientes e
-// Configurações. Cada item só aparece para quem pode abrir a página dele: Colaboradores e Clientes, para quem
-// cuida deles.
+// A barra superior tem uma página por assunto, sem sub-abas: Início, Projetos, Colaboradores, Clientes, Pagamentos
+// e Configurações. Cada item só aparece para quem pode abrir a página dele: Colaboradores e Clientes para quem
+// cuida deles, Pagamentos (a equipe, que é dinheiro de todos) só para admins.
 func TestPages_MainNavHasOnePagePerSubject(t *testing.T) {
 	e := newServer(t)
 	admin := signup(t, e, "Org", "ana@test.com")
@@ -46,7 +46,7 @@ func TestPages_MainNavHasOnePagePerSubject(t *testing.T) {
 
 	// all é a barra de um admin, com o item current marcado.
 	all := func(current string) []string {
-		items := []string{"Início " + home, "Projetos " + home + "/projects", "Colaboradores " + home + "/people", "Clientes " + home + "/customers", "Configurações " + home + "/about"}
+		items := []string{"Início " + home, "Projetos " + home + "/projects", "Colaboradores " + home + "/people", "Clientes " + home + "/customers", "Pagamentos " + home + "/payments", "Configurações " + home + "/about"}
 		for i, it := range items {
 			if strings.HasPrefix(it, current+" ") {
 				items[i] += " (current)"
@@ -62,7 +62,9 @@ func TestPages_MainNavHasOnePagePerSubject(t *testing.T) {
 		{"admin on the projects page", home + "/projects", admin.session, all("Projetos")},
 		{"admin in a project", "/projects/" + projectID + "/tasks", admin.session, all("Projetos")},
 		{"admin on the collaborators page", home + "/people", admin.session, all("Colaboradores")},
+		{"admin on a collaborator's profile", home + "/people/" + member.id, admin.session, all("Colaboradores")},
 		{"admin on the customers page", home + "/customers", admin.session, all("Clientes")},
+		{"admin on the payments page", home + "/payments", admin.session, all("Pagamentos")},
 		{"admin on the settings page", home + "/about", admin.session, all("Configurações")},
 		{"admin on the organization edit page", home + "/settings", admin.session, all("Configurações")},
 		{"an admin who is not the owner", home, otherAdmin.session, all("Início")},

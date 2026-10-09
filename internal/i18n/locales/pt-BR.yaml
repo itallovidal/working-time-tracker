@@ -40,6 +40,7 @@ common:
   delete_confirm: Excluir de vez?
 
 titles:
+  payments: Pagamentos
   login: Entrar
   signup: Criar conta
   clerk_continue: Entrando
@@ -52,6 +53,7 @@ titles:
   org_projects: Projetos
   org_customers: Clientes
   org_people: Colaboradores
+  org_person: Colaborador
   overview: Gestão · Visão geral
   my_overview: Início
   collaborators: Colaboradores
@@ -69,6 +71,7 @@ nav:
   projects: Projetos
   people: Colaboradores
   customers: Clientes
+  payments: Pagamentos
   settings: Configurações
   account_sr: "Sua conta:"
   profile: Perfil
@@ -418,21 +421,73 @@ not_found:
   text: O endereço não existe ou você não tem acesso a ele.
   back: Voltar ao início
 
+payments:
+  intro: Quanto pagar, a quem e quando, calculado da regra de pagamento de cada pessoa e das horas registradas. Clique numa pessoa para abrir o perfil dela.
+  refresh: Atualizar
+  loading: Carregando os pagamentos…
+  rule_line: "{{.rule}} · o período fecha à meia-noite ({{.tz}})"
+  next_payment: Próximo pagamento
+  today: Paga hoje
+  days_left:
+    one: "em {{.count}} dia"
+    other: "em {{.count}} dias"
+  goal: Meta da jornada
+  goal_hint: "de {{.time}} no período"
+  project: Projeto
+  history_empty: Nenhum período fechado ainda.
+  history_note: "Os períodos fechados são calculados das sessões registradas: nada é guardado como pago. Trocar a regra recalcula onde os períodos passados caem, e excluir um projeto tira as sessões dele do histórico."
+  total_closed: Total dos períodos fechados
+  period: Período
+  pay_date: Data do pagamento
+  hours: Horas
+  amount: Valor
+  rule: Regra
+  last_closed: Último fechado
+  owner_no_amount: sem valor
+  team_to_pay: A pagar no período
+  team_to_pay_hint: Até agora, nos períodos em andamento
+  team_closing_7: Fecha em 7 dias
+  team_closing_30: "{{.amount}} em 30 dias"
+  team_hours: Horas da equipe
+  team_hours_owner: "{{.time}} do dono"
+  team_without_rule: Pessoas sem regra
+  team_empty: Ninguém tem regra de pagamento ainda.
+  without_rule_title: "Sem regra de pagamento:"
+  without_rule_link: Defina em Colaboradores
+  calendar: Datas de pagamento
+  calendar_hint: O valor só conta os períodos que já estão em andamento.
+
 profile:
-  eyebrow: Sua conta
-  title: Seu perfil
-  weekly_hours: Jornada semanal
+  eyebrow: Seu perfil
+  edit: Editar perfil
+  tabs_label: O que editar
+  loading: Carregando o perfil…
+  no_weekly_hours: Jornada não informada
+  no_payment_rule: Sem regra de pagamento
+  no_rule: Você ainda não tem regra de pagamento. Peça a um admin para definir quando você é pago.
+  no_rule_other: Esta pessoa ainda não tem regra de pagamento, então não há períodos para mostrar.
+  set_rule: Definir regra
+  this_period: Neste período
+  lifetime: Desde o início
+  lifetime_since: "desde {{.date}}"
+  lifetime_empty: Nenhuma hora registrada
+  history: Histórico de pagamentos
+  upcoming: Próximos pagamentos
+  projects:
+    title: Projetos e valores
+    intro: Quanto você recebe por hora em cada projeto e o que já fez neles. Só você e os admins veem.
+    intro_other: Quanto a pessoa recebe por hora em cada projeto e o que já fez neles.
+    empty: Você ainda não está em nenhum projeto.
+    empty_other: Esta pessoa ainda não está em nenhum projeto.
+    rate: Valor por hora
+    period: Neste período
+    left: saiu do projeto
   personal:
     title: Dados pessoais
     name: Nome
     email_hint: É o email que você usa para entrar.
     submit: Salvar perfil
     saved: Perfil salvo.
-  rates:
-    owner: "Dono: recebe o valor cobrado do cliente"
-    title: Meus valores
-    intro: Quanto você recebe por hora em cada projeto. Só você e os admins veem.
-    empty: Você ainda não tem valor definido em nenhum projeto.
   password:
     title: Senha
     current: Senha atual
@@ -507,6 +562,12 @@ help:
       mine: "Seu painel (todos): as suas horas de hoje e da semana, as suas tarefas abertas e concluídas em todos os projetos e a semana dia a dia, com as horas por projeto. Só aparece o que é seu: nada de dinheiro nem dos colegas. Clique numa tarefa para abri-la."
       overview: "Visão geral (só administradores): as suas horas, as horas da equipe, a receita, o custo e a margem de todos os projetos juntos, em 7 dias, 30 dias ou tudo."
       team: "Equipe (só administradores): quem está com o ponto aberto agora e em qual tarefa."
+    payments:
+      title: Pagamentos
+      text: "O item “Pagamentos” da barra superior, só para o dono e os administradores: é a visão de quem paga. Os valores são calculados da regra de pagamento de cada pessoa e das sessões registradas; nada é guardado como pago."
+      mine: "Quem não é administrador não tem esta página: cada pessoa vê os próprios pagamentos no perfil dela (o menu da conta › “Perfil”)."
+      rule: "A regra se define em Colaboradores, no lápis da linha (ou no “Editar” do perfil da pessoa), na aba “Pagamento”: mensal (um dia fixo do mês; em meses mais curtos paga no último dia) ou quinzenal (a partir de uma data de início, de 15 em 15 dias, paga no último dia de cada período). Trocar a regra recalcula onde os períodos passados caem."
+      team: "A equipe: o que pagar nos períodos em andamento, o que fecha em 7 dias, as horas da equipe, as datas de pagamento e quem está sem regra. A tabela segue a data do pagamento, e não as horas. Clique numa linha para abrir o perfil da pessoa, com o histórico e o detalhe por projeto. O dono aparece com horas e sem valor."
     org_about:
       title: Configurações
       text: "O item “Configurações” da barra superior. É o perfil da organização: descrição, país, contato, dados da empresa e como o time trabalha (regime, fuso e moeda). Todo mundo lê. Campo vazio aparece como “Não informado”."
@@ -514,12 +575,13 @@ help:
       delete: "No fim da edição está “Excluir organização”: só o dono consegue, e só depois de excluir todos os projetos."
     org_people:
       title: Colaboradores
-      text: "Quem faz parte da organização, com o papel (Dono, Admin ou Membro) e a jornada semanal. A página aparece só para quem cuida das pessoas: administradores e quem o dono liberou."
+      text: "Quem faz parte da organização, com o papel (Dono, Admin ou Membro), a jornada semanal e a regra de pagamento. A página aparece só para quem cuida das pessoas: administradores e quem o dono liberou."
       add: "“Adicionar colaborador” gera um link de convite. Escolha o papel (só o dono convida administradores) e, se quiser, informe o email para que só aquela pessoa use o link."
       add_email: "“Adicionar colaborador” envia o convite por email. Escolha o papel (só o dono convida administradores) e informe o email; sem email, gera só um link para você copiar e enviar."
       pending: "“Convites pendentes” lista os links ainda não usados, cada um com validade de 7 dias. Dá para revogar."
-      edit: "O lápis da linha abre “Jornada e permissões”: as horas combinadas por semana e, para o dono, as permissões de organização de quem não é administrador."
+      edit: "O lápis da linha abre “Pagamento e permissões”: as horas combinadas por semana, a regra de quando a pessoa é paga e, para o dono, as permissões de organização de quem não é administrador."
       role: "Só o dono torna alguém administrador, ou volta a membro."
+      profile: "Para os administradores, clicar na linha abre o perfil da pessoa: a jornada e a regra, as horas e o valor do período e desde o início, por projeto, o histórico de pagamentos e as próximas datas. O “Editar” do perfil abre o mesmo modal do lápis."
     org_customers:
       title: Clientes
       text: "O cadastro de quem contrata a organização: nome, país, documento fiscal (CNPJ no Brasil, EIN nos EUA), pessoa de contato, email e telefone. A página aparece só para quem cuida dos clientes."
@@ -578,10 +640,11 @@ help:
       integrations: "Se o projeto tem integrações, a página mostra o item ligado (issue ou cartão) e deixa publicar a tarefa em outra plataforma."
     profile:
       title: Perfil
-      text: "Abra o menu da conta (o seu nome, no canto da barra superior) e escolha “Perfil”."
-      personal: "“Dados pessoais”: nome e email (o email é o que você usa para entrar). A jornada semanal só se lê aqui; quem altera é um administrador."
-      rates: "“Meus valores”: quanto você recebe por hora em cada projeto. Só você e os administradores veem."
-      password: "“Senha”: troque a senha. As suas outras sessões são encerradas."
+      text: "Abra o menu da conta (o seu nome, no canto da barra superior) e escolha “Perfil”. A página é para ler: o que você fez e quando é pago."
+      summary: "No alto: o seu nome, o papel, o email, a jornada semanal e a regra de pagamento. A jornada e a regra só se leem aqui; quem altera é um administrador."
+      payments: "Os cartões mostram as horas e o valor do período corrente, a data do próximo pagamento e quantos dias faltam, o andamento contra a jornada e o total desde o início. Abaixo, o histórico dos períodos fechados e os próximos pagamentos. O período fecha no dia do pagamento. Sem regra, peça a um administrador para definir quando você é pago. O dono não é pago: no perfil dele ficam só as horas."
+      rates: "“Projetos e valores”: quanto você recebe por hora em cada projeto e o que fez neles, no período e desde o início. Só você e os administradores veem."
+      edit: "“Editar perfil” abre os dados pessoais (nome e email, que é o que você usa para entrar) e, na aba “Senha”, a troca de senha, que encerra as suas outras sessões."
       language: "O idioma (PT | EN), a “Ajuda” e o “Sair” ficam no mesmo menu da conta, e o navegador lembra o idioma escolhido."
   concepts:
     rates:
@@ -618,7 +681,7 @@ help:
       a: "Não. O app só registra o tempo cronometrado: não há lançamento manual, aprovação nem fechamento de período. O que dá para ajustar são os intervalos das tarefas dentro de uma sessão (abra a sessão e use o lápis), sem mudar o tempo total dela."
     missing_tab:
       q: Não vejo uma página, uma aba ou um botão
-      a: "É permissão. A Gestão do projeto e as páginas Colaboradores e Clientes aparecem só para quem pode usá-las. Peça a um administrador (veja “Quem vê e faz o quê”)."
+      a: "É permissão. A Gestão do projeto e as páginas Colaboradores, Clientes e Pagamentos aparecem só para quem pode usá-las. Peça a um administrador (veja “Quem vê e faz o quê”)."
     missing_project:
       q: Não vejo um projeto
       a: "Cada pessoa vê só os projetos em que foi posta, com valor por hora (o dono e os administradores veem todos). Abra “Projetos”, na barra superior: a página lista os seus. Se o projeto não está lá, peça a um administrador ou ao gerente do projeto para pôr você nele em Gestão › Colaboradores."
@@ -673,11 +736,19 @@ org:
     edit_title: Editar colaborador
     edit_label: "Editar {{.name}}"
     tabs_label: Dados do colaborador
-    tab_hours: Jornada
+    tab_payment: Pagamento
     tab_permissions: Permissões
     tab_projects: Projetos e valores
-    weekly_hours_label: Jornada semanal (horas)
-    weekly_hours_hint: Quantas horas por semana foram combinadas com a pessoa. Vale para todos os projetos. Vazio apaga.
+    payment: Pagamento
+    payment_label: Quando pagar
+    payment_none: Sem regra
+    payment_monthly: Mensal
+    payment_biweekly: Quinzenal
+    payment_day_label: Dia do mês
+    payment_day_hint: "Em meses mais curtos paga no último dia."
+    payment_start_label: Início da contagem
+    payment_start_hint: "A cada 15 dias a partir desta data; o pagamento sai no último dia de cada período de 15 dias."
+    weekly_hours_label: Jornada semanal mínima (horas)
     saved: "Dados de {{.name}} salvos."
     projects_loading: Carregando os projetos…
     projects_retry: Tentar de novo
@@ -1414,6 +1485,9 @@ labels:
   weekly_hours: "{{.hours}}h por semana"
   weekly_slot: "{{.day}} às {{.time}}"
   weekly_hours_none: Não informada
+  payment_monthly: "Mensal · dia {{.day}}"
+  payment_biweekly: "Quinzenal · desde {{.date}}"
+  payment_none: Sem regra
   weekday:
     monday: Segunda-feira
     tuesday: Terça-feira

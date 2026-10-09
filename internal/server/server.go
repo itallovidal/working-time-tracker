@@ -191,7 +191,7 @@ func Build(client *ent.Client, opts Options) (*App, error) {
 		return nil, err
 	}
 	pages := page.NewHandler(page.Deps{
-		Orgs: orgSvc, Projects: projectSvc, Tasks: taskSvc,
+		Orgs: orgSvc, Projects: projectSvc, Tasks: taskSvc, People: personSvc,
 		I18n: catalog, CookieSecure: opts.CookieSecure,
 		OAuthConfigured: map[string]bool{"github": opts.GitHubOAuth.Configured(), "trello": opts.TrelloAuth.Configured()},
 		Clerk:           clerkPage,

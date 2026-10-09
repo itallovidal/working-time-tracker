@@ -1,0 +1,156 @@
+{{/* person_edit_modal é o modal Editar colaborador, em abas: a jornada e a regra de pagamento, as permissões da
+     organização e os projetos com o valor por hora. Cada aba só existe para quem pode usá-la, e a faixa de abas só
+     aparece com duas ou mais. Nada vai para o servidor antes de Salvar, e um Salvar só aplica o rascunho de todas
+     as abas. Abre na lista de colaboradores e no perfil de um deles; fica no escopo do componente que o inclui,
+     que espalha personEditor() (org.js). */}}
+{{define "person_edit_modal"}}
+<template x-teleport="#modal-root">
+  <form class="stack" x-show="$store.modal.name === 'person-edit'" @submit.prevent="savePerson()">
+    <div class="row" x-show="editing">
+      <span class="avatar" aria-hidden="true" x-text="WTT.fmt.initials(editing && editing.name)"></span>
+      <div>
+        <div><strong x-text="editing && editing.name"></strong> <span class="badge" x-show="editing && editing.id === me.id">{{.T "common.you"}}</span></div>
+        <div class="muted small" x-text="editing && editing.email"></div>
+      </div>
+    </div>
+
+    <div class="segmented segmented-tabs" role="tablist" aria-label="{{.T "org.people.tabs_label"}}" x-cloak x-show="tabs.length > 1"
+         @keydown.arrow-right.prevent="moveTab('next')" @keydown.arrow-left.prevent="moveTab('prev')"
+         @keydown.home.prevent="moveTab('first')" @keydown.end.prevent="moveTab('last')">
+      {{if .Can "people.manage"}}
+      <button type="button" role="tab" id="person-tab-payment" aria-controls="person-panel-payment" x-ref="tab-payment"
+              :aria-selected="(tab === 'payment').toString()" :tabindex="tab === 'payment' ? 0 : -1"
+              @click="tab = 'payment'">{{template "icon" "hand-holding-dollar"}} {{.T "org.people.tab_payment"}}</button>
+      {{end}}
+      {{if .IsOwner}}
+      <button type="button" role="tab" id="person-tab-permissions" aria-controls="person-panel-permissions" x-ref="tab-permissions"
+              :aria-selected="(tab === 'permissions').toString()" :tabindex="tab === 'permissions' ? 0 : -1"
+              @click="tab = 'permissions'">{{template "icon" "key"}} {{.T "org.people.tab_permissions"}}</button>
+      {{end}}
+      {{if .IsAdmin}}
+      <button type="button" role="tab" id="person-tab-projects" aria-controls="person-panel-projects" x-ref="tab-projects"
+              :aria-selected="(tab === 'projects').toString()" :tabindex="tab === 'projects' ? 0 : -1"
+              @click="tab = 'projects'">{{template "icon" "folder-open"}} {{.T "org.people.tab_projects"}}</button>
+      {{end}}
+    </div>
+
+    {{if .Can "people.manage"}}
+    <div class="field" id="person-panel-payment" role="tabpanel" aria-labelledby="person-tab-payment" x-show="tab === 'payment'">
+      <label for="person-weekly-hours">{{.T "org.people.weekly_hours_label"}}</label>
+      <select id="person-weekly-hours" x-model="draft.weekly_hours" data-autofocus>
+        <option value="">{{.T "labels.weekly_hours_none"}}</option>
+        <option value="20">20</option>
+        <option value="30">30</option>
+        <option value="40">40</option>
+      </select>
+
+      <label for="person-payment-frequency">{{.T "org.people.payment_label"}}</label>
+      <select id="person-payment-frequency" x-model="draft.payment.frequency">
+        <option value="">{{.T "org.people.payment_none"}}</option>
+        <option value="monthly">{{.T "org.people.payment_monthly"}}</option>
+        <option value="biweekly">{{.T "org.people.payment_biweekly"}}</option>
+      </select>
+      <template x-if="draft.payment.frequency === 'monthly'">
+        <div class="field">
+          <label for="person-payment-day">{{.T "org.people.payment_day_label"}}</label>
+          <input id="person-payment-day" type="number" min="1" max="31" step="1" class="num" x-model="draft.payment.day">
+          <span class="hint">{{.T "org.people.payment_day_hint"}}</span>
+        </div>
+      </template>
+      <template x-if="draft.payment.frequency === 'biweekly'">
+        <div class="field">
+          <label for="person-payment-start">{{.T "org.people.payment_start_label"}}</label>
+          <input id="person-payment-start" type="date" x-model="draft.payment.start">
+          <span class="hint">{{.T "org.people.payment_start_hint"}}</span>
+        </div>
+      </template>
+    </div>
+    {{end}}
+
+    {{/* As permissões da organização: só o dono libera, e só a quem não é admin. */}}
+    {{if .IsOwner}}
+    <div class="field" id="person-panel-permissions" role="tabpanel" aria-labelledby="person-tab-permissions" x-cloak x-show="tab === 'permissions' && editing">
+      <span class="field-label" id="person-permissions-label">{{.T "org.people.permissions_title"}}</span>
+      <p class="muted small" x-show="editing && editing.is_owner">{{.T "org.people.permissions_owner"}}</p>
+      <p class="muted small" x-show="editing && !editing.is_owner && editing.role === 'admin'">{{.T "org.people.permissions_admin"}}</p>
+      <ul class="list picker" x-show="canGrant(editing)">
+        <template x-for="k in orgKeys" :key="k">
+          <li>
+            <label class="pick">
+              <input type="checkbox" :value="k" x-model="draft.permissions">
+              <span class="grow">
+                <span x-text="$t('permissions.keys.' + k.replace('.', '_') + '.name')"></span>
+                <span class="muted small" x-text="$t('permissions.keys.' + k.replace('.', '_') + '.about')"></span>
+              </span>
+            </label>
+          </li>
+        </template>
+      </ul>
+      <span class="hint" x-show="canGrant(editing)">{{.T "org.people.permissions_hint"}}</span>
+    </div>
+    {{end}}
+
+    {{/* Os projetos da pessoa e o valor que ela recebe por hora em cada um. Só admins: o valor é uma permissão de projeto
+         (rates.manage), e eles têm todas. Entrar num projeto ou sair dele só acontece ao Salvar. */}}
+    {{if .IsAdmin}}
+    <div class="stack" id="person-panel-projects" role="tabpanel" aria-labelledby="person-tab-projects" x-cloak x-show="tab === 'projects'">
+      <p class="muted small" x-show="projectsState === 'loading'">{{.T "org.people.projects_loading"}}</p>
+      <div class="stack" x-cloak x-show="projectsState === 'error'">
+        <p class="form-error" x-text="errors.projects" role="alert"></p>
+        <div><button type="button" class="btn btn-secondary btn-sm" @click="loadProjects(editing)">{{.T "org.people.projects_retry"}}</button></div>
+      </div>
+
+      <div class="stack" x-cloak x-show="projectsState === 'ready'">
+        <p class="muted small" x-show="editing && editing.is_owner">{{.T "collab.owner_rate_hint"}}</p>
+        <p class="muted small" x-show="draft.projects.length === 0">{{.T "org.people.projects_empty"}}</p>
+        <ul class="list project-rates" x-show="draft.projects.length > 0">
+          <template x-for="row in draft.projects" :key="row.project_id">
+            <li>
+              <span class="grow">
+                <span class="project-name" :class="row.removed && 'is-removed'" x-text="row.name"></span>
+                <span class="badge" x-show="row.isNew">{{.T "org.people.joins_on_save"}}</span>
+                <span class="muted small note" x-show="row.removed">{{.T "collab.remove_confirm"}}</span>
+              </span>
+              <span class="rate-input" x-show="!row.removed && editing && !editing.is_owner">
+                <span class="muted small" aria-hidden="true" x-text="WTT.fmt.moneyUnit()"></span>
+                <input type="text" inputmode="decimal" class="num" placeholder="{{.T "project_settings.rate_placeholder"}}"
+                       :aria-label="$t('org.people.rate_of', { project: row.name, unit: WTT.fmt.moneyUnit() })" x-model="row.rate">
+              </span>
+              <button type="button" class="btn btn-ghost btn-sm" @click="toggleRemove(row)"
+                      :class="!row.removed && !row.isNew && 'btn-danger-ghost'"
+                      x-text="row.removed ? $t('org.people.undo_leave') : (row.isNew ? $t('org.people.discard_join') : $t('collab.leave'))"></button>
+            </li>
+          </template>
+        </ul>
+        <p class="muted small">{{.T "org.people.projects_hint"}}</p>
+
+        <div class="field" x-show="addableProjects().length > 0">
+          <label for="person-add-project">{{.T "org.people.add_project"}}</label>
+          <div class="row project-add">
+            <select id="person-add-project" x-model="addForm.project_id">
+              <option value="">{{.T "org.people.choose_project"}}</option>
+              <template x-for="p in addableProjects()" :key="p.id">
+                <option :value="p.id" x-text="p.name"></option>
+              </template>
+            </select>
+            <span class="rate-input" x-show="editing && !editing.is_owner">
+              <span class="muted small" aria-hidden="true" x-text="WTT.fmt.moneyUnit()"></span>
+              <input type="text" inputmode="decimal" class="num" placeholder="{{.T "project_settings.rate_placeholder"}}"
+                     :aria-label="$t('org.people.new_rate_of', { unit: WTT.fmt.moneyUnit() })" x-model="addForm.rate" @keydown.enter.prevent="addProject()">
+            </span>
+            <button type="button" class="btn btn-secondary btn-sm" @click="addProject()">{{template "icon" "plus"}} {{.T "org.people.add_project_button"}}</button>
+          </div>
+        </div>
+        <p class="muted small" x-show="allProjects && allProjects.length === 0">{{.T "org.people.projects_none_in_org"}}</p>
+      </div>
+    </div>
+    {{end}}
+
+    <p class="form-error" x-show="errors.edit" x-text="errors.edit" role="alert"></p>
+    <div class="row row-end">
+      <button type="button" class="btn btn-secondary" @click="$store.modal.dismiss()">{{.T "common.cancel"}}</button>
+      <button type="submit" class="btn" :disabled="pending">{{.T "common.save"}}</button>
+    </div>
+  </form>
+</template>
+{{end}}

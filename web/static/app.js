@@ -348,6 +348,19 @@
     weeklyHours(hours) {
       return hours ? t('labels.weekly_hours', { hours }) : '';
     },
+    // "2026-10-05" -> "05 de out. de 2026": um dia de calendário, formatado sem passar por fuso. Não use fmt.date para
+    // isso: o navegador converte o instante para o fuso dele e desloca o dia.
+    day(value, opts) {
+      if (!value) return '';
+      const [y, m, d] = String(value).slice(0, 10).split('-').map(Number);
+      return new Date(y, m - 1, d, 12).toLocaleDateString(lang, opts || { day: '2-digit', month: 'short', year: 'numeric' });
+    },
+    // {frequency: 'monthly', day: 5} -> "Mensal · dia 5"; sem regra, texto vazio
+    paymentRule(rule) {
+      if (!rule || !rule.frequency) return '';
+      if (rule.frequency === 'monthly') return t('labels.payment_monthly', { day: rule.day });
+      return t('labels.payment_biweekly', { date: fmt.day(rule.start, { day: '2-digit', month: '2-digit' }) });
+    },
     // mask aplica uma máscara do cadastro de países: 9 é um dígito, * é um dígito ou uma letra, o resto é literal.
     // "11222333000181" com "**.***.***/****-99" -> "11.222.333/0001-81". Vale também enquanto a pessoa digita: o que
     // ainda não tem valor fica de fora (sem hífen sobrando), e o que passa do formato é cortado.
@@ -470,7 +483,24 @@
     return { label: fmt.date(iso), cls: '' };
   }
 
-  window.WTT = { can, t, lang, priorityClass, statusClass, hasDeadlineDate, deadlineInfo, errorText, api, ApiError, form, fmt, toCents, copyText, notInformed, weekdays, priorities, taskStatuses, markdown, routine, sprintOptions, sprintChoices, workModes, currencies, countries, boot: window.BOOT || {} };
+  // payments são as contas de tela dos pagamentos, iguais no perfil da pessoa e na tela da equipe.
+  const payments = {
+    // "05 out. – 05 nov.": os dois dias são inclusivos, em dias de calendário.
+    period(p) {
+      return fmt.day(p.start, { day: '2-digit', month: 'short' }) + ' – ' + fmt.day(p.pay_date, { day: '2-digit', month: 'short' });
+    },
+    // Quanto falta para o pagamento do período corrente: "Paga hoje" ou "em 3 dias".
+    daysLeft(cur) {
+      if (!cur || cur.days_left === undefined) return '';
+      return cur.days_left === 0 ? t('payments.today') : t('payments.days_left', { count: cur.days_left });
+    },
+    // O andamento do período contra a meta da jornada, em porcentagem.
+    goalPercent(cur) {
+      return cur && cur.goal_seconds ? Math.round(cur.seconds / cur.goal_seconds * 100) : 0;
+    },
+  };
+
+  window.WTT = { can, t, lang, priorityClass, statusClass, hasDeadlineDate, deadlineInfo, errorText, api, ApiError, form, fmt, payments, toCents, copyText, notInformed, weekdays, priorities, taskStatuses, markdown, routine, sprintOptions, sprintChoices, workModes, currencies, countries, boot: window.BOOT || {} };
 
   // Onde flash() deixa a mensagem para a página seguinte.
   const flashKey = 'wtt:flash';

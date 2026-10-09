@@ -412,58 +412,20 @@ document.addEventListener('alpine:init', () => {
     },
   }));
 
-  Alpine.data('orgPeople', () => ({
-    ...form(),
+  // personEditor é o modal Editar colaborador (o parcial person_edit_modal), que a lista de colaboradores e o perfil de
+  // um deles têm em comum: o estado do rascunho e o Salvar. Cada componente o espalha no seu objeto, junto do form().
+  const personEditor = () => ({
     me,
-    loading: true,
-    people: [],
-    invites: [],
-    invite: { email: '', role: 'member' },
-    lastLink: '',
-    // Como o último convite chegou (email, terminal ou link) e para quem, para o modal dizer o que aconteceu.
-    lastDelivery: '',
-    lastEmail: '',
     editing: null, // a pessoa aberta no modal do colaborador
-    tab: 'hours', // a aba do modal: hours, permissions ou projects
+    tab: 'payment', // a aba do modal: payment, permissions ou projects
     tabs: [], // as abas que quem olha pode usar
     // O rascunho do modal: nada vai para o servidor antes de Salvar. projects são as linhas da aba de projetos:
     // { project_id, name, cents (o valor gravado, null na linha nova), rate (o texto do campo), isNew, removed }.
-    draft: { weekly_hours: '', permissions: [], projects: [] },
+    draft: { weekly_hours: '', payment: { frequency: '', day: '', start: '' }, permissions: [], projects: [] },
     addForm: { project_id: '', rate: '' }, // o projeto e o valor escolhidos para a pessoa entrar
     allProjects: null, // os projetos da organização, buscados na primeira vez que o modal abre para um admin
     projectsState: 'idle', // idle, loading, ready ou error
     orgKeys: [], // as permissões da organização do catálogo, para o dono liberar
-    async init() {
-      try {
-        const [people, invites, catalog] = await Promise.all([
-          api('GET', '/api/orgs/' + orgId + '/persons'),
-          api('GET', '/api/orgs/' + orgId + '/invites'),
-          me.is_owner ? api('GET', '/api/permissions') : null,
-        ]);
-        this.people = people || [];
-        this.invites = invites || [];
-        if (catalog) this.orgKeys = catalog.organization;
-      } catch (e) {
-        this.errors.load = e.message;
-      } finally {
-        this.loading = false;
-      }
-      // O atalho "Adicionar colaborador" da página inicial chega com ?add=1: abre o modal do
-      // convite e tira o parâmetro, para recarregar ou voltar não abrir o modal de novo.
-      if (new URLSearchParams(location.search).has('add')) {
-        history.replaceState(null, '', location.pathname);
-        this.openInvite();
-      }
-    },
-    setRole(person, role) {
-      return this.run('role', async () => {
-        const updated = await api('PATCH', '/api/persons/' + person.id + '/role', { role });
-        person.role = updated.role;
-        toast(WTT.t(updated.role === 'admin' ? 'org.people.now_admin' : 'org.people.now_member', { name: person.name }));
-        // Quem tirou o próprio admin perde o acesso a esta página.
-        if (person.id === me.id && updated.role !== 'admin') location.href = '/';
-      });
-    },
     // As permissões da organização só se liberam a quem não é admin, e só o dono as dá.
     canGrant(person) {
       return !!me.is_owner && !!person && person.role !== 'admin' && !person.is_owner;
@@ -473,7 +435,7 @@ document.addEventListener('alpine:init', () => {
     // o modal não mostra a faixa de abas.
     availableTabs() {
       return [
-        WTT.can('people.manage') && 'hours',
+        WTT.can('people.manage') && 'payment',
         me.is_owner && 'permissions',
         me.role === 'admin' && 'projects',
       ].filter(Boolean);
@@ -491,8 +453,9 @@ document.addEventListener('alpine:init', () => {
     openEdit(person) {
       this.editing = person;
       this.tabs = this.availableTabs();
-      this.tab = this.tabs[0] || 'hours';
-      this.draft = { weekly_hours: person.weekly_hours || '', permissions: [...(person.permissions || [])], projects: [] };
+      this.tab = this.tabs[0] || 'payment';
+      const rule = person.payment || {};
+      this.draft = { weekly_hours: person.weekly_hours || '', payment: { frequency: rule.frequency || '', day: rule.day || '', start: rule.start || '' }, permissions: [...(person.permissions || [])], projects: [] };
       this.addForm = { project_id: '', rate: '' };
       this.projectsState = 'idle';
       this.errors.edit = '';
@@ -581,6 +544,25 @@ document.addEventListener('alpine:init', () => {
       }
       return changes;
     },
+    // paymentBody valida a regra do rascunho (ou normaliza a que a pessoa já tem) e devolve o corpo do PATCH. Um erro
+    // troca para a aba e nomeia o campo.
+    paymentBody(rule) {
+      const d = rule ? { frequency: rule.frequency || '', day: rule.day || '', start: rule.start || '' } : this.draft.payment;
+      if (d.frequency === 'monthly') {
+        const day = Number(String(d.day).trim());
+        if (String(d.day).trim() === '' || !Number.isInteger(day) || day < 1 || day > 31) {
+          if (!rule) { this.tab = 'payment'; throw new Error(WTT.t('errors.person.invalid_payment_day')); }
+        }
+        return { frequency: 'monthly', day };
+      }
+      if (d.frequency === 'biweekly') {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(d.start || '')) {
+          if (!rule) { this.tab = 'payment'; throw new Error(WTT.t('errors.person.invalid_payment_start')); }
+        }
+        return { frequency: 'biweekly', start: d.start };
+      }
+      return { frequency: '' };
+    },
     // savePerson aplica o rascunho com as rotas que já existiam: a jornada, as permissões e, projeto a projeto, o valor
     // ou a saída. Cada chamada que dá certo vira o novo ponto de partida; se uma falhar, o que já foi aplicado continua
     // valendo e o modal fica aberto com o erro. Salvar de novo só repete o que faltou.
@@ -590,13 +572,18 @@ document.addEventListener('alpine:init', () => {
         const text = String(this.draft.weekly_hours).trim();
         const hours = text === '' ? 0 : Number(text);
         if (!Number.isInteger(hours) || hours < 0 || hours > 168) {
-          this.tab = 'hours';
+          this.tab = 'payment';
           throw new Error(WTT.t('errors.person.invalid_week_hours'));
         }
+        const pay = this.paymentBody();
         const projects = this.projectChanges();
         if (WTT.can('people.manage') && hours !== (person.weekly_hours || 0)) {
           const updated = await api('PATCH', '/api/persons/' + person.id + '/weekly-hours', { weekly_hours: hours });
           person.weekly_hours = updated.weekly_hours;
+        }
+        if (WTT.can('people.manage') && JSON.stringify(pay) !== JSON.stringify(this.paymentBody(person.payment || {}))) {
+          const updated = await api('PATCH', '/api/persons/' + person.id + '/payment', pay);
+          person.payment = updated.payment;
         }
         const before = [...(person.permissions || [])].sort().join();
         if (this.canGrant(person) && [...this.draft.permissions].sort().join() !== before) {
@@ -621,6 +608,56 @@ document.addEventListener('alpine:init', () => {
         }
         toast(WTT.t('org.people.saved', { name: person.name }));
         Alpine.store('modal').close();
+        // A página que abriu o modal diz o que fazer depois (o perfil relê os números).
+        if (this.afterPersonSaved) await this.afterPersonSaved(person);
+      });
+    },
+  });
+
+  Alpine.data('orgPeople', () => ({
+    ...form(),
+    ...personEditor(),
+    loading: true,
+    people: [],
+    invites: [],
+    invite: { email: '', role: 'member' },
+    lastLink: '',
+    // Como o último convite chegou (email, terminal ou link) e para quem, para o modal dizer o que aconteceu.
+    lastDelivery: '',
+    lastEmail: '',
+    async init() {
+      try {
+        const [people, invites, catalog] = await Promise.all([
+          api('GET', '/api/orgs/' + orgId + '/persons'),
+          api('GET', '/api/orgs/' + orgId + '/invites'),
+          me.is_owner ? api('GET', '/api/permissions') : null,
+        ]);
+        this.people = people || [];
+        this.invites = invites || [];
+        if (catalog) this.orgKeys = catalog.organization;
+      } catch (e) {
+        this.errors.load = e.message;
+      } finally {
+        this.loading = false;
+      }
+      // O atalho "Adicionar colaborador" da página inicial chega com ?add=1: abre o modal do
+      // convite e tira o parâmetro, para recarregar ou voltar não abrir o modal de novo.
+      if (new URLSearchParams(location.search).has('add')) {
+        history.replaceState(null, '', location.pathname);
+        this.openInvite();
+      }
+    },
+    // profileHref é o perfil da pessoa: para os admins, a linha da lista leva até ele.
+    profileHref(person) {
+      return '/orgs/' + orgId + '/people/' + person.id;
+    },
+    setRole(person, role) {
+      return this.run('role', async () => {
+        const updated = await api('PATCH', '/api/persons/' + person.id + '/role', { role });
+        person.role = updated.role;
+        toast(WTT.t(updated.role === 'admin' ? 'org.people.now_admin' : 'org.people.now_member', { name: person.name }));
+        // Quem tirou o próprio admin perde o acesso a esta página.
+        if (person.id === me.id && updated.role !== 'admin') location.href = '/';
       });
     },
     // openInvite abre o modal de adicionar colaborador, sempre com o formulário zerado.
@@ -655,6 +692,97 @@ document.addEventListener('alpine:init', () => {
         this.invites = this.invites.filter((i) => i.id !== inv.id);
         toast(WTT.t('org.people.revoked'));
       });
+    },
+  }));
+
+  // personProfile é o que o perfil de uma pessoa mostra (o parcial person_profile), igual no meu perfil e no de um
+  // colaborador aberto por um admin: quem ela é, as horas e o valor do período e desde o início, por projeto, e os
+  // pagamentos calculados da regra dela. self diz se é o perfil de quem olha, para os textos.
+  const personProfile = (id, self) => ({
+    self,
+    person: null,
+    detail: null, // os pagamentos da pessoa: o período corrente, os próximos, o histórico e o "desde o início"
+    rates: [], // o valor por hora dela em cada projeto
+    profileLoading: true,
+    // loadProfile lê tudo de uma vez; os números valem para a hora em que chegam.
+    async loadProfile() {
+      this.profileLoading = true;
+      this.errors.load = '';
+      try {
+        const [person, detail, rates] = await Promise.all([
+          api('GET', '/api/persons/' + id),
+          api('GET', '/api/persons/' + id + '/payments'),
+          api('GET', '/api/persons/' + id + '/allocations'),
+        ]);
+        this.person = person;
+        this.detail = detail;
+        this.rates = rates || [];
+      } catch (e) {
+        this.errors.load = e.message;
+      } finally {
+        this.profileLoading = false;
+      }
+    },
+    // "40h por semana · Mensal · dia 5": a jornada e a regra de pagamento. O dono não é pago, então não tem regra a mostrar.
+    summaryLine() {
+      const p = this.person;
+      if (!p) return '';
+      const parts = [WTT.fmt.weeklyHours(p.weekly_hours) || WTT.t('profile.no_weekly_hours')];
+      if (!p.is_owner) parts.push(WTT.fmt.paymentRule(p.payment) || WTT.t('profile.no_payment_rule'));
+      return parts.join(' · ');
+    },
+    // projectRows junta, por projeto, o valor por hora (a alocação), o que a pessoa fez no período corrente e desde o
+    // início, em ordem de nome. Um projeto com horas e sem alocação é um de que ela saiu.
+    projectRows() {
+      if (!this.detail) return [];
+      const rows = new Map();
+      const row = (projectId, name) => {
+        if (!rows.has(projectId)) rows.set(projectId, { id: projectId, name, allocated: false, rate: null, period: null, lifetime: null });
+        return rows.get(projectId);
+      };
+      this.rates.forEach((a) => {
+        const r = row(a.project_id, a.project ? a.project.name : a.project_id);
+        r.allocated = true;
+        r.rate = a.pay_rate_cents;
+      });
+      ((this.detail.current && this.detail.current.projects) || []).forEach((p) => { row(p.project.id, p.project.name).period = p; });
+      this.detail.lifetime.projects.forEach((p) => { row(p.project.id, p.project.name).lifetime = p; });
+      return [...rows.values()].sort((a, b) => a.name.localeCompare(b.name));
+    },
+    // historyRows são os períodos fechados que a tela lista: os que terminam do dia da primeira sessão em diante. Os de
+    // antes, em que a pessoa ainda não registrava horas, vêm zerados do servidor e só encheriam a tabela.
+    historyRows() {
+      const first = this.detail.lifetime.first_day;
+      return first ? this.detail.history.filter((h) => h.pay_date >= first) : [];
+    },
+    // "8h 30min · R$ 400,00": as horas e, para quem é pago, o valor. Sem nada no projeto, um traço.
+    shareText(share) {
+      if (!share) return '—';
+      const hours = WTT.fmt.hours(share.seconds);
+      return this.detail.owner || share.amount_cents === null || share.amount_cents === undefined ? hours : hours + ' · ' + WTT.fmt.money(share.amount_cents);
+    },
+    // A dica do cartão "Desde o início": o valor (de quem é pago) e o dia da primeira sessão.
+    lifetimeHint() {
+      const life = this.detail.lifetime;
+      const parts = [];
+      if (!this.detail.owner && life.amount_cents !== null) parts.push(WTT.fmt.money(life.amount_cents));
+      parts.push(life.first_day ? WTT.t('profile.lifetime_since', { date: WTT.fmt.day(life.first_day) }) : WTT.t('profile.lifetime_empty'));
+      return parts.join(' · ');
+    },
+  });
+
+  // O perfil de um colaborador, aberto por um admin: o que a pessoa vê no dela, com o modal Editar colaborador.
+  Alpine.data('orgPerson', () => ({
+    ...form(),
+    ...personEditor(),
+    ...personProfile((WTT.boot.person || {}).id, false),
+    init() {
+      if (me.is_owner) api('GET', '/api/permissions').then((catalog) => { this.orgKeys = catalog.organization; }).catch(() => {});
+      return this.loadProfile();
+    },
+    // A jornada e a regra mudam os períodos, e os projetos mudam a tabela: depois de salvar, tudo é relido.
+    afterPersonSaved() {
+      return this.loadProfile();
     },
   }));
 
@@ -915,37 +1043,44 @@ document.addEventListener('alpine:init', () => {
     },
   }));
 
+  // O meu perfil: o que fiz e quando sou pago, para ler, e o modal Editar perfil, com os dados pessoais e a senha.
   Alpine.data('profileSettings', () => ({
     ...form(),
+    ...personProfile(me.id, true),
     profile: { name: me.name, email: me.email },
     password: { current: '', next: '' },
-    rates: [],
-    ratesLoaded: false,
-    weeklyHours: undefined, // a jornada da pessoa; null quando nenhum admin informou
-    async init() {
-      // A jornada é só para ler: sem ela, o cartão deixa de mostrar a linha.
-      api('GET', '/api/persons/' + me.id).then((p) => { this.weeklyHours = p.weekly_hours; }).catch(() => {});
-      try {
-        this.rates = (await api('GET', '/api/persons/' + me.id + '/allocations')) || [];
-      } catch (e) {
-        this.errors.rates = e.message;
-      } finally {
-        this.ratesLoaded = true;
-      }
+    tab: 'personal', // a aba do modal: personal ou password
+    init() {
+      return this.loadProfile();
+    },
+    // openProfileEdit abre o modal com os dados de agora e a senha em branco.
+    openProfileEdit() {
+      const p = this.person || me;
+      this.profile = { name: p.name, email: p.email };
+      this.password = { current: '', next: '' };
+      this.tab = 'personal';
+      this.errors.profile = '';
+      this.errors.password = '';
+      Alpine.store('modal').open('profile-edit', WTT.t('profile.edit'), () => !this.pending);
+    },
+    focusTab(tab) {
+      this.tab = tab;
+      this.$nextTick(() => this.$refs['tab-' + tab].focus());
     },
     saveProfile() {
       return this.run('profile', async () => {
         const p = await api('PATCH', '/api/persons/' + me.id, this.profile);
-        this.profile = { name: p.name, email: p.email };
+        if (this.person) Object.assign(this.person, { name: p.name, email: p.email });
         setText('[data-me-name]', p.name);
         toast(WTT.t('profile.personal.saved'));
+        Alpine.store('modal').close();
       });
     },
     changePassword() {
       return this.run('password', async () => {
         await api('POST', '/api/auth/password', { current_password: this.password.current, new_password: this.password.next });
-        this.password = { current: '', next: '' };
         toast(WTT.t('profile.password.changed'));
+        Alpine.store('modal').close();
       });
     },
   }));
