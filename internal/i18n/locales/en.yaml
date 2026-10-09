@@ -63,8 +63,6 @@ nav:
   logout: Sign out
 
 home:
-  intro: How the organization is doing and the projects it runs.
-  intro_member: The projects of the organization.
   stats:
     title: Overview
     scope_7: The sum of all projects in the last 7 days.

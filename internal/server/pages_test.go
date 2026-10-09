@@ -206,20 +206,13 @@ func TestPages_ModalHostAndIcons(t *testing.T) {
 	}
 }
 
-// O resumo da organização aparece no cabeçalho das páginas dela e na página
-// inicial, e a organização chega pronta ao JavaScript.
+// O resumo da organização aparece no cabeçalho das páginas dela (a página
+// inicial não tem cabeçalho), e a organização chega pronta ao JavaScript.
 func TestPages_OrgSummaryInHeader(t *testing.T) {
 	e := newServer(t)
 	admin := signup(t, e, "Org", "ana@test.com")
 	member := invite(t, e, admin, "bia@test.com", "member")
 	orgPath := "/orgs/" + admin.orgID
-
-	// Sem resumo, a página inicial diz o que cada um encontra nela: o admin, a visão geral; o membro, os projetos.
-	for who, want := range map[string]string{member.session: "Os projetos da organização.", admin.session: "Como a organização está indo"} {
-		if body := do(e, "GET", orgPath, "", who).Body.String(); !strings.Contains(body, want) {
-			t.Errorf("home page without a summary does not show the default lede %q", want)
-		}
-	}
 
 	rec := do(e, "PATCH", "/api/orgs/"+admin.orgID, `{"summary":"Entregas <rápidas> no mesmo dia","industry":"Logística"}`, admin.session)
 	if rec.Code != http.StatusOK {
@@ -227,8 +220,10 @@ func TestPages_OrgSummaryInHeader(t *testing.T) {
 	}
 	for _, path := range []string{orgPath, orgPath + "/about"} {
 		body := do(e, "GET", path, "", member.session).Body.String()
-		if !strings.Contains(body, "Entregas &lt;rápidas&gt; no mesmo dia") {
-			t.Errorf("GET %s does not show the escaped summary", path)
+		// A página inicial abre direto nos blocos: sem título, sem nome da organização e sem frase (nem o resumo).
+		shown, want := strings.Contains(body, "Entregas &lt;rápidas&gt; no mesmo dia"), path != orgPath
+		if shown != want {
+			t.Errorf("GET %s shows the escaped summary = %v, want %v", path, shown, want)
 		}
 		if strings.Contains(body, "<rápidas>") {
 			t.Errorf("GET %s shows the summary without escaping", path)

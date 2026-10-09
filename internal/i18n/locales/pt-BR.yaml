@@ -73,8 +73,6 @@ nav:
   logout: Sair
 
 home:
-  intro: Como a organização está indo e os projetos que ela toca.
-  intro_member: Os projetos da organização.
   stats:
     title: Visão geral
     scope_7: Soma de todos os projetos nos últimos 7 dias.

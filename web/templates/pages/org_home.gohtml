@@ -1,13 +1,5 @@
 {{define "content"}}
 <main class="page" x-data="orgHome">
-  <div class="page-head">
-    <div>
-      <div class="eyebrow">{{.Me.OrganizationName}}</div>
-      <h1>{{.T "nav.home"}}</h1>
-      <p class="lede">{{if and .Org .Org.Summary}}{{.Org.Summary}}{{else if .IsAdmin}}{{.T "home.intro"}}{{else}}{{.T "home.intro_member"}}{{end}}</p>
-    </div>
-  </div>
-
   {{if .IsAdmin}}
   {{/* Os números são só dos admins: são o dinheiro de todos os projetos e as horas de cada pessoa.
        Valem para a hora em "Atualizado às" e são relidos pelo botão. */}}
