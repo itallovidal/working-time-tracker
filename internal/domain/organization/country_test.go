@@ -23,12 +23,13 @@ func TestService_Update_Country(t *testing.T) {
 		t.Fatalf("a new organization starts in BR, got %q", got.Country)
 	}
 
-	for in, want := range map[string]string{"us": "US", " EUA ": "US", "Brasil": "BR", "": "BR", "US": "US"} {
-		if _, err := svc.Update(id, organization.UpdateInput{Country: ptr(in)}); err != nil {
-			t.Fatalf("country %q: %v", in, err)
+	// Em ordem fixa, terminando em US: o fim do teste confere que um país recusado não tira a organização de lá.
+	for _, c := range []struct{ in, want string }{{"us", "US"}, {" EUA ", "US"}, {"Brasil", "BR"}, {"", "BR"}, {"US", "US"}} {
+		if _, err := svc.Update(id, organization.UpdateInput{Country: ptr(c.in)}); err != nil {
+			t.Fatalf("country %q: %v", c.in, err)
 		}
-		if got, _ := svc.Get(id); got.Country != want {
-			t.Errorf("country %q saved as %q, want %q", in, got.Country, want)
+		if got, _ := svc.Get(id); got.Country != c.want {
+			t.Errorf("country %q saved as %q, want %q", c.in, got.Country, c.want)
 		}
 	}
 
