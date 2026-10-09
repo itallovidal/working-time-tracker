@@ -76,6 +76,7 @@ colaboradores e outros gerentes, mas não dá o grupo financeiro, que tem o fatu
 | `POST`/`GET /orgs/:id/invites`, `DELETE /invites/:id`, `PATCH /persons/:id/weekly-hours` | `people.manage` (convidar um admin é só do dono) |
 | `PATCH /persons/:id/role`, `PATCH /persons/:id/permissions`, `DELETE /orgs/:id` | só o dono |
 | `PATCH /orgs/:id` | admin |
+| `GET /orgs/:id/me/overview`, `GET /orgs/:id/me/tasks` | qualquer membro da organização (cada um lê só as próprias horas e tarefas, nunca as de outra pessoa) |
 | `GET /orgs/:id/overview`, `GET /orgs/:id/working-now` | admin (a segunda só diz quem está com o ponto aberto e em que tarefas, sem tempo nem dinheiro) |
 
 Sem a permissão a API responde `403 auth.permission_required` (ou `auth.owner_only`, ou `auth.admin_only`), e a página, `404`.

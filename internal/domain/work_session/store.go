@@ -203,6 +203,32 @@ func (s *Store) ListByOrganization(orgID string) ([]WorkSession, error) {
 	return toDomainSessions(sessions), nil
 }
 
+// ListByPersonSince devolve as sessões da pessoa nos projetos da organização que ainda corriam em
+// since ou depois (as que terminaram antes ficam de fora; a aberta sempre entra), da mais recente
+// para a mais antiga, sem as tarefas: serve a quem soma o tempo da pessoa a partir de um instante.
+func (s *Store) ListByPersonSince(orgID, personID string, since time.Time) ([]WorkSession, error) {
+	oid, err := uuid.Parse(orgID)
+	if err != nil {
+		return nil, err
+	}
+	pid, err := uuid.Parse(personID)
+	if err != nil {
+		return nil, err
+	}
+	sessions, err := s.client.WorkSession.Query().
+		Where(
+			worksession.PersonIDEQ(pid),
+			worksession.HasProjectWith(entproject.OrganizationIDEQ(oid)),
+			worksession.Or(worksession.EndAtIsNil(), worksession.EndAtGTE(since)),
+		).
+		Order(ent.Desc(worksession.FieldStartAt)).
+		All(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	return toDomainSessions(sessions), nil
+}
+
 // ListOpenByOrganization devolve as sessões abertas dos projetos da organização, da que
 // começou primeiro para a última, cada uma com as suas tarefas (os intervalos, na ordem em
 // que entraram, com o nome). Serve a quem mostra quem está trabalhando agora e em quê.

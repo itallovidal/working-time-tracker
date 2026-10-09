@@ -96,6 +96,18 @@ type Task struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+// HasDeadline diz se a tarefa tem prazo: uma sem prazo guarda o tempo zero do Go, ou nada.
+func (t *Task) HasDeadline() bool {
+	return !t.Deadline.Before(noDeadline)
+}
+
+// Assigned é uma tarefa de uma pessoa com o nome do projeto dela, para a lista que junta os projetos
+// todos.
+type Assigned struct {
+	Task
+	ProjectName string
+}
+
 // LinkFor acha o vínculo com a integração. Com o id vazio devolve o primeiro, para quem só tem um.
 func (t *Task) LinkFor(integrationID string) *Link {
 	for i := range t.Links {

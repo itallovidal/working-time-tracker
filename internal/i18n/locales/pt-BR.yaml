@@ -119,6 +119,44 @@ home:
     prev: Anterior
     next: Próxima
     range: "{{.from}}–{{.to}} de {{.total}}"
+  me:
+    title: Seu painel
+    intro: Suas horas e suas tarefas, em todos os projetos.
+    loading: Carregando o seu painel…
+    today: Hoje
+    week: Esta semana
+    week_hint: De segunda a domingo
+    week_goal: "{{.percent}}% das {{.hours}}h combinadas"
+    open: Tarefas abertas
+    open_overdue:
+      one: "{{.count}} atrasada"
+      other: "{{.count}} atrasadas"
+    open_week:
+      one: "{{.count}} vence esta semana"
+      other: "{{.count}} vencem esta semana"
+    open_none_late: Nenhuma atrasada
+    open_empty: Nada em aberto
+    done: Concluídas
+    done_share: "{{.percent}}% das suas tarefas"
+    done_empty: Nenhuma tarefa ainda
+    tasks_title: Suas tarefas
+    tasks_state: Quais tarefas mostrar
+    tasks_loading: Carregando as suas tarefas…
+    tab_open: Abertas
+    tab_closed: Concluídas
+    empty_none: Você ainda não tem tarefas
+    empty_none_text: Quando alguém passar uma tarefa para você, ou você pegar uma na lista de um projeto, ela aparece aqui.
+    empty_open: Nenhuma tarefa aberta com você
+    empty_open_text: Tudo o que era seu já foi concluído.
+    empty_closed: Nenhuma tarefa concluída ainda
+    empty_closed_text: As tarefas que você fechar aparecem aqui.
+    pager: Páginas das suas tarefas
+    week_title: Sua semana
+    week_chart: Horas por dia, de segunda a domingo.
+    week_empty: Nenhuma hora registrada esta semana.
+    by_project: Por projeto
+    day_label: "{{.day}}: {{.time}}"
+    day_none: sem horas
   # O ranking por horas, guardado em partials/team_hours.gohtml e hoje sem uso.
   ranking:
     title: Equipe
@@ -396,6 +434,7 @@ help:
     home:
       title: Início da organização
       text: A primeira tela depois de entrar.
+      mine: "Seu painel (todos): as suas horas de hoje e da semana, as suas tarefas abertas e concluídas em todos os projetos e a semana dia a dia, com as horas por projeto. Só aparece o que é seu: nada de dinheiro nem dos colegas. Clique numa tarefa para abri-la."
       projects: "Projetos: os projetos da organização, em cartões, seis por página. Clique num cartão para abrir o projeto. Quem pode criar projetos vê o botão “Novo projeto” junto do título."
       overview: "Visão geral (só administradores): as suas horas, as horas da equipe, a receita, o custo e a margem de todos os projetos juntos, em 7 dias, 30 dias ou tudo."
       team: "Equipe (só administradores): quem está com o ponto aberto agora e em qual tarefa."
@@ -1456,6 +1495,8 @@ errors:
     invalid_work_mode: "regime de trabalho inválido: use remote, hybrid ou onsite"
     name_required: "informe o nome"
     not_found: "organização não encontrada"
+  overview:
+    invalid_task_state: "estado de tarefa inválido (state): use open ou closed"
   person:
     admin_has_all_permissions: "os admins já têm todas as permissões"
     invalid_permission: "permissão da organização desconhecida"

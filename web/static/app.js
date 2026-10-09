@@ -240,6 +240,13 @@
       const s = Math.max(0, Math.floor(seconds || 0));
       return pad(Math.floor(s / 3600)) + ':' + pad(Math.floor((s % 3600) / 60)) + ':' + pad(s % 60);
     },
+    // 9000 -> "2h30"; 3600 -> "1h"; 2700 -> "45min"; menos de um minuto, vazio. Para o rótulo curto de uma barra.
+    hoursShort(seconds) {
+      const m = Math.round(Math.max(0, seconds || 0) / 60);
+      if (m < 1) return '';
+      if (m < 60) return m + 'min';
+      return Math.floor(m / 60) + 'h' + (m % 60 ? pad(m % 60) : '');
+    },
     // 3725 -> "1h 02min"; 42 -> "42s"
     hours(seconds) {
       const s = Math.max(0, Math.floor(seconds || 0));
@@ -401,7 +408,26 @@
   const granted = (window.BOOT && window.BOOT.can) || [];
   const can = (key) => granted.includes(key);
 
-  window.WTT = { can, t, lang, errorText, api, ApiError, form, fmt, toCents, copyText, notInformed, weekdays, priorities, taskStatuses, markdown, routine, sprintOptions, sprintChoices, orgSizes, workModes, currencies, boot: window.BOOT || {} };
+  // priorityClass e statusClass dão a cor de uma prioridade e de um status (`.tone` e a variante,
+  // em app.css), no selo, no chip do filtro e no select. Uma tarefa sem valor conhecido cai em
+  // "sem prioridade" e em "backlog", os padrões da API.
+  const priorityClass = (p) => 'tone prio-' + (['urgent', 'high', 'medium', 'low'].includes(p) ? p : 'none');
+  const statusClass = (s) => 'tone status-' + (['in_progress', 'awaiting_closure', 'closed'].includes(s) ? s : 'backlog');
+
+  // Uma tarefa sem prazo guarda o tempo zero do Go (ano 1, uma tarefa importada de uma issue nasce assim):
+  // antes de 1971 não é um prazo.
+  const hasDeadlineDate = (iso) => !!iso && new Date(iso).getFullYear() >= 1971;
+  // deadlineInfo descreve o prazo de uma tarefa para o badge: atrasada, vencendo
+  // nas próximas 48 horas ou só a data.
+  function deadlineInfo(iso) {
+    if (!hasDeadlineDate(iso)) return { label: t('tasks.no_deadline'), cls: '' };
+    const diff = new Date(iso).getTime() - Date.now();
+    if (diff < 0) return { label: t('tasks.overdue', { date: fmt.date(iso) }), cls: 'badge-danger' };
+    if (diff < 2 * 24 * 60 * 60 * 1000) return { label: t('tasks.due_soon', { date: fmt.date(iso) }), cls: 'badge-warn' };
+    return { label: fmt.date(iso), cls: '' };
+  }
+
+  window.WTT = { can, t, lang, priorityClass, statusClass, hasDeadlineDate, deadlineInfo, errorText, api, ApiError, form, fmt, toCents, copyText, notInformed, weekdays, priorities, taskStatuses, markdown, routine, sprintOptions, sprintChoices, orgSizes, workModes, currencies, boot: window.BOOT || {} };
 
   // Onde flash() deixa a mensagem para a página seguinte.
   const flashKey = 'wtt:flash';

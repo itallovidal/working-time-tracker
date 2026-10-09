@@ -10,6 +10,7 @@ import (
 	"working-time-tracker/ent/issuesync"
 	entlabel "working-time-tracker/ent/label"
 	entperson "working-time-tracker/ent/person"
+	entproject "working-time-tracker/ent/project"
 	"working-time-tracker/ent/task"
 	"working-time-tracker/internal/database"
 )
@@ -52,7 +53,11 @@ var noDeadline = time.Date(1971, 1, 1, 0, 0, 0, 0, time.UTC)
 
 // filtered monta a consulta das tarefas do projeto que passam pelos filtros.
 func (s *Store) filtered(projectID uuid.UUID, f ListFilter) *ent.TaskQuery {
-	q := s.client.Task.Query().Where(task.ProjectIDEQ(projectID))
+	return applyFilter(s.client.Task.Query().Where(task.ProjectIDEQ(projectID)), f)
+}
+
+// applyFilter aplica os filtros a uma consulta de tarefas, seja qual for o escopo dela.
+func applyFilter(q *ent.TaskQuery, f ListFilter) *ent.TaskQuery {
 	if f.Query != "" {
 		q = q.Where(task.NameContainsFold(f.Query))
 	}
@@ -154,6 +159,86 @@ func (s *Store) CountByProject(projectID string, f ListFilter) (int, error) {
 		return 0, err
 	}
 	return s.filtered(uid, f).Count(context.Background())
+}
+
+// assigned monta a consulta das tarefas de uma pessoa em todos os projetos da organização que passam
+// pelos filtros. O responsável vem do argumento, não do filtro.
+func (s *Store) assigned(orgID, personID uuid.UUID, f ListFilter) *ent.TaskQuery {
+	q := s.client.Task.Query().Where(
+		task.AssigneeIDEQ(personID),
+		task.HasProjectWith(entproject.OrganizationIDEQ(orgID)),
+	)
+	return applyFilter(q, f)
+}
+
+// ListAssigned lista as tarefas da pessoa em todos os projetos da organização, da mais nova para a
+// mais antiga, cada uma com o nome do projeto. Com f.Page maior que zero, devolve só aquela página.
+func (s *Store) ListAssigned(orgID, personID string, f ListFilter) ([]Assigned, error) {
+	oid, pid, err := parseOrgPerson(orgID, personID)
+	if err != nil {
+		return nil, err
+	}
+	q := s.assigned(oid, pid, f).
+		WithProject().
+		Order(ent.Desc(task.FieldCreatedAt, task.FieldID))
+	if f.Page > 0 {
+		q = q.Limit(f.PerPage).Offset((f.Page - 1) * f.PerPage)
+	}
+	tasks, err := q.All(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	out := make([]Assigned, len(tasks))
+	for i, e := range tasks {
+		out[i] = Assigned{Task: *toDomainTask(e)}
+		if e.Edges.Project != nil {
+			out[i].ProjectName = e.Edges.Project.Name
+		}
+	}
+	return out, nil
+}
+
+// CountAssigned conta as tarefas da pessoa na organização que passam pelos filtros.
+func (s *Store) CountAssigned(orgID, personID string, f ListFilter) (int, error) {
+	oid, pid, err := parseOrgPerson(orgID, personID)
+	if err != nil {
+		return 0, err
+	}
+	return s.assigned(oid, pid, f).Count(context.Background())
+}
+
+// AssignedByStatus conta as tarefas da pessoa na organização por status, numa consulta só. Um status
+// sem tarefas não aparece no mapa.
+func (s *Store) AssignedByStatus(orgID, personID string) (map[string]int, error) {
+	oid, pid, err := parseOrgPerson(orgID, personID)
+	if err != nil {
+		return nil, err
+	}
+	var rows []struct {
+		Status string `json:"status"`
+		Count  int    `json:"count"`
+	}
+	if err := s.assigned(oid, pid, ListFilter{}).
+		GroupBy(task.FieldStatus).
+		Aggregate(ent.Count()).
+		Scan(context.Background(), &rows); err != nil {
+		return nil, err
+	}
+	counts := make(map[string]int, len(rows))
+	for _, r := range rows {
+		counts[r.Status] = r.Count
+	}
+	return counts, nil
+}
+
+func parseOrgPerson(orgID, personID string) (org, person uuid.UUID, err error) {
+	if org, err = uuid.Parse(orgID); err != nil {
+		return uuid.Nil, uuid.Nil, err
+	}
+	if person, err = uuid.Parse(personID); err != nil {
+		return uuid.Nil, uuid.Nil, err
+	}
+	return org, person, nil
 }
 
 // AssigneesByProject lista, sem repetir e por nome, quem é responsável por

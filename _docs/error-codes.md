@@ -201,6 +201,12 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `organization.name_required` | 400 | — | `informe o nome` | `enter the name` |
 | `organization.not_found` | 404 | — | `organização não encontrada` | `organization not found` |
 
+### overview
+
+| Código | Status | Parâmetros | pt-BR | en |
+|---|---|---|---|---|
+| `overview.invalid_task_state` | 400 | — | `estado de tarefa inválido (state): use open ou closed` | `invalid task state (state): use open or closed` |
+
 ### person
 
 | Código | Status | Parâmetros | pt-BR | en |

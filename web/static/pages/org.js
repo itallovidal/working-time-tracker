@@ -174,10 +174,137 @@ document.addEventListener('alpine:init', () => {
     },
   });
 
+  // O painel de cada pessoa na página inicial, para todos os papéis: as horas de hoje e da semana e as
+  // tarefas dela em todos os projetos (os números vêm de /me/overview, e a lista, cinco por página, de
+  // /me/tasks). Relê sozinho de minuto em minuto, enquanto a aba está à vista, e ao voltar a ela; um
+  // refresh que falha deixa os últimos números. Quem usa tem `...form()` (errors) e chama `initMine()`.
+  const HOME_TASKS_PER_PAGE = 5;
+  const MINE_REFRESH_MS = 60 * 1000;
+  const homeMine = () => ({
+    mine: null, // o painel; null até a primeira resposta
+    myState: 'open', // a lista mostra as tarefas abertas ou as concluídas
+    myTasks: [],
+    myTotal: 0,
+    myPage: 1,
+    myLoading: true,
+    initMine() {
+      this.loadMine();
+      this.loadMyTasks();
+      const refresh = () => {
+        if (document.visibilityState !== 'visible') return;
+        this.loadMine();
+        this.loadMyTasks();
+      };
+      setInterval(refresh, MINE_REFRESH_MS);
+      document.addEventListener('visibilitychange', refresh);
+    },
+    async loadMine() {
+      // O fuso de quem olha decide onde o dia e a semana começam.
+      const tz = encodeURIComponent(Intl.DateTimeFormat().resolvedOptions().timeZone || '');
+      try {
+        this.mine = await api('GET', '/api/orgs/' + orgId + '/me/overview?tz=' + tz);
+        this.errors.mine = '';
+      } catch (e) {
+        if (!this.mine) this.errors.mine = e.message;
+      }
+    },
+    async loadMyTasks() {
+      try {
+        const res = await api('GET', '/api/orgs/' + orgId + '/me/tasks?state=' + this.myState + '&page=' + this.myPage + '&per_page=' + HOME_TASKS_PER_PAGE);
+        this.myTasks = res.items || [];
+        this.myTotal = res.total;
+        this.myPage = res.page;
+        this.errors.myTasks = '';
+      } catch (e) {
+        if (this.myLoading) this.errors.myTasks = e.message;
+      } finally {
+        this.myLoading = false;
+      }
+    },
+    setMyState(state) {
+      if (this.myState === state) return;
+      this.myState = state;
+      this.myPage = 1;
+      this.myTasks = [];
+      this.myLoading = true;
+      this.loadMyTasks();
+    },
+    goMyPage(page) {
+      this.myPage = page;
+      return this.loadMyTasks();
+    },
+    myPages() {
+      return Math.max(1, Math.ceil(this.myTotal / HOME_TASKS_PER_PAGE));
+    },
+    myRange() {
+      const from = this.myTotal === 0 ? 0 : (this.myPage - 1) * HOME_TASKS_PER_PAGE + 1;
+      return WTT.t('home.team.range', { from, to: Math.min(this.myTotal, this.myPage * HOME_TASKS_PER_PAGE), total: this.myTotal });
+    },
+
+    // Os quatro números. Cada um tem o valor e a dica que o acompanha. Menos de um minuto é "0min": segundos
+    // soltos num painel de horas só atrapalham.
+    hoursText: (seconds) => (seconds < 60 ? '0min' : WTT.fmt.hours(seconds)),
+    todayHint() {
+      const on = this.mine.working_on;
+      if (!this.mine.working_now) return WTT.t('home.team.idle');
+      if (on.length === 0) return WTT.t('home.team.no_task');
+      return on[0].task.name + ' · ' + on[0].project.name;
+    },
+    weekHint() {
+      const goal = this.mine.weekly_hours;
+      if (!goal) return WTT.t('home.me.week_hint');
+      return WTT.t('home.me.week_goal', { percent: Math.round(this.mine.hours.week_seconds / (goal * 3600) * 100), hours: goal });
+    },
+    openHint() {
+      const t = this.mine.tasks;
+      if (t.overdue > 0) return WTT.t('home.me.open_overdue', { count: t.overdue });
+      if (t.due_this_week > 0) return WTT.t('home.me.open_week', { count: t.due_this_week });
+      return t.open > 0 ? WTT.t('home.me.open_none_late') : WTT.t('home.me.open_empty');
+    },
+    doneHint() {
+      const t = this.mine.tasks;
+      return t.total > 0 ? WTT.t('home.me.done_share', { percent: Math.round(t.closed / t.total * 100) }) : WTT.t('home.me.done_empty');
+    },
+
+    // O que a lista diz quando está vazia: a pessoa nunca teve tarefa, ou não tem nenhuma neste estado.
+    myEmpty() {
+      if (this.mine && this.mine.tasks.total === 0) return { title: WTT.t('home.me.empty_none'), text: WTT.t('home.me.empty_none_text') };
+      return this.myState === 'closed'
+        ? { title: WTT.t('home.me.empty_closed'), text: WTT.t('home.me.empty_closed_text') }
+        : { title: WTT.t('home.me.empty_open'), text: WTT.t('home.me.empty_open_text') };
+    },
+
+    // A semana em sete colunas, de segunda a domingo. A escala é a do maior dia, nunca menos de quatro
+    // horas, para um dia curto não parecer cheio. Os dias que ainda não chegaram ficam sem barra.
+    bars() {
+      const days = this.mine.hours.days;
+      const today = new Date(this.mine.generated_at).toLocaleDateString('sv-SE', { timeZone: this.mine.timezone }); // AAAA-MM-DD
+      const scale = Math.max(4 * 3600, ...days.map((d) => d.seconds));
+      return days.map((d) => {
+        const at = new Date(d.date + 'T12:00:00');
+        const name = at.toLocaleDateString(WTT.lang, { weekday: 'long', day: 'numeric', month: 'short' });
+        return {
+          date: d.date,
+          short: at.toLocaleDateString(WTT.lang, { weekday: 'short' }).replace('.', ''),
+          value: WTT.fmt.hoursShort(d.seconds),
+          height: d.seconds > 0 ? Math.max(4, Math.round(d.seconds / scale * 100)) : 0,
+          today: d.date === today,
+          label: WTT.t('home.me.day_label', { day: name, time: d.seconds > 0 ? WTT.fmt.hours(d.seconds) : WTT.t('home.me.day_none') }),
+        };
+      });
+    },
+    // A tarefa fechada mostra só a data do prazo: "atrasada" não se aplica ao que já terminou.
+    taskDeadlineClass: (t) => (t.status === 'closed' || !t.deadline ? '' : WTT.deadlineInfo(t.deadline).cls),
+    taskDeadlineLabel: (t) => (t.status === 'closed' && WTT.hasDeadlineDate(t.deadline) ? WTT.fmt.date(t.deadline) : WTT.deadlineInfo(t.deadline).label),
+    priorityClass: WTT.priorityClass,
+    statusClass: WTT.statusClass,
+  });
+
   // A página inicial: para admins, a visão geral da organização (tempo e dinheiro de todos os
-  // projetos) e, para todos, os projetos em cartões, seis por página.
+  // projetos) e, para todos, o painel da própria pessoa e os projetos em cartões, seis por página.
   Alpine.data('orgHome', () => ({
     ...projectCreation(),
+    ...homeMine(),
     loading: true,
     projects: [],
     total: 0,
@@ -198,6 +325,7 @@ document.addEventListener('alpine:init', () => {
       const wanted = parseInt(new URLSearchParams(location.search).get('page'), 10);
       this.page = wanted > 0 ? wanted : 1;
       this.loadProjects();
+      this.initMine();
       if (me.role === 'admin') this.loadStats();
     },
 

@@ -165,7 +165,8 @@ func TestPages_OrgProjectsTabIsATable(t *testing.T) {
 	}
 	for who, session := range map[string]string{"admin": admin.session, "member": member.session} {
 		body := do(e, "GET", home, "", session).Body.String()
-		if !strings.Contains(body, "project-card") || strings.Contains(body, `class="row-link"`) {
+		// A tabela de projetos tem o cabeçalho Projeto; a de tarefas do painel (linhas row-link) é outra coisa.
+		if !strings.Contains(body, "project-card") || strings.Contains(body, "<th>Projeto</th>") {
 			t.Errorf("%s home page should show the cards and not the table", who)
 		}
 	}

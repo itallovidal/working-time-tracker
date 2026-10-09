@@ -147,6 +147,8 @@ Se o convite foi criado com email, só esse email consegue aceitar. Um convite v
 | GET | `/api/orgs/:orgId/persons` | logado | Pessoas da organização |
 | GET | `/api/orgs/:orgId/overview` | admin | Visão geral da organização: o tempo e o dinheiro de todos os projetos em três janelas, e as horas de cada pessoa. Veja abaixo |
 | GET | `/api/orgs/:orgId/working-now` | admin | Quem está com o ponto aberto na organização e em que tarefas, sem tempo nem dinheiro. Veja abaixo |
+| GET | `/api/orgs/:orgId/me/overview` | logado | O painel de quem pede: as horas dele (hoje, a semana, dia a dia e por projeto) e as tarefas dele, em todos os projetos. Veja abaixo |
+| GET | `/api/orgs/:orgId/me/tasks` | logado | As tarefas de quem pede, em todos os projetos, abertas ou concluídas, em páginas. Veja abaixo |
 | POST | `/api/orgs/:orgId/projects` | `projects.create` | Cria um projeto |
 | GET | `/api/orgs/:orgId/projects` | logado | Projetos da organização, do mais novo para o mais antigo. Sem `page`, todos num array; com `page`, uma página. Veja abaixo |
 | POST | `/api/orgs/:orgId/customers` | `customers.manage` | Cria um cliente |
@@ -221,6 +223,48 @@ A organização é criada pelo signup, e o `organization_id` vem no `/api/auth/m
 
 - `working_on` são as tarefas que a pessoa tem na sessão neste instante (os intervalos sem fim), na ordem em que entraram, cada uma com o projeto. Fica `[]` (nunca `null`) numa sessão que já ficou sem tarefa: a pessoa continua "trabalhando agora".
 - É a mesma regra do `working_on` da visão geral da organização, sem somar o tempo de ninguém. Não há tempo de espera: quem esqueceu de bater a saída continua aparecendo até a sessão ser encerrada.
+
+### O painel de quem está logado
+
+As duas rotas são de qualquer membro da organização (`404` para outra organização ou um id malformado, `401` sem sessão) e respondem sempre sobre **quem pede**: não há parâmetro de pessoa, e nada de dinheiro nem de colegas no corpo.
+
+`GET /api/orgs/:orgId/me/overview?tz=America/Sao_Paulo` — `tz` é o fuso (nome IANA) de quem olha, que decide onde o dia e a semana começam; vazio, `Local` ou desconhecido valem `UTC`, e `timezone` diz o que foi usado. A semana vai de segunda a domingo.
+
+```json
+{
+  "generated_at": "2026-10-07T15:00:00Z",
+  "timezone": "America/Sao_Paulo",
+  "week_start": "2026-10-05T03:00:00Z",
+  "weekly_hours": 40,
+  "hours": {
+    "today_seconds": 7200,
+    "week_seconds": 19800,
+    "days": [ { "date": "2026-10-05", "seconds": 7200 }, { "date": "2026-10-06", "seconds": 5400 }, "… até 2026-10-11" ],
+    "projects": [ { "project": { "id": "…", "name": "App de Pedidos" }, "seconds": 14400 } ]
+  },
+  "tasks": { "total": 8, "open": 6, "backlog": 4, "in_progress": 1, "awaiting_closure": 1, "closed": 2, "overdue": 2, "due_this_week": 2 },
+  "working_now": true,
+  "working_on": [ { "task": { "id": "…", "name": "Login com telefone" }, "project": { "id": "…", "name": "App de Pedidos" } } ]
+}
+```
+
+- `weekly_hours` é a jornada combinada, `null` quando ninguém informou. `days` tem sempre os sete dias (os que ainda não chegaram vêm com `0`), e `projects` só os projetos com tempo na semana, do que mais teve para o que menos (`[]`, nunca `null`). A sessão aberta conta até `generated_at`, e a que atravessa a meia-noite conta em cada dia o seu pedaço.
+- `open` é toda tarefa que não está fechada; `overdue`, a aberta com prazo já vencido; `due_this_week`, a aberta que ainda vence até o domingo. A tarefa não guarda quando foi fechada, então `closed` é o total.
+- `working_on` vem `[]` (nunca `null`) sem ponto aberto ou com a sessão sem tarefa.
+
+`GET /api/orgs/:orgId/me/tasks?state=open&page=1&per_page=5` — `state` é `open` (padrão) ou `closed` (`400 overview.invalid_task_state` para outro valor). `page` e `per_page` seguem a lista de projetos: a partir de 1, o padrão é 10 por página, o teto 100 e uma página além da última devolve a última (`400 project.invalid_page` e `project.invalid_per_page` para valor inválido).
+
+```json
+{
+  "items": [
+    { "id": "…", "name": "Endpoint de cálculo de frete", "status": "in_progress", "priority": "urgent",
+      "deadline": "2026-10-06T15:00:00Z", "project": { "id": "…", "name": "App de Pedidos" } }
+  ],
+  "total": 7, "page": 1, "per_page": 5
+}
+```
+
+- As abertas saem com o prazo mais perto primeiro (as atrasadas à frente, as sem prazo por último), depois a prioridade mais alta e as mais novas; as concluídas, da mais nova para a mais antiga. `deadline` é `null` na tarefa sem prazo.
 
 ### Perfil da organização
 

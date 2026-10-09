@@ -154,6 +154,12 @@ func (s *Service) ListByOrganization(orgID string) ([]WorkSession, error) {
 	return s.sessionStore.ListByOrganization(orgID)
 }
 
+// ListByPersonSince devolve as sessões da pessoa na organização que ainda corriam em since ou depois,
+// sem as tarefas nem os valores calculados: quem soma usa Within.
+func (s *Service) ListByPersonSince(orgID, personID string, since time.Time) ([]WorkSession, error) {
+	return s.sessionStore.ListByPersonSince(orgID, personID, since)
+}
+
 // ListOpenByOrganization devolve as sessões abertas da organização com as tarefas de cada uma.
 func (s *Service) ListOpenByOrganization(orgID string) ([]WorkSession, error) {
 	return s.sessionStore.ListOpenByOrganization(orgID)

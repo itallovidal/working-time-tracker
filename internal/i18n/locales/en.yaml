@@ -109,6 +109,44 @@ home:
     prev: Previous
     next: Next
     range: "{{.from}}–{{.to}} of {{.total}}"
+  me:
+    title: Your dashboard
+    intro: Your hours and your tasks, across every project.
+    loading: Loading your dashboard…
+    today: Today
+    week: This week
+    week_hint: Monday to Sunday
+    week_goal: "{{.percent}}% of the {{.hours}}h agreed"
+    open: Open tasks
+    open_overdue:
+      one: "{{.count}} overdue"
+      other: "{{.count}} overdue"
+    open_week:
+      one: "{{.count}} due this week"
+      other: "{{.count}} due this week"
+    open_none_late: None overdue
+    open_empty: Nothing open
+    done: Completed
+    done_share: "{{.percent}}% of your tasks"
+    done_empty: No tasks yet
+    tasks_title: Your tasks
+    tasks_state: Which tasks to show
+    tasks_loading: Loading your tasks…
+    tab_open: Open
+    tab_closed: Completed
+    empty_none: You have no tasks yet
+    empty_none_text: When someone hands a task to you, or you take one from a project's list, it shows up here.
+    empty_open: No open tasks with you
+    empty_open_text: Everything that was yours is already done.
+    empty_closed: No completed tasks yet
+    empty_closed_text: The tasks you close show up here.
+    pager: Pages of your tasks
+    week_title: Your week
+    week_chart: Hours per day, Monday to Sunday.
+    week_empty: No hours logged this week.
+    by_project: By project
+    day_label: "{{.day}}: {{.time}}"
+    day_none: no hours
   # The hours ranking, kept in partials/team_hours.gohtml and unused for now.
   ranking:
     title: Team
@@ -386,6 +424,7 @@ help:
     home:
       title: Organization home
       text: The first screen after you sign in.
+      mine: "Your dashboard (everyone): your hours today and this week, your open and completed tasks across every project, and the week day by day with the hours per project. Only what is yours shows: no money and nothing about colleagues. Click a task to open it."
       projects: "Projects: the organization's projects, as cards, six per page. Click a card to open the project. Whoever can create projects sees the “New project” button next to the title."
       overview: "Overview (admins only): your hours, the team's hours, and the revenue, cost and margin of all projects together, over 7 days, 30 days or all time."
       team: "Team (admins only): who has the clock open right now and on which task."
@@ -1446,6 +1485,8 @@ errors:
     invalid_work_mode: "invalid work mode: use remote, hybrid or onsite"
     name_required: "enter the name"
     not_found: "organization not found"
+  overview:
+    invalid_task_state: "invalid task state (state): use open or closed"
   person:
     admin_has_all_permissions: "admins already have every permission"
     invalid_permission: "unknown organization permission"

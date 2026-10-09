@@ -5,13 +5,9 @@ document.addEventListener('alpine:init', () => {
   const project = WTT.boot.project;
   const toast = (msg, kind) => Alpine.store('toast').show(msg, kind);
   const clock = () => Alpine.store('clock');
-  const DAY = 24 * 60 * 60 * 1000;
 
-  // priorityClass e statusClass dão a cor de uma prioridade e de um status (`.tone` e a variante,
-  // em app.css), no selo, no chip do filtro e no select. Uma tarefa sem valor conhecido cai em
-  // "sem prioridade" e em "backlog", os padrões da API.
-  const priorityClass = (p) => 'tone prio-' + (['urgent', 'high', 'medium', 'low'].includes(p) ? p : 'none');
-  const statusClass = (s) => 'tone status-' + (['in_progress', 'awaiting_closure', 'closed'].includes(s) ? s : 'backlog');
+  // As cores de uma prioridade e de um status e o selo do prazo são de app.css/app.js, as mesmas da primeira tela.
+  const { priorityClass, statusClass, hasDeadlineDate, deadlineInfo } = WTT;
   const byLabelName = (a, b) => a.name.localeCompare(b.name, WTT.lang);
 
   // Grupos de permissões que a API tem e as telas não oferecem.
@@ -149,19 +145,6 @@ document.addEventListener('alpine:init', () => {
       return this[finish]();
     },
   });
-
-  // Uma tarefa sem prazo guarda o tempo zero do Go (ano 1, uma tarefa importada de uma issue nasce assim):
-  // antes de 1971 não é um prazo.
-  const hasDeadlineDate = (iso) => !!iso && new Date(iso).getFullYear() >= 1971;
-  // deadlineInfo descreve o prazo de uma tarefa para o badge: atrasada, vencendo
-  // nas próximas 48 horas ou só a data.
-  function deadlineInfo(iso) {
-    if (!hasDeadlineDate(iso)) return { label: WTT.t('tasks.no_deadline'), cls: '' };
-    const diff = new Date(iso).getTime() - Date.now();
-    if (diff < 0) return { label: WTT.t('tasks.overdue', { date: WTT.fmt.date(iso) }), cls: 'badge-danger' };
-    if (diff < 2 * DAY) return { label: WTT.t('tasks.due_soon', { date: WTT.fmt.date(iso) }), cls: 'badge-warn' };
-    return { label: WTT.fmt.date(iso), cls: '' };
-  }
 
   // taskBadges são as cores e o prazo de uma tarefa para os selos, em todas as telas que os mostram.
   const taskBadges = {

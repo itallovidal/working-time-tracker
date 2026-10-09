@@ -135,6 +135,134 @@
   </section>
   {{end}}
 
+  {{/* O painel de quem abriu a página, para todos os papéis: as horas de hoje e da semana e as tarefas dela em todos os
+       projetos. Os números vêm de /me/overview e a lista de /me/tasks; só o que é da própria pessoa. */}}
+  <section class="stack" aria-labelledby="home-me-title">
+    <div class="section-head">
+      <h2 id="home-me-title">{{.T "home.me.title"}}</h2>
+      <p class="muted small">{{.T "home.me.intro"}}</p>
+    </div>
+
+    <p class="muted" x-show="!mine && !errors.mine">{{.T "home.me.loading"}}</p>
+    <p class="form-error" x-cloak x-show="errors.mine" x-text="errors.mine" role="alert"></p>
+
+    <template x-if="mine">
+      <div class="stack">
+        <div class="kpis kpis-4">
+          <div class="kpi hue-teal">
+            <span class="kpi-icon">{{template "icon" "clock"}}</span>
+            <div class="kpi-body">
+              <span class="kpi-label">{{.T "home.me.today"}}</span>
+              <span class="kpi-value" x-text="hoursText(mine.hours.today_seconds)"></span>
+              <span class="kpi-hint" x-text="todayHint()"></span>
+            </div>
+          </div>
+          <div class="kpi hue-purple">
+            <span class="kpi-icon">{{template "icon" "calendar-week"}}</span>
+            <div class="kpi-body">
+              <span class="kpi-label">{{.T "home.me.week"}}</span>
+              <span class="kpi-value" x-text="hoursText(mine.hours.week_seconds)"></span>
+              <span class="kpi-hint" x-text="weekHint()"></span>
+            </div>
+          </div>
+          <div class="kpi" :class="mine.tasks.overdue > 0 ? 'hue-orange' : 'hue-blue'">
+            <span class="kpi-icon">{{template "icon" "list-check"}}</span>
+            <div class="kpi-body">
+              <span class="kpi-label">{{.T "home.me.open"}}</span>
+              <span class="kpi-value" x-text="mine.tasks.open"></span>
+              <span class="kpi-hint" :class="mine.tasks.overdue > 0 && 'text-danger'" x-text="openHint()"></span>
+            </div>
+          </div>
+          <div class="kpi hue-green">
+            <span class="kpi-icon">{{template "icon" "circle-check"}}</span>
+            <div class="kpi-body">
+              <span class="kpi-label">{{.T "home.me.done"}}</span>
+              <span class="kpi-value" x-text="mine.tasks.closed"></span>
+              <span class="kpi-hint" x-text="doneHint()"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-aside home-me">
+          <section class="stack" aria-labelledby="home-tasks-title">
+            <div class="toolbar">
+              <h3 id="home-tasks-title">{{.T "home.me.tasks_title"}}</h3>
+              <div class="segmented" role="group" aria-label="{{.T "home.me.tasks_state"}}">
+                <button type="button" :aria-pressed="myState === 'open'" @click="setMyState('open')">{{.T "home.me.tab_open"}} <span class="badge num" x-text="mine.tasks.open"></span></button>
+                <button type="button" :aria-pressed="myState === 'closed'" @click="setMyState('closed')">{{.T "home.me.tab_closed"}} <span class="badge num" x-text="mine.tasks.closed"></span></button>
+              </div>
+            </div>
+
+            <p class="muted" x-show="myLoading">{{.T "home.me.tasks_loading"}}</p>
+            <p class="form-error" x-cloak x-show="errors.myTasks" x-text="errors.myTasks" role="alert"></p>
+
+            <div class="empty" x-cloak x-show="!myLoading && !errors.myTasks && myTotal === 0">
+              {{template "icon" "list-check"}}
+              <strong x-text="myEmpty().title"></strong>
+              <span x-text="myEmpty().text"></span>
+            </div>
+
+            <div class="table-wrap" x-cloak x-show="myTasks.length > 0">
+              <table>
+                <thead>
+                  <tr><th>{{.T "tasks.col_task"}}</th><th>{{.T "tasks.col_status"}}</th><th>{{.T "tasks.col_priority"}}</th><th>{{.T "tasks.col_deadline"}}</th></tr>
+                </thead>
+                <tbody>
+                  <template x-for="t in myTasks" :key="t.id">
+                    {{/* A linha inteira abre a tarefa; o nome continua um link, para o teclado e para abrir em outra aba. */}}
+                    <tr class="row-link" @click="if (!$event.target.closest('a, button')) location.href = '/tasks/' + t.id">
+                      <td>
+                        <a :href="'/tasks/' + t.id" x-text="t.name"></a>
+                        <div class="muted small" x-text="t.project.name"></div>
+                      </td>
+                      <td><span class="badge" :class="statusClass(t.status)" x-text="WTT.fmt.taskStatus(t.status)"></span></td>
+                      <td><span class="badge" :class="priorityClass(t.priority)" x-text="WTT.fmt.priority(t.priority)"></span></td>
+                      <td><span class="badge num" :class="taskDeadlineClass(t)" x-text="taskDeadlineLabel(t)"></span></td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+
+            <nav class="pager" aria-label="{{.T "home.me.pager"}}" x-cloak x-show="myTotal > 0">
+              <span class="muted small" x-text="myRange()"></span>
+              <div class="row row-tight" x-show="myPages() > 1">
+                <button type="button" class="btn btn-secondary btn-sm" :disabled="myPage <= 1" @click="goMyPage(myPage - 1)">{{template "icon" "chevron-left"}} {{.T "home.team.prev"}}</button>
+                <button type="button" class="btn btn-secondary btn-sm" :disabled="myPage >= myPages()" @click="goMyPage(myPage + 1)">{{.T "home.team.next"}} {{template "icon" "chevron-right"}}</button>
+              </div>
+            </nav>
+          </section>
+
+          {{/* A semana em sete colunas, de segunda a domingo. Cada dia é um item da lista com o valor por extenso
+               (o rótulo curto em cima da barra e o nome do dia são só para os olhos), e o do dia de hoje vai em negrito. */}}
+          <section class="card hue-teal" aria-labelledby="home-week-title">
+            <div class="card-head"><h3 id="home-week-title">{{.T "home.me.week_title"}}</h3></div>
+            <p class="muted small" x-text="mine.hours.week_seconds > 0 ? $t('home.me.week_chart') : $t('home.me.week_empty')"></p>
+            <ol class="week-bars" aria-label="{{.T "home.me.week_chart"}}">
+              <template x-for="b in bars()" :key="b.date">
+                <li class="week-day" :class="b.today && 'is-today'" :title="b.label" :aria-label="b.label" :aria-current="b.today ? 'date' : null">
+                  <div class="week-track">
+                    <span class="week-bar" x-show="b.height > 0" :style="'height:' + b.height + '%'"><span class="week-value" aria-hidden="true" x-text="b.value"></span></span>
+                  </div>
+                  <span class="week-name" aria-hidden="true" x-text="b.short"></span>
+                </li>
+              </template>
+            </ol>
+            {{/* Onde as horas da semana foram: o tempo da própria pessoa em cada projeto, do que mais teve para o que menos. */}}
+            <div class="stack stack-tight" x-cloak x-show="mine.hours.projects.length > 0">
+              <h4 class="week-projects-title">{{.T "home.me.by_project"}}</h4>
+              <ul class="week-projects">
+                <template x-for="p in mine.hours.projects" :key="p.project.id">
+                  <li><span class="name" x-text="p.project.name"></span><span class="time" x-text="WTT.fmt.hours(p.seconds)"></span></li>
+                </template>
+              </ul>
+            </div>
+          </section>
+        </div>
+      </div>
+    </template>
+  </section>
+
   <section class="stack" aria-labelledby="home-projects-title">
     <div class="toolbar">
       <div class="row row-tight">

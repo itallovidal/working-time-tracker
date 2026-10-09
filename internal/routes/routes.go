@@ -88,6 +88,10 @@ func RegisterRoutes(e *echo.Echo, h Handlers, m *auth.Middleware, authLimiter ec
 	// Quem está com o ponto aberto e em que tarefas, sem tempo nem dinheiro: a bolinha da lista de tarefas e a
 	// coluna "Agora" dos colaboradores. Também só dos admins.
 	r.GET("/orgs/:orgId/working-now", h.Overview.WorkingNow, org, admin)
+	// O painel de cada pessoa na primeira tela: as horas e as tarefas de quem pede, em todos os projetos. É de
+	// todos os membros, e cada um lê só o seu.
+	r.GET("/orgs/:orgId/me/overview", h.Overview.Mine, org)
+	r.GET("/orgs/:orgId/me/tasks", h.Overview.MyTasks, org)
 	r.POST("/orgs/:orgId/invites", h.Auth.CreateInvite, org, orgCan(permission.PeopleManage))
 	r.GET("/orgs/:orgId/invites", h.Auth.ListInvites, org, orgCan(permission.PeopleManage))
 	r.DELETE("/invites/:inviteId", h.Auth.RevokeInvite, inv, orgCan(permission.PeopleManage))

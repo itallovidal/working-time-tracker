@@ -181,6 +181,210 @@ func TestOrgWorkingNow_AdminOnly(t *testing.T) {
 	}
 }
 
+// O painel da primeira tela é de cada pessoa, seja qual for o papel: o membro e o admin leem o seu, que só
+// tem as tarefas e as horas de quem pede (nada de dinheiro nem de outra pessoa). Outra organização recebe
+// 404, e sem sessão, 401.
+func TestMeOverview_EveryMemberReadsOwn(t *testing.T) {
+	e := newServer(t)
+	admin := signup(t, e, "Org", "ana@test.com")
+	bia := invite(t, e, admin, "bia@test.com", "member")
+	other := signup(t, e, "Outra", "caio@outra.com")
+	alfa := createEmptyProject(t, e, admin, "Projeto Alfa")
+	beta := createEmptyProject(t, e, admin, "Projeto Beta")
+	for _, p := range []string{alfa, beta} {
+		allocate(t, e, admin, p, bia.id, 2000)
+	}
+	newTask := func(project, name, assignee string) string {
+		t.Helper()
+		body := `{"name":"` + name + `","assignee_id":"` + assignee + `"}`
+		rec := do(e, "POST", "/api/projects/"+project+"/tasks", body, admin.session)
+		if rec.Code != http.StatusCreated {
+			t.Fatalf("create task %s = %d: %s", name, rec.Code, rec.Body.String())
+		}
+		return decode(t, rec)["id"].(string)
+	}
+	// A Bia tem duas tarefas em projetos diferentes e fecha uma; a Ana tem a sua.
+	first := newTask(alfa, "Tarefa A", bia.id)
+	newTask(beta, "Tarefa B", bia.id)
+	newTask(alfa, "Tarefa da Ana", admin.id)
+	if rec := do(e, "PATCH", "/api/tasks/"+first+"/attributes", `{"status":"closed"}`, admin.session); rec.Code != http.StatusOK {
+		t.Fatalf("close task = %d: %s", rec.Code, rec.Body.String())
+	}
+	// A Bia bate o ponto na tarefa B.
+	var second string
+	for _, it := range decodeList(t, do(e, "GET", "/api/projects/"+beta+"/tasks", "", admin.session)) {
+		second = it["id"].(string)
+	}
+	if rec := do(e, "POST", "/api/projects/"+beta+"/work-sessions/clock-in", `{"task_id":"`+second+`"}`, bia.session); rec.Code != http.StatusCreated {
+		t.Fatalf("clock-in = %d: %s", rec.Code, rec.Body.String())
+	}
+
+	path := "/api/orgs/" + admin.orgID + "/me/overview"
+	read := func(session, query string) map[string]any {
+		t.Helper()
+		rec := do(e, "GET", path+query, "", session)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("GET %s%s = %d: %s", path, query, rec.Code, rec.Body.String())
+		}
+		for _, leak := range []string{"cents", "email", "bia@test.com", "ana@test.com"} {
+			if strings.Contains(rec.Body.String(), leak) {
+				t.Errorf("GET %s leaks %q: %s", path, leak, rec.Body.String())
+			}
+		}
+		return decode(t, rec)
+	}
+
+	// O membro lê o dele: duas tarefas, uma aberta e uma fechada, e o ponto aberto na tarefa B.
+	body := read(bia.session, "?tz=America/Sao_Paulo")
+	tasks, _ := body["tasks"].(map[string]any)
+	for field, want := range map[string]float64{"total": 2, "open": 1, "closed": 1, "backlog": 0, "in_progress": 1, "overdue": 0} {
+		if tasks[field] != want {
+			t.Errorf("Bia's tasks.%s = %v, want %v (%v)", field, tasks[field], want, tasks)
+		}
+	}
+	if body["timezone"] != "America/Sao_Paulo" || body["working_now"] != true {
+		t.Errorf("Bia's timezone = %v, working_now = %v, want America/Sao_Paulo and true", body["timezone"], body["working_now"])
+	}
+	if on, _ := body["working_on"].([]any); len(on) != 1 {
+		t.Errorf("Bia's working_on = %v, want her one task", body["working_on"])
+	}
+	hours, _ := body["hours"].(map[string]any)
+	if days, _ := hours["days"].([]any); len(days) != 7 {
+		t.Errorf("hours.days = %v, want the seven days of the week", hours["days"])
+	}
+	// A Bia tem o ponto aberto no Projeto Beta, então as horas dela da semana são só dali.
+	if projects, _ := hours["projects"].([]any); len(projects) != 1 || projects[0].(map[string]any)["project"].(map[string]any)["name"] != "Projeto Beta" {
+		t.Errorf("Bia's hours.projects = %v, want only the Projeto Beta", hours["projects"])
+	}
+	for _, field := range []string{"today_seconds", "week_seconds"} {
+		if _, ok := hours[field].(float64); !ok {
+			t.Errorf("hours.%s = %v, want a number", field, hours[field])
+		}
+	}
+	if _, present := body["weekly_hours"]; !present || body["weekly_hours"] != nil {
+		t.Errorf("weekly_hours = %v, want present and null", body["weekly_hours"])
+	}
+
+	// O admin lê o dele, e não o da Bia: uma tarefa aberta, sem ponto aberto. Sem fuso vale UTC.
+	body = read(admin.session, "")
+	tasks, _ = body["tasks"].(map[string]any)
+	if tasks["total"] != float64(1) || tasks["open"] != float64(1) || body["working_now"] != false || body["timezone"] != "UTC" {
+		t.Errorf("admin's overview = tasks %v, working_now %v, timezone %v, want one open task, not working, UTC", tasks, body["working_now"], body["timezone"])
+	}
+	if on, ok := body["working_on"].([]any); !ok || len(on) != 0 {
+		t.Errorf("admin's working_on = %v, want an empty list (not null)", body["working_on"])
+	}
+	if hours, _ := body["hours"].(map[string]any); hours["projects"] == nil || len(hours["projects"].([]any)) != 0 {
+		t.Errorf("admin's hours.projects = %v, want an empty list (not null)", hours["projects"])
+	}
+
+	if rec := do(e, "GET", path, "", other.session); rec.Code != http.StatusNotFound {
+		t.Errorf("another org GET %s = %d, want 404", path, rec.Code)
+	}
+	if rec := do(e, "GET", path, "", ""); rec.Code != http.StatusUnauthorized {
+		t.Errorf("GET %s without session = %d, want 401", path, rec.Code)
+	}
+	if rec := do(e, "GET", "/api/orgs/not-a-uuid/me/overview", "", bia.session); rec.Code != http.StatusNotFound {
+		t.Errorf("GET me/overview of a malformed org id = %d, want 404", rec.Code)
+	}
+}
+
+// A lista de tarefas da primeira tela: as abertas por padrão, as fechadas com state=closed, em páginas, sempre
+// só as de quem pede (a Bia não vê a tarefa da Ana). Um state, page ou per_page inválido é 400 com o código
+// do problema; outra organização é 404 e sem sessão, 401.
+func TestMeTasks_OwnTasksInPages(t *testing.T) {
+	e := newServer(t)
+	admin := signup(t, e, "Org", "ana@test.com")
+	bia := invite(t, e, admin, "bia@test.com", "member")
+	other := signup(t, e, "Outra", "caio@outra.com")
+	alfa := createEmptyProject(t, e, admin, "Projeto Alfa")
+	allocate(t, e, admin, alfa, bia.id, 2000)
+	for i := 1; i <= 3; i++ {
+		body := fmt.Sprintf(`{"name":"Da Bia %d","assignee_id":"%s","deadline":"2030-01-0%dT12:00:00Z"}`, i, bia.id, i)
+		if rec := do(e, "POST", "/api/projects/"+alfa+"/tasks", body, admin.session); rec.Code != http.StatusCreated {
+			t.Fatalf("create task = %d: %s", rec.Code, rec.Body.String())
+		}
+	}
+	closed := decode(t, do(e, "POST", "/api/projects/"+alfa+"/tasks", `{"name":"Fechada da Bia","assignee_id":"`+bia.id+`"}`, admin.session))["id"].(string)
+	if rec := do(e, "PATCH", "/api/tasks/"+closed+"/attributes", `{"status":"closed"}`, admin.session); rec.Code != http.StatusOK {
+		t.Fatalf("close task = %d: %s", rec.Code, rec.Body.String())
+	}
+	if rec := do(e, "POST", "/api/projects/"+alfa+"/tasks", `{"name":"Da Ana","assignee_id":"`+admin.id+`"}`, admin.session); rec.Code != http.StatusCreated {
+		t.Fatalf("create Ana's task = %d: %s", rec.Code, rec.Body.String())
+	}
+
+	path := "/api/orgs/" + admin.orgID + "/me/tasks"
+	type page struct {
+		Items []struct {
+			Name     string
+			Status   string
+			Deadline *string
+			Project  struct{ ID, Name string }
+		}
+		Total, Page int
+		PerPage     int `json:"per_page"`
+	}
+	get := func(query, session string) page {
+		t.Helper()
+		rec := do(e, "GET", path+query, "", session)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("GET %s%s = %d: %s", path, query, rec.Code, rec.Body.String())
+		}
+		var p page
+		if err := json.Unmarshal(rec.Body.Bytes(), &p); err != nil {
+			t.Fatalf("decode %s: %v: %s", query, err, rec.Body.String())
+		}
+		return p
+	}
+
+	// Aberta por padrão: as três da Bia pelo prazo mais perto, cada uma com o projeto.
+	p := get("", bia.session)
+	if p.Total != 3 || len(p.Items) != 3 || p.Page != 1 || p.PerPage != 10 {
+		t.Fatalf("Bia's open tasks = %+v, want her three, page 1 of 10 per page", p)
+	}
+	if p.Items[0].Name != "Da Bia 1" || p.Items[2].Name != "Da Bia 3" || p.Items[0].Project.Name != "Projeto Alfa" || p.Items[0].Project.ID != alfa || p.Items[0].Deadline == nil {
+		t.Errorf("Bia's open tasks = %+v, want Da Bia 1..3 by deadline, with the project and the deadline", p.Items)
+	}
+	if two := get("?state=open&page=2&per_page=2", bia.session); len(two.Items) != 1 || two.Items[0].Name != "Da Bia 3" || two.Total != 3 || two.Page != 2 {
+		t.Errorf("page 2 of 2 per page = %+v, want only Da Bia 3 of 3", two)
+	}
+	if done := get("?state=closed", bia.session); done.Total != 1 || len(done.Items) != 1 || done.Items[0].Name != "Fechada da Bia" || done.Items[0].Status != "closed" {
+		t.Errorf("Bia's closed tasks = %+v, want her one closed task", done)
+	}
+	// A tarefa da Ana é só da Ana (criada sem prazo, ganha o de sete dias).
+	if mine := get("", admin.session); mine.Total != 1 || mine.Items[0].Name != "Da Ana" || mine.Items[0].Deadline == nil {
+		t.Errorf("admin's open tasks = %+v, want only Da Ana, with the default deadline", mine)
+	}
+
+	for query, code := range map[string]string{
+		"?state=all":            "overview.invalid_task_state",
+		"?state=CLOSED":         "overview.invalid_task_state",
+		"?page=0":               "project.invalid_page",
+		"?page=abc":             "project.invalid_page",
+		"?per_page=0":           "project.invalid_per_page",
+		"?per_page=1.5":         "project.invalid_per_page",
+		"?state=closed&page=-1": "project.invalid_page",
+	} {
+		rec := do(e, "GET", path+query, "", bia.session)
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("GET %s = %d, want 400", query, rec.Code)
+			continue
+		}
+		if got := decode(t, rec)["error"].(map[string]any)["code"]; got != code {
+			t.Errorf("GET %s error = %v, want %s", query, got, code)
+		}
+	}
+	if rec := do(e, "GET", path, "", other.session); rec.Code != http.StatusNotFound {
+		t.Errorf("another org GET %s = %d, want 404", path, rec.Code)
+	}
+	if rec := do(e, "GET", path, "", ""); rec.Code != http.StatusUnauthorized {
+		t.Errorf("GET %s without session = %d, want 401", path, rec.Code)
+	}
+	if rec := do(e, "GET", "/api/orgs/not-a-uuid/me/tasks", "", bia.session); rec.Code != http.StatusNotFound {
+		t.Errorf("GET me/tasks of a malformed org id = %d, want 404", rec.Code)
+	}
+}
+
 // A lista de projetos da organização: sem page vem inteira num array (como sempre veio);
 // com page vem uma página com o total, do mais novo para o mais antigo, sem repetir nem
 // pular projeto entre as páginas.

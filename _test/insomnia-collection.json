@@ -284,6 +284,30 @@
       "body": {}
     },
     {
+      "_id": "req_02_03d",
+      "_type": "request",
+      "parentId": "fld_02",
+      "name": "Meu painel (horas e tarefas de quem pede)",
+      "method": "GET",
+      "url": "{{base_url}}/api/orgs/{{org_id}}/me/overview?tz=America/Sao_Paulo",
+      "authentication": {},
+      "metaSortKey": 3.7,
+      "headers": [],
+      "body": {}
+    },
+    {
+      "_id": "req_02_03e",
+      "_type": "request",
+      "parentId": "fld_02",
+      "name": "Minhas tarefas (abertas ou concluídas, em páginas)",
+      "method": "GET",
+      "url": "{{base_url}}/api/orgs/{{org_id}}/me/tasks?state=open&page=1&per_page=5",
+      "authentication": {},
+      "metaSortKey": 3.8,
+      "headers": [],
+      "body": {}
+    },
+    {
       "_id": "req_02_04",
       "_type": "request",
       "parentId": "fld_02",
