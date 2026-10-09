@@ -6,7 +6,6 @@
     <div>
       <div class="eyebrow" data-org-name>{{.Me.OrganizationName}}</div>
       <h1>{{.T "nav.payments"}}</h1>
-      <p class="lede">{{.T "payments.intro"}}</p>
     </div>
     <button type="button" class="btn btn-secondary btn-sm" :disabled="loading" @click="reload()">{{template "icon" "rotate"}} {{.T "payments.refresh"}}</button>
   </div>

@@ -84,8 +84,6 @@
     </div>
 
     <section class="stack" id="view-people" role="tabpanel" aria-labelledby="view-people-tab" x-show="view === 'people'">
-      <p class="muted">{{.T "collab.people_intro"}}</p>
-
       <div class="empty" x-show="collaborators.length === 0">
         {{template "icon" "users"}}
         <strong>{{.T "collab.none"}}</strong>

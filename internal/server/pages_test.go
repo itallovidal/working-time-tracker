@@ -376,7 +376,7 @@ func TestPages_ProjectTasksTab(t *testing.T) {
 			`class="pager"`,
 			"Nova tarefa", `x-teleport="#modal-root"`, `x-show="$store.modal.name === 'task-new'"`, `id="task-name"`, `id="task-assignee"`,
 			// A página diz o que é e tem duas listas, cada uma com a sua página: as sem responsável e as que têm.
-			`class="lede muted"`, "Aqui estão as tarefas que ninguém pegou", `x-for="key in taskLists"`, `go(key, lists[key].page + 1)`,
+			`x-for="key in taskLists"`, `go(key, lists[key].page + 1)`,
 			// Uma tarefa pode ficar sem responsável, e a lista mostra o que está disponível.
 			"Lista de tarefas", "Atribuir a mim", "Outra pessoa", `value="none" x-model="draft.assign"`,
 			// Prioridade e etiqueta: os filtros (várias de cada), a coluna e os campos do modal.
@@ -439,7 +439,7 @@ func TestPages_ProjectMyTasksTab(t *testing.T) {
 		}
 		body := rec.Body.String()
 		for _, want := range []string{
-			`x-data="projectMyTasks"`, "Tudo o que está com você", `x-for="s in statuses"`, `:aria-expanded="open[s.value].toString()"`,
+			`x-data="projectMyTasks"`, `x-for="s in statuses"`, `:aria-expanded="open[s.value].toString()"`,
 			`class="fold-toggle"`, "Você não tem tarefas neste projeto.", "Ver a lista de tarefas", `@click="startTask(t)"`, `class="clock"`,
 			// A aba é a atual, e fica entre o Início e a Lista de tarefas.
 			`/my-tasks" aria-current="page"`, "Minhas tarefas",
@@ -1004,7 +1004,7 @@ func TestPages_ProjectIntegrationsTab(t *testing.T) {
 		`class="badge" :class="priorityClass(t.priority)" x-text="WTT.fmt.priority(t.priority)"`, `class="badge" :class="statusClass(t.status)"`,
 		`class="select-tone" :class="priorityClass(draft.priority)"`,
 		// A descrição da seção Com responsável diz que são tarefas de quem não é a pessoa.
-		`x-text="key === 'free' ? $t('tasks.section_free_hint') : $t('tasks.section_taken_hint')"`,
+		`x-text="$t('tasks.section_taken_hint')"`,
 	} {
 		if !strings.Contains(board, want) {
 			t.Errorf("the board does not contain %q", want)

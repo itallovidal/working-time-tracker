@@ -9,7 +9,6 @@
         <h1>{{.T "nav.projects"}}</h1>
         <span class="badge num" x-cloak x-show="!loading" x-text="total"></span>
       </div>
-      <p class="lede">{{.T "org.projects.intro"}}</p>
     </div>
     {{if .Can "projects.create"}}
     <button type="button" class="btn" @click="openCreate()">{{template "icon" "plus"}} {{.T "org.projects.new"}}</button>

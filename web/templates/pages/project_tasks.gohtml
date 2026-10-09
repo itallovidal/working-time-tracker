@@ -2,9 +2,6 @@
 <main class="page" x-data="projectTasks">
   {{template "project_head" .}}
 
-  {{/* O que esta página é: onde o time acha o que ninguém pegou e, logo abaixo, o que já tem dono. */}}
-  <p class="lede muted">{{.T "tasks.lede"}}</p>
-
   <div class="toolbar">
     <div class="stack">
       <div class="row filters">
@@ -65,7 +62,7 @@
             <h2 :id="'tasks-' + key + '-title'" x-text="key === 'free' ? $t('tasks.section_free') : $t('tasks.section_taken')"></h2>
             <span class="badge num" x-text="lists[key].total"></span>
           </div>
-          <p class="muted small" x-text="key === 'free' ? $t('tasks.section_free_hint') : $t('tasks.section_taken_hint')"></p>
+          <p class="muted small" x-show="key !== 'free'" x-text="$t('tasks.section_taken_hint')"></p>
           <p class="muted small" x-show="lists[key].tasks.length > 0">{{.T "tasks.row_hint"}}</p>
         </div>
 

@@ -108,7 +108,6 @@ home:
     no_cost: Nenhuma hora com valor pago
   team:
     title: Equipe
-    intro: Quem está com o ponto aberto agora e em que tarefa.
     nobody_working: Ninguém está com o ponto aberto agora.
     working: Trabalhando agora
     on_task: Na tarefa
@@ -422,7 +421,6 @@ not_found:
   back: Voltar ao início
 
 payments:
-  intro: Quanto pagar, a quem e quando, calculado da regra de pagamento de cada pessoa e das horas registradas. Clique numa pessoa para abrir o perfil dela.
   refresh: Atualizar
   loading: Carregando os pagamentos…
   rule_line: "{{.rule}} · o período fecha à meia-noite ({{.tz}})"
@@ -819,7 +817,6 @@ org:
     created: Cliente criado.
     deleted: Cliente excluído.
   projects:
-    intro: Cada projeto tem seus times, tarefas e registro de tempo.
     new: Novo projeto
     internal: Projeto interno
     customer: Cliente
@@ -848,7 +845,7 @@ project:
     tasks: Lista de tarefas
     my_tasks: Minhas tarefas
     home: Início
-    teams: Colaboradores
+    teams: Colaboradores no projeto
     integrations: Integrações
     settings: Configurações
     management: Gestão
@@ -948,9 +945,7 @@ tasks:
     done: "Tarefa postada no {{.provider}}: issue #{{.number}}."
     failed: "A tarefa foi criada, mas não deu para postá-la no {{.provider}}: {{.message}}"
   none_filtered: Nenhuma tarefa com esses filtros
-  lede: Aqui estão as tarefas que ninguém pegou, para o time escolher e bater o ponto, e logo abaixo as que já têm responsável.
   section_free: Sem responsável
-  section_free_hint: Ninguém pegou estas tarefas. Quem bater o ponto numa delas passa a ser o responsável.
   section_taken: Com responsável
   section_taken_hint: Tarefas que já estão com alguém que não é você.
   free_none: Nenhuma tarefa livre. Todas as tarefas do projeto têm responsável.
@@ -995,7 +990,6 @@ tasks:
     date: Até uma data…
 
 my_tasks:
-  lede: Tudo o que está com você, separado por status, para organizar o seu trabalho. O que ninguém pegou fica na lista de tarefas.
   none: Você não tem tarefas neste projeto.
   none_text: Pegue uma disponível na lista de tarefas.
   none_link: Ver a lista de tarefas
@@ -1093,7 +1087,7 @@ time:
   your_rate_before: "Seu valor neste projeto:"
   your_rate_after: por hora. Só você e os admins veem.
   sessions: Sessões
-  sessions_intro_admin: O ponto de todo mundo neste projeto.
+  sessions_admin: Sessões dos Colaboradores
   totals_follow: Os totais acompanham os filtros.
   person_filter: Filtrar por pessoa
   all_people: Todas as pessoas
@@ -1257,7 +1251,6 @@ integration_types:
 
 project_settings:
   title: Projeto
-  intro_admin: Como o projeto trabalha e quem paga por ele.
   intro_member: Como o projeto trabalha. Só admins alteram as configurações.
   internal: Projeto interno
   bill_rate_fact: Valor cobrado por hora
@@ -1312,7 +1305,6 @@ collab:
   missing_text: "neste projeto sem valor por hora:"
   missing_blocked: "Abra a pessoa para definir o valor ou tirá-la do projeto: sem valor, o ponto fica bloqueado."
   people_title: Pessoas
-  people_intro: "Quem trabalha neste projeto. Cada pessoa entra com o valor que recebe por hora aqui."
   search_placeholder: Buscar por nome ou e-mail
   search_label: Buscar colaborador por nome ou e-mail
   add_person: Adicionar pessoa
@@ -1405,7 +1397,6 @@ collab:
     other: "Página {{.page}} de {{.pages}} · {{.count}} pessoas"
 
 overview:
-  intro: "O projeto em números: quem trabalha nele, quanto tempo foi registrado e o que esse tempo custou e rendeu."
   updated: "Atualizado às {{.time}}"
   refresh: Atualizar
   loading: Carregando a visão geral…
@@ -1439,7 +1430,6 @@ overview:
   first_session: Primeiro ponto
   last_session: Último ponto
   nobody_clocked: Ninguém bateu ponto ainda
-  age_note: O início é o dia em que o projeto foi cadastrado. Dias, semanas e meses medem o mesmo tempo, cada um arredondado para baixo.
   activity: Atividade
   last_7: Últimos 7 dias
   last_30: Últimos 30 dias
@@ -1468,7 +1458,6 @@ overview:
   see: ver
   bill_rate: Valor cobrado por hora
   no_bill_rate: Sem valor cobrado
-  tasks_note: Atrasada é a tarefa com o prazo vencido. A receita soma o valor cobrado que valia quando cada ponto foi batido.
 
 labels:
   not_informed: Não informado

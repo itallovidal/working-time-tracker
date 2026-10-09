@@ -36,7 +36,7 @@ func TestPages_HomeIsAnOverview(t *testing.T) {
 	// A equipe mostra quem trabalha agora e em quê, e não compara o tempo de ninguém: sem horas,
 	// sem barras e sem a ordem por quem trabalhou mais, que ficaram guardadas no parcial team_hours.
 	teamCard := adminPage[strings.Index(adminPage, `id="home-team-title"`):strings.Index(adminPage, `id="home-me-title"`)]
-	for _, want := range []string{"Equipe", "Quem está com o ponto aberto agora e em que tarefa.", "Na tarefa", "Trabalhando agora", "Sem ponto aberto", "Ninguém está com o ponto aberto agora.", `teamView()`, `'/tasks/' + p.working_on[0].task.id`} {
+	for _, want := range []string{"Equipe", "Na tarefa", "Trabalhando agora", "Sem ponto aberto", "Ninguém está com o ponto aberto agora.", `teamView()`, `'/tasks/' + p.working_on[0].task.id`} {
 		if !strings.Contains(teamCard, want) {
 			t.Errorf("the team card does not contain %q", want)
 		}

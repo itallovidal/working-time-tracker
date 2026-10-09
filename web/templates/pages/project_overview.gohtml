@@ -5,7 +5,6 @@
   {{/* A tela é uma fotografia: os números valem para a hora em "Atualizado às" e são
        relidos pelo botão ou quando alguém bate o ponto nesta aba. */}}
   <div class="toolbar">
-    <p class="muted">{{.T "overview.intro"}}</p>
     <div class="row row-tight" x-cloak x-show="data">
       <span class="muted small" x-text="data ? $t('overview.updated', { time: WTT.fmt.time(data.generated_at) }) : ''"></span>
       <button type="button" class="btn btn-secondary btn-sm" :disabled="pending === 'load'" @click="load()">{{template "icon" "rotate"}} {{.T "overview.refresh"}}</button>
@@ -69,7 +68,6 @@
             <dd :class="data.time.last_session_at ? '' : 'muted'" x-text="data.time.last_session_at ? WTT.fmt.date(data.time.last_session_at) : $t('overview.nobody_clocked')"></dd>
           </div>
         </dl>
-        <p class="muted small">{{.T "overview.age_note"}}</p>
       </section>
 
       <section class="card">
@@ -159,7 +157,6 @@
             <dd class="num" :class="data.project.bill_rate_cents === null && 'muted'" x-text="data.project.bill_rate_cents === null ? $t('overview.no_bill_rate') : WTT.fmt.money(data.project.bill_rate_cents)"></dd>
           </div>
         </dl>
-        <p class="muted small">{{.T "overview.tasks_note"}}</p>
       </section>
     </div>
   </template>
@@ -167,8 +164,7 @@
   <template x-if="data">
     <section class="stack">
       <div class="stack stack-tight">
-        <h2>{{.T "time.sessions"}}</h2>
-        <p class="muted">{{.T "time.sessions_intro_admin"}} {{.T "time.totals_follow"}}</p>
+        <h2>{{.T "time.sessions_admin"}}</h2>
       </div>
       <div class="row filters">
         <select x-model="filter.person" aria-label="{{.T "time.person_filter"}}">

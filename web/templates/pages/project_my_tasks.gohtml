@@ -2,8 +2,6 @@
 <main class="page" x-data="projectMyTasks">
   {{template "project_head" .}}
 
-  <p class="lede muted">{{.T "my_tasks.lede"}}</p>
-
   {{/* O mesmo painel do timer do Início, aqui de ponta a ponta: logo abaixo vem a lista, e não outro cartão. */}}
   {{template "clock_card" .}}
 

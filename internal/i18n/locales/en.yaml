@@ -98,7 +98,6 @@ home:
     no_cost: No hours with a pay rate
   team:
     title: Team
-    intro: Who has the clock running right now, and on which task.
     nobody_working: Nobody has the clock running right now.
     working: Working now
     on_task: On task
@@ -412,7 +411,6 @@ not_found:
   back: Back to start
 
 payments:
-  intro: How much to pay, to whom and when, calculated from each person's payment rule and tracked hours. Click a person to open their profile.
   refresh: Refresh
   loading: Loading the payments…
   rule_line: "{{.rule}} · the period closes at midnight ({{.tz}})"
@@ -809,7 +807,6 @@ org:
     created: Customer created.
     deleted: Customer deleted.
   projects:
-    intro: Each project has its own teams, tasks and time tracking.
     new: New project
     internal: Internal project
     customer: Customer
@@ -838,7 +835,7 @@ project:
     tasks: Task list
     my_tasks: My tasks
     home: Home
-    teams: Collaborators
+    teams: Collaborators on the project
     integrations: Integrations
     settings: Settings
     management: Management
@@ -938,9 +935,7 @@ tasks:
     done: "Task posted to {{.provider}}: issue #{{.number}}."
     failed: "The task was created, but it could not be posted to {{.provider}}: {{.message}}"
   none_filtered: No tasks match these filters
-  lede: Here are the tasks nobody has picked up, for the team to choose and clock in, and below them the ones that already have an assignee.
   section_free: Unassigned
-  section_free_hint: Nobody has picked these tasks up. Whoever clocks in on one becomes its assignee.
   section_taken: Assigned
   section_taken_hint: Tasks that are already with someone who is not you.
   free_none: No free tasks. Every task in the project has an assignee.
@@ -985,7 +980,6 @@ tasks:
     date: Until a date…
 
 my_tasks:
-  lede: Everything that is with you, split by status, to organize your work. What nobody has picked up stays on the task list.
   none: You have no tasks in this project.
   none_text: Pick an available one on the task list.
   none_link: See the task list
@@ -1083,7 +1077,7 @@ time:
   your_rate_before: "Your rate on this project:"
   your_rate_after: per hour. Only you and the admins can see it.
   sessions: Sessions
-  sessions_intro_admin: Everyone's time on this project.
+  sessions_admin: Collaborators’ sessions
   totals_follow: The totals follow the filters.
   person_filter: Filter by person
   all_people: All people
@@ -1247,7 +1241,6 @@ integration_types:
 
 project_settings:
   title: Project
-  intro_admin: How the project works and who pays for it.
   intro_member: How the project works. Only admins change the settings.
   internal: Internal project
   bill_rate_fact: Rate billed per hour
@@ -1302,7 +1295,6 @@ collab:
   missing_text: "on this project without an hourly rate:"
   missing_blocked: "Open the person to set the rate or remove them from the project: without a rate, clocking in is blocked."
   people_title: People
-  people_intro: "Who works on this project. Each person joins with the hourly rate they earn here."
   search_placeholder: Search by name or email
   search_label: Search collaborators by name or email
   add_person: Add person
@@ -1395,7 +1387,6 @@ collab:
     other: "Page {{.page}} of {{.pages}} · {{.count}} people"
 
 overview:
-  intro: "The project in numbers: who works on it, how much time was tracked and what that time cost and earned."
   updated: "Updated at {{.time}}"
   refresh: Refresh
   loading: Loading the overview…
@@ -1429,7 +1420,6 @@ overview:
   first_session: First clock-in
   last_session: Last clock-in
   nobody_clocked: Nobody has clocked in yet
-  age_note: The start is the day the project was created. Days, weeks and months measure the same time, each rounded down.
   activity: Activity
   last_7: Last 7 days
   last_30: Last 30 days
@@ -1458,7 +1448,6 @@ overview:
   see: view
   bill_rate: Rate billed per hour
   no_bill_rate: No billed rate
-  tasks_note: Overdue is a task past its deadline. The revenue adds up the billed rate that applied when each clock-in was made.
 
 labels:
   not_informed: Not provided
