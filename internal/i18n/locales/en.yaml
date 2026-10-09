@@ -516,7 +516,7 @@ help:
       currency: "The currency is one for the whole organization and only changes how amounts are shown."
     roles:
       title: Who sees and does what
-      text: "Everyone in the organization reads the projects, creates and edits tasks, and clocks in for themselves (if they have an hourly rate on the project). The rest depends on the role and the permissions."
+      text: "Each person sees only the projects they were put in, with an hourly rate (the owner and the admins see all of them). In those projects they read what it shows, create and edit tasks, and clock in for themselves. The rest depends on the role and the permissions."
       owner: "Owner: who created the organization. Can do everything, and only the owner changes roles, invites admins, gives organization permissions and deletes the organization."
       admin: "Admin: everything, on every project, except what is only for the owner."
       member: "Member: the day to day, with more access only through permissions."
@@ -678,7 +678,7 @@ org:
     loading: Loading projects…
     empty: No projects yet
     empty_admin: Create the first project to set up the teams and start tracking time.
-    empty_member: When an admin creates a project, it shows up here.
+    empty_member: You have not been added to any project yet. When an admin puts you in a project, with your hourly rate, it shows up here.
     col_project: Project
     col_customer: Customer
     col_people: People

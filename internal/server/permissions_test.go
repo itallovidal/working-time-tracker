@@ -87,10 +87,10 @@ func TestPermissions_PresetsDecideWhatEachPersonCanDo(t *testing.T) {
 	if got := status(e, "PATCH", "/api/projects/"+other, `{"name":"Beta 2"}`, manager.session); got != http.StatusForbidden {
 		t.Errorf("a manager of Alfa editing Beta = %d, want 403", got)
 	}
-	// E quem nem está no projeto não passa em nada dele.
+	// E quem nem está no projeto não passa em nada dele: para ela o projeto não existe (404).
 	for _, path := range []string{base + "/billing", base + "/overview"} {
-		if got := status(e, "GET", path, "", stranger.session); got != http.StatusForbidden {
-			t.Errorf("a person outside the project GET %s = %d, want 403", path, got)
+		if got := status(e, "GET", path, "", stranger.session); got != http.StatusNotFound {
+			t.Errorf("a person outside the project GET %s = %d, want 404", path, got)
 		}
 	}
 }
@@ -195,8 +195,8 @@ func TestPermissions_NobodyGrantsWhatTheyLack(t *testing.T) {
 	if got := status(e, "DELETE", "/api/projects/"+prj+"/collaborators/"+newcomer.id, "", manager.session); got != http.StatusNoContent {
 		t.Fatalf("removing the new manager = %d, want 204", got)
 	}
-	if got := status(e, "POST", "/api/projects/"+prj+"/teams", `{"name":"Outro"}`, newcomer.session); got != http.StatusForbidden {
-		t.Errorf("a person removed from the project creating a team = %d, want 403", got)
+	if got := status(e, "POST", "/api/projects/"+prj+"/teams", `{"name":"Outro"}`, newcomer.session); got != http.StatusNotFound {
+		t.Errorf("a person removed from the project creating a team = %d, want 404 (the project is no longer theirs)", got)
 	}
 }
 

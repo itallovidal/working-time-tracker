@@ -44,7 +44,7 @@ func (f *fixture) mineTask(projectID string, assignee uuid.UUID, name string, st
 
 func (f *fixture) mine(personID uuid.UUID, tz string) *overview.Mine {
 	f.t.Helper()
-	m, err := f.svc.Mine(f.orgID, personID.String(), tz)
+	m, err := f.svc.Mine(f.orgID, personID.String(), tz, false)
 	if err != nil {
 		f.t.Fatalf("mine: %v", err)
 	}
@@ -232,7 +232,7 @@ func TestMyTasks_OpenOrderAndPages(t *testing.T) {
 
 	page := func(state string, n, per int) *overview.MyTasksPage {
 		t.Helper()
-		p, err := f.svc.MyTasks(f.orgID, ana.String(), state, n, per)
+		p, err := f.svc.MyTasks(f.orgID, ana.String(), state, false, n, per)
 		if err != nil {
 			t.Fatalf("my tasks %s page %d: %v", state, n, err)
 		}
@@ -291,7 +291,7 @@ func TestMyTasks_Closed(t *testing.T) {
 	x := f.project("Projeto X")
 	base := time.Now().Add(-10 * day).Truncate(time.Second)
 
-	empty, err := f.svc.MyTasks(f.orgID, ana.String(), overview.StateClosed, 1, 5)
+	empty, err := f.svc.MyTasks(f.orgID, ana.String(), overview.StateClosed, false, 1, 5)
 	if err != nil || empty.Items == nil || len(empty.Items) != 0 || empty.Total != 0 || empty.Page != 1 {
 		t.Fatalf("closed tasks of a person with none = %+v (%v), want an empty list, total 0, page 1", empty, err)
 	}
@@ -301,23 +301,23 @@ func TestMyTasks_Closed(t *testing.T) {
 	}
 	f.mineTask(x, ana, "Aberta", enttask.StatusInProgress, enttask.PriorityNone, nil, base)
 
-	p, err := f.svc.MyTasks(f.orgID, ana.String(), overview.StateClosed, 1, 5)
+	p, err := f.svc.MyTasks(f.orgID, ana.String(), overview.StateClosed, false, 1, 5)
 	if err != nil || p.Total != 7 || len(p.Items) != 5 || p.Items[0].Name != "Fechada 7" || p.Items[4].Name != "Fechada 3" {
 		t.Fatalf("first page of closed = %+v (%v), want 5 of 7, newest first (Fechada 7 to Fechada 3)", p, err)
 	}
-	p, err = f.svc.MyTasks(f.orgID, ana.String(), overview.StateClosed, 2, 5)
+	p, err = f.svc.MyTasks(f.orgID, ana.String(), overview.StateClosed, false, 2, 5)
 	if err != nil || len(p.Items) != 2 || p.Items[0].Name != "Fechada 2" || p.Items[1].Name != "Fechada 1" {
 		t.Fatalf("second page of closed = %+v (%v), want Fechada 2 and Fechada 1", p, err)
 	}
-	if p, _ = f.svc.MyTasks(f.orgID, ana.String(), overview.StateClosed, 9, 5); p.Page != 2 {
+	if p, _ = f.svc.MyTasks(f.orgID, ana.String(), overview.StateClosed, false, 9, 5); p.Page != 2 {
 		t.Errorf("closed page 9 = page %d, want the last (2)", p.Page)
 	}
 
 	for _, bad := range [][2]string{{"not-a-uuid", ana.String()}, {f.orgID, "not-a-uuid"}} {
-		if _, err := f.svc.MyTasks(bad[0], bad[1], overview.StateOpen, 1, 5); !errors.Is(err, database.ErrNotFound) {
+		if _, err := f.svc.MyTasks(bad[0], bad[1], overview.StateOpen, false, 1, 5); !errors.Is(err, database.ErrNotFound) {
 			t.Errorf("MyTasks(%q, %q) error = %v, want not found", bad[0], bad[1], err)
 		}
-		if _, err := f.svc.Mine(bad[0], bad[1], ""); !errors.Is(err, database.ErrNotFound) {
+		if _, err := f.svc.Mine(bad[0], bad[1], "", false); !errors.Is(err, database.ErrNotFound) {
 			t.Errorf("Mine(%q, %q) error = %v, want not found", bad[0], bad[1], err)
 		}
 	}

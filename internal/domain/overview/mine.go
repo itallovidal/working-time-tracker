@@ -105,8 +105,10 @@ var openStatuses = []string{"backlog", "in_progress", "awaiting_closure"}
 
 // Mine monta o painel da pessoa. tz é o nome do fuso (America/Sao_Paulo) de quem olha, que decide
 // onde começam o dia e a semana; um nome vazio ou desconhecido vale UTC, e o fuso usado volta na
-// resposta. Um ID malformado vale como "não encontrado".
-func (s *Service) Mine(orgID, personID, tz string) (*Mine, error) {
+// resposta. Um ID malformado vale como "não encontrado". Com onlyMyProjects (quem não é admin), as tarefas
+// contadas são só as de projetos em que a pessoa está: uma tarefa de um projeto de que ela saiu não aparece,
+// já que ela não consegue abri-la. As horas são sempre todas as dela.
+func (s *Service) Mine(orgID, personID, tz string, onlyMyProjects bool) (*Mine, error) {
 	if _, err := uuid.Parse(orgID); err != nil {
 		return nil, database.ErrNotFound
 	}
@@ -163,7 +165,7 @@ func (s *Service) Mine(orgID, personID, tz string) (*Mine, error) {
 		return nil, err
 	}
 
-	if err := s.fillMineTasks(m, orgID, personID, now, weekStart.AddDate(0, 0, 7).Add(-time.Nanosecond)); err != nil {
+	if err := s.fillMineTasks(m, orgID, personID, onlyMyProjects, now, weekStart.AddDate(0, 0, 7).Add(-time.Nanosecond)); err != nil {
 		return nil, err
 	}
 
@@ -205,8 +207,9 @@ func (s *Service) fillMineProjects(m *Mine, seconds map[uuid.UUID]float64) error
 
 // fillMineTasks conta as tarefas da pessoa: por status numa consulta, e as atrasadas e as que vencem
 // até weekEnd em mais duas.
-func (s *Service) fillMineTasks(m *Mine, orgID, personID string, now, weekEnd time.Time) error {
-	byStatus, err := s.deps.Tasks.AssignedByStatus(orgID, personID)
+func (s *Service) fillMineTasks(m *Mine, orgID, personID string, onlyMyProjects bool, now, weekEnd time.Time) error {
+	scope := mineScope(personID, onlyMyProjects)
+	byStatus, err := s.deps.Tasks.AssignedByStatus(orgID, personID, scope)
 	if err != nil {
 		return err
 	}
@@ -218,10 +221,10 @@ func (s *Service) fillMineTasks(m *Mine, orgID, personID string, now, weekEnd ti
 	if t.Open == 0 {
 		return nil
 	}
-	if t.Overdue, err = s.deps.Tasks.CountAssigned(orgID, personID, task.ListFilter{Statuses: openStatuses, DeadlineTo: &now}); err != nil {
+	if t.Overdue, err = s.deps.Tasks.CountAssigned(orgID, personID, withScope(scope, task.ListFilter{Statuses: openStatuses, DeadlineTo: &now})); err != nil {
 		return err
 	}
-	untilWeekEnd, err := s.deps.Tasks.CountAssigned(orgID, personID, task.ListFilter{Statuses: openStatuses, DeadlineTo: &weekEnd})
+	untilWeekEnd, err := s.deps.Tasks.CountAssigned(orgID, personID, withScope(scope, task.ListFilter{Statuses: openStatuses, DeadlineTo: &weekEnd}))
 	if err != nil {
 		return err
 	}
@@ -230,18 +233,36 @@ func (s *Service) fillMineTasks(m *Mine, orgID, personID string, now, weekEnd ti
 	return nil
 }
 
+// mineScope é o filtro de escopo das tarefas do painel: com onlyMyProjects, só as de projetos em que a pessoa
+// está. Um id malformado não chega aqui (quem chama já o recusou).
+func mineScope(personID string, onlyMyProjects bool) task.ListFilter {
+	if !onlyMyProjects {
+		return task.ListFilter{}
+	}
+	id := uuid.MustParse(personID)
+	return task.ListFilter{InProjectsOf: &id}
+}
+
+// withScope junta o escopo do painel aos outros filtros de uma consulta.
+func withScope(scope, f task.ListFilter) task.ListFilter {
+	f.InProjectsOf = scope.InProjectsOf
+	return f
+}
+
 // MyTasks lista as tarefas da pessoa em todos os projetos da organização, do estado pedido (StateOpen
 // ou StateClosed). As abertas vêm com as que vencem primeiro (as atrasadas à frente), depois as de
 // maior prioridade e as mais novas; as fechadas, da mais nova para a mais antiga, porque a tarefa
 // não guarda quando foi fechada. page e perPage zerados valem a página 1 e dez por página; uma página
-// além da última volta a última. Um ID malformado vale como "não encontrado".
-func (s *Service) MyTasks(orgID, personID, state string, page, perPage int) (*MyTasksPage, error) {
+// além da última volta a última. Um ID malformado vale como "não encontrado". Com onlyMyProjects (quem não é
+// admin), só entram as tarefas de projetos em que a pessoa está, como em Mine.
+func (s *Service) MyTasks(orgID, personID, state string, onlyMyProjects bool, page, perPage int) (*MyTasksPage, error) {
 	if _, err := uuid.Parse(orgID); err != nil {
 		return nil, database.ErrNotFound
 	}
 	if _, err := uuid.Parse(personID); err != nil {
 		return nil, database.ErrNotFound
 	}
+	scope := mineScope(personID, onlyMyProjects)
 	if perPage <= 0 {
 		perPage = defaultTasksPerPage
 	}
@@ -254,7 +275,7 @@ func (s *Service) MyTasks(orgID, personID, state string, page, perPage int) (*My
 	var rows []task.Assigned
 	switch state {
 	case StateClosed:
-		total, err := s.deps.Tasks.CountAssigned(orgID, personID, task.ListFilter{Statuses: []string{"closed"}})
+		total, err := s.deps.Tasks.CountAssigned(orgID, personID, withScope(scope, task.ListFilter{Statuses: []string{"closed"}}))
 		if err != nil {
 			return nil, err
 		}
@@ -262,11 +283,11 @@ func (s *Service) MyTasks(orgID, personID, state string, page, perPage int) (*My
 		if total == 0 {
 			return out, nil
 		}
-		if rows, err = s.deps.Tasks.ListAssigned(orgID, personID, task.ListFilter{Statuses: []string{"closed"}, Page: out.Page, PerPage: perPage}); err != nil {
+		if rows, err = s.deps.Tasks.ListAssigned(orgID, personID, withScope(scope, task.ListFilter{Statuses: []string{"closed"}, Page: out.Page, PerPage: perPage})); err != nil {
 			return nil, err
 		}
 	default:
-		all, err := s.deps.Tasks.ListAssigned(orgID, personID, task.ListFilter{Statuses: openStatuses})
+		all, err := s.deps.Tasks.ListAssigned(orgID, personID, withScope(scope, task.ListFilter{Statuses: openStatuses}))
 		if err != nil {
 			return nil, err
 		}

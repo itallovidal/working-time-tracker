@@ -393,8 +393,9 @@ func TestProjects_ListPages(t *testing.T) {
 	admin := signup(t, e, "Org", "ana@test.com")
 	bia := invite(t, e, admin, "bia@test.com", "member")
 	other := signup(t, e, "Outra", "caio@outra.com")
+	var ids []string
 	for i := 1; i <= 5; i++ {
-		createProject(t, e, admin, fmt.Sprintf("Projeto %d", i))
+		ids = append(ids, createProject(t, e, admin, fmt.Sprintf("Projeto %d", i)))
 	}
 	createProject(t, e, other, "Projeto de outra organização")
 	list := "/api/orgs/" + admin.orgID + "/projects"
@@ -461,9 +462,14 @@ func TestProjects_ListPages(t *testing.T) {
 	if p := get("?page=1", admin.session); p.PerPage != 10 {
 		t.Errorf("page=1 alone = %+v, want the default of 10 per page", p)
 	}
-	// Todo membro lista os projetos; a lista é da organização dele.
-	if p := get("?page=1&per_page=2", bia.session); p.Total != 5 {
-		t.Errorf("member page = %+v, want the 5 projects of the organization", p)
+	// Quem não é admin lista só os projetos em que está (o Projeto 1 e o 3), da organização dele.
+	if p := get("?page=1&per_page=2", bia.session); p.Total != 0 || len(p.Items) != 0 {
+		t.Errorf("member page before being added = %+v, want no projects", p)
+	}
+	allocate(t, e, admin, ids[0], bia.id, 2000)
+	allocate(t, e, admin, ids[2], bia.id, 2000)
+	if p := get("?page=1&per_page=2", bia.session); p.Total != 2 || strings.Join(p.Items, ",") != "Projeto 3,Projeto 1" {
+		t.Errorf("member page = %+v, want only the 2 projects she is in (Projeto 3, Projeto 1)", p)
 	}
 	if rec := do(e, "GET", list+"?page=1", "", other.session); rec.Code != http.StatusNotFound {
 		t.Errorf("another org GET %s = %d, want 404", list, rec.Code)

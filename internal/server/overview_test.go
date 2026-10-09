@@ -190,6 +190,9 @@ func TestPages_ProjectOpensOnTheRightTab(t *testing.T) {
 	admin := signup(t, e, "Org", "ana@test.com")
 	member := invite(t, e, admin, "bia@test.com", "member")
 	projectID := createProject(t, e, admin, "Projeto Alfa")
+
+	// Quem não é admin só vê os projetos em que está: o membro entra no projeto, com valor por hora.
+	allocate(t, e, admin, projectID, member.id, 2000)
 	prefix := "/projects/" + projectID
 
 	for who, session := range map[string]string{"admin": admin.session, "member": member.session} {

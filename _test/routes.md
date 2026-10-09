@@ -9,6 +9,7 @@ Todas as rotas falam JSON. Erros sempre vêm como `{"error": {"code": "dominio.m
 - O login e o signup devolvem um cookie `wtt_session` (HttpOnly, SameSite=Lax, válido por 7 dias). Clientes HTTP como o Insomnia guardam o cookie sozinhos: faça o login uma vez e as próximas chamadas já vão autenticadas.
 - Tudo fora de `/api/auth/*` e `/healthcheck` exige a sessão. Sem ela, a resposta é **401**.
 - Cada pessoa pertence a uma organização. Um recurso de outra organização responde **404**, como se não existisse.
+- Quem não é admin só alcança os projetos em que está (com valor por hora ou em algum time): a rota de um projeto, de uma tarefa, de um time ou de uma integração de um projeto em que a pessoa não está também responde **404**, antes de qualquer permissão. Os admins alcançam todos. Veja [`_docs/permissions.md`](../_docs/permissions.md).
 - Rotas marcadas como **admin** respondem **403** para membros. As marcadas com uma permissão (`project.edit`, `billing.view`…) ou **dono** respondem **403** a quem não a tem: admins têm todas, e o dono tem também as que são só dele. A lista está em [`_docs/permissions.md`](../_docs/permissions.md).
 - `POST`, `PUT` e `PATCH` precisam de `Content-Type: application/json`. Outro formato responde **415**, o que também protege contra CSRF.
 - Signup, login e convites têm limite de tentativas por IP. Acima dele, a resposta é **429**.
@@ -150,7 +151,7 @@ Se o convite foi criado com email, só esse email consegue aceitar. Um convite v
 | GET | `/api/orgs/:orgId/me/overview` | logado | O painel de quem pede: as horas dele (hoje, a semana, dia a dia e por projeto) e as tarefas dele, em todos os projetos. Veja abaixo |
 | GET | `/api/orgs/:orgId/me/tasks` | logado | As tarefas de quem pede, em todos os projetos, abertas ou concluídas, em páginas. Veja abaixo |
 | POST | `/api/orgs/:orgId/projects` | `projects.create` | Cria um projeto |
-| GET | `/api/orgs/:orgId/projects` | logado | Projetos da organização, do mais novo para o mais antigo. Sem `page`, todos num array; com `page`, uma página. Veja abaixo |
+| GET | `/api/orgs/:orgId/projects` | logado | Projetos da organização, do mais novo para o mais antigo (para quem não é admin, só os em que está). Sem `page`, todos num array; com `page`, uma página. Veja abaixo |
 | POST | `/api/orgs/:orgId/customers` | `customers.manage` | Cria um cliente |
 | GET | `/api/orgs/:orgId/customers` | `customers.manage` | Clientes da organização, em ordem alfabética |
 

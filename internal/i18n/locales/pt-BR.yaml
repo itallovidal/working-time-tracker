@@ -526,7 +526,7 @@ help:
       currency: "A moeda é uma só para a organização e só muda como os valores aparecem."
     roles:
       title: Quem vê e faz o quê
-      text: "Todo mundo na organização lê os projetos, cria e edita tarefas e bate o próprio ponto (se tiver valor por hora no projeto). O resto depende do papel e das permissões."
+      text: "Cada pessoa vê só os projetos em que foi posta, com valor por hora (o dono e os administradores veem todos). Nesses projetos, lê o que ele mostra, cria e edita tarefas e bate o próprio ponto. O resto depende do papel e das permissões."
       owner: "Dono: quem criou a organização. Faz tudo, e só ele troca papéis, convida administradores, libera permissões de organização e exclui a organização."
       admin: "Admin: tudo, em todos os projetos, menos o que é só do dono."
       member: "Membro: o dia a dia, com mais acesso só por permissões."
@@ -688,7 +688,7 @@ org:
     loading: Carregando projetos…
     empty: Nenhum projeto ainda
     empty_admin: Crie o primeiro projeto para montar os times e começar a registrar tempo.
-    empty_member: Quando um admin criar um projeto, ele aparece aqui.
+    empty_member: Você ainda não foi adicionado a nenhum projeto. Quando um admin pôr você num projeto, com o seu valor por hora, ele aparece aqui.
     col_project: Projeto
     col_customer: Cliente
     col_people: Pessoas

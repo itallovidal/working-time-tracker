@@ -11,6 +11,7 @@ import (
 	"working-time-tracker/ent/project"
 	enttask "working-time-tracker/ent/task"
 	"working-time-tracker/internal/database"
+	"working-time-tracker/internal/domain/projectaccess"
 )
 
 type Store struct {
@@ -43,14 +44,22 @@ func (s *Store) Create(p *Project) error {
 	return nil
 }
 
-func (s *Store) ListByOrg(orgID string) ([]Project, error) {
+// inOrg escolhe os projetos da organização. Com member, só os em que essa pessoa está (valor por hora ou
+// time); nil escolhe todos, o que só os admins veem.
+func (s *Store) inOrg(orgID uuid.UUID, member *uuid.UUID) *ent.ProjectQuery {
+	q := s.client.Project.Query().Where(project.OrganizationIDEQ(orgID))
+	if member != nil {
+		q = q.Where(projectaccess.ProjectsOf(*member))
+	}
+	return q
+}
+
+func (s *Store) ListByOrg(orgID string, member *uuid.UUID) ([]Project, error) {
 	uid, err := uuid.Parse(orgID)
 	if err != nil {
 		return nil, err
 	}
-	projects, err := newestFirst(withCounts(s.client.Project.Query().
-		Where(project.OrganizationIDEQ(uid)).
-		WithCustomer())).
+	projects, err := newestFirst(withCounts(s.inOrg(uid, member).WithCustomer())).
 		All(context.Background())
 	if err != nil {
 		return nil, err
@@ -58,25 +67,23 @@ func (s *Store) ListByOrg(orgID string) ([]Project, error) {
 	return toDomainProjects(projects), nil
 }
 
-// CountByOrg conta os projetos da organização.
-func (s *Store) CountByOrg(orgID string) (int, error) {
+// CountByOrg conta os projetos da organização (com member, os dessa pessoa).
+func (s *Store) CountByOrg(orgID string, member *uuid.UUID) (int, error) {
 	uid, err := uuid.Parse(orgID)
 	if err != nil {
 		return 0, err
 	}
-	return s.client.Project.Query().Where(project.OrganizationIDEQ(uid)).Count(context.Background())
+	return s.inOrg(uid, member).Count(context.Background())
 }
 
-// ListPageByOrg devolve uma página dos projetos da organização, do mais novo para o mais
-// antigo. page começa em 1.
-func (s *Store) ListPageByOrg(orgID string, page, perPage int) ([]Project, error) {
+// ListPageByOrg devolve uma página dos projetos da organização (com member, os dessa pessoa), do mais
+// novo para o mais antigo. page começa em 1.
+func (s *Store) ListPageByOrg(orgID string, member *uuid.UUID, page, perPage int) ([]Project, error) {
 	uid, err := uuid.Parse(orgID)
 	if err != nil {
 		return nil, err
 	}
-	projects, err := newestFirst(withCounts(s.client.Project.Query().
-		Where(project.OrganizationIDEQ(uid)).
-		WithCustomer())).
+	projects, err := newestFirst(withCounts(s.inOrg(uid, member).WithCustomer())).
 		Offset((page - 1) * perPage).
 		Limit(perPage).
 		All(context.Background())

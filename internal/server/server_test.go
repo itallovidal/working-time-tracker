@@ -240,6 +240,8 @@ func TestAccess_MemberCannotUseAdminRoutes(t *testing.T) {
 	admin := signup(t, e, "Org", "ana@test.com")
 	member := invite(t, e, admin, "bia@test.com", "member")
 	projectID := createProject(t, e, admin, "Projeto")
+	// O membro está no projeto: sem isso as rotas dele são 404, e o que se confere aqui é a falta de permissão (403).
+	allocate(t, e, admin, projectID, member.id, 2000)
 
 	if member.orgID != admin.orgID {
 		t.Fatalf("invited member joined org %s, want %s", member.orgID, admin.orgID)
@@ -360,7 +362,8 @@ func TestProjects_MemberAndTaskCounts(t *testing.T) {
 
 	type counts struct{ members, tasks any }
 	got := map[string]counts{}
-	for _, p := range decodeList(t, do(e, "GET", "/api/orgs/"+admin.orgID+"/projects", "", member.session)) {
+	// Os números são os mesmos para todos, mas o membro só lista o projeto em que está: o admin os vê todos.
+	for _, p := range decodeList(t, do(e, "GET", "/api/orgs/"+admin.orgID+"/projects", "", admin.session)) {
 		got[p["id"].(string)] = counts{p["member_count"], p["task_count"]}
 	}
 	if got[busy] != (counts{float64(3), float64(3)}) {
@@ -461,10 +464,10 @@ func TestRates_VisibilityByRole(t *testing.T) {
 		}
 	}
 
-	// Quem ainda não tem valor recebe uma lista vazia, não um erro.
+	// Quem não tem valor no projeto nem está nele: para ela o projeto não existe (404), em vez de uma lista vazia.
 	dora := invite(t, e, admin, "dora@test.com", "member")
-	if rec := do(e, "GET", prj+"/allocations", "", dora.session); rec.Code != http.StatusOK || strings.TrimSpace(rec.Body.String()) != "[]" {
-		t.Errorf("member without allocation = %d %s, want 200 []", rec.Code, rec.Body.String())
+	if rec := do(e, "GET", prj+"/allocations", "", dora.session); rec.Code != http.StatusNotFound {
+		t.Errorf("member without allocation = %d %s, want 404", rec.Code, rec.Body.String())
 	}
 
 	if rec := do(e, "PUT", prj+"/allocations/"+bia.id, `{}`, admin.session); rec.Code != http.StatusBadRequest {
@@ -547,7 +550,8 @@ func TestWorkSessions_UseLoggedInPerson(t *testing.T) {
 }
 
 // Sem valor por hora no projeto ninguém bate ponto, nem um admin por outra
-// pessoa. É o caso de quem foi tirado do projeto e ficou com uma tarefa dele.
+// pessoa. É o caso de quem foi tirado do projeto e ficou com uma tarefa dele: ela mesma já nem alcança o projeto
+// (404), e o admin que tenta bater o ponto por ela recebe a recusa pelo valor que falta.
 func TestWorkSessions_RequireRate(t *testing.T) {
 	e := newServer(t)
 	admin := signup(t, e, "Org", "ana@test.com")
@@ -563,14 +567,12 @@ func TestWorkSessions_RequireRate(t *testing.T) {
 		t.Fatalf("remove from the project = %d: %s", rec.Code, rec.Body.String())
 	}
 
-	for who, tc := range map[string]struct{ body, session string }{
-		"member":             {`{"task_id":"` + taskID + `"}`, member.session},
-		"admin for a member": {`{"task_id":"` + taskID + `","person_id":"` + member.id + `"}`, admin.session},
-	} {
-		rec := do(e, "POST", prj+"/work-sessions/clock-in", tc.body, tc.session)
-		if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), `"code":"work_session.no_rate"`) {
-			t.Errorf("%s clock-in without a rate = %d %s, want 400 explaining the missing rate", who, rec.Code, rec.Body.String())
-		}
+	if rec := do(e, "POST", prj+"/work-sessions/clock-in", `{"task_id":"`+taskID+`"}`, member.session); rec.Code != http.StatusNotFound {
+		t.Errorf("member clock-in after being removed = %d %s, want 404 (she is out of the project)", rec.Code, rec.Body.String())
+	}
+	rec := do(e, "POST", prj+"/work-sessions/clock-in", `{"task_id":"`+taskID+`","person_id":"`+member.id+`"}`, admin.session)
+	if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), `"code":"work_session.no_rate"`) {
+		t.Errorf("admin clock-in for a member without a rate = %d %s, want 400 explaining the missing rate", rec.Code, rec.Body.String())
 	}
 	if rec := do(e, "GET", "/api/work-sessions/active", "", member.session); strings.TrimSpace(rec.Body.String()) != "null" {
 		t.Errorf("a session was opened without a rate: %s", rec.Body.String())
@@ -1071,12 +1073,12 @@ func TestCollaborators_VisibilityAndRemoval(t *testing.T) {
 	if rates := decodeList(t, do(e, "GET", "/api/projects/"+projectID+"/allocations", "", admin.session)); len(rates) != 1 {
 		t.Errorf("rates after the removal = %v, want only Caio's", rates)
 	}
-	// A tarefa continua com ela, mas sem valor ela não bate mais ponto aqui.
+	// A tarefa continua com ela, mas fora do projeto ela já nem o alcança: não bate mais ponto aqui.
 	if task := decode(t, do(e, "GET", "/api/tasks/"+taskID, "", admin.session)); task["assignee_id"] != member.id {
 		t.Errorf("task assignee after the removal = %v, want it unchanged", task["assignee_id"])
 	}
-	if rec := do(e, "POST", "/api/projects/"+projectID+"/work-sessions/clock-in", `{"task_id":"`+taskID+`"}`, member.session); rec.Code != http.StatusBadRequest {
-		t.Errorf("clock-in after the removal = %d, want 400", rec.Code)
+	if rec := do(e, "POST", "/api/projects/"+projectID+"/work-sessions/clock-in", `{"task_id":"`+taskID+`"}`, member.session); rec.Code != http.StatusNotFound {
+		t.Errorf("clock-in after the removal = %d, want 404", rec.Code)
 	}
 	if rec := do(e, "DELETE", base+"/"+member.id, "", admin.session); rec.Code != http.StatusNotFound {
 		t.Errorf("removing the same person twice = %d, want 404", rec.Code)
@@ -1249,7 +1251,8 @@ func TestProjects_CustomerMeeting(t *testing.T) {
 		t.Fatalf("set customer = %d: %s", rec.Code, rec.Body.String())
 	}
 
-	// Quem não é admin lê a reunião, mas não altera o projeto.
+	// Quem não é admin lê a reunião (do projeto em que está), mas não altera o projeto.
+	allocate(t, e, admin, id, member.id, 2000)
 	read := decode(t, do(e, "GET", "/api/projects/"+id, "", member.session))
 	if read["customer_meeting_day"] != "wednesday" || read["customer_meeting_time"] != "10:30" {
 		t.Errorf("member reads the meeting as %v %v", read["customer_meeting_day"], read["customer_meeting_time"])
@@ -1655,6 +1658,7 @@ func TestTasks_Status(t *testing.T) {
 	admin := signup(t, e, "Org", "ana@test.com")
 	member := invite(t, e, admin, "bia@test.com", "member")
 	projectID := createProject(t, e, admin, "Projeto")
+	allocate(t, e, admin, projectID, member.id, 2000)
 	tasks := "/api/projects/" + projectID + "/tasks"
 
 	rec := do(e, "POST", tasks, `{"name":"Nova","status":"closed"}`, member.session)
@@ -1715,6 +1719,7 @@ func TestTasks_PriorityAndLabels(t *testing.T) {
 	outsider := signup(t, e, "Outra", "zeca@test.com")
 	projectID := createProject(t, e, admin, "Projeto")
 	otherProject := createProject(t, e, admin, "Outro")
+	allocate(t, e, admin, projectID, member.id, 2000)
 	labels := "/api/projects/" + projectID + "/labels"
 
 	if rec := do(e, "POST", labels, `{"name":"bug"}`, member.session); rec.Code != http.StatusForbidden {

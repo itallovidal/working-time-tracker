@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v5"
 
 	"working-time-tracker/internal/apperr"
@@ -42,8 +43,10 @@ func (h *Handler) Create(c *echo.Context) error {
 	if err != nil {
 		return apperr.Respond(c, 400, err)
 	}
-	// O valor não importa: para o dono a alocação sempre sai com zero.
-	if me := auth.CurrentPerson(c); me != nil && me.IsOwner {
+	// O valor não importa: para o dono a alocação sempre sai com zero. Quem não é admin e cria um projeto
+	// (a organização lhe deu a permissão de criar) também entra nele, senão o projeto que acabou de criar
+	// sumiria da lista dele: só se vê o projeto em que se está.
+	if me := auth.CurrentPerson(c); me != nil && (me.IsOwner || !me.IsAdmin()) {
 		if _, err := h.enroller.Set(project.ID.String(), me.PersonID.String(), 0); err != nil {
 			return apperr.Respond(c, 500, err)
 		}
@@ -52,21 +55,26 @@ func (h *Handler) Create(c *echo.Context) error {
 }
 
 // ListByOrg lista os projetos da organização. Sem page, devolve todos num array; com page,
-// uma página com o total (per_page só vale junto de page).
+// uma página com o total (per_page só vale junto de page). Os admins veem todos os projetos; quem
+// não é admin vê só aqueles em que está (tem valor por hora ou está em algum time).
 func (h *Handler) ListByOrg(c *echo.Context) error {
 	orgID := c.Param("orgId")
 	page, perPage, err := pageParams(c)
 	if err != nil {
 		return apperr.Respond(c, http.StatusBadRequest, err)
 	}
+	var member *uuid.UUID
+	if me := auth.CurrentPerson(c); !me.IsAdmin() {
+		member = &me.PersonID
+	}
 	if page > 0 {
-		out, err := h.svc.ListPage(orgID, page, perPage)
+		out, err := h.svc.ListPage(orgID, member, page, perPage)
 		if err != nil {
 			return apperr.Respond(c, 500, err)
 		}
 		return c.JSON(200, out)
 	}
-	projects, err := h.svc.ListByOrg(orgID)
+	projects, err := h.svc.ListByOrg(orgID, member)
 	if err != nil {
 		return apperr.Respond(c, 500, err)
 	}

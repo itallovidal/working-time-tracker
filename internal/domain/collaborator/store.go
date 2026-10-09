@@ -13,6 +13,7 @@ import (
 	enttm "working-time-tracker/ent/teammembership"
 	"working-time-tracker/internal/database"
 	"working-time-tracker/internal/domain/permission"
+	"working-time-tracker/internal/domain/projectaccess"
 )
 
 type Store struct {
@@ -30,10 +31,7 @@ func (s *Store) ListByProject(projectID uuid.UUID) ([]Collaborator, error) {
 	hasRate := entalloc.ProjectIDEQ(projectID)
 	inTeam := enttm.HasTeamWith(entteam.ProjectIDEQ(projectID))
 	people, err := s.client.Person.Query().
-		Where(entperson.Or(
-			entperson.HasAllocationsWith(hasRate),
-			entperson.HasTeamMembershipsWith(inTeam),
-		)).
+		Where(projectaccess.PersonIn(projectID)).
 		WithAllocations(func(q *ent.AllocationQuery) { q.Where(hasRate) }).
 		WithTeamMemberships(func(q *ent.TeamMembershipQuery) { q.Where(inTeam).WithTeam() }).
 		Order(ent.Asc(entperson.FieldName)).

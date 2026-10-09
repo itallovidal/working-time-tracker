@@ -13,6 +13,7 @@ import (
 	entproject "working-time-tracker/ent/project"
 	"working-time-tracker/ent/task"
 	"working-time-tracker/internal/database"
+	"working-time-tracker/internal/domain/projectaccess"
 )
 
 type Store struct {
@@ -89,6 +90,9 @@ func applyFilter(q *ent.TaskQuery, f ListFilter) *ent.TaskQuery {
 	}
 	if len(f.LabelIDs) > 0 {
 		q = q.Where(task.HasLabelsWith(entlabel.IDIn(f.LabelIDs...)))
+	}
+	if f.InProjectsOf != nil {
+		q = q.Where(task.HasProjectWith(projectaccess.ProjectsOf(*f.InProjectsOf)))
 	}
 	return q
 }
@@ -207,9 +211,9 @@ func (s *Store) CountAssigned(orgID, personID string, f ListFilter) (int, error)
 	return s.assigned(oid, pid, f).Count(context.Background())
 }
 
-// AssignedByStatus conta as tarefas da pessoa na organização por status, numa consulta só. Um status
-// sem tarefas não aparece no mapa.
-func (s *Store) AssignedByStatus(orgID, personID string) (map[string]int, error) {
+// AssignedByStatus conta as tarefas da pessoa na organização que passam pelos filtros (o que importa é
+// f.InProjectsOf) por status, numa consulta só. Um status sem tarefas não aparece no mapa.
+func (s *Store) AssignedByStatus(orgID, personID string, f ListFilter) (map[string]int, error) {
 	oid, pid, err := parseOrgPerson(orgID, personID)
 	if err != nil {
 		return nil, err
@@ -218,7 +222,7 @@ func (s *Store) AssignedByStatus(orgID, personID string) (map[string]int, error)
 		Status string `json:"status"`
 		Count  int    `json:"count"`
 	}
-	if err := s.assigned(oid, pid, ListFilter{}).
+	if err := s.assigned(oid, pid, f).
 		GroupBy(task.FieldStatus).
 		Aggregate(ent.Count()).
 		Scan(context.Background(), &rows); err != nil {

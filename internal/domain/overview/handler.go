@@ -68,7 +68,8 @@ func (h *Handler) WorkingNow(c *echo.Context) error {
 // Mine devolve o painel de quem pede: as horas dele hoje e na semana, no fuso do ?tz=, e as tarefas
 // dele. Qualquer pessoa da organização lê o seu, e só o seu.
 func (h *Handler) Mine(c *echo.Context) error {
-	m, err := h.svc.Mine(c.Param("orgId"), auth.CurrentPerson(c).PersonID.String(), c.QueryParam("tz"))
+	me := auth.CurrentPerson(c)
+	m, err := h.svc.Mine(c.Param("orgId"), me.PersonID.String(), c.QueryParam("tz"), !me.IsAdmin())
 	if err != nil {
 		return failOrg(c, err)
 	}
@@ -90,7 +91,8 @@ func (h *Handler) MyTasks(c *echo.Context) error {
 	if err != nil {
 		return apperr.Respond(c, http.StatusBadRequest, err)
 	}
-	list, err := h.svc.MyTasks(c.Param("orgId"), auth.CurrentPerson(c).PersonID.String(), state, page, perPage)
+	me := auth.CurrentPerson(c)
+	list, err := h.svc.MyTasks(c.Param("orgId"), me.PersonID.String(), state, !me.IsAdmin(), page, perPage)
 	if err != nil {
 		return failOrg(c, err)
 	}

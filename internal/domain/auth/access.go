@@ -14,6 +14,7 @@ import (
 	"working-time-tracker/ent/team"
 	"working-time-tracker/internal/apperr"
 	"working-time-tracker/internal/domain/permission"
+	"working-time-tracker/internal/domain/projectaccess"
 )
 
 // Kind é o tipo de recurso de um parâmetro de rota, para descobrir a organização dona.
@@ -148,6 +149,30 @@ func (r *Resolver) ProjectSet(me *Identity, projectID uuid.UUID) (permission.Set
 	return permission.Set{Keys: permission.Normalize(a.Permissions, permission.ProjectKeys)}, nil
 }
 
+// ProjectAccess diz se a pessoa está no projeto e o que ela pode nele. Os admins estão em todos e podem tudo.
+// Quem não é admin só está nos projetos em que tem valor por hora ou em cujo time está, e as permissões
+// vêm do que a alocação dele libera (um time sem alocação dá acesso, mas nenhuma permissão).
+func (r *Resolver) ProjectAccess(me *Identity, projectID uuid.UUID) (set permission.Set, in bool, err error) {
+	if me.IsAdmin() {
+		return permission.Set{All: true}, true, nil
+	}
+	if me == nil {
+		return permission.Set{}, false, nil
+	}
+	ctx := context.Background()
+	a, err := r.client.Allocation.Query().
+		Where(entalloc.ProjectIDEQ(projectID), entalloc.PersonIDEQ(me.PersonID)).
+		Only(ctx)
+	if err == nil {
+		return permission.Set{Keys: permission.Normalize(a.Permissions, permission.ProjectKeys)}, true, nil
+	}
+	if !ent.IsNotFound(err) {
+		return permission.Set{}, false, err
+	}
+	in, err = projectaccess.Has(ctx, r.client, me.PersonID, projectID)
+	return permission.Set{}, in, err
+}
+
 // SameOrganization diz se o recurso existe e é da organização da pessoa logada.
 func (r *Resolver) SameOrganization(c *echo.Context, kind Kind, id string) bool {
 	me := CurrentPerson(c)
@@ -177,14 +202,18 @@ func (m *Middleware) requireOrg(kind Kind, param string, deny echo.HandlerFunc) 
 			if !m.resolver.SameOrganization(c, kind, c.Param(param)) {
 				return deny(c)
 			}
-			// Num recurso de projeto, as permissões da pessoa nele ficam à mão das rotas e dos
-			// handlers que vêm depois. Os admins têm tudo em todos os projetos: para eles
-			// nada se consulta.
+			// Num recurso de projeto, quem não é admin só passa se estiver no projeto, e as permissões
+			// dele nele ficam à mão das rotas e dos handlers que vêm depois. Quem não está recebe a
+			// mesma resposta de um projeto que não existe, para não revelar que ele existe. Os admins
+			// têm tudo em todos os projetos: para eles nada se consulta.
 			if me := CurrentPerson(c); !me.IsAdmin() {
 				if projectID, err := m.resolver.ProjectOf(kind, c.Param(param)); err == nil && projectID != uuid.Nil {
-					set, err := m.resolver.ProjectSet(me, projectID)
+					set, in, err := m.resolver.ProjectAccess(me, projectID)
 					if err != nil {
 						return err
+					}
+					if !in {
+						return deny(c)
 					}
 					c.Set(projectSetKey, set)
 				}

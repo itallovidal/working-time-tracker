@@ -49,6 +49,8 @@ func TestPages_RenderForAdminAndMember(t *testing.T) {
 	member := invite(t, e, admin, "bia@test.com", "member")
 	projectID := createProject(t, e, admin, "Projeto Alfa")
 
+	// Quem não é admin só vê os projetos em que está: o membro entra no projeto, com valor por hora.
+	allocate(t, e, admin, projectID, member.id, 2000)
 	for _, who := range []account{admin, member} {
 		for _, path := range pagePaths(admin.orgID, projectID) {
 			rec := do(e, "GET", path, "", who.session)
@@ -397,6 +399,8 @@ func TestPages_ProjectTasksTab(t *testing.T) {
 	member := invite(t, e, admin, "bia@test.com", "member")
 	projectID := createProject(t, e, admin, "Projeto Alfa")
 
+	// Quem não é admin só vê os projetos em que está: o membro entra no projeto, com valor por hora.
+	allocate(t, e, admin, projectID, member.id, 2000)
 	for who, session := range map[string]string{"admin": admin.session, "member": member.session} {
 		body := do(e, "GET", "/projects/"+projectID+"/tasks", "", session).Body.String()
 		for _, want := range []string{
@@ -455,6 +459,9 @@ func TestPages_ProjectMyTasksTab(t *testing.T) {
 	member := invite(t, e, admin, "bia@test.com", "member")
 	outsider := signup(t, e, "Outra", "zeca@test.com")
 	projectID := createProject(t, e, admin, "Projeto Alfa")
+
+	// Quem não é admin só vê os projetos em que está: o membro entra no projeto, com valor por hora.
+	allocate(t, e, admin, projectID, member.id, 2000)
 	mine := "/projects/" + projectID + "/my-tasks"
 
 	for who, session := range map[string]string{"admin": admin.session, "member": member.session} {
@@ -502,6 +509,9 @@ func TestPages_ProjectMyOverviewTab(t *testing.T) {
 	admin := signup(t, e, "Org", "ana@test.com")
 	member := invite(t, e, admin, "bia@test.com", "member")
 	projectID := createProject(t, e, admin, "Projeto Alfa")
+
+	// Quem não é admin só vê os projetos em que está: o membro entra no projeto, com valor por hora.
+	allocate(t, e, admin, projectID, member.id, 2000)
 	overview := "/projects/" + projectID + "/overview"
 	const warning = "ainda não tem valor por hora neste projeto"
 	pages := map[string]string{}
@@ -573,6 +583,9 @@ func TestPages_CollaboratorsTabIsReadOnly(t *testing.T) {
 	admin := signup(t, e, "Org", "ana@test.com")
 	member := invite(t, e, admin, "bia@test.com", "member")
 	projectID := createProject(t, e, admin, "Projeto Alfa")
+
+	// Quem não é admin só vê os projetos em que está: o membro entra no projeto, com valor por hora.
+	allocate(t, e, admin, projectID, member.id, 2000)
 	tab := "/projects/" + projectID + "/collaborators"
 
 	for who, session := range map[string]string{"admin": admin.session, "member": member.session} {
@@ -817,6 +830,9 @@ func TestPages_ProjectIntegrationsTab(t *testing.T) {
 	admin := signup(t, e, "Org", "ana@test.com")
 	member := invite(t, e, admin, "bia@test.com", "member")
 	projectID := createProject(t, e, admin, "Projeto Alfa")
+
+	// Quem não é admin só vê os projetos em que está: o membro entra no projeto, com valor por hora.
+	allocate(t, e, admin, projectID, member.id, 2000)
 	// Os três tipos, na ordem da tela, cada um com os campos do seu metadata.
 	types := []string{
 		`"integration_types":[{"type":"github","label":"GitHub"`, `"key":"repo","label":"Repositório"`,
