@@ -50,6 +50,7 @@ var (
 	CustomersColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "name", Type: field.TypeString},
+		{Name: "country", Type: field.TypeString, Default: "BR"},
 		{Name: "document", Type: field.TypeString, Nullable: true},
 		{Name: "contact_name", Type: field.TypeString, Nullable: true},
 		{Name: "contact_email", Type: field.TypeString, Nullable: true},
@@ -65,7 +66,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "customers_organizations_customers",
-				Columns:    []*schema.Column{CustomersColumns[7]},
+				Columns:    []*schema.Column{CustomersColumns[8]},
 				RefColumns: []*schema.Column{OrganizationsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},

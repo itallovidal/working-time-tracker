@@ -852,3 +852,55 @@ func TestMigrate_CountryMigrationConvertsTheOldCountryText(t *testing.T) {
 		t.Error("a NULL country must be refused after the migration")
 	}
 }
+
+// O cliente ganhou país, e o dos que já existem é o da organização deles. O documento guardado não muda.
+func TestMigrate_CustomerCountryMigrationUsesTheOrganizationCountry(t *testing.T) {
+	ctx := context.Background()
+	defer restoreSchema(t)
+	const migration = "20261009034626_customer_country.sql"
+	applyMigrationsBefore(t, migration)
+
+	brOrg, usOrg := uuid.New(), uuid.New()
+	brCustomer, usCustomer := uuid.New(), uuid.New()
+	for _, q := range []struct {
+		sql  string
+		args []any
+	}{
+		{`INSERT INTO organizations (id, name, country, created_at) VALUES ($1, 'Brasileira', 'BR', now()), ($2, 'Americana', 'US', now())`, []any{brOrg, usOrg}},
+		{`INSERT INTO customers (id, organization_id, name, document, created_at) VALUES ($1, $2, 'Cliente BR', '11222333000181', now())`, []any{brCustomer, brOrg}},
+		{`INSERT INTO customers (id, organization_id, name, document, created_at) VALUES ($1, $2, 'Cliente US', '123456789', now())`, []any{usCustomer, usOrg}},
+	} {
+		if _, err := testDB.ExecContext(ctx, q.sql, q.args...); err != nil {
+			t.Fatalf("seed the old schema: %v\n%s", err, q.sql)
+		}
+	}
+
+	raw, err := os.ReadFile("migrations/" + migration)
+	if err != nil {
+		t.Fatalf("read migration: %v", err)
+	}
+	if _, err := testDB.ExecContext(ctx, string(raw)); err != nil {
+		t.Fatalf("run %s over the old customers: %v", migration, err)
+	}
+
+	for id, want := range map[uuid.UUID][2]string{
+		brCustomer: {"BR", "11222333000181"},
+		usCustomer: {"US", "123456789"},
+	} {
+		var country, document string
+		if err := testDB.QueryRowContext(ctx, `SELECT country, document FROM customers WHERE id = $1`, id).Scan(&country, &document); err != nil {
+			t.Fatalf("read the customer: %v", err)
+		}
+		if country != want[0] || document != want[1] {
+			t.Errorf("customer = %q %q, want %q %q", country, document, want[0], want[1])
+		}
+	}
+
+	// Um cliente novo sem país começa em BR, e o país é obrigatório.
+	if _, err := testDB.ExecContext(ctx, `INSERT INTO customers (id, organization_id, name, created_at) VALUES ($1, $2, 'Novo', now())`, uuid.New(), brOrg); err != nil {
+		t.Fatalf("insert a customer without a country: %v", err)
+	}
+	if _, err := testDB.ExecContext(ctx, `INSERT INTO customers (id, organization_id, name, country, created_at) VALUES ($1, $2, 'Sem país', NULL, now())`, uuid.New(), brOrg); err == nil {
+		t.Error("a NULL country must be refused after the migration")
+	}
+}

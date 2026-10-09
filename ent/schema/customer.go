@@ -20,7 +20,11 @@ func (Customer) Fields() []ent.Field {
 		field.UUID("id", uuid.UUID{}).Default(uuid.New).Immutable(),
 		field.UUID("organization_id", uuid.UUID{}),
 		field.String("name"),
-		// CNPJ sem máscara.
+		// O país do cliente (código ISO 3166-1: BR, US, DE...), que começa no da organização. Decide a regra do documento: o
+		// CNPJ no Brasil e o EIN nos EUA são conferidos; nos outros países o documento é texto livre. Quem decide é
+		// internal/country.
+		field.String("country").Default("BR"),
+		// O documento fiscal do cliente, sem máscara quando o país tem regra (CNPJ, EIN).
 		field.String("document").Optional(),
 		field.String("contact_name").Optional(),
 		field.String("contact_email").Optional(),

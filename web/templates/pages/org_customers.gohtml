@@ -21,14 +21,18 @@
     <div class="table-wrap" x-show="customers.length > 0">
       <table>
         <thead>
-          <tr><th>{{.T "org.customers.customer"}}</th><th>{{.T "org.fields.cnpj"}}</th><th>{{.T "org.customers.contact"}}</th><th>{{.T "org.customers.projects"}}</th><th class="actions"><span class="sr-only">{{.T "common.actions"}}</span></th></tr>
+          <tr><th>{{.T "org.customers.customer"}}</th><th>{{.T "countries.generic.legal_id.label"}}</th><th>{{.T "org.customers.contact"}}</th><th>{{.T "org.customers.projects"}}</th><th class="actions"><span class="sr-only">{{.T "common.actions"}}</span></th></tr>
         </thead>
         <tbody>
           <template x-for="c in customers" :key="c.id">
             <tr>
-              <td class="nowrap" x-text="c.name"></td>
               <td class="nowrap">
-                <span class="mono num" x-show="c.document" x-text="WTT.fmt.cnpj(c.document)"></span>
+                <div x-text="c.name"></div>
+                <div class="muted small" x-text="WTT.countries.name(c.country)"></div>
+              </td>
+              <td class="nowrap">
+                <span class="muted small" x-show="c.document && WTT.countries.legalId(c.country).field" x-text="WTT.countries.legalId(c.country).label"></span>
+                <span class="mono num" x-show="c.document" x-text="WTT.fmt.taxId(c.document, c.country)"></span>
                 <span class="muted" x-show="!c.document" x-text="WTT.notInformed"></span>
               </td>
               <td>
@@ -62,10 +66,7 @@
         <label for="customer-name">{{.T "common.name"}}</label>
         <input id="customer-name" type="text" required maxlength="120" x-model="draft.name" data-autofocus>
       </div>
-      <div class="field">
-        <label for="customer-document">{{.T "org.fields.cnpj"}}</label>
-        <input id="customer-document" type="text" class="mono" maxlength="18" placeholder="{{.T "org.settings.cnpj_placeholder"}}" x-model="draft.document">
-      </div>
+      {{template "customer_document" (dict "Data" . "Model" "draft" "Id" "customer" "Country" true)}}
       <div class="field">
         <label for="customer-contact">{{.T "org.customers.contact_person"}}</label>
         <input id="customer-contact" type="text" maxlength="120" x-model="draft.contact_name">

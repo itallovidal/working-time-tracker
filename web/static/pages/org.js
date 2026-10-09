@@ -635,10 +635,27 @@ document.addEventListener('alpine:init', () => {
     },
   }));
 
-  const blankCustomer = () => ({ name: '', document: '', contact_name: '', contact_email: '', contact_phone: '' });
+  // O cliente novo começa no país da organização.
+  const blankCustomer = () => ({ name: '', country: org.country || 'BR', document: '', contact_name: '', contact_email: '', contact_phone: '' });
+
+  // customerDocument é o que o modal de cliente e a etapa dos clientes das boas-vindas têm em comum (o parcial
+  // customer_document): a lista de países, o documento fiscal do país escolhido (rótulo, máscara, placeholder) e a
+  // máscara aplicada enquanto se digita. model é o nome do objeto do cliente no componente ('draft' ou 'customer').
+  const customerDocument = () => ({
+    // Os países do cadastro primeiro, e depois todos os outros por nome: o cliente pode ser de qualquer lugar.
+    customerCountries: WTT.countries.list().map((c) => ({ code: c.code, name: WTT.countries.name(c.code) })).concat(WTT.countries.others()),
+    docId(code) { return WTT.countries.legalId(code); },
+    maskDoc(model) {
+      const id = WTT.countries.legalId(this[model].country);
+      if (id.mask) this[model].document = WTT.fmt.mask(this[model].document, id.mask);
+    },
+    // O documento de um país não vale em outro: trocar o país esvazia o campo.
+    docCountryChanged(model) { this[model].document = ''; },
+  });
 
   Alpine.data('orgCustomers', () => ({
     ...form(),
+    ...customerDocument(),
     loading: true,
     customers: [],
     editing: null, // id do cliente em edição; null quando o formulário cria um novo
@@ -659,7 +676,8 @@ document.addEventListener('alpine:init', () => {
       this.editing = c ? c.id : null;
       this.draft = c ? {
         name: c.name,
-        document: WTT.fmt.cnpj(c.document),
+        country: c.country,
+        document: WTT.fmt.taxId(c.document, c.country),
         contact_name: c.contact_name,
         contact_email: c.contact_email,
         contact_phone: c.contact_phone,
@@ -698,6 +716,7 @@ document.addEventListener('alpine:init', () => {
   // no servidor, e elas não voltam; recarregar no meio, sem fechar, recomeça da etapa 1, já com o que foi salvo.
   Alpine.data('onboarding', () => ({
     ...form(),
+    ...customerDocument(),
     step: 1,
     orgName: me.organization_name,
     timezones: timezoneOptions(org.timezone),

@@ -67,11 +67,9 @@
           <label for="ob-customer-name">{{.T "common.name"}}</label>
           <input id="ob-customer-name" type="text" required maxlength="120" x-model="customer.name" data-autofocus data-step="2">
         </div>
+        {{/* O país do cliente é o da organização (o seletor está na aba Clientes); o documento segue o país. */}}
         <div class="fields">
-          <div class="field">
-            <label for="ob-customer-document">{{.T "org.fields.cnpj"}}</label>
-            <input id="ob-customer-document" type="text" class="mono" maxlength="18" placeholder="{{.T "org.settings.cnpj_placeholder"}}" x-model="customer.document">
-          </div>
+          {{template "customer_document" (dict "Data" . "Model" "customer" "Id" "ob-customer" "Country" false)}}
           <div class="field">
             <label for="ob-customer-email">{{.T "common.email"}}</label>
             <input id="ob-customer-email" type="email" maxlength="255" x-model="customer.contact_email">

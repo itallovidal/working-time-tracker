@@ -62,11 +62,15 @@ var people = []struct {
 	{"larissa", "Larissa Freitas", "larissa@example.com", "member", 40},
 }
 
-var customers = []struct{ key, name, document, contact, email, phone string }{
-	{"bompreco", "Rede Bom Preço", "12.ABC.345/01DE-35", "Marcos Dias", "marcos@bompreco.example", "+55 (11) 3003-1000"},
-	{"vidaplena", "Clínica Vida Plena", "11.444.777/0001-61", "Renata Alves", "renata@vidaplena.example", "+55 (48) 3003-2200"},
-	{"pagai", "Pagaí Pagamentos", "", "Tiago Nunes", "tiago@pagai.example", ""},
-	{"atacado", "Atacado Norte", "45.723.174/0001-10", "Sérgio Matos", "sergio@atacadonorte.example", "+55 (92) 3003-4400"},
+// Os clientes. country vazio é o da organização (o Brasil). Os dois últimos são de fora, para a demonstração mostrar o
+// documento de cada país: o EIN dos EUA, conferido, e o de um país sem regra (a Alemanha), texto livre.
+var customers = []struct{ key, name, country, document, contact, email, phone string }{
+	{"bompreco", "Rede Bom Preço", "", "12.ABC.345/01DE-35", "Marcos Dias", "marcos@bompreco.example", "+55 (11) 3003-1000"},
+	{"vidaplena", "Clínica Vida Plena", "", "11.444.777/0001-61", "Renata Alves", "renata@vidaplena.example", "+55 (48) 3003-2200"},
+	{"pagai", "Pagaí Pagamentos", "", "", "Tiago Nunes", "tiago@pagai.example", ""},
+	{"atacado", "Atacado Norte", "", "45.723.174/0001-10", "Sérgio Matos", "sergio@atacadonorte.example", "+55 (92) 3003-4400"},
+	{"lonestar", "Lone Star Retail", "US", "74-2345678", "Dana Whitfield", "dana@lonestar.example", "+1 (512) 555-0142"},
+	{"beispiel", "Beispiel Handel GmbH", "DE", "DE 811128135", "Jana Becker", "jana@beispiel.example", "+49 30 5550 1420"},
 }
 
 // Os projetos. customer vazio é um projeto interno, sem valor cobrado. Em rates
@@ -413,6 +417,7 @@ func main() {
 	for _, c := range customers {
 		created, err := customerSvc.Create(orgID, customer.Input{
 			Name:         text(c.name),
+			Country:      optionalText(c.country),
 			Document:     text(c.document),
 			ContactName:  text(c.contact),
 			ContactEmail: text(c.email),

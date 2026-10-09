@@ -48,8 +48,12 @@ func init() {
 	allocation.DefaultID = allocationDescID.Default.(func() uuid.UUID)
 	customerFields := schema.Customer{}.Fields()
 	_ = customerFields
+	// customerDescCountry is the schema descriptor for country field.
+	customerDescCountry := customerFields[3].Descriptor()
+	// customer.DefaultCountry holds the default value on creation for the country field.
+	customer.DefaultCountry = customerDescCountry.Default.(string)
 	// customerDescCreatedAt is the schema descriptor for created_at field.
-	customerDescCreatedAt := customerFields[7].Descriptor()
+	customerDescCreatedAt := customerFields[8].Descriptor()
 	// customer.DefaultCreatedAt holds the default value on creation for the created_at field.
 	customer.DefaultCreatedAt = customerDescCreatedAt.Default.(func() time.Time)
 	// customerDescID is the schema descriptor for id field.

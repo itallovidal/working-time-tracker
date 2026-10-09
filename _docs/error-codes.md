@@ -93,7 +93,8 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 |---|---|---|---|---|
 | `customer.contact_too_long` | 400 | — | `o nome do contato pode ter até 120 caracteres` | `the contact name can have up to 120 characters` |
 | `customer.has_projects` | 400 | — | `este cliente tem projetos; tire o cliente dos projetos antes de excluir` | `this customer has projects; remove the customer from the projects before deleting` |
-| `customer.invalid_document` | 400 | — | `CNPJ inválido: confira os números e os dígitos verificadores` | `invalid CNPJ: check the numbers and the check digits` |
+| `customer.invalid_country` | 400 | — | `país inválido: use um código de país como BR, US ou DE` | `invalid country: use a country code like BR, US or DE` |
+| `customer.invalid_document` | 400 | — | `documento fiscal inválido para o país do cliente: confira os números (CNPJ no Brasil, EIN nos EUA)` | `invalid tax ID for the customer's country: check the numbers (CNPJ in Brazil, EIN in the US)` |
 | `customer.invalid_email` | 400 | — | `informe um email de contato válido` | `enter a valid contact email` |
 | `customer.invalid_organization` | 400 | — | `organização inválida` | `invalid organization` |
 | `customer.invalid_phone` | 400 | — | `telefone inválido: use números, espaços, +, parênteses e hífen` | `invalid phone: use digits, spaces, +, parentheses and hyphen` |

@@ -384,7 +384,14 @@ Content-Type: application/json
   "contact_phone": "+55 (11) 3003-1000"
 }
 ```
-Só `name` é obrigatório. `document` é o CNPJ, com ou sem máscara: os dígitos verificadores são conferidos e a resposta traz sem máscara.
+Só `name` é obrigatório. `country` é o país do cliente, o código ISO 3166-1 (`BR`, `US`, `DE`…): sem ele (ou vazio, na criação), é o país da organização, e na edição nunca fica vazio (`customer.invalid_country`). O `document` é o documento fiscal e se confere pela regra do país **do cliente**: `BR`, o CNPJ (com ou sem máscara, com os dígitos verificadores conferidos, inclusive no formato alfanumérico); `US`, o EIN (`XX-XXXXXXX`); qualquer outro país, texto livre de até 32 caracteres (letras, números, espaço, `.`, `-`, `/` e `_`), sem conferência. A resposta traz o documento sem máscara. Trocar o país de um cliente confere o documento que já está guardado pelo país novo: se não serve, o pedido é recusado (`customer.invalid_document`), e mandar o `document` (ou `""`) no mesmo pedido resolve.
+
+```http
+POST /api/orgs/:orgId/customers
+Content-Type: application/json
+
+{ "name": "Acme Inc", "country": "US", "document": "12-3456789" }
+```
 
 ---
 

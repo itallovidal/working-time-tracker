@@ -7,6 +7,7 @@ import (
 
 	"working-time-tracker/ent"
 	entcustomer "working-time-tracker/ent/customer"
+	entorganization "working-time-tracker/ent/organization"
 	"working-time-tracker/internal/database"
 )
 
@@ -22,6 +23,7 @@ func (s *Store) Create(c *Customer) error {
 	created, err := s.client.Customer.Create().
 		SetOrganizationID(c.OrganizationID).
 		SetName(c.Name).
+		SetCountry(c.Country).
 		SetDocument(c.Document).
 		SetContactName(c.ContactName).
 		SetContactEmail(c.ContactEmail).
@@ -77,12 +79,26 @@ func (s *Store) GetByID(id string) (*Customer, error) {
 func (s *Store) Update(c *Customer) error {
 	_, err := s.client.Customer.UpdateOneID(c.ID).
 		SetName(c.Name).
+		SetCountry(c.Country).
 		SetDocument(c.Document).
 		SetContactName(c.ContactName).
 		SetContactEmail(c.ContactEmail).
 		SetContactPhone(c.ContactPhone).
 		Save(context.Background())
 	return err
+}
+
+// OrgCountry devolve o país da organização, que é o do cliente novo quando ninguém escolhe outro. Organização que não
+// existe é ErrInvalidOrganization.
+func (s *Store) OrgCountry(orgID uuid.UUID) (string, error) {
+	code, err := s.client.Organization.Query().
+		Where(entorganization.IDEQ(orgID)).
+		Select(entorganization.FieldCountry).
+		String(context.Background())
+	if ent.IsNotFound(err) {
+		return "", ErrInvalidOrganization
+	}
+	return code, err
 }
 
 func (s *Store) Delete(id uuid.UUID) error {
@@ -94,6 +110,7 @@ func toDomain(e *ent.Customer) *Customer {
 		ID:             e.ID,
 		OrganizationID: e.OrganizationID,
 		Name:           e.Name,
+		Country:        e.Country,
 		Document:       e.Document,
 		ContactName:    e.ContactName,
 		ContactEmail:   e.ContactEmail,

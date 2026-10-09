@@ -58,6 +58,20 @@ func (_u *CustomerUpdate) SetNillableName(v *string) *CustomerUpdate {
 	return _u
 }
 
+// SetCountry sets the "country" field.
+func (_u *CustomerUpdate) SetCountry(v string) *CustomerUpdate {
+	_u.mutation.SetCountry(v)
+	return _u
+}
+
+// SetNillableCountry sets the "country" field if the given value is not nil.
+func (_u *CustomerUpdate) SetNillableCountry(v *string) *CustomerUpdate {
+	if v != nil {
+		_u.SetCountry(*v)
+	}
+	return _u
+}
+
 // SetDocument sets the "document" field.
 func (_u *CustomerUpdate) SetDocument(v string) *CustomerUpdate {
 	_u.mutation.SetDocument(v)
@@ -240,6 +254,9 @@ func (_u *CustomerUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if value, ok := _u.mutation.Name(); ok {
 		_spec.SetField(customer.FieldName, field.TypeString, value)
 	}
+	if value, ok := _u.mutation.Country(); ok {
+		_spec.SetField(customer.FieldCountry, field.TypeString, value)
+	}
 	if value, ok := _u.mutation.Document(); ok {
 		_spec.SetField(customer.FieldDocument, field.TypeString, value)
 	}
@@ -382,6 +399,20 @@ func (_u *CustomerUpdateOne) SetName(v string) *CustomerUpdateOne {
 func (_u *CustomerUpdateOne) SetNillableName(v *string) *CustomerUpdateOne {
 	if v != nil {
 		_u.SetName(*v)
+	}
+	return _u
+}
+
+// SetCountry sets the "country" field.
+func (_u *CustomerUpdateOne) SetCountry(v string) *CustomerUpdateOne {
+	_u.mutation.SetCountry(v)
+	return _u
+}
+
+// SetNillableCountry sets the "country" field if the given value is not nil.
+func (_u *CustomerUpdateOne) SetNillableCountry(v *string) *CustomerUpdateOne {
+	if v != nil {
+		_u.SetCountry(*v)
 	}
 	return _u
 }
@@ -597,6 +628,9 @@ func (_u *CustomerUpdateOne) sqlSave(ctx context.Context) (_node *Customer, err 
 	}
 	if value, ok := _u.mutation.Name(); ok {
 		_spec.SetField(customer.FieldName, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.Country(); ok {
+		_spec.SetField(customer.FieldCountry, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.Document(); ok {
 		_spec.SetField(customer.FieldDocument, field.TypeString, value)

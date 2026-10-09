@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"working-time-tracker/internal/country"
 	"working-time-tracker/internal/domain/person"
 	"working-time-tracker/internal/validate"
 )
@@ -26,6 +27,14 @@ func (s *Service) Create(orgID string, in Input) (*Customer, error) {
 	c := &Customer{OrganizationID: orgUID}
 	if in.Name == nil {
 		return nil, ErrNameRequired
+	}
+	// O país do cliente novo é o da organização, a menos que venha outro.
+	if in.Country == nil || strings.TrimSpace(*in.Country) == "" {
+		orgCountry, err := s.store.OrgCountry(orgUID)
+		if err != nil {
+			return nil, err
+		}
+		in.Country = &orgCountry
 	}
 	if err := apply(c, in); err != nil {
 		return nil, err
@@ -82,16 +91,34 @@ func apply(c *Customer, in Input) error {
 		}
 		c.Name = name
 	}
-	if in.Document != nil {
+	// O país vem antes do documento, que se confere pela regra dele. Aceita os países do cadastro e qualquer código ISO.
+	countryChanged := false
+	if in.Country != nil {
+		code, ok := country.CustomerCountry(*in.Country)
+		if !ok {
+			return ErrInvalidCountry
+		}
+		countryChanged = code != c.Country
+		c.Country = code
+	}
+	switch {
+	case in.Document != nil:
 		v := strings.TrimSpace(*in.Document)
 		if v != "" {
-			normalized, ok := validate.CNPJ(v)
+			normalized, ok := country.NormalizeTaxID(c.Country, v)
 			if !ok {
 				return ErrInvalidDocument
 			}
 			v = normalized
 		}
 		c.Document = v
+	case countryChanged && c.Document != "":
+		// O documento guardado é conferido pelo país novo, e um que não serve é recusado: nada é apagado em silêncio.
+		normalized, ok := country.NormalizeTaxID(c.Country, c.Document)
+		if !ok {
+			return ErrInvalidDocument
+		}
+		c.Document = normalized
 	}
 	if in.ContactName != nil {
 		v := strings.TrimSpace(*in.ContactName)

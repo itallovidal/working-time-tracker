@@ -477,7 +477,7 @@ help:
       tip: "The currency only changes how amounts are shown; the app does not convert between currencies."
     customers:
       title: Register the customers
-      text: "A customer is who hires your team. Only the name is required; CNPJ, contact person, email and phone are optional."
+      text: "A customer is who hires your team. Only the name is required; the country (which starts as the organization's), the tax ID (CNPJ in Brazil, EIN in the US), contact person, email and phone are optional."
       tip: "This step is optional: a project without a customer is an internal project, and the customer can be picked later, in the project settings."
     project:
       title: Create the first project
@@ -529,7 +529,7 @@ help:
       role: "Only the owner makes someone an admin, or back to a member."
     org_customers:
       title: "Organization: Customers"
-      text: "The register of who hires the organization: name, CNPJ, contact person, email and phone. The tab only appears for whoever looks after customers."
+      text: "The register of who hires the organization: name, country, tax ID (CNPJ in Brazil, EIN in the US), contact person, email and phone. The tab only appears for whoever looks after customers."
       actions: "“New customer” registers one; each row has the actions to edit and delete."
       link: "A customer is linked to a project in the project settings, together with the rate billed per hour."
     org_projects:
@@ -745,6 +745,7 @@ org:
   customers:
     intro: Who hires the organization. Each project can have a customer and a rate billed per hour, set in the project settings.
     new: New customer
+    country: Country
     edit_title: Edit customer
     loading: Loading customers…
     empty: No customers yet
@@ -1488,7 +1489,8 @@ errors:
   customer:
     contact_too_long: "the contact name can have up to 120 characters"
     has_projects: "this customer has projects; remove the customer from the projects before deleting"
-    invalid_document: "invalid CNPJ: check the numbers and the check digits"
+    invalid_country: "invalid country: use a country code like BR, US or DE"
+    invalid_document: "invalid tax ID for the customer's country: check the numbers (CNPJ in Brazil, EIN in the US)"
     invalid_email: "enter a valid contact email"
     invalid_organization: "invalid organization"
     invalid_phone: "invalid phone: use digits, spaces, +, parentheses and hyphen"

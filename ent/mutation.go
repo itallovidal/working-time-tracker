@@ -840,6 +840,7 @@ type CustomerMutation struct {
 	typ                 string
 	id                  *uuid.UUID
 	name                *string
+	country             *string
 	document            *string
 	contact_name        *string
 	contact_email       *string
@@ -1030,6 +1031,42 @@ func (m *CustomerMutation) OldName(ctx context.Context) (v string, err error) {
 // ResetName resets all changes to the "name" field.
 func (m *CustomerMutation) ResetName() {
 	m.name = nil
+}
+
+// SetCountry sets the "country" field.
+func (m *CustomerMutation) SetCountry(s string) {
+	m.country = &s
+}
+
+// Country returns the value of the "country" field in the mutation.
+func (m *CustomerMutation) Country() (r string, exists bool) {
+	v := m.country
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCountry returns the old "country" field's value of the Customer entity.
+// If the Customer object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CustomerMutation) OldCountry(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCountry is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCountry requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCountry: %w", err)
+	}
+	return oldValue.Country, nil
+}
+
+// ResetCountry resets all changes to the "country" field.
+func (m *CustomerMutation) ResetCountry() {
+	m.country = nil
 }
 
 // SetDocument sets the "document" field.
@@ -1379,12 +1416,15 @@ func (m *CustomerMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *CustomerMutation) Fields() []string {
-	fields := make([]string, 0, 7)
+	fields := make([]string, 0, 8)
 	if m.organization != nil {
 		fields = append(fields, customer.FieldOrganizationID)
 	}
 	if m.name != nil {
 		fields = append(fields, customer.FieldName)
+	}
+	if m.country != nil {
+		fields = append(fields, customer.FieldCountry)
 	}
 	if m.document != nil {
 		fields = append(fields, customer.FieldDocument)
@@ -1413,6 +1453,8 @@ func (m *CustomerMutation) Field(name string) (ent.Value, bool) {
 		return m.OrganizationID()
 	case customer.FieldName:
 		return m.Name()
+	case customer.FieldCountry:
+		return m.Country()
 	case customer.FieldDocument:
 		return m.Document()
 	case customer.FieldContactName:
@@ -1436,6 +1478,8 @@ func (m *CustomerMutation) OldField(ctx context.Context, name string) (ent.Value
 		return m.OldOrganizationID(ctx)
 	case customer.FieldName:
 		return m.OldName(ctx)
+	case customer.FieldCountry:
+		return m.OldCountry(ctx)
 	case customer.FieldDocument:
 		return m.OldDocument(ctx)
 	case customer.FieldContactName:
@@ -1468,6 +1512,13 @@ func (m *CustomerMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetName(v)
+		return nil
+	case customer.FieldCountry:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCountry(v)
 		return nil
 	case customer.FieldDocument:
 		v, ok := value.(string)
@@ -1585,6 +1636,9 @@ func (m *CustomerMutation) ResetField(name string) error {
 		return nil
 	case customer.FieldName:
 		m.ResetName()
+		return nil
+	case customer.FieldCountry:
+		m.ResetCountry()
 		return nil
 	case customer.FieldDocument:
 		m.ResetDocument()

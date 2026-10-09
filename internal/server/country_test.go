@@ -141,3 +141,40 @@ func TestPages_CountriesReachTheBrowser(t *testing.T) {
 		t.Errorf("BOOT org = country %v, ein %v; want BR and an empty EIN", org["country"], org["ein"])
 	}
 }
+
+// O cliente tem país (o da organização, se ninguém escolhe outro), e o documento dele é conferido por esse país.
+func TestCustomers_CountryAndDocument(t *testing.T) {
+	e := newServer(t)
+	admin := signup(t, e, "Org", "ana@test.com")
+	path := "/api/orgs/" + admin.orgID + "/customers"
+
+	post := func(body string) map[string]any {
+		t.Helper()
+		rec := do(e, "POST", path, body, admin.session)
+		if rec.Code != http.StatusCreated {
+			t.Fatalf("create %s = %d: %s", body, rec.Code, rec.Body.String())
+		}
+		return decode(t, rec)
+	}
+	if c := post(`{"name":"Padrão","document":"11.222.333/0001-81"}`); c["country"] != "BR" || c["document"] != "11222333000181" {
+		t.Errorf("default customer = %v", c)
+	}
+	if c := post(`{"name":"Acme Inc","country":"US","document":"12-3456789"}`); c["country"] != "US" || c["document"] != "123456789" {
+		t.Errorf("US customer = %v", c)
+	}
+	if c := post(`{"name":"Beispiel","country":"de","document":"DE 123456789"}`); c["country"] != "DE" || c["document"] != "DE 123456789" {
+		t.Errorf("DE customer = %v", c)
+	}
+
+	for body, code := range map[string]string{
+		`{"name":"X","country":"US","document":"11.222.333/0001-81"}`: "customer.invalid_document",
+		`{"name":"X","country":"ZZ"}`:                                 "customer.invalid_country",
+	} {
+		if rec := do(e, "POST", path, body, admin.session); rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), `"`+code+`"`) {
+			t.Errorf("%s = %d %s, want 400 %s", body, rec.Code, rec.Body.String(), code)
+		}
+	}
+	if list := decodeList(t, do(e, "GET", path, "", admin.session)); len(list) != 3 {
+		t.Errorf("customers = %d, want the 3 valid ones", len(list))
+	}
+}

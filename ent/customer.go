@@ -23,6 +23,8 @@ type Customer struct {
 	OrganizationID uuid.UUID `json:"organization_id,omitempty"`
 	// Name holds the value of the "name" field.
 	Name string `json:"name,omitempty"`
+	// Country holds the value of the "country" field.
+	Country string `json:"country,omitempty"`
 	// Document holds the value of the "document" field.
 	Document string `json:"document,omitempty"`
 	// ContactName holds the value of the "contact_name" field.
@@ -75,7 +77,7 @@ func (*Customer) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case customer.FieldName, customer.FieldDocument, customer.FieldContactName, customer.FieldContactEmail, customer.FieldContactPhone:
+		case customer.FieldName, customer.FieldCountry, customer.FieldDocument, customer.FieldContactName, customer.FieldContactEmail, customer.FieldContactPhone:
 			values[i] = new(sql.NullString)
 		case customer.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
@@ -113,6 +115,12 @@ func (_m *Customer) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field name", values[i])
 			} else if value.Valid {
 				_m.Name = value.String
+			}
+		case customer.FieldCountry:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field country", values[i])
+			} else if value.Valid {
+				_m.Country = value.String
 			}
 		case customer.FieldDocument:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -195,6 +203,9 @@ func (_m *Customer) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("name=")
 	builder.WriteString(_m.Name)
+	builder.WriteString(", ")
+	builder.WriteString("country=")
+	builder.WriteString(_m.Country)
 	builder.WriteString(", ")
 	builder.WriteString("document=")
 	builder.WriteString(_m.Document)

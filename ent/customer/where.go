@@ -66,6 +66,11 @@ func Name(v string) predicate.Customer {
 	return predicate.Customer(sql.FieldEQ(FieldName, v))
 }
 
+// Country applies equality check predicate on the "country" field. It's identical to CountryEQ.
+func Country(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldEQ(FieldCountry, v))
+}
+
 // Document applies equality check predicate on the "document" field. It's identical to DocumentEQ.
 func Document(v string) predicate.Customer {
 	return predicate.Customer(sql.FieldEQ(FieldDocument, v))
@@ -174,6 +179,71 @@ func NameEqualFold(v string) predicate.Customer {
 // NameContainsFold applies the ContainsFold predicate on the "name" field.
 func NameContainsFold(v string) predicate.Customer {
 	return predicate.Customer(sql.FieldContainsFold(FieldName, v))
+}
+
+// CountryEQ applies the EQ predicate on the "country" field.
+func CountryEQ(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldEQ(FieldCountry, v))
+}
+
+// CountryNEQ applies the NEQ predicate on the "country" field.
+func CountryNEQ(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldNEQ(FieldCountry, v))
+}
+
+// CountryIn applies the In predicate on the "country" field.
+func CountryIn(vs ...string) predicate.Customer {
+	return predicate.Customer(sql.FieldIn(FieldCountry, vs...))
+}
+
+// CountryNotIn applies the NotIn predicate on the "country" field.
+func CountryNotIn(vs ...string) predicate.Customer {
+	return predicate.Customer(sql.FieldNotIn(FieldCountry, vs...))
+}
+
+// CountryGT applies the GT predicate on the "country" field.
+func CountryGT(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldGT(FieldCountry, v))
+}
+
+// CountryGTE applies the GTE predicate on the "country" field.
+func CountryGTE(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldGTE(FieldCountry, v))
+}
+
+// CountryLT applies the LT predicate on the "country" field.
+func CountryLT(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldLT(FieldCountry, v))
+}
+
+// CountryLTE applies the LTE predicate on the "country" field.
+func CountryLTE(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldLTE(FieldCountry, v))
+}
+
+// CountryContains applies the Contains predicate on the "country" field.
+func CountryContains(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldContains(FieldCountry, v))
+}
+
+// CountryHasPrefix applies the HasPrefix predicate on the "country" field.
+func CountryHasPrefix(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldHasPrefix(FieldCountry, v))
+}
+
+// CountryHasSuffix applies the HasSuffix predicate on the "country" field.
+func CountryHasSuffix(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldHasSuffix(FieldCountry, v))
+}
+
+// CountryEqualFold applies the EqualFold predicate on the "country" field.
+func CountryEqualFold(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldEqualFold(FieldCountry, v))
+}
+
+// CountryContainsFold applies the ContainsFold predicate on the "country" field.
+func CountryContainsFold(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldContainsFold(FieldCountry, v))
 }
 
 // DocumentEQ applies the EQ predicate on the "document" field.

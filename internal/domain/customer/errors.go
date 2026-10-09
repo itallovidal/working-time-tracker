@@ -14,6 +14,7 @@ var (
 	ErrNameTooLong         = apperr.New("customer.name_too_long", http.StatusBadRequest)
 	ErrContactTooLong      = apperr.New("customer.contact_too_long", http.StatusBadRequest)
 	ErrInvalidDocument     = apperr.New("customer.invalid_document", http.StatusBadRequest)
+	ErrInvalidCountry      = apperr.New("customer.invalid_country", http.StatusBadRequest)
 	ErrInvalidEmail        = apperr.New("customer.invalid_email", http.StatusBadRequest)
 	ErrInvalidPhone        = apperr.New("customer.invalid_phone", http.StatusBadRequest)
 	ErrHasProjects         = apperr.New("customer.has_projects", http.StatusBadRequest)

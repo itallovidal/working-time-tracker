@@ -35,6 +35,20 @@ func (_c *CustomerCreate) SetName(v string) *CustomerCreate {
 	return _c
 }
 
+// SetCountry sets the "country" field.
+func (_c *CustomerCreate) SetCountry(v string) *CustomerCreate {
+	_c.mutation.SetCountry(v)
+	return _c
+}
+
+// SetNillableCountry sets the "country" field if the given value is not nil.
+func (_c *CustomerCreate) SetNillableCountry(v *string) *CustomerCreate {
+	if v != nil {
+		_c.SetCountry(*v)
+	}
+	return _c
+}
+
 // SetDocument sets the "document" field.
 func (_c *CustomerCreate) SetDocument(v string) *CustomerCreate {
 	_c.mutation.SetDocument(v)
@@ -174,6 +188,10 @@ func (_c *CustomerCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (_c *CustomerCreate) defaults() {
+	if _, ok := _c.mutation.Country(); !ok {
+		v := customer.DefaultCountry
+		_c.mutation.SetCountry(v)
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := customer.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
@@ -191,6 +209,9 @@ func (_c *CustomerCreate) check() error {
 	}
 	if _, ok := _c.mutation.Name(); !ok {
 		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "Customer.name"`)}
+	}
+	if _, ok := _c.mutation.Country(); !ok {
+		return &ValidationError{Name: "country", err: errors.New(`ent: missing required field "Customer.country"`)}
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "Customer.created_at"`)}
@@ -236,6 +257,10 @@ func (_c *CustomerCreate) createSpec() (*Customer, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Name(); ok {
 		_spec.SetField(customer.FieldName, field.TypeString, value)
 		_node.Name = value
+	}
+	if value, ok := _c.mutation.Country(); ok {
+		_spec.SetField(customer.FieldCountry, field.TypeString, value)
+		_node.Country = value
 	}
 	if value, ok := _c.mutation.Document(); ok {
 		_spec.SetField(customer.FieldDocument, field.TypeString, value)

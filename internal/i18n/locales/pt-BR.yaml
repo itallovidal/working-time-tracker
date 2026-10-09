@@ -487,7 +487,7 @@ help:
       tip: "A moeda só muda como os valores aparecem; o app não converte entre moedas."
     customers:
       title: Cadastre os clientes
-      text: "Cliente é quem contrata o seu time. Só o nome é obrigatório; CNPJ, pessoa de contato, email e telefone são opcionais."
+      text: "Cliente é quem contrata o seu time. Só o nome é obrigatório; o país (que começa no da organização), o documento fiscal (CNPJ no Brasil, EIN nos EUA), a pessoa de contato, o email e o telefone são opcionais."
       tip: "Este passo é opcional: um projeto sem cliente é um projeto interno, e o cliente pode ser escolhido depois, nas configurações do projeto."
     project:
       title: Crie o primeiro projeto
@@ -539,7 +539,7 @@ help:
       role: "Só o dono torna alguém administrador, ou volta a membro."
     org_customers:
       title: "Organização: Clientes"
-      text: "O cadastro de quem contrata a organização: nome, CNPJ, pessoa de contato, email e telefone. A aba aparece só para quem cuida dos clientes."
+      text: "O cadastro de quem contrata a organização: nome, país, documento fiscal (CNPJ no Brasil, EIN nos EUA), pessoa de contato, email e telefone. A aba aparece só para quem cuida dos clientes."
       actions: "“Novo cliente” cadastra; cada linha tem as ações de editar e excluir."
       link: "O cliente é ligado a um projeto nas configurações do projeto, junto com o valor cobrado por hora."
     org_projects:
@@ -755,6 +755,7 @@ org:
   customers:
     intro: Quem contrata a organização. Cada projeto pode ter um cliente e um valor cobrado por hora, definidos nas configurações do projeto.
     new: Novo cliente
+    country: País
     edit_title: Editar cliente
     loading: Carregando clientes…
     empty: Nenhum cliente ainda
@@ -1498,7 +1499,8 @@ errors:
   customer:
     contact_too_long: "o nome do contato pode ter até 120 caracteres"
     has_projects: "este cliente tem projetos; tire o cliente dos projetos antes de excluir"
-    invalid_document: "CNPJ inválido: confira os números e os dígitos verificadores"
+    invalid_country: "país inválido: use um código de país como BR, US ou DE"
+    invalid_document: "documento fiscal inválido para o país do cliente: confira os números (CNPJ no Brasil, EIN nos EUA)"
     invalid_email: "informe um email de contato válido"
     invalid_organization: "organização inválida"
     invalid_phone: "telefone inválido: use números, espaços, +, parênteses e hífen"

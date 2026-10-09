@@ -19,6 +19,8 @@ const (
 	FieldOrganizationID = "organization_id"
 	// FieldName holds the string denoting the name field in the database.
 	FieldName = "name"
+	// FieldCountry holds the string denoting the country field in the database.
+	FieldCountry = "country"
 	// FieldDocument holds the string denoting the document field in the database.
 	FieldDocument = "document"
 	// FieldContactName holds the string denoting the contact_name field in the database.
@@ -56,6 +58,7 @@ var Columns = []string{
 	FieldID,
 	FieldOrganizationID,
 	FieldName,
+	FieldCountry,
 	FieldDocument,
 	FieldContactName,
 	FieldContactEmail,
@@ -74,6 +77,8 @@ func ValidColumn(column string) bool {
 }
 
 var (
+	// DefaultCountry holds the default value on creation for the "country" field.
+	DefaultCountry string
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 	// DefaultID holds the default value on creation for the "id" field.
@@ -96,6 +101,11 @@ func ByOrganizationID(opts ...sql.OrderTermOption) OrderOption {
 // ByName orders the results by the name field.
 func ByName(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldName, opts...).ToFunc()
+}
+
+// ByCountry orders the results by the country field.
+func ByCountry(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCountry, opts...).ToFunc()
 }
 
 // ByDocument orders the results by the document field.

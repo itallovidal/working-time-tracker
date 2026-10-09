@@ -1,0 +1,25 @@
+{{/* O país do cliente e o documento fiscal dele, para o modal de cliente e para a etapa dos clientes das boas-vindas.
+     O documento muda de rótulo, de máscara e de regra com o país (CNPJ no Brasil, EIN nos EUA, texto livre nos outros),
+     e vem do cadastro de países (BOOT.countries). O componente que inclui traz customerCountries, docId(código),
+     maskDoc(modelo) e docCountryChanged(modelo) (ver customerDocument em pages/org.js).
+     Parâmetros: Data (a página), Model (o nome do objeto do cliente no componente: "draft" ou "customer"), Id (o
+     prefixo dos ids dos campos) e Country (mostra o seletor de país; sem ele, o país é o que o objeto já tem). */}}
+{{define "customer_document"}}
+{{$m := .Model}}
+<div class="{{if .Country}}fields{{else}}stack{{end}}">
+  {{- if .Country}}
+  <div class="field">
+    <label for="{{.Id}}-country">{{.Data.T "org.customers.country"}}</label>
+    <select id="{{.Id}}-country" x-model="{{$m}}.country" @change="docCountryChanged('{{$m}}')">
+      <template x-for="c in customerCountries" :key="c.code">
+        <option :value="c.code" x-text="c.name" :selected="c.code === {{$m}}.country"></option>
+      </template>
+    </select>
+  </div>
+  {{- end}}
+  <div class="field">
+    <label for="{{.Id}}-document" x-text="docId({{$m}}.country).label"></label>
+    <input id="{{.Id}}-document" type="text" class="mono" :maxlength="docId({{$m}}.country).mask ? docId({{$m}}.country).mask.length : 32" :placeholder="docId({{$m}}.country).placeholder" x-model="{{$m}}.document" @input="maskDoc('{{$m}}')">
+  </div>
+</div>
+{{end}}
