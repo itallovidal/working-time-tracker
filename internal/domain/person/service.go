@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"working-time-tracker/internal/database"
 	"working-time-tracker/internal/domain/permission"
 )
 
@@ -66,7 +67,32 @@ func (s *Service) ListByOrg(orgID string) ([]Person, error) {
 	return s.store.ListByOrg(orgID)
 }
 
+// ListVisible lista as pessoas da organização que quem pede pode ver: com viewer, só ele e quem divide projeto
+// com ele; nil lista todas (admins e quem cuida de pessoas).
+func (s *Service) ListVisible(orgID string, viewer *uuid.UUID) ([]Person, error) {
+	return s.store.ListByOrgScoped(orgID, viewer)
+}
+
 func (s *Service) Get(id string) (*Person, error) {
+	return s.store.GetByID(id)
+}
+
+// GetVisible devolve a pessoa se quem pede pode vê-la, ou database.ErrNotFound: com viewer, só ele mesmo e quem
+// divide projeto com ele; nil vê todas.
+func (s *Service) GetVisible(id string, viewer *uuid.UUID) (*Person, error) {
+	if viewer != nil {
+		pid, err := uuid.Parse(id)
+		if err != nil {
+			return nil, database.ErrNotFound
+		}
+		ok, err := s.store.Visible(pid, *viewer)
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			return nil, database.ErrNotFound
+		}
+	}
 	return s.store.GetByID(id)
 }
 

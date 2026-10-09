@@ -25,6 +25,17 @@ O dono e os admins veem todos os projetos. Um membro **só vê aqueles em que es
 - Toda rota e toda página de um projeto, de uma tarefa, de um time ou de uma integração responde **404** a quem não está no projeto, a mesma resposta de um recurso que não existe (a diferença de 403 é de propósito: não revelar que ele existe). Isso vem antes de qualquer permissão do projeto, e vale para quem foi tirado dele na hora.
 - Quem cria um projeto sem ser admin (a organização lhe deu `projects.create`) entra nele com valor zero, senão o projeto que acabou de criar sumiria da lista dele.
 - O painel da primeira tela (`/me/overview`, `/me/tasks`) só conta as tarefas de projetos em que a pessoa está; as horas dela são sempre todas.
+- O menu **Projetos** da barra superior lista os mesmos projetos que a lista da API traz para a pessoa (todos, para os admins).
+- Tirar a pessoa do projeto encerra o ponto que ela tinha aberto nele, porque fora do projeto ela não alcança mais a rota de parar.
+
+### Quem vê quem
+
+A lista `GET /orgs/:id/persons` e `GET /persons/:id` trazem nome, e-mail, papel, permissões e jornada, e valem para:
+
+| Quem | Vê |
+|---|---|
+| Admin, quem tem `people.manage` e quem tem `collaborators.manage` em algum projeto em que está | Todas as pessoas da organização (cuidam de pessoas ou precisam achar quem entra num projeto) |
+| Os outros | Só a si mesmos e quem está em algum projeto deles (valor por hora ou time); as demais respondem `404` pelo id e não vêm na lista |
 
 ## Permissões do projeto
 

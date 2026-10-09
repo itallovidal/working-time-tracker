@@ -864,6 +864,27 @@
       },
     }));
 
+    // O menu Projetos da barra superior: a lista vem do window.BOOT (nav_projects), e a busca filtra pelo nome.
+    Alpine.data('navProjects', () => ({
+      open: false,
+      q: '',
+      items: WTT.boot.nav_projects || [],
+      currentId: (WTT.boot.project || {}).id || '',
+      get shown() {
+        const q = this.q.trim().toLowerCase();
+        return q ? this.items.filter((p) => p.name.toLowerCase().includes(q)) : this.items;
+      },
+      toggle() {
+        this.open = !this.open;
+        if (this.open) this.$nextTick(() => { if (this.$refs.q && this.items.length > 7) this.$refs.q.focus(); });
+        else this.q = '';
+      },
+      close() {
+        this.open = false;
+        this.q = '';
+      },
+    }));
+
     Alpine.data('logoutButton', () => ({
       busy: false,
       async logout() {

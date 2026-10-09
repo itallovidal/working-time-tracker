@@ -9,6 +9,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v5"
 
 	"working-time-tracker/internal/domain/auth"
@@ -34,6 +35,8 @@ type Data struct {
 	Section     string                     // item ativo da barra superior: home, people, organization, profile
 	Org         *organization.Organization // só nas páginas da organização
 	Project     *Crumb
+	// NavProjects são os projetos do menu da barra superior: todos, para os admins, e os da pessoa, para os outros.
+	NavProjects []Crumb
 	Task        *Crumb // só na página da tarefa, que tem cabeçalho próprio, sem as abas do projeto
 	Management  bool   // a página é da área de Gestão (só admins): a barra de abas mostra as abas dela
 	Tab         string // aba ativa do projeto (overview, tasks, time, teams, integrations, settings) ou da organização (about, people, customers, projects)
@@ -105,7 +108,7 @@ func (d Data) Granted() []string {
 
 // Boot vira window.BOOT na página: os dados iniciais que o JavaScript precisa.
 func (d Data) Boot() map[string]any {
-	boot := map[string]any{"me": d.Me, "lang": d.Lang, "can": d.Granted()}
+	boot := map[string]any{"me": d.Me, "lang": d.Lang, "can": d.Granted(), "nav_projects": append([]Crumb{}, d.NavProjects...)}
 	if d.Project != nil {
 		boot["project"] = d.Project
 	}
@@ -194,6 +197,7 @@ func (h *Handler) prepare(c *echo.Context, d Data) Data {
 	d.Lang = h.deps.I18n.Lang(c)
 	d.Path = c.Request().URL.RequestURI()
 	d.cat = h.deps.I18n
+	d.NavProjects = h.navProjects(d.Me)
 	if d.TitleKey != "" {
 		d.Title = d.T(d.TitleKey)
 		if d.TitleSuffix != "" {
@@ -201,6 +205,27 @@ func (h *Handler) prepare(c *echo.Context, d Data) Data {
 		}
 	}
 	return d
+}
+
+// navProjects lista os projetos do menu da barra superior: todos, para os admins, e só os em que está, para os
+// outros. Um erro não derruba a página: o menu fica vazio.
+func (h *Handler) navProjects(me *auth.Identity) []Crumb {
+	if me == nil || h.deps.Projects == nil {
+		return nil
+	}
+	var member *uuid.UUID
+	if !me.IsAdmin() {
+		member = &me.PersonID
+	}
+	items, err := h.deps.Projects.ListNav(me.OrganizationID.String(), member)
+	if err != nil {
+		return nil
+	}
+	out := make([]Crumb, len(items))
+	for i, it := range items {
+		out[i] = Crumb{ID: it.ID.String(), Name: it.Name}
+	}
+	return out
 }
 
 // NotFound é a página de 404 para rotas do navegador.

@@ -67,6 +67,10 @@ nav:
   label: Organização
   home: Início
   people: Colaboradores
+  projects: Projetos
+  projects_search: Buscar projeto
+  projects_no_match: Nenhum projeto com esse nome
+  projects_all: Ver todos os projetos
   organization: Organização
   help: Ajuda
   profile_sr: "Seu perfil:"
@@ -548,6 +552,9 @@ help:
     missing_tab:
       q: Não vejo uma aba ou um botão
       a: "É permissão. A Gestão do projeto e as abas Colaboradores, Clientes e Projetos da organização aparecem só para quem pode usá-las. Peça a um administrador (veja “Quem vê e faz o quê”)."
+    missing_project:
+      q: Não vejo um projeto
+      a: "Cada pessoa vê só os projetos em que foi posta, com valor por hora (o dono e os administradores veem todos). Abra o menu “Projetos” na barra superior: ele lista os seus, e “Ver todos os projetos” leva à lista da primeira tela. Se o projeto não está lá, peça a um administrador ou ao gerente do projeto para pôr você nele em Gestão › Colaboradores."
     invite:
       q: O convite não chegou por email
       a: "O app não envia email: copie o link na hora em que ele é gerado e mande você mesmo. Se ele venceu (7 dias) ou já foi usado, gere outro."

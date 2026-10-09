@@ -1,6 +1,7 @@
 package server_test
 
 import (
+	"context"
 	"net/http"
 	"slices"
 	"strings"
@@ -243,5 +244,93 @@ func TestProjectAccess_DashboardOnlyCountsTasksOfMyProjects(t *testing.T) {
 	}
 	if tasks := bodyOf("overview", admin.session)["tasks"].(map[string]any); tasks["total"] != float64(2) {
 		t.Errorf("admin's counts = %v, want two tasks", tasks)
+	}
+}
+
+// Estar só num time do projeto, sem valor por hora (o que só existe em dado de antes de o valor ser obrigatório),
+// também é estar nele: abre o projeto e o lista, mas não traz nenhuma permissão (o que dá permissão é a alocação).
+func TestProjectAccess_TeamOnlyIsStillInTheProject(t *testing.T) {
+	e := newServer(t)
+	admin := signup(t, e, "Org", "ana@test.com")
+	bia := invite(t, e, admin, "bia@test.com", "member")
+	alfa := createEmptyProject(t, e, admin, "Projeto Alfa")
+	beta := createEmptyProject(t, e, admin, "Projeto Beta")
+	allocate(t, e, admin, alfa, bia.id, 2000)
+	teamID := decode(t, do(e, "POST", "/api/projects/"+alfa+"/teams", `{"name":"Time"}`, admin.session))["id"].(string)
+	if rec := do(e, "POST", "/api/teams/"+teamID+"/members", `{"person_id":"`+bia.id+`"}`, admin.session); rec.Code != http.StatusCreated {
+		t.Fatalf("add to the team = %d: %s", rec.Code, rec.Body.String())
+	}
+	// O valor sai direto do banco, como em dado antigo: sobra só o time.
+	testClient.Allocation.Delete().ExecX(context.Background())
+
+	list := "/api/orgs/" + admin.orgID + "/projects"
+	if got := projectNames(t, decodeList(t, do(e, "GET", list, "", bia.session))); !slices.Equal(got, []string{"Projeto Alfa"}) {
+		t.Errorf("team-only Bia's projects = %v, want the Alfa", got)
+	}
+	if got := status(e, "GET", "/api/projects/"+alfa, "", bia.session); got != http.StatusOK {
+		t.Errorf("team-only Bia GET the Alfa = %d, want 200", got)
+	}
+	if got := status(e, "GET", "/api/projects/"+alfa+"/billing", "", bia.session); got != http.StatusForbidden {
+		t.Errorf("team-only Bia GET the Alfa billing = %d, want 403 (no permission, but in the project)", got)
+	}
+	if got := status(e, "GET", "/api/projects/"+beta, "", bia.session); got != http.StatusNotFound {
+		t.Errorf("team-only Bia GET the Beta = %d, want 404", got)
+	}
+}
+
+// Tirar alguém do projeto encerra o ponto que ela tinha aberto nele (fora do projeto ela já não o alcança, nem
+// para parar), mas não mexe no ponto aberto em outro projeto.
+func TestCollaborators_RemovalEndsTheOpenSession(t *testing.T) {
+	e := newServer(t)
+	admin := signup(t, e, "Org", "ana@test.com")
+	bia := invite(t, e, admin, "bia@test.com", "member")
+	alfa := createEmptyProject(t, e, admin, "Projeto Alfa")
+	beta := createEmptyProject(t, e, admin, "Projeto Beta")
+	allocate(t, e, admin, alfa, bia.id, 2000)
+	allocate(t, e, admin, beta, bia.id, 2000)
+	newTask := func(project, name string) string {
+		t.Helper()
+		body := `{"name":"` + name + `","assignee_id":"` + bia.id + `"}`
+		rec := do(e, "POST", "/api/projects/"+project+"/tasks", body, admin.session)
+		if rec.Code != http.StatusCreated {
+			t.Fatalf("create task = %d: %s", rec.Code, rec.Body.String())
+		}
+		return decode(t, rec)["id"].(string)
+	}
+	alfaTask, betaTask := newTask(alfa, "Tarefa do Alfa"), newTask(beta, "Tarefa do Beta")
+	clockIn := func(project, task string) {
+		t.Helper()
+		if rec := do(e, "POST", "/api/projects/"+project+"/work-sessions/clock-in", `{"task_id":"`+task+`"}`, bia.session); rec.Code != http.StatusCreated {
+			t.Fatalf("clock-in = %d: %s", rec.Code, rec.Body.String())
+		}
+	}
+	active := func() string {
+		return strings.TrimSpace(do(e, "GET", "/api/work-sessions/active", "", bia.session).Body.String())
+	}
+
+	// O ponto aberto no Alfa acaba quando a Bia sai do Alfa.
+	clockIn(alfa, alfaTask)
+	if active() == "null" {
+		t.Fatal("Bia has no open session after clocking in")
+	}
+	if rec := do(e, "DELETE", "/api/projects/"+alfa+"/collaborators/"+bia.id, "", admin.session); rec.Code != http.StatusNoContent {
+		t.Fatalf("remove Bia from the Alfa = %d: %s", rec.Code, rec.Body.String())
+	}
+	if got := active(); got != "null" {
+		t.Errorf("Bia's open session after being removed from its project = %s, want none", got)
+	}
+	sessions := decodeList(t, do(e, "GET", "/api/projects/"+alfa+"/work-sessions?person_id="+bia.id, "", admin.session))
+	if len(sessions) != 1 || sessions[0]["end_at"] == nil {
+		t.Errorf("the Alfa sessions after the removal = %v, want one, now closed (the time she worked is kept)", sessions)
+	}
+
+	// O ponto aberto no Beta não é tocado quando ela sai do Alfa (aqui, de novo).
+	allocate(t, e, admin, alfa, bia.id, 2000)
+	clockIn(beta, betaTask)
+	if rec := do(e, "DELETE", "/api/projects/"+alfa+"/collaborators/"+bia.id, "", admin.session); rec.Code != http.StatusNoContent {
+		t.Fatalf("remove Bia from the Alfa again = %d: %s", rec.Code, rec.Body.String())
+	}
+	if got := active(); got == "null" {
+		t.Error("Bia's open session in the Beta was closed by her removal from the Alfa")
 	}
 }

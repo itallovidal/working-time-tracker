@@ -54,6 +54,34 @@ func (s *Store) inOrg(orgID uuid.UUID, member *uuid.UUID) *ent.ProjectQuery {
 	return q
 }
 
+// NavItem é o que o menu de projetos da barra superior mostra: o id e o nome.
+type NavItem struct {
+	ID   uuid.UUID
+	Name string
+}
+
+// ListNav lista, por nome, os projetos da organização (com member, só os dessa pessoa) que o menu da barra
+// superior mostra: só o id e o nome, no máximo limit. É uma consulta leve, feita a cada página.
+func (s *Store) ListNav(orgID string, member *uuid.UUID, limit int) ([]NavItem, error) {
+	uid, err := uuid.Parse(orgID)
+	if err != nil {
+		return nil, err
+	}
+	projects, err := s.inOrg(uid, member).
+		Select(project.FieldID, project.FieldName).
+		Order(ent.Asc(project.FieldName), ent.Asc(project.FieldID)).
+		Limit(limit).
+		All(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	items := make([]NavItem, len(projects))
+	for i, p := range projects {
+		items[i] = NavItem{ID: p.ID, Name: p.Name}
+	}
+	return items, nil
+}
+
 func (s *Store) ListByOrg(orgID string, member *uuid.UUID) ([]Project, error) {
 	uid, err := uuid.Parse(orgID)
 	if err != nil {

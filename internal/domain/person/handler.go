@@ -3,6 +3,7 @@ package person
 import (
 	"net/http"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v5"
 
 	"working-time-tracker/internal/apperr"
@@ -10,16 +11,38 @@ import (
 )
 
 type Handler struct {
-	svc *Service
+	svc   *Service
+	scope func(c *echo.Context) (*uuid.UUID, error)
 }
 
 func NewHandler(svc *Service) *Handler {
 	return &Handler{svc: svc}
 }
 
+// SetScope liga a regra de quem vê quem: dado o pedido, devolve nil quando quem pede vê todas as pessoas da
+// organização, ou o id dele quando só vê a si mesmo e quem divide projeto com ele. Quem monta é o servidor, que
+// conhece a sessão e os projetos; sem isso todo mundo vê todo mundo.
+func (h *Handler) SetScope(scope func(c *echo.Context) (*uuid.UUID, error)) {
+	h.scope = scope
+}
+
+// viewer devolve de quem a lista é vista, ou nil quando quem pede vê todas as pessoas.
+func (h *Handler) viewer(c *echo.Context) (*uuid.UUID, error) {
+	if h.scope == nil {
+		return nil, nil
+	}
+	return h.scope(c)
+}
+
+// ListByOrg lista as pessoas da organização que quem pede pode ver: todas, para os admins e para quem cuida de
+// pessoas (ou de colaboradores de algum projeto); para os outros, só eles mesmos e quem está em algum projeto deles.
 func (h *Handler) ListByOrg(c *echo.Context) error {
 	orgID := c.Param("orgId")
-	persons, err := h.svc.ListByOrg(orgID)
+	viewer, err := h.viewer(c)
+	if err != nil {
+		return apperr.Respond(c, http.StatusInternalServerError, err)
+	}
+	persons, err := h.svc.ListVisible(orgID, viewer)
 	if err != nil {
 		return apperr.Respond(c, http.StatusInternalServerError, err)
 	}
@@ -28,7 +51,11 @@ func (h *Handler) ListByOrg(c *echo.Context) error {
 
 func (h *Handler) Get(c *echo.Context) error {
 	id := c.Param("personId")
-	person, err := h.svc.Get(id)
+	viewer, err := h.viewer(c)
+	if err != nil {
+		return apperr.Respond(c, http.StatusInternalServerError, err)
+	}
+	person, err := h.svc.GetVisible(id, viewer)
 	if err != nil {
 		if err == database.ErrNotFound {
 			return apperr.Respond(c, http.StatusNotFound, ErrNotFound)

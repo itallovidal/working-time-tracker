@@ -3,6 +3,7 @@ package collaborator
 import (
 	"context"
 	"sort"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -11,6 +12,7 @@ import (
 	entperson "working-time-tracker/ent/person"
 	entteam "working-time-tracker/ent/team"
 	enttm "working-time-tracker/ent/teammembership"
+	entworksession "working-time-tracker/ent/worksession"
 	"working-time-tracker/internal/database"
 	"working-time-tracker/internal/domain/permission"
 	"working-time-tracker/internal/domain/projectaccess"
@@ -63,8 +65,9 @@ func (s *Store) ListByProject(projectID uuid.UUID) ([]Collaborator, error) {
 
 // Remove tira a pessoa do projeto: apaga o valor por hora dela e a tira de
 // todos os times do projeto, numa transação só. As tarefas e as sessões de
-// trabalho dela ficam. Devolve database.ErrNotFound quando ela não tinha
-// nenhum dos dois vínculos.
+// trabalho dela ficam, e a sessão que ela tinha aberta neste projeto é encerrada
+// agora: fora do projeto ela não o alcança mais, nem para parar o ponto. Devolve
+// database.ErrNotFound quando ela não tinha nenhum dos dois vínculos.
 func (s *Store) Remove(projectID, personID uuid.UUID) error {
 	ctx := context.Background()
 	tx, err := s.client.Tx(ctx)
@@ -90,6 +93,12 @@ func (s *Store) Remove(projectID, personID uuid.UUID) error {
 	}
 	if rates+memberships == 0 {
 		return rollback(database.ErrNotFound)
+	}
+	if _, err := tx.WorkSession.Update().
+		Where(entworksession.ProjectIDEQ(projectID), entworksession.PersonIDEQ(personID), entworksession.EndAtIsNil()).
+		SetEndAt(time.Now()).
+		Save(ctx); err != nil {
+		return rollback(err)
 	}
 	return tx.Commit()
 }

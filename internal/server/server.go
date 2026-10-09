@@ -154,11 +154,12 @@ func Build(client *ent.Client, opts Options) (*App, error) {
 	taskStore.SetCreateHook(syncer.NotifyCreated)
 	taskSvc.SetRemover(syncer)
 
+	personHandler := person.NewHandler(personSvc)
 	handlers := routes.Handlers{
 		Auth:          auth.NewHandler(authSvc, opts.CookieSecure),
 		Organization:  organization.NewHandler(orgSvc),
 		Customer:      customer.NewHandler(customerSvc),
-		Person:        person.NewHandler(personSvc),
+		Person:        personHandler,
 		Permission:    permission.NewHandler(),
 		Project:       project.NewHandler(projectSvc, allocationSvc),
 		Team:          team.NewHandler(teamSvc, membershipSvc),
@@ -173,6 +174,8 @@ func Build(client *ent.Client, opts Options) (*App, error) {
 	}
 	resolver := auth.NewResolver(client)
 	authMW := auth.NewMiddleware(authSvc, resolver, opts.CookieSecure)
+	// Quem não é admin nem cuida de pessoas só vê a si mesmo e quem divide projeto com ele.
+	personHandler.SetScope(authMW.PeopleScope)
 	oauthHandler := integration.NewOAuthHandler(integrationSvc, opts.GitHubOAuth, opts.TrelloAuth, resolver, opts.EncryptKey, opts.CookieSecure)
 	catalog, err := i18n.Load()
 	if err != nil {

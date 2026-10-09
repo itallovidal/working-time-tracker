@@ -5,6 +5,7 @@ package projectaccess
 
 import (
 	"context"
+	"slices"
 
 	"github.com/google/uuid"
 
@@ -15,6 +16,7 @@ import (
 	entproject "working-time-tracker/ent/project"
 	entteam "working-time-tracker/ent/team"
 	enttm "working-time-tracker/ent/teammembership"
+	"working-time-tracker/internal/domain/permission"
 )
 
 // PersonIn escolhe as pessoas que estão no projeto: as que têm valor por hora nele ou estão em algum time dele.
@@ -31,6 +33,32 @@ func ProjectsOf(personID uuid.UUID) predicate.Project {
 		entproject.HasAllocationsWith(entalloc.PersonIDEQ(personID)),
 		entproject.HasTeamsWith(entteam.HasMembershipsWith(enttm.PersonIDEQ(personID))),
 	)
+}
+
+// ColleaguesOf escolhe a própria pessoa e quem está em algum dos projetos dela: as pessoas que ela tem motivo
+// para ver. Quem não é admin e não cuida de pessoas não vê mais ninguém da organização.
+func ColleaguesOf(personID uuid.UUID) predicate.Person {
+	mine := ProjectsOf(personID)
+	return entperson.Or(
+		entperson.IDEQ(personID),
+		entperson.HasAllocationsWith(entalloc.HasProjectWith(mine)),
+		entperson.HasTeamMembershipsWith(enttm.HasTeamWith(entteam.HasProjectWith(mine))),
+	)
+}
+
+// ManagesPeople diz se a pessoa pode pôr gente num projeto em que está (tem collaborators.manage nele). Quem pode
+// precisa achar qualquer pessoa da organização, para escolher quem entra.
+func ManagesPeople(ctx context.Context, client *ent.Client, personID uuid.UUID) (bool, error) {
+	allocs, err := client.Allocation.Query().Where(entalloc.PersonIDEQ(personID)).All(ctx)
+	if err != nil {
+		return false, err
+	}
+	for _, a := range allocs {
+		if slices.Contains(permission.Normalize(a.Permissions, permission.ProjectKeys), permission.CollaboratorsManage) {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // Has diz se a pessoa está no projeto.

@@ -9,6 +9,7 @@ import (
 	"working-time-tracker/ent/organization"
 	"working-time-tracker/ent/person"
 	"working-time-tracker/internal/database"
+	"working-time-tracker/internal/domain/projectaccess"
 )
 
 type Store struct {
@@ -50,6 +51,29 @@ func (s *Store) ListByOrg(orgID string) ([]Person, error) {
 		return nil, err
 	}
 	return toDomainPersons(persons), nil
+}
+
+// ListByOrgScoped lista as pessoas da organização que quem pede pode ver: com viewer, só ele e quem está em
+// algum projeto dele; nil lista todas.
+func (s *Store) ListByOrgScoped(orgID string, viewer *uuid.UUID) ([]Person, error) {
+	uid, err := uuid.Parse(orgID)
+	if err != nil {
+		return nil, err
+	}
+	q := s.client.Person.Query().Where(person.OrganizationIDEQ(uid))
+	if viewer != nil {
+		q = q.Where(projectaccess.ColleaguesOf(*viewer))
+	}
+	persons, err := q.Order(ent.Asc(person.FieldName)).All(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	return toDomainPersons(persons), nil
+}
+
+// Visible diz se a pessoa é uma das que viewer pode ver (ele mesmo ou quem divide projeto com ele).
+func (s *Store) Visible(personID, viewer uuid.UUID) (bool, error) {
+	return s.client.Person.Query().Where(person.IDEQ(personID), projectaccess.ColleaguesOf(viewer)).Exist(context.Background())
 }
 
 func (s *Store) GetByID(id string) (*Person, error) {

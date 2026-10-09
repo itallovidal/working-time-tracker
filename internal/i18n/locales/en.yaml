@@ -57,6 +57,10 @@ nav:
   label: Organization
   home: Home
   people: Collaborators
+  projects: Projects
+  projects_search: Search projects
+  projects_no_match: No project with that name
+  projects_all: See all projects
   organization: Organization
   help: Help
   profile_sr: "Your profile:"
@@ -538,6 +542,9 @@ help:
     missing_tab:
       q: I do not see a tab or a button
       a: "It is a permission. Project Management and the organization's Collaborators, Customers and Projects tabs only appear for whoever can use them. Ask an admin (see “Who sees and does what”)."
+    missing_project:
+      q: I do not see a project
+      a: "Each person sees only the projects they were put in, with an hourly rate (the owner and the admins see all of them). Open the “Projects” menu in the top bar: it lists yours, and “See all projects” takes you to the list on the first screen. If the project is not there, ask an admin or the project's manager to add you in Management › Collaborators."
     invite:
       q: The invitation did not arrive by email
       a: "The app does not send email: copy the link when it is generated and send it yourself. If it expired (7 days) or was already used, generate another one."

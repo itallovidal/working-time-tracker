@@ -145,7 +145,7 @@ Se o convite foi criado com email, só esse email consegue aceitar. Um convite v
 | GET | `/api/orgs/:orgId` | logado | Detalhes da organização |
 | PATCH | `/api/orgs/:orgId` | admin | Altera o nome e o perfil. Veja os campos abaixo |
 | DELETE | `/api/orgs/:orgId` | dono | Exclui a organização com as pessoas e os convites. Falha se ainda houver projetos |
-| GET | `/api/orgs/:orgId/persons` | logado | Pessoas da organização |
+| GET | `/api/orgs/:orgId/persons` | logado | Pessoas da organização que quem pede pode ver: todas, para os admins, quem tem `people.manage` e quem tem `collaborators.manage` em algum projeto em que está (precisa achar quem entra); para os outros, só ele mesmo e quem está em algum projeto dele |
 | GET | `/api/orgs/:orgId/overview` | admin | Visão geral da organização: o tempo e o dinheiro de todos os projetos em três janelas, e as horas de cada pessoa. Veja abaixo |
 | GET | `/api/orgs/:orgId/working-now` | admin | Quem está com o ponto aberto na organização e em que tarefas, sem tempo nem dinheiro. Veja abaixo |
 | GET | `/api/orgs/:orgId/me/overview` | logado | O painel de quem pede: as horas dele (hoje, a semana, dia a dia e por projeto) e as tarefas dele, em todos os projetos. Veja abaixo |
@@ -368,7 +368,7 @@ Só `name` é obrigatório. `document` é o CNPJ, com ou sem máscara: os dígit
 
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
-| GET | `/api/persons/:personId` | logado | Detalhes da pessoa |
+| GET | `/api/persons/:personId` | logado | Detalhes da pessoa, para quem pode vê-la (a mesma regra da lista); outra pessoa dá `404` |
 | PATCH | `/api/persons/:personId` | a própria pessoa ou admin | Altera nome e email |
 | PATCH | `/api/persons/:personId/role` | dono | Muda o papel: `{"role": "admin"}` ou `{"role": "member"}` |
 | PATCH | `/api/persons/:personId/permissions` | dono | Define as permissões da organização de quem não é admin: `{"permissions": ["projects.create", "customers.manage"]}`. Admin recusa (`400 person.admin_has_all_permissions`), e uma chave que não é da organização também (`400 person.invalid_permission`). Repetidas saem, e a ordem é a do catálogo |
@@ -475,7 +475,7 @@ Quem está no projeto. Uma pessoa é colaboradora quando tem valor por hora nele
 - `teams` traz só os times deste projeto, por nome. Vem vazio para quem ainda não entrou em nenhum time; essa pessoa bate ponto, mas não pode ser responsável por tarefa.
 - `pay_rate_cents` é o valor da pessoa. Um membro recebe o próprio valor e `null` no dos colegas. Para um admin, `null` só aparece em quem entrou num time antes de o valor ser obrigatório: essa pessoa não bate ponto até receber um valor (o `PUT` acima) ou sair do projeto.
 
-O `DELETE` faz as duas remoções numa transação e responde `204`. As tarefas e as sessões de trabalho da pessoa ficam como estão. Se ela não tinha valor nem time no projeto, a resposta é `404`.
+O `DELETE` faz as duas remoções numa transação e responde `204`. As tarefas e as sessões de trabalho da pessoa ficam como estão, só que a sessão que ela tinha **aberta neste projeto** é encerrada na hora (fora dele ela já não o alcança, nem para parar o ponto); uma aberta em outro projeto não é tocada. Se ela não tinha valor nem time no projeto, a resposta é `404`.
 
 Para **pôr** alguém no projeto, use o `PUT` de `/allocations/:personId` acima e, depois, se quiser, `POST /api/teams/:teamId/members`. Nessa ordem: o time recusa quem ainda não tem valor.
 

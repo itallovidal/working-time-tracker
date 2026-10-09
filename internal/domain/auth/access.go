@@ -173,6 +173,28 @@ func (r *Resolver) ProjectAccess(me *Identity, projectID uuid.UUID) (set permiss
 	return permission.Set{}, in, err
 }
 
+// PeopleScope diz até onde a pessoa logada vê as outras da organização: nil, todas (admins, quem cuida de pessoas
+// e quem pode pôr gente em algum projeto em que está, que precisa achar quem entra); o id dela, só ela mesma e
+// quem está em algum projeto dela.
+func (m *Middleware) PeopleScope(c *echo.Context) (*uuid.UUID, error) {
+	me := CurrentPerson(c)
+	if me == nil {
+		return nil, ErrUnauthenticated
+	}
+	if me.IsAdmin() || me.Can(permission.PeopleManage) {
+		return nil, nil
+	}
+	manages, err := projectaccess.ManagesPeople(c.Request().Context(), m.resolver.client, me.PersonID)
+	if err != nil {
+		return nil, err
+	}
+	if manages {
+		return nil, nil
+	}
+	id := me.PersonID
+	return &id, nil
+}
+
 // SameOrganization diz se o recurso existe e é da organização da pessoa logada.
 func (r *Resolver) SameOrganization(c *echo.Context, kind Kind, id string) bool {
 	me := CurrentPerson(c)

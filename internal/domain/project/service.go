@@ -151,6 +151,16 @@ func (s *Service) ListByOrg(orgID string, member *uuid.UUID) ([]Project, error) 
 	return s.store.ListByOrg(orgID, member)
 }
 
+// NavLimit é quantos projetos o menu da barra superior mostra, no máximo; quem tem mais usa a busca da lista da
+// primeira tela.
+const NavLimit = 200
+
+// ListNav lista o id e o nome dos projetos para o menu da barra superior, por nome: com member, só os dessa
+// pessoa; nil lista todos.
+func (s *Service) ListNav(orgID string, member *uuid.UUID) ([]NavItem, error) {
+	return s.store.ListNav(orgID, member, NavLimit)
+}
+
 // CountByOrg conta todos os projetos da organização.
 func (s *Service) CountByOrg(orgID string) (int, error) {
 	return s.store.CountByOrg(orgID, nil)
