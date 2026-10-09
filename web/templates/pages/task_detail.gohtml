@@ -7,7 +7,7 @@
     <a class="btn btn-ghost btn-sm self-start" href="/projects/{{.Project.ID}}/tasks" :href="backHref()">{{template "icon" "arrow-left"}} {{.T "task_detail.back"}}</a>
     <div class="page-head">
       <nav class="eyebrow" aria-label="{{.T "task_detail.breadcrumb"}}">
-        <a href="/orgs/{{.OrgID}}">{{.T "project.head.projects"}}</a> /
+        <a href="/orgs/{{.OrgID}}/projects">{{.T "project.head.projects"}}</a> /
         <a href="/projects/{{.Project.ID}}/overview">{{.Project.Name}}</a>
       </nav>
       <div class="row" x-cloak x-show="task">

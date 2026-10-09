@@ -12,11 +12,12 @@ import (
 )
 
 // pagePaths são as páginas logadas de uma organização com um projeto que todo
-// mundo vê. As abas de gestão da organização (orgPagePaths) são só de admins.
+// mundo vê. As de orgPagePaths pedem permissão.
 func pagePaths(orgID, projectID string) []string {
 	return []string{
 		"/orgs/" + orgID,
 		"/orgs/" + orgID + "/about",
+		"/orgs/" + orgID + "/projects",
 		"/profile",
 		"/projects/" + projectID + "/overview",
 		"/projects/" + projectID + "/tasks",
@@ -34,12 +35,12 @@ func managementPagePaths(projectID string) []string {
 	}
 }
 
-// orgPagePaths são as abas de gestão da organização: Colaboradores, Clientes e Projetos.
+// orgPagePaths são as páginas da organização que um membro sem permissão não abre: Colaboradores e Clientes, de quem
+// cuida deles.
 func orgPagePaths(orgID string) []string {
 	return []string{
 		"/orgs/" + orgID + "/people",
 		"/orgs/" + orgID + "/customers",
-		"/orgs/" + orgID + "/projects",
 	}
 }
 
@@ -75,25 +76,25 @@ func TestPages_RenderForAdminAndMember(t *testing.T) {
 	}
 
 	// Ações de admin não aparecem para membros.
-	rec := do(e, "GET", "/orgs/"+admin.orgID, "", member.session)
+	rec := do(e, "GET", "/orgs/"+admin.orgID+"/projects", "", member.session)
 	if strings.Contains(rec.Body.String(), "Novo projeto") {
 		t.Error("member sees the 'Novo projeto' button")
 	}
-	rec = do(e, "GET", "/orgs/"+admin.orgID, "", admin.session)
+	rec = do(e, "GET", "/orgs/"+admin.orgID+"/projects", "", admin.session)
 	if !strings.Contains(rec.Body.String(), "Novo projeto") {
 		t.Error("admin does not see the 'Novo projeto' button")
 	}
 }
 
-// As abas de gestão da organização são só de admins: membros não veem os links
-// e recebem "Página não encontrada" se abrirem o endereço.
-func TestPages_OrgTabsAreAdminOnly(t *testing.T) {
+// Colaboradores e Clientes não são de todo mundo: um membro sem permissão não vê os links na barra
+// e recebe "Página não encontrada" se abrir o endereço.
+func TestPages_OrgPagesNeedPermission(t *testing.T) {
 	e := newServer(t)
 	admin := signup(t, e, "Org", "ana@test.com")
 	member := invite(t, e, admin, "bia@test.com", "member")
 
 	about := "/orgs/" + admin.orgID + "/about"
-	// A edição não é uma aba: o admin chega nela pelo botão Editar da aba Sobre.
+	// A edição não tem item na barra: o admin chega nela pelo botão Editar das Configurações.
 	edit := "/orgs/" + admin.orgID + "/settings"
 
 	for _, path := range append(orgPagePaths(admin.orgID), edit) {
@@ -103,20 +104,17 @@ func TestPages_OrgTabsAreAdminOnly(t *testing.T) {
 			t.Errorf("admin GET %s = %d, want 200", path, rec.Code)
 		}
 		body := rec.Body.String()
-		// Cada aba mostra as outras, então uma leva à outra.
-		for _, tab := range orgPagePaths(admin.orgID) {
-			if !strings.Contains(body, `href="`+tab+`"`) {
-				t.Errorf("admin GET %s does not link to the tab %s", path, tab)
+		// A barra leva de uma página às outras.
+		for _, other := range orgPagePaths(admin.orgID) {
+			if !strings.Contains(body, `href="`+other+`"`) {
+				t.Errorf("admin GET %s does not link to %s", path, other)
 			}
 		}
-		if !strings.Contains(body, "Colaboradores") {
-			t.Errorf("admin GET %s does not show the Colaboradores tab", path)
-		}
 		if path != edit && strings.Contains(body, `href="`+edit+`"`) {
-			t.Errorf("admin GET %s still links to the edit page as a tab", path)
+			t.Errorf("admin GET %s links to the edit page, which opens only from the settings page", path)
 		}
 		if path == edit && !strings.Contains(body, `href="`+about+`"`) {
-			t.Error("the edit page does not link back to the about tab")
+			t.Error("the edit page does not link back to the settings page")
 		}
 		if rec := do(e, "GET", path, "", member.session); rec.Code != http.StatusNotFound {
 			t.Errorf("member GET %s = %d, want 404", path, rec.Code)
@@ -128,8 +126,8 @@ func TestPages_OrgTabsAreAdminOnly(t *testing.T) {
 			t.Errorf("GET %s without session = %d to %q, want 303 to /login", path, rec.Code, rec.Header().Get("Location"))
 		}
 	}
-	// O item do menu leva à aba Sobre, que todo mundo lê. Só o admin vê, nela,
-	// os links para as abas de gestão e o botão Editar.
+	// O item Configurações leva ao perfil da organização, que todo mundo lê. Só o admin vê, nele,
+	// os links para as outras páginas e o botão Editar.
 	for _, who := range []account{admin, member} {
 		if rec := do(e, "GET", "/orgs/"+admin.orgID, "", who.session); !strings.Contains(rec.Body.String(), `href="`+about+`"`) {
 			t.Error("the menu does not link to the organization page")
@@ -144,32 +142,6 @@ func TestPages_OrgTabsAreAdminOnly(t *testing.T) {
 		}
 		if strings.Contains(memberAbout, link) {
 			t.Errorf("member about page links to %s", path)
-		}
-	}
-}
-
-// A aba Projetos do admin é uma tabela de gestão; a página inicial, que todo
-// mundo abre, continua com os cartões.
-func TestPages_OrgProjectsTabIsATable(t *testing.T) {
-	e := newServer(t)
-	admin := signup(t, e, "Org", "ana@test.com")
-	member := invite(t, e, admin, "bia@test.com", "member")
-	home := "/orgs/" + admin.orgID
-
-	tab := do(e, "GET", home+"/projects", "", admin.session).Body.String()
-	for _, want := range []string{"<th>Projeto</th>", "<th>Cliente</th>", ">Pessoas</th>", "<th>Tarefas</th>", `class="row-link"`} {
-		if !strings.Contains(tab, want) {
-			t.Errorf("projects tab does not contain %q", want)
-		}
-	}
-	if strings.Contains(tab, "project-card") {
-		t.Error("projects tab still shows the project cards")
-	}
-	for who, session := range map[string]string{"admin": admin.session, "member": member.session} {
-		body := do(e, "GET", home, "", session).Body.String()
-		// A tabela de projetos tem o cabeçalho Projeto; a de tarefas do painel (linhas row-link) é outra coisa.
-		if !strings.Contains(body, "project-card") || strings.Contains(body, "<th>Projeto</th>") {
-			t.Errorf("%s home page should show the cards and not the table", who)
 		}
 	}
 }
@@ -660,8 +632,8 @@ func TestPages_ProjectSettingsAndWeeklyHours(t *testing.T) {
 		}
 	}
 
-	// O Novo projeto oferece as mesmas durações e não pergunta a jornada.
-	for _, path := range []string{"/orgs/" + admin.orgID, "/orgs/" + admin.orgID + "/projects"} {
+	// O Novo projeto, na página Projetos, oferece as mesmas durações e não pergunta a jornada.
+	for _, path := range []string{"/orgs/" + admin.orgID + "/projects"} {
 		body := do(e, "GET", path, "", admin.session).Body.String()
 		if !strings.Contains(body, `<select id="project-sprint" x-model.number="draft.sprint_duration_days">`) || !strings.Contains(body, `x-for="o in WTT.sprintOptions"`) {
 			t.Errorf("%s: the new project form does not offer the sprint durations in a select", path)

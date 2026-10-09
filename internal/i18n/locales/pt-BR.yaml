@@ -47,11 +47,11 @@ titles:
   profile: Seu perfil
   not_found: Página não encontrada
   home: Início
-  org_about: Sobre · Organização
-  org_settings: Editar · Organização
-  org_projects: Projetos · Organização
-  org_customers: Clientes · Organização
-  org_people: Colaboradores · Organização
+  org_about: Configurações
+  org_settings: Editar organização
+  org_projects: Projetos
+  org_customers: Clientes
+  org_people: Colaboradores
   overview: Gestão · Visão geral
   my_overview: Início
   collaborators: Colaboradores
@@ -64,16 +64,15 @@ titles:
   help: Ajuda
 
 nav:
-  label: Organização
+  label: Páginas
   home: Início
-  people: Colaboradores
   projects: Projetos
-  projects_search: Buscar projeto
-  projects_no_match: Nenhum projeto com esse nome
-  projects_all: Ver todos os projetos
-  organization: Organização
+  people: Colaboradores
+  customers: Clientes
+  settings: Configurações
+  account_sr: "Sua conta:"
+  profile: Perfil
   help: Ajuda
-  profile_sr: "Seu perfil:"
   logout: Sair
 
 home:
@@ -165,7 +164,6 @@ home:
     intro: Horas de cada pessoa no período, de quem mais trabalhou para quem menos.
     nobody_worked: Ninguém bateu ponto neste período.
   projects:
-    title: Projetos
     pager: Páginas da lista de projetos
     prev: Anterior
     next: Próxima
@@ -315,7 +313,7 @@ onboarding:
   later: Ver depois
   org:
     title: Boas-vindas ao Working Time Tracker
-    lead: "A organização {{.name}} está criada. Conte um pouco sobre ela: o resto você completa quando quiser, em Organização › Sobre."
+    lead: "A organização {{.name}} está criada. Conte um pouco sobre ela: o resto você completa quando quiser, em Configurações."
     money_note: A moeda e o fuso valem para a organização inteira. Ajuste agora, antes de cadastrar qualquer valor.
   customers:
     title: Seus clientes
@@ -446,7 +444,7 @@ profile:
 
 # A ajuda (/help): uma página só, com o passo a passo do primeiro uso e o que cada tela faz.
 # Os rótulos que a pessoa clica aparecem nos textos entre aspas, como estão na tela; os
-# caminhos (Organização › Sobre › Editar) são montados no template com as chaves da própria tela.
+# caminhos (Configurações › Editar) são montados no template com as chaves da própria tela.
 help:
   eyebrow: Ajuda
   title: Como usar o Working Time Tracker
@@ -469,7 +467,7 @@ help:
       tip: "Recebeu um convite? Pule este passo: abra o link do convite e crie a sua conta por lá."
     currency:
       title: Confira a moeda e o fuso
-      text: "A moeda (real, dólar ou euro) e o fuso horário valem para a organização inteira. Ajuste agora, antes de cadastrar qualquer valor. Aproveite para preencher o perfil: o time inteiro lê a aba Sobre."
+      text: "A moeda (real, dólar ou euro) e o fuso horário valem para a organização inteira. Ajuste agora, antes de cadastrar qualquer valor. Aproveite para preencher o perfil: o time inteiro lê em Configurações."
       tip: "A moeda só muda como os valores aparecem; o app não converte entre moedas."
     customers:
       title: Cadastre os clientes
@@ -507,30 +505,29 @@ help:
       title: Início da organização
       text: A primeira tela depois de entrar.
       mine: "Seu painel (todos): as suas horas de hoje e da semana, as suas tarefas abertas e concluídas em todos os projetos e a semana dia a dia, com as horas por projeto. Só aparece o que é seu: nada de dinheiro nem dos colegas. Clique numa tarefa para abri-la."
-      projects: "Projetos: os projetos da organização, em cartões, seis por página. Clique num cartão para abrir o projeto. Quem pode criar projetos vê o botão “Novo projeto” junto do título."
       overview: "Visão geral (só administradores): as suas horas, as horas da equipe, a receita, o custo e a margem de todos os projetos juntos, em 7 dias, 30 dias ou tudo."
       team: "Equipe (só administradores): quem está com o ponto aberto agora e em qual tarefa."
     org_about:
-      title: "Organização: Sobre"
-      text: "O perfil da organização: descrição, país, contato, dados da empresa e como o time trabalha (regime, fuso e moeda). Todo mundo lê. Campo vazio aparece como “Não informado”."
+      title: Configurações
+      text: "O item “Configurações” da barra superior. É o perfil da organização: descrição, país, contato, dados da empresa e como o time trabalha (regime, fuso e moeda). Todo mundo lê. Campo vazio aparece como “Não informado”."
       edit: "O administrador tem o botão “Editar”, para alterar o perfil, a moeda e o fuso."
       delete: "No fim da edição está “Excluir organização”: só o dono consegue, e só depois de excluir todos os projetos."
     org_people:
-      title: "Organização: Colaboradores"
-      text: "Quem faz parte da organização, com o papel (Dono, Admin ou Membro) e a jornada semanal. A aba aparece só para quem cuida das pessoas: administradores e quem o dono liberou."
+      title: Colaboradores
+      text: "Quem faz parte da organização, com o papel (Dono, Admin ou Membro) e a jornada semanal. A página aparece só para quem cuida das pessoas: administradores e quem o dono liberou."
       add: "“Adicionar colaborador” gera um link de convite. Escolha o papel (só o dono convida administradores) e, se quiser, informe o email para que só aquela pessoa use o link."
       add_email: "“Adicionar colaborador” envia o convite por email. Escolha o papel (só o dono convida administradores) e informe o email; sem email, gera só um link para você copiar e enviar."
       pending: "“Convites pendentes” lista os links ainda não usados, cada um com validade de 7 dias. Dá para revogar."
       edit: "O lápis da linha abre “Jornada e permissões”: as horas combinadas por semana e, para o dono, as permissões de organização de quem não é administrador."
       role: "Só o dono torna alguém administrador, ou volta a membro."
     org_customers:
-      title: "Organização: Clientes"
-      text: "O cadastro de quem contrata a organização: nome, país, documento fiscal (CNPJ no Brasil, EIN nos EUA), pessoa de contato, email e telefone. A aba aparece só para quem cuida dos clientes."
+      title: Clientes
+      text: "O cadastro de quem contrata a organização: nome, país, documento fiscal (CNPJ no Brasil, EIN nos EUA), pessoa de contato, email e telefone. A página aparece só para quem cuida dos clientes."
       actions: "“Novo cliente” cadastra; cada linha tem as ações de editar e excluir."
       link: "O cliente é ligado a um projeto nas configurações do projeto, junto com o valor cobrado por hora."
     org_projects:
-      title: "Organização: Projetos"
-      text: "Uma tabela com todos os projetos (projeto, cliente, pessoas e tarefas). Clique numa linha para abrir. O botão “Novo projeto” abre o mesmo formulário do Início. A aba aparece só para quem pode criar projetos."
+      title: Projetos
+      text: "O item “Projetos” da barra superior, para todos: os seus projetos (todos, para o dono e os administradores) em cartões, seis por página, cada um com o cliente, as pessoas e as tarefas. Clique num cartão para abrir o projeto. Quem pode criar projetos vê o botão “Novo projeto” no alto da página."
     project_home:
       title: "Projeto: Início"
       text: "É onde você bate o ponto, e a primeira aba ao abrir um projeto."
@@ -581,11 +578,11 @@ help:
       integrations: "Se o projeto tem integrações, a página mostra o item ligado (issue ou cartão) e deixa publicar a tarefa em outra plataforma."
     profile:
       title: Perfil
-      text: "Clique no seu nome, no canto da barra superior."
+      text: "Abra o menu da conta (o seu nome, no canto da barra superior) e escolha “Perfil”."
       personal: "“Dados pessoais”: nome e email (o email é o que você usa para entrar). A jornada semanal só se lê aqui; quem altera é um administrador."
       rates: "“Meus valores”: quanto você recebe por hora em cada projeto. Só você e os administradores veem."
       password: "“Senha”: troque a senha. As suas outras sessões são encerradas."
-      language: "O seletor PT | EN, no alto da tela, troca o idioma, e o navegador lembra a escolha. “Sair” fica ao lado."
+      language: "O idioma (PT | EN), a “Ajuda” e o “Sair” ficam no mesmo menu da conta, e o navegador lembra o idioma escolhido."
   concepts:
     rates:
       title: Valor por hora
@@ -603,9 +600,9 @@ help:
       admin: "Admin: tudo, em todos os projetos, menos o que é só do dono."
       member: "Membro: o dia a dia, com mais acesso só por permissões."
       groups: "Ao pôr alguém num projeto, você escolhe o grupo dela: “Colaborador” (sem permissões extras), “Gerente de projeto” (cuida do projeto, dos times, das pessoas, das etiquetas e das integrações) ou “Administrador do projeto” (tudo no projeto, inclusive o faturamento). O grupo vale só naquele projeto."
-      org_perms: "O dono também pode liberar, a quem não é administrador, permissões de organização: criar projetos, cuidar dos clientes e cuidar das pessoas. Elas abrem as abas Projetos, Clientes e Colaboradores."
+      org_perms: "O dono também pode liberar, a quem não é administrador, permissões de organização: criar projetos, cuidar dos clientes e cuidar das pessoas. Elas liberam o botão “Novo projeto” e as páginas Clientes e Colaboradores."
       money: "Os valores pagos aos colegas e o faturamento só aparecem para quem tem permissão para ver. Cada pessoa sempre vê o próprio valor."
-      missing: "Se uma aba ou um botão não aparece para você, falta permissão: peça a um administrador."
+      missing: "Se uma página, uma aba ou um botão não aparece para você, falta permissão: peça a um administrador."
     integrations:
       title: Integrações com GitHub e Trello
       text: "Opcional. Liga o projeto a um repositório do GitHub ou a um quadro do Trello, para que as tarefas andem junto com as issues e os cartões."
@@ -620,11 +617,11 @@ help:
       q: Esqueci de bater o ponto. Dá para lançar as horas depois?
       a: "Não. O app só registra o tempo cronometrado: não há lançamento manual, aprovação nem fechamento de período. O que dá para ajustar são os intervalos das tarefas dentro de uma sessão (abra a sessão e use o lápis), sem mudar o tempo total dela."
     missing_tab:
-      q: Não vejo uma aba ou um botão
-      a: "É permissão. A Gestão do projeto e as abas Colaboradores, Clientes e Projetos da organização aparecem só para quem pode usá-las. Peça a um administrador (veja “Quem vê e faz o quê”)."
+      q: Não vejo uma página, uma aba ou um botão
+      a: "É permissão. A Gestão do projeto e as páginas Colaboradores e Clientes aparecem só para quem pode usá-las. Peça a um administrador (veja “Quem vê e faz o quê”)."
     missing_project:
       q: Não vejo um projeto
-      a: "Cada pessoa vê só os projetos em que foi posta, com valor por hora (o dono e os administradores veem todos). Abra o menu “Projetos” na barra superior: ele lista os seus, e “Ver todos os projetos” leva à lista da primeira tela. Se o projeto não está lá, peça a um administrador ou ao gerente do projeto para pôr você nele em Gestão › Colaboradores."
+      a: "Cada pessoa vê só os projetos em que foi posta, com valor por hora (o dono e os administradores veem todos). Abra “Projetos”, na barra superior: a página lista os seus. Se o projeto não está lá, peça a um administrador ou ao gerente do projeto para pôr você nele em Gestão › Colaboradores."
     invite:
       q: O convite não chegou por email
       a: "O app não envia email: copie o link na hora em que ele é gerado e mande você mesmo. Se ele venceu (7 dias) ou já foi usado, gere outro."
@@ -634,13 +631,6 @@ help:
       a: "Ainda não. Os números ficam nas Visões gerais da organização e do projeto."
 
 org:
-  head:
-    title: Organização
-    sections: Seções da organização
-    about: Sobre
-    people: Colaboradores
-    customers: Clientes
-    projects: Projetos
   fields:
     website: Site
     linkedin: LinkedIn
@@ -662,7 +652,7 @@ org:
     identity: Identidade
     summary: Resumo
     summary_hint: Uma linha que aparece no cabeçalho da organização.
-    description_hint: O que a organização faz e para quem. Todos os membros leem na aba Sobre.
+    description_hint: O que a organização faz e para quem. Todos os membros leem em Configurações.
     contact: Contato
     contact_email: Email de contato
     website_placeholder: https://exemplo.com.br

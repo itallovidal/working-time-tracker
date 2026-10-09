@@ -1,15 +1,16 @@
 {{define "content"}}
 <main class="page" x-data="orgPeople">
-  {{template "org_head" .}}
+  <div class="page-head">
+    <div>
+      <div class="eyebrow" data-org-name>{{.Me.OrganizationName}}</div>
+      <h1>{{.T "nav.people"}}</h1>
+      <p class="lede">{{.T "org.people.intro"}}</p>
+    </div>
+    <button type="button" class="btn" @click="openInvite()">{{template "icon" "user-plus"}} {{.T "org.people.add"}}</button>
+  </div>
 
   <section class="stack">
-    <div class="toolbar">
-      <div class="stack stack-tight flex-1">
-        <h2>{{.T "org.people.title"}}</h2>
-        <p class="muted">{{.T "org.people.intro"}}</p>
-      </div>
-      <button type="button" class="btn" @click="openInvite()">{{template "icon" "user-plus"}} {{.T "org.people.add"}}</button>
-    </div>
+    <h2>{{.T "org.people.title"}}</h2>
 
     <p class="muted" x-show="loading">{{.T "org.people.loading"}}</p>
     <p class="form-error" x-cloak x-show="errors.load" x-text="errors.load"></p>

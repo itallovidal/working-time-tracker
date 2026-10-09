@@ -37,11 +37,11 @@ titles:
   profile: Your profile
   not_found: Page not found
   home: Home
-  org_about: About · Organization
-  org_settings: Edit · Organization
-  org_projects: Projects · Organization
-  org_customers: Customers · Organization
-  org_people: Collaborators · Organization
+  org_about: Settings
+  org_settings: Edit organization
+  org_projects: Projects
+  org_customers: Customers
+  org_people: Collaborators
   overview: Management · Overview
   my_overview: Home
   collaborators: Collaborators
@@ -54,16 +54,15 @@ titles:
   help: Help
 
 nav:
-  label: Organization
+  label: Pages
   home: Home
-  people: Collaborators
   projects: Projects
-  projects_search: Search projects
-  projects_no_match: No project with that name
-  projects_all: See all projects
-  organization: Organization
+  people: Collaborators
+  customers: Customers
+  settings: Settings
+  account_sr: "Your account:"
+  profile: Profile
   help: Help
-  profile_sr: "Your profile:"
   logout: Sign out
 
 home:
@@ -155,7 +154,6 @@ home:
     intro: Each person's hours in the period, from who worked the most to who worked the least.
     nobody_worked: Nobody clocked in during this period.
   projects:
-    title: Projects
     pager: Project list pages
     prev: Previous
     next: Next
@@ -305,7 +303,7 @@ onboarding:
   later: Later
   org:
     title: Welcome to Working Time Tracker
-    lead: "The organization {{.name}} is created. Tell us a little about it: you can fill in the rest whenever you like, under Organization › About."
+    lead: "The organization {{.name}} is created. Tell us a little about it: you can fill in the rest whenever you like, under Settings."
     money_note: The currency and the time zone apply to the whole organization. Set them now, before registering any rate.
   customers:
     title: Your customers
@@ -436,7 +434,7 @@ profile:
 
 # The help (/help): a single page with the first-use walkthrough and what each screen does.
 # The labels a person clicks appear in the texts between quotes, as they are on screen; the
-# paths (Organization › About › Edit) are built in the template with the screen's own keys.
+# paths (Settings › Edit) are built in the template with the screen's own keys.
 help:
   eyebrow: Help
   title: How to use Working Time Tracker
@@ -459,7 +457,7 @@ help:
       tip: "Got an invitation? Skip this step: open the invitation link and create your account there."
     currency:
       title: Check the currency and time zone
-      text: "The currency (real, dollar or euro) and the time zone apply to the whole organization. Set them now, before registering any amount. Take the chance to fill in the profile: the whole team reads the About tab."
+      text: "The currency (real, dollar or euro) and the time zone apply to the whole organization. Set them now, before registering any amount. Take the chance to fill in the profile: the whole team reads it under Settings."
       tip: "The currency only changes how amounts are shown; the app does not convert between currencies."
     customers:
       title: Register the customers
@@ -497,30 +495,29 @@ help:
       title: Organization home
       text: The first screen after you sign in.
       mine: "Your dashboard (everyone): your hours today and this week, your open and completed tasks across every project, and the week day by day with the hours per project. Only what is yours shows: no money and nothing about colleagues. Click a task to open it."
-      projects: "Projects: the organization's projects, as cards, six per page. Click a card to open the project. Whoever can create projects sees the “New project” button next to the title."
       overview: "Overview (admins only): your hours, the team's hours, and the revenue, cost and margin of all projects together, over 7 days, 30 days or all time."
       team: "Team (admins only): who has the clock open right now and on which task."
     org_about:
-      title: "Organization: About"
-      text: "The organization profile: description, country, contact, company details and how the team works (work mode, time zone and currency). Everyone reads it. An empty field shows as “Not provided”."
+      title: Settings
+      text: "The “Settings” item in the top bar. It is the organization profile: description, country, contact, company details and how the team works (work mode, time zone and currency). Everyone reads it. An empty field shows as “Not provided”."
       edit: "Admins have the “Edit” button, to change the profile, the currency and the time zone."
       delete: "At the end of the edit screen there is “Delete organization”: only the owner can do it, and only after every project is deleted."
     org_people:
-      title: "Organization: Collaborators"
-      text: "Who belongs to the organization, with the role (Owner, Admin or Member) and the weekly hours. The tab only appears for whoever looks after people: admins and anyone the owner allowed."
+      title: Collaborators
+      text: "Who belongs to the organization, with the role (Owner, Admin or Member) and the weekly hours. The page only appears for whoever looks after people: admins and anyone the owner allowed."
       add: "“Add collaborator” generates an invitation link. Pick the role (only the owner invites admins) and, if you want, enter the email so that only that person can use the link."
       add_email: "“Add collaborator” sends the invitation by email. Pick the role (only the owner invites admins) and enter the email; without an email it only generates a link for you to copy and send."
       pending: "“Pending invitations” lists the links not used yet, each one valid for 7 days. You can revoke them."
       edit: "The pencil on the row opens “Hours and permissions”: the hours agreed per week and, for the owner, the organization permissions of people who are not admins."
       role: "Only the owner makes someone an admin, or back to a member."
     org_customers:
-      title: "Organization: Customers"
-      text: "The register of who hires the organization: name, country, tax ID (CNPJ in Brazil, EIN in the US), contact person, email and phone. The tab only appears for whoever looks after customers."
+      title: Customers
+      text: "The register of who hires the organization: name, country, tax ID (CNPJ in Brazil, EIN in the US), contact person, email and phone. The page only appears for whoever looks after customers."
       actions: "“New customer” registers one; each row has the actions to edit and delete."
       link: "A customer is linked to a project in the project settings, together with the rate billed per hour."
     org_projects:
-      title: "Organization: Projects"
-      text: "A table with all the projects (project, customer, people and tasks). Click a row to open it. The “New project” button opens the same form as Home. The tab only appears for whoever can create projects."
+      title: Projects
+      text: "The “Projects” item in the top bar, for everyone: your projects (all of them, for the owner and the admins) as cards, six per page, each with the customer, the people and the tasks. Click a card to open the project. Whoever can create projects sees the “New project” button at the top of the page."
     project_home:
       title: "Project: Home"
       text: "This is where you clock in, and the first tab when you open a project."
@@ -571,11 +568,11 @@ help:
       integrations: "If the project has integrations, the page shows the linked item (an issue or a card) and lets you post the task to another platform."
     profile:
       title: Profile
-      text: "Click your name, in the corner of the top bar."
+      text: "Open the account menu (your name, in the corner of the top bar) and choose “Profile”."
       personal: "“Personal details”: name and email (the email is the one you sign in with). The weekly hours are read-only here; an admin changes them."
       rates: "“My rates”: how much you earn per hour on each project. Only you and the admins see it."
       password: "“Password”: change your password. Your other sessions are signed out."
-      language: "The PT | EN switch, at the top of the screen, changes the language, and the browser remembers the choice. “Sign out” is next to it."
+      language: "The language (PT | EN), “Help” and “Sign out” are in the same account menu, and the browser remembers the language you chose."
   concepts:
     rates:
       title: Hourly rate
@@ -593,9 +590,9 @@ help:
       admin: "Admin: everything, on every project, except what is only for the owner."
       member: "Member: the day to day, with more access only through permissions."
       groups: "When you add someone to a project, you pick their group: “Collaborator” (no extra permissions), “Project manager” (runs the project, its teams, its people, its labels and its integrations) or “Project administrator” (everything on the project, billing included). The group only applies to that project."
-      org_perms: "The owner can also give people who are not admins organization permissions: create projects, look after customers and look after people. They open the Projects, Customers and Collaborators tabs."
+      org_perms: "The owner can also give people who are not admins organization permissions: create projects, look after customers and look after people. They unlock the “New project” button and the Customers and Collaborators pages."
       money: "The rates paid to colleagues and the billing only show for whoever has permission to see them. Everyone always sees their own rate."
-      missing: "If a tab or a button does not show up for you, you lack a permission: ask an admin."
+      missing: "If a page, a tab or a button does not show up for you, you lack a permission: ask an admin."
     integrations:
       title: GitHub and Trello integrations
       text: "Optional. Connects the project to a GitHub repository or a Trello board, so tasks move along with the issues and the cards."
@@ -610,11 +607,11 @@ help:
       q: I forgot to clock in. Can I add the hours afterwards?
       a: "No. The app only records timed work: there is no manual entry, approval or period closing. What you can adjust are the task intervals inside a session (open the session and use the pencil), without changing the session's total time."
     missing_tab:
-      q: I do not see a tab or a button
-      a: "It is a permission. Project Management and the organization's Collaborators, Customers and Projects tabs only appear for whoever can use them. Ask an admin (see “Who sees and does what”)."
+      q: I do not see a page, a tab or a button
+      a: "It is a permission. Project Management and the Collaborators and Customers pages only appear for whoever can use them. Ask an admin (see “Who sees and does what”)."
     missing_project:
       q: I do not see a project
-      a: "Each person sees only the projects they were put in, with an hourly rate (the owner and the admins see all of them). Open the “Projects” menu in the top bar: it lists yours, and “See all projects” takes you to the list on the first screen. If the project is not there, ask an admin or the project's manager to add you in Management › Collaborators."
+      a: "Each person sees only the projects they were put in, with an hourly rate (the owner and the admins see all of them). Open “Projects”, in the top bar: the page lists yours. If the project is not there, ask an admin or the project's manager to add you in Management › Collaborators."
     invite:
       q: The invitation did not arrive by email
       a: "The app does not send email: copy the link when it is generated and send it yourself. If it expired (7 days) or was already used, generate another one."
@@ -624,13 +621,6 @@ help:
       a: "Not yet. The numbers are in the organization and project Overviews."
 
 org:
-  head:
-    title: Organization
-    sections: Organization sections
-    about: About
-    people: Collaborators
-    customers: Customers
-    projects: Projects
   fields:
     website: Website
     linkedin: LinkedIn
@@ -652,7 +642,7 @@ org:
     identity: Identity
     summary: Summary
     summary_hint: A single line shown in the organization header.
-    description_hint: What the organization does and for whom. Every member reads it on the About tab.
+    description_hint: What the organization does and for whom. Every member reads it under Settings.
     contact: Contact
     contact_email: Contact email
     website_placeholder: https://example.com

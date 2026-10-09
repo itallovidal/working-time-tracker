@@ -1,13 +1,15 @@
 {{define "content"}}
 <main class="page" x-data="orgSettings">
-  {{template "org_head" .}}
-
-  {{/* A tela de edição abre pelo botão Editar da aba Sobre e volta para ela, na mesma largura. */}}
-  <div class="stack">
-    <div class="toolbar">
-      <h2>{{.T "org.settings.title"}}</h2>
-      <a class="btn btn-ghost btn-sm" href="/orgs/{{.OrgID}}/about">{{template "icon" "arrow-left"}} {{.T "common.back"}}</a>
+  {{/* A tela de edição abre pelo botão Editar das Configurações e volta para elas, na mesma largura. */}}
+  <div class="page-head">
+    <div>
+      <div class="eyebrow" data-org-name>{{.Me.OrganizationName}}</div>
+      <h1>{{.T "org.settings.title"}}</h1>
     </div>
+    <a class="btn btn-ghost btn-sm" href="/orgs/{{.OrgID}}/about">{{template "icon" "arrow-left"}} {{.T "common.back"}}</a>
+  </div>
+
+  <div class="stack">
     <form class="stack" @submit.prevent="saveOrg()">
       <section class="card">
         <div class="card-head"><h2>{{.T "org.settings.identity"}}</h2></div>

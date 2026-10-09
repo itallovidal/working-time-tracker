@@ -255,59 +255,6 @@
     </template>
   </section>
 
-  <section class="stack" aria-labelledby="home-projects-title">
-    <div class="toolbar">
-      <div class="row row-tight">
-        <h2 id="home-projects-title">{{.T "home.projects.title"}}</h2>
-        <span class="badge num" x-cloak x-show="!loading" x-text="total"></span>
-      </div>
-      {{if .Can "projects.create"}}
-      <button type="button" class="btn" @click="openCreate()">{{template "icon" "plus"}} {{.T "org.projects.new"}}</button>
-      {{end}}
-    </div>
-
-    <p class="muted" x-show="loading">{{.T "org.projects.loading"}}</p>
-    <p class="form-error" x-cloak x-show="errors.load" x-text="errors.load" role="alert"></p>
-
-    <div class="empty" x-cloak x-show="!loading && !errors.load && total === 0">
-      {{template "icon" "diagram-project"}}
-      <strong>{{.T "org.projects.empty"}}</strong>
-      {{if .Can "projects.create"}}
-      <span>{{.T "org.projects.empty_admin"}}</span>
-      {{else}}
-      <span>{{.T "org.projects.empty_member"}}</span>
-      {{end}}
-    </div>
-
-    <div class="project-grid" x-cloak x-show="projects.length > 0">
-      <template x-for="p in projects" :key="p.id">
-        <a class="project-card" :class="'hue-' + hueOf(p.id)" :href="'/projects/' + p.id">
-          <div class="project-top">
-            <span class="project-mark" aria-hidden="true" x-text="markOf(p.name)"></span>
-            <div class="project-title">
-              <h3 x-text="p.name"></h3>
-              <p class="project-customer" x-text="p.customer ? p.customer.name : $t('org.projects.internal')"></p>
-            </div>
-          </div>
-          <p class="project-desc" x-show="p.description" x-text="p.description"></p>
-          <div class="project-stats">
-            <span class="project-stat">{{template "icon" "users"}} <span x-text="$t('home.projects.people', { count: p.member_count })"></span></span>
-            <span class="project-stat">{{template "icon" "list-check"}} <span x-text="$t('home.projects.tasks', { count: p.task_count })"></span></span>
-          </div>
-        </a>
-      </template>
-    </div>
-
-    <nav class="pager" aria-label="{{.T "home.projects.pager"}}" x-cloak x-show="total > 0">
-      <span class="muted small" x-text="summary()"></span>
-      <div class="row row-tight" x-show="pages() > 1">
-        <button type="button" class="btn btn-secondary btn-sm" :disabled="page <= 1 || pending === 'page'" @click="go(page - 1)">{{template "icon" "chevron-left"}} {{.T "home.projects.prev"}}</button>
-        <button type="button" class="btn btn-secondary btn-sm" :disabled="page >= pages() || pending === 'page'" @click="go(page + 1)">{{.T "home.projects.next"}} {{template "icon" "chevron-right"}}</button>
-      </div>
-    </nav>
-  </section>
-
-  {{template "project_form" .}}
   {{if and .Me .Me.NeedsOnboarding}}{{template "onboarding" .}}{{end}}
 </main>
 {{end}}

@@ -84,7 +84,7 @@
                 <option :value="c.id" x-text="c.name" :selected="c.id === draft.customer_id"></option>
               </template>
             </select>
-            <span class="hint">{{.T "project_settings.customers_hint"}} <a href="/orgs/{{.OrgID}}/customers">{{.T "org.head.title"}} › {{.T "org.head.customers"}}</a>.</span>
+            <span class="hint">{{.T "project_settings.customers_hint"}} <a href="/orgs/{{.OrgID}}/customers">{{.T "nav.customers"}}</a>.</span>
           </div>
           {{end}}
           <div class="field">

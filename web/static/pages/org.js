@@ -50,8 +50,7 @@ document.addEventListener('alpine:init', () => {
     : { label: r[0], value: WTT.notInformed, empty: true }));
   const bareURL = (url) => (url || '').replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
 
-  // projectCreation é o que a página inicial e a aba Projetos têm em comum: o modal de novo projeto
-  // (o formulário é o parcial project_form) e a criação. Cada componente o espalha no seu objeto.
+  // projectCreation é o modal de novo projeto da página Projetos (o formulário é o parcial project_form) e a criação.
   const projectCreation = () => ({
     ...form(),
     customers: null, // só carregados quando o modal de novo projeto abre pela primeira vez
@@ -99,22 +98,6 @@ document.addEventListener('alpine:init', () => {
     },
   });
 
-  // A aba Projetos da organização: todos os projetos numa tabela de gestão.
-  Alpine.data('orgProjects', () => ({
-    ...projectCreation(),
-    loading: true,
-    projects: [],
-    async init() {
-      try {
-        this.projects = (await api('GET', '/api/orgs/' + orgId + '/projects')) || [];
-      } catch (e) {
-        this.errors.load = e.message;
-      } finally {
-        this.loading = false;
-      }
-    },
-  }));
-
   // Tons dos cartões de projeto: só enfeite (as classes .hue-* do app.css), sorteados pelo id para
   // o projeto ter sempre a mesma cor, em qualquer lugar.
   const projectHues = ['teal', 'blue', 'purple', 'green', 'orange', 'gold'];
@@ -137,7 +120,7 @@ document.addEventListener('alpine:init', () => {
     return letters.join('').toUpperCase();
   };
 
-  const HOME_PROJECTS_PER_PAGE = 6;
+  const PROJECTS_PER_PAGE = 6;
   const HOME_TEAM_PER_PAGE = 5; // listas de pessoas ficam em cinco por vez
   // As três janelas da visão geral: a chave é a da API, o campo é o tempo da pessoa nela.
   const periodFields = { last_7_days: 'last_7_days_seconds', last_30_days: 'last_30_days_seconds', all_time: 'total_seconds' };
@@ -302,41 +285,26 @@ document.addEventListener('alpine:init', () => {
     statusClass: WTT.statusClass,
   });
 
-  // A página inicial: para admins, a visão geral da organização (tempo e dinheiro de todos os
-  // projetos) e, para todos, o painel da própria pessoa e os projetos em cartões, seis por página.
-  Alpine.data('orgHome', () => ({
+  // A página Projetos: os projetos de quem olha (todos, para os admins) em cartões, seis por página.
+  Alpine.data('orgProjects', () => ({
     ...projectCreation(),
-    ...homeMine(),
     loading: true,
     projects: [],
     total: 0,
     page: 1,
-    stats: null,
-    statsLoading: false,
-    period: 'last_30_days',
-    teamAt: 1,
-    periods: [
-      { key: 'last_7_days', label: WTT.t('home.stats.last_7') },
-      { key: 'last_30_days', label: WTT.t('home.stats.last_30') },
-      { key: 'all_time', label: WTT.t('home.stats.all_time') },
-    ],
     hueOf,
-    initialsOf,
     markOf,
     init() {
       const wanted = parseInt(new URLSearchParams(location.search).get('page'), 10);
       this.page = wanted > 0 ? wanted : 1;
       this.loadProjects();
-      this.initMine();
-      if (me.role === 'admin') this.loadStats();
     },
-
-    // Os projetos: uma página por vez, vinda do servidor, que corrige uma página que não existe mais.
+    // Uma página por vez, vinda do servidor, que corrige uma página que não existe mais.
     loadProjects() {
       return this.run('page', async () => {
         this.errors.load = '';
         try {
-          const res = await api('GET', '/api/orgs/' + orgId + '/projects?page=' + this.page + '&per_page=' + HOME_PROJECTS_PER_PAGE);
+          const res = await api('GET', '/api/orgs/' + orgId + '/projects?page=' + this.page + '&per_page=' + PROJECTS_PER_PAGE);
           this.projects = res.items || [];
           this.total = res.total;
           this.page = res.page;
@@ -353,7 +321,7 @@ document.addEventListener('alpine:init', () => {
       return this.loadProjects();
     },
     pages() {
-      return Math.max(1, Math.ceil(this.total / HOME_PROJECTS_PER_PAGE));
+      return Math.max(1, Math.ceil(this.total / PROJECTS_PER_PAGE));
     },
     summary() {
       return WTT.t('home.projects.summary', { page: this.page, pages: this.pages(), count: this.total });
@@ -364,6 +332,27 @@ document.addEventListener('alpine:init', () => {
       if (this.page > 1) url.searchParams.set('page', this.page);
       else url.searchParams.delete('page');
       history.replaceState(null, '', url);
+    },
+  }));
+
+  // A página inicial: para admins, a visão geral da organização (tempo e dinheiro de todos os
+  // projetos) e a equipe; para todos, o painel da própria pessoa.
+  Alpine.data('orgHome', () => ({
+    ...form(),
+    ...homeMine(),
+    stats: null,
+    statsLoading: false,
+    period: 'last_30_days',
+    teamAt: 1,
+    periods: [
+      { key: 'last_7_days', label: WTT.t('home.stats.last_7') },
+      { key: 'last_30_days', label: WTT.t('home.stats.last_30') },
+      { key: 'all_time', label: WTT.t('home.stats.all_time') },
+    ],
+    initialsOf,
+    init() {
+      this.initMine();
+      if (me.role === 'admin') this.loadStats();
     },
 
     // A visão geral: o servidor manda as três janelas de uma vez, e trocar de janela não pede nada.

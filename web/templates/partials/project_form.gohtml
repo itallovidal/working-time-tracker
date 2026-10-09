@@ -1,6 +1,5 @@
-{{/* O formulário de novo projeto, para a página inicial e para a aba Projetos. Aparece no modal do layout
-   base e continua no escopo do componente que o inclui, que traz draft, customers, errors, pending,
-   openCreate e create. */}}
+{{/* O formulário de novo projeto, da página Projetos. Aparece no modal do layout base e continua no escopo
+   do componente que o inclui, que traz draft, customers, errors, pending, openCreate e create. */}}
 {{define "project_form"}}
 {{if .Can "projects.create"}}
   <template x-teleport="#modal-root">

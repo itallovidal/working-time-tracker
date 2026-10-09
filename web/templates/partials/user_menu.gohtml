@@ -1,0 +1,24 @@
+{{/* user_menu é o menu da conta, no canto da barra superior: o botão com o avatar e o nome de quem está logado abre
+     o perfil, a ajuda, a troca de idioma e a saída. O botão fica marcado no Perfil e na Ajuda. Fecha com Esc, ao
+     clicar fora ou ao escolher. */}}
+{{define "user_menu"}}
+<div class="nav-menu user-menu" x-data="userMenu" @keydown.escape.window="close()" @click.outside="close()">
+  <button type="button" class="nav-menu-btn user-menu-btn" :class="open && 'is-open'" aria-haspopup="true" aria-controls="user-menu-panel"
+          :aria-expanded="open.toString()" title="{{.Me.Email}}" {{if or (eq .Section "profile") (eq .Section "help")}}aria-current="true"{{end}} @click="toggle()">
+    <span class="sr-only">{{.T "nav.account_sr"}}</span>
+    <span class="avatar" aria-hidden="true">{{.Initials}}</span>
+    <span class="name" data-me-name>{{.Me.Name}}</span>
+    {{if .IsOwner}}<span class="badge badge-accent">{{.T "roles.owner"}}</span>{{else if .IsAdmin}}<span class="badge badge-accent">{{.T "roles.admin"}}</span>{{end}}
+    {{template "icon" "chevron-down"}}
+  </button>
+  <div class="nav-menu-panel" id="user-menu-panel" x-cloak x-show="open">
+    <a class="user-menu-item" href="/profile" {{if eq .Section "profile"}}aria-current="page"{{end}} @click="close()">{{template "icon" "user"}} {{.T "nav.profile"}}</a>
+    <a class="user-menu-item" href="/help" {{if eq .Section "help"}}aria-current="page"{{end}} @click="close()">{{template "icon" "circle-question"}} {{.T "nav.help"}}</a>
+    <div class="user-menu-row">
+      <span class="muted small">{{.T "lang.label"}}</span>
+      {{template "lang_switch" .}}
+    </div>
+    <button type="button" class="user-menu-item" :disabled="busy" @click="logout()">{{template "icon" "right-from-bracket"}} {{.T "nav.logout"}}</button>
+  </div>
+</div>
+{{end}}

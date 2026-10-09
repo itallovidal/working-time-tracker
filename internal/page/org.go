@@ -34,42 +34,36 @@ func (h *Handler) Org(c *echo.Context) error {
 	return h.render(c, "org_home", d)
 }
 
-// orgPage monta a página de uma aba da organização. A aba Colaboradores tem o próprio item na
-// barra superior; as outras ficam sob Organização.
-func (h *Handler) orgPage(c *echo.Context, name, titleKey, tab string) error {
-	section := "organization"
-	if tab == "people" {
-		section = "people"
-	}
-	return h.render(c, name, h.orgData(c, Data{TitleKey: titleKey, Section: section, Tab: tab}))
+// orgPage monta uma página da organização. Cada uma tem o seu item na barra superior (section).
+func (h *Handler) orgPage(c *echo.Context, name, titleKey, section string) error {
+	return h.render(c, name, h.orgData(c, Data{TitleKey: titleKey, Section: section}))
 }
 
-// About é a aba Sobre: o perfil da organização, que todos os membros leem (S11.4).
+// About é a página Configurações: o perfil da organização, que todos os membros leem (S11.4).
 func (h *Handler) About(c *echo.Context) error {
-	return h.orgPage(c, "org_about", "titles.org_about", "about")
+	return h.orgPage(c, "org_about", "titles.org_about", "organization")
 }
 
 // OrgSettings é a tela de edição da organização: os dados dela e a exclusão (S8.2).
-// Abre pelo botão Editar da aba Sobre, que continua marcada. O perfil e a senha de
-// quem está logado ficam em Profile. Esta tela e as abas seguintes são só de admins;
-// o middleware de rota garante isso.
+// Abre pelo botão Editar das Configurações, que continuam marcadas na barra. O perfil e a senha de
+// quem está logado ficam em Profile. Esta tela é só de admins; o middleware de rota garante isso.
 func (h *Handler) OrgSettings(c *echo.Context) error {
-	return h.orgPage(c, "org_settings", "titles.org_settings", "about")
+	return h.orgPage(c, "org_settings", "titles.org_settings", "organization")
 }
 
-// OrgProjects é a aba Projetos: todos os projetos numa tabela de gestão, dentro da organização.
+// OrgProjects é a página Projetos: os projetos de quem olha (todos, para os admins), em cartões.
 func (h *Handler) OrgProjects(c *echo.Context) error {
 	return h.orgPage(c, "org_projects", "titles.org_projects", "projects")
 }
 
-// Customers é a aba Clientes: quem contrata os projetos da organização (S12.4).
+// Customers é a página Clientes: quem contrata os projetos da organização (S12.4).
 func (h *Handler) Customers(c *echo.Context) error {
 	return h.orgPage(c, "org_customers", "titles.org_customers", "customers")
 }
 
-// People é a aba Colaboradores: as pessoas da organização, os papéis e os convites (S8.3).
+// People é a página Colaboradores: as pessoas da organização, os papéis e os convites (S8.3).
 func (h *Handler) People(c *echo.Context) error {
-	d := h.orgData(c, Data{TitleKey: "titles.org_people", Section: "people", Tab: "people"})
+	d := h.orgData(c, Data{TitleKey: "titles.org_people", Section: "people"})
 	if d.Props == nil {
 		d.Props = map[string]any{}
 	}

@@ -160,8 +160,8 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 .mainnav a:hover { background: var(--surface-2); color: var(--ink); }
 .mainnav a[aria-current="page"] { background: var(--accent-soft); color: var(--accent); }
 
-/* O menu Projetos: um botão do tamanho dos links, com o painel logo abaixo (ou, em tela estreita, de ponta a ponta
-   da barra). Os seletores levam .mainnav para vencer o estilo dos links da barra. */
+/* O menu da conta: um botão com o avatar e o nome, e o painel logo abaixo, alinhado ao canto da barra (em tela
+   estreita, colado à borda dela). */
 .topbar-inner { position: relative; }
 .nav-menu { position: relative; }
 .nav-menu-btn {
@@ -169,37 +169,36 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
   cursor: pointer; padding: 6px 10px; border-radius: var(--radius-sm); display: inline-flex; align-items: center; gap: 6px;
 }
 .nav-menu-btn:hover, .nav-menu-btn.is-open { background: var(--surface-2); color: var(--ink); }
-.nav-menu-btn[aria-current="true"] { background: var(--accent-soft); color: var(--accent); }
+.nav-menu-btn[aria-current="true"] { background: var(--surface-2); color: var(--accent); }
 .nav-menu-btn i { font-size: 0.7rem; transition: transform 0.15s; }
 .nav-menu-btn.is-open i { transform: rotate(180deg); }
 .nav-menu-panel {
-  position: absolute; top: calc(100% + 6px); left: 0; z-index: 30; width: 320px; max-width: calc(100vw - 32px);
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 30; width: 240px; max-width: calc(100vw - 32px);
   background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius); box-shadow: var(--shadow);
-  padding: 8px; display: flex; flex-direction: column; gap: 6px;
+  padding: 8px; display: flex; flex-direction: column; gap: 2px;
 }
-.nav-menu-list { list-style: none; margin: 0; padding: 0; max-height: min(55vh, 360px); overflow-y: auto; overscroll-behavior: contain; }
-.mainnav .nav-project {
-  display: block; padding: 8px 10px; border-radius: var(--radius-sm); color: var(--ink); font-weight: 500; font-size: 0.93rem;
-  text-decoration: none; overflow-wrap: anywhere;
+.user-menu-btn { gap: 8px; padding: 3px 8px 3px 3px; font-size: 0.9rem; }
+.user-menu-item {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border: 0; border-radius: var(--radius-sm);
+  background: transparent; color: var(--ink); font: inherit; font-weight: 500; font-size: 0.93rem; text-align: left;
+  text-decoration: none; cursor: pointer;
 }
-.mainnav .nav-project:hover { background: var(--surface-2); color: var(--ink); }
-.mainnav .nav-project[aria-current="page"] { background: var(--accent-soft); color: var(--accent); }
-.nav-menu-empty { margin: 4px 8px; }
-.mainnav .nav-menu-all {
-  display: block; margin-top: 2px; padding: 10px 10px 4px; border-top: 1px solid var(--rule); border-radius: 0;
-  font-size: 0.86rem; font-weight: 600; color: var(--accent);
+.user-menu-item:hover { background: var(--surface-2); }
+.user-menu-item[aria-current="page"] { background: var(--accent-soft); color: var(--accent); }
+.user-menu-item i { width: 16px; text-align: center; color: var(--muted); }
+.user-menu-item[aria-current="page"] i { color: inherit; }
+.user-menu-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px;
+  border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); margin: 4px 0;
 }
-.mainnav .nav-menu-all:hover { background: transparent; color: var(--accent); text-decoration: underline; }
-/* Ao ir para a lista de projetos da primeira tela, a barra fixa não cobre o título. */
-#home-projects-title { scroll-margin-top: 84px; }
 @media (max-width: 640px) {
   .nav-menu { position: static; }
-  .nav-menu-panel { left: 16px; right: 16px; width: auto; max-width: none; top: 100%; }
+  .nav-menu-panel { right: 16px; top: 100%; }
 }
 
 .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
 
-/* Toggle de idioma: PT | EN. Na barra e, sem login, no canto da tela. */
+/* Toggle de idioma: PT | EN. No menu da conta e, sem login, no canto da tela. */
 .lang-switch { display: inline-flex; border: 1px solid var(--rule); border-radius: var(--radius-sm); overflow: hidden; }
 .lang-switch a {
   padding: 3px 8px; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.04em;
@@ -209,12 +208,6 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 .lang-switch a:hover { background: var(--surface-2); color: var(--ink); }
 .lang-switch a[aria-current] { background: var(--accent-soft); color: var(--accent); }
 .lang-float { position: fixed; top: 12px; right: 16px; z-index: 20; }
-.me {
-  display: flex; align-items: center; gap: 8px; font-size: 0.9rem; color: var(--ink-2);
-  text-decoration: none; padding: 3px 8px 3px 3px; border-radius: var(--radius-sm);
-}
-.me:hover { background: var(--surface-2); color: var(--ink); }
-.me[aria-current="page"] { background: var(--surface-2); color: var(--accent); }
 .avatar {
   width: 28px; height: 28px; border-radius: 50%;
   background: var(--accent-soft); color: var(--accent);
@@ -952,9 +945,15 @@ html.modal-open { overflow: hidden; }
 }
 
 @media (max-width: 640px) {
-  .topbar-inner { padding: 10px 16px; gap: 10px; }
+  .topbar-inner { padding: 10px 16px; gap: 6px 10px; }
+  /* No celular o nome da organização e o menu da conta dividem a primeira linha, e os itens ficam embaixo, na
+     largura toda: a barra é fixa, e uma linha a menos sobra para a página. */
+  .brand { flex: 1 1 0; min-width: 0; }
+  .brand span { overflow: hidden; text-overflow: ellipsis; }
+  .topbar-right { order: 2; }
+  .mainnav { order: 3; flex-basis: 100%; }
   .page { padding: 20px 16px 48px; }
-  .me .name { display: none; }
+  .user-menu-btn .name { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }

@@ -1,45 +1,61 @@
 {{define "content"}}
 <main class="page" x-data="orgProjects">
-  {{template "org_head" .}}
-
-  <div class="toolbar">
-    <p class="muted">{{.T "org.projects.intro"}}</p>
+  {{/* Os projetos de quem olha (todos, para os admins), em cartões, seis por página. Quem pode criar projeto tem o
+       botão no cabeçalho. */}}
+  <div class="page-head">
+    <div>
+      <div class="eyebrow" data-org-name>{{.Me.OrganizationName}}</div>
+      <div class="row row-tight">
+        <h1>{{.T "nav.projects"}}</h1>
+        <span class="badge num" x-cloak x-show="!loading" x-text="total"></span>
+      </div>
+      <p class="lede">{{.T "org.projects.intro"}}</p>
+    </div>
+    {{if .Can "projects.create"}}
     <button type="button" class="btn" @click="openCreate()">{{template "icon" "plus"}} {{.T "org.projects.new"}}</button>
+    {{end}}
   </div>
-
-  {{template "project_form" .}}
 
   <p class="muted" x-show="loading">{{.T "org.projects.loading"}}</p>
-  <p class="form-error" x-cloak x-show="errors.load" x-text="errors.load"></p>
+  <p class="form-error" x-cloak x-show="errors.load" x-text="errors.load" role="alert"></p>
 
-  <div class="empty" x-cloak x-show="!loading && !errors.load && projects.length === 0">
+  <div class="empty" x-cloak x-show="!loading && !errors.load && total === 0">
     {{template "icon" "diagram-project"}}
     <strong>{{.T "org.projects.empty"}}</strong>
+    {{if .Can "projects.create"}}
     <span>{{.T "org.projects.empty_admin"}}</span>
+    {{else}}
+    <span>{{.T "org.projects.empty_member"}}</span>
+    {{end}}
   </div>
 
-  {{/* A aba do admin é uma tabela de gestão; os cartões ficam na página inicial, para quem
-       entra para trabalhar num projeto. */}}
-  <div class="table-wrap" x-cloak x-show="projects.length > 0">
-    <table>
-      <thead>
-        <tr><th>{{.T "org.projects.col_project"}}</th><th>{{.T "org.projects.col_customer"}}</th><th title="{{.T "org.projects.col_people_title"}}">{{.T "org.projects.col_people"}}</th><th>{{.T "org.projects.col_tasks"}}</th></tr>
-      </thead>
-      <tbody>
-        <template x-for="p in projects" :key="p.id">
-          {{/* A linha inteira abre o projeto; o clique no link fica com o navegador. */}}
-          <tr class="row-link" @click="if (!$event.target.closest('a')) location.href = '/projects/' + p.id">
-            <td><a :href="'/projects/' + p.id" x-text="p.name"></a></td>
-            <td>
-              <span x-show="p.customer" x-text="p.customer && p.customer.name"></span>
-              <span class="muted" x-show="!p.customer">{{.T "org.projects.internal"}}</span>
-            </td>
-            <td class="num" x-text="p.member_count"></td>
-            <td class="num" x-text="p.task_count"></td>
-          </tr>
-        </template>
-      </tbody>
-    </table>
+  <div class="project-grid" x-cloak x-show="projects.length > 0">
+    <template x-for="p in projects" :key="p.id">
+      <a class="project-card" :class="'hue-' + hueOf(p.id)" :href="'/projects/' + p.id">
+        <div class="project-top">
+          <span class="project-mark" aria-hidden="true" x-text="markOf(p.name)"></span>
+          <div class="project-title">
+            <h3 x-text="p.name"></h3>
+            <p class="project-customer" x-text="p.customer ? p.customer.name : $t('org.projects.internal')"></p>
+          </div>
+        </div>
+        <p class="project-desc" x-show="p.description" x-text="p.description"></p>
+        <div class="project-stats">
+          <span class="project-stat">{{template "icon" "users"}} <span x-text="$t('home.projects.people', { count: p.member_count })"></span></span>
+          <span class="project-stat">{{template "icon" "list-check"}} <span x-text="$t('home.projects.tasks', { count: p.task_count })"></span></span>
+        </div>
+      </a>
+    </template>
   </div>
+
+  <nav class="pager" aria-label="{{.T "home.projects.pager"}}" x-cloak x-show="total > 0">
+    <span class="muted small" x-text="summary()"></span>
+    <div class="row row-tight" x-show="pages() > 1">
+      <button type="button" class="btn btn-secondary btn-sm" :disabled="page <= 1 || pending === 'page'" @click="go(page - 1)">{{template "icon" "chevron-left"}} {{.T "home.projects.prev"}}</button>
+      <button type="button" class="btn btn-secondary btn-sm" :disabled="page >= pages() || pending === 'page'" @click="go(page + 1)">{{.T "home.projects.next"}} {{template "icon" "chevron-right"}}</button>
+    </div>
+  </nav>
+
+  {{template "project_form" .}}
 </main>
 {{end}}

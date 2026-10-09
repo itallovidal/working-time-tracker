@@ -34,14 +34,14 @@ func RegisterPages(e *echo.Echo, p *page.Handler, m *auth.Middleware, oauth *int
 	org := m.RequireOrgPage(auth.KindOrganization, "orgId", p.NotFound)
 	g.GET("/orgs/:orgId", p.Org, org)
 	g.GET("/orgs/:orgId/about", p.About, org)
-	// A tela de edição da organização é só de admins; as outras abas, de quem cuida do que
-	// elas mostram: pessoas, clientes e projetos.
+	// Os projetos de quem olha: a página é de todos, e a API entrega a cada um só os dele.
+	g.GET("/orgs/:orgId/projects", p.OrgProjects, org)
+	// A tela de edição da organização é só de admins; Colaboradores e Clientes, de quem cuida deles.
 	admin := m.RequireAdminPage(p.NotFound)
 	orgCan := func(key string) echo.MiddlewareFunc { return m.RequireOrgPermissionPage(p.NotFound, key) }
 	g.GET("/orgs/:orgId/settings", p.OrgSettings, org, admin)
 	g.GET("/orgs/:orgId/people", p.People, org, orgCan(permission.PeopleManage))
 	g.GET("/orgs/:orgId/customers", p.Customers, org, orgCan(permission.CustomersManage))
-	g.GET("/orgs/:orgId/projects", p.OrgProjects, org, orgCan(permission.ProjectsCreate))
 
 	prj := m.RequireOrgPage(auth.KindProject, "projectId", p.NotFound)
 	g.GET("/projects/:projectId", p.Project, prj)

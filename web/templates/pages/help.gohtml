@@ -46,10 +46,10 @@
             <a class="help-toc-group" href="#screens">{{.T "help.groups.screens"}}</a>
             <ul>
               <li><a href="#home">{{.T "help.screens.home.title"}}</a></li>
-              <li><a href="#org-about">{{.T "help.screens.org_about.title"}}</a></li>
+              <li><a href="#org-projects">{{.T "help.screens.org_projects.title"}}</a></li>
               <li><a href="#org-people">{{.T "help.screens.org_people.title"}}</a></li>
               <li><a href="#org-customers">{{.T "help.screens.org_customers.title"}}</a></li>
-              <li><a href="#org-projects">{{.T "help.screens.org_projects.title"}}</a></li>
+              <li><a href="#org-about">{{.T "help.screens.org_about.title"}}</a></li>
               <li><a href="#project-home">{{.T "help.screens.project_home.title"}}</a></li>
               <li><a href="#my-tasks">{{.T "help.screens.project_my_tasks.title"}}</a></li>
               <li><a href="#task-list">{{.T "help.screens.project_tasks.title"}}</a></li>
@@ -103,21 +103,21 @@
         <section class="card help-section" id="currency" data-help-section>
           <h3>{{.T "help.steps.currency.title"}}</h3>
           <p>{{.T "help.steps.currency.text"}}</p>
-          <ol class="help-path" aria-label="{{.T "help.path_label"}}"><li>{{.T "nav.organization"}}</li><li>{{.T "org.head.about"}}</li><li>{{.T "common.edit"}}</li></ol>
+          <ol class="help-path" aria-label="{{.T "help.path_label"}}"><li>{{.T "nav.settings"}}</li><li>{{.T "common.edit"}}</li></ol>
           <p class="help-tip">{{.T "help.steps.currency.tip"}}</p>
         </section>
 
         <section class="card help-section" id="customers" data-help-section>
           <h3>{{.T "help.steps.customers.title"}}</h3>
           <p>{{.T "help.steps.customers.text"}}</p>
-          <ol class="help-path" aria-label="{{.T "help.path_label"}}"><li>{{.T "nav.organization"}}</li><li>{{.T "org.head.customers"}}</li><li>{{.T "org.customers.new"}}</li></ol>
+          <ol class="help-path" aria-label="{{.T "help.path_label"}}"><li>{{.T "nav.customers"}}</li><li>{{.T "org.customers.new"}}</li></ol>
           <p class="help-tip">{{.T "help.steps.customers.tip"}}</p>
         </section>
 
         <section class="card help-section" id="new-project" data-help-section>
           <h3>{{.T "help.steps.project.title"}}</h3>
           <p>{{.T "help.steps.project.text"}}</p>
-          <ol class="help-path" aria-label="{{.T "help.path_label"}}"><li>{{.T "nav.home"}}</li><li>{{.T "org.projects.new"}}</li></ol>
+          <ol class="help-path" aria-label="{{.T "help.path_label"}}"><li>{{.T "nav.projects"}}</li><li>{{.T "org.projects.new"}}</li></ol>
           <p class="help-tip">{{.T "help.steps.project.tip"}}</p>
         </section>
 
@@ -173,19 +173,14 @@
           <p>{{.T "help.screens.home.text"}}</p>
           <ul class="help-list">
             <li>{{.T "help.screens.home.mine"}}</li>
-            <li>{{.T "help.screens.home.projects"}}</li>
             <li>{{.T "help.screens.home.overview"}}</li>
             <li>{{.T "help.screens.home.team"}}</li>
           </ul>
         </section>
 
-        <section class="card help-section" id="org-about" data-help-section>
-          <h3>{{.T "help.screens.org_about.title"}}</h3>
-          <p>{{.T "help.screens.org_about.text"}}</p>
-          <ul class="help-list">
-            <li>{{.T "help.screens.org_about.edit"}}</li>
-            <li>{{.T "help.screens.org_about.delete"}}</li>
-          </ul>
+        <section class="card help-section" id="org-projects" data-help-section>
+          <h3>{{.T "help.screens.org_projects.title"}}</h3>
+          <p>{{.T "help.screens.org_projects.text"}}</p>
         </section>
 
         <section class="card help-section" id="org-people" data-help-section>
@@ -208,9 +203,13 @@
           </ul>
         </section>
 
-        <section class="card help-section" id="org-projects" data-help-section>
-          <h3>{{.T "help.screens.org_projects.title"}}</h3>
-          <p>{{.T "help.screens.org_projects.text"}}</p>
+        <section class="card help-section" id="org-about" data-help-section>
+          <h3>{{.T "help.screens.org_about.title"}}</h3>
+          <p>{{.T "help.screens.org_about.text"}}</p>
+          <ul class="help-list">
+            <li>{{.T "help.screens.org_about.edit"}}</li>
+            <li>{{.T "help.screens.org_about.delete"}}</li>
+          </ul>
         </section>
 
         <section class="card help-section" id="project-home" data-help-section>

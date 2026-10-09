@@ -1,9 +1,11 @@
 {{define "content"}}
 <main class="page" x-data="orgCustomers">
-  {{template "org_head" .}}
-
-  <div class="toolbar">
-    <p class="muted flex-1">{{.T "org.customers.intro"}}</p>
+  <div class="page-head">
+    <div>
+      <div class="eyebrow" data-org-name>{{.Me.OrganizationName}}</div>
+      <h1>{{.T "nav.customers"}}</h1>
+      <p class="lede">{{.T "org.customers.intro"}}</p>
+    </div>
     <button type="button" class="btn" @click="openForm()">{{template "icon" "plus"}} {{.T "org.customers.new"}}</button>
   </div>
 
