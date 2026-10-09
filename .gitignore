@@ -3,3 +3,6 @@
 
 # Binário gerado por `go build -o wtt ./cmd`
 /wtt
+
+# Arquivos do Finder (macOS), em qualquer pasta
+.DS_Store
