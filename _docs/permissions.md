@@ -55,9 +55,9 @@ A lista `GET /orgs/:id/persons` e `GET /persons/:id` trazem nome, e-mail, papel,
 
 | Chave | Libera |
 |---|---|
-| `projects.create` | Criar projetos e abrir a aba Projetos da organização |
-| `customers.manage` | Cadastrar, alterar e excluir clientes |
-| `people.manage` | Convidar pessoas (como membro), revogar convites e definir a jornada semanal |
+| `projects.create` | Criar projetos (o botão Novo projeto da página Projetos, que todos abrem) |
+| `customers.manage` | Cadastrar, alterar e excluir clientes (a página Clientes e o item dela na barra) |
+| `people.manage` | Convidar pessoas (como membro), revogar convites e definir a jornada semanal e a regra de pagamento (a página Colaboradores e o item dela na barra) |
 
 ## Grupos do projeto
 
@@ -93,10 +93,15 @@ colaboradores e outros gerentes, mas não dá o grupo financeiro, que tem o fatu
 | `POST /projects/:id/integrations`, `PATCH`/`DELETE /integrations/:id` | `integrations.manage` |
 | `POST /orgs/:id/projects` | `projects.create` |
 | `*/customers` | `customers.manage` |
-| `POST`/`GET /orgs/:id/invites`, `DELETE /invites/:id`, `PATCH /persons/:id/weekly-hours` | `people.manage` (convidar um admin é só do dono) |
+| `POST`/`GET /orgs/:id/invites`, `DELETE /invites/:id`, `PATCH /persons/:id/weekly-hours`, `PATCH /persons/:id/payment` | `people.manage` (convidar um admin é só do dono) |
 | `PATCH /persons/:id/role`, `PATCH /persons/:id/permissions`, `DELETE /orgs/:id` | só o dono |
 | `PATCH /orgs/:id` | admin |
 | `GET /orgs/:id/me/overview`, `GET /orgs/:id/me/tasks` | qualquer membro da organização (cada um lê só as próprias horas e tarefas, nunca as de outra pessoa) |
+| `GET /persons/:id/payments` | só a própria pessoa e os admins (`403` para os outros, também para quem tem só `people.manage`: é dinheiro) |
+| `GET /orgs/:id/payments` | admin (a visão da equipe: o que pagar e as horas de cada pessoa) |
+| Página `/orgs/:id/payments` | admin (`404` para os outros): os pagamentos de cada pessoa ficam no perfil dela |
+| Página `/orgs/:id/people/:personId` (o perfil de um colaborador) | admin (`404` para os outros, também para quem tem só `people.manage`: mostra o valor por hora e os pagamentos) |
+| Página `/orgs/:id/projects` | qualquer membro (cada um vê só os projetos dele; o Novo projeto pede `projects.create`) |
 | `GET /orgs/:id/overview`, `GET /orgs/:id/working-now` | admin (a segunda só diz quem está com o ponto aberto e em que tarefas, sem tempo nem dinheiro) |
 
 Sem a permissão a API responde `403 auth.permission_required` (ou `auth.owner_only`, ou `auth.admin_only`), e a página, `404`.
@@ -104,7 +109,7 @@ Sem a permissão a API responde `403 auth.permission_required` (ou `auth.owner_o
 ## Onde se escolhe
 
 - **Grupo do projeto**: no passo 2 de Adicionar pessoa e no modal Editar colaborador (aba Colaboradores da Gestão).
-- **Permissões da organização**: no modal Editar colaborador (aba Permissões), na aba Colaboradores da organização, só para o dono e só para quem não é admin.
+- **Permissões da organização**: no modal Editar colaborador (aba Permissões), que abre pelo lápis da página Colaboradores ou pelo Editar do perfil da pessoa, só para o dono e só para quem não é admin.
 - **Valor por hora em cada projeto**: no mesmo modal, na aba Projetos e valores, só para admins. Ela usa as rotas do projeto (`PUT /projects/:id/allocations/:personId` e `DELETE /projects/:id/collaborators/:personId`) e `GET /persons/:id/allocations`, que continuam conferindo a permissão: quem tem só `people.manage` não vê a aba e, se chamasse as rotas, receberia `403`.
 
 ## Ainda não existe
