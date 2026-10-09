@@ -559,6 +559,12 @@ td.actions { text-align: right; white-space: nowrap; }
   background: var(--tone-soft); color: var(--tone);
   border-color: var(--tone-line, transparent); border-style: var(--tone-style, solid);
 }
+/* O selo de status é quadrado, de fundo branco, com um traço vertical na cor do status à esquerda; o da
+   prioridade segue arredondado e pintado, para os dois não se confundirem. */
+.badge.status-backlog, .badge.status-in_progress, .badge.status-awaiting_closure, .badge.status-closed {
+  background: var(--surface); color: var(--ink); border-radius: 0;
+  border-color: var(--rule); border-left: 3px solid var(--tone);
+}
 .chip.tone, .select-tone {
   background-color: var(--tone-soft); color: var(--tone);
   border-color: var(--tone-line, color-mix(in srgb, var(--tone) 35%, transparent)); border-style: var(--tone-style, solid);
