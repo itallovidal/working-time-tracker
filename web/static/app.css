@@ -262,6 +262,8 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
   padding: 18px 20px; display: flex; flex-direction: column; gap: 14px;
 }
 .card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+/* O ícone do título de um cartão (a página Sobre): na cor de destaque, para ler como marca do assunto, não como texto. */
+.card-head h2 > .fa-solid { color: var(--accent); margin-right: 4px; }
 .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: start; }
 .grid-aside { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 18px; align-items: start; }
 @media (max-width: 860px) { .grid-2, .grid-aside { grid-template-columns: 1fr; } }

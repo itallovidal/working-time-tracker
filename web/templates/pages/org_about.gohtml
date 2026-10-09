@@ -15,7 +15,7 @@
     {{end}}
 
     <section class="card">
-      <div class="card-head"><h2>{{.T "org.about.identity"}}</h2></div>
+      <div class="card-head"><h2>{{template "icon" "id-card"}} {{.T "org.about.identity"}}</h2></div>
       <p class="prose" x-show="org.description" x-text="org.description"></p>
       <dl class="facts">
         <div class="fact" x-show="!org.description"><dt>{{.T "common.description_label"}}</dt><dd class="muted" x-text="WTT.notInformed"></dd></div>
@@ -26,7 +26,7 @@
     </section>
 
     <section class="card">
-      <div class="card-head"><h2>{{.T "org.about.how_we_work"}}</h2></div>
+      <div class="card-head"><h2>{{template "icon" "briefcase"}} {{.T "org.about.how_we_work"}}</h2></div>
       <dl class="facts">
         <template x-for="f in defaults()" :key="f.label">
           <div class="fact"><dt x-text="f.label"></dt><dd :class="f.empty && 'muted'" x-text="f.value"></dd></div>
@@ -35,7 +35,7 @@
     </section>
 
     <section class="card">
-      <div class="card-head"><h2>{{.T "org.about.contact"}}</h2></div>
+      <div class="card-head"><h2>{{template "icon" "address-book"}} {{.T "org.about.contact"}}</h2></div>
       <dl class="facts">
         <template x-for="f in contact()" :key="f.label">
           <div class="fact">
@@ -50,7 +50,7 @@
     </section>
 
     <section class="card">
-      <div class="card-head"><h2>{{.T "org.about.company"}}</h2></div>
+      <div class="card-head"><h2>{{template "icon" "scale-balanced"}} {{.T "org.about.company"}}</h2></div>
       <dl class="facts">
         <template x-for="f in legal()" :key="f.label">
           <div class="fact"><dt x-text="f.label"></dt><dd :class="{ mono: f.mono, muted: f.empty }" x-text="f.value"></dd></div>
