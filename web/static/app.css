@@ -217,9 +217,10 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 .avatar-lg { width: 52px; height: 52px; font-size: 1.1rem; }
 .person-head { gap: 14px; flex-wrap: nowrap; align-items: center; min-width: 0; }
 .person-head > div { min-width: 0; }
-.person-head h1, .person-head .lede { overflow-wrap: anywhere; }
+.person-head h1, .person-head .lede, .person-head .profile-name { overflow-wrap: anywhere; }
+.profile-name { font-size: 1.15rem; font-weight: 650; }
 
-.page { max-width: 1200px; margin: 0 auto; padding: 28px 20px 64px; display: flex; flex-direction: column; gap: 22px; }
+.page { max-width: 1200px; margin: 0 auto; padding: 28px 20px 64px; display: flex; flex-direction: column; gap: 40px; }
 .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 .page-head .lede { color: var(--muted); margin-top: 4px; }
 .eyebrow { font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
@@ -263,6 +264,18 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 /* O ícone do título de um cartão (a página Sobre): na cor de destaque, para ler como marca do assunto, não como texto. */
 .card-head h2 > .fa-solid { color: var(--accent); margin-right: 4px; }
 .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: start; }
+/* O perfil de uma pessoa: cartões lado a lado (dados, período, desde o início), cada um com um número grande. */
+.profile-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; align-items: stretch; }
+.profile-big { display: flex; flex-direction: column; gap: 2px; }
+.profile-big-value { font-size: 1.9rem; font-weight: 650; font-variant-numeric: tabular-nums; line-height: 1.15; }
+.profile-big-hint { color: var(--muted); font-size: 0.9rem; }
+.profile-next { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; margin: 0; }
+.profile-next-date { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; font-size: 1rem; }
+.profile-next-date strong { font-size: 1.3rem; }
+.profile-facts dt .fa-solid { width: 1.2em; color: var(--accent); margin-right: 4px; }
+.profile-tasks { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.meter { height: 8px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+.meter > span { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
 .grid-aside { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 18px; align-items: start; }
 @media (max-width: 860px) { .grid-2, .grid-aside { grid-template-columns: 1fr; } }
 /* A página da tarefa: duas colunas de cartões, e em tela estreita uma coluna só, na ordem
@@ -346,7 +359,7 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 .pager .btn:disabled { cursor: default; }
 .stack-tight { gap: 4px; }
 /* Entre as seções de uma página: o relógio, as tarefas, as sessões. */
-.stack-sections { gap: 32px; }
+.stack-sections { gap: 40px; }
 .stack-narrow { max-width: 560px; }
 .row-tight { gap: 6px; }
 .facts { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 0; font-size: 0.9rem; }
@@ -707,7 +720,7 @@ td.actions { text-align: right; white-space: nowrap; }
 
 /* A equipe da página inicial: cada pessoa, com a tarefa em que trabalha agora quando está com o
    ponto aberto. A barra e as horas, abaixo, são do ranking guardado e hoje sem uso. */
-.team-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.team-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
 .team-row { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 12px; }
 .team-row .avatar { width: 36px; height: 36px; background: var(--tone-soft); color: var(--tone); }
 .team-who { min-width: 0; }

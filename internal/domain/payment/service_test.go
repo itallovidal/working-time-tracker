@@ -112,7 +112,7 @@ func monthly(day int) person.PaymentRule {
 
 func (f *fixture) summary(who uuid.UUID) *payment.Summary {
 	f.t.Helper()
-	s, err := f.svc.Person(f.orgID, who.String(), 0)
+	s, err := f.svc.Person(f.orgID, who.String(), 0, false)
 	if err != nil {
 		f.t.Fatal(err)
 	}
@@ -262,7 +262,7 @@ func TestPerson_OtherOrganizationIsNotFound(t *testing.T) {
 	f := setup(t)
 	ana := f.person("ana", monthly(5))
 	other, _ := organization.NewService(organization.NewStore(testClient)).Create("Outra")
-	if _, err := f.svc.Person(other.ID.String(), ana.String(), 0); err == nil {
+	if _, err := f.svc.Person(other.ID.String(), ana.String(), 0, false); err == nil {
 		t.Error("a person from another organization should not be found")
 	}
 }

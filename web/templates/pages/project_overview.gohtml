@@ -107,10 +107,7 @@
           <h2>{{.T "overview.integrations_title"}}</h2>
           <a class="btn btn-ghost btn-sm" href="/projects/{{.Project.ID}}/management/integrations">{{template "icon" "plug"}} {{.T "overview.open_tab"}}</a>
         </div>
-        <div class="empty" x-show="data.integrations.total === 0">
-          <strong>{{.T "overview.no_integrations"}}</strong>
-          <span>{{.T "overview.no_integrations_text"}}</span>
-        </div>
+        {{template "empty_state" (dict "Icon" "plug" "Show" "data.integrations.total === 0" "Title" (.T "overview.no_integrations") "Text" (.T "overview.no_integrations_text"))}}
         <p class="muted small" x-show="data.integrations.total > 0" x-text="integrationsSummary()"></p>
         <ul class="list" x-show="data.integrations.total > 0">
           <template x-for="it in data.integrations.items" :key="it.id">
@@ -205,10 +202,7 @@
         </div>
       </section>
 
-      <div class="empty" x-cloak x-show="filtered().length === 0">
-        <strong>{{.T "time.empty"}}</strong>
-        <span x-text="hasFilters() ? $t('time.empty_filtered') : $t('time.empty_text')"></span>
-      </div>
+      {{template "empty_state" (dict "Icon" "clock" "Cloak" true "Show" "filtered().length === 0" "Title" (.T "time.empty") "TextX" "hasFilters() ? $t('time.empty_filtered') : $t('time.empty_text')")}}
       <div class="table-wrap" x-show="filtered().length > 0">
         <table>
           <thead>

@@ -398,10 +398,11 @@ document.addEventListener('alpine:init', () => {
       return this.stats.by_person.filter((p) => p.working_now).map((p) => p.person.name).join(', ');
     },
 
-    // A equipe: todas as pessoas, cinco por página, com quem trabalha agora primeiro e depois por
-    // nome. Não há ordem por horas de propósito (veja teamHours).
+    // Quem está com o ponto aberto agora, por nome, sem quem abriu a página (o painel dela é o de baixo).
+    // Não há ordem por horas de propósito (veja teamHours).
     teamRows() {
-      return [...this.stats.by_person].sort((a, b) => Number(b.working_now) - Number(a.working_now) || a.person.name.localeCompare(b.person.name));
+      const me = window.BOOT && window.BOOT.me && window.BOOT.me.id;
+      return this.stats.by_person.filter((p) => p.working_now && p.person.id !== me).sort((a, b) => a.person.name.localeCompare(b.person.name));
     },
     teamView() {
       return pageOf(this.teamRows(), this.teamAt, HOME_TEAM_PER_PAGE);
@@ -762,6 +763,20 @@ document.addEventListener('alpine:init', () => {
       return this.detail.owner || share.amount_cents === null || share.amount_cents === undefined ? hours : hours + ' · ' + WTT.fmt.money(share.amount_cents);
     },
     // A dica do cartão "Desde o início": o valor (de quem é pago) e o dia da primeira sessão.
+    // O período que o card Próximo pagamento mostra: o corrente ou, se a contagem da regra ainda não começou, o primeiro
+    // que vem, zerado (as horas, o valor e, para os admins, a receita).
+    nx() {
+      const d = this.detail;
+      if (!d || !d.rule) return null;
+      if (d.current) return d.current;
+      const up = d.upcoming && d.upcoming[0];
+      if (!up) return null;
+      const hours = this.person && this.person.weekly_hours;
+      const v = { ...up, seconds: 0, amount_cents: 0, projects: [], days_left: undefined };
+      if (hours) v.goal_seconds = hours * 3600 * up.days / 7;
+      if (WTT.boot.me.role === 'admin') { v.revenue_cents = 0; v.margin_cents = 0; }
+      return v;
+    },
     lifetimeHint() {
       const life = this.detail.lifetime;
       const parts = [];

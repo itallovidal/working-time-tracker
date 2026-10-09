@@ -13,6 +13,7 @@ import (
 	"working-time-tracker/internal/domain/organization"
 	"working-time-tracker/internal/domain/person"
 	"working-time-tracker/internal/domain/project"
+	"working-time-tracker/internal/domain/task"
 	"working-time-tracker/internal/domain/work_session"
 )
 
@@ -31,6 +32,8 @@ type Deps struct {
 	People   *person.Service
 	Sessions *work_session.Service
 	Projects *project.Service
+	// Tasks conta as tarefas do período por estado; sem ele o detalhe vem sem essa contagem.
+	Tasks *task.Service
 	// Now é o relógio da conta; sem ele vale time.Now. Os testes o fixam.
 	Now func() time.Time
 }
@@ -61,6 +64,18 @@ type ProjectShare struct {
 	Project     Ref     `json:"project"`
 	Seconds     float64 `json:"seconds"`
 	AmountCents *int    `json:"amount_cents"`
+	// RevenueCents é o que o projeto cobra dos clientes por esse tempo. Só vai para admins; para os outros é nil.
+	RevenueCents *int `json:"revenue_cents,omitempty"`
+}
+
+// TaskCounts são as tarefas em que a pessoa trabalhou no período, contadas pelo estado que têm agora. O sistema não
+// guarda quando uma tarefa fechou, então "fechadas" são as que ela trabalhou e hoje estão fechadas.
+type TaskCounts struct {
+	Worked          int `json:"worked"`
+	Backlog         int `json:"backlog"`
+	InProgress      int `json:"in_progress"`
+	AwaitingClosure int `json:"awaiting_closure"`
+	Closed          int `json:"closed"`
 }
 
 // PeriodView é um período para a tela. Start e PayDate são dias de calendário YYYY-MM-DD no fuso da organização,
@@ -80,6 +95,12 @@ type PeriodView struct {
 	GoalSeconds *float64 `json:"goal_seconds,omitempty"`
 	// Projects (no corrente) é o detalhe por projeto.
 	Projects []ProjectShare `json:"projects,omitempty"`
+	// RevenueCents e MarginCents (no corrente, só para admins) são o que o tempo da pessoa rendeu aos projetos e o que
+	// sobra depois do que ela recebe: a soma de todos os projetos dela.
+	RevenueCents *int `json:"revenue_cents,omitempty"`
+	MarginCents  *int `json:"margin_cents,omitempty"`
+	// Tasks (no corrente) são as tarefas em que ela trabalhou no período.
+	Tasks *TaskCounts `json:"tasks,omitempty"`
 }
 
 // Totals é o acumulado dos períodos fechados do histórico.
@@ -121,8 +142,9 @@ func location(name string) *time.Location {
 }
 
 // Person monta os pagamentos da pessoa: os períodos da regra dela (se há uma) e o que ela registrou desde o início.
-// Um ID malformado ou de outra organização vale como "não encontrado".
-func (s *Service) Person(orgID, personID string, history int) (*Summary, error) {
+// Um ID malformado ou de outra organização vale como "não encontrado". Com revenue, o período corrente traz também o que
+// o tempo da pessoa rendeu aos projetos (valor cobrado), que só os admins veem.
+func (s *Service) Person(orgID, personID string, history int, revenue bool) (*Summary, error) {
 	org, err := s.deps.Orgs.Get(orgID)
 	if err != nil {
 		return nil, err
@@ -152,8 +174,13 @@ func (s *Service) Person(orgID, personID string, history int) (*Summary, error) 
 		current = fill(out, p, sessions, now, history, loc)
 	}
 	all := lifetime(out, sessions, now, p.IsOwner, loc)
-	if err := s.nameProjects(out, current, all); err != nil {
+	if err := s.nameProjects(out, current, all, revenue); err != nil {
 		return nil, err
+	}
+	if p.Payment != nil && out.Current != nil {
+		if err := s.countTasks(out.Current, sessions, p, now, loc); err != nil {
+			return nil, err
+		}
 	}
 	return out, nil
 }
@@ -187,38 +214,45 @@ type sum struct {
 	seconds float64
 	cents   int
 	money   bool
+	// bill é o que os clientes pagam por esse tempo; billed diz se alguma sessão tinha valor cobrado.
+	bill   int
+	billed bool
 }
 
 // add soma um pedaço de sessão. Sem valor (o dono, ou sessão sem taxa), os centavos ficam de fora.
-func (t *sum) add(seconds float64, pay *int, owner bool) {
+func (t *sum) add(seconds float64, pay, bill *int, owner bool) {
 	t.seconds += seconds
 	if !owner && pay != nil {
 		t.cents += *pay
 		t.money = true
 	}
+	if bill != nil {
+		t.bill += *bill
+		t.billed = true
+	}
 }
 
 // addTo soma o pedaço na linha do projeto, criando-a na primeira vez.
-func addTo(perProject map[uuid.UUID]*sum, projectID uuid.UUID, seconds float64, pay *int, owner bool) {
+func addTo(perProject map[uuid.UUID]*sum, projectID uuid.UUID, seconds float64, pay, bill *int, owner bool) {
 	ps := perProject[projectID]
 	if ps == nil {
 		ps = &sum{}
 		perProject[projectID] = ps
 	}
-	ps.add(seconds, pay, owner)
+	ps.add(seconds, pay, bill, owner)
 }
 
 // within soma o que as sessões têm em [from, to), no total e, com perProject, por projeto.
 func within(sessions []work_session.WorkSession, from, to, now time.Time, owner bool, perProject map[uuid.UUID]*sum) sum {
 	var total sum
 	for i := range sessions {
-		sec, pay, _ := sessions[i].WithinRange(from, to, now)
+		sec, pay, bill := sessions[i].WithinRange(from, to, now)
 		if sec <= 0 {
 			continue
 		}
-		total.add(sec, pay, owner)
+		total.add(sec, pay, bill, owner)
 		if perProject != nil {
-			addTo(perProject, sessions[i].ProjectID, sec, pay, owner)
+			addTo(perProject, sessions[i].ProjectID, sec, pay, bill, owner)
 		}
 	}
 	return total
@@ -234,12 +268,12 @@ func lifetime(out *Summary, sessions []work_session.WorkSession, now time.Time, 
 		if first.IsZero() || sessions[i].StartAt.Before(first) {
 			first = sessions[i].StartAt
 		}
-		sec, pay, _ := sessions[i].Within(time.Time{}, now)
+		sec, pay, bill := sessions[i].Within(time.Time{}, now)
 		if sec <= 0 {
 			continue
 		}
-		total.add(sec, pay, owner)
-		addTo(byProject, sessions[i].ProjectID, sec, pay, owner)
+		total.add(sec, pay, bill, owner)
+		addTo(byProject, sessions[i].ProjectID, sec, pay, bill, owner)
 	}
 	out.Lifetime.Seconds, out.Lifetime.AmountCents = total.seconds, total.amount(owner)
 	if !first.IsZero() {
@@ -305,7 +339,7 @@ func view(p Period) PeriodView {
 
 // nameProjects põe no período corrente e no "desde o início" o detalhe por projeto, com o nome de cada um, buscando
 // cada projeto uma vez. Um projeto que sumiu no meio do caminho fica de fora, sem derrubar a resposta.
-func (s *Service) nameProjects(out *Summary, current, all map[uuid.UUID]*sum) error {
+func (s *Service) nameProjects(out *Summary, current, all map[uuid.UUID]*sum, revenue bool) error {
 	names := map[uuid.UUID]string{}
 	for _, byProject := range []map[uuid.UUID]*sum{current, all} {
 		for id := range byProject {
@@ -323,14 +357,68 @@ func (s *Service) nameProjects(out *Summary, current, all map[uuid.UUID]*sum) er
 		}
 	}
 	if out.Current != nil {
-		out.Current.Projects = shares(current, names)
+		out.Current.Projects = shares(current, names, revenue)
+		if revenue {
+			var bill int
+			for _, t := range current {
+				bill += t.bill
+			}
+			out.Current.RevenueCents = &bill
+			if out.Current.AmountCents != nil {
+				margin := bill - *out.Current.AmountCents
+				out.Current.MarginCents = &margin
+			}
+		}
 	}
-	out.Lifetime.Projects = shares(all, names)
+	out.Lifetime.Projects = shares(all, names, false)
+	return nil
+}
+
+// countTasks conta as tarefas em que a pessoa trabalhou dentro do período corrente (alguma sessão dela o tocou, com a
+// tarefa dentro da sessão), pelo estado de hoje. Sem o serviço de tarefas, ou com uma tarefa que sumiu, a contagem
+// segue sem ela.
+func (s *Service) countTasks(cur *PeriodView, sessions []work_session.WorkSession, p *person.Person, now time.Time, loc *time.Location) error {
+	period, ok := PeriodAt(*p.Payment, now, loc)
+	if !ok || s.deps.Tasks == nil {
+		return nil
+	}
+	seen := map[uuid.UUID]bool{}
+	counts := TaskCounts{}
+	for i := range sessions {
+		if sec, _, _ := sessions[i].WithinRange(period.Start, period.End, now); sec <= 0 {
+			continue
+		}
+		for _, st := range sessions[i].Tasks {
+			if seen[st.TaskID] {
+				continue
+			}
+			seen[st.TaskID] = true
+			t, err := s.deps.Tasks.Get(st.TaskID.String())
+			if errors.Is(err, database.ErrNotFound) {
+				continue
+			}
+			if err != nil {
+				return err
+			}
+			counts.Worked++
+			switch t.Status {
+			case "in_progress":
+				counts.InProgress++
+			case "awaiting_closure":
+				counts.AwaitingClosure++
+			case "closed":
+				counts.Closed++
+			default:
+				counts.Backlog++
+			}
+		}
+	}
+	cur.Tasks = &counts
 	return nil
 }
 
 // shares monta o detalhe por projeto, do que teve mais tempo para o que teve menos.
-func shares(byProject map[uuid.UUID]*sum, names map[uuid.UUID]string) []ProjectShare {
+func shares(byProject map[uuid.UUID]*sum, names map[uuid.UUID]string, revenue bool) []ProjectShare {
 	list := []ProjectShare{}
 	for id, t := range byProject {
 		name, ok := names[id]
@@ -341,6 +429,10 @@ func shares(byProject map[uuid.UUID]*sum, names map[uuid.UUID]string) []ProjectS
 		if t.money {
 			c := t.cents
 			share.AmountCents = &c
+		}
+		if revenue {
+			b := t.bill
+			share.RevenueCents = &b
 		}
 		list = append(list, share)
 	}

@@ -15,6 +15,7 @@
   <p class="muted" x-show="loading">{{.T "my_tasks.loading"}}</p>
 
   <div class="empty" x-cloak x-show="!loading && !errors.load && tasks.length === 0">
+    {{template "icon" "list-check"}}
     <strong>{{.T "my_tasks.none"}}</strong>
     <span>{{.T "my_tasks.none_text"}}</span>
     <a class="btn btn-secondary btn-sm" href="/projects/{{.Project.ID}}/tasks">{{.T "my_tasks.none_link"}}</a>
@@ -32,7 +33,7 @@
           </button>
         </h2>
         <div class="stack" :id="'mine-' + s.value + '-body'" x-show="open[s.value]">
-          <p class="muted small" x-show="inStatus(s.value).length === 0">{{.T "my_tasks.empty"}}</p>
+          {{template "empty_state" (dict "Icon" "inbox" "Show" "inStatus(s.value).length === 0" "Title" (.T "my_tasks.empty"))}}
           {{template "task_table" (dict "Data" . "Rows" "inStatus(s.value)" "Assignee" "false" "Action" "start" "ActionShow" "true")}}
         </div>
       </section>

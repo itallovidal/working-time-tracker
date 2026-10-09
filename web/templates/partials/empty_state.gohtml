@@ -1,0 +1,13 @@
+{{/* empty_state é o cartão pontilhado de quando não há nada para mostrar: o ícone, a mensagem principal e, em cinza
+     embaixo, uma explicação. Recebe um dict:
+       Icon   o nome do ícone, como em template "icon"
+       Title  a mensagem (ou TitleX, uma expressão do Alpine para a que muda)
+       Text   a explicação, opcional (ou TextX)
+       Show   a condição do x-show, opcional
+       Cloak  true para esconder até o Alpine carregar
+     O que tem botão ou link dentro escreve o mesmo cartão à mão, com <div class="empty"> e o ícone. */}}
+{{define "empty_state"}}<div class="empty"{{if .Cloak}} x-cloak{{end}}{{if .Show}} x-show="{{.Show}}"{{end}}>
+  {{template "icon" .Icon}}
+  {{if .TitleX}}<strong x-text="{{.TitleX}}"></strong>{{else}}<strong>{{.Title}}</strong>{{end}}
+  {{if .TextX}}<span x-text="{{.TextX}}"></span>{{else if .Text}}<span>{{.Text}}</span>{{end}}
+</div>{{end}}

@@ -41,10 +41,13 @@
     {{/* As tarefas da pessoa que ainda não estão na sessão: ao iniciar uma, o cartão vai para o painel do timer. */}}
     <section class="stack">
       <h2>{{.T "time.my_tasks"}}</h2>
-      <p class="muted small" x-cloak x-show="!loading && tasks.length === 0">
-        {{.T "time.no_tasks"}} <a href="/projects/{{.Project.ID}}/tasks">{{.T "time.create_task"}}</a>
-      </p>
-      <p class="muted small" x-cloak x-show="tasks.length > 0 && idleTasks().length === 0">{{.T "time.all_in_session"}}</p>
+      <div class="empty" x-cloak x-show="!loading && tasks.length === 0">
+        {{template "icon" "list-check"}}
+        <strong>{{.T "time.no_tasks"}}</strong>
+        <span>{{.T "time.create_task"}}</span>
+        <a class="btn btn-secondary btn-sm" href="/projects/{{.Project.ID}}/tasks">{{.T "my_tasks.none_link"}}</a>
+      </div>
+      {{template "empty_state" (dict "Icon" "circle-check" "Cloak" true "Show" "tasks.length > 0 && idleTasks().length === 0" "Title" (.T "time.all_in_session"))}}
       <div class="task-cards" x-show="idleTasks().length > 0">
         <template x-for="t in idleTasks()" :key="t.id">
           {{template "task_card" .}}
@@ -84,10 +87,7 @@
         </div>
       </section>
 
-      <div class="empty" x-cloak x-show="filtered().length === 0">
-        <strong>{{.T "time.empty"}}</strong>
-        <span x-text="hasFilters() ? $t('time.empty_filtered') : $t('time.empty_own')"></span>
-      </div>
+      {{template "empty_state" (dict "Icon" "clock" "Cloak" true "Show" "filtered().length === 0" "Title" (.T "time.empty") "TextX" "hasFilters() ? $t('time.empty_filtered') : $t('time.empty_own')")}}
       <div class="table-wrap" x-show="filtered().length > 0">
         <table>
           <thead>

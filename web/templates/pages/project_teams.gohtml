@@ -94,6 +94,7 @@
         {{end}}
       </div>
       <div class="empty" x-show="collaborators.length > 0 && rows().length === 0">
+        {{template "icon" "magnifying-glass"}}
         <strong>{{.T "collab.no_match"}}</strong>
         <button type="button" class="btn btn-secondary btn-sm" @click="search = ''">{{.T "collab.clear_search"}}</button>
       </div>

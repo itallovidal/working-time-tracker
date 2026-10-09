@@ -57,7 +57,7 @@
         </p>
       </div>
 
-      <p class="muted" x-show="team.people.length === 0">{{.T "payments.team_empty"}}</p>
+      {{template "empty_state" (dict "Icon" "wallet" "Show" "team.people.length === 0" "Title" (.T "payments.team_empty"))}}
       <div class="table-wrap" x-show="team.people.length > 0">
         <table>
           <thead>

@@ -226,7 +226,7 @@ func (s *Store) ListByOrganizationSince(orgID string, since time.Time) ([]WorkSe
 
 // ListByPersonSince devolve as sessões da pessoa nos projetos da organização que ainda corriam em
 // since ou depois (as que terminaram antes ficam de fora; a aberta sempre entra), da mais recente
-// para a mais antiga, sem as tarefas: serve a quem soma o tempo da pessoa a partir de um instante.
+// para a mais antiga, cada uma com as suas tarefas: serve a quem soma o tempo da pessoa a partir de um instante.
 func (s *Store) ListByPersonSince(orgID, personID string, since time.Time) ([]WorkSession, error) {
 	oid, err := uuid.Parse(orgID)
 	if err != nil {
@@ -242,6 +242,7 @@ func (s *Store) ListByPersonSince(orgID, personID string, since time.Time) ([]Wo
 			worksession.HasProjectWith(entproject.OrganizationIDEQ(oid)),
 			worksession.Or(worksession.EndAtIsNil(), worksession.EndAtGTE(since)),
 		).
+		WithTaskLinks(withTasks).
 		Order(ent.Desc(worksession.FieldStartAt)).
 		All(context.Background())
 	if err != nil {

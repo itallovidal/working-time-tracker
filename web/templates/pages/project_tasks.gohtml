@@ -76,9 +76,7 @@
           </select>
         </div>
 
-        <div class="empty" x-show="lists[key].total === 0">
-          <strong x-text="listFiltered(key) ? $t('tasks.none_filtered') : (key === 'free' ? $t('tasks.free_none') : $t('tasks.taken_none'))"></strong>
-        </div>
+        {{template "empty_state" (dict "Icon" "list-check" "Show" "lists[key].total === 0" "TitleX" "listFiltered(key) ? $t('tasks.none_filtered') : (key === 'free' ? $t('tasks.free_none') : $t('tasks.taken_none'))" "TextX" "listFiltered(key) ? '' : (key === 'free' ? $t('tasks.free_none_text') : $t('tasks.taken_none_text'))")}}
 
         {{template "task_table" (dict "Data" . "Rows" "lists[key].tasks" "Assignee" "key === 'taken'" "Action" "claim" "ActionShow" "key === 'free'")}}
 

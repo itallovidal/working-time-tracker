@@ -4,20 +4,7 @@
      que o inclui, que espalha personProfile() (org.js). O dono não é pago: no perfil dele ficam só as horas. */}}
 {{define "person_profile"}}
 <div class="page-head">
-  <div class="row person-head">
-    <span class="avatar avatar-lg" aria-hidden="true">{{if .Person}}{{.PersonInitials}}{{else}}{{.Initials}}{{end}}</span>
-    <div>
-      <div class="eyebrow">{{if .Person}}{{.T "nav.people"}}{{else}}{{.T "profile.eyebrow"}}{{end}}</div>
-      <div class="row row-tight">
-        {{/* O nome vem do servidor e passa a ser o da pessoa carregada, para o cabeçalho não pular. */}}
-        <h1 {{if not .Person}}data-me-name{{end}} x-text="person ? person.name : $el.textContent">{{if .Person}}{{.Person.Name}}{{else}}{{.Me.Name}}{{end}}</h1>
-        <span class="badge" x-cloak x-show="person" :class="person && person.role === 'admin' && 'badge-accent'" x-text="person ? (person.is_owner ? $t('roles.owner') : WTT.fmt.role(person.role)) : ''"></span>
-        {{if .Person}}<span class="badge" x-cloak x-show="person && person.id === WTT.boot.me.id">{{.T "common.you"}}</span>{{end}}
-      </div>
-      <p class="lede" x-cloak x-show="person" x-text="person ? person.email : ''"></p>
-      <p class="muted small" x-cloak x-show="person" x-text="summaryLine()"></p>
-    </div>
-  </div>
+  <h1>{{if .Person}}{{.T "profile.title_other"}}{{else}}{{.T "profile.eyebrow"}}{{end}}</h1>
   <div class="row">
     {{if .Person}}
     <a class="btn btn-ghost btn-sm" href="/orgs/{{.OrgID}}/people">{{template "icon" "arrow-left"}} {{.T "nav.people"}}</a>
@@ -43,47 +30,178 @@
         </p>
       </div>
 
-      <div class="kpis kpis-4">
-        <div class="kpi hue-teal" x-show="!detail.owner && detail.current">
-          <span class="kpi-icon">{{template "icon" "clock"}}</span>
-          <div class="kpi-body">
-            <span class="kpi-label">{{.T "profile.this_period"}}</span>
-            <span class="kpi-value" x-text="detail.current ? WTT.fmt.hours(detail.current.seconds) : ''"></span>
-            <span class="kpi-hint" x-text="detail.current ? WTT.fmt.money(detail.current.amount_cents) : ''"></span>
+      {{/* Três cartões lado a lado: quem é a pessoa, o período que corre e o que ela fez desde o início. O do período
+           só existe com regra de pagamento, e o dono, que não é pago, fica com os outros dois. */}}
+      <div class="profile-cards">
+        <section class="card" aria-labelledby="profile-data-title">
+          <div class="card-head"><h2 id="profile-data-title">{{template "icon" "id-card"}} {{.T "profile.data"}}</h2></div>
+          {{/* Quem é a pessoa: o avatar, o nome (que vem do servidor e passa a ser o da pessoa carregada, para não pular) e o email. */}}
+          <div class="row person-head">
+            <span class="avatar avatar-lg" aria-hidden="true">{{if .Person}}{{.PersonInitials}}{{else}}{{.Initials}}{{end}}</span>
+            <div>
+              <div class="row row-tight">
+                <strong class="profile-name" {{if not .Person}}data-me-name{{end}} x-text="person ? person.name : $el.textContent">{{if .Person}}{{.Person.Name}}{{else}}{{.Me.Name}}{{end}}</strong>
+                {{if .Person}}<span class="badge" x-cloak x-show="person && person.id === WTT.boot.me.id">{{.T "common.you"}}</span>{{end}}
+              </div>
+              <p class="muted small" x-cloak x-show="person" x-text="person ? person.email : ''"></p>
+            </div>
           </div>
-        </div>
-        <div class="kpi hue-green" x-show="!detail.owner && detail.rule">
-          <span class="kpi-icon">{{template "icon" "calendar-check"}}</span>
-          <div class="kpi-body">
-            <span class="kpi-label">{{.T "payments.next_payment"}}</span>
-            <span class="kpi-value" x-text="detail.upcoming.length ? WTT.fmt.day(detail.upcoming[0].pay_date, { day: '2-digit', month: 'short' }) : '—'"></span>
-            <span class="kpi-hint" x-text="WTT.payments.daysLeft(detail.current)"></span>
+          <dl class="facts" x-show="person">
+            <dt>{{.T "profile.role"}}</dt>
+            <dd><span class="badge" :class="person && person.role === 'admin' && 'badge-accent'" x-text="person ? (person.is_owner ? $t('roles.owner') : WTT.fmt.role(person.role)) : ''"></span></dd>
+            <dt>{{.T "profile.weekly"}}</dt>
+            <dd x-text="person ? (WTT.fmt.weeklyHours(person.weekly_hours) || $t('profile.no_weekly_hours')) : ''"></dd>
+            <template x-if="person && !person.is_owner">
+              <div class="fact">
+                <dt>{{.T "profile.payment"}}</dt>
+                <dd x-text="WTT.fmt.paymentRule(person.payment) || $t('profile.no_payment_rule')"></dd>
+              </div>
+            </template>
+          </dl>
+        </section>
+
+        <section class="card" aria-labelledby="profile-lifetime-title">
+          <div class="card-head"><h2 id="profile-lifetime-title">{{template "icon" "hourglass-half"}} {{.T "profile.lifetime"}}</h2></div>
+          <div class="profile-big">
+            <span class="profile-big-value" x-text="WTT.fmt.hours(detail.lifetime.seconds)"></span>
+            <span class="profile-big-hint">{{.T "profile.lifetime_hours"}}</span>
           </div>
-        </div>
-        <div class="kpi hue-purple" x-show="!detail.owner && detail.current && detail.current.goal_seconds">
-          <span class="kpi-icon">{{template "icon" "bullseye"}}</span>
-          <div class="kpi-body">
-            <span class="kpi-label">{{.T "payments.goal"}}</span>
-            <span class="kpi-value" x-text="WTT.payments.goalPercent(detail.current) + '%'"></span>
-            <span class="kpi-hint" x-text="detail.current && detail.current.goal_seconds ? $t('payments.goal_hint', { time: WTT.fmt.hours(detail.current.goal_seconds) }) : ''"></span>
-          </div>
-        </div>
-        <div class="kpi hue-blue">
-          <span class="kpi-icon">{{template "icon" "hourglass-half"}}</span>
-          <div class="kpi-body">
-            <span class="kpi-label">{{.T "profile.lifetime"}}</span>
-            <span class="kpi-value" x-text="WTT.fmt.hours(detail.lifetime.seconds)"></span>
-            <span class="kpi-hint" x-text="lifetimeHint()"></span>
-          </div>
-        </div>
+          <dl class="facts profile-facts">
+            <dt>{{template "icon" "calendar-day"}} {{.T "profile.lifetime_first"}}</dt>
+            <dd x-text="detail.lifetime.first_day ? WTT.fmt.day(detail.lifetime.first_day) : $t('profile.lifetime_empty')"></dd>
+            <template x-if="!detail.owner && detail.lifetime.amount_cents !== null">
+              <div class="fact">
+                <dt>{{template "icon" "wallet"}} {{.T "profile.lifetime_amount"}}</dt>
+                <dd x-text="WTT.fmt.money(detail.lifetime.amount_cents)"></dd>
+              </div>
+            </template>
+            <dt>{{template "icon" "diagram-project"}} {{.T "profile.lifetime_projects"}}</dt>
+            <dd x-text="detail.lifetime.projects.length"></dd>
+          </dl>
+        </section>
       </div>
     </div>
 
-    <section class="stack stack-tight" aria-labelledby="profile-projects-title">
-      <h2 id="profile-projects-title">{{.T "profile.projects.title"}}</h2>
-      {{/* O dono não tem valor por hora: a frase de cima do perfil já diz por quê. */}}
-      <p class="muted small" x-show="!detail.owner">{{if .Person}}{{.T "profile.projects.intro_other"}}{{else}}{{.T "profile.projects.intro"}}{{end}}</p>
-      <p class="muted" x-show="projectRows().length === 0" x-text="self ? $t('profile.projects.empty') : $t('profile.projects.empty_other')"></p>
+    {{/* O próximo pagamento, por inteiro: quando cai, quanto a pessoa trabalhou no período, quanto se paga, quanto isso
+         rendeu (só admins veem a receita) e o que ela fez, por projeto. */}}
+    <section class="card" aria-labelledby="profile-next-title" x-show="!detail.owner && detail.rule">
+      <div class="card-head">
+        <div class="stack stack-tight">
+          <h2 id="profile-next-title">{{template "icon" "calendar-check"}} {{.T "payments.next_payment"}}</h2>
+          <p class="muted small" x-text="nx() ? WTT.payments.period(nx()) + ' · ' + $t('payments.rule_line', { rule: WTT.fmt.paymentRule(detail.rule), tz: detail.timezone }) : ''"></p>
+        </div>
+        <div class="profile-next-date">
+          <strong x-text="nx() ? WTT.fmt.day(nx().pay_date) : ''"></strong>
+          <span class="muted" x-text="WTT.payments.daysLeft(nx())"></span>
+        </div>
+      </div>
+
+      <p class="muted small" x-show="!detail.current && detail.upcoming.length > 0" x-text="detail.upcoming.length ? $t('profile.next.not_started', { date: WTT.fmt.day(detail.upcoming[0].start) }) : ''"></p>
+
+      <div class="kpis kpis-4" x-show="nx()">
+        <div class="kpi hue-teal">
+          <span class="kpi-icon">{{template "icon" "clock"}}</span>
+          <div class="kpi-body">
+            <span class="kpi-label">{{.T "profile.next.hours"}}</span>
+            <span class="kpi-value" x-text="nx() ? WTT.fmt.hours(nx().seconds) : ''"></span>
+            <span class="kpi-hint" x-text="nx() && nx().goal_seconds ? WTT.payments.goalPercent(nx()) + '% ' + $t('payments.goal_hint', { time: WTT.fmt.hours(nx().goal_seconds) }) : $t('profile.next.no_goal')"></span>
+          </div>
+        </div>
+        <div class="kpi hue-orange">
+          <span class="kpi-icon">{{template "icon" "wallet"}}</span>
+          <div class="kpi-body">
+            <span class="kpi-label">{{.T "profile.next.to_pay"}}</span>
+            <span class="kpi-value" x-text="nx() ? WTT.fmt.money(nx().amount_cents) : ''"></span>
+            <span class="kpi-hint">{{.T "profile.next.to_pay_hint"}}</span>
+          </div>
+        </div>
+        <div class="kpi hue-blue" x-show="nx() && nx().revenue_cents !== undefined">
+          <span class="kpi-icon">{{template "icon" "hand-holding-dollar"}}</span>
+          <div class="kpi-body">
+            <span class="kpi-label">{{.T "profile.next.revenue"}}</span>
+            <span class="kpi-value" x-text="nx() && nx().revenue_cents !== undefined ? WTT.fmt.money(nx().revenue_cents) : ''"></span>
+            <span class="kpi-hint">{{.T "profile.next.revenue_hint"}}</span>
+          </div>
+        </div>
+        <div class="kpi" :class="nx() && nx().margin_cents < 0 ? 'hue-orange' : 'hue-green'" x-show="nx() && nx().margin_cents !== undefined">
+          <span class="kpi-icon">{{template "icon" "chart-line"}}</span>
+          <div class="kpi-body">
+            <span class="kpi-label">{{.T "profile.next.margin"}}</span>
+            <span class="kpi-value" :class="nx() && nx().margin_cents < 0 && 'text-danger'" x-text="nx() && nx().margin_cents !== undefined ? WTT.fmt.money(nx().margin_cents) : ''"></span>
+            <span class="kpi-hint">{{.T "profile.next.margin_hint"}}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="profile-tasks" x-show="nx() && nx().tasks">
+        <span class="muted small">{{.T "profile.next.tasks"}}</span>
+        <span class="badge num" x-text="nx() && nx().tasks ? $t('profile.next.tasks_worked', { count: nx().tasks.worked }) : ''"></span>
+        <span class="badge badge-ok num" x-text="nx() && nx().tasks ? $t('profile.next.tasks_closed', { count: nx().tasks.closed }) : ''"></span>
+        <span class="badge num" x-text="nx() && nx().tasks ? $t('profile.next.tasks_in_progress', { count: nx().tasks.in_progress }) : ''"></span>
+        <span class="badge num" x-show="nx() && nx().tasks && nx().tasks.awaiting_closure > 0" x-text="nx() && nx().tasks ? $t('profile.next.tasks_awaiting', { count: nx().tasks.awaiting_closure }) : ''"></span>
+        <span class="badge num" x-show="nx() && nx().tasks && nx().tasks.backlog > 0" x-text="nx() && nx().tasks ? $t('profile.next.tasks_backlog', { count: nx().tasks.backlog }) : ''"></span>
+      </div>
+
+      <div class="table-wrap" x-show="nx() && nx().projects && nx().projects.length > 0">
+        <table>
+          <thead>
+            <tr>
+              <th>{{.T "payments.project"}}</th>
+              <th class="num">{{.T "payments.hours"}}</th>
+              <th class="num">{{.T "profile.next.col_cost"}}</th>
+              <template x-if="nx() && nx().revenue_cents !== undefined">
+                <th class="num">{{.T "profile.next.col_revenue"}}</th>
+              </template>
+              <template x-if="nx() && nx().revenue_cents !== undefined">
+                <th class="num">{{.T "profile.next.col_margin"}}</th>
+              </template>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="r in (nx() ? nx().projects || [] : [])" :key="r.project.id">
+              <tr>
+                <td x-text="r.project.name"></td>
+                <td class="nowrap num" x-text="WTT.fmt.hours(r.seconds)"></td>
+                <td class="nowrap num" x-text="r.amount_cents === null ? '—' : WTT.fmt.money(r.amount_cents)"></td>
+                <template x-if="r.revenue_cents !== undefined">
+                  <td class="nowrap num" x-text="WTT.fmt.money(r.revenue_cents)"></td>
+                </template>
+                <template x-if="r.revenue_cents !== undefined">
+                  <td class="nowrap num" :class="r.amount_cents !== null && r.revenue_cents - r.amount_cents < 0 && 'text-danger'" x-text="r.amount_cents === null ? '—' : WTT.fmt.money(r.revenue_cents - r.amount_cents)"></td>
+                </template>
+              </tr>
+            </template>
+          </tbody>
+          <tfoot>
+            <tr>
+              <th>{{.T "profile.next.total"}}</th>
+              <th class="nowrap num" x-text="nx() ? WTT.fmt.hours(nx().seconds) : ''"></th>
+              <th class="nowrap num" x-text="nx() ? WTT.fmt.money(nx().amount_cents) : ''"></th>
+              <template x-if="nx() && nx().revenue_cents !== undefined">
+                <th class="nowrap num" x-text="WTT.fmt.money(nx().revenue_cents)"></th>
+              </template>
+              <template x-if="nx() && nx().revenue_cents !== undefined">
+                <th class="nowrap num" x-text="WTT.fmt.money(nx().margin_cents)"></th>
+              </template>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <p class="muted small">{{.T "profile.next.note"}}</p>
+    </section>
+
+    <section class="card" aria-labelledby="profile-projects-title">
+      <div class="card-head">
+        <div class="stack stack-tight">
+          <h2 id="profile-projects-title">{{template "icon" "diagram-project"}} {{.T "profile.projects.title"}}</h2>
+          {{/* O dono não tem valor por hora: a frase de cima do perfil já diz por quê. */}}
+          <p class="muted small" x-show="!detail.owner">{{if .Person}}{{.T "profile.projects.intro_other"}}{{else}}{{.T "profile.projects.intro"}}{{end}}</p>
+        </div>
+      </div>
+      <div class="empty" x-show="projectRows().length === 0">
+        {{template "icon" "diagram-project"}}
+        <strong x-text="self ? $t('profile.projects.empty') : $t('profile.projects.empty_other')"></strong>
+      </div>
       <div class="table-wrap" x-show="projectRows().length > 0">
         <table>
           <thead>
@@ -114,49 +232,34 @@
     </section>
 
     <template x-if="detail.rule && !detail.owner">
-      <div class="stack stack-sections">
-        <section class="stack stack-tight" aria-labelledby="profile-history-title">
-          <h2 id="profile-history-title">{{.T "profile.history"}}</h2>
-          {{/* Só os períodos de depois que a pessoa começou a registrar horas: os anteriores são todos zero. */}}
-          <p class="muted" x-show="historyRows().length === 0">{{.T "payments.history_empty"}}</p>
-          <div class="table-wrap" x-show="historyRows().length > 0">
-            <table>
-              <thead><tr><th>{{.T "payments.period"}}</th><th>{{.T "payments.pay_date"}}</th><th class="num">{{.T "payments.hours"}}</th><th class="num">{{.T "payments.amount"}}</th></tr></thead>
-              <tbody>
-                <template x-for="h in historyRows()" :key="h.pay_date">
-                  <tr>
-                    <td class="nowrap" x-text="WTT.payments.period(h)"></td>
-                    <td class="nowrap" x-text="WTT.fmt.day(h.pay_date)"></td>
-                    <td class="nowrap num" x-text="WTT.fmt.hours(h.seconds)"></td>
-                    <td class="nowrap num" x-text="WTT.fmt.money(h.amount_cents)"></td>
-                  </tr>
-                </template>
-              </tbody>
-              <tfoot>
-                <tr>
-                  <th colspan="2">{{.T "payments.total_closed"}}</th>
-                  <th class="nowrap num" x-text="WTT.fmt.hours(detail.totals.seconds)"></th>
-                  <th class="nowrap num" x-text="WTT.fmt.money(detail.totals.amount_cents)"></th>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-          <p class="muted small">{{.T "payments.history_note"}}</p>
-        </section>
-
-        <section class="stack stack-tight" aria-labelledby="profile-upcoming-title">
-          <h2 id="profile-upcoming-title">{{.T "profile.upcoming"}}</h2>
-          <ul class="list">
-            <template x-for="u in detail.upcoming" :key="u.pay_date">
-              <li>
-                <strong x-text="WTT.fmt.day(u.pay_date)"></strong>
-                <span class="muted grow" x-text="WTT.payments.period(u)"></span>
-              </li>
+    <section class="card" aria-labelledby="profile-history-title">
+      <div class="card-head"><h2 id="profile-history-title">{{template "icon" "calendar-week"}} {{.T "profile.history"}}</h2></div>
+      {{/* Só os períodos de depois que a pessoa começou a registrar horas: os anteriores são todos zero. */}}
+      {{template "empty_state" (dict "Icon" "calendar-week" "Show" "historyRows().length === 0" "Title" (.T "payments.history_empty"))}}
+      <div class="table-wrap" x-show="historyRows().length > 0">
+        <table>
+          <thead><tr><th>{{.T "payments.period"}}</th><th>{{.T "payments.pay_date"}}</th><th class="num">{{.T "payments.hours"}}</th><th class="num">{{.T "payments.amount"}}</th></tr></thead>
+          <tbody>
+            <template x-for="h in historyRows()" :key="h.pay_date">
+              <tr>
+                <td class="nowrap" x-text="WTT.payments.period(h)"></td>
+                <td class="nowrap" x-text="WTT.fmt.day(h.pay_date)"></td>
+                <td class="nowrap num" x-text="WTT.fmt.hours(h.seconds)"></td>
+                <td class="nowrap num" x-text="WTT.fmt.money(h.amount_cents)"></td>
+              </tr>
             </template>
-          </ul>
-          <p class="muted small" x-text="$t('payments.rule_line', { rule: WTT.fmt.paymentRule(detail.rule), tz: detail.timezone })"></p>
-        </section>
+          </tbody>
+          <tfoot>
+            <tr>
+              <th colspan="2">{{.T "payments.total_closed"}}</th>
+              <th class="nowrap num" x-text="WTT.fmt.hours(detail.totals.seconds)"></th>
+              <th class="nowrap num" x-text="WTT.fmt.money(detail.totals.amount_cents)"></th>
+            </tr>
+          </tfoot>
+        </table>
       </div>
+      <p class="muted small">{{.T "payments.history_note"}}</p>
+    </section>
     </template>
   </div>
 </template>

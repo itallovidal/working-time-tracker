@@ -107,8 +107,8 @@ home:
     no_revenue: Nenhuma hora com valor cobrado
     no_cost: Nenhuma hora com valor pago
   team:
-    title: Equipe
-    nobody_working: Ninguém está com o ponto aberto agora.
+    title: Trabalhando agora
+    nobody_working: Sem colaboradores trabalhando agora.
     working: Trabalhando agora
     on_task: Na tarefa
     open_task: "Abrir a tarefa {{.name}}"
@@ -457,9 +457,14 @@ payments:
 
 profile:
   eyebrow: Seu perfil
+  title_other: Perfil do colaborador
   edit: Editar perfil
   tabs_label: O que editar
   loading: Carregando o perfil…
+  data: Dados
+  role: Cargo
+  weekly: Jornada semanal
+  payment: Pagamento
   no_weekly_hours: Jornada não informada
   no_payment_rule: Sem regra de pagamento
   no_rule: Você ainda não tem regra de pagamento. Peça a um admin para definir quando você é pago.
@@ -468,9 +473,38 @@ profile:
   this_period: Neste período
   lifetime: Desde o início
   lifetime_since: "desde {{.date}}"
+  lifetime_hours: horas registradas
+  lifetime_first: Primeiro registro
+  lifetime_amount: Valor acumulado
+  lifetime_projects: Projetos
   lifetime_empty: Nenhuma hora registrada
   history: Histórico de pagamentos
   upcoming: Próximos pagamentos
+  next:
+    not_started: "A contagem começa em {{.date}}: até lá não há horas nem valor."
+    hours: Horas trabalhadas
+    no_goal: Sem jornada definida
+    to_pay: A pagar
+    to_pay_hint: O que a pessoa recebe pelas horas
+    revenue: Gerou
+    revenue_hint: O que os clientes pagam por essas horas
+    margin: Sobra
+    margin_hint: O que gerou menos o que a pessoa recebe
+    tasks: Tarefas do período
+    tasks_worked:
+      one: "{{.count}} trabalhada"
+      other: "{{.count}} trabalhadas"
+    tasks_closed:
+      one: "{{.count}} fechada"
+      other: "{{.count}} fechadas"
+    tasks_in_progress: "{{.count}} em progresso"
+    tasks_awaiting: "{{.count}} aguardando fechamento"
+    tasks_backlog: "{{.count}} no backlog"
+    col_cost: Custo
+    col_revenue: Receita
+    col_margin: Margem
+    total: Total
+    note: "As tarefas são as que a pessoa trabalhou no período, contadas pelo estado que têm agora. A receita soma o valor cobrado de cada projeto, e a margem é a receita menos o que a pessoa recebe."
   projects:
     title: Projetos e valores
     intro: Quanto você recebe por hora em cada projeto e o que já fez neles. Só você e os admins veem.
@@ -948,8 +982,10 @@ tasks:
   section_free: Sem responsável
   section_taken: Com responsável
   section_taken_hint: Tarefas que já estão com alguém que não é você.
-  free_none: Nenhuma tarefa livre. Todas as tarefas do projeto têm responsável.
-  taken_none: Nenhuma tarefa com outras pessoas ainda.
+  free_none: Nenhuma tarefa sem responsável
+  free_none_text: Todas as tarefas do projeto já têm responsável.
+  taken_none: Nenhuma tarefa com responsável
+  taken_none_text: Quando alguém pegar uma tarefa, ela aparece aqui.
   row_hint: Clique em uma tarefa para abrir os detalhes.
   pager_free: Páginas das tarefas sem responsável
   pager_taken: Páginas das tarefas com responsável

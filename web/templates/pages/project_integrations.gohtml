@@ -14,6 +14,7 @@
   <p class="form-error" x-cloak x-show="errors.connect" x-text="errors.connect" role="alert"></p>
 
   <div class="empty" x-cloak x-show="!loading && !errors.load && items.length === 0">
+    {{template "icon" "plug"}}
     <strong>{{.T "integrations.none"}}</strong>
     {{if .CanDo "integrations.manage"}}
     <span>{{.T "integrations.none_admin"}}</span>

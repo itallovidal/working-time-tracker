@@ -131,7 +131,7 @@ func TestPages_ProjectOverviewTab(t *testing.T) {
 	}
 	for _, want := range []string{
 		"Projeto Alfa", `x-data="projectOverview"`, "Atualizar",
-		"<h2>Projeto</h2>", "<h2>Atividade</h2>", "<h2>Integrações</h2>", "<h2>Tarefas e cliente</h2>", "<h2>Sessões</h2>", `aria-label="Filtrar por pessoa"`, `aria-label="Filtrar por data"`, `aria-label="Filtrar por tarefa"`, "<h3>Totais</h3>", "<th>Pessoa</th>",
+		"<h2>Projeto</h2>", "<h2>Atividade</h2>", "<h2>Integrações</h2>", "<h2>Tarefas e cliente</h2>", "<h2>Sessões dos Colaboradores</h2>", `aria-label="Filtrar por pessoa"`, `aria-label="Filtrar por data"`, `aria-label="Filtrar por tarefa"`, "<h3>Totais</h3>", "<th>Pessoa</th>",
 		`href="/projects/` + projectID + `/tasks?due=overdue"`, `class="pager"`,
 		// Os tipos de integração vão no BOOT, para a lista mostrar o nome da plataforma.
 		`"integration_types"`,

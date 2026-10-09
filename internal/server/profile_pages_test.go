@@ -47,10 +47,10 @@ func TestPages_CollaboratorProfileIsForAdmins(t *testing.T) {
 	body := do(e, "GET", people+"/"+bia.id, "", owner.session).Body.String()
 	for _, want := range []string{
 		`x-data="orgPerson"`, "<title>Colaborador · Convidado · Working Time Tracker</title>",
-		`x-text="person ? person.name : $el.textContent">Convidado</h1>`, `<span class="avatar avatar-lg" aria-hidden="true">C</span>`,
+		`x-text="person ? person.name : $el.textContent">Convidado</strong>`, `<span class="avatar avatar-lg" aria-hidden="true">C</span>`,
 		`href="` + people + `"`, `@click="openEdit(person)"`, `x-show="$store.modal.name === 'person-edit'"`,
 		`id="person-tab-payment"`, `id="person-tab-permissions"`, `id="person-tab-projects"`,
-		"Neste período", "Próximo pagamento", "Desde o início", "Projetos e valores", "Histórico de pagamentos", "Próximos pagamentos", "Definir regra",
+		"Dados", "Próximo pagamento", "Horas trabalhadas", "A pagar", "Tarefas do período", "Desde o início", "Projetos e valores", "Histórico de pagamentos", "Definir regra",
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("the collaborator profile does not contain %q", want)
@@ -93,9 +93,9 @@ func TestPages_ProfileShowsPaymentsAndEditsInAModal(t *testing.T) {
 	}
 	body := rec.Body.String()
 	for _, want := range []string{
-		`x-data="profileSettings"`, `<h1 data-me-name x-text="person ? person.name : $el.textContent">Convidado</h1>`,
-		`x-text="summaryLine()"`, `@click="openProfileEdit()"`, "Editar perfil",
-		"Neste período", "Próximo pagamento", "Desde o início", "Projetos e valores", "Histórico de pagamentos", "Próximos pagamentos",
+		`x-data="profileSettings"`, `<strong class="profile-name" data-me-name x-text="person ? person.name : $el.textContent">Convidado</strong>`,
+		`@click="openProfileEdit()"`, "Editar perfil",
+		"Dados", "Próximo pagamento", "Horas trabalhadas", "A pagar", "Tarefas do período", "Desde o início", "Projetos e valores", "Histórico de pagamentos",
 		`x-show="$store.modal.name === 'profile-edit'"`, `id="profile-tab-personal"`, `id="profile-tab-password"`,
 		`id="me-name"`, `id="me-email"`, `id="pw-current"`, `id="pw-new"`,
 	} {

@@ -97,8 +97,8 @@ home:
     no_revenue: No hours with a billed rate
     no_cost: No hours with a pay rate
   team:
-    title: Team
-    nobody_working: Nobody has the clock running right now.
+    title: Working now
+    nobody_working: No collaborators working right now.
     working: Working now
     on_task: On task
     open_task: "Open task {{.name}}"
@@ -447,9 +447,14 @@ payments:
 
 profile:
   eyebrow: Your profile
+  title_other: Collaborator profile
   edit: Edit profile
   tabs_label: What to edit
   loading: Loading the profile…
+  data: Details
+  role: Role
+  weekly: Weekly hours
+  payment: Payment
   no_weekly_hours: Weekly hours not set
   no_payment_rule: No payment rule
   no_rule: You have no payment rule yet. Ask an admin to set when you are paid.
@@ -458,9 +463,38 @@ profile:
   this_period: This period
   lifetime: Since the start
   lifetime_since: "since {{.date}}"
+  lifetime_hours: hours tracked
+  lifetime_first: First entry
+  lifetime_amount: Accumulated amount
+  lifetime_projects: Projects
   lifetime_empty: No hours tracked
   history: Payment history
   upcoming: Upcoming payments
+  next:
+    not_started: "The count starts on {{.date}}: until then there are no hours or amounts."
+    hours: Hours worked
+    no_goal: No weekly hours set
+    to_pay: To pay
+    to_pay_hint: What the person earns for the hours
+    revenue: Generated
+    revenue_hint: What clients pay for these hours
+    margin: Left over
+    margin_hint: What was generated minus what the person earns
+    tasks: Tasks in the period
+    tasks_worked:
+      one: "{{.count}} worked on"
+      other: "{{.count}} worked on"
+    tasks_closed:
+      one: "{{.count}} closed"
+      other: "{{.count}} closed"
+    tasks_in_progress: "{{.count}} in progress"
+    tasks_awaiting: "{{.count}} awaiting closure"
+    tasks_backlog: "{{.count}} in the backlog"
+    col_cost: Cost
+    col_revenue: Revenue
+    col_margin: Margin
+    total: Total
+    note: "Tasks are the ones the person worked on in the period, counted by the state they have now. Revenue adds up the billed amount of each project, and the margin is the revenue minus what the person earns."
   projects:
     title: Projects and rates
     intro: How much you earn per hour on each project and what you have done on them. Only you and the admins can see it.
@@ -938,8 +972,10 @@ tasks:
   section_free: Unassigned
   section_taken: Assigned
   section_taken_hint: Tasks that are already with someone who is not you.
-  free_none: No free tasks. Every task in the project has an assignee.
-  taken_none: No tasks with other people yet.
+  free_none: No tasks without an assignee
+  free_none_text: Every task in the project already has an assignee.
+  taken_none: No tasks with an assignee
+  taken_none_text: When someone picks up a task, it shows up here.
   row_hint: Click a task to open its details.
   pager_free: Pages of the unassigned tasks
   pager_taken: Pages of the assigned tasks

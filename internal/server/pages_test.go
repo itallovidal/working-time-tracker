@@ -258,7 +258,7 @@ func TestPages_ProjectCollaboratorsTab(t *testing.T) {
 		t.Errorf("member GET %s = %d, want 404", tab, rec.Code)
 	}
 	for who, body := range map[string]string{"admin": adminPage} {
-		if !strings.Contains(body, `href="`+tab+`" aria-current="page"`) || !strings.Contains(body, " Colaboradores</a>") {
+		if !strings.Contains(body, `href="`+tab+`" aria-current="page"`) || !strings.Contains(body, " Colaboradores no projeto</a>") {
 			t.Errorf("%s: the tab bar does not show Colaboradores as the current tab", who)
 		}
 		if strings.Contains(body, `href="`+rates+`"`) || strings.Contains(body, " Valores</a>") || strings.Contains(body, " Times</a>") {
@@ -538,7 +538,7 @@ func TestPages_ProjectMyOverviewTab(t *testing.T) {
 			t.Errorf("%s: the old Ponto address answers %d to %q, want a redirect to %s", who, old.Code, old.Header().Get("Location"), overview)
 		}
 	}
-	if !strings.Contains(pages["admin"], `href="/projects/`+projectID+`/management/teams">Colaboradores</a>`) || !strings.Contains(pages["member"], "Peça a um admin para definir") {
+	if !strings.Contains(pages["admin"], `href="/projects/`+projectID+`/management/teams">Colaboradores no projeto</a>`) || !strings.Contains(pages["member"], "Peça a um admin para definir") {
 		t.Error("the rate warning should send the admin to the collaborators tab and the member to an admin")
 	}
 }
@@ -707,9 +707,9 @@ func TestPages_ProjectSettingsAndWeeklyHours(t *testing.T) {
 		t.Errorf("who only manages people should see the hours tab only, got hours %v, permissions %v, projects %v", h, p, pr)
 	}
 
-	// Cada pessoa lê a própria jornada no perfil (na linha do cabeçalho), sem campo para alterar.
+	// Cada pessoa lê a própria jornada no perfil (no cartão Dados), sem campo para alterar.
 	profile := do(e, "GET", "/profile", "", member.session).Body.String()
-	if !strings.Contains(profile, `x-text="summaryLine()"`) || strings.Contains(profile, "weekly-hours") {
+	if !strings.Contains(profile, "Jornada semanal") || strings.Contains(profile, "weekly-hours") {
 		t.Error("the profile should show the weekly hours as text, without a field")
 	}
 

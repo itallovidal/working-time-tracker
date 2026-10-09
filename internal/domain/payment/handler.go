@@ -38,7 +38,7 @@ func (h *Handler) ByPerson(c *echo.Context) error {
 		}
 		history = n
 	}
-	sum, err := h.svc.Person(me.OrganizationID.String(), personID, history)
+	sum, err := h.svc.Person(me.OrganizationID.String(), personID, history, me.IsAdmin())
 	if err != nil {
 		if errors.Is(err, database.ErrNotFound) {
 			return apperr.Respond(c, http.StatusNotFound, person.ErrNotFound)
