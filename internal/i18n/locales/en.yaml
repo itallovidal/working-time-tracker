@@ -365,6 +365,8 @@ auth:
     title: Create organization
     subtitle: You join as an admin and invite your team afterwards.
     org_name: Organization name
+    country: Country
+    country_hint: Sets the currency, the time zone and the tax data of the organization.
     steps_label: Sign-up steps
     step_org: Organization
     step_access: Access
@@ -467,7 +469,7 @@ help:
   steps:
     create_account:
       title: Create the account
-      text: "Open the sign-up screen. In the first step, enter the organization name and your name; in the second, your email and a password with at least 8 characters, typed twice. You join as an admin and the owner of the organization. On your first visit, a welcome window walks you through the organization details, the first customer and the first invitation; any step can wait."
+      text: "Open the sign-up screen. In the first step, enter the organization name, the country (it sets the currency, the time zone and the tax data) and your name; in the second, your email and a password with at least 8 characters, typed twice. You join as an admin and the owner of the organization. On your first visit, a welcome window walks you through the organization details, the first customer and the first invitation; any step can wait."
       tip: "Got an invitation? Skip this step: open the invitation link and create your account there."
     currency:
       title: Check the currency and time zone
@@ -687,6 +689,7 @@ org:
     state: State
     postal_code: Postal code
     country: Country
+    country_hint: Sets the tax ID, the state and the postal code of the organization.
     how_we_work: How we work
     work_mode: Work mode
     hours_note: The sprint length is set in each project, and the weekly hours on each person.

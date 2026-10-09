@@ -59,7 +59,7 @@
           </div>
           <div class="field">
             <label for="org-phone">{{.T "common.phone"}}</label>
-            <input id="org-phone" type="tel" maxlength="32" placeholder="{{.T "org.settings.phone_placeholder"}}" x-model="form.phone">
+            <input id="org-phone" type="tel" maxlength="32" :placeholder="profile.phone.placeholder" x-model="form.phone">
           </div>
         </div>
         <div class="fields">
@@ -76,23 +76,36 @@
 
       <section class="card">
         <div class="card-head"><h2>{{.T "org.settings.legal"}}</h2></div>
+        {{/* O país decide o documento fiscal, o estado e o código postal: os rótulos, as máscaras e a lista de estados vêm
+             do cadastro de países (BOOT.countries), e o documento do outro país fica guardado, escondido. */}}
         <div class="fields">
           <div class="field">
             <label for="org-legal-name">{{.T "org.fields.legal_name"}}</label>
             <input id="org-legal-name" type="text" maxlength="200" x-model="form.legal_name">
           </div>
           <div class="field">
-            <label for="org-cnpj">{{.T "org.fields.cnpj"}}</label>
-            <input id="org-cnpj" type="text" class="mono" maxlength="18" placeholder="{{.T "org.settings.cnpj_placeholder"}}" x-model="form.cnpj">
+            <label for="org-country">{{.T "org.settings.country"}}</label>
+            <select id="org-country" x-model="form.country" @change="countryChanged()">
+              <template x-for="c in countryOptions" :key="c.code">
+                <option :value="c.code" x-text="c.name" :selected="c.code === form.country"></option>
+              </template>
+            </select>
+            <span class="hint">{{.T "org.settings.country_hint"}}</span>
+          </div>
+        </div>
+        <div class="fields">
+          <div class="field">
+            <label for="org-legal-id" x-text="profile.legal_id.label"></label>
+            <input id="org-legal-id" type="text" class="mono" :maxlength="profile.legal_id.mask.length" :placeholder="profile.legal_id.placeholder" x-model="form[profile.legal_id.field]" @input="maskLegal()">
           </div>
         </div>
         <div class="fields">
           <div class="field">
             <label for="org-address1">{{.T "org.fields.address"}}</label>
-            <input id="org-address1" type="text" maxlength="200" placeholder="{{.T "org.settings.address_placeholder"}}" x-model="form.address_line1">
+            <input id="org-address1" type="text" maxlength="200" :placeholder="profile.address.line1_placeholder" x-model="form.address_line1">
           </div>
           <div class="field">
-            <label for="org-address2">{{.T "org.settings.address2"}}</label>
+            <label for="org-address2" x-text="profile.address.line2_label"></label>
             <input id="org-address2" type="text" maxlength="200" x-model="form.address_line2">
           </div>
         </div>
@@ -102,16 +115,22 @@
             <input id="org-city" type="text" maxlength="100" x-model="form.city">
           </div>
           <div class="field">
-            <label for="org-state">{{.T "org.settings.state"}}</label>
-            <input id="org-state" type="text" maxlength="100" x-model="form.state">
+            <label for="org-state" x-text="profile.state.label"></label>
+            <template x-if="profile.state.options">
+              <select id="org-state" x-model="form.state">
+                <option value="">{{.T "labels.not_informed"}}</option>
+                <template x-for="s in profile.state.options" :key="s.code">
+                  <option :value="s.code" x-text="s.code + ' · ' + s.name" :selected="s.code === form.state"></option>
+                </template>
+              </select>
+            </template>
+            <template x-if="!profile.state.options">
+              <input id="org-state" type="text" maxlength="100" x-model="form.state">
+            </template>
           </div>
           <div class="field">
-            <label for="org-postal">{{.T "org.settings.postal_code"}}</label>
-            <input id="org-postal" type="text" maxlength="16" x-model="form.postal_code">
-          </div>
-          <div class="field">
-            <label for="org-country">{{.T "org.settings.country"}}</label>
-            <input id="org-country" type="text" maxlength="100" x-model="form.country">
+            <label for="org-postal" x-text="profile.postal.label"></label>
+            <input id="org-postal" type="text" inputmode="numeric" autocomplete="postal-code" :maxlength="profile.postal.mask.length" :placeholder="profile.postal.placeholder" x-model="form.postal_code" @input="maskPostal()">
           </div>
         </div>
       </section>

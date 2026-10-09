@@ -73,3 +73,71 @@ func TestOrganization_ProfileOfAUSCompany(t *testing.T) {
 		}
 	}
 }
+
+// O cadastro de países vai no window.BOOT das páginas que o desenham (o cadastro, a volta do Clerk e as páginas da
+// organização), no idioma da requisição, e a tela de cadastro tem o seletor de país.
+func TestPages_CountriesReachTheBrowser(t *testing.T) {
+	e := newServer(t)
+
+	rec := getPage(e, "/signup", "", "", "")
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `id="signup-country"`) {
+		t.Fatalf("/signup = %d, want the page with the country select", rec.Code)
+	}
+	list := func(lang string) []any {
+		t.Helper()
+		reg, ok := bootOf(t, getPage(e, "/signup", "", lang, "").Body.String())["countries"].(map[string]any)
+		if !ok {
+			t.Fatalf("/signup (%q) has no countries in window.BOOT", lang)
+		}
+		return reg["list"].([]any)
+	}
+
+	pt := list("pt-BR")
+	if len(pt) != 2 {
+		t.Fatalf("countries = %d, want BR and US", len(pt))
+	}
+	br, us := pt[0].(map[string]any), pt[1].(map[string]any)
+	if br["code"] != "BR" || us["code"] != "US" || br["currency"] != "BRL" || us["currency"] != "USD" {
+		t.Errorf("countries = %v / %v", br, us)
+	}
+	if id := br["legal_id"].(map[string]any); id["field"] != "cnpj" || id["label"] != "CNPJ" || id["mask"] != "**.***.***/****-99" {
+		t.Errorf("BR legal id = %v", id)
+	}
+	if id := us["legal_id"].(map[string]any); id["field"] != "ein" || id["label"] != "EIN" || id["mask"] != "99-9999999" {
+		t.Errorf("US legal id = %v", id)
+	}
+	if st := br["state"].(map[string]any); st["label"] != "Estado" || len(st["options"].([]any)) != 27 {
+		t.Errorf("BR states = %v", st)
+	}
+	if st := us["state"].(map[string]any); len(st["options"].([]any)) != 59 {
+		t.Errorf("US states = %d, want 59", len(st["options"].([]any)))
+	}
+	if postal := br["postal"].(map[string]any)["label"]; postal != "CEP" {
+		t.Errorf("BR postal label = %v, want CEP", postal)
+	}
+
+	// Em inglês os textos são os de lá.
+	en := list("en")
+	if postal := en[1].(map[string]any)["postal"].(map[string]any)["label"]; postal != "ZIP code" {
+		t.Errorf("US postal label in English = %v, want ZIP code", postal)
+	}
+	if state := en[0].(map[string]any)["state"].(map[string]any)["label"]; state != "State" {
+		t.Errorf("BR state label in English = %v, want State", state)
+	}
+
+	// As páginas que não desenham países não carregam o cadastro.
+	if _, has := bootOf(t, getPage(e, "/help", "", "", "").Body.String())["countries"]; has {
+		t.Error("/help must not carry the countries")
+	}
+
+	// A configuração da organização traz o cadastro e o país da organização.
+	admin := signup(t, e, "Org", "ana@test.com")
+	settings := getPage(e, "/orgs/"+admin.orgID+"/settings", admin.session, "", "")
+	boot := bootOf(t, settings.Body.String())
+	if _, has := boot["countries"]; !has {
+		t.Error("the organization settings page must carry the countries")
+	}
+	if org := boot["org"].(map[string]any); org["country"] != "BR" || org["ein"] != "" {
+		t.Errorf("BOOT org = country %v, ein %v; want BR and an empty EIN", org["country"], org["ein"])
+	}
+}

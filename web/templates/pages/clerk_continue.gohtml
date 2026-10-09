@@ -40,6 +40,15 @@
           <input id="clerk-org" type="text" autocomplete="organization" required x-model="organization_name">
         </div>
         <div class="field">
+          <label for="clerk-country">{{.T "auth.signup.country"}}</label>
+          <select id="clerk-country" autocomplete="country" required x-model="country">
+            <template x-for="c in countries" :key="c.code">
+              <option :value="c.code" x-text="WTT.countries.name(c.code)" :selected="c.code === country"></option>
+            </template>
+          </select>
+          <span class="hint">{{.T "auth.signup.country_hint"}}</span>
+        </div>
+        <div class="field">
           <label for="clerk-name">{{.T "auth.your_name"}}</label>
           <input id="clerk-name" type="text" autocomplete="name" x-model="name">
         </div>

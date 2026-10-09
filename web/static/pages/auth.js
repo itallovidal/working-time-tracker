@@ -180,6 +180,9 @@ document.addEventListener('alpine:init', () => {
     // step: 1 é a organização (o nome dela e o da pessoa), 2 é o acesso (email e senha). Os valores ficam aqui, não
     // nos campos, então voltar à etapa 1 e seguir de novo não perde nada.
     step: 1,
+    // O país da organização: o do idioma da página, até a pessoa trocar. Define a moeda, o fuso e os dados fiscais.
+    country: WTT.countries.forLang(WTT.lang),
+    countries: WTT.countries.list(),
     // confirmTouched: a pessoa já saiu do campo de confirmação. Até lá, "não confere" só aparece quando o que ela
     // digitou já tem o tamanho da senha, para não reclamar a cada letra.
     confirmTouched: false,
@@ -235,6 +238,7 @@ document.addEventListener('alpine:init', () => {
       return this.run('signup', async () => {
         await api('POST', '/api/auth/signup', {
           organization_name: this.organization_name,
+          country: this.country,
           name: this.name,
           email: this.email,
           password: this.password,
@@ -318,6 +322,8 @@ document.addEventListener('alpine:init', () => {
     invites: [],
     password: '',
     organization_name: '',
+    country: WTT.countries.forLang(WTT.lang),
+    countries: WTT.countries.list(),
     async init() {
       markTried();
       try {
@@ -383,7 +389,7 @@ document.addEventListener('alpine:init', () => {
     },
     createOrg() {
       return this.run('choose', async () => {
-        await this.finish(await this.call('/api/auth/clerk/signup', { organization_name: this.organization_name, name: this.name }));
+        await this.finish(await this.call('/api/auth/clerk/signup', { organization_name: this.organization_name, country: this.country, name: this.name }));
       });
     },
     retry() {

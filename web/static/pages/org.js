@@ -15,19 +15,37 @@ document.addEventListener('alpine:init', () => {
     customer_id: '', rate: '',
   });
 
+  // Os documentos fiscais vêm do cadastro de países ('cnpj', 'ein'): um país novo com documento novo entra sozinho.
+  const legalFields = WTT.countries.list().map((c) => c.legal_id.field);
   const orgTexts = [
     'name', 'summary', 'description', 'industry', 'size',
     'website', 'contact_email', 'phone', 'linkedin_url', 'instagram_url',
-    'legal_name', 'cnpj', 'address_line1', 'address_line2', 'city', 'state', 'postal_code', 'country',
+    'legal_name', ...legalFields, 'address_line1', 'address_line2', 'city', 'state', 'postal_code', 'country',
     'work_mode', 'timezone', 'currency',
   ];
   const orgNumbers = ['founded_year'];
 
-  // orgForm copia a organização para o formulário: campo sem valor vira texto vazio.
+  // stateCode devolve a sigla do estado no país (aceita a sigla ou o nome). Um país com lista e um estado que não está
+  // nela (um dado antigo) dá vazio, e a tela pede de novo; sem lista, o texto livre fica como está.
+  function stateCode(country, value) {
+    const options = country.state.options;
+    if (!options) return value;
+    const v = String(value || '').trim().toLowerCase();
+    const hit = options.find((o) => o.code.toLowerCase() === v || o.name.toLowerCase() === v);
+    return hit ? hit.code : '';
+  }
+
+  // orgForm copia a organização para o formulário: campo sem valor vira texto vazio. Cada documento fiscal e o código
+  // postal aparecem com a máscara do país; o servidor guarda sem máscara e o confere de novo.
   function orgForm(o) {
     const f = {};
     orgTexts.concat(orgNumbers).forEach((k) => { f[k] = o[k] || ''; });
-    f.cnpj = WTT.fmt.cnpj(f.cnpj);
+    WTT.countries.list().forEach((c) => { f[c.legal_id.field] = WTT.fmt.mask(f[c.legal_id.field], c.legal_id.mask); });
+    const country = WTT.countries.get(f.country);
+    if (country) {
+      f.state = stateCode(country, f.state);
+      f.postal_code = WTT.fmt.mask(f.postal_code, country.postal.mask);
+    }
     return f;
   }
 
@@ -538,6 +556,24 @@ document.addEventListener('alpine:init', () => {
     timezones: timezoneOptions(org.timezone),
     thisYear: new Date().getFullYear(),
     confirmDelete: false,
+    countryOptions: WTT.countries.list().map((c) => ({ code: c.code, name: WTT.countries.name(c.code) })),
+    // profile são as regras do país escolhido no formulário: o documento fiscal, o estado, o código postal e os textos.
+    get profile() {
+      return WTT.countries.get(this.form.country) || WTT.countries.list()[0];
+    },
+    // Trocar o país muda o formato do estado e do código postal: o valor do país anterior não vale no novo. O documento
+    // do outro país fica no formulário, escondido, e volta como estava: o servidor o guarda.
+    countryChanged() {
+      this.form.state = '';
+      this.form.postal_code = '';
+    },
+    maskLegal() {
+      const id = this.profile.legal_id;
+      this.form[id.field] = WTT.fmt.mask(this.form[id.field], id.mask);
+    },
+    maskPostal() {
+      this.form.postal_code = WTT.fmt.mask(this.form.postal_code, this.profile.postal.mask);
+    },
     saveOrg() {
       return this.run('org', async () => {
         // Texto vazio e zero apagam o campo; a API mantém o que não vier no corpo.
@@ -565,7 +601,7 @@ document.addEventListener('alpine:init', () => {
         [WTT.t('org.fields.segment'), org.industry],
         [WTT.t('org.fields.size'), WTT.fmt.orgSize(org.size)],
         [WTT.t('org.about.founded'), org.founded_year ? String(org.founded_year) : ''],
-        [WTT.t('org.about.location'), [org.city, org.state, org.country].filter(Boolean).join(', ')],
+        [WTT.t('org.about.location'), [org.city, org.state, org.country && WTT.countries.name(org.country)].filter(Boolean).join(', ')],
       ]);
     },
     contact() {
@@ -578,9 +614,11 @@ document.addEventListener('alpine:init', () => {
       ]);
     },
     legal() {
+      // O documento fiscal é o do país da organização; o de outro país, se há, fica guardado e escondido.
+      const id = WTT.countries.legalId(org.country);
       return rows([
         [WTT.t('org.fields.legal_name'), org.legal_name],
-        [WTT.t('org.fields.cnpj'), WTT.fmt.cnpj(org.cnpj), { mono: true }],
+        [id.label, WTT.fmt.mask(org[id.field], id.mask), { mono: true }],
         [WTT.t('org.fields.address'), [org.address_line1, org.address_line2, org.postal_code].filter(Boolean).join(' · ')],
       ]);
     },

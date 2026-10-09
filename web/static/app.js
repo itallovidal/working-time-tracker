@@ -187,6 +187,42 @@
     { value: 'EUR', label: t('labels.currency.EUR') },
   ];
 
+  // countries lê o cadastro de países que o servidor manda em BOOT.countries (internal/country): o documento fiscal, o
+  // código postal, os estados e os textos de cada país, no idioma da página. A tela se desenha a partir dele, então um
+  // país novo no servidor aparece sem mexer aqui. Os nomes dos países vêm do navegador (Intl.DisplayNames).
+  const countries = (() => {
+    const empty = { list: [], generic: { legal_id: { label: '' } }, iso: [] };
+    const registry = () => (window.BOOT && window.BOOT.countries) || empty;
+    let displayNames = null;
+    try { displayNames = new Intl.DisplayNames([lang], { type: 'region' }); } catch (e) { /* o código serve de nome */ }
+    const name = (code) => {
+      try { return (displayNames && displayNames.of(code)) || code; } catch (e) { return code; }
+    };
+    const get = (code) => registry().list.find((c) => c.code === code) || null;
+    return {
+      list: () => registry().list,
+      get,
+      name,
+      // forLang sugere o país de um idioma da interface ("pt-BR" -> BR, "en" -> US); sem correspondência, o primeiro.
+      forLang(l) {
+        const tag = String(l || lang).toLowerCase().split(/[-_]/)[0];
+        const hit = registry().list.find((c) => c.langs.includes(tag));
+        return hit ? hit.code : (registry().list[0] ? registry().list[0].code : 'BR');
+      },
+      // legalId é o documento fiscal do país. Fora do cadastro não há regra: é um texto livre, sem máscara.
+      legalId(code) {
+        const c = get(code);
+        return c ? c.legal_id : { field: null, label: registry().generic.legal_id.label, placeholder: '', mask: '' };
+      },
+      // others são os países ISO fora do cadastro, por nome: o país de um cliente pode ser qualquer um.
+      others() {
+        const known = new Set(registry().list.map((c) => c.code));
+        return registry().iso.filter((c) => !known.has(c)).map((code) => ({ code, name: name(code) }))
+          .sort((a, b) => a.name.localeCompare(b.name, lang));
+      },
+    };
+  })();
+
   // Separadores de número do idioma, para ler o que a pessoa digita em um campo de valor.
   const numberParts = new Intl.NumberFormat(lang).formatToParts(1234.5);
   const groupSeparator = (numberParts.find((p) => p.type === 'group') || {}).value || ',';
@@ -320,6 +356,31 @@
     weeklyHours(hours) {
       return hours ? t('labels.weekly_hours', { hours }) : '';
     },
+    // mask aplica uma máscara do cadastro de países: 9 é um dígito, * é um dígito ou uma letra, o resto é literal.
+    // "11222333000181" com "**.***.***/****-99" -> "11.222.333/0001-81". Vale também enquanto a pessoa digita: o que
+    // ainda não tem valor fica de fora (sem hífen sobrando), e o que passa do formato é cortado.
+    mask(value, pattern) {
+      const text = value === null || value === undefined ? '' : String(value);
+      if (!pattern) return text;
+      const raw = text.toUpperCase().replace(/[^0-9A-Z]/g, '');
+      let out = '';
+      let i = 0;
+      for (const p of pattern) {
+        if (i >= raw.length) break;
+        if (p === '9' || p === '*') {
+          if (p === '9' && !/[0-9]/.test(raw[i])) break;
+          out += raw[i++];
+        } else {
+          out += p;
+        }
+      }
+      return out;
+    },
+    // taxId mostra o documento fiscal pela máscara do país; um país sem regra mostra o texto como veio.
+    taxId(value, code) {
+      const id = countries.legalId(code);
+      return id.mask ? fmt.mask(value, id.mask) : (value || '');
+    },
     // "11222333000181" -> "11.222.333/0001-81"
     cnpj(value) {
       const v = value || '';
@@ -427,7 +488,7 @@
     return { label: fmt.date(iso), cls: '' };
   }
 
-  window.WTT = { can, t, lang, priorityClass, statusClass, hasDeadlineDate, deadlineInfo, errorText, api, ApiError, form, fmt, toCents, copyText, notInformed, weekdays, priorities, taskStatuses, markdown, routine, sprintOptions, sprintChoices, orgSizes, workModes, currencies, boot: window.BOOT || {} };
+  window.WTT = { can, t, lang, priorityClass, statusClass, hasDeadlineDate, deadlineInfo, errorText, api, ApiError, form, fmt, toCents, copyText, notInformed, weekdays, priorities, taskStatuses, markdown, routine, sprintOptions, sprintChoices, orgSizes, workModes, currencies, countries, boot: window.BOOT || {} };
 
   // Onde flash() deixa a mensagem para a página seguinte.
   const flashKey = 'wtt:flash';

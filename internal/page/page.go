@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v5"
 
+	"working-time-tracker/internal/country"
 	"working-time-tracker/internal/domain/auth"
 	"working-time-tracker/internal/domain/organization"
 	"working-time-tracker/internal/domain/permission"
@@ -111,6 +112,11 @@ func (d Data) Boot() map[string]any {
 	boot := map[string]any{"me": d.Me, "lang": d.Lang, "can": d.Granted(), "nav_projects": append([]Crumb{}, d.NavProjects...)}
 	if d.Project != nil {
 		boot["project"] = d.Project
+	}
+	// O cadastro de países (rótulos, máscaras, estados) vai só às páginas que o desenham: o cadastro, a volta do Clerk e
+	// as páginas da organização, que são as do script org.
+	if d.cat != nil && (d.Script == "auth" || d.Script == "org") {
+		boot["countries"] = country.Describe(d.T)
 	}
 	for k, v := range d.Props {
 		boot[k] = v

@@ -20,6 +20,15 @@
             <input id="signup-org" x-init="$el.focus()" type="text" autocomplete="organization" required x-model="organization_name">
           </div>
           <div class="field">
+            <label for="signup-country">{{.T "auth.signup.country"}}</label>
+            <select id="signup-country" autocomplete="country" required x-model="country">
+              <template x-for="c in countries" :key="c.code">
+                <option :value="c.code" x-text="WTT.countries.name(c.code)" :selected="c.code === country"></option>
+              </template>
+            </select>
+            <span class="hint">{{.T "auth.signup.country_hint"}}</span>
+          </div>
+          <div class="field">
             <label for="signup-name">{{.T "auth.your_name"}}</label>
             <input id="signup-name" type="text" autocomplete="name" required x-model="name">
           </div>

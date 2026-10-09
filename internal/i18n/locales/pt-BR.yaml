@@ -375,6 +375,8 @@ auth:
     title: Criar organização
     subtitle: Você entra como admin e depois convida o time.
     org_name: Nome da organização
+    country: País
+    country_hint: Define a moeda, o fuso e os dados fiscais da organização.
     steps_label: Etapas do cadastro
     step_org: Organização
     step_access: Acesso
@@ -477,7 +479,7 @@ help:
   steps:
     create_account:
       title: Crie a conta
-      text: "Abra a tela de cadastro. Na primeira etapa, informe o nome da organização e o seu nome; na segunda, o seu email e uma senha com pelo menos 8 caracteres, digitada duas vezes. Você entra como administrador e dono da organização. No primeiro acesso, uma janela de boas-vindas leva você pelos dados da organização, pelo primeiro cliente e pelo primeiro convite; qualquer etapa pode ficar para depois."
+      text: "Abra a tela de cadastro. Na primeira etapa, informe o nome da organização, o país (ele define a moeda, o fuso e os dados fiscais) e o seu nome; na segunda, o seu email e uma senha com pelo menos 8 caracteres, digitada duas vezes. Você entra como administrador e dono da organização. No primeiro acesso, uma janela de boas-vindas leva você pelos dados da organização, pelo primeiro cliente e pelo primeiro convite; qualquer etapa pode ficar para depois."
       tip: "Recebeu um convite? Pule este passo: abra o link do convite e crie a sua conta por lá."
     currency:
       title: Confira a moeda e o fuso
@@ -697,6 +699,7 @@ org:
     state: Estado
     postal_code: CEP
     country: País
+    country_hint: Define o documento fiscal, o estado e o código postal da organização.
     how_we_work: Como trabalhamos
     work_mode: Regime de trabalho
     hours_note: A duração da sprint fica nas configurações de cada projeto, e a jornada semanal, no cadastro de cada pessoa.
