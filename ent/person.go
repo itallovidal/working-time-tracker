@@ -38,6 +38,12 @@ type Person struct {
 	Permissions []string `json:"permissions,omitempty"`
 	// WeeklyHours holds the value of the "weekly_hours" field.
 	WeeklyHours *int `json:"weekly_hours,omitempty"`
+	// PaymentFrequency holds the value of the "payment_frequency" field.
+	PaymentFrequency *string `json:"payment_frequency,omitempty"`
+	// PaymentDay holds the value of the "payment_day" field.
+	PaymentDay *int `json:"payment_day,omitempty"`
+	// PaymentStart holds the value of the "payment_start" field.
+	PaymentStart *string `json:"payment_start,omitempty"`
 	// OnboardedAt holds the value of the "onboarded_at" field.
 	OnboardedAt *time.Time `json:"onboarded_at,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
@@ -143,9 +149,9 @@ func (*Person) scanValues(columns []string) ([]any, error) {
 			values[i] = new([]byte)
 		case person.FieldIsOwner:
 			values[i] = new(sql.NullBool)
-		case person.FieldWeeklyHours:
+		case person.FieldWeeklyHours, person.FieldPaymentDay:
 			values[i] = new(sql.NullInt64)
-		case person.FieldName, person.FieldEmail, person.FieldPasswordHash, person.FieldClerkUserID, person.FieldRole:
+		case person.FieldName, person.FieldEmail, person.FieldPasswordHash, person.FieldClerkUserID, person.FieldRole, person.FieldPaymentFrequency, person.FieldPaymentStart:
 			values[i] = new(sql.NullString)
 		case person.FieldOnboardedAt, person.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
@@ -230,6 +236,27 @@ func (_m *Person) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.WeeklyHours = new(int)
 				*_m.WeeklyHours = int(value.Int64)
+			}
+		case person.FieldPaymentFrequency:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field payment_frequency", values[i])
+			} else if value.Valid {
+				_m.PaymentFrequency = new(string)
+				*_m.PaymentFrequency = value.String
+			}
+		case person.FieldPaymentDay:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field payment_day", values[i])
+			} else if value.Valid {
+				_m.PaymentDay = new(int)
+				*_m.PaymentDay = int(value.Int64)
+			}
+		case person.FieldPaymentStart:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field payment_start", values[i])
+			} else if value.Valid {
+				_m.PaymentStart = new(string)
+				*_m.PaymentStart = value.String
 			}
 		case person.FieldOnboardedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -343,6 +370,21 @@ func (_m *Person) String() string {
 	if v := _m.WeeklyHours; v != nil {
 		builder.WriteString("weekly_hours=")
 		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	if v := _m.PaymentFrequency; v != nil {
+		builder.WriteString("payment_frequency=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.PaymentDay; v != nil {
+		builder.WriteString("payment_day=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	if v := _m.PaymentStart; v != nil {
+		builder.WriteString("payment_start=")
+		builder.WriteString(*v)
 	}
 	builder.WriteString(", ")
 	if v := _m.OnboardedAt; v != nil {

@@ -337,3 +337,45 @@ func TestService_FindByEmailInOrg(t *testing.T) {
 		}
 	}
 }
+
+func TestService_SetPayment(t *testing.T) {
+	cleanup(t)
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	svc := person.NewService(person.NewStore(testClient))
+	org, _ := orgSvc.Create("Org")
+	ana, _ := svc.Create(org.ID.String(), "Ana", "ana@test.com")
+	id := ana.ID.String()
+
+	p, err := svc.SetPayment(id, person.PaymentRule{Frequency: "monthly", Day: 5, Start: "2026-10-01"})
+	if err != nil || p.Payment == nil || *p.Payment != (person.PaymentRule{Frequency: "monthly", Day: 5}) {
+		t.Fatalf("monthly = %+v, %v; want day 5 without start", p.Payment, err)
+	}
+	p, err = svc.SetPayment(id, person.PaymentRule{Frequency: "biweekly", Day: 9, Start: "2026-10-01"})
+	if err != nil || p.Payment == nil || *p.Payment != (person.PaymentRule{Frequency: "biweekly", Start: "2026-10-01"}) {
+		t.Fatalf("biweekly = %+v, %v; want start without day", p.Payment, err)
+	}
+	for name, in := range map[string]person.PaymentRule{
+		"day 0":             {Frequency: "monthly", Day: 0},
+		"day 32":            {Frequency: "monthly", Day: 32},
+		"biweekly no start": {Frequency: "biweekly"},
+		"bad date":          {Frequency: "biweekly", Start: "2026-02-30"},
+		"unknown frequency": {Frequency: "weekly"},
+	} {
+		if _, err := svc.SetPayment(id, in); err == nil {
+			t.Errorf("%s: want an error", name)
+		}
+	}
+	if _, err := svc.SetPayment(id, person.PaymentRule{Frequency: "monthly", Day: 0}); err != person.ErrInvalidPayDay {
+		t.Errorf("day 0 error = %v, want ErrInvalidPayDay", err)
+	}
+	if _, err := svc.SetPayment(id, person.PaymentRule{Frequency: "biweekly", Start: "x"}); err != person.ErrInvalidPayStart {
+		t.Errorf("bad start error = %v, want ErrInvalidPayStart", err)
+	}
+	if _, err := svc.SetPayment(id, person.PaymentRule{Frequency: "x"}); err != person.ErrInvalidPayFrequency {
+		t.Errorf("bad frequency error = %v, want ErrInvalidPayFrequency", err)
+	}
+	p, err = svc.SetPayment(id, person.PaymentRule{})
+	if err != nil || p.Payment != nil {
+		t.Errorf("clear = %+v, %v; want no rule", p.Payment, err)
+	}
+}

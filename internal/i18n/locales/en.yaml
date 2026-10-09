@@ -1561,6 +1561,8 @@ errors:
     not_found: "organization not found"
   overview:
     invalid_task_state: "invalid task state (state): use open or closed"
+  payment:
+    own_only: "you can only see your own payments, or any if you are an admin"
   person:
     admin_has_all_permissions: "admins already have every permission"
     invalid_permission: "unknown organization permission"
@@ -1572,6 +1574,9 @@ errors:
     last_admin: "the organization needs at least one admin"
     owner_is_admin: "the organization owner is always an admin"
     invalid_week_hours: "the weekly hours must be between 1 and 168"
+    invalid_payment_frequency: "the payment must be monthly or biweekly"
+    invalid_payment_day: "the payment day must be between 1 and 31"
+    invalid_payment_start: "enter a valid start date for the biweekly payment"
     name_required: "enter the name"
     not_found: "person not found"
   project:

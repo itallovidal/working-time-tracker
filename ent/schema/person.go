@@ -35,6 +35,11 @@ func (Person) Fields() []ent.Field {
 		// Jornada semanal combinada com a pessoa, em horas. Vale para a organização
 		// toda, e não por projeto.
 		field.Int("weekly_hours").Optional().Nillable(),
+		// A regra de pagamento: "monthly" (dia fixo do mês, payment_day) ou "biweekly" (de 15 em 15 dias a partir
+		// de payment_start, um dia de calendário YYYY-MM-DD sem fuso). Validado em Go, como tasks.status.
+		field.String("payment_frequency").Optional().Nillable(),
+		field.Int("payment_day").Optional().Nillable(),
+		field.String("payment_start").Optional().Nillable(),
 		// Quando a pessoa terminou, ou dispensou, as boas-vindas do primeiro acesso. Nulo é "ainda não viu"; só o dono
 		// as vê, então para os outros o valor não muda nada. As pessoas que já existiam ficaram com a data da migração.
 		field.Time("onboarded_at").Optional().Nillable(),

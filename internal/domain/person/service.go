@@ -2,6 +2,7 @@ package person
 
 import (
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -166,4 +167,26 @@ func (s *Service) SetWeeklyHours(id string, hours *int) (*Person, error) {
 		hours = nil
 	}
 	return s.store.SetWeeklyHours(id, hours)
+}
+
+// SetPayment define a regra de pagamento da pessoa. Mensal pede o dia (1 a 31) e descarta o início; quinzenal
+// pede um início válido (YYYY-MM-DD) e descarta o dia; frequência vazia apaga a regra.
+func (s *Service) SetPayment(id string, in PaymentRule) (*Person, error) {
+	switch in.Frequency {
+	case "":
+		return s.store.SetPayment(id, nil)
+	case PaymentMonthly:
+		if in.Day < 1 || in.Day > 31 {
+			return nil, ErrInvalidPayDay
+		}
+		return s.store.SetPayment(id, &PaymentRule{Frequency: PaymentMonthly, Day: in.Day})
+	case PaymentBiweekly:
+		start := strings.TrimSpace(in.Start)
+		t, err := time.Parse(time.DateOnly, start)
+		if err != nil {
+			return nil, ErrInvalidPayStart
+		}
+		return s.store.SetPayment(id, &PaymentRule{Frequency: PaymentBiweekly, Start: t.Format(time.DateOnly)})
+	}
+	return nil, ErrInvalidPayFrequency
 }

@@ -13,6 +13,8 @@ import (
 type Handler struct {
 	svc   *Service
 	scope func(c *echo.Context) (*uuid.UUID, error)
+	// seesPayment diz se quem pede pode ver a regra de pagamento da pessoa; nil não esconde nada.
+	seesPayment func(c *echo.Context, personID uuid.UUID) bool
 }
 
 func NewHandler(svc *Service) *Handler {
@@ -24,6 +26,18 @@ func NewHandler(svc *Service) *Handler {
 // conhece a sessão e os projetos; sem isso todo mundo vê todo mundo.
 func (h *Handler) SetScope(scope func(c *echo.Context) (*uuid.UUID, error)) {
 	h.scope = scope
+}
+
+// SetPaymentGuard liga a regra de quem vê a regra de pagamento dos outros: a própria pessoa, admins e quem cuida de
+// pessoas. Para os demais (colegas de projeto) a lista e o detalhe trazem payment: null.
+func (h *Handler) SetPaymentGuard(f func(c *echo.Context, personID uuid.UUID) bool) {
+	h.seesPayment = f
+}
+
+func (h *Handler) redactPayment(c *echo.Context, p *Person) {
+	if h.seesPayment != nil && !h.seesPayment(c, p.ID) {
+		p.Payment = nil
+	}
 }
 
 // viewer devolve de quem a lista é vista, ou nil quando quem pede vê todas as pessoas.
@@ -46,6 +60,9 @@ func (h *Handler) ListByOrg(c *echo.Context) error {
 	if err != nil {
 		return apperr.Respond(c, http.StatusInternalServerError, err)
 	}
+	for i := range persons {
+		h.redactPayment(c, &persons[i])
+	}
 	return c.JSON(http.StatusOK, persons)
 }
 
@@ -62,6 +79,7 @@ func (h *Handler) Get(c *echo.Context) error {
 		}
 		return apperr.Respond(c, http.StatusInternalServerError, err)
 	}
+	h.redactPayment(c, person)
 	return c.JSON(http.StatusOK, person)
 }
 
@@ -132,6 +150,27 @@ func (h *Handler) SetWeeklyHours(c *echo.Context) error {
 		return apperr.Respond(c, http.StatusBadRequest, apperr.ErrInvalidBody)
 	}
 	person, err := h.svc.SetWeeklyHours(id, body.WeeklyHours)
+	if err != nil {
+		if err == database.ErrNotFound {
+			return apperr.Respond(c, http.StatusNotFound, ErrNotFound)
+		}
+		return apperr.Respond(c, http.StatusBadRequest, err)
+	}
+	return c.JSON(http.StatusOK, person)
+}
+
+// SetPayment define a regra de pagamento da pessoa (mensal, quinzenal ou nenhuma). Quem pode é quem pode
+// mudar a jornada: a regra é o que a organização combinou com ela.
+func (h *Handler) SetPayment(c *echo.Context) error {
+	var body struct {
+		Frequency string `json:"frequency"`
+		Day       int    `json:"day"`
+		Start     string `json:"start"`
+	}
+	if err := c.Bind(&body); err != nil {
+		return apperr.Respond(c, http.StatusBadRequest, apperr.ErrInvalidBody)
+	}
+	person, err := h.svc.SetPayment(c.Param("personId"), PaymentRule{Frequency: body.Frequency, Day: body.Day, Start: body.Start})
 	if err != nil {
 		if err == database.ErrNotFound {
 			return apperr.Respond(c, http.StatusNotFound, ErrNotFound)

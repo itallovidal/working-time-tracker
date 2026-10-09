@@ -91,6 +91,21 @@ func WeeklyHours(v int) predicate.Person {
 	return predicate.Person(sql.FieldEQ(FieldWeeklyHours, v))
 }
 
+// PaymentFrequency applies equality check predicate on the "payment_frequency" field. It's identical to PaymentFrequencyEQ.
+func PaymentFrequency(v string) predicate.Person {
+	return predicate.Person(sql.FieldEQ(FieldPaymentFrequency, v))
+}
+
+// PaymentDay applies equality check predicate on the "payment_day" field. It's identical to PaymentDayEQ.
+func PaymentDay(v int) predicate.Person {
+	return predicate.Person(sql.FieldEQ(FieldPaymentDay, v))
+}
+
+// PaymentStart applies equality check predicate on the "payment_start" field. It's identical to PaymentStartEQ.
+func PaymentStart(v string) predicate.Person {
+	return predicate.Person(sql.FieldEQ(FieldPaymentStart, v))
+}
+
 // OnboardedAt applies equality check predicate on the "onboarded_at" field. It's identical to OnboardedAtEQ.
 func OnboardedAt(v time.Time) predicate.Person {
 	return predicate.Person(sql.FieldEQ(FieldOnboardedAt, v))
@@ -489,6 +504,206 @@ func WeeklyHoursIsNil() predicate.Person {
 // WeeklyHoursNotNil applies the NotNil predicate on the "weekly_hours" field.
 func WeeklyHoursNotNil() predicate.Person {
 	return predicate.Person(sql.FieldNotNull(FieldWeeklyHours))
+}
+
+// PaymentFrequencyEQ applies the EQ predicate on the "payment_frequency" field.
+func PaymentFrequencyEQ(v string) predicate.Person {
+	return predicate.Person(sql.FieldEQ(FieldPaymentFrequency, v))
+}
+
+// PaymentFrequencyNEQ applies the NEQ predicate on the "payment_frequency" field.
+func PaymentFrequencyNEQ(v string) predicate.Person {
+	return predicate.Person(sql.FieldNEQ(FieldPaymentFrequency, v))
+}
+
+// PaymentFrequencyIn applies the In predicate on the "payment_frequency" field.
+func PaymentFrequencyIn(vs ...string) predicate.Person {
+	return predicate.Person(sql.FieldIn(FieldPaymentFrequency, vs...))
+}
+
+// PaymentFrequencyNotIn applies the NotIn predicate on the "payment_frequency" field.
+func PaymentFrequencyNotIn(vs ...string) predicate.Person {
+	return predicate.Person(sql.FieldNotIn(FieldPaymentFrequency, vs...))
+}
+
+// PaymentFrequencyGT applies the GT predicate on the "payment_frequency" field.
+func PaymentFrequencyGT(v string) predicate.Person {
+	return predicate.Person(sql.FieldGT(FieldPaymentFrequency, v))
+}
+
+// PaymentFrequencyGTE applies the GTE predicate on the "payment_frequency" field.
+func PaymentFrequencyGTE(v string) predicate.Person {
+	return predicate.Person(sql.FieldGTE(FieldPaymentFrequency, v))
+}
+
+// PaymentFrequencyLT applies the LT predicate on the "payment_frequency" field.
+func PaymentFrequencyLT(v string) predicate.Person {
+	return predicate.Person(sql.FieldLT(FieldPaymentFrequency, v))
+}
+
+// PaymentFrequencyLTE applies the LTE predicate on the "payment_frequency" field.
+func PaymentFrequencyLTE(v string) predicate.Person {
+	return predicate.Person(sql.FieldLTE(FieldPaymentFrequency, v))
+}
+
+// PaymentFrequencyContains applies the Contains predicate on the "payment_frequency" field.
+func PaymentFrequencyContains(v string) predicate.Person {
+	return predicate.Person(sql.FieldContains(FieldPaymentFrequency, v))
+}
+
+// PaymentFrequencyHasPrefix applies the HasPrefix predicate on the "payment_frequency" field.
+func PaymentFrequencyHasPrefix(v string) predicate.Person {
+	return predicate.Person(sql.FieldHasPrefix(FieldPaymentFrequency, v))
+}
+
+// PaymentFrequencyHasSuffix applies the HasSuffix predicate on the "payment_frequency" field.
+func PaymentFrequencyHasSuffix(v string) predicate.Person {
+	return predicate.Person(sql.FieldHasSuffix(FieldPaymentFrequency, v))
+}
+
+// PaymentFrequencyIsNil applies the IsNil predicate on the "payment_frequency" field.
+func PaymentFrequencyIsNil() predicate.Person {
+	return predicate.Person(sql.FieldIsNull(FieldPaymentFrequency))
+}
+
+// PaymentFrequencyNotNil applies the NotNil predicate on the "payment_frequency" field.
+func PaymentFrequencyNotNil() predicate.Person {
+	return predicate.Person(sql.FieldNotNull(FieldPaymentFrequency))
+}
+
+// PaymentFrequencyEqualFold applies the EqualFold predicate on the "payment_frequency" field.
+func PaymentFrequencyEqualFold(v string) predicate.Person {
+	return predicate.Person(sql.FieldEqualFold(FieldPaymentFrequency, v))
+}
+
+// PaymentFrequencyContainsFold applies the ContainsFold predicate on the "payment_frequency" field.
+func PaymentFrequencyContainsFold(v string) predicate.Person {
+	return predicate.Person(sql.FieldContainsFold(FieldPaymentFrequency, v))
+}
+
+// PaymentDayEQ applies the EQ predicate on the "payment_day" field.
+func PaymentDayEQ(v int) predicate.Person {
+	return predicate.Person(sql.FieldEQ(FieldPaymentDay, v))
+}
+
+// PaymentDayNEQ applies the NEQ predicate on the "payment_day" field.
+func PaymentDayNEQ(v int) predicate.Person {
+	return predicate.Person(sql.FieldNEQ(FieldPaymentDay, v))
+}
+
+// PaymentDayIn applies the In predicate on the "payment_day" field.
+func PaymentDayIn(vs ...int) predicate.Person {
+	return predicate.Person(sql.FieldIn(FieldPaymentDay, vs...))
+}
+
+// PaymentDayNotIn applies the NotIn predicate on the "payment_day" field.
+func PaymentDayNotIn(vs ...int) predicate.Person {
+	return predicate.Person(sql.FieldNotIn(FieldPaymentDay, vs...))
+}
+
+// PaymentDayGT applies the GT predicate on the "payment_day" field.
+func PaymentDayGT(v int) predicate.Person {
+	return predicate.Person(sql.FieldGT(FieldPaymentDay, v))
+}
+
+// PaymentDayGTE applies the GTE predicate on the "payment_day" field.
+func PaymentDayGTE(v int) predicate.Person {
+	return predicate.Person(sql.FieldGTE(FieldPaymentDay, v))
+}
+
+// PaymentDayLT applies the LT predicate on the "payment_day" field.
+func PaymentDayLT(v int) predicate.Person {
+	return predicate.Person(sql.FieldLT(FieldPaymentDay, v))
+}
+
+// PaymentDayLTE applies the LTE predicate on the "payment_day" field.
+func PaymentDayLTE(v int) predicate.Person {
+	return predicate.Person(sql.FieldLTE(FieldPaymentDay, v))
+}
+
+// PaymentDayIsNil applies the IsNil predicate on the "payment_day" field.
+func PaymentDayIsNil() predicate.Person {
+	return predicate.Person(sql.FieldIsNull(FieldPaymentDay))
+}
+
+// PaymentDayNotNil applies the NotNil predicate on the "payment_day" field.
+func PaymentDayNotNil() predicate.Person {
+	return predicate.Person(sql.FieldNotNull(FieldPaymentDay))
+}
+
+// PaymentStartEQ applies the EQ predicate on the "payment_start" field.
+func PaymentStartEQ(v string) predicate.Person {
+	return predicate.Person(sql.FieldEQ(FieldPaymentStart, v))
+}
+
+// PaymentStartNEQ applies the NEQ predicate on the "payment_start" field.
+func PaymentStartNEQ(v string) predicate.Person {
+	return predicate.Person(sql.FieldNEQ(FieldPaymentStart, v))
+}
+
+// PaymentStartIn applies the In predicate on the "payment_start" field.
+func PaymentStartIn(vs ...string) predicate.Person {
+	return predicate.Person(sql.FieldIn(FieldPaymentStart, vs...))
+}
+
+// PaymentStartNotIn applies the NotIn predicate on the "payment_start" field.
+func PaymentStartNotIn(vs ...string) predicate.Person {
+	return predicate.Person(sql.FieldNotIn(FieldPaymentStart, vs...))
+}
+
+// PaymentStartGT applies the GT predicate on the "payment_start" field.
+func PaymentStartGT(v string) predicate.Person {
+	return predicate.Person(sql.FieldGT(FieldPaymentStart, v))
+}
+
+// PaymentStartGTE applies the GTE predicate on the "payment_start" field.
+func PaymentStartGTE(v string) predicate.Person {
+	return predicate.Person(sql.FieldGTE(FieldPaymentStart, v))
+}
+
+// PaymentStartLT applies the LT predicate on the "payment_start" field.
+func PaymentStartLT(v string) predicate.Person {
+	return predicate.Person(sql.FieldLT(FieldPaymentStart, v))
+}
+
+// PaymentStartLTE applies the LTE predicate on the "payment_start" field.
+func PaymentStartLTE(v string) predicate.Person {
+	return predicate.Person(sql.FieldLTE(FieldPaymentStart, v))
+}
+
+// PaymentStartContains applies the Contains predicate on the "payment_start" field.
+func PaymentStartContains(v string) predicate.Person {
+	return predicate.Person(sql.FieldContains(FieldPaymentStart, v))
+}
+
+// PaymentStartHasPrefix applies the HasPrefix predicate on the "payment_start" field.
+func PaymentStartHasPrefix(v string) predicate.Person {
+	return predicate.Person(sql.FieldHasPrefix(FieldPaymentStart, v))
+}
+
+// PaymentStartHasSuffix applies the HasSuffix predicate on the "payment_start" field.
+func PaymentStartHasSuffix(v string) predicate.Person {
+	return predicate.Person(sql.FieldHasSuffix(FieldPaymentStart, v))
+}
+
+// PaymentStartIsNil applies the IsNil predicate on the "payment_start" field.
+func PaymentStartIsNil() predicate.Person {
+	return predicate.Person(sql.FieldIsNull(FieldPaymentStart))
+}
+
+// PaymentStartNotNil applies the NotNil predicate on the "payment_start" field.
+func PaymentStartNotNil() predicate.Person {
+	return predicate.Person(sql.FieldNotNull(FieldPaymentStart))
+}
+
+// PaymentStartEqualFold applies the EqualFold predicate on the "payment_start" field.
+func PaymentStartEqualFold(v string) predicate.Person {
+	return predicate.Person(sql.FieldEqualFold(FieldPaymentStart, v))
+}
+
+// PaymentStartContainsFold applies the ContainsFold predicate on the "payment_start" field.
+func PaymentStartContainsFold(v string) predicate.Person {
+	return predicate.Person(sql.FieldContainsFold(FieldPaymentStart, v))
 }
 
 // OnboardedAtEQ applies the EQ predicate on the "onboarded_at" field.

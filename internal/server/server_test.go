@@ -255,6 +255,7 @@ func TestAccess_MemberCannotUseAdminRoutes(t *testing.T) {
 		{"POST", "/api/orgs/" + admin.orgID + "/invites", `{}`},
 		{"PATCH", "/api/persons/" + member.id + "/role", `{"role":"admin"}`},
 		{"PATCH", "/api/persons/" + member.id + "/weekly-hours", `{"weekly_hours":10}`},
+		{"PATCH", "/api/persons/" + member.id + "/payment", `{"frequency":"monthly","day":5}`},
 		{"PATCH", "/api/persons/" + admin.id, `{"name":"Hacker","email":"x@test.com"}`},
 	}
 	for _, tc := range forbidden {
@@ -841,6 +842,9 @@ func TestRoutes_Table(t *testing.T) {
 		"PATCH /api/persons/:personId/role",
 		"PATCH /api/persons/:personId/permissions",
 		"PATCH /api/persons/:personId/weekly-hours",
+		"PATCH /api/persons/:personId/payment",
+		"GET /api/persons/:personId/payments",
+		"GET /api/orgs/:orgId/payments",
 		"GET /api/persons/:personId/allocations",
 
 		"GET /api/projects/:projectId",
@@ -1820,5 +1824,73 @@ func TestTasks_PriorityAndLabels(t *testing.T) {
 	}
 	if got := count("?page=1"); got != 3 {
 		t.Errorf("after deleting a label the project has %d tasks, want 3", got)
+	}
+}
+
+func TestPersons_PaymentRule(t *testing.T) {
+	e := newServer(t)
+	admin := signup(t, e, "Org", "ana@test.com")
+	bia := invite(t, e, admin, "bia@test.com", "member")
+	path := "/api/persons/" + bia.id + "/payment"
+
+	if got, ok := decode(t, do(e, "GET", "/api/persons/"+bia.id, "", bia.session))["payment"]; !ok || got != nil {
+		t.Errorf("new person payment = %v (present: %v), want null", got, ok)
+	}
+	rec := do(e, "PATCH", path, `{"frequency":"biweekly","start":"2026-10-01"}`, admin.session)
+	pay, _ := decode(t, rec)["payment"].(map[string]any)
+	if rec.Code != http.StatusOK || pay["frequency"] != "biweekly" || pay["start"] != "2026-10-01" {
+		t.Fatalf("admin PATCH = %d %s", rec.Code, rec.Body.String())
+	}
+	// A própria pessoa e o admin leem a regra.
+	for _, s := range []string{bia.session, admin.session} {
+		if decode(t, do(e, "GET", "/api/persons/"+bia.id, "", s))["payment"] == nil {
+			t.Error("the person and the admin should see the payment rule")
+		}
+	}
+	for _, bad := range []string{`{"frequency":"monthly","day":0}`, `{"frequency":"monthly","day":32}`, `{"frequency":"biweekly"}`, `{"frequency":"yearly"}`} {
+		if rec := do(e, "PATCH", path, bad, admin.session); rec.Code != http.StatusBadRequest {
+			t.Errorf("PATCH %s = %d, want 400", bad, rec.Code)
+		}
+	}
+	if rec := do(e, "PATCH", path, `{"frequency":""}`, admin.session); rec.Code != http.StatusOK || decode(t, rec)["payment"] != nil {
+		t.Errorf("clear = %d %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestPayments_Permissions(t *testing.T) {
+	e := newServer(t)
+	admin := signup(t, e, "Org", "ana@test.com")
+	bia := invite(t, e, admin, "bia@test.com", "member")
+	carol := invite(t, e, admin, "carol@test.com", "member")
+	if rec := do(e, "PATCH", "/api/persons/"+carol.id+"/permissions", `{"permissions":["people.manage"]}`, admin.session); rec.Code != http.StatusOK {
+		t.Fatalf("grant people.manage = %d", rec.Code)
+	}
+	if rec := do(e, "PATCH", "/api/persons/"+bia.id+"/payment", `{"frequency":"monthly","day":5}`, carol.session); rec.Code != http.StatusOK {
+		t.Fatalf("people.manage alone should change the rule, got %d", rec.Code)
+	}
+	for _, c := range []struct {
+		name, path, session string
+		want                int
+	}{
+		{"own payments", "/api/persons/" + bia.id + "/payments", bia.session, http.StatusOK},
+		{"another person's payments", "/api/persons/" + bia.id + "/payments", admin.session, http.StatusOK},
+		{"a member reading another's", "/api/persons/" + admin.id + "/payments", bia.session, http.StatusForbidden},
+		{"people.manage reading another's", "/api/persons/" + bia.id + "/payments", carol.session, http.StatusForbidden},
+		{"team as admin", "/api/orgs/" + admin.orgID + "/payments", admin.session, http.StatusOK},
+		{"team as member", "/api/orgs/" + admin.orgID + "/payments", bia.session, http.StatusForbidden},
+		{"team as people.manage", "/api/orgs/" + admin.orgID + "/payments", carol.session, http.StatusForbidden},
+		{"bad history", "/api/persons/" + bia.id + "/payments?history=x", bia.session, http.StatusBadRequest},
+	} {
+		if rec := do(e, "GET", c.path, "", c.session); rec.Code != c.want {
+			t.Errorf("%s = %d, want %d: %s", c.name, rec.Code, c.want, rec.Body.String())
+		}
+	}
+	got := decode(t, do(e, "GET", "/api/persons/"+bia.id+"/payments?history=2", "", bia.session))
+	if rule, _ := got["rule"].(map[string]any); rule["frequency"] != "monthly" || len(got["history"].([]any)) != 2 {
+		t.Errorf("payments = %v", got)
+	}
+	none := decode(t, do(e, "GET", "/api/persons/"+admin.id+"/payments", "", admin.session))
+	if none["rule"] != nil || none["current"] != nil {
+		t.Errorf("a person without a rule should get rule null, got %v", none)
 	}
 }

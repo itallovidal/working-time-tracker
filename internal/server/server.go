@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
 
@@ -19,6 +20,7 @@ import (
 	"working-time-tracker/internal/domain/issuesync"
 	"working-time-tracker/internal/domain/organization"
 	"working-time-tracker/internal/domain/overview"
+	"working-time-tracker/internal/domain/payment"
 	"working-time-tracker/internal/domain/permission"
 	"working-time-tracker/internal/domain/person"
 	"working-time-tracker/internal/domain/project"
@@ -122,6 +124,7 @@ func Build(client *ent.Client, opts Options) (*App, error) {
 		Tasks:         taskStore,
 		People:        personSvc,
 	})
+	paymentSvc := payment.NewService(payment.Deps{Orgs: orgSvc, People: personSvc, Sessions: workSessionSvc, Projects: projectSvc})
 	authSvc := auth.NewService(authStore)
 	var clerkPage *page.Clerk
 	if opts.Clerk != nil && opts.Clerk.Provider != nil {
@@ -166,6 +169,7 @@ func Build(client *ent.Client, opts Options) (*App, error) {
 		Allocation:    allocation.NewHandler(allocationSvc),
 		Collaborator:  collaborator.NewHandler(collaboratorSvc),
 		Overview:      overview.NewHandler(overviewSvc),
+		Payment:       payment.NewHandler(paymentSvc),
 		Task:          task.NewHandler(taskSvc),
 		WorkSession:   work_session.NewHandler(workSessionSvc),
 		Integration:   integration.NewHandler(integrationSvc),
@@ -176,6 +180,11 @@ func Build(client *ent.Client, opts Options) (*App, error) {
 	authMW := auth.NewMiddleware(authSvc, resolver, opts.CookieSecure)
 	// Quem não é admin nem cuida de pessoas só vê a si mesmo e quem divide projeto com ele.
 	personHandler.SetScope(authMW.PeopleScope)
+	// A regra de pagamento é só da própria pessoa, dos admins e de quem cuida de pessoas.
+	personHandler.SetPaymentGuard(func(c *echo.Context, personID uuid.UUID) bool {
+		me := auth.CurrentPerson(c)
+		return me != nil && (me.PersonID == personID || me.IsAdmin() || me.Can(permission.PeopleManage))
+	})
 	oauthHandler := integration.NewOAuthHandler(integrationSvc, opts.GitHubOAuth, opts.TrelloAuth, resolver, opts.EncryptKey, opts.CookieSecure)
 	catalog, err := i18n.Load()
 	if err != nil {

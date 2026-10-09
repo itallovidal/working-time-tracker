@@ -208,6 +208,12 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 |---|---|---|---|---|
 | `overview.invalid_task_state` | 400 | — | `estado de tarefa inválido (state): use open ou closed` | `invalid task state (state): use open or closed` |
 
+### payment
+
+| Código | Status | Parâmetros | pt-BR | en |
+|---|---|---|---|---|
+| `payment.own_only` | 403 | — | `você só pode ver os seus pagamentos, ou os de qualquer pessoa se for admin` | `you can only see your own payments, or any if you are an admin` |
+
 ### person
 
 | Código | Status | Parâmetros | pt-BR | en |
@@ -217,6 +223,9 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `person.email_required` | 400 | — | `informe o email` | `enter the email` |
 | `person.invalid_email` | 400 | — | `informe um email válido` | `enter a valid email` |
 | `person.invalid_organization` | 400 | — | `organização inválida` | `invalid organization` |
+| `person.invalid_payment_day` | 400 | — | `o dia do pagamento deve ficar entre 1 e 31` | `the payment day must be between 1 and 31` |
+| `person.invalid_payment_frequency` | 400 | — | `a frequência de pagamento deve ser mensal ou quinzenal` | `the payment must be monthly or biweekly` |
+| `person.invalid_payment_start` | 400 | — | `informe uma data de início válida para o pagamento quinzenal` | `enter a valid start date for the biweekly payment` |
 | `person.invalid_permission` | 400 | — | `permissão da organização desconhecida` | `unknown organization permission` |
 | `person.invalid_role` | 400 | — | `papel inválido: use admin ou member` | `invalid role: use admin or member` |
 | `person.invalid_week_hours` | 400 | — | `a jornada semanal deve ficar entre 1 e 168 horas` | `the weekly hours must be between 1 and 168` |

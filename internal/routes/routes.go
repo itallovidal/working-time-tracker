@@ -11,6 +11,7 @@ import (
 	"working-time-tracker/internal/domain/issuesync"
 	"working-time-tracker/internal/domain/organization"
 	"working-time-tracker/internal/domain/overview"
+	"working-time-tracker/internal/domain/payment"
 	"working-time-tracker/internal/domain/permission"
 	"working-time-tracker/internal/domain/person"
 	"working-time-tracker/internal/domain/project"
@@ -31,6 +32,7 @@ type Handlers struct {
 	Allocation   *allocation.Handler
 	Collaborator *collaborator.Handler
 	Overview     *overview.Handler
+	Payment      *payment.Handler
 	Task         *task.Handler
 	WorkSession  *work_session.Handler
 	Integration  *integration.Handler
@@ -85,6 +87,8 @@ func RegisterRoutes(e *echo.Echo, h Handlers, m *auth.Middleware, authLimiter ec
 	r.POST("/orgs/:orgId/projects", h.Project.Create, org, orgCan(permission.ProjectsCreate))
 	r.GET("/orgs/:orgId/projects", h.Project.ListByOrg, org)
 	// A visão geral da organização soma o dinheiro de todos os projetos e o tempo de cada pessoa: só dos admins.
+	// Os pagamentos da equipe são dinheiro e horas de todos: só de admins.
+	r.GET("/orgs/:orgId/payments", h.Payment.Team, org, admin)
 	r.GET("/orgs/:orgId/overview", h.Overview.Organization, org, admin)
 	// Quem está com o ponto aberto e em que tarefas, sem tempo nem dinheiro: a bolinha da lista de tarefas e a
 	// coluna "Agora" dos colaboradores. Também só dos admins.
@@ -115,8 +119,11 @@ func RegisterRoutes(e *echo.Echo, h Handlers, m *auth.Middleware, authLimiter ec
 	r.PATCH("/persons/:personId/role", h.Person.SetRole, per, owner)
 	r.PATCH("/persons/:personId/permissions", h.Person.SetPermissions, per, owner)
 	r.PATCH("/persons/:personId/weekly-hours", h.Person.SetWeeklyHours, per, orgCan(permission.PeopleManage))
+	r.PATCH("/persons/:personId/payment", h.Person.SetPayment, per, orgCan(permission.PeopleManage))
 	// O handler só entrega os valores à própria pessoa ou a um admin.
 	r.GET("/persons/:personId/allocations", h.Allocation.ListByPerson, per)
+	// O handler só entrega os pagamentos à própria pessoa ou a um admin.
+	r.GET("/persons/:personId/payments", h.Payment.ByPerson, per)
 
 	r.GET("/projects/:projectId", h.Project.Get, prj)
 	r.PATCH("/projects/:projectId", h.Project.Update, prj, can(permission.ProjectEdit))

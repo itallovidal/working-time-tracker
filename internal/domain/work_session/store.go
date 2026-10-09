@@ -203,6 +203,27 @@ func (s *Store) ListByOrganization(orgID string) ([]WorkSession, error) {
 	return toDomainSessions(sessions), nil
 }
 
+// ListByOrganizationSince devolve as sessões dos projetos da organização que ainda corriam em since ou depois (a
+// aberta sempre entra), da mais recente para a mais antiga, sem as tarefas: serve a quem soma o tempo de todos a
+// partir de um instante sem ler a história inteira.
+func (s *Store) ListByOrganizationSince(orgID string, since time.Time) ([]WorkSession, error) {
+	uid, err := uuid.Parse(orgID)
+	if err != nil {
+		return nil, err
+	}
+	sessions, err := s.client.WorkSession.Query().
+		Where(
+			worksession.HasProjectWith(entproject.OrganizationIDEQ(uid)),
+			worksession.Or(worksession.EndAtIsNil(), worksession.EndAtGTE(since)),
+		).
+		Order(ent.Desc(worksession.FieldStartAt)).
+		All(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	return toDomainSessions(sessions), nil
+}
+
 // ListByPersonSince devolve as sessões da pessoa nos projetos da organização que ainda corriam em
 // since ou depois (as que terminaram antes ficam de fora; a aberta sempre entra), da mais recente
 // para a mais antiga, sem as tarefas: serve a quem soma o tempo da pessoa a partir de um instante.

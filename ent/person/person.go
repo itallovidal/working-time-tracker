@@ -34,6 +34,12 @@ const (
 	FieldPermissions = "permissions"
 	// FieldWeeklyHours holds the string denoting the weekly_hours field in the database.
 	FieldWeeklyHours = "weekly_hours"
+	// FieldPaymentFrequency holds the string denoting the payment_frequency field in the database.
+	FieldPaymentFrequency = "payment_frequency"
+	// FieldPaymentDay holds the string denoting the payment_day field in the database.
+	FieldPaymentDay = "payment_day"
+	// FieldPaymentStart holds the string denoting the payment_start field in the database.
+	FieldPaymentStart = "payment_start"
 	// FieldOnboardedAt holds the string denoting the onboarded_at field in the database.
 	FieldOnboardedAt = "onboarded_at"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
@@ -117,6 +123,9 @@ var Columns = []string{
 	FieldIsOwner,
 	FieldPermissions,
 	FieldWeeklyHours,
+	FieldPaymentFrequency,
+	FieldPaymentDay,
+	FieldPaymentStart,
 	FieldOnboardedAt,
 	FieldCreatedAt,
 }
@@ -212,6 +221,21 @@ func ByIsOwner(opts ...sql.OrderTermOption) OrderOption {
 // ByWeeklyHours orders the results by the weekly_hours field.
 func ByWeeklyHours(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldWeeklyHours, opts...).ToFunc()
+}
+
+// ByPaymentFrequency orders the results by the payment_frequency field.
+func ByPaymentFrequency(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPaymentFrequency, opts...).ToFunc()
+}
+
+// ByPaymentDay orders the results by the payment_day field.
+func ByPaymentDay(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPaymentDay, opts...).ToFunc()
+}
+
+// ByPaymentStart orders the results by the payment_start field.
+func ByPaymentStart(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPaymentStart, opts...).ToFunc()
 }
 
 // ByOnboardedAt orders the results by the onboarded_at field.

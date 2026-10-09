@@ -47,19 +47,28 @@ const historyDays = 75
 var people = []struct {
 	key, name, email, role string
 	weeklyHours            int
+	pay                    person.PaymentRule
 }{
-	{"ana", "Ana Souza", "ana@example.com", "admin", 0},
-	{"helena", "Helena Costa", "helena@example.com", "admin", 40},
-	{"bruno", "Bruno Lima", "bruno@example.com", "member", 40},
-	{"carla", "Carla Mendes", "carla@example.com", "member", 40},
-	{"diego", "Diego Rocha", "diego@example.com", "member", 30},
-	{"elisa", "Elisa Prado", "elisa@example.com", "member", 20},
-	{"fabio", "Fábio Teixeira", "fabio@example.com", "member", 40},
-	{"gabriela", "Gabriela Nunes", "gabriela@example.com", "member", 30},
-	{"henrique", "Henrique Barros", "henrique@example.com", "member", 40},
-	{"isabela", "Isabela Cardoso", "isabela@example.com", "member", 40},
-	{"joao", "João Pedro Alves", "joao@example.com", "member", 20},
-	{"larissa", "Larissa Freitas", "larissa@example.com", "member", 40},
+	{"ana", "Ana Souza", "ana@example.com", "admin", 0, person.PaymentRule{}},
+	{"helena", "Helena Costa", "helena@example.com", "admin", 40, monthly(5)},
+	{"bruno", "Bruno Lima", "bruno@example.com", "member", 40, monthly(5)},
+	{"carla", "Carla Mendes", "carla@example.com", "member", 40, monthly(10)},
+	{"diego", "Diego Rocha", "diego@example.com", "member", 30, biweekly("2026-09-01")},
+	{"elisa", "Elisa Prado", "elisa@example.com", "member", 20, monthly(30)},
+	{"fabio", "Fábio Teixeira", "fabio@example.com", "member", 40, biweekly("2026-09-10")},
+	{"gabriela", "Gabriela Nunes", "gabriela@example.com", "member", 30, monthly(10)},
+	{"henrique", "Henrique Barros", "henrique@example.com", "member", 40, biweekly("2026-09-21")},
+	{"isabela", "Isabela Cardoso", "isabela@example.com", "member", 40, monthly(5)},
+	{"joao", "João Pedro Alves", "joao@example.com", "member", 20, biweekly("2026-10-01")},
+	{"larissa", "Larissa Freitas", "larissa@example.com", "member", 40, monthly(30)},
+}
+
+func monthly(day int) person.PaymentRule {
+	return person.PaymentRule{Frequency: person.PaymentMonthly, Day: day}
+}
+
+func biweekly(start string) person.PaymentRule {
+	return person.PaymentRule{Frequency: person.PaymentBiweekly, Start: start}
 }
 
 // Os clientes. country vazio é o da organização (o Brasil). Os dois últimos são de fora, para a demonstração mostrar o
@@ -384,6 +393,8 @@ func main() {
 	}
 	for _, p := range people {
 		_, err := personSvc.SetWeeklyHours(person[p.key].PersonID.String(), optionalNumber(p.weeklyHours))
+		must(err)
+		_, err = personSvc.SetPayment(person[p.key].PersonID.String(), p.pay)
 		must(err)
 	}
 

@@ -7880,6 +7880,10 @@ type PersonMutation struct {
 	appendpermissions       []string
 	weekly_hours            *int
 	addweekly_hours         *int
+	payment_frequency       *string
+	payment_day             *int
+	addpayment_day          *int
+	payment_start           *string
 	onboarded_at            *time.Time
 	created_at              *time.Time
 	clearedFields           map[string]struct{}
@@ -8425,6 +8429,174 @@ func (m *PersonMutation) ResetWeeklyHours() {
 	delete(m.clearedFields, person.FieldWeeklyHours)
 }
 
+// SetPaymentFrequency sets the "payment_frequency" field.
+func (m *PersonMutation) SetPaymentFrequency(s string) {
+	m.payment_frequency = &s
+}
+
+// PaymentFrequency returns the value of the "payment_frequency" field in the mutation.
+func (m *PersonMutation) PaymentFrequency() (r string, exists bool) {
+	v := m.payment_frequency
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPaymentFrequency returns the old "payment_frequency" field's value of the Person entity.
+// If the Person object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PersonMutation) OldPaymentFrequency(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPaymentFrequency is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPaymentFrequency requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPaymentFrequency: %w", err)
+	}
+	return oldValue.PaymentFrequency, nil
+}
+
+// ClearPaymentFrequency clears the value of the "payment_frequency" field.
+func (m *PersonMutation) ClearPaymentFrequency() {
+	m.payment_frequency = nil
+	m.clearedFields[person.FieldPaymentFrequency] = struct{}{}
+}
+
+// PaymentFrequencyCleared returns if the "payment_frequency" field was cleared in this mutation.
+func (m *PersonMutation) PaymentFrequencyCleared() bool {
+	_, ok := m.clearedFields[person.FieldPaymentFrequency]
+	return ok
+}
+
+// ResetPaymentFrequency resets all changes to the "payment_frequency" field.
+func (m *PersonMutation) ResetPaymentFrequency() {
+	m.payment_frequency = nil
+	delete(m.clearedFields, person.FieldPaymentFrequency)
+}
+
+// SetPaymentDay sets the "payment_day" field.
+func (m *PersonMutation) SetPaymentDay(i int) {
+	m.payment_day = &i
+	m.addpayment_day = nil
+}
+
+// PaymentDay returns the value of the "payment_day" field in the mutation.
+func (m *PersonMutation) PaymentDay() (r int, exists bool) {
+	v := m.payment_day
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPaymentDay returns the old "payment_day" field's value of the Person entity.
+// If the Person object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PersonMutation) OldPaymentDay(ctx context.Context) (v *int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPaymentDay is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPaymentDay requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPaymentDay: %w", err)
+	}
+	return oldValue.PaymentDay, nil
+}
+
+// AddPaymentDay adds i to the "payment_day" field.
+func (m *PersonMutation) AddPaymentDay(i int) {
+	if m.addpayment_day != nil {
+		*m.addpayment_day += i
+	} else {
+		m.addpayment_day = &i
+	}
+}
+
+// AddedPaymentDay returns the value that was added to the "payment_day" field in this mutation.
+func (m *PersonMutation) AddedPaymentDay() (r int, exists bool) {
+	v := m.addpayment_day
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearPaymentDay clears the value of the "payment_day" field.
+func (m *PersonMutation) ClearPaymentDay() {
+	m.payment_day = nil
+	m.addpayment_day = nil
+	m.clearedFields[person.FieldPaymentDay] = struct{}{}
+}
+
+// PaymentDayCleared returns if the "payment_day" field was cleared in this mutation.
+func (m *PersonMutation) PaymentDayCleared() bool {
+	_, ok := m.clearedFields[person.FieldPaymentDay]
+	return ok
+}
+
+// ResetPaymentDay resets all changes to the "payment_day" field.
+func (m *PersonMutation) ResetPaymentDay() {
+	m.payment_day = nil
+	m.addpayment_day = nil
+	delete(m.clearedFields, person.FieldPaymentDay)
+}
+
+// SetPaymentStart sets the "payment_start" field.
+func (m *PersonMutation) SetPaymentStart(s string) {
+	m.payment_start = &s
+}
+
+// PaymentStart returns the value of the "payment_start" field in the mutation.
+func (m *PersonMutation) PaymentStart() (r string, exists bool) {
+	v := m.payment_start
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPaymentStart returns the old "payment_start" field's value of the Person entity.
+// If the Person object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PersonMutation) OldPaymentStart(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPaymentStart is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPaymentStart requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPaymentStart: %w", err)
+	}
+	return oldValue.PaymentStart, nil
+}
+
+// ClearPaymentStart clears the value of the "payment_start" field.
+func (m *PersonMutation) ClearPaymentStart() {
+	m.payment_start = nil
+	m.clearedFields[person.FieldPaymentStart] = struct{}{}
+}
+
+// PaymentStartCleared returns if the "payment_start" field was cleared in this mutation.
+func (m *PersonMutation) PaymentStartCleared() bool {
+	_, ok := m.clearedFields[person.FieldPaymentStart]
+	return ok
+}
+
+// ResetPaymentStart resets all changes to the "payment_start" field.
+func (m *PersonMutation) ResetPaymentStart() {
+	m.payment_start = nil
+	delete(m.clearedFields, person.FieldPaymentStart)
+}
+
 // SetOnboardedAt sets the "onboarded_at" field.
 func (m *PersonMutation) SetOnboardedAt(t time.Time) {
 	m.onboarded_at = &t
@@ -8895,7 +9067,7 @@ func (m *PersonMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *PersonMutation) Fields() []string {
-	fields := make([]string, 0, 11)
+	fields := make([]string, 0, 14)
 	if m.name != nil {
 		fields = append(fields, person.FieldName)
 	}
@@ -8922,6 +9094,15 @@ func (m *PersonMutation) Fields() []string {
 	}
 	if m.weekly_hours != nil {
 		fields = append(fields, person.FieldWeeklyHours)
+	}
+	if m.payment_frequency != nil {
+		fields = append(fields, person.FieldPaymentFrequency)
+	}
+	if m.payment_day != nil {
+		fields = append(fields, person.FieldPaymentDay)
+	}
+	if m.payment_start != nil {
+		fields = append(fields, person.FieldPaymentStart)
 	}
 	if m.onboarded_at != nil {
 		fields = append(fields, person.FieldOnboardedAt)
@@ -8955,6 +9136,12 @@ func (m *PersonMutation) Field(name string) (ent.Value, bool) {
 		return m.Permissions()
 	case person.FieldWeeklyHours:
 		return m.WeeklyHours()
+	case person.FieldPaymentFrequency:
+		return m.PaymentFrequency()
+	case person.FieldPaymentDay:
+		return m.PaymentDay()
+	case person.FieldPaymentStart:
+		return m.PaymentStart()
 	case person.FieldOnboardedAt:
 		return m.OnboardedAt()
 	case person.FieldCreatedAt:
@@ -8986,6 +9173,12 @@ func (m *PersonMutation) OldField(ctx context.Context, name string) (ent.Value, 
 		return m.OldPermissions(ctx)
 	case person.FieldWeeklyHours:
 		return m.OldWeeklyHours(ctx)
+	case person.FieldPaymentFrequency:
+		return m.OldPaymentFrequency(ctx)
+	case person.FieldPaymentDay:
+		return m.OldPaymentDay(ctx)
+	case person.FieldPaymentStart:
+		return m.OldPaymentStart(ctx)
 	case person.FieldOnboardedAt:
 		return m.OldOnboardedAt(ctx)
 	case person.FieldCreatedAt:
@@ -9062,6 +9255,27 @@ func (m *PersonMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetWeeklyHours(v)
 		return nil
+	case person.FieldPaymentFrequency:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPaymentFrequency(v)
+		return nil
+	case person.FieldPaymentDay:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPaymentDay(v)
+		return nil
+	case person.FieldPaymentStart:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPaymentStart(v)
+		return nil
 	case person.FieldOnboardedAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -9087,6 +9301,9 @@ func (m *PersonMutation) AddedFields() []string {
 	if m.addweekly_hours != nil {
 		fields = append(fields, person.FieldWeeklyHours)
 	}
+	if m.addpayment_day != nil {
+		fields = append(fields, person.FieldPaymentDay)
+	}
 	return fields
 }
 
@@ -9097,6 +9314,8 @@ func (m *PersonMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
 	case person.FieldWeeklyHours:
 		return m.AddedWeeklyHours()
+	case person.FieldPaymentDay:
+		return m.AddedPaymentDay()
 	}
 	return nil, false
 }
@@ -9112,6 +9331,13 @@ func (m *PersonMutation) AddField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddWeeklyHours(v)
+		return nil
+	case person.FieldPaymentDay:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddPaymentDay(v)
 		return nil
 	}
 	return fmt.Errorf("unknown Person numeric field %s", name)
@@ -9132,6 +9358,15 @@ func (m *PersonMutation) ClearedFields() []string {
 	}
 	if m.FieldCleared(person.FieldWeeklyHours) {
 		fields = append(fields, person.FieldWeeklyHours)
+	}
+	if m.FieldCleared(person.FieldPaymentFrequency) {
+		fields = append(fields, person.FieldPaymentFrequency)
+	}
+	if m.FieldCleared(person.FieldPaymentDay) {
+		fields = append(fields, person.FieldPaymentDay)
+	}
+	if m.FieldCleared(person.FieldPaymentStart) {
+		fields = append(fields, person.FieldPaymentStart)
 	}
 	if m.FieldCleared(person.FieldOnboardedAt) {
 		fields = append(fields, person.FieldOnboardedAt)
@@ -9161,6 +9396,15 @@ func (m *PersonMutation) ClearField(name string) error {
 		return nil
 	case person.FieldWeeklyHours:
 		m.ClearWeeklyHours()
+		return nil
+	case person.FieldPaymentFrequency:
+		m.ClearPaymentFrequency()
+		return nil
+	case person.FieldPaymentDay:
+		m.ClearPaymentDay()
+		return nil
+	case person.FieldPaymentStart:
+		m.ClearPaymentStart()
 		return nil
 	case person.FieldOnboardedAt:
 		m.ClearOnboardedAt()
@@ -9199,6 +9443,15 @@ func (m *PersonMutation) ResetField(name string) error {
 		return nil
 	case person.FieldWeeklyHours:
 		m.ResetWeeklyHours()
+		return nil
+	case person.FieldPaymentFrequency:
+		m.ResetPaymentFrequency()
+		return nil
+	case person.FieldPaymentDay:
+		m.ResetPaymentDay()
+		return nil
+	case person.FieldPaymentStart:
+		m.ResetPaymentStart()
 		return nil
 	case person.FieldOnboardedAt:
 		m.ResetOnboardedAt()

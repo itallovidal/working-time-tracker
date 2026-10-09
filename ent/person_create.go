@@ -122,6 +122,48 @@ func (_c *PersonCreate) SetNillableWeeklyHours(v *int) *PersonCreate {
 	return _c
 }
 
+// SetPaymentFrequency sets the "payment_frequency" field.
+func (_c *PersonCreate) SetPaymentFrequency(v string) *PersonCreate {
+	_c.mutation.SetPaymentFrequency(v)
+	return _c
+}
+
+// SetNillablePaymentFrequency sets the "payment_frequency" field if the given value is not nil.
+func (_c *PersonCreate) SetNillablePaymentFrequency(v *string) *PersonCreate {
+	if v != nil {
+		_c.SetPaymentFrequency(*v)
+	}
+	return _c
+}
+
+// SetPaymentDay sets the "payment_day" field.
+func (_c *PersonCreate) SetPaymentDay(v int) *PersonCreate {
+	_c.mutation.SetPaymentDay(v)
+	return _c
+}
+
+// SetNillablePaymentDay sets the "payment_day" field if the given value is not nil.
+func (_c *PersonCreate) SetNillablePaymentDay(v *int) *PersonCreate {
+	if v != nil {
+		_c.SetPaymentDay(*v)
+	}
+	return _c
+}
+
+// SetPaymentStart sets the "payment_start" field.
+func (_c *PersonCreate) SetPaymentStart(v string) *PersonCreate {
+	_c.mutation.SetPaymentStart(v)
+	return _c
+}
+
+// SetNillablePaymentStart sets the "payment_start" field if the given value is not nil.
+func (_c *PersonCreate) SetNillablePaymentStart(v *string) *PersonCreate {
+	if v != nil {
+		_c.SetPaymentStart(*v)
+	}
+	return _c
+}
+
 // SetOnboardedAt sets the "onboarded_at" field.
 func (_c *PersonCreate) SetOnboardedAt(v time.Time) *PersonCreate {
 	_c.mutation.SetOnboardedAt(v)
@@ -406,6 +448,18 @@ func (_c *PersonCreate) createSpec() (*Person, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.WeeklyHours(); ok {
 		_spec.SetField(person.FieldWeeklyHours, field.TypeInt, value)
 		_node.WeeklyHours = &value
+	}
+	if value, ok := _c.mutation.PaymentFrequency(); ok {
+		_spec.SetField(person.FieldPaymentFrequency, field.TypeString, value)
+		_node.PaymentFrequency = &value
+	}
+	if value, ok := _c.mutation.PaymentDay(); ok {
+		_spec.SetField(person.FieldPaymentDay, field.TypeInt, value)
+		_node.PaymentDay = &value
+	}
+	if value, ok := _c.mutation.PaymentStart(); ok {
+		_spec.SetField(person.FieldPaymentStart, field.TypeString, value)
+		_node.PaymentStart = &value
 	}
 	if value, ok := _c.mutation.OnboardedAt(); ok {
 		_spec.SetField(person.FieldOnboardedAt, field.TypeTime, value)

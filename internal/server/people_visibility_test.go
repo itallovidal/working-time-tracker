@@ -114,3 +114,43 @@ func TestPeople_MemberSeesOnlyColleagues(t *testing.T) {
 		t.Errorf("Eli's profile page = %d, want 200", got)
 	}
 }
+
+// A regra de pagamento de uma pessoa só vai para ela mesma, para os admins e para quem cuida de pessoas: um colega de
+// projeto recebe payment: null, na lista e pelo id.
+func TestPeople_PaymentRuleIsHiddenFromColleagues(t *testing.T) {
+	e := newServer(t)
+	admin := signup(t, e, "Org", "ana@test.com")
+	bia := invite(t, e, admin, "bia@test.com", "member")
+	caio := invite(t, e, admin, "caio@test.com", "member")
+	pam := invite(t, e, admin, "pam@test.com", "member")
+	alfa := createEmptyProject(t, e, admin, "Projeto Alfa")
+	allocate(t, e, admin, alfa, bia.id, 2000)
+	allocate(t, e, admin, alfa, caio.id, 2000)
+	if rec := do(e, "PATCH", "/api/persons/"+pam.id+"/permissions", `{"permissions":["people.manage"]}`, admin.session); rec.Code != http.StatusOK {
+		t.Fatalf("grant people.manage = %d", rec.Code)
+	}
+	if rec := do(e, "PATCH", "/api/persons/"+bia.id+"/payment", `{"frequency":"monthly","day":5}`, admin.session); rec.Code != http.StatusOK {
+		t.Fatalf("set rule = %d", rec.Code)
+	}
+	for _, c := range []struct {
+		who     string
+		session string
+		visible bool
+	}{{"bia", bia.session, true}, {"admin", admin.session, true}, {"people.manage", pam.session, true}, {"colleague", caio.session, false}} {
+		byID := do(e, "GET", "/api/persons/"+bia.id, "", c.session)
+		if byID.Code != http.StatusOK {
+			t.Fatalf("%s: GET person = %d", c.who, byID.Code)
+		}
+		got := []any{decode(t, byID)["payment"]}
+		for _, p := range decodeList(t, do(e, "GET", "/api/orgs/"+admin.orgID+"/persons", "", c.session)) {
+			if p["id"] == bia.id {
+				got = append(got, p["payment"])
+			}
+		}
+		for _, g := range got {
+			if (g != nil) != c.visible {
+				t.Errorf("%s sees payment %v, visible want %v", c.who, g, c.visible)
+			}
+		}
+	}
+}

@@ -192,6 +192,73 @@ func (_u *PersonUpdate) ClearWeeklyHours() *PersonUpdate {
 	return _u
 }
 
+// SetPaymentFrequency sets the "payment_frequency" field.
+func (_u *PersonUpdate) SetPaymentFrequency(v string) *PersonUpdate {
+	_u.mutation.SetPaymentFrequency(v)
+	return _u
+}
+
+// SetNillablePaymentFrequency sets the "payment_frequency" field if the given value is not nil.
+func (_u *PersonUpdate) SetNillablePaymentFrequency(v *string) *PersonUpdate {
+	if v != nil {
+		_u.SetPaymentFrequency(*v)
+	}
+	return _u
+}
+
+// ClearPaymentFrequency clears the value of the "payment_frequency" field.
+func (_u *PersonUpdate) ClearPaymentFrequency() *PersonUpdate {
+	_u.mutation.ClearPaymentFrequency()
+	return _u
+}
+
+// SetPaymentDay sets the "payment_day" field.
+func (_u *PersonUpdate) SetPaymentDay(v int) *PersonUpdate {
+	_u.mutation.ResetPaymentDay()
+	_u.mutation.SetPaymentDay(v)
+	return _u
+}
+
+// SetNillablePaymentDay sets the "payment_day" field if the given value is not nil.
+func (_u *PersonUpdate) SetNillablePaymentDay(v *int) *PersonUpdate {
+	if v != nil {
+		_u.SetPaymentDay(*v)
+	}
+	return _u
+}
+
+// AddPaymentDay adds value to the "payment_day" field.
+func (_u *PersonUpdate) AddPaymentDay(v int) *PersonUpdate {
+	_u.mutation.AddPaymentDay(v)
+	return _u
+}
+
+// ClearPaymentDay clears the value of the "payment_day" field.
+func (_u *PersonUpdate) ClearPaymentDay() *PersonUpdate {
+	_u.mutation.ClearPaymentDay()
+	return _u
+}
+
+// SetPaymentStart sets the "payment_start" field.
+func (_u *PersonUpdate) SetPaymentStart(v string) *PersonUpdate {
+	_u.mutation.SetPaymentStart(v)
+	return _u
+}
+
+// SetNillablePaymentStart sets the "payment_start" field if the given value is not nil.
+func (_u *PersonUpdate) SetNillablePaymentStart(v *string) *PersonUpdate {
+	if v != nil {
+		_u.SetPaymentStart(*v)
+	}
+	return _u
+}
+
+// ClearPaymentStart clears the value of the "payment_start" field.
+func (_u *PersonUpdate) ClearPaymentStart() *PersonUpdate {
+	_u.mutation.ClearPaymentStart()
+	return _u
+}
+
 // SetOnboardedAt sets the "onboarded_at" field.
 func (_u *PersonUpdate) SetOnboardedAt(v time.Time) *PersonUpdate {
 	_u.mutation.SetOnboardedAt(v)
@@ -539,6 +606,27 @@ func (_u *PersonUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.WeeklyHoursCleared() {
 		_spec.ClearField(person.FieldWeeklyHours, field.TypeInt)
+	}
+	if value, ok := _u.mutation.PaymentFrequency(); ok {
+		_spec.SetField(person.FieldPaymentFrequency, field.TypeString, value)
+	}
+	if _u.mutation.PaymentFrequencyCleared() {
+		_spec.ClearField(person.FieldPaymentFrequency, field.TypeString)
+	}
+	if value, ok := _u.mutation.PaymentDay(); ok {
+		_spec.SetField(person.FieldPaymentDay, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedPaymentDay(); ok {
+		_spec.AddField(person.FieldPaymentDay, field.TypeInt, value)
+	}
+	if _u.mutation.PaymentDayCleared() {
+		_spec.ClearField(person.FieldPaymentDay, field.TypeInt)
+	}
+	if value, ok := _u.mutation.PaymentStart(); ok {
+		_spec.SetField(person.FieldPaymentStart, field.TypeString, value)
+	}
+	if _u.mutation.PaymentStartCleared() {
+		_spec.ClearField(person.FieldPaymentStart, field.TypeString)
 	}
 	if value, ok := _u.mutation.OnboardedAt(); ok {
 		_spec.SetField(person.FieldOnboardedAt, field.TypeTime, value)
@@ -1020,6 +1108,73 @@ func (_u *PersonUpdateOne) ClearWeeklyHours() *PersonUpdateOne {
 	return _u
 }
 
+// SetPaymentFrequency sets the "payment_frequency" field.
+func (_u *PersonUpdateOne) SetPaymentFrequency(v string) *PersonUpdateOne {
+	_u.mutation.SetPaymentFrequency(v)
+	return _u
+}
+
+// SetNillablePaymentFrequency sets the "payment_frequency" field if the given value is not nil.
+func (_u *PersonUpdateOne) SetNillablePaymentFrequency(v *string) *PersonUpdateOne {
+	if v != nil {
+		_u.SetPaymentFrequency(*v)
+	}
+	return _u
+}
+
+// ClearPaymentFrequency clears the value of the "payment_frequency" field.
+func (_u *PersonUpdateOne) ClearPaymentFrequency() *PersonUpdateOne {
+	_u.mutation.ClearPaymentFrequency()
+	return _u
+}
+
+// SetPaymentDay sets the "payment_day" field.
+func (_u *PersonUpdateOne) SetPaymentDay(v int) *PersonUpdateOne {
+	_u.mutation.ResetPaymentDay()
+	_u.mutation.SetPaymentDay(v)
+	return _u
+}
+
+// SetNillablePaymentDay sets the "payment_day" field if the given value is not nil.
+func (_u *PersonUpdateOne) SetNillablePaymentDay(v *int) *PersonUpdateOne {
+	if v != nil {
+		_u.SetPaymentDay(*v)
+	}
+	return _u
+}
+
+// AddPaymentDay adds value to the "payment_day" field.
+func (_u *PersonUpdateOne) AddPaymentDay(v int) *PersonUpdateOne {
+	_u.mutation.AddPaymentDay(v)
+	return _u
+}
+
+// ClearPaymentDay clears the value of the "payment_day" field.
+func (_u *PersonUpdateOne) ClearPaymentDay() *PersonUpdateOne {
+	_u.mutation.ClearPaymentDay()
+	return _u
+}
+
+// SetPaymentStart sets the "payment_start" field.
+func (_u *PersonUpdateOne) SetPaymentStart(v string) *PersonUpdateOne {
+	_u.mutation.SetPaymentStart(v)
+	return _u
+}
+
+// SetNillablePaymentStart sets the "payment_start" field if the given value is not nil.
+func (_u *PersonUpdateOne) SetNillablePaymentStart(v *string) *PersonUpdateOne {
+	if v != nil {
+		_u.SetPaymentStart(*v)
+	}
+	return _u
+}
+
+// ClearPaymentStart clears the value of the "payment_start" field.
+func (_u *PersonUpdateOne) ClearPaymentStart() *PersonUpdateOne {
+	_u.mutation.ClearPaymentStart()
+	return _u
+}
+
 // SetOnboardedAt sets the "onboarded_at" field.
 func (_u *PersonUpdateOne) SetOnboardedAt(v time.Time) *PersonUpdateOne {
 	_u.mutation.SetOnboardedAt(v)
@@ -1397,6 +1552,27 @@ func (_u *PersonUpdateOne) sqlSave(ctx context.Context) (_node *Person, err erro
 	}
 	if _u.mutation.WeeklyHoursCleared() {
 		_spec.ClearField(person.FieldWeeklyHours, field.TypeInt)
+	}
+	if value, ok := _u.mutation.PaymentFrequency(); ok {
+		_spec.SetField(person.FieldPaymentFrequency, field.TypeString, value)
+	}
+	if _u.mutation.PaymentFrequencyCleared() {
+		_spec.ClearField(person.FieldPaymentFrequency, field.TypeString)
+	}
+	if value, ok := _u.mutation.PaymentDay(); ok {
+		_spec.SetField(person.FieldPaymentDay, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedPaymentDay(); ok {
+		_spec.AddField(person.FieldPaymentDay, field.TypeInt, value)
+	}
+	if _u.mutation.PaymentDayCleared() {
+		_spec.ClearField(person.FieldPaymentDay, field.TypeInt)
+	}
+	if value, ok := _u.mutation.PaymentStart(); ok {
+		_spec.SetField(person.FieldPaymentStart, field.TypeString, value)
+	}
+	if _u.mutation.PaymentStartCleared() {
+		_spec.ClearField(person.FieldPaymentStart, field.TypeString)
 	}
 	if value, ok := _u.mutation.OnboardedAt(); ok {
 		_spec.SetField(person.FieldOnboardedAt, field.TypeTime, value)

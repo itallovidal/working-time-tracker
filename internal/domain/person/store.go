@@ -226,6 +226,47 @@ func (s *Store) FindByEmailInOrg(orgID uuid.UUID, email string) (*Person, error)
 	return toDomainPerson(p), nil
 }
 
+func paymentOf(e *ent.Person) *PaymentRule {
+	if e.PaymentFrequency == nil || *e.PaymentFrequency == "" {
+		return nil
+	}
+	r := &PaymentRule{Frequency: *e.PaymentFrequency}
+	if e.PaymentDay != nil {
+		r.Day = *e.PaymentDay
+	}
+	if e.PaymentStart != nil {
+		r.Start = *e.PaymentStart
+	}
+	return r
+}
+
+// SetPayment grava a regra de pagamento da pessoa; nil apaga.
+func (s *Store) SetPayment(id string, rule *PaymentRule) (*Person, error) {
+	uid, err := uuid.Parse(id)
+	if err != nil {
+		return nil, database.ErrNotFound
+	}
+	q := s.client.Person.UpdateOneID(uid)
+	if rule == nil {
+		q = q.ClearPaymentFrequency().ClearPaymentDay().ClearPaymentStart()
+	} else {
+		q = q.SetPaymentFrequency(rule.Frequency)
+		if rule.Frequency == PaymentMonthly {
+			q = q.SetPaymentDay(rule.Day).ClearPaymentStart()
+		} else {
+			q = q.SetPaymentStart(rule.Start).ClearPaymentDay()
+		}
+	}
+	p, err := q.Save(context.Background())
+	if ent.IsNotFound(err) {
+		return nil, database.ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return toDomainPerson(p), nil
+}
+
 func toDomainPerson(e *ent.Person) *Person {
 	if e == nil {
 		return nil
@@ -239,6 +280,7 @@ func toDomainPerson(e *ent.Person) *Person {
 		IsOwner:        e.IsOwner,
 		Permissions:    append([]string{}, e.Permissions...),
 		WeeklyHours:    e.WeeklyHours,
+		Payment:        paymentOf(e),
 		CreatedAt:      e.CreatedAt,
 	}
 }

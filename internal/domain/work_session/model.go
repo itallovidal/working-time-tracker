@@ -86,6 +86,24 @@ func (w *WorkSession) Within(since, now time.Time) (seconds float64, pay, bill *
 	return seconds, amount(seconds, w.PayRateCents), amount(seconds, w.BillRateCents)
 }
 
+// WithinRange é o que caiu da sessão no intervalo [from, to): o tempo e os dois valores, arredondados ao centavo sobre
+// o pedaço que caiu dentro (uma sessão que atravessa a fronteira de dois períodos é arredondada uma vez em cada
+// pedaço, e a soma dos pedaços pode diferir em um centavo da sessão inteira). A sessão aberta conta até now.
+func (w *WorkSession) WithinRange(from, to, now time.Time) (seconds float64, pay, bill *int) {
+	start, end := w.StartAt, now
+	if w.EndAt != nil {
+		end = *w.EndAt
+	}
+	if start.Before(from) {
+		start = from
+	}
+	if end.After(to) {
+		end = to
+	}
+	seconds = math.Max(0, end.Sub(start).Seconds())
+	return seconds, amount(seconds, w.PayRateCents), amount(seconds, w.BillRateCents)
+}
+
 // taskSeconds é o tempo do intervalo dentro da sessão: o intervalo recortado entre o
 // início e o fim dela (ou now, se está aberta).
 func (w *WorkSession) taskSeconds(l *SessionTask, now time.Time) float64 {
