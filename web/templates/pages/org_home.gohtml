@@ -308,5 +308,6 @@
   </section>
 
   {{template "project_form" .}}
+  {{if and .Me .Me.NeedsOnboarding}}{{template "onboarding" .}}{{end}}
 </main>
 {{end}}

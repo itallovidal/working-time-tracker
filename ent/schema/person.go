@@ -35,6 +35,9 @@ func (Person) Fields() []ent.Field {
 		// Jornada semanal combinada com a pessoa, em horas. Vale para a organização
 		// toda, e não por projeto.
 		field.Int("weekly_hours").Optional().Nillable(),
+		// Quando a pessoa terminou, ou dispensou, as boas-vindas do primeiro acesso. Nulo é "ainda não viu"; só o dono
+		// as vê, então para os outros o valor não muda nada. As pessoas que já existiam ficaram com a data da migração.
+		field.Time("onboarded_at").Optional().Nillable(),
 		field.Time("created_at").Default(time.Now).Immutable(),
 	}
 }

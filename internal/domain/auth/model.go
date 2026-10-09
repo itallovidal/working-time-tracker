@@ -25,6 +25,9 @@ type Identity struct {
 	// HasPassword diz se a conta tem senha do sistema. Quem entra só pelo Clerk não tem, e a troca de senha
 	// não se aplica a essa pessoa.
 	HasPassword bool `json:"has_password"`
+	// NeedsOnboarding diz que o dono ainda não viu as boas-vindas do primeiro acesso (o modal da página inicial).
+	// Só o dono as vê: quem entra por convite já encontra a organização montada.
+	NeedsOnboarding bool `json:"needs_onboarding"`
 }
 
 func (i *Identity) IsAdmin() bool {

@@ -654,6 +654,119 @@ document.addEventListener('alpine:init', () => {
     },
   }));
 
+  // As boas-vindas do primeiro acesso (partials/onboarding.gohtml): quatro etapas num modal que abre sozinho na
+  // página inicial do dono que acabou de criar a organização. Cada etapa guarda o que a pessoa fez, para a última
+  // dizer o que ficou para depois. Fechar de qualquer jeito (Concluir, Esc, o X ou o fundo) dá baixa nas boas-vindas
+  // no servidor, e elas não voltam; recarregar no meio, sem fechar, recomeça da etapa 1, já com o que foi salvo.
+  Alpine.data('onboarding', () => ({
+    ...form(),
+    step: 1,
+    orgName: me.organization_name,
+    timezones: timezoneOptions(org.timezone),
+    orgDraft: {
+      summary: org.summary || '',
+      industry: org.industry || '',
+      work_mode: org.work_mode || '',
+      timezone: org.timezone,
+      currency: org.currency,
+    },
+    customer: blankCustomer(),
+    invite: { email: '', role: 'member' },
+    lastLink: '',
+    lastDelivery: '',
+    lastEmail: '',
+    saved: { org: false, customer: false },
+    invited: 0,
+    shown: false,
+    completing: null,
+    init() {
+      // Depois de o Alpine montar o modal no #modal-root.
+      this.$nextTick(() => this.show());
+      this.$watch('$store.modal.isOpen', (open) => {
+        if (!open && this.shown) this.closed();
+      });
+    },
+    titles() {
+      return [WTT.t('onboarding.org.title'), WTT.t('onboarding.customers.title'), WTT.t('onboarding.people.title'), WTT.t('onboarding.done.title')];
+    },
+    show() {
+      this.shown = true;
+      // Enquanto grava, o modal não fecha: um erro do servidor ficaria sem ter onde aparecer.
+      Alpine.store('modal').open('onboarding', this.titles()[0], () => !this.pending);
+      this.focusField();
+    },
+    // focusField põe o foco no primeiro campo da etapa atual (o data-step dele). O modal abre durante o carregamento
+    // da página, com o painel ainda em transição, e na troca de etapa a anterior só some depois: o campo só aceita
+    // foco quando está à vista, por isso a tentativa se repete por um instante. O campo é o da etapa, e não "o primeiro
+    // visível", senão o da etapa que está saindo contaria como pronto.
+    focusField(tries = 0) {
+      const field = document.querySelector('.modal-panel [data-autofocus][data-step="' + this.step + '"]');
+      const ready = !!field && !!field.offsetParent;
+      if (ready) field.focus();
+      if ((!ready || document.activeElement !== field) && tries < 60) setTimeout(() => this.focusField(tries + 1), 50);
+    },
+    // go muda de etapa, troca o título do modal e põe o foco no primeiro campo dela.
+    go(step) {
+      this.step = step;
+      Alpine.store('modal').title = this.titles()[step - 1];
+      // Quem chegou à última etapa pode sair pelos links dela: a baixa vai antes, não ao fechar.
+      if (step === 4) this.complete();
+      this.$nextTick(() => this.focusField());
+    },
+    next() { this.go(this.step + 1); },
+    saveOrg() {
+      return this.run('org', async () => {
+        // A API mantém o que não vier no corpo, então o resto do perfil fica como está.
+        await api('PATCH', '/api/orgs/' + orgId, { ...this.orgDraft });
+        this.saved.org = true;
+        this.next();
+      });
+    },
+    saveCustomer() {
+      return this.run('customer', async () => {
+        await api('POST', '/api/orgs/' + orgId + '/customers', this.customer);
+        this.saved.customer = true;
+        toast(WTT.t('org.customers.created'));
+        this.next();
+      });
+    },
+    // O convite fica na etapa depois de criado: o link só aparece agora, e quem convidou pode gerar outro.
+    createInvite() {
+      return this.run('invite', async () => {
+        const inv = await api('POST', '/api/orgs/' + orgId + '/invites', { email: this.invite.email, role: this.invite.role });
+        this.lastLink = location.origin + inv.path;
+        this.lastDelivery = inv.delivery;
+        this.lastEmail = inv.email || '';
+        this.invited += 1;
+        this.$nextTick(() => this.$refs.link && this.$refs.link.focus());
+      });
+    },
+    anotherInvite() {
+      this.invite = { email: '', role: 'member' };
+      this.lastLink = '';
+      this.lastDelivery = '';
+      this.lastEmail = '';
+      this.errors.invite = '';
+      this.$nextTick(() => document.getElementById('ob-invite-email')?.focus());
+    },
+    async copyLink() {
+      const ok = await WTT.copyText(this.lastLink);
+      toast(ok ? WTT.t('org.people.link_copied') : WTT.t('org.people.copy_failed'), ok ? 'info' : 'error');
+    },
+    // complete dá baixa nas boas-vindas uma vez só. Se falhar, elas voltam no próximo acesso: não vale travar a tela.
+    complete() {
+      if (!this.completing) this.completing = api('POST', '/api/auth/onboarding/complete').catch(() => {});
+      return this.completing;
+    },
+    finish() { Alpine.store('modal').close(); },
+    async closed() {
+      this.shown = false;
+      await this.complete();
+      // A moeda, o fuso e o resumo mudaram: a página inicial os mostra, então recarrega com os novos.
+      if (this.saved.org) location.reload();
+    },
+  }));
+
   Alpine.data('profileSettings', () => ({
     ...form(),
     profile: { name: me.name, email: me.email },

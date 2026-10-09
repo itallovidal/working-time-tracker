@@ -147,6 +147,12 @@ func (s *Service) ChangePassword(actor *Identity, currentToken, current, next st
 	return s.store.DeleteOtherSessions(actor.PersonID, HashToken(currentToken))
 }
 
+// CompleteOnboarding dá baixa nas boas-vindas do primeiro acesso de quem está logado, seja porque terminou, seja porque
+// as dispensou. É idempotente e só mexe na própria pessoa.
+func (s *Service) CompleteOnboarding(actor *Identity) error {
+	return s.store.MarkOnboarded(actor.PersonID, s.now())
+}
+
 // CreateInvite gera o convite para a organização de quem convida. O token em claro só existe no retorno desta
 // chamada. Com o Clerk ligado e um e-mail, o convite também é criado no Clerk, que manda o e-mail com o link (no
 // modo terminal ele não manda, e o link vai para o log do servidor), e só é gravado se o Clerk o aceitou; um novo

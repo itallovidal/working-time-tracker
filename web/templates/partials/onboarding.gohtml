@@ -1,0 +1,181 @@
+{{/* As boas-vindas do primeiro acesso: um modal em quatro etapas que abre na página inicial do dono que acabou de criar
+     a organização (o servidor só inclui este parcial enquanto Me.NeedsOnboarding). Etapa 1, os dados mais importantes
+     da organização; 2, o primeiro cliente; 3, o primeiro convite; 4, onde ajustar cada coisa e a documentação. Cada
+     uma das três primeiras pode ser pulada. O estado e as chamadas estão em onboarding, em pages/org.js. */}}
+{{define "onboarding"}}
+<div x-data="onboarding" hidden>
+  <template x-teleport="#modal-root">
+    <div class="stack" x-show="$store.modal.name === 'onboarding'">
+      <ol class="wizard-steps" aria-label="{{.T "onboarding.steps_label"}}">
+        <li :class="step === 1 && 'current'" :aria-current="step === 1 ? 'step' : false"><span class="n">1</span> {{.T "onboarding.step_org"}}</li>
+        <li :class="step === 2 && 'current'" :aria-current="step === 2 ? 'step' : false"><span class="n">2</span> {{.T "onboarding.step_customers"}}</li>
+        <li :class="step === 3 && 'current'" :aria-current="step === 3 ? 'step' : false"><span class="n">3</span> {{.T "onboarding.step_people"}}</li>
+        <li :class="step === 4 && 'current'" :aria-current="step === 4 ? 'step' : false"><span class="n">4</span> {{.T "onboarding.step_done"}}</li>
+      </ol>
+
+      {{/* Etapa 1: a organização. Só o que mais importa; o resto fica na edição, em Organização › Sobre. */}}
+      <form class="stack" x-show="step === 1" @submit.prevent="saveOrg()">
+        <p class="muted small" x-text="$t('onboarding.org.lead', { name: orgName })"></p>
+        <div class="field">
+          <label for="ob-summary">{{.T "org.settings.summary"}}</label>
+          <input id="ob-summary" type="text" maxlength="160" x-model="orgDraft.summary" data-autofocus data-step="1">
+          <span class="hint">{{.T "org.settings.summary_hint"}} <span class="num" x-text="orgDraft.summary.length + '/160'"></span></span>
+        </div>
+        <div class="fields">
+          <div class="field">
+            <label for="ob-industry">{{.T "org.fields.segment"}}</label>
+            <input id="ob-industry" type="text" maxlength="100" placeholder="{{.T "org.settings.industry_placeholder"}}" x-model="orgDraft.industry">
+          </div>
+          <div class="field">
+            <label for="ob-work-mode">{{.T "org.settings.work_mode"}}</label>
+            <select id="ob-work-mode" x-model="orgDraft.work_mode">
+              <option value="">{{.T "labels.not_informed"}}</option>
+              <template x-for="m in WTT.workModes" :key="m.value">
+                <option :value="m.value" x-text="m.label" :selected="m.value === orgDraft.work_mode"></option>
+              </template>
+            </select>
+          </div>
+          <div class="field">
+            <label for="ob-timezone">{{.T "org.fields.timezone"}}</label>
+            <select id="ob-timezone" x-model="orgDraft.timezone">
+              <template x-for="tz in timezones" :key="tz">
+                <option :value="tz" x-text="tz" :selected="tz === orgDraft.timezone"></option>
+              </template>
+            </select>
+          </div>
+          <div class="field">
+            <label for="ob-currency">{{.T "org.fields.currency"}}</label>
+            <select id="ob-currency" x-model="orgDraft.currency">
+              <template x-for="c in WTT.currencies" :key="c.value">
+                <option :value="c.value" x-text="c.label" :selected="c.value === orgDraft.currency"></option>
+              </template>
+            </select>
+          </div>
+        </div>
+        <p class="muted small">{{.T "onboarding.org.money_note"}}</p>
+        <p class="form-error" x-cloak x-show="errors.org" x-text="errors.org" role="alert"></p>
+        <div class="row row-end">
+          <button type="button" class="btn btn-secondary" :disabled="pending" @click="next()">{{.T "onboarding.later"}}</button>
+          <button type="submit" class="btn" :disabled="pending">{{.T "common.save"}}</button>
+        </div>
+      </form>
+
+      {{/* Etapa 2: o primeiro cliente. O resto do cadastro, com contato e telefone, fica na aba Clientes. */}}
+      <form class="stack" x-cloak x-show="step === 2" @submit.prevent="saveCustomer()">
+        <p class="muted small">{{.T "onboarding.customers.lead"}}</p>
+        <div class="field">
+          <label for="ob-customer-name">{{.T "common.name"}}</label>
+          <input id="ob-customer-name" type="text" required maxlength="120" x-model="customer.name" data-autofocus data-step="2">
+        </div>
+        <div class="fields">
+          <div class="field">
+            <label for="ob-customer-document">{{.T "org.fields.cnpj"}}</label>
+            <input id="ob-customer-document" type="text" class="mono" maxlength="18" placeholder="{{.T "org.settings.cnpj_placeholder"}}" x-model="customer.document">
+          </div>
+          <div class="field">
+            <label for="ob-customer-email">{{.T "common.email"}}</label>
+            <input id="ob-customer-email" type="email" maxlength="255" x-model="customer.contact_email">
+          </div>
+        </div>
+        <p class="form-error" x-cloak x-show="errors.customer" x-text="errors.customer" role="alert"></p>
+        <div class="row row-end">
+          <button type="button" class="btn btn-secondary" :disabled="pending" @click="next()">{{.T "onboarding.customers.later"}}</button>
+          <button type="submit" class="btn" :disabled="pending">{{.T "common.save"}}</button>
+        </div>
+      </form>
+
+      {{/* Etapa 3: o primeiro convite. Igual ao modal da aba Colaboradores: com o Clerk e um e-mail, o convite sai por
+           e-mail; sem e-mail, ou sem o Clerk, é um link para copiar, que só aparece agora. */}}
+      <form class="stack" x-cloak x-show="step === 3" @submit.prevent="createInvite()">
+        <div class="stack" x-show="!lastLink">
+          <p class="muted small">{{.T "onboarding.people.lead"}}</p>
+          <p class="muted small">{{if .Props.emailInvites}}{{.T "org.people.invite_intro_email"}}{{else}}{{.T "org.people.invite_intro"}}{{end}}</p>
+          <div class="field">
+            <label for="ob-invite-email">{{.T "common.email"}}</label>
+            <input id="ob-invite-email" type="email" placeholder="{{.T "common.optional"}}" x-model="invite.email" data-autofocus data-step="3">
+            <span class="hint">{{if .Props.emailInvites}}{{.T "org.people.invite_email_hint_email"}}{{else}}{{.T "org.people.invite_email_hint"}}{{end}}</span>
+          </div>
+          <div class="field">
+            <label for="ob-invite-role">{{.T "common.role"}}</label>
+            <select id="ob-invite-role" x-model="invite.role">
+              <option value="member">{{.T "roles.member"}}</option>
+              <option value="admin">{{.T "roles.admin"}}</option>
+            </select>
+          </div>
+          <p class="form-error" x-cloak x-show="errors.invite" x-text="errors.invite" role="alert"></p>
+          <div class="row row-end">
+            <button type="button" class="btn btn-secondary" :disabled="pending" @click="next()">{{.T "onboarding.people.later"}}</button>
+            {{- if .Props.emailInvites}}
+            <button type="submit" class="btn" :disabled="pending">
+              <span x-cloak x-show="invite.email">{{template "icon" "paper-plane"}} {{.T "org.people.send_by_email"}}</span>
+              <span x-show="!invite.email">{{template "icon" "link"}} {{.T "org.people.generate"}}</span>
+            </button>
+            {{- else}}
+            <button type="submit" class="btn" :disabled="pending">{{template "icon" "link"}} {{.T "org.people.generate"}}</button>
+            {{- end}}
+          </div>
+        </div>
+
+        <div class="stack" x-cloak x-show="lastLink" x-transition.opacity>
+          <p class="muted small" x-cloak x-show="lastDelivery === 'email'" x-text="$t('org.people.sent_to', { email: lastEmail })"></p>
+          <p class="muted small" x-cloak x-show="lastDelivery === 'terminal'">{{.T "org.people.terminal_note"}}</p>
+          <div class="field">
+            <label for="ob-invite-link">{{.T "org.people.link_label"}}</label>
+            <input id="ob-invite-link" type="text" readonly :value="lastLink" x-ref="link" @focus="$event.target.select()">
+            <span class="hint" x-show="lastDelivery === 'link'">{{.T "org.people.link_hint"}}</span>
+            <span class="hint" x-cloak x-show="lastDelivery !== 'link'">{{.T "org.people.link_hint_email"}}</span>
+          </div>
+          <div class="row row-end">
+            <button type="button" class="btn btn-ghost" @click="anotherInvite()">{{.T "onboarding.people.another"}}</button>
+            <button type="button" class="btn btn-secondary" @click="copyLink()">{{template "icon" "copy"}} {{.T "org.people.copy"}}</button>
+            <button type="button" class="btn" @click="next()">{{.T "onboarding.people.next"}} {{template "icon" "arrow-right"}}</button>
+          </div>
+        </div>
+      </form>
+
+      {{/* Etapa 4: onde ajustar cada coisa, o que ficou para depois e a documentação. */}}
+      <div class="stack" x-cloak x-show="step === 4">
+        <p class="muted small">{{.T "onboarding.done.lead"}}</p>
+        <ul class="onboarding-links">
+          <li>
+            <a class="onboarding-link" href="/orgs/{{.OrgID}}/settings">
+              <span class="onboarding-ico" aria-hidden="true">{{template "icon" "building"}}</span>
+              <span class="onboarding-text"><strong>{{.T "onboarding.done.org"}}</strong><span class="muted small">{{.T "onboarding.done.org_text"}}</span></span>
+              <span class="badge" :class="saved.org ? 'badge-ok' : ''" x-text="saved.org ? $t('onboarding.done.saved') : $t('onboarding.done.pending')"></span>
+            </a>
+          </li>
+          <li>
+            <a class="onboarding-link" href="/orgs/{{.OrgID}}/customers">
+              <span class="onboarding-ico" aria-hidden="true">{{template "icon" "handshake"}}</span>
+              <span class="onboarding-text"><strong>{{.T "onboarding.done.customers"}}</strong><span class="muted small">{{.T "onboarding.done.customers_text"}}</span></span>
+              <span class="badge" :class="saved.customer ? 'badge-ok' : ''" x-text="saved.customer ? $t('onboarding.done.saved') : $t('onboarding.done.pending')"></span>
+            </a>
+          </li>
+          <li>
+            <a class="onboarding-link" href="/orgs/{{.OrgID}}/people">
+              <span class="onboarding-ico" aria-hidden="true">{{template "icon" "users"}}</span>
+              <span class="onboarding-text"><strong>{{.T "onboarding.done.people"}}</strong><span class="muted small">{{.T "onboarding.done.people_text"}}</span></span>
+              <span class="badge" :class="invited > 0 ? 'badge-ok' : ''" x-text="invited > 0 ? $t('onboarding.done.invited', { count: invited }) : $t('onboarding.done.pending')"></span>
+            </a>
+          </li>
+          <li>
+            <a class="onboarding-link" href="/orgs/{{.OrgID}}/projects">
+              <span class="onboarding-ico" aria-hidden="true">{{template "icon" "diagram-project"}}</span>
+              <span class="onboarding-text"><strong>{{.T "onboarding.done.projects"}}</strong><span class="muted small">{{.T "onboarding.done.projects_text"}}</span></span>
+            </a>
+          </li>
+          <li>
+            <a class="onboarding-link" href="/help#getting-started" target="_blank" rel="noopener">
+              <span class="onboarding-ico" aria-hidden="true">{{template "icon" "book"}}</span>
+              <span class="onboarding-text"><strong>{{.T "onboarding.done.docs"}}</strong><span class="muted small">{{.T "onboarding.done.docs_text"}}</span></span>
+            </a>
+          </li>
+        </ul>
+        <div class="row row-end">
+          <button type="button" class="btn" data-autofocus data-step="4" @click="finish()">{{.T "onboarding.done.finish"}}</button>
+        </div>
+      </div>
+    </div>
+  </template>
+</div>
+{{end}}

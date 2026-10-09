@@ -45,8 +45,9 @@ Todas as rotas falam JSON. Erros sempre vêm como `{"error": {"code": "dominio.m
 | POST | `/api/auth/signup` | público | Cria uma organização com você como admin e abre a sessão |
 | POST | `/api/auth/login` | público | Abre uma sessão |
 | POST | `/api/auth/logout` | logado | Encerra a sessão atual |
-| GET | `/api/auth/me` | logado | Quem está logado, com a organização e o papel |
+| GET | `/api/auth/me` | logado | Quem está logado, com a organização e o papel. `needs_onboarding` é verdadeiro para o dono que ainda não viu as boas-vindas |
 | POST | `/api/auth/password` | logado | Troca a senha e encerra as suas outras sessões |
+| POST | `/api/auth/onboarding/complete` | logado | Dá baixa nas boas-vindas do primeiro acesso de quem chama (`204`). Repetir não muda nada |
 | GET | `/api/auth/invites/:token` | público | Mostra para qual organização e papel é o convite |
 | POST | `/api/auth/invites/:token/accept` | público | Cria a conta pelo convite e abre a sessão |
 | POST | `/api/auth/clerk/login` | público, token do Clerk | Entra pelo Clerk (ver abaixo) |
@@ -126,6 +127,12 @@ Content-Type: application/json
 
 { "current_password": "senha-atual", "new_password": "senha-nova-123" }
 ```
+
+### Boas-vindas do primeiro acesso
+```http
+POST /api/auth/onboarding/complete
+```
+Responde `204`, sem corpo. Só o dono vê as boas-vindas (o modal da página inicial); o `/api/auth/me` traz `needs_onboarding: true` enquanto ele não as concluiu ou dispensou, e a primeira chamada grava a data, as outras não mudam nada. Quem entrou por convite nunca as vê, e quem já existia antes do recurso não as vê.
 
 ### Aceitar convite
 ```http

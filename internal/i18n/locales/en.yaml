@@ -278,6 +278,46 @@ session:
     removed: Task removed from the session.
     read_only: Only the person who clocked in, or an admin, can change the session tasks.
 
+onboarding:
+  steps_label: Welcome steps
+  step_org: Organization
+  step_customers: Customers
+  step_people: People
+  step_done: Done
+  later: Later
+  org:
+    title: Welcome to Working Time Tracker
+    lead: "The organization {{.name}} is created. Tell us a little about it: you can fill in the rest whenever you like, under Organization › About."
+    money_note: The currency and the time zone apply to the whole organization. Set them now, before registering any rate.
+  customers:
+    title: Your customers
+    lead: A customer is whoever hires the organization. Each project can have a customer and the rate billed to them per hour; an internal project doesn't need one.
+    later: Add later
+  people:
+    title: Your team
+    lead: Invite the people who will work with you. Once someone accepts, you put them on the projects, with their hourly rate for each one.
+    later: Invite later
+    another: Invite another person
+    next: Continue
+  done:
+    title: All set
+    lead: You can adjust each of these whenever you like, through the links below.
+    saved: Saved
+    pending: For later
+    invited:
+      one: "{{.count}} invitation created"
+      other: "{{.count}} invitations created"
+    org: Organization details
+    org_text: Summary, contact, legal data and how you work.
+    customers: Customers
+    customers_text: Who hires the projects, with a contact for each.
+    people: People
+    people_text: Invitations, roles, permissions and weekly hours.
+    projects: Projects
+    projects_text: Create the first project and put the team on it, with each person's hourly rate. That is how time starts to count.
+    docs: Documentation
+    docs_text: The first-use walkthrough and what each screen does.
+    finish: Finish
 auth:
   password: Password
   password_hint: At least 8 characters.
@@ -293,6 +333,16 @@ auth:
     title: Create organization
     subtitle: You join as an admin and invite your team afterwards.
     org_name: Organization name
+    steps_label: Sign-up steps
+    step_org: Organization
+    step_access: Access
+    next: Next
+    back: Back
+    confirm_password: Confirm the password
+    password_mismatch: The passwords don't match.
+    password_match: The passwords match.
+    show_password: Show the passwords
+    hide_password: Hide the passwords
     submit: Create account
     pending: Creating…
     has_account: Already have an account?
@@ -385,7 +435,7 @@ help:
   steps:
     create_account:
       title: Create the account
-      text: "Open the sign-up screen and fill in the organization name, your name, your email and a password with at least 8 characters. You join as an admin and the owner of the organization."
+      text: "Open the sign-up screen. In the first step, enter the organization name and your name; in the second, your email and a password with at least 8 characters, typed twice. You join as an admin and the owner of the organization. On your first visit, a welcome window walks you through the organization details, the first customer and the first invitation; any step can wait."
       tip: "Got an invitation? Skip this step: open the invitation link and create your account there."
     currency:
       title: Check the currency and time zone

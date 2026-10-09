@@ -71,6 +71,8 @@ func TestClerkSignup_CreatesOwnerWithoutPassword(t *testing.T) {
 	}
 	if got, err := svc.Authenticate(res.Token); err != nil || got.PersonID != id.PersonID {
 		t.Errorf("the new session must authenticate: %v", err)
+	} else if !id.NeedsOnboarding || !got.NeedsOnboarding {
+		t.Error("the owner created through the Clerk gets the welcome too")
 	}
 	if _, _, err := svc.Login("ana@acme.com", ""); !errors.Is(err, ErrInvalidCredentials) {
 		t.Errorf("password login of an account without password: err = %v, want ErrInvalidCredentials", err)

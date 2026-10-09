@@ -153,6 +153,18 @@
       }
     },
     {
+      "_id": "req_01_03_onboarding",
+      "_type": "request",
+      "parentId": "fld_01",
+      "name": "Concluir as boas-vindas",
+      "method": "POST",
+      "url": "{{base_url}}/api/auth/onboarding/complete",
+      "authentication": {},
+      "metaSortKey": 3,
+      "headers": [],
+      "body": {}
+    },
+    {
       "_id": "req_01_04",
       "_type": "request",
       "parentId": "fld_01",

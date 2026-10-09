@@ -6,28 +6,57 @@
       <h1>{{.T "auth.signup.title"}}</h1>
       <p class="muted">{{.T "auth.signup.subtitle"}}</p>
     </div>
-    <form class="stack" @submit.prevent="submit()">
-      <div class="field">
-        <label for="signup-org">{{.T "auth.signup.org_name"}}</label>
-        <input id="signup-org" type="text" autocomplete="organization" required x-model="organization_name" autofocus>
-      </div>
-      <div class="field">
-        <label for="signup-name">{{.T "auth.your_name"}}</label>
-        <input id="signup-name" type="text" autocomplete="name" required x-model="name">
-      </div>
-      <div class="field">
-        <label for="signup-email">{{.T "common.email"}}</label>
-        <input id="signup-email" type="email" autocomplete="email" required x-model="email">
-      </div>
-      <div class="field">
-        <label for="signup-password">{{.T "auth.password"}}</label>
-        <input id="signup-password" type="password" autocomplete="new-password" minlength="8" required x-model="password">
-        <span class="hint">{{.T "auth.password_hint"}}</span>
-      </div>
-      <p class="form-error" x-cloak x-show="errors.signup" x-text="errors.signup" role="alert"></p>
-      <button class="btn btn-block" type="submit" :disabled="pending">
-        <span x-text="pending ? $t('auth.signup.pending') : $t('auth.signup.submit')">{{.T "auth.signup.submit"}}</span>
-      </button>
+    {{/* Duas etapas: a organização (nome dela e o seu) e o acesso (email e senha). As etapas são blocos x-if, não x-show:
+         assim só os campos à vista existem, e a validação do navegador (required, minlength, email) vale para eles. */}}
+    <ol class="wizard-steps" aria-label="{{.T "auth.signup.steps_label"}}">
+      <li :class="step === 1 && 'current'" :aria-current="step === 1 ? 'step' : false"><span class="n">1</span> {{.T "auth.signup.step_org"}}</li>
+      <li :class="step === 2 && 'current'" :aria-current="step === 2 ? 'step' : false"><span class="n">2</span> {{.T "auth.signup.step_access"}}</li>
+    </ol>
+    <form class="stack" x-ref="form" @submit.prevent="submit()">
+      <template x-if="step === 1">
+        <div class="stack">
+          <div class="field">
+            <label for="signup-org">{{.T "auth.signup.org_name"}}</label>
+            <input id="signup-org" x-init="$el.focus()" type="text" autocomplete="organization" required x-model="organization_name">
+          </div>
+          <div class="field">
+            <label for="signup-name">{{.T "auth.your_name"}}</label>
+            <input id="signup-name" type="text" autocomplete="name" required x-model="name">
+          </div>
+          <button class="btn btn-block" type="submit">{{.T "auth.signup.next"}} {{template "icon" "arrow-right"}}</button>
+        </div>
+      </template>
+      <template x-if="step === 2">
+        <div class="stack">
+          <div class="field">
+            <label for="signup-email">{{.T "common.email"}}</label>
+            <input id="signup-email" x-init="$el.focus()" type="email" autocomplete="email" required x-model="email">
+          </div>
+          <div class="field">
+            <label for="signup-password">{{.T "auth.password"}}</label>
+            <div class="input-affix">
+              <input id="signup-password" :type="reveal ? 'text' : 'password'" type="password" autocomplete="new-password" minlength="8" required x-model="password" aria-describedby="signup-password-hint">
+              <button class="input-affix-btn" type="button" @click="reveal = !reveal" :aria-pressed="reveal" :aria-label="reveal ? $t('auth.signup.hide_password') : $t('auth.signup.show_password')" :title="reveal ? $t('auth.signup.hide_password') : $t('auth.signup.show_password')"><i class="fa-solid" :class="reveal ? 'fa-eye-slash' : 'fa-eye'" aria-hidden="true"></i></button>
+            </div>
+            <span id="signup-password-hint" class="hint" :class="longEnough && 'is-ok'">{{.T "auth.password_hint"}}</span>
+          </div>
+          <div class="field">
+            <label for="signup-confirm">{{.T "auth.signup.confirm_password"}}</label>
+            <div class="input-affix">
+              <input id="signup-confirm" x-ref="confirm" :type="reveal ? 'text' : 'password'" type="password" autocomplete="new-password" required x-model="confirmation" @blur="confirmTouched = true" :aria-invalid="showMismatch" aria-describedby="signup-confirm-msg">
+              <button class="input-affix-btn" type="button" @click="reveal = !reveal" :aria-pressed="reveal" :aria-label="reveal ? $t('auth.signup.hide_password') : $t('auth.signup.show_password')" :title="reveal ? $t('auth.signup.hide_password') : $t('auth.signup.show_password')"><i class="fa-solid" :class="reveal ? 'fa-eye-slash' : 'fa-eye'" aria-hidden="true"></i></button>
+            </div>
+            <span id="signup-confirm-msg" class="hint hint-slot" :class="showMismatch ? 'is-bad' : matches && 'is-ok'" aria-live="polite" x-text="showMismatch ? $t('auth.signup.password_mismatch') : (matches ? $t('auth.signup.password_match') : '')"></span>
+          </div>
+          <p class="form-error" x-cloak x-show="errors.signup" x-text="errors.signup" role="alert"></p>
+          <div class="auth-actions">
+            <button class="btn btn-secondary" type="button" :disabled="pending" @click="back()">{{template "icon" "arrow-left"}} {{.T "auth.signup.back"}}</button>
+            <button class="btn" type="submit" :disabled="pending">
+              <span x-text="pending ? $t('auth.signup.pending') : $t('auth.signup.submit')">{{.T "auth.signup.submit"}}</span>
+            </button>
+          </div>
+        </div>
+      </template>
     </form>
     {{- if .Props.clerk}}
     {{/* Com o Google a conta nasce no Clerk; o nome da organização é pedido na volta, na página de retorno. */}}

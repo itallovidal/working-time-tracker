@@ -8393,6 +8393,7 @@ type PersonMutation struct {
 	appendpermissions       []string
 	weekly_hours            *int
 	addweekly_hours         *int
+	onboarded_at            *time.Time
 	created_at              *time.Time
 	clearedFields           map[string]struct{}
 	organization            *uuid.UUID
@@ -8937,6 +8938,55 @@ func (m *PersonMutation) ResetWeeklyHours() {
 	delete(m.clearedFields, person.FieldWeeklyHours)
 }
 
+// SetOnboardedAt sets the "onboarded_at" field.
+func (m *PersonMutation) SetOnboardedAt(t time.Time) {
+	m.onboarded_at = &t
+}
+
+// OnboardedAt returns the value of the "onboarded_at" field in the mutation.
+func (m *PersonMutation) OnboardedAt() (r time.Time, exists bool) {
+	v := m.onboarded_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOnboardedAt returns the old "onboarded_at" field's value of the Person entity.
+// If the Person object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PersonMutation) OldOnboardedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOnboardedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOnboardedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOnboardedAt: %w", err)
+	}
+	return oldValue.OnboardedAt, nil
+}
+
+// ClearOnboardedAt clears the value of the "onboarded_at" field.
+func (m *PersonMutation) ClearOnboardedAt() {
+	m.onboarded_at = nil
+	m.clearedFields[person.FieldOnboardedAt] = struct{}{}
+}
+
+// OnboardedAtCleared returns if the "onboarded_at" field was cleared in this mutation.
+func (m *PersonMutation) OnboardedAtCleared() bool {
+	_, ok := m.clearedFields[person.FieldOnboardedAt]
+	return ok
+}
+
+// ResetOnboardedAt resets all changes to the "onboarded_at" field.
+func (m *PersonMutation) ResetOnboardedAt() {
+	m.onboarded_at = nil
+	delete(m.clearedFields, person.FieldOnboardedAt)
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (m *PersonMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
@@ -9358,7 +9408,7 @@ func (m *PersonMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *PersonMutation) Fields() []string {
-	fields := make([]string, 0, 10)
+	fields := make([]string, 0, 11)
 	if m.name != nil {
 		fields = append(fields, person.FieldName)
 	}
@@ -9385,6 +9435,9 @@ func (m *PersonMutation) Fields() []string {
 	}
 	if m.weekly_hours != nil {
 		fields = append(fields, person.FieldWeeklyHours)
+	}
+	if m.onboarded_at != nil {
+		fields = append(fields, person.FieldOnboardedAt)
 	}
 	if m.created_at != nil {
 		fields = append(fields, person.FieldCreatedAt)
@@ -9415,6 +9468,8 @@ func (m *PersonMutation) Field(name string) (ent.Value, bool) {
 		return m.Permissions()
 	case person.FieldWeeklyHours:
 		return m.WeeklyHours()
+	case person.FieldOnboardedAt:
+		return m.OnboardedAt()
 	case person.FieldCreatedAt:
 		return m.CreatedAt()
 	}
@@ -9444,6 +9499,8 @@ func (m *PersonMutation) OldField(ctx context.Context, name string) (ent.Value, 
 		return m.OldPermissions(ctx)
 	case person.FieldWeeklyHours:
 		return m.OldWeeklyHours(ctx)
+	case person.FieldOnboardedAt:
+		return m.OldOnboardedAt(ctx)
 	case person.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	}
@@ -9518,6 +9575,13 @@ func (m *PersonMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetWeeklyHours(v)
 		return nil
+	case person.FieldOnboardedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOnboardedAt(v)
+		return nil
 	case person.FieldCreatedAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -9582,6 +9646,9 @@ func (m *PersonMutation) ClearedFields() []string {
 	if m.FieldCleared(person.FieldWeeklyHours) {
 		fields = append(fields, person.FieldWeeklyHours)
 	}
+	if m.FieldCleared(person.FieldOnboardedAt) {
+		fields = append(fields, person.FieldOnboardedAt)
+	}
 	return fields
 }
 
@@ -9607,6 +9674,9 @@ func (m *PersonMutation) ClearField(name string) error {
 		return nil
 	case person.FieldWeeklyHours:
 		m.ClearWeeklyHours()
+		return nil
+	case person.FieldOnboardedAt:
+		m.ClearOnboardedAt()
 		return nil
 	}
 	return fmt.Errorf("unknown Person nullable field %s", name)
@@ -9642,6 +9712,9 @@ func (m *PersonMutation) ResetField(name string) error {
 		return nil
 	case person.FieldWeeklyHours:
 		m.ResetWeeklyHours()
+		return nil
+	case person.FieldOnboardedAt:
+		m.ResetOnboardedAt()
 		return nil
 	case person.FieldCreatedAt:
 		m.ResetCreatedAt()

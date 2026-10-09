@@ -161,7 +161,7 @@ func init() {
 	// person.DefaultIsOwner holds the default value on creation for the is_owner field.
 	person.DefaultIsOwner = personDescIsOwner.Default.(bool)
 	// personDescCreatedAt is the schema descriptor for created_at field.
-	personDescCreatedAt := personFields[10].Descriptor()
+	personDescCreatedAt := personFields[11].Descriptor()
 	// person.DefaultCreatedAt holds the default value on creation for the created_at field.
 	person.DefaultCreatedAt = personDescCreatedAt.Default.(func() time.Time)
 	// personDescID is the schema descriptor for id field.

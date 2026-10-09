@@ -191,3 +191,48 @@ func TestChangePassword_KeepsOnlyCurrentSession(t *testing.T) {
 		t.Errorf("login with new password: %v", err)
 	}
 }
+
+func TestOnboarding_OnlyTheOwnerNeedsItAndTheFirstDismissalCounts(t *testing.T) {
+	svc, c := newService(t)
+	owner, token := mustSignup(t, svc, "ana@acme.com")
+	if !owner.NeedsOnboarding {
+		t.Error("a new owner needs the welcome")
+	}
+	if got, err := svc.Authenticate(token); err != nil || !got.NeedsOnboarding {
+		t.Fatalf("the authenticated owner needs the welcome: %+v, err = %v", got, err)
+	}
+
+	// Quem entra por convite encontra a organização montada: não há boas-vindas para ele.
+	_, inviteToken, err := svc.CreateInvite(bg, owner, "", person.RoleAdmin)
+	if err != nil {
+		t.Fatalf("invite: %v", err)
+	}
+	guest, _, err := svc.AcceptInvite(inviteToken, AcceptInviteInput{Name: "Bia", Email: "bia@acme.com", Password: "senha-forte-2"})
+	if err != nil {
+		t.Fatalf("accept: %v", err)
+	}
+	if guest.NeedsOnboarding {
+		t.Error("an invited person never needs the owner's welcome")
+	}
+
+	if err := svc.CompleteOnboarding(owner); err != nil {
+		t.Fatalf("complete: %v", err)
+	}
+	first := c.now()
+	if got, _ := svc.Authenticate(token); got.NeedsOnboarding {
+		t.Error("after the dismissal the owner no longer needs the welcome")
+	}
+
+	// Repetir não muda a data: ela é a de quando a pessoa terminou.
+	c.advance(time.Hour)
+	if err := svc.CompleteOnboarding(owner); err != nil {
+		t.Fatalf("complete again: %v", err)
+	}
+	p, err := testClient.Person.Get(bg, owner.PersonID)
+	if err != nil {
+		t.Fatalf("load the owner: %v", err)
+	}
+	if p.OnboardedAt == nil || !p.OnboardedAt.Truncate(time.Millisecond).Equal(first.Truncate(time.Millisecond)) {
+		t.Errorf("onboarded_at = %v, want the first dismissal at %v", p.OnboardedAt, first)
+	}
+}

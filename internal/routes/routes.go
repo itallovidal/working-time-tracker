@@ -76,6 +76,7 @@ func RegisterRoutes(e *echo.Echo, h Handlers, m *auth.Middleware, authLimiter ec
 	r.POST("/auth/logout", h.Auth.Logout)
 	r.GET("/auth/me", h.Auth.Me)
 	r.POST("/auth/password", h.Auth.ChangePassword)
+	r.POST("/auth/onboarding/complete", h.Auth.CompleteOnboarding)
 
 	r.GET("/orgs/:orgId", h.Organization.Get, org)
 	r.PATCH("/orgs/:orgId", h.Organization.Update, org, admin)

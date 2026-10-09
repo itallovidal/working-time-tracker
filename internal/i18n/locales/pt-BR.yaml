@@ -288,6 +288,46 @@ session:
     removed: Tarefa tirada da sessão.
     read_only: Só quem bateu o ponto, ou um admin, muda as tarefas da sessão.
 
+onboarding:
+  steps_label: Etapas das boas-vindas
+  step_org: Organização
+  step_customers: Clientes
+  step_people: Colaboradores
+  step_done: Pronto
+  later: Ver depois
+  org:
+    title: Boas-vindas ao Working Time Tracker
+    lead: "A organização {{.name}} está criada. Conte um pouco sobre ela: o resto você completa quando quiser, em Organização › Sobre."
+    money_note: A moeda e o fuso valem para a organização inteira. Ajuste agora, antes de cadastrar qualquer valor.
+  customers:
+    title: Seus clientes
+    lead: Cliente é quem contrata a organização. Cada projeto pode ter um cliente e o valor cobrado dele por hora; um projeto interno não precisa de cliente.
+    later: Cadastrar depois
+  people:
+    title: Seu time
+    lead: Convide quem vai trabalhar com você. Quando a pessoa aceitar, você a põe nos projetos, com o valor por hora de cada um.
+    later: Convidar depois
+    another: Convidar outra pessoa
+    next: Continuar
+  done:
+    title: Tudo pronto
+    lead: Cada coisa pode ser ajustada quando você quiser, pelos links abaixo.
+    saved: Salvo
+    pending: Para depois
+    invited:
+      one: "{{.count}} convite criado"
+      other: "{{.count}} convites criados"
+    org: Dados da organização
+    org_text: Resumo, contato, dados jurídicos e como vocês trabalham.
+    customers: Clientes
+    customers_text: Quem contrata os projetos, com o contato de cada um.
+    people: Colaboradores
+    people_text: Convites, papéis, permissões e jornada semanal.
+    projects: Projetos
+    projects_text: Crie o primeiro projeto e ponha o time nele, com o valor por hora de cada pessoa. É assim que o ponto passa a contar.
+    docs: Documentação
+    docs_text: O passo a passo do primeiro uso e o que cada tela faz.
+    finish: Concluir
 auth:
   password: Senha
   password_hint: Pelo menos 8 caracteres.
@@ -303,6 +343,16 @@ auth:
     title: Criar organização
     subtitle: Você entra como admin e depois convida o time.
     org_name: Nome da organização
+    steps_label: Etapas do cadastro
+    step_org: Organização
+    step_access: Acesso
+    next: Próxima
+    back: Voltar
+    confirm_password: Confirme a senha
+    password_mismatch: As senhas não conferem.
+    password_match: As senhas conferem.
+    show_password: Mostrar as senhas
+    hide_password: Ocultar as senhas
     submit: Criar conta
     pending: Criando…
     has_account: Já tem conta?
@@ -395,7 +445,7 @@ help:
   steps:
     create_account:
       title: Crie a conta
-      text: "Abra a tela de cadastro e preencha o nome da organização, o seu nome, o seu email e uma senha com pelo menos 8 caracteres. Você entra como administrador e dono da organização."
+      text: "Abra a tela de cadastro. Na primeira etapa, informe o nome da organização e o seu nome; na segunda, o seu email e uma senha com pelo menos 8 caracteres, digitada duas vezes. Você entra como administrador e dono da organização. No primeiro acesso, uma janela de boas-vindas leva você pelos dados da organização, pelo primeiro cliente e pelo primeiro convite; qualquer etapa pode ficar para depois."
       tip: "Recebeu um convite? Pule este passo: abra o link do convite e crie a sua conta por lá."
     currency:
       title: Confira a moeda e o fuso

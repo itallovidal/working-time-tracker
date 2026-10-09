@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 	"working-time-tracker/ent/allocation"
 	"working-time-tracker/ent/invite"
 	"working-time-tracker/ent/organization"
@@ -188,6 +189,26 @@ func (_u *PersonUpdate) AddWeeklyHours(v int) *PersonUpdate {
 // ClearWeeklyHours clears the value of the "weekly_hours" field.
 func (_u *PersonUpdate) ClearWeeklyHours() *PersonUpdate {
 	_u.mutation.ClearWeeklyHours()
+	return _u
+}
+
+// SetOnboardedAt sets the "onboarded_at" field.
+func (_u *PersonUpdate) SetOnboardedAt(v time.Time) *PersonUpdate {
+	_u.mutation.SetOnboardedAt(v)
+	return _u
+}
+
+// SetNillableOnboardedAt sets the "onboarded_at" field if the given value is not nil.
+func (_u *PersonUpdate) SetNillableOnboardedAt(v *time.Time) *PersonUpdate {
+	if v != nil {
+		_u.SetOnboardedAt(*v)
+	}
+	return _u
+}
+
+// ClearOnboardedAt clears the value of the "onboarded_at" field.
+func (_u *PersonUpdate) ClearOnboardedAt() *PersonUpdate {
+	_u.mutation.ClearOnboardedAt()
 	return _u
 }
 
@@ -518,6 +539,12 @@ func (_u *PersonUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.WeeklyHoursCleared() {
 		_spec.ClearField(person.FieldWeeklyHours, field.TypeInt)
+	}
+	if value, ok := _u.mutation.OnboardedAt(); ok {
+		_spec.SetField(person.FieldOnboardedAt, field.TypeTime, value)
+	}
+	if _u.mutation.OnboardedAtCleared() {
+		_spec.ClearField(person.FieldOnboardedAt, field.TypeTime)
 	}
 	if _u.mutation.OrganizationCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -993,6 +1020,26 @@ func (_u *PersonUpdateOne) ClearWeeklyHours() *PersonUpdateOne {
 	return _u
 }
 
+// SetOnboardedAt sets the "onboarded_at" field.
+func (_u *PersonUpdateOne) SetOnboardedAt(v time.Time) *PersonUpdateOne {
+	_u.mutation.SetOnboardedAt(v)
+	return _u
+}
+
+// SetNillableOnboardedAt sets the "onboarded_at" field if the given value is not nil.
+func (_u *PersonUpdateOne) SetNillableOnboardedAt(v *time.Time) *PersonUpdateOne {
+	if v != nil {
+		_u.SetOnboardedAt(*v)
+	}
+	return _u
+}
+
+// ClearOnboardedAt clears the value of the "onboarded_at" field.
+func (_u *PersonUpdateOne) ClearOnboardedAt() *PersonUpdateOne {
+	_u.mutation.ClearOnboardedAt()
+	return _u
+}
+
 // SetOrganization sets the "organization" edge to the Organization entity.
 func (_u *PersonUpdateOne) SetOrganization(v *Organization) *PersonUpdateOne {
 	return _u.SetOrganizationID(v.ID)
@@ -1350,6 +1397,12 @@ func (_u *PersonUpdateOne) sqlSave(ctx context.Context) (_node *Person, err erro
 	}
 	if _u.mutation.WeeklyHoursCleared() {
 		_spec.ClearField(person.FieldWeeklyHours, field.TypeInt)
+	}
+	if value, ok := _u.mutation.OnboardedAt(); ok {
+		_spec.SetField(person.FieldOnboardedAt, field.TypeTime, value)
+	}
+	if _u.mutation.OnboardedAtCleared() {
+		_spec.ClearField(person.FieldOnboardedAt, field.TypeTime)
 	}
 	if _u.mutation.OrganizationCleared() {
 		edge := &sqlgraph.EdgeSpec{

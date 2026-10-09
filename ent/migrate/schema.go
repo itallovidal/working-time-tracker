@@ -273,6 +273,7 @@ var (
 		{Name: "is_owner", Type: field.TypeBool, Default: false},
 		{Name: "permissions", Type: field.TypeJSON, Nullable: true},
 		{Name: "weekly_hours", Type: field.TypeInt, Nullable: true},
+		{Name: "onboarded_at", Type: field.TypeTime, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "organization_id", Type: field.TypeUUID},
 	}
@@ -284,7 +285,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "persons_organizations_persons",
-				Columns:    []*schema.Column{PersonsColumns[10]},
+				Columns:    []*schema.Column{PersonsColumns[11]},
 				RefColumns: []*schema.Column{OrganizationsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -298,7 +299,7 @@ var (
 			{
 				Name:    "one_owner_per_organization",
 				Unique:  true,
-				Columns: []*schema.Column{PersonsColumns[10]},
+				Columns: []*schema.Column{PersonsColumns[11]},
 				Annotation: &entsql.IndexAnnotation{
 					Where: "is_owner",
 				},

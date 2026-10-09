@@ -379,7 +379,7 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 .md-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 .md-preview { min-height: 12.5rem; padding: 10px 12px; border: 1px solid var(--rule-strong); border-radius: var(--radius-sm); background: var(--surface); }
 /* As etapas do modal: dois passos numerados, o atual em destaque. */
-.wizard-steps { display: flex; gap: 18px; list-style: none; margin: 0 0 4px; padding: 0 0 10px; border-bottom: 1px solid var(--rule); }
+.wizard-steps { display: flex; flex-wrap: wrap; gap: 6px 18px; list-style: none; margin: 0 0 4px; padding: 0 0 10px; border-bottom: 1px solid var(--rule); }
 .wizard-steps li { display: inline-flex; align-items: center; gap: 8px; font-size: 0.88rem; font-weight: 600; color: var(--muted); }
 .wizard-steps .n {
   display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%;
@@ -387,6 +387,20 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 }
 .wizard-steps li.current { color: var(--ink); }
 .wizard-steps li.current .n { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+/* A última etapa das boas-vindas: um cartão-link por assunto, com o ícone, o texto e o estado. */
+.onboarding-links { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.onboarding-link {
+  display: flex; align-items: center; gap: 12px; padding: 10px 12px; color: inherit; text-decoration: none;
+  border: 1px solid var(--rule); border-radius: var(--radius-sm); background: var(--surface);
+}
+.onboarding-link:hover { background: var(--surface-2); border-color: var(--rule-strong); }
+.onboarding-link:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.onboarding-ico {
+  flex: none; width: 34px; height: 34px; display: grid; place-items: center;
+  border-radius: var(--radius-sm); background: var(--accent-soft); color: var(--accent);
+}
+.onboarding-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.onboarding-link .badge { flex: none; }
 /* A escolha do grupo de permissões: um cartão por grupo, o marcado em destaque. */
 .presets { display: flex; flex-direction: column; gap: 8px; }
 .preset {
@@ -414,6 +428,21 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 .field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 .field label, .field-label { font-size: 0.84rem; font-weight: 600; color: var(--ink-2); }
 .field .hint { font-size: 0.8rem; color: var(--muted); }
+/* Dica que muda com o que a pessoa digita: verde quando a regra foi cumprida, vermelha quando falhou. */
+.field .hint.is-ok { color: var(--ok); }
+.field .hint.is-bad { color: var(--danger); }
+.field .hint-slot { min-height: 1.25em; }
+/* Campo de senha com o botão de mostrar/ocultar dentro da borda, à direita. */
+.input-affix { position: relative; }
+.input-affix input { padding-right: 40px; }
+.input-affix-btn {
+  position: absolute; top: 50%; right: 4px; transform: translateY(-50%);
+  width: 32px; height: 32px; display: grid; place-items: center;
+  background: transparent; border: 0; border-radius: var(--radius-sm);
+  color: var(--muted); cursor: pointer;
+}
+.input-affix-btn:hover { color: var(--ink); background: var(--surface-2); }
+.input-affix-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
 .fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
 /* Um grupo de campos de um formulário longo, com o nome dele na borda. */
 .form-group {
@@ -847,6 +876,10 @@ td .task-chips { min-width: 200px; }
 }
 .auth-card .brand { font-size: 1.05rem; }
 .auth-foot { text-align: center; font-size: 0.9rem; color: var(--muted); }
+/* Voltar e o botão principal lado a lado, o principal com mais espaço. */
+.auth-actions { display: flex; gap: 10px; }
+.auth-actions .btn { flex: 1; }
+.auth-actions .btn:last-child { flex: 2; }
 /* O "ou" entre o email e a senha do sistema e o Google. */
 .auth-divider { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 0.85rem; }
 .auth-divider::before, .auth-divider::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
@@ -889,6 +922,8 @@ html.modal-open { overflow: hidden; }
 }
 .modal-panel:focus-visible { outline: none; }
 .modal-panel-wide { max-width: 780px; }
+/* As boas-vindas: quatro etapas e um formulário com seletores lado a lado pedem mais que os 480px dos outros modais. */
+.modal-panel-md { max-width: 580px; }
 .modal-head {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   padding: 14px 14px 14px 20px; border-bottom: 1px solid var(--rule);

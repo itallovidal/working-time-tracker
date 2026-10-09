@@ -25,7 +25,13 @@ func (h *Handler) orgData(c *echo.Context, d Data) Data {
 // Org é a página inicial da organização: para os admins, a visão geral (o tempo e o dinheiro de
 // todos os projetos), e para todos, os projetos em cartões, uma página por vez.
 func (h *Handler) Org(c *echo.Context) error {
-	return h.render(c, "org_home", h.orgData(c, Data{TitleKey: "titles.home", Section: "home"}))
+	d := h.orgData(c, Data{TitleKey: "titles.home", Section: "home"})
+	if d.Props == nil {
+		d.Props = map[string]any{}
+	}
+	// As boas-vindas do primeiro acesso têm um passo de convite, que fala em enviar por e-mail quando o Clerk está ligado.
+	d.Props["emailInvites"] = h.deps.InviteByEmail
+	return h.render(c, "org_home", d)
 }
 
 // orgPage monta a página de uma aba da organização. A aba Colaboradores tem o próprio item na

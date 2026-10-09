@@ -38,6 +38,8 @@ type Person struct {
 	Permissions []string `json:"permissions,omitempty"`
 	// WeeklyHours holds the value of the "weekly_hours" field.
 	WeeklyHours *int `json:"weekly_hours,omitempty"`
+	// OnboardedAt holds the value of the "onboarded_at" field.
+	OnboardedAt *time.Time `json:"onboarded_at,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -145,7 +147,7 @@ func (*Person) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullInt64)
 		case person.FieldName, person.FieldEmail, person.FieldPasswordHash, person.FieldClerkUserID, person.FieldRole:
 			values[i] = new(sql.NullString)
-		case person.FieldCreatedAt:
+		case person.FieldOnboardedAt, person.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
 		case person.FieldID, person.FieldOrganizationID:
 			values[i] = new(uuid.UUID)
@@ -228,6 +230,13 @@ func (_m *Person) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.WeeklyHours = new(int)
 				*_m.WeeklyHours = int(value.Int64)
+			}
+		case person.FieldOnboardedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field onboarded_at", values[i])
+			} else if value.Valid {
+				_m.OnboardedAt = new(time.Time)
+				*_m.OnboardedAt = value.Time
 			}
 		case person.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -334,6 +343,11 @@ func (_m *Person) String() string {
 	if v := _m.WeeklyHours; v != nil {
 		builder.WriteString("weekly_hours=")
 		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	if v := _m.OnboardedAt; v != nil {
+		builder.WriteString("onboarded_at=")
+		builder.WriteString(v.Format(time.ANSIC))
 	}
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")

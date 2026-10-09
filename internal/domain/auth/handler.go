@@ -101,6 +101,15 @@ func (h *Handler) Me(c *echo.Context) error {
 	return c.JSON(http.StatusOK, CurrentPerson(c))
 }
 
+// CompleteOnboarding encerra as boas-vindas do primeiro acesso: o modal da página inicial avisa quando termina ou é
+// dispensado, e ele não volta.
+func (h *Handler) CompleteOnboarding(c *echo.Context) error {
+	if err := h.svc.CompleteOnboarding(CurrentPerson(c)); err != nil {
+		return fail(c, err)
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
 func (h *Handler) ChangePassword(c *echo.Context) error {
 	var body struct {
 		CurrentPassword string `json:"current_password"`

@@ -136,6 +136,15 @@ func (s *Store) SetPasswordHash(personID uuid.UUID, hash string) error {
 	return s.client.Person.UpdateOneID(personID).SetPasswordHash(hash).Exec(context.Background())
 }
 
+// MarkOnboarded registra que a pessoa viu as boas-vindas. Só grava na primeira vez, para a data ser a de quando ela
+// terminou, e repetir a chamada (o modal pode avisar duas vezes) não muda nada.
+func (s *Store) MarkOnboarded(personID uuid.UUID, at time.Time) error {
+	return s.client.Person.Update().
+		Where(person.IDEQ(personID), person.OnboardedAtIsNil()).
+		SetOnboardedAt(at).
+		Exec(context.Background())
+}
+
 func (s *Store) CreateSession(personID uuid.UUID, tokenHash string, expiresAt time.Time) error {
 	return s.client.Session.Create().
 		SetPersonID(personID).
@@ -293,6 +302,8 @@ func identityOf(p *ent.Person, org *ent.Organization) *Identity {
 		IsOwner:        p.IsOwner,
 		Permissions:    append([]string{}, p.Permissions...),
 		OrganizationID: p.OrganizationID,
+
+		NeedsOnboarding: p.IsOwner && p.OnboardedAt == nil,
 	}
 	if org != nil {
 		id.OrganizationName = org.Name

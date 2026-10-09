@@ -3,7 +3,7 @@
 {{define "modal"}}
 <div class="modal" x-data x-cloak x-show="$store.modal.isOpen" x-transition.opacity
      @keydown.escape.window="$store.modal.dismiss()" @mousedown.self="$store.modal.dismiss()">
-  <section class="modal-panel" :class="$store.modal.name === 'session' && 'modal-panel-wide'" role="dialog" aria-modal="true" aria-labelledby="modal-title" tabindex="-1"
+  <section class="modal-panel" :class="{ 'modal-panel-wide': $store.modal.name === 'session', 'modal-panel-md': $store.modal.name === 'onboarding' }" role="dialog" aria-modal="true" aria-labelledby="modal-title" tabindex="-1"
            x-show="$store.modal.isOpen" x-transition.scale.96>
     <header class="modal-head">
       <h2 id="modal-title" x-text="$store.modal.title"></h2>

@@ -176,8 +176,37 @@ document.addEventListener('alpine:init', () => {
     name: '',
     email: '',
     password: '',
+    confirmation: '',
+    // step: 1 é a organização (o nome dela e o da pessoa), 2 é o acesso (email e senha). Os valores ficam aqui, não
+    // nos campos, então voltar à etapa 1 e seguir de novo não perde nada.
+    step: 1,
+    // confirmTouched: a pessoa já saiu do campo de confirmação. Até lá, "não confere" só aparece quando o que ela
+    // digitou já tem o tamanho da senha, para não reclamar a cada letra.
+    confirmTouched: false,
+    reveal: false,
     clerk: !!WTT.boot.clerk,
     loading: !!WTT.boot.clerk,
+    get longEnough() { return [...this.password].length >= 8; },
+    get matches() { return this.confirmation !== '' && this.confirmation === this.password; },
+    get showMismatch() {
+      return this.confirmation !== '' && this.confirmation !== this.password
+        && (this.confirmTouched || this.confirmation.length >= this.password.length);
+    },
+    async next() {
+      // O required não enxerga espaço em branco: apara os dois campos e deixa o navegador conferir de novo, para
+      // um nome só de espaços não passar para a etapa 2 e só falhar no servidor, onde o campo não está à vista.
+      this.organization_name = this.organization_name.trim();
+      this.name = this.name.trim();
+      await this.$nextTick();
+      if (!this.$refs.form.reportValidity()) return;
+      // O primeiro campo de cada etapa se foca sozinho ao entrar (x-init no template): o autofocus não vale para
+      // campo que entra depois do carregamento.
+      this.step = 2;
+    },
+    back() {
+      this.errors.signup = '';
+      this.step = 1;
+    },
     async init() {
       if (!this.clerk) return;
       try {
@@ -194,6 +223,15 @@ document.addEventListener('alpine:init', () => {
       }
     },
     submit() {
+      // Enter ou o botão: na etapa 1 avança, na 2 cria a conta.
+      if (this.step === 1) return this.next();
+      // A confirmação é só da tela: o servidor recebe uma senha, e esta conferência impede que um erro de digitação
+      // vire uma conta que ninguém consegue abrir.
+      if (this.confirmation !== this.password) {
+        this.confirmTouched = true;
+        this.$refs.confirm.focus();
+        return undefined;
+      }
       return this.run('signup', async () => {
         await api('POST', '/api/auth/signup', {
           organization_name: this.organization_name,

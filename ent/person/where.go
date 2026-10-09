@@ -91,6 +91,11 @@ func WeeklyHours(v int) predicate.Person {
 	return predicate.Person(sql.FieldEQ(FieldWeeklyHours, v))
 }
 
+// OnboardedAt applies equality check predicate on the "onboarded_at" field. It's identical to OnboardedAtEQ.
+func OnboardedAt(v time.Time) predicate.Person {
+	return predicate.Person(sql.FieldEQ(FieldOnboardedAt, v))
+}
+
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.Person {
 	return predicate.Person(sql.FieldEQ(FieldCreatedAt, v))
@@ -484,6 +489,56 @@ func WeeklyHoursIsNil() predicate.Person {
 // WeeklyHoursNotNil applies the NotNil predicate on the "weekly_hours" field.
 func WeeklyHoursNotNil() predicate.Person {
 	return predicate.Person(sql.FieldNotNull(FieldWeeklyHours))
+}
+
+// OnboardedAtEQ applies the EQ predicate on the "onboarded_at" field.
+func OnboardedAtEQ(v time.Time) predicate.Person {
+	return predicate.Person(sql.FieldEQ(FieldOnboardedAt, v))
+}
+
+// OnboardedAtNEQ applies the NEQ predicate on the "onboarded_at" field.
+func OnboardedAtNEQ(v time.Time) predicate.Person {
+	return predicate.Person(sql.FieldNEQ(FieldOnboardedAt, v))
+}
+
+// OnboardedAtIn applies the In predicate on the "onboarded_at" field.
+func OnboardedAtIn(vs ...time.Time) predicate.Person {
+	return predicate.Person(sql.FieldIn(FieldOnboardedAt, vs...))
+}
+
+// OnboardedAtNotIn applies the NotIn predicate on the "onboarded_at" field.
+func OnboardedAtNotIn(vs ...time.Time) predicate.Person {
+	return predicate.Person(sql.FieldNotIn(FieldOnboardedAt, vs...))
+}
+
+// OnboardedAtGT applies the GT predicate on the "onboarded_at" field.
+func OnboardedAtGT(v time.Time) predicate.Person {
+	return predicate.Person(sql.FieldGT(FieldOnboardedAt, v))
+}
+
+// OnboardedAtGTE applies the GTE predicate on the "onboarded_at" field.
+func OnboardedAtGTE(v time.Time) predicate.Person {
+	return predicate.Person(sql.FieldGTE(FieldOnboardedAt, v))
+}
+
+// OnboardedAtLT applies the LT predicate on the "onboarded_at" field.
+func OnboardedAtLT(v time.Time) predicate.Person {
+	return predicate.Person(sql.FieldLT(FieldOnboardedAt, v))
+}
+
+// OnboardedAtLTE applies the LTE predicate on the "onboarded_at" field.
+func OnboardedAtLTE(v time.Time) predicate.Person {
+	return predicate.Person(sql.FieldLTE(FieldOnboardedAt, v))
+}
+
+// OnboardedAtIsNil applies the IsNil predicate on the "onboarded_at" field.
+func OnboardedAtIsNil() predicate.Person {
+	return predicate.Person(sql.FieldIsNull(FieldOnboardedAt))
+}
+
+// OnboardedAtNotNil applies the NotNil predicate on the "onboarded_at" field.
+func OnboardedAtNotNil() predicate.Person {
+	return predicate.Person(sql.FieldNotNull(FieldOnboardedAt))
 }
 
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.

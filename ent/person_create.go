@@ -122,6 +122,20 @@ func (_c *PersonCreate) SetNillableWeeklyHours(v *int) *PersonCreate {
 	return _c
 }
 
+// SetOnboardedAt sets the "onboarded_at" field.
+func (_c *PersonCreate) SetOnboardedAt(v time.Time) *PersonCreate {
+	_c.mutation.SetOnboardedAt(v)
+	return _c
+}
+
+// SetNillableOnboardedAt sets the "onboarded_at" field if the given value is not nil.
+func (_c *PersonCreate) SetNillableOnboardedAt(v *time.Time) *PersonCreate {
+	if v != nil {
+		_c.SetOnboardedAt(*v)
+	}
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *PersonCreate) SetCreatedAt(v time.Time) *PersonCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -392,6 +406,10 @@ func (_c *PersonCreate) createSpec() (*Person, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.WeeklyHours(); ok {
 		_spec.SetField(person.FieldWeeklyHours, field.TypeInt, value)
 		_node.WeeklyHours = &value
+	}
+	if value, ok := _c.mutation.OnboardedAt(); ok {
+		_spec.SetField(person.FieldOnboardedAt, field.TypeTime, value)
+		_node.OnboardedAt = &value
 	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(person.FieldCreatedAt, field.TypeTime, value)

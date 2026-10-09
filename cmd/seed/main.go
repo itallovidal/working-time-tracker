@@ -369,6 +369,8 @@ func main() {
 		Password:         password,
 	})
 	must(err)
+	// A organização de demonstração já vem montada: sem isto, o dono dela abriria as boas-vindas do primeiro acesso.
+	must(authSvc.CompleteOnboarding(admin))
 	orgID := admin.OrganizationID.String()
 	person := map[string]*auth.Identity{people[0].key: admin}
 	for _, p := range people[1:] {

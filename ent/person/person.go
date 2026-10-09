@@ -34,6 +34,8 @@ const (
 	FieldPermissions = "permissions"
 	// FieldWeeklyHours holds the string denoting the weekly_hours field in the database.
 	FieldWeeklyHours = "weekly_hours"
+	// FieldOnboardedAt holds the string denoting the onboarded_at field in the database.
+	FieldOnboardedAt = "onboarded_at"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// EdgeOrganization holds the string denoting the organization edge name in mutations.
@@ -115,6 +117,7 @@ var Columns = []string{
 	FieldIsOwner,
 	FieldPermissions,
 	FieldWeeklyHours,
+	FieldOnboardedAt,
 	FieldCreatedAt,
 }
 
@@ -209,6 +212,11 @@ func ByIsOwner(opts ...sql.OrderTermOption) OrderOption {
 // ByWeeklyHours orders the results by the weekly_hours field.
 func ByWeeklyHours(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldWeeklyHours, opts...).ToFunc()
+}
+
+// ByOnboardedAt orders the results by the onboarded_at field.
+func ByOnboardedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldOnboardedAt, opts...).ToFunc()
 }
 
 // ByCreatedAt orders the results by the created_at field.

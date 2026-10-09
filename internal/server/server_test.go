@@ -812,6 +812,7 @@ func TestRoutes_Table(t *testing.T) {
 		"POST /api/auth/logout",
 		"GET /api/auth/me",
 		"POST /api/auth/password",
+		"POST /api/auth/onboarding/complete",
 
 		"GET /api/orgs/:orgId",
 		"PATCH /api/orgs/:orgId",
