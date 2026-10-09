@@ -273,6 +273,18 @@ A interface fala **português do Brasil** (o padrão) e **inglês**. Todo texto 
 - **Erros da API:** a API não manda mensagem, só um código estável (`{"error": {"code": "auth.invalid_credentials", "params": {...}}}`). O navegador traduz pelo código, procurando `errors.<código>` no mesmo YAML (`WTT.errorText`), e `e.message` já chega no idioma da página. Os códigos são declarados em `errors.go` de cada domínio (`apperr.New`) e estão documentados, com o status e os textos, em [`_docs/error-codes.md`](_docs/error-codes.md), um arquivo gerado por teste. Um teste recusa código sem texto, texto sem código e placeholder que o código não declara.
 - **Fora da tradução:** os dados de demonstração do seed e o que as pessoas digitam (nomes de projeto, tarefas, clientes) ficam como foram escritos. Logs e comandos de linha de comando seguem em português.
 
+### Países
+
+O que muda de um país para outro nos dados da organização e dos clientes (o documento fiscal, o formato do código postal, a lista de estados, a moeda e o fuso de partida) está num cadastro só, `internal/country`, e a tela o recebe em `window.BOOT.countries` (as páginas do cadastro e da organização), com os textos no idioma da página. Nada disso é `if` espalhado: a validação do servidor, os rótulos, as máscaras e a lista de estados saem da mesma entrada. Hoje são o Brasil (`BR`) e os Estados Unidos (`US`); o país de um **cliente** pode ser qualquer código ISO 3166-1 (`internal/country/iso.go`, com os nomes vindos do navegador por `Intl.DisplayNames`), e os que não estão no cadastro têm o documento em texto livre.
+
+- **Adicionar um país com documento fiscal próprio:**
+  1. Uma entrada nova em `internal/country` (um arquivo como `br.go` e `us.go`): `Code`, `Aliases` (grafias antigas, em minúsculas), `Langs` (os idiomas da interface que o sugerem), `Currency`, `Timezone`, o `LegalID` (`Field`, `Mask` e `Normalize`) e o `Address` (a lista de estados, ou nenhuma para texto livre, e o código postal), e a entrada em `order` (`country.go`). As máscaras usam `9` para um dígito, `*` para um dígito ou uma letra, e o resto é literal.
+  2. Os validadores em `internal/validate` (como `EIN`, `CEP` e `ZIP`), com os testes.
+  3. Os textos `countries.<código em minúsculas>.*` nos dois catálogos (`legal_id.label` e `placeholder`, `phone.placeholder`, `address.line1_placeholder` e `line2_label`, `state.label`, `postal.label` e `placeholder`). `internal/country` confere que todo país tem todos os textos nos dois idiomas.
+  4. Se o documento é uma coluna nova da organização: o campo no `ent/schema/organization.go` (com a migração, ver abaixo), o campo em `Organization` e `UpdateInput` e as linhas de `Store.Update` e `toDomainOrg` (`internal/domain/organization`), um erro `organization.invalid_<campo>` com os textos, e a linha em `legalIDRefs` (`organization/service.go`). `TestLegalIDRefs_CoverEveryCountry` falha enquanto essa linha faltar.
+  5. O país nunca é só texto livre: o campo `country` da organização guarda o código, e qualquer código novo precisa estar no cadastro para ser aceito (`country.Parse`).
+- **Sem mudar o banco:** um país que usa só o que já existe (por exemplo, um documento que cabe numa coluna existente) não pede migração.
+
 ### Onde fica cada coisa
 
 ```

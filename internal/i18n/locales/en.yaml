@@ -652,7 +652,6 @@ org:
     linkedin: LinkedIn
     instagram: Instagram
     legal_name: Legal name
-    cnpj: CNPJ
     address: Address
     timezone: Time zone
     currency: Currency
@@ -678,16 +677,10 @@ org:
     contact: Contact
     contact_email: Contact email
     website_placeholder: https://example.com
-    phone_placeholder: +1 (555) 010-0100
     linkedin_placeholder: https://www.linkedin.com/company/…
     instagram_placeholder: https://www.instagram.com/…
     legal: Legal details
-    cnpj_placeholder: 00.000.000/0000-00
-    address_placeholder: Street and number
-    address2: Complement and neighborhood
     city: City
-    state: State
-    postal_code: Postal code
     country: Country
     country_hint: Sets the tax ID, the state and the postal code of the organization.
     how_we_work: How we work

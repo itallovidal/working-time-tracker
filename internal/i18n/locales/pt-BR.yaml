@@ -662,7 +662,6 @@ org:
     linkedin: LinkedIn
     instagram: Instagram
     legal_name: Razão social
-    cnpj: CNPJ
     address: Endereço
     timezone: Fuso horário
     currency: Moeda
@@ -688,16 +687,10 @@ org:
     contact: Contato
     contact_email: Email de contato
     website_placeholder: https://exemplo.com.br
-    phone_placeholder: +55 (11) 4002-8922
     linkedin_placeholder: https://www.linkedin.com/company/…
     instagram_placeholder: https://www.instagram.com/…
     legal: Dados jurídicos
-    cnpj_placeholder: 00.000.000/0000-00
-    address_placeholder: Rua e número
-    address2: Complemento e bairro
     city: Cidade
-    state: Estado
-    postal_code: CEP
     country: País
     country_hint: Define o documento fiscal, o estado e o código postal da organização.
     how_we_work: Como trabalhamos

@@ -381,12 +381,6 @@
       const id = countries.legalId(code);
       return id.mask ? fmt.mask(value, id.mask) : (value || '');
     },
-    // "11222333000181" -> "11.222.333/0001-81"
-    cnpj(value) {
-      const v = value || '';
-      if (v.length !== 14) return v;
-      return v.slice(0, 2) + '.' + v.slice(2, 5) + '.' + v.slice(5, 8) + '/' + v.slice(8, 12) + '-' + v.slice(12);
-    },
     orgSize(value) {
       const s = orgSizes.find((x) => x.value === value);
       return s ? s.label : value;
