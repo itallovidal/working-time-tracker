@@ -104,7 +104,8 @@ Sem a permissão a API responde `403 auth.permission_required` (ou `auth.owner_o
 ## Onde se escolhe
 
 - **Grupo do projeto**: no passo 2 de Adicionar pessoa e no modal Editar colaborador (aba Colaboradores da Gestão).
-- **Permissões da organização**: no modal Jornada e permissões, na aba Colaboradores da organização, só para o dono e só para quem não é admin.
+- **Permissões da organização**: no modal Editar colaborador (aba Permissões), na aba Colaboradores da organização, só para o dono e só para quem não é admin.
+- **Valor por hora em cada projeto**: no mesmo modal, na aba Projetos e valores, só para admins. Ela usa as rotas do projeto (`PUT /projects/:id/allocations/:personId` e `DELETE /projects/:id/collaborators/:personId`) e `GET /persons/:id/allocations`, que continuam conferindo a permissão: quem tem só `people.manage` não vê a aba e, se chamasse as rotas, receberia `403`.
 
 ## Ainda não existe
 

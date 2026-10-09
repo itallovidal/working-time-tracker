@@ -670,11 +670,29 @@ org:
   people:
     title: People
     weekly_hours: Weekly hours
-    edit_title: Hours and permissions
-    edit_label: "Edit {{.name}}'s weekly hours"
+    edit_title: Edit collaborator
+    edit_label: "Edit {{.name}}"
+    tabs_label: Collaborator details
+    tab_hours: Hours
+    tab_permissions: Permissions
+    tab_projects: Projects and rates
     weekly_hours_label: Weekly hours
     weekly_hours_hint: How many hours a week were agreed with the person. Applies to every project. Empty clears it.
-    hours_saved: "{{.name}}'s weekly hours saved."
+    saved: "{{.name}}'s details saved."
+    projects_loading: Loading the projects…
+    projects_retry: Try again
+    projects_empty: The person is not on any project.
+    projects_hint: "Changing a rate only applies to new sessions: the ones already tracked keep the rate of the time. The project's permission group and the teams are set in the project's Collaborators tab."
+    projects_none_in_org: The organization has no projects yet.
+    joins_on_save: Joins on save
+    undo_leave: Undo
+    discard_join: Don't add
+    add_project: Put on another project
+    add_project_button: Add
+    choose_project: Choose a project
+    rate_of: "Hourly rate on {{.project}} ({{.unit}})"
+    new_rate_of: "Hourly rate on the chosen project ({{.unit}})"
+    rate_invalid: "Enter the hourly rate on {{.project}}, for example 20.00."
     permissions_title: Organization permissions
     permissions_hint: Only the owner gives these, and they apply to every project. The permissions of each project are given when the person is added to it.
     permissions_admin: Admins already have every organization permission.

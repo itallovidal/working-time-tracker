@@ -246,6 +246,51 @@ func TestPermissions_AllocationNeedsTheRightPermissionForEachChange(t *testing.T
 	}
 }
 
+// O modal do colaborador mexe nos valores de uma pessoa em vários projetos, e isso é só de admins: quem tem apenas
+// people.manage (a jornada e os convites) não lê os valores dos outros nem põe alguém num projeto ou o tira dele,
+// enquanto um admin que não é o dono faz as três coisas.
+func TestPermissions_PersonRatesFromTheOrganizationAreForAdmins(t *testing.T) {
+	e := newServer(t)
+	owner := signup(t, e, "Org", "ana@test.com")
+	admin := invite(t, e, owner, "bia@test.com", "admin")
+	people := invite(t, e, owner, "pam@test.com", "member")
+	target := invite(t, e, owner, "caio@test.com", "member")
+	alfa := createEmptyProject(t, e, owner, "Alfa")
+	beta := createEmptyProject(t, e, owner, "Beta")
+	allocate(t, e, owner, alfa, target.id, 2000)
+	if code := status(e, "PATCH", "/api/persons/"+people.id+"/permissions", `{"permissions":["people.manage"]}`, owner.session); code != http.StatusOK {
+		t.Fatalf("grant people.manage = %d", code)
+	}
+
+	list := "/api/persons/" + target.id + "/allocations"
+	if code := status(e, "GET", list, "", people.session); code != http.StatusForbidden {
+		t.Errorf("people.manage reading another person's rates = %d, want 403", code)
+	}
+	if code, _ := putAllocation(e, people, beta, target.id, `{"pay_rate_cents":3000}`); code != http.StatusForbidden && code != http.StatusNotFound {
+		t.Errorf("people.manage putting someone on a project = %d, want 403 or 404", code)
+	}
+	if code := status(e, "DELETE", "/api/projects/"+alfa+"/collaborators/"+target.id, "", people.session); code != http.StatusForbidden && code != http.StatusNotFound {
+		t.Errorf("people.manage taking someone off a project = %d, want 403 or 404", code)
+	}
+
+	if code := status(e, "GET", list, "", admin.session); code != http.StatusOK {
+		t.Errorf("an admin reading another person's rates = %d, want 200", code)
+	}
+	if code, out := putAllocation(e, admin, alfa, target.id, `{"pay_rate_cents":2500}`); code != http.StatusOK {
+		t.Errorf("an admin changing a rate = %d: %s", code, out)
+	}
+	if code, out := putAllocation(e, admin, beta, target.id, `{"pay_rate_cents":3000}`); code != http.StatusOK {
+		t.Errorf("an admin putting someone on a project = %d: %s", code, out)
+	}
+	if code := status(e, "DELETE", "/api/projects/"+alfa+"/collaborators/"+target.id, "", admin.session); code != http.StatusNoContent {
+		t.Errorf("an admin taking someone off a project = %d, want 204", code)
+	}
+	left := decodeList(t, do(e, "GET", list, "", admin.session))
+	if len(left) != 1 || left[0]["project_id"] != beta || left[0]["pay_rate_cents"] != float64(3000) {
+		t.Errorf("after the changes the person's rates = %v, want only Beta at 3000", left)
+	}
+}
+
 // As permissões da organização são do dono: ele libera criar projetos, cuidar dos clientes e
 // das pessoas a quem não é admin, e os admins não precisam delas.
 func TestPermissions_OrganizationOnesBelongToTheOwner(t *testing.T) {

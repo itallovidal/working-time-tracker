@@ -434,8 +434,15 @@ document.addEventListener('alpine:init', () => {
     // Como o último convite chegou (email, terminal ou link) e para quem, para o modal dizer o que aconteceu.
     lastDelivery: '',
     lastEmail: '',
-    editing: null, // a pessoa aberta no modal da jornada semanal e das permissões
-    draft: { weekly_hours: '', permissions: [] },
+    editing: null, // a pessoa aberta no modal do colaborador
+    tab: 'hours', // a aba do modal: hours, permissions ou projects
+    tabs: [], // as abas que quem olha pode usar
+    // O rascunho do modal: nada vai para o servidor antes de Salvar. projects são as linhas da aba de projetos:
+    // { project_id, name, cents (o valor gravado, null na linha nova), rate (o texto do campo), isNew, removed }.
+    draft: { weekly_hours: '', permissions: [], projects: [] },
+    addForm: { project_id: '', rate: '' }, // o projeto e o valor escolhidos para a pessoa entrar
+    allProjects: null, // os projetos da organização, buscados na primeira vez que o modal abre para um admin
+    projectsState: 'idle', // idle, loading, ready ou error
     orgKeys: [], // as permissões da organização do catálogo, para o dono liberar
     async init() {
       try {
@@ -472,20 +479,132 @@ document.addEventListener('alpine:init', () => {
     canGrant(person) {
       return !!me.is_owner && !!person && person.role !== 'admin' && !person.is_owner;
     },
-    // openEdit abre o modal com a jornada e as permissões da pessoa. Ele edita um rascunho:
+    // availableTabs são as abas que quem olha pode usar: a jornada (people.manage), as permissões da organização
+    // (só o dono) e os projetos com o valor por hora (só admins, que têm todas as permissões de projeto). Com uma só,
+    // o modal não mostra a faixa de abas.
+    availableTabs() {
+      return [
+        WTT.can('people.manage') && 'hours',
+        me.is_owner && 'permissions',
+        me.role === 'admin' && 'projects',
+      ].filter(Boolean);
+    },
+    // moveTab é a troca pelas setas, Home e End: o foco acompanha a aba escolhida.
+    moveTab(to) {
+      const last = this.tabs.length - 1;
+      const at = this.tabs.indexOf(this.tab);
+      const next = { first: 0, last, next: at >= last ? 0 : at + 1, prev: at <= 0 ? last : at - 1 }[to];
+      this.tab = this.tabs[next];
+      this.$nextTick(() => this.$refs['tab-' + this.tab].focus());
+    },
+    // openEdit abre o modal do colaborador: a jornada, as permissões e os projetos da pessoa. Ele edita um rascunho:
     // nada vai para o servidor antes de Salvar. O papel muda direto na linha, pelo botão.
     openEdit(person) {
       this.editing = person;
-      this.draft = { weekly_hours: person.weekly_hours || '', permissions: [...(person.permissions || [])] };
+      this.tabs = this.availableTabs();
+      this.tab = this.tabs[0] || 'hours';
+      this.draft = { weekly_hours: person.weekly_hours || '', permissions: [...(person.permissions || [])], projects: [] };
+      this.addForm = { project_id: '', rate: '' };
+      this.projectsState = 'idle';
       this.errors.edit = '';
+      this.errors.projects = '';
       Alpine.store('modal').open('person-edit', WTT.t('org.people.edit_title'), () => !this.pending);
+      if (this.tabs.includes('projects')) this.loadProjects(person);
     },
+    // loadProjects traz os projetos da pessoa com o valor dela em cada um e, na primeira vez, os projetos da organização,
+    // para o seletor de entrar em outro. A aba mostra o carregando e o erro; as outras seguem usáveis.
+    async loadProjects(person) {
+      this.projectsState = 'loading';
+      this.errors.projects = '';
+      try {
+        const [allocations, projects] = await Promise.all([
+          api('GET', '/api/persons/' + person.id + '/allocations'),
+          this.allProjects || api('GET', '/api/orgs/' + orgId + '/projects'),
+        ]);
+        if (this.editing !== person) return; // o modal fechou, ou abriu outra pessoa, enquanto carregava
+        this.allProjects = projects || [];
+        this.draft.projects = (allocations || []).map((a) => ({
+          project_id: a.project_id,
+          name: a.project ? a.project.name : a.project_id,
+          cents: a.pay_rate_cents,
+          rate: WTT.fmt.moneyInput(a.pay_rate_cents),
+          isNew: false,
+          removed: false,
+        }));
+        this.projectsState = 'ready';
+      } catch (e) {
+        if (this.editing !== person) return;
+        this.errors.projects = e.message;
+        this.projectsState = 'error';
+      }
+    },
+    // addableProjects são os projetos da organização em que a pessoa ainda não está. O que está marcado para sair
+    // continua na lista até o Salvar, e o botão Desfazer o devolve.
+    addableProjects() {
+      const taken = new Set(this.draft.projects.map((r) => r.project_id));
+      return (this.allProjects || []).filter((p) => !taken.has(p.id));
+    },
+    // addProject põe a linha do projeto escolhido no rascunho. O dono entra sem valor: as horas dele valem o valor cobrado.
+    addProject() {
+      const project = (this.allProjects || []).find((p) => p.id === this.addForm.project_id);
+      if (!project) {
+        this.errors.edit = WTT.t('org.people.choose_project');
+        return;
+      }
+      const owner = !!this.editing.is_owner;
+      const cents = owner ? 0 : WTT.toCents(this.addForm.rate);
+      if (cents === null) {
+        this.errors.edit = WTT.t('collab.rate_required');
+        return;
+      }
+      this.errors.edit = '';
+      this.draft.projects.push({
+        project_id: project.id, name: project.name, cents: null,
+        rate: owner ? '' : WTT.fmt.moneyInput(cents), isNew: true, removed: false,
+      });
+      this.addForm = { project_id: '', rate: '' };
+    },
+    // toggleRemove marca o projeto para a pessoa sair ao salvar, ou desfaz a marca. Uma linha que ainda não foi gravada
+    // simplesmente some do rascunho.
+    toggleRemove(row) {
+      if (row.isNew) this.draft.projects = this.draft.projects.filter((r) => r.project_id !== row.project_id);
+      else row.removed = !row.removed;
+    },
+    // projectChanges separa o que o rascunho mudou nos projetos e confere os valores antes de qualquer envio: um valor
+    // que não é número para tudo, e leva para a aba dos projetos.
+    projectChanges() {
+      if (this.projectsState !== 'ready') return [];
+      const owner = !!this.editing.is_owner;
+      const changes = [];
+      for (const row of this.draft.projects) {
+        if (row.removed) {
+          changes.push({ row, remove: true });
+        } else if (owner) {
+          if (row.isNew) changes.push({ row, cents: 0 });
+        } else {
+          const cents = WTT.toCents(row.rate);
+          if (cents === null) {
+            this.tab = 'projects';
+            throw new Error(WTT.t('org.people.rate_invalid', { project: row.name }));
+          }
+          if (row.isNew || cents !== row.cents) changes.push({ row, cents });
+        }
+      }
+      return changes;
+    },
+    // savePerson aplica o rascunho com as rotas que já existiam: a jornada, as permissões e, projeto a projeto, o valor
+    // ou a saída. Cada chamada que dá certo vira o novo ponto de partida; se uma falhar, o que já foi aplicado continua
+    // valendo e o modal fica aberto com o erro. Salvar de novo só repete o que faltou.
     savePerson() {
       return this.run('edit', async () => {
         const person = this.editing;
         const text = String(this.draft.weekly_hours).trim();
         const hours = text === '' ? 0 : Number(text);
-        if (!Number.isInteger(hours) || hours < 0 || hours > 168) throw new Error(WTT.t('errors.person.invalid_week_hours'));
+        if (!Number.isInteger(hours) || hours < 0 || hours > 168) {
+          this.tab = 'hours';
+          throw new Error(WTT.t('errors.person.invalid_week_hours'));
+        }
+        const projects = this.projectChanges();
         if (WTT.can('people.manage') && hours !== (person.weekly_hours || 0)) {
           const updated = await api('PATCH', '/api/persons/' + person.id + '/weekly-hours', { weekly_hours: hours });
           person.weekly_hours = updated.weekly_hours;
@@ -495,7 +614,23 @@ document.addEventListener('alpine:init', () => {
           const updated = await api('PATCH', '/api/persons/' + person.id + '/permissions', { permissions: this.draft.permissions });
           person.permissions = updated.permissions;
         }
-        toast(WTT.t('org.people.hours_saved', { name: person.name }));
+        for (const { row, remove, cents } of projects) {
+          const base = '/api/projects/' + row.project_id;
+          try {
+            if (remove) {
+              await api('DELETE', base + '/collaborators/' + person.id);
+              this.draft.projects = this.draft.projects.filter((r) => r.project_id !== row.project_id);
+            } else {
+              const saved = await api('PUT', base + '/allocations/' + person.id, { pay_rate_cents: cents });
+              row.cents = saved.pay_rate_cents;
+              row.isNew = false;
+            }
+          } catch (e) {
+            this.tab = 'projects';
+            throw new Error(row.name + ': ' + e.message);
+          }
+        }
+        toast(WTT.t('org.people.saved', { name: person.name }));
         Alpine.store('modal').close();
       });
     },

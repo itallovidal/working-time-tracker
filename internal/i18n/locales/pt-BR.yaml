@@ -680,11 +680,29 @@ org:
   people:
     title: Integrantes
     weekly_hours: Jornada semanal
-    edit_title: Jornada e permissões
-    edit_label: "Editar a jornada semanal de {{.name}}"
+    edit_title: Editar colaborador
+    edit_label: "Editar {{.name}}"
+    tabs_label: Dados do colaborador
+    tab_hours: Jornada
+    tab_permissions: Permissões
+    tab_projects: Projetos e valores
     weekly_hours_label: Jornada semanal (horas)
     weekly_hours_hint: Quantas horas por semana foram combinadas com a pessoa. Vale para todos os projetos. Vazio apaga.
-    hours_saved: "Jornada de {{.name}} salva."
+    saved: "Dados de {{.name}} salvos."
+    projects_loading: Carregando os projetos…
+    projects_retry: Tentar de novo
+    projects_empty: A pessoa não está em nenhum projeto.
+    projects_hint: "Mudar o valor só vale para as próximas sessões: as que já foram registradas guardam o valor da época. O grupo de permissões do projeto e os times ficam na aba Colaboradores do projeto."
+    projects_none_in_org: A organização ainda não tem projetos.
+    joins_on_save: Entra ao salvar
+    undo_leave: Desfazer
+    discard_join: Não adicionar
+    add_project: Colocar em outro projeto
+    add_project_button: Adicionar
+    choose_project: Escolha um projeto
+    rate_of: "Valor por hora em {{.project}} ({{.unit}})"
+    new_rate_of: "Valor por hora no projeto escolhido ({{.unit}})"
+    rate_invalid: "Informe o valor por hora em {{.project}}, por exemplo 20,00."
     permissions_title: Permissões da organização
     permissions_hint: Só o dono libera, e valem em todos os projetos. As permissões de cada projeto são dadas ao pôr a pessoa nele.
     permissions_admin: Admins já têm todas as permissões da organização.

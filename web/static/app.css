@@ -537,6 +537,15 @@ td.actions { text-align: right; white-space: nowrap; }
 .list-btn:hover { background: var(--surface-2); }
 .list-btn .grow { display: flex; flex-direction: column; }
 .list-btn > i { color: var(--muted); font-size: 0.8rem; }
+/* Os projetos de uma pessoa no modal do colaborador: o nome, o valor por hora e o botão Tirar. O projeto que vai sair ao
+   salvar fica riscado, com o aviso embaixo. */
+.project-rates > li { flex-wrap: wrap; }
+.project-rates .note { display: block; }
+.project-name.is-removed { text-decoration: line-through; color: var(--muted); }
+.rate-input { display: inline-flex; align-items: center; gap: 6px; }
+.rate-input input { width: 7.5rem; }
+.project-add select { flex: 1 1 12rem; }
+
 /* Lista para escolher uma pessoa: rola por dentro, e a linha inteira marca a opção. */
 .picker { max-height: 232px; overflow-y: auto; border: 1px solid var(--rule); border-radius: var(--radius-sm); }
 .picker > li { padding: 0; }
@@ -931,8 +940,16 @@ html.modal-open { overflow: hidden; }
   padding: 14px 14px 14px 20px; border-bottom: 1px solid var(--rule);
 }
 .modal-body { padding: 18px 20px; overflow-y: auto; overscroll-behavior: contain; }
+/* A coluna do grid não passa da largura da tela: sem isto, um conteúdo que não quebra linha (a faixa de abas do
+   colaborador) alargava o painel além do celular. A faixa rola por dentro quando não cabe. */
+.modal { grid-template-columns: minmax(0, 1fr); }
+.modal .segmented { max-width: 100%; overflow-x: auto; }
 /* No celular o painel sobe para o topo, para o teclado não cobrir os campos. */
-@media (max-width: 640px) { .modal { --modal-gap: 10px; place-items: start center; } }
+@media (max-width: 640px) {
+  .modal { --modal-gap: 10px; place-items: start center; }
+  .segmented-tabs button { padding: 6px 8px; font-size: 0.88rem; }
+  .segmented-tabs button i { display: none; }
+}
 
 @media (max-width: 640px) {
   .topbar-inner { padding: 10px 16px; gap: 10px; }

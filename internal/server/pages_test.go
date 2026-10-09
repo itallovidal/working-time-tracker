@@ -715,6 +715,25 @@ func TestPages_ProjectSettingsAndWeeklyHours(t *testing.T) {
 		t.Error("an admin who is not the owner should edit the weekly hours only, and not the permissions or the admin role")
 	}
 
+	// O modal é em abas, e cada uma só existe para quem pode usá-la: a jornada para quem cuida de pessoas, as permissões
+	// da organização para o dono e os projetos, com o valor por hora, para os admins.
+	tabs := func(page string) (hours, permissions, projects bool) {
+		return strings.Contains(page, `id="person-tab-hours"`), strings.Contains(page, `id="person-tab-permissions"`), strings.Contains(page, `id="person-tab-projects"`)
+	}
+	if h, p, pr := tabs(people); !h || !p || !pr || !strings.Contains(people, `role="tablist"`) || !strings.Contains(people, `id="person-panel-projects"`) {
+		t.Errorf("the owner should see the three tabs, got hours %v, permissions %v, projects %v", h, p, pr)
+	}
+	if h, p, pr := tabs(do(e, "GET", "/orgs/"+admin.orgID+"/people", "", otherAdmin.session).Body.String()); !h || p || !pr {
+		t.Errorf("an admin who is not the owner should see the hours and projects tabs only, got hours %v, permissions %v, projects %v", h, p, pr)
+	}
+	peopleManager := invite(t, e, admin, "pessoas@test.com", "member")
+	if rec := do(e, "PATCH", "/api/persons/"+peopleManager.id+"/permissions", `{"permissions":["people.manage"]}`, admin.session); rec.Code != http.StatusOK {
+		t.Fatalf("grant people.manage = %d: %s", rec.Code, rec.Body.String())
+	}
+	if h, p, pr := tabs(do(e, "GET", "/orgs/"+admin.orgID+"/people", "", peopleManager.session).Body.String()); !h || p || pr {
+		t.Errorf("who only manages people should see the hours tab only, got hours %v, permissions %v, projects %v", h, p, pr)
+	}
+
 	// Cada pessoa lê a própria jornada no perfil, sem campo para alterar.
 	profile := do(e, "GET", "/profile", "", member.session).Body.String()
 	if !strings.Contains(profile, "<dt>Jornada semanal</dt>") || strings.Contains(profile, "weekly-hours") {
@@ -725,7 +744,7 @@ func TestPages_ProjectSettingsAndWeeklyHours(t *testing.T) {
 	for path, wants := range map[string][]string{
 		"/static/app.js":           {"sprintOptions", "labels.sprint.long_", "labels.sprint.short_"},
 		"/static/pages/project.js": {"'project-edit'", "sprintChoices()"},
-		"/static/pages/org.js":     {"/weekly-hours'", "'person-edit'"},
+		"/static/pages/org.js":     {"/weekly-hours'", "'person-edit'", "/allocations/", "/collaborators/"},
 	} {
 		body := do(e, "GET", path, "", "").Body.String()
 		for _, want := range wants {
