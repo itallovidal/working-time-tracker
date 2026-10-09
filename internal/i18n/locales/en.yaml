@@ -278,6 +278,38 @@ session:
     removed: Task removed from the session.
     read_only: Only the person who clocked in, or an admin, can change the session tasks.
 
+countries:
+  generic:
+    legal_id:
+      label: Tax ID
+  br:
+    legal_id:
+      label: CNPJ
+      placeholder: 00.000.000/0000-00
+    phone:
+      placeholder: "+55 (11) 4002-8922"
+    address:
+      line1_placeholder: Street and number
+      line2_label: Complement and neighborhood
+    state:
+      label: State
+    postal:
+      label: Postal code (CEP)
+      placeholder: 00000-000
+  us:
+    legal_id:
+      label: EIN
+      placeholder: 00-0000000
+    phone:
+      placeholder: "+1 (555) 010-0100"
+    address:
+      line1_placeholder: Street address
+      line2_label: Apartment, suite, etc.
+    state:
+      label: State
+    postal:
+      label: ZIP code
+      placeholder: "00000"
 onboarding:
   steps_label: Welcome steps
   step_org: Organization

@@ -67,3 +67,83 @@ func TestHTTPURL(t *testing.T) {
 		}
 	}
 }
+
+func TestEIN(t *testing.T) {
+	for in, want := range map[string]string{
+		"12-3456789":   "123456789",
+		"123456789":    "123456789",
+		" 12 3456789 ": "123456789",
+		"98-7654321":   "987654321",
+	} {
+		if got, ok := validate.EIN(in); !ok || got != want {
+			t.Errorf("EIN(%q) = %q, %v; want %q, true", in, got, ok, want)
+		}
+	}
+	for _, in := range []string{
+		"", "12-345678", "12-34567890", "00-1234567", // curto, longo, prefixo que não existe
+		"AB-3456789", "12/3456789", "12-345678A",
+	} {
+		if got, ok := validate.EIN(in); ok {
+			t.Errorf("EIN(%q) = %q, true; want invalid", in, got)
+		}
+	}
+}
+
+func TestCEP(t *testing.T) {
+	for in, want := range map[string]string{
+		"88010-000":  "88010-000",
+		"88010000":   "88010-000",
+		"88.010-000": "88010-000",
+		" 01310 100": "01310-100",
+	} {
+		if got, ok := validate.CEP(in); !ok || got != want {
+			t.Errorf("CEP(%q) = %q, %v; want %q, true", in, got, ok, want)
+		}
+	}
+	for _, in := range []string{"", "8801-000", "880100000", "88010-00A", "88010/000"} {
+		if got, ok := validate.CEP(in); ok {
+			t.Errorf("CEP(%q) = %q, true; want invalid", in, got)
+		}
+	}
+}
+
+func TestZIP(t *testing.T) {
+	for in, want := range map[string]string{
+		"10001":       "10001",
+		"10001-1234":  "10001-1234",
+		"100011234":   "10001-1234",
+		" 10001 1234": "10001-1234",
+		"10001-":      "10001",
+	} {
+		if got, ok := validate.ZIP(in); !ok || got != want {
+			t.Errorf("ZIP(%q) = %q, %v; want %q, true", in, got, ok, want)
+		}
+	}
+	for _, in := range []string{"", "1000", "100011", "10001-123", "ABCDE", "10001-12AB"} {
+		if got, ok := validate.ZIP(in); ok {
+			t.Errorf("ZIP(%q) = %q, true; want invalid", in, got)
+		}
+	}
+}
+
+func TestGenericTaxID(t *testing.T) {
+	for in, want := range map[string]string{
+		"DE 123456789":     "DE 123456789",
+		"  DE   123456789": "DE 123456789",
+		"CHE-123.456.789":  "CHE-123.456.789",
+		"B-12345678/9":     "B-12345678/9",
+		"NIF_PT501964843":  "NIF_PT501964843",
+	} {
+		if got, ok := validate.GenericTaxID(in); !ok || got != want {
+			t.Errorf("GenericTaxID(%q) = %q, %v; want %q, true", in, got, ok, want)
+		}
+	}
+	for _, in := range []string{
+		"", "   ", "12345678901234567890123456789012345", // vazio, só espaço, 35 caracteres
+		"12<345", "12;345", "12'345",
+	} {
+		if got, ok := validate.GenericTaxID(in); ok {
+			t.Errorf("GenericTaxID(%q) = %q, true; want invalid", in, got)
+		}
+	}
+}

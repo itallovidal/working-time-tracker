@@ -288,6 +288,38 @@ session:
     removed: Tarefa tirada da sessão.
     read_only: Só quem bateu o ponto, ou um admin, muda as tarefas da sessão.
 
+countries:
+  generic:
+    legal_id:
+      label: Documento fiscal
+  br:
+    legal_id:
+      label: CNPJ
+      placeholder: 00.000.000/0000-00
+    phone:
+      placeholder: "+55 (11) 4002-8922"
+    address:
+      line1_placeholder: Rua e número
+      line2_label: Complemento e bairro
+    state:
+      label: Estado
+    postal:
+      label: CEP
+      placeholder: 00000-000
+  us:
+    legal_id:
+      label: EIN
+      placeholder: 00-0000000
+    phone:
+      placeholder: "+1 (555) 010-0100"
+    address:
+      line1_placeholder: Endereço e número
+      line2_label: Apartamento, sala etc.
+    state:
+      label: Estado
+    postal:
+      label: Código postal (ZIP)
+      placeholder: "00000"
 onboarding:
   steps_label: Etapas das boas-vindas
   step_org: Organização
