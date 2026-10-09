@@ -1,29 +1,20 @@
 // Package country é o cadastro dos países que a organização conhece. Cada entrada diz o que muda de um país para
-// outro: o documento fiscal da empresa (CNPJ, EIN), o formato do código postal, a lista de estados, a moeda e o fuso
-// de quem acaba de criar a organização. O banco tem uma tabela só, com todas as colunas; este pacote decide quais delas
+// outro: o documento fiscal da empresa (CNPJ, EIN), os textos do endereço, a moeda e o fuso de quem acaba de criar a
+// organização. O banco tem uma tabela só, com todas as colunas; este pacote decide quais delas
 // valem para o país e como se validam. Um país novo é uma entrada nova aqui, mais os textos em locales/*.yaml.
 //
-// Os rótulos e as máscaras vão para o navegador (ver View), que desenha a tela a partir deles, e os validadores ficam
-// só no servidor, que continua sendo quem decide.
+// Os rótulos e as máscaras vão para o navegador (ver Describe), que desenha a tela a partir deles, e os validadores
+// ficam só no servidor, que continua sendo quem decide.
 package country
 
 import (
 	"strings"
-	"unicode/utf8"
 
 	"working-time-tracker/internal/validate"
 )
 
 // Default é o país de quem não diz qual é: o do primeiro uso do sistema.
 const Default = "BR"
-
-const maxStateRunes = 100
-
-// State é um estado de um país que tem lista. Name fica no idioma do próprio país, sem tradução.
-type State struct {
-	Code string `json:"code"`
-	Name string `json:"name"`
-}
 
 // LegalID é o documento fiscal da empresa que só existe em alguns países.
 type LegalID struct {
@@ -33,19 +24,6 @@ type LegalID struct {
 	Mask string
 	// Normalize confere o valor e devolve a forma guardada, sem máscara.
 	Normalize func(string) (string, bool)
-}
-
-// Postal é o código postal do país.
-type Postal struct {
-	Mask      string
-	Normalize func(string) (string, bool)
-}
-
-// Address são as regras de endereço que variam: os estados e o código postal.
-type Address struct {
-	// States é a lista de estados. Nula, o estado é texto livre.
-	States []State
-	Postal Postal
 }
 
 // Country é uma entrada do cadastro.
@@ -59,7 +37,6 @@ type Country struct {
 	// Currency e Timezone valem para a organização nova, e para o campo que a pessoa esvazia na edição.
 	Currency, Timezone string
 	LegalID            LegalID
-	Address            Address
 }
 
 var (
@@ -145,34 +122,4 @@ func NormalizeTaxID(code, raw string) (string, bool) {
 		return c.LegalID.Normalize(raw)
 	}
 	return validate.GenericTaxID(raw)
-}
-
-// NormalizeState confere o estado pelo país: com lista, aceita o código ou o nome (sem diferenciar maiúsculas) e
-// devolve o código; sem lista, é texto livre aparado de até 100 caracteres. Vazio quer dizer "sem estado" e vale.
-func (c *Country) NormalizeState(raw string) (string, bool) {
-	raw = strings.TrimSpace(raw)
-	if raw == "" {
-		return "", true
-	}
-	if len(c.Address.States) == 0 {
-		return raw, utf8.RuneCountInString(raw) <= maxStateRunes
-	}
-	for _, s := range c.Address.States {
-		if strings.EqualFold(raw, s.Code) || strings.EqualFold(raw, s.Name) {
-			return s.Code, true
-		}
-	}
-	return "", false
-}
-
-// NormalizePostal confere o código postal pelo país e devolve a forma guardada (a mesma que se mostra). Vazio vale.
-func (c *Country) NormalizePostal(raw string) (string, bool) {
-	raw = strings.TrimSpace(raw)
-	if raw == "" {
-		return "", true
-	}
-	if c.Address.Postal.Normalize == nil {
-		return raw, utf8.RuneCountInString(raw) <= 16
-	}
-	return c.Address.Postal.Normalize(raw)
 }

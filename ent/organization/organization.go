@@ -21,22 +21,12 @@ const (
 	FieldSummary = "summary"
 	// FieldDescription holds the string denoting the description field in the database.
 	FieldDescription = "description"
-	// FieldIndustry holds the string denoting the industry field in the database.
-	FieldIndustry = "industry"
-	// FieldFoundedYear holds the string denoting the founded_year field in the database.
-	FieldFoundedYear = "founded_year"
-	// FieldSize holds the string denoting the size field in the database.
-	FieldSize = "size"
 	// FieldWebsite holds the string denoting the website field in the database.
 	FieldWebsite = "website"
 	// FieldContactEmail holds the string denoting the contact_email field in the database.
 	FieldContactEmail = "contact_email"
-	// FieldPhone holds the string denoting the phone field in the database.
-	FieldPhone = "phone"
 	// FieldLinkedinURL holds the string denoting the linkedin_url field in the database.
 	FieldLinkedinURL = "linkedin_url"
-	// FieldInstagramURL holds the string denoting the instagram_url field in the database.
-	FieldInstagramURL = "instagram_url"
 	// FieldLegalName holds the string denoting the legal_name field in the database.
 	FieldLegalName = "legal_name"
 	// FieldCnpj holds the string denoting the cnpj field in the database.
@@ -47,12 +37,6 @@ const (
 	FieldAddressLine1 = "address_line1"
 	// FieldAddressLine2 holds the string denoting the address_line2 field in the database.
 	FieldAddressLine2 = "address_line2"
-	// FieldCity holds the string denoting the city field in the database.
-	FieldCity = "city"
-	// FieldState holds the string denoting the state field in the database.
-	FieldState = "state"
-	// FieldPostalCode holds the string denoting the postal_code field in the database.
-	FieldPostalCode = "postal_code"
 	// FieldCountry holds the string denoting the country field in the database.
 	FieldCountry = "country"
 	// FieldWorkMode holds the string denoting the work_mode field in the database.
@@ -109,22 +93,14 @@ var Columns = []string{
 	FieldName,
 	FieldSummary,
 	FieldDescription,
-	FieldIndustry,
-	FieldFoundedYear,
-	FieldSize,
 	FieldWebsite,
 	FieldContactEmail,
-	FieldPhone,
 	FieldLinkedinURL,
-	FieldInstagramURL,
 	FieldLegalName,
 	FieldCnpj,
 	FieldEin,
 	FieldAddressLine1,
 	FieldAddressLine2,
-	FieldCity,
-	FieldState,
-	FieldPostalCode,
 	FieldCountry,
 	FieldWorkMode,
 	FieldTimezone,
@@ -178,21 +154,6 @@ func ByDescription(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldDescription, opts...).ToFunc()
 }
 
-// ByIndustry orders the results by the industry field.
-func ByIndustry(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldIndustry, opts...).ToFunc()
-}
-
-// ByFoundedYear orders the results by the founded_year field.
-func ByFoundedYear(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldFoundedYear, opts...).ToFunc()
-}
-
-// BySize orders the results by the size field.
-func BySize(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldSize, opts...).ToFunc()
-}
-
 // ByWebsite orders the results by the website field.
 func ByWebsite(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldWebsite, opts...).ToFunc()
@@ -203,19 +164,9 @@ func ByContactEmail(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldContactEmail, opts...).ToFunc()
 }
 
-// ByPhone orders the results by the phone field.
-func ByPhone(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldPhone, opts...).ToFunc()
-}
-
 // ByLinkedinURL orders the results by the linkedin_url field.
 func ByLinkedinURL(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldLinkedinURL, opts...).ToFunc()
-}
-
-// ByInstagramURL orders the results by the instagram_url field.
-func ByInstagramURL(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldInstagramURL, opts...).ToFunc()
 }
 
 // ByLegalName orders the results by the legal_name field.
@@ -241,21 +192,6 @@ func ByAddressLine1(opts ...sql.OrderTermOption) OrderOption {
 // ByAddressLine2 orders the results by the address_line2 field.
 func ByAddressLine2(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldAddressLine2, opts...).ToFunc()
-}
-
-// ByCity orders the results by the city field.
-func ByCity(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldCity, opts...).ToFunc()
-}
-
-// ByState orders the results by the state field.
-func ByState(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldState, opts...).ToFunc()
-}
-
-// ByPostalCode orders the results by the postal_code field.
-func ByPostalCode(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldPostalCode, opts...).ToFunc()
 }
 
 // ByCountry orders the results by the country field.

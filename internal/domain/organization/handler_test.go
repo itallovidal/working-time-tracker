@@ -97,7 +97,7 @@ func TestHandler_UpdateProfile(t *testing.T) {
 	body := rec.Body.String()
 	for _, want := range []string{
 		`"name":"Org"`, `"summary":"Entregas rápidas"`, `"cnpj":"12ABC34501DE35"`, `"work_mode":"remote"`,
-		`"founded_year":null`, `"timezone":"America/Sao_Paulo"`, `"currency":"BRL"`,
+		`"timezone":"America/Sao_Paulo"`, `"currency":"BRL"`,
 		// O país é o código, e o EIN existe no JSON mesmo vazio.
 		`"country":"BR"`, `"ein":""`,
 	} {
@@ -106,22 +106,20 @@ func TestHandler_UpdateProfile(t *testing.T) {
 		}
 	}
 
-	// País, EIN, estado e código postal de uma empresa dos EUA, no mesmo pedido.
-	if rec := patch(`{"country":"US","ein":"12-3456789","state":"ny","postal_code":"10001"}`); rec.Code != http.StatusOK {
+	// País e EIN de uma empresa dos EUA, no mesmo pedido.
+	if rec := patch(`{"country":"US","ein":"12-3456789"}`); rec.Code != http.StatusOK {
 		t.Fatalf("US update expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
 	rec = httptest.NewRecorder()
 	e.ServeHTTP(rec, httptest.NewRequest("GET", path, nil))
-	for _, want := range []string{`"country":"US"`, `"ein":"123456789"`, `"state":"NY"`, `"postal_code":"10001"`, `"cnpj":"12ABC34501DE35"`} {
+	for _, want := range []string{`"country":"US"`, `"ein":"123456789"`, `"cnpj":"12ABC34501DE35"`} {
 		if !strings.Contains(rec.Body.String(), want) {
 			t.Errorf("US GET body does not contain %s: %s", want, rec.Body.String())
 		}
 	}
 	for body, code := range map[string]string{
-		`{"ein":"00-3456789"}`:        "organization.invalid_ein",
-		`{"country":"Portugal"}`:      "organization.invalid_country",
-		`{"state":"SP"}`:              "organization.invalid_state",
-		`{"postal_code":"01310-100"}`: "organization.invalid_postal_code",
+		`{"ein":"00-3456789"}`:   "organization.invalid_ein",
+		`{"country":"Portugal"}`: "organization.invalid_country",
 	} {
 		if rec := patch(body); rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), `"code":"`+code+`"`) {
 			t.Errorf("%s = %d %s, want 400 %s", body, rec.Code, rec.Body.String(), code)

@@ -13,7 +13,6 @@ import (
 )
 
 var (
-	sizes      = map[string]bool{"1-10": true, "11-50": true, "51-200": true, "201-500": true, "500+": true}
 	workModes  = map[string]bool{"remote": true, "hybrid": true, "onsite": true}
 	currencies = map[string]bool{"BRL": true, "USD": true, "EUR": true}
 )
@@ -83,8 +82,7 @@ func apply(org *Organization, in UpdateInput) error {
 		org.Name = name
 	}
 
-	// Textos livres: só o tamanho é conferido. O estado e o código postal também passam pelas regras do país, mais abaixo;
-	// o tamanho vem primeiro, para um texto enorme dar "campo longo demais" e não "formato inválido".
+	// Textos livres: só o tamanho é conferido.
 	for _, f := range []struct {
 		dst   *string
 		src   *string
@@ -92,13 +90,9 @@ func apply(org *Organization, in UpdateInput) error {
 		max   int
 	}{
 		{&org.Description, in.Description, "long_description", 2000},
-		{&org.Industry, in.Industry, "industry", 100},
 		{&org.LegalName, in.LegalName, "legal_name", 200},
 		{&org.AddressLine1, in.AddressLine1, "address_line1", 200},
 		{&org.AddressLine2, in.AddressLine2, "address_line2", 200},
-		{&org.City, in.City, "city", 100},
-		{&org.State, in.State, "state", 100},
-		{&org.PostalCode, in.PostalCode, "postal_code", 16},
 	} {
 		if f.src == nil {
 			continue
@@ -119,8 +113,7 @@ func apply(org *Organization, in UpdateInput) error {
 		org.Summary = v
 	}
 
-	// País: o código do cadastro, e vazio volta para o padrão. Vem antes de tudo o que depende dele.
-	countryChanged := false
+	// País: o código do cadastro, e vazio volta para o padrão. Vem antes do que depende dele (o fuso e a moeda padrão).
 	if in.Country != nil {
 		code := country.Default
 		if v := strings.TrimSpace(*in.Country); v != "" {
@@ -130,32 +123,13 @@ func apply(org *Organization, in UpdateInput) error {
 			}
 			code = parsed
 		}
-		countryChanged = code != org.Country
 		org.Country = code
 	}
 	profile := profileOf(org.Country)
 
-	// O estado e o código postal seguem o país. Se o país mudou e o campo não veio, o valor guardado é conferido pelo país
-	// novo, e um valor que não serve é recusado: nada é apagado em silêncio.
-	if in.State != nil || countryChanged {
-		v, ok := profile.NormalizeState(org.State)
-		if !ok {
-			return ErrInvalidState
-		}
-		org.State = v
-	}
-	if in.PostalCode != nil || countryChanged {
-		v, ok := profile.NormalizePostal(org.PostalCode)
-		if !ok {
-			return ErrInvalidPostalCode
-		}
-		org.PostalCode = v
-	}
-
 	for _, f := range []struct{ dst, src *string }{
 		{&org.Website, in.Website},
 		{&org.LinkedinURL, in.LinkedinURL},
-		{&org.InstagramURL, in.InstagramURL},
 	} {
 		if f.src == nil {
 			continue
@@ -178,13 +152,7 @@ func apply(org *Organization, in UpdateInput) error {
 		}
 		org.ContactEmail = v
 	}
-	if in.Phone != nil {
-		v := strings.TrimSpace(*in.Phone)
-		if v != "" && !validate.Phone(v) {
-			return ErrInvalidPhone
-		}
-		org.Phone = v
-	}
+
 	// Os documentos fiscais, um por país do cadastro. Cada um é conferido pela regra do país dono dele, qualquer que seja o
 	// país da organização: o PATCH {"country":"US","ein":"..."} não depende da ordem dos campos, e trocar de país não
 	// apaga o documento do outro.
@@ -204,20 +172,7 @@ func apply(org *Organization, in UpdateInput) error {
 		}
 		*ref.dst = v
 	}
-	if in.Size != nil {
-		v := strings.TrimSpace(*in.Size)
-		if v != "" && !sizes[v] {
-			return ErrInvalidSize
-		}
-		org.Size = v
-	}
 
-	if in.FoundedYear != nil {
-		if *in.FoundedYear != 0 && (*in.FoundedYear < 1900 || *in.FoundedYear > time.Now().Year()) {
-			return ErrInvalidFoundedYear
-		}
-		org.FoundedYear = nilIfZero(*in.FoundedYear)
-	}
 	if in.WorkMode != nil {
 		v := strings.ToLower(strings.TrimSpace(*in.WorkMode))
 		if v != "" && !workModes[v] {
@@ -282,11 +237,4 @@ func maxLen(field, v string, max int) error {
 		return ErrFieldTooLong.With("field", field, "max", max)
 	}
 	return nil
-}
-
-func nilIfZero(v int) *int {
-	if v == 0 {
-		return nil
-	}
-	return &v
 }

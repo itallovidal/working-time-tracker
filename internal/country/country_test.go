@@ -50,15 +50,8 @@ func TestRegistry_EntriesAreConsistent(t *testing.T) {
 		if _, err := time.LoadLocation(c.Timezone); err != nil {
 			t.Errorf("%s: timezone %q: %v", c.Code, c.Timezone, err)
 		}
-		if len(c.Langs) == 0 || c.Address.Postal.Mask == "" || c.Address.Postal.Normalize == nil {
-			t.Errorf("%s: needs its languages and a postal code rule", c.Code)
-		}
-		seen := map[string]bool{}
-		for _, s := range c.Address.States {
-			if !twoLetters.MatchString(s.Code) || s.Name == "" || seen[s.Code] {
-				t.Errorf("%s: state %+v is malformed or repeats", c.Code, s)
-			}
-			seen[s.Code] = true
+		if len(c.Langs) == 0 {
+			t.Errorf("%s: needs the interface languages that suggest it", c.Code)
 		}
 		for _, a := range c.Aliases {
 			if a != strings.ToLower(a) {
@@ -68,12 +61,6 @@ func TestRegistry_EntriesAreConsistent(t *testing.T) {
 		if !isoSet[c.Code] {
 			t.Errorf("%s is not an ISO 3166-1 code", c.Code)
 		}
-	}
-	if got := len(MustGet("BR").Address.States); got != 27 {
-		t.Errorf("BR has %d states, want the 26 states and the Federal District", got)
-	}
-	if got := len(MustGet("US").Address.States); got != 59 {
-		t.Errorf("US has %d states and territories, want 50 + DC + 5 territories + 3 military", got)
 	}
 }
 
@@ -163,43 +150,6 @@ func TestNormalizeTaxID(t *testing.T) {
 	}
 }
 
-func TestNormalizeStateAndPostal(t *testing.T) {
-	br, us := MustGet("BR"), MustGet("US")
-	for _, c := range []struct {
-		country  *Country
-		in, want string
-		ok       bool
-	}{
-		{br, "sp", "SP", true}, {br, "São Paulo", "SP", true}, {br, "são paulo", "SP", true},
-		{br, "  RJ ", "RJ", true}, {br, "", "", true}, {br, "XX", "", false}, {br, "Sao Paulo", "", false},
-		{us, "tx", "TX", true}, {us, "Texas", "TX", true}, {us, "DC", "DC", true}, {us, "SP", "", false},
-	} {
-		if got, ok := c.country.NormalizeState(c.in); ok != c.ok || got != c.want {
-			t.Errorf("%s.NormalizeState(%q) = %q, %v; want %q, %v", c.country.Code, c.in, got, ok, c.want, c.ok)
-		}
-	}
-	for _, c := range []struct {
-		country  *Country
-		in, want string
-		ok       bool
-	}{
-		{br, "88010000", "88010-000", true}, {br, "88010-000", "88010-000", true}, {br, "", "", true}, {br, "10001", "", false},
-		{us, "10001", "10001", true}, {us, "10001-1234", "10001-1234", true}, {us, "88010-000", "", false},
-	} {
-		if got, ok := c.country.NormalizePostal(c.in); ok != c.ok || got != c.want {
-			t.Errorf("%s.NormalizePostal(%q) = %q, %v; want %q, %v", c.country.Code, c.in, got, ok, c.want, c.ok)
-		}
-	}
-	// Sem lista, o estado é texto livre, com teto.
-	free := &Country{}
-	if got, ok := free.NormalizeState("  Bavaria "); !ok || got != "Bavaria" {
-		t.Errorf("free state = %q, %v; want Bavaria, true", got, ok)
-	}
-	if _, ok := free.NormalizeState(strings.Repeat("x", 101)); ok {
-		t.Error("a free state over 100 characters must be invalid")
-	}
-}
-
 func TestDescribe_IsWhatTheBrowserReceives(t *testing.T) {
 	r := Describe(func(key string, _ ...any) string { return "<" + key + ">" })
 	if len(r.List) != len(All()) || r.List[0].Code != "BR" || r.List[1].Code != "US" {
@@ -209,7 +159,7 @@ func TestDescribe_IsWhatTheBrowserReceives(t *testing.T) {
 	if br.LegalID.Field != "cnpj" || br.LegalID.Mask != "**.***.***/****-99" || br.LegalID.Label != "<countries.br.legal_id.label>" {
 		t.Errorf("BR legal id = %+v", br.LegalID)
 	}
-	if len(br.State.Options) != 27 || br.Postal.Mask != "99999-999" || br.Currency != "BRL" {
+	if br.Address.Line2Label != "<countries.br.address.line2_label>" || br.Currency != "BRL" || br.Timezone != "America/Sao_Paulo" {
 		t.Errorf("BR address/defaults = %+v", br)
 	}
 	if r.Generic.LegalID.Label != "<countries.generic.legal_id.label>" || len(r.ISO) != 249 {
@@ -219,7 +169,7 @@ func TestDescribe_IsWhatTheBrowserReceives(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
 	}
-	for _, key := range []string{`"legal_id"`, `"line2_label"`, `"options"`, `"iso"`, `"generic"`} {
+	for _, key := range []string{`"legal_id"`, `"line2_label"`, `"iso"`, `"generic"`} {
 		if !strings.Contains(string(raw), key) {
 			t.Errorf("the JSON lacks %s", key)
 		}

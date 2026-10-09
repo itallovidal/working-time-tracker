@@ -53,20 +53,18 @@ func TestOrganization_ProfileOfAUSCompany(t *testing.T) {
 	session, orgID := sessionFrom(t, rec), decode(t, rec)["organization_id"].(string)
 	path := "/api/orgs/" + orgID
 
-	if rec := do(e, "PATCH", path, `{"ein":"12-3456789","state":"tx","postal_code":"78701-1234","city":"Austin"}`, session); rec.Code != http.StatusOK {
+	if rec := do(e, "PATCH", path, `{"ein":"12-3456789","address_line1":"500 Congress Ave","address_line2":"Suite 200"}`, session); rec.Code != http.StatusOK {
 		t.Fatalf("patch = %d: %s", rec.Code, rec.Body.String())
 	}
 	org := decode(t, do(e, "GET", path, "", session))
-	if org["ein"] != "123456789" || org["state"] != "TX" || org["postal_code"] != "78701-1234" || org["country"] != "US" {
+	if org["ein"] != "123456789" || org["address_line1"] != "500 Congress Ave" || org["country"] != "US" {
 		t.Errorf("profile = %v", org)
 	}
 
 	for body, code := range map[string]string{
-		`{"ein":"123"}`:               "organization.invalid_ein",
-		`{"cnpj":"12-3456789"}`:       "organization.invalid_cnpj",
-		`{"state":"SP"}`:              "organization.invalid_state",
-		`{"postal_code":"01310-100"}`: "organization.invalid_postal_code",
-		`{"country":"DE"}`:            "organization.invalid_country",
+		`{"ein":"123"}`:         "organization.invalid_ein",
+		`{"cnpj":"12-3456789"}`: "organization.invalid_cnpj",
+		`{"country":"DE"}`:      "organization.invalid_country",
 	} {
 		if rec := do(e, "PATCH", path, body, session); rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), `"`+code+`"`) {
 			t.Errorf("%s = %d %s, want 400 %s", body, rec.Code, rec.Body.String(), code)
@@ -106,23 +104,20 @@ func TestPages_CountriesReachTheBrowser(t *testing.T) {
 	if id := us["legal_id"].(map[string]any); id["field"] != "ein" || id["label"] != "EIN" || id["mask"] != "99-9999999" {
 		t.Errorf("US legal id = %v", id)
 	}
-	if st := br["state"].(map[string]any); st["label"] != "Estado" || len(st["options"].([]any)) != 27 {
-		t.Errorf("BR states = %v", st)
+	if line2 := br["address"].(map[string]any)["line2_label"]; line2 != "Complemento e bairro" {
+		t.Errorf("BR address complement label = %v, want Complemento e bairro", line2)
 	}
-	if st := us["state"].(map[string]any); len(st["options"].([]any)) != 59 {
-		t.Errorf("US states = %d, want 59", len(st["options"].([]any)))
-	}
-	if postal := br["postal"].(map[string]any)["label"]; postal != "CEP" {
-		t.Errorf("BR postal label = %v, want CEP", postal)
+	if line2 := us["address"].(map[string]any)["line2_label"]; line2 != "Apartamento, sala etc." {
+		t.Errorf("US address complement label = %v, want Apartamento, sala etc.", line2)
 	}
 
 	// Em inglês os textos são os de lá.
 	en := list("en")
-	if postal := en[1].(map[string]any)["postal"].(map[string]any)["label"]; postal != "ZIP code" {
-		t.Errorf("US postal label in English = %v, want ZIP code", postal)
+	if line2 := en[1].(map[string]any)["address"].(map[string]any)["line2_label"]; line2 != "Apartment, suite, etc." {
+		t.Errorf("US address complement label in English = %v, want Apartment, suite, etc.", line2)
 	}
-	if state := en[0].(map[string]any)["state"].(map[string]any)["label"]; state != "State" {
-		t.Errorf("BR state label in English = %v, want State", state)
+	if line2 := en[0].(map[string]any)["address"].(map[string]any)["line2_label"]; line2 != "Complement and neighborhood" {
+		t.Errorf("BR address complement label in English = %v, want Complement and neighborhood", line2)
 	}
 
 	// As páginas que não desenham países não carregam o cadastro.

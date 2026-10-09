@@ -165,14 +165,6 @@
   // Os status de uma tarefa, na ordem em que ela costuma passar por eles. O value é o código do backend.
   const taskStatuses = ['backlog', 'in_progress', 'awaiting_closure', 'closed'].map((value) => ({ value, label: t('tasks.status.' + value) }));
 
-  const orgSizes = [
-    { value: '1-10', label: t('labels.org_size.s1_10') },
-    { value: '11-50', label: t('labels.org_size.s11_50') },
-    { value: '51-200', label: t('labels.org_size.s51_200') },
-    { value: '201-500', label: t('labels.org_size.s201_500') },
-    { value: '500+', label: t('labels.org_size.s500_plus') },
-  ];
-
   // Os regimes de trabalho que o backend aceita (internal/domain/organization).
   const workModes = [
     { value: 'remote', label: t('labels.work_mode.remote') },
@@ -381,10 +373,6 @@
       const id = countries.legalId(code);
       return id.mask ? fmt.mask(value, id.mask) : (value || '');
     },
-    orgSize(value) {
-      const s = orgSizes.find((x) => x.value === value);
-      return s ? s.label : value;
-    },
     currency(value) {
       const c = currencies.find((x) => x.value === value);
       return c ? c.label : value;
@@ -482,7 +470,7 @@
     return { label: fmt.date(iso), cls: '' };
   }
 
-  window.WTT = { can, t, lang, priorityClass, statusClass, hasDeadlineDate, deadlineInfo, errorText, api, ApiError, form, fmt, toCents, copyText, notInformed, weekdays, priorities, taskStatuses, markdown, routine, sprintOptions, sprintChoices, orgSizes, workModes, currencies, countries, boot: window.BOOT || {} };
+  window.WTT = { can, t, lang, priorityClass, statusClass, hasDeadlineDate, deadlineInfo, errorText, api, ApiError, form, fmt, toCents, copyText, notInformed, weekdays, priorities, taskStatuses, markdown, routine, sprintOptions, sprintChoices, workModes, currencies, countries, boot: window.BOOT || {} };
 
   // Onde flash() deixa a mensagem para a página seguinte.
   const flashKey = 'wtt:flash';

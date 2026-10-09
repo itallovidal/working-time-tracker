@@ -89,43 +89,6 @@ func TestEIN(t *testing.T) {
 	}
 }
 
-func TestCEP(t *testing.T) {
-	for in, want := range map[string]string{
-		"88010-000":  "88010-000",
-		"88010000":   "88010-000",
-		"88.010-000": "88010-000",
-		" 01310 100": "01310-100",
-	} {
-		if got, ok := validate.CEP(in); !ok || got != want {
-			t.Errorf("CEP(%q) = %q, %v; want %q, true", in, got, ok, want)
-		}
-	}
-	for _, in := range []string{"", "8801-000", "880100000", "88010-00A", "88010/000"} {
-		if got, ok := validate.CEP(in); ok {
-			t.Errorf("CEP(%q) = %q, true; want invalid", in, got)
-		}
-	}
-}
-
-func TestZIP(t *testing.T) {
-	for in, want := range map[string]string{
-		"10001":       "10001",
-		"10001-1234":  "10001-1234",
-		"100011234":   "10001-1234",
-		" 10001 1234": "10001-1234",
-		"10001-":      "10001",
-	} {
-		if got, ok := validate.ZIP(in); !ok || got != want {
-			t.Errorf("ZIP(%q) = %q, %v; want %q, true", in, got, ok, want)
-		}
-	}
-	for _, in := range []string{"", "1000", "100011", "10001-123", "ABCDE", "10001-12AB"} {
-		if got, ok := validate.ZIP(in); ok {
-			t.Errorf("ZIP(%q) = %q, true; want invalid", in, got)
-		}
-	}
-}
-
 func TestGenericTaxID(t *testing.T) {
 	for in, want := range map[string]string{
 		"DE 123456789":     "DE 123456789",

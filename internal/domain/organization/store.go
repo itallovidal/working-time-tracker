@@ -55,37 +55,25 @@ func (s *Store) GetByID(id string) (*Organization, error) {
 	return toDomainOrg(org), nil
 }
 
-// Update grava a organização como está: texto vazio fica vazio e número nil é
-// apagado no banco. Quem decide entre manter e apagar é o service.
+// Update grava a organização como está: texto vazio fica vazio. Quem decide entre manter e
+// apagar é o service.
 func (s *Store) Update(org *Organization) error {
 	q := s.client.Organization.UpdateOneID(org.ID).
 		SetName(org.Name).
 		SetSummary(org.Summary).
 		SetDescription(org.Description).
-		SetIndustry(org.Industry).
-		SetSize(org.Size).
 		SetWebsite(org.Website).
 		SetContactEmail(org.ContactEmail).
-		SetPhone(org.Phone).
 		SetLinkedinURL(org.LinkedinURL).
-		SetInstagramURL(org.InstagramURL).
 		SetLegalName(org.LegalName).
 		SetCnpj(org.CNPJ).
 		SetEin(org.EIN).
 		SetAddressLine1(org.AddressLine1).
 		SetAddressLine2(org.AddressLine2).
-		SetCity(org.City).
-		SetState(org.State).
-		SetPostalCode(org.PostalCode).
 		SetCountry(org.Country).
 		SetWorkMode(org.WorkMode).
 		SetTimezone(org.Timezone).
 		SetCurrency(org.Currency)
-	if org.FoundedYear != nil {
-		q = q.SetFoundedYear(*org.FoundedYear)
-	} else {
-		q = q.ClearFoundedYear()
-	}
 	_, err := q.Save(context.Background())
 	return err
 }
@@ -121,22 +109,14 @@ func toDomainOrg(e *ent.Organization) *Organization {
 		Name:         e.Name,
 		Summary:      e.Summary,
 		Description:  e.Description,
-		Industry:     e.Industry,
-		FoundedYear:  e.FoundedYear,
-		Size:         e.Size,
 		Website:      e.Website,
 		ContactEmail: e.ContactEmail,
-		Phone:        e.Phone,
 		LinkedinURL:  e.LinkedinURL,
-		InstagramURL: e.InstagramURL,
 		LegalName:    e.LegalName,
 		CNPJ:         e.Cnpj,
 		EIN:          e.Ein,
 		AddressLine1: e.AddressLine1,
 		AddressLine2: e.AddressLine2,
-		City:         e.City,
-		State:        e.State,
-		PostalCode:   e.PostalCode,
 		Country:      e.Country,
 		WorkMode:     e.WorkMode,
 		Timezone:     e.Timezone,

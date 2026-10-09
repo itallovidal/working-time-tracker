@@ -350,7 +350,6 @@ func main() {
 	taskSvc := task.NewService(task.NewStore(db.Client), membershipStore, nil)
 
 	text := func(v string) *string { return &v }
-	number := func(v int) *int { return &v }
 	// optional devolve nil para o valor vazio, que os services tratam como "sem valor".
 	optionalText := func(v string) *string {
 		if v == "" {
@@ -393,20 +392,13 @@ func main() {
 		Description: text("A Jatobá Software desenvolve aplicativos, sistemas web e APIs sob medida. " +
 			"Trabalhamos por projeto: cada cliente tem um time dedicado, com entregas a cada sprint.\n\n" +
 			"Atendemos varejo, saúde e serviços financeiros."),
-		Industry:     text("Desenvolvimento de software"),
-		FoundedYear:  number(2016),
-		Size:         text("1-10"),
 		Website:      text("https://jatoba.example"),
 		ContactEmail: text("contato@jatoba.example"),
-		Phone:        text("+55 (48) 3003-2016"),
 		LinkedinURL:  text("https://www.linkedin.com/company/jatoba-software"),
 		LegalName:    text("Jatobá Software Ltda"),
 		CNPJ:         text("11.222.333/0001-81"),
-		AddressLine1: text("Rua das Acácias, 120"),
+		AddressLine1: text("Rua das Acácias, 120, Florianópolis, SC"),
 		AddressLine2: text("Sala 304, Centro"),
-		City:         text("Florianópolis"),
-		State:        text("SC"),
-		PostalCode:   text("88010-000"),
 		Country:      text("BR"),
 		WorkMode:     text("hybrid"),
 	})

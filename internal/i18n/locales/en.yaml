@@ -286,30 +286,16 @@ countries:
     legal_id:
       label: CNPJ
       placeholder: 00.000.000/0000-00
-    phone:
-      placeholder: "+55 (11) 4002-8922"
     address:
       line1_placeholder: Street and number
       line2_label: Complement and neighborhood
-    state:
-      label: State
-    postal:
-      label: Postal code (CEP)
-      placeholder: 00000-000
   us:
     legal_id:
       label: EIN
       placeholder: 00-0000000
-    phone:
-      placeholder: "+1 (555) 010-0100"
     address:
       line1_placeholder: Street address
       line2_label: Apartment, suite, etc.
-    state:
-      label: State
-    postal:
-      label: ZIP code
-      placeholder: "00000"
 onboarding:
   steps_label: Welcome steps
   step_org: Organization
@@ -516,7 +502,7 @@ help:
       team: "Team (admins only): who has the clock open right now and on which task."
     org_about:
       title: "Organization: About"
-      text: "The organization profile: description, industry, contact, company details and how the team works (work mode, time zone and currency). Everyone reads it. An empty field shows as “Not provided”."
+      text: "The organization profile: description, country, contact, company details and how the team works (work mode, time zone and currency). Everyone reads it. An empty field shows as “Not provided”."
       edit: "Admins have the “Edit” button, to change the profile, the currency and the time zone."
       delete: "At the end of the edit screen there is “Delete organization”: only the owner can do it, and only after every project is deleted."
     org_people:
@@ -646,11 +632,8 @@ org:
     customers: Customers
     projects: Projects
   fields:
-    segment: Industry
-    size: Size
     website: Website
     linkedin: LinkedIn
-    instagram: Instagram
     legal_name: Legal name
     address: Address
     timezone: Time zone
@@ -663,8 +646,6 @@ org:
     how_we_work: How we work
     contact: Contact
     company: Company details
-    founded: Founded
-    location: Location
     work_mode: Work mode
   settings:
     title: Edit organization
@@ -672,17 +653,13 @@ org:
     summary: Summary
     summary_hint: A single line shown in the organization header.
     description_hint: What the organization does and for whom. Every member reads it on the About tab.
-    industry_placeholder: "E.g.: logistics, healthcare, technology"
-    founded_year: Year founded
     contact: Contact
     contact_email: Contact email
     website_placeholder: https://example.com
     linkedin_placeholder: https://www.linkedin.com/company/…
-    instagram_placeholder: https://www.instagram.com/…
     legal: Legal details
-    city: City
     country: Country
-    country_hint: Sets the tax ID, the state and the postal code of the organization.
+    country_hint: Sets the tax ID of the organization (CNPJ or EIN) and the address texts.
     how_we_work: How we work
     work_mode: Work mode
     hours_note: The sprint length is set in each project, and the weekly hours on each person.
@@ -1427,12 +1404,6 @@ labels:
     friday: Friday
     saturday: Saturday
     sunday: Sunday
-  org_size:
-    s1_10: 1 to 10 people
-    s11_50: 11 to 50 people
-    s51_200: 51 to 200 people
-    s201_500: 201 to 500 people
-    s500_plus: More than 500 people
   work_mode:
     remote: Remote
     hybrid: Hybrid
@@ -1565,11 +1536,6 @@ errors:
     invalid_currency: "invalid currency: use BRL, USD or EUR"
     invalid_ein: "invalid EIN: use 9 digits, for example 12-3456789"
     invalid_email: "enter a valid contact email"
-    invalid_founded_year: "the year founded must be between 1900 and the current year"
-    invalid_phone: "invalid phone: use digits, spaces, +, parentheses and hyphen"
-    invalid_postal_code: "invalid postal code for the organization's country (CEP in Brazil, ZIP in the US)"
-    invalid_size: "invalid size: use 1-10, 11-50, 51-200, 201-500 or 500+"
-    invalid_state: "invalid state for the organization's country: use the abbreviation, for example SP or TX"
     invalid_timezone: "invalid time zone: use a name like America/Sao_Paulo"
     invalid_url: "invalid address: use an http or https link, for example https://example.com"
     invalid_work_mode: "invalid work mode: use remote, hybrid or onsite"
@@ -1672,12 +1638,7 @@ fields:
   board_id: "Board"
   address_line1: "the address"
   address_line2: "the address complement"
-  city: "the city"
-  country: "the country"
   long_description: "the description"
-  industry: "the industry"
   legal_name: "the legal name"
   name: "the name"
-  postal_code: "the postal code"
-  state: "the state"
   summary: "the summary"

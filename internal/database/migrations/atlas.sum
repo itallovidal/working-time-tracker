@@ -1,4 +1,4 @@
-h1:jwylFHeO6tyV55f4lovyGnQi2RESoiZwE7m968IDUII=
+h1:vJITNZzTEaGNqWy9pnc7IU6DagfFi77+pIHCj2TRRnU=
 20261006010705_baseline.sql h1:In26R+bkQHX0yTBQ3cHUfkq0TyExXFWtzWiAp+CXcPk=
 20261006053300_integration_credentials_metadata.sql h1:o/Eet/4UpJcK+X/j0/hx8u5DPKRFuIPzq5e0spWIBX4=
 20261006220500_move_weekly_hours_to_person.sql h1:FSjx+g6ZU9ynL4VqWDbgWEb2QdpiaQV4ZE/YuC/imyI=
@@ -19,3 +19,4 @@ h1:jwylFHeO6tyV55f4lovyGnQi2RESoiZwE7m968IDUII=
 20261009021957_person_onboarded_at.sql h1:oiG2PdOBmOy1PGXhQ2CgfUWhvAyvag/LD9lSoIbD840=
 20261009033319_organization_country_ein.sql h1:V26mjTv2miW1nZC6SXIAqoThUaIirZq4aoj547HeQT8=
 20261009034626_customer_country.sql h1:Z6+3o7A4j9QCOiHfq4qgN+CtMRUKNx9630VshGILbzQ=
+20261009040109_organization_drop_profile_fields.sql h1:n0CLDuvkolZOYQnx6jE9i45LaG4hZQhh23wIRQ/H7II=

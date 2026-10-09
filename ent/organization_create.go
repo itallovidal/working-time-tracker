@@ -59,48 +59,6 @@ func (_c *OrganizationCreate) SetNillableDescription(v *string) *OrganizationCre
 	return _c
 }
 
-// SetIndustry sets the "industry" field.
-func (_c *OrganizationCreate) SetIndustry(v string) *OrganizationCreate {
-	_c.mutation.SetIndustry(v)
-	return _c
-}
-
-// SetNillableIndustry sets the "industry" field if the given value is not nil.
-func (_c *OrganizationCreate) SetNillableIndustry(v *string) *OrganizationCreate {
-	if v != nil {
-		_c.SetIndustry(*v)
-	}
-	return _c
-}
-
-// SetFoundedYear sets the "founded_year" field.
-func (_c *OrganizationCreate) SetFoundedYear(v int) *OrganizationCreate {
-	_c.mutation.SetFoundedYear(v)
-	return _c
-}
-
-// SetNillableFoundedYear sets the "founded_year" field if the given value is not nil.
-func (_c *OrganizationCreate) SetNillableFoundedYear(v *int) *OrganizationCreate {
-	if v != nil {
-		_c.SetFoundedYear(*v)
-	}
-	return _c
-}
-
-// SetSize sets the "size" field.
-func (_c *OrganizationCreate) SetSize(v string) *OrganizationCreate {
-	_c.mutation.SetSize(v)
-	return _c
-}
-
-// SetNillableSize sets the "size" field if the given value is not nil.
-func (_c *OrganizationCreate) SetNillableSize(v *string) *OrganizationCreate {
-	if v != nil {
-		_c.SetSize(*v)
-	}
-	return _c
-}
-
 // SetWebsite sets the "website" field.
 func (_c *OrganizationCreate) SetWebsite(v string) *OrganizationCreate {
 	_c.mutation.SetWebsite(v)
@@ -129,20 +87,6 @@ func (_c *OrganizationCreate) SetNillableContactEmail(v *string) *OrganizationCr
 	return _c
 }
 
-// SetPhone sets the "phone" field.
-func (_c *OrganizationCreate) SetPhone(v string) *OrganizationCreate {
-	_c.mutation.SetPhone(v)
-	return _c
-}
-
-// SetNillablePhone sets the "phone" field if the given value is not nil.
-func (_c *OrganizationCreate) SetNillablePhone(v *string) *OrganizationCreate {
-	if v != nil {
-		_c.SetPhone(*v)
-	}
-	return _c
-}
-
 // SetLinkedinURL sets the "linkedin_url" field.
 func (_c *OrganizationCreate) SetLinkedinURL(v string) *OrganizationCreate {
 	_c.mutation.SetLinkedinURL(v)
@@ -153,20 +97,6 @@ func (_c *OrganizationCreate) SetLinkedinURL(v string) *OrganizationCreate {
 func (_c *OrganizationCreate) SetNillableLinkedinURL(v *string) *OrganizationCreate {
 	if v != nil {
 		_c.SetLinkedinURL(*v)
-	}
-	return _c
-}
-
-// SetInstagramURL sets the "instagram_url" field.
-func (_c *OrganizationCreate) SetInstagramURL(v string) *OrganizationCreate {
-	_c.mutation.SetInstagramURL(v)
-	return _c
-}
-
-// SetNillableInstagramURL sets the "instagram_url" field if the given value is not nil.
-func (_c *OrganizationCreate) SetNillableInstagramURL(v *string) *OrganizationCreate {
-	if v != nil {
-		_c.SetInstagramURL(*v)
 	}
 	return _c
 }
@@ -237,48 +167,6 @@ func (_c *OrganizationCreate) SetAddressLine2(v string) *OrganizationCreate {
 func (_c *OrganizationCreate) SetNillableAddressLine2(v *string) *OrganizationCreate {
 	if v != nil {
 		_c.SetAddressLine2(*v)
-	}
-	return _c
-}
-
-// SetCity sets the "city" field.
-func (_c *OrganizationCreate) SetCity(v string) *OrganizationCreate {
-	_c.mutation.SetCity(v)
-	return _c
-}
-
-// SetNillableCity sets the "city" field if the given value is not nil.
-func (_c *OrganizationCreate) SetNillableCity(v *string) *OrganizationCreate {
-	if v != nil {
-		_c.SetCity(*v)
-	}
-	return _c
-}
-
-// SetState sets the "state" field.
-func (_c *OrganizationCreate) SetState(v string) *OrganizationCreate {
-	_c.mutation.SetState(v)
-	return _c
-}
-
-// SetNillableState sets the "state" field if the given value is not nil.
-func (_c *OrganizationCreate) SetNillableState(v *string) *OrganizationCreate {
-	if v != nil {
-		_c.SetState(*v)
-	}
-	return _c
-}
-
-// SetPostalCode sets the "postal_code" field.
-func (_c *OrganizationCreate) SetPostalCode(v string) *OrganizationCreate {
-	_c.mutation.SetPostalCode(v)
-	return _c
-}
-
-// SetNillablePostalCode sets the "postal_code" field if the given value is not nil.
-func (_c *OrganizationCreate) SetNillablePostalCode(v *string) *OrganizationCreate {
-	if v != nil {
-		_c.SetPostalCode(*v)
 	}
 	return _c
 }
@@ -548,18 +436,6 @@ func (_c *OrganizationCreate) createSpec() (*Organization, *sqlgraph.CreateSpec)
 		_spec.SetField(organization.FieldDescription, field.TypeString, value)
 		_node.Description = value
 	}
-	if value, ok := _c.mutation.Industry(); ok {
-		_spec.SetField(organization.FieldIndustry, field.TypeString, value)
-		_node.Industry = value
-	}
-	if value, ok := _c.mutation.FoundedYear(); ok {
-		_spec.SetField(organization.FieldFoundedYear, field.TypeInt, value)
-		_node.FoundedYear = &value
-	}
-	if value, ok := _c.mutation.Size(); ok {
-		_spec.SetField(organization.FieldSize, field.TypeString, value)
-		_node.Size = value
-	}
 	if value, ok := _c.mutation.Website(); ok {
 		_spec.SetField(organization.FieldWebsite, field.TypeString, value)
 		_node.Website = value
@@ -568,17 +444,9 @@ func (_c *OrganizationCreate) createSpec() (*Organization, *sqlgraph.CreateSpec)
 		_spec.SetField(organization.FieldContactEmail, field.TypeString, value)
 		_node.ContactEmail = value
 	}
-	if value, ok := _c.mutation.Phone(); ok {
-		_spec.SetField(organization.FieldPhone, field.TypeString, value)
-		_node.Phone = value
-	}
 	if value, ok := _c.mutation.LinkedinURL(); ok {
 		_spec.SetField(organization.FieldLinkedinURL, field.TypeString, value)
 		_node.LinkedinURL = value
-	}
-	if value, ok := _c.mutation.InstagramURL(); ok {
-		_spec.SetField(organization.FieldInstagramURL, field.TypeString, value)
-		_node.InstagramURL = value
 	}
 	if value, ok := _c.mutation.LegalName(); ok {
 		_spec.SetField(organization.FieldLegalName, field.TypeString, value)
@@ -599,18 +467,6 @@ func (_c *OrganizationCreate) createSpec() (*Organization, *sqlgraph.CreateSpec)
 	if value, ok := _c.mutation.AddressLine2(); ok {
 		_spec.SetField(organization.FieldAddressLine2, field.TypeString, value)
 		_node.AddressLine2 = value
-	}
-	if value, ok := _c.mutation.City(); ok {
-		_spec.SetField(organization.FieldCity, field.TypeString, value)
-		_node.City = value
-	}
-	if value, ok := _c.mutation.State(); ok {
-		_spec.SetField(organization.FieldState, field.TypeString, value)
-		_node.State = value
-	}
-	if value, ok := _c.mutation.PostalCode(); ok {
-		_spec.SetField(organization.FieldPostalCode, field.TypeString, value)
-		_node.PostalCode = value
 	}
 	if value, ok := _c.mutation.Country(); ok {
 		_spec.SetField(organization.FieldCountry, field.TypeString, value)

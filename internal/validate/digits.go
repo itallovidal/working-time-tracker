@@ -33,31 +33,6 @@ func EIN(s string) (string, bool) {
 	return d, true
 }
 
-// CEP confere o código postal brasileiro e o devolve como NNNNN-NNN.
-func CEP(s string) (string, bool) {
-	d, ok := digitsOnly(s, " .-")
-	if !ok || len(d) != 8 {
-		return "", false
-	}
-	return d[:5] + "-" + d[5:], true
-}
-
-// ZIP confere o ZIP code dos EUA, de 5 dígitos ou ZIP+4, e o devolve como NNNNN ou
-// NNNNN-NNNN.
-func ZIP(s string) (string, bool) {
-	d, ok := digitsOnly(s, " -")
-	if !ok {
-		return "", false
-	}
-	switch len(d) {
-	case 5:
-		return d, true
-	case 9:
-		return d[:5] + "-" + d[5:], true
-	}
-	return "", false
-}
-
 const maxTaxIDRunes = 32
 
 // GenericTaxID aceita o documento fiscal de um país sem regra própria: letras, dígitos,

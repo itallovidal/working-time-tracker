@@ -244,7 +244,7 @@
       ],
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"name\": \"Empresa Renomeada\",\n  \"summary\": \"Entregas no mesmo dia para o comércio de bairro.\",\n  \"website\": \"https://empresa.example\",\n  \"country\": \"BR\",\n  \"cnpj\": \"11.222.333/0001-81\",\n  \"state\": \"SP\",\n  \"postal_code\": \"01310-100\",\n  \"timezone\": \"America/Sao_Paulo\",\n  \"currency\": \"BRL\",\n  \"work_mode\": \"hybrid\"\n}"
+        "text": "{\n  \"name\": \"Empresa Renomeada\",\n  \"summary\": \"Entregas no mesmo dia para o comércio de bairro.\",\n  \"website\": \"https://empresa.example\",\n  \"country\": \"BR\",\n  \"cnpj\": \"11.222.333/0001-81\",\n  \"timezone\": \"America/Sao_Paulo\",\n  \"currency\": \"BRL\",\n  \"work_mode\": \"hybrid\"\n}"
       }
     },
     {

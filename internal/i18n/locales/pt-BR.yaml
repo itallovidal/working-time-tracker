@@ -296,30 +296,16 @@ countries:
     legal_id:
       label: CNPJ
       placeholder: 00.000.000/0000-00
-    phone:
-      placeholder: "+55 (11) 4002-8922"
     address:
       line1_placeholder: Rua e número
       line2_label: Complemento e bairro
-    state:
-      label: Estado
-    postal:
-      label: CEP
-      placeholder: 00000-000
   us:
     legal_id:
       label: EIN
       placeholder: 00-0000000
-    phone:
-      placeholder: "+1 (555) 010-0100"
     address:
       line1_placeholder: Endereço e número
       line2_label: Apartamento, sala etc.
-    state:
-      label: Estado
-    postal:
-      label: Código postal (ZIP)
-      placeholder: "00000"
 onboarding:
   steps_label: Etapas das boas-vindas
   step_org: Organização
@@ -526,7 +512,7 @@ help:
       team: "Equipe (só administradores): quem está com o ponto aberto agora e em qual tarefa."
     org_about:
       title: "Organização: Sobre"
-      text: "O perfil da organização: descrição, segmento, contato, dados da empresa e como o time trabalha (regime, fuso e moeda). Todo mundo lê. Campo vazio aparece como “Não informado”."
+      text: "O perfil da organização: descrição, país, contato, dados da empresa e como o time trabalha (regime, fuso e moeda). Todo mundo lê. Campo vazio aparece como “Não informado”."
       edit: "O administrador tem o botão “Editar”, para alterar o perfil, a moeda e o fuso."
       delete: "No fim da edição está “Excluir organização”: só o dono consegue, e só depois de excluir todos os projetos."
     org_people:
@@ -656,11 +642,8 @@ org:
     customers: Clientes
     projects: Projetos
   fields:
-    segment: Segmento
-    size: Porte
     website: Site
     linkedin: LinkedIn
-    instagram: Instagram
     legal_name: Razão social
     address: Endereço
     timezone: Fuso horário
@@ -673,8 +656,6 @@ org:
     how_we_work: Como trabalhamos
     contact: Contato
     company: Dados da empresa
-    founded: Fundação
-    location: Localização
     work_mode: Regime
   settings:
     title: Editar organização
@@ -682,17 +663,13 @@ org:
     summary: Resumo
     summary_hint: Uma linha que aparece no cabeçalho da organização.
     description_hint: O que a organização faz e para quem. Todos os membros leem na aba Sobre.
-    industry_placeholder: "Ex.: logística, saúde, tecnologia"
-    founded_year: Ano de fundação
     contact: Contato
     contact_email: Email de contato
     website_placeholder: https://exemplo.com.br
     linkedin_placeholder: https://www.linkedin.com/company/…
-    instagram_placeholder: https://www.instagram.com/…
     legal: Dados jurídicos
-    city: Cidade
     country: País
-    country_hint: Define o documento fiscal, o estado e o código postal da organização.
+    country_hint: Define o documento fiscal da organização (CNPJ ou EIN) e os textos do endereço.
     how_we_work: Como trabalhamos
     work_mode: Regime de trabalho
     hours_note: A duração da sprint fica nas configurações de cada projeto, e a jornada semanal, no cadastro de cada pessoa.
@@ -1437,12 +1414,6 @@ labels:
     friday: Sexta-feira
     saturday: Sábado
     sunday: Domingo
-  org_size:
-    s1_10: 1 a 10 pessoas
-    s11_50: 11 a 50 pessoas
-    s51_200: 51 a 200 pessoas
-    s201_500: 201 a 500 pessoas
-    s500_plus: Mais de 500 pessoas
   work_mode:
     remote: Remoto
     hybrid: Híbrido
@@ -1575,11 +1546,6 @@ errors:
     invalid_currency: "moeda inválida: use BRL, USD ou EUR"
     invalid_ein: "EIN inválido: use 9 dígitos, por exemplo 12-3456789"
     invalid_email: "informe um email de contato válido"
-    invalid_founded_year: "o ano de fundação deve ficar entre 1900 e o ano atual"
-    invalid_phone: "telefone inválido: use números, espaços, +, parênteses e hífen"
-    invalid_postal_code: "código postal inválido para o país da organização (CEP no Brasil, ZIP nos EUA)"
-    invalid_size: "porte inválido: use 1-10, 11-50, 51-200, 201-500 ou 500+"
-    invalid_state: "estado inválido para o país da organização: use a sigla, por exemplo SP ou TX"
     invalid_timezone: "fuso horário inválido: use um nome como America/Sao_Paulo"
     invalid_url: "endereço inválido: use um link http ou https, por exemplo https://exemplo.com.br"
     invalid_work_mode: "regime de trabalho inválido: use remote, hybrid ou onsite"
@@ -1682,12 +1648,7 @@ fields:
   board_id: "Quadro"
   address_line1: "o endereço"
   address_line2: "o complemento"
-  city: "a cidade"
-  country: "o país"
   long_description: "a descrição"
-  industry: "o segmento"
   legal_name: "a razão social"
   name: "o nome"
-  postal_code: "o CEP"
-  state: "o estado"
   summary: "o resumo"

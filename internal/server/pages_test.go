@@ -214,7 +214,7 @@ func TestPages_OrgSummaryInHeader(t *testing.T) {
 	member := invite(t, e, admin, "bia@test.com", "member")
 	orgPath := "/orgs/" + admin.orgID
 
-	rec := do(e, "PATCH", "/api/orgs/"+admin.orgID, `{"summary":"Entregas <rápidas> no mesmo dia","industry":"Logística"}`, admin.session)
+	rec := do(e, "PATCH", "/api/orgs/"+admin.orgID, `{"summary":"Entregas <rápidas> no mesmo dia","legal_name":"Acme Logística Ltda"}`, admin.session)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("PATCH org = %d: %s", rec.Code, rec.Body.String())
 	}
@@ -228,7 +228,7 @@ func TestPages_OrgSummaryInHeader(t *testing.T) {
 		if strings.Contains(body, "<rápidas>") {
 			t.Errorf("GET %s shows the summary without escaping", path)
 		}
-		if !strings.Contains(body, `"industry":"Logística"`) {
+		if !strings.Contains(body, `"legal_name":"Acme Logística Ltda"`) {
 			t.Errorf("GET %s does not pass the organization to the page script", path)
 		}
 	}
