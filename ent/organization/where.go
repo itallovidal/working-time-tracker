@@ -121,6 +121,11 @@ func Cnpj(v string) predicate.Organization {
 	return predicate.Organization(sql.FieldEQ(FieldCnpj, v))
 }
 
+// Ein applies equality check predicate on the "ein" field. It's identical to EinEQ.
+func Ein(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldEin, v))
+}
+
 // AddressLine1 applies equality check predicate on the "address_line1" field. It's identical to AddressLine1EQ.
 func AddressLine1(v string) predicate.Organization {
 	return predicate.Organization(sql.FieldEQ(FieldAddressLine1, v))
@@ -1111,6 +1116,81 @@ func CnpjContainsFold(v string) predicate.Organization {
 	return predicate.Organization(sql.FieldContainsFold(FieldCnpj, v))
 }
 
+// EinEQ applies the EQ predicate on the "ein" field.
+func EinEQ(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldEin, v))
+}
+
+// EinNEQ applies the NEQ predicate on the "ein" field.
+func EinNEQ(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldNEQ(FieldEin, v))
+}
+
+// EinIn applies the In predicate on the "ein" field.
+func EinIn(vs ...string) predicate.Organization {
+	return predicate.Organization(sql.FieldIn(FieldEin, vs...))
+}
+
+// EinNotIn applies the NotIn predicate on the "ein" field.
+func EinNotIn(vs ...string) predicate.Organization {
+	return predicate.Organization(sql.FieldNotIn(FieldEin, vs...))
+}
+
+// EinGT applies the GT predicate on the "ein" field.
+func EinGT(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldGT(FieldEin, v))
+}
+
+// EinGTE applies the GTE predicate on the "ein" field.
+func EinGTE(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldGTE(FieldEin, v))
+}
+
+// EinLT applies the LT predicate on the "ein" field.
+func EinLT(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldLT(FieldEin, v))
+}
+
+// EinLTE applies the LTE predicate on the "ein" field.
+func EinLTE(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldLTE(FieldEin, v))
+}
+
+// EinContains applies the Contains predicate on the "ein" field.
+func EinContains(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldContains(FieldEin, v))
+}
+
+// EinHasPrefix applies the HasPrefix predicate on the "ein" field.
+func EinHasPrefix(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldHasPrefix(FieldEin, v))
+}
+
+// EinHasSuffix applies the HasSuffix predicate on the "ein" field.
+func EinHasSuffix(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldHasSuffix(FieldEin, v))
+}
+
+// EinIsNil applies the IsNil predicate on the "ein" field.
+func EinIsNil() predicate.Organization {
+	return predicate.Organization(sql.FieldIsNull(FieldEin))
+}
+
+// EinNotNil applies the NotNil predicate on the "ein" field.
+func EinNotNil() predicate.Organization {
+	return predicate.Organization(sql.FieldNotNull(FieldEin))
+}
+
+// EinEqualFold applies the EqualFold predicate on the "ein" field.
+func EinEqualFold(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldEqualFold(FieldEin, v))
+}
+
+// EinContainsFold applies the ContainsFold predicate on the "ein" field.
+func EinContainsFold(v string) predicate.Organization {
+	return predicate.Organization(sql.FieldContainsFold(FieldEin, v))
+}
+
 // AddressLine1EQ applies the EQ predicate on the "address_line1" field.
 func AddressLine1EQ(v string) predicate.Organization {
 	return predicate.Organization(sql.FieldEQ(FieldAddressLine1, v))
@@ -1539,16 +1619,6 @@ func CountryHasPrefix(v string) predicate.Organization {
 // CountryHasSuffix applies the HasSuffix predicate on the "country" field.
 func CountryHasSuffix(v string) predicate.Organization {
 	return predicate.Organization(sql.FieldHasSuffix(FieldCountry, v))
-}
-
-// CountryIsNil applies the IsNil predicate on the "country" field.
-func CountryIsNil() predicate.Organization {
-	return predicate.Organization(sql.FieldIsNull(FieldCountry))
-}
-
-// CountryNotNil applies the NotNil predicate on the "country" field.
-func CountryNotNil() predicate.Organization {
-	return predicate.Organization(sql.FieldNotNull(FieldCountry))
 }
 
 // CountryEqualFold applies the EqualFold predicate on the "country" field.

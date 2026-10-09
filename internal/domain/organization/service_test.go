@@ -157,6 +157,9 @@ func TestService_Update_Profile(t *testing.T) {
 		"work_mode":     {got.WorkMode, "hybrid"},
 		"timezone":      {got.Timezone, "America/Recife"},
 		"currency":      {got.Currency, "USD"},
+		// "Brasil" é uma grafia antiga: o que fica guardado é o código.
+		"country": {got.Country, "BR"},
+		"state":   {got.State, "SP"},
 	} {
 		if pair[0] != pair[1] {
 			t.Errorf("%s = %q, want %q", field, pair[0], pair[1])

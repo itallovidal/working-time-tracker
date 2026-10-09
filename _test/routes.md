@@ -79,7 +79,7 @@ Content-Type: application/json
 | 502 `auth.clerk_unavailable` | O Clerk não respondeu; tente de novo |
 
 ```http
-POST /api/auth/clerk/signup          { "organization_name": "Minha Empresa", "name": "Ana Souza" }   // name é opcional
+POST /api/auth/clerk/signup          { "organization_name": "Minha Empresa", "country": "BR", "name": "Ana Souza" }   // name e country são opcionais
 POST /api/auth/clerk/join            { "invite_id": "<uuid de um convite de no_account.invites>", "name": "…" }
 ```
 
@@ -92,6 +92,7 @@ Content-Type: application/json
 
 {
   "organization_name": "Minha Empresa",
+  "country": "BR",
   "name": "Ana Souza",
   "email": "ana@empresa.com",
   "password": "pelo-menos-8"
@@ -109,7 +110,7 @@ Resposta `201` (e o cookie `wtt_session`):
   "organization_name": "Minha Empresa"
 }
 ```
-O email vira minúsculas e é único no sistema todo. A senha precisa ter entre 8 e 72 caracteres.
+O email vira minúsculas e é único no sistema todo. A senha precisa ter entre 8 e 72 caracteres. `country` é o país da organização (`BR` ou `US`) e é opcional: vazio é `BR`. Ele define a moeda e o fuso de partida (`BRL` e `America/Sao_Paulo`, ou `USD` e `America/New_York`); um país desconhecido responde 400 `auth.invalid_country`. O mesmo vale para o `clerk/signup`.
 
 ### Login
 ```http
@@ -289,11 +290,17 @@ O `GET` devolve todos os campos para qualquer membro. No `PATCH`, **campo que n�
 | `website`, `linkedin_url`, `instagram_url` | Link `http` ou `https`. Sem esquema, vira `https://…` |
 | `contact_email`, `phone` | Email válido; telefone com números, espaços, `+`, parênteses e hífen |
 | `legal_name` | Razão social, até 200 caracteres |
-| `cnpj` | Com ou sem máscara. Os dígitos verificadores são conferidos, inclusive no formato alfanumérico. A resposta traz sem máscara |
-| `address_line1`, `address_line2`, `city`, `state`, `postal_code`, `country` | Texto livre |
+| `country` | O código do país: `BR` (o padrão) ou `US`. Vazio volta para `BR`. Aceita ainda as grafias antigas ("Brasil", "EUA"), e o que fica guardado é o código. Decide o documento fiscal, o formato do estado e do código postal, e o fuso e a moeda padrão |
+| `cnpj` | Documento do Brasil. Com ou sem máscara; os dígitos verificadores são conferidos, inclusive no formato alfanumérico. A resposta traz sem máscara |
+| `ein` | Documento dos EUA, `XX-XXXXXXX`: 9 dígitos, e o prefixo `00` não existe. A resposta traz os 9 dígitos, sem máscara |
+| `state` | Com lista, a sigla (`SP`, `TX`), em qualquer caixa; o nome por extenso também é aceito e vira a sigla. BR: 26 estados e o DF. US: 50 estados, DC, territórios e os códigos militares (`AA`, `AE`, `AP`) |
+| `postal_code` | BR: CEP, de 8 dígitos, guardado como `NNNNN-NNN`. US: ZIP de 5 dígitos, ou ZIP+4 (`NNNNN-NNNN`) |
+| `address_line1`, `address_line2`, `city` | Texto livre |
 | `work_mode` | Regime de trabalho: `remote`, `hybrid` ou `onsite` |
-| `timezone` | Nome IANA, por exemplo `America/Sao_Paulo` (o padrão) |
-| `currency` | `BRL` (o padrão), `USD` ou `EUR` |
+| `timezone` | Nome IANA, por exemplo `America/Sao_Paulo`. Vazio volta para o padrão do país (`America/Sao_Paulo` no BR, `America/New_York` nos US) |
+| `currency` | `BRL`, `USD` ou `EUR`. Vazio volta para o padrão do país (`BRL` no BR, `USD` nos US) |
+
+Cada documento fiscal é conferido pela regra do país dono dele, qualquer que seja o país da organização, então o pedido `{"country":"US","ein":"…"}` não depende da ordem dos campos. **Trocar o país não apaga o documento do outro** (o CNPJ de uma organização que virou `US` continua guardado, e a tela o esconde) e também não muda a moeda nem o fuso. O estado e o código postal que já estão guardados são conferidos pelo país novo: se não servem, o pedido é recusado (`organization.invalid_state` ou `organization.invalid_postal_code`), e mandar os dois vazios no mesmo pedido resolve. Os erros novos são `organization.invalid_country`, `invalid_ein`, `invalid_state` e `invalid_postal_code`.
 
 A duração da sprint e a jornada semanal não são da organização: a sprint fica em cada projeto (`sprint_duration_days`) e a jornada, em cada pessoa (`weekly_hours`).
 
@@ -305,8 +312,18 @@ Content-Type: application/json
   "summary": "Entregas no mesmo dia para o comércio de bairro.",
   "website": "acme-delivery.example",
   "cnpj": "11.222.333/0001-81",
+  "state": "SP",
+  "postal_code": "01310-100",
   "work_mode": "hybrid"
 }
+```
+
+Uma empresa dos EUA:
+```http
+PATCH /api/orgs/:orgId
+Content-Type: application/json
+
+{ "country": "US", "ein": "12-3456789", "state": "TX", "postal_code": "78701", "city": "Austin" }
 ```
 
 ### Convites

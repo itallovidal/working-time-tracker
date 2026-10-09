@@ -41,6 +41,8 @@ const (
 	FieldLegalName = "legal_name"
 	// FieldCnpj holds the string denoting the cnpj field in the database.
 	FieldCnpj = "cnpj"
+	// FieldEin holds the string denoting the ein field in the database.
+	FieldEin = "ein"
 	// FieldAddressLine1 holds the string denoting the address_line1 field in the database.
 	FieldAddressLine1 = "address_line1"
 	// FieldAddressLine2 holds the string denoting the address_line2 field in the database.
@@ -117,6 +119,7 @@ var Columns = []string{
 	FieldInstagramURL,
 	FieldLegalName,
 	FieldCnpj,
+	FieldEin,
 	FieldAddressLine1,
 	FieldAddressLine2,
 	FieldCity,
@@ -140,6 +143,8 @@ func ValidColumn(column string) bool {
 }
 
 var (
+	// DefaultCountry holds the default value on creation for the "country" field.
+	DefaultCountry string
 	// DefaultTimezone holds the default value on creation for the "timezone" field.
 	DefaultTimezone string
 	// DefaultCurrency holds the default value on creation for the "currency" field.
@@ -221,6 +226,11 @@ func ByLegalName(opts ...sql.OrderTermOption) OrderOption {
 // ByCnpj orders the results by the cnpj field.
 func ByCnpj(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCnpj, opts...).ToFunc()
+}
+
+// ByEin orders the results by the ein field.
+func ByEin(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldEin, opts...).ToFunc()
 }
 
 // ByAddressLine1 orders the results by the address_line1 field.

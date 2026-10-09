@@ -748,3 +748,107 @@ func TestMigrate_IssueSyncRules(t *testing.T) {
 		t.Error("deleting the integration must keep the tasks")
 	}
 }
+
+// applyMigrationsBefore recria o schema e aplica as migrações anteriores a uma, para o teste semear o banco como era
+// e só então rodar o arquivo dela.
+func applyMigrationsBefore(t *testing.T, migration string) {
+	t.Helper()
+	testutil.ResetSchema(t, testDB)
+	files, err := os.ReadDir("migrations")
+	if err != nil {
+		t.Fatalf("read migrations: %v", err)
+	}
+	before := fstest.MapFS{}
+	for _, f := range files {
+		if !strings.HasSuffix(f.Name(), ".sql") || f.Name() >= migration {
+			continue
+		}
+		raw, err := os.ReadFile("migrations/" + f.Name())
+		if err != nil {
+			t.Fatalf("read %s: %v", f.Name(), err)
+		}
+		before[f.Name()] = &fstest.MapFile{Data: raw}
+	}
+	provider, err := goose.NewProvider(goose.DialectPostgres, testDB, before)
+	if err != nil {
+		t.Fatalf("goose provider: %v", err)
+	}
+	if _, err := provider.Up(context.Background()); err != nil {
+		t.Fatalf("apply the migrations before %s: %v", migration, err)
+	}
+}
+
+// O país da organização era texto livre e virou o código do cadastro de países. A migração converte o que já existe
+// (os EUA, em qualquer grafia, viram US; o resto vira BR), sem perder o texto de um país desconhecido, e ajusta o CEP e
+// a sigla do estado que já estavam quase certos.
+func TestMigrate_CountryMigrationConvertsTheOldCountryText(t *testing.T) {
+	ctx := context.Background()
+	defer restoreSchema(t)
+	const migration = "20261009033319_organization_country_ein.sql"
+	applyMigrationsBefore(t, migration)
+
+	type legacy struct {
+		name                                        string
+		country, line2, state, postal               any // nil vira NULL
+		wantCountry, wantLine2, wantState, wantPost string
+	}
+	cases := []legacy{
+		{"brasil com CEP sem hífen e sigla minúscula", "Brasil", nil, "sc", "88010000", "BR", "", "SC", "88010-000"},
+		{"país nulo", nil, nil, nil, nil, "BR", "", "", ""},
+		{"país vazio", "  ", nil, "", "", "BR", "", "", ""},
+		{"EUA", "EUA", nil, "tx", "78701", "US", "", "TX", "78701"},
+		{"estados unidos com espaços e maiúsculas", "  United States ", nil, "NY", "10001-1234", "US", "", "NY", "10001-1234"},
+		{"país desconhecido guarda o texto no complemento", "Portugal", "Bloco B", nil, nil, "BR", "Bloco B · Portugal", "", ""},
+		{"país desconhecido sem complemento", "Portugal", nil, nil, nil, "BR", "Portugal", "", ""},
+		{"estado por extenso e CEP fora do padrão ficam como estão", "BR", nil, "São Paulo", "1234", "BR", "", "São Paulo", "1234"},
+		{"CEP com espaço", "BR", nil, nil, "01310 100", "BR", "", "", "01310-100"},
+	}
+	ids := make([]uuid.UUID, len(cases))
+	for i, c := range cases {
+		ids[i] = uuid.New()
+		if _, err := testDB.ExecContext(ctx,
+			`INSERT INTO organizations (id, name, country, address_line2, state, postal_code, created_at) VALUES ($1, $2, $3, $4, $5, $6, now())`,
+			ids[i], c.name, c.country, c.line2, c.state, c.postal); err != nil {
+			t.Fatalf("seed %q: %v", c.name, err)
+		}
+	}
+
+	raw, err := os.ReadFile("migrations/" + migration)
+	if err != nil {
+		t.Fatalf("read migration: %v", err)
+	}
+	if _, err := testDB.ExecContext(ctx, string(raw)); err != nil {
+		t.Fatalf("run %s over the old organizations: %v", migration, err)
+	}
+
+	for i, c := range cases {
+		var country string
+		var line2, state, postal sql.NullString
+		if err := testDB.QueryRowContext(ctx,
+			`SELECT country, address_line2, state, postal_code FROM organizations WHERE id = $1`, ids[i]).
+			Scan(&country, &line2, &state, &postal); err != nil {
+			t.Fatalf("read %q: %v", c.name, err)
+		}
+		if country != c.wantCountry || line2.String != c.wantLine2 || state.String != c.wantState || postal.String != c.wantPost {
+			t.Errorf("%s: country=%q line2=%q state=%q postal=%q; want %q %q %q %q",
+				c.name, country, line2.String, state.String, postal.String, c.wantCountry, c.wantLine2, c.wantState, c.wantPost)
+		}
+	}
+
+	// Depois da migração o país é obrigatório e começa em BR, e o EIN existe e é opcional.
+	fresh := uuid.New()
+	if _, err := testDB.ExecContext(ctx, `INSERT INTO organizations (id, name, created_at) VALUES ($1, 'Nova', now())`, fresh); err != nil {
+		t.Fatalf("insert an organization without a country: %v", err)
+	}
+	var country string
+	var ein sql.NullString
+	if err := testDB.QueryRowContext(ctx, `SELECT country, ein FROM organizations WHERE id = $1`, fresh).Scan(&country, &ein); err != nil {
+		t.Fatalf("read the new organization: %v", err)
+	}
+	if country != "BR" || ein.Valid {
+		t.Errorf("new organization = country %q, ein %v; want BR and no EIN", country, ein)
+	}
+	if _, err := testDB.ExecContext(ctx, `INSERT INTO organizations (id, name, country, created_at) VALUES ($1, 'Sem país', NULL, now())`, uuid.New()); err == nil {
+		t.Error("a NULL country must be refused after the migration")
+	}
+}

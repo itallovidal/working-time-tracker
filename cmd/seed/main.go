@@ -403,7 +403,7 @@ func main() {
 		City:         text("Florianópolis"),
 		State:        text("SC"),
 		PostalCode:   text("88010-000"),
-		Country:      text("Brasil"),
+		Country:      text("BR"),
 		WorkMode:     text("hybrid"),
 	})
 	must(err)

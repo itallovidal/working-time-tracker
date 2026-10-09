@@ -6134,6 +6134,7 @@ type OrganizationMutation struct {
 	instagram_url    *string
 	legal_name       *string
 	cnpj             *string
+	ein              *string
 	address_line1    *string
 	address_line2    *string
 	city             *string
@@ -6911,6 +6912,55 @@ func (m *OrganizationMutation) ResetCnpj() {
 	delete(m.clearedFields, organization.FieldCnpj)
 }
 
+// SetEin sets the "ein" field.
+func (m *OrganizationMutation) SetEin(s string) {
+	m.ein = &s
+}
+
+// Ein returns the value of the "ein" field in the mutation.
+func (m *OrganizationMutation) Ein() (r string, exists bool) {
+	v := m.ein
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEin returns the old "ein" field's value of the Organization entity.
+// If the Organization object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *OrganizationMutation) OldEin(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEin is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEin requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEin: %w", err)
+	}
+	return oldValue.Ein, nil
+}
+
+// ClearEin clears the value of the "ein" field.
+func (m *OrganizationMutation) ClearEin() {
+	m.ein = nil
+	m.clearedFields[organization.FieldEin] = struct{}{}
+}
+
+// EinCleared returns if the "ein" field was cleared in this mutation.
+func (m *OrganizationMutation) EinCleared() bool {
+	_, ok := m.clearedFields[organization.FieldEin]
+	return ok
+}
+
+// ResetEin resets all changes to the "ein" field.
+func (m *OrganizationMutation) ResetEin() {
+	m.ein = nil
+	delete(m.clearedFields, organization.FieldEin)
+}
+
 // SetAddressLine1 sets the "address_line1" field.
 func (m *OrganizationMutation) SetAddressLine1(s string) {
 	m.address_line1 = &s
@@ -7187,22 +7237,9 @@ func (m *OrganizationMutation) OldCountry(ctx context.Context) (v string, err er
 	return oldValue.Country, nil
 }
 
-// ClearCountry clears the value of the "country" field.
-func (m *OrganizationMutation) ClearCountry() {
-	m.country = nil
-	m.clearedFields[organization.FieldCountry] = struct{}{}
-}
-
-// CountryCleared returns if the "country" field was cleared in this mutation.
-func (m *OrganizationMutation) CountryCleared() bool {
-	_, ok := m.clearedFields[organization.FieldCountry]
-	return ok
-}
-
 // ResetCountry resets all changes to the "country" field.
 func (m *OrganizationMutation) ResetCountry() {
 	m.country = nil
-	delete(m.clearedFields, organization.FieldCountry)
 }
 
 // SetWorkMode sets the "work_mode" field.
@@ -7612,7 +7649,7 @@ func (m *OrganizationMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *OrganizationMutation) Fields() []string {
-	fields := make([]string, 0, 23)
+	fields := make([]string, 0, 24)
 	if m.name != nil {
 		fields = append(fields, organization.FieldName)
 	}
@@ -7651,6 +7688,9 @@ func (m *OrganizationMutation) Fields() []string {
 	}
 	if m.cnpj != nil {
 		fields = append(fields, organization.FieldCnpj)
+	}
+	if m.ein != nil {
+		fields = append(fields, organization.FieldEin)
 	}
 	if m.address_line1 != nil {
 		fields = append(fields, organization.FieldAddressLine1)
@@ -7716,6 +7756,8 @@ func (m *OrganizationMutation) Field(name string) (ent.Value, bool) {
 		return m.LegalName()
 	case organization.FieldCnpj:
 		return m.Cnpj()
+	case organization.FieldEin:
+		return m.Ein()
 	case organization.FieldAddressLine1:
 		return m.AddressLine1()
 	case organization.FieldAddressLine2:
@@ -7771,6 +7813,8 @@ func (m *OrganizationMutation) OldField(ctx context.Context, name string) (ent.V
 		return m.OldLegalName(ctx)
 	case organization.FieldCnpj:
 		return m.OldCnpj(ctx)
+	case organization.FieldEin:
+		return m.OldEin(ctx)
 	case organization.FieldAddressLine1:
 		return m.OldAddressLine1(ctx)
 	case organization.FieldAddressLine2:
@@ -7890,6 +7934,13 @@ func (m *OrganizationMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetCnpj(v)
+		return nil
+	case organization.FieldEin:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEin(v)
 		return nil
 	case organization.FieldAddressLine1:
 		v, ok := value.(string)
@@ -8042,6 +8093,9 @@ func (m *OrganizationMutation) ClearedFields() []string {
 	if m.FieldCleared(organization.FieldCnpj) {
 		fields = append(fields, organization.FieldCnpj)
 	}
+	if m.FieldCleared(organization.FieldEin) {
+		fields = append(fields, organization.FieldEin)
+	}
 	if m.FieldCleared(organization.FieldAddressLine1) {
 		fields = append(fields, organization.FieldAddressLine1)
 	}
@@ -8056,9 +8110,6 @@ func (m *OrganizationMutation) ClearedFields() []string {
 	}
 	if m.FieldCleared(organization.FieldPostalCode) {
 		fields = append(fields, organization.FieldPostalCode)
-	}
-	if m.FieldCleared(organization.FieldCountry) {
-		fields = append(fields, organization.FieldCountry)
 	}
 	if m.FieldCleared(organization.FieldWorkMode) {
 		fields = append(fields, organization.FieldWorkMode)
@@ -8113,6 +8164,9 @@ func (m *OrganizationMutation) ClearField(name string) error {
 	case organization.FieldCnpj:
 		m.ClearCnpj()
 		return nil
+	case organization.FieldEin:
+		m.ClearEin()
+		return nil
 	case organization.FieldAddressLine1:
 		m.ClearAddressLine1()
 		return nil
@@ -8127,9 +8181,6 @@ func (m *OrganizationMutation) ClearField(name string) error {
 		return nil
 	case organization.FieldPostalCode:
 		m.ClearPostalCode()
-		return nil
-	case organization.FieldCountry:
-		m.ClearCountry()
 		return nil
 	case organization.FieldWorkMode:
 		m.ClearWorkMode()
@@ -8180,6 +8231,9 @@ func (m *OrganizationMutation) ResetField(name string) error {
 		return nil
 	case organization.FieldCnpj:
 		m.ResetCnpj()
+		return nil
+	case organization.FieldEin:
+		m.ResetEin()
 		return nil
 	case organization.FieldAddressLine1:
 		m.ResetAddressLine1()

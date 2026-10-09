@@ -293,6 +293,26 @@ func (_u *OrganizationUpdate) ClearCnpj() *OrganizationUpdate {
 	return _u
 }
 
+// SetEin sets the "ein" field.
+func (_u *OrganizationUpdate) SetEin(v string) *OrganizationUpdate {
+	_u.mutation.SetEin(v)
+	return _u
+}
+
+// SetNillableEin sets the "ein" field if the given value is not nil.
+func (_u *OrganizationUpdate) SetNillableEin(v *string) *OrganizationUpdate {
+	if v != nil {
+		_u.SetEin(*v)
+	}
+	return _u
+}
+
+// ClearEin clears the value of the "ein" field.
+func (_u *OrganizationUpdate) ClearEin() *OrganizationUpdate {
+	_u.mutation.ClearEin()
+	return _u
+}
+
 // SetAddressLine1 sets the "address_line1" field.
 func (_u *OrganizationUpdate) SetAddressLine1(v string) *OrganizationUpdate {
 	_u.mutation.SetAddressLine1(v)
@@ -404,12 +424,6 @@ func (_u *OrganizationUpdate) SetNillableCountry(v *string) *OrganizationUpdate 
 	if v != nil {
 		_u.SetCountry(*v)
 	}
-	return _u
-}
-
-// ClearCountry clears the value of the "country" field.
-func (_u *OrganizationUpdate) ClearCountry() *OrganizationUpdate {
-	_u.mutation.ClearCountry()
 	return _u
 }
 
@@ -724,6 +738,12 @@ func (_u *OrganizationUpdate) sqlSave(ctx context.Context) (_node int, err error
 	if _u.mutation.CnpjCleared() {
 		_spec.ClearField(organization.FieldCnpj, field.TypeString)
 	}
+	if value, ok := _u.mutation.Ein(); ok {
+		_spec.SetField(organization.FieldEin, field.TypeString, value)
+	}
+	if _u.mutation.EinCleared() {
+		_spec.ClearField(organization.FieldEin, field.TypeString)
+	}
 	if value, ok := _u.mutation.AddressLine1(); ok {
 		_spec.SetField(organization.FieldAddressLine1, field.TypeString, value)
 	}
@@ -756,9 +776,6 @@ func (_u *OrganizationUpdate) sqlSave(ctx context.Context) (_node int, err error
 	}
 	if value, ok := _u.mutation.Country(); ok {
 		_spec.SetField(organization.FieldCountry, field.TypeString, value)
-	}
-	if _u.mutation.CountryCleared() {
-		_spec.ClearField(organization.FieldCountry, field.TypeString)
 	}
 	if value, ok := _u.mutation.WorkMode(); ok {
 		_spec.SetField(organization.FieldWorkMode, field.TypeString, value)
@@ -1233,6 +1250,26 @@ func (_u *OrganizationUpdateOne) ClearCnpj() *OrganizationUpdateOne {
 	return _u
 }
 
+// SetEin sets the "ein" field.
+func (_u *OrganizationUpdateOne) SetEin(v string) *OrganizationUpdateOne {
+	_u.mutation.SetEin(v)
+	return _u
+}
+
+// SetNillableEin sets the "ein" field if the given value is not nil.
+func (_u *OrganizationUpdateOne) SetNillableEin(v *string) *OrganizationUpdateOne {
+	if v != nil {
+		_u.SetEin(*v)
+	}
+	return _u
+}
+
+// ClearEin clears the value of the "ein" field.
+func (_u *OrganizationUpdateOne) ClearEin() *OrganizationUpdateOne {
+	_u.mutation.ClearEin()
+	return _u
+}
+
 // SetAddressLine1 sets the "address_line1" field.
 func (_u *OrganizationUpdateOne) SetAddressLine1(v string) *OrganizationUpdateOne {
 	_u.mutation.SetAddressLine1(v)
@@ -1344,12 +1381,6 @@ func (_u *OrganizationUpdateOne) SetNillableCountry(v *string) *OrganizationUpda
 	if v != nil {
 		_u.SetCountry(*v)
 	}
-	return _u
-}
-
-// ClearCountry clears the value of the "country" field.
-func (_u *OrganizationUpdateOne) ClearCountry() *OrganizationUpdateOne {
-	_u.mutation.ClearCountry()
 	return _u
 }
 
@@ -1694,6 +1725,12 @@ func (_u *OrganizationUpdateOne) sqlSave(ctx context.Context) (_node *Organizati
 	if _u.mutation.CnpjCleared() {
 		_spec.ClearField(organization.FieldCnpj, field.TypeString)
 	}
+	if value, ok := _u.mutation.Ein(); ok {
+		_spec.SetField(organization.FieldEin, field.TypeString, value)
+	}
+	if _u.mutation.EinCleared() {
+		_spec.ClearField(organization.FieldEin, field.TypeString)
+	}
 	if value, ok := _u.mutation.AddressLine1(); ok {
 		_spec.SetField(organization.FieldAddressLine1, field.TypeString, value)
 	}
@@ -1726,9 +1763,6 @@ func (_u *OrganizationUpdateOne) sqlSave(ctx context.Context) (_node *Organizati
 	}
 	if value, ok := _u.mutation.Country(); ok {
 		_spec.SetField(organization.FieldCountry, field.TypeString, value)
-	}
-	if _u.mutation.CountryCleared() {
-		_spec.ClearField(organization.FieldCountry, field.TypeString)
 	}
 	if value, ok := _u.mutation.WorkMode(); ok {
 		_spec.SetField(organization.FieldWorkMode, field.TypeString, value)

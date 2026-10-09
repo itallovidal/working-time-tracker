@@ -44,6 +44,8 @@ type Organization struct {
 	LegalName string `json:"legal_name,omitempty"`
 	// Cnpj holds the value of the "cnpj" field.
 	Cnpj string `json:"cnpj,omitempty"`
+	// Ein holds the value of the "ein" field.
+	Ein string `json:"ein,omitempty"`
 	// AddressLine1 holds the value of the "address_line1" field.
 	AddressLine1 string `json:"address_line1,omitempty"`
 	// AddressLine2 holds the value of the "address_line2" field.
@@ -128,7 +130,7 @@ func (*Organization) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case organization.FieldFoundedYear:
 			values[i] = new(sql.NullInt64)
-		case organization.FieldName, organization.FieldSummary, organization.FieldDescription, organization.FieldIndustry, organization.FieldSize, organization.FieldWebsite, organization.FieldContactEmail, organization.FieldPhone, organization.FieldLinkedinURL, organization.FieldInstagramURL, organization.FieldLegalName, organization.FieldCnpj, organization.FieldAddressLine1, organization.FieldAddressLine2, organization.FieldCity, organization.FieldState, organization.FieldPostalCode, organization.FieldCountry, organization.FieldWorkMode, organization.FieldTimezone, organization.FieldCurrency:
+		case organization.FieldName, organization.FieldSummary, organization.FieldDescription, organization.FieldIndustry, organization.FieldSize, organization.FieldWebsite, organization.FieldContactEmail, organization.FieldPhone, organization.FieldLinkedinURL, organization.FieldInstagramURL, organization.FieldLegalName, organization.FieldCnpj, organization.FieldEin, organization.FieldAddressLine1, organization.FieldAddressLine2, organization.FieldCity, organization.FieldState, organization.FieldPostalCode, organization.FieldCountry, organization.FieldWorkMode, organization.FieldTimezone, organization.FieldCurrency:
 			values[i] = new(sql.NullString)
 		case organization.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
@@ -233,6 +235,12 @@ func (_m *Organization) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field cnpj", values[i])
 			} else if value.Valid {
 				_m.Cnpj = value.String
+			}
+		case organization.FieldEin:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field ein", values[i])
+			} else if value.Valid {
+				_m.Ein = value.String
 			}
 		case organization.FieldAddressLine1:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -390,6 +398,9 @@ func (_m *Organization) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("cnpj=")
 	builder.WriteString(_m.Cnpj)
+	builder.WriteString(", ")
+	builder.WriteString("ein=")
+	builder.WriteString(_m.Ein)
 	builder.WriteString(", ")
 	builder.WriteString("address_line1=")
 	builder.WriteString(_m.AddressLine1)

@@ -199,6 +199,20 @@ func (_c *OrganizationCreate) SetNillableCnpj(v *string) *OrganizationCreate {
 	return _c
 }
 
+// SetEin sets the "ein" field.
+func (_c *OrganizationCreate) SetEin(v string) *OrganizationCreate {
+	_c.mutation.SetEin(v)
+	return _c
+}
+
+// SetNillableEin sets the "ein" field if the given value is not nil.
+func (_c *OrganizationCreate) SetNillableEin(v *string) *OrganizationCreate {
+	if v != nil {
+		_c.SetEin(*v)
+	}
+	return _c
+}
+
 // SetAddressLine1 sets the "address_line1" field.
 func (_c *OrganizationCreate) SetAddressLine1(v string) *OrganizationCreate {
 	_c.mutation.SetAddressLine1(v)
@@ -448,6 +462,10 @@ func (_c *OrganizationCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (_c *OrganizationCreate) defaults() {
+	if _, ok := _c.mutation.Country(); !ok {
+		v := organization.DefaultCountry
+		_c.mutation.SetCountry(v)
+	}
 	if _, ok := _c.mutation.Timezone(); !ok {
 		v := organization.DefaultTimezone
 		_c.mutation.SetTimezone(v)
@@ -470,6 +488,9 @@ func (_c *OrganizationCreate) defaults() {
 func (_c *OrganizationCreate) check() error {
 	if _, ok := _c.mutation.Name(); !ok {
 		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "Organization.name"`)}
+	}
+	if _, ok := _c.mutation.Country(); !ok {
+		return &ValidationError{Name: "country", err: errors.New(`ent: missing required field "Organization.country"`)}
 	}
 	if _, ok := _c.mutation.Timezone(); !ok {
 		return &ValidationError{Name: "timezone", err: errors.New(`ent: missing required field "Organization.timezone"`)}
@@ -566,6 +587,10 @@ func (_c *OrganizationCreate) createSpec() (*Organization, *sqlgraph.CreateSpec)
 	if value, ok := _c.mutation.Cnpj(); ok {
 		_spec.SetField(organization.FieldCnpj, field.TypeString, value)
 		_node.Cnpj = value
+	}
+	if value, ok := _c.mutation.Ein(); ok {
+		_spec.SetField(organization.FieldEin, field.TypeString, value)
+		_node.Ein = value
 	}
 	if value, ok := _c.mutation.AddressLine1(); ok {
 		_spec.SetField(organization.FieldAddressLine1, field.TypeString, value)

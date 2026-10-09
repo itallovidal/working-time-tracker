@@ -6,6 +6,8 @@ import (
 	_ "time/tzdata" // o binário valida fusos mesmo onde o sistema não tem a base instalada
 	"unicode/utf8"
 
+	"working-time-tracker/internal/apperr"
+	"working-time-tracker/internal/country"
 	"working-time-tracker/internal/domain/person"
 	"working-time-tracker/internal/validate"
 )
@@ -81,7 +83,8 @@ func apply(org *Organization, in UpdateInput) error {
 		org.Name = name
 	}
 
-	// Textos livres: só o tamanho é conferido.
+	// Textos livres: só o tamanho é conferido. O estado e o código postal também passam pelas regras do país, mais abaixo;
+	// o tamanho vem primeiro, para um texto enorme dar "campo longo demais" e não "formato inválido".
 	for _, f := range []struct {
 		dst   *string
 		src   *string
@@ -96,7 +99,6 @@ func apply(org *Organization, in UpdateInput) error {
 		{&org.City, in.City, "city", 100},
 		{&org.State, in.State, "state", 100},
 		{&org.PostalCode, in.PostalCode, "postal_code", 16},
-		{&org.Country, in.Country, "country", 100},
 	} {
 		if f.src == nil {
 			continue
@@ -115,6 +117,39 @@ func apply(org *Organization, in UpdateInput) error {
 			return err
 		}
 		org.Summary = v
+	}
+
+	// País: o código do cadastro, e vazio volta para o padrão. Vem antes de tudo o que depende dele.
+	countryChanged := false
+	if in.Country != nil {
+		code := country.Default
+		if v := strings.TrimSpace(*in.Country); v != "" {
+			parsed, ok := country.Parse(v)
+			if !ok {
+				return ErrInvalidCountry
+			}
+			code = parsed
+		}
+		countryChanged = code != org.Country
+		org.Country = code
+	}
+	profile := profileOf(org.Country)
+
+	// O estado e o código postal seguem o país. Se o país mudou e o campo não veio, o valor guardado é conferido pelo país
+	// novo, e um valor que não serve é recusado: nada é apagado em silêncio.
+	if in.State != nil || countryChanged {
+		v, ok := profile.NormalizeState(org.State)
+		if !ok {
+			return ErrInvalidState
+		}
+		org.State = v
+	}
+	if in.PostalCode != nil || countryChanged {
+		v, ok := profile.NormalizePostal(org.PostalCode)
+		if !ok {
+			return ErrInvalidPostalCode
+		}
+		org.PostalCode = v
 	}
 
 	for _, f := range []struct{ dst, src *string }{
@@ -150,16 +185,24 @@ func apply(org *Organization, in UpdateInput) error {
 		}
 		org.Phone = v
 	}
-	if in.CNPJ != nil {
-		v := strings.TrimSpace(*in.CNPJ)
+	// Os documentos fiscais, um por país do cadastro. Cada um é conferido pela regra do país dono dele, qualquer que seja o
+	// país da organização: o PATCH {"country":"US","ein":"..."} não depende da ordem dos campos, e trocar de país não
+	// apaga o documento do outro.
+	refs := legalIDRefs(org, in)
+	for _, c := range country.All() {
+		ref, ok := refs[c.LegalID.Field]
+		if !ok || ref.src == nil {
+			continue
+		}
+		v := strings.TrimSpace(*ref.src)
 		if v != "" {
-			normalized, ok := validate.CNPJ(v)
+			normalized, ok := c.LegalID.Normalize(v)
 			if !ok {
-				return ErrInvalidCNPJ
+				return ref.err
 			}
 			v = normalized
 		}
-		org.CNPJ = v
+		*ref.dst = v
 	}
 	if in.Size != nil {
 		v := strings.TrimSpace(*in.Size)
@@ -183,11 +226,11 @@ func apply(org *Organization, in UpdateInput) error {
 		org.WorkMode = v
 	}
 
-	// Fuso e moeda sempre têm valor: vazio volta para o padrão.
+	// Fuso e moeda sempre têm valor: vazio volta para o padrão do país.
 	if in.Timezone != nil {
 		v := strings.TrimSpace(*in.Timezone)
 		if v == "" {
-			v = DefaultTimezone
+			v = profile.Timezone
 		}
 		if _, err := time.LoadLocation(v); err != nil || v == "Local" {
 			return ErrInvalidTimezone
@@ -197,7 +240,7 @@ func apply(org *Organization, in UpdateInput) error {
 	if in.Currency != nil {
 		v := strings.ToUpper(strings.TrimSpace(*in.Currency))
 		if v == "" {
-			v = DefaultCurrency
+			v = profile.Currency
 		}
 		if !currencies[v] {
 			return ErrInvalidCurrency
@@ -205,6 +248,31 @@ func apply(org *Organization, in UpdateInput) error {
 		org.Currency = v
 	}
 	return nil
+}
+
+// profileOf devolve as regras do país de uma organização. Um código que o cadastro não conhece (um dado antigo, escrito à
+// mão) cai no país padrão, para a organização continuar editável.
+func profileOf(code string) *country.Country {
+	if c, ok := country.Get(code); ok {
+		return c
+	}
+	return country.MustGet(country.Default)
+}
+
+// legalIDRef liga um documento fiscal à coluna da organização, ao valor que veio no PATCH e ao erro dele.
+type legalIDRef struct {
+	dst *string
+	src *string
+	err *apperr.Error
+}
+
+// legalIDRefs liga o documento de cada país do cadastro (country.LegalID.Field) à coluna da organização. É a lista a
+// mexer quando um país com documento novo entra; um teste confere que nenhum documento do cadastro ficou de fora.
+func legalIDRefs(org *Organization, in UpdateInput) map[string]legalIDRef {
+	return map[string]legalIDRef{
+		"cnpj": {&org.CNPJ, in.CNPJ, ErrInvalidCNPJ},
+		"ein":  {&org.EIN, in.EIN, ErrInvalidEIN},
+	}
 }
 
 // maxLen confere o tamanho de um campo de texto. field é o nome do campo na API,

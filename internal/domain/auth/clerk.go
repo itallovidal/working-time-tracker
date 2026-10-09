@@ -85,6 +85,8 @@ type ClerkLoginInput struct {
 type ClerkSignupInput struct {
 	OrganizationName string `json:"organization_name"`
 	Name             string `json:"name"`
+	// Country é o código do país da organização (BR, US); vazio é o país padrão.
+	Country string `json:"country"`
 }
 
 type ClerkJoinInput struct {
@@ -227,6 +229,10 @@ func (s *Service) ClerkSignup(ctx context.Context, sessionToken string, in Clerk
 	if orgName == "" {
 		return nil, ErrOrgNameRequired
 	}
+	profile, err := signupCountry(in.Country)
+	if err != nil {
+		return nil, err
+	}
 	if err := s.clerkNoPerson(ident, email); err != nil {
 		return nil, err
 	}
@@ -237,6 +243,9 @@ func (s *Service) ClerkSignup(ctx context.Context, sessionToken string, in Clerk
 	now := s.now()
 	id, err := s.store.CreateAccount(NewAccount{
 		OrganizationName: orgName,
+		Country:          profile.Code,
+		Currency:         profile.Currency,
+		Timezone:         profile.Timezone,
 		Name:             accountName(in.Name, ident.Name, email),
 		Email:            email,
 		ClerkUserID:      &ident.UserID,

@@ -71,6 +71,7 @@ func (s *Store) Update(org *Organization) error {
 		SetInstagramURL(org.InstagramURL).
 		SetLegalName(org.LegalName).
 		SetCnpj(org.CNPJ).
+		SetEin(org.EIN).
 		SetAddressLine1(org.AddressLine1).
 		SetAddressLine2(org.AddressLine2).
 		SetCity(org.City).
@@ -130,6 +131,7 @@ func toDomainOrg(e *ent.Organization) *Organization {
 		InstagramURL: e.InstagramURL,
 		LegalName:    e.LegalName,
 		CNPJ:         e.Cnpj,
+		EIN:          e.Ein,
 		AddressLine1: e.AddressLine1,
 		AddressLine2: e.AddressLine2,
 		City:         e.City,

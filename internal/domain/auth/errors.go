@@ -17,6 +17,7 @@ var (
 	ErrAccountExists       = apperr.New("auth.account_exists", http.StatusConflict)
 	ErrNameRequired        = apperr.New("auth.name_required", http.StatusBadRequest)
 	ErrOrgNameRequired     = apperr.New("auth.org_name_required", http.StatusBadRequest)
+	ErrInvalidCountry      = apperr.New("auth.invalid_country", http.StatusBadRequest)
 	ErrWeakPassword        = apperr.New("auth.weak_password", http.StatusBadRequest)
 	ErrLongPassword        = apperr.New("auth.long_password", http.StatusBadRequest)
 	ErrAdminOnly           = apperr.New("auth.admin_only", http.StatusForbidden)

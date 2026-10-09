@@ -44,7 +44,7 @@ func fail(c *echo.Context, err error) error {
 	case errors.Is(err, ErrInviteInvalid), errors.Is(err, database.ErrNotFound):
 		status = http.StatusNotFound
 	case errors.Is(err, ErrWeakPassword), errors.Is(err, ErrLongPassword),
-		errors.Is(err, ErrNameRequired), errors.Is(err, ErrOrgNameRequired),
+		errors.Is(err, ErrNameRequired), errors.Is(err, ErrOrgNameRequired), errors.Is(err, ErrInvalidCountry),
 		errors.Is(err, ErrInviteEmailMismatch), errors.Is(err, ErrWrongPassword),
 		errors.Is(err, person.ErrInvalidEmail), errors.Is(err, person.ErrInvalidRole):
 		status = http.StatusBadRequest

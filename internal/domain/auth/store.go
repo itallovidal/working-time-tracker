@@ -25,16 +25,19 @@ func NewStore(client *ent.Client) *Store {
 type NewAccount struct {
 	OrganizationID   *uuid.UUID // nil cria uma organização nova com OrganizationName
 	OrganizationName string
-	Name             string
-	Email            string
-	PasswordHash     *string // nil: a conta entra só pelo Clerk, sem senha
-	ClerkUserID      *string
-	Role             string
-	IsOwner          bool // só o signup cria o dono, junto com a organização
-	SessionHash      string
-	SessionExpires   time.Time
-	InviteID         *uuid.UUID // convite a marcar como aceito na mesma transação
-	Now              time.Time
+	// Country, Currency e Timezone são os da organização nova (os padrões do país escolhido); não valem quando a pessoa
+	// entra numa organização que já existe.
+	Country, Currency, Timezone string
+	Name                        string
+	Email                       string
+	PasswordHash                *string // nil: a conta entra só pelo Clerk, sem senha
+	ClerkUserID                 *string
+	Role                        string
+	IsOwner                     bool // só o signup cria o dono, junto com a organização
+	SessionHash                 string
+	SessionExpires              time.Time
+	InviteID                    *uuid.UUID // convite a marcar como aceito na mesma transação
+	Now                         time.Time
 }
 
 // CreateAccount cria (se preciso) a organização, a pessoa e a sessão numa transação.
@@ -66,7 +69,11 @@ func (s *Store) CreateAccount(a NewAccount) (*Identity, error) {
 
 	var org *ent.Organization
 	if a.OrganizationID == nil {
-		org, err = tx.Organization.Create().SetName(a.OrganizationName).Save(ctx)
+		create := tx.Organization.Create().SetName(a.OrganizationName)
+		if a.Country != "" {
+			create = create.SetCountry(a.Country).SetCurrency(a.Currency).SetTimezone(a.Timezone)
+		}
+		org, err = create.Save(ctx)
 	} else {
 		org, err = tx.Organization.Get(ctx, *a.OrganizationID)
 	}

@@ -58,11 +58,12 @@ func TestSignup_Validation(t *testing.T) {
 		in   SignupInput
 		want error
 	}{
-		{"email repetido", SignupInput{"Outra", "Bia", "ANA@acme.com", "senha-forte-1"}, ErrEmailInUse},
-		{"senha curta", SignupInput{"Outra", "Bia", "bia@acme.com", "curta"}, ErrWeakPassword},
-		{"sem organização", SignupInput{"  ", "Bia", "bia@acme.com", "senha-forte-1"}, ErrOrgNameRequired},
-		{"sem nome", SignupInput{"Outra", "", "bia@acme.com", "senha-forte-1"}, ErrNameRequired},
-		{"email inválido", SignupInput{"Outra", "Bia", "bia", "senha-forte-1"}, person.ErrInvalidEmail},
+		{"email repetido", SignupInput{OrganizationName: "Outra", Name: "Bia", Email: "ANA@acme.com", Password: "senha-forte-1"}, ErrEmailInUse},
+		{"senha curta", SignupInput{OrganizationName: "Outra", Name: "Bia", Email: "bia@acme.com", Password: "curta"}, ErrWeakPassword},
+		{"sem organização", SignupInput{OrganizationName: "  ", Name: "Bia", Email: "bia@acme.com", Password: "senha-forte-1"}, ErrOrgNameRequired},
+		{"sem nome", SignupInput{OrganizationName: "Outra", Name: "", Email: "bia@acme.com", Password: "senha-forte-1"}, ErrNameRequired},
+		{"email inválido", SignupInput{OrganizationName: "Outra", Name: "Bia", Email: "bia", Password: "senha-forte-1"}, person.ErrInvalidEmail},
+		{"país inválido", SignupInput{OrganizationName: "Outra", Name: "Bia", Email: "bia@acme.com", Password: "senha-forte-1", Country: "Portugal"}, ErrInvalidCountry},
 	}
 	for _, tc := range cases {
 		if _, _, err := svc.Signup(tc.in); !errors.Is(err, tc.want) {
@@ -234,5 +235,39 @@ func TestOnboarding_OnlyTheOwnerNeedsItAndTheFirstDismissalCounts(t *testing.T) 
 	}
 	if p.OnboardedAt == nil || !p.OnboardedAt.Truncate(time.Millisecond).Equal(first.Truncate(time.Millisecond)) {
 		t.Errorf("onboarded_at = %v, want the first dismissal at %v", p.OnboardedAt, first)
+	}
+}
+
+// O país escolhido no cadastro decide a moeda e o fuso da organização nova. Sem país, é o padrão (o Brasil), como era
+// antes de o campo existir; um alias antigo ("EUA") ainda é entendido.
+func TestSignup_CountrySetsTheOrganizationDefaults(t *testing.T) {
+	cases := []struct {
+		name, country, wantCountry, wantCurrency, wantTimezone string
+	}{
+		{"sem país", "", "BR", "BRL", "America/Sao_Paulo"},
+		{"brasil em minúsculas", " br ", "BR", "BRL", "America/Sao_Paulo"},
+		{"estados unidos", "US", "US", "USD", "America/New_York"},
+		{"alias", "EUA", "US", "USD", "America/New_York"},
+	}
+	for i, tc := range cases {
+		svc, _ := newService(t)
+		id, _, err := svc.Signup(SignupInput{
+			OrganizationName: "Acme", Name: "Ana", Email: "ana" + string(rune('a'+i)) + "@acme.com",
+			Password: "senha-forte-1", Country: tc.country,
+		})
+		if err != nil {
+			t.Fatalf("%s: signup: %v", tc.name, err)
+		}
+		org, err := testClient.Organization.Get(bg, id.OrganizationID)
+		if err != nil {
+			t.Fatalf("%s: load the organization: %v", tc.name, err)
+		}
+		if org.Country != tc.wantCountry || org.Currency != tc.wantCurrency || org.Timezone != tc.wantTimezone {
+			t.Errorf("%s: organization = %s %s %s, want %s %s %s", tc.name,
+				org.Country, org.Currency, org.Timezone, tc.wantCountry, tc.wantCurrency, tc.wantTimezone)
+		}
+		if id.OrganizationCurrency != tc.wantCurrency {
+			t.Errorf("%s: identity currency = %q, want %q", tc.name, id.OrganizationCurrency, tc.wantCurrency)
+		}
 	}
 }

@@ -67,6 +67,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `auth.clerk_invite_failed` | 502 | — | `o serviço de login não aceitou o convite. Confira o email e tente de novo` | `the sign-in service did not accept the invitation. Check the email and try again` |
 | `auth.clerk_token_invalid` | 401 | — | `não foi possível confirmar o seu login. Entre de novo` | `could not confirm your sign-in. Sign in again` |
 | `auth.clerk_unavailable` | 502 | — | `o serviço de login não respondeu. Tente de novo em instantes` | `the sign-in service did not answer. Try again in a moment` |
+| `auth.invalid_country` | 400 | — | `país inválido: use um código como BR ou US` | `invalid country: use a code like BR or US` |
 | `auth.invalid_credentials` | 401 | — | `email ou senha incorretos` | `wrong email or password` |
 | `auth.invite_email_mismatch` | 400 | — | `este convite foi feito para outro email` | `this invitation was made for another email` |
 | `auth.invite_invalid` | 404 | — | `este convite não é válido: ele expirou, foi revogado ou já foi usado` | `this invitation is not valid: it expired, was revoked or was already used` |
@@ -190,11 +191,15 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `organization.field_too_long` | 400 | `field`, `max` | `{{.field}} pode ter até {{.max}} caracteres` | `{{.field}} can have up to {{.max}} characters` |
 | `organization.has_projects` | 400 | — | `exclua todos os projetos antes de excluir a organização` | `delete all projects before deleting the organization` |
 | `organization.invalid_cnpj` | 400 | — | `CNPJ inválido: confira os números e os dígitos verificadores` | `invalid CNPJ: check the numbers and the check digits` |
+| `organization.invalid_country` | 400 | — | `país inválido: use um código como BR ou US` | `invalid country: use a code like BR or US` |
 | `organization.invalid_currency` | 400 | — | `moeda inválida: use BRL, USD ou EUR` | `invalid currency: use BRL, USD or EUR` |
+| `organization.invalid_ein` | 400 | — | `EIN inválido: use 9 dígitos, por exemplo 12-3456789` | `invalid EIN: use 9 digits, for example 12-3456789` |
 | `organization.invalid_email` | 400 | — | `informe um email de contato válido` | `enter a valid contact email` |
 | `organization.invalid_founded_year` | 400 | — | `o ano de fundação deve ficar entre 1900 e o ano atual` | `the year founded must be between 1900 and the current year` |
 | `organization.invalid_phone` | 400 | — | `telefone inválido: use números, espaços, +, parênteses e hífen` | `invalid phone: use digits, spaces, +, parentheses and hyphen` |
+| `organization.invalid_postal_code` | 400 | — | `código postal inválido para o país da organização (CEP no Brasil, ZIP nos EUA)` | `invalid postal code for the organization's country (CEP in Brazil, ZIP in the US)` |
 | `organization.invalid_size` | 400 | — | `porte inválido: use 1-10, 11-50, 51-200, 201-500 ou 500+` | `invalid size: use 1-10, 11-50, 51-200, 201-500 or 500+` |
+| `organization.invalid_state` | 400 | — | `estado inválido para o país da organização: use a sigla, por exemplo SP ou TX` | `invalid state for the organization's country: use the abbreviation, for example SP or TX` |
 | `organization.invalid_timezone` | 400 | — | `fuso horário inválido: use um nome como America/Sao_Paulo` | `invalid time zone: use a name like America/Sao_Paulo` |
 | `organization.invalid_url` | 400 | — | `endereço inválido: use um link http ou https, por exemplo https://exemplo.com.br` | `invalid address: use an http or https link, for example https://example.com` |
 | `organization.invalid_work_mode` | 400 | — | `regime de trabalho inválido: use remote, hybrid ou onsite` | `invalid work mode: use remote, hybrid or onsite` |

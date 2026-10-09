@@ -10,6 +10,7 @@ import (
 
 	"working-time-tracker/ent"
 	"working-time-tracker/internal/adapter"
+	"working-time-tracker/internal/country"
 	"working-time-tracker/internal/database"
 	"working-time-tracker/internal/domain/person"
 )
@@ -43,6 +44,22 @@ type SignupInput struct {
 	Name             string `json:"name"`
 	Email            string `json:"email"`
 	Password         string `json:"password"`
+	// Country é o código do país da organização (BR, US). Vazio é o país padrão, como era antes de o campo existir.
+	Country string `json:"country"`
+}
+
+// signupCountry confere o país de quem cria a organização. Vazio é o país padrão: quem chama a API sem o campo continua
+// recebendo uma organização brasileira.
+func signupCountry(raw string) (*country.Country, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return country.MustGet(country.Default), nil
+	}
+	code, ok := country.Parse(raw)
+	if !ok {
+		return nil, ErrInvalidCountry
+	}
+	return country.MustGet(code), nil
 }
 
 // Signup cria uma organização nova com a pessoa como admin e já abre a sessão.
@@ -50,6 +67,10 @@ func (s *Service) Signup(in SignupInput) (*Identity, string, error) {
 	orgName := strings.TrimSpace(in.OrganizationName)
 	if orgName == "" {
 		return nil, "", ErrOrgNameRequired
+	}
+	profile, err := signupCountry(in.Country)
+	if err != nil {
+		return nil, "", err
 	}
 	name, email, hash, err := s.validateAccount(in.Name, in.Email, in.Password)
 	if err != nil {
@@ -62,6 +83,9 @@ func (s *Service) Signup(in SignupInput) (*Identity, string, error) {
 	now := s.now()
 	id, err := s.store.CreateAccount(NewAccount{
 		OrganizationName: orgName,
+		Country:          profile.Code,
+		Currency:         profile.Currency,
+		Timezone:         profile.Timezone,
 		Name:             name,
 		Email:            email,
 		PasswordHash:     &hash,

@@ -33,15 +33,18 @@ func (Organization) Fields() []ent.Field {
 		field.String("linkedin_url").Optional(),
 		field.String("instagram_url").Optional(),
 
-		// Dados jurídicos. O CNPJ fica sem máscara.
+		// Dados jurídicos. O país é o código (BR, US) e decide quais deles valem: o CNPJ é do Brasil, o EIN é dos EUA, e o
+		// estado e o código postal seguem o formato do país. Os documentos ficam sem máscara. Trocar o país não apaga o
+		// documento do outro, só o esconde. Quem decide as regras de cada país é internal/country.
 		field.String("legal_name").Optional(),
 		field.String("cnpj").Optional(),
+		field.String("ein").Optional(),
 		field.String("address_line1").Optional(),
 		field.String("address_line2").Optional(),
 		field.String("city").Optional(),
 		field.String("state").Optional(),
 		field.String("postal_code").Optional(),
-		field.String("country").Optional(),
+		field.String("country").Default("BR"),
 
 		// Como a organização trabalha. Sprint, daily e weekly ficam no projeto, porque
 		// projetos diferentes podem trabalhar de formas diferentes.

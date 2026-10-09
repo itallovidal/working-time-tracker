@@ -133,7 +133,7 @@ func TestErrors_FieldTooLongCarriesTheFieldAndTheLimit(t *testing.T) {
 	admin := signup(t, e, "Org", "ana@test.com")
 	limits := map[string]int{
 		"name": 120, "long_description": 2000, "industry": 100, "legal_name": 200, "address_line1": 200,
-		"address_line2": 200, "city": 100, "state": 100, "postal_code": 16, "country": 100, "summary": 160,
+		"address_line2": 200, "city": 100, "state": 100, "postal_code": 16, "summary": 160,
 	}
 	jsonName := map[string]string{"long_description": "description"}
 

@@ -79,6 +79,33 @@ func TestClerkSignup_CreatesOwnerWithoutPassword(t *testing.T) {
 	}
 }
 
+func TestClerkSignup_CountrySetsTheOrganizationDefaults(t *testing.T) {
+	svc, fake := newClerkService(t)
+	token := clerkUser(fake, "user_us", "joe@acme.com", "Joe Smith")
+	res, err := svc.ClerkSignup(bg, token, ClerkSignupInput{OrganizationName: "Acme Inc", Country: "us"})
+	if err != nil {
+		t.Fatalf("clerk signup: %v", err)
+	}
+	org, err := testClient.Organization.Get(bg, res.Identity.OrganizationID)
+	if err != nil {
+		t.Fatalf("load the organization: %v", err)
+	}
+	if org.Country != "US" || org.Currency != "USD" || org.Timezone != "America/New_York" {
+		t.Errorf("organization = %s %s %s, want US USD America/New_York", org.Country, org.Currency, org.Timezone)
+	}
+
+	// Sem país é o padrão, e um país que o cadastro não conhece é recusado antes de criar qualquer coisa.
+	svc2, fake2 := newClerkService(t)
+	token2 := clerkUser(fake2, "user_br", "ana@acme.com", "Ana")
+	if _, err := svc2.ClerkSignup(bg, token2, ClerkSignupInput{OrganizationName: "Acme", Country: "Portugal"}); !errors.Is(err, ErrInvalidCountry) {
+		t.Errorf("unknown country: err = %v, want ErrInvalidCountry", err)
+	}
+	res2 := mustClerkSignup(t, svc2, token2, "Acme")
+	if org2, _ := testClient.Organization.Get(bg, res2.Identity.OrganizationID); org2 == nil || org2.Country != "BR" || org2.Currency != "BRL" {
+		t.Errorf("without a country the organization must be BR/BRL: %+v", org2)
+	}
+}
+
 func TestClerkSignup_Validation(t *testing.T) {
 	svc, fake := newClerkService(t)
 	token := clerkUser(fake, "user_1", "ana@acme.com", "")

@@ -138,16 +138,20 @@ func init() {
 	label.DefaultID = labelDescID.Default.(func() uuid.UUID)
 	organizationFields := schema.Organization{}.Fields()
 	_ = organizationFields
+	// organizationDescCountry is the schema descriptor for country field.
+	organizationDescCountry := organizationFields[20].Descriptor()
+	// organization.DefaultCountry holds the default value on creation for the country field.
+	organization.DefaultCountry = organizationDescCountry.Default.(string)
 	// organizationDescTimezone is the schema descriptor for timezone field.
-	organizationDescTimezone := organizationFields[21].Descriptor()
+	organizationDescTimezone := organizationFields[22].Descriptor()
 	// organization.DefaultTimezone holds the default value on creation for the timezone field.
 	organization.DefaultTimezone = organizationDescTimezone.Default.(string)
 	// organizationDescCurrency is the schema descriptor for currency field.
-	organizationDescCurrency := organizationFields[22].Descriptor()
+	organizationDescCurrency := organizationFields[23].Descriptor()
 	// organization.DefaultCurrency holds the default value on creation for the currency field.
 	organization.DefaultCurrency = organizationDescCurrency.Default.(string)
 	// organizationDescCreatedAt is the schema descriptor for created_at field.
-	organizationDescCreatedAt := organizationFields[23].Descriptor()
+	organizationDescCreatedAt := organizationFields[24].Descriptor()
 	// organization.DefaultCreatedAt holds the default value on creation for the created_at field.
 	organization.DefaultCreatedAt = organizationDescCreatedAt.Default.(func() time.Time)
 	// organizationDescID is the schema descriptor for id field.
