@@ -174,7 +174,10 @@ permissions:
   keys:
     project_edit:
       name: Edit the project
-      about: Name, description, sprint, daily, weekly and the customer meeting, and deleting the project.
+      about: Name, description, sprint, daily, weekly and the customer meeting.
+    project_delete:
+      name: Delete the project
+      about: Delete the project, with its hours and rates. There is no undoing it.
     teams_manage:
       name: Manage teams
       about: Create, edit and delete teams and choose who is in each one.

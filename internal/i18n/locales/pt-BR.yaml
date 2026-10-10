@@ -184,7 +184,10 @@ permissions:
   keys:
     project_edit:
       name: Alterar o projeto
-      about: Nome, descrição, sprint, daily, weekly e a reunião com o cliente, e excluir o projeto.
+      about: Nome, descrição, sprint, daily, weekly e a reunião com o cliente.
+    project_delete:
+      name: Excluir o projeto
+      about: Excluir o projeto, com as horas e os valores dele. Quem o exclui não tem como desfazer.
     teams_manage:
       name: Cuidar dos times
       about: Criar, editar e excluir times e escolher quem está em cada um.

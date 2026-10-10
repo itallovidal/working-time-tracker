@@ -127,7 +127,7 @@ func RegisterRoutes(e *echo.Echo, h Handlers, m *auth.Middleware, authLimiter ec
 
 	r.GET("/projects/:projectId", h.Project.Get, prj)
 	r.PATCH("/projects/:projectId", h.Project.Update, prj, can(permission.ProjectEdit))
-	r.DELETE("/projects/:projectId", h.Project.Delete, prj, can(permission.ProjectEdit))
+	r.DELETE("/projects/:projectId", h.Project.Delete, prj, can(permission.ProjectDelete))
 	// A visão geral soma o que o projeto custou e rendeu: de quem vê o faturamento.
 	r.GET("/projects/:projectId/overview", h.Overview.Get, prj, can(permission.BillingView))
 	r.POST("/projects/:projectId/teams", h.Team.Create, prj, can(permission.TeamsManage))

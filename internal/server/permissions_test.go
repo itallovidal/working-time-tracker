@@ -373,8 +373,8 @@ func TestPermissions_CatalogAndIdentity(t *testing.T) {
 		t.Fatalf("GET /api/permissions = %d", rec.Code)
 	}
 	cat := decode(t, rec)
-	if p, _ := cat["project"].([]any); len(p) != 9 {
-		t.Errorf("project permissions = %v, want 9", cat["project"])
+	if p, _ := cat["project"].([]any); len(p) != 10 {
+		t.Errorf("project permissions = %v, want 10", cat["project"])
 	}
 	if o, _ := cat["organization"].([]any); len(o) != 3 {
 		t.Errorf("organization permissions = %v, want 3", cat["organization"])

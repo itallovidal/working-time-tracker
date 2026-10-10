@@ -127,13 +127,17 @@
       {{end}}
       <p class="form-error" x-show="errors.save" x-text="errors.save" role="alert"></p>
       <p class="form-error" x-show="errors.delete" x-text="errors.delete" role="alert"></p>
+      {{if .CanDo "project.delete"}}
       <div class="confirm" x-cloak x-show="confirmDelete">
         <span>{{.T "project_settings.delete_confirm"}}</span>
         <button type="button" class="btn btn-danger btn-sm" :disabled="pending" @click="remove()">{{.T "common.delete"}}</button>
         <button type="button" class="btn btn-ghost btn-sm" @click="confirmDelete = false">{{.T "common.cancel"}}</button>
       </div>
+      {{end}}
       <div class="toolbar" x-show="!confirmDelete">
+        {{if .CanDo "project.delete"}}
         <button type="button" class="btn btn-danger-ghost" @click="confirmDelete = true">{{template "icon" "trash"}} {{.T "project_settings.delete_title"}}</button>
+        {{end}}
         <div class="row">
           <button type="button" class="btn btn-secondary" @click="$store.modal.dismiss()">{{.T "common.cancel"}}</button>
           <button type="submit" class="btn" :disabled="pending">{{.T "common.save"}}</button>

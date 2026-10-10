@@ -12,7 +12,8 @@ import "slices"
 
 // Permissões do escopo do projeto.
 const (
-	ProjectEdit         = "project.edit"         // alterar e excluir o projeto, e a aba Configurações
+	ProjectEdit         = "project.edit"         // alterar o projeto, e a aba Configurações
+	ProjectDelete       = "project.delete"       // excluir o projeto, com as horas e os valores dele
 	TeamsManage         = "teams.manage"         // criar, editar e excluir times e escolher quem está neles
 	CollaboratorsManage = "collaborators.manage" // pôr e tirar pessoas do projeto, e escolher o grupo delas
 	RatesView           = "rates.view"           // ver o valor pago aos outros e as horas de todos
@@ -34,7 +35,7 @@ const (
 // as telas as mostram.
 var (
 	ProjectKeys = []string{
-		ProjectEdit, TeamsManage, CollaboratorsManage, RatesView, RatesManage,
+		ProjectEdit, ProjectDelete, TeamsManage, CollaboratorsManage, RatesView, RatesManage,
 		BillingView, BillingManage, LabelsManage, IntegrationsManage,
 	}
 	OrganizationKeys = []string{ProjectsCreate, CustomersManage, PeopleManage}
