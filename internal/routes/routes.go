@@ -81,14 +81,15 @@ func RegisterRoutes(e *echo.Echo, h Handlers, m *auth.Middleware, authLimiter ec
 	r.POST("/auth/onboarding/complete", h.Auth.CompleteOnboarding)
 
 	r.GET("/orgs/:orgId", h.Organization.Get, org)
-	r.PATCH("/orgs/:orgId", h.Organization.Update, org, admin)
+	// Os dados da organização são do dono.
+	r.PATCH("/orgs/:orgId", h.Organization.Update, org, owner)
 	r.DELETE("/orgs/:orgId", h.Organization.Delete, org, owner)
 	r.GET("/orgs/:orgId/persons", h.Person.ListByOrg, org)
 	r.POST("/orgs/:orgId/projects", h.Project.Create, org, admin)
 	r.GET("/orgs/:orgId/projects", h.Project.ListByOrg, org)
-	// A visão geral da organização soma o dinheiro de todos os projetos e o tempo de cada pessoa: só dos admins.
-	// Os pagamentos da equipe são dinheiro e horas de todos: só de admins.
-	r.GET("/orgs/:orgId/payments", h.Payment.Team, org, admin)
+	// A visão geral da organização soma o tempo de cada pessoa e o custo de todos os projetos: dos admins, sem a
+	// cobrança e a margem (que são do dono). Os pagamentos da equipe são dinheiro e horas de todos: só do dono.
+	r.GET("/orgs/:orgId/payments", h.Payment.Team, org, orgCan(permission.PaymentsManage))
 	r.GET("/orgs/:orgId/overview", h.Overview.Organization, org, admin)
 	// Quem está com o ponto aberto e em que tarefas, sem tempo nem dinheiro: a bolinha da lista de tarefas e a
 	// coluna "Agora" dos colaboradores. Também só dos admins.
@@ -101,11 +102,12 @@ func RegisterRoutes(e *echo.Echo, h Handlers, m *auth.Middleware, authLimiter ec
 	r.GET("/orgs/:orgId/invites", h.Auth.ListInvites, org, orgCan(permission.PeopleManage))
 	r.DELETE("/invites/:inviteId", h.Auth.RevokeInvite, inv, orgCan(permission.PeopleManage))
 	// O convite que já deixa pronto o projeto (valor, time e permissões) e a lista dos pendentes dele. Quem
-	// convida precisa da permissão de pessoas da organização e das de pôr alguém no projeto com valor.
-	r.POST("/projects/:projectId/invites", h.ProjectInvite.Create, prj, orgCan(permission.PeopleManage), can(permission.CollaboratorsManage, permission.RatesManage))
+	// convida precisa das permissões de pôr alguém no projeto com valor: o administrador de projeto convida para o
+	// projeto dele, sem precisar da permissão de pessoas da organização.
+	r.POST("/projects/:projectId/invites", h.ProjectInvite.Create, prj, can(permission.CollaboratorsManage, permission.RatesManage))
 	r.GET("/projects/:projectId/invites", h.ProjectInvite.List, prj, can(permission.CollaboratorsManage))
 
-	// Os clientes são de quem cuida deles: admins e quem recebeu essa permissão.
+	// Os clientes são do dono.
 	customers := orgCan(permission.CustomersManage)
 	r.POST("/orgs/:orgId/customers", h.Customer.Create, org, customers)
 	r.GET("/orgs/:orgId/customers", h.Customer.ListByOrg, org, customers)
@@ -115,21 +117,22 @@ func RegisterRoutes(e *echo.Echo, h Handlers, m *auth.Middleware, authLimiter ec
 
 	r.GET("/persons/:personId", h.Person.Get, per)
 	r.PATCH("/persons/:personId", h.Person.Update, per, m.RequireSelfOrAdmin("personId"))
-	// Os papéis e as permissões da organização são só do dono.
+	// Os papéis são só do dono: as permissões da organização decorrem do cargo, e não se dão uma a uma.
 	r.PATCH("/persons/:personId/role", h.Person.SetRole, per, owner)
-	r.PATCH("/persons/:personId/permissions", h.Person.SetPermissions, per, owner)
 	r.PATCH("/persons/:personId/weekly-hours", h.Person.SetWeeklyHours, per, orgCan(permission.PeopleManage))
-	r.PATCH("/persons/:personId/payment", h.Person.SetPayment, per, orgCan(permission.PeopleManage))
+	// A regra de pagamento é dinheiro: só do dono.
+	r.PATCH("/persons/:personId/payment", h.Person.SetPayment, per, orgCan(permission.PaymentsManage))
 	// O handler só entrega os valores à própria pessoa ou a um admin.
 	r.GET("/persons/:personId/allocations", h.Allocation.ListByPerson, per)
-	// O handler só entrega os pagamentos à própria pessoa ou a um admin.
+	// O handler só entrega os pagamentos à própria pessoa ou ao dono.
 	r.GET("/persons/:personId/payments", h.Payment.ByPerson, per)
 
 	r.GET("/projects/:projectId", h.Project.Get, prj)
 	r.PATCH("/projects/:projectId", h.Project.Update, prj, can(permission.ProjectEdit))
 	r.DELETE("/projects/:projectId", h.Project.Delete, prj, can(permission.ProjectDelete))
-	// A visão geral soma o que o projeto custou e rendeu: de quem vê o faturamento.
-	r.GET("/projects/:projectId/overview", h.Overview.Get, prj, can(permission.BillingView))
+	// A visão geral é de quem cuida do projeto: o que ele rendeu (a cobrança, a receita e a margem) o handler só
+	// entrega a quem vê o faturamento.
+	r.GET("/projects/:projectId/overview", h.Overview.Get, prj, can(permission.ProjectKeys...))
 	r.POST("/projects/:projectId/teams", h.Team.Create, prj, can(permission.TeamsManage))
 	r.GET("/projects/:projectId/teams", h.Team.ListByProject, prj)
 	r.GET("/projects/:projectId/members", h.Team.ListProjectMembers, prj)

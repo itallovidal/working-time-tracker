@@ -18,14 +18,14 @@ const (
 	projectSetKey = "auth.project_set"
 )
 
-// ProjectPermissions devolve o que a pessoa logada pode fazer no projeto da rota: tudo,
-// para os admins, e o que a alocação dela libera, para os outros. Quem monta isso é o
-// RequireOrg da rota; numa rota sem projeto, só os admins têm algo.
+// ProjectPermissions devolve o que a pessoa logada pode fazer no projeto da rota: o que o cargo dá e o que a
+// alocação dela libera. Quem monta isso é o RequireOrg da rota; numa rota sem projeto vale só o cargo
+// (BaseProjectSet).
 func ProjectPermissions(c *echo.Context) permission.Set {
 	if set, ok := c.Get(projectSetKey).(permission.Set); ok {
 		return set
 	}
-	return permission.Set{All: CurrentPerson(c).IsAdmin()}
+	return BaseProjectSet(CurrentPerson(c))
 }
 
 // CurrentPerson devolve a pessoa logada, ou nil quando a requisição não tem sessão.
@@ -131,8 +131,20 @@ func (m *Middleware) RequireOwner(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 }
 
-// RequireOrgPermission libera a rota para quem tem a permissão da organização: os
-// admins e quem o dono liberou.
+// RequireOwnerPage faz a mesma checagem do RequireOwner para páginas, com a resposta de 404 dada.
+func (m *Middleware) RequireOwnerPage(notFound echo.HandlerFunc) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c *echo.Context) error {
+			if me := CurrentPerson(c); me == nil || !me.IsOwner {
+				return notFound(c)
+			}
+			return next(c)
+		}
+	}
+}
+
+// RequireOrgPermission libera a rota para quem tem a permissão da organização, que decorre do cargo: o dono tem
+// todas, e o admin as de criar projeto e cuidar das pessoas.
 func (m *Middleware) RequireOrgPermission(key string) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c *echo.Context) error {

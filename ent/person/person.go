@@ -30,8 +30,6 @@ const (
 	FieldRole = "role"
 	// FieldIsOwner holds the string denoting the is_owner field in the database.
 	FieldIsOwner = "is_owner"
-	// FieldPermissions holds the string denoting the permissions field in the database.
-	FieldPermissions = "permissions"
 	// FieldWeeklyHours holds the string denoting the weekly_hours field in the database.
 	FieldWeeklyHours = "weekly_hours"
 	// FieldPaymentFrequency holds the string denoting the payment_frequency field in the database.
@@ -121,7 +119,6 @@ var Columns = []string{
 	FieldClerkUserID,
 	FieldRole,
 	FieldIsOwner,
-	FieldPermissions,
 	FieldWeeklyHours,
 	FieldPaymentFrequency,
 	FieldPaymentDay,

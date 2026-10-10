@@ -102,12 +102,6 @@ func (_c *PersonCreate) SetNillableIsOwner(v *bool) *PersonCreate {
 	return _c
 }
 
-// SetPermissions sets the "permissions" field.
-func (_c *PersonCreate) SetPermissions(v []string) *PersonCreate {
-	_c.mutation.SetPermissions(v)
-	return _c
-}
-
 // SetWeeklyHours sets the "weekly_hours" field.
 func (_c *PersonCreate) SetWeeklyHours(v int) *PersonCreate {
 	_c.mutation.SetWeeklyHours(v)
@@ -440,10 +434,6 @@ func (_c *PersonCreate) createSpec() (*Person, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.IsOwner(); ok {
 		_spec.SetField(person.FieldIsOwner, field.TypeBool, value)
 		_node.IsOwner = value
-	}
-	if value, ok := _c.mutation.Permissions(); ok {
-		_spec.SetField(person.FieldPermissions, field.TypeJSON, value)
-		_node.Permissions = value
 	}
 	if value, ok := _c.mutation.WeeklyHours(); ok {
 		_spec.SetField(person.FieldWeeklyHours, field.TypeInt, value)

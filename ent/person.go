@@ -3,7 +3,6 @@
 package ent
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -34,8 +33,6 @@ type Person struct {
 	Role person.Role `json:"role,omitempty"`
 	// IsOwner holds the value of the "is_owner" field.
 	IsOwner bool `json:"is_owner,omitempty"`
-	// Permissions holds the value of the "permissions" field.
-	Permissions []string `json:"permissions,omitempty"`
 	// WeeklyHours holds the value of the "weekly_hours" field.
 	WeeklyHours *int `json:"weekly_hours,omitempty"`
 	// PaymentFrequency holds the value of the "payment_frequency" field.
@@ -145,8 +142,6 @@ func (*Person) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case person.FieldPermissions:
-			values[i] = new([]byte)
 		case person.FieldIsOwner:
 			values[i] = new(sql.NullBool)
 		case person.FieldWeeklyHours, person.FieldPaymentDay:
@@ -221,14 +216,6 @@ func (_m *Person) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field is_owner", values[i])
 			} else if value.Valid {
 				_m.IsOwner = value.Bool
-			}
-		case person.FieldPermissions:
-			if value, ok := values[i].(*[]byte); !ok {
-				return fmt.Errorf("unexpected type %T for field permissions", values[i])
-			} else if value != nil && len(*value) > 0 {
-				if err := json.Unmarshal(*value, &_m.Permissions); err != nil {
-					return fmt.Errorf("unmarshal field permissions: %w", err)
-				}
 			}
 		case person.FieldWeeklyHours:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -363,9 +350,6 @@ func (_m *Person) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("is_owner=")
 	builder.WriteString(fmt.Sprintf("%v", _m.IsOwner))
-	builder.WriteString(", ")
-	builder.WriteString("permissions=")
-	builder.WriteString(fmt.Sprintf("%v", _m.Permissions))
 	builder.WriteString(", ")
 	if v := _m.WeeklyHours; v != nil {
 		builder.WriteString("weekly_hours=")

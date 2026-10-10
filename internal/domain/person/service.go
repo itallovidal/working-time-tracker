@@ -9,7 +9,6 @@ import (
 
 	"working-time-tracker/internal/apperr"
 	"working-time-tracker/internal/database"
-	"working-time-tracker/internal/domain/permission"
 	"working-time-tracker/internal/validate"
 )
 
@@ -162,22 +161,6 @@ func (s *Service) SetRole(id, role string) (*Person, error) {
 		return nil, ErrInvalidRole.With("field", "role")
 	}
 	return s.store.SetRole(id, role)
-}
-
-// SetPermissions define as permissões da organização de quem não é admin: admins já
-// têm todas, e guardar uma lista para eles confundiria a tela.
-func (s *Service) SetPermissions(id string, keys []string) (*Person, error) {
-	if !permission.Valid(keys, permission.OrganizationKeys) {
-		return nil, ErrInvalidPermission.With("field", "permissions")
-	}
-	p, err := s.store.GetByID(id)
-	if err != nil {
-		return nil, err
-	}
-	if p.Role == RoleAdmin {
-		return nil, ErrAdminHasAll.With("field", "permissions")
-	}
-	return s.store.SetPermissions(id, permission.Normalize(keys, permission.OrganizationKeys))
 }
 
 // SetWeeklyHours define a jornada semanal da pessoa. nil ou zero apaga.

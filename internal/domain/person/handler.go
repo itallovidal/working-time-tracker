@@ -33,8 +33,6 @@ type Handler struct {
 	// seesWeeklyHours devolve, para o pedido, quem tem a jornada semanal à vista; nil não esconde nada. A função
 	// é montada uma vez por pedido, para a lista não consultar o banco a cada pessoa.
 	seesWeeklyHours func(c *echo.Context) (func(personID uuid.UUID) bool, error)
-	// seesPermissions diz se quem pede vê a lista de permissões da organização da pessoa; nil não esconde nada.
-	seesPermissions func(c *echo.Context, personID uuid.UUID) bool
 }
 
 func NewHandler(svc *Service) *Handler {
@@ -61,12 +59,6 @@ func (h *Handler) SetWeeklyHoursGuard(f func(c *echo.Context) (func(personID uui
 	h.seesWeeklyHours = f
 }
 
-// SetPermissionsGuard liga a regra de quem vê a lista de permissões da organização de uma pessoa: ela mesma, o dono
-// e os admins. Os colegas veem o papel e o e-mail, e permissions chega vazio.
-func (h *Handler) SetPermissionsGuard(f func(c *echo.Context, personID uuid.UUID) bool) {
-	h.seesPermissions = f
-}
-
 // redactWeeklyHours apaga a jornada das pessoas que quem pede não vê.
 func (h *Handler) redactWeeklyHours(c *echo.Context, people ...*Person) error {
 	if h.seesWeeklyHours == nil {
@@ -82,12 +74,6 @@ func (h *Handler) redactWeeklyHours(c *echo.Context, people ...*Person) error {
 		}
 	}
 	return nil
-}
-
-func (h *Handler) redactPermissions(c *echo.Context, p *Person) {
-	if h.seesPermissions != nil && !h.seesPermissions(c, p.ID) {
-		p.Permissions = []string{}
-	}
 }
 
 func (h *Handler) redactPayment(c *echo.Context, p *Person) {
@@ -118,7 +104,6 @@ func (h *Handler) ListByOrg(c *echo.Context) error {
 	}
 	for i := range persons {
 		h.redactPayment(c, &persons[i])
-		h.redactPermissions(c, &persons[i])
 	}
 	ptrs := make([]*Person, len(persons))
 	for i := range persons {
@@ -144,7 +129,6 @@ func (h *Handler) Get(c *echo.Context) error {
 		return apperr.Respond(c, http.StatusInternalServerError, err)
 	}
 	h.redactPayment(c, person)
-	h.redactPermissions(c, person)
 	if err := h.redactWeeklyHours(c, person); err != nil {
 		return apperr.Respond(c, http.StatusInternalServerError, err)
 	}
@@ -176,22 +160,6 @@ func (h *Handler) SetRole(c *echo.Context) error {
 		return apperr.Respond(c, http.StatusBadRequest, apperr.BindError(err))
 	}
 	person, err := h.svc.SetRole(id, body.Role)
-	if err != nil {
-		return fail(c, err)
-	}
-	return c.JSON(http.StatusOK, person)
-}
-
-// SetPermissions define as permissões da organização de quem não é admin. A rota é só
-// do dono.
-func (h *Handler) SetPermissions(c *echo.Context) error {
-	var body struct {
-		Permissions []string `json:"permissions"`
-	}
-	if err := c.Bind(&body); err != nil {
-		return apperr.Respond(c, http.StatusBadRequest, apperr.BindError(err))
-	}
-	person, err := h.svc.SetPermissions(c.Param("personId"), body.Permissions)
 	if err != nil {
 		return fail(c, err)
 	}

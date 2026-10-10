@@ -7876,8 +7876,6 @@ type PersonMutation struct {
 	clerk_user_id           *string
 	role                    *person.Role
 	is_owner                *bool
-	permissions             *[]string
-	appendpermissions       []string
 	weekly_hours            *int
 	addweekly_hours         *int
 	payment_frequency       *string
@@ -8292,71 +8290,6 @@ func (m *PersonMutation) OldIsOwner(ctx context.Context) (v bool, err error) {
 // ResetIsOwner resets all changes to the "is_owner" field.
 func (m *PersonMutation) ResetIsOwner() {
 	m.is_owner = nil
-}
-
-// SetPermissions sets the "permissions" field.
-func (m *PersonMutation) SetPermissions(s []string) {
-	m.permissions = &s
-	m.appendpermissions = nil
-}
-
-// Permissions returns the value of the "permissions" field in the mutation.
-func (m *PersonMutation) Permissions() (r []string, exists bool) {
-	v := m.permissions
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldPermissions returns the old "permissions" field's value of the Person entity.
-// If the Person object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *PersonMutation) OldPermissions(ctx context.Context) (v []string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldPermissions is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldPermissions requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldPermissions: %w", err)
-	}
-	return oldValue.Permissions, nil
-}
-
-// AppendPermissions adds s to the "permissions" field.
-func (m *PersonMutation) AppendPermissions(s []string) {
-	m.appendpermissions = append(m.appendpermissions, s...)
-}
-
-// AppendedPermissions returns the list of values that were appended to the "permissions" field in this mutation.
-func (m *PersonMutation) AppendedPermissions() ([]string, bool) {
-	if len(m.appendpermissions) == 0 {
-		return nil, false
-	}
-	return m.appendpermissions, true
-}
-
-// ClearPermissions clears the value of the "permissions" field.
-func (m *PersonMutation) ClearPermissions() {
-	m.permissions = nil
-	m.appendpermissions = nil
-	m.clearedFields[person.FieldPermissions] = struct{}{}
-}
-
-// PermissionsCleared returns if the "permissions" field was cleared in this mutation.
-func (m *PersonMutation) PermissionsCleared() bool {
-	_, ok := m.clearedFields[person.FieldPermissions]
-	return ok
-}
-
-// ResetPermissions resets all changes to the "permissions" field.
-func (m *PersonMutation) ResetPermissions() {
-	m.permissions = nil
-	m.appendpermissions = nil
-	delete(m.clearedFields, person.FieldPermissions)
 }
 
 // SetWeeklyHours sets the "weekly_hours" field.
@@ -9067,7 +9000,7 @@ func (m *PersonMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *PersonMutation) Fields() []string {
-	fields := make([]string, 0, 14)
+	fields := make([]string, 0, 13)
 	if m.name != nil {
 		fields = append(fields, person.FieldName)
 	}
@@ -9088,9 +9021,6 @@ func (m *PersonMutation) Fields() []string {
 	}
 	if m.is_owner != nil {
 		fields = append(fields, person.FieldIsOwner)
-	}
-	if m.permissions != nil {
-		fields = append(fields, person.FieldPermissions)
 	}
 	if m.weekly_hours != nil {
 		fields = append(fields, person.FieldWeeklyHours)
@@ -9132,8 +9062,6 @@ func (m *PersonMutation) Field(name string) (ent.Value, bool) {
 		return m.Role()
 	case person.FieldIsOwner:
 		return m.IsOwner()
-	case person.FieldPermissions:
-		return m.Permissions()
 	case person.FieldWeeklyHours:
 		return m.WeeklyHours()
 	case person.FieldPaymentFrequency:
@@ -9169,8 +9097,6 @@ func (m *PersonMutation) OldField(ctx context.Context, name string) (ent.Value, 
 		return m.OldRole(ctx)
 	case person.FieldIsOwner:
 		return m.OldIsOwner(ctx)
-	case person.FieldPermissions:
-		return m.OldPermissions(ctx)
 	case person.FieldWeeklyHours:
 		return m.OldWeeklyHours(ctx)
 	case person.FieldPaymentFrequency:
@@ -9240,13 +9166,6 @@ func (m *PersonMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetIsOwner(v)
-		return nil
-	case person.FieldPermissions:
-		v, ok := value.([]string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetPermissions(v)
 		return nil
 	case person.FieldWeeklyHours:
 		v, ok := value.(int)
@@ -9353,9 +9272,6 @@ func (m *PersonMutation) ClearedFields() []string {
 	if m.FieldCleared(person.FieldClerkUserID) {
 		fields = append(fields, person.FieldClerkUserID)
 	}
-	if m.FieldCleared(person.FieldPermissions) {
-		fields = append(fields, person.FieldPermissions)
-	}
 	if m.FieldCleared(person.FieldWeeklyHours) {
 		fields = append(fields, person.FieldWeeklyHours)
 	}
@@ -9390,9 +9306,6 @@ func (m *PersonMutation) ClearField(name string) error {
 		return nil
 	case person.FieldClerkUserID:
 		m.ClearClerkUserID()
-		return nil
-	case person.FieldPermissions:
-		m.ClearPermissions()
 		return nil
 	case person.FieldWeeklyHours:
 		m.ClearWeeklyHours()
@@ -9437,9 +9350,6 @@ func (m *PersonMutation) ResetField(name string) error {
 		return nil
 	case person.FieldIsOwner:
 		m.ResetIsOwner()
-		return nil
-	case person.FieldPermissions:
-		m.ResetPermissions()
 		return nil
 	case person.FieldWeeklyHours:
 		m.ResetWeeklyHours()

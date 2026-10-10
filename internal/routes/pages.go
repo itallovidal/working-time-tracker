@@ -36,12 +36,14 @@ func RegisterPages(e *echo.Echo, p *page.Handler, m *auth.Middleware, oauth *int
 	g.GET("/orgs/:orgId/about", p.About, org)
 	// Os projetos de quem olha: a página é de todos, e a API entrega a cada um só os dele.
 	g.GET("/orgs/:orgId/projects", p.OrgProjects, org)
-	// A tela de edição da organização, os pagamentos da equipe e o perfil de um colaborador são só de admins (os dois
-	// últimos são dinheiro); Colaboradores e Clientes, de quem cuida deles.
+	// A tela de edição da organização e os pagamentos da equipe são só do dono (o segundo é dinheiro); o perfil de
+	// um colaborador é dos admins, sem pagamentos nem receita; Colaboradores é de quem cuida das pessoas, e
+	// Clientes, do dono.
 	admin := m.RequireAdminPage(p.NotFound)
+	owner := m.RequireOwnerPage(p.NotFound)
 	orgCan := func(key string) echo.MiddlewareFunc { return m.RequireOrgPermissionPage(p.NotFound, key) }
-	g.GET("/orgs/:orgId/settings", p.OrgSettings, org, admin)
-	g.GET("/orgs/:orgId/payments", p.Payments, org, admin)
+	g.GET("/orgs/:orgId/settings", p.OrgSettings, org, owner)
+	g.GET("/orgs/:orgId/payments", p.Payments, org, owner)
 	g.GET("/orgs/:orgId/people", p.People, org, orgCan(permission.PeopleManage))
 	g.GET("/orgs/:orgId/people/:personId", p.Person, org, admin, m.RequireOrgPage(auth.KindPerson, "personId", p.NotFound))
 	g.GET("/orgs/:orgId/customers", p.Customers, org, orgCan(permission.CustomersManage))
@@ -58,7 +60,7 @@ func RegisterPages(e *echo.Echo, p *page.Handler, m *auth.Middleware, oauth *int
 	// mostra, e quem não tem nenhuma recebe o 404.
 	can := func(keys ...string) echo.MiddlewareFunc { return m.RequireProjectPermissionPage(p.NotFound, keys...) }
 	g.GET("/projects/:projectId/management", p.Management, prj, can(permission.ProjectKeys...))
-	g.GET("/projects/:projectId/management/overview", p.Overview, prj, can(permission.BillingView))
+	g.GET("/projects/:projectId/management/overview", p.Overview, prj, can(permission.ProjectKeys...))
 	g.GET("/projects/:projectId/management/teams", p.Teams, prj, can(permission.CollaboratorsManage, permission.TeamsManage, permission.RatesView, permission.RatesManage))
 	g.GET("/projects/:projectId/management/integrations", p.Integrations, prj, can(permission.IntegrationsManage))
 	// Conectar com o GitHub: a ida leva a pessoa a autorizar lá (a mesma permissão da aba), a volta

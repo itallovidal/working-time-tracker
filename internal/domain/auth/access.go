@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"net/http"
+	"slices"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v5"
@@ -128,36 +129,66 @@ func (r *Resolver) ProjectOf(kind Kind, id string) (uuid.UUID, error) {
 	return uuid.Nil, nil
 }
 
-// ProjectSet devolve o que a pessoa pode fazer no projeto: tudo, para os admins, e o que
-// a alocação dela no projeto libera, para os outros.
-func (r *Resolver) ProjectSet(me *Identity, projectID uuid.UUID) (permission.Set, error) {
-	if me.IsAdmin() {
-		return permission.Set{All: true}, nil
+// BaseProjectSet é o que o cargo dá em qualquer projeto, antes da alocação: tudo, para o dono; o que o admin tem em
+// todo projeto (permission.AdminProjectKeys, sem a cobrança), para o admin; nada, para os outros. É o único lugar
+// que decide isso: ProjectSet, ProjectAccess e o ProjectPermissions de uma rota sem projeto partem dele.
+func BaseProjectSet(me *Identity) permission.Set {
+	switch {
+	case me == nil:
+		return permission.Set{}
+	case me.IsOwner:
+		return permission.Set{All: true}
+	case me.IsAdmin():
+		return permission.Set{Keys: append([]string{}, permission.AdminProjectKeys...)}
 	}
-	if me == nil {
-		return permission.Set{}, nil
+	return permission.Set{}
+}
+
+// withGroup soma ao conjunto do cargo as permissões do grupo da alocação, que o dono pode ter dado a um admin
+// (por exemplo o financeiro, para um projeto).
+func withGroup(base permission.Set, groupKeys []string) permission.Set {
+	if base.All {
+		return base
+	}
+	keys := append([]string{}, base.Keys...)
+	for _, k := range permission.Normalize(groupKeys, permission.ProjectKeys) {
+		if !slices.Contains(keys, k) {
+			keys = append(keys, k)
+		}
+	}
+	return permission.Set{Keys: permission.Normalize(keys, permission.ProjectKeys)}
+}
+
+// ProjectSet devolve o que a pessoa pode fazer no projeto: o que o cargo dá (BaseProjectSet) mais o que a alocação
+// dela no projeto libera.
+func (r *Resolver) ProjectSet(me *Identity, projectID uuid.UUID) (permission.Set, error) {
+	base := BaseProjectSet(me)
+	if me == nil || base.All {
+		return base, nil
 	}
 	a, err := r.client.Allocation.Query().
 		Where(entalloc.ProjectIDEQ(projectID), entalloc.PersonIDEQ(me.PersonID)).
 		Only(context.Background())
 	if ent.IsNotFound(err) {
-		return permission.Set{}, nil
+		return base, nil
 	}
 	if err != nil {
 		return permission.Set{}, err
 	}
-	return permission.Set{Keys: permission.Normalize(a.Permissions, permission.ProjectKeys)}, nil
+	return withGroup(base, a.Permissions), nil
 }
 
-// ProjectAccess diz se a pessoa está no projeto e o que ela pode nele. Os admins estão em todos e podem tudo.
-// Quem não é admin só está nos projetos em que tem valor por hora ou em cujo time está, e as permissões
-// vêm do que a alocação dele libera (um time sem alocação dá acesso, mas nenhuma permissão).
+// ProjectAccess diz se a pessoa está no projeto e o que ela pode nele. Os admins estão em todos, com o que o cargo
+// dá (BaseProjectSet) mais o grupo da alocação, se tiverem uma. Quem não é admin só está nos projetos em que tem
+// valor por hora ou em cujo time está, e as permissões vêm do que a alocação dele libera (um time sem alocação dá
+// acesso, mas nenhuma permissão).
 func (r *Resolver) ProjectAccess(me *Identity, projectID uuid.UUID) (set permission.Set, in bool, err error) {
-	if me.IsAdmin() {
-		return permission.Set{All: true}, true, nil
-	}
 	if me == nil {
 		return permission.Set{}, false, nil
+	}
+	if me.IsAdmin() {
+		set, err = r.ProjectSet(me, projectID)
+		return set, true, err
 	}
 	ctx := context.Background()
 	a, err := r.client.Allocation.Query().
@@ -227,8 +258,9 @@ func (m *Middleware) requireOrg(kind Kind, param string, deny echo.HandlerFunc) 
 			// Num recurso de projeto, quem não é admin só passa se estiver no projeto, e as permissões
 			// dele nele ficam à mão das rotas e dos handlers que vêm depois. Quem não está recebe a
 			// mesma resposta de um projeto que não existe, para não revelar que ele existe. Os admins
-			// têm tudo em todos os projetos: para eles nada se consulta.
-			if me := CurrentPerson(c); !me.IsAdmin() {
+			// estão em todos os projetos, mas com o que o cargo dá a eles (sem a cobrança), então também têm o
+			// conjunto montado aqui. Só o dono tem tudo em todos: para ele nada se consulta.
+			if me := CurrentPerson(c); me != nil && !me.IsOwner {
 				if projectID, err := m.resolver.ProjectOf(kind, c.Param(param)); err == nil && projectID != uuid.Nil {
 					set, in, err := m.resolver.ProjectAccess(me, projectID)
 					if err != nil {

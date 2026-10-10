@@ -1,11 +1,12 @@
 // Package permission é o catálogo do que cada pessoa pode fazer, além do que todo
 // mundo já faz (ver as próprias tarefas, bater o próprio ponto).
 //
-// O dono e os admins da organização podem tudo. Os outros têm só o que foi liberado, em
-// dois escopos: o do projeto, que vale num projeto só e fica na alocação da pessoa nele,
-// e o da organização, que vale em todos e fica na própria pessoa. Ao adicionar alguém a
-// um projeto escolhe-se um grupo (Preset), que é uma lista pronta de permissões do
-// projeto; cada permissão avulsa pode vir depois.
+// Os cargos são quatro: o dono (tudo, inclusive o dinheiro), o admin (cria projetos internos, convida pessoas e
+// administra todos os projetos, sem cliente, cobrança nem pagamentos), o administrador de projeto (o grupo manager
+// de um projeto) e o colaborador. As permissões têm dois escopos: o do projeto, que vale num projeto só e fica na
+// alocação da pessoa nele, e o da organização, que decorre do cargo (OrgKeysFor) e não é dada pessoa a pessoa. Ao
+// adicionar alguém a um projeto escolhe-se um grupo (Preset), que é uma lista pronta de permissões do projeto;
+// cada permissão avulsa pode vir depois.
 package permission
 
 import "slices"
@@ -24,11 +25,12 @@ const (
 	IntegrationsManage  = "integrations.manage"  // criar, editar e excluir as integrações
 )
 
-// Permissões do escopo da organização.
+// Permissões do escopo da organização. Decorrem do cargo (OrgKeysFor): ninguém as recebe avulsas.
 const (
-	ProjectsCreate  = "projects.create"  // criar projetos
-	CustomersManage = "customers.manage" // cadastrar e alterar os clientes
+	ProjectsCreate  = "projects.create"  // criar projetos internos (o dono cria também com cliente)
+	CustomersManage = "customers.manage" // cadastrar e alterar os clientes: só o dono
 	PeopleManage    = "people.manage"    // convidar pessoas e definir a jornada semanal
+	PaymentsManage  = "payments.manage"  // os pagamentos da equipe e a regra de pagamento de cada pessoa: só o dono
 )
 
 // ProjectKeys e OrganizationKeys são as permissões de cada escopo, na ordem em que
@@ -38,8 +40,28 @@ var (
 		ProjectEdit, ProjectDelete, TeamsManage, CollaboratorsManage, RatesView, RatesManage,
 		BillingView, BillingManage, LabelsManage, IntegrationsManage,
 	}
-	OrganizationKeys = []string{ProjectsCreate, CustomersManage, PeopleManage}
+	// OrganizationKeys é o discriminador de Data.Can e do JavaScript: uma chave daqui vale na organização inteira, e
+	// não no projeto da página.
+	OrganizationKeys = []string{ProjectsCreate, CustomersManage, PeopleManage, PaymentsManage}
+	// AdminProjectKeys é o que o admin tem em todo projeto: tudo do projeto, menos o dinheiro de cobrança (ver e
+	// definir o cliente e o valor cobrado), que é do dono. O custo de cada pessoa (rates.*) ele vê e define.
+	AdminProjectKeys = []string{
+		ProjectEdit, ProjectDelete, TeamsManage, CollaboratorsManage, RatesView, RatesManage,
+		LabelsManage, IntegrationsManage,
+	}
 )
+
+// OrgKeysFor devolve as permissões da organização do cargo: o dono tem todas; o admin cria projeto (interno) e cuida
+// das pessoas; o colaborador, nenhuma. Nada disso fica gravado na pessoa.
+func OrgKeysFor(role string, isOwner bool) []string {
+	switch {
+	case isOwner:
+		return append([]string{}, OrganizationKeys...)
+	case role == "admin":
+		return []string{ProjectsCreate, PeopleManage}
+	}
+	return []string{}
+}
 
 // Os grupos pré-definidos do projeto.
 const (

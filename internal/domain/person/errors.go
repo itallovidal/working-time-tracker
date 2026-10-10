@@ -15,8 +15,6 @@ var (
 	ErrInvalidRole         = apperr.New("person.invalid_role", http.StatusBadRequest)
 	ErrLastAdmin           = apperr.New("person.last_admin", http.StatusBadRequest)
 	ErrOwnerRole           = apperr.New("person.owner_is_admin", http.StatusBadRequest)
-	ErrInvalidPermission   = apperr.New("person.invalid_permission", http.StatusBadRequest)
-	ErrAdminHasAll         = apperr.New("person.admin_has_all_permissions", http.StatusBadRequest)
 	ErrInvalidWeekHours    = apperr.New("person.invalid_week_hours", http.StatusBadRequest)
 	ErrInvalidPayFrequency = apperr.New("person.invalid_payment_frequency", http.StatusBadRequest)
 	ErrInvalidPayDay       = apperr.New("person.invalid_payment_day", http.StatusBadRequest)

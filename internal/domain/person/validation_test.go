@@ -74,7 +74,7 @@ func TestService_ProfileFieldRules(t *testing.T) {
 	}
 }
 
-func TestService_RoleAndPermissionFields(t *testing.T) {
+func TestService_RoleFields(t *testing.T) {
 	cleanup(t)
 	orgSvc := organization.NewService(organization.NewStore(testClient))
 	svc := person.NewService(person.NewStore(testClient))
@@ -83,8 +83,6 @@ func TestService_RoleAndPermissionFields(t *testing.T) {
 
 	_, err := svc.SetRole(p.ID.String(), "owner")
 	wantField(t, "papel", err, person.ErrInvalidRole, "role")
-	_, err = svc.SetPermissions(p.ID.String(), []string{"nao.existe"})
-	wantField(t, "permissão", err, person.ErrInvalidPermission, "permissions")
 }
 
 func TestService_WeeklyHoursAndPaymentFields(t *testing.T) {

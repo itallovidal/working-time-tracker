@@ -15,9 +15,9 @@ type Identity struct {
 	Role     string    `json:"role"`
 	// IsOwner marca o dono da organização, que é admin e é um só por organização.
 	IsOwner bool `json:"is_owner"`
-	// Permissions são as permissões da organização que o dono liberou a esta pessoa;
-	// ficam vazias nos admins, que têm todas.
-	Permissions      []string  `json:"permissions"`
+	// Permissions são as permissões da organização do cargo da pessoa (permission.OrgKeysFor). Não vão no JSON:
+	// o que a tela precisa sai de BOOT.can.
+	Permissions      []string  `json:"-"`
 	OrganizationID   uuid.UUID `json:"organization_id"`
 	OrganizationName string    `json:"organization_name"`
 	// OrganizationCurrency é a moeda dos valores da organização (BRL, USD ou EUR).
@@ -34,10 +34,10 @@ func (i *Identity) IsAdmin() bool {
 	return i != nil && i.Role == "admin"
 }
 
-// Can diz se a pessoa pode fazer o que a permissão da organização libera. Os admins
-// podem tudo; os outros, o que o dono liberou a eles.
+// Can diz se a pessoa pode fazer o que a permissão da organização libera, pelo cargo dela (permission.OrgKeysFor).
+// Ser admin não basta: o dono tem todas, e o admin só as de projeto e de pessoas.
 func (i *Identity) Can(key string) bool {
-	return i.IsAdmin() || (i != nil && slices.Contains(i.Permissions, key))
+	return i != nil && slices.Contains(i.Permissions, key)
 }
 
 // As formas de entrega de um convite (ver Invite.Delivery).

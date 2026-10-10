@@ -181,10 +181,10 @@ func Build(client *ent.Client, opts Options) (*App, error) {
 	authMW := auth.NewMiddleware(authSvc, resolver, opts.CookieSecure)
 	// Quem não é admin nem cuida de pessoas só vê a si mesmo e quem divide projeto com ele.
 	personHandler.SetScope(authMW.PeopleScope)
-	// A regra de pagamento é só da própria pessoa, dos admins e de quem cuida de pessoas.
+	// A regra de pagamento é dinheiro: só da própria pessoa e do dono.
 	personHandler.SetPaymentGuard(func(c *echo.Context, personID uuid.UUID) bool {
 		me := auth.CurrentPerson(c)
-		return me != nil && (me.PersonID == personID || me.IsAdmin() || me.Can(permission.PeopleManage))
+		return me != nil && (me.PersonID == personID || me.IsOwner)
 	})
 	// A jornada semanal é da própria pessoa, do dono e dos admins, de quem cuida de pessoas (define a jornada) e de
 	// quem administra um projeto em que ela está. Os colegas de projeto não a veem.
@@ -201,10 +201,6 @@ func Build(client *ent.Client, opts Options) (*App, error) {
 			return nil, err
 		}
 		return func(id uuid.UUID) bool { return id == me.PersonID || managed[id] }, nil
-	})
-	personHandler.SetPermissionsGuard(func(c *echo.Context, personID uuid.UUID) bool {
-		me := auth.CurrentPerson(c)
-		return me != nil && (me.PersonID == personID || me.IsAdmin())
 	})
 	oauthHandler := integration.NewOAuthHandler(integrationSvc, opts.GitHubOAuth, opts.TrelloAuth, resolver, opts.EncryptKey, opts.CookieSecure)
 	catalog, err := i18n.Load()

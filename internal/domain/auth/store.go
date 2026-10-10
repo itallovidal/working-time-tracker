@@ -11,6 +11,7 @@ import (
 	"working-time-tracker/ent/person"
 	"working-time-tracker/ent/session"
 	"working-time-tracker/internal/database"
+	"working-time-tracker/internal/domain/permission"
 )
 
 type Store struct {
@@ -307,7 +308,7 @@ func identityOf(p *ent.Person, org *ent.Organization) *Identity {
 		Email:          p.Email,
 		Role:           string(p.Role),
 		IsOwner:        p.IsOwner,
-		Permissions:    append([]string{}, p.Permissions...),
+		Permissions:    permission.OrgKeysFor(string(p.Role), p.IsOwner),
 		OrganizationID: p.OrganizationID,
 
 		NeedsOnboarding: p.IsOwner && p.OnboardedAt == nil,
