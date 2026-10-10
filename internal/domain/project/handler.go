@@ -124,8 +124,9 @@ func (h *Handler) Get(c *echo.Context) error {
 func (h *Handler) Update(c *echo.Context) error {
 	id := c.Param("projectId")
 	var body struct {
-		Name string `json:"name"`
-		// Description e SprintDurationDays ausentes mantêm o valor atual; Description "" apaga.
+		// Name, Description e SprintDurationDays ausentes mantêm o valor atual; Name "" é recusado e Description ""
+		// apaga.
+		Name               *string `json:"name"`
 		Description        *string `json:"description"`
 		SprintDurationDays *int    `json:"sprint_duration_days"`
 		Routine

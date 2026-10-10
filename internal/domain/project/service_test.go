@@ -87,7 +87,7 @@ func TestService_Update(t *testing.T) {
 
 	org, _ := orgSvc.Create("Test Org")
 	created, _ := svc.Create(org.ID.String(), "Old Name", "", 0, project.Routine{})
-	updated, err := svc.Update(created.ID.String(), "New Name", ptr("new desc"), ptr(10), project.Routine{})
+	updated, err := svc.Update(created.ID.String(), ptr("New Name"), ptr("new desc"), ptr(10), project.Routine{})
 	if err != nil {
 		t.Fatalf("update failed: %v", err)
 	}
@@ -194,7 +194,7 @@ func TestService_Update_OptionalScheduleFields(t *testing.T) {
 		t.Errorf("weekly_sync_day = %v, want friday", proj.WeeklySyncDay)
 	}
 
-	kept, err := svc.Update(proj.ID.String(), "Projeto", nil, nil, project.Routine{})
+	kept, err := svc.Update(proj.ID.String(), ptr("Projeto"), nil, nil, project.Routine{})
 	if err != nil {
 		t.Fatalf("update keeping fields: %v", err)
 	}
@@ -203,7 +203,7 @@ func TestService_Update_OptionalScheduleFields(t *testing.T) {
 	}
 
 	empty := ""
-	cleared, err := svc.Update(proj.ID.String(), "Projeto", nil, nil, project.Routine{DailyTime: &empty, WeeklySyncDay: &empty})
+	cleared, err := svc.Update(proj.ID.String(), ptr("Projeto"), nil, nil, project.Routine{DailyTime: &empty, WeeklySyncDay: &empty})
 	if err != nil {
 		t.Fatalf("update clearing fields: %v", err)
 	}
@@ -232,22 +232,22 @@ func TestService_WeeklySyncTime(t *testing.T) {
 	}
 
 	// Omitir mantém o horário; trocar só o horário vale.
-	kept, _ := svc.Update(proj.ID.String(), "So weekly", nil, nil, project.Routine{})
+	kept, _ := svc.Update(proj.ID.String(), ptr("So weekly"), nil, nil, project.Routine{})
 	if kept.WeeklySyncTime == nil || *kept.WeeklySyncTime != "13:00" {
 		t.Errorf("omitted weekly time should be kept, got %v", kept.WeeklySyncTime)
 	}
 	later := "15:30"
-	moved, err := svc.Update(proj.ID.String(), "So weekly", nil, nil, project.Routine{WeeklySyncTime: &later})
+	moved, err := svc.Update(proj.ID.String(), ptr("So weekly"), nil, nil, project.Routine{WeeklySyncTime: &later})
 	if err != nil || moved.WeeklySyncTime == nil || *moved.WeeklySyncTime != "15:30" {
 		t.Errorf("change only the weekly time: %v, %v", moved, err)
 	}
 
 	// Apagar o dia apaga o horário junto, e a daily segue.
 	daily, empty := "10:00", ""
-	if _, err := svc.Update(proj.ID.String(), "So weekly", nil, nil, project.Routine{DailyTime: &daily}); err != nil {
+	if _, err := svc.Update(proj.ID.String(), ptr("So weekly"), nil, nil, project.Routine{DailyTime: &daily}); err != nil {
 		t.Fatalf("add daily: %v", err)
 	}
-	cleared, err := svc.Update(proj.ID.String(), "So weekly", nil, nil, project.Routine{WeeklySyncDay: &empty})
+	cleared, err := svc.Update(proj.ID.String(), ptr("So weekly"), nil, nil, project.Routine{WeeklySyncDay: &empty})
 	if err != nil {
 		t.Fatalf("clear weekly: %v", err)
 	}
@@ -260,7 +260,7 @@ func TestService_WeeklySyncTime(t *testing.T) {
 	}
 
 	// Horário sem dia e horário inválido são recusados.
-	if _, err := svc.Update(proj.ID.String(), "So weekly", nil, nil, project.Routine{WeeklySyncTime: &at}); !errors.Is(err, project.ErrWeeklyTimeWithoutDay) {
+	if _, err := svc.Update(proj.ID.String(), ptr("So weekly"), nil, nil, project.Routine{WeeklySyncTime: &at}); !errors.Is(err, project.ErrWeeklyTimeWithoutDay) {
 		t.Errorf("time without day on update: err = %v", err)
 	}
 	if _, err := svc.Create(org.ID.String(), "P", "", 0, project.Routine{WeeklySyncTime: &at}); !errors.Is(err, project.ErrWeeklyTimeWithoutDay) {
@@ -316,22 +316,22 @@ func TestService_CustomerMeeting(t *testing.T) {
 	}
 
 	// Omitir mantém; trocar só o horário vale.
-	kept, _ := svc.Update(proj.ID.String(), "Com reuniao", nil, nil, project.Routine{})
+	kept, _ := svc.Update(proj.ID.String(), ptr("Com reuniao"), nil, nil, project.Routine{})
 	if kept.CustomerMeetingDay == nil || kept.CustomerMeetingTime == nil {
 		t.Errorf("an omitted meeting should be kept, got %v %v", kept.CustomerMeetingDay, kept.CustomerMeetingTime)
 	}
 	later := "16:00"
-	moved, err := svc.Update(proj.ID.String(), "Com reuniao", nil, nil, project.Routine{CustomerMeetingTime: &later})
+	moved, err := svc.Update(proj.ID.String(), ptr("Com reuniao"), nil, nil, project.Routine{CustomerMeetingTime: &later})
 	if err != nil || moved.CustomerMeetingTime == nil || *moved.CustomerMeetingTime != "16:00" {
 		t.Errorf("change only the meeting time: %v, %v", moved, err)
 	}
 
 	// Apagar o dia apaga o horário junto, e a weekly do time não é tocada.
 	weekly, weeklyAt, empty := "friday", "09:00", ""
-	if _, err := svc.Update(proj.ID.String(), "Com reuniao", nil, nil, project.Routine{WeeklySyncDay: &weekly, WeeklySyncTime: &weeklyAt}); err != nil {
+	if _, err := svc.Update(proj.ID.String(), ptr("Com reuniao"), nil, nil, project.Routine{WeeklySyncDay: &weekly, WeeklySyncTime: &weeklyAt}); err != nil {
 		t.Fatalf("add the weekly: %v", err)
 	}
-	if _, err := svc.Update(proj.ID.String(), "Com reuniao", nil, nil, project.Routine{CustomerMeetingDay: &empty}); err != nil {
+	if _, err := svc.Update(proj.ID.String(), ptr("Com reuniao"), nil, nil, project.Routine{CustomerMeetingDay: &empty}); err != nil {
 		t.Fatalf("clear the meeting: %v", err)
 	}
 	reloaded, _ := svc.Get(proj.ID.String())
@@ -343,7 +343,7 @@ func TestService_CustomerMeeting(t *testing.T) {
 	}
 
 	// Horário sem dia, dia inválido e horário inválido são recusados.
-	if _, err := svc.Update(proj.ID.String(), "Com reuniao", nil, nil, project.Routine{CustomerMeetingTime: &at}); !errors.Is(err, project.ErrMeetingTimeWithoutDay) {
+	if _, err := svc.Update(proj.ID.String(), ptr("Com reuniao"), nil, nil, project.Routine{CustomerMeetingTime: &at}); !errors.Is(err, project.ErrMeetingTimeWithoutDay) {
 		t.Errorf("time without day on update: err = %v", err)
 	}
 	if _, err := svc.Create(org.ID.String(), "P", "", 0, project.Routine{CustomerMeetingTime: &at}); !errors.Is(err, project.ErrMeetingTimeWithoutDay) {
@@ -399,15 +399,15 @@ func TestService_SlotDayNeedsTime(t *testing.T) {
 	id := ok.ID.String()
 
 	// Na edição: trocar só o dia mantém o horário; limpar só o horário deixaria o dia sozinho.
-	moved, err := svc.Update(id, "Completo", nil, nil, project.Routine{WeeklySyncDay: &other})
+	moved, err := svc.Update(id, ptr("Completo"), nil, nil, project.Routine{WeeklySyncDay: &other})
 	if err != nil || moved.WeeklySyncTime == nil || *moved.WeeklySyncTime != at {
 		t.Errorf("change only the weekly day: %v, %v", moved, err)
 	}
-	_, err = svc.Update(id, "Completo", nil, nil, project.Routine{WeeklySyncTime: &empty})
+	_, err = svc.Update(id, ptr("Completo"), nil, nil, project.Routine{WeeklySyncTime: &empty})
 	wantRequired("clear only the weekly time", err, "weekly_sync_time")
-	_, err = svc.Update(id, "Completo", nil, nil, project.Routine{CustomerMeetingTime: &empty})
+	_, err = svc.Update(id, ptr("Completo"), nil, nil, project.Routine{CustomerMeetingTime: &empty})
 	wantRequired("clear only the meeting time", err, "customer_meeting_time")
-	if _, err := svc.Update(id, "Completo", nil, nil, project.Routine{WeeklySyncDay: &empty}); err != nil {
+	if _, err := svc.Update(id, ptr("Completo"), nil, nil, project.Routine{WeeklySyncDay: &empty}); err != nil {
 		t.Errorf("clearing the day clears the slot: %v", err)
 	}
 
@@ -416,14 +416,14 @@ func TestService_SlotDayNeedsTime(t *testing.T) {
 		SetWeeklySyncDay("friday").SetCustomerMeetingDay("monday").SaveX(ctx)
 	lid := legacy.ID.String()
 	desc := "nova descrição"
-	if _, err := svc.Update(lid, "Antigo renomeado", &desc, nil, project.Routine{}); err != nil {
+	if _, err := svc.Update(lid, ptr("Antigo renomeado"), &desc, nil, project.Routine{}); err != nil {
 		t.Errorf("rename a project whose weekly has no time: %v", err)
 	}
-	_, err = svc.Update(lid, "Antigo renomeado", nil, nil, project.Routine{WeeklySyncDay: &other})
+	_, err = svc.Update(lid, ptr("Antigo renomeado"), nil, nil, project.Routine{WeeklySyncDay: &other})
 	wantRequired("legacy weekly, new day without time", err, "weekly_sync_time")
-	_, err = svc.Update(lid, "Antigo renomeado", nil, nil, project.Routine{CustomerMeetingDay: &weekday})
+	_, err = svc.Update(lid, ptr("Antigo renomeado"), nil, nil, project.Routine{CustomerMeetingDay: &weekday})
 	wantRequired("legacy meeting, new day without time", err, "customer_meeting_time")
-	fixed, err := svc.Update(lid, "Antigo renomeado", nil, nil, project.Routine{WeeklySyncDay: &other, WeeklySyncTime: &at})
+	fixed, err := svc.Update(lid, ptr("Antigo renomeado"), nil, nil, project.Routine{WeeklySyncDay: &other, WeeklySyncTime: &at})
 	if err != nil || fixed.WeeklySyncTime == nil || *fixed.WeeklySyncTime != at {
 		t.Errorf("give the legacy weekly its time: %v, %v", fixed, err)
 	}
@@ -500,7 +500,7 @@ func TestService_Billing(t *testing.T) {
 		t.Errorf("project customer = %+v, want Empresa A", got.Customer)
 	}
 	// Editar o projeto não mexe no cliente nem no valor.
-	if _, err := svc.Update(id, "Projeto X2", nil, nil, project.Routine{}); err != nil {
+	if _, err := svc.Update(id, ptr("Projeto X2"), nil, nil, project.Routine{}); err != nil {
 		t.Fatalf("update: %v", err)
 	}
 	if after, _ := svc.Billing(id); after.Customer == nil || after.BillRateCents == nil || *after.BillRateCents != 10000 {
@@ -529,6 +529,38 @@ func fieldOf(err error) string {
 		return s
 	}
 	return ""
+}
+
+// O nome também mantém quando não vem, como a descrição e a sprint (e como a organização e o cliente). Em branco, ou
+// só espaços, continua recusado, e a recusa não troca o nome.
+func TestService_Update_NameOmittedKeeps(t *testing.T) {
+	cleanup(t)
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	svc := project.NewService(project.NewStore(testClient))
+	org, _ := orgSvc.Create("Org")
+	proj, err := svc.Create(org.ID.String(), "Original", "texto", 0, project.Routine{})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+
+	desc := "nova"
+	got, err := svc.Update(proj.ID.String(), nil, &desc, nil, project.Routine{})
+	if err != nil || got.Name != "Original" || got.Description != "nova" {
+		t.Fatalf("update without a name = %+v, %v; want the name kept and the description changed", got, err)
+	}
+	renamed, err := svc.Update(proj.ID.String(), ptr("  Renomeado  "), nil, nil, project.Routine{})
+	if err != nil || renamed.Name != "Renomeado" || renamed.Description != "nova" {
+		t.Fatalf("rename = %+v, %v; want the trimmed name and the description kept", renamed, err)
+	}
+	for _, blank := range []string{"", "   "} {
+		if _, err := svc.Update(proj.ID.String(), ptr(blank), nil, nil, project.Routine{}); !errors.Is(err, project.ErrNameRequired) || fieldOf(err) != "name" {
+			t.Errorf("update with name %q: err = %v, want project.name_required on name", blank, err)
+		}
+	}
+	reloaded, _ := svc.Get(proj.ID.String())
+	if reloaded.Name != "Renomeado" {
+		t.Errorf("a refused blank name left the name as %q", reloaded.Name)
+	}
 }
 
 // Nome (1 a 120, aparado) e descrição (até 2.000, aparada): na criação e na edição, com o campo no erro.
@@ -571,7 +603,7 @@ func TestService_NameAndDescriptionRules(t *testing.T) {
 		_, err := svc.Create(orgID, c.projName, c.desc, 0, project.Routine{})
 		check("create", err)
 		desc := c.desc
-		_, err = svc.Update(base.ID.String(), c.projName, &desc, nil, project.Routine{})
+		_, err = svc.Update(base.ID.String(), ptr(c.projName), &desc, nil, project.Routine{})
 		check("update", err)
 	}
 
@@ -591,12 +623,12 @@ func TestService_Update_DescriptionOmittedKeeps(t *testing.T) {
 	proj, _ := svc.Create(org.ID.String(), "P", "texto", 0, project.Routine{})
 	id := proj.ID.String()
 
-	kept, err := svc.Update(id, "P", nil, nil, project.Routine{})
+	kept, err := svc.Update(id, ptr("P"), nil, nil, project.Routine{})
 	if err != nil || kept.Description != "texto" {
 		t.Fatalf("omitted description = %q, %v; want it kept", kept.Description, err)
 	}
 	empty := ""
-	cleared, err := svc.Update(id, "P", &empty, nil, project.Routine{})
+	cleared, err := svc.Update(id, ptr("P"), &empty, nil, project.Routine{})
 	if err != nil || cleared.Description != "" {
 		t.Fatalf("empty description = %q, %v; want it cleared", cleared.Description, err)
 	}
@@ -616,7 +648,7 @@ func TestService_SprintRules(t *testing.T) {
 		if _, err := svc.Create(orgID, "P", "", n, project.Routine{}); err != nil {
 			t.Errorf("create with sprint %d: %v", n, err)
 		}
-		if _, err := svc.Update(id, "P", nil, ptr(n), project.Routine{}); err != nil {
+		if _, err := svc.Update(id, ptr("P"), nil, ptr(n), project.Routine{}); err != nil {
 			t.Errorf("update with sprint %d: %v", n, err)
 		}
 	}
@@ -626,11 +658,11 @@ func TestService_SprintRules(t *testing.T) {
 		}
 	}
 	for _, n := range []int{-1, 0, 91} {
-		if _, err := svc.Update(id, "P", nil, ptr(n), project.Routine{}); !errors.Is(err, project.ErrInvalidSprint) || fieldOf(err) != "sprint_duration_days" {
+		if _, err := svc.Update(id, ptr("P"), nil, ptr(n), project.Routine{}); !errors.Is(err, project.ErrInvalidSprint) || fieldOf(err) != "sprint_duration_days" {
 			t.Errorf("update with sprint %d: err = %v", n, err)
 		}
 	}
-	kept, err := svc.Update(id, "P", nil, nil, project.Routine{})
+	kept, err := svc.Update(id, ptr("P"), nil, nil, project.Routine{})
 	if err != nil || kept.SprintDurationDays != 90 {
 		t.Errorf("an omitted sprint should keep the current (90): %+v, %v", kept, err)
 	}
@@ -665,13 +697,13 @@ func TestService_MeetingNeedsCustomer(t *testing.T) {
 	}
 
 	internal, _ := svc.Create(orgID, "Interno", "", 0, project.Routine{})
-	if _, err := svc.Update(internal.ID.String(), "Interno", nil, nil, project.Routine{CustomerMeetingDay: &day}); !errors.Is(err, project.ErrMeetingNeedsCustomer) || fieldOf(err) != "customer_meeting_day" {
+	if _, err := svc.Update(internal.ID.String(), ptr("Interno"), nil, nil, project.Routine{CustomerMeetingDay: &day}); !errors.Is(err, project.ErrMeetingNeedsCustomer) || fieldOf(err) != "customer_meeting_day" {
 		t.Errorf("update with a meeting and no customer: err = %v", err)
 	}
 	if _, err := svc.SetBilling(internal.ID.String(), &mine, nil); err != nil {
 		t.Fatalf("set customer: %v", err)
 	}
-	if _, err := svc.Update(internal.ID.String(), "Interno", nil, nil, project.Routine{CustomerMeetingDay: &day, CustomerMeetingTime: &at}); err != nil {
+	if _, err := svc.Update(internal.ID.String(), ptr("Interno"), nil, nil, project.Routine{CustomerMeetingDay: &day, CustomerMeetingTime: &at}); err != nil {
 		t.Errorf("update with a meeting and a customer: %v", err)
 	}
 }

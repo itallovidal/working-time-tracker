@@ -123,23 +123,41 @@ func nilIfEmpty(v *string) *string {
 	return v
 }
 
-// nameAndDescription confere e apara o nome (obrigatório, 1 a 120) e a descrição (até 2.000), na criação e na edição.
-func nameAndDescription(name string, description *string) (string, *string, error) {
+// cleanName confere e apara o nome do projeto: obrigatório, de 1 a 120 caracteres.
+func cleanName(name string) (string, error) {
 	name, err := validate.Required("name", name, validate.MaxName)
 	if err != nil {
 		if apperr.Code(err) == apperr.ErrFieldRequired.Code {
-			return "", nil, ErrNameRequired.With("field", "name")
+			return "", ErrNameRequired.With("field", "name")
 		}
-		return "", nil, err
+		return "", err
 	}
+	return name, nil
+}
+
+// cleanDescription confere e apara a descrição (até 2.000); nil continua nil.
+func cleanDescription(description *string) (*string, error) {
 	if description == nil {
-		return name, nil, nil
+		return nil, nil
 	}
 	d, err := validate.Text("long_description", *description, validate.MaxDescription)
 	if err != nil {
+		return nil, err
+	}
+	return &d, nil
+}
+
+// nameAndDescription confere o nome e a descrição na criação, onde o nome é obrigatório. O erro do nome vem antes.
+func nameAndDescription(name string, description *string) (string, *string, error) {
+	name, err := cleanName(name)
+	if err != nil {
 		return "", nil, err
 	}
-	return name, &d, nil
+	d, err := cleanDescription(description)
+	if err != nil {
+		return "", nil, err
+	}
+	return name, d, nil
 }
 
 // meetingNeedsCustomer recusa a reunião com o cliente (um dia preenchido) quando o projeto não tem cliente.
@@ -279,12 +297,21 @@ func (s *Service) Get(id string) (*Project, error) {
 	return s.store.GetByID(id)
 }
 
-// Update altera o projeto. Nos campos opcionais, nil mantém o valor atual e texto vazio apaga: a descrição é um
-// *string pelo mesmo motivo (omitir mantém, "" apaga). sprintDurationDays nil mantém a duração atual; um valor
-// fora de 1 a 90, inclusive 0, é recusado, igual à criação pela API. Apagar o dia da weekly ou da reunião apaga
-// também o horário. Marcar a reunião com o cliente em um projeto sem cliente é recusado.
-func (s *Service) Update(id, name string, description *string, sprintDurationDays *int, routine Routine) (*Project, error) {
-	name, description, err := nameAndDescription(name, description)
+// Update altera o projeto. O nome, a descrição e a duração da sprint são ponteiros: nil mantém o valor atual, como
+// no cadastro de organização e de cliente. O nome não aceita ficar vazio, então um nome em branco (ou só espaços)
+// é recusado, e a descrição "" apaga. sprintDurationDays nil mantém a duração atual; um valor fora de 1 a 90,
+// inclusive 0, é recusado, igual à criação pela API. Apagar o dia da weekly ou da reunião apaga também o horário.
+// Marcar a reunião com o cliente em um projeto sem cliente é recusado.
+func (s *Service) Update(id string, name *string, description *string, sprintDurationDays *int, routine Routine) (*Project, error) {
+	var newName *string
+	if name != nil {
+		n, err := cleanName(*name)
+		if err != nil {
+			return nil, err
+		}
+		newName = &n
+	}
+	description, err := cleanDescription(description)
 	if err != nil {
 		return nil, err
 	}
@@ -302,7 +329,9 @@ func (s *Service) Update(id, name string, description *string, sprintDurationDay
 	if err := meetingNeedsCustomer(routine, project.Customer != nil); err != nil {
 		return nil, err
 	}
-	project.Name = name
+	if newName != nil {
+		project.Name = *newName
+	}
 	if description != nil {
 		project.Description = *description
 	}

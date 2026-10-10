@@ -167,6 +167,23 @@ func TestValidation_ProjectWithCustomerAndMeeting(t *testing.T) {
 	if body := decode(t, rec); body["description"] != "" {
 		t.Errorf("empty description should clear it: %v", body)
 	}
+
+	// O nome também mantém quando não vem (ausente ou null), como na organização e no cliente. Em branco é recusado.
+	for _, body := range []string{`{}`, `{"description":"outra"}`, `{"name":null}`, `{"name":null,"description":"outra"}`} {
+		rec = do(e, "PATCH", "/api/projects/"+id, body, admin.session)
+		if got := decode(t, rec); rec.Code != http.StatusOK || got["name"] != "P2" {
+			t.Errorf("PATCH %s = %d, name %v; want 200 and the name kept", body, rec.Code, got["name"])
+		}
+	}
+	for _, body := range []string{`{"name":""}`, `{"name":"   "}`} {
+		rec = do(e, "PATCH", "/api/projects/"+id, body, admin.session)
+		if code, params := projErrorOf(t, rec.Body.String()); rec.Code != http.StatusBadRequest || code != "project.name_required" || params["field"] != "name" {
+			t.Errorf("PATCH %s = %d %s, want 400 project.name_required on name", body, rec.Code, rec.Body.String())
+		}
+	}
+	if got := decode(t, do(e, "GET", "/api/projects/"+id, "", admin.session)); got["name"] != "P2" {
+		t.Errorf("a refused blank name changed the name to %v", got["name"])
+	}
 }
 
 // Apagar um cliente com projetos é conflito (409), não corpo inválido.
