@@ -17,9 +17,7 @@ func TestWorkSessions_TasksOfTheSession(t *testing.T) {
 	prj := "/api/projects/" + projectID
 	allocate(t, e, admin, projectID, bia.id, 2000)
 	allocate(t, e, admin, projectID, caio.id, 2500)
-	if rec := do(e, "PUT", prj+"/billing", `{"bill_rate_cents":10000}`, admin.session); rec.Code != http.StatusOK {
-		t.Fatalf("set billing = %d: %s", rec.Code, rec.Body.String())
-	}
+	setBilling(t, e, admin, prj, 10000)
 	taskA := decode(t, do(e, "POST", prj+"/tasks", `{"name":"A"}`, admin.session))["id"].(string)
 	taskB := decode(t, do(e, "POST", prj+"/tasks", `{"name":"B"}`, admin.session))["id"].(string)
 

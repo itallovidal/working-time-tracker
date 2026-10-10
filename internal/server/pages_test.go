@@ -302,7 +302,7 @@ func TestPages_ProjectCollaboratorsTab(t *testing.T) {
 		`title="Editar colaborador"`, `class="list-btn" title="Editar colaborador" @click="openPerson(m)"`,
 		// O modal do colaborador: o valor, os times em caixas de marcar e a saída do projeto.
 		`x-show="$store.modal.name === 'collab-edit'"`,
-		`id="collab-edit-rate" type="text" inputmode="decimal" class="num" placeholder="0,00" data-field="pay_rate_cents"`,
+		`id="collab-edit-rate" type="text" inputmode="decimal" class="num" placeholder="10,00" data-field="pay_rate_cents"`,
 		`type="checkbox" :value="t.id" x-model="person.team_ids"`, "Tirar do projeto", "savePerson()", "removePerson()",
 		// O grupo de permissões: o modal do colaborador escolhe, e adicionar pessoa é em dois passos.
 		`class="presets" role="radiogroup"`, `x-for="p in presetChoices()"`, `x-model="preset"`,
@@ -323,7 +323,7 @@ func TestPages_ProjectCollaboratorsTab(t *testing.T) {
 	if first, second, group := strings.Index(steps, `<div class="stack" x-show="addStep === 1">`), strings.Index(steps, `<div class="stack" x-show="addStep === 2">`), strings.Index(steps, `class="presets"`); first < 0 || second < first || group < second {
 		t.Errorf("the add person form does not put the group in the second step (steps at %d and %d, group at %d)", first, second, group)
 	}
-	if !strings.Contains(addForm, `id="collab-rate" type="text" inputmode="decimal" class="num" placeholder="0,00" data-field="pay_rate_cents"`) {
+	if !strings.Contains(addForm, `id="collab-rate" type="text" inputmode="decimal" class="num" placeholder="10,00" data-field="pay_rate_cents"`) {
 		t.Error("the hourly rate of the add person form does not show its error under the field")
 	}
 	if rate, team := strings.Index(addForm, `id="collab-rate"`), strings.Index(addForm, `id="collab-team"`); rate < 0 || team < rate {

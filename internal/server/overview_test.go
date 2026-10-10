@@ -17,9 +17,7 @@ func TestOverview_AdminOnly(t *testing.T) {
 	prj := "/api/projects/" + projectID
 
 	// A Bia entra no projeto (o valor antes do time), ganha uma tarefa e bate o ponto.
-	if rec := do(e, "PUT", prj+"/billing", `{"bill_rate_cents":10000}`, admin.session); rec.Code != http.StatusOK {
-		t.Fatalf("set billing = %d: %s", rec.Code, rec.Body.String())
-	}
+	customerID := setBilling(t, e, admin, prj, 10000)
 	allocate(t, e, admin, projectID, bia.id, 2000)
 	teamID := decode(t, do(e, "POST", prj+"/teams", `{"name":"Time"}`, admin.session))["id"].(string)
 	do(e, "POST", "/api/teams/"+teamID+"/members", `{"person_id":"`+bia.id+`"}`, admin.session)
@@ -43,7 +41,7 @@ func TestOverview_AdminOnly(t *testing.T) {
 		return m
 	}
 	for key, want := range map[string]map[string]any{
-		"project": {"name": "Projeto Alfa", "bill_rate_cents": float64(10000), "customer": nil},
+		"project": {"name": "Projeto Alfa", "bill_rate_cents": float64(10000)},
 		// O admin não está no projeto: só a Bia conta.
 		"people": {"total": float64(1), "without_team": float64(0), "without_rate": float64(0), "working_now": float64(0)},
 		"teams":  {"total": float64(1)},
@@ -56,6 +54,9 @@ func TestOverview_AdminOnly(t *testing.T) {
 				t.Errorf("%s.%s = %v, want %v", key, field, got[field], v)
 			}
 		}
+	}
+	if c, _ := section("project")["customer"].(map[string]any); c == nil || c["id"] != customerID {
+		t.Errorf("project customer = %v, want %s", section("project")["customer"], customerID)
 	}
 	if _, ok := section("project")["age"].(map[string]any); !ok {
 		t.Errorf("project has no age: %s", rec.Body.String())

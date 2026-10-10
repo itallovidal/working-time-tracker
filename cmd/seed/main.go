@@ -438,9 +438,12 @@ func main() {
 	}
 	seeded := map[string]seededProject{}
 	for _, p := range projects {
-		// O cliente já vai na criação: a reunião com ele só vale em um projeto que tem cliente.
+		// O cliente e o valor cobrado vão já na criação: com cliente o valor é obrigatório, sem cliente é recusado, e
+		// a reunião com o cliente só vale em um projeto que tem cliente.
+		billRate := optionalNumber(p.billRate)
 		created, err := projectSvc.CreateWithCustomer(orgID, project.CreateInput{
 			Name: p.name, Description: p.description, SprintDurationDays: p.sprintDays, CustomerID: customerID[p.customer],
+			BillRateCents: billRate,
 			Routine: project.Routine{
 				DailyTime: optionalText(p.daily), WeeklySyncDay: optionalText(p.weekly), WeeklySyncTime: optionalText(p.weeklyTime),
 				CustomerMeetingDay: optionalText(p.meetingDay), CustomerMeetingTime: optionalText(p.meetingTime),
@@ -449,12 +452,6 @@ func main() {
 		must(err)
 		id := created.ID.String()
 
-		billRate := optionalNumber(p.billRate)
-		if p.customer != "" {
-			cid := customerID[p.customer]
-			_, err := projectSvc.SetBilling(id, &cid, billRate)
-			must(err)
-		}
 		// O valor vem antes do time: é ele que põe a pessoa no projeto.
 		for who, cents := range p.rates {
 			// A Ana é a dona da organização: não recebe valor por hora, as horas dela

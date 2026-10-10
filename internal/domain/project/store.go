@@ -22,7 +22,7 @@ func NewStore(client *ent.Client) *Store {
 	return &Store{client: client}
 }
 
-func (s *Store) Create(p *Project) error {
+func (s *Store) Create(p *Project, billRateCents *int) error {
 	q := s.client.Project.Create().
 		SetOrganizationID(p.OrganizationID).
 		SetName(p.Name).
@@ -34,7 +34,8 @@ func (s *Store) Create(p *Project) error {
 		SetNillableWeeklySyncDay(p.WeeklySyncDay).
 		SetNillableWeeklySyncTime(p.WeeklySyncTime).
 		SetNillableCustomerMeetingDay(p.CustomerMeetingDay).
-		SetNillableCustomerMeetingTime(p.CustomerMeetingTime)
+		SetNillableCustomerMeetingTime(p.CustomerMeetingTime).
+		SetNillableBillRateCents(billRateCents)
 	if p.Customer != nil {
 		q = q.SetCustomerID(p.Customer.ID)
 	}

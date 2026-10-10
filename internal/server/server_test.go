@@ -139,6 +139,23 @@ func createEmptyProject(t *testing.T, e *echo.Echo, admin account, name string) 
 	return id
 }
 
+// setBilling dá ao projeto um cliente novo e o valor cobrado, como o dono: com cliente o valor é obrigatório e sem
+// cliente é recusado, então os dois vão juntos. Devolve o id do cliente. prj é o caminho da API do projeto.
+func setBilling(t *testing.T, e *echo.Echo, owner account, prj string, cents int) string {
+	t.Helper()
+	body := fmt.Sprintf(`{"name":"Cliente %d"}`, cents)
+	rec := do(e, "POST", "/api/orgs/"+owner.orgID+"/customers", body, owner.session)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("create customer = %d: %s", rec.Code, rec.Body.String())
+	}
+	customerID := decode(t, rec)["id"].(string)
+	body = fmt.Sprintf(`{"customer_id":"%s","bill_rate_cents":%d}`, customerID, cents)
+	if rec := do(e, "PUT", prj+"/billing", body, owner.session); rec.Code != http.StatusOK {
+		t.Fatalf("set billing = %d: %s", rec.Code, rec.Body.String())
+	}
+	return customerID
+}
+
 // allocate define, como admin, quanto a pessoa recebe por hora no projeto. Sem
 // isso ela não bate ponto.
 func allocate(t *testing.T, e *echo.Echo, admin account, projectID, personID string, cents int) {
@@ -606,9 +623,7 @@ func TestWorkSessions_AmountsByRole(t *testing.T) {
 		do(e, "POST", "/api/teams/"+teamID+"/members", `{"person_id":"`+p.id+`"}`, admin.session)
 	}
 	taskID := decode(t, do(e, "POST", prj+"/tasks", `{"name":"Tarefa","assignee_id":"`+bia.id+`"}`, admin.session))["id"].(string)
-	if rec := do(e, "PUT", prj+"/billing", `{"bill_rate_cents":10000}`, admin.session); rec.Code != http.StatusOK {
-		t.Fatalf("set billing = %d: %s", rec.Code, rec.Body.String())
-	}
+	setBilling(t, e, admin, prj, 10000)
 
 	clockIn := `{"task_id":"` + taskID + `"}`
 	rec := do(e, "POST", prj+"/work-sessions/clock-in", clockIn, bia.session)
@@ -1197,9 +1212,7 @@ func TestOwner_EntersItsProjectsAndWorksAtTheBilledRate(t *testing.T) {
 
 	// O dono bate ponto sem que ninguém o tenha adicionado num projeto sem ele: a sessão
 	// guarda valor pago zero e o valor cobrado, e o outro admin, sem valor, não bate.
-	if rec := do(e, "PUT", "/api/projects/"+theirs+"/billing", `{"bill_rate_cents":12000}`, other.session); rec.Code != http.StatusOK {
-		t.Fatalf("set billing = %d: %s", rec.Code, rec.Body.String())
-	}
+	setBilling(t, e, other, "/api/projects/"+theirs, 12000)
 	taskID := decode(t, do(e, "POST", "/api/projects/"+theirs+"/tasks", `{"name":"Tarefa"}`, owner.session))["id"].(string)
 	clock := "/api/projects/" + theirs + "/work-sessions/clock-in"
 	if rec := do(e, "POST", clock, `{"task_id":"`+taskID+`"}`, other.session); rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "work_session.no_rate") {
@@ -1252,7 +1265,7 @@ func TestProjects_CustomerMeeting(t *testing.T) {
 		t.Fatalf("create a meeting without a customer = %d: %s", rec.Code, rec.Body.String())
 	}
 	rec = do(e, "POST", "/api/orgs/"+admin.orgID+"/projects",
-		`{"name":"Alfa","customer_id":"`+cust+`","customer_meeting_day":"Wednesday","customer_meeting_time":"10:30"}`, admin.session)
+		`{"name":"Alfa","customer_id":"`+cust+`","bill_rate_cents":10000,"customer_meeting_day":"Wednesday","customer_meeting_time":"10:30"}`, admin.session)
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("create = %d: %s", rec.Code, rec.Body.String())
 	}

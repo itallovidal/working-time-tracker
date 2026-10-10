@@ -860,7 +860,6 @@ org:
     rate_invalid: Enter the rate billed per hour, for example 150.00.
     rate_too_high: The rate billed per hour must be between 0 and 1,000,000.00.
     created: Project created.
-    created_no_billing: "Project created, but the customer and the rate were not saved: {{.error}}"
 
 project:
   head:
@@ -1291,8 +1290,8 @@ project_settings:
   delete_confirm: Delete the project? Its teams, tasks, work sessions and integrations are deleted.
   billing_title: Customer and billing
   customers_hint: Add customers under
-  rate_placeholder: "0.00"
-  bill_rate_hint: What the customer pays the organization. Only admins see it. Empty clears it.
+  rate_placeholder: "10.00"
+  bill_rate_hint: What the customer pays the organization, required on a project with a customer. Only admins see it.
   delete_title: Delete project
   delete_text: Deletes the project with all its teams, tasks, work sessions and integrations.
   saved: Project saved.
@@ -1534,7 +1533,7 @@ errors:
   allocation:
     preset_above_yours: "the group gives a permission you do not have"
     invalid_preset: "unknown permission group"
-    invalid_rate: "the hourly rate must be between 0 and 1,000,000.00"
+    invalid_rate: "the hourly rate must be between 10.00 and 1,000,000.00"
     not_defined: "this person has no rate set on this project"
     own_rates_only: "you can only see your own rates"
     person_not_in_org: "person not found in this organization"
@@ -1678,7 +1677,9 @@ errors:
     not_found: "person not found"
   project:
     customer_not_found: "customer not found in this organization"
-    invalid_bill_rate: "the rate billed per hour must be between 0 and 1,000,000.00"
+    invalid_bill_rate: "the rate billed per hour must be between 10.00 and 1,000,000.00"
+    bill_rate_required: "enter the rate billed per hour: a project with a customer needs it"
+    bill_rate_needs_customer: "the billed rate only applies to a project with a customer: choose the project's customer first"
     invalid_daily_time: "the daily time must use the HH:MM format, for example 09:30"
     invalid_organization: "invalid organization"
     invalid_sprint: "the sprint must be between 1 and 90 days long"

@@ -168,6 +168,20 @@ func meetingNeedsCustomer(r Routine, hasCustomer bool) error {
 	return nil
 }
 
+// checkBillRate confere o valor cobrado contra o cliente: com cliente o valor é obrigatório, sem cliente é
+// recusado (projeto interno é investimento, só existe o custo), e quando vem tem o piso de validate.MinRateCents.
+func checkBillRate(billRateCents *int, hasCustomer bool) error {
+	switch {
+	case billRateCents == nil && hasCustomer:
+		return ErrBillRateRequired.With("field", "bill_rate_cents")
+	case billRateCents != nil && !hasCustomer:
+		return ErrBillRateNeedsCustomer.With("field", "bill_rate_cents")
+	case billRateCents != nil && validate.Rate("bill_rate_cents", *billRateCents) != nil:
+		return ErrInvalidBillRate.With("field", "bill_rate_cents")
+	}
+	return nil
+}
+
 // CreateInput é o que a criação do projeto aceita, além da organização.
 type CreateInput struct {
 	Name        string
@@ -177,6 +191,8 @@ type CreateInput struct {
 	Routine            Routine
 	// CustomerID é o cliente do projeto novo (vazio: projeto interno). A reunião com o cliente só vale com ele.
 	CustomerID string
+	// BillRateCents é o valor cobrado por hora: obrigatório com cliente e recusado sem ele.
+	BillRateCents *int
 }
 
 // Create cria o projeto sem cliente (ver CreateWithCustomer). Sprint zerada vira 14 dias. Daily, weekly e
@@ -244,7 +260,10 @@ func (s *Service) CreateWithCustomer(orgID string, in CreateInput) (*Project, er
 	if project.CustomerMeetingDay, project.CustomerMeetingTime, err = mergeSlot(nil, nil, routine.CustomerMeetingDay, routine.CustomerMeetingTime, ErrMeetingTimeWithoutDay, "customer_meeting_time"); err != nil {
 		return nil, err
 	}
-	if err := s.store.Create(project); err != nil {
+	if err := checkBillRate(in.BillRateCents, customerUID != nil); err != nil {
+		return nil, err
+	}
+	if err := s.store.Create(project, in.BillRateCents); err != nil {
 		return nil, err
 	}
 	if customerUID != nil {
@@ -365,15 +384,13 @@ func (s *Service) Billing(projectID string) (*Billing, error) {
 	return s.store.Billing(uid)
 }
 
-// SetBilling substitui o cliente e o valor cobrado do projeto. nil (ou cliente
-// vazio) apaga: é assim que um projeto volta a ser interno.
+// SetBilling substitui o cliente e o valor cobrado do projeto. Os dois andam juntos: com cliente o valor é
+// obrigatório, sem cliente o valor é recusado. nil (ou cliente vazio) apaga o cliente: é assim que um projeto volta
+// a ser interno, e então o valor também vai embora.
 func (s *Service) SetBilling(projectID string, customerID *string, billRateCents *int) (*Billing, error) {
 	uid, err := uuid.Parse(projectID)
 	if err != nil {
 		return nil, database.ErrNotFound
-	}
-	if billRateCents != nil && validate.Money("bill_rate_cents", *billRateCents) != nil {
-		return nil, ErrInvalidBillRate.With("field", "bill_rate_cents")
 	}
 	var customerUID *uuid.UUID
 	if customerID != nil && strings.TrimSpace(*customerID) != "" {
@@ -389,6 +406,9 @@ func (s *Service) SetBilling(projectID string, customerID *string, billRateCents
 			return nil, ErrCustomerNotFound.With("field", "customer_id")
 		}
 		customerUID = &cid
+	}
+	if err := checkBillRate(billRateCents, customerUID != nil); err != nil {
+		return nil, err
 	}
 	if err := s.store.SetBilling(uid, customerUID, billRateCents); err != nil {
 		return nil, err

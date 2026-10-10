@@ -37,6 +37,8 @@ func (h *Handler) Create(c *echo.Context) error {
 		SprintDurationDays *int `json:"sprint_duration_days"`
 		// CustomerID é opcional: com ele o projeto já nasce com o cliente, e a reunião com o cliente vale.
 		CustomerID string `json:"customer_id"`
+		// BillRateCents é o valor cobrado por hora: obrigatório com customer_id e recusado sem ele.
+		BillRateCents *int `json:"bill_rate_cents"`
 		Routine
 	}
 	if err := c.Bind(&body); err != nil {
@@ -50,15 +52,14 @@ func (h *Handler) Create(c *echo.Context) error {
 	}
 	project, err := h.svc.CreateWithCustomer(orgID, CreateInput{
 		Name: body.Name, Description: body.Description, SprintDurationDays: sprint,
-		Routine: body.Routine, CustomerID: body.CustomerID,
+		Routine: body.Routine, CustomerID: body.CustomerID, BillRateCents: body.BillRateCents,
 	})
 	if err != nil {
 		return apperr.Respond(c, 400, err)
 	}
-	// O valor não importa: para o dono a alocação sempre sai com zero. Quem não é admin e cria um projeto
-	// (a organização lhe deu a permissão de criar) também entra nele, senão o projeto que acabou de criar
-	// sumiria da lista dele: só se vê o projeto em que se está.
-	if me := auth.CurrentPerson(c); me != nil && (me.IsOwner || !me.IsAdmin()) {
+	// O dono que cria um projeto já entra nele; o valor não importa, a alocação do dono sai sempre com zero. Quem
+	// cria sem ser o dono é admin e vê todos os projetos, então não é matriculado.
+	if me := auth.CurrentPerson(c); me != nil && me.IsOwner {
 		if _, err := h.enroller.Set(project.ID.String(), me.PersonID.String(), 0); err != nil {
 			return apperr.Respond(c, 500, err)
 		}

@@ -870,8 +870,7 @@ org:
     rate_invalid: Informe o valor cobrado por hora, por exemplo 150,00.
     rate_too_high: O valor cobrado por hora deve ficar entre 0 e 1.000.000,00.
     created: Projeto criado.
-    created_no_billing: "Projeto criado, mas o cliente e o valor não foram salvos: {{.error}}"
-
+  
 project:
   head:
     projects: Projetos
@@ -1301,8 +1300,8 @@ project_settings:
   delete_confirm: Excluir o projeto? Os times, as tarefas, as sessões de trabalho e as integrações dele são apagados.
   billing_title: Cliente e cobrança
   customers_hint: Cadastre clientes em
-  rate_placeholder: "0,00"
-  bill_rate_hint: O que o cliente paga à organização. Só admins veem. Vazio apaga.
+  rate_placeholder: "10,00"
+  bill_rate_hint: O que o cliente paga à organização, obrigatório em um projeto com cliente. Só admins veem.
   delete_title: Excluir projeto
   delete_text: Apaga o projeto com todos os times, tarefas, sessões de trabalho e integrações.
   saved: Projeto salvo.
@@ -1544,7 +1543,7 @@ errors:
   allocation:
     preset_above_yours: "o grupo dá uma permissão que você não tem"
     invalid_preset: "grupo de permissões desconhecido"
-    invalid_rate: "o valor por hora deve ficar entre 0 e 1.000.000,00"
+    invalid_rate: "o valor por hora deve ficar entre 10,00 e 1.000.000,00"
     not_defined: "esta pessoa não tem valor definido neste projeto"
     own_rates_only: "você só pode ver os seus próprios valores"
     person_not_in_org: "pessoa não encontrada nesta organização"
@@ -1688,7 +1687,9 @@ errors:
     not_found: "pessoa não encontrada"
   project:
     customer_not_found: "cliente não encontrado nesta organização"
-    invalid_bill_rate: "o valor cobrado por hora deve ficar entre 0 e 1.000.000,00"
+    invalid_bill_rate: "o valor cobrado por hora deve ficar entre 10,00 e 1.000.000,00"
+    bill_rate_required: "informe o valor cobrado por hora: um projeto com cliente precisa dele"
+    bill_rate_needs_customer: "o valor cobrado só vale em um projeto com cliente: escolha o cliente do projeto antes"
     invalid_daily_time: "o horário da daily deve estar no formato HH:MM, por exemplo 09:30"
     invalid_organization: "organização inválida"
     invalid_sprint: "a sprint precisa ter entre 1 e 90 dias"

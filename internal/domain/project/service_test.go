@@ -302,7 +302,7 @@ func TestService_CustomerMeeting(t *testing.T) {
 
 	day, at := "Wednesday", "10:30"
 	proj, err := svc.CreateWithCustomer(org.ID.String(), project.CreateInput{
-		Name: "Com reuniao", Routine: project.Routine{CustomerMeetingDay: &day, CustomerMeetingTime: &at}, CustomerID: customerID,
+		Name: "Com reuniao", Routine: project.Routine{CustomerMeetingDay: &day, CustomerMeetingTime: &at}, CustomerID: customerID, BillRateCents: ptr(10000),
 	})
 	if err != nil {
 		t.Fatalf("create with a customer meeting: %v", err)
@@ -383,11 +383,11 @@ func TestService_SlotDayNeedsTime(t *testing.T) {
 	wantRequired("create weekly day only", err, "weekly_sync_time")
 	_, err = svc.Create(orgID, "P", "", 0, project.Routine{WeeklySyncDay: &weekday, WeeklySyncTime: &empty})
 	wantRequired("create weekly day, empty time", err, "weekly_sync_time")
-	_, err = svc.CreateWithCustomer(orgID, project.CreateInput{Name: "P", CustomerID: customer.ID.String(), Routine: project.Routine{CustomerMeetingDay: &weekday}})
+	_, err = svc.CreateWithCustomer(orgID, project.CreateInput{Name: "P", CustomerID: customer.ID.String(), BillRateCents: ptr(10000), Routine: project.Routine{CustomerMeetingDay: &weekday}})
 	wantRequired("create meeting day only", err, "customer_meeting_time")
 
 	// Com os dois, ou com os dois vazios, vale.
-	ok, err := svc.CreateWithCustomer(orgID, project.CreateInput{Name: "Completo", CustomerID: customer.ID.String(), Routine: project.Routine{
+	ok, err := svc.CreateWithCustomer(orgID, project.CreateInput{Name: "Completo", CustomerID: customer.ID.String(), BillRateCents: ptr(10000), Routine: project.Routine{
 		WeeklySyncDay: &weekday, WeeklySyncTime: &at, CustomerMeetingDay: &other, CustomerMeetingTime: &at,
 	}})
 	if err != nil {
@@ -442,17 +442,17 @@ func TestService_Billing_ClearingTheCustomerClearsTheMeeting(t *testing.T) {
 
 	day, at := "monday", "09:00"
 	proj, err := svc.CreateWithCustomer(org.ID.String(), project.CreateInput{
-		Name: "Projeto", Routine: project.Routine{CustomerMeetingDay: &day, CustomerMeetingTime: &at}, CustomerID: a,
+		Name: "Projeto", Routine: project.Routine{CustomerMeetingDay: &day, CustomerMeetingTime: &at}, CustomerID: a, BillRateCents: ptr(10000),
 	})
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
 	id := proj.ID.String()
 
-	if _, err := svc.SetBilling(id, &a, nil); err != nil {
+	if _, err := svc.SetBilling(id, &a, ptr(10000)); err != nil {
 		t.Fatalf("set customer: %v", err)
 	}
-	if _, err := svc.SetBilling(id, &b, nil); err != nil {
+	if _, err := svc.SetBilling(id, &b, ptr(10000)); err != nil {
 		t.Fatalf("change customer: %v", err)
 	}
 	if got, _ := svc.Get(id); got.CustomerMeetingDay == nil || got.CustomerMeetingTime == nil {
@@ -688,10 +688,10 @@ func TestService_MeetingNeedsCustomer(t *testing.T) {
 	if _, err := svc.Create(orgID, "P", "", 0, project.Routine{CustomerMeetingDay: &empty}); err != nil {
 		t.Errorf("create with an empty meeting day: %v", err)
 	}
-	if _, err := svc.CreateWithCustomer(orgID, project.CreateInput{Name: "P", CustomerID: theirs}); !errors.Is(err, project.ErrCustomerNotFound) || fieldOf(err) != "customer_id" {
+	if _, err := svc.CreateWithCustomer(orgID, project.CreateInput{Name: "P", CustomerID: theirs, BillRateCents: ptr(10000)}); !errors.Is(err, project.ErrCustomerNotFound) || fieldOf(err) != "customer_id" {
 		t.Errorf("create with a customer of another organization: err = %v", err)
 	}
-	with, err := svc.CreateWithCustomer(orgID, project.CreateInput{Name: "P", CustomerID: mine, Routine: project.Routine{CustomerMeetingDay: &day, CustomerMeetingTime: &at}})
+	with, err := svc.CreateWithCustomer(orgID, project.CreateInput{Name: "P", CustomerID: mine, BillRateCents: ptr(10000), Routine: project.Routine{CustomerMeetingDay: &day, CustomerMeetingTime: &at}})
 	if err != nil || with.Customer == nil || with.Customer.Name != "A" || with.CustomerMeetingDay == nil {
 		t.Fatalf("create with customer and meeting = %+v, %v", with, err)
 	}
@@ -700,7 +700,7 @@ func TestService_MeetingNeedsCustomer(t *testing.T) {
 	if _, err := svc.Update(internal.ID.String(), ptr("Interno"), nil, nil, project.Routine{CustomerMeetingDay: &day}); !errors.Is(err, project.ErrMeetingNeedsCustomer) || fieldOf(err) != "customer_meeting_day" {
 		t.Errorf("update with a meeting and no customer: err = %v", err)
 	}
-	if _, err := svc.SetBilling(internal.ID.String(), &mine, nil); err != nil {
+	if _, err := svc.SetBilling(internal.ID.String(), &mine, ptr(10000)); err != nil {
 		t.Fatalf("set customer: %v", err)
 	}
 	if _, err := svc.Update(internal.ID.String(), ptr("Interno"), nil, nil, project.Routine{CustomerMeetingDay: &day, CustomerMeetingTime: &at}); err != nil {
@@ -708,7 +708,8 @@ func TestService_MeetingNeedsCustomer(t *testing.T) {
 	}
 }
 
-// O valor cobrado vai de 0 a 1.000.000,00, com o campo no erro.
+// O valor cobrado vai de 10,00 a 1.000.000,00, com o campo no erro, e anda junto do cliente: com cliente é
+// obrigatório, sem cliente é recusado.
 func TestService_SetBilling_RateLimits(t *testing.T) {
 	cleanup(t)
 	orgSvc := organization.NewService(organization.NewStore(testClient))
@@ -716,16 +717,41 @@ func TestService_SetBilling_RateLimits(t *testing.T) {
 	org, _ := orgSvc.Create("Org")
 	proj, _ := svc.Create(org.ID.String(), "P", "", 0, project.Routine{})
 	id := proj.ID.String()
+	cust := testClient.Customer.Create().SetOrganizationID(org.ID).SetName("Empresa").SaveX(context.Background()).ID.String()
 
-	for _, n := range []int{0, validate.MaxCents} {
-		if _, err := svc.SetBilling(id, nil, ptr(n)); err != nil {
+	for _, n := range []int{validate.MinRateCents, validate.MaxCents} {
+		if _, err := svc.SetBilling(id, &cust, ptr(n)); err != nil {
 			t.Errorf("rate %d: %v", n, err)
 		}
 	}
-	for _, n := range []int{-1, validate.MaxCents + 1} {
-		if _, err := svc.SetBilling(id, nil, ptr(n)); !errors.Is(err, project.ErrInvalidBillRate) || fieldOf(err) != "bill_rate_cents" {
+	for _, n := range []int{0, validate.MinRateCents - 1, -1, validate.MaxCents + 1} {
+		if _, err := svc.SetBilling(id, &cust, ptr(n)); !errors.Is(err, project.ErrInvalidBillRate) || fieldOf(err) != "bill_rate_cents" {
 			t.Errorf("rate %d: err = %v", n, err)
 		}
+	}
+	// Com cliente o valor é obrigatório; sem cliente o valor é recusado, e os dois nulos voltam ao interno.
+	if _, err := svc.SetBilling(id, &cust, nil); !errors.Is(err, project.ErrBillRateRequired) || fieldOf(err) != "bill_rate_cents" {
+		t.Errorf("customer without a rate: err = %v", err)
+	}
+	if _, err := svc.SetBilling(id, nil, ptr(10000)); !errors.Is(err, project.ErrBillRateNeedsCustomer) || fieldOf(err) != "bill_rate_cents" {
+		t.Errorf("rate without a customer: err = %v", err)
+	}
+	if b, err := svc.SetBilling(id, nil, nil); err != nil || b.Customer != nil || b.BillRateCents != nil {
+		t.Errorf("back to internal: %+v, %v", b, err)
+	}
+	// A criação segue a mesma regra, numa chamada só.
+	if _, err := svc.CreateWithCustomer(org.ID.String(), project.CreateInput{Name: "Sem valor", CustomerID: cust}); !errors.Is(err, project.ErrBillRateRequired) {
+		t.Errorf("create with a customer and no rate: err = %v", err)
+	}
+	if _, err := svc.CreateWithCustomer(org.ID.String(), project.CreateInput{Name: "Sem cliente", BillRateCents: ptr(10000)}); !errors.Is(err, project.ErrBillRateNeedsCustomer) {
+		t.Errorf("create with a rate and no customer: err = %v", err)
+	}
+	created, err := svc.CreateWithCustomer(org.ID.String(), project.CreateInput{Name: "Completo", CustomerID: cust, BillRateCents: ptr(10000)})
+	if err != nil {
+		t.Fatalf("create with a customer and a rate: %v", err)
+	}
+	if b, _ := svc.Billing(created.ID.String()); b == nil || b.BillRateCents == nil || *b.BillRateCents != 10000 {
+		t.Errorf("billing after create = %+v, want 10000", b)
 	}
 	bad := "não-é-uuid"
 	if _, err := svc.SetBilling(id, &bad, nil); !errors.Is(err, project.ErrCustomerNotFound) || fieldOf(err) != "customer_id" {

@@ -41,6 +41,7 @@ func TestPermissions_PresetsDecideWhatEachPersonCanDo(t *testing.T) {
 	prj := createProject(t, e, admin, "Alfa")
 	other := createProject(t, e, admin, "Beta")
 	base := "/api/projects/" + prj
+	customerID := decode(t, do(e, "POST", "/api/orgs/"+admin.orgID+"/customers", `{"name":"Cliente"}`, admin.session))["id"].(string)
 
 	withPreset(t, e, admin, prj, manager.id, "manager")
 	withPreset(t, e, admin, prj, finance.id, "finance")
@@ -62,7 +63,7 @@ func TestPermissions_PresetsDecideWhatEachPersonCanDo(t *testing.T) {
 	calls := []call{
 		{"edit the project", "PATCH", base, `{"name":"Alfa 2"}`, only("manager")},
 		{"read the billing", "GET", base + "/billing", "", only("finance")},
-		{"set the billing", "PUT", base + "/billing", `{"bill_rate_cents":9000}`, only("finance")},
+		{"set the billing", "PUT", base + "/billing", `{"customer_id":"` + customerID + `","bill_rate_cents":9000}`, only("finance")},
 		{"read the overview", "GET", base + "/overview", "", only("finance")},
 		{"create a team", "POST", base + "/teams", `{"name":"Time"}`, only("manager")},
 		{"create a label", "POST", base + "/labels", `{"name":"Bug"}`, only("manager")},
@@ -104,9 +105,7 @@ func TestPermissions_ValuesFollowThePermissions(t *testing.T) {
 	finance := invite(t, e, admin, "fabio@test.com", "member")
 	plain := invite(t, e, admin, "caio@test.com", "member")
 	prj := createProject(t, e, admin, "Alfa")
-	if code := status(e, "PUT", "/api/projects/"+prj+"/billing", `{"bill_rate_cents":9000}`, admin.session); code != http.StatusOK {
-		t.Fatalf("set billing = %d", code)
-	}
+	setBilling(t, e, admin, "/api/projects/"+prj, 9000)
 	withPreset(t, e, admin, prj, manager.id, "manager")
 	withPreset(t, e, admin, prj, finance.id, "finance")
 	withPreset(t, e, admin, prj, plain.id, "member")
@@ -333,9 +332,10 @@ func TestPermissions_OrganizationOnesBelongToTheOwner(t *testing.T) {
 		t.Fatalf("the owner giving permissions = %d %s", code, out)
 	}
 
-	// Agora o membro cria projeto e cuida de clientes, mas ainda não convida nem muda papéis.
-	if got := status(e, "POST", org+"/projects", `{"name":"X"}`, member.session); got != http.StatusCreated {
-		t.Errorf("the member creating a project = %d, want 201", got)
+	// Agora o membro cuida de clientes, mas ainda não convida nem muda papéis. Criar projeto é do dono e do admin:
+	// um projeto novo precisa de quem defina o valor cobrado, e a permissão não o torna admin.
+	if got := status(e, "POST", org+"/projects", `{"name":"X"}`, member.session); got != http.StatusForbidden {
+		t.Errorf("the member creating a project = %d, want 403", got)
 	}
 	if got := status(e, "GET", org+"/customers", "", member.session); got != http.StatusOK {
 		t.Errorf("the member listing customers = %d, want 200", got)

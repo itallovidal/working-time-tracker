@@ -73,7 +73,10 @@ func TestValidation_CustomersProjectsTeamsAllocations(t *testing.T) {
 		{"project meeting without customer", "POST", "/api/orgs/" + orgID + "/projects", `{"name":"P","customer_meeting_day":"monday"}`, 400, "project.meeting_needs_customer", "customer_meeting_day", 0},
 		{"project meeting day invalid", "POST", "/api/orgs/" + orgID + "/projects", `{"name":"P","customer_meeting_day":"someday"}`, 400, "project.invalid_weekday", "customer_meeting_day", 0},
 		{"project meeting time without day", "POST", "/api/orgs/" + orgID + "/projects", `{"name":"P","customer_meeting_time":"10:00"}`, 400, "project.customer_meeting_time_without_day", "customer_meeting_time", 0},
-		{"project meeting day without time", "POST", "/api/orgs/" + orgID + "/projects", `{"name":"P","customer_id":"` + customerID + `","customer_meeting_day":"monday"}`, 400, "request.field_required", "customer_meeting_time", 0},
+		{"project meeting day without time", "POST", "/api/orgs/" + orgID + "/projects", `{"name":"P","customer_id":"` + customerID + `","bill_rate_cents":10000,"customer_meeting_day":"monday"}`, 400, "request.field_required", "customer_meeting_time", 0},
+		{"project with customer and no rate", "POST", "/api/orgs/" + orgID + "/projects", `{"name":"P","customer_id":"` + customerID + `"}`, 400, "project.bill_rate_required", "bill_rate_cents", 0},
+		{"project with a rate and no customer", "POST", "/api/orgs/" + orgID + "/projects", `{"name":"P","bill_rate_cents":10000}`, 400, "project.bill_rate_needs_customer", "bill_rate_cents", 0},
+		{"project rate under the floor", "POST", "/api/orgs/" + orgID + "/projects", `{"name":"P","customer_id":"` + customerID + `","bill_rate_cents":999}`, 400, "project.invalid_bill_rate", "bill_rate_cents", 0},
 		{"project weekly day without time", "POST", "/api/orgs/" + orgID + "/projects", `{"name":"P","weekly_sync_day":"friday"}`, 400, "request.field_required", "weekly_sync_time", 0},
 		{"project weekly day with empty time", "POST", "/api/orgs/" + orgID + "/projects", `{"name":"P","weekly_sync_day":"friday","weekly_sync_time":""}`, 400, "request.field_required", "weekly_sync_time", 0},
 		{"project patch weekly day without time", "PATCH", "/api/projects/" + projectID, `{"name":"Projeto","weekly_sync_day":"friday"}`, 400, "request.field_required", "weekly_sync_time", 0},
@@ -83,8 +86,11 @@ func TestValidation_CustomersProjectsTeamsAllocations(t *testing.T) {
 		{"project patch meeting without customer", "PATCH", "/api/projects/" + projectID, `{"name":"Projeto","customer_meeting_day":"monday"}`, 400, "project.meeting_needs_customer", "customer_meeting_day", 0},
 		{"project patch sprint zero", "PATCH", "/api/projects/" + projectID, `{"name":"Projeto","sprint_duration_days":0}`, 400, "project.invalid_sprint", "sprint_duration_days", 0},
 		{"project patch name over limit", "PATCH", "/api/projects/" + projectID, `{"name":"` + rep(121) + `"}`, 400, "request.field_too_long", "name", 120},
-		{"project billing over limit", "PUT", "/api/projects/" + projectID + "/billing", `{"bill_rate_cents":100000001}`, 400, "project.invalid_bill_rate", "bill_rate_cents", 0},
-		{"project billing negative", "PUT", "/api/projects/" + projectID + "/billing", `{"bill_rate_cents":-1}`, 400, "project.invalid_bill_rate", "bill_rate_cents", 0},
+		{"project billing over limit", "PUT", "/api/projects/" + projectID + "/billing", `{"customer_id":"` + customerID + `","bill_rate_cents":100000001}`, 400, "project.invalid_bill_rate", "bill_rate_cents", 0},
+		{"project billing negative", "PUT", "/api/projects/" + projectID + "/billing", `{"customer_id":"` + customerID + `","bill_rate_cents":-1}`, 400, "project.invalid_bill_rate", "bill_rate_cents", 0},
+		{"project billing zero", "PUT", "/api/projects/" + projectID + "/billing", `{"customer_id":"` + customerID + `","bill_rate_cents":0}`, 400, "project.invalid_bill_rate", "bill_rate_cents", 0},
+		{"project billing customer without rate", "PUT", "/api/projects/" + projectID + "/billing", `{"customer_id":"` + customerID + `"}`, 400, "project.bill_rate_required", "bill_rate_cents", 0},
+		{"project billing rate without customer", "PUT", "/api/projects/" + projectID + "/billing", `{"bill_rate_cents":10000}`, 400, "project.bill_rate_needs_customer", "bill_rate_cents", 0},
 		{"project billing customer", "PUT", "/api/projects/" + projectID + "/billing", `{"customer_id":"nao-e-uuid"}`, 400, "project.customer_not_found", "customer_id", 0},
 
 		// Time.
@@ -100,12 +106,14 @@ func TestValidation_CustomersProjectsTeamsAllocations(t *testing.T) {
 
 		// Valor por hora.
 		{"rate negative", "PUT", "/api/projects/" + projectID + "/allocations/" + member.id, `{"pay_rate_cents":-1}`, 400, "allocation.invalid_rate", "pay_rate_cents", 0},
+		{"rate zero", "PUT", "/api/projects/" + projectID + "/allocations/" + member.id, `{"pay_rate_cents":0}`, 400, "allocation.invalid_rate", "pay_rate_cents", 0},
+		{"rate under the floor", "PUT", "/api/projects/" + projectID + "/allocations/" + member.id, `{"pay_rate_cents":999}`, 400, "allocation.invalid_rate", "pay_rate_cents", 0},
 		{"rate over limit", "PUT", "/api/projects/" + projectID + "/allocations/" + member.id, `{"pay_rate_cents":100000001}`, 400, "allocation.invalid_rate", "pay_rate_cents", 0},
 		{"rate missing", "PUT", "/api/projects/" + projectID + "/allocations/" + admin.id, `{}`, 400, "allocation.rate_required", "pay_rate_cents", 0},
 		{"preset invalid", "PUT", "/api/projects/" + projectID + "/allocations/" + member.id, `{"preset":"deus"}`, 400, "allocation.invalid_preset", "preset", 0},
 		{"invite rate missing", "POST", "/api/projects/" + projectID + "/invites", `{"email":"x@test.com"}`, 400, "allocation.rate_required", "pay_rate_cents", 0},
 		{"invite rate over limit", "POST", "/api/projects/" + projectID + "/invites", `{"email":"x@test.com","pay_rate_cents":100000001}`, 400, "allocation.invalid_rate", "pay_rate_cents", 0},
-		{"invite team elsewhere", "POST", "/api/projects/" + projectID + "/invites", `{"email":"x@test.com","pay_rate_cents":100,"team_id":"nao-e-uuid"}`, 400, "projectinvite.team_not_in_project", "team_id", 0},
+		{"invite team elsewhere", "POST", "/api/projects/" + projectID + "/invites", `{"email":"x@test.com","pay_rate_cents":1000,"team_id":"nao-e-uuid"}`, 400, "projectinvite.team_not_in_project", "team_id", 0},
 	}
 	for _, tc := range cases {
 		rec := do(e, tc.method, tc.path, tc.body, admin.session)
@@ -127,8 +135,11 @@ func TestValidation_CustomersProjectsTeamsAllocations(t *testing.T) {
 		{"customer name at limit", "POST", "/api/orgs/" + orgID + "/customers", `{"name":"` + rep(120) + `"}`},
 		{"project name and description at limit", "POST", "/api/orgs/" + orgID + "/projects", `{"name":"` + rep(120) + `","description":"` + rep(2000) + `"}`},
 		{"team name at limit", "POST", "/api/projects/" + projectID + "/teams", `{"name":"` + rep(120) + `"}`},
+		{"rate at the floor", "PUT", "/api/projects/" + projectID + "/allocations/" + member.id, `{"pay_rate_cents":1000}`},
 		{"rate at limit", "PUT", "/api/projects/" + projectID + "/allocations/" + member.id, `{"pay_rate_cents":100000000}`},
-		{"billing at limit", "PUT", "/api/projects/" + projectID + "/billing", `{"bill_rate_cents":100000000}`},
+		{"billing at the floor", "PUT", "/api/projects/" + projectID + "/billing", `{"customer_id":"` + customerID + `","bill_rate_cents":1000}`},
+		{"billing at limit", "PUT", "/api/projects/" + projectID + "/billing", `{"customer_id":"` + customerID + `","bill_rate_cents":100000000}`},
+		{"project with customer and rate", "POST", "/api/orgs/" + orgID + "/projects", `{"name":"C","customer_id":"` + customerID + `","bill_rate_cents":1000}`},
 	}
 	for _, tc := range ok {
 		rec := do(e, tc.method, tc.path, tc.body, admin.session)
@@ -146,7 +157,7 @@ func TestValidation_ProjectWithCustomerAndMeeting(t *testing.T) {
 	customerID := decode(t, rec)["id"].(string)
 
 	rec = do(e, "POST", "/api/orgs/"+admin.orgID+"/projects",
-		`{"name":"P","customer_id":"`+customerID+`","customer_meeting_day":"Monday","customer_meeting_time":"10:30"}`, admin.session)
+		`{"name":"P","customer_id":"`+customerID+`","bill_rate_cents":10000,"customer_meeting_day":"Monday","customer_meeting_time":"10:30"}`, admin.session)
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("create = %d: %s", rec.Code, rec.Body.String())
 	}
@@ -193,7 +204,7 @@ func TestValidation_CustomerWithProjectsIsAConflict(t *testing.T) {
 	rec := do(e, "POST", "/api/orgs/"+admin.orgID+"/customers", `{"name":"Cliente"}`, admin.session)
 	customerID := decode(t, rec)["id"].(string)
 	projectID := createProject(t, e, admin, "P")
-	if rec := do(e, "PUT", "/api/projects/"+projectID+"/billing", `{"customer_id":"`+customerID+`"}`, admin.session); rec.Code != http.StatusOK {
+	if rec := do(e, "PUT", "/api/projects/"+projectID+"/billing", `{"customer_id":"`+customerID+`","bill_rate_cents":10000}`, admin.session); rec.Code != http.StatusOK {
 		t.Fatalf("set billing = %d: %s", rec.Code, rec.Body.String())
 	}
 	rec = do(e, "DELETE", "/api/customers/"+customerID, "", admin.session)

@@ -84,7 +84,7 @@ func RegisterRoutes(e *echo.Echo, h Handlers, m *auth.Middleware, authLimiter ec
 	r.PATCH("/orgs/:orgId", h.Organization.Update, org, admin)
 	r.DELETE("/orgs/:orgId", h.Organization.Delete, org, owner)
 	r.GET("/orgs/:orgId/persons", h.Person.ListByOrg, org)
-	r.POST("/orgs/:orgId/projects", h.Project.Create, org, orgCan(permission.ProjectsCreate))
+	r.POST("/orgs/:orgId/projects", h.Project.Create, org, admin)
 	r.GET("/orgs/:orgId/projects", h.Project.ListByOrg, org)
 	// A visão geral da organização soma o dinheiro de todos os projetos e o tempo de cada pessoa: só dos admins.
 	// Os pagamentos da equipe são dinheiro e horas de todos: só de admins.

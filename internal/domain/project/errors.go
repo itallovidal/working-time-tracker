@@ -21,8 +21,12 @@ var (
 	// ErrMeetingNeedsCustomer recusa a reunião com o cliente num projeto sem cliente. O field é customer_meeting_day.
 	ErrMeetingNeedsCustomer = apperr.New("project.meeting_needs_customer", http.StatusBadRequest)
 	ErrInvalidBillRate      = apperr.New("project.invalid_bill_rate", http.StatusBadRequest)
-	ErrCustomerNotFound     = apperr.New("project.customer_not_found", http.StatusBadRequest)
-	ErrInvalidOrganization  = apperr.New("project.invalid_organization", http.StatusBadRequest)
-	ErrInvalidPage          = apperr.New("project.invalid_page", http.StatusBadRequest)
-	ErrInvalidPerPage       = apperr.New("project.invalid_per_page", http.StatusBadRequest)
+	// ErrBillRateRequired recusa o projeto com cliente e sem valor cobrado. O field é bill_rate_cents.
+	ErrBillRateRequired = apperr.New("project.bill_rate_required", http.StatusBadRequest)
+	// ErrBillRateNeedsCustomer recusa o valor cobrado num projeto sem cliente. O field é bill_rate_cents.
+	ErrBillRateNeedsCustomer = apperr.New("project.bill_rate_needs_customer", http.StatusBadRequest)
+	ErrCustomerNotFound      = apperr.New("project.customer_not_found", http.StatusBadRequest)
+	ErrInvalidOrganization   = apperr.New("project.invalid_organization", http.StatusBadRequest)
+	ErrInvalidPage           = apperr.New("project.invalid_page", http.StatusBadRequest)
+	ErrInvalidPerPage        = apperr.New("project.invalid_per_page", http.StatusBadRequest)
 )

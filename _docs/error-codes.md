@@ -48,7 +48,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | Código | Status | Parâmetros | pt-BR | en |
 |---|---|---|---|---|
 | `allocation.invalid_preset` | 400 | — | `grupo de permissões desconhecido` | `unknown permission group` |
-| `allocation.invalid_rate` | 400 | — | `o valor por hora deve ficar entre 0 e 1.000.000,00` | `the hourly rate must be between 0 and 1,000,000.00` |
+| `allocation.invalid_rate` | 400 | — | `o valor por hora deve ficar entre 10,00 e 1.000.000,00` | `the hourly rate must be between 10.00 and 1,000,000.00` |
 | `allocation.not_defined` | 404 | — | `esta pessoa não tem valor definido neste projeto` | `this person has no rate set on this project` |
 | `allocation.own_rates_only` | 403 | — | `você só pode ver os seus próprios valores` | `you can only see your own rates` |
 | `allocation.person_not_in_org` | 400 | — | `pessoa não encontrada nesta organização` | `person not found in this organization` |
@@ -240,9 +240,11 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 
 | Código | Status | Parâmetros | pt-BR | en |
 |---|---|---|---|---|
+| `project.bill_rate_needs_customer` | 400 | — | `o valor cobrado só vale em um projeto com cliente: escolha o cliente do projeto antes` | `the billed rate only applies to a project with a customer: choose the project's customer first` |
+| `project.bill_rate_required` | 400 | — | `informe o valor cobrado por hora: um projeto com cliente precisa dele` | `enter the rate billed per hour: a project with a customer needs it` |
 | `project.customer_meeting_time_without_day` | 400 | — | `o horário da reunião com o cliente precisa do dia da reunião` | `the customer meeting time needs the meeting day` |
 | `project.customer_not_found` | 400 | — | `cliente não encontrado nesta organização` | `customer not found in this organization` |
-| `project.invalid_bill_rate` | 400 | — | `o valor cobrado por hora deve ficar entre 0 e 1.000.000,00` | `the rate billed per hour must be between 0 and 1,000,000.00` |
+| `project.invalid_bill_rate` | 400 | — | `o valor cobrado por hora deve ficar entre 10,00 e 1.000.000,00` | `the rate billed per hour must be between 10.00 and 1,000,000.00` |
 | `project.invalid_customer_meeting_time` | 400 | — | `o horário da reunião com o cliente deve estar no formato HH:MM, por exemplo 10:30` | `the customer meeting time must use the HH:MM format, for example 10:30` |
 | `project.invalid_daily_time` | 400 | — | `o horário da daily deve estar no formato HH:MM, por exemplo 09:30` | `the daily time must use the HH:MM format, for example 09:30` |
 | `project.invalid_organization` | 400 | — | `organização inválida` | `invalid organization` |

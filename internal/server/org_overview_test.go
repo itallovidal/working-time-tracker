@@ -21,9 +21,7 @@ func TestOrgOverview_AdminOnly(t *testing.T) {
 	prj := "/api/projects/" + projectID
 
 	// A Bia bate o ponto no Projeto Alfa, que cobra 100,00 por hora e paga 20,00 a ela.
-	if rec := do(e, "PUT", prj+"/billing", `{"bill_rate_cents":10000}`, admin.session); rec.Code != http.StatusOK {
-		t.Fatalf("set billing = %d: %s", rec.Code, rec.Body.String())
-	}
+	setBilling(t, e, admin, prj, 10000)
 	allocate(t, e, admin, projectID, bia.id, 2000)
 	taskID := decode(t, do(e, "POST", prj+"/tasks", `{"name":"Tarefa","assignee_id":"`+bia.id+`"}`, admin.session))["id"].(string)
 	if rec := do(e, "POST", prj+"/work-sessions/clock-in", `{"task_id":"`+taskID+`"}`, bia.session); rec.Code != http.StatusCreated {

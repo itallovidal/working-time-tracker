@@ -167,28 +167,35 @@ func TestProjectAccess_InviteWithProjectOpensOnlyThatProject(t *testing.T) {
 	}
 }
 
-// Um membro que a organização deixou criar projetos não perde de vista o que acabou de criar: entra nele, e só
-// nele (os outros projetos continuam fora da lista dele).
-func TestProjectAccess_MemberWhoCreatesAProjectStaysInIt(t *testing.T) {
+// Criar projeto é do dono e do admin: um membro, mesmo com a permissão projects.create, recebe 403 e nada é criado.
+// O admin que não é o dono cria e vê todos os projetos sem ser matriculado em nenhum (só o dono entra, com custo 0).
+func TestProjectAccess_OnlyOwnerAndAdminCreateProjects(t *testing.T) {
 	e := newServer(t)
 	admin := signup(t, e, "Org", "ana@test.com")
 	bia := invite(t, e, admin, "bia@test.com", "member")
+	helena := invite(t, e, admin, "helena@test.com", "admin")
 	createEmptyProject(t, e, admin, "Projeto da Ana")
 	if rec := do(e, "PATCH", "/api/persons/"+bia.id+"/permissions", `{"permissions":["projects.create"]}`, admin.session); rec.Code != http.StatusOK {
 		t.Fatalf("grant projects.create = %d: %s", rec.Code, rec.Body.String())
 	}
 
-	mine := createProject(t, e, bia, "Projeto da Bia")
-	list := "/api/orgs/" + admin.orgID + "/projects"
-	if got := projectNames(t, decodeList(t, do(e, "GET", list, "", bia.session))); !slices.Equal(got, []string{"Projeto da Bia"}) {
-		t.Errorf("Bia's projects = %v, want only the one she created", got)
+	create := "/api/orgs/" + admin.orgID + "/projects"
+	if rec := do(e, "POST", create, `{"name":"Projeto da Bia"}`, bia.session); rec.Code != http.StatusForbidden {
+		t.Errorf("Bia creating a project = %d, want 403: %s", rec.Code, rec.Body.String())
 	}
-	if rec := do(e, "GET", "/api/projects/"+mine, "", bia.session); rec.Code != http.StatusOK {
-		t.Errorf("Bia GET her own new project = %d, want 200", rec.Code)
+	if got := projectNames(t, decodeList(t, do(e, "GET", create, "", admin.session))); len(got) != 1 {
+		t.Errorf("projects after the refusal = %v, want only the owner's", got)
 	}
-	// Criar um projeto não faz dela admin de coisa nenhuma: ela continua sem ver os dos outros.
-	if got := projectNames(t, decodeList(t, do(e, "GET", list, "", admin.session))); len(got) != 2 {
-		t.Errorf("admin's projects = %v, want both", got)
+
+	mine := createProject(t, e, helena, "Projeto da Helena")
+	if got := projectNames(t, decodeList(t, do(e, "GET", create, "", helena.session))); len(got) != 2 {
+		t.Errorf("Helena's projects = %v, want both (an admin sees every project)", got)
+	}
+	people := decodeList(t, do(e, "GET", "/api/projects/"+mine+"/collaborators", "", admin.session))
+	for _, p := range people {
+		if person, _ := p["person"].(map[string]any); person != nil && person["id"] == helena.id {
+			t.Errorf("Helena was enrolled in the project she created: %v", p)
+		}
 	}
 }
 
