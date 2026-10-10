@@ -204,6 +204,7 @@ func Build(client *ent.Client, opts Options) (*App, error) {
 	}
 
 	e.Renderer = renderer
+	e.Binder = strictBinder{}
 	e.HTTPErrorHandler = errorHandler(pages)
 
 	e.StaticFS("/static", echo.MustSubFS(web.FS, "static"))

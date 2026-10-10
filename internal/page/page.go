@@ -16,6 +16,7 @@ import (
 	"working-time-tracker/internal/domain/organization"
 	"working-time-tracker/internal/domain/permission"
 	"working-time-tracker/internal/i18n"
+	"working-time-tracker/internal/validate"
 )
 
 // Crumb identifica um recurso no cabeçalho da página.
@@ -107,7 +108,7 @@ func (d Data) Granted() []string {
 
 // Boot vira window.BOOT na página: os dados iniciais que o JavaScript precisa.
 func (d Data) Boot() map[string]any {
-	boot := map[string]any{"me": d.Me, "lang": d.Lang, "can": d.Granted()}
+	boot := map[string]any{"me": d.Me, "lang": d.Lang, "can": d.Granted(), "limits": validate.Limits()}
 	if d.Project != nil {
 		boot["project"] = d.Project
 	}
