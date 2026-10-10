@@ -30,18 +30,29 @@ O dono e os admins veem todos os projetos. Um membro **só vê aqueles em que es
 
 ### Quem vê quem
 
-A lista `GET /orgs/:id/persons` e `GET /persons/:id` trazem nome, e-mail, papel, permissões e jornada, e valem para:
+A lista `GET /orgs/:id/persons` e `GET /persons/:id` trazem nome, e-mail e papel, e valem para:
 
 | Quem | Vê |
 |---|---|
 | Admin, quem tem `people.manage` e quem tem `collaborators.manage` em algum projeto em que está | Todas as pessoas da organização (cuidam de pessoas ou precisam achar quem entra num projeto) |
 | Os outros | Só a si mesmos e quem está em algum projeto deles (valor por hora ou time); as demais respondem `404` pelo id e não vêm na lista |
 
+Dentro do que vê, cada um recebe só parte do cadastro de cada pessoa:
+
+| Campo | Quem vê | Os outros recebem |
+|---|---|---|
+| Papel e e-mail | todos | |
+| `weekly_hours` (a jornada) | a própria pessoa, o dono, os admins, quem tem `people.manage` (que a define) e quem tem `collaborators.manage` num projeto em que a pessoa está | `null` |
+| `permissions` (as da organização) | a própria pessoa, o dono e os admins | `[]` |
+| `payment` (a regra de pagamento) | a própria pessoa, os admins e quem tem `people.manage` | `null` |
+
+Na lista de valores do projeto (`GET /projects/:id/allocations`), o grupo (`preset`) de cada pessoa vai para quem vê a lista, mas o array `permissions` só vai para a própria pessoa, o dono e os admins (os outros recebem `[]`).
 ## Permissões do projeto
 
 | Chave | Libera |
 |---|---|
-| `project.edit` | Alterar e excluir o projeto (nome, descrição, sprint, daily, weekly e a reunião com o cliente) e abrir a aba Configurações |
+| `project.edit` | Alterar o projeto (nome, descrição, sprint, daily, weekly e a reunião com o cliente) e abrir a aba Configurações |
+| `project.delete` | Excluir o projeto, com as horas e os valores dele. Não está no grupo gerente de projeto: só o grupo administrador do projeto, o dono e os admins |
 | `teams.manage` | Criar, editar e excluir times, e escolher quem está em cada um |
 | `collaborators.manage` | Pôr e tirar pessoas do projeto e escolher o grupo delas |
 | `rates.view` | Ver o valor pago aos colegas e as horas de todos |
@@ -69,7 +80,7 @@ fica para depois: ao mexer numa, o grupo passa a `custom`.
 | Colaborador | `member` | nenhuma |
 | Gerente de projeto | `manager` | `project.edit`, `teams.manage`, `collaborators.manage`, `rates.view`, `rates.manage`, `labels.manage`, `integrations.manage` |
 | Financeiro | `finance` | `rates.view`, `rates.manage`, `billing.view`, `billing.manage` |
-| Administrador do projeto | `admin` | todas as do projeto |
+| Administrador do projeto | `admin` | todas as do projeto (inclusive `project.delete`) |
 
 As telas oferecem só três: colaborador, gerente de projeto e administrador do projeto. O financeiro existe na API (`preset: "finance"`) e nos testes, mas está escondido das telas (`HIDDEN_PRESETS` em `project.js`). O administrador do projeto aparece como "tudo o que o gerente de projeto faz, e mais:" seguido só do que ele acrescenta (ver e definir o faturamento).
 
@@ -80,7 +91,8 @@ colaboradores e outros gerentes, mas não dá o grupo financeiro, que tem o fatu
 
 | Rota | Permissão |
 |---|---|
-| `PATCH`/`DELETE /projects/:id` | `project.edit` |
+| `PATCH /projects/:id` | `project.edit` |
+| `DELETE /projects/:id` | `project.delete` |
 | `GET /projects/:id/overview` | `billing.view` |
 | `GET`/`PUT /projects/:id/billing` | `billing.view` / `billing.manage` |
 | `POST /projects/:id/teams`, `PATCH`/`DELETE /teams/:id`, `POST`/`DELETE /teams/:id/members` | `teams.manage` |

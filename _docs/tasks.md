@@ -996,6 +996,14 @@
 - [X] S93.8 `_docs/design.md` (Decision 16), `_test/routes.md` and the README updated; `_docs/permissions.md` is left for Sprint 95 and still lists `projects.create` as the permission of creating a project
 - [X] S93.9 Checked in the browser (seeded throwaway instance on 8090): the new project form with a customer chosen shows the rate field required, empty answers "informe o valor cobrado por hora" and 5,00 and 0 answer the 10,00 to 1.000.000,00 text, all without a request; 10,00 creates the project in one call with the customer and `bill_rate_cents` 1000; in Configurações the rate field shows only with a customer and removing the customer saves both as `null`
 
+### Sprint 94: Visibility and Separations
+
+- [X] S94.1 The weekly hours are the person's own: `GET /orgs/:id/persons` and `GET /persons/:id` answer `weekly_hours: null` to a colleague (`person.Handler.SetWeeklyHoursGuard`, built once per request in `server.go`, the pair of `redactPayment`); the person, the owner, the admins, who has `people.manage` and who has `collaborators.manage` in a project the person is in (`projectaccess.PeopleOfManagedProjects`) still see it; the person's own value comes from `/me/overview` and does not change
+- [X] S94.2 The organization's permission list of a person is hidden the same way (`SetPermissionsGuard`: the person, the owner and the admins; the others get `[]`), and in `GET /projects/:id/allocations` the `permissions` array of each link goes only to the person and the admins, while `preset` (the role) stays
+- [X] S94.3 `project.delete`: a new project key, outside the manager group and inside the admin one (`ProjectKeys`); `DELETE /projects/:id` asks for it and the delete button in Editar projeto depends on it (it used to show with `billing.manage` too); `permissions.keys.project_delete.*` in both languages
+- [X] S94.4 Tests: `TestVisibility_WeeklyHoursOnlyToWhoManagesThem`, `TestVisibility_PermissionListOfTheProject`, `TestVisibility_DeletingAProjectIsItsOwnPermission`, `TestPeopleOfManagedProjects`; the catalog count of `TestPermissions_CatalogAndIdentity` is 10
+- [X] S94.5 `_docs/permissions.md` and `_test/routes.md` updated (who sees which field, `project.delete`)
+
 ---
 
 ### Seed with a Full Demo

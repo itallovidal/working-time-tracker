@@ -410,7 +410,7 @@ Content-Type: application/json
 
 A pessoa traz `permissions`, as da organização que o dono liberou (vazio nos admins, que têm todas), e `/api/auth/me` traz as mesmas. As permissões estão em [`_docs/permissions.md`](../_docs/permissions.md). A organização nunca fica sem admin: rebaixar o último admin responde `400`. A pessoa traz `is_owner`: o dono da organização é quem a criou (o signup), é um só por organização e é sempre admin, então rebaixá-lo responde `400 person.owner_is_admin`, mesmo com outros admins. Quem entra por convite nunca é o dono. Pessoas entram na organização pelo signup ou por convite.
 
-A pessoa traz `weekly_hours`, a jornada semanal combinada com ela, em horas: vale para a organização toda, e não por projeto. Vai de 0 a 168 e vem `null` enquanto nenhum admin informou. Só um admin altera, e `0` ou `null` apagam a jornada (fora da faixa é `400 person.invalid_week_hours`); o `PATCH` de nome e email não mexe nela. Todos da organização leem.
+A pessoa traz `weekly_hours`, a jornada semanal combinada com ela, em horas: vale para a organização toda, e não por projeto. Vai de 0 a 168 e vem `null` enquanto nenhum admin informou. Só um admin altera, e `0` ou `null` apagam a jornada (fora da faixa é `400 person.invalid_week_hours`); o `PATCH` de nome e email não mexe nela. Quem a vê: a própria pessoa, o dono, os admins, quem tem `people.manage` e quem tem `collaborators.manage` num projeto em que a pessoa está (o administrador de projeto); os colegas recebem `null`, na lista e no detalhe. A jornada própria vem em `/me/overview` e não muda. A lista de `permissions` da pessoa segue a mesma ideia: só ela, o dono e os admins a veem (os outros recebem `[]`), e na lista de valores do projeto (`GET /api/projects/:projectId/allocations`) o `permissions` de cada vínculo só vai para a própria pessoa e para os admins, e o `preset` continua à vista.
 
 ---
 
@@ -420,7 +420,7 @@ A pessoa traz `weekly_hours`, a jornada semanal combinada com ela, em horas: val
 |---|---|---|---|
 | GET | `/api/projects/:projectId` | logado | Detalhes do projeto |
 | PATCH | `/api/projects/:projectId` | `project.edit` | Altera o projeto |
-| DELETE | `/api/projects/:projectId` | `project.edit` | Exclui o projeto com times, tarefas, sessões e integrações |
+| DELETE | `/api/projects/:projectId` | `project.delete` | Exclui o projeto com times, tarefas, sessões e integrações |
 | GET | `/api/projects/:projectId/overview` | `billing.view` | O projeto em números: pessoas, times, horas, custo, receita, tempo de projeto, tarefas e integrações. Veja [Visão geral](#visão-geral) |
 | GET | `/api/projects/:projectId/members` | logado | Pessoas que estão no projeto (com valor por hora ou em algum time), sem repetir: são as que podem ser responsáveis por tarefas |
 
