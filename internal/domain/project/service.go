@@ -89,9 +89,16 @@ func (r Routine) normalized() Routine {
 }
 
 // mergeSlot aplica um dia e um horário (nil mantém, vazio apaga) sobre os do
-// projeto. O horário não existe sem o dia: quem apagou o dia não deixa um horário
-// solto, e quem manda um horário precisa ter o dia.
+// projeto. Dia e horário andam juntos: quem apagou o dia não deixa um horário
+// solto, quem manda um horário precisa ter o dia, e quem grava um dia precisa ter
+// o horário, como a tela exige.
+//
+// O dia sem horário só é recusado quando o corpo mexeu no slot (mandou o dia ou o
+// horário). Weeklies antigas têm o dia sem horário de propósito (a migration de
+// 20261007120000 as deixou assim), e editar só o nome de um projeto assim segue
+// valendo.
 func mergeSlot(curDay, curTime, day, at *string, errWithoutDay *apperr.Error, timeField string) (*string, *string, error) {
+	touched := day != nil || at != nil
 	if day != nil {
 		curDay = nilIfEmpty(day)
 	}
@@ -103,6 +110,8 @@ func mergeSlot(curDay, curTime, day, at *string, errWithoutDay *apperr.Error, ti
 			return nil, nil, errWithoutDay.With("field", timeField)
 		}
 		curTime = nil
+	} else if curTime == nil && touched {
+		return nil, nil, apperr.ErrFieldRequired.With("field", timeField)
 	}
 	return curDay, curTime, nil
 }

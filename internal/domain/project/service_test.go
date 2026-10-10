@@ -185,8 +185,8 @@ func TestService_Update_OptionalScheduleFields(t *testing.T) {
 	svc := project.NewService(project.NewStore(testClient))
 
 	org, _ := orgSvc.Create("Org")
-	daily, weekly := "09:30", "Friday"
-	proj, err := svc.Create(org.ID.String(), "Projeto", "", 0, project.Routine{DailyTime: &daily, WeeklySyncDay: &weekly})
+	daily, weekly, weeklyAt := "09:30", "Friday", "10:00"
+	proj, err := svc.Create(org.ID.String(), "Projeto", "", 0, project.Routine{DailyTime: &daily, WeeklySyncDay: &weekly, WeeklySyncTime: &weeklyAt})
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
@@ -327,8 +327,8 @@ func TestService_CustomerMeeting(t *testing.T) {
 	}
 
 	// Apagar o dia apaga o horário junto, e a weekly do time não é tocada.
-	weekly, empty := "friday", ""
-	if _, err := svc.Update(proj.ID.String(), "Com reuniao", nil, nil, project.Routine{WeeklySyncDay: &weekly}); err != nil {
+	weekly, weeklyAt, empty := "friday", "09:00", ""
+	if _, err := svc.Update(proj.ID.String(), "Com reuniao", nil, nil, project.Routine{WeeklySyncDay: &weekly, WeeklySyncTime: &weeklyAt}); err != nil {
 		t.Fatalf("add the weekly: %v", err)
 	}
 	if _, err := svc.Update(proj.ID.String(), "Com reuniao", nil, nil, project.Routine{CustomerMeetingDay: &empty}); err != nil {
@@ -355,6 +355,77 @@ func TestService_CustomerMeeting(t *testing.T) {
 	}
 	if _, err := svc.Create(org.ID.String(), "P", "", 0, project.Routine{CustomerMeetingDay: &day, CustomerMeetingTime: &badTime}); !errors.Is(err, project.ErrInvalidMeetingTime) {
 		t.Errorf("invalid meeting time: err = %v", err)
+	}
+}
+
+// Dia e horário andam juntos, na weekly e na reunião com o cliente: gravar o dia sem o horário é recusado, na
+// criação e na edição, com o horário no erro, como a tela exige. Weeklies antigas ficaram só com o dia; quem edita
+// outro campo delas segue valendo, porque o corpo não mexeu no slot.
+func TestService_SlotDayNeedsTime(t *testing.T) {
+	cleanup(t)
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	svc := project.NewService(project.NewStore(testClient))
+	org, _ := orgSvc.Create("Org")
+	orgID := org.ID.String()
+	ctx := context.Background()
+	customer := testClient.Customer.Create().SetOrganizationID(org.ID).SetName("Empresa").SaveX(ctx)
+
+	weekday, at, other, empty := "friday", "10:00", "monday", ""
+	wantRequired := func(label string, err error, field string) {
+		t.Helper()
+		if !errors.Is(err, apperr.ErrFieldRequired) || fieldOf(err) != field {
+			t.Errorf("%s: err = %v (field %q), want request.field_required on %s", label, err, fieldOf(err), field)
+		}
+	}
+
+	// Na criação, o dia sozinho (ou com o horário vazio) é recusado.
+	_, err := svc.Create(orgID, "P", "", 0, project.Routine{WeeklySyncDay: &weekday})
+	wantRequired("create weekly day only", err, "weekly_sync_time")
+	_, err = svc.Create(orgID, "P", "", 0, project.Routine{WeeklySyncDay: &weekday, WeeklySyncTime: &empty})
+	wantRequired("create weekly day, empty time", err, "weekly_sync_time")
+	_, err = svc.CreateWithCustomer(orgID, project.CreateInput{Name: "P", CustomerID: customer.ID.String(), Routine: project.Routine{CustomerMeetingDay: &weekday}})
+	wantRequired("create meeting day only", err, "customer_meeting_time")
+
+	// Com os dois, ou com os dois vazios, vale.
+	ok, err := svc.CreateWithCustomer(orgID, project.CreateInput{Name: "Completo", CustomerID: customer.ID.String(), Routine: project.Routine{
+		WeeklySyncDay: &weekday, WeeklySyncTime: &at, CustomerMeetingDay: &other, CustomerMeetingTime: &at,
+	}})
+	if err != nil {
+		t.Fatalf("create with both: %v", err)
+	}
+	if _, err := svc.Create(orgID, "Vazio", "", 0, project.Routine{WeeklySyncDay: &empty, WeeklySyncTime: &empty}); err != nil {
+		t.Errorf("create with an empty slot: %v", err)
+	}
+	id := ok.ID.String()
+
+	// Na edição: trocar só o dia mantém o horário; limpar só o horário deixaria o dia sozinho.
+	moved, err := svc.Update(id, "Completo", nil, nil, project.Routine{WeeklySyncDay: &other})
+	if err != nil || moved.WeeklySyncTime == nil || *moved.WeeklySyncTime != at {
+		t.Errorf("change only the weekly day: %v, %v", moved, err)
+	}
+	_, err = svc.Update(id, "Completo", nil, nil, project.Routine{WeeklySyncTime: &empty})
+	wantRequired("clear only the weekly time", err, "weekly_sync_time")
+	_, err = svc.Update(id, "Completo", nil, nil, project.Routine{CustomerMeetingTime: &empty})
+	wantRequired("clear only the meeting time", err, "customer_meeting_time")
+	if _, err := svc.Update(id, "Completo", nil, nil, project.Routine{WeeklySyncDay: &empty}); err != nil {
+		t.Errorf("clearing the day clears the slot: %v", err)
+	}
+
+	// Linhas antigas, só com o dia: editar outro campo vale; mexer no slot sem dar o horário não.
+	legacy := testClient.Project.Create().SetName("Antigo").SetOrganizationID(org.ID).SetCustomerID(customer.ID).
+		SetWeeklySyncDay("friday").SetCustomerMeetingDay("monday").SaveX(ctx)
+	lid := legacy.ID.String()
+	desc := "nova descrição"
+	if _, err := svc.Update(lid, "Antigo renomeado", &desc, nil, project.Routine{}); err != nil {
+		t.Errorf("rename a project whose weekly has no time: %v", err)
+	}
+	_, err = svc.Update(lid, "Antigo renomeado", nil, nil, project.Routine{WeeklySyncDay: &other})
+	wantRequired("legacy weekly, new day without time", err, "weekly_sync_time")
+	_, err = svc.Update(lid, "Antigo renomeado", nil, nil, project.Routine{CustomerMeetingDay: &weekday})
+	wantRequired("legacy meeting, new day without time", err, "customer_meeting_time")
+	fixed, err := svc.Update(lid, "Antigo renomeado", nil, nil, project.Routine{WeeklySyncDay: &other, WeeklySyncTime: &at})
+	if err != nil || fixed.WeeklySyncTime == nil || *fixed.WeeklySyncTime != at {
+		t.Errorf("give the legacy weekly its time: %v, %v", fixed, err)
 	}
 }
 
@@ -576,7 +647,7 @@ func TestService_MeetingNeedsCustomer(t *testing.T) {
 	ctx := context.Background()
 	mine := testClient.Customer.Create().SetOrganizationID(org.ID).SetName("A").SaveX(ctx).ID.String()
 	theirs := testClient.Customer.Create().SetOrganizationID(other.ID).SetName("B").SaveX(ctx).ID.String()
-	day, empty := "monday", ""
+	day, at, empty := "monday", "10:00", ""
 
 	if _, err := svc.Create(orgID, "P", "", 0, project.Routine{CustomerMeetingDay: &day}); !errors.Is(err, project.ErrMeetingNeedsCustomer) || fieldOf(err) != "customer_meeting_day" {
 		t.Errorf("create with a meeting and no customer: err = %v", err)
@@ -588,7 +659,7 @@ func TestService_MeetingNeedsCustomer(t *testing.T) {
 	if _, err := svc.CreateWithCustomer(orgID, project.CreateInput{Name: "P", CustomerID: theirs}); !errors.Is(err, project.ErrCustomerNotFound) || fieldOf(err) != "customer_id" {
 		t.Errorf("create with a customer of another organization: err = %v", err)
 	}
-	with, err := svc.CreateWithCustomer(orgID, project.CreateInput{Name: "P", CustomerID: mine, Routine: project.Routine{CustomerMeetingDay: &day}})
+	with, err := svc.CreateWithCustomer(orgID, project.CreateInput{Name: "P", CustomerID: mine, Routine: project.Routine{CustomerMeetingDay: &day, CustomerMeetingTime: &at}})
 	if err != nil || with.Customer == nil || with.Customer.Name != "A" || with.CustomerMeetingDay == nil {
 		t.Fatalf("create with customer and meeting = %+v, %v", with, err)
 	}
@@ -600,7 +671,7 @@ func TestService_MeetingNeedsCustomer(t *testing.T) {
 	if _, err := svc.SetBilling(internal.ID.String(), &mine, nil); err != nil {
 		t.Fatalf("set customer: %v", err)
 	}
-	if _, err := svc.Update(internal.ID.String(), "Interno", nil, nil, project.Routine{CustomerMeetingDay: &day}); err != nil {
+	if _, err := svc.Update(internal.ID.String(), "Interno", nil, nil, project.Routine{CustomerMeetingDay: &day, CustomerMeetingTime: &at}); err != nil {
 		t.Errorf("update with a meeting and a customer: %v", err)
 	}
 }

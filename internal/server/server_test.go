@@ -1284,6 +1284,8 @@ func TestProjects_CustomerMeeting(t *testing.T) {
 		`{"name":"Alfa","customer_meeting_time":"25:00"}`:                           "project.invalid_customer_meeting_time",
 		`{"name":"Alfa","customer_meeting_day":"someday"}`:                          "project.invalid_weekday",
 		`{"name":"Alfa","customer_meeting_day":"","customer_meeting_time":"10:00"}`: "project.customer_meeting_time_without_day",
+		// O horário é do dia: apagar só o horário deixaria o dia sozinho.
+		`{"name":"Alfa","customer_meeting_time":""}`: "request.field_required",
 	} {
 		rec := do(e, "PATCH", "/api/projects/"+id, body, admin.session)
 		if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), code) {
