@@ -3,6 +3,7 @@ package project
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v5"
@@ -43,6 +44,10 @@ func (h *Handler) Create(c *echo.Context) error {
 	}
 	if err := c.Bind(&body); err != nil {
 		return apperr.Respond(c, 400, apperr.BindError(err))
+	}
+	// Cliente e valor cobrado são dinheiro: o admin cria só projeto interno, e o dono define os dois.
+	if me := auth.CurrentPerson(c); me != nil && !me.IsOwner && (strings.TrimSpace(body.CustomerID) != "" || body.BillRateCents != nil) {
+		return apperr.Respond(c, 403, auth.ErrOwnerOnly)
 	}
 	sprint := 0
 	if body.SprintDurationDays != nil {

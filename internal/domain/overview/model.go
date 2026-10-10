@@ -127,3 +127,18 @@ type PersonTotal struct {
 	PayAmountCents  *int    `json:"pay_amount_cents"`
 	BillAmountCents *int    `json:"bill_amount_cents"`
 }
+
+// HideBilling tira da visão geral do projeto o que é cobrança: o cliente e o valor cobrado, a receita e a margem,
+// do projeto e de cada pessoa. O custo fica. É o que quem administra o projeto sem ver o faturamento recebe.
+func (o *Overview) HideBilling() {
+	o.Project.Customer, o.Project.BillRateCents = nil, nil
+	o.Money.hideBilling()
+	for i := range o.ByPerson {
+		o.ByPerson[i].BillAmountCents = nil
+	}
+}
+
+// hideBilling apaga a receita e a margem, que sem a receita não se calcula; o custo continua.
+func (m *Money) hideBilling() {
+	m.BillAmountCents, m.MarginCents = nil, nil
+}

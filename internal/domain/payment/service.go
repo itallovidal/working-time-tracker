@@ -132,6 +132,19 @@ type Summary struct {
 	Lifetime    Lifetime            `json:"lifetime"`
 }
 
+// HideMoney tira da resposta o dinheiro: a regra, os períodos de pagamento e todo valor. Ficam as horas (o tempo
+// desde o início e por projeto) e o dia da primeira sessão. É o que um admin que não é o dono recebe do perfil de
+// outra pessoa: o dinheiro de pagamento é do dono.
+func (s *Summary) HideMoney() {
+	s.Rule, s.Current = nil, nil
+	s.Upcoming, s.History = []PeriodView{}, []PeriodView{}
+	s.Totals.AmountCents = nil
+	s.Lifetime.AmountCents = nil
+	for i := range s.Lifetime.Projects {
+		s.Lifetime.Projects[i].AmountCents, s.Lifetime.Projects[i].RevenueCents = nil, nil
+	}
+}
+
 // location carrega o fuso da organização; um nome inválido cai para UTC.
 func location(name string) *time.Location {
 	loc, err := time.LoadLocation(name)

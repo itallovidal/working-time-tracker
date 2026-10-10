@@ -263,3 +263,11 @@ func (m *Money) addMargin() {
 	}
 	m.MarginCents = &margin
 }
+
+// HideBilling tira da visão geral da organização a receita e a margem de cada janela, que são do dono; o custo e o
+// tempo ficam.
+func (o *OrgOverview) HideBilling() {
+	o.Periods.Last7Days.Money.hideBilling()
+	o.Periods.Last30Days.Money.hideBilling()
+	o.Periods.AllTime.Money.hideBilling()
+}

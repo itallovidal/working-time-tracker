@@ -33,7 +33,8 @@ func (h *Handler) Management(c *echo.Context) error {
 	set := auth.ProjectPermissions(c)
 	tab := "overview"
 	switch {
-	case set.Has(permission.BillingView):
+	// Quem tem qualquer permissão do projeto abre a Visão geral; a cobrança dela só vai a quem vê o faturamento.
+	case set.Manages():
 	case set.HasAny(permission.CollaboratorsManage, permission.TeamsManage, permission.RatesView, permission.RatesManage):
 		tab = "teams"
 	case set.Has(permission.IntegrationsManage):

@@ -11,6 +11,7 @@ import (
 	"working-time-tracker/internal/database"
 	"working-time-tracker/internal/domain/auth"
 	"working-time-tracker/internal/domain/organization"
+	"working-time-tracker/internal/domain/permission"
 	"working-time-tracker/internal/domain/project"
 )
 
@@ -36,11 +37,15 @@ func (h *Handler) Get(c *echo.Context) error {
 	if err != nil {
 		return fail(c, err)
 	}
+	// A rota é de quem cuida do projeto; a cobrança é só de quem vê o faturamento.
+	if !auth.ProjectPermissions(c).Has(permission.BillingView) {
+		o.HideBilling()
+	}
 	return c.JSON(http.StatusOK, o)
 }
 
-// Organization devolve a visão geral da organização de quem pede. A rota é só de admins: é o
-// dinheiro de todos os projetos e o tempo de cada pessoa.
+// Organization devolve a visão geral da organização de quem pede. A rota é só de admins: é o tempo de cada pessoa
+// e o custo de todos os projetos; a receita e a margem só vão para o dono.
 func (h *Handler) Organization(c *echo.Context) error {
 	o, err := h.svc.Organization(c.Param("orgId"), auth.CurrentPerson(c).PersonID.String())
 	if err != nil {
@@ -48,6 +53,10 @@ func (h *Handler) Organization(c *echo.Context) error {
 			return apperr.Respond(c, http.StatusNotFound, organization.ErrNotFound)
 		}
 		return apperr.Respond(c, http.StatusInternalServerError, err)
+	}
+	// A receita e a margem são do dono.
+	if me := auth.CurrentPerson(c); me == nil || !me.IsOwner {
+		o.HideBilling()
 	}
 	return c.JSON(http.StatusOK, o)
 }
