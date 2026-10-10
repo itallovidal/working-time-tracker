@@ -160,3 +160,22 @@ func TestManagesPeople(t *testing.T) {
 		}
 	}
 }
+
+// Quem tem collaborators.manage num projeto alcança as pessoas dele (com valor ou só no time), e só elas: o Diego é
+// gerente do Y, então traz a Carla e ele mesmo, e não a Ana nem o Bruno, que são do X.
+func TestPeopleOfManagedProjects(t *testing.T) {
+	s := setup(t)
+	ctx := context.Background()
+
+	got, err := projectaccess.PeopleOfManagedProjects(ctx, testClient, s.diego)
+	if err != nil {
+		t.Fatalf("people of managed projects: %v", err)
+	}
+	if !got[s.carla] || !got[s.diego] || got[s.ana] || got[s.bruno] || got[s.eva] {
+		t.Errorf("Diego's people = %v, want only Carla and Diego", got)
+	}
+	// Quem não administra projeto nenhum não alcança ninguém.
+	if none, _ := projectaccess.PeopleOfManagedProjects(ctx, testClient, s.carla); len(none) != 0 {
+		t.Errorf("Carla's people = %v, want none", none)
+	}
+}

@@ -30,6 +30,11 @@ type Handler struct {
 	scope func(c *echo.Context) (*uuid.UUID, error)
 	// seesPayment diz se quem pede pode ver a regra de pagamento da pessoa; nil não esconde nada.
 	seesPayment func(c *echo.Context, personID uuid.UUID) bool
+	// seesWeeklyHours devolve, para o pedido, quem tem a jornada semanal à vista; nil não esconde nada. A função
+	// é montada uma vez por pedido, para a lista não consultar o banco a cada pessoa.
+	seesWeeklyHours func(c *echo.Context) (func(personID uuid.UUID) bool, error)
+	// seesPermissions diz se quem pede vê a lista de permissões da organização da pessoa; nil não esconde nada.
+	seesPermissions func(c *echo.Context, personID uuid.UUID) bool
 }
 
 func NewHandler(svc *Service) *Handler {
@@ -47,6 +52,42 @@ func (h *Handler) SetScope(scope func(c *echo.Context) (*uuid.UUID, error)) {
 // pessoas. Para os demais (colegas de projeto) a lista e o detalhe trazem payment: null.
 func (h *Handler) SetPaymentGuard(f func(c *echo.Context, personID uuid.UUID) bool) {
 	h.seesPayment = f
+}
+
+// SetWeeklyHoursGuard liga a regra de quem vê a jornada semanal dos outros: a própria pessoa, o dono e os admins,
+// quem define a jornada e quem administra um projeto em que a pessoa está. Para os demais (colegas) a lista e o
+// detalhe trazem weekly_hours: null.
+func (h *Handler) SetWeeklyHoursGuard(f func(c *echo.Context) (func(personID uuid.UUID) bool, error)) {
+	h.seesWeeklyHours = f
+}
+
+// SetPermissionsGuard liga a regra de quem vê a lista de permissões da organização de uma pessoa: ela mesma, o dono
+// e os admins. Os colegas veem o papel e o e-mail, e permissions chega vazio.
+func (h *Handler) SetPermissionsGuard(f func(c *echo.Context, personID uuid.UUID) bool) {
+	h.seesPermissions = f
+}
+
+// redactWeeklyHours apaga a jornada das pessoas que quem pede não vê.
+func (h *Handler) redactWeeklyHours(c *echo.Context, people ...*Person) error {
+	if h.seesWeeklyHours == nil {
+		return nil
+	}
+	sees, err := h.seesWeeklyHours(c)
+	if err != nil {
+		return err
+	}
+	for _, p := range people {
+		if !sees(p.ID) {
+			p.WeeklyHours = nil
+		}
+	}
+	return nil
+}
+
+func (h *Handler) redactPermissions(c *echo.Context, p *Person) {
+	if h.seesPermissions != nil && !h.seesPermissions(c, p.ID) {
+		p.Permissions = []string{}
+	}
 }
 
 func (h *Handler) redactPayment(c *echo.Context, p *Person) {
@@ -77,6 +118,14 @@ func (h *Handler) ListByOrg(c *echo.Context) error {
 	}
 	for i := range persons {
 		h.redactPayment(c, &persons[i])
+		h.redactPermissions(c, &persons[i])
+	}
+	ptrs := make([]*Person, len(persons))
+	for i := range persons {
+		ptrs[i] = &persons[i]
+	}
+	if err := h.redactWeeklyHours(c, ptrs...); err != nil {
+		return apperr.Respond(c, http.StatusInternalServerError, err)
 	}
 	return c.JSON(http.StatusOK, persons)
 }
@@ -95,6 +144,10 @@ func (h *Handler) Get(c *echo.Context) error {
 		return apperr.Respond(c, http.StatusInternalServerError, err)
 	}
 	h.redactPayment(c, person)
+	h.redactPermissions(c, person)
+	if err := h.redactWeeklyHours(c, person); err != nil {
+		return apperr.Respond(c, http.StatusInternalServerError, err)
+	}
 	return c.JSON(http.StatusOK, person)
 }
 

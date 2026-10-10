@@ -29,7 +29,8 @@ func fail(c *echo.Context, err error) error {
 
 // ListByProject devolve os valores do projeto. Quem vê o valor dos outros (admins e quem
 // tem essa permissão no projeto) recebe os de todo mundo; qualquer outra pessoa recebe
-// só o dela, ou uma lista vazia.
+// só o dela, ou uma lista vazia. A lista de permissões de cada pessoa só vai para ela mesma, para o dono e para os
+// admins.
 func (h *Handler) ListByProject(c *echo.Context) error {
 	projectID := c.Param("projectId")
 	me := auth.CurrentPerson(c)
@@ -37,6 +38,15 @@ func (h *Handler) ListByProject(c *echo.Context) error {
 		all, err := h.svc.ListByProject(projectID)
 		if err != nil {
 			return fail(c, err)
+		}
+		// O grupo (preset) é o papel da pessoa e todo mundo o vê; a lista de permissões de cada um é só da própria
+		// pessoa, do dono e dos admins.
+		if me == nil || !me.IsAdmin() {
+			for i := range all {
+				if me == nil || all[i].PersonID != me.PersonID {
+					all[i].Permissions = []string{}
+				}
+			}
 		}
 		return c.JSON(http.StatusOK, all)
 	}

@@ -61,6 +61,37 @@ func ManagesPeople(ctx context.Context, client *ent.Client, personID uuid.UUID) 
 	return false, nil
 }
 
+// PeopleOfManagedProjects devolve as pessoas que estão em algum projeto em que a pessoa tem collaborators.manage (o
+// Administrador de projeto de hoje, o grupo manager). É o que ela vê além de si: a jornada de quem trabalha com ela
+// nesse projeto. A própria pessoa não entra por aqui; quem chama já a trata à parte.
+func PeopleOfManagedProjects(ctx context.Context, client *ent.Client, personID uuid.UUID) (map[uuid.UUID]bool, error) {
+	allocs, err := client.Allocation.Query().Where(entalloc.PersonIDEQ(personID)).All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var projects []uuid.UUID
+	for _, a := range allocs {
+		if slices.Contains(permission.Normalize(a.Permissions, permission.ProjectKeys), permission.CollaboratorsManage) {
+			projects = append(projects, a.ProjectID)
+		}
+	}
+	out := map[uuid.UUID]bool{}
+	if len(projects) == 0 {
+		return out, nil
+	}
+	people, err := client.Person.Query().Where(entperson.Or(
+		entperson.HasAllocationsWith(entalloc.ProjectIDIn(projects...)),
+		entperson.HasTeamMembershipsWith(enttm.HasTeamWith(entteam.ProjectIDIn(projects...))),
+	)).IDs(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, id := range people {
+		out[id] = true
+	}
+	return out, nil
+}
+
 // Has diz se a pessoa está no projeto.
 func Has(ctx context.Context, client *ent.Client, personID, projectID uuid.UUID) (bool, error) {
 	return client.Project.Query().Where(entproject.IDEQ(projectID), ProjectsOf(personID)).Exist(ctx)

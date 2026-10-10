@@ -24,6 +24,7 @@ import (
 	"working-time-tracker/internal/domain/permission"
 	"working-time-tracker/internal/domain/person"
 	"working-time-tracker/internal/domain/project"
+	"working-time-tracker/internal/domain/projectaccess"
 	"working-time-tracker/internal/domain/projectinvite"
 	"working-time-tracker/internal/domain/task"
 	"working-time-tracker/internal/domain/team"
@@ -184,6 +185,26 @@ func Build(client *ent.Client, opts Options) (*App, error) {
 	personHandler.SetPaymentGuard(func(c *echo.Context, personID uuid.UUID) bool {
 		me := auth.CurrentPerson(c)
 		return me != nil && (me.PersonID == personID || me.IsAdmin() || me.Can(permission.PeopleManage))
+	})
+	// A jornada semanal é da própria pessoa, do dono e dos admins, de quem cuida de pessoas (define a jornada) e de
+	// quem administra um projeto em que ela está. Os colegas de projeto não a veem.
+	personHandler.SetWeeklyHoursGuard(func(c *echo.Context) (func(uuid.UUID) bool, error) {
+		me := auth.CurrentPerson(c)
+		if me == nil {
+			return func(uuid.UUID) bool { return false }, nil
+		}
+		if me.IsAdmin() || me.Can(permission.PeopleManage) {
+			return func(uuid.UUID) bool { return true }, nil
+		}
+		managed, err := projectaccess.PeopleOfManagedProjects(c.Request().Context(), client, me.PersonID)
+		if err != nil {
+			return nil, err
+		}
+		return func(id uuid.UUID) bool { return id == me.PersonID || managed[id] }, nil
+	})
+	personHandler.SetPermissionsGuard(func(c *echo.Context, personID uuid.UUID) bool {
+		me := auth.CurrentPerson(c)
+		return me != nil && (me.PersonID == personID || me.IsAdmin())
 	})
 	oauthHandler := integration.NewOAuthHandler(integrationSvc, opts.GitHubOAuth, opts.TrelloAuth, resolver, opts.EncryptKey, opts.CookieSecure)
 	catalog, err := i18n.Load()
