@@ -7,30 +7,33 @@
       <p class="muted">{{.T "auth.signup.subtitle"}}</p>
     </div>
     {{/* Duas etapas: a organização (nome dela e o seu) e o acesso (email e senha). As etapas são blocos x-if, não x-show:
-         assim só os campos à vista existem, e a validação do navegador (required, minlength, email) vale para eles. */}}
+         assim só os campos à vista existem, e a conferência da tela (check) vale para eles. */}}
     <ol class="wizard-steps" aria-label="{{.T "auth.signup.steps_label"}}">
       <li :class="step === 1 && 'current'" :aria-current="step === 1 ? 'step' : false"><span class="n">1</span> {{.T "auth.signup.step_org"}}</li>
       <li :class="step === 2 && 'current'" :aria-current="step === 2 ? 'step' : false"><span class="n">2</span> {{.T "auth.signup.step_access"}}</li>
     </ol>
-    <form class="stack" x-ref="form" @submit.prevent="submit()">
+    <form class="stack" novalidate x-ref="form" @submit.prevent="submit()">
       <template x-if="step === 1">
         <div class="stack">
           <div class="field">
             <label for="signup-org">{{.T "auth.signup.org_name"}}</label>
-            <input id="signup-org" x-init="$el.focus()" type="text" autocomplete="organization" required x-model="organization_name">
+            <input id="signup-org" x-init="$el.focus()" type="text" autocomplete="organization" maxlength="{{limit "name"}}" data-field="organization_name" x-model="organization_name" @input="clearField('organization_name')" :aria-invalid="fieldErrors.organization_name ? 'true' : 'false'">
+            {{template "field_error" "organization_name"}}
           </div>
           <div class="field">
             <label for="signup-country">{{.T "auth.signup.country"}}</label>
-            <select id="signup-country" autocomplete="country" required x-model="country">
+            <select id="signup-country" autocomplete="country" data-field="country" x-model="country" @change="clearField('country')" :aria-invalid="fieldErrors.country ? 'true' : 'false'">
               <template x-for="c in countries" :key="c.code">
                 <option :value="c.code" x-text="WTT.countries.name(c.code)" :selected="c.code === country"></option>
               </template>
             </select>
             <span class="hint">{{.T "auth.signup.country_hint"}}</span>
+            {{template "field_error" "country"}}
           </div>
           <div class="field">
             <label for="signup-name">{{.T "auth.your_name"}}</label>
-            <input id="signup-name" type="text" autocomplete="name" required x-model="name">
+            <input id="signup-name" type="text" autocomplete="name" maxlength="{{limit "name"}}" data-field="name" x-model="name" @input="clearField('name')" :aria-invalid="fieldErrors.name ? 'true' : 'false'">
+            {{template "field_error" "name"}}
           </div>
           <button class="btn btn-block" type="submit">{{.T "auth.signup.next"}} {{template "icon" "arrow-right"}}</button>
         </div>
@@ -39,20 +42,22 @@
         <div class="stack">
           <div class="field">
             <label for="signup-email">{{.T "common.email"}}</label>
-            <input id="signup-email" x-init="$el.focus()" type="email" autocomplete="email" required x-model="email">
+            <input id="signup-email" x-init="$el.focus()" type="email" autocomplete="email" maxlength="{{limit "email"}}" data-field="email" x-model="email" @input="clearField('email')" :aria-invalid="fieldErrors.email ? 'true' : 'false'">
+            {{template "field_error" "email"}}
           </div>
           <div class="field">
             <label for="signup-password">{{.T "auth.password"}}</label>
             <div class="input-affix">
-              <input id="signup-password" :type="reveal ? 'text' : 'password'" type="password" autocomplete="new-password" minlength="8" required x-model="password" aria-describedby="signup-password-hint">
+              <input id="signup-password" :type="reveal ? 'text' : 'password'" type="password" autocomplete="new-password" data-field="password" x-model="password" @input="clearField('password')" :aria-invalid="fieldErrors.password ? 'true' : 'false'" aria-describedby="signup-password-hint">
               <button class="input-affix-btn" type="button" @click="reveal = !reveal" :aria-pressed="reveal" :aria-label="reveal ? $t('auth.signup.hide_password') : $t('auth.signup.show_password')" :title="reveal ? $t('auth.signup.hide_password') : $t('auth.signup.show_password')"><i class="fa-solid" :class="reveal ? 'fa-eye-slash' : 'fa-eye'" aria-hidden="true"></i></button>
             </div>
             <span id="signup-password-hint" class="hint" :class="longEnough && 'is-ok'">{{.T "auth.password_hint"}}</span>
+            {{template "field_error" "password"}}
           </div>
           <div class="field">
             <label for="signup-confirm">{{.T "auth.signup.confirm_password"}}</label>
             <div class="input-affix">
-              <input id="signup-confirm" x-ref="confirm" :type="reveal ? 'text' : 'password'" type="password" autocomplete="new-password" required x-model="confirmation" @blur="confirmTouched = true" :aria-invalid="showMismatch" aria-describedby="signup-confirm-msg">
+              <input id="signup-confirm" x-ref="confirm" :type="reveal ? 'text' : 'password'" type="password" autocomplete="new-password" x-model="confirmation" @blur="confirmTouched = true" :aria-invalid="showMismatch" aria-describedby="signup-confirm-msg">
               <button class="input-affix-btn" type="button" @click="reveal = !reveal" :aria-pressed="reveal" :aria-label="reveal ? $t('auth.signup.hide_password') : $t('auth.signup.show_password')" :title="reveal ? $t('auth.signup.hide_password') : $t('auth.signup.show_password')"><i class="fa-solid" :class="reveal ? 'fa-eye-slash' : 'fa-eye'" aria-hidden="true"></i></button>
             </div>
             <span id="signup-confirm-msg" class="hint hint-slot" :class="showMismatch ? 'is-bad' : matches && 'is-ok'" aria-live="polite" x-text="showMismatch ? $t('auth.signup.password_mismatch') : (matches ? $t('auth.signup.password_match') : '')"></span>

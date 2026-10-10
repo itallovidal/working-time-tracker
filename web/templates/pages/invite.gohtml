@@ -20,20 +20,23 @@
           <h1 x-text="$t('auth.invite.join', { name: info.organization_name })"></h1>
           <p class="muted">{{.T "auth.invite.invited_as"}} <strong x-text="WTT.fmt.role(info.role)"></strong>. {{.T "auth.invite.create_to_accept"}}</p>
         </div>
-        <form class="stack" @submit.prevent="submit()">
+        <form class="stack" novalidate @submit.prevent="submit()">
           <div class="field">
             <label for="invite-name">{{.T "auth.your_name"}}</label>
-            <input id="invite-name" type="text" autocomplete="name" required x-model="name">
+            <input id="invite-name" type="text" autocomplete="name" maxlength="{{limit "name"}}" data-field="name" x-model="name" @input="clearField('name')" :aria-invalid="fieldErrors.name ? 'true' : 'false'">
+            {{template "field_error" "name"}}
           </div>
           <div class="field">
             <label for="invite-email">{{.T "common.email"}}</label>
-            <input id="invite-email" type="email" autocomplete="email" required x-model="email" :readonly="!!info.email">
+            <input id="invite-email" type="email" autocomplete="email" maxlength="{{limit "email"}}" data-field="email" x-model="email" @input="clearField('email')" :aria-invalid="fieldErrors.email ? 'true' : 'false'" :readonly="!!info.email">
             <span class="hint" x-show="info.email">{{.T "auth.invite.email_only"}}</span>
+            {{template "field_error" "email"}}
           </div>
           <div class="field">
             <label for="invite-password">{{.T "auth.password"}}</label>
-            <input id="invite-password" type="password" autocomplete="new-password" minlength="8" required x-model="password">
+            <input id="invite-password" type="password" autocomplete="new-password" data-field="password" x-model="password" @input="clearField('password')" :aria-invalid="fieldErrors.password ? 'true' : 'false'">
             <span class="hint">{{.T "auth.password_hint"}}</span>
+            {{template "field_error" "password"}}
           </div>
           <p class="form-error" x-cloak x-show="errors.accept" x-text="errors.accept" role="alert"></p>
           <button class="btn btn-block" type="submit" :disabled="pending">

@@ -6,14 +6,16 @@
       <h1>{{.T "auth.login.title"}}</h1>
       <p class="muted">{{.T "auth.login.subtitle"}}</p>
     </div>
-    <form class="stack" @submit.prevent="submit()">
+    <form class="stack" novalidate @submit.prevent="submit()">
       <div class="field">
         <label for="login-email">{{.T "common.email"}}</label>
-        <input id="login-email" type="email" autocomplete="email" required x-model="email" autofocus>
+        <input id="login-email" type="email" autocomplete="email" data-field="email" x-model="email" @input="clearField('email')" :aria-invalid="fieldErrors.email ? 'true' : 'false'" autofocus>
+        {{template "field_error" "email"}}
       </div>
       <div class="field">
         <label for="login-password">{{.T "auth.password"}}</label>
-        <input id="login-password" type="password" autocomplete="current-password" required x-model="password">
+        <input id="login-password" type="password" autocomplete="current-password" data-field="password" x-model="password" @input="clearField('password')" :aria-invalid="fieldErrors.password ? 'true' : 'false'">
+        {{template "field_error" "password"}}
       </div>
       <p class="form-error" x-cloak x-show="errors.login" x-text="errors.login" role="alert"></p>
       <button class="btn btn-block" type="submit" :disabled="pending">

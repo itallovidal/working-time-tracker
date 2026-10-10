@@ -10,12 +10,13 @@
       <noscript><p class="form-error">{{.T "auth.clerk.noscript"}}</p></noscript>
     </div>
 
-    <form class="stack" x-cloak x-show="state === 'password'" @submit.prevent="submitPassword()">
+    <form class="stack" novalidate x-cloak x-show="state === 'password'" @submit.prevent="submitPassword()">
       <h1>{{.T "auth.clerk.confirm_password_title"}}</h1>
       <p class="muted" x-text="$t('auth.clerk.confirm_password_text', { email })"></p>
       <div class="field">
         <label for="clerk-password">{{.T "auth.password"}}</label>
-        <input id="clerk-password" type="password" autocomplete="current-password" required x-model="password">
+        <input id="clerk-password" type="password" autocomplete="current-password" data-field="password" x-model="password" @input="clearField('password')" :aria-invalid="fieldErrors.password ? 'true' : 'false'">
+        {{template "field_error" "password"}}
       </div>
       <p class="form-error" x-cloak x-show="errors.password" x-text="errors.password" role="alert"></p>
       <button class="btn btn-block" type="submit" :disabled="pending">{{.T "auth.clerk.confirm_password_submit"}}</button>
@@ -34,14 +35,15 @@
           <p class="auth-foot">{{.T "auth.clerk.or_create"}}</p>
         </div>
       </template>
-      <form class="stack" @submit.prevent="createOrg()">
+      <form class="stack" novalidate @submit.prevent="createOrg()">
         <div class="field">
           <label for="clerk-org">{{.T "auth.signup.org_name"}}</label>
-          <input id="clerk-org" type="text" autocomplete="organization" required x-model="organization_name">
+          <input id="clerk-org" type="text" autocomplete="organization" maxlength="{{limit "name"}}" data-field="organization_name" x-model="organization_name" @input="clearField('organization_name')" :aria-invalid="fieldErrors.organization_name ? 'true' : 'false'">
+          {{template "field_error" "organization_name"}}
         </div>
         <div class="field">
           <label for="clerk-country">{{.T "auth.signup.country"}}</label>
-          <select id="clerk-country" autocomplete="country" required x-model="country">
+          <select id="clerk-country" autocomplete="country" data-field="country" x-model="country" @change="clearField('country')">
             <template x-for="c in countries" :key="c.code">
               <option :value="c.code" x-text="WTT.countries.name(c.code)" :selected="c.code === country"></option>
             </template>
@@ -49,8 +51,9 @@
           <span class="hint">{{.T "auth.signup.country_hint"}}</span>
         </div>
         <div class="field">
-          <label for="clerk-name">{{.T "auth.your_name"}}</label>
-          <input id="clerk-name" type="text" autocomplete="name" x-model="name">
+          {{template "field_label" (dict "D" . "For" "clerk-name" "Key" "auth.your_name" "Optional" true)}}
+          <input id="clerk-name" type="text" autocomplete="name" maxlength="{{limit "name"}}" data-field="name" x-model="name" @input="clearField('name')" :aria-invalid="fieldErrors.name ? 'true' : 'false'">
+          {{template "field_error" "name"}}
         </div>
         <p class="form-error" x-cloak x-show="errors.choose" x-text="errors.choose" role="alert"></p>
         <button class="btn btn-block" :class="invites.length > 0 && 'btn-secondary'" type="submit" :disabled="pending">{{.T "auth.clerk.create_org"}}</button>
