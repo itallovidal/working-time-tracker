@@ -8,7 +8,9 @@
   <label class="toggle"><input type="checkbox" x-model="draft.has_daily"> {{.T "project.fields.has_daily"}}</label>
   <div class="field" x-show="draft.has_daily">
     <label for="routine-daily">{{.T "project.fields.daily_time"}}</label>
-    <input id="routine-daily" type="time" :required="draft.has_daily" x-model="draft.daily_time">
+    <input id="routine-daily" type="time" data-field="daily_time" x-model="draft.daily_time" @input="clearField('daily_time')"
+           :aria-invalid="fieldErrors.daily_time ? 'true' : 'false'">
+    {{template "field_error" "daily_time"}}
   </div>
 </div>
 <div class="routine">
@@ -16,16 +18,20 @@
   <div class="fields" x-show="draft.has_weekly">
     <div class="field">
       <label for="routine-weekly-day">{{.T "project.fields.weekly_day"}}</label>
-      <select id="routine-weekly-day" :required="draft.has_weekly" x-model="draft.weekly_sync_day">
+      <select id="routine-weekly-day" data-field="weekly_sync_day" x-model="draft.weekly_sync_day" @change="clearField('weekly_sync_day')"
+              :aria-invalid="fieldErrors.weekly_sync_day ? 'true' : 'false'">
         <option value="" disabled>{{.T "project.fields.pick_day"}}</option>
         <template x-for="d in WTT.weekdays" :key="d.value">
           <option :value="d.value" x-text="d.label" :selected="d.value === draft.weekly_sync_day"></option>
         </template>
       </select>
+      {{template "field_error" "weekly_sync_day"}}
     </div>
     <div class="field">
       <label for="routine-weekly-time">{{.T "project.fields.weekly_time"}}</label>
-      <input id="routine-weekly-time" type="time" :required="draft.has_weekly" x-model="draft.weekly_sync_time">
+      <input id="routine-weekly-time" type="time" data-field="weekly_sync_time" x-model="draft.weekly_sync_time" @input="clearField('weekly_sync_time')"
+             :aria-invalid="fieldErrors.weekly_sync_time ? 'true' : 'false'">
+      {{template "field_error" "weekly_sync_time"}}
     </div>
   </div>
 </div>

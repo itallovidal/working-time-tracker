@@ -10,16 +10,20 @@
   <div class="fields" x-show="draft.has_meeting">
     <div class="field">
       <label for="meeting-day">{{.T "project.fields.meeting_day"}}</label>
-      <select id="meeting-day" :required="draft.has_meeting && draft.customer_id" x-model="draft.customer_meeting_day">
+      <select id="meeting-day" data-field="customer_meeting_day" x-model="draft.customer_meeting_day" @change="clearField('customer_meeting_day')"
+              :aria-invalid="fieldErrors.customer_meeting_day ? 'true' : 'false'">
         <option value="" disabled>{{.T "project.fields.pick_day"}}</option>
         <template x-for="d in WTT.weekdays" :key="d.value">
           <option :value="d.value" x-text="d.label" :selected="d.value === draft.customer_meeting_day"></option>
         </template>
       </select>
+      {{template "field_error" "customer_meeting_day"}}
     </div>
     <div class="field">
       <label for="meeting-time">{{.T "project.fields.meeting_time"}}</label>
-      <input id="meeting-time" type="time" :required="draft.has_meeting && draft.customer_id" x-model="draft.customer_meeting_time">
+      <input id="meeting-time" type="time" data-field="customer_meeting_time" x-model="draft.customer_meeting_time"
+             @input="clearField('customer_meeting_time')" :aria-invalid="fieldErrors.customer_meeting_time ? 'true' : 'false'">
+      {{template "field_error" "customer_meeting_time"}}
     </div>
   </div>
 </div>
