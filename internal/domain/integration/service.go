@@ -4,12 +4,73 @@ import (
 	"errors"
 	"reflect"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
 
 	"working-time-tracker/internal/adapter"
 	"working-time-tracker/internal/apperr"
+	"working-time-tracker/internal/validate"
 )
+
+// Os campos do corpo que os erros de validação apontam: a chave JSON, que é também a chave de fields.* no catálogo.
+const (
+	fieldDisplayName = "display_name"
+	fieldToken       = "token"
+)
+
+// cleanName apara o nome da integração e confere o tamanho. Vazio, ou só espaços, é recusado.
+func cleanName(name string) (string, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return "", ErrNameRequired.With("field", fieldDisplayName)
+	}
+	return validate.Required(fieldDisplayName, name, validate.MaxName)
+}
+
+// cleanToken apara o token e confere o tamanho. Vazio é aceito aqui: a plataforma é quem diz que falta.
+func cleanToken(token string) (string, error) {
+	return validate.Text(fieldToken, token, validate.MaxToken)
+}
+
+// withField devolve o erro de uma plataforma com o campo que o causou: o token, o repositório (o campo que
+// identifica a conexão: repo, project_url, board_id) ou a chave do app. Um erro que já diz o campo, ou que não é
+// de um campo, segue como está.
+func withField(err error, desc adapter.Descriptor) error {
+	var e *apperr.Error
+	if !errors.As(err, &e) {
+		return err
+	}
+	if _, has := e.Params["field"]; has {
+		return err
+	}
+	switch e.Code {
+	case adapter.ErrInvalidToken.Code, adapter.ErrTokenRequired.Code:
+		return e.With("field", fieldToken)
+	case adapter.ErrGitHubInvalidRepo.Code, adapter.ErrGitHubRepoNotFound.Code,
+		adapter.ErrGitLabInvalidProject.Code, adapter.ErrGitLabForbidden.Code, adapter.ErrGitLabProjectMissing.Code,
+		adapter.ErrTrelloInvalidBoard.Code, adapter.ErrTrelloNoAccessBoard.Code, adapter.ErrTrelloBoardMissing.Code:
+		if key := desc.SummaryKey(); key != "" {
+			return e.With("field", key)
+		}
+	case adapter.ErrTrelloInvalidKey.Code:
+		return e.With("field", "api_key")
+	}
+	return err
+}
+
+// checkMetadata confere o metadata da plataforma: o campo que identifica a conexão (repositório, projeto,
+// quadro) tem um teto antes de o adaptador conferir o formato, e os erros dele dizem o campo.
+func checkMetadata(impl adapter.Integration, raw map[string]interface{}) (map[string]interface{}, error) {
+	desc := impl.Descriptor()
+	if key := desc.SummaryKey(); key != "" {
+		if v, ok := raw[key].(string); ok && utf8.RuneCountInString(strings.TrimSpace(v)) > validate.MaxRepo {
+			return nil, apperr.ErrFieldTooLong.With("field", key, "max", validate.MaxRepo)
+		}
+	}
+	meta, err := impl.CheckMetadata(raw)
+	return meta, withField(err, desc)
+}
 
 type Service struct {
 	store      *Store
@@ -49,8 +110,13 @@ func (s *Service) open(it *Integration) (string, error) {
 // campos próprios da plataforma. O adapter do tipo confere o metadata e valida a
 // conexão na plataforma antes de qualquer coisa ser guardada.
 func (s *Service) Create(projectID, integrationType, displayName, token string, metadata map[string]interface{}, enabled bool) (*Integration, error) {
-	if displayName == "" {
-		return nil, ErrNameRequired
+	displayName, err := cleanName(displayName)
+	if err != nil {
+		return nil, err
+	}
+	token, err = cleanToken(token)
+	if err != nil {
+		return nil, err
 	}
 
 	impl, err := adapter.GetIntegration(integrationType)
@@ -58,13 +124,12 @@ func (s *Service) Create(projectID, integrationType, displayName, token string, 
 		return nil, err
 	}
 
-	meta, err := impl.CheckMetadata(metadata)
+	meta, err := checkMetadata(impl, metadata)
 	if err != nil {
 		return nil, err
 	}
-	token = strings.TrimSpace(token)
 	if err := impl.Validate(adapter.Connection{Token: token, Metadata: meta}); err != nil {
-		return nil, err
+		return nil, withField(err, impl.Descriptor())
 	}
 
 	credentials, err := s.seal(token)
@@ -339,13 +404,19 @@ func (s *Service) Edit(id string, in EditInput) (*Integration, error) {
 	// O tipo só é preciso para conferir a conexão e a sincronização: renomear ou ativar não depende dele.
 	impl, implErr := adapter.GetIntegration(existing.Type)
 
+	// O nome vazio mantém o que está; um nome só de espaços não é um nome e é recusado, não gravado.
 	if in.DisplayName != "" {
-		existing.DisplayName = in.DisplayName
+		if existing.DisplayName, err = cleanName(in.DisplayName); err != nil {
+			return nil, err
+		}
 	}
 
 	wasSyncing := existing.SyncIssues
 	repoChanged := false
-	token := strings.TrimSpace(in.Token)
+	token, err := cleanToken(in.Token)
+	if err != nil {
+		return nil, err
+	}
 	if token != "" || in.Metadata != nil {
 		if implErr != nil {
 			return nil, implErr
@@ -355,7 +426,7 @@ func (s *Service) Edit(id string, in EditInput) (*Integration, error) {
 		// O que identifica a conexão (o repositório, o quadro) é o que a sincronização não deixa trocar.
 		summary := desc.SummaryKey()
 		if in.Metadata != nil {
-			if meta, err = impl.CheckMetadata(keepInternal(desc, in.Metadata, existing.Metadata)); err != nil {
+			if meta, err = checkMetadata(impl, keepInternal(desc, in.Metadata, existing.Metadata)); err != nil {
 				return nil, err
 			}
 			// O nome legível guardado é do alvo antigo: se o alvo mudou e o nome não, ele não vale mais.
@@ -375,7 +446,7 @@ func (s *Service) Edit(id string, in EditInput) (*Integration, error) {
 				}
 			}
 			if err := impl.Validate(adapter.Connection{Token: token, Metadata: meta}); err != nil {
-				return nil, err
+				return nil, withField(err, desc)
 			}
 			if existing.Credentials, err = s.seal(token); err != nil {
 				return nil, err

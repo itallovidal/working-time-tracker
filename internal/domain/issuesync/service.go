@@ -555,7 +555,7 @@ func (r *run) dirty(row *Row) bool {
 		return false
 	}
 	l, b := toLocal(t), row.snapshot()
-	return norm(l.Title) != norm(b.Title) || norm(l.Body) != norm(b.Body) || l.Closed != b.Closed ||
+	return normTitle(l.Title) != normTitle(b.Title) || norm(l.Body) != norm(b.Body) || l.Closed != b.Closed ||
 		!sameKeys(keyed(l.Labels), keyed(b.Labels)) || (r.caps.Assignee && !samePerson(l.Person, b.MappedPerson)) ||
 		(r.caps.Deadline && !normDeadline(l.Deadline).Equal(normDeadline(b.Deadline)))
 }

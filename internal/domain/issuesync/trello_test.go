@@ -472,7 +472,7 @@ func TestTrello_AdoptsManuallyLinkedTask(t *testing.T) {
 	// Colar o endereço do cartão no lugar do link curto também serve.
 	other := e.mustTask("Por endereço")
 	e.fake.AddCard(testutil.TrelloCard{ShortLink: "PorUrl01", Name: "Pelo endereço"})
-	if _, err := e.taskSvc.LinkExternalItem(other.ID.String(), e.it.ID.String(), "https://trello.com/c/PorUrl01/3-pelo-endereco", ""); err != nil {
+	if _, err := e.taskSvc.LinkExternalItem(other.ID.String(), e.it.ID.String(), "https://trello.com/c/PorUrl01/3-pelo-endereco", "https://trello.com/c/PorUrl01/3-pelo-endereco"); err != nil {
 		t.Fatalf("link by url: %v", err)
 	}
 	e.sync(issuesync.Full)

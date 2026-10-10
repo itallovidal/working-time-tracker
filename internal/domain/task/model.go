@@ -1,10 +1,24 @@
 package task
 
 import (
+	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
+
+	"working-time-tracker/internal/validate"
 )
+
+// ClipName apara o título que veio de uma plataforma (o da issue, o do cartão) e o corta no tamanho do nome de uma
+// tarefa, em caracteres e não em bytes, para nunca partir um caractere no meio. Um nome que já cabe fica como está.
+func ClipName(title string) string {
+	title = strings.TrimSpace(title)
+	if utf8.RuneCountInString(title) <= validate.MaxTaskName {
+		return title
+	}
+	return strings.TrimSpace(string([]rune(title)[:validate.MaxTaskName]))
+}
 
 type Person struct {
 	ID    uuid.UUID `json:"id"`

@@ -311,7 +311,11 @@ func TestOrganization_Profile(t *testing.T) {
 			t.Errorf("organization still has %s", gone)
 		}
 	}
-	rec = do(e, "POST", path+"/projects", `{"name":"Projeto","weekly_hours":30}`, admin.session)
+	// Uma chave que a API não conhece (a jornada, que saiu do projeto) é recusada, em vez de ignorada em silêncio.
+	if rec := do(e, "POST", path+"/projects", `{"name":"Projeto","weekly_hours":30}`, admin.session); rec.Code != http.StatusBadRequest {
+		t.Errorf("a project with weekly_hours = %d: %s, want 400", rec.Code, rec.Body.String())
+	}
+	rec = do(e, "POST", path+"/projects", `{"name":"Projeto"}`, admin.session)
 	created := decode(t, rec)
 	if created["sprint_duration_days"] != float64(14) {
 		t.Errorf("new project = sprint %v, want 14", created["sprint_duration_days"])
@@ -474,8 +478,8 @@ func TestRates_VisibilityByRole(t *testing.T) {
 	if rec := do(e, "PUT", prj+"/allocations/"+bia.id, `{}`, admin.session); rec.Code != http.StatusBadRequest {
 		t.Errorf("PUT allocation without a rate = %d, want 400", rec.Code)
 	}
-	if rec := do(e, "DELETE", "/api/customers/"+customerID, "", admin.session); rec.Code != http.StatusBadRequest {
-		t.Errorf("DELETE customer with projects = %d, want 400", rec.Code)
+	if rec := do(e, "DELETE", "/api/customers/"+customerID, "", admin.session); rec.Code != http.StatusConflict {
+		t.Errorf("DELETE customer with projects = %d, want 409", rec.Code)
 	}
 }
 
@@ -1244,6 +1248,11 @@ func TestProjects_CustomerMeeting(t *testing.T) {
 
 	rec := do(e, "POST", "/api/orgs/"+admin.orgID+"/projects",
 		`{"name":"Alfa","customer_meeting_day":"Wednesday","customer_meeting_time":"10:30"}`, admin.session)
+	if code, _ := projErrorOf(t, rec.Body.String()); rec.Code != http.StatusBadRequest || code != "project.meeting_needs_customer" {
+		t.Fatalf("create a meeting without a customer = %d: %s", rec.Code, rec.Body.String())
+	}
+	rec = do(e, "POST", "/api/orgs/"+admin.orgID+"/projects",
+		`{"name":"Alfa","customer_id":"`+cust+`","customer_meeting_day":"Wednesday","customer_meeting_time":"10:30"}`, admin.session)
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("create = %d: %s", rec.Code, rec.Body.String())
 	}
@@ -1656,7 +1665,7 @@ func TestTasks_UpdateAttributes(t *testing.T) {
 	}
 }
 
-// O status pela API: a tarefa nasce em backlog mesmo que o corpo peça outro, só o PATCH
+// O status pela API: a tarefa nasce em backlog e o corpo não pode pedir outro, só o PATCH
 // muda, um valor fora dos quatro é recusado, e a lista filtra por um ou mais status.
 func TestTasks_Status(t *testing.T) {
 	e := newServer(t)
@@ -1666,7 +1675,11 @@ func TestTasks_Status(t *testing.T) {
 	allocate(t, e, admin, projectID, member.id, 2000)
 	tasks := "/api/projects/" + projectID + "/tasks"
 
-	rec := do(e, "POST", tasks, `{"name":"Nova","status":"closed"}`, member.session)
+	// O status não é da criação: pedir um é recusado, e a tarefa nasce em backlog.
+	if rec := do(e, "POST", tasks, `{"name":"Nova","status":"closed"}`, member.session); rec.Code != http.StatusBadRequest {
+		t.Fatalf("create with a status = %d: %s, want 400", rec.Code, rec.Body.String())
+	}
+	rec := do(e, "POST", tasks, `{"name":"Nova"}`, member.session)
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("create = %d: %s", rec.Code, rec.Body.String())
 	}
@@ -1740,7 +1753,7 @@ func TestTasks_PriorityAndLabels(t *testing.T) {
 	bug := decode(t, rec)["id"].(string)
 	design := decode(t, do(e, "POST", labels, `{"name":"design"}`, admin.session))["id"].(string)
 	foreign := decode(t, do(e, "POST", "/api/projects/"+otherProject+"/labels", `{"name":"bug"}`, admin.session))["id"].(string)
-	if rec := do(e, "POST", labels, `{"name":"BUG"}`, admin.session); rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "label.name_taken") {
+	if rec := do(e, "POST", labels, `{"name":"BUG"}`, admin.session); rec.Code != http.StatusConflict || !strings.Contains(rec.Body.String(), "label.name_taken") {
 		t.Errorf("a repeated name = %d: %s", rec.Code, rec.Body.String())
 	}
 	if list := decodeList(t, do(e, "GET", labels, "", member.session)); len(list) != 2 {

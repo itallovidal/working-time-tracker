@@ -13,6 +13,11 @@ import (
 	"working-time-tracker/internal/domain/task"
 )
 
+// normTitle é o título como se compara: aparado, com os finais de linha em \n e cortado no tamanho que a tarefa
+// guarda. Sem o corte, a tarefa com o título cortado pareceria mudada a cada rodada, e o título inteiro da
+// plataforma seria trocado pelo cortado.
+func normTitle(s string) string { return task.ClipName(lf(s)) }
+
 func toRemote(i adapter.Issue) Remote {
 	return Remote{Title: i.Title, Body: i.Body, Closed: i.State == stateClosed, Labels: i.Labels, Assignee: i.Assignees, Deadline: i.Deadline}
 }
@@ -28,7 +33,7 @@ func toLocal(t *task.Task) Local {
 // snapshotFrom é o acordo depois da rodada: a issue como ficou, e o responsável ligado que a rodada decidiu.
 func snapshotFrom(i adapter.Issue, m Mapping) Snapshot {
 	return Snapshot{
-		Title:        norm(i.Title),
+		Title:        normTitle(i.Title),
 		Body:         norm(i.Body),
 		Closed:       i.State == stateClosed,
 		Labels:       append([]string{}, i.Labels...),
@@ -66,7 +71,7 @@ func (r *run) mergeOptions() []MergeOption {
 // (o token sem permissão, a etiqueta que não existe, o responsável que não pode ser) aparece aqui como diferença.
 func matches(after adapter.Issue, p Push) bool {
 	switch {
-	case p.Title != nil && norm(after.Title) != *p.Title,
+	case p.Title != nil && normTitle(after.Title) != normTitle(*p.Title),
 		p.Body != nil && norm(after.Body) != *p.Body,
 		p.State != nil && after.State != *p.State,
 		p.Labels != nil && !sameKeys(keyed(after.Labels), keyed(*p.Labels)),
@@ -79,7 +84,7 @@ func matches(after adapter.Issue, p Push) bool {
 
 func sameRow(a, b *Row) bool {
 	same := func(x, y *uuid.UUID) bool { return samePerson(x, y) }
-	return a.State == b.State && a.URL == b.URL && same(a.TaskID, b.TaskID) && norm(a.Title) == norm(b.Title) && norm(a.Body) == norm(b.Body) &&
+	return a.State == b.State && a.URL == b.URL && same(a.TaskID, b.TaskID) && normTitle(a.Title) == normTitle(b.Title) && norm(a.Body) == norm(b.Body) &&
 		sameKeys(keyed(a.Labels), keyed(b.Labels)) && sameKeys(keyed(a.Logins), keyed(b.Logins)) &&
 		a.MappedLogin == b.MappedLogin && same(a.MappedPerson, b.MappedPerson) &&
 		normDeadline(a.Deadline).Equal(normDeadline(b.Deadline)) &&
@@ -106,13 +111,15 @@ func (r *run) importIssue(issue adapter.Issue) error {
 			}
 		}
 	}
-	name := strings.TrimSpace(lf(issue.Title))
+	// O nome de uma tarefa tem no máximo 255 caracteres; um título maior (o Trello deixa 16 mil) é cortado.
+	name := task.ClipName(lf(issue.Title))
 	if name == "" {
 		if r.numeric {
 			name = "Issue #" + issue.ID
 		} else {
 			name = r.label + " " + issue.ID
 		}
+		name = task.ClipName(name)
 	}
 	imported := task.Imported{
 		ProjectID: r.integ.ProjectID, Name: name, Description: lf(issue.Body), Labels: labels,
@@ -318,7 +325,7 @@ func isRejection(err error) bool {
 func (r *run) localPatch(t *task.Task, c LocalChange) (task.RemotePatch, error) {
 	var p task.RemotePatch
 	if c.Title != nil && strings.TrimSpace(*c.Title) != "" {
-		name := strings.TrimSpace(*c.Title)
+		name := task.ClipName(*c.Title)
 		p.Name = &name
 	}
 	p.Description = c.Body

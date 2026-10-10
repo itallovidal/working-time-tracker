@@ -21,9 +21,9 @@ var (
 	ErrIntegrationsUnavailable = apperr.New("task.integrations_unavailable", http.StatusBadRequest)
 	ErrLinkFieldsRequired      = apperr.New("task.link_fields_required", http.StatusBadRequest)
 	// ErrAlreadyLinked é a tarefa que já tem um item nesta integração: cada integração tem um só.
-	ErrAlreadyLinked = apperr.New("task.already_linked", http.StatusBadRequest)
+	ErrAlreadyLinked = apperr.New("task.already_linked", http.StatusConflict)
 	// ErrItemTaken é o item que já está ligado a outra tarefa.
-	ErrItemTaken             = apperr.New("task.item_taken", http.StatusBadRequest)
+	ErrItemTaken             = apperr.New("task.item_taken", http.StatusConflict)
 	ErrQueryTooLong          = apperr.New("task.query_too_long", http.StatusBadRequest, "max")
 	ErrInvalidAssigneeFilter = apperr.New("task.invalid_assignee_filter", http.StatusBadRequest)
 	ErrInvalidDeadlineFilter = apperr.New("task.invalid_deadline_filter", http.StatusBadRequest)
@@ -35,8 +35,12 @@ var (
 	ErrLabelOtherProject     = apperr.New("task.label_other_project", http.StatusBadRequest)
 	ErrLabelNameRequired     = apperr.New("label.name_required", http.StatusBadRequest)
 	ErrLabelNameTooLong      = apperr.New("label.name_too_long", http.StatusBadRequest, "max")
-	ErrLabelNameTaken        = apperr.New("label.name_taken", http.StatusBadRequest)
+	ErrLabelNameTaken        = apperr.New("label.name_taken", http.StatusConflict)
 	ErrLabelNotFound         = apperr.New("label.not_found", http.StatusNotFound)
 	ErrInvalidPage           = apperr.New("task.invalid_page", http.StatusBadRequest)
 	ErrInvalidPerPage        = apperr.New("task.invalid_per_page", http.StatusBadRequest)
 )
+
+// ErrDeadlineOutOfRange é o prazo antes de 1971: a tarefa guarda o "sem prazo" como uma data antiga, então uma
+// data assim seria lida como sem prazo, em silêncio. Para tirar o prazo se manda null.
+var ErrDeadlineOutOfRange = apperr.ErrFieldInvalid.With("field", "deadline")

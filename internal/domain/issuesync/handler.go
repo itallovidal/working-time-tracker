@@ -79,12 +79,14 @@ type publishBody struct {
 func (h *Handler) Publish(c *echo.Context) error {
 	var body publishBody
 	if err := c.Bind(&body); err != nil {
-		return apperr.Respond(c, 400, apperr.ErrInvalidBody)
+		return apperr.Respond(c, 400, apperr.BindError(err))
 	}
 	published, err := h.syncer.Publish(c.Request().Context(), parseID(c.Param("taskId")), parseID(body.IntegrationID))
 	switch {
 	case err == nil:
 		return c.JSON(200, published)
+	case errors.Is(err, ErrAlreadyLinked):
+		return apperr.Respond(c, 409, err)
 	case errors.Is(err, database.ErrNotFound):
 		return apperr.Respond(c, 404, err)
 	}

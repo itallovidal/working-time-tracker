@@ -2,6 +2,7 @@ package task
 
 import (
 	"errors"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -9,15 +10,24 @@ import (
 	"github.com/google/uuid"
 
 	"working-time-tracker/internal/adapter"
+	"working-time-tracker/internal/apperr"
 	"working-time-tracker/internal/database"
 	"working-time-tracker/internal/domain/integration"
 	"working-time-tracker/internal/domain/team"
+	"working-time-tracker/internal/validate"
 )
 
 // MaxDescriptionLen é o tamanho máximo da descrição de uma tarefa, em caracteres: o mesmo do corpo de uma
 // issue do GitHub, para a sincronização não cortar o texto nem num sentido nem no outro. Ela é
 // Markdown e vira HTML no navegador de todo mundo que abre a tarefa.
-const MaxDescriptionLen = 65536
+const MaxDescriptionLen = validate.MaxTaskDescription
+
+// Os campos do corpo que os erros de validação apontam: a chave JSON, ou o rótulo do catálogo quando é o alias da
+// tela (a descrição da tarefa é long_description em fields.*, e a tela o liga ao campo description).
+const (
+	fieldName        = "name"
+	fieldDescription = "long_description"
+)
 
 // Tamanho de página da lista de tarefas: o padrão e o teto que a API aceita.
 const (
@@ -44,22 +54,24 @@ func (s *Service) Create(projectID, name, description, assigneeID string, deadli
 // como responsável pode, mesmo fora dos times: é o "atribuir a mim". Qualquer
 // outra pessoa precisa estar em algum time do projeto.
 func (s *Service) CreateAs(selfID, projectID, name, description, assigneeID string, deadline *time.Time, attrs Attrs) (*Task, error) {
-	if name == "" {
-		return nil, ErrNameRequired
+	name, err := cleanName(name)
+	if err != nil {
+		return nil, err
 	}
-	if utf8.RuneCountInString(description) > MaxDescriptionLen {
-		return nil, ErrDescriptionTooLong.With("max", MaxDescriptionLen)
+	if err := checkDescription(description); err != nil {
+		return nil, err
+	}
+	if deadline != nil && deadline.Before(noDeadline) {
+		return nil, ErrDeadlineOutOfRange
 	}
 	priority := "none"
-	if attrs.Priority != nil && *attrs.Priority != "" {
-		if !validPriority(*attrs.Priority) {
-			return nil, ErrInvalidPriority
-		}
-		priority = *attrs.Priority
+	if p, err := cleanPriority(attrs.Priority); err != nil {
+		return nil, err
+	} else if p != nil {
+		priority = *p
 	}
 	labels := []Label{}
 	if attrs.LabelIDs != nil {
-		var err error
 		if labels, err = s.resolveLabels(projectID, *attrs.LabelIDs); err != nil {
 			return nil, err
 		}
@@ -69,7 +81,7 @@ func (s *Service) CreateAs(selfID, projectID, name, description, assigneeID stri
 	if assigneeID != "" {
 		uid, err := uuid.Parse(assigneeID)
 		if err != nil {
-			return nil, ErrInvalidAssignee
+			return nil, ErrInvalidAssignee.With("field", "assignee_id")
 		}
 		if assigneeID != selfID {
 			isMember, err := s.membershipStore.IsPersonInProject(assigneeID, projectID)
@@ -77,7 +89,7 @@ func (s *Service) CreateAs(selfID, projectID, name, description, assigneeID stri
 				return nil, err
 			}
 			if !isMember {
-				return nil, ErrAssigneeNotInTeam
+				return nil, ErrAssigneeNotInTeam.With("field", "assignee_id")
 			}
 		}
 		assignee = &uid
@@ -149,26 +161,66 @@ func (s *Service) Update(id, name, description string, assigneeID *string, deadl
 	return s.UpdateAs("", id, name, description, assigneeID, deadline, Attrs{})
 }
 
-// UpdateAs altera a tarefa em nome de quem está logado; a regra do responsável é a do CreateAs.
+// UpdateAs altera a tarefa em nome de quem está logado; a regra do responsável é a do CreateAs. A descrição e o
+// prazo são sempre gravados (um prazo nil mantém o que a tarefa tem); quem precisa manter a descrição ou apagar
+// o prazo usa PatchAs.
 func (s *Service) UpdateAs(selfID, id, name, description string, assigneeID *string, deadline *time.Time, attrs Attrs) (*Task, error) {
-	if name == "" {
-		return nil, ErrNameRequired
+	return s.PatchAs(selfID, id, name, &description, assigneeID, deadlineOpt(deadline), attrs)
+}
+
+// deadlineOpt é o prazo de quem não diz "apagar": nil é ausente, e o valor, um prazo novo.
+func deadlineOpt(d *time.Time) validate.Optional[time.Time] {
+	if d == nil {
+		return validate.Optional[time.Time]{}
 	}
-	if utf8.RuneCountInString(description) > MaxDescriptionLen {
-		return nil, ErrDescriptionTooLong.With("max", MaxDescriptionLen)
+	return validate.Optional[time.Time]{Set: true, Value: d}
+}
+
+// resolveDeadline traduz o prazo do pedido para o que se grava: nil mantém, o tempo zero apaga (a tarefa sem
+// prazo guarda o tempo zero) e uma data antes de 1971 é recusada, em vez de virar "sem prazo" sem aviso.
+func resolveDeadline(o validate.Optional[time.Time]) (*time.Time, error) {
+	if !o.Set {
+		return nil, nil
 	}
-	if attrs.Priority != nil && !validPriority(*attrs.Priority) {
-		return nil, ErrInvalidPriority
+	if o.Value == nil {
+		return &time.Time{}, nil
+	}
+	if o.Value.Before(noDeadline) {
+		return nil, ErrDeadlineOutOfRange
+	}
+	return o.Value, nil
+}
+
+// PatchAs é o UpdateAs da API: a descrição nil mantém a que a tarefa tem, e o prazo distingue ausente (mantém),
+// null (apaga) e um valor.
+func (s *Service) PatchAs(selfID, id, name string, description *string, assigneeID *string, deadline validate.Optional[time.Time], attrs Attrs) (*Task, error) {
+	name, err := cleanName(name)
+	if err != nil {
+		return nil, err
+	}
+	if description != nil {
+		if err := checkDescription(*description); err != nil {
+			return nil, err
+		}
+	}
+	dl, err := resolveDeadline(deadline)
+	if err != nil {
+		return nil, err
+	}
+	if attrs.Priority, err = cleanPriority(attrs.Priority); err != nil {
+		return nil, err
 	}
 	if attrs.Status != nil && !validStatus(*attrs.Status) {
-		return nil, ErrInvalidStatus
+		return nil, ErrInvalidStatus.With("field", "status")
 	}
 	task, err := s.taskStore.GetByID(id)
 	if err != nil {
 		return nil, err
 	}
 	task.Name = name
-	task.Description = description
+	if description != nil {
+		task.Description = *description
+	}
 	if attrs.Priority != nil {
 		task.Priority = *attrs.Priority
 	}
@@ -189,13 +241,45 @@ func (s *Service) UpdateAs(selfID, id, name, description string, assigneeID *str
 	} else if unassign {
 		task.AssigneeID = nil
 	}
-	if deadline != nil {
-		task.Deadline = *deadline
+	if dl != nil {
+		task.Deadline = *dl
 	}
 	if err := s.taskStore.Update(task); err != nil {
 		return nil, err
 	}
 	return s.taskStore.GetByID(id)
+}
+
+// cleanName apara o nome da tarefa e confere o tamanho. O servidor é a regra: a tela só adianta o aviso.
+func cleanName(name string) (string, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return "", ErrNameRequired.With("field", fieldName)
+	}
+	return validate.Required(fieldName, name, validate.MaxTaskName)
+}
+
+// checkDescription confere o tamanho da descrição, em caracteres.
+func checkDescription(description string) error {
+	if utf8.RuneCountInString(description) > MaxDescriptionLen {
+		return ErrDescriptionTooLong.With("max", MaxDescriptionLen, "field", fieldDescription)
+	}
+	return nil
+}
+
+// cleanPriority confere a prioridade. A vazia vale "none", na criação e na edição; nil é ausente.
+func cleanPriority(p *string) (*string, error) {
+	if p == nil {
+		return nil, nil
+	}
+	v := strings.TrimSpace(*p)
+	if v == "" {
+		v = "none"
+	}
+	if !validPriority(v) {
+		return nil, ErrInvalidPriority.With("field", "priority")
+	}
+	return &v, nil
 }
 
 // Claim passa a tarefa para quem pediu, sem bater o ponto e sem mexer no status: é pegar a tarefa para
@@ -243,7 +327,7 @@ func (s *Service) checkAssignee(selfID string, t *Task, assigneeID *string) (ass
 	}
 	uid, err := uuid.Parse(*assigneeID)
 	if err != nil {
-		return nil, false, ErrInvalidAssignee
+		return nil, false, ErrInvalidAssignee.With("field", "assignee_id")
 	}
 	if (t.AssigneeID == nil || uid != *t.AssigneeID) && *assigneeID != selfID {
 		isMember, err := s.membershipStore.IsPersonInProject(*assigneeID, t.ProjectID.String())
@@ -251,7 +335,7 @@ func (s *Service) checkAssignee(selfID string, t *Task, assigneeID *string) (ass
 			return nil, false, err
 		}
 		if !isMember {
-			return nil, false, ErrAssigneeNotInTeam
+			return nil, false, ErrAssigneeNotInTeam.With("field", "assignee_id")
 		}
 	}
 	return &uid, false, nil
@@ -266,17 +350,27 @@ func (s *Service) UpdateAttrs(id string, attrs Attrs) (*Task, error) {
 // responsável e o prazo que vierem (os que faltam ficam como estão), sem o nome e a descrição. A regra do
 // responsável é a do UpdateAs.
 func (s *Service) UpdateAttrsAs(selfID, id string, attrs Attrs, assigneeID *string, deadline *time.Time) (*Task, error) {
-	if attrs.Priority != nil && !validPriority(*attrs.Priority) {
-		return nil, ErrInvalidPriority
+	return s.PatchAttrsAs(selfID, id, attrs, assigneeID, deadlineOpt(deadline))
+}
+
+// PatchAttrsAs é o UpdateAttrsAs da API: o prazo distingue ausente (mantém), null (apaga) e um valor.
+func (s *Service) PatchAttrsAs(selfID, id string, attrs Attrs, assigneeID *string, deadline validate.Optional[time.Time]) (*Task, error) {
+	var err error
+	if attrs.Priority, err = cleanPriority(attrs.Priority); err != nil {
+		return nil, err
 	}
 	if attrs.Status != nil && !validStatus(*attrs.Status) {
-		return nil, ErrInvalidStatus
+		return nil, ErrInvalidStatus.With("field", "status")
+	}
+	dl, err := resolveDeadline(deadline)
+	if err != nil {
+		return nil, err
 	}
 	t, err := s.taskStore.GetByID(id)
 	if err != nil {
 		return nil, err
 	}
-	patch := attrsPatch{priority: attrs.Priority, status: attrs.Status, deadline: deadline}
+	patch := attrsPatch{priority: attrs.Priority, status: attrs.Status, deadline: dl}
 	if attrs.LabelIDs != nil {
 		resolved, err := s.resolveLabels(t.ProjectID.String(), *attrs.LabelIDs)
 		if err != nil {
@@ -297,34 +391,85 @@ func (s *Service) UpdateAttrsAs(selfID, id string, attrs Attrs, assigneeID *stri
 // máximo um item por integração, e um item serve a uma tarefa só. O id vale como a pessoa o escreveu ou, nos
 // tipos que sabem, como o link do cartão colado (a sincronização o lê pela chave).
 func (s *Service) LinkExternalItem(taskID, integrationID, externalItemID, externalItemURL string) (*Task, error) {
+	// Os três campos são obrigatórios; o erro diz qual falta. O servidor confere tudo antes de ler o banco.
+	integrationID = strings.TrimSpace(integrationID)
+	if integrationID == "" {
+		return nil, ErrLinkFieldsRequired.With("field", "integration_id")
+	}
+	raw := strings.TrimSpace(externalItemID)
+	if raw == "" {
+		return nil, ErrLinkFieldsRequired.With("field", "external_item_id")
+	}
+	if utf8.RuneCountInString(raw) > validate.MaxItemURL {
+		return nil, apperr.ErrFieldTooLong.With("field", "external_item_id", "max", validate.MaxExternalItem)
+	}
+	link := strings.TrimSpace(externalItemURL)
+	if link == "" {
+		return nil, ErrLinkFieldsRequired.With("field", "external_item_url")
+	}
+	if utf8.RuneCountInString(link) > validate.MaxItemURL {
+		return nil, apperr.ErrFieldTooLong.With("field", "external_item_url", "max", validate.MaxItemURL)
+	}
+	// O link vira o href do cartão da tarefa: só http e https passam.
+	link, ok := validate.HTTPURL(link)
+	if !ok {
+		return nil, apperr.ErrFieldInvalid.With("field", "external_item_url")
+	}
+	if utf8.RuneCountInString(link) > validate.MaxItemURL {
+		return nil, apperr.ErrFieldTooLong.With("field", "external_item_url", "max", validate.MaxItemURL)
+	}
+
 	t, err := s.taskStore.GetByID(taskID)
 	if err != nil {
 		return nil, err
 	}
 	eid, err := uuid.Parse(integrationID)
 	if err != nil {
-		return nil, ErrIntegrationNotFound
+		return nil, ErrIntegrationNotFound.With("field", "integration_id")
 	}
 	integrationProject, kind, err := s.taskStore.IntegrationInfo(eid)
 	if errors.Is(err, database.ErrNotFound) {
-		return nil, ErrIntegrationNotFound
+		return nil, ErrIntegrationNotFound.With("field", "integration_id")
 	}
 	if err != nil {
 		return nil, err
 	}
 	if integrationProject != t.ProjectID {
-		return nil, ErrIntegrationOtherProject
+		return nil, ErrIntegrationOtherProject.With("field", "integration_id")
 	}
-	item := strings.TrimSpace(externalItemID)
-	if impl, err := adapter.GetIntegration(kind); err == nil {
-		if key, ok := adapter.NewItemKeyer(impl).Key(item); ok {
-			item = key
-		}
+	item, err := itemKey(kind, raw)
+	if err != nil {
+		return nil, err
 	}
-	if err := s.taskStore.LinkItem(t.ID, eid, item, strings.TrimSpace(externalItemURL)); err != nil {
+	if err := s.taskStore.LinkItem(t.ID, eid, item, link); err != nil {
 		return nil, err
 	}
 	return s.taskStore.GetByID(taskID)
+}
+
+// itemKey é a chave do item como a sincronização a lê, conforme o tipo da integração: o número da issue (sem
+// zeros à esquerda, que a plataforma não escreve) nos tipos numéricos, o link curto do cartão no Trello. Um
+// tipo que o programa não conhece fica com o que foi escrito.
+func itemKey(kind, raw string) (string, error) {
+	item := raw
+	if impl, err := adapter.GetIntegration(kind); err == nil {
+		key, ok := adapter.NewItemKeyer(impl).Key(raw)
+		if !ok {
+			return "", apperr.ErrFieldInvalid.With("field", "external_item_id")
+		}
+		item = key
+		if impl.Descriptor().ItemNumeric {
+			n, err := strconv.Atoi(key)
+			if err != nil || n < 1 || strings.HasPrefix(key, "+") {
+				return "", apperr.ErrFieldInvalid.With("field", "external_item_id")
+			}
+			item = strconv.Itoa(n)
+		}
+	}
+	if utf8.RuneCountInString(item) > validate.MaxExternalItem {
+		return "", apperr.ErrFieldTooLong.With("field", "external_item_id", "max", validate.MaxExternalItem)
+	}
+	return item, nil
 }
 
 // UnlinkExternalItem solta a tarefa do item da integração. Sem integração, solta o único item que ela
@@ -365,7 +510,7 @@ func (s *Service) GetExternalDetails(taskID, integrationID string) (*adapter.Ext
 // dizer qual (a primeira é a mais antiga, mas quem desfaz ou lê um vínculo não deve adivinhar).
 func linkOf(t *Task, integrationID string) (*Link, error) {
 	if integrationID == "" && len(t.Links) > 1 {
-		return nil, ErrLinkFieldsRequired
+		return nil, ErrLinkFieldsRequired.With("field", "integration_id")
 	}
 	link := t.LinkFor(integrationID)
 	if link == nil {
