@@ -14,12 +14,13 @@
       </ol>
 
       {{/* Etapa 1: a organização. Só o que mais importa; o resto fica na edição, em Organização › Sobre. */}}
-      <form class="stack" x-show="step === 1" @submit.prevent="saveOrg()">
+      <form class="stack" novalidate x-show="step === 1" @submit.prevent="saveOrg()">
         <p class="muted small" x-text="$t('onboarding.org.lead', { name: orgName })"></p>
         <div class="field">
-          <label for="ob-summary">{{.T "org.settings.summary"}}</label>
-          <input id="ob-summary" type="text" maxlength="160" x-model="orgDraft.summary" data-autofocus data-step="1">
-          <span class="hint">{{.T "org.settings.summary_hint"}} <span class="num" x-text="orgDraft.summary.length + '/160'"></span></span>
+          {{template "field_label" (dict "D" . "For" "ob-summary" "Key" "org.settings.summary" "Optional" true)}}
+          <input id="ob-summary" type="text" data-field="summary" maxlength="{{limit "summary"}}" x-model="orgDraft.summary" @input="clearField('summary')" :aria-invalid="fieldErrors.summary ? 'true' : 'false'" data-autofocus data-step="1">
+          {{template "field_error" "summary"}}
+          <span class="hint">{{.T "org.settings.summary_hint"}} <span class="num" x-text="summaryLength() + '/{{limit "summary"}}'"></span></span>
         </div>
         <div class="fields">
           <div class="field">
@@ -57,18 +58,20 @@
       </form>
 
       {{/* Etapa 2: o primeiro cliente. O resto do cadastro, com contato e telefone, fica na aba Clientes. */}}
-      <form class="stack" x-cloak x-show="step === 2" @submit.prevent="saveCustomer()">
+      <form class="stack" novalidate x-cloak x-show="step === 2" @submit.prevent="saveCustomer()">
         <p class="muted small">{{.T "onboarding.customers.lead"}}</p>
         <div class="field">
           <label for="ob-customer-name">{{.T "common.name"}}</label>
-          <input id="ob-customer-name" type="text" required maxlength="120" x-model="customer.name" data-autofocus data-step="2">
+          <input id="ob-customer-name" type="text" data-field="name" maxlength="{{limit "name"}}" x-model="customer.name" @input="clearField('name')" :aria-invalid="fieldErrors.name ? 'true' : 'false'" data-autofocus data-step="2">
+          {{template "field_error" "name"}}
         </div>
         {{/* O país do cliente é o da organização (o seletor está na aba Clientes); o documento segue o país. */}}
         <div class="fields">
           {{template "customer_document" (dict "Data" . "Model" "customer" "Id" "ob-customer" "Country" false)}}
           <div class="field">
-            <label for="ob-customer-email">{{.T "common.email"}}</label>
-            <input id="ob-customer-email" type="email" maxlength="255" x-model="customer.contact_email">
+            {{template "field_label" (dict "D" . "For" "ob-customer-email" "Key" "common.email" "Optional" true)}}
+            <input id="ob-customer-email" type="email" data-field="contact_email" maxlength="{{limit "email"}}" x-model="customer.contact_email" @input="clearField('contact_email')" :aria-invalid="fieldErrors.contact_email ? 'true' : 'false'">
+            {{template "field_error" "contact_email"}}
           </div>
         </div>
         <p class="form-error" x-cloak x-show="errors.customer" x-text="errors.customer" role="alert"></p>
@@ -80,21 +83,23 @@
 
       {{/* Etapa 3: o primeiro convite. Igual ao modal da aba Colaboradores: com o Clerk e um e-mail, o convite sai por
            e-mail; sem e-mail, ou sem o Clerk, é um link para copiar, que só aparece agora. */}}
-      <form class="stack" x-cloak x-show="step === 3" @submit.prevent="createInvite()">
+      <form class="stack" novalidate x-cloak x-show="step === 3" @submit.prevent="createInvite()">
         <div class="stack" x-show="!lastLink">
           <p class="muted small">{{.T "onboarding.people.lead"}}</p>
           <p class="muted small">{{if .Props.emailInvites}}{{.T "org.people.invite_intro_email"}}{{else}}{{.T "org.people.invite_intro"}}{{end}}</p>
           <div class="field">
-            <label for="ob-invite-email">{{.T "common.email"}}</label>
-            <input id="ob-invite-email" type="email" placeholder="{{.T "common.optional"}}" x-model="invite.email" data-autofocus data-step="3">
+            {{template "field_label" (dict "D" . "For" "ob-invite-email" "Key" "common.email" "Optional" true)}}
+            <input id="ob-invite-email" type="email" data-field="email" maxlength="{{limit "email"}}" x-model="invite.email" @input="clearField('email')" :aria-invalid="fieldErrors.email ? 'true' : 'false'" data-autofocus data-step="3">
+            {{template "field_error" "email"}}
             <span class="hint">{{if .Props.emailInvites}}{{.T "org.people.invite_email_hint_email"}}{{else}}{{.T "org.people.invite_email_hint"}}{{end}}</span>
           </div>
           <div class="field">
             <label for="ob-invite-role">{{.T "common.role"}}</label>
-            <select id="ob-invite-role" x-model="invite.role">
+            <select id="ob-invite-role" data-field="role" x-model="invite.role" @change="clearField('role')">
               <option value="member">{{.T "roles.member"}}</option>
-              <option value="admin">{{.T "roles.admin"}}</option>
+              {{if .IsOwner}}<option value="admin">{{.T "roles.admin"}}</option>{{end}}
             </select>
+            {{template "field_error" "role"}}
           </div>
           <p class="form-error" x-cloak x-show="errors.invite" x-text="errors.invite" role="alert"></p>
           <div class="row row-end">

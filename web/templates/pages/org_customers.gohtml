@@ -63,23 +63,27 @@
 
   {{/* O formulário aparece no modal do layout base, mas continua no escopo de orgCustomers. */}}
   <template x-teleport="#modal-root">
-    <form class="stack" x-show="$store.modal.name === 'customer'" @submit.prevent="save()">
+    <form class="stack" novalidate x-show="$store.modal.name === 'customer'" @submit.prevent="save()">
       <div class="field">
         <label for="customer-name">{{.T "common.name"}}</label>
-        <input id="customer-name" type="text" required maxlength="120" x-model="draft.name" data-autofocus>
+        <input id="customer-name" type="text" data-field="name" maxlength="{{limit "name"}}" x-model="draft.name" @input="clearField('name')" :aria-invalid="fieldErrors.name ? 'true' : 'false'" data-autofocus>
+        {{template "field_error" "name"}}
       </div>
       {{template "customer_document" (dict "Data" . "Model" "draft" "Id" "customer" "Country" true)}}
       <div class="field">
-        <label for="customer-contact">{{.T "org.customers.contact_person"}}</label>
-        <input id="customer-contact" type="text" maxlength="120" x-model="draft.contact_name">
+        {{template "field_label" (dict "D" . "For" "customer-contact" "Key" "org.customers.contact_person" "Optional" true)}}
+        <input id="customer-contact" type="text" data-field="contact_name" maxlength="{{limit "name"}}" x-model="draft.contact_name" @input="clearField('contact_name')" :aria-invalid="fieldErrors.contact_name ? 'true' : 'false'">
+        {{template "field_error" "contact_name"}}
       </div>
       <div class="field">
-        <label for="customer-email">{{.T "common.email"}}</label>
-        <input id="customer-email" type="email" maxlength="255" x-model="draft.contact_email">
+        {{template "field_label" (dict "D" . "For" "customer-email" "Key" "common.email" "Optional" true)}}
+        <input id="customer-email" type="email" data-field="contact_email" maxlength="{{limit "email"}}" x-model="draft.contact_email" @input="clearField('contact_email')" :aria-invalid="fieldErrors.contact_email ? 'true' : 'false'">
+        {{template "field_error" "contact_email"}}
       </div>
       <div class="field">
-        <label for="customer-phone">{{.T "common.phone"}}</label>
-        <input id="customer-phone" type="tel" maxlength="32" x-model="draft.contact_phone">
+        {{template "field_label" (dict "D" . "For" "customer-phone" "Key" "common.phone" "Optional" true)}}
+        <input id="customer-phone" type="tel" data-field="contact_phone" maxlength="{{limit "phone"}}" x-model="draft.contact_phone" @input="clearField('contact_phone')" :aria-invalid="fieldErrors.contact_phone ? 'true' : 'false'">
+        {{template "field_error" "contact_phone"}}
       </div>
       <p class="form-error" x-show="errors.save" x-text="errors.save" role="alert"></p>
       <div class="row row-end">

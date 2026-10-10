@@ -5,7 +5,7 @@
      que espalha personEditor() (org.js). */}}
 {{define "person_edit_modal"}}
 <template x-teleport="#modal-root">
-  <form class="stack" x-show="$store.modal.name === 'person-edit'" @submit.prevent="savePerson()">
+  <form class="stack" novalidate x-show="$store.modal.name === 'person-edit'" @submit.prevent="savePerson()">
     <div class="row" x-show="editing">
       <span class="avatar" aria-hidden="true" x-text="WTT.fmt.initials(editing && editing.name)"></span>
       <div>
@@ -37,15 +37,17 @@
     {{if .Can "people.manage"}}
     <div class="field" id="person-panel-payment" role="tabpanel" aria-labelledby="person-tab-payment" x-show="tab === 'payment'">
       <label for="person-weekly-hours">{{.T "org.people.weekly_hours_label"}}</label>
-      <select id="person-weekly-hours" x-model="draft.weekly_hours" data-autofocus>
+      <select id="person-weekly-hours" data-field="weekly_hours" x-model="draft.weekly_hours" @change="clearField('weekly_hours')" data-autofocus>
         <option value="">{{.T "labels.weekly_hours_none"}}</option>
-        <option value="20">20</option>
-        <option value="30">30</option>
-        <option value="40">40</option>
+        {{/* 20, 30 e 40, e a carga atual da pessoa quando é outra (uma carga antiga some da lista se não entrar aqui). */}}
+        <template x-for="h in weeklyHourOptions()" :key="h">
+          <option :value="String(h)" x-text="h" :selected="String(h) === String(draft.weekly_hours)"></option>
+        </template>
       </select>
+      {{template "field_error" "weekly_hours"}}
 
       <label for="person-payment-frequency">{{.T "org.people.payment_label"}}</label>
-      <select id="person-payment-frequency" x-model="draft.payment.frequency">
+      <select id="person-payment-frequency" data-field="frequency" x-model="draft.payment.frequency" @change="clearField('frequency'); clearField('day'); clearField('start')">
         <option value="">{{.T "org.people.payment_none"}}</option>
         <option value="monthly">{{.T "org.people.payment_monthly"}}</option>
         <option value="biweekly">{{.T "org.people.payment_biweekly"}}</option>
@@ -53,14 +55,16 @@
       <template x-if="draft.payment.frequency === 'monthly'">
         <div class="field">
           <label for="person-payment-day">{{.T "org.people.payment_day_label"}}</label>
-          <input id="person-payment-day" type="number" min="1" max="31" step="1" class="num" x-model="draft.payment.day">
+          <input id="person-payment-day" type="number" min="1" max="31" step="1" class="num" data-field="day" x-model="draft.payment.day" @input="clearField('day')" :aria-invalid="fieldErrors.day ? 'true' : 'false'">
+          {{template "field_error" "day"}}
           <span class="hint">{{.T "org.people.payment_day_hint"}}</span>
         </div>
       </template>
       <template x-if="draft.payment.frequency === 'biweekly'">
         <div class="field">
           <label for="person-payment-start">{{.T "org.people.payment_start_label"}}</label>
-          <input id="person-payment-start" type="date" x-model="draft.payment.start">
+          <input id="person-payment-start" type="date" data-field="start" x-model="draft.payment.start" @input="clearField('start')" :aria-invalid="fieldErrors.start ? 'true' : 'false'">
+          {{template "field_error" "start"}}
           <span class="hint">{{.T "org.people.payment_start_hint"}}</span>
         </div>
       </template>
@@ -114,11 +118,13 @@
               <span class="rate-input" x-show="!row.removed && editing && !editing.is_owner">
                 <span class="muted small" aria-hidden="true" x-text="WTT.fmt.moneyUnit()"></span>
                 <input type="text" inputmode="decimal" class="num" placeholder="{{.T "project_settings.rate_placeholder"}}"
-                       :aria-label="$t('org.people.rate_of', { project: row.name, unit: WTT.fmt.moneyUnit() })" x-model="row.rate">
+                       :aria-label="$t('org.people.rate_of', { project: row.name, unit: WTT.fmt.moneyUnit() })" x-model="row.rate"
+                       @input="row.error = ''" :aria-invalid="row.error ? 'true' : 'false'" :data-rate-row="row.project_id">
               </span>
               <button type="button" class="btn btn-ghost btn-sm" @click="toggleRemove(row)"
                       :class="!row.removed && !row.isNew && 'btn-danger-ghost'"
                       x-text="row.removed ? $t('org.people.undo_leave') : (row.isNew ? $t('org.people.discard_join') : $t('collab.leave'))"></button>
+              <p class="form-error" style="flex-basis: 100%" x-cloak x-show="row.error && !row.removed" x-text="row.error" role="alert"></p>
             </li>
           </template>
         </ul>
@@ -136,11 +142,13 @@
             <span class="rate-input" x-show="editing && !editing.is_owner">
               <span class="muted small" aria-hidden="true" x-text="WTT.fmt.moneyUnit()"></span>
               <input type="text" inputmode="decimal" class="num" placeholder="{{.T "project_settings.rate_placeholder"}}"
-                     :aria-label="$t('org.people.new_rate_of', { unit: WTT.fmt.moneyUnit() })" x-model="addForm.rate" @keydown.enter.prevent="addProject()">
+                     :aria-label="$t('org.people.new_rate_of', { unit: WTT.fmt.moneyUnit() })" x-model="addForm.rate"
+                     @input="errors.addRate = ''" :aria-invalid="errors.addRate ? 'true' : 'false'" data-rate-add @keydown.enter.prevent="addProject()">
             </span>
             <button type="button" class="btn btn-secondary btn-sm" @click="addProject()">{{template "icon" "plus"}} {{.T "org.people.add_project_button"}}</button>
           </div>
         </div>
+        <p class="form-error" x-cloak x-show="errors.addRate" x-text="errors.addRate" role="alert"></p>
         <p class="muted small" x-show="allProjects && allProjects.length === 0">{{.T "org.people.projects_none_in_org"}}</p>
       </div>
     </div>
