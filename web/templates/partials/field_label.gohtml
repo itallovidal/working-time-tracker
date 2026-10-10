@@ -1,0 +1,5 @@
+{{/* field_label é o rótulo de um campo. Um campo opcional diz "(opcional)" no rótulo, e não no placeholder, e o
+     obrigatório não diz nada. Recebe um dict com D (a página, para o texto), For (o id do campo), Key (a chave do
+     texto do rótulo) e, nos opcionais, Optional verdadeiro:
+     {{template "field_label" (dict "D" . "For" "org-name" "Key" "org.settings.name")}} */}}
+{{define "field_label"}}<label for="{{.For}}">{{.D.T .Key}}{{if .Optional}} <span class="optional">{{.D.T "common.optional_label"}}</span>{{end}}</label>{{end}}

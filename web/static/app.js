@@ -92,12 +92,119 @@
     return data;
   }
 
-  // form é um mixin para componentes com formulários: guarda qual ação está em
-  // andamento e a mensagem de erro de cada uma, para mostrar ao lado do formulário certo.
+  // limits são os tamanhos máximos que o servidor confere (internal/validate/limits.go), vindos em BOOT.limits. O
+  // maxlength dos templates sai da função `limit`; aqui ficam os que o JavaScript confere antes de enviar.
+  const limits = (window.BOOT && window.BOOT.limits) || {};
+
+  // aliases ligam o nome de um campo que o servidor devolve ao campo da tela quando os dois não coincidem.
+  const fieldAliases = { long_description: 'description' };
+
+  // rules são as conferências de campo da tela, as mesmas do servidor. Cada regra recebe o valor e o nome do campo
+  // e devolve o texto do erro (o mesmo errors.request.field_* do servidor) ou '' quando está certo. Campo vazio só
+  // erra em required: o resto confere o que veio preenchido.
+  const rules = (() => {
+    const msg = (code, field, params) => errorText({ code: 'request.' + code, params: { field, ...params } });
+    const text = (v) => String(v === null || v === undefined ? '' : v).trim();
+    const chars = (v) => Array.from(v).length;
+    return {
+      required: (v, field) => (text(v) === '' ? msg('field_required', field) : ''),
+      // max(n) aceita o tamanho em número ou o nome de um limite: rules.max('name').
+      max: (n) => (v, field) => {
+        const max = typeof n === 'string' ? limits[n] : n;
+        return chars(text(v)) > max ? msg('field_too_long', field, { max }) : '';
+      },
+      email: (v, field) => {
+        const x = text(v);
+        return x === '' || /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(x) ? '' : msg('field_invalid', field);
+      },
+      // url aceita o que o servidor aceita: http ou https, com o esquema opcional e um host com ponto.
+      url: (v, field) => {
+        const x = text(v);
+        if (x === '') return '';
+        if (/[\s\u0000-\u001f]/.test(x)) return msg('field_invalid', field);
+        try {
+          const u = new URL(x.includes('://') ? x : 'https://' + x);
+          const ok = (u.protocol === 'http:' || u.protocol === 'https:') && !u.username && u.hostname.includes('.')
+            && !u.hostname.startsWith('.') && !u.hostname.endsWith('.');
+          return ok ? '' : msg('field_invalid', field);
+        } catch (e) {
+          return msg('field_invalid', field);
+        }
+      },
+      phone: (v, field) => {
+        const x = text(v);
+        if (x === '') return '';
+        const digits = (x.match(/\d/g) || []).length;
+        return /^[0-9+() .-]{8,32}$/.test(x) && digits >= (limits.phone_min_digits || 7) ? '' : msg('field_invalid', field);
+      },
+      // money confere um valor digitado: só dígitos e separador, de 0 até o teto do servidor.
+      money: (v, field) => {
+        if (text(v) === '') return '';
+        const cents = toCents(v, { strict: true });
+        return cents === null || cents < 0 || cents > (limits.max_cents || 100000000) ? msg('field_invalid', field) : '';
+      },
+      // integer(min, max) confere um número inteiro, escrito só com dígitos.
+      integer: (min, max) => (v, field) => {
+        const x = text(v);
+        if (x === '') return '';
+        const n = Number(x);
+        return /^\d+$/.test(x) && n >= min && n <= max ? '' : msg('field_invalid', field);
+      },
+      date: (v, field) => (text(v) === '' || /^\d{4}-\d{2}-\d{2}$/.test(text(v)) ? '' : msg('field_invalid', field)),
+      time: (v, field) => (text(v) === '' || /^([01]\d|2[0-3]):[0-5]\d$/.test(text(v)) ? '' : msg('field_invalid', field)),
+    };
+  })();
+
+  // form é um mixin para componentes com formulários: guarda qual ação está em andamento, a mensagem de erro de
+  // cada uma (errors, o aviso do formulário) e o erro de cada campo (fieldErrors, embaixo do campo certo).
+  //
+  // O erro da API que diz o campo (params.field) vai para o campo, e só o que não diz fica no aviso do
+  // formulário. check() confere os campos antes de enviar com as mesmas regras do servidor, mostra todos os erros
+  // e leva o foco ao primeiro. Quem escreve o campo no template põe data-field="nome", @input="clearField('nome')"
+  // e o partial field_error.
   function form() {
     return {
       pending: null,
       errors: {},
+      fieldErrors: {},
+      setField(name, message) {
+        this.fieldErrors = { ...this.fieldErrors, [fieldAliases[name] || name]: message };
+      },
+      clearField(name) {
+        if (!this.fieldErrors[name]) return;
+        const next = { ...this.fieldErrors };
+        delete next[name];
+        this.fieldErrors = next;
+      },
+      clearFields() {
+        this.fieldErrors = {};
+      },
+      // focusField leva o foco ao campo `name` que está à vista (o mesmo nome pode existir em outro modal).
+      fieldEl(name) {
+        return Array.from(document.querySelectorAll('[data-field="' + name + '"]')).find((e) => e.offsetParent !== null) || null;
+      },
+      focusField(name) {
+        const el = this.fieldEl(name);
+        if (el) el.focus();
+      },
+      // check confere os campos: { nome: [valor, regra, regra...] }. Devolve true quando todos estão certos. A
+      // ordem das chaves é a ordem dos campos na tela, e o primeiro com erro recebe o foco.
+      check(spec) {
+        const found = {};
+        for (const [name, [value, ...list]] of Object.entries(spec)) {
+          for (const rule of list) {
+            const message = rule(value, name);
+            if (message) {
+              found[name] = message;
+              break;
+            }
+          }
+        }
+        this.fieldErrors = found;
+        const first = Object.keys(found)[0];
+        if (first) this.$nextTick(() => this.focusField(first));
+        return first === undefined;
+      },
       async run(key, fn) {
         if (this.pending) return undefined;
         this.pending = key;
@@ -105,7 +212,15 @@
         try {
           return await fn();
         } catch (e) {
-          this.errors[key] = e && e.message ? e.message : String(e);
+          // Um erro que diz o campo vai para o campo, quando a tela o desenha (data-field); senão fica no aviso.
+          const field = e && e.params && e.params.field;
+          const name = field && (fieldAliases[field] || field);
+          if (name && e.code && this.fieldEl(name)) {
+            this.setField(name, e.message);
+            this.focusField(name);
+          } else {
+            this.errors[key] = e && e.message ? e.message : String(e);
+          }
           return undefined;
         } finally {
           this.pending = null;
@@ -249,6 +364,19 @@
       has_weekly: !!p.weekly_sync_day, weekly_sync_day: p.weekly_sync_day || '', weekly_sync_time: p.weekly_sync_time || '',
       has_meeting: !!p.customer_meeting_day, customer_meeting_day: p.customer_meeting_day || '', customer_meeting_time: p.customer_meeting_time || '',
     }),
+    // As conferências do rascunho para WTT.form().check, na ordem da tela: o dia e o horário ligados (a marca) são
+    // obrigatórios, e a reunião com o cliente só vale com cliente escolhido (o servidor recusa sem ele).
+    rules: (d) => {
+      const on = (flag, ...list) => (flag ? list : []);
+      const meeting = !!(d.has_meeting && d.customer_id);
+      return {
+        customer_meeting_day: [d.customer_meeting_day, ...on(meeting, rules.required)],
+        customer_meeting_time: [d.customer_meeting_time, ...on(meeting, rules.required), rules.time],
+        daily_time: [d.daily_time, ...on(d.has_daily, rules.required), rules.time],
+        weekly_sync_day: [d.weekly_sync_day, ...on(d.has_weekly, rules.required)],
+        weekly_sync_time: [d.weekly_sync_time, ...on(d.has_weekly, rules.required), rules.time],
+      };
+    },
     // Texto vazio é o que apaga na API; o horário de cada dia sai junto com ele.
     payload: (d) => {
       const meeting = d.has_meeting && d.customer_id;
@@ -422,8 +550,13 @@
   // separadores, o último é o decimal. Com um só: repetido ou seguido de três dígitos
   // é milhar quando for o separador de milhar do idioma ("1.234" em pt-BR, "1,234" em
   // en); nos outros casos é decimal.
-  function toCents(text) {
-    let v = String(text === null || text === undefined ? '' : text).replace(/[^\d.,]/g, '');
+  //
+  // No modo estrito ({ strict: true }) só dígitos, ponto, vírgula e espaços valem: "-20", "12abc" e "1e3" são
+  // recusados em vez de lidos como 20, 12 e 13.
+  function toCents(text, opts) {
+    const raw = String(text === null || text === undefined ? '' : text).trim();
+    if (opts && opts.strict && !/^[\d.,\s]*$/.test(raw)) return null;
+    let v = raw.replace(/[^\d.,]/g, '');
     if (v === '') return null;
     const dot = v.lastIndexOf('.');
     const comma = v.lastIndexOf(',');
@@ -500,7 +633,7 @@
     },
   };
 
-  window.WTT = { can, t, lang, priorityClass, statusClass, hasDeadlineDate, deadlineInfo, errorText, api, ApiError, form, fmt, payments, toCents, copyText, notInformed, weekdays, priorities, taskStatuses, markdown, routine, sprintOptions, sprintChoices, workModes, currencies, countries, boot: window.BOOT || {} };
+  window.WTT = { can, t, lang, priorityClass, statusClass, hasDeadlineDate, deadlineInfo, errorText, api, ApiError, form, rules, limits, fmt, payments, toCents, copyText, notInformed, weekdays, priorities, taskStatuses, markdown, routine, sprintOptions, sprintChoices, workModes, currencies, countries, boot: window.BOOT || {} };
 
   // Onde flash() deixa a mensagem para a página seguinte.
   const flashKey = 'wtt:flash';
@@ -845,13 +978,43 @@
         this.start = { ...this.draft };
         this.confirmRemove = false;
         this.errors = {};
+        this.clearFields();
         this.view = 'interval';
       },
       back() {
         this.view = 'overview';
         this.errors = {};
+        this.clearFields();
+      },
+      // checkInterval confere o intervalo como o servidor (validateInterval): o começo cabe na sessão, o fim vem
+      // depois do começo e nenhum passa do fim da sessão (ou de agora, se aberta). O que não mudou já valeu antes.
+      // O store não é um componente (sem $nextTick), então o foco vai pelo Alpine.nextTick.
+      checkInterval() {
+        const s = this.session;
+        const l = this.link;
+        const fromChanged = this.draft.from !== this.start.from;
+        const untilChanged = this.draft.until !== this.start.until;
+        this.clearFields();
+        if (!fromChanged && !untilChanged) return true;
+        const found = {};
+        const message = (code, field) => window.WTT.errorText({ code, params: { field } });
+        const limit = s.end_at ? ms(s.end_at) : Date.now();
+        const from = fromChanged ? (this.draft.from ? new Date(this.draft.from).getTime() : NaN) : ms(l.from_at);
+        const until = untilChanged ? (this.draft.until ? new Date(this.draft.until).getTime() : null) : (l.until_at ? ms(l.until_at) : null);
+        if (Number.isNaN(from)) {
+          found.from_at = message('request.field_required', 'from_at');
+        } else if (fromChanged && (from < ms(s.start_at) || from > limit || (s.end_at && from >= limit))) {
+          found.from_at = message('work_session.invalid_interval', 'from_at');
+        } else if (until !== null && (until <= from || until > limit)) {
+          found.until_at = message('work_session.invalid_interval', 'until_at');
+        }
+        this.fieldErrors = found;
+        const first = Object.keys(found)[0];
+        if (first) Alpine.nextTick(() => this.focusField(first));
+        return first === undefined;
       },
       saveInterval() {
+        if (!this.checkInterval()) return undefined;
         return this.run('save', async () => {
           const body = {};
           if (this.draft.from !== this.start.from) body.from_at = fmt.fromDateTimeInput(this.draft.from);

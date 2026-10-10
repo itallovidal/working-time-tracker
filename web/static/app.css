@@ -438,6 +438,8 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 .field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 .field label, .field-label { font-size: 0.84rem; font-weight: 600; color: var(--ink-2); }
 .field .hint { font-size: 0.8rem; color: var(--muted); }
+/* "(opcional)" no rótulo: o obrigatório não diz nada, o opcional diz, mais leve que o nome. */
+.field label .optional, .field-label .optional { font-weight: 400; color: var(--muted); }
 /* Dica que muda com o que a pessoa digita: verde quando a regra foi cumprida, vermelha quando falhou. */
 .field .hint.is-ok { color: var(--ok); }
 .field .hint.is-bad { color: var(--danger); }
