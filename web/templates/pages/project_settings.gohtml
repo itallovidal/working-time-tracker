@@ -94,8 +94,9 @@
             <span class="hint">{{.T "project_settings.customers_hint"}} <a href="/orgs/{{.OrgID}}/customers">{{.T "nav.customers"}}</a>.</span>
           </div>
           {{end}}
-          <div class="field">
-            <label for="ps-bill-rate"><span x-text="$t('project.fields.bill_rate', { unit: WTT.fmt.moneyUnit() })"></span> <span class="optional">{{.T "common.optional_label"}}</span></label>
+          {{/* Projeto interno não tem quem pague: o valor só aparece com cliente, e com ele é obrigatório. */}}
+          <div class="field" x-show="draft.customer_id">
+            <label for="ps-bill-rate"><span x-text="$t('project.fields.bill_rate', { unit: WTT.fmt.moneyUnit() })"></span></label>
             <input id="ps-bill-rate" type="text" inputmode="decimal" class="num" placeholder="{{.T "project_settings.rate_placeholder"}}" data-field="bill_rate_cents"
                    x-model="draft.rate" @input="clearField('bill_rate_cents')" :aria-invalid="fieldErrors.bill_rate_cents ? 'true' : 'false'">
             {{template "field_error" "bill_rate_cents"}}

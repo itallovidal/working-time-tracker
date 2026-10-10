@@ -192,11 +192,16 @@
         if (x === '') return '';
         return (taxIdValid[kind] || taxIdValid.generic)(x) ? '' : errorText({ code, params: { field } });
       },
-      // money confere um valor digitado: só dígitos e separador, de 0 até o teto do servidor.
-      money: (v, field) => {
+      // rate confere um valor por hora digitado (custo ou valor cobrado): só dígitos e separador, do piso ao teto do
+      // servidor. Fora da faixa o erro é o texto do código da API daquele campo, que diz os dois limites.
+      rate: (v, field) => {
         if (text(v) === '') return '';
         const cents = toCents(v, { strict: true });
-        return cents === null || cents < 0 || cents > (limits.max_cents || 100000000) ? msg('field_invalid', field) : '';
+        if (cents === null) return msg('field_invalid', field);
+        const min = limits.min_rate_cents || 1000;
+        if (cents >= min && cents <= (limits.max_cents || 100000000)) return '';
+        const code = field === 'bill_rate_cents' ? 'project.invalid_bill_rate' : 'allocation.invalid_rate';
+        return errorText({ code, params: { field } });
       },
       // integer(min, max, code) confere um número inteiro, escrito só com dígitos. Com code, o erro é o texto desse
       // código da API (que diz a faixa); sem ele é o "está inválido" genérico.

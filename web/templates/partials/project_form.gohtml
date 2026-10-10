@@ -1,7 +1,7 @@
 {{/* O formulário de novo projeto, da página Projetos. Aparece no modal do layout base e continua no escopo
    do componente que o inclui, que traz draft, customers, errors, pending, openCreate e create. */}}
 {{define "project_form"}}
-{{if .Can "projects.create"}}
+{{if .IsAdmin}}
   <template x-teleport="#modal-root">
     <form class="stack" novalidate x-show="$store.modal.name === 'project'" @submit.prevent="create()">
       <fieldset class="form-group">
@@ -36,7 +36,7 @@
           </div>
           {{/* Projeto interno não tem quem pague: o valor só aparece com um cliente escolhido. */}}
           <div class="field" x-show="draft.customer_id">
-            <label for="project-bill-rate"><span x-text="$t('project.fields.bill_rate', { unit: WTT.fmt.moneyUnit() })"></span> <span class="optional">{{.T "common.optional_label"}}</span></label>
+            <label for="project-bill-rate"><span x-text="$t('project.fields.bill_rate', { unit: WTT.fmt.moneyUnit() })"></span></label>
             <input id="project-bill-rate" type="text" inputmode="decimal" class="num" data-field="bill_rate_cents" x-model="draft.rate"
                    @input="clearField('bill_rate_cents')" :aria-invalid="fieldErrors.bill_rate_cents ? 'true' : 'false'">
             {{template "field_error" "bill_rate_cents"}}

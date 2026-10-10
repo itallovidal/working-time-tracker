@@ -1702,14 +1702,15 @@ document.addEventListener('alpine:init', () => {
             // A descrição chega do servidor como long_description, e o rótulo do campo é o dele.
             description: [description, (v) => R.max('description')(v, 'long_description')],
           } : {}),
-          ...(editBilling ? { bill_rate_cents: [d.rate, R.money] } : {}),
+          // Com cliente o valor é obrigatório; sem cliente o campo some e nada é enviado.
+          ...(editBilling ? { bill_rate_cents: [d.customer_id ? d.rate : '', ...(d.customer_id ? [R.required] : []), R.rate] } : {}),
           ...(editProject ? {
             ...WTT.routine.rules(d),
             sprint_duration_days: [d.sprint_duration_days, R.integer(1, 90)],
           } : {}),
         })) return;
-        // O valor vazio apaga.
-        const cents = editBilling ? WTT.toCents(d.rate, { strict: true }) : this.billRateCents;
+                // Sem cliente não há valor cobrado: o servidor o recusa, então vai nulo junto do cliente apagado.
+        const cents = editBilling ? (d.customer_id ? WTT.toCents(d.rate, { strict: true }) : null) : this.billRateCents;
 
         const customerId = this.current.customer ? this.current.customer.id : '';
         if (editBilling && (d.customer_id !== customerId || cents !== this.billRateCents)) {
@@ -1985,7 +1986,7 @@ document.addEventListener('alpine:init', () => {
         // O dono não tem valor pago: as horas dele valem o valor cobrado.
         // Quem não define o valor deixa o campo como está: ele nem aparece.
         const sets = !c.person.is_owner && WTT.can('rates.manage');
-        if (sets && !this.check({ pay_rate_cents: [this.person.rate, WTT.rules.required, WTT.rules.money] })) return;
+        if (sets && !this.check({ pay_rate_cents: [this.person.rate, WTT.rules.required, WTT.rules.rate] })) return;
         const cents = sets ? WTT.toCents(this.person.rate, { strict: true }) : c.pay_rate_cents;
         const current = c.teams.map((t) => t.id);
         const wanted = this.person.team_ids;
@@ -2078,7 +2079,7 @@ document.addEventListener('alpine:init', () => {
     // addNext confere a etapa 1 e, quando a pessoa precisa de um grupo, vai para a 2; senão grava direto.
     addNext() {
       if (this.addInviting()) {
-        if (!this.check({ pay_rate_cents: [this.add.rate, WTT.rules.required, WTT.rules.money] })) return undefined;
+        if (!this.check({ pay_rate_cents: [this.add.rate, WTT.rules.required, WTT.rules.rate] })) return undefined;
         this.errors.add = '';
         if (!this.addNeedsGroup()) return this.inviteSend();
         this.addStep = 2;
@@ -2089,7 +2090,7 @@ document.addEventListener('alpine:init', () => {
         this.errors.add = WTT.t('collab.choose_person');
         return undefined;
       }
-      if (!person.is_owner && !this.check({ pay_rate_cents: [this.add.rate, WTT.rules.required, WTT.rules.money] })) return undefined;
+      if (!person.is_owner && !this.check({ pay_rate_cents: [this.add.rate, WTT.rules.required, WTT.rules.rate] })) return undefined;
       this.clearFields();
       this.errors.add = '';
       if (!this.addNeedsGroup()) return this.addPerson();

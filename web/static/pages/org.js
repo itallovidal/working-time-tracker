@@ -69,13 +69,13 @@ document.addEventListener('alpine:init', () => {
         this.errors.create = WTT.t('org.projects.customers_load_failed', { error: e.message });
       }
     },
-    // create cria o projeto e, se houver cliente ou valor, grava a cobrança logo em seguida.
+    // create cria o projeto numa chamada só: o cliente e o valor cobrado vão juntos, porque com cliente o valor é
+    // obrigatório e sem cliente é recusado.
     create() {
       return this.run('create', async () => {
         const d = this.draft;
         const R = WTT.rules;
-        // O valor só vale com cliente (o campo some no projeto interno) e é conferido antes:
-        // depois de criado, um erro na cobrança deixaria o projeto sem ela.
+        // O valor só existe com cliente (o campo some no projeto interno).
         const withCustomer = !!d.customer_id;
         const name = String(d.name).trim();
         const description = String(d.description).trim();
@@ -83,31 +83,21 @@ document.addEventListener('alpine:init', () => {
         if (!this.check({
           name: [name, R.required, R.max('name')],
           description: [description, (v) => R.max('description')(v, 'long_description')],
-          bill_rate_cents: [withCustomer ? d.rate : '', R.money],
+          bill_rate_cents: [withCustomer ? d.rate : '', ...(withCustomer ? [R.required] : []), R.rate],
           ...WTT.routine.rules(d),
           sprint_duration_days: [d.sprint_duration_days, R.integer(1, 90)],
         })) return;
-        const cents = withCustomer ? WTT.toCents(d.rate, { strict: true }) : null;
-        // O cliente vai já na criação: a reunião com ele só vale em um projeto com cliente. O valor cobrado, que é
-        // outra rota, vem logo em seguida.
         const body = {
           name,
           description,
           sprint_duration_days: Number(d.sprint_duration_days) || 0,
           ...WTT.routine.payload(d),
         };
-        if (withCustomer) body.customer_id = d.customer_id;
-        const p = await api('POST', '/api/orgs/' + orgId + '/projects', body);
-        if (withCustomer && cents !== null) {
-          try {
-            await api('PUT', '/api/projects/' + p.id + '/billing', { customer_id: d.customer_id, bill_rate_cents: cents });
-          } catch (e) {
-            // O projeto já existe: as configurações dele são o lugar de definir a cobrança de novo.
-            Alpine.store('toast').flash(WTT.t('org.projects.created_no_billing', { error: e.message }), 'error');
-            location.href = '/projects/' + p.id + '/management/settings';
-            return;
-          }
+        if (withCustomer) {
+          body.customer_id = d.customer_id;
+          body.bill_rate_cents = WTT.toCents(d.rate, { strict: true });
         }
+        const p = await api('POST', '/api/orgs/' + orgId + '/projects', body);
         Alpine.store('toast').flash(WTT.t('org.projects.created'));
         location.href = '/projects/' + p.id;
       });
@@ -535,7 +525,7 @@ document.addEventListener('alpine:init', () => {
       this.errors.addRate = '';
       if (!owner) {
         // O valor é obrigatório e vai em modo estrito, com o teto do servidor.
-        const bad = WTT.rules.required(this.addForm.rate, 'pay_rate_cents') || WTT.rules.money(this.addForm.rate, 'pay_rate_cents');
+        const bad = WTT.rules.required(this.addForm.rate, 'pay_rate_cents') || WTT.rules.rate(this.addForm.rate, 'pay_rate_cents');
         if (bad) {
           this.errors.addRate = bad;
           this.$nextTick(() => document.querySelector('[data-rate-add]')?.focus());
@@ -569,7 +559,7 @@ document.addEventListener('alpine:init', () => {
         } else if (owner) {
           if (row.isNew) changes.push({ row, cents: 0 });
         } else {
-          const bad = WTT.rules.required(row.rate, 'pay_rate_cents') || WTT.rules.money(row.rate, 'pay_rate_cents');
+          const bad = WTT.rules.required(row.rate, 'pay_rate_cents') || WTT.rules.rate(row.rate, 'pay_rate_cents');
           row.error = bad;
           if (bad) {
             invalid = invalid || row;
