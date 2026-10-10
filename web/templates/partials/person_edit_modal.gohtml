@@ -36,7 +36,7 @@
 
     {{if .Can "people.manage"}}
     <div class="field" id="person-panel-payment" role="tabpanel" aria-labelledby="person-tab-payment" x-show="tab === 'payment'">
-      <label for="person-weekly-hours">{{.T "org.people.weekly_hours_label"}}</label>
+      {{template "field_label" (dict "D" . "For" "person-weekly-hours" "Key" "org.people.weekly_hours_label" "Optional" true)}}
       <select id="person-weekly-hours" data-field="weekly_hours" x-model="draft.weekly_hours" @change="clearField('weekly_hours')" data-autofocus>
         <option value="">{{.T "labels.weekly_hours_none"}}</option>
         {{/* 20, 30 e 40, e a carga atual da pessoa quando é outra (uma carga antiga some da lista se não entrar aqui). */}}
@@ -46,7 +46,7 @@
       </select>
       {{template "field_error" "weekly_hours"}}
 
-      <label for="person-payment-frequency">{{.T "org.people.payment_label"}}</label>
+      {{template "field_label" (dict "D" . "For" "person-payment-frequency" "Key" "org.people.payment_label" "Optional" true)}}
       <select id="person-payment-frequency" data-field="frequency" x-model="draft.payment.frequency" @change="clearField('frequency'); clearField('day'); clearField('start')">
         <option value="">{{.T "org.people.payment_none"}}</option>
         <option value="monthly">{{.T "org.people.payment_monthly"}}</option>

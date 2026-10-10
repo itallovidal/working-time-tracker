@@ -163,3 +163,66 @@ func TestTaxId_IsCheckedOnTheScreen(t *testing.T) {
 		t.Error("customer_document.gohtml does not take the generic document size from the tax_id limit")
 	}
 }
+
+// A confirmação da senha do cadastro é um campo como os outros: o erro (vazia ou diferente) sai embaixo dele e o
+// check leva o foco. Antes, a confirmação vazia só mexia o foco, sem dizer o que errou.
+func TestPasswordConfirmation_IsAFieldWithItsError(t *testing.T) {
+	signup := templates(t)["templates/pages/signup.gohtml"]
+	for _, want := range []string{`data-field="confirm_password"`, `{{template "field_error" "confirm_password"}}`} {
+		if !strings.Contains(signup, want) {
+			t.Errorf("signup.gohtml lacks %s", want)
+		}
+	}
+	read := func(name string) string {
+		b, err := FS.ReadFile(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(b)
+	}
+	auth, org, app := read("static/pages/auth.js"), read("static/pages/org.js"), read("static/app.js")
+	if !strings.Contains(auth, "confirm_password: [this.confirmation, rules.confirmation(this.password)]") {
+		t.Error("auth.js: the signup does not check the confirmation with rules.confirmation")
+	}
+	if strings.Contains(auth, "$refs.confirm.focus()") {
+		t.Error("auth.js moves the focus to the confirmation by hand: the check does it, with the error under the field")
+	}
+	if !strings.Contains(org, "WTT.rules.confirmation(next)") {
+		t.Error("org.js: the password change does not check the confirmation with rules.confirmation")
+	}
+	if !strings.Contains(app, "confirmation: (other) =>") {
+		t.Error("app.js has no rules.confirmation")
+	}
+}
+
+// Estes campos aceitam vazio e dizem "(opcional)" no rótulo, pelo partial field_label. Antes o rótulo era escrito
+// à mão e não dizia nada (só uma opção "Não informado", ou uma dica ao lado).
+func TestOptionalFields_SayItInTheLabel(t *testing.T) {
+	tpl := templates(t)
+	for _, c := range []struct{ file, id string }{
+		{"templates/pages/org_settings.gohtml", "org-work-mode"},
+		{"templates/partials/onboarding.gohtml", "ob-work-mode"},
+		{"templates/partials/person_edit_modal.gohtml", "person-weekly-hours"},
+		{"templates/partials/person_edit_modal.gohtml", "person-payment-frequency"},
+		{"templates/pages/project_teams.gohtml", "collab-team"},
+		{"templates/partials/session_modal.gohtml", "session-until"},
+	} {
+		src, ok := tpl[c.file]
+		if !ok {
+			t.Errorf("%s not found", c.file)
+			continue
+		}
+		if strings.Contains(src, `<label for="`+c.id+`">`) {
+			t.Errorf("%s: the label of %s is written by hand; use the field_label partial with Optional", c.file, c.id)
+		}
+		at := strings.Index(src, `"For" "`+c.id+`"`)
+		if at < 0 {
+			t.Errorf("%s: no field_label call for %s", c.file, c.id)
+			continue
+		}
+		call := src[at : at+strings.Index(src[at:], "}}")]
+		if !strings.Contains(call, `"Optional" true`) {
+			t.Errorf("%s: the field_label of %s is not marked Optional", c.file, c.id)
+		}
+	}
+}

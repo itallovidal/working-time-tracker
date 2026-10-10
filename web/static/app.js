@@ -151,6 +151,14 @@
         const max = typeof n === 'string' ? limits[n] : n;
         return chars(String(v === null || v === undefined ? '' : v)) > max ? msg('field_too_long', field, { max }) : '';
       },
+      // confirmation(other) confere a confirmação de uma senha nova: vazia é "informe a confirmação" e diferente
+      // é "não conferem". Não apara, como a senha: o espaço faz parte dela. A confirmação é só da tela; o servidor
+      // recebe uma senha só, e esta conferência impede que um erro de digitação vire uma conta que ninguém abre.
+      confirmation: (other) => (v, field) => {
+        const s = String(v === null || v === undefined ? '' : v);
+        if (s === '') return msg('field_required', field);
+        return s === other ? '' : t('auth.signup.password_mismatch');
+      },
       email: (v, field) => {
         const x = text(v);
         return x === '' || /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(x) ? '' : msg('field_invalid', field);

@@ -1220,7 +1220,7 @@ document.addEventListener('alpine:init', () => {
       const ok = this.check({
         current_password: [this.password.current, WTT.rules.required],
         new_password: [next, newPassword],
-        confirm_password: [this.password.confirm, (v) => (v !== next ? WTT.t('auth.signup.password_mismatch') : '')],
+        confirm_password: [this.password.confirm, WTT.rules.confirmation(next)],
       });
       if (!ok) return undefined;
       return this.run('password', async () => {

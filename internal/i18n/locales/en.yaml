@@ -771,7 +771,7 @@ org:
     payment_day_hint: "In shorter months it pays on the last day."
     payment_start_label: Counting starts on
     payment_start_hint: "Every 15 days from this date; the payment goes out on the last day of each 15-day period."
-    weekly_hours_label: Minimum weekly hours (hours)
+    weekly_hours_label: Minimum weekly hours
     saved: "{{.name}}'s details saved."
     projects_loading: Loading the projects…
     projects_retry: Try again
@@ -1372,7 +1372,7 @@ collab:
   rate_hint: "Required. How much the person earns per hour on this project."
   team: Team
   no_team_yet: No team for now
-  team_hint: "Optional. People on a team can be assigned tasks."
+  team_hint: "People on a team can be assigned tasks."
   add_submit: Add to the project
   team_name: Team name
   team_name_placeholder: "E.g.: Backend"
@@ -1772,6 +1772,7 @@ fields:
   password: "the password"
   current_password: "the current password"
   new_password: "the new password"
+  confirm_password: "the password confirmation"
   organization_name: "the organization name"
   website: "the website"
   linkedin_url: "the LinkedIn"

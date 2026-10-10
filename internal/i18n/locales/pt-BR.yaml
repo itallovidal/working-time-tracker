@@ -781,7 +781,7 @@ org:
     payment_day_hint: "Em meses mais curtos paga no último dia."
     payment_start_label: Início da contagem
     payment_start_hint: "A cada 15 dias a partir desta data; o pagamento sai no último dia de cada período de 15 dias."
-    weekly_hours_label: Jornada semanal mínima (horas)
+    weekly_hours_label: Jornada semanal mínima, em horas
     saved: "Dados de {{.name}} salvos."
     projects_loading: Carregando os projetos…
     projects_retry: Tentar de novo
@@ -1382,7 +1382,7 @@ collab:
   rate_hint: "Obrigatório. Quanto a pessoa recebe por hora neste projeto."
   team: Time
   no_team_yet: Sem time por enquanto
-  team_hint: "Opcional. Quem está num time pode receber tarefas."
+  team_hint: "Quem está num time pode receber tarefas."
   add_submit: Adicionar ao projeto
   team_name: Nome do time
   team_name_placeholder: "Ex.: Backend"
@@ -1782,6 +1782,7 @@ fields:
   password: "a senha"
   current_password: "a senha atual"
   new_password: "a nova senha"
+  confirm_password: "a confirmação da senha"
   organization_name: "o nome da organização"
   website: "o site"
   linkedin_url: "o LinkedIn"

@@ -355,7 +355,7 @@
           <span class="hint">{{.T "collab.rate_hint"}}</span>
         </div>
         <div class="field">
-          <label for="collab-team">{{.T "collab.team"}}</label>
+          {{template "field_label" (dict "D" . "For" "collab-team" "Key" "collab.team" "Optional" true)}}
           <select id="collab-team" x-model="add.team_id">
             <option value="">{{.T "collab.no_team_yet"}}</option>
             <template x-for="t in teams" :key="t.id">

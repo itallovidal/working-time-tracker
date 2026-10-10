@@ -249,15 +249,11 @@ document.addEventListener('alpine:init', () => {
       const ok = this.check({
         email: [this.email, rules.required, rules.email, rules.max('email')],
         password: [this.password, passwordRule],
+        // A confirmação é só da tela (o servidor recebe uma senha): vazia ou diferente erra embaixo do campo, como os
+        // outros, e o check leva o foco ao primeiro erro.
+        confirm_password: [this.confirmation, rules.confirmation(this.password)],
       });
       if (!ok) return undefined;
-      // A confirmação é só da tela: o servidor recebe uma senha, e esta conferência impede que um erro de digitação
-      // vire uma conta que ninguém consegue abrir.
-      if (this.confirmation !== this.password) {
-        this.confirmTouched = true;
-        this.$refs.confirm.focus();
-        return undefined;
-      }
       return this.run('signup', async () => {
         await api('POST', '/api/auth/signup', {
           organization_name: this.organization_name,

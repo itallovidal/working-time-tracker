@@ -24,7 +24,7 @@
         </div>
         <div class="fields">
           <div class="field">
-            <label for="ob-work-mode">{{.T "org.settings.work_mode"}}</label>
+            {{template "field_label" (dict "D" . "For" "ob-work-mode" "Key" "org.settings.work_mode" "Optional" true)}}
             <select id="ob-work-mode" x-model="orgDraft.work_mode">
               <option value="">{{.T "labels.not_informed"}}</option>
               <template x-for="m in WTT.workModes" :key="m.value">

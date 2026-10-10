@@ -57,10 +57,13 @@
           <div class="field">
             <label for="signup-confirm">{{.T "auth.signup.confirm_password"}}</label>
             <div class="input-affix">
-              <input id="signup-confirm" x-ref="confirm" :type="reveal ? 'text' : 'password'" type="password" autocomplete="new-password" x-model="confirmation" @blur="confirmTouched = true" :aria-invalid="showMismatch" aria-describedby="signup-confirm-msg">
+              <input id="signup-confirm" :type="reveal ? 'text' : 'password'" type="password" autocomplete="new-password" data-field="confirm_password" x-model="confirmation" @input="clearField('confirm_password')" @blur="confirmTouched = true" :aria-invalid="showMismatch || fieldErrors.confirm_password ? 'true' : 'false'" aria-describedby="signup-confirm-msg">
               <button class="input-affix-btn" type="button" @click="reveal = !reveal" :aria-pressed="reveal" :aria-label="reveal ? $t('auth.signup.hide_password') : $t('auth.signup.show_password')" :title="reveal ? $t('auth.signup.hide_password') : $t('auth.signup.show_password')"><i class="fa-solid" :class="reveal ? 'fa-eye-slash' : 'fa-eye'" aria-hidden="true"></i></button>
             </div>
-            <span id="signup-confirm-msg" class="hint hint-slot" :class="showMismatch ? 'is-bad' : matches && 'is-ok'" aria-live="polite" x-text="showMismatch ? $t('auth.signup.password_mismatch') : (matches ? $t('auth.signup.password_match') : '')"></span>
+            {{/* A dica diz "conferem" e "não conferem" enquanto digita; o erro do envio (vazio ou diferente) sai embaixo do
+                 campo como nos outros, e a dica não repete a mensagem enquanto ele está à vista. */}}
+            <span id="signup-confirm-msg" class="hint hint-slot" :class="showMismatch && !fieldErrors.confirm_password ? 'is-bad' : matches && 'is-ok'" aria-live="polite" x-text="showMismatch && !fieldErrors.confirm_password ? $t('auth.signup.password_mismatch') : (matches ? $t('auth.signup.password_match') : '')"></span>
+            {{template "field_error" "confirm_password"}}
           </div>
           <p class="form-error" x-cloak x-show="errors.signup" x-text="errors.signup" role="alert"></p>
           <div class="auth-actions">

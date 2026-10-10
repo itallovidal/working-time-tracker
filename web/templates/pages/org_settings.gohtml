@@ -98,7 +98,7 @@
         <div class="card-head"><h2>{{.T "org.settings.how_we_work"}}</h2></div>
         <div class="fields">
           <div class="field">
-            <label for="org-work-mode">{{.T "org.settings.work_mode"}}</label>
+            {{template "field_label" (dict "D" . "For" "org-work-mode" "Key" "org.settings.work_mode" "Optional" true)}}
             <select id="org-work-mode" x-model="form.work_mode">
               <option value="">{{.T "labels.not_informed"}}</option>
               <template x-for="m in WTT.workModes" :key="m.value">

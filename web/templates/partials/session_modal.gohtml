@@ -101,7 +101,7 @@
           <p class="form-error" x-cloak x-show="v.fieldErrors.from_at" x-text="v.fieldErrors.from_at" role="alert"></p>
         </div>
         <div class="field">
-          <label for="session-until">{{.T "session.modal.until"}}</label>
+          {{template "field_label" (dict "D" . "For" "session-until" "Key" "session.modal.until" "Optional" true)}}
           <input id="session-until" type="datetime-local" data-field="until_at" x-model="v.draft.until"
                  @input="v.clearField('until_at')" :aria-invalid="v.fieldErrors.until_at ? 'true' : 'false'"
                  :min="WTT.fmt.dateTimeInput(v.session.start_at)">
