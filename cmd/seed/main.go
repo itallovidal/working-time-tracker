@@ -438,9 +438,13 @@ func main() {
 	}
 	seeded := map[string]seededProject{}
 	for _, p := range projects {
-		created, err := projectSvc.Create(orgID, p.name, p.description, p.sprintDays, project.Routine{
-			DailyTime: optionalText(p.daily), WeeklySyncDay: optionalText(p.weekly), WeeklySyncTime: optionalText(p.weeklyTime),
-			CustomerMeetingDay: optionalText(p.meetingDay), CustomerMeetingTime: optionalText(p.meetingTime),
+		// O cliente já vai na criação: a reunião com ele só vale em um projeto que tem cliente.
+		created, err := projectSvc.CreateWithCustomer(orgID, project.CreateInput{
+			Name: p.name, Description: p.description, SprintDurationDays: p.sprintDays, CustomerID: customerID[p.customer],
+			Routine: project.Routine{
+				DailyTime: optionalText(p.daily), WeeklySyncDay: optionalText(p.weekly), WeeklySyncTime: optionalText(p.weeklyTime),
+				CustomerMeetingDay: optionalText(p.meetingDay), CustomerMeetingTime: optionalText(p.meetingTime),
+			},
 		})
 		must(err)
 		id := created.ID.String()

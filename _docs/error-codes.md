@@ -77,6 +77,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `auth.own_profile_only` | 403 | — | `você só pode alterar o seu próprio perfil` | `you can only change your own profile` |
 | `auth.owner_only` | 403 | — | `só o dono da organização pode fazer isso` | `only the organization owner can do this` |
 | `auth.permission_required` | 403 | — | `você não tem permissão para fazer isso` | `you do not have permission to do this` |
+| `auth.same_password` | 400 | — | `a nova senha precisa ser diferente da atual` | `the new password must be different from the current one` |
 | `auth.unauthenticated` | 401 | — | `faça login para continuar` | `sign in to continue` |
 | `auth.weak_password` | 400 | — | `a senha precisa ter pelo menos 8 caracteres` | `the password needs at least 8 characters` |
 | `auth.wrong_password` | 400 | — | `a senha atual está incorreta` | `the current password is wrong` |
@@ -92,7 +93,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | Código | Status | Parâmetros | pt-BR | en |
 |---|---|---|---|---|
 | `customer.contact_too_long` | 400 | — | `o nome do contato pode ter até 120 caracteres` | `the contact name can have up to 120 characters` |
-| `customer.has_projects` | 400 | — | `este cliente tem projetos; tire o cliente dos projetos antes de excluir` | `this customer has projects; remove the customer from the projects before deleting` |
+| `customer.has_projects` | 409 | — | `este cliente tem projetos; tire o cliente dos projetos antes de excluir` | `this customer has projects; remove the customer from the projects before deleting` |
 | `customer.invalid_country` | 400 | — | `país inválido: use um código de país como BR, US ou DE` | `invalid country: use a country code like BR, US or DE` |
 | `customer.invalid_document` | 400 | — | `documento fiscal inválido para o país do cliente: confira os números (CNPJ no Brasil, EIN nos EUA)` | `invalid tax ID for the customer's country: check the numbers (CNPJ in Brazil, EIN in the US)` |
 | `customer.invalid_email` | 400 | — | `informe um email de contato válido` | `enter a valid contact email` |
@@ -181,7 +182,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | Código | Status | Parâmetros | pt-BR | en |
 |---|---|---|---|---|
 | `label.name_required` | 400 | — | `informe o nome da etiqueta` | `enter the label name` |
-| `label.name_taken` | 400 | — | `o projeto já tem uma etiqueta com este nome` | `the project already has a label with this name` |
+| `label.name_taken` | 409 | — | `o projeto já tem uma etiqueta com este nome` | `the project already has a label with this name` |
 | `label.name_too_long` | 400 | `max` | `o nome da etiqueta aceita até {{.max}} caracteres` | `the label name accepts up to {{.max}} characters` |
 | `label.not_found` | 404 | — | `etiqueta não encontrada` | `label not found` |
 
@@ -212,6 +213,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 
 | Código | Status | Parâmetros | pt-BR | en |
 |---|---|---|---|---|
+| `payment.invalid_history` | 400 | — | `o histórico deve ser um número inteiro de períodos, maior que zero` | `the history must be a whole number of periods, greater than zero` |
 | `payment.own_only` | 403 | — | `você só pode ver os seus pagamentos, ou os de qualquer pessoa se for admin` | `you can only see your own payments, or any if you are an admin` |
 
 ### person
@@ -249,6 +251,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `project.invalid_sprint` | 400 | — | `a sprint precisa ter entre 1 e 90 dias` | `the sprint must be between 1 and 90 days long` |
 | `project.invalid_weekday` | 400 | — | `dia da semana inválido: use monday, tuesday, wednesday, thursday, friday, saturday ou sunday` | `invalid weekday: use monday, tuesday, wednesday, thursday, friday, saturday or sunday` |
 | `project.invalid_weekly_time` | 400 | — | `o horário da weekly deve estar no formato HH:MM, por exemplo 13:00` | `the weekly time must use the HH:MM format, for example 13:00` |
+| `project.meeting_needs_customer` | 400 | — | `a reunião com o cliente só vale em um projeto com cliente: escolha o cliente do projeto antes` | `the customer meeting only applies to a project with a customer: choose the project's customer first` |
 | `project.name_required` | 400 | — | `informe o nome do projeto` | `enter the project name` |
 | `project.not_found` | 404 | — | `projeto não encontrado` | `project not found` |
 | `project.weekly_time_without_day` | 400 | — | `o horário da weekly precisa do dia da weekly` | `the weekly time needs the weekly day` |
@@ -263,6 +266,10 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 
 | Código | Status | Parâmetros | pt-BR | en |
 |---|---|---|---|---|
+| `request.body_too_large` | 413 | — | `corpo grande demais: o limite é 1 MiB` | `body too large: the limit is 1 MiB` |
+| `request.field_invalid` | 400 | `field` | `{{.field}} está inválido` | `{{.field}} is not valid` |
+| `request.field_required` | 400 | `field` | `informe {{.field}}` | `enter {{.field}}` |
+| `request.field_too_long` | 400 | `field`, `max` | `{{.field}} pode ter até {{.max}} caracteres` | `{{.field}} can have up to {{.max}} characters` |
 | `request.invalid_body` | 400 | — | `corpo da requisição inválido` | `invalid request body` |
 | `request.json_required` | 415 | — | `envie o corpo como JSON (Content-Type: application/json)` | `send the body as JSON (Content-Type: application/json)` |
 | `request.not_found` | 404 | — | `não encontrado` | `not found` |
@@ -273,7 +280,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | Código | Status | Parâmetros | pt-BR | en |
 |---|---|---|---|---|
 | `task.already_assigned` | 409 | — | `esta tarefa já tem responsável` | `this task already has an assignee` |
-| `task.already_linked` | 400 | — | `a tarefa já está ligada a um item desta integração` | `the task is already linked to an item of this integration` |
+| `task.already_linked` | 409 | — | `a tarefa já está ligada a um item desta integração` | `the task is already linked to an item of this integration` |
 | `task.assignee_not_in_team` | 400 | — | `o responsável precisa estar neste projeto` | `the assignee must be on this project` |
 | `task.description_too_long` | 400 | `max` | `a descrição aceita até {{.max}} caracteres` | `the description accepts up to {{.max}} characters` |
 | `task.integration_not_found` | 400 | — | `integração não encontrada` | `integration not found` |
@@ -289,7 +296,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `task.invalid_priority_filter` | 400 | — | `prioridade inválida (priority): use urgent, high, medium, low ou none, separadas por vírgula` | `invalid priority (priority): use urgent, high, medium, low or none, separated by commas` |
 | `task.invalid_status` | 400 | — | `status inválido: use backlog, in_progress, awaiting_closure ou closed` | `invalid status: use backlog, in_progress, awaiting_closure or closed` |
 | `task.invalid_status_filter` | 400 | — | `status inválido (status): use backlog, in_progress, awaiting_closure ou closed, separados por vírgula` | `invalid status (status): use backlog, in_progress, awaiting_closure or closed, separated by commas` |
-| `task.item_taken` | 400 | — | `este item já está ligado a outra tarefa` | `this item is already linked to another task` |
+| `task.item_taken` | 409 | — | `este item já está ligado a outra tarefa` | `this item is already linked to another task` |
 | `task.label_other_project` | 400 | — | `uma das etiquetas não existe neste projeto` | `one of the labels does not exist in this project` |
 | `task.link_fields_required` | 400 | — | `informe a integração, o item e o link` | `enter the integration, the item and the link` |
 | `task.name_required` | 400 | — | `informe o nome` | `enter the name` |
@@ -322,6 +329,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `work_session.not_found` | 404 | — | `sessão não encontrada` | `session not found` |
 | `work_session.not_open` | 400 | — | `não há ponto aberto para esta pessoa` | `this person has no open clock-in` |
 | `work_session.not_yours` | 403 | — | `só quem bateu o ponto, ou um admin, pode mexer nas tarefas desta sessão` | `only the person who clocked in, or an admin, can change the tasks of this session` |
+| `work_session.open_in_other_project` | 400 | — | `o ponto desta pessoa está aberto em outro projeto; pare-o por lá` | `this person's clock-in is open in another project; stop it there` |
 | `work_session.other_person_admin_only` | 403 | — | `só admins podem registrar o ponto de outra pessoa` | `only admins can clock in for another person` |
 | `work_session.person_not_found` | 400 | — | `pessoa não encontrada` | `person not found` |
 | `work_session.person_not_in_org` | 400 | — | `pessoa não encontrada nesta organização` | `person not found in this organization` |
