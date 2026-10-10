@@ -7,11 +7,11 @@ import (
 	"testing"
 )
 
-// Os cartões das tarefas da pessoa, no Início do projeto, seguem um desenho: o nome; o status e a
-// prioridade como selos; o prazo e o Iniciar; uma divisória; e as etiquetas. O cartão inteiro abre
-// a tarefa, com o mouse virando mão e o fundo escurecendo, e não tem sublinhado nem linha lateral.
-// O navegador não avisa quando um nome some do JavaScript nem quando um estilo se perde, então
-// estes testes leem os arquivos.
+// Os cartões das tarefas da pessoa, no Início do projeto e no painel do timer, seguem um desenho: o nome
+// com a prioridade; o status e o prazo; e, depois de uma divisória, o sinal das etiquetas e das integrações
+// com o Iniciar e a seta que abre o cartão. O cartão inteiro abre a tarefa; é só borda e, com o mouse
+// em cima, ganha o fundo; não tem sublinhado nem linha lateral. O navegador não avisa quando um nome some
+// do JavaScript nem quando um estilo se perde, então estes testes leem os arquivos.
 func TestTaskCardsFollowTheirLayout(t *testing.T) {
 	read := func(name string) string {
 		t.Helper()
@@ -30,15 +30,19 @@ func TestTaskCardsFollowTheirLayout(t *testing.T) {
 	}
 	cards := partial[start:]
 
-	// A ordem de cima para baixo: nome, status, prioridade, prazo, Iniciar, divisória, etiquetas.
+	// A ordem de cima para baixo: nome, prioridade, status, prazo e, no pé, o sinal das integrações, as
+	// etiquetas por extenso, o Iniciar e a seta.
 	order := []string{
+		`class="task-card-head"`,
 		`class="task-card-name"`,
-		`:class="statusClass(t.status)"`,
 		`:class="priorityClass(t.priority)"`,
+		`:class="statusClass(t.status)"`,
 		`cardDeadlineLabel(t)`,
-		`startTask(t)`,
 		`class="task-card-foot"`,
+		`x-for="l in t.links"`,
 		`x-for="l in t.labels"`,
+		`startTask(t)`,
+		`open = !open`,
 	}
 	last := -1
 	for _, want := range order {
@@ -54,24 +58,30 @@ func TestTaskCardsFollowTheirLayout(t *testing.T) {
 	}
 	for _, want := range []string{
 		`WTT.fmt.taskStatus(t.status)`, `WTT.fmt.priority(t.priority)`, // os selos com o nome do status e da prioridade
-		`hasDeadline(t)`,                                                                      // o prazo, só quando há
-		`isRunning(t)`,                                                                        // o "Em andamento" no lugar do Iniciar
+		`hasDeadline(t)`,                                // o prazo, só quando há
+		`isRunning(t)`,                                  // o tempo e o Parar tarefa no lugar do Iniciar
+		`'is-running': isRunning(t)`,                    // o cartão em andamento ganha o destaque
+		`x-data="{ open: false }"`,                      // abrir e fechar é só da tela
+		`:aria-expanded="open.toString()"`,              // a seta diz se o cartão está aberto
+		`:aria-controls="'card-more-' + t.id"`,          // e o que ela abre
+		`$store.clock.taskElapsed(`,                     // o tempo da tarefa na sessão
+		`linkIcon(l)`, `linkLabel(l)`, `hasExternal(t)`, // cada item ligado: o ícone da plataforma, e o nome por extenso quando aberto
 		`card-link`, `location.href = '/tasks/' + t.id`, `$event.target.closest('a, button')`, // o cartão inteiro abre a tarefa, e o botão e o link não
 	} {
 		if !strings.Contains(cards, want) {
 			t.Errorf("the task card does not contain %q", want)
 		}
 	}
-	// O que saiu: o botão Ver detalhes (o cartão é o link), o texto só para leitor de tela e a dica da
-	// linha lateral (a prioridade é um selo, com texto).
-	for _, gone := range []string{"view_details", "sr-only", ":title="} {
+	// O que saiu: o botão Ver detalhes (o cartão é o link), o texto só para leitor de tela (o nome da
+	// plataforma vai no aria-label do item) e o selo único "GitHub #16 + Trello X".
+	for _, gone := range []string{"view_details", "sr-only", "externalLabel(t)", "task-card-badges", "task-card-bottom"} {
 		if strings.Contains(cards, gone) {
 			t.Errorf("the task card still has %q", gone)
 		}
 	}
 
 	// Os estilos: sem linha lateral nem cor literal, o nome sem sublinhado, e o cartão clicável com a
-	// mão e um fundo mais escuro (um token que existe nos dois temas).
+	// mão, só borda e, sob o mouse, com o fundo.
 	rule := func(selector string) string {
 		t.Helper()
 		m := regexp.MustCompile(`(?m)^` + regexp.QuoteMeta(selector) + ` \{([^}]*)\}`).FindStringSubmatch(css)
@@ -92,31 +102,33 @@ func TestTaskCardsFollowTheirLayout(t *testing.T) {
 	if !strings.Contains(rule(".card-link"), "cursor: pointer;") {
 		t.Error("the clickable card does not have the pointer cursor")
 	}
-	if !strings.Contains(rule(".card-link:hover"), "background: var(--surface-hover);") {
-		t.Error("the clickable card does not change its background on hover")
+	// O cartão é só borda: o fundo é transparente, e é o mouse em cima que o preenche, com um token que
+	// existe nos dois temas (e não mais com um fundo mais escuro que o cartão).
+	if !strings.Contains(rule(".task-card"), "background: transparent;") {
+		t.Error("the task card has a background again: it is only a border, and the hover fills it")
 	}
-	dark := strings.Index(css, "@media (prefers-color-scheme: dark)")
-	if dark < 0 {
-		t.Fatal("app.css has no dark theme")
+	hover := rule(".card-link:hover")
+	if !strings.Contains(hover, "background: var(--surface);") {
+		t.Error("the clickable card does not get its background on hover")
 	}
-	hover := regexp.MustCompile(`--surface-hover: (#[0-9a-fA-F]{6});`)
-	light, night := hover.FindStringSubmatch(css[:dark]), hover.FindStringSubmatch(css[dark:])
-	if light == nil || night == nil {
-		t.Fatal("--surface-hover is not defined in both the light and the dark theme")
+	if strings.Contains(css, "--surface-hover") {
+		t.Error("the --surface-hover token is back: the hover fills with --surface (or --surface-2 inside the clock panel)")
 	}
-	// "Mais escuro" é para valer nos dois temas: o fundo sob o mouse é menos luminoso que o do cartão.
-	surface := regexp.MustCompile(`--surface: (#[0-9a-fA-F]{6});`)
-	for theme, c := range map[string][2]string{
-		"light": {light[1], surface.FindStringSubmatch(css[:dark])[1]},
-		"dark":  {night[1], surface.FindStringSubmatch(css[dark:])[1]},
-	} {
-		if luminance(t, c[0]) >= luminance(t, c[1]) {
-			t.Errorf("%s theme: the hover background %s is not darker than the card %s", theme, c[0], c[1])
-		}
+	if !strings.Contains(css, ".clock .card-link:hover { background: var(--surface-2); }") {
+		t.Error("the card inside the clock panel has no hover fill: the panel is already --surface, so it needs a tone above")
 	}
 
 	// Com subgrid, o cartão ocupa uma linha da grade por filho: o `span` do CSS é o número de filhos.
-	children := len(regexp.MustCompile(`class="task-card-[a-z]+"`).FindAllString(cards, -1))
+	// As partes são os filhos diretos do cartão, que são os três `task-card-*` abaixo; o que está dentro
+	// deles (o nome, os sinais, a ação) não entra na conta.
+	var children int
+	for _, part := range []string{"task-card-head", "task-card-meta", "task-card-foot"} {
+		if !strings.Contains(cards, `class="`+part+`"`) {
+			t.Errorf("the task card has no %s part", part)
+			continue
+		}
+		children++
+	}
 	if !strings.Contains(css, "grid-row: span "+strconv.Itoa(children)+";") {
 		t.Errorf("the card has %d children and app.css has no `grid-row: span %d` for the subgrid: the rows of neighbouring cards would not line up", children, children)
 	}

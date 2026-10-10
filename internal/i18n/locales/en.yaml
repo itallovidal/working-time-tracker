@@ -1097,6 +1097,7 @@ time:
   set_rate_after: " tab."
   ask_admin: Ask an admin to set it.
   running: In progress
+  running_tasks: Tasks in progress
   since: "Since {{.time}}"
   start_hint: Click Start on one of the tasks below to start counting time.
   all_in_session: All your tasks are in the session.
@@ -1146,6 +1147,9 @@ time:
   open: in progress
   my_tasks: Your tasks
   no_labels: No labels
+  no_integrations: No integrations
+  card_more: Show labels and integrations
+  card_less: Hide labels and integrations
   session_value: this session
   sessions_intro_own: Your sessions on this project.
   empty_own: When you clock in on this project, the session shows up here.

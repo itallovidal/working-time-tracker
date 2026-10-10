@@ -5,8 +5,6 @@
   --ground: #f3f5f4;
   --surface: #ffffff;
   --surface-2: #f8faf9;
-  /* O fundo de um cartão clicável sob o mouse: mais escuro que o cartão, nos dois temas. */
-  --surface-hover: #edf1f0;
   --ink: #172026;
   --ink-2: #3b4751;
   --muted: #5f6c76;
@@ -53,7 +51,6 @@
     --ground: #0e1214;
     --surface: #151b1e;
     --surface-2: #1a2125;
-    --surface-hover: #0f1417;
     --ink: #e5ebee;
     --ink-2: #c1ccd2;
     --muted: #92a0a9;
@@ -741,45 +738,91 @@ td.actions { text-align: right; white-space: nowrap; }
 .team-hours { font-family: var(--mono); font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
 
 /* ---------- Registro de tempo ---------- */
+/* O painel é um contêiner: a divisão em duas colunas depende da largura dele (no Início ele divide a linha
+   com o "Seu tempo"), e não da largura da tela. */
 .clock {
   background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius);
-  padding: 22px; display: flex; flex-direction: column; gap: 16px;
+  padding: 24px; display: flex; flex-direction: column; gap: 16px; container-type: inline-size;
 }
 .clock-face {
   font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: clamp(2.4rem, 7vw, 3.6rem);
   font-weight: 600; letter-spacing: 0.02em; line-height: 1; color: var(--ink);
 }
 .clock-face.running { color: var(--accent); }
-/* Embaixo do painel do timer: desde quando, e os botões Parar e Tarefas da sessão. */
-.clock-bottom { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
 .clock-value { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 1.4rem; font-weight: 600; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .clock-value .small { font-family: inherit; font-weight: 400; }
-/* As tarefas da pessoa no Início: um cartão por tarefa, que abre a tarefa por inteiro. De cima para
-   baixo: o nome; o status e a prioridade (selos, nas cores de `.tone`); o prazo e o Iniciar, no pé do
-   corpo; uma divisória; e as etiquetas. O corpo cresce, então o prazo e o Iniciar ficam alinhados
-   entre cartões de alturas diferentes. */
-.task-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 12px; }
+/* Com o ponto aberto: o cronômetro e os botões da sessão de um lado, as tarefas em andamento do outro, com a
+   largura que sobra. Em largura curta é uma coluna só, nessa ordem. */
+.clock-running { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px 40px; align-items: start; }
+.clock-alert { grid-column: 1 / -1; margin: 0; }
+.clock-side { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.clock-since { margin: 0; }
+.clock-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
+.clock-tasks { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.clock-tasks-title { margin: 0; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+@container (min-width: 700px) {
+  .clock-running { grid-template-columns: minmax(240px, 300px) minmax(0, 1fr); column-gap: 32px; }
+  .clock-actions { flex-direction: column; align-items: stretch; }
+  .clock-tasks { border-left: 1px solid var(--rule); padding-left: 32px; }
+}
+/* As tarefas da pessoa no Início e, em andamento, no painel do timer: um cartão por tarefa, que abre a tarefa
+   por inteiro. De cima para baixo: o nome com a prioridade; o status e o prazo; e o pé, depois de uma divisória:
+   à esquerda o sinal das etiquetas e das integrações, à direita o Iniciar com a seta que abre o cartão. Aberto, o
+   pé lista as etiquetas e as integrações e o Iniciar ocupa a largura toda. As colunas têm no mínimo 340px, então
+   o cartão não vira uma tira estreita nem se estica numa tela larga. O cartão é só borda e, sob o mouse, ganha o
+   fundo (o do cartão do painel, que já está sobre o fundo claro, é um tom acima). */
+.task-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 16px; }
 .task-card {
-  background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius);
-  padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; min-width: 0;
+  background: transparent; border: 1px solid var(--rule-strong); border-radius: var(--radius);
+  padding: 18px 20px; display: flex; flex-direction: column; gap: 14px; min-width: 0;
 }
-.task-card-name { font-weight: 600; color: var(--ink); text-decoration: none; overflow-wrap: anywhere; }
-.task-card-badges { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-.task-card-bottom { margin-top: auto; padding-top: 18px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
-.task-card-go { margin-left: auto; }
-.task-card-foot { border-top: 1px solid var(--rule); padding-top: 10px; min-height: 2.6rem; }
+.task-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.task-card-name {
+  flex: 1; min-width: 0;
+  font-size: 1.08rem; font-weight: 600; line-height: 1.35; color: var(--ink); text-decoration: none; overflow-wrap: anywhere;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden;
+}
+.task-card-priority { flex: none; margin-top: 2px; }
+.task-card-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.task-card-foot { margin-top: auto; border-top: 1px solid var(--rule); padding-top: 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+/* Fechado: o sinal do que o cartão tem, sem repetir os nomes. */
+.task-card-marks { flex: 1 1 auto; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; color: var(--muted); font-size: 0.86rem; font-weight: 500; }
+.task-card-mark { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.task-card-mark > i { font-size: 1rem; }
+/* Aberto: cada coisa com o seu título, e a seção ocupa a linha toda. */
+.task-card-details { flex: 1 1 100%; display: flex; flex-direction: column; gap: 14px; }
+.task-card-detail { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.task-card-detail-title { font-size: 0.76rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.task-card-links { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; min-width: 0; color: var(--ink-2); font-size: 0.9rem; font-weight: 500; }
+.task-card-link { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.task-card-link > i { font-size: 1.05rem; }
 .task-card .label-list { margin-top: 0; }
-/* Com subgrid, as quatro partes de cada cartão (nome, selos, prazo e Iniciar, etiquetas) ficam nas
-   mesmas linhas da grade dos cartões vizinhos: o prazo e o Iniciar de uma fileira saem alinhados, mesmo
-   que um cartão tenha etiquetas que quebram em três linhas. O `span 4` é o número de filhos do cartão
-   (um teste confere). Sem subgrid, vale o desenho de coluna acima, com o corpo crescendo. */
+.task-card-actions { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+.task-card-time { font-weight: 600; color: var(--accent); }
+/* O botão com a seta: o Iniciar (ou o Parar tarefa) e, colado a ele, o que abre e fecha o cartão. */
+.btn-split { display: inline-flex; align-items: stretch; min-width: 0; }
+.btn-split-main { border-top-right-radius: 0; border-bottom-right-radius: 0; flex: 1; justify-content: center; }
+.btn-split-toggle { border-top-left-radius: 0; border-bottom-left-radius: 0; padding-inline: 9px; box-shadow: inset 1px 0 0 color-mix(in srgb, currentColor 30%, transparent); }
+.task-card-chevron { display: inline-flex; transition: transform 0.15s; }
+.task-card.is-open .task-card-chevron { transform: rotate(180deg); }
+.task-card.is-open .task-card-actions { flex: 1 1 100%; margin-left: 0; }
+.task-card.is-open .btn-split { flex: 1; }
+/* Na sessão, o cartão leva a cor de destaque na borda, no lugar de uma linha lateral. */
+.task-card.is-running { border-color: var(--accent); }
+/* Com subgrid, as três partes de cada cartão (nome e prioridade, status e prazo, pé) ficam nas mesmas linhas
+   da grade dos cartões vizinhos: o pé de uma fileira sai alinhado, mesmo que um cartão tenha o nome em três
+   linhas. O `span 3` é o número de partes do cartão (um teste confere). Sem subgrid, vale o desenho de coluna
+   acima, com o pé empurrado para baixo. */
 @supports (grid-template-rows: subgrid) {
-  .task-card { display: grid; grid-row: span 4; grid-template-rows: subgrid; row-gap: 10px; }
-  .task-card-bottom { margin-top: 0; align-self: end; }
+  .task-card { display: grid; grid-row: span 3; grid-template-rows: subgrid; row-gap: 14px; }
+  .task-card-foot { margin-top: 0; align-self: end; }
 }
-/* Cartão que leva a outra página: o link fica no nome e o cartão inteiro aceita o clique. */
+/* Cartão que leva a outra página: o link fica no nome e o cartão inteiro aceita o clique. É só borda; sob o
+   mouse ganha o fundo, e dentro do painel do timer (que já é `--surface`) o fundo é um tom acima. */
 .card-link { cursor: pointer; transition: background-color 0.12s, border-color 0.12s; }
-.card-link:hover { background: var(--surface-hover); border-color: var(--rule-strong); }
+.card-link:hover { background: var(--surface); border-color: var(--rule); }
+.clock .card-link:hover { background: var(--surface-2); }
+.task-card.is-running:hover { border-color: var(--accent); }
 .card-link:has(a:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
 /* Etiquetas: os selos sob o nome da tarefa e as caixas de escolha dos modais. */
 .label-list { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }

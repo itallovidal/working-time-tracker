@@ -1107,6 +1107,7 @@ time:
   set_rate_after: "."
   ask_admin: Peça a um admin para definir.
   running: Em andamento
+  running_tasks: Tarefas em andamento
   since: "Desde as {{.time}}"
   start_hint: Clique em Iniciar numa das tarefas abaixo para começar a contar o tempo.
   all_in_session: Todas as suas tarefas estão na sessão.
@@ -1156,6 +1157,9 @@ time:
   open: em andamento
   my_tasks: Suas tarefas
   no_labels: Sem etiquetas
+  no_integrations: Sem integrações
+  card_more: Mostrar etiquetas e integrações
+  card_less: Ocultar etiquetas e integrações
   session_value: nesta sessão
   sessions_intro_own: As suas sessões neste projeto.
   empty_own: Quando você bater o ponto neste projeto, a sessão aparece aqui.

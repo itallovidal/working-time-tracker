@@ -1,31 +1,65 @@
 {{/* O cartão de uma tarefa da pessoa, usado nas Suas tarefas do Início e, em andamento, dentro do painel do
      timer (partials/clock_card.gohtml). Vai dentro de um `<template x-for="t in ...">`, e a página tem de ter o
      `taskClock()` de project.js (as cores, o prazo, o Iniciar). O cartão inteiro abre a tarefa; o nome continua um
-     link para o teclado e para abrir em outra aba, e o botão Iniciar não abre. De cima para baixo: o nome; o status
-     e a prioridade; um respiro; o prazo (só quando há) e o Iniciar, ou o "Em andamento" no lugar dele; uma
-     divisória; e as etiquetas. */}}
+     link para o teclado e para abrir em outra aba, e os botões não abrem. São três partes, de cima para baixo:
+     o nome com a prioridade; o status e o prazo (só quando há); e o pé, depois de uma divisória. O pé fechado
+     tem, à esquerda, um sinal das etiquetas (ícone e quantas) e das integrações (o ícone de cada plataforma) e,
+     à direita, o Iniciar (ou, na sessão, o tempo da tarefa e o Parar tarefa) com a seta que abre o cartão. Aberto,
+     o pé lista as etiquetas e as integrações por extenso e o Iniciar ocupa a largura toda. O estado aberto é só
+     da tela (`open`). O cartão é só borda; ao passar o mouse, ganha o fundo. */}}
 {{define "task_card"}}
-<div class="task-card card-link" @click="if (!$event.target.closest('a, button')) location.href = '/tasks/' + t.id">
-  <a class="task-card-name" :href="'/tasks/' + t.id" x-text="t.name"></a>
-  <div class="task-card-badges">
-    <span class="badge" :class="statusClass(t.status)" x-text="WTT.fmt.taskStatus(t.status)"></span>
-    <span class="badge" :class="priorityClass(t.priority)" x-text="WTT.fmt.priority(t.priority)"></span>
-    <span class="badge" x-show="hasExternal(t)" x-text="externalLabel(t)"></span>
+<div class="task-card card-link" x-data="{ open: false }" :class="{ 'is-running': isRunning(t), 'is-open': open }"
+     @click="if (!$event.target.closest('a, button')) location.href = '/tasks/' + t.id">
+  <div class="task-card-head">
+    <a class="task-card-name" :href="'/tasks/' + t.id" x-text="t.name"></a>
+    <span class="badge task-card-priority" :class="priorityClass(t.priority)" x-text="WTT.fmt.priority(t.priority)"></span>
   </div>
-  <div class="task-card-bottom">
+  <div class="task-card-meta">
+    <span class="badge" :class="statusClass(t.status)" x-text="WTT.fmt.taskStatus(t.status)"></span>
     <span class="badge num" :class="cardDeadlineClass(t)" x-show="hasDeadline(t)">{{template "icon" "calendar-day"}} <span x-text="cardDeadlineLabel(t)"></span></span>
-    {{/* Em andamento (só dentro do painel do timer, que já diz "Em andamento"), o botão para só esta tarefa ocupa o lugar do Iniciar. */}}
-    <button type="button" class="btn btn-secondary btn-sm task-card-go" x-show="isRunning(t)"
-            :disabled="pending" :aria-label="$t('session.stop_task_label', { name: t.name })" title="{{.T "session.stop_task_hint"}}" @click="stopTask(t)">{{template "icon" "stop"}} {{.T "session.stop_task"}}</button>
-    {{/* Com o ponto aberto neste projeto, o botão põe a tarefa na sessão; com ele aberto em outro, fica desabilitado. */}}
-    <button type="button" class="btn btn-sm task-card-go" x-show="!isRunning(t)"
-            :disabled="pending || noRate() || !$store.clock.ready || (!!$store.clock.session && !sessionHere())" @click="startTask(t)">{{template "icon" "play"}} <span x-text="sessionHere() ? $t('session.add_to_session') : $t('time.start')"></span></button>
   </div>
   <div class="task-card-foot">
-    <div class="label-list" x-show="t.labels && t.labels.length > 0">
-      <template x-for="l in t.labels" :key="l.id"><span class="badge" x-text="l.name"></span></template>
+    {{/* Fechado: só um sinal do que há. As integrações são o ícone de cada plataforma; o nome vai no aria-label. */}}
+    <div class="task-card-marks" x-show="!open">
+      <span class="task-card-mark" x-show="t.labels && t.labels.length > 0" role="img" :aria-label="$t('tasks.labels') + ': ' + (t.labels || []).length" :title="$t('tasks.labels')">{{template "icon" "tag"}} <span class="num" x-text="(t.labels || []).length"></span></span>
+      <template x-for="l in t.links" :key="l.integration_id">
+        <span class="task-card-mark" role="img" :aria-label="linkLabel(l)" :title="linkLabel(l)"><i :class="linkIcon(l)" aria-hidden="true"></i></span>
+      </template>
     </div>
-    <span class="muted small" x-show="!t.labels || t.labels.length === 0">{{.T "time.no_labels"}}</span>
+    {{/* Aberto: todas as etiquetas e todas as integrações, cada uma com o seu título. */}}
+    <div class="task-card-details" :id="'card-more-' + t.id" x-show="open">
+      <div class="task-card-detail">
+        <span class="task-card-detail-title">{{.T "tasks.labels"}}</span>
+        <div class="label-list" x-show="t.labels && t.labels.length > 0">
+          <template x-for="l in t.labels" :key="l.id"><span class="badge" x-text="l.name"></span></template>
+        </div>
+        <span class="muted small" x-show="!t.labels || t.labels.length === 0">{{.T "time.no_labels"}}</span>
+      </div>
+      <div class="task-card-detail">
+        <span class="task-card-detail-title">{{.T "task_detail.external"}}</span>
+        <div class="task-card-links" x-show="hasExternal(t)">
+          <template x-for="l in t.links" :key="l.integration_id">
+            <span class="task-card-link"><i :class="linkIcon(l)" aria-hidden="true"></i> <span x-text="linkLabel(l)"></span></span>
+          </template>
+        </div>
+        <span class="muted small" x-show="!hasExternal(t)">{{.T "time.no_integrations"}}</span>
+      </div>
+    </div>
+    <div class="task-card-actions">
+      {{/* Na sessão (só dentro do painel do timer): o tempo desta tarefa e o botão para parar só ela. */}}
+      <span class="task-card-time mono num" x-show="isRunning(t)" x-text="isRunning(t) ? WTT.fmt.clock($store.clock.taskElapsed($store.clock.session, t.id)) : ''"></span>
+      <div class="btn-split">
+        <button type="button" class="btn btn-secondary btn-sm btn-split-main" x-show="isRunning(t)"
+                :disabled="pending" :aria-label="$t('session.stop_task_label', { name: t.name })" title="{{.T "session.stop_task_hint"}}" @click="stopTask(t)">{{template "icon" "stop"}} {{.T "session.stop_task"}}</button>
+        {{/* Com o ponto aberto neste projeto, o botão põe a tarefa na sessão; com ele aberto em outro, fica desabilitado. */}}
+        <button type="button" class="btn btn-sm btn-split-main" x-show="!isRunning(t)"
+                :disabled="pending || noRate() || !$store.clock.ready || (!!$store.clock.session && !sessionHere())" @click="startTask(t)">{{template "icon" "play"}} <span x-text="sessionHere() ? $t('session.add_to_session') : $t('time.start')"></span></button>
+        <button type="button" class="btn btn-sm btn-split-toggle" :class="isRunning(t) && 'btn-secondary'"
+                :aria-expanded="open.toString()" :aria-controls="'card-more-' + t.id"
+                :aria-label="open ? $t('time.card_less') : $t('time.card_more')" :title="open ? $t('time.card_less') : $t('time.card_more')"
+                @click="open = !open"><span class="task-card-chevron">{{template "icon" "chevron-down"}}</span></button>
+      </div>
+    </div>
   </div>
 </div>
 {{end}}
