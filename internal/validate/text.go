@@ -78,3 +78,11 @@ func Money(field string, cents int) error {
 	}
 	return nil
 }
+
+// Rate confere um valor por hora em centavos (custo ou valor cobrado): de MinRateCents a MaxCents.
+func Rate(field string, cents int) error {
+	if cents < MinRateCents || cents > MaxCents {
+		return apperr.ErrFieldInvalid.With("field", field)
+	}
+	return nil
+}

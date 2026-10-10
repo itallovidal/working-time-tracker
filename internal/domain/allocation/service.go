@@ -30,13 +30,10 @@ func ids(projectID, personID string) (uuid.UUID, uuid.UUID, error) {
 }
 
 // Set põe a pessoa no projeto com o valor dado, ou troca o valor de quem já
-// está nele. Zero vale: é alguém que trabalha no projeto sem receber por hora.
-// Para tirar a pessoa do projeto, o caminho é collaborator.Service.Remove, que
+// está nele. O valor tem o piso de validate.MinRateCents: ninguém trabalha de graça, e só o dono entra com 0
+// (a checagem do dono vem antes da do valor). Para tirar a pessoa do projeto, o caminho é collaborator.Service.Remove, que
 // apaga o valor e os times juntos: não há como ficar no projeto sem valor.
 func (s *Service) Set(projectID, personID string, payRateCents int) (*Allocation, error) {
-	if validate.Money("pay_rate_cents", payRateCents) != nil {
-		return nil, ErrInvalidRate.With("field", "pay_rate_cents")
-	}
 	prj, per, err := ids(projectID, personID)
 	if err != nil {
 		return nil, ErrPersonNotInOrg
@@ -54,6 +51,8 @@ func (s *Service) Set(projectID, personID string, payRateCents int) (*Allocation
 		return nil, err
 	} else if owner {
 		payRateCents = 0
+	} else if validate.Rate("pay_rate_cents", payRateCents) != nil {
+		return nil, ErrInvalidRate.With("field", "pay_rate_cents")
 	}
 	if err := s.store.Set(prj, per, payRateCents); err != nil {
 		return nil, err

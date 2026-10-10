@@ -41,6 +41,9 @@ const (
 	MaxTaxID = 32
 	// MaxCents é o teto de um valor em dinheiro (valor por hora, valor cobrado): 1.000.000,00, em centavos.
 	MaxCents = 100_000_000
+	// MinRateCents é o piso de um valor por hora (custo e valor cobrado): 10,00, em centavos. Zero não vale; só o
+	// dono entra num projeto com custo 0.
+	MinRateCents = 1000
 )
 
 // Limits são os tamanhos que a tela precisa, por nome, em window.BOOT.limits e na função de template limit.
@@ -51,5 +54,6 @@ func Limits() map[string]int {
 		"address": MaxAddress, "summary": MaxSummary, "description": MaxDescription,
 		"task_description": MaxTaskDescription, "search": MaxSearch, "repo": MaxRepo, "phone": MaxPhone,
 		"phone_min": MinPhone, "phone_min_digits": MinPhoneDigits, "tax_id": MaxTaxID, "max_cents": MaxCents,
+		"min_rate_cents": MinRateCents,
 	}
 }

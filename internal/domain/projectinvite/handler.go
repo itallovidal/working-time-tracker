@@ -46,7 +46,7 @@ func (h *Handler) Create(c *echo.Context) error {
 	if body.PayRateCents == nil {
 		return apperr.Respond(c, http.StatusBadRequest, allocation.ErrRateRequired.With("field", "pay_rate_cents"))
 	}
-	if validate.Money("pay_rate_cents", *body.PayRateCents) != nil {
+	if validate.Rate("pay_rate_cents", *body.PayRateCents) != nil {
 		return apperr.Respond(c, http.StatusBadRequest, allocation.ErrInvalidRate.With("field", "pay_rate_cents"))
 	}
 

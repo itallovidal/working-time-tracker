@@ -336,14 +336,14 @@ func TestService_ClockIn_RequiresRate(t *testing.T) {
 		t.Error("a session was opened for a person without a rate")
 	}
 
-	// Zero é um valor: a pessoa trabalha no projeto sem receber por hora.
-	setRate(t, proj.ID.String(), p.ID.String(), 0)
+	// Com o valor definido neste projeto, a pessoa bate ponto.
+	setRate(t, proj.ID.String(), p.ID.String(), 1000)
 	session, err := wsSvc.ClockIn(proj.ID.String(), task1.ID.String(), p.ID.String())
 	if err != nil {
-		t.Fatalf("clock in with a zero rate: %v", err)
+		t.Fatalf("clock in with a rate: %v", err)
 	}
-	if session.PayRateCents == nil || *session.PayRateCents != 0 {
-		t.Errorf("pay_rate_cents = %v, want 0", session.PayRateCents)
+	if session.PayRateCents == nil || *session.PayRateCents != 1000 {
+		t.Errorf("pay_rate_cents = %v, want 1000", session.PayRateCents)
 	}
 }
 
@@ -357,7 +357,8 @@ func TestService_ClockIn_OwnerWorksAtTheBilledRate(t *testing.T) {
 	testClient.Person.UpdateOneID(owner.ID).SetIsOwner(true).ExecX(context.Background())
 	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, project.Routine{})
 	rate := 8000
-	if _, err := projSvc.SetBilling(proj.ID.String(), nil, &rate); err != nil {
+	customerID := testClient.Customer.Create().SetOrganizationID(org.ID).SetName("Cliente").SaveX(context.Background()).ID.String()
+	if _, err := projSvc.SetBilling(proj.ID.String(), &customerID, &rate); err != nil {
 		t.Fatalf("set billing: %v", err)
 	}
 	task1, err := taskSvc.Create(proj.ID.String(), "Task", "", "", nil)
@@ -418,7 +419,8 @@ func TestService_RateIsSnapshottedAtClockIn(t *testing.T) {
 	// O admin muda os dois valores.
 	setRate(t, projectID, personID, 2500)
 	bill := 10000
-	if _, err := projSvc.SetBilling(projectID, nil, &bill); err != nil {
+	customerID := testClient.Customer.Create().SetOrganizationID(org.ID).SetName("Cliente").SaveX(context.Background()).ID.String()
+	if _, err := projSvc.SetBilling(projectID, &customerID, &bill); err != nil {
 		t.Fatalf("set billing: %v", err)
 	}
 	if _, err := wsSvc.ClockIn(projectID, task1.ID.String(), personID); err != nil {

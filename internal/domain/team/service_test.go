@@ -158,12 +158,10 @@ func TestMembership_RequiresRateInTheProject(t *testing.T) {
 		t.Errorf("the refused person is in the team: %+v", members)
 	}
 
-	// Zero é um valor: a pessoa está no projeto, só não recebe por hora.
-	if _, err := allocation.NewService(allocation.NewStore(testClient)).Set(proj.ID.String(), p.ID.String(), 0); err != nil {
-		t.Fatalf("set a zero rate: %v", err)
-	}
+	// Com o valor definido, a pessoa está no projeto e entra no time.
+	setRate(t, proj.ID.String(), p.ID.String())
 	if _, err := memberSvc.Add(tm.ID.String(), p.ID.String()); err != nil {
-		t.Errorf("add a person with a zero rate: %v", err)
+		t.Errorf("add a person with a rate: %v", err)
 	}
 }
 

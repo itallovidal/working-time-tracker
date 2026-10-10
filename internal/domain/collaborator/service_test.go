@@ -82,7 +82,7 @@ func setup(t *testing.T) fixture {
 	for _, a := range []struct {
 		project, person string
 		cents           int
-	}{{f.projectX, f.ana, 9000}, {f.projectX, f.bruno, 0}, {f.projectY, f.ana, 11000}} {
+	}{{f.projectX, f.ana, 9000}, {f.projectX, f.bruno, 1000}, {f.projectY, f.ana, 11000}} {
 		if _, err := f.allocationSvc.Set(a.project, a.person, a.cents); err != nil {
 			t.Fatalf("fixture rate: %v", err)
 		}
@@ -128,7 +128,7 @@ func TestService_ListByProject_RatesAndTeams(t *testing.T) {
 	}
 	want := []string{
 		"Ana: rate 9000, teams [Backend Mobile]", // valor e dois times, só os deste projeto
-		"Bruno: rate 0, teams []",                // valor zero é valor; sem time
+		"Bruno: rate 1000, teams []",             // só o valor, sem time
 		"Carla: no rate, teams [Backend]",        // num time sem valor, de antes da regra
 	}
 	if !slices.Equal(got, want) {

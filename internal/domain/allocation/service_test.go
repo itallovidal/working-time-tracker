@@ -67,6 +67,20 @@ func TestService_Set_OwnerAlwaysZero(t *testing.T) {
 	}
 }
 
+// A checagem do dono vem antes da do valor: o dono entra com 0, que para os outros não vale.
+func TestService_Set_OwnerEntersWithZero(t *testing.T) {
+	f := setup(t)
+	testClient.Person.UpdateOneID(uuid.MustParse(f.ana)).SetIsOwner(true).ExecX(context.Background())
+
+	a, err := f.svc.Set(f.projectX, f.ana, 0)
+	if err != nil || a.PayRateCents != 0 {
+		t.Fatalf("owner with zero: a = %+v, err = %v, want zero and none", a, err)
+	}
+	if _, err := f.svc.Set(f.projectX, f.bruno, 0); !errors.Is(err, allocation.ErrInvalidRate) {
+		t.Errorf("a member with zero: err = %v, want ErrInvalidRate", err)
+	}
+}
+
 // A mesma pessoa tem um valor diferente em cada projeto.
 func TestService_RatePerProject(t *testing.T) {
 	f := setup(t)
@@ -95,7 +109,7 @@ func TestService_RatePerProject(t *testing.T) {
 func TestService_SetTwiceUpdates(t *testing.T) {
 	f := setup(t)
 	f.svc.Set(f.projectX, f.bruno, 2000)
-	f.svc.Set(f.projectX, f.ana, 0)
+	f.svc.Set(f.projectX, f.ana, 1000)
 
 	a, err := f.svc.Set(f.projectX, f.bruno, 3000)
 	if err != nil {
@@ -105,7 +119,7 @@ func TestService_SetTwiceUpdates(t *testing.T) {
 		t.Errorf("pay_rate_cents = %d, want 3000", a.PayRateCents)
 	}
 	list, _ := f.svc.ListByProject(f.projectX)
-	if len(list) != 2 || list[0].Person.Name != "Ana" || list[0].PayRateCents != 0 || list[1].PayRateCents != 3000 {
+	if len(list) != 2 || list[0].Person.Name != "Ana" || list[0].PayRateCents != 1000 || list[1].PayRateCents != 3000 {
 		t.Errorf("list by project = %+v", list)
 	}
 }
@@ -113,13 +127,13 @@ func TestService_SetTwiceUpdates(t *testing.T) {
 func TestService_Validation(t *testing.T) {
 	f := setup(t)
 
-	// O teto e o piso: 0 e 1.000.000,00 valem, -1 e o teto + 1 não, e o erro diz o campo.
-	for _, cents := range []int{0, validate.MaxCents} {
+	// O piso e o teto: 10,00 e 1.000.000,00 valem; zero, 9,99, -1 e o teto + 1 não, e o erro diz o campo.
+	for _, cents := range []int{validate.MinRateCents, validate.MaxCents} {
 		if _, err := f.svc.Set(f.projectX, f.bruno, cents); err != nil {
 			t.Errorf("rate %d: err = %v, want none", cents, err)
 		}
 	}
-	for _, cents := range []int{-1, validate.MaxCents + 1} {
+	for _, cents := range []int{0, validate.MinRateCents - 1, -1, validate.MaxCents + 1} {
 		_, err := f.svc.Set(f.projectX, f.bruno, cents)
 		var e *apperr.Error
 		if !errors.Is(err, allocation.ErrInvalidRate) || !errors.As(err, &e) || e.Params["field"] != "pay_rate_cents" {
