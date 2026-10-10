@@ -87,7 +87,7 @@
   {{/* Criar e editar no mesmo modal. O corpo enviado é igual para todas as plataformas:
        nome, token e, em metadata, os campos que o tipo declara. */}}
   <template x-teleport="#modal-root">
-    <form class="stack" x-show="$store.modal.name === 'integration-form'" @submit.prevent="save()">
+    <form class="stack" novalidate x-show="$store.modal.name === 'integration-form'" @submit.prevent="save()">
       <template x-if="!draft.id">
         <ul class="list picker" role="radiogroup" aria-label="{{.T "integrations.platform"}}">
           <template x-for="t in types" :key="t.type">
@@ -121,14 +121,19 @@
       <div class="stack" x-show="!connectStep()">
         <div class="field">
           <label for="int-name">{{.T "common.name"}}</label>
-          <input id="int-name" type="text" required placeholder="{{.T "integrations.name_placeholder"}}" x-model="draft.display_name" data-autofocus>
+          <input id="int-name" type="text" maxlength="{{limit "name"}}" data-field="display_name" placeholder="{{.T "integrations.name_placeholder"}}"
+                 x-model="draft.display_name" @input="clearField('display_name')" :aria-invalid="fieldErrors.display_name ? 'true' : 'false'" data-autofocus>
+          {{template "field_error" "display_name"}}
         </div>
         {{/* Quem se autoriza no site da plataforma não tem token para colar. */}}
         <div class="field" x-show="!isOAuth(draft.type)">
-          <label for="int-token">{{.T "integrations.token_label"}}</label>
+          {{/* Obrigatório ao criar; ao editar, em branco mantém o token atual. */}}
+          <label for="int-token">{{.T "integrations.token_label"}} <span class="optional" x-show="draft.id">{{.T "common.optional_label"}}</span></label>
           {{/* new-password: com "off" o navegador ainda oferece a senha salva do site. */}}
-          <input id="int-token" type="password" autocomplete="new-password" :required="!draft.id && !isOAuth(draft.type)"
-                 :placeholder="draft.id && draft.has_token ? $t('integrations.keep_token') : ''" x-model="draft.token">
+          <input id="int-token" type="password" autocomplete="new-password" maxlength="{{limit "token"}}" data-field="token"
+                 :placeholder="draft.id && draft.has_token ? $t('integrations.keep_token') : ''" x-model="draft.token"
+                 @input="clearField('token')" :aria-invalid="fieldErrors.token ? 'true' : 'false'">
+          {{template "field_error" "token"}}
           <span class="hint" x-show="typeOf(draft.type).token_hint" x-text="typeOf(draft.type).token_hint"></span>
         </div>
         {{/* Os campos do tipo. Os internos (a chave do app do Trello) a conexão guarda, e a tela não mostra. O que
@@ -138,8 +143,8 @@
           <div class="field" x-show="!f.internal && !f.hidden">
             <label :for="'int-meta-' + f.key" x-text="f.label"></label>
             <template x-if="f.picker === 'select'">
-              <select :id="'int-meta-' + f.key" :required="f.required && !f.internal" :disabled="f.summary && repoLocked()"
-                      @change="draft.metadata[f.key] = $event.target.value; if (f.name_key) draft.metadata[f.name_key] = $event.target.value ? $event.target.selectedOptions[0].textContent.trim() : ''">
+              <select :id="'int-meta-' + f.key" :data-field="f.key" :aria-invalid="fieldErrors[f.key] ? 'true' : 'false'" :disabled="f.summary && repoLocked()"
+                      @change="clearField(f.key); draft.metadata[f.key] = $event.target.value; if (f.name_key) draft.metadata[f.name_key] = $event.target.value ? $event.target.selectedOptions[0].textContent.trim() : ''">
                 <option value="" :selected="!draft.metadata[f.key]">{{$.T "integrations.pick_placeholder"}}</option>
                 <template x-for="r in repos" :key="r.id || r.full_name">
                   <option :value="r.id || r.full_name" :selected="(r.id || r.full_name) === draft.metadata[f.key]" x-text="r.full_name"></option>
@@ -151,10 +156,12 @@
               </select>
             </template>
             <template x-if="f.picker !== 'select'">
-              <input :id="'int-meta-' + f.key" type="text" autocomplete="off" spellcheck="false" :required="f.required && !f.internal"
-                     :placeholder="f.placeholder || ''" :list="f.picker === 'datalist' ? 'int-repos' : null"
-                     :readonly="f.summary && repoLocked()" x-model="draft.metadata[f.key]">
+              <input :id="'int-meta-' + f.key" type="text" autocomplete="off" spellcheck="false" maxlength="{{limit "repo"}}"
+                     :data-field="f.key" :placeholder="f.placeholder || ''" :list="f.picker === 'datalist' ? 'int-repos' : null"
+                     :readonly="f.summary && repoLocked()" x-model="draft.metadata[f.key]" @input="clearField(f.key)"
+                     :aria-invalid="fieldErrors[f.key] ? 'true' : 'false'">
             </template>
+            <p class="form-error" x-cloak x-show="fieldErrors[f.key]" x-text="fieldErrors[f.key]" role="alert"></p>
             <span class="hint" x-cloak x-show="f.summary && repoLocked()">{{$.T "integrations.sync_locked"}}</span>
             <span class="hint" x-show="f.hint && !f.internal && f.picker !== 'select'" x-text="f.hint"></span>
           </div>

@@ -5,7 +5,7 @@
   <div class="toolbar">
     <div class="stack">
       <div class="row filters">
-        <input type="search" placeholder="{{.T "tasks.search_placeholder"}}" aria-label="{{.T "tasks.search_label"}}"
+        <input type="search" maxlength="{{limit "search"}}" placeholder="{{.T "tasks.search_placeholder"}}" aria-label="{{.T "tasks.search_label"}}"
                x-model="filters.q" @input.debounce.300ms="apply()">
         <select aria-label="{{.T "tasks.due_filter"}}" x-model="filters.due" @change="apply()">
           <option value="">{{.T "tasks.any_due"}}</option>

@@ -79,10 +79,10 @@ func toLabels(rows []*ent.Label) []Label {
 func cleanLabelName(name string) (string, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
-		return "", ErrLabelNameRequired
+		return "", ErrLabelNameRequired.With("field", "name")
 	}
 	if utf8.RuneCountInString(name) > maxLabelLen {
-		return "", ErrLabelNameTooLong.With("max", maxLabelLen)
+		return "", ErrLabelNameTooLong.With("max", maxLabelLen, "field", "name")
 	}
 	return name, nil
 }
@@ -119,7 +119,7 @@ func (s *Service) CreateLabel(projectID, name string) (*Label, error) {
 		return nil, err
 	}
 	if taken {
-		return nil, ErrLabelNameTaken
+		return nil, ErrLabelNameTaken.With("field", "name")
 	}
 	return s.taskStore.createLabel(pid, name)
 }
@@ -142,7 +142,7 @@ func (s *Service) RenameLabel(projectID, labelID, name string) (*Label, error) {
 		return nil, err
 	}
 	if taken {
-		return nil, ErrLabelNameTaken
+		return nil, ErrLabelNameTaken.With("field", "name")
 	}
 	saved, err := row.Update().SetName(name).Save(context.Background())
 	if err != nil {
@@ -204,7 +204,7 @@ func (s *Service) resolveLabels(projectID string, ids []string) ([]Label, error)
 	for _, id := range ids {
 		uid, err := uuid.Parse(id)
 		if err != nil {
-			return nil, ErrLabelOtherProject
+			return nil, ErrLabelOtherProject.With("field", "label_ids")
 		}
 		if !seen[uid] {
 			seen[uid] = true
@@ -219,7 +219,7 @@ func (s *Service) resolveLabels(projectID string, ids []string) ([]Label, error)
 		return nil, err
 	}
 	if len(found) != len(uids) {
-		return nil, ErrLabelOtherProject
+		return nil, ErrLabelOtherProject.With("field", "label_ids")
 	}
 	return found, nil
 }

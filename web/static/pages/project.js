@@ -86,6 +86,18 @@ document.addEventListener('alpine:init', () => {
     },
   });
 
+  // deadlineRule confere o prazo de uma tarefa (um dia, vindo do <input type="date">) com a faixa do servidor: uma
+  // data antes de 1971 é recusada, porque a tarefa guarda o "sem prazo" como uma data antiga.
+  const deadlineRule = (v, field) => {
+    const x = String(v || '').trim();
+    if (x === '') return '';
+    return WTT.rules.date(x, field) || (x < '1971-01-01' ? WTT.errorText({ code: 'request.field_invalid', params: { field } }) : '');
+  };
+  // As regras do nome da tarefa, as mesmas do servidor: obrigatório (aparado) e até task_name caracteres.
+  const taskNameRules = () => [WTT.rules.required, WTT.rules.max('task_name')];
+  // A etapa do passo a passo em que cada campo está: um erro do servidor leva de volta à etapa do campo.
+  const wizardStepOf = { name: 1, description: 1, long_description: 1, deadline: 2, priority: 2, label_ids: 2, assignee_id: 2 };
+
   // taskWizard é o passo a passo do modal Nova tarefa: a etapa 1 é o nome e a descrição (em Markdown,
   // com pré-visualização) e a etapa 2, o resto. Editar uma tarefa não passa por aqui: o nome e a descrição,
   // e os detalhes, têm um modal cada na página da tarefa. Quem usa tem um
@@ -100,8 +112,7 @@ document.addEventListener('alpine:init', () => {
     resetWizard() {
       this.step = 1;
       this.mdView = 'write';
-      this.errors.name = '';
-      this.errors.assignee = '';
+      this.clearFields();
     },
     // focusStep põe o foco no primeiro campo da etapa: o store do modal só foca ao abrir.
     focusStep() {
@@ -111,12 +122,7 @@ document.addEventListener('alpine:init', () => {
       });
     },
     next() {
-      if (!this.draft.name.trim()) {
-        this.errors.name = WTT.t('tasks.wizard.name_required');
-        this.focusStep();
-        return false;
-      }
-      this.errors.name = '';
+      if (!this.check({ name: [this.draft.name, ...taskNameRules()] })) return false;
       this.step = 2;
       this.focusStep();
       return true;
@@ -132,11 +138,9 @@ document.addEventListener('alpine:init', () => {
         this.next();
         return undefined;
       }
-      if (this.draft.assign === 'other' && !this.draft.assignee_id) {
-        this.errors.assignee = WTT.t('tasks.wizard.pick_person');
-        return undefined;
-      }
-      this.errors.assignee = '';
+      const spec = { deadline: [this.draft.deadline, deadlineRule] };
+      if (this.draft.assign === 'other') spec.assignee_id = [this.draft.assignee_id, WTT.rules.required];
+      if (!this.check(spec)) return undefined;
       if (this.step === 2 && this.publishStep) {
         this.step = 3;
         this.focusStep();
@@ -774,15 +778,26 @@ document.addEventListener('alpine:init', () => {
       return this.run('create', async () => {
         // As integrações que o servidor posta sozinho (o Trello) e a pessoa desmarcou: ele não as posta.
         const skip = this.integrations.filter((i) => this.autoPublish(i) && !this.ticked(i)).map((i) => i.id);
-        const t = await api('POST', '/api/projects/' + project.id + '/tasks', {
-          name: this.draft.name,
-          description: this.draft.description,
-          assignee_id: { me: me.id, none: '', other: this.draft.assignee_id }[this.draft.assign],
-          deadline: WTT.fmt.fromDateInput(this.draft.deadline),
-          priority: this.draft.priority,
-          label_ids: this.draft.label_ids,
-          skip_publish: skip,
-        });
+        let t;
+        try {
+          t = await api('POST', '/api/projects/' + project.id + '/tasks', {
+            name: this.draft.name.trim(),
+            description: this.draft.description,
+            assignee_id: { me: me.id, none: '', other: this.draft.assignee_id }[this.draft.assign],
+            deadline: WTT.fmt.fromDateInput(this.draft.deadline),
+            priority: this.draft.priority,
+            label_ids: this.draft.label_ids,
+            skip_publish: skip,
+          });
+        } catch (e) {
+          // O erro de um campo de outra etapa volta para a etapa dele, onde o campo está à vista.
+          const step = wizardStepOf[e && e.params && e.params.field];
+          if (step && step !== this.step) {
+            this.step = step;
+            await this.$nextTick();
+          }
+          throw e;
+        }
         // Postar vem depois de criar, uma plataforma de cada vez: se uma falhar, a tarefa existe e o aviso diz o
         // que houve com ela, sem impedir as outras. As que o servidor posta sozinho (o Trello) não passam por aqui.
         const results = [];
@@ -970,7 +985,7 @@ document.addEventListener('alpine:init', () => {
     openEdit() {
       this.setTask(this.task);
       this.errors.save = '';
-      this.errors.name = '';
+      this.clearFields();
       this.mdView = 'write';
       Alpine.store('modal').open('task-edit', WTT.t('task_detail.edit_title'), () => !this.pending);
     },
@@ -979,7 +994,7 @@ document.addEventListener('alpine:init', () => {
     openDetails() {
       this.setTask(this.task);
       this.errors.details = '';
-      this.errors.assignee = '';
+      this.clearFields();
       this.errors.label = '';
       this.newLabel = '';
       Alpine.store('modal').open('task-details', WTT.t('task_detail.edit_details'), () => !this.pending);
@@ -992,22 +1007,23 @@ document.addEventListener('alpine:init', () => {
     // saveDetails manda só os detalhes, pela rota própria: o nome e a descrição não vão, então não há como
     // desfazer uma edição feita por outra pessoa. O responsável e o prazo só vão se a pessoa os mudou: um
     // prazo que veio do Trello com hora perderia a hora (o campo guarda só o dia), e uma tarefa que alguém
-    // acabou de pegar voltaria a quem a tinha quando o modal abriu.
+    // acabou de pegar voltaria a quem a tinha quando o modal abriu. No prazo, a chave ausente mantém e null
+    // apaga: sem mudança a chave é omitida, e o campo esvaziado manda null.
     saveDetails() {
-      if (this.draft.assign === 'other' && !this.draft.assignee_id) {
-        this.errors.assignee = WTT.t('tasks.wizard.pick_person');
-        return undefined;
-      }
-      this.errors.assignee = '';
+      const spec = { deadline: [this.draft.deadline, deadlineRule] };
+      if (this.draft.assign === 'other') spec.assignee_id = [this.draft.assignee_id, WTT.rules.required];
+      if (!this.check(spec)) return undefined;
       return this.run('details', async () => {
         const assignee = { me: me.id, none: '', other: this.draft.assignee_id }[this.draft.assign];
-        const t = await api('PATCH', '/api/tasks/' + this.taskId + '/attributes', {
+        const body = {
           status: this.draft.status,
           priority: this.draft.priority,
           label_ids: this.draft.label_ids,
           assignee_id: assignee === this.assigneeWas ? null : assignee,
-          deadline: this.draft.deadline === this.deadlineWas ? null : WTT.fmt.fromDateInput(this.draft.deadline),
-        });
+        };
+        // fromDateInput devolve null para o campo vazio: é o apagar.
+        if (this.draft.deadline !== this.deadlineWas) body.deadline = WTT.fmt.fromDateInput(this.draft.deadline);
+        const t = await api('PATCH', '/api/tasks/' + this.taskId + '/attributes', body);
         this.setTask(t);
         Alpine.store('modal').close();
         toast(WTT.t('task_detail.details_saved'));
@@ -1075,14 +1091,10 @@ document.addEventListener('alpine:init', () => {
     // save grava o nome e a descrição pelo PATCH da tarefa, que não mexe no que não vem: o responsável, o prazo,
     // o status, a prioridade e as etiquetas são dos detalhes.
     save() {
-      if (!this.draft.name.trim()) {
-        this.errors.name = WTT.t('tasks.wizard.name_required');
-        return undefined;
-      }
-      this.errors.name = '';
+      if (!this.check({ name: [this.draft.name, ...taskNameRules()] })) return undefined;
       return this.run('save', async () => {
         const t = await api('PATCH', '/api/tasks/' + this.taskId, {
-          name: this.draft.name,
+          name: this.draft.name.trim(),
           description: this.draft.description,
         });
         this.setTask(t);
@@ -1090,9 +1102,29 @@ document.addEventListener('alpine:init', () => {
         toast(WTT.t('task_detail.saved'));
       });
     },
+    // itemRule confere o item como o servidor: obrigatório, até external_item caracteres e, nos tipos de número
+    // (a issue do GitHub), só dígitos e maior que zero. No resto (o link curto do Trello, ou o link do cartão
+    // colado) o formato é conferido pelo servidor.
+    itemRule(v, field) {
+      const x = String(v || '').trim();
+      const invalid = () => WTT.errorText({ code: 'request.field_invalid', params: { field } });
+      if (this.linkType().item_numeric && x !== '' && !(/^\d+$/.test(x) && Number(x) >= 1)) return invalid();
+      return '';
+    },
     link() {
+      const ok = this.check({
+        integration_id: [this.linkForm.integration_id, WTT.rules.required],
+        external_item_id: [this.linkForm.external_item_id, WTT.rules.required, WTT.rules.max('external_item'), (v, f) => this.itemRule(v, f)],
+        external_item_url: [this.linkForm.external_item_url, WTT.rules.required, WTT.rules.max('item_url'), WTT.rules.url],
+      });
+      if (!ok) return undefined;
       return this.run('link', async () => {
-        const t = await api('POST', '/api/tasks/' + this.taskId + '/link-external-item', this.linkForm);
+        const body = {
+          integration_id: this.linkForm.integration_id,
+          external_item_id: this.linkForm.external_item_id.trim(),
+          external_item_url: this.linkForm.external_item_url.trim(),
+        };
+        const t = await api('POST', '/api/tasks/' + this.taskId + '/link-external-item', body);
         this.linkForm.external_item_id = '';
         this.linkForm.external_item_url = '';
         this.setTask(t);
@@ -1386,6 +1418,7 @@ document.addEventListener('alpine:init', () => {
       this.errors.save = '';
       this.errors.remove = '';
       this.errors.connect = '';
+      this.clearFields();
       Alpine.store('modal').open('integration-form', title, () => !this.pending);
     },
     // Só o tipo que lê e escreve issues sincroniza (o GitHub).
@@ -1424,12 +1457,59 @@ document.addEventListener('alpine:init', () => {
     pickType() {
       this.draft.metadata = {};
     },
+    // metaRule é a conferência do formato do campo que identifica a conexão, a mesma do adaptador da plataforma:
+    // o repositório do GitHub, o projeto do GitLab e o quadro do Trello (que aceita o link do quadro). O campo
+    // de outro tipo não tem formato conferido aqui.
+    metaRule(key) {
+      const bare = (v, ...hosts) => {
+        let x = String(v || '').trim().replace(/^https?:\/\//, '').replace(/^www\./, '');
+        for (const h of hosts) if (x.startsWith(h + '/')) x = x.slice(h.length + 1);
+        return x.replace(/\/+$/, '').replace(/\.git$/, '');
+      };
+      const invalid = (field) => WTT.errorText({ code: 'request.field_invalid', params: { field } });
+      if (key === 'repo') {
+        return (v, field) => {
+          const x = bare(v, 'github.com');
+          if (x === '') return '';
+          const name = x.slice(x.lastIndexOf('/') + 1);
+          return /^[A-Za-z0-9][A-Za-z0-9-]*\/[A-Za-z0-9._-]+$/.test(x) && name.replace(/\./g, '') !== '' ? '' : invalid(field);
+        };
+      }
+      if (key === 'project_url') {
+        return (v, field) => {
+          let x = bare(v, 'gitlab.com');
+          if (x === '') return '';
+          const i = x.indexOf('/-/');
+          if (i >= 0) x = x.slice(0, i);
+          return /^[A-Za-z0-9_.-]+(\/[A-Za-z0-9_.-]+)+$/.test(x) ? '' : invalid(field);
+        };
+      }
+      if (key === 'board_id') {
+        return (v, field) => {
+          let x = String(v || '').trim();
+          if (x === '') return '';
+          const m = x.match(/trello\.com\/b\/([A-Za-z0-9]+)/);
+          if (m) x = m[1];
+          return /^[A-Za-z0-9]+$/.test(x) ? '' : invalid(field);
+        };
+      }
+      return () => '';
+    },
     save() {
       this.errors.remove = '';
+      const d = this.draft;
+      const spec = { display_name: [d.display_name, WTT.rules.required, WTT.rules.max('name')] };
+      if (!this.isOAuth(d.type)) {
+        // Ao criar o token é obrigatório; ao editar, em branco mantém o atual.
+        spec.token = [d.token, ...(d.id ? [] : [WTT.rules.required]), WTT.rules.max('token')];
+      }
+      for (const f of this.typeOf(d.type).metadata) {
+        if (f.internal || f.hidden) continue;
+        spec[f.key] = [(d.metadata || {})[f.key], ...(f.required ? [WTT.rules.required] : []), WTT.rules.max('repo'), this.metaRule(f.key)];
+      }
+      if (!this.check(spec)) return undefined;
       return this.run('save', async () => {
-        const d = this.draft;
         const body = { display_name: d.display_name.trim(), enabled: d.enabled, token: d.token.trim(), metadata: { ...d.metadata } };
-        if (!body.display_name) throw new Error(WTT.t('integrations.name_required'));
         // Desativada e sem sincronização antes, não liga agora: a caixa está desabilitada e o servidor recusaria.
         if (d.id && this.typeOf(d.type).sync) body.sync_issues = d.enabled || d.sync_was ? !!d.sync_issues : false;
         if (d.id) {
@@ -1549,37 +1629,37 @@ document.addEventListener('alpine:init', () => {
       };
       this.errors.save = '';
       this.errors.delete = '';
+      this.clearFields();
       this.confirmDelete = false;
       // Enquanto salva, o modal não fecha: um erro do servidor ficaria sem ter onde aparecer.
       Alpine.store('modal').open('project-edit', WTT.t('project_settings.edit_title'), () => !this.pending);
     },
-    // save manda o projeto e, se o cliente ou o valor mudou, a cobrança, que é
-    // outra rota. Se a segunda falhar, a primeira já valeu: a aba atrás do modal
-    // mostra o que foi salvo, e Salvar de novo só repete o que faltou.
+    // save manda a cobrança, se o cliente ou o valor mudou, e depois o projeto: a reunião com o cliente só vale em
+    // um projeto com cliente, então o cliente tem de estar gravado antes de a reunião ir. Se a segunda falhar, a
+    // primeira já valeu: a aba atrás do modal mostra o que foi salvo, e Salvar de novo só repete o que faltou.
     save() {
       return this.run('save', async () => {
         const d = this.draft;
+        const R = WTT.rules;
         const editProject = WTT.can('project.edit');
         const editBilling = WTT.can('billing.manage');
-        // O valor é conferido antes de qualquer chamada. Vazio apaga.
-        const cents = editBilling ? WTT.toCents(d.rate) : this.billRateCents;
-        if (editBilling) {
-          if (cents === null && String(d.rate).trim() !== '') throw new Error(WTT.t('org.projects.rate_invalid'));
-          if (cents !== null && cents > 100000000) throw new Error(WTT.t('org.projects.rate_too_high'));
-        }
-
-        // Cada parte vai pela rota da permissão dela: o projeto e a reunião, em project.edit,
-        // e o cliente e o valor cobrado, em billing.manage. Sem daily ou sem weekly vai texto
-        // vazio, que apaga; a API mantém o que não vier no corpo.
-        if (editProject) {
-          this.current = await api('PATCH', '/api/projects/' + project.id, {
-            name: d.name,
-            description: d.description,
-            sprint_duration_days: Number(d.sprint_duration_days) || 0,
-            ...WTT.routine.payload(d),
-          });
-          document.querySelectorAll('[data-project-name]').forEach((el) => { el.textContent = this.current.name; });
-        }
+        const name = String(d.name).trim();
+        const description = String(d.description).trim();
+        // A tela confere as regras do servidor antes de qualquer chamada, e só dos campos que ela mostra.
+        if (!this.check({
+          ...(editProject ? {
+            name: [name, R.required, R.max('name')],
+            // A descrição chega do servidor como long_description, e o rótulo do campo é o dele.
+            description: [description, (v) => R.max('description')(v, 'long_description')],
+          } : {}),
+          ...(editBilling ? { bill_rate_cents: [d.rate, R.money] } : {}),
+          ...(editProject ? {
+            ...WTT.routine.rules(d),
+            sprint_duration_days: [d.sprint_duration_days, R.integer(1, 90)],
+          } : {}),
+        })) return;
+        // O valor vazio apaga.
+        const cents = editBilling ? WTT.toCents(d.rate, { strict: true }) : this.billRateCents;
 
         const customerId = this.current.customer ? this.current.customer.id : '';
         if (editBilling && (d.customer_id !== customerId || cents !== this.billRateCents)) {
@@ -1594,6 +1674,18 @@ document.addEventListener('alpine:init', () => {
             this.current.customer_meeting_day = undefined;
             this.current.customer_meeting_time = undefined;
           }
+        }
+
+        // O projeto e a reunião vão em project.edit, e o cliente e o valor cobrado, em billing.manage. Sem daily
+        // ou sem weekly vai texto vazio, que apaga; a API mantém o que não vier no corpo.
+        if (editProject) {
+          this.current = await api('PATCH', '/api/projects/' + project.id, {
+            name,
+            description,
+            sprint_duration_days: Number(d.sprint_duration_days) || 0,
+            ...WTT.routine.payload(d),
+          });
+          document.querySelectorAll('[data-project-name]').forEach((el) => { el.textContent = this.current.name; });
         }
         toast(WTT.t('project_settings.saved'));
         Alpine.store('modal').close();
@@ -1821,12 +1913,13 @@ document.addEventListener('alpine:init', () => {
       this.preset = this.person.preset;
       this.confirming = null;
       this.errors.person = '';
+      this.clearFields();
       Alpine.store('modal').open('collab-edit', WTT.t('collab.edit_person'), () => !this.pending);
     },
     // A margem com o valor que está digitado no modal, ou null sem valor cobrado
     // do cliente ou sem um valor válido no campo.
     personMargin() {
-      const cents = WTT.toCents(this.person.rate);
+      const cents = WTT.toCents(this.person.rate, { strict: true });
       if (this.billing.bill_rate_cents === null || cents === null) return null;
       return this.billing.bill_rate_cents - cents;
     },
@@ -1841,8 +1934,9 @@ document.addEventListener('alpine:init', () => {
         if (!c) throw new Error(WTT.t('collab.person_gone'));
         // O dono não tem valor pago: as horas dele valem o valor cobrado.
         // Quem não define o valor deixa o campo como está: ele nem aparece.
-        const cents = c.person.is_owner || !WTT.can('rates.manage') ? c.pay_rate_cents : WTT.toCents(this.person.rate);
-        if (cents === null && WTT.can('rates.manage')) throw new Error(WTT.t('collab.rate_required'));
+        const sets = !c.person.is_owner && WTT.can('rates.manage');
+        if (sets && !this.check({ pay_rate_cents: [this.person.rate, WTT.rules.required, WTT.rules.money] })) return;
+        const cents = sets ? WTT.toCents(this.person.rate, { strict: true }) : c.pay_rate_cents;
         const current = c.teams.map((t) => t.id);
         const wanted = this.person.team_ids;
         const leaving = current.filter((id) => !wanted.includes(id));
@@ -1915,6 +2009,7 @@ document.addEventListener('alpine:init', () => {
       this.addStep = 1;
       this.preset = 'member';
       this.errors.add = '';
+      this.clearFields();
       Alpine.store('modal').open('collab-add', WTT.t('collab.add_title'), () => !this.pending);
     },
     // A pessoa escolhida na etapa 1, com o papel e o dono, para saber se ela precisa de um grupo.
@@ -1933,10 +2028,7 @@ document.addEventListener('alpine:init', () => {
     // addNext confere a etapa 1 e, quando a pessoa precisa de um grupo, vai para a 2; senão grava direto.
     addNext() {
       if (this.addInviting()) {
-        if (WTT.toCents(this.add.rate) === null) {
-          this.errors.add = WTT.t('collab.rate_required');
-          return undefined;
-        }
+        if (!this.check({ pay_rate_cents: [this.add.rate, WTT.rules.required, WTT.rules.money] })) return undefined;
         this.errors.add = '';
         if (!this.addNeedsGroup()) return this.inviteSend();
         this.addStep = 2;
@@ -1947,10 +2039,8 @@ document.addEventListener('alpine:init', () => {
         this.errors.add = WTT.t('collab.choose_person');
         return undefined;
       }
-      if (!person.is_owner && WTT.toCents(this.add.rate) === null) {
-        this.errors.add = WTT.t('collab.rate_required');
-        return undefined;
-      }
+      if (!person.is_owner && !this.check({ pay_rate_cents: [this.add.rate, WTT.rules.required, WTT.rules.money] })) return undefined;
+      this.clearFields();
       this.errors.add = '';
       if (!this.addNeedsGroup()) return this.addPerson();
       this.addStep = 2;
@@ -1970,7 +2060,7 @@ document.addEventListener('alpine:init', () => {
     inviteSend() {
       return this.run('add', async () => {
         const email = this.inviteEmail();
-        const cents = WTT.toCents(this.add.rate);
+        const cents = WTT.toCents(this.add.rate, { strict: true });
         if (!email) throw new Error(WTT.t('collab.choose_person'));
         if (cents === null) throw new Error(WTT.t('collab.rate_required'));
         const body = { email, pay_rate_cents: cents };
@@ -1992,7 +2082,7 @@ document.addEventListener('alpine:init', () => {
       return this.run('add', async () => {
         const person = this.addTarget();
         if (!person) throw new Error(WTT.t('collab.choose_person'));
-        const cents = person.is_owner ? 0 : WTT.toCents(this.add.rate);
+        const cents = person.is_owner ? 0 : WTT.toCents(this.add.rate, { strict: true });
         if (cents === null) throw new Error(WTT.t('collab.rate_required'));
         const body = { pay_rate_cents: cents };
         if (this.addNeedsGroup() && this.preset !== 'member') body.preset = this.preset;
@@ -2019,11 +2109,14 @@ document.addEventListener('alpine:init', () => {
     openTeam() {
       this.newTeam = '';
       this.errors.create = '';
+      this.clearFields();
       Alpine.store('modal').open('team-new', WTT.t('collab.new_team'), () => !this.pending);
     },
     createTeam() {
       return this.run('create', async () => {
-        const t = await api('POST', '/api/projects/' + project.id + '/teams', { name: this.newTeam });
+        const name = this.newTeam.trim();
+        if (!this.check({ name: [name, WTT.rules.required, WTT.rules.max('name')] })) return;
+        const t = await api('POST', '/api/projects/' + project.id + '/teams', { name });
         this.teams = [t, ...this.teams];
         Alpine.store('modal').close();
         toast(WTT.t('collab.team_created'));
@@ -2043,6 +2136,7 @@ document.addEventListener('alpine:init', () => {
       this.edit = { id: team.id, name: team.name, search: '', member_ids: [...inTeam], people: [...members, ...others] };
       this.confirming = null;
       this.errors.team = '';
+      this.clearFields();
       Alpine.store('modal').open('team-edit', WTT.t('collab.edit_team'), () => !this.pending);
       // A lista guarda a rolagem da última abertura; cada uma começa do topo, onde estão os integrantes.
       this.$nextTick(() => { this.$refs.editList.scrollTop = 0; });
@@ -2060,7 +2154,7 @@ document.addEventListener('alpine:init', () => {
       return this.run('team', async () => {
         const team = this.teams.find((t) => t.id === this.edit.id);
         const name = this.edit.name.trim();
-        if (!name) throw new Error(WTT.t('collab.team_name_required'));
+        if (!this.check({ name: [name, WTT.rules.required, WTT.rules.max('name')] })) return;
         const current = this.membersOf(team).map((c) => c.person.id);
         const wanted = this.edit.member_ids;
         const leaving = current.filter((id) => !wanted.includes(id));

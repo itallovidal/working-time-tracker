@@ -220,10 +220,10 @@ func TestService_Priority(t *testing.T) {
 		t.Fatalf("create with priority: %v, %+v", err, tk)
 	}
 	bad := "critical"
-	if _, err := taskSvc.CreateAs("", pid, "X", "", "", nil, task.Attrs{Priority: &bad}); err != task.ErrInvalidPriority {
+	if _, err := taskSvc.CreateAs("", pid, "X", "", "", nil, task.Attrs{Priority: &bad}); !errors.Is(err, task.ErrInvalidPriority) {
 		t.Errorf("invalid priority on create: err = %v", err)
 	}
-	if _, err := taskSvc.UpdateAs("", tk.ID.String(), "Fogo", "", nil, nil, task.Attrs{Priority: &bad}); err != task.ErrInvalidPriority {
+	if _, err := taskSvc.UpdateAs("", tk.ID.String(), "Fogo", "", nil, nil, task.Attrs{Priority: &bad}); !errors.Is(err, task.ErrInvalidPriority) {
 		t.Errorf("invalid priority on update: err = %v", err)
 	}
 	kept, err := taskSvc.Update(tk.ID.String(), "Fogo 2", "", nil, nil)
@@ -271,7 +271,7 @@ func TestService_Status(t *testing.T) {
 		t.Errorf("an update without status must keep it, got %q (%v)", kept.Status, err)
 	}
 	bad := "done"
-	if _, err := taskSvc.UpdateAs("", id, "Nova", "", nil, nil, task.Attrs{Status: &bad}); err != task.ErrInvalidStatus {
+	if _, err := taskSvc.UpdateAs("", id, "Nova", "", nil, nil, task.Attrs{Status: &bad}); !errors.Is(err, task.ErrInvalidStatus) {
 		t.Errorf("invalid status on update: err = %v", err)
 	}
 	if got, _ := taskSvc.Get(id); got.Status != "in_progress" {
@@ -336,10 +336,10 @@ func TestService_Labels(t *testing.T) {
 	if err != nil || bug.Name != "bug" {
 		t.Fatalf("create label: %v, %+v", err, bug)
 	}
-	if _, err := taskSvc.CreateLabel(aid, "BUG"); err != task.ErrLabelNameTaken {
+	if _, err := taskSvc.CreateLabel(aid, "BUG"); !errors.Is(err, task.ErrLabelNameTaken) {
 		t.Errorf("same name with another case: err = %v, want taken", err)
 	}
-	if _, err := taskSvc.CreateLabel(aid, "   "); err != task.ErrLabelNameRequired {
+	if _, err := taskSvc.CreateLabel(aid, "   "); !errors.Is(err, task.ErrLabelNameRequired) {
 		t.Errorf("empty name: err = %v", err)
 	}
 	if _, err := taskSvc.CreateLabel(aid, strings.Repeat("x", 51)); err == nil {
@@ -360,10 +360,10 @@ func TestService_Labels(t *testing.T) {
 		t.Fatalf("create with labels (a repeated id counts once): %v, %+v", err, tk.Labels)
 	}
 	foreign := []string{other.ID.String()}
-	if _, err := taskSvc.CreateAs("", aid, "X", "", "", nil, task.Attrs{LabelIDs: &foreign}); err != task.ErrLabelOtherProject {
+	if _, err := taskSvc.CreateAs("", aid, "X", "", "", nil, task.Attrs{LabelIDs: &foreign}); !errors.Is(err, task.ErrLabelOtherProject) {
 		t.Errorf("a label of another project on create: err = %v", err)
 	}
-	if _, err := taskSvc.UpdateAs("", tk.ID.String(), "X", "", nil, nil, task.Attrs{LabelIDs: &foreign}); err != task.ErrLabelOtherProject {
+	if _, err := taskSvc.UpdateAs("", tk.ID.String(), "X", "", nil, nil, task.Attrs{LabelIDs: &foreign}); !errors.Is(err, task.ErrLabelOtherProject) {
 		t.Errorf("a label of another project on update: err = %v", err)
 	}
 
@@ -383,7 +383,7 @@ func TestService_Labels(t *testing.T) {
 	}
 
 	// Renomear confere o nome; excluir tira a etiqueta das tarefas e deixa as tarefas.
-	if _, err := taskSvc.RenameLabel(aid, design.ID.String(), "BUG"); err != task.ErrLabelNameTaken {
+	if _, err := taskSvc.RenameLabel(aid, design.ID.String(), "BUG"); !errors.Is(err, task.ErrLabelNameTaken) {
 		t.Errorf("renaming onto an existing name: err = %v", err)
 	}
 	if _, err := taskSvc.RenameLabel(bid, design.ID.String(), "x"); err == nil {

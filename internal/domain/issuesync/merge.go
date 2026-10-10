@@ -224,12 +224,12 @@ func Merge(ctx context.Context, b Snapshot, r Remote, l Local, res Resolver, opt
 	}
 
 	// Título e corpo: o GitHub vence; senão, a tarefa segue para a issue.
-	if t := norm(r.Title); t != norm(b.Title) {
-		if t != norm(l.Title) {
+	if t := normTitle(r.Title); t != normTitle(b.Title) {
+		if t != normTitle(l.Title) {
 			v := lf(r.Title)
 			plan.Local.Title = &v
 		}
-	} else if t := norm(l.Title); t != norm(b.Title) {
+	} else if t := normTitle(l.Title); t != normTitle(b.Title) {
 		plan.Push.Title = &t
 	}
 	if t := norm(r.Body); t != norm(b.Body) {

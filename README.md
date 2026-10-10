@@ -377,6 +377,10 @@ O `gitlab` tem `ComingSoon: true` no `Descriptor`: o `POST` dele responde `400` 
 
 Um tipo novo é um arquivo em `internal/adapter` que implementa `Integration` e uma linha no `registry.go`. O `Descriptor` dele diz que campos o `metadata` tem, e é dele que a tela tira o formulário e os rótulos (as páginas de projeto o recebem em `window.BOOT.integration_types`); o `CheckMetadata` confere e normaliza esses campos sem falar com a plataforma; `Validate` e `FetchItemDetails` recebem a `Connection`, com o token e o `metadata`.
 
+### Validação dos formulários
+
+Cada campo tem uma regra só, a mesma na tela e no servidor (Decisão 16 em `_docs/design.md`): os tamanhos máximos estão em `internal/validate/limits.go`, o servidor devolve o campo que errou (`params.field`) e a tela mostra o erro embaixo dele, com foco no primeiro. Todo formulário confere os campos pela própria página (`novalidate`), e o campo opcional diz "(opcional)" no rótulo. O corpo JSON da API é estrito: chave desconhecida é recusada.
+
 ## Segurança
 
 - **Senhas** com bcrypt. Contas sem senha (criadas antes do login existir) não conseguem entrar.

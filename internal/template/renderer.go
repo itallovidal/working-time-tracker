@@ -9,6 +9,8 @@ import (
 	"strings"
 
 	"github.com/labstack/echo/v5"
+
+	"working-time-tracker/internal/validate"
 )
 
 // Renderer guarda um conjunto de templates por página. Cada conjunto tem os
@@ -21,7 +23,7 @@ type Renderer struct {
 // New lê templates/layouts/*, templates/partials/* e cada templates/pages/*.gohtml.
 // Um template com erro faz a inicialização falhar, e não a primeira requisição.
 func New(fsys fs.FS) (*Renderer, error) {
-	base, err := template.New("").Funcs(template.FuncMap{"dict": dict}).ParseFS(fsys, "templates/layouts/*.gohtml", "templates/partials/*.gohtml")
+	base, err := template.New("").Funcs(template.FuncMap{"dict": dict, "limit": limit}).ParseFS(fsys, "templates/layouts/*.gohtml", "templates/partials/*.gohtml")
 	if err != nil {
 		return nil, fmt.Errorf("parse layouts: %w", err)
 	}
@@ -59,6 +61,16 @@ func dict(pairs ...any) (map[string]any, error) {
 		m[key] = pairs[i+1]
 	}
 	return m, nil
+}
+
+// limit devolve um tamanho máximo de internal/validate (limit "name" é 120), para o maxlength dos campos nascer do mesmo
+// valor que o servidor confere. Um nome que não existe falha na inicialização.
+func limit(name string) (int, error) {
+	n, ok := validate.Limits()[name]
+	if !ok {
+		return 0, fmt.Errorf("limit: %q is not a known limit", name)
+	}
+	return n, nil
 }
 
 // Pages lista as páginas carregadas, para os testes conferirem que todas existem.

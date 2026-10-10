@@ -19,15 +19,17 @@
       {{- end}}
 
       <form class="stack" id="profile-panel-personal" {{if .Me.HasPassword}}role="tabpanel" aria-labelledby="profile-tab-personal"{{end}}
-            x-show="tab === 'personal'" @submit.prevent="saveProfile()">
+            novalidate x-show="tab === 'personal'" @submit.prevent="saveProfile()">
         <div class="field">
           <label for="me-name">{{.T "profile.personal.name"}}</label>
-          <input id="me-name" type="text" autocomplete="name" required x-model="profile.name" data-autofocus>
+          <input id="me-name" type="text" autocomplete="name" maxlength="{{limit "name"}}" data-field="name" x-model="profile.name" @input="clearField('name')" :aria-invalid="fieldErrors.name ? 'true' : 'false'" data-autofocus>
+          {{template "field_error" "name"}}
         </div>
         <div class="field">
           <label for="me-email">{{.T "common.email"}}</label>
-          <input id="me-email" type="email" autocomplete="email" required x-model="profile.email">
+          <input id="me-email" type="email" autocomplete="email" maxlength="{{limit "email"}}" data-field="email" x-model="profile.email" @input="clearField('email')" :aria-invalid="fieldErrors.email ? 'true' : 'false'">
           <span class="hint">{{.T "profile.personal.email_hint"}}</span>
+          {{template "field_error" "email"}}
         </div>
         {{- if not .Me.HasPassword}}
         {{/* Quem entra só pelo Clerk não tem senha do sistema: não há o que trocar. */}}
@@ -42,15 +44,22 @@
 
       {{- if .Me.HasPassword}}
       <form class="stack" id="profile-panel-password" role="tabpanel" aria-labelledby="profile-tab-password"
-            x-cloak x-show="tab === 'password'" @submit.prevent="changePassword()">
+            novalidate x-cloak x-show="tab === 'password'" @submit.prevent="changePassword()">
         <div class="field">
           <label for="pw-current">{{.T "profile.password.current"}}</label>
-          <input id="pw-current" type="password" autocomplete="current-password" required x-model="password.current">
+          <input id="pw-current" type="password" autocomplete="current-password" data-field="current_password" x-model="password.current" @input="clearField('current_password')" :aria-invalid="fieldErrors.current_password ? 'true' : 'false'">
+          {{template "field_error" "current_password"}}
         </div>
         <div class="field">
           <label for="pw-new">{{.T "profile.password.next"}}</label>
-          <input id="pw-new" type="password" autocomplete="new-password" minlength="8" required x-model="password.next">
+          <input id="pw-new" type="password" autocomplete="new-password" data-field="new_password" x-model="password.next" @input="clearField('new_password')" :aria-invalid="fieldErrors.new_password ? 'true' : 'false'">
           <span class="hint">{{.T "profile.password.next_hint"}}</span>
+          {{template "field_error" "new_password"}}
+        </div>
+        <div class="field">
+          <label for="pw-confirm">{{.T "auth.signup.confirm_password"}}</label>
+          <input id="pw-confirm" type="password" autocomplete="new-password" data-field="confirm_password" x-model="password.confirm" @input="clearField('confirm_password')" :aria-invalid="fieldErrors.confirm_password ? 'true' : 'false'">
+          {{template "field_error" "confirm_password"}}
         </div>
         <p class="form-error" x-show="errors.password" x-text="errors.password" role="alert"></p>
         <div class="row row-end">

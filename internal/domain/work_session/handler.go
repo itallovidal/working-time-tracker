@@ -3,6 +3,7 @@ package work_session
 import (
 	"encoding/json"
 	"errors"
+	"reflect"
 	"time"
 
 	"github.com/labstack/echo/v5"
@@ -27,7 +28,7 @@ func personFor(c *echo.Context, requested string) (string, int, error) {
 	me := auth.CurrentPerson(c)
 	if me == nil {
 		if requested == "" {
-			return "", 400, ErrPersonRequired
+			return "", 400, ErrPersonRequired.With("field", "person_id")
 		}
 		return requested, 0, nil
 	}
@@ -80,10 +81,10 @@ func (h *Handler) ClockIn(c *echo.Context) error {
 		PersonID string `json:"person_id"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return apperr.Respond(c, 400, apperr.ErrInvalidBody)
+		return apperr.Respond(c, 400, apperr.BindError(err))
 	}
 	if body.TaskID == "" {
-		return apperr.Respond(c, 400, ErrTaskRequired)
+		return apperr.Respond(c, 400, ErrTaskRequired.With("field", "task_id"))
 	}
 	personID, status, perr := personFor(c, body.PersonID)
 	if status != 0 {
@@ -102,7 +103,7 @@ func (h *Handler) ClockOut(c *echo.Context) error {
 		PersonID string `json:"person_id"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return apperr.Respond(c, 400, apperr.ErrInvalidBody)
+		return apperr.Respond(c, 400, apperr.BindError(err))
 	}
 	personID, status, perr := personFor(c, body.PersonID)
 	if status != 0 {
@@ -134,6 +135,11 @@ func (h *Handler) List(c *echo.Context) error {
 
 	sessions, err := h.svc.ListByProject(projectID, taskIDPtr, personIDPtr)
 	if err != nil {
+		// Um filtro com id malformado é do pedido (400), como no total; o resto é falha nossa.
+		var coded *apperr.Error
+		if errors.As(err, &coded) {
+			return apperr.Respond(c, 400, err)
+		}
 		return apperr.Respond(c, 500, err)
 	}
 	me, set := auth.CurrentPerson(c), auth.ProjectPermissions(c)
@@ -203,7 +209,8 @@ func (o *optTime) UnmarshalJSON(b []byte) error {
 	}
 	var t time.Time
 	if err := json.Unmarshal(b, &t); err != nil {
-		return err
+		// Um UnmarshalTypeError recebe o nome do campo do decodificador, e o servidor o devolve em invalid_body.
+		return &json.UnmarshalTypeError{Value: "string", Type: reflect.TypeOf(t)}
 	}
 	o.Value = &t
 	return nil
@@ -245,10 +252,10 @@ func (h *Handler) AddTask(c *echo.Context) error {
 		UntilAt optTime `json:"until_at"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return apperr.Respond(c, 400, apperr.ErrInvalidBody)
+		return apperr.Respond(c, 400, apperr.BindError(err))
 	}
 	if body.TaskID == "" {
-		return apperr.Respond(c, 400, ErrTaskRequired)
+		return apperr.Respond(c, 400, ErrTaskRequired.With("field", "task_id"))
 	}
 	if err := h.editable(c); err != nil {
 		return respond(c, err)
@@ -269,7 +276,7 @@ func (h *Handler) UpdateTask(c *echo.Context) error {
 		Stop    bool    `json:"stop"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return apperr.Respond(c, 400, apperr.ErrInvalidBody)
+		return apperr.Respond(c, 400, apperr.BindError(err))
 	}
 	if err := h.editable(c); err != nil {
 		return respond(c, err)

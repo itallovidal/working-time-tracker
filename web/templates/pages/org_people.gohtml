@@ -14,6 +14,7 @@
 
     <p class="muted" x-show="loading">{{.T "org.people.loading"}}</p>
     <p class="form-error" x-cloak x-show="errors.load" x-text="errors.load"></p>
+    <p class="form-error" x-cloak x-show="errors.role" x-text="errors.role" role="alert"></p>
     <div class="table-wrap" x-show="people.length > 0">
       <table>
         <thead>
@@ -94,20 +95,22 @@
   {{/* O formulário aparece no modal do layout base, mas continua no escopo de orgPeople. Com o Clerk ligado
        (emailInvites) o convite com email sai por email; sem email, ou sem o Clerk, é o link para copiar. */}}
   <template x-teleport="#modal-root">
-    <form class="stack" x-show="$store.modal.name === 'invite'" @submit.prevent="createInvite()">
+    <form class="stack" novalidate x-show="$store.modal.name === 'invite'" @submit.prevent="createInvite()">
       <div class="stack" x-show="!lastLink">
         <p class="muted small">{{if .Props.emailInvites}}{{.T "org.people.invite_intro_email"}}{{else}}{{.T "org.people.invite_intro"}}{{end}}</p>
         <div class="field">
-          <label for="invite-email">{{.T "common.email"}}</label>
-          <input id="invite-email" type="email" placeholder="{{.T "common.optional"}}" x-model="invite.email" data-autofocus>
+          {{template "field_label" (dict "D" . "For" "invite-email" "Key" "common.email" "Optional" true)}}
+          <input id="invite-email" type="email" data-field="email" maxlength="{{limit "email"}}" x-model="invite.email" @input="clearField('email')" :aria-invalid="fieldErrors.email ? 'true' : 'false'" data-autofocus>
+          {{template "field_error" "email"}}
           <span class="hint">{{if .Props.emailInvites}}{{.T "org.people.invite_email_hint_email"}}{{else}}{{.T "org.people.invite_email_hint"}}{{end}}</span>
         </div>
         <div class="field">
           <label for="invite-role">{{.T "common.role"}}</label>
-          <select id="invite-role" x-model="invite.role">
+          <select id="invite-role" data-field="role" x-model="invite.role" @change="clearField('role')">
             <option value="member">{{.T "roles.member"}}</option>
             {{if .IsOwner}}<option value="admin">{{.T "roles.admin"}}</option>{{end}}
           </select>
+          {{template "field_error" "role"}}
         </div>
         <p class="form-error" x-show="errors.invite" x-text="errors.invite" role="alert"></p>
         <div class="row row-end">

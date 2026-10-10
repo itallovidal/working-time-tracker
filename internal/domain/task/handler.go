@@ -14,6 +14,7 @@ import (
 	"working-time-tracker/internal/apperr"
 	"working-time-tracker/internal/database"
 	"working-time-tracker/internal/domain/auth"
+	"working-time-tracker/internal/validate"
 )
 
 type Handler struct {
@@ -37,7 +38,7 @@ func (h *Handler) Create(c *echo.Context) error {
 		SkipPublish []string `json:"skip_publish"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return apperr.Respond(c, 400, apperr.ErrInvalidBody)
+		return apperr.Respond(c, 400, apperr.BindError(err))
 	}
 	skip, err := parseIntegrationIDs(body.SkipPublish)
 	if err != nil {
@@ -72,9 +73,6 @@ func parseIntegrationIDs(raw []string) ([]uuid.UUID, error) {
 	return out, nil
 }
 
-// maxQueryLen limita o texto da busca por nome.
-const maxQueryLen = 100
-
 // parseListFilter lê os filtros da lista na query string: q, assignee_id,
 // deadline_to, priority, status, label_id, page e per_page. Todos são opcionais.
 // assignee_id=none lista só as tarefas sem responsável, assignee_id=any, só as que têm, e
@@ -85,8 +83,8 @@ func parseListFilter(c *echo.Context) (ListFilter, error) {
 	var f ListFilter
 
 	f.Query = strings.TrimSpace(c.QueryParam("q"))
-	if utf8.RuneCountInString(f.Query) > maxQueryLen {
-		return f, ErrQueryTooLong.With("max", maxQueryLen)
+	if utf8.RuneCountInString(f.Query) > validate.MaxSearch {
+		return f, ErrQueryTooLong.With("max", validate.MaxSearch, "field", "q")
 	}
 	if v := c.QueryParam("assignee_id"); v == "none" {
 		f.Unassigned = true
@@ -95,13 +93,13 @@ func parseListFilter(c *echo.Context) (ListFilter, error) {
 	} else if v == "others" {
 		me, err := uuid.Parse(selfID(c))
 		if err != nil {
-			return f, ErrInvalidAssigneeFilter
+			return f, ErrInvalidAssigneeFilter.With("field", "assignee_id")
 		}
 		f.OthersOf = &me
 	} else if v != "" {
 		id, err := uuid.Parse(v)
 		if err != nil {
-			return f, ErrInvalidAssigneeFilter
+			return f, ErrInvalidAssigneeFilter.With("field", "assignee_id")
 		}
 		f.AssigneeID = &id
 	}
@@ -115,7 +113,7 @@ func parseListFilter(c *echo.Context) (ListFilter, error) {
 	if v := c.QueryParam("priority"); v != "" {
 		for _, p := range strings.Split(v, ",") {
 			if !validPriority(p) {
-				return f, ErrInvalidPriorityFilter
+				return f, ErrInvalidPriorityFilter.With("field", "priority")
 			}
 			f.Priorities = append(f.Priorities, p)
 		}
@@ -123,7 +121,7 @@ func parseListFilter(c *echo.Context) (ListFilter, error) {
 	if v := c.QueryParam("status"); v != "" {
 		for _, st := range strings.Split(v, ",") {
 			if !validStatus(st) {
-				return f, ErrInvalidStatusFilter
+				return f, ErrInvalidStatusFilter.With("field", "status")
 			}
 			f.Statuses = append(f.Statuses, st)
 		}
@@ -190,19 +188,21 @@ func (h *Handler) Get(c *echo.Context) error {
 
 func (h *Handler) Update(c *echo.Context) error {
 	id := c.Param("taskId")
+	// A descrição omitida mantém a que a tarefa tem (só "" a esvazia), e o prazo distingue ausente (mantém) de
+	// null (apaga).
 	var body struct {
-		Name        string     `json:"name"`
-		Description string     `json:"description"`
-		AssigneeID  *string    `json:"assignee_id"`
-		Deadline    *time.Time `json:"deadline"`
-		Priority    *string    `json:"priority"`
-		Status      *string    `json:"status"`
-		LabelIDs    *[]string  `json:"label_ids"`
+		Name        string                       `json:"name"`
+		Description *string                      `json:"description"`
+		AssigneeID  *string                      `json:"assignee_id"`
+		Deadline    validate.Optional[time.Time] `json:"deadline"`
+		Priority    *string                      `json:"priority"`
+		Status      *string                      `json:"status"`
+		LabelIDs    *[]string                    `json:"label_ids"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return apperr.Respond(c, 400, apperr.ErrInvalidBody)
+		return apperr.Respond(c, 400, apperr.BindError(err))
 	}
-	task, err := h.svc.UpdateAs(selfID(c), id, body.Name, body.Description, body.AssigneeID, body.Deadline,
+	task, err := h.svc.PatchAs(selfID(c), id, body.Name, body.Description, body.AssigneeID, body.Deadline,
 		Attrs{Priority: body.Priority, Status: body.Status, LabelIDs: body.LabelIDs})
 	if err != nil {
 		return apperr.Respond(c, 400, err)
@@ -224,19 +224,19 @@ func (h *Handler) Claim(c *echo.Context) error {
 }
 
 // UpdateAttrs é a edição dos detalhes da tarefa: prioridade, status, etiquetas, responsável e prazo, cada um
-// opcional. O responsável vazio tira o atual.
+// opcional. O responsável vazio tira o atual, e o prazo null o apaga (ausente o mantém).
 func (h *Handler) UpdateAttrs(c *echo.Context) error {
 	var body struct {
-		Priority   *string    `json:"priority"`
-		Status     *string    `json:"status"`
-		LabelIDs   *[]string  `json:"label_ids"`
-		AssigneeID *string    `json:"assignee_id"`
-		Deadline   *time.Time `json:"deadline"`
+		Priority   *string                      `json:"priority"`
+		Status     *string                      `json:"status"`
+		LabelIDs   *[]string                    `json:"label_ids"`
+		AssigneeID *string                      `json:"assignee_id"`
+		Deadline   validate.Optional[time.Time] `json:"deadline"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return apperr.Respond(c, 400, apperr.ErrInvalidBody)
+		return apperr.Respond(c, 400, apperr.BindError(err))
 	}
-	task, err := h.svc.UpdateAttrsAs(selfID(c), c.Param("taskId"),
+	task, err := h.svc.PatchAttrsAs(selfID(c), c.Param("taskId"),
 		Attrs{Priority: body.Priority, Status: body.Status, LabelIDs: body.LabelIDs}, body.AssigneeID, body.Deadline)
 	if err != nil {
 		return apperr.Respond(c, 400, err)
@@ -267,13 +267,14 @@ func (h *Handler) LinkExternalItem(c *echo.Context) error {
 		ExternalItemURL string `json:"external_item_url"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return apperr.Respond(c, 400, apperr.ErrInvalidBody)
-	}
-	if body.IntegrationID == "" || body.ExternalItemID == "" || body.ExternalItemURL == "" {
-		return apperr.Respond(c, 400, ErrLinkFieldsRequired)
+		return apperr.Respond(c, 400, apperr.BindError(err))
 	}
 	task, err := h.svc.LinkExternalItem(taskID, body.IntegrationID, body.ExternalItemID, body.ExternalItemURL)
 	if err != nil {
+		// Um item que já tem dono, ou uma tarefa que já tem item nesta integração, é conflito, não pedido ruim.
+		if errors.Is(err, ErrItemTaken) || errors.Is(err, ErrAlreadyLinked) {
+			return apperr.Respond(c, http.StatusConflict, err)
+		}
 		return apperr.Respond(c, 400, err)
 	}
 	return c.JSON(200, task)
@@ -311,10 +312,13 @@ func selfID(c *echo.Context) string {
 }
 
 // labelFail responde ao erro de uma rota de etiqueta: um projeto ou uma etiqueta
-// que não existe é 404; os erros de validação, 400.
+// que não existe é 404; um nome que já existe, 409; os erros de validação, 400.
 func labelFail(c *echo.Context, err error) error {
 	if err == database.ErrNotFound {
 		return apperr.Respond(c, 404, ErrLabelNotFound)
+	}
+	if errors.Is(err, ErrLabelNameTaken) {
+		return apperr.Respond(c, http.StatusConflict, err)
 	}
 	if _, ok := err.(*apperr.Error); ok {
 		return apperr.Respond(c, 400, err)
@@ -337,7 +341,7 @@ func (h *Handler) CreateLabel(c *echo.Context) error {
 		Name string `json:"name"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return apperr.Respond(c, 400, apperr.ErrInvalidBody)
+		return apperr.Respond(c, 400, apperr.BindError(err))
 	}
 	label, err := h.svc.CreateLabel(c.Param("projectId"), body.Name)
 	if err != nil {
@@ -352,7 +356,7 @@ func (h *Handler) RenameLabel(c *echo.Context) error {
 		Name string `json:"name"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return apperr.Respond(c, 400, apperr.ErrInvalidBody)
+		return apperr.Respond(c, 400, apperr.BindError(err))
 	}
 	label, err := h.svc.RenameLabel(c.Param("projectId"), c.Param("labelId"), body.Name)
 	if err != nil {

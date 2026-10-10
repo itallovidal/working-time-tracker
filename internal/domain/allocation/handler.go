@@ -78,7 +78,7 @@ func (h *Handler) Set(c *echo.Context) error {
 		Preset       string `json:"preset"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return apperr.Respond(c, http.StatusBadRequest, apperr.ErrInvalidBody)
+		return apperr.Respond(c, http.StatusBadRequest, apperr.BindError(err))
 	}
 	projectID, personID := c.Param("projectId"), c.Param("personId")
 	can := auth.ProjectPermissions(c)
@@ -89,7 +89,7 @@ func (h *Handler) Set(c *echo.Context) error {
 	}
 	isNew := current == nil
 	if body.PayRateCents == nil && (isNew || body.Preset == "") {
-		return fail(c, ErrRateRequired)
+		return fail(c, ErrRateRequired.With("field", "pay_rate_cents"))
 	}
 	changesRate := body.PayRateCents != nil && (isNew || *body.PayRateCents != current.PayRateCents)
 	changesPreset := body.Preset != "" && (isNew || body.Preset != current.Preset)
@@ -101,11 +101,11 @@ func (h *Handler) Set(c *echo.Context) error {
 	if body.Preset != "" {
 		var ok bool
 		if preset, ok = permission.PresetByID(body.Preset); !ok {
-			return fail(c, ErrInvalidPreset)
+			return fail(c, ErrInvalidPreset.With("field", "preset"))
 		}
 		for _, k := range preset.Permissions {
 			if !can.Has(k) {
-				return apperr.Respond(c, http.StatusForbidden, ErrAbovePermission)
+				return apperr.Respond(c, http.StatusForbidden, ErrAbovePermission.With("field", "preset"))
 			}
 		}
 	}

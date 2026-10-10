@@ -10,21 +10,24 @@
   </div>
 
   <div class="stack">
-    <form class="stack" @submit.prevent="saveOrg()">
+    <form class="stack" novalidate @submit.prevent="saveOrg()">
       <section class="card">
         <div class="card-head"><h2>{{.T "org.settings.identity"}}</h2></div>
         <div class="field">
           <label for="org-name">{{.T "common.name"}}</label>
-          <input id="org-name" type="text" required maxlength="120" x-model="form.name">
+          <input id="org-name" type="text" data-field="name" maxlength="{{limit "name"}}" x-model="form.name" @input="clearField('name')" :aria-invalid="fieldErrors.name ? 'true' : 'false'">
+          {{template "field_error" "name"}}
         </div>
         <div class="field">
-          <label for="org-summary">{{.T "org.settings.summary"}}</label>
-          <input id="org-summary" type="text" maxlength="160" x-model="form.summary">
-          <span class="hint">{{.T "org.settings.summary_hint"}} <span class="num" x-text="form.summary.length + '/160'"></span></span>
+          {{template "field_label" (dict "D" . "For" "org-summary" "Key" "org.settings.summary" "Optional" true)}}
+          <input id="org-summary" type="text" data-field="summary" maxlength="{{limit "summary"}}" x-model="form.summary" @input="clearField('summary')" :aria-invalid="fieldErrors.summary ? 'true' : 'false'">
+          {{template "field_error" "summary"}}
+          <span class="hint">{{.T "org.settings.summary_hint"}} <span class="num" x-text="summaryLength() + '/{{limit "summary"}}'"></span></span>
         </div>
         <div class="field">
-          <label for="org-description">{{.T "common.description_label"}}</label>
-          <textarea id="org-description" rows="5" maxlength="2000" x-model="form.description"></textarea>
+          {{template "field_label" (dict "D" . "For" "org-description" "Key" "common.description_label" "Optional" true)}}
+          <textarea id="org-description" rows="5" data-field="description" maxlength="{{limit "description"}}" x-model="form.description" @input="clearField('description')" :aria-invalid="fieldErrors.description ? 'true' : 'false'"></textarea>
+          {{template "field_error" "description"}}
           <span class="hint">{{.T "org.settings.description_hint"}}</span>
         </div>
       </section>
@@ -33,16 +36,19 @@
         <div class="card-head"><h2>{{.T "org.settings.contact"}}</h2></div>
         <div class="fields">
           <div class="field">
-            <label for="org-website">{{.T "org.fields.website"}}</label>
-            <input id="org-website" type="text" inputmode="url" maxlength="255" placeholder="{{.T "org.settings.website_placeholder"}}" x-model="form.website">
+            {{template "field_label" (dict "D" . "For" "org-website" "Key" "org.fields.website" "Optional" true)}}
+            <input id="org-website" type="text" inputmode="url" data-field="website" maxlength="{{limit "url"}}" placeholder="{{.T "org.settings.website_placeholder"}}" x-model="form.website" @input="clearField('website')" :aria-invalid="fieldErrors.website ? 'true' : 'false'">
+            {{template "field_error" "website"}}
           </div>
           <div class="field">
-            <label for="org-email">{{.T "org.settings.contact_email"}}</label>
-            <input id="org-email" type="email" maxlength="255" x-model="form.contact_email">
+            {{template "field_label" (dict "D" . "For" "org-email" "Key" "org.settings.contact_email" "Optional" true)}}
+            <input id="org-email" type="email" data-field="contact_email" maxlength="{{limit "email"}}" x-model="form.contact_email" @input="clearField('contact_email')" :aria-invalid="fieldErrors.contact_email ? 'true' : 'false'">
+            {{template "field_error" "contact_email"}}
           </div>
           <div class="field">
-            <label for="org-linkedin">{{.T "org.fields.linkedin"}}</label>
-            <input id="org-linkedin" type="text" inputmode="url" maxlength="255" placeholder="{{.T "org.settings.linkedin_placeholder"}}" x-model="form.linkedin_url">
+            {{template "field_label" (dict "D" . "For" "org-linkedin" "Key" "org.fields.linkedin" "Optional" true)}}
+            <input id="org-linkedin" type="text" inputmode="url" data-field="linkedin_url" maxlength="{{limit "url"}}" placeholder="{{.T "org.settings.linkedin_placeholder"}}" x-model="form.linkedin_url" @input="clearField('linkedin_url')" :aria-invalid="fieldErrors.linkedin_url ? 'true' : 'false'">
+            {{template "field_error" "linkedin_url"}}
           </div>
         </div>
       </section>
@@ -53,8 +59,9 @@
              (BOOT.countries), e o documento do outro país fica guardado, escondido. */}}
         <div class="fields">
           <div class="field">
-            <label for="org-legal-name">{{.T "org.fields.legal_name"}}</label>
-            <input id="org-legal-name" type="text" maxlength="200" x-model="form.legal_name">
+            {{template "field_label" (dict "D" . "For" "org-legal-name" "Key" "org.fields.legal_name" "Optional" true)}}
+            <input id="org-legal-name" type="text" data-field="legal_name" maxlength="{{limit "legal_name"}}" x-model="form.legal_name" @input="clearField('legal_name')" :aria-invalid="fieldErrors.legal_name ? 'true' : 'false'">
+            {{template "field_error" "legal_name"}}
           </div>
           <div class="field">
             <label for="org-country">{{.T "org.settings.country"}}</label>
@@ -68,18 +75,21 @@
         </div>
         <div class="fields">
           <div class="field">
-            <label for="org-legal-id" x-text="profile.legal_id.label"></label>
-            <input id="org-legal-id" type="text" class="mono" :maxlength="profile.legal_id.mask.length" :placeholder="profile.legal_id.placeholder" x-model="form[profile.legal_id.field]" @input="maskLegal()">
+            <label for="org-legal-id"><span x-text="profile.legal_id.label"></span> <span class="optional">{{.T "common.optional_label"}}</span></label>
+            <input id="org-legal-id" type="text" class="mono" :data-field="profile.legal_id.field" :maxlength="profile.legal_id.mask.length" :placeholder="profile.legal_id.placeholder" x-model="form[profile.legal_id.field]" @input="maskLegal(); clearField(profile.legal_id.field)" :aria-invalid="fieldErrors[profile.legal_id.field] ? 'true' : 'false'">
+            <p class="form-error" x-cloak x-show="fieldErrors[profile.legal_id.field]" x-text="fieldErrors[profile.legal_id.field]" role="alert"></p>
           </div>
         </div>
         <div class="fields">
           <div class="field">
-            <label for="org-address1">{{.T "org.fields.address"}}</label>
-            <input id="org-address1" type="text" maxlength="200" :placeholder="profile.address.line1_placeholder" x-model="form.address_line1">
+            {{template "field_label" (dict "D" . "For" "org-address1" "Key" "org.fields.address" "Optional" true)}}
+            <input id="org-address1" type="text" data-field="address_line1" maxlength="{{limit "address"}}" :placeholder="profile.address.line1_placeholder" x-model="form.address_line1" @input="clearField('address_line1')" :aria-invalid="fieldErrors.address_line1 ? 'true' : 'false'">
+            {{template "field_error" "address_line1"}}
           </div>
           <div class="field">
-            <label for="org-address2" x-text="profile.address.line2_label"></label>
-            <input id="org-address2" type="text" maxlength="200" x-model="form.address_line2">
+            <label for="org-address2"><span x-text="profile.address.line2_label"></span> <span class="optional">{{.T "common.optional_label"}}</span></label>
+            <input id="org-address2" type="text" data-field="address_line2" maxlength="{{limit "address"}}" x-model="form.address_line2" @input="clearField('address_line2')" :aria-invalid="fieldErrors.address_line2 ? 'true' : 'false'">
+            {{template "field_error" "address_line2"}}
           </div>
         </div>
       </section>
@@ -123,6 +133,8 @@
       </div>
     </form>
 
+    {{/* Só o dono exclui a organização (o servidor recusa o resto). */}}
+    {{if .IsOwner}}
     <section class="card">
       <div class="card-head"><h2>{{.T "org.settings.delete_title"}}</h2></div>
       <p class="muted small">{{.T "org.settings.delete_warning"}}</p>
@@ -136,6 +148,7 @@
         <button type="button" class="btn btn-ghost btn-sm" @click="confirmDelete = false">{{.T "common.cancel"}}</button>
       </div>
     </section>
+    {{end}}
   </div>
 </main>
 {{end}}

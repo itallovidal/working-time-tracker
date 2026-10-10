@@ -132,8 +132,15 @@ var (
 	ErrInvalidBody  = New("request.invalid_body", http.StatusBadRequest)
 	ErrJSONRequired = New("request.json_required", http.StatusUnsupportedMediaType)
 	ErrNotFound     = New("request.not_found", http.StatusNotFound)
+	ErrBodyTooLarge = New("request.body_too_large", http.StatusRequestEntityTooLarge)
 	ErrInternal     = New("internal.server_error", http.StatusInternalServerError)
 	ErrTooMany      = New("request.too_many_attempts", http.StatusTooManyRequests)
+
+	// Os três erros de campo que servem a qualquer formulário. O parâmetro field é o nome do campo na API (o
+	// rótulo dele está em fields.* no catálogo), para a tela mostrar o erro embaixo do campo certo.
+	ErrFieldRequired = New("request.field_required", http.StatusBadRequest, "field")
+	ErrFieldTooLong  = New("request.field_too_long", http.StatusBadRequest, "field", "max")
+	ErrFieldInvalid  = New("request.field_invalid", http.StatusBadRequest, "field")
 )
 
 // body é o corpo de toda resposta de erro: {"error": {"code": "...", "params": {...}}}.
@@ -160,4 +167,14 @@ func Respond(c *echo.Context, status int, err error) error {
 	}
 	c.Logger().Error("unexpected error", "error", err)
 	return c.JSON(http.StatusInternalServerError, body{Error: detail{Code: ErrInternal.Code}})
+}
+
+// BindError é o erro que um handler devolve quando c.Bind falha. O Binder do servidor já entrega um *Error (corpo
+// grande demais, ou um tipo errado num campo, com o nome do campo); qualquer outra falha vira "request.invalid_body".
+func BindError(err error) *Error {
+	var e *Error
+	if errors.As(err, &e) {
+		return e
+	}
+	return ErrInvalidBody
 }

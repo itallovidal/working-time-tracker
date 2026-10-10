@@ -10,9 +10,11 @@ import (
 
 	"working-time-tracker/ent"
 	"working-time-tracker/internal/adapter"
+	"working-time-tracker/internal/apperr"
 	"working-time-tracker/internal/country"
 	"working-time-tracker/internal/database"
 	"working-time-tracker/internal/domain/person"
+	"working-time-tracker/internal/validate"
 )
 
 const (
@@ -57,16 +59,39 @@ func signupCountry(raw string) (*country.Country, error) {
 	}
 	code, ok := country.Parse(raw)
 	if !ok {
-		return nil, ErrInvalidCountry
+		return nil, ErrInvalidCountry.With("field", "country")
 	}
 	return country.MustGet(code), nil
 }
 
+// requiredText apara um nome e confere que veio e que cabe em max. required é o erro do domínio para o campo vazio
+// (auth.name_required, auth.org_name_required); o excesso é o erro genérico de tamanho. field é a chave do campo no
+// corpo da requisição.
+func requiredText(required *apperr.Error, field, raw string, max int) (string, error) {
+	v, err := validate.Text(field, raw, max)
+	if err != nil {
+		return "", err
+	}
+	if v == "" {
+		return "", required.With("field", field)
+	}
+	return v, nil
+}
+
+// passwordField diz de qual campo é o erro de uma senha (a senha do cadastro, a nova senha da troca).
+func passwordField(err error, field string) error {
+	var e *apperr.Error
+	if errors.As(err, &e) {
+		return e.With("field", field)
+	}
+	return err
+}
+
 // Signup cria uma organização nova com a pessoa como admin e já abre a sessão.
 func (s *Service) Signup(in SignupInput) (*Identity, string, error) {
-	orgName := strings.TrimSpace(in.OrganizationName)
-	if orgName == "" {
-		return nil, "", ErrOrgNameRequired
+	orgName, err := requiredText(ErrOrgNameRequired, "organization_name", in.OrganizationName, validate.MaxName)
+	if err != nil {
+		return nil, "", err
 	}
 	profile, err := signupCountry(in.Country)
 	if err != nil {
@@ -159,11 +184,15 @@ func (s *Service) ChangePassword(actor *Identity, currentToken, current, next st
 		return err
 	}
 	if hash == "" || !CheckPassword(hash, current) {
-		return ErrWrongPassword
+		return ErrWrongPassword.With("field", "current_password")
+	}
+	// Trocar a senha pela mesma não troca nada; a confirmação da nova senha é só da tela.
+	if next == current {
+		return ErrSamePassword.With("field", "new_password")
 	}
 	newHash, err := HashPassword(next)
 	if err != nil {
-		return err
+		return passwordField(err, "new_password")
 	}
 	if err := s.store.SetPasswordHash(actor.PersonID, newHash); err != nil {
 		return err
@@ -190,7 +219,7 @@ func (s *Service) CreateInvite(ctx context.Context, actor *Identity, email, role
 // chama já conferiu o que o setup pede (o handler do projeto, que conhece as permissões dele).
 func (s *Service) CreateProjectInvite(ctx context.Context, actor *Identity, email string, setup ProjectSetup) (*Invite, string, error) {
 	if person.NormalizeEmail(email) == "" {
-		return nil, "", person.ErrInvalidEmail
+		return nil, "", person.ErrInvalidEmail.With("field", "email")
 	}
 	return s.createInvite(ctx, actor, email, person.RoleMember, &setup)
 }
@@ -200,23 +229,24 @@ func (s *Service) createInvite(ctx context.Context, actor *Identity, email, role
 		role = person.RoleMember
 	}
 	if role != person.RoleAdmin && role != person.RoleMember {
-		return nil, "", person.ErrInvalidRole
+		return nil, "", person.ErrInvalidRole.With("field", "role")
 	}
 	// Quem convida para admin dá poder sobre a organização inteira: é do dono.
 	if role == person.RoleAdmin && !actor.IsOwner {
 		return nil, "", ErrOwnerOnly
 	}
 	var emailPtr *string
-	if e := person.NormalizeEmail(email); e != "" {
-		if !person.ValidEmail(e) {
-			return nil, "", person.ErrInvalidEmail
+	if person.NormalizeEmail(email) != "" {
+		e, err := person.ParseEmail("email", email)
+		if err != nil {
+			return nil, "", err
 		}
 		inUse, err := s.store.EmailInUse(e)
 		if err != nil {
 			return nil, "", err
 		}
 		if inUse {
-			return nil, "", ErrAccountExists
+			return nil, "", ErrAccountExists.With("field", "email")
 		}
 		emailPtr = &e
 	}
@@ -361,7 +391,7 @@ func (s *Service) AcceptInvite(token string, in AcceptInviteInput) (*Identity, s
 		return nil, "", err
 	}
 	if inv.Email != nil && *inv.Email != email {
-		return nil, "", ErrInviteEmailMismatch
+		return nil, "", ErrInviteEmailMismatch.With("field", "email")
 	}
 	sessionToken, sessionHash, err := NewToken()
 	if err != nil {
@@ -389,24 +419,24 @@ func (s *Service) AcceptInvite(token string, in AcceptInviteInput) (*Identity, s
 // validateAccount confere nome, email e senha de uma conta nova e devolve os
 // valores normalizados junto com o hash da senha.
 func (s *Service) validateAccount(name, email, password string) (string, string, string, error) {
-	name = strings.TrimSpace(name)
-	if name == "" {
-		return "", "", "", ErrNameRequired
+	name, err := requiredText(ErrNameRequired, "name", name, validate.MaxName)
+	if err != nil {
+		return "", "", "", err
 	}
-	email = person.NormalizeEmail(email)
-	if !person.ValidEmail(email) {
-		return "", "", "", person.ErrInvalidEmail
+	email, err = person.ParseEmail("email", email)
+	if err != nil {
+		return "", "", "", err
 	}
 	inUse, err := s.store.EmailInUse(email)
 	if err != nil {
 		return "", "", "", err
 	}
 	if inUse {
-		return "", "", "", ErrEmailInUse
+		return "", "", "", ErrEmailInUse.With("field", "email")
 	}
 	hash, err := HashPassword(password)
 	if err != nil {
-		return "", "", "", err
+		return "", "", "", passwordField(err, "password")
 	}
 	return name, email, hash, nil
 }

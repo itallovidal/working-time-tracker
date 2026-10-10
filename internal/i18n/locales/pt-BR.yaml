@@ -33,6 +33,7 @@ common:
   role: Papel
   actions: Ações
   optional: Opcional
+  optional_label: "(opcional)"
   you: você
   description_label: Descrição
   clear_filters: Limpar filtros
@@ -1037,6 +1038,7 @@ my_tasks:
 
 task_detail:
   loading: Carregando a tarefa…
+  deadline_clear_hint: Apague a data para tirar o prazo da tarefa.
   edit_title: Editar nome e descrição
   edit_details: Editar detalhes
   details_saved: Detalhes atualizados.
@@ -1569,6 +1571,7 @@ errors:
     unauthenticated: "faça login para continuar"
     weak_password: "a senha precisa ter pelo menos 8 caracteres"
     wrong_password: "a senha atual está incorreta"
+    same_password: "a nova senha precisa ser diferente da atual"
   collaborator:
     not_in_project: "esta pessoa não está neste projeto"
   customer:
@@ -1666,6 +1669,7 @@ errors:
     invalid_task_state: "estado de tarefa inválido (state): use open ou closed"
   payment:
     own_only: "você só pode ver os seus pagamentos, ou os de qualquer pessoa se for admin"
+    invalid_history: "o histórico deve ser um número inteiro de períodos, maior que zero"
   person:
     admin_has_all_permissions: "os admins já têm todas as permissões"
     invalid_permission: "permissão da organização desconhecida"
@@ -1693,6 +1697,7 @@ errors:
     customer_meeting_time_without_day: "o horário da reunião com o cliente precisa do dia da reunião"
     invalid_weekly_time: "o horário da weekly deve estar no formato HH:MM, por exemplo 13:00"
     weekly_time_without_day: "o horário da weekly precisa do dia da weekly"
+    meeting_needs_customer: "a reunião com o cliente só vale em um projeto com cliente: escolha o cliente do projeto antes"
     name_required: "informe o nome do projeto"
     not_found: "projeto não encontrado"
     invalid_page: "página inválida (page): use um número a partir de 1"
@@ -1700,6 +1705,10 @@ errors:
   projectinvite:
     team_not_in_project: "o time não é deste projeto"
   request:
+    body_too_large: "corpo grande demais: o limite é 1 MiB"
+    field_required: "informe {{.field}}"
+    field_too_long: "{{.field}} pode ter até {{.max}} caracteres"
+    field_invalid: "{{.field}} está inválido"
     invalid_body: "corpo da requisição inválido"
     json_required: "envie o corpo como JSON (Content-Type: application/json)"
     not_found: "não encontrado"
@@ -1746,6 +1755,7 @@ errors:
     no_rate: "esta pessoa ainda não tem valor por hora neste projeto; um admin precisa definir na aba Colaboradores antes do ponto"
     not_found: "sessão não encontrada"
     not_open: "não há ponto aberto para esta pessoa"
+    open_in_other_project: "o ponto desta pessoa está aberto em outro projeto; pare-o por lá"
     not_yours: "só quem bateu o ponto, ou um admin, pode mexer nas tarefas desta sessão"
     other_person_admin_only: "só admins podem registrar o ponto de outra pessoa"
     person_not_found: "pessoa não encontrada"
@@ -1768,3 +1778,56 @@ fields:
   legal_name: "a razão social"
   name: "o nome"
   summary: "o resumo"
+  email: "o e-mail"
+  password: "a senha"
+  current_password: "a senha atual"
+  new_password: "a nova senha"
+  organization_name: "o nome da organização"
+  website: "o site"
+  linkedin_url: "o LinkedIn"
+  contact_email: "o e-mail do contato"
+  contact_name: "a pessoa de contato"
+  contact_phone: "o telefone"
+  country: "o país"
+  document: "o documento"
+  cnpj: "o CNPJ"
+  ein: "o EIN"
+  customer_id: "o cliente"
+  bill_rate_cents: "o valor cobrado por hora"
+  pay_rate_cents: "o valor por hora"
+  sprint_duration_days: "a duração da sprint"
+  daily_time: "o horário da daily"
+  weekly_sync_day: "o dia da weekly"
+  weekly_sync_time: "o horário da weekly"
+  customer_meeting_day: "o dia da reunião com o cliente"
+  customer_meeting_time: "o horário da reunião com o cliente"
+  deadline: "o prazo"
+  priority: "a prioridade"
+  status: "o status"
+  assignee_id: "o responsável"
+  label: "o rótulo"
+  label_ids: "os rótulos"
+  integration_id: "a integração"
+  external_item_id: "o item"
+  external_item_url: "o link do item"
+  display_name: "o nome"
+  token: "o token"
+  from_at: "o início do intervalo"
+  until_at: "o fim do intervalo"
+  role: "o papel"
+  weekly_hours: "as horas semanais"
+  frequency: "a frequência de pagamento"
+  day: "o dia do pagamento"
+  start: "o início do ciclo"
+  team_id: "o time"
+  person_id: "a pessoa"
+  q: "a busca"
+  task_id: "a tarefa"
+  preset: "o grupo de permissões"
+  timezone: "o fuso horário"
+  currency: "a moeda"
+  work_mode: "o modo de trabalho"
+  type: "o tipo"
+  payment: "a regra de pagamento"
+  permissions: "as permissões"
+  history: "o histórico"

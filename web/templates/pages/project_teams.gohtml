@@ -349,7 +349,9 @@
         <p class="muted small" x-show="addIsOwner()">{{.T "collab.owner_rate_hint"}}</p>
         <div class="field" x-show="!addIsOwner()">
           <label for="collab-rate" x-text="$t('collab.col_rate', { unit: WTT.fmt.moneyUnit() })"></label>
-          <input id="collab-rate" type="text" inputmode="decimal" class="num" placeholder="{{.T "project_settings.rate_placeholder"}}" :required="!addIsOwner()" x-model="add.rate">
+          <input id="collab-rate" type="text" inputmode="decimal" class="num" placeholder="{{.T "project_settings.rate_placeholder"}}" data-field="pay_rate_cents"
+                 x-model="add.rate" @input="clearField('pay_rate_cents')" :aria-invalid="fieldErrors.pay_rate_cents ? 'true' : 'false'">
+          {{template "field_error" "pay_rate_cents"}}
           <span class="hint">{{.T "collab.rate_hint"}}</span>
         </div>
         <div class="field">
@@ -399,10 +401,12 @@
   </template>
 
   <template x-teleport="#modal-root">
-    <form class="stack" x-show="$store.modal.name === 'team-new'" @submit.prevent="createTeam()">
+    <form class="stack" novalidate x-show="$store.modal.name === 'team-new'" @submit.prevent="createTeam()">
       <div class="field">
         <label for="team-name">{{.T "collab.team_name"}}</label>
-        <input id="team-name" type="text" placeholder="{{.T "collab.team_name_placeholder"}}" x-model="newTeam" data-autofocus>
+        <input id="team-name" type="text" maxlength="{{limit "name"}}" placeholder="{{.T "collab.team_name_placeholder"}}" data-field="name"
+               x-model="newTeam" @input="clearField('name')" :aria-invalid="fieldErrors.name ? 'true' : 'false'" data-autofocus>
+        {{template "field_error" "name"}}
       </div>
       <p class="form-error" x-show="errors.create" x-text="errors.create" role="alert"></p>
       <div class="row row-end">
@@ -414,10 +418,12 @@
 
   {{/* Editar time: nada vai para o servidor antes de Salvar, então Cancelar desfaz tudo. */}}
   <template x-teleport="#modal-root">
-    <form class="stack" x-show="$store.modal.name === 'team-edit'" @submit.prevent="saveTeam()">
+    <form class="stack" novalidate x-show="$store.modal.name === 'team-edit'" @submit.prevent="saveTeam()">
       <div class="field">
         <label for="team-edit-name">{{.T "collab.team_name"}}</label>
-        <input id="team-edit-name" type="text" x-model="edit.name" data-autofocus>
+        <input id="team-edit-name" type="text" maxlength="{{limit "name"}}" data-field="name" x-model="edit.name" @input="clearField('name')"
+               :aria-invalid="fieldErrors.name ? 'true' : 'false'" data-autofocus>
+        {{template "field_error" "name"}}
       </div>
       <div class="field">
         <label for="team-edit-search">{{.T "collab.members_label"}} <span class="muted" x-text="'(' + edit.member_ids.length + ')'"></span></label>
@@ -461,7 +467,7 @@
   {{/* O colaborador: o valor por hora, os times e a saída do projeto num lugar só. Como no
        Editar time, nada vai para o servidor antes de Salvar. */}}
   <template x-teleport="#modal-root">
-    <form class="stack" x-show="$store.modal.name === 'collab-edit'" @submit.prevent="savePerson()">
+    <form class="stack" novalidate x-show="$store.modal.name === 'collab-edit'" @submit.prevent="savePerson()">
       <div class="row">
         <span class="avatar" aria-hidden="true" x-text="WTT.fmt.initials(person.name)"></span>
         <div class="grow">
@@ -473,7 +479,9 @@
       {{if .CanDo "rates.manage"}}
       <div class="field" x-show="!person.is_owner">
         <label for="collab-edit-rate" x-text="$t('collab.col_rate', { unit: WTT.fmt.moneyUnit() })"></label>
-        <input id="collab-edit-rate" type="text" inputmode="decimal" class="num" placeholder="{{.T "project_settings.rate_placeholder"}}" :required="!person.is_owner" x-model="person.rate" data-autofocus>
+        <input id="collab-edit-rate" type="text" inputmode="decimal" class="num" placeholder="{{.T "project_settings.rate_placeholder"}}" data-field="pay_rate_cents"
+               x-model="person.rate" @input="clearField('pay_rate_cents')" :aria-invalid="fieldErrors.pay_rate_cents ? 'true' : 'false'" data-autofocus>
+        {{template "field_error" "pay_rate_cents"}}
         <span class="hint">
           {{.T "collab.person_rate_hint"}}
           <span x-show="personMargin() !== null">{{.T "collab.margin_before"}} <strong class="num" :class="personMargin() < 0 && 'text-danger'" x-text="WTT.fmt.money(personMargin())"></strong> {{.T "collab.margin_after"}}</span>

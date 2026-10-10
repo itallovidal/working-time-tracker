@@ -23,6 +23,7 @@ common:
   role: Role
   actions: Actions
   optional: Optional
+  optional_label: "(optional)"
   you: you
   description_label: Description
   clear_filters: Clear filters
@@ -1027,6 +1028,7 @@ my_tasks:
 
 task_detail:
   loading: Loading the task…
+  deadline_clear_hint: Clear the date to remove the task deadline.
   edit_title: Edit name and description
   edit_details: Edit details
   details_saved: Details updated.
@@ -1559,6 +1561,7 @@ errors:
     unauthenticated: "sign in to continue"
     weak_password: "the password needs at least 8 characters"
     wrong_password: "the current password is wrong"
+    same_password: "the new password must be different from the current one"
   collaborator:
     not_in_project: "this person is not on this project"
   customer:
@@ -1656,6 +1659,7 @@ errors:
     invalid_task_state: "invalid task state (state): use open or closed"
   payment:
     own_only: "you can only see your own payments, or any if you are an admin"
+    invalid_history: "the history must be a whole number of periods, greater than zero"
   person:
     admin_has_all_permissions: "admins already have every permission"
     invalid_permission: "unknown organization permission"
@@ -1683,6 +1687,7 @@ errors:
     customer_meeting_time_without_day: "the customer meeting time needs the meeting day"
     invalid_weekly_time: "the weekly time must use the HH:MM format, for example 13:00"
     weekly_time_without_day: "the weekly time needs the weekly day"
+    meeting_needs_customer: "the customer meeting only applies to a project with a customer: choose the project's customer first"
     name_required: "enter the project name"
     not_found: "project not found"
     invalid_page: "invalid page (page): use a number from 1"
@@ -1690,6 +1695,10 @@ errors:
   projectinvite:
     team_not_in_project: "the team is not in this project"
   request:
+    body_too_large: "body too large: the limit is 1 MiB"
+    field_required: "enter {{.field}}"
+    field_too_long: "{{.field}} can have up to {{.max}} characters"
+    field_invalid: "{{.field}} is not valid"
     invalid_body: "invalid request body"
     json_required: "send the body as JSON (Content-Type: application/json)"
     not_found: "not found"
@@ -1736,6 +1745,7 @@ errors:
     no_rate: "this person has no hourly rate on this project yet; an admin must set one on the Collaborators tab before clocking in"
     not_found: "session not found"
     not_open: "this person has no open clock-in"
+    open_in_other_project: "this person's clock-in is open in another project; stop it there"
     not_yours: "only the person who clocked in, or an admin, can change the tasks of this session"
     other_person_admin_only: "only admins can clock in for another person"
     person_not_found: "person not found"
@@ -1758,3 +1768,56 @@ fields:
   legal_name: "the legal name"
   name: "the name"
   summary: "the summary"
+  email: "the email"
+  password: "the password"
+  current_password: "the current password"
+  new_password: "the new password"
+  organization_name: "the organization name"
+  website: "the website"
+  linkedin_url: "the LinkedIn"
+  contact_email: "the contact email"
+  contact_name: "the contact person"
+  contact_phone: "the phone"
+  country: "the country"
+  document: "the document"
+  cnpj: "the CNPJ"
+  ein: "the EIN"
+  customer_id: "the customer"
+  bill_rate_cents: "the billed hourly rate"
+  pay_rate_cents: "the hourly rate"
+  sprint_duration_days: "the sprint length"
+  daily_time: "the daily time"
+  weekly_sync_day: "the weekly day"
+  weekly_sync_time: "the weekly time"
+  customer_meeting_day: "the customer meeting day"
+  customer_meeting_time: "the customer meeting time"
+  deadline: "the deadline"
+  priority: "the priority"
+  status: "the status"
+  assignee_id: "the assignee"
+  label: "the label"
+  label_ids: "the labels"
+  integration_id: "the integration"
+  external_item_id: "the item"
+  external_item_url: "the item link"
+  display_name: "the name"
+  token: "the token"
+  from_at: "the interval start"
+  until_at: "the interval end"
+  role: "the role"
+  weekly_hours: "the weekly hours"
+  frequency: "the payment frequency"
+  day: "the payment day"
+  start: "the cycle start"
+  team_id: "the team"
+  person_id: "the person"
+  q: "the search"
+  task_id: "the task"
+  preset: "the permission group"
+  timezone: "the time zone"
+  currency: "the currency"
+  work_mode: "the work mode"
+  type: "the type"
+  payment: "the payment rule"
+  permissions: "the permissions"
+  history: "the history"

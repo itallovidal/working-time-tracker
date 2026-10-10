@@ -1,8 +1,11 @@
 package server_test
 
 import (
+	"io/fs"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -127,7 +130,64 @@ func TestErrors_ResponsesCarryOnlyTheCode(t *testing.T) {
 	}
 }
 
-// Um texto longo demais devolve o campo e o limite, e todo campo tem rótulo no catálogo.
+// fieldUses são os jeitos de um campo aparecer no código Go: o par "field" nos parâmetros de um erro
+// (ErrX.With("field", "name")), o primeiro argumento dos validadores de internal/validate e a constante que
+// guarda o nome (fieldName = "name"), que alimenta um dos dois.
+var fieldUses = []*regexp.Regexp{
+	regexp.MustCompile(`\.With\((?:[^()]|\([^()]*\))*?"field",\s*"(\w+)"`),
+	regexp.MustCompile(`validate\.(?:Text|Required|Email|Money)\(\s*"(\w+)"`),
+	regexp.MustCompile(`(?m)^\s*field\w*\s*=\s*"(\w+)"`),
+}
+
+// Todo campo que o código Go manda em params.field tem rótulo em fields.* nos dois idiomas: a tela mostra o
+// rótulo no texto do erro. O teste lê o fonte de internal/ (sem os _test.go), então um campo novo sem rótulo
+// falha aqui, e não na tela de quem o usa.
+func TestErrors_EveryFieldInTheSourceHasALabel(t *testing.T) {
+	used := map[string]string{} // campo -> um arquivo que o usa
+	err := filepath.WalkDir("..", func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
+			return nil
+		}
+		src, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		for _, re := range fieldUses {
+			for _, m := range re.FindAllStringSubmatch(string(src), -1) {
+				if _, ok := used[m[1]]; !ok {
+					used[m[1]] = path
+				}
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Sem nenhum uso o teste não está lendo o fonte: o servidor já usa campos em dezenas de lugares.
+	if len(used) < 10 {
+		t.Fatalf("found only %d fields in the source (%v): is the scan reading internal/?", len(used), used)
+	}
+
+	for _, lang := range i18n.Supported() {
+		texts := flatCatalog(t, lang)
+		var missing []string
+		for field, path := range used {
+			if _, ok := texts["fields."+field]; !ok {
+				missing = append(missing, field+" ("+path+")")
+			}
+		}
+		sort.Strings(missing)
+		if len(missing) > 0 {
+			t.Errorf("%s has no label in fields.* for %v", lang, missing)
+		}
+	}
+}
+
+// Um texto longo demais devolve o campo e o limite.
 func TestErrors_FieldTooLongCarriesTheFieldAndTheLimit(t *testing.T) {
 	e := newServer(t)
 	admin := signup(t, e, "Org", "ana@test.com")
@@ -136,20 +196,6 @@ func TestErrors_FieldTooLongCarriesTheFieldAndTheLimit(t *testing.T) {
 		"address_line2": 200, "summary": 160,
 	}
 	jsonName := map[string]string{"long_description": "description"}
-
-	for _, lang := range i18n.Supported() {
-		texts := flatCatalog(t, lang)
-		var missing []string
-		for field := range limits {
-			if _, ok := texts["fields."+field]; !ok {
-				missing = append(missing, field)
-			}
-		}
-		sort.Strings(missing)
-		if len(missing) > 0 {
-			t.Errorf("%s has no label in fields.* for %v", lang, missing)
-		}
-	}
 
 	for field, max := range limits {
 		key := field

@@ -60,6 +60,7 @@ document.addEventListener('alpine:init', () => {
     async openCreate() {
       this.draft = blankProject();
       this.errors.create = '';
+      this.clearFields();
       Alpine.store('modal').open('project', WTT.t('org.projects.new'), () => !this.pending);
       if (this.customers !== null) return;
       try {
@@ -71,20 +72,35 @@ document.addEventListener('alpine:init', () => {
     // create cria o projeto e, se houver cliente ou valor, grava a cobrança logo em seguida.
     create() {
       return this.run('create', async () => {
+        const d = this.draft;
+        const R = WTT.rules;
         // O valor só vale com cliente (o campo some no projeto interno) e é conferido antes:
         // depois de criado, um erro na cobrança deixaria o projeto sem ela.
-        const cents = this.draft.customer_id ? WTT.toCents(this.draft.rate) : null;
-        if (this.draft.customer_id && cents === null && String(this.draft.rate).trim() !== '') throw new Error(WTT.t('org.projects.rate_invalid'));
-        if (cents !== null && cents > 100000000) throw new Error(WTT.t('org.projects.rate_too_high'));
-        const p = await api('POST', '/api/orgs/' + orgId + '/projects', {
-          name: this.draft.name,
-          description: this.draft.description,
-          sprint_duration_days: Number(this.draft.sprint_duration_days) || 0,
-          ...WTT.routine.payload(this.draft),
-        });
-        if (this.draft.customer_id) {
+        const withCustomer = !!d.customer_id;
+        const name = String(d.name).trim();
+        const description = String(d.description).trim();
+        // A descrição chega do servidor como long_description, e o rótulo do campo é o dele.
+        if (!this.check({
+          name: [name, R.required, R.max('name')],
+          description: [description, (v) => R.max('description')(v, 'long_description')],
+          bill_rate_cents: [withCustomer ? d.rate : '', R.money],
+          ...WTT.routine.rules(d),
+          sprint_duration_days: [d.sprint_duration_days, R.integer(1, 90)],
+        })) return;
+        const cents = withCustomer ? WTT.toCents(d.rate, { strict: true }) : null;
+        // O cliente vai já na criação: a reunião com ele só vale em um projeto com cliente. O valor cobrado, que é
+        // outra rota, vem logo em seguida.
+        const body = {
+          name,
+          description,
+          sprint_duration_days: Number(d.sprint_duration_days) || 0,
+          ...WTT.routine.payload(d),
+        };
+        if (withCustomer) body.customer_id = d.customer_id;
+        const p = await api('POST', '/api/orgs/' + orgId + '/projects', body);
+        if (withCustomer && cents !== null) {
           try {
-            await api('PUT', '/api/projects/' + p.id + '/billing', { customer_id: this.draft.customer_id || null, bill_rate_cents: cents });
+            await api('PUT', '/api/projects/' + p.id + '/billing', { customer_id: d.customer_id, bill_rate_cents: cents });
           } catch (e) {
             // O projeto já existe: as configurações dele são o lugar de definir a cobrança de novo.
             Alpine.store('toast').flash(WTT.t('org.projects.created_no_billing', { error: e.message }), 'error');
@@ -441,6 +457,14 @@ document.addEventListener('alpine:init', () => {
         me.role === 'admin' && 'projects',
       ].filter(Boolean);
     },
+    // weeklyHourOptions são as cargas da lista: 20, 30 e 40, e a atual da pessoa quando é outra (uma carga fora
+    // das três apareceria como "Não definido" e seria apagada ao salvar).
+    weeklyHourOptions() {
+      const options = [20, 30, 40];
+      const current = Number(this.editing && this.editing.weekly_hours);
+      if (current > 0 && !options.includes(current)) options.push(current);
+      return options.sort((a, b) => a - b);
+    },
     // moveTab é a troca pelas setas, Home e End: o foco acompanha a aba escolhida.
     moveTab(to) {
       const last = this.tabs.length - 1;
@@ -461,6 +485,8 @@ document.addEventListener('alpine:init', () => {
       this.projectsState = 'idle';
       this.errors.edit = '';
       this.errors.projects = '';
+      this.errors.addRate = '';
+      this.clearFields();
       Alpine.store('modal').open('person-edit', WTT.t('org.people.edit_title'), () => !this.pending);
       if (this.tabs.includes('projects')) this.loadProjects(person);
     },
@@ -481,6 +507,7 @@ document.addEventListener('alpine:init', () => {
           name: a.project ? a.project.name : a.project_id,
           cents: a.pay_rate_cents,
           rate: WTT.fmt.moneyInput(a.pay_rate_cents),
+          error: '',
           isNew: false,
           removed: false,
         }));
@@ -505,15 +532,21 @@ document.addEventListener('alpine:init', () => {
         return;
       }
       const owner = !!this.editing.is_owner;
-      const cents = owner ? 0 : WTT.toCents(this.addForm.rate);
-      if (cents === null) {
-        this.errors.edit = WTT.t('collab.rate_required');
-        return;
+      this.errors.addRate = '';
+      if (!owner) {
+        // O valor é obrigatório e vai em modo estrito, com o teto do servidor.
+        const bad = WTT.rules.required(this.addForm.rate, 'pay_rate_cents') || WTT.rules.money(this.addForm.rate, 'pay_rate_cents');
+        if (bad) {
+          this.errors.addRate = bad;
+          this.$nextTick(() => document.querySelector('[data-rate-add]')?.focus());
+          return;
+        }
       }
+      const cents = owner ? 0 : WTT.toCents(this.addForm.rate, { strict: true });
       this.errors.edit = '';
       this.draft.projects.push({
         project_id: project.id, name: project.name, cents: null,
-        rate: owner ? '' : WTT.fmt.moneyInput(cents), isNew: true, removed: false,
+        rate: owner ? '' : WTT.fmt.moneyInput(cents), error: '', isNew: true, removed: false,
       });
       this.addForm = { project_id: '', rate: '' };
     },
@@ -524,44 +557,41 @@ document.addEventListener('alpine:init', () => {
       else row.removed = !row.removed;
     },
     // projectChanges separa o que o rascunho mudou nos projetos e confere os valores antes de qualquer envio: um valor
-    // que não é número para tudo, e leva para a aba dos projetos.
+    // que não é número (ou passa do teto) marca a linha, leva para a aba dos projetos e devolve null.
     projectChanges() {
       if (this.projectsState !== 'ready') return [];
       const owner = !!this.editing.is_owner;
       const changes = [];
+      let invalid = null;
       for (const row of this.draft.projects) {
         if (row.removed) {
           changes.push({ row, remove: true });
         } else if (owner) {
           if (row.isNew) changes.push({ row, cents: 0 });
         } else {
-          const cents = WTT.toCents(row.rate);
-          if (cents === null) {
-            this.tab = 'projects';
-            throw new Error(WTT.t('org.people.rate_invalid', { project: row.name }));
+          const bad = WTT.rules.required(row.rate, 'pay_rate_cents') || WTT.rules.money(row.rate, 'pay_rate_cents');
+          row.error = bad;
+          if (bad) {
+            invalid = invalid || row;
+            continue;
           }
+          const cents = WTT.toCents(row.rate, { strict: true });
           if (row.isNew || cents !== row.cents) changes.push({ row, cents });
         }
       }
+      if (invalid) {
+        this.tab = 'projects';
+        this.$nextTick(() => document.querySelector('[data-rate-row="' + invalid.project_id + '"]')?.focus());
+        return null;
+      }
       return changes;
     },
-    // paymentBody valida a regra do rascunho (ou normaliza a que a pessoa já tem) e devolve o corpo do PATCH. Um erro
-    // troca para a aba e nomeia o campo.
+    // paymentBody monta o corpo do PATCH da regra de pagamento a partir do rascunho (ou da regra que a pessoa já tem,
+    // para comparar). A chave frequency vai sempre: "" limpa a regra. A conferência dos campos é do savePerson.
     paymentBody(rule) {
       const d = rule ? { frequency: rule.frequency || '', day: rule.day || '', start: rule.start || '' } : this.draft.payment;
-      if (d.frequency === 'monthly') {
-        const day = Number(String(d.day).trim());
-        if (String(d.day).trim() === '' || !Number.isInteger(day) || day < 1 || day > 31) {
-          if (!rule) { this.tab = 'payment'; throw new Error(WTT.t('errors.person.invalid_payment_day')); }
-        }
-        return { frequency: 'monthly', day };
-      }
-      if (d.frequency === 'biweekly') {
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(d.start || '')) {
-          if (!rule) { this.tab = 'payment'; throw new Error(WTT.t('errors.person.invalid_payment_start')); }
-        }
-        return { frequency: 'biweekly', start: d.start };
-      }
+      if (d.frequency === 'monthly') return { frequency: 'monthly', day: Number(String(d.day).trim()) };
+      if (d.frequency === 'biweekly') return { frequency: 'biweekly', start: d.start };
       return { frequency: '' };
     },
     // savePerson aplica o rascunho com as rotas que já existiam: a jornada, as permissões e, projeto a projeto, o valor
@@ -570,14 +600,23 @@ document.addEventListener('alpine:init', () => {
     savePerson() {
       return this.run('edit', async () => {
         const person = this.editing;
+        const { rules } = WTT;
         const text = String(this.draft.weekly_hours).trim();
         const hours = text === '' ? 0 : Number(text);
-        if (!Number.isInteger(hours) || hours < 0 || hours > 168) {
-          this.tab = 'payment';
-          throw new Error(WTT.t('errors.person.invalid_week_hours'));
+        // A jornada e a regra só existem para quem gerencia pessoas; a aba delas vem à vista antes de conferir.
+        if (WTT.can('people.manage')) {
+          const d = this.draft.payment;
+          const spec = { weekly_hours: [text, rules.integer(0, 168)] };
+          if (d.frequency === 'monthly') spec.day = [d.day, rules.required, rules.integer(1, 31)];
+          if (d.frequency === 'biweekly') spec.start = [d.start, rules.required, rules.date];
+          if (!this.check(spec)) {
+            if (this.tabs.includes('payment')) this.tab = 'payment';
+            return;
+          }
         }
         const pay = this.paymentBody();
         const projects = this.projectChanges();
+        if (projects === null) return;
         if (WTT.can('people.manage') && hours !== (person.weekly_hours || 0)) {
           const updated = await api('PATCH', '/api/persons/' + person.id + '/weekly-hours', { weekly_hours: hours });
           person.weekly_hours = updated.weekly_hours;
@@ -668,12 +707,16 @@ document.addEventListener('alpine:init', () => {
       this.lastDelivery = '';
       this.lastEmail = '';
       this.errors.invite = '';
+      this.clearFields();
       Alpine.store('modal').open('invite', WTT.t('org.people.add'), () => !this.pending);
     },
     // O modal fica aberto depois de gerar o convite: o link só aparece nesta hora.
     createInvite() {
+      // O e-mail do convite é opcional; preenchido, confere como o servidor.
+      const email = this.invite.email.trim();
+      if (!this.check({ email: [email, WTT.rules.email, WTT.rules.max('email')] })) return undefined;
       return this.run('invite', async () => {
-        const inv = await api('POST', '/api/orgs/' + orgId + '/invites', { email: this.invite.email, role: this.invite.role });
+        const inv = await api('POST', '/api/orgs/' + orgId + '/invites', { email, role: this.invite.role });
         this.lastLink = location.origin + inv.path;
         this.lastDelivery = inv.delivery;
         this.lastEmail = inv.email || '';
@@ -815,11 +858,32 @@ document.addEventListener('alpine:init', () => {
       const id = this.profile.legal_id;
       this.form[id.field] = WTT.fmt.mask(this.form[id.field], id.mask);
     },
+    // O resumo é uma linha só: o servidor junta os espaços repetidos, e o contador conta como ele.
+    summaryLength() {
+      return Array.from(this.form.summary.trim().replace(/\s+/g, ' ')).length;
+    },
     saveOrg() {
+      const { rules } = WTT;
+      const f = this.form;
+      // O resumo é medido depois de juntar os espaços, como o servidor faz.
+      const summary = f.summary.trim().replace(/\s+/g, ' ');
+      const ok = this.check({
+        name: [f.name, rules.required, rules.max('name')],
+        summary: [summary, rules.max('summary')],
+        description: [f.description, rules.max('description')],
+        website: [f.website, rules.url, rules.max('url')],
+        contact_email: [f.contact_email, rules.email, rules.max('email')],
+        linkedin_url: [f.linkedin_url, rules.url, rules.max('url')],
+        legal_name: [f.legal_name, rules.max('legal_name')],
+        address_line1: [f.address_line1, rules.max('address')],
+        address_line2: [f.address_line2, rules.max('address')],
+      });
+      if (!ok) return undefined;
       return this.run('org', async () => {
-        // Texto vazio apaga o campo; a API mantém o que não vier no corpo.
+        // Texto vazio apaga o campo; a API mantém o que não vier no corpo. O texto vai sem os espaços das pontas.
         const body = {};
-        orgTexts.forEach((k) => { body[k] = this.form[k]; });
+        orgTexts.forEach((k) => { body[k] = typeof f[k] === 'string' ? f[k].trim() : f[k]; });
+        body.summary = summary;
         await api('PATCH', '/api/orgs/' + orgId, body);
         // A edição volta para a aba Sobre, que recarrega com os dados novos e mostra o toast.
         Alpine.store('toast').flash(WTT.t('org.settings.saved'));
@@ -870,6 +934,29 @@ document.addEventListener('alpine:init', () => {
     },
   }));
 
+  // customerBody é o cliente como vai para a API: os textos sem os espaços das pontas. O país vazio é o da
+  // organização (o servidor faz o mesmo na criação e na edição).
+  const customerBody = (c) => ({
+    name: c.name.trim(),
+    country: c.country,
+    document: String(c.document || '').trim(),
+    contact_name: String(c.contact_name || '').trim(),
+    contact_email: String(c.contact_email || '').trim(),
+    contact_phone: String(c.contact_phone || '').trim(),
+  });
+  // customerSpec são as conferências do cliente, na ordem dos campos. O nome é obrigatório; o resto é opcional e,
+  // preenchido, confere. full diz se o formulário tem a pessoa de contato e o telefone (a etapa das boas-vindas não).
+  const customerSpec = (b, full) => {
+    const { rules } = WTT;
+    return {
+      name: [b.name, rules.required, rules.max('name')],
+      document: [b.document, rules.max(32)],
+      ...(full ? { contact_name: [b.contact_name, rules.max('name')] } : {}),
+      contact_email: [b.contact_email, rules.email, rules.max('email')],
+      ...(full ? { contact_phone: [b.contact_phone, rules.phone, rules.max('phone')] } : {}),
+    };
+  };
+
   // O cliente novo começa no país da organização.
   const blankCustomer = () => ({ name: '', country: org.country || 'BR', document: '', contact_name: '', contact_email: '', contact_phone: '' });
 
@@ -918,17 +1005,20 @@ document.addEventListener('alpine:init', () => {
         contact_phone: c.contact_phone,
       } : blankCustomer();
       this.errors.save = '';
+      this.clearFields();
       // Enquanto salva, o modal não fecha: um erro do servidor ficaria sem ter onde aparecer.
       Alpine.store('modal').open('customer', c ? WTT.t('org.customers.edit_title') : WTT.t('org.customers.new'), () => !this.pending);
     },
     save() {
+      const body = customerBody(this.draft);
+      if (!this.check(customerSpec(body, true))) return undefined;
       return this.run('save', async () => {
         if (this.editing) {
-          const saved = await api('PATCH', '/api/customers/' + this.editing, this.draft);
+          const saved = await api('PATCH', '/api/customers/' + this.editing, body);
           this.customers = this.customers.map((c) => (c.id === saved.id ? saved : c));
           toast(WTT.t('org.customers.saved'));
         } else {
-          this.customers = [...this.customers, await api('POST', '/api/orgs/' + orgId + '/customers', this.draft)];
+          this.customers = [...this.customers, await api('POST', '/api/orgs/' + orgId + '/customers', body)];
           toast(WTT.t('org.customers.created'));
         }
         this.customers.sort((a, b) => a.name.localeCompare(b.name, WTT.lang));
@@ -999,23 +1089,32 @@ document.addEventListener('alpine:init', () => {
     // go muda de etapa, troca o título do modal e põe o foco no primeiro campo dela.
     go(step) {
       this.step = step;
+      this.clearFields();
       Alpine.store('modal').title = this.titles()[step - 1];
       // Quem chegou à última etapa pode sair pelos links dela: a baixa vai antes, não ao fechar.
       if (step === 4) this.complete();
       this.$nextTick(() => this.focusField());
     },
     next() { this.go(this.step + 1); },
+    // O resumo é uma linha só: o servidor junta os espaços repetidos, e o contador conta como ele.
+    summaryLength() {
+      return Array.from(this.orgDraft.summary.trim().replace(/\s+/g, ' ')).length;
+    },
     saveOrg() {
+      const summary = this.orgDraft.summary.trim().replace(/\s+/g, ' ');
+      if (!this.check({ summary: [summary, WTT.rules.max('summary')] })) return undefined;
       return this.run('org', async () => {
         // A API mantém o que não vier no corpo, então o resto do perfil fica como está.
-        await api('PATCH', '/api/orgs/' + orgId, { ...this.orgDraft });
+        await api('PATCH', '/api/orgs/' + orgId, { ...this.orgDraft, summary });
         this.saved.org = true;
         this.next();
       });
     },
     saveCustomer() {
+      const body = customerBody(this.customer);
+      if (!this.check(customerSpec(body, false))) return undefined;
       return this.run('customer', async () => {
-        await api('POST', '/api/orgs/' + orgId + '/customers', this.customer);
+        await api('POST', '/api/orgs/' + orgId + '/customers', body);
         this.saved.customer = true;
         toast(WTT.t('org.customers.created'));
         this.next();
@@ -1023,8 +1122,10 @@ document.addEventListener('alpine:init', () => {
     },
     // O convite fica na etapa depois de criado: o link só aparece agora, e quem convidou pode gerar outro.
     createInvite() {
+      const email = this.invite.email.trim();
+      if (!this.check({ email: [email, WTT.rules.email, WTT.rules.max('email')] })) return undefined;
       return this.run('invite', async () => {
-        const inv = await api('POST', '/api/orgs/' + orgId + '/invites', { email: this.invite.email, role: this.invite.role });
+        const inv = await api('POST', '/api/orgs/' + orgId + '/invites', { email, role: this.invite.role });
         this.lastLink = location.origin + inv.path;
         this.lastDelivery = inv.delivery;
         this.lastEmail = inv.email || '';
@@ -1038,6 +1139,7 @@ document.addEventListener('alpine:init', () => {
       this.lastDelivery = '';
       this.lastEmail = '';
       this.errors.invite = '';
+      this.clearFields();
       this.$nextTick(() => document.getElementById('ob-invite-email')?.focus());
     },
     async copyLink() {
@@ -1063,7 +1165,7 @@ document.addEventListener('alpine:init', () => {
     ...form(),
     ...personProfile(me.id, true),
     profile: { name: me.name, email: me.email },
-    password: { current: '', next: '' },
+    password: { current: '', next: '', confirm: '' },
     tab: 'personal', // a aba do modal: personal ou password
     init() {
       return this.loadProfile();
@@ -1072,10 +1174,11 @@ document.addEventListener('alpine:init', () => {
     openProfileEdit() {
       const p = this.person || me;
       this.profile = { name: p.name, email: p.email };
-      this.password = { current: '', next: '' };
+      this.password = { current: '', next: '', confirm: '' };
       this.tab = 'personal';
       this.errors.profile = '';
       this.errors.password = '';
+      this.clearFields();
       Alpine.store('modal').open('profile-edit', WTT.t('profile.edit'), () => !this.pending);
     },
     focusTab(tab) {
@@ -1083,6 +1186,13 @@ document.addEventListener('alpine:init', () => {
       this.$nextTick(() => this.$refs['tab-' + tab].focus());
     },
     saveProfile() {
+      this.profile.name = this.profile.name.trim();
+      this.profile.email = this.profile.email.trim();
+      const ok = this.check({
+        name: [this.profile.name, WTT.rules.required, WTT.rules.max('name')],
+        email: [this.profile.email, WTT.rules.required, WTT.rules.email, WTT.rules.max('email')],
+      });
+      if (!ok) return undefined;
       return this.run('profile', async () => {
         const p = await api('PATCH', '/api/persons/' + me.id, this.profile);
         if (this.person) Object.assign(this.person, { name: p.name, email: p.email });
@@ -1092,6 +1202,22 @@ document.addEventListener('alpine:init', () => {
       });
     },
     changePassword() {
+      // Como o servidor: a nova senha tem de 8 caracteres a 72 bytes e ser diferente da atual. A confirmação é só
+      // da tela (o servidor recebe uma senha só): impede que um erro de digitação vire uma senha que ninguém sabe.
+      const next = this.password.next;
+      const tooShort = Array.from(next).length < 8;
+      const tooLong = new TextEncoder().encode(next).length > 72;
+      const newPassword = () => {
+        if (tooShort) return WTT.t('errors.auth.weak_password');
+        if (tooLong) return WTT.t('errors.auth.long_password');
+        return next === this.password.current ? WTT.t('errors.auth.same_password') : '';
+      };
+      const ok = this.check({
+        current_password: [this.password.current, WTT.rules.required],
+        new_password: [next, newPassword],
+        confirm_password: [this.password.confirm, (v) => (v !== next ? WTT.t('auth.signup.password_mismatch') : '')],
+      });
+      if (!ok) return undefined;
       return this.run('password', async () => {
         await api('POST', '/api/auth/password', { current_password: this.password.current, new_password: this.password.next });
         toast(WTT.t('profile.password.changed'));

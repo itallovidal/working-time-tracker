@@ -469,7 +469,7 @@ func TestDual_AutoPostIsPerIntegration(t *testing.T) {
 	d.tr.AddCard(testutil.TrelloCard{ShortLink: "Manual01", Name: "Do Trello"})
 	manual, err := d.taskSvc.CreateAs("", d.project, "Já tem cartão", "", "", nil, task.Attrs{})
 	must(t, err)
-	_, err = d.taskSvc.LinkExternalItem(manual.ID.String(), d.trIt.ID.String(), "Manual01", "")
+	_, err = d.taskSvc.LinkExternalItem(manual.ID.String(), d.trIt.ID.String(), "Manual01", "https://trello.com/c/Manual01")
 	must(t, err)
 	before := len(d.tr.Cards(board))
 	d.flush()

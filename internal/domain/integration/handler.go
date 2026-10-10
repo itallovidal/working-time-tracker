@@ -74,15 +74,15 @@ func (h *Handler) Create(c *echo.Context) error {
 		Enabled     *bool                  `json:"enabled"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return apperr.Respond(c, 400, apperr.ErrInvalidBody)
+		return apperr.Respond(c, 400, apperr.BindError(err))
 	}
 	if body.Type == "" {
-		return apperr.Respond(c, 400, ErrTypeRequired)
+		return apperr.Respond(c, 400, ErrTypeRequired.With("field", "type"))
 	}
 	// Um tipo "em breve" não ganha integração nova pela API. Fica no handler e não no
 	// service: as que já existem seguem funcionando, e reativar o tipo é virar a flag.
 	if impl, err := adapter.GetIntegration(body.Type); err == nil && impl.Descriptor().ComingSoon {
-		return apperr.Respond(c, 400, ErrTypeComingSoon.With("provider", impl.Descriptor().Label))
+		return apperr.Respond(c, 400, ErrTypeComingSoon.With("provider", impl.Descriptor().Label, "field", "type"))
 	}
 	// Sem enabled no corpo, a integração nasce ativa.
 	enabled := body.Enabled == nil || *body.Enabled
@@ -134,7 +134,7 @@ func (h *Handler) Update(c *echo.Context) error {
 		SyncIssues  *bool                  `json:"sync_issues"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return apperr.Respond(c, 400, apperr.ErrInvalidBody)
+		return apperr.Respond(c, 400, apperr.BindError(err))
 	}
 	it, err := h.svc.Edit(id, EditInput{
 		DisplayName: body.DisplayName, Token: body.Token, Metadata: body.Metadata,

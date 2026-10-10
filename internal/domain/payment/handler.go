@@ -34,7 +34,7 @@ func (h *Handler) ByPerson(c *echo.Context) error {
 	if raw := c.QueryParam("history"); raw != "" {
 		n, err := strconv.Atoi(raw)
 		if err != nil || n < 1 {
-			return apperr.Respond(c, http.StatusBadRequest, apperr.ErrInvalidBody)
+			return apperr.Respond(c, http.StatusBadRequest, ErrInvalidHistory.With("field", "history"))
 		}
 		history = n
 	}

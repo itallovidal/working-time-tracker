@@ -11,6 +11,7 @@ import (
 	"working-time-tracker/internal/adapter"
 	"working-time-tracker/internal/database"
 	"working-time-tracker/internal/domain/person"
+	"working-time-tracker/internal/validate"
 )
 
 // ClerkSettings são os ajustes que o convite por e-mail pelo Clerk precisa.
@@ -225,9 +226,13 @@ func (s *Service) ClerkSignup(ctx context.Context, sessionToken string, in Clerk
 	if err != nil {
 		return nil, err
 	}
-	orgName := strings.TrimSpace(in.OrganizationName)
-	if orgName == "" {
-		return nil, ErrOrgNameRequired
+	orgName, err := requiredText(ErrOrgNameRequired, "organization_name", in.OrganizationName, validate.MaxName)
+	if err != nil {
+		return nil, err
+	}
+	// O nome é opcional (o do Clerk ou o do e-mail ocupa o lugar), mas o que a pessoa digita tem o mesmo teto.
+	if _, err := validate.Text("name", in.Name, validate.MaxName); err != nil {
+		return nil, err
 	}
 	profile, err := signupCountry(in.Country)
 	if err != nil {
@@ -270,6 +275,9 @@ func (s *Service) ClerkJoin(ctx context.Context, sessionToken string, in ClerkJo
 	invID, err := uuid.Parse(in.InviteID)
 	if err != nil {
 		return nil, ErrInviteInvalid
+	}
+	if _, err := validate.Text("name", in.Name, validate.MaxName); err != nil {
+		return nil, err
 	}
 	inv, err := s.store.InviteByID(invID, s.now())
 	if err != nil {
@@ -336,9 +344,17 @@ func (s *Service) clerkJoin(ctx context.Context, ident *adapter.ClerkIdentity, e
 func accountName(typed, fromClerk, email string) string {
 	for _, n := range []string{typed, fromClerk} {
 		if n = strings.TrimSpace(n); n != "" {
-			return n
+			return truncateRunes(n, validate.MaxName)
 		}
 	}
 	local, _, _ := strings.Cut(email, "@")
-	return local
+	return truncateRunes(local, validate.MaxName)
+}
+
+// truncateRunes corta s em n caracteres: o nome que vem do Clerk ou do e-mail não passa do teto do campo.
+func truncateRunes(s string, n int) string {
+	if r := []rune(s); len(r) > n {
+		return string(r[:n])
+	}
+	return s
 }

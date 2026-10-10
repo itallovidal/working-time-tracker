@@ -25,10 +25,10 @@ func NewService(sessionStore *Store, taskStore *taskdom.Store, rates *allocation
 func (s *Service) ClockIn(projectID, taskID, personID string) (*WorkSession, error) {
 	task, err := s.taskStore.GetByID(taskID)
 	if err != nil {
-		return nil, ErrTaskNotFound
+		return nil, ErrTaskNotFound.With("field", "task_id")
 	}
 	if task.ProjectID.String() != projectID {
-		return nil, ErrTaskOtherProject
+		return nil, ErrTaskOtherProject.With("field", "task_id")
 	}
 
 	personUID, err := uuid.Parse(personID)
@@ -126,6 +126,10 @@ func (s *Service) ClockOut(projectID, personID string) (*WorkSession, error) {
 		}
 		return nil, err
 	}
+	// O ponto aberto é de outro projeto: parar por esta rota fecharia a sessão de lá, que não é o que a rota diz.
+	if active.ProjectID.String() != projectID {
+		return nil, ErrOpenInOtherProject
+	}
 
 	now := time.Now()
 	active.EndAt = &now
@@ -136,7 +140,19 @@ func (s *Service) ClockOut(projectID, personID string) (*WorkSession, error) {
 	return active, nil
 }
 
+// ListByProject lista as sessões do projeto, pela tarefa e pela pessoa quando vêm. Um id que não é um UUID é
+// recusado, como no total, e não vira uma lista vazia.
 func (s *Service) ListByProject(projectID string, taskID, personID *string) ([]WorkSession, error) {
+	if taskID != nil && *taskID != "" {
+		if _, err := uuid.Parse(*taskID); err != nil {
+			return nil, ErrInvalidTaskFilter.With("field", "task_id")
+		}
+	}
+	if personID != nil && *personID != "" {
+		if _, err := uuid.Parse(*personID); err != nil {
+			return nil, ErrInvalidPersonFilter.With("field", "person_id")
+		}
+	}
 	sessions, err := s.sessionStore.ListByProject(projectID, taskID, personID)
 	if err != nil {
 		return nil, err
@@ -192,12 +208,12 @@ func (s *Service) TotalTime(projectID string, taskID, personID *string) (*TotalT
 	if hasTask {
 		var err error
 		if taskUID, err = uuid.Parse(*taskID); err != nil {
-			return nil, ErrInvalidTaskFilter
+			return nil, ErrInvalidTaskFilter.With("field", "task_id")
 		}
 	}
 	if hasPerson {
 		if _, err := uuid.Parse(*personID); err != nil {
-			return nil, ErrInvalidPersonFilter
+			return nil, ErrInvalidPersonFilter.With("field", "person_id")
 		}
 	}
 	sessions, err := s.ListByProject(projectID, taskID, personID)
@@ -265,10 +281,10 @@ func (s *Service) AddTask(projectID, sessionID, taskID string, from, until *time
 	}
 	t, err := s.taskStore.GetByID(taskID)
 	if err != nil {
-		return nil, ErrTaskNotFound
+		return nil, ErrTaskNotFound.With("field", "task_id")
 	}
 	if t.ProjectID != session.ProjectID {
-		return nil, ErrTaskOtherProject
+		return nil, ErrTaskOtherProject.With("field", "task_id")
 	}
 
 	now := time.Now()
@@ -283,7 +299,7 @@ func (s *Service) AddTask(projectID, sessionID, taskID string, from, until *time
 		return nil, err
 	}
 	if overlaps(session, t.ID, uuid.Nil, start, until) {
-		return nil, ErrTaskOverlap
+		return nil, ErrTaskOverlap.With("field", "from_at")
 	}
 	if _, err := s.sessionStore.AddTask(session.ID, t.ID, start, until); err != nil {
 		return nil, err
@@ -344,7 +360,7 @@ func (s *Service) UpdateTask(projectID, sessionID, linkID string, change TaskCha
 		return nil, err
 	}
 	if overlaps(session, link.TaskID, link.ID, from, until) {
-		return nil, ErrTaskOverlap
+		return nil, ErrTaskOverlap.With("field", "from_at")
 	}
 	if session.EndAt == nil && until != nil && !hasOtherActive(session, link.ID) {
 		return nil, ErrLastTask
@@ -395,17 +411,18 @@ func hasOtherActive(session *WorkSession, skip uuid.UUID) bool {
 }
 
 // validateInterval confere que o intervalo cabe na sessão: começa depois do início dela,
-// termina depois de começar, e nenhum dos dois passa do fim dela (ou de agora, se aberta).
+// termina depois de começar, e nenhum dos dois passa do fim dela (ou de agora, se aberta). O erro diz qual dos
+// dois campos errou: from_at (o começo) ou until_at (o fim).
 func validateInterval(session *WorkSession, from time.Time, until *time.Time, now time.Time) error {
 	limit := now
 	if session.EndAt != nil {
 		limit = *session.EndAt
 	}
 	if from.Before(session.StartAt) || from.After(limit) || (session.EndAt != nil && !from.Before(limit)) {
-		return ErrInvalidInterval
+		return ErrInvalidInterval.With("field", "from_at")
 	}
 	if until != nil && (!until.After(from) || until.After(limit)) {
-		return ErrInvalidInterval
+		return ErrInvalidInterval.With("field", "until_at")
 	}
 	return nil
 }

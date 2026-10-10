@@ -43,7 +43,8 @@ func fail(c *echo.Context, err error) error {
 		status = http.StatusBadGateway
 	case errors.Is(err, ErrInviteInvalid), errors.Is(err, database.ErrNotFound):
 		status = http.StatusNotFound
-	case errors.Is(err, ErrWeakPassword), errors.Is(err, ErrLongPassword),
+	case errors.Is(err, ErrWeakPassword), errors.Is(err, ErrLongPassword), errors.Is(err, ErrSamePassword),
+		errors.Is(err, apperr.ErrFieldRequired), errors.Is(err, apperr.ErrFieldTooLong), errors.Is(err, apperr.ErrFieldInvalid),
 		errors.Is(err, ErrNameRequired), errors.Is(err, ErrOrgNameRequired), errors.Is(err, ErrInvalidCountry),
 		errors.Is(err, ErrInviteEmailMismatch), errors.Is(err, ErrWrongPassword),
 		errors.Is(err, person.ErrInvalidEmail), errors.Is(err, person.ErrInvalidRole):
@@ -56,14 +57,14 @@ func fail(c *echo.Context, err error) error {
 // de outro domínio que cria convites (o do projeto).
 func Respond(c *echo.Context, err error) error { return fail(c, err) }
 
-func badBody(c *echo.Context) error {
-	return apperr.Respond(c, http.StatusBadRequest, apperr.ErrInvalidBody)
+func badBody(c *echo.Context, err error) error {
+	return apperr.Respond(c, http.StatusBadRequest, apperr.BindError(err))
 }
 
 func (h *Handler) Signup(c *echo.Context) error {
 	var body SignupInput
 	if err := c.Bind(&body); err != nil {
-		return badBody(c)
+		return badBody(c, err)
 	}
 	id, token, err := h.svc.Signup(body)
 	if err != nil {
@@ -79,7 +80,7 @@ func (h *Handler) Login(c *echo.Context) error {
 		Password string `json:"password"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return badBody(c)
+		return badBody(c, err)
 	}
 	id, token, err := h.svc.Login(body.Email, body.Password)
 	if err != nil {
@@ -116,7 +117,7 @@ func (h *Handler) ChangePassword(c *echo.Context) error {
 		NewPassword     string `json:"new_password"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return badBody(c)
+		return badBody(c, err)
 	}
 	if err := h.svc.ChangePassword(CurrentPerson(c), currentToken(c), body.CurrentPassword, body.NewPassword); err != nil {
 		return fail(c, err)
@@ -143,7 +144,7 @@ func (h *Handler) CreateInvite(c *echo.Context) error {
 		Role  string `json:"role"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return badBody(c)
+		return badBody(c, err)
 	}
 	inv, token, err := h.svc.CreateInvite(c.Request().Context(), CurrentPerson(c), body.Email, body.Role)
 	if err != nil {
@@ -183,7 +184,7 @@ func (h *Handler) InviteInfo(c *echo.Context) error {
 func (h *Handler) AcceptInvite(c *echo.Context) error {
 	var body AcceptInviteInput
 	if err := c.Bind(&body); err != nil {
-		return badBody(c)
+		return badBody(c, err)
 	}
 	id, token, err := h.svc.AcceptInvite(c.Param("token"), body)
 	if err != nil {

@@ -71,7 +71,7 @@ func TestTrello_NewTaskIsNotPostedWhenThereIsNothingToDo(t *testing.T) {
 	e := newTrelloEnv(t, issuesync.Config{})
 	linked := e.create("Já ligada", "", nil, nil)
 	e.fake.AddCard(testutil.TrelloCard{ShortLink: "Manual01", Name: "Do Trello"})
-	if _, err := e.taskSvc.LinkExternalItem(linked.ID.String(), e.it.ID.String(), "Manual01", ""); err != nil {
+	if _, err := e.taskSvc.LinkExternalItem(linked.ID.String(), e.it.ID.String(), "Manual01", "https://trello.com/c/Manual01"); err != nil {
 		t.Fatalf("link: %v", err)
 	}
 	e.fake.Reset()

@@ -23,7 +23,7 @@ func NewStore(client *ent.Client) *Store {
 }
 
 func (s *Store) Create(p *Project) error {
-	created, err := s.client.Project.Create().
+	q := s.client.Project.Create().
 		SetOrganizationID(p.OrganizationID).
 		SetName(p.Name).
 		SetDescription(p.Description).
@@ -34,8 +34,11 @@ func (s *Store) Create(p *Project) error {
 		SetNillableWeeklySyncDay(p.WeeklySyncDay).
 		SetNillableWeeklySyncTime(p.WeeklySyncTime).
 		SetNillableCustomerMeetingDay(p.CustomerMeetingDay).
-		SetNillableCustomerMeetingTime(p.CustomerMeetingTime).
-		Save(context.Background())
+		SetNillableCustomerMeetingTime(p.CustomerMeetingTime)
+	if p.Customer != nil {
+		q = q.SetCustomerID(p.Customer.ID)
+	}
+	created, err := q.Save(context.Background())
 	if err != nil {
 		return err
 	}
@@ -186,6 +189,13 @@ func (s *Store) CustomerInProjectOrganization(customerID, projectID uuid.UUID) (
 		Exist(context.Background())
 }
 
+// CustomerInOrganization diz se o cliente existe e é da organização.
+func (s *Store) CustomerInOrganization(customerID, orgID uuid.UUID) (bool, error) {
+	return s.client.Customer.Query().
+		Where(entcustomer.IDEQ(customerID), entcustomer.OrganizationIDEQ(orgID)).
+		Exist(context.Background())
+}
+
 // Update grava o projeto como está: um campo opcional nil é apagado no banco.
 // Quem decide entre manter e apagar é o service.
 func (s *Store) Update(p *Project) error {
@@ -235,7 +245,7 @@ func (s *Store) Update(p *Project) error {
 func (s *Store) Delete(id string) error {
 	uid, err := uuid.Parse(id)
 	if err != nil {
-		return err
+		return database.ErrNotFound
 	}
 	return s.client.Project.DeleteOneID(uid).Exec(context.Background())
 }

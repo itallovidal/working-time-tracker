@@ -302,7 +302,7 @@ func TestPages_ProjectCollaboratorsTab(t *testing.T) {
 		`title="Editar colaborador"`, `class="list-btn" title="Editar colaborador" @click="openPerson(m)"`,
 		// O modal do colaborador: o valor, os times em caixas de marcar e a saída do projeto.
 		`x-show="$store.modal.name === 'collab-edit'"`,
-		`id="collab-edit-rate" type="text" inputmode="decimal" class="num" placeholder="0,00" :required="!person.is_owner"`,
+		`id="collab-edit-rate" type="text" inputmode="decimal" class="num" placeholder="0,00" data-field="pay_rate_cents"`,
 		`type="checkbox" :value="t.id" x-model="person.team_ids"`, "Tirar do projeto", "savePerson()", "removePerson()",
 		// O grupo de permissões: o modal do colaborador escolhe, e adicionar pessoa é em dois passos.
 		`class="presets" role="radiogroup"`, `x-for="p in presetChoices()"`, `x-model="preset"`,
@@ -323,8 +323,8 @@ func TestPages_ProjectCollaboratorsTab(t *testing.T) {
 	if first, second, group := strings.Index(steps, `<div class="stack" x-show="addStep === 1">`), strings.Index(steps, `<div class="stack" x-show="addStep === 2">`), strings.Index(steps, `class="presets"`); first < 0 || second < first || group < second {
 		t.Errorf("the add person form does not put the group in the second step (steps at %d and %d, group at %d)", first, second, group)
 	}
-	if !strings.Contains(addForm, `id="collab-rate" type="text" inputmode="decimal" class="num" placeholder="0,00" :required="!addIsOwner()"`) {
-		t.Error("the hourly rate is not a required field of the add person form (except for the owner)")
+	if !strings.Contains(addForm, `id="collab-rate" type="text" inputmode="decimal" class="num" placeholder="0,00" data-field="pay_rate_cents"`) {
+		t.Error("the hourly rate of the add person form does not show its error under the field")
 	}
 	if rate, team := strings.Index(addForm, `id="collab-rate"`), strings.Index(addForm, `id="collab-team"`); rate < 0 || team < rate {
 		t.Error("the add person form does not show the hourly rate above the team")
@@ -620,7 +620,7 @@ func TestPages_ProjectSettingsAndWeeklyHours(t *testing.T) {
 	}
 	for _, field := range []string{
 		`<input id="ps-name"`, `<select id="ps-customer"`, `<input id="ps-bill-rate"`,
-		`<select id="ps-sprint" x-model.number="draft.sprint_duration_days">`, `x-for="o in sprintChoices()"`,
+		`<select id="ps-sprint" data-field="sprint_duration_days"`, `x-for="o in sprintChoices()"`,
 		`<input id="routine-daily"`, `<select id="routine-weekly-day"`, `<input id="routine-weekly-time"`, `<textarea id="ps-description"`,
 		`<select id="meeting-day"`, `<input id="meeting-time"`,
 		"Excluir projeto", "<dt>Valor cobrado por hora</dt>",
@@ -636,12 +636,12 @@ func TestPages_ProjectSettingsAndWeeklyHours(t *testing.T) {
 	// O Novo projeto, na página Projetos, oferece as mesmas durações e não pergunta a jornada.
 	for _, path := range []string{"/orgs/" + admin.orgID + "/projects"} {
 		body := do(e, "GET", path, "", admin.session).Body.String()
-		if !strings.Contains(body, `<select id="project-sprint" x-model.number="draft.sprint_duration_days">`) || !strings.Contains(body, `x-for="o in WTT.sprintOptions"`) {
+		if !strings.Contains(body, `<select id="project-sprint" data-field="sprint_duration_days"`) || !strings.Contains(body, `x-for="o in WTT.sprintOptions"`) {
 			t.Errorf("%s: the new project form does not offer the sprint durations in a select", path)
 		}
 		// Daily e weekly são marcas que revelam o horário, e os campos vêm em três grupos.
 		for _, want := range []string{
-			`x-model="draft.has_daily"`, `x-model="draft.has_weekly"`, `<input id="routine-daily" type="time" :required="draft.has_daily"`,
+			`x-model="draft.has_daily"`, `x-model="draft.has_weekly"`, `<input id="routine-daily" type="time" data-field="daily_time"`,
 			`<select id="routine-weekly-day"`, `<input id="routine-weekly-time" type="time"`,
 			"<legend>Projeto</legend>", "<legend>Cliente e cobrança</legend>", "<legend>Rotina do time</legend>",
 			`x-model="draft.has_meeting"`, `<select id="meeting-day"`, `<input id="meeting-time" type="time"`,
@@ -665,7 +665,7 @@ func TestPages_ProjectSettingsAndWeeklyHours(t *testing.T) {
 	people := do(e, "GET", "/orgs/"+admin.orgID+"/people", "", admin.session).Body.String()
 	for _, want := range []string{
 		"<th>Jornada semanal</th>", `x-show="$store.modal.name === 'person-edit'"`,
-		`<select id="person-weekly-hours"`, `<option value="40">40</option>`, `@click="openEdit(p)"`,
+		`<select id="person-weekly-hours"`, `x-for="h in weeklyHourOptions()"`, `@click="openEdit(p)"`,
 	} {
 		if !strings.Contains(people, want) {
 			t.Errorf("the organization people tab does not contain %q", want)
@@ -852,7 +852,7 @@ func TestPages_ProjectIntegrationsTab(t *testing.T) {
 	for _, adminOnly := range []string{
 		"Nova integração", `x-teleport="#modal-root"`, `x-show="$store.modal.name === 'integration-form'"`,
 		`role="radiogroup" aria-label="Plataforma"`, `x-model="draft.type"`,
-		`id="int-name"`, `id="int-token"`, `autocomplete="new-password"`, `:required="!draft.id && !isOAuth(draft.type)"`,
+		`id="int-name"`, `id="int-token"`, `autocomplete="new-password"`, `data-field="token"`, `data-field="display_name"`,
 		`x-for="f in typeOf(draft.type).metadata"`, `x-model="draft.metadata[f.key]"`, `x-model="draft.enabled"`,
 		`@click="openEdit(it)"`, `title="Editar integração"`, "Excluir integração", `@click="remove()"`,
 	} {

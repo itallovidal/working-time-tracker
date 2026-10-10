@@ -3,16 +3,21 @@
 {{define "project_form"}}
 {{if .Can "projects.create"}}
   <template x-teleport="#modal-root">
-    <form class="stack" x-show="$store.modal.name === 'project'" @submit.prevent="create()">
+    <form class="stack" novalidate x-show="$store.modal.name === 'project'" @submit.prevent="create()">
       <fieldset class="form-group">
         <legend>{{.T "project.groups.about"}}</legend>
         <div class="field">
           <label for="project-name">{{.T "common.name"}}</label>
-          <input id="project-name" type="text" required x-model="draft.name" data-autofocus>
+          <input id="project-name" type="text" maxlength="{{limit "name"}}" data-field="name" x-model="draft.name" @input="clearField('name')"
+                 :aria-invalid="fieldErrors.name ? 'true' : 'false'" data-autofocus>
+          {{template "field_error" "name"}}
         </div>
         <div class="field">
-          <label for="project-description">{{.T "common.description_label"}}</label>
-          <textarea id="project-description" x-model="draft.description" placeholder="{{.T "common.optional"}}"></textarea>
+          {{template "field_label" (dict "D" . "For" "project-description" "Key" "common.description_label" "Optional" true)}}
+          <textarea id="project-description" maxlength="{{limit "description"}}" data-field="description" x-model="draft.description"
+                    @input="clearField('description')" :aria-invalid="fieldErrors.description ? 'true' : 'false'"></textarea>
+          <span class="hint num" x-text="Array.from(draft.description).length + '/{{limit "description"}}'"></span>
+          {{template "field_error" "description"}}
         </div>
       </fieldset>
       <fieldset class="form-group">
@@ -20,17 +25,21 @@
         <div class="fields">
           <div class="field">
             <label for="project-customer">{{.T "org.projects.customer"}}</label>
-            <select id="project-customer" x-model="draft.customer_id">
+            <select id="project-customer" data-field="customer_id" x-model="draft.customer_id" @change="clearField('customer_id')"
+                    :aria-invalid="fieldErrors.customer_id ? 'true' : 'false'">
               <option value="">{{.T "org.projects.internal"}}</option>
               <template x-for="c in customers || []" :key="c.id">
                 <option :value="c.id" x-text="c.name"></option>
               </template>
             </select>
+            {{template "field_error" "customer_id"}}
           </div>
           {{/* Projeto interno não tem quem pague: o valor só aparece com um cliente escolhido. */}}
           <div class="field" x-show="draft.customer_id">
-            <label for="project-bill-rate" x-text="$t('project.fields.bill_rate', { unit: WTT.fmt.moneyUnit() })"></label>
-            <input id="project-bill-rate" type="text" inputmode="decimal" class="num" placeholder="{{.T "common.optional"}}" x-model="draft.rate">
+            <label for="project-bill-rate"><span x-text="$t('project.fields.bill_rate', { unit: WTT.fmt.moneyUnit() })"></span> <span class="optional">{{.T "common.optional_label"}}</span></label>
+            <input id="project-bill-rate" type="text" inputmode="decimal" class="num" data-field="bill_rate_cents" x-model="draft.rate"
+                   @input="clearField('bill_rate_cents')" :aria-invalid="fieldErrors.bill_rate_cents ? 'true' : 'false'">
+            {{template "field_error" "bill_rate_cents"}}
           </div>
         </div>
         {{template "project_customer_meeting" .}}
@@ -40,11 +49,13 @@
         <legend>{{.T "project.groups.routine"}}</legend>
         <div class="field">
           <label for="project-sprint">{{.T "project.fields.sprint"}}</label>
-          <select id="project-sprint" x-model.number="draft.sprint_duration_days">
+          <select id="project-sprint" data-field="sprint_duration_days" x-model.number="draft.sprint_duration_days"
+                  @change="clearField('sprint_duration_days')" :aria-invalid="fieldErrors.sprint_duration_days ? 'true' : 'false'">
             <template x-for="o in WTT.sprintOptions" :key="o.value">
               <option :value="o.value" x-text="o.label" :selected="o.value === draft.sprint_duration_days"></option>
             </template>
           </select>
+          {{template "field_error" "sprint_duration_days"}}
         </div>
         {{template "project_routine" .}}
       </fieldset>

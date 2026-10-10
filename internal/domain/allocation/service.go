@@ -5,6 +5,7 @@ import (
 
 	"working-time-tracker/internal/database"
 	"working-time-tracker/internal/domain/permission"
+	"working-time-tracker/internal/validate"
 )
 
 type Service struct {
@@ -33,8 +34,8 @@ func ids(projectID, personID string) (uuid.UUID, uuid.UUID, error) {
 // Para tirar a pessoa do projeto, o caminho é collaborator.Service.Remove, que
 // apaga o valor e os times juntos: não há como ficar no projeto sem valor.
 func (s *Service) Set(projectID, personID string, payRateCents int) (*Allocation, error) {
-	if payRateCents < 0 || payRateCents > MaxRateCents {
-		return nil, ErrInvalidRate
+	if validate.Money("pay_rate_cents", payRateCents) != nil {
+		return nil, ErrInvalidRate.With("field", "pay_rate_cents")
 	}
 	prj, per, err := ids(projectID, personID)
 	if err != nil {

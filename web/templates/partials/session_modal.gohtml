@@ -65,13 +65,13 @@
           </div>
         </fieldset>
 
-        <form class="stack" x-show="v.canEdit" @submit.prevent="v.add()">
+        <form class="stack" novalidate x-show="v.canEdit" @submit.prevent="v.add()">
           <fieldset class="form-group">
             <legend>{{.T "session.modal.add_title"}}</legend>
             <p class="muted small" x-text="v.session.end_at ? $t('session.modal.add_hint_closed') : $t('session.modal.add_hint_open')"></p>
             <div class="field">
               <label for="session-search">{{.T "session.modal.search"}}</label>
-              <input id="session-search" type="search" x-model="v.search" @input.debounce.300ms="v.find()" autocomplete="off">
+              <input id="session-search" type="search" maxlength="{{limit "search"}}" x-model="v.search" @input.debounce.300ms="v.find()" autocomplete="off">
             </div>
             <p class="muted small" x-show="v.results.length === 0">{{.T "session.modal.no_results"}}</p>
             <div class="row" x-show="v.results.length > 0">
@@ -95,13 +95,17 @@
         <h3 x-text="$t('session.modal.edit_title', { name: v.link.task.name })"></h3>
         <div class="field">
           <label for="session-from">{{.T "session.modal.from"}}</label>
-          <input id="session-from" type="datetime-local" x-model="v.draft.from" data-autofocus
+          <input id="session-from" type="datetime-local" data-field="from_at" x-model="v.draft.from" data-autofocus
+                 @input="v.clearField('from_at')" :aria-invalid="v.fieldErrors.from_at ? 'true' : 'false'"
                  :min="WTT.fmt.dateTimeInput(v.session.start_at)">
+          <p class="form-error" x-cloak x-show="v.fieldErrors.from_at" x-text="v.fieldErrors.from_at" role="alert"></p>
         </div>
         <div class="field">
           <label for="session-until">{{.T "session.modal.until"}}</label>
-          <input id="session-until" type="datetime-local" x-model="v.draft.until"
+          <input id="session-until" type="datetime-local" data-field="until_at" x-model="v.draft.until"
+                 @input="v.clearField('until_at')" :aria-invalid="v.fieldErrors.until_at ? 'true' : 'false'"
                  :min="WTT.fmt.dateTimeInput(v.session.start_at)">
+          <p class="form-error" x-cloak x-show="v.fieldErrors.until_at" x-text="v.fieldErrors.until_at" role="alert"></p>
           <span class="hint">{{.T "session.modal.until_hint"}}</span>
         </div>
         <p class="form-error" x-show="v.errors.save" x-text="v.errors.save" role="alert"></p>

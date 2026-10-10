@@ -56,17 +56,22 @@
   {{/* Editar projeto: nada vai para o servidor antes de Salvar, então Cancelar desfaz tudo.
        Os campos seguem a ordem do modal Novo projeto. */}}
   <template x-teleport="#modal-root">
-    <form class="stack" x-show="$store.modal.name === 'project-edit'" @submit.prevent="save()">
+    <form class="stack" novalidate x-show="$store.modal.name === 'project-edit'" @submit.prevent="save()">
       {{if .CanDo "project.edit"}}
       <fieldset class="form-group">
         <legend>{{.T "project.groups.about"}}</legend>
         <div class="field">
           <label for="ps-name">{{.T "common.name"}}</label>
-          <input id="ps-name" type="text" required x-model="draft.name" data-autofocus>
+          <input id="ps-name" type="text" maxlength="{{limit "name"}}" data-field="name" x-model="draft.name" @input="clearField('name')"
+                 :aria-invalid="fieldErrors.name ? 'true' : 'false'" data-autofocus>
+          {{template "field_error" "name"}}
         </div>
         <div class="field">
-          <label for="ps-description">{{.T "common.description_label"}}</label>
-          <textarea id="ps-description" x-model="draft.description" placeholder="{{.T "common.optional"}}"></textarea>
+          {{template "field_label" (dict "D" . "For" "ps-description" "Key" "common.description_label" "Optional" true)}}
+          <textarea id="ps-description" maxlength="{{limit "description"}}" data-field="description" x-model="draft.description"
+                    @input="clearField('description')" :aria-invalid="fieldErrors.description ? 'true' : 'false'"></textarea>
+          <span class="hint num" x-text="Array.from(draft.description).length + '/{{limit "description"}}'"></span>
+          {{template "field_error" "description"}}
         </div>
       </fieldset>
       {{end}}
@@ -78,18 +83,22 @@
           {{if .Can "customers.manage"}}
           <div class="field">
             <label for="ps-customer">{{.T "org.projects.customer"}}</label>
-            <select id="ps-customer" x-model="draft.customer_id">
+            <select id="ps-customer" data-field="customer_id" x-model="draft.customer_id" @change="clearField('customer_id')"
+                    :aria-invalid="fieldErrors.customer_id ? 'true' : 'false'">
               <option value="">{{.T "project_settings.internal"}}</option>
               <template x-for="c in customers" :key="c.id">
                 <option :value="c.id" x-text="c.name" :selected="c.id === draft.customer_id"></option>
               </template>
             </select>
+            {{template "field_error" "customer_id"}}
             <span class="hint">{{.T "project_settings.customers_hint"}} <a href="/orgs/{{.OrgID}}/customers">{{.T "nav.customers"}}</a>.</span>
           </div>
           {{end}}
           <div class="field">
-            <label for="ps-bill-rate" x-text="$t('project.fields.bill_rate', { unit: WTT.fmt.moneyUnit() })"></label>
-            <input id="ps-bill-rate" type="text" inputmode="decimal" class="num" placeholder="{{.T "project_settings.rate_placeholder"}}" x-model="draft.rate">
+            <label for="ps-bill-rate"><span x-text="$t('project.fields.bill_rate', { unit: WTT.fmt.moneyUnit() })"></span> <span class="optional">{{.T "common.optional_label"}}</span></label>
+            <input id="ps-bill-rate" type="text" inputmode="decimal" class="num" placeholder="{{.T "project_settings.rate_placeholder"}}" data-field="bill_rate_cents"
+                   x-model="draft.rate" @input="clearField('bill_rate_cents')" :aria-invalid="fieldErrors.bill_rate_cents ? 'true' : 'false'">
+            {{template "field_error" "bill_rate_cents"}}
             <span class="hint">{{.T "project_settings.bill_rate_hint"}}</span>
           </div>
         </div>
@@ -104,11 +113,13 @@
         <legend>{{.T "project.groups.routine"}}</legend>
         <div class="field">
           <label for="ps-sprint">{{.T "project.fields.sprint"}}</label>
-          <select id="ps-sprint" x-model.number="draft.sprint_duration_days">
+          <select id="ps-sprint" data-field="sprint_duration_days" x-model.number="draft.sprint_duration_days"
+                  @change="clearField('sprint_duration_days')" :aria-invalid="fieldErrors.sprint_duration_days ? 'true' : 'false'">
             <template x-for="o in sprintChoices()" :key="o.value">
               <option :value="o.value" x-text="o.label" :selected="o.value === draft.sprint_duration_days"></option>
             </template>
           </select>
+          {{template "field_error" "sprint_duration_days"}}
         </div>
         {{template "project_routine" .}}
       </fieldset>

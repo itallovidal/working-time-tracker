@@ -92,7 +92,7 @@ func TestTrelloSync_EndToEnd(t *testing.T) {
 	}
 
 	// Editar e fechar a tarefa levam o nome e o fechamento para o cartão, pelo gancho.
-	if rec = do(e, "PATCH", "/api/tasks/"+taskID, `{"name":"Tarefa editada","description":"descrição","deadline":null}`, admin.session); rec.Code != http.StatusOK {
+	if rec = do(e, "PATCH", "/api/tasks/"+taskID, `{"name":"Tarefa editada","description":"descrição"}`, admin.session); rec.Code != http.StatusOK {
 		t.Fatalf("edit the task = %d: %s", rec.Code, rec.Body.String())
 	}
 	if rec = do(e, "PATCH", "/api/tasks/"+taskID+"/attributes", `{"status":"closed"}`, admin.session); rec.Code != http.StatusOK {

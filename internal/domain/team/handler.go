@@ -22,7 +22,7 @@ func (h *Handler) Create(c *echo.Context) error {
 		Name string `json:"name"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return apperr.Respond(c, 400, apperr.ErrInvalidBody)
+		return apperr.Respond(c, 400, apperr.BindError(err))
 	}
 	team, err := h.svc.Create(projectID, body.Name)
 	if err != nil {
@@ -58,7 +58,7 @@ func (h *Handler) Update(c *echo.Context) error {
 		Name string `json:"name"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return apperr.Respond(c, 400, apperr.ErrInvalidBody)
+		return apperr.Respond(c, 400, apperr.BindError(err))
 	}
 	team, err := h.svc.Update(id, body.Name)
 	if err != nil {
@@ -81,10 +81,10 @@ func (h *Handler) AddMember(c *echo.Context) error {
 		PersonID string `json:"person_id"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return apperr.Respond(c, 400, apperr.ErrInvalidBody)
+		return apperr.Respond(c, 400, apperr.BindError(err))
 	}
 	if body.PersonID == "" {
-		return apperr.Respond(c, 400, ErrPersonRequired)
+		return apperr.Respond(c, 400, ErrPersonRequired.With("field", "person_id"))
 	}
 	membership, err := h.membershipSvc.Add(teamID, body.PersonID)
 	if err != nil {
@@ -99,10 +99,10 @@ func (h *Handler) RemoveMember(c *echo.Context) error {
 		PersonID string `json:"person_id"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return apperr.Respond(c, 400, apperr.ErrInvalidBody)
+		return apperr.Respond(c, 400, apperr.BindError(err))
 	}
 	if body.PersonID == "" {
-		return apperr.Respond(c, 400, ErrPersonRequired)
+		return apperr.Respond(c, 400, ErrPersonRequired.With("field", "person_id"))
 	}
 	if err := h.membershipSvc.Remove(teamID, body.PersonID); err != nil {
 		return apperr.Respond(c, 400, err)

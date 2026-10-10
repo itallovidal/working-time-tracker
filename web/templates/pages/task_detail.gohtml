@@ -201,7 +201,7 @@
         <template x-if="task && (links().length === 0 || linkable().length > 0)">
           <section class="card integration-card">
             <div class="card-head"><h2>{{.T "task_detail.external"}}</h2></div>
-            <form class="stack" @submit.prevent="link()">
+            <form class="stack" novalidate @submit.prevent="link()">
               <p class="muted small" x-show="integrations.length === 0">
                 {{.T "task_detail.no_integrations"}}
                 {{if .Can "integrations.manage"}}<a href="/projects/{{.Project.ID}}/management/integrations">{{.T "task_detail.configure"}}</a>{{else}}{{.T "task_detail.ask_admin"}}{{end}}
@@ -210,21 +210,29 @@
                 <div class="stack">
                   <div class="field">
                     <label for="td-integration">{{.T "task_detail.integration"}}</label>
-                    <select id="td-integration" x-model="linkForm.integration_id">
+                    <select id="td-integration" data-field="integration_id" aria-required="true" x-model="linkForm.integration_id" @change="clearField('integration_id')"
+                            :aria-invalid="fieldErrors.integration_id ? 'true' : 'false'">
                       <template x-for="i in linkable()" :key="i.id">
                         <option :value="i.id" x-text="i.display_name + ' (' + typeLabel(i.type) + ')'" :selected="i.id === linkForm.integration_id"></option>
                       </template>
                     </select>
+                    {{template "field_error" "integration_id"}}
                   </div>
                   {{/* O que identifica o item muda com a plataforma: o número da issue, o cartão. */}}
                   <div class="field">
                     <label for="td-item" x-text="linkType().item_label || $t('tasks.item')">{{.T "tasks.item"}}</label>
-                    <input id="td-item" type="text" autocomplete="off" :inputmode="linkType().item_numeric ? 'numeric' : 'text'"
-                           :placeholder="linkType().item_placeholder || ''" x-model="linkForm.external_item_id">
+                    <input id="td-item" type="text" autocomplete="off" maxlength="{{limit "external_item"}}" data-field="external_item_id" aria-required="true"
+                           :inputmode="linkType().item_numeric ? 'numeric' : 'text'" :placeholder="linkType().item_placeholder || ''"
+                           x-model="linkForm.external_item_id" @input="clearField('external_item_id')"
+                           :aria-invalid="fieldErrors.external_item_id ? 'true' : 'false'">
+                    {{template "field_error" "external_item_id"}}
                   </div>
                   <div class="field">
                     <label for="td-url">{{.T "task_detail.link"}}</label>
-                    <input id="td-url" type="url" placeholder="https://…" x-model="linkForm.external_item_url">
+                    <input id="td-url" type="url" autocomplete="off" maxlength="{{limit "item_url"}}" data-field="external_item_url" aria-required="true" placeholder="https://…"
+                           x-model="linkForm.external_item_url" @input="clearField('external_item_url')"
+                           :aria-invalid="fieldErrors.external_item_url ? 'true' : 'false'">
+                    {{template "field_error" "external_item_url"}}
                   </div>
                   <p class="form-error" x-show="errors.link" x-text="errors.link" role="alert"></p>
                   <button type="submit" class="btn btn-secondary" :disabled="pending">{{.T "task_detail.link_action"}}</button>
@@ -260,8 +268,11 @@
       {{template "task_priority" .}}
       {{template "task_assignee" .}}
       <div class="field">
-        <label for="task-deadline">{{.T "tasks.col_deadline"}}</label>
-        <input id="task-deadline" type="date" x-model="draft.deadline">
+        {{template "field_label" (dict "D" . "For" "task-deadline" "Key" "tasks.col_deadline" "Optional" true)}}
+        <input id="task-deadline" type="date" min="1971-01-01" data-field="deadline" x-model="draft.deadline" @input="clearField('deadline')"
+               :aria-invalid="fieldErrors.deadline ? 'true' : 'false'">
+        {{template "field_error" "deadline"}}
+        <span class="hint">{{.T "task_detail.deadline_clear_hint"}}</span>
       </div>
       {{template "task_labels" .}}
       <p class="form-error" x-show="errors.details" x-text="errors.details" role="alert"></p>
@@ -274,7 +285,7 @@
 
   {{/* Excluir tarefa: a lixeira do cabeçalho abre este pedido de confirmação. */}}
   <template x-teleport="#modal-root">
-    <form class="stack" x-show="$store.modal.name === 'task-delete'" @submit.prevent="remove()">
+    <form class="stack" novalidate x-show="$store.modal.name === 'task-delete'" @submit.prevent="remove()">
       <p>{{.T "task_detail.delete_confirm"}}</p>
       {{/* Uma caixa para cada plataforma em que a tarefa está: marcada, a exclusão também vale lá (o GitHub apaga a
            issue, o Trello arquiva o cartão). Todas começam desmarcadas, e sem nada marcado só a tarefa sai. */}}

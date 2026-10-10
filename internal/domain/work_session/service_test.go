@@ -329,7 +329,7 @@ func TestService_ClockIn_RequiresRate(t *testing.T) {
 	// Ter valor em outro projeto não libera este.
 	setRate(t, other.ID.String(), p.ID.String(), 2000)
 
-	if _, err := wsSvc.ClockIn(proj.ID.String(), task1.ID.String(), p.ID.String()); err != work_session.ErrNoRate {
+	if _, err := wsSvc.ClockIn(proj.ID.String(), task1.ID.String(), p.ID.String()); !errors.Is(err, work_session.ErrNoRate) {
 		t.Fatalf("clock in without a rate: err = %v, want ErrNoRate", err)
 	}
 	if active, _ := wsSvc.Active(p.ID.String()); active != nil {
@@ -386,7 +386,7 @@ func TestService_ClockIn_OwnerWorksAtTheBilledRate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create task 2: %v", err)
 	}
-	if _, err := wsSvc.ClockIn(proj.ID.String(), task2.ID.String(), other.ID.String()); err != work_session.ErrNoRate {
+	if _, err := wsSvc.ClockIn(proj.ID.String(), task2.ID.String(), other.ID.String()); !errors.Is(err, work_session.ErrNoRate) {
 		t.Errorf("a non-owner without a rate: err = %v, want ErrNoRate", err)
 	}
 }

@@ -1,6 +1,15 @@
 // Componentes das páginas públicas: login, signup, aceite de convite e a volta do Clerk.
 document.addEventListener('alpine:init', () => {
-  const { api, form, t } = WTT;
+  const { api, form, t, rules } = WTT;
+
+  // passwordRule confere uma senha nova como o servidor: pelo menos 8 caracteres e, no máximo, 72 bytes (o limite
+  // do bcrypt). Não apara: o espaço faz parte da senha. Vazio também erra, com o mesmo texto de "curta demais".
+  const passwordRule = (v) => {
+    const s = String(v === null || v === undefined ? '' : v);
+    if (Array.from(s).length < 8) return t('errors.auth.weak_password');
+    if (new TextEncoder().encode(s).length > 72) return t('errors.auth.long_password');
+    return '';
+  };
 
   // ---------- Clerk no navegador ----------
   // Com as chaves do Clerk no servidor (WTT.boot.clerk), o login, o cadastro e o convite oferecem também o Google,
@@ -162,8 +171,11 @@ document.addEventListener('alpine:init', () => {
     },
     otherAccount() { return leaveClerk(); },
     submit() {
+      // O login só exige preenchido: o formato do email e o tamanho da senha são do servidor, que responde sempre
+      // o mesmo erro para não dizer o que existe.
+      if (!this.check({ email: [this.email, rules.required], password: [this.password, rules.required] })) return undefined;
       return this.run('login', async () => {
-        await api('POST', '/api/auth/login', { email: this.email, password: this.password });
+        await api('POST', '/api/auth/login', { email: this.email.trim(), password: this.password });
         location.href = WTT.boot.next || '/';
       });
     },
@@ -196,18 +208,23 @@ document.addEventListener('alpine:init', () => {
         && (this.confirmTouched || this.confirmation.length >= this.password.length);
     },
     async next() {
-      // O required não enxerga espaço em branco: apara os dois campos e deixa o navegador conferir de novo, para
-      // um nome só de espaços não passar para a etapa 2 e só falhar no servidor, onde o campo não está à vista.
+      // Apara os dois campos e confere como o servidor, para um nome só de espaços ou comprido demais não passar
+      // para a etapa 2 e só falhar lá, onde o campo não está à vista.
       this.organization_name = this.organization_name.trim();
       this.name = this.name.trim();
-      await this.$nextTick();
-      if (!this.$refs.form.reportValidity()) return;
+      const ok = this.check({
+        organization_name: [this.organization_name, rules.required, rules.max('name')],
+        country: [this.country, rules.required],
+        name: [this.name, rules.required, rules.max('name')],
+      });
+      if (!ok) return;
       // O primeiro campo de cada etapa se foca sozinho ao entrar (x-init no template): o autofocus não vale para
       // campo que entra depois do carregamento.
       this.step = 2;
     },
     back() {
       this.errors.signup = '';
+      this.clearFields();
       this.step = 1;
     },
     async init() {
@@ -228,6 +245,12 @@ document.addEventListener('alpine:init', () => {
     submit() {
       // Enter ou o botão: na etapa 1 avança, na 2 cria a conta.
       if (this.step === 1) return this.next();
+      this.email = this.email.trim();
+      const ok = this.check({
+        email: [this.email, rules.required, rules.email, rules.max('email')],
+        password: [this.password, passwordRule],
+      });
+      if (!ok) return undefined;
       // A confirmação é só da tela: o servidor recebe uma senha, e esta conferência impede que um erro de digitação
       // vire uma conta que ninguém consegue abrir.
       if (this.confirmation !== this.password) {
@@ -297,6 +320,14 @@ document.addEventListener('alpine:init', () => {
       }
     },
     submit() {
+      this.name = this.name.trim();
+      this.email = this.email.trim();
+      const ok = this.check({
+        name: [this.name, rules.required, rules.max('name')],
+        email: [this.email, rules.required, rules.email, rules.max('email')],
+        password: [this.password, passwordRule],
+      });
+      if (!ok) return undefined;
       return this.run('accept', async () => {
         await api('POST', '/api/auth/invites/' + encodeURIComponent(WTT.boot.token) + '/accept', {
           name: this.name,
@@ -378,16 +409,28 @@ document.addEventListener('alpine:init', () => {
       location.replace(WTT.boot.next || '/');
     },
     submitPassword() {
+      if (!this.check({ password: [this.password, rules.required] })) return undefined;
       return this.run('password', async () => {
         await this.finish(await this.call('/api/auth/clerk/login', { invite_token: WTT.boot.invite || '', password: this.password }));
       });
     },
     join(inv) {
+      // O nome é opcional: sem ele o servidor usa o do Clerk.
+      this.name = this.name.trim();
+      if (!this.check({ name: [this.name, rules.max('name')] })) return undefined;
       return this.run('choose', async () => {
         await this.finish(await this.call('/api/auth/clerk/join', { invite_id: inv.id, name: this.name }));
       });
     },
     createOrg() {
+      this.organization_name = this.organization_name.trim();
+      this.name = this.name.trim();
+      const ok = this.check({
+        organization_name: [this.organization_name, rules.required, rules.max('name')],
+        country: [this.country, rules.required],
+        name: [this.name, rules.max('name')],
+      });
+      if (!ok) return undefined;
       return this.run('choose', async () => {
         await this.finish(await this.call('/api/auth/clerk/signup', { organization_name: this.organization_name, country: this.country, name: this.name }));
       });

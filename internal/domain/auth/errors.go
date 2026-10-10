@@ -14,6 +14,7 @@ var (
 	ErrInviteInvalid       = apperr.New("auth.invite_invalid", http.StatusNotFound)
 	ErrInviteEmailMismatch = apperr.New("auth.invite_email_mismatch", http.StatusBadRequest)
 	ErrWrongPassword       = apperr.New("auth.wrong_password", http.StatusBadRequest)
+	ErrSamePassword        = apperr.New("auth.same_password", http.StatusBadRequest)
 	ErrAccountExists       = apperr.New("auth.account_exists", http.StatusConflict)
 	ErrNameRequired        = apperr.New("auth.name_required", http.StatusBadRequest)
 	ErrOrgNameRequired     = apperr.New("auth.org_name_required", http.StatusBadRequest)

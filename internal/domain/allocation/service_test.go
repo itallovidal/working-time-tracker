@@ -2,14 +2,17 @@ package allocation_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/google/uuid"
 
+	"working-time-tracker/internal/apperr"
 	"working-time-tracker/internal/domain/allocation"
 	"working-time-tracker/internal/domain/organization"
 	"working-time-tracker/internal/domain/person"
 	"working-time-tracker/internal/domain/project"
+	"working-time-tracker/internal/validate"
 	"working-time-tracker/testutil"
 )
 
@@ -110,19 +113,30 @@ func TestService_SetTwiceUpdates(t *testing.T) {
 func TestService_Validation(t *testing.T) {
 	f := setup(t)
 
-	for _, cents := range []int{-1, allocation.MaxRateCents + 1} {
-		if _, err := f.svc.Set(f.projectX, f.bruno, cents); err != allocation.ErrInvalidRate {
-			t.Errorf("rate %d: err = %v, want ErrInvalidRate", cents, err)
+	// O teto e o piso: 0 e 1.000.000,00 valem, -1 e o teto + 1 não, e o erro diz o campo.
+	for _, cents := range []int{0, validate.MaxCents} {
+		if _, err := f.svc.Set(f.projectX, f.bruno, cents); err != nil {
+			t.Errorf("rate %d: err = %v, want none", cents, err)
 		}
+	}
+	for _, cents := range []int{-1, validate.MaxCents + 1} {
+		_, err := f.svc.Set(f.projectX, f.bruno, cents)
+		var e *apperr.Error
+		if !errors.Is(err, allocation.ErrInvalidRate) || !errors.As(err, &e) || e.Params["field"] != "pay_rate_cents" {
+			t.Errorf("rate %d: err = %v, want ErrInvalidRate with field pay_rate_cents", cents, err)
+		}
+	}
+	if allocation.MaxRateCents != validate.MaxCents {
+		t.Errorf("MaxRateCents = %d, want validate.MaxCents", allocation.MaxRateCents)
 	}
 
 	// Pessoa de outra organização não entra no projeto.
 	other, _ := organization.NewService(organization.NewStore(testClient)).Create("Outra")
 	outsider, _ := f.personSvc.Create(other.ID.String(), "Caio", "caio@outra.com")
-	if _, err := f.svc.Set(f.projectX, outsider.ID.String(), 1000); err != allocation.ErrPersonNotInOrg {
+	if _, err := f.svc.Set(f.projectX, outsider.ID.String(), 1000); !errors.Is(err, allocation.ErrPersonNotInOrg) {
 		t.Errorf("outsider: err = %v, want ErrPersonNotInOrg", err)
 	}
-	if _, err := f.svc.Set(f.projectX, "não-é-uuid", 1000); err != allocation.ErrPersonNotInOrg {
+	if _, err := f.svc.Set(f.projectX, "não-é-uuid", 1000); !errors.Is(err, allocation.ErrPersonNotInOrg) {
 		t.Errorf("bad id: err = %v, want ErrPersonNotInOrg", err)
 	}
 }

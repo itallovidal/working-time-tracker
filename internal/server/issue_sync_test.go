@@ -429,7 +429,7 @@ func TestIssueSync_PublishTask(t *testing.T) {
 	}
 
 	// Postar de novo a mesma tarefa não vale.
-	if rec = publish(first, integ, member.session); rec.Code != http.StatusBadRequest || errorCode(t, rec) != "task.already_linked" {
+	if rec = publish(first, integ, member.session); rec.Code != http.StatusConflict || errorCode(t, rec) != "task.already_linked" {
 		t.Errorf("publish twice = %d %s", rec.Code, rec.Body.String())
 	}
 
