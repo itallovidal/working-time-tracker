@@ -220,7 +220,6 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 
 | Código | Status | Parâmetros | pt-BR | en |
 |---|---|---|---|---|
-| `person.admin_has_all_permissions` | 400 | — | `os admins já têm todas as permissões` | `admins already have every permission` |
 | `person.email_in_use` | 409 | — | `este email já está em uso` | `this email is already in use` |
 | `person.email_required` | 400 | — | `informe o email` | `enter the email` |
 | `person.invalid_email` | 400 | — | `informe um email válido` | `enter a valid email` |
@@ -228,7 +227,6 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `person.invalid_payment_day` | 400 | — | `o dia do pagamento deve ficar entre 1 e 31` | `the payment day must be between 1 and 31` |
 | `person.invalid_payment_frequency` | 400 | — | `a frequência de pagamento deve ser mensal ou quinzenal` | `the payment must be monthly or biweekly` |
 | `person.invalid_payment_start` | 400 | — | `informe uma data de início válida para o pagamento quinzenal` | `enter a valid start date for the biweekly payment` |
-| `person.invalid_permission` | 400 | — | `permissão da organização desconhecida` | `unknown organization permission` |
 | `person.invalid_role` | 400 | — | `papel inválido: use admin ou member` | `invalid role: use admin or member` |
 | `person.invalid_week_hours` | 400 | — | `a jornada semanal deve ficar entre 0 e 168 horas (0 apaga a jornada)` | `the weekly hours must be between 0 and 168 (0 clears them)` |
 | `person.last_admin` | 400 | — | `a organização precisa de pelo menos um admin` | `the organization needs at least one admin` |
