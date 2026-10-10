@@ -6,10 +6,12 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	"working-time-tracker/internal/validate"
 )
 
-// MaxRateCents é o teto de um valor por hora: 1.000.000,00.
-const MaxRateCents = 100_000_000
+// MaxRateCents é o teto de um valor por hora: 1.000.000,00. É validate.MaxCents, que fica num lugar só.
+const MaxRateCents = validate.MaxCents
 
 type Person struct {
 	ID    uuid.UUID `json:"id"`

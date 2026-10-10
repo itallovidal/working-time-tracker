@@ -31,15 +31,27 @@ func NewHandler(svc *Service, enroller OwnerEnroller) *Handler {
 func (h *Handler) Create(c *echo.Context) error {
 	orgID := c.Param("orgId")
 	var body struct {
-		Name               string `json:"name"`
-		Description        string `json:"description"`
-		SprintDurationDays int    `json:"sprint_duration_days"`
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		// SprintDurationDays ausente vale 14; um 0 enviado é recusado, igual na edição.
+		SprintDurationDays *int `json:"sprint_duration_days"`
+		// CustomerID é opcional: com ele o projeto já nasce com o cliente, e a reunião com o cliente vale.
+		CustomerID string `json:"customer_id"`
 		Routine
 	}
 	if err := c.Bind(&body); err != nil {
-		return apperr.Respond(c, 400, apperr.ErrInvalidBody)
+		return apperr.Respond(c, 400, apperr.BindError(err))
 	}
-	project, err := h.svc.Create(orgID, body.Name, body.Description, body.SprintDurationDays, body.Routine)
+	sprint := 0
+	if body.SprintDurationDays != nil {
+		if sprint = *body.SprintDurationDays; sprint == 0 {
+			return apperr.Respond(c, 400, ErrInvalidSprint.With("field", "sprint_duration_days"))
+		}
+	}
+	project, err := h.svc.CreateWithCustomer(orgID, CreateInput{
+		Name: body.Name, Description: body.Description, SprintDurationDays: sprint,
+		Routine: body.Routine, CustomerID: body.CustomerID,
+	})
 	if err != nil {
 		return apperr.Respond(c, 400, err)
 	}
@@ -112,13 +124,14 @@ func (h *Handler) Get(c *echo.Context) error {
 func (h *Handler) Update(c *echo.Context) error {
 	id := c.Param("projectId")
 	var body struct {
-		Name               string `json:"name"`
-		Description        string `json:"description"`
-		SprintDurationDays int    `json:"sprint_duration_days"`
+		Name string `json:"name"`
+		// Description e SprintDurationDays ausentes mantêm o valor atual; Description "" apaga.
+		Description        *string `json:"description"`
+		SprintDurationDays *int    `json:"sprint_duration_days"`
 		Routine
 	}
 	if err := c.Bind(&body); err != nil {
-		return apperr.Respond(c, 400, apperr.ErrInvalidBody)
+		return apperr.Respond(c, 400, apperr.BindError(err))
 	}
 	project, err := h.svc.Update(id, body.Name, body.Description, body.SprintDurationDays, body.Routine)
 	if err != nil {
@@ -146,7 +159,7 @@ func (h *Handler) SetBilling(c *echo.Context) error {
 		BillRateCents *int    `json:"bill_rate_cents"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return apperr.Respond(c, 400, apperr.ErrInvalidBody)
+		return apperr.Respond(c, 400, apperr.BindError(err))
 	}
 	billing, err := h.svc.SetBilling(c.Param("projectId"), body.CustomerID, body.BillRateCents)
 	if err != nil {

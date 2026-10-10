@@ -1,6 +1,7 @@
 package customer
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/labstack/echo/v5"
@@ -18,8 +19,12 @@ func NewHandler(svc *Service) *Handler {
 }
 
 func fail(c *echo.Context, err error) error {
-	if err == database.ErrNotFound {
+	switch {
+	case errors.Is(err, database.ErrNotFound):
 		return apperr.Respond(c, http.StatusNotFound, ErrNotFound)
+	case errors.Is(err, ErrHasProjects):
+		// Conflito com o estado atual (o cliente ainda tem projetos), não um corpo mal formado.
+		return apperr.Respond(c, http.StatusConflict, err)
 	}
 	return apperr.Respond(c, http.StatusBadRequest, err)
 }
@@ -27,7 +32,7 @@ func fail(c *echo.Context, err error) error {
 func (h *Handler) Create(c *echo.Context) error {
 	var body Input
 	if err := c.Bind(&body); err != nil {
-		return apperr.Respond(c, http.StatusBadRequest, apperr.ErrInvalidBody)
+		return apperr.Respond(c, http.StatusBadRequest, apperr.BindError(err))
 	}
 	customer, err := h.svc.Create(c.Param("orgId"), body)
 	if err != nil {
@@ -55,7 +60,7 @@ func (h *Handler) Get(c *echo.Context) error {
 func (h *Handler) Update(c *echo.Context) error {
 	var body Input
 	if err := c.Bind(&body); err != nil {
-		return apperr.Respond(c, http.StatusBadRequest, apperr.ErrInvalidBody)
+		return apperr.Respond(c, http.StatusBadRequest, apperr.BindError(err))
 	}
 	customer, err := h.svc.Update(c.Param("customerId"), body)
 	if err != nil {

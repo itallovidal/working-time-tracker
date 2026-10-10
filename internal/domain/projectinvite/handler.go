@@ -11,6 +11,7 @@ import (
 	"working-time-tracker/internal/domain/auth"
 	"working-time-tracker/internal/domain/permission"
 	"working-time-tracker/internal/domain/team"
+	"working-time-tracker/internal/validate"
 )
 
 type Handler struct {
@@ -35,7 +36,7 @@ func (h *Handler) Create(c *echo.Context) error {
 		Preset       string `json:"preset"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return apperr.Respond(c, http.StatusBadRequest, apperr.ErrInvalidBody)
+		return apperr.Respond(c, http.StatusBadRequest, apperr.BindError(err))
 	}
 	projectID := c.Param("projectId")
 	can := auth.ProjectPermissions(c)
@@ -43,21 +44,21 @@ func (h *Handler) Create(c *echo.Context) error {
 		return apperr.Respond(c, http.StatusForbidden, auth.ErrPermissionRequired)
 	}
 	if body.PayRateCents == nil {
-		return apperr.Respond(c, http.StatusBadRequest, allocation.ErrRateRequired)
+		return apperr.Respond(c, http.StatusBadRequest, allocation.ErrRateRequired.With("field", "pay_rate_cents"))
 	}
-	if *body.PayRateCents < 0 || *body.PayRateCents > allocation.MaxRateCents {
-		return apperr.Respond(c, http.StatusBadRequest, allocation.ErrInvalidRate)
+	if validate.Money("pay_rate_cents", *body.PayRateCents) != nil {
+		return apperr.Respond(c, http.StatusBadRequest, allocation.ErrInvalidRate.With("field", "pay_rate_cents"))
 	}
 
 	setup := auth.ProjectSetup{ProjectID: uuid.MustParse(projectID), PayRateCents: body.PayRateCents}
 	if body.Preset != "" && body.Preset != permission.PresetMember {
 		preset, ok := permission.PresetByID(body.Preset)
 		if !ok {
-			return apperr.Respond(c, http.StatusBadRequest, allocation.ErrInvalidPreset)
+			return apperr.Respond(c, http.StatusBadRequest, allocation.ErrInvalidPreset.With("field", "preset"))
 		}
 		for _, k := range preset.Permissions {
 			if !can.Has(k) {
-				return apperr.Respond(c, http.StatusForbidden, allocation.ErrAbovePermission)
+				return apperr.Respond(c, http.StatusForbidden, allocation.ErrAbovePermission.With("field", "preset"))
 			}
 		}
 		setup.Preset = preset.ID
@@ -68,11 +69,11 @@ func (h *Handler) Create(c *echo.Context) error {
 		}
 		teamID, err := uuid.Parse(body.TeamID)
 		if err != nil {
-			return apperr.Respond(c, http.StatusBadRequest, ErrTeamNotInProject)
+			return apperr.Respond(c, http.StatusBadRequest, ErrTeamNotInProject.With("field", "team_id"))
 		}
 		t, err := h.teams.Get(body.TeamID)
 		if err != nil || t.ProjectID.String() != projectID {
-			return apperr.Respond(c, http.StatusBadRequest, ErrTeamNotInProject)
+			return apperr.Respond(c, http.StatusBadRequest, ErrTeamNotInProject.With("field", "team_id"))
 		}
 		setup.TeamID = &teamID
 	}

@@ -71,7 +71,7 @@ func (s *Store) Update(t *Team) error {
 func (s *Store) Delete(id string) error {
 	uid, err := uuid.Parse(id)
 	if err != nil {
-		return err
+		return database.ErrNotFound
 	}
 	return s.client.Team.DeleteOneID(uid).Exec(context.Background())
 }

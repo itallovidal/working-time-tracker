@@ -1,6 +1,7 @@
 package customer_test
 
 import (
+	"errors"
 	"testing"
 
 	"working-time-tracker/internal/domain/customer"
@@ -46,7 +47,7 @@ func TestService_Country(t *testing.T) {
 		"an unknown country":       {customer.Input{Name: ptr("X"), Country: ptr("ZZ")}, customer.ErrInvalidCountry},
 		"a country name, not code": {customer.Input{Name: ptr("X"), Country: ptr("Brasil")}, customer.ErrInvalidCountry},
 	} {
-		if _, err := svc.Create(orgID, c.in); err != c.want {
+		if _, err := svc.Create(orgID, c.in); !errors.Is(err, c.want) {
 			t.Errorf("%s: err = %v, want %v", name, err, c.want)
 		}
 	}
@@ -75,7 +76,7 @@ func TestService_Update_ChangingTheCountryChecksTheStoredDocument(t *testing.T) 
 	}
 	id := c.ID.String()
 
-	if _, err := svc.Update(id, customer.Input{Country: ptr("US")}); err != customer.ErrInvalidDocument {
+	if _, err := svc.Update(id, customer.Input{Country: ptr("US")}); !errors.Is(err, customer.ErrInvalidDocument) {
 		t.Fatalf("a CNPJ under a US customer: err = %v, want ErrInvalidDocument", err)
 	}
 	if got, _ := svc.Get(id); got.Country != "BR" || got.Document != "11222333000181" {
@@ -102,8 +103,18 @@ func TestService_Update_ChangingTheCountryChecksTheStoredDocument(t *testing.T) 
 		t.Errorf("after US→BR = %q %q, want BR and no document", got.Country, got.Document)
 	}
 
-	// O país nunca fica sem valor: vazio, na edição, é inválido.
-	if _, err := svc.Update(id, customer.Input{Country: ptr("")}); err != customer.ErrInvalidCountry {
-		t.Errorf("an empty country on update: err = %v, want ErrInvalidCountry", err)
+	// O país nunca fica sem valor, e vazio vale o mesmo na criação e na edição: o país da organização.
+	if _, err := svc.Update(id, customer.Input{Country: ptr("DE")}); err != nil {
+		t.Fatalf("switch to DE: %v", err)
+	}
+	orgs := organization.NewService(organization.NewStore(testClient))
+	if _, err := orgs.Update(orgID, organization.UpdateInput{Country: ptr("US")}); err != nil {
+		t.Fatalf("switch the organization to the US: %v", err)
+	}
+	if _, err := svc.Update(id, customer.Input{Country: ptr("  ")}); err != nil {
+		t.Fatalf("an empty country on update: %v", err)
+	}
+	if got, _ := svc.Get(id); got.Country != "US" {
+		t.Errorf("an empty country on update = %q, want the organization's (US)", got.Country)
 	}
 }
