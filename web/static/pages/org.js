@@ -55,13 +55,14 @@ document.addEventListener('alpine:init', () => {
     ...form(),
     customers: null, // só carregados quando o modal de novo projeto abre pela primeira vez
     draft: blankProject(),
-    // openCreate abre o modal de novo projeto. Só admins criam projeto, e só eles podem
-    // listar os clientes; por isso a lista vem aqui, e não no init.
+    // openCreate abre o modal de novo projeto. Só admins criam projeto, e só o dono pode listar os clientes e
+    // definir um (o admin cria só projeto interno); por isso a lista vem aqui, e não no init.
     async openCreate() {
       this.draft = blankProject();
       this.errors.create = '';
       this.clearFields();
       Alpine.store('modal').open('project', WTT.t('org.projects.new'), () => !this.pending);
+      if (!me.is_owner) { this.customers = []; return; }
       if (this.customers !== null) return;
       try {
         this.customers = (await api('GET', '/api/orgs/' + orgId + '/customers')) || [];
@@ -424,26 +425,20 @@ document.addEventListener('alpine:init', () => {
   const personEditor = () => ({
     me,
     editing: null, // a pessoa aberta no modal do colaborador
-    tab: 'payment', // a aba do modal: payment, permissions ou projects
+    tab: 'payment', // a aba do modal: payment ou projects
     tabs: [], // as abas que quem olha pode usar
     // O rascunho do modal: nada vai para o servidor antes de Salvar. projects são as linhas da aba de projetos:
     // { project_id, name, cents (o valor gravado, null na linha nova), rate (o texto do campo), isNew, removed }.
-    draft: { weekly_hours: '', payment: { frequency: '', day: '', start: '' }, permissions: [], projects: [] },
+    draft: { weekly_hours: '', payment: { frequency: '', day: '', start: '' }, projects: [] },
     addForm: { project_id: '', rate: '' }, // o projeto e o valor escolhidos para a pessoa entrar
     allProjects: null, // os projetos da organização, buscados na primeira vez que o modal abre para um admin
     projectsState: 'idle', // idle, loading, ready ou error
-    orgKeys: [], // as permissões da organização do catálogo, para o dono liberar
-    // As permissões da organização só se liberam a quem não é admin, e só o dono as dá.
-    canGrant(person) {
-      return !!me.is_owner && !!person && person.role !== 'admin' && !person.is_owner;
-    },
-    // availableTabs são as abas que quem olha pode usar: a jornada (people.manage), as permissões da organização
-    // (só o dono) e os projetos com o valor por hora (só admins, que têm todas as permissões de projeto). Com uma só,
-    // o modal não mostra a faixa de abas.
+    // availableTabs são as abas que quem olha pode usar: a jornada e, para o dono, a regra de pagamento
+    // (people.manage) e os projetos com o valor por hora (só admins, que têm rates.manage em todos). Com uma só, o
+    // modal não mostra a faixa de abas.
     availableTabs() {
       return [
         WTT.can('people.manage') && 'payment',
-        me.is_owner && 'permissions',
         me.role === 'admin' && 'projects',
       ].filter(Boolean);
     },
@@ -463,14 +458,14 @@ document.addEventListener('alpine:init', () => {
       this.tab = this.tabs[next];
       this.$nextTick(() => this.$refs['tab-' + this.tab].focus());
     },
-    // openEdit abre o modal do colaborador: a jornada, as permissões e os projetos da pessoa. Ele edita um rascunho:
+    // openEdit abre o modal do colaborador: a jornada, a regra de pagamento (do dono) e os projetos da pessoa. Ele edita um rascunho:
     // nada vai para o servidor antes de Salvar. O papel muda direto na linha, pelo botão.
     openEdit(person) {
       this.editing = person;
       this.tabs = this.availableTabs();
       this.tab = this.tabs[0] || 'payment';
       const rule = person.payment || {};
-      this.draft = { weekly_hours: person.weekly_hours || '', payment: { frequency: rule.frequency || '', day: rule.day || '', start: rule.start || '' }, permissions: [...(person.permissions || [])], projects: [] };
+      this.draft = { weekly_hours: person.weekly_hours || '', payment: { frequency: rule.frequency || '', day: rule.day || '', start: rule.start || '' }, projects: [] };
       this.addForm = { project_id: '', rate: '' };
       this.projectsState = 'idle';
       this.errors.edit = '';
@@ -584,7 +579,7 @@ document.addEventListener('alpine:init', () => {
       if (d.frequency === 'biweekly') return { frequency: 'biweekly', start: d.start };
       return { frequency: '' };
     },
-    // savePerson aplica o rascunho com as rotas que já existiam: a jornada, as permissões e, projeto a projeto, o valor
+    // savePerson aplica o rascunho com as rotas que já existiam: a jornada, a regra de pagamento e, projeto a projeto, o valor
     // ou a saída. Cada chamada que dá certo vira o novo ponto de partida; se uma falhar, o que já foi aplicado continua
     // valendo e o modal fica aberto com o erro. Salvar de novo só repete o que faltou.
     savePerson() {
@@ -593,12 +588,14 @@ document.addEventListener('alpine:init', () => {
         const { rules } = WTT;
         const text = String(this.draft.weekly_hours).trim();
         const hours = text === '' ? 0 : Number(text);
-        // A jornada e a regra só existem para quem gerencia pessoas; a aba delas vem à vista antes de conferir.
+        // A jornada existe para quem gerencia pessoas, e a regra de pagamento só para o dono; a aba delas vem à vista
+        // antes de conferir.
+        const paysRule = WTT.can('payments.manage');
         if (WTT.can('people.manage')) {
           const d = this.draft.payment;
           const spec = { weekly_hours: [text, rules.integer(0, 168, 'person.invalid_week_hours')] };
-          if (d.frequency === 'monthly') spec.day = [d.day, rules.required, rules.integer(1, 31)];
-          if (d.frequency === 'biweekly') spec.start = [d.start, rules.required, rules.date];
+          if (paysRule && d.frequency === 'monthly') spec.day = [d.day, rules.required, rules.integer(1, 31)];
+          if (paysRule && d.frequency === 'biweekly') spec.start = [d.start, rules.required, rules.date];
           if (!this.check(spec)) {
             if (this.tabs.includes('payment')) this.tab = 'payment';
             return;
@@ -611,14 +608,9 @@ document.addEventListener('alpine:init', () => {
           const updated = await api('PATCH', '/api/persons/' + person.id + '/weekly-hours', { weekly_hours: hours });
           person.weekly_hours = updated.weekly_hours;
         }
-        if (WTT.can('people.manage') && JSON.stringify(pay) !== JSON.stringify(this.paymentBody(person.payment || {}))) {
+        if (paysRule && JSON.stringify(pay) !== JSON.stringify(this.paymentBody(person.payment || {}))) {
           const updated = await api('PATCH', '/api/persons/' + person.id + '/payment', pay);
           person.payment = updated.payment;
-        }
-        const before = [...(person.permissions || [])].sort().join();
-        if (this.canGrant(person) && [...this.draft.permissions].sort().join() !== before) {
-          const updated = await api('PATCH', '/api/persons/' + person.id + '/permissions', { permissions: this.draft.permissions });
-          person.permissions = updated.permissions;
         }
         for (const { row, remove, cents } of projects) {
           const base = '/api/projects/' + row.project_id;
@@ -657,14 +649,12 @@ document.addEventListener('alpine:init', () => {
     lastEmail: '',
     async init() {
       try {
-        const [people, invites, catalog] = await Promise.all([
+        const [people, invites] = await Promise.all([
           api('GET', '/api/orgs/' + orgId + '/persons'),
           api('GET', '/api/orgs/' + orgId + '/invites'),
-          me.is_owner ? api('GET', '/api/permissions') : null,
         ]);
         this.people = people || [];
         this.invites = invites || [];
-        if (catalog) this.orgKeys = catalog.organization;
       } catch (e) {
         this.errors.load = e.message;
       } finally {
@@ -807,7 +797,7 @@ document.addEventListener('alpine:init', () => {
       const hours = this.person && this.person.weekly_hours;
       const v = { ...up, seconds: 0, amount_cents: 0, projects: [], days_left: undefined };
       if (hours) v.goal_seconds = hours * 3600 * up.days / 7;
-      if (WTT.boot.me.role === 'admin') { v.revenue_cents = 0; v.margin_cents = 0; }
+      if (WTT.boot.me.is_owner) { v.revenue_cents = 0; v.margin_cents = 0; }
       return v;
     },
     lifetimeHint() {
@@ -825,7 +815,6 @@ document.addEventListener('alpine:init', () => {
     ...personEditor(),
     ...personProfile((WTT.boot.person || {}).id, false),
     init() {
-      if (me.is_owner) api('GET', '/api/permissions').then((catalog) => { this.orgKeys = catalog.organization; }).catch(() => {});
       return this.loadProfile();
     },
     // A jornada e a regra mudam os períodos, e os projetos mudam a tabela: depois de salvar, tudo é relido.

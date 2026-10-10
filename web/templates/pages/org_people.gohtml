@@ -18,7 +18,7 @@
     <div class="table-wrap" x-show="people.length > 0">
       <table>
         <thead>
-          <tr><th>{{.T "common.name"}}</th><th>{{.T "common.email"}}</th><th>{{.T "common.role"}}</th><th>{{.T "org.people.weekly_hours"}}</th>{{if .Can "people.manage"}}<th>{{.T "org.people.payment"}}</th>{{end}}<th class="actions"><span class="sr-only">{{.T "common.actions"}}</span></th></tr>
+          <tr><th>{{.T "common.name"}}</th><th>{{.T "common.email"}}</th><th>{{.T "common.role"}}</th><th>{{.T "org.people.weekly_hours"}}</th>{{if .Can "payments.manage"}}<th>{{.T "org.people.payment"}}</th>{{end}}<th class="actions"><span class="sr-only">{{.T "common.actions"}}</span></th></tr>
         </thead>
         <tbody>
           <template x-for="p in people" :key="p.id">
@@ -32,7 +32,7 @@
               <td class="muted" x-text="p.email"></td>
               <td><span class="badge" :class="p.role === 'admin' && 'badge-accent'" x-text="p.is_owner ? $t('roles.owner') : WTT.fmt.role(p.role)"></span></td>
               <td class="nowrap num" :class="!p.weekly_hours && 'muted'" x-text="WTT.fmt.weeklyHours(p.weekly_hours) || $t('labels.weekly_hours_none')"></td>
-              {{if .Can "people.manage"}}<td class="nowrap" :class="!p.payment && 'muted'" x-text="WTT.fmt.paymentRule(p.payment) || $t('labels.payment_none')"></td>{{end}}
+              {{if .Can "payments.manage"}}<td class="nowrap" :class="!p.payment && 'muted'" x-text="WTT.fmt.paymentRule(p.payment) || $t('labels.payment_none')"></td>{{end}}
               <td class="actions">
                 {{/* O papel só muda pelo dono, e o dono é sempre admin. */}}
                 <button type="button" class="btn btn-ghost btn-sm" :disabled="pending" x-show="me.is_owner && !p.is_owner"

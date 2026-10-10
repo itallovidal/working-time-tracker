@@ -11,7 +11,7 @@ document.addEventListener('alpine:init', () => {
   const byLabelName = (a, b) => a.name.localeCompare(b.name, WTT.lang);
 
   // Grupos de permissões que a API tem e as telas não oferecem.
-  const HIDDEN_PRESETS = ['finance'];
+  const HIDDEN_PRESETS = ['finance', 'admin'];
 
   // labelTools é o que as telas que escolhem etiquetas têm em comum: a lista do projeto e,
   // para admins, criar uma na hora. O rascunho de quem usa guarda os ids marcados.

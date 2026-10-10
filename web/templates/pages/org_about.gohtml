@@ -1,7 +1,7 @@
 {{define "content"}}
 <main class="page" x-data="orgAbout">
   {{/* A página Configurações é o perfil da organização, que todos leem; o resumo dela, quando há, é a frase do
-       cabeçalho. Só admins têm o Editar. */}}
+       cabeçalho. Só o dono tem o Editar. */}}
   <div class="page-head">
     <div>
       <div class="eyebrow" data-org-name>{{.Me.OrganizationName}}</div>
@@ -9,12 +9,12 @@
       {{$summary := ""}}{{with .Org}}{{$summary = .Summary}}{{end}}
       <p class="lede">{{if $summary}}{{$summary}}{{else}}{{.T "org.about.intro"}}{{end}}</p>
     </div>
-    {{if .IsAdmin}}<a class="btn btn-secondary" href="/orgs/{{.OrgID}}/settings">{{template "icon" "pen"}} {{.T "common.edit"}}</a>{{end}}
+    {{if .IsOwner}}<a class="btn btn-secondary" href="/orgs/{{.OrgID}}/settings">{{template "icon" "pen"}} {{.T "common.edit"}}</a>{{end}}
   </div>
 
   {{/* Os cartões ficam um embaixo do outro, na largura toda. */}}
   <div class="stack" x-cloak>
-    {{if .IsAdmin}}
+    {{if .IsOwner}}
     <p class="alert" x-show="isEmpty()">
       {{.T "org.about.empty_profile"}} <a href="/orgs/{{.OrgID}}/settings">{{.T "org.about.fill_profile"}}</a>
     </p>

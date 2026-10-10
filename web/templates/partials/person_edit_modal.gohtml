@@ -1,5 +1,5 @@
-{{/* person_edit_modal é o modal Editar colaborador, em abas: a jornada e a regra de pagamento, as permissões da
-     organização e os projetos com o valor por hora. Cada aba só existe para quem pode usá-la, e a faixa de abas só
+{{/* person_edit_modal é o modal Editar colaborador, em abas: a jornada (e, para o dono, a regra de pagamento) e os
+     projetos com o valor por hora. Cada aba só existe para quem pode usá-la, e a faixa de abas só
      aparece com duas ou mais. Nada vai para o servidor antes de Salvar, e um Salvar só aplica o rascunho de todas
      as abas. Abre na lista de colaboradores e no perfil de um deles; fica no escopo do componente que o inclui,
      que espalha personEditor() (org.js). */}}
@@ -22,11 +22,6 @@
               :aria-selected="(tab === 'payment').toString()" :tabindex="tab === 'payment' ? 0 : -1"
               @click="tab = 'payment'">{{template "icon" "hand-holding-dollar"}} {{.T "org.people.tab_payment"}}</button>
       {{end}}
-      {{if .IsOwner}}
-      <button type="button" role="tab" id="person-tab-permissions" aria-controls="person-panel-permissions" x-ref="tab-permissions"
-              :aria-selected="(tab === 'permissions').toString()" :tabindex="tab === 'permissions' ? 0 : -1"
-              @click="tab = 'permissions'">{{template "icon" "key"}} {{.T "org.people.tab_permissions"}}</button>
-      {{end}}
       {{if .IsAdmin}}
       <button type="button" role="tab" id="person-tab-projects" aria-controls="person-panel-projects" x-ref="tab-projects"
               :aria-selected="(tab === 'projects').toString()" :tabindex="tab === 'projects' ? 0 : -1"
@@ -46,6 +41,8 @@
       </select>
       {{template "field_error" "weekly_hours"}}
 
+      {{/* A regra de pagamento é dinheiro: só o dono a vê e a define. */}}
+      {{if .Can "payments.manage"}}
       {{template "field_label" (dict "D" . "For" "person-payment-frequency" "Key" "org.people.payment_label" "Optional" true)}}
       <select id="person-payment-frequency" data-field="frequency" x-model="draft.payment.frequency" @change="clearField('frequency'); clearField('day'); clearField('start')">
         <option value="">{{.T "org.people.payment_none"}}</option>
@@ -68,29 +65,7 @@
           <span class="hint">{{.T "org.people.payment_start_hint"}}</span>
         </div>
       </template>
-    </div>
-    {{end}}
-
-    {{/* As permissões da organização: só o dono libera, e só a quem não é admin. */}}
-    {{if .IsOwner}}
-    <div class="field" id="person-panel-permissions" role="tabpanel" aria-labelledby="person-tab-permissions" x-cloak x-show="tab === 'permissions' && editing">
-      <span class="field-label" id="person-permissions-label">{{.T "org.people.permissions_title"}}</span>
-      <p class="muted small" x-show="editing && editing.is_owner">{{.T "org.people.permissions_owner"}}</p>
-      <p class="muted small" x-show="editing && !editing.is_owner && editing.role === 'admin'">{{.T "org.people.permissions_admin"}}</p>
-      <ul class="list picker" x-show="canGrant(editing)">
-        <template x-for="k in orgKeys" :key="k">
-          <li>
-            <label class="pick">
-              <input type="checkbox" :value="k" x-model="draft.permissions">
-              <span class="grow">
-                <span x-text="$t('permissions.keys.' + k.replace('.', '_') + '.name')"></span>
-                <span class="muted small" x-text="$t('permissions.keys.' + k.replace('.', '_') + '.about')"></span>
-              </span>
-            </label>
-          </li>
-        </template>
-      </ul>
-      <span class="hint" x-show="canGrant(editing)">{{.T "org.people.permissions_hint"}}</span>
+      {{end}}
     </div>
     {{end}}
 

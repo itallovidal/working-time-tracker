@@ -202,27 +202,18 @@ permissions:
     integrations_manage:
       name: Manage integrations
       about: Connect GitHub, GitLab and Trello, and change or delete the connections.
-    projects_create:
-      name: Create projects
-      about: Create new projects in the organization.
-    customers_manage:
-      name: Manage customers
-      about: Register, change and delete the organization's customers.
-    people_manage:
-      name: Manage people
-      about: Invite people, revoke invites and set the weekly hours.
   presets:
     member:
       name: Collaborator
       about: Works on the project, sees their own tasks and their own clock.
     manager:
-      name: Project manager
+      name: Project administrator
       about: Runs the project, its teams, its people, its labels and its integrations.
     finance:
       name: Finance
       about: "Runs the project's money: hourly rates, customer and billing."
     admin:
-      name: Project administrator
+      name: Full administration
       about: Everything that can be done in this project.
     custom:
       name: Custom
@@ -566,7 +557,7 @@ help:
       tip_email: "The invitation is valid for 7 days and works once. If it is for an email, only that email can accept it, Google included. Inviting the same email again cancels the previous one. If the email does not arrive, the link is also shown on screen, and you can copy it and send it any way you like. Invitations not accepted yet stay under “Pending invitations”."
     rates:
       title: People on the project and the hourly rate
-      text: "Inviting is not enough: each person must be added to every project they will work on, with the amount they earn per hour there. Pick the person, enter the hourly rate (required), a team (optional) and the permission group: Collaborator, Project manager or Project administrator."
+      text: "Inviting is not enough: each person must be added to every project they will work on, with the amount they earn per hour there. Pick the person, enter the hourly rate (required), a team (optional) and the permission group: Collaborator or Project administrator."
       tip: "Without an hourly rate, the person cannot start the clock. The rate can be different on each project and change later, but it only applies to new sessions."
     tasks:
       title: Create the tasks
@@ -685,12 +676,12 @@ help:
     roles:
       title: Who sees and does what
       text: "Each person sees only the projects they were put in, with an hourly rate (the owner and the admins see all of them). In those projects they read what it shows, create and edit tasks, and clock in for themselves. The rest depends on the role and the permissions."
-      owner: "Owner: who created the organization. Can do everything, and only the owner changes roles, invites admins, gives organization permissions and deletes the organization."
-      admin: "Admin: everything, on every project, except what is only for the owner."
-      member: "Member: the day to day, with more access only through permissions."
-      groups: "When you add someone to a project, you pick their group: “Collaborator” (no extra permissions), “Project manager” (runs the project, its teams, its people, its labels and its integrations) or “Project administrator” (everything on the project, billing included). The group only applies to that project."
-      org_perms: "The owner can also give people who are not admins organization permissions: create projects, look after customers and look after people. They unlock the “New project” button and the Customers and Collaborators pages."
-      money: "The rates paid to colleagues and the billing only show for whoever has permission to see them. Everyone always sees their own rate."
+      owner: "Owner: who created the organization. Can do everything, money included (customers, billed rate and payments), and only the owner changes roles, invites admins and deletes the organization."
+      admin: "Admin: creates internal projects, invites people and administers every project. Does not see customers, billing or payments."
+      member: "Collaborator: the day to day on the projects they were put in."
+      groups: "When you add someone to a project, you pick their group: “Collaborator” (no extra permissions) or “Project administrator” (runs the project, its teams, its people, its labels and its integrations). The group only applies to that project."
+      org_perms: "The pages follow the role: Customers and Payments are only for the owner, Collaborators is for the owner and the admins, and so is the “New project” button (an admin creates internal projects only)."
+      money: "The rates paid to colleagues only show for whoever runs the project, and billing and payments only for the owner. Everyone always sees their own rate."
       missing: "If a page, a tab or a button does not show up for you, you lack a permission: ask an admin."
     integrations:
       title: GitHub and Trello integrations
@@ -763,7 +754,6 @@ org:
     edit_label: "Edit {{.name}}"
     tabs_label: Collaborator details
     tab_payment: Payment
-    tab_permissions: Permissions
     tab_projects: Projects and rates
     payment: Payment
     payment_label: When to pay
@@ -790,11 +780,6 @@ org:
     rate_of: "Hourly rate on {{.project}} ({{.unit}})"
     new_rate_of: "Hourly rate on the chosen project ({{.unit}})"
     rate_invalid: "Enter the hourly rate on {{.project}}, for example 20.00."
-    permissions_title: Organization permissions
-    permissions_hint: Only the owner gives these, and they apply to every project. The permissions of each project are given when the person is added to it.
-    permissions_admin: Admins already have every organization permission.
-    permissions_owner: The owner has every permission.
-    permissions_saved: "{{.name}}'s permissions saved."
     intro: Who belongs to the organization. To put someone on a project and build the teams, use the project's Collaborators tab.
     add: Add collaborator
     loading: Loading collaborators…
@@ -1663,8 +1648,6 @@ errors:
     own_only: "you can only see your own payments, or any if you are an admin"
     invalid_history: "the history must be a whole number of periods, greater than zero"
   person:
-    admin_has_all_permissions: "admins already have every permission"
-    invalid_permission: "unknown organization permission"
     email_in_use: "this email is already in use"
     email_required: "enter the email"
     invalid_email: "enter a valid email"

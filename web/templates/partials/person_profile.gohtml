@@ -23,12 +23,15 @@
     <div class="stack">
       <p class="muted small" x-show="detail.owner">{{.T "collab.owner_rate_hint"}}</p>
       {{/* Sem regra não há período: o aviso diz a quem pedir (no meu perfil) ou deixa definir (no de um colaborador). */}}
+      {{/* A regra é dinheiro: só o dono a vê e a define no perfil de outra pessoa. */}}
+      {{if or (not .Person) (.Can "payments.manage")}}
       <div class="alert" role="status" x-show="!detail.owner && !detail.rule">
         <p>
           <span x-text="self ? $t('profile.no_rule') : $t('profile.no_rule_other')"></span>
           {{if .Person}}<button type="button" class="btn btn-secondary btn-sm" @click="openEdit(person)">{{.T "profile.set_rule"}}</button>{{end}}
         </p>
       </div>
+      {{end}}
 
       {{/* Três cartões lado a lado: quem é a pessoa, o período que corre e o que ela fez desde o início. O do período
            só existe com regra de pagamento, e o dono, que não é pago, fica com os outros dois. */}}
@@ -51,12 +54,14 @@
             <dd><span class="badge" :class="person && person.role === 'admin' && 'badge-accent'" x-text="person ? (person.is_owner ? $t('roles.owner') : WTT.fmt.role(person.role)) : ''"></span></dd>
             <dt>{{.T "profile.weekly"}}</dt>
             <dd x-text="person ? (WTT.fmt.weeklyHours(person.weekly_hours) || $t('profile.no_weekly_hours')) : ''"></dd>
+            {{if or (not .Person) (.Can "payments.manage")}}
             <template x-if="person && !person.is_owner">
               <div class="fact">
                 <dt>{{.T "profile.payment"}}</dt>
                 <dd x-text="WTT.fmt.paymentRule(person.payment) || $t('profile.no_payment_rule')"></dd>
               </div>
             </template>
+            {{end}}
           </dl>
         </section>
 

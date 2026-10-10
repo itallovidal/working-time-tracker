@@ -144,6 +144,8 @@
             </div>
           </div>
         </div>
+        {{/* O cliente e o valor cobrado são do faturamento: só quem tem billing.view os recebe. */}}
+        {{if .Can "billing.view"}}
         <dl class="facts">
           <div class="fact">
             <dt>{{.T "org.projects.customer"}}</dt>
@@ -154,6 +156,7 @@
             <dd class="num" :class="data.project.bill_rate_cents === null && 'muted'" x-text="data.project.bill_rate_cents === null ? $t('overview.no_bill_rate') : WTT.fmt.money(data.project.bill_rate_cents)"></dd>
           </div>
         </dl>
+        {{end}}
       </section>
     </div>
   </template>
@@ -191,6 +194,7 @@
             <div class="v" x-text="WTT.fmt.money(filteredAmount('pay'))"></div>
             <div class="k">{{.T "time.cost"}}</div>
           </div>
+          {{if .Can "billing.view"}}
           <div class="total">
             <div class="v" x-text="WTT.fmt.money(filteredAmount('bill'))"></div>
             <div class="k">{{.T "time.revenue"}}</div>
@@ -199,6 +203,7 @@
             <div class="v" :class="filteredMargin() < 0 && 'text-danger'" x-text="WTT.fmt.money(filteredMargin())"></div>
             <div class="k">{{.T "time.margin"}}<span x-show="filteredMarginShare() !== null" x-text="$t('overview.margin_share', { percent: filteredMarginShare() })"></span></div>
           </div>
+          {{end}}
         </div>
       </section>
 
@@ -207,7 +212,7 @@
         <table>
           <thead>
             <tr>
-              <th>{{.T "time.col_person"}}</th><th>{{.T "time.col_tasks"}}</th><th>{{.T "time.col_start"}}</th><th>{{.T "time.col_end"}}</th><th class="actions">{{.T "time.col_duration"}}</th><th class="actions">{{.T "time.cost"}}</th><th class="actions">{{.T "time.revenue"}}</th><th class="actions"><span class="sr-only">{{.T "time.col_details"}}</span></th>
+              <th>{{.T "time.col_person"}}</th><th>{{.T "time.col_tasks"}}</th><th>{{.T "time.col_start"}}</th><th>{{.T "time.col_end"}}</th><th class="actions">{{.T "time.col_duration"}}</th><th class="actions">{{.T "time.cost"}}</th>{{if .Can "billing.view"}}<th class="actions">{{.T "time.revenue"}}</th>{{end}}<th class="actions"><span class="sr-only">{{.T "time.col_details"}}</span></th>
             </tr>
           </thead>
           <tbody>
@@ -228,7 +233,7 @@
                 </td>
                 <td class="actions mono num" x-text="WTT.fmt.clock(seconds(s))"></td>
                 <td class="actions num" x-text="WTT.fmt.money(amount(s, 'pay'))"></td>
-                <td class="actions num" x-text="WTT.fmt.money(amount(s, 'bill'))"></td>
+                {{if .Can "billing.view"}}<td class="actions num" x-text="WTT.fmt.money(amount(s, 'bill'))"></td>{{end}}
                 <td class="actions"><button type="button" class="btn btn-ghost btn-sm" aria-label="{{.T "session.details"}}" title="{{.T "session.details"}}" @click="openSession(s)">{{template "icon" "eye"}}</button></td>
               </tr>
             </template>

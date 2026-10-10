@@ -212,28 +212,19 @@ permissions:
     integrations_manage:
       name: Cuidar das integrações
       about: Conectar o GitHub, o GitLab e o Trello, e alterar ou excluir as conexões.
-    projects_create:
-      name: Criar projetos
-      about: Criar projetos novos na organização.
-    customers_manage:
-      name: Cuidar dos clientes
-      about: Cadastrar, alterar e excluir os clientes da organização.
-    people_manage:
-      name: Cuidar das pessoas
-      about: Convidar pessoas, revogar convites e definir a jornada semanal.
   presets:
     member:
       name: Colaborador
       about: Trabalha no projeto, vê as próprias tarefas e o próprio ponto.
     manager:
-      name: Gerente de projeto
+      name: Administrador de projeto
       about: Cuida do projeto, dos times, das pessoas, das etiquetas e das integrações.
     finance:
       name: Financeiro
       about: "Cuida do dinheiro do projeto: valores por hora, cliente e faturamento."
     admin:
-      name: Administrador do projeto
-      about: Tudo o que dá para fazer neste projeto.
+      name: Administração completa
+      about: Tudo o que dá para fazer neste projeto, inclusive o faturamento. Fica guardado na API, fora das telas.
     custom:
       name: Personalizado
       about: Uma combinação de permissões que não é de nenhum grupo.
@@ -576,7 +567,7 @@ help:
       tip_email: "O convite vale por 7 dias e funciona uma vez. Se ele é para um email, só esse email o aceita, inclusive pelo Google. Convidar o mesmo email de novo cancela o anterior. Se o email não chegar, o link também aparece na tela, e dá para copiá-lo e mandar por onde preferir. Os convites ainda não aceitos ficam em “Convites pendentes”."
     rates:
       title: Pessoas no projeto e valor por hora
-      text: "Convidar não basta: cada pessoa precisa ser adicionada a cada projeto em que vai trabalhar, com o valor que ela recebe por hora ali. Escolha a pessoa, informe o valor por hora (obrigatório), um time (opcional) e o grupo de permissões: Colaborador, Gerente de projeto ou Administrador do projeto."
+      text: "Convidar não basta: cada pessoa precisa ser adicionada a cada projeto em que vai trabalhar, com o valor que ela recebe por hora ali. Escolha a pessoa, informe o valor por hora (obrigatório), um time (opcional) e o grupo de permissões: Colaborador ou Administrador de projeto."
       tip: "Sem valor por hora, a pessoa não consegue iniciar o ponto. O valor pode ser diferente em cada projeto e mudar depois, mas só vale para as sessões novas."
     tasks:
       title: Crie as tarefas
@@ -695,12 +686,12 @@ help:
     roles:
       title: Quem vê e faz o quê
       text: "Cada pessoa vê só os projetos em que foi posta, com valor por hora (o dono e os administradores veem todos). Nesses projetos, lê o que ele mostra, cria e edita tarefas e bate o próprio ponto. O resto depende do papel e das permissões."
-      owner: "Dono: quem criou a organização. Faz tudo, e só ele troca papéis, convida administradores, libera permissões de organização e exclui a organização."
-      admin: "Admin: tudo, em todos os projetos, menos o que é só do dono."
-      member: "Membro: o dia a dia, com mais acesso só por permissões."
-      groups: "Ao pôr alguém num projeto, você escolhe o grupo dela: “Colaborador” (sem permissões extras), “Gerente de projeto” (cuida do projeto, dos times, das pessoas, das etiquetas e das integrações) ou “Administrador do projeto” (tudo no projeto, inclusive o faturamento). O grupo vale só naquele projeto."
-      org_perms: "O dono também pode liberar, a quem não é administrador, permissões de organização: criar projetos, cuidar dos clientes e cuidar das pessoas. Elas liberam o botão “Novo projeto” e as páginas Clientes e Colaboradores."
-      money: "Os valores pagos aos colegas e o faturamento só aparecem para quem tem permissão para ver. Cada pessoa sempre vê o próprio valor."
+      owner: "Dono: quem criou a organização. Faz tudo, inclusive o dinheiro (clientes, valor cobrado e pagamentos), e só ele troca papéis, convida administradores e exclui a organização."
+      admin: "Admin: cria projetos internos, convida pessoas e administra todos os projetos. Não vê clientes, cobrança nem pagamentos."
+      member: "Colaborador: o dia a dia nos projetos em que foi posto."
+      groups: "Ao pôr alguém num projeto, você escolhe o grupo dela: “Colaborador” (sem permissões extras) ou “Administrador de projeto” (cuida do projeto, dos times, das pessoas, das etiquetas e das integrações). O grupo vale só naquele projeto."
+      org_perms: "As páginas seguem o papel: Clientes e Pagamentos são só do dono, Colaboradores é do dono e dos admins, e o botão “Novo projeto” também (o admin cria só projeto interno)."
+      money: "Os valores pagos aos colegas só aparecem para quem cuida do projeto, e o faturamento e os pagamentos, só para o dono. Cada pessoa sempre vê o próprio valor."
       missing: "Se uma página, uma aba ou um botão não aparece para você, falta permissão: peça a um administrador."
     integrations:
       title: Integrações com GitHub e Trello
@@ -773,7 +764,6 @@ org:
     edit_label: "Editar {{.name}}"
     tabs_label: Dados do colaborador
     tab_payment: Pagamento
-    tab_permissions: Permissões
     tab_projects: Projetos e valores
     payment: Pagamento
     payment_label: Quando pagar
@@ -800,11 +790,6 @@ org:
     rate_of: "Valor por hora em {{.project}} ({{.unit}})"
     new_rate_of: "Valor por hora no projeto escolhido ({{.unit}})"
     rate_invalid: "Informe o valor por hora em {{.project}}, por exemplo 20,00."
-    permissions_title: Permissões da organização
-    permissions_hint: Só o dono libera, e valem em todos os projetos. As permissões de cada projeto são dadas ao pôr a pessoa nele.
-    permissions_admin: Admins já têm todas as permissões da organização.
-    permissions_owner: O dono tem todas as permissões.
-    permissions_saved: "Permissões de {{.name}} salvas."
     intro: Quem faz parte da organização. Para pôr alguém num projeto e montar os times, use a aba Colaboradores do projeto.
     add: Adicionar colaborador
     loading: Carregando colaboradores…
@@ -1673,8 +1658,6 @@ errors:
     own_only: "você só pode ver os seus pagamentos, ou os de qualquer pessoa se for admin"
     invalid_history: "o histórico deve ser um número inteiro de períodos, maior que zero"
   person:
-    admin_has_all_permissions: "os admins já têm todas as permissões"
-    invalid_permission: "permissão da organização desconhecida"
     email_in_use: "este email já está em uso"
     email_required: "informe o email"
     invalid_email: "informe um email válido"

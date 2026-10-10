@@ -20,6 +20,8 @@
           {{template "field_error" "description"}}
         </div>
       </fieldset>
+      {{/* O cliente e o valor cobrado são dinheiro do dono: o admin cria só projeto interno, e o dono converte. */}}
+      {{if .IsOwner}}
       <fieldset class="form-group">
         <legend>{{.T "project.groups.billing"}}</legend>
         <div class="fields">
@@ -45,6 +47,7 @@
         {{template "project_customer_meeting" .}}
         <span class="hint">{{.T "org.projects.admins_only_hint"}}</span>
       </fieldset>
+      {{end}}
       <fieldset class="form-group">
         <legend>{{.T "project.groups.routine"}}</legend>
         <div class="field">
