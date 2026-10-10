@@ -103,7 +103,7 @@ func TestService_Create_EmailUniqueAcrossOrgs(t *testing.T) {
 	if _, err := svc.Create(orgA.ID.String(), "John", "john@test.com"); err != nil {
 		t.Fatalf("first create failed: %v", err)
 	}
-	if _, err := svc.Create(orgB.ID.String(), "John", " John@Test.com "); err != person.ErrEmailInUse {
+	if _, err := svc.Create(orgB.ID.String(), "John", " John@Test.com "); !errors.Is(err, person.ErrEmailInUse) {
 		t.Fatalf("expected ErrEmailInUse for the same email (any case) in another org, got %v", err)
 	}
 }
@@ -117,7 +117,7 @@ func TestService_Update_EmailInUse(t *testing.T) {
 	svc.Create(org.ID.String(), "Ana", "ana@test.com")
 	bia, _ := svc.Create(org.ID.String(), "Bia", "bia@test.com")
 
-	if _, err := svc.Update(bia.ID.String(), "Bia", "ana@test.com"); err != person.ErrEmailInUse {
+	if _, err := svc.Update(bia.ID.String(), "Bia", "ana@test.com"); !errors.Is(err, person.ErrEmailInUse) {
 		t.Fatalf("expected ErrEmailInUse, got %v", err)
 	}
 	// Manter o próprio email não conta como duplicado.
@@ -138,7 +138,7 @@ func TestService_SetRole_LastAdmin(t *testing.T) {
 	if _, err := svc.SetRole(ana.ID.String(), person.RoleAdmin); err != nil {
 		t.Fatalf("promote ana: %v", err)
 	}
-	if _, err := svc.SetRole(ana.ID.String(), person.RoleMember); err != person.ErrLastAdmin {
+	if _, err := svc.SetRole(ana.ID.String(), person.RoleMember); !errors.Is(err, person.ErrLastAdmin) {
 		t.Fatalf("expected ErrLastAdmin, got %v", err)
 	}
 	if _, err := svc.SetRole(bia.ID.String(), person.RoleAdmin); err != nil {
@@ -166,7 +166,7 @@ func TestService_SetRole_OwnerStaysAdmin(t *testing.T) {
 		t.Fatalf("promote bia: %v", err)
 	}
 
-	if _, err := svc.SetRole(ana.ID.String(), person.RoleMember); err != person.ErrOwnerRole {
+	if _, err := svc.SetRole(ana.ID.String(), person.RoleMember); !errors.Is(err, person.ErrOwnerRole) {
 		t.Errorf("demoting the owner with another admin around: err = %v, want ErrOwnerRole", err)
 	}
 	if got, _ := svc.Get(ana.ID.String()); got.Role != person.RoleAdmin || !got.IsOwner {
@@ -289,7 +289,7 @@ func TestService_SetWeeklyHours(t *testing.T) {
 	}
 
 	for _, bad := range []int{-1, 169} {
-		if _, err := svc.SetWeeklyHours(id, &bad); err != person.ErrInvalidWeekHours {
+		if _, err := svc.SetWeeklyHours(id, &bad); !errors.Is(err, person.ErrInvalidWeekHours) {
 			t.Errorf("set %d hours: err = %v, want ErrInvalidWeekHours", bad, err)
 		}
 	}
@@ -365,13 +365,13 @@ func TestService_SetPayment(t *testing.T) {
 			t.Errorf("%s: want an error", name)
 		}
 	}
-	if _, err := svc.SetPayment(id, person.PaymentRule{Frequency: "monthly", Day: 0}); err != person.ErrInvalidPayDay {
+	if _, err := svc.SetPayment(id, person.PaymentRule{Frequency: "monthly", Day: 0}); !errors.Is(err, person.ErrInvalidPayDay) {
 		t.Errorf("day 0 error = %v, want ErrInvalidPayDay", err)
 	}
-	if _, err := svc.SetPayment(id, person.PaymentRule{Frequency: "biweekly", Start: "x"}); err != person.ErrInvalidPayStart {
+	if _, err := svc.SetPayment(id, person.PaymentRule{Frequency: "biweekly", Start: "x"}); !errors.Is(err, person.ErrInvalidPayStart) {
 		t.Errorf("bad start error = %v, want ErrInvalidPayStart", err)
 	}
-	if _, err := svc.SetPayment(id, person.PaymentRule{Frequency: "x"}); err != person.ErrInvalidPayFrequency {
+	if _, err := svc.SetPayment(id, person.PaymentRule{Frequency: "x"}); !errors.Is(err, person.ErrInvalidPayFrequency) {
 		t.Errorf("bad frequency error = %v, want ErrInvalidPayFrequency", err)
 	}
 	p, err = svc.SetPayment(id, person.PaymentRule{})

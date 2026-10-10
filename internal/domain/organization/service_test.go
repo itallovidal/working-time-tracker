@@ -1,6 +1,7 @@
 package organization_test
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -82,7 +83,7 @@ func TestService_Update(t *testing.T) {
 	if updated.Name != "New Name" {
 		t.Errorf("name = %q, want %q", updated.Name, "New Name")
 	}
-	if _, err := svc.Update(created.ID.String(), organization.UpdateInput{Name: ptr("   ")}); err != organization.ErrNameRequired {
+	if _, err := svc.Update(created.ID.String(), organization.UpdateInput{Name: ptr("   ")}); !errors.Is(err, organization.ErrNameRequired) {
 		t.Errorf("blank name: err = %v, want ErrNameRequired", err)
 	}
 }
@@ -194,7 +195,7 @@ func TestService_Update_Validation(t *testing.T) {
 		{"currency", organization.UpdateInput{Currency: ptr("BTC")}, organization.ErrInvalidCurrency},
 	}
 	for _, c := range cases {
-		if _, err := svc.Update(id, c.in); err != c.want {
+		if _, err := svc.Update(id, c.in); !errors.Is(err, c.want) {
 			t.Errorf("%s: err = %v, want %v", c.name, err, c.want)
 		}
 	}

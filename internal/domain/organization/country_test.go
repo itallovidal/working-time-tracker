@@ -1,6 +1,7 @@
 package organization_test
 
 import (
+	"errors"
 	"testing"
 
 	"working-time-tracker/internal/domain/organization"
@@ -33,11 +34,11 @@ func TestService_Update_Country(t *testing.T) {
 		}
 	}
 
-	if _, err := svc.Update(id, organization.UpdateInput{Country: ptr("Portugal")}); err != organization.ErrInvalidCountry {
+	if _, err := svc.Update(id, organization.UpdateInput{Country: ptr("Portugal")}); !errors.Is(err, organization.ErrInvalidCountry) {
 		t.Errorf("unknown country: err = %v, want ErrInvalidCountry", err)
 	}
 	// Um código que o cadastro não tem, mesmo sendo ISO, também é recusado: a organização é BR ou US.
-	if _, err := svc.Update(id, organization.UpdateInput{Country: ptr("DE")}); err != organization.ErrInvalidCountry {
+	if _, err := svc.Update(id, organization.UpdateInput{Country: ptr("DE")}); !errors.Is(err, organization.ErrInvalidCountry) {
 		t.Errorf("DE: err = %v, want ErrInvalidCountry", err)
 	}
 	if got, _ := svc.Get(id); got.Country != "US" {
@@ -65,7 +66,7 @@ func TestService_Update_LegalIDs(t *testing.T) {
 		"a bad CNPJ":       {organization.UpdateInput{CNPJ: ptr("11.222.333/0001-80")}, organization.ErrInvalidCNPJ},
 		"an EIN as a CNPJ": {organization.UpdateInput{CNPJ: ptr("12-3456789")}, organization.ErrInvalidCNPJ},
 	} {
-		if _, err := svc.Update(id, c.in); err != c.want {
+		if _, err := svc.Update(id, c.in); !errors.Is(err, c.want) {
 			t.Errorf("%s: err = %v, want %v", name, err, c.want)
 		}
 	}

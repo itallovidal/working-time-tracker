@@ -33,7 +33,7 @@ func (h *Handler) clerkRespond(c *echo.Context, res *ClerkResult) error {
 func (h *Handler) ClerkLogin(c *echo.Context) error {
 	var body ClerkLoginInput
 	if err := c.Bind(&body); err != nil {
-		return badBody(c)
+		return badBody(c, err)
 	}
 	res, err := h.svc.ClerkLogin(c.Request().Context(), bearerToken(c), body)
 	if err != nil {
@@ -46,7 +46,7 @@ func (h *Handler) ClerkLogin(c *echo.Context) error {
 func (h *Handler) ClerkSignup(c *echo.Context) error {
 	var body ClerkSignupInput
 	if err := c.Bind(&body); err != nil {
-		return badBody(c)
+		return badBody(c, err)
 	}
 	res, err := h.svc.ClerkSignup(c.Request().Context(), bearerToken(c), body)
 	if err != nil {
@@ -59,7 +59,7 @@ func (h *Handler) ClerkSignup(c *echo.Context) error {
 func (h *Handler) ClerkJoin(c *echo.Context) error {
 	var body ClerkJoinInput
 	if err := c.Bind(&body); err != nil {
-		return badBody(c)
+		return badBody(c, err)
 	}
 	res, err := h.svc.ClerkJoin(c.Request().Context(), bearerToken(c), body)
 	if err != nil {

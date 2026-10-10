@@ -1,14 +1,29 @@
 package person
 
 import (
+	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v5"
 
 	"working-time-tracker/internal/apperr"
 	"working-time-tracker/internal/database"
+	"working-time-tracker/internal/validate"
 )
+
+// fail traduz um erro do domínio em resposta: pessoa que não existe é 404, e-mail já usado é 409 (conflito com
+// outra conta), e o resto dos erros de validação é 400.
+func fail(c *echo.Context, err error) error {
+	switch {
+	case errors.Is(err, database.ErrNotFound):
+		return apperr.Respond(c, http.StatusNotFound, ErrNotFound)
+	case errors.Is(err, ErrEmailInUse):
+		return apperr.Respond(c, http.StatusConflict, err)
+	}
+	return apperr.Respond(c, http.StatusBadRequest, err)
+}
 
 type Handler struct {
 	svc   *Service
@@ -90,14 +105,11 @@ func (h *Handler) Update(c *echo.Context) error {
 		Email string `json:"email"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return apperr.Respond(c, http.StatusBadRequest, apperr.ErrInvalidBody)
+		return apperr.Respond(c, http.StatusBadRequest, apperr.BindError(err))
 	}
 	person, err := h.svc.Update(id, body.Name, body.Email)
 	if err != nil {
-		if err == database.ErrNotFound {
-			return apperr.Respond(c, http.StatusNotFound, ErrNotFound)
-		}
-		return apperr.Respond(c, http.StatusBadRequest, err)
+		return fail(c, err)
 	}
 	return c.JSON(http.StatusOK, person)
 }
@@ -108,14 +120,11 @@ func (h *Handler) SetRole(c *echo.Context) error {
 		Role string `json:"role"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return apperr.Respond(c, http.StatusBadRequest, apperr.ErrInvalidBody)
+		return apperr.Respond(c, http.StatusBadRequest, apperr.BindError(err))
 	}
 	person, err := h.svc.SetRole(id, body.Role)
 	if err != nil {
-		if err == database.ErrNotFound {
-			return apperr.Respond(c, http.StatusNotFound, ErrNotFound)
-		}
-		return apperr.Respond(c, http.StatusBadRequest, err)
+		return fail(c, err)
 	}
 	return c.JSON(http.StatusOK, person)
 }
@@ -127,14 +136,11 @@ func (h *Handler) SetPermissions(c *echo.Context) error {
 		Permissions []string `json:"permissions"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return apperr.Respond(c, http.StatusBadRequest, apperr.ErrInvalidBody)
+		return apperr.Respond(c, http.StatusBadRequest, apperr.BindError(err))
 	}
 	person, err := h.svc.SetPermissions(c.Param("personId"), body.Permissions)
 	if err != nil {
-		if err == database.ErrNotFound {
-			return apperr.Respond(c, http.StatusNotFound, ErrNotFound)
-		}
-		return apperr.Respond(c, http.StatusBadRequest, err)
+		return fail(c, err)
 	}
 	return c.JSON(http.StatusOK, person)
 }
@@ -144,17 +150,18 @@ func (h *Handler) SetPermissions(c *echo.Context) error {
 func (h *Handler) SetWeeklyHours(c *echo.Context) error {
 	id := c.Param("personId")
 	var body struct {
-		WeeklyHours *int `json:"weekly_hours"`
+		WeeklyHours validate.Optional[int] `json:"weekly_hours"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return apperr.Respond(c, http.StatusBadRequest, apperr.ErrInvalidBody)
+		return apperr.Respond(c, http.StatusBadRequest, apperr.BindError(err))
 	}
-	person, err := h.svc.SetWeeklyHours(id, body.WeeklyHours)
+	// Ausente não é "apagar": {} é um pedido sem nada, e só null (ou zero) apaga a jornada.
+	if !body.WeeklyHours.Set {
+		return apperr.Respond(c, http.StatusBadRequest, apperr.ErrFieldRequired.With("field", "weekly_hours"))
+	}
+	person, err := h.svc.SetWeeklyHours(id, body.WeeklyHours.Value)
 	if err != nil {
-		if err == database.ErrNotFound {
-			return apperr.Respond(c, http.StatusNotFound, ErrNotFound)
-		}
-		return apperr.Respond(c, http.StatusBadRequest, err)
+		return fail(c, err)
 	}
 	return c.JSON(http.StatusOK, person)
 }
@@ -163,19 +170,20 @@ func (h *Handler) SetWeeklyHours(c *echo.Context) error {
 // mudar a jornada: a regra é o que a organização combinou com ela.
 func (h *Handler) SetPayment(c *echo.Context) error {
 	var body struct {
-		Frequency string `json:"frequency"`
-		Day       int    `json:"day"`
-		Start     string `json:"start"`
+		Frequency *string `json:"frequency"`
+		Day       int     `json:"day"`
+		Start     string  `json:"start"`
 	}
 	if err := c.Bind(&body); err != nil {
-		return apperr.Respond(c, http.StatusBadRequest, apperr.ErrInvalidBody)
+		return apperr.Respond(c, http.StatusBadRequest, apperr.BindError(err))
 	}
-	person, err := h.svc.SetPayment(c.Param("personId"), PaymentRule{Frequency: body.Frequency, Day: body.Day, Start: body.Start})
+	// {} não é "apagar a regra": quem apaga manda frequency vazio.
+	if body.Frequency == nil {
+		return apperr.Respond(c, http.StatusBadRequest, apperr.ErrFieldRequired.With("field", "frequency"))
+	}
+	person, err := h.svc.SetPayment(c.Param("personId"), PaymentRule{Frequency: strings.TrimSpace(*body.Frequency), Day: body.Day, Start: body.Start})
 	if err != nil {
-		if err == database.ErrNotFound {
-			return apperr.Respond(c, http.StatusNotFound, ErrNotFound)
-		}
-		return apperr.Respond(c, http.StatusBadRequest, err)
+		return fail(c, err)
 	}
 	return c.JSON(http.StatusOK, person)
 }

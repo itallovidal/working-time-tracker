@@ -25,9 +25,15 @@ func NewService(store *Store) *Service {
 	return &Service{store: store}
 }
 
+// Create grava uma organização só com o nome. Nenhuma rota chama: o cadastro cria a organização junto com a conta
+// do dono (auth.Service.Signup). Fica para quem monta uma organização à mão (testes), com a mesma regra de nome.
 func (s *Service) Create(name string) (*Organization, error) {
+	name = strings.TrimSpace(name)
 	if name == "" {
-		return nil, ErrNameRequired
+		return nil, ErrNameRequired.With("field", "name")
+	}
+	if _, err := text("name", name, validate.MaxName); err != nil {
+		return nil, err
 	}
 	org := &Organization{Name: name}
 	if err := s.store.Create(org); err != nil {
@@ -74,31 +80,32 @@ func apply(org *Organization, in UpdateInput) error {
 	if in.Name != nil {
 		name := strings.TrimSpace(*in.Name)
 		if name == "" {
-			return ErrNameRequired
+			return ErrNameRequired.With("field", "name")
 		}
-		if err := maxLen("name", name, 120); err != nil {
+		if _, err := text("name", name, validate.MaxName); err != nil {
 			return err
 		}
 		org.Name = name
 	}
 
-	// Textos livres: só o tamanho é conferido.
+	// Textos livres: aparados, e só o tamanho é conferido. A descrição chega na chave description e o erro a chama de
+	// long_description (o nome antigo do campo, que a tela traduz).
 	for _, f := range []struct {
 		dst   *string
 		src   *string
 		label string
 		max   int
 	}{
-		{&org.Description, in.Description, "long_description", 2000},
-		{&org.LegalName, in.LegalName, "legal_name", 200},
-		{&org.AddressLine1, in.AddressLine1, "address_line1", 200},
-		{&org.AddressLine2, in.AddressLine2, "address_line2", 200},
+		{&org.Description, in.Description, "long_description", validate.MaxDescription},
+		{&org.LegalName, in.LegalName, "legal_name", validate.MaxLegalName},
+		{&org.AddressLine1, in.AddressLine1, "address_line1", validate.MaxAddress},
+		{&org.AddressLine2, in.AddressLine2, "address_line2", validate.MaxAddress},
 	} {
 		if f.src == nil {
 			continue
 		}
-		v := strings.TrimSpace(*f.src)
-		if err := maxLen(f.label, v, f.max); err != nil {
+		v, err := text(f.label, *f.src, f.max)
+		if err != nil {
 			return err
 		}
 		*f.dst = v
@@ -107,7 +114,7 @@ func apply(org *Organization, in UpdateInput) error {
 	if in.Summary != nil {
 		// O resumo é uma linha só: quebras e espaços repetidos viram um espaço.
 		v := strings.Join(strings.Fields(*in.Summary), " ")
-		if err := maxLen("summary", v, 160); err != nil {
+		if _, err := text("summary", v, validate.MaxSummary); err != nil {
 			return err
 		}
 		org.Summary = v
@@ -119,7 +126,7 @@ func apply(org *Organization, in UpdateInput) error {
 		if v := strings.TrimSpace(*in.Country); v != "" {
 			parsed, ok := country.Parse(v)
 			if !ok {
-				return ErrInvalidCountry
+				return ErrInvalidCountry.With("field", "country")
 			}
 			code = parsed
 		}
@@ -127,9 +134,12 @@ func apply(org *Organization, in UpdateInput) error {
 	}
 	profile := profileOf(org.Country)
 
-	for _, f := range []struct{ dst, src *string }{
-		{&org.Website, in.Website},
-		{&org.LinkedinURL, in.LinkedinURL},
+	for _, f := range []struct {
+		dst, src *string
+		field    string
+	}{
+		{&org.Website, in.Website, "website"},
+		{&org.LinkedinURL, in.LinkedinURL, "linkedin_url"},
 	} {
 		if f.src == nil {
 			continue
@@ -137,8 +147,8 @@ func apply(org *Organization, in UpdateInput) error {
 		v := strings.TrimSpace(*f.src)
 		if v != "" {
 			normalized, ok := validate.HTTPURL(v)
-			if !ok || utf8.RuneCountInString(normalized) > 255 {
-				return ErrInvalidURL
+			if !ok || utf8.RuneCountInString(normalized) > validate.MaxURL {
+				return ErrInvalidURL.With("field", f.field)
 			}
 			v = normalized
 		}
@@ -147,8 +157,8 @@ func apply(org *Organization, in UpdateInput) error {
 
 	if in.ContactEmail != nil {
 		v := person.NormalizeEmail(*in.ContactEmail)
-		if v != "" && (!person.ValidEmail(v) || utf8.RuneCountInString(v) > 255) {
-			return ErrInvalidEmail
+		if v != "" && !person.ValidEmail(v) {
+			return ErrInvalidEmail.With("field", "contact_email")
 		}
 		org.ContactEmail = v
 	}
@@ -166,7 +176,7 @@ func apply(org *Organization, in UpdateInput) error {
 		if v != "" {
 			normalized, ok := c.LegalID.Normalize(v)
 			if !ok {
-				return ref.err
+				return ref.err.With("field", c.LegalID.Field)
 			}
 			v = normalized
 		}
@@ -176,7 +186,7 @@ func apply(org *Organization, in UpdateInput) error {
 	if in.WorkMode != nil {
 		v := strings.ToLower(strings.TrimSpace(*in.WorkMode))
 		if v != "" && !workModes[v] {
-			return ErrInvalidWorkMode
+			return ErrInvalidWorkMode.With("field", "work_mode")
 		}
 		org.WorkMode = v
 	}
@@ -188,7 +198,7 @@ func apply(org *Organization, in UpdateInput) error {
 			v = profile.Timezone
 		}
 		if _, err := time.LoadLocation(v); err != nil || v == "Local" {
-			return ErrInvalidTimezone
+			return ErrInvalidTimezone.With("field", "timezone")
 		}
 		org.Timezone = v
 	}
@@ -198,7 +208,7 @@ func apply(org *Organization, in UpdateInput) error {
 			v = profile.Currency
 		}
 		if !currencies[v] {
-			return ErrInvalidCurrency
+			return ErrInvalidCurrency.With("field", "currency")
 		}
 		org.Currency = v
 	}
@@ -230,11 +240,12 @@ func legalIDRefs(org *Organization, in UpdateInput) map[string]legalIDRef {
 	}
 }
 
-// maxLen confere o tamanho de um campo de texto. field é o nome do campo na API,
-// e o cliente mostra o rótulo dele.
-func maxLen(field, v string, max int) error {
-	if utf8.RuneCountInString(v) > max {
-		return ErrFieldTooLong.With("field", field, "max", max)
+// text apara um texto livre e confere o tamanho. field é o nome do campo na API, e o cliente mostra o rótulo dele. O
+// código continua o do domínio (organization.field_too_long, Decisão 11 do design), e não o genérico de validate.Text.
+func text(field, v string, max int) (string, error) {
+	v, err := validate.Text(field, v, max)
+	if err != nil {
+		return "", ErrFieldTooLong.With("field", field, "max", max)
 	}
-	return nil
+	return v, nil
 }

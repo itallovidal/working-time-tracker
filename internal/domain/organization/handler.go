@@ -1,6 +1,7 @@
 package organization
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/labstack/echo/v5"
@@ -33,7 +34,7 @@ func (h *Handler) Update(c *echo.Context) error {
 	id := c.Param("orgId")
 	var body UpdateInput
 	if err := c.Bind(&body); err != nil {
-		return apperr.Respond(c, http.StatusBadRequest, apperr.ErrInvalidBody)
+		return apperr.Respond(c, http.StatusBadRequest, apperr.BindError(err))
 	}
 	org, err := h.svc.Update(id, body)
 	if err != nil {
@@ -50,6 +51,10 @@ func (h *Handler) Delete(c *echo.Context) error {
 	if err := h.svc.Delete(id); err != nil {
 		if err == database.ErrNotFound {
 			return apperr.Respond(c, http.StatusNotFound, ErrNotFound)
+		}
+		// Uma organização com projetos não se apaga: é conflito com o estado dela, e não corpo inválido.
+		if errors.Is(err, ErrHasProjects) {
+			return apperr.Respond(c, http.StatusConflict, err)
 		}
 		return apperr.Respond(c, http.StatusBadRequest, err)
 	}

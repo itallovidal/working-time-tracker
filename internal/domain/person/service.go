@@ -3,11 +3,14 @@ package person
 import (
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
 
+	"working-time-tracker/internal/apperr"
 	"working-time-tracker/internal/database"
 	"working-time-tracker/internal/domain/permission"
+	"working-time-tracker/internal/validate"
 )
 
 // NormalizeEmail tira espaços e deixa o email em minúsculas, para que
@@ -16,10 +19,43 @@ func NormalizeEmail(email string) string {
 	return strings.ToLower(strings.TrimSpace(email))
 }
 
-// ValidEmail faz uma checagem mínima de formato; a confirmação real seria por email.
+// ValidEmail confere o formato local@dominio.tld e o tamanho; a confirmação real seria por email.
 func ValidEmail(email string) bool {
-	at := strings.Index(email, "@")
-	return at > 0 && at < len(email)-1 && !strings.ContainsAny(email, " \t\n")
+	return validate.EmailFormat(email)
+}
+
+// ParseEmail normaliza o e-mail de uma pessoa e confere o tamanho (até 255) e o formato local@dominio.tld. field é a
+// chave do campo no corpo da requisição, para a tela mostrar o erro embaixo dele. Vazio é recusado como e-mail
+// inválido: quem aceita o campo vazio confere antes.
+func ParseEmail(field, raw string) (string, error) {
+	email := NormalizeEmail(raw)
+	if utf8.RuneCountInString(email) > validate.MaxEmail {
+		return "", apperr.ErrFieldTooLong.With("field", field, "max", validate.MaxEmail)
+	}
+	if !ValidEmail(email) {
+		return "", ErrInvalidEmail.With("field", field)
+	}
+	return email, nil
+}
+
+// parseProfile confere o nome e o e-mail de uma pessoa: o nome sem espaços nas pontas, de 1 a 120 caracteres, e o
+// e-mail obrigatório.
+func parseProfile(name, email string) (string, string, error) {
+	name, err := validate.Text("name", name, validate.MaxName)
+	if err != nil {
+		return "", "", err
+	}
+	if name == "" {
+		return "", "", ErrNameRequired.With("field", "name")
+	}
+	if NormalizeEmail(email) == "" {
+		return "", "", ErrEmailRequired.With("field", "email")
+	}
+	email, err = ParseEmail("email", email)
+	if err != nil {
+		return "", "", err
+	}
+	return name, email, nil
 }
 
 type Service struct {
@@ -31,16 +67,9 @@ func NewService(store *Store) *Service {
 }
 
 func (s *Service) Create(orgID, name, email string) (*Person, error) {
-	name = strings.TrimSpace(name)
-	email = NormalizeEmail(email)
-	if name == "" {
-		return nil, ErrNameRequired
-	}
-	if email == "" {
-		return nil, ErrEmailRequired
-	}
-	if !ValidEmail(email) {
-		return nil, ErrInvalidEmail
+	name, email, err := parseProfile(name, email)
+	if err != nil {
+		return nil, err
 	}
 	orgUID, err := uuid.Parse(orgID)
 	if err != nil {
@@ -51,7 +80,7 @@ func (s *Service) Create(orgID, name, email string) (*Person, error) {
 		return nil, err
 	}
 	if inUse {
-		return nil, ErrEmailInUse
+		return nil, ErrEmailInUse.With("field", "email")
 	}
 	person := &Person{
 		Name:           name,
@@ -103,16 +132,9 @@ func (s *Service) FindByEmailInOrg(orgID uuid.UUID, email string) (*Person, erro
 }
 
 func (s *Service) Update(id, name, email string) (*Person, error) {
-	name = strings.TrimSpace(name)
-	email = NormalizeEmail(email)
-	if name == "" {
-		return nil, ErrNameRequired
-	}
-	if email == "" {
-		return nil, ErrEmailRequired
-	}
-	if !ValidEmail(email) {
-		return nil, ErrInvalidEmail
+	name, email, err := parseProfile(name, email)
+	if err != nil {
+		return nil, err
 	}
 	person, err := s.store.GetByID(id)
 	if err != nil {
@@ -123,7 +145,7 @@ func (s *Service) Update(id, name, email string) (*Person, error) {
 		return nil, err
 	}
 	if inUse {
-		return nil, ErrEmailInUse
+		return nil, ErrEmailInUse.With("field", "email")
 	}
 	person.Name = name
 	person.Email = email
@@ -137,7 +159,7 @@ func (s *Service) Update(id, name, email string) (*Person, error) {
 // checagem do último admin fica no store, na mesma transação da mudança.
 func (s *Service) SetRole(id, role string) (*Person, error) {
 	if role != RoleAdmin && role != RoleMember {
-		return nil, ErrInvalidRole
+		return nil, ErrInvalidRole.With("field", "role")
 	}
 	return s.store.SetRole(id, role)
 }
@@ -146,14 +168,14 @@ func (s *Service) SetRole(id, role string) (*Person, error) {
 // têm todas, e guardar uma lista para eles confundiria a tela.
 func (s *Service) SetPermissions(id string, keys []string) (*Person, error) {
 	if !permission.Valid(keys, permission.OrganizationKeys) {
-		return nil, ErrInvalidPermission
+		return nil, ErrInvalidPermission.With("field", "permissions")
 	}
 	p, err := s.store.GetByID(id)
 	if err != nil {
 		return nil, err
 	}
 	if p.Role == RoleAdmin {
-		return nil, ErrAdminHasAll
+		return nil, ErrAdminHasAll.With("field", "permissions")
 	}
 	return s.store.SetPermissions(id, permission.Normalize(keys, permission.OrganizationKeys))
 }
@@ -161,7 +183,7 @@ func (s *Service) SetPermissions(id string, keys []string) (*Person, error) {
 // SetWeeklyHours define a jornada semanal da pessoa. nil ou zero apaga.
 func (s *Service) SetWeeklyHours(id string, hours *int) (*Person, error) {
 	if hours != nil && (*hours < 0 || *hours > 168) {
-		return nil, ErrInvalidWeekHours
+		return nil, ErrInvalidWeekHours.With("field", "weekly_hours")
 	}
 	if hours != nil && *hours == 0 {
 		hours = nil
@@ -177,16 +199,16 @@ func (s *Service) SetPayment(id string, in PaymentRule) (*Person, error) {
 		return s.store.SetPayment(id, nil)
 	case PaymentMonthly:
 		if in.Day < 1 || in.Day > 31 {
-			return nil, ErrInvalidPayDay
+			return nil, ErrInvalidPayDay.With("field", "day")
 		}
 		return s.store.SetPayment(id, &PaymentRule{Frequency: PaymentMonthly, Day: in.Day})
 	case PaymentBiweekly:
 		start := strings.TrimSpace(in.Start)
 		t, err := time.Parse(time.DateOnly, start)
 		if err != nil {
-			return nil, ErrInvalidPayStart
+			return nil, ErrInvalidPayStart.With("field", "start")
 		}
 		return s.store.SetPayment(id, &PaymentRule{Frequency: PaymentBiweekly, Start: t.Format(time.DateOnly)})
 	}
-	return nil, ErrInvalidPayFrequency
+	return nil, ErrInvalidPayFrequency.With("field", "frequency")
 }
