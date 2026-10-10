@@ -226,3 +226,36 @@ func TestOptionalFields_SayItInTheLabel(t *testing.T) {
 		}
 	}
 }
+
+// Os textos de erro que dizem o que a tela faz: a faixa das horas semanais vem do código da API (e não do "está
+// inválido" genérico), e a busca tem o erro embaixo do campo, com o que vem na URL cortado no teto.
+func TestErrorTexts_TheScreenSaysWhatTheServerSays(t *testing.T) {
+	read := func(name string) string {
+		b, err := FS.ReadFile(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(b)
+	}
+	app, org, project := read("static/app.js"), read("static/pages/org.js"), read("static/pages/project.js")
+	if !strings.Contains(app, "integer: (min, max, code) =>") {
+		t.Error("app.js: rules.integer does not take the code of the API error")
+	}
+	if !strings.Contains(org, "rules.integer(0, 168, 'person.invalid_week_hours')") {
+		t.Error("org.js: the weekly hours do not show the API text for the range")
+	}
+	for _, want := range []string{
+		"Array.from(p.get('q') || '').slice(0, WTT.limits.search).join('')", // a URL entra cortada no teto
+		"e.params.field === 'q'", // o erro da busca vai ao campo
+	} {
+		if !strings.Contains(project, want) {
+			t.Errorf("project.js lacks %q", want)
+		}
+	}
+	tasks := templates(t)["templates/pages/project_tasks.gohtml"]
+	for _, want := range []string{`data-field="q"`, `{{template "field_error" "q"}}`} {
+		if !strings.Contains(tasks, want) {
+			t.Errorf("project_tasks.gohtml lacks %s", want)
+		}
+	}
+}

@@ -306,11 +306,19 @@ func TestService_LinkExternalItem_ConflictsSayTheField(t *testing.T) {
 	if _, err := svc.LinkExternalItem(a.ID.String(), trello, "Same0001", link); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := svc.LinkExternalItem(b.ID.String(), trello, "Same0001", link); !errors.Is(err, task.ErrItemTaken) {
+	_, err := svc.LinkExternalItem(b.ID.String(), trello, "Same0001", link)
+	if !errors.Is(err, task.ErrItemTaken) {
 		t.Errorf("item of another task = %v, want task.item_taken", err)
 	}
-	if _, err := svc.LinkExternalItem(a.ID.String(), trello, "Other002", link); !errors.Is(err, task.ErrAlreadyLinked) {
+	if code, field := codeAndField(err); code != "task.item_taken" || field != "external_item_id" {
+		t.Errorf("item of another task: code %q field %q, want task.item_taken on external_item_id", code, field)
+	}
+	_, err = svc.LinkExternalItem(a.ID.String(), trello, "Other002", link)
+	if !errors.Is(err, task.ErrAlreadyLinked) {
 		t.Errorf("a second item in the same integration = %v, want task.already_linked", err)
+	}
+	if code, field := codeAndField(err); code != "task.already_linked" || field != "integration_id" {
+		t.Errorf("a second item in the same integration: code %q field %q, want task.already_linked on integration_id", code, field)
 	}
 	if got := apperr.Registered()["task.item_taken"].Status; got != 409 {
 		t.Errorf("task.item_taken is declared with %d, want 409", got)

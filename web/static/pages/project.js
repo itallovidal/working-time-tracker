@@ -645,7 +645,8 @@ document.addEventListener('alpine:init', () => {
       // As tarefas de quem está logado ficam em Minhas tarefas: a lista não as mostra.
       const assignee = /^[0-9a-f-]{36}$/i.test(p.get('assignee') || '') && p.get('assignee') !== me.id ? p.get('assignee') : '';
       this.filters = {
-        q: p.get('q') || '',
+        // O servidor recusa uma busca maior que o teto; o que vem na URL entra cortado nele, como o campo faz.
+        q: Array.from(p.get('q') || '').slice(0, WTT.limits.search).join(''),
         assignee,
         due: isDate ? 'date' : (dueOptions.some((o) => o.value === due) ? due : ''),
         date: isDate ? due : '',
@@ -713,9 +714,17 @@ document.addEventListener('alpine:init', () => {
           this.assignees = res.assignees || [];
         });
         this.errors.load = '';
+        this.clearField('q');
         this.writeURL();
       } catch (e) {
-        if (seq === this.seq) this.errors.load = e.message;
+        if (seq !== this.seq) return;
+        // O erro da busca vai embaixo do campo dela; os outros ficam no aviso da lista.
+        if (e && e.params && e.params.field === 'q') {
+          this.errors.load = '';
+          this.setField('q', e.message);
+        } else {
+          this.errors.load = e.message;
+        }
       }
     },
     // apply é o que os filtros chamam ao mudar: as duas listas voltam para a primeira página.

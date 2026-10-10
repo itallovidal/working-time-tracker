@@ -606,7 +606,7 @@ document.addEventListener('alpine:init', () => {
         // A jornada e a regra só existem para quem gerencia pessoas; a aba delas vem à vista antes de conferir.
         if (WTT.can('people.manage')) {
           const d = this.draft.payment;
-          const spec = { weekly_hours: [text, rules.integer(0, 168)] };
+          const spec = { weekly_hours: [text, rules.integer(0, 168, 'person.invalid_week_hours')] };
           if (d.frequency === 'monthly') spec.day = [d.day, rules.required, rules.integer(1, 31)];
           if (d.frequency === 'biweekly') spec.start = [d.start, rules.required, rules.date];
           if (!this.check(spec)) {

@@ -19,12 +19,12 @@ var (
 	ErrIntegrationOtherProject = apperr.New("task.integration_other_project", http.StatusBadRequest)
 	ErrNoExternalItem          = apperr.New("task.no_external_item", http.StatusBadRequest)
 	ErrIntegrationsUnavailable = apperr.New("task.integrations_unavailable", http.StatusBadRequest)
-	ErrLinkFieldsRequired      = apperr.New("task.link_fields_required", http.StatusBadRequest)
+	ErrLinkFieldsRequired      = apperr.New("task.link_fields_required", http.StatusBadRequest, "field")
 	// ErrAlreadyLinked é a tarefa que já tem um item nesta integração: cada integração tem um só.
 	ErrAlreadyLinked = apperr.New("task.already_linked", http.StatusConflict)
 	// ErrItemTaken é o item que já está ligado a outra tarefa.
 	ErrItemTaken             = apperr.New("task.item_taken", http.StatusConflict)
-	ErrQueryTooLong          = apperr.New("task.query_too_long", http.StatusBadRequest, "max")
+	ErrQueryTooLong          = apperr.New("task.query_too_long", http.StatusBadRequest, "max", "field")
 	ErrInvalidAssigneeFilter = apperr.New("task.invalid_assignee_filter", http.StatusBadRequest)
 	ErrInvalidDeadlineFilter = apperr.New("task.invalid_deadline_filter", http.StatusBadRequest)
 	ErrInvalidPriority       = apperr.New("task.invalid_priority", http.StatusBadRequest)

@@ -198,12 +198,14 @@
         const cents = toCents(v, { strict: true });
         return cents === null || cents < 0 || cents > (limits.max_cents || 100000000) ? msg('field_invalid', field) : '';
       },
-      // integer(min, max) confere um número inteiro, escrito só com dígitos.
-      integer: (min, max) => (v, field) => {
+      // integer(min, max, code) confere um número inteiro, escrito só com dígitos. Com code, o erro é o texto desse
+      // código da API (que diz a faixa); sem ele é o "está inválido" genérico.
+      integer: (min, max, code) => (v, field) => {
         const x = text(v);
         if (x === '') return '';
         const n = Number(x);
-        return /^\d+$/.test(x) && n >= min && n <= max ? '' : msg('field_invalid', field);
+        if (/^\d+$/.test(x) && n >= min && n <= max) return '';
+        return code ? errorText({ code, params: { field } }) : msg('field_invalid', field);
       },
       date: (v, field) => (text(v) === '' || /^\d{4}-\d{2}-\d{2}$/.test(text(v)) ? '' : msg('field_invalid', field)),
       time: (v, field) => (text(v) === '' || /^([01]\d|2[0-3]):[0-5]\d$/.test(text(v)) ? '' : msg('field_invalid', field)),

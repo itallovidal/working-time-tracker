@@ -230,7 +230,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `person.invalid_payment_start` | 400 | — | `informe uma data de início válida para o pagamento quinzenal` | `enter a valid start date for the biweekly payment` |
 | `person.invalid_permission` | 400 | — | `permissão da organização desconhecida` | `unknown organization permission` |
 | `person.invalid_role` | 400 | — | `papel inválido: use admin ou member` | `invalid role: use admin or member` |
-| `person.invalid_week_hours` | 400 | — | `a jornada semanal deve ficar entre 1 e 168 horas` | `the weekly hours must be between 1 and 168` |
+| `person.invalid_week_hours` | 400 | — | `a jornada semanal deve ficar entre 0 e 168 horas (0 apaga a jornada)` | `the weekly hours must be between 0 and 168 (0 clears them)` |
 | `person.last_admin` | 400 | — | `a organização precisa de pelo menos um admin` | `the organization needs at least one admin` |
 | `person.name_required` | 400 | — | `informe o nome` | `enter the name` |
 | `person.not_found` | 404 | — | `pessoa não encontrada` | `person not found` |
@@ -298,11 +298,11 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `task.invalid_status_filter` | 400 | — | `status inválido (status): use backlog, in_progress, awaiting_closure ou closed, separados por vírgula` | `invalid status (status): use backlog, in_progress, awaiting_closure or closed, separated by commas` |
 | `task.item_taken` | 409 | — | `este item já está ligado a outra tarefa` | `this item is already linked to another task` |
 | `task.label_other_project` | 400 | — | `uma das etiquetas não existe neste projeto` | `one of the labels does not exist in this project` |
-| `task.link_fields_required` | 400 | — | `informe a integração, o item e o link` | `enter the integration, the item and the link` |
+| `task.link_fields_required` | 400 | `field` | `informe {{.field}}` | `enter {{.field}}` |
 | `task.name_required` | 400 | — | `informe o nome` | `enter the name` |
 | `task.no_external_item` | 400 | — | `a tarefa não tem item externo vinculado` | `the task has no linked external item` |
 | `task.not_found` | 404 | — | `tarefa não encontrada` | `task not found` |
-| `task.query_too_long` | 400 | `max` | `a busca aceita até {{.max}} caracteres (q)` | `the search accepts up to {{.max}} characters (q)` |
+| `task.query_too_long` | 400 | `max`, `field` | `{{.field}} aceita até {{.max}} caracteres` | `{{.field}} accepts up to {{.max}} characters` |
 
 ### team
 

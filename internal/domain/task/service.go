@@ -442,6 +442,15 @@ func (s *Service) LinkExternalItem(taskID, integrationID, externalItemID, extern
 		return nil, err
 	}
 	if err := s.taskStore.LinkItem(t.ID, eid, item, link); err != nil {
+		// O conflito diz o campo que o resolve: o item (de outra tarefa) ou a integração (a tarefa já tem um item
+		// nela). O campo entra aqui, e não no erro de origem, porque publicar uma tarefa também devolve
+		// already_linked, e lá ele não é de um campo do formulário de vincular.
+		switch {
+		case errors.Is(err, ErrItemTaken):
+			return nil, ErrItemTaken.With("field", "external_item_id")
+		case errors.Is(err, ErrAlreadyLinked):
+			return nil, ErrAlreadyLinked.With("field", "integration_id")
+		}
 		return nil, err
 	}
 	return s.taskStore.GetByID(taskID)

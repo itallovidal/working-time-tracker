@@ -6,7 +6,8 @@
     <div class="stack">
       <div class="row filters">
         <input type="search" maxlength="{{limit "search"}}" placeholder="{{.T "tasks.search_placeholder"}}" aria-label="{{.T "tasks.search_label"}}"
-               x-model="filters.q" @input.debounce.300ms="apply()">
+               data-field="q" :aria-invalid="fieldErrors.q ? 'true' : 'false'"
+               x-model="filters.q" @input="clearField('q')" @input.debounce.300ms="apply()">
         <select aria-label="{{.T "tasks.due_filter"}}" x-model="filters.due" @change="apply()">
           <option value="">{{.T "tasks.any_due"}}</option>
           <template x-for="o in dueOptions" :key="o.value">
@@ -16,6 +17,7 @@
         <input type="date" aria-label="{{.T "tasks.due_date"}}" x-cloak x-show="filters.due === 'date'"
                x-model="filters.date" @change="apply()">
       </div>
+      {{template "field_error" "q"}}
       {{/* Prioridade e etiqueta aceitam várias: a tarefa passa se tem qualquer uma das marcadas. */}}
       <div class="row filter-chips" role="group" aria-label="{{.T "tasks.priority_filter"}}">
         <span class="muted small">{{.T "tasks.col_priority"}}</span>

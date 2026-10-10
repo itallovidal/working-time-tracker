@@ -172,8 +172,8 @@ func TestValidation_LinksLabelsAndIntegrations(t *testing.T) {
 		{"link with a script address", "POST", linkA, `{"integration_id":"` + integID + `","external_item_id":"1","external_item_url":"javascript:alert(1)"}`, 400, "request.field_invalid", "external_item_url"},
 		{"link with an address over the limit", "POST", linkA, `{"integration_id":"` + integID + `","external_item_id":"1","external_item_url":"https://example.com/` + strings.Repeat("a", 2049) + `"}`, 400, "request.field_too_long", "external_item_url"},
 		{"link", "POST", linkA, good("1"), 200, "", ""},
-		{"link an item that has an owner", "POST", linkB, good("1"), 409, "task.item_taken", ""},
-		{"link a second item in the integration", "POST", linkA, good("2"), 409, "task.already_linked", ""},
+		{"link an item that has an owner", "POST", linkB, good("1"), 409, "task.item_taken", "external_item_id"},
+		{"link a second item in the integration", "POST", linkA, good("2"), 409, "task.already_linked", "integration_id"},
 
 		{"label without a name", "POST", prj + "/labels", `{"name":"  "}`, 400, "label.name_required", "name"},
 		{"label over the limit", "POST", prj + "/labels", `{"name":"` + strings.Repeat("a", 51) + `"}`, 400, "label.name_too_long", "name"},
