@@ -165,7 +165,7 @@ Se o convite foi criado com email, só esse email consegue aceitar. Um convite v
 | GET | `/api/orgs/:orgId/working-now` | admin | Quem está com o ponto aberto na organização e em que tarefas, sem tempo nem dinheiro. Veja abaixo |
 | GET | `/api/orgs/:orgId/me/overview` | logado | O painel de quem pede: as horas dele (hoje, a semana, dia a dia e por projeto) e as tarefas dele, em todos os projetos. Veja abaixo |
 | GET | `/api/orgs/:orgId/me/tasks` | logado | As tarefas de quem pede, em todos os projetos, abertas ou concluídas, em páginas. Veja abaixo |
-| POST | `/api/orgs/:orgId/projects` | `projects.create` | Cria um projeto |
+| POST | `/api/orgs/:orgId/projects` | admin | Cria um projeto, já com o cliente e o valor cobrado quando há cliente |
 | GET | `/api/orgs/:orgId/projects` | logado | Projetos da organização, do mais novo para o mais antigo (para quem não é admin, só os em que está). Sem `page`, todos num array; com `page`, uma página. Veja abaixo |
 | POST | `/api/orgs/:orgId/customers` | `customers.manage` | Cria um cliente |
 | GET | `/api/orgs/:orgId/customers` | `customers.manage` | Clientes da organização, em ordem alfabética |
@@ -436,9 +436,12 @@ Content-Type: application/json
   "weekly_sync_day": "friday",
   "weekly_sync_time": "14:00",
   "customer_meeting_day": "wednesday",
-  "customer_meeting_time": "10:30"
+  "customer_meeting_time": "10:30",
+  "customer_id": "<id do cliente, opcional>",
+  "bill_rate_cents": 14000
 }
 ```
+- `customer_id` e `bill_rate_cents` andam juntos: um projeto **ou tem cliente (e valor cobrado) ou é interno**. Com `customer_id` o valor é obrigatório (`400 project.bill_rate_required`); sem cliente o valor é recusado (`400 project.bill_rate_needs_customer`); fora de 10,00 a 1.000.000,00 é `400 project.invalid_bill_rate`. O `customer_id` de outra organização é `400 project.customer_not_found`, checado antes do valor. O erro leva `params.field` = `bill_rate_cents`. Só o dono e os admins criam projeto (os outros recebem `403`), e só o dono é matriculado no projeto que cria, com custo 0.
 - `sprint_duration_days` vai de 1 a 90, e o padrão é 14. As telas oferecem 7, 14 e 30 (um mês); um projeto com outra duração continua com ela.
 - `daily_time` usa o formato `HH:MM`. Sem ele, o projeto não tem daily.
 - `weekly_sync_day` vai de `monday` a `sunday`. Sem ele, o projeto não tem weekly.
@@ -456,7 +459,7 @@ O projeto traz `customer` (`{"id", "name"}` ou `null`) para qualquer membro. O v
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
 | GET | `/api/projects/:projectId/billing` | `billing.view` | Cliente e valor que ele paga por hora |
-| PUT | `/api/projects/:projectId/billing` | `billing.manage` | Substitui os dois. O que vier `null` é apagado |
+| PUT | `/api/projects/:projectId/billing` | `billing.manage` | Substitui os dois, que andam juntos: com cliente o valor é obrigatório, sem cliente o valor é recusado |
 
 ```http
 PUT /api/projects/:projectId/billing
@@ -464,7 +467,7 @@ Content-Type: application/json
 
 { "customer_id": "<id do cliente>", "bill_rate_cents": 10000 }
 ```
-Os valores são sempre em **centavos**, na moeda da organização: `10000` é 100,00. O cliente precisa ser da mesma organização do projeto. Mandar `{"customer_id": null, "bill_rate_cents": null}` volta o projeto a ser interno.
+Os valores são sempre em **centavos**, na moeda da organização: `10000` é 100,00. O valor vai de `1000` (10,00) a `100000000`. O cliente precisa ser da mesma organização do projeto (`400 project.customer_not_found`, antes do valor). Com `customer_id` e sem `bill_rate_cents` é `400 project.bill_rate_required`; com o valor e sem cliente é `400 project.bill_rate_needs_customer`; fora da faixa é `400 project.invalid_bill_rate`. Mandar `{"customer_id": null, "bill_rate_cents": null}` volta o projeto a ser interno.
 
 ### Valor pago a cada pessoa
 
@@ -475,7 +478,7 @@ O vínculo de uma pessoa com o projeto e quanto ela recebe por hora nele. Há um
 | GET | `/api/projects/:projectId/allocations` | logado | Quem vê o valor dos outros (`rates.view`, `rates.manage` e os admins) recebe todos; um membro recebe só o dele, ou `[]`. Cada vínculo traz `preset` e `permissions` |
 | PUT | `/api/projects/:projectId/allocations/:personId` | `collaborators.manage` ou `rates.manage` | Põe a pessoa no projeto com o valor dela, ou troca o valor de quem já está: `{"pay_rate_cents": 2000}` |
 
-`pay_rate_cents` vai de `0` a `100000000` e é obrigatório para quem entra no projeto. Zero vale: é alguém que trabalha no projeto sem receber por hora. A pessoa precisa ser da mesma organização do projeto. Para o dono da organização o valor gravado é sempre `0`.
+`pay_rate_cents` vai de `1000` (10,00) a `100000000` e é obrigatório para quem entra no projeto: zero não vale, ninguém trabalha de graça (`400 allocation.invalid_rate`, com a mesma faixa no convite de projeto). A pessoa precisa ser da mesma organização do projeto. A exceção é o dono da organização: a checagem dele vem antes da do valor, e o valor gravado é sempre `0`, seja qual for o que vier.
 
 O corpo aceita também `preset`, o grupo de permissões da pessoa no projeto: `member` (o padrão de quem entra), `manager`, `finance` ou `admin` (outro valor é `400 allocation.invalid_preset`). Pode vir sozinho, para trocar o grupo de quem já está no projeto: `{"preset": "manager"}`. Cada mudança pede a sua permissão: pôr alguém ou trocar o grupo, `collaborators.manage`; trocar o valor, `rates.manage` (`403 auth.permission_required`). Quem dá um grupo precisa ter todas as permissões dele (`403 allocation.preset_above_yours`). Sem valor e sem grupo, `400 allocation.rate_required`.
 
