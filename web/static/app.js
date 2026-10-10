@@ -106,6 +106,38 @@
     const msg = (code, field, params) => errorText({ code: 'request.' + code, params: { field, ...params } });
     const text = (v) => String(v === null || v === undefined ? '' : v).trim();
     const chars = (v) => Array.from(v).length;
+    // taxIdValid são as regras do documento fiscal, portadas do servidor (cnpj.go e digits.go): cada uma recebe o
+    // texto já aparado e diz se vale. Mudou lá, muda aqui.
+    const taxIdValid = {
+      // CNPJ, numérico ou alfanumérico: 14 caracteres [0-9A-Z] sem pontos, barras, hífens e espaços, não todos
+      // iguais, e dois dígitos verificadores (módulo 11, pesos 2 a 9 da direita para a esquerda, letra = código - 48).
+      cnpj(x) {
+        const c = x.toUpperCase().replace(/[./\- ]/g, '');
+        if (!/^[0-9A-Z]{14}$/.test(c) || /^(.)\1{13}$/.test(c)) return false;
+        const digit = (base) => {
+          let sum = 0;
+          let weight = 2;
+          for (let i = base.length - 1; i >= 0; i -= 1) {
+            sum += (base.charCodeAt(i) - 48) * weight;
+            weight = weight === 9 ? 2 : weight + 1;
+          }
+          const rest = sum % 11;
+          return rest >= 2 ? String(11 - rest) : '0';
+        };
+        return c[12] === digit(c.slice(0, 12)) && c[13] === digit(c.slice(0, 13));
+      },
+      // EIN: 9 dígitos, com espaços e hífens à vontade, e o prefixo 00 não existe.
+      ein(x) {
+        if (!/^[0-9 -]+$/.test(x)) return false;
+        const d = x.replace(/[ -]/g, '');
+        return d.length === 9 && d.slice(0, 2) !== '00';
+      },
+      // Sem regra do país: de 1 a tax_id caracteres (depois de juntar os espaços), só letras, dígitos, espaço e ./-_.
+      generic(x) {
+        const s = x.split(/\s+/).filter(Boolean).join(' ');
+        return s !== '' && chars(s) <= limits.tax_id && /^[\p{L}\p{Nd} ./\-_]+$/u.test(s);
+      },
+    };
     return {
       required: (v, field) => (text(v) === '' ? msg('field_required', field) : ''),
       // max(n) aceita o tamanho em número ou o nome de um limite: rules.max('name').
@@ -142,6 +174,15 @@
         if (x === '') return '';
         const digits = (x.match(/\d/g) || []).length;
         return /^[0-9+() .-]{8,32}$/.test(x) && digits >= (limits.phone_min_digits || 7) ? '' : msg('field_invalid', field);
+      },
+      // taxId(kind, code) confere o documento fiscal como o servidor (internal/validate: cnpj.go e digits.go). kind é
+      // o documento do país no cadastro ('cnpj', 'ein') ou null para o país sem regra, que aceita um texto livre
+      // (letras, dígitos, espaço e ./-_ até limits.tax_id). code é o erro que o servidor devolve naquele formulário:
+      // organization.invalid_cnpj, organization.invalid_ein ou customer.invalid_document. Vazio é aceito.
+      taxId: (kind, code) => (v, field) => {
+        const x = text(v);
+        if (x === '') return '';
+        return (taxIdValid[kind] || taxIdValid.generic)(x) ? '' : errorText({ code, params: { field } });
       },
       // money confere um valor digitado: só dígitos e separador, de 0 até o teto do servidor.
       money: (v, field) => {

@@ -103,3 +103,63 @@ func TestTaskDescription_IsCheckedAndNotCut(t *testing.T) {
 		t.Error("app.js has no rules.maxChars")
 	}
 }
+
+// Um tamanho escrito à mão na tela diverge do servidor sem ninguém ver: o `: 32` do :maxlength do documento e o
+// rules.max(32) do JavaScript escaparam do teste do maxlength literal. Estes dois olham as mesmas coisas nos
+// atributos ligados do Alpine e nas regras do JavaScript.
+func TestLimits_NoNumberWrittenByHandOnTheScreen(t *testing.T) {
+	action := regexp.MustCompile(`(?s)\{\{.*?\}\}`)
+	bound := regexp.MustCompile(`:maxlength="[^"]*\b\d+\b[^"]*"`)
+	for path, src := range templates(t) {
+		for _, m := range bound.FindAllString(action.ReplaceAllString(src, ""), -1) {
+			t.Errorf("%s has %s: take the number from {{limit \"...\"}} (internal/validate/limits.go)", path, m)
+		}
+	}
+
+	literal := regexp.MustCompile(`\bmax(Chars)?\(\s*\d+\s*\)`)
+	err := fs.WalkDir(FS, "static", func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".js") || strings.Contains(path, "/vendor/") {
+			return err
+		}
+		b, err := FS.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		for _, m := range literal.FindAllString(string(b), -1) {
+			t.Errorf("%s has %s: pass the name of a limit (rules.max('name')), which comes from internal/validate/limits.go", path, m)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+// O documento fiscal é conferido na tela, pelo país, antes do envio: o cliente (e a etapa dos clientes das
+// boas-vindas) e as Configurações da organização. As regras são a porta do que o servidor faz (cnpj.go e digits.go).
+func TestTaxId_IsCheckedOnTheScreen(t *testing.T) {
+	read := func(name string) string {
+		b, err := FS.ReadFile(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(b)
+	}
+	app, org := read("static/app.js"), read("static/pages/org.js")
+	for _, want := range []string{"taxId: (kind, code)", "const taxIdValid = {", "cnpj(x) {", "ein(x) {", "generic(x) {", "limits.tax_id"} {
+		if !strings.Contains(app, want) {
+			t.Errorf("app.js lacks %q", want)
+		}
+	}
+	for _, want := range []string{
+		`rules.taxId(WTT.countries.legalId(b.country).field, 'customer.invalid_document')`, // cliente e boas-vindas
+		`rules.taxId(legal, 'organization.invalid_' + legal)`,                              // Configurações da organização
+	} {
+		if !strings.Contains(org, want) {
+			t.Errorf("org.js lacks %q", want)
+		}
+	}
+	if !strings.Contains(templates(t)["templates/partials/customer_document.gohtml"], `{{limit "tax_id"}}`) {
+		t.Error("customer_document.gohtml does not take the generic document size from the tax_id limit")
+	}
+}

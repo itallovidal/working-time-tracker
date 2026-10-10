@@ -37,6 +37,8 @@ const (
 	MaxPhone       = 32
 	MinPhone       = 8
 	MinPhoneDigits = 7
+	// MaxTaxID é o documento fiscal de um país sem regra própria. O CNPJ e o EIN têm o tamanho da máscara.
+	MaxTaxID = 32
 	// MaxCents é o teto de um valor em dinheiro (valor por hora, valor cobrado): 1.000.000,00, em centavos.
 	MaxCents = 100_000_000
 )
@@ -48,6 +50,6 @@ func Limits() map[string]int {
 		"item_url": MaxItemURL, "external_item": MaxExternalItem, "token": MaxToken, "legal_name": MaxLegalName,
 		"address": MaxAddress, "summary": MaxSummary, "description": MaxDescription,
 		"task_description": MaxTaskDescription, "search": MaxSearch, "repo": MaxRepo, "phone": MaxPhone,
-		"phone_min": MinPhone, "phone_min_digits": MinPhoneDigits, "max_cents": MaxCents,
+		"phone_min": MinPhone, "phone_min_digits": MinPhoneDigits, "tax_id": MaxTaxID, "max_cents": MaxCents,
 	}
 }

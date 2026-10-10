@@ -33,15 +33,13 @@ func EIN(s string) (string, bool) {
 	return d, true
 }
 
-const maxTaxIDRunes = 32
-
 // GenericTaxID aceita o documento fiscal de um país sem regra própria: letras, dígitos,
 // espaço, ponto, hífen, barra e sublinhado, de 1 a 32 caracteres, com os espaços
 // de sobra reduzidos. Não confere dígito verificador, porque cada país tem o seu.
 // Vazio é inválido: quem chama já tratou o campo vazio como "apagar".
 func GenericTaxID(s string) (string, bool) {
 	s = strings.Join(strings.Fields(s), " ")
-	if s == "" || utf8.RuneCountInString(s) > maxTaxIDRunes {
+	if s == "" || utf8.RuneCountInString(s) > MaxTaxID {
 		return "", false
 	}
 	for _, r := range s {

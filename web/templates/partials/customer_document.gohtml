@@ -20,7 +20,7 @@
   {{- end}}
   <div class="field">
     <label for="{{.Id}}-document"><span x-text="docId({{$m}}.country).label"></span> <span class="optional">{{.Data.T "common.optional_label"}}</span></label>
-    <input id="{{.Id}}-document" type="text" class="mono" data-field="document" :maxlength="docId({{$m}}.country).mask ? docId({{$m}}.country).mask.length : 32" :placeholder="docId({{$m}}.country).placeholder" x-model="{{$m}}.document" @input="maskDoc('{{$m}}'); clearField('document')" :aria-invalid="fieldErrors.document ? 'true' : 'false'">
+    <input id="{{.Id}}-document" type="text" class="mono" data-field="document" :maxlength="docId({{$m}}.country).mask ? docId({{$m}}.country).mask.length : {{limit "tax_id"}}" :placeholder="docId({{$m}}.country).placeholder" x-model="{{$m}}.document" @input="maskDoc('{{$m}}'); clearField('document')" :aria-invalid="fieldErrors.document ? 'true' : 'false'">
     {{template "field_error" "document"}}
   </div>
 </div>

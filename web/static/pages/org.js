@@ -867,6 +867,9 @@ document.addEventListener('alpine:init', () => {
       const f = this.form;
       // O resumo é medido depois de juntar os espaços, como o servidor faz.
       const summary = f.summary.trim().replace(/\s+/g, ' ');
+      // O documento do país escolhido é o que está à vista (cnpj ou ein). O servidor confere os dois, seja qual for o
+      // país; um valor antigo e inválido do que está oculto volta como erro dele, no aviso do formulário.
+      const legal = this.profile.legal_id.field;
       const ok = this.check({
         name: [f.name, rules.required, rules.max('name')],
         summary: [summary, rules.max('summary')],
@@ -875,6 +878,7 @@ document.addEventListener('alpine:init', () => {
         contact_email: [f.contact_email, rules.email, rules.max('email')],
         linkedin_url: [f.linkedin_url, rules.url, rules.max('url')],
         legal_name: [f.legal_name, rules.max('legal_name')],
+        [legal]: [f[legal], rules.taxId(legal, 'organization.invalid_' + legal)],
         address_line1: [f.address_line1, rules.max('address')],
         address_line2: [f.address_line2, rules.max('address')],
       });
@@ -950,7 +954,8 @@ document.addEventListener('alpine:init', () => {
     const { rules } = WTT;
     return {
       name: [b.name, rules.required, rules.max('name')],
-      document: [b.document, rules.max(32)],
+      // O documento confere pelo país do cliente, como o servidor: CNPJ, EIN ou texto livre nos outros países.
+      document: [b.document, rules.taxId(WTT.countries.legalId(b.country).field, 'customer.invalid_document')],
       ...(full ? { contact_name: [b.contact_name, rules.max('name')] } : {}),
       contact_email: [b.contact_email, rules.email, rules.max('email')],
       ...(full ? { contact_phone: [b.contact_phone, rules.phone, rules.max('phone')] } : {}),

@@ -1,6 +1,7 @@
 package validate_test
 
 import (
+	"strings"
 	"testing"
 
 	"working-time-tracker/internal/validate"
@@ -108,5 +109,20 @@ func TestGenericTaxID(t *testing.T) {
 		if got, ok := validate.GenericTaxID(in); ok {
 			t.Errorf("GenericTaxID(%q) = %q, true; want invalid", in, got)
 		}
+	}
+}
+
+// O teto do documento sem regra do país vem do arquivo de limites, que a tela lê: a regra do servidor e a do
+// JavaScript (rules.taxId) param no mesmo número.
+func TestGenericTaxID_CeilingIsTheLimit(t *testing.T) {
+	if got := validate.Limits()["tax_id"]; got != validate.MaxTaxID {
+		t.Fatalf("Limits()[tax_id] = %d, want %d", got, validate.MaxTaxID)
+	}
+	at := strings.Repeat("1", validate.MaxTaxID)
+	if _, ok := validate.GenericTaxID(at); !ok {
+		t.Errorf("GenericTaxID with %d characters should be valid", validate.MaxTaxID)
+	}
+	if _, ok := validate.GenericTaxID(at + "1"); ok {
+		t.Errorf("GenericTaxID with %d characters should be invalid", validate.MaxTaxID+1)
 	}
 }
