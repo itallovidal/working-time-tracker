@@ -113,6 +113,12 @@
         const max = typeof n === 'string' ? limits[n] : n;
         return chars(text(v)) > max ? msg('field_too_long', field, { max }) : '';
       },
+      // maxChars é o max sem aparar: o servidor conta a descrição da tarefa como veio, com os espaços e as
+      // quebras das pontas, e a tela tem de contar igual para não deixar passar o que ele recusa.
+      maxChars: (n) => (v, field) => {
+        const max = typeof n === 'string' ? limits[n] : n;
+        return chars(String(v === null || v === undefined ? '' : v)) > max ? msg('field_too_long', field, { max }) : '';
+      },
       email: (v, field) => {
         const x = text(v);
         return x === '' || /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(x) ? '' : msg('field_invalid', field);

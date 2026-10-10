@@ -76,8 +76,23 @@ document.addEventListener('alpine:init', () => {
   // que o passo a passo da tarefa nova e o modal Editar nome e descrição dividem. Quem usa tem um `draft` com a descrição.
   const mdTools = () => ({
     mdView: 'write', // write ou preview
+    // Só renderiza com a Pré-visualização aberta: o teto da descrição não corta mais o texto colado, e um texto
+    // grande não pode passar por marked e DOMPurify a cada tecla de Escrever.
     previewHTML() {
-      return WTT.markdown(this.draft.description);
+      return this.mdView === 'preview' ? WTT.markdown(this.draft.description) : '';
+    },
+    // descriptionLength é o tamanho da descrição em caracteres, contado como o servidor (pontos de código).
+    descriptionLength() {
+      return Array.from(this.draft.description || '').length;
+    },
+    // showDescriptionField volta para Escrever quando o erro é da descrição: em Pré-visualizar o campo está oculto
+    // e o erro não teria onde aparecer nem como receber o foco. Devolve true se trocou (quem chama espera o
+    // próximo quadro, para o campo estar à vista).
+    showDescriptionField(e) {
+      const field = e && e.params && e.params.field;
+      if ((field !== 'description' && field !== 'long_description') || this.mdView === 'write') return false;
+      this.mdView = 'write';
+      return true;
     },
     // setMd troca entre Escrever e Pré-visualizar; com `focus`, leva o foco para o botão (setas).
     setMd(view, focus) {
@@ -95,6 +110,24 @@ document.addEventListener('alpine:init', () => {
   };
   // As regras do nome da tarefa, as mesmas do servidor: obrigatório (aparado) e até task_name caracteres.
   const taskNameRules = () => [WTT.rules.required, WTT.rules.max('task_name')];
+  // A regra da descrição da tarefa, a mesma do servidor: até task_description caracteres, contados sem aparar. O
+  // texto do erro é o do servidor (task.description_too_long), e o rótulo do campo é long_description.
+  const taskDescriptionRule = (v) => (
+    WTT.rules.maxChars('task_description')(v, 'long_description')
+      ? WTT.errorText({ code: 'task.description_too_long', params: { field: 'long_description', max: WTT.limits.task_description } })
+      : ''
+  );
+  // checkTaskText confere o nome e a descrição de uma tarefa (o passo 1 do passo a passo e o modal Editar). O
+  // nome vem primeiro, para o foco ir ao primeiro erro na ordem da tela; um erro da descrição devolve a tela
+  // para Escrever, onde o campo está à vista.
+  const checkTaskText = (self) => {
+    const ok = self.check({
+      name: [self.draft.name, ...taskNameRules()],
+      description: [self.draft.description, taskDescriptionRule],
+    });
+    if (self.fieldErrors.description) self.mdView = 'write';
+    return ok;
+  };
   // A etapa do passo a passo em que cada campo está: um erro do servidor leva de volta à etapa do campo.
   const wizardStepOf = { name: 1, description: 1, long_description: 1, deadline: 2, priority: 2, label_ids: 2, assignee_id: 2 };
 
@@ -122,7 +155,7 @@ document.addEventListener('alpine:init', () => {
       });
     },
     next() {
-      if (!this.check({ name: [this.draft.name, ...taskNameRules()] })) return false;
+      if (!checkTaskText(this)) return false;
       this.step = 2;
       this.focusStep();
       return true;
@@ -790,12 +823,13 @@ document.addEventListener('alpine:init', () => {
             skip_publish: skip,
           });
         } catch (e) {
-          // O erro de um campo de outra etapa volta para a etapa dele, onde o campo está à vista.
+          // O erro de um campo de outra etapa volta para a etapa dele, onde o campo está à vista; o da descrição
+          // também volta para Escrever, onde o campo existe.
           const step = wizardStepOf[e && e.params && e.params.field];
-          if (step && step !== this.step) {
-            this.step = step;
-            await this.$nextTick();
-          }
+          const moved = Boolean(step && step !== this.step);
+          if (moved) this.step = step;
+          const toWrite = this.showDescriptionField(e);
+          if (moved || toWrite) await this.$nextTick();
           throw e;
         }
         // Postar vem depois de criar, uma plataforma de cada vez: se uma falhar, a tarefa existe e o aviso diz o
@@ -1091,12 +1125,19 @@ document.addEventListener('alpine:init', () => {
     // save grava o nome e a descrição pelo PATCH da tarefa, que não mexe no que não vem: o responsável, o prazo,
     // o status, a prioridade e as etiquetas são dos detalhes.
     save() {
-      if (!this.check({ name: [this.draft.name, ...taskNameRules()] })) return undefined;
+      if (!checkTaskText(this)) return undefined;
       return this.run('save', async () => {
-        const t = await api('PATCH', '/api/tasks/' + this.taskId, {
-          name: this.draft.name.trim(),
-          description: this.draft.description,
-        });
+        let t;
+        try {
+          t = await api('PATCH', '/api/tasks/' + this.taskId, {
+            name: this.draft.name.trim(),
+            description: this.draft.description,
+          });
+        } catch (e) {
+          // Em Pré-visualizar o campo da descrição está oculto: volta para Escrever antes de o erro ser roteado.
+          if (this.showDescriptionField(e)) await this.$nextTick();
+          throw e;
+        }
         this.setTask(t);
         Alpine.store('modal').close();
         toast(WTT.t('task_detail.saved'));

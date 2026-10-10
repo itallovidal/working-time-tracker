@@ -80,6 +80,11 @@ func TestValidation_Tasks(t *testing.T) {
 
 		{"edit without a name", "PATCH", task, `{"description":"x"}`, 400, "task.name_required", "name"},
 		{"edit with a name over the limit", "PATCH", task, `{"name":"` + strings.Repeat("a", 256) + `"}`, 400, "request.field_too_long", "name"},
+		{"edit with a description at the limit", "PATCH", task, `{"name":"Base","description":"` + strings.Repeat("a", 65536) + `"}`, 200, "", ""},
+		{"edit with a description over the limit", "PATCH", task, `{"name":"Base","description":"` + strings.Repeat("a", 65537) + `"}`, 400, "task.description_too_long", "long_description"},
+		// O servidor conta a descrição como veio, sem aparar: a quebra de linha da ponta entra na conta, e a tela
+		// (rules.maxChars) conta igual.
+		{"edit with a description over the limit by a trailing newline", "PATCH", task, `{"name":"Base","description":"` + strings.Repeat("a", 65536) + `\n"}`, 400, "task.description_too_long", "long_description"},
 		{"edit with a deadline before 1971", "PATCH", task, `{"name":"Base","deadline":"1960-01-01T00:00:00Z"}`, 400, "request.field_invalid", "deadline"},
 		{"edit with a bad status", "PATCH", task, `{"name":"Base","status":"x"}`, 400, "task.invalid_status", "status"},
 		{"edit with an empty priority", "PATCH", task, `{"name":"Base","priority":""}`, 200, "", ""},

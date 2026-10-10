@@ -52,8 +52,12 @@
               @click="setMd('preview')">{{template "icon" "eye"}} {{.T "tasks.md.preview"}}</button>
     </div>
   </div>
-  <textarea id="task-description" rows="8" maxlength="{{limit "task_description"}}" data-field="description" x-show="mdView === 'write'"
+  {{/* Sem maxlength de propósito: ele cortaria em silêncio o que fosse colado. O contador mostra o tamanho
+       como o servidor conta, e quem confere é a regra da descrição (taskDescriptionRule em project.js). */}}
+  <textarea id="task-description" rows="8" data-field="description" x-show="mdView === 'write'"
             x-model="draft.description" @input="clearField('description')" :aria-invalid="fieldErrors.description ? 'true' : 'false'"></textarea>
+  <span class="hint num" :class="{ 'is-bad': descriptionLength() > {{limit "task_description"}} }"
+        x-text="descriptionLength() + '/{{limit "task_description"}}'"></span>
   {{template "field_error" "description"}}
   <div id="task-preview" class="md-preview" role="tabpanel" aria-labelledby="md-preview-tab" x-show="mdView === 'preview'">
     <div class="markdown" x-show="draft.description.trim()" x-html="previewHTML()"></div>

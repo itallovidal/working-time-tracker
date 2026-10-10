@@ -61,3 +61,45 @@ func TestTemplates_OptionalIsSaidInTheLabel(t *testing.T) {
 		}
 	}
 }
+
+// A descrição da tarefa não tem maxlength: ele cortaria em silêncio o que fosse colado e a regra nunca avisaria.
+// No lugar, o contador mostra o tamanho e a regra (contada sem aparar, como o servidor) confere no passo a passo e no
+// modal Editar, com o erro embaixo do campo.
+func TestTaskDescription_IsCheckedAndNotCut(t *testing.T) {
+	tpl := templates(t)["templates/partials/task_fields.gohtml"]
+	textarea := regexp.MustCompile(`<textarea id="task-description"[^>]*>`).FindString(tpl)
+	if textarea == "" {
+		t.Fatal("the task description textarea is not in templates/partials/task_fields.gohtml")
+	}
+	if strings.Contains(textarea, "maxlength") {
+		t.Errorf("%s has maxlength: it cuts pasted text without a word; the counter and taskDescriptionRule do the checking", textarea)
+	}
+	if !strings.Contains(tpl, `descriptionLength() + '/{{limit "task_description"}}'`) {
+		t.Error("task_fields.gohtml has no counter of the description built from the task_description limit")
+	}
+
+	raw, err := FS.ReadFile("static/pages/project.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	js := string(raw)
+	for _, want := range []string{
+		`WTT.rules.maxChars('task_description')`, // a regra, sem aparar
+		`description: [self.draft.description, taskDescriptionRule]`,
+	} {
+		if !strings.Contains(js, want) {
+			t.Errorf("project.js lacks %q", want)
+		}
+	}
+	// O passo 1 do passo a passo e o modal Editar conferem nome e descrição pelo mesmo helper.
+	if n := strings.Count(js, "checkTaskText(this)"); n != 2 {
+		t.Errorf("checkTaskText(this) is called %d times in project.js, want 2 (taskWizard.next and taskDetail.save)", n)
+	}
+	app, err := FS.ReadFile("static/app.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(app), "maxChars: (n) =>") {
+		t.Error("app.js has no rules.maxChars")
+	}
+}
