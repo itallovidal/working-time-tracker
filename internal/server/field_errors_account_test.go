@@ -201,7 +201,6 @@ func TestFieldErrors_Person(t *testing.T) {
 		{"dia 0", "PATCH", path + "/payment", `{"frequency":"monthly","day":0}`, 400, "person.invalid_payment_day", "day"},
 		{"início ausente", "PATCH", path + "/payment", `{"frequency":"biweekly"}`, 400, "person.invalid_payment_start", "start"},
 		{"papel", "PATCH", path + "/role", `{"role":"dono"}`, 400, "person.invalid_role", "role"},
-		{"permissão", "PATCH", path + "/permissions", `{"permissions":["nao.existe"]}`, 400, "person.invalid_permission", "permissions"},
 	}
 	for _, tc := range cases {
 		acctExpect(t, tc.name, do(e, tc.method, tc.path, tc.body, admin.session), tc.status, tc.code, tc.field)

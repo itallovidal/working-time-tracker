@@ -28,20 +28,14 @@ func mainNav(t *testing.T, body string) []string {
 
 // A barra superior tem uma página por assunto, sem sub-abas: Início, Projetos, Colaboradores, Clientes, Pagamentos
 // e Configurações. Cada item só aparece para quem pode abrir a página dele: Colaboradores e Clientes para quem
-// cuida deles, Pagamentos (a equipe, que é dinheiro de todos) só para admins.
+// cuida deles, Pagamentos (a equipe, que é dinheiro de todos) só para o dono. O admin que não é o dono vê
+// Colaboradores, mas não Clientes nem Pagamentos.
 func TestPages_MainNavHasOnePagePerSubject(t *testing.T) {
 	e := newServer(t)
 	admin := signup(t, e, "Org", "ana@test.com")
 	member := invite(t, e, admin, "bia@test.com", "member")
-	carol := invite(t, e, admin, "carol@test.com", "member")
-	dan := invite(t, e, admin, "dan@test.com", "member")
 	otherAdmin := invite(t, e, admin, "eva@test.com", "admin")
 	home := "/orgs/" + admin.orgID
-	for person, key := range map[string]string{carol.id: "people.manage", dan.id: "customers.manage"} {
-		if rec := do(e, "PATCH", "/api/persons/"+person+"/permissions", `{"permissions":["`+key+`"]}`, admin.session); rec.Code != http.StatusOK {
-			t.Fatalf("grant %s = %d: %s", key, rec.Code, rec.Body.String())
-		}
-	}
 	projectID := createProject(t, e, admin, "Projeto Alfa")
 
 	// all é a barra de um admin, com o item current marcado.
@@ -67,12 +61,10 @@ func TestPages_MainNavHasOnePagePerSubject(t *testing.T) {
 		{"admin on the payments page", home + "/payments", admin.session, all("Pagamentos")},
 		{"admin on the settings page", home + "/about", admin.session, all("Configurações")},
 		{"admin on the organization edit page", home + "/settings", admin.session, all("Configurações")},
-		{"an admin who is not the owner", home, otherAdmin.session, all("Início")},
+		{"an admin who is not the owner", home, otherAdmin.session, []string{"Início " + home + " (current)", "Projetos " + home + "/projects", "Colaboradores " + home + "/people", "Configurações " + home + "/about"}},
 		{"admin on the help page", "/help", admin.session, all("")},
 		{"admin on the profile page", "/profile", admin.session, all("")},
 		{"member without a permission", home, member.session, []string{"Início " + home + " (current)", "Projetos " + home + "/projects", "Configurações " + home + "/about"}},
-		{"member allowed to manage people", home, carol.session, []string{"Início " + home + " (current)", "Projetos " + home + "/projects", "Colaboradores " + home + "/people", "Configurações " + home + "/about"}},
-		{"member allowed to manage customers", home, dan.session, []string{"Início " + home + " (current)", "Projetos " + home + "/projects", "Clientes " + home + "/customers", "Configurações " + home + "/about"}},
 	} {
 		rec := do(e, "GET", c.path, "", c.session)
 		if rec.Code != http.StatusOK {

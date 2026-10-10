@@ -443,26 +443,6 @@
       }
     },
     {
-      "_id": "req_03_04",
-      "_type": "request",
-      "parentId": "fld_03",
-      "name": "Definir permissões da organização",
-      "method": "PATCH",
-      "url": "{{base_url}}/api/persons/{{person_id}}/permissions",
-      "authentication": {},
-      "metaSortKey": 5,
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        }
-      ],
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n  \"permissions\": [\"projects.create\", \"customers.manage\"]\n}"
-      }
-    },
-    {
       "_id": "fld_04",
       "_type": "request_group",
       "parentId": "__workspace__",

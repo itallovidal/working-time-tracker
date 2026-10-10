@@ -7,17 +7,13 @@ import (
 )
 
 // O perfil de um colaborador é a tela da pessoa para quem paga: as horas, o valor e os pagamentos dela. Só admins
-// abrem (é dinheiro): quem cuida de pessoas sem ser admin, o membro e quem é de outra organização recebem o 404.
+// abrem (sem os pagamentos nem a receita, que são do dono): o membro e quem é de outra organização recebem o 404.
 func TestPages_CollaboratorProfileIsForAdmins(t *testing.T) {
 	e := newServer(t)
 	owner := signup(t, e, "Org", "ana@test.com")
 	otherAdmin := invite(t, e, owner, "eva@test.com", "admin")
 	bia := invite(t, e, owner, "bia@test.com", "member")
-	carol := invite(t, e, owner, "carol@test.com", "member")
 	outsider := signup(t, e, "Outra", "zoe@outra.com")
-	if rec := do(e, "PATCH", "/api/persons/"+carol.id+"/permissions", `{"permissions":["people.manage"]}`, owner.session); rec.Code != http.StatusOK {
-		t.Fatalf("grant people.manage = %d", rec.Code)
-	}
 	people := "/orgs/" + owner.orgID + "/people"
 
 	for _, c := range []struct {
@@ -29,7 +25,6 @@ func TestPages_CollaboratorProfileIsForAdmins(t *testing.T) {
 		{"the owner opening themselves", people + "/" + owner.id, owner.session, http.StatusOK},
 		{"a member opening themselves by this address", people + "/" + bia.id, bia.session, http.StatusNotFound},
 		{"a member opening the owner", people + "/" + owner.id, bia.session, http.StatusNotFound},
-		{"people.manage without admin", people + "/" + bia.id, carol.session, http.StatusNotFound},
 		{"a person of another organization", people + "/" + outsider.id, owner.session, http.StatusNotFound},
 		{"an id that is not an id", people + "/nada", owner.session, http.StatusNotFound},
 		{"an id nobody has", people + "/00000000-0000-4000-8000-000000000000", owner.session, http.StatusNotFound},
@@ -49,7 +44,7 @@ func TestPages_CollaboratorProfileIsForAdmins(t *testing.T) {
 		`x-data="orgPerson"`, "<title>Colaborador · Convidado · Working Time Tracker</title>",
 		`x-text="person ? person.name : $el.textContent">Convidado</strong>`, `<span class="avatar avatar-lg" aria-hidden="true">C</span>`,
 		`href="` + people + `"`, `@click="openEdit(person)"`, `x-show="$store.modal.name === 'person-edit'"`,
-		`id="person-tab-payment"`, `id="person-tab-permissions"`, `id="person-tab-projects"`,
+		`id="person-tab-payment"`, `id="person-tab-projects"`,
 		"Dados", "Próximo pagamento", "Horas trabalhadas", "A pagar", "Tarefas do período", "Desde o início", "Projetos e valores", "Histórico de pagamentos", "Definir regra",
 	} {
 		if !strings.Contains(body, want) {
@@ -65,18 +60,16 @@ func TestPages_CollaboratorProfileIsForAdmins(t *testing.T) {
 			t.Errorf("the collaborator profile has %q, which belongs to the viewer's own profile", gone)
 		}
 	}
-	// As permissões da organização seguem só do dono, também aqui.
-	if asAdmin := do(e, "GET", people+"/"+bia.id, "", otherAdmin.session).Body.String(); strings.Contains(asAdmin, `id="person-tab-permissions"`) || !strings.Contains(asAdmin, `id="person-tab-projects"`) {
-		t.Error("an admin who is not the owner should get the payment and projects tabs, and not the permissions one")
+	// A regra de pagamento é só do dono, também aqui: o admin que não é o dono abre o perfil, com a aba dos projetos
+	// e a jornada, mas sem os campos da regra, sem os pagamentos e sem a receita.
+	asAdmin := do(e, "GET", people+"/"+bia.id, "", otherAdmin.session)
+	if asAdmin.Code != http.StatusOK || !strings.Contains(asAdmin.Body.String(), `id="person-tab-projects"`) || strings.Contains(asAdmin.Body.String(), "person-payment-frequency") {
+		t.Errorf("an admin who is not the owner opening the profile = %d, want the page with the projects tab and no payment rule field", asAdmin.Code)
 	}
 
-	// A lista de colaboradores leva ao perfil só para admins: quem só cuida de pessoas continua com a lista e o lápis.
+	// A lista de colaboradores leva ao perfil para os admins.
 	if list := do(e, "GET", people, "", owner.session).Body.String(); !strings.Contains(list, `class="row-link"`) || !strings.Contains(list, `<a :href="profileHref(p)" x-text="p.name"></a>`) {
 		t.Error("the collaborators list does not link each row to the person's profile for an admin")
-	}
-	list := do(e, "GET", people, "", carol.session)
-	if body := list.Body.String(); list.Code != http.StatusOK || strings.Contains(body, "profileHref") || strings.Contains(body, `class="row-link"`) || !strings.Contains(body, `@click="openEdit(p)"`) {
-		t.Errorf("people.manage alone = %d: the list should keep the pencil and not link to the profiles", list.Code)
 	}
 }
 
@@ -132,27 +125,22 @@ func TestPages_ProfileShowsPaymentsAndEditsInAModal(t *testing.T) {
 	}
 }
 
-// Pagamentos é a visão de quem paga: só do dono e dos admins, e só com a equipe. O que cada pessoa recebe ficou no
+// Pagamentos é a visão de quem paga: só do dono, e só com a equipe. O que cada pessoa recebe ficou no
 // perfil dela, e a linha da tabela leva até lá.
 func TestPages_PaymentsIsTheTeamViewForAdmins(t *testing.T) {
 	e := newServer(t)
 	owner := signup(t, e, "Org", "ana@test.com")
 	otherAdmin := invite(t, e, owner, "eva@test.com", "admin")
 	bia := invite(t, e, owner, "bia@test.com", "member")
-	carol := invite(t, e, owner, "carol@test.com", "member")
-	if rec := do(e, "PATCH", "/api/persons/"+carol.id+"/permissions", `{"permissions":["people.manage"]}`, owner.session); rec.Code != http.StatusOK {
-		t.Fatalf("grant people.manage = %d", rec.Code)
-	}
 	path := "/orgs/" + owner.orgID + "/payments"
 
 	for who, c := range map[string]struct {
 		session string
 		want    int
 	}{
-		"the owner":                   {owner.session, http.StatusOK},
-		"another admin":               {otherAdmin.session, http.StatusOK},
-		"a member":                    {bia.session, http.StatusNotFound},
-		"people.manage without admin": {carol.session, http.StatusNotFound},
+		"the owner":     {owner.session, http.StatusOK},
+		"another admin": {otherAdmin.session, http.StatusNotFound},
+		"a member":      {bia.session, http.StatusNotFound},
 	} {
 		if rec := do(e, "GET", path, "", c.session); rec.Code != c.want {
 			t.Errorf("%s: GET %s = %d, want %d", who, path, rec.Code, c.want)

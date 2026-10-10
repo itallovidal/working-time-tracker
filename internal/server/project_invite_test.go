@@ -125,18 +125,13 @@ func TestProjectInvite_PermissionsAndValidation(t *testing.T) {
 	}
 
 	valid := `{"email":"novo@test.com","pay_rate_cents":5000}`
-	// Quem é só colaborador do projeto não convida; o gerente do projeto, sem a permissão de pessoas da
-	// organização, também não.
+	// Quem é só colaborador do projeto não convida; o administrador de projeto convida para o projeto dele, sem
+	// precisar de permissão de pessoas da organização, mas só dá os grupos que cabem nas permissões dele.
 	if got := code(plain, valid); got != http.StatusForbidden {
 		t.Errorf("plain collaborator = %d, want 403", got)
 	}
-	if got := code(manager, valid); got != http.StatusForbidden {
-		t.Errorf("project manager without people.manage = %d, want 403", got)
-	}
-	// Com a permissão de pessoas, o gerente convida, mas só dá os grupos que cabem nas permissões dele.
-	do(e, "PATCH", "/api/persons/"+manager.id+"/permissions", `{"permissions":["people.manage"]}`, admin.session)
 	if got := code(manager, valid); got != http.StatusCreated {
-		t.Errorf("manager with people.manage = %d, want 201", got)
+		t.Errorf("project administrator = %d, want 201", got)
 	}
 	if got := code(manager, `{"email":"admin@test.com","pay_rate_cents":5000,"preset":"admin"}`); got != http.StatusForbidden {
 		t.Errorf("a preset above the manager's own permissions = %d, want 403", got)

@@ -10,7 +10,7 @@ Todas as rotas falam JSON. Erros sempre vêm como `{"error": {"code": "dominio.m
 - Tudo fora de `/api/auth/*` e `/healthcheck` exige a sessão. Sem ela, a resposta é **401**.
 - Cada pessoa pertence a uma organização. Um recurso de outra organização responde **404**, como se não existisse.
 - Quem não é admin só alcança os projetos em que está (com valor por hora ou em algum time): a rota de um projeto, de uma tarefa, de um time ou de uma integração de um projeto em que a pessoa não está também responde **404**, antes de qualquer permissão. Os admins alcançam todos. Veja [`_docs/permissions.md`](../_docs/permissions.md).
-- Rotas marcadas como **admin** respondem **403** para membros. As marcadas com uma permissão (`project.edit`, `billing.view`…) ou **dono** respondem **403** a quem não a tem: admins têm todas, e o dono tem também as que são só dele. A lista está em [`_docs/permissions.md`](../_docs/permissions.md).
+- Rotas marcadas como **admin** respondem **403** para membros. As marcadas com uma permissão (`project.edit`, `billing.view`…) ou **dono** respondem **403** a quem não a tem. Os cargos são quatro (dono, admin, administrador de projeto e colaborador): o dono tem todas, o admin tem as de projeto menos a cobrança (`billing.*`) e as da organização de criar projeto e cuidar de pessoas, e as do administrador de projeto vêm do grupo dele no projeto. A lista está em [`_docs/permissions.md`](../_docs/permissions.md).
 - `POST`, `PUT` e `PATCH` precisam de `Content-Type: application/json`. Outro formato responde **415**, o que também protege contra CSRF.
 - Signup, login e convites têm limite de tentativas por IP. Acima dele, a resposta é **429**.
 
@@ -156,19 +156,19 @@ Se o convite foi criado com email, só esse email consegue aceitar. Um convite v
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
 | GET | `/api/orgs/:orgId` | logado | Detalhes da organização |
-| PATCH | `/api/orgs/:orgId` | admin | Altera o nome e o perfil. Veja os campos abaixo |
+| PATCH | `/api/orgs/:orgId` | dono | Altera o nome e o perfil. Veja os campos abaixo |
 | DELETE | `/api/orgs/:orgId` | dono | Exclui a organização com as pessoas e os convites. Falha se ainda houver projetos |
-| GET | `/api/orgs/:orgId/persons` | logado | Pessoas da organização que quem pede pode ver: todas, para os admins, quem tem `people.manage` e quem tem `collaborators.manage` em algum projeto em que está (precisa achar quem entra); para os outros, só ele mesmo e quem está em algum projeto dele |
-| GET | `/api/persons/:personId/payments` | a própria pessoa ou admin | Pagamentos calculados da regra: `{generated_at, timezone, owner, rule, current, upcoming[], history[], totals, lifetime}`. Os períodos vão como dias de calendário `YYYY-MM-DD` (`start`, `pay_date`, inclusivos) no fuso da organização. `?history=N` (padrão 12, no máximo 60). Sem regra: `rule: null`, `current: null` e as listas vazias. `lifetime` vem sempre, com ou sem regra: `{seconds, amount_cents, first_day, projects[]}`, tudo o que a pessoa registrou desde a primeira sessão (cada sessão inteira, arredondada uma vez), com o dia da primeira (`first_day`, vazio para quem nunca bateu ponto) e o detalhe por projeto (nunca nulo). O dono não tem `amount_cents`. É o que o perfil da pessoa mostra (`/profile` e, para admins, `/orgs/:orgId/people/:personId`) |
-| GET | `/api/orgs/:orgId/payments` | admin | A visão da equipe: `people[]` (regra, período corrente e último fechado, ordenados pela data do pagamento e pelo nome), `without_rule[]`, `calendar[]` e `totals` (a pagar, fecha em 7 e 30 dias, horas, sem regra) |
-| GET | `/api/orgs/:orgId/overview` | admin | Visão geral da organização: o tempo e o dinheiro de todos os projetos em três janelas, e as horas de cada pessoa. Veja abaixo |
+| GET | `/api/orgs/:orgId/persons` | logado | Pessoas da organização que quem pede pode ver: todas, para o dono, os admins e quem tem `collaborators.manage` em algum projeto em que está (precisa achar quem entra); para os outros, só ele mesmo e quem está em algum projeto dele |
+| GET | `/api/persons/:personId/payments` | a própria pessoa, o dono ou admin (o admin recebe de outra pessoa só as horas: `rule: null`, sem períodos nem valores) | Pagamentos calculados da regra: `{generated_at, timezone, owner, rule, current, upcoming[], history[], totals, lifetime}`. Os períodos vão como dias de calendário `YYYY-MM-DD` (`start`, `pay_date`, inclusivos) no fuso da organização. `?history=N` (padrão 12, no máximo 60). Sem regra: `rule: null`, `current: null` e as listas vazias. `lifetime` vem sempre, com ou sem regra: `{seconds, amount_cents, first_day, projects[]}`, tudo o que a pessoa registrou desde a primeira sessão (cada sessão inteira, arredondada uma vez), com o dia da primeira (`first_day`, vazio para quem nunca bateu ponto) e o detalhe por projeto (nunca nulo). O dono não tem `amount_cents`. É o que o perfil da pessoa mostra (`/profile` e, para admins, `/orgs/:orgId/people/:personId`) |
+| GET | `/api/orgs/:orgId/payments` | `payments.manage` (dono) | A visão da equipe: `people[]` (regra, período corrente e último fechado, ordenados pela data do pagamento e pelo nome), `without_rule[]`, `calendar[]` e `totals` (a pagar, fecha em 7 e 30 dias, horas, sem regra) |
+| GET | `/api/orgs/:orgId/overview` | admin | Visão geral da organização: o tempo e o custo de todos os projetos em três janelas, e as horas de cada pessoa; a receita e a margem só vão para o dono (`null` para o admin). Veja abaixo |
 | GET | `/api/orgs/:orgId/working-now` | admin | Quem está com o ponto aberto na organização e em que tarefas, sem tempo nem dinheiro. Veja abaixo |
 | GET | `/api/orgs/:orgId/me/overview` | logado | O painel de quem pede: as horas dele (hoje, a semana, dia a dia e por projeto) e as tarefas dele, em todos os projetos. Veja abaixo |
 | GET | `/api/orgs/:orgId/me/tasks` | logado | As tarefas de quem pede, em todos os projetos, abertas ou concluídas, em páginas. Veja abaixo |
 | POST | `/api/orgs/:orgId/projects` | admin | Cria um projeto, já com o cliente e o valor cobrado quando há cliente |
 | GET | `/api/orgs/:orgId/projects` | logado | Projetos da organização, do mais novo para o mais antigo (para quem não é admin, só os em que está). Sem `page`, todos num array; com `page`, uma página. Veja abaixo |
-| POST | `/api/orgs/:orgId/customers` | `customers.manage` | Cria um cliente |
-| GET | `/api/orgs/:orgId/customers` | `customers.manage` | Clientes da organização, em ordem alfabética |
+| POST | `/api/orgs/:orgId/customers` | `customers.manage` (dono) | Cria um cliente |
+| GET | `/api/orgs/:orgId/customers` | `customers.manage` (dono) | Clientes da organização, em ordem alfabética |
 
 A organização é criada pelo signup, e o `organization_id` vem no `/api/auth/me`, junto com `organization_currency`.
 
@@ -333,7 +333,7 @@ Content-Type: application/json
 | POST | `/api/orgs/:orgId/invites` | `people.manage` | Cria um convite: com email e o Clerk ligado, o Clerk manda o email; senão, só o link |
 | GET | `/api/orgs/:orgId/invites` | `people.manage` | Convites ainda válidos |
 | DELETE | `/api/invites/:inviteId` | `people.manage` | Revoga um convite |
-| POST | `/api/projects/:projectId/invites` | `people.manage` (organização) e `collaborators.manage` + `rates.manage` (projeto) | Convida para a organização alguém que já entra neste projeto, com o valor, o time e o grupo escolhidos |
+| POST | `/api/projects/:projectId/invites` | `collaborators.manage` + `rates.manage` (projeto) | Convida para a organização alguém que já entra neste projeto, com o valor, o time e o grupo escolhidos |
 | GET | `/api/projects/:projectId/invites` | `collaborators.manage` (projeto) | Convites pendentes que levam a pessoa a este projeto |
 
 ```http
@@ -402,15 +402,14 @@ Content-Type: application/json
 | GET | `/api/persons/:personId` | logado | Detalhes da pessoa, para quem pode vê-la (a mesma regra da lista); outra pessoa dá `404` |
 | PATCH | `/api/persons/:personId` | a própria pessoa ou admin | Altera nome e email |
 | PATCH | `/api/persons/:personId/role` | dono | Muda o papel: `{"role": "admin"}` ou `{"role": "member"}` |
-| PATCH | `/api/persons/:personId/permissions` | dono | Define as permissões da organização de quem não é admin: `{"permissions": ["projects.create", "customers.manage"]}`. Admin recusa (`400 person.admin_has_all_permissions`), e uma chave que não é da organização também (`400 person.invalid_permission`). Repetidas saem, e a ordem é a do catálogo |
 | GET | `/api/permissions` | logado | O catálogo: `project` e `organization` (as chaves, na ordem das telas) e `presets` (os grupos do projeto, cada um com `id` e `permissions`) |
 | PATCH | `/api/persons/:personId/weekly-hours` | `people.manage` | Define a jornada semanal: `{"weekly_hours": 40}` |
-| PATCH | `/api/persons/:personId/payment` | `people.manage` | Define a regra de pagamento: `{"frequency":"monthly","day":5}`, `{"frequency":"biweekly","start":"2026-10-01"}` ou `{"frequency":""}` para apagar. A regra só vai para a própria pessoa, admins e `people.manage` (`payment: null` para os outros) |
+| PATCH | `/api/persons/:personId/payment` | `payments.manage` (dono) | Define a regra de pagamento: `{"frequency":"monthly","day":5}`, `{"frequency":"biweekly","start":"2026-10-01"}` ou `{"frequency":""}` para apagar. A regra só vai para a própria pessoa e para o dono (`payment: null` para os outros) |
 | GET | `/api/persons/:personId/allocations` | a própria pessoa ou admin | Quanto a pessoa recebe por hora em cada projeto |
 
-A pessoa traz `permissions`, as da organização que o dono liberou (vazio nos admins, que têm todas), e `/api/auth/me` traz as mesmas. As permissões estão em [`_docs/permissions.md`](../_docs/permissions.md). A organização nunca fica sem admin: rebaixar o último admin responde `400`. A pessoa traz `is_owner`: o dono da organização é quem a criou (o signup), é um só por organização e é sempre admin, então rebaixá-lo responde `400 person.owner_is_admin`, mesmo com outros admins. Quem entra por convite nunca é o dono. Pessoas entram na organização pelo signup ou por convite.
+A pessoa e `/api/auth/me` não trazem lista de permissões da organização: elas decorrem do cargo (dono: todas; admin: criar projeto e cuidar de pessoas; membro: nenhuma), e a tela lê o que pode em `BOOT.can`. As permissões estão em [`_docs/permissions.md`](../_docs/permissions.md). A organização nunca fica sem admin: rebaixar o último admin responde `400`. A pessoa traz `is_owner`: o dono da organização é quem a criou (o signup), é um só por organização e é sempre admin, então rebaixá-lo responde `400 person.owner_is_admin`, mesmo com outros admins. Quem entra por convite nunca é o dono. Pessoas entram na organização pelo signup ou por convite.
 
-A pessoa traz `weekly_hours`, a jornada semanal combinada com ela, em horas: vale para a organização toda, e não por projeto. Vai de 0 a 168 e vem `null` enquanto nenhum admin informou. Só um admin altera, e `0` ou `null` apagam a jornada (fora da faixa é `400 person.invalid_week_hours`); o `PATCH` de nome e email não mexe nela. Quem a vê: a própria pessoa, o dono, os admins, quem tem `people.manage` e quem tem `collaborators.manage` num projeto em que a pessoa está (o administrador de projeto); os colegas recebem `null`, na lista e no detalhe. A jornada própria vem em `/me/overview` e não muda. A lista de `permissions` da pessoa segue a mesma ideia: só ela, o dono e os admins a veem (os outros recebem `[]`), e na lista de valores do projeto (`GET /api/projects/:projectId/allocations`) o `permissions` de cada vínculo só vai para a própria pessoa e para os admins, e o `preset` continua à vista.
+A pessoa traz `weekly_hours`, a jornada semanal combinada com ela, em horas: vale para a organização toda, e não por projeto. Vai de 0 a 168 e vem `null` enquanto nenhum admin informou. Só um admin altera, e `0` ou `null` apagam a jornada (fora da faixa é `400 person.invalid_week_hours`); o `PATCH` de nome e email não mexe nela. Quem a vê: a própria pessoa, o dono, os admins, quem tem `people.manage` e quem tem `collaborators.manage` num projeto em que a pessoa está (o administrador de projeto); os colegas recebem `null`, na lista e no detalhe. A jornada própria vem em `/me/overview` e não muda. Na lista de valores do projeto (`GET /api/projects/:projectId/allocations`) o `permissions` de cada vínculo só vai para a própria pessoa e para os admins (os outros recebem `[]`), e o `preset` continua à vista.
 
 ---
 
@@ -421,7 +420,7 @@ A pessoa traz `weekly_hours`, a jornada semanal combinada com ela, em horas: val
 | GET | `/api/projects/:projectId` | logado | Detalhes do projeto |
 | PATCH | `/api/projects/:projectId` | `project.edit` | Altera o projeto |
 | DELETE | `/api/projects/:projectId` | `project.delete` | Exclui o projeto com times, tarefas, sessões e integrações |
-| GET | `/api/projects/:projectId/overview` | `billing.view` | O projeto em números: pessoas, times, horas, custo, receita, tempo de projeto, tarefas e integrações. Veja [Visão geral](#visão-geral) |
+| GET | `/api/projects/:projectId/overview` | qualquer permissão do projeto | O projeto em números: pessoas, times, horas, custo, receita, tempo de projeto, tarefas e integrações; o cliente, o valor cobrado, a receita e a margem só vêm com `billing.view`. Veja [Visão geral](#visão-geral) |
 | GET | `/api/projects/:projectId/members` | logado | Pessoas que estão no projeto (com valor por hora ou em algum time), sem repetir: são as que podem ser responsáveis por tarefas |
 
 ```http
@@ -520,7 +519,7 @@ Tudo o que a aba Visão geral mostra, numa resposta só. É só de admins, porqu
 
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
-| GET | `/api/projects/:projectId/overview` | `billing.view` | Pessoas, times, horas, custo, receita e margem, tempo de projeto, tarefas, integrações e as horas de cada pessoa |
+| GET | `/api/projects/:projectId/overview` | qualquer permissão do projeto (a cobrança, com `billing.view`) | Pessoas, times, horas, custo, receita e margem, tempo de projeto, tarefas, integrações e as horas de cada pessoa |
 
 ```json
 {

@@ -64,7 +64,7 @@ func TestPermissions_PresetsDecideWhatEachPersonCanDo(t *testing.T) {
 		{"edit the project", "PATCH", base, `{"name":"Alfa 2"}`, only("manager")},
 		{"read the billing", "GET", base + "/billing", "", only("finance")},
 		{"set the billing", "PUT", base + "/billing", `{"customer_id":"` + customerID + `","bill_rate_cents":9000}`, only("finance")},
-		{"read the overview", "GET", base + "/overview", "", only("finance")},
+		{"read the overview", "GET", base + "/overview", "", only("manager", "finance")},
 		{"create a team", "POST", base + "/teams", `{"name":"Time"}`, only("manager")},
 		{"create a label", "POST", base + "/labels", `{"name":"Bug"}`, only("manager")},
 		{"create an integration", "POST", base + "/integrations", `{"type":"github","display_name":"GH"}`, only("manager")},
@@ -245,31 +245,28 @@ func TestPermissions_AllocationNeedsTheRightPermissionForEachChange(t *testing.T
 	}
 }
 
-// O modal do colaborador mexe nos valores de uma pessoa em vários projetos, e isso é só de admins: quem tem apenas
-// people.manage (a jornada e os convites) não lê os valores dos outros nem põe alguém num projeto ou o tira dele,
-// enquanto um admin que não é o dono faz as três coisas.
+// O modal do colaborador mexe nos valores de uma pessoa em vários projetos, e isso é só de admins: o membro não lê
+// os valores dos outros nem põe alguém num projeto ou o tira dele, enquanto um admin que não é o dono faz as três
+// coisas (rates.manage está nas permissões de projeto do cargo).
 func TestPermissions_PersonRatesFromTheOrganizationAreForAdmins(t *testing.T) {
 	e := newServer(t)
 	owner := signup(t, e, "Org", "ana@test.com")
 	admin := invite(t, e, owner, "bia@test.com", "admin")
-	people := invite(t, e, owner, "pam@test.com", "member")
+	member := invite(t, e, owner, "pam@test.com", "member")
 	target := invite(t, e, owner, "caio@test.com", "member")
 	alfa := createEmptyProject(t, e, owner, "Alfa")
 	beta := createEmptyProject(t, e, owner, "Beta")
 	allocate(t, e, owner, alfa, target.id, 2000)
-	if code := status(e, "PATCH", "/api/persons/"+people.id+"/permissions", `{"permissions":["people.manage"]}`, owner.session); code != http.StatusOK {
-		t.Fatalf("grant people.manage = %d", code)
-	}
 
 	list := "/api/persons/" + target.id + "/allocations"
-	if code := status(e, "GET", list, "", people.session); code != http.StatusForbidden {
-		t.Errorf("people.manage reading another person's rates = %d, want 403", code)
+	if code := status(e, "GET", list, "", member.session); code != http.StatusForbidden {
+		t.Errorf("a member reading another person's rates = %d, want 403", code)
 	}
-	if code, _ := putAllocation(e, people, beta, target.id, `{"pay_rate_cents":3000}`); code != http.StatusForbidden && code != http.StatusNotFound {
-		t.Errorf("people.manage putting someone on a project = %d, want 403 or 404", code)
+	if code, _ := putAllocation(e, member, beta, target.id, `{"pay_rate_cents":3000}`); code != http.StatusForbidden && code != http.StatusNotFound {
+		t.Errorf("a member putting someone on a project = %d, want 403 or 404", code)
 	}
-	if code := status(e, "DELETE", "/api/projects/"+alfa+"/collaborators/"+target.id, "", people.session); code != http.StatusForbidden && code != http.StatusNotFound {
-		t.Errorf("people.manage taking someone off a project = %d, want 403 or 404", code)
+	if code := status(e, "DELETE", "/api/projects/"+alfa+"/collaborators/"+target.id, "", member.session); code != http.StatusForbidden && code != http.StatusNotFound {
+		t.Errorf("a member taking someone off a project = %d, want 403 or 404", code)
 	}
 
 	if code := status(e, "GET", list, "", admin.session); code != http.StatusOK {
@@ -290,74 +287,56 @@ func TestPermissions_PersonRatesFromTheOrganizationAreForAdmins(t *testing.T) {
 	}
 }
 
-// As permissões da organização são do dono: ele libera criar projetos, cuidar dos clientes e
-// das pessoas a quem não é admin, e os admins não precisam delas.
-func TestPermissions_OrganizationOnesBelongToTheOwner(t *testing.T) {
+// As permissões da organização decorrem do cargo: o dono tem todas, o admin cria projeto (só interno) e cuida das
+// pessoas, e o membro não tem nenhuma. O dinheiro (clientes, cobrança, pagamentos) e os dados da organização são do
+// dono, e não há mais rota para dar permissão avulsa.
+func TestPermissions_OrganizationOnesFollowTheRole(t *testing.T) {
 	e := newServer(t)
 	owner := signup(t, e, "Org", "ana@test.com")
 	admin := invite(t, e, owner, "bia@test.com", "admin")
 	member := invite(t, e, owner, "caio@test.com", "member")
 	org := "/api/orgs/" + owner.orgID
+	customerID := decode(t, do(e, "POST", org+"/customers", `{"name":"Cliente"}`, owner.session))["id"].(string)
 
-	// Sem nada liberado, o membro não faz nada de gestão da organização.
-	for name, c := range map[string][3]string{
-		"create a project": {"POST", org + "/projects", `{"name":"X"}`},
-		"list customers":   {"GET", org + "/customers", ""},
-		"create an invite": {"POST", org + "/invites", `{"role":"member"}`},
+	for _, c := range []struct {
+		name, method, path, body string
+		who                      string
+		session                  string
+		want                     int
+	}{
+		{"create an internal project", "POST", org + "/projects", `{"name":"X"}`, "member", member.session, http.StatusForbidden},
+		{"list customers", "GET", org + "/customers", "", "member", member.session, http.StatusForbidden},
+		{"create an invite", "POST", org + "/invites", `{"role":"member"}`, "member", member.session, http.StatusForbidden},
+		{"payments of the team", "GET", org + "/payments", "", "member", member.session, http.StatusForbidden},
+
+		{"create an internal project", "POST", org + "/projects", `{"name":"Y"}`, "admin", admin.session, http.StatusCreated},
+		{"create a project with a customer", "POST", org + "/projects", `{"name":"Z","customer_id":"` + customerID + `","bill_rate_cents":10000}`, "admin", admin.session, http.StatusForbidden},
+		{"create a project with a billed rate", "POST", org + "/projects", `{"name":"W","bill_rate_cents":10000}`, "admin", admin.session, http.StatusForbidden},
+		{"list customers", "GET", org + "/customers", "", "admin", admin.session, http.StatusForbidden},
+		{"create a customer", "POST", org + "/customers", `{"name":"Outro"}`, "admin", admin.session, http.StatusForbidden},
+		{"payments of the team", "GET", org + "/payments", "", "admin", admin.session, http.StatusForbidden},
+		{"edit the organization", "PATCH", org, `{"summary":"X"}`, "admin", admin.session, http.StatusForbidden},
+		{"set a payment rule", "PATCH", "/api/persons/" + member.id + "/payment", `{"frequency":"monthly","day":5}`, "admin", admin.session, http.StatusForbidden},
+		{"set the weekly hours", "PATCH", "/api/persons/" + member.id + "/weekly-hours", `{"weekly_hours":30}`, "admin", admin.session, http.StatusOK},
+		{"invite a member", "POST", org + "/invites", `{"role":"member"}`, "admin", admin.session, http.StatusCreated},
+		{"invite an admin", "POST", org + "/invites", `{"role":"admin"}`, "admin", admin.session, http.StatusForbidden},
+		{"change a role", "PATCH", "/api/persons/" + member.id + "/role", `{"role":"admin"}`, "admin", admin.session, http.StatusForbidden},
+		{"delete the organization", "DELETE", org, "", "admin", admin.session, http.StatusForbidden},
+
+		{"create a project with a customer", "POST", org + "/projects", `{"name":"Com cliente","customer_id":"` + customerID + `","bill_rate_cents":10000}`, "owner", owner.session, http.StatusCreated},
+		{"list customers", "GET", org + "/customers", "", "owner", owner.session, http.StatusOK},
+		{"payments of the team", "GET", org + "/payments", "", "owner", owner.session, http.StatusOK},
+		{"set a payment rule", "PATCH", "/api/persons/" + member.id + "/payment", `{"frequency":"monthly","day":5}`, "owner", owner.session, http.StatusOK},
+		{"edit the organization", "PATCH", org, `{"summary":"X"}`, "owner", owner.session, http.StatusOK},
 	} {
-		if got := status(e, c[0], c[1], c[2], member.session); got != http.StatusForbidden {
-			t.Errorf("a member without permissions: %s = %d, want 403", name, got)
+		if got := status(e, c.method, c.path, c.body, c.session); got != c.want {
+			t.Errorf("%s: %s = %d, want %d", c.who, c.name, got, c.want)
 		}
 	}
 
-	// Só o dono libera, e só a quem não é admin.
-	grant := func(by account, personID, body string) (int, string) {
-		rec := do(e, "PATCH", "/api/persons/"+personID+"/permissions", body, by.session)
-		return rec.Code, rec.Body.String()
-	}
-	if code, _ := grant(admin, member.id, `{"permissions":["projects.create"]}`); code != http.StatusForbidden {
-		t.Errorf("an admin giving permissions = %d, want 403", code)
-	}
-	if code, _ := grant(member, member.id, `{"permissions":["projects.create"]}`); code != http.StatusForbidden {
-		t.Errorf("a member giving themselves permissions = %d, want 403", code)
-	}
-	if code, out := grant(owner, admin.id, `{"permissions":["projects.create"]}`); code != http.StatusBadRequest || !strings.Contains(out, "person.admin_has_all_permissions") {
-		t.Errorf("giving permissions to an admin = %d %s, want 400 person.admin_has_all_permissions", code, out)
-	}
-	if code, out := grant(owner, member.id, `{"permissions":["billing.view"]}`); code != http.StatusBadRequest || !strings.Contains(out, "person.invalid_permission") {
-		t.Errorf("a project permission at the organization scope = %d %s, want 400 person.invalid_permission", code, out)
-	}
-	code, out := grant(owner, member.id, `{"permissions":["projects.create","customers.manage","projects.create"]}`)
-	if code != http.StatusOK || !strings.Contains(out, `"permissions":["projects.create","customers.manage"]`) {
-		t.Fatalf("the owner giving permissions = %d %s", code, out)
-	}
-
-	// Agora o membro cuida de clientes, mas ainda não convida nem muda papéis. Criar projeto é do dono e do admin:
-	// um projeto novo precisa de quem defina o valor cobrado, e a permissão não o torna admin.
-	if got := status(e, "POST", org+"/projects", `{"name":"X"}`, member.session); got != http.StatusForbidden {
-		t.Errorf("the member creating a project = %d, want 403", got)
-	}
-	if got := status(e, "GET", org+"/customers", "", member.session); got != http.StatusOK {
-		t.Errorf("the member listing customers = %d, want 200", got)
-	}
-	if got := status(e, "POST", org+"/invites", `{"role":"member"}`, member.session); got != http.StatusForbidden {
-		t.Errorf("the member inviting = %d, want 403", got)
-	}
-	if got := status(e, "PATCH", "/api/persons/"+admin.id+"/role", `{"role":"member"}`, member.session); got != http.StatusForbidden {
-		t.Errorf("the member changing a role = %d, want 403", got)
-	}
-	// O admin faz tudo isso sem permissão nenhuma, menos o que é do dono.
-	if got := status(e, "POST", org+"/projects", `{"name":"Y"}`, admin.session); got != http.StatusCreated {
-		t.Errorf("the admin creating a project = %d, want 201", got)
-	}
-	if got := status(e, "POST", org+"/invites", `{"role":"admin"}`, admin.session); got != http.StatusForbidden {
-		t.Errorf("an admin inviting another admin = %d, want 403 (it is the owner's)", got)
-	}
-	if got := status(e, "POST", org+"/invites", `{"role":"member"}`, admin.session); got != http.StatusCreated {
-		t.Errorf("an admin inviting a member = %d, want 201", got)
-	}
-	if got := status(e, "DELETE", org, "", admin.session); got != http.StatusForbidden {
-		t.Errorf("an admin deleting the organization = %d, want 403 (it is the owner's)", got)
+	// Dar permissão avulsa deixou de existir, para todos.
+	if got := status(e, "PATCH", "/api/persons/"+member.id+"/permissions", `{"permissions":["projects.create"]}`, owner.session); got == http.StatusOK {
+		t.Errorf("the owner giving a loose permission = %d, want the route gone", got)
 	}
 }
 
@@ -376,8 +355,8 @@ func TestPermissions_CatalogAndIdentity(t *testing.T) {
 	if p, _ := cat["project"].([]any); len(p) != 10 {
 		t.Errorf("project permissions = %v, want 10", cat["project"])
 	}
-	if o, _ := cat["organization"].([]any); len(o) != 3 {
-		t.Errorf("organization permissions = %v, want 3", cat["organization"])
+	if o, _ := cat["organization"].([]any); len(o) != 4 {
+		t.Errorf("organization permissions = %v, want 4", cat["organization"])
 	}
 	if presets, _ := cat["presets"].([]any); len(presets) != 4 {
 		t.Errorf("presets = %v, want 4", cat["presets"])
@@ -386,10 +365,11 @@ func TestPermissions_CatalogAndIdentity(t *testing.T) {
 		t.Errorf("the catalog without a session = %d, want 401", got)
 	}
 
-	do(e, "PATCH", "/api/persons/"+member.id+"/permissions", `{"permissions":["people.manage"]}`, owner.session)
+	// A identidade não traz mais a lista de permissões da organização: ela decorre do cargo, e a tela lê o que pode
+	// em BOOT.can.
 	me := decode(t, do(e, "GET", "/api/auth/me", "", member.session))
-	if perms, _ := me["permissions"].([]any); len(perms) != 1 || perms[0] != "people.manage" {
-		t.Errorf("/auth/me permissions = %v, want [people.manage]", me["permissions"])
+	if _, has := me["permissions"]; has {
+		t.Errorf("/auth/me still carries permissions: %v", me["permissions"])
 	}
 }
 

@@ -675,36 +675,32 @@ func TestPages_ProjectSettingsAndWeeklyHours(t *testing.T) {
 		t.Error("the role should change on the row button, and not in the weekly hours modal")
 	}
 
-	// As permissões da organização estão no mesmo modal, mas só o dono as vê: um admin que
-	// não é o dono edita a jornada e nada mais.
-	for _, want := range []string{`id="person-permissions-label"`, `x-model="draft.permissions"`, "canGrant(editing)"} {
-		if !strings.Contains(people, want) {
-			t.Errorf("the owner does not see %q in the people modal", want)
+	// As permissões da organização decorrem do cargo: não há mais aba nem lista para liberá-las. A regra de
+	// pagamento é dinheiro, só do dono: um admin que não é o dono edita a jornada e os projetos.
+	for _, gone := range []string{`id="person-permissions-label"`, `x-model="draft.permissions"`, "canGrant(", `id="person-tab-permissions"`} {
+		if strings.Contains(people, gone) {
+			t.Errorf("the people modal still has %q", gone)
 		}
 	}
+	if !strings.Contains(people, `id="person-payment-frequency"`) {
+		t.Error("the owner does not see the payment rule in the people modal")
+	}
 	otherAdmin := invite(t, e, admin, "outro-admin@test.com", "admin")
-	if peopleAsAdmin := do(e, "GET", "/orgs/"+admin.orgID+"/people", "", otherAdmin.session).Body.String(); strings.Contains(peopleAsAdmin, "person-permissions-label") ||
+	if peopleAsAdmin := do(e, "GET", "/orgs/"+admin.orgID+"/people", "", otherAdmin.session).Body.String(); strings.Contains(peopleAsAdmin, "person-payment-frequency") ||
 		strings.Contains(peopleAsAdmin, `<option value="admin">`) || !strings.Contains(peopleAsAdmin, `id="person-weekly-hours"`) {
-		t.Error("an admin who is not the owner should edit the weekly hours only, and not the permissions or the admin role")
+		t.Error("an admin who is not the owner should edit the weekly hours only, and not the payment rule or the admin role")
 	}
 
-	// O modal é em abas, e cada uma só existe para quem pode usá-la: a jornada para quem cuida de pessoas, as permissões
-	// da organização para o dono e os projetos, com o valor por hora, para os admins.
-	tabs := func(page string) (hours, permissions, projects bool) {
-		return strings.Contains(page, `id="person-tab-payment"`), strings.Contains(page, `id="person-tab-permissions"`), strings.Contains(page, `id="person-tab-projects"`)
+	// O modal é em abas, e cada uma só existe para quem pode usá-la: a jornada para quem cuida de pessoas e os
+	// projetos, com o valor por hora, para os admins.
+	tabs := func(page string) (hours, projects bool) {
+		return strings.Contains(page, `id="person-tab-payment"`), strings.Contains(page, `id="person-tab-projects"`)
 	}
-	if h, p, pr := tabs(people); !h || !p || !pr || !strings.Contains(people, `role="tablist"`) || !strings.Contains(people, `id="person-panel-projects"`) {
-		t.Errorf("the owner should see the three tabs, got hours %v, permissions %v, projects %v", h, p, pr)
+	if h, pr := tabs(people); !h || !pr || !strings.Contains(people, `role="tablist"`) || !strings.Contains(people, `id="person-panel-projects"`) {
+		t.Errorf("the owner should see the hours and projects tabs, got hours %v, projects %v", h, pr)
 	}
-	if h, p, pr := tabs(do(e, "GET", "/orgs/"+admin.orgID+"/people", "", otherAdmin.session).Body.String()); !h || p || !pr {
-		t.Errorf("an admin who is not the owner should see the hours and projects tabs only, got hours %v, permissions %v, projects %v", h, p, pr)
-	}
-	peopleManager := invite(t, e, admin, "pessoas@test.com", "member")
-	if rec := do(e, "PATCH", "/api/persons/"+peopleManager.id+"/permissions", `{"permissions":["people.manage"]}`, admin.session); rec.Code != http.StatusOK {
-		t.Fatalf("grant people.manage = %d: %s", rec.Code, rec.Body.String())
-	}
-	if h, p, pr := tabs(do(e, "GET", "/orgs/"+admin.orgID+"/people", "", peopleManager.session).Body.String()); !h || p || pr {
-		t.Errorf("who only manages people should see the hours tab only, got hours %v, permissions %v, projects %v", h, p, pr)
+	if h, pr := tabs(do(e, "GET", "/orgs/"+admin.orgID+"/people", "", otherAdmin.session).Body.String()); !h || !pr {
+		t.Errorf("an admin who is not the owner should see the hours and projects tabs, got hours %v, projects %v", h, pr)
 	}
 
 	// Cada pessoa lê a própria jornada no perfil (no cartão Dados), sem campo para alterar.

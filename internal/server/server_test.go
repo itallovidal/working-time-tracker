@@ -859,7 +859,6 @@ func TestRoutes_Table(t *testing.T) {
 		"GET /api/persons/:personId",
 		"PATCH /api/persons/:personId",
 		"PATCH /api/persons/:personId/role",
-		"PATCH /api/persons/:personId/permissions",
 		"PATCH /api/persons/:personId/weekly-hours",
 		"PATCH /api/persons/:personId/payment",
 		"GET /api/persons/:personId/payments",
@@ -1212,7 +1211,7 @@ func TestOwner_EntersItsProjectsAndWorksAtTheBilledRate(t *testing.T) {
 
 	// O dono bate ponto sem que ninguém o tenha adicionado num projeto sem ele: a sessão
 	// guarda valor pago zero e o valor cobrado, e o outro admin, sem valor, não bate.
-	setBilling(t, e, other, "/api/projects/"+theirs, 12000)
+	setBilling(t, e, owner, "/api/projects/"+theirs, 12000)
 	taskID := decode(t, do(e, "POST", "/api/projects/"+theirs+"/tasks", `{"name":"Tarefa"}`, owner.session))["id"].(string)
 	clock := "/api/projects/" + theirs + "/work-sessions/clock-in"
 	if rec := do(e, "POST", clock, `{"task_id":"`+taskID+`"}`, other.session); rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "work_session.no_rate") {
@@ -1889,12 +1888,13 @@ func TestPayments_Permissions(t *testing.T) {
 	e := newServer(t)
 	admin := signup(t, e, "Org", "ana@test.com")
 	bia := invite(t, e, admin, "bia@test.com", "member")
-	carol := invite(t, e, admin, "carol@test.com", "member")
-	if rec := do(e, "PATCH", "/api/persons/"+carol.id+"/permissions", `{"permissions":["people.manage"]}`, admin.session); rec.Code != http.StatusOK {
-		t.Fatalf("grant people.manage = %d", rec.Code)
+	carol := invite(t, e, admin, "carol@test.com", "admin")
+	// A regra de pagamento é do dono: um admin que não é o dono recebe 403.
+	if rec := do(e, "PATCH", "/api/persons/"+bia.id+"/payment", `{"frequency":"monthly","day":5}`, carol.session); rec.Code != http.StatusForbidden {
+		t.Fatalf("an admin who is not the owner changing the rule = %d, want 403", rec.Code)
 	}
-	if rec := do(e, "PATCH", "/api/persons/"+bia.id+"/payment", `{"frequency":"monthly","day":5}`, carol.session); rec.Code != http.StatusOK {
-		t.Fatalf("people.manage alone should change the rule, got %d", rec.Code)
+	if rec := do(e, "PATCH", "/api/persons/"+bia.id+"/payment", `{"frequency":"monthly","day":5}`, admin.session); rec.Code != http.StatusOK {
+		t.Fatalf("the owner changing the rule = %d", rec.Code)
 	}
 	for _, c := range []struct {
 		name, path, session string
@@ -1903,15 +1903,19 @@ func TestPayments_Permissions(t *testing.T) {
 		{"own payments", "/api/persons/" + bia.id + "/payments", bia.session, http.StatusOK},
 		{"another person's payments", "/api/persons/" + bia.id + "/payments", admin.session, http.StatusOK},
 		{"a member reading another's", "/api/persons/" + admin.id + "/payments", bia.session, http.StatusForbidden},
-		{"people.manage reading another's", "/api/persons/" + bia.id + "/payments", carol.session, http.StatusForbidden},
+		{"an admin who is not the owner reading another's (hours only)", "/api/persons/" + bia.id + "/payments", carol.session, http.StatusOK},
 		{"team as admin", "/api/orgs/" + admin.orgID + "/payments", admin.session, http.StatusOK},
 		{"team as member", "/api/orgs/" + admin.orgID + "/payments", bia.session, http.StatusForbidden},
-		{"team as people.manage", "/api/orgs/" + admin.orgID + "/payments", carol.session, http.StatusForbidden},
+		{"team as an admin who is not the owner", "/api/orgs/" + admin.orgID + "/payments", carol.session, http.StatusForbidden},
 		{"bad history", "/api/persons/" + bia.id + "/payments?history=x", bia.session, http.StatusBadRequest},
 	} {
 		if rec := do(e, "GET", c.path, "", c.session); rec.Code != c.want {
 			t.Errorf("%s = %d, want %d: %s", c.name, rec.Code, c.want, rec.Body.String())
 		}
+	}
+	hidden := decode(t, do(e, "GET", "/api/persons/"+bia.id+"/payments", "", carol.session))
+	if hidden["rule"] != nil || hidden["current"] != nil || len(hidden["history"].([]any)) != 0 {
+		t.Errorf("an admin who is not the owner sees the money of another person: %v", hidden)
 	}
 	got := decode(t, do(e, "GET", "/api/persons/"+bia.id+"/payments?history=2", "", bia.session))
 	if rule, _ := got["rule"].(map[string]any); rule["frequency"] != "monthly" || len(got["history"].([]any)) != 2 {

@@ -167,7 +167,7 @@ func TestProjectAccess_InviteWithProjectOpensOnlyThatProject(t *testing.T) {
 	}
 }
 
-// Criar projeto é do dono e do admin: um membro, mesmo com a permissão projects.create, recebe 403 e nada é criado.
+// Criar projeto é do dono e do admin: um membro recebe 403 e nada é criado.
 // O admin que não é o dono cria e vê todos os projetos sem ser matriculado em nenhum (só o dono entra, com custo 0).
 func TestProjectAccess_OnlyOwnerAndAdminCreateProjects(t *testing.T) {
 	e := newServer(t)
@@ -175,9 +175,6 @@ func TestProjectAccess_OnlyOwnerAndAdminCreateProjects(t *testing.T) {
 	bia := invite(t, e, admin, "bia@test.com", "member")
 	helena := invite(t, e, admin, "helena@test.com", "admin")
 	createEmptyProject(t, e, admin, "Projeto da Ana")
-	if rec := do(e, "PATCH", "/api/persons/"+bia.id+"/permissions", `{"permissions":["projects.create"]}`, admin.session); rec.Code != http.StatusOK {
-		t.Fatalf("grant projects.create = %d: %s", rec.Code, rec.Body.String())
-	}
 
 	create := "/api/orgs/" + admin.orgID + "/projects"
 	if rec := do(e, "POST", create, `{"name":"Projeto da Bia"}`, bia.session); rec.Code != http.StatusForbidden {
@@ -254,14 +251,13 @@ func TestProjectAccess_DashboardOnlyCountsTasksOfMyProjects(t *testing.T) {
 	}
 }
 
-// Estar só num time do projeto, sem valor por hora (o que só existe em dado de antes de o valor ser obrigatório),
-// também é estar nele: abre o projeto e o lista, mas não traz nenhuma permissão (o que dá permissão é a alocação).
-func TestProjectAccess_TeamOnlyIsStillInTheProject(t *testing.T) {
+// Estar no projeto é ter valor por hora nele: um time sem o valor (dado de antes de o valor ser obrigatório) não põe
+// ninguém no projeto, que para quem só tem o time não existe.
+func TestProjectAccess_TeamWithoutRateIsNotInTheProject(t *testing.T) {
 	e := newServer(t)
 	admin := signup(t, e, "Org", "ana@test.com")
 	bia := invite(t, e, admin, "bia@test.com", "member")
 	alfa := createEmptyProject(t, e, admin, "Projeto Alfa")
-	beta := createEmptyProject(t, e, admin, "Projeto Beta")
 	allocate(t, e, admin, alfa, bia.id, 2000)
 	teamID := decode(t, do(e, "POST", "/api/projects/"+alfa+"/teams", `{"name":"Time"}`, admin.session))["id"].(string)
 	if rec := do(e, "POST", "/api/teams/"+teamID+"/members", `{"person_id":"`+bia.id+`"}`, admin.session); rec.Code != http.StatusCreated {
@@ -271,17 +267,11 @@ func TestProjectAccess_TeamOnlyIsStillInTheProject(t *testing.T) {
 	testClient.Allocation.Delete().ExecX(context.Background())
 
 	list := "/api/orgs/" + admin.orgID + "/projects"
-	if got := projectNames(t, decodeList(t, do(e, "GET", list, "", bia.session))); !slices.Equal(got, []string{"Projeto Alfa"}) {
-		t.Errorf("team-only Bia's projects = %v, want the Alfa", got)
+	if got := projectNames(t, decodeList(t, do(e, "GET", list, "", bia.session))); len(got) != 0 {
+		t.Errorf("team-only Bia's projects = %v, want none", got)
 	}
-	if got := status(e, "GET", "/api/projects/"+alfa, "", bia.session); got != http.StatusOK {
-		t.Errorf("team-only Bia GET the Alfa = %d, want 200", got)
-	}
-	if got := status(e, "GET", "/api/projects/"+alfa+"/billing", "", bia.session); got != http.StatusForbidden {
-		t.Errorf("team-only Bia GET the Alfa billing = %d, want 403 (no permission, but in the project)", got)
-	}
-	if got := status(e, "GET", "/api/projects/"+beta, "", bia.session); got != http.StatusNotFound {
-		t.Errorf("team-only Bia GET the Beta = %d, want 404", got)
+	if got := status(e, "GET", "/api/projects/"+alfa, "", bia.session); got != http.StatusNotFound {
+		t.Errorf("team-only Bia GET the Alfa = %d, want 404", got)
 	}
 }
 

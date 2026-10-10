@@ -8,8 +8,9 @@ import (
 )
 
 // Quem não é admin, não cuida de pessoas e não pode pôr gente em projeto só vê a si mesmo e quem está em algum
-// projeto dele, na lista da organização e pelo id; os outros dão 404, como uma pessoa que não existe. O admin, quem
-// tem people.manage e quem tem collaborators.manage em algum projeto veem todas (precisam achar quem entra).
+// projeto dele, na lista da organização e pelo id; os outros dão 404, como uma pessoa que não existe. O dono, os
+// admins e quem tem collaborators.manage em algum projeto (o administrador de projeto) veem todas (precisam achar
+// quem entra).
 func TestPeople_MemberSeesOnlyColleagues(t *testing.T) {
 	e := newServer(t)
 	admin := signup(t, e, "Org", "ana@test.com")
@@ -18,7 +19,7 @@ func TestPeople_MemberSeesOnlyColleagues(t *testing.T) {
 	dora := invite(t, e, admin, "dora@test.com", "member")
 	eli := invite(t, e, admin, "eli@test.com", "member")   // não está em projeto nenhum
 	gabi := invite(t, e, admin, "gabi@test.com", "member") // gerente do Alfa
-	pam := invite(t, e, admin, "pam@test.com", "member")   // people.manage
+	pam := invite(t, e, admin, "pam@test.com", "admin")    // admin que não é o dono
 	other := signup(t, e, "Outra", "zed@outra.com")
 	alfa := createEmptyProject(t, e, admin, "Projeto Alfa")
 	beta := createEmptyProject(t, e, admin, "Projeto Beta")
@@ -26,9 +27,6 @@ func TestPeople_MemberSeesOnlyColleagues(t *testing.T) {
 	allocate(t, e, admin, alfa, caio.id, 2000)
 	allocate(t, e, admin, beta, dora.id, 2000)
 	withPreset(t, e, admin, alfa, gabi.id, "manager")
-	if rec := do(e, "PATCH", "/api/persons/"+pam.id+"/permissions", `{"permissions":["people.manage"]}`, admin.session); rec.Code != http.StatusOK {
-		t.Fatalf("grant people.manage = %d: %s", rec.Code, rec.Body.String())
-	}
 
 	list := "/api/orgs/" + admin.orgID + "/persons"
 	ids := func(session string) []string {
@@ -64,7 +62,7 @@ func TestPeople_MemberSeesOnlyColleagues(t *testing.T) {
 		"Dora (alone in the Beta)":    {dora.session, sorted(dora)},
 		"Eli (in no project)":         {eli.session, sorted(eli)},
 		"admin":                       {admin.session, everyone},
-		"Pam (people.manage)":         {pam.session, everyone},
+		"Pam (admin)":                 {pam.session, everyone},
 		"Gabi (collaborators.manage)": {gabi.session, everyone},
 	} {
 		if got := ids(c.session); !slices.Equal(got, c.want) {
@@ -115,20 +113,17 @@ func TestPeople_MemberSeesOnlyColleagues(t *testing.T) {
 	}
 }
 
-// A regra de pagamento de uma pessoa só vai para ela mesma, para os admins e para quem cuida de pessoas: um colega de
-// projeto recebe payment: null, na lista e pelo id.
+// A regra de pagamento de uma pessoa é dinheiro: só vai para ela mesma e para o dono. Um colega de projeto e um admin
+// que não é o dono recebem payment: null, na lista e pelo id.
 func TestPeople_PaymentRuleIsHiddenFromColleagues(t *testing.T) {
 	e := newServer(t)
 	admin := signup(t, e, "Org", "ana@test.com")
 	bia := invite(t, e, admin, "bia@test.com", "member")
 	caio := invite(t, e, admin, "caio@test.com", "member")
-	pam := invite(t, e, admin, "pam@test.com", "member")
+	pam := invite(t, e, admin, "pam@test.com", "admin")
 	alfa := createEmptyProject(t, e, admin, "Projeto Alfa")
 	allocate(t, e, admin, alfa, bia.id, 2000)
 	allocate(t, e, admin, alfa, caio.id, 2000)
-	if rec := do(e, "PATCH", "/api/persons/"+pam.id+"/permissions", `{"permissions":["people.manage"]}`, admin.session); rec.Code != http.StatusOK {
-		t.Fatalf("grant people.manage = %d", rec.Code)
-	}
 	if rec := do(e, "PATCH", "/api/persons/"+bia.id+"/payment", `{"frequency":"monthly","day":5}`, admin.session); rec.Code != http.StatusOK {
 		t.Fatalf("set rule = %d", rec.Code)
 	}
@@ -136,7 +131,7 @@ func TestPeople_PaymentRuleIsHiddenFromColleagues(t *testing.T) {
 		who     string
 		session string
 		visible bool
-	}{{"bia", bia.session, true}, {"admin", admin.session, true}, {"people.manage", pam.session, true}, {"colleague", caio.session, false}} {
+	}{{"bia", bia.session, true}, {"admin", admin.session, true}, {"admin who is not the owner", pam.session, false}, {"colleague", caio.session, false}} {
 		byID := do(e, "GET", "/api/persons/"+bia.id, "", c.session)
 		if byID.Code != http.StatusOK {
 			t.Fatalf("%s: GET person = %d", c.who, byID.Code)
