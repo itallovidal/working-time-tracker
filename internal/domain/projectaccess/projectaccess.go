@@ -1,6 +1,6 @@
-// Package projectaccess diz quem está num projeto. Estar nele é ter valor por hora ou estar em algum time
-// dele (a mesma conta dos colaboradores e do número de pessoas do cartão do projeto). Quem não é admin só vê
-// os projetos em que está: o dono e os admins veem todos e não passam por aqui.
+// Package projectaccess diz quem está num projeto. Estar nele é ter valor por hora nele (a mesma conta dos
+// colaboradores e do número de pessoas do cartão do projeto): ninguém entra num time sem o valor. Quem não é admin
+// só vê os projetos em que está: o dono e os admins veem todos e não passam por aqui.
 package projectaccess
 
 import (
@@ -14,25 +14,17 @@ import (
 	entperson "working-time-tracker/ent/person"
 	"working-time-tracker/ent/predicate"
 	entproject "working-time-tracker/ent/project"
-	entteam "working-time-tracker/ent/team"
-	enttm "working-time-tracker/ent/teammembership"
 	"working-time-tracker/internal/domain/permission"
 )
 
-// PersonIn escolhe as pessoas que estão no projeto: as que têm valor por hora nele ou estão em algum time dele.
+// PersonIn escolhe as pessoas que estão no projeto: as que têm valor por hora nele.
 func PersonIn(projectID uuid.UUID) predicate.Person {
-	return entperson.Or(
-		entperson.HasAllocationsWith(entalloc.ProjectIDEQ(projectID)),
-		entperson.HasTeamMembershipsWith(enttm.HasTeamWith(entteam.ProjectIDEQ(projectID))),
-	)
+	return entperson.HasAllocationsWith(entalloc.ProjectIDEQ(projectID))
 }
 
-// ProjectsOf escolhe os projetos em que a pessoa está: aqueles em que tem valor por hora ou em cujo time está.
+// ProjectsOf escolhe os projetos em que a pessoa está: aqueles em que tem valor por hora.
 func ProjectsOf(personID uuid.UUID) predicate.Project {
-	return entproject.Or(
-		entproject.HasAllocationsWith(entalloc.PersonIDEQ(personID)),
-		entproject.HasTeamsWith(entteam.HasMembershipsWith(enttm.PersonIDEQ(personID))),
-	)
+	return entproject.HasAllocationsWith(entalloc.PersonIDEQ(personID))
 }
 
 // ColleaguesOf escolhe a própria pessoa e quem está em algum dos projetos dela: as pessoas que ela tem motivo
@@ -42,7 +34,6 @@ func ColleaguesOf(personID uuid.UUID) predicate.Person {
 	return entperson.Or(
 		entperson.IDEQ(personID),
 		entperson.HasAllocationsWith(entalloc.HasProjectWith(mine)),
-		entperson.HasTeamMembershipsWith(enttm.HasTeamWith(entteam.HasProjectWith(mine))),
 	)
 }
 
@@ -79,10 +70,9 @@ func PeopleOfManagedProjects(ctx context.Context, client *ent.Client, personID u
 	if len(projects) == 0 {
 		return out, nil
 	}
-	people, err := client.Person.Query().Where(entperson.Or(
+	people, err := client.Person.Query().Where(
 		entperson.HasAllocationsWith(entalloc.ProjectIDIn(projects...)),
-		entperson.HasTeamMembershipsWith(enttm.HasTeamWith(entteam.ProjectIDIn(projects...))),
-	)).IDs(ctx)
+	).IDs(ctx)
 	if err != nil {
 		return nil, err
 	}

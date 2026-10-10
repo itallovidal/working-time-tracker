@@ -67,12 +67,12 @@ func names(t *testing.T, client *ent.Client, q *ent.PersonQuery) []string {
 	return out
 }
 
-// Estar no projeto é ter valor por hora nele ou estar em um time dele: quem só está num time (dado antigo) também
-// está, e quem não tem nenhum dos dois, não.
-func TestPersonIn_RateOrTeam(t *testing.T) {
+// Estar no projeto é ter valor por hora nele: um time sem o valor (o que só existe em dado de antes de o valor ser
+// obrigatório) não põe ninguém no projeto.
+func TestPersonIn_Rate(t *testing.T) {
 	s := setup(t)
-	if got := names(t, testClient, testClient.Person.Query().Where(projectaccess.PersonIn(s.x))); !slices.Equal(got, []string{"ana", "bruno"}) {
-		t.Errorf("people in X = %v, want ana (rate) and bruno (team only)", got)
+	if got := names(t, testClient, testClient.Person.Query().Where(projectaccess.PersonIn(s.x))); !slices.Equal(got, []string{"ana"}) {
+		t.Errorf("people in X = %v, want only ana (rate); bruno is only in a team", got)
 	}
 	if got := names(t, testClient, testClient.Person.Query().Where(projectaccess.PersonIn(s.y))); !slices.Equal(got, []string{"carla", "diego"}) {
 		t.Errorf("people in Y = %v, want carla and diego", got)
@@ -98,7 +98,7 @@ func TestProjectsOfAndHas(t *testing.T) {
 		want []string
 	}{
 		"ana (rate)":        {s.ana, []string{"X"}},
-		"bruno (team only)": {s.bruno, []string{"X"}},
+		"bruno (team only)": {s.bruno, nil},
 		"carla":             {s.carla, []string{"Y"}},
 		"eva (none)":        {s.eva, nil},
 		"zoe (other org)":   {s.zoe, nil},
@@ -112,7 +112,7 @@ func TestProjectsOfAndHas(t *testing.T) {
 		want            bool
 	}{
 		"ana in X":          {s.ana, s.x, true},
-		"bruno in X (team)": {s.bruno, s.x, true},
+		"bruno in X (team)": {s.bruno, s.x, false},
 		"bruno in Y":        {s.bruno, s.y, false},
 		"eva in X":          {s.eva, s.x, false},
 		"zoe in X":          {s.zoe, s.x, false},
@@ -124,8 +124,8 @@ func TestProjectsOfAndHas(t *testing.T) {
 	}
 }
 
-// Os colegas de alguém são ele mesmo e quem está em algum projeto dele, por valor ou por time; quem não está em
-// projeto nenhum só vê a si mesmo.
+// Os colegas de alguém são ele mesmo e quem está em algum projeto dele, por valor; quem não está em projeto nenhum
+// só vê a si mesmo.
 func TestColleaguesOf(t *testing.T) {
 	s := setup(t)
 	colleagues := func(person uuid.UUID) []string {
@@ -135,8 +135,8 @@ func TestColleaguesOf(t *testing.T) {
 		id   uuid.UUID
 		want []string
 	}{
-		"ana":   {s.ana, []string{"ana", "bruno"}},
-		"bruno": {s.bruno, []string{"ana", "bruno"}},
+		"ana":   {s.ana, []string{"ana"}},
+		"bruno": {s.bruno, []string{"bruno"}},
 		"carla": {s.carla, []string{"carla", "diego"}},
 		"eva":   {s.eva, []string{"eva"}},
 	} {

@@ -169,13 +169,12 @@ func describe(p overview.PersonTotal) string {
 
 // O cenário: o Projeto X é de um cliente que paga 100,00 por hora e foi
 // cadastrado há 95 dias. A Ana tem valor e está em dois times, o Bruno só tem
-// valor, a Carla está num time sem valor e o Diego trabalhou e saiu. Há um time
+// valor, a Carla só tem sessões antigas, sem valor, e o Diego trabalhou e saiu. Há um time
 // vazio, três tarefas (uma atrasada, uma no prazo, uma sem prazo) e seis
 // sessões. O Projeto Y, da mesma organização, tem tarefa atrasada e sessão que
 // não podem entrar na conta do X.
 func TestService_Totals(t *testing.T) {
 	f := setup(t)
-	ctx := context.Background()
 	ana, bruno, carla, diego := f.person("Ana"), f.person("Bruno"), f.person("Carla"), f.person("Diego")
 
 	x, y := f.project("Projeto X"), f.project("Projeto Y")
@@ -201,8 +200,6 @@ func TestService_Totals(t *testing.T) {
 	f.team(x, "Vazio")
 	f.join(backend, ana)
 	f.join(mobile, ana)
-	// A Carla entra direto no banco: é a linha de quem está num time sem valor.
-	testClient.TeamMembership.Create().SetTeamID(uuid.MustParse(backend)).SetPersonID(carla).SaveX(ctx)
 
 	late, onTime := f.now.Add(-2*day), f.now.Add(5*day)
 	overdue, due, open := f.task(x, ana, &late), f.task(x, ana, &onTime), f.task(x, ana, nil)
@@ -228,8 +225,8 @@ func TestService_Totals(t *testing.T) {
 	if p := got.Project; p.Customer == nil || p.Customer.Name != "Cliente" || p.BillRateCents == nil || *p.BillRateCents != 10000 {
 		t.Errorf("billing = customer %+v, rate %s; want Cliente at 10000", p.Customer, show(p.BillRateCents))
 	}
-	// Ana, Bruno e Carla: a Ana conta uma vez, e o Diego já saiu.
-	if want := (overview.People{Total: 3, WithoutTeam: 1, WithoutRate: 1}); got.People != want {
+	// Ana e Bruno: a Ana conta uma vez, e o Diego e a Carla (sem valor, só com sessão antiga) não estão no projeto.
+	if want := (overview.People{Total: 2, WithoutTeam: 1}); got.People != want {
 		t.Errorf("people = %+v, want %+v", got.People, want)
 	}
 	if got.Teams.Total != 3 {
@@ -275,7 +272,7 @@ func TestService_Totals(t *testing.T) {
 	want := []string{
 		"Ana: 12600s in 2 sessions, pay 7000, bill 35000, in the project",
 		"Diego: 3600s in 1 sessions, pay 3000, bill 10000, left the project",
-		"Carla: 1800s in 1 sessions, pay -, bill -, in the project",
+		"Carla: 1800s in 1 sessions, pay -, bill -, left the project",
 		"Bruno: 200s in 2 sessions, pay 112, bill 556, in the project",
 	}
 	if !slices.Equal(rows, want) {

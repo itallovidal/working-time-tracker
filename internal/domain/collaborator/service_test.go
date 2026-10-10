@@ -92,11 +92,6 @@ func setup(t *testing.T) fixture {
 			t.Fatalf("fixture member: %v", err)
 		}
 	}
-	// A Carla entra direto pelo Ent: o service já não deixa pôr num time quem
-	// não tem valor.
-	testClient.TeamMembership.Create().
-		SetTeamID(uuid.MustParse(f.backend)).SetPersonID(uuid.MustParse(f.carla)).
-		SaveX(context.Background())
 	return f
 }
 
@@ -129,7 +124,6 @@ func TestService_ListByProject_RatesAndTeams(t *testing.T) {
 	want := []string{
 		"Ana: rate 9000, teams [Backend Mobile]", // valor e dois times, só os deste projeto
 		"Bruno: rate 1000, teams []",             // só o valor, sem time
-		"Carla: no rate, teams [Backend]",        // num time sem valor, de antes da regra
 	}
 	if !slices.Equal(got, want) {
 		t.Errorf("collaborators of X:\n got %q\nwant %q", got, want)
@@ -168,8 +162,8 @@ func TestService_Remove(t *testing.T) {
 			t.Errorf("Ana is still a collaborator of X: %s", describe(c))
 		}
 	}
-	if len(left) != 2 {
-		t.Errorf("X has %d collaborators left, want Bruno and Carla", len(left))
+	if len(left) != 1 {
+		t.Errorf("X has %d collaborators left, want Bruno", len(left))
 	}
 	if other, _ := f.svc.ListByProject(f.projectY); len(other) != 1 || describe(other[0]) != "Ana: rate 11000, teams [Backend Y]" {
 		t.Errorf("collaborators of Y after removing Ana from X = %+v, want her untouched", other)
@@ -181,11 +175,7 @@ func TestService_Remove(t *testing.T) {
 		t.Errorf("work sessions after removal = %d, want 1", n)
 	}
 
-	// Quem ficou num time sem valor também sai.
-	if err := f.svc.Remove(f.projectX, f.carla); err != nil {
-		t.Errorf("remove a person with only a team: %v", err)
-	}
-	// Quem só tinha valor, sem time, também.
+	// Quem só tinha valor, sem time, também sai.
 	if err := f.svc.Remove(f.projectX, f.bruno); err != nil {
 		t.Errorf("remove a person with only a rate: %v", err)
 	}
@@ -210,7 +200,7 @@ func TestService_Remove_NotACollaborator(t *testing.T) {
 		t.Errorf("malformed project id: err = %v, want ErrNotFound", err)
 	}
 	// Uma remoção recusada não mexe em nada.
-	if list, _ := f.svc.ListByProject(f.projectX); len(list) != 3 {
-		t.Errorf("X has %d collaborators after refused removals, want 3", len(list))
+	if list, _ := f.svc.ListByProject(f.projectX); len(list) != 2 {
+		t.Errorf("X has %d collaborators after refused removals, want 2", len(list))
 	}
 }

@@ -155,14 +155,10 @@ func (s *MembershipStore) IsPersonInProject(personID, projectID string) (bool, e
 		Exist(context.Background())
 }
 
-// inProject é quem está no projeto: tem valor por hora nele ou está em algum
-// dos times dele. Desde que o valor passou a ser obrigatório para entrar num
-// time, quem está num time tem valor; a segunda parte cobre os bancos antigos.
+// inProject é quem está no projeto: tem valor por hora nele. Ninguém entra num time sem o valor, então estar no
+// projeto é ter o valor, uma regra só.
 func inProject(projectID uuid.UUID) predicate.Person {
-	return entperson.Or(
-		entperson.HasAllocationsWith(entalloc.ProjectIDEQ(projectID)),
-		entperson.HasTeamMembershipsWith(enttm.HasTeamWith(team.ProjectIDEQ(projectID))),
-	)
+	return entperson.HasAllocationsWith(entalloc.ProjectIDEQ(projectID))
 }
 
 func toDomainMembership(e *ent.TeamMembership) TeamMembership {
