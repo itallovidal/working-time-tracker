@@ -1,4 +1,4 @@
-// A tela de pagamentos, só de admins: a visão da equipe (quanto pagar, a quem e quando, e as horas de cada pessoa).
+// A tela de pagamentos, só do dono: a visão da equipe (quanto pagar, a quem e quando, e as horas de cada pessoa).
 // O que cada pessoa recebe, com o histórico e o detalhe por projeto, fica no perfil dela.
 document.addEventListener('alpine:init', () => {
   const { api, form } = WTT;

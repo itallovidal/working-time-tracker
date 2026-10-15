@@ -47,13 +47,12 @@ type Age struct {
 	Months int `json:"months"`
 }
 
-// People conta os colaboradores do projeto: quem tem valor por hora nele ou
-// está em algum time dele, sem repetir.
+// People conta os colaboradores do projeto: quem tem valor por hora nele.
 type People struct {
 	Total       int `json:"total"`
 	WithoutTeam int `json:"without_team"`
-	// WithoutRate são os que estão num time e ainda não têm valor por hora: não
-	// conseguem bater ponto.
+	// WithoutRate são os que estão no projeto sem valor por hora, que não conseguem bater ponto. Como estar no
+	// projeto é ter o valor, fica em zero: vem de quando dava para entrar num time sem ele.
 	WithoutRate int `json:"without_rate"`
 	// WorkingNow são as pessoas com uma sessão aberta no projeto.
 	WorkingNow int `json:"working_now"`

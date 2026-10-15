@@ -143,7 +143,7 @@ type ListFilter struct {
 	Priorities []string    // só as com uma destas prioridades
 	Statuses   []string    // só as com um destes status
 	LabelIDs   []uuid.UUID // só as que têm alguma destas etiquetas
-	// InProjectsOf limita às tarefas de projetos em que esta pessoa está (valor por hora ou time), para quem
+	// InProjectsOf limita às tarefas de projetos em que esta pessoa está (tem valor por hora nele), para quem
 	// não é admin; nil não limita. Só as consultas que juntam vários projetos (as do painel) a usam.
 	InProjectsOf *uuid.UUID
 	Page         int // a partir de 1; zero é a lista inteira

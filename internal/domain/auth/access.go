@@ -180,8 +180,7 @@ func (r *Resolver) ProjectSet(me *Identity, projectID uuid.UUID) (permission.Set
 
 // ProjectAccess diz se a pessoa está no projeto e o que ela pode nele. Os admins estão em todos, com o que o cargo
 // dá (BaseProjectSet) mais o grupo da alocação, se tiverem uma. Quem não é admin só está nos projetos em que tem
-// valor por hora ou em cujo time está, e as permissões vêm do que a alocação dele libera (um time sem alocação dá
-// acesso, mas nenhuma permissão).
+// valor por hora (projectaccess), e as permissões vêm do que a alocação dele libera.
 func (r *Resolver) ProjectAccess(me *Identity, projectID uuid.UUID) (set permission.Set, in bool, err error) {
 	if me == nil {
 		return permission.Set{}, false, nil

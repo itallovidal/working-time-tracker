@@ -51,8 +51,8 @@ func (s *Service) Create(projectID, name, description, assigneeID string, deadli
 }
 
 // CreateAs cria a tarefa em nome de quem está logado. Quem escolhe a si mesmo
-// como responsável pode, mesmo fora dos times: é o "atribuir a mim". Qualquer
-// outra pessoa precisa estar em algum time do projeto.
+// como responsável sempre pode: é o "atribuir a mim". Qualquer outra pessoa
+// precisa estar no projeto (ter valor por hora nele).
 func (s *Service) CreateAs(selfID, projectID, name, description, assigneeID string, deadline *time.Time, attrs Attrs) (*Task, error) {
 	name, err := cleanName(name)
 	if err != nil {
@@ -315,7 +315,7 @@ func (s *Service) Claim(selfID, id string) (*Task, error) {
 }
 
 // checkAssignee confere o responsável pedido para a tarefa t. Nil mantém o que ela tem, vazio a deixa sem
-// responsável (volta a ficar disponível) e um id só vale para quem está em algum time do projeto, salvo quem
+// responsável (volta a ficar disponível) e um id só vale para quem está no projeto (tem valor por hora nele), salvo quem
 // pede para si mesmo ou quem já é o responsável. Devolve a pessoa a gravar, ou unassign para tirá-la; com
 // os dois zerados, nada muda.
 func (s *Service) checkAssignee(selfID string, t *Task, assigneeID *string) (assignee *uuid.UUID, unassign bool, err error) {

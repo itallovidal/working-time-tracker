@@ -29,10 +29,9 @@ type Collaborator struct {
 	// vazio para quem ainda não entrou em nenhum time.
 	Teams []Team `json:"teams"`
 	// Preset é o grupo de permissões da pessoa neste projeto (member, manager, finance,
-	// admin ou custom). Quem entrou num time sem valor, de antes, fica em member.
+	// admin ou custom).
 	Preset string `json:"preset"`
 	// PayRateCents é quanto a pessoa recebe por hora no projeto; nil quando quem
-	// pergunta não pode ver, ou em quem entrou num time antes de o valor ser
-	// obrigatório.
+	// pergunta não pode ver.
 	PayRateCents *int `json:"pay_rate_cents"`
 }

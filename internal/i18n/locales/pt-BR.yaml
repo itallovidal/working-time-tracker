@@ -557,7 +557,7 @@ help:
       tip: "Este passo é opcional: um projeto sem cliente é um projeto interno, e o cliente pode ser escolhido depois, nas configurações do projeto."
     project:
       title: Crie o primeiro projeto
-      text: "Informe o nome e, se quiser, uma descrição. Escolha o cliente e o valor cobrado por hora (só administradores veem esses campos) e a duração da sprint: 7, 14 ou 30 dias. Marque “O projeto tem daily” e “O projeto tem weekly” se o time faz essas reuniões."
+      text: "Informe o nome e, se quiser, uma descrição. Escolha o cliente e o valor cobrado por hora (só o dono vê esses campos: o administrador cria só projeto interno) e a duração da sprint: 7, 14 ou 30 dias. Marque “O projeto tem daily” e “O projeto tem weekly” se o time faz essas reuniões."
       tip: "O valor cobrado por hora é o que o cliente paga pelas horas deste projeto. É com ele que o app calcula a receita."
     invite:
       title: Convide o time
@@ -579,7 +579,7 @@ help:
       tip: "Ao iniciar, a tarefa vai para “Em progresso”. Você pode trabalhar em várias tarefas na mesma sessão (“Adicionar à sessão”): cada uma conta o tempo cheio e a sessão conta uma vez só. Só existe um ponto aberto por pessoa."
     numbers:
       title: Acompanhe os números
-      text: "Administradores veem, no Início da organização, as horas, a receita, o custo e a margem de todos os projetos, em 7 dias, 30 dias ou tudo. Cada projeto tem a sua “Visão geral” na Gestão, com as sessões de todo mundo e os totais."
+      text: "O dono e os administradores veem, no Início da organização, as horas e o custo de todos os projetos, em 7 dias, 30 dias ou tudo; a receita e a margem, só o dono. Cada projeto tem a sua “Visão geral” na Gestão, com as sessões de todo mundo e os totais."
       tip: "As telas mostram quem está trabalhando agora e em qual tarefa, mas não ordenam nem comparam pessoas por horas."
   screens:
     intro: "Para cada tela: o que ela mostra e o que dá para fazer nela. Alguns botões só aparecem para quem tem a permissão (veja “Quem vê e faz o quê”)."
@@ -587,31 +587,31 @@ help:
       title: Início da organização
       text: A primeira tela depois de entrar.
       mine: "Seu painel (todos): as suas horas de hoje e da semana, as suas tarefas abertas e concluídas em todos os projetos e a semana dia a dia, com as horas por projeto. Só aparece o que é seu: nada de dinheiro nem dos colegas. Clique numa tarefa para abri-la."
-      overview: "Visão geral (só administradores): as suas horas, as horas da equipe, a receita, o custo e a margem de todos os projetos juntos, em 7 dias, 30 dias ou tudo."
-      team: "Equipe (só administradores): quem está com o ponto aberto agora e em qual tarefa."
+      overview: "Visão geral (o dono e os administradores): as suas horas, as horas da equipe e o custo de todos os projetos juntos, em 7 dias, 30 dias ou tudo. A receita e a margem só aparecem para o dono."
+      team: "Equipe (o dono e os administradores): quem está com o ponto aberto agora e em qual tarefa."
     payments:
       title: Pagamentos
-      text: "O item “Pagamentos” da barra superior, só para o dono e os administradores: é a visão de quem paga. Os valores são calculados da regra de pagamento de cada pessoa e das sessões registradas; nada é guardado como pago."
-      mine: "Quem não é administrador não tem esta página: cada pessoa vê os próprios pagamentos no perfil dela (o menu da conta › “Perfil”)."
-      rule: "A regra se define em Colaboradores, no lápis da linha (ou no “Editar” do perfil da pessoa), na aba “Pagamento”: mensal (um dia fixo do mês; em meses mais curtos paga no último dia) ou quinzenal (a partir de uma data de início, de 15 em 15 dias, paga no último dia de cada período). Trocar a regra recalcula onde os períodos passados caem."
+      text: "O item “Pagamentos” da barra superior, só para o dono: é a visão de quem paga. Os valores são calculados da regra de pagamento de cada pessoa e das sessões registradas; nada é guardado como pago."
+      mine: "Só o dono tem esta página: cada pessoa vê os próprios pagamentos no perfil dela (o menu da conta › “Perfil”)."
+      rule: "O dono define a regra em Colaboradores, no lápis da linha (ou no “Editar” do perfil da pessoa), na aba “Pagamento”: mensal (um dia fixo do mês; em meses mais curtos paga no último dia) ou quinzenal (a partir de uma data de início, de 15 em 15 dias, paga no último dia de cada período). Trocar a regra recalcula onde os períodos passados caem."
       team: "A equipe: o que pagar nos períodos em andamento, o que fecha em 7 dias, as horas da equipe, as datas de pagamento e quem está sem regra. A tabela segue a data do pagamento, e não as horas. Clique numa linha para abrir o perfil da pessoa, com o histórico e o detalhe por projeto. O dono aparece com horas e sem valor."
     org_about:
       title: Configurações
       text: "O item “Configurações” da barra superior. É o perfil da organização: descrição, país, contato, dados da empresa e como o time trabalha (regime, fuso e moeda). Todo mundo lê. Campo vazio aparece como “Não informado”."
-      edit: "O administrador tem o botão “Editar”, para alterar o perfil, a moeda e o fuso."
+      edit: "O dono tem o botão “Editar”, para alterar o perfil, a moeda e o fuso."
       delete: "No fim da edição está “Excluir organização”: só o dono consegue, e só depois de excluir todos os projetos."
     org_people:
       title: Colaboradores
-      text: "Quem faz parte da organização, com o papel (Dono, Admin ou Membro), a jornada semanal e a regra de pagamento. A página aparece só para quem cuida das pessoas: administradores e quem o dono liberou."
+      text: "Quem faz parte da organização, com o papel (Dono, Admin ou Membro), a jornada semanal e, para o dono, a regra de pagamento. A página aparece só para o dono e os administradores."
       add: "“Adicionar colaborador” gera um link de convite. Escolha o papel (só o dono convida administradores) e, se quiser, informe o email para que só aquela pessoa use o link."
       add_email: "“Adicionar colaborador” envia o convite por email. Escolha o papel (só o dono convida administradores) e informe o email; sem email, gera só um link para você copiar e enviar."
       pending: "“Convites pendentes” lista os links ainda não usados, cada um com validade de 7 dias. Dá para revogar."
-      edit: "O lápis da linha abre “Pagamento e permissões”: as horas combinadas por semana, a regra de quando a pessoa é paga e, para o dono, as permissões de organização de quem não é administrador."
+      edit: "O lápis da linha abre “Editar colaborador”, em abas: “Pagamento”, com as horas combinadas por semana e, para o dono, a regra de quando a pessoa é paga; e “Projetos e valores”, com o valor por hora da pessoa em cada projeto, onde dá para pô-la em outros projetos ou tirá-la deles."
       role: "Só o dono torna alguém administrador, ou volta a membro."
-      profile: "Para os administradores, clicar na linha abre o perfil da pessoa: a jornada e a regra, as horas e o valor do período e desde o início, por projeto, o histórico de pagamentos e as próximas datas. O “Editar” do perfil abre o mesmo modal do lápis."
+      profile: "Para o dono e os administradores, clicar na linha abre o perfil da pessoa: a jornada, as horas do período e desde o início e os projetos dela. A regra de pagamento, o histórico de pagamentos e as próximas datas só aparecem para o dono. O “Editar” do perfil abre o mesmo modal do lápis."
     org_customers:
       title: Clientes
-      text: "O cadastro de quem contrata a organização: nome, país, documento fiscal (CNPJ no Brasil, EIN nos EUA), pessoa de contato, email e telefone. A página aparece só para quem cuida dos clientes."
+      text: "O cadastro de quem contrata a organização: nome, país, documento fiscal (CNPJ no Brasil, EIN nos EUA), pessoa de contato, email e telefone. A página é só do dono."
       actions: "“Novo cliente” cadastra; cada linha tem as ações de editar e excluir."
       link: "O cliente é ligado a um projeto nas configurações do projeto, junto com o valor cobrado por hora."
     org_projects:
@@ -642,20 +642,20 @@ help:
     mgmt_overview:
       title: "Gestão: Visão geral"
       intro: "O botão “Gestão”, no fim das abas do projeto, aparece para quem tem alguma permissão no projeto. Cada aba da Gestão aparece conforme a permissão da pessoa."
-      text: "A Visão geral é o projeto em números: pessoas, times, horas dos últimos 7 e 30 dias, quem está trabalhando agora, tarefas atrasadas, cliente e valor cobrado."
-      sessions: "Abaixo ficam as sessões de todo mundo, com filtros de pessoa, data e tarefa, e os totais de tempo, custo, receita e margem."
-      who: "Exige a permissão de ver o faturamento."
+      text: "A Visão geral é o projeto em números: pessoas, times, horas dos últimos 7 e 30 dias, quem está trabalhando agora, tarefas atrasadas e, para o dono, o cliente e o valor cobrado."
+      sessions: "Abaixo ficam as sessões de todo mundo, com filtros de pessoa, data e tarefa, e os totais de tempo e custo; a receita e a margem, só para o dono."
+      who: "Abre para quem tem qualquer permissão no projeto."
     mgmt_people:
       title: "Gestão: Colaboradores"
       text: "Aqui você põe e tira pessoas do projeto, define o valor por hora e o grupo de permissões de cada uma e monta os times (“Novo time”). “Adicionar pessoa” tem dois passos: quem entra, com o valor por hora e o time, e as permissões. Para alguém que ainda não está na organização, digite o e-mail dele: a tela oferece convidá-lo, e quando ele aceitar entra no projeto com o que você escolheu."
-      margin: "A coluna “Margem por hora” mostra a diferença entre o valor cobrado do cliente e o valor da pessoa."
+      margin: "Para o dono, a coluna “Margem por hora” mostra a diferença entre o valor cobrado do cliente e o valor da pessoa."
       edit: "O lápis da linha abre a edição: valor, grupo, times e “Tirar do projeto” (as tarefas e as horas ficam)."
     mgmt_integrations:
       title: "Gestão: Integrações"
       text: "Liga o projeto a um repositório do GitHub ou a um quadro do Trello. Veja “Integrações com GitHub e Trello”, mais abaixo."
     mgmt_settings:
       title: "Gestão: Configurações"
-      text: "Os dados do projeto (descrição, duração da sprint, daily e weekly), o cliente e o valor cobrado por hora. O botão “Editar” abre o formulário de edição."
+      text: "Os dados do projeto (descrição, duração da sprint, daily e weekly), o cliente e, para o dono, o valor cobrado por hora. O botão “Editar” abre o formulário de edição."
       delete: "Nele fica “Excluir projeto”, que apaga também os times, as tarefas, as sessões de trabalho e as integrações do projeto."
     task_page:
       title: Página da tarefa
@@ -668,8 +668,8 @@ help:
     profile:
       title: Perfil
       text: "Abra o menu da conta (o seu nome, no canto da barra superior) e escolha “Perfil”. A página é para ler: o que você fez e quando é pago."
-      summary: "No alto: o seu nome, o papel, o email, a jornada semanal e a regra de pagamento. A jornada e a regra só se leem aqui; quem altera é um administrador."
-      payments: "Os cartões mostram as horas e o valor do período corrente, a data do próximo pagamento e quantos dias faltam, o andamento contra a jornada e o total desde o início. Abaixo, o histórico dos períodos fechados e os próximos pagamentos. O período fecha no dia do pagamento. Sem regra, peça a um administrador para definir quando você é pago. O dono não é pago: no perfil dele ficam só as horas."
+      summary: "No alto: o seu nome, o papel, o email, a jornada semanal e a regra de pagamento. A jornada e a regra só se leem aqui: quem altera a jornada é um administrador, e a regra, o dono."
+      payments: "Os cartões mostram as horas e o valor do período corrente, a data do próximo pagamento e quantos dias faltam, o andamento contra a jornada e o total desde o início. Abaixo, o histórico dos períodos fechados e os próximos pagamentos. O período fecha no dia do pagamento. Sem regra, peça ao dono para definir quando você é pago. O dono não é pago: no perfil dele ficam só as horas."
       rates: "“Projetos e valores”: quanto você recebe por hora em cada projeto e o que fez neles, no período e desde o início. Só você e os administradores veem."
       edit: "“Editar perfil” abre os dados pessoais (nome e email, que é o que você usa para entrar) e, na aba “Senha”, a troca de senha, que encerra as suas outras sessões."
       language: "O idioma (PT | EN), a “Ajuda” e o “Sair” ficam no mesmo menu da conta, e o navegador lembra o idioma escolhido."
@@ -702,7 +702,7 @@ help:
   faq:
     no_clock:
       q: Não consigo iniciar o ponto
-      a: "Quase sempre falta o valor por hora da pessoa naquele projeto: um administrador ou gerente do projeto define em Gestão › Colaboradores. A outra causa é um ponto já aberto em outro projeto; pare-o antes de iniciar este."
+      a: "Quase sempre falta o valor por hora da pessoa naquele projeto: um administrador ou o administrador do projeto define em Gestão › Colaboradores. A outra causa é um ponto já aberto em outro projeto; pare-o antes de iniciar este."
     forgot:
       q: Esqueci de bater o ponto. Dá para lançar as horas depois?
       a: "Não. O app só registra o tempo cronometrado: não há lançamento manual, aprovação nem fechamento de período. O que dá para ajustar são os intervalos das tarefas dentro de uma sessão (abra a sessão e use o lápis), sem mudar o tempo total dela."
@@ -711,7 +711,7 @@ help:
       a: "É permissão. A Gestão do projeto e as páginas Colaboradores, Clientes e Pagamentos aparecem só para quem pode usá-las. Peça a um administrador (veja “Quem vê e faz o quê”)."
     missing_project:
       q: Não vejo um projeto
-      a: "Cada pessoa vê só os projetos em que foi posta, com valor por hora (o dono e os administradores veem todos). Abra “Projetos”, na barra superior: a página lista os seus. Se o projeto não está lá, peça a um administrador ou ao gerente do projeto para pôr você nele em Gestão › Colaboradores."
+      a: "Cada pessoa vê só os projetos em que foi posta, com valor por hora (o dono e os administradores veem todos). Abra “Projetos”, na barra superior: a página lista os seus. Se o projeto não está lá, peça a um administrador ou ao administrador do projeto para pôr você nele em Gestão › Colaboradores."
     invite:
       q: O convite não chegou por email
       a: "O app não envia email: copie o link na hora em que ele é gerado e mande você mesmo. Se ele venceu (7 dias) ou já foi usado, gere outro."

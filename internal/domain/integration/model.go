@@ -20,7 +20,7 @@ type Integration struct {
 	// HasToken diz se há credencial salva. É calculado antes de ela ser removida da
 	// resposta, para a interface mostrar o estado sem ver o segredo.
 	HasToken bool `json:"has_token"`
-	// SyncIssues liga a sincronização das issues do repositório com as tarefas (só o GitHub).
+	// SyncIssues liga a sincronização das issues do repositório com as tarefas (o GitHub e o Trello).
 	SyncIssues bool `json:"sync_issues"`
 	// SyncCursor é de onde a próxima rodada incremental pede as issues mexidas; nulo é a primeira vez.
 	SyncCursor *time.Time `json:"-"`
