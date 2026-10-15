@@ -1,6 +1,6 @@
 # Rotas da API — Working Time Tracker
 
-**Base URL:** `http://localhost:8080`
+**Base URL:** `http://localhost:1243`
 
 Todas as rotas falam JSON. Erros sempre vêm como `{"error": {"code": "dominio.motivo", "params": {...}}}`: a API **não manda mensagem**, manda um código estável (e `params`, quando o texto precisa de valores), e quem chama mostra o texto no idioma da pessoa. A lista completa de códigos, com o status e os textos em português e inglês, está em [`_docs/error-codes.md`](../_docs/error-codes.md).
 
@@ -905,7 +905,7 @@ A ajuda é uma página do navegador, não da API JSON, e não precisa de sessão
 
 | Variável | Descrição |
 |---|---|
-| `base_url` | URL do servidor, por padrão `http://localhost:8080` |
+| `base_url` | URL do servidor, por padrão `http://localhost:1243` |
 | `org_id` | `organization_id` do `/api/auth/me` |
 | `person_id` | `id` do `/api/auth/me` ou de outra pessoa |
 | `session_id` | `id` de uma sessão, da resposta do clock-in |

@@ -50,7 +50,7 @@ go run ./cmd/seed
 go run ./cmd
 ```
 
-Abra **http://localhost:8080**. O seed cria a **Jatobá Software**, uma software house com doze pessoas, seis clientes (quatro do Brasil e dois de fora, um dos EUA, com EIN, e um da Alemanha, com documento em texto livre) e oito projetos (um deles interno), em que cada pessoa tem um valor por hora diferente conforme o projeto. Entre como:
+Abra **http://localhost:1243**. O seed cria a **Jatobá Software**, uma software house com doze pessoas, seis clientes (quatro do Brasil e dois de fora, um dos EUA, com EIN, e um da Alemanha, com documento em texto livre) e oito projetos (um deles interno), em que cada pessoa tem um valor por hora diferente conforme o projeto. Entre como:
 
 | Papel | Email | Senha |
 |---|---|---|
@@ -76,18 +76,18 @@ Para gerar o binário: `go build -o wtt ./cmd && ./wtt`. Templates e arquivos es
 
 | Variável | Obrigatória | Descrição |
 |---|---|---|
-| `API_PORT` | sim | Porta HTTP, por exemplo `8080` |
+| `API_PORT` | sim | Porta HTTP, por exemplo `1243` |
 | `DATABASE_URL` | sim | Conexão com o PostgreSQL |
 | `INTEGRATION_ENCRYPTION_KEY` | sim | Chave da criptografia AES-GCM dos tokens de integração. Trocá-la torna os tokens salvos ilegíveis: cada integração pede o token de novo na edição, e o resto dela (nome e `metadata`) continua |
 | `COOKIE_SECURE` | não | `true` marca o cookie de sessão como `Secure`. Use em produção, atrás de HTTPS |
-| `PUBLIC_URL` | para conectar o GitHub ou o Trello, ou entrar pelo Clerk | O endereço em que as pessoas abrem o sistema, sem barra no fim (`http://localhost:8080`). O GitHub devolve a pessoa a `PUBLIC_URL/integrations/github/callback`, e o Trello a `PUBLIC_URL/integrations/trello/callback` |
+| `PUBLIC_URL` | para conectar o GitHub ou o Trello, ou entrar pelo Clerk | O endereço em que as pessoas abrem o sistema, sem barra no fim (`http://localhost:1243`). O GitHub devolve a pessoa a `PUBLIC_URL/integrations/github/callback`, e o Trello a `PUBLIC_URL/integrations/trello/callback` |
 | `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | para conectar o GitHub | O Client ID e o Client secret do app OAuth cadastrado no GitHub. Sem eles, o botão Conectar com o GitHub avisa que não está configurado |
 | `GITHUB_URL`, `GITHUB_API_URL` | não | Para um GitHub Enterprise (ou um servidor fake): o site (`https://github.com`) e a API (`https://api.github.com`), que são os padrões |
 | `TRELLO_API_KEY` | para conectar o Trello | A chave de API do app do Trello (só letras e dígitos). Sem ela, o botão Conectar com o Trello avisa que não está configurado. `TRELLO_APP_NAME` muda o nome que a tela de autorização do Trello mostra (padrão "Working Time Tracker") |
 | `TRELLO_URL`, `TRELLO_API_URL` | não | Para um servidor fake: o site (`https://trello.com`) e a API (`https://api.trello.com/1`), que são os padrões |
 | `SYNC_INTERVAL`, `GITHUB_SYNC_INTERVAL`, `TRELLO_SYNC_INTERVAL` | não | De quanto em quanto tempo a rotina de fundo olha as integrações com a sincronização ligada (`5m`, `30s`...). `SYNC_INTERVAL` vale para todas as plataformas (padrão `5m`), e `GITHUB_SYNC_INTERVAL` e `TRELLO_SYNC_INTERVAL` valem só para a delas, sobre o comum; `0` desliga a rotina de fundo (de todas, ou só daquela plataforma), e o botão Sincronizar agora e a sincronização das tarefas que mudam seguem valendo. A rotina acorda no menor dos intervalos e olha cada integração quando passou o do tipo dela. O Trello não avisa quando um cartão muda, então o que muda lá chega no próximo intervalo (ou no botão); o que muda aqui vai em poucos segundos |
 | `CLERK_SECRET_KEY`, `CLERK_PUBLISHABLE_KEY` | para entrar pelo Clerk | As duas chaves do app no Clerk (`sk_…` e `pk_…`). Sem elas o login é só por email e senha, como sempre. Uma só das duas, ou as duas sem `PUBLIC_URL`, derrubam a subida. Ver [Entrar com o Clerk](#entrar-com-o-clerk) |
-| `CLERK_AUTHORIZED_PARTIES` | não | As origens (`http://localhost:8080`, sem barra) cujas sessões do Clerk o servidor aceita, separadas por vírgula. O padrão é a origem do `PUBLIC_URL`. Quem sobe o sistema em duas portas (a sua e a de uma conferência) lista as duas |
+| `CLERK_AUTHORIZED_PARTIES` | não | As origens (`http://localhost:1243`, sem barra) cujas sessões do Clerk o servidor aceita, separadas por vírgula. O padrão é a origem do `PUBLIC_URL`. Quem sobe o sistema em duas portas (a sua e a de uma conferência) lista as duas |
 | `INVITE_DELIVERY` | não | O que o convite por email faz com o Clerk ligado: `email` (o padrão) pede ao Clerk que mande o email; `terminal` **não manda** e escreve o link do convite no log do servidor, para desenvolver sem caixa de entrada. Sem o Clerk, não vale nada: o convite é só o link. Com `COOKIE_SECURE=true` o servidor avisa na subida, porque o log passa a ter links de convite |
 | `CLERK_API_URL` | não | Só para um servidor fake: o endereço da Backend API do Clerk, sem o `/v1`. O padrão é `https://api.clerk.com` |
 | `TEST_DATABASE_URL` | só nos testes | Banco usado por `go test`. O nome precisa terminar em `_test` |
@@ -137,7 +137,7 @@ O modal avisa que o email não foi enviado. Num app de desenvolvimento do Clerk,
 
 O botão **Conectar com o GitHub** usa um **OAuth App** do GitHub, que se cadastra uma vez por servidor:
 
-1. Em github.com/settings/developers, **New OAuth App**. *Homepage URL*: o `PUBLIC_URL` (`http://localhost:8080`). *Authorization callback URL*: `PUBLIC_URL/integrations/github/callback` (`http://localhost:8080/integrations/github/callback`).
+1. Em github.com/settings/developers, **New OAuth App**. *Homepage URL*: o `PUBLIC_URL` (`http://localhost:1243`). *Authorization callback URL*: `PUBLIC_URL/integrations/github/callback` (`http://localhost:1243/integrations/github/callback`).
 2. Copie o **Client ID** e gere um **Client secret**. No `.env`: `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` e `PUBLIC_URL`. Reinicie o servidor.
 3. Em Gestão, Integrações, **Nova integração**, GitHub, **Conectar com o GitHub**: autorize no GitHub, volte e escolha o repositório.
 
@@ -181,7 +181,7 @@ Para ver isso numa instância sem tocar no GitHub de verdade, `go run ./cmd/fake
 
 O botão **Conectar com o Trello** usa a **chave de API** de um app do Trello, que se cria uma vez por servidor:
 
-1. Em trello.com/power-ups/admin, crie um Power-Up (ele serve de app) e, na aba **API key**, gere a **API key**. Se o Trello recusar o endereço de retorno, acrescente o `PUBLIC_URL` (`http://localhost:8080`) em **Allowed origins**, na mesma aba.
+1. Em trello.com/power-ups/admin, crie um Power-Up (ele serve de app) e, na aba **API key**, gere a **API key**. Se o Trello recusar o endereço de retorno, acrescente o `PUBLIC_URL` (`http://localhost:1243`) em **Allowed origins**, na mesma aba.
 2. No `.env`: `TRELLO_API_KEY` (e `TRELLO_APP_NAME`, se quiser outro nome na tela de autorização) e `PUBLIC_URL`. Reinicie o servidor.
 3. Em Gestão, Integrações, **Nova integração**, Trello, **Conectar com o Trello**: autorize no Trello, volte e escolha o quadro numa lista dos quadros abertos que a conta enxerga, com o espaço de trabalho de cada um (a integração nasce desativada e só é ativada ao escolher um; **Reconectar** renova o acesso ou troca de conta).
 

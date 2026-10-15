@@ -15,7 +15,7 @@
       "parentId": "__workspace__",
       "name": "Base",
       "data": {
-        "base_url": "http://localhost:8080",
+        "base_url": "http://localhost:1243",
         "org_id": "",
         "person_id": "",
         "project_id": "",
