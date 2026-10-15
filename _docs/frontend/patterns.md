@@ -25,8 +25,10 @@ flowchart TB
   cabeçalho.
 - **Páginas de projeto** (`partials/project_head.gohtml`) têm duas barras de abas. A de todos tem Início, Minhas
   tarefas, Lista de tarefas e Colaboradores (só para ler). O botão **Gestão** aparece para quem tem alguma permissão do
-  projeto e troca a barra pela da Gestão. A administração do projeto (pessoas, valores, times, integrações e os dados
-  dele) só se edita lá: nas abas de todos ela aparece para ler. `Data.CanDo` é o `Can` que só vale dentro da Gestão.
+  projeto e troca a barra pela da Gestão, que só mostra as abas que a pessoa abre (`Data.OpensTab`, lido de
+  `page.ManagementTabs`, de onde as rotas também leem). A administração do projeto (pessoas, valores, times,
+  integrações e os dados dele) só se edita lá: nas abas de todos ela aparece para ler. `Data.CanDo` é o `Can` que só
+  vale dentro da Gestão.
 - **Balão da sessão** (`partials/active_session.gohtml`). Com o ponto aberto, fica no canto de baixo à direita de
   todas as páginas de quem está logado, acima dos avisos e abaixo dos modais.
 - Ação que a pessoa não pode usar não aparece. A API continua sendo quem garante a permissão.

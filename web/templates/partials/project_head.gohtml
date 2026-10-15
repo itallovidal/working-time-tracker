@@ -7,11 +7,11 @@
 </div>
 <nav class="tabs" aria-label="{{.T "project.head.sections"}}">
   {{if .Management}}
-  {{/* A Gestão soma o dinheiro do projeto e mexe nas pessoas, nas integrações e nos dados dele: só admins entram. */}}
-  <a href="/projects/{{.Project.ID}}/management/overview" {{if eq .Tab "overview"}}aria-current="page"{{end}}>{{template "icon" "chart-simple"}} {{.T "project.head.overview"}}</a>
-  <a href="/projects/{{.Project.ID}}/management/teams" {{if eq .Tab "teams"}}aria-current="page"{{end}}>{{template "icon" "people-group"}} {{.T "project.head.teams"}}</a>
-  <a href="/projects/{{.Project.ID}}/management/integrations" {{if eq .Tab "integrations"}}aria-current="page"{{end}}>{{template "icon" "plug"}} {{.T "project.head.integrations"}}</a>
-  <a href="/projects/{{.Project.ID}}/management/settings" {{if eq .Tab "settings"}}aria-current="page"{{end}}>{{template "icon" "gear"}} {{.T "project.head.settings"}}</a>
+  {{/* Cada aba da Gestão pede as suas permissões (page.ManagementTabs): a barra só mostra as que a pessoa abre. */}}
+  {{if .OpensTab "overview"}}<a href="/projects/{{.Project.ID}}/management/overview" {{if eq .Tab "overview"}}aria-current="page"{{end}}>{{template "icon" "chart-simple"}} {{.T "project.head.overview"}}</a>{{end}}
+  {{if .OpensTab "teams"}}<a href="/projects/{{.Project.ID}}/management/teams" {{if eq .Tab "teams"}}aria-current="page"{{end}}>{{template "icon" "people-group"}} {{.T "project.head.teams"}}</a>{{end}}
+  {{if .OpensTab "integrations"}}<a href="/projects/{{.Project.ID}}/management/integrations" {{if eq .Tab "integrations"}}aria-current="page"{{end}}>{{template "icon" "plug"}} {{.T "project.head.integrations"}}</a>{{end}}
+  {{if .OpensTab "settings"}}<a href="/projects/{{.Project.ID}}/management/settings" {{if eq .Tab "settings"}}aria-current="page"{{end}}>{{template "icon" "gear"}} {{.T "project.head.settings"}}</a>{{end}}
   <a class="tabs-end" href="/projects/{{.Project.ID}}/overview">{{template "icon" "arrow-left"}} {{.T "project.head.back"}}</a>
   {{else}}
   <a href="/projects/{{.Project.ID}}/overview" {{if eq .Tab "overview"}}aria-current="page"{{end}}>{{template "icon" "house"}} {{.T "project.head.home"}}</a>

@@ -20,7 +20,7 @@
     <p class="alert alert-warn">
       <strong x-text="$t('overview.without_rate_count', { count: data.people.without_rate })"></strong>
       <span x-text="$t('overview.without_rate_text', { count: data.people.without_rate })"></span>
-      {{.T "overview.set_rate_before"}} <a href="/projects/{{.Project.ID}}/management/teams">{{.T "project.head.teams"}}</a>{{.T "overview.set_rate_after"}}
+      {{if .OpensTab "teams"}}{{.T "overview.set_rate_before"}} <a href="/projects/{{.Project.ID}}/management/teams">{{.T "project.head.teams"}}</a>{{.T "overview.set_rate_after"}}{{end}}
     </p>
   </template>
 
@@ -105,7 +105,7 @@
       <section class="card">
         <div class="card-head">
           <h2>{{.T "overview.integrations_title"}}</h2>
-          <a class="btn btn-ghost btn-sm" href="/projects/{{.Project.ID}}/management/integrations">{{template "icon" "plug"}} {{.T "overview.open_tab"}}</a>
+          {{if .OpensTab "integrations"}}<a class="btn btn-ghost btn-sm" href="/projects/{{.Project.ID}}/management/integrations">{{template "icon" "plug"}} {{.T "overview.open_tab"}}</a>{{end}}
         </div>
         {{template "empty_state" (dict "Icon" "plug" "Show" "data.integrations.total === 0" "Title" (.T "overview.no_integrations") "Text" (.T "overview.no_integrations_text"))}}
         <p class="muted small" x-show="data.integrations.total > 0" x-text="integrationsSummary()"></p>

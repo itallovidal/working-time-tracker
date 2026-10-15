@@ -88,7 +88,8 @@ também no `sessionStorage`).
 ## Gestão do projeto
 
 A Gestão é a área de quem cuida do projeto. O botão aparece para quem tem **alguma** permissão do projeto, e cada aba
-pede a permissão do que mostra. Quem não tem recebe o 404.
+pede a permissão do que mostra. Quem não tem recebe o 404. As permissões de cada aba ficam num lugar só,
+`page.ManagementTabs`: a rota pede essas permissões, e a barra de abas (`Data.OpensTab`) só mostra a aba a quem a abre.
 
 | Rota | Tela | Permissão |
 |---|---|---|
