@@ -2,7 +2,7 @@
 // um código estável (como "auth.invalid_credentials") e, quando a mensagem precisa
 // de valores, parâmetros. A API não manda texto: quem mostra a mensagem é o
 // cliente, no idioma da pessoa, procurando "errors.<código>" no catálogo. Os
-// códigos estão documentados em _docs/error-codes.md.
+// códigos estão documentados em _docs/api/errors.md.
 package apperr
 
 import (

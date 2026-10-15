@@ -27,6 +27,25 @@ O admin e o administrador de projeto são cargos de gestão; "admin" continua va
 (`Identity.IsAdmin()`), mas não para *quem pode tudo*: o que o cargo dá fica em um lugar só,
 `permission.OrgKeysFor` (organização) e `auth.BaseProjectSet` (projeto).
 
+De cima para baixo, cada cargo alcança menos. O dinheiro fica fora da escada: hoje é só do dono.
+
+```mermaid
+flowchart LR
+  subgraph gestao["Gente e projeto"]
+    direction TB
+    D["Dono"] --> A["Admin"] --> G["Administrador de projeto"] --> C["Colaborador"]
+  end
+  subgraph dinheiro["Dinheiro"]
+    direction TB
+    M["Clientes, cobrança, receita, margem e pagamentos"]
+    F["Financeiro (ainda não existe)"]
+  end
+  D --> M
+  F -.-> M
+```
+
+As regras de cada valor e de cada pagamento estão em [money.md](money.md).
+
 ### Tabela
 
 ✔ pode · — não pode · (seu) só no projeto que lhe deram

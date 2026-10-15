@@ -10,7 +10,7 @@ import (
 	"working-time-tracker/internal/apperr"
 )
 
-const errorDocsPath = "../../_docs/error-codes.md"
+const errorDocsPath = "../../_docs/api/errors.md"
 
 const errorDocsHeader = `# Códigos de erro da API
 
@@ -101,6 +101,6 @@ func TestErrorCodesDoc_IsUpToDate(t *testing.T) {
 		t.Fatalf("%v: run UPDATE_ERROR_DOCS=1 go test ./internal/server -run ErrorCodesDoc", err)
 	}
 	if string(got) != want {
-		t.Error("_docs/error-codes.md is out of date: run UPDATE_ERROR_DOCS=1 go test ./internal/server -run ErrorCodesDoc")
+		t.Error("_docs/api/errors.md is out of date: run UPDATE_ERROR_DOCS=1 go test ./internal/server -run ErrorCodesDoc")
 	}
 }

@@ -1,6 +1,6 @@
 # Textos da interface em português do Brasil (idioma padrão).
 #
-# Regras (valem para todos os idiomas, ver README):
+# Regras (valem para todos os idiomas, ver _docs/development/i18n-and-countries.md):
 #   - uma chave por frase inteira; nada de montar frase juntando pedaços;
 #   - valores entram por placeholder: "{{.name}}";
 #   - plural com as formas one/other, e o placeholder {{.count}};
