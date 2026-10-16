@@ -863,6 +863,8 @@ func TestRoutes_Table(t *testing.T) {
 		"PATCH /api/persons/:personId/payment",
 		"GET /api/persons/:personId/payments",
 		"GET /api/orgs/:orgId/payments",
+		"POST /api/orgs/:orgId/payouts",
+		"DELETE /api/orgs/:orgId/payouts/:payoutId",
 		"GET /api/persons/:personId/allocations",
 
 		"GET /api/projects/:projectId",
@@ -1924,5 +1926,42 @@ func TestPayments_Permissions(t *testing.T) {
 	none := decode(t, do(e, "GET", "/api/persons/"+admin.id+"/payments", "", admin.session))
 	if none["rule"] != nil || none["current"] != nil {
 		t.Errorf("a person without a rule should get rule null, got %v", none)
+	}
+
+	// A baixa do período corrente da bia, pelo dono, com o período que a própria API devolve.
+	cur := got["current"].(map[string]any)
+	body := `{"person_id":"` + bia.id + `","start":"` + cur["start"].(string) + `","pay_date":"` + cur["pay_date"].(string) + `","amount_cents":1500}`
+	payouts := "/api/orgs/" + admin.orgID + "/payouts"
+	if rec := do(e, "POST", payouts, body, carol.session); rec.Code != http.StatusForbidden {
+		t.Errorf("an admin who is not the owner marking as paid = %d, want 403", rec.Code)
+	}
+	rec := do(e, "POST", payouts, body, admin.session)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("mark as paid = %d %s", rec.Code, rec.Body.String())
+	}
+	payout := decode(t, rec)
+	if payout["amount_cents"] != float64(1500) || payout["start"] != cur["start"] {
+		t.Errorf("payout = %v", payout)
+	}
+	if rec := do(e, "POST", payouts, body, admin.session); rec.Code != http.StatusConflict || !strings.Contains(rec.Body.String(), "payment.already_paid") {
+		t.Errorf("the same period twice = %d %s, want 409 payment.already_paid", rec.Code, rec.Body.String())
+	}
+	owner := `{"person_id":"` + admin.id + `","start":"` + cur["start"].(string) + `","pay_date":"` + cur["pay_date"].(string) + `","amount_cents":1500}`
+	if rec := do(e, "POST", payouts, owner, admin.session); rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "payment.owner_not_paid") {
+		t.Errorf("a payout for the owner = %d %s, want 400 payment.owner_not_paid", rec.Code, rec.Body.String())
+	}
+	team := decode(t, do(e, "GET", "/api/orgs/"+admin.orgID+"/payments", "", admin.session))
+	if paid := team["paid"].([]any); len(paid) != 1 {
+		t.Errorf("paid = %v, want the payout", paid)
+	}
+	if mine := decode(t, do(e, "GET", "/api/persons/"+bia.id+"/payments", "", bia.session)); mine["current"].(map[string]any)["paid"] == nil {
+		t.Errorf("bia should see her current period as paid: %v", mine["current"])
+	}
+	id := payout["id"].(string)
+	if rec := do(e, "DELETE", payouts+"/"+id, "", admin.session); rec.Code != http.StatusNoContent {
+		t.Errorf("undo = %d %s", rec.Code, rec.Body.String())
+	}
+	if rec := do(e, "DELETE", payouts+"/"+id, "", admin.session); rec.Code != http.StatusNotFound || !strings.Contains(rec.Body.String(), "payment.payout_not_found") {
+		t.Errorf("undo twice = %d %s, want 404 payment.payout_not_found", rec.Code, rec.Body.String())
 	}
 }
