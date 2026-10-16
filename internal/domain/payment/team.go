@@ -263,7 +263,7 @@ func paidMark(paid map[string]Payout, personID uuid.UUID, v PeriodView) *PaidMar
 	if !ok {
 		return nil
 	}
-	return &PaidMark{ID: po.ID, AmountCents: po.AmountCents, PaidAt: po.PaidAt}
+	return &PaidMark{ID: po.ID, AmountCents: po.AmountCents, BonusCents: po.BonusCents, PaidAt: po.PaidAt}
 }
 
 func earliest(a, b time.Time) time.Time {

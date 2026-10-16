@@ -58,6 +58,20 @@ func (_c *PayoutCreate) SetAmountCents(v int) *PayoutCreate {
 	return _c
 }
 
+// SetBonusCents sets the "bonus_cents" field.
+func (_c *PayoutCreate) SetBonusCents(v int) *PayoutCreate {
+	_c.mutation.SetBonusCents(v)
+	return _c
+}
+
+// SetNillableBonusCents sets the "bonus_cents" field if the given value is not nil.
+func (_c *PayoutCreate) SetNillableBonusCents(v *int) *PayoutCreate {
+	if v != nil {
+		_c.SetBonusCents(*v)
+	}
+	return _c
+}
+
 // SetPaidAt sets the "paid_at" field.
 func (_c *PayoutCreate) SetPaidAt(v time.Time) *PayoutCreate {
 	_c.mutation.SetPaidAt(v)
@@ -140,6 +154,10 @@ func (_c *PayoutCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (_c *PayoutCreate) defaults() {
+	if _, ok := _c.mutation.BonusCents(); !ok {
+		v := payout.DefaultBonusCents
+		_c.mutation.SetBonusCents(v)
+	}
 	if _, ok := _c.mutation.PaidAt(); !ok {
 		v := payout.DefaultPaidAt()
 		_c.mutation.SetPaidAt(v)
@@ -187,6 +205,14 @@ func (_c *PayoutCreate) check() error {
 	if v, ok := _c.mutation.AmountCents(); ok {
 		if err := payout.AmountCentsValidator(v); err != nil {
 			return &ValidationError{Name: "amount_cents", err: fmt.Errorf(`ent: validator failed for field "Payout.amount_cents": %w`, err)}
+		}
+	}
+	if _, ok := _c.mutation.BonusCents(); !ok {
+		return &ValidationError{Name: "bonus_cents", err: errors.New(`ent: missing required field "Payout.bonus_cents"`)}
+	}
+	if v, ok := _c.mutation.BonusCents(); ok {
+		if err := payout.BonusCentsValidator(v); err != nil {
+			return &ValidationError{Name: "bonus_cents", err: fmt.Errorf(`ent: validator failed for field "Payout.bonus_cents": %w`, err)}
 		}
 	}
 	if _, ok := _c.mutation.PaidAt(); !ok {
@@ -252,6 +278,10 @@ func (_c *PayoutCreate) createSpec() (*Payout, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.AmountCents(); ok {
 		_spec.SetField(payout.FieldAmountCents, field.TypeInt, value)
 		_node.AmountCents = value
+	}
+	if value, ok := _c.mutation.BonusCents(); ok {
+		_spec.SetField(payout.FieldBonusCents, field.TypeInt, value)
+		_node.BonusCents = value
 	}
 	if value, ok := _c.mutation.PaidAt(); ok {
 		_spec.SetField(payout.FieldPaidAt, field.TypeTime, value)

@@ -23,6 +23,8 @@ var (
 	ErrAlreadyPaid = apperr.New("payment.already_paid", http.StatusConflict)
 	// ErrInvalidAmount é o valor pago que falta ou é negativo.
 	ErrInvalidAmount = apperr.New("payment.invalid_amount", http.StatusBadRequest)
+	// ErrInvalidBonus é o bônus negativo.
+	ErrInvalidBonus = apperr.New("payment.invalid_bonus", http.StatusBadRequest)
 	// ErrPayoutNotFound é a baixa que não existe na organização.
 	ErrPayoutNotFound = apperr.New("payment.payout_not_found", http.StatusNotFound)
 )

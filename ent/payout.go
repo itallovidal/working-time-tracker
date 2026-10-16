@@ -31,6 +31,8 @@ type Payout struct {
 	CalculatedCents int `json:"calculated_cents,omitempty"`
 	// AmountCents holds the value of the "amount_cents" field.
 	AmountCents int `json:"amount_cents,omitempty"`
+	// BonusCents holds the value of the "bonus_cents" field.
+	BonusCents int `json:"bonus_cents,omitempty"`
 	// PaidAt holds the value of the "paid_at" field.
 	PaidAt time.Time `json:"paid_at,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
@@ -68,7 +70,7 @@ func (*Payout) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case payout.FieldSeconds:
 			values[i] = new(sql.NullFloat64)
-		case payout.FieldCalculatedCents, payout.FieldAmountCents:
+		case payout.FieldCalculatedCents, payout.FieldAmountCents, payout.FieldBonusCents:
 			values[i] = new(sql.NullInt64)
 		case payout.FieldPeriodStart, payout.FieldPayDate:
 			values[i] = new(sql.NullString)
@@ -132,6 +134,12 @@ func (_m *Payout) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field amount_cents", values[i])
 			} else if value.Valid {
 				_m.AmountCents = int(value.Int64)
+			}
+		case payout.FieldBonusCents:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field bonus_cents", values[i])
+			} else if value.Valid {
+				_m.BonusCents = int(value.Int64)
 			}
 		case payout.FieldPaidAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -203,6 +211,9 @@ func (_m *Payout) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("amount_cents=")
 	builder.WriteString(fmt.Sprintf("%v", _m.AmountCents))
+	builder.WriteString(", ")
+	builder.WriteString("bonus_cents=")
+	builder.WriteString(fmt.Sprintf("%v", _m.BonusCents))
 	builder.WriteString(", ")
 	builder.WriteString("paid_at=")
 	builder.WriteString(_m.PaidAt.Format(time.ANSIC))

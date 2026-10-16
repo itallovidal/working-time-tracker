@@ -699,8 +699,8 @@ func main() {
 		             JOIN work_sessions s ON s.id = l.session_id WHERE s.end_at IS NULL)`)
 	must(err)
 
-	// O último período fechado de algumas pessoas já teve baixa, com o valor calculado; os outros fechados dos
-	// últimos 60 dias aparecem como atrasados em Pagamentos.
+	// O último período fechado de algumas pessoas já teve baixa, com o valor calculado (a Helena levou um bônus junto);
+	// os outros fechados dos últimos 60 dias aparecem como atrasados em Pagamentos.
 	paymentSvc := payment.NewService(payment.Deps{
 		Orgs: orgSvc, People: personSvc, Projects: projectSvc,
 		Sessions: work_session.NewService(work_session.NewStore(db.Client), task.NewStore(db.Client), allocation.NewStore(db.Client)),
@@ -715,7 +715,11 @@ func main() {
 			continue
 		}
 		last := s.History[0]
-		_, err = paymentSvc.MarkPaid(orgID, payment.MarkInput{PersonID: id, Start: last.Start, PayDate: last.PayDate, AmountCents: last.AmountCents})
+		var bonus *int
+		if key == "helena" {
+			bonus = optionalNumber(50000)
+		}
+		_, err = paymentSvc.MarkPaid(orgID, payment.MarkInput{PersonID: id, Start: last.Start, PayDate: last.PayDate, AmountCents: last.AmountCents, BonusCents: bonus})
 		must(err)
 		paidOut++
 	}

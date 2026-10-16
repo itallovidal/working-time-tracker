@@ -7880,6 +7880,8 @@ type PayoutMutation struct {
 	addcalculated_cents *int
 	amount_cents        *int
 	addamount_cents     *int
+	bonus_cents         *int
+	addbonus_cents      *int
 	paid_at             *time.Time
 	created_at          *time.Time
 	clearedFields       map[string]struct{}
@@ -8270,6 +8272,62 @@ func (m *PayoutMutation) ResetAmountCents() {
 	m.addamount_cents = nil
 }
 
+// SetBonusCents sets the "bonus_cents" field.
+func (m *PayoutMutation) SetBonusCents(i int) {
+	m.bonus_cents = &i
+	m.addbonus_cents = nil
+}
+
+// BonusCents returns the value of the "bonus_cents" field in the mutation.
+func (m *PayoutMutation) BonusCents() (r int, exists bool) {
+	v := m.bonus_cents
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBonusCents returns the old "bonus_cents" field's value of the Payout entity.
+// If the Payout object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PayoutMutation) OldBonusCents(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBonusCents is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBonusCents requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBonusCents: %w", err)
+	}
+	return oldValue.BonusCents, nil
+}
+
+// AddBonusCents adds i to the "bonus_cents" field.
+func (m *PayoutMutation) AddBonusCents(i int) {
+	if m.addbonus_cents != nil {
+		*m.addbonus_cents += i
+	} else {
+		m.addbonus_cents = &i
+	}
+}
+
+// AddedBonusCents returns the value that was added to the "bonus_cents" field in this mutation.
+func (m *PayoutMutation) AddedBonusCents() (r int, exists bool) {
+	v := m.addbonus_cents
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetBonusCents resets all changes to the "bonus_cents" field.
+func (m *PayoutMutation) ResetBonusCents() {
+	m.bonus_cents = nil
+	m.addbonus_cents = nil
+}
+
 // SetPaidAt sets the "paid_at" field.
 func (m *PayoutMutation) SetPaidAt(t time.Time) {
 	m.paid_at = &t
@@ -8403,7 +8461,7 @@ func (m *PayoutMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *PayoutMutation) Fields() []string {
-	fields := make([]string, 0, 8)
+	fields := make([]string, 0, 9)
 	if m.person != nil {
 		fields = append(fields, payout.FieldPersonID)
 	}
@@ -8421,6 +8479,9 @@ func (m *PayoutMutation) Fields() []string {
 	}
 	if m.amount_cents != nil {
 		fields = append(fields, payout.FieldAmountCents)
+	}
+	if m.bonus_cents != nil {
+		fields = append(fields, payout.FieldBonusCents)
 	}
 	if m.paid_at != nil {
 		fields = append(fields, payout.FieldPaidAt)
@@ -8448,6 +8509,8 @@ func (m *PayoutMutation) Field(name string) (ent.Value, bool) {
 		return m.CalculatedCents()
 	case payout.FieldAmountCents:
 		return m.AmountCents()
+	case payout.FieldBonusCents:
+		return m.BonusCents()
 	case payout.FieldPaidAt:
 		return m.PaidAt()
 	case payout.FieldCreatedAt:
@@ -8473,6 +8536,8 @@ func (m *PayoutMutation) OldField(ctx context.Context, name string) (ent.Value, 
 		return m.OldCalculatedCents(ctx)
 	case payout.FieldAmountCents:
 		return m.OldAmountCents(ctx)
+	case payout.FieldBonusCents:
+		return m.OldBonusCents(ctx)
 	case payout.FieldPaidAt:
 		return m.OldPaidAt(ctx)
 	case payout.FieldCreatedAt:
@@ -8528,6 +8593,13 @@ func (m *PayoutMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetAmountCents(v)
 		return nil
+	case payout.FieldBonusCents:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBonusCents(v)
+		return nil
 	case payout.FieldPaidAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -8559,6 +8631,9 @@ func (m *PayoutMutation) AddedFields() []string {
 	if m.addamount_cents != nil {
 		fields = append(fields, payout.FieldAmountCents)
 	}
+	if m.addbonus_cents != nil {
+		fields = append(fields, payout.FieldBonusCents)
+	}
 	return fields
 }
 
@@ -8573,6 +8648,8 @@ func (m *PayoutMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedCalculatedCents()
 	case payout.FieldAmountCents:
 		return m.AddedAmountCents()
+	case payout.FieldBonusCents:
+		return m.AddedBonusCents()
 	}
 	return nil, false
 }
@@ -8602,6 +8679,13 @@ func (m *PayoutMutation) AddField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddAmountCents(v)
+		return nil
+	case payout.FieldBonusCents:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddBonusCents(v)
 		return nil
 	}
 	return fmt.Errorf("unknown Payout numeric field %s", name)
@@ -8647,6 +8731,9 @@ func (m *PayoutMutation) ResetField(name string) error {
 		return nil
 	case payout.FieldAmountCents:
 		m.ResetAmountCents()
+		return nil
+	case payout.FieldBonusCents:
+		m.ResetBonusCents()
 		return nil
 	case payout.FieldPaidAt:
 		m.ResetPaidAt()

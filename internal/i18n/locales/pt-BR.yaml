@@ -458,6 +458,7 @@ payments:
   paid_at: Pago em
   amount_paid: Valor pago
   calculated: "calculado {{.amount}}"
+  bonus_line: "+ {{.amount}} de bônus"
   later: "+{{.time}} depois da baixa ({{.amount}})"
   undo: Desfazer
   undo_confirm: Desfazer a baixa?
@@ -469,7 +470,10 @@ payments:
   modal:
     title: "Dar baixa · {{.name}}"
     calculated: Valor calculado
+    amount_label: "Valor pago pelas horas ({{.unit}})"
     amount_hint: Vem com o valor calculado. Mude se pagou outro valor.
+    bonus_label: "Bônus ({{.unit}})"
+    bonus_hint: Pago junto, além das horas. Em branco, fica sem bônus.
     running: "O período ainda está correndo: as horas que a pessoa registrar depois aparecem em Pagos recentemente, como depois da baixa."
     confirm: Confirmar baixa
 
@@ -1687,6 +1691,7 @@ errors:
     period_not_started: "este período ainda não começou"
     already_paid: "este período já tem baixa"
     invalid_amount: "informe o valor pago, zero ou mais"
+    invalid_bonus: "o bônus não pode ser negativo"
     payout_not_found: "baixa não encontrada"
   person:
     email_in_use: "este email já está em uso"
@@ -1814,6 +1819,7 @@ fields:
   customer_id: "o cliente"
   bill_rate_cents: "o valor cobrado por hora"
   amount_cents: "o valor pago"
+  bonus_cents: "o bônus"
   pay_rate_cents: "o valor por hora"
   sprint_duration_days: "a duração da sprint"
   daily_time: "o horário da daily"

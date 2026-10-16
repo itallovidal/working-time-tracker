@@ -137,6 +137,7 @@
                   </td>
                   <td class="nowrap num">
                     <span x-text="WTT.fmt.money(row.amount_cents)"></span>
+                    <div class="small" x-show="row.bonus_cents > 0" x-text="$t('payments.bonus_line', { amount: WTT.fmt.money(row.bonus_cents) })"></div>
                     <div class="muted small" x-show="row.amount_cents !== row.calculated_cents" x-text="$t('payments.calculated', { amount: WTT.fmt.money(row.calculated_cents) })"></div>
                   </td>
                   <td class="actions">
@@ -171,11 +172,19 @@
       </template>
       <p class="muted small" x-show="paying && paying.running">{{.T "payments.modal.running"}}</p>
       <div class="field">
-        <label for="payout-amount"><span x-text="$t('payments.amount_paid') + ' (' + WTT.fmt.moneyUnit() + ')'"></span></label>
+        <label for="payout-amount"><span x-text="$t('payments.modal.amount_label', { unit: WTT.fmt.moneyUnit() })"></span></label>
         <input id="payout-amount" type="text" inputmode="decimal" class="num" data-field="amount_cents" data-autofocus x-model="amount"
                @input="clearField('amount_cents')" :aria-invalid="fieldErrors.amount_cents ? 'true' : 'false'">
         {{template "field_error" "amount_cents"}}
         <span class="hint">{{.T "payments.modal.amount_hint"}}</span>
+      </div>
+      {{/* O bônus é pago junto, além das horas. Em branco é zero: não houve bônus. */}}
+      <div class="field">
+        <label for="payout-bonus"><span x-text="$t('payments.modal.bonus_label', { unit: WTT.fmt.moneyUnit() })"></span> <span class="optional">{{.T "common.optional_label"}}</span></label>
+        <input id="payout-bonus" type="text" inputmode="decimal" class="num" data-field="bonus_cents" x-model="bonus" placeholder="0,00"
+               @input="clearField('bonus_cents')" :aria-invalid="fieldErrors.bonus_cents ? 'true' : 'false'">
+        {{template "field_error" "bonus_cents"}}
+        <span class="hint">{{.T "payments.modal.bonus_hint"}}</span>
       </div>
       <p class="form-error" x-show="errors.pay" x-text="errors.pay" role="alert"></p>
       <div class="row row-end">

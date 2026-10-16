@@ -448,6 +448,7 @@ payments:
   paid_at: Paid on
   amount_paid: Amount paid
   calculated: "calculated {{.amount}}"
+  bonus_line: "+ {{.amount}} bonus"
   later: "+{{.time}} after it was paid ({{.amount}})"
   undo: Undo
   undo_confirm: Undo this payment?
@@ -459,7 +460,10 @@ payments:
   modal:
     title: "Mark as paid · {{.name}}"
     calculated: Calculated amount
+    amount_label: "Amount paid for the hours ({{.unit}})"
     amount_hint: Filled with the calculated amount. Change it if you paid a different amount.
+    bonus_label: "Bonus ({{.unit}})"
+    bonus_hint: Paid together, on top of the hours. Leave it blank for no bonus.
     running: "The period is still running: hours the person tracks afterwards show up in Recently paid, as after the payment."
     confirm: Confirm payment
 
@@ -1677,6 +1681,7 @@ errors:
     period_not_started: "this period has not started yet"
     already_paid: "this period is already marked as paid"
     invalid_amount: "enter the amount paid, zero or more"
+    invalid_bonus: "the bonus cannot be negative"
     payout_not_found: "payment record not found"
   person:
     email_in_use: "this email is already in use"
@@ -1804,6 +1809,7 @@ fields:
   customer_id: "the customer"
   bill_rate_cents: "the billed hourly rate"
   amount_cents: "the amount paid"
+  bonus_cents: "the bonus"
   pay_rate_cents: "the hourly rate"
   sprint_duration_days: "the sprint length"
   daily_time: "the daily time"

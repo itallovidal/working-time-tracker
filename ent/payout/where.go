@@ -86,6 +86,11 @@ func AmountCents(v int) predicate.Payout {
 	return predicate.Payout(sql.FieldEQ(FieldAmountCents, v))
 }
 
+// BonusCents applies equality check predicate on the "bonus_cents" field. It's identical to BonusCentsEQ.
+func BonusCents(v int) predicate.Payout {
+	return predicate.Payout(sql.FieldEQ(FieldBonusCents, v))
+}
+
 // PaidAt applies equality check predicate on the "paid_at" field. It's identical to PaidAtEQ.
 func PaidAt(v time.Time) predicate.Payout {
 	return predicate.Payout(sql.FieldEQ(FieldPaidAt, v))
@@ -364,6 +369,46 @@ func AmountCentsLT(v int) predicate.Payout {
 // AmountCentsLTE applies the LTE predicate on the "amount_cents" field.
 func AmountCentsLTE(v int) predicate.Payout {
 	return predicate.Payout(sql.FieldLTE(FieldAmountCents, v))
+}
+
+// BonusCentsEQ applies the EQ predicate on the "bonus_cents" field.
+func BonusCentsEQ(v int) predicate.Payout {
+	return predicate.Payout(sql.FieldEQ(FieldBonusCents, v))
+}
+
+// BonusCentsNEQ applies the NEQ predicate on the "bonus_cents" field.
+func BonusCentsNEQ(v int) predicate.Payout {
+	return predicate.Payout(sql.FieldNEQ(FieldBonusCents, v))
+}
+
+// BonusCentsIn applies the In predicate on the "bonus_cents" field.
+func BonusCentsIn(vs ...int) predicate.Payout {
+	return predicate.Payout(sql.FieldIn(FieldBonusCents, vs...))
+}
+
+// BonusCentsNotIn applies the NotIn predicate on the "bonus_cents" field.
+func BonusCentsNotIn(vs ...int) predicate.Payout {
+	return predicate.Payout(sql.FieldNotIn(FieldBonusCents, vs...))
+}
+
+// BonusCentsGT applies the GT predicate on the "bonus_cents" field.
+func BonusCentsGT(v int) predicate.Payout {
+	return predicate.Payout(sql.FieldGT(FieldBonusCents, v))
+}
+
+// BonusCentsGTE applies the GTE predicate on the "bonus_cents" field.
+func BonusCentsGTE(v int) predicate.Payout {
+	return predicate.Payout(sql.FieldGTE(FieldBonusCents, v))
+}
+
+// BonusCentsLT applies the LT predicate on the "bonus_cents" field.
+func BonusCentsLT(v int) predicate.Payout {
+	return predicate.Payout(sql.FieldLT(FieldBonusCents, v))
+}
+
+// BonusCentsLTE applies the LTE predicate on the "bonus_cents" field.
+func BonusCentsLTE(v int) predicate.Payout {
+	return predicate.Payout(sql.FieldLTE(FieldBonusCents, v))
 }
 
 // PaidAtEQ applies the EQ predicate on the "paid_at" field.

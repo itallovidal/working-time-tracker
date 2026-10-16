@@ -13,7 +13,8 @@ import (
 )
 
 // Payout é a baixa de um período: o dono marcou que pagou. Start e PayDate são as datas do período pago; Seconds e
-// CalculatedCents, o que ele tinha na hora da baixa; AmountCents, o que foi pago de fato.
+// CalculatedCents, o que ele tinha na hora da baixa; AmountCents, o que foi pago de fato pelas horas; BonusCents, um
+// bônus pago junto (zero quando não houve).
 type Payout struct {
 	ID              uuid.UUID `json:"id"`
 	PersonID        uuid.UUID `json:"person_id"`
@@ -22,6 +23,7 @@ type Payout struct {
 	Seconds         float64   `json:"seconds"`
 	CalculatedCents int       `json:"calculated_cents"`
 	AmountCents     int       `json:"amount_cents"`
+	BonusCents      int       `json:"bonus_cents"`
 	PaidAt          time.Time `json:"paid_at"`
 }
 
@@ -43,7 +45,7 @@ func NewStore(client *ent.Client) *Store {
 func toPayout(e *ent.Payout) Payout {
 	return Payout{
 		ID: e.ID, PersonID: e.PersonID, Start: e.PeriodStart, PayDate: e.PayDate, Seconds: e.Seconds,
-		CalculatedCents: e.CalculatedCents, AmountCents: e.AmountCents, PaidAt: e.PaidAt,
+		CalculatedCents: e.CalculatedCents, AmountCents: e.AmountCents, BonusCents: e.BonusCents, PaidAt: e.PaidAt,
 	}
 }
 
@@ -56,6 +58,7 @@ func (s *Store) Create(p *Payout) error {
 		SetSeconds(p.Seconds).
 		SetCalculatedCents(p.CalculatedCents).
 		SetAmountCents(p.AmountCents).
+		SetBonusCents(p.BonusCents).
 		SetPaidAt(p.PaidAt).
 		Save(context.Background())
 	if err != nil {

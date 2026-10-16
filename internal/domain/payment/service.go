@@ -107,10 +107,11 @@ type PeriodView struct {
 	Paid *PaidMark `json:"paid,omitempty"`
 }
 
-// PaidMark é a baixa de um período, como o perfil e a visão da equipe a mostram.
+// PaidMark é a baixa de um período, como o perfil e a visão da equipe a mostram: o valor pago pelas horas e o bônus.
 type PaidMark struct {
 	ID          uuid.UUID `json:"id"`
 	AmountCents int       `json:"amount_cents"`
+	BonusCents  int       `json:"bonus_cents"`
 	PaidAt      time.Time `json:"paid_at"`
 }
 

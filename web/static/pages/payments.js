@@ -10,7 +10,8 @@ document.addEventListener('alpine:init', () => {
     loading: true,
     team: null,
     paying: null, // a linha de Próximos pagamentos que o modal Dar baixa mostra
-    amount: '', // o texto do campo Valor pago
+    amount: '', // o texto do campo Valor pago pelas horas
+    bonus: '', // o texto do campo Bônus; em branco é zero
     confirming: null, // a baixa de Pagos recentemente que pede confirmação para desfazer
     init() {
       return this.reload();
@@ -39,18 +40,27 @@ document.addEventListener('alpine:init', () => {
     openPayout(row) {
       this.paying = row;
       this.amount = fmt.moneyInput(row.amount_cents);
+      this.bonus = '';
       this.errors.pay = '';
       this.clearFields();
       Alpine.store('modal').open('payout', t('payments.modal.title', { name: row.person.name }), () => !this.pending);
     },
-    // markPaid grava a baixa do período com o valor do campo e relê a tela: a linha passa para Pagos recentemente.
+    // markPaid grava a baixa do período com o valor pelas horas e o bônus (em branco, zero) e relê a tela: a linha passa
+    // para Pagos recentemente. Os dois só aceitam dígitos e separador, então um valor negativo não passa.
     markPaid() {
       const row = this.paying;
       const amount = (v, field) => (toCents(v, { strict: true }) === null ? errorText({ code: 'payment.invalid_amount', params: { field } }) : '');
-      if (!row || !this.check({ amount_cents: [this.amount, amount] })) return undefined;
+      const bonus = (v, field) => {
+        const x = String(v).trim();
+        if (x === '' || toCents(x, { strict: true }) !== null) return '';
+        return errorText({ code: x.startsWith('-') ? 'payment.invalid_bonus' : 'request.field_invalid', params: { field } });
+      };
+      if (!row || !this.check({ amount_cents: [this.amount, amount], bonus_cents: [this.bonus, bonus] })) return undefined;
       return this.run('pay', async () => {
         await api('POST', '/api/orgs/' + orgId + '/payouts', {
-          person_id: row.person.id, start: row.start, pay_date: row.pay_date, amount_cents: toCents(this.amount, { strict: true }),
+          person_id: row.person.id, start: row.start, pay_date: row.pay_date,
+          amount_cents: toCents(this.amount, { strict: true }),
+          bonus_cents: String(this.bonus).trim() === '' ? 0 : toCents(this.bonus, { strict: true }),
         });
         Alpine.store('modal').close();
         Alpine.store('toast').show(t('payments.marked', { name: row.person.name }));

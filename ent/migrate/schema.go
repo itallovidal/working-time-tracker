@@ -264,6 +264,7 @@ var (
 		{Name: "seconds", Type: field.TypeFloat64},
 		{Name: "calculated_cents", Type: field.TypeInt},
 		{Name: "amount_cents", Type: field.TypeInt},
+		{Name: "bonus_cents", Type: field.TypeInt, Default: 0},
 		{Name: "paid_at", Type: field.TypeTime},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "person_id", Type: field.TypeUUID},
@@ -276,7 +277,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "payouts_persons_payouts",
-				Columns:    []*schema.Column{PayoutsColumns[8]},
+				Columns:    []*schema.Column{PayoutsColumns[9]},
 				RefColumns: []*schema.Column{PersonsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -285,7 +286,7 @@ var (
 			{
 				Name:    "payout_person_id_period_start_pay_date",
 				Unique:  true,
-				Columns: []*schema.Column{PayoutsColumns[8], PayoutsColumns[1], PayoutsColumns[2]},
+				Columns: []*schema.Column{PayoutsColumns[9], PayoutsColumns[1], PayoutsColumns[2]},
 			},
 		},
 	}

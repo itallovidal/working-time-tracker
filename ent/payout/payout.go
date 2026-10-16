@@ -27,6 +27,8 @@ const (
 	FieldCalculatedCents = "calculated_cents"
 	// FieldAmountCents holds the string denoting the amount_cents field in the database.
 	FieldAmountCents = "amount_cents"
+	// FieldBonusCents holds the string denoting the bonus_cents field in the database.
+	FieldBonusCents = "bonus_cents"
 	// FieldPaidAt holds the string denoting the paid_at field in the database.
 	FieldPaidAt = "paid_at"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
@@ -53,6 +55,7 @@ var Columns = []string{
 	FieldSeconds,
 	FieldCalculatedCents,
 	FieldAmountCents,
+	FieldBonusCents,
 	FieldPaidAt,
 	FieldCreatedAt,
 }
@@ -74,6 +77,10 @@ var (
 	CalculatedCentsValidator func(int) error
 	// AmountCentsValidator is a validator for the "amount_cents" field. It is called by the builders before save.
 	AmountCentsValidator func(int) error
+	// DefaultBonusCents holds the default value on creation for the "bonus_cents" field.
+	DefaultBonusCents int
+	// BonusCentsValidator is a validator for the "bonus_cents" field. It is called by the builders before save.
+	BonusCentsValidator func(int) error
 	// DefaultPaidAt holds the default value on creation for the "paid_at" field.
 	DefaultPaidAt func() time.Time
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
@@ -118,6 +125,11 @@ func ByCalculatedCents(opts ...sql.OrderTermOption) OrderOption {
 // ByAmountCents orders the results by the amount_cents field.
 func ByAmountCents(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldAmountCents, opts...).ToFunc()
+}
+
+// ByBonusCents orders the results by the bonus_cents field.
+func ByBonusCents(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBonusCents, opts...).ToFunc()
 }
 
 // ByPaidAt orders the results by the paid_at field.

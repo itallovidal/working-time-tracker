@@ -135,6 +135,27 @@ func (_u *PayoutUpdate) AddAmountCents(v int) *PayoutUpdate {
 	return _u
 }
 
+// SetBonusCents sets the "bonus_cents" field.
+func (_u *PayoutUpdate) SetBonusCents(v int) *PayoutUpdate {
+	_u.mutation.ResetBonusCents()
+	_u.mutation.SetBonusCents(v)
+	return _u
+}
+
+// SetNillableBonusCents sets the "bonus_cents" field if the given value is not nil.
+func (_u *PayoutUpdate) SetNillableBonusCents(v *int) *PayoutUpdate {
+	if v != nil {
+		_u.SetBonusCents(*v)
+	}
+	return _u
+}
+
+// AddBonusCents adds value to the "bonus_cents" field.
+func (_u *PayoutUpdate) AddBonusCents(v int) *PayoutUpdate {
+	_u.mutation.AddBonusCents(v)
+	return _u
+}
+
 // SetPaidAt sets the "paid_at" field.
 func (_u *PayoutUpdate) SetPaidAt(v time.Time) *PayoutUpdate {
 	_u.mutation.SetPaidAt(v)
@@ -209,6 +230,11 @@ func (_u *PayoutUpdate) check() error {
 			return &ValidationError{Name: "amount_cents", err: fmt.Errorf(`ent: validator failed for field "Payout.amount_cents": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.BonusCents(); ok {
+		if err := payout.BonusCentsValidator(v); err != nil {
+			return &ValidationError{Name: "bonus_cents", err: fmt.Errorf(`ent: validator failed for field "Payout.bonus_cents": %w`, err)}
+		}
+	}
 	if _u.mutation.PersonCleared() && len(_u.mutation.PersonIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "Payout.person"`)
 	}
@@ -250,6 +276,12 @@ func (_u *PayoutUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.AddedAmountCents(); ok {
 		_spec.AddField(payout.FieldAmountCents, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.BonusCents(); ok {
+		_spec.SetField(payout.FieldBonusCents, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedBonusCents(); ok {
+		_spec.AddField(payout.FieldBonusCents, field.TypeInt, value)
 	}
 	if value, ok := _u.mutation.PaidAt(); ok {
 		_spec.SetField(payout.FieldPaidAt, field.TypeTime, value)
@@ -408,6 +440,27 @@ func (_u *PayoutUpdateOne) AddAmountCents(v int) *PayoutUpdateOne {
 	return _u
 }
 
+// SetBonusCents sets the "bonus_cents" field.
+func (_u *PayoutUpdateOne) SetBonusCents(v int) *PayoutUpdateOne {
+	_u.mutation.ResetBonusCents()
+	_u.mutation.SetBonusCents(v)
+	return _u
+}
+
+// SetNillableBonusCents sets the "bonus_cents" field if the given value is not nil.
+func (_u *PayoutUpdateOne) SetNillableBonusCents(v *int) *PayoutUpdateOne {
+	if v != nil {
+		_u.SetBonusCents(*v)
+	}
+	return _u
+}
+
+// AddBonusCents adds value to the "bonus_cents" field.
+func (_u *PayoutUpdateOne) AddBonusCents(v int) *PayoutUpdateOne {
+	_u.mutation.AddBonusCents(v)
+	return _u
+}
+
 // SetPaidAt sets the "paid_at" field.
 func (_u *PayoutUpdateOne) SetPaidAt(v time.Time) *PayoutUpdateOne {
 	_u.mutation.SetPaidAt(v)
@@ -495,6 +548,11 @@ func (_u *PayoutUpdateOne) check() error {
 			return &ValidationError{Name: "amount_cents", err: fmt.Errorf(`ent: validator failed for field "Payout.amount_cents": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.BonusCents(); ok {
+		if err := payout.BonusCentsValidator(v); err != nil {
+			return &ValidationError{Name: "bonus_cents", err: fmt.Errorf(`ent: validator failed for field "Payout.bonus_cents": %w`, err)}
+		}
+	}
 	if _u.mutation.PersonCleared() && len(_u.mutation.PersonIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "Payout.person"`)
 	}
@@ -553,6 +611,12 @@ func (_u *PayoutUpdateOne) sqlSave(ctx context.Context) (_node *Payout, err erro
 	}
 	if value, ok := _u.mutation.AddedAmountCents(); ok {
 		_spec.AddField(payout.FieldAmountCents, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.BonusCents(); ok {
+		_spec.SetField(payout.FieldBonusCents, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedBonusCents(); ok {
+		_spec.AddField(payout.FieldBonusCents, field.TypeInt, value)
 	}
 	if value, ok := _u.mutation.PaidAt(); ok {
 		_spec.SetField(payout.FieldPaidAt, field.TypeTime, value)

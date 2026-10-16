@@ -24,10 +24,13 @@ func (Payout) Fields() []ent.Field {
 		// O período pago, em dias de calendário YYYY-MM-DD no fuso da organização, os dois inclusivos.
 		field.String("period_start"),
 		field.String("pay_date"),
-		// As horas e o valor que o período tinha na hora da baixa, e o que o dono pagou de fato, que pode ser outro.
+		// As horas e o valor que o período tinha na hora da baixa, e o que o dono pagou de fato pelas horas, que pode ser
+		// outro.
 		field.Float("seconds").Min(0),
 		field.Int("calculated_cents").NonNegative(),
 		field.Int("amount_cents").NonNegative(),
+		// Um bônus pago junto, além das horas; zero quando não houve.
+		field.Int("bonus_cents").NonNegative().Default(0),
 		field.Time("paid_at").Default(time.Now),
 		field.Time("created_at").Default(time.Now).Immutable(),
 	}
