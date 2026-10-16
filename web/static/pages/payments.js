@@ -31,6 +31,10 @@ document.addEventListener('alpine:init', () => {
     personHref(person) {
       return '/orgs/' + orgId + '/people/' + person.id;
     },
+    // ruleLines parte a regra em duas linhas para a tabela: "Mensal" e, embaixo, "dia 5".
+    ruleLines(rule) {
+      return fmt.paymentRule(rule).split(' · ');
+    },
     // openPayout abre o modal Dar baixa com o valor calculado no campo, que o dono pode mudar.
     openPayout(row) {
       this.paying = row;

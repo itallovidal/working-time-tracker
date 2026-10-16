@@ -355,6 +355,8 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 .pager { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .pager .btn:disabled { cursor: default; }
 .stack-tight { gap: 4px; }
+/* Um título de seção com a tabela dele, com folga entre os dois (Pagamentos). */
+.stack-loose { gap: 24px; }
 /* Entre as seções de uma página: o relógio, as tarefas, as sessões. */
 .stack-sections { gap: 40px; }
 .stack-narrow { max-width: 560px; }
@@ -686,6 +688,8 @@ td.actions { text-align: right; white-space: nowrap; }
 /* O painel de cada pessoa na página inicial: quatro números numa fileira (dois em tela média, um em tela estreita). */
 .kpis-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 @media (max-width: 1100px) { .kpis-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* Em quatro colunas o cartão é estreito: o valor encolhe um pouco para "R$ 135.270,00" caber sem quebrar no meio. */
+@media (min-width: 1101px) { .kpis-4 .kpi-value { font-size: 1.3rem; } }
 @media (max-width: 560px) { .kpis-4 { grid-template-columns: minmax(0, 1fr); } }
 
 /* As duas colunas do painel (tarefas e semana) podem encolher abaixo do que a tabela pede: sem isto, em tela estreita a

@@ -61,7 +61,7 @@
         </div>
       </div>
 
-      <section class="stack stack-tight" aria-labelledby="payments-upcoming-title">
+      <section class="stack stack-loose" aria-labelledby="payments-upcoming-title">
         <h2 id="payments-upcoming-title">{{template "icon" "calendar-day"}} {{.T "payments.upcoming"}}</h2>
         {{template "empty_state" (dict "Icon" "wallet" "Show" "team.due.length === 0" "Title" (.T "payments.upcoming_empty"))}}
         <div class="table-wrap" x-show="team.due.length > 0">
@@ -77,21 +77,29 @@
               <template x-for="row in team.due" :key="row.person.id + row.start">
                 <tr class="row-link" @click="if (!$event.target.closest('a, button')) location.href = personHref(row.person)">
                   <td class="nowrap"><a :href="personHref(row.person)" x-text="row.person.name"></a></td>
-                  <td class="nowrap muted" x-text="WTT.fmt.paymentRule(row.rule)"></td>
                   <td class="nowrap">
-                    <span x-text="WTT.payments.period(row)"></span>
-                    <span class="muted small" x-show="row.running">· {{.T "payments.running"}}</span>
+                    <div x-text="ruleLines(row.rule)[0]"></div>
+                    <div class="muted small" x-text="ruleLines(row.rule)[1] || ''"></div>
+                  </td>
+                  {{/* O que é secundário (em andamento, atraso, as horas do último fechado) fica numa segunda linha menor,
+                       para a tabela caber na largura da página. */}}
+                  <td class="nowrap">
+                    <div x-text="WTT.payments.period(row)"></div>
+                    <div class="muted small" x-show="row.running">{{.T "payments.running"}}</div>
                   </td>
                   <td class="nowrap">
-                    <span x-text="WTT.fmt.day(row.pay_date)"></span>
+                    <div x-text="WTT.fmt.day(row.pay_date)"></div>
                     <span class="badge badge-danger" x-show="row.overdue">{{.T "payments.overdue"}}</span>
-                    <span class="muted small" x-show="!row.overdue" x-text="WTT.payments.daysLeft(row)"></span>
+                    <div class="muted small" x-show="!row.overdue" x-text="WTT.payments.daysLeft(row)"></div>
                   </td>
                   <td class="nowrap num" x-text="WTT.fmt.hours(row.seconds)"></td>
                   <td class="nowrap num" x-text="WTT.fmt.money(row.amount_cents)"></td>
-                  <td class="nowrap num muted">
-                    <span x-text="row.last_closed ? WTT.fmt.hours(row.last_closed.seconds) + ' · ' + WTT.fmt.money(row.last_closed.amount_cents) : '—'"></span>
-                    <span x-show="row.last_closed && row.last_closed.paid" :title="row.last_closed && row.last_closed.paid ? $t('payments.paid_on', { date: WTT.fmt.date(row.last_closed.paid.paid_at), amount: WTT.fmt.money(row.last_closed.paid.amount_cents) }) : ''">{{template "icon" "circle-check"}}</span>
+                  <td class="nowrap num">
+                    <div>
+                      <span x-text="row.last_closed ? WTT.fmt.money(row.last_closed.amount_cents) : '—'"></span>
+                      <span class="muted" x-show="row.last_closed && row.last_closed.paid" :title="row.last_closed && row.last_closed.paid ? $t('payments.paid_on', { date: WTT.fmt.date(row.last_closed.paid.paid_at), amount: WTT.fmt.money(row.last_closed.paid.amount_cents) }) : ''">{{template "icon" "circle-check"}}</span>
+                    </div>
+                    <div class="muted small" x-show="row.last_closed" x-text="row.last_closed ? WTT.fmt.hours(row.last_closed.seconds) : ''"></div>
                   </td>
                   <td class="actions">
                     <button type="button" class="btn btn-secondary btn-sm" :disabled="pending" @click="openPayout(row)">{{template "icon" "check"}} {{.T "payments.mark_paid"}}</button>
@@ -103,7 +111,7 @@
         </div>
       </section>
 
-      <section class="stack stack-tight" aria-labelledby="payments-paid-title">
+      <section class="stack stack-loose" aria-labelledby="payments-paid-title">
         <h2 id="payments-paid-title">{{template "icon" "circle-check"}} {{.T "payments.paid_recently"}}</h2>
         <p class="form-error" x-cloak x-show="errors.undo" x-text="errors.undo" role="alert"></p>
         {{template "empty_state" (dict "Icon" "circle-check" "Show" "team.paid.length === 0" "Title" (.T "payments.paid_empty"))}}
