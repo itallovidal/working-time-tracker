@@ -18,6 +18,7 @@ import (
 	"working-time-tracker/ent/issuesync"
 	"working-time-tracker/ent/label"
 	"working-time-tracker/ent/organization"
+	"working-time-tracker/ent/payout"
 	"working-time-tracker/ent/person"
 	"working-time-tracker/ent/project"
 	"working-time-tracker/ent/session"
@@ -53,6 +54,8 @@ type Client struct {
 	Label *LabelClient
 	// Organization is the client for interacting with the Organization builders.
 	Organization *OrganizationClient
+	// Payout is the client for interacting with the Payout builders.
+	Payout *PayoutClient
 	// Person is the client for interacting with the Person builders.
 	Person *PersonClient
 	// Project is the client for interacting with the Project builders.
@@ -87,6 +90,7 @@ func (c *Client) init() {
 	c.IssueSync = NewIssueSyncClient(c.config)
 	c.Label = NewLabelClient(c.config)
 	c.Organization = NewOrganizationClient(c.config)
+	c.Payout = NewPayoutClient(c.config)
 	c.Person = NewPersonClient(c.config)
 	c.Project = NewProjectClient(c.config)
 	c.Session = NewSessionClient(c.config)
@@ -194,6 +198,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		IssueSync:       NewIssueSyncClient(cfg),
 		Label:           NewLabelClient(cfg),
 		Organization:    NewOrganizationClient(cfg),
+		Payout:          NewPayoutClient(cfg),
 		Person:          NewPersonClient(cfg),
 		Project:         NewProjectClient(cfg),
 		Session:         NewSessionClient(cfg),
@@ -228,6 +233,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		IssueSync:       NewIssueSyncClient(cfg),
 		Label:           NewLabelClient(cfg),
 		Organization:    NewOrganizationClient(cfg),
+		Payout:          NewPayoutClient(cfg),
 		Person:          NewPersonClient(cfg),
 		Project:         NewProjectClient(cfg),
 		Session:         NewSessionClient(cfg),
@@ -266,7 +272,7 @@ func (c *Client) Close() error {
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.Allocation, c.Customer, c.Integration, c.Invite, c.IssueSync, c.Label,
-		c.Organization, c.Person, c.Project, c.Session, c.Task, c.Team,
+		c.Organization, c.Payout, c.Person, c.Project, c.Session, c.Task, c.Team,
 		c.TeamMembership, c.WorkSession, c.WorkSessionTask,
 	} {
 		n.Use(hooks...)
@@ -278,7 +284,7 @@ func (c *Client) Use(hooks ...Hook) {
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.Allocation, c.Customer, c.Integration, c.Invite, c.IssueSync, c.Label,
-		c.Organization, c.Person, c.Project, c.Session, c.Task, c.Team,
+		c.Organization, c.Payout, c.Person, c.Project, c.Session, c.Task, c.Team,
 		c.TeamMembership, c.WorkSession, c.WorkSessionTask,
 	} {
 		n.Intercept(interceptors...)
@@ -302,6 +308,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Label.mutate(ctx, m)
 	case *OrganizationMutation:
 		return c.Organization.mutate(ctx, m)
+	case *PayoutMutation:
+		return c.Payout.mutate(ctx, m)
 	case *PersonMutation:
 		return c.Person.mutate(ctx, m)
 	case *ProjectMutation:
@@ -1542,6 +1550,155 @@ func (c *OrganizationClient) mutate(ctx context.Context, m *OrganizationMutation
 	}
 }
 
+// PayoutClient is a client for the Payout schema.
+type PayoutClient struct {
+	config
+}
+
+// NewPayoutClient returns a client for the Payout from the given config.
+func NewPayoutClient(c config) *PayoutClient {
+	return &PayoutClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `payout.Hooks(f(g(h())))`.
+func (c *PayoutClient) Use(hooks ...Hook) {
+	c.hooks.Payout = append(c.hooks.Payout, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `payout.Intercept(f(g(h())))`.
+func (c *PayoutClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Payout = append(c.inters.Payout, interceptors...)
+}
+
+// Create returns a builder for creating a Payout entity.
+func (c *PayoutClient) Create() *PayoutCreate {
+	mutation := newPayoutMutation(c.config, OpCreate)
+	return &PayoutCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Payout entities.
+func (c *PayoutClient) CreateBulk(builders ...*PayoutCreate) *PayoutCreateBulk {
+	return &PayoutCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *PayoutClient) MapCreateBulk(slice any, setFunc func(*PayoutCreate, int)) *PayoutCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &PayoutCreateBulk{err: fmt.Errorf("calling to PayoutClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*PayoutCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &PayoutCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Payout.
+func (c *PayoutClient) Update() *PayoutUpdate {
+	mutation := newPayoutMutation(c.config, OpUpdate)
+	return &PayoutUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *PayoutClient) UpdateOne(_m *Payout) *PayoutUpdateOne {
+	mutation := newPayoutMutation(c.config, OpUpdateOne, withPayout(_m))
+	return &PayoutUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *PayoutClient) UpdateOneID(id uuid.UUID) *PayoutUpdateOne {
+	mutation := newPayoutMutation(c.config, OpUpdateOne, withPayoutID(id))
+	return &PayoutUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Payout.
+func (c *PayoutClient) Delete() *PayoutDelete {
+	mutation := newPayoutMutation(c.config, OpDelete)
+	return &PayoutDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *PayoutClient) DeleteOne(_m *Payout) *PayoutDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *PayoutClient) DeleteOneID(id uuid.UUID) *PayoutDeleteOne {
+	builder := c.Delete().Where(payout.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &PayoutDeleteOne{builder}
+}
+
+// Query returns a query builder for Payout.
+func (c *PayoutClient) Query() *PayoutQuery {
+	return &PayoutQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypePayout},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a Payout entity by its id.
+func (c *PayoutClient) Get(ctx context.Context, id uuid.UUID) (*Payout, error) {
+	return c.Query().Where(payout.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *PayoutClient) GetX(ctx context.Context, id uuid.UUID) *Payout {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryPerson queries the person edge of a Payout.
+func (c *PayoutClient) QueryPerson(_m *Payout) *PersonQuery {
+	query := (&PersonClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(payout.Table, payout.FieldID, id),
+			sqlgraph.To(person.Table, person.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, payout.PersonTable, payout.PersonColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *PayoutClient) Hooks() []Hook {
+	return c.hooks.Payout
+}
+
+// Interceptors returns the client interceptors.
+func (c *PayoutClient) Interceptors() []Interceptor {
+	return c.inters.Payout
+}
+
+func (c *PayoutClient) mutate(ctx context.Context, m *PayoutMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&PayoutCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&PayoutUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&PayoutUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&PayoutDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Payout mutation op: %q", m.Op())
+	}
+}
+
 // PersonClient is a client for the Person schema.
 type PersonClient struct {
 	config
@@ -1755,6 +1912,22 @@ func (c *PersonClient) QueryAllocations(_m *Person) *AllocationQuery {
 			sqlgraph.From(person.Table, person.FieldID, id),
 			sqlgraph.To(allocation.Table, allocation.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, person.AllocationsTable, person.AllocationsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryPayouts queries the payouts edge of a Person.
+func (c *PersonClient) QueryPayouts(_m *Person) *PayoutQuery {
+	query := (&PayoutClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(person.Table, person.FieldID, id),
+			sqlgraph.To(payout.Table, payout.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, person.PayoutsTable, person.PayoutsColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -3122,12 +3295,12 @@ func (c *WorkSessionTaskClient) mutate(ctx context.Context, m *WorkSessionTaskMu
 type (
 	hooks struct {
 		Allocation, Customer, Integration, Invite, IssueSync, Label, Organization,
-		Person, Project, Session, Task, Team, TeamMembership, WorkSession,
+		Payout, Person, Project, Session, Task, Team, TeamMembership, WorkSession,
 		WorkSessionTask []ent.Hook
 	}
 	inters struct {
 		Allocation, Customer, Integration, Invite, IssueSync, Label, Organization,
-		Person, Project, Session, Task, Team, TeamMembership, WorkSession,
+		Payout, Person, Project, Session, Task, Team, TeamMembership, WorkSession,
 		WorkSessionTask []ent.Interceptor
 	}
 )

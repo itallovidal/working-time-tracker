@@ -67,9 +67,11 @@ type PersonEdges struct {
 	CreatedInvites []*Invite `json:"created_invites,omitempty"`
 	// Allocations holds the value of the allocations edge.
 	Allocations []*Allocation `json:"allocations,omitempty"`
+	// Payouts holds the value of the payouts edge.
+	Payouts []*Payout `json:"payouts,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [7]bool
+	loadedTypes [8]bool
 }
 
 // OrganizationOrErr returns the Organization value or an error if the edge
@@ -135,6 +137,15 @@ func (e PersonEdges) AllocationsOrErr() ([]*Allocation, error) {
 		return e.Allocations, nil
 	}
 	return nil, &NotLoadedError{edge: "allocations"}
+}
+
+// PayoutsOrErr returns the Payouts value or an error if the edge
+// was not loaded in eager-loading.
+func (e PersonEdges) PayoutsOrErr() ([]*Payout, error) {
+	if e.loadedTypes[7] {
+		return e.Payouts, nil
+	}
+	return nil, &NotLoadedError{edge: "payouts"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -304,6 +315,11 @@ func (_m *Person) QueryCreatedInvites() *InviteQuery {
 // QueryAllocations queries the "allocations" edge of the Person entity.
 func (_m *Person) QueryAllocations() *AllocationQuery {
 	return NewPersonClient(_m.config).QueryAllocations(_m)
+}
+
+// QueryPayouts queries the "payouts" edge of the Person entity.
+func (_m *Person) QueryPayouts() *PayoutQuery {
+	return NewPersonClient(_m.config).QueryPayouts(_m)
 }
 
 // Update returns a builder for updating this Person.

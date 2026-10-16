@@ -11,6 +11,7 @@ import (
 	"working-time-tracker/ent/issuesync"
 	"working-time-tracker/ent/label"
 	"working-time-tracker/ent/organization"
+	"working-time-tracker/ent/payout"
 	"working-time-tracker/ent/person"
 	"working-time-tracker/ent/project"
 	"working-time-tracker/ent/schema"
@@ -162,6 +163,32 @@ func init() {
 	organizationDescID := organizationFields[0].Descriptor()
 	// organization.DefaultID holds the default value on creation for the id field.
 	organization.DefaultID = organizationDescID.Default.(func() uuid.UUID)
+	payoutFields := schema.Payout{}.Fields()
+	_ = payoutFields
+	// payoutDescSeconds is the schema descriptor for seconds field.
+	payoutDescSeconds := payoutFields[4].Descriptor()
+	// payout.SecondsValidator is a validator for the "seconds" field. It is called by the builders before save.
+	payout.SecondsValidator = payoutDescSeconds.Validators[0].(func(float64) error)
+	// payoutDescCalculatedCents is the schema descriptor for calculated_cents field.
+	payoutDescCalculatedCents := payoutFields[5].Descriptor()
+	// payout.CalculatedCentsValidator is a validator for the "calculated_cents" field. It is called by the builders before save.
+	payout.CalculatedCentsValidator = payoutDescCalculatedCents.Validators[0].(func(int) error)
+	// payoutDescAmountCents is the schema descriptor for amount_cents field.
+	payoutDescAmountCents := payoutFields[6].Descriptor()
+	// payout.AmountCentsValidator is a validator for the "amount_cents" field. It is called by the builders before save.
+	payout.AmountCentsValidator = payoutDescAmountCents.Validators[0].(func(int) error)
+	// payoutDescPaidAt is the schema descriptor for paid_at field.
+	payoutDescPaidAt := payoutFields[7].Descriptor()
+	// payout.DefaultPaidAt holds the default value on creation for the paid_at field.
+	payout.DefaultPaidAt = payoutDescPaidAt.Default.(func() time.Time)
+	// payoutDescCreatedAt is the schema descriptor for created_at field.
+	payoutDescCreatedAt := payoutFields[8].Descriptor()
+	// payout.DefaultCreatedAt holds the default value on creation for the created_at field.
+	payout.DefaultCreatedAt = payoutDescCreatedAt.Default.(func() time.Time)
+	// payoutDescID is the schema descriptor for id field.
+	payoutDescID := payoutFields[0].Descriptor()
+	// payout.DefaultID holds the default value on creation for the id field.
+	payout.DefaultID = payoutDescID.Default.(func() uuid.UUID)
 	personFields := schema.Person{}.Fields()
 	_ = personFields
 	// personDescIsOwner is the schema descriptor for is_owner field.

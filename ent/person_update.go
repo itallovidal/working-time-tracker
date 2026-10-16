@@ -10,6 +10,7 @@ import (
 	"working-time-tracker/ent/allocation"
 	"working-time-tracker/ent/invite"
 	"working-time-tracker/ent/organization"
+	"working-time-tracker/ent/payout"
 	"working-time-tracker/ent/person"
 	"working-time-tracker/ent/predicate"
 	"working-time-tracker/ent/session"
@@ -355,6 +356,21 @@ func (_u *PersonUpdate) AddAllocations(v ...*Allocation) *PersonUpdate {
 	return _u.AddAllocationIDs(ids...)
 }
 
+// AddPayoutIDs adds the "payouts" edge to the Payout entity by IDs.
+func (_u *PersonUpdate) AddPayoutIDs(ids ...uuid.UUID) *PersonUpdate {
+	_u.mutation.AddPayoutIDs(ids...)
+	return _u
+}
+
+// AddPayouts adds the "payouts" edges to the Payout entity.
+func (_u *PersonUpdate) AddPayouts(v ...*Payout) *PersonUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddPayoutIDs(ids...)
+}
+
 // Mutation returns the PersonMutation object of the builder.
 func (_u *PersonUpdate) Mutation() *PersonMutation {
 	return _u.mutation
@@ -490,6 +506,27 @@ func (_u *PersonUpdate) RemoveAllocations(v ...*Allocation) *PersonUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveAllocationIDs(ids...)
+}
+
+// ClearPayouts clears all "payouts" edges to the Payout entity.
+func (_u *PersonUpdate) ClearPayouts() *PersonUpdate {
+	_u.mutation.ClearPayouts()
+	return _u
+}
+
+// RemovePayoutIDs removes the "payouts" edge to Payout entities by IDs.
+func (_u *PersonUpdate) RemovePayoutIDs(ids ...uuid.UUID) *PersonUpdate {
+	_u.mutation.RemovePayoutIDs(ids...)
+	return _u
+}
+
+// RemovePayouts removes "payouts" edges to Payout entities.
+func (_u *PersonUpdate) RemovePayouts(v ...*Payout) *PersonUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemovePayoutIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -903,6 +940,51 @@ func (_u *PersonUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if _u.mutation.PayoutsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   person.PayoutsTable,
+			Columns: []string{person.PayoutsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(payout.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedPayoutsIDs(); len(nodes) > 0 && !_u.mutation.PayoutsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   person.PayoutsTable,
+			Columns: []string{person.PayoutsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(payout.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.PayoutsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   person.PayoutsTable,
+			Columns: []string{person.PayoutsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(payout.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{person.Label}
@@ -1242,6 +1324,21 @@ func (_u *PersonUpdateOne) AddAllocations(v ...*Allocation) *PersonUpdateOne {
 	return _u.AddAllocationIDs(ids...)
 }
 
+// AddPayoutIDs adds the "payouts" edge to the Payout entity by IDs.
+func (_u *PersonUpdateOne) AddPayoutIDs(ids ...uuid.UUID) *PersonUpdateOne {
+	_u.mutation.AddPayoutIDs(ids...)
+	return _u
+}
+
+// AddPayouts adds the "payouts" edges to the Payout entity.
+func (_u *PersonUpdateOne) AddPayouts(v ...*Payout) *PersonUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddPayoutIDs(ids...)
+}
+
 // Mutation returns the PersonMutation object of the builder.
 func (_u *PersonUpdateOne) Mutation() *PersonMutation {
 	return _u.mutation
@@ -1377,6 +1474,27 @@ func (_u *PersonUpdateOne) RemoveAllocations(v ...*Allocation) *PersonUpdateOne 
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveAllocationIDs(ids...)
+}
+
+// ClearPayouts clears all "payouts" edges to the Payout entity.
+func (_u *PersonUpdateOne) ClearPayouts() *PersonUpdateOne {
+	_u.mutation.ClearPayouts()
+	return _u
+}
+
+// RemovePayoutIDs removes the "payouts" edge to Payout entities by IDs.
+func (_u *PersonUpdateOne) RemovePayoutIDs(ids ...uuid.UUID) *PersonUpdateOne {
+	_u.mutation.RemovePayoutIDs(ids...)
+	return _u
+}
+
+// RemovePayouts removes "payouts" edges to Payout entities.
+func (_u *PersonUpdateOne) RemovePayouts(v ...*Payout) *PersonUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemovePayoutIDs(ids...)
 }
 
 // Where appends a list predicates to the PersonUpdate builder.
@@ -1813,6 +1931,51 @@ func (_u *PersonUpdateOne) sqlSave(ctx context.Context) (_node *Person, err erro
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(allocation.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.PayoutsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   person.PayoutsTable,
+			Columns: []string{person.PayoutsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(payout.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedPayoutsIDs(); len(nodes) > 0 && !_u.mutation.PayoutsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   person.PayoutsTable,
+			Columns: []string{person.PayoutsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(payout.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.PayoutsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   person.PayoutsTable,
+			Columns: []string{person.PayoutsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(payout.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

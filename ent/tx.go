@@ -26,6 +26,8 @@ type Tx struct {
 	Label *LabelClient
 	// Organization is the client for interacting with the Organization builders.
 	Organization *OrganizationClient
+	// Payout is the client for interacting with the Payout builders.
+	Payout *PayoutClient
 	// Person is the client for interacting with the Person builders.
 	Person *PersonClient
 	// Project is the client for interacting with the Project builders.
@@ -180,6 +182,7 @@ func (tx *Tx) init() {
 	tx.IssueSync = NewIssueSyncClient(tx.config)
 	tx.Label = NewLabelClient(tx.config)
 	tx.Organization = NewOrganizationClient(tx.config)
+	tx.Payout = NewPayoutClient(tx.config)
 	tx.Person = NewPersonClient(tx.config)
 	tx.Project = NewProjectClient(tx.config)
 	tx.Session = NewSessionClient(tx.config)

@@ -90,6 +90,9 @@ func RegisterRoutes(e *echo.Echo, h Handlers, m *auth.Middleware, authLimiter ec
 	// A visão geral da organização soma o tempo de cada pessoa e o custo de todos os projetos: dos admins, sem a
 	// cobrança e a margem (que são do dono). Os pagamentos da equipe são dinheiro e horas de todos: só do dono.
 	r.GET("/orgs/:orgId/payments", h.Payment.Team, org, orgCan(permission.PaymentsManage))
+	// A baixa de um pagamento (o dono marca que pagou um período) e o desfazer: também só do dono.
+	r.POST("/orgs/:orgId/payouts", h.Payment.MarkPaid, org, orgCan(permission.PaymentsManage))
+	r.DELETE("/orgs/:orgId/payouts/:payoutId", h.Payment.Unmark, org, orgCan(permission.PaymentsManage))
 	r.GET("/orgs/:orgId/overview", h.Overview.Organization, org, admin)
 	// Quem está com o ponto aberto e em que tarefas, sem tempo nem dinheiro: a bolinha da lista de tarefas e a
 	// coluna "Agora" dos colaboradores. Também só dos admins.

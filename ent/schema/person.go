@@ -53,6 +53,8 @@ func (Person) Edges() []ent.Edge {
 		edge.To("sessions", Session.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("created_invites", Invite.Type),
 		edge.To("allocations", Allocation.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
+		// As baixas dos pagamentos dela. Sem a pessoa, não há a quem ter pago.
+		edge.To("payouts", Payout.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
 	}
 }
 

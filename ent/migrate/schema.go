@@ -256,6 +256,39 @@ var (
 		Columns:    OrganizationsColumns,
 		PrimaryKey: []*schema.Column{OrganizationsColumns[0]},
 	}
+	// PayoutsColumns holds the columns for the "payouts" table.
+	PayoutsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "period_start", Type: field.TypeString},
+		{Name: "pay_date", Type: field.TypeString},
+		{Name: "seconds", Type: field.TypeFloat64},
+		{Name: "calculated_cents", Type: field.TypeInt},
+		{Name: "amount_cents", Type: field.TypeInt},
+		{Name: "paid_at", Type: field.TypeTime},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "person_id", Type: field.TypeUUID},
+	}
+	// PayoutsTable holds the schema information for the "payouts" table.
+	PayoutsTable = &schema.Table{
+		Name:       "payouts",
+		Columns:    PayoutsColumns,
+		PrimaryKey: []*schema.Column{PayoutsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "payouts_persons_payouts",
+				Columns:    []*schema.Column{PayoutsColumns[8]},
+				RefColumns: []*schema.Column{PersonsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "payout_person_id_period_start_pay_date",
+				Unique:  true,
+				Columns: []*schema.Column{PayoutsColumns[8], PayoutsColumns[1], PayoutsColumns[2]},
+			},
+		},
+	}
 	// PersonsColumns holds the columns for the "persons" table.
 	PersonsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -566,6 +599,7 @@ var (
 		IssueSyncsTable,
 		LabelsTable,
 		OrganizationsTable,
+		PayoutsTable,
 		PersonsTable,
 		ProjectsTable,
 		SessionsTable,
@@ -590,6 +624,7 @@ func init() {
 	IssueSyncsTable.ForeignKeys[0].RefTable = IntegrationsTable
 	IssueSyncsTable.ForeignKeys[1].RefTable = TasksTable
 	LabelsTable.ForeignKeys[0].RefTable = ProjectsTable
+	PayoutsTable.ForeignKeys[0].RefTable = PersonsTable
 	PersonsTable.ForeignKeys[0].RefTable = OrganizationsTable
 	ProjectsTable.ForeignKeys[0].RefTable = CustomersTable
 	ProjectsTable.ForeignKeys[1].RefTable = OrganizationsTable
