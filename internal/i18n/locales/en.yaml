@@ -574,7 +574,7 @@ help:
       tip: "This step is optional: a project without a customer is an internal project, and the customer can be picked later, in the project settings."
     project:
       title: Create the first project
-      text: "Enter the name and, if you want, a description. Pick the customer and the rate billed per hour (only admins see these fields) and the sprint length: 7, 14 or 30 days. Tick “The project has a daily” and “The project has a weekly” if the team holds those meetings."
+      text: "Enter the name and, if you want, a description. Pick the customer and the rate billed per hour (only the owner sees these fields: an admin creates internal projects only) and the sprint length: 7, 14 or 30 days. Tick “The project has a daily” and “The project has a weekly” if the team holds those meetings."
       tip: "The rate billed per hour is what the customer pays for the hours of this project. It is what the app uses to work out the revenue."
     invite:
       title: Invite the team
@@ -596,7 +596,7 @@ help:
       tip: "When you start, the task moves to “In progress”. You can work on several tasks in the same session (“Add to the session”): each one counts the full time and the session counts once. Only one clock can be open per person."
     numbers:
       title: Follow the numbers
-      text: "Admins see, on the organization Home, the hours, revenue, cost and margin of all projects, over 7 days, 30 days or all time. Each project has its own “Overview” in Management, with everyone's sessions and the totals."
+      text: "The owner and the admins see, on the organization Home, the hours and cost of all projects, over 7 days, 30 days or all time; the revenue and margin, only the owner. Each project has its own “Overview” in Management, with everyone's sessions and the totals."
       tip: "The screens show who is working right now and on which task, but they do not rank or compare people by hours."
   screens:
     intro: "For each screen: what it shows and what you can do there. Some buttons only appear for people with the permission (see “Who sees and does what”)."
@@ -604,31 +604,31 @@ help:
       title: Organization home
       text: The first screen after you sign in.
       mine: "Your dashboard (everyone): your hours today and this week, your open and completed tasks across every project, and the week day by day with the hours per project. Only what is yours shows: no money and nothing about colleagues. Click a task to open it."
-      overview: "Overview (admins only): your hours, the team's hours, and the revenue, cost and margin of all projects together, over 7 days, 30 days or all time."
-      team: "Team (admins only): who has the clock open right now and on which task."
+      overview: "Overview (the owner and the admins): your hours, the team's hours and the cost of all projects together, over 7 days, 30 days or all time. The revenue and margin only appear for the owner."
+      team: "Team (the owner and the admins): who has the clock open right now and on which task."
     payments:
       title: Payments
-      text: "The “Payments” item in the top bar, only for the owner: it is the view of whoever pays. The amounts are calculated from each person's payment rule and the tracked sessions. In “Upcoming payments”, “Mark as paid” records that you paid the period, with the calculated amount or another one; the row moves to “Recently paid”, where you can undo it. A period that closes without being marked stays as overdue."
-      mine: "Whoever is not an admin does not have this page: each person sees their own payments on their profile (the account menu › “Profile”)."
-      rule: "The rule is set in Collaborators, in the pencil of the row (or in “Edit” on the person's profile), on the “Payment” tab: monthly (a fixed day of the month; in shorter months it pays on the last day) or biweekly (from a start date, every 15 days, paid on the last day of each period). Changing the rule recalculates where the past periods fall."
-      team: "The team: what to pay in the running periods, what closes in 7 days, the team's hours, the payment dates and who has no rule. The table is ordered by pay date, not by hours. Click a row to open the person's profile, with the history and the breakdown by project. The owner shows hours and no amount."
+      text: "The “Payments” item in the top bar, only for the owner: it is the view of whoever pays. The amounts are calculated from each person's payment rule and the tracked sessions. In “Upcoming payments”, “Mark as paid” records that you paid the period, with the calculated amount or another one and, if any, a bonus; the row moves to “Recently paid”, where you can undo it. A period that closes without being marked stays as overdue."
+      mine: "Only the owner has this page: each person sees their own payments on their profile (the account menu › “Profile”)."
+      rule: "The owner sets the rule in Collaborators, in the pencil of the row (or in “Edit” on the person's profile), on the “Payment” tab: monthly (a fixed day of the month; in shorter months it pays on the last day) or biweekly (from a start date, every 15 days, paid on the last day of each period). Changing the rule recalculates where the past periods fall."
+      team: "The team: what to pay (overdue included), what closes in 7 and 30 days, the team's hours and who has no rule. “Upcoming payments” is ordered by pay date, not by hours; “Recently paid” shows the payments recorded in the last 30 days. Click a row to open the person's profile, with the history and the breakdown by project. The owner is not paid and does not show in the tables."
     org_about:
       title: Settings
       text: "The “Settings” item in the top bar. It is the organization profile: description, country, contact, company details and how the team works (work mode, time zone and currency). Everyone reads it. An empty field shows as “Not provided”."
-      edit: "Admins have the “Edit” button, to change the profile, the currency and the time zone."
+      edit: "The owner has the “Edit” button, to change the profile, the currency and the time zone."
       delete: "At the end of the edit screen there is “Delete organization”: only the owner can do it, and only after every project is deleted."
     org_people:
       title: Collaborators
-      text: "Who belongs to the organization, with the role (Owner, Admin or Member), the weekly hours and the payment rule. The page only appears for whoever looks after people: admins and anyone the owner allowed."
+      text: "Who belongs to the organization, with the role (Owner, Admin or Member), the weekly hours and, for the owner, the payment rule. The page only appears for the owner and the admins."
       add: "“Add collaborator” generates an invitation link. Pick the role (only the owner invites admins) and, if you want, enter the email so that only that person can use the link."
       add_email: "“Add collaborator” sends the invitation by email. Pick the role (only the owner invites admins) and enter the email; without an email it only generates a link for you to copy and send."
       pending: "“Pending invitations” lists the links not used yet, each one valid for 7 days. You can revoke them."
-      edit: "The pencil on the row opens “Payment and permissions”: the hours agreed per week, when the person is paid and, for the owner, the organization permissions of people who are not admins."
+      edit: "The pencil on the row opens “Edit collaborator”, in tabs: “Payment”, with the hours agreed per week and, for the owner, when the person is paid; and “Projects and rates”, with the person's hourly rate on each project, where you can put them on other projects or take them off."
       role: "Only the owner makes someone an admin, or back to a member."
-      profile: "For admins, clicking the row opens the person's profile: the weekly hours and the rule, the hours and amount of the period and since the start, by project, the payment history and the next dates. “Edit” on the profile opens the same modal as the pencil."
+      profile: "For the owner and the admins, clicking the row opens the person's profile: the weekly hours, the hours of the period and since the start, and their projects. The payment rule, the payment history and the next dates only appear for the owner. “Edit” on the profile opens the same modal as the pencil."
     org_customers:
       title: Customers
-      text: "The register of who hires the organization: name, country, tax ID (CNPJ in Brazil, EIN in the US), contact person, email and phone. The page only appears for whoever looks after customers."
+      text: "The register of who hires the organization: name, country, tax ID (CNPJ in Brazil, EIN in the US), contact person, email and phone. The page is the owner's only."
       actions: "“New customer” registers one; each row has the actions to edit and delete."
       link: "A customer is linked to a project in the project settings, together with the rate billed per hour."
     org_projects:
@@ -659,20 +659,20 @@ help:
     mgmt_overview:
       title: "Management: Overview"
       intro: "The “Management” button, at the end of the project tabs, appears for whoever has some permission on the project. Each Management tab appears according to the person's permission."
-      text: "The Overview is the project in numbers: people, teams, hours over the last 7 and 30 days, who is working right now, overdue tasks, customer and billed rate."
-      sessions: "Below are everyone's sessions, with person, date and task filters, and the totals of time, cost, revenue and margin."
-      who: "It requires the permission to see the billing."
+      text: "The Overview is the project in numbers: people, teams, hours over the last 7 and 30 days, who is working right now, overdue tasks and, for the owner, the customer and billed rate."
+      sessions: "Below are everyone's sessions, with person, date and task filters, and the totals of time and cost; the revenue and margin, only for the owner."
+      who: "It opens for anyone with a permission on the project."
     mgmt_people:
       title: "Management: Collaborators"
       text: "Here you add and remove people on the project, set each one's hourly rate and permission group, and build the teams (“New team”). “Add person” has two steps: who joins, with the hourly rate and the team, and the permissions. For someone who is not in the organization yet, type their email: the screen offers to invite them, and once they accept they join the project with what you chose."
-      margin: "The “Margin per hour” column shows the difference between the rate billed to the customer and the person's rate."
+      margin: "For the owner, the “Margin per hour” column shows the difference between the rate billed to the customer and the person's rate."
       edit: "The pencil on the row opens the edit: rate, group, teams and “Remove from the project” (the tasks and the hours stay)."
     mgmt_integrations:
       title: "Management: Integrations"
       text: "Connects the project to a GitHub repository or a Trello board. See “GitHub and Trello integrations”, further down."
     mgmt_settings:
       title: "Management: Settings"
-      text: "The project details (description, sprint length, daily and weekly), the customer and the rate billed per hour. The “Edit” button opens the edit form."
+      text: "The project details (description, sprint length, daily and weekly), the customer and, for the owner, the rate billed per hour. The “Edit” button opens the edit form."
       delete: "It holds “Delete project”, which also deletes the project's teams, tasks, work sessions and integrations."
     task_page:
       title: Task page
@@ -685,8 +685,8 @@ help:
     profile:
       title: Profile
       text: "Open the account menu (your name, in the corner of the top bar) and choose “Profile”. The page is for reading: what you did and when you are paid."
-      summary: "At the top: your name, role, email, weekly hours and payment rule. The weekly hours and the rule are read-only here; an admin changes them."
-      payments: "The cards show the hours and amount of the current period, the date of the next payment and how many days are left, the progress against your weekly hours and the total since the start. Below, the history of closed periods and the upcoming payments. The period closes on the day of the payment. Without a rule, ask an admin to set when you are paid. The owner is not paid: their profile only has the hours."
+      summary: "At the top: your name, role, email, weekly hours and payment rule. The weekly hours and the rule are read-only here: an admin changes the weekly hours, and the owner the rule."
+      payments: "The cards show the hours and amount of the current period, the date of the next payment and how many days are left, the progress against your weekly hours and the total since the start. Below, the history of closed periods and the upcoming payments. The period closes on the day of the payment. Without a rule, ask the owner to set when you are paid. The owner is not paid: their profile only has the hours."
       rates: "“Projects and rates”: how much you earn per hour on each project and what you did on them, in the period and since the start. Only you and the admins see it."
       edit: "“Edit profile” opens your personal details (name and email, the one you sign in with) and, on the “Password” tab, the password change, which signs out your other sessions."
       language: "The language (PT | EN), “Help” and “Sign out” are in the same account menu, and the browser remembers the language you chose."
@@ -719,7 +719,7 @@ help:
   faq:
     no_clock:
       q: I cannot start the clock
-      a: "Most often the person has no hourly rate on that project: an admin or project manager sets it in Management › Collaborators. The other cause is a clock already open on another project; stop it before starting this one."
+      a: "Most often the person has no hourly rate on that project: an admin or the project administrator sets it in Management › Collaborators. The other cause is a clock already open on another project; stop it before starting this one."
     forgot:
       q: I forgot to clock in. Can I add the hours afterwards?
       a: "No. The app only records timed work: there is no manual entry, approval or period closing. What you can adjust are the task intervals inside a session (open the session and use the pencil), without changing the session's total time."
@@ -728,7 +728,7 @@ help:
       a: "It is a permission. Project Management and the Collaborators, Customers and Payments pages only appear for whoever can use them. Ask an admin (see “Who sees and does what”)."
     missing_project:
       q: I do not see a project
-      a: "Each person sees only the projects they were put in, with an hourly rate (the owner and the admins see all of them). Open “Projects”, in the top bar: the page lists yours. If the project is not there, ask an admin or the project's manager to add you in Management › Collaborators."
+      a: "Each person sees only the projects they were put in, with an hourly rate (the owner and the admins see all of them). Open “Projects”, in the top bar: the page lists yours. If the project is not there, ask an admin or the project administrator to add you in Management › Collaborators."
     invite:
       q: The invitation did not arrive by email
       a: "The app does not send email: copy the link when it is generated and send it yourself. If it expired (7 days) or was already used, generate another one."

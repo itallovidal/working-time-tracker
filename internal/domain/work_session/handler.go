@@ -55,7 +55,8 @@ func visiblePerson(c *echo.Context, requested string) (string, int, error) {
 
 // redact apaga da sessão os valores que quem chama não pode ver. O valor cobrado do
 // cliente é de quem vê o faturamento do projeto; o valor pago é de quem vê o valor dos
-// outros e da própria pessoa. Os admins veem tudo. Sem login no contexto, nada é mostrado.
+// outros e da própria pessoa. O admin não vê o faturamento (o conjunto dele não tem billing.view); só o dono vê
+// tudo. Sem login no contexto, nada é mostrado.
 func redact(set permission.Set, me *auth.Identity, s *WorkSession) {
 	if s == nil {
 		return

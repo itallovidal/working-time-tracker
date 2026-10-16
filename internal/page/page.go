@@ -38,7 +38,7 @@ type Data struct {
 	Project     *Crumb
 	Task        *Crumb // só na página da tarefa, que tem cabeçalho próprio, sem as abas do projeto
 	Person      *Crumb // só no perfil de um colaborador, aberto por um admin
-	Management  bool   // a página é da área de Gestão (só admins): a barra de abas mostra as abas dela
+	Management  bool   // a página é da área de Gestão: a barra de abas mostra as abas dela que a pessoa abre
 	Tab         string // aba ativa do projeto (overview, tasks, time, teams, integrations, settings)
 	Script      string // página em /static/pages/<Script>.js com os componentes Alpine
 	Markdown    bool   // a página mostra ou escreve Markdown: carrega o marked e o DOMPurify (ligado em prepare)
@@ -159,6 +159,36 @@ func (d Data) CanDoAny(keys ...string) bool {
 		}
 	}
 	return false
+}
+
+// ManagementTab é uma aba da Gestão e as permissões do projeto que a abrem (basta uma).
+type ManagementTab struct {
+	ID   string
+	Keys []string
+}
+
+// ManagementTabs são as abas da Gestão, na ordem da barra. A rota de cada aba (routes/pages.go), a barra de abas e a
+// raiz da Gestão leem daqui, para ninguém ver uma aba que responde 404.
+var ManagementTabs = []ManagementTab{
+	{"overview", permission.ProjectKeys},
+	{"teams", []string{permission.CollaboratorsManage, permission.TeamsManage, permission.RatesView, permission.RatesManage}},
+	{"integrations", []string{permission.IntegrationsManage}},
+	{"settings", []string{permission.ProjectEdit, permission.BillingView, permission.BillingManage}},
+}
+
+// TabKeys devolve as permissões que abrem a aba da Gestão de nome id (nenhuma, para uma aba que não existe).
+func TabKeys(id string) []string {
+	for _, t := range ManagementTabs {
+		if t.ID == id {
+			return t.Keys
+		}
+	}
+	return nil
+}
+
+// OpensTab diz se quem olha abre a aba da Gestão de nome id.
+func (d Data) OpensTab(id string) bool {
+	return d.Access.HasAny(TabKeys(id)...)
 }
 
 // IsOwner diz se quem olha é o dono da organização.

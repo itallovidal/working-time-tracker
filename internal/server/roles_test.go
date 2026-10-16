@@ -8,7 +8,7 @@ import (
 
 // A escada de cargos de ponta a ponta: cada linha é uma rota, e cada coluna, quem a chama. Os quatro cargos são o dono,
 // o admin (que não é o dono), o administrador de projeto (o grupo manager, num projeto) e o colaborador. O que a tabela
-// de _docs/permissions.md diz de cada capacidade está aqui, célula a célula: 200/201/204 passa, 403 é recusa por
+// de _docs/product/permissions.md diz de cada capacidade está aqui, célula a célula: 200/201/204 passa, 403 é recusa por
 // permissão e 404 é página ou recurso que não existe para quem pede.
 func TestRoles_Matrix(t *testing.T) {
 	e := newServer(t)

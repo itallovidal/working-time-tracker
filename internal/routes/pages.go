@@ -57,12 +57,13 @@ func RegisterPages(e *echo.Echo, p *page.Handler, m *auth.Middleware, oauth *int
 	g.GET("/projects/:projectId/time-tracking", p.ToHome, prj)
 	g.GET("/projects/:projectId/collaborators", p.Collaborators, prj)
 	// A Gestão é a área do projeto de quem cuida dele: cada aba pede a permissão do que
-	// mostra, e quem não tem nenhuma recebe o 404.
+	// mostra (page.ManagementTabs, de onde a barra de abas também lê), e quem não tem nenhuma recebe o 404.
 	can := func(keys ...string) echo.MiddlewareFunc { return m.RequireProjectPermissionPage(p.NotFound, keys...) }
+	tab := func(id string) echo.MiddlewareFunc { return can(page.TabKeys(id)...) }
 	g.GET("/projects/:projectId/management", p.Management, prj, can(permission.ProjectKeys...))
-	g.GET("/projects/:projectId/management/overview", p.Overview, prj, can(permission.ProjectKeys...))
-	g.GET("/projects/:projectId/management/teams", p.Teams, prj, can(permission.CollaboratorsManage, permission.TeamsManage, permission.RatesView, permission.RatesManage))
-	g.GET("/projects/:projectId/management/integrations", p.Integrations, prj, can(permission.IntegrationsManage))
+	g.GET("/projects/:projectId/management/overview", p.Overview, prj, tab("overview"))
+	g.GET("/projects/:projectId/management/teams", p.Teams, prj, tab("teams"))
+	g.GET("/projects/:projectId/management/integrations", p.Integrations, prj, tab("integrations"))
 	// Conectar com o GitHub: a ida leva a pessoa a autorizar lá (a mesma permissão da aba), a volta
 	// cai num endereço fixo, o que está cadastrado no app, e confere tudo de novo pelo cookie.
 	g.GET("/projects/:projectId/management/integrations/github/connect", oauth.GitHubConnect, prj, can(permission.IntegrationsManage))
@@ -72,7 +73,7 @@ func RegisterPages(e *echo.Echo, p *page.Handler, m *auth.Middleware, oauth *int
 	g.GET("/projects/:projectId/management/integrations/trello/connect", oauth.TrelloConnect, prj, can(permission.IntegrationsManage))
 	g.GET(integration.TrelloCallbackPath, p.TrelloCallback)
 	g.POST(integration.TrelloTokenPath, oauth.TrelloToken, m.JSONOnly)
-	g.GET("/projects/:projectId/management/settings", p.ProjectSettings, prj, can(permission.ProjectEdit, permission.BillingView, permission.BillingManage))
+	g.GET("/projects/:projectId/management/settings", p.ProjectSettings, prj, tab("settings"))
 	// Os caminhos de antes da Gestão continuam levando às mesmas abas.
 	g.GET("/projects/:projectId/teams", p.ToManagement("teams"), prj)
 	g.GET("/projects/:projectId/integrations", p.ToManagement("integrations"), prj)

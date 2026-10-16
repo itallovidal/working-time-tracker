@@ -6,7 +6,6 @@ import (
 	"github.com/labstack/echo/v5"
 
 	"working-time-tracker/internal/domain/auth"
-	"working-time-tracker/internal/domain/permission"
 )
 
 // projectHome é a página em que o projeto abre, para todos: a Visão geral de quem
@@ -31,16 +30,13 @@ func (h *Handler) Overview(c *echo.Context) error {
 // Management leva da raiz da Gestão para a primeira aba que a pessoa pode abrir.
 func (h *Handler) Management(c *echo.Context) error {
 	set := auth.ProjectPermissions(c)
-	tab := "overview"
-	switch {
 	// Quem tem qualquer permissão do projeto abre a Visão geral; a cobrança dela só vai a quem vê o faturamento.
-	case set.Manages():
-	case set.HasAny(permission.CollaboratorsManage, permission.TeamsManage, permission.RatesView, permission.RatesManage):
-		tab = "teams"
-	case set.Has(permission.IntegrationsManage):
-		tab = "integrations"
-	default:
-		tab = "settings"
+	tab := ManagementTabs[0].ID
+	for _, t := range ManagementTabs {
+		if set.HasAny(t.Keys...) {
+			tab = t.ID
+			break
+		}
 	}
 	return c.Redirect(http.StatusSeeOther, "/projects/"+c.Param("projectId")+"/management/"+tab)
 }

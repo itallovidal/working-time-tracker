@@ -116,7 +116,7 @@ func checkHistory(ctx context.Context, db *sql.DB, sources []*goose.Source) erro
 		}
 	}
 
-	const hint = `recreate database %q (drop it, create it again, then run the seed; see "Migrações do banco" in the README)`
+	const hint = `recreate database %q (drop it, create it again, then run the seed; see _docs/development/workflow.md)`
 	if len(applied) == 0 {
 		if appTables > 0 {
 			return fmt.Errorf("%w: "+hint, ErrLegacyDatabase, name)

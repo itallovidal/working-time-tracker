@@ -16,7 +16,7 @@ document.addEventListener('alpine:init', () => {
   // que entra pelo Clerk, logo abaixo do email e da senha do sistema (que são o jeito principal de entrar). O Clerk
   // só diz quem a pessoa é: depois de entrar lá, /auth/clerk/continue troca o token dele por uma sessão daqui (o
   // cookie de sempre), e o resto do sistema não sabe que o Clerk existe. O email e a senha do próprio Clerk não
-  // são oferecidos: o que ele mostra além do Google vem da configuração do app dele (ver o README). O clerk-js vem do Frontend API do app
+  // são oferecidos: o que ele mostra além do Google vem da configuração do app dele (ver _docs/integrations/clerk.md). O clerk-js vem do Frontend API do app
   // no Clerk, não do nosso servidor; a versão fica nestas constantes porque uma versão principal nova pode mudar
   // a forma de carregar.
   const CLERK_JS = '@clerk/clerk-js@6';

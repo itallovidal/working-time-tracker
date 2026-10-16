@@ -74,7 +74,7 @@ func (h *Handler) Create(c *echo.Context) error {
 
 // ListByOrg lista os projetos da organização. Sem page, devolve todos num array; com page,
 // uma página com o total (per_page só vale junto de page). Os admins veem todos os projetos; quem
-// não é admin vê só aqueles em que está (tem valor por hora ou está em algum time).
+// não é admin vê só aqueles em que está (tem valor por hora nele).
 func (h *Handler) ListByOrg(c *echo.Context) error {
 	orgID := c.Param("orgId")
 	page, perPage, err := pageParams(c)
