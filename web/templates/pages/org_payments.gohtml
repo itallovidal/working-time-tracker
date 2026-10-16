@@ -1,6 +1,8 @@
 {{define "content"}}
-{{/* Os pagamentos da equipe, só de admins: quanto pagar, a quem e quando. A linha de cada pessoa leva ao perfil
-     dela, onde estão o histórico e o detalhe por projeto. O que cada um recebe fica no próprio perfil. */}}
+{{/* Os pagamentos da equipe, só do dono: o que pagar, a quem e quando, e o que já foi pago. Em Próximos pagamentos ficam
+     os períodos sem baixa (o corrente de cada pessoa e os fechados que atrasaram); Dar baixa registra o pagamento e a
+     linha passa para Pagos recentemente, onde dá para desfazer. A linha de cada pessoa leva ao perfil dela. O dono não
+     é pago: não aparece nas tabelas nem em "sem regra". */}}
 <main class="page" x-data="orgPayments">
   <div class="page-head">
     <div>
@@ -14,91 +16,165 @@
   <p class="form-error" x-cloak x-show="errors.load" x-text="errors.load" role="alert"></p>
 
   <template x-if="team">
-    <div class="stack">
-      <div class="kpis kpis-4">
-        <div class="kpi hue-green">
-          <span class="kpi-icon">{{template "icon" "hand-holding-dollar"}}</span>
-          <div class="kpi-body">
-            <span class="kpi-label">{{.T "payments.team_to_pay"}}</span>
-            <span class="kpi-value" x-text="WTT.fmt.money(team.totals.to_pay_cents)"></span>
-            <span class="kpi-hint">{{.T "payments.team_to_pay_hint"}}</span>
+    <div class="stack stack-sections">
+      <div class="stack">
+        <div class="kpis kpis-4">
+          <div class="kpi hue-green">
+            <span class="kpi-icon">{{template "icon" "hand-holding-dollar"}}</span>
+            <div class="kpi-body">
+              <span class="kpi-label">{{.T "payments.team_to_pay"}}</span>
+              <span class="kpi-value" x-text="WTT.fmt.money(team.totals.to_pay_cents)"></span>
+              <span class="kpi-hint" x-text="team.totals.overdue_cents > 0 ? $t('payments.team_overdue', { amount: WTT.fmt.money(team.totals.overdue_cents) }) : $t('payments.team_to_pay_hint')"></span>
+            </div>
+          </div>
+          <div class="kpi hue-orange">
+            <span class="kpi-icon">{{template "icon" "calendar-day"}}</span>
+            <div class="kpi-body">
+              <span class="kpi-label">{{.T "payments.team_closing_7"}}</span>
+              <span class="kpi-value" x-text="WTT.fmt.money(team.totals.closing_7_cents)"></span>
+              <span class="kpi-hint" x-text="$t('payments.team_closing_30', { amount: WTT.fmt.money(team.totals.closing_30_cents) })"></span>
+            </div>
+          </div>
+          <div class="kpi hue-teal">
+            <span class="kpi-icon">{{template "icon" "clock"}}</span>
+            <div class="kpi-body">
+              <span class="kpi-label">{{.T "payments.team_hours"}}</span>
+              <span class="kpi-value" x-text="WTT.fmt.hours(team.totals.seconds)"></span>
+              <span class="kpi-hint" x-text="team.totals.owner_seconds > 0 ? $t('payments.team_hours_owner', { time: WTT.fmt.hours(team.totals.owner_seconds) }) : ''"></span>
+            </div>
+          </div>
+          <div class="kpi hue-purple">
+            <span class="kpi-icon">{{template "icon" "user-slash"}}</span>
+            <div class="kpi-body">
+              <span class="kpi-label">{{.T "payments.team_without_rule"}}</span>
+              <span class="kpi-value" x-text="team.totals.without_rule"></span>
+            </div>
           </div>
         </div>
-        <div class="kpi hue-orange">
-          <span class="kpi-icon">{{template "icon" "calendar-day"}}</span>
-          <div class="kpi-body">
-            <span class="kpi-label">{{.T "payments.team_closing_7"}}</span>
-            <span class="kpi-value" x-text="WTT.fmt.money(team.totals.closing_7_cents)"></span>
-            <span class="kpi-hint" x-text="$t('payments.team_closing_30', { amount: WTT.fmt.money(team.totals.closing_30_cents) })"></span>
-          </div>
-        </div>
-        <div class="kpi hue-teal">
-          <span class="kpi-icon">{{template "icon" "clock"}}</span>
-          <div class="kpi-body">
-            <span class="kpi-label">{{.T "payments.team_hours"}}</span>
-            <span class="kpi-value" x-text="WTT.fmt.hours(team.totals.seconds)"></span>
-            <span class="kpi-hint" x-text="team.totals.owner_seconds > 0 ? $t('payments.team_hours_owner', { time: WTT.fmt.hours(team.totals.owner_seconds) }) : ''"></span>
-          </div>
-        </div>
-        <div class="kpi hue-purple">
-          <span class="kpi-icon">{{template "icon" "user-slash"}}</span>
-          <div class="kpi-body">
-            <span class="kpi-label">{{.T "payments.team_without_rule"}}</span>
-            <span class="kpi-value" x-text="team.totals.without_rule"></span>
-          </div>
+
+        <div class="alert alert-warn" role="status" x-show="team.without_rule.length > 0">
+          <p>
+            <strong>{{.T "payments.without_rule_title"}}</strong>
+            <span x-text="team.without_rule.map((p) => p.name).join(', ')"></span>.
+            <a href="/orgs/{{.OrgID}}/people">{{.T "payments.without_rule_link"}}</a>
+          </p>
         </div>
       </div>
 
-      <div class="alert alert-warn" role="status" x-show="team.without_rule.length > 0">
-        <p>
-          <strong>{{.T "payments.without_rule_title"}}</strong>
-          <span x-text="team.without_rule.map((p) => p.name).join(', ')"></span>.
-          <a href="/orgs/{{.OrgID}}/people">{{.T "payments.without_rule_link"}}</a>
-        </p>
-      </div>
-
-      {{template "empty_state" (dict "Icon" "wallet" "Show" "team.people.length === 0" "Title" (.T "payments.team_empty"))}}
-      <div class="table-wrap" x-show="team.people.length > 0">
-        <table>
-          <thead>
-            <tr>
-              <th>{{.T "common.name"}}</th><th>{{.T "payments.rule"}}</th><th>{{.T "payments.period"}}</th><th>{{.T "payments.pay_date"}}</th>
-              <th class="num">{{.T "payments.hours"}}</th><th class="num">{{.T "payments.amount"}}</th><th class="num">{{.T "payments.last_closed"}}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <template x-for="row in team.people" :key="row.person.id">
-              <tr class="row-link" @click="if (!$event.target.closest('a')) location.href = personHref(row.person)">
-                <td class="nowrap">
-                  <a :href="personHref(row.person)" x-text="row.person.name"></a>
-                  <span class="badge" x-show="row.person.is_owner">{{.T "roles.owner"}}</span>
-                </td>
-                <td class="nowrap muted" x-text="WTT.fmt.paymentRule(row.rule)"></td>
-                <td class="nowrap" x-text="row.current ? WTT.payments.period(row.current) : '—'"></td>
-                <td class="nowrap" x-text="WTT.fmt.day(row.pay_date)"></td>
-                <td class="nowrap num" x-text="row.current ? WTT.fmt.hours(row.current.seconds) : '—'"></td>
-                <td class="nowrap num" x-text="row.person.is_owner ? $t('payments.owner_no_amount') : (row.current ? WTT.fmt.money(row.current.amount_cents) : '—')"></td>
-                <td class="nowrap num muted" x-text="row.last_closed ? (row.person.is_owner ? WTT.fmt.hours(row.last_closed.seconds) : WTT.fmt.hours(row.last_closed.seconds) + ' · ' + WTT.fmt.money(row.last_closed.amount_cents)) : '—'"></td>
+      <section class="stack stack-tight" aria-labelledby="payments-upcoming-title">
+        <h2 id="payments-upcoming-title">{{template "icon" "calendar-day"}} {{.T "payments.upcoming"}}</h2>
+        {{template "empty_state" (dict "Icon" "wallet" "Show" "team.due.length === 0" "Title" (.T "payments.upcoming_empty"))}}
+        <div class="table-wrap" x-show="team.due.length > 0">
+          <table>
+            <thead>
+              <tr>
+                <th>{{.T "common.name"}}</th><th>{{.T "payments.rule"}}</th><th>{{.T "payments.period"}}</th><th>{{.T "payments.pay_date"}}</th>
+                <th class="num">{{.T "payments.hours"}}</th><th class="num">{{.T "payments.amount"}}</th><th class="num">{{.T "payments.last_closed"}}</th>
+                <th class="actions"><span class="sr-only">{{.T "common.actions"}}</span></th>
               </tr>
-            </template>
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              <template x-for="row in team.due" :key="row.person.id + row.start">
+                <tr class="row-link" @click="if (!$event.target.closest('a, button')) location.href = personHref(row.person)">
+                  <td class="nowrap"><a :href="personHref(row.person)" x-text="row.person.name"></a></td>
+                  <td class="nowrap muted" x-text="WTT.fmt.paymentRule(row.rule)"></td>
+                  <td class="nowrap">
+                    <span x-text="WTT.payments.period(row)"></span>
+                    <span class="muted small" x-show="row.running">· {{.T "payments.running"}}</span>
+                  </td>
+                  <td class="nowrap">
+                    <span x-text="WTT.fmt.day(row.pay_date)"></span>
+                    <span class="badge badge-danger" x-show="row.overdue">{{.T "payments.overdue"}}</span>
+                    <span class="muted small" x-show="!row.overdue" x-text="WTT.payments.daysLeft(row)"></span>
+                  </td>
+                  <td class="nowrap num" x-text="WTT.fmt.hours(row.seconds)"></td>
+                  <td class="nowrap num" x-text="WTT.fmt.money(row.amount_cents)"></td>
+                  <td class="nowrap num muted">
+                    <span x-text="row.last_closed ? WTT.fmt.hours(row.last_closed.seconds) + ' · ' + WTT.fmt.money(row.last_closed.amount_cents) : '—'"></span>
+                    <span x-show="row.last_closed && row.last_closed.paid" :title="row.last_closed && row.last_closed.paid ? $t('payments.paid_on', { date: WTT.fmt.date(row.last_closed.paid.paid_at), amount: WTT.fmt.money(row.last_closed.paid.amount_cents) }) : ''">{{template "icon" "circle-check"}}</span>
+                  </td>
+                  <td class="actions">
+                    <button type="button" class="btn btn-secondary btn-sm" :disabled="pending" @click="openPayout(row)">{{template "icon" "check"}} {{.T "payments.mark_paid"}}</button>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </section>
 
-      <div class="stack stack-tight" x-show="team.calendar.length > 0">
-        <h2>{{.T "payments.calendar"}}</h2>
-        <ul class="list">
-          <template x-for="day in team.calendar" :key="day.date">
-            <li>
-              <strong x-text="WTT.fmt.day(day.date)"></strong>
-              <span class="muted grow" x-text="day.people.map((p) => p.name).join(', ')"></span>
-              <span class="num" x-show="day.total_cents > 0" x-text="WTT.fmt.money(day.total_cents)"></span>
-            </li>
-          </template>
-        </ul>
-        <p class="muted small">{{.T "payments.calendar_hint"}}</p>
-      </div>
+      <section class="stack stack-tight" aria-labelledby="payments-paid-title">
+        <h2 id="payments-paid-title">{{template "icon" "circle-check"}} {{.T "payments.paid_recently"}}</h2>
+        <p class="form-error" x-cloak x-show="errors.undo" x-text="errors.undo" role="alert"></p>
+        {{template "empty_state" (dict "Icon" "circle-check" "Show" "team.paid.length === 0" "Title" (.T "payments.paid_empty"))}}
+        <div class="table-wrap" x-show="team.paid.length > 0">
+          <table>
+            <thead>
+              <tr>
+                <th>{{.T "common.name"}}</th><th>{{.T "payments.period"}}</th><th>{{.T "payments.pay_date"}}</th><th>{{.T "payments.paid_at"}}</th>
+                <th class="num">{{.T "payments.hours"}}</th><th class="num">{{.T "payments.amount_paid"}}</th>
+                <th class="actions"><span class="sr-only">{{.T "common.actions"}}</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="row in team.paid" :key="row.id">
+                <tr class="row-link" @click="if (!$event.target.closest('a, button')) location.href = personHref(row.person)">
+                  <td class="nowrap"><a :href="personHref(row.person)" x-text="row.person.name"></a></td>
+                  <td class="nowrap" x-text="WTT.payments.period(row)"></td>
+                  <td class="nowrap" x-text="WTT.fmt.day(row.pay_date)"></td>
+                  <td class="nowrap" x-text="WTT.fmt.date(row.paid_at)"></td>
+                  <td class="nowrap num">
+                    <span x-text="WTT.fmt.hours(row.seconds)"></span>
+                    <div class="muted small" x-show="row.later_seconds > 0" x-text="$t('payments.later', { time: WTT.fmt.hours(row.later_seconds), amount: WTT.fmt.money(row.later_cents) })"></div>
+                  </td>
+                  <td class="nowrap num">
+                    <span x-text="WTT.fmt.money(row.amount_cents)"></span>
+                    <div class="muted small" x-show="row.amount_cents !== row.calculated_cents" x-text="$t('payments.calculated', { amount: WTT.fmt.money(row.calculated_cents) })"></div>
+                  </td>
+                  <td class="actions">
+                    <div class="confirm" x-cloak x-show="confirming === row.id">
+                      <span>{{.T "payments.undo_confirm"}}</span>
+                      <button type="button" class="btn btn-danger btn-sm" :disabled="pending" @click="undo(row)">{{.T "payments.undo"}}</button>
+                      <button type="button" class="btn btn-ghost btn-sm" @click="confirming = null">{{.T "common.cancel"}}</button>
+                    </div>
+                    <button type="button" class="btn btn-danger-ghost btn-sm" x-show="confirming !== row.id" @click="confirming = row.id">{{template "icon" "rotate-left"}} {{.T "payments.undo"}}</button>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
+  </template>
+
+  {{/* Dar baixa: o período, as horas e o valor calculado, e o valor pago, que vem com o calculado e pode mudar. */}}
+  <template x-teleport="#modal-root">
+    <form class="stack" novalidate x-show="$store.modal.name === 'payout'" @submit.prevent="markPaid()">
+      <template x-if="paying">
+        <dl class="facts">
+          <dt>{{.T "payments.period"}}</dt>
+          <dd x-text="WTT.payments.period(paying) + ' · ' + WTT.fmt.day(paying.pay_date)"></dd>
+          <dt>{{.T "payments.hours"}}</dt>
+          <dd x-text="WTT.fmt.hours(paying.seconds)"></dd>
+          <dt>{{.T "payments.modal.calculated"}}</dt>
+          <dd x-text="WTT.fmt.money(paying.amount_cents)"></dd>
+        </dl>
+      </template>
+      <p class="muted small" x-show="paying && paying.running">{{.T "payments.modal.running"}}</p>
+      <div class="field">
+        <label for="payout-amount"><span x-text="$t('payments.amount_paid') + ' (' + WTT.fmt.moneyUnit() + ')'"></span></label>
+        <input id="payout-amount" type="text" inputmode="decimal" class="num" data-field="amount_cents" data-autofocus x-model="amount"
+               @input="clearField('amount_cents')" :aria-invalid="fieldErrors.amount_cents ? 'true' : 'false'">
+        {{template "field_error" "amount_cents"}}
+        <span class="hint">{{.T "payments.modal.amount_hint"}}</span>
+      </div>
+      <p class="form-error" x-show="errors.pay" x-text="errors.pay" role="alert"></p>
+      <div class="row row-end">
+        <button type="button" class="btn btn-secondary" @click="$store.modal.dismiss()">{{.T "common.cancel"}}</button>
+        <button type="submit" class="btn" :disabled="pending">{{template "icon" "check"}} {{.T "payments.modal.confirm"}}</button>
+      </div>
+    </form>
   </template>
 </main>
 {{end}}

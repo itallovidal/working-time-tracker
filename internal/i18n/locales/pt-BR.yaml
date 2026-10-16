@@ -428,7 +428,7 @@ payments:
   goal_hint: "de {{.time}} no período"
   project: Projeto
   history_empty: Nenhum período fechado ainda.
-  history_note: "Os períodos fechados são calculados das sessões registradas: nada é guardado como pago. Trocar a regra recalcula onde os períodos passados caem, e excluir um projeto tira as sessões dele do histórico."
+  history_note: "Os períodos fechados são calculados das sessões registradas, e a coluna Pagamento mostra a baixa que o dono deu em cada um. Trocar a regra recalcula onde os períodos passados caem, e excluir um projeto tira as sessões dele do histórico."
   total_closed: Total dos períodos fechados
   period: Período
   pay_date: Data do pagamento
@@ -437,8 +437,9 @@ payments:
   rule: Regra
   last_closed: Último fechado
   owner_no_amount: sem valor
-  team_to_pay: A pagar no período
-  team_to_pay_hint: Até agora, nos períodos em andamento
+  team_to_pay: A pagar
+  team_to_pay_hint: Tudo sem baixa, até agora
+  team_overdue: "{{.amount}} em atraso"
   team_closing_7: Fecha em 7 dias
   team_closing_30: "{{.amount}} em 30 dias"
   team_hours: Horas da equipe
@@ -447,8 +448,30 @@ payments:
   team_empty: Ninguém tem regra de pagamento ainda.
   without_rule_title: "Sem regra de pagamento:"
   without_rule_link: Defina em Colaboradores
-  calendar: Datas de pagamento
-  calendar_hint: O valor só conta os períodos que já estão em andamento.
+  upcoming: Próximos pagamentos
+  upcoming_empty: Nenhum pagamento a fazer.
+  paid_recently: Pagos recentemente
+  paid_empty: Nenhuma baixa nos últimos 30 dias.
+  overdue: Atrasado
+  running: em andamento
+  mark_paid: Dar baixa
+  paid_at: Pago em
+  amount_paid: Valor pago
+  calculated: "calculado {{.amount}}"
+  later: "+{{.time}} depois da baixa ({{.amount}})"
+  undo: Desfazer
+  undo_confirm: Desfazer a baixa?
+  marked: "Baixa registrada: {{.name}}."
+  unmarked: Baixa desfeita.
+  payment: Pagamento
+  pending: Pendente
+  paid_on: "Pago em {{.date}} · {{.amount}}"
+  modal:
+    title: "Dar baixa · {{.name}}"
+    calculated: Valor calculado
+    amount_hint: Vem com o valor calculado. Mude se pagou outro valor.
+    running: "O período ainda está correndo: as horas que a pessoa registrar depois aparecem em Pagos recentemente, como depois da baixa."
+    confirm: Confirmar baixa
 
 profile:
   eyebrow: Seu perfil
@@ -591,7 +614,7 @@ help:
       team: "Equipe (só administradores): quem está com o ponto aberto agora e em qual tarefa."
     payments:
       title: Pagamentos
-      text: "O item “Pagamentos” da barra superior, só para o dono e os administradores: é a visão de quem paga. Os valores são calculados da regra de pagamento de cada pessoa e das sessões registradas; nada é guardado como pago."
+      text: "O item “Pagamentos” da barra superior, só para o dono: é a visão de quem paga. Os valores são calculados da regra de pagamento de cada pessoa e das sessões registradas. Em “Próximos pagamentos”, “Dar baixa” registra que você pagou o período, com o valor calculado ou outro; a linha passa para “Pagos recentemente”, onde dá para desfazer. Um período que fecha sem baixa fica como atrasado."
       mine: "Quem não é administrador não tem esta página: cada pessoa vê os próprios pagamentos no perfil dela (o menu da conta › “Perfil”)."
       rule: "A regra se define em Colaboradores, no lápis da linha (ou no “Editar” do perfil da pessoa), na aba “Pagamento”: mensal (um dia fixo do mês; em meses mais curtos paga no último dia) ou quinzenal (a partir de uma data de início, de 15 em 15 dias, paga no último dia de cada período). Trocar a regra recalcula onde os períodos passados caem."
       team: "A equipe: o que pagar nos períodos em andamento, o que fecha em 7 dias, as horas da equipe, as datas de pagamento e quem está sem regra. A tabela segue a data do pagamento, e não as horas. Clique numa linha para abrir o perfil da pessoa, com o histórico e o detalhe por projeto. O dono aparece com horas e sem valor."
@@ -1506,6 +1529,7 @@ labels:
   payment_monthly: "Mensal · dia {{.day}}"
   payment_biweekly: "Quinzenal · desde {{.date}}"
   payment_none: Sem regra
+  payment_owner: Recebe do cliente
   weekday:
     monday: Segunda-feira
     tuesday: Terça-feira
@@ -1657,6 +1681,13 @@ errors:
   payment:
     own_only: "você só pode ver os seus pagamentos, ou os de qualquer pessoa se for admin"
     invalid_history: "o histórico deve ser um número inteiro de períodos, maior que zero"
+    owner_not_paid: "o dono não é pago: não há baixa para ele"
+    no_rule: "esta pessoa não tem regra de pagamento, então não há período para dar baixa"
+    not_a_period: "as datas não formam um período da regra de pagamento desta pessoa"
+    period_not_started: "este período ainda não começou"
+    already_paid: "este período já tem baixa"
+    invalid_amount: "informe o valor pago, zero ou mais"
+    payout_not_found: "baixa não encontrada"
   person:
     email_in_use: "este email já está em uso"
     email_required: "informe o email"
@@ -1782,6 +1813,7 @@ fields:
   ein: "o EIN"
   customer_id: "o cliente"
   bill_rate_cents: "o valor cobrado por hora"
+  amount_cents: "o valor pago"
   pay_rate_cents: "o valor por hora"
   sprint_duration_days: "a duração da sprint"
   daily_time: "o horário da daily"
