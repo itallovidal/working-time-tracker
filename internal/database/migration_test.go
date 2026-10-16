@@ -160,6 +160,7 @@ func TestMigrate_ForeignKeyDeleteRules(t *testing.T) {
 		"allocations_persons_allocations":             "CASCADE",
 		"invites_organizations_invites":               "CASCADE",
 		"sessions_persons_sessions":                   "CASCADE",
+		"payouts_persons_payouts":                     "CASCADE",
 		"labels_projects_labels":                      "CASCADE",
 		"task_labels_task_id":                         "CASCADE",
 		"task_labels_label_id":                        "CASCADE",

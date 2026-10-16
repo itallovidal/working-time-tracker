@@ -213,8 +213,16 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 
 | Código | Status | Parâmetros | pt-BR | en |
 |---|---|---|---|---|
+| `payment.already_paid` | 409 | — | `este período já está pago: não há horas registradas depois da baixa` | `this period is already paid: no hours were tracked after the payment` |
+| `payment.invalid_amount` | 400 | — | `informe o valor pago, zero ou mais` | `enter the amount paid, zero or more` |
+| `payment.invalid_bonus` | 400 | — | `o bônus não pode ser negativo` | `the bonus cannot be negative` |
 | `payment.invalid_history` | 400 | — | `o histórico deve ser um número inteiro de períodos, maior que zero` | `the history must be a whole number of periods, greater than zero` |
+| `payment.no_rule` | 400 | — | `esta pessoa não tem regra de pagamento, então não há período para dar baixa` | `this person has no payment rule, so there is no period to mark as paid` |
+| `payment.not_a_period` | 400 | — | `as datas não formam um período da regra de pagamento desta pessoa` | `the dates are not a period of this person's payment rule` |
 | `payment.own_only` | 403 | — | `você só pode ver os seus pagamentos, ou os de qualquer pessoa se for admin` | `you can only see your own payments, or any if you are an admin` |
+| `payment.owner_not_paid` | 400 | — | `o dono não é pago: não há baixa para ele` | `the owner is not paid: there is no payment to record for them` |
+| `payment.payout_not_found` | 404 | — | `baixa não encontrada` | `payment record not found` |
+| `payment.period_not_started` | 400 | — | `este período ainda não começou` | `this period has not started yet` |
 
 ### person
 

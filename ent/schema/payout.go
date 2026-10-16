@@ -1,0 +1,54 @@
+package schema
+
+import (
+	"time"
+
+	"entgo.io/ent"
+	"entgo.io/ent/schema/edge"
+	"entgo.io/ent/schema/field"
+	"entgo.io/ent/schema/index"
+	"github.com/google/uuid"
+)
+
+// Payout é a baixa de um período de pagamento de uma pessoa: o dono marcou que pagou. Os períodos são calculados da
+// regra da pessoa (internal/domain/payment); a baixa guarda as datas do período que pagou e os números daquele momento,
+// para que uma hora registrada depois, ou uma regra trocada, não reescreva o que foi pago.
+type Payout struct {
+	ent.Schema
+}
+
+func (Payout) Fields() []ent.Field {
+	return []ent.Field{
+		field.UUID("id", uuid.UUID{}).Default(uuid.New).Immutable(),
+		field.UUID("person_id", uuid.UUID{}),
+		// O período pago, em dias de calendário YYYY-MM-DD no fuso da organização, os dois inclusivos.
+		field.String("period_start"),
+		field.String("pay_date"),
+		// As horas e o valor que o período tinha na hora da baixa, e o que o dono pagou de fato pelas horas, que pode ser
+		// outro.
+		field.Float("seconds").Min(0),
+		field.Int("calculated_cents").NonNegative(),
+		field.Int("amount_cents").NonNegative(),
+		// Um bônus pago junto, além das horas; zero quando não houve.
+		field.Int("bonus_cents").NonNegative().Default(0),
+		// A ordem da baixa no período: 0 é a primeira, que cobre as horas até ali; cada uma das seguintes paga o que a
+		// pessoa registrou depois da anterior, e seconds e calculated_cents dela são só esse restante.
+		field.Int("seq").NonNegative().Default(0),
+		field.Time("paid_at").Default(time.Now),
+		field.Time("created_at").Default(time.Now).Immutable(),
+	}
+}
+
+func (Payout) Edges() []ent.Edge {
+	return []ent.Edge{
+		edge.From("person", Person.Type).Ref("payouts").Field("person_id").Unique().Required(),
+	}
+}
+
+// Indexes garante uma baixa só por posição no período de cada pessoa: duas baixas ao mesmo tempo calculam a mesma
+// seq, e a segunda esbarra no índice em vez de pagar o mesmo restante duas vezes.
+func (Payout) Indexes() []ent.Index {
+	return []ent.Index{
+		index.Fields("person_id", "period_start", "pay_date", "seq").Unique(),
+	}
+}

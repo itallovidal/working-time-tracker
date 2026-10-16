@@ -125,7 +125,7 @@ func Build(client *ent.Client, opts Options) (*App, error) {
 		Tasks:         taskStore,
 		People:        personSvc,
 	})
-	paymentSvc := payment.NewService(payment.Deps{Orgs: orgSvc, People: personSvc, Sessions: workSessionSvc, Projects: projectSvc, Tasks: taskSvc})
+	paymentSvc := payment.NewService(payment.Deps{Orgs: orgSvc, People: personSvc, Sessions: workSessionSvc, Projects: projectSvc, Tasks: taskSvc, Payouts: payment.NewStore(client)})
 	authSvc := auth.NewService(authStore)
 	var clerkPage *page.Clerk
 	if opts.Clerk != nil && opts.Clerk.Provider != nil {

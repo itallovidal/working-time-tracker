@@ -43,8 +43,8 @@ nada no perfil da organização exige uma empresa de software.
 - Controle de acesso fino (bastavam os papéis membro e admin). **Hoje:** quatro cargos e permissões por projeto
   (Decisão 17).
 - Folha de pagamento ou nota fiscal: o sistema guarda os valores por hora e mostra quanto vale cada sessão. A partir
-  da regra de pagamento de cada pessoa ele calcula os períodos, mas não registra pagamentos, não emite notas e não
-  trata impostos (Decisão 15).
+  da regra de pagamento de cada pessoa ele calcula os períodos, mas não emite notas e não trata impostos (Decisão
+  15). **Hoje:** registra a baixa de cada período pago, com o valor e um bônus (Decisão 18).
 - Projetos de preço fechado e histórico de valores com data de vigência: a cobrança é só por hora, e mudar um valor
   vale a partir do próximo clock-in.
 - Implantação em várias regiões ou com o banco particionado (um PostgreSQL só).
@@ -563,7 +563,7 @@ nem destaque por horas, e os testes travam a ordem.
 
 **Hoje:** a regra é definida e lida só pelo dono e pela própria pessoa; os pagamentos de uma pessoa são dela e do
 dono (um admin vê só as horas), e a visão da equipe é só do dono (Decisão 17). Os pagamentos de cada um ficam no
-perfil.
+perfil. Os períodos continuam calculados, mas o pagamento feito passou a ser registrado (Decisão 18).
 
 ### Decisão 16: Validação — uma regra por campo, na tela e no servidor, com o erro embaixo do campo certo
 
@@ -622,6 +622,29 @@ infraestrutura. O time é só organização visual e não dá autoridade.
 quem não tem `billing.*` não os concede (`allocation.preset_above_yours`). Não houve migração de dados: o banco de
 desenvolvimento é descartável e o seed foi refeito. A matriz dos quatro cargos contra as rotas está nos testes
 `TestRoles_Matrix` e `TestRoles_Pages`. As regras de hoje estão em [permissions.md](../product/permissions.md).
+
+### Decisão 18: Baixa de pagamentos — o período é calculado, o pagamento feito é gravado
+
+**Contexto:** a Decisão 15 não guardava nada como pago, e a página Pagamentos mostrava o que pagar sem como dizer
+que foi pago. O dono pediu para dar baixa, ver o que pagou há pouco e, junto, dar um bônus.
+
+**Decisão:** uma tabela `payouts` guarda a baixa de um período de uma pessoa, identificado pelas datas
+(`period_start`, `pay_date`). A baixa vale a qualquer momento depois que o período começou, inclusive no corrente,
+antes da data; guarda as horas e o valor calculados naquele momento, o valor pago pelas horas (que o dono pode mudar)
+e um bônus opcional. Um período fechado sem baixa nos últimos 60 dias fica **atrasado** em Próximos pagamentos; Pagos
+recentemente mostra as baixas dos últimos 30 dias e o que o período ganhou depois de cada uma. Só o dono dá baixa e
+desfaz (`payments.manage`). O dono não é pago e sai das tabelas e de "sem regra".
+
+Horas registradas depois de uma baixa são o **restante** do período: ele volta para Próximos pagamentos só com elas
+(o que já foi pago aparece ao lado), entra nos cartões e leva outra baixa. Cada baixa guarda o que cobriu (a primeira,
+o período até ali; as seguintes, o que veio depois da anterior) e a posição dela no período (`seq`); o índice único em
+pessoa, período e `seq` impede que duas baixas ao mesmo tempo paguem o mesmo restante. Sem restante, uma baixa nova é
+recusada (`payment.already_paid`).
+
+**Consequências:** o período continua sendo calculado, então trocar a regra pode deixar uma baixa sem período que
+case com ela: a baixa fica nos números dela e o período novo aparece como a pagar. Desfazer uma baixa devolve o que ela
+cobria como restante. Não houve migração de dados: os períodos fechados antes da baixa existir aparecem como atrasados
+até o dono dar baixa neles.
 
 ## Riscos e trade-offs
 

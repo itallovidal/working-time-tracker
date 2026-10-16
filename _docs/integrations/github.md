@@ -8,7 +8,7 @@ campo e os limites dela. O que é comum às plataformas (o vínculo, a regra de 
 
 O botão **Conectar com o GitHub** usa um **OAuth App**, cadastrado uma vez por servidor:
 
-1. Em github.com/settings/developers, **New OAuth App**. *Homepage URL*: o `PUBLIC_URL` (`http://localhost:8080`).
+1. Em github.com/settings/developers, **New OAuth App**. *Homepage URL*: o `PUBLIC_URL` (`http://localhost:1243`).
    *Authorization callback URL*: `PUBLIC_URL/integrations/github/callback`.
 2. Copie o **Client ID** e gere um **Client secret**. No `.env`: `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` e
    `PUBLIC_URL`. Reinicie o servidor.

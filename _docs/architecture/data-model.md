@@ -26,6 +26,7 @@ erDiagram
   TASK }o--o{ LABEL : "task_labels"
   PROJECT ||--o{ WORK_SESSION : "tem"
   PERSON ||--o{ WORK_SESSION : "bate o ponto"
+  PERSON ||--o{ PAYOUT : "recebe"
   WORK_SESSION ||--o{ WORK_SESSION_TASK : "intervalos"
   TASK ||--o{ WORK_SESSION_TASK : "esteve em"
   PROJECT ||--o{ INTEGRATION : "tem"
@@ -68,6 +69,17 @@ erDiagram
     string weekly_sync_time
     string customer_meeting_day
     string customer_meeting_time
+  }
+  PAYOUT {
+    uuid person_id FK
+    string period_start "YYYY-MM-DD"
+    string pay_date "YYYY-MM-DD"
+    float seconds "o que a baixa cobriu"
+    int calculated_cents "o que a baixa cobriu"
+    int amount_cents "pago pelas horas"
+    int bonus_cents "zero sem bônus"
+    int seq "0 na primeira baixa do período"
+    time paid_at
   }
   ALLOCATION {
     uuid project_id FK
@@ -211,8 +223,11 @@ um vínculo feito à mão que a sincronização ainda não adotou; `gone` é o i
 ser o responsável, com um `UPDATE ... WHERE assignee_id IS NULL`, então de dois pedidos ao mesmo tempo só um ganha.
 O prazo padrão de uma tarefa nova é de 7 dias; uma tarefa importada de uma plataforma pode nascer sem prazo.
 
-**Os pagamentos não são gravados.** Não há tabela de pagamentos: os períodos são calculados da regra da pessoa
-(`payment_frequency`, `payment_day`, `payment_start`) e das sessões. Ver [money.md](../product/money.md).
+**Os períodos de pagamento não são gravados, a baixa é.** Os períodos são calculados da regra da pessoa
+(`payment_frequency`, `payment_day`, `payment_start`) e das sessões. `payouts` guarda só a baixa de um período: a primeira
+cobre o período até ali e cada uma das seguintes, o restante que a pessoa registrou depois da anterior (índice único em
+`person_id`, `period_start`, `pay_date` e `seq`, a posição da baixa no período), com o que ela cobriu e o que foi pago,
+bônus incluído; sai junto com a pessoa. Ver [money.md](../product/money.md).
 
 ## Exclusões
 

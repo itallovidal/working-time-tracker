@@ -42,6 +42,9 @@ func TestRoles_Matrix(t *testing.T) {
 		{"list customers", "GET", org + "/customers", "", [4]int{ok, 403, 403, 403}},
 		{"create a customer", "POST", org + "/customers", `{"name":"Outro"}`, [4]int{ok, 403, 403, 403}},
 		{"the team payments", "GET", org + "/payments", "", [4]int{ok, 403, 403, 403}},
+		// A baixa é só do dono: ele passa da porta e esbarra no corpo vazio (400) ou na baixa que não existe (404).
+		{"mark a payment as paid", "POST", org + "/payouts", `{}`, [4]int{400, 403, 403, 403}},
+		{"undo a payment", "DELETE", org + "/payouts/00000000-0000-0000-0000-000000000000", "", [4]int{404, 403, 403, 403}},
 		{"the organization overview", "GET", org + "/overview", "", [4]int{ok, ok, 403, 403}},
 		{"set the weekly hours", "PATCH", "/api/persons/" + plain.id + "/weekly-hours", `{"weekly_hours":30}`, [4]int{ok, ok, 403, 403}},
 		{"set a payment rule", "PATCH", "/api/persons/" + plain.id + "/payment", `{"frequency":"monthly","day":5}`, [4]int{ok, 403, 403, 403}},

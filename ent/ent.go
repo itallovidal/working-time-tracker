@@ -15,6 +15,7 @@ import (
 	"working-time-tracker/ent/issuesync"
 	"working-time-tracker/ent/label"
 	"working-time-tracker/ent/organization"
+	"working-time-tracker/ent/payout"
 	"working-time-tracker/ent/person"
 	"working-time-tracker/ent/project"
 	"working-time-tracker/ent/session"
@@ -94,6 +95,7 @@ func checkColumn(t, c string) error {
 			issuesync.Table:       issuesync.ValidColumn,
 			label.Table:           label.ValidColumn,
 			organization.Table:    organization.ValidColumn,
+			payout.Table:          payout.ValidColumn,
 			person.Table:          person.ValidColumn,
 			project.Table:         project.ValidColumn,
 			session.Table:         session.ValidColumn,

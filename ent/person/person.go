@@ -56,6 +56,8 @@ const (
 	EdgeCreatedInvites = "created_invites"
 	// EdgeAllocations holds the string denoting the allocations edge name in mutations.
 	EdgeAllocations = "allocations"
+	// EdgePayouts holds the string denoting the payouts edge name in mutations.
+	EdgePayouts = "payouts"
 	// Table holds the table name of the person in the database.
 	Table = "persons"
 	// OrganizationTable is the table that holds the organization relation/edge.
@@ -107,6 +109,13 @@ const (
 	AllocationsInverseTable = "allocations"
 	// AllocationsColumn is the table column denoting the allocations relation/edge.
 	AllocationsColumn = "person_id"
+	// PayoutsTable is the table that holds the payouts relation/edge.
+	PayoutsTable = "payouts"
+	// PayoutsInverseTable is the table name for the Payout entity.
+	// It exists in this package in order to avoid circular dependency with the "payout" package.
+	PayoutsInverseTable = "payouts"
+	// PayoutsColumn is the table column denoting the payouts relation/edge.
+	PayoutsColumn = "person_id"
 )
 
 // Columns holds all SQL columns for person fields.
@@ -335,6 +344,20 @@ func ByAllocations(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newAllocationsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByPayoutsCount orders the results by payouts count.
+func ByPayoutsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newPayoutsStep(), opts...)
+	}
+}
+
+// ByPayouts orders the results by payouts terms.
+func ByPayouts(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newPayoutsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newOrganizationStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -382,5 +405,12 @@ func newAllocationsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(AllocationsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, AllocationsTable, AllocationsColumn),
+	)
+}
+func newPayoutsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(PayoutsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, PayoutsTable, PayoutsColumn),
 	)
 }

@@ -1,6 +1,6 @@
 // Package payment calcula, a partir da regra de pagamento de cada pessoa e das sessões dela, os períodos de
-// pagamento: o corrente, os próximos e os já fechados, com as horas e o valor de cada um. Não tem tabela: nada é
-// registrado como pago, tudo é calculado na hora.
+// pagamento: o corrente, os próximos e os já fechados, com as horas e o valor de cada um. Os períodos são calculados na
+// hora; a única coisa guardada é a baixa (payouts), quando o dono marca que pagou um período.
 package payment
 
 import (

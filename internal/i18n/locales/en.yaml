@@ -418,7 +418,7 @@ payments:
   goal_hint: "of {{.time}} for the period"
   project: Project
   history_empty: No closed period yet.
-  history_note: "Closed periods are calculated from the tracked sessions: nothing is recorded as paid. Changing the rule recalculates where the past periods fall, and deleting a project removes its sessions from the history."
+  history_note: "Closed periods are calculated from the tracked sessions, and the Payment column shows the payment the owner recorded for each one. Changing the rule recalculates where the past periods fall, and deleting a project removes its sessions from the history."
   total_closed: Total of the closed periods
   period: Period
   pay_date: Pay date
@@ -427,8 +427,9 @@ payments:
   rule: Rule
   last_closed: Last closed
   owner_no_amount: no amount
-  team_to_pay: To pay this period
-  team_to_pay_hint: Up to now, in the running periods
+  team_to_pay: To pay
+  team_to_pay_hint: Everything not marked as paid, up to now
+  team_overdue: "{{.amount}} overdue"
   team_closing_7: Closing in 7 days
   team_closing_30: "{{.amount}} in 30 days"
   team_hours: Team hours
@@ -437,8 +438,38 @@ payments:
   team_empty: Nobody has a payment rule yet.
   without_rule_title: "No payment rule:"
   without_rule_link: Set them in Collaborators
-  calendar: Payment dates
-  calendar_hint: The amount only counts periods that are already running.
+  upcoming: Upcoming payments
+  upcoming_empty: No payments to make.
+  paid_recently: Recently paid
+  paid_empty: No payments recorded in the last 30 days.
+  overdue: Overdue
+  running: running
+  mark_paid: Mark as paid
+  paid_at: Paid on
+  amount_paid: Amount paid
+  calculated: "calculated {{.amount}}"
+  bonus_line: "+ {{.amount}} bonus"
+  later: "+{{.time}} after it was paid"
+  later_amount: "{{.amount}} still to pay"
+  rest: remainder
+  already_paid: "{{.amount}} paid"
+  undo: Undo
+  undo_confirm: Undo this payment?
+  marked: "Payment recorded: {{.name}}."
+  unmarked: Payment undone.
+  payment: Payment
+  pending: Pending
+  paid_on: "Paid on {{.date}} · {{.amount}}"
+  modal:
+    title: "Mark as paid · {{.name}}"
+    calculated: Calculated amount
+    amount_label: "Amount paid for the hours ({{.unit}})"
+    amount_hint: Filled with the calculated amount. Change it if you paid a different amount.
+    bonus_label: "Bonus ({{.unit}})"
+    bonus_hint: Paid together, on top of the hours. Leave it blank for no bonus.
+    running: "The period is still running: hours the person tracks after the payment come back to Upcoming payments, as the remainder."
+    rest: "This period was already marked as paid: this is the remainder, the hours tracked after that."
+    confirm: Confirm payment
 
 profile:
   eyebrow: Your profile
@@ -581,10 +612,10 @@ help:
       team: "Team (the owner and the admins): who has the clock open right now and on which task."
     payments:
       title: Payments
-      text: "The “Payments” item in the top bar, only for the owner: it is the view of whoever pays. The amounts are calculated from each person's payment rule and the tracked sessions; nothing is recorded as paid."
+      text: "The “Payments” item in the top bar, only for the owner: it is the view of whoever pays. The amounts are calculated from each person's payment rule and the tracked sessions. In “Upcoming payments”, “Mark as paid” records that you paid the period, with the calculated amount or another one and, if any, a bonus; the row moves to “Recently paid”, where you can undo it. A period that closes without being marked stays as overdue, and hours tracked after a payment come back to “Upcoming payments” as the remainder of the period."
       mine: "Only the owner has this page: each person sees their own payments on their profile (the account menu › “Profile”)."
       rule: "The owner sets the rule in Collaborators, in the pencil of the row (or in “Edit” on the person's profile), on the “Payment” tab: monthly (a fixed day of the month; in shorter months it pays on the last day) or biweekly (from a start date, every 15 days, paid on the last day of each period). Changing the rule recalculates where the past periods fall."
-      team: "The team: what to pay in the running periods, what closes in 7 days, the team's hours, the payment dates and who has no rule. The table is ordered by pay date, not by hours. Click a row to open the person's profile, with the history and the breakdown by project. The owner shows hours and no amount."
+      team: "The team: what to pay (overdue included), what closes in 7 and 30 days, the team's hours and who has no rule. “Upcoming payments” is ordered by pay date, not by hours; “Recently paid” shows the payments recorded in the last 30 days. Click a row to open the person's profile, with the history and the breakdown by project. The owner is not paid and does not show in the tables."
     org_about:
       title: Settings
       text: "The “Settings” item in the top bar. It is the organization profile: description, country, contact, company details and how the team works (work mode, time zone and currency). Everyone reads it. An empty field shows as “Not provided”."
@@ -1496,6 +1527,7 @@ labels:
   payment_monthly: "Monthly · day {{.day}}"
   payment_biweekly: "Biweekly · since {{.date}}"
   payment_none: No rule
+  payment_owner: Paid by the client
   weekday:
     monday: Monday
     tuesday: Tuesday
@@ -1647,6 +1679,14 @@ errors:
   payment:
     own_only: "you can only see your own payments, or any if you are an admin"
     invalid_history: "the history must be a whole number of periods, greater than zero"
+    owner_not_paid: "the owner is not paid: there is no payment to record for them"
+    no_rule: "this person has no payment rule, so there is no period to mark as paid"
+    not_a_period: "the dates are not a period of this person's payment rule"
+    period_not_started: "this period has not started yet"
+    already_paid: "this period is already paid: no hours were tracked after the payment"
+    invalid_amount: "enter the amount paid, zero or more"
+    invalid_bonus: "the bonus cannot be negative"
+    payout_not_found: "payment record not found"
   person:
     email_in_use: "this email is already in use"
     email_required: "enter the email"
@@ -1772,6 +1812,8 @@ fields:
   ein: "the EIN"
   customer_id: "the customer"
   bill_rate_cents: "the billed hourly rate"
+  amount_cents: "the amount paid"
+  bonus_cents: "the bonus"
   pay_rate_cents: "the hourly rate"
   sprint_duration_days: "the sprint length"
   daily_time: "the daily time"

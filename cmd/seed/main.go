@@ -29,10 +29,12 @@ import (
 	"working-time-tracker/internal/domain/auth"
 	"working-time-tracker/internal/domain/customer"
 	"working-time-tracker/internal/domain/organization"
+	"working-time-tracker/internal/domain/payment"
 	"working-time-tracker/internal/domain/person"
 	"working-time-tracker/internal/domain/project"
 	"working-time-tracker/internal/domain/task"
 	"working-time-tracker/internal/domain/team"
+	"working-time-tracker/internal/domain/work_session"
 )
 
 const password = "demo12345"
@@ -697,6 +699,31 @@ func main() {
 		             JOIN work_sessions s ON s.id = l.session_id WHERE s.end_at IS NULL)`)
 	must(err)
 
+	// O último período fechado de algumas pessoas já teve baixa, com o valor calculado (a Helena levou um bônus junto);
+	// os outros fechados dos últimos 60 dias aparecem como atrasados em Pagamentos.
+	paymentSvc := payment.NewService(payment.Deps{
+		Orgs: orgSvc, People: personSvc, Projects: projectSvc,
+		Sessions: work_session.NewService(work_session.NewStore(db.Client), task.NewStore(db.Client), allocation.NewStore(db.Client)),
+		Payouts:  payment.NewStore(db.Client),
+	})
+	paidOut := 0
+	for _, key := range []string{"helena", "bruno", "carla", "diego"} {
+		id := person[key].PersonID.String()
+		s, err := paymentSvc.Person(orgID, id, 1, false)
+		must(err)
+		if len(s.History) == 0 || s.History[0].AmountCents == nil {
+			continue
+		}
+		last := s.History[0]
+		var bonus *int
+		if key == "helena" {
+			bonus = optionalNumber(50000)
+		}
+		_, err = paymentSvc.MarkPaid(orgID, payment.MarkInput{PersonID: id, Start: last.Start, PayDate: last.PayDate, AmountCents: last.AmountCents, BonusCents: bonus})
+		must(err)
+		paidOut++
+	}
+
 	unassigned := 0
 	for _, t := range tasks {
 		if t.assignee == "" {
@@ -710,6 +737,7 @@ func main() {
 		len(customers), len(projects), len(tasks), unassigned)
 	fmt.Printf("  %d sessões fechadas nos últimos %d dias e %d com o ponto aberto agora\n", closed, historyDays, len(openNow))
 	fmt.Printf("  %d integrações sem credencial: informe o token na aba Integrações para usá-las\n", len(integrations))
+	fmt.Printf("  %d pagamentos com baixa; os outros períodos fechados aparecem como atrasados em Pagamentos\n", paidOut)
 	fmt.Println()
 	fmt.Printf("  Dono:    %s / %s\n", people[0].email, password)
 	for _, p := range people[1:] {

@@ -308,6 +308,7 @@ func TestPermissions_OrganizationOnesFollowTheRole(t *testing.T) {
 		{"list customers", "GET", org + "/customers", "", "member", member.session, http.StatusForbidden},
 		{"create an invite", "POST", org + "/invites", `{"role":"member"}`, "member", member.session, http.StatusForbidden},
 		{"payments of the team", "GET", org + "/payments", "", "member", member.session, http.StatusForbidden},
+		{"mark a payment as paid", "POST", org + "/payouts", `{}`, "member", member.session, http.StatusForbidden},
 
 		{"create an internal project", "POST", org + "/projects", `{"name":"Y"}`, "admin", admin.session, http.StatusCreated},
 		{"create a project with a customer", "POST", org + "/projects", `{"name":"Z","customer_id":"` + customerID + `","bill_rate_cents":10000}`, "admin", admin.session, http.StatusForbidden},
@@ -315,6 +316,8 @@ func TestPermissions_OrganizationOnesFollowTheRole(t *testing.T) {
 		{"list customers", "GET", org + "/customers", "", "admin", admin.session, http.StatusForbidden},
 		{"create a customer", "POST", org + "/customers", `{"name":"Outro"}`, "admin", admin.session, http.StatusForbidden},
 		{"payments of the team", "GET", org + "/payments", "", "admin", admin.session, http.StatusForbidden},
+		{"mark a payment as paid", "POST", org + "/payouts", `{}`, "admin", admin.session, http.StatusForbidden},
+		{"undo a payment", "DELETE", org + "/payouts/00000000-0000-0000-0000-000000000000", "", "admin", admin.session, http.StatusForbidden},
 		{"edit the organization", "PATCH", org, `{"summary":"X"}`, "admin", admin.session, http.StatusForbidden},
 		{"set a payment rule", "PATCH", "/api/persons/" + member.id + "/payment", `{"frequency":"monthly","day":5}`, "admin", admin.session, http.StatusForbidden},
 		{"set the weekly hours", "PATCH", "/api/persons/" + member.id + "/weekly-hours", `{"weekly_hours":30}`, "admin", admin.session, http.StatusOK},

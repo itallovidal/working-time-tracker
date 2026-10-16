@@ -149,21 +149,24 @@ func TestPages_PaymentsIsTheTeamViewForAdmins(t *testing.T) {
 
 	body := do(e, "GET", path, "", owner.session).Body.String()
 	for _, want := range []string{
-		`x-data="orgPayments"`, "<h1>Pagamentos</h1>", "A pagar no período", "Fecha em 7 dias", "Horas da equipe", "Pessoas sem regra", "Datas de pagamento",
-		`<tr class="row-link" @click="if (!$event.target.closest('a')) location.href = personHref(row.person)">`,
+		`x-data="orgPayments"`, "<h1>Pagamentos</h1>", "A pagar", "Fecha em 7 dias", "Horas da equipe", "Pessoas sem regra",
+		"Próximos pagamentos", "Pagos recentemente", "Dar baixa", "Desfazer", `x-for="row in team.due"`, `x-for="row in team.paid"`,
+		`$store.modal.name === 'payout'`,
+		`<tr class="row-link" @click="if (!$event.target.closest('a, button')) location.href = personHref(row.person)">`,
 		`<a :href="personHref(row.person)" x-text="row.person.name"></a>`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("the payments page does not contain %q", want)
 		}
 	}
-	for _, gone := range []string{"Meus pagamentos", `role="tablist"`, "payments-mine", "openPerson(", "closePerson(", "setView("} {
+	// A seção das datas repetia a tabela e saiu.
+	for _, gone := range []string{"Meus pagamentos", `role="tablist"`, "payments-mine", "openPerson(", "closePerson(", "setView(", "Datas de pagamento", "team.calendar"} {
 		if strings.Contains(body, gone) {
 			t.Errorf("the payments page still has %q from the old My payments view", gone)
 		}
 	}
 	script := do(e, "GET", "/static/pages/payments.js", "", "").Body.String()
-	if !strings.Contains(script, "+ '/people/' + person.id") || strings.Contains(script, "openPerson") || strings.Contains(script, "/api/persons/") {
-		t.Error("payments.js should only read the team and link each person to their profile")
+	if !strings.Contains(script, "+ '/people/' + person.id") || strings.Contains(script, "openPerson") || strings.Contains(script, "/api/persons/") || !strings.Contains(script, "/payouts") {
+		t.Error("payments.js should read the team, link each person to their profile and record the payouts")
 	}
 }

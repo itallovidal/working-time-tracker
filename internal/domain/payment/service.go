@@ -34,6 +34,8 @@ type Deps struct {
 	Projects *project.Service
 	// Tasks conta as tarefas do período por estado; sem ele o detalhe vem sem essa contagem.
 	Tasks *task.Service
+	// Payouts guarda as baixas; sem ele nenhum período aparece como pago e não se dá baixa.
+	Payouts *Store
 	// Now é o relógio da conta; sem ele vale time.Now. Os testes o fixam.
 	Now func() time.Time
 }
@@ -101,6 +103,17 @@ type PeriodView struct {
 	MarginCents  *int `json:"margin_cents,omitempty"`
 	// Tasks (no corrente) são as tarefas em que ela trabalhou no período.
 	Tasks *TaskCounts `json:"tasks,omitempty"`
+	// Paid (no corrente e nos fechados) é a baixa do período, quando o dono já marcou que pagou.
+	Paid *PaidMark `json:"paid,omitempty"`
+}
+
+// PaidMark é a baixa de um período, como o perfil e a visão da equipe a mostram: o valor pago pelas horas e o bônus. Com
+// a baixa do restante, são as somas das duas, com a data e o ID da última.
+type PaidMark struct {
+	ID          uuid.UUID `json:"id"`
+	AmountCents int       `json:"amount_cents"`
+	BonusCents  int       `json:"bonus_cents"`
+	PaidAt      time.Time `json:"paid_at"`
 }
 
 // Totals é o acumulado dos períodos fechados do histórico.
@@ -185,6 +198,9 @@ func (s *Service) Person(orgID, personID string, history int, revenue bool) (*Su
 	var current map[uuid.UUID]*sum
 	if p.Payment != nil {
 		current = fill(out, p, sessions, now, history, loc)
+		if err := s.markPaid(out, p.ID); err != nil {
+			return nil, err
+		}
 	}
 	all := lifetime(out, sessions, now, p.IsOwner, loc)
 	if err := s.nameProjects(out, current, all, revenue); err != nil {
@@ -196,6 +212,22 @@ func (s *Service) Person(orgID, personID string, history int, revenue bool) (*Su
 		}
 	}
 	return out, nil
+}
+
+// markPaid põe no período corrente e no histórico a baixa de cada um, para a pessoa ver o que já recebeu.
+func (s *Service) markPaid(out *Summary, personID uuid.UUID) error {
+	payouts, err := s.payoutsOf([]uuid.UUID{personID})
+	if err != nil || len(payouts) == 0 {
+		return err
+	}
+	paid := groupPayouts(payouts)
+	if out.Current != nil {
+		out.Current.Paid = paidMark(paid, personID, *out.Current)
+	}
+	for i := range out.History {
+		out.History[i].Paid = paidMark(paid, personID, out.History[i])
+	}
+	return nil
 }
 
 func newSummary(p *person.Person, tz string, now time.Time) *Summary {

@@ -63,22 +63,30 @@ Cada pessoa pode ter uma **regra de pagamento**, que diz quando ela é paga. Só
 O dia do pagamento é o **último dia do período**: o período fecha à meia-noite do fim desse dia, no fuso da
 organização. Uma sessão que atravessa a virada conta em cada período só o trecho dela.
 
-**Tudo é calculado, nada é registrado.** Não há tabela de pagamentos nem marca de "pago": o período corrente, os próximos
-e o histórico saem da regra e das sessões, na hora (`internal/domain/payment`). Por isso:
+**Os períodos são calculados; a baixa é registrada.** O período corrente, os próximos e o histórico saem da regra e
+das sessões, na hora (`internal/domain/payment`). O que fica gravado é só a **baixa** (tabela `payouts`): o dono marca
+que pagou um período, a qualquer momento depois que ele começou, e a baixa guarda as horas e o valor calculados naquele
+momento, o valor pago pelas horas (vem com o calculado e pode mudar) e um **bônus** opcional (zero quando não houve,
+nunca negativo). O que a pessoa registra depois de uma baixa é o **restante** do período: volta para os pagamentos a
+fazer, com o que já foi pago, e leva outra baixa, que cobre só ele. Por isso:
 
-- trocar a regra recalcula onde os períodos passados caem;
+- trocar a regra recalcula onde os períodos passados caem; uma baixa antiga deixa de casar com os períodos novos, mas
+  continua em Pagos recentemente com os números dela;
 - excluir um projeto tira as sessões dele do histórico;
 - quem não tem regra ainda tem as horas e o total **desde o início**, só sem períodos;
-- o dono aparece com horas e sem valor.
+- o dono não é pago: não tem valor, não entra nas tabelas de Pagamentos nem em "sem regra".
 
 **Onde aparece.**
 
 - No **perfil** da pessoa: as horas e o valor do período corrente, o próximo pagamento e quantos dias faltam, o andamento
-  contra a jornada, o total desde o início, o histórico dos períodos fechados e as próximas datas
-  (`GET /api/persons/:personId/payments`).
-- Na página **Pagamentos** (`/orgs/:orgId/payments`, `GET /api/orgs/:orgId/payments`), só do dono: o que pagar nos
-  períodos em andamento, o que fecha em 7 dias, as horas da equipe, as datas e quem está sem regra. A tabela segue a data
-  do pagamento, não as horas.
+  contra a jornada, o total desde o início, o histórico dos períodos fechados (cada um com a baixa, "Pago em …", ou
+  "Pendente") e as próximas datas (`GET /api/persons/:personId/payments`).
+- Na página **Pagamentos** (`/orgs/:orgId/payments`, `GET /api/orgs/:orgId/payments`), só do dono: os cartões (o que
+  pagar, atrasados incluídos, o que paga em 7 e 30 dias, as horas da equipe e quem está sem regra), **Próximos
+  pagamentos** (os períodos sem baixa, o corrente de cada pessoa e os fechados dos últimos 60 dias, marcados Atrasado,
+  e o restante dos que já tiveram baixa, com **Dar baixa**) e **Pagos recentemente** (as baixas dos últimos 30 dias,
+  com o bônus, o restante que o período ganhou depois da baixa e **Desfazer**; `POST` e `DELETE /api/orgs/:orgId/payouts`). As tabelas seguem a data do pagamento, não as
+  horas.
 
 ## Quem vê o quê
 

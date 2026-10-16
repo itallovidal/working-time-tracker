@@ -64,3 +64,39 @@ func (h *Handler) Team(c *echo.Context) error {
 	}
 	return c.JSON(http.StatusOK, t)
 }
+
+// MarkPaid dá baixa num período de uma pessoa (só o dono, pela rota). Responde 201 com a baixa.
+func (h *Handler) MarkPaid(c *echo.Context) error {
+	var body MarkInput
+	if err := c.Bind(&body); err != nil {
+		return apperr.Respond(c, http.StatusBadRequest, apperr.BindError(err))
+	}
+	if body.PersonID == "" {
+		return apperr.Respond(c, http.StatusBadRequest, apperr.ErrFieldRequired.With("field", "person_id"))
+	}
+	po, err := h.svc.MarkPaid(c.Param("orgId"), body)
+	if err != nil {
+		var ae *apperr.Error
+		switch {
+		case errors.Is(err, database.ErrNotFound):
+			return apperr.Respond(c, http.StatusNotFound, person.ErrNotFound)
+		case errors.Is(err, ErrAlreadyPaid):
+			return apperr.Respond(c, http.StatusConflict, err)
+		case errors.As(err, &ae):
+			return apperr.Respond(c, http.StatusBadRequest, err)
+		}
+		return apperr.Respond(c, http.StatusInternalServerError, err)
+	}
+	return c.JSON(http.StatusCreated, po)
+}
+
+// Unmark desfaz uma baixa (só o dono, pela rota). Responde 204.
+func (h *Handler) Unmark(c *echo.Context) error {
+	if err := h.svc.Unmark(c.Param("orgId"), c.Param("payoutId")); err != nil {
+		if errors.Is(err, database.ErrNotFound) {
+			return apperr.Respond(c, http.StatusNotFound, ErrPayoutNotFound)
+		}
+		return apperr.Respond(c, http.StatusInternalServerError, err)
+	}
+	return c.NoContent(http.StatusNoContent)
+}

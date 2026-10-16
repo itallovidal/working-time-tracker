@@ -65,7 +65,7 @@ flowchart LR
 | `/orgs/:orgId/people` | Colaboradores: as pessoas, os papéis, a jornada, os convites pendentes e o Adicionar colaborador. `?add=1` abre já com o modal do convite | `people.manage` (dono e admin) |
 | `/orgs/:orgId/people/:personId` | O perfil de um colaborador, com o Editar. Pagamentos e regra só para o dono | dono e admin |
 | `/orgs/:orgId/customers` | Clientes, com cadastro e edição num modal | dono |
-| `/orgs/:orgId/payments` | Pagamentos da equipe: o que pagar nos períodos em andamento, o que fecha em 7 dias e quem está sem regra. A linha leva ao perfil | dono |
+| `/orgs/:orgId/payments` | Pagamentos da equipe: os cartões (o que pagar, atrasados incluídos, o que fecha em 7 e 30 dias, as horas e quem está sem regra), Próximos pagamentos (com Dar baixa, o valor pelas horas e o bônus) e Pagos recentemente (com Desfazer). A linha leva ao perfil | dono |
 
 ## Projeto
 

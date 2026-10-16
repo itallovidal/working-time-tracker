@@ -243,7 +243,7 @@
       {{template "empty_state" (dict "Icon" "calendar-week" "Show" "historyRows().length === 0" "Title" (.T "payments.history_empty"))}}
       <div class="table-wrap" x-show="historyRows().length > 0">
         <table>
-          <thead><tr><th>{{.T "payments.period"}}</th><th>{{.T "payments.pay_date"}}</th><th class="num">{{.T "payments.hours"}}</th><th class="num">{{.T "payments.amount"}}</th></tr></thead>
+          <thead><tr><th>{{.T "payments.period"}}</th><th>{{.T "payments.pay_date"}}</th><th class="num">{{.T "payments.hours"}}</th><th class="num">{{.T "payments.amount"}}</th><th>{{.T "payments.payment"}}</th></tr></thead>
           <tbody>
             <template x-for="h in historyRows()" :key="h.pay_date">
               <tr>
@@ -251,6 +251,7 @@
                 <td class="nowrap" x-text="WTT.fmt.day(h.pay_date)"></td>
                 <td class="nowrap num" x-text="WTT.fmt.hours(h.seconds)"></td>
                 <td class="nowrap num" x-text="WTT.fmt.money(h.amount_cents)"></td>
+                <td class="nowrap" :class="!h.paid && 'muted'" x-text="h.paid ? $t('payments.paid_on', { date: WTT.fmt.date(h.paid.paid_at), amount: WTT.fmt.money(h.paid.amount_cents) }) + (h.paid.bonus_cents > 0 ? ' ' + $t('payments.bonus_line', { amount: WTT.fmt.money(h.paid.bonus_cents) }) : '') : $t('payments.pending')"></td>
               </tr>
             </template>
           </tbody>
@@ -259,6 +260,7 @@
               <th colspan="2">{{.T "payments.total_closed"}}</th>
               <th class="nowrap num" x-text="WTT.fmt.hours(detail.totals.seconds)"></th>
               <th class="nowrap num" x-text="WTT.fmt.money(detail.totals.amount_cents)"></th>
+              <th></th>
             </tr>
           </tfoot>
         </table>
