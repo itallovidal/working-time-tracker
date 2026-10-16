@@ -1940,8 +1940,12 @@ func TestPayments_Permissions(t *testing.T) {
 		t.Fatalf("mark as paid = %d %s", rec.Code, rec.Body.String())
 	}
 	payout := decode(t, rec)
-	if payout["amount_cents"] != float64(1500) || payout["start"] != cur["start"] {
-		t.Errorf("payout = %v", payout)
+	if payout["amount_cents"] != float64(1500) || payout["bonus_cents"] != float64(0) || payout["start"] != cur["start"] {
+		t.Errorf("payout = %v, want 1500 and no bonus", payout)
+	}
+	negative := strings.Replace(body, `"amount_cents":1500}`, `"amount_cents":1500,"bonus_cents":-1}`, 1)
+	if rec := do(e, "POST", payouts, negative, admin.session); rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "payment.invalid_bonus") {
+		t.Errorf("a negative bonus = %d %s, want 400 payment.invalid_bonus", rec.Code, rec.Body.String())
 	}
 	if rec := do(e, "POST", payouts, body, admin.session); rec.Code != http.StatusConflict || !strings.Contains(rec.Body.String(), "payment.already_paid") {
 		t.Errorf("the same period twice = %d %s, want 409 payment.already_paid", rec.Code, rec.Body.String())

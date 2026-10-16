@@ -358,14 +358,14 @@ func TestTeam_OverdueAndPayouts(t *testing.T) {
 		t.Errorf("totals = %+v", tot)
 	}
 
-	// A baixa de 6/9 a 5/10 com outro valor.
-	paid := 12000
-	po, err := f.svc.MarkPaid(f.orgID, payment.MarkInput{PersonID: zeca.String(), Start: "2026-09-06", PayDate: "2026-10-05", AmountCents: &paid})
+	// A baixa de 6/9 a 5/10 com outro valor e um bônus.
+	paid, bonus := 12000, 3000
+	po, err := f.svc.MarkPaid(f.orgID, payment.MarkInput{PersonID: zeca.String(), Start: "2026-09-06", PayDate: "2026-10-05", AmountCents: &paid, BonusCents: &bonus})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if po.Seconds != 7200 || po.CalculatedCents != 10000 || po.AmountCents != 12000 {
-		t.Errorf("payout = %+v, want 7200s, calculated 10000, paid 12000", po)
+	if po.Seconds != 7200 || po.CalculatedCents != 10000 || po.AmountCents != 12000 || po.BonusCents != 3000 {
+		t.Errorf("payout = %+v, want 7200s, calculated 10000, paid 12000, bonus 3000", po)
 	}
 	if _, err := f.svc.MarkPaid(f.orgID, payment.MarkInput{PersonID: zeca.String(), Start: "2026-09-06", PayDate: "2026-10-05", AmountCents: &paid}); !errors.Is(err, payment.ErrAlreadyPaid) {
 		t.Errorf("a second payout of the same period: err = %v, want already_paid", err)
@@ -374,17 +374,19 @@ func TestTeam_OverdueAndPayouts(t *testing.T) {
 	if len(team.Due) != 2 || team.Due[1].LastClosed == nil || team.Due[1].LastClosed.Paid == nil || team.Due[1].LastClosed.Paid.AmountCents != 12000 {
 		t.Errorf("after the payout due = %+v", team.Due)
 	}
-	if len(team.Paid) != 1 || team.Paid[0].Person.Name != "zeca" || team.Paid[0].AmountCents != 12000 || team.Paid[0].LaterSeconds != 0 {
+	if len(team.Paid) != 1 || team.Paid[0].Person.Name != "zeca" || team.Paid[0].AmountCents != 12000 || team.Paid[0].BonusCents != 3000 || team.Paid[0].LaterSeconds != 0 {
 		t.Errorf("paid = %+v", team.Paid)
 	}
-	if s := f.summary(zeca); s.History[0].Paid == nil || s.History[0].Paid.AmountCents != 12000 || s.History[1].Paid != nil {
+	if s := f.summary(zeca); s.History[0].Paid == nil || s.History[0].Paid.AmountCents != 12000 || s.History[0].Paid.BonusCents != 3000 || s.History[1].Paid != nil {
 		t.Errorf("the profile history should show the payout: %+v", s.History[:2])
 	}
 
 	// A baixa do corrente antes da data; o que ele registra depois aparece como "depois da baixa".
 	five := 5000
-	if _, err := f.svc.MarkPaid(f.orgID, payment.MarkInput{PersonID: zeca.String(), Start: "2026-10-06", PayDate: "2026-11-05", AmountCents: &five}); err != nil {
+	if early, err := f.svc.MarkPaid(f.orgID, payment.MarkInput{PersonID: zeca.String(), Start: "2026-10-06", PayDate: "2026-11-05", AmountCents: &five}); err != nil {
 		t.Fatal(err)
+	} else if early.BonusCents != 0 {
+		t.Errorf("a payout without a bonus has bonus %d, want 0", early.BonusCents)
 	}
 	f.session(zeca, "2026-10-09T13:00:00Z", "2026-10-09T14:00:00Z", 5000)
 	team, _ = f.svc.Team(f.orgID)
@@ -440,6 +442,7 @@ func TestMarkPaid_Refusals(t *testing.T) {
 		{"a period that has not started", f.orgID, payment.MarkInput{PersonID: zeca.String(), Start: "2026-11-06", PayDate: "2026-12-05", AmountCents: &amount}, payment.ErrPeriodNotStarted},
 		{"no amount", f.orgID, payment.MarkInput{PersonID: zeca.String(), Start: "2026-10-06", PayDate: "2026-11-05"}, payment.ErrInvalidAmount},
 		{"a negative amount", f.orgID, payment.MarkInput{PersonID: zeca.String(), Start: "2026-10-06", PayDate: "2026-11-05", AmountCents: &negative}, payment.ErrInvalidAmount},
+		{"a negative bonus", f.orgID, payment.MarkInput{PersonID: zeca.String(), Start: "2026-10-06", PayDate: "2026-11-05", AmountCents: &amount, BonusCents: &negative}, payment.ErrInvalidBonus},
 		{"the owner", f.orgID, payment.MarkInput{PersonID: ana.String(), Start: "2026-10-06", PayDate: "2026-11-05", AmountCents: &amount}, payment.ErrOwnerNotPaid},
 		{"no rule", f.orgID, payment.MarkInput{PersonID: livia.String(), Start: "2026-10-06", PayDate: "2026-11-05", AmountCents: &amount}, payment.ErrNoRule},
 		{"someone from another organization", other.ID.String(), payment.MarkInput{PersonID: zeca.String(), Start: "2026-10-06", PayDate: "2026-11-05", AmountCents: &amount}, database.ErrNotFound},
