@@ -213,7 +213,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 
 | Código | Status | Parâmetros | pt-BR | en |
 |---|---|---|---|---|
-| `payment.already_paid` | 409 | — | `este período já tem baixa` | `this period is already marked as paid` |
+| `payment.already_paid` | 409 | — | `este período já está pago: não há horas registradas depois da baixa` | `this period is already paid: no hours were tracked after the payment` |
 | `payment.invalid_amount` | 400 | — | `informe o valor pago, zero ou mais` | `enter the amount paid, zero or more` |
 | `payment.invalid_bonus` | 400 | — | `o bônus não pode ser negativo` | `the bonus cannot be negative` |
 | `payment.invalid_history` | 400 | — | `o histórico deve ser um número inteiro de períodos, maior que zero` | `the history must be a whole number of periods, greater than zero` |

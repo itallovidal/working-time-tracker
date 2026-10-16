@@ -29,6 +29,8 @@ const (
 	FieldAmountCents = "amount_cents"
 	// FieldBonusCents holds the string denoting the bonus_cents field in the database.
 	FieldBonusCents = "bonus_cents"
+	// FieldSeq holds the string denoting the seq field in the database.
+	FieldSeq = "seq"
 	// FieldPaidAt holds the string denoting the paid_at field in the database.
 	FieldPaidAt = "paid_at"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
@@ -56,6 +58,7 @@ var Columns = []string{
 	FieldCalculatedCents,
 	FieldAmountCents,
 	FieldBonusCents,
+	FieldSeq,
 	FieldPaidAt,
 	FieldCreatedAt,
 }
@@ -81,6 +84,10 @@ var (
 	DefaultBonusCents int
 	// BonusCentsValidator is a validator for the "bonus_cents" field. It is called by the builders before save.
 	BonusCentsValidator func(int) error
+	// DefaultSeq holds the default value on creation for the "seq" field.
+	DefaultSeq int
+	// SeqValidator is a validator for the "seq" field. It is called by the builders before save.
+	SeqValidator func(int) error
 	// DefaultPaidAt holds the default value on creation for the "paid_at" field.
 	DefaultPaidAt func() time.Time
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
@@ -130,6 +137,11 @@ func ByAmountCents(opts ...sql.OrderTermOption) OrderOption {
 // ByBonusCents orders the results by the bonus_cents field.
 func ByBonusCents(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldBonusCents, opts...).ToFunc()
+}
+
+// BySeq orders the results by the seq field.
+func BySeq(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSeq, opts...).ToFunc()
 }
 
 // ByPaidAt orders the results by the paid_at field.

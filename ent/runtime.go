@@ -183,12 +183,18 @@ func init() {
 	payout.DefaultBonusCents = payoutDescBonusCents.Default.(int)
 	// payout.BonusCentsValidator is a validator for the "bonus_cents" field. It is called by the builders before save.
 	payout.BonusCentsValidator = payoutDescBonusCents.Validators[0].(func(int) error)
+	// payoutDescSeq is the schema descriptor for seq field.
+	payoutDescSeq := payoutFields[8].Descriptor()
+	// payout.DefaultSeq holds the default value on creation for the seq field.
+	payout.DefaultSeq = payoutDescSeq.Default.(int)
+	// payout.SeqValidator is a validator for the "seq" field. It is called by the builders before save.
+	payout.SeqValidator = payoutDescSeq.Validators[0].(func(int) error)
 	// payoutDescPaidAt is the schema descriptor for paid_at field.
-	payoutDescPaidAt := payoutFields[8].Descriptor()
+	payoutDescPaidAt := payoutFields[9].Descriptor()
 	// payout.DefaultPaidAt holds the default value on creation for the paid_at field.
 	payout.DefaultPaidAt = payoutDescPaidAt.Default.(func() time.Time)
 	// payoutDescCreatedAt is the schema descriptor for created_at field.
-	payoutDescCreatedAt := payoutFields[9].Descriptor()
+	payoutDescCreatedAt := payoutFields[10].Descriptor()
 	// payout.DefaultCreatedAt holds the default value on creation for the created_at field.
 	payout.DefaultCreatedAt = payoutDescCreatedAt.Default.(func() time.Time)
 	// payoutDescID is the schema descriptor for id field.

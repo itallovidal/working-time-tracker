@@ -72,6 +72,20 @@ func (_c *PayoutCreate) SetNillableBonusCents(v *int) *PayoutCreate {
 	return _c
 }
 
+// SetSeq sets the "seq" field.
+func (_c *PayoutCreate) SetSeq(v int) *PayoutCreate {
+	_c.mutation.SetSeq(v)
+	return _c
+}
+
+// SetNillableSeq sets the "seq" field if the given value is not nil.
+func (_c *PayoutCreate) SetNillableSeq(v *int) *PayoutCreate {
+	if v != nil {
+		_c.SetSeq(*v)
+	}
+	return _c
+}
+
 // SetPaidAt sets the "paid_at" field.
 func (_c *PayoutCreate) SetPaidAt(v time.Time) *PayoutCreate {
 	_c.mutation.SetPaidAt(v)
@@ -158,6 +172,10 @@ func (_c *PayoutCreate) defaults() {
 		v := payout.DefaultBonusCents
 		_c.mutation.SetBonusCents(v)
 	}
+	if _, ok := _c.mutation.Seq(); !ok {
+		v := payout.DefaultSeq
+		_c.mutation.SetSeq(v)
+	}
 	if _, ok := _c.mutation.PaidAt(); !ok {
 		v := payout.DefaultPaidAt()
 		_c.mutation.SetPaidAt(v)
@@ -213,6 +231,14 @@ func (_c *PayoutCreate) check() error {
 	if v, ok := _c.mutation.BonusCents(); ok {
 		if err := payout.BonusCentsValidator(v); err != nil {
 			return &ValidationError{Name: "bonus_cents", err: fmt.Errorf(`ent: validator failed for field "Payout.bonus_cents": %w`, err)}
+		}
+	}
+	if _, ok := _c.mutation.Seq(); !ok {
+		return &ValidationError{Name: "seq", err: errors.New(`ent: missing required field "Payout.seq"`)}
+	}
+	if v, ok := _c.mutation.Seq(); ok {
+		if err := payout.SeqValidator(v); err != nil {
+			return &ValidationError{Name: "seq", err: fmt.Errorf(`ent: validator failed for field "Payout.seq": %w`, err)}
 		}
 	}
 	if _, ok := _c.mutation.PaidAt(); !ok {
@@ -282,6 +308,10 @@ func (_c *PayoutCreate) createSpec() (*Payout, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.BonusCents(); ok {
 		_spec.SetField(payout.FieldBonusCents, field.TypeInt, value)
 		_node.BonusCents = value
+	}
+	if value, ok := _c.mutation.Seq(); ok {
+		_spec.SetField(payout.FieldSeq, field.TypeInt, value)
+		_node.Seq = value
 	}
 	if value, ok := _c.mutation.PaidAt(); ok {
 		_spec.SetField(payout.FieldPaidAt, field.TypeTime, value)

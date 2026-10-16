@@ -31,6 +31,9 @@ func (Payout) Fields() []ent.Field {
 		field.Int("amount_cents").NonNegative(),
 		// Um bônus pago junto, além das horas; zero quando não houve.
 		field.Int("bonus_cents").NonNegative().Default(0),
+		// A ordem da baixa no período: 0 é a primeira, que cobre as horas até ali; cada uma das seguintes paga o que a
+		// pessoa registrou depois da anterior, e seconds e calculated_cents dela são só esse restante.
+		field.Int("seq").NonNegative().Default(0),
 		field.Time("paid_at").Default(time.Now),
 		field.Time("created_at").Default(time.Now).Immutable(),
 	}
@@ -42,9 +45,10 @@ func (Payout) Edges() []ent.Edge {
 	}
 }
 
-// Indexes garante uma baixa só por período de cada pessoa.
+// Indexes garante uma baixa só por posição no período de cada pessoa: duas baixas ao mesmo tempo calculam a mesma
+// seq, e a segunda esbarra no índice em vez de pagar o mesmo restante duas vezes.
 func (Payout) Indexes() []ent.Index {
 	return []ent.Index{
-		index.Fields("person_id", "period_start", "pay_date").Unique(),
+		index.Fields("person_id", "period_start", "pay_date", "seq").Unique(),
 	}
 }

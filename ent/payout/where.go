@@ -91,6 +91,11 @@ func BonusCents(v int) predicate.Payout {
 	return predicate.Payout(sql.FieldEQ(FieldBonusCents, v))
 }
 
+// Seq applies equality check predicate on the "seq" field. It's identical to SeqEQ.
+func Seq(v int) predicate.Payout {
+	return predicate.Payout(sql.FieldEQ(FieldSeq, v))
+}
+
 // PaidAt applies equality check predicate on the "paid_at" field. It's identical to PaidAtEQ.
 func PaidAt(v time.Time) predicate.Payout {
 	return predicate.Payout(sql.FieldEQ(FieldPaidAt, v))
@@ -409,6 +414,46 @@ func BonusCentsLT(v int) predicate.Payout {
 // BonusCentsLTE applies the LTE predicate on the "bonus_cents" field.
 func BonusCentsLTE(v int) predicate.Payout {
 	return predicate.Payout(sql.FieldLTE(FieldBonusCents, v))
+}
+
+// SeqEQ applies the EQ predicate on the "seq" field.
+func SeqEQ(v int) predicate.Payout {
+	return predicate.Payout(sql.FieldEQ(FieldSeq, v))
+}
+
+// SeqNEQ applies the NEQ predicate on the "seq" field.
+func SeqNEQ(v int) predicate.Payout {
+	return predicate.Payout(sql.FieldNEQ(FieldSeq, v))
+}
+
+// SeqIn applies the In predicate on the "seq" field.
+func SeqIn(vs ...int) predicate.Payout {
+	return predicate.Payout(sql.FieldIn(FieldSeq, vs...))
+}
+
+// SeqNotIn applies the NotIn predicate on the "seq" field.
+func SeqNotIn(vs ...int) predicate.Payout {
+	return predicate.Payout(sql.FieldNotIn(FieldSeq, vs...))
+}
+
+// SeqGT applies the GT predicate on the "seq" field.
+func SeqGT(v int) predicate.Payout {
+	return predicate.Payout(sql.FieldGT(FieldSeq, v))
+}
+
+// SeqGTE applies the GTE predicate on the "seq" field.
+func SeqGTE(v int) predicate.Payout {
+	return predicate.Payout(sql.FieldGTE(FieldSeq, v))
+}
+
+// SeqLT applies the LT predicate on the "seq" field.
+func SeqLT(v int) predicate.Payout {
+	return predicate.Payout(sql.FieldLT(FieldSeq, v))
+}
+
+// SeqLTE applies the LTE predicate on the "seq" field.
+func SeqLTE(v int) predicate.Payout {
+	return predicate.Payout(sql.FieldLTE(FieldSeq, v))
 }
 
 // PaidAtEQ applies the EQ predicate on the "paid_at" field.

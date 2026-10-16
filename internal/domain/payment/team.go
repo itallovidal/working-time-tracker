@@ -19,8 +19,9 @@ type PersonRef struct {
 	IsOwner bool      `json:"is_owner"`
 }
 
-// DueRow é um pagamento a fazer: um período de uma pessoa sem baixa. É o corrente (Running, com as horas e o valor até
-// agora) ou um fechado nos últimos overdueDays dias (Overdue, quando a data já passou).
+// DueRow é um pagamento a fazer: um período de uma pessoa sem baixa, ou o restante de um que já teve. É o corrente
+// (Running, com as horas e o valor até agora) ou um fechado nos últimos overdueDays dias (Overdue, quando a data já
+// passou).
 type DueRow struct {
 	Person  PersonRef          `json:"person"`
 	Rule    person.PaymentRule `json:"rule"`
@@ -33,12 +34,16 @@ type DueRow struct {
 	Running     bool    `json:"running"`
 	Seconds     float64 `json:"seconds"`
 	AmountCents int     `json:"amount_cents"`
+	// Rest diz que o período já teve baixa e a linha é o restante: Seconds e AmountCents são só o que a pessoa
+	// registrou depois da última baixa, e PaidCents é o que as baixas dele já pagaram pelas horas.
+	Rest      bool `json:"rest"`
+	PaidCents int  `json:"paid_cents"`
 	// LastClosed é o último período fechado da pessoa, com a baixa dele, se houve.
 	LastClosed *PeriodView `json:"last_closed"`
 }
 
-// PaidRow é uma baixa recente. LaterSeconds e LaterCents são o que o período ganhou depois dela: quem foi pago antes da
-// data e seguiu trabalhando no período.
+// PaidRow é uma baixa recente. LaterSeconds e LaterCents, só na última baixa do período, são o que ele ganhou depois
+// dela e ainda não foi pago: quem foi pago antes da data e seguiu trabalhando. Esse restante também está em Due.
 type PaidRow struct {
 	Payout
 	Person       PersonRef `json:"person"`
@@ -48,7 +53,8 @@ type PaidRow struct {
 
 // TeamTotals são os números dos cartões. Os valores somam as linhas a pagar, atrasados incluídos; o dono não entra.
 type TeamTotals struct {
-	// ToPayCents é tudo o que está sem baixa: os atrasados e os correntes, até agora. OverdueCents é a parte atrasada.
+	// ToPayCents é tudo o que está sem baixa: os atrasados e os correntes, até agora, e o restante dos que já tiveram
+	// baixa. OverdueCents é a parte atrasada.
 	ToPayCents   int `json:"to_pay_cents"`
 	OverdueCents int `json:"overdue_cents"`
 	// Closing7Cents e Closing30Cents são a parte que paga em até 7 e 30 dias (os atrasados entram).
@@ -71,7 +77,8 @@ type Team struct {
 }
 
 const (
-	// overdueDays é até quantos dias para trás um período fechado sem baixa ainda aparece, como atrasado.
+	// overdueDays é até quantos dias para trás um período fechado sem baixa (ou com restante) ainda aparece, como
+	// atrasado.
 	overdueDays = 60
 	// paidDays é até quantos dias para trás uma baixa aparece em Pagos recentemente.
 	paidDays = 30
@@ -103,11 +110,10 @@ func (s *Service) Team(orgID string) (*Team, error) {
 	if err != nil {
 		return nil, err
 	}
-	paid := map[string]Payout{}
+	paid := groupPayouts(payouts)
 	var recent []Payout
 	paidFrom := now.AddDate(0, 0, -paidDays)
 	for _, po := range payouts {
-		paid[po.key()] = po
 		if !po.PaidAt.Before(paidFrom) {
 			recent = append(recent, po)
 		}
@@ -188,23 +194,28 @@ func (s *Service) Team(orgID string) (*Team, error) {
 			v.Paid = paidMark(paid, p.ID, v)
 			last = &v
 		}
-		// Do fechado mais antigo para o corrente. Um fechado sem horas não tem o que pagar e não vira atraso.
+		// Do fechado mais antigo para o corrente. Um fechado sem horas não tem o que pagar e não vira atraso; um que já
+		// teve baixa só volta com o que a pessoa registrou depois dela.
 		periods := append(slices.Clone(pl.closed), *pl.cur)
 		for i := len(periods) - 1; i >= 0; i-- {
 			per := periods[i]
 			running := i == len(periods)-1
-			if _, done := paid[periodKey(p.ID, view(per))]; done || (!running && per.PayDate.Before(overdueFrom)) {
+			if !running && per.PayDate.Before(overdueFrom) {
 				continue
 			}
-			t := within(sessions, per.Start, per.End, now, false, nil)
-			if !running && t.seconds <= 0 {
+			before := paid[periodKey(p.ID, view(per))]
+			t := remaining(within(sessions, per.Start, per.End, now, false, nil), before)
+			if len(before) > 0 && t.cents <= 0 || len(before) == 0 && !running && t.seconds <= 0 {
 				continue
 			}
 			left := daysBetween(today, per.PayDate)
 			row := DueRow{
 				Person: ref, Rule: *p.Payment, Start: per.StartDay(), PayDate: per.PayDay(), Days: per.Days(),
 				DaysLeft: left, Overdue: left < 0, Running: running, Seconds: t.seconds, AmountCents: t.cents,
-				LastClosed: last,
+				Rest: len(before) > 0, LastClosed: last,
+			}
+			for _, po := range before {
+				row.PaidCents += po.AmountCents
 			}
 			out.Due = append(out.Due, row)
 			out.Totals.ToPayCents += t.cents
@@ -226,12 +237,11 @@ func (s *Service) Team(orgID string) (*Team, error) {
 	}
 	for _, po := range recent {
 		row := PaidRow{Payout: po, Person: names[po.PersonID]}
-		if start, ok := starts[po.Start]; ok {
-			if pay, err := time.ParseInLocation(time.DateOnly, po.PayDate, loc); err == nil {
-				t := within(byPerson[po.PersonID], start, pay.AddDate(0, 0, 1), now, false, nil)
-				row.LaterSeconds = max(0, t.seconds-po.Seconds)
-				row.LaterCents = max(0, t.cents-po.CalculatedCents)
-			}
+		period := paid[po.key()]
+		start, ok := starts[po.Start]
+		if pay, err := time.ParseInLocation(time.DateOnly, po.PayDate, loc); ok && err == nil && period[len(period)-1].ID == po.ID {
+			t := remaining(within(byPerson[po.PersonID], start, pay.AddDate(0, 0, 1), now, false, nil), period)
+			row.LaterSeconds, row.LaterCents = t.seconds, t.cents
 		}
 		out.Paid = append(out.Paid, row)
 	}
@@ -257,13 +267,20 @@ func (s *Service) payoutsOf(ids []uuid.UUID) ([]Payout, error) {
 	return s.deps.Payouts.ListByPersons(ids)
 }
 
-// paidMark é a baixa do período, se ele tem uma.
-func paidMark(paid map[string]Payout, personID uuid.UUID, v PeriodView) *PaidMark {
-	po, ok := paid[periodKey(personID, v)]
-	if !ok {
+// paidMark é a baixa do período, se ele tem uma. Com mais de uma (a do período e a do restante), soma o que foi pago e
+// fica com a data e o ID da última.
+func paidMark(paid map[string][]Payout, personID uuid.UUID, v PeriodView) *PaidMark {
+	payouts := paid[periodKey(personID, v)]
+	if len(payouts) == 0 {
 		return nil
 	}
-	return &PaidMark{ID: po.ID, AmountCents: po.AmountCents, BonusCents: po.BonusCents, PaidAt: po.PaidAt}
+	last := payouts[len(payouts)-1]
+	mark := &PaidMark{ID: last.ID, PaidAt: last.PaidAt}
+	for _, po := range payouts {
+		mark.AmountCents += po.AmountCents
+		mark.BonusCents += po.BonusCents
+	}
+	return mark
 }
 
 func earliest(a, b time.Time) time.Time {

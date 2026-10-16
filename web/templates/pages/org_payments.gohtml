@@ -81,11 +81,11 @@
                     <div x-text="ruleLines(row.rule)[0]"></div>
                     <div class="muted small" x-text="ruleLines(row.rule)[1] || ''"></div>
                   </td>
-                  {{/* O que é secundário (em andamento, atraso, as horas do último fechado) fica numa segunda linha menor,
-                       para a tabela caber na largura da página. */}}
+                  {{/* O que é secundário (em andamento, restante, atraso, o já pago, as horas do último fechado) fica numa
+                       segunda linha menor, para a tabela caber na largura da página. */}}
                   <td class="nowrap">
                     <div x-text="WTT.payments.period(row)"></div>
-                    <div class="muted small" x-show="row.running">{{.T "payments.running"}}</div>
+                    <div class="muted small" x-show="row.running || row.rest" x-text="[row.running && $t('payments.running'), row.rest && $t('payments.rest')].filter(Boolean).join(' · ')"></div>
                   </td>
                   <td class="nowrap">
                     <div x-text="WTT.fmt.day(row.pay_date)"></div>
@@ -93,7 +93,10 @@
                     <div class="muted small" x-show="!row.overdue" x-text="WTT.payments.daysLeft(row)"></div>
                   </td>
                   <td class="nowrap num" x-text="WTT.fmt.hours(row.seconds)"></td>
-                  <td class="nowrap num" x-text="WTT.fmt.money(row.amount_cents)"></td>
+                  <td class="nowrap num">
+                    <div x-text="WTT.fmt.money(row.amount_cents)"></div>
+                    <div class="muted small wrap" x-show="row.rest" x-text="$t('payments.already_paid', { amount: WTT.fmt.money(row.paid_cents) })"></div>
+                  </td>
                   <td class="nowrap num">
                     <div>
                       <span x-text="row.last_closed ? WTT.fmt.money(row.last_closed.amount_cents) : '—'"></span>
@@ -128,16 +131,20 @@
               <template x-for="row in team.paid" :key="row.id">
                 <tr class="row-link" @click="if (!$event.target.closest('a, button')) location.href = personHref(row.person)">
                   <td class="nowrap"><a :href="personHref(row.person)" x-text="row.person.name"></a></td>
-                  <td class="nowrap" x-text="WTT.payments.period(row)"></td>
+                  <td class="nowrap">
+                    <div x-text="WTT.payments.period(row)"></div>
+                    <div class="muted small" x-show="row.seq > 0">{{.T "payments.rest"}}</div>
+                  </td>
                   <td class="nowrap" x-text="WTT.fmt.day(row.pay_date)"></td>
                   <td class="nowrap" x-text="WTT.fmt.date(row.paid_at)"></td>
                   <td class="nowrap num">
                     <span x-text="WTT.fmt.hours(row.seconds)"></span>
-                    <div class="muted small" x-show="row.later_seconds > 0" x-text="$t('payments.later', { time: WTT.fmt.hours(row.later_seconds), amount: WTT.fmt.money(row.later_cents) })"></div>
+                    <div class="muted small wrap" x-show="row.later_cents > 0" x-text="$t('payments.later', { time: WTT.fmt.hours(row.later_seconds) })"></div>
                   </td>
                   <td class="nowrap num">
                     <span x-text="WTT.fmt.money(row.amount_cents)"></span>
                     <div class="small" x-show="row.bonus_cents > 0" x-text="$t('payments.bonus_line', { amount: WTT.fmt.money(row.bonus_cents) })"></div>
+                    <div class="small wrap" x-show="row.later_cents > 0" x-text="$t('payments.later_amount', { amount: WTT.fmt.money(row.later_cents) })"></div>
                     <div class="muted small" x-show="row.amount_cents !== row.calculated_cents" x-text="$t('payments.calculated', { amount: WTT.fmt.money(row.calculated_cents) })"></div>
                   </td>
                   <td class="actions">
@@ -157,7 +164,8 @@
     </div>
   </template>
 
-  {{/* Dar baixa: o período, as horas e o valor calculado, e o valor pago, que vem com o calculado e pode mudar. */}}
+  {{/* Dar baixa: o período, as horas e o valor calculado, e o valor pago, que vem com o calculado e pode mudar. No
+       restante de um período que já teve baixa, as horas e o valor são só o que veio depois dela. */}}
   <template x-teleport="#modal-root">
     <form class="stack" novalidate x-show="$store.modal.name === 'payout'" @submit.prevent="markPaid()">
       <template x-if="paying">
@@ -170,6 +178,7 @@
           <dd x-text="WTT.fmt.money(paying.amount_cents)"></dd>
         </dl>
       </template>
+      <p class="muted small" x-show="paying && paying.rest">{{.T "payments.modal.rest"}}</p>
       <p class="muted small" x-show="paying && paying.running">{{.T "payments.modal.running"}}</p>
       <div class="field">
         <label for="payout-amount"><span x-text="$t('payments.modal.amount_label', { unit: WTT.fmt.moneyUnit() })"></span></label>

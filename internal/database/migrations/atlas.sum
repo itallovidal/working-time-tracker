@@ -1,4 +1,4 @@
-h1:/qX6SOpP/YwQGTjHlvvl3sv2c7OzF6HIa9CAxwXb+0w=
+h1:yhQgQ4zCn0M4z+VlH3unN0t1WLe+UN/b7JGdVGdLDL8=
 20261006010705_baseline.sql h1:In26R+bkQHX0yTBQ3cHUfkq0TyExXFWtzWiAp+CXcPk=
 20261006053300_integration_credentials_metadata.sql h1:o/Eet/4UpJcK+X/j0/hx8u5DPKRFuIPzq5e0spWIBX4=
 20261006220500_move_weekly_hours_to_person.sql h1:FSjx+g6ZU9ynL4VqWDbgWEb2QdpiaQV4ZE/YuC/imyI=
@@ -24,3 +24,4 @@ h1:/qX6SOpP/YwQGTjHlvvl3sv2c7OzF6HIa9CAxwXb+0w=
 20261010232955_drop_person_permissions.sql h1:5f8LWzWD54eOL4kuZKr2eNGHSgJP/cKoaEqHYCC9bW0=
 20261016060414_payouts.sql h1:0AqDIBtpDSQSNFqlgaZFqykTjd8F8gRQqr9B5C7tq7E=
 20261016065100_payout_bonus.sql h1:EXq/BQRtPhZ8BRnpqa6jxlHgenz6bqstKp6CMTI3/IQ=
+20261016073002_payout_seq.sql h1:jpYE6J0LtS9Jyx3/r8YwTZMTSPcwFIfBpeNapogVrDE=

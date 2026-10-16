@@ -107,7 +107,8 @@ type PeriodView struct {
 	Paid *PaidMark `json:"paid,omitempty"`
 }
 
-// PaidMark é a baixa de um período, como o perfil e a visão da equipe a mostram: o valor pago pelas horas e o bônus.
+// PaidMark é a baixa de um período, como o perfil e a visão da equipe a mostram: o valor pago pelas horas e o bônus. Com
+// a baixa do restante, são as somas das duas, com a data e o ID da última.
 type PaidMark struct {
 	ID          uuid.UUID `json:"id"`
 	AmountCents int       `json:"amount_cents"`
@@ -219,10 +220,7 @@ func (s *Service) markPaid(out *Summary, personID uuid.UUID) error {
 	if err != nil || len(payouts) == 0 {
 		return err
 	}
-	paid := map[string]Payout{}
-	for _, po := range payouts {
-		paid[po.key()] = po
-	}
+	paid := groupPayouts(payouts)
 	if out.Current != nil {
 		out.Current.Paid = paidMark(paid, personID, *out.Current)
 	}

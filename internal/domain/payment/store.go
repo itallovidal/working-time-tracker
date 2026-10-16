@@ -13,8 +13,9 @@ import (
 )
 
 // Payout é a baixa de um período: o dono marcou que pagou. Start e PayDate são as datas do período pago; Seconds e
-// CalculatedCents, o que ele tinha na hora da baixa; AmountCents, o que foi pago de fato pelas horas; BonusCents, um
-// bônus pago junto (zero quando não houve).
+// CalculatedCents, o que a baixa cobriu (na primeira, o período até ali; nas seguintes, o que a pessoa registrou depois
+// da anterior); AmountCents, o que foi pago de fato por essas horas; BonusCents, um bônus pago junto (zero quando não
+// houve). Seq é a ordem da baixa no período, 0 para a primeira.
 type Payout struct {
 	ID              uuid.UUID `json:"id"`
 	PersonID        uuid.UUID `json:"person_id"`
@@ -24,6 +25,7 @@ type Payout struct {
 	CalculatedCents int       `json:"calculated_cents"`
 	AmountCents     int       `json:"amount_cents"`
 	BonusCents      int       `json:"bonus_cents"`
+	Seq             int       `json:"seq"`
 	PaidAt          time.Time `json:"paid_at"`
 }
 
@@ -45,11 +47,12 @@ func NewStore(client *ent.Client) *Store {
 func toPayout(e *ent.Payout) Payout {
 	return Payout{
 		ID: e.ID, PersonID: e.PersonID, Start: e.PeriodStart, PayDate: e.PayDate, Seconds: e.Seconds,
-		CalculatedCents: e.CalculatedCents, AmountCents: e.AmountCents, BonusCents: e.BonusCents, PaidAt: e.PaidAt,
+		CalculatedCents: e.CalculatedCents, AmountCents: e.AmountCents, BonusCents: e.BonusCents, Seq: e.Seq, PaidAt: e.PaidAt,
 	}
 }
 
-// Create grava a baixa. Um período que já tem baixa esbarra no índice único: ErrAlreadyPaid.
+// Create grava a baixa. Outra baixa com a mesma seq no período, gravada ao mesmo tempo, esbarra no índice único:
+// ErrAlreadyPaid.
 func (s *Store) Create(p *Payout) error {
 	created, err := s.client.Payout.Create().
 		SetPersonID(p.PersonID).
@@ -59,6 +62,7 @@ func (s *Store) Create(p *Payout) error {
 		SetCalculatedCents(p.CalculatedCents).
 		SetAmountCents(p.AmountCents).
 		SetBonusCents(p.BonusCents).
+		SetSeq(p.Seq).
 		SetPaidAt(p.PaidAt).
 		Save(context.Background())
 	if err != nil {
