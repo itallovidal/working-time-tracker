@@ -74,10 +74,11 @@ erDiagram
     uuid person_id FK
     string period_start "YYYY-MM-DD"
     string pay_date "YYYY-MM-DD"
-    float seconds "no momento da baixa"
-    int calculated_cents "no momento da baixa"
+    float seconds "o que a baixa cobriu"
+    int calculated_cents "o que a baixa cobriu"
     int amount_cents "pago pelas horas"
     int bonus_cents "zero sem bônus"
+    int seq "0 na primeira baixa do período"
     time paid_at
   }
   ALLOCATION {
@@ -223,8 +224,9 @@ ser o responsável, com um `UPDATE ... WHERE assignee_id IS NULL`, então de doi
 O prazo padrão de uma tarefa nova é de 7 dias; uma tarefa importada de uma plataforma pode nascer sem prazo.
 
 **Os períodos de pagamento não são gravados, a baixa é.** Os períodos são calculados da regra da pessoa
-(`payment_frequency`, `payment_day`, `payment_start`) e das sessões. `payouts` guarda só a baixa de um período, uma por
-pessoa e período (índice único em `person_id`, `period_start`, `pay_date`), com os números do momento e o que foi pago,
+(`payment_frequency`, `payment_day`, `payment_start`) e das sessões. `payouts` guarda só a baixa de um período: a primeira
+cobre o período até ali e cada uma das seguintes, o restante que a pessoa registrou depois da anterior (índice único em
+`person_id`, `period_start`, `pay_date` e `seq`, a posição da baixa no período), com o que ela cobriu e o que foi pago,
 bônus incluído; sai junto com a pessoa. Ver [money.md](../product/money.md).
 
 ## Exclusões

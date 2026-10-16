@@ -635,10 +635,16 @@ e um bônus opcional. Um período fechado sem baixa nos últimos 60 dias fica **
 recentemente mostra as baixas dos últimos 30 dias e o que o período ganhou depois de cada uma. Só o dono dá baixa e
 desfaz (`payments.manage`). O dono não é pago e sai das tabelas e de "sem regra".
 
+Horas registradas depois de uma baixa são o **restante** do período: ele volta para Próximos pagamentos só com elas
+(o que já foi pago aparece ao lado), entra nos cartões e leva outra baixa. Cada baixa guarda o que cobriu (a primeira,
+o período até ali; as seguintes, o que veio depois da anterior) e a posição dela no período (`seq`); o índice único em
+pessoa, período e `seq` impede que duas baixas ao mesmo tempo paguem o mesmo restante. Sem restante, uma baixa nova é
+recusada (`payment.already_paid`).
+
 **Consequências:** o período continua sendo calculado, então trocar a regra pode deixar uma baixa sem período que
-case com ela: a baixa fica nos números dela e o período novo aparece como a pagar. Horas registradas depois de uma
-baixa não reabrem o período; aparecem como "depois da baixa". Não houve migração de dados: os períodos fechados
-antes da baixa existir aparecem como atrasados até o dono dar baixa neles.
+case com ela: a baixa fica nos números dela e o período novo aparece como a pagar. Desfazer uma baixa devolve o que ela
+cobria como restante. Não houve migração de dados: os períodos fechados antes da baixa existir aparecem como atrasados
+até o dono dar baixa neles.
 
 ## Riscos e trade-offs
 

@@ -67,7 +67,8 @@ organização. Uma sessão que atravessa a virada conta em cada período só o t
 das sessões, na hora (`internal/domain/payment`). O que fica gravado é só a **baixa** (tabela `payouts`): o dono marca
 que pagou um período, a qualquer momento depois que ele começou, e a baixa guarda as horas e o valor calculados naquele
 momento, o valor pago pelas horas (vem com o calculado e pode mudar) e um **bônus** opcional (zero quando não houve,
-nunca negativo). Por isso:
+nunca negativo). O que a pessoa registra depois de uma baixa é o **restante** do período: volta para os pagamentos a
+fazer, com o que já foi pago, e leva outra baixa, que cobre só ele. Por isso:
 
 - trocar a regra recalcula onde os períodos passados caem; uma baixa antiga deixa de casar com os períodos novos, mas
   continua em Pagos recentemente com os números dela;
@@ -82,9 +83,9 @@ nunca negativo). Por isso:
   "Pendente") e as próximas datas (`GET /api/persons/:personId/payments`).
 - Na página **Pagamentos** (`/orgs/:orgId/payments`, `GET /api/orgs/:orgId/payments`), só do dono: os cartões (o que
   pagar, atrasados incluídos, o que paga em 7 e 30 dias, as horas da equipe e quem está sem regra), **Próximos
-  pagamentos** (os períodos sem baixa: o corrente de cada pessoa e os fechados dos últimos 60 dias, marcados Atrasado,
-  com **Dar baixa**) e **Pagos recentemente** (as baixas dos últimos 30 dias, com o bônus, o que o período ganhou depois
-  da baixa e **Desfazer**; `POST` e `DELETE /api/orgs/:orgId/payouts`). As tabelas seguem a data do pagamento, não as
+  pagamentos** (os períodos sem baixa, o corrente de cada pessoa e os fechados dos últimos 60 dias, marcados Atrasado,
+  e o restante dos que já tiveram baixa, com **Dar baixa**) e **Pagos recentemente** (as baixas dos últimos 30 dias,
+  com o bônus, o restante que o período ganhou depois da baixa e **Desfazer**; `POST` e `DELETE /api/orgs/:orgId/payouts`). As tabelas seguem a data do pagamento, não as
   horas.
 
 ## Quem vê o quê
