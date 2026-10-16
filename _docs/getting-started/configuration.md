@@ -10,11 +10,11 @@ ninguém pediu.
 
 | Variável | Obrigatória | Para que serve |
 |---|---|---|
-| `API_PORT` | sim | Porta HTTP, por exemplo `8080` |
+| `API_PORT` | sim | Porta HTTP. O `.env.example` usa `1243`: a `8080` é comum demais e costuma estar ocupada por outro serviço |
 | `DATABASE_URL` | sim | Conexão com o PostgreSQL. O seed e o `cmd/migrate` usam a mesma |
 | `INTEGRATION_ENCRYPTION_KEY` | sim | Chave da criptografia AES-GCM dos tokens das integrações (`openssl rand -hex 32`). Trocá-la torna os tokens salvos ilegíveis: cada integração pede o token de novo, e o resto dela (nome e `metadata`) continua |
 | `COOKIE_SECURE` | não | `true` marca os cookies como `Secure`. Use em produção, atrás de HTTPS |
-| `PUBLIC_URL` | com GitHub, Trello ou Clerk | O endereço em que as pessoas abrem o sistema, sem barra no fim (`http://localhost:8080`). As plataformas devolvem a pessoa para ele depois de autorizar |
+| `PUBLIC_URL` | com GitHub, Trello ou Clerk | O endereço em que as pessoas abrem o sistema, sem barra no fim (`http://localhost:1243`). As plataformas devolvem a pessoa para ele depois de autorizar |
 
 ## Integrações
 

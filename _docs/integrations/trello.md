@@ -9,7 +9,7 @@ os gatilhos, a espera) está em [overview.md](overview.md).
 O botão **Conectar com o Trello** usa a **chave de API** de um app do Trello, criada uma vez por servidor:
 
 1. Em trello.com/power-ups/admin, crie um Power-Up (ele serve de app) e, na aba **API key**, gere a chave. Se o Trello
-   recusar o endereço de retorno, acrescente o `PUBLIC_URL` (`http://localhost:8080`) em **Allowed origins**, na mesma
+   recusar o endereço de retorno, acrescente o `PUBLIC_URL` (`http://localhost:1243`) em **Allowed origins**, na mesma
    aba.
 2. No `.env`: `TRELLO_API_KEY`, só letras e dígitos, e `PUBLIC_URL`. `TRELLO_APP_NAME` muda o nome que a tela de
    autorização mostra (o padrão é "Working Time Tracker"). Reinicie o servidor.

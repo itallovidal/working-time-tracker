@@ -41,7 +41,7 @@ go run ./cmd/seed       # opcional: dados de demonstração (só num banco vazio
 go run ./cmd            # servidor; aplica as migrações ao subir
 ```
 
-Abra **http://localhost:8080**. O seed cria a **Jatobá Software**, uma software house com doze pessoas, seis clientes e
+Abra **http://localhost:1243**. O seed cria a **Jatobá Software**, uma software house com doze pessoas, seis clientes e
 oito projetos. A senha de todas as contas é `demo12345`:
 
 | Cargo | E-mail |

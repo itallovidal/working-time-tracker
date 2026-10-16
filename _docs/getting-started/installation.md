@@ -18,7 +18,7 @@ flowchart LR
     C -- "sim" --> D["go run ./cmd/seed"]
     C -- "não" --> E["go run ./cmd"]
     D --> E
-    E --> F["http://localhost:8080"]
+    E --> F["http://localhost:1243"]
 ```
 
 ```bash
@@ -35,7 +35,7 @@ go run ./cmd/seed
 go run ./cmd
 ```
 
-Abra **http://localhost:8080**. O servidor e o seed aplicam as migrações pendentes ao iniciar, então o banco não pede
+Abra **http://localhost:1243**. O servidor e o seed aplicam as migrações pendentes ao iniciar, então o banco não pede
 preparo (ver [Fluxo de trabalho](../development/workflow.md#migrações)).
 
 Sem o seed, clique em **Crie uma organização** na tela de login: quem cria a organização é o dono dela.
