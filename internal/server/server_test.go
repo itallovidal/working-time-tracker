@@ -1947,6 +1947,10 @@ func TestPayments_Permissions(t *testing.T) {
 	if rec := do(e, "POST", payouts, negative, admin.session); rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "payment.invalid_bonus") {
 		t.Errorf("a negative bonus = %d %s, want 400 payment.invalid_bonus", rec.Code, rec.Body.String())
 	}
+	malformed := strings.Replace(body, bia.id, "abc", 1)
+	if rec := do(e, "POST", payouts, malformed, admin.session); rec.Code != http.StatusNotFound || !strings.Contains(rec.Body.String(), "person.not_found") {
+		t.Errorf("a malformed person_id = %d %s, want 404 person.not_found", rec.Code, rec.Body.String())
+	}
 	if rec := do(e, "POST", payouts, body, admin.session); rec.Code != http.StatusConflict || !strings.Contains(rec.Body.String(), "payment.already_paid") {
 		t.Errorf("the same period twice = %d %s, want 409 payment.already_paid", rec.Code, rec.Body.String())
 	}

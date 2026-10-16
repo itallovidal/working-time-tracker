@@ -381,29 +381,75 @@ func TestTeam_OverdueAndPayouts(t *testing.T) {
 		t.Errorf("the profile history should show the payout: %+v", s.History[:2])
 	}
 
-	// A baixa do corrente antes da data; o que ele registra depois aparece como "depois da baixa".
+	// A baixa do corrente antes da data. O que ele registra depois é o restante do período: volta para a lista, com o
+	// que já foi pago, entra nos totais e leva outra baixa, só dele.
 	five := 5000
-	if early, err := f.svc.MarkPaid(f.orgID, payment.MarkInput{PersonID: zeca.String(), Start: "2026-10-06", PayDate: "2026-11-05", AmountCents: &five}); err != nil {
+	early, err := f.svc.MarkPaid(f.orgID, payment.MarkInput{PersonID: zeca.String(), Start: "2026-10-06", PayDate: "2026-11-05", AmountCents: &five})
+	if err != nil {
 		t.Fatal(err)
-	} else if early.BonusCents != 0 {
-		t.Errorf("a payout without a bonus has bonus %d, want 0", early.BonusCents)
+	}
+	if early.BonusCents != 0 || early.Seq != 0 {
+		t.Errorf("the early payout = %+v, want no bonus and seq 0", early)
 	}
 	f.session(zeca, "2026-10-09T13:00:00Z", "2026-10-09T14:00:00Z", 5000)
+	team, _ = f.svc.Team(f.orgID)
+	if len(team.Due) != 2 || team.Due[0].PayDate != "2026-09-05" {
+		t.Fatalf("the oldest overdue and the rest of the running period should be left: %+v", team.Due)
+	}
+	if r := team.Due[1]; !r.Rest || !r.Running || r.PayDate != "2026-11-05" || r.Seconds != 3600 || r.AmountCents != 5000 || r.PaidCents != 5000 {
+		t.Errorf("the rest row = %+v, want 1h / 5000 after 5000 paid", r)
+	}
+	if tot := team.Totals; tot.ToPayCents != 10000 || tot.OverdueCents != 5000 {
+		t.Errorf("totals with the rest = %+v, want to pay 10000 and overdue 5000", tot)
+	}
+	var earlyRow *payment.PaidRow
+	for i := range team.Paid {
+		if team.Paid[i].ID == early.ID {
+			earlyRow = &team.Paid[i]
+		}
+	}
+	if earlyRow == nil || earlyRow.LaterSeconds != 3600 || earlyRow.LaterCents != 5000 {
+		t.Errorf("the early payout = %+v, want 1h / 5000 after it", earlyRow)
+	}
+	if s := f.summary(zeca); s.Current.Paid == nil || s.Current.Paid.AmountCents != 5000 {
+		t.Errorf("the current period should show the payout: %+v", s.Current.Paid)
+	}
+
+	// A baixa do restante cobre só a hora de depois; sem hora nova, não há o que pagar.
+	rest, err := f.svc.MarkPaid(f.orgID, payment.MarkInput{PersonID: zeca.String(), Start: "2026-10-06", PayDate: "2026-11-05", AmountCents: &five})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rest.Seq != 1 || rest.Seconds != 3600 || rest.CalculatedCents != 5000 {
+		t.Errorf("the rest payout = %+v, want seq 1 and 1h / 5000", rest)
+	}
+	if _, err := f.svc.MarkPaid(f.orgID, payment.MarkInput{PersonID: zeca.String(), Start: "2026-10-06", PayDate: "2026-11-05", AmountCents: &five}); !errors.Is(err, payment.ErrAlreadyPaid) {
+		t.Errorf("a payout with nothing after the last one: err = %v, want already_paid", err)
+	}
 	team, _ = f.svc.Team(f.orgID)
 	if len(team.Due) != 1 || team.Due[0].PayDate != "2026-09-05" {
 		t.Errorf("only the oldest overdue should be left: %+v", team.Due)
 	}
-	var early *payment.PaidRow
-	for i := range team.Paid {
-		if team.Paid[i].PayDate == "2026-11-05" {
-			early = &team.Paid[i]
+	for _, r := range team.Paid {
+		if r.LaterSeconds != 0 {
+			t.Errorf("nothing is left after the rest payout: %+v", r)
 		}
 	}
-	if early == nil || early.LaterSeconds != 3600 || early.LaterCents != 5000 {
-		t.Errorf("the early payout = %+v, want 1h / 5000 after it", early)
+	if s := f.summary(zeca); s.Current.Paid == nil || s.Current.Paid.AmountCents != 10000 || s.Current.Paid.ID != rest.ID {
+		t.Errorf("the current period should sum both payouts: %+v", s.Current.Paid)
 	}
-	if s := f.summary(zeca); s.Current.Paid == nil || s.Current.Paid.AmountCents != 5000 {
-		t.Errorf("the current period should show the payout: %+v", s.Current.Paid)
+
+	// Desfazer a primeira devolve o que ela cobria; a baixa seguinte do período não repete a seq da que ficou.
+	if err := f.svc.Unmark(f.orgID, early.ID.String()); err != nil {
+		t.Fatal(err)
+	}
+	team, _ = f.svc.Team(f.orgID)
+	if len(team.Due) != 2 || !team.Due[1].Rest || team.Due[1].AmountCents != 5000 || team.Due[1].PaidCents != 5000 {
+		t.Errorf("after undoing the first payout due = %+v", team.Due)
+	}
+	again, err := f.svc.MarkPaid(f.orgID, payment.MarkInput{PersonID: zeca.String(), Start: "2026-10-06", PayDate: "2026-11-05", AmountCents: &five})
+	if err != nil || again.Seq != 2 {
+		t.Errorf("paying it again = %+v, %v; want seq 2", again, err)
 	}
 
 	// Desfazer devolve o período para a lista.
@@ -446,6 +492,7 @@ func TestMarkPaid_Refusals(t *testing.T) {
 		{"the owner", f.orgID, payment.MarkInput{PersonID: ana.String(), Start: "2026-10-06", PayDate: "2026-11-05", AmountCents: &amount}, payment.ErrOwnerNotPaid},
 		{"no rule", f.orgID, payment.MarkInput{PersonID: livia.String(), Start: "2026-10-06", PayDate: "2026-11-05", AmountCents: &amount}, payment.ErrNoRule},
 		{"someone from another organization", other.ID.String(), payment.MarkInput{PersonID: zeca.String(), Start: "2026-10-06", PayDate: "2026-11-05", AmountCents: &amount}, database.ErrNotFound},
+		{"a malformed person id", f.orgID, payment.MarkInput{PersonID: "abc", Start: "2026-10-06", PayDate: "2026-11-05", AmountCents: &amount}, database.ErrNotFound},
 	}
 	for _, c := range cases {
 		if _, err := f.svc.MarkPaid(c.org, c.in); !errors.Is(err, c.want) {
