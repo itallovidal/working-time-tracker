@@ -215,6 +215,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 |---|---|---|---|---|
 | `payment.already_paid` | 409 | — | `este período já tem baixa` | `this period is already marked as paid` |
 | `payment.invalid_amount` | 400 | — | `informe o valor pago, zero ou mais` | `enter the amount paid, zero or more` |
+| `payment.invalid_bonus` | 400 | — | `o bônus não pode ser negativo` | `the bonus cannot be negative` |
 | `payment.invalid_history` | 400 | — | `o histórico deve ser um número inteiro de períodos, maior que zero` | `the history must be a whole number of periods, greater than zero` |
 | `payment.no_rule` | 400 | — | `esta pessoa não tem regra de pagamento, então não há período para dar baixa` | `this person has no payment rule, so there is no period to mark as paid` |
 | `payment.not_a_period` | 400 | — | `as datas não formam um período da regra de pagamento desta pessoa` | `the dates are not a period of this person's payment rule` |
