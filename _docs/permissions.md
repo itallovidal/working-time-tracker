@@ -181,7 +181,8 @@ faturamento que ele não vê. O dono dá qualquer um; o admin, só os que cabem 
 | `PATCH /persons/:id/role`, `PATCH /orgs/:id`, `DELETE /orgs/:id` | só o dono |
 | `GET /orgs/:id/me/overview`, `GET /orgs/:id/me/tasks` | qualquer membro da organização (cada um lê só as próprias horas e tarefas, nunca as de outra pessoa) |
 | `GET /persons/:id/payments` | a própria pessoa e o dono; o admin recebe só as horas e os projetos de outra pessoa, sem regra, períodos nem valores; `403` para os outros |
-| `GET /orgs/:id/payments` | `payments.manage` (só o dono): o que pagar e as horas de cada pessoa |
+| `GET /orgs/:id/payments` | `payments.manage` (só o dono): o que pagar, o que foi pago há pouco e as horas de cada pessoa |
+| `POST /orgs/:id/payouts`, `DELETE /orgs/:id/payouts/:payoutId` | `payments.manage` (só o dono): dar baixa num período e desfazer |
 | Página `/orgs/:id/payments` | só o dono (`404` para os outros) |
 | Página `/orgs/:id/settings` | só o dono (`404` para os outros); a página `/orgs/:id/about` é de todos |
 | Página `/orgs/:id/customers` | só o dono |

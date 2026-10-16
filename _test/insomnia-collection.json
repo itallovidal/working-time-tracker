@@ -27,7 +27,8 @@
         "invite_token": "",
         "label_id": "",
         "session_id": "",
-        "session_task_id": ""
+        "session_task_id": "",
+        "payout_id": ""
       }
     },
     {
@@ -441,6 +442,50 @@
         "mimeType": "application/json",
         "text": "{\n  \"weekly_hours\": 40\n}"
       }
+    },
+    {
+      "_id": "req_03_04",
+      "_type": "request",
+      "parentId": "fld_03",
+      "name": "Pagamentos da equipe (dono)",
+      "method": "GET",
+      "url": "{{base_url}}/api/orgs/{{org_id}}/payments",
+      "authentication": {},
+      "metaSortKey": 4,
+      "headers": [],
+      "body": {}
+    },
+    {
+      "_id": "req_03_05",
+      "_type": "request",
+      "parentId": "fld_03",
+      "name": "Dar baixa num pagamento (dono)",
+      "method": "POST",
+      "url": "{{base_url}}/api/orgs/{{org_id}}/payouts",
+      "authentication": {},
+      "metaSortKey": 5,
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"person_id\": \"{{person_id}}\",\n  \"start\": \"2026-10-06\",\n  \"pay_date\": \"2026-11-05\",\n  \"amount_cents\": 150000\n}"
+      }
+    },
+    {
+      "_id": "req_03_06",
+      "_type": "request",
+      "parentId": "fld_03",
+      "name": "Desfazer baixa (dono)",
+      "method": "DELETE",
+      "url": "{{base_url}}/api/orgs/{{org_id}}/payouts/{{payout_id}}",
+      "authentication": {},
+      "metaSortKey": 6,
+      "headers": [],
+      "body": {}
     },
     {
       "_id": "fld_04",
