@@ -43,8 +43,12 @@ func TestService_List(t *testing.T) {
 	cleanup(t)
 	svc := organization.NewService(organization.NewStore(testClient))
 
-	svc.Create("Org A")
-	svc.Create("Org B")
+	if _, err := svc.Create("Org A"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Create("Org B"); err != nil {
+		t.Fatal(err)
+	}
 
 	orgs, err := svc.List()
 	if err != nil {

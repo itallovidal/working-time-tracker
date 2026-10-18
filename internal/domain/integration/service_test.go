@@ -357,7 +357,7 @@ func TestService_RowFromBeforeMetadata(t *testing.T) {
 	}
 
 	res, err := svc.FetchItemDetails(id, "42")
-	if err != nil || res.Details != nil || res.Error == nil || !(res.Error.Code == "integration.field_required" && res.Error.Params["field"] == "repo") {
+	if err != nil || res.Details != nil || res.Error == nil || res.Error.Code != "integration.field_required" || res.Error.Params["field"] != "repo" {
 		t.Fatalf("fetch before the edit = %+v, %v; want the missing field as the reason", res, err)
 	}
 

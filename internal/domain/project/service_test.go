@@ -130,7 +130,9 @@ func TestService_OrgDeletionBlockedByProjects(t *testing.T) {
 	projSvc := project.NewService(project.NewStore(testClient))
 
 	org, _ := orgSvc.Create("Test Org")
-	projSvc.Create(org.ID.String(), "Project A", "", 0, project.Routine{})
+	if _, err := projSvc.Create(org.ID.String(), "Project A", "", 0, project.Routine{}); err != nil {
+		t.Fatal(err)
+	}
 
 	err := orgSvc.Delete(org.ID.String())
 	if err == nil {

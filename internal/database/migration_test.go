@@ -182,7 +182,7 @@ func TestMigrate_ForeignKeyDeleteRules(t *testing.T) {
 	if err != nil {
 		t.Fatalf("query constraints: %v", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }() // só leitura: o erro do Close não muda o teste
 
 	got := map[string]string{}
 	for rows.Next() {
@@ -387,7 +387,7 @@ func TestMigrate_SessionTasksMigrationKeepsTheOldSessions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("query the migrated sessions: %v", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }() // só leitura: o erro do Close não muda o teste
 	type migrated struct {
 		session, project, task uuid.UUID
 		from                   time.Time
@@ -674,7 +674,7 @@ func queryColumn[T any](t *testing.T, query string) []T {
 	if err != nil {
 		t.Fatalf("query: %v", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }() // só leitura: o erro do Close não muda o teste
 	var values []T
 	for rows.Next() {
 		var v T

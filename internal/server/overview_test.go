@@ -164,7 +164,7 @@ func TestPages_ProjectOverviewTab(t *testing.T) {
 			continue
 		}
 		asAdmin := do(e, "GET", path, "", admin.session).Body.String()
-		if !(strings.Contains(asAdmin, link) || strings.Contains(asAdmin, management)) || !strings.Contains(asAdmin, " Gestão</a>") {
+		if (!strings.Contains(asAdmin, link) && !strings.Contains(asAdmin, management)) || !strings.Contains(asAdmin, " Gestão</a>") {
 			t.Errorf("admin GET %s does not have the Gestão button", path)
 		}
 		if asMember := do(e, "GET", path, "", member.session).Body.String(); strings.Contains(asMember, "/management/") || strings.Contains(asMember, "Gestão") {

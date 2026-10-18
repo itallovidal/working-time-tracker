@@ -426,7 +426,8 @@ func (t *Trello) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if time.Now().Before(limited) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusTooManyRequests)
-			io.WriteString(w, `{"error":"API_TOKEN_LIMIT_EXCEEDED","message":"Rate limit exceeded"}`)
+			// O erro de escrita fica de fora: o pedido que caiu não tem a quem responder.
+			_, _ = io.WriteString(w, `{"error":"API_TOKEN_LIMIT_EXCEEDED","message":"Rate limit exceeded"}`)
 			return
 		}
 		if fault != nil {
@@ -487,7 +488,7 @@ var trelloIDPattern = regexp.MustCompile(`^[A-Za-z0-9]+$`)
 
 func trJSON(w http.ResponseWriter, v any) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	json.NewEncoder(w).Encode(v)
+	_ = json.NewEncoder(w).Encode(v) // o pedido que caiu não tem a quem responder
 }
 
 func (t *Trello) getMe(w http.ResponseWriter, r *http.Request) {

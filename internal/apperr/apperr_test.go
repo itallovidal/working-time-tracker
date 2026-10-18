@@ -25,7 +25,7 @@ func TestNew_RejectsBadCodes(t *testing.T) {
 					t.Errorf("New(%q) did not panic", code)
 				}
 			}()
-			apperr.New(code, 400)
+			_ = apperr.New(code, 400) // o que se testa é o panic
 		}()
 	}
 	defer func() {
@@ -33,7 +33,7 @@ func TestNew_RejectsBadCodes(t *testing.T) {
 			t.Error("a repeated code did not panic")
 		}
 	}()
-	apperr.New("sample.too_long", 400)
+	_ = apperr.New("sample.too_long", 400) // o que se testa é o panic
 }
 
 func TestError_IsAndWith(t *testing.T) {

@@ -43,11 +43,12 @@ func FakeGitLab() http.Handler {
 			http.Error(w, `{"message":"401 Unauthorized"}`, http.StatusUnauthorized)
 			return
 		}
+		// Os erros de escrita ficam de fora: o pedido que caiu não tem a quem responder.
 		switch r.URL.EscapedPath() {
 		case "/projects/group%2Fproject":
-			w.Write([]byte(`{"path_with_namespace":"group/project"}`))
+			_, _ = w.Write([]byte(`{"path_with_namespace":"group/project"}`))
 		case "/projects/group%2Fproject/issues/7":
-			w.Write([]byte(`{"title":"Ajustar relatório","state":"opened","web_url":"https://gitlab.com/group/project/-/issues/7"}`))
+			_, _ = w.Write([]byte(`{"title":"Ajustar relatório","state":"opened","web_url":"https://gitlab.com/group/project/-/issues/7"}`))
 		default:
 			http.Error(w, `{"message":"404 Not Found"}`, http.StatusNotFound)
 		}

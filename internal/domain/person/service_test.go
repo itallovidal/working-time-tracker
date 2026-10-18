@@ -42,7 +42,9 @@ func TestService_Create_DuplicateEmail(t *testing.T) {
 	svc := person.NewService(person.NewStore(testClient))
 
 	org, _ := orgSvc.Create("Test Org")
-	svc.Create(org.ID.String(), "John", "john@test.com")
+	if _, err := svc.Create(org.ID.String(), "John", "john@test.com"); err != nil {
+		t.Fatal(err)
+	}
 	_, err := svc.Create(org.ID.String(), "Jane", "john@test.com")
 	if err == nil {
 		t.Fatal("expected error for duplicate email, got nil")
@@ -79,8 +81,12 @@ func TestService_ListByOrg(t *testing.T) {
 	svc := person.NewService(person.NewStore(testClient))
 
 	org, _ := orgSvc.Create("Test Org")
-	svc.Create(org.ID.String(), "John", "john@test.com")
-	svc.Create(org.ID.String(), "Jane", "jane@test.com")
+	if _, err := svc.Create(org.ID.String(), "John", "john@test.com"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Create(org.ID.String(), "Jane", "jane@test.com"); err != nil {
+		t.Fatal(err)
+	}
 
 	persons, err := svc.ListByOrg(org.ID.String())
 	if err != nil {
@@ -114,7 +120,9 @@ func TestService_Update_EmailInUse(t *testing.T) {
 	svc := person.NewService(person.NewStore(testClient))
 
 	org, _ := orgSvc.Create("Org")
-	svc.Create(org.ID.String(), "Ana", "ana@test.com")
+	if _, err := svc.Create(org.ID.String(), "Ana", "ana@test.com"); err != nil {
+		t.Fatal(err)
+	}
 	bia, _ := svc.Create(org.ID.String(), "Bia", "bia@test.com")
 
 	if _, err := svc.Update(bia.ID.String(), "Bia", "ana@test.com"); !errors.Is(err, person.ErrEmailInUse) {
@@ -189,8 +197,12 @@ func TestService_SetRole_ConcurrentDemotionsKeepOneAdmin(t *testing.T) {
 		org, _ := orgSvc.Create("Org")
 		ana, _ := svc.Create(org.ID.String(), "Ana", "ana@test.com")
 		bia, _ := svc.Create(org.ID.String(), "Bia", "bia@test.com")
-		svc.SetRole(ana.ID.String(), person.RoleAdmin)
-		svc.SetRole(bia.ID.String(), person.RoleAdmin)
+		if _, err := svc.SetRole(ana.ID.String(), person.RoleAdmin); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := svc.SetRole(bia.ID.String(), person.RoleAdmin); err != nil {
+			t.Fatal(err)
+		}
 
 		errs := make([]error, 2)
 		var wg sync.WaitGroup
@@ -216,7 +228,8 @@ func TestService_SetRole_ConcurrentDemotionsKeepOneAdmin(t *testing.T) {
 		if admins != 1 {
 			t.Fatalf("round %d: %d admins left (errors: %v, %v), want 1", i, admins, errs[0], errs[1])
 		}
-		if !(errs[0] == nil && errs[1] == person.ErrLastAdmin) && !(errs[0] == person.ErrLastAdmin && errs[1] == nil) {
+		oneOfEach := (errs[0] == nil && errs[1] == person.ErrLastAdmin) || (errs[0] == person.ErrLastAdmin && errs[1] == nil)
+		if !oneOfEach {
 			t.Fatalf("round %d: errors = %v, %v; want one success and one ErrLastAdmin", i, errs[0], errs[1])
 		}
 	}
@@ -231,8 +244,12 @@ func TestOrganizationDelete_CascadesPersons(t *testing.T) {
 
 	org, _ := orgSvc.Create("Org")
 	other, _ := orgSvc.Create("Outra Org")
-	svc.Create(org.ID.String(), "Ana", "ana@test.com")
-	svc.Create(other.ID.String(), "Bia", "bia@test.com")
+	if _, err := svc.Create(org.ID.String(), "Ana", "ana@test.com"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Create(other.ID.String(), "Bia", "bia@test.com"); err != nil {
+		t.Fatal(err)
+	}
 
 	if err := orgSvc.Delete(org.ID.String()); err != nil {
 		t.Fatalf("delete organization with persons failed: %v", err)

@@ -967,7 +967,9 @@ func TestAPI_ActiveSessionAndProjectMembers(t *testing.T) {
 
 	rec = do(e, "GET", "/api/projects/"+projectID+"/members", "", admin.session)
 	var members []map[string]any
-	json.Unmarshal(rec.Body.Bytes(), &members)
+	if err := json.Unmarshal(rec.Body.Bytes(), &members); err != nil {
+		t.Fatalf("members = %s: %v", rec.Body.String(), err)
+	}
 	if len(members) != 1 || members[0]["id"] != admin.id {
 		t.Errorf("members = %s, want only the admin once (even though she is in two teams)", rec.Body.String())
 	}
