@@ -135,8 +135,9 @@ tarefa fica sem responsável, disponível para alguém pegar.
 
 ## Conferir sem o GitHub de verdade
 
-`go run ./cmd/fakegithub -addr :8091` sobe o GitHub falso dos testes (`testutil.GitHub`). Ele atende o site, com a
-autorização que já volta aceita, e a API no mesmo endereço, com issues de vários jeitos. Aponte o servidor para ele:
+`go run ./cmd/fakegithub -addr :8091` (ou `make fake-github`; `make fakes` sobe este e o Trello falso) sobe o GitHub
+falso dos testes (`testutil.GitHub`). Ele atende o site, com a autorização que já volta aceita, e a API no mesmo
+endereço, com issues de vários jeitos. Aponte o servidor para ele:
 
 ```bash
 GITHUB_URL=http://localhost:8091
