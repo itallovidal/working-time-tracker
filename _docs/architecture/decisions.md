@@ -646,6 +646,27 @@ case com ela: a baixa fica nos números dela e o período novo aparece como a pa
 cobria como restante. Não houve migração de dados: os períodos fechados antes da baixa existir aparecem como atrasados
 até o dono dar baixa neles.
 
+### Decisão 19: Deploy — uma imagem só com o servidor, o banco fora dela
+
+**Contexto:** o sistema vai ao ar para o dono e algumas pessoas, gastando o mínimo, sem um servidor para administrar:
+uma imagem Docker que uma plataforma roda. O dono escolheu o Supabase grátis para o banco e o Railway (ou o Fly.io)
+para o servidor.
+
+**Decisão:** a imagem tem só o binário, numa base distroless sem shell, rodando sem privilégios. O banco fica fora:
+dentro da imagem, cada deploy criaria um container novo sem os dados, e a maioria das plataformas não guarda disco. A
+conexão com o Supabase é pelo pooler em session mode, porque a direta só tem IPv6 e o transaction mode não aceita os
+prepared statements do pgx nem o advisory lock das migrações. O servidor roda numa **instância só, sempre ligada**: a
+sincronização roda no processo e o limite de tentativas do login é da memória. Três ajustes para isso: `PORT` quando
+não há `API_PORT`, `DB_MAX_CONNS` (o session mode recusa clientes além do pool) e `CLIENT_IP_HEADER`, porque atrás do
+proxy o IP da conexão é o dele e todo mundo dividiria o mesmo limite do login. O cabeçalho é um de um IP só, que o
+proxy reescreve; o `X-Forwarded-For`, que quem chama pode começar, é recusado.
+
+**Consequências:** duas réplicas sincronizariam em dobro e dividiriam mal o limite do login, então escalar pede tirar
+os dois do processo. Plataformas que desligam o container sem tráfego param a sincronização. Uma versão anterior não
+sobe num banco com uma migração que ela não conhece, então voltar uma versão por cima de uma migração não funciona: a
+saída é subir uma versão nova. O plano grátis do Supabase pausa depois de uma semana sem uso e não tem backup, que fica
+por conta do `pg_dump`. Ver [Deploy](../getting-started/deploy.md).
+
 ## Riscos e trade-offs
 
 - **Limite de requisições das plataformas.** Buscar detalhes e sincronizar gasta a cota de cada plataforma. →

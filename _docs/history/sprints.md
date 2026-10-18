@@ -1035,6 +1035,16 @@
 - [X] S96.14 The hours tracked after a payout are the remainder of the period: it comes back to Próximos pagamentos with only them (`rest` and `paid_cents`; "restante" and "pago R$ X" on the screen), counts in the cards and takes another payout that covers just that (`seq`, a new column with the migration `payout_seq`, unique with the person and the period, so two payouts at once cannot pay the same remainder); with nothing after the last payout, `payment.already_paid`, and undoing a payout returns what it covered. Before, those hours showed only in Pagos recentemente and were gone after 30 days
 - [X] S96.15 Checked in the browser (seeded throwaway instance on 8090) as the owner (Ana): Dar baixa on Bruno's running period with his clock open; the remainder came back as "em andamento · restante" with "pago R$ 3.234,74", and Dar baixa on it recorded `seq` 1, shown as "restante" in Pagos recentemente; both tables fit 1280px without a horizontal scroll
 
+### Sprint 97: Deploy Image
+
+- [X] S97.1 `Dockerfile` (multi-stage: the binary built with `CGO_ENABLED=0` on `golang:1.26-alpine`, run on `distroless/static-debian12:nonroot`, with the certificates and the time zones, `PORT=8080`) and `.dockerignore` (`.env`, `.git`, `.claude`, `_docs`, `_test`); the database stays out of the image
+- [X] S97.2 `PORT` is the port when `API_PORT` is not set: the platforms that run the image say the port there
+- [X] S97.3 `DB_MAX_CONNS` caps the open connections (default 10): the Supabase session pooler refuses clients beyond its pool size; `0`, negative or not a number stops the start
+- [X] S97.4 `CLIENT_IP_HEADER` (`X-Real-IP` on Railway, `Fly-Client-IP` on Fly.io): behind a proxy the login rate limit counted every request as the proxy's IP, so one person failing the password locked everyone out; the header is read only when set, a value that is not an IP falls back to the connection address, and `X-Forwarded-For` stops the start (a list the caller can start). The request log shows the same IP. The `server` log line shows the port, `db_max_conns` and where the IP comes from
+- [X] S97.5 Tests: `TestLoad_Port`, `TestLoad_DBMaxConns`, `TestLoad_ClientIPHeader` and `TestAuthRateLimit_ClientIPHeader` (behind the proxy one person hits 429 and another still gets through; without the header a made-up `X-Real-IP` does not escape the limit)
+- [X] S97.6 `_docs/getting-started/deploy.md` (the diagram, the costs, the image, the Supabase database through the session pooler with the Data API off, the production variables, Railway and Fly.io, updating and rolling back, which does not cross a migration, and the common problems), Decision 19, `configuration.md`, `security.md`, `.env.example` and the README
+- [X] S97.7 Checked with Docker: the image (43 MB) built and ran on a throwaway database with `--env-file .env -e API_PORT=`, applied the 27 migrations from scratch, answered `/healthcheck` and `/login` with 200 as the non-root user, and logged `remote_ip` from `X-Real-IP`
+
 ---
 
 ### Seed with a Full Demo
