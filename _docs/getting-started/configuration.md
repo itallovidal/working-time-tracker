@@ -48,4 +48,4 @@ Estas não são lidas pelo servidor.
 |---|---|---|
 | `TEST_DATABASE_URL` | `go test` | O banco dos testes. O nome precisa terminar em `_test`. Ver [Fluxo de trabalho](../development/workflow.md) |
 | `UPDATE_ERROR_DOCS` | `go test ./internal/server` | Qualquer valor regrava o [`_docs/api/errors.md`](../api/errors.md) em vez de compará-lo |
-| `POSTGRES_PORT` | `docker compose` | A porta do Postgres na sua máquina. Padrão: `5432` |
+| `POSTGRES_PORT` | `docker compose` e o `Makefile` | A porta do Postgres na sua máquina, do ambiente ou do `.env`. Padrão: `5432` |

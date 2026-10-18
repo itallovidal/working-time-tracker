@@ -1,14 +1,15 @@
 # Fluxo de trabalho
 
 Como rodar os testes e como mudar o banco. Para subir o sistema, ver [Instalação](../getting-started/installation.md).
+Os atalhos do `make` usados aqui, e o que cada um roda por baixo, estão em [Comandos](commands.md).
 
 ## Testes
 
 Os testes usam um **PostgreSQL de verdade**, o banco `working_time_tracker_test` que o `docker compose` cria. O Go não
-lê o `.env`, então carregue-o antes:
+lê o `.env`, e o `make test` o carrega antes:
 
 ```bash
-set -a && source .env && set +a && go test -p 1 ./...
+make test    # por baixo: set -a && source .env && set +a && go test -p 1 ./...
 ```
 
 - **Cada pacote recria o banco.** Antes de rodar, o pacote apaga o schema e aplica as migrações de novo
@@ -22,13 +23,11 @@ set -a && source .env && set +a && go test -p 1 ./...
   de alguém. As plataformas são fakes em `testutil`: o GitHub (`github.go`) e o Trello (`trello.go`), com estado, o
   GitLab (`platforms.go`) e a Backend API do Clerk (`clerkapi.go`).
 
-A suíte inteira leva alguns minutos. Para achar as falhas numa saída longa, grave-a num arquivo e filtre:
+A suíte inteira leva alguns minutos. O `make test` grava a saída em `/tmp/wtt-test.log` e mostra só o resumo: o
+resultado de cada pacote, os testes que falharam e a mensagem de cada falha. `make check` passa antes o `gofmt` e o
+`go vet`.
 
-```bash
-set -a && source .env && set +a && go test -p 1 ./... > /tmp/wtt-test.log 2>&1; grep -E '^(--- FAIL|FAIL|ok )' /tmp/wtt-test.log
-```
-
-Um pacote só: `go test -p 1 ./internal/domain/task -run TestNome`.
+Um pacote só, com a saída inteira: `make test-pkg pkg=./internal/domain/task run=TestNome`.
 
 ### O que a suíte cobre
 
@@ -44,7 +43,7 @@ Um pacote só: `go test -p 1 ./internal/domain/task -run TestNome`.
 
 ### Arquivos gerados
 
-Três coisas no repositório são geradas e vão no mesmo commit da mudança que as alterou:
+Três coisas no repositório são geradas e vão no mesmo commit da mudança que as alterou. `make generate` regera as três:
 
 | Arquivo | Como regerar |
 |---|---|
@@ -55,8 +54,9 @@ Três coisas no repositório são geradas e vão no mesmo commit da mudança que
 ### Plataformas falsas para desenvolver
 
 Os fakes do GitHub e do Trello também sobem como servidores, com um painel em `/_fake` para mexer nos itens como se
-fosse outra pessoa: `go run ./cmd/fakegithub -addr :8091` e `go run ./cmd/faketrello -addr :8092`. Como apontar o
-sistema para eles está em [GitHub](../integrations/github.md) e [Trello](../integrations/trello.md).
+fosse outra pessoa: `make fakes` sobe os dois (`go run ./cmd/fakegithub -addr :8091` e
+`go run ./cmd/faketrello -addr :8092`). Como apontar o sistema para eles está em [GitHub](../integrations/github.md) e
+[Trello](../integrations/trello.md).
 
 ## Migrações
 
@@ -69,21 +69,20 @@ O `ent/schema` continua sendo a **fonte do modelo**, e os arquivos são gerados 
 
 ```mermaid
 flowchart TD
-    A["Editar ent/schema"] --> B["go generate ./ent"]
-    B --> C["go run ./cmd/migrate new nome"]
-    C --> D["Revisar o SQL gerado"]
-    D -- "editou à mão" --> E["go run ./cmd/migrate checksum"]
-    D -- "não editou" --> F["Rodar os testes"]
+    A["Editar ent/schema"] --> B["make migrate-new name=nome<br/>(go generate ./ent e migrate new)"]
+    B --> D["Revisar o SQL gerado"]
+    D -- "editou à mão" --> E["make migrate-checksum"]
+    D -- "não editou" --> F["make check"]
     E --> F
     F --> G["Commit: ent/schema, código gerado e migração juntos"]
 ```
 
-| Comando | O que faz |
-|---|---|
-| `go run ./cmd/migrate new <nome>` | Gera um arquivo com a diferença entre o que as migrações produzem e o `ent/schema`. Cria um banco temporário no servidor do `DATABASE_URL`, aplica nele as migrações do mesmo jeito que o servidor e o apaga ao terminar, sem tocar no seu |
-| `go run ./cmd/migrate checksum` | Recalcula o `atlas.sum` depois de uma edição à mão |
-| `go run ./cmd/migrate status` | Lista as migrações e quais já foram aplicadas no banco do `DATABASE_URL` |
-| `go run ./cmd/migrate up` | Aplica as pendentes sem subir o servidor |
+| Atalho | Comando | O que faz |
+|---|---|---|
+| `make migrate-new name=<nome>` | `go generate ./ent` e `go run ./cmd/migrate new <nome>` | Gera um arquivo com a diferença entre o que as migrações produzem e o `ent/schema`. Cria um banco temporário no servidor do `DATABASE_URL`, aplica nele as migrações do mesmo jeito que o servidor e o apaga ao terminar, sem tocar no seu |
+| `make migrate-checksum` | `go run ./cmd/migrate checksum` | Recalcula o `atlas.sum` depois de uma edição à mão |
+| `make migrate-status` | `go run ./cmd/migrate status` | Lista as migrações e quais já foram aplicadas no banco do `DATABASE_URL` |
+| `make migrate-up` | `go run ./cmd/migrate up` | Aplica as pendentes sem subir o servidor |
 
 ### Revise sempre o arquivo gerado
 
@@ -123,6 +122,6 @@ docker compose exec db psql -U wtt -d postgres \
 go run ./cmd/seed
 ```
 
-Isso apaga os dados desse banco. Para mantê-los, guarde-os antes com `pg_dump --data-only`, recrie o banco, rode
-`go run ./cmd/migrate up` no lugar do seed e restaure o dump. Só funciona se o banco antigo estava com o schema da
-versão que introduziu as migrações.
+`make db-reset` faz o mesmo e pede confirmação antes. Isso apaga os dados desse banco. Para mantê-los, guarde-os antes
+com `pg_dump --data-only`, recrie o banco, rode `make migrate-up` no lugar do seed e restaure o dump. Só funciona se o
+banco antigo estava com o schema da versão que introduziu as migrações.

@@ -45,7 +45,8 @@ docker run --rm -p 8080:8080 --env-file .env -e API_PORT= \
 ```
 
 O `-e API_PORT=` deixa valer a porta da imagem (`PORT=8080`), e o `host.docker.internal` é o Postgres do
-`docker compose` visto de dentro do container. O Railway e o Fly.io constroem a imagem a partir do `Dockerfile`; não
+`docker compose` visto de dentro do container. `make image-run` faz os dois passos (`port=` troca a porta da sua
+máquina). O Railway e o Fly.io constroem a imagem a partir do `Dockerfile`; não
 precisa publicá-la num registro.
 
 ## O banco no Supabase
@@ -67,11 +68,14 @@ O plano Free tem 500 MB de banco, que sobram para o ponto de algumas pessoas, e 
 
 - **Pausa depois de uma semana sem uso.** O Supabase avisa por email antes; os dados ficam e o projeto volta pelo
   painel, mas enquanto ele está pausado o sistema não abre.
-- **Não tem backup.** Faça um de tempos em tempos, da sua máquina:
+- **Não tem backup.** Faça um de tempos em tempos, da sua máquina, com a URL do Supabase:
 
   ```bash
-  pg_dump "$DATABASE_URL" -Fc -f wtt-$(date +%F).dump
+  make backup url="postgresql://…"    # pg_dump -Fc em backups/wtt-AAAA-MM-DD-HHMM.dump
   ```
+
+  A pasta `backups/` fica fora do git e da imagem. Como restaurar está em
+  [Comandos](../development/commands.md#build-e-deploy).
 
 Nunca aponte o `TEST_DATABASE_URL` para o Supabase: cada pacote de teste apaga o schema do banco dele.
 
@@ -175,7 +179,7 @@ O servidor aplica as migrações novas ao subir, e cada uma roda numa transaçã
 e o servidor não sobe. **Voltar por cima de uma migração não funciona:** uma versão anterior recusa um banco com uma
 migração que ela não conhece (`database has a migration this build does not know`). Em produção, ignore a dica da
 mensagem de recriar o banco, que é para o banco de desenvolvimento: corrija e suba uma versão nova. Antes de um deploy
-com migração, faça o `pg_dump`.
+com migração, faça o `make backup`.
 
 ## Problemas comuns
 

@@ -5,4 +5,6 @@
 _docs
 _test
 /wtt
+/.air
+/backups
 **/.DS_Store
