@@ -57,7 +57,7 @@ Sem o seed, clique em **Crie uma organização** na tela de login. A porta ocupa
 o seed cria estão em [Instalação](_docs/getting-started/installation.md) e [Configuração](_docs/getting-started/configuration.md).
 
 Os testes usam um PostgreSQL de verdade. `make test` carrega o `.env`, roda a suíte e mostra só o resumo, e
-`make check` passa antes o `gofmt` e o `go vet`:
+`make check` passa antes o `gofmt`, o `go vet` e o `golangci-lint`:
 
 ```bash
 make test

@@ -94,8 +94,8 @@ Revise sempre o SQL gerado. As regras (rename, coluna `NOT NULL` nova, a ordem d
 | `make test` | `go test -p 1 ./...`, com o `.env` carregado | Grava a saída em `/tmp/wtt-test.log` e mostra só o resumo |
 | `make test-pkg pkg=<pacote>` | `go test -p 1 <pacote>`, com o `.env` carregado | A saída vai inteira para o terminal. `run=TestNome` roda só os testes cujo nome bate (é o `-run` do Go) |
 | `make generate` | `go generate ./ent`, `go run ./cmd/migrate checksum` e `UPDATE_ERROR_DOCS=1 go test ./internal/server -run ErrorCodesDoc -count=1` | Os três [arquivos gerados](workflow.md#arquivos-gerados), que vão no commit da mudança que os alterou |
-| `make check` | `gofmt -l .`, `go vet ./...` e o `make test` | Para no primeiro que falhar |
-| `make lint` | `golangci-lint run ./...` | Fora do `check`: o código ainda tem problemas antigos que ele aponta, a maioria de `errcheck` |
+| `make check` | `gofmt -l .`, `go vet ./...`, o `make lint` e o `make test` | Para no primeiro que falhar |
+| `make lint` | `golangci-lint run ./...` | A configuração padrão do golangci-lint v2: o projeto não tem `.golangci.yml` |
 
 O resumo do `make test` tem uma linha por pacote (`ok` ou `FAIL`), o nome de cada teste que falhou e a mensagem da
 falha (`arquivo_test.go:123: ...`). O resto, como o log das requisições, fica no arquivo.
@@ -103,6 +103,13 @@ falha (`arquivo_test.go:123: ...`). O resto, como o log das requisições, fica 
 O Go guarda o resultado de cada pacote, e numa segunda rodada só os pacotes que mudaram rodam de novo: o resumo mostra
 `(cached)` nos outros. Para rodar tudo do zero, `go clean -testcache` antes. O `-p 1` e o banco dos testes estão
 explicados em [Fluxo de trabalho](workflow.md#testes).
+
+O golangci-lint mostra no máximo 3 avisos iguais e 50 de cada linter, e o total que ele imprime no fim conta só os
+que mostrou. Para ver todos de uma vez, como depois de um merge grande:
+
+```bash
+golangci-lint run --max-issues-per-linter=0 --max-same-issues=0 ./...
+```
 
 ## Build e deploy
 

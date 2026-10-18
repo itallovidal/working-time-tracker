@@ -10,6 +10,8 @@ Como subir o Working Time Tracker na sua máquina, com ou sem os dados de demons
   para ele.
 - **make**, que já vem no macOS e no Linux, para os atalhos do [`Makefile`](../../Makefile). Sem ele, os comandos
   equivalentes estão logo abaixo e em [Comandos](../development/commands.md).
+- **golangci-lint v2**, só para o `make check` e o `make lint` (`brew install golangci-lint`; os outros jeitos estão em
+  [golangci-lint.run](https://golangci-lint.run/welcome/install/)).
 
 ## Passo a passo
 
