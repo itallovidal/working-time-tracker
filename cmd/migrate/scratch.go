@@ -22,7 +22,7 @@ func createScratch(ctx context.Context, dsn string) (*sql.DB, func(), error) {
 
 	name := fmt.Sprintf("wtt_migrate_%d", time.Now().UnixNano())
 	if _, err := admin.ExecContext(ctx, "CREATE DATABASE "+name+" TEMPLATE template0"); err != nil {
-		admin.Close()
+		_ = admin.Close() // o erro que importa é o do CREATE DATABASE
 		return nil, nil, fmt.Errorf("criando o banco temporário %s: %w", name, err)
 	}
 
@@ -31,12 +31,12 @@ func createScratch(ctx context.Context, dsn string) (*sql.DB, func(), error) {
 	scratch := stdlib.OpenDB(*scratchCfg)
 
 	cleanup := func() {
-		scratch.Close()
+		_ = scratch.Close() // o DROP com FORCE logo abaixo derruba o que tiver ficado aberto
 		// Contexto próprio: a limpeza tem de rodar mesmo se o comando foi interrompido.
 		if _, err := admin.ExecContext(context.Background(), "DROP DATABASE IF EXISTS "+name+" WITH (FORCE)"); err != nil {
 			fmt.Printf("aviso: não consegui apagar o banco temporário %s: %v\n", name, err)
 		}
-		admin.Close()
+		_ = admin.Close() // fim da limpeza: não há o que fazer com o erro
 	}
 	return scratch, cleanup, nil
 }

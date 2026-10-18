@@ -114,7 +114,7 @@ func (s *Store) SetRole(id, role string) (*Person, error) {
 		return nil, err
 	}
 	rollback := func(err error) (*Person, error) {
-		tx.Rollback()
+		_ = tx.Rollback() // o erro que volta é o que motivou desfazer
 		return nil, err
 	}
 

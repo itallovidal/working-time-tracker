@@ -74,7 +74,7 @@ func (s *Store) Remove(projectID, personID uuid.UUID) error {
 		return err
 	}
 	rollback := func(err error) error {
-		tx.Rollback()
+		_ = tx.Rollback() // o erro que volta é o que motivou desfazer
 		return err
 	}
 

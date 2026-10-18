@@ -85,7 +85,7 @@ func (o *GitHubOAuth) Exchange(code string) (string, error) {
 	if err != nil {
 		return "", ErrProviderUnreachable.With("provider", "GitHub").Wrap(err)
 	}
-	defer resp.Body.Close()
+	defer closeBody(resp)
 	if resp.StatusCode != http.StatusOK {
 		return "", ErrProviderStatus.With("provider", "GitHub", "status", resp.StatusCode)
 	}

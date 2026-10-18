@@ -97,21 +97,19 @@ func (h *OAuthHandler) errorCode(c *echo.Context, flow oauthFlow, err error) str
 
 // begin é o começo comum da conexão: confere a reconexão (?integration=<id> tem de ser uma integração
 // deste tipo e deste projeto), sorteia o state e grava o cookie. Devolve o state para ir na ida; quando
-// algo falha, já respondeu a pessoa e devolve ok falso.
-func (h *OAuthHandler) begin(c *echo.Context, flow oauthFlow, back string) (state string, ok bool) {
+// algo falha, já respondeu a pessoa e devolve ok falso, com o erro dessa resposta.
+func (h *OAuthHandler) begin(c *echo.Context, flow oauthFlow, back string) (state string, ok bool, err error) {
 	projectID := c.Param("projectId")
 	integrationID := c.QueryParam("integration")
 	if integrationID != "" {
 		it, err := h.svc.Get(integrationID)
 		if err != nil || it.ProjectID.String() != projectID || it.Type != flow.typ {
-			h.failBack(c, flow, back, ErrNotFound)
-			return "", false
+			return "", false, h.failBack(c, flow, back, ErrNotFound)
 		}
 	}
-	state, err := randomState()
+	state, err = randomState()
 	if err != nil {
-		h.failBack(c, flow, back, err)
-		return "", false
+		return "", false, h.failBack(c, flow, back, err)
 	}
 	value, err := h.seal(oauthClaims{
 		Type:          flow.typ,
@@ -122,8 +120,7 @@ func (h *OAuthHandler) begin(c *echo.Context, flow oauthFlow, back string) (stat
 		Expires:       time.Now().Add(oauthTTL).Unix(),
 	})
 	if err != nil {
-		h.failBack(c, flow, back, err)
-		return "", false
+		return "", false, h.failBack(c, flow, back, err)
 	}
 	c.SetCookie(&http.Cookie{
 		Name:     oauthCookie,
@@ -134,7 +131,7 @@ func (h *OAuthHandler) begin(c *echo.Context, flow oauthFlow, back string) (stat
 		Secure:   h.cookieSecure,
 		SameSite: http.SameSiteLaxMode,
 	})
-	return state, true
+	return state, true, nil
 }
 
 // GitHubConnect começa a conexão: grava o cookie e manda a pessoa para o GitHub. A
@@ -145,9 +142,9 @@ func (h *OAuthHandler) GitHubConnect(c *echo.Context) error {
 	if !h.github.Configured() {
 		return h.failBack(c, githubFlow, back, adapter.ErrGitHubOAuthNotConfigured)
 	}
-	state, ok := h.begin(c, githubFlow, back)
+	state, ok, err := h.begin(c, githubFlow, back)
 	if !ok {
-		return nil
+		return err
 	}
 	return c.Redirect(http.StatusFound, h.github.AuthorizeURL(state))
 }

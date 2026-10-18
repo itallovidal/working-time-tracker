@@ -157,7 +157,7 @@ func trelloCheck(resp *http.Response, errs trelloErrs) error {
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		return nil
 	}
-	defer resp.Body.Close()
+	defer closeBody(resp)
 	raw, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
 	message := strings.ToLower(string(raw))
 	if strings.Contains(message, "too_many_cards") {
@@ -194,7 +194,7 @@ func trelloCheck(resp *http.Response, errs trelloErrs) error {
 
 // trelloDecode lê o corpo JSON e o fecha.
 func trelloDecode(resp *http.Response, into any) error {
-	defer resp.Body.Close()
+	defer closeBody(resp)
 	if err := json.NewDecoder(io.LimitReader(resp.Body, trelloBodyLimit)).Decode(into); err != nil {
 		return ErrUnexpectedResponse.With("provider", "Trello").Wrap(err)
 	}
@@ -583,7 +583,7 @@ func (t *TrelloIntegration) RemoveItem(ctx context.Context, conn Connection, id 
 		}
 		return "", err
 	}
-	resp.Body.Close()
+	closeBody(resp)
 	return RemoveArchived, nil
 }
 
@@ -707,7 +707,7 @@ func (t *TrelloIntegration) CreateLabel(ctx context.Context, conn Connection, na
 	if err := trelloCheck(resp, trelloErrs{NotFound: ErrTrelloBoardMissing, Denied: ErrForbidden.With("provider", "Trello")}); err != nil {
 		return err
 	}
-	resp.Body.Close()
+	closeBody(resp)
 	return nil
 }
 

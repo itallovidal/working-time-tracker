@@ -332,7 +332,7 @@ var openNow = []struct {
 }
 
 func main() {
-	godotenv.Load()
+	_ = godotenv.Load() // o .env é opcional: sem ele valem as variáveis do ambiente
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {
 		log.Fatal("defina DATABASE_URL (veja o .env.example)")

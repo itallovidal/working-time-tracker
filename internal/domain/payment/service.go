@@ -238,23 +238,6 @@ func newSummary(p *person.Person, tz string, now time.Time) *Summary {
 	}
 }
 
-// sinceFor é o começo do período mais antigo do histórico: de onde as sessões interessam.
-func sinceFor(rule person.PaymentRule, now time.Time, history int, loc *time.Location) time.Time {
-	cur, ok := PeriodAt(rule, now, loc)
-	if !ok {
-		return now
-	}
-	start := cur.Start
-	for i := 0; i < history; i++ {
-		prev, ok := Previous(cur)
-		if !ok {
-			break
-		}
-		cur, start = prev, prev.Start
-	}
-	return start
-}
-
 type sum struct {
 	seconds float64
 	cents   int

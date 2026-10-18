@@ -47,7 +47,7 @@ func main() {
 	mux.HandleFunc("GET /_fake/cards", func(w http.ResponseWriter, r *http.Request) { write(w, fake.Cards(board)) })
 	mux.HandleFunc("POST /_fake/cards", func(w http.ResponseWriter, r *http.Request) {
 		var in patch
-		json.NewDecoder(r.Body).Decode(&in)
+		read(r, &in)
 		c := testutil.TrelloCard{}
 		in.apply(fake, &c)
 		write(w, map[string]string{"id": fake.AddCard(c), "note": "use o link curto no painel"})
@@ -59,7 +59,7 @@ func main() {
 			return
 		}
 		var in patch
-		json.NewDecoder(r.Body).Decode(&in)
+		read(r, &in)
 		fake.EditCard(id, func(c *testutil.TrelloCard) { in.apply(fake, c) })
 		write(w, map[string]bool{"ok": true})
 	})
@@ -69,7 +69,7 @@ func main() {
 	})
 	mux.HandleFunc("POST /_fake/cards/{id}/move", func(w http.ResponseWriter, r *http.Request) {
 		var in struct{ Board string }
-		json.NewDecoder(r.Body).Decode(&in)
+		read(r, &in)
 		if in.Board == "" {
 			in.Board = testutil.TrelloOtherBoardID
 		}
@@ -82,19 +82,19 @@ func main() {
 	})
 	mux.HandleFunc("POST /_fake/write", func(w http.ResponseWriter, r *http.Request) {
 		var in struct{ Write bool }
-		json.NewDecoder(r.Body).Decode(&in)
+		read(r, &in)
 		fake.SetWrite(board, in.Write)
 		write(w, map[string]bool{"ok": true})
 	})
 	mux.HandleFunc("POST /_fake/revoke", func(w http.ResponseWriter, r *http.Request) {
 		var in struct{ Token string }
-		json.NewDecoder(r.Body).Decode(&in)
+		read(r, &in)
 		fake.RevokeToken(in.Token)
 		write(w, map[string]bool{"ok": true})
 	})
 	mux.HandleFunc("POST /_fake/deny", func(w http.ResponseWriter, r *http.Request) {
 		var in struct{ Deny bool }
-		json.NewDecoder(r.Body).Decode(&in)
+		read(r, &in)
 		fake.DenyAuthorization(in.Deny)
 		write(w, map[string]bool{"ok": true})
 	})
@@ -152,9 +152,15 @@ func labelID(fake *testutil.Trello, name string) string {
 	return fake.AddLabel(board, name, "sky")
 }
 
+// read lê o corpo de um pedido do painel. O corpo vazio, ou que não é JSON, deixa os campos com o valor
+// zero: a rota segue com eles, e o erro fica de fora.
+func read(r *http.Request, into any) { _ = json.NewDecoder(r.Body).Decode(into) }
+
 func write(w http.ResponseWriter, v any) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(v)
+	if err := json.NewEncoder(w).Encode(v); err != nil {
+		log.Printf("writing response: %v", err)
+	}
 }
 
 // seed deixa o quadro com cartões de vários jeitos: com e sem data, com Markdown, com etiqueta só de cor,

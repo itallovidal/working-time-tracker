@@ -107,7 +107,7 @@ func (g *GitHubIntegration) Validate(conn Connection) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer closeBody(resp)
 
 	switch resp.StatusCode {
 	case http.StatusOK:
@@ -135,7 +135,7 @@ func (g *GitHubIntegration) FetchItemDetails(conn Connection, itemID string) (*I
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer closeBody(resp)
 
 	if resp.StatusCode == http.StatusUnauthorized {
 		return nil, ErrInvalidToken.With("provider", "GitHub")
@@ -170,7 +170,7 @@ func (g *GitHubIntegration) Account(conn Connection) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer closeBody(resp)
 
 	switch resp.StatusCode {
 	case http.StatusOK:
@@ -196,7 +196,7 @@ func (g *GitHubIntegration) ListRepositories(conn Connection) ([]Repository, err
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer closeBody(resp)
 
 	switch resp.StatusCode {
 	case http.StatusOK:

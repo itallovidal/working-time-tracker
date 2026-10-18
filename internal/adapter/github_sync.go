@@ -103,7 +103,7 @@ func check(resp *http.Response, missing error) error {
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		return nil
 	}
-	defer resp.Body.Close()
+	defer closeBody(resp)
 	message, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
 	switch resp.StatusCode {
 	case http.StatusUnauthorized:
@@ -159,7 +159,7 @@ func remaining(resp *http.Response) int {
 
 // decode lê o corpo JSON e o fecha.
 func decode(resp *http.Response, into any) error {
-	defer resp.Body.Close()
+	defer closeBody(resp)
 	if err := json.NewDecoder(io.LimitReader(resp.Body, githubBodyLimit)).Decode(into); err != nil {
 		return ErrUnexpectedResponse.With("provider", "GitHub").Wrap(err)
 	}
@@ -402,7 +402,7 @@ func (g *GitHubIntegration) CreateIssue(ctx context.Context, conn Connection, in
 	}
 	// 410 é o repositório com as issues desligadas; o check trataria como "não achei".
 	if resp.StatusCode == http.StatusGone {
-		resp.Body.Close()
+		closeBody(resp)
 		return nil, ErrIssuesDisabled.With("provider", "GitHub")
 	}
 	if err := check(resp, ErrGitHubRepoNotFound); err != nil {
@@ -570,13 +570,13 @@ func (g *GitHubIntegration) CreateLabel(ctx context.Context, conn Connection, na
 	}
 	// 422 é a etiqueta que já existe (criada por outra rodada, ou com outra caixa): serve.
 	if resp.StatusCode == http.StatusUnprocessableEntity {
-		resp.Body.Close()
+		closeBody(resp)
 		return nil
 	}
 	if err := check(resp, ErrGitHubRepoNotFound); err != nil {
 		return err
 	}
-	resp.Body.Close()
+	closeBody(resp)
 	return nil
 }
 
@@ -592,7 +592,7 @@ func (g *GitHubIntegration) UserEmail(ctx context.Context, conn Connection, logi
 		return "", err
 	}
 	if resp.StatusCode == http.StatusNotFound {
-		resp.Body.Close()
+		closeBody(resp)
 		return "", nil
 	}
 	if err := check(resp, nil); err != nil {
