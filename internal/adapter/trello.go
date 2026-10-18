@@ -177,7 +177,7 @@ func (t *TrelloIntegration) Validate(conn Connection) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer closeBody(resp)
 
 	switch resp.StatusCode {
 	case http.StatusOK:
@@ -210,7 +210,7 @@ func (t *TrelloIntegration) FetchItemDetails(conn Connection, itemID string) (*I
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer closeBody(resp)
 
 	if resp.StatusCode == http.StatusUnauthorized {
 		return nil, ErrTrelloNoAccessCard

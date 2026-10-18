@@ -103,7 +103,7 @@ func checkHistory(ctx context.Context, db *sql.DB, sources []*goose.Source) erro
 		if err != nil {
 			return fmt.Errorf("reading migration history: %w", err)
 		}
-		defer rows.Close()
+		defer func() { _ = rows.Close() }() // o erro da leitura vem do rows.Err abaixo
 		for rows.Next() {
 			var v int64
 			if err := rows.Scan(&v); err != nil {

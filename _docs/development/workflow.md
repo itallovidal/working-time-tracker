@@ -24,8 +24,8 @@ make test    # por baixo: set -a && source .env && set +a && go test -p 1 ./...
   GitLab (`platforms.go`) e a Backend API do Clerk (`clerkapi.go`).
 
 A suíte inteira leva alguns minutos. O `make test` grava a saída em `/tmp/wtt-test.log` e mostra só o resumo: o
-resultado de cada pacote, os testes que falharam e a mensagem de cada falha. `make check` passa antes o `gofmt` e o
-`go vet`.
+resultado de cada pacote, os testes que falharam e a mensagem de cada falha. `make check` passa antes o `gofmt`, o
+`go vet` e o `golangci-lint`.
 
 Um pacote só, com a saída inteira: `make test-pkg pkg=./internal/domain/task run=TestNome`.
 

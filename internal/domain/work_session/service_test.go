@@ -209,7 +209,9 @@ func TestService_ClockIn_StartsTheTask(t *testing.T) {
 		if got := status(fresh.ID.String()); got != "in_progress" {
 			t.Errorf("status after clocking in on a %s task = %q, want in_progress", from, got)
 		}
-		wsSvc.ClockOut(pid, ana.ID.String())
+		if _, err := wsSvc.ClockOut(pid, ana.ID.String()); err != nil {
+			t.Fatal(err)
+		}
 	}
 }
 
@@ -224,7 +226,9 @@ func TestService_ClockOut_Success(t *testing.T) {
 	task1, _ := taskSvc.Create(proj.ID.String(), "Task", "", p.ID.String(), nil)
 	setRate(t, proj.ID.String(), p.ID.String(), 2000)
 
-	wsSvc.ClockIn(proj.ID.String(), task1.ID.String(), p.ID.String())
+	if _, err := wsSvc.ClockIn(proj.ID.String(), task1.ID.String(), p.ID.String()); err != nil {
+		t.Fatal(err)
+	}
 	time.Sleep(time.Millisecond)
 
 	session, err := wsSvc.ClockOut(proj.ID.String(), p.ID.String())
@@ -277,7 +281,9 @@ func TestService_OverlappingSessionRejected(t *testing.T) {
 	taskB, _ := taskSvc.Create(proj.ID.String(), "Task B", "", p.ID.String(), nil)
 	setRate(t, proj.ID.String(), p.ID.String(), 2000)
 
-	wsSvc.ClockIn(proj.ID.String(), taskA.ID.String(), p.ID.String())
+	if _, err := wsSvc.ClockIn(proj.ID.String(), taskA.ID.String(), p.ID.String()); err != nil {
+		t.Fatal(err)
+	}
 	_, err := wsSvc.ClockIn(proj.ID.String(), taskB.ID.String(), p.ID.String())
 	if err == nil {
 		t.Fatal("expected error for overlapping session, got nil")
@@ -295,9 +301,13 @@ func TestService_TotalTime(t *testing.T) {
 	task1, _ := taskSvc.Create(proj.ID.String(), "Task", "", p.ID.String(), nil)
 	setRate(t, proj.ID.String(), p.ID.String(), 2000)
 
-	wsSvc.ClockIn(proj.ID.String(), task1.ID.String(), p.ID.String())
+	if _, err := wsSvc.ClockIn(proj.ID.String(), task1.ID.String(), p.ID.String()); err != nil {
+		t.Fatal(err)
+	}
 	time.Sleep(time.Millisecond)
-	wsSvc.ClockOut(proj.ID.String(), p.ID.String())
+	if _, err := wsSvc.ClockOut(proj.ID.String(), p.ID.String()); err != nil {
+		t.Fatal(err)
+	}
 
 	taskID := task1.ID.String()
 	personID := p.ID.String()
@@ -414,7 +424,9 @@ func TestService_RateIsSnapshottedAtClockIn(t *testing.T) {
 	if first.PayRateCents == nil || *first.PayRateCents != 2000 || first.BillRateCents != nil {
 		t.Errorf("first session rates = %v / %v, want 2000 / nil", first.PayRateCents, first.BillRateCents)
 	}
-	wsSvc.ClockOut(projectID, personID)
+	if _, err := wsSvc.ClockOut(projectID, personID); err != nil {
+		t.Fatal(err)
+	}
 
 	// O admin muda os dois valores.
 	setRate(t, projectID, personID, 2500)
@@ -428,7 +440,9 @@ func TestService_RateIsSnapshottedAtClockIn(t *testing.T) {
 	}
 	// Mudar de novo com o ponto aberto não mexe na sessão em andamento.
 	setRate(t, projectID, personID, 9999)
-	wsSvc.ClockOut(projectID, personID)
+	if _, err := wsSvc.ClockOut(projectID, personID); err != nil {
+		t.Fatal(err)
+	}
 
 	sessions, err := wsSvc.ListByProject(projectID, nil, nil)
 	if err != nil || len(sessions) != 2 {

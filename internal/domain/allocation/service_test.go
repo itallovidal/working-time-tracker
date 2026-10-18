@@ -108,8 +108,12 @@ func TestService_RatePerProject(t *testing.T) {
 // Definir de novo troca o valor, sem criar um segundo vínculo.
 func TestService_SetTwiceUpdates(t *testing.T) {
 	f := setup(t)
-	f.svc.Set(f.projectX, f.bruno, 2000)
-	f.svc.Set(f.projectX, f.ana, 1000)
+	if _, err := f.svc.Set(f.projectX, f.bruno, 2000); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.svc.Set(f.projectX, f.ana, 1000); err != nil {
+		t.Fatal(err)
+	}
 
 	a, err := f.svc.Set(f.projectX, f.bruno, 3000)
 	if err != nil {
@@ -158,8 +162,12 @@ func TestService_Validation(t *testing.T) {
 // Excluir o projeto leva os vínculos junto.
 func TestService_ProjectDeleteCascades(t *testing.T) {
 	f := setup(t)
-	f.svc.Set(f.projectX, f.bruno, 2000)
-	f.svc.Set(f.projectY, f.bruno, 2500)
+	if _, err := f.svc.Set(f.projectX, f.bruno, 2000); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.svc.Set(f.projectY, f.bruno, 2500); err != nil {
+		t.Fatal(err)
+	}
 
 	if err := f.projSvc.Delete(f.projectX); err != nil {
 		t.Fatalf("delete project: %v", err)

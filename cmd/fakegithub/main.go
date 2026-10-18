@@ -50,7 +50,7 @@ func main() {
 	})
 	mux.HandleFunc("POST /_fake/issues", func(w http.ResponseWriter, r *http.Request) {
 		var in patch
-		json.NewDecoder(r.Body).Decode(&in)
+		read(r, &in)
 		i := testutil.GitHubIssue{}
 		in.apply(&i)
 		write(w, map[string]int{"number": fake.AddIssue(repo, i)})
@@ -62,25 +62,25 @@ func main() {
 			return
 		}
 		var in patch
-		json.NewDecoder(r.Body).Decode(&in)
+		read(r, &in)
 		fake.EditIssue(repo, n, func(i *testutil.GitHubIssue) { in.apply(i) })
 		write(w, map[string]bool{"ok": true})
 	})
 	mux.HandleFunc("POST /_fake/users", func(w http.ResponseWriter, r *http.Request) {
 		var in struct{ Login, Email string }
-		json.NewDecoder(r.Body).Decode(&in)
+		read(r, &in)
 		fake.AddUser(in.Login, in.Email)
 		write(w, map[string]bool{"ok": true})
 	})
 	mux.HandleFunc("POST /_fake/push", func(w http.ResponseWriter, r *http.Request) {
 		var in struct{ Push bool }
-		json.NewDecoder(r.Body).Decode(&in)
+		read(r, &in)
 		fake.SetPush(repo, in.Push)
 		write(w, map[string]bool{"ok": true})
 	})
 	mux.HandleFunc("POST /_fake/admin", func(w http.ResponseWriter, r *http.Request) {
 		var in struct{ Admin bool }
-		json.NewDecoder(r.Body).Decode(&in)
+		read(r, &in)
 		fake.SetAdmin(repo, in.Admin)
 		write(w, map[string]bool{"ok": true})
 	})
@@ -118,9 +118,15 @@ func (p patch) apply(i *testutil.GitHubIssue) {
 	}
 }
 
+// read lê o corpo de um pedido do painel. O corpo vazio, ou que não é JSON, deixa os campos com o valor
+// zero: a rota segue com eles, e o erro fica de fora.
+func read(r *http.Request, into any) { _ = json.NewDecoder(r.Body).Decode(into) }
+
 func write(w http.ResponseWriter, v any) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(v)
+	if err := json.NewEncoder(w).Encode(v); err != nil {
+		log.Printf("writing response: %v", err)
+	}
 }
 
 // seed deixa o repositório com issues de vários jeitos: com e sem responsável, com Markdown, com

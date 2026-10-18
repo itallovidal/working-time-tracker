@@ -55,8 +55,12 @@ func TestService_ListByProject(t *testing.T) {
 
 	org, _ := orgSvc.Create("Test Org")
 	proj, _ := projSvc.Create(org.ID.String(), "Project A", "", 0, project.Routine{})
-	svc.Create(proj.ID.String(), "Team A")
-	svc.Create(proj.ID.String(), "Team B")
+	if _, err := svc.Create(proj.ID.String(), "Team A"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Create(proj.ID.String(), "Team B"); err != nil {
+		t.Fatal(err)
+	}
 
 	teams, err := svc.ListByProject(proj.ID.String())
 	if err != nil {

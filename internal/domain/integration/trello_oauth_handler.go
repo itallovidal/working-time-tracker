@@ -28,9 +28,9 @@ func (h *OAuthHandler) TrelloConnect(c *echo.Context) error {
 	if !h.trello.Configured() {
 		return h.failBack(c, trelloFlow, back, adapter.ErrTrelloOAuthNotConfigured)
 	}
-	state, ok := h.begin(c, trelloFlow, back)
+	state, ok, err := h.begin(c, trelloFlow, back)
 	if !ok {
-		return nil
+		return err
 	}
 	return c.Redirect(http.StatusFound, h.trello.AuthorizeURL(state))
 }

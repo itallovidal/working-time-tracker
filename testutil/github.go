@@ -417,27 +417,29 @@ func (g *GitHub) routes() *http.ServeMux {
 			ClientSecret string `json:"client_secret"`
 			Code         string `json:"code"`
 		}
-		json.NewDecoder(r.Body).Decode(&body)
+		// O corpo que não é JSON fica vazio e cai nas credenciais erradas.
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		// Os erros de escrita aqui e abaixo ficam de fora: o pedido que caiu não tem a quem responder.
 		switch {
 		case body.ClientID != GitHubClientID || body.ClientSecret != GitHubClientSecret:
-			w.Write([]byte(`{"error":"incorrect_client_credentials"}`))
+			_, _ = w.Write([]byte(`{"error":"incorrect_client_credentials"}`))
 		case body.Code == GitHubOAuthCode:
-			fmt.Fprintf(w, `{"access_token":%q,"token_type":"bearer","scope":"repo"}`, GitHubOAuthToken)
+			_, _ = fmt.Fprintf(w, `{"access_token":%q,"token_type":"bearer","scope":"repo"}`, GitHubOAuthToken)
 		case body.Code == GitHubSecondOAuthCode:
-			fmt.Fprintf(w, `{"access_token":%q,"token_type":"bearer","scope":"repo"}`, GitHubSecondOAuthToken)
+			_, _ = fmt.Fprintf(w, `{"access_token":%q,"token_type":"bearer","scope":"repo"}`, GitHubSecondOAuthToken)
 		default:
-			w.Write([]byte(`{"error":"bad_verification_code"}`))
+			_, _ = w.Write([]byte(`{"error":"bad_verification_code"}`))
 		}
 	})
 	mux.HandleFunc("GET /user", auth(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, `{"login":%q}`, GitHubLogin)
+		_, _ = fmt.Fprintf(w, `{"login":%q}`, GitHubLogin)
 	}))
 	mux.HandleFunc("GET /user/repos", auth(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Authorization") == "Bearer "+GitHubSecondOAuthToken {
-			w.Write([]byte(`[{"full_name":"owner/second","private":false}]`))
+			_, _ = w.Write([]byte(`[{"full_name":"owner/second","private":false}]`))
 			return
 		}
-		w.Write([]byte(`[{"full_name":"owner/repo","private":true},{"full_name":"owner/other","private":false}]`))
+		_, _ = w.Write([]byte(`[{"full_name":"owner/repo","private":true},{"full_name":"owner/other","private":false}]`))
 	}))
 	return mux
 }
@@ -756,7 +758,8 @@ func (g *GitHub) patchIssue(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"message":"Must have push access to edit issues"}`, http.StatusForbidden)
 		return
 	}
-	// Os campos entram numa ordem fixa: o estado antes do motivo, que o fecha com "completed" se faltar.
+	// Os campos entram numa ordem fixa: o estado antes do motivo, que o fecha com "completed" se faltar. Um
+	// campo de tipo errado entra com o valor zero.
 	for _, field := range []string{"title", "body", "state", "state_reason", "labels", "assignees"} {
 		raw, sent := in[field]
 		if !sent || repo.discard[field] {
@@ -764,17 +767,17 @@ func (g *GitHub) patchIssue(w http.ResponseWriter, r *http.Request) {
 		}
 		switch field {
 		case "title":
-			json.Unmarshal(raw, &issue.Title)
+			_ = json.Unmarshal(raw, &issue.Title)
 		case "body":
 			var s *string
-			json.Unmarshal(raw, &s)
+			_ = json.Unmarshal(raw, &s)
 			issue.Body = ""
 			if s != nil {
 				issue.Body = *s
 			}
 		case "state":
 			var state string
-			json.Unmarshal(raw, &state)
+			_ = json.Unmarshal(raw, &state)
 			if state != issue.State {
 				issue.State = state
 				issue.StateReason = "completed"
@@ -783,10 +786,10 @@ func (g *GitHub) patchIssue(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		case "state_reason":
-			json.Unmarshal(raw, &issue.StateReason)
+			_ = json.Unmarshal(raw, &issue.StateReason)
 		case "labels":
 			var names []string
-			json.Unmarshal(raw, &names)
+			_ = json.Unmarshal(raw, &names)
 			// Uma etiqueta que o repositório não tem é descartada: a sincronização cria antes de pedir.
 			issue.Labels = nil
 			for _, n := range names {
@@ -796,7 +799,7 @@ func (g *GitHub) patchIssue(w http.ResponseWriter, r *http.Request) {
 			}
 		case "assignees":
 			var logins []string
-			json.Unmarshal(raw, &logins)
+			_ = json.Unmarshal(raw, &logins)
 			issue.Assignees = nil
 			for _, l := range logins {
 				if _, ok := g.users[l]; ok && !g.nologin[l] {
@@ -919,7 +922,7 @@ func (g *GitHub) searchUsers(w http.ResponseWriter, r *http.Request) {
 
 func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(v)
+	_ = json.NewEncoder(w).Encode(v) // o pedido que caiu não tem a quem responder
 }
 
 // LoopbackOnly devolve um transporte que recusa qualquer endereço que não seja da própria máquina.

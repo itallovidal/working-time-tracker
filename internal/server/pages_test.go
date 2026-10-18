@@ -409,7 +409,7 @@ func TestPages_ProjectTasksTab(t *testing.T) {
 		// topo e antes da tabela, e só aparece nessa lista.
 		due, list, assignee, table := strings.Index(body, `aria-label="Filtrar por prazo"`), strings.Index(body, `x-for="key in taskLists"`),
 			strings.Index(body, `aria-label="Filtrar por responsável"`), strings.Index(body, "<table>")
-		if !(due < list && list < assignee && assignee < table) {
+		if due >= list || list >= assignee || assignee >= table {
 			t.Errorf("%s: the assignee filter is not inside the lists, between the top filters and the table", who)
 		}
 		if !strings.Contains(body, `x-show="key === 'taken' && (lists.taken.total > 0 || filters.assignee)"`) {
@@ -454,7 +454,7 @@ func TestPages_ProjectMyTasksTab(t *testing.T) {
 			t.Errorf("%s: the my tasks tab still hides the priority badge when there is none", who)
 		}
 		home, mineTab, list := strings.Index(body, ">Início</a>"), strings.Index(body, `/my-tasks"`), strings.Index(body, `/tasks"`)
-		if !(home < mineTab && mineTab < list) {
+		if home >= mineTab || mineTab >= list {
 			t.Errorf("%s: the tabs are not Início, Minhas tarefas, Lista de tarefas", who)
 		}
 		// As outras abas do projeto também levam a ela.
@@ -652,7 +652,7 @@ func TestPages_ProjectSettingsAndWeeklyHours(t *testing.T) {
 		}
 		// A reunião com o cliente fica no grupo Cliente e cobrança, e não na rotina do time.
 		billing, routine, meeting := strings.Index(body, "<legend>Cliente e cobrança</legend>"), strings.Index(body, "<legend>Rotina do time</legend>"), strings.Index(body, `<select id="meeting-day"`)
-		if !(billing < meeting && meeting < routine) {
+		if billing >= meeting || meeting >= routine {
 			t.Errorf("%s: the customer meeting is not inside Cliente e cobrança (billing %d, meeting %d, routine %d)", path, billing, meeting, routine)
 		}
 		if strings.Contains(body, "project-weekly-hours") || strings.Contains(body, "weekly_hours") {
@@ -914,7 +914,7 @@ func TestPages_ProjectIntegrationsTab(t *testing.T) {
 	// mais no cabeçalho.
 	details, del, integrations, head := strings.Index(detail, `class="card task-details"`), strings.Index(detail, `@click="openDelete()"`),
 		strings.Index(detail, `class="task-integrations"`), strings.Index(detail, `</header>`)
-	if !(head < details && details < del && del < integrations) {
+	if head >= details || details >= del || del >= integrations {
 		t.Errorf("the delete button is not between the details card and the integrations (header %d, details %d, delete %d, integrations %d)", head, details, del, integrations)
 	}
 	if strings.Contains(detail[:head], `openDelete()`) {
@@ -945,7 +945,7 @@ func TestPages_ProjectIntegrationsTab(t *testing.T) {
 		}
 	}
 	main, details, description := strings.Index(detail, `class="card task-main"`), strings.Index(detail, `class="card task-details"`), strings.Index(detail, `class="task-description"`)
-	if !(main < description && description < details) {
+	if main >= description || description >= details {
 		t.Error("the details card is not after the card with the name and the description")
 	}
 	if strings.Contains(detail[main:details], `class="detail-list"`) || strings.Contains(detail[main:details], `<dl class="facts">`) {

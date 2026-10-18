@@ -162,9 +162,16 @@ func TestService_ListSyncing(t *testing.T) {
 	svc, projectID, a := githubReady(t)
 	b, _ := svc.Create(projectID, "github", "B", "ghp_test", githubMetadata(), true)
 	off, _ := svc.Create(projectID, "github", "Desligada", "ghp_test", githubMetadata(), true)
-	svc.Edit(a.ID.String(), integration.EditInput{SyncIssues: yes()})
-	svc.Edit(b.ID.String(), integration.EditInput{SyncIssues: yes()})
-	svc.Edit(b.ID.String(), integration.EditInput{Enabled: no()}) // desativada: a rodada a pula
+	if _, err := svc.Edit(a.ID.String(), integration.EditInput{SyncIssues: yes()}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Edit(b.ID.String(), integration.EditInput{SyncIssues: yes()}); err != nil {
+		t.Fatal(err)
+	}
+	// desativada: a rodada a pula
+	if _, err := svc.Edit(b.ID.String(), integration.EditInput{Enabled: no()}); err != nil {
+		t.Fatal(err)
+	}
 	_ = off
 
 	list, err := svc.ListSyncing()
@@ -177,7 +184,9 @@ func TestService_ListSyncing(t *testing.T) {
 func TestService_RecordSync(t *testing.T) {
 	svc, _, it := githubReady(t)
 	id := it.ID.String()
-	svc.Edit(id, integration.EditInput{SyncIssues: yes()})
+	if _, err := svc.Edit(id, integration.EditInput{SyncIssues: yes()}); err != nil {
+		t.Fatal(err)
+	}
 
 	at := time.Now().UTC().Truncate(time.Second)
 	cursor := at.Add(-2 * time.Minute)
@@ -203,7 +212,9 @@ func TestService_RecordSync(t *testing.T) {
 	if row := testClient.Integration.GetX(context.Background(), it.ID); row.SyncCursor == nil || !row.SyncCursor.Equal(cursor) || row.LastSyncError != "integration.rate_limited" {
 		t.Errorf("an edit changed the sync result: cursor %v, error %q", row.SyncCursor, row.LastSyncError)
 	}
-	svc.RecordSync(it.ID, integration.SyncResult{At: at.Add(2 * time.Minute)})
+	if err := svc.RecordSync(it.ID, integration.SyncResult{At: at.Add(2 * time.Minute)}); err != nil {
+		t.Fatal(err)
+	}
 	if got, _ = svc.Get(id); got.LastSyncError != "" {
 		t.Errorf("a good round must clear the error, got %q", got.LastSyncError)
 	}
@@ -213,7 +224,9 @@ func TestService_RecordSync(t *testing.T) {
 // nenhum login ligado a alguém daqui.
 func TestService_SyncUnmatched(t *testing.T) {
 	svc, _, it := githubReady(t)
-	svc.Edit(it.ID.String(), integration.EditInput{SyncIssues: yes()})
+	if _, err := svc.Edit(it.ID.String(), integration.EditInput{SyncIssues: yes()}); err != nil {
+		t.Fatal(err)
+	}
 	ctx := context.Background()
 	mk := func(n int, state issuesync.State, logins []string, mapped string, withTask bool) {
 		q := testClient.IssueSync.Create().SetIntegrationID(it.ID).SetItemID(strconv.Itoa(n)).SetState(state).
@@ -236,7 +249,9 @@ func TestService_SyncUnmatched(t *testing.T) {
 		t.Errorf("unmatched = %d, %v, want 2", got.SyncUnmatched, err)
 	}
 	// Com a sincronização desligada a contagem não é calculada.
-	svc.Edit(it.ID.String(), integration.EditInput{SyncIssues: no()})
+	if _, err := svc.Edit(it.ID.String(), integration.EditInput{SyncIssues: no()}); err != nil {
+		t.Fatal(err)
+	}
 	if got, _ = svc.Get(it.ID.String()); got.SyncUnmatched != 0 {
 		t.Errorf("unmatched with the sync off = %d, want 0", got.SyncUnmatched)
 	}

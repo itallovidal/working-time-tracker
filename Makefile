@@ -129,12 +129,14 @@ generate: ## Regera o código do ent, o atlas.sum e o _docs/api/errors.md
 	go run ./cmd/migrate checksum
 	@$(LOAD_ENV) UPDATE_ERROR_DOCS=1 go test ./internal/server -run ErrorCodesDoc -count=1
 
-check: ## Antes de um commit: o gofmt, o go vet e a suíte
+check: ## Antes de um commit: o gofmt, o go vet, o golangci-lint e a suíte
 	@unformatted=$$(gofmt -l .); [ -z "$$unformatted" ] || { echo "Arquivos sem gofmt:"; echo "$$unformatted"; exit 1; }
 	go vet ./...
+	@$(MAKE) --no-print-directory lint
 	@$(MAKE) --no-print-directory test
 
-lint: ## Roda o golangci-lint (fora do check: o código ainda não passa nele)
+lint: ## Roda o golangci-lint, com a configuração padrão
+	@command -v golangci-lint >/dev/null || { echo "Instale o golangci-lint v2: brew install golangci-lint (ou veja golangci-lint.run)"; exit 1; }
 	golangci-lint run ./...
 
 ##@ Build e deploy

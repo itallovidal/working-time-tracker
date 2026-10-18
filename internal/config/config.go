@@ -165,7 +165,7 @@ func originOf(raw string) (string, error) {
 }
 
 func Load() (*Config, error) {
-	godotenv.Load()
+	_ = godotenv.Load() // o .env é opcional: sem ele valem as variáveis do ambiente
 
 	cfg := &Config{
 		APIPort:               os.Getenv("API_PORT"),

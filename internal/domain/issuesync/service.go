@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"log/slog"
-	"strconv"
 	"sync"
 	"time"
 
@@ -720,7 +719,7 @@ func (s *Syncer) SyncTaskNow(ctx context.Context, taskID uuid.UUID, integrationI
 		switch {
 		case err == nil:
 			ran++
-			total.Summary.add(&sum.Summary)
+			total.add(&sum.Summary)
 			if total.Problem == "" {
 				total.Problem = sum.Problem
 			}
@@ -772,5 +771,3 @@ func (s *Syncer) syncLinkNow(ctx context.Context, t *task.Task, l task.Link) (*T
 	s.afterRun(l.IntegrationID, nil)
 	return &TaskSummary{Summary: r.sum, Problem: r.problem}, nil
 }
-
-func itoa(n int) string { return strconv.Itoa(n) }

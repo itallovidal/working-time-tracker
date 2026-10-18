@@ -49,7 +49,7 @@ func (s *Store) CreateAccount(a NewAccount) (*Identity, error) {
 		return nil, err
 	}
 	rollback := func(err error) (*Identity, error) {
-		tx.Rollback()
+		_ = tx.Rollback() // o erro que volta é o que motivou desfazer
 		return nil, err
 	}
 

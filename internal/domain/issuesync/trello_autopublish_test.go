@@ -130,7 +130,9 @@ func TestTrello_NewTaskTrelloRefuses(t *testing.T) {
 	}
 	e.fake.AddList(board, "Nova lista", 1)
 	e.fake.Reset()
-	e.syncer.SyncNow(context.Background(), e.it.ID)
+	if _, err := e.syncer.SyncNow(context.Background(), e.it.ID); err != nil {
+		t.Fatal(err)
+	}
 	if e.cardsCount() != 0 {
 		t.Errorf("a refused task was tried again by the button: %d cards", e.cardsCount())
 	}

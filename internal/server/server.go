@@ -257,7 +257,9 @@ func Build(client *ent.Client, opts Options) (*App, error) {
 	e.Use(authMW.LoadSession)
 	e.Use(catalog.Middleware())
 
-	routes.HealthcheckRoutesRegister(e)
+	if err := routes.HealthcheckRoutesRegister(e); err != nil {
+		return nil, err
+	}
 	routes.RegisterRoutes(e, handlers, authMW, authRateLimiter(opts.AuthRateLimit))
 	routes.RegisterPages(e, pages, authMW, oauthHandler)
 

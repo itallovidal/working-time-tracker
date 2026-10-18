@@ -80,7 +80,7 @@ func authorizeOnTrello(t *testing.T, to *url.URL) (state, token string) {
 	if err != nil {
 		t.Fatalf("authorize on Trello: %v", err)
 	}
-	res.Body.Close()
+	_ = res.Body.Close() // só o status e o Location interessam
 	if res.StatusCode != http.StatusFound {
 		t.Fatalf("Trello authorization = %d, want a redirect back", res.StatusCode)
 	}

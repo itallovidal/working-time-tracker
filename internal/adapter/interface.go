@@ -3,6 +3,7 @@ package adapter
 import (
 	"context"
 	"errors"
+	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
@@ -402,3 +403,7 @@ func issueNumber(itemID string) (string, error) {
 	}
 	return id, nil
 }
+
+// closeBody fecha o corpo da resposta de uma plataforma. O erro do Close de um corpo que só foi lido não
+// muda o resultado da chamada, então fica de fora.
+func closeBody(resp *http.Response) { _ = resp.Body.Close() }

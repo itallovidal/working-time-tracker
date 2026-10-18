@@ -394,7 +394,9 @@ func TestService_Labels(t *testing.T) {
 		t.Errorf("rename: %v, %+v", err, renamed)
 	}
 	both := []string{bug.ID.String(), design.ID.String()}
-	taskSvc.UpdateAs("", tk.ID.String(), "Renomeada", "", nil, nil, task.Attrs{LabelIDs: &both})
+	if _, err := taskSvc.UpdateAs("", tk.ID.String(), "Renomeada", "", nil, nil, task.Attrs{LabelIDs: &both}); err != nil {
+		t.Fatal(err)
+	}
 	if err := taskSvc.DeleteLabel(bid, bug.ID.String()); err == nil {
 		t.Error("deleting a label through another project must fail")
 	}
@@ -547,10 +549,18 @@ func TestService_ListFilters_AssignedAndUnassigned(t *testing.T) {
 	join(t, memberSvc, tm, ana.ID.String())
 	join(t, memberSvc, tm, bia.ID.String())
 
-	taskSvc.Create(pid, "a", "", ana.ID.String(), nil)
-	taskSvc.Create(pid, "b", "", ana.ID.String(), nil)
-	taskSvc.Create(pid, "c", "", bia.ID.String(), nil)
-	taskSvc.Create(pid, "d", "", "", nil)
+	if _, err := taskSvc.Create(pid, "a", "", ana.ID.String(), nil); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := taskSvc.Create(pid, "b", "", ana.ID.String(), nil); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := taskSvc.Create(pid, "c", "", bia.ID.String(), nil); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := taskSvc.Create(pid, "d", "", "", nil); err != nil {
+		t.Fatal(err)
+	}
 
 	total := func(f task.ListFilter) int {
 		t.Helper()
@@ -1000,7 +1010,9 @@ func TestService_ListByProject_DeadlineFilterSkipsTasksWithoutDeadline(t *testin
 	join(t, memberSvc, tm, p.ID.String())
 
 	overdue := time.Now().Add(-24 * time.Hour)
-	taskSvc.Create(proj.ID.String(), "Overdue", "", p.ID.String(), &overdue)
+	if _, err := taskSvc.Create(proj.ID.String(), "Overdue", "", p.ID.String(), &overdue); err != nil {
+		t.Fatal(err)
+	}
 	testClient.Task.Create().SetProjectID(proj.ID).SetName("Null deadline").SetAssigneeID(p.ID).SaveX(ctx)
 	testClient.Task.Create().SetProjectID(proj.ID).SetName("Zero deadline").SetAssigneeID(p.ID).
 		SetDeadline(time.Time{}).SaveX(ctx)

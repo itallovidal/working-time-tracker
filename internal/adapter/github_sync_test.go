@@ -133,7 +133,7 @@ func TestGitHubSync_PaginationStaysOnTheServer(t *testing.T) {
 	defer foreign.Close()
 	evil := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Link", `<`+foreign.URL+`/steal>; rel="next"`)
-		w.Write([]byte(`[]`))
+		_, _ = w.Write([]byte(`[]`)) // o servidor de teste não tem a quem avisar do erro
 	}))
 	defer evil.Close()
 
@@ -359,7 +359,8 @@ func TestGitHubSync_SendsTheHeadersTheAPIAsksFor(t *testing.T) {
 	var got http.Header
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		got = r.Header.Clone()
-		w.Write([]byte(`{"full_name":"owner/repo","permissions":{"push":true}}`))
+		// O servidor de teste não tem a quem avisar do erro de escrita.
+		_, _ = w.Write([]byte(`{"full_name":"owner/repo","permissions":{"push":true}}`))
 	}))
 	defer srv.Close()
 	g := &GitHubIntegration{BaseURL: srv.URL}

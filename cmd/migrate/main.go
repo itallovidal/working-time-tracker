@@ -26,7 +26,7 @@ const usage = `uso: go run ./cmd/migrate <comando>
   up           aplica as migrações pendentes (o servidor e o seed já fazem isso ao iniciar)`
 
 func main() {
-	godotenv.Load()
+	_ = godotenv.Load() // o .env é opcional: sem ele valem as variáveis do ambiente
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	err := run(ctx, os.Args[1:])
 	stop()
@@ -66,7 +66,7 @@ func status(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	defer db.Raw.Close()
+	defer func() { _ = db.Raw.Close() }() // o comando termina em seguida; o erro do Close não muda o resultado
 	migrations, err := database.Status(ctx, db.Raw)
 	if err != nil {
 		return err
@@ -86,7 +86,7 @@ func up(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	defer db.Raw.Close()
+	defer func() { _ = db.Raw.Close() }() // o comando termina em seguida; o erro do Close não muda o resultado
 	return database.Migrate(ctx, db.Raw)
 }
 
