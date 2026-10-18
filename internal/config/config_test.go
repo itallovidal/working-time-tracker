@@ -1,6 +1,7 @@
 package config
 
 import (
+	"strings"
 	"testing"
 	"time"
 )
@@ -156,6 +157,72 @@ func TestLoad_ClerkMisconfigurationIsRefused(t *testing.T) {
 		}
 		if _, err := Load(); err == nil {
 			t.Errorf("%s must be refused", name)
+		}
+	}
+}
+
+// A porta vem de API_PORT; sem ela, de PORT, que é onde as plataformas que rodam a imagem a dizem. Sem nenhuma das
+// duas a subida para.
+func TestLoad_Port(t *testing.T) {
+	setRequired(t)
+	t.Setenv("PORT", "9000")
+	if cfg, err := Load(); err != nil || cfg.APIPort != "8080" {
+		t.Errorf("API_PORT and PORT set: port = %q, %v; want API_PORT (8080)", cfg.APIPort, err)
+	}
+
+	t.Setenv("API_PORT", "")
+	if cfg, err := Load(); err != nil || cfg.APIPort != "9000" {
+		t.Errorf("only PORT set: port = %q, %v; want 9000", cfg.APIPort, err)
+	}
+
+	t.Setenv("PORT", "")
+	if _, err := Load(); err == nil || !strings.Contains(err.Error(), "API_PORT") {
+		t.Errorf("no port: err = %v, want a missing API_PORT", err)
+	}
+}
+
+// O banco tem no máximo dez conexões, a menos que DB_MAX_CONNS diga outro número; o que não é um número positivo
+// derruba a subida.
+func TestLoad_DBMaxConns(t *testing.T) {
+	setRequired(t)
+	t.Setenv("DB_MAX_CONNS", "")
+	if cfg, err := Load(); err != nil || cfg.DBMaxConns != 10 {
+		t.Errorf("default = %d, %v; want 10", cfg.DBMaxConns, err)
+	}
+
+	t.Setenv("DB_MAX_CONNS", " 4 ")
+	if cfg, err := Load(); err != nil || cfg.DBMaxConns != 4 {
+		t.Errorf("DB_MAX_CONNS=4: %d, %v", cfg.DBMaxConns, err)
+	}
+
+	for _, raw := range []string{"0", "-2", "ten", "2.5"} {
+		t.Setenv("DB_MAX_CONNS", raw)
+		if _, err := Load(); err == nil {
+			t.Errorf("DB_MAX_CONNS=%q must be refused", raw)
+		}
+	}
+}
+
+// CLIENT_IP_HEADER é opcional e aceita qualquer cabeçalho de um IP só; o X-Forwarded-For, uma lista que quem chama
+// pode começar, derruba a subida.
+func TestLoad_ClientIPHeader(t *testing.T) {
+	setRequired(t)
+	t.Setenv("CLIENT_IP_HEADER", "")
+	if cfg, err := Load(); err != nil || cfg.ClientIPHeader != "" {
+		t.Errorf("default = %q, %v; want empty (the connection address)", cfg.ClientIPHeader, err)
+	}
+
+	for raw, want := range map[string]string{" x-real-ip ": "X-Real-Ip", "Fly-Client-IP": "Fly-Client-Ip"} {
+		t.Setenv("CLIENT_IP_HEADER", raw)
+		if cfg, err := Load(); err != nil || cfg.ClientIPHeader != want {
+			t.Errorf("CLIENT_IP_HEADER=%q: %q, %v; want %q", raw, cfg.ClientIPHeader, err, want)
+		}
+	}
+
+	for _, raw := range []string{"X-Forwarded-For", "x-forwarded-for"} {
+		t.Setenv("CLIENT_IP_HEADER", raw)
+		if _, err := Load(); err == nil {
+			t.Errorf("CLIENT_IP_HEADER=%q must be refused", raw)
 		}
 	}
 }

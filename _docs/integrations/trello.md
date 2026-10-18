@@ -134,9 +134,9 @@ muda aqui vai em poucos segundos, pelo gancho.
 
 ## Conferir sem o Trello de verdade
 
-`go run ./cmd/faketrello -addr :8092` sobe o Trello falso dos testes (`testutil.Trello`). Ele atende o site, com a
-autorização que já volta aceita, e a API no mesmo endereço, com um quadro "App" de cartões de vários jeitos. Aponte o
-servidor para ele:
+`go run ./cmd/faketrello -addr :8092` (ou `make fake-trello`; `make fakes` sobe este e o GitHub falso) sobe o Trello
+falso dos testes (`testutil.Trello`). Ele atende o site, com a autorização que já volta aceita, e a API no mesmo
+endereço, com um quadro "App" de cartões de vários jeitos. Aponte o servidor para ele:
 
 ```bash
 TRELLO_URL=http://localhost:8092

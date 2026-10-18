@@ -10,8 +10,11 @@ ninguém pediu.
 
 | Variável | Obrigatória | Para que serve |
 |---|---|---|
-| `API_PORT` | sim | Porta HTTP. O `.env.example` usa `1243`: a `8080` é comum demais e costuma estar ocupada por outro serviço |
+| `API_PORT` | sim, ou `PORT` | Porta HTTP. O `.env.example` usa `1243`: a `8080` é comum demais e costuma estar ocupada por outro serviço |
+| `PORT` | não | A porta quando não há `API_PORT`. É onde as plataformas que rodam a imagem (Railway, Render, Cloud Run) dizem a porta; a imagem traz `8080` |
 | `DATABASE_URL` | sim | Conexão com o PostgreSQL. O seed e o `cmd/migrate` usam a mesma |
+| `DB_MAX_CONNS` | não | Máximo de conexões abertas com o banco. Padrão `10`. Um pooler em session mode, como o do Supabase, recusa clientes além do tamanho do pool dele. Ver [Deploy](deploy.md) |
+| `CLIENT_IP_HEADER` | atrás de um proxy | O cabeçalho em que o proxy da frente põe o IP de quem chamou: `X-Real-IP` no Railway, `Fly-Client-IP` no Fly.io. O limite de tentativas do login conta por esse IP; sem ele, atrás de um proxy, todo mundo divide o mesmo limite. Vazio (padrão), vale o IP da conexão. Só se define quando o servidor só é alcançado pelo proxy. `X-Forwarded-For` derruba a subida: é uma lista que quem chama pode começar |
 | `INTEGRATION_ENCRYPTION_KEY` | sim | Chave da criptografia AES-GCM dos tokens das integrações (`openssl rand -hex 32`). Trocá-la torna os tokens salvos ilegíveis: cada integração pede o token de novo, e o resto dela (nome e `metadata`) continua |
 | `COOKIE_SECURE` | não | `true` marca os cookies como `Secure`. Use em produção, atrás de HTTPS |
 | `PUBLIC_URL` | com GitHub, Trello ou Clerk | O endereço em que as pessoas abrem o sistema, sem barra no fim (`http://localhost:1243`). As plataformas devolvem a pessoa para ele depois de autorizar |
@@ -45,4 +48,4 @@ Estas não são lidas pelo servidor.
 |---|---|---|
 | `TEST_DATABASE_URL` | `go test` | O banco dos testes. O nome precisa terminar em `_test`. Ver [Fluxo de trabalho](../development/workflow.md) |
 | `UPDATE_ERROR_DOCS` | `go test ./internal/server` | Qualquer valor regrava o [`_docs/api/errors.md`](../api/errors.md) em vez de compará-lo |
-| `POSTGRES_PORT` | `docker compose` | A porta do Postgres na sua máquina. Padrão: `5432` |
+| `POSTGRES_PORT` | `docker compose` e o `Makefile` | A porta do Postgres na sua máquina, do ambiente ou do `.env`. Padrão: `5432` |

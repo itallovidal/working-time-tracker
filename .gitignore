@@ -6,3 +6,9 @@
 
 # Arquivos do Finder (macOS), em qualquer pasta
 .DS_Store
+
+# O binário que o `make dev` (air) recompila a cada mudança
+/.air/
+
+# Os dumps do `make backup`: têm os dados do banco de produção
+/backups/

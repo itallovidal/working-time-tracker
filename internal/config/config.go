@@ -2,8 +2,10 @@ package config
 
 import (
 	"fmt"
+	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -15,6 +17,14 @@ type Config struct {
 	DatabaseURL           string
 	IntegrationEncryptKey string
 	CookieSecure          bool
+
+	// DBMaxConns é o máximo de conexões abertas com o banco. Um pooler em session mode (o do Supabase)
+	// recusa clientes além do tamanho do pool dele, então o servidor não pode abrir quantas quiser.
+	DBMaxConns int
+	// ClientIPHeader é o cabeçalho em que o proxy da frente põe o IP de quem chamou (X-Real-IP no Railway,
+	// Fly-Client-IP no Fly.io). Vazio, o IP é o da conexão. O limite de tentativas do login conta por esse IP:
+	// atrás de um proxy, sem o cabeçalho, todo mundo teria o IP do proxy e dividiria o mesmo limite.
+	ClientIPHeader string
 
 	// O app OAuth do GitHub, para o botão "Conectar com o GitHub". São opcionais: sem
 	// eles a tela avisa que a conexão não está configurada.
@@ -122,6 +132,29 @@ func (c *Config) loadClerk() error {
 	return nil
 }
 
+// defaultDBMaxConns cabe com folga no pool do Supabase grátis e sobra para poucas pessoas usando ao mesmo tempo.
+const defaultDBMaxConns = 10
+
+// loadProxyAndPool lê DB_MAX_CONNS e CLIENT_IP_HEADER. Um engano aqui derruba a subida, como nos intervalos.
+func (c *Config) loadProxyAndPool() error {
+	c.DBMaxConns = defaultDBMaxConns
+	if raw := strings.TrimSpace(os.Getenv("DB_MAX_CONNS")); raw != "" {
+		n, err := strconv.Atoi(raw)
+		if err != nil || n < 1 {
+			return fmt.Errorf("DB_MAX_CONNS %q is not a positive number", raw)
+		}
+		c.DBMaxConns = n
+	}
+
+	// O X-Forwarded-For é uma lista que quem chama pode começar com o IP que quiser: usá-lo inteiro deixaria
+	// cada tentativa de login vir de um IP inventado. Só serve um cabeçalho com um IP que o proxy sempre reescreve.
+	c.ClientIPHeader = http.CanonicalHeaderKey(strings.TrimSpace(os.Getenv("CLIENT_IP_HEADER")))
+	if c.ClientIPHeader == "X-Forwarded-For" {
+		return fmt.Errorf("CLIENT_IP_HEADER cannot be X-Forwarded-For (a list the caller can start); use the single-IP header the proxy sets, like X-Real-IP or Fly-Client-IP")
+	}
+	return nil
+}
+
 // originOf é a origem de um endereço: esquema, nome e porta, sem caminho.
 func originOf(raw string) (string, error) {
 	u, err := url.Parse(raw)
@@ -181,6 +214,15 @@ func Load() (*Config, error) {
 			}
 			cfg.SyncIntervals[platform] = d
 		}
+	}
+
+	// As plataformas que rodam a imagem (Railway, Render, Cloud Run) dizem a porta em PORT; API_PORT, quando
+	// definida, vale sobre ela.
+	if cfg.APIPort == "" {
+		cfg.APIPort = os.Getenv("PORT")
+	}
+	if err := cfg.loadProxyAndPool(); err != nil {
+		return nil, err
 	}
 
 	var missing []string

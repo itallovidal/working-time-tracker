@@ -32,14 +32,17 @@ flowchart LR
 
 ## Getting started
 
-Pré-requisitos: **Go 1.26+** e **Docker**, ou um PostgreSQL 14+ seu.
+Pré-requisitos: **Go 1.26+** e **Docker**, ou um PostgreSQL 14+ seu, e o **make**, que já vem no macOS e no Linux.
 
 ```bash
-cp .env.example .env    # troque INTEGRATION_ENCRYPTION_KEY por: openssl rand -hex 32
-docker compose up -d    # Postgres com o banco de dev e o de testes
-go run ./cmd/seed       # opcional: dados de demonstração (só num banco vazio)
-go run ./cmd            # servidor; aplica as migrações ao subir
+make setup    # cria o .env com uma chave nova e sobe o Postgres (o banco de dev e o de testes)
+make seed     # opcional: dados de demonstração (só num banco vazio)
+make run      # servidor; aplica as migrações ao subir
 ```
+
+`make` sozinho lista todos os comandos: `make dev` reinicia o servidor a cada mudança, `make demo` sobe a demonstração
+num banco à parte, `make migrate-new name=<nome>` cria uma migração. O que cada um roda por baixo está em
+[Comandos](_docs/development/commands.md), e o passo a passo sem o `make` em [Instalação](_docs/getting-started/installation.md).
 
 Abra **http://localhost:1243**. O seed cria a **Jatobá Software**, uma software house com doze pessoas, seis clientes e
 oito projetos. A senha de todas as contas é `demo12345`:
@@ -53,10 +56,11 @@ oito projetos. A senha de todas as contas é `demo12345`:
 Sem o seed, clique em **Crie uma organização** na tela de login. A porta ocupada, as variáveis de ambiente e o que mais
 o seed cria estão em [Instalação](_docs/getting-started/installation.md) e [Configuração](_docs/getting-started/configuration.md).
 
-Os testes usam um PostgreSQL de verdade:
+Os testes usam um PostgreSQL de verdade. `make test` carrega o `.env`, roda a suíte e mostra só o resumo, e
+`make check` passa antes o `gofmt` e o `go vet`:
 
 ```bash
-set -a && source .env && set +a && go test -p 1 ./...
+make test
 ```
 
 ## Documentação
@@ -65,6 +69,7 @@ set -a && source .env && set +a && go test -p 1 ./...
 |---|---|---|
 | Começando | [Instalação](_docs/getting-started/installation.md) | Subir o sistema, o seed e os problemas comuns |
 | | [Configuração](_docs/getting-started/configuration.md) | Todas as variáveis de ambiente |
+| | [Deploy](_docs/getting-started/deploy.md) | A imagem Docker, o banco no Supabase e o servidor no Railway ou no Fly.io |
 | Produto | [Visão geral](_docs/product/overview.md) | Conceitos, organização, projetos e pessoas, tarefas, ponto e painéis |
 | | [Dinheiro](_docs/product/money.md) | Clientes, valores por hora, margem e pagamentos |
 | | [Permissões](_docs/product/permissions.md) | Os cargos, os grupos do projeto e o que cada um pode |
@@ -82,7 +87,8 @@ set -a && source .env && set +a && go test -p 1 ./...
 | API | [Visão geral](_docs/api/overview.md) | Convenções, grupos de rotas e validação |
 | | [Referência](_docs/api/reference.md) | Todas as rotas, com exemplos |
 | | [Erros](_docs/api/errors.md) | Os códigos de erro (gerado por teste) |
-| Desenvolvimento | [Testes e migrações](_docs/development/workflow.md) | Rodar a suíte e mudar o banco |
+| Desenvolvimento | [Comandos](_docs/development/commands.md) | O `Makefile`: subir, testar, migrar, gerar a imagem e o backup |
+| | [Testes e migrações](_docs/development/workflow.md) | Rodar a suíte e mudar o banco |
 | | [Idiomas e países](_docs/development/i18n-and-countries.md) | Como os textos funcionam e como acrescentar um idioma ou um país |
 | Histórico | [Sprints](_docs/history/sprints.md) | O que foi feito em cada sprint |
 | | [Proposta inicial](_docs/history/initial-proposal.md) · [Refatoração domain-first](_docs/history/domain-first-refactor.md) | Documentos de quando o projeto começou |

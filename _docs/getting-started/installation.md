@@ -8,30 +8,38 @@ Como subir o Working Time Tracker na sua máquina, com ou sem os dados de demons
 - **Go 1.26.4** ou mais novo (a versão do `go.mod`).
 - **Docker**, para o PostgreSQL do `docker-compose.yml`. Um PostgreSQL 14+ seu também serve: aponte o `DATABASE_URL`
   para ele.
+- **make**, que já vem no macOS e no Linux, para os atalhos do [`Makefile`](../../Makefile). Sem ele, os comandos
+  equivalentes estão logo abaixo e em [Comandos](../development/commands.md).
 
 ## Passo a passo
 
 ```mermaid
 flowchart LR
-    A["cp .env.example .env"] --> B["docker compose up -d"]
-    B --> C{"Quer dados de demonstração?"}
-    C -- "sim" --> D["go run ./cmd/seed"]
-    C -- "não" --> E["go run ./cmd"]
+    A["make setup"] --> C{"Quer dados de demonstração?"}
+    C -- "sim" --> D["make seed"]
+    C -- "não" --> E["make run"]
     D --> E
     E --> F["http://localhost:1243"]
 ```
 
 ```bash
-# 1. Configuração: troque INTEGRATION_ENCRYPTION_KEY por uma chave sua (openssl rand -hex 32)
-cp .env.example .env
+# 1. Configuração e banco: cria o .env com uma INTEGRATION_ENCRYPTION_KEY nova e sobe o Postgres com o banco de
+#    desenvolvimento e o de testes. Um .env que já existe não é tocado.
+make setup
 
-# 2. Banco: sobe o Postgres com o banco de desenvolvimento e o de testes
+# 2. Dados de demonstração (opcional, só num banco vazio)
+make seed
+
+# 3. Servidor (ou make dev, que reinicia a cada mudança)
+make run
+```
+
+Sem o `make`, os mesmos passos:
+
+```bash
+cp .env.example .env    # troque INTEGRATION_ENCRYPTION_KEY por uma chave sua: openssl rand -hex 32
 docker compose up -d
-
-# 3. Dados de demonstração (opcional, só num banco vazio)
 go run ./cmd/seed
-
-# 4. Servidor
 go run ./cmd
 ```
 
@@ -73,15 +81,15 @@ pode fazer está em [Permissões](../product/permissions.md).
 
 ## Problemas comuns
 
-**A porta 5432 já está ocupada.** Suba o banco em outra porta e ajuste o `DATABASE_URL` e o `TEST_DATABASE_URL` no
-`.env`:
+**A porta 5432 já está ocupada.** Ponha `POSTGRES_PORT=5433` no `.env` (o `docker compose` e o `make` leem dali),
+ajuste a porta do `DATABASE_URL` e do `TEST_DATABASE_URL` e suba de novo:
 
 ```bash
-POSTGRES_PORT=5433 docker compose up -d
+make db-up
 ```
 
 **O banco de testes não existe.** O `docker compose` só cria o `working_time_tracker_test` quando o volume do Postgres
-nasce (o script em `docker/initdb`). Num volume antigo, crie à mão:
+nasce (o script em `docker/initdb`). Num volume antigo, `make db-up` cria o que falta. Sem o `make`:
 
 ```bash
 docker compose exec db psql -U wtt -d postgres -c 'CREATE DATABASE working_time_tracker_test OWNER wtt'
@@ -96,7 +104,7 @@ propósito, com a mensagem do motivo. Confira em [Configuração](configuration.
 ## Gerar o binário
 
 ```bash
-go build -o wtt ./cmd && ./wtt
+make build && ./wtt     # ou: go build -o wtt ./cmd && ./wtt
 ```
 
 Os templates e os arquivos estáticos vão embutidos no binário (`embed.FS` em `web/embed.go`), então ele só precisa do
