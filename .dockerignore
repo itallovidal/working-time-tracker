@@ -1,0 +1,8 @@
+# Fora da imagem: os segredos locais, o histórico do git, a documentação e o que só serve para desenvolver.
+.env
+.git
+.claude
+_docs
+_test
+/wtt
+**/.DS_Store

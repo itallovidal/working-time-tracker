@@ -28,6 +28,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("database: %v", err)
 	}
+	db.Raw.SetMaxOpenConns(ENV.DBMaxConns)
 
 	if err := database.Migrate(context.Background(), db.Raw); err != nil {
 		log.Fatalf("migration: %v", err)
@@ -76,17 +77,23 @@ func main() {
 	}
 
 	app, err := server.Build(db.Client, server.Options{
-		EncryptKey:   ENV.IntegrationEncryptKey,
-		CookieSecure: ENV.CookieSecure,
-		GitHubOAuth:  github,
-		TrelloAuth:   trello,
-		Clerk:        clerkOpts,
-		Sync:         issuesync.Config{Interval: ENV.SyncInterval, Intervals: ENV.SyncIntervals},
+		EncryptKey:     ENV.IntegrationEncryptKey,
+		CookieSecure:   ENV.CookieSecure,
+		ClientIPHeader: ENV.ClientIPHeader,
+		GitHubOAuth:    github,
+		TrelloAuth:     trello,
+		Clerk:          clerkOpts,
+		Sync:           issuesync.Config{Interval: ENV.SyncInterval, Intervals: ENV.SyncIntervals},
 	})
 	if err != nil {
 		log.Fatalf("server: %v", err)
 	}
 	e := app.Echo
+	clientIP := ENV.ClientIPHeader
+	if clientIP == "" {
+		clientIP = "the connection address"
+	}
+	e.Logger.Info("server", "port", ENV.APIPort, "db_max_conns", ENV.DBMaxConns, "client_ip_from", clientIP)
 	apiURL, siteURL := ENV.GitHubAPIURL, ENV.GitHubURL
 	if apiURL == "" {
 		apiURL = "https://api.github.com"

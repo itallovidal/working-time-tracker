@@ -2,6 +2,7 @@ package server
 
 import (
 	"errors"
+	"net"
 	"net/http"
 	"strings"
 
@@ -42,6 +43,10 @@ type Options struct {
 	// AuthRateLimit é o limite de requisições por segundo, por IP, nas rotas
 	// públicas de autenticação. Zero usa o padrão (10 por minuto, rajada de 10).
 	AuthRateLimit float64
+	// ClientIPHeader é o cabeçalho em que o proxy da frente põe o IP de quem chamou (X-Real-IP, Fly-Client-IP).
+	// Vazio, o IP é o da conexão. Só se define quando o servidor só é alcançado pelo proxy, que reescreve o
+	// cabeçalho: sem proxy, quem chama mandaria o IP que quisesse.
+	ClientIPHeader string
 	// GitHubOAuth é o app OAuth do GitHub deste servidor. Nulo ou sem credenciais, o botão
 	// Conectar com o GitHub avisa que não está configurado.
 	GitHubOAuth *adapter.GitHubOAuth
@@ -136,6 +141,9 @@ func Build(client *ent.Client, opts Options) (*App, error) {
 	}
 
 	e := echo.New()
+	if opts.ClientIPHeader != "" {
+		e.IPExtractor = clientIPFromHeader(opts.ClientIPHeader)
+	}
 	// Quem aceita um convite que leva a um projeto entra nele com o valor, o grupo e o time escolhidos.
 	authSvc.SetProjectApplier(projectinvite.NewApplier(allocationSvc, membershipSvc), e.Logger.Warn)
 	if opts.Clerk != nil && opts.Clerk.Provider != nil {
@@ -254,6 +262,18 @@ func Build(client *ent.Client, opts Options) (*App, error) {
 	routes.RegisterPages(e, pages, authMW, oauthHandler)
 
 	return &App{Echo: e, Sync: syncer}, nil
+}
+
+// clientIPFromHeader lê o IP de quem chamou no cabeçalho que o proxy da frente escreve. Sem o cabeçalho, ou com
+// algo que não é um IP, vale o IP da conexão.
+func clientIPFromHeader(header string) echo.IPExtractor {
+	direct := echo.ExtractIPDirect()
+	return func(req *http.Request) string {
+		if ip := net.ParseIP(strings.TrimSpace(req.Header.Get(header))); ip != nil {
+			return ip.String()
+		}
+		return direct(req)
+	}
 }
 
 func authRateLimiter(perSecond float64) echo.MiddlewareFunc {

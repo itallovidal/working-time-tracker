@@ -17,7 +17,8 @@ quê está em [permissions.md](../product/permissions.md); aqui está como isso 
   `SameSite=Lax`.
 - **Corpo estrito.** A API recusa chave desconhecida no JSON e corpo acima de 1 MiB.
 - **Limite de tentativas** por IP no signup, no login, nos convites e nas rotas do Clerk: 10 por minuto, em memória
-  (`429` acima disso).
+  (`429` acima disso). Atrás de um proxy, o IP vem do cabeçalho que ele escreve (`CLIENT_IP_HEADER`); sem isso, todo
+  mundo teria o IP do proxy e uma pessoa errando a senha travaria o login das outras.
 - **Redirecionamentos.** O `?next=` do login e da troca de idioma só aceita um caminho do próprio sistema.
 
 ## Entrar pelo Clerk
