@@ -69,7 +69,7 @@ make test
 |---|---|---|
 | Começando | [Instalação](_docs/getting-started/installation.md) | Subir o sistema, o seed e os problemas comuns |
 | | [Configuração](_docs/getting-started/configuration.md) | Todas as variáveis de ambiente |
-| | [Deploy](_docs/getting-started/deploy.md) | A imagem Docker, o banco no Supabase e o servidor no Railway ou no Fly.io |
+| | [Deploy](_docs/getting-started/deploy.md) | A imagem Docker, o banco no Supabase e o servidor no Render, no Railway ou no Fly.io |
 | Produto | [Visão geral](_docs/product/overview.md) | Conceitos, organização, projetos e pessoas, tarefas, ponto e painéis |
 | | [Dinheiro](_docs/product/money.md) | Clientes, valores por hora, margem e pagamentos |
 | | [Permissões](_docs/product/permissions.md) | Os cargos, os grupos do projeto e o que cada um pode |

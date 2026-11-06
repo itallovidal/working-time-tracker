@@ -649,8 +649,8 @@ até o dono dar baixa neles.
 ### Decisão 19: Deploy — uma imagem só com o servidor, o banco fora dela
 
 **Contexto:** o sistema vai ao ar para o dono e algumas pessoas, gastando o mínimo, sem um servidor para administrar:
-uma imagem Docker que uma plataforma roda. O dono escolheu o Supabase grátis para o banco e o Railway (ou o Fly.io)
-para o servidor.
+uma imagem Docker que uma plataforma roda. O dono escolheu o Supabase grátis para o banco e o Render para o servidor
+(o Railway e o Fly.io também servem, e o guia cobre os três).
 
 **Decisão:** a imagem tem só o binário, numa base distroless sem shell, rodando sem privilégios. O banco fica fora:
 dentro da imagem, cada deploy criaria um container novo sem os dados, e a maioria das plataformas não guarda disco. A
