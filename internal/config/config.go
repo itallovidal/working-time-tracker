@@ -21,9 +21,9 @@ type Config struct {
 	// DBMaxConns é o máximo de conexões abertas com o banco. Um pooler em session mode (o do Supabase)
 	// recusa clientes além do tamanho do pool dele, então o servidor não pode abrir quantas quiser.
 	DBMaxConns int
-	// ClientIPHeader é o cabeçalho em que o proxy da frente põe o IP de quem chamou (X-Real-IP no Railway,
-	// Fly-Client-IP no Fly.io). Vazio, o IP é o da conexão. O limite de tentativas do login conta por esse IP:
-	// atrás de um proxy, sem o cabeçalho, todo mundo teria o IP do proxy e dividiria o mesmo limite.
+	// ClientIPHeader é o cabeçalho em que o proxy da frente põe o IP de quem chamou (CF-Connecting-IP no Render,
+	// X-Real-IP no Railway, Fly-Client-IP no Fly.io). Vazio, o IP é o da conexão. O limite de tentativas do login
+	// conta por esse IP: atrás de um proxy, sem o cabeçalho, todo mundo teria o IP do proxy e dividiria o mesmo limite.
 	ClientIPHeader string
 
 	// O app OAuth do GitHub, para o botão "Conectar com o GitHub". São opcionais: sem

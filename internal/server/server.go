@@ -43,7 +43,7 @@ type Options struct {
 	// AuthRateLimit é o limite de requisições por segundo, por IP, nas rotas
 	// públicas de autenticação. Zero usa o padrão (10 por minuto, rajada de 10).
 	AuthRateLimit float64
-	// ClientIPHeader é o cabeçalho em que o proxy da frente põe o IP de quem chamou (X-Real-IP, Fly-Client-IP).
+	// ClientIPHeader é o cabeçalho em que o proxy da frente põe o IP de quem chamou (CF-Connecting-IP, X-Real-IP, Fly-Client-IP).
 	// Vazio, o IP é o da conexão. Só se define quando o servidor só é alcançado pelo proxy, que reescreve o
 	// cabeçalho: sem proxy, quem chama mandaria o IP que quisesse.
 	ClientIPHeader string

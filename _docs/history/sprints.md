@@ -1061,6 +1061,13 @@
 - [X] S99.5 `make check` runs `make lint` between `go vet` and the suite, and `make lint` says how to install golangci-lint when it is missing; `commands.md` (the `check` and `lint` rows, and the flags that show every finding), the README, `workflow.md` and the golangci-lint v2 in the prerequisites of `installation.md`
 - [X] S99.6 Checked on this machine: golangci-lint 2.11.4 with and without the two flags (0 issues), `gofmt -l .` and `go vet ./...` clean, and `make check` passed whole against the compose Postgres, after the merge of main; none of the setup calls that now stop with `t.Fatal` was failing silently
 
+### Sprint 100: Render
+
+- [X] S100.1 `deploy.md` gets a Render section next to Railway and Fly.io: the Hobby workspace, a Docker web service on `main` in Ohio (next to the Supabase project), the Starter plan (the Free one sleeps after 15 minutes without traffic and stops the sync), the health check at `/healthcheck`, `API_PORT` unset (Render sets `PORT`, default `10000`) and `PUBLIC_URL` set by hand in Environment. The Render row also goes into the costs, the diagram, the image paragraph, the variables table and the update steps (a Render rollback turns the auto-deploy off, so it has to be turned on again), and two rows into the common problems
+- [X] S100.2 The Supabase step says the create form can offer only the general regions (Americas, Europe, APAC) and that Americas landed in Ohio (`us-east-2`, seen in the pooler host `aws-0-us-east-2`), not in North Virginia as the docs listed; Ohio is the Render region that sits next to it
+- [X] S100.3 `CLIENT_IP_HEADER=CF-Connecting-IP` on Render: Render's own article on hosting PocketBase says Cloudflare writes the header on every request and overwrites what the caller sent; `X-Forwarded-For` stays refused. No behavior change: the config already accepts any single-IP header. `.env.example`, `configuration.md`, the comments of `config.go` and `server.go`, Decision 19 and the README name Render
+- [X] S100.4 Checked by the owner on 2026-11-06, following these steps: the service came up on Render with the Supabase database (the session pooler answered `select version()` with PostgreSQL 17.11 from their machine) and the app works online. Not checked: the `remote_ip` in the Render log, which was not visible from here
+
 ---
 
 ### Seed with a Full Demo

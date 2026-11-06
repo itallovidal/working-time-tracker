@@ -2,25 +2,26 @@
 
 O sistema é um binário Go com os templates, os estáticos, os textos e as migrações embutidos, então a imagem Docker
 é só ele. O banco fica fora da imagem: um container novo a cada deploy apagaria os dados, e a maioria das
-plataformas que rodam imagens não guarda disco. Este guia usa o **Supabase** para o banco e o **Railway** ou o
-**Fly.io** para o servidor, mas qualquer lugar que rode uma imagem e dê um PostgreSQL 14+ serve. O porquê está na
+plataformas que rodam imagens não guarda disco. Este guia usa o **Supabase** para o banco e o **Render**, o **Railway**
+ou o **Fly.io** para o servidor, mas qualquer lugar que rode uma imagem e dê um PostgreSQL 14+ serve. O porquê está na
 [Decisão 19](../architecture/decisions.md#decisão-19-deploy--uma-imagem-só-com-o-servidor-o-banco-fora-dela).
 
 ```mermaid
 flowchart LR
-    U["Navegador"] -->|"HTTPS"| P["Proxy da plataforma<br/>(Railway ou Fly.io)"]
-    P -->|"X-Real-IP ou Fly-Client-IP"| S["Container<br/>com o binário"]
+    U["Navegador"] -->|"HTTPS"| P["Proxy da plataforma<br/>(Render, Railway ou Fly.io)"]
+    P -->|"CF-Connecting-IP, X-Real-IP<br/>ou Fly-Client-IP"| S["Container<br/>com o binário"]
     S -->|"Session pooler, porta 5432, TLS"| D["PostgreSQL<br/>no Supabase"]
     S -->|"sincronização"| I["GitHub, Trello"]
 ```
 
 ## Quanto custa
 
-Os preços de outubro de 2026, para uma pessoa e alguns amigos:
+Os preços de outubro de 2026 (o do Render, de novembro), para uma pessoa e alguns amigos:
 
 | Peça | Plano | Por mês |
 |---|---|---|
 | Banco | Supabase Free: 500 MB, pausa depois de uma semana sem uso, sem backup | US$ 0 |
+| Servidor | Render Starter: 512 MB, sempre ligado (o plano grátis dorme depois de 15 minutos sem tráfego) | US$ 7 |
 | Servidor | Railway Hobby: inclui US$ 5 de uso, que o servidor sozinho não costuma passar | US$ 5 |
 | Servidor | Fly.io: uma máquina de 256 MB em São Paulo, sem plano grátis | ~US$ 3,50 |
 
@@ -46,13 +47,17 @@ docker run --rm -p 8080:8080 --env-file .env -e API_PORT= \
 
 O `-e API_PORT=` deixa valer a porta da imagem (`PORT=8080`), e o `host.docker.internal` é o Postgres do
 `docker compose` visto de dentro do container. `make image-run` faz os dois passos (`port=` troca a porta da sua
-máquina). O Railway e o Fly.io constroem a imagem a partir do `Dockerfile`; não
+máquina). O Render, o Railway e o Fly.io constroem a imagem a partir do `Dockerfile`; não
 precisa publicá-la num registro.
 
 ## O banco no Supabase
 
-1. Crie o projeto no plano Free, na **mesma região do servidor**: East US (North Virginia) para o Railway na
-   Virgínia, South America (São Paulo) para o Fly.io em `gru`.
+1. Crie o projeto no plano Free, na **mesma região do servidor**: East US (Ohio) para o Render em Ohio, East US (North
+   Virginia) para o Railway na Virgínia, South America (São Paulo) para o Fly.io em `gru`. O formulário de criação pode
+   oferecer só as regiões gerais (Americas, Europe, APAC), e não a lista completa: em novembro de 2026, Americas caiu em
+   Ohio (`us-east-2`), e não na Virgínia. Confira no host do pooler (`aws-0-us-east-2.pooler.supabase.com`): o
+   primeiro trecho termina com a região. A documentação do Supabase não diz se a região pode ser trocada depois, então
+   confira antes de seguir.
 2. **Desligue a Data API** (desmarque "Enable Data API" ao criar o projeto, ou desligue depois nas configurações da
    API). O Supabase expõe o schema `public` por uma API REST, e as migrações criam as tabelas nele sem RLS. O sistema
    não usa essa API.
@@ -86,11 +91,40 @@ Nunca aponte o `TEST_DATABASE_URL` para o Supabase: cada pacote de teste apaga o
 | `DATABASE_URL` | A URL do Session pooler, com `?sslmode=require` |
 | `INTEGRATION_ENCRYPTION_KEY` | Uma chave nova (`openssl rand -hex 32`), guardada fora da plataforma. Trocá-la depois faz cada integração pedir o token de novo |
 | `COOKIE_SECURE` | `true` |
-| `PUBLIC_URL` | O endereço público, sem barra no fim (`https://wtt.up.railway.app`, `https://wtt.fly.dev` ou o seu domínio) |
-| `CLIENT_IP_HEADER` | `X-Real-IP` no Railway, `Fly-Client-IP` no Fly.io |
+| `PUBLIC_URL` | O endereço público, sem barra no fim (`https://wtt.onrender.com`, `https://wtt.up.railway.app`, `https://wtt.fly.dev` ou o seu domínio) |
+| `CLIENT_IP_HEADER` | `CF-Connecting-IP` no Render, `X-Real-IP` no Railway, `Fly-Client-IP` no Fly.io |
 | `GITHUB_*`, `TRELLO_*`, `CLERK_*` | Se usar as integrações ou o Clerk, como em [Configuração](configuration.md). `INVITE_DELIVERY` fica em `email` |
 
 A porta não precisa de variável: a imagem traz `PORT=8080`, e a plataforma que diz outra porta em `PORT` a troca.
+
+## Render
+
+Tudo pelo painel, e cada push na branch ligada ao serviço faz um deploy novo.
+
+1. Crie a conta e fique no workspace **Hobby** (US$ 0, mais o servidor). O Render cobra US$ 1 no cartão para conferi-lo
+   e devolve.
+2. **New → Web Service**, conecte o GitHub e dê acesso ao repositório. O Render acha o `Dockerfile` na raiz e constrói
+   a imagem com ele.
+3. Preencha:
+   - **Language**: Docker. **Branch**: `main`.
+   - **Region**: Ohio, a mesma do banco no Supabase.
+   - **Instance Type**: Starter (US$ 7, 512 MB). O Free não serve: dorme depois de 15 minutos sem tráfego, leva cerca
+     de um minuto para acordar, e a sincronização para junto.
+   - **Environment Variables**: as variáveis de produção, com `CLIENT_IP_HEADER` = `CF-Connecting-IP`. Não defina
+     `API_PORT`: o Render põe `PORT` (padrão `10000`) e o servidor escuta nela.
+   - **Advanced → Health Check Path**: `/healthcheck`. Depois de criado, fica em **Settings → Health Checks**.
+4. **Create Web Service**. No primeiro boot, o servidor aplica as migrações no Supabase; a linha `server` do log mostra
+   a porta, o `db_max_conns` e de onde vem o IP.
+5. Com o endereço que o Render deu (`https://<nome>.onrender.com`), defina o `PUBLIC_URL` em **Environment** e salve
+   com o deploy: o serviço sobe de novo com o valor. Se o nome do serviço estiver livre, dá para preencher o
+   `PUBLIC_URL` já no passo 3.
+
+Deixe uma instância só. O Render tem a Cloudflare na frente: ela escreve o `CF-Connecting-IP` em toda requisição, por
+cima do que quem chamou mandou, e por isso o valor é confiável. O `X-Forwarded-For`, que o Render cita nos exemplos,
+é uma lista que quem chama pode começar, e o servidor o recusa.
+
+O Render não tem região na América do Sul (Oregon, Ohio, Virginia, Frankfurt e Singapore): de Ohio, cada página leva
+mais de 100 ms a mais para quem está no Brasil.
 
 ## Railway
 
@@ -169,6 +203,11 @@ Depois, cada `fly deploy` constrói e sobe a versão nova. `fly logs` mostra o l
 
 ## Atualizar e voltar uma versão
 
+- **Render:** cada push na `main` faz um deploy novo. A versão nova só recebe o tráfego quando o health check
+  responde `2xx` ou `3xx`; se isso não acontece em 15 minutos, o Render cancela o deploy e a anterior continua no ar.
+  Para voltar, abra **Deploys** no serviço, escolha um deploy que funcionou, **Rollback** e **Rollback to this
+  deploy**. **O rollback desliga o auto-deploy do serviço**: religue em **Settings** depois de subir a correção. Só
+  dá para voltar a um deploy cuja imagem o Render ainda guarda (5, no workspace Hobby).
 - **Railway:** cada push na branch ligada ao serviço (a `main`) faz um deploy novo. Com o healthcheck, a versão
   anterior só sai quando a nova responde. Para voltar, abra **Deployments**, escolha um deploy anterior e use
   **Rollback**.
@@ -191,3 +230,5 @@ com migração, faça o `make backup`.
 | Todo mundo leva `429` no login depois de alguém errar a senha | O IP de todos é o do proxy | Defina o `CLIENT_IP_HEADER` |
 | A plataforma diz que o servidor não responde | A porta em que ele escuta não é a que a plataforma espera | Veja a porta na linha `server` do log e não defina `API_PORT` |
 | `database has a migration this build does not know` | Voltou para uma versão anterior a uma migração | Suba uma versão nova (ver acima) |
+| No Render, o deploy é cancelado e a versão anterior continua no ar | O `/healthcheck` não respondeu em 15 minutos: o servidor não subiu (o banco não conectou, uma variável é inválida) ou escuta em outra porta | Leia o fim do log do deploy; a linha `server` só aparece quando ele sobe |
+| No Render, o painel mostra uma versão antiga depois de um push | Um rollback desligou o auto-deploy | Religue o auto-deploy em **Settings** |
