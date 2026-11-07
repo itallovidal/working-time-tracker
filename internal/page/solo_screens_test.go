@@ -87,17 +87,20 @@ func TestProjectForm_BillingComesFromTheCustomer(t *testing.T) {
 	for who, html := range map[string]string{"solo": solo, "team": team} {
 		mustNotHave(t, who+" project form", html, `name="project-billing"`, `id="project-monthly-fee"`, `id="project-closing-day"`,
 			`id="project-bill-rate"`, `data-field="bill_rate_cents"`)
-		mustHave(t, who+" project form", html, `id="project-bill-extra"`, `data-field="bill_extra_cents"`, `x-text="billing.customer(customerOf())"`)
+		mustHave(t, who+" project form", html, `id="project-bill-extra"`, `data-field="bill_extra_cents"`, `x-text="billing.customerAmount(customerOf())"`)
 		if n := strings.Count(html, `id="project-bill-extra"`); n != 1 {
 			t.Errorf("%s project form has %d extra fields, want 1", who, n)
 		}
-		// O acréscimo é um ajuste: fica no bloco Avançado, recolhido, depois da Rotina.
+		// O acréscimo é um ajuste: fica no bloco Avançado, recolhido, no grupo Cobrança, entre o cliente e o Desenvolvimento.
 		extra := strings.Index(html, `id="project-bill-extra"`)
 		fold := strings.LastIndex(html[:max(extra, 0)], `<details class="form-fold"`)
+		billing := strings.Index(html, ">Cobrança</legend>")
 		routine := strings.Index(html, `id="project-sprint"`)
-		if fold < 0 || routine < 0 || fold < routine {
-			t.Errorf("%s project form: the extra is not in a fold after the routine (fold at %d, routine at %d)", who, fold, routine)
+		if fold < 0 || billing < 0 || routine < 0 || fold < billing || extra > routine {
+			t.Errorf("%s project form: the extra is not in a fold of the billing group (billing at %d, fold at %d, routine at %d)", who, billing, fold, routine)
 		}
+		// O grupo Cobrança só aparece com um cliente escolhido.
+		mustHave(t, who+" project form", html, `<fieldset class="form-group" x-cloak x-show="customerOf()">`)
 		mustHave(t, who+" project form", html, `:open="extraOpen"`, ">Avançado</summary>")
 	}
 }

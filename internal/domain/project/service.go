@@ -56,7 +56,30 @@ func (r Routine) validate() error {
 	if err := validateSlot(r.WeeklySyncDay, r.WeeklySyncTime, "weekly_sync_day", "weekly_sync_time", ErrInvalidWeeklyTime); err != nil {
 		return err
 	}
-	return validateSlot(r.CustomerMeetingDay, r.CustomerMeetingTime, "customer_meeting_day", "customer_meeting_time", ErrInvalidMeetingTime)
+	if err := validateSlot(r.CustomerMeetingDay, r.CustomerMeetingTime, "customer_meeting_day", "customer_meeting_time", ErrInvalidMeetingTime); err != nil {
+		return err
+	}
+	if v := r.CustomerMeetingEveryWeeks; v != nil && (*v < 1 || *v > maxMeetingEveryWeeks) {
+		return ErrInvalidMeetingEvery.With("field", "customer_meeting_every_weeks")
+	}
+	return nil
+}
+
+// maxMeetingEveryWeeks é o maior intervalo da reunião com o cliente: a cada duas semanas.
+const maxMeetingEveryWeeks = 2
+
+// meetingEvery é a frequência da reunião depois de uma mudança: sem reunião (sem dia) volta a 1, a enviada vale, e
+// nil mantém a atual.
+func meetingEvery(cur int, in *int, day *string) int {
+	switch {
+	case day == nil:
+		return 1
+	case in != nil:
+		return *in
+	case cur < 1:
+		return 1
+	}
+	return cur
 }
 
 // validateSlot confere um dia da semana e um horário, cada um só se vier preenchido. dayField e timeField são as
@@ -86,6 +109,8 @@ func (r Routine) normalized() Routine {
 		WeeklySyncTime:      optional(r.WeeklySyncTime),
 		CustomerMeetingDay:  lower(r.CustomerMeetingDay),
 		CustomerMeetingTime: optional(r.CustomerMeetingTime),
+		// A frequência é um número: não tem o que aparar.
+		CustomerMeetingEveryWeeks: r.CustomerMeetingEveryWeeks,
 	}
 }
 
@@ -268,6 +293,7 @@ func (s *Service) CreateWithCustomer(orgID string, in CreateInput) (*Project, er
 	if project.CustomerMeetingDay, project.CustomerMeetingTime, err = mergeSlot(nil, nil, routine.CustomerMeetingDay, routine.CustomerMeetingTime, ErrMeetingTimeWithoutDay, "customer_meeting_time"); err != nil {
 		return nil, err
 	}
+	project.CustomerMeetingEveryWeeks = meetingEvery(1, routine.CustomerMeetingEveryWeeks, project.CustomerMeetingDay)
 	if err := checkBillExtra(in.BillExtraCents, cb); err != nil {
 		return nil, err
 	}
@@ -374,6 +400,7 @@ func (s *Service) Update(id string, name *string, description *string, sprintDur
 	if project.CustomerMeetingDay, project.CustomerMeetingTime, err = mergeSlot(project.CustomerMeetingDay, project.CustomerMeetingTime, routine.CustomerMeetingDay, routine.CustomerMeetingTime, ErrMeetingTimeWithoutDay, "customer_meeting_time"); err != nil {
 		return nil, err
 	}
+	project.CustomerMeetingEveryWeeks = meetingEvery(project.CustomerMeetingEveryWeeks, routine.CustomerMeetingEveryWeeks, project.CustomerMeetingDay)
 	if err := s.store.Update(project); err != nil {
 		return nil, err
 	}

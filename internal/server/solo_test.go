@@ -286,9 +286,9 @@ func TestSolo_TeamPagesAre404(t *testing.T) {
 			t.Errorf("solo GET %s = %d, want 200", path, rec.Code)
 		}
 	}
-	// A raiz da Gestão cai na Visão geral, que existe.
-	if rec := do(e, "GET", "/projects/"+soloProject+"/management", "", solo.session); rec.Code != http.StatusSeeOther || !strings.HasSuffix(rec.Header().Get("Location"), "/management/overview") {
-		t.Errorf("solo GET management = %d to %q, want 303 to the overview", rec.Code, rec.Header().Get("Location"))
+	// No solo a Visão geral é uma aba do projeto, fora da Gestão: a raiz da Gestão cai em Integrações.
+	if rec := do(e, "GET", "/projects/"+soloProject+"/management", "", solo.session); rec.Code != http.StatusSeeOther || !strings.HasSuffix(rec.Header().Get("Location"), "/management/integrations") {
+		t.Errorf("solo GET management = %d to %q, want 303 to the integrations", rec.Code, rec.Header().Get("Location"))
 	}
 
 	// Com equipe, tudo abre (o legado /teams redireciona).
@@ -489,31 +489,49 @@ func TestSolo_ProjectTabsLoseTheTeamTab(t *testing.T) {
 		}
 		return body[start : start+strings.Index(body[start:], "</nav>")]
 	}
+	// No solo a Visão geral mora na barra do projeto, e a Gestão fica com Integrações e Configurações; aberta, a Visão
+	// geral mostra a barra do projeto, com ela marcada.
+	href := func(project, path string) string { return `href="/projects/` + project + path + `"` }
 	for _, c := range []struct {
 		name, path string
-		keep       []string
+		keep, gone []string
+		current    string
 	}{
-		{"outside the management", "/projects/%s/overview", []string{"/overview", "/my-tasks", "/tasks", "/management"}},
-		{"inside the management", "/projects/%s/management/overview", []string{"/management/overview", "/management/integrations", "/management/settings"}},
+		{"home", "/projects/%s/overview", []string{"/overview", "/my-tasks", "/tasks", "/management/overview", "/management"}, []string{"/management/integrations", "/management/settings"}, "/overview"},
+		{"overview", "/projects/%s/management/overview", []string{"/overview", "/my-tasks", "/tasks", "/management/overview", "/management"}, []string{"/management/integrations", "/management/settings"}, "/management/overview"},
+		{"management", "/projects/%s/management/integrations", []string{"/management/integrations", "/management/settings", "/overview"}, []string{"/management/overview", "/my-tasks", "/tasks"}, "/management/integrations"},
 	} {
 		soloTabs := tabs(solo, strings.Replace(c.path, "%s", soloProject, 1))
-		for _, gone := range []string{"/collaborators", "/management/teams", "Colaboradores no projeto"} {
-			if strings.Contains(soloTabs, gone) {
+		for _, gone := range append([]string{"/collaborators", "/management/teams"}, c.gone...) {
+			if strings.Contains(soloTabs, href(soloProject, gone)) {
 				t.Errorf("solo %s: the tab strip still has %q: %s", c.name, gone, soloTabs)
 			}
 		}
+		if strings.Contains(soloTabs, "Colaboradores no projeto") {
+			t.Errorf("solo %s: the tab strip still has the teams tab: %s", c.name, soloTabs)
+		}
 		for _, want := range c.keep {
-			if !strings.Contains(soloTabs, want) {
+			if !strings.Contains(soloTabs, href(soloProject, want)) {
 				t.Errorf("solo %s: the tab strip lost %q: %s", c.name, want, soloTabs)
 			}
 		}
-		teamTabs := tabs(team, strings.Replace(c.path, "%s", teamProject, 1))
-		want := "/collaborators"
-		if strings.Contains(c.name, "inside") {
-			want = "/management/teams"
+		if !strings.Contains(soloTabs, href(soloProject, c.current)+` aria-current="page"`) || strings.Count(soloTabs, `aria-current="page"`) != 1 {
+			t.Errorf("solo %s: %q is not the one current tab: %s", c.name, c.current, soloTabs)
 		}
-		if !strings.Contains(teamTabs, want) || !strings.Contains(teamTabs, "Colaboradores no projeto") {
-			t.Errorf("team %s: the tab strip lost the teams tab (%q): %s", c.name, want, teamTabs)
+	}
+
+	// Com equipe nada muda: a Visão geral fica dentro da Gestão, com Colaboradores.
+	for _, c := range []struct{ name, path, want string }{
+		{"outside the management", "/projects/%s/overview", "/collaborators"},
+		{"inside the management", "/projects/%s/management/overview", "/management/teams"},
+	} {
+		teamTabs := tabs(team, strings.Replace(c.path, "%s", teamProject, 1))
+		if !strings.Contains(teamTabs, href(teamProject, c.want)) || !strings.Contains(teamTabs, "Colaboradores no projeto") {
+			t.Errorf("team %s: the tab strip lost the teams tab (%q): %s", c.name, c.want, teamTabs)
+		}
+		overview := strings.Contains(teamTabs, href(teamProject, "/management/overview"))
+		if inside := strings.Contains(c.name, "inside"); overview != inside {
+			t.Errorf("team %s: the overview tab shown = %v, want %v: %s", c.name, overview, inside, teamTabs)
 		}
 	}
 }

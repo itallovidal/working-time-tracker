@@ -366,6 +366,9 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 .facts dd { margin: 0; overflow-wrap: anywhere; }
 /* .fact agrupa um par dt/dd gerado por x-for sem quebrar a grade do .facts. */
 .fact { display: contents; }
+/* Vários blocos .facts em sequência (os detalhes do cliente): a coluna dos rótulos tem a mesma largura em todos, para
+   os valores ficarem alinhados de um bloco para o outro. */
+.facts-wide { grid-template-columns: 9.5rem 1fr; }
 .prose { white-space: pre-line; color: var(--ink-2); }
 /* Descrição em Markdown, já sanitizada: o texto corre como numa página, e os títulos ficam
    pequenos para não competir com o da tarefa. */
@@ -467,6 +470,9 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 }
 .form-group > legend { padding: 0 6px; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
 .form-group > .hint { font-size: 0.8rem; color: var(--muted); }
+/* Uma linha de leitura num grupo do formulário, com a ação ao lado: a cobrança do cliente e "Editar em Clientes". Em tela
+   estreita a ação desce inteira para baixo do texto. */
+.billing-line { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; }
 /* Um bloco recolhido dentro do formulário (details): o que quase ninguém muda fica atrás de uma linha. */
 .form-fold { padding-top: 12px; border-top: 1px solid var(--rule); }
 .form-fold > summary { cursor: pointer; font-size: 0.84rem; font-weight: 600; color: var(--ink-2); }

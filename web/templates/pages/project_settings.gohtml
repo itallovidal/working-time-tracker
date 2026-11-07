@@ -85,11 +85,13 @@
         </div>
       </fieldset>
       {{end}}
-      {{if .CanDoAny "project.edit" "billing.manage"}}
-      <fieldset class="form-group">
-        <legend>{{.T "project.groups.billing"}}</legend>
-        {{if .CanDo "billing.manage"}}
-        {{if .Can "customers.manage"}}
+      {{/* O cliente: o seletor, para quem cuida da cobrança e dos clientes, e a reunião, para quem edita o projeto. Sem o
+           seletor, o grupo some num projeto interno, que não tem reunião com cliente. */}}
+      {{$picksCustomer := and (.CanDo "billing.manage") (.Can "customers.manage")}}
+      {{if or $picksCustomer (.CanDo "project.edit")}}
+      <fieldset class="form-group"{{if not $picksCustomer}} x-cloak x-show="draft.customer_id"{{end}}>
+        <legend>{{.T "project.groups.customer"}}</legend>
+        {{if $picksCustomer}}
         <div class="field">
           <label for="ps-customer">{{.T "org.projects.customer"}}</label>
           <select id="ps-customer" data-field="customer_id" x-model="draft.customer_id" @change="customerChanged()"
@@ -103,17 +105,18 @@
           <span class="hint">{{.T "project_settings.customers_hint"}} <a href="/orgs/{{.OrgID}}/customers">{{.T "nav.customers"}}</a>.</span>
         </div>
         {{end}}
-        {{/* A cobrança do cliente, só para leitura: o mesmo parcial do novo projeto. O acréscimo fica no fim, em Avançado. */}}
-        {{template "project_billing_fields" (dict "Data" . "Customer" "draftCustomer()")}}
-        {{end}}
         {{if .CanDo "project.edit"}}
         {{template "project_customer_meeting" .}}
         {{end}}
       </fieldset>
       {{end}}
+      {{/* A cobrança do cliente, só para leitura, e o acréscimo do projeto em Avançado: o mesmo grupo do Novo projeto. */}}
+      {{if .CanDo "billing.manage"}}
+      {{template "project_billing_group" (dict "Data" . "Id" "ps" "Customer" "draftCustomer()")}}
+      {{end}}
       {{if .CanDo "project.edit"}}
       <fieldset class="form-group">
-        <legend>{{if .Me.OrganizationSolo}}{{.T "project.groups.routine_solo"}}{{else}}{{.T "project.groups.routine"}}{{end}}</legend>
+        <legend>{{.T "project.groups.routine"}}</legend>
         <div class="field">
           <label for="ps-sprint">{{.T "project.fields.sprint"}}</label>
           <select id="ps-sprint" data-field="sprint_duration_days" x-model.number="draft.sprint_duration_days"
@@ -126,9 +129,6 @@
         </div>
         {{template "project_routine" .}}
       </fieldset>
-      {{end}}
-      {{if .CanDo "billing.manage"}}
-      {{template "project_extra_fold" (dict "Data" . "Id" "ps" "Customer" "draftCustomer()")}}
       {{end}}
       <p class="form-error" x-show="errors.save" x-text="errors.save" role="alert"></p>
       <p class="form-error" x-show="errors.delete" x-text="errors.delete" role="alert"></p>

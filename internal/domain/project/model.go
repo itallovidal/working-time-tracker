@@ -32,15 +32,17 @@ type Billing struct {
 }
 
 // Routine são os horários que o projeto combina: a daily e a weekly do time e a
-// reunião semanal com o cliente. Em cada campo, nil mantém o que o projeto já tem
+// reunião com o cliente. Em cada campo, nil mantém o que o projeto já tem
 // (na criação, deixa sem) e texto vazio apaga. O horário de uma weekly ou de uma
-// reunião só existe junto com o dia.
+// reunião só existe junto com o dia. CustomerMeetingEveryWeeks diz se a reunião é
+// toda semana (1) ou a cada duas (2).
 type Routine struct {
-	DailyTime           *string `json:"daily_time"`
-	WeeklySyncDay       *string `json:"weekly_sync_day"`
-	WeeklySyncTime      *string `json:"weekly_sync_time"`
-	CustomerMeetingDay  *string `json:"customer_meeting_day"`
-	CustomerMeetingTime *string `json:"customer_meeting_time"`
+	DailyTime                 *string `json:"daily_time"`
+	WeeklySyncDay             *string `json:"weekly_sync_day"`
+	WeeklySyncTime            *string `json:"weekly_sync_time"`
+	CustomerMeetingDay        *string `json:"customer_meeting_day"`
+	CustomerMeetingTime       *string `json:"customer_meeting_time"`
+	CustomerMeetingEveryWeeks *int    `json:"customer_meeting_every_weeks"`
 }
 
 type Project struct {
@@ -54,9 +56,11 @@ type Project struct {
 	DailyTime          *string   `json:"daily_time,omitempty"`
 	WeeklySyncDay      *string   `json:"weekly_sync_day,omitempty"`
 	WeeklySyncTime     *string   `json:"weekly_sync_time,omitempty"`
-	// CustomerMeetingDay e CustomerMeetingTime são a reunião semanal com o cliente.
-	CustomerMeetingDay  *string `json:"customer_meeting_day,omitempty"`
-	CustomerMeetingTime *string `json:"customer_meeting_time,omitempty"`
+	// CustomerMeetingDay e CustomerMeetingTime são a reunião com o cliente, que acontece a cada
+	// CustomerMeetingEveryWeeks semanas: 1 (toda semana) ou 2. Sem reunião, 1.
+	CustomerMeetingDay        *string `json:"customer_meeting_day,omitempty"`
+	CustomerMeetingTime       *string `json:"customer_meeting_time,omitempty"`
+	CustomerMeetingEveryWeeks int     `json:"customer_meeting_every_weeks"`
 	// Customer é nil em projetos internos.
 	Customer *CustomerRef `json:"customer"`
 	// MemberCount conta os colaboradores do projeto, sem repetir: quem está em

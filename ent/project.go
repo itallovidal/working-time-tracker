@@ -42,6 +42,8 @@ type Project struct {
 	CustomerMeetingDay *string `json:"customer_meeting_day,omitempty"`
 	// CustomerMeetingTime holds the value of the "customer_meeting_time" field.
 	CustomerMeetingTime *string `json:"customer_meeting_time,omitempty"`
+	// CustomerMeetingEveryWeeks holds the value of the "customer_meeting_every_weeks" field.
+	CustomerMeetingEveryWeeks int `json:"customer_meeting_every_weeks,omitempty"`
 	// CustomerID holds the value of the "customer_id" field.
 	CustomerID *uuid.UUID `json:"customer_id,omitempty"`
 	// BillExtraCents holds the value of the "bill_extra_cents" field.
@@ -171,7 +173,7 @@ func (*Project) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case project.FieldCustomerID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case project.FieldSprintDurationDays, project.FieldBillExtraCents:
+		case project.FieldSprintDurationDays, project.FieldCustomerMeetingEveryWeeks, project.FieldBillExtraCents:
 			values[i] = new(sql.NullInt64)
 		case project.FieldName, project.FieldDescription, project.FieldGithubRepoURL, project.FieldGitlabRepoURL, project.FieldDailyTime, project.FieldWeeklySyncDay, project.FieldWeeklySyncTime, project.FieldCustomerMeetingDay, project.FieldCustomerMeetingTime:
 			values[i] = new(sql.NullString)
@@ -272,6 +274,12 @@ func (_m *Project) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.CustomerMeetingTime = new(string)
 				*_m.CustomerMeetingTime = value.String
+			}
+		case project.FieldCustomerMeetingEveryWeeks:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field customer_meeting_every_weeks", values[i])
+			} else if value.Valid {
+				_m.CustomerMeetingEveryWeeks = int(value.Int64)
 			}
 		case project.FieldCustomerID:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -419,6 +427,9 @@ func (_m *Project) String() string {
 		builder.WriteString("customer_meeting_time=")
 		builder.WriteString(*v)
 	}
+	builder.WriteString(", ")
+	builder.WriteString("customer_meeting_every_weeks=")
+	builder.WriteString(fmt.Sprintf("%v", _m.CustomerMeetingEveryWeeks))
 	builder.WriteString(", ")
 	if v := _m.CustomerID; v != nil {
 		builder.WriteString("customer_id=")

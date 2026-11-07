@@ -12,7 +12,6 @@
   <section class="stack">
     <p class="muted" x-show="loading">{{.T "org.customers.loading"}}</p>
     <p class="form-error" x-cloak x-show="errors.load" x-text="errors.load"></p>
-    <p class="form-error" x-cloak x-show="errors.remove" x-text="errors.remove" role="alert"></p>
 
     <div class="empty" x-cloak x-show="!loading && !errors.load && customers.length === 0">
       {{template "icon" "handshake"}}
@@ -23,48 +22,77 @@
     <div class="table-wrap" x-show="customers.length > 0">
       <table>
         <thead>
-          <tr><th>{{.T "org.customers.customer"}}</th><th>{{.T "countries.generic.legal_id.label"}}</th><th>{{.T "org.customers.contact"}}</th><th>{{.T "customer.billing.column"}}</th><th>{{.T "org.customers.projects"}}</th><th class="actions"><span class="sr-only">{{.T "common.actions"}}</span></th></tr>
+          {{/* A cobrança mora no cliente (Decisão 21): uma coluna por informação. O modo, o fechamento e o vencimento são
+               do modo solo; na equipe todo cliente é por hora, e fica só o valor por hora. O documento fiscal, o contrato
+               e as ações ficam nos detalhes, que a linha abre. */}}
+          <tr>
+            <th>{{.T "org.customers.customer"}}</th>
+            {{if .Me.OrganizationSolo}}<th>{{.T "customer.billing.col_mode"}}</th>{{end}}
+            <th>{{if .Me.OrganizationSolo}}{{.T "customer.billing.col_amount"}}{{else}}{{.T "customer.billing.col_rate"}}{{end}}</th>
+            {{if .Me.OrganizationSolo}}<th>{{.T "customer.billing.col_closing"}}</th><th>{{.T "customer.billing.col_due"}}</th>{{end}}
+            <th>{{.T "org.customers.contact"}}</th>
+            <th>{{.T "org.customers.projects"}}</th>
+          </tr>
         </thead>
         <tbody>
           <template x-for="c in customers" :key="c.id">
-            <tr>
+            {{/* A linha inteira abre os detalhes; o nome é um botão, para o teclado. */}}
+            <tr class="row-link" @click="if (!$event.target.closest('a, button')) openDetails(c)">
               <td class="nowrap">
-                <div x-text="c.name"></div>
+                <button type="button" class="row-open" aria-haspopup="dialog" @click="openDetails(c)" x-text="c.name"></button>
                 <div class="muted small" x-text="WTT.countries.name(c.country)"></div>
               </td>
-              <td class="nowrap">
-                <span class="muted small" x-show="c.document && WTT.countries.legalId(c.country).field" x-text="WTT.countries.legalId(c.country).label"></span>
-                <span class="mono num" x-show="c.document" x-text="WTT.fmt.taxId(c.document, c.country)"></span>
-                <span class="muted" x-show="!c.document" x-text="WTT.notInformed"></span>
-              </td>
+              {{if .Me.OrganizationSolo}}<td class="nowrap" x-text="billingMode(c)"></td>{{end}}
+              <td class="nowrap num" :class="WTT.billing.withoutRate(c) && 'muted'" x-text="billingAmount(c)"></td>
+              {{if .Me.OrganizationSolo}}<td class="nowrap" x-text="billingClosing(c)"></td><td class="nowrap" x-text="billingDue(c)"></td>{{end}}
               <td>
                 <div x-show="c.contact_name" x-text="c.contact_name"></div>
                 <div class="muted small" x-show="c.contact_email || c.contact_phone" x-text="[c.contact_email, c.contact_phone].filter(Boolean).join(' · ')"></div>
                 <span class="muted" x-show="!c.contact_name && !c.contact_email && !c.contact_phone" x-text="WTT.notInformed"></span>
               </td>
-              {{/* A cobrança mora no cliente (Decisão 21): o valor por hora ou o contrato. Os prazos são do modo solo. */}}
-              <td>
-                <div :class="c.billing_mode !== 'monthly' && c.hourly_rate_cents == null && 'muted'" x-text="billingLabel(c)"></div>
-                {{if .Me.OrganizationSolo}}<div class="muted small" x-text="billingTerms(c)"></div>{{end}}
-              </td>
               <td class="num" x-text="c.project_count"></td>
-              <td class="actions">
-                <span x-show="confirming !== c.id">
-                  <button type="button" class="btn btn-ghost btn-sm" @click="openForm(c)">{{template "icon" "pen"}} {{.T "common.edit"}}</button>
-                  <button type="button" class="btn btn-danger-ghost btn-sm" @click="confirming = c.id">{{template "icon" "trash"}} {{.T "common.delete"}}</button>
-                </span>
-                <span class="confirm" x-cloak x-show="confirming === c.id">
-                  <span>{{.T "org.customers.delete_question"}}</span>
-                  <button type="button" class="btn btn-danger btn-sm" :disabled="pending" @click="remove(c)">{{.T "common.delete"}}</button>
-                  <button type="button" class="btn btn-ghost btn-sm" @click="confirming = null">{{.T "common.cancel"}}</button>
-                </span>
-              </td>
             </tr>
           </template>
         </tbody>
       </table>
     </div>
   </section>
+
+  {{/* Os detalhes do cliente: o cliente, o contato e a cobrança, só para ler. Editar troca para o formulário, que volta
+       para cá ao cancelar ou salvar; Excluir pede confirmação, e o erro do servidor (cliente com projetos) aparece aqui. */}}
+  <template x-teleport="#modal-root">
+    <div class="stack" x-show="$store.modal.name === 'customer-details'">
+      <template x-for="block in customerFacts(viewing())" :key="block.title">
+        <section class="stack stack-tight">
+          <h3 class="eyebrow" x-text="block.title"></h3>
+          <dl class="facts facts-wide">
+            <template x-for="f in block.rows" :key="f.label">
+              <div class="fact">
+                <dt x-text="f.label"></dt>
+                <dd>
+                  <a x-show="f.href && !f.empty" :href="f.href" x-text="f.value"></a>
+                  <span x-show="!f.href || f.empty" :class="{ mono: f.mono && !f.empty, muted: f.empty }" x-text="f.value"></span>
+                </dd>
+              </div>
+            </template>
+          </dl>
+        </section>
+      </template>
+      <p class="form-error" x-show="errors.remove" x-text="errors.remove" role="alert"></p>
+      <div class="confirm" x-cloak x-show="confirming">
+        <span>{{.T "org.customers.delete_question"}}</span>
+        <button type="button" class="btn btn-danger btn-sm" :disabled="pending" @click="remove()">{{.T "common.delete"}}</button>
+        <button type="button" class="btn btn-ghost btn-sm" @click="confirming = false">{{.T "common.cancel"}}</button>
+      </div>
+      <div class="toolbar" x-show="!confirming">
+        <button type="button" class="btn btn-danger-ghost" @click="confirming = true; errors.remove = ''">{{template "icon" "trash"}} {{.T "common.delete"}}</button>
+        <div class="row">
+          <button type="button" class="btn btn-secondary" @click="$store.modal.dismiss()">{{.T "common.close"}}</button>
+          <button type="button" class="btn" data-autofocus @click="openForm(viewing())">{{template "icon" "pen"}} {{.T "common.edit"}}</button>
+        </div>
+      </div>
+    </div>
+  </template>
 
   {{/* O formulário aparece no modal do layout base, mas continua no escopo de orgCustomers. */}}
   <template x-teleport="#modal-root">
@@ -122,7 +150,7 @@
       </fieldset>
       <p class="form-error" x-show="errors.save" x-text="errors.save" role="alert"></p>
       <div class="row row-end">
-        <button type="button" class="btn btn-secondary" @click="$store.modal.dismiss()">{{.T "common.cancel"}}</button>
+        <button type="button" class="btn btn-secondary" @click="cancelForm()">{{.T "common.cancel"}}</button>
         <button type="submit" class="btn" :disabled="pending" x-text="editing ? $t('common.save') : $t('org.customers.create')">{{.T "org.customers.create"}}</button>
       </div>
     </form>

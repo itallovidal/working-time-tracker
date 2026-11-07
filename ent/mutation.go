@@ -11807,52 +11807,54 @@ func (m *PersonMutation) ResetEdge(name string) error {
 // ProjectMutation represents an operation that mutates the Project nodes in the graph.
 type ProjectMutation struct {
 	config
-	op                      Op
-	typ                     string
-	id                      *uuid.UUID
-	name                    *string
-	description             *string
-	github_repo_url         *string
-	gitlab_repo_url         *string
-	sprint_duration_days    *int
-	addsprint_duration_days *int
-	daily_time              *string
-	weekly_sync_day         *string
-	weekly_sync_time        *string
-	customer_meeting_day    *string
-	customer_meeting_time   *string
-	bill_extra_cents        *int
-	addbill_extra_cents     *int
-	created_at              *time.Time
-	clearedFields           map[string]struct{}
-	organization            *uuid.UUID
-	clearedorganization     bool
-	customer                *uuid.UUID
-	clearedcustomer         bool
-	teams                   map[uuid.UUID]struct{}
-	removedteams            map[uuid.UUID]struct{}
-	clearedteams            bool
-	tasks                   map[uuid.UUID]struct{}
-	removedtasks            map[uuid.UUID]struct{}
-	clearedtasks            bool
-	work_sessions           map[uuid.UUID]struct{}
-	removedwork_sessions    map[uuid.UUID]struct{}
-	clearedwork_sessions    bool
-	integrations            map[uuid.UUID]struct{}
-	removedintegrations     map[uuid.UUID]struct{}
-	clearedintegrations     bool
-	allocations             map[uuid.UUID]struct{}
-	removedallocations      map[uuid.UUID]struct{}
-	clearedallocations      bool
-	invites                 map[uuid.UUID]struct{}
-	removedinvites          map[uuid.UUID]struct{}
-	clearedinvites          bool
-	labels                  map[uuid.UUID]struct{}
-	removedlabels           map[uuid.UUID]struct{}
-	clearedlabels           bool
-	done                    bool
-	oldValue                func(context.Context) (*Project, error)
-	predicates              []predicate.Project
+	op                              Op
+	typ                             string
+	id                              *uuid.UUID
+	name                            *string
+	description                     *string
+	github_repo_url                 *string
+	gitlab_repo_url                 *string
+	sprint_duration_days            *int
+	addsprint_duration_days         *int
+	daily_time                      *string
+	weekly_sync_day                 *string
+	weekly_sync_time                *string
+	customer_meeting_day            *string
+	customer_meeting_time           *string
+	customer_meeting_every_weeks    *int
+	addcustomer_meeting_every_weeks *int
+	bill_extra_cents                *int
+	addbill_extra_cents             *int
+	created_at                      *time.Time
+	clearedFields                   map[string]struct{}
+	organization                    *uuid.UUID
+	clearedorganization             bool
+	customer                        *uuid.UUID
+	clearedcustomer                 bool
+	teams                           map[uuid.UUID]struct{}
+	removedteams                    map[uuid.UUID]struct{}
+	clearedteams                    bool
+	tasks                           map[uuid.UUID]struct{}
+	removedtasks                    map[uuid.UUID]struct{}
+	clearedtasks                    bool
+	work_sessions                   map[uuid.UUID]struct{}
+	removedwork_sessions            map[uuid.UUID]struct{}
+	clearedwork_sessions            bool
+	integrations                    map[uuid.UUID]struct{}
+	removedintegrations             map[uuid.UUID]struct{}
+	clearedintegrations             bool
+	allocations                     map[uuid.UUID]struct{}
+	removedallocations              map[uuid.UUID]struct{}
+	clearedallocations              bool
+	invites                         map[uuid.UUID]struct{}
+	removedinvites                  map[uuid.UUID]struct{}
+	clearedinvites                  bool
+	labels                          map[uuid.UUID]struct{}
+	removedlabels                   map[uuid.UUID]struct{}
+	clearedlabels                   bool
+	done                            bool
+	oldValue                        func(context.Context) (*Project, error)
+	predicates                      []predicate.Project
 }
 
 var _ ent.Mutation = (*ProjectMutation)(nil)
@@ -12479,6 +12481,62 @@ func (m *ProjectMutation) ResetCustomerMeetingTime() {
 	delete(m.clearedFields, project.FieldCustomerMeetingTime)
 }
 
+// SetCustomerMeetingEveryWeeks sets the "customer_meeting_every_weeks" field.
+func (m *ProjectMutation) SetCustomerMeetingEveryWeeks(i int) {
+	m.customer_meeting_every_weeks = &i
+	m.addcustomer_meeting_every_weeks = nil
+}
+
+// CustomerMeetingEveryWeeks returns the value of the "customer_meeting_every_weeks" field in the mutation.
+func (m *ProjectMutation) CustomerMeetingEveryWeeks() (r int, exists bool) {
+	v := m.customer_meeting_every_weeks
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCustomerMeetingEveryWeeks returns the old "customer_meeting_every_weeks" field's value of the Project entity.
+// If the Project object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProjectMutation) OldCustomerMeetingEveryWeeks(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCustomerMeetingEveryWeeks is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCustomerMeetingEveryWeeks requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCustomerMeetingEveryWeeks: %w", err)
+	}
+	return oldValue.CustomerMeetingEveryWeeks, nil
+}
+
+// AddCustomerMeetingEveryWeeks adds i to the "customer_meeting_every_weeks" field.
+func (m *ProjectMutation) AddCustomerMeetingEveryWeeks(i int) {
+	if m.addcustomer_meeting_every_weeks != nil {
+		*m.addcustomer_meeting_every_weeks += i
+	} else {
+		m.addcustomer_meeting_every_weeks = &i
+	}
+}
+
+// AddedCustomerMeetingEveryWeeks returns the value that was added to the "customer_meeting_every_weeks" field in this mutation.
+func (m *ProjectMutation) AddedCustomerMeetingEveryWeeks() (r int, exists bool) {
+	v := m.addcustomer_meeting_every_weeks
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetCustomerMeetingEveryWeeks resets all changes to the "customer_meeting_every_weeks" field.
+func (m *ProjectMutation) ResetCustomerMeetingEveryWeeks() {
+	m.customer_meeting_every_weeks = nil
+	m.addcustomer_meeting_every_weeks = nil
+}
+
 // SetCustomerID sets the "customer_id" field.
 func (m *ProjectMutation) SetCustomerID(u uuid.UUID) {
 	m.customer = &u
@@ -13086,7 +13144,7 @@ func (m *ProjectMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ProjectMutation) Fields() []string {
-	fields := make([]string, 0, 14)
+	fields := make([]string, 0, 15)
 	if m.organization != nil {
 		fields = append(fields, project.FieldOrganizationID)
 	}
@@ -13119,6 +13177,9 @@ func (m *ProjectMutation) Fields() []string {
 	}
 	if m.customer_meeting_time != nil {
 		fields = append(fields, project.FieldCustomerMeetingTime)
+	}
+	if m.customer_meeting_every_weeks != nil {
+		fields = append(fields, project.FieldCustomerMeetingEveryWeeks)
 	}
 	if m.customer != nil {
 		fields = append(fields, project.FieldCustomerID)
@@ -13159,6 +13220,8 @@ func (m *ProjectMutation) Field(name string) (ent.Value, bool) {
 		return m.CustomerMeetingDay()
 	case project.FieldCustomerMeetingTime:
 		return m.CustomerMeetingTime()
+	case project.FieldCustomerMeetingEveryWeeks:
+		return m.CustomerMeetingEveryWeeks()
 	case project.FieldCustomerID:
 		return m.CustomerID()
 	case project.FieldBillExtraCents:
@@ -13196,6 +13259,8 @@ func (m *ProjectMutation) OldField(ctx context.Context, name string) (ent.Value,
 		return m.OldCustomerMeetingDay(ctx)
 	case project.FieldCustomerMeetingTime:
 		return m.OldCustomerMeetingTime(ctx)
+	case project.FieldCustomerMeetingEveryWeeks:
+		return m.OldCustomerMeetingEveryWeeks(ctx)
 	case project.FieldCustomerID:
 		return m.OldCustomerID(ctx)
 	case project.FieldBillExtraCents:
@@ -13288,6 +13353,13 @@ func (m *ProjectMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetCustomerMeetingTime(v)
 		return nil
+	case project.FieldCustomerMeetingEveryWeeks:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCustomerMeetingEveryWeeks(v)
+		return nil
 	case project.FieldCustomerID:
 		v, ok := value.(uuid.UUID)
 		if !ok {
@@ -13320,6 +13392,9 @@ func (m *ProjectMutation) AddedFields() []string {
 	if m.addsprint_duration_days != nil {
 		fields = append(fields, project.FieldSprintDurationDays)
 	}
+	if m.addcustomer_meeting_every_weeks != nil {
+		fields = append(fields, project.FieldCustomerMeetingEveryWeeks)
+	}
 	if m.addbill_extra_cents != nil {
 		fields = append(fields, project.FieldBillExtraCents)
 	}
@@ -13333,6 +13408,8 @@ func (m *ProjectMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
 	case project.FieldSprintDurationDays:
 		return m.AddedSprintDurationDays()
+	case project.FieldCustomerMeetingEveryWeeks:
+		return m.AddedCustomerMeetingEveryWeeks()
 	case project.FieldBillExtraCents:
 		return m.AddedBillExtraCents()
 	}
@@ -13350,6 +13427,13 @@ func (m *ProjectMutation) AddField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddSprintDurationDays(v)
+		return nil
+	case project.FieldCustomerMeetingEveryWeeks:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddCustomerMeetingEveryWeeks(v)
 		return nil
 	case project.FieldBillExtraCents:
 		v, ok := value.(int)
@@ -13474,6 +13558,9 @@ func (m *ProjectMutation) ResetField(name string) error {
 		return nil
 	case project.FieldCustomerMeetingTime:
 		m.ResetCustomerMeetingTime()
+		return nil
+	case project.FieldCustomerMeetingEveryWeeks:
+		m.ResetCustomerMeetingEveryWeeks()
 		return nil
 	case project.FieldCustomerID:
 		m.ResetCustomerID()
