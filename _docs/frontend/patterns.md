@@ -137,8 +137,8 @@ Cada campo tem uma regra só, a mesma na tela e no servidor.
   que for colado: um contador mostra o tamanho e a regra avisa.
 - Um campo por linha, com a dica dele embaixo, dentro do `.field`. Em pares, os rótulos com "(opcional)" quebram em
   alturas diferentes e os campos desalinham.
-- O que é raro ou um ajuste fica num bloco recolhido no fim (`<details class="form-fold">`, como "Multa, juros e
-  tolerância" no cliente e "Avançado" no projeto), aberto quando já tem valor e quando um campo dele erra (o
+- O que é raro ou um ajuste fica num bloco recolhido no fim do grupo dele (`<details class="form-fold">`, como "Multa,
+  juros e tolerância" na cobrança do cliente e "Avançado" na cobrança do projeto), aberto quando já tem valor e quando um campo dele erra (o
   componente abre o bloco e leva o foco ao campo, que fechado não o recebe).
 - O `<select>` não usa a aparência do sistema (`appearance: none` em `app.css`): fica com a altura dos campos e uma
   seta própria em `currentColor`, igual no Chrome e no Safari. Uma regra que pinta um campo usa `background-color`, não

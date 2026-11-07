@@ -140,12 +140,46 @@ func TestCustomerBilling_FieldsAreInsideTheSoloGate(t *testing.T) {
 			t.Errorf("customer_contract.gohtml has no field {{$id}}-%s", id)
 		}
 	}
-	// A coluna Cobrança aparece nos dois modos, e os prazos dela só no solo.
-	if !strings.Contains(tpl, `<th>{{.T "customer.billing.column"}}</th>`) {
-		t.Error("the customers list has no Cobrança column")
+	// A cobrança na lista tem uma coluna por informação: o valor nos dois modos; o modo, o fechamento e o vencimento só
+	// no solo (o cabeçalho e a célula).
+	if !strings.Contains(tpl, `x-text="billingAmount(c)"`) {
+		t.Error("the customers list has no amount column")
 	}
-	if !strings.Contains(tpl, `{{if .Me.OrganizationSolo}}<div class="muted small" x-text="billingTerms(c)"></div>{{end}}`) {
-		t.Error("the closing and due terms of the Cobrança column are not behind .Me.OrganizationSolo")
+	for _, want := range []string{
+		`{{if .Me.OrganizationSolo}}<th>{{.T "customer.billing.col_mode"}}</th>{{end}}`,
+		`{{if .Me.OrganizationSolo}}<th>{{.T "customer.billing.col_closing"}}</th><th>{{.T "customer.billing.col_due"}}</th>{{end}}`,
+		`{{if .Me.OrganizationSolo}}<td class="nowrap" x-text="billingMode(c)"></td>{{end}}`,
+		`{{if .Me.OrganizationSolo}}<td class="nowrap" x-text="billingClosing(c)"></td><td class="nowrap" x-text="billingDue(c)"></td>{{end}}`,
+	} {
+		if !strings.Contains(tpl, want) {
+			t.Errorf("the customers list lacks the solo-only column %s", want)
+		}
+	}
+}
+
+// A linha da lista abre os detalhes do cliente, e Editar e Excluir moram neles, não na linha.
+func TestCustomers_RowOpensTheDetails(t *testing.T) {
+	tpl := templates(t)["templates/pages/org_customers.gohtml"]
+	details := strings.Index(tpl, `x-show="$store.modal.name === 'customer-details'"`)
+	if details < 0 {
+		t.Fatal("org_customers.gohtml has no customer-details modal")
+	}
+	for _, want := range []string{`class="row-link"`, `openDetails(c)`, `class="row-open"`} {
+		if at := strings.Index(tpl, want); at < 0 || at > details {
+			t.Errorf("the customers list row lacks %s", want)
+		}
+	}
+	for _, want := range []string{`@click="openForm(viewing())"`, `@click="remove()"`, `x-text="errors.remove"`, `customerFacts(viewing())`} {
+		if at := strings.Index(tpl, want); at < details {
+			t.Errorf("%s is not in the customer-details modal", want)
+		}
+	}
+	if strings.Contains(tpl, `openForm(c)`) {
+		t.Error("the customers list row still opens the edit form directly")
+	}
+	// Cancelar a edição volta para os detalhes.
+	if !strings.Contains(tpl, `@click="cancelForm()"`) {
+		t.Error("the customer form does not cancel through cancelForm")
 	}
 }
 

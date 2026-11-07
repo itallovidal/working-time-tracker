@@ -99,6 +99,7 @@ var projects = []struct {
 	sprintDays                       int
 	daily, weekly, weeklyTime        string
 	meetingDay, meetingTime          string
+	meetingEveryWeeks                int               // 0 é toda semana; 2, a cada duas
 	presets                          map[string]string // quem tem um grupo de permissões além de colaborador
 	billRate, ageDays                int
 	teams                            map[string][]string
@@ -123,7 +124,7 @@ var projects = []struct {
 	{
 		key: "agenda", customer: "vidaplena", name: "Agendamento Online", ageDays: 152,
 		description: "Marcação de consultas pelo site e pelo WhatsApp, com confirmação automática.",
-		sprintDays:  7, daily: "10:00", weekly: "monday", weeklyTime: "11:30", billRate: 11000, meetingDay: "friday", meetingTime: "11:00",
+		sprintDays:  7, daily: "10:00", weekly: "monday", weeklyTime: "11:30", billRate: 11000, meetingDay: "friday", meetingTime: "11:00", meetingEveryWeeks: 2,
 		teams:   map[string][]string{"Produto": {"carla", "diego", "elisa", "isabela"}},
 		rates:   map[string]int{"carla": 5000, "diego": 5800, "elisa": 4000, "isabela": 6500, "joao": 2500},
 		presets: map[string]string{"isabela": "manager"},
@@ -471,6 +472,7 @@ func main() {
 			Routine: project.Routine{
 				DailyTime: optionalText(p.daily), WeeklySyncDay: optionalText(p.weekly), WeeklySyncTime: optionalText(p.weeklyTime),
 				CustomerMeetingDay: optionalText(p.meetingDay), CustomerMeetingTime: optionalText(p.meetingTime),
+				CustomerMeetingEveryWeeks: optionalNumber(p.meetingEveryWeeks),
 			},
 		})
 		must(err)

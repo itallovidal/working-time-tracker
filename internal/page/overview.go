@@ -17,26 +17,29 @@ func projectHome() string {
 // MyOverview é o Início do projeto, a mesma tela para admin e membro: o relógio,
 // as suas tarefas, o seu tempo neste projeto e as suas sessões.
 func (h *Handler) MyOverview(c *echo.Context) error {
-	return h.projectPage(c, "project_my_overview", "titles.my_overview", "overview", h.integrationTypes(c))
+	return h.projectPage(c, "project_my_overview", "titles.my_overview", "home", h.integrationTypes(c))
 }
 
 // Overview é a Visão geral da Gestão: pessoas, times, horas, custo, receita,
 // tempo de projeto e integrações numa tela só, para admins (S26). Os tipos de
-// integração vão junto para a lista mostrar o nome de cada plataforma.
+// integração vão junto para a lista mostrar o nome de cada plataforma. No modo solo
+// ela é uma aba do projeto (Data.outsideManagement), e o título não diz "Gestão".
 func (h *Handler) Overview(c *echo.Context) error {
-	return h.managementPage(c, "project_overview", "titles.overview", "overview", h.integrationTypes(c))
+	title := "titles.overview"
+	if me := auth.CurrentPerson(c); me != nil && me.OrganizationSolo {
+		title = "titles.overview_solo"
+	}
+	return h.managementPage(c, "project_overview", title, "overview", h.integrationTypes(c))
 }
 
-// Management leva da raiz da Gestão para a primeira aba que a pessoa pode abrir.
+// Management leva da raiz da Gestão para a primeira aba de dentro dela que a pessoa pode abrir. Quem tem qualquer
+// permissão do projeto abre a Visão geral, que na equipe é a primeira; no modo solo ela mora fora da Gestão, e a raiz
+// leva a Integrações.
 func (h *Handler) Management(c *echo.Context) error {
-	set := auth.ProjectPermissions(c)
-	// Quem tem qualquer permissão do projeto abre a Visão geral; a cobrança dela só vai a quem vê o faturamento.
-	tab := ManagementTabs[0].ID
-	for _, t := range ManagementTabs {
-		if set.HasAny(t.Keys...) {
-			tab = t.ID
-			break
-		}
+	d := Data{Me: auth.CurrentPerson(c), Access: auth.ProjectPermissions(c)}
+	tab := d.firstManagementTab()
+	if tab == "" {
+		tab = ManagementTabs[0].ID
 	}
 	return c.Redirect(http.StatusSeeOther, "/projects/"+c.Param("projectId")+"/management/"+tab)
 }

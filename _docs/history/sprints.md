@@ -1121,6 +1121,16 @@ Branch `feat/small-fixes` (2026-11-07), from what the owner noted after using th
 - [X] S105.5 A receber intro without the "(America/Sao_Paulo)" time zone
 - [X] S105.6 Every `<select>` drops the system look (`appearance: none`) and gets the field height and an arrow drawn in `currentColor`, so Safari matches Chrome; color rules use `background-color` so the arrow stays. The open option list is still the system's
 
+### Sprint 112: Customers in Columns, the Project Form in Groups, Biweekly Meetings and the Solo Overview Tab
+
+Branch `feat/customers-and-project-form` (2026-11-07), from what the owner asked after using the solo mode.
+
+- [X] S112.1 Customers list: one column per billing item (Modo, Valor, Fechamento and Vencimento in solo; Valor por hora with a team), the customer with its country and the contact; the tax ID and the row actions leave the list
+- [X] S112.2 Customer details modal, opened by the row (the name is a button, for the keyboard): the customer, the contact (email and phone as links) and the billing, with the contract and the late terms in solo. Editar goes to the existing form, which comes back to the details on Cancelar and on Salvar; Excluir asks for confirmation and shows the server's refusal (a customer with projects) in the modal
+- [X] S112.3 New project and edit project forms in four groups: Projeto, Cliente (the select and the meeting), Cobrança (the customer's billing in two lines with "Editar em Clientes" beside it, and the "Avançado" extra fold, which moves here from the end of the form; only with a customer) and Desenvolvimento (was "Rotina"). One partial, `project_billing_group`, replaces `project_billing_fields` and `project_extra_fold`
+- [X] S112.4 The customer meeting is every week or every two weeks: `projects.customer_meeting_every_weeks` (1 or 2, default 1, `project.invalid_customer_meeting_every_weeks` otherwise), back to 1 when the meeting or the customer goes away. A "Frequência" select in the form, and Configurações says "…, a cada duas semanas". Only the frequency is kept: nothing computes meeting dates yet
+- [X] S112.5 Solo mode: the Overview is a main project tab, and Gestão holds Integrações and Configurações (its root opens Integrações). The tab strip comes from `page.Data.ProjectTabs()`, where `outsideManagement` is the one rule that changes with the mode; the Início tab id is `home`. Help texts follow
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open
