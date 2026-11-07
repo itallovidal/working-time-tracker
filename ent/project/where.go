@@ -111,6 +111,11 @@ func CustomerMeetingTime(v string) predicate.Project {
 	return predicate.Project(sql.FieldEQ(FieldCustomerMeetingTime, v))
 }
 
+// CustomerMeetingEveryWeeks applies equality check predicate on the "customer_meeting_every_weeks" field. It's identical to CustomerMeetingEveryWeeksEQ.
+func CustomerMeetingEveryWeeks(v int) predicate.Project {
+	return predicate.Project(sql.FieldEQ(FieldCustomerMeetingEveryWeeks, v))
+}
+
 // CustomerID applies equality check predicate on the "customer_id" field. It's identical to CustomerIDEQ.
 func CustomerID(v uuid.UUID) predicate.Project {
 	return predicate.Project(sql.FieldEQ(FieldCustomerID, v))
@@ -849,6 +854,46 @@ func CustomerMeetingTimeEqualFold(v string) predicate.Project {
 // CustomerMeetingTimeContainsFold applies the ContainsFold predicate on the "customer_meeting_time" field.
 func CustomerMeetingTimeContainsFold(v string) predicate.Project {
 	return predicate.Project(sql.FieldContainsFold(FieldCustomerMeetingTime, v))
+}
+
+// CustomerMeetingEveryWeeksEQ applies the EQ predicate on the "customer_meeting_every_weeks" field.
+func CustomerMeetingEveryWeeksEQ(v int) predicate.Project {
+	return predicate.Project(sql.FieldEQ(FieldCustomerMeetingEveryWeeks, v))
+}
+
+// CustomerMeetingEveryWeeksNEQ applies the NEQ predicate on the "customer_meeting_every_weeks" field.
+func CustomerMeetingEveryWeeksNEQ(v int) predicate.Project {
+	return predicate.Project(sql.FieldNEQ(FieldCustomerMeetingEveryWeeks, v))
+}
+
+// CustomerMeetingEveryWeeksIn applies the In predicate on the "customer_meeting_every_weeks" field.
+func CustomerMeetingEveryWeeksIn(vs ...int) predicate.Project {
+	return predicate.Project(sql.FieldIn(FieldCustomerMeetingEveryWeeks, vs...))
+}
+
+// CustomerMeetingEveryWeeksNotIn applies the NotIn predicate on the "customer_meeting_every_weeks" field.
+func CustomerMeetingEveryWeeksNotIn(vs ...int) predicate.Project {
+	return predicate.Project(sql.FieldNotIn(FieldCustomerMeetingEveryWeeks, vs...))
+}
+
+// CustomerMeetingEveryWeeksGT applies the GT predicate on the "customer_meeting_every_weeks" field.
+func CustomerMeetingEveryWeeksGT(v int) predicate.Project {
+	return predicate.Project(sql.FieldGT(FieldCustomerMeetingEveryWeeks, v))
+}
+
+// CustomerMeetingEveryWeeksGTE applies the GTE predicate on the "customer_meeting_every_weeks" field.
+func CustomerMeetingEveryWeeksGTE(v int) predicate.Project {
+	return predicate.Project(sql.FieldGTE(FieldCustomerMeetingEveryWeeks, v))
+}
+
+// CustomerMeetingEveryWeeksLT applies the LT predicate on the "customer_meeting_every_weeks" field.
+func CustomerMeetingEveryWeeksLT(v int) predicate.Project {
+	return predicate.Project(sql.FieldLT(FieldCustomerMeetingEveryWeeks, v))
+}
+
+// CustomerMeetingEveryWeeksLTE applies the LTE predicate on the "customer_meeting_every_weeks" field.
+func CustomerMeetingEveryWeeksLTE(v int) predicate.Project {
+	return predicate.Project(sql.FieldLTE(FieldCustomerMeetingEveryWeeks, v))
 }
 
 // CustomerIDEQ applies the EQ predicate on the "customer_id" field.

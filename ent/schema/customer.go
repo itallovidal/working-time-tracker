@@ -48,6 +48,13 @@ func (Customer) Fields() []ent.Field {
 		// fechamento e o vencimento do recebível.
 		field.Int("closing_day").Default(31).Min(1).Max(31),
 		field.Int("payment_days").NonNegative().Default(0),
+		// O ciclo do período: "monthly" (fecha no closing_day de cada mês) ou "biweekly" (a cada 14 dias, o bi-weekly dos
+		// EUA). Validado em Go, como billing_mode; o de 14 dias só vale no modo hourly. cycle_anchor é o dia, YYYY-MM-DD no
+		// fuso da organização, em que fechou o último período já pago fora do app: os períodos de 14 dias começam no dia
+		// seguinte, e nada até ele é cobrado. Só existe no ciclo de 14 dias. No de 14 dias o closing_day fica guardado sem
+		// uso e volta a valer quando o ciclo volta a ser mensal.
+		field.String("billing_cycle").Default("monthly"),
+		field.String("cycle_anchor").Optional().Nillable(),
 		// Só monthly: a multa por atraso e os juros ao mês, em pontos-base (200 = 2%), e os dias de tolerância depois do
 		// vencimento antes de cobrar os dois.
 		field.Int("late_fee_bp").NonNegative().Default(0),

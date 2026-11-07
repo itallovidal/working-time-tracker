@@ -143,6 +143,14 @@ func TestCustomerBilling_FormValidation(t *testing.T) {
 		{"payment days negative", "POST", create, `{"name":"X","hourly_rate_cents":10000,"payment_days":-1}`, 400, "customer.invalid_payment_days", "payment_days"},
 		{"payment days over the cap", "PATCH", "/api/customers/" + hourlyID, `{"payment_days":366}`, 400, "customer.invalid_payment_days", "payment_days"},
 
+		// O ciclo de 14 dias, só do por hora, com o último fechamento já pago.
+		{"unknown cycle", "POST", create, `{"name":"X","hourly_rate_cents":10000,"billing_cycle":"weekly"}`, 400, "customer.invalid_billing_cycle", "billing_cycle"},
+		{"biweekly without the anchor", "POST", create, `{"name":"X","hourly_rate_cents":10000,"billing_cycle":"biweekly"}`, 400, "request.field_required", "cycle_anchor"},
+		{"anchor not a date", "POST", create, `{"name":"X","hourly_rate_cents":10000,"billing_cycle":"biweekly","cycle_anchor":"27/10/2026"}`, 400, "request.field_invalid", "cycle_anchor"},
+		{"anchor in the future", "POST", create, `{"name":"X","hourly_rate_cents":10000,"billing_cycle":"biweekly","cycle_anchor":"2999-01-01"}`, 400, "customer.invalid_cycle_anchor", "cycle_anchor"},
+		{"anchor on the monthly cycle", "PATCH", "/api/customers/" + hourlyID, `{"cycle_anchor":"2026-10-27"}`, 400, "customer.field_biweekly_only", "cycle_anchor"},
+		{"biweekly on a monthly customer", "PATCH", "/api/customers/" + monthlyID, `{"billing_cycle":"biweekly"}`, 400, "customer.field_hourly_only", "billing_cycle"},
+
 		// O tipo errado de um campo novo é corpo inválido, com o nome do campo.
 		{"closing day as text", "POST", create, `{"name":"X","hourly_rate_cents":10000,"closing_day":"5"}`, 400, "request.invalid_body", "closing_day"},
 		{"fee as text", "POST", create, `{"name":"X","billing_mode":"monthly","monthly_fee_cents":"muito"}`, 400, "request.invalid_body", "monthly_fee_cents"},
@@ -162,7 +170,9 @@ func TestCustomerBilling_FormValidation(t *testing.T) {
 	// O que vale passa, nos limites, e volta como foi gravado.
 	ok := []struct{ name, method, path, body string }{
 		{"hourly with every term", "POST", create, `{"name":"A","hourly_rate_cents":1000,"closing_day":1,"payment_days":365}`},
-		{"hourly with the defaults spelled out", "POST", create, `{"name":"B","billing_mode":"hourly","hourly_rate_cents":10000,"monthly_fee_cents":null,"contract_start":"","contract_end":"","late_fee_bp":0,"late_interest_bp_month":0,"grace_days":0,"closing_day":31,"payment_days":0}`},
+		{"hourly with the defaults spelled out", "POST", create, `{"name":"B","billing_mode":"hourly","hourly_rate_cents":10000,"monthly_fee_cents":null,"contract_start":"","contract_end":"","billing_cycle":"monthly","cycle_anchor":"","late_fee_bp":0,"late_interest_bp_month":0,"grace_days":0,"closing_day":31,"payment_days":0}`},
+		{"hourly every 14 days", "POST", create, `{"name":"D","billing_mode":"hourly","hourly_rate_cents":10000,"billing_cycle":"biweekly","cycle_anchor":"2026-10-27","closing_day":31,"payment_days":3}`},
+		{"monthly with the cycle defaults", "POST", create, `{"name":"E",` + monthlyBody + `,"billing_cycle":"monthly","cycle_anchor":""}`},
 		{"monthly with every term", "POST", create, `{"name":"C",` + monthlyBody + `,"contract_end":"2027-10-31","closing_day":28,"payment_days":10,"late_fee_bp":10000,"late_interest_bp_month":100,"grace_days":365}`},
 		{"monthly edit", "PATCH", "/api/customers/" + monthlyID, `{"monthly_fee_cents":700000,"contract_end":""}`},
 	}
@@ -175,6 +185,43 @@ func TestCustomerBilling_FormValidation(t *testing.T) {
 	edited := decode(t, do(e, "GET", "/api/customers/"+monthlyID, "", owner.session))
 	if edited["monthly_fee_cents"] != float64(700000) || edited["contract_end"] != nil || edited["contract_start"] != "2026-11-01" || edited["billing_mode"] != "monthly" {
 		t.Errorf("monthly customer after the edit = %v", edited)
+	}
+}
+
+// Com recebíveis no cliente, trocar o dia de fechamento ou o ciclo é conflito com o estado (409), não corpo inválido;
+// passar para 14 dias com o último fechamento no fim do recebível é aceito, e o cliente sai assim no GET.
+func TestCustomerBilling_LocksAre409(t *testing.T) {
+	e := newServer(t)
+	owner := signup(t, e, "Org", "ana@test.com")
+	makeSolo(t, owner.orgID, true)
+	rec := do(e, "POST", "/api/orgs/"+owner.orgID+"/customers", `{"name":"Acme","hourly_rate_cents":10000}`, owner.session)
+	id := decode(t, rec)["id"].(string)
+	testClient.Receivable.Create().
+		SetOrganizationID(uuid.MustParse(owner.orgID)).SetCustomerID(uuid.MustParse(id)).SetKind("hourly").
+		SetPeriodStart("2026-09-01").SetPeriodEnd("2026-09-30").SetSeconds(3600).
+		SetCalculatedCents(10000).SetAmountCents(10000).SetCurrency("BRL").SetDueDate("2026-09-30").
+		SaveX(context.Background())
+
+	for _, c := range []struct{ name, body, code, field string }{
+		{"another closing day", `{"closing_day":15}`, "customer.closing_day_locked", "closing_day"},
+		{"anchor before the receivable", `{"billing_cycle":"biweekly","cycle_anchor":"2026-09-29"}`, "customer.cycle_locked", "cycle_anchor"},
+	} {
+		rec := do(e, "PATCH", "/api/customers/"+id, c.body, owner.session)
+		if code, params := projErrorOf(t, rec.Body.String()); rec.Code != http.StatusConflict || code != c.code || params["field"] != c.field {
+			t.Errorf("%s = %d %s, want 409 %s on %s", c.name, rec.Code, rec.Body.String(), c.code, c.field)
+		}
+	}
+
+	rec = do(e, "PATCH", "/api/customers/"+id, `{"billing_cycle":"biweekly","cycle_anchor":"2026-09-30"}`, owner.session)
+	if body := decode(t, rec); rec.Code != http.StatusOK || body["billing_cycle"] != "biweekly" || body["cycle_anchor"] != "2026-09-30" {
+		t.Errorf("biweekly from the end of the receivable = %d %v", rec.Code, body)
+	}
+	rec = do(e, "PATCH", "/api/customers/"+id, `{"billing_cycle":"monthly","cycle_anchor":""}`, owner.session)
+	if code, params := projErrorOf(t, rec.Body.String()); rec.Code != http.StatusConflict || code != "customer.cycle_locked" || params["field"] != "billing_cycle" {
+		t.Errorf("back to monthly = %d %s, want 409 customer.cycle_locked on billing_cycle", rec.Code, rec.Body.String())
+	}
+	if got := decode(t, do(e, "GET", "/api/customers/"+id, "", owner.session)); got["billing_cycle"] != "biweekly" || got["cycle_anchor"] != "2026-09-30" {
+		t.Errorf("get after the refused change = %v", got)
 	}
 }
 
@@ -362,7 +409,7 @@ func TestCustomerBilling_PagesShowTheTermsOnlyInSolo(t *testing.T) {
 
 	// O formulário de novo projeto mostra a cobrança do cliente, só para leitura, e pede o acréscimo (Decisão 21).
 	projects := do(e, "GET", "/orgs/"+owner.orgID+"/projects", "", owner.session).Body.String()
-	for _, want := range []string{`@change="customerChanged()"`, `x-text="billing.customer(customerOf())"`, `id="project-bill-extra"`,
+	for _, want := range []string{`@change="customerChanged()"`, `x-text="billing.customerAmount(customerOf())"`, `id="project-bill-extra"`,
 		`data-field="bill_extra_cents"`, `x-text="billing.extraLabel(customerOf())"`, `x-text="billing.total(customerOf(), draft.extra)"`} {
 		if !strings.Contains(projects, want) {
 			t.Errorf("the new project form lacks %s", want)

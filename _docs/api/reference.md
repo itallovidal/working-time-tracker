@@ -13,6 +13,8 @@ Todas as rotas falam JSON. Erros sempre vêm como `{"error": {"code": "dominio.m
 - Rotas marcadas como **admin** respondem **403** para membros. As marcadas com uma permissão (`project.edit`, `billing.view`…) ou **dono** respondem **403** a quem não a tem. Os cargos são quatro (dono, admin, administrador de projeto e colaborador): o dono tem todas, o admin tem as de projeto menos a cobrança (`billing.*`) e as da organização de criar projeto e cuidar de pessoas, e as do administrador de projeto vêm do grupo dele no projeto. A lista está em [`permissions.md`](../product/permissions.md).
 - `POST`, `PUT` e `PATCH` precisam de `Content-Type: application/json`. Outro formato responde **415**, o que também protege contra CSRF.
 - Signup, login e convites têm limite de tentativas por IP. Acima dele, a resposta é **429**.
+- O servidor MCP (`/mcp`, para o Claude) fica fora da API e entra com um token pessoal em `Authorization: Bearer`, não
+  com o cookie. Ver [`mcp.md`](mcp.md).
 
 ## Códigos de status
 
@@ -51,13 +53,16 @@ Toda validação de formulário devolve o campo que errou: `{"error": {"code": "
 | POST | `/api/auth/login` | público | Abre uma sessão |
 | POST | `/api/auth/logout` | logado | Encerra a sessão atual |
 | GET | `/api/auth/me` | logado | Quem está logado, com a organização e o papel. `needs_onboarding` é verdadeiro para o dono que ainda não viu as boas-vindas |
-| POST | `/api/auth/password` | logado | Troca a senha e encerra as suas outras sessões |
+| POST | `/api/auth/password` | logado | Troca a senha, encerra as suas outras sessões e revoga os seus tokens do Claude |
 | POST | `/api/auth/onboarding/complete` | logado | Dá baixa nas boas-vindas do primeiro acesso de quem chama (`204`). Repetir não muda nada |
 | GET | `/api/auth/invites/:token` | público | Mostra para qual organização e papel é o convite |
 | POST | `/api/auth/invites/:token/accept` | público | Cria a conta pelo convite e abre a sessão |
 | POST | `/api/auth/clerk/login` | público, token do Clerk | Entra pelo Clerk (ver abaixo) |
 | POST | `/api/auth/clerk/signup` | público, token do Clerk | Cria uma organização para quem entrou pelo Clerk |
 | POST | `/api/auth/clerk/join` | público, token do Clerk | Aceita um convite pendente feito para o email do Clerk |
+| GET | `/api/auth/tokens` | logado | Os seus tokens do Claude (ver abaixo), do mais novo para o mais antigo, sem o token em si |
+| POST | `/api/auth/tokens` | logado | Gera um token do Claude e o devolve em claro, uma vez só |
+| DELETE | `/api/auth/tokens/:tokenId` | logado | Revoga um token seu (`204`). O de outra pessoa responde `404` |
 
 ### Entrar pelo Clerk
 
@@ -143,6 +148,29 @@ Content-Type: application/json
 POST /api/auth/onboarding/complete
 ```
 Responde `204`, sem corpo. Só o dono vê as boas-vindas (o modal da página inicial); o `/api/auth/me` traz `needs_onboarding: true` enquanto ele não as concluiu ou dispensou, e a primeira chamada grava a data, as outras não mudam nada. Quem entrou por convite nunca as vê, e quem já existia antes do recurso não as vê.
+
+### Tokens do Claude
+```http
+POST /api/auth/tokens
+Content-Type: application/json
+
+{ "name": "Claude Code no notebook", "days": 90 }
+```
+O token é o que o Claude Code manda em `Authorization: Bearer` para o servidor MCP em `/mcp`
+([mcp.md](mcp.md)); ele **não abre a API**, que continua só com o cookie. `days` é 30, 90 (o padrão, quando não vem)
+ou 365. Responde `201`:
+
+```json
+{
+  "id": "…", "name": "Claude Code no notebook", "prefix": "wtt_Mt-Mne",
+  "expires_at": "2027-02-05T15:59:00Z", "last_used_at": null, "created_at": "2026-11-07T15:59:00Z",
+  "token": "wtt_…"
+}
+```
+
+`token` só aparece aqui; a lista traz o resto, e `prefix` é o começo do token, para reconhecê-lo. Cada pessoa tem até
+10 tokens válidos (`409` `auth.token_limit`; os vencidos não contam). `last_used_at` é gravado no máximo uma vez por
+minuto. Trocar a senha revoga todos.
 
 ### Aceitar convite
 ```http
@@ -459,7 +487,7 @@ Content-Type: application/json
 
 ### Termos comerciais do cliente
 
-Todo cliente traz o **modo de cobrança** e os termos dele, que o `POST` e o `PATCH` aceitam. A cobrança mora no cliente e vale para todos os projetos dele (Decisão 21): o projeto só soma um acréscimo. O cliente só com o valor por hora é por hora, fecha no dia 31 e vence no fechamento. Os valores são em **centavos**, na moeda da organização.
+Todo cliente traz o **modo de cobrança** e os termos dele, que o `POST` e o `PATCH` aceitam. A cobrança mora no cliente e vale para todos os projetos dele (Decisão 21): o projeto só soma um acréscimo. O cliente só com o valor por hora é por hora, de ciclo mensal, fecha no dia 31 e vence no fechamento. Os valores são em **centavos**, na moeda da organização.
 
 | Campo | Tipo | Regra |
 |---|---|---|
@@ -468,7 +496,9 @@ Todo cliente traz o **modo de cobrança** e os termos dele, que o `POST` e o `PA
 | `monthly_fee_cents` | int ou `null` | Só `monthly`, obrigatório nele (`400 request.field_required`) e de 1 a 100000000 (`400 customer.invalid_monthly_fee`) |
 | `contract_start` | `YYYY-MM-DD` | Só `monthly`, obrigatório nele. Uma data que não existe é `400 request.field_invalid` |
 | `contract_end` | `YYYY-MM-DD` ou `""` | Só `monthly`, opcional (sem fim, o contrato segue). Tem de ser **depois** do início: `400 customer.invalid_contract_end` |
-| `closing_day` | int, padrão 31 | De 1 a 31: o dia em que o período fecha. 31 é o último dia do mês, e o mês curto fecha no último dia dele (`400 customer.invalid_closing_day`). Com recebíveis no cliente o dia não muda: outro valor é `409 customer.closing_day_locked` (o mesmo dia que ele já tem passa); desfeitos os recebíveis, muda |
+| `billing_cycle` | `"monthly"` (padrão) ou `"biweekly"` | O ciclo do período. `monthly` fecha no `closing_day` de cada mês; `biweekly` fecha **a cada 14 dias** (o bi-weekly dos EUA, não a quinzena de 15 dias da regra de pagamento da pessoa) e só vale em `hourly`: num cliente mensal é `400 customer.field_hourly_only`. Outro valor, ou vazio, é `400 customer.invalid_billing_cycle` |
+| `cycle_anchor` | `YYYY-MM-DD` ou `""` | Só `biweekly`, obrigatório nele (`400 request.field_required`): o último dia do último período que o cliente já pagou. Os períodos começam no dia seguinte e têm 14 dias; as horas até a âncora nunca são propostas. Uma data que não existe é `400 request.field_invalid`; depois de hoje, no fuso da organização, é `400 customer.invalid_cycle_anchor` (conferido só quando a âncora muda). No ciclo mensal, com valor, é `400 customer.field_biweekly_only`; voltar ao mensal apaga a âncora |
+| `closing_day` | int, padrão 31 | De 1 a 31: o dia em que o período mensal fecha. 31 é o último dia do mês, e o mês curto fecha no último dia dele (`400 customer.invalid_closing_day`). No ciclo de 14 dias fica guardado sem uso. Com recebíveis no cliente o dia não muda: outro valor é `409 customer.closing_day_locked` (o mesmo dia que ele já tem passa); desfeitos os recebíveis, muda |
 | `payment_days` | int, padrão 0 | De 0 a 365: dias entre o fechamento e o vencimento (`400 customer.invalid_payment_days`) |
 | `late_fee_bp` | int, padrão 0 | Só `monthly`. A multa em pontos-base (200 = 2%), de 0 a 10000 (`400 customer.invalid_late_fee`) |
 | `late_interest_bp_month` | int, padrão 0 | Só `monthly`. Os juros ao mês em pontos-base, de 0 a 10000 (`400 customer.invalid_late_interest`) |
@@ -477,6 +507,7 @@ Todo cliente traz o **modo de cobrança** e os termos dele, que o `POST` e o `PA
 - **Um modo ou o outro.** Um campo do outro modo, com valor, é recusado com o campo em `params.field`: `400 customer.field_hourly_only` (`hourly_rate_cents` num cliente mensal) ou `400 customer.field_monthly_only` (a mensalidade, o contrato, a multa, os juros ou a tolerância num cliente por hora). `null`, `""` e `0` são o padrão do campo, não valor. Trocar o modo apaga os campos do modo que saiu.
 - **`monthly` só no modo solo.** Numa organização que não é solo, `billing_mode: "monthly"` é `400 customer.monthly_needs_solo` (`params.field` = `billing_mode`), na criação e na troca. Desligar o modo solo esconde as telas, e o cliente mensal segue guardado e editável.
 - **O modo trava com projetos.** Trocar o `billing_mode` de um cliente que já tem projetos é `409 customer.mode_locked` (`params.field` = `billing_mode`). Mandar o modo que ele já tem, e mexer nos outros termos, vale.
+- **O ciclo trava com recebíveis.** Com recebíveis no cliente, mudar o `billing_cycle` ou a `cycle_anchor` é `409 customer.cycle_locked`, porque os períodos novos cairiam por cima dos confirmados. A exceção é ficar em `biweekly` com a âncora no `period_end` do recebível mais recente, ou depois: os períodos novos começam depois dele. `params.field` é `billing_cycle` na volta ao mensal (também por uma troca de modo) e `cycle_anchor` no resto. Mandar o ciclo e a âncora que ele já tem passa.
 - **`PATCH`.** Campo omitido mantém o valor. `null` em `hourly_rate_cents` ou `monthly_fee_cents` é recusado no modo que os exige (`400 request.field_required`); em `contract_start` e `contract_end`, `""` apaga (o início de um cliente mensal não pode ficar vazio).
 - Todo erro de termo leva `params.field` com a chave do corpo, para a tela marcar o campo. Chave desconhecida, ou do tipo errado (`"closing_day": "5"`), é `400 request.invalid_body`.
 
@@ -494,6 +525,19 @@ Content-Type: application/json
   "late_fee_bp": 200,
   "late_interest_bp_month": 100,
   "grace_days": 3
+}
+```
+
+Um cliente por hora que paga a cada 14 dias, com o último período pago fechando em 27/10/2026 e 3 dias de prazo: os períodos são 28/10 a 10/11 (vence 13/11), 11/11 a 24/11, e assim por diante.
+
+```http
+PATCH /api/customers/:customerId
+Content-Type: application/json
+
+{
+  "billing_cycle": "biweekly",
+  "cycle_anchor": "2026-10-27",
+  "payment_days": 3
 }
 ```
 
@@ -540,6 +584,7 @@ Content-Type: application/json
   "weekly_sync_time": "14:00",
   "customer_meeting_day": "wednesday",
   "customer_meeting_time": "10:30",
+  "customer_meeting_every_weeks": 2,
   "customer_id": "<id do cliente, opcional>",
   "bill_extra_cents": 2000
 }
@@ -549,7 +594,8 @@ Content-Type: application/json
 - `daily_time` usa o formato `HH:MM`. Sem ele, o projeto não tem daily.
 - `weekly_sync_day` vai de `monday` a `sunday`. Sem ele, o projeto não tem weekly.
 - `weekly_sync_time` usa o formato `HH:MM` e anda junto com o dia: horário sem `weekly_sync_day` é `400 project.weekly_time_without_day`, e dia sem horário é `400 request.field_required` com `params.field` = `weekly_sync_time`. A recusa do dia sem horário só vale quando o corpo mexe na weekly (manda o dia ou o horário): weeklies antigas, que ficaram só com o dia, seguem lendo e aceitam um `PATCH` que muda outro campo, e para consertar uma delas basta mandar o horário.
-- `customer_meeting_day` e `customer_meeting_time` são a reunião semanal com o cliente, com as mesmas regras da weekly: o dia vai de `monday` a `sunday` (outro valor é `400 project.invalid_weekday`), o horário usa `HH:MM` (`400 project.invalid_customer_meeting_time`) e andam juntos: horário sem o dia é `400 project.customer_meeting_time_without_day` e dia sem horário é `400 request.field_required` com `params.field` = `customer_meeting_time` (com a mesma guarda para linhas antigas). Não dependem da weekly do time. Qualquer pessoa do projeto lê os dois campos; só admin altera. Tirar o cliente do projeto (`PUT /api/projects/:projectId/billing` com `customer_id` nulo) apaga a reunião. As telas só oferecem a reunião num projeto com cliente, e a API recusa o dia num projeto sem cliente (`400 project.meeting_needs_customer`).
+- `customer_meeting_day` e `customer_meeting_time` são a reunião com o cliente, com as mesmas regras da weekly: o dia vai de `monday` a `sunday` (outro valor é `400 project.invalid_weekday`), o horário usa `HH:MM` (`400 project.invalid_customer_meeting_time`) e andam juntos: horário sem o dia é `400 project.customer_meeting_time_without_day` e dia sem horário é `400 request.field_required` com `params.field` = `customer_meeting_time` (com a mesma guarda para linhas antigas). Não dependem da weekly do time. Qualquer pessoa do projeto lê os dois campos; só admin altera. Tirar o cliente do projeto (`PUT /api/projects/:projectId/billing` com `customer_id` nulo) apaga a reunião. As telas só oferecem a reunião num projeto com cliente, e a API recusa o dia num projeto sem cliente (`400 project.meeting_needs_customer`).
+- `customer_meeting_every_weeks` é a frequência da reunião: `1` (toda semana) ou `2` (a cada duas semanas); outro valor é `400 project.invalid_customer_meeting_every_weeks`. Omitido mantém o atual (na criação, `1`). O projeto sem reunião, ou que perde a reunião (apagada ou junto com o cliente), fica em `1`, e a resposta sempre traz o campo.
 
 No `PATCH`, um campo omitido mantém o valor atual, e `""` apaga `daily_time`, `weekly_sync_day`, `weekly_sync_time`, `customer_meeting_day` ou `customer_meeting_time`. Apagar o dia da weekly ou da reunião apaga o horário junto. O `name` também mantém quando não vem (ausente ou `null`), como na organização e no cliente; vazio ou só espaços é `400 project.name_required`. O projeto não tem jornada semanal: ela é da pessoa (`PATCH /api/persons/:personId/weekly-hours`).
 

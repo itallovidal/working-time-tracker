@@ -17,6 +17,7 @@ erDiagram
   ORGANIZATION ||--o{ RECEIVABLE : "tem"
   CUSTOMER ||--o{ RECEIVABLE : "gera"
   PERSON ||--o{ SESSION : "entra com"
+  PERSON ||--o{ API_TOKEN : "conecta o Claude com"
   PROJECT ||--o{ ALLOCATION : "tem"
   PERSON ||--o{ ALLOCATION : "tem"
   PROJECT ||--o{ TEAM : "tem"
@@ -67,6 +68,8 @@ erDiagram
     int monthly_fee_cents "só monthly"
     string contract_start "só monthly, YYYY-MM-DD"
     string contract_end "só monthly, opcional"
+    string billing_cycle "monthly ou biweekly (14 dias, só hourly)"
+    string cycle_anchor "só biweekly, YYYY-MM-DD"
     int closing_day "1 a 31, padrão 31"
     int payment_days "fechamento até o vencimento"
     int late_fee_bp "só monthly, 200 = 2%"
@@ -100,6 +103,7 @@ erDiagram
     string weekly_sync_time
     string customer_meeting_day
     string customer_meeting_time
+    int customer_meeting_every_weeks
   }
   PAYOUT {
     uuid person_id FK
@@ -179,6 +183,13 @@ erDiagram
     string token_hash UK
     timestamp expires_at
   }
+  API_TOKEN {
+    string name
+    string token_hash UK
+    string prefix
+    timestamp expires_at
+    timestamp last_used_at "opcional"
+  }
 ```
 
 `ISSUE_SYNC.snapshot` resume várias colunas (`title`, `body`, `labels`, `assignee_logins`, `mapped_login`,
@@ -191,8 +202,9 @@ erDiagram
 | `organizations` | A empresa. Perfil, dados jurídicos (o documento fiscal depende do `country`), regime, fuso e moeda, e a marca do modo solo (`solo`) |
 | `persons` | Uma pessoa de **uma** organização. O e-mail é único no sistema todo. `role` é `admin` ou `member`; o dono é um admin com `is_owner` |
 | `sessions` | A sessão de login (o cookie). Guarda só o sha256 do token |
+| `api_tokens` | Os tokens do Claude (o servidor MCP em `/mcp`): o nome, o começo do token para a lista, a validade e o último uso. Como a sessão, guarda só o sha256, e some com a pessoa. Índice em `person_id`, por onde a lista, o limite e a troca de senha os procuram |
 | `invites` | Convite de uso único, com validade. Pode levar a pessoa a um projeto, com valor, time e grupo |
-| `customers` | O cliente que contrata projetos. Tem país próprio, que decide como o documento é conferido, e os termos de cobrança, que valem para todos os projetos dele: o modo (`hourly` ou `monthly`), o valor por hora (no por hora), o fechamento do período, o prazo e, no mensal, a mensalidade, o contrato, a multa, os juros e a tolerância |
+| `customers` | O cliente que contrata projetos. Tem país próprio, que decide como o documento é conferido, e os termos de cobrança, que valem para todos os projetos dele: o modo (`hourly` ou `monthly`), o valor por hora (no por hora), o ciclo do período (mensal, ou a cada 14 dias a partir de uma âncora, no por hora), o fechamento do período, o prazo e, no mensal, a mensalidade, o contrato, a multa, os juros e a tolerância |
 | `receivables` | A conta a receber de um cliente por período, no modo solo: o que o dono confirmou cobrar e, depois, o que entrou. Um por cliente e período |
 | `projects` | O projeto. Com cliente, tem um acréscimo opcional sobre a cobrança dele (por hora no cliente por hora, por mês no mensal); o valor cobrado por hora é o do cliente mais o acréscimo, calculado, nunca gravado aqui. Sem cliente é interno, sem acréscimo |
 | `allocations` | A pessoa no projeto: o valor pago por hora e o grupo de permissões dela ali. Uma por pessoa e projeto |
@@ -265,10 +277,12 @@ bônus incluído; sai junto com a pessoa. Ver [money.md](../product/money.md).
 **O modo solo é uma marca, e o que ele esconde fica guardado.** `organizations.solo` só liga com uma pessoa e sem
 convites pendentes (o serviço confere; o banco não). Desligar não apaga nada: o cliente `monthly` e os recebíveis
 continuam nas tabelas, só sem tela. O `billing_mode` do cliente e os campos de cada modo são validados em Go, como a
-regra de pagamento da pessoa; o banco só garante os padrões (`hourly`, `closing_day` 31, zeros).
+regra de pagamento da pessoa; o banco só garante os padrões (`hourly`, `billing_cycle` `monthly`, `closing_day` 31,
+zeros). O `billing_cycle` e a `cycle_anchor` também são validados em Go.
 
 **Os períodos de cobrança não são gravados, a confirmação é.** O período do cliente (o `closing_day`, pela mesma conta da
-regra mensal de pagamento) e a proposta (as sessões de todos os projetos do cliente, ou a mensalidade) são calculados na
+regra mensal de pagamento, ou os 14 dias a partir do dia seguinte à `cycle_anchor`, pela conta da quinzenal com 14
+dias) e a proposta (as sessões de todos os projetos do cliente, ou a mensalidade) são calculados na
 hora. `receivables` guarda a confirmação: as datas do período, o tempo e o valor que o sistema calculou naquele momento,
 o valor confirmado, a moeda da organização (sem conversão), o vencimento e, quando entra, o recebimento. O índice único
 em `customer_id`, `period_start` e `period_end` impede duas confirmações do mesmo período. A chave estrangeira do cliente
@@ -284,7 +298,7 @@ em `customer_id`, `period_start` e `period_end` impede duas confirmações do me
 | Time | Apaga quem estava nele. O convite que levava a ele fica sem time |
 | Integração | Apaga os vínculos dela |
 | Cliente | Só sem projetos apontando para ele (`customer.has_projects`) e sem recebíveis (`customer.has_receivables`) |
-| Organização | Só sem projetos (`organization.has_projects`). Apaga as pessoas, as sessões de login, os clientes, os recebíveis e os convites |
+| Organização | Só sem projetos (`organization.has_projects`). Apaga as pessoas, as sessões de login, os tokens do Claude, os clientes, os recebíveis e os convites |
 
 Uma pessoa com tarefas não pode ser apagada do banco (a chave estrangeira recusa), e não há rota que apague uma
 pessoa.

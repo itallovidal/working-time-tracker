@@ -753,8 +753,9 @@ migração de dados nem backfill.
 
 **Consequências:** os períodos são calculados do cadastro do cliente de hoje, e a sessão não guarda o cliente (vale o do
 projeto de hoje). Dois caminhos cobrariam as mesmas horas duas vezes e por isso são recusados com `409`: trocar o dia de
-fechamento de um cliente que já tem recebíveis (`customer.closing_day_locked`), porque os períodos novos cairiam por
-cima dos confirmados, e tirar do cliente um projeto com sessões quando o cliente já tem recebíveis
+fechamento (e, desde a [Decisão 23](#decisão-23-o-ciclo-de-14-dias-do-cliente-por-hora), o ciclo e a âncora) de um
+cliente que já tem recebíveis (`customer.closing_day_locked`, `customer.cycle_locked`), porque os períodos novos cairiam
+por cima dos confirmados, e tirar do cliente um projeto com sessões quando o cliente já tem recebíveis
 (`project.customer_locked`). Ambos destravam quando os recebíveis são desfeitos; guardar o cliente em cada sessão, como
 o valor por hora, resolveria o segundo sem a trava, mas pede uma migração com preenchimento sobre dados reais e fica
 para depois. O recebimento grava só se o valor confirmado ainda é o que foi lido (`receivable.changed`), para uma
@@ -813,6 +814,87 @@ por hora com projetos recebe o **menor** valor cobrado entre eles, e cada projet
 zerado antes de o dono confirmar o período some da proposta (ele confere o valor ao confirmar, como já fazia com o
 primeiro mês parcial). As regras de hoje estão em [money.md](../product/money.md#os-dois-valores-por-hora).
 
+### Decisão 22: MCP — o Claude no mesmo binário, com um token pessoal que só vale no /mcp
+
+**Contexto:** o dono quer usar o sistema de dentro do Claude: criar e atualizar tarefas, pegar uma para si,
+sincronizá-la, bater o ponto e trocar de tarefa sem abrir a tela. A API só aceitava o cookie da sessão, então nenhum
+cliente fora do navegador entrava. Os apps hospedados do Claude (claude.ai, Desktop, celular) só conectam um servidor
+remoto por OAuth 2.1; o Claude Code aceita um token num cabeçalho.
+
+**Escolha:** um servidor MCP em `/mcp`, no mesmo binário, com o SDK oficial de Go (`modelcontextprotocol/go-sdk`), e
+um token pessoal gerado no perfil. A primeira etapa é o Claude Code.
+
+- **No mesmo binário, fora do `/api`.** Sobe com o servidor, no mesmo deploy, e usa os services que ele já monta. Um
+  binário à parte (um MCP local por stdio que chamasse a API) pediria instalar mais uma coisa em cada máquina e ainda
+  precisaria de um token para a API.
+- **Sem estado.** O transporte é o Streamable HTTP em modo stateless, com respostas em JSON: cada pedido é completo e
+  nada fica na memória do processo. Na troca de processo de um deploy no Render, uma sessão guardada em memória cairia.
+- **As ferramentas chamam os services, não a API por dentro.** Os services são livres do echo (ids em texto, quem chama
+  em `selfID`). A checagem dos middlewares (a organização, o projeto, as permissões nele) saiu do `RequireOrg` para
+  `Resolver.Reach`, que o middleware e o MCP usam, então a regra continua num lugar só. As checagens que moravam nos
+  handlers ficaram desnecessárias: o ponto é sempre o da pessoa do token (sem `personFor` nem `editable`), e o MCP não
+  devolve dinheiro (sem `redact`).
+- **O token só vale no `/mcp`, e o `/mcp` não aceita o cookie.** Um token vazado não troca a senha, não cria outro
+  token nem lê pagamentos; e um site de fora não usa a sessão do navegador para falar com o `/mcp`.
+- **O token é como a sessão:** `wtt_` mais 32 bytes, só o sha256 no banco, uma tabela própria (`api_tokens`), validade
+  de 30, 90 ou 365 dias, até 10 por pessoa, revogado por quem o gerou e por uma troca de senha. O prefixo `wtt_` deixa
+  os scanners de segredo reconhecê-lo.
+- **Dinheiro fica de fora** de toda saída. O que o Claude precisa (tarefas, ponto, horas) não depende dele, e uma regra
+  a menos para errar.
+- **Para o modelo, em inglês:** as descrições das ferramentas, as instruções e os textos de erro (do catálogo `en`, com
+  o código estável). O Claude responde à pessoa no idioma dela.
+
+**Alternativas descartadas:**
+- **OAuth já na primeira etapa:** é o que abre o claude.ai e o Desktop, mas pede um servidor de autorização inteiro
+  (metadados, consentimento, troca de código com PKCE, renovação, cadastro do cliente por CIMD ou DCR). Fica para a
+  próxima etapa; o verificador do token é o ponto de encaixe, com o mesmo escopo `mcp`.
+- **O token também na API:** daria ao Claude tudo o que a API faz, inclusive dinheiro e a própria conta. O MCP expõe só
+  as ferramentas escolhidas.
+- **Chamar a API por dentro** (montar a requisição e passá-la ao router): manteria as checagens dos handlers sem
+  esforço, mas misturaria o token com o cookie no mesmo caminho e passaria tudo por JSON duas vezes.
+- **Token sem validade:** mais cômodo, mas um token esquecido numa máquina valeria para sempre.
+
+**Consequências:** quem entra pelo MCP vê o que vê na tela, menos o dinheiro, e as mudanças passam pelas mesmas regras
+(e pelo gancho da sincronização). O como usar está em [api/mcp.md](../api/mcp.md), e a segurança do token em
+[security.md](security.md#tokens-do-claude-mcp).
+
+### Decisão 23: O ciclo de 14 dias do cliente por hora
+
+**Contexto:** clientes dos EUA pagam as horas em bi-weekly: a cada duas semanas, 14 dias. O cliente por hora só tinha o
+ciclo mensal (`closing_day`). A regra quinzenal que existia era a da pessoa (Decisão 15), de 15 dias, e não chegava ao
+cliente. O dono quer dizer quando o cliente pagou pela última vez e, dali, contar os períodos.
+
+**Escolha:** o cliente ganha o ciclo do período (`billing_cycle`: `monthly`, o padrão, ou `biweekly`) e, no de 14
+dias, a âncora (`cycle_anchor`), o último dia do último período que o cliente já pagou.
+
+- **Só no por hora.** O contrato mensal é por mês e o ciclo dele é sempre o mensal: `biweekly` num cliente mensal é
+  recusado, e trocar o modo leva o ciclo ao mensal.
+- **A conta é a da quinzenal da pessoa, com 14 dias.** `PaymentRule` ganha `PeriodDays` (`json:"-"`, zero vale 15): a
+  regra da pessoa não muda nem na API, e o ciclo do cliente monta a regra com início no dia seguinte à âncora e 14
+  dias. As bordas, o fuso e o horário de verão são os da Decisão 15.
+- **Nada até a âncora é período.** As horas de lá foram acertadas fora do app e nunca são propostas. A âncora não pode
+  ser depois de hoje, no fuso da organização; o cliente novo usa o dia 14 dias antes do primeiro fechamento.
+- **A trava dos recebíveis vale para o ciclo e a âncora** (`409 customer.cycle_locked`), com uma exceção: ficar no de
+  14 dias com a âncora no fim do recebível mais recente, ou depois. Os períodos novos começam depois de tudo o que já
+  foi confirmado, e assim um cliente com histórico mensal passa para 14 dias sem desfazer nada. A comparação é com o
+  que está gravado, então a trava vale também quando a mudança vem da troca de modo. O `closing_day_locked`, que saía
+  como `400`, passa a sair como o `409` documentado.
+- **O teto das propostas segue o ciclo:** 24 períodos fechados no mensal e 52 no de 14 dias, cerca de dois anos nos
+  dois. Com 24, um ano de 26 períodos perderia os primeiros na Receita projetada.
+
+**Alternativas descartadas:**
+- Mudar a quinzena da pessoa para 14 dias: a da pessoa é a quinzena brasileira, e ninguém pediu.
+- Um intervalo livre (a cada N dias): o pedido é o bi-weekly, e N livre pede validação e tela para um caso que não
+  existe. O `PeriodDays` deixa a porta aberta.
+- Uma grade sem começo, que propõe também as horas antes da âncora: o dono quer contar "a partir daqui", e o que vem
+  antes já foi pago.
+- Aceitar a âncora no futuro, como o primeiro fechamento: as horas de hoje até ela ficariam sem período, sem aviso.
+
+**Consequências:** um mês tem dois ou três fins de período, então o valor por hora efetivo do mês na tela inicial é uma
+aproximação, como já era com outro dia de fechamento. O `closing_day` fica guardado sem uso no ciclo de 14 dias e volta
+a valer quando o ciclo volta ao mensal. As regras de hoje estão em
+[money.md](../product/money.md#contas-a-receber-modo-solo).
+
 ## Riscos e trade-offs
 
 - **Limite de requisições das plataformas.** Buscar detalhes e sincronizar gasta a cota de cada plataforma. →
@@ -832,5 +914,7 @@ primeiro mês parcial). As regras de hoje estão em [money.md](../product/money.
   e o servidor não sobe.
 - **Sem checagem de build na lógica do front-end.** O comportamento do Alpine mora em atributos do HTML. → Componentes
   pequenos, a validação do servidor como fonte da verdade e testes das páginas servidas.
+- **Um token do Claude vazado.** Quem o tiver age como a pessoa no `/mcp` até ele vencer. → O token só vale no `/mcp`
+  (sem conta e sem dinheiro), vence, é revogado no perfil e numa troca de senha, e o perfil mostra o último uso.
 - **A fila da sincronização é da memória.** Um reinício esquece as tarefas que esperavam para virar cartão. → Elas
   podem ser postadas pela página da tarefa (`POST /api/tasks/:taskId/publish`).

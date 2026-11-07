@@ -62,11 +62,12 @@ func formOf(t *testing.T, name, page, modal string) string {
 var monthlyControls = []string{
 	`id="customer-billing-mode"`, `id="customer-monthly-fee"`, `id="customer-contract-start"`,
 	`id="customer-contract-end"`, `id="customer-closing-day"`, `id="customer-payment-days"`, `id="customer-late-fee"`,
-	`id="customer-late-interest"`, `id="customer-grace-days"`,
+	`id="customer-late-interest"`, `id="customer-grace-days"`, `id="customer-billing-cycle"`, `id="customer-cycle-anchor"`,
 	`data-field="billing_mode"`, `data-field="monthly_fee_cents"`, `data-field="contract_start"`,
+	`data-field="billing_cycle"`, `data-field="cycle_anchor"`,
 	`data-field="contract_end"`, `data-field="closing_day"`, `data-field="payment_days"`, `data-field="late_fee_bp"`,
 	`data-field="late_interest_bp_month"`, `data-field="grace_days"`,
-	`lateOpen`, `draft.billing_mode === 'monthly'`, `billingTerms(`,
+	`lateOpen`, `draft.billing_mode === 'monthly'`, `billingMode(`, `billingClosing(`, `billingDue(`,
 }
 
 func TestCustomerBilling_LinksAndControlsByMode(t *testing.T) {

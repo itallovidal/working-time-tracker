@@ -43,6 +43,10 @@ const (
 	FieldClosingDay = "closing_day"
 	// FieldPaymentDays holds the string denoting the payment_days field in the database.
 	FieldPaymentDays = "payment_days"
+	// FieldBillingCycle holds the string denoting the billing_cycle field in the database.
+	FieldBillingCycle = "billing_cycle"
+	// FieldCycleAnchor holds the string denoting the cycle_anchor field in the database.
+	FieldCycleAnchor = "cycle_anchor"
 	// FieldLateFeeBp holds the string denoting the late_fee_bp field in the database.
 	FieldLateFeeBp = "late_fee_bp"
 	// FieldLateInterestBpMonth holds the string denoting the late_interest_bp_month field in the database.
@@ -99,6 +103,8 @@ var Columns = []string{
 	FieldContractEnd,
 	FieldClosingDay,
 	FieldPaymentDays,
+	FieldBillingCycle,
+	FieldCycleAnchor,
 	FieldLateFeeBp,
 	FieldLateInterestBpMonth,
 	FieldGraceDays,
@@ -132,6 +138,8 @@ var (
 	DefaultPaymentDays int
 	// PaymentDaysValidator is a validator for the "payment_days" field. It is called by the builders before save.
 	PaymentDaysValidator func(int) error
+	// DefaultBillingCycle holds the default value on creation for the "billing_cycle" field.
+	DefaultBillingCycle string
 	// DefaultLateFeeBp holds the default value on creation for the "late_fee_bp" field.
 	DefaultLateFeeBp int
 	// LateFeeBpValidator is a validator for the "late_fee_bp" field. It is called by the builders before save.
@@ -226,6 +234,16 @@ func ByClosingDay(opts ...sql.OrderTermOption) OrderOption {
 // ByPaymentDays orders the results by the payment_days field.
 func ByPaymentDays(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldPaymentDays, opts...).ToFunc()
+}
+
+// ByBillingCycle orders the results by the billing_cycle field.
+func ByBillingCycle(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBillingCycle, opts...).ToFunc()
+}
+
+// ByCycleAnchor orders the results by the cycle_anchor field.
+func ByCycleAnchor(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCycleAnchor, opts...).ToFunc()
 }
 
 // ByLateFeeBp orders the results by the late_fee_bp field.

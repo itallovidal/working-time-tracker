@@ -5,6 +5,7 @@ package ent
 import (
 	"time"
 	"working-time-tracker/ent/allocation"
+	"working-time-tracker/ent/apitoken"
 	"working-time-tracker/ent/customer"
 	"working-time-tracker/ent/integration"
 	"working-time-tracker/ent/invite"
@@ -30,6 +31,16 @@ import (
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	apitokenFields := schema.APIToken{}.Fields()
+	_ = apitokenFields
+	// apitokenDescCreatedAt is the schema descriptor for created_at field.
+	apitokenDescCreatedAt := apitokenFields[7].Descriptor()
+	// apitoken.DefaultCreatedAt holds the default value on creation for the created_at field.
+	apitoken.DefaultCreatedAt = apitokenDescCreatedAt.Default.(func() time.Time)
+	// apitokenDescID is the schema descriptor for id field.
+	apitokenDescID := apitokenFields[0].Descriptor()
+	// apitoken.DefaultID holds the default value on creation for the id field.
+	apitoken.DefaultID = apitokenDescID.Default.(func() uuid.UUID)
 	allocationFields := schema.Allocation{}.Fields()
 	_ = allocationFields
 	// allocationDescPayRateCents is the schema descriptor for pay_rate_cents field.
@@ -92,26 +103,30 @@ func init() {
 	customer.DefaultPaymentDays = customerDescPaymentDays.Default.(int)
 	// customer.PaymentDaysValidator is a validator for the "payment_days" field. It is called by the builders before save.
 	customer.PaymentDaysValidator = customerDescPaymentDays.Validators[0].(func(int) error)
+	// customerDescBillingCycle is the schema descriptor for billing_cycle field.
+	customerDescBillingCycle := customerFields[15].Descriptor()
+	// customer.DefaultBillingCycle holds the default value on creation for the billing_cycle field.
+	customer.DefaultBillingCycle = customerDescBillingCycle.Default.(string)
 	// customerDescLateFeeBp is the schema descriptor for late_fee_bp field.
-	customerDescLateFeeBp := customerFields[15].Descriptor()
+	customerDescLateFeeBp := customerFields[17].Descriptor()
 	// customer.DefaultLateFeeBp holds the default value on creation for the late_fee_bp field.
 	customer.DefaultLateFeeBp = customerDescLateFeeBp.Default.(int)
 	// customer.LateFeeBpValidator is a validator for the "late_fee_bp" field. It is called by the builders before save.
 	customer.LateFeeBpValidator = customerDescLateFeeBp.Validators[0].(func(int) error)
 	// customerDescLateInterestBpMonth is the schema descriptor for late_interest_bp_month field.
-	customerDescLateInterestBpMonth := customerFields[16].Descriptor()
+	customerDescLateInterestBpMonth := customerFields[18].Descriptor()
 	// customer.DefaultLateInterestBpMonth holds the default value on creation for the late_interest_bp_month field.
 	customer.DefaultLateInterestBpMonth = customerDescLateInterestBpMonth.Default.(int)
 	// customer.LateInterestBpMonthValidator is a validator for the "late_interest_bp_month" field. It is called by the builders before save.
 	customer.LateInterestBpMonthValidator = customerDescLateInterestBpMonth.Validators[0].(func(int) error)
 	// customerDescGraceDays is the schema descriptor for grace_days field.
-	customerDescGraceDays := customerFields[17].Descriptor()
+	customerDescGraceDays := customerFields[19].Descriptor()
 	// customer.DefaultGraceDays holds the default value on creation for the grace_days field.
 	customer.DefaultGraceDays = customerDescGraceDays.Default.(int)
 	// customer.GraceDaysValidator is a validator for the "grace_days" field. It is called by the builders before save.
 	customer.GraceDaysValidator = customerDescGraceDays.Validators[0].(func(int) error)
 	// customerDescCreatedAt is the schema descriptor for created_at field.
-	customerDescCreatedAt := customerFields[18].Descriptor()
+	customerDescCreatedAt := customerFields[20].Descriptor()
 	// customer.DefaultCreatedAt holds the default value on creation for the created_at field.
 	customer.DefaultCreatedAt = customerDescCreatedAt.Default.(func() time.Time)
 	// customerDescID is the schema descriptor for id field.
@@ -282,14 +297,18 @@ func init() {
 	projectDescSprintDurationDays := projectFields[6].Descriptor()
 	// project.DefaultSprintDurationDays holds the default value on creation for the sprint_duration_days field.
 	project.DefaultSprintDurationDays = projectDescSprintDurationDays.Default.(int)
+	// projectDescCustomerMeetingEveryWeeks is the schema descriptor for customer_meeting_every_weeks field.
+	projectDescCustomerMeetingEveryWeeks := projectFields[12].Descriptor()
+	// project.DefaultCustomerMeetingEveryWeeks holds the default value on creation for the customer_meeting_every_weeks field.
+	project.DefaultCustomerMeetingEveryWeeks = projectDescCustomerMeetingEveryWeeks.Default.(int)
 	// projectDescBillExtraCents is the schema descriptor for bill_extra_cents field.
-	projectDescBillExtraCents := projectFields[13].Descriptor()
+	projectDescBillExtraCents := projectFields[14].Descriptor()
 	// project.DefaultBillExtraCents holds the default value on creation for the bill_extra_cents field.
 	project.DefaultBillExtraCents = projectDescBillExtraCents.Default.(int)
 	// project.BillExtraCentsValidator is a validator for the "bill_extra_cents" field. It is called by the builders before save.
 	project.BillExtraCentsValidator = projectDescBillExtraCents.Validators[0].(func(int) error)
 	// projectDescCreatedAt is the schema descriptor for created_at field.
-	projectDescCreatedAt := projectFields[14].Descriptor()
+	projectDescCreatedAt := projectFields[15].Descriptor()
 	// project.DefaultCreatedAt holds the default value on creation for the created_at field.
 	project.DefaultCreatedAt = projectDescCreatedAt.Default.(func() time.Time)
 	// projectDescID is the schema descriptor for id field.

@@ -622,7 +622,7 @@ func TestPages_ProjectSettingsAndWeeklyHours(t *testing.T) {
 		`<input id="ps-name"`, `<select id="ps-customer"`, `<input id="ps-bill-extra"`,
 		`<select id="ps-sprint" data-field="sprint_duration_days"`, `x-for="o in sprintChoices()"`,
 		`<input id="routine-daily"`, `<select id="routine-weekly-day"`, `<input id="routine-weekly-time"`, `<textarea id="ps-description"`,
-		`<select id="meeting-day"`, `<input id="meeting-time"`,
+		`<select id="meeting-every" data-field="customer_meeting_every_weeks"`, `<select id="meeting-day"`, `<input id="meeting-time"`,
 		"Excluir projeto", "<dt>Valor cobrado por hora</dt>",
 	} {
 		at := strings.Index(adminPage, field)
@@ -639,21 +639,25 @@ func TestPages_ProjectSettingsAndWeeklyHours(t *testing.T) {
 		if !strings.Contains(body, `<select id="project-sprint" data-field="sprint_duration_days"`) || !strings.Contains(body, `x-for="o in WTT.sprintOptions"`) {
 			t.Errorf("%s: the new project form does not offer the sprint durations in a select", path)
 		}
-		// Daily e weekly são marcas que revelam o horário, e os campos vêm em três grupos.
+		// Daily e weekly são marcas que revelam o horário, e os campos vêm em quatro grupos.
 		for _, want := range []string{
 			`x-model="draft.has_daily"`, `x-model="draft.has_weekly"`, `<input id="routine-daily" type="time" data-field="daily_time"`,
 			`<select id="routine-weekly-day"`, `<input id="routine-weekly-time" type="time"`,
-			"<legend>Projeto</legend>", "<legend>Cliente e cobrança</legend>", "<legend>Rotina do time</legend>",
-			`x-model="draft.has_meeting"`, `<select id="meeting-day"`, `<input id="meeting-time" type="time"`,
+			"<legend>Projeto</legend>", "<legend>Cliente</legend>", "<legend>Cobrança</legend>", "<legend>Desenvolvimento</legend>",
+			`x-model="draft.has_meeting"`, `<select id="meeting-every"`, `<select id="meeting-day"`, `<input id="meeting-time" type="time"`,
 		} {
 			if !strings.Contains(body, want) {
 				t.Errorf("%s: the new project form does not contain %q", path, want)
 			}
 		}
-		// A reunião com o cliente fica no grupo Cliente e cobrança, e não na rotina do time.
-		billing, routine, meeting := strings.Index(body, "<legend>Cliente e cobrança</legend>"), strings.Index(body, "<legend>Rotina do time</legend>"), strings.Index(body, `<select id="meeting-day"`)
-		if billing >= meeting || meeting >= routine {
-			t.Errorf("%s: the customer meeting is not inside Cliente e cobrança (billing %d, meeting %d, routine %d)", path, billing, meeting, routine)
+		// Os grupos vêm na ordem Projeto, Cliente, Cobrança e Desenvolvimento, e a reunião com o cliente fica no grupo Cliente.
+		about, customer, billing, routine := strings.Index(body, "<legend>Projeto</legend>"), strings.Index(body, "<legend>Cliente</legend>"),
+			strings.Index(body, "<legend>Cobrança</legend>"), strings.Index(body, "<legend>Desenvolvimento</legend>")
+		if about >= customer || customer >= billing || billing >= routine {
+			t.Errorf("%s: the groups are out of order (Projeto %d, Cliente %d, Cobrança %d, Desenvolvimento %d)", path, about, customer, billing, routine)
+		}
+		if meeting := strings.Index(body, `<select id="meeting-day"`); meeting < customer || meeting > billing {
+			t.Errorf("%s: the customer meeting is not inside Cliente (customer %d, meeting %d, billing %d)", path, customer, meeting, billing)
 		}
 		if strings.Contains(body, "project-weekly-hours") || strings.Contains(body, "weekly_hours") {
 			t.Errorf("%s: the new project form or the project card still has the weekly hours", path)

@@ -4,6 +4,106 @@
 <main class="page" x-data="profileSettings">
   {{template "person_profile" .}}
 
+  {{/* Os tokens do Claude: cada um deixa o Claude Code (o servidor MCP em /mcp) agir como a pessoa. O token aparece
+       uma vez só, no modal, junto com o comando pronto; a lista mostra só o começo dele. */}}
+  <section class="card stack" aria-labelledby="claude-title" x-data="claudeTokens">
+    <div class="card-head">
+      <h2 id="claude-title">{{template "icon" "robot"}} {{.T "profile.claude.title"}}</h2>
+      <button type="button" class="btn btn-secondary btn-sm" @click="openNew()">{{template "icon" "plus"}} {{.T "profile.claude.new"}}</button>
+    </div>
+    <p class="muted">{{.T "profile.claude.intro"}}</p>
+
+    <p class="muted" x-show="loading && tokens.length === 0">{{.T "profile.claude.loading"}}</p>
+    <p class="form-error" x-cloak x-show="errors.load" x-text="errors.load" role="alert"></p>
+    <p class="form-error" x-cloak x-show="errors.revoke" x-text="errors.revoke" role="alert"></p>
+
+    <div class="empty" x-cloak x-show="!loading && !errors.load && tokens.length === 0">
+      {{template "icon" "key"}}
+      <strong>{{.T "profile.claude.empty"}}</strong>
+      <span>{{.T "profile.claude.empty_text"}}</span>
+    </div>
+
+    <div class="table-wrap" x-cloak x-show="tokens.length > 0">
+      <table>
+        <thead>
+          <tr>
+            <th>{{.T "profile.claude.col_name"}}</th><th>{{.T "profile.claude.col_token"}}</th>
+            <th>{{.T "profile.claude.col_last_used"}}</th><th>{{.T "profile.claude.col_expires"}}</th>
+            <th class="actions"><span class="sr-only">{{.T "common.actions"}}</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="tok in tokens" :key="tok.id">
+            <tr>
+              <td><strong x-text="tok.name"></strong></td>
+              <td><code x-text="tok.prefix + '…'"></code></td>
+              <td class="nowrap" x-text="tok.last_used_at ? WTT.fmt.date(tok.last_used_at) : $t('profile.claude.never_used')"></td>
+              <td class="nowrap">
+                <span x-show="!expired(tok)" x-text="WTT.fmt.date(tok.expires_at)"></span>
+                <span class="badge" x-cloak x-show="expired(tok)">{{.T "profile.claude.expired"}}</span>
+              </td>
+              <td class="actions">
+                <button type="button" class="btn btn-danger-ghost btn-sm" x-show="confirming !== tok.id" @click="confirming = tok.id">{{template "icon" "ban"}} {{.T "profile.claude.revoke"}}</button>
+                <span class="confirm" x-cloak x-show="confirming === tok.id">
+                  <span>{{.T "profile.claude.revoke_question"}}</span>
+                  <button type="button" class="btn btn-danger btn-sm" :disabled="pending" @click="revoke(tok)">{{.T "profile.claude.revoke"}}</button>
+                  <button type="button" class="btn btn-ghost btn-sm" @click="confirming = null">{{.T "common.cancel"}}</button>
+                </span>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+    <p class="muted small">{{.T "profile.claude.password_note"}}</p>
+
+    <template x-teleport="#modal-root">
+      <form class="stack" novalidate x-show="$store.modal.name === 'claude-token'" @submit.prevent="create()">
+        <div class="stack" x-show="!created">
+          <div class="field">
+            <label for="claude-token-name">{{.T "profile.claude.name"}}</label>
+            <input id="claude-token-name" type="text" maxlength="{{limit "name"}}" data-field="name" x-model="draft.name" @input="clearField('name')" :aria-invalid="fieldErrors.name ? 'true' : 'false'" data-autofocus>
+            <span class="hint">{{.T "profile.claude.name_hint"}}</span>
+            {{template "field_error" "name"}}
+          </div>
+          <div class="field">
+            <label for="claude-token-days">{{.T "profile.claude.days"}}</label>
+            <select id="claude-token-days" data-field="days" x-model.number="draft.days" @change="clearField('days')">
+              <option value="30">{{.T "profile.claude.days_30"}}</option>
+              <option value="90">{{.T "profile.claude.days_90"}}</option>
+              <option value="365">{{.T "profile.claude.days_365"}}</option>
+            </select>
+            {{template "field_error" "days"}}
+          </div>
+          <p class="form-error" x-show="errors.create" x-text="errors.create" role="alert"></p>
+          <div class="row row-end">
+            <button type="button" class="btn btn-secondary" @click="$store.modal.dismiss()">{{.T "common.cancel"}}</button>
+            <button type="submit" class="btn" :disabled="pending">{{template "icon" "key"}} {{.T "profile.claude.submit"}}</button>
+          </div>
+        </div>
+
+        <div class="stack" x-cloak x-show="created" x-transition.opacity>
+          <div class="alert" role="status"><p>{{.T "profile.claude.copy_now"}}</p></div>
+          <div class="field">
+            <label for="claude-token-command">{{.T "profile.claude.command"}}</label>
+            <textarea id="claude-token-command" rows="4" readonly :value="command()" x-ref="command" @focus="$event.target.select()"></textarea>
+            <span class="hint">{{.T "profile.claude.command_hint"}}</span>
+          </div>
+          <div class="field">
+            <label for="claude-token-value">{{.T "profile.claude.token"}}</label>
+            <input id="claude-token-value" type="text" readonly :value="created ? created.token : ''" @focus="$event.target.select()">
+            <span class="hint">{{.T "profile.claude.token_hint"}}</span>
+          </div>
+          <div class="row row-end">
+            <button type="button" class="btn btn-secondary" @click="copy(command())">{{template "icon" "copy"}} {{.T "profile.claude.copy_command"}}</button>
+            <button type="button" class="btn btn-secondary" @click="copy(created.token)">{{template "icon" "copy"}} {{.T "profile.claude.copy_token"}}</button>
+            <button type="button" class="btn" @click="$store.modal.dismiss()">{{.T "profile.claude.done"}}</button>
+          </div>
+        </div>
+      </form>
+    </template>
+  </section>
+
   <template x-teleport="#modal-root">
     <div class="stack" x-show="$store.modal.name === 'profile-edit'">
       {{- if .Me.HasPassword}}

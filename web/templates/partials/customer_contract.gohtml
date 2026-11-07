@@ -1,5 +1,6 @@
-{{/* Os termos do cliente que valem para o período (modo solo): a mensalidade e o contrato (só no mensal), o fechamento e o
-     prazo (nos dois modos) e, recolhidos, a multa, os juros e a tolerância (só no mensal). Aparecem no modal de cliente,
+{{/* Os termos do cliente que valem para o período (modo solo): a mensalidade e o contrato (só no mensal), o ciclo (só no
+     por hora: mensal ou a cada 14 dias), o fechamento (o dia do mês no ciclo mensal, ou o último fechamento já pago no de
+     14 dias), o prazo (nos dois modos) e, recolhidos, a multa, os juros e a tolerância (só no mensal). Aparecem no modal de cliente,
      junto com o modo e o valor por hora: a cobrança mora no cliente (Decisão 21). O componente que inclui traz o objeto
      dos termos (blankBilling/billingDraft em pages/org.js), lateOpen e o mixin WTT.form (fieldErrors, clearField).
      Parâmetros: Data (a página), Model (o nome do objeto dos termos no componente) e Id (o prefixo dos ids dos campos).
@@ -28,7 +29,23 @@
   </div>
 </div>
 
-<div class="field">
+{{/* O ciclo é do por hora: o contrato mensal fecha sempre no dia do mês. O de 14 dias é o bi-weekly dos EUA, contado a
+     partir do último fechamento que o cliente já pagou; no lugar do dia do mês, a tela pede esse dia. */}}
+<div class="field" x-show="{{$m}}.billing_mode === 'hourly'">
+  <label for="{{$id}}-billing-cycle">{{.T "customer.billing.cycle"}}</label>
+  <select id="{{$id}}-billing-cycle" data-field="billing_cycle" x-model="{{$m}}.billing_cycle" @change="clearField('billing_cycle'); clearField('cycle_anchor'); clearField('closing_day')" :aria-invalid="fieldErrors.billing_cycle ? 'true' : 'false'">
+    <option value="monthly">{{.T "customer.billing.cycle_monthly"}}</option>
+    <option value="biweekly">{{.T "customer.billing.cycle_biweekly"}}</option>
+  </select>
+  {{template "field_error" "billing_cycle"}}
+</div>
+<div class="field" x-show="{{$m}}.billing_mode === 'hourly' && {{$m}}.billing_cycle === 'biweekly'">
+  <label for="{{$id}}-cycle-anchor">{{.T "customer.billing.cycle_anchor"}}</label>
+  <input id="{{$id}}-cycle-anchor" type="date" data-field="cycle_anchor" x-model="{{$m}}.cycle_anchor" @input="clearField('cycle_anchor')" :aria-invalid="fieldErrors.cycle_anchor ? 'true' : 'false'">
+  {{template "field_error" "cycle_anchor"}}
+  <span class="hint">{{.T "customer.billing.cycle_anchor_hint"}}</span>
+</div>
+<div class="field" x-show="{{$m}}.billing_mode === 'monthly' || {{$m}}.billing_cycle !== 'biweekly'">
   <label for="{{$id}}-closing-day">{{.T "customer.billing.closing_day"}}</label>
   <input id="{{$id}}-closing-day" type="number" min="1" max="31" step="1" class="num" data-field="closing_day" x-model="{{$m}}.closing_day" @input="clearField('closing_day')" :aria-invalid="fieldErrors.closing_day ? 'true' : 'false'">
   {{template "field_error" "closing_day"}}

@@ -32,6 +32,7 @@ import (
 	"working-time-tracker/internal/domain/team"
 	"working-time-tracker/internal/domain/work_session"
 	"working-time-tracker/internal/i18n"
+	"working-time-tracker/internal/mcp"
 	"working-time-tracker/internal/page"
 	"working-time-tracker/internal/routes"
 	tmpl "working-time-tracker/internal/template"
@@ -62,6 +63,9 @@ type Options struct {
 	// Sync são os ajustes da sincronização das issues. O valor zero serve: sem Interval a rotina de
 	// fundo não olha o GitHub (só o botão e o gancho das tarefas).
 	Sync issuesync.Config
+	// PublicURL é o endereço do sistema, sem barra no fim (PUBLIC_URL). O servidor MCP o usa no link de cada tarefa,
+	// e o perfil, no endereço que mostra para conectar o Claude. Vazio, o perfil usa o endereço da requisição.
+	PublicURL string
 }
 
 // ClerkOptions são os dados do login pelo Clerk.
@@ -239,6 +243,7 @@ func Build(client *ent.Client, opts Options) (*App, error) {
 		},
 		Clerk:         clerkPage,
 		InviteByEmail: clerkPage != nil,
+		PublicURL:     opts.PublicURL,
 	})
 
 	renderer, err := tmpl.New(web.FS)
@@ -278,6 +283,13 @@ func Build(client *ent.Client, opts Options) (*App, error) {
 	if err := routes.HealthcheckRoutesRegister(e); err != nil {
 		return nil, err
 	}
+	// O servidor MCP, para o Claude. Fica fora do /api: entra com o token do Claude, não com o cookie.
+	mcpHandler := mcp.NewHandler(mcp.Deps{
+		Auth: authSvc, Resolver: resolver, Projects: projectSvc, Tasks: taskSvc,
+		Sessions: workSessionSvc, Overview: overviewSvc, Syncer: syncer, I18n: catalog,
+		PublicURL: opts.PublicURL, Logger: e.Logger,
+	})
+	e.Any(mcp.Path, echo.WrapHandler(mcpHandler))
 	routes.RegisterRoutes(e, handlers, authMW, authRateLimiter(opts.AuthRateLimit))
 	routes.RegisterPages(e, pages, authMW, oauthHandler)
 

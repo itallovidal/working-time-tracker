@@ -195,6 +195,96 @@ func (d Data) OpensTab(id string) bool {
 	return d.Access.HasAny(TabKeys(id)...)
 }
 
+// ProjectTab é uma aba da barra do projeto: o endereço, o ícone, a chave do rótulo no catálogo, se é a página aberta e
+// se vai para o fim da barra (o botão da Gestão e a volta dela).
+type ProjectTab struct {
+	ID      string
+	Href    string
+	Icon    string
+	Label   string
+	Current bool
+	End     bool
+}
+
+// managementTabViews são o ícone e o rótulo de cada aba da Gestão (ManagementTabs).
+var managementTabViews = map[string]struct{ icon, label string }{
+	"overview":     {"chart-simple", "project.head.overview"},
+	"teams":        {"people-group", "project.head.teams"},
+	"integrations": {"plug", "project.head.integrations"},
+	"settings":     {"gear", "project.head.settings"},
+}
+
+// outsideManagement diz se a aba da Gestão de nome id mora na barra principal do projeto, junto do Início e das
+// Tarefas, em vez de dentro da Gestão. No modo solo a Visão geral é uma tela do dia a dia: a pessoa é a própria
+// gestora, e a Gestão fica com Integrações e Configurações. É a única regra que muda a barra entre os modos.
+func (d Data) outsideManagement(id string) bool {
+	return id == "overview" && d.Solo()
+}
+
+// opensManagement diz se a pessoa abre alguma aba que mora dentro da Gestão: é quando o botão Gestão aparece.
+func (d Data) opensManagement() bool {
+	return d.firstManagementTab() != ""
+}
+
+// firstManagementTab é a primeira aba de dentro da Gestão que a pessoa abre, ou "" quando não abre nenhuma. A raiz da
+// Gestão leva para ela.
+func (d Data) firstManagementTab() string {
+	for _, t := range ManagementTabs {
+		if !d.outsideManagement(t.ID) && d.OpensTab(t.ID) {
+			return t.ID
+		}
+	}
+	return ""
+}
+
+// managementTab monta a aba da Gestão de nome id.
+func (d Data) managementTab(id string) ProjectTab {
+	v := managementTabViews[id]
+	return ProjectTab{
+		ID: id, Href: "/projects/" + d.Project.ID + "/management/" + id, Icon: v.icon, Label: v.label,
+		Current: d.Management && d.Tab == id,
+	}
+}
+
+// ProjectTabs é a barra de abas do projeto (partials/project_head). Dentro da Gestão: as abas dela que a pessoa abre e a
+// volta para o projeto. Fora: Início, Minhas tarefas, Tarefas, Colaboradores (fora do modo solo), as abas da Gestão
+// que moram fora (outsideManagement) e o botão Gestão. Uma aba da Gestão que mora fora mostra a barra de fora, com ela
+// marcada.
+func (d Data) ProjectTabs() []ProjectTab {
+	if d.Project == nil {
+		return nil
+	}
+	base := "/projects/" + d.Project.ID
+	if d.Management && !d.outsideManagement(d.Tab) {
+		var tabs []ProjectTab
+		for _, t := range ManagementTabs {
+			if !d.outsideManagement(t.ID) && d.OpensTab(t.ID) {
+				tabs = append(tabs, d.managementTab(t.ID))
+			}
+		}
+		return append(tabs, ProjectTab{ID: "back", Href: base + "/overview", Icon: "arrow-left", Label: "project.head.back", End: true})
+	}
+	current := func(id string) bool { return !d.Management && d.Tab == id }
+	tabs := []ProjectTab{
+		{ID: "home", Href: base + "/overview", Icon: "house", Label: "project.head.home", Current: current("home")},
+		{ID: "mine", Href: base + "/my-tasks", Icon: "user-check", Label: "project.head.my_tasks", Current: current("mine")},
+		{ID: "tasks", Href: base + "/tasks", Icon: "list-check", Label: "project.head.tasks", Current: current("tasks")},
+	}
+	// No modo solo a aba Colaboradores (as pessoas e os times) não existe: a organização é uma pessoa só.
+	if !d.Solo() {
+		tabs = append(tabs, ProjectTab{ID: "teams", Href: base + "/collaborators", Icon: "people-group", Label: "project.head.teams", Current: current("teams")})
+	}
+	for _, t := range ManagementTabs {
+		if d.outsideManagement(t.ID) && d.OpensTab(t.ID) {
+			tabs = append(tabs, d.managementTab(t.ID))
+		}
+	}
+	if d.Access.Manages() && d.opensManagement() {
+		tabs = append(tabs, ProjectTab{ID: "management", Href: base + "/management", Icon: "sliders", Label: "project.head.management", End: true})
+	}
+	return tabs
+}
+
 // IsOwner diz se quem olha é o dono da organização.
 func (d Data) IsOwner() bool {
 	return d.Me != nil && d.Me.IsOwner

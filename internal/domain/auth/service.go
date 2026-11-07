@@ -182,7 +182,8 @@ func (s *Service) Authenticate(token string) (*Identity, error) {
 	return id, err
 }
 
-// ChangePassword troca a senha e encerra as outras sessões da pessoa, mantendo a atual.
+// ChangePassword troca a senha, encerra as outras sessões da pessoa, mantendo a atual, e revoga os tokens do Claude:
+// quem trocou a senha por desconfiar de alguém também tira dele um token que ele tenha gerado.
 func (s *Service) ChangePassword(actor *Identity, currentToken, current, next string) error {
 	hash, err := s.store.PasswordHash(actor.PersonID)
 	if err != nil {
@@ -199,10 +200,7 @@ func (s *Service) ChangePassword(actor *Identity, currentToken, current, next st
 	if err != nil {
 		return passwordField(err, "new_password")
 	}
-	if err := s.store.SetPasswordHash(actor.PersonID, newHash); err != nil {
-		return err
-	}
-	return s.store.DeleteOtherSessions(actor.PersonID, HashToken(currentToken))
+	return s.store.ReplacePassword(actor.PersonID, newHash, HashToken(currentToken))
 }
 
 // CompleteOnboarding dá baixa nas boas-vindas do primeiro acesso de quem está logado, seja porque terminou, seja porque

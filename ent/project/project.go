@@ -37,6 +37,8 @@ const (
 	FieldCustomerMeetingDay = "customer_meeting_day"
 	// FieldCustomerMeetingTime holds the string denoting the customer_meeting_time field in the database.
 	FieldCustomerMeetingTime = "customer_meeting_time"
+	// FieldCustomerMeetingEveryWeeks holds the string denoting the customer_meeting_every_weeks field in the database.
+	FieldCustomerMeetingEveryWeeks = "customer_meeting_every_weeks"
 	// FieldCustomerID holds the string denoting the customer_id field in the database.
 	FieldCustomerID = "customer_id"
 	// FieldBillExtraCents holds the string denoting the bill_extra_cents field in the database.
@@ -142,6 +144,7 @@ var Columns = []string{
 	FieldWeeklySyncTime,
 	FieldCustomerMeetingDay,
 	FieldCustomerMeetingTime,
+	FieldCustomerMeetingEveryWeeks,
 	FieldCustomerID,
 	FieldBillExtraCents,
 	FieldCreatedAt,
@@ -160,6 +163,8 @@ func ValidColumn(column string) bool {
 var (
 	// DefaultSprintDurationDays holds the default value on creation for the "sprint_duration_days" field.
 	DefaultSprintDurationDays int
+	// DefaultCustomerMeetingEveryWeeks holds the default value on creation for the "customer_meeting_every_weeks" field.
+	DefaultCustomerMeetingEveryWeeks int
 	// DefaultBillExtraCents holds the default value on creation for the "bill_extra_cents" field.
 	DefaultBillExtraCents int
 	// BillExtraCentsValidator is a validator for the "bill_extra_cents" field. It is called by the builders before save.
@@ -231,6 +236,11 @@ func ByCustomerMeetingDay(opts ...sql.OrderTermOption) OrderOption {
 // ByCustomerMeetingTime orders the results by the customer_meeting_time field.
 func ByCustomerMeetingTime(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCustomerMeetingTime, opts...).ToFunc()
+}
+
+// ByCustomerMeetingEveryWeeks orders the results by the customer_meeting_every_weeks field.
+func ByCustomerMeetingEveryWeeks(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCustomerMeetingEveryWeeks, opts...).ToFunc()
 }
 
 // ByCustomerID orders the results by the customer_id field.

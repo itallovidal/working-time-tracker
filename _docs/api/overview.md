@@ -16,6 +16,8 @@ rota, com corpo e resposta, está em [reference.md](reference.md), e cada códig
 - **Erro é código, não texto.** Toda resposta de erro é
   `{"error": {"code": "dominio.motivo", "params": {...}}}`. Quem chama mostra o texto no idioma da pessoa. Um erro que a
   API não previu vira `500` `internal.server_error`, sem detalhe interno.
+- **O Claude não entra por aqui.** O servidor MCP fica em `/mcp`, fora da API, e entra com um token pessoal em
+  `Authorization: Bearer`; o token não vale na API, e o cookie não vale no `/mcp`. Ver [mcp.md](mcp.md).
 - **Corpo estrito.** Chave desconhecida é `400` `request.invalid_body`. Tipo errado devolve o mesmo código com
   `params.field`. Corpo acima de 1 MiB é `413` `request.body_too_large` (`internal/server/binder.go`).
 - **`PATCH` parcial.** Campo omitido mantém o valor, e `null` apaga onde faz sentido (o prazo da tarefa).
@@ -57,7 +59,7 @@ a quem pode vê-los. As regras estão em [permissions.md](../product/permissions
 | Grupo | Rotas | Acesso |
 |---|---|---|
 | Autenticação | `/api/auth/signup`, `login`, `invites/:token` (+ `accept`), `clerk/login`, `clerk/signup`, `clerk/join` | públicas, com limite de tentativas |
-| Conta | `/api/auth/logout`, `me`, `password`, `onboarding/complete` | logado |
+| Conta | `/api/auth/logout`, `me`, `password`, `onboarding/complete`, `tokens` (+ `:tokenId`) | logado; os tokens, cada um os seus |
 | Organização | `/api/orgs/:orgId` (`PATCH` e `DELETE` do dono) (+ `persons`, `projects`, `overview`, `working-now`, `me/overview`, `me/tasks`, `payments`, `receivables`, `invites`, `customers`) | membro; `overview` e `working-now` de admins; `payments` e `customers` do dono; `receivables` do dono, só no modo solo; `invites` com `people.manage` (409 no modo solo); criar projeto, admins; `PATCH` com `solo`, o dono |
 | Convites | `/api/invites/:inviteId` (`DELETE`), `/api/projects/:projectId/invites` | `people.manage`; o do projeto, `collaborators.manage` para listar e também `rates.manage` para criar |
 | Clientes | `/api/customers/:customerId` | dono |

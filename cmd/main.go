@@ -14,6 +14,7 @@ import (
 	"working-time-tracker/internal/database"
 	"working-time-tracker/internal/domain/integration"
 	"working-time-tracker/internal/domain/issuesync"
+	"working-time-tracker/internal/mcp"
 	"working-time-tracker/internal/server"
 )
 
@@ -101,6 +102,7 @@ func main() {
 		TrelloAuth:     trello,
 		Clerk:          clerkOpts,
 		Sync:           issuesync.Config{Interval: ENV.SyncInterval, Intervals: ENV.SyncIntervals},
+		PublicURL:      ENV.PublicURL,
 	})
 	if err != nil {
 		log.Fatalf("server: %v", err)
@@ -111,6 +113,7 @@ func main() {
 		clientIP = "the connection address"
 	}
 	e.Logger.Info("server", "port", ENV.APIPort, "db_max_conns", ENV.DBMaxConns, "client_ip_from", clientIP)
+	e.Logger.Info("mcp", "path", mcp.Path, "public_url", ENV.PublicURL)
 	apiURL, siteURL := ENV.GitHubAPIURL, ENV.GitHubURL
 	if apiURL == "" {
 		apiURL = "https://api.github.com"

@@ -9,6 +9,38 @@ import (
 )
 
 var (
+	// APITokensColumns holds the columns for the "api_tokens" table.
+	APITokensColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "name", Type: field.TypeString},
+		{Name: "token_hash", Type: field.TypeString, Unique: true},
+		{Name: "prefix", Type: field.TypeString},
+		{Name: "expires_at", Type: field.TypeTime},
+		{Name: "last_used_at", Type: field.TypeTime, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "person_id", Type: field.TypeUUID},
+	}
+	// APITokensTable holds the schema information for the "api_tokens" table.
+	APITokensTable = &schema.Table{
+		Name:       "api_tokens",
+		Columns:    APITokensColumns,
+		PrimaryKey: []*schema.Column{APITokensColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "api_tokens_persons_api_tokens",
+				Columns:    []*schema.Column{APITokensColumns[7]},
+				RefColumns: []*schema.Column{PersonsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "apitoken_person_id",
+				Unique:  false,
+				Columns: []*schema.Column{APITokensColumns[7]},
+			},
+		},
+	}
 	// AllocationsColumns holds the columns for the "allocations" table.
 	AllocationsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -62,6 +94,8 @@ var (
 		{Name: "contract_end", Type: field.TypeString, Nullable: true},
 		{Name: "closing_day", Type: field.TypeInt, Default: 31},
 		{Name: "payment_days", Type: field.TypeInt, Default: 0},
+		{Name: "billing_cycle", Type: field.TypeString, Default: "monthly"},
+		{Name: "cycle_anchor", Type: field.TypeString, Nullable: true},
 		{Name: "late_fee_bp", Type: field.TypeInt, Default: 0},
 		{Name: "late_interest_bp_month", Type: field.TypeInt, Default: 0},
 		{Name: "grace_days", Type: field.TypeInt, Default: 0},
@@ -76,7 +110,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "customers_organizations_customers",
-				Columns:    []*schema.Column{CustomersColumns[18]},
+				Columns:    []*schema.Column{CustomersColumns[20]},
 				RefColumns: []*schema.Column{OrganizationsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -361,6 +395,7 @@ var (
 		{Name: "weekly_sync_time", Type: field.TypeString, Nullable: true},
 		{Name: "customer_meeting_day", Type: field.TypeString, Nullable: true},
 		{Name: "customer_meeting_time", Type: field.TypeString, Nullable: true},
+		{Name: "customer_meeting_every_weeks", Type: field.TypeInt, Default: 1},
 		{Name: "bill_extra_cents", Type: field.TypeInt, Default: 0},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "customer_id", Type: field.TypeUUID, Nullable: true},
@@ -374,13 +409,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "projects_customers_projects",
-				Columns:    []*schema.Column{ProjectsColumns[13]},
+				Columns:    []*schema.Column{ProjectsColumns[14]},
 				RefColumns: []*schema.Column{CustomersColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "projects_organizations_projects",
-				Columns:    []*schema.Column{ProjectsColumns[14]},
+				Columns:    []*schema.Column{ProjectsColumns[15]},
 				RefColumns: []*schema.Column{OrganizationsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -654,6 +689,7 @@ var (
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		APITokensTable,
 		AllocationsTable,
 		CustomersTable,
 		IntegrationsTable,
@@ -676,6 +712,7 @@ var (
 )
 
 func init() {
+	APITokensTable.ForeignKeys[0].RefTable = PersonsTable
 	AllocationsTable.ForeignKeys[0].RefTable = PersonsTable
 	AllocationsTable.ForeignKeys[1].RefTable = ProjectsTable
 	CustomersTable.ForeignKeys[0].RefTable = OrganizationsTable

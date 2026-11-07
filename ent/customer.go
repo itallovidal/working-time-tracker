@@ -47,6 +47,10 @@ type Customer struct {
 	ClosingDay int `json:"closing_day,omitempty"`
 	// PaymentDays holds the value of the "payment_days" field.
 	PaymentDays int `json:"payment_days,omitempty"`
+	// BillingCycle holds the value of the "billing_cycle" field.
+	BillingCycle string `json:"billing_cycle,omitempty"`
+	// CycleAnchor holds the value of the "cycle_anchor" field.
+	CycleAnchor *string `json:"cycle_anchor,omitempty"`
 	// LateFeeBp holds the value of the "late_fee_bp" field.
 	LateFeeBp int `json:"late_fee_bp,omitempty"`
 	// LateInterestBpMonth holds the value of the "late_interest_bp_month" field.
@@ -110,7 +114,7 @@ func (*Customer) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case customer.FieldHourlyRateCents, customer.FieldMonthlyFeeCents, customer.FieldClosingDay, customer.FieldPaymentDays, customer.FieldLateFeeBp, customer.FieldLateInterestBpMonth, customer.FieldGraceDays:
 			values[i] = new(sql.NullInt64)
-		case customer.FieldName, customer.FieldCountry, customer.FieldDocument, customer.FieldContactName, customer.FieldContactEmail, customer.FieldContactPhone, customer.FieldBillingMode, customer.FieldContractStart, customer.FieldContractEnd:
+		case customer.FieldName, customer.FieldCountry, customer.FieldDocument, customer.FieldContactName, customer.FieldContactEmail, customer.FieldContactPhone, customer.FieldBillingMode, customer.FieldContractStart, customer.FieldContractEnd, customer.FieldBillingCycle, customer.FieldCycleAnchor:
 			values[i] = new(sql.NullString)
 		case customer.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
@@ -224,6 +228,19 @@ func (_m *Customer) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field payment_days", values[i])
 			} else if value.Valid {
 				_m.PaymentDays = int(value.Int64)
+			}
+		case customer.FieldBillingCycle:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field billing_cycle", values[i])
+			} else if value.Valid {
+				_m.BillingCycle = value.String
+			}
+		case customer.FieldCycleAnchor:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field cycle_anchor", values[i])
+			} else if value.Valid {
+				_m.CycleAnchor = new(string)
+				*_m.CycleAnchor = value.String
 			}
 		case customer.FieldLateFeeBp:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -349,6 +366,14 @@ func (_m *Customer) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("payment_days=")
 	builder.WriteString(fmt.Sprintf("%v", _m.PaymentDays))
+	builder.WriteString(", ")
+	builder.WriteString("billing_cycle=")
+	builder.WriteString(_m.BillingCycle)
+	builder.WriteString(", ")
+	if v := _m.CycleAnchor; v != nil {
+		builder.WriteString("cycle_anchor=")
+		builder.WriteString(*v)
+	}
 	builder.WriteString(", ")
 	builder.WriteString("late_fee_bp=")
 	builder.WriteString(fmt.Sprintf("%v", _m.LateFeeBp))

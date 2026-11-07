@@ -1,4 +1,4 @@
-h1:Y2LKPyhbmFjDn0HyCPTBWkfF/OI9P1ed5C2HqkbQ5Go=
+h1:3gszk7XxR7Tot8goCReEcZHrukzaBT+GSA7iCS5ClHg=
 20261006010705_baseline.sql h1:In26R+bkQHX0yTBQ3cHUfkq0TyExXFWtzWiAp+CXcPk=
 20261006053300_integration_credentials_metadata.sql h1:o/Eet/4UpJcK+X/j0/hx8u5DPKRFuIPzq5e0spWIBX4=
 20261006220500_move_weekly_hours_to_person.sql h1:FSjx+g6ZU9ynL4VqWDbgWEb2QdpiaQV4ZE/YuC/imyI=
@@ -27,3 +27,6 @@ h1:Y2LKPyhbmFjDn0HyCPTBWkfF/OI9P1ed5C2HqkbQ5Go=
 20261016073002_payout_seq.sql h1:jpYE6J0LtS9Jyx3/r8YwTZMTSPcwFIfBpeNapogVrDE=
 20261106231028_solo_billing_receivables.sql h1:9lsA4Cmyi+7XIUDWHM/jZExO5WMiHXkkWA9fdNmdbNg=
 20261107030348_billing_on_customer.sql h1:+0y170pxDbPHXR1q+TPKXQwptjC/9JayuUkfuPrgrNM=
+20261107192331_project_meeting_every_weeks.sql h1:+aKdyi3cDQJSvgGwuv8+dT91ssZ/ejsN9ydWzOfmQ5E=
+20261107202436_api_tokens.sql h1:EAMCF/3t+ybAcBH9Y9gZK8I2dEkhoHNnCS53Y0p5g0g=
+20261107203457_customer_billing_cycle.sql h1:mQkMzScnWSvOgGTNWle4DoUNZ37q4PSl97Z+GHto678=

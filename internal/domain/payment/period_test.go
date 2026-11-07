@@ -1,6 +1,8 @@
 package payment
 
 import (
+	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 
@@ -118,6 +120,55 @@ func TestPreviousAndNext(t *testing.T) {
 	pm, _ := Previous(m)
 	if pm.PayDay() != "2026-10-05" || Next(pm).PayDay() != m.PayDay() {
 		t.Errorf("monthly previous/next = %s / %s", pm.PayDay(), Next(pm).PayDay())
+	}
+}
+
+// O ciclo de 14 dias do cliente (PeriodDays 14) usa a mesma conta da quinzena, com períodos de 14 dias de calendário a
+// partir do início, e nada antes dele.
+func TestBiweekly_PeriodDays(t *testing.T) {
+	sp := loc(t, "America/Sao_Paulo")
+	rule := person.PaymentRule{Frequency: person.PaymentBiweekly, Start: "2026-10-28", PeriodDays: 14}
+	at, _ := time.ParseInLocation("2006-01-02 15:04", "2026-11-10 23:59", sp)
+	p, ok := PeriodAt(rule, at, sp)
+	if !ok || p.StartDay() != "2026-10-28" || p.PayDay() != "2026-11-10" || p.Days() != 14 {
+		t.Fatalf("got %s..%s days %d (ok %v), want 2026-10-28..2026-11-10 days 14", p.StartDay(), p.PayDay(), p.Days(), ok)
+	}
+	next := Next(p)
+	if next.StartDay() != "2026-11-11" || next.PayDay() != "2026-11-24" || next.Days() != 14 {
+		t.Errorf("next = %s..%s days %d", next.StartDay(), next.PayDay(), next.Days())
+	}
+	if back, ok := Previous(next); !ok || back.StartDay() != p.StartDay() || back.PayDay() != p.PayDay() {
+		t.Errorf("previous of next = %s..%s (ok %v)", back.StartDay(), back.PayDay(), ok)
+	}
+	if _, ok := Previous(p); ok {
+		t.Error("nothing comes before the first period")
+	}
+	before, _ := time.ParseInLocation("2006-01-02 15:04", "2026-10-27 23:59", sp)
+	if _, ok := PeriodAt(rule, before, sp); ok {
+		t.Error("before the start there should be no period")
+	}
+	up := Upcoming(rule, before, 3, sp)
+	if len(up) != 3 || up[0].PayDay() != "2026-11-10" || up[1].PayDay() != "2026-11-24" || up[2].PayDay() != "2026-12-08" {
+		t.Errorf("upcoming = %+v", up)
+	}
+	// O tamanho não sai no JSON: a regra da pessoa, na API, continua com frequency, day e start.
+	b, err := json.Marshal(rule)
+	if err != nil || strings.Contains(string(b), "period") || strings.Contains(string(b), "14") {
+		t.Errorf("json = %s (err %v)", b, err)
+	}
+}
+
+// Com 14 dias, a virada do horário de verão também não desloca nenhum dia.
+func TestBiweekly_PeriodDaysDaylightSaving(t *testing.T) {
+	ny := loc(t, "America/New_York")
+	rule := person.PaymentRule{Frequency: person.PaymentBiweekly, Start: "2026-10-28", PeriodDays: 14} // 01/11 vira
+	at, _ := time.ParseInLocation("2006-01-02 15:04", "2026-11-03 12:00", ny)
+	p, ok := PeriodAt(rule, at, ny)
+	if !ok || p.StartDay() != "2026-10-28" || p.PayDay() != "2026-11-10" || p.Days() != 14 {
+		t.Fatalf("got %s..%s days %d", p.StartDay(), p.PayDay(), p.Days())
+	}
+	if h := p.End.Sub(p.Start).Hours(); h != 14*24+1 {
+		t.Errorf("period is %vh long, want 337h (one extra hour of the fall-back)", h)
 	}
 }
 

@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 	"working-time-tracker/ent/allocation"
+	"working-time-tracker/ent/apitoken"
 	"working-time-tracker/ent/customer"
 	"working-time-tracker/ent/integration"
 	"working-time-tracker/ent/invite"
@@ -41,6 +42,7 @@ const (
 	OpUpdateOne = ent.OpUpdateOne
 
 	// Node types.
+	TypeAPIToken        = "APIToken"
 	TypeAllocation      = "Allocation"
 	TypeCustomer        = "Customer"
 	TypeIntegration     = "Integration"
@@ -59,6 +61,738 @@ const (
 	TypeWorkSession     = "WorkSession"
 	TypeWorkSessionTask = "WorkSessionTask"
 )
+
+// APITokenMutation represents an operation that mutates the APIToken nodes in the graph.
+type APITokenMutation struct {
+	config
+	op            Op
+	typ           string
+	id            *uuid.UUID
+	name          *string
+	token_hash    *string
+	prefix        *string
+	expires_at    *time.Time
+	last_used_at  *time.Time
+	created_at    *time.Time
+	clearedFields map[string]struct{}
+	person        *uuid.UUID
+	clearedperson bool
+	done          bool
+	oldValue      func(context.Context) (*APIToken, error)
+	predicates    []predicate.APIToken
+}
+
+var _ ent.Mutation = (*APITokenMutation)(nil)
+
+// apitokenOption allows management of the mutation configuration using functional options.
+type apitokenOption func(*APITokenMutation)
+
+// newAPITokenMutation creates new mutation for the APIToken entity.
+func newAPITokenMutation(c config, op Op, opts ...apitokenOption) *APITokenMutation {
+	m := &APITokenMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeAPIToken,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withAPITokenID sets the ID field of the mutation.
+func withAPITokenID(id uuid.UUID) apitokenOption {
+	return func(m *APITokenMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *APIToken
+		)
+		m.oldValue = func(ctx context.Context) (*APIToken, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().APIToken.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withAPIToken sets the old APIToken of the mutation.
+func withAPIToken(node *APIToken) apitokenOption {
+	return func(m *APITokenMutation) {
+		m.oldValue = func(context.Context) (*APIToken, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m APITokenMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m APITokenMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of APIToken entities.
+func (m *APITokenMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *APITokenMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *APITokenMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().APIToken.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetPersonID sets the "person_id" field.
+func (m *APITokenMutation) SetPersonID(u uuid.UUID) {
+	m.person = &u
+}
+
+// PersonID returns the value of the "person_id" field in the mutation.
+func (m *APITokenMutation) PersonID() (r uuid.UUID, exists bool) {
+	v := m.person
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPersonID returns the old "person_id" field's value of the APIToken entity.
+// If the APIToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *APITokenMutation) OldPersonID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPersonID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPersonID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPersonID: %w", err)
+	}
+	return oldValue.PersonID, nil
+}
+
+// ResetPersonID resets all changes to the "person_id" field.
+func (m *APITokenMutation) ResetPersonID() {
+	m.person = nil
+}
+
+// SetName sets the "name" field.
+func (m *APITokenMutation) SetName(s string) {
+	m.name = &s
+}
+
+// Name returns the value of the "name" field in the mutation.
+func (m *APITokenMutation) Name() (r string, exists bool) {
+	v := m.name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldName returns the old "name" field's value of the APIToken entity.
+// If the APIToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *APITokenMutation) OldName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldName: %w", err)
+	}
+	return oldValue.Name, nil
+}
+
+// ResetName resets all changes to the "name" field.
+func (m *APITokenMutation) ResetName() {
+	m.name = nil
+}
+
+// SetTokenHash sets the "token_hash" field.
+func (m *APITokenMutation) SetTokenHash(s string) {
+	m.token_hash = &s
+}
+
+// TokenHash returns the value of the "token_hash" field in the mutation.
+func (m *APITokenMutation) TokenHash() (r string, exists bool) {
+	v := m.token_hash
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTokenHash returns the old "token_hash" field's value of the APIToken entity.
+// If the APIToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *APITokenMutation) OldTokenHash(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTokenHash is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTokenHash requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTokenHash: %w", err)
+	}
+	return oldValue.TokenHash, nil
+}
+
+// ResetTokenHash resets all changes to the "token_hash" field.
+func (m *APITokenMutation) ResetTokenHash() {
+	m.token_hash = nil
+}
+
+// SetPrefix sets the "prefix" field.
+func (m *APITokenMutation) SetPrefix(s string) {
+	m.prefix = &s
+}
+
+// Prefix returns the value of the "prefix" field in the mutation.
+func (m *APITokenMutation) Prefix() (r string, exists bool) {
+	v := m.prefix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPrefix returns the old "prefix" field's value of the APIToken entity.
+// If the APIToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *APITokenMutation) OldPrefix(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPrefix is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPrefix requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPrefix: %w", err)
+	}
+	return oldValue.Prefix, nil
+}
+
+// ResetPrefix resets all changes to the "prefix" field.
+func (m *APITokenMutation) ResetPrefix() {
+	m.prefix = nil
+}
+
+// SetExpiresAt sets the "expires_at" field.
+func (m *APITokenMutation) SetExpiresAt(t time.Time) {
+	m.expires_at = &t
+}
+
+// ExpiresAt returns the value of the "expires_at" field in the mutation.
+func (m *APITokenMutation) ExpiresAt() (r time.Time, exists bool) {
+	v := m.expires_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldExpiresAt returns the old "expires_at" field's value of the APIToken entity.
+// If the APIToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *APITokenMutation) OldExpiresAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldExpiresAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldExpiresAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldExpiresAt: %w", err)
+	}
+	return oldValue.ExpiresAt, nil
+}
+
+// ResetExpiresAt resets all changes to the "expires_at" field.
+func (m *APITokenMutation) ResetExpiresAt() {
+	m.expires_at = nil
+}
+
+// SetLastUsedAt sets the "last_used_at" field.
+func (m *APITokenMutation) SetLastUsedAt(t time.Time) {
+	m.last_used_at = &t
+}
+
+// LastUsedAt returns the value of the "last_used_at" field in the mutation.
+func (m *APITokenMutation) LastUsedAt() (r time.Time, exists bool) {
+	v := m.last_used_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLastUsedAt returns the old "last_used_at" field's value of the APIToken entity.
+// If the APIToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *APITokenMutation) OldLastUsedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLastUsedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLastUsedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLastUsedAt: %w", err)
+	}
+	return oldValue.LastUsedAt, nil
+}
+
+// ClearLastUsedAt clears the value of the "last_used_at" field.
+func (m *APITokenMutation) ClearLastUsedAt() {
+	m.last_used_at = nil
+	m.clearedFields[apitoken.FieldLastUsedAt] = struct{}{}
+}
+
+// LastUsedAtCleared returns if the "last_used_at" field was cleared in this mutation.
+func (m *APITokenMutation) LastUsedAtCleared() bool {
+	_, ok := m.clearedFields[apitoken.FieldLastUsedAt]
+	return ok
+}
+
+// ResetLastUsedAt resets all changes to the "last_used_at" field.
+func (m *APITokenMutation) ResetLastUsedAt() {
+	m.last_used_at = nil
+	delete(m.clearedFields, apitoken.FieldLastUsedAt)
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *APITokenMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *APITokenMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the APIToken entity.
+// If the APIToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *APITokenMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *APITokenMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// ClearPerson clears the "person" edge to the Person entity.
+func (m *APITokenMutation) ClearPerson() {
+	m.clearedperson = true
+	m.clearedFields[apitoken.FieldPersonID] = struct{}{}
+}
+
+// PersonCleared reports if the "person" edge to the Person entity was cleared.
+func (m *APITokenMutation) PersonCleared() bool {
+	return m.clearedperson
+}
+
+// PersonIDs returns the "person" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// PersonID instead. It exists only for internal usage by the builders.
+func (m *APITokenMutation) PersonIDs() (ids []uuid.UUID) {
+	if id := m.person; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetPerson resets all changes to the "person" edge.
+func (m *APITokenMutation) ResetPerson() {
+	m.person = nil
+	m.clearedperson = false
+}
+
+// Where appends a list predicates to the APITokenMutation builder.
+func (m *APITokenMutation) Where(ps ...predicate.APIToken) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the APITokenMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *APITokenMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.APIToken, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *APITokenMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *APITokenMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (APIToken).
+func (m *APITokenMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *APITokenMutation) Fields() []string {
+	fields := make([]string, 0, 7)
+	if m.person != nil {
+		fields = append(fields, apitoken.FieldPersonID)
+	}
+	if m.name != nil {
+		fields = append(fields, apitoken.FieldName)
+	}
+	if m.token_hash != nil {
+		fields = append(fields, apitoken.FieldTokenHash)
+	}
+	if m.prefix != nil {
+		fields = append(fields, apitoken.FieldPrefix)
+	}
+	if m.expires_at != nil {
+		fields = append(fields, apitoken.FieldExpiresAt)
+	}
+	if m.last_used_at != nil {
+		fields = append(fields, apitoken.FieldLastUsedAt)
+	}
+	if m.created_at != nil {
+		fields = append(fields, apitoken.FieldCreatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *APITokenMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case apitoken.FieldPersonID:
+		return m.PersonID()
+	case apitoken.FieldName:
+		return m.Name()
+	case apitoken.FieldTokenHash:
+		return m.TokenHash()
+	case apitoken.FieldPrefix:
+		return m.Prefix()
+	case apitoken.FieldExpiresAt:
+		return m.ExpiresAt()
+	case apitoken.FieldLastUsedAt:
+		return m.LastUsedAt()
+	case apitoken.FieldCreatedAt:
+		return m.CreatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *APITokenMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case apitoken.FieldPersonID:
+		return m.OldPersonID(ctx)
+	case apitoken.FieldName:
+		return m.OldName(ctx)
+	case apitoken.FieldTokenHash:
+		return m.OldTokenHash(ctx)
+	case apitoken.FieldPrefix:
+		return m.OldPrefix(ctx)
+	case apitoken.FieldExpiresAt:
+		return m.OldExpiresAt(ctx)
+	case apitoken.FieldLastUsedAt:
+		return m.OldLastUsedAt(ctx)
+	case apitoken.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown APIToken field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *APITokenMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case apitoken.FieldPersonID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPersonID(v)
+		return nil
+	case apitoken.FieldName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetName(v)
+		return nil
+	case apitoken.FieldTokenHash:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTokenHash(v)
+		return nil
+	case apitoken.FieldPrefix:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPrefix(v)
+		return nil
+	case apitoken.FieldExpiresAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetExpiresAt(v)
+		return nil
+	case apitoken.FieldLastUsedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLastUsedAt(v)
+		return nil
+	case apitoken.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown APIToken field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *APITokenMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *APITokenMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *APITokenMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown APIToken numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *APITokenMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(apitoken.FieldLastUsedAt) {
+		fields = append(fields, apitoken.FieldLastUsedAt)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *APITokenMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *APITokenMutation) ClearField(name string) error {
+	switch name {
+	case apitoken.FieldLastUsedAt:
+		m.ClearLastUsedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown APIToken nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *APITokenMutation) ResetField(name string) error {
+	switch name {
+	case apitoken.FieldPersonID:
+		m.ResetPersonID()
+		return nil
+	case apitoken.FieldName:
+		m.ResetName()
+		return nil
+	case apitoken.FieldTokenHash:
+		m.ResetTokenHash()
+		return nil
+	case apitoken.FieldPrefix:
+		m.ResetPrefix()
+		return nil
+	case apitoken.FieldExpiresAt:
+		m.ResetExpiresAt()
+		return nil
+	case apitoken.FieldLastUsedAt:
+		m.ResetLastUsedAt()
+		return nil
+	case apitoken.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown APIToken field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *APITokenMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.person != nil {
+		edges = append(edges, apitoken.EdgePerson)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *APITokenMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case apitoken.EdgePerson:
+		if id := m.person; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *APITokenMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *APITokenMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *APITokenMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.clearedperson {
+		edges = append(edges, apitoken.EdgePerson)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *APITokenMutation) EdgeCleared(name string) bool {
+	switch name {
+	case apitoken.EdgePerson:
+		return m.clearedperson
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *APITokenMutation) ClearEdge(name string) error {
+	switch name {
+	case apitoken.EdgePerson:
+		m.ClearPerson()
+		return nil
+	}
+	return fmt.Errorf("unknown APIToken unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *APITokenMutation) ResetEdge(name string) error {
+	switch name {
+	case apitoken.EdgePerson:
+		m.ResetPerson()
+		return nil
+	}
+	return fmt.Errorf("unknown APIToken edge %s", name)
+}
 
 // AllocationMutation represents an operation that mutates the Allocation nodes in the graph.
 type AllocationMutation struct {
@@ -860,6 +1594,8 @@ type CustomerMutation struct {
 	addclosing_day            *int
 	payment_days              *int
 	addpayment_days           *int
+	billing_cycle             *string
+	cycle_anchor              *string
 	late_fee_bp               *int
 	addlate_fee_bp            *int
 	late_interest_bp_month    *int
@@ -1675,6 +2411,91 @@ func (m *CustomerMutation) ResetPaymentDays() {
 	m.addpayment_days = nil
 }
 
+// SetBillingCycle sets the "billing_cycle" field.
+func (m *CustomerMutation) SetBillingCycle(s string) {
+	m.billing_cycle = &s
+}
+
+// BillingCycle returns the value of the "billing_cycle" field in the mutation.
+func (m *CustomerMutation) BillingCycle() (r string, exists bool) {
+	v := m.billing_cycle
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBillingCycle returns the old "billing_cycle" field's value of the Customer entity.
+// If the Customer object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CustomerMutation) OldBillingCycle(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBillingCycle is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBillingCycle requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBillingCycle: %w", err)
+	}
+	return oldValue.BillingCycle, nil
+}
+
+// ResetBillingCycle resets all changes to the "billing_cycle" field.
+func (m *CustomerMutation) ResetBillingCycle() {
+	m.billing_cycle = nil
+}
+
+// SetCycleAnchor sets the "cycle_anchor" field.
+func (m *CustomerMutation) SetCycleAnchor(s string) {
+	m.cycle_anchor = &s
+}
+
+// CycleAnchor returns the value of the "cycle_anchor" field in the mutation.
+func (m *CustomerMutation) CycleAnchor() (r string, exists bool) {
+	v := m.cycle_anchor
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCycleAnchor returns the old "cycle_anchor" field's value of the Customer entity.
+// If the Customer object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CustomerMutation) OldCycleAnchor(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCycleAnchor is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCycleAnchor requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCycleAnchor: %w", err)
+	}
+	return oldValue.CycleAnchor, nil
+}
+
+// ClearCycleAnchor clears the value of the "cycle_anchor" field.
+func (m *CustomerMutation) ClearCycleAnchor() {
+	m.cycle_anchor = nil
+	m.clearedFields[customer.FieldCycleAnchor] = struct{}{}
+}
+
+// CycleAnchorCleared returns if the "cycle_anchor" field was cleared in this mutation.
+func (m *CustomerMutation) CycleAnchorCleared() bool {
+	_, ok := m.clearedFields[customer.FieldCycleAnchor]
+	return ok
+}
+
+// ResetCycleAnchor resets all changes to the "cycle_anchor" field.
+func (m *CustomerMutation) ResetCycleAnchor() {
+	m.cycle_anchor = nil
+	delete(m.clearedFields, customer.FieldCycleAnchor)
+}
+
 // SetLateFeeBp sets the "late_fee_bp" field.
 func (m *CustomerMutation) SetLateFeeBp(i int) {
 	m.late_fee_bp = &i
@@ -2048,7 +2869,7 @@ func (m *CustomerMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *CustomerMutation) Fields() []string {
-	fields := make([]string, 0, 18)
+	fields := make([]string, 0, 20)
 	if m.organization != nil {
 		fields = append(fields, customer.FieldOrganizationID)
 	}
@@ -2090,6 +2911,12 @@ func (m *CustomerMutation) Fields() []string {
 	}
 	if m.payment_days != nil {
 		fields = append(fields, customer.FieldPaymentDays)
+	}
+	if m.billing_cycle != nil {
+		fields = append(fields, customer.FieldBillingCycle)
+	}
+	if m.cycle_anchor != nil {
+		fields = append(fields, customer.FieldCycleAnchor)
 	}
 	if m.late_fee_bp != nil {
 		fields = append(fields, customer.FieldLateFeeBp)
@@ -2139,6 +2966,10 @@ func (m *CustomerMutation) Field(name string) (ent.Value, bool) {
 		return m.ClosingDay()
 	case customer.FieldPaymentDays:
 		return m.PaymentDays()
+	case customer.FieldBillingCycle:
+		return m.BillingCycle()
+	case customer.FieldCycleAnchor:
+		return m.CycleAnchor()
 	case customer.FieldLateFeeBp:
 		return m.LateFeeBp()
 	case customer.FieldLateInterestBpMonth:
@@ -2184,6 +3015,10 @@ func (m *CustomerMutation) OldField(ctx context.Context, name string) (ent.Value
 		return m.OldClosingDay(ctx)
 	case customer.FieldPaymentDays:
 		return m.OldPaymentDays(ctx)
+	case customer.FieldBillingCycle:
+		return m.OldBillingCycle(ctx)
+	case customer.FieldCycleAnchor:
+		return m.OldCycleAnchor(ctx)
 	case customer.FieldLateFeeBp:
 		return m.OldLateFeeBp(ctx)
 	case customer.FieldLateInterestBpMonth:
@@ -2298,6 +3133,20 @@ func (m *CustomerMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetPaymentDays(v)
+		return nil
+	case customer.FieldBillingCycle:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBillingCycle(v)
+		return nil
+	case customer.FieldCycleAnchor:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCycleAnchor(v)
 		return nil
 	case customer.FieldLateFeeBp:
 		v, ok := value.(int)
@@ -2468,6 +3317,9 @@ func (m *CustomerMutation) ClearedFields() []string {
 	if m.FieldCleared(customer.FieldContractEnd) {
 		fields = append(fields, customer.FieldContractEnd)
 	}
+	if m.FieldCleared(customer.FieldCycleAnchor) {
+		fields = append(fields, customer.FieldCycleAnchor)
+	}
 	return fields
 }
 
@@ -2505,6 +3357,9 @@ func (m *CustomerMutation) ClearField(name string) error {
 		return nil
 	case customer.FieldContractEnd:
 		m.ClearContractEnd()
+		return nil
+	case customer.FieldCycleAnchor:
+		m.ClearCycleAnchor()
 		return nil
 	}
 	return fmt.Errorf("unknown Customer nullable field %s", name)
@@ -2555,6 +3410,12 @@ func (m *CustomerMutation) ResetField(name string) error {
 		return nil
 	case customer.FieldPaymentDays:
 		m.ResetPaymentDays()
+		return nil
+	case customer.FieldBillingCycle:
+		m.ResetBillingCycle()
+		return nil
+	case customer.FieldCycleAnchor:
+		m.ResetCycleAnchor()
 		return nil
 	case customer.FieldLateFeeBp:
 		m.ResetLateFeeBp()
@@ -10015,6 +10876,9 @@ type PersonMutation struct {
 	sessions                map[uuid.UUID]struct{}
 	removedsessions         map[uuid.UUID]struct{}
 	clearedsessions         bool
+	api_tokens              map[uuid.UUID]struct{}
+	removedapi_tokens       map[uuid.UUID]struct{}
+	clearedapi_tokens       bool
 	created_invites         map[uuid.UUID]struct{}
 	removedcreated_invites  map[uuid.UUID]struct{}
 	clearedcreated_invites  bool
@@ -10977,6 +11841,60 @@ func (m *PersonMutation) ResetSessions() {
 	m.removedsessions = nil
 }
 
+// AddAPITokenIDs adds the "api_tokens" edge to the APIToken entity by ids.
+func (m *PersonMutation) AddAPITokenIDs(ids ...uuid.UUID) {
+	if m.api_tokens == nil {
+		m.api_tokens = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.api_tokens[ids[i]] = struct{}{}
+	}
+}
+
+// ClearAPITokens clears the "api_tokens" edge to the APIToken entity.
+func (m *PersonMutation) ClearAPITokens() {
+	m.clearedapi_tokens = true
+}
+
+// APITokensCleared reports if the "api_tokens" edge to the APIToken entity was cleared.
+func (m *PersonMutation) APITokensCleared() bool {
+	return m.clearedapi_tokens
+}
+
+// RemoveAPITokenIDs removes the "api_tokens" edge to the APIToken entity by IDs.
+func (m *PersonMutation) RemoveAPITokenIDs(ids ...uuid.UUID) {
+	if m.removedapi_tokens == nil {
+		m.removedapi_tokens = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.api_tokens, ids[i])
+		m.removedapi_tokens[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedAPITokens returns the removed IDs of the "api_tokens" edge to the APIToken entity.
+func (m *PersonMutation) RemovedAPITokensIDs() (ids []uuid.UUID) {
+	for id := range m.removedapi_tokens {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// APITokensIDs returns the "api_tokens" edge IDs in the mutation.
+func (m *PersonMutation) APITokensIDs() (ids []uuid.UUID) {
+	for id := range m.api_tokens {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetAPITokens resets all changes to the "api_tokens" edge.
+func (m *PersonMutation) ResetAPITokens() {
+	m.api_tokens = nil
+	m.clearedapi_tokens = false
+	m.removedapi_tokens = nil
+}
+
 // AddCreatedInviteIDs adds the "created_invites" edge to the Invite entity by ids.
 func (m *PersonMutation) AddCreatedInviteIDs(ids ...uuid.UUID) {
 	if m.created_invites == nil {
@@ -11548,7 +12466,7 @@ func (m *PersonMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *PersonMutation) AddedEdges() []string {
-	edges := make([]string, 0, 8)
+	edges := make([]string, 0, 9)
 	if m.organization != nil {
 		edges = append(edges, person.EdgeOrganization)
 	}
@@ -11563,6 +12481,9 @@ func (m *PersonMutation) AddedEdges() []string {
 	}
 	if m.sessions != nil {
 		edges = append(edges, person.EdgeSessions)
+	}
+	if m.api_tokens != nil {
+		edges = append(edges, person.EdgeAPITokens)
 	}
 	if m.created_invites != nil {
 		edges = append(edges, person.EdgeCreatedInvites)
@@ -11608,6 +12529,12 @@ func (m *PersonMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case person.EdgeAPITokens:
+		ids := make([]ent.Value, 0, len(m.api_tokens))
+		for id := range m.api_tokens {
+			ids = append(ids, id)
+		}
+		return ids
 	case person.EdgeCreatedInvites:
 		ids := make([]ent.Value, 0, len(m.created_invites))
 		for id := range m.created_invites {
@@ -11632,7 +12559,7 @@ func (m *PersonMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *PersonMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 8)
+	edges := make([]string, 0, 9)
 	if m.removedtasks != nil {
 		edges = append(edges, person.EdgeTasks)
 	}
@@ -11644,6 +12571,9 @@ func (m *PersonMutation) RemovedEdges() []string {
 	}
 	if m.removedsessions != nil {
 		edges = append(edges, person.EdgeSessions)
+	}
+	if m.removedapi_tokens != nil {
+		edges = append(edges, person.EdgeAPITokens)
 	}
 	if m.removedcreated_invites != nil {
 		edges = append(edges, person.EdgeCreatedInvites)
@@ -11685,6 +12615,12 @@ func (m *PersonMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case person.EdgeAPITokens:
+		ids := make([]ent.Value, 0, len(m.removedapi_tokens))
+		for id := range m.removedapi_tokens {
+			ids = append(ids, id)
+		}
+		return ids
 	case person.EdgeCreatedInvites:
 		ids := make([]ent.Value, 0, len(m.removedcreated_invites))
 		for id := range m.removedcreated_invites {
@@ -11709,7 +12645,7 @@ func (m *PersonMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *PersonMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 8)
+	edges := make([]string, 0, 9)
 	if m.clearedorganization {
 		edges = append(edges, person.EdgeOrganization)
 	}
@@ -11724,6 +12660,9 @@ func (m *PersonMutation) ClearedEdges() []string {
 	}
 	if m.clearedsessions {
 		edges = append(edges, person.EdgeSessions)
+	}
+	if m.clearedapi_tokens {
+		edges = append(edges, person.EdgeAPITokens)
 	}
 	if m.clearedcreated_invites {
 		edges = append(edges, person.EdgeCreatedInvites)
@@ -11751,6 +12690,8 @@ func (m *PersonMutation) EdgeCleared(name string) bool {
 		return m.clearedwork_sessions
 	case person.EdgeSessions:
 		return m.clearedsessions
+	case person.EdgeAPITokens:
+		return m.clearedapi_tokens
 	case person.EdgeCreatedInvites:
 		return m.clearedcreated_invites
 	case person.EdgeAllocations:
@@ -11791,6 +12732,9 @@ func (m *PersonMutation) ResetEdge(name string) error {
 	case person.EdgeSessions:
 		m.ResetSessions()
 		return nil
+	case person.EdgeAPITokens:
+		m.ResetAPITokens()
+		return nil
 	case person.EdgeCreatedInvites:
 		m.ResetCreatedInvites()
 		return nil
@@ -11807,52 +12751,54 @@ func (m *PersonMutation) ResetEdge(name string) error {
 // ProjectMutation represents an operation that mutates the Project nodes in the graph.
 type ProjectMutation struct {
 	config
-	op                      Op
-	typ                     string
-	id                      *uuid.UUID
-	name                    *string
-	description             *string
-	github_repo_url         *string
-	gitlab_repo_url         *string
-	sprint_duration_days    *int
-	addsprint_duration_days *int
-	daily_time              *string
-	weekly_sync_day         *string
-	weekly_sync_time        *string
-	customer_meeting_day    *string
-	customer_meeting_time   *string
-	bill_extra_cents        *int
-	addbill_extra_cents     *int
-	created_at              *time.Time
-	clearedFields           map[string]struct{}
-	organization            *uuid.UUID
-	clearedorganization     bool
-	customer                *uuid.UUID
-	clearedcustomer         bool
-	teams                   map[uuid.UUID]struct{}
-	removedteams            map[uuid.UUID]struct{}
-	clearedteams            bool
-	tasks                   map[uuid.UUID]struct{}
-	removedtasks            map[uuid.UUID]struct{}
-	clearedtasks            bool
-	work_sessions           map[uuid.UUID]struct{}
-	removedwork_sessions    map[uuid.UUID]struct{}
-	clearedwork_sessions    bool
-	integrations            map[uuid.UUID]struct{}
-	removedintegrations     map[uuid.UUID]struct{}
-	clearedintegrations     bool
-	allocations             map[uuid.UUID]struct{}
-	removedallocations      map[uuid.UUID]struct{}
-	clearedallocations      bool
-	invites                 map[uuid.UUID]struct{}
-	removedinvites          map[uuid.UUID]struct{}
-	clearedinvites          bool
-	labels                  map[uuid.UUID]struct{}
-	removedlabels           map[uuid.UUID]struct{}
-	clearedlabels           bool
-	done                    bool
-	oldValue                func(context.Context) (*Project, error)
-	predicates              []predicate.Project
+	op                              Op
+	typ                             string
+	id                              *uuid.UUID
+	name                            *string
+	description                     *string
+	github_repo_url                 *string
+	gitlab_repo_url                 *string
+	sprint_duration_days            *int
+	addsprint_duration_days         *int
+	daily_time                      *string
+	weekly_sync_day                 *string
+	weekly_sync_time                *string
+	customer_meeting_day            *string
+	customer_meeting_time           *string
+	customer_meeting_every_weeks    *int
+	addcustomer_meeting_every_weeks *int
+	bill_extra_cents                *int
+	addbill_extra_cents             *int
+	created_at                      *time.Time
+	clearedFields                   map[string]struct{}
+	organization                    *uuid.UUID
+	clearedorganization             bool
+	customer                        *uuid.UUID
+	clearedcustomer                 bool
+	teams                           map[uuid.UUID]struct{}
+	removedteams                    map[uuid.UUID]struct{}
+	clearedteams                    bool
+	tasks                           map[uuid.UUID]struct{}
+	removedtasks                    map[uuid.UUID]struct{}
+	clearedtasks                    bool
+	work_sessions                   map[uuid.UUID]struct{}
+	removedwork_sessions            map[uuid.UUID]struct{}
+	clearedwork_sessions            bool
+	integrations                    map[uuid.UUID]struct{}
+	removedintegrations             map[uuid.UUID]struct{}
+	clearedintegrations             bool
+	allocations                     map[uuid.UUID]struct{}
+	removedallocations              map[uuid.UUID]struct{}
+	clearedallocations              bool
+	invites                         map[uuid.UUID]struct{}
+	removedinvites                  map[uuid.UUID]struct{}
+	clearedinvites                  bool
+	labels                          map[uuid.UUID]struct{}
+	removedlabels                   map[uuid.UUID]struct{}
+	clearedlabels                   bool
+	done                            bool
+	oldValue                        func(context.Context) (*Project, error)
+	predicates                      []predicate.Project
 }
 
 var _ ent.Mutation = (*ProjectMutation)(nil)
@@ -12479,6 +13425,62 @@ func (m *ProjectMutation) ResetCustomerMeetingTime() {
 	delete(m.clearedFields, project.FieldCustomerMeetingTime)
 }
 
+// SetCustomerMeetingEveryWeeks sets the "customer_meeting_every_weeks" field.
+func (m *ProjectMutation) SetCustomerMeetingEveryWeeks(i int) {
+	m.customer_meeting_every_weeks = &i
+	m.addcustomer_meeting_every_weeks = nil
+}
+
+// CustomerMeetingEveryWeeks returns the value of the "customer_meeting_every_weeks" field in the mutation.
+func (m *ProjectMutation) CustomerMeetingEveryWeeks() (r int, exists bool) {
+	v := m.customer_meeting_every_weeks
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCustomerMeetingEveryWeeks returns the old "customer_meeting_every_weeks" field's value of the Project entity.
+// If the Project object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProjectMutation) OldCustomerMeetingEveryWeeks(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCustomerMeetingEveryWeeks is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCustomerMeetingEveryWeeks requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCustomerMeetingEveryWeeks: %w", err)
+	}
+	return oldValue.CustomerMeetingEveryWeeks, nil
+}
+
+// AddCustomerMeetingEveryWeeks adds i to the "customer_meeting_every_weeks" field.
+func (m *ProjectMutation) AddCustomerMeetingEveryWeeks(i int) {
+	if m.addcustomer_meeting_every_weeks != nil {
+		*m.addcustomer_meeting_every_weeks += i
+	} else {
+		m.addcustomer_meeting_every_weeks = &i
+	}
+}
+
+// AddedCustomerMeetingEveryWeeks returns the value that was added to the "customer_meeting_every_weeks" field in this mutation.
+func (m *ProjectMutation) AddedCustomerMeetingEveryWeeks() (r int, exists bool) {
+	v := m.addcustomer_meeting_every_weeks
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetCustomerMeetingEveryWeeks resets all changes to the "customer_meeting_every_weeks" field.
+func (m *ProjectMutation) ResetCustomerMeetingEveryWeeks() {
+	m.customer_meeting_every_weeks = nil
+	m.addcustomer_meeting_every_weeks = nil
+}
+
 // SetCustomerID sets the "customer_id" field.
 func (m *ProjectMutation) SetCustomerID(u uuid.UUID) {
 	m.customer = &u
@@ -13086,7 +14088,7 @@ func (m *ProjectMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ProjectMutation) Fields() []string {
-	fields := make([]string, 0, 14)
+	fields := make([]string, 0, 15)
 	if m.organization != nil {
 		fields = append(fields, project.FieldOrganizationID)
 	}
@@ -13119,6 +14121,9 @@ func (m *ProjectMutation) Fields() []string {
 	}
 	if m.customer_meeting_time != nil {
 		fields = append(fields, project.FieldCustomerMeetingTime)
+	}
+	if m.customer_meeting_every_weeks != nil {
+		fields = append(fields, project.FieldCustomerMeetingEveryWeeks)
 	}
 	if m.customer != nil {
 		fields = append(fields, project.FieldCustomerID)
@@ -13159,6 +14164,8 @@ func (m *ProjectMutation) Field(name string) (ent.Value, bool) {
 		return m.CustomerMeetingDay()
 	case project.FieldCustomerMeetingTime:
 		return m.CustomerMeetingTime()
+	case project.FieldCustomerMeetingEveryWeeks:
+		return m.CustomerMeetingEveryWeeks()
 	case project.FieldCustomerID:
 		return m.CustomerID()
 	case project.FieldBillExtraCents:
@@ -13196,6 +14203,8 @@ func (m *ProjectMutation) OldField(ctx context.Context, name string) (ent.Value,
 		return m.OldCustomerMeetingDay(ctx)
 	case project.FieldCustomerMeetingTime:
 		return m.OldCustomerMeetingTime(ctx)
+	case project.FieldCustomerMeetingEveryWeeks:
+		return m.OldCustomerMeetingEveryWeeks(ctx)
 	case project.FieldCustomerID:
 		return m.OldCustomerID(ctx)
 	case project.FieldBillExtraCents:
@@ -13288,6 +14297,13 @@ func (m *ProjectMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetCustomerMeetingTime(v)
 		return nil
+	case project.FieldCustomerMeetingEveryWeeks:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCustomerMeetingEveryWeeks(v)
+		return nil
 	case project.FieldCustomerID:
 		v, ok := value.(uuid.UUID)
 		if !ok {
@@ -13320,6 +14336,9 @@ func (m *ProjectMutation) AddedFields() []string {
 	if m.addsprint_duration_days != nil {
 		fields = append(fields, project.FieldSprintDurationDays)
 	}
+	if m.addcustomer_meeting_every_weeks != nil {
+		fields = append(fields, project.FieldCustomerMeetingEveryWeeks)
+	}
 	if m.addbill_extra_cents != nil {
 		fields = append(fields, project.FieldBillExtraCents)
 	}
@@ -13333,6 +14352,8 @@ func (m *ProjectMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
 	case project.FieldSprintDurationDays:
 		return m.AddedSprintDurationDays()
+	case project.FieldCustomerMeetingEveryWeeks:
+		return m.AddedCustomerMeetingEveryWeeks()
 	case project.FieldBillExtraCents:
 		return m.AddedBillExtraCents()
 	}
@@ -13350,6 +14371,13 @@ func (m *ProjectMutation) AddField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddSprintDurationDays(v)
+		return nil
+	case project.FieldCustomerMeetingEveryWeeks:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddCustomerMeetingEveryWeeks(v)
 		return nil
 	case project.FieldBillExtraCents:
 		v, ok := value.(int)
@@ -13474,6 +14502,9 @@ func (m *ProjectMutation) ResetField(name string) error {
 		return nil
 	case project.FieldCustomerMeetingTime:
 		m.ResetCustomerMeetingTime()
+		return nil
+	case project.FieldCustomerMeetingEveryWeeks:
+		m.ResetCustomerMeetingEveryWeeks()
 		return nil
 	case project.FieldCustomerID:
 		m.ResetCustomerID()

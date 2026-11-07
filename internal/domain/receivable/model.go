@@ -13,8 +13,12 @@ const (
 )
 
 const (
-	// MaxHourlyProposals é quantos períodos fechados do cliente por hora a lista A confirmar traz, os mais recentes.
+	// MaxHourlyProposals é quantos períodos fechados do cliente por hora de ciclo mensal a lista A confirmar traz, os
+	// mais recentes: dois anos.
 	MaxHourlyProposals = 24
+	// MaxBiweeklyProposals é o mesmo teto no ciclo de 14 dias, também cerca de dois anos. Um ano da tela inicial tem
+	// no máximo 26 períodos fechados desse ciclo, abaixo dele.
+	MaxBiweeklyProposals = 52
 	// MaxMonthlyProposals limita os períodos do contrato mensal que ainda não foram confirmados: um contrato que
 	// começa muito atrás, ou uma data digitada errada, não enche a tela. Fica com os mais recentes.
 	MaxMonthlyProposals = 60

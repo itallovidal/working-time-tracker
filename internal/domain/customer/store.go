@@ -34,6 +34,8 @@ func (s *Store) Create(c *Customer) error {
 		SetNillableMonthlyFeeCents(c.MonthlyFeeCents).
 		SetNillableContractStart(c.ContractStart).
 		SetNillableContractEnd(c.ContractEnd).
+		SetBillingCycle(c.BillingCycle).
+		SetNillableCycleAnchor(c.CycleAnchor).
 		SetClosingDay(c.ClosingDay).
 		SetPaymentDays(c.PaymentDays).
 		SetLateFeeBp(c.LateFeeBP).
@@ -98,11 +100,17 @@ func (s *Store) Update(c *Customer) error {
 		SetContactEmail(c.ContactEmail).
 		SetContactPhone(c.ContactPhone).
 		SetBillingMode(c.BillingMode).
+		SetBillingCycle(c.BillingCycle).
 		SetClosingDay(c.ClosingDay).
 		SetPaymentDays(c.PaymentDays).
 		SetLateFeeBp(c.LateFeeBP).
 		SetLateInterestBpMonth(c.LateInterestBPMonth).
 		SetGraceDays(c.GraceDays)
+	if c.CycleAnchor != nil {
+		q = q.SetCycleAnchor(*c.CycleAnchor)
+	} else {
+		q = q.ClearCycleAnchor()
+	}
 	if c.HourlyRateCents != nil {
 		q = q.SetHourlyRateCents(*c.HourlyRateCents)
 	} else {
@@ -153,11 +161,39 @@ func (s *Store) OrgSolo(orgID uuid.UUID) (bool, error) {
 	return solo, err
 }
 
+// OrgTimezone devolve o fuso da organização, onde se conta o "hoje" da âncora do ciclo de 14 dias. Organização que não
+// existe é ErrInvalidOrganization.
+func (s *Store) OrgTimezone(orgID uuid.UUID) (string, error) {
+	tz, err := s.client.Organization.Query().
+		Where(entorganization.IDEQ(orgID)).
+		Select(entorganization.FieldTimezone).
+		String(context.Background())
+	if ent.IsNotFound(err) {
+		return "", ErrInvalidOrganization
+	}
+	return tz, err
+}
+
 // HasReceivables diz se o cliente tem algum recebível, confirmado ou recebido. Enquanto tiver, não pode ser excluído.
 func (s *Store) HasReceivables(id uuid.UUID) (bool, error) {
 	return s.client.Receivable.Query().
 		Where(entreceivable.CustomerIDEQ(id)).
 		Exist(context.Background())
+}
+
+// LastPeriodEnd devolve o último dia do período mais recente que o cliente já tem em recebíveis (YYYY-MM-DD), e false
+// quando ele não tem nenhum. Os dias se comparam como texto.
+func (s *Store) LastPeriodEnd(id uuid.UUID) (string, bool, error) {
+	ends, err := s.client.Receivable.Query().
+		Where(entreceivable.CustomerIDEQ(id)).
+		Order(ent.Desc(entreceivable.FieldPeriodEnd)).
+		Limit(1).
+		Select(entreceivable.FieldPeriodEnd).
+		Strings(context.Background())
+	if err != nil || len(ends) == 0 {
+		return "", false, err
+	}
+	return ends[0], true, nil
 }
 
 func (s *Store) Delete(id uuid.UUID) error {
@@ -182,6 +218,8 @@ func toDomain(e *ent.Customer) *Customer {
 		MonthlyFeeCents:     e.MonthlyFeeCents,
 		ContractStart:       e.ContractStart,
 		ContractEnd:         e.ContractEnd,
+		BillingCycle:        e.BillingCycle,
+		CycleAnchor:         e.CycleAnchor,
 		ClosingDay:          e.ClosingDay,
 		PaymentDays:         e.PaymentDays,
 		LateFeeBP:           e.LateFeeBp,

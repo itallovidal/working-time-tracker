@@ -51,6 +51,8 @@ func (Person) Edges() []ent.Edge {
 		edge.To("team_memberships", TeamMembership.Type),
 		edge.To("work_sessions", WorkSession.Type),
 		edge.To("sessions", Session.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
+		// Os tokens do Claude (MCP) somem com a pessoa, como as sessões.
+		edge.To("api_tokens", APIToken.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("created_invites", Invite.Type),
 		edge.To("allocations", Allocation.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
 		// As baixas dos pagamentos dela. Sem a pessoa, não há a quem ter pago.

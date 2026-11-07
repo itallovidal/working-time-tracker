@@ -83,6 +83,14 @@ func (f *soloFixture) hourly(name string) *ent.Customer {
 		SetBillingMode("hourly").SetClosingDay(31).SetPaymentDays(5).SaveX(context.Background())
 }
 
+// biweekly cria um cliente por hora no ciclo de 14 dias a partir da âncora, com 3 dias de prazo.
+func (f *soloFixture) biweekly(name, anchor string) *ent.Customer {
+	f.t.Helper()
+	return testClient.Customer.Create().SetOrganizationID(f.orgID).SetName(name).
+		SetBillingMode("hourly").SetBillingCycle("biweekly").SetCycleAnchor(anchor).SetPaymentDays(3).
+		SaveX(context.Background())
+}
+
 // monthly cria um cliente mensal que fecha no último dia do mês, com o contrato começando em start.
 func (f *soloFixture) monthly(name string, feeCents int, start string) *ent.Customer {
 	f.t.Helper()
@@ -419,8 +427,28 @@ func TestSolo_TheYearFollowsTheTimezoneOfTheOrganization(t *testing.T) {
 	}
 }
 
-// As propostas do domínio dos recebíveis têm tetos (24 períodos fechados por cliente por hora, 60 por mensal), mas uma
-// janela tem no máximo 12 períodos de cada cliente: um histórico longo e nunca confirmado não muda a conta do ano.
+// No ciclo de 14 dias um ano tem 26 períodos, mais que os 24 do teto mensal: o teto do ciclo (52) deixa todos na conta
+// do ano. Hoje é 20/12/2026; com âncora 31/12/2025 os períodos começam em 1/1, o 25º fechado termina em 16/12 e o
+// aberto vai de 17/12 a 30/12.
+func TestSolo_BiweeklyYearKeepsEveryPeriod(t *testing.T) {
+	f := newSolo(t, "2026-12-20T15:00:00Z", "America/Sao_Paulo")
+	acme := f.biweekly("Acme Inc.", "2025-12-31")
+	task := f.task(acme, "Site")
+	for k := 0; k < 26; k++ {
+		at := time.Date(2026, time.January, 2+14*k, 13, 0, 0, 0, time.UTC)
+		f.session(task, at.Format(time.RFC3339), at.Add(time.Hour).Format(time.RFC3339), cents(10000))
+	}
+	got := f.solo(overview.WindowYear)
+	want := []string{"Acme Inc. [hourly]: 93600s, received 0, projected 260000, rate 10000 below=false"} // 26 períodos de 1h
+	if rows := rowLines(got); !slices.Equal(rows, want) {
+		t.Errorf("rows\n got  %q\n want %q", rows, want)
+	}
+	checkSums(t, got)
+}
+
+// As propostas do domínio dos recebíveis têm tetos (24 períodos fechados por cliente por hora no ciclo mensal, 52 no de
+// 14 dias, 60 por mensal), mas uma janela tem no máximo 12 períodos mensais de cada cliente: um histórico longo e nunca
+// confirmado não muda a conta do ano.
 func TestSolo_AnOldUnconfirmedHistoryDoesNotChangeTheYear(t *testing.T) {
 	f := newSolo(t, "2026-11-18T15:00:00Z", "America/Sao_Paulo")
 	alfa := f.hourly("Alfa")

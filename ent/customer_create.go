@@ -204,6 +204,34 @@ func (_c *CustomerCreate) SetNillablePaymentDays(v *int) *CustomerCreate {
 	return _c
 }
 
+// SetBillingCycle sets the "billing_cycle" field.
+func (_c *CustomerCreate) SetBillingCycle(v string) *CustomerCreate {
+	_c.mutation.SetBillingCycle(v)
+	return _c
+}
+
+// SetNillableBillingCycle sets the "billing_cycle" field if the given value is not nil.
+func (_c *CustomerCreate) SetNillableBillingCycle(v *string) *CustomerCreate {
+	if v != nil {
+		_c.SetBillingCycle(*v)
+	}
+	return _c
+}
+
+// SetCycleAnchor sets the "cycle_anchor" field.
+func (_c *CustomerCreate) SetCycleAnchor(v string) *CustomerCreate {
+	_c.mutation.SetCycleAnchor(v)
+	return _c
+}
+
+// SetNillableCycleAnchor sets the "cycle_anchor" field if the given value is not nil.
+func (_c *CustomerCreate) SetNillableCycleAnchor(v *string) *CustomerCreate {
+	if v != nil {
+		_c.SetCycleAnchor(*v)
+	}
+	return _c
+}
+
 // SetLateFeeBp sets the "late_fee_bp" field.
 func (_c *CustomerCreate) SetLateFeeBp(v int) *CustomerCreate {
 	_c.mutation.SetLateFeeBp(v)
@@ -360,6 +388,10 @@ func (_c *CustomerCreate) defaults() {
 		v := customer.DefaultPaymentDays
 		_c.mutation.SetPaymentDays(v)
 	}
+	if _, ok := _c.mutation.BillingCycle(); !ok {
+		v := customer.DefaultBillingCycle
+		_c.mutation.SetBillingCycle(v)
+	}
 	if _, ok := _c.mutation.LateFeeBp(); !ok {
 		v := customer.DefaultLateFeeBp
 		_c.mutation.SetLateFeeBp(v)
@@ -421,6 +453,9 @@ func (_c *CustomerCreate) check() error {
 		if err := customer.PaymentDaysValidator(v); err != nil {
 			return &ValidationError{Name: "payment_days", err: fmt.Errorf(`ent: validator failed for field "Customer.payment_days": %w`, err)}
 		}
+	}
+	if _, ok := _c.mutation.BillingCycle(); !ok {
+		return &ValidationError{Name: "billing_cycle", err: errors.New(`ent: missing required field "Customer.billing_cycle"`)}
 	}
 	if _, ok := _c.mutation.LateFeeBp(); !ok {
 		return &ValidationError{Name: "late_fee_bp", err: errors.New(`ent: missing required field "Customer.late_fee_bp"`)}
@@ -538,6 +573,14 @@ func (_c *CustomerCreate) createSpec() (*Customer, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.PaymentDays(); ok {
 		_spec.SetField(customer.FieldPaymentDays, field.TypeInt, value)
 		_node.PaymentDays = value
+	}
+	if value, ok := _c.mutation.BillingCycle(); ok {
+		_spec.SetField(customer.FieldBillingCycle, field.TypeString, value)
+		_node.BillingCycle = value
+	}
+	if value, ok := _c.mutation.CycleAnchor(); ok {
+		_spec.SetField(customer.FieldCycleAnchor, field.TypeString, value)
+		_node.CycleAnchor = &value
 	}
 	if value, ok := _c.mutation.LateFeeBp(); ok {
 		_spec.SetField(customer.FieldLateFeeBp, field.TypeInt, value)

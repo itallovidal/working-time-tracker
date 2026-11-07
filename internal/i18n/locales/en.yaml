@@ -47,6 +47,7 @@ titles:
   org_people: Collaborators
   org_person: Collaborator
   overview: Management · Overview
+  overview_solo: Overview
   my_overview: Home
   collaborators: Collaborators
   tasks: Task list
@@ -637,6 +638,40 @@ profile:
   title_other: Collaborator profile
   edit: Edit profile
   tabs_label: What to edit
+  claude:
+    title: Connect to Claude
+    intro: "With a token, Claude Code creates and updates your tasks, claims tasks, syncs with the project's integrations and clocks in and out for you. It sees what you see, except the money amounts."
+    new: New token
+    loading: Loading the tokens…
+    empty: No tokens yet
+    empty_text: Create a token to connect Claude Code to this system.
+    col_name: Name
+    col_token: Token
+    col_last_used: Last used
+    col_expires: Expires on
+    never_used: Never used
+    expired: Expired
+    revoke: Revoke
+    revoke_question: Revoke this token?
+    revoked: Token revoked. The Claude that used it can no longer get in.
+    password_note: Changing your password revokes all your tokens.
+    modal_title: New Claude token
+    name: Name
+    name_hint: To tell it apart later, like "Claude Code on the laptop".
+    days: Valid for
+    days_30: 30 days
+    days_90: 90 days
+    days_365: 1 year
+    submit: Create token
+    copy_now: "Copy it now: the token is not shown again. Whoever has it acts as you until it expires or is revoked."
+    command: Claude Code command
+    command_hint: Run it in the terminal. Then, in a Claude Code conversation, ask for example "what are my tasks?".
+    token: Token
+    token_hint: To paste somewhere else, like a project's configuration. Keep it like a password.
+    copy_command: Copy command
+    copy_token: Copy token
+    copied: Copied.
+    done: Done
   loading: Loading the profile…
   data: Details
   role: Role
@@ -764,6 +799,7 @@ help:
     numbers:
       title: Follow the numbers
       text: "The owner and the admins see, on the organization Home, the hours and cost of all projects, over 7 days, 30 days or all time; the revenue and margin, only the owner. Each project has its own “Overview” in Management, with everyone's sessions and the totals."
+      text_solo: "The Home shows the hours, the revenue and the projected revenue, by customer. Each project has its own “Overview” tab, next to Tasks, with the sessions and the totals."
       tip: "The screens show who is working right now and on which task, but they do not rank or compare people by hours."
   screens:
     intro: "For each screen: what it shows and what you can do there. Some buttons only appear for people with the permission (see “Who sees and does what”)."
@@ -804,7 +840,7 @@ help:
     org_customers:
       title: Customers
       text: "The register of who hires the organization: name, country, tax ID (CNPJ in Brazil, EIN in the US), contact person, email, phone and billing: the hourly rate, which applies to all of the customer's projects. The page is the owner's only."
-      actions: "“New customer” registers one; each row has the actions to edit and delete."
+      actions: "“New customer” registers one. Clicking a row opens the customer details, with “Edit” and “Delete”."
       link: "A customer is linked to a project when the project is created or in its settings. Raising the customer's rate changes the billed rate of all of its projects, for the hours logged from then on."
     org_projects:
       title: Projects
@@ -834,7 +870,9 @@ help:
       presence: "For the owner and the administrators, the “Now” column shows who has the clock running and on which task. It refreshes by itself every 30 seconds."
     mgmt_overview:
       title: "Management: Overview"
+      title_solo: "Project: Overview"
       intro: "The “Management” button, at the end of the project tabs, appears for whoever has some permission on the project. Each Management tab appears according to the person's permission."
+      intro_solo: "In solo mode, the Overview is a project tab, next to Tasks. The “Management” button, at the end of the tabs, holds Integrations and Settings."
       text: "The Overview is the project in numbers: people, teams, hours over the last 7 and 30 days, who is working right now, overdue tasks and, for the owner, the customer and billed rate."
       sessions: "Below are everyone's sessions, with person, date and task filters, and the totals of time and cost; the revenue and margin, only for the owner."
       who: "It opens for anyone with a permission on the project."
@@ -866,6 +904,7 @@ help:
       rates: "“Projects and rates”: how much you earn per hour on each project and what you did on them, in the period and since the start. Only you and the admins see it."
       edit: "“Edit profile” opens your personal details (name and email, the one you sign in with) and, on the “Password” tab, the password change, which signs out your other sessions."
       language: "The language (PT | EN), “Help” and “Sign out” are in the same account menu, and the browser remembers the language you chose."
+      claude: "In “Connect to Claude”, “New token” creates a token and the command that connects Claude Code: with it, Claude creates and updates your tasks, claims tasks, syncs and clocks in and out for you, as you and without seeing money amounts. The token is shown only once, expires on the chosen date and can be revoked there; changing your password revokes them all."
   concepts:
     rates:
       title: Hourly rate
@@ -891,7 +930,7 @@ help:
       text: "Solo mode is for people who work on their own, as freelancers or solo contractors: the organization is just one person, and what belongs to a team goes away instead of crowding the menus."
       choose: "Tick “I work alone” when you create the organization or later, in Settings › Edit. Only the owner changes it, and it only turns on with you as the only person and no pending invites."
       hides: "The menu loses Collaborators and Payments and gains “Receivables”; the project loses the Collaborators tab, and nobody is invited. Turning the mode off deletes nothing: everything that was hidden comes back."
-      billing: "Each customer is billed per hour (the hours on their projects times the customer's hourly rate) or by a monthly contract (a fixed amount per month, and their projects have no hourly rate), never both. Billing is set under Customers and applies to all of the customer's projects; each project only adds an extra, per hour or per month. Once a customer has projects the mode cannot change."
+      billing: "Each customer is billed per hour (the hours on their projects times the customer's hourly rate) or by a monthly contract (a fixed amount per month, and their projects have no hourly rate), never both. Billing is set under Customers and applies to all of the customer's projects; each project only adds an extra, per hour or per month. Once a customer has projects the mode cannot change. An hourly customer's period closes once a month, on the closing day, or every 14 days (US bi-weekly), counted from the last closing the customer already paid."
       home: "Home shows the hours, the revenue (the money that came in) and the projected revenue (what you expect to receive, paid or not), per customer."
     integrations:
       title: GitHub, GitLab and Trello integrations
@@ -1041,6 +1080,9 @@ org:
     projects: Projects
     delete_question: Delete?
     contact_person: Contact person
+    details_customer: Customer
+    details_contact: Contact
+    details_billing: Billing
     create: Create customer
     saved: Customer saved.
     created: Customer created.
@@ -1069,7 +1111,6 @@ org:
 customer:
   billing:
     title: Billing
-    column: Billing
     mode: Billing mode
     hourly: Hourly
     monthly: Monthly
@@ -1081,6 +1122,11 @@ customer:
     contract_start: Contract start
     contract_end: Contract end
     contract_end_hint: Without a date, the contract runs indefinitely.
+    cycle: Billing cycle
+    cycle_monthly: Monthly, on the closing day
+    cycle_biweekly: Every 2 weeks (14 days)
+    cycle_anchor: Last closing already paid
+    cycle_anchor_hint: "The last day of the last period the customer already paid. The next ones close every 14 days from it, and the hours up to that day stay out of Receivables. New customer: use the day 14 days before the first closing."
     closing_day: Closing day
     closing_day_hint: The day of the month the period closes. 31 is the last day of every month.
     payment_days: Payment term (days)
@@ -1090,17 +1136,31 @@ customer:
     late_fee: Late fee (%)
     late_interest: Interest per month (%)
     grace_days: Grace period (days)
-    cell_hourly_no_rate: Hourly · no hourly rate
-    cell_hourly_rate: "Hourly · {{.rate}}"
-    cell_monthly: "Monthly · {{.fee}}"
-    cell_contract_from: "Contract since {{.start}}"
-    cell_contract_range: "Contract from {{.start}} to {{.end}}"
-    cell_closing_last: Closes on the last day
-    cell_closing_day: "Closes on day {{.day}}"
-    cell_due_closing: due at closing
+    col_mode: Mode
+    col_amount: Amount
+    col_rate: Hourly rate
+    col_closing: Closing
+    col_due: Due
+    fee: Monthly fee
+    contract: Contract
+    contract_range: "{{.start}} to {{.end}}"
+    contract_open: "Since {{.start}}, no end date"
+    late_fee_fact: Late fee
+    late_interest_fact: Interest per month
+    grace_days_fact: Grace period
+    grace_days_value:
+      one: "{{.count}} day"
+      other: "{{.count}} days"
+    cell_fee_month: "{{.fee}}/month"
+    cell_rate_hour: "{{.rate}}/h"
+    cell_no_rate: No hourly rate
+    cell_closing_last: Last day
+    cell_closing_day: "Day {{.day}}"
+    cell_closing_biweekly: "Every 14 days since {{.date}}"
+    cell_due_closing: At closing
     cell_due_days:
-      one: "due {{.count}} day later"
-      other: "due {{.count}} days later"
+      one: "{{.count}} day later"
+      other: "{{.count}} days later"
     project_rate_monthly: "Not applicable: billed monthly"
     option_label: "{{.name}} · {{.mode}}"
 project:
@@ -1118,11 +1178,13 @@ project:
     back: Back to the project
   groups:
     about: Project
-    billing: Customer and billing
-    routine: Team routine
-    routine_solo: Routine
+    customer: Customer
+    billing: Billing
+    routine: Development
   billing:
     customer_terms: Customer billing
+    mode_monthly: Monthly contract
+    mode_hourly: Hourly
     advanced: Advanced
     customer_hourly: "Hourly · {{.rate}}/h"
     customer_monthly: "Monthly contract · {{.fee}}/month"
@@ -1152,7 +1214,11 @@ project:
     pick_day: Pick the day
     no_daily: No daily
     no_weekly: No weekly
-    has_meeting: Has a weekly meeting with the customer
+    has_meeting: Has a meeting with the customer
+    meeting_every: How often
+    meeting_every_1: Every week
+    meeting_every_2: Every two weeks
+    meeting_biweekly_slot: "{{.slot}}, every two weeks"
     meeting: Customer meeting
     meeting_day: Meeting day
     meeting_time: Meeting time
@@ -1850,6 +1916,10 @@ errors:
     weak_password: "the password needs at least 8 characters"
     wrong_password: "the current password is wrong"
     same_password: "the new password must be different from the current one"
+    token_days_invalid: "a token must last 30, 90 or 365 days"
+    token_limit: "you already have {{.max}} tokens; revoke one before creating another"
+    token_name_required: "give the token a name, so you can tell it apart later"
+    token_not_found: "token not found"
   collaborator:
     not_in_project: "this person is not on this project"
   customer:
@@ -1868,8 +1938,12 @@ errors:
     mode_locked: "this customer already has projects: the billing mode can no longer change"
     has_receivables: "this customer has receivables; undo them on the Receivables page before deleting"
     closing_day_locked: "this customer already has receivables: the closing day can no longer change"
+    cycle_locked: "this customer already has receivables: the cycle only becomes every 14 days with the last closing on the end of the latest receivable or later, and it cannot go back to monthly"
     field_hourly_only: "{{.field}} only applies to an hourly customer"
     field_monthly_only: "{{.field}} only applies to a monthly customer"
+    field_biweekly_only: "{{.field}} only applies to the 14-day cycle"
+    invalid_billing_cycle: "invalid cycle: use monthly or biweekly (every 14 days)"
+    invalid_cycle_anchor: "the last closing already paid cannot be after today"
     invalid_hourly_rate: "the hourly rate must be between 10.00 and 1,000,000.00"
     invalid_monthly_fee: "the monthly fee must be between 0.01 and 1,000,000.00"
     invalid_contract_end: "the contract end must be after the start"
@@ -1949,6 +2023,12 @@ errors:
     name_taken: "the project already has a label with this name"
     name_too_long: "the label name accepts up to {{.max}} characters"
     not_found: "label not found"
+  mcp:
+    invalid_assignee: "the assignee is me (you) or none (nobody)"
+    invalid_date: "invalid date in {{.field}}: use YYYY-MM-DD"
+    task_already_active: "this task is already running in the session"
+    task_not_in_session: "this task is not running in the open session"
+    unknown_label: "the project has no label {{.label}}; the ones it has: {{.available}}"
   organization:
     field_too_long: "{{.field}} can have up to {{.max}} characters"
     has_projects: "delete all projects before deleting the organization"
@@ -2004,6 +2084,7 @@ errors:
     invalid_weekday: "invalid weekday: use monday, tuesday, wednesday, thursday, friday, saturday or sunday"
     invalid_customer_meeting_time: "the customer meeting time must use the HH:MM format, for example 10:30"
     customer_meeting_time_without_day: "the customer meeting time needs the meeting day"
+    invalid_customer_meeting_every_weeks: "the customer meeting is every week (1) or every two weeks (2)"
     invalid_weekly_time: "the weekly time must use the HH:MM format, for example 13:00"
     weekly_time_without_day: "the weekly time needs the weekly day"
     meeting_needs_customer: "the customer meeting only applies to a project with a customer: choose the project's customer first"
@@ -2015,7 +2096,7 @@ errors:
     team_not_in_project: "the team is not in this project"
   receivable:
     not_found: "receivable not found"
-    not_a_period: "the dates are not a period of this customer: check the customer's closing day and, on a monthly contract, the start and the end"
+    not_a_period: "the dates are not a period of this customer: check the customer's cycle (the closing day, or the 14 days since the last closing already paid) and, on a monthly contract, the start and the end"
     period_open: "this period has not closed yet: an hourly customer is only confirmed after the period closes"
     already_confirmed: "this period was already confirmed"
     already_received: "this receivable was already received: undo the payment first"
@@ -2124,6 +2205,8 @@ fields:
   monthly_fee_cents: "the monthly fee"
   contract_start: "the contract start"
   contract_end: "the contract end"
+  billing_cycle: "the billing cycle"
+  cycle_anchor: "the last closing already paid"
   closing_day: "the closing day"
   payment_days: "the payment term"
   late_fee_bp: "the late fee"
@@ -2149,10 +2232,14 @@ fields:
   weekly_sync_time: "the weekly time"
   customer_meeting_day: "the customer meeting day"
   customer_meeting_time: "the customer meeting time"
+  customer_meeting_every_weeks: "the customer meeting frequency"
   deadline: "the deadline"
   priority: "the priority"
   status: "the status"
   assignee_id: "the assignee"
+  assignee: "the assignee"
+  days: "the validity"
+  query: "the search"
   label: "the label"
   label_ids: "the labels"
   integration_id: "the integration"

@@ -28,6 +28,7 @@ flowchart LR
 - **Modo solo.** Para quem trabalha sozinho (freelancer, PJ): a organização é uma pessoa só e perde o que é de equipe. Cada cliente é cobrado por hora ou por contrato mensal, e o dono confirma e acompanha o que tem a receber, com a multa e os juros sugeridos no contrato mensal.
 - **Painéis.** Cada pessoa tem o seu painel. A gestão tem a visão geral da organização e de cada projeto, além de saber quem está trabalhando agora e em quê.
 - **Integrações.** Issues do GitHub e do GitLab e cartões do Trello sincronizados com as tarefas nos dois sentidos, e a mesma tarefa pode estar em mais de uma plataforma.
+- **Claude (MCP).** Com um token gerado no perfil, o Claude Code cria e atualiza tarefas, pega uma para você, sincroniza, bate o ponto e troca de tarefa, como você e sem ver dinheiro. Ver [MCP](_docs/api/mcp.md).
 - **Entrada e convites.** E-mail e senha, ou Google pelo Clerk. Os convites vão por link ou por e-mail.
 - **Idiomas e países.** Português e inglês. Brasil e EUA, com CNPJ e EIN.
 - **Ajuda pública** em `/help`, com o passo a passo do primeiro uso.
@@ -47,8 +48,8 @@ num banco à parte, `make migrate-new name=<nome>` cria uma migração. O que ca
 [Comandos](_docs/development/commands.md), e o passo a passo sem o `make` em [Instalação](_docs/getting-started/installation.md).
 
 Abra **http://localhost:1243**. O seed cria a **Jatobá Software**, uma software house com doze pessoas, seis clientes e
-oito projetos, e a **Marina Duarte Design**, uma organização no modo solo, com um cliente por hora e um por contrato
-mensal. A senha de todas as contas é `demo12345`:
+oito projetos, e a **Marina Duarte Design**, uma freelancer no modo solo com um ano de trabalho: cinco clientes (três
+por hora e dois por contrato mensal), dez projetos e o A receber cheio. A senha de todas as contas é `demo12345`:
 
 | Cargo | E-mail |
 |---|---|
@@ -91,6 +92,7 @@ make test
 | API | [Visão geral](_docs/api/overview.md) | Convenções, grupos de rotas e validação |
 | | [Referência](_docs/api/reference.md) | Todas as rotas, com exemplos |
 | | [Erros](_docs/api/errors.md) | Os códigos de erro (gerado por teste) |
+| | [MCP](_docs/api/mcp.md) | Conectar o Claude Code, o token pessoal e as ferramentas |
 | Desenvolvimento | [Comandos](_docs/development/commands.md) | O `Makefile`: subir, testar, migrar, gerar a imagem e o backup |
 | | [Testes e migrações](_docs/development/workflow.md) | Rodar a suíte e mudar o banco |
 | | [Idiomas e países](_docs/development/i18n-and-countries.md) | Como os textos funcionam e como acrescentar um idioma ou um país |
