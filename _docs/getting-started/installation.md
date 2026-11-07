@@ -52,7 +52,10 @@ Sem o seed, clique em **Crie uma organização** na tela de login: quem cria a o
 
 ## Dados de demonstração
 
-O seed (`cmd/seed`) só roda num banco **sem nenhuma organização** e cria a **Jatobá Software**, uma software house:
+O seed (`cmd/seed`) só roda num banco **sem nenhuma organização** e cria duas, na mesma execução: a **Jatobá Software**,
+uma software house, e a **Marina Duarte Design**, uma organização no [modo solo](../product/overview.md#modo-solo).
+
+### Jatobá Software (com equipe)
 
 | O quê | Como fica |
 |---|---|
@@ -64,8 +67,21 @@ O seed (`cmd/seed`) só roda num banco **sem nenhuma organização** e cria a **
 | Sessões | Uma sequência fixa nos últimos 75 dias, seguindo a jornada de cada um; cerca de três em dez têm uma segunda tarefa em paralelo. O seed diz quantas criou ao terminar. O Bruno e a Carla ficam com o ponto **aberto**, até alguém parar |
 | Integrações | Oito, de demonstração e **sem credencial**: aparecem nas telas, mas só falam com a plataforma depois que alguém reconecta ou informa um token |
 
+### Marina Duarte Design (modo solo)
+
+Uma freelancer que atende sozinha, como PJ, com dois clientes. Ela é a única pessoa da organização (dona, sem convites e
+sem equipe), e a organização já vem marcada como **Trabalho sozinho(a)**:
+
+| O quê | Como fica |
+|---|---|
+| Clientes | Dois. A **Agência Pixel** é cobrada **por hora**: valor padrão de 150,00, fechamento no dia 25 e 10 dias para pagar. A **Clínica Aurora** é cobrada por **contrato mensal**: 6.300,00 por mês desde o primeiro dia do mês retrasado, fechamento no último dia do mês, 5 dias para pagar, multa de 2%, juros de 1% ao mês e 3 dias de tolerância |
+| Projetos | Quatro. Dois da Pixel, cada um com o seu valor por hora (150,00 e 135,00); um da Aurora, **sem valor por hora**; e um interno (Estudos e administração), que só tem horas |
+| Tarefas | 17, com prioridade, os quatro status e prazos de três semanas atrás a um mês à frente, todas da Marina |
+| Sessões | Cerca de 110, desde o primeiro dia do mês retrasado até hoje, de uma sequência fixa à parte (a da software house não muda). Terça e quinta têm suporte da Aurora, para o contrato mensal ter horas em todo mês |
+| A receber | Quatro recebíveis confirmados e duas propostas, calculados a partir do dia em que o seed roda: dois da Aurora **recebidos** (o do mês retrasado, com a multa e os juros que o sistema sugere, e o do mês passado), o do mês corrente **confirmado adiantado e em aberto**, e um da Pixel (o período fechado mais antigo) **atrasado**. O período seguinte da Aurora e os outros períodos fechados da Pixel ficam como propostas por confirmar |
+
 O sorteio usa uma semente fixa: o mesmo seed dá sempre os mesmos dados, com as datas contadas a partir do dia em que
-roda.
+roda. Por isso `make demo` (que recria o banco a cada vez) mostra os recebíveis sempre em estados variados.
 
 ### Contas da demonstração
 
@@ -77,8 +93,9 @@ A senha de todas é `demo12345`.
 | Admin | `helena@example.com` |
 | Administrador de projeto | `isabela@example.com` (App de Pedidos e Agendamento Online) e `carla@example.com` (Painel do Lojista) |
 | Colaborador | `bruno`, `diego`, `elisa`, `fabio`, `gabriela`, `henrique`, `joao` ou `larissa`, seguidos de `@example.com` |
+| Dona do modo solo (Marina Duarte Design) | `marina@example.com` |
 
-A Larissa tem também o grupo financeiro no Dashboard Financeiro, que só existe na API por enquanto. O que cada cargo
+A Marina é a única pessoa da organização dela, que não tem as telas de equipe. A Larissa tem também o grupo financeiro no Dashboard Financeiro, que só existe na API por enquanto. O que cada cargo
 pode fazer está em [Permissões](../product/permissions.md).
 
 ## Problemas comuns

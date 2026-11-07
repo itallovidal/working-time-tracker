@@ -131,6 +131,11 @@ func Currency(v string) predicate.Organization {
 	return predicate.Organization(sql.FieldEQ(FieldCurrency, v))
 }
 
+// Solo applies equality check predicate on the "solo" field. It's identical to SoloEQ.
+func Solo(v bool) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldSolo, v))
+}
+
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.Organization {
 	return predicate.Organization(sql.FieldEQ(FieldCreatedAt, v))
@@ -1221,6 +1226,16 @@ func CurrencyContainsFold(v string) predicate.Organization {
 	return predicate.Organization(sql.FieldContainsFold(FieldCurrency, v))
 }
 
+// SoloEQ applies the EQ predicate on the "solo" field.
+func SoloEQ(v bool) predicate.Organization {
+	return predicate.Organization(sql.FieldEQ(FieldSolo, v))
+}
+
+// SoloNEQ applies the NEQ predicate on the "solo" field.
+func SoloNEQ(v bool) predicate.Organization {
+	return predicate.Organization(sql.FieldNEQ(FieldSolo, v))
+}
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.Organization {
 	return predicate.Organization(sql.FieldEQ(FieldCreatedAt, v))
@@ -1345,6 +1360,29 @@ func HasInvites() predicate.Organization {
 func HasInvitesWith(preds ...predicate.Invite) predicate.Organization {
 	return predicate.Organization(func(s *sql.Selector) {
 		step := newInvitesStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasReceivables applies the HasEdge predicate on the "receivables" edge.
+func HasReceivables() predicate.Organization {
+	return predicate.Organization(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ReceivablesTable, ReceivablesColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasReceivablesWith applies the HasEdge predicate on the "receivables" edge with a given conditions (other predicates).
+func HasReceivablesWith(preds ...predicate.Receivable) predicate.Organization {
+	return predicate.Organization(func(s *sql.Selector) {
+		step := newReceivablesStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

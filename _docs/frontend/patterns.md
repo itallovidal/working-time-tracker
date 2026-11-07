@@ -8,7 +8,7 @@ como a tela mostra isso.
 
 ```mermaid
 flowchart TB
-    top["Barra superior: organização, Início, Projetos, Colaboradores, Clientes, Pagamentos, Configurações, menu da conta"]
+    top["Barra superior: organização, Início, Projetos, Colaboradores, Clientes, Pagamentos (ou A receber, no modo solo), Configurações, menu da conta"]
     top --> proj["Página de projeto: abas Início, Minhas tarefas, Lista de tarefas, Colaboradores + botão Gestão"]
     proj --> mgmt["Gestão: abas Visão geral, Colaboradores, Integrações, Configurações + Voltar ao projeto"]
     proj --> task["Página da tarefa: cabeçalho próprio, sem abas"]
@@ -16,7 +16,8 @@ flowchart TB
 
 - **Barra superior** (`partials/topbar.gohtml`). O nome da organização e uma página por assunto. Cada item só aparece
   para quem pode abrir a página dele: Colaboradores com `people.manage`, Clientes com `customers.manage` e Pagamentos com
-  `payments.manage`. Projetos fica marcado também dentro de um projeto. No celular, o nome e o menu da conta dividem a
+  `payments.manage`. No modo solo (`Me.OrganizationSolo`) somem Colaboradores e Pagamentos, que são de equipe, e entra A
+  receber, com `receivables.manage`. Projetos fica marcado também dentro de um projeto. No celular, o nome e o menu da conta dividem a
   primeira linha, e os itens vão para baixo.
 - **Menu da conta** (`partials/user_menu.gohtml`). O avatar, o nome e o selo de dono ou admin abrem Perfil, Ajuda, o
   toggle de idioma (PT | EN) e Sair. Fecha com Esc, com um clique fora ou ao escolher. Sem login, o toggle fica no
@@ -24,7 +25,7 @@ flowchart TB
 - **Páginas da organização** não têm sub-abas: cada assunto é uma página, com o item dela na barra e o próprio
   cabeçalho.
 - **Páginas de projeto** (`partials/project_head.gohtml`) têm duas barras de abas. A de todos tem Início, Minhas
-  tarefas, Lista de tarefas e Colaboradores (só para ler). O botão **Gestão** aparece para quem tem alguma permissão do
+  tarefas, Lista de tarefas e Colaboradores (só para ler; no modo solo não há esta aba). O botão **Gestão** aparece para quem tem alguma permissão do
   projeto e troca a barra pela da Gestão, que só mostra as abas que a pessoa abre (`Data.OpensTab`, lido de
   `page.ManagementTabs`, de onde as rotas também leem). A administração do projeto (pessoas, valores, times,
   integrações e os dados dele) só se edita lá: nas abas de todos ela aparece para ler. `Data.CanDo` é o `Can` que só
@@ -59,6 +60,11 @@ Valem para telas novas e para as que forem revistas.
 - **O botão de criar fica junto da lista que ele alimenta** (Novo projeto no bloco de projetos), não solto no
   cabeçalho da página. Um atalho de adicionar ao lado do "Ver …" é bem-vindo, e leva à página que já tem o modal, com
   `?add=1`, em vez de copiar o modal.
+- **O que é de equipe não existe no modo solo.** Uma tela ou um link que só faz sentido com mais de uma pessoa leva a
+  condição `not .Me.OrganizationSolo` no template (a barra superior, as abas, os textos com link) e, na rota da página, o
+  middleware `RequireTeamPage`, que responde 404. Um link para uma página escondida é um bug. A varredura
+  (`TestLinkSweep_*`) abre as páginas principais de uma organização solo e de uma com equipe, segue todo link interno
+  e falha se algum dá 404, se a solo aponta para uma página de equipe ou se a com equipe aponta para o A receber.
 - **Sem ranking de pessoas por horas.** Nenhuma tela ordena, ranqueia ou põe barras proporcionais de horas entre
   pessoas. Somas (horas da equipe, receita, custo, margem) podem, porque não comparam ninguém. Horas não medem bem a
   contribuição, e a tela induziria essa leitura. O que se mostra da equipe é quem trabalha agora e em que tarefa. O

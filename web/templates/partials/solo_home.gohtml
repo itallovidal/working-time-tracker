@@ -1,0 +1,117 @@
+{{/* A visão geral da tela inicial do modo solo (Me.OrganizationSolo), no lugar da visão geral da organização com equipe: as
+     horas, a Receita (o que entrou) e a Receita projetada (o que se espera dos períodos que terminam na janela), o valor
+     por hora efetivo e a tabela por cliente. A janela é de calendário (Este mês, Mês passado, Ano) e a conta toda é do
+     servidor (GET /solo/overview); a tela só mostra. De propósito não há ordem por horas ou por valor nem link para
+     páginas de equipe: os clientes vão em ordem de nome, e no modo solo essas páginas respondem 404. Usa o estado do
+     componente orgHome (soloHome em org.js). */}}
+{{define "solo_home"}}
+<section class="stack" aria-labelledby="home-solo-title">
+  <div class="toolbar">
+    <div class="section-head">
+      <h2 id="home-solo-title">{{.T "home.solo.title"}}</h2>
+      <p class="muted small" x-text="soloScope()"></p>
+    </div>
+    <div class="row">
+      <div class="segmented" role="group" aria-label="{{.T "home.solo.window"}}">
+        <template x-for="o in soloWindows" :key="o.key">
+          <button type="button" :aria-pressed="soloWindow === o.key" @click="setSoloWindow(o.key)" x-text="o.label"></button>
+        </template>
+      </div>
+      <span class="muted small" x-cloak x-show="solo" x-text="solo ? $t('home.stats.updated', { time: WTT.fmt.time(solo.generated_at) }) : ''"></span>
+      <button type="button" class="btn btn-secondary btn-sm" :disabled="soloLoading" @click="loadSolo()">{{template "icon" "rotate"}} {{.T "home.stats.refresh"}}</button>
+    </div>
+  </div>
+
+  <p class="muted" x-show="soloLoading && !solo">{{.T "home.solo.loading"}}</p>
+  <p class="form-error" x-cloak x-show="errors.solo" x-text="errors.solo" role="alert"></p>
+
+  <template x-if="solo">
+    <div class="stack stack-sections" :aria-busy="soloLoading">
+      <div class="kpis kpis-4">
+        <div class="kpi hue-teal">
+          <span class="kpi-icon">{{template "icon" "clock"}}</span>
+          <div class="kpi-body">
+            <span class="kpi-label">{{.T "home.solo.cards.hours"}}</span>
+            <span class="kpi-value" x-text="hoursText(solo.totals.seconds)"></span>
+            <span class="kpi-hint">{{.T "home.solo.cards.hours_hint"}}</span>
+          </div>
+        </div>
+        <div class="kpi hue-green">
+          <span class="kpi-icon">{{template "icon" "hand-holding-dollar"}}</span>
+          <div class="kpi-body">
+            <span class="kpi-label">{{.T "home.solo.cards.received"}}</span>
+            <span class="kpi-value" x-text="WTT.fmt.money(solo.totals.received_cents)"></span>
+            <span class="kpi-hint">{{.T "home.solo.cards.received_hint"}}</span>
+          </div>
+        </div>
+        <div class="kpi hue-blue">
+          <span class="kpi-icon">{{template "icon" "chart-line"}}</span>
+          <div class="kpi-body">
+            <span class="kpi-label">{{.T "home.solo.cards.projected"}}</span>
+            <span class="kpi-value" x-text="WTT.fmt.money(solo.totals.projected_cents)"></span>
+            <span class="kpi-hint">{{.T "home.solo.cards.projected_hint"}}</span>
+          </div>
+        </div>
+        {{/* Abaixo do piso de valor por hora a cor muda e a dica vira um aviso: não é um erro. */}}
+        <div class="kpi" :class="solo.totals.below_min_rate ? 'hue-orange' : 'hue-purple'">
+          <span class="kpi-icon">{{template "icon" "gauge-high"}}</span>
+          <div class="kpi-body">
+            <span class="kpi-label">{{.T "home.solo.cards.rate"}}</span>
+            <span class="kpi-value" x-text="WTT.fmt.money(solo.totals.effective_rate_cents)"></span>
+            <span class="kpi-hint" x-show="solo.totals.effective_rate_cents === null">{{.T "home.solo.cards.rate_empty"}}</span>
+            <span class="kpi-hint" x-cloak x-show="solo.totals.effective_rate_cents !== null && !solo.totals.below_min_rate">{{.T "home.solo.cards.rate_hint"}}</span>
+            <span class="kpi-hint" x-cloak x-show="solo.totals.below_min_rate"><span class="badge badge-warn">{{template "icon" "triangle-exclamation"}} <span x-text="soloBelowMin()"></span></span></span>
+          </div>
+        </div>
+      </div>
+
+      <section class="stack" aria-labelledby="home-solo-customers-title">
+        <div class="section-head">
+          <h3 id="home-solo-customers-title">{{.T "home.solo.customers.title"}}</h3>
+          <p class="muted small">{{.T "home.solo.customers.intro"}}</p>
+        </div>
+        {{template "empty_state" (dict "Icon" "chart-line" "Show" "soloEmpty()" "Cloak" true "Title" (.T "home.solo.empty.title") "Text" (.T "home.solo.empty.text"))}}
+        <div class="table-wrap" x-cloak x-show="!soloEmpty()">
+          <table>
+            <thead>
+              <tr>
+                <th>{{.T "home.solo.col.customer"}}</th><th>{{.T "home.solo.col.kind"}}</th><th class="num">{{.T "home.solo.col.hours"}}</th>
+                <th class="num">{{.T "home.solo.col.received"}}</th><th class="num">{{.T "home.solo.col.projected"}}</th><th class="num">{{.T "home.solo.col.rate"}}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="row in solo.customers" :key="row.customer.id">
+                <tr>
+                  <td class="nowrap" x-text="row.customer.name"></td>
+                  <td class="nowrap"><span class="badge" x-text="soloKind(row.kind)"></span></td>
+                  <td class="nowrap num" x-text="hoursText(row.seconds)"></td>
+                  <td class="nowrap num" x-text="WTT.fmt.money(row.received_cents)"></td>
+                  <td class="nowrap num" x-text="WTT.fmt.money(row.projected_cents)"></td>
+                  <td class="nowrap num">
+                    <span x-show="!row.below_min_rate" x-text="WTT.fmt.money(row.effective_rate_cents)"></span>
+                    <span class="badge badge-warn" x-cloak x-show="row.below_min_rate" :title="soloBelowMin()">{{template "icon" "triangle-exclamation"}} <span x-text="WTT.fmt.money(row.effective_rate_cents)"></span></span>
+                  </td>
+                </tr>
+              </template>
+              {{/* Os projetos sem cliente só têm horas: sem receita, sem valor por hora. */}}
+              <template x-if="solo.internal_seconds > 0">
+                <tr>
+                  <td class="nowrap">
+                    <div>{{.T "home.solo.customers.internal"}}</div>
+                    <div class="muted small">{{.T "home.solo.customers.internal_hint"}}</div>
+                  </td>
+                  <td class="muted">—</td>
+                  <td class="nowrap num" x-text="hoursText(solo.internal_seconds)"></td>
+                  <td class="muted">—</td>
+                  <td class="muted">—</td>
+                  <td class="muted">—</td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </template>
+</section>
+{{end}}

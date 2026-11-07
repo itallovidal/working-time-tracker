@@ -17,6 +17,9 @@ type CustomerRef struct {
 type Billing struct {
 	Customer      *CustomerRef `json:"customer"`
 	BillRateCents *int         `json:"bill_rate_cents"`
+	// CustomerBillingMode é o modo de cobrança do cliente (hourly ou monthly), ou nil no projeto interno. O projeto de
+	// cliente mensal não tem valor cobrado por hora (BillRateCents é nil).
+	CustomerBillingMode *string `json:"customer_billing_mode"`
 }
 
 // Routine são os horários que o projeto combina: a daily e a weekly do time e a

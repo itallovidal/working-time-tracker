@@ -35,6 +35,12 @@
             <input id="signup-name" type="text" autocomplete="name" maxlength="{{limit "name"}}" data-field="name" x-model="name" @input="clearField('name')" :aria-invalid="fieldErrors.name ? 'true' : 'false'">
             {{template "field_error" "name"}}
           </div>
+          {{/* O modo solo: a organização é só a pessoa que se cadastra. Pode ser desligado depois, em Configurações. */}}
+          <div class="field">
+            <label class="toggle" for="signup-solo"><input id="signup-solo" type="checkbox" data-field="solo" x-model="solo" @change="clearField('solo')" aria-describedby="signup-solo-hint"> {{.T "solo.label"}}</label>
+            <span id="signup-solo-hint" class="hint">{{.T "solo.hint"}}</span>
+            {{template "field_error" "solo"}}
+          </div>
           <button class="btn btn-block" type="submit">{{.T "auth.signup.next"}} {{template "icon" "arrow-right"}}</button>
         </div>
       </template>

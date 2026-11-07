@@ -38,6 +38,11 @@ type Organization struct {
 	Timezone string `json:"timezone"`
 	Currency string `json:"currency"`
 
+	// Solo é o modo solo: uma pessoa só (freelancer, PJ) que cobra os clientes e acompanha o que tem a receber. Ligado, a
+	// organização perde as telas de equipe (Colaboradores, Pagamentos, convites) e ganha as de quem trabalha sozinho.
+	// Só liga com exatamente uma pessoa e nenhum convite pendente; desligar sempre vale e esconde, sem apagar.
+	Solo bool `json:"solo"`
+
 	CreatedAt time.Time `json:"created_at"`
 }
 
@@ -65,4 +70,8 @@ type UpdateInput struct {
 	WorkMode *string `json:"work_mode"`
 	Timezone *string `json:"timezone"`
 	Currency *string `json:"currency"`
+
+	// Solo liga ou desliga o modo solo. Ligar pede exatamente uma pessoa e nenhum convite pendente
+	// (ErrSoloNeedsSinglePerson); desligar sempre vale.
+	Solo *bool `json:"solo"`
 }

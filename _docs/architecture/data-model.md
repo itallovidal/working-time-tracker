@@ -14,6 +14,8 @@ erDiagram
   ORGANIZATION ||--o{ PROJECT : "tem"
   ORGANIZATION ||--o{ INVITE : "tem"
   CUSTOMER |o--o{ PROJECT : "contrata"
+  ORGANIZATION ||--o{ RECEIVABLE : "tem"
+  CUSTOMER ||--o{ RECEIVABLE : "gera"
   PERSON ||--o{ SESSION : "entra com"
   PROJECT ||--o{ ALLOCATION : "tem"
   PERSON ||--o{ ALLOCATION : "tem"
@@ -42,6 +44,7 @@ erDiagram
     string ein
     string timezone
     string currency
+    bool solo "modo solo: uma pessoa só"
   }
   PERSON {
     string email UK
@@ -59,6 +62,34 @@ erDiagram
     string name
     string country "ISO 3166-1"
     string document
+    string billing_mode "hourly ou monthly"
+    int default_rate_cents "só hourly"
+    int monthly_fee_cents "só monthly"
+    string contract_start "só monthly, YYYY-MM-DD"
+    string contract_end "só monthly, opcional"
+    int closing_day "1 a 31, padrão 31"
+    int payment_days "fechamento até o vencimento"
+    int late_fee_bp "só monthly, 200 = 2%"
+    int late_interest_bp_month "só monthly"
+    int grace_days "só monthly"
+  }
+  RECEIVABLE {
+    uuid customer_id FK
+    string kind "hourly ou monthly"
+    string period_start "YYYY-MM-DD"
+    string period_end "YYYY-MM-DD"
+    float seconds "tempo na confirmação"
+    int calculated_cents "o que o sistema propôs"
+    int amount_cents "o que o dono confirmou"
+    string currency
+    string due_date "YYYY-MM-DD"
+    string invoice_number "opcional"
+    string note "opcional"
+    timestamp confirmed_at
+    string received_on "nulo: não entrou"
+    int received_cents "opcional"
+    int late_fee_cents "parte de received_cents"
+    int interest_cents "parte de received_cents"
   }
   PROJECT {
     uuid customer_id FK "nulo: interno"
@@ -157,12 +188,13 @@ erDiagram
 
 | Tabela | O que é |
 |---|---|
-| `organizations` | A empresa. Perfil, dados jurídicos (o documento fiscal depende do `country`), regime, fuso e moeda |
+| `organizations` | A empresa. Perfil, dados jurídicos (o documento fiscal depende do `country`), regime, fuso e moeda, e a marca do modo solo (`solo`) |
 | `persons` | Uma pessoa de **uma** organização. O e-mail é único no sistema todo. `role` é `admin` ou `member`; o dono é um admin com `is_owner` |
 | `sessions` | A sessão de login (o cookie). Guarda só o sha256 do token |
 | `invites` | Convite de uso único, com validade. Pode levar a pessoa a um projeto, com valor, time e grupo |
-| `customers` | O cliente que contrata projetos. Tem país próprio, que decide como o documento é conferido |
-| `projects` | O projeto. Com cliente, tem o valor cobrado por hora; sem cliente, é interno e não tem nenhum dos dois |
+| `customers` | O cliente que contrata projetos. Tem país próprio, que decide como o documento é conferido, e os termos de cobrança: o modo (`hourly` ou `monthly`), o fechamento do período, o prazo e, no mensal, a mensalidade, o contrato, a multa, os juros e a tolerância |
+| `receivables` | A conta a receber de um cliente por período, no modo solo: o que o dono confirmou cobrar e, depois, o que entrou. Um por cliente e período |
+| `projects` | O projeto. Com cliente por hora, tem o valor cobrado por hora; sem cliente, é interno e não tem nenhum dos dois; com cliente mensal tem o cliente e não tem o valor por hora |
 | `allocations` | A pessoa no projeto: o valor pago por hora e o grupo de permissões dela ali. Uma por pessoa e projeto |
 | `teams`, `team_memberships` | Os times de um projeto e quem está em cada um |
 | `labels`, `task_labels` | As etiquetas de um projeto e as de cada tarefa |
@@ -200,7 +232,7 @@ As sessões dele gravam `pay_rate_cents = 0`, o valor cobrado do projeto e `owne
 o valor cobrado, sem custo. Para todos os outros, o valor pago e o cobrado têm o piso de 10,00 por hora.
 
 **A sessão congela os valores.** Ao abrir o ponto, a sessão copia o valor pago da alocação e o valor cobrado do
-projeto. Mudar um valor só vale dali em diante. Quem não tem alocação no projeto não bate o ponto.
+projeto (nulo no projeto interno e no de cliente mensal). Mudar um valor só vale dali em diante. Quem não tem alocação no projeto não bate o ponto.
 
 **Uma sessão aberta por pessoa.** O índice único parcial `one_active_session` em
 `work_sessions (person_id) WHERE end_at IS NULL` garante isso no banco, mesmo com dois clock-ins ao mesmo tempo; o
@@ -229,6 +261,19 @@ cobre o período até ali e cada uma das seguintes, o restante que a pessoa regi
 `person_id`, `period_start`, `pay_date` e `seq`, a posição da baixa no período), com o que ela cobriu e o que foi pago,
 bônus incluído; sai junto com a pessoa. Ver [money.md](../product/money.md).
 
+**O modo solo é uma marca, e o que ele esconde fica guardado.** `organizations.solo` só liga com uma pessoa e sem
+convites pendentes (o serviço confere; o banco não). Desligar não apaga nada: o cliente `monthly` e os recebíveis
+continuam nas tabelas, só sem tela. O `billing_mode` do cliente e os campos de cada modo são validados em Go, como a
+regra de pagamento da pessoa; o banco só garante os padrões (`hourly`, `closing_day` 31, zeros).
+
+**Os períodos de cobrança não são gravados, a confirmação é.** O período do cliente (o `closing_day`, pela mesma conta da
+regra mensal de pagamento) e a proposta (as sessões de todos os projetos do cliente, ou a mensalidade) são calculados na
+hora. `receivables` guarda a confirmação: as datas do período, o tempo e o valor que o sistema calculou naquele momento,
+o valor confirmado, a moeda da organização (sem conversão), o vencimento e, quando entra, o recebimento. O índice único
+em `customer_id`, `period_start` e `period_end` impede duas confirmações do mesmo período. A chave estrangeira do cliente
+**não** apaga em cascata (o serviço recusa excluir um cliente com recebíveis), e a da organização apaga. Ver
+[money.md](../product/money.md#contas-a-receber-modo-solo).
+
 ## Exclusões
 
 | Excluir | O que acontece |
@@ -237,8 +282,8 @@ bônus incluído; sai junto com a pessoa. Ver [money.md](../product/money.md).
 | Projeto | Apaga os times, as alocações, as etiquetas, as tarefas, as sessões e as integrações (com os vínculos). O convite que levava a ele continua valendo, só para a organização |
 | Time | Apaga quem estava nele. O convite que levava a ele fica sem time |
 | Integração | Apaga os vínculos dela |
-| Cliente | Só sem projetos apontando para ele (`customer.has_projects`) |
-| Organização | Só sem projetos (`organization.has_projects`). Apaga as pessoas, as sessões de login, os clientes e os convites |
+| Cliente | Só sem projetos apontando para ele (`customer.has_projects`) e sem recebíveis (`customer.has_receivables`) |
+| Organização | Só sem projetos (`organization.has_projects`). Apaga as pessoas, as sessões de login, os clientes, os recebíveis e os convites |
 
 Uma pessoa com tarefas não pode ser apagada do banco (a chave estrangeira recusa), e não há rota que apague uma
 pessoa.

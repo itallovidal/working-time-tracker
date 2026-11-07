@@ -10,6 +10,7 @@ import (
 	"working-time-tracker/ent/customer"
 	"working-time-tracker/ent/organization"
 	"working-time-tracker/ent/project"
+	"working-time-tracker/ent/receivable"
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
@@ -105,6 +106,146 @@ func (_c *CustomerCreate) SetNillableContactPhone(v *string) *CustomerCreate {
 	return _c
 }
 
+// SetBillingMode sets the "billing_mode" field.
+func (_c *CustomerCreate) SetBillingMode(v string) *CustomerCreate {
+	_c.mutation.SetBillingMode(v)
+	return _c
+}
+
+// SetNillableBillingMode sets the "billing_mode" field if the given value is not nil.
+func (_c *CustomerCreate) SetNillableBillingMode(v *string) *CustomerCreate {
+	if v != nil {
+		_c.SetBillingMode(*v)
+	}
+	return _c
+}
+
+// SetDefaultRateCents sets the "default_rate_cents" field.
+func (_c *CustomerCreate) SetDefaultRateCents(v int) *CustomerCreate {
+	_c.mutation.SetDefaultRateCents(v)
+	return _c
+}
+
+// SetNillableDefaultRateCents sets the "default_rate_cents" field if the given value is not nil.
+func (_c *CustomerCreate) SetNillableDefaultRateCents(v *int) *CustomerCreate {
+	if v != nil {
+		_c.SetDefaultRateCents(*v)
+	}
+	return _c
+}
+
+// SetMonthlyFeeCents sets the "monthly_fee_cents" field.
+func (_c *CustomerCreate) SetMonthlyFeeCents(v int) *CustomerCreate {
+	_c.mutation.SetMonthlyFeeCents(v)
+	return _c
+}
+
+// SetNillableMonthlyFeeCents sets the "monthly_fee_cents" field if the given value is not nil.
+func (_c *CustomerCreate) SetNillableMonthlyFeeCents(v *int) *CustomerCreate {
+	if v != nil {
+		_c.SetMonthlyFeeCents(*v)
+	}
+	return _c
+}
+
+// SetContractStart sets the "contract_start" field.
+func (_c *CustomerCreate) SetContractStart(v string) *CustomerCreate {
+	_c.mutation.SetContractStart(v)
+	return _c
+}
+
+// SetNillableContractStart sets the "contract_start" field if the given value is not nil.
+func (_c *CustomerCreate) SetNillableContractStart(v *string) *CustomerCreate {
+	if v != nil {
+		_c.SetContractStart(*v)
+	}
+	return _c
+}
+
+// SetContractEnd sets the "contract_end" field.
+func (_c *CustomerCreate) SetContractEnd(v string) *CustomerCreate {
+	_c.mutation.SetContractEnd(v)
+	return _c
+}
+
+// SetNillableContractEnd sets the "contract_end" field if the given value is not nil.
+func (_c *CustomerCreate) SetNillableContractEnd(v *string) *CustomerCreate {
+	if v != nil {
+		_c.SetContractEnd(*v)
+	}
+	return _c
+}
+
+// SetClosingDay sets the "closing_day" field.
+func (_c *CustomerCreate) SetClosingDay(v int) *CustomerCreate {
+	_c.mutation.SetClosingDay(v)
+	return _c
+}
+
+// SetNillableClosingDay sets the "closing_day" field if the given value is not nil.
+func (_c *CustomerCreate) SetNillableClosingDay(v *int) *CustomerCreate {
+	if v != nil {
+		_c.SetClosingDay(*v)
+	}
+	return _c
+}
+
+// SetPaymentDays sets the "payment_days" field.
+func (_c *CustomerCreate) SetPaymentDays(v int) *CustomerCreate {
+	_c.mutation.SetPaymentDays(v)
+	return _c
+}
+
+// SetNillablePaymentDays sets the "payment_days" field if the given value is not nil.
+func (_c *CustomerCreate) SetNillablePaymentDays(v *int) *CustomerCreate {
+	if v != nil {
+		_c.SetPaymentDays(*v)
+	}
+	return _c
+}
+
+// SetLateFeeBp sets the "late_fee_bp" field.
+func (_c *CustomerCreate) SetLateFeeBp(v int) *CustomerCreate {
+	_c.mutation.SetLateFeeBp(v)
+	return _c
+}
+
+// SetNillableLateFeeBp sets the "late_fee_bp" field if the given value is not nil.
+func (_c *CustomerCreate) SetNillableLateFeeBp(v *int) *CustomerCreate {
+	if v != nil {
+		_c.SetLateFeeBp(*v)
+	}
+	return _c
+}
+
+// SetLateInterestBpMonth sets the "late_interest_bp_month" field.
+func (_c *CustomerCreate) SetLateInterestBpMonth(v int) *CustomerCreate {
+	_c.mutation.SetLateInterestBpMonth(v)
+	return _c
+}
+
+// SetNillableLateInterestBpMonth sets the "late_interest_bp_month" field if the given value is not nil.
+func (_c *CustomerCreate) SetNillableLateInterestBpMonth(v *int) *CustomerCreate {
+	if v != nil {
+		_c.SetLateInterestBpMonth(*v)
+	}
+	return _c
+}
+
+// SetGraceDays sets the "grace_days" field.
+func (_c *CustomerCreate) SetGraceDays(v int) *CustomerCreate {
+	_c.mutation.SetGraceDays(v)
+	return _c
+}
+
+// SetNillableGraceDays sets the "grace_days" field if the given value is not nil.
+func (_c *CustomerCreate) SetNillableGraceDays(v *int) *CustomerCreate {
+	if v != nil {
+		_c.SetGraceDays(*v)
+	}
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *CustomerCreate) SetCreatedAt(v time.Time) *CustomerCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -153,6 +294,21 @@ func (_c *CustomerCreate) AddProjects(v ...*Project) *CustomerCreate {
 	return _c.AddProjectIDs(ids...)
 }
 
+// AddReceivableIDs adds the "receivables" edge to the Receivable entity by IDs.
+func (_c *CustomerCreate) AddReceivableIDs(ids ...uuid.UUID) *CustomerCreate {
+	_c.mutation.AddReceivableIDs(ids...)
+	return _c
+}
+
+// AddReceivables adds the "receivables" edges to the Receivable entity.
+func (_c *CustomerCreate) AddReceivables(v ...*Receivable) *CustomerCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddReceivableIDs(ids...)
+}
+
 // Mutation returns the CustomerMutation object of the builder.
 func (_c *CustomerCreate) Mutation() *CustomerMutation {
 	return _c.mutation
@@ -192,6 +348,30 @@ func (_c *CustomerCreate) defaults() {
 		v := customer.DefaultCountry
 		_c.mutation.SetCountry(v)
 	}
+	if _, ok := _c.mutation.BillingMode(); !ok {
+		v := customer.DefaultBillingMode
+		_c.mutation.SetBillingMode(v)
+	}
+	if _, ok := _c.mutation.ClosingDay(); !ok {
+		v := customer.DefaultClosingDay
+		_c.mutation.SetClosingDay(v)
+	}
+	if _, ok := _c.mutation.PaymentDays(); !ok {
+		v := customer.DefaultPaymentDays
+		_c.mutation.SetPaymentDays(v)
+	}
+	if _, ok := _c.mutation.LateFeeBp(); !ok {
+		v := customer.DefaultLateFeeBp
+		_c.mutation.SetLateFeeBp(v)
+	}
+	if _, ok := _c.mutation.LateInterestBpMonth(); !ok {
+		v := customer.DefaultLateInterestBpMonth
+		_c.mutation.SetLateInterestBpMonth(v)
+	}
+	if _, ok := _c.mutation.GraceDays(); !ok {
+		v := customer.DefaultGraceDays
+		_c.mutation.SetGraceDays(v)
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := customer.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
@@ -212,6 +392,59 @@ func (_c *CustomerCreate) check() error {
 	}
 	if _, ok := _c.mutation.Country(); !ok {
 		return &ValidationError{Name: "country", err: errors.New(`ent: missing required field "Customer.country"`)}
+	}
+	if _, ok := _c.mutation.BillingMode(); !ok {
+		return &ValidationError{Name: "billing_mode", err: errors.New(`ent: missing required field "Customer.billing_mode"`)}
+	}
+	if v, ok := _c.mutation.DefaultRateCents(); ok {
+		if err := customer.DefaultRateCentsValidator(v); err != nil {
+			return &ValidationError{Name: "default_rate_cents", err: fmt.Errorf(`ent: validator failed for field "Customer.default_rate_cents": %w`, err)}
+		}
+	}
+	if v, ok := _c.mutation.MonthlyFeeCents(); ok {
+		if err := customer.MonthlyFeeCentsValidator(v); err != nil {
+			return &ValidationError{Name: "monthly_fee_cents", err: fmt.Errorf(`ent: validator failed for field "Customer.monthly_fee_cents": %w`, err)}
+		}
+	}
+	if _, ok := _c.mutation.ClosingDay(); !ok {
+		return &ValidationError{Name: "closing_day", err: errors.New(`ent: missing required field "Customer.closing_day"`)}
+	}
+	if v, ok := _c.mutation.ClosingDay(); ok {
+		if err := customer.ClosingDayValidator(v); err != nil {
+			return &ValidationError{Name: "closing_day", err: fmt.Errorf(`ent: validator failed for field "Customer.closing_day": %w`, err)}
+		}
+	}
+	if _, ok := _c.mutation.PaymentDays(); !ok {
+		return &ValidationError{Name: "payment_days", err: errors.New(`ent: missing required field "Customer.payment_days"`)}
+	}
+	if v, ok := _c.mutation.PaymentDays(); ok {
+		if err := customer.PaymentDaysValidator(v); err != nil {
+			return &ValidationError{Name: "payment_days", err: fmt.Errorf(`ent: validator failed for field "Customer.payment_days": %w`, err)}
+		}
+	}
+	if _, ok := _c.mutation.LateFeeBp(); !ok {
+		return &ValidationError{Name: "late_fee_bp", err: errors.New(`ent: missing required field "Customer.late_fee_bp"`)}
+	}
+	if v, ok := _c.mutation.LateFeeBp(); ok {
+		if err := customer.LateFeeBpValidator(v); err != nil {
+			return &ValidationError{Name: "late_fee_bp", err: fmt.Errorf(`ent: validator failed for field "Customer.late_fee_bp": %w`, err)}
+		}
+	}
+	if _, ok := _c.mutation.LateInterestBpMonth(); !ok {
+		return &ValidationError{Name: "late_interest_bp_month", err: errors.New(`ent: missing required field "Customer.late_interest_bp_month"`)}
+	}
+	if v, ok := _c.mutation.LateInterestBpMonth(); ok {
+		if err := customer.LateInterestBpMonthValidator(v); err != nil {
+			return &ValidationError{Name: "late_interest_bp_month", err: fmt.Errorf(`ent: validator failed for field "Customer.late_interest_bp_month": %w`, err)}
+		}
+	}
+	if _, ok := _c.mutation.GraceDays(); !ok {
+		return &ValidationError{Name: "grace_days", err: errors.New(`ent: missing required field "Customer.grace_days"`)}
+	}
+	if v, ok := _c.mutation.GraceDays(); ok {
+		if err := customer.GraceDaysValidator(v); err != nil {
+			return &ValidationError{Name: "grace_days", err: fmt.Errorf(`ent: validator failed for field "Customer.grace_days": %w`, err)}
+		}
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "Customer.created_at"`)}
@@ -278,6 +511,46 @@ func (_c *CustomerCreate) createSpec() (*Customer, *sqlgraph.CreateSpec) {
 		_spec.SetField(customer.FieldContactPhone, field.TypeString, value)
 		_node.ContactPhone = value
 	}
+	if value, ok := _c.mutation.BillingMode(); ok {
+		_spec.SetField(customer.FieldBillingMode, field.TypeString, value)
+		_node.BillingMode = value
+	}
+	if value, ok := _c.mutation.DefaultRateCents(); ok {
+		_spec.SetField(customer.FieldDefaultRateCents, field.TypeInt, value)
+		_node.DefaultRateCents = &value
+	}
+	if value, ok := _c.mutation.MonthlyFeeCents(); ok {
+		_spec.SetField(customer.FieldMonthlyFeeCents, field.TypeInt, value)
+		_node.MonthlyFeeCents = &value
+	}
+	if value, ok := _c.mutation.ContractStart(); ok {
+		_spec.SetField(customer.FieldContractStart, field.TypeString, value)
+		_node.ContractStart = &value
+	}
+	if value, ok := _c.mutation.ContractEnd(); ok {
+		_spec.SetField(customer.FieldContractEnd, field.TypeString, value)
+		_node.ContractEnd = &value
+	}
+	if value, ok := _c.mutation.ClosingDay(); ok {
+		_spec.SetField(customer.FieldClosingDay, field.TypeInt, value)
+		_node.ClosingDay = value
+	}
+	if value, ok := _c.mutation.PaymentDays(); ok {
+		_spec.SetField(customer.FieldPaymentDays, field.TypeInt, value)
+		_node.PaymentDays = value
+	}
+	if value, ok := _c.mutation.LateFeeBp(); ok {
+		_spec.SetField(customer.FieldLateFeeBp, field.TypeInt, value)
+		_node.LateFeeBp = value
+	}
+	if value, ok := _c.mutation.LateInterestBpMonth(); ok {
+		_spec.SetField(customer.FieldLateInterestBpMonth, field.TypeInt, value)
+		_node.LateInterestBpMonth = value
+	}
+	if value, ok := _c.mutation.GraceDays(); ok {
+		_spec.SetField(customer.FieldGraceDays, field.TypeInt, value)
+		_node.GraceDays = value
+	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(customer.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
@@ -308,6 +581,22 @@ func (_c *CustomerCreate) createSpec() (*Customer, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(project.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ReceivablesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   customer.ReceivablesTable,
+			Columns: []string{customer.ReceivablesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(receivable.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

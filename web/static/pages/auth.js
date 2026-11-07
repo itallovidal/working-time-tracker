@@ -189,6 +189,8 @@ document.addEventListener('alpine:init', () => {
     email: '',
     password: '',
     confirmation: '',
+    // O modo solo: a organização é só quem se cadastra (sem equipe). O servidor sempre aceita no cadastro.
+    solo: false,
     // step: 1 é a organização (o nome dela e o da pessoa), 2 é o acesso (email e senha). Os valores ficam aqui, não
     // nos campos, então voltar à etapa 1 e seguir de novo não perde nada.
     step: 1,
@@ -258,6 +260,7 @@ document.addEventListener('alpine:init', () => {
         await api('POST', '/api/auth/signup', {
           organization_name: this.organization_name,
           country: this.country,
+          solo: this.solo,
           name: this.name,
           email: this.email,
           password: this.password,
@@ -349,6 +352,7 @@ document.addEventListener('alpine:init', () => {
     invites: [],
     password: '',
     organization_name: '',
+    solo: false, // o modo solo, como no cadastro por senha
     country: WTT.countries.forLang(WTT.lang),
     countries: WTT.countries.list(),
     async init() {
@@ -428,7 +432,7 @@ document.addEventListener('alpine:init', () => {
       });
       if (!ok) return undefined;
       return this.run('choose', async () => {
-        await this.finish(await this.call('/api/auth/clerk/signup', { organization_name: this.organization_name, country: this.country, name: this.name }));
+        await this.finish(await this.call('/api/auth/clerk/signup', { organization_name: this.organization_name, country: this.country, solo: this.solo, name: this.name }));
       });
     },
     retry() {

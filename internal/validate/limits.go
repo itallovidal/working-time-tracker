@@ -39,8 +39,16 @@ const (
 	MinPhoneDigits = 7
 	// MaxTaxID é o documento fiscal de um país sem regra própria. O CNPJ e o EIN têm o tamanho da máscara.
 	MaxTaxID = 32
+	// MaxTermDays é o teto do prazo de pagamento e da tolerância de um cliente, em dias; MaxRateBP é o da multa e dos
+	// juros ao mês, em pontos-base (10000 = 100%). A especificação só pede "não negativo": o teto impede um número
+	// absurdo de estourar uma data ou de virar multa de milhares por cento.
+	MaxTermDays = 365
+	MaxRateBP   = 10000
 	// MaxCents é o teto de um valor em dinheiro (valor por hora, valor cobrado): 1.000.000,00, em centavos.
 	MaxCents = 100_000_000
+	// MaxInvoiceNumber é o número da nota de um recebível, e MaxNote, a observação dele.
+	MaxInvoiceNumber = 60
+	MaxNote          = 500
 	// MinRateCents é o piso de um valor por hora (custo e valor cobrado): 10,00, em centavos. Zero não vale; só o
 	// dono entra num projeto com custo 0.
 	MinRateCents = 1000
@@ -52,8 +60,10 @@ func Limits() map[string]int {
 		"name": MaxName, "task_name": MaxTaskName, "label": MaxLabel, "email": MaxEmail, "url": MaxURL,
 		"item_url": MaxItemURL, "external_item": MaxExternalItem, "token": MaxToken, "legal_name": MaxLegalName,
 		"address": MaxAddress, "summary": MaxSummary, "description": MaxDescription,
+		"term_days": MaxTermDays, "rate_bp": MaxRateBP,
 		"task_description": MaxTaskDescription, "search": MaxSearch, "repo": MaxRepo, "phone": MaxPhone,
 		"phone_min": MinPhone, "phone_min_digits": MinPhoneDigits, "tax_id": MaxTaxID, "max_cents": MaxCents,
 		"min_rate_cents": MinRateCents,
+		"invoice_number": MaxInvoiceNumber, "note": MaxNote,
 	}
 }

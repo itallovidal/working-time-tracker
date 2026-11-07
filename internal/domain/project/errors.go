@@ -29,4 +29,8 @@ var (
 	ErrInvalidOrganization   = apperr.New("project.invalid_organization", http.StatusBadRequest)
 	ErrInvalidPage           = apperr.New("project.invalid_page", http.StatusBadRequest)
 	ErrInvalidPerPage        = apperr.New("project.invalid_per_page", http.StatusBadRequest)
+
+	// ErrBillRateNotAllowed recusa o valor cobrado num projeto de cliente mensal: o contrato é um valor por mês, e o
+	// projeto não tem valor por hora. O field é bill_rate_cents.
+	ErrBillRateNotAllowed = apperr.New("project.bill_rate_not_allowed", http.StatusBadRequest)
 )

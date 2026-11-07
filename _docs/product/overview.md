@@ -15,6 +15,7 @@ flowchart TD
   O --> P["Pessoas"]
   O --> PR["Projetos"]
   C -->|"0 ou 1 por projeto"| PR
+  C -->|"modo solo"| R["Recebíveis"]
   P -->|"valor por hora no projeto"| PR
   PR --> T["Times"]
   PR --> TK["Tarefas"]
@@ -25,24 +26,27 @@ flowchart TD
 
 | Conceito | O que é |
 |---|---|
-| Organização | A empresa. Cada pessoa pertence a uma só, e o e-mail é único no sistema |
-| Cliente | Quem contrata a organização. Um projeto tem um cliente ou é interno |
+| Organização | A empresa, ou a pessoa que trabalha sozinha (modo solo). Cada pessoa pertence a uma só, e o e-mail é único no sistema |
+| Cliente | Quem contrata a organização. Um projeto tem um cliente ou é interno. É cobrado por hora ou, no modo solo, por contrato mensal ([money.md](money.md#termos-comerciais-modo-solo)) |
 | Projeto | Onde o trabalho acontece. Tem tarefas, times, integrações e as pessoas que trabalham nele |
 | Pessoa no projeto | Quem tem **valor por hora** no projeto (a alocação). Não existe outro jeito de estar num projeto |
 | Time | Só agrupa pessoas dentro de um projeto, para achá-las. Não dá permissão nem autoridade |
 | Tarefa | O que se faz. É sempre de um projeto e pode estar ligada a uma issue do GitHub ou a um cartão do Trello |
 | Sessão de ponto | Um intervalo de trabalho de uma pessoa num projeto, com uma ou mais tarefas |
 | Cargo | Dono, admin, administrador de projeto ou colaborador. Ver [permissions.md](permissions.md) |
+| Recebível | Uma conta a receber de um cliente por período, que o dono confirma e depois dá como recebida. Só no [modo solo](#modo-solo); as regras estão em [money.md](money.md#contas-a-receber-modo-solo) |
 
 ## Organização
 
-**Cadastro.** O cadastro tem duas etapas: primeiro a organização (nome, país e o nome da pessoa), depois o acesso
+**Cadastro.** O cadastro tem duas etapas: primeiro a organização (nome, país, o nome da pessoa e, para quem trabalha
+sozinho, o [modo solo](#modo-solo)), depois o acesso
 (e-mail e senha de 8 a 72 caracteres). Quem cria a organização é o **dono**: tem o papel `admin` e a marca `is_owner`,
 e só existe um por organização. Com o Clerk ligado, também dá para entrar e cadastrar pelo Google (ver
 [../integrations/clerk.md](../integrations/clerk.md)).
 
 **Boas-vindas.** No primeiro acesso, só o dono vê um modal em quatro etapas: os dados da organização (com a moeda e o
 fuso), o primeiro cliente, o primeiro convite e onde ajustar cada coisa. As três primeiras podem ficar para depois.
+No [modo solo](#modo-solo) são três etapas, sem o convite.
 Fechar o modal de qualquer jeito o encerra para sempre. A data fica em `persons.onboarded_at`, gravada por
 `POST /api/auth/onboarding/complete`, e `GET /api/auth/me` diz se falta (`needs_onboarding`). Quem entra por convite não
 vê as boas-vindas.
@@ -59,7 +63,37 @@ livre de até 32 caracteres. Os detalhes e como adicionar um país estão em
 [../development/i18n-and-countries.md](../development/i18n-and-countries.md).
 
 **Excluir.** Só o dono exclui a organização, e só depois que ela não tiver mais projetos. A exclusão apaga as pessoas,
-os clientes e os convites.
+os clientes, os recebíveis e os convites.
+
+### Modo solo
+
+Para quem atua sozinho (freelancer, PJ), a organização tem o **modo solo** (`organizations.solo`, `false` por padrão). A
+tela o chama de **Trabalho sozinho(a)**, com uma dica. A organização é uma pessoa só: o que é de equipe some, e entra o
+que é de quem cobra os próprios clientes (o **A receber**, que tem as suas regras).
+
+- **Onde se escolhe.** Na etapa 1 do cadastro e na página de retorno do Clerk (a que pede o nome da organização), que
+  criam a organização já no modo (`solo` no corpo de `POST /api/auth/signup` e de `POST /api/auth/clerk/signup`), e em
+  Configurações, na edição da organização, que só o dono abre (`PATCH /api/orgs/:orgId`, `solo`). O modo vai no
+  `GET /api/auth/me` como `organization_solo`, e é dele que as telas leem.
+- **Ligar** pede exatamente **uma pessoa** na organização e **nenhum convite pendente** (um convite já aceito ou vencido não conta):
+  senão `409 organization.solo_needs_single_person`, e a tela mostra o erro embaixo do check. No cadastro a conta sempre
+  cabe. **Desligar sempre vale** e **esconde, não apaga**: os clientes mensais e os recebíveis ficam guardados, e o menu
+  de equipe volta na mesma sessão.
+- **Convidar** (da organização e do projeto) responde `409 organization.solo_no_invites`: uma organização de uma pessoa
+  só não tem a quem convidar, e é isso que mantém a regra de ligar verdadeira enquanto o modo está ligado.
+- **O que some.**
+
+| Onde | No modo solo |
+|---|---|
+| Menu | Perde **Colaboradores** e **Pagamentos**, e ganha **A receber** (`/orgs/:orgId/receivables`, só quando a pessoa pode gerenciar os recebíveis, a permissão `receivables.manage`) |
+| Páginas | `/orgs/:orgId/people`, `/orgs/:orgId/people/:personId` e `/orgs/:orgId/payments` respondem `404` |
+| Projeto | Somem as abas **Colaboradores** e **Times** (a aba é uma só, dentro e fora da Gestão): `/projects/:projectId/collaborators`, `/projects/:projectId/management/teams` e o caminho antigo `/projects/:projectId/teams` respondem `404`, e a barra de abas e o aviso de valor por hora não a oferecem |
+| Tela inicial | Perde a **Visão geral** da organização (com o cartão **Trabalhando agora**, o custo e a margem) e o bloco da **Equipe**, e ganha a [visão geral do solo](#painéis): horas, Receita, Receita projetada e a tabela por cliente. O **Seu painel** fica |
+| Boas-vindas | Três etapas: organização, primeiro cliente e fim. Sem o convite, e sem o link para Colaboradores no fim |
+| Modal Editar colaborador | Sem jornada semanal nem regra de pagamento: uma pessoa só, que é o dono e não é paga |
+
+A API de pessoas e de pagamentos (`/api/orgs/:orgId/persons`, `/payments`, ...) não muda: o modo esconde telas e fecha os
+convites, e não apaga nem recusa o que já existe. Uma organização com equipe (`solo = false`) continua exatamente igual.
 
 ## Projetos e pessoas
 
@@ -94,7 +128,8 @@ guarda só o hash do token. Há dois caminhos:
 | Do projeto (`/projects/:projectId/invites`) | Quem tem `collaborators.manage` no projeto | E-mail obrigatório, papel de membro, e o valor por hora, o time e o grupo. Ao aceitar, a pessoa já entra no projeto com eles |
 
 Um e-mail que já tem conta é recusado (`auth.account_exists`). Com o Clerk ligado, convidar o mesmo e-mail de novo
-substitui o convite anterior. Os convites pendentes podem ser revogados.
+substitui o convite anterior. Os convites pendentes podem ser revogados. Numa organização no [modo solo](#modo-solo) os
+dois caminhos respondem `409 organization.solo_no_invites`.
 
 ## Tarefas
 
@@ -193,7 +228,25 @@ projeto e o dinheiro contam a sessão uma vez só. Editar o começo e o fim de u
 - **Visão geral**, para o dono e os admins: todos os projetos somados, em 7 dias, 30 dias ou tudo, com as suas horas, as
   da equipe e o custo. A receita e a margem só vão para o dono. A sessão que atravessa a borda da janela conta só o
   trecho de dentro, e cada sessão é arredondada ao centavo, então o total da organização é a soma dos projetos.
-- **Equipe**, para o dono e os admins: quem está com o ponto aberto agora e em que tarefa.
+- **Equipe**, para o dono e os admins: quem está com o ponto aberto agora e em que tarefa. Não existe no
+  [modo solo](#modo-solo), nem o cartão Trabalhando agora da visão geral.
+- **Visão geral do modo solo**, só para o dono, **no lugar** da Visão geral e da Equipe acima (a organização com equipe
+  não muda). Uma janela de calendário no fuso da organização, escolhida num seletor: **Este mês** (padrão), **Mês
+  passado** e **Ano** (de 1º de janeiro ao fim do mês corrente, para conter sempre o mês). Quatro cartões e uma tabela
+  (`GET /api/orgs/:orgId/solo/overview?window=month|last_month|year`, `404` fora do modo solo e `403` para quem não é o
+  dono):
+  - **Horas**: o tempo trabalhado na janela, de todas as sessões (as dos projetos internos também). A sessão que
+    atravessa a borda da janela conta só o trecho de dentro, e a aberta conta até agora.
+  - **Receita**: o que **entrou** na janela, a soma de `received_cents` dos recebíveis com `received_on` dentro dela.
+  - **Receita projetada**: o que se **espera** dos períodos de cobrança que **terminam** na janela. As duas contas têm
+    regras próprias em [money.md](money.md#receita-e-receita-projetada-modo-solo).
+  - **Valor por hora efetivo**: a Receita projetada dividida pelas horas da janela, ou um travessão sem horas. Abaixo do
+    piso de valor por hora (`validate.MinRateCents`, 10,00) o cartão vira um aviso, que não é um erro.
+  - **Por cliente**: Cliente, Tipo (por hora ou mensal), Horas, Receita, Projetada e Valor por hora efetivo, em ordem de
+    nome, nunca por horas ou por valor (o sistema não ranqueia). Entra o cliente que tem horas, recebimento ou valor
+    projetado na janela; as horas de um cliente mensal são as das sessões dos projetos dele (o dono bate ponto neles
+    também). Uma linha **Sem cliente (internos)** traz só as horas dos projetos sem cliente. Sem nada na janela, a tabela
+    dá lugar a um estado vazio. A tela não leva a páginas de equipe, que respondem `404` no solo.
 
 **Quem trabalha agora.** Para o dono e os admins, a Lista de tarefas marca se o responsável está com o ponto aberto, e a
 aba Colaboradores do projeto mostra em que tarefa cada um está. Os dois leem `GET /api/orgs/:orgId/working-now`, que
@@ -213,13 +266,17 @@ alguma permissão nele, e cada aba pede a permissão do que mostra.
 | Aba | O que tem |
 |---|---|
 | Visão geral | Pessoas, times, idade do projeto, integrações, atividade de 7 e 30 dias, quem está com o ponto aberto, tarefas atrasadas e as sessões de todos, com filtros e totais. O cliente, o valor cobrado, a receita e a margem só vão com `billing.view` |
-| Colaboradores | Pôr e tirar pessoas, valor por hora, grupo e times |
+| Colaboradores | Pôr e tirar pessoas, valor por hora, grupo e times. Não existe no [modo solo](#modo-solo) |
 | Integrações | GitHub e Trello (ver [../integrations/overview.md](../integrations/overview.md)) |
 | Configurações | Os dados do projeto e, com `billing.view`, o cliente e o valor cobrado |
 
 **Perfil.** O perfil da própria pessoa (`/profile`) e o de um colaborador (`/orgs/:orgId/people/:personId`, só para o
 dono e os admins) mostram a jornada, as horas por projeto, o período corrente e o histórico de pagamentos. O que cada
 um vê do dinheiro está em [money.md](money.md#quem-vê-o-quê).
+
+**A receber** (`/orgs/:orgId/receivables`, só o dono e só no modo solo): o que cobrar de cada cliente. Os cartões
+(a confirmar, em aberto, atrasado e recebido no mês) e as listas A confirmar, Em aberto e Recebidos. As regras estão em
+[money.md](money.md#contas-a-receber-modo-solo).
 
 ## Integrações
 

@@ -34,7 +34,7 @@ Um pacote só, com a saída inteira: `make test-pkg pkg=./internal/domain/task r
 | Onde | O quê |
 |---|---|
 | `internal/domain/*` | O service e o handler de cada domínio, com o banco |
-| `internal/server` | O servidor montado, como em produção: a tabela de rotas, a sessão, o isolamento entre organizações, a matriz dos quatro cargos contra as rotas e as páginas, quem vê o quê, as páginas de cada tela, a validação dos formulários, o idioma, o OAuth do GitHub e do Trello, o Clerk e a sincronização contra os fakes (uma segunda rodada sem diferença faz zero escritas na plataforma) |
+| `internal/server` | O servidor montado, como em produção: a tabela de rotas, a sessão, o isolamento entre organizações, a matriz dos quatro cargos contra as rotas e as páginas, o modo solo (as páginas de equipe escondidas e os links entre as telas, em `link_sweep_test.go`), quem vê o quê, as páginas de cada tela, a validação dos formulários, o idioma, o OAuth do GitHub e do Trello, o Clerk e a sincronização contra os fakes (uma segunda rodada sem diferença faz zero escritas na plataforma) |
 | `internal/database` | As migrações: aplicar duas vezes não muda nada, o banco que elas produzem bate com o `ent/schema`, a recusa de banco sem histórico e de migração desconhecida, o `atlas.sum` em dia, as regras de chave estrangeira, uma sessão aberta por pessoa e um dono por organização |
 | `cmd/migrate` | O gerador de migrações e o checksum |
 | `internal/i18n` | Os idiomas têm as mesmas chaves e os mesmos placeholders, e toda chave usada existe |

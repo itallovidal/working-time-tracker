@@ -73,3 +73,24 @@ func TestSet(t *testing.T) {
 		t.Error("the all set has everything")
 	}
 }
+
+// O A receber é do dono: a chave está no catálogo da organização, o dono a tem e o admin e o colaborador não.
+func TestOrgKeysFor_ReceivablesAreTheOwners(t *testing.T) {
+	if !slices.Contains(permission.OrganizationKeys, permission.ReceivablesManage) {
+		t.Fatalf("%s is not in the organization catalog: %v", permission.ReceivablesManage, permission.OrganizationKeys)
+	}
+	if slices.Contains(permission.ProjectKeys, permission.ReceivablesManage) {
+		t.Errorf("%s is an organization permission, not a project one", permission.ReceivablesManage)
+	}
+	if got := permission.OrgKeysFor("admin", true); !slices.Equal(got, permission.OrganizationKeys) {
+		t.Errorf("the owner has %v, want every organization key", got)
+	}
+	for _, c := range []struct {
+		role    string
+		isOwner bool
+	}{{"admin", false}, {"member", false}} {
+		if slices.Contains(permission.OrgKeysFor(c.role, c.isOwner), permission.ReceivablesManage) {
+			t.Errorf("role %q (owner %v) has %s: it is the owner's only", c.role, c.isOwner, permission.ReceivablesManage)
+		}
+	}
+}

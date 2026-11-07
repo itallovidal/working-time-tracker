@@ -8,6 +8,7 @@ import (
 
 	"working-time-tracker/internal/apperr"
 	"working-time-tracker/internal/database"
+	"working-time-tracker/internal/domain/organization"
 	"working-time-tracker/internal/domain/person"
 )
 
@@ -41,6 +42,8 @@ func fail(c *echo.Context, err error) error {
 	case errors.Is(err, ErrClerkUnavailable), errors.Is(err, ErrClerkInviteFailed):
 		logClerkCause(c, err)
 		status = http.StatusBadGateway
+	case errors.Is(err, organization.ErrSoloNoInvites):
+		status = http.StatusConflict
 	case errors.Is(err, ErrInviteInvalid), errors.Is(err, database.ErrNotFound):
 		status = http.StatusNotFound
 	case errors.Is(err, ErrWeakPassword), errors.Is(err, ErrLongPassword), errors.Is(err, ErrSamePassword),

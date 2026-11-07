@@ -50,6 +50,7 @@
               <li><a href="#org-people">{{.T "help.screens.org_people.title"}}</a></li>
               <li><a href="#org-customers">{{.T "help.screens.org_customers.title"}}</a></li>
               <li><a href="#payments">{{.T "help.screens.payments.title"}}</a></li>
+              <li><a href="#receivables">{{.T "help.screens.receivables.title"}}</a></li>
               <li><a href="#org-about">{{.T "help.screens.org_about.title"}}</a></li>
               <li><a href="#project-home">{{.T "help.screens.project_home.title"}}</a></li>
               <li><a href="#my-tasks">{{.T "help.screens.project_my_tasks.title"}}</a></li>
@@ -68,6 +69,7 @@
             <ul>
               <li><a href="#hourly-rate">{{.T "help.concepts.rates.title"}}</a></li>
               <li><a href="#roles">{{.T "help.concepts.roles.title"}}</a></li>
+              <li><a href="#solo-mode">{{.T "help.concepts.solo.title"}}</a></li>
               <li><a href="#integrations">{{.T "help.concepts.integrations.title"}}</a></li>
             </ul>
           </li>
@@ -215,6 +217,18 @@
           </ul>
         </section>
 
+        <section class="card help-section" id="receivables" data-help-section>
+          <h3>{{.T "help.screens.receivables.title"}}</h3>
+          <p>{{.T "help.screens.receivables.text"}}</p>
+          <ul class="help-list">
+            <li>{{.T "help.screens.receivables.cards"}}</li>
+            <li>{{.T "help.screens.receivables.confirm"}}</li>
+            <li>{{.T "help.screens.receivables.receive"}}</li>
+            <li>{{.T "help.screens.receivables.undo"}}</li>
+            <li>{{.T "help.screens.receivables.invoice"}}</li>
+          </ul>
+        </section>
+
         <section class="card help-section" id="org-about" data-help-section>
           <h3>{{.T "help.screens.org_about.title"}}</h3>
           <p>{{.T "help.screens.org_about.text"}}</p>
@@ -344,6 +358,17 @@
             <li>{{.T "help.concepts.roles.money"}}</li>
           </ul>
           <p class="help-tip">{{.T "help.concepts.roles.missing"}}</p>
+        </section>
+
+        <section class="card help-section" id="solo-mode" data-help-section>
+          <h3>{{.T "help.concepts.solo.title"}}</h3>
+          <p>{{.T "help.concepts.solo.text"}}</p>
+          <ul class="help-list">
+            <li>{{.T "help.concepts.solo.choose"}}</li>
+            <li>{{.T "help.concepts.solo.hides"}}</li>
+            <li>{{.T "help.concepts.solo.billing"}}</li>
+            <li>{{.T "help.concepts.solo.home"}}</li>
+          </ul>
         </section>
 
         <section class="card help-section" id="integrations" data-help-section>

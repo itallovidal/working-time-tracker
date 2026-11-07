@@ -32,6 +32,8 @@ type Tx struct {
 	Person *PersonClient
 	// Project is the client for interacting with the Project builders.
 	Project *ProjectClient
+	// Receivable is the client for interacting with the Receivable builders.
+	Receivable *ReceivableClient
 	// Session is the client for interacting with the Session builders.
 	Session *SessionClient
 	// Task is the client for interacting with the Task builders.
@@ -185,6 +187,7 @@ func (tx *Tx) init() {
 	tx.Payout = NewPayoutClient(tx.config)
 	tx.Person = NewPersonClient(tx.config)
 	tx.Project = NewProjectClient(tx.config)
+	tx.Receivable = NewReceivableClient(tx.config)
 	tx.Session = NewSessionClient(tx.config)
 	tx.Task = NewTaskClient(tx.config)
 	tx.Team = NewTeamClient(tx.config)

@@ -32,6 +32,7 @@ common:
 
 titles:
   payments: Payments
+  receivables: Receivables
   login: Sign in
   signup: Create account
   clerk_continue: Signing in
@@ -63,11 +64,18 @@ nav:
   people: Collaborators
   customers: Customers
   payments: Payments
+  receivables: Receivables
   settings: Settings
   account_sr: "Your account:"
   profile: Profile
   help: Help
   logout: Sign out
+
+# Solo mode: the organization is a single person (freelancer, contractor). The check shows on sign-up and in Settings.
+solo:
+  label: I work alone
+  hint: "For freelancers and solo contractors: the organization is just you. Team features (Collaborators, Payments and invites) go away and Receivables comes in, to track what your customers owe you."
+  settings_hint: "It only turns on with you as the only person and no pending invites. Turning it off deletes nothing: monthly customers and what you have to receive stay saved."
 
 home:
   stats:
@@ -169,6 +177,46 @@ home:
     tasks:
       one: "{{.count}} task"
       other: "{{.count}} tasks"
+
+  # The solo mode home: hours, revenue and projected revenue by calendar window and by customer.
+  solo:
+    title: Overview
+    window: Window
+    month: This month
+    last_month: Last month
+    year: Year
+    scope: "{{.from}} to {{.to}}"
+    loading: Loading the overview…
+    cards:
+      hours: Hours
+      hours_hint: Every project, internal ones too
+      received: Revenue
+      received_hint: What came in during the period, by the date it was received
+      projected: Projected revenue
+      projected_hint: What is expected from the periods that end here, paid or not
+      rate: Effective hourly rate
+      rate_hint: The projected revenue divided by the hours
+      rate_empty: No hours in this period
+      rate_below: "Below {{.min}} per hour: check the amounts."
+    customers:
+      title: By customer
+      intro: The hours of each customer's projects, what came in and what is expected, in name order.
+      internal: No customer (internal)
+      internal_hint: Projects without a customer
+    col:
+      customer: Customer
+      kind: Type
+      hours: Hours
+      received: Revenue
+      projected: Projected
+      rate: Effective hourly rate
+    kind:
+      hourly: Hourly
+      monthly: Monthly
+    rate_line: "{{.rate}} per hour"
+    empty:
+      title: Nothing in this period
+      text: The hours, receipts and billing periods of this window show up here.
 
 permissions:
   keys:
@@ -471,6 +519,111 @@ payments:
     rest: "This period was already marked as paid: this is the remainder, the hours tracked after that."
     confirm: Confirm payment
 
+receivable:
+  refresh: Refresh
+  loading: Loading the receivables…
+  intro: "What to charge each customer, what is already confirmed and what came in. The period closes at midnight ({{.tz}})."
+  cards:
+    to_confirm: To confirm
+    to_confirm_hint:
+      one: "{{.count}} period to confirm"
+      other: "{{.count}} periods to confirm"
+    open: Open
+    open_hint:
+      one: "{{.count}} confirmed invoice"
+      other: "{{.count}} confirmed invoices"
+    late: Late
+    late_hint:
+      one: "{{.count}} invoice is past due"
+      other: "{{.count}} invoices are past due"
+    late_none: Nothing late
+    received_month: Received this month
+    received_month_hint:
+      one: "{{.count}} payment"
+      other: "{{.count}} payments"
+  to_confirm:
+    title: To confirm
+    empty: Nothing to confirm.
+    empty_text: "Closed periods with hours from hourly customers and the months of monthly contracts show up here."
+  open:
+    title: Open
+    empty: No open invoices.
+  received:
+    title: Received
+    empty: Nothing received yet.
+    note: "The most recent payments."
+  col:
+    customer: Customer
+    period: Period
+    hours: Hours
+    amount: Amount
+    due: Due date
+    received_on: Received on
+    received: Received
+  kind:
+    hourly: Hourly
+    monthly: Monthly
+  running: in progress
+  late:
+    one: "{{.count}} day late"
+    other: "{{.count}} days late"
+  late_badge: Late
+  below_min: "Effective hourly rate below {{.min}}: check the amount."
+  rate_line: "{{.rate}} per hour"
+  calculated_line: "calculated {{.amount}}"
+  invoice_line: "Invoice {{.number}}"
+  fee_line: "late fee {{.amount}}"
+  interest_line: "interest {{.amount}}"
+  actions:
+    confirm: Confirm
+    receive: Receive
+    edit: Edit
+    undo: Undo
+    undo_confirm: Undo confirmation
+    undo_receive: Undo payment
+    undo_confirm_ask: Undo the confirmation?
+    undo_receive_ask: Undo the payment?
+  toast:
+    confirmed: "Confirmed: {{.name}}."
+    updated: "Updated: {{.name}}."
+    received: "Payment recorded: {{.name}}."
+    unconfirmed: Confirmation undone.
+    unreceived: Payment undone.
+  modal:
+    confirm_title: "Confirm · {{.name}}"
+    edit_title: "Edit · {{.name}}"
+    receive_title: "Receive · {{.name}}"
+    period: Period
+    hours: Hours
+    calculated: Calculated amount
+    amount_label: "Amount to charge ({{.unit}})"
+    amount_hint: Comes with the calculated amount. Change it if you will charge another amount.
+    rate: "Effective hourly rate: {{.rate}}"
+    rate_below: "Effective hourly rate: {{.rate}}, below the {{.min}} floor. Check the amount."
+    due_label: Due date
+    due_hint: The end of the period plus the customer's payment term. Change it if you agreed another date.
+    invoice_label: Invoice number
+    invoice_hint: The system does not issue invoices. Keep here the number of the one you issued.
+    note_label: Note
+    open_period: "The period has not closed yet. The amount is the monthly fee, and you can correct it (a partial first month, for example)."
+    confirm: Confirm
+    save: Save
+    received_on_label: Date received
+    received_on_hint: Comes with today. Change it if the money came in on another day.
+    received_label: "Amount received ({{.unit}})"
+    received_hint_hourly: For an hourly customer the confirmed amount comes in.
+    received_hint_monthly: Free, it can be more or less than the confirmed amount. Comes with the confirmed amount.
+    fee_label: "Late fee ({{.unit}})"
+    interest_label: "Interest ({{.unit}})"
+    charges_hint: The late fee and interest are already part of the amount received. Left blank, they are zero.
+    suggestion:
+      one: "{{.count}} day after the due date: late fee {{.fee}} and interest {{.interest}}, {{.total}} in total."
+      other: "{{.count}} days after the due date: late fee {{.fee}} and interest {{.interest}}, {{.total}} in total."
+    suggestion_none: There is no late fee or interest on this date.
+    suggestion_apply: Use the suggestion
+    suggestion_loading: Calculating the suggestion…
+    receive: Record payment
+
 profile:
   eyebrow: Your profile
   title_other: Collaborator profile
@@ -616,6 +769,14 @@ help:
       mine: "Only the owner has this page: each person sees their own payments on their profile (the account menu › “Profile”)."
       rule: "The owner sets the rule in Collaborators, in the pencil of the row (or in “Edit” on the person's profile), on the “Payment” tab: monthly (a fixed day of the month; in shorter months it pays on the last day) or biweekly (from a start date, every 15 days, paid on the last day of each period). Changing the rule recalculates where the past periods fall."
       team: "The team: what to pay (overdue included), what closes in 7 and 30 days, the team's hours and who has no rule. “Upcoming payments” is ordered by pay date, not by hours; “Recently paid” shows the payments recorded in the last 30 days. Click a row to open the person's profile, with the history and the breakdown by project. The owner is not paid and does not show in the tables."
+    receivables:
+      title: Receivables
+      text: "The “Receivables” item in the top bar, only for the owner of an organization in solo mode: what to charge each customer and what has already come in. Each receivable belongs to a customer and a period: the app proposes it, and you confirm it."
+      cards: "At the top, four cards: what is waiting to be confirmed, what is open, what is late (confirmed, not received and past the due date) and what came in this month."
+      confirm: "“To confirm” lists the proposals. For an hourly customer, a period shows up after it closes, with the hours on the customer's projects times the rate billed on each one; for a monthly one, it is the monthly fee, from the start of the contract to next month, and you can confirm it at any time. “Confirm” opens the amount, the due date, the invoice number and a note, and you adjust whatever you need."
+      receive: "“Open” is what was confirmed and has not come in yet. “Receive” records the day and the amount. For an hourly customer the confirmed amount comes in; for a monthly one the amount is free, and the app suggests the late fee and interest when the payment goes past the due date plus the contract's grace days."
+      undo: "“Received” lists what came in. You can undo the payment and, after that, the confirmation: the period goes back to being a proposal."
+      invoice: "The app does not issue invoices: the number is only a note. An effective hourly rate below 10.00 shows up as a warning, never as an error."
     org_about:
       title: Settings
       text: "The “Settings” item in the top bar. It is the organization profile: description, country, contact, company details and how the team works (work mode, time zone and currency). Everyone reads it. An empty field shows as “Not provided”."
@@ -714,6 +875,13 @@ help:
       org_perms: "The pages follow the role: Customers and Payments are only for the owner, Collaborators is for the owner and the admins, and so is the “New project” button (an admin creates internal projects only)."
       money: "The rates paid to colleagues only show for whoever runs the project, and billing and payments only for the owner. Everyone always sees their own rate."
       missing: "If a page, a tab or a button does not show up for you, you lack a permission: ask an admin."
+    solo:
+      title: I work alone
+      text: "Solo mode is for people who work on their own, as freelancers or solo contractors: the organization is just one person, and what belongs to a team goes away instead of crowding the menus."
+      choose: "Tick “I work alone” when you create the organization or later, in Settings › Edit. Only the owner changes it, and it only turns on with you as the only person and no pending invites."
+      hides: "The menu loses Collaborators and Payments and gains “Receivables”; the project loses the Collaborators tab, and nobody is invited. Turning the mode off deletes nothing: everything that was hidden comes back."
+      billing: "Each customer is billed per hour (the hours on their projects times the rate billed on each one) or by a monthly contract (a fixed amount per month, and their projects have no hourly rate), never both. Choose it in Customers: once a customer has projects, the mode cannot change."
+      home: "Home shows the hours, the revenue (the money that came in) and the projected revenue (what you expect to receive, paid or not), per customer."
     integrations:
       title: GitHub and Trello integrations
       text: "Optional. Connects the project to a GitHub repository or a Trello board, so tasks move along with the issues and the cards."
@@ -880,6 +1048,44 @@ org:
     rate_too_high: The rate billed per hour must be between 0 and 1,000,000.00.
     created: Project created.
 
+customer:
+  billing:
+    title: Billing
+    column: Billing
+    mode: Billing mode
+    hourly: Hourly
+    monthly: Monthly
+    mode_hint: "Hourly: the project hours times each project's billed rate. Monthly: a fixed amount per month, the contract."
+    mode_locked: The mode cannot change because the customer already has projects.
+    default_rate: "Default hourly rate ({{.unit}})"
+    default_rate_hint: Fills in the billed rate when you create a project for this customer. Each project keeps its own.
+    monthly_fee: "Monthly fee ({{.unit}})"
+    contract_start: Contract start
+    contract_end: Contract end
+    contract_end_hint: Without a date, the contract runs indefinitely.
+    closing_day: Closing day
+    closing_day_hint: The day of the month the period closes. 31 is the last day of every month.
+    payment_days: Payment term (days)
+    payment_days_hint: The days between the closing and the due date.
+    late_title: Late fee, interest and grace
+    late_hint: They only count after the due date plus the grace days, and show up as a suggestion when you record the payment.
+    late_fee: Late fee (%)
+    late_interest: Interest per month (%)
+    grace_days: Grace period (days)
+    cell_hourly: Hourly
+    cell_hourly_rate: "Hourly · {{.rate}}"
+    cell_monthly: "Monthly · {{.fee}}"
+    cell_contract_from: "Contract since {{.start}}"
+    cell_contract_range: "Contract from {{.start}} to {{.end}}"
+    cell_closing_last: Closes on the last day
+    cell_closing_day: "Closes on day {{.day}}"
+    cell_due_closing: due at closing
+    cell_due_days:
+      one: "due {{.count}} day later"
+      other: "due {{.count}} days later"
+    project_monthly_note: "This customer is billed monthly, so the project has no hourly rate. Hours are still tracked."
+    project_rate_default: "Filled in with the customer's default rate. The project keeps its own rate: changing it here does not change the customer."
+    project_rate_monthly: "Not applicable: billed monthly"
 project:
   head:
     projects: Projects
@@ -1594,6 +1800,20 @@ errors:
     name_required: "enter the customer name"
     name_too_long: "the customer name can have up to 120 characters"
     not_found: "customer not found"
+    invalid_billing_mode: "invalid billing mode: use hourly or monthly"
+    monthly_needs_solo: "monthly billing only applies in solo mode: turn it on in the organization settings"
+    mode_locked: "this customer already has projects: the billing mode can no longer change"
+    has_receivables: "this customer has receivables; undo them on the Receivables page before deleting"
+    field_hourly_only: "{{.field}} only applies to an hourly customer"
+    field_monthly_only: "{{.field}} only applies to a monthly customer"
+    invalid_default_rate: "the default hourly rate must be between 10.00 and 1,000,000.00"
+    invalid_monthly_fee: "the monthly fee must be between 0.01 and 1,000,000.00"
+    invalid_contract_end: "the contract end must be after the start"
+    invalid_closing_day: "the closing day must be between 1 and 31"
+    invalid_payment_days: "the payment term must be between 0 and 365 days"
+    invalid_late_fee: "the late fee must be between 0% and 100%"
+    invalid_late_interest: "the interest per month must be between 0% and 100%"
+    invalid_grace_days: "the grace period must be between 0 and 365 days"
   integration:
     disabled: "the integration is disabled"
     field_not_text: "the \"{{.field}}\" field of {{.provider}} must be text"
@@ -1674,8 +1894,11 @@ errors:
     invalid_work_mode: "invalid work mode: use remote, hybrid or onsite"
     name_required: "enter the name"
     not_found: "organization not found"
+    solo_needs_single_person: "solo mode only turns on with a single person in the organization and no pending invites"
+    solo_no_invites: "an organization in solo mode cannot invite anyone: turn solo mode off to invite people"
   overview:
     invalid_task_state: "invalid task state (state): use open or closed"
+    invalid_window: "invalid window (window): use month, last_month or year"
   payment:
     own_only: "you can only see your own payments, or any if you are an admin"
     invalid_history: "the history must be a whole number of periods, greater than zero"
@@ -1706,6 +1929,7 @@ errors:
     invalid_bill_rate: "the rate billed per hour must be between 10.00 and 1,000,000.00"
     bill_rate_required: "enter the rate billed per hour: a project with a customer needs it"
     bill_rate_needs_customer: "the billed rate only applies to a project with a customer: choose the project's customer first"
+    bill_rate_not_allowed: "this customer is billed monthly: its projects have no hourly billed rate"
     invalid_daily_time: "the daily time must use the HH:MM format, for example 09:30"
     invalid_organization: "invalid organization"
     invalid_sprint: "the sprint must be between 1 and 90 days long"
@@ -1721,6 +1945,19 @@ errors:
     invalid_per_page: "invalid page size (per_page): use a number from 1"
   projectinvite:
     team_not_in_project: "the team is not in this project"
+  receivable:
+    not_found: "receivable not found"
+    not_a_period: "the dates are not a period of this customer: check the customer's closing day and, on a monthly contract, the start and the end"
+    period_open: "this period has not closed yet: an hourly customer is only confirmed after the period closes"
+    already_confirmed: "this period was already confirmed"
+    already_received: "this receivable was already received: undo the payment first"
+    not_received: "this receivable has not been received yet"
+    invalid_amount: "enter an amount greater than zero, up to 1,000,000.00"
+    invalid_charge: "the late fee and the interest must be zero or more, up to 1,000,000.00"
+    charges_not_allowed: "late fee and interest only apply to a monthly contract"
+    received_must_match: "for an hourly customer, the amount received is the confirmed one"
+    charges_exceed_received: "the late fee and the interest are part of the amount received and cannot exceed it"
+    received_in_future: "the date received cannot be after today"
   request:
     body_too_large: "body too large: the limit is 1 MiB"
     field_required: "enter {{.field}}"
@@ -1812,8 +2049,29 @@ fields:
   ein: "the EIN"
   customer_id: "the customer"
   bill_rate_cents: "the billed hourly rate"
+  billing_mode: "the billing mode"
+  default_rate_cents: "the default hourly rate"
+  monthly_fee_cents: "the monthly fee"
+  contract_start: "the contract start"
+  contract_end: "the contract end"
+  closing_day: "the closing day"
+  payment_days: "the payment term"
+  late_fee_bp: "the late fee"
+  late_interest_bp_month: "the interest per month"
+  grace_days: "the grace period"
   amount_cents: "the amount paid"
   bonus_cents: "the bonus"
+  period_start: "the start of the period"
+  period_end: "the end of the period"
+  due_date: "the due date"
+  invoice_number: "the invoice number"
+  note: "the note"
+  received_on: "the date received"
+  received_cents: "the amount received"
+  late_fee_cents: "the late fee"
+  interest_cents: "the interest"
+  on: "the date"
+  window: "the window"
   pay_rate_cents: "the hourly rate"
   sprint_duration_days: "the sprint length"
   daily_time: "the daily time"
@@ -1847,6 +2105,7 @@ fields:
   timezone: "the time zone"
   currency: "the currency"
   work_mode: "the work mode"
+  solo: "solo mode"
   type: "the type"
   payment: "the payment rule"
   permissions: "the permissions"

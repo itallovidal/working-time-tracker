@@ -48,6 +48,8 @@ type Organization struct {
 	Timezone string `json:"timezone,omitempty"`
 	// Currency holds the value of the "currency" field.
 	Currency string `json:"currency,omitempty"`
+	// Solo holds the value of the "solo" field.
+	Solo bool `json:"solo,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -66,9 +68,11 @@ type OrganizationEdges struct {
 	Customers []*Customer `json:"customers,omitempty"`
 	// Invites holds the value of the invites edge.
 	Invites []*Invite `json:"invites,omitempty"`
+	// Receivables holds the value of the receivables edge.
+	Receivables []*Receivable `json:"receivables,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [4]bool
+	loadedTypes [5]bool
 }
 
 // PersonsOrErr returns the Persons value or an error if the edge
@@ -107,11 +111,22 @@ func (e OrganizationEdges) InvitesOrErr() ([]*Invite, error) {
 	return nil, &NotLoadedError{edge: "invites"}
 }
 
+// ReceivablesOrErr returns the Receivables value or an error if the edge
+// was not loaded in eager-loading.
+func (e OrganizationEdges) ReceivablesOrErr() ([]*Receivable, error) {
+	if e.loadedTypes[4] {
+		return e.Receivables, nil
+	}
+	return nil, &NotLoadedError{edge: "receivables"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*Organization) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
+		case organization.FieldSolo:
+			values[i] = new(sql.NullBool)
 		case organization.FieldName, organization.FieldSummary, organization.FieldDescription, organization.FieldWebsite, organization.FieldContactEmail, organization.FieldLinkedinURL, organization.FieldLegalName, organization.FieldCnpj, organization.FieldEin, organization.FieldAddressLine1, organization.FieldAddressLine2, organization.FieldCountry, organization.FieldWorkMode, organization.FieldTimezone, organization.FieldCurrency:
 			values[i] = new(sql.NullString)
 		case organization.FieldCreatedAt:
@@ -229,6 +244,12 @@ func (_m *Organization) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.Currency = value.String
 			}
+		case organization.FieldSolo:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field solo", values[i])
+			} else if value.Valid {
+				_m.Solo = value.Bool
+			}
 		case organization.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
@@ -266,6 +287,11 @@ func (_m *Organization) QueryCustomers() *CustomerQuery {
 // QueryInvites queries the "invites" edge of the Organization entity.
 func (_m *Organization) QueryInvites() *InviteQuery {
 	return NewOrganizationClient(_m.config).QueryInvites(_m)
+}
+
+// QueryReceivables queries the "receivables" edge of the Organization entity.
+func (_m *Organization) QueryReceivables() *ReceivableQuery {
+	return NewOrganizationClient(_m.config).QueryReceivables(_m)
 }
 
 // Update returns a builder for updating this Organization.
@@ -335,6 +361,9 @@ func (_m *Organization) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("currency=")
 	builder.WriteString(_m.Currency)
+	builder.WriteString(", ")
+	builder.WriteString("solo=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Solo))
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))

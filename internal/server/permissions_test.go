@@ -358,8 +358,8 @@ func TestPermissions_CatalogAndIdentity(t *testing.T) {
 	if p, _ := cat["project"].([]any); len(p) != 10 {
 		t.Errorf("project permissions = %v, want 10", cat["project"])
 	}
-	if o, _ := cat["organization"].([]any); len(o) != 4 {
-		t.Errorf("organization permissions = %v, want 4", cat["organization"])
+	if o, _ := cat["organization"].([]any); len(o) != 5 {
+		t.Errorf("organization permissions = %v, want 5", cat["organization"])
 	}
 	if presets, _ := cat["presets"].([]any); len(presets) != 4 {
 		t.Errorf("presets = %v, want 4", cat["presets"])

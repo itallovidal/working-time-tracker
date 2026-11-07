@@ -10,9 +10,12 @@ import (
 
 	"working-time-tracker/internal/database"
 	"working-time-tracker/internal/domain/collaborator"
+	"working-time-tracker/internal/domain/customer"
 	"working-time-tracker/internal/domain/integration"
+	"working-time-tracker/internal/domain/organization"
 	"working-time-tracker/internal/domain/person"
 	"working-time-tracker/internal/domain/project"
+	"working-time-tracker/internal/domain/receivable"
 	"working-time-tracker/internal/domain/task"
 	"working-time-tracker/internal/domain/team"
 	"working-time-tracker/internal/domain/work_session"
@@ -30,6 +33,11 @@ type Deps struct {
 	Tasks         *task.Store
 	// People serve à visão geral da organização, que lista todas as pessoas dela.
 	People *person.Service
+	// Orgs, Customers e Receivables servem à tela inicial do modo solo: o fuso e a moeda da organização, os clientes e o
+	// que se tem a receber deles.
+	Orgs        *organization.Service
+	Customers   *customer.Service
+	Receivables *receivable.Service
 	// Now é o relógio da conta; sem ele vale time.Now. Os testes fixam o instante para as
 	// janelas de 7 e 30 dias e as sessões abertas darem sempre o mesmo número.
 	Now func() time.Time

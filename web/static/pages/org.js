@@ -30,6 +30,7 @@ document.addEventListener('alpine:init', () => {
     const f = {};
     orgTexts.forEach((k) => { f[k] = o[k] || ''; });
     WTT.countries.list().forEach((c) => { f[c.legal_id.field] = WTT.fmt.mask(f[c.legal_id.field], c.legal_id.mask); });
+    f.solo = !!o.solo; // o modo solo é o único campo que não é texto
     return f;
   }
 
@@ -55,10 +56,38 @@ document.addEventListener('alpine:init', () => {
     ...form(),
     customers: null, // só carregados quando o modal de novo projeto abre pela primeira vez
     draft: blankProject(),
+    rateTouched: false, // a pessoa digitou o valor cobrado: trocar o cliente não o sobrescreve mais
+    // customerOf é o cliente escolhido no rascunho, ou null (projeto interno).
+    customerOf() {
+      return (this.customers || []).find((c) => c.id === this.draft.customer_id) || null;
+    },
+    // monthlyCustomer diz que o cliente escolhido é cobrado por mês: o projeto dele não tem valor por hora.
+    monthlyCustomer() {
+      const c = this.customerOf();
+      return !!c && c.billing_mode === 'monthly';
+    },
+    // hasRate diz que o campo do valor cobrado existe: há cliente, e ele é cobrado por hora.
+    hasRate() {
+      return !!this.draft.customer_id && !this.monthlyCustomer();
+    },
+    // customerChanged copia o valor por hora padrão do cliente para o campo (o projeto guarda o seu, e o cliente não
+    // muda), a menos que a pessoa já tenha digitado um valor.
+    customerChanged() {
+      this.clearField('customer_id');
+      this.clearField('bill_rate_cents');
+      const c = this.customerOf();
+      if (!this.rateTouched) this.draft.rate = c && c.default_rate_cents != null ? WTT.fmt.moneyInput(c.default_rate_cents) : '';
+    },
+    // rateFromDefault diz que o valor do campo é o padrão do cliente, ainda sem mexer, para a dica dizer de onde veio.
+    rateFromDefault() {
+      const c = this.customerOf();
+      return !this.rateTouched && !!c && c.default_rate_cents != null && this.hasRate();
+    },
     // openCreate abre o modal de novo projeto. Só admins criam projeto, e só o dono pode listar os clientes e
     // definir um (o admin cria só projeto interno); por isso a lista vem aqui, e não no init.
     async openCreate() {
       this.draft = blankProject();
+      this.rateTouched = false;
       this.errors.create = '';
       this.clearFields();
       Alpine.store('modal').open('project', WTT.t('org.projects.new'), () => !this.pending);
@@ -76,15 +105,16 @@ document.addEventListener('alpine:init', () => {
       return this.run('create', async () => {
         const d = this.draft;
         const R = WTT.rules;
-        // O valor só existe com cliente (o campo some no projeto interno).
+        // O valor só existe com cliente por hora (o campo some no projeto interno e no cliente mensal).
         const withCustomer = !!d.customer_id;
+        const withRate = this.hasRate();
         const name = String(d.name).trim();
         const description = String(d.description).trim();
         // A descrição chega do servidor como long_description, e o rótulo do campo é o dele.
         if (!this.check({
           name: [name, R.required, R.max('name')],
           description: [description, (v) => R.max('description')(v, 'long_description')],
-          bill_rate_cents: [withCustomer ? d.rate : '', ...(withCustomer ? [R.required] : []), R.rate],
+          bill_rate_cents: [withRate ? d.rate : '', ...(withRate ? [R.required] : []), R.rate],
           ...WTT.routine.rules(d),
           sprint_duration_days: [d.sprint_duration_days, R.integer(1, 90)],
         })) return;
@@ -96,7 +126,8 @@ document.addEventListener('alpine:init', () => {
         };
         if (withCustomer) {
           body.customer_id = d.customer_id;
-          body.bill_rate_cents = WTT.toCents(d.rate, { strict: true });
+          // O cliente mensal não tem valor por hora: o servidor recusa um.
+          if (withRate) body.bill_rate_cents = WTT.toCents(d.rate, { strict: true });
         }
         const p = await api('POST', '/api/orgs/' + orgId + '/projects', body);
         Alpine.store('toast').flash(WTT.t('org.projects.created'));
@@ -292,6 +323,62 @@ document.addEventListener('alpine:init', () => {
     statusClass: WTT.statusClass,
   });
 
+  // A visão geral da tela inicial do modo solo (Me.OrganizationSolo), no lugar da visão geral com equipe: as horas, a
+  // Receita (o que entrou), a Receita projetada (o que se espera dos períodos que terminam na janela), o valor por hora
+  // efetivo e a tabela por cliente. A janela é de calendário (month, last_month ou year) e as contas são do servidor
+  // (GET /solo/overview): a tela só pede a janela escolhida e mostra. Quem usa tem `...form()` (errors) e `...homeMine()`
+  // (hoursText), e chama `loadSolo()`.
+  const soloHome = () => ({
+    solo: null, // a resposta da API para a janela mostrada; null até a primeira
+    soloLoading: false,
+    soloWindow: 'month',
+    soloSeq: 0, // descarta a resposta de uma janela que já foi trocada
+    soloWindows: [
+      { key: 'month', label: WTT.t('home.solo.month') },
+      { key: 'last_month', label: WTT.t('home.solo.last_month') },
+      { key: 'year', label: WTT.t('home.solo.year') },
+    ],
+    async loadSolo() {
+      const seq = ++this.soloSeq;
+      const key = this.soloWindow;
+      this.soloLoading = true;
+      this.errors.solo = '';
+      try {
+        const res = await api('GET', '/api/orgs/' + orgId + '/solo/overview?window=' + key);
+        if (seq === this.soloSeq) this.solo = res;
+      } catch (e) {
+        if (seq === this.soloSeq) this.errors.solo = e.message;
+      } finally {
+        if (seq === this.soloSeq) this.soloLoading = false;
+      }
+    },
+    setSoloWindow(key) {
+      if (this.soloWindow === key) return;
+      this.soloWindow = key;
+      return this.loadSolo();
+    },
+    // O intervalo que a janela cobre, em dias de calendário ("01 nov. a 30 nov. 2026"). Enquanto a resposta da janela
+    // recém-escolhida não chegou, os dias na tela são os da anterior, e por isso ficam de fora.
+    soloScope() {
+      if (!this.solo || this.solo.window !== this.soloWindow) return '';
+      return WTT.t('home.solo.scope', {
+        from: WTT.fmt.day(this.solo.from, { day: '2-digit', month: 'short' }),
+        to: WTT.fmt.day(this.solo.to, { day: '2-digit', month: 'short', year: 'numeric' }),
+      });
+    },
+    // Sem cliente nenhum com horas, recebimento ou valor, e sem horas internas, não há tabela para mostrar.
+    soloEmpty() {
+      return !!this.solo && this.solo.customers.length === 0 && this.solo.internal_seconds <= 0;
+    },
+    soloKind(kind) {
+      return WTT.t(kind === 'monthly' ? 'home.solo.kind.monthly' : 'home.solo.kind.hourly');
+    },
+    // O aviso de valor por hora abaixo do piso: não é um erro, e o piso é o mesmo que o servidor confere.
+    soloBelowMin() {
+      return WTT.t('home.solo.cards.rate_below', { min: WTT.fmt.money(WTT.limits.min_rate_cents) });
+    },
+  });
+
   // A página Projetos: os projetos de quem olha (todos, para os admins) em cartões, seis por página.
   Alpine.data('orgProjects', () => ({
     ...projectCreation(),
@@ -343,10 +430,12 @@ document.addEventListener('alpine:init', () => {
   }));
 
   // A página inicial: para admins, a visão geral da organização (tempo e dinheiro de todos os
-  // projetos) e a equipe; para todos, o painel da própria pessoa.
+  // projetos) e a equipe, ou, no modo solo, a visão geral do solo (soloHome); para todos, o painel da
+  // própria pessoa.
   Alpine.data('orgHome', () => ({
     ...form(),
     ...homeMine(),
+    ...soloHome(),
     stats: null,
     statsLoading: false,
     period: 'last_30_days',
@@ -359,7 +448,8 @@ document.addEventListener('alpine:init', () => {
     initialsOf,
     init() {
       this.initMine();
-      if (me.role === 'admin') this.loadStats();
+      // No modo solo a visão geral é a do solo (soloHome), e a da organização com equipe nem é pedida.
+      if (me.role === 'admin') (me.organization_solo ? this.loadSolo() : this.loadStats());
     },
 
     // A visão geral: o servidor manda as três janelas de uma vez, e trocar de janela não pede nada.
@@ -435,10 +525,11 @@ document.addEventListener('alpine:init', () => {
     projectsState: 'idle', // idle, loading, ready ou error
     // availableTabs são as abas que quem olha pode usar: a jornada e, para o dono, a regra de pagamento
     // (people.manage) e os projetos com o valor por hora (só admins, que têm rates.manage em todos). Com uma só, o
-    // modal não mostra a faixa de abas.
+    // modal não mostra a faixa de abas. No modo solo não há jornada nem regra de pagamento (uma pessoa só, que não é
+    // paga): a aba de pagamento não existe.
     availableTabs() {
       return [
-        WTT.can('people.manage') && 'payment',
+        WTT.can('people.manage') && !me.organization_solo && 'payment',
         me.role === 'admin' && 'projects',
       ].filter(Boolean);
     },
@@ -589,9 +680,10 @@ document.addEventListener('alpine:init', () => {
         const text = String(this.draft.weekly_hours).trim();
         const hours = text === '' ? 0 : Number(text);
         // A jornada existe para quem gerencia pessoas, e a regra de pagamento só para o dono; a aba delas vem à vista
-        // antes de conferir.
-        const paysRule = WTT.can('payments.manage');
-        if (WTT.can('people.manage')) {
+        // antes de conferir. No modo solo nenhuma das duas existe.
+        const team = !me.organization_solo;
+        const paysRule = team && WTT.can('payments.manage');
+        if (team && WTT.can('people.manage')) {
           const d = this.draft.payment;
           const spec = { weekly_hours: [text, rules.integer(0, 168, 'person.invalid_week_hours')] };
           if (paysRule && d.frequency === 'monthly') spec.day = [d.day, rules.required, rules.integer(1, 31)];
@@ -604,7 +696,7 @@ document.addEventListener('alpine:init', () => {
         const pay = this.paymentBody();
         const projects = this.projectChanges();
         if (projects === null) return;
-        if (WTT.can('people.manage') && hours !== (person.weekly_hours || 0)) {
+        if (team && WTT.can('people.manage') && hours !== (person.weekly_hours || 0)) {
           const updated = await api('PATCH', '/api/persons/' + person.id + '/weekly-hours', { weekly_hours: hours });
           person.weekly_hours = updated.weekly_hours;
         }
@@ -867,6 +959,7 @@ document.addEventListener('alpine:init', () => {
         const body = {};
         orgTexts.forEach((k) => { body[k] = typeof f[k] === 'string' ? f[k].trim() : f[k]; });
         body.summary = summary;
+        body.solo = !!f.solo;
         await api('PATCH', '/api/orgs/' + orgId, body);
         // A edição volta para a aba Sobre, que recarrega com os dados novos e mostra o toast.
         Alpine.store('toast').flash(WTT.t('org.settings.saved'));
@@ -959,13 +1052,130 @@ document.addEventListener('alpine:init', () => {
     docCountryChanged(model) { this[model].document = ''; },
   });
 
+  // ---------- Termos comerciais do cliente (modo solo) ----------
+  // Só o modo solo mostra e manda estes campos (me.organization_solo): a organização com equipe não muda.
+
+  // percentBP lê um percentual digitado ("2", "2,5") em pontos-base (200, 250): é a mesma conta dos centavos, e vazio é 0.
+  const percentBP = (text) => (String(text).trim() === '' ? 0 : WTT.toCents(text, { strict: true }));
+  // Os campos do bloco recolhido (multa, juros e tolerância), que a tela abre quando um deles erra.
+  const lateFields = ['late_fee_bp', 'late_interest_bp_month', 'grace_days'];
+
+  // blankBilling são os termos de um cliente novo: por hora, fechando no último dia e vencendo no fechamento. Os campos
+  // de texto guardam o que a pessoa digita; billingBody os converte.
+  const blankBilling = () => ({
+    billing_mode: 'hourly', default_rate: '', monthly_fee: '', contract_start: '', contract_end: '',
+    closing_day: '31', payment_days: '0', late_fee: '', late_interest: '', grace_days: '',
+  });
+
+  // billingDraft copia os termos do cliente para o formulário: o que não tem valor vira texto vazio.
+  const billingDraft = (c) => ({
+    billing_mode: c.billing_mode || 'hourly',
+    default_rate: WTT.fmt.moneyInput(c.default_rate_cents),
+    monthly_fee: WTT.fmt.moneyInput(c.monthly_fee_cents),
+    contract_start: c.contract_start || '',
+    contract_end: c.contract_end || '',
+    closing_day: String(c.closing_day || 31),
+    payment_days: String(c.payment_days || 0),
+    late_fee: c.late_fee_bp ? WTT.fmt.moneyInput(c.late_fee_bp) : '',
+    late_interest: c.late_interest_bp_month ? WTT.fmt.moneyInput(c.late_interest_bp_month) : '',
+    grace_days: c.grace_days ? String(c.grace_days) : '',
+  });
+
+  // billingBody são os termos como vão para a API. O que é do outro modo vai vazio (null, texto vazio ou zero): o
+  // servidor recusa um valor do outro modo, e trocar de modo apaga o que ficou para trás.
+  const billingBody = (d) => {
+    const monthly = d.billing_mode === 'monthly';
+    const hasRate = !monthly && String(d.default_rate).trim() !== '';
+    return {
+      billing_mode: d.billing_mode,
+      default_rate_cents: hasRate ? WTT.toCents(d.default_rate, { strict: true }) : null,
+      monthly_fee_cents: monthly ? WTT.toCents(d.monthly_fee, { strict: true }) : null,
+      contract_start: monthly ? String(d.contract_start).trim() : '',
+      contract_end: monthly ? String(d.contract_end).trim() : '',
+      closing_day: Number(d.closing_day),
+      payment_days: Number(d.payment_days),
+      late_fee_bp: monthly ? percentBP(d.late_fee) : 0,
+      late_interest_bp_month: monthly ? percentBP(d.late_interest) : 0,
+      grace_days: monthly ? Number(String(d.grace_days).trim() || 0) : 0,
+    };
+  };
+
+  // amountRule confere um valor em dinheiro digitado: só dígitos e separador, de min ao teto do servidor, em centavos.
+  // Fora da faixa o erro é o texto do código da API daquele campo, que diz a faixa.
+  const amountRule = (min, code) => (v, field) => {
+    if (String(v).trim() === '') return '';
+    const cents = WTT.toCents(v, { strict: true });
+    if (cents === null) return WTT.errorText({ code: 'request.field_invalid', params: { field } });
+    return cents >= min && cents <= WTT.limits.max_cents ? '' : WTT.errorText({ code, params: { field } });
+  };
+  // percentRule confere um percentual digitado (de 0 ao teto do servidor, em pontos-base).
+  const percentRule = (code) => (v, field) => {
+    if (String(v).trim() === '') return '';
+    const bp = WTT.toCents(v, { strict: true });
+    if (bp === null) return WTT.errorText({ code: 'request.field_invalid', params: { field } });
+    return bp <= WTT.limits.rate_bp ? '' : WTT.errorText({ code, params: { field } });
+  };
+  // contractEndRule: o fim do contrato vem depois do início (os dois já têm o formato de uma data).
+  const contractEndRule = (start) => (v, field) => (String(v).trim() !== '' && /^\d{4}-\d{2}-\d{2}$/.test(start) && String(v).trim() <= start
+    ? WTT.errorText({ code: 'customer.invalid_contract_end', params: { field } }) : '');
+
+  // billingSpec são as conferências dos termos, na ordem da tela e só dos campos do modo escolhido (os do outro modo
+  // somem do formulário), com as mesmas regras do servidor.
+  const billingSpec = (d) => {
+    const { rules } = WTT;
+    const monthly = d.billing_mode === 'monthly';
+    return {
+      ...(monthly ? {
+        monthly_fee_cents: [d.monthly_fee, rules.required, amountRule(1, 'customer.invalid_monthly_fee')],
+        contract_start: [d.contract_start, rules.required, rules.date],
+        contract_end: [d.contract_end, rules.date, contractEndRule(String(d.contract_start).trim())],
+      } : {
+        default_rate_cents: [d.default_rate, amountRule(WTT.limits.min_rate_cents, 'customer.invalid_default_rate')],
+      }),
+      closing_day: [d.closing_day, rules.required, rules.integer(1, 31, 'customer.invalid_closing_day')],
+      payment_days: [d.payment_days, rules.required, rules.integer(0, WTT.limits.term_days, 'customer.invalid_payment_days')],
+      ...(monthly ? {
+        late_fee_bp: [d.late_fee, percentRule('customer.invalid_late_fee')],
+        late_interest_bp_month: [d.late_interest, percentRule('customer.invalid_late_interest')],
+        grace_days: [d.grace_days, rules.integer(0, WTT.limits.term_days, 'customer.invalid_grace_days')],
+      } : {}),
+    };
+  };
+
+  // customerBilling é o que a página Clientes tem a mais no modo solo: o texto da coluna Cobrança e o estado do
+  // formulário (o modo travado e o bloco recolhido).
+  const customerBilling = () => ({
+    solo: !!me.organization_solo,
+    modeLocked: false, // o cliente já tem projetos: o modo não muda
+    lateOpen: false, // o bloco de multa, juros e tolerância
+    // billingLabel é a primeira linha da coluna Cobrança: o modo e o valor (a mensalidade ou o valor por hora padrão).
+    billingLabel(c) {
+      if (c.billing_mode === 'monthly') return WTT.t('customer.billing.cell_monthly', { fee: WTT.fmt.money(c.monthly_fee_cents) });
+      if (c.default_rate_cents != null) return WTT.t('customer.billing.cell_hourly_rate', { rate: WTT.fmt.money(c.default_rate_cents) });
+      return WTT.t('customer.billing.cell_hourly');
+    },
+    // billingTerms é a segunda: o contrato (no mensal), o fechamento e o prazo.
+    billingTerms(c) {
+      const parts = [];
+      if (c.billing_mode === 'monthly' && c.contract_start) {
+        parts.push(c.contract_end
+          ? WTT.t('customer.billing.cell_contract_range', { start: WTT.fmt.day(c.contract_start), end: WTT.fmt.day(c.contract_end) })
+          : WTT.t('customer.billing.cell_contract_from', { start: WTT.fmt.day(c.contract_start) }));
+      }
+      parts.push(c.closing_day >= 31 ? WTT.t('customer.billing.cell_closing_last') : WTT.t('customer.billing.cell_closing_day', { day: c.closing_day }));
+      parts.push(c.payment_days > 0 ? WTT.t('customer.billing.cell_due_days', { count: c.payment_days }) : WTT.t('customer.billing.cell_due_closing'));
+      return parts.join(' · ');
+    },
+  });
+
   Alpine.data('orgCustomers', () => ({
     ...form(),
     ...customerDocument(),
+    ...customerBilling(),
     loading: true,
     customers: [],
     editing: null, // id do cliente em edição; null quando o formulário cria um novo
-    draft: blankCustomer(),
+    draft: { ...blankCustomer(), ...blankBilling() },
     confirming: null,
     async init() {
       try {
@@ -987,7 +1197,10 @@ document.addEventListener('alpine:init', () => {
         contact_name: c.contact_name,
         contact_email: c.contact_email,
         contact_phone: c.contact_phone,
-      } : blankCustomer();
+        ...billingDraft(c),
+      } : { ...blankCustomer(), ...blankBilling() };
+      this.modeLocked = !!c && c.project_count > 0;
+      this.lateOpen = !!c && !!(c.late_fee_bp || c.late_interest_bp_month || c.grace_days);
       this.errors.save = '';
       this.clearFields();
       // Enquanto salva, o modal não fecha: um erro do servidor ficaria sem ter onde aparecer.
@@ -995,7 +1208,17 @@ document.addEventListener('alpine:init', () => {
     },
     save() {
       const body = customerBody(this.draft);
-      if (!this.check(customerSpec(body, true))) return undefined;
+      const spec = customerSpec(body, true);
+      // Os termos só existem no modo solo; fora dele o corpo é o de sempre.
+      if (this.solo) {
+        Object.assign(spec, billingSpec(this.draft));
+        Object.assign(body, billingBody(this.draft));
+      }
+      if (!this.check(spec)) {
+        // O erro dentro do bloco recolhido só recebe o foco com o bloco aberto.
+        if (lateFields.some((f) => this.fieldErrors[f])) this.lateOpen = true;
+        return undefined;
+      }
       return this.run('save', async () => {
         if (this.editing) {
           const saved = await api('PATCH', '/api/customers/' + this.editing, body);
@@ -1079,7 +1302,8 @@ document.addEventListener('alpine:init', () => {
       if (step === 4) this.complete();
       this.$nextTick(() => this.focusField());
     },
-    next() { this.go(this.step + 1); },
+    // No modo solo não há convite: da etapa 2 (o cliente) vai direto à última, a 4.
+    next() { this.go(me.organization_solo && this.step === 2 ? 4 : this.step + 1); },
     // O resumo é uma linha só: o servidor junta os espaços repetidos, e o contador conta como ele.
     summaryLength() {
       return Array.from(this.orgDraft.summary.trim().replace(/\s+/g, ' ')).length;

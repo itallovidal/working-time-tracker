@@ -75,6 +75,7 @@ responder, não a tela:
 | A regra de pagamento de uma pessoa | A própria pessoa e o dono |
 | Os pagamentos de uma pessoa (períodos e valores) | A própria pessoa e o dono. Um admin que abre o perfil de outra pessoa recebe só as horas (`HideMoney`) |
 | Os pagamentos da equipe | Só o dono |
+| As contas a receber (modo solo) | Só o dono, e só numa organização no modo solo: fora dele a rota responde 404 |
 | A jornada semanal de uma pessoa | A própria pessoa, o dono, os admins, quem cuida de pessoas e o administrador de um projeto em que ela está |
 
 Os clientes e a edição da organização também são só do dono.

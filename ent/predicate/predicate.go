@@ -36,6 +36,9 @@ type Person func(*sql.Selector)
 // Project is the predicate function for project builders.
 type Project func(*sql.Selector)
 
+// Receivable is the predicate function for receivable builders.
+type Receivable func(*sql.Selector)
+
 // Session is the predicate function for session builders.
 type Session func(*sql.Selector)
 

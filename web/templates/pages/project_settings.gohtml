@@ -42,7 +42,7 @@
         {{if .CanDo "billing.view"}}
         <div class="fact">
           <dt>{{.T "project_settings.bill_rate_fact"}}</dt>
-          <dd class="num" :class="billRateCents === null && 'muted'" x-text="billRateCents === null ? WTT.notInformed : WTT.fmt.money(billRateCents)"></dd>
+          <dd class="num" :class="billRateCents === null && 'muted'" x-text="billRateCents !== null ? WTT.fmt.money(billRateCents) : (billingMode === 'monthly' ? $t('customer.billing.project_rate_monthly') : WTT.notInformed)"></dd>
         </div>
         {{end}}
       </dl>
@@ -83,7 +83,7 @@
           {{if .Can "customers.manage"}}
           <div class="field">
             <label for="ps-customer">{{.T "org.projects.customer"}}</label>
-            <select id="ps-customer" data-field="customer_id" x-model="draft.customer_id" @change="clearField('customer_id')"
+            <select id="ps-customer" data-field="customer_id" x-model="draft.customer_id" @change="customerChanged()"
                     :aria-invalid="fieldErrors.customer_id ? 'true' : 'false'">
               <option value="">{{.T "project_settings.internal"}}</option>
               <template x-for="c in customers" :key="c.id">
@@ -94,15 +94,18 @@
             <span class="hint">{{.T "project_settings.customers_hint"}} <a href="/orgs/{{.OrgID}}/customers">{{.T "nav.customers"}}</a>.</span>
           </div>
           {{end}}
-          {{/* Projeto interno não tem quem pague: o valor só aparece com cliente, e com ele é obrigatório. */}}
-          <div class="field" x-show="draft.customer_id">
+          {{/* Projeto interno não tem quem pague, e o cliente mensal paga o contrato, não as horas: o valor só aparece com
+               um cliente por hora, e com ele é obrigatório. */}}
+          <div class="field" x-show="hasRate()">
             <label for="ps-bill-rate"><span x-text="$t('project.fields.bill_rate', { unit: WTT.fmt.moneyUnit() })"></span></label>
             <input id="ps-bill-rate" type="text" inputmode="decimal" class="num" placeholder="{{.T "project_settings.rate_placeholder"}}" data-field="bill_rate_cents"
-                   x-model="draft.rate" @input="clearField('bill_rate_cents')" :aria-invalid="fieldErrors.bill_rate_cents ? 'true' : 'false'">
+                   x-model="draft.rate" @input="rateTouched = true; clearField('bill_rate_cents')" :aria-invalid="fieldErrors.bill_rate_cents ? 'true' : 'false'">
             {{template "field_error" "bill_rate_cents"}}
             <span class="hint">{{.T "project_settings.bill_rate_hint"}}</span>
+            <span class="hint" x-cloak x-show="rateFromDefault()" x-text="$t('customer.billing.project_rate_default')"></span>
           </div>
         </div>
+        <p class="muted small" x-cloak x-show="monthlyCustomer()" x-text="$t('customer.billing.project_monthly_note')"></p>
         {{end}}
         {{if .CanDo "project.edit"}}
         {{template "project_customer_meeting" .}}

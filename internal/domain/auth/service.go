@@ -13,6 +13,7 @@ import (
 	"working-time-tracker/internal/apperr"
 	"working-time-tracker/internal/country"
 	"working-time-tracker/internal/database"
+	"working-time-tracker/internal/domain/organization"
 	"working-time-tracker/internal/domain/person"
 	"working-time-tracker/internal/validate"
 )
@@ -48,6 +49,9 @@ type SignupInput struct {
 	Password         string `json:"password"`
 	// Country é o código do país da organização (BR, US). Vazio é o país padrão, como era antes de o campo existir.
 	Country string `json:"country"`
+	// Solo cria a organização já no modo solo (uma pessoa só, sem equipe). Vale a regra de ligar: a organização nasce com
+	// exatamente uma pessoa e nenhum convite, então a conta sempre cabe.
+	Solo bool `json:"solo"`
 }
 
 // signupCountry confere o país de quem cria a organização. Vazio é o país padrão: quem chama a API sem o campo continua
@@ -111,6 +115,7 @@ func (s *Service) Signup(in SignupInput) (*Identity, string, error) {
 		Country:          profile.Code,
 		Currency:         profile.Currency,
 		Timezone:         profile.Timezone,
+		Solo:             in.Solo,
 		Name:             name,
 		Email:            email,
 		PasswordHash:     &hash,
@@ -225,6 +230,15 @@ func (s *Service) CreateProjectInvite(ctx context.Context, actor *Identity, emai
 }
 
 func (s *Service) createInvite(ctx context.Context, actor *Identity, email, role string, setup *ProjectSetup) (*Invite, string, error) {
+	// Uma organização no modo solo é uma pessoa só: não convida ninguém, nem para a organização nem para um projeto.
+	// Lê do banco, e não da identidade: é o estado de agora que vale.
+	solo, err := s.store.OrganizationSolo(actor.OrganizationID)
+	if err != nil {
+		return nil, "", err
+	}
+	if solo {
+		return nil, "", organization.ErrSoloNoInvites
+	}
 	if role == "" {
 		role = person.RoleMember
 	}

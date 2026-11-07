@@ -11,6 +11,7 @@ import (
 	"working-time-tracker/ent/organization"
 	"working-time-tracker/ent/predicate"
 	"working-time-tracker/ent/project"
+	"working-time-tracker/ent/receivable"
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect"
@@ -29,6 +30,7 @@ type CustomerQuery struct {
 	predicates       []predicate.Customer
 	withOrganization *OrganizationQuery
 	withProjects     *ProjectQuery
+	withReceivables  *ReceivableQuery
 	modifiers        []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -103,6 +105,28 @@ func (_q *CustomerQuery) QueryProjects() *ProjectQuery {
 			sqlgraph.From(customer.Table, customer.FieldID, selector),
 			sqlgraph.To(project.Table, project.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, customer.ProjectsTable, customer.ProjectsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryReceivables chains the current query on the "receivables" edge.
+func (_q *CustomerQuery) QueryReceivables() *ReceivableQuery {
+	query := (&ReceivableClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(customer.Table, customer.FieldID, selector),
+			sqlgraph.To(receivable.Table, receivable.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, customer.ReceivablesTable, customer.ReceivablesColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -304,6 +328,7 @@ func (_q *CustomerQuery) Clone() *CustomerQuery {
 		predicates:       append([]predicate.Customer{}, _q.predicates...),
 		withOrganization: _q.withOrganization.Clone(),
 		withProjects:     _q.withProjects.Clone(),
+		withReceivables:  _q.withReceivables.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -329,6 +354,17 @@ func (_q *CustomerQuery) WithProjects(opts ...func(*ProjectQuery)) *CustomerQuer
 		opt(query)
 	}
 	_q.withProjects = query
+	return _q
+}
+
+// WithReceivables tells the query-builder to eager-load the nodes that are connected to
+// the "receivables" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *CustomerQuery) WithReceivables(opts ...func(*ReceivableQuery)) *CustomerQuery {
+	query := (&ReceivableClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withReceivables = query
 	return _q
 }
 
@@ -410,9 +446,10 @@ func (_q *CustomerQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Cus
 	var (
 		nodes       = []*Customer{}
 		_spec       = _q.querySpec()
-		loadedTypes = [2]bool{
+		loadedTypes = [3]bool{
 			_q.withOrganization != nil,
 			_q.withProjects != nil,
+			_q.withReceivables != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -446,6 +483,13 @@ func (_q *CustomerQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Cus
 		if err := _q.loadProjects(ctx, query, nodes,
 			func(n *Customer) { n.Edges.Projects = []*Project{} },
 			func(n *Customer, e *Project) { n.Edges.Projects = append(n.Edges.Projects, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withReceivables; query != nil {
+		if err := _q.loadReceivables(ctx, query, nodes,
+			func(n *Customer) { n.Edges.Receivables = []*Receivable{} },
+			func(n *Customer, e *Receivable) { n.Edges.Receivables = append(n.Edges.Receivables, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -509,6 +553,36 @@ func (_q *CustomerQuery) loadProjects(ctx context.Context, query *ProjectQuery, 
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "customer_id" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *CustomerQuery) loadReceivables(ctx context.Context, query *ReceivableQuery, nodes []*Customer, init func(*Customer), assign func(*Customer, *Receivable)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Customer)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(receivable.FieldCustomerID)
+	}
+	query.Where(predicate.Receivable(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(customer.ReceivablesColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.CustomerID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "customer_id" returned %v for node %v`, fk, n.ID)
 		}
 		assign(node, n)
 	}

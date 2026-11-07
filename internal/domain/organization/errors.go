@@ -21,4 +21,8 @@ var (
 	ErrInvalidTimezone = apperr.New("organization.invalid_timezone", http.StatusBadRequest)
 	ErrInvalidCurrency = apperr.New("organization.invalid_currency", http.StatusBadRequest)
 	ErrHasProjects     = apperr.New("organization.has_projects", http.StatusBadRequest)
+
+	// O modo solo (ver Organization.Solo). Os dois são conflito com o estado da organização, e não corpo inválido.
+	ErrSoloNeedsSinglePerson = apperr.New("organization.solo_needs_single_person", http.StatusConflict)
+	ErrSoloNoInvites         = apperr.New("organization.solo_no_invites", http.StatusConflict)
 )

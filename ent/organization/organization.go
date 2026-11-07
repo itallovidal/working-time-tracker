@@ -45,6 +45,8 @@ const (
 	FieldTimezone = "timezone"
 	// FieldCurrency holds the string denoting the currency field in the database.
 	FieldCurrency = "currency"
+	// FieldSolo holds the string denoting the solo field in the database.
+	FieldSolo = "solo"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// EdgePersons holds the string denoting the persons edge name in mutations.
@@ -55,6 +57,8 @@ const (
 	EdgeCustomers = "customers"
 	// EdgeInvites holds the string denoting the invites edge name in mutations.
 	EdgeInvites = "invites"
+	// EdgeReceivables holds the string denoting the receivables edge name in mutations.
+	EdgeReceivables = "receivables"
 	// Table holds the table name of the organization in the database.
 	Table = "organizations"
 	// PersonsTable is the table that holds the persons relation/edge.
@@ -85,6 +89,13 @@ const (
 	InvitesInverseTable = "invites"
 	// InvitesColumn is the table column denoting the invites relation/edge.
 	InvitesColumn = "organization_id"
+	// ReceivablesTable is the table that holds the receivables relation/edge.
+	ReceivablesTable = "receivables"
+	// ReceivablesInverseTable is the table name for the Receivable entity.
+	// It exists in this package in order to avoid circular dependency with the "receivable" package.
+	ReceivablesInverseTable = "receivables"
+	// ReceivablesColumn is the table column denoting the receivables relation/edge.
+	ReceivablesColumn = "organization_id"
 )
 
 // Columns holds all SQL columns for organization fields.
@@ -105,6 +116,7 @@ var Columns = []string{
 	FieldWorkMode,
 	FieldTimezone,
 	FieldCurrency,
+	FieldSolo,
 	FieldCreatedAt,
 }
 
@@ -125,6 +137,8 @@ var (
 	DefaultTimezone string
 	// DefaultCurrency holds the default value on creation for the "currency" field.
 	DefaultCurrency string
+	// DefaultSolo holds the default value on creation for the "solo" field.
+	DefaultSolo bool
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 	// DefaultID holds the default value on creation for the "id" field.
@@ -214,6 +228,11 @@ func ByCurrency(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCurrency, opts...).ToFunc()
 }
 
+// BySolo orders the results by the solo field.
+func BySolo(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSolo, opts...).ToFunc()
+}
+
 // ByCreatedAt orders the results by the created_at field.
 func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCreatedAt, opts...).ToFunc()
@@ -274,6 +293,20 @@ func ByInvites(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newInvitesStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByReceivablesCount orders the results by receivables count.
+func ByReceivablesCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newReceivablesStep(), opts...)
+	}
+}
+
+// ByReceivables orders the results by receivables terms.
+func ByReceivables(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newReceivablesStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newPersonsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -300,5 +333,12 @@ func newInvitesStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(InvitesInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, InvitesTable, InvitesColumn),
+	)
+}
+func newReceivablesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ReceivablesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ReceivablesTable, ReceivablesColumn),
 	)
 }

@@ -6,6 +6,9 @@
 // geradas por uma sequência fixa (o mesmo seed dá sempre o mesmo banco), duas
 // pessoas com o ponto aberto e integrações com itens vinculados a tarefas.
 //
+// Na mesma execução vem uma segunda organização, no modo solo (solo.go): uma freelancer com um cliente por hora e um
+// por contrato mensal, os projetos deles, sessões desde o mês retrasado e recebíveis em vários estados.
+//
 // Uso: go run ./cmd/seed (lê DATABASE_URL do ambiente ou do .env)
 package main
 
@@ -724,6 +727,9 @@ func main() {
 		paidOut++
 	}
 
+	// A organização do modo solo, depois da software house: não mexe no sorteio dela.
+	solo := seedSolo(ctx, db, now)
+
 	unassigned := 0
 	for _, t := range tasks {
 		if t.assignee == "" {
@@ -739,6 +745,11 @@ func main() {
 	fmt.Printf("  %d integrações sem credencial: informe o token na aba Integrações para usá-las\n", len(integrations))
 	fmt.Printf("  %d pagamentos com baixa; os outros períodos fechados aparecem como atrasados em Pagamentos\n", paidOut)
 	fmt.Println()
+	fmt.Printf("  Organização solo: %s, uma pessoa só, com um cliente por hora (Agência Pixel) e um por contrato mensal (Clínica Aurora)\n", soloOrgName)
+	fmt.Printf("  %d projetos (um interno), %d tarefas e %d sessões fechadas desde o mês retrasado\n", solo.projects, solo.tasks, solo.sessions)
+	fmt.Printf("  %d recebíveis confirmados (%d recebidos, %d em aberto, %d atrasado) e %d propostas por confirmar em A receber\n",
+		solo.confirmed, solo.received, solo.confirmed-solo.received-solo.late, solo.late, solo.toConfirm)
+	fmt.Println()
 	fmt.Printf("  Dono:    %s / %s\n", people[0].email, password)
 	for _, p := range people[1:] {
 		role := "Membro: "
@@ -747,6 +758,7 @@ func main() {
 		}
 		fmt.Printf("  %s %s / %s\n", role, p.email, password)
 	}
+	fmt.Printf("  Solo:    %s / %s (%s)\n", soloEmail, password, soloOrgName)
 }
 
 // linkTask vincula a tarefa a itens das integrações do projeto. link tem o formato "gh:42", "gl:17" ou

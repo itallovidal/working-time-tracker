@@ -21,6 +21,7 @@ import (
 	"working-time-tracker/ent/payout"
 	"working-time-tracker/ent/person"
 	"working-time-tracker/ent/project"
+	"working-time-tracker/ent/receivable"
 	"working-time-tracker/ent/session"
 	"working-time-tracker/ent/task"
 	"working-time-tracker/ent/team"
@@ -60,6 +61,8 @@ type Client struct {
 	Person *PersonClient
 	// Project is the client for interacting with the Project builders.
 	Project *ProjectClient
+	// Receivable is the client for interacting with the Receivable builders.
+	Receivable *ReceivableClient
 	// Session is the client for interacting with the Session builders.
 	Session *SessionClient
 	// Task is the client for interacting with the Task builders.
@@ -93,6 +96,7 @@ func (c *Client) init() {
 	c.Payout = NewPayoutClient(c.config)
 	c.Person = NewPersonClient(c.config)
 	c.Project = NewProjectClient(c.config)
+	c.Receivable = NewReceivableClient(c.config)
 	c.Session = NewSessionClient(c.config)
 	c.Task = NewTaskClient(c.config)
 	c.Team = NewTeamClient(c.config)
@@ -201,6 +205,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		Payout:          NewPayoutClient(cfg),
 		Person:          NewPersonClient(cfg),
 		Project:         NewProjectClient(cfg),
+		Receivable:      NewReceivableClient(cfg),
 		Session:         NewSessionClient(cfg),
 		Task:            NewTaskClient(cfg),
 		Team:            NewTeamClient(cfg),
@@ -236,6 +241,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		Payout:          NewPayoutClient(cfg),
 		Person:          NewPersonClient(cfg),
 		Project:         NewProjectClient(cfg),
+		Receivable:      NewReceivableClient(cfg),
 		Session:         NewSessionClient(cfg),
 		Task:            NewTaskClient(cfg),
 		Team:            NewTeamClient(cfg),
@@ -272,8 +278,8 @@ func (c *Client) Close() error {
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.Allocation, c.Customer, c.Integration, c.Invite, c.IssueSync, c.Label,
-		c.Organization, c.Payout, c.Person, c.Project, c.Session, c.Task, c.Team,
-		c.TeamMembership, c.WorkSession, c.WorkSessionTask,
+		c.Organization, c.Payout, c.Person, c.Project, c.Receivable, c.Session, c.Task,
+		c.Team, c.TeamMembership, c.WorkSession, c.WorkSessionTask,
 	} {
 		n.Use(hooks...)
 	}
@@ -284,8 +290,8 @@ func (c *Client) Use(hooks ...Hook) {
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.Allocation, c.Customer, c.Integration, c.Invite, c.IssueSync, c.Label,
-		c.Organization, c.Payout, c.Person, c.Project, c.Session, c.Task, c.Team,
-		c.TeamMembership, c.WorkSession, c.WorkSessionTask,
+		c.Organization, c.Payout, c.Person, c.Project, c.Receivable, c.Session, c.Task,
+		c.Team, c.TeamMembership, c.WorkSession, c.WorkSessionTask,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -314,6 +320,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Person.mutate(ctx, m)
 	case *ProjectMutation:
 		return c.Project.mutate(ctx, m)
+	case *ReceivableMutation:
+		return c.Receivable.mutate(ctx, m)
 	case *SessionMutation:
 		return c.Session.mutate(ctx, m)
 	case *TaskMutation:
@@ -629,6 +637,22 @@ func (c *CustomerClient) QueryProjects(_m *Customer) *ProjectQuery {
 			sqlgraph.From(customer.Table, customer.FieldID, id),
 			sqlgraph.To(project.Table, project.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, customer.ProjectsTable, customer.ProjectsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryReceivables queries the receivables edge of a Customer.
+func (c *CustomerClient) QueryReceivables(_m *Customer) *ReceivableQuery {
+	query := (&ReceivableClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(customer.Table, customer.FieldID, id),
+			sqlgraph.To(receivable.Table, receivable.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, customer.ReceivablesTable, customer.ReceivablesColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -1525,6 +1549,22 @@ func (c *OrganizationClient) QueryInvites(_m *Organization) *InviteQuery {
 	return query
 }
 
+// QueryReceivables queries the receivables edge of a Organization.
+func (c *OrganizationClient) QueryReceivables(_m *Organization) *ReceivableQuery {
+	query := (&ReceivableClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(organization.Table, organization.FieldID, id),
+			sqlgraph.To(receivable.Table, receivable.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, organization.ReceivablesTable, organization.ReceivablesColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *OrganizationClient) Hooks() []Hook {
 	return c.hooks.Organization
@@ -2234,6 +2274,171 @@ func (c *ProjectClient) mutate(ctx context.Context, m *ProjectMutation) (Value, 
 		return (&ProjectDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown Project mutation op: %q", m.Op())
+	}
+}
+
+// ReceivableClient is a client for the Receivable schema.
+type ReceivableClient struct {
+	config
+}
+
+// NewReceivableClient returns a client for the Receivable from the given config.
+func NewReceivableClient(c config) *ReceivableClient {
+	return &ReceivableClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `receivable.Hooks(f(g(h())))`.
+func (c *ReceivableClient) Use(hooks ...Hook) {
+	c.hooks.Receivable = append(c.hooks.Receivable, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `receivable.Intercept(f(g(h())))`.
+func (c *ReceivableClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Receivable = append(c.inters.Receivable, interceptors...)
+}
+
+// Create returns a builder for creating a Receivable entity.
+func (c *ReceivableClient) Create() *ReceivableCreate {
+	mutation := newReceivableMutation(c.config, OpCreate)
+	return &ReceivableCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Receivable entities.
+func (c *ReceivableClient) CreateBulk(builders ...*ReceivableCreate) *ReceivableCreateBulk {
+	return &ReceivableCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ReceivableClient) MapCreateBulk(slice any, setFunc func(*ReceivableCreate, int)) *ReceivableCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ReceivableCreateBulk{err: fmt.Errorf("calling to ReceivableClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ReceivableCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ReceivableCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Receivable.
+func (c *ReceivableClient) Update() *ReceivableUpdate {
+	mutation := newReceivableMutation(c.config, OpUpdate)
+	return &ReceivableUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ReceivableClient) UpdateOne(_m *Receivable) *ReceivableUpdateOne {
+	mutation := newReceivableMutation(c.config, OpUpdateOne, withReceivable(_m))
+	return &ReceivableUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ReceivableClient) UpdateOneID(id uuid.UUID) *ReceivableUpdateOne {
+	mutation := newReceivableMutation(c.config, OpUpdateOne, withReceivableID(id))
+	return &ReceivableUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Receivable.
+func (c *ReceivableClient) Delete() *ReceivableDelete {
+	mutation := newReceivableMutation(c.config, OpDelete)
+	return &ReceivableDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ReceivableClient) DeleteOne(_m *Receivable) *ReceivableDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ReceivableClient) DeleteOneID(id uuid.UUID) *ReceivableDeleteOne {
+	builder := c.Delete().Where(receivable.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ReceivableDeleteOne{builder}
+}
+
+// Query returns a query builder for Receivable.
+func (c *ReceivableClient) Query() *ReceivableQuery {
+	return &ReceivableQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeReceivable},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a Receivable entity by its id.
+func (c *ReceivableClient) Get(ctx context.Context, id uuid.UUID) (*Receivable, error) {
+	return c.Query().Where(receivable.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ReceivableClient) GetX(ctx context.Context, id uuid.UUID) *Receivable {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryOrganization queries the organization edge of a Receivable.
+func (c *ReceivableClient) QueryOrganization(_m *Receivable) *OrganizationQuery {
+	query := (&OrganizationClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(receivable.Table, receivable.FieldID, id),
+			sqlgraph.To(organization.Table, organization.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, receivable.OrganizationTable, receivable.OrganizationColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryCustomer queries the customer edge of a Receivable.
+func (c *ReceivableClient) QueryCustomer(_m *Receivable) *CustomerQuery {
+	query := (&CustomerClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(receivable.Table, receivable.FieldID, id),
+			sqlgraph.To(customer.Table, customer.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, receivable.CustomerTable, receivable.CustomerColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *ReceivableClient) Hooks() []Hook {
+	return c.hooks.Receivable
+}
+
+// Interceptors returns the client interceptors.
+func (c *ReceivableClient) Interceptors() []Interceptor {
+	return c.inters.Receivable
+}
+
+func (c *ReceivableClient) mutate(ctx context.Context, m *ReceivableMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ReceivableCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ReceivableUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ReceivableUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ReceivableDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Receivable mutation op: %q", m.Op())
 	}
 }
 
@@ -3295,12 +3500,12 @@ func (c *WorkSessionTaskClient) mutate(ctx context.Context, m *WorkSessionTaskMu
 type (
 	hooks struct {
 		Allocation, Customer, Integration, Invite, IssueSync, Label, Organization,
-		Payout, Person, Project, Session, Task, Team, TeamMembership, WorkSession,
-		WorkSessionTask []ent.Hook
+		Payout, Person, Project, Receivable, Session, Task, Team, TeamMembership,
+		WorkSession, WorkSessionTask []ent.Hook
 	}
 	inters struct {
 		Allocation, Customer, Integration, Invite, IssueSync, Label, Organization,
-		Payout, Person, Project, Session, Task, Team, TeamMembership, WorkSession,
-		WorkSessionTask []ent.Interceptor
+		Payout, Person, Project, Receivable, Session, Task, Team, TeamMembership,
+		WorkSession, WorkSessionTask []ent.Interceptor
 	}
 )

@@ -93,12 +93,26 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | Código | Status | Parâmetros | pt-BR | en |
 |---|---|---|---|---|
 | `customer.contact_too_long` | 400 | — | `o nome do contato pode ter até 120 caracteres` | `the contact name can have up to 120 characters` |
+| `customer.field_hourly_only` | 400 | `field` | `{{.field}} só vale em um cliente cobrado por hora` | `{{.field}} only applies to an hourly customer` |
+| `customer.field_monthly_only` | 400 | `field` | `{{.field}} só vale em um cliente com cobrança mensal` | `{{.field}} only applies to a monthly customer` |
 | `customer.has_projects` | 409 | — | `este cliente tem projetos; tire o cliente dos projetos antes de excluir` | `this customer has projects; remove the customer from the projects before deleting` |
+| `customer.has_receivables` | 409 | — | `este cliente tem contas a receber; desfaça-as na página A receber antes de excluir` | `this customer has receivables; undo them on the Receivables page before deleting` |
+| `customer.invalid_billing_mode` | 400 | — | `modo de cobrança inválido: use hourly (por hora) ou monthly (mensal)` | `invalid billing mode: use hourly or monthly` |
+| `customer.invalid_closing_day` | 400 | — | `o dia de fechamento deve ficar entre 1 e 31` | `the closing day must be between 1 and 31` |
+| `customer.invalid_contract_end` | 400 | — | `o fim do contrato deve ser depois do início` | `the contract end must be after the start` |
 | `customer.invalid_country` | 400 | — | `país inválido: use um código de país como BR, US ou DE` | `invalid country: use a country code like BR, US or DE` |
+| `customer.invalid_default_rate` | 400 | — | `o valor por hora padrão deve ficar entre 10,00 e 1.000.000,00` | `the default hourly rate must be between 10.00 and 1,000,000.00` |
 | `customer.invalid_document` | 400 | — | `documento fiscal inválido para o país do cliente: confira os números (CNPJ no Brasil, EIN nos EUA)` | `invalid tax ID for the customer's country: check the numbers (CNPJ in Brazil, EIN in the US)` |
 | `customer.invalid_email` | 400 | — | `informe um email de contato válido` | `enter a valid contact email` |
+| `customer.invalid_grace_days` | 400 | — | `a tolerância deve ficar entre 0 e 365 dias` | `the grace period must be between 0 and 365 days` |
+| `customer.invalid_late_fee` | 400 | — | `a multa deve ficar entre 0% e 100%` | `the late fee must be between 0% and 100%` |
+| `customer.invalid_late_interest` | 400 | — | `os juros ao mês devem ficar entre 0% e 100%` | `the interest per month must be between 0% and 100%` |
+| `customer.invalid_monthly_fee` | 400 | — | `a mensalidade deve ficar entre 0,01 e 1.000.000,00` | `the monthly fee must be between 0.01 and 1,000,000.00` |
 | `customer.invalid_organization` | 400 | — | `organização inválida` | `invalid organization` |
+| `customer.invalid_payment_days` | 400 | — | `o prazo de pagamento deve ficar entre 0 e 365 dias` | `the payment term must be between 0 and 365 days` |
 | `customer.invalid_phone` | 400 | — | `telefone inválido: use números, espaços, +, parênteses e hífen` | `invalid phone: use digits, spaces, +, parentheses and hyphen` |
+| `customer.mode_locked` | 409 | — | `este cliente já tem projetos: o modo de cobrança não pode mais mudar` | `this customer already has projects: the billing mode can no longer change` |
+| `customer.monthly_needs_solo` | 400 | — | `a cobrança mensal só vale no modo Trabalho sozinho(a): ligue-o nas configurações da organização` | `monthly billing only applies in solo mode: turn it on in the organization settings` |
 | `customer.name_required` | 400 | — | `informe o nome do cliente` | `enter the customer name` |
 | `customer.name_too_long` | 400 | — | `o nome do cliente pode ter até 120 caracteres` | `the customer name can have up to 120 characters` |
 | `customer.not_found` | 404 | — | `cliente não encontrado` | `customer not found` |
@@ -202,12 +216,15 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `organization.invalid_work_mode` | 400 | — | `regime de trabalho inválido: use remote, hybrid ou onsite` | `invalid work mode: use remote, hybrid or onsite` |
 | `organization.name_required` | 400 | — | `informe o nome` | `enter the name` |
 | `organization.not_found` | 404 | — | `organização não encontrada` | `organization not found` |
+| `organization.solo_needs_single_person` | 409 | — | `o modo solo só liga com uma única pessoa na organização e nenhum convite pendente` | `solo mode only turns on with a single person in the organization and no pending invites` |
+| `organization.solo_no_invites` | 409 | — | `uma organização no modo solo não convida ninguém: desligue o modo solo para convidar` | `an organization in solo mode cannot invite anyone: turn solo mode off to invite people` |
 
 ### overview
 
 | Código | Status | Parâmetros | pt-BR | en |
 |---|---|---|---|---|
 | `overview.invalid_task_state` | 400 | — | `estado de tarefa inválido (state): use open ou closed` | `invalid task state (state): use open or closed` |
+| `overview.invalid_window` | 400 | — | `janela inválida (window): use month, last_month ou year` | `invalid window (window): use month, last_month or year` |
 
 ### payment
 
@@ -247,6 +264,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | Código | Status | Parâmetros | pt-BR | en |
 |---|---|---|---|---|
 | `project.bill_rate_needs_customer` | 400 | — | `o valor cobrado só vale em um projeto com cliente: escolha o cliente do projeto antes` | `the billed rate only applies to a project with a customer: choose the project's customer first` |
+| `project.bill_rate_not_allowed` | 400 | — | `este cliente é cobrado por mês: o projeto dele não tem valor cobrado por hora` | `this customer is billed monthly: its projects have no hourly billed rate` |
 | `project.bill_rate_required` | 400 | — | `informe o valor cobrado por hora: um projeto com cliente precisa dele` | `enter the rate billed per hour: a project with a customer needs it` |
 | `project.customer_meeting_time_without_day` | 400 | — | `o horário da reunião com o cliente precisa do dia da reunião` | `the customer meeting time needs the meeting day` |
 | `project.customer_not_found` | 400 | — | `cliente não encontrado nesta organização` | `customer not found in this organization` |
@@ -269,6 +287,23 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | Código | Status | Parâmetros | pt-BR | en |
 |---|---|---|---|---|
 | `projectinvite.team_not_in_project` | 400 | — | `o time não é deste projeto` | `the team is not in this project` |
+
+### receivable
+
+| Código | Status | Parâmetros | pt-BR | en |
+|---|---|---|---|---|
+| `receivable.already_confirmed` | 409 | — | `este período já foi confirmado` | `this period was already confirmed` |
+| `receivable.already_received` | 409 | — | `este recebível já foi recebido: desfaça o recebimento antes` | `this receivable was already received: undo the payment first` |
+| `receivable.charges_exceed_received` | 400 | — | `a multa e os juros fazem parte do valor recebido e não podem passar dele` | `the late fee and the interest are part of the amount received and cannot exceed it` |
+| `receivable.charges_not_allowed` | 400 | — | `multa e juros só valem no contrato mensal` | `late fee and interest only apply to a monthly contract` |
+| `receivable.invalid_amount` | 400 | — | `informe um valor maior que zero, até 1.000.000,00` | `enter an amount greater than zero, up to 1,000,000.00` |
+| `receivable.invalid_charge` | 400 | — | `a multa e os juros devem ser zero ou mais, até 1.000.000,00` | `the late fee and the interest must be zero or more, up to 1,000,000.00` |
+| `receivable.not_a_period` | 400 | — | `as datas não formam um período deste cliente: confira o dia de fechamento dele e, no contrato mensal, o início e o fim` | `the dates are not a period of this customer: check the customer's closing day and, on a monthly contract, the start and the end` |
+| `receivable.not_found` | 404 | — | `recebível não encontrado` | `receivable not found` |
+| `receivable.not_received` | 409 | — | `este recebível ainda não foi recebido` | `this receivable has not been received yet` |
+| `receivable.period_open` | 409 | — | `este período ainda não fechou: o cliente por hora só se confirma depois do fechamento` | `this period has not closed yet: an hourly customer is only confirmed after the period closes` |
+| `receivable.received_in_future` | 400 | — | `a data do recebimento não pode ser depois de hoje` | `the date received cannot be after today` |
+| `receivable.received_must_match` | 400 | — | `no cliente por hora, o valor recebido é o confirmado` | `for an hourly customer, the amount received is the confirmed one` |
 
 ### request
 

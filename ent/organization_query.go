@@ -13,6 +13,7 @@ import (
 	"working-time-tracker/ent/person"
 	"working-time-tracker/ent/predicate"
 	"working-time-tracker/ent/project"
+	"working-time-tracker/ent/receivable"
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect"
@@ -25,15 +26,16 @@ import (
 // OrganizationQuery is the builder for querying Organization entities.
 type OrganizationQuery struct {
 	config
-	ctx           *QueryContext
-	order         []organization.OrderOption
-	inters        []Interceptor
-	predicates    []predicate.Organization
-	withPersons   *PersonQuery
-	withProjects  *ProjectQuery
-	withCustomers *CustomerQuery
-	withInvites   *InviteQuery
-	modifiers     []func(*sql.Selector)
+	ctx             *QueryContext
+	order           []organization.OrderOption
+	inters          []Interceptor
+	predicates      []predicate.Organization
+	withPersons     *PersonQuery
+	withProjects    *ProjectQuery
+	withCustomers   *CustomerQuery
+	withInvites     *InviteQuery
+	withReceivables *ReceivableQuery
+	modifiers       []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -151,6 +153,28 @@ func (_q *OrganizationQuery) QueryInvites() *InviteQuery {
 			sqlgraph.From(organization.Table, organization.FieldID, selector),
 			sqlgraph.To(invite.Table, invite.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, organization.InvitesTable, organization.InvitesColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryReceivables chains the current query on the "receivables" edge.
+func (_q *OrganizationQuery) QueryReceivables() *ReceivableQuery {
+	query := (&ReceivableClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(organization.Table, organization.FieldID, selector),
+			sqlgraph.To(receivable.Table, receivable.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, organization.ReceivablesTable, organization.ReceivablesColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -345,15 +369,16 @@ func (_q *OrganizationQuery) Clone() *OrganizationQuery {
 		return nil
 	}
 	return &OrganizationQuery{
-		config:        _q.config,
-		ctx:           _q.ctx.Clone(),
-		order:         append([]organization.OrderOption{}, _q.order...),
-		inters:        append([]Interceptor{}, _q.inters...),
-		predicates:    append([]predicate.Organization{}, _q.predicates...),
-		withPersons:   _q.withPersons.Clone(),
-		withProjects:  _q.withProjects.Clone(),
-		withCustomers: _q.withCustomers.Clone(),
-		withInvites:   _q.withInvites.Clone(),
+		config:          _q.config,
+		ctx:             _q.ctx.Clone(),
+		order:           append([]organization.OrderOption{}, _q.order...),
+		inters:          append([]Interceptor{}, _q.inters...),
+		predicates:      append([]predicate.Organization{}, _q.predicates...),
+		withPersons:     _q.withPersons.Clone(),
+		withProjects:    _q.withProjects.Clone(),
+		withCustomers:   _q.withCustomers.Clone(),
+		withInvites:     _q.withInvites.Clone(),
+		withReceivables: _q.withReceivables.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -401,6 +426,17 @@ func (_q *OrganizationQuery) WithInvites(opts ...func(*InviteQuery)) *Organizati
 		opt(query)
 	}
 	_q.withInvites = query
+	return _q
+}
+
+// WithReceivables tells the query-builder to eager-load the nodes that are connected to
+// the "receivables" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *OrganizationQuery) WithReceivables(opts ...func(*ReceivableQuery)) *OrganizationQuery {
+	query := (&ReceivableClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withReceivables = query
 	return _q
 }
 
@@ -482,11 +518,12 @@ func (_q *OrganizationQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]
 	var (
 		nodes       = []*Organization{}
 		_spec       = _q.querySpec()
-		loadedTypes = [4]bool{
+		loadedTypes = [5]bool{
 			_q.withPersons != nil,
 			_q.withProjects != nil,
 			_q.withCustomers != nil,
 			_q.withInvites != nil,
+			_q.withReceivables != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -535,6 +572,13 @@ func (_q *OrganizationQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]
 		if err := _q.loadInvites(ctx, query, nodes,
 			func(n *Organization) { n.Edges.Invites = []*Invite{} },
 			func(n *Organization, e *Invite) { n.Edges.Invites = append(n.Edges.Invites, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withReceivables; query != nil {
+		if err := _q.loadReceivables(ctx, query, nodes,
+			func(n *Organization) { n.Edges.Receivables = []*Receivable{} },
+			func(n *Organization, e *Receivable) { n.Edges.Receivables = append(n.Edges.Receivables, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -646,6 +690,36 @@ func (_q *OrganizationQuery) loadInvites(ctx context.Context, query *InviteQuery
 	}
 	query.Where(predicate.Invite(func(s *sql.Selector) {
 		s.Where(sql.InValues(s.C(organization.InvitesColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.OrganizationID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "organization_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *OrganizationQuery) loadReceivables(ctx context.Context, query *ReceivableQuery, nodes []*Organization, init func(*Organization), assign func(*Organization, *Receivable)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Organization)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(receivable.FieldOrganizationID)
+	}
+	query.Where(predicate.Receivable(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(organization.ReceivablesColumn), fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {

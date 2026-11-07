@@ -88,6 +88,8 @@ type ClerkSignupInput struct {
 	Name             string `json:"name"`
 	// Country é o código do país da organização (BR, US); vazio é o país padrão.
 	Country string `json:"country"`
+	// Solo cria a organização já no modo solo, como no cadastro por senha (SignupInput.Solo).
+	Solo bool `json:"solo"`
 }
 
 type ClerkJoinInput struct {
@@ -251,6 +253,7 @@ func (s *Service) ClerkSignup(ctx context.Context, sessionToken string, in Clerk
 		Country:          profile.Code,
 		Currency:         profile.Currency,
 		Timezone:         profile.Timezone,
+		Solo:             in.Solo,
 		Name:             accountName(in.Name, ident.Name, email),
 		Email:            email,
 		ClerkUserID:      &ident.UserID,

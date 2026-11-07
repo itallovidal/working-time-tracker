@@ -10,6 +10,7 @@ import (
 	"working-time-tracker/ent/organization"
 	"working-time-tracker/ent/predicate"
 	"working-time-tracker/ent/project"
+	"working-time-tracker/ent/receivable"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -152,6 +153,219 @@ func (_u *CustomerUpdate) ClearContactPhone() *CustomerUpdate {
 	return _u
 }
 
+// SetBillingMode sets the "billing_mode" field.
+func (_u *CustomerUpdate) SetBillingMode(v string) *CustomerUpdate {
+	_u.mutation.SetBillingMode(v)
+	return _u
+}
+
+// SetNillableBillingMode sets the "billing_mode" field if the given value is not nil.
+func (_u *CustomerUpdate) SetNillableBillingMode(v *string) *CustomerUpdate {
+	if v != nil {
+		_u.SetBillingMode(*v)
+	}
+	return _u
+}
+
+// SetDefaultRateCents sets the "default_rate_cents" field.
+func (_u *CustomerUpdate) SetDefaultRateCents(v int) *CustomerUpdate {
+	_u.mutation.ResetDefaultRateCents()
+	_u.mutation.SetDefaultRateCents(v)
+	return _u
+}
+
+// SetNillableDefaultRateCents sets the "default_rate_cents" field if the given value is not nil.
+func (_u *CustomerUpdate) SetNillableDefaultRateCents(v *int) *CustomerUpdate {
+	if v != nil {
+		_u.SetDefaultRateCents(*v)
+	}
+	return _u
+}
+
+// AddDefaultRateCents adds value to the "default_rate_cents" field.
+func (_u *CustomerUpdate) AddDefaultRateCents(v int) *CustomerUpdate {
+	_u.mutation.AddDefaultRateCents(v)
+	return _u
+}
+
+// ClearDefaultRateCents clears the value of the "default_rate_cents" field.
+func (_u *CustomerUpdate) ClearDefaultRateCents() *CustomerUpdate {
+	_u.mutation.ClearDefaultRateCents()
+	return _u
+}
+
+// SetMonthlyFeeCents sets the "monthly_fee_cents" field.
+func (_u *CustomerUpdate) SetMonthlyFeeCents(v int) *CustomerUpdate {
+	_u.mutation.ResetMonthlyFeeCents()
+	_u.mutation.SetMonthlyFeeCents(v)
+	return _u
+}
+
+// SetNillableMonthlyFeeCents sets the "monthly_fee_cents" field if the given value is not nil.
+func (_u *CustomerUpdate) SetNillableMonthlyFeeCents(v *int) *CustomerUpdate {
+	if v != nil {
+		_u.SetMonthlyFeeCents(*v)
+	}
+	return _u
+}
+
+// AddMonthlyFeeCents adds value to the "monthly_fee_cents" field.
+func (_u *CustomerUpdate) AddMonthlyFeeCents(v int) *CustomerUpdate {
+	_u.mutation.AddMonthlyFeeCents(v)
+	return _u
+}
+
+// ClearMonthlyFeeCents clears the value of the "monthly_fee_cents" field.
+func (_u *CustomerUpdate) ClearMonthlyFeeCents() *CustomerUpdate {
+	_u.mutation.ClearMonthlyFeeCents()
+	return _u
+}
+
+// SetContractStart sets the "contract_start" field.
+func (_u *CustomerUpdate) SetContractStart(v string) *CustomerUpdate {
+	_u.mutation.SetContractStart(v)
+	return _u
+}
+
+// SetNillableContractStart sets the "contract_start" field if the given value is not nil.
+func (_u *CustomerUpdate) SetNillableContractStart(v *string) *CustomerUpdate {
+	if v != nil {
+		_u.SetContractStart(*v)
+	}
+	return _u
+}
+
+// ClearContractStart clears the value of the "contract_start" field.
+func (_u *CustomerUpdate) ClearContractStart() *CustomerUpdate {
+	_u.mutation.ClearContractStart()
+	return _u
+}
+
+// SetContractEnd sets the "contract_end" field.
+func (_u *CustomerUpdate) SetContractEnd(v string) *CustomerUpdate {
+	_u.mutation.SetContractEnd(v)
+	return _u
+}
+
+// SetNillableContractEnd sets the "contract_end" field if the given value is not nil.
+func (_u *CustomerUpdate) SetNillableContractEnd(v *string) *CustomerUpdate {
+	if v != nil {
+		_u.SetContractEnd(*v)
+	}
+	return _u
+}
+
+// ClearContractEnd clears the value of the "contract_end" field.
+func (_u *CustomerUpdate) ClearContractEnd() *CustomerUpdate {
+	_u.mutation.ClearContractEnd()
+	return _u
+}
+
+// SetClosingDay sets the "closing_day" field.
+func (_u *CustomerUpdate) SetClosingDay(v int) *CustomerUpdate {
+	_u.mutation.ResetClosingDay()
+	_u.mutation.SetClosingDay(v)
+	return _u
+}
+
+// SetNillableClosingDay sets the "closing_day" field if the given value is not nil.
+func (_u *CustomerUpdate) SetNillableClosingDay(v *int) *CustomerUpdate {
+	if v != nil {
+		_u.SetClosingDay(*v)
+	}
+	return _u
+}
+
+// AddClosingDay adds value to the "closing_day" field.
+func (_u *CustomerUpdate) AddClosingDay(v int) *CustomerUpdate {
+	_u.mutation.AddClosingDay(v)
+	return _u
+}
+
+// SetPaymentDays sets the "payment_days" field.
+func (_u *CustomerUpdate) SetPaymentDays(v int) *CustomerUpdate {
+	_u.mutation.ResetPaymentDays()
+	_u.mutation.SetPaymentDays(v)
+	return _u
+}
+
+// SetNillablePaymentDays sets the "payment_days" field if the given value is not nil.
+func (_u *CustomerUpdate) SetNillablePaymentDays(v *int) *CustomerUpdate {
+	if v != nil {
+		_u.SetPaymentDays(*v)
+	}
+	return _u
+}
+
+// AddPaymentDays adds value to the "payment_days" field.
+func (_u *CustomerUpdate) AddPaymentDays(v int) *CustomerUpdate {
+	_u.mutation.AddPaymentDays(v)
+	return _u
+}
+
+// SetLateFeeBp sets the "late_fee_bp" field.
+func (_u *CustomerUpdate) SetLateFeeBp(v int) *CustomerUpdate {
+	_u.mutation.ResetLateFeeBp()
+	_u.mutation.SetLateFeeBp(v)
+	return _u
+}
+
+// SetNillableLateFeeBp sets the "late_fee_bp" field if the given value is not nil.
+func (_u *CustomerUpdate) SetNillableLateFeeBp(v *int) *CustomerUpdate {
+	if v != nil {
+		_u.SetLateFeeBp(*v)
+	}
+	return _u
+}
+
+// AddLateFeeBp adds value to the "late_fee_bp" field.
+func (_u *CustomerUpdate) AddLateFeeBp(v int) *CustomerUpdate {
+	_u.mutation.AddLateFeeBp(v)
+	return _u
+}
+
+// SetLateInterestBpMonth sets the "late_interest_bp_month" field.
+func (_u *CustomerUpdate) SetLateInterestBpMonth(v int) *CustomerUpdate {
+	_u.mutation.ResetLateInterestBpMonth()
+	_u.mutation.SetLateInterestBpMonth(v)
+	return _u
+}
+
+// SetNillableLateInterestBpMonth sets the "late_interest_bp_month" field if the given value is not nil.
+func (_u *CustomerUpdate) SetNillableLateInterestBpMonth(v *int) *CustomerUpdate {
+	if v != nil {
+		_u.SetLateInterestBpMonth(*v)
+	}
+	return _u
+}
+
+// AddLateInterestBpMonth adds value to the "late_interest_bp_month" field.
+func (_u *CustomerUpdate) AddLateInterestBpMonth(v int) *CustomerUpdate {
+	_u.mutation.AddLateInterestBpMonth(v)
+	return _u
+}
+
+// SetGraceDays sets the "grace_days" field.
+func (_u *CustomerUpdate) SetGraceDays(v int) *CustomerUpdate {
+	_u.mutation.ResetGraceDays()
+	_u.mutation.SetGraceDays(v)
+	return _u
+}
+
+// SetNillableGraceDays sets the "grace_days" field if the given value is not nil.
+func (_u *CustomerUpdate) SetNillableGraceDays(v *int) *CustomerUpdate {
+	if v != nil {
+		_u.SetGraceDays(*v)
+	}
+	return _u
+}
+
+// AddGraceDays adds value to the "grace_days" field.
+func (_u *CustomerUpdate) AddGraceDays(v int) *CustomerUpdate {
+	_u.mutation.AddGraceDays(v)
+	return _u
+}
+
 // SetOrganization sets the "organization" edge to the Organization entity.
 func (_u *CustomerUpdate) SetOrganization(v *Organization) *CustomerUpdate {
 	return _u.SetOrganizationID(v.ID)
@@ -170,6 +384,21 @@ func (_u *CustomerUpdate) AddProjects(v ...*Project) *CustomerUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.AddProjectIDs(ids...)
+}
+
+// AddReceivableIDs adds the "receivables" edge to the Receivable entity by IDs.
+func (_u *CustomerUpdate) AddReceivableIDs(ids ...uuid.UUID) *CustomerUpdate {
+	_u.mutation.AddReceivableIDs(ids...)
+	return _u
+}
+
+// AddReceivables adds the "receivables" edges to the Receivable entity.
+func (_u *CustomerUpdate) AddReceivables(v ...*Receivable) *CustomerUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddReceivableIDs(ids...)
 }
 
 // Mutation returns the CustomerMutation object of the builder.
@@ -204,6 +433,27 @@ func (_u *CustomerUpdate) RemoveProjects(v ...*Project) *CustomerUpdate {
 	return _u.RemoveProjectIDs(ids...)
 }
 
+// ClearReceivables clears all "receivables" edges to the Receivable entity.
+func (_u *CustomerUpdate) ClearReceivables() *CustomerUpdate {
+	_u.mutation.ClearReceivables()
+	return _u
+}
+
+// RemoveReceivableIDs removes the "receivables" edge to Receivable entities by IDs.
+func (_u *CustomerUpdate) RemoveReceivableIDs(ids ...uuid.UUID) *CustomerUpdate {
+	_u.mutation.RemoveReceivableIDs(ids...)
+	return _u
+}
+
+// RemoveReceivables removes "receivables" edges to Receivable entities.
+func (_u *CustomerUpdate) RemoveReceivables(v ...*Receivable) *CustomerUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveReceivableIDs(ids...)
+}
+
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (_u *CustomerUpdate) Save(ctx context.Context) (int, error) {
 	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
@@ -233,6 +483,41 @@ func (_u *CustomerUpdate) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *CustomerUpdate) check() error {
+	if v, ok := _u.mutation.DefaultRateCents(); ok {
+		if err := customer.DefaultRateCentsValidator(v); err != nil {
+			return &ValidationError{Name: "default_rate_cents", err: fmt.Errorf(`ent: validator failed for field "Customer.default_rate_cents": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.MonthlyFeeCents(); ok {
+		if err := customer.MonthlyFeeCentsValidator(v); err != nil {
+			return &ValidationError{Name: "monthly_fee_cents", err: fmt.Errorf(`ent: validator failed for field "Customer.monthly_fee_cents": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.ClosingDay(); ok {
+		if err := customer.ClosingDayValidator(v); err != nil {
+			return &ValidationError{Name: "closing_day", err: fmt.Errorf(`ent: validator failed for field "Customer.closing_day": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.PaymentDays(); ok {
+		if err := customer.PaymentDaysValidator(v); err != nil {
+			return &ValidationError{Name: "payment_days", err: fmt.Errorf(`ent: validator failed for field "Customer.payment_days": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.LateFeeBp(); ok {
+		if err := customer.LateFeeBpValidator(v); err != nil {
+			return &ValidationError{Name: "late_fee_bp", err: fmt.Errorf(`ent: validator failed for field "Customer.late_fee_bp": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.LateInterestBpMonth(); ok {
+		if err := customer.LateInterestBpMonthValidator(v); err != nil {
+			return &ValidationError{Name: "late_interest_bp_month", err: fmt.Errorf(`ent: validator failed for field "Customer.late_interest_bp_month": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.GraceDays(); ok {
+		if err := customer.GraceDaysValidator(v); err != nil {
+			return &ValidationError{Name: "grace_days", err: fmt.Errorf(`ent: validator failed for field "Customer.grace_days": %w`, err)}
+		}
+	}
 	if _u.mutation.OrganizationCleared() && len(_u.mutation.OrganizationIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "Customer.organization"`)
 	}
@@ -280,6 +565,69 @@ func (_u *CustomerUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.ContactPhoneCleared() {
 		_spec.ClearField(customer.FieldContactPhone, field.TypeString)
+	}
+	if value, ok := _u.mutation.BillingMode(); ok {
+		_spec.SetField(customer.FieldBillingMode, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.DefaultRateCents(); ok {
+		_spec.SetField(customer.FieldDefaultRateCents, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedDefaultRateCents(); ok {
+		_spec.AddField(customer.FieldDefaultRateCents, field.TypeInt, value)
+	}
+	if _u.mutation.DefaultRateCentsCleared() {
+		_spec.ClearField(customer.FieldDefaultRateCents, field.TypeInt)
+	}
+	if value, ok := _u.mutation.MonthlyFeeCents(); ok {
+		_spec.SetField(customer.FieldMonthlyFeeCents, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedMonthlyFeeCents(); ok {
+		_spec.AddField(customer.FieldMonthlyFeeCents, field.TypeInt, value)
+	}
+	if _u.mutation.MonthlyFeeCentsCleared() {
+		_spec.ClearField(customer.FieldMonthlyFeeCents, field.TypeInt)
+	}
+	if value, ok := _u.mutation.ContractStart(); ok {
+		_spec.SetField(customer.FieldContractStart, field.TypeString, value)
+	}
+	if _u.mutation.ContractStartCleared() {
+		_spec.ClearField(customer.FieldContractStart, field.TypeString)
+	}
+	if value, ok := _u.mutation.ContractEnd(); ok {
+		_spec.SetField(customer.FieldContractEnd, field.TypeString, value)
+	}
+	if _u.mutation.ContractEndCleared() {
+		_spec.ClearField(customer.FieldContractEnd, field.TypeString)
+	}
+	if value, ok := _u.mutation.ClosingDay(); ok {
+		_spec.SetField(customer.FieldClosingDay, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedClosingDay(); ok {
+		_spec.AddField(customer.FieldClosingDay, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.PaymentDays(); ok {
+		_spec.SetField(customer.FieldPaymentDays, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedPaymentDays(); ok {
+		_spec.AddField(customer.FieldPaymentDays, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.LateFeeBp(); ok {
+		_spec.SetField(customer.FieldLateFeeBp, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedLateFeeBp(); ok {
+		_spec.AddField(customer.FieldLateFeeBp, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.LateInterestBpMonth(); ok {
+		_spec.SetField(customer.FieldLateInterestBpMonth, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedLateInterestBpMonth(); ok {
+		_spec.AddField(customer.FieldLateInterestBpMonth, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.GraceDays(); ok {
+		_spec.SetField(customer.FieldGraceDays, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedGraceDays(); ok {
+		_spec.AddField(customer.FieldGraceDays, field.TypeInt, value)
 	}
 	if _u.mutation.OrganizationCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -348,6 +696,51 @@ func (_u *CustomerUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(project.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ReceivablesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   customer.ReceivablesTable,
+			Columns: []string{customer.ReceivablesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(receivable.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedReceivablesIDs(); len(nodes) > 0 && !_u.mutation.ReceivablesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   customer.ReceivablesTable,
+			Columns: []string{customer.ReceivablesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(receivable.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ReceivablesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   customer.ReceivablesTable,
+			Columns: []string{customer.ReceivablesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(receivable.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -497,6 +890,219 @@ func (_u *CustomerUpdateOne) ClearContactPhone() *CustomerUpdateOne {
 	return _u
 }
 
+// SetBillingMode sets the "billing_mode" field.
+func (_u *CustomerUpdateOne) SetBillingMode(v string) *CustomerUpdateOne {
+	_u.mutation.SetBillingMode(v)
+	return _u
+}
+
+// SetNillableBillingMode sets the "billing_mode" field if the given value is not nil.
+func (_u *CustomerUpdateOne) SetNillableBillingMode(v *string) *CustomerUpdateOne {
+	if v != nil {
+		_u.SetBillingMode(*v)
+	}
+	return _u
+}
+
+// SetDefaultRateCents sets the "default_rate_cents" field.
+func (_u *CustomerUpdateOne) SetDefaultRateCents(v int) *CustomerUpdateOne {
+	_u.mutation.ResetDefaultRateCents()
+	_u.mutation.SetDefaultRateCents(v)
+	return _u
+}
+
+// SetNillableDefaultRateCents sets the "default_rate_cents" field if the given value is not nil.
+func (_u *CustomerUpdateOne) SetNillableDefaultRateCents(v *int) *CustomerUpdateOne {
+	if v != nil {
+		_u.SetDefaultRateCents(*v)
+	}
+	return _u
+}
+
+// AddDefaultRateCents adds value to the "default_rate_cents" field.
+func (_u *CustomerUpdateOne) AddDefaultRateCents(v int) *CustomerUpdateOne {
+	_u.mutation.AddDefaultRateCents(v)
+	return _u
+}
+
+// ClearDefaultRateCents clears the value of the "default_rate_cents" field.
+func (_u *CustomerUpdateOne) ClearDefaultRateCents() *CustomerUpdateOne {
+	_u.mutation.ClearDefaultRateCents()
+	return _u
+}
+
+// SetMonthlyFeeCents sets the "monthly_fee_cents" field.
+func (_u *CustomerUpdateOne) SetMonthlyFeeCents(v int) *CustomerUpdateOne {
+	_u.mutation.ResetMonthlyFeeCents()
+	_u.mutation.SetMonthlyFeeCents(v)
+	return _u
+}
+
+// SetNillableMonthlyFeeCents sets the "monthly_fee_cents" field if the given value is not nil.
+func (_u *CustomerUpdateOne) SetNillableMonthlyFeeCents(v *int) *CustomerUpdateOne {
+	if v != nil {
+		_u.SetMonthlyFeeCents(*v)
+	}
+	return _u
+}
+
+// AddMonthlyFeeCents adds value to the "monthly_fee_cents" field.
+func (_u *CustomerUpdateOne) AddMonthlyFeeCents(v int) *CustomerUpdateOne {
+	_u.mutation.AddMonthlyFeeCents(v)
+	return _u
+}
+
+// ClearMonthlyFeeCents clears the value of the "monthly_fee_cents" field.
+func (_u *CustomerUpdateOne) ClearMonthlyFeeCents() *CustomerUpdateOne {
+	_u.mutation.ClearMonthlyFeeCents()
+	return _u
+}
+
+// SetContractStart sets the "contract_start" field.
+func (_u *CustomerUpdateOne) SetContractStart(v string) *CustomerUpdateOne {
+	_u.mutation.SetContractStart(v)
+	return _u
+}
+
+// SetNillableContractStart sets the "contract_start" field if the given value is not nil.
+func (_u *CustomerUpdateOne) SetNillableContractStart(v *string) *CustomerUpdateOne {
+	if v != nil {
+		_u.SetContractStart(*v)
+	}
+	return _u
+}
+
+// ClearContractStart clears the value of the "contract_start" field.
+func (_u *CustomerUpdateOne) ClearContractStart() *CustomerUpdateOne {
+	_u.mutation.ClearContractStart()
+	return _u
+}
+
+// SetContractEnd sets the "contract_end" field.
+func (_u *CustomerUpdateOne) SetContractEnd(v string) *CustomerUpdateOne {
+	_u.mutation.SetContractEnd(v)
+	return _u
+}
+
+// SetNillableContractEnd sets the "contract_end" field if the given value is not nil.
+func (_u *CustomerUpdateOne) SetNillableContractEnd(v *string) *CustomerUpdateOne {
+	if v != nil {
+		_u.SetContractEnd(*v)
+	}
+	return _u
+}
+
+// ClearContractEnd clears the value of the "contract_end" field.
+func (_u *CustomerUpdateOne) ClearContractEnd() *CustomerUpdateOne {
+	_u.mutation.ClearContractEnd()
+	return _u
+}
+
+// SetClosingDay sets the "closing_day" field.
+func (_u *CustomerUpdateOne) SetClosingDay(v int) *CustomerUpdateOne {
+	_u.mutation.ResetClosingDay()
+	_u.mutation.SetClosingDay(v)
+	return _u
+}
+
+// SetNillableClosingDay sets the "closing_day" field if the given value is not nil.
+func (_u *CustomerUpdateOne) SetNillableClosingDay(v *int) *CustomerUpdateOne {
+	if v != nil {
+		_u.SetClosingDay(*v)
+	}
+	return _u
+}
+
+// AddClosingDay adds value to the "closing_day" field.
+func (_u *CustomerUpdateOne) AddClosingDay(v int) *CustomerUpdateOne {
+	_u.mutation.AddClosingDay(v)
+	return _u
+}
+
+// SetPaymentDays sets the "payment_days" field.
+func (_u *CustomerUpdateOne) SetPaymentDays(v int) *CustomerUpdateOne {
+	_u.mutation.ResetPaymentDays()
+	_u.mutation.SetPaymentDays(v)
+	return _u
+}
+
+// SetNillablePaymentDays sets the "payment_days" field if the given value is not nil.
+func (_u *CustomerUpdateOne) SetNillablePaymentDays(v *int) *CustomerUpdateOne {
+	if v != nil {
+		_u.SetPaymentDays(*v)
+	}
+	return _u
+}
+
+// AddPaymentDays adds value to the "payment_days" field.
+func (_u *CustomerUpdateOne) AddPaymentDays(v int) *CustomerUpdateOne {
+	_u.mutation.AddPaymentDays(v)
+	return _u
+}
+
+// SetLateFeeBp sets the "late_fee_bp" field.
+func (_u *CustomerUpdateOne) SetLateFeeBp(v int) *CustomerUpdateOne {
+	_u.mutation.ResetLateFeeBp()
+	_u.mutation.SetLateFeeBp(v)
+	return _u
+}
+
+// SetNillableLateFeeBp sets the "late_fee_bp" field if the given value is not nil.
+func (_u *CustomerUpdateOne) SetNillableLateFeeBp(v *int) *CustomerUpdateOne {
+	if v != nil {
+		_u.SetLateFeeBp(*v)
+	}
+	return _u
+}
+
+// AddLateFeeBp adds value to the "late_fee_bp" field.
+func (_u *CustomerUpdateOne) AddLateFeeBp(v int) *CustomerUpdateOne {
+	_u.mutation.AddLateFeeBp(v)
+	return _u
+}
+
+// SetLateInterestBpMonth sets the "late_interest_bp_month" field.
+func (_u *CustomerUpdateOne) SetLateInterestBpMonth(v int) *CustomerUpdateOne {
+	_u.mutation.ResetLateInterestBpMonth()
+	_u.mutation.SetLateInterestBpMonth(v)
+	return _u
+}
+
+// SetNillableLateInterestBpMonth sets the "late_interest_bp_month" field if the given value is not nil.
+func (_u *CustomerUpdateOne) SetNillableLateInterestBpMonth(v *int) *CustomerUpdateOne {
+	if v != nil {
+		_u.SetLateInterestBpMonth(*v)
+	}
+	return _u
+}
+
+// AddLateInterestBpMonth adds value to the "late_interest_bp_month" field.
+func (_u *CustomerUpdateOne) AddLateInterestBpMonth(v int) *CustomerUpdateOne {
+	_u.mutation.AddLateInterestBpMonth(v)
+	return _u
+}
+
+// SetGraceDays sets the "grace_days" field.
+func (_u *CustomerUpdateOne) SetGraceDays(v int) *CustomerUpdateOne {
+	_u.mutation.ResetGraceDays()
+	_u.mutation.SetGraceDays(v)
+	return _u
+}
+
+// SetNillableGraceDays sets the "grace_days" field if the given value is not nil.
+func (_u *CustomerUpdateOne) SetNillableGraceDays(v *int) *CustomerUpdateOne {
+	if v != nil {
+		_u.SetGraceDays(*v)
+	}
+	return _u
+}
+
+// AddGraceDays adds value to the "grace_days" field.
+func (_u *CustomerUpdateOne) AddGraceDays(v int) *CustomerUpdateOne {
+	_u.mutation.AddGraceDays(v)
+	return _u
+}
+
 // SetOrganization sets the "organization" edge to the Organization entity.
 func (_u *CustomerUpdateOne) SetOrganization(v *Organization) *CustomerUpdateOne {
 	return _u.SetOrganizationID(v.ID)
@@ -515,6 +1121,21 @@ func (_u *CustomerUpdateOne) AddProjects(v ...*Project) *CustomerUpdateOne {
 		ids[i] = v[i].ID
 	}
 	return _u.AddProjectIDs(ids...)
+}
+
+// AddReceivableIDs adds the "receivables" edge to the Receivable entity by IDs.
+func (_u *CustomerUpdateOne) AddReceivableIDs(ids ...uuid.UUID) *CustomerUpdateOne {
+	_u.mutation.AddReceivableIDs(ids...)
+	return _u
+}
+
+// AddReceivables adds the "receivables" edges to the Receivable entity.
+func (_u *CustomerUpdateOne) AddReceivables(v ...*Receivable) *CustomerUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddReceivableIDs(ids...)
 }
 
 // Mutation returns the CustomerMutation object of the builder.
@@ -547,6 +1168,27 @@ func (_u *CustomerUpdateOne) RemoveProjects(v ...*Project) *CustomerUpdateOne {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveProjectIDs(ids...)
+}
+
+// ClearReceivables clears all "receivables" edges to the Receivable entity.
+func (_u *CustomerUpdateOne) ClearReceivables() *CustomerUpdateOne {
+	_u.mutation.ClearReceivables()
+	return _u
+}
+
+// RemoveReceivableIDs removes the "receivables" edge to Receivable entities by IDs.
+func (_u *CustomerUpdateOne) RemoveReceivableIDs(ids ...uuid.UUID) *CustomerUpdateOne {
+	_u.mutation.RemoveReceivableIDs(ids...)
+	return _u
+}
+
+// RemoveReceivables removes "receivables" edges to Receivable entities.
+func (_u *CustomerUpdateOne) RemoveReceivables(v ...*Receivable) *CustomerUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveReceivableIDs(ids...)
 }
 
 // Where appends a list predicates to the CustomerUpdate builder.
@@ -591,6 +1233,41 @@ func (_u *CustomerUpdateOne) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *CustomerUpdateOne) check() error {
+	if v, ok := _u.mutation.DefaultRateCents(); ok {
+		if err := customer.DefaultRateCentsValidator(v); err != nil {
+			return &ValidationError{Name: "default_rate_cents", err: fmt.Errorf(`ent: validator failed for field "Customer.default_rate_cents": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.MonthlyFeeCents(); ok {
+		if err := customer.MonthlyFeeCentsValidator(v); err != nil {
+			return &ValidationError{Name: "monthly_fee_cents", err: fmt.Errorf(`ent: validator failed for field "Customer.monthly_fee_cents": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.ClosingDay(); ok {
+		if err := customer.ClosingDayValidator(v); err != nil {
+			return &ValidationError{Name: "closing_day", err: fmt.Errorf(`ent: validator failed for field "Customer.closing_day": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.PaymentDays(); ok {
+		if err := customer.PaymentDaysValidator(v); err != nil {
+			return &ValidationError{Name: "payment_days", err: fmt.Errorf(`ent: validator failed for field "Customer.payment_days": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.LateFeeBp(); ok {
+		if err := customer.LateFeeBpValidator(v); err != nil {
+			return &ValidationError{Name: "late_fee_bp", err: fmt.Errorf(`ent: validator failed for field "Customer.late_fee_bp": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.LateInterestBpMonth(); ok {
+		if err := customer.LateInterestBpMonthValidator(v); err != nil {
+			return &ValidationError{Name: "late_interest_bp_month", err: fmt.Errorf(`ent: validator failed for field "Customer.late_interest_bp_month": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.GraceDays(); ok {
+		if err := customer.GraceDaysValidator(v); err != nil {
+			return &ValidationError{Name: "grace_days", err: fmt.Errorf(`ent: validator failed for field "Customer.grace_days": %w`, err)}
+		}
+	}
 	if _u.mutation.OrganizationCleared() && len(_u.mutation.OrganizationIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "Customer.organization"`)
 	}
@@ -655,6 +1332,69 @@ func (_u *CustomerUpdateOne) sqlSave(ctx context.Context) (_node *Customer, err 
 	}
 	if _u.mutation.ContactPhoneCleared() {
 		_spec.ClearField(customer.FieldContactPhone, field.TypeString)
+	}
+	if value, ok := _u.mutation.BillingMode(); ok {
+		_spec.SetField(customer.FieldBillingMode, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.DefaultRateCents(); ok {
+		_spec.SetField(customer.FieldDefaultRateCents, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedDefaultRateCents(); ok {
+		_spec.AddField(customer.FieldDefaultRateCents, field.TypeInt, value)
+	}
+	if _u.mutation.DefaultRateCentsCleared() {
+		_spec.ClearField(customer.FieldDefaultRateCents, field.TypeInt)
+	}
+	if value, ok := _u.mutation.MonthlyFeeCents(); ok {
+		_spec.SetField(customer.FieldMonthlyFeeCents, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedMonthlyFeeCents(); ok {
+		_spec.AddField(customer.FieldMonthlyFeeCents, field.TypeInt, value)
+	}
+	if _u.mutation.MonthlyFeeCentsCleared() {
+		_spec.ClearField(customer.FieldMonthlyFeeCents, field.TypeInt)
+	}
+	if value, ok := _u.mutation.ContractStart(); ok {
+		_spec.SetField(customer.FieldContractStart, field.TypeString, value)
+	}
+	if _u.mutation.ContractStartCleared() {
+		_spec.ClearField(customer.FieldContractStart, field.TypeString)
+	}
+	if value, ok := _u.mutation.ContractEnd(); ok {
+		_spec.SetField(customer.FieldContractEnd, field.TypeString, value)
+	}
+	if _u.mutation.ContractEndCleared() {
+		_spec.ClearField(customer.FieldContractEnd, field.TypeString)
+	}
+	if value, ok := _u.mutation.ClosingDay(); ok {
+		_spec.SetField(customer.FieldClosingDay, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedClosingDay(); ok {
+		_spec.AddField(customer.FieldClosingDay, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.PaymentDays(); ok {
+		_spec.SetField(customer.FieldPaymentDays, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedPaymentDays(); ok {
+		_spec.AddField(customer.FieldPaymentDays, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.LateFeeBp(); ok {
+		_spec.SetField(customer.FieldLateFeeBp, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedLateFeeBp(); ok {
+		_spec.AddField(customer.FieldLateFeeBp, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.LateInterestBpMonth(); ok {
+		_spec.SetField(customer.FieldLateInterestBpMonth, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedLateInterestBpMonth(); ok {
+		_spec.AddField(customer.FieldLateInterestBpMonth, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.GraceDays(); ok {
+		_spec.SetField(customer.FieldGraceDays, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedGraceDays(); ok {
+		_spec.AddField(customer.FieldGraceDays, field.TypeInt, value)
 	}
 	if _u.mutation.OrganizationCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -723,6 +1463,51 @@ func (_u *CustomerUpdateOne) sqlSave(ctx context.Context) (_node *Customer, err 
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(project.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ReceivablesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   customer.ReceivablesTable,
+			Columns: []string{customer.ReceivablesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(receivable.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedReceivablesIDs(); len(nodes) > 0 && !_u.mutation.ReceivablesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   customer.ReceivablesTable,
+			Columns: []string{customer.ReceivablesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(receivable.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ReceivablesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   customer.ReceivablesTable,
+			Columns: []string{customer.ReceivablesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(receivable.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

@@ -2,11 +2,14 @@ package organization
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 
 	"working-time-tracker/ent"
+	entinvite "working-time-tracker/ent/invite"
 	entorg "working-time-tracker/ent/organization"
+	entperson "working-time-tracker/ent/person"
 	entproject "working-time-tracker/ent/project"
 	"working-time-tracker/internal/database"
 )
@@ -73,9 +76,25 @@ func (s *Store) Update(org *Organization) error {
 		SetCountry(org.Country).
 		SetWorkMode(org.WorkMode).
 		SetTimezone(org.Timezone).
-		SetCurrency(org.Currency)
+		SetCurrency(org.Currency).
+		SetSolo(org.Solo)
 	_, err := q.Save(context.Background())
 	return err
+}
+
+// CountPeople conta as pessoas da organização (o dono incluído).
+func (s *Store) CountPeople(orgID uuid.UUID) (int, error) {
+	return s.client.Person.Query().
+		Where(entperson.OrganizationIDEQ(orgID)).
+		Count(context.Background())
+}
+
+// CountPendingInvites conta os convites ainda utilizáveis da organização: nem aceitos nem vencidos, como a lista de
+// convites pendentes (auth.Store.PendingInvites).
+func (s *Store) CountPendingInvites(orgID uuid.UUID, now time.Time) (int, error) {
+	return s.client.Invite.Query().
+		Where(entinvite.OrganizationIDEQ(orgID), entinvite.AcceptedAtIsNil(), entinvite.ExpiresAtGT(now)).
+		Count(context.Background())
 }
 
 func (s *Store) Delete(id string) error {
@@ -121,6 +140,7 @@ func toDomainOrg(e *ent.Organization) *Organization {
 		WorkMode:     e.WorkMode,
 		Timezone:     e.Timezone,
 		Currency:     e.Currency,
+		Solo:         e.Solo,
 		CreatedAt:    e.CreatedAt,
 	}
 }

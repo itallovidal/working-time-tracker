@@ -21,4 +21,26 @@ var (
 	ErrInvalidPhone        = apperr.New("customer.invalid_phone", http.StatusBadRequest)
 	ErrHasProjects         = apperr.New("customer.has_projects", http.StatusConflict)
 	ErrInvalidOrganization = apperr.New("customer.invalid_organization", http.StatusBadRequest)
+
+	// Os termos comerciais (modo solo). Todos dizem o campo (a chave do corpo), menos os conflitos de estado.
+	// ErrInvalidBillingMode recusa um modo que não é hourly nem monthly. O field é billing_mode.
+	ErrInvalidBillingMode = apperr.New("customer.invalid_billing_mode", http.StatusBadRequest)
+	// ErrMonthlyNeedsSolo recusa o modo monthly numa organização que não é solo. O field é billing_mode.
+	ErrMonthlyNeedsSolo = apperr.New("customer.monthly_needs_solo", http.StatusBadRequest)
+	// ErrModeLocked recusa trocar o modo de um cliente que já tem projetos (issue #25). O field é billing_mode.
+	ErrModeLocked = apperr.New("customer.mode_locked", http.StatusConflict)
+	// ErrHasReceivables recusa excluir o cliente que tem recebíveis: quem os desfaz é o dono, na página A receber.
+	ErrHasReceivables = apperr.New("customer.has_receivables", http.StatusConflict)
+	// ErrFieldHourlyOnly e ErrFieldMonthlyOnly recusam o campo do outro modo; o field diz qual.
+	ErrFieldHourlyOnly  = apperr.New("customer.field_hourly_only", http.StatusBadRequest, "field")
+	ErrFieldMonthlyOnly = apperr.New("customer.field_monthly_only", http.StatusBadRequest, "field")
+	// Os valores fora da faixa, cada um com o campo e a faixa no texto.
+	ErrInvalidDefaultRate  = apperr.New("customer.invalid_default_rate", http.StatusBadRequest)
+	ErrInvalidMonthlyFee   = apperr.New("customer.invalid_monthly_fee", http.StatusBadRequest)
+	ErrInvalidContractEnd  = apperr.New("customer.invalid_contract_end", http.StatusBadRequest)
+	ErrInvalidClosingDay   = apperr.New("customer.invalid_closing_day", http.StatusBadRequest)
+	ErrInvalidPaymentDays  = apperr.New("customer.invalid_payment_days", http.StatusBadRequest)
+	ErrInvalidLateFee      = apperr.New("customer.invalid_late_fee", http.StatusBadRequest)
+	ErrInvalidLateInterest = apperr.New("customer.invalid_late_interest", http.StatusBadRequest)
+	ErrInvalidGraceDays    = apperr.New("customer.invalid_grace_days", http.StatusBadRequest)
 )

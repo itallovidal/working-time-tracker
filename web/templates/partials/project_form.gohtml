@@ -27,7 +27,7 @@
         <div class="fields">
           <div class="field">
             <label for="project-customer">{{.T "org.projects.customer"}}</label>
-            <select id="project-customer" data-field="customer_id" x-model="draft.customer_id" @change="clearField('customer_id')"
+            <select id="project-customer" data-field="customer_id" x-model="draft.customer_id" @change="customerChanged()"
                     :aria-invalid="fieldErrors.customer_id ? 'true' : 'false'">
               <option value="">{{.T "org.projects.internal"}}</option>
               <template x-for="c in customers || []" :key="c.id">
@@ -36,14 +36,17 @@
             </select>
             {{template "field_error" "customer_id"}}
           </div>
-          {{/* Projeto interno não tem quem pague: o valor só aparece com um cliente escolhido. */}}
-          <div class="field" x-show="draft.customer_id">
+          {{/* Projeto interno não tem quem pague, e o cliente mensal paga o contrato, não as horas: o valor só aparece
+               com um cliente por hora. Ele vem preenchido com o valor padrão do cliente (o projeto guarda o seu). */}}
+          <div class="field" x-show="hasRate()">
             <label for="project-bill-rate"><span x-text="$t('project.fields.bill_rate', { unit: WTT.fmt.moneyUnit() })"></span></label>
             <input id="project-bill-rate" type="text" inputmode="decimal" class="num" data-field="bill_rate_cents" x-model="draft.rate"
-                   @input="clearField('bill_rate_cents')" :aria-invalid="fieldErrors.bill_rate_cents ? 'true' : 'false'">
+                   @input="rateTouched = true; clearField('bill_rate_cents')" :aria-invalid="fieldErrors.bill_rate_cents ? 'true' : 'false'">
             {{template "field_error" "bill_rate_cents"}}
+            <span class="hint" x-cloak x-show="rateFromDefault()" x-text="$t('customer.billing.project_rate_default')"></span>
           </div>
         </div>
+        <p class="muted small" x-cloak x-show="monthlyCustomer()" x-text="$t('customer.billing.project_monthly_note')"></p>
         {{template "project_customer_meeting" .}}
         <span class="hint">{{.T "org.projects.admins_only_hint"}}</span>
       </fieldset>
