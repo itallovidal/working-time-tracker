@@ -15,14 +15,14 @@ var gitlabDescriptor = Descriptor{
 	Type:  "gitlab",
 	Label: "GitLab",
 	Metadata: []Field{
-		{Key: "project_url", Required: true, Summary: true},
+		{Key: "project_url", Required: true, Summary: true, Picker: "datalist"},
 	},
 	ItemNumeric: true,
-	ComingSoon:  true,
 	Sync:        true,
 	// Como o GitHub: o responsável se liga pelo e-mail público, e a lista filtra pela última mudança
 	// (updated_after). O prazo (due_date) fica de fora, como no GitHub.
 	Caps: SyncCaps{Assignee: true, ServerSince: true},
+	Auth: AuthOAuth,
 }
 
 // GitLabIntegration fala com a API do GitLab. BaseURL e Client são opcionais e

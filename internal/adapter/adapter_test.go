@@ -251,6 +251,10 @@ func TestGitHub_AccountAndRepositories(t *testing.T) {
 	gitlab := &GitLabIntegration{}
 	var _ AccountLookup = gitlab
 	var _ RepositoryLister = gitlab
+	if d := gitlab.Descriptor(); d.Auth != AuthOAuth || d.ComingSoon || !d.Sync || !d.Caps.Assignee || !d.Caps.ServerSince ||
+		d.Caps.Deadline || d.Caps.AutoPublish || d.Metadata[0].Picker != "datalist" {
+		t.Errorf("gitlab descriptor = %+v; want it like GitHub's", d)
+	}
 	trello := &TrelloIntegration{}
 	if d := trello.Descriptor(); d.Auth != AuthOAuth || d.ComingSoon || !d.Sync {
 		t.Errorf("trello descriptor: auth %q, coming soon %v, sync %v", d.Auth, d.ComingSoon, d.Sync)

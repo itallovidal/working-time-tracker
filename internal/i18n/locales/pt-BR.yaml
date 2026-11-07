@@ -1533,8 +1533,11 @@ integration_types:
     token_hint: Token pessoal com escopo api, que lê e escreve as issues.
     item_label: Número da issue
     item_placeholder: "Ex.: 42"
+    pick_title: Escolha o projeto
+    pick_hint: A lista traz os projetos de que a sua conta é membro. Um projeto que não aparece se digita como grupo/projeto.
     sync_label: "Sincronizar as issues deste projeto com as tarefas"
     sync_hint: "As issues abertas viram tarefas, e o nome, a descrição, as etiquetas, o responsável e o fechamento ficam iguais nos dois lados, para qualquer lado que mude. O responsável é ligado pelo e-mail público do usuário no GitLab. Se os dois lados mudarem o mesmo campo, vale o do GitLab. Prioridade, prazo, horas e os status Em progresso e Aguardando fechamento ficam só aqui."
+    connect_unconfigured: A conexão com o GitLab não está configurada neste servidor. Quem administra precisa definir GITLAB_CLIENT_ID, GITLAB_CLIENT_SECRET e PUBLIC_URL.
     fields:
       project_url:
         label: Projeto

@@ -73,6 +73,9 @@ func RegisterPages(e *echo.Echo, p *page.Handler, m *auth.Middleware, oauth *int
 	// cai num endereço fixo, o que está cadastrado no app, e confere tudo de novo pelo cookie.
 	g.GET("/projects/:projectId/management/integrations/github/connect", oauth.GitHubConnect, prj, can(permission.IntegrationsManage))
 	g.GET(integration.CallbackPath, oauth.GitHubCallback)
+	// Conectar com o GitLab: o mesmo vai e volta do GitHub.
+	g.GET("/projects/:projectId/management/integrations/gitlab/connect", oauth.GitLabConnect, prj, can(permission.IntegrationsManage))
+	g.GET(integration.GitLabCallbackPath, oauth.GitLabCallback)
 	// Conectar com o Trello: a ida é igual; a volta cai numa página que lê o token do fragmento da URL e o
 	// entrega ao servidor, que confere tudo de novo pelo cookie.
 	g.GET("/projects/:projectId/management/integrations/trello/connect", oauth.TrelloConnect, prj, can(permission.IntegrationsManage))

@@ -14,17 +14,17 @@ func setRequired(t *testing.T) {
 }
 
 // A sincronização olha as integrações de cinco em cinco minutos, a menos que se diga outra coisa; zero a desliga, e o
-// que não é uma duração derruba a subida. SYNC_INTERVAL vale para todas as plataformas; GITHUB_SYNC_INTERVAL e
-// TRELLO_SYNC_INTERVAL valem só para a delas, e quem não tem o seu usa o comum.
+// que não é uma duração derruba a subida. SYNC_INTERVAL vale para todas as plataformas; GITHUB_SYNC_INTERVAL,
+// GITLAB_SYNC_INTERVAL e TRELLO_SYNC_INTERVAL valem só para a delas, e quem não tem o seu usa o comum.
 func TestLoad_SyncIntervals(t *testing.T) {
 	setRequired(t)
 	clear := func() {
-		for _, name := range []string{"SYNC_INTERVAL", "GITHUB_SYNC_INTERVAL", "TRELLO_SYNC_INTERVAL"} {
+		for _, name := range []string{"SYNC_INTERVAL", "GITHUB_SYNC_INTERVAL", "GITLAB_SYNC_INTERVAL", "TRELLO_SYNC_INTERVAL"} {
 			t.Setenv(name, "")
 		}
 	}
 
-	for _, name := range []string{"SYNC_INTERVAL", "GITHUB_SYNC_INTERVAL", "TRELLO_SYNC_INTERVAL"} {
+	for _, name := range []string{"SYNC_INTERVAL", "GITHUB_SYNC_INTERVAL", "GITLAB_SYNC_INTERVAL", "TRELLO_SYNC_INTERVAL"} {
 		for raw, want := range map[string]time.Duration{"30s": 30 * time.Second, "1h": time.Hour, "0": 0, " 2m ": 2 * time.Minute} {
 			clear()
 			t.Setenv(name, raw)
@@ -39,7 +39,7 @@ func TestLoad_SyncIntervals(t *testing.T) {
 				}
 				continue
 			}
-			platform := map[string]string{"GITHUB_SYNC_INTERVAL": "github", "TRELLO_SYNC_INTERVAL": "trello"}[name]
+			platform := map[string]string{"GITHUB_SYNC_INTERVAL": "github", "GITLAB_SYNC_INTERVAL": "gitlab", "TRELLO_SYNC_INTERVAL": "trello"}[name]
 			if got, ok := cfg.SyncIntervals[platform]; !ok || got != want || len(cfg.SyncIntervals) != 1 {
 				t.Errorf("%s=%q: per platform %v, want only %s = %v", name, raw, cfg.SyncIntervals, platform, want)
 			}
@@ -65,10 +65,28 @@ func TestLoad_SyncIntervals(t *testing.T) {
 	clear()
 	t.Setenv("SYNC_INTERVAL", "10m")
 	t.Setenv("GITHUB_SYNC_INTERVAL", "1m")
+	t.Setenv("GITLAB_SYNC_INTERVAL", "3m")
 	t.Setenv("TRELLO_SYNC_INTERVAL", "0")
 	cfg, err := Load()
-	if err != nil || cfg.SyncInterval != 10*time.Minute || cfg.SyncIntervals["github"] != time.Minute || cfg.SyncIntervals["trello"] != 0 || len(cfg.SyncIntervals) != 2 {
+	if err != nil || cfg.SyncInterval != 10*time.Minute || cfg.SyncIntervals["github"] != time.Minute || cfg.SyncIntervals["gitlab"] != 3*time.Minute ||
+		cfg.SyncIntervals["trello"] != 0 || len(cfg.SyncIntervals) != 3 {
 		t.Errorf("mixed = default %v, per platform %v, %v", cfg.SyncInterval, cfg.SyncIntervals, err)
+	}
+}
+
+// O app do GitLab, como o do GitHub: os endereços perdem a barra do fim, e vazios valem o gitlab.com.
+func TestLoad_GitLabSettings(t *testing.T) {
+	setRequired(t)
+	t.Setenv("GITLAB_CLIENT_ID", " id ")
+	t.Setenv("GITLAB_CLIENT_SECRET", " secret ")
+	t.Setenv("GITLAB_URL", "http://localhost:8093/")
+	t.Setenv("GITLAB_API_URL", "http://localhost:8093/api/v4/")
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	if cfg.GitLabClientID != "id" || cfg.GitLabClientSecret != "secret" || cfg.GitLabURL != "http://localhost:8093" || cfg.GitLabAPIURL != "http://localhost:8093/api/v4" {
+		t.Errorf("gitlab settings = %q %q %q %q", cfg.GitLabClientID, cfg.GitLabClientSecret, cfg.GitLabURL, cfg.GitLabAPIURL)
 	}
 }
 
@@ -77,6 +95,7 @@ func TestLoad_TrelloSettings(t *testing.T) {
 	setRequired(t)
 	t.Setenv("SYNC_INTERVAL", "")
 	t.Setenv("GITHUB_SYNC_INTERVAL", "")
+	t.Setenv("GITLAB_SYNC_INTERVAL", "")
 	t.Setenv("TRELLO_SYNC_INTERVAL", "")
 	t.Setenv("TRELLO_API_KEY", " 0123456789abcdef ")
 	t.Setenv("TRELLO_URL", "http://localhost:8092/")

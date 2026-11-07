@@ -64,3 +64,24 @@ func withBasicOnly(t *testing.T, typ string) {
 	adapter.Register(typ, func() adapter.Integration { return basicOnly{orig} })
 	t.Cleanup(func() { adapter.Register(typ, func() adapter.Integration { return orig }) })
 }
+
+// comingSoon é um tipo marcado como "em breve", com o resto igual ao do tipo que ele cobre.
+type comingSoon struct{ adapter.Integration }
+
+func (c comingSoon) Descriptor() adapter.Descriptor {
+	d := c.Integration.Descriptor()
+	d.ComingSoon = true
+	return d
+}
+
+// withComingSoon marca o tipo como "em breve" durante o teste: nenhum tipo de verdade está mais, e o mecanismo
+// continua valendo para o próximo que chegar.
+func withComingSoon(t *testing.T, typ string) {
+	t.Helper()
+	orig, err := adapter.GetIntegration(typ)
+	if err != nil {
+		t.Fatal(err)
+	}
+	adapter.Register(typ, func() adapter.Integration { return comingSoon{orig} })
+	t.Cleanup(func() { adapter.Register(typ, func() adapter.Integration { return orig }) })
+}
