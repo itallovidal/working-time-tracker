@@ -283,9 +283,9 @@ mudar schema, regras nem tela. Buscar na hora evita dados velhos e a estrutura d
   tarefa e só então chamar as plataformas, uma a uma: uma falha lá nunca traz a tarefa de volta.
 
 **Hoje:** os detalhes do item são buscados a cada leitura, sem o cache de curta duração; o único cache é o da
-sincronização (o e-mail público e o login no GitHub). O `SendNotification` não existe. O Trello é oferecido; o
-GitLab tem o adapter pronto, mas segue "Em breve" (`Descriptor.ComingSoon`), e a API recusa criar uma integração
-nova dele. O sistema escreve nas plataformas, com a conta de quem conectou. O funcionamento de hoje está em
+sincronização (o e-mail público e o login no GitHub). O `SendNotification` não existe. O Trello e o GitLab são
+oferecidos (o GitLab saiu do "Em breve" na Sprint 106, com o token do OAuth que vence em 2 horas e é renovado pelo
+servidor). O sistema escreve nas plataformas, com a conta de quem conectou. O funcionamento de hoje está em
 [integrations/overview.md](../integrations/overview.md).
 
 ### Decisão 6: Credenciais — criptografia em repouso

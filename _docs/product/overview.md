@@ -31,7 +31,7 @@ flowchart TD
 | Projeto | Onde o trabalho acontece. Tem tarefas, times, integrações e as pessoas que trabalham nele |
 | Pessoa no projeto | Quem tem **valor por hora** no projeto (a alocação). Não existe outro jeito de estar num projeto |
 | Time | Só agrupa pessoas dentro de um projeto, para achá-las. Não dá permissão nem autoridade |
-| Tarefa | O que se faz. É sempre de um projeto e pode estar ligada a uma issue do GitHub ou a um cartão do Trello |
+| Tarefa | O que se faz. É sempre de um projeto e pode estar ligada a uma issue do GitHub ou do GitLab, ou a um cartão do Trello |
 | Sessão de ponto | Um intervalo de trabalho de uma pessoa num projeto, com uma ou mais tarefas |
 | Cargo | Dono, admin, administrador de projeto ou colaborador. Ver [permissions.md](permissions.md) |
 | Recebível | Uma conta a receber de um cliente por período, que o dono confirma e depois dá como recebida. Só no [modo solo](#modo-solo); as regras estão em [money.md](money.md#contas-a-receber-modo-solo) |
@@ -273,7 +273,7 @@ alguma permissão nele, e cada aba pede a permissão do que mostra.
 |---|---|
 | Visão geral | Pessoas, times, idade do projeto, integrações, atividade de 7 e 30 dias, quem está com o ponto aberto, tarefas atrasadas e as sessões de todos, com filtros e totais. O cliente, o valor cobrado, a receita e a margem só vão com `billing.view` |
 | Colaboradores | Pôr e tirar pessoas, valor por hora, grupo e times. Não existe no [modo solo](#modo-solo) |
-| Integrações | GitHub e Trello (ver [../integrations/overview.md](../integrations/overview.md)) |
+| Integrações | GitHub, GitLab e Trello (ver [../integrations/overview.md](../integrations/overview.md)) |
 | Configurações | Os dados do projeto e, com `billing.view`, o cliente, a cobrança dele, o acréscimo do projeto e o valor cobrado |
 
 **Perfil.** O perfil da própria pessoa (`/profile`) e o de um colaborador (`/orgs/:orgId/people/:personId`, só para o
@@ -286,7 +286,7 @@ um vê do dinheiro está em [money.md](money.md#quem-vê-o-quê).
 
 ## Integrações
 
-Uma tarefa pode estar ligada a uma issue do GitHub e a um cartão do Trello ao mesmo tempo, sincronizados nos dois
+Uma tarefa pode estar ligada a uma issue do GitHub, a uma do GitLab e a um cartão do Trello ao mesmo tempo, sincronizados nos dois
 sentidos. Ver [../integrations/overview.md](../integrations/overview.md).
 
 ## Ajuda

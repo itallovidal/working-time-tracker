@@ -189,6 +189,7 @@
             <div class="stack">
               <p class="muted small" x-text="$t('task_detail.publish_intro', { provider: target.label })"></p>
               <p class="muted small" x-show="target.type === 'github'">{{.T "task_detail.publish_github_note"}}</p>
+              <p class="muted small" x-show="target.type === 'gitlab'">{{.T "task_detail.publish_gitlab_note"}}</p>
               <p class="muted small" x-show="target.type === 'trello'">{{.T "task_detail.publish_trello_note"}}</p>
               <p class="form-error" x-cloak x-show="errors['publish:' + target.id]" x-text="errors['publish:' + target.id]" role="alert"></p>
               <button type="button" class="btn btn-secondary" :disabled="pending" @click="publish(target)">

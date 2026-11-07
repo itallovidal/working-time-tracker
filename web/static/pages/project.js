@@ -389,7 +389,8 @@ document.addEventListener('alpine:init', () => {
   // aqui espera, guardado, até ela voltar.
   const syncStopped = new Set([
     'integration.invalid_token', 'integration.rate_limited', 'integration.provider_unreachable',
-    'integration.github_repo_not_found', 'integration.trello_no_access_board', 'integration.trello_board_not_found',
+    'integration.github_repo_not_found', 'integration.gitlab_project_not_found', 'integration.trello_no_access_board',
+    'integration.trello_board_not_found',
   ]);
 
   const linkType = (link) => (link.integration ? link.integration.type : '');
@@ -1227,15 +1228,18 @@ document.addEventListener('alpine:init', () => {
       this.removeIn = checked ? [...rest, link.id] : rest;
     },
     // removeAsk e removeNote dizem o que a caixa de cada plataforma faz com o item: o GitHub apaga a issue (e só a
-    // fecha se a conta não é admin), o Trello arquiva o cartão, e uma plataforma sem regra própria fecha o item.
+    // fecha se a conta não é admin), o GitLab também (só o Owner do projeto apaga), o Trello arquiva o cartão, e uma
+    // plataforma sem regra própria fecha o item.
     removeAsk(link) {
       if (link.type === 'github') return WTT.t('task_detail.delete_remote_github');
+      if (link.type === 'gitlab') return WTT.t('task_detail.delete_remote_gitlab');
       if (link.type === 'trello') return WTT.t('task_detail.delete_remote_trello');
       return WTT.t('task_detail.delete_remote_other', { provider: link.label });
     },
     removeNote(link) {
       if (!link.canRemove) return WTT.t('task_detail.delete_remote_off_note');
       if (link.type === 'github') return WTT.t('task_detail.delete_remote_github_note');
+      if (link.type === 'gitlab') return WTT.t('task_detail.delete_remote_gitlab_note');
       if (link.type === 'trello') return WTT.t('task_detail.delete_remote_trello_note');
       return '';
     },

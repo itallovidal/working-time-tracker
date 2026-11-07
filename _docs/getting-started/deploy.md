@@ -11,7 +11,7 @@ flowchart LR
     U["Navegador"] -->|"HTTPS"| P["Proxy da plataforma<br/>(Render, Railway ou Fly.io)"]
     P -->|"CF-Connecting-IP, X-Real-IP<br/>ou Fly-Client-IP"| S["Container<br/>com o binário"]
     S -->|"Session pooler, porta 5432, TLS"| D["PostgreSQL<br/>no Supabase"]
-    S -->|"sincronização"| I["GitHub, Trello"]
+    S -->|"sincronização"| I["GitHub, GitLab, Trello"]
 ```
 
 ## Quanto custa
@@ -27,7 +27,7 @@ Os preços de outubro de 2026 (o do Render, de novembro), para uma pessoa e algu
 
 ## O que o servidor precisa
 
-- **Uma instância só.** A sincronização com o GitHub e o Trello roda dentro do processo, e o limite de tentativas do
+- **Uma instância só.** A sincronização com o GitHub, o GitLab e o Trello roda dentro do processo, e o limite de tentativas do
   login guarda os contadores em memória. Com duas réplicas, as duas sincronizariam ao mesmo tempo.
 - **Ficar ligado.** Uma plataforma que desliga o container sem tráfego (o Render grátis, o Koyeb grátis, o Cloud Run
   escalando a zero) para a sincronização junto.
@@ -93,7 +93,7 @@ Nunca aponte o `TEST_DATABASE_URL` para o Supabase: cada pacote de teste apaga o
 | `COOKIE_SECURE` | `true` |
 | `PUBLIC_URL` | O endereço público, sem barra no fim (`https://wtt.onrender.com`, `https://wtt.up.railway.app`, `https://wtt.fly.dev` ou o seu domínio) |
 | `CLIENT_IP_HEADER` | `CF-Connecting-IP` no Render, `X-Real-IP` no Railway, `Fly-Client-IP` no Fly.io |
-| `GITHUB_*`, `TRELLO_*`, `CLERK_*` | Se usar as integrações ou o Clerk, como em [Configuração](configuration.md). `INVITE_DELIVERY` fica em `email` |
+| `GITHUB_*`, `GITLAB_*`, `TRELLO_*`, `CLERK_*` | Se usar as integrações ou o Clerk, como em [Configuração](configuration.md). `INVITE_DELIVERY` fica em `email` |
 
 A porta não precisa de variável: a imagem traz `PORT=8080`, e a plataforma que diz outra porta em `PORT` a troca.
 
@@ -199,7 +199,8 @@ Depois, cada `fly deploy` constrói e sobe a versão nova. `fly logs` mostra o l
 - No log, a linha `server` mostra a porta, o `db_max_conns` e de onde vem o IP (`client_ip_from`), e cada requisição
   traz o `remote_ip`: ele deve ser o IP de quem acessou, não o do proxy.
 - Se usar as integrações ou o Clerk, troque o endereço de retorno para o `PUBLIC_URL`: a "Authorization callback URL"
-  do app OAuth do GitHub, as "Allowed origins" da chave do Trello e o domínio no Clerk.
+  do app OAuth do GitHub, o "Redirect URI" do app do GitLab (`PUBLIC_URL/integrations/gitlab/callback`; o app aceita
+  mais de um, um por linha), as "Allowed origins" da chave do Trello e o domínio no Clerk.
 
 ## Atualizar e voltar uma versão
 

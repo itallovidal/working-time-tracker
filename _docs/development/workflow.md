@@ -20,8 +20,8 @@ make test    # por baixo: set -a && source .env && set +a && go test -p 1 ./...
   falham ao mesmo tempo, e parece uma regressão que não existe.
 - **Nenhum teste sai da máquina.** O transporte HTTP padrão dos testes recusa qualquer endereço que não seja local
   (`testutil.BlockExternalHTTP`): um teste que apontasse para o GitHub de verdade falha, em vez de escrever nas issues
-  de alguém. As plataformas são fakes em `testutil`: o GitHub (`github.go`) e o Trello (`trello.go`), com estado, o
-  GitLab (`platforms.go`) e a Backend API do Clerk (`clerkapi.go`).
+  de alguém. As plataformas são fakes em `testutil`, com estado: o GitHub (`github.go`), o GitLab (`gitlab.go`) e o
+  Trello (`trello.go`), e a Backend API do Clerk (`clerkapi.go`).
 
 A suíte inteira leva alguns minutos. O `make test` grava a saída em `/tmp/wtt-test.log` e mostra só o resumo: o
 resultado de cada pacote, os testes que falharam e a mensagem de cada falha. `make check` passa antes o `gofmt`, o
@@ -53,10 +53,10 @@ Três coisas no repositório são geradas e vão no mesmo commit da mudança que
 
 ### Plataformas falsas para desenvolver
 
-Os fakes do GitHub e do Trello também sobem como servidores, com um painel em `/_fake` para mexer nos itens como se
-fosse outra pessoa: `make fakes` sobe os dois (`go run ./cmd/fakegithub -addr :8091` e
-`go run ./cmd/faketrello -addr :8092`). Como apontar o sistema para eles está em [GitHub](../integrations/github.md) e
-[Trello](../integrations/trello.md).
+Os fakes do GitHub, do GitLab e do Trello também sobem como servidores, com um painel em `/_fake` para mexer nos itens
+como se fosse outra pessoa: `make fakes` sobe os três (`go run ./cmd/fakegithub -addr :8091`,
+`go run ./cmd/faketrello -addr :8092` e `go run ./cmd/fakegitlab -addr :8093`). Como apontar o sistema para eles está
+em [GitHub](../integrations/github.md), [GitLab](../integrations/gitlab.md) e [Trello](../integrations/trello.md).
 
 ## Migrações
 

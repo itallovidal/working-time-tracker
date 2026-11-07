@@ -188,12 +188,12 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | Código | Status | Parâmetros | pt-BR | en |
 |---|---|---|---|---|
 | `issue_sync.label_refused` | 400 | — | `o token não pode criar etiquetas do outro lado: a etiqueta nova fica só aqui` | `the token cannot create labels on the other side: the new label stays here only` |
-| `issue_sync.no_login` | 400 | — | `não achei o usuário do GitHub de quem é responsável aqui: ele precisa ter o e-mail público no perfil do GitHub` | `could not find the GitHub user of the person assigned here: they need a public email on their GitHub profile` |
+| `issue_sync.no_login` | 400 | — | `não achei, na plataforma, o usuário de quem é responsável aqui: ele precisa ter o e-mail público no perfil do GitHub ou do GitLab` | `could not find, on the platform, the user of the person assigned here: they need a public email on their GitHub or GitLab profile` |
 | `issue_sync.publish_read_only` | 400 | — | `o token desta integração não escreve no repositório ou quadro: o item novo sairia sem parte dos dados, então a tarefa não foi postada` | `the token of this integration cannot write to the repository or board: the new item would come out without some of its data, so the task was not posted` |
 | `issue_sync.push_discarded` | 400 | — | `a plataforma ignorou uma mudança deste item (o token pode não ter permissão de escrita): ela fica só aqui` | `the platform ignored a change to this item (the token may lack write permission): it stays here only` |
 | `issue_sync.push_rejected` | 400 | — | `a plataforma recusou uma mudança deste item: ela fica só aqui` | `the platform refused a change to this item: it stays here only` |
 | `issue_sync.read_only` | 400 | — | `o token não escreve neste repositório ou quadro: os itens só vêm para cá, e as mudanças daqui não saem` | `the token cannot write to this repository or board: items only come here, and changes made here do not go out` |
-| `issue_sync.remove_only_closed` | 400 | — | `a plataforma não deixou apagar o item (a conta conectada precisa ser admin do repositório), então ele só foi fechado` | `the platform did not let the item be deleted (the connected account must be an admin of the repository), so it was only closed` |
+| `issue_sync.remove_only_closed` | 400 | — | `a plataforma não deixou apagar o item (a conta conectada precisa ser admin do repositório no GitHub, ou Owner do projeto no GitLab), então ele só foi fechado` | `the platform did not let the item be deleted (the connected account must be a repository admin on GitHub, or a project Owner on GitLab), so it was only closed` |
 | `issue_sync.remove_read_only` | 400 | — | `o token desta integração não escreve no repositório ou quadro, então o item continua lá` | `the token of this integration cannot write to the repository or board, so the item is still there` |
 
 ### label

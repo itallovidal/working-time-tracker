@@ -1331,7 +1331,7 @@
       "_id": "req_08_05",
       "_type": "request",
       "parentId": "fld_08",
-      "name": "Criar integração GitLab (em breve: responde 400)",
+      "name": "Criar integração GitLab (token pessoal com escopo api)",
       "method": "POST",
       "url": "{{base_url}}/api/projects/{{project_id}}/integrations",
       "authentication": {},
@@ -1344,7 +1344,7 @@
       ],
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"type\": \"gitlab\",\n  \"display_name\": \"GitLab do cliente\",\n  \"token\": \"glpat-seu_token\",\n  \"metadata\": {\n    \"project_url\": \"grupo/projeto\"\n  }\n}"
+        "text": "{\n  \"type\": \"gitlab\",\n  \"display_name\": \"GitLab do cliente\",\n  \"token\": \"glpat-seu_token_com_escopo_api\",\n  \"metadata\": {\n    \"project_url\": \"grupo/projeto\"\n  }\n}"
       }
     },
     {
