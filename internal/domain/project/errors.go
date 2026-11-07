@@ -20,19 +20,20 @@ var (
 	ErrMeetingTimeWithoutDay = apperr.New("project.customer_meeting_time_without_day", http.StatusBadRequest)
 	// ErrMeetingNeedsCustomer recusa a reunião com o cliente num projeto sem cliente. O field é customer_meeting_day.
 	ErrMeetingNeedsCustomer = apperr.New("project.meeting_needs_customer", http.StatusBadRequest)
-	ErrInvalidBillRate      = apperr.New("project.invalid_bill_rate", http.StatusBadRequest)
-	// ErrBillRateRequired recusa o projeto com cliente e sem valor cobrado. O field é bill_rate_cents.
-	ErrBillRateRequired = apperr.New("project.bill_rate_required", http.StatusBadRequest)
-	// ErrBillRateNeedsCustomer recusa o valor cobrado num projeto sem cliente. O field é bill_rate_cents.
-	ErrBillRateNeedsCustomer = apperr.New("project.bill_rate_needs_customer", http.StatusBadRequest)
-	ErrCustomerNotFound      = apperr.New("project.customer_not_found", http.StatusBadRequest)
-	ErrInvalidOrganization   = apperr.New("project.invalid_organization", http.StatusBadRequest)
-	ErrInvalidPage           = apperr.New("project.invalid_page", http.StatusBadRequest)
-	ErrInvalidPerPage        = apperr.New("project.invalid_per_page", http.StatusBadRequest)
+	ErrCustomerNotFound     = apperr.New("project.customer_not_found", http.StatusBadRequest)
+	ErrInvalidOrganization  = apperr.New("project.invalid_organization", http.StatusBadRequest)
+	ErrInvalidPage          = apperr.New("project.invalid_page", http.StatusBadRequest)
+	ErrInvalidPerPage       = apperr.New("project.invalid_per_page", http.StatusBadRequest)
 
-	// ErrBillRateNotAllowed recusa o valor cobrado num projeto de cliente mensal: o contrato é um valor por mês, e o
-	// projeto não tem valor por hora. O field é bill_rate_cents.
-	ErrBillRateNotAllowed = apperr.New("project.bill_rate_not_allowed", http.StatusBadRequest)
+	// O acréscimo do projeto sobre a cobrança do cliente (Decisão 21). O field é bill_extra_cents.
+	// ErrInvalidBillExtra recusa o acréscimo negativo ou acima do teto (o do valor por hora no cliente por hora, o de
+	// um valor em dinheiro no mensal).
+	ErrInvalidBillExtra = apperr.New("project.invalid_bill_extra", http.StatusBadRequest)
+	// ErrBillExtraNeedsCustomer recusa o acréscimo num projeto sem cliente: o projeto interno não é cobrado.
+	ErrBillExtraNeedsCustomer = apperr.New("project.bill_extra_needs_customer", http.StatusBadRequest)
+	// ErrCustomerWithoutRate recusa o cliente por hora que ainda não tem valor por hora (um cliente antigo, de antes da
+	// Decisão 21): o projeto não teria o que cobrar. O dono informa o valor em Clientes. O field é customer_id.
+	ErrCustomerWithoutRate = apperr.New("project.customer_without_rate", http.StatusBadRequest)
 
 	// ErrCustomerLocked recusa tirar do cliente o projeto que tem sessões quando o cliente já tem recebíveis: as horas
 	// iam para as propostas do cliente novo e o recebível do antigo continuaria cobrando as mesmas. O field é customer_id.

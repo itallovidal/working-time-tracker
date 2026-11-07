@@ -36,7 +36,7 @@ const (
 )
 
 // soloCustomers são os dois clientes: o primeiro por hora, o segundo por contrato mensal. Os termos do por hora são o
-// valor padrão (copiado para os projetos), o dia de fechamento e o prazo de pagamento; os do mensal, a mensalidade e a
+// valor por hora (o de todos os projetos dele), o dia de fechamento e o prazo de pagamento; os do mensal, a mensalidade e a
 // vigência, o prazo, a multa de 2%, os juros de 1% ao mês e a tolerância de 3 dias.
 var soloCustomers = []struct {
 	key, name, document, contact, email, phone string
@@ -45,17 +45,21 @@ var soloCustomers = []struct {
 	{"aurora", "Clínica Aurora", "", "Dr. Paulo Menezes", "paulo@aurora.example", "+55 (48) 3003-7700"},
 }
 
-// soloProjects: a Pixel (por hora) tem dois projetos, cada um com o seu valor cobrado (o primeiro é o valor padrão do
-// cliente, copiado); a Aurora (mensal) tem um, sem valor por hora; e o último é interno. weight é o peso do projeto
-// na divisão do dia de trabalho.
+// soloPixelRate é o valor por hora da Agência Pixel, o cliente por hora.
+const soloPixelRate = 13500
+
+// soloProjects: a Pixel (por hora, 135,00) tem dois projetos, um com acréscimo de 15,00 por hora (cobra 150,00) e um
+// sem (cobra os 135,00 do cliente); a Aurora (mensal) tem um, sem valor por hora e com acréscimo de 400,00 por mês
+// sobre a mensalidade; e o último é interno. extra é o acréscimo do projeto em centavos (Decisão 21): por hora no
+// cliente por hora, por mês no mensal. weight é o peso do projeto na divisão do dia de trabalho.
 var soloProjects = []struct {
 	key, customer, name, description string
-	billRate                         int // centavos por hora; zero: sem valor (cliente mensal ou interno)
+	extra                            int
 	weight                           float64
 }{
-	{"identidade", "pixel", "Identidade visual da Pixel", "Marca, manual e papelaria para o rebranding da agência.", 15000, 0.30},
-	{"landing", "pixel", "Landing pages de campanha", "Páginas de campanha com formulário de leads e medição de conversão.", 13500, 0.25},
-	{"suporte", "aurora", "Site e suporte mensal", "Manutenção do site, correções, backup e relatório mensal de acessos.", 0, 0.30},
+	{"identidade", "pixel", "Identidade visual da Pixel", "Marca, manual e papelaria para o rebranding da agência.", 1500, 0.30},
+	{"landing", "pixel", "Landing pages de campanha", "Páginas de campanha com formulário de leads e medição de conversão.", 0, 0.25},
+	{"suporte", "aurora", "Site e suporte mensal", "Manutenção do site, correções, backup e relatório mensal de acessos.", 40000, 0.30},
 	{"estudos", "", "Estudos e administração", "Propostas, contabilidade e estudos. Horas sem cliente.", 0, 0.15},
 }
 
@@ -144,7 +148,7 @@ func seedSolo(ctx context.Context, db *database.DB, now time.Time) soloSummary {
 	_, err = personSvc.SetWeeklyHours(ownerID, number(40))
 	must(err)
 
-	// Os clientes. O por hora leva o valor padrão, o fechamento no dia 25 e 10 dias para pagar; o mensal, a mensalidade
+	// Os clientes. O por hora leva o valor por hora, o fechamento no dia 25 e 10 dias para pagar; o mensal, a mensalidade
 	// de 6.300,00 desde o primeiro dia do mês retrasado, fechando no último dia do mês (o padrão), 5 dias para pagar,
 	// multa de 2%, juros de 1% ao mês e 3 dias de tolerância.
 	customerID := map[string]string{}
@@ -154,7 +158,7 @@ func seedSolo(ctx context.Context, db *database.DB, now time.Time) soloSummary {
 		}
 		switch c.key {
 		case "pixel":
-			in.DefaultRateCents = money(15000)
+			in.HourlyRateCents = money(soloPixelRate)
 			in.ClosingDay = number(25)
 			in.PaymentDays = number(10)
 		case "aurora":
@@ -181,12 +185,13 @@ func seedSolo(ctx context.Context, db *database.DB, now time.Time) soloSummary {
 	prjs := map[string]*soloProject{}
 	var order []string
 	for _, p := range soloProjects {
+		// O valor cobrado que as sessões guardam: o do cliente por hora mais o acréscimo; nenhum no mensal e no interno.
 		var billRate *int
-		if p.billRate > 0 {
-			billRate = number(p.billRate)
+		if p.customer == "pixel" {
+			billRate = number(soloPixelRate + p.extra)
 		}
 		created, err := projectSvc.CreateWithCustomer(orgID, project.CreateInput{
-			Name: p.name, Description: p.description, CustomerID: customerID[p.customer], BillRateCents: billRate,
+			Name: p.name, Description: p.description, CustomerID: customerID[p.customer], BillExtraCents: p.extra,
 		})
 		must(err)
 		id := created.ID.String()

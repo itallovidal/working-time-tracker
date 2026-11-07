@@ -102,7 +102,7 @@ func TestErrors_ResponsesCarryOnlyTheCode(t *testing.T) {
 		{"wrong login", "POST", "/api/auth/login", `{"email":"ana@test.com","password":"errada-errada"}`, "", 401, "auth.invalid_credentials"},
 		{"no session", "GET", "/api/auth/me", "", "", 401, "auth.unauthenticated"},
 		{"bad body", "POST", "/api/auth/login", `{`, "", 400, "request.invalid_body"},
-		{"admin only", "POST", "/api/orgs/" + admin.orgID + "/customers", `{"name":"X"}`, member.session, 403, "auth.permission_required"},
+		{"admin only", "POST", "/api/orgs/" + admin.orgID + "/customers", `{"name":"X","hourly_rate_cents":10000}`, member.session, 403, "auth.permission_required"},
 		{"owner only", "PATCH", "/api/orgs/" + admin.orgID, `{"summary":"X"}`, member.session, 403, "auth.owner_only"},
 		{"validation", "PATCH", "/api/orgs/" + admin.orgID, `{"cnpj":"11.222.333/0001-80"}`, admin.session, 400, "organization.invalid_cnpj"},
 		{"not found in org", "GET", "/api/projects/00000000-0000-0000-0000-000000000000", "", admin.session, 404, "request.not_found"},

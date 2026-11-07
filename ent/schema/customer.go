@@ -35,8 +35,10 @@ func (Customer) Fields() []ent.Field {
 		// (um valor fixo por mês, o contrato): um ou outro, nunca os dois. Validado em Go, como payment_frequency; os
 		// campos do outro modo são recusados lá, e o modo "monthly" só vale em organização solo.
 		field.String("billing_mode").Default("hourly"),
-		// Só hourly: o valor por hora que preenche o campo ao criar um projeto do cliente (o projeto guarda o seu).
-		field.Int("default_rate_cents").Optional().Nillable().NonNegative(),
+		// Só hourly: o valor por hora que o cliente paga, o mesmo em todos os projetos dele (cada projeto pode somar um
+		// acréscimo, projects.bill_extra_cents). Obrigatório no hourly, conferido em Go; nulo só num cliente antigo sem
+		// projetos, de antes da migração billing_on_customer.
+		field.Int("hourly_rate_cents").Optional().Nillable().NonNegative(),
 		// Só monthly: o valor do contrato por mês e a vigência dele, em dias de calendário YYYY-MM-DD no fuso da
 		// organização. Sem fim, o contrato segue por tempo indeterminado.
 		field.Int("monthly_fee_cents").Optional().Nillable().NonNegative(),

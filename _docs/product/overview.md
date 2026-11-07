@@ -27,7 +27,7 @@ flowchart TD
 | Conceito | O que é |
 |---|---|
 | Organização | A empresa, ou a pessoa que trabalha sozinha (modo solo). Cada pessoa pertence a uma só, e o e-mail é único no sistema |
-| Cliente | Quem contrata a organização. Um projeto tem um cliente ou é interno. É cobrado por hora ou, no modo solo, por contrato mensal ([money.md](money.md#termos-comerciais-modo-solo)) |
+| Cliente | Quem contrata a organização. Um projeto tem um cliente ou é interno. É cobrado por hora ou, no modo solo, por contrato mensal; a cobrança mora no cliente, e o projeto só soma um acréscimo ([money.md](money.md#a-cobrança-mora-no-cliente)) |
 | Projeto | Onde o trabalho acontece. Tem tarefas, times, integrações e as pessoas que trabalham nele |
 | Pessoa no projeto | Quem tem **valor por hora** no projeto (a alocação). Não existe outro jeito de estar num projeto |
 | Time | Só agrupa pessoas dentro de um projeto, para achá-las. Não dá permissão nem autoridade |
@@ -106,7 +106,8 @@ convites, e não apaga nem recusa o que já existe. Uma organização com equipe
 daily opcional (horário) e uma weekly opcional (dia e horário). Com cliente, pode ter também uma reunião semanal com
 ele (dia e horário); tirar o cliente apaga essa reunião. Esses horários são de cada projeto, não da organização.
 
-- Quem cria: o dono e os admins. O admin só cria projeto interno; projeto com cliente e valor cobrado é do dono.
+- Quem cria: o dono e os admins. O admin só cria projeto interno; projeto com cliente (e o acréscimo dele) é do dono. A
+  cobrança é a do cliente: o formulário a mostra, só para leitura, e pede só o acréscimo do projeto.
 - Quem vê: o dono e os admins veem todos. Os outros veem só os projetos em que estão, e qualquer rota de outro projeto
   responde `404` (ver [permissions.md](permissions.md#quem-vê-quais-projetos)).
 - Excluir um projeto apaga os times, as alocações, as tarefas, as sessões e as integrações dele.
@@ -273,7 +274,7 @@ alguma permissão nele, e cada aba pede a permissão do que mostra.
 | Visão geral | Pessoas, times, idade do projeto, integrações, atividade de 7 e 30 dias, quem está com o ponto aberto, tarefas atrasadas e as sessões de todos, com filtros e totais. O cliente, o valor cobrado, a receita e a margem só vão com `billing.view` |
 | Colaboradores | Pôr e tirar pessoas, valor por hora, grupo e times. Não existe no [modo solo](#modo-solo) |
 | Integrações | GitHub e Trello (ver [../integrations/overview.md](../integrations/overview.md)) |
-| Configurações | Os dados do projeto e, com `billing.view`, o cliente e o valor cobrado |
+| Configurações | Os dados do projeto e, com `billing.view`, o cliente, a cobrança dele, o acréscimo do projeto e o valor cobrado |
 
 **Perfil.** O perfil da própria pessoa (`/profile`) e o de um colaborador (`/orgs/:orgId/people/:personId`, só para o
 dono e os admins) mostram a jornada, as horas por projeto, o período corrente e o histórico de pagamentos. O que cada

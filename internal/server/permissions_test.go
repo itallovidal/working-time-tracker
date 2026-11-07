@@ -41,7 +41,7 @@ func TestPermissions_PresetsDecideWhatEachPersonCanDo(t *testing.T) {
 	prj := createProject(t, e, admin, "Alfa")
 	other := createProject(t, e, admin, "Beta")
 	base := "/api/projects/" + prj
-	customerID := decode(t, do(e, "POST", "/api/orgs/"+admin.orgID+"/customers", `{"name":"Cliente"}`, admin.session))["id"].(string)
+	customerID := decode(t, do(e, "POST", "/api/orgs/"+admin.orgID+"/customers", `{"name":"Cliente","hourly_rate_cents":10000}`, admin.session))["id"].(string)
 
 	withPreset(t, e, admin, prj, manager.id, "manager")
 	withPreset(t, e, admin, prj, finance.id, "finance")
@@ -63,7 +63,7 @@ func TestPermissions_PresetsDecideWhatEachPersonCanDo(t *testing.T) {
 	calls := []call{
 		{"edit the project", "PATCH", base, `{"name":"Alfa 2"}`, only("manager")},
 		{"read the billing", "GET", base + "/billing", "", only("finance")},
-		{"set the billing", "PUT", base + "/billing", `{"customer_id":"` + customerID + `","bill_rate_cents":9000}`, only("finance")},
+		{"set the billing", "PUT", base + "/billing", `{"customer_id":"` + customerID + `"}`, only("finance")},
 		{"read the overview", "GET", base + "/overview", "", only("manager", "finance")},
 		{"create a team", "POST", base + "/teams", `{"name":"Time"}`, only("manager")},
 		{"create a label", "POST", base + "/labels", `{"name":"Bug"}`, only("manager")},
@@ -296,7 +296,7 @@ func TestPermissions_OrganizationOnesFollowTheRole(t *testing.T) {
 	admin := invite(t, e, owner, "bia@test.com", "admin")
 	member := invite(t, e, owner, "caio@test.com", "member")
 	org := "/api/orgs/" + owner.orgID
-	customerID := decode(t, do(e, "POST", org+"/customers", `{"name":"Cliente"}`, owner.session))["id"].(string)
+	customerID := decode(t, do(e, "POST", org+"/customers", `{"name":"Cliente","hourly_rate_cents":10000}`, owner.session))["id"].(string)
 
 	for _, c := range []struct {
 		name, method, path, body string
@@ -311,10 +311,10 @@ func TestPermissions_OrganizationOnesFollowTheRole(t *testing.T) {
 		{"mark a payment as paid", "POST", org + "/payouts", `{}`, "member", member.session, http.StatusForbidden},
 
 		{"create an internal project", "POST", org + "/projects", `{"name":"Y"}`, "admin", admin.session, http.StatusCreated},
-		{"create a project with a customer", "POST", org + "/projects", `{"name":"Z","customer_id":"` + customerID + `","bill_rate_cents":10000}`, "admin", admin.session, http.StatusForbidden},
-		{"create a project with a billed rate", "POST", org + "/projects", `{"name":"W","bill_rate_cents":10000}`, "admin", admin.session, http.StatusForbidden},
+		{"create a project with a customer", "POST", org + "/projects", `{"name":"Z","customer_id":"` + customerID + `"}`, "admin", admin.session, http.StatusForbidden},
+		{"create a project with an extra", "POST", org + "/projects", `{"name":"W","bill_extra_cents":10000}`, "admin", admin.session, http.StatusForbidden},
 		{"list customers", "GET", org + "/customers", "", "admin", admin.session, http.StatusForbidden},
-		{"create a customer", "POST", org + "/customers", `{"name":"Outro"}`, "admin", admin.session, http.StatusForbidden},
+		{"create a customer", "POST", org + "/customers", `{"name":"Outro","hourly_rate_cents":10000}`, "admin", admin.session, http.StatusForbidden},
 		{"payments of the team", "GET", org + "/payments", "", "admin", admin.session, http.StatusForbidden},
 		{"mark a payment as paid", "POST", org + "/payouts", `{}`, "admin", admin.session, http.StatusForbidden},
 		{"undo a payment", "DELETE", org + "/payouts/00000000-0000-0000-0000-000000000000", "", "admin", admin.session, http.StatusForbidden},
@@ -326,7 +326,7 @@ func TestPermissions_OrganizationOnesFollowTheRole(t *testing.T) {
 		{"change a role", "PATCH", "/api/persons/" + member.id + "/role", `{"role":"admin"}`, "admin", admin.session, http.StatusForbidden},
 		{"delete the organization", "DELETE", org, "", "admin", admin.session, http.StatusForbidden},
 
-		{"create a project with a customer", "POST", org + "/projects", `{"name":"Com cliente","customer_id":"` + customerID + `","bill_rate_cents":10000}`, "owner", owner.session, http.StatusCreated},
+		{"create a project with a customer", "POST", org + "/projects", `{"name":"Com cliente","customer_id":"` + customerID + `"}`, "owner", owner.session, http.StatusCreated},
 		{"list customers", "GET", org + "/customers", "", "owner", owner.session, http.StatusOK},
 		{"payments of the team", "GET", org + "/payments", "", "owner", owner.session, http.StatusOK},
 		{"set a payment rule", "PATCH", "/api/persons/" + member.id + "/payment", `{"frequency":"monthly","day":5}`, "owner", owner.session, http.StatusOK},

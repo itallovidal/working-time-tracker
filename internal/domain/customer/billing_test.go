@@ -22,6 +22,15 @@ func opt(v int) validate.Optional[int] {
 	return validate.Optional[int]{Set: true, Value: &v}
 }
 
+// withRate dá ao cliente por hora o valor por hora, que é obrigatório (Decisão 21), quando o teste não manda um (nem
+// null): o cliente mensal e o que já diz o valor passam como vieram.
+func withRate(in customer.Input) customer.Input {
+	if !in.HourlyRateCents.Set && (in.BillingMode == nil || *in.BillingMode != customer.BillingMonthly) {
+		in.HourlyRateCents = opt(15000)
+	}
+	return in
+}
+
 // setSolo liga ou desliga o modo solo da organização do teste, como o dono faz em Configurações.
 func setSolo(t *testing.T, orgID string, solo bool) {
 	t.Helper()
@@ -43,19 +52,21 @@ func refused(t *testing.T, name string, err error, want error, field string) {
 	}
 }
 
-// Um cliente sem termos é por hora, fecha no último dia e vence no fechamento, e é assim que sai da lista e do Get. É o
-// que todo cliente de antes dos termos é.
+// Um cliente só com o valor por hora é por hora, fecha no último dia e vence no fechamento, e é assim que sai da lista e
+// do Get. Sem o valor por hora ele é recusado: a cobrança mora no cliente (Decisão 21).
 func TestBilling_DefaultsAreTheOldBehaviour(t *testing.T) {
 	svc, _, orgID := setup(t)
-	created, err := svc.Create(orgID, customer.Input{Name: ptr("Empresa A")})
+	_, err := svc.Create(orgID, customer.Input{Name: ptr("Sem valor")})
+	refused(t, "hourly customer without a rate", err, apperr.ErrFieldRequired, "hourly_rate_cents")
+	created, err := svc.Create(orgID, withRate(customer.Input{Name: ptr("Empresa A")}))
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
 	for name, c := range map[string]*customer.Customer{"created": created, "got": mustGet(t, svc, created.ID.String())} {
 		if c.BillingMode != customer.BillingHourly || c.ClosingDay != 31 || c.PaymentDays != 0 ||
-			c.DefaultRateCents != nil || c.MonthlyFeeCents != nil || c.ContractStart != nil || c.ContractEnd != nil ||
+			c.HourlyRateCents == nil || *c.HourlyRateCents != 15000 || c.MonthlyFeeCents != nil || c.ContractStart != nil || c.ContractEnd != nil ||
 			c.LateFeeBP != 0 || c.LateInterestBPMonth != 0 || c.GraceDays != 0 {
-			t.Errorf("%s = %+v, want hourly, closing day 31 and nothing else", name, c)
+			t.Errorf("%s = %+v, want hourly at 150.00, closing day 31 and nothing else", name, c)
 		}
 	}
 	list, err := svc.ListByOrg(orgID)
@@ -82,41 +93,42 @@ func mustGet(t *testing.T, svc *customer.Service, id string) *customer.Customer 
 func TestBilling_HourlyTerms(t *testing.T) {
 	svc, _, orgID := setup(t)
 
-	// O valor por hora padrão tem o piso de 10,00 (e o teto) quando vem.
+	// O valor por hora tem o piso de 10,00 (e o teto).
 	refused(t, "rate under the floor", func() error {
-		_, err := svc.Create(orgID, customer.Input{Name: ptr("X"), DefaultRateCents: opt(validate.MinRateCents - 1)})
+		_, err := svc.Create(orgID, withRate(customer.Input{Name: ptr("X"), HourlyRateCents: opt(validate.MinRateCents - 1)}))
 		return err
-	}(), customer.ErrInvalidDefaultRate, "default_rate_cents")
+	}(), customer.ErrInvalidHourlyRate, "hourly_rate_cents")
 	refused(t, "rate zero", func() error {
-		_, err := svc.Create(orgID, customer.Input{Name: ptr("X"), DefaultRateCents: opt(0)})
+		_, err := svc.Create(orgID, withRate(customer.Input{Name: ptr("X"), HourlyRateCents: opt(0)}))
 		return err
-	}(), customer.ErrInvalidDefaultRate, "default_rate_cents")
+	}(), customer.ErrInvalidHourlyRate, "hourly_rate_cents")
 	refused(t, "rate over the cap", func() error {
-		_, err := svc.Create(orgID, customer.Input{Name: ptr("X"), DefaultRateCents: opt(validate.MaxCents + 1)})
+		_, err := svc.Create(orgID, withRate(customer.Input{Name: ptr("X"), HourlyRateCents: opt(validate.MaxCents + 1)}))
 		return err
-	}(), customer.ErrInvalidDefaultRate, "default_rate_cents")
+	}(), customer.ErrInvalidHourlyRate, "hourly_rate_cents")
 
-	c, err := svc.Create(orgID, customer.Input{
-		Name: ptr("Hora"), DefaultRateCents: opt(validate.MinRateCents), ClosingDay: ptr(5), PaymentDays: ptr(15),
-	})
+	c, err := svc.Create(orgID, withRate(customer.Input{
+		Name: ptr("Hora"), HourlyRateCents: opt(validate.MinRateCents), ClosingDay: ptr(5), PaymentDays: ptr(15),
+	}))
 	if err != nil {
 		t.Fatalf("create at the floor: %v", err)
 	}
-	if c.DefaultRateCents == nil || *c.DefaultRateCents != 1000 || c.ClosingDay != 5 || c.PaymentDays != 15 {
+	if c.HourlyRateCents == nil || *c.HourlyRateCents != 1000 || c.ClosingDay != 5 || c.PaymentDays != 15 {
 		t.Errorf("created = %+v", c)
 	}
-	if got := mustGet(t, svc, c.ID.String()); got.DefaultRateCents == nil || *got.DefaultRateCents != 1000 || got.ClosingDay != 5 || got.PaymentDays != 15 {
+	if got := mustGet(t, svc, c.ID.String()); got.HourlyRateCents == nil || *got.HourlyRateCents != 1000 || got.ClosingDay != 5 || got.PaymentDays != 15 {
 		t.Errorf("stored = %+v", got)
 	}
 
-	// null apaga o valor padrão; ausente mantém.
+	// Ausente mantém o valor; null é recusado, porque o cliente por hora sempre tem valor.
 	kept, err := svc.Update(c.ID.String(), customer.Input{Name: ptr("Hora 2")})
-	if err != nil || kept.DefaultRateCents == nil || *kept.DefaultRateCents != 1000 {
+	if err != nil || kept.HourlyRateCents == nil || *kept.HourlyRateCents != 1000 {
 		t.Errorf("absent keeps the rate: %+v, %v", kept, err)
 	}
-	cleared, err := svc.Update(c.ID.String(), customer.Input{DefaultRateCents: validate.Optional[int]{Set: true}})
-	if err != nil || cleared.DefaultRateCents != nil {
-		t.Errorf("null clears the rate: %+v, %v", cleared, err)
+	_, err = svc.Update(c.ID.String(), customer.Input{HourlyRateCents: validate.Optional[int]{Set: true}})
+	refused(t, "null rate", err, apperr.ErrFieldRequired, "hourly_rate_cents")
+	if got := mustGet(t, svc, c.ID.String()); got.HourlyRateCents == nil || *got.HourlyRateCents != 1000 {
+		t.Errorf("refused null kept = %+v, want the 10.00 rate", got)
 	}
 
 	// O dia de fechamento vai de 1 a 31 e o prazo, de 0 ao teto.
@@ -157,15 +169,15 @@ func TestBilling_HourlyRefusesMonthlyFields(t *testing.T) {
 	}
 	for _, c := range cases {
 		c.in.Name = ptr("X")
-		_, err := svc.Create(orgID, c.in)
+		_, err := svc.Create(orgID, withRate(c.in))
 		refused(t, "create with "+c.field, err, customer.ErrFieldMonthlyOnly, c.field)
 	}
 
-	got, err := svc.Create(orgID, customer.Input{
+	got, err := svc.Create(orgID, withRate(customer.Input{
 		Name: ptr("Tudo vazio"), BillingMode: ptr("hourly"),
 		MonthlyFeeCents: validate.Optional[int]{Set: true}, ContractStart: ptr(""), ContractEnd: ptr("  "),
 		LateFeeBP: ptr(0), LateInterestBPMonth: ptr(0), GraceDays: ptr(0),
-	})
+	}))
 	if err != nil || got.BillingMode != customer.BillingHourly || got.MonthlyFeeCents != nil || got.ContractStart != nil {
 		t.Errorf("empty monthly fields on an hourly customer: %+v, %v", got, err)
 	}
@@ -175,7 +187,7 @@ func TestBilling_BillingModeValue(t *testing.T) {
 	svc, _, orgID := setup(t)
 	setSolo(t, orgID, true)
 	for _, mode := range []string{"", "weekly", "MONTHLY", "hour"} {
-		_, err := svc.Create(orgID, customer.Input{Name: ptr("X"), BillingMode: ptr(mode)})
+		_, err := svc.Create(orgID, withRate(customer.Input{Name: ptr("X"), BillingMode: ptr(mode)}))
 		refused(t, "mode "+mode, err, customer.ErrInvalidBillingMode, "billing_mode")
 	}
 }
@@ -186,10 +198,10 @@ func TestBilling_MonthlyNeedsSolo(t *testing.T) {
 	monthly := customer.Input{
 		Name: ptr("Mensal"), BillingMode: ptr("monthly"), MonthlyFeeCents: opt(630000), ContractStart: ptr("2026-11-01"),
 	}
-	_, err := svc.Create(orgID, monthly)
+	_, err := svc.Create(orgID, withRate(monthly))
 	refused(t, "create monthly outside solo", err, customer.ErrMonthlyNeedsSolo, "billing_mode")
 
-	hourly, err := svc.Create(orgID, customer.Input{Name: ptr("Hora")})
+	hourly, err := svc.Create(orgID, withRate(customer.Input{Name: ptr("Hora")}))
 	if err != nil {
 		t.Fatalf("create hourly: %v", err)
 	}
@@ -201,7 +213,7 @@ func TestBilling_MonthlyNeedsSolo(t *testing.T) {
 
 	// Com o modo ligado, passa.
 	setSolo(t, orgID, true)
-	created, err := svc.Create(orgID, monthly)
+	created, err := svc.Create(orgID, withRate(monthly))
 	if err != nil || created.BillingMode != customer.BillingMonthly {
 		t.Fatalf("create monthly in a solo organization: %+v, %v", created, err)
 	}
@@ -225,31 +237,31 @@ func TestBilling_MonthlyContract(t *testing.T) {
 	// A mensalidade e o início são obrigatórios.
 	noFee := base()
 	noFee.MonthlyFeeCents = validate.Optional[int]{}
-	_, err := svc.Create(orgID, noFee)
+	_, err := svc.Create(orgID, withRate(noFee))
 	refused(t, "no fee", err, apperr.ErrFieldRequired, "monthly_fee_cents")
 	nullFee := base()
 	nullFee.MonthlyFeeCents = validate.Optional[int]{Set: true}
-	_, err = svc.Create(orgID, nullFee)
+	_, err = svc.Create(orgID, withRate(nullFee))
 	refused(t, "null fee", err, apperr.ErrFieldRequired, "monthly_fee_cents")
 	noStart := base()
 	noStart.ContractStart = nil
-	_, err = svc.Create(orgID, noStart)
+	_, err = svc.Create(orgID, withRate(noStart))
 	refused(t, "no start", err, apperr.ErrFieldRequired, "contract_start")
 	blankStart := base()
 	blankStart.ContractStart = ptr("  ")
-	_, err = svc.Create(orgID, blankStart)
+	_, err = svc.Create(orgID, withRate(blankStart))
 	refused(t, "blank start", err, apperr.ErrFieldRequired, "contract_start")
 
 	// A mensalidade é maior que zero e cabe no teto.
 	for _, cents := range []int{0, -1, validate.MaxCents + 1} {
 		in := base()
 		in.MonthlyFeeCents = opt(cents)
-		_, err := svc.Create(orgID, in)
+		_, err := svc.Create(orgID, withRate(in))
 		refused(t, "fee out of range", err, customer.ErrInvalidMonthlyFee, "monthly_fee_cents")
 	}
 	one := base()
 	one.MonthlyFeeCents = opt(1)
-	if _, err := svc.Create(orgID, one); err != nil {
+	if _, err := svc.Create(orgID, withRate(one)); err != nil {
 		t.Errorf("a fee of one cent: %v", err)
 	}
 
@@ -257,17 +269,17 @@ func TestBilling_MonthlyContract(t *testing.T) {
 	for _, bad := range []string{"2026-02-30", "2026-1-5", "01/11/2026", "amanhã", "2026-13-01"} {
 		in := base()
 		in.ContractStart = ptr(bad)
-		_, err := svc.Create(orgID, in)
+		_, err := svc.Create(orgID, withRate(in))
 		refused(t, "start "+bad, err, apperr.ErrFieldInvalid, "contract_start")
 		in = base()
 		in.ContractEnd = ptr(bad)
-		_, err = svc.Create(orgID, in)
+		_, err = svc.Create(orgID, withRate(in))
 		refused(t, "end "+bad, err, apperr.ErrFieldInvalid, "contract_end")
 	}
 	for _, end := range []string{"2026-11-01", "2026-10-31", "2025-01-01"} {
 		in := base()
 		in.ContractEnd = ptr(end)
-		_, err := svc.Create(orgID, in)
+		_, err := svc.Create(orgID, withRate(in))
 		refused(t, "end "+end, err, customer.ErrInvalidContractEnd, "contract_end")
 	}
 
@@ -275,7 +287,7 @@ func TestBilling_MonthlyContract(t *testing.T) {
 	in.ContractEnd = ptr("2026-11-02")
 	in.ClosingDay, in.PaymentDays = ptr(10), ptr(5)
 	in.LateFeeBP, in.LateInterestBPMonth, in.GraceDays = ptr(200), ptr(100), ptr(3)
-	c, err := svc.Create(orgID, in)
+	c, err := svc.Create(orgID, withRate(in))
 	if err != nil {
 		t.Fatalf("create monthly: %v", err)
 	}
@@ -283,7 +295,7 @@ func TestBilling_MonthlyContract(t *testing.T) {
 	if got.BillingMode != customer.BillingMonthly || got.MonthlyFeeCents == nil || *got.MonthlyFeeCents != 630000 ||
 		got.ContractStart == nil || *got.ContractStart != "2026-11-01" || got.ContractEnd == nil || *got.ContractEnd != "2026-11-02" ||
 		got.ClosingDay != 10 || got.PaymentDays != 5 || got.LateFeeBP != 200 || got.LateInterestBPMonth != 100 || got.GraceDays != 3 ||
-		got.DefaultRateCents != nil {
+		got.HourlyRateCents != nil {
 		t.Errorf("stored monthly customer = %+v", got)
 	}
 
@@ -304,7 +316,7 @@ func TestBilling_MonthlyContract(t *testing.T) {
 func TestBilling_MonthlyLateTerms(t *testing.T) {
 	svc, _, orgID := setup(t)
 	setSolo(t, orgID, true)
-	c, err := svc.Create(orgID, customer.Input{Name: ptr("Mensal"), BillingMode: ptr("monthly"), MonthlyFeeCents: opt(630000), ContractStart: ptr("2026-11-01")})
+	c, err := svc.Create(orgID, withRate(customer.Input{Name: ptr("Mensal"), BillingMode: ptr("monthly"), MonthlyFeeCents: opt(630000), ContractStart: ptr("2026-11-01")}))
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
@@ -329,17 +341,17 @@ func TestBilling_MonthlyLateTerms(t *testing.T) {
 func TestBilling_MonthlyRefusesTheHourlyRate(t *testing.T) {
 	svc, _, orgID := setup(t)
 	setSolo(t, orgID, true)
-	_, err := svc.Create(orgID, customer.Input{
+	_, err := svc.Create(orgID, withRate(customer.Input{
 		Name: ptr("Mensal"), BillingMode: ptr("monthly"), MonthlyFeeCents: opt(630000), ContractStart: ptr("2026-11-01"),
-		DefaultRateCents: opt(15000),
-	})
-	refused(t, "default rate on a monthly customer", err, customer.ErrFieldHourlyOnly, "default_rate_cents")
+		HourlyRateCents: opt(15000),
+	}))
+	refused(t, "default rate on a monthly customer", err, customer.ErrFieldHourlyOnly, "hourly_rate_cents")
 
 	// null é o padrão do campo, não um valor.
-	if _, err := svc.Create(orgID, customer.Input{
+	if _, err := svc.Create(orgID, withRate(customer.Input{
 		Name: ptr("Mensal"), BillingMode: ptr("monthly"), MonthlyFeeCents: opt(630000), ContractStart: ptr("2026-11-01"),
-		DefaultRateCents: validate.Optional[int]{Set: true},
-	}); err != nil {
+		HourlyRateCents: validate.Optional[int]{Set: true},
+	})); err != nil {
 		t.Errorf("null default rate on a monthly customer: %v", err)
 	}
 }
@@ -348,35 +360,35 @@ func TestBilling_MonthlyRefusesTheHourlyRate(t *testing.T) {
 func TestBilling_SwitchingTheModeClearsTheOtherTerms(t *testing.T) {
 	svc, _, orgID := setup(t)
 	setSolo(t, orgID, true)
-	hourly, err := svc.Create(orgID, customer.Input{Name: ptr("Troca"), DefaultRateCents: opt(15000), ClosingDay: ptr(10), PaymentDays: ptr(7)})
+	hourly, err := svc.Create(orgID, withRate(customer.Input{Name: ptr("Troca"), HourlyRateCents: opt(15000), ClosingDay: ptr(10), PaymentDays: ptr(7)}))
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
 	id := hourly.ID.String()
 
 	// Mandar o valor por hora junto do modo mensal é recusado; sem ele, o valor padrão fica para trás.
-	_, err = svc.Update(id, customer.Input{BillingMode: ptr("monthly"), MonthlyFeeCents: opt(500000), ContractStart: ptr("2026-11-01"), DefaultRateCents: opt(15000)})
-	refused(t, "switch carrying the rate", err, customer.ErrFieldHourlyOnly, "default_rate_cents")
+	_, err = svc.Update(id, customer.Input{BillingMode: ptr("monthly"), MonthlyFeeCents: opt(500000), ContractStart: ptr("2026-11-01"), HourlyRateCents: opt(15000)})
+	refused(t, "switch carrying the rate", err, customer.ErrFieldHourlyOnly, "hourly_rate_cents")
 	monthly, err := svc.Update(id, customer.Input{
 		BillingMode: ptr("monthly"), MonthlyFeeCents: opt(500000), ContractStart: ptr("2026-11-01"), LateFeeBP: ptr(200),
 	})
-	if err != nil || monthly.BillingMode != customer.BillingMonthly || monthly.DefaultRateCents != nil ||
+	if err != nil || monthly.BillingMode != customer.BillingMonthly || monthly.HourlyRateCents != nil ||
 		monthly.MonthlyFeeCents == nil || monthly.ClosingDay != 10 || monthly.PaymentDays != 7 || monthly.LateFeeBP != 200 {
 		t.Fatalf("switch to monthly = %+v, %v; want the rate gone and the closing terms kept", monthly, err)
 	}
-	if got := mustGet(t, svc, id); got.DefaultRateCents != nil {
-		t.Errorf("stored default rate = %v, want none", *got.DefaultRateCents)
+	if got := mustGet(t, svc, id); got.HourlyRateCents != nil {
+		t.Errorf("stored default rate = %v, want none", *got.HourlyRateCents)
 	}
 
 	// De volta ao por hora: o contrato inteiro sai.
-	back, err := svc.Update(id, customer.Input{BillingMode: ptr("hourly"), DefaultRateCents: opt(20000)})
+	back, err := svc.Update(id, customer.Input{BillingMode: ptr("hourly"), HourlyRateCents: opt(20000)})
 	if err != nil || back.BillingMode != customer.BillingHourly || back.MonthlyFeeCents != nil || back.ContractStart != nil ||
 		back.ContractEnd != nil || back.LateFeeBP != 0 || back.LateInterestBPMonth != 0 || back.GraceDays != 0 ||
-		back.DefaultRateCents == nil || *back.DefaultRateCents != 20000 {
+		back.HourlyRateCents == nil || *back.HourlyRateCents != 20000 {
 		t.Errorf("switch back to hourly = %+v, %v", back, err)
 	}
 	// Mandar o mesmo modo que já tem não é troca.
-	if same, err := svc.Update(id, customer.Input{BillingMode: ptr("hourly")}); err != nil || same.DefaultRateCents == nil {
+	if same, err := svc.Update(id, customer.Input{BillingMode: ptr("hourly")}); err != nil || same.HourlyRateCents == nil {
 		t.Errorf("the same mode again: %+v, %v; want it unchanged", same, err)
 	}
 }
@@ -385,30 +397,30 @@ func TestBilling_SwitchingTheModeClearsTheOtherTerms(t *testing.T) {
 func TestBilling_ModeLockedWithProjects(t *testing.T) {
 	svc, projSvc, orgID := setup(t)
 	setSolo(t, orgID, true)
-	c, err := svc.Create(orgID, customer.Input{Name: ptr("Com projeto"), DefaultRateCents: opt(15000)})
+	c, err := svc.Create(orgID, withRate(customer.Input{Name: ptr("Com projeto"), HourlyRateCents: opt(15000)}))
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
 	id := c.ID.String()
 	proj, _ := projSvc.Create(orgID, "Projeto", "", 0, project.Routine{})
-	if _, err := projSvc.SetBilling(proj.ID.String(), &id, ptr(15000)); err != nil {
+	if _, err := projSvc.SetBilling(proj.ID.String(), &id, 0); err != nil {
 		t.Fatalf("set billing: %v", err)
 	}
 
 	_, err = svc.Update(id, customer.Input{BillingMode: ptr("monthly"), MonthlyFeeCents: opt(500000), ContractStart: ptr("2026-11-01")})
 	refused(t, "switch with projects", err, customer.ErrModeLocked, "billing_mode")
-	if got := mustGet(t, svc, id); got.BillingMode != customer.BillingHourly || got.DefaultRateCents == nil {
+	if got := mustGet(t, svc, id); got.BillingMode != customer.BillingHourly || got.HourlyRateCents == nil {
 		t.Errorf("a locked switch changed the customer: %+v", got)
 	}
 
 	// Mandar o modo que ele já tem, e mexer nos outros termos, continua valendo.
-	edited, err := svc.Update(id, customer.Input{BillingMode: ptr("hourly"), DefaultRateCents: opt(18000), PaymentDays: ptr(10)})
-	if err != nil || edited.DefaultRateCents == nil || *edited.DefaultRateCents != 18000 || edited.PaymentDays != 10 {
+	edited, err := svc.Update(id, customer.Input{BillingMode: ptr("hourly"), HourlyRateCents: opt(18000), PaymentDays: ptr(10)})
+	if err != nil || edited.HourlyRateCents == nil || *edited.HourlyRateCents != 18000 || edited.PaymentDays != 10 {
 		t.Errorf("edit of a locked customer = %+v, %v", edited, err)
 	}
 
 	// Sem projetos o modo volta a trocar.
-	if _, err := projSvc.SetBilling(proj.ID.String(), nil, nil); err != nil {
+	if _, err := projSvc.SetBilling(proj.ID.String(), nil, 0); err != nil {
 		t.Fatalf("clear billing: %v", err)
 	}
 	if got, err := svc.Update(id, customer.Input{BillingMode: ptr("monthly"), MonthlyFeeCents: opt(500000), ContractStart: ptr("2026-11-01")}); err != nil || got.BillingMode != customer.BillingMonthly {
@@ -430,12 +442,12 @@ func receivableOf(c *customer.Customer) *ent.Receivable {
 // trava este, e desfeitos os recebíveis o dia muda.
 func TestBilling_ClosingDayLockedWithReceivables(t *testing.T) {
 	svc, _, orgID := setup(t)
-	c, err := svc.Create(orgID, customer.Input{Name: ptr("Com recebível"), ClosingDay: ptr(20)})
+	c, err := svc.Create(orgID, withRate(customer.Input{Name: ptr("Com recebível"), ClosingDay: ptr(20)}))
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
 	id := c.ID.String()
-	other, err := svc.Create(orgID, customer.Input{Name: ptr("Outro")})
+	other, err := svc.Create(orgID, withRate(customer.Input{Name: ptr("Outro")}))
 	if err != nil {
 		t.Fatalf("create other: %v", err)
 	}
@@ -463,7 +475,7 @@ func TestBilling_ClosingDayLockedWithReceivables(t *testing.T) {
 	refused(t, "closing day out of range", err, customer.ErrInvalidClosingDay, "closing_day")
 
 	// Na criação o dia é livre: o cliente ainda não tem recebível.
-	if created, err := svc.Create(orgID, customer.Input{Name: ptr("Novo"), ClosingDay: ptr(5)}); err != nil || created.ClosingDay != 5 {
+	if created, err := svc.Create(orgID, withRate(customer.Input{Name: ptr("Novo"), ClosingDay: ptr(5)})); err != nil || created.ClosingDay != 5 {
 		t.Errorf("create with a closing day: %+v, %v", created, err)
 	}
 
@@ -481,7 +493,7 @@ func TestBilling_ClosingDayLockedWithReceivables(t *testing.T) {
 func TestBilling_DeleteRefusedWithReceivables(t *testing.T) {
 	svc, _, orgID := setup(t)
 	setSolo(t, orgID, true)
-	c, err := svc.Create(orgID, customer.Input{Name: ptr("Com recebível"), BillingMode: ptr("monthly"), MonthlyFeeCents: opt(630000), ContractStart: ptr("2026-11-01")})
+	c, err := svc.Create(orgID, withRate(customer.Input{Name: ptr("Com recebível"), BillingMode: ptr("monthly"), MonthlyFeeCents: opt(630000), ContractStart: ptr("2026-11-01")}))
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}

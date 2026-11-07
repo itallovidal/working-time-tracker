@@ -13,7 +13,7 @@ import (
 func TestService_Country(t *testing.T) {
 	svc, _, orgID := setup(t)
 
-	brazilian, err := svc.Create(orgID, customer.Input{Name: ptr("Empresa BR"), Document: ptr("11.222.333/0001-81")})
+	brazilian, err := svc.Create(orgID, withRate(customer.Input{Name: ptr("Empresa BR"), Document: ptr("11.222.333/0001-81")}))
 	if err != nil {
 		t.Fatalf("create in the default country: %v", err)
 	}
@@ -21,7 +21,7 @@ func TestService_Country(t *testing.T) {
 		t.Errorf("default customer = %q %q, want BR and the CNPJ unmasked", brazilian.Country, brazilian.Document)
 	}
 
-	american, err := svc.Create(orgID, customer.Input{Name: ptr("Acme Inc"), Country: ptr("us"), Document: ptr("12-3456789")})
+	american, err := svc.Create(orgID, withRate(customer.Input{Name: ptr("Acme Inc"), Country: ptr("us"), Document: ptr("12-3456789")}))
 	if err != nil {
 		t.Fatalf("create a US customer: %v", err)
 	}
@@ -29,7 +29,7 @@ func TestService_Country(t *testing.T) {
 		t.Errorf("US customer = %q %q, want US and the EIN unmasked", american.Country, american.Document)
 	}
 
-	german, err := svc.Create(orgID, customer.Input{Name: ptr("Beispiel GmbH"), Country: ptr("DE"), Document: ptr("  DE   123456789 ")})
+	german, err := svc.Create(orgID, withRate(customer.Input{Name: ptr("Beispiel GmbH"), Country: ptr("DE"), Document: ptr("  DE   123456789 ")}))
 	if err != nil {
 		t.Fatalf("create a customer in a country with no rule: %v", err)
 	}
@@ -47,7 +47,7 @@ func TestService_Country(t *testing.T) {
 		"an unknown country":       {customer.Input{Name: ptr("X"), Country: ptr("ZZ")}, customer.ErrInvalidCountry},
 		"a country name, not code": {customer.Input{Name: ptr("X"), Country: ptr("Brasil")}, customer.ErrInvalidCountry},
 	} {
-		if _, err := svc.Create(orgID, c.in); !errors.Is(err, c.want) {
+		if _, err := svc.Create(orgID, withRate(c.in)); !errors.Is(err, c.want) {
 			t.Errorf("%s: err = %v, want %v", name, err, c.want)
 		}
 	}
@@ -57,7 +57,7 @@ func TestService_Country(t *testing.T) {
 	if _, err := orgs.Update(orgID, organization.UpdateInput{Country: ptr("US")}); err != nil {
 		t.Fatalf("switch the organization to the US: %v", err)
 	}
-	inUS, err := svc.Create(orgID, customer.Input{Name: ptr("Local Co"), Country: ptr("")})
+	inUS, err := svc.Create(orgID, withRate(customer.Input{Name: ptr("Local Co"), Country: ptr("")}))
 	if err != nil {
 		t.Fatalf("create with an empty country: %v", err)
 	}
@@ -70,7 +70,7 @@ func TestService_Country(t *testing.T) {
 // apagado em silêncio. Mandar o documento (ou vazio) no mesmo pedido resolve.
 func TestService_Update_ChangingTheCountryChecksTheStoredDocument(t *testing.T) {
 	svc, _, orgID := setup(t)
-	c, err := svc.Create(orgID, customer.Input{Name: ptr("Empresa"), Document: ptr("11.222.333/0001-81")})
+	c, err := svc.Create(orgID, withRate(customer.Input{Name: ptr("Empresa"), Document: ptr("11.222.333/0001-81")}))
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}

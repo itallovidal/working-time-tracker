@@ -316,7 +316,7 @@ func (s *Service) Confirm(orgID string, in ConfirmInput) (*Receivable, error) {
 	}
 	seconds, calculated := sumWithin(sessions[c.ID], period.Start, period.End, e.now)
 	if kind == KindMonthly {
-		calculated = *c.MonthlyFeeCents
+		calculated = t.monthlyCents()
 	}
 	created, err := s.deps.Store.Create(e.id, &ent.Receivable{
 		CustomerID: c.ID, Kind: kind, PeriodStart: in.PeriodStart, PeriodEnd: in.PeriodEnd,

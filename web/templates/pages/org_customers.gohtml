@@ -23,7 +23,7 @@
     <div class="table-wrap" x-show="customers.length > 0">
       <table>
         <thead>
-          <tr><th>{{.T "org.customers.customer"}}</th><th>{{.T "countries.generic.legal_id.label"}}</th><th>{{.T "org.customers.contact"}}</th>{{if .Me.OrganizationSolo}}<th>{{.T "customer.billing.column"}}</th>{{end}}<th>{{.T "org.customers.projects"}}</th><th class="actions"><span class="sr-only">{{.T "common.actions"}}</span></th></tr>
+          <tr><th>{{.T "org.customers.customer"}}</th><th>{{.T "countries.generic.legal_id.label"}}</th><th>{{.T "org.customers.contact"}}</th><th>{{.T "customer.billing.column"}}</th><th>{{.T "org.customers.projects"}}</th><th class="actions"><span class="sr-only">{{.T "common.actions"}}</span></th></tr>
         </thead>
         <tbody>
           <template x-for="c in customers" :key="c.id">
@@ -42,12 +42,11 @@
                 <div class="muted small" x-show="c.contact_email || c.contact_phone" x-text="[c.contact_email, c.contact_phone].filter(Boolean).join(' · ')"></div>
                 <span class="muted" x-show="!c.contact_name && !c.contact_email && !c.contact_phone" x-text="WTT.notInformed"></span>
               </td>
-              {{if .Me.OrganizationSolo}}
+              {{/* A cobrança mora no cliente (Decisão 21): o valor por hora ou o contrato. Os prazos são do modo solo. */}}
               <td>
-                <div x-text="billingLabel(c)"></div>
-                <div class="muted small" x-text="billingTerms(c)"></div>
+                <div :class="c.billing_mode !== 'monthly' && c.hourly_rate_cents == null && 'muted'" x-text="billingLabel(c)"></div>
+                {{if .Me.OrganizationSolo}}<div class="muted small" x-text="billingTerms(c)"></div>{{end}}
               </td>
-              {{end}}
               <td class="num" x-text="c.project_count"></td>
               <td class="actions">
                 <span x-show="confirming !== c.id">
@@ -91,10 +90,12 @@
         <input id="customer-phone" type="tel" data-field="contact_phone" maxlength="{{limit "phone"}}" x-model="draft.contact_phone" @input="clearField('contact_phone')" :aria-invalid="fieldErrors.contact_phone ? 'true' : 'false'">
         {{template "field_error" "contact_phone"}}
       </div>
-      {{/* Os termos comerciais só existem no modo solo: o cliente por hora tem o valor padrão, e o mensal, o contrato. */}}
-      {{if .Me.OrganizationSolo}}
+      {{/* A cobrança mora no cliente (Decisão 21): o valor por hora vale para todos os projetos dele, e cada projeto só
+           soma um acréscimo. O modo, o contrato mensal e os prazos só existem no modo solo; na equipe todo cliente é
+           por hora, e o modal pede só o valor. */}}
       <fieldset class="form-group">
         <legend>{{.T "customer.billing.title"}}</legend>
+        {{if .Me.OrganizationSolo}}
         <div class="field">
           <label for="customer-billing-mode">{{.T "customer.billing.mode"}}</label>
           <select id="customer-billing-mode" data-field="billing_mode" x-model="draft.billing_mode" :disabled="modeLocked" @change="clearField('billing_mode')" :aria-invalid="fieldErrors.billing_mode ? 'true' : 'false'">
@@ -105,18 +106,20 @@
           <span class="hint" x-show="modeLocked">{{.T "customer.billing.mode_locked"}}</span>
           <span class="hint" x-show="!modeLocked">{{.T "customer.billing.mode_hint"}}</span>
         </div>
+        {{end}}
 
         <div class="field" x-show="draft.billing_mode === 'hourly'">
-          <label for="customer-default-rate"><span x-text="$t('customer.billing.default_rate', { unit: WTT.fmt.moneyUnit() })"></span> <span class="optional">{{.T "common.optional_label"}}</span></label>
-          <input id="customer-default-rate" type="text" inputmode="decimal" class="num" placeholder="{{.T "project_settings.rate_placeholder"}}" data-field="default_rate_cents" x-model="draft.default_rate" @input="clearField('default_rate_cents')" :aria-invalid="fieldErrors.default_rate_cents ? 'true' : 'false'">
-          {{template "field_error" "default_rate_cents"}}
-          <span class="hint">{{.T "customer.billing.default_rate_hint"}}</span>
+          <label for="customer-hourly-rate" x-text="$t('customer.billing.hourly_rate', { unit: WTT.fmt.moneyUnit() })"></label>
+          <input id="customer-hourly-rate" type="text" inputmode="decimal" class="num" placeholder="{{.T "project_settings.rate_placeholder"}}" data-field="hourly_rate_cents" x-model="draft.hourly_rate" @input="clearField('hourly_rate_cents')" :aria-invalid="fieldErrors.hourly_rate_cents ? 'true' : 'false'">
+          {{template "field_error" "hourly_rate_cents"}}
+          <span class="hint">{{.T "customer.billing.hourly_rate_hint"}}</span>
         </div>
 
-        {{/* O contrato, o fechamento, o prazo e a multa: o mesmo parcial do formulário de novo projeto. */}}
+        {{if .Me.OrganizationSolo}}
+        {{/* O contrato, o fechamento, o prazo e a multa. */}}
         {{template "customer_contract" (dict "Data" . "Model" "draft" "Id" "customer")}}
+        {{end}}
       </fieldset>
-      {{end}}
       <p class="form-error" x-show="errors.save" x-text="errors.save" role="alert"></p>
       <div class="row row-end">
         <button type="button" class="btn btn-secondary" @click="$store.modal.dismiss()">{{.T "common.cancel"}}</button>

@@ -40,8 +40,11 @@ type Proposal struct {
 	// Seconds é o tempo trabalhado no período em todos os projetos do cliente (até agora, no período corrente).
 	Seconds float64 `json:"seconds"`
 	// CalculatedCents é o valor proposto: no por hora, a soma das sessões cortadas no período, cada uma arredondada ao
-	// centavo pelo valor cobrado congelado nela; no mensal, a mensalidade.
+	// centavo pelo valor cobrado congelado nela; no mensal, a mensalidade mais os acréscimos mensais dos projetos.
 	CalculatedCents int `json:"calculated_cents"`
+	// ExtraCents é a parte de CalculatedCents que vem dos acréscimos mensais dos projetos do cliente (só no mensal;
+	// zero no por hora, em que o acréscimo já está no valor de cada sessão).
+	ExtraCents int `json:"extra_cents"`
 	// DueDate é o vencimento que a confirmação usa se o dono não mudar: o fim do período mais os payment_days.
 	DueDate string `json:"due_date"`
 	// Open diz que o período ainda não fechou. A lista A confirmar só tem períodos abertos no mensal, que se confirma

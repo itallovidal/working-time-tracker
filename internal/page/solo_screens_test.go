@@ -63,20 +63,18 @@ func TestOnboarding_SoloAsksOnlyTheTimeZone(t *testing.T) {
 	mustHave(t, "team onboarding", team, `id="ob-work-mode"`, `id="ob-currency"`, `id="ob-timezone"`)
 }
 
-// No solo o novo projeto escolhe a cobrança (por hora ou contrato mensal) e tem os campos do contrato; com equipe, só o
-// valor por hora, como antes.
-func TestProjectForm_BillingChoiceOnlyInSolo(t *testing.T) {
+// O novo projeto não configura a cobrança, que mora no cliente (Decisão 21): nos dois modos mostra a do cliente, só para
+// leitura, e pede o acréscimo. A escolha de modo e os campos do contrato ficam só no modal de cliente.
+func TestProjectForm_BillingComesFromTheCustomer(t *testing.T) {
 	solo, team := pair(t, "org_projects", func(s bool) Data {
 		return Data{Me: identity("admin", true, s), Section: "projects", Script: "org"}
 	})
-	mustHave(t, "solo project form", solo, `name="project-billing"`, `value="monthly"`, `id="project-monthly-fee"`,
-		`id="project-contract-start"`, `id="project-closing-day"`, `id="project-late-fee"`, `id="project-bill-rate"`)
-	mustNotHave(t, "team project form", team, `name="project-billing"`, `id="project-monthly-fee"`, `id="project-closing-day"`)
-	mustHave(t, "team project form", team, `id="project-bill-rate"`)
-	// O valor por hora aparece uma vez só nos dois.
 	for who, html := range map[string]string{"solo": solo, "team": team} {
-		if n := strings.Count(html, `id="project-bill-rate"`); n != 1 {
-			t.Errorf("%s project form has %d bill rate fields, want 1", who, n)
+		mustNotHave(t, who+" project form", html, `name="project-billing"`, `id="project-monthly-fee"`, `id="project-closing-day"`,
+			`id="project-bill-rate"`, `data-field="bill_rate_cents"`)
+		mustHave(t, who+" project form", html, `id="project-bill-extra"`, `data-field="bill_extra_cents"`, `x-text="billing.customer(customerOf())"`)
+		if n := strings.Count(html, `id="project-bill-extra"`); n != 1 {
+			t.Errorf("%s project form has %d extra fields, want 1", who, n)
 		}
 	}
 }

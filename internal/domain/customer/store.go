@@ -30,7 +30,7 @@ func (s *Store) Create(c *Customer) error {
 		SetContactEmail(c.ContactEmail).
 		SetContactPhone(c.ContactPhone).
 		SetBillingMode(c.BillingMode).
-		SetNillableDefaultRateCents(c.DefaultRateCents).
+		SetNillableHourlyRateCents(c.HourlyRateCents).
 		SetNillableMonthlyFeeCents(c.MonthlyFeeCents).
 		SetNillableContractStart(c.ContractStart).
 		SetNillableContractEnd(c.ContractEnd).
@@ -103,10 +103,10 @@ func (s *Store) Update(c *Customer) error {
 		SetLateFeeBp(c.LateFeeBP).
 		SetLateInterestBpMonth(c.LateInterestBPMonth).
 		SetGraceDays(c.GraceDays)
-	if c.DefaultRateCents != nil {
-		q = q.SetDefaultRateCents(*c.DefaultRateCents)
+	if c.HourlyRateCents != nil {
+		q = q.SetHourlyRateCents(*c.HourlyRateCents)
 	} else {
-		q = q.ClearDefaultRateCents()
+		q = q.ClearHourlyRateCents()
 	}
 	if c.MonthlyFeeCents != nil {
 		q = q.SetMonthlyFeeCents(*c.MonthlyFeeCents)
@@ -178,7 +178,7 @@ func toDomain(e *ent.Customer) *Customer {
 		CreatedAt:      e.CreatedAt,
 
 		BillingMode:         e.BillingMode,
-		DefaultRateCents:    e.DefaultRateCents,
+		HourlyRateCents:     e.HourlyRateCents,
 		MonthlyFeeCents:     e.MonthlyFeeCents,
 		ContractStart:       e.ContractStart,
 		ContractEnd:         e.ContractEnd,

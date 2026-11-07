@@ -167,30 +167,30 @@ func (_u *CustomerUpdate) SetNillableBillingMode(v *string) *CustomerUpdate {
 	return _u
 }
 
-// SetDefaultRateCents sets the "default_rate_cents" field.
-func (_u *CustomerUpdate) SetDefaultRateCents(v int) *CustomerUpdate {
-	_u.mutation.ResetDefaultRateCents()
-	_u.mutation.SetDefaultRateCents(v)
+// SetHourlyRateCents sets the "hourly_rate_cents" field.
+func (_u *CustomerUpdate) SetHourlyRateCents(v int) *CustomerUpdate {
+	_u.mutation.ResetHourlyRateCents()
+	_u.mutation.SetHourlyRateCents(v)
 	return _u
 }
 
-// SetNillableDefaultRateCents sets the "default_rate_cents" field if the given value is not nil.
-func (_u *CustomerUpdate) SetNillableDefaultRateCents(v *int) *CustomerUpdate {
+// SetNillableHourlyRateCents sets the "hourly_rate_cents" field if the given value is not nil.
+func (_u *CustomerUpdate) SetNillableHourlyRateCents(v *int) *CustomerUpdate {
 	if v != nil {
-		_u.SetDefaultRateCents(*v)
+		_u.SetHourlyRateCents(*v)
 	}
 	return _u
 }
 
-// AddDefaultRateCents adds value to the "default_rate_cents" field.
-func (_u *CustomerUpdate) AddDefaultRateCents(v int) *CustomerUpdate {
-	_u.mutation.AddDefaultRateCents(v)
+// AddHourlyRateCents adds value to the "hourly_rate_cents" field.
+func (_u *CustomerUpdate) AddHourlyRateCents(v int) *CustomerUpdate {
+	_u.mutation.AddHourlyRateCents(v)
 	return _u
 }
 
-// ClearDefaultRateCents clears the value of the "default_rate_cents" field.
-func (_u *CustomerUpdate) ClearDefaultRateCents() *CustomerUpdate {
-	_u.mutation.ClearDefaultRateCents()
+// ClearHourlyRateCents clears the value of the "hourly_rate_cents" field.
+func (_u *CustomerUpdate) ClearHourlyRateCents() *CustomerUpdate {
+	_u.mutation.ClearHourlyRateCents()
 	return _u
 }
 
@@ -483,9 +483,9 @@ func (_u *CustomerUpdate) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *CustomerUpdate) check() error {
-	if v, ok := _u.mutation.DefaultRateCents(); ok {
-		if err := customer.DefaultRateCentsValidator(v); err != nil {
-			return &ValidationError{Name: "default_rate_cents", err: fmt.Errorf(`ent: validator failed for field "Customer.default_rate_cents": %w`, err)}
+	if v, ok := _u.mutation.HourlyRateCents(); ok {
+		if err := customer.HourlyRateCentsValidator(v); err != nil {
+			return &ValidationError{Name: "hourly_rate_cents", err: fmt.Errorf(`ent: validator failed for field "Customer.hourly_rate_cents": %w`, err)}
 		}
 	}
 	if v, ok := _u.mutation.MonthlyFeeCents(); ok {
@@ -569,14 +569,14 @@ func (_u *CustomerUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if value, ok := _u.mutation.BillingMode(); ok {
 		_spec.SetField(customer.FieldBillingMode, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.DefaultRateCents(); ok {
-		_spec.SetField(customer.FieldDefaultRateCents, field.TypeInt, value)
+	if value, ok := _u.mutation.HourlyRateCents(); ok {
+		_spec.SetField(customer.FieldHourlyRateCents, field.TypeInt, value)
 	}
-	if value, ok := _u.mutation.AddedDefaultRateCents(); ok {
-		_spec.AddField(customer.FieldDefaultRateCents, field.TypeInt, value)
+	if value, ok := _u.mutation.AddedHourlyRateCents(); ok {
+		_spec.AddField(customer.FieldHourlyRateCents, field.TypeInt, value)
 	}
-	if _u.mutation.DefaultRateCentsCleared() {
-		_spec.ClearField(customer.FieldDefaultRateCents, field.TypeInt)
+	if _u.mutation.HourlyRateCentsCleared() {
+		_spec.ClearField(customer.FieldHourlyRateCents, field.TypeInt)
 	}
 	if value, ok := _u.mutation.MonthlyFeeCents(); ok {
 		_spec.SetField(customer.FieldMonthlyFeeCents, field.TypeInt, value)
@@ -904,30 +904,30 @@ func (_u *CustomerUpdateOne) SetNillableBillingMode(v *string) *CustomerUpdateOn
 	return _u
 }
 
-// SetDefaultRateCents sets the "default_rate_cents" field.
-func (_u *CustomerUpdateOne) SetDefaultRateCents(v int) *CustomerUpdateOne {
-	_u.mutation.ResetDefaultRateCents()
-	_u.mutation.SetDefaultRateCents(v)
+// SetHourlyRateCents sets the "hourly_rate_cents" field.
+func (_u *CustomerUpdateOne) SetHourlyRateCents(v int) *CustomerUpdateOne {
+	_u.mutation.ResetHourlyRateCents()
+	_u.mutation.SetHourlyRateCents(v)
 	return _u
 }
 
-// SetNillableDefaultRateCents sets the "default_rate_cents" field if the given value is not nil.
-func (_u *CustomerUpdateOne) SetNillableDefaultRateCents(v *int) *CustomerUpdateOne {
+// SetNillableHourlyRateCents sets the "hourly_rate_cents" field if the given value is not nil.
+func (_u *CustomerUpdateOne) SetNillableHourlyRateCents(v *int) *CustomerUpdateOne {
 	if v != nil {
-		_u.SetDefaultRateCents(*v)
+		_u.SetHourlyRateCents(*v)
 	}
 	return _u
 }
 
-// AddDefaultRateCents adds value to the "default_rate_cents" field.
-func (_u *CustomerUpdateOne) AddDefaultRateCents(v int) *CustomerUpdateOne {
-	_u.mutation.AddDefaultRateCents(v)
+// AddHourlyRateCents adds value to the "hourly_rate_cents" field.
+func (_u *CustomerUpdateOne) AddHourlyRateCents(v int) *CustomerUpdateOne {
+	_u.mutation.AddHourlyRateCents(v)
 	return _u
 }
 
-// ClearDefaultRateCents clears the value of the "default_rate_cents" field.
-func (_u *CustomerUpdateOne) ClearDefaultRateCents() *CustomerUpdateOne {
-	_u.mutation.ClearDefaultRateCents()
+// ClearHourlyRateCents clears the value of the "hourly_rate_cents" field.
+func (_u *CustomerUpdateOne) ClearHourlyRateCents() *CustomerUpdateOne {
+	_u.mutation.ClearHourlyRateCents()
 	return _u
 }
 
@@ -1233,9 +1233,9 @@ func (_u *CustomerUpdateOne) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *CustomerUpdateOne) check() error {
-	if v, ok := _u.mutation.DefaultRateCents(); ok {
-		if err := customer.DefaultRateCentsValidator(v); err != nil {
-			return &ValidationError{Name: "default_rate_cents", err: fmt.Errorf(`ent: validator failed for field "Customer.default_rate_cents": %w`, err)}
+	if v, ok := _u.mutation.HourlyRateCents(); ok {
+		if err := customer.HourlyRateCentsValidator(v); err != nil {
+			return &ValidationError{Name: "hourly_rate_cents", err: fmt.Errorf(`ent: validator failed for field "Customer.hourly_rate_cents": %w`, err)}
 		}
 	}
 	if v, ok := _u.mutation.MonthlyFeeCents(); ok {
@@ -1336,14 +1336,14 @@ func (_u *CustomerUpdateOne) sqlSave(ctx context.Context) (_node *Customer, err 
 	if value, ok := _u.mutation.BillingMode(); ok {
 		_spec.SetField(customer.FieldBillingMode, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.DefaultRateCents(); ok {
-		_spec.SetField(customer.FieldDefaultRateCents, field.TypeInt, value)
+	if value, ok := _u.mutation.HourlyRateCents(); ok {
+		_spec.SetField(customer.FieldHourlyRateCents, field.TypeInt, value)
 	}
-	if value, ok := _u.mutation.AddedDefaultRateCents(); ok {
-		_spec.AddField(customer.FieldDefaultRateCents, field.TypeInt, value)
+	if value, ok := _u.mutation.AddedHourlyRateCents(); ok {
+		_spec.AddField(customer.FieldHourlyRateCents, field.TypeInt, value)
 	}
-	if _u.mutation.DefaultRateCentsCleared() {
-		_spec.ClearField(customer.FieldDefaultRateCents, field.TypeInt)
+	if _u.mutation.HourlyRateCentsCleared() {
+		_spec.ClearField(customer.FieldHourlyRateCents, field.TypeInt)
 	}
 	if value, ok := _u.mutation.MonthlyFeeCents(); ok {
 		_spec.SetField(customer.FieldMonthlyFeeCents, field.TypeInt, value)

@@ -63,7 +63,7 @@ erDiagram
     string country "ISO 3166-1"
     string document
     string billing_mode "hourly ou monthly"
-    int default_rate_cents "só hourly"
+    int hourly_rate_cents "só hourly, obrigatório"
     int monthly_fee_cents "só monthly"
     string contract_start "só monthly, YYYY-MM-DD"
     string contract_end "só monthly, opcional"
@@ -93,7 +93,7 @@ erDiagram
   }
   PROJECT {
     uuid customer_id FK "nulo: interno"
-    int bill_rate_cents "valor cobrado"
+    int bill_extra_cents "acréscimo, padrão 0"
     int sprint_duration_days
     string daily_time
     string weekly_sync_day
@@ -192,9 +192,9 @@ erDiagram
 | `persons` | Uma pessoa de **uma** organização. O e-mail é único no sistema todo. `role` é `admin` ou `member`; o dono é um admin com `is_owner` |
 | `sessions` | A sessão de login (o cookie). Guarda só o sha256 do token |
 | `invites` | Convite de uso único, com validade. Pode levar a pessoa a um projeto, com valor, time e grupo |
-| `customers` | O cliente que contrata projetos. Tem país próprio, que decide como o documento é conferido, e os termos de cobrança: o modo (`hourly` ou `monthly`), o fechamento do período, o prazo e, no mensal, a mensalidade, o contrato, a multa, os juros e a tolerância |
+| `customers` | O cliente que contrata projetos. Tem país próprio, que decide como o documento é conferido, e os termos de cobrança, que valem para todos os projetos dele: o modo (`hourly` ou `monthly`), o valor por hora (no por hora), o fechamento do período, o prazo e, no mensal, a mensalidade, o contrato, a multa, os juros e a tolerância |
 | `receivables` | A conta a receber de um cliente por período, no modo solo: o que o dono confirmou cobrar e, depois, o que entrou. Um por cliente e período |
-| `projects` | O projeto. Com cliente por hora, tem o valor cobrado por hora; sem cliente, é interno e não tem nenhum dos dois; com cliente mensal tem o cliente e não tem o valor por hora |
+| `projects` | O projeto. Com cliente, tem um acréscimo opcional sobre a cobrança dele (por hora no cliente por hora, por mês no mensal); o valor cobrado por hora é o do cliente mais o acréscimo, calculado, nunca gravado aqui. Sem cliente é interno, sem acréscimo |
 | `allocations` | A pessoa no projeto: o valor pago por hora e o grupo de permissões dela ali. Uma por pessoa e projeto |
 | `teams`, `team_memberships` | Os times de um projeto e quem está em cada um |
 | `labels`, `task_labels` | As etiquetas de um projeto e as de cada tarefa |
@@ -228,11 +228,12 @@ Num banco de antes dessa regra pode haver alguém num time sem alocação. Essa 
 nem faz a pessoa aparecer como colaboradora; para voltar, ela precisa de um valor.
 
 **O dono não tem custo.** A alocação dele guarda sempre 0, e o ponto dele não exige alocação (o clock-in a cria).
-As sessões dele gravam `pay_rate_cents = 0`, o valor cobrado do projeto e `owner_hours = true`: as horas dele valem
+As sessões dele gravam `pay_rate_cents = 0`, o valor cobrado do projeto (o do cliente mais o acréscimo) e `owner_hours = true`: as horas dele valem
 o valor cobrado, sem custo. Para todos os outros, o valor pago e o cobrado têm o piso de 10,00 por hora.
 
 **A sessão congela os valores.** Ao abrir o ponto, a sessão copia o valor pago da alocação e o valor cobrado do
-projeto (nulo no projeto interno e no de cliente mensal). Mudar um valor só vale dali em diante. Quem não tem alocação no projeto não bate o ponto.
+projeto, o valor por hora do cliente mais o acréscimo do projeto (nulo no projeto interno e no de cliente mensal). Mudar
+um valor, inclusive reajustar o cliente, só vale dali em diante. Quem não tem alocação no projeto não bate o ponto.
 
 **Uma sessão aberta por pessoa.** O índice único parcial `one_active_session` em
 `work_sessions (person_id) WHERE end_at IS NULL` garante isso no banco, mesmo com dois clock-ins ao mesmo tempo; o

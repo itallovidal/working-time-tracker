@@ -40,13 +40,16 @@
           <dd :class="!current.customer_meeting_day && 'muted'" x-text="meeting()"></dd>
         </div>
         {{if .CanDo "billing.view"}}
-        {{/* No modo solo, como o projeto é cobrado (o modo é do cliente): por hora ou pelo contrato mensal. */}}
-        {{if .Me.OrganizationSolo}}
+        {{/* A cobrança mora no cliente (Decisão 21): a do cliente, o acréscimo do projeto e o valor por hora que sai dos
+             dois (no mensal, o contrato não tem valor por hora). */}}
         <div class="fact" x-show="current.customer">
-          <dt>{{.T "customer.billing.title"}}</dt>
-          <dd><span x-text="billingFact()"></span> · <a href="/orgs/{{.OrgID}}/customers">{{.T "customer.billing.project_contract_where"}}</a></dd>
+          <dt>{{.T "project.billing.customer_terms"}}</dt>
+          <dd><span x-text="billing.customer(currentCustomer())"></span>{{if .Can "customers.manage"}} · <a href="/orgs/{{.OrgID}}/customers">{{.T "project.billing.edit_in_customers"}}</a>{{end}}</dd>
         </div>
-        {{end}}
+        <div class="fact" x-show="current.customer">
+          <dt>{{.T "project.billing.extra_fact"}}</dt>
+          <dd class="num" :class="!billExtraCents && 'muted'" x-text="extraFact()"></dd>
+        </div>
         <div class="fact">
           <dt>{{.T "project_settings.bill_rate_fact"}}</dt>
           <dd class="num" :class="billRateCents === null && 'muted'" x-text="billRateCents !== null ? WTT.fmt.money(billRateCents) : (billingMode === 'monthly' ? $t('customer.billing.project_rate_monthly') : WTT.notInformed)"></dd>
@@ -86,33 +89,22 @@
       <fieldset class="form-group">
         <legend>{{.T "project.groups.billing"}}</legend>
         {{if .CanDo "billing.manage"}}
-        <div class="fields">
-          {{if .Can "customers.manage"}}
-          <div class="field">
-            <label for="ps-customer">{{.T "org.projects.customer"}}</label>
-            <select id="ps-customer" data-field="customer_id" x-model="draft.customer_id" @change="customerChanged()"
-                    :aria-invalid="fieldErrors.customer_id ? 'true' : 'false'">
-              <option value="">{{.T "project_settings.internal"}}</option>
-              <template x-for="c in customers" :key="c.id">
-                <option :value="c.id" x-text="customerOption(c)" :selected="c.id === draft.customer_id"></option>
-              </template>
-            </select>
-            {{template "field_error" "customer_id"}}
-            <span class="hint">{{.T "project_settings.customers_hint"}} <a href="/orgs/{{.OrgID}}/customers">{{.T "nav.customers"}}</a>.</span>
-          </div>
-          {{end}}
-          {{/* Projeto interno não tem quem pague, e o cliente mensal paga o contrato, não as horas: o valor só aparece com
-               um cliente por hora, e com ele é obrigatório. */}}
-          <div class="field" x-show="hasRate()">
-            <label for="ps-bill-rate"><span x-text="$t('project.fields.bill_rate', { unit: WTT.fmt.moneyUnit() })"></span></label>
-            <input id="ps-bill-rate" type="text" inputmode="decimal" class="num" placeholder="{{.T "project_settings.rate_placeholder"}}" data-field="bill_rate_cents"
-                   x-model="draft.rate" @input="rateTouched = true; clearField('bill_rate_cents')" :aria-invalid="fieldErrors.bill_rate_cents ? 'true' : 'false'">
-            {{template "field_error" "bill_rate_cents"}}
-            <span class="hint">{{if .Me.OrganizationSolo}}{{.T "project_settings.bill_rate_hint_solo"}}{{else}}{{.T "project_settings.bill_rate_hint"}}{{end}}</span>
-            <span class="hint" x-cloak x-show="rateFromDefault()" x-text="$t('customer.billing.project_rate_default')"></span>
-          </div>
+        {{if .Can "customers.manage"}}
+        <div class="field">
+          <label for="ps-customer">{{.T "org.projects.customer"}}</label>
+          <select id="ps-customer" data-field="customer_id" x-model="draft.customer_id" @change="customerChanged()"
+                  :aria-invalid="fieldErrors.customer_id ? 'true' : 'false'">
+            <option value="">{{.T "project_settings.internal"}}</option>
+            <template x-for="c in customers" :key="c.id">
+              <option :value="c.id" x-text="customerOption(c)" :selected="c.id === draft.customer_id"></option>
+            </template>
+          </select>
+          {{template "field_error" "customer_id"}}
+          <span class="hint">{{.T "project_settings.customers_hint"}} <a href="/orgs/{{.OrgID}}/customers">{{.T "nav.customers"}}</a>.</span>
         </div>
-        <p class="muted small" x-cloak x-show="monthlyCustomer()" x-text="$t('customer.billing.project_monthly_note')"></p>
+        {{end}}
+        {{/* A cobrança do cliente, só para leitura, e o acréscimo deste projeto: o mesmo parcial do novo projeto. */}}
+        {{template "project_billing_fields" (dict "Data" . "Id" "ps" "Customer" "draftCustomer()")}}
         {{end}}
         {{if .CanDo "project.edit"}}
         {{template "project_customer_meeting" .}}

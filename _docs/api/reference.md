@@ -172,7 +172,7 @@ Se o convite foi criado com email, só esse email consegue aceitar. Um convite v
 | GET | `/api/orgs/:orgId/working-now` | admin | Quem está com o ponto aberto na organização e em que tarefas, sem tempo nem dinheiro. Veja abaixo |
 | GET | `/api/orgs/:orgId/me/overview` | logado | O painel de quem pede: as horas dele (hoje, a semana, dia a dia e por projeto) e as tarefas dele, em todos os projetos. Veja abaixo |
 | GET | `/api/orgs/:orgId/me/tasks` | logado | As tarefas de quem pede, em todos os projetos, abertas ou concluídas, em páginas. Veja abaixo |
-| POST | `/api/orgs/:orgId/projects` | admin | Cria um projeto, já com o cliente e o valor cobrado quando há cliente |
+| POST | `/api/orgs/:orgId/projects` | admin | Cria um projeto, já com o cliente e o acréscimo quando há cliente |
 | GET | `/api/orgs/:orgId/projects` | logado | Projetos da organização, do mais novo para o mais antigo (para quem não é admin, só os em que está). Sem `page`, todos num array; com `page`, uma página. Veja abaixo |
 | POST | `/api/orgs/:orgId/customers` | `customers.manage` (dono) | Cria um cliente |
 | GET | `/api/orgs/:orgId/customers` | `customers.manage` (dono) | Clientes da organização, em ordem alfabética |
@@ -459,12 +459,12 @@ Content-Type: application/json
 
 ### Termos comerciais do cliente
 
-Todo cliente traz o **modo de cobrança** e os termos dele, que o `POST` e o `PATCH` aceitam. O cliente sem termos é por hora, fecha no dia 31 e vence no fechamento, como todo cliente era antes. Os valores são em **centavos**, na moeda da organização.
+Todo cliente traz o **modo de cobrança** e os termos dele, que o `POST` e o `PATCH` aceitam. A cobrança mora no cliente e vale para todos os projetos dele (Decisão 21): o projeto só soma um acréscimo. O cliente só com o valor por hora é por hora, fecha no dia 31 e vence no fechamento. Os valores são em **centavos**, na moeda da organização.
 
 | Campo | Tipo | Regra |
 |---|---|---|
 | `billing_mode` | `"hourly"` (padrão) ou `"monthly"` | Um ou outro, nunca os dois. Outro valor, ou vazio, é `400 customer.invalid_billing_mode` |
-| `default_rate_cents` | int ou `null` | Só `hourly`. O valor por hora que preenche o campo ao criar um projeto do cliente (o projeto guarda o seu). Quando vem, de 1000 (10,00) a 100000000: `400 customer.invalid_default_rate` |
+| `hourly_rate_cents` | int | Só `hourly`, **obrigatório** nele (`400 request.field_required`, também com `null`): o valor por hora do cliente, o mesmo em todos os projetos dele. De 1000 (10,00) a 100000000: `400 customer.invalid_hourly_rate`. Mudar o valor vale para as sessões novas de todos os projetos do cliente. Só um cliente antigo, de antes da Decisão 21 e sem projetos, pode vir com `null` |
 | `monthly_fee_cents` | int ou `null` | Só `monthly`, obrigatório nele (`400 request.field_required`) e de 1 a 100000000 (`400 customer.invalid_monthly_fee`) |
 | `contract_start` | `YYYY-MM-DD` | Só `monthly`, obrigatório nele. Uma data que não existe é `400 request.field_invalid` |
 | `contract_end` | `YYYY-MM-DD` ou `""` | Só `monthly`, opcional (sem fim, o contrato segue). Tem de ser **depois** do início: `400 customer.invalid_contract_end` |
@@ -474,10 +474,10 @@ Todo cliente traz o **modo de cobrança** e os termos dele, que o `POST` e o `PA
 | `late_interest_bp_month` | int, padrão 0 | Só `monthly`. Os juros ao mês em pontos-base, de 0 a 10000 (`400 customer.invalid_late_interest`) |
 | `grace_days` | int, padrão 0 | Só `monthly`. Dias de tolerância depois do vencimento, de 0 a 365 (`400 customer.invalid_grace_days`) |
 
-- **Um modo ou o outro.** Um campo do outro modo, com valor, é recusado com o campo em `params.field`: `400 customer.field_hourly_only` (`default_rate_cents` num cliente mensal) ou `400 customer.field_monthly_only` (a mensalidade, o contrato, a multa, os juros ou a tolerância num cliente por hora). `null`, `""` e `0` são o padrão do campo, não valor. Trocar o modo apaga os campos do modo que saiu.
+- **Um modo ou o outro.** Um campo do outro modo, com valor, é recusado com o campo em `params.field`: `400 customer.field_hourly_only` (`hourly_rate_cents` num cliente mensal) ou `400 customer.field_monthly_only` (a mensalidade, o contrato, a multa, os juros ou a tolerância num cliente por hora). `null`, `""` e `0` são o padrão do campo, não valor. Trocar o modo apaga os campos do modo que saiu.
 - **`monthly` só no modo solo.** Numa organização que não é solo, `billing_mode: "monthly"` é `400 customer.monthly_needs_solo` (`params.field` = `billing_mode`), na criação e na troca. Desligar o modo solo esconde as telas, e o cliente mensal segue guardado e editável.
 - **O modo trava com projetos.** Trocar o `billing_mode` de um cliente que já tem projetos é `409 customer.mode_locked` (`params.field` = `billing_mode`). Mandar o modo que ele já tem, e mexer nos outros termos, vale.
-- **`PATCH`.** Campo omitido mantém o valor. Nos opcionais de dinheiro (`default_rate_cents`, `monthly_fee_cents`), `null` apaga; em `contract_start` e `contract_end`, `""` apaga (o início de um cliente mensal não pode ficar vazio).
+- **`PATCH`.** Campo omitido mantém o valor. `null` em `hourly_rate_cents` ou `monthly_fee_cents` é recusado no modo que os exige (`400 request.field_required`); em `contract_start` e `contract_end`, `""` apaga (o início de um cliente mensal não pode ficar vazio).
 - Todo erro de termo leva `params.field` com a chave do corpo, para a tela marcar o campo. Chave desconhecida, ou do tipo errado (`"closing_day": "5"`), é `400 request.invalid_body`.
 
 ```http
@@ -541,10 +541,10 @@ Content-Type: application/json
   "customer_meeting_day": "wednesday",
   "customer_meeting_time": "10:30",
   "customer_id": "<id do cliente, opcional>",
-  "bill_rate_cents": 14000
+  "bill_extra_cents": 2000
 }
 ```
-- `customer_id` e `bill_rate_cents` andam juntos: um projeto **ou tem cliente (e valor cobrado) ou é interno**. Com um cliente **por hora** o valor é obrigatório (`400 project.bill_rate_required`); com um cliente **mensal** o valor é recusado (`400 project.bill_rate_not_allowed`: o contrato é um valor por mês, e o projeto não tem valor por hora); sem cliente o valor é recusado (`400 project.bill_rate_needs_customer`); fora de 10,00 a 1.000.000,00 é `400 project.invalid_bill_rate`. O `customer_id` de outra organização é `400 project.customer_not_found`, checado antes do valor. O erro leva `params.field` = `bill_rate_cents`. Só o dono e os admins criam projeto (os outros recebem `403`), e só o dono é matriculado no projeto que cria, com custo 0.
+- `customer_id` e `bill_extra_cents` andam juntos: um projeto **ou tem cliente ou é interno**. A cobrança é a do cliente (o valor por hora ou o contrato mensal, Decisão 21), e `bill_extra_cents` é o **acréscimo** opcional do projeto sobre ela: por hora com cliente por hora (o valor cobrado é o do cliente mais ele), por mês com cliente mensal (soma à mensalidade). Ausente é zero. Vai de 0 a 100000000 (`400 project.invalid_bill_extra`); sem cliente só vale zero (`400 project.bill_extra_needs_customer`). Esses erros levam `params.field` = `bill_extra_cents`. O `customer_id` de outra organização é `400 project.customer_not_found`, e um cliente por hora ainda sem valor por hora é `400 project.customer_without_rate`, os dois com `params.field` = `customer_id`. Mandar `customer_id` ou `bill_extra_cents` é só do dono (`403 auth.owner_only` para o admin). Só o dono e os admins criam projeto (os outros recebem `403`), e só o dono é matriculado no projeto que cria, com custo 0.
 - `sprint_duration_days` vai de 1 a 90, e o padrão é 14. As telas oferecem 7, 14 e 30 (um mês); um projeto com outra duração continua com ela.
 - `daily_time` usa o formato `HH:MM`. Sem ele, o projeto não tem daily.
 - `weekly_sync_day` vai de `monday` a `sunday`. Sem ele, o projeto não tem weekly.
@@ -557,22 +557,32 @@ O projeto traz `member_count`, os colaboradores dele (quem tem valor por hora ne
 
 O projeto traz `customer` (`{"id", "name"}` ou `null`) para qualquer membro. O valor cobrado nunca vem aqui: ele fica em `/billing`.
 
-### Cliente e valor cobrado
+### Cliente e acréscimo
 
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
-| GET | `/api/projects/:projectId/billing` | `billing.view` | Cliente, valor que ele paga por hora (`null` com cliente mensal) e o modo de cobrança do cliente (`customer_billing_mode`: `hourly`, `monthly` ou `null` no projeto interno) |
-| PUT | `/api/projects/:projectId/billing` | `billing.manage` | Substitui os dois, que andam juntos: com cliente por hora o valor é obrigatório, com cliente mensal é recusado, sem cliente é recusado |
+| GET | `/api/projects/:projectId/billing` | `billing.view` | O cliente, o valor cobrado por hora calculado (`bill_rate_cents`: o do cliente mais o acréscimo; `null` no interno e com cliente mensal), o acréscimo (`bill_extra_cents`), o modo de cobrança do cliente (`customer_billing_mode`: `hourly`, `monthly` ou `null` no projeto interno) e a cobrança dele (`customer_hourly_rate_cents`, `customer_monthly_fee_cents`) |
+| PUT | `/api/projects/:projectId/billing` | `billing.manage` | Substitui o cliente e o acréscimo, que andam juntos |
 
 ```http
 PUT /api/projects/:projectId/billing
 Content-Type: application/json
 
-{ "customer_id": "<id do cliente>", "bill_rate_cents": 10000 }
+{ "customer_id": "<id do cliente>", "bill_extra_cents": 2000 }
 ```
-Os valores são sempre em **centavos**, na moeda da organização: `10000` é 100,00. O valor vai de `1000` (10,00) a `100000000`. O cliente precisa ser da mesma organização do projeto (`400 project.customer_not_found`, antes do valor). O valor segue o modo de cobrança do cliente **novo**, também ao trocar o cliente do projeto: com um cliente por hora e sem `bill_rate_cents` é `400 project.bill_rate_required`; com um cliente mensal e qualquer valor é `400 project.bill_rate_not_allowed` (ao passar de um cliente por hora para um mensal, o valor antigo não vai junto: `bill_rate_cents` vai `null`); com o valor e sem cliente é `400 project.bill_rate_needs_customer`; fora da faixa é `400 project.invalid_bill_rate`. Mandar `{"customer_id": null, "bill_rate_cents": null}` volta o projeto a ser interno.
+```json
+{
+  "customer": { "id": "…", "name": "Rede Bom Preço" },
+  "bill_rate_cents": 14000,
+  "bill_extra_cents": 2000,
+  "customer_billing_mode": "hourly",
+  "customer_hourly_rate_cents": 12000,
+  "customer_monthly_fee_cents": null
+}
+```
+Os valores são sempre em **centavos**, na moeda da organização: `10000` é 100,00. O valor por hora e o contrato são do cliente (Decisão 21): reajustá-los muda o valor cobrado de todos os projetos dele, nas sessões novas. O cliente precisa ser da mesma organização do projeto (`400 project.customer_not_found`), e o cliente por hora precisa ter valor por hora (`400 project.customer_without_rate`). O acréscimo, ausente ou `null`, é zero; vale no modo do cliente **novo**, também ao trocar o cliente do projeto (por hora ou por mês); vai de 0 a 100000000 (`400 project.invalid_bill_extra`); sem cliente só vale zero (`400 project.bill_extra_needs_customer`). Mandar `{"customer_id": null}` volta o projeto a ser interno.
 
-Um projeto **com sessões** não sai de um cliente que já tem recebíveis, nem para outro cliente nem para interno: `409 project.customer_locked` (`params.field` é `customer_id`). A sessão não guarda o cliente, vale o do projeto de hoje, e trocar levaria as horas já cobradas para as propostas do cliente novo. Mandar o mesmo cliente, só com outro valor, passa; o projeto sem sessões, ou de um cliente sem recebíveis, troca à vontade; desfeitos os recebíveis, o projeto sai. A checagem vem depois das de cliente e de valor (`400`).
+Um projeto **com sessões** não sai de um cliente que já tem recebíveis, nem para outro cliente nem para interno: `409 project.customer_locked` (`params.field` é `customer_id`). A sessão não guarda o cliente, vale o do projeto de hoje, e trocar levaria as horas já cobradas para as propostas do cliente novo. Mandar o mesmo cliente, só com outro acréscimo, passa; o projeto sem sessões, ou de um cliente sem recebíveis, troca à vontade; desfeitos os recebíveis, o projeto sai. A checagem vem depois das de cliente e de acréscimo (`400`).
 
 ### Valor pago a cada pessoa
 
@@ -834,7 +844,7 @@ Na lista de tarefas e no detalhe, a tarefa traz `links`, um por item externo a q
 ### Valores nas sessões
 
 - **Sem valor, sem ponto.** O clock-in responde `400` quando a pessoa não tem valor por hora no projeto (`PUT /api/projects/:projectId/allocations/:personId`). É o caso de quem foi tirado do projeto e ficou com uma tarefa dele. Vale também para um admin batendo o ponto de outra pessoa.
-- **O valor é travado no clock-in.** A sessão guarda `pay_rate_cents` (o que a pessoa recebe por hora) e `bill_rate_cents` (o que o cliente paga; `null` em projeto sem valor cobrado: o interno e o de cliente mensal, onde o ponto funciona do mesmo jeito e as horas e o custo contam). Mudar um valor depois só afeta as sessões seguintes.
+- **O valor é travado no clock-in.** A sessão guarda `pay_rate_cents` (o que a pessoa recebe por hora) e `bill_rate_cents` (o que o cliente paga: o valor por hora do cliente mais o acréscimo do projeto naquele momento; `null` em projeto sem valor cobrado: o interno e o de cliente mensal, onde o ponto funciona do mesmo jeito e as horas e o custo contam). Mudar um valor depois, inclusive reajustar o cliente, só afeta as sessões seguintes.
 - Cada sessão traz também `pay_amount_cents` e `bill_amount_cents`: o tempo da sessão vezes o valor por hora, arredondado para o centavo. O total soma as sessões já arredondadas.
 - **Quem vê o quê.** Um admin recebe os quatro campos de todas as sessões. Um membro recebe `pay_rate_cents` e `pay_amount_cents` só nas próprias sessões; nas dos colegas, e sempre nos dois campos de `bill`, vem `null`. No total, um membro só recebe `pay_amount_cents` quando filtra por ele mesmo (`?person_id=` o próprio id).
 - Sessões criadas antes dos valores existirem ficam com tudo `null`.
@@ -1005,8 +1015,9 @@ nulos ou zero antes dele) e os derivados `late` (confirmado, sem recebimento e c
   confirmado e não entrou, atrasado incluído), `late_count` e `late_cents` (a parte vencida) e `received_month_count` e
   `received_month_cents` (o que entrou no mês corrente do calendário, a soma de `received_cents`);
 - `to_confirm[]`: as propostas, do período que fecha primeiro para o que fecha depois (e por nome do cliente). Cada uma
-  tem `customer`, `kind`, `period_start`, `period_end`, `seconds`, `calculated_cents`, `due_date` (o padrão), `open` (o
-  período ainda não fechou; só acontece no mensal), `effective_rate_cents` e `below_min_rate`;
+  tem `customer`, `kind`, `period_start`, `period_end`, `seconds`, `calculated_cents`, `extra_cents` (no mensal, a parte
+  de `calculated_cents` que vem dos acréscimos mensais dos projetos do cliente; zero no por hora), `due_date` (o padrão),
+  `open` (o período ainda não fechou; só acontece no mensal), `effective_rate_cents` e `below_min_rate`;
 - `open[]`: os recebíveis sem recebimento, do vencimento mais antigo para o mais novo;
 - `received[]`: os recebidos, o mais recente primeiro, até 50.
 
@@ -1045,7 +1056,7 @@ A ajuda é uma página do navegador, não da API JSON, e não precisa de sessão
 5. **Entrar no projeto:** `PUT /api/projects/:projectId/allocations/:personId` com o seu `id` e `pay_rate_cents`. Sem esse passo você não entra em time nem bate ponto.
 6. **Criar time:** `POST /api/projects/:projectId/teams`, e depois `POST /api/teams/:teamId/members` com o seu próprio `id`.
 7. **Criar tarefa:** `POST /api/projects/:projectId/tasks` com você como responsável.
-8. **Cliente e valor cobrado:** `POST /api/orgs/:orgId/customers` e `PUT /api/projects/:projectId/billing` com o cliente e `bill_rate_cents`.
+8. **Cliente e acréscimo:** `POST /api/orgs/:orgId/customers` com o `hourly_rate_cents`, e `PUT /api/projects/:projectId/billing` com o cliente e, se quiser, `bill_extra_cents`.
 9. **Bater o ponto:** `clock-in` com `{"task_id": "…"}`, `GET /api/work-sessions/active`, `POST .../work-sessions/:sessionId/tasks` com uma segunda tarefa (copie o `id` da sessão para `session_id`) e `clock-out`.
 10. **Totais:** `GET /api/projects/:projectId/work-sessions/total?task_id=…`.
 11. **Convidar alguém:** `POST /api/orgs/:orgId/invites`, depois `POST /api/auth/invites/:token/accept` numa sessão sem cookie (ou após `logout`).

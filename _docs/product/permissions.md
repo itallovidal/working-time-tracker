@@ -11,7 +11,8 @@ lê a mesma lista em `GET /api/permissions`.
 2. **Time é só organização visual.** Serve para achar gente num projeto grande. Não dá autoridade, e por isso não
    existe "líder de time".
 3. **Ninguém trabalha de graça, e todo cliente paga.** O custo e o valor cobrado têm o piso de 10,00 por hora (só o dono
-   entra com custo 0), e um projeto ou tem cliente com valor cobrado ou é interno, sem os dois.
+   entra com custo 0), e um projeto ou tem cliente, que paga o valor por hora dele mais o acréscimo do projeto, ou é
+   interno, sem cliente e sem acréscimo.
 4. **Cada cargo só convida e promove quem está abaixo dele** (`allocation.preset_above_yours`).
 
 ## Os cargos
@@ -59,7 +60,7 @@ As regras de cada valor e de cada pagamento estão em [money.md](money.md).
 | Cadastrar e alterar clientes | ✔ | — | — | — |
 | Criar projeto interno | ✔ | ✔ | — | — |
 | Criar projeto com cliente | ✔ | — | — | — |
-| Definir cliente e valor cobrado | ✔ | — | — | — |
+| Definir o cliente e o acréscimo do projeto | ✔ | — | — | — |
 | Ver cobrança, receita e margem | ✔ | — | — | — |
 | Ver as pessoas: nome, e-mail e papel | ✔ todas | ✔ todas | ✔ todas (para achar quem convidar) | quem está nos projetos dele |
 | Ver a lista de permissões de alguém | ✔ | ✔ | — | só a sua |
@@ -113,7 +114,7 @@ projeto nenhum; o convite com projeto a põe nele ao ser aceito.
   existe). Isso vem antes de qualquer permissão do projeto, e vale para quem foi tirado dele na hora.
 - Criar projeto é do dono e dos admins (`POST /orgs/:id/projects` responde `403` a um membro). Só o dono é matriculado no
   projeto que cria, com valor zero; o admin que não é dono vê todos os projetos sem entrar em nenhum. Com `customer_id`
-  ou `bill_rate_cents`, só o dono (`403 auth.owner_only` para o admin).
+  ou `bill_extra_cents`, só o dono (`403 auth.owner_only` para o admin).
 - O painel da primeira tela (`/me/overview`, `/me/tasks`) só conta as tarefas de projetos em que a pessoa está; as horas
   dela são sempre todas.
 - Tirar a pessoa do projeto encerra o ponto que ela tinha aberto nele, porque fora do projeto ela não alcança mais a
@@ -151,7 +152,7 @@ lista, mas o array `permissions` só vai para a própria pessoa, o dono e os adm
 | `rates.view` | Ver o valor pago aos colegas e as horas de todos |
 | `rates.manage` | Definir o valor por hora de uma pessoa no projeto (mínimo 10,00; só o dono entra com 0) |
 | `billing.view` | Ver o cliente, o valor cobrado, a receita e a margem na Visão geral |
-| `billing.manage` | Trocar o cliente e o valor cobrado (andam juntos: com cliente o valor é obrigatório, mínimo 10,00; sem cliente não há valor) |
+| `billing.manage` | Trocar o cliente e o acréscimo do projeto (andam juntos: sem cliente não há acréscimo). O valor por hora e o contrato são do cliente, em Clientes |
 | `labels.manage` | Criar, renomear e excluir as etiquetas do projeto |
 | `integrations.manage` | Criar, editar e excluir as integrações do projeto |
 
@@ -204,7 +205,7 @@ faturamento que ele não vê. O dono dá qualquer um; o admin, só os que cabem 
 | `GET /projects/:id/work-sessions`, `.../total` | todos; as sessões dos colegas só com alguma permissão do projeto, e o valor cobrado só com `billing.view` |
 | `POST`/`PATCH`/`DELETE /projects/:id/labels` | `labels.manage` |
 | `POST /projects/:id/integrations`, `PATCH`/`DELETE /integrations/:id` | `integrations.manage` |
-| `POST /orgs/:id/projects` | admin (o dono ou um admin); com cliente ou valor cobrado, só o dono |
+| `POST /orgs/:id/projects` | admin (o dono ou um admin); com cliente ou acréscimo, só o dono |
 | `*/customers` | `customers.manage` (só o dono) |
 | `POST`/`GET /orgs/:id/invites`, `DELETE /invites/:id`, `PATCH /persons/:id/weekly-hours` | `people.manage` (convidar um admin é só do dono) |
 | `PATCH /persons/:id/payment` | `payments.manage` (só o dono) |

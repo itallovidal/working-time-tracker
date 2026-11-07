@@ -48,18 +48,22 @@ func (s *Store) Org(orgID string) (Org, error) {
 	return Org{Solo: o.Solo, Timezone: o.Timezone, Currency: o.Currency}, nil
 }
 
-// Customers lista os clientes da organização, em ordem alfabética.
+// Customers lista os clientes da organização, em ordem alfabética, com os projetos de cada um (o acréscimo mensal de
+// cada projeto soma à mensalidade).
 func (s *Store) Customers(orgID uuid.UUID) ([]*ent.Customer, error) {
 	return s.client.Customer.Query().
 		Where(entcustomer.OrganizationIDEQ(orgID)).
+		WithProjects().
 		Order(ent.Asc(entcustomer.FieldName), ent.Asc(entcustomer.FieldID)).
 		All(context.Background())
 }
 
-// Customer lê um cliente da organização. De outra organização ou inexistente, é database.ErrNotFound.
+// Customer lê um cliente da organização, com os projetos dele. De outra organização ou inexistente, é
+// database.ErrNotFound.
 func (s *Store) Customer(orgID, id uuid.UUID) (*ent.Customer, error) {
 	c, err := s.client.Customer.Query().
 		Where(entcustomer.IDEQ(id), entcustomer.OrganizationIDEQ(orgID)).
+		WithProjects().
 		Only(context.Background())
 	if err != nil {
 		if ent.IsNotFound(err) {

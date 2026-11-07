@@ -953,3 +953,70 @@ func TestMigrate_CustomerCountryMigrationUsesTheOrganizationCountry(t *testing.T
 		t.Error("a NULL country must be refused after the migration")
 	}
 }
+
+// A cobrança passou para o cliente (Decisão 21) sem mudar um número: o cliente por hora com projetos fica com o menor
+// valor cobrado entre eles, cada projeto guarda a diferença como acréscimo, o cliente sem projetos guarda o valor padrão
+// que tinha (ou fica sem valor), e o cliente mensal e o projeto interno ficam sem acréscimo.
+func TestMigrate_BillingOnCustomerKeepsTheBilledRates(t *testing.T) {
+	ctx := context.Background()
+	defer restoreSchema(t)
+	const migration = "20261107030348_billing_on_customer.sql"
+	applyMigrationsBefore(t, migration)
+
+	org := uuid.New()
+	hourly, monthly, idle, bare := uuid.New(), uuid.New(), uuid.New(), uuid.New()
+	cheap, dear, contract, internal := uuid.New(), uuid.New(), uuid.New(), uuid.New()
+	for _, q := range []struct {
+		sql  string
+		args []any
+	}{
+		{`INSERT INTO organizations (id, name, created_at) VALUES ($1, 'Org', now())`, []any{org}},
+		{`INSERT INTO customers (id, organization_id, name, default_rate_cents, created_at) VALUES ($1, $2, 'Por hora', 20000, now())`, []any{hourly, org}},
+		{`INSERT INTO customers (id, organization_id, name, billing_mode, monthly_fee_cents, contract_start, created_at)
+		  VALUES ($1, $2, 'Mensal', 'monthly', 500000, '2026-11-01', now())`, []any{monthly, org}},
+		{`INSERT INTO customers (id, organization_id, name, default_rate_cents, created_at) VALUES ($1, $2, 'Sem projetos', 13000, now())`, []any{idle, org}},
+		{`INSERT INTO customers (id, organization_id, name, created_at) VALUES ($1, $2, 'Sem nada', now())`, []any{bare, org}},
+		{`INSERT INTO projects (id, organization_id, name, customer_id, bill_rate_cents, created_at) VALUES ($1, $2, 'Barato', $3, 15000, now())`, []any{cheap, org, hourly}},
+		{`INSERT INTO projects (id, organization_id, name, customer_id, bill_rate_cents, created_at) VALUES ($1, $2, 'Caro', $3, 17000, now())`, []any{dear, org, hourly}},
+		{`INSERT INTO projects (id, organization_id, name, customer_id, created_at) VALUES ($1, $2, 'Contrato', $3, now())`, []any{contract, org, monthly}},
+		{`INSERT INTO projects (id, organization_id, name, created_at) VALUES ($1, $2, 'Interno', now())`, []any{internal, org}},
+	} {
+		if _, err := testDB.ExecContext(ctx, q.sql, q.args...); err != nil {
+			t.Fatalf("seed the old schema: %v\n%s", err, q.sql)
+		}
+	}
+
+	raw, err := os.ReadFile("migrations/" + migration)
+	if err != nil {
+		t.Fatalf("read migration: %v", err)
+	}
+	if _, err := testDB.ExecContext(ctx, string(raw)); err != nil {
+		t.Fatalf("run %s over the old billing: %v", migration, err)
+	}
+
+	// O cliente por hora fica com 150,00, o menor dos dois projetos (o valor padrão de 200,00 não valia para nenhum).
+	for id, want := range map[uuid.UUID]*int{hourly: ptr(15000), monthly: nil, idle: ptr(13000), bare: nil} {
+		var got sql.NullInt64
+		if err := testDB.QueryRowContext(ctx, `SELECT hourly_rate_cents FROM customers WHERE id = $1`, id).Scan(&got); err != nil {
+			t.Fatalf("read the customer: %v", err)
+		}
+		if (want == nil) != !got.Valid || (want != nil && int64(*want) != got.Int64) {
+			t.Errorf("customer %s hourly rate = %v, want %v", id, got, want)
+		}
+	}
+	// Cada projeto cobra o mesmo de antes: o valor do cliente mais o acréscimo.
+	for id, want := range map[uuid.UUID]int{cheap: 0, dear: 2000, contract: 0, internal: 0} {
+		var extra int
+		if err := testDB.QueryRowContext(ctx, `SELECT bill_extra_cents FROM projects WHERE id = $1`, id).Scan(&extra); err != nil {
+			t.Fatalf("read the project: %v", err)
+		}
+		if extra != want {
+			t.Errorf("project %s extra = %d, want %d", id, extra, want)
+		}
+	}
+	if _, err := testDB.ExecContext(ctx, `SELECT bill_rate_cents FROM projects`); err == nil {
+		t.Error("projects.bill_rate_cents must be gone after the migration")
+	}
+}
+
+func ptr[T any](v T) *T { return &v }

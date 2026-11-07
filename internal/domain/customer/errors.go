@@ -38,7 +38,7 @@ var (
 	ErrFieldHourlyOnly  = apperr.New("customer.field_hourly_only", http.StatusBadRequest, "field")
 	ErrFieldMonthlyOnly = apperr.New("customer.field_monthly_only", http.StatusBadRequest, "field")
 	// Os valores fora da faixa, cada um com o campo e a faixa no texto.
-	ErrInvalidDefaultRate  = apperr.New("customer.invalid_default_rate", http.StatusBadRequest)
+	ErrInvalidHourlyRate   = apperr.New("customer.invalid_hourly_rate", http.StatusBadRequest)
 	ErrInvalidMonthlyFee   = apperr.New("customer.invalid_monthly_fee", http.StatusBadRequest)
 	ErrInvalidContractEnd  = apperr.New("customer.invalid_contract_end", http.StatusBadRequest)
 	ErrInvalidClosingDay   = apperr.New("customer.invalid_closing_day", http.StatusBadRequest)

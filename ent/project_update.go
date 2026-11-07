@@ -266,30 +266,24 @@ func (_u *ProjectUpdate) ClearCustomerID() *ProjectUpdate {
 	return _u
 }
 
-// SetBillRateCents sets the "bill_rate_cents" field.
-func (_u *ProjectUpdate) SetBillRateCents(v int) *ProjectUpdate {
-	_u.mutation.ResetBillRateCents()
-	_u.mutation.SetBillRateCents(v)
+// SetBillExtraCents sets the "bill_extra_cents" field.
+func (_u *ProjectUpdate) SetBillExtraCents(v int) *ProjectUpdate {
+	_u.mutation.ResetBillExtraCents()
+	_u.mutation.SetBillExtraCents(v)
 	return _u
 }
 
-// SetNillableBillRateCents sets the "bill_rate_cents" field if the given value is not nil.
-func (_u *ProjectUpdate) SetNillableBillRateCents(v *int) *ProjectUpdate {
+// SetNillableBillExtraCents sets the "bill_extra_cents" field if the given value is not nil.
+func (_u *ProjectUpdate) SetNillableBillExtraCents(v *int) *ProjectUpdate {
 	if v != nil {
-		_u.SetBillRateCents(*v)
+		_u.SetBillExtraCents(*v)
 	}
 	return _u
 }
 
-// AddBillRateCents adds value to the "bill_rate_cents" field.
-func (_u *ProjectUpdate) AddBillRateCents(v int) *ProjectUpdate {
-	_u.mutation.AddBillRateCents(v)
-	return _u
-}
-
-// ClearBillRateCents clears the value of the "bill_rate_cents" field.
-func (_u *ProjectUpdate) ClearBillRateCents() *ProjectUpdate {
-	_u.mutation.ClearBillRateCents()
+// AddBillExtraCents adds value to the "bill_extra_cents" field.
+func (_u *ProjectUpdate) AddBillExtraCents(v int) *ProjectUpdate {
+	_u.mutation.AddBillExtraCents(v)
 	return _u
 }
 
@@ -601,9 +595,9 @@ func (_u *ProjectUpdate) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *ProjectUpdate) check() error {
-	if v, ok := _u.mutation.BillRateCents(); ok {
-		if err := project.BillRateCentsValidator(v); err != nil {
-			return &ValidationError{Name: "bill_rate_cents", err: fmt.Errorf(`ent: validator failed for field "Project.bill_rate_cents": %w`, err)}
+	if v, ok := _u.mutation.BillExtraCents(); ok {
+		if err := project.BillExtraCentsValidator(v); err != nil {
+			return &ValidationError{Name: "bill_extra_cents", err: fmt.Errorf(`ent: validator failed for field "Project.bill_extra_cents": %w`, err)}
 		}
 	}
 	if _u.mutation.OrganizationCleared() && len(_u.mutation.OrganizationIDs()) > 0 {
@@ -681,14 +675,11 @@ func (_u *ProjectUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.CustomerMeetingTimeCleared() {
 		_spec.ClearField(project.FieldCustomerMeetingTime, field.TypeString)
 	}
-	if value, ok := _u.mutation.BillRateCents(); ok {
-		_spec.SetField(project.FieldBillRateCents, field.TypeInt, value)
+	if value, ok := _u.mutation.BillExtraCents(); ok {
+		_spec.SetField(project.FieldBillExtraCents, field.TypeInt, value)
 	}
-	if value, ok := _u.mutation.AddedBillRateCents(); ok {
-		_spec.AddField(project.FieldBillRateCents, field.TypeInt, value)
-	}
-	if _u.mutation.BillRateCentsCleared() {
-		_spec.ClearField(project.FieldBillRateCents, field.TypeInt)
+	if value, ok := _u.mutation.AddedBillExtraCents(); ok {
+		_spec.AddField(project.FieldBillExtraCents, field.TypeInt, value)
 	}
 	if _u.mutation.OrganizationCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -1312,30 +1303,24 @@ func (_u *ProjectUpdateOne) ClearCustomerID() *ProjectUpdateOne {
 	return _u
 }
 
-// SetBillRateCents sets the "bill_rate_cents" field.
-func (_u *ProjectUpdateOne) SetBillRateCents(v int) *ProjectUpdateOne {
-	_u.mutation.ResetBillRateCents()
-	_u.mutation.SetBillRateCents(v)
+// SetBillExtraCents sets the "bill_extra_cents" field.
+func (_u *ProjectUpdateOne) SetBillExtraCents(v int) *ProjectUpdateOne {
+	_u.mutation.ResetBillExtraCents()
+	_u.mutation.SetBillExtraCents(v)
 	return _u
 }
 
-// SetNillableBillRateCents sets the "bill_rate_cents" field if the given value is not nil.
-func (_u *ProjectUpdateOne) SetNillableBillRateCents(v *int) *ProjectUpdateOne {
+// SetNillableBillExtraCents sets the "bill_extra_cents" field if the given value is not nil.
+func (_u *ProjectUpdateOne) SetNillableBillExtraCents(v *int) *ProjectUpdateOne {
 	if v != nil {
-		_u.SetBillRateCents(*v)
+		_u.SetBillExtraCents(*v)
 	}
 	return _u
 }
 
-// AddBillRateCents adds value to the "bill_rate_cents" field.
-func (_u *ProjectUpdateOne) AddBillRateCents(v int) *ProjectUpdateOne {
-	_u.mutation.AddBillRateCents(v)
-	return _u
-}
-
-// ClearBillRateCents clears the value of the "bill_rate_cents" field.
-func (_u *ProjectUpdateOne) ClearBillRateCents() *ProjectUpdateOne {
-	_u.mutation.ClearBillRateCents()
+// AddBillExtraCents adds value to the "bill_extra_cents" field.
+func (_u *ProjectUpdateOne) AddBillExtraCents(v int) *ProjectUpdateOne {
+	_u.mutation.AddBillExtraCents(v)
 	return _u
 }
 
@@ -1660,9 +1645,9 @@ func (_u *ProjectUpdateOne) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *ProjectUpdateOne) check() error {
-	if v, ok := _u.mutation.BillRateCents(); ok {
-		if err := project.BillRateCentsValidator(v); err != nil {
-			return &ValidationError{Name: "bill_rate_cents", err: fmt.Errorf(`ent: validator failed for field "Project.bill_rate_cents": %w`, err)}
+	if v, ok := _u.mutation.BillExtraCents(); ok {
+		if err := project.BillExtraCentsValidator(v); err != nil {
+			return &ValidationError{Name: "bill_extra_cents", err: fmt.Errorf(`ent: validator failed for field "Project.bill_extra_cents": %w`, err)}
 		}
 	}
 	if _u.mutation.OrganizationCleared() && len(_u.mutation.OrganizationIDs()) > 0 {
@@ -1757,14 +1742,11 @@ func (_u *ProjectUpdateOne) sqlSave(ctx context.Context) (_node *Project, err er
 	if _u.mutation.CustomerMeetingTimeCleared() {
 		_spec.ClearField(project.FieldCustomerMeetingTime, field.TypeString)
 	}
-	if value, ok := _u.mutation.BillRateCents(); ok {
-		_spec.SetField(project.FieldBillRateCents, field.TypeInt, value)
+	if value, ok := _u.mutation.BillExtraCents(); ok {
+		_spec.SetField(project.FieldBillExtraCents, field.TypeInt, value)
 	}
-	if value, ok := _u.mutation.AddedBillRateCents(); ok {
-		_spec.AddField(project.FieldBillRateCents, field.TypeInt, value)
-	}
-	if _u.mutation.BillRateCentsCleared() {
-		_spec.ClearField(project.FieldBillRateCents, field.TypeInt)
+	if value, ok := _u.mutation.AddedBillExtraCents(); ok {
+		_spec.AddField(project.FieldBillExtraCents, field.TypeInt, value)
 	}
 	if _u.mutation.OrganizationCleared() {
 		edge := &sqlgraph.EdgeSpec{

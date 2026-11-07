@@ -56,16 +56,17 @@ func formOf(t *testing.T, name, page, modal string) string {
 	return page[at : at+end]
 }
 
-// monthlyControls são as marcas dos controles do modo mensal e dos termos do cliente. Nenhuma pode estar na tela de uma
-// organização com equipe.
+// monthlyControls são as marcas dos controles do modo mensal e dos termos do cliente que são do modo solo. Nenhuma pode
+// estar na tela de uma organização com equipe. O valor por hora do cliente não está aqui: todo cliente por hora tem um,
+// na equipe também (Decisão 21).
 var monthlyControls = []string{
-	`id="customer-billing-mode"`, `id="customer-default-rate"`, `id="customer-monthly-fee"`, `id="customer-contract-start"`,
+	`id="customer-billing-mode"`, `id="customer-monthly-fee"`, `id="customer-contract-start"`,
 	`id="customer-contract-end"`, `id="customer-closing-day"`, `id="customer-payment-days"`, `id="customer-late-fee"`,
 	`id="customer-late-interest"`, `id="customer-grace-days"`,
-	`data-field="billing_mode"`, `data-field="default_rate_cents"`, `data-field="monthly_fee_cents"`, `data-field="contract_start"`,
+	`data-field="billing_mode"`, `data-field="monthly_fee_cents"`, `data-field="contract_start"`,
 	`data-field="contract_end"`, `data-field="closing_day"`, `data-field="payment_days"`, `data-field="late_fee_bp"`,
 	`data-field="late_interest_bp_month"`, `data-field="grace_days"`,
-	`form-fold`, `draft.billing_mode`, `billingLabel(`, `billingTerms(`,
+	`form-fold`, `draft.billing_mode === 'monthly'`, `billingTerms(`,
 }
 
 func TestCustomerBilling_LinksAndControlsByMode(t *testing.T) {

@@ -14,6 +14,7 @@ import (
 	enttask "working-time-tracker/ent/task"
 	entsession "working-time-tracker/ent/worksession"
 	"working-time-tracker/internal/database"
+	"working-time-tracker/internal/domain/customer"
 	"working-time-tracker/internal/domain/projectaccess"
 )
 
@@ -25,7 +26,7 @@ func NewStore(client *ent.Client) *Store {
 	return &Store{client: client}
 }
 
-func (s *Store) Create(p *Project, billRateCents *int) error {
+func (s *Store) Create(p *Project, billExtraCents int) error {
 	q := s.client.Project.Create().
 		SetOrganizationID(p.OrganizationID).
 		SetName(p.Name).
@@ -38,7 +39,7 @@ func (s *Store) Create(p *Project, billRateCents *int) error {
 		SetNillableWeeklySyncTime(p.WeeklySyncTime).
 		SetNillableCustomerMeetingDay(p.CustomerMeetingDay).
 		SetNillableCustomerMeetingTime(p.CustomerMeetingTime).
-		SetNillableBillRateCents(billRateCents)
+		SetBillExtraCents(billExtraCents)
 	if p.Customer != nil {
 		q = q.SetCustomerID(p.Customer.ID)
 	}
@@ -159,15 +160,17 @@ func (s *Store) Billing(projectID uuid.UUID) (*Billing, error) {
 		}
 		return nil, err
 	}
-	b := &Billing{Customer: customerRef(p), BillRateCents: p.BillRateCents}
+	b := &Billing{Customer: customerRef(p), BillExtraCents: p.BillExtraCents}
 	if c := p.Edges.Customer; c != nil {
 		b.CustomerBillingMode = &c.BillingMode
+		b.CustomerHourlyRateCents, b.CustomerMonthlyFeeCents = c.HourlyRateCents, c.MonthlyFeeCents
+		b.BillRateCents = customer.BillRate(c.BillingMode, c.HourlyRateCents, p.BillExtraCents)
 	}
 	return b, nil
 }
 
-// SetBilling grava o cliente e o valor cobrado como vieram: nil apaga.
-func (s *Store) SetBilling(projectID uuid.UUID, customerID *uuid.UUID, billRateCents *int) error {
+// SetBilling grava o cliente e o acréscimo como vieram: customerID nil tira o cliente.
+func (s *Store) SetBilling(projectID uuid.UUID, customerID *uuid.UUID, billExtraCents int) error {
 	q := s.client.Project.UpdateOneID(projectID)
 	if customerID != nil {
 		q = q.SetCustomerID(*customerID)
@@ -175,12 +178,7 @@ func (s *Store) SetBilling(projectID uuid.UUID, customerID *uuid.UUID, billRateC
 		// Sem cliente não há reunião com ele.
 		q = q.ClearCustomer().ClearCustomerMeetingDay().ClearCustomerMeetingTime()
 	}
-	if billRateCents != nil {
-		q = q.SetBillRateCents(*billRateCents)
-	} else {
-		q = q.ClearBillRateCents()
-	}
-	_, err := q.Save(context.Background())
+	_, err := q.SetBillExtraCents(billExtraCents).Save(context.Background())
 	if ent.IsNotFound(err) {
 		return database.ErrNotFound
 	}
@@ -203,29 +201,38 @@ func (s *Store) HasBilledHistory(projectID, customerID uuid.UUID) (bool, error) 
 		Exist(ctx)
 }
 
-// CustomerBillingModeOfProject devolve o modo de cobrança do cliente (hourly ou monthly) e se ele existe e é da
-// organização do projeto.
-func (s *Store) CustomerBillingModeOfProject(customerID, projectID uuid.UUID) (mode string, ok bool, err error) {
-	return s.billingMode(
+// CustomerBilling é o que a regra do acréscimo lê do cliente de um projeto: o modo de cobrança e se o cliente por
+// hora já tem valor por hora.
+type CustomerBilling struct {
+	Mode    string
+	HasRate bool
+}
+
+// CustomerBillingOfProject devolve a cobrança do cliente e se ele existe e é da organização do projeto.
+func (s *Store) CustomerBillingOfProject(customerID, projectID uuid.UUID) (CustomerBilling, bool, error) {
+	return s.customerBilling(
 		entcustomer.IDEQ(customerID),
 		entcustomer.HasOrganizationWith(entorg.HasProjectsWith(project.IDEQ(projectID))),
 	)
 }
 
-// CustomerBillingMode devolve o modo de cobrança do cliente (hourly ou monthly) e se ele existe e é da organização.
-func (s *Store) CustomerBillingMode(customerID, orgID uuid.UUID) (mode string, ok bool, err error) {
-	return s.billingMode(entcustomer.IDEQ(customerID), entcustomer.OrganizationIDEQ(orgID))
+// CustomerBillingOf devolve a cobrança do cliente e se ele existe e é da organização.
+func (s *Store) CustomerBillingOf(customerID, orgID uuid.UUID) (CustomerBilling, bool, error) {
+	return s.customerBilling(entcustomer.IDEQ(customerID), entcustomer.OrganizationIDEQ(orgID))
 }
 
-func (s *Store) billingMode(where ...predicate.Customer) (string, bool, error) {
-	mode, err := s.client.Customer.Query().
+func (s *Store) customerBilling(where ...predicate.Customer) (CustomerBilling, bool, error) {
+	c, err := s.client.Customer.Query().
 		Where(where...).
-		Select(entcustomer.FieldBillingMode).
-		String(context.Background())
+		Select(entcustomer.FieldBillingMode, entcustomer.FieldHourlyRateCents).
+		Only(context.Background())
 	if ent.IsNotFound(err) {
-		return "", false, nil
+		return CustomerBilling{}, false, nil
 	}
-	return mode, err == nil, err
+	if err != nil {
+		return CustomerBilling{}, false, err
+	}
+	return CustomerBilling{Mode: c.BillingMode, HasRate: c.HourlyRateCents != nil}, true, nil
 }
 
 // Update grava o projeto como está: um campo opcional nil é apagado no banco.

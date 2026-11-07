@@ -58,10 +58,10 @@ func init() {
 	customerDescBillingMode := customerFields[8].Descriptor()
 	// customer.DefaultBillingMode holds the default value on creation for the billing_mode field.
 	customer.DefaultBillingMode = customerDescBillingMode.Default.(string)
-	// customerDescDefaultRateCents is the schema descriptor for default_rate_cents field.
-	customerDescDefaultRateCents := customerFields[9].Descriptor()
-	// customer.DefaultRateCentsValidator is a validator for the "default_rate_cents" field. It is called by the builders before save.
-	customer.DefaultRateCentsValidator = customerDescDefaultRateCents.Validators[0].(func(int) error)
+	// customerDescHourlyRateCents is the schema descriptor for hourly_rate_cents field.
+	customerDescHourlyRateCents := customerFields[9].Descriptor()
+	// customer.HourlyRateCentsValidator is a validator for the "hourly_rate_cents" field. It is called by the builders before save.
+	customer.HourlyRateCentsValidator = customerDescHourlyRateCents.Validators[0].(func(int) error)
 	// customerDescMonthlyFeeCents is the schema descriptor for monthly_fee_cents field.
 	customerDescMonthlyFeeCents := customerFields[10].Descriptor()
 	// customer.MonthlyFeeCentsValidator is a validator for the "monthly_fee_cents" field. It is called by the builders before save.
@@ -282,10 +282,12 @@ func init() {
 	projectDescSprintDurationDays := projectFields[6].Descriptor()
 	// project.DefaultSprintDurationDays holds the default value on creation for the sprint_duration_days field.
 	project.DefaultSprintDurationDays = projectDescSprintDurationDays.Default.(int)
-	// projectDescBillRateCents is the schema descriptor for bill_rate_cents field.
-	projectDescBillRateCents := projectFields[13].Descriptor()
-	// project.BillRateCentsValidator is a validator for the "bill_rate_cents" field. It is called by the builders before save.
-	project.BillRateCentsValidator = projectDescBillRateCents.Validators[0].(func(int) error)
+	// projectDescBillExtraCents is the schema descriptor for bill_extra_cents field.
+	projectDescBillExtraCents := projectFields[13].Descriptor()
+	// project.DefaultBillExtraCents holds the default value on creation for the bill_extra_cents field.
+	project.DefaultBillExtraCents = projectDescBillExtraCents.Default.(int)
+	// project.BillExtraCentsValidator is a validator for the "bill_extra_cents" field. It is called by the builders before save.
+	project.BillExtraCentsValidator = projectDescBillExtraCents.Validators[0].(func(int) error)
 	// projectDescCreatedAt is the schema descriptor for created_at field.
 	projectDescCreatedAt := projectFields[14].Descriptor()
 	// project.DefaultCreatedAt holds the default value on creation for the created_at field.

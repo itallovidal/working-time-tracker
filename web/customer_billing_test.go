@@ -56,8 +56,8 @@ func TestCustomerBilling_ScreenSendsOnlyKnownKeys(t *testing.T) {
 		}
 	}
 
-	// Cada termo tem um campo na tela, com o erro embaixo dele: o modo e o valor padrão no modal de cliente, e o resto
-	// no parcial customer_contract, que o modal inclui (e o formulário de novo projeto também).
+	// Cada termo tem um campo na tela, com o erro embaixo dele: o modo e o valor por hora no modal de cliente, e o resto
+	// no parcial customer_contract, que o modal inclui.
 	all := templates(t)
 	tpl := all["templates/pages/org_customers.gohtml"] + all["templates/partials/customer_contract.gohtml"]
 	for _, m := range sent {
@@ -69,27 +69,37 @@ func TestCustomerBilling_ScreenSendsOnlyKnownKeys(t *testing.T) {
 	}
 }
 
-// Os campos dos termos só existem no modo solo: ficam todos dentro do {{if .Me.OrganizationSolo}}.
+// O modo, o contrato e os prazos só existem no modo solo: ficam dentro do {{if .Me.OrganizationSolo}}. O valor por hora
+// fica fora, porque todo cliente por hora tem um, na equipe também (Decisão 21).
 func TestCustomerBilling_FieldsAreInsideTheSoloGate(t *testing.T) {
 	tpl := templates(t)["templates/pages/org_customers.gohtml"]
-	gate := strings.Index(tpl, "{{if .Me.OrganizationSolo}}\n      <fieldset")
+	fieldset := strings.Index(tpl, `<legend>{{.T "customer.billing.title"}}</legend>`)
+	if fieldset < 0 {
+		t.Fatal("org_customers.gohtml has no billing fieldset")
+	}
+	gate := strings.Index(tpl[fieldset:], "{{if .Me.OrganizationSolo}}")
 	if gate < 0 {
-		t.Fatal("the billing fieldset is not behind .Me.OrganizationSolo")
+		t.Fatal("the billing mode is not behind .Me.OrganizationSolo")
 	}
-	for _, id := range []string{"customer-billing-mode", "customer-default-rate"} {
-		at := strings.Index(tpl, `id="`+id+`"`)
-		if at < 0 {
-			t.Errorf("org_customers.gohtml has no field %s", id)
-		} else if at < gate {
-			t.Errorf("%s is outside the solo gate", id)
-		}
+	gate += fieldset
+	mode := strings.Index(tpl, `id="customer-billing-mode"`)
+	if mode < gate {
+		t.Error("customer-billing-mode is outside the solo gate")
 	}
-	// O contrato vem do parcial, incluído dentro do mesmo bloco.
+	rate := strings.Index(tpl, `id="customer-hourly-rate"`)
+	if rate < 0 {
+		t.Error("org_customers.gohtml has no field customer-hourly-rate")
+	}
+	// O valor por hora vem depois do fim do bloco do modo, fora do modo solo.
+	if end := strings.Index(tpl[mode:], "{{end}}"); end < 0 || rate < mode+end {
+		t.Error("customer-hourly-rate is inside the solo gate, but every hourly customer has a rate")
+	}
+	// O contrato vem do parcial, num bloco do modo solo depois do valor por hora.
 	include := strings.Index(tpl, `{{template "customer_contract" (dict "Data" . "Model" "draft" "Id" "customer")}}`)
 	if include < 0 {
 		t.Error("org_customers.gohtml does not include customer_contract for the draft")
-	} else if include < gate {
-		t.Error("customer_contract is included outside the solo gate")
+	} else if gated := strings.LastIndex(tpl[:include], "{{if .Me.OrganizationSolo}}"); gated < rate {
+		t.Error("customer_contract is included outside a solo gate")
 	}
 	contract := templates(t)["templates/partials/customer_contract.gohtml"]
 	for _, id := range []string{"monthly-fee", "contract-start", "contract-end", "closing-day", "payment-days", "late-fee", "late-interest", "grace-days"} {
@@ -97,9 +107,12 @@ func TestCustomerBilling_FieldsAreInsideTheSoloGate(t *testing.T) {
 			t.Errorf("customer_contract.gohtml has no field {{$id}}-%s", id)
 		}
 	}
-	// A coluna da lista também.
-	if !strings.Contains(tpl, `{{if .Me.OrganizationSolo}}<th>{{.T "customer.billing.column"}}</th>{{end}}`) {
-		t.Error("the Cobrança column is not behind .Me.OrganizationSolo")
+	// A coluna Cobrança aparece nos dois modos, e os prazos dela só no solo.
+	if !strings.Contains(tpl, `<th>{{.T "customer.billing.column"}}</th>`) {
+		t.Error("the customers list has no Cobrança column")
+	}
+	if !strings.Contains(tpl, `{{if .Me.OrganizationSolo}}<div class="muted small" x-text="billingTerms(c)"></div>{{end}}`) {
+		t.Error("the closing and due terms of the Cobrança column are not behind .Me.OrganizationSolo")
 	}
 }
 

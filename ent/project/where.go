@@ -116,9 +116,9 @@ func CustomerID(v uuid.UUID) predicate.Project {
 	return predicate.Project(sql.FieldEQ(FieldCustomerID, v))
 }
 
-// BillRateCents applies equality check predicate on the "bill_rate_cents" field. It's identical to BillRateCentsEQ.
-func BillRateCents(v int) predicate.Project {
-	return predicate.Project(sql.FieldEQ(FieldBillRateCents, v))
+// BillExtraCents applies equality check predicate on the "bill_extra_cents" field. It's identical to BillExtraCentsEQ.
+func BillExtraCents(v int) predicate.Project {
+	return predicate.Project(sql.FieldEQ(FieldBillExtraCents, v))
 }
 
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
@@ -881,54 +881,44 @@ func CustomerIDNotNil() predicate.Project {
 	return predicate.Project(sql.FieldNotNull(FieldCustomerID))
 }
 
-// BillRateCentsEQ applies the EQ predicate on the "bill_rate_cents" field.
-func BillRateCentsEQ(v int) predicate.Project {
-	return predicate.Project(sql.FieldEQ(FieldBillRateCents, v))
+// BillExtraCentsEQ applies the EQ predicate on the "bill_extra_cents" field.
+func BillExtraCentsEQ(v int) predicate.Project {
+	return predicate.Project(sql.FieldEQ(FieldBillExtraCents, v))
 }
 
-// BillRateCentsNEQ applies the NEQ predicate on the "bill_rate_cents" field.
-func BillRateCentsNEQ(v int) predicate.Project {
-	return predicate.Project(sql.FieldNEQ(FieldBillRateCents, v))
+// BillExtraCentsNEQ applies the NEQ predicate on the "bill_extra_cents" field.
+func BillExtraCentsNEQ(v int) predicate.Project {
+	return predicate.Project(sql.FieldNEQ(FieldBillExtraCents, v))
 }
 
-// BillRateCentsIn applies the In predicate on the "bill_rate_cents" field.
-func BillRateCentsIn(vs ...int) predicate.Project {
-	return predicate.Project(sql.FieldIn(FieldBillRateCents, vs...))
+// BillExtraCentsIn applies the In predicate on the "bill_extra_cents" field.
+func BillExtraCentsIn(vs ...int) predicate.Project {
+	return predicate.Project(sql.FieldIn(FieldBillExtraCents, vs...))
 }
 
-// BillRateCentsNotIn applies the NotIn predicate on the "bill_rate_cents" field.
-func BillRateCentsNotIn(vs ...int) predicate.Project {
-	return predicate.Project(sql.FieldNotIn(FieldBillRateCents, vs...))
+// BillExtraCentsNotIn applies the NotIn predicate on the "bill_extra_cents" field.
+func BillExtraCentsNotIn(vs ...int) predicate.Project {
+	return predicate.Project(sql.FieldNotIn(FieldBillExtraCents, vs...))
 }
 
-// BillRateCentsGT applies the GT predicate on the "bill_rate_cents" field.
-func BillRateCentsGT(v int) predicate.Project {
-	return predicate.Project(sql.FieldGT(FieldBillRateCents, v))
+// BillExtraCentsGT applies the GT predicate on the "bill_extra_cents" field.
+func BillExtraCentsGT(v int) predicate.Project {
+	return predicate.Project(sql.FieldGT(FieldBillExtraCents, v))
 }
 
-// BillRateCentsGTE applies the GTE predicate on the "bill_rate_cents" field.
-func BillRateCentsGTE(v int) predicate.Project {
-	return predicate.Project(sql.FieldGTE(FieldBillRateCents, v))
+// BillExtraCentsGTE applies the GTE predicate on the "bill_extra_cents" field.
+func BillExtraCentsGTE(v int) predicate.Project {
+	return predicate.Project(sql.FieldGTE(FieldBillExtraCents, v))
 }
 
-// BillRateCentsLT applies the LT predicate on the "bill_rate_cents" field.
-func BillRateCentsLT(v int) predicate.Project {
-	return predicate.Project(sql.FieldLT(FieldBillRateCents, v))
+// BillExtraCentsLT applies the LT predicate on the "bill_extra_cents" field.
+func BillExtraCentsLT(v int) predicate.Project {
+	return predicate.Project(sql.FieldLT(FieldBillExtraCents, v))
 }
 
-// BillRateCentsLTE applies the LTE predicate on the "bill_rate_cents" field.
-func BillRateCentsLTE(v int) predicate.Project {
-	return predicate.Project(sql.FieldLTE(FieldBillRateCents, v))
-}
-
-// BillRateCentsIsNil applies the IsNil predicate on the "bill_rate_cents" field.
-func BillRateCentsIsNil() predicate.Project {
-	return predicate.Project(sql.FieldIsNull(FieldBillRateCents))
-}
-
-// BillRateCentsNotNil applies the NotNil predicate on the "bill_rate_cents" field.
-func BillRateCentsNotNil() predicate.Project {
-	return predicate.Project(sql.FieldNotNull(FieldBillRateCents))
+// BillExtraCentsLTE applies the LTE predicate on the "bill_extra_cents" field.
+func BillExtraCentsLTE(v int) predicate.Project {
+	return predicate.Project(sql.FieldLTE(FieldBillExtraCents, v))
 }
 
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.

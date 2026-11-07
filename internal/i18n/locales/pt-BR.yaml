@@ -586,6 +586,7 @@ receivable:
   below_min: "Valor por hora efetivo abaixo de {{.min}}: confira o valor."
   rate_line: "{{.rate}} por hora"
   calculated_line: "calculado {{.amount}}"
+  extra_line: "inclui {{.amount}} de acréscimos"
   invoice_line: "Nota {{.number}}"
   fee_line: "multa {{.amount}}"
   interest_line: "juros {{.amount}}"
@@ -748,8 +749,8 @@ help:
       tip: "Este passo é opcional: um projeto sem cliente é um projeto interno, e o cliente pode ser escolhido depois, nas configurações do projeto."
     project:
       title: Crie o primeiro projeto
-      text: "Informe o nome e, se quiser, uma descrição. Escolha o cliente e o valor cobrado por hora (só o dono vê esses campos: o administrador cria só projeto interno) e a duração da sprint: 7, 14 ou 30 dias. Marque “O projeto tem daily” e “O projeto tem weekly” se o time faz essas reuniões."
-      tip: "O valor cobrado por hora é o que o cliente paga pelas horas deste projeto. É com ele que o app calcula a receita."
+      text: "Informe o nome e, se quiser, uma descrição. Escolha o cliente e, se precisar, um acréscimo sobre a cobrança dele (só o dono vê esses campos: o administrador cria só projeto interno) e a duração da sprint: 7, 14 ou 30 dias. Marque “O projeto tem daily” e “O projeto tem weekly” se o time faz essas reuniões."
+      tip: "A cobrança é do cliente: o valor por hora ou o contrato mensal, definido em Clientes e igual em todos os projetos dele. O projeto só soma um acréscimo, por hora ou por mês, para algo pequeno ou temporário."
     invite:
       title: Convide o time
       text: "Gere um link de convite, copie e envie à pessoa por onde preferir: o app não envia email. Quem abrir o link informa o nome, escolhe uma senha e entra na organização com o papel que você escolheu."
@@ -790,7 +791,7 @@ help:
       title: A receber
       text: "O item “A receber” da barra superior, só para o dono de uma organização no modo solo: o que cobrar de cada cliente e o que já entrou. Cada conta a receber é de um cliente e de um período: o app propõe, e você confirma."
       cards: "No alto, quatro cartões: o que há para confirmar, o que está em aberto, o que está atrasado (confirmado, sem receber e depois do vencimento) e o que entrou no mês."
-      confirm: "“A confirmar” lista as propostas. No cliente por hora, o período aparece depois de fechar, com as horas dos projetos dele vezes o valor cobrado de cada um; no mensal, é a mensalidade, do começo do contrato até o mês seguinte, e dá para confirmar a qualquer hora. “Confirmar” abre o valor, o vencimento, o número da nota e uma observação, e você ajusta o que for preciso."
+      confirm: "“A confirmar” lista as propostas. No cliente por hora, o período aparece depois de fechar, com as horas dos projetos dele vezes o valor cobrado de cada um (o do cliente mais o acréscimo do projeto); no mensal, é a mensalidade mais os acréscimos mensais dos projetos, do começo do contrato até o mês seguinte, e dá para confirmar a qualquer hora. “Confirmar” abre o valor, o vencimento, o número da nota e uma observação, e você ajusta o que for preciso."
       receive: "“Em aberto” é o que foi confirmado e ainda não entrou. “Receber” registra o dia e o valor. No cliente por hora entra o valor confirmado; no mensal o valor é livre, e o app sugere a multa e os juros quando o pagamento passa do vencimento mais a tolerância do contrato."
       undo: "“Recebidos” lista o que entrou. Dá para desfazer o recebimento e, depois, a confirmação: o período volta a ser uma proposta."
       invoice: "O app não emite nota: o número dela é só uma anotação. Um valor por hora efetivo abaixo de 10,00 aparece como aviso, nunca como erro."
@@ -810,9 +811,9 @@ help:
       profile: "Para o dono e os administradores, clicar na linha abre o perfil da pessoa: a jornada, as horas do período e desde o início e os projetos dela. A regra de pagamento, o histórico de pagamentos e as próximas datas só aparecem para o dono. O “Editar” do perfil abre o mesmo modal do lápis."
     org_customers:
       title: Clientes
-      text: "O cadastro de quem contrata a organização: nome, país, documento fiscal (CNPJ no Brasil, EIN nos EUA), pessoa de contato, email e telefone. A página é só do dono."
+      text: "O cadastro de quem contrata a organização: nome, país, documento fiscal (CNPJ no Brasil, EIN nos EUA), pessoa de contato, email, telefone e a cobrança: o valor por hora, que vale para todos os projetos do cliente. A página é só do dono."
       actions: "“Novo cliente” cadastra; cada linha tem as ações de editar e excluir."
-      link: "O cliente é ligado a um projeto nas configurações do projeto, junto com o valor cobrado por hora."
+      link: "O cliente é ligado a um projeto ao criar o projeto ou nas configurações dele. Reajustar o valor do cliente muda o valor cobrado de todos os projetos dele, para as horas registradas daqui em diante."
     org_projects:
       title: Projetos
       text: "O item “Projetos” da barra superior, para todos: os seus projetos (todos, para o dono e os administradores) em cartões, seis por página, cada um com o cliente, as pessoas e as tarefas. Clique num cartão para abrir o projeto. Quem pode criar projetos vê o botão “Novo projeto” no alto da página."
@@ -878,7 +879,7 @@ help:
       title: Valor por hora
       text: "O app usa dois valores, e os dois são por projeto."
       paid: "Valor pago (custo): quanto cada pessoa recebe por hora naquele projeto. É definido ao pôr a pessoa no projeto e pode ser diferente de um projeto para outro."
-      billed: "Valor cobrado (receita): quanto o cliente paga por hora naquele projeto. É definido ao criar o projeto ou nas Configurações dele, depois de escolher o cliente."
+      billed: "Valor cobrado (receita): quanto o cliente paga por hora naquele projeto. É o valor por hora do cliente, definido em Clientes, mais o acréscimo do projeto, se houver."
       margin: "Margem é a receita menos o custo. As Visões gerais somam tudo; a lista de Colaboradores da Gestão mostra a margem por hora de cada pessoa."
       history: "Mudar um valor só vale para as sessões novas: as que já foram registradas guardam o valor da época."
       owner: "O dono não tem custo: o valor das horas dele entra como receita, e ele bate ponto sem ter valor por hora."
@@ -898,7 +899,7 @@ help:
       text: "O modo solo é para quem atua sozinho, como freelancer ou PJ: a organização é uma pessoa só, e o que é de equipe some em vez de ficar sobrando nos menus."
       choose: "Marque “Trabalho sozinho(a)” ao criar a organização ou depois, em Configurações › Editar. Só o dono muda, e só liga com você como a única pessoa e sem convites pendentes."
       hides: "O menu perde Colaboradores e Pagamentos e ganha “A receber”; o projeto perde a aba Colaboradores, e ninguém é convidado. Desligar o modo não apaga nada: tudo o que ficou escondido volta."
-      billing: "Cada cliente é cobrado por hora (as horas dos projetos vezes o valor cobrado de cada um) ou por contrato mensal (um valor fixo por mês, e os projetos dele não têm valor por hora), nunca pelos dois. Escolha em Clientes ou ao criar o projeto: o modo e o contrato são do cliente e valem para todos os projetos dele, e depois que o cliente tem projetos o modo não muda."
+      billing: "Cada cliente é cobrado por hora (as horas dos projetos vezes o valor por hora dele) ou por contrato mensal (um valor fixo por mês, e os projetos dele não têm valor por hora), nunca pelos dois. A cobrança se define em Clientes e vale para todos os projetos do cliente; cada projeto só soma um acréscimo, por hora ou por mês. Depois que o cliente tem projetos o modo não muda."
       home: "O Início mostra as horas, a receita (o dinheiro que entrou) e a receita projetada (o que se espera receber, pago ou não), por cliente."
     integrations:
       title: Integrações com GitHub e Trello
@@ -1036,7 +1037,7 @@ org:
     link_copied: Link copiado.
     copy_failed: Não deu para copiar. Selecione o link e copie manualmente.
   customers:
-    intro: Quem contrata a organização. Cada projeto pode ter um cliente e um valor cobrado por hora, definidos nas configurações do projeto.
+    intro: Quem contrata a organização e como paga. A cobrança de cada cliente vale para todos os projetos dele, e cada projeto pode somar um acréscimo.
     new: Novo cliente
     country: País
     edit_title: Editar cliente
@@ -1056,8 +1057,8 @@ org:
     new: Novo projeto
     internal: Projeto interno
     customer: Cliente
-    admins_only_hint: O cliente e o valor cobrado só aparecem para admins e podem ser trocados depois, nas configurações do projeto.
-    admins_only_hint_solo: O cliente e o valor cobrado podem ser trocados depois, nas configurações do projeto.
+    admins_only_hint: O cliente e o acréscimo só aparecem para admins e podem ser trocados depois, nas configurações do projeto.
+    admins_only_hint_solo: O cliente e o acréscimo podem ser trocados depois, nas configurações do projeto.
     create: Criar projeto
     loading: Carregando projetos…
     empty: Nenhum projeto ainda
@@ -1080,10 +1081,10 @@ customer:
     mode: Modo de cobrança
     hourly: Por hora
     monthly: Mensal
-    mode_hint: "Por hora: as horas dos projetos vezes o valor cobrado de cada projeto. Mensal: um valor fixo por mês, o contrato."
+    mode_hint: "Por hora: as horas dos projetos vezes o valor por hora do cliente. Mensal: um valor fixo por mês, o contrato."
     mode_locked: O modo não muda porque o cliente já tem projetos.
-    default_rate: "Valor por hora padrão ({{.unit}})"
-    default_rate_hint: Preenche o valor cobrado ao criar um projeto deste cliente. Cada projeto guarda o seu.
+    hourly_rate: "Valor por hora ({{.unit}})"
+    hourly_rate_hint: "Vale para todos os projetos deste cliente: o reajuste se faz aqui. Um novo valor conta para as horas registradas daqui em diante, e cada projeto pode somar um acréscimo."
     monthly_fee: "Mensalidade ({{.unit}})"
     contract_start: Início do contrato
     contract_end: Fim do contrato
@@ -1097,7 +1098,7 @@ customer:
     late_fee: Multa por atraso (%)
     late_interest: Juros ao mês (%)
     grace_days: Tolerância (dias)
-    cell_hourly: Por hora
+    cell_hourly_no_rate: Por hora · sem valor por hora
     cell_hourly_rate: "Por hora · {{.rate}}"
     cell_monthly: "Mensal · {{.fee}}"
     cell_contract_from: "Contrato desde {{.start}}"
@@ -1108,16 +1109,8 @@ customer:
     cell_due_days:
       one: "vence {{.count}} dia depois"
       other: "vence {{.count}} dias depois"
-    project_monthly_note: "Este cliente é cobrado por mês, então o projeto não tem valor por hora. As horas continuam sendo contadas."
-    project_rate_default: "Preenchido com o valor padrão do cliente. O projeto guarda o próprio valor: mudar aqui não altera o cliente."
     project_rate_monthly: "Não se aplica: cobrança mensal"
-    monthly_contract: Contrato mensal
     option_label: "{{.name}} · {{.mode}}"
-    project_mode_hint: O modo de cobrança e o contrato ficam no cliente e valem para todos os projetos dele.
-    project_contract_edit: Editar o contrato em Clientes
-    project_contract_where: definido no cliente
-    project_contract_new: "O contrato fica no cliente {{.name}} e vale para todos os projetos dele."
-    project_to_hourly: "O cliente {{.name}} passa a ser cobrado por hora."
 project:
   head:
     projects: Projetos
@@ -1136,6 +1129,24 @@ project:
     billing: Cliente e cobrança
     routine: Rotina do time
     routine_solo: Rotina
+  billing:
+    customer_terms: Cobrança do cliente
+    customer_hourly: "Por hora · {{.rate}}/h"
+    customer_monthly: "Contrato mensal · {{.fee}}/mês"
+    customer_no_rate: Por hora, ainda sem valor por hora
+    customer_without_rate: Este cliente ainda não tem valor por hora. Informe o valor em Clientes para cobrar o projeto.
+    edit_in_customers: Editar em Clientes
+    extra_hourly: "Acréscimo por hora ({{.unit}})"
+    extra_monthly: "Acréscimo por mês ({{.unit}})"
+    extra_hourly_hint: Soma ao valor por hora do cliente só neste projeto, para algo pequeno ou temporário. O reajuste do cliente se faz em Clientes.
+    extra_monthly_hint: Soma à mensalidade do cliente a cada mês, para um projeto a mais. Zere quando acabar.
+    total_hourly: "Este projeto cobra {{.rate}} por hora."
+    total_monthly: "Soma {{.extra}} por mês à mensalidade de {{.fee}}."
+    total_monthly_plain: Este projeto entra na mensalidade do cliente, sem valor a mais.
+    extra_fact: Acréscimo do projeto
+    extra_fact_hourly: "+ {{.extra}} por hora"
+    extra_fact_monthly: "+ {{.extra}} por mês"
+    no_extra: Sem acréscimo
   fields:
     sprint: Duração da sprint
     daily: Daily
@@ -1153,7 +1164,6 @@ project:
     meeting_day: Dia da reunião
     meeting_time: Horário da reunião
     no_meeting: Sem reunião
-    bill_rate: "Valor cobrado por hora ({{.unit}})"
 
 tasks:
   search_placeholder: Buscar pelo nome
@@ -1554,16 +1564,14 @@ project_settings:
   intro_member: Como o projeto trabalha. Só admins alteram as configurações.
   internal: Projeto interno
   bill_rate_fact: Valor cobrado por hora
-  bill_rate_note: O valor cobrado é o que o cliente paga à organização. Só admins veem.
-  bill_rate_note_solo: O valor cobrado é o que o cliente paga por hora.
+  bill_rate_note: O valor cobrado é o que o cliente paga à organização por hora neste projeto, o valor dele mais o acréscimo do projeto. Só admins veem.
+  bill_rate_note_solo: O valor cobrado é o que o cliente paga por hora neste projeto, o valor dele mais o acréscimo do projeto.
   edit_title: Editar projeto
   delete_confirm: Excluir o projeto? Os times, as tarefas, as sessões de trabalho e as integrações dele são apagados.
   delete_confirm_solo: Excluir o projeto? As tarefas, as sessões de trabalho e as integrações dele são apagadas.
   billing_title: Cliente e cobrança
   customers_hint: Cadastre clientes em
   rate_placeholder: "10,00"
-  bill_rate_hint: O que o cliente paga à organização, obrigatório em um projeto com cliente. Só admins veem.
-  bill_rate_hint_solo: O que o cliente paga por hora, obrigatório em um projeto com cliente cobrado por hora.
   delete_title: Excluir projeto
   delete_text: Apaga o projeto com todos os times, tarefas, sessões de trabalho e integrações.
   saved: Projeto salvo.
@@ -1856,7 +1864,7 @@ errors:
     closing_day_locked: "este cliente já tem contas a receber: o dia de fechamento não pode mais mudar"
     field_hourly_only: "{{.field}} só vale em um cliente cobrado por hora"
     field_monthly_only: "{{.field}} só vale em um cliente com cobrança mensal"
-    invalid_default_rate: "o valor por hora padrão deve ficar entre 10,00 e 1.000.000,00"
+    invalid_hourly_rate: "o valor por hora deve ficar entre 10,00 e 1.000.000,00"
     invalid_monthly_fee: "a mensalidade deve ficar entre 0,01 e 1.000.000,00"
     invalid_contract_end: "o fim do contrato deve ser depois do início"
     invalid_closing_day: "o dia de fechamento deve ficar entre 1 e 31"
@@ -1976,10 +1984,9 @@ errors:
     not_found: "pessoa não encontrada"
   project:
     customer_not_found: "cliente não encontrado nesta organização"
-    invalid_bill_rate: "o valor cobrado por hora deve ficar entre 10,00 e 1.000.000,00"
-    bill_rate_required: "informe o valor cobrado por hora: um projeto com cliente precisa dele"
-    bill_rate_needs_customer: "o valor cobrado só vale em um projeto com cliente: escolha o cliente do projeto antes"
-    bill_rate_not_allowed: "este cliente é cobrado por mês: o projeto dele não tem valor cobrado por hora"
+    invalid_bill_extra: "o acréscimo deve ficar entre 0 e 1.000.000,00"
+    bill_extra_needs_customer: "o acréscimo só vale em um projeto com cliente: escolha o cliente do projeto antes"
+    customer_without_rate: "este cliente ainda não tem valor por hora: informe o valor em Clientes antes"
     customer_locked: "este projeto tem horas e o cliente dele já tem contas a receber: trocar o cliente cobraria as mesmas horas de novo"
     invalid_daily_time: "o horário da daily deve estar no formato HH:MM, por exemplo 09:30"
     invalid_organization: "organização inválida"
@@ -2102,7 +2109,8 @@ fields:
   customer_id: "o cliente"
   bill_rate_cents: "o valor cobrado por hora"
   billing_mode: "o modo de cobrança"
-  default_rate_cents: "o valor por hora padrão"
+  hourly_rate_cents: "o valor por hora"
+  bill_extra_cents: "o acréscimo"
   monthly_fee_cents: "a mensalidade"
   contract_start: "o início do contrato"
   contract_end: "o fim do contrato"

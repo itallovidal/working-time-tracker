@@ -38,15 +38,15 @@ func (h *Handler) Create(c *echo.Context) error {
 		SprintDurationDays *int `json:"sprint_duration_days"`
 		// CustomerID é opcional: com ele o projeto já nasce com o cliente, e a reunião com o cliente vale.
 		CustomerID string `json:"customer_id"`
-		// BillRateCents é o valor cobrado por hora: obrigatório com customer_id e recusado sem ele.
-		BillRateCents *int `json:"bill_rate_cents"`
+		// BillExtraCents é o acréscimo do projeto sobre a cobrança do cliente (ausente é zero): só com customer_id.
+		BillExtraCents *int `json:"bill_extra_cents"`
 		Routine
 	}
 	if err := c.Bind(&body); err != nil {
 		return apperr.Respond(c, 400, apperr.BindError(err))
 	}
-	// Cliente e valor cobrado são dinheiro: o admin cria só projeto interno, e o dono define os dois.
-	if me := auth.CurrentPerson(c); me != nil && !me.IsOwner && (strings.TrimSpace(body.CustomerID) != "" || body.BillRateCents != nil) {
+	// Cliente e acréscimo são dinheiro: o admin cria só projeto interno, e o dono define os dois.
+	if me := auth.CurrentPerson(c); me != nil && !me.IsOwner && (strings.TrimSpace(body.CustomerID) != "" || body.BillExtraCents != nil) {
 		return apperr.Respond(c, 403, auth.ErrOwnerOnly)
 	}
 	sprint := 0
@@ -57,7 +57,7 @@ func (h *Handler) Create(c *echo.Context) error {
 	}
 	project, err := h.svc.CreateWithCustomer(orgID, CreateInput{
 		Name: body.Name, Description: body.Description, SprintDurationDays: sprint,
-		Routine: body.Routine, CustomerID: body.CustomerID, BillRateCents: body.BillRateCents,
+		Routine: body.Routine, CustomerID: body.CustomerID, BillExtraCents: valueOr0(body.BillExtraCents),
 	})
 	if err != nil {
 		return apperr.Respond(c, 400, err)
@@ -159,16 +159,16 @@ func (h *Handler) GetBilling(c *echo.Context) error {
 	return c.JSON(200, billing)
 }
 
-// SetBilling substitui o cliente e o valor cobrado: o que vier null é apagado.
+// SetBilling substitui o cliente e o acréscimo: o cliente null tira o cliente, e o acréscimo ausente ou null é zero.
 func (h *Handler) SetBilling(c *echo.Context) error {
 	var body struct {
-		CustomerID    *string `json:"customer_id"`
-		BillRateCents *int    `json:"bill_rate_cents"`
+		CustomerID     *string `json:"customer_id"`
+		BillExtraCents *int    `json:"bill_extra_cents"`
 	}
 	if err := c.Bind(&body); err != nil {
 		return apperr.Respond(c, 400, apperr.BindError(err))
 	}
-	billing, err := h.svc.SetBilling(c.Param("projectId"), body.CustomerID, body.BillRateCents)
+	billing, err := h.svc.SetBilling(c.Param("projectId"), body.CustomerID, valueOr0(body.BillExtraCents))
 	if err != nil {
 		if err == database.ErrNotFound {
 			return apperr.Respond(c, 404, ErrNotFound)
@@ -184,4 +184,12 @@ func (h *Handler) Delete(c *echo.Context) error {
 		return apperr.Respond(c, 400, err)
 	}
 	return c.NoContent(204)
+}
+
+// valueOr0 é o número enviado, ou zero quando ele não veio.
+func valueOr0(v *int) int {
+	if v == nil {
+		return 0
+	}
+	return *v
 }

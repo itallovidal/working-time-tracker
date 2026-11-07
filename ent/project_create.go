@@ -182,16 +182,16 @@ func (_c *ProjectCreate) SetNillableCustomerID(v *uuid.UUID) *ProjectCreate {
 	return _c
 }
 
-// SetBillRateCents sets the "bill_rate_cents" field.
-func (_c *ProjectCreate) SetBillRateCents(v int) *ProjectCreate {
-	_c.mutation.SetBillRateCents(v)
+// SetBillExtraCents sets the "bill_extra_cents" field.
+func (_c *ProjectCreate) SetBillExtraCents(v int) *ProjectCreate {
+	_c.mutation.SetBillExtraCents(v)
 	return _c
 }
 
-// SetNillableBillRateCents sets the "bill_rate_cents" field if the given value is not nil.
-func (_c *ProjectCreate) SetNillableBillRateCents(v *int) *ProjectCreate {
+// SetNillableBillExtraCents sets the "bill_extra_cents" field if the given value is not nil.
+func (_c *ProjectCreate) SetNillableBillExtraCents(v *int) *ProjectCreate {
 	if v != nil {
-		_c.SetBillRateCents(*v)
+		_c.SetBillExtraCents(*v)
 	}
 	return _c
 }
@@ -378,6 +378,10 @@ func (_c *ProjectCreate) defaults() {
 		v := project.DefaultSprintDurationDays
 		_c.mutation.SetSprintDurationDays(v)
 	}
+	if _, ok := _c.mutation.BillExtraCents(); !ok {
+		v := project.DefaultBillExtraCents
+		_c.mutation.SetBillExtraCents(v)
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := project.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
@@ -399,9 +403,12 @@ func (_c *ProjectCreate) check() error {
 	if _, ok := _c.mutation.SprintDurationDays(); !ok {
 		return &ValidationError{Name: "sprint_duration_days", err: errors.New(`ent: missing required field "Project.sprint_duration_days"`)}
 	}
-	if v, ok := _c.mutation.BillRateCents(); ok {
-		if err := project.BillRateCentsValidator(v); err != nil {
-			return &ValidationError{Name: "bill_rate_cents", err: fmt.Errorf(`ent: validator failed for field "Project.bill_rate_cents": %w`, err)}
+	if _, ok := _c.mutation.BillExtraCents(); !ok {
+		return &ValidationError{Name: "bill_extra_cents", err: errors.New(`ent: missing required field "Project.bill_extra_cents"`)}
+	}
+	if v, ok := _c.mutation.BillExtraCents(); ok {
+		if err := project.BillExtraCentsValidator(v); err != nil {
+			return &ValidationError{Name: "bill_extra_cents", err: fmt.Errorf(`ent: validator failed for field "Project.bill_extra_cents": %w`, err)}
 		}
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
@@ -485,9 +492,9 @@ func (_c *ProjectCreate) createSpec() (*Project, *sqlgraph.CreateSpec) {
 		_spec.SetField(project.FieldCustomerMeetingTime, field.TypeString, value)
 		_node.CustomerMeetingTime = &value
 	}
-	if value, ok := _c.mutation.BillRateCents(); ok {
-		_spec.SetField(project.FieldBillRateCents, field.TypeInt, value)
-		_node.BillRateCents = &value
+	if value, ok := _c.mutation.BillExtraCents(); ok {
+		_spec.SetField(project.FieldBillExtraCents, field.TypeInt, value)
+		_node.BillExtraCents = value
 	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(project.FieldCreatedAt, field.TypeTime, value)

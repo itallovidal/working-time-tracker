@@ -31,8 +31,10 @@ func (Project) Fields() []ent.Field {
 		field.String("customer_meeting_time").Optional().Nillable(),
 		// Projeto interno fica sem cliente e sem valor cobrado.
 		field.UUID("customer_id", uuid.UUID{}).Optional().Nillable(),
-		// O que o cliente paga à organização por hora neste projeto.
-		field.Int("bill_rate_cents").Optional().Nillable().NonNegative(),
+		// O acréscimo deste projeto sobre a cobrança do cliente: por hora com cliente por hora (o valor cobrado é o do
+		// cliente mais este), por mês com cliente mensal (soma à mensalidade). Zero é sem acréscimo, e o projeto
+		// interno fica sempre em zero. A cobrança mora no cliente: o projeto não guarda valor por hora.
+		field.Int("bill_extra_cents").NonNegative().Default(0),
 		field.Time("created_at").Default(time.Now).Immutable(),
 	}
 }

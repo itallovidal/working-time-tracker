@@ -45,13 +45,13 @@ func newSweepOrg(t *testing.T, e *echo.Echo, solo bool) sweepOrg {
 	} else {
 		o.owner = signup(t, e, "Software House", "dono@equipe.test")
 	}
-	rec := do(e, "POST", "/api/orgs/"+o.owner.orgID+"/customers", `{"name":"Cliente da varredura"}`, o.owner.session)
+	rec := do(e, "POST", "/api/orgs/"+o.owner.orgID+"/customers", `{"name":"Cliente da varredura","hourly_rate_cents":10000}`, o.owner.session)
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("%s: create customer = %d: %s", o.label, rec.Code, rec.Body.String())
 	}
 	customer := decode(t, rec)["id"].(string)
 	rec = do(e, "POST", "/api/orgs/"+o.owner.orgID+"/projects",
-		`{"name":"Projeto da varredura","customer_id":"`+customer+`","bill_rate_cents":15000}`, o.owner.session)
+		`{"name":"Projeto da varredura","customer_id":"`+customer+`","bill_extra_cents":5000}`, o.owner.session)
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("%s: create project = %d: %s", o.label, rec.Code, rec.Body.String())
 	}
