@@ -61,6 +61,19 @@ func (h *Handler) Organization(c *echo.Context) error {
 	return c.JSON(http.StatusOK, o)
 }
 
+// Solo devolve a tela inicial do modo solo na janela de ?window= (month, last_month ou year; month, sem ela). A rota
+// confere que quem pede é o dono e que a organização é solo: é a receita e o que se espera receber de cada cliente.
+func (h *Handler) Solo(c *echo.Context) error {
+	o, err := h.svc.Solo(c.Param("orgId"), c.QueryParam("window"))
+	if err != nil {
+		if errors.Is(err, ErrInvalidWindow) {
+			return apperr.Respond(c, http.StatusBadRequest, err)
+		}
+		return failOrg(c, err)
+	}
+	return c.JSON(http.StatusOK, o)
+}
+
 // WorkingNow devolve quem está com o ponto aberto na organização e em que tarefas, sem tempo
 // nem dinheiro. É só de admins, como a visão geral: mostra o que cada pessoa faz agora.
 func (h *Handler) WorkingNow(c *echo.Context) error {

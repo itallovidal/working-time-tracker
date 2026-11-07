@@ -59,10 +59,38 @@ func (s *Service) Update(id string, in UpdateInput) (*Organization, error) {
 	if err := apply(org, in); err != nil {
 		return nil, err
 	}
+	if err := s.applySolo(org, in.Solo); err != nil {
+		return nil, err
+	}
 	if err := s.store.Update(org); err != nil {
 		return nil, err
 	}
 	return org, nil
+}
+
+// applySolo liga ou desliga o modo solo. Só ligar pede conferência: a organização tem de ter exatamente uma pessoa e
+// nenhum convite pendente, senão ErrSoloNeedsSinglePerson. Desligar sempre vale, e esconde sem apagar: os clientes
+// mensais e os recebíveis ficam guardados. Mandar o valor que a organização já tem não muda nada (a tela de
+// Configurações manda o campo sempre, e salvar o resto não pode falhar por isso).
+func (s *Service) applySolo(org *Organization, want *bool) error {
+	if want == nil || *want == org.Solo {
+		return nil
+	}
+	if *want {
+		people, err := s.store.CountPeople(org.ID)
+		if err != nil {
+			return err
+		}
+		invites, err := s.store.CountPendingInvites(org.ID, time.Now())
+		if err != nil {
+			return err
+		}
+		if people != 1 || invites != 0 {
+			return ErrSoloNeedsSinglePerson.With("field", "solo")
+		}
+	}
+	org.Solo = *want
+	return nil
 }
 
 func (s *Service) Delete(id string) error {

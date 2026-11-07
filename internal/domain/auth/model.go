@@ -22,6 +22,9 @@ type Identity struct {
 	OrganizationName string    `json:"organization_name"`
 	// OrganizationCurrency é a moeda dos valores da organização (BRL, USD ou EUR).
 	OrganizationCurrency string `json:"organization_currency"`
+	// OrganizationSolo diz que a organização trabalha no modo solo (uma pessoa só, sem equipe). As telas leem daqui
+	// (.Me.OrganizationSolo, me.organization_solo) para esconder o que é de equipe e mostrar o que é do modo solo.
+	OrganizationSolo bool `json:"organization_solo"`
 	// HasPassword diz se a conta tem senha do sistema. Quem entra só pelo Clerk não tem, e a troca de senha
 	// não se aplica a essa pessoa.
 	HasPassword bool `json:"has_password"`

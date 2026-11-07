@@ -90,6 +90,8 @@ POST /api/auth/clerk/join            { "invite_id": "<uuid de um convite de no_a
 
 `signup` e `join` respondem **201** com o mesmo corpo e o cookie. `signup`: 400 `auth.org_name_required`, 409 `auth.account_exists` (já há conta para esse usuário ou email). `join`: o convite precisa ter email e ser o email verificado do Clerk (convite sem email só entra pelo `invite_token` do `login`).
 
+O `signup` do Clerk também aceita `"solo": true`, que cria a organização no modo solo, como o `signup` por senha (ver [Signup](#signup)).
+
 ### Signup
 ```http
 POST /api/auth/signup
@@ -116,6 +118,8 @@ Resposta `201` (e o cookie `wtt_session`):
 }
 ```
 O email vira minúsculas e é único no sistema todo. A senha precisa ter entre 8 e 72 caracteres. `country` é o país da organização (`BR` ou `US`) e é opcional: vazio é `BR`. Ele define a moeda e o fuso de partida (`BRL` e `America/Sao_Paulo`, ou `USD` e `America/New_York`); um país desconhecido responde 400 `auth.invalid_country`. O mesmo vale para o `clerk/signup`.
+
+`solo` (`true` ou `false`, opcional; o padrão é `false`) cria a organização já no **modo solo**, a de uma pessoa só (ver [Modo solo](#modo-solo)). Como a organização nasce com exatamente uma pessoa e nenhum convite, a regra de ligar sempre cabe. O signup, o login e o `GET /api/auth/me` devolvem `organization_solo` (booleano) junto com `organization_currency`; é o que as telas leem para esconder o que é de equipe.
 
 ### Login
 ```http
@@ -157,13 +161,14 @@ Se o convite foi criado com email, só esse email consegue aceitar. Um convite v
 |---|---|---|---|
 | GET | `/api/orgs/:orgId` | logado | Detalhes da organização |
 | PATCH | `/api/orgs/:orgId` | dono | Altera o nome e o perfil. Veja os campos abaixo |
-| DELETE | `/api/orgs/:orgId` | dono | Exclui a organização com as pessoas e os convites. Falha se ainda houver projetos |
+| DELETE | `/api/orgs/:orgId` | dono | Exclui a organização com as pessoas, os clientes, os recebíveis e os convites. Falha se ainda houver projetos |
 | GET | `/api/orgs/:orgId/persons` | logado | Pessoas da organização que quem pede pode ver: todas, para o dono, os admins e quem tem `collaborators.manage` em algum projeto em que está (precisa achar quem entra); para os outros, só ele mesmo e quem está em algum projeto dele |
 | GET | `/api/persons/:personId/payments` | a própria pessoa, o dono ou admin (o admin recebe de outra pessoa só as horas: `rule: null`, sem períodos nem valores) | Pagamentos calculados da regra: `{generated_at, timezone, owner, rule, current, upcoming[], history[], totals, lifetime}`. Os períodos vão como dias de calendário `YYYY-MM-DD` (`start`, `pay_date`, inclusivos) no fuso da organização. `?history=N` (padrão 12, no máximo 60). Sem regra: `rule: null`, `current: null` e as listas vazias. `lifetime` vem sempre, com ou sem regra: `{seconds, amount_cents, first_day, projects[]}`, tudo o que a pessoa registrou desde a primeira sessão (cada sessão inteira, arredondada uma vez), com o dia da primeira (`first_day`, vazio para quem nunca bateu ponto) e o detalhe por projeto (nunca nulo). O dono não tem `amount_cents`. O corrente e cada período de `history[]` trazem `paid` (`{id, amount_cents, bonus_cents, paid_at}`) quando tiveram baixa; com a baixa do restante, os valores são a soma e a data e o `id` são os da última. É o que o perfil da pessoa mostra (`/profile` e, para admins, `/orgs/:orgId/people/:personId`) |
 | GET | `/api/orgs/:orgId/payments` | `payments.manage` (dono) | A visão da equipe, sem o dono (que não é pago): `due[]`, os períodos sem baixa (o corrente de cada pessoa, `running`, e os fechados com data de pagamento nos últimos 60 dias e alguma hora, `overdue`) e o restante dos que já tiveram baixa (`rest`, com `seconds` e `amount_cents` só do que veio depois da última baixa e `paid_cents`, o que as baixas já pagaram pelas horas), com `person`, `rule`, `start`, `pay_date`, `days`, `days_left` (negativo no atraso), `seconds`, `amount_cents` e `last_closed` (o último fechado da pessoa, com `paid`), ordenados pela data do pagamento e pelo nome; `paid[]`, as baixas dos últimos 30 dias, da mais nova para a mais antiga, com `id`, `person`, `start`, `pay_date`, `paid_at`, `seconds` e `calculated_cents` (o que a baixa cobriu), `amount_cents` (o pago pelas horas), `bonus_cents`, `seq` (0 na primeira baixa do período, mais nas do restante) e `later_seconds`/`later_cents` (na última baixa do período, o restante que ele ganhou depois dela e que está em `due[]`); `without_rule[]` (sem o dono) e `totals` (`to_pay_cents` e `overdue_cents`, `closing_7_cents` e `closing_30_cents` com os atrasados, `seconds`, `owner_seconds`, `without_rule`) |
 | POST | `/api/orgs/:orgId/payouts` | `payments.manage` (dono) | Dá baixa num período, ou no restante de um que já teve baixa: `{person_id, start, pay_date, amount_cents, bonus_cents}`. `bonus_cents` é opcional (sem ele, `0`) e não pode ser negativo (`400 payment.invalid_bonus`). O período tem de ser um da regra da pessoa (`400 payment.not_a_period`) e já ter começado (`400 payment.period_not_started`); o corrente vale, antes da data. `amount_cents` é o valor pago, inteiro e zero ou mais (`400 payment.invalid_amount`); as horas e o valor calculado são do servidor, no momento, e numa baixa do restante são só o que veio depois da última. `400 payment.owner_not_paid` para o dono, `400 payment.no_rule` para quem não tem regra, `404 person.not_found` para um `person_id` malformado ou de alguém de outra organização e `409 payment.already_paid` quando o período já tem baixa e nada foi registrado depois dela. `201` com a baixa |
 | DELETE | `/api/orgs/:orgId/payouts/:payoutId` | `payments.manage` (dono) | Desfaz a baixa: o que ela cobria volta para `due[]`. `204`; `404 payment.payout_not_found` |
 | GET | `/api/orgs/:orgId/overview` | admin | Visão geral da organização: o tempo e o custo de todos os projetos em três janelas, e as horas de cada pessoa; a receita e a margem só vão para o dono (`null` para o admin). Veja abaixo |
+| GET | `/api/orgs/:orgId/solo/overview` | `receivables.manage` (dono), só no modo solo | A tela inicial do modo solo: horas, Receita, Receita projetada e o valor por hora efetivo, no total e por cliente, numa janela de calendário. `404` fora do modo solo. Veja abaixo |
 | GET | `/api/orgs/:orgId/working-now` | admin | Quem está com o ponto aberto na organização e em que tarefas, sem tempo nem dinheiro. Veja abaixo |
 | GET | `/api/orgs/:orgId/me/overview` | logado | O painel de quem pede: as horas dele (hoje, a semana, dia a dia e por projeto) e as tarefas dele, em todos os projetos. Veja abaixo |
 | GET | `/api/orgs/:orgId/me/tasks` | logado | As tarefas de quem pede, em todos os projetos, abertas ou concluídas, em páginas. Veja abaixo |
@@ -171,8 +176,9 @@ Se o convite foi criado com email, só esse email consegue aceitar. Um convite v
 | GET | `/api/orgs/:orgId/projects` | logado | Projetos da organização, do mais novo para o mais antigo (para quem não é admin, só os em que está). Sem `page`, todos num array; com `page`, uma página. Veja abaixo |
 | POST | `/api/orgs/:orgId/customers` | `customers.manage` (dono) | Cria um cliente |
 | GET | `/api/orgs/:orgId/customers` | `customers.manage` (dono) | Clientes da organização, em ordem alfabética |
+| GET, POST | `/api/orgs/:orgId/receivables` (+ `/:id`, `/:id/late-charges`, `/:id/receive`) | `receivables.manage` (dono), só no modo solo | As contas a receber: ver [Contas a receber](#contas-a-receber-modo-solo) |
 
-A organização é criada pelo signup, e o `organization_id` vem no `/api/auth/me`, junto com `organization_currency`.
+A organização é criada pelo signup, e o `organization_id` vem no `/api/auth/me`, junto com `organization_currency` e `organization_solo`.
 
 ### Lista de projetos paginada
 
@@ -225,6 +231,46 @@ A organização é criada pelo signup, e o `organization_id` vem no `/api/auth/m
 - `money` segue a visão geral do projeto: `pay_amount_cents` (custo) e `bill_amount_cents` (receita) são `null` quando nenhuma sessão da janela tem aquele valor por hora, e `margin_cents` é a receita menos o custo, `null` sem receita. As horas do dono têm custo `0`, então entram inteiras na margem.
 - `by_person` traz **todas** as pessoas da organização, também as que ainda não bateram ponto (com zeros), da que mais trabalhou no total para a que menos; a soma de cada janela é a das linhas. `working_now` marca quem tem uma sessão aberta em qualquer projeto, e `people.working_now` conta essas pessoas. `working_on` são as tarefas que a pessoa tem na sessão aberta neste instante (os intervalos que ainda não terminaram), na ordem em que entraram, cada uma com o projeto, com id e nome para a tela levar até elas; vem `[]`, nunca `null`, para quem não trabalha agora e para quem abriu uma sessão que ficou sem tarefa. A tela da página inicial usa isso e não ordena nem compara as pessoas pelas horas.
 - O total de `all_time` é a soma das visões gerais dos projetos (`GET /api/projects/:projectId/overview`).
+
+### Visão geral do modo solo
+
+`GET /api/orgs/:orgId/solo/overview?window=month|last_month|year` é a tela inicial do [modo solo](../product/overview.md#modo-solo). É só do dono (`403 auth.permission_required` para os outros, antes do `404`) e só de organização solo (`404 request.not_found` fora dela, mesmo para o dono), como as rotas de [recebíveis](#contas-a-receber-modo-solo). `window` é `month` (padrão), `last_month` ou `year`; outro valor é `400 overview.invalid_window` (`params.field: window`).
+
+```json
+{
+  "window": "month", "from": "2026-11-01", "to": "2026-11-30",
+  "timezone": "America/Sao_Paulo", "currency": "BRL",
+  "generated_at": "2026-11-18T12:00:00-03:00",
+  "totals": {
+    "seconds": 43200, "received_cents": 40000, "projected_cents": 565000,
+    "effective_rate_cents": 47083, "below_min_rate": false
+  },
+  "customers": [
+    { "customer": { "id": "…", "name": "Alfa" }, "kind": "hourly", "seconds": 23400,
+      "received_cents": 40000, "projected_cents": 65000, "effective_rate_cents": 10000, "below_min_rate": false },
+    { "customer": { "id": "…", "name": "Beta" }, "kind": "monthly", "seconds": 14400,
+      "received_cents": 0, "projected_cents": 500000, "effective_rate_cents": 125000, "below_min_rate": false }
+  ],
+  "internal_seconds": 5400
+}
+```
+
+- **Janelas.** São de calendário, no fuso da organização (`timezone`): `month` é o mês corrente, `last_month` o anterior e
+  `year` vai de 1º de janeiro ao último dia do mês corrente (assim contém sempre o `month`). `from` e `to` são os dias que a
+  janela cobre, `YYYY-MM-DD`, os dois inclusivos. Os valores são em centavos da moeda da organização (`currency`).
+- **`totals.seconds`** é o tempo de todas as sessões na janela (as dos projetos internos também), cada uma cortada na borda;
+  a aberta conta até `generated_at`. **`totals.received_cents`** é a **Receita**: a soma de `received_cents` dos recebíveis
+  com `received_on` dentro da janela, pela data do recebimento. **`totals.projected_cents`** é a **Receita projetada**: dos
+  períodos que **terminam** na janela (`period_end`), o `amount_cents` do recebível quando existe e a proposta quando não
+  (no por hora, o período em andamento com as horas até agora; no mensal, a mensalidade). Receita e projetada têm datas
+  diferentes e não se misturam: veja [money.md](../product/money.md#receita-e-receita-projetada-modo-solo).
+- **`effective_rate_cents`** é `projected_cents` dividido pelas horas, ao centavo, e `null` sem horas. `below_min_rate` avisa
+  que ficou abaixo de 10,00 por hora (`validate.MinRateCents`); é um aviso, nunca um erro.
+- **`customers`** traz os clientes que têm horas, recebimento ou valor projetado na janela, **em ordem de nome** (sem caixa
+  nem acento, o id desempata) e nunca por horas ou por valor. `kind` é o modo de cobrança de hoje (`hourly` ou `monthly`) e
+  `seconds` são as horas das sessões dos projetos do cliente, também no mensal. Nunca é `null`: `[]` sem nada. As linhas, com
+  `internal_seconds`, somam os `totals`.
+- **`internal_seconds`** são as horas dos projetos sem cliente (internos) na janela, só tempo. `0` sem elas.
 
 ### Quem está trabalhando agora
 
@@ -303,8 +349,22 @@ O `GET` devolve todos os campos para qualquer membro. No `PATCH`, **campo que n�
 | `work_mode` | Regime de trabalho: `remote`, `hybrid` ou `onsite` |
 | `timezone` | Nome IANA, por exemplo `America/Sao_Paulo`. Vazio volta para o padrão do país (`America/Sao_Paulo` no BR, `America/New_York` nos US) |
 | `currency` | `BRL`, `USD` ou `EUR`. Vazio volta para o padrão do país (`BRL` no BR, `USD` nos US) |
+| `solo` | Booleano: liga ou desliga o modo solo (ver [Modo solo](#modo-solo)). Ligar pede exatamente uma pessoa e nenhum convite pendente (409 `organization.solo_needs_single_person`); desligar sempre vale. Mandar o valor que a organização já tem não muda nada. Tipo errado é 400 `request.invalid_body` |
 
 Cada documento fiscal é conferido pela regra do país dono dele, qualquer que seja o país da organização, então o pedido `{"country":"US","ein":"…"}` não depende da ordem dos campos. **Trocar o país não apaga o documento do outro** (o CNPJ de uma organização que virou `US` continua guardado, e a tela o esconde) e também não muda a moeda nem o fuso. Os erros do país e dos documentos são `organization.invalid_country`, `invalid_cnpj` e `invalid_ein`.
+
+### Modo solo
+
+`solo` é o modo de uma pessoa só (freelancer, PJ). O `GET /api/orgs/:orgId` o devolve (`"solo": false` por padrão), o cadastro o cria ligado (`solo: true` no `signup`) e o `PATCH /api/orgs/:orgId`, que é do dono, o liga e desliga.
+
+| Pedido | Resposta |
+|---|---|
+| `{"solo": true}` com exatamente uma pessoa e nenhum convite pendente | 200, com `solo: true` |
+| `{"solo": true}` com mais de uma pessoa, ou com um convite pendente (um aceito ou vencido não conta) | **409** `organization.solo_needs_single_person`, com `params.field = "solo"`. A organização fica como estava |
+| `{"solo": false}` | 200, sempre. Esconde, não apaga: os clientes mensais e os recebíveis ficam guardados |
+| Qualquer `PATCH` por quem não é o dono | 403 `auth.owner_only` |
+
+Com `solo = true`, convidar responde **409** `organization.solo_no_invites` (ver [Convites](#convites)), e as páginas de equipe respondem 404 (ver [Modo solo](../product/overview.md#modo-solo)). As rotas da API de pessoas e de pagamentos não mudam: só as telas e os convites.
 
 A duração da sprint e a jornada semanal não são da organização: a sprint fica em cada projeto (`sprint_duration_days`) e a jornada, em cada pessoa (`weekly_hours`).
 
@@ -348,6 +408,8 @@ Content-Type: application/json
 
 Com o Clerk ligado e um email, o convite é criado no Clerk primeiro (com validade de 7 dias e `redirect_url` no `/invite/<token>`) e só então gravado: se o Clerk recusar, a resposta é **502** `auth.clerk_invite_failed`; se não responder, **502** `auth.clerk_unavailable`, e nada fica gravado. Um novo convite para o mesmo email na organização **substitui** o anterior (apagado aqui e cancelado no Clerk). `DELETE /api/invites/:inviteId` também cancela o convite no Clerk (um problema lá não impede de revogar).
 
+**Modo solo.** Numa organização no modo solo (ver [Modo solo](#modo-solo)) os dois `POST` de convite, o da organização e o do projeto, respondem **409** `organization.solo_no_invites`, com qualquer corpo: a recusa vem antes de o corpo ser lido, e depois da checagem de quem pode convidar (sem a permissão continua o 403). Nada é gravado, nem no Clerk. `GET` da lista e `DELETE` continuam valendo (a lista de uma organização solo está sempre vazia). Desligado o modo, convidar volta a funcionar.
+
 **Convite que já leva ao projeto.** `POST /api/projects/:projectId/invites` é o convite da tela Adicionar pessoa ao projeto para um e-mail que ainda não é de ninguém da organização:
 
 ```http
@@ -372,7 +434,7 @@ Quem contrata a organização. Todas as rotas pedem `customers.manage` (admins t
 | GET | `/api/orgs/:orgId/customers` | Lista, com `project_count` em cada um |
 | GET | `/api/customers/:customerId` | Detalhes |
 | PATCH | `/api/customers/:customerId` | Altera. Campo omitido mantém o valor; `""` apaga |
-| DELETE | `/api/customers/:customerId` | Exclui. Responde `400` enquanto algum projeto apontar para o cliente |
+| DELETE | `/api/customers/:customerId` | Exclui. Responde `409` enquanto algum projeto apontar para o cliente (`customer.has_projects`) ou o cliente tiver recebíveis (`customer.has_receivables`) |
 
 ```http
 POST /api/orgs/:orgId/customers
@@ -393,6 +455,46 @@ POST /api/orgs/:orgId/customers
 Content-Type: application/json
 
 { "name": "Acme Inc", "country": "US", "document": "12-3456789" }
+```
+
+### Termos comerciais do cliente
+
+Todo cliente traz o **modo de cobrança** e os termos dele, que o `POST` e o `PATCH` aceitam. O cliente sem termos é por hora, fecha no dia 31 e vence no fechamento, como todo cliente era antes. Os valores são em **centavos**, na moeda da organização.
+
+| Campo | Tipo | Regra |
+|---|---|---|
+| `billing_mode` | `"hourly"` (padrão) ou `"monthly"` | Um ou outro, nunca os dois. Outro valor, ou vazio, é `400 customer.invalid_billing_mode` |
+| `default_rate_cents` | int ou `null` | Só `hourly`. O valor por hora que preenche o campo ao criar um projeto do cliente (o projeto guarda o seu). Quando vem, de 1000 (10,00) a 100000000: `400 customer.invalid_default_rate` |
+| `monthly_fee_cents` | int ou `null` | Só `monthly`, obrigatório nele (`400 request.field_required`) e de 1 a 100000000 (`400 customer.invalid_monthly_fee`) |
+| `contract_start` | `YYYY-MM-DD` | Só `monthly`, obrigatório nele. Uma data que não existe é `400 request.field_invalid` |
+| `contract_end` | `YYYY-MM-DD` ou `""` | Só `monthly`, opcional (sem fim, o contrato segue). Tem de ser **depois** do início: `400 customer.invalid_contract_end` |
+| `closing_day` | int, padrão 31 | De 1 a 31: o dia em que o período fecha. 31 é o último dia do mês, e o mês curto fecha no último dia dele (`400 customer.invalid_closing_day`). Com recebíveis no cliente o dia não muda: outro valor é `409 customer.closing_day_locked` (o mesmo dia que ele já tem passa); desfeitos os recebíveis, muda |
+| `payment_days` | int, padrão 0 | De 0 a 365: dias entre o fechamento e o vencimento (`400 customer.invalid_payment_days`) |
+| `late_fee_bp` | int, padrão 0 | Só `monthly`. A multa em pontos-base (200 = 2%), de 0 a 10000 (`400 customer.invalid_late_fee`) |
+| `late_interest_bp_month` | int, padrão 0 | Só `monthly`. Os juros ao mês em pontos-base, de 0 a 10000 (`400 customer.invalid_late_interest`) |
+| `grace_days` | int, padrão 0 | Só `monthly`. Dias de tolerância depois do vencimento, de 0 a 365 (`400 customer.invalid_grace_days`) |
+
+- **Um modo ou o outro.** Um campo do outro modo, com valor, é recusado com o campo em `params.field`: `400 customer.field_hourly_only` (`default_rate_cents` num cliente mensal) ou `400 customer.field_monthly_only` (a mensalidade, o contrato, a multa, os juros ou a tolerância num cliente por hora). `null`, `""` e `0` são o padrão do campo, não valor. Trocar o modo apaga os campos do modo que saiu.
+- **`monthly` só no modo solo.** Numa organização que não é solo, `billing_mode: "monthly"` é `400 customer.monthly_needs_solo` (`params.field` = `billing_mode`), na criação e na troca. Desligar o modo solo esconde as telas, e o cliente mensal segue guardado e editável.
+- **O modo trava com projetos.** Trocar o `billing_mode` de um cliente que já tem projetos é `409 customer.mode_locked` (`params.field` = `billing_mode`). Mandar o modo que ele já tem, e mexer nos outros termos, vale.
+- **`PATCH`.** Campo omitido mantém o valor. Nos opcionais de dinheiro (`default_rate_cents`, `monthly_fee_cents`), `null` apaga; em `contract_start` e `contract_end`, `""` apaga (o início de um cliente mensal não pode ficar vazio).
+- Todo erro de termo leva `params.field` com a chave do corpo, para a tela marcar o campo. Chave desconhecida, ou do tipo errado (`"closing_day": "5"`), é `400 request.invalid_body`.
+
+```http
+PATCH /api/customers/:customerId
+Content-Type: application/json
+
+{
+  "billing_mode": "monthly",
+  "monthly_fee_cents": 630000,
+  "contract_start": "2026-11-01",
+  "contract_end": "",
+  "closing_day": 5,
+  "payment_days": 10,
+  "late_fee_bp": 200,
+  "late_interest_bp_month": 100,
+  "grace_days": 3
+}
 ```
 
 ---
@@ -442,7 +544,7 @@ Content-Type: application/json
   "bill_rate_cents": 14000
 }
 ```
-- `customer_id` e `bill_rate_cents` andam juntos: um projeto **ou tem cliente (e valor cobrado) ou é interno**. Com `customer_id` o valor é obrigatório (`400 project.bill_rate_required`); sem cliente o valor é recusado (`400 project.bill_rate_needs_customer`); fora de 10,00 a 1.000.000,00 é `400 project.invalid_bill_rate`. O `customer_id` de outra organização é `400 project.customer_not_found`, checado antes do valor. O erro leva `params.field` = `bill_rate_cents`. Só o dono e os admins criam projeto (os outros recebem `403`), e só o dono é matriculado no projeto que cria, com custo 0.
+- `customer_id` e `bill_rate_cents` andam juntos: um projeto **ou tem cliente (e valor cobrado) ou é interno**. Com um cliente **por hora** o valor é obrigatório (`400 project.bill_rate_required`); com um cliente **mensal** o valor é recusado (`400 project.bill_rate_not_allowed`: o contrato é um valor por mês, e o projeto não tem valor por hora); sem cliente o valor é recusado (`400 project.bill_rate_needs_customer`); fora de 10,00 a 1.000.000,00 é `400 project.invalid_bill_rate`. O `customer_id` de outra organização é `400 project.customer_not_found`, checado antes do valor. O erro leva `params.field` = `bill_rate_cents`. Só o dono e os admins criam projeto (os outros recebem `403`), e só o dono é matriculado no projeto que cria, com custo 0.
 - `sprint_duration_days` vai de 1 a 90, e o padrão é 14. As telas oferecem 7, 14 e 30 (um mês); um projeto com outra duração continua com ela.
 - `daily_time` usa o formato `HH:MM`. Sem ele, o projeto não tem daily.
 - `weekly_sync_day` vai de `monday` a `sunday`. Sem ele, o projeto não tem weekly.
@@ -459,8 +561,8 @@ O projeto traz `customer` (`{"id", "name"}` ou `null`) para qualquer membro. O v
 
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
-| GET | `/api/projects/:projectId/billing` | `billing.view` | Cliente e valor que ele paga por hora |
-| PUT | `/api/projects/:projectId/billing` | `billing.manage` | Substitui os dois, que andam juntos: com cliente o valor é obrigatório, sem cliente o valor é recusado |
+| GET | `/api/projects/:projectId/billing` | `billing.view` | Cliente, valor que ele paga por hora (`null` com cliente mensal) e o modo de cobrança do cliente (`customer_billing_mode`: `hourly`, `monthly` ou `null` no projeto interno) |
+| PUT | `/api/projects/:projectId/billing` | `billing.manage` | Substitui os dois, que andam juntos: com cliente por hora o valor é obrigatório, com cliente mensal é recusado, sem cliente é recusado |
 
 ```http
 PUT /api/projects/:projectId/billing
@@ -468,7 +570,9 @@ Content-Type: application/json
 
 { "customer_id": "<id do cliente>", "bill_rate_cents": 10000 }
 ```
-Os valores são sempre em **centavos**, na moeda da organização: `10000` é 100,00. O valor vai de `1000` (10,00) a `100000000`. O cliente precisa ser da mesma organização do projeto (`400 project.customer_not_found`, antes do valor). Com `customer_id` e sem `bill_rate_cents` é `400 project.bill_rate_required`; com o valor e sem cliente é `400 project.bill_rate_needs_customer`; fora da faixa é `400 project.invalid_bill_rate`. Mandar `{"customer_id": null, "bill_rate_cents": null}` volta o projeto a ser interno.
+Os valores são sempre em **centavos**, na moeda da organização: `10000` é 100,00. O valor vai de `1000` (10,00) a `100000000`. O cliente precisa ser da mesma organização do projeto (`400 project.customer_not_found`, antes do valor). O valor segue o modo de cobrança do cliente **novo**, também ao trocar o cliente do projeto: com um cliente por hora e sem `bill_rate_cents` é `400 project.bill_rate_required`; com um cliente mensal e qualquer valor é `400 project.bill_rate_not_allowed` (ao passar de um cliente por hora para um mensal, o valor antigo não vai junto: `bill_rate_cents` vai `null`); com o valor e sem cliente é `400 project.bill_rate_needs_customer`; fora da faixa é `400 project.invalid_bill_rate`. Mandar `{"customer_id": null, "bill_rate_cents": null}` volta o projeto a ser interno.
+
+Um projeto **com sessões** não sai de um cliente que já tem recebíveis, nem para outro cliente nem para interno: `409 project.customer_locked` (`params.field` é `customer_id`). A sessão não guarda o cliente, vale o do projeto de hoje, e trocar levaria as horas já cobradas para as propostas do cliente novo. Mandar o mesmo cliente, só com outro valor, passa; o projeto sem sessões, ou de um cliente sem recebíveis, troca à vontade; desfeitos os recebíveis, o projeto sai. A checagem vem depois das de cliente e de valor (`400`).
 
 ### Valor pago a cada pessoa
 
@@ -730,7 +834,7 @@ Na lista de tarefas e no detalhe, a tarefa traz `links`, um por item externo a q
 ### Valores nas sessões
 
 - **Sem valor, sem ponto.** O clock-in responde `400` quando a pessoa não tem valor por hora no projeto (`PUT /api/projects/:projectId/allocations/:personId`). É o caso de quem foi tirado do projeto e ficou com uma tarefa dele. Vale também para um admin batendo o ponto de outra pessoa.
-- **O valor é travado no clock-in.** A sessão guarda `pay_rate_cents` (o que a pessoa recebe por hora) e `bill_rate_cents` (o que o cliente paga; `null` em projeto sem valor cobrado). Mudar um valor depois só afeta as sessões seguintes.
+- **O valor é travado no clock-in.** A sessão guarda `pay_rate_cents` (o que a pessoa recebe por hora) e `bill_rate_cents` (o que o cliente paga; `null` em projeto sem valor cobrado: o interno e o de cliente mensal, onde o ponto funciona do mesmo jeito e as horas e o custo contam). Mudar um valor depois só afeta as sessões seguintes.
 - Cada sessão traz também `pay_amount_cents` e `bill_amount_cents`: o tempo da sessão vezes o valor por hora, arredondado para o centavo. O total soma as sessões já arredondadas.
 - **Quem vê o quê.** Um admin recebe os quatro campos de todas as sessões. Um membro recebe `pay_rate_cents` e `pay_amount_cents` só nas próprias sessões; nas dos colegas, e sempre nos dois campos de `bill`, vem `null`. No total, um membro só recebe `pay_amount_cents` quando filtra por ele mesmo (`?person_id=` o próprio id).
 - Sessões criadas antes dos valores existirem ficam com tudo `null`.
@@ -865,6 +969,49 @@ Content-Type: application/json
 
 ---
 
+## Contas a receber (modo solo)
+
+O A receber é do **modo solo** (`organizations.solo`) e do **dono** (`receivables.manage`). Em uma organização que não
+trabalha sozinha as sete rotas respondem `404 request.not_found`, mesmo para o dono (a permissão vem antes: quem não é
+o dono recebe `403 auth.permission_required`). Desligar o modo esconde as rotas e guarda os recebíveis. Os valores são
+em centavos e os dias, `YYYY-MM-DD` no fuso da organização, os dois lados do período inclusivos. As regras estão em
+[../product/money.md](../product/money.md#contas-a-receber-modo-solo).
+
+| Método | Rota | Descrição |
+|---|---|---|
+| GET | `/api/orgs/:orgId/receivables` | A página inteira: `totals`, `to_confirm[]`, `open[]` e `received[]`. Veja abaixo |
+| POST | `/api/orgs/:orgId/receivables` | Confirma um período de um cliente: `{customer_id, period_start, period_end, amount_cents, due_date, invoice_number, note}`. Só `amount_cents` (maior que zero, até 1.000.000,00) e os três primeiros são obrigatórios; sem `due_date` vale o fim do período mais os `payment_days` do cliente. `201` com o recebível; `404 customer.not_found` (cliente malformado, inexistente ou de outra organização); `400 receivable.not_a_period` (as datas não são um período do ciclo do cliente, ou, no mensal, ficam fora do contrato ou além do período seguinte ao corrente); `409 receivable.period_open` (por hora, período que ainda não fechou); `409 receivable.already_confirmed`; `400 receivable.invalid_amount` (`field: amount_cents`); `request.field_required`, `request.field_invalid` e `request.field_too_long` com `field` (`period_start`, `period_end`, `due_date`, `invoice_number` até 60, `note` até 500) |
+| PATCH | `/api/orgs/:orgId/receivables/:id` | Altera `amount_cents`, `due_date`, `invoice_number` e `note` (campo ausente mantém; texto vazio apaga a nota e o número da nota). `200` com o recebível; `409 receivable.already_received` se já foi recebido; `404 receivable.not_found`; os mesmos erros de campo da confirmação |
+| DELETE | `/api/orgs/:orgId/receivables/:id` | Desfaz a confirmação: o período volta a ser uma proposta. `204`; `409 receivable.already_received` (desfaça o recebimento antes); `404 receivable.not_found` |
+| GET | `/api/orgs/:orgId/receivables/:id/late-charges` | A sugestão de multa e juros para receber na data `?on=YYYY-MM-DD` (hoje, sem ela): `{on, due_date, grace_days, amount_cents, days_late, charged, late_fee_cents, interest_cents, total_cents}`. Só o contrato mensal tem multa e juros; no recebível por hora tudo vem zerado. `400 request.field_invalid` (`field: on`) para uma data que não existe |
+| POST | `/api/orgs/:orgId/receivables/:id/receive` | Registra o recebimento: `{received_on, received_cents, late_fee_cents, interest_cents}`, tudo opcional. Sem `received_on` vale hoje; depois de hoje é `400 receivable.received_in_future`. **Por hora:** o valor recebido é o confirmado (outro valor é `400 receivable.received_must_match`) e multa e juros diferentes de zero são `400 receivable.charges_not_allowed`. **Mensal:** `received_cents` é livre (maior que zero, `400 receivable.invalid_amount`; sem ele vale o confirmado mais a multa e os juros), `late_fee_cents` e `interest_cents` valem zero ou mais (`400 receivable.invalid_charge`) e somados não passam de `received_cents` (`400 receivable.charges_exceed_received`). `200` com o recebível; `409 receivable.already_received`; `409 receivable.changed` se o valor confirmado foi editado depois de o recebimento lê-lo (duas abas): nada é gravado, e quem recebe confere o valor e tenta de novo |
+| DELETE | `/api/orgs/:orgId/receivables/:id/receive` | Desfaz o recebimento: o recebível volta para `open[]` e a multa e os juros informados se vão com ele. `204`; `409 receivable.not_received`; `404 receivable.not_found` |
+
+Os erros de campo levam `params.field` com a chave do corpo, para a tela mostrar o erro embaixo do campo. O corpo é JSON
+estrito (`400 request.invalid_body` para chave desconhecida).
+
+**O recebível** (`201`, `200` e os itens de `open[]` e `received[]`): `id`, `customer` (`{id, name}`), `kind`
+(`hourly` ou `monthly`, o modo do cliente na confirmação), `period_start`, `period_end`, `seconds` e `calculated_cents`
+(o que o sistema calculou na confirmação), `amount_cents` (o confirmado), `currency`, `due_date`, `invoice_number`,
+`note`, `confirmed_at`, `received_on`, `received_cents`, `late_fee_cents`, `interest_cents` (os três do recebimento,
+nulos ou zero antes dele) e os derivados `late` (confirmado, sem recebimento e com hoje depois do vencimento),
+`days_late`, `effective_rate_cents` (o confirmado dividido pelas horas; nulo sem horas) e `below_min_rate` (abaixo de
+10,00 por hora: um aviso, não um erro).
+
+**`GET /receivables`** responde:
+
+- `generated_at`, `timezone`, `currency` e `today` (o dia de hoje no fuso da organização);
+- `totals`: `to_confirm_count` e `to_confirm_cents` (as propostas), `open_count` e `open_cents` (tudo o que foi
+  confirmado e não entrou, atrasado incluído), `late_count` e `late_cents` (a parte vencida) e `received_month_count` e
+  `received_month_cents` (o que entrou no mês corrente do calendário, a soma de `received_cents`);
+- `to_confirm[]`: as propostas, do período que fecha primeiro para o que fecha depois (e por nome do cliente). Cada uma
+  tem `customer`, `kind`, `period_start`, `period_end`, `seconds`, `calculated_cents`, `due_date` (o padrão), `open` (o
+  período ainda não fechou; só acontece no mensal), `effective_rate_cents` e `below_min_rate`;
+- `open[]`: os recebíveis sem recebimento, do vencimento mais antigo para o mais novo;
+- `received[]`: os recebidos, o mais recente primeiro, até 50.
+
+---
+
 ## Idioma
 
 A interface fala português do Brasil (padrão) e inglês. Estas duas rotas são do navegador, não da API JSON, e não precisam de sessão.
@@ -902,6 +1049,7 @@ A ajuda é uma página do navegador, não da API JSON, e não precisa de sessão
 9. **Bater o ponto:** `clock-in` com `{"task_id": "…"}`, `GET /api/work-sessions/active`, `POST .../work-sessions/:sessionId/tasks` com uma segunda tarefa (copie o `id` da sessão para `session_id`) e `clock-out`.
 10. **Totais:** `GET /api/projects/:projectId/work-sessions/total?task_id=…`.
 11. **Convidar alguém:** `POST /api/orgs/:orgId/invites`, depois `POST /api/auth/invites/:token/accept` numa sessão sem cookie (ou após `logout`).
+12. **Modo solo:** numa organização de uma pessoa só (`signup` com `"solo": true`, ou `PATCH /api/orgs/:orgId` com `{"solo": true}`), crie um cliente mensal (`billing_mode: "monthly"`), `GET /api/orgs/:orgId/receivables` para ver as propostas, `POST` para confirmar um período e `POST .../receivables/:id/receive` para receber (copie o `id` do recebível para `receivable_id`).
 
 ## Variáveis de ambiente (Insomnia)
 
@@ -915,6 +1063,7 @@ A ajuda é uma página do navegador, não da API JSON, e não precisa de sessão
 | `project_id` | `id` retornado ao criar o projeto |
 | `team_id` | `id` retornado ao criar o time |
 | `customer_id` | `id` retornado ao criar o cliente |
+| `receivable_id` | `id` retornado ao confirmar um recebível |
 | `task_id` | `id` retornado ao criar a tarefa |
 | `integration_id` | `id` retornado ao criar a integração |
 | `invite_id` / `invite_token` | `id` e `token` retornados ao criar o convite |

@@ -9,6 +9,7 @@ import (
 
 	"github.com/labstack/echo/v5"
 
+	"working-time-tracker/internal/domain/organization"
 	"working-time-tracker/internal/domain/permission"
 )
 
@@ -161,6 +162,30 @@ func (m *Middleware) RequireOrgPermissionPage(notFound echo.HandlerFunc, key str
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c *echo.Context) error {
 			if !CurrentPerson(c).Can(key) {
+				return notFound(c)
+			}
+			return next(c)
+		}
+	}
+}
+
+// RejectInvitesInSolo recusa o convite numa organização no modo solo (409 organization.solo_no_invites). Vem depois da
+// checagem de quem pode convidar, para quem não pode continuar com o 403, e antes de ler o corpo.
+func (m *Middleware) RejectInvitesInSolo(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c *echo.Context) error {
+		if me := CurrentPerson(c); me != nil && me.OrganizationSolo {
+			return apperr.Respond(c, http.StatusConflict, organization.ErrSoloNoInvites)
+		}
+		return next(c)
+	}
+}
+
+// RequireTeamPage esconde uma página de equipe (Colaboradores, Pagamentos, os colaboradores e os times do projeto) de
+// uma organização no modo solo: a resposta é a de 404 dada, a mesma de uma página que não existe.
+func (m *Middleware) RequireTeamPage(notFound echo.HandlerFunc) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c *echo.Context) error {
+			if me := CurrentPerson(c); me != nil && me.OrganizationSolo {
 				return notFound(c)
 			}
 			return next(c)

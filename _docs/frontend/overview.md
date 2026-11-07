@@ -67,6 +67,7 @@ passar vários argumentos a um partial, e `limit`, que devolve o tamanho máximo
 | `static/pages/auth.js` | entrar, criar organização, convite e a volta do Clerk |
 | `static/pages/org.js` | as páginas da organização e os perfis |
 | `static/pages/payments.js` | Pagamentos |
+| `static/pages/receivables.js` | A receber (modo solo) |
 | `static/pages/project.js` | as páginas do projeto, a Gestão e a página da tarefa |
 | `static/pages/help.js` | a ajuda (marca a seção à vista no sumário) |
 | `static/pages/trello_callback.js` | a volta do Trello, que lê o token do fragmento da URL |
@@ -96,7 +97,7 @@ web/
     purify.min.js              # vendorizado: sanitiza o HTML do Markdown
     clerk-pt-BR.js             # textos do Clerk em português
   *_test.go                    # testes das telas (hash dos vendorizados, formulários, cartões, cores)
-internal/page/                 # handlers das páginas: auth.go, org.go, project.go, overview.go, help.go
+internal/page/                 # handlers das páginas: auth.go, org.go, project.go, overview.go, receivables.go, help.go
 internal/template/renderer.go  # um conjunto de templates por página, lido na subida
 ```
 

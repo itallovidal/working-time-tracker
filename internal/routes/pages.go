@@ -42,10 +42,15 @@ func RegisterPages(e *echo.Echo, p *page.Handler, m *auth.Middleware, oauth *int
 	admin := m.RequireAdminPage(p.NotFound)
 	owner := m.RequireOwnerPage(p.NotFound)
 	orgCan := func(key string) echo.MiddlewareFunc { return m.RequireOrgPermissionPage(p.NotFound, key) }
+	// As páginas de equipe não existem no modo solo (uma pessoa só): respondem 404, como uma página que não existe.
+	team := m.RequireTeamPage(p.NotFound)
 	g.GET("/orgs/:orgId/settings", p.OrgSettings, org, owner)
-	g.GET("/orgs/:orgId/payments", p.Payments, org, owner)
-	g.GET("/orgs/:orgId/people", p.People, org, orgCan(permission.PeopleManage))
-	g.GET("/orgs/:orgId/people/:personId", p.Person, org, admin, m.RequireOrgPage(auth.KindPerson, "personId", p.NotFound))
+	g.GET("/orgs/:orgId/payments", p.Payments, org, owner, team)
+	// O A receber é do modo solo e do dono: a permissão manda quem não é o dono para o 404, e a própria página manda para
+	// o 404 o dono de uma organização que não é solo.
+	g.GET("/orgs/:orgId/receivables", p.Receivables, org, orgCan(permission.ReceivablesManage))
+	g.GET("/orgs/:orgId/people", p.People, org, orgCan(permission.PeopleManage), team)
+	g.GET("/orgs/:orgId/people/:personId", p.Person, org, admin, m.RequireOrgPage(auth.KindPerson, "personId", p.NotFound), team)
 	g.GET("/orgs/:orgId/customers", p.Customers, org, orgCan(permission.CustomersManage))
 
 	prj := m.RequireOrgPage(auth.KindProject, "projectId", p.NotFound)
@@ -55,14 +60,14 @@ func RegisterPages(e *echo.Echo, p *page.Handler, m *auth.Middleware, oauth *int
 	g.GET("/projects/:projectId/my-tasks", p.MyTasks, prj)
 	// O Ponto foi para o Início do projeto; o endereço antigo continua levando para lá.
 	g.GET("/projects/:projectId/time-tracking", p.ToHome, prj)
-	g.GET("/projects/:projectId/collaborators", p.Collaborators, prj)
+	g.GET("/projects/:projectId/collaborators", p.Collaborators, prj, team)
 	// A Gestão é a área do projeto de quem cuida dele: cada aba pede a permissão do que
 	// mostra (page.ManagementTabs, de onde a barra de abas também lê), e quem não tem nenhuma recebe o 404.
 	can := func(keys ...string) echo.MiddlewareFunc { return m.RequireProjectPermissionPage(p.NotFound, keys...) }
 	tab := func(id string) echo.MiddlewareFunc { return can(page.TabKeys(id)...) }
 	g.GET("/projects/:projectId/management", p.Management, prj, can(permission.ProjectKeys...))
 	g.GET("/projects/:projectId/management/overview", p.Overview, prj, tab("overview"))
-	g.GET("/projects/:projectId/management/teams", p.Teams, prj, tab("teams"))
+	g.GET("/projects/:projectId/management/teams", p.Teams, prj, tab("teams"), team)
 	g.GET("/projects/:projectId/management/integrations", p.Integrations, prj, tab("integrations"))
 	// Conectar com o GitHub: a ida leva a pessoa a autorizar lá (a mesma permissão da aba), a volta
 	// cai num endereço fixo, o que está cadastrado no app, e confere tudo de novo pelo cookie.
@@ -75,7 +80,7 @@ func RegisterPages(e *echo.Echo, p *page.Handler, m *auth.Middleware, oauth *int
 	g.POST(integration.TrelloTokenPath, oauth.TrelloToken, m.JSONOnly)
 	g.GET("/projects/:projectId/management/settings", p.ProjectSettings, prj, tab("settings"))
 	// Os caminhos de antes da Gestão continuam levando às mesmas abas.
-	g.GET("/projects/:projectId/teams", p.ToManagement("teams"), prj)
+	g.GET("/projects/:projectId/teams", p.ToManagement("teams"), prj, team)
 	g.GET("/projects/:projectId/integrations", p.ToManagement("integrations"), prj)
 	g.GET("/projects/:projectId/settings", p.ToManagement("settings"), prj)
 

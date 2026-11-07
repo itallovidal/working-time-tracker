@@ -6,8 +6,8 @@ lê a mesma lista em `GET /api/permissions`.
 ## Princípios
 
 1. **Dois eixos.** Gerir gente e projeto é uma hierarquia; o dinheiro (custo e cobrança) é outro eixo e não segue o
-   cargo: hoje o dono concentra a cobrança, os clientes e os pagamentos, e o **Financeiro** entra depois, junto com o
-   custo de infraestrutura.
+   cargo: hoje o dono concentra a cobrança, os clientes, os pagamentos e as contas a receber do modo solo, e o **Financeiro**
+   entra depois, junto com o custo de infraestrutura.
 2. **Time é só organização visual.** Serve para achar gente num projeto grande. Não dá autoridade, e por isso não
    existe "líder de time".
 3. **Ninguém trabalha de graça, e todo cliente paga.** O custo e o valor cobrado têm o piso de 10,00 por hora (só o dono
@@ -75,10 +75,20 @@ As regras de cada valor e de cada pagamento estão em [money.md](money.md).
 | Ver os pagamentos de uma pessoa | ✔ todos | só as horas | — | só os seus |
 | Página de pagamentos da equipe | ✔ | — | — | — |
 | Definir a regra de pagamento | ✔ | — | — | — |
+| A receber do modo solo: confirmar, receber e desfazer | ✔ (só no modo solo) | — | — | — |
 | Tarefas, ponto, ver o próprio valor | ✔ | ✔ | ✔ | ✔ |
 
 A jornada é da pessoa (vale na organização inteira); o que varia por projeto é o custo. Por isso o administrador de
 projeto vê a jornada e não a define: definir vai além do projeto dele.
+
+## Modo solo
+
+Numa organização no [modo solo](overview.md#modo-solo) o dono é a única pessoa, e as páginas de equipe não se abrem para
+ninguém, nem para ele: `/orgs/:orgId/people`, `/orgs/:orgId/people/:personId`, `/orgs/:orgId/payments` e as abas
+Colaboradores e Times do projeto respondem `404`, a mesma resposta de uma página que não existe, mesmo com a permissão
+(`people.manage`, `payments.manage`, `collaborators.manage`) que o cargo dá. Convidar responde `409
+organization.solo_no_invites`. Nenhuma permissão muda de dono: o modo esconde telas e fecha os convites, e a API de pessoas
+e de pagamentos segue a regra de sempre. O modo só liga e desliga pelo dono (`PATCH /api/orgs/:orgId`).
 
 ## Dois escopos
 
@@ -155,6 +165,7 @@ Decorrem do cargo (`permission.OrgKeysFor`), e a página só mostra o que o carg
 | `people.manage` | ✔ | ✔ | Convidar pessoas (como membro), revogar convites e definir a jornada semanal (a página Colaboradores) |
 | `customers.manage` | ✔ | — | Cadastrar, alterar e excluir clientes (a página Clientes) |
 | `payments.manage` | ✔ | — | A página Pagamentos da equipe e a regra de pagamento de cada pessoa |
+| `receivables.manage` | ✔ | — | A página A receber e as rotas de recebíveis do modo solo: confirmar o que cobrar de cada cliente, registrar o recebimento e desfazer. Só vale em organização solo (`404` fora dela) |
 
 ## Grupos do projeto
 
@@ -202,7 +213,10 @@ faturamento que ele não vê. O dono dá qualquer um; o admin, só os que cabem 
 | `GET /persons/:id/payments` | a própria pessoa e o dono; o admin recebe só as horas e os projetos de outra pessoa, sem regra, períodos nem valores; `403` para os outros |
 | `GET /orgs/:id/payments` | `payments.manage` (só o dono): o que pagar, o que foi pago há pouco e as horas de cada pessoa |
 | `POST /orgs/:id/payouts`, `DELETE /orgs/:id/payouts/:payoutId` | `payments.manage` (só o dono): dar baixa num período e desfazer |
+| `GET`/`POST /orgs/:id/receivables`, `PATCH`/`DELETE /orgs/:id/receivables/:id`, `GET /orgs/:id/receivables/:id/late-charges`, `POST`/`DELETE /orgs/:id/receivables/:id/receive` | `receivables.manage` (só o dono) e organização solo: quem não tem a permissão recebe `403 auth.permission_required`, e o dono de uma organização que não é solo, `404` |
+| `GET /orgs/:id/solo/overview` | a mesma regra do A receber (`receivables.manage`, só o dono) e organização solo: a tela inicial do modo solo, com a receita e o que se espera receber de cada cliente |
 | Página `/orgs/:id/payments` | só o dono (`404` para os outros) |
+| Página `/orgs/:id/receivables` (A receber) | só o dono, e só em organização solo (`404` para os outros e fora do modo solo) |
 | Página `/orgs/:id/settings` | só o dono (`404` para os outros); a página `/orgs/:id/about` é de todos |
 | Página `/orgs/:id/customers` | só o dono |
 | Página `/orgs/:id/people` | `people.manage` (o dono e os admins) |
@@ -226,8 +240,9 @@ O teste `TestRoles_Matrix` confere cada célula dessa tabela com os quatro cargo
 
 ## Ainda não existe
 
-- O **Financeiro**: custo de infraestrutura, contas a receber e o dinheiro da organização inteira, sem gerir gente nem
+- O **Financeiro**: custo de infraestrutura, contas a pagar e o dinheiro da organização inteira, sem gerir gente nem
   projeto. Hoje o dono concentra o dinheiro, e os grupos `finance` e `admin` do projeto ficam guardados, escondidos.
+- As contas a receber nas organizações com equipe (issue #24): hoje o A receber é só do modo solo.
 - Editar as permissões avulsas de alguém já no projeto (os grupos mudam todas de uma vez).
 - Editar as horas já batidas (o começo e o fim da sessão): não há rota, e a permissão entra junto com ela. As tarefas da
   sessão já se editam, porque só dividem o tempo.

@@ -26,8 +26,8 @@ rota, com corpo e resposta, está em [reference.md](reference.md), e cada códig
 |---|---|
 | `401` | Sem sessão, ou login recusado. A tela leva ao login |
 | `403` | Logado, mas sem o cargo ou a permissão que a rota pede |
-| `404` | O recurso não existe, é de outra organização ou é de um projeto em que a pessoa não está. A API não diferencia, para não revelar que existe |
-| `409` | Conflito com o que já existe: e-mail em uso, cliente com projetos, etiqueta com o mesmo nome, tarefa que outra pessoa pegou antes, item já ligado, rodada de sincronização em andamento |
+| `404` | O recurso não existe, é de outra organização ou é de um projeto em que a pessoa não está. A API não diferencia, para não revelar que existe. As rotas dos recebíveis também respondem 404 fora do modo solo |
+| `409` | Conflito com o que já existe: e-mail em uso, cliente com projetos ou recebíveis, convite numa organização no modo solo, etiqueta com o mesmo nome, tarefa que outra pessoa pegou antes, item já ligado, rodada de sincronização em andamento |
 | `415` | Corpo que não é JSON |
 | `429` | Limite de tentativas |
 
@@ -58,7 +58,7 @@ a quem pode vê-los. As regras estão em [permissions.md](../product/permissions
 |---|---|---|
 | Autenticação | `/api/auth/signup`, `login`, `invites/:token` (+ `accept`), `clerk/login`, `clerk/signup`, `clerk/join` | públicas, com limite de tentativas |
 | Conta | `/api/auth/logout`, `me`, `password`, `onboarding/complete` | logado |
-| Organização | `/api/orgs/:orgId` (`PATCH` e `DELETE` do dono) (+ `persons`, `projects`, `overview`, `working-now`, `me/overview`, `me/tasks`, `payments`, `invites`, `customers`) | membro; `overview` e `working-now` de admins; `payments` e `customers` do dono; `invites` com `people.manage`; criar projeto, admins |
+| Organização | `/api/orgs/:orgId` (`PATCH` e `DELETE` do dono) (+ `persons`, `projects`, `overview`, `working-now`, `me/overview`, `me/tasks`, `payments`, `receivables`, `invites`, `customers`) | membro; `overview` e `working-now` de admins; `payments` e `customers` do dono; `receivables` do dono, só no modo solo; `invites` com `people.manage` (409 no modo solo); criar projeto, admins; `PATCH` com `solo`, o dono |
 | Convites | `/api/invites/:inviteId` (`DELETE`), `/api/projects/:projectId/invites` | `people.manage`; o do projeto, `collaborators.manage` para listar e também `rates.manage` para criar |
 | Clientes | `/api/customers/:customerId` | dono |
 | Pessoas | `/api/persons/:personId` (+ `role`, `weekly-hours`, `payment`, `allocations`, `payments`) | `role` do dono, `weekly-hours` com `people.manage`, `payment` do dono; o perfil, a própria pessoa ou um admin |

@@ -28,7 +28,8 @@
         "label_id": "",
         "session_id": "",
         "session_task_id": "",
-        "payout_id": ""
+        "payout_id": "",
+        "receivable_id": ""
       }
     },
     {
@@ -87,6 +88,26 @@
       "body": {
         "mimeType": "application/json",
         "text": "{\n  \"organization_name\": \"Minha Empresa\",\n  \"country\": \"BR\",\n  \"name\": \"Ana Souza\",\n  \"email\": \"ana@empresa.com\",\n  \"password\": \"senha-forte-1\"\n}"
+      }
+    },
+    {
+      "_id": "req_01_00_solo",
+      "_type": "request",
+      "parentId": "fld_01",
+      "name": "Signup no modo solo",
+      "method": "POST",
+      "url": "{{base_url}}/api/auth/signup",
+      "authentication": {},
+      "metaSortKey": 0.5,
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"organization_name\": \"Marina Duarte Design\",\n  \"country\": \"BR\",\n  \"solo\": true,\n  \"name\": \"Marina Duarte\",\n  \"email\": \"marina@empresa.com\",\n  \"password\": \"pelo-menos-8\"\n}"
       }
     },
     {
@@ -1658,6 +1679,201 @@
       "url": "{{base_url}}/api/projects/{{project_id}}/collaborators/{{person_id}}",
       "authentication": {},
       "metaSortKey": 12,
+      "headers": [],
+      "body": {}
+    },
+    {
+      "_id": "fld_11",
+      "_type": "request_group",
+      "parentId": "__workspace__",
+      "name": "Modo solo e A receber",
+      "metaSortKey": 9.5
+    },
+    {
+      "_id": "req_11_00",
+      "_type": "request",
+      "parentId": "fld_11",
+      "name": "Ligar o modo solo (dono)",
+      "method": "PATCH",
+      "url": "{{base_url}}/api/orgs/{{org_id}}",
+      "authentication": {},
+      "metaSortKey": 0,
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"solo\": true\n}"
+      }
+    },
+    {
+      "_id": "req_11_01",
+      "_type": "request",
+      "parentId": "fld_11",
+      "name": "Desligar o modo solo (dono)",
+      "method": "PATCH",
+      "url": "{{base_url}}/api/orgs/{{org_id}}",
+      "authentication": {},
+      "metaSortKey": 1,
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"solo\": false\n}"
+      }
+    },
+    {
+      "_id": "req_11_02",
+      "_type": "request",
+      "parentId": "fld_11",
+      "name": "Cliente por hora, com os termos",
+      "method": "POST",
+      "url": "{{base_url}}/api/orgs/{{org_id}}/customers",
+      "authentication": {},
+      "metaSortKey": 2,
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Agência Pixel\",\n  \"default_rate_cents\": 15000,\n  \"closing_day\": 25,\n  \"payment_days\": 10\n}"
+      }
+    },
+    {
+      "_id": "req_11_03",
+      "_type": "request",
+      "parentId": "fld_11",
+      "name": "Cliente mensal, com o contrato (modo solo)",
+      "method": "POST",
+      "url": "{{base_url}}/api/orgs/{{org_id}}/customers",
+      "authentication": {},
+      "metaSortKey": 3,
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Clínica Aurora\",\n  \"billing_mode\": \"monthly\",\n  \"monthly_fee_cents\": 630000,\n  \"contract_start\": \"2026-09-01\",\n  \"payment_days\": 5,\n  \"late_fee_bp\": 200,\n  \"late_interest_bp_month\": 100,\n  \"grace_days\": 3\n}"
+      }
+    },
+    {
+      "_id": "req_11_04",
+      "_type": "request",
+      "parentId": "fld_11",
+      "name": "Listar o A receber (dono, modo solo)",
+      "method": "GET",
+      "url": "{{base_url}}/api/orgs/{{org_id}}/receivables",
+      "authentication": {},
+      "metaSortKey": 4,
+      "headers": [],
+      "body": {}
+    },
+    {
+      "_id": "req_11_05",
+      "_type": "request",
+      "parentId": "fld_11",
+      "name": "Confirmar um período (dono, modo solo)",
+      "method": "POST",
+      "url": "{{base_url}}/api/orgs/{{org_id}}/receivables",
+      "authentication": {},
+      "metaSortKey": 5,
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"customer_id\": \"{{customer_id}}\",\n  \"period_start\": \"2026-10-01\",\n  \"period_end\": \"2026-10-31\",\n  \"amount_cents\": 630000,\n  \"due_date\": \"2026-11-05\",\n  \"invoice_number\": \"NF 102\",\n  \"note\": \"\"\n}"
+      }
+    },
+    {
+      "_id": "req_11_06",
+      "_type": "request",
+      "parentId": "fld_11",
+      "name": "Editar um recebível",
+      "method": "PATCH",
+      "url": "{{base_url}}/api/orgs/{{org_id}}/receivables/{{receivable_id}}",
+      "authentication": {},
+      "metaSortKey": 6,
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"note\": \"Cobrança enviada por e-mail\"\n}"
+      }
+    },
+    {
+      "_id": "req_11_07",
+      "_type": "request",
+      "parentId": "fld_11",
+      "name": "Sugestão de multa e juros",
+      "method": "GET",
+      "url": "{{base_url}}/api/orgs/{{org_id}}/receivables/{{receivable_id}}/late-charges?on=2026-11-15",
+      "authentication": {},
+      "metaSortKey": 7,
+      "headers": [],
+      "body": {}
+    },
+    {
+      "_id": "req_11_08",
+      "_type": "request",
+      "parentId": "fld_11",
+      "name": "Receber",
+      "method": "POST",
+      "url": "{{base_url}}/api/orgs/{{org_id}}/receivables/{{receivable_id}}/receive",
+      "authentication": {},
+      "metaSortKey": 8,
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"received_on\": \"2026-11-15\",\n  \"received_cents\": 644700,\n  \"late_fee_cents\": 12600,\n  \"interest_cents\": 2100\n}"
+      }
+    },
+    {
+      "_id": "req_11_09",
+      "_type": "request",
+      "parentId": "fld_11",
+      "name": "Desfazer o recebimento",
+      "method": "DELETE",
+      "url": "{{base_url}}/api/orgs/{{org_id}}/receivables/{{receivable_id}}/receive",
+      "authentication": {},
+      "metaSortKey": 9,
+      "headers": [],
+      "body": {}
+    },
+    {
+      "_id": "req_11_10",
+      "_type": "request",
+      "parentId": "fld_11",
+      "name": "Desfazer a confirmação",
+      "method": "DELETE",
+      "url": "{{base_url}}/api/orgs/{{org_id}}/receivables/{{receivable_id}}",
+      "authentication": {},
+      "metaSortKey": 10,
       "headers": [],
       "body": {}
     },

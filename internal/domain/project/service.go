@@ -8,6 +8,7 @@ import (
 
 	"working-time-tracker/internal/apperr"
 	"working-time-tracker/internal/database"
+	"working-time-tracker/internal/domain/customer"
 	"working-time-tracker/internal/validate"
 )
 
@@ -168,14 +169,22 @@ func meetingNeedsCustomer(r Routine, hasCustomer bool) error {
 	return nil
 }
 
-// checkBillRate confere o valor cobrado contra o cliente: com cliente o valor é obrigatório, sem cliente é
-// recusado (projeto interno é investimento, só existe o custo), e quando vem tem o piso de validate.MinRateCents.
-func checkBillRate(billRateCents *int, hasCustomer bool) error {
+// checkBillRate confere o valor cobrado contra o cliente. customerMode é o modo de cobrança do cliente do projeto
+// (customer.BillingHourly ou customer.BillingMonthly), ou "" no projeto interno:
+//   - cliente por hora: o valor é obrigatório;
+//   - cliente mensal: o contrato é um valor por mês, então o projeto não tem valor por hora e informar um é recusado;
+//   - sem cliente: o valor é recusado (projeto interno é investimento, só existe o custo).
+//
+// Quando vem, o valor tem o piso de validate.MinRateCents.
+func checkBillRate(billRateCents *int, customerMode string) error {
+	hasCustomer := customerMode != ""
 	switch {
-	case billRateCents == nil && hasCustomer:
+	case billRateCents == nil && hasCustomer && customerMode != customer.BillingMonthly:
 		return ErrBillRateRequired.With("field", "bill_rate_cents")
 	case billRateCents != nil && !hasCustomer:
 		return ErrBillRateNeedsCustomer.With("field", "bill_rate_cents")
+	case billRateCents != nil && customerMode == customer.BillingMonthly:
+		return ErrBillRateNotAllowed.With("field", "bill_rate_cents")
 	case billRateCents != nil && validate.Rate("bill_rate_cents", *billRateCents) != nil:
 		return ErrInvalidBillRate.With("field", "bill_rate_cents")
 	}
@@ -191,7 +200,8 @@ type CreateInput struct {
 	Routine            Routine
 	// CustomerID é o cliente do projeto novo (vazio: projeto interno). A reunião com o cliente só vale com ele.
 	CustomerID string
-	// BillRateCents é o valor cobrado por hora: obrigatório com cliente e recusado sem ele.
+	// BillRateCents é o valor cobrado por hora: obrigatório com cliente por hora, recusado sem cliente e recusado
+	// com cliente mensal (o contrato é um valor por mês).
 	BillRateCents *int
 }
 
@@ -227,19 +237,20 @@ func (s *Service) CreateWithCustomer(orgID string, in CreateInput) (*Project, er
 		return nil, err
 	}
 	var customerUID *uuid.UUID
+	customerMode := ""
 	if cid := strings.TrimSpace(in.CustomerID); cid != "" {
 		uid, err := uuid.Parse(cid)
 		if err != nil {
 			return nil, ErrCustomerNotFound.With("field", "customer_id")
 		}
-		ok, err := s.store.CustomerInOrganization(uid, orgUID)
+		mode, ok, err := s.store.CustomerBillingMode(uid, orgUID)
 		if err != nil {
 			return nil, err
 		}
 		if !ok {
 			return nil, ErrCustomerNotFound.With("field", "customer_id")
 		}
-		customerUID = &uid
+		customerUID, customerMode = &uid, mode
 	}
 	if err := meetingNeedsCustomer(routine, customerUID != nil); err != nil {
 		return nil, err
@@ -260,7 +271,7 @@ func (s *Service) CreateWithCustomer(orgID string, in CreateInput) (*Project, er
 	if project.CustomerMeetingDay, project.CustomerMeetingTime, err = mergeSlot(nil, nil, routine.CustomerMeetingDay, routine.CustomerMeetingTime, ErrMeetingTimeWithoutDay, "customer_meeting_time"); err != nil {
 		return nil, err
 	}
-	if err := checkBillRate(in.BillRateCents, customerUID != nil); err != nil {
+	if err := checkBillRate(in.BillRateCents, customerMode); err != nil {
 		return nil, err
 	}
 	if err := s.store.Create(project, in.BillRateCents); err != nil {
@@ -384,30 +395,57 @@ func (s *Service) Billing(projectID string) (*Billing, error) {
 	return s.store.Billing(uid)
 }
 
-// SetBilling substitui o cliente e o valor cobrado do projeto. Os dois andam juntos: com cliente o valor é
-// obrigatório, sem cliente o valor é recusado. nil (ou cliente vazio) apaga o cliente: é assim que um projeto volta
-// a ser interno, e então o valor também vai embora.
+// checkCustomerChange recusa tirar o projeto de um cliente que já tem recebíveis quando o projeto tem sessões
+// (ErrCustomerLocked): a sessão não guarda o cliente, vale o do projeto de hoje, então as horas já cobradas do
+// cliente antigo entrariam de novo nas propostas do novo. Mandar o mesmo cliente (só o valor muda) passa, e o projeto
+// de um cliente sem recebível ou sem sessão troca à vontade.
+func (s *Service) checkCustomerChange(projectID uuid.UUID, next *uuid.UUID) error {
+	cur, err := s.store.Billing(projectID)
+	if err != nil {
+		return err
+	}
+	if cur.Customer == nil || (next != nil && *next == cur.Customer.ID) {
+		return nil
+	}
+	locked, err := s.store.HasBilledHistory(projectID, cur.Customer.ID)
+	if err != nil {
+		return err
+	}
+	if locked {
+		return ErrCustomerLocked.With("field", "customer_id")
+	}
+	return nil
+}
+
+// SetBilling substitui o cliente e o valor cobrado do projeto. Os dois andam juntos e o valor segue o modo de cobrança
+// do cliente novo: com cliente por hora o valor é obrigatório, com cliente mensal é recusado
+// (ErrBillRateNotAllowed) e sem cliente é recusado. nil (ou cliente vazio) apaga o cliente: é assim que um projeto
+// volta a ser interno, e então o valor também vai embora.
 func (s *Service) SetBilling(projectID string, customerID *string, billRateCents *int) (*Billing, error) {
 	uid, err := uuid.Parse(projectID)
 	if err != nil {
 		return nil, database.ErrNotFound
 	}
 	var customerUID *uuid.UUID
+	customerMode := ""
 	if customerID != nil && strings.TrimSpace(*customerID) != "" {
 		cid, err := uuid.Parse(strings.TrimSpace(*customerID))
 		if err != nil {
 			return nil, ErrCustomerNotFound.With("field", "customer_id")
 		}
-		ok, err := s.store.CustomerInProjectOrganization(cid, uid)
+		mode, ok, err := s.store.CustomerBillingModeOfProject(cid, uid)
 		if err != nil {
 			return nil, err
 		}
 		if !ok {
 			return nil, ErrCustomerNotFound.With("field", "customer_id")
 		}
-		customerUID = &cid
+		customerUID, customerMode = &cid, mode
 	}
-	if err := checkBillRate(billRateCents, customerUID != nil); err != nil {
+	if err := checkBillRate(billRateCents, customerMode); err != nil {
+		return nil, err
+	}
+	if err := s.checkCustomerChange(uid, customerUID); err != nil {
 		return nil, err
 	}
 	if err := s.store.SetBilling(uid, customerUID, billRateCents); err != nil {

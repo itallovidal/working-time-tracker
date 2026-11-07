@@ -29,12 +29,34 @@ const (
 	FieldContactEmail = "contact_email"
 	// FieldContactPhone holds the string denoting the contact_phone field in the database.
 	FieldContactPhone = "contact_phone"
+	// FieldBillingMode holds the string denoting the billing_mode field in the database.
+	FieldBillingMode = "billing_mode"
+	// FieldDefaultRateCents holds the string denoting the default_rate_cents field in the database.
+	FieldDefaultRateCents = "default_rate_cents"
+	// FieldMonthlyFeeCents holds the string denoting the monthly_fee_cents field in the database.
+	FieldMonthlyFeeCents = "monthly_fee_cents"
+	// FieldContractStart holds the string denoting the contract_start field in the database.
+	FieldContractStart = "contract_start"
+	// FieldContractEnd holds the string denoting the contract_end field in the database.
+	FieldContractEnd = "contract_end"
+	// FieldClosingDay holds the string denoting the closing_day field in the database.
+	FieldClosingDay = "closing_day"
+	// FieldPaymentDays holds the string denoting the payment_days field in the database.
+	FieldPaymentDays = "payment_days"
+	// FieldLateFeeBp holds the string denoting the late_fee_bp field in the database.
+	FieldLateFeeBp = "late_fee_bp"
+	// FieldLateInterestBpMonth holds the string denoting the late_interest_bp_month field in the database.
+	FieldLateInterestBpMonth = "late_interest_bp_month"
+	// FieldGraceDays holds the string denoting the grace_days field in the database.
+	FieldGraceDays = "grace_days"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// EdgeOrganization holds the string denoting the organization edge name in mutations.
 	EdgeOrganization = "organization"
 	// EdgeProjects holds the string denoting the projects edge name in mutations.
 	EdgeProjects = "projects"
+	// EdgeReceivables holds the string denoting the receivables edge name in mutations.
+	EdgeReceivables = "receivables"
 	// Table holds the table name of the customer in the database.
 	Table = "customers"
 	// OrganizationTable is the table that holds the organization relation/edge.
@@ -51,6 +73,13 @@ const (
 	ProjectsInverseTable = "projects"
 	// ProjectsColumn is the table column denoting the projects relation/edge.
 	ProjectsColumn = "customer_id"
+	// ReceivablesTable is the table that holds the receivables relation/edge.
+	ReceivablesTable = "receivables"
+	// ReceivablesInverseTable is the table name for the Receivable entity.
+	// It exists in this package in order to avoid circular dependency with the "receivable" package.
+	ReceivablesInverseTable = "receivables"
+	// ReceivablesColumn is the table column denoting the receivables relation/edge.
+	ReceivablesColumn = "customer_id"
 )
 
 // Columns holds all SQL columns for customer fields.
@@ -63,6 +92,16 @@ var Columns = []string{
 	FieldContactName,
 	FieldContactEmail,
 	FieldContactPhone,
+	FieldBillingMode,
+	FieldDefaultRateCents,
+	FieldMonthlyFeeCents,
+	FieldContractStart,
+	FieldContractEnd,
+	FieldClosingDay,
+	FieldPaymentDays,
+	FieldLateFeeBp,
+	FieldLateInterestBpMonth,
+	FieldGraceDays,
 	FieldCreatedAt,
 }
 
@@ -79,6 +118,32 @@ func ValidColumn(column string) bool {
 var (
 	// DefaultCountry holds the default value on creation for the "country" field.
 	DefaultCountry string
+	// DefaultBillingMode holds the default value on creation for the "billing_mode" field.
+	DefaultBillingMode string
+	// DefaultRateCentsValidator is a validator for the "default_rate_cents" field. It is called by the builders before save.
+	DefaultRateCentsValidator func(int) error
+	// MonthlyFeeCentsValidator is a validator for the "monthly_fee_cents" field. It is called by the builders before save.
+	MonthlyFeeCentsValidator func(int) error
+	// DefaultClosingDay holds the default value on creation for the "closing_day" field.
+	DefaultClosingDay int
+	// ClosingDayValidator is a validator for the "closing_day" field. It is called by the builders before save.
+	ClosingDayValidator func(int) error
+	// DefaultPaymentDays holds the default value on creation for the "payment_days" field.
+	DefaultPaymentDays int
+	// PaymentDaysValidator is a validator for the "payment_days" field. It is called by the builders before save.
+	PaymentDaysValidator func(int) error
+	// DefaultLateFeeBp holds the default value on creation for the "late_fee_bp" field.
+	DefaultLateFeeBp int
+	// LateFeeBpValidator is a validator for the "late_fee_bp" field. It is called by the builders before save.
+	LateFeeBpValidator func(int) error
+	// DefaultLateInterestBpMonth holds the default value on creation for the "late_interest_bp_month" field.
+	DefaultLateInterestBpMonth int
+	// LateInterestBpMonthValidator is a validator for the "late_interest_bp_month" field. It is called by the builders before save.
+	LateInterestBpMonthValidator func(int) error
+	// DefaultGraceDays holds the default value on creation for the "grace_days" field.
+	DefaultGraceDays int
+	// GraceDaysValidator is a validator for the "grace_days" field. It is called by the builders before save.
+	GraceDaysValidator func(int) error
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 	// DefaultID holds the default value on creation for the "id" field.
@@ -128,6 +193,56 @@ func ByContactPhone(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldContactPhone, opts...).ToFunc()
 }
 
+// ByBillingMode orders the results by the billing_mode field.
+func ByBillingMode(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBillingMode, opts...).ToFunc()
+}
+
+// ByDefaultRateCents orders the results by the default_rate_cents field.
+func ByDefaultRateCents(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDefaultRateCents, opts...).ToFunc()
+}
+
+// ByMonthlyFeeCents orders the results by the monthly_fee_cents field.
+func ByMonthlyFeeCents(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldMonthlyFeeCents, opts...).ToFunc()
+}
+
+// ByContractStart orders the results by the contract_start field.
+func ByContractStart(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldContractStart, opts...).ToFunc()
+}
+
+// ByContractEnd orders the results by the contract_end field.
+func ByContractEnd(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldContractEnd, opts...).ToFunc()
+}
+
+// ByClosingDay orders the results by the closing_day field.
+func ByClosingDay(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldClosingDay, opts...).ToFunc()
+}
+
+// ByPaymentDays orders the results by the payment_days field.
+func ByPaymentDays(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPaymentDays, opts...).ToFunc()
+}
+
+// ByLateFeeBp orders the results by the late_fee_bp field.
+func ByLateFeeBp(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldLateFeeBp, opts...).ToFunc()
+}
+
+// ByLateInterestBpMonth orders the results by the late_interest_bp_month field.
+func ByLateInterestBpMonth(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldLateInterestBpMonth, opts...).ToFunc()
+}
+
+// ByGraceDays orders the results by the grace_days field.
+func ByGraceDays(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldGraceDays, opts...).ToFunc()
+}
+
 // ByCreatedAt orders the results by the created_at field.
 func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCreatedAt, opts...).ToFunc()
@@ -153,6 +268,20 @@ func ByProjects(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newProjectsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByReceivablesCount orders the results by receivables count.
+func ByReceivablesCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newReceivablesStep(), opts...)
+	}
+}
+
+// ByReceivables orders the results by receivables terms.
+func ByReceivables(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newReceivablesStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newOrganizationStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -165,5 +294,12 @@ func newProjectsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(ProjectsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, ProjectsTable, ProjectsColumn),
+	)
+}
+func newReceivablesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ReceivablesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ReceivablesTable, ReceivablesColumn),
 	)
 }

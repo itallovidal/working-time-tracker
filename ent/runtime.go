@@ -14,6 +14,7 @@ import (
 	"working-time-tracker/ent/payout"
 	"working-time-tracker/ent/person"
 	"working-time-tracker/ent/project"
+	"working-time-tracker/ent/receivable"
 	"working-time-tracker/ent/schema"
 	"working-time-tracker/ent/session"
 	"working-time-tracker/ent/task"
@@ -53,8 +54,64 @@ func init() {
 	customerDescCountry := customerFields[3].Descriptor()
 	// customer.DefaultCountry holds the default value on creation for the country field.
 	customer.DefaultCountry = customerDescCountry.Default.(string)
+	// customerDescBillingMode is the schema descriptor for billing_mode field.
+	customerDescBillingMode := customerFields[8].Descriptor()
+	// customer.DefaultBillingMode holds the default value on creation for the billing_mode field.
+	customer.DefaultBillingMode = customerDescBillingMode.Default.(string)
+	// customerDescDefaultRateCents is the schema descriptor for default_rate_cents field.
+	customerDescDefaultRateCents := customerFields[9].Descriptor()
+	// customer.DefaultRateCentsValidator is a validator for the "default_rate_cents" field. It is called by the builders before save.
+	customer.DefaultRateCentsValidator = customerDescDefaultRateCents.Validators[0].(func(int) error)
+	// customerDescMonthlyFeeCents is the schema descriptor for monthly_fee_cents field.
+	customerDescMonthlyFeeCents := customerFields[10].Descriptor()
+	// customer.MonthlyFeeCentsValidator is a validator for the "monthly_fee_cents" field. It is called by the builders before save.
+	customer.MonthlyFeeCentsValidator = customerDescMonthlyFeeCents.Validators[0].(func(int) error)
+	// customerDescClosingDay is the schema descriptor for closing_day field.
+	customerDescClosingDay := customerFields[13].Descriptor()
+	// customer.DefaultClosingDay holds the default value on creation for the closing_day field.
+	customer.DefaultClosingDay = customerDescClosingDay.Default.(int)
+	// customer.ClosingDayValidator is a validator for the "closing_day" field. It is called by the builders before save.
+	customer.ClosingDayValidator = func() func(int) error {
+		validators := customerDescClosingDay.Validators
+		fns := [...]func(int) error{
+			validators[0].(func(int) error),
+			validators[1].(func(int) error),
+		}
+		return func(closing_day int) error {
+			for _, fn := range fns {
+				if err := fn(closing_day); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// customerDescPaymentDays is the schema descriptor for payment_days field.
+	customerDescPaymentDays := customerFields[14].Descriptor()
+	// customer.DefaultPaymentDays holds the default value on creation for the payment_days field.
+	customer.DefaultPaymentDays = customerDescPaymentDays.Default.(int)
+	// customer.PaymentDaysValidator is a validator for the "payment_days" field. It is called by the builders before save.
+	customer.PaymentDaysValidator = customerDescPaymentDays.Validators[0].(func(int) error)
+	// customerDescLateFeeBp is the schema descriptor for late_fee_bp field.
+	customerDescLateFeeBp := customerFields[15].Descriptor()
+	// customer.DefaultLateFeeBp holds the default value on creation for the late_fee_bp field.
+	customer.DefaultLateFeeBp = customerDescLateFeeBp.Default.(int)
+	// customer.LateFeeBpValidator is a validator for the "late_fee_bp" field. It is called by the builders before save.
+	customer.LateFeeBpValidator = customerDescLateFeeBp.Validators[0].(func(int) error)
+	// customerDescLateInterestBpMonth is the schema descriptor for late_interest_bp_month field.
+	customerDescLateInterestBpMonth := customerFields[16].Descriptor()
+	// customer.DefaultLateInterestBpMonth holds the default value on creation for the late_interest_bp_month field.
+	customer.DefaultLateInterestBpMonth = customerDescLateInterestBpMonth.Default.(int)
+	// customer.LateInterestBpMonthValidator is a validator for the "late_interest_bp_month" field. It is called by the builders before save.
+	customer.LateInterestBpMonthValidator = customerDescLateInterestBpMonth.Validators[0].(func(int) error)
+	// customerDescGraceDays is the schema descriptor for grace_days field.
+	customerDescGraceDays := customerFields[17].Descriptor()
+	// customer.DefaultGraceDays holds the default value on creation for the grace_days field.
+	customer.DefaultGraceDays = customerDescGraceDays.Default.(int)
+	// customer.GraceDaysValidator is a validator for the "grace_days" field. It is called by the builders before save.
+	customer.GraceDaysValidator = customerDescGraceDays.Validators[0].(func(int) error)
 	// customerDescCreatedAt is the schema descriptor for created_at field.
-	customerDescCreatedAt := customerFields[8].Descriptor()
+	customerDescCreatedAt := customerFields[18].Descriptor()
 	// customer.DefaultCreatedAt holds the default value on creation for the created_at field.
 	customer.DefaultCreatedAt = customerDescCreatedAt.Default.(func() time.Time)
 	// customerDescID is the schema descriptor for id field.
@@ -155,8 +212,12 @@ func init() {
 	organizationDescCurrency := organizationFields[15].Descriptor()
 	// organization.DefaultCurrency holds the default value on creation for the currency field.
 	organization.DefaultCurrency = organizationDescCurrency.Default.(string)
+	// organizationDescSolo is the schema descriptor for solo field.
+	organizationDescSolo := organizationFields[16].Descriptor()
+	// organization.DefaultSolo holds the default value on creation for the solo field.
+	organization.DefaultSolo = organizationDescSolo.Default.(bool)
 	// organizationDescCreatedAt is the schema descriptor for created_at field.
-	organizationDescCreatedAt := organizationFields[16].Descriptor()
+	organizationDescCreatedAt := organizationFields[17].Descriptor()
 	// organization.DefaultCreatedAt holds the default value on creation for the created_at field.
 	organization.DefaultCreatedAt = organizationDescCreatedAt.Default.(func() time.Time)
 	// organizationDescID is the schema descriptor for id field.
@@ -233,6 +294,48 @@ func init() {
 	projectDescID := projectFields[0].Descriptor()
 	// project.DefaultID holds the default value on creation for the id field.
 	project.DefaultID = projectDescID.Default.(func() uuid.UUID)
+	receivableFields := schema.Receivable{}.Fields()
+	_ = receivableFields
+	// receivableDescSeconds is the schema descriptor for seconds field.
+	receivableDescSeconds := receivableFields[6].Descriptor()
+	// receivable.SecondsValidator is a validator for the "seconds" field. It is called by the builders before save.
+	receivable.SecondsValidator = receivableDescSeconds.Validators[0].(func(float64) error)
+	// receivableDescCalculatedCents is the schema descriptor for calculated_cents field.
+	receivableDescCalculatedCents := receivableFields[7].Descriptor()
+	// receivable.CalculatedCentsValidator is a validator for the "calculated_cents" field. It is called by the builders before save.
+	receivable.CalculatedCentsValidator = receivableDescCalculatedCents.Validators[0].(func(int) error)
+	// receivableDescAmountCents is the schema descriptor for amount_cents field.
+	receivableDescAmountCents := receivableFields[8].Descriptor()
+	// receivable.AmountCentsValidator is a validator for the "amount_cents" field. It is called by the builders before save.
+	receivable.AmountCentsValidator = receivableDescAmountCents.Validators[0].(func(int) error)
+	// receivableDescConfirmedAt is the schema descriptor for confirmed_at field.
+	receivableDescConfirmedAt := receivableFields[13].Descriptor()
+	// receivable.DefaultConfirmedAt holds the default value on creation for the confirmed_at field.
+	receivable.DefaultConfirmedAt = receivableDescConfirmedAt.Default.(func() time.Time)
+	// receivableDescReceivedCents is the schema descriptor for received_cents field.
+	receivableDescReceivedCents := receivableFields[15].Descriptor()
+	// receivable.ReceivedCentsValidator is a validator for the "received_cents" field. It is called by the builders before save.
+	receivable.ReceivedCentsValidator = receivableDescReceivedCents.Validators[0].(func(int) error)
+	// receivableDescLateFeeCents is the schema descriptor for late_fee_cents field.
+	receivableDescLateFeeCents := receivableFields[16].Descriptor()
+	// receivable.DefaultLateFeeCents holds the default value on creation for the late_fee_cents field.
+	receivable.DefaultLateFeeCents = receivableDescLateFeeCents.Default.(int)
+	// receivable.LateFeeCentsValidator is a validator for the "late_fee_cents" field. It is called by the builders before save.
+	receivable.LateFeeCentsValidator = receivableDescLateFeeCents.Validators[0].(func(int) error)
+	// receivableDescInterestCents is the schema descriptor for interest_cents field.
+	receivableDescInterestCents := receivableFields[17].Descriptor()
+	// receivable.DefaultInterestCents holds the default value on creation for the interest_cents field.
+	receivable.DefaultInterestCents = receivableDescInterestCents.Default.(int)
+	// receivable.InterestCentsValidator is a validator for the "interest_cents" field. It is called by the builders before save.
+	receivable.InterestCentsValidator = receivableDescInterestCents.Validators[0].(func(int) error)
+	// receivableDescCreatedAt is the schema descriptor for created_at field.
+	receivableDescCreatedAt := receivableFields[18].Descriptor()
+	// receivable.DefaultCreatedAt holds the default value on creation for the created_at field.
+	receivable.DefaultCreatedAt = receivableDescCreatedAt.Default.(func() time.Time)
+	// receivableDescID is the schema descriptor for id field.
+	receivableDescID := receivableFields[0].Descriptor()
+	// receivable.DefaultID holds the default value on creation for the id field.
+	receivable.DefaultID = receivableDescID.Default.(func() uuid.UUID)
 	sessionFields := schema.Session{}.Fields()
 	_ = sessionFields
 	// sessionDescCreatedAt is the schema descriptor for created_at field.

@@ -1630,8 +1630,11 @@ document.addEventListener('alpine:init', () => {
     loading: true,
     current: { name: '', description: '', sprint_duration_days: 14, customer: null }, // o projeto como está no servidor
     billRateCents: null, // o valor cobrado; só admins recebem
+    billingMode: null, // o modo de cobrança do cliente do projeto (hourly ou monthly); vem com o valor cobrado
     customers: [],
     draft: { name: '', description: '', sprint_duration_days: 14, ...WTT.routine.blank(), customer_id: '', rate: '' },
+    rateTouched: false, // a pessoa digitou o valor cobrado: trocar o cliente não o sobrescreve mais
+    rateCopied: false, // o valor do campo veio do valor por hora padrão do cliente escolhido
     confirmDelete: false,
     async init() {
       try {
@@ -1642,12 +1645,54 @@ document.addEventListener('alpine:init', () => {
           WTT.can('customers.manage') ? api('GET', '/api/orgs/' + me.organization_id + '/customers') : null,
         ]);
         this.customers = customers || [];
-        if (billing) this.billRateCents = billing.bill_rate_cents;
+        if (billing) {
+          this.billRateCents = billing.bill_rate_cents;
+          this.billingMode = billing.customer_billing_mode;
+        }
       } catch (e) {
         this.errors.load = e.message;
       } finally {
         this.loading = false;
       }
+    },
+    // customerMode é o modo de cobrança do cliente escolhido no rascunho ('' no projeto interno). Quem não recebe a
+    // lista de clientes só edita a cobrança do cliente atual, e vale o modo que veio com ela.
+    customerMode() {
+      const id = this.draft.customer_id;
+      if (!id) return '';
+      const c = this.customers.find((x) => x.id === id);
+      if (c) return c.billing_mode || 'hourly';
+      return this.current.customer && this.current.customer.id === id ? (this.billingMode || 'hourly') : 'hourly';
+    },
+    // O cliente mensal paga o contrato, não as horas: o projeto dele não tem valor por hora.
+    monthlyCustomer() {
+      return this.customerMode() === 'monthly';
+    },
+    // hasRate diz que o campo do valor cobrado existe: há cliente, e ele é cobrado por hora.
+    hasRate() {
+      return !!this.draft.customer_id && !this.monthlyCustomer();
+    },
+    // customerChanged troca o valor do campo pelo valor por hora padrão do cliente escolhido (uma cópia: o projeto guarda
+    // o seu, e o cliente não muda), a menos que a pessoa já tenha digitado um. Voltar ao cliente de antes devolve o valor
+    // que o projeto tinha.
+    customerChanged() {
+      this.clearField('customer_id');
+      this.clearField('bill_rate_cents');
+      this.rateCopied = false;
+      if (this.rateTouched) return;
+      const c = this.customers.find((x) => x.id === this.draft.customer_id);
+      if (this.current.customer && this.draft.customer_id === this.current.customer.id) {
+        this.draft.rate = WTT.fmt.moneyInput(this.billRateCents);
+      } else if (c && c.default_rate_cents != null) {
+        this.draft.rate = WTT.fmt.moneyInput(c.default_rate_cents);
+        this.rateCopied = true;
+      } else {
+        this.draft.rate = '';
+      }
+    },
+    // rateFromDefault diz que o valor do campo é o padrão do cliente, para a dica dizer de onde veio.
+    rateFromDefault() {
+      return this.rateCopied && !this.rateTouched && this.hasRate();
     },
     // As linhas do cartão do projeto. Sem daily ou sem weekly é uma resposta, e
     // não um campo por preencher: o time pode não fazer.
@@ -1680,6 +1725,8 @@ document.addEventListener('alpine:init', () => {
       this.errors.save = '';
       this.errors.delete = '';
       this.clearFields();
+      this.rateTouched = false;
+      this.rateCopied = false;
       this.confirmDelete = false;
       // Enquanto salva, o modal não fecha: um erro do servidor ficaria sem ter onde aparecer.
       Alpine.store('modal').open('project-edit', WTT.t('project_settings.edit_title'), () => !this.pending);
@@ -1702,15 +1749,15 @@ document.addEventListener('alpine:init', () => {
             // A descrição chega do servidor como long_description, e o rótulo do campo é o dele.
             description: [description, (v) => R.max('description')(v, 'long_description')],
           } : {}),
-          // Com cliente o valor é obrigatório; sem cliente o campo some e nada é enviado.
-          ...(editBilling ? { bill_rate_cents: [d.customer_id ? d.rate : '', ...(d.customer_id ? [R.required] : []), R.rate] } : {}),
+          // Com cliente por hora o valor é obrigatório; sem cliente, ou com cliente mensal, o campo some e nada é enviado.
+          ...(editBilling ? { bill_rate_cents: [this.hasRate() ? d.rate : '', ...(this.hasRate() ? [R.required] : []), R.rate] } : {}),
           ...(editProject ? {
             ...WTT.routine.rules(d),
             sprint_duration_days: [d.sprint_duration_days, R.integer(1, 90)],
           } : {}),
         })) return;
-                // Sem cliente não há valor cobrado: o servidor o recusa, então vai nulo junto do cliente apagado.
-        const cents = editBilling ? (d.customer_id ? WTT.toCents(d.rate, { strict: true }) : null) : this.billRateCents;
+        // Sem cliente, ou com cliente mensal, não há valor cobrado: o servidor o recusa, então vai nulo.
+        const cents = editBilling ? (this.hasRate() ? WTT.toCents(d.rate, { strict: true }) : null) : this.billRateCents;
 
         const customerId = this.current.customer ? this.current.customer.id : '';
         if (editBilling && (d.customer_id !== customerId || cents !== this.billRateCents)) {
@@ -1720,6 +1767,7 @@ document.addEventListener('alpine:init', () => {
           });
           this.current.customer = billing.customer;
           this.billRateCents = billing.bill_rate_cents;
+          this.billingMode = billing.customer_billing_mode;
           // Tirar o cliente apaga a reunião com ele, e o servidor devolve o projeto como ficou.
           if (!billing.customer) {
             this.current.customer_meeting_day = undefined;

@@ -467,6 +467,11 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 }
 .form-group > legend { padding: 0 6px; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
 .form-group > .hint { font-size: 0.8rem; color: var(--muted); }
+/* Um bloco recolhido dentro do formulário (details): o que quase ninguém muda fica atrás de uma linha. */
+.form-fold { padding-top: 12px; border-top: 1px solid var(--rule); }
+.form-fold > summary { cursor: pointer; font-size: 0.84rem; font-weight: 600; color: var(--ink-2); }
+.form-fold > summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--radius-sm); }
+.form-fold[open] > summary { margin-bottom: 12px; }
 /* Daily ou weekly: a marca que diz se o projeto tem, e o horário que ela liga. */
 .routine { display: flex; flex-direction: column; gap: 10px; padding-top: 12px; border-top: 1px solid var(--rule); }
 .toggle { display: flex; align-items: center; gap: 10px; font-size: 0.92rem; font-weight: 600; color: var(--ink); cursor: pointer; }

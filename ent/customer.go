@@ -33,6 +33,26 @@ type Customer struct {
 	ContactEmail string `json:"contact_email,omitempty"`
 	// ContactPhone holds the value of the "contact_phone" field.
 	ContactPhone string `json:"contact_phone,omitempty"`
+	// BillingMode holds the value of the "billing_mode" field.
+	BillingMode string `json:"billing_mode,omitempty"`
+	// DefaultRateCents holds the value of the "default_rate_cents" field.
+	DefaultRateCents *int `json:"default_rate_cents,omitempty"`
+	// MonthlyFeeCents holds the value of the "monthly_fee_cents" field.
+	MonthlyFeeCents *int `json:"monthly_fee_cents,omitempty"`
+	// ContractStart holds the value of the "contract_start" field.
+	ContractStart *string `json:"contract_start,omitempty"`
+	// ContractEnd holds the value of the "contract_end" field.
+	ContractEnd *string `json:"contract_end,omitempty"`
+	// ClosingDay holds the value of the "closing_day" field.
+	ClosingDay int `json:"closing_day,omitempty"`
+	// PaymentDays holds the value of the "payment_days" field.
+	PaymentDays int `json:"payment_days,omitempty"`
+	// LateFeeBp holds the value of the "late_fee_bp" field.
+	LateFeeBp int `json:"late_fee_bp,omitempty"`
+	// LateInterestBpMonth holds the value of the "late_interest_bp_month" field.
+	LateInterestBpMonth int `json:"late_interest_bp_month,omitempty"`
+	// GraceDays holds the value of the "grace_days" field.
+	GraceDays int `json:"grace_days,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -47,9 +67,11 @@ type CustomerEdges struct {
 	Organization *Organization `json:"organization,omitempty"`
 	// Projects holds the value of the projects edge.
 	Projects []*Project `json:"projects,omitempty"`
+	// Receivables holds the value of the receivables edge.
+	Receivables []*Receivable `json:"receivables,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
+	loadedTypes [3]bool
 }
 
 // OrganizationOrErr returns the Organization value or an error if the edge
@@ -72,12 +94,23 @@ func (e CustomerEdges) ProjectsOrErr() ([]*Project, error) {
 	return nil, &NotLoadedError{edge: "projects"}
 }
 
+// ReceivablesOrErr returns the Receivables value or an error if the edge
+// was not loaded in eager-loading.
+func (e CustomerEdges) ReceivablesOrErr() ([]*Receivable, error) {
+	if e.loadedTypes[2] {
+		return e.Receivables, nil
+	}
+	return nil, &NotLoadedError{edge: "receivables"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*Customer) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case customer.FieldName, customer.FieldCountry, customer.FieldDocument, customer.FieldContactName, customer.FieldContactEmail, customer.FieldContactPhone:
+		case customer.FieldDefaultRateCents, customer.FieldMonthlyFeeCents, customer.FieldClosingDay, customer.FieldPaymentDays, customer.FieldLateFeeBp, customer.FieldLateInterestBpMonth, customer.FieldGraceDays:
+			values[i] = new(sql.NullInt64)
+		case customer.FieldName, customer.FieldCountry, customer.FieldDocument, customer.FieldContactName, customer.FieldContactEmail, customer.FieldContactPhone, customer.FieldBillingMode, customer.FieldContractStart, customer.FieldContractEnd:
 			values[i] = new(sql.NullString)
 		case customer.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
@@ -146,6 +179,70 @@ func (_m *Customer) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.ContactPhone = value.String
 			}
+		case customer.FieldBillingMode:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field billing_mode", values[i])
+			} else if value.Valid {
+				_m.BillingMode = value.String
+			}
+		case customer.FieldDefaultRateCents:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field default_rate_cents", values[i])
+			} else if value.Valid {
+				_m.DefaultRateCents = new(int)
+				*_m.DefaultRateCents = int(value.Int64)
+			}
+		case customer.FieldMonthlyFeeCents:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field monthly_fee_cents", values[i])
+			} else if value.Valid {
+				_m.MonthlyFeeCents = new(int)
+				*_m.MonthlyFeeCents = int(value.Int64)
+			}
+		case customer.FieldContractStart:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field contract_start", values[i])
+			} else if value.Valid {
+				_m.ContractStart = new(string)
+				*_m.ContractStart = value.String
+			}
+		case customer.FieldContractEnd:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field contract_end", values[i])
+			} else if value.Valid {
+				_m.ContractEnd = new(string)
+				*_m.ContractEnd = value.String
+			}
+		case customer.FieldClosingDay:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field closing_day", values[i])
+			} else if value.Valid {
+				_m.ClosingDay = int(value.Int64)
+			}
+		case customer.FieldPaymentDays:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field payment_days", values[i])
+			} else if value.Valid {
+				_m.PaymentDays = int(value.Int64)
+			}
+		case customer.FieldLateFeeBp:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field late_fee_bp", values[i])
+			} else if value.Valid {
+				_m.LateFeeBp = int(value.Int64)
+			}
+		case customer.FieldLateInterestBpMonth:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field late_interest_bp_month", values[i])
+			} else if value.Valid {
+				_m.LateInterestBpMonth = int(value.Int64)
+			}
+		case customer.FieldGraceDays:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field grace_days", values[i])
+			} else if value.Valid {
+				_m.GraceDays = int(value.Int64)
+			}
 		case customer.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
@@ -173,6 +270,11 @@ func (_m *Customer) QueryOrganization() *OrganizationQuery {
 // QueryProjects queries the "projects" edge of the Customer entity.
 func (_m *Customer) QueryProjects() *ProjectQuery {
 	return NewCustomerClient(_m.config).QueryProjects(_m)
+}
+
+// QueryReceivables queries the "receivables" edge of the Customer entity.
+func (_m *Customer) QueryReceivables() *ReceivableQuery {
+	return NewCustomerClient(_m.config).QueryReceivables(_m)
 }
 
 // Update returns a builder for updating this Customer.
@@ -218,6 +320,44 @@ func (_m *Customer) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("contact_phone=")
 	builder.WriteString(_m.ContactPhone)
+	builder.WriteString(", ")
+	builder.WriteString("billing_mode=")
+	builder.WriteString(_m.BillingMode)
+	builder.WriteString(", ")
+	if v := _m.DefaultRateCents; v != nil {
+		builder.WriteString("default_rate_cents=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	if v := _m.MonthlyFeeCents; v != nil {
+		builder.WriteString("monthly_fee_cents=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	if v := _m.ContractStart; v != nil {
+		builder.WriteString("contract_start=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.ContractEnd; v != nil {
+		builder.WriteString("contract_end=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	builder.WriteString("closing_day=")
+	builder.WriteString(fmt.Sprintf("%v", _m.ClosingDay))
+	builder.WriteString(", ")
+	builder.WriteString("payment_days=")
+	builder.WriteString(fmt.Sprintf("%v", _m.PaymentDays))
+	builder.WriteString(", ")
+	builder.WriteString("late_fee_bp=")
+	builder.WriteString(fmt.Sprintf("%v", _m.LateFeeBp))
+	builder.WriteString(", ")
+	builder.WriteString("late_interest_bp_month=")
+	builder.WriteString(fmt.Sprintf("%v", _m.LateInterestBpMonth))
+	builder.WriteString(", ")
+	builder.WriteString("grace_days=")
+	builder.WriteString(fmt.Sprintf("%v", _m.GraceDays))
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))

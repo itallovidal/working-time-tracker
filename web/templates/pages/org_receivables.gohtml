@@ -1,0 +1,320 @@
+{{define "content"}}
+{{/* O A receber do modo solo, só do dono: o que cobrar de cada cliente, o que já foi confirmado e o que entrou. Em A
+     confirmar ficam as propostas (os períodos fechados com horas dos clientes por hora e os meses dos contratos
+     mensais); Confirmar grava o valor e o vencimento e a linha passa para Em aberto, onde se recebe, edita e desfaz.
+     Receber leva a linha para Recebidos, onde dá para desfazer o recebimento. No cliente mensal, o modal de receber
+     sugere a multa e os juros do atraso. O sistema não emite nota: o número dela é só uma anotação. */}}
+<main class="page" x-data="orgReceivables">
+  <div class="page-head">
+    <div>
+      <div class="eyebrow" data-org-name>{{.Me.OrganizationName}}</div>
+      <h1>{{.T "titles.receivables"}}</h1>
+    </div>
+    <button type="button" class="btn btn-secondary btn-sm" :disabled="loading" @click="reload()">{{template "icon" "rotate"}} {{.T "receivable.refresh"}}</button>
+  </div>
+
+  <p class="muted" x-show="loading && !data">{{.T "receivable.loading"}}</p>
+  <p class="form-error" x-cloak x-show="errors.load" x-text="errors.load" role="alert"></p>
+
+  <template x-if="data">
+    <div class="stack stack-sections">
+      <div class="stack">
+        <p class="muted" x-text="$t('receivable.intro', { tz: data.timezone })"></p>
+        <div class="kpis kpis-4">
+          <div class="kpi hue-purple">
+            <span class="kpi-icon">{{template "icon" "clipboard-check"}}</span>
+            <div class="kpi-body">
+              <span class="kpi-label">{{.T "receivable.cards.to_confirm"}}</span>
+              <span class="kpi-value" x-text="WTT.fmt.money(data.totals.to_confirm_cents)"></span>
+              <span class="kpi-hint" x-text="$t('receivable.cards.to_confirm_hint', { count: data.totals.to_confirm_count })"></span>
+            </div>
+          </div>
+          <div class="kpi hue-blue">
+            <span class="kpi-icon">{{template "icon" "file-invoice-dollar"}}</span>
+            <div class="kpi-body">
+              <span class="kpi-label">{{.T "receivable.cards.open"}}</span>
+              <span class="kpi-value" x-text="WTT.fmt.money(data.totals.open_cents)"></span>
+              <span class="kpi-hint" x-text="$t('receivable.cards.open_hint', { count: data.totals.open_count })"></span>
+            </div>
+          </div>
+          <div class="kpi hue-orange">
+            <span class="kpi-icon">{{template "icon" "triangle-exclamation"}}</span>
+            <div class="kpi-body">
+              <span class="kpi-label">{{.T "receivable.cards.late"}}</span>
+              <span class="kpi-value" x-text="WTT.fmt.money(data.totals.late_cents)"></span>
+              <span class="kpi-hint" x-text="data.totals.late_count > 0 ? $t('receivable.cards.late_hint', { count: data.totals.late_count }) : $t('receivable.cards.late_none')"></span>
+            </div>
+          </div>
+          <div class="kpi hue-green">
+            <span class="kpi-icon">{{template "icon" "circle-check"}}</span>
+            <div class="kpi-body">
+              <span class="kpi-label">{{.T "receivable.cards.received_month"}}</span>
+              <span class="kpi-value" x-text="WTT.fmt.money(data.totals.received_month_cents)"></span>
+              <span class="kpi-hint" x-text="$t('receivable.cards.received_month_hint', { count: data.totals.received_month_count })"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <section class="stack stack-loose" aria-labelledby="receivables-confirm-title">
+        <h2 id="receivables-confirm-title">{{template "icon" "clipboard-check"}} {{.T "receivable.to_confirm.title"}}</h2>
+        {{template "empty_state" (dict "Icon" "clipboard-check" "Show" "data.to_confirm.length === 0" "Title" (.T "receivable.to_confirm.empty") "Text" (.T "receivable.to_confirm.empty_text"))}}
+        <div class="table-wrap" x-show="data.to_confirm.length > 0">
+          <table>
+            <thead>
+              <tr>
+                <th>{{.T "receivable.col.customer"}}</th><th>{{.T "receivable.col.period"}}</th><th class="num">{{.T "receivable.col.hours"}}</th>
+                <th class="num">{{.T "receivable.col.amount"}}</th><th>{{.T "receivable.col.due"}}</th>
+                <th class="actions"><span class="sr-only">{{.T "common.actions"}}</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="row in data.to_confirm" :key="row.customer.id + row.period_start">
+                <tr>
+                  <td class="nowrap">
+                    <div x-text="row.customer.name"></div>
+                    <div class="muted small" x-text="kindLabel(row.kind)"></div>
+                  </td>
+                  <td class="nowrap">
+                    <div x-text="period(row)"></div>
+                    <div class="muted small" x-show="row.open">{{.T "receivable.running"}}</div>
+                  </td>
+                  <td class="nowrap num" x-text="WTT.fmt.hours(row.seconds)"></td>
+                  {{/* O valor por hora que a proposta rende fica numa segunda linha; abaixo do piso ele vira um aviso, não um erro. */}}
+                  <td class="nowrap num">
+                    <div x-text="WTT.fmt.money(row.calculated_cents)"></div>
+                    <div class="muted small" x-show="row.effective_rate_cents !== null && !row.below_min_rate" x-text="rateLine(row)"></div>
+                    <div class="small" x-cloak x-show="row.below_min_rate">
+                      <span class="badge badge-warn" :title="belowMin()">{{template "icon" "triangle-exclamation"}} <span x-text="rateLine(row)"></span></span>
+                    </div>
+                  </td>
+                  <td class="nowrap" x-text="WTT.fmt.day(row.due_date)"></td>
+                  <td class="actions">
+                    <button type="button" class="btn btn-secondary btn-sm" :disabled="pending" @click="openConfirm(row)">{{template "icon" "check"}} {{.T "receivable.actions.confirm"}}</button>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="stack stack-loose" aria-labelledby="receivables-open-title">
+        <h2 id="receivables-open-title">{{template "icon" "file-invoice-dollar"}} {{.T "receivable.open.title"}}</h2>
+        <p class="form-error" x-cloak x-show="errors.undo" x-text="errors.undo" role="alert"></p>
+        {{template "empty_state" (dict "Icon" "file-invoice-dollar" "Show" "data.open.length === 0" "Title" (.T "receivable.open.empty"))}}
+        <div class="table-wrap" x-show="data.open.length > 0">
+          <table>
+            <thead>
+              <tr>
+                <th>{{.T "receivable.col.customer"}}</th><th>{{.T "receivable.col.period"}}</th><th>{{.T "receivable.col.due"}}</th>
+                <th class="num">{{.T "receivable.col.amount"}}</th>
+                <th class="actions"><span class="sr-only">{{.T "common.actions"}}</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="row in data.open" :key="row.id">
+                <tr>
+                  <td class="nowrap">
+                    <div x-text="row.customer.name"></div>
+                    <div class="muted small" x-text="kindLabel(row.kind)"></div>
+                  </td>
+                  <td class="nowrap" x-text="period(row)"></td>
+                  <td class="nowrap">
+                    <div x-text="WTT.fmt.day(row.due_date)"></div>
+                    <span class="badge badge-danger" x-cloak x-show="row.late">{{.T "receivable.late_badge"}}</span>
+                    <div class="muted small" x-cloak x-show="row.late" x-text="$t('receivable.late', { count: row.days_late })"></div>
+                  </td>
+                  <td class="nowrap num">
+                    <div x-text="WTT.fmt.money(row.amount_cents)"></div>
+                    <div class="muted small" x-show="row.amount_cents !== row.calculated_cents" x-text="$t('receivable.calculated_line', { amount: WTT.fmt.money(row.calculated_cents) })"></div>
+                    <div class="muted small" x-show="row.invoice_number" x-text="$t('receivable.invoice_line', { number: row.invoice_number })"></div>
+                    <div class="small" x-cloak x-show="row.below_min_rate">
+                      <span class="badge badge-warn" :title="belowMin()">{{template "icon" "triangle-exclamation"}} <span x-text="rateLine(row)"></span></span>
+                    </div>
+                  </td>
+                  <td class="actions">
+                    <div class="confirm" x-cloak x-show="confirming === row.id">
+                      <span>{{.T "receivable.actions.undo_confirm_ask"}}</span>
+                      <button type="button" class="btn btn-danger btn-sm" :disabled="pending" @click="unconfirm(row)">{{.T "receivable.actions.undo"}}</button>
+                      <button type="button" class="btn btn-ghost btn-sm" @click="confirming = null">{{.T "common.cancel"}}</button>
+                    </div>
+                    <div class="row row-end" x-show="confirming !== row.id">
+                      <button type="button" class="btn btn-secondary btn-sm" :disabled="pending" @click="openReceive(row)">{{template "icon" "hand-holding-dollar"}} {{.T "receivable.actions.receive"}}</button>
+                      <button type="button" class="btn btn-ghost btn-sm" :disabled="pending" @click="openEdit(row)">{{template "icon" "pen"}} {{.T "receivable.actions.edit"}}</button>
+                      <button type="button" class="btn btn-danger-ghost btn-sm" :disabled="pending" @click="confirming = row.id; receivedConfirming = null">{{template "icon" "rotate-left"}} {{.T "receivable.actions.undo_confirm"}}</button>
+                    </div>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="stack stack-loose" aria-labelledby="receivables-received-title">
+        <h2 id="receivables-received-title">{{template "icon" "circle-check"}} {{.T "receivable.received.title"}}</h2>
+        <p class="form-error" x-cloak x-show="errors.unreceive" x-text="errors.unreceive" role="alert"></p>
+        {{template "empty_state" (dict "Icon" "circle-check" "Show" "data.received.length === 0" "Title" (.T "receivable.received.empty"))}}
+        <p class="muted small" x-show="data.received.length > 0">{{.T "receivable.received.note"}}</p>
+        <div class="table-wrap" x-show="data.received.length > 0">
+          <table>
+            <thead>
+              <tr>
+                <th>{{.T "receivable.col.customer"}}</th><th>{{.T "receivable.col.period"}}</th><th>{{.T "receivable.col.received_on"}}</th>
+                <th class="num">{{.T "receivable.col.amount"}}</th><th class="num">{{.T "receivable.col.received"}}</th>
+                <th class="actions"><span class="sr-only">{{.T "common.actions"}}</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="row in data.received" :key="row.id">
+                <tr>
+                  <td class="nowrap">
+                    <div x-text="row.customer.name"></div>
+                    <div class="muted small" x-text="kindLabel(row.kind)"></div>
+                  </td>
+                  <td class="nowrap" x-text="period(row)"></td>
+                  <td class="nowrap" x-text="WTT.fmt.day(row.received_on)"></td>
+                  <td class="nowrap num">
+                    <div x-text="WTT.fmt.money(row.amount_cents)"></div>
+                    <div class="muted small" x-show="row.invoice_number" x-text="$t('receivable.invoice_line', { number: row.invoice_number })"></div>
+                  </td>
+                  <td class="nowrap num">
+                    <div x-text="WTT.fmt.money(row.received_cents)"></div>
+                    <div class="muted small" x-show="row.late_fee_cents > 0" x-text="$t('receivable.fee_line', { amount: WTT.fmt.money(row.late_fee_cents) })"></div>
+                    <div class="muted small" x-show="row.interest_cents > 0" x-text="$t('receivable.interest_line', { amount: WTT.fmt.money(row.interest_cents) })"></div>
+                  </td>
+                  <td class="actions">
+                    <div class="confirm" x-cloak x-show="receivedConfirming === row.id">
+                      <span>{{.T "receivable.actions.undo_receive_ask"}}</span>
+                      <button type="button" class="btn btn-danger btn-sm" :disabled="pending" @click="unreceive(row)">{{.T "receivable.actions.undo"}}</button>
+                      <button type="button" class="btn btn-ghost btn-sm" @click="receivedConfirming = null">{{.T "common.cancel"}}</button>
+                    </div>
+                    <button type="button" class="btn btn-danger-ghost btn-sm" x-show="receivedConfirming !== row.id" :disabled="pending" @click="receivedConfirming = row.id; confirming = null">{{template "icon" "rotate-left"}} {{.T "receivable.actions.undo_receive"}}</button>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </template>
+
+  {{/* Confirmar (e editar, enquanto não foi recebido): o período, as horas e o valor calculado, e o que o dono ajusta, que
+       vem preenchido: o valor, o vencimento, o número da nota e a observação. No mensal o valor é a mensalidade, e o dono
+       corrige o que não bate (o primeiro mês parcial). */}}
+  <template x-teleport="#modal-root">
+    <form class="stack" novalidate x-show="$store.modal.name === 'receivable-confirm'" @submit.prevent="saveConfirm()">
+      <template x-if="target">
+        <dl class="facts">
+          <dt>{{.T "receivable.col.customer"}}</dt>
+          <dd x-text="target.customer.name + ' · ' + kindLabel(target.kind)"></dd>
+          <dt>{{.T "receivable.modal.period"}}</dt>
+          <dd x-text="period(target)"></dd>
+          <dt>{{.T "receivable.modal.hours"}}</dt>
+          <dd x-text="WTT.fmt.hours(target.seconds)"></dd>
+          <dt>{{.T "receivable.modal.calculated"}}</dt>
+          <dd x-text="WTT.fmt.money(target.calculated_cents)"></dd>
+        </dl>
+      </template>
+      <p class="muted small" x-show="target && target.open && target.kind === 'monthly' && !editing">{{.T "receivable.modal.open_period"}}</p>
+      <div class="field">
+        <label for="receivable-amount"><span x-text="$t('receivable.modal.amount_label', { unit: WTT.fmt.moneyUnit() })"></span></label>
+        <input id="receivable-amount" type="text" inputmode="decimal" class="num" data-field="amount_cents" data-autofocus x-model="draft.amount"
+               @input="clearField('amount_cents')" :aria-invalid="fieldErrors.amount_cents ? 'true' : 'false'">
+        {{template "field_error" "amount_cents"}}
+        <span class="hint">{{.T "receivable.modal.amount_hint"}}</span>
+        <span class="hint" x-cloak x-show="draftRate() !== ''" :class="draftBelowMin() && 'is-bad'" x-text="draftRate()"></span>
+      </div>
+      <div class="field">
+        <label for="receivable-due">{{.T "receivable.modal.due_label"}}</label>
+        <input id="receivable-due" type="date" min="1971-01-01" data-field="due_date" x-model="draft.due"
+               @input="clearField('due_date')" :aria-invalid="fieldErrors.due_date ? 'true' : 'false'">
+        {{template "field_error" "due_date"}}
+        <span class="hint">{{.T "receivable.modal.due_hint"}}</span>
+      </div>
+      <div class="field">
+        {{template "field_label" (dict "D" . "For" "receivable-invoice" "Key" "receivable.modal.invoice_label" "Optional" true)}}
+        <input id="receivable-invoice" type="text" maxlength="{{limit "invoice_number"}}" data-field="invoice_number" x-model="draft.invoice"
+               @input="clearField('invoice_number')" :aria-invalid="fieldErrors.invoice_number ? 'true' : 'false'">
+        {{template "field_error" "invoice_number"}}
+        <span class="hint">{{.T "receivable.modal.invoice_hint"}}</span>
+      </div>
+      <div class="field">
+        {{template "field_label" (dict "D" . "For" "receivable-note" "Key" "receivable.modal.note_label" "Optional" true)}}
+        <textarea id="receivable-note" rows="2" maxlength="{{limit "note"}}" data-field="note" x-model="draft.note"
+                  @input="clearField('note')" :aria-invalid="fieldErrors.note ? 'true' : 'false'"></textarea>
+        {{template "field_error" "note"}}
+      </div>
+      <p class="form-error" x-show="errors.save" x-text="errors.save" role="alert"></p>
+      <div class="row row-end">
+        <button type="button" class="btn btn-secondary" @click="$store.modal.dismiss()">{{.T "common.cancel"}}</button>
+        <button type="submit" class="btn" :disabled="pending">{{template "icon" "check"}} <span x-text="editing ? $t('receivable.modal.save') : $t('receivable.modal.confirm')"></span></button>
+      </div>
+    </form>
+  </template>
+
+  {{/* Receber: a data (hoje, por padrão) e o valor. No cliente por hora entra o valor confirmado, sem multa nem juros. No
+       mensal o valor é livre, e a multa e os juros são partes dele; a sugestão (do atraso na data escolhida) preenche os
+       três com um clique. */}}
+  <template x-teleport="#modal-root">
+    <form class="stack" novalidate x-show="$store.modal.name === 'receivable-receive'" @submit.prevent="saveReceive()">
+      <template x-if="receiving">
+        <dl class="facts">
+          <dt>{{.T "receivable.col.customer"}}</dt>
+          <dd x-text="receiving.customer.name + ' · ' + kindLabel(receiving.kind)"></dd>
+          <dt>{{.T "receivable.modal.period"}}</dt>
+          <dd x-text="period(receiving)"></dd>
+          <dt>{{.T "receivable.col.due"}}</dt>
+          <dd x-text="WTT.fmt.day(receiving.due_date)"></dd>
+          <dt>{{.T "receivable.col.amount"}}</dt>
+          <dd x-text="WTT.fmt.money(receiving.amount_cents)"></dd>
+        </dl>
+      </template>
+      <div class="field">
+        <label for="receivable-received-on">{{.T "receivable.modal.received_on_label"}}</label>
+        <input id="receivable-received-on" type="date" min="1971-01-01" data-field="received_on" x-model="rec.on"
+               @input="clearField('received_on')" @change="loadSuggestion()" :aria-invalid="fieldErrors.received_on ? 'true' : 'false'">
+        {{template "field_error" "received_on"}}
+        <span class="hint">{{.T "receivable.modal.received_on_hint"}}</span>
+      </div>
+      <template x-if="monthly">
+        <div class="stack">
+          <div class="alert alert-warn" role="status" x-cloak x-show="suggestion && suggestion.charged">
+            <p x-text="suggestionText()"></p>
+            <button type="button" class="btn btn-secondary btn-sm" @click="applySuggestion()">{{template "icon" "wand-magic-sparkles"}} {{.T "receivable.modal.suggestion_apply"}}</button>
+          </div>
+          <p class="muted small" x-cloak x-show="suggestion && !suggestion.charged">{{.T "receivable.modal.suggestion_none"}}</p>
+          <div class="field">
+            <label for="receivable-received"><span x-text="$t('receivable.modal.received_label', { unit: WTT.fmt.moneyUnit() })"></span></label>
+            <input id="receivable-received" type="text" inputmode="decimal" class="num" data-field="received_cents" x-model="rec.amount"
+                   @input="clearField('received_cents')" :aria-invalid="fieldErrors.received_cents ? 'true' : 'false'">
+            {{template "field_error" "received_cents"}}
+            <span class="hint">{{.T "receivable.modal.received_hint_monthly"}}</span>
+          </div>
+          <div class="field">
+            <label for="receivable-fee"><span x-text="$t('receivable.modal.fee_label', { unit: WTT.fmt.moneyUnit() })"></span> <span class="optional">{{.T "common.optional_label"}}</span></label>
+            <input id="receivable-fee" type="text" inputmode="decimal" class="num" data-field="late_fee_cents" x-model="rec.fee" placeholder="0,00"
+                   @input="clearField('late_fee_cents')" :aria-invalid="fieldErrors.late_fee_cents ? 'true' : 'false'">
+            {{template "field_error" "late_fee_cents"}}
+          </div>
+          <div class="field">
+            <label for="receivable-interest"><span x-text="$t('receivable.modal.interest_label', { unit: WTT.fmt.moneyUnit() })"></span> <span class="optional">{{.T "common.optional_label"}}</span></label>
+            <input id="receivable-interest" type="text" inputmode="decimal" class="num" data-field="interest_cents" x-model="rec.interest" placeholder="0,00"
+                   @input="clearField('interest_cents')" :aria-invalid="fieldErrors.interest_cents ? 'true' : 'false'">
+            {{template "field_error" "interest_cents"}}
+            <span class="hint">{{.T "receivable.modal.charges_hint"}}</span>
+          </div>
+        </div>
+      </template>
+      <p class="muted small" x-show="!monthly">{{.T "receivable.modal.received_hint_hourly"}}</p>
+      <p class="form-error" x-show="errors.receive" x-text="errors.receive" role="alert"></p>
+      <div class="row row-end">
+        <button type="button" class="btn btn-secondary" @click="$store.modal.dismiss()">{{.T "common.cancel"}}</button>
+        <button type="submit" class="btn" :disabled="pending">{{template "icon" "check"}} {{.T "receivable.modal.receive"}}</button>
+      </div>
+    </form>
+  </template>
+</main>
+{{end}}

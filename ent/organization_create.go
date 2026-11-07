@@ -12,6 +12,7 @@ import (
 	"working-time-tracker/ent/organization"
 	"working-time-tracker/ent/person"
 	"working-time-tracker/ent/project"
+	"working-time-tracker/ent/receivable"
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
@@ -227,6 +228,20 @@ func (_c *OrganizationCreate) SetNillableCurrency(v *string) *OrganizationCreate
 	return _c
 }
 
+// SetSolo sets the "solo" field.
+func (_c *OrganizationCreate) SetSolo(v bool) *OrganizationCreate {
+	_c.mutation.SetSolo(v)
+	return _c
+}
+
+// SetNillableSolo sets the "solo" field if the given value is not nil.
+func (_c *OrganizationCreate) SetNillableSolo(v *bool) *OrganizationCreate {
+	if v != nil {
+		_c.SetSolo(*v)
+	}
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *OrganizationCreate) SetCreatedAt(v time.Time) *OrganizationCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -315,6 +330,21 @@ func (_c *OrganizationCreate) AddInvites(v ...*Invite) *OrganizationCreate {
 	return _c.AddInviteIDs(ids...)
 }
 
+// AddReceivableIDs adds the "receivables" edge to the Receivable entity by IDs.
+func (_c *OrganizationCreate) AddReceivableIDs(ids ...uuid.UUID) *OrganizationCreate {
+	_c.mutation.AddReceivableIDs(ids...)
+	return _c
+}
+
+// AddReceivables adds the "receivables" edges to the Receivable entity.
+func (_c *OrganizationCreate) AddReceivables(v ...*Receivable) *OrganizationCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddReceivableIDs(ids...)
+}
+
 // Mutation returns the OrganizationMutation object of the builder.
 func (_c *OrganizationCreate) Mutation() *OrganizationMutation {
 	return _c.mutation
@@ -362,6 +392,10 @@ func (_c *OrganizationCreate) defaults() {
 		v := organization.DefaultCurrency
 		_c.mutation.SetCurrency(v)
 	}
+	if _, ok := _c.mutation.Solo(); !ok {
+		v := organization.DefaultSolo
+		_c.mutation.SetSolo(v)
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := organization.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
@@ -385,6 +419,9 @@ func (_c *OrganizationCreate) check() error {
 	}
 	if _, ok := _c.mutation.Currency(); !ok {
 		return &ValidationError{Name: "currency", err: errors.New(`ent: missing required field "Organization.currency"`)}
+	}
+	if _, ok := _c.mutation.Solo(); !ok {
+		return &ValidationError{Name: "solo", err: errors.New(`ent: missing required field "Organization.solo"`)}
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "Organization.created_at"`)}
@@ -484,6 +521,10 @@ func (_c *OrganizationCreate) createSpec() (*Organization, *sqlgraph.CreateSpec)
 		_spec.SetField(organization.FieldCurrency, field.TypeString, value)
 		_node.Currency = value
 	}
+	if value, ok := _c.mutation.Solo(); ok {
+		_spec.SetField(organization.FieldSolo, field.TypeBool, value)
+		_node.Solo = value
+	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(organization.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
@@ -545,6 +586,22 @@ func (_c *OrganizationCreate) createSpec() (*Organization, *sqlgraph.CreateSpec)
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(invite.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ReceivablesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   organization.ReceivablesTable,
+			Columns: []string{organization.ReceivablesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(receivable.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

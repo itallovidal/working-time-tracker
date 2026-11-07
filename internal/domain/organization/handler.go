@@ -41,6 +41,10 @@ func (h *Handler) Update(c *echo.Context) error {
 		if err == database.ErrNotFound {
 			return apperr.Respond(c, http.StatusNotFound, ErrNotFound)
 		}
+		// Ligar o modo solo com mais de uma pessoa, ou com convite pendente, é conflito com o estado da organização.
+		if errors.Is(err, ErrSoloNeedsSinglePerson) {
+			return apperr.Respond(c, http.StatusConflict, err)
+		}
 		return apperr.Respond(c, http.StatusBadRequest, err)
 	}
 	return c.JSON(http.StatusOK, org)

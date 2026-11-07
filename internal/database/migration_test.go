@@ -161,6 +161,7 @@ func TestMigrate_ForeignKeyDeleteRules(t *testing.T) {
 		"invites_organizations_invites":               "CASCADE",
 		"sessions_persons_sessions":                   "CASCADE",
 		"payouts_persons_payouts":                     "CASCADE",
+		"receivables_organizations_receivables":       "CASCADE",
 		"labels_projects_labels":                      "CASCADE",
 		"task_labels_task_id":                         "CASCADE",
 		"task_labels_label_id":                        "CASCADE",
@@ -174,6 +175,7 @@ func TestMigrate_ForeignKeyDeleteRules(t *testing.T) {
 		"tasks_persons_tasks":                         "NO ACTION",
 		"team_memberships_persons_team_memberships":   "NO ACTION",
 		"work_sessions_persons_work_sessions":         "NO ACTION",
+		"receivables_customers_receivables":           "NO ACTION",
 	}
 
 	rows, err := testDB.Query(`SELECT constraint_name, delete_rule
@@ -204,6 +206,52 @@ func TestMigrate_ForeignKeyDeleteRules(t *testing.T) {
 		if _, ok := want[name]; !ok {
 			t.Errorf("%s (%s) is not covered by this test", name, rule)
 		}
+	}
+}
+
+// Um recebível não some com o cliente (a chave estrangeira recusa, e o serviço recusa antes), mas apagar a organização
+// continua funcionando: o cliente e o recebível saem pela organização, na mesma instrução. Há um recebível por cliente
+// e período.
+func TestMigrate_ReceivableRules(t *testing.T) {
+	testutil.Truncate(t, testDB)
+	ctx := context.Background()
+
+	org := testClient.Organization.Create().SetName("Org").SaveX(ctx)
+	customer := testClient.Customer.Create().SetName("Cliente").SetOrganizationID(org.ID).SaveX(ctx)
+	receivable := func(start, end string) error {
+		_, err := testClient.Receivable.Create().
+			SetOrganizationID(org.ID).SetCustomerID(customer.ID).SetKind("hourly").
+			SetPeriodStart(start).SetPeriodEnd(end).SetSeconds(3600).
+			SetCalculatedCents(10000).SetAmountCents(10000).SetCurrency("BRL").SetDueDate(end).
+			Save(ctx)
+		return err
+	}
+
+	if err := receivable("2026-10-01", "2026-10-31"); err != nil {
+		t.Fatalf("first receivable: %v", err)
+	}
+	if err := receivable("2026-10-01", "2026-10-31"); err == nil {
+		t.Error("the database must refuse a second receivable for the same customer and period")
+	}
+	if err := receivable("2026-11-01", "2026-11-30"); err != nil {
+		t.Errorf("another period of the same customer must be allowed: %v", err)
+	}
+
+	if err := testClient.Customer.DeleteOneID(customer.ID).Exec(ctx); err == nil {
+		t.Error("the database must refuse to delete a customer that has receivables")
+	}
+	if n := testClient.Receivable.Query().CountX(ctx); n != 2 {
+		t.Errorf("the refused delete must keep the receivables, got %d, want 2", n)
+	}
+
+	if err := testClient.Organization.DeleteOneID(org.ID).Exec(ctx); err != nil {
+		t.Fatalf("deleting an organization whose customer has receivables: %v", err)
+	}
+	if n := testClient.Customer.Query().CountX(ctx); n != 0 {
+		t.Errorf("deleting the organization must delete its customers, %d left", n)
+	}
+	if n := testClient.Receivable.Query().CountX(ctx); n != 0 {
+		t.Errorf("deleting the organization must delete its receivables, %d left", n)
 	}
 }
 

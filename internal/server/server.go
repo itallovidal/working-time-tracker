@@ -27,6 +27,7 @@ import (
 	"working-time-tracker/internal/domain/project"
 	"working-time-tracker/internal/domain/projectaccess"
 	"working-time-tracker/internal/domain/projectinvite"
+	"working-time-tracker/internal/domain/receivable"
 	"working-time-tracker/internal/domain/task"
 	"working-time-tracker/internal/domain/team"
 	"working-time-tracker/internal/domain/work_session"
@@ -121,6 +122,7 @@ func Build(client *ent.Client, opts Options) (*App, error) {
 	integrationSvc := integration.NewService(integrationStore, opts.EncryptKey)
 	taskSvc := task.NewService(taskStore, membershipStore, integrationSvc)
 	workSessionSvc := work_session.NewService(sessionStore, taskStore, allocationStore)
+	receivableSvc := receivable.NewService(receivable.Deps{Store: receivable.NewStore(client)})
 	overviewSvc := overview.NewService(overview.Deps{
 		Projects:      projectSvc,
 		Collaborators: collaboratorSvc,
@@ -129,6 +131,9 @@ func Build(client *ent.Client, opts Options) (*App, error) {
 		Integrations:  integrationSvc,
 		Tasks:         taskStore,
 		People:        personSvc,
+		Orgs:          orgSvc,
+		Customers:     customerSvc,
+		Receivables:   receivableSvc,
 	})
 	paymentSvc := payment.NewService(payment.Deps{Orgs: orgSvc, People: personSvc, Sessions: workSessionSvc, Projects: projectSvc, Tasks: taskSvc, Payouts: payment.NewStore(client)})
 	authSvc := auth.NewService(authStore)
@@ -179,6 +184,7 @@ func Build(client *ent.Client, opts Options) (*App, error) {
 		Collaborator:  collaborator.NewHandler(collaboratorSvc),
 		Overview:      overview.NewHandler(overviewSvc),
 		Payment:       payment.NewHandler(paymentSvc),
+		Receivable:    receivable.NewHandler(receivableSvc),
 		Task:          task.NewHandler(taskSvc),
 		WorkSession:   work_session.NewHandler(workSessionSvc),
 		Integration:   integration.NewHandler(integrationSvc),

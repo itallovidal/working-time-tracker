@@ -91,6 +91,56 @@ func ContactPhone(v string) predicate.Customer {
 	return predicate.Customer(sql.FieldEQ(FieldContactPhone, v))
 }
 
+// BillingMode applies equality check predicate on the "billing_mode" field. It's identical to BillingModeEQ.
+func BillingMode(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldEQ(FieldBillingMode, v))
+}
+
+// DefaultRateCents applies equality check predicate on the "default_rate_cents" field. It's identical to DefaultRateCentsEQ.
+func DefaultRateCents(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldEQ(FieldDefaultRateCents, v))
+}
+
+// MonthlyFeeCents applies equality check predicate on the "monthly_fee_cents" field. It's identical to MonthlyFeeCentsEQ.
+func MonthlyFeeCents(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldEQ(FieldMonthlyFeeCents, v))
+}
+
+// ContractStart applies equality check predicate on the "contract_start" field. It's identical to ContractStartEQ.
+func ContractStart(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldEQ(FieldContractStart, v))
+}
+
+// ContractEnd applies equality check predicate on the "contract_end" field. It's identical to ContractEndEQ.
+func ContractEnd(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldEQ(FieldContractEnd, v))
+}
+
+// ClosingDay applies equality check predicate on the "closing_day" field. It's identical to ClosingDayEQ.
+func ClosingDay(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldEQ(FieldClosingDay, v))
+}
+
+// PaymentDays applies equality check predicate on the "payment_days" field. It's identical to PaymentDaysEQ.
+func PaymentDays(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldEQ(FieldPaymentDays, v))
+}
+
+// LateFeeBp applies equality check predicate on the "late_fee_bp" field. It's identical to LateFeeBpEQ.
+func LateFeeBp(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldEQ(FieldLateFeeBp, v))
+}
+
+// LateInterestBpMonth applies equality check predicate on the "late_interest_bp_month" field. It's identical to LateInterestBpMonthEQ.
+func LateInterestBpMonth(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldEQ(FieldLateInterestBpMonth, v))
+}
+
+// GraceDays applies equality check predicate on the "grace_days" field. It's identical to GraceDaysEQ.
+func GraceDays(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldEQ(FieldGraceDays, v))
+}
+
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.Customer {
 	return predicate.Customer(sql.FieldEQ(FieldCreatedAt, v))
@@ -546,6 +596,521 @@ func ContactPhoneContainsFold(v string) predicate.Customer {
 	return predicate.Customer(sql.FieldContainsFold(FieldContactPhone, v))
 }
 
+// BillingModeEQ applies the EQ predicate on the "billing_mode" field.
+func BillingModeEQ(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldEQ(FieldBillingMode, v))
+}
+
+// BillingModeNEQ applies the NEQ predicate on the "billing_mode" field.
+func BillingModeNEQ(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldNEQ(FieldBillingMode, v))
+}
+
+// BillingModeIn applies the In predicate on the "billing_mode" field.
+func BillingModeIn(vs ...string) predicate.Customer {
+	return predicate.Customer(sql.FieldIn(FieldBillingMode, vs...))
+}
+
+// BillingModeNotIn applies the NotIn predicate on the "billing_mode" field.
+func BillingModeNotIn(vs ...string) predicate.Customer {
+	return predicate.Customer(sql.FieldNotIn(FieldBillingMode, vs...))
+}
+
+// BillingModeGT applies the GT predicate on the "billing_mode" field.
+func BillingModeGT(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldGT(FieldBillingMode, v))
+}
+
+// BillingModeGTE applies the GTE predicate on the "billing_mode" field.
+func BillingModeGTE(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldGTE(FieldBillingMode, v))
+}
+
+// BillingModeLT applies the LT predicate on the "billing_mode" field.
+func BillingModeLT(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldLT(FieldBillingMode, v))
+}
+
+// BillingModeLTE applies the LTE predicate on the "billing_mode" field.
+func BillingModeLTE(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldLTE(FieldBillingMode, v))
+}
+
+// BillingModeContains applies the Contains predicate on the "billing_mode" field.
+func BillingModeContains(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldContains(FieldBillingMode, v))
+}
+
+// BillingModeHasPrefix applies the HasPrefix predicate on the "billing_mode" field.
+func BillingModeHasPrefix(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldHasPrefix(FieldBillingMode, v))
+}
+
+// BillingModeHasSuffix applies the HasSuffix predicate on the "billing_mode" field.
+func BillingModeHasSuffix(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldHasSuffix(FieldBillingMode, v))
+}
+
+// BillingModeEqualFold applies the EqualFold predicate on the "billing_mode" field.
+func BillingModeEqualFold(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldEqualFold(FieldBillingMode, v))
+}
+
+// BillingModeContainsFold applies the ContainsFold predicate on the "billing_mode" field.
+func BillingModeContainsFold(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldContainsFold(FieldBillingMode, v))
+}
+
+// DefaultRateCentsEQ applies the EQ predicate on the "default_rate_cents" field.
+func DefaultRateCentsEQ(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldEQ(FieldDefaultRateCents, v))
+}
+
+// DefaultRateCentsNEQ applies the NEQ predicate on the "default_rate_cents" field.
+func DefaultRateCentsNEQ(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldNEQ(FieldDefaultRateCents, v))
+}
+
+// DefaultRateCentsIn applies the In predicate on the "default_rate_cents" field.
+func DefaultRateCentsIn(vs ...int) predicate.Customer {
+	return predicate.Customer(sql.FieldIn(FieldDefaultRateCents, vs...))
+}
+
+// DefaultRateCentsNotIn applies the NotIn predicate on the "default_rate_cents" field.
+func DefaultRateCentsNotIn(vs ...int) predicate.Customer {
+	return predicate.Customer(sql.FieldNotIn(FieldDefaultRateCents, vs...))
+}
+
+// DefaultRateCentsGT applies the GT predicate on the "default_rate_cents" field.
+func DefaultRateCentsGT(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldGT(FieldDefaultRateCents, v))
+}
+
+// DefaultRateCentsGTE applies the GTE predicate on the "default_rate_cents" field.
+func DefaultRateCentsGTE(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldGTE(FieldDefaultRateCents, v))
+}
+
+// DefaultRateCentsLT applies the LT predicate on the "default_rate_cents" field.
+func DefaultRateCentsLT(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldLT(FieldDefaultRateCents, v))
+}
+
+// DefaultRateCentsLTE applies the LTE predicate on the "default_rate_cents" field.
+func DefaultRateCentsLTE(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldLTE(FieldDefaultRateCents, v))
+}
+
+// DefaultRateCentsIsNil applies the IsNil predicate on the "default_rate_cents" field.
+func DefaultRateCentsIsNil() predicate.Customer {
+	return predicate.Customer(sql.FieldIsNull(FieldDefaultRateCents))
+}
+
+// DefaultRateCentsNotNil applies the NotNil predicate on the "default_rate_cents" field.
+func DefaultRateCentsNotNil() predicate.Customer {
+	return predicate.Customer(sql.FieldNotNull(FieldDefaultRateCents))
+}
+
+// MonthlyFeeCentsEQ applies the EQ predicate on the "monthly_fee_cents" field.
+func MonthlyFeeCentsEQ(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldEQ(FieldMonthlyFeeCents, v))
+}
+
+// MonthlyFeeCentsNEQ applies the NEQ predicate on the "monthly_fee_cents" field.
+func MonthlyFeeCentsNEQ(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldNEQ(FieldMonthlyFeeCents, v))
+}
+
+// MonthlyFeeCentsIn applies the In predicate on the "monthly_fee_cents" field.
+func MonthlyFeeCentsIn(vs ...int) predicate.Customer {
+	return predicate.Customer(sql.FieldIn(FieldMonthlyFeeCents, vs...))
+}
+
+// MonthlyFeeCentsNotIn applies the NotIn predicate on the "monthly_fee_cents" field.
+func MonthlyFeeCentsNotIn(vs ...int) predicate.Customer {
+	return predicate.Customer(sql.FieldNotIn(FieldMonthlyFeeCents, vs...))
+}
+
+// MonthlyFeeCentsGT applies the GT predicate on the "monthly_fee_cents" field.
+func MonthlyFeeCentsGT(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldGT(FieldMonthlyFeeCents, v))
+}
+
+// MonthlyFeeCentsGTE applies the GTE predicate on the "monthly_fee_cents" field.
+func MonthlyFeeCentsGTE(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldGTE(FieldMonthlyFeeCents, v))
+}
+
+// MonthlyFeeCentsLT applies the LT predicate on the "monthly_fee_cents" field.
+func MonthlyFeeCentsLT(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldLT(FieldMonthlyFeeCents, v))
+}
+
+// MonthlyFeeCentsLTE applies the LTE predicate on the "monthly_fee_cents" field.
+func MonthlyFeeCentsLTE(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldLTE(FieldMonthlyFeeCents, v))
+}
+
+// MonthlyFeeCentsIsNil applies the IsNil predicate on the "monthly_fee_cents" field.
+func MonthlyFeeCentsIsNil() predicate.Customer {
+	return predicate.Customer(sql.FieldIsNull(FieldMonthlyFeeCents))
+}
+
+// MonthlyFeeCentsNotNil applies the NotNil predicate on the "monthly_fee_cents" field.
+func MonthlyFeeCentsNotNil() predicate.Customer {
+	return predicate.Customer(sql.FieldNotNull(FieldMonthlyFeeCents))
+}
+
+// ContractStartEQ applies the EQ predicate on the "contract_start" field.
+func ContractStartEQ(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldEQ(FieldContractStart, v))
+}
+
+// ContractStartNEQ applies the NEQ predicate on the "contract_start" field.
+func ContractStartNEQ(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldNEQ(FieldContractStart, v))
+}
+
+// ContractStartIn applies the In predicate on the "contract_start" field.
+func ContractStartIn(vs ...string) predicate.Customer {
+	return predicate.Customer(sql.FieldIn(FieldContractStart, vs...))
+}
+
+// ContractStartNotIn applies the NotIn predicate on the "contract_start" field.
+func ContractStartNotIn(vs ...string) predicate.Customer {
+	return predicate.Customer(sql.FieldNotIn(FieldContractStart, vs...))
+}
+
+// ContractStartGT applies the GT predicate on the "contract_start" field.
+func ContractStartGT(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldGT(FieldContractStart, v))
+}
+
+// ContractStartGTE applies the GTE predicate on the "contract_start" field.
+func ContractStartGTE(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldGTE(FieldContractStart, v))
+}
+
+// ContractStartLT applies the LT predicate on the "contract_start" field.
+func ContractStartLT(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldLT(FieldContractStart, v))
+}
+
+// ContractStartLTE applies the LTE predicate on the "contract_start" field.
+func ContractStartLTE(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldLTE(FieldContractStart, v))
+}
+
+// ContractStartContains applies the Contains predicate on the "contract_start" field.
+func ContractStartContains(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldContains(FieldContractStart, v))
+}
+
+// ContractStartHasPrefix applies the HasPrefix predicate on the "contract_start" field.
+func ContractStartHasPrefix(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldHasPrefix(FieldContractStart, v))
+}
+
+// ContractStartHasSuffix applies the HasSuffix predicate on the "contract_start" field.
+func ContractStartHasSuffix(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldHasSuffix(FieldContractStart, v))
+}
+
+// ContractStartIsNil applies the IsNil predicate on the "contract_start" field.
+func ContractStartIsNil() predicate.Customer {
+	return predicate.Customer(sql.FieldIsNull(FieldContractStart))
+}
+
+// ContractStartNotNil applies the NotNil predicate on the "contract_start" field.
+func ContractStartNotNil() predicate.Customer {
+	return predicate.Customer(sql.FieldNotNull(FieldContractStart))
+}
+
+// ContractStartEqualFold applies the EqualFold predicate on the "contract_start" field.
+func ContractStartEqualFold(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldEqualFold(FieldContractStart, v))
+}
+
+// ContractStartContainsFold applies the ContainsFold predicate on the "contract_start" field.
+func ContractStartContainsFold(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldContainsFold(FieldContractStart, v))
+}
+
+// ContractEndEQ applies the EQ predicate on the "contract_end" field.
+func ContractEndEQ(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldEQ(FieldContractEnd, v))
+}
+
+// ContractEndNEQ applies the NEQ predicate on the "contract_end" field.
+func ContractEndNEQ(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldNEQ(FieldContractEnd, v))
+}
+
+// ContractEndIn applies the In predicate on the "contract_end" field.
+func ContractEndIn(vs ...string) predicate.Customer {
+	return predicate.Customer(sql.FieldIn(FieldContractEnd, vs...))
+}
+
+// ContractEndNotIn applies the NotIn predicate on the "contract_end" field.
+func ContractEndNotIn(vs ...string) predicate.Customer {
+	return predicate.Customer(sql.FieldNotIn(FieldContractEnd, vs...))
+}
+
+// ContractEndGT applies the GT predicate on the "contract_end" field.
+func ContractEndGT(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldGT(FieldContractEnd, v))
+}
+
+// ContractEndGTE applies the GTE predicate on the "contract_end" field.
+func ContractEndGTE(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldGTE(FieldContractEnd, v))
+}
+
+// ContractEndLT applies the LT predicate on the "contract_end" field.
+func ContractEndLT(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldLT(FieldContractEnd, v))
+}
+
+// ContractEndLTE applies the LTE predicate on the "contract_end" field.
+func ContractEndLTE(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldLTE(FieldContractEnd, v))
+}
+
+// ContractEndContains applies the Contains predicate on the "contract_end" field.
+func ContractEndContains(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldContains(FieldContractEnd, v))
+}
+
+// ContractEndHasPrefix applies the HasPrefix predicate on the "contract_end" field.
+func ContractEndHasPrefix(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldHasPrefix(FieldContractEnd, v))
+}
+
+// ContractEndHasSuffix applies the HasSuffix predicate on the "contract_end" field.
+func ContractEndHasSuffix(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldHasSuffix(FieldContractEnd, v))
+}
+
+// ContractEndIsNil applies the IsNil predicate on the "contract_end" field.
+func ContractEndIsNil() predicate.Customer {
+	return predicate.Customer(sql.FieldIsNull(FieldContractEnd))
+}
+
+// ContractEndNotNil applies the NotNil predicate on the "contract_end" field.
+func ContractEndNotNil() predicate.Customer {
+	return predicate.Customer(sql.FieldNotNull(FieldContractEnd))
+}
+
+// ContractEndEqualFold applies the EqualFold predicate on the "contract_end" field.
+func ContractEndEqualFold(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldEqualFold(FieldContractEnd, v))
+}
+
+// ContractEndContainsFold applies the ContainsFold predicate on the "contract_end" field.
+func ContractEndContainsFold(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldContainsFold(FieldContractEnd, v))
+}
+
+// ClosingDayEQ applies the EQ predicate on the "closing_day" field.
+func ClosingDayEQ(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldEQ(FieldClosingDay, v))
+}
+
+// ClosingDayNEQ applies the NEQ predicate on the "closing_day" field.
+func ClosingDayNEQ(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldNEQ(FieldClosingDay, v))
+}
+
+// ClosingDayIn applies the In predicate on the "closing_day" field.
+func ClosingDayIn(vs ...int) predicate.Customer {
+	return predicate.Customer(sql.FieldIn(FieldClosingDay, vs...))
+}
+
+// ClosingDayNotIn applies the NotIn predicate on the "closing_day" field.
+func ClosingDayNotIn(vs ...int) predicate.Customer {
+	return predicate.Customer(sql.FieldNotIn(FieldClosingDay, vs...))
+}
+
+// ClosingDayGT applies the GT predicate on the "closing_day" field.
+func ClosingDayGT(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldGT(FieldClosingDay, v))
+}
+
+// ClosingDayGTE applies the GTE predicate on the "closing_day" field.
+func ClosingDayGTE(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldGTE(FieldClosingDay, v))
+}
+
+// ClosingDayLT applies the LT predicate on the "closing_day" field.
+func ClosingDayLT(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldLT(FieldClosingDay, v))
+}
+
+// ClosingDayLTE applies the LTE predicate on the "closing_day" field.
+func ClosingDayLTE(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldLTE(FieldClosingDay, v))
+}
+
+// PaymentDaysEQ applies the EQ predicate on the "payment_days" field.
+func PaymentDaysEQ(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldEQ(FieldPaymentDays, v))
+}
+
+// PaymentDaysNEQ applies the NEQ predicate on the "payment_days" field.
+func PaymentDaysNEQ(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldNEQ(FieldPaymentDays, v))
+}
+
+// PaymentDaysIn applies the In predicate on the "payment_days" field.
+func PaymentDaysIn(vs ...int) predicate.Customer {
+	return predicate.Customer(sql.FieldIn(FieldPaymentDays, vs...))
+}
+
+// PaymentDaysNotIn applies the NotIn predicate on the "payment_days" field.
+func PaymentDaysNotIn(vs ...int) predicate.Customer {
+	return predicate.Customer(sql.FieldNotIn(FieldPaymentDays, vs...))
+}
+
+// PaymentDaysGT applies the GT predicate on the "payment_days" field.
+func PaymentDaysGT(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldGT(FieldPaymentDays, v))
+}
+
+// PaymentDaysGTE applies the GTE predicate on the "payment_days" field.
+func PaymentDaysGTE(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldGTE(FieldPaymentDays, v))
+}
+
+// PaymentDaysLT applies the LT predicate on the "payment_days" field.
+func PaymentDaysLT(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldLT(FieldPaymentDays, v))
+}
+
+// PaymentDaysLTE applies the LTE predicate on the "payment_days" field.
+func PaymentDaysLTE(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldLTE(FieldPaymentDays, v))
+}
+
+// LateFeeBpEQ applies the EQ predicate on the "late_fee_bp" field.
+func LateFeeBpEQ(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldEQ(FieldLateFeeBp, v))
+}
+
+// LateFeeBpNEQ applies the NEQ predicate on the "late_fee_bp" field.
+func LateFeeBpNEQ(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldNEQ(FieldLateFeeBp, v))
+}
+
+// LateFeeBpIn applies the In predicate on the "late_fee_bp" field.
+func LateFeeBpIn(vs ...int) predicate.Customer {
+	return predicate.Customer(sql.FieldIn(FieldLateFeeBp, vs...))
+}
+
+// LateFeeBpNotIn applies the NotIn predicate on the "late_fee_bp" field.
+func LateFeeBpNotIn(vs ...int) predicate.Customer {
+	return predicate.Customer(sql.FieldNotIn(FieldLateFeeBp, vs...))
+}
+
+// LateFeeBpGT applies the GT predicate on the "late_fee_bp" field.
+func LateFeeBpGT(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldGT(FieldLateFeeBp, v))
+}
+
+// LateFeeBpGTE applies the GTE predicate on the "late_fee_bp" field.
+func LateFeeBpGTE(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldGTE(FieldLateFeeBp, v))
+}
+
+// LateFeeBpLT applies the LT predicate on the "late_fee_bp" field.
+func LateFeeBpLT(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldLT(FieldLateFeeBp, v))
+}
+
+// LateFeeBpLTE applies the LTE predicate on the "late_fee_bp" field.
+func LateFeeBpLTE(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldLTE(FieldLateFeeBp, v))
+}
+
+// LateInterestBpMonthEQ applies the EQ predicate on the "late_interest_bp_month" field.
+func LateInterestBpMonthEQ(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldEQ(FieldLateInterestBpMonth, v))
+}
+
+// LateInterestBpMonthNEQ applies the NEQ predicate on the "late_interest_bp_month" field.
+func LateInterestBpMonthNEQ(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldNEQ(FieldLateInterestBpMonth, v))
+}
+
+// LateInterestBpMonthIn applies the In predicate on the "late_interest_bp_month" field.
+func LateInterestBpMonthIn(vs ...int) predicate.Customer {
+	return predicate.Customer(sql.FieldIn(FieldLateInterestBpMonth, vs...))
+}
+
+// LateInterestBpMonthNotIn applies the NotIn predicate on the "late_interest_bp_month" field.
+func LateInterestBpMonthNotIn(vs ...int) predicate.Customer {
+	return predicate.Customer(sql.FieldNotIn(FieldLateInterestBpMonth, vs...))
+}
+
+// LateInterestBpMonthGT applies the GT predicate on the "late_interest_bp_month" field.
+func LateInterestBpMonthGT(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldGT(FieldLateInterestBpMonth, v))
+}
+
+// LateInterestBpMonthGTE applies the GTE predicate on the "late_interest_bp_month" field.
+func LateInterestBpMonthGTE(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldGTE(FieldLateInterestBpMonth, v))
+}
+
+// LateInterestBpMonthLT applies the LT predicate on the "late_interest_bp_month" field.
+func LateInterestBpMonthLT(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldLT(FieldLateInterestBpMonth, v))
+}
+
+// LateInterestBpMonthLTE applies the LTE predicate on the "late_interest_bp_month" field.
+func LateInterestBpMonthLTE(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldLTE(FieldLateInterestBpMonth, v))
+}
+
+// GraceDaysEQ applies the EQ predicate on the "grace_days" field.
+func GraceDaysEQ(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldEQ(FieldGraceDays, v))
+}
+
+// GraceDaysNEQ applies the NEQ predicate on the "grace_days" field.
+func GraceDaysNEQ(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldNEQ(FieldGraceDays, v))
+}
+
+// GraceDaysIn applies the In predicate on the "grace_days" field.
+func GraceDaysIn(vs ...int) predicate.Customer {
+	return predicate.Customer(sql.FieldIn(FieldGraceDays, vs...))
+}
+
+// GraceDaysNotIn applies the NotIn predicate on the "grace_days" field.
+func GraceDaysNotIn(vs ...int) predicate.Customer {
+	return predicate.Customer(sql.FieldNotIn(FieldGraceDays, vs...))
+}
+
+// GraceDaysGT applies the GT predicate on the "grace_days" field.
+func GraceDaysGT(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldGT(FieldGraceDays, v))
+}
+
+// GraceDaysGTE applies the GTE predicate on the "grace_days" field.
+func GraceDaysGTE(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldGTE(FieldGraceDays, v))
+}
+
+// GraceDaysLT applies the LT predicate on the "grace_days" field.
+func GraceDaysLT(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldLT(FieldGraceDays, v))
+}
+
+// GraceDaysLTE applies the LTE predicate on the "grace_days" field.
+func GraceDaysLTE(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldLTE(FieldGraceDays, v))
+}
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.Customer {
 	return predicate.Customer(sql.FieldEQ(FieldCreatedAt, v))
@@ -624,6 +1189,29 @@ func HasProjects() predicate.Customer {
 func HasProjectsWith(preds ...predicate.Project) predicate.Customer {
 	return predicate.Customer(func(s *sql.Selector) {
 		step := newProjectsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasReceivables applies the HasEdge predicate on the "receivables" edge.
+func HasReceivables() predicate.Customer {
+	return predicate.Customer(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ReceivablesTable, ReceivablesColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasReceivablesWith applies the HasEdge predicate on the "receivables" edge with a given conditions (other predicates).
+func HasReceivablesWith(preds ...predicate.Receivable) predicate.Customer {
+	return predicate.Customer(func(s *sql.Selector) {
+		step := newReceivablesStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

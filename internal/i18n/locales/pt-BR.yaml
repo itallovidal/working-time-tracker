@@ -42,6 +42,7 @@ common:
 
 titles:
   payments: Pagamentos
+  receivables: A receber
   login: Entrar
   signup: Criar conta
   clerk_continue: Entrando
@@ -73,11 +74,18 @@ nav:
   people: Colaboradores
   customers: Clientes
   payments: Pagamentos
+  receivables: A receber
   settings: Configurações
   account_sr: "Sua conta:"
   profile: Perfil
   help: Ajuda
   logout: Sair
+
+# O modo solo: a organização é uma pessoa só (freelancer, PJ). O check aparece no cadastro e em Configurações.
+solo:
+  label: Trabalho sozinho(a)
+  hint: "Para quem atua como freelancer ou PJ: a organização é só você. Some o que é de equipe (Colaboradores, Pagamentos e convites) e entra o A receber, para acompanhar o que os clientes lhe devem."
+  settings_hint: "Só liga com você como a única pessoa e sem convites pendentes. Desligar não apaga nada: os clientes mensais e o que você tem a receber ficam guardados."
 
 home:
   stats:
@@ -179,6 +187,46 @@ home:
     tasks:
       one: "{{.count}} tarefa"
       other: "{{.count}} tarefas"
+
+  # A tela inicial do modo solo: horas, receita e receita projetada por janela de calendário e por cliente.
+  solo:
+    title: Visão geral
+    window: Janela
+    month: Este mês
+    last_month: Mês passado
+    year: Ano
+    scope: "De {{.from}} a {{.to}}"
+    loading: Carregando a visão geral…
+    cards:
+      hours: Horas
+      hours_hint: Todos os projetos, também os internos
+      received: Receita
+      received_hint: O que entrou no período, pela data do recebimento
+      projected: Receita projetada
+      projected_hint: O que se espera dos períodos que terminam aqui, pagos ou não
+      rate: Valor por hora efetivo
+      rate_hint: A receita projetada dividida pelas horas
+      rate_empty: Nenhuma hora neste período
+      rate_below: "Abaixo de {{.min}} por hora: confira os valores."
+    customers:
+      title: Por cliente
+      intro: As horas dos projetos de cada cliente, o que entrou e o que se espera receber, em ordem de nome.
+      internal: Sem cliente (internos)
+      internal_hint: Projetos sem cliente
+    col:
+      customer: Cliente
+      kind: Tipo
+      hours: Horas
+      received: Receita
+      projected: Projetada
+      rate: Valor por hora efetivo
+    kind:
+      hourly: Por hora
+      monthly: Mensal
+    rate_line: "{{.rate}} por hora"
+    empty:
+      title: Nada neste período
+      text: As horas, os recebimentos e os períodos a receber desta janela aparecem aqui.
 
 permissions:
   keys:
@@ -481,6 +529,111 @@ payments:
     rest: "O período já teve baixa: este é o restante, as horas registradas depois dela."
     confirm: Confirmar baixa
 
+receivable:
+  refresh: Atualizar
+  loading: Carregando as contas a receber…
+  intro: "O que cobrar de cada cliente, o que já foi confirmado e o que entrou. O período fecha à meia-noite ({{.tz}})."
+  cards:
+    to_confirm: A confirmar
+    to_confirm_hint:
+      one: "{{.count}} período para confirmar"
+      other: "{{.count}} períodos para confirmar"
+    open: Em aberto
+    open_hint:
+      one: "{{.count}} conta confirmada"
+      other: "{{.count}} contas confirmadas"
+    late: Atrasado
+    late_hint:
+      one: "{{.count}} conta passou do vencimento"
+      other: "{{.count}} contas passaram do vencimento"
+    late_none: Nada atrasado
+    received_month: Recebido no mês
+    received_month_hint:
+      one: "{{.count}} recebimento"
+      other: "{{.count}} recebimentos"
+  to_confirm:
+    title: A confirmar
+    empty: Nada para confirmar.
+    empty_text: "Os períodos fechados com horas dos clientes por hora e os meses dos contratos mensais aparecem aqui."
+  open:
+    title: Em aberto
+    empty: Nenhuma conta em aberto.
+  received:
+    title: Recebidos
+    empty: Nenhum recebimento ainda.
+    note: "Os recebimentos mais recentes."
+  col:
+    customer: Cliente
+    period: Período
+    hours: Horas
+    amount: Valor
+    due: Vencimento
+    received_on: Recebido em
+    received: Recebido
+  kind:
+    hourly: Por hora
+    monthly: Mensal
+  running: em andamento
+  late:
+    one: "{{.count}} dia de atraso"
+    other: "{{.count}} dias de atraso"
+  late_badge: Atrasado
+  below_min: "Valor por hora efetivo abaixo de {{.min}}: confira o valor."
+  rate_line: "{{.rate}} por hora"
+  calculated_line: "calculado {{.amount}}"
+  invoice_line: "Nota {{.number}}"
+  fee_line: "multa {{.amount}}"
+  interest_line: "juros {{.amount}}"
+  actions:
+    confirm: Confirmar
+    receive: Receber
+    edit: Editar
+    undo: Desfazer
+    undo_confirm: Desfazer confirmação
+    undo_receive: Desfazer recebimento
+    undo_confirm_ask: Desfazer a confirmação?
+    undo_receive_ask: Desfazer o recebimento?
+  toast:
+    confirmed: "Confirmado: {{.name}}."
+    updated: "Alterado: {{.name}}."
+    received: "Recebimento registrado: {{.name}}."
+    unconfirmed: Confirmação desfeita.
+    unreceived: Recebimento desfeito.
+  modal:
+    confirm_title: "Confirmar · {{.name}}"
+    edit_title: "Editar · {{.name}}"
+    receive_title: "Receber · {{.name}}"
+    period: Período
+    hours: Horas
+    calculated: Valor calculado
+    amount_label: "Valor a cobrar ({{.unit}})"
+    amount_hint: Vem com o valor calculado. Mude se vai cobrar outro valor.
+    rate: "Valor por hora efetivo: {{.rate}}"
+    rate_below: "Valor por hora efetivo: {{.rate}}, abaixo do piso de {{.min}}. Confira o valor."
+    due_label: Vencimento
+    due_hint: O fim do período mais os dias de prazo do cliente. Mude se combinou outra data.
+    invoice_label: Número da nota
+    invoice_hint: O sistema não emite a nota. Guarde aqui o número da que você emitiu.
+    note_label: Observação
+    open_period: "O período ainda não fechou. O valor é a mensalidade, e você pode corrigi-lo (o primeiro mês parcial, por exemplo)."
+    confirm: Confirmar
+    save: Salvar
+    received_on_label: Data do recebimento
+    received_on_hint: Vem com hoje. Mude se o dinheiro entrou em outro dia.
+    received_label: "Valor recebido ({{.unit}})"
+    received_hint_hourly: No cliente por hora entra o valor confirmado.
+    received_hint_monthly: Livre, pode ser mais ou menos que o confirmado. Vem com o valor confirmado.
+    fee_label: "Multa ({{.unit}})"
+    interest_label: "Juros ({{.unit}})"
+    charges_hint: A multa e os juros já estão dentro do valor recebido. Em branco, ficam zerados.
+    suggestion:
+      one: "{{.count}} dia depois do vencimento: multa {{.fee}} e juros {{.interest}}, um total de {{.total}}."
+      other: "{{.count}} dias depois do vencimento: multa {{.fee}} e juros {{.interest}}, um total de {{.total}}."
+    suggestion_none: Nesta data não há multa nem juros.
+    suggestion_apply: Usar a sugestão
+    suggestion_loading: Calculando a sugestão…
+    receive: Registrar recebimento
+
 profile:
   eyebrow: Seu perfil
   title_other: Perfil do colaborador
@@ -626,6 +779,14 @@ help:
       mine: "Só o dono tem esta página: cada pessoa vê os próprios pagamentos no perfil dela (o menu da conta › “Perfil”)."
       rule: "O dono define a regra em Colaboradores, no lápis da linha (ou no “Editar” do perfil da pessoa), na aba “Pagamento”: mensal (um dia fixo do mês; em meses mais curtos paga no último dia) ou quinzenal (a partir de uma data de início, de 15 em 15 dias, paga no último dia de cada período). Trocar a regra recalcula onde os períodos passados caem."
       team: "A equipe: o que pagar (atrasados incluídos), o que fecha em 7 e 30 dias, as horas da equipe e quem está sem regra. “Próximos pagamentos” segue a data do pagamento, e não as horas; “Pagos recentemente” mostra as baixas dos últimos 30 dias. Clique numa linha para abrir o perfil da pessoa, com o histórico e o detalhe por projeto. O dono não é pago e não aparece nas tabelas."
+    receivables:
+      title: A receber
+      text: "O item “A receber” da barra superior, só para o dono de uma organização no modo solo: o que cobrar de cada cliente e o que já entrou. Cada conta a receber é de um cliente e de um período: o app propõe, e você confirma."
+      cards: "No alto, quatro cartões: o que há para confirmar, o que está em aberto, o que está atrasado (confirmado, sem receber e depois do vencimento) e o que entrou no mês."
+      confirm: "“A confirmar” lista as propostas. No cliente por hora, o período aparece depois de fechar, com as horas dos projetos dele vezes o valor cobrado de cada um; no mensal, é a mensalidade, do começo do contrato até o mês seguinte, e dá para confirmar a qualquer hora. “Confirmar” abre o valor, o vencimento, o número da nota e uma observação, e você ajusta o que for preciso."
+      receive: "“Em aberto” é o que foi confirmado e ainda não entrou. “Receber” registra o dia e o valor. No cliente por hora entra o valor confirmado; no mensal o valor é livre, e o app sugere a multa e os juros quando o pagamento passa do vencimento mais a tolerância do contrato."
+      undo: "“Recebidos” lista o que entrou. Dá para desfazer o recebimento e, depois, a confirmação: o período volta a ser uma proposta."
+      invoice: "O app não emite nota: o número dela é só uma anotação. Um valor por hora efetivo abaixo de 10,00 aparece como aviso, nunca como erro."
     org_about:
       title: Configurações
       text: "O item “Configurações” da barra superior. É o perfil da organização: descrição, país, contato, dados da empresa e como o time trabalha (regime, fuso e moeda). Todo mundo lê. Campo vazio aparece como “Não informado”."
@@ -724,6 +885,13 @@ help:
       org_perms: "As páginas seguem o papel: Clientes e Pagamentos são só do dono, Colaboradores é do dono e dos admins, e o botão “Novo projeto” também (o admin cria só projeto interno)."
       money: "Os valores pagos aos colegas só aparecem para quem cuida do projeto, e o faturamento e os pagamentos, só para o dono. Cada pessoa sempre vê o próprio valor."
       missing: "Se uma página, uma aba ou um botão não aparece para você, falta permissão: peça a um administrador."
+    solo:
+      title: Trabalho sozinho(a)
+      text: "O modo solo é para quem atua sozinho, como freelancer ou PJ: a organização é uma pessoa só, e o que é de equipe some em vez de ficar sobrando nos menus."
+      choose: "Marque “Trabalho sozinho(a)” ao criar a organização ou depois, em Configurações › Editar. Só o dono muda, e só liga com você como a única pessoa e sem convites pendentes."
+      hides: "O menu perde Colaboradores e Pagamentos e ganha “A receber”; o projeto perde a aba Colaboradores, e ninguém é convidado. Desligar o modo não apaga nada: tudo o que ficou escondido volta."
+      billing: "Cada cliente é cobrado por hora (as horas dos projetos vezes o valor cobrado de cada um) ou por contrato mensal (um valor fixo por mês, e os projetos dele não têm valor por hora), nunca pelos dois. Escolha em Clientes: depois que o cliente tem projetos, o modo não muda."
+      home: "O Início mostra as horas, a receita (o dinheiro que entrou) e a receita projetada (o que se espera receber, pago ou não), por cliente."
     integrations:
       title: Integrações com GitHub e Trello
       text: "Opcional. Liga o projeto a um repositório do GitHub ou a um quadro do Trello, para que as tarefas andem junto com as issues e os cartões."
@@ -890,6 +1058,44 @@ org:
     rate_too_high: O valor cobrado por hora deve ficar entre 0 e 1.000.000,00.
     created: Projeto criado.
   
+customer:
+  billing:
+    title: Cobrança
+    column: Cobrança
+    mode: Modo de cobrança
+    hourly: Por hora
+    monthly: Mensal
+    mode_hint: "Por hora: as horas dos projetos vezes o valor cobrado de cada projeto. Mensal: um valor fixo por mês, o contrato."
+    mode_locked: O modo não muda porque o cliente já tem projetos.
+    default_rate: "Valor por hora padrão ({{.unit}})"
+    default_rate_hint: Preenche o valor cobrado ao criar um projeto deste cliente. Cada projeto guarda o seu.
+    monthly_fee: "Mensalidade ({{.unit}})"
+    contract_start: Início do contrato
+    contract_end: Fim do contrato
+    contract_end_hint: Sem data, o contrato segue por tempo indeterminado.
+    closing_day: Dia de fechamento
+    closing_day_hint: O dia do mês em que o período fecha. 31 é o último dia de cada mês.
+    payment_days: Prazo de pagamento (dias)
+    payment_days_hint: Os dias entre o fechamento e o vencimento.
+    late_title: Multa, juros e tolerância
+    late_hint: Contam só depois do vencimento mais a tolerância, e aparecem como sugestão ao registrar o recebimento.
+    late_fee: Multa por atraso (%)
+    late_interest: Juros ao mês (%)
+    grace_days: Tolerância (dias)
+    cell_hourly: Por hora
+    cell_hourly_rate: "Por hora · {{.rate}}"
+    cell_monthly: "Mensal · {{.fee}}"
+    cell_contract_from: "Contrato desde {{.start}}"
+    cell_contract_range: "Contrato de {{.start}} a {{.end}}"
+    cell_closing_last: Fecha no último dia
+    cell_closing_day: "Fecha no dia {{.day}}"
+    cell_due_closing: vence no fechamento
+    cell_due_days:
+      one: "vence {{.count}} dia depois"
+      other: "vence {{.count}} dias depois"
+    project_monthly_note: "Este cliente é cobrado por mês, então o projeto não tem valor por hora. As horas continuam sendo contadas."
+    project_rate_default: "Preenchido com o valor padrão do cliente. O projeto guarda o próprio valor: mudar aqui não altera o cliente."
+    project_rate_monthly: "Não se aplica: cobrança mensal"
 project:
   head:
     projects: Projetos
@@ -1604,6 +1810,21 @@ errors:
     name_required: "informe o nome do cliente"
     name_too_long: "o nome do cliente pode ter até 120 caracteres"
     not_found: "cliente não encontrado"
+    invalid_billing_mode: "modo de cobrança inválido: use hourly (por hora) ou monthly (mensal)"
+    monthly_needs_solo: "a cobrança mensal só vale no modo Trabalho sozinho(a): ligue-o nas configurações da organização"
+    mode_locked: "este cliente já tem projetos: o modo de cobrança não pode mais mudar"
+    has_receivables: "este cliente tem contas a receber; desfaça-as na página A receber antes de excluir"
+    closing_day_locked: "este cliente já tem contas a receber: o dia de fechamento não pode mais mudar"
+    field_hourly_only: "{{.field}} só vale em um cliente cobrado por hora"
+    field_monthly_only: "{{.field}} só vale em um cliente com cobrança mensal"
+    invalid_default_rate: "o valor por hora padrão deve ficar entre 10,00 e 1.000.000,00"
+    invalid_monthly_fee: "a mensalidade deve ficar entre 0,01 e 1.000.000,00"
+    invalid_contract_end: "o fim do contrato deve ser depois do início"
+    invalid_closing_day: "o dia de fechamento deve ficar entre 1 e 31"
+    invalid_payment_days: "o prazo de pagamento deve ficar entre 0 e 365 dias"
+    invalid_late_fee: "a multa deve ficar entre 0% e 100%"
+    invalid_late_interest: "os juros ao mês devem ficar entre 0% e 100%"
+    invalid_grace_days: "a tolerância deve ficar entre 0 e 365 dias"
   integration:
     disabled: "a integração está desativada"
     field_not_text: "o campo \"{{.field}}\" do {{.provider}} precisa ser um texto"
@@ -1684,8 +1905,11 @@ errors:
     invalid_work_mode: "regime de trabalho inválido: use remote, hybrid ou onsite"
     name_required: "informe o nome"
     not_found: "organização não encontrada"
+    solo_needs_single_person: "o modo solo só liga com uma única pessoa na organização e nenhum convite pendente"
+    solo_no_invites: "uma organização no modo solo não convida ninguém: desligue o modo solo para convidar"
   overview:
     invalid_task_state: "estado de tarefa inválido (state): use open ou closed"
+    invalid_window: "janela inválida (window): use month, last_month ou year"
   payment:
     own_only: "você só pode ver os seus pagamentos, ou os de qualquer pessoa se for admin"
     invalid_history: "o histórico deve ser um número inteiro de períodos, maior que zero"
@@ -1716,6 +1940,8 @@ errors:
     invalid_bill_rate: "o valor cobrado por hora deve ficar entre 10,00 e 1.000.000,00"
     bill_rate_required: "informe o valor cobrado por hora: um projeto com cliente precisa dele"
     bill_rate_needs_customer: "o valor cobrado só vale em um projeto com cliente: escolha o cliente do projeto antes"
+    bill_rate_not_allowed: "este cliente é cobrado por mês: o projeto dele não tem valor cobrado por hora"
+    customer_locked: "este projeto tem horas e o cliente dele já tem contas a receber: trocar o cliente cobraria as mesmas horas de novo"
     invalid_daily_time: "o horário da daily deve estar no formato HH:MM, por exemplo 09:30"
     invalid_organization: "organização inválida"
     invalid_sprint: "a sprint precisa ter entre 1 e 90 dias"
@@ -1731,6 +1957,20 @@ errors:
     invalid_per_page: "tamanho de página inválido (per_page): use um número a partir de 1"
   projectinvite:
     team_not_in_project: "o time não é deste projeto"
+  receivable:
+    not_found: "recebível não encontrado"
+    not_a_period: "as datas não formam um período deste cliente: confira o dia de fechamento dele e, no contrato mensal, o início e o fim"
+    period_open: "este período ainda não fechou: o cliente por hora só se confirma depois do fechamento"
+    already_confirmed: "este período já foi confirmado"
+    already_received: "este recebível já foi recebido: desfaça o recebimento antes"
+    changed: "este recebível foi editado enquanto você o recebia: confira os valores e tente de novo"
+    not_received: "este recebível ainda não foi recebido"
+    invalid_amount: "informe um valor maior que zero, até 1.000.000,00"
+    invalid_charge: "a multa e os juros devem ser zero ou mais, até 1.000.000,00"
+    charges_not_allowed: "multa e juros só valem no contrato mensal"
+    received_must_match: "no cliente por hora, o valor recebido é o confirmado"
+    charges_exceed_received: "a multa e os juros fazem parte do valor recebido e não podem passar dele"
+    received_in_future: "a data do recebimento não pode ser depois de hoje"
   request:
     body_too_large: "corpo grande demais: o limite é 1 MiB"
     field_required: "informe {{.field}}"
@@ -1822,8 +2062,29 @@ fields:
   ein: "o EIN"
   customer_id: "o cliente"
   bill_rate_cents: "o valor cobrado por hora"
+  billing_mode: "o modo de cobrança"
+  default_rate_cents: "o valor por hora padrão"
+  monthly_fee_cents: "a mensalidade"
+  contract_start: "o início do contrato"
+  contract_end: "o fim do contrato"
+  closing_day: "o dia de fechamento"
+  payment_days: "o prazo de pagamento"
+  late_fee_bp: "a multa por atraso"
+  late_interest_bp_month: "os juros ao mês"
+  grace_days: "a tolerância"
   amount_cents: "o valor pago"
   bonus_cents: "o bônus"
+  period_start: "o início do período"
+  period_end: "o fim do período"
+  due_date: "o vencimento"
+  invoice_number: "o número da nota"
+  note: "a observação"
+  received_on: "a data do recebimento"
+  received_cents: "o valor recebido"
+  late_fee_cents: "a multa"
+  interest_cents: "os juros"
+  on: "a data"
+  window: "a janela"
   pay_rate_cents: "o valor por hora"
   sprint_duration_days: "a duração da sprint"
   daily_time: "o horário da daily"
@@ -1857,6 +2118,7 @@ fields:
   timezone: "o fuso horário"
   currency: "a moeda"
   work_mode: "o modo de trabalho"
+  solo: "o modo solo"
   type: "o tipo"
   payment: "a regra de pagamento"
   permissions: "as permissões"

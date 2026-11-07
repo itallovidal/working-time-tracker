@@ -12,6 +12,7 @@ import (
 	"working-time-tracker/ent/person"
 	"working-time-tracker/ent/predicate"
 	"working-time-tracker/ent/project"
+	"working-time-tracker/ent/receivable"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -308,6 +309,20 @@ func (_u *OrganizationUpdate) SetNillableCurrency(v *string) *OrganizationUpdate
 	return _u
 }
 
+// SetSolo sets the "solo" field.
+func (_u *OrganizationUpdate) SetSolo(v bool) *OrganizationUpdate {
+	_u.mutation.SetSolo(v)
+	return _u
+}
+
+// SetNillableSolo sets the "solo" field if the given value is not nil.
+func (_u *OrganizationUpdate) SetNillableSolo(v *bool) *OrganizationUpdate {
+	if v != nil {
+		_u.SetSolo(*v)
+	}
+	return _u
+}
+
 // AddPersonIDs adds the "persons" edge to the Person entity by IDs.
 func (_u *OrganizationUpdate) AddPersonIDs(ids ...uuid.UUID) *OrganizationUpdate {
 	_u.mutation.AddPersonIDs(ids...)
@@ -366,6 +381,21 @@ func (_u *OrganizationUpdate) AddInvites(v ...*Invite) *OrganizationUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.AddInviteIDs(ids...)
+}
+
+// AddReceivableIDs adds the "receivables" edge to the Receivable entity by IDs.
+func (_u *OrganizationUpdate) AddReceivableIDs(ids ...uuid.UUID) *OrganizationUpdate {
+	_u.mutation.AddReceivableIDs(ids...)
+	return _u
+}
+
+// AddReceivables adds the "receivables" edges to the Receivable entity.
+func (_u *OrganizationUpdate) AddReceivables(v ...*Receivable) *OrganizationUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddReceivableIDs(ids...)
 }
 
 // Mutation returns the OrganizationMutation object of the builder.
@@ -455,6 +485,27 @@ func (_u *OrganizationUpdate) RemoveInvites(v ...*Invite) *OrganizationUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveInviteIDs(ids...)
+}
+
+// ClearReceivables clears all "receivables" edges to the Receivable entity.
+func (_u *OrganizationUpdate) ClearReceivables() *OrganizationUpdate {
+	_u.mutation.ClearReceivables()
+	return _u
+}
+
+// RemoveReceivableIDs removes the "receivables" edge to Receivable entities by IDs.
+func (_u *OrganizationUpdate) RemoveReceivableIDs(ids ...uuid.UUID) *OrganizationUpdate {
+	_u.mutation.RemoveReceivableIDs(ids...)
+	return _u
+}
+
+// RemoveReceivables removes "receivables" edges to Receivable entities.
+func (_u *OrganizationUpdate) RemoveReceivables(v ...*Receivable) *OrganizationUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveReceivableIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -570,6 +621,9 @@ func (_u *OrganizationUpdate) sqlSave(ctx context.Context) (_node int, err error
 	}
 	if value, ok := _u.mutation.Currency(); ok {
 		_spec.SetField(organization.FieldCurrency, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.Solo(); ok {
+		_spec.SetField(organization.FieldSolo, field.TypeBool, value)
 	}
 	if _u.mutation.PersonsCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -744,6 +798,51 @@ func (_u *OrganizationUpdate) sqlSave(ctx context.Context) (_node int, err error
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(invite.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ReceivablesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   organization.ReceivablesTable,
+			Columns: []string{organization.ReceivablesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(receivable.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedReceivablesIDs(); len(nodes) > 0 && !_u.mutation.ReceivablesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   organization.ReceivablesTable,
+			Columns: []string{organization.ReceivablesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(receivable.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ReceivablesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   organization.ReceivablesTable,
+			Columns: []string{organization.ReceivablesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(receivable.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1047,6 +1146,20 @@ func (_u *OrganizationUpdateOne) SetNillableCurrency(v *string) *OrganizationUpd
 	return _u
 }
 
+// SetSolo sets the "solo" field.
+func (_u *OrganizationUpdateOne) SetSolo(v bool) *OrganizationUpdateOne {
+	_u.mutation.SetSolo(v)
+	return _u
+}
+
+// SetNillableSolo sets the "solo" field if the given value is not nil.
+func (_u *OrganizationUpdateOne) SetNillableSolo(v *bool) *OrganizationUpdateOne {
+	if v != nil {
+		_u.SetSolo(*v)
+	}
+	return _u
+}
+
 // AddPersonIDs adds the "persons" edge to the Person entity by IDs.
 func (_u *OrganizationUpdateOne) AddPersonIDs(ids ...uuid.UUID) *OrganizationUpdateOne {
 	_u.mutation.AddPersonIDs(ids...)
@@ -1105,6 +1218,21 @@ func (_u *OrganizationUpdateOne) AddInvites(v ...*Invite) *OrganizationUpdateOne
 		ids[i] = v[i].ID
 	}
 	return _u.AddInviteIDs(ids...)
+}
+
+// AddReceivableIDs adds the "receivables" edge to the Receivable entity by IDs.
+func (_u *OrganizationUpdateOne) AddReceivableIDs(ids ...uuid.UUID) *OrganizationUpdateOne {
+	_u.mutation.AddReceivableIDs(ids...)
+	return _u
+}
+
+// AddReceivables adds the "receivables" edges to the Receivable entity.
+func (_u *OrganizationUpdateOne) AddReceivables(v ...*Receivable) *OrganizationUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddReceivableIDs(ids...)
 }
 
 // Mutation returns the OrganizationMutation object of the builder.
@@ -1194,6 +1322,27 @@ func (_u *OrganizationUpdateOne) RemoveInvites(v ...*Invite) *OrganizationUpdate
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveInviteIDs(ids...)
+}
+
+// ClearReceivables clears all "receivables" edges to the Receivable entity.
+func (_u *OrganizationUpdateOne) ClearReceivables() *OrganizationUpdateOne {
+	_u.mutation.ClearReceivables()
+	return _u
+}
+
+// RemoveReceivableIDs removes the "receivables" edge to Receivable entities by IDs.
+func (_u *OrganizationUpdateOne) RemoveReceivableIDs(ids ...uuid.UUID) *OrganizationUpdateOne {
+	_u.mutation.RemoveReceivableIDs(ids...)
+	return _u
+}
+
+// RemoveReceivables removes "receivables" edges to Receivable entities.
+func (_u *OrganizationUpdateOne) RemoveReceivables(v ...*Receivable) *OrganizationUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveReceivableIDs(ids...)
 }
 
 // Where appends a list predicates to the OrganizationUpdate builder.
@@ -1339,6 +1488,9 @@ func (_u *OrganizationUpdateOne) sqlSave(ctx context.Context) (_node *Organizati
 	}
 	if value, ok := _u.mutation.Currency(); ok {
 		_spec.SetField(organization.FieldCurrency, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.Solo(); ok {
+		_spec.SetField(organization.FieldSolo, field.TypeBool, value)
 	}
 	if _u.mutation.PersonsCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -1513,6 +1665,51 @@ func (_u *OrganizationUpdateOne) sqlSave(ctx context.Context) (_node *Organizati
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(invite.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ReceivablesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   organization.ReceivablesTable,
+			Columns: []string{organization.ReceivablesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(receivable.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedReceivablesIDs(); len(nodes) > 0 && !_u.mutation.ReceivablesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   organization.ReceivablesTable,
+			Columns: []string{organization.ReceivablesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(receivable.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ReceivablesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   organization.ReceivablesTable,
+			Columns: []string{organization.ReceivablesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(receivable.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

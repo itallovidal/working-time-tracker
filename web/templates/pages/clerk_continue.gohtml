@@ -55,6 +55,11 @@
           <input id="clerk-name" type="text" autocomplete="name" maxlength="{{limit "name"}}" data-field="name" x-model="name" @input="clearField('name')" :aria-invalid="fieldErrors.name ? 'true' : 'false'">
           {{template "field_error" "name"}}
         </div>
+        <div class="field">
+          <label class="toggle" for="clerk-solo"><input id="clerk-solo" type="checkbox" data-field="solo" x-model="solo" @change="clearField('solo')" aria-describedby="clerk-solo-hint"> {{.T "solo.label"}}</label>
+          <span id="clerk-solo-hint" class="hint">{{.T "solo.hint"}}</span>
+          {{template "field_error" "solo"}}
+        </div>
         <p class="form-error" x-cloak x-show="errors.choose" x-text="errors.choose" role="alert"></p>
         <button class="btn btn-block" :class="invites.length > 0 && 'btn-secondary'" type="submit" :disabled="pending">{{.T "auth.clerk.create_org"}}</button>
       </form>

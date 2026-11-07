@@ -35,6 +35,7 @@ type NewAccount struct {
 	ClerkUserID                 *string
 	Role                        string
 	IsOwner                     bool // só o signup cria o dono, junto com a organização
+	Solo                        bool // a organização nova já nasce no modo solo; não vale numa organização que já existe
 	SessionHash                 string
 	SessionExpires              time.Time
 	InviteID                    *uuid.UUID // convite a marcar como aceito na mesma transação
@@ -74,6 +75,7 @@ func (s *Store) CreateAccount(a NewAccount) (*Identity, error) {
 		if a.Country != "" {
 			create = create.SetCountry(a.Country).SetCurrency(a.Currency).SetTimezone(a.Timezone)
 		}
+		create = create.SetSolo(a.Solo)
 		org, err = create.Save(ctx)
 	} else {
 		org, err = tx.Organization.Get(ctx, *a.OrganizationID)
@@ -110,6 +112,19 @@ func (s *Store) CreateAccount(a NewAccount) (*Identity, error) {
 		return nil, err
 	}
 	return identityOf(p, org), nil
+}
+
+// OrganizationSolo diz se a organização está no modo solo. Uma organização que não existe não está: quem a usa falha
+// adiante, na gravação, como falhava antes do modo solo.
+func (s *Store) OrganizationSolo(orgID uuid.UUID) (bool, error) {
+	org, err := s.client.Organization.Get(context.Background(), orgID)
+	if ent.IsNotFound(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return org.Solo, nil
 }
 
 func (s *Store) EmailInUse(email string) (bool, error) {
@@ -316,6 +331,7 @@ func identityOf(p *ent.Person, org *ent.Organization) *Identity {
 	if org != nil {
 		id.OrganizationName = org.Name
 		id.OrganizationCurrency = org.Currency
+		id.OrganizationSolo = org.Solo
 	}
 	return id
 }

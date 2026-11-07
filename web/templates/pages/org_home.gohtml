@@ -1,6 +1,8 @@
 {{define "content"}}
 <main class="page" x-data="orgHome">
-  {{if .IsAdmin}}
+  {{/* No modo solo a visão geral é outra (partials/solo_home): horas, receita e receita projetada por janela de calendário
+       e por cliente. A organização com equipe fica com a visão geral de sempre, logo abaixo. */ -}}
+  {{if .IsAdmin}}{{if .Me.OrganizationSolo}}{{template "solo_home" .}}{{else}}
   {{/* Os números são só dos admins: são o dinheiro de todos os projetos e as horas de cada pessoa.
        Valem para a hora em "Atualizado às" e são relidos pelo botão. */}}
   <section class="stack" aria-labelledby="home-stats-title">
@@ -42,6 +44,8 @@
               <span class="kpi-hint" x-text="$t('home.stats.team_hint', { time: WTT.fmt.hours(current().seconds) })"></span>
             </div>
           </div>
+          {{/* No modo solo não há equipe para ver trabalhando: o cartão some. */}}
+          {{if not .Me.OrganizationSolo}}
           <div class="kpi hue-green">
             <span class="kpi-icon">{{template "icon" "circle-play"}}</span>
             <div class="kpi-body">
@@ -50,6 +54,7 @@
               <span class="kpi-hint" x-text="workingNames() || $t('home.stats.nobody_open')"></span>
             </div>
           </div>
+          {{end}}
           <div class="kpi hue-blue">
             <span class="kpi-icon">{{template "icon" "hand-holding-dollar"}}</span>
             <div class="kpi-body">
@@ -76,6 +81,8 @@
           </div>
         </div>
 
+        {{/* No modo solo (Me.OrganizationSolo) o bloco da Equipe não existe: a organização é uma pessoa só. */}}
+        {{if not .Me.OrganizationSolo}}
         {{/* A equipe: quem está com o ponto aberto agora e em que tarefa, quem trabalha agora primeiro e
              depois por nome. De propósito não há horas, barras nem ordem por tempo: veja partials/team_hours. */}}
         <section class="stack" aria-labelledby="home-team-title">
@@ -123,10 +130,11 @@
             </div>
           </nav>
         </section>
+        {{end}}
       </div>
     </template>
   </section>
-  {{end}}
+  {{end}}{{end}}
 
   {{/* O painel de quem abriu a página, para todos os papéis: as horas de hoje e da semana e as tarefas dela em todos os
        projetos. Os números vêm de /me/overview e a lista de /me/tasks; só o que é da própria pessoa. */}}

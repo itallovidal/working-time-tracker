@@ -2,7 +2,8 @@
      projetos com o valor por hora. Cada aba só existe para quem pode usá-la, e a faixa de abas só
      aparece com duas ou mais. Nada vai para o servidor antes de Salvar, e um Salvar só aplica o rascunho de todas
      as abas. Abre na lista de colaboradores e no perfil de um deles; fica no escopo do componente que o inclui,
-     que espalha personEditor() (org.js). */}}
+     que espalha personEditor() (org.js). No modo solo (Me.OrganizationSolo) não há jornada semanal nem regra de
+     pagamento: a aba delas não existe. */}}
 {{define "person_edit_modal"}}
 <template x-teleport="#modal-root">
   <form class="stack" novalidate x-show="$store.modal.name === 'person-edit'" @submit.prevent="savePerson()">
@@ -17,7 +18,7 @@
     <div class="segmented segmented-tabs" role="tablist" aria-label="{{.T "org.people.tabs_label"}}" x-cloak x-show="tabs.length > 1"
          @keydown.arrow-right.prevent="moveTab('next')" @keydown.arrow-left.prevent="moveTab('prev')"
          @keydown.home.prevent="moveTab('first')" @keydown.end.prevent="moveTab('last')">
-      {{if .Can "people.manage"}}
+      {{if and (not .Me.OrganizationSolo) (.Can "people.manage")}}
       <button type="button" role="tab" id="person-tab-payment" aria-controls="person-panel-payment" x-ref="tab-payment"
               :aria-selected="(tab === 'payment').toString()" :tabindex="tab === 'payment' ? 0 : -1"
               @click="tab = 'payment'">{{template "icon" "hand-holding-dollar"}} {{.T "org.people.tab_payment"}}</button>
@@ -29,7 +30,7 @@
       {{end}}
     </div>
 
-    {{if .Can "people.manage"}}
+    {{if and (not .Me.OrganizationSolo) (.Can "people.manage")}}
     <div class="field" id="person-panel-payment" role="tabpanel" aria-labelledby="person-tab-payment" x-show="tab === 'payment'">
       {{template "field_label" (dict "D" . "For" "person-weekly-hours" "Key" "org.people.weekly_hours_label" "Optional" true)}}
       <select id="person-weekly-hours" data-field="weekly_hours" x-model="draft.weekly_hours" @change="clearField('weekly_hours')" data-autofocus>

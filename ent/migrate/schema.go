@@ -55,6 +55,16 @@ var (
 		{Name: "contact_name", Type: field.TypeString, Nullable: true},
 		{Name: "contact_email", Type: field.TypeString, Nullable: true},
 		{Name: "contact_phone", Type: field.TypeString, Nullable: true},
+		{Name: "billing_mode", Type: field.TypeString, Default: "hourly"},
+		{Name: "default_rate_cents", Type: field.TypeInt, Nullable: true},
+		{Name: "monthly_fee_cents", Type: field.TypeInt, Nullable: true},
+		{Name: "contract_start", Type: field.TypeString, Nullable: true},
+		{Name: "contract_end", Type: field.TypeString, Nullable: true},
+		{Name: "closing_day", Type: field.TypeInt, Default: 31},
+		{Name: "payment_days", Type: field.TypeInt, Default: 0},
+		{Name: "late_fee_bp", Type: field.TypeInt, Default: 0},
+		{Name: "late_interest_bp_month", Type: field.TypeInt, Default: 0},
+		{Name: "grace_days", Type: field.TypeInt, Default: 0},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "organization_id", Type: field.TypeUUID},
 	}
@@ -66,7 +76,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "customers_organizations_customers",
-				Columns:    []*schema.Column{CustomersColumns[8]},
+				Columns:    []*schema.Column{CustomersColumns[18]},
 				RefColumns: []*schema.Column{OrganizationsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -248,6 +258,7 @@ var (
 		{Name: "work_mode", Type: field.TypeString, Nullable: true},
 		{Name: "timezone", Type: field.TypeString, Default: "America/Sao_Paulo"},
 		{Name: "currency", Type: field.TypeString, Default: "BRL"},
+		{Name: "solo", Type: field.TypeBool, Default: false},
 		{Name: "created_at", Type: field.TypeTime},
 	}
 	// OrganizationsTable holds the schema information for the "organizations" table.
@@ -372,6 +383,55 @@ var (
 				Columns:    []*schema.Column{ProjectsColumns[14]},
 				RefColumns: []*schema.Column{OrganizationsColumns[0]},
 				OnDelete:   schema.NoAction,
+			},
+		},
+	}
+	// ReceivablesColumns holds the columns for the "receivables" table.
+	ReceivablesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "kind", Type: field.TypeString},
+		{Name: "period_start", Type: field.TypeString},
+		{Name: "period_end", Type: field.TypeString},
+		{Name: "seconds", Type: field.TypeFloat64},
+		{Name: "calculated_cents", Type: field.TypeInt},
+		{Name: "amount_cents", Type: field.TypeInt},
+		{Name: "currency", Type: field.TypeString},
+		{Name: "due_date", Type: field.TypeString},
+		{Name: "invoice_number", Type: field.TypeString, Nullable: true},
+		{Name: "note", Type: field.TypeString, Nullable: true},
+		{Name: "confirmed_at", Type: field.TypeTime},
+		{Name: "received_on", Type: field.TypeString, Nullable: true},
+		{Name: "received_cents", Type: field.TypeInt, Nullable: true},
+		{Name: "late_fee_cents", Type: field.TypeInt, Default: 0},
+		{Name: "interest_cents", Type: field.TypeInt, Default: 0},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "customer_id", Type: field.TypeUUID},
+		{Name: "organization_id", Type: field.TypeUUID},
+	}
+	// ReceivablesTable holds the schema information for the "receivables" table.
+	ReceivablesTable = &schema.Table{
+		Name:       "receivables",
+		Columns:    ReceivablesColumns,
+		PrimaryKey: []*schema.Column{ReceivablesColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "receivables_customers_receivables",
+				Columns:    []*schema.Column{ReceivablesColumns[17]},
+				RefColumns: []*schema.Column{CustomersColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+			{
+				Symbol:     "receivables_organizations_receivables",
+				Columns:    []*schema.Column{ReceivablesColumns[18]},
+				RefColumns: []*schema.Column{OrganizationsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "receivable_customer_id_period_start_period_end",
+				Unique:  true,
+				Columns: []*schema.Column{ReceivablesColumns[17], ReceivablesColumns[2], ReceivablesColumns[3]},
 			},
 		},
 	}
@@ -604,6 +664,7 @@ var (
 		PayoutsTable,
 		PersonsTable,
 		ProjectsTable,
+		ReceivablesTable,
 		SessionsTable,
 		TasksTable,
 		TeamsTable,
@@ -630,6 +691,8 @@ func init() {
 	PersonsTable.ForeignKeys[0].RefTable = OrganizationsTable
 	ProjectsTable.ForeignKeys[0].RefTable = CustomersTable
 	ProjectsTable.ForeignKeys[1].RefTable = OrganizationsTable
+	ReceivablesTable.ForeignKeys[0].RefTable = CustomersTable
+	ReceivablesTable.ForeignKeys[1].RefTable = OrganizationsTable
 	SessionsTable.ForeignKeys[0].RefTable = PersonsTable
 	TasksTable.ForeignKeys[0].RefTable = PersonsTable
 	TasksTable.ForeignKeys[1].RefTable = ProjectsTable

@@ -186,8 +186,12 @@ func TabKeys(id string) []string {
 	return nil
 }
 
-// OpensTab diz se quem olha abre a aba da Gestão de nome id.
+// OpensTab diz se quem olha abre a aba da Gestão de nome id. Numa organização no modo solo a aba Colaboradores não
+// existe (a rota dela responde 404), por mais que a pessoa tenha as permissões dela.
 func (d Data) OpensTab(id string) bool {
+	if id == "teams" && d.Me != nil && d.Me.OrganizationSolo {
+		return false
+	}
 	return d.Access.HasAny(TabKeys(id)...)
 }
 

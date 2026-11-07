@@ -10,4 +10,6 @@ import (
 // em internal/i18n/locales, na chave errors.<código>.
 var (
 	ErrInvalidTaskState = apperr.New("overview.invalid_task_state", http.StatusBadRequest)
+	// ErrInvalidWindow é uma janela da tela inicial do modo solo que não é month, last_month nem year.
+	ErrInvalidWindow = apperr.New("overview.invalid_window", http.StatusBadRequest)
 )

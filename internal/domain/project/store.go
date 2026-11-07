@@ -8,8 +8,11 @@ import (
 	"working-time-tracker/ent"
 	entcustomer "working-time-tracker/ent/customer"
 	entorg "working-time-tracker/ent/organization"
+	"working-time-tracker/ent/predicate"
 	"working-time-tracker/ent/project"
+	entreceivable "working-time-tracker/ent/receivable"
 	enttask "working-time-tracker/ent/task"
+	entsession "working-time-tracker/ent/worksession"
 	"working-time-tracker/internal/database"
 	"working-time-tracker/internal/domain/projectaccess"
 )
@@ -156,7 +159,11 @@ func (s *Store) Billing(projectID uuid.UUID) (*Billing, error) {
 		}
 		return nil, err
 	}
-	return &Billing{Customer: customerRef(p), BillRateCents: p.BillRateCents}, nil
+	b := &Billing{Customer: customerRef(p), BillRateCents: p.BillRateCents}
+	if c := p.Edges.Customer; c != nil {
+		b.CustomerBillingMode = &c.BillingMode
+	}
+	return b, nil
 }
 
 // SetBilling grava o cliente e o valor cobrado como vieram: nil apaga.
@@ -180,21 +187,45 @@ func (s *Store) SetBilling(projectID uuid.UUID, customerID *uuid.UUID, billRateC
 	return err
 }
 
-// CustomerInProjectOrganization diz se o cliente existe e é da organização do projeto.
-func (s *Store) CustomerInProjectOrganization(customerID, projectID uuid.UUID) (bool, error) {
-	return s.client.Customer.Query().
-		Where(
-			entcustomer.IDEQ(customerID),
-			entcustomer.HasOrganizationWith(entorg.HasProjectsWith(project.IDEQ(projectID))),
-		).
-		Exist(context.Background())
+// HasBilledHistory diz se o projeto tem sessões e o cliente tem algum recebível, confirmado ou recebido. É quando tirar
+// o projeto do cliente refaria a atribuição das horas: elas passariam a entrar nas propostas do cliente novo, e o
+// recebível do antigo continuaria cobrando as mesmas.
+func (s *Store) HasBilledHistory(projectID, customerID uuid.UUID) (bool, error) {
+	ctx := context.Background()
+	has, err := s.client.Receivable.Query().
+		Where(entreceivable.CustomerIDEQ(customerID)).
+		Exist(ctx)
+	if err != nil || !has {
+		return false, err
+	}
+	return s.client.WorkSession.Query().
+		Where(entsession.ProjectIDEQ(projectID)).
+		Exist(ctx)
 }
 
-// CustomerInOrganization diz se o cliente existe e é da organização.
-func (s *Store) CustomerInOrganization(customerID, orgID uuid.UUID) (bool, error) {
-	return s.client.Customer.Query().
-		Where(entcustomer.IDEQ(customerID), entcustomer.OrganizationIDEQ(orgID)).
-		Exist(context.Background())
+// CustomerBillingModeOfProject devolve o modo de cobrança do cliente (hourly ou monthly) e se ele existe e é da
+// organização do projeto.
+func (s *Store) CustomerBillingModeOfProject(customerID, projectID uuid.UUID) (mode string, ok bool, err error) {
+	return s.billingMode(
+		entcustomer.IDEQ(customerID),
+		entcustomer.HasOrganizationWith(entorg.HasProjectsWith(project.IDEQ(projectID))),
+	)
+}
+
+// CustomerBillingMode devolve o modo de cobrança do cliente (hourly ou monthly) e se ele existe e é da organização.
+func (s *Store) CustomerBillingMode(customerID, orgID uuid.UUID) (mode string, ok bool, err error) {
+	return s.billingMode(entcustomer.IDEQ(customerID), entcustomer.OrganizationIDEQ(orgID))
+}
+
+func (s *Store) billingMode(where ...predicate.Customer) (string, bool, error) {
+	mode, err := s.client.Customer.Query().
+		Where(where...).
+		Select(entcustomer.FieldBillingMode).
+		String(context.Background())
+	if ent.IsNotFound(err) {
+		return "", false, nil
+	}
+	return mode, err == nil, err
 }
 
 // Update grava o projeto como está: um campo opcional nil é apagado no banco.

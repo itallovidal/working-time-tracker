@@ -8,6 +8,7 @@ import (
 	"working-time-tracker/ent"
 	entcustomer "working-time-tracker/ent/customer"
 	entorganization "working-time-tracker/ent/organization"
+	entreceivable "working-time-tracker/ent/receivable"
 	"working-time-tracker/internal/database"
 )
 
@@ -28,6 +29,16 @@ func (s *Store) Create(c *Customer) error {
 		SetContactName(c.ContactName).
 		SetContactEmail(c.ContactEmail).
 		SetContactPhone(c.ContactPhone).
+		SetBillingMode(c.BillingMode).
+		SetNillableDefaultRateCents(c.DefaultRateCents).
+		SetNillableMonthlyFeeCents(c.MonthlyFeeCents).
+		SetNillableContractStart(c.ContractStart).
+		SetNillableContractEnd(c.ContractEnd).
+		SetClosingDay(c.ClosingDay).
+		SetPaymentDays(c.PaymentDays).
+		SetLateFeeBp(c.LateFeeBP).
+		SetLateInterestBpMonth(c.LateInterestBPMonth).
+		SetGraceDays(c.GraceDays).
 		Save(context.Background())
 	if err != nil {
 		return err
@@ -76,15 +87,43 @@ func (s *Store) GetByID(id string) (*Customer, error) {
 	return toDomain(c), nil
 }
 
+// Update grava o cliente como está: um campo opcional nil é apagado no banco. Quem decide entre manter e apagar é o
+// service.
 func (s *Store) Update(c *Customer) error {
-	_, err := s.client.Customer.UpdateOneID(c.ID).
+	q := s.client.Customer.UpdateOneID(c.ID).
 		SetName(c.Name).
 		SetCountry(c.Country).
 		SetDocument(c.Document).
 		SetContactName(c.ContactName).
 		SetContactEmail(c.ContactEmail).
 		SetContactPhone(c.ContactPhone).
-		Save(context.Background())
+		SetBillingMode(c.BillingMode).
+		SetClosingDay(c.ClosingDay).
+		SetPaymentDays(c.PaymentDays).
+		SetLateFeeBp(c.LateFeeBP).
+		SetLateInterestBpMonth(c.LateInterestBPMonth).
+		SetGraceDays(c.GraceDays)
+	if c.DefaultRateCents != nil {
+		q = q.SetDefaultRateCents(*c.DefaultRateCents)
+	} else {
+		q = q.ClearDefaultRateCents()
+	}
+	if c.MonthlyFeeCents != nil {
+		q = q.SetMonthlyFeeCents(*c.MonthlyFeeCents)
+	} else {
+		q = q.ClearMonthlyFeeCents()
+	}
+	if c.ContractStart != nil {
+		q = q.SetContractStart(*c.ContractStart)
+	} else {
+		q = q.ClearContractStart()
+	}
+	if c.ContractEnd != nil {
+		q = q.SetContractEnd(*c.ContractEnd)
+	} else {
+		q = q.ClearContractEnd()
+	}
+	_, err := q.Save(context.Background())
 	return err
 }
 
@@ -99,6 +138,26 @@ func (s *Store) OrgCountry(orgID uuid.UUID) (string, error) {
 		return "", ErrInvalidOrganization
 	}
 	return code, err
+}
+
+// OrgSolo diz se a organização trabalha no modo solo, que é quando o cliente pode ser mensal. Organização que não
+// existe é ErrInvalidOrganization.
+func (s *Store) OrgSolo(orgID uuid.UUID) (bool, error) {
+	solo, err := s.client.Organization.Query().
+		Where(entorganization.IDEQ(orgID)).
+		Select(entorganization.FieldSolo).
+		Bool(context.Background())
+	if ent.IsNotFound(err) {
+		return false, ErrInvalidOrganization
+	}
+	return solo, err
+}
+
+// HasReceivables diz se o cliente tem algum recebível, confirmado ou recebido. Enquanto tiver, não pode ser excluído.
+func (s *Store) HasReceivables(id uuid.UUID) (bool, error) {
+	return s.client.Receivable.Query().
+		Where(entreceivable.CustomerIDEQ(id)).
+		Exist(context.Background())
 }
 
 func (s *Store) Delete(id uuid.UUID) error {
@@ -117,5 +176,16 @@ func toDomain(e *ent.Customer) *Customer {
 		ContactPhone:   e.ContactPhone,
 		ProjectCount:   len(e.Edges.Projects),
 		CreatedAt:      e.CreatedAt,
+
+		BillingMode:         e.BillingMode,
+		DefaultRateCents:    e.DefaultRateCents,
+		MonthlyFeeCents:     e.MonthlyFeeCents,
+		ContractStart:       e.ContractStart,
+		ContractEnd:         e.ContractEnd,
+		ClosingDay:          e.ClosingDay,
+		PaymentDays:         e.PaymentDays,
+		LateFeeBP:           e.LateFeeBp,
+		LateInterestBPMonth: e.LateInterestBpMonth,
+		GraceDays:           e.GraceDays,
 	}
 }

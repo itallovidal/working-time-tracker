@@ -79,7 +79,7 @@ As rotas são `POST /api/auth/clerk/login`, `/signup` (cria a organização, com
 | O usuário do Clerk já está ligado a uma pessoa | Entra |
 | Há uma conta com o mesmo e-mail verificado, **sem senha** | É ligada e entra |
 | Há uma conta com o mesmo e-mail, **com senha** | Pede a senha dela, uma vez, e só então liga. O cadastro por senha não verifica o e-mail: sem essa prova, quem cadastrou o e-mail de outra pessoa com uma senha dele ficaria com a conta |
-| Não há conta | Mostra os convites pendentes para o e-mail, para a pessoa escolher, ou pede o nome da organização para criar a dela. Nada é aceito sozinho, porque entrar numa organização não se desfaz |
+| Não há conta | Mostra os convites pendentes para o e-mail, para a pessoa escolher, ou pede o nome da organização para criar a dela (com a escolha de trabalhar sozinho, o [modo solo](../product/overview.md#modo-solo)). Nada é aceito sozinho, porque entrar numa organização não se desfaz |
 | A pessoa chegou pelo link de um convite (`invite_token`) | Entra direto na organização dele. Se o convite tem e-mail, o e-mail verificado do Clerk precisa ser o mesmo (`auth.invite_email_mismatch`) |
 | Quem já é de uma organização chega com o convite de outra | Recusa (`auth.account_exists`): o e-mail é de uma conta só |
 | A conta está ligada a outro usuário do Clerk que ainda existe | Recusa (`auth.clerk_account_linked`). Se esse usuário foi apagado, religa |

@@ -123,6 +123,13 @@
             </select>
           </div>
         </div>
+        {{/* O modo solo: só liga com uma pessoa e sem convites pendentes (o servidor confere e o erro sai aqui embaixo);
+             desligar sempre vale e não apaga nada. */}}
+        <div class="field">
+          <label class="toggle" for="org-solo"><input id="org-solo" type="checkbox" data-field="solo" x-model="form.solo" @change="clearField('solo')" aria-describedby="org-solo-hint"> {{.T "solo.label"}}</label>
+          <span id="org-solo-hint" class="hint">{{.T "solo.hint"}} {{.T "solo.settings_hint"}}</span>
+          {{template "field_error" "solo"}}
+        </div>
         <p class="muted small">{{.T "org.settings.hours_note"}}</p>
       </section>
 

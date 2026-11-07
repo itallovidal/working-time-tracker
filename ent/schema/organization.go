@@ -44,6 +44,11 @@ func (Organization) Fields() []ent.Field {
 		field.String("timezone").Default("America/Sao_Paulo"),
 		field.String("currency").Default("BRL"),
 
+		// O modo solo: uma pessoa só (freelancer, PJ) que cobra os clientes e acompanha o que tem a receber. Só liga com
+		// exatamente uma pessoa e nenhum convite pendente; desligar esconde as telas do modo, e os clientes mensais e os
+		// recebíveis ficam guardados. Quem decide é internal/domain/organization.
+		field.Bool("solo").Default(false),
+
 		field.Time("created_at").Default(time.Now).Immutable(),
 	}
 }
@@ -54,5 +59,6 @@ func (Organization) Edges() []ent.Edge {
 		edge.To("projects", Project.Type),
 		edge.To("customers", Customer.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("invites", Invite.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
+		edge.To("receivables", Receivable.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
 	}
 }

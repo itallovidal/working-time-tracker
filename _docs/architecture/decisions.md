@@ -17,7 +17,8 @@ integrar a plataformas externas (GitHub, GitLab, Trello) para ligar tarefas a it
 O público são equipes que trabalham por projeto e querem saber o tempo por tarefa, o andamento do projeto, os prazos
 e os itens ligados. O foco são empresas de desenvolvimento (software houses e consultorias) que atendem vários
 clientes e alocam pessoas em um ou mais projetos; o seed de demonstração é uma delas. O modelo continua genérico:
-nada no perfil da organização exige uma empresa de software.
+nada no perfil da organização exige uma empresa de software. Quem trabalha sozinho (freelancer, PJ) é um segundo
+público, atendido pelo modo solo (Decisão 20).
 
 ## Objetivos e não-objetivos
 
@@ -31,7 +32,8 @@ nada no perfil da organização exige uma empresa de software.
 - Modelar como a organização recebe e como paga: o cliente contrata um projeto por um valor por hora, e cada pessoa
   tem um valor pago por hora em cada projeto. Os admins veem e mudam todos os valores; o membro vê só o dele.
   **Hoje:** o dinheiro de cobrança (cliente, valor cobrado, receita, margem) e os pagamentos são do dono
-  (Decisão 17).
+  (Decisão 17). No modo solo o cliente também pode ser cobrado por um valor fixo por mês, e o dono acompanha o que
+  confirmou cobrar e o que já entrou (Decisão 20).
 - Uma API REST mínima para todo o cadastro e o ponto, por organização e projeto.
 - Uma interface web leve (HTML no servidor + Alpine.js) servida pelo próprio binário.
 
@@ -44,9 +46,11 @@ nada no perfil da organização exige uma empresa de software.
   (Decisão 17).
 - Folha de pagamento ou nota fiscal: o sistema guarda os valores por hora e mostra quanto vale cada sessão. A partir
   da regra de pagamento de cada pessoa ele calcula os períodos, mas não emite notas e não trata impostos (Decisão
-  15). **Hoje:** registra a baixa de cada período pago, com o valor e um bônus (Decisão 18).
+  15). **Hoje:** registra a baixa de cada período pago, com o valor e um bônus (Decisão 18). Também não emite nota
+  fiscal de cobrança: o recebível do modo solo guarda só o número da nota, que o dono anota (Decisão 20).
 - Projetos de preço fechado e histórico de valores com data de vigência: a cobrança é só por hora, e mudar um valor
-  vale a partir do próximo clock-in.
+  vale a partir do próximo clock-in. **Hoje:** o cliente do modo solo pode ser cobrado por contrato mensal, um valor
+  fixo por mês (Decisão 20). O projeto continua sem preço fechado, e o histórico de valores com vigência segue de fora.
 - Implantação em várias regiões ou com o banco particionado (um PostgreSQL só).
 
 ## Decisões
@@ -563,7 +567,8 @@ nem destaque por horas, e os testes travam a ordem.
 
 **Hoje:** a regra é definida e lida só pelo dono e pela própria pessoa; os pagamentos de uma pessoa são dela e do
 dono (um admin vê só as horas), e a visão da equipe é só do dono (Decisão 17). Os pagamentos de cada um ficam no
-perfil. Os períodos continuam calculados, mas o pagamento feito passou a ser registrado (Decisão 18).
+perfil. Os períodos continuam calculados, mas o pagamento feito passou a ser registrado (Decisão 18). A mesma conta
+de períodos mensais fecha o ciclo de cobrança dos clientes do modo solo (Decisão 20).
 
 ### Decisão 16: Validação — uma regra por campo, na tela e no servidor, com o erro embaixo do campo certo
 
@@ -586,7 +591,8 @@ por hora (pago ou cobrado) tem o piso de 10,00, zero é recusado menos para o do
 valor cobrado ou é interno sem os dois, nos dois sentidos.
 
 **Hoje:** o admin cria só projetos internos; criar com cliente ou valor cobrado é do dono (`auth.owner_only`), e só
-o dono é matriculado no projeto que cria (o admin já vê todos).
+o dono é matriculado no projeto que cria (o admin já vê todos). O projeto de um cliente cobrado por contrato mensal
+também não tem valor cobrado por hora (`project.bill_rate_not_allowed`, Decisão 20).
 
 ### Decisão 17: Cargos e dinheiro — o cargo dá as permissões da organização, e o dinheiro tem eixo próprio
 
@@ -666,6 +672,94 @@ os dois do processo. Plataformas que desligam o container sem tráfego param a s
 sobe num banco com uma migração que ela não conhece, então voltar uma versão por cima de uma migração não funciona: a
 saída é subir uma versão nova. O plano grátis do Supabase pausa depois de uma semana sem uso e não tem backup, que fica
 por conta do `pg_dump`. Ver [Deploy](../getting-started/deploy.md).
+
+### Decisão 20: Modo solo — uma pessoa só, cobrança por hora ou por contrato e contas a receber
+
+**Contexto:** o sistema foi feito para equipes. Quem atua sozinho (freelancer, PJ) abria uma organização com menus que
+não lhe servem (Colaboradores, Pagamentos, times, convites), cobrava alguns clientes por um valor fixo por mês, que o
+modelo não tinha onde guardar (o cliente era sempre "horas vezes o valor cobrado do projeto"), e não via o que já
+cobrou, o que está atrasado e o que entrou. A "receita" que o sistema mostrava era o tempo vezes o valor cobrado
+(Decisão 17), não dinheiro que entrou: para quem emite a própria nota, é a diferença entre trabalhar e receber.
+
+**Escolha:** três peças, que só valem para a organização marcada como solo (`organizations.solo`, `false` por padrão).
+O schema é a única coisa que existe para todos; uma organização com equipe segue exatamente como era.
+
+1. **O modo solo é uma marca da organização**, "Trabalho sozinho(a)", escolhida na etapa 1 do cadastro (e na volta do
+   Clerk) e em Configurações, e só o dono a muda. **Só liga com uma pessoa e sem convites pendentes**
+   (`409 organization.solo_needs_single_person`), e enquanto está ligado convidar responde
+   `409 organization.solo_no_invites`: é isso que mantém a regra verdadeira. Ele **esconde o que é de equipe, não
+   apaga**: o menu perde Colaboradores e Pagamentos e ganha A receber, as páginas de pessoas e pagamentos e as abas
+   Colaboradores e Times do projeto respondem `404` (a mesma resposta de uma página que não existe), a tela inicial
+   perde a Equipe e "Trabalhando agora", as boas-vindas perdem o convite e o modal da pessoa perde a jornada e a regra
+   de pagamento. Desligar sempre vale, e os clientes mensais e os recebíveis ficam guardados, como o documento do outro
+   país (Decisão 14). A API de pessoas e de pagamentos não muda.
+2. **O cliente é cobrado por hora ou por contrato mensal, nunca pelos dois** (`customers.billing_mode`). O por hora é o
+   de sempre, com um valor padrão que **só preenche** o campo do valor cobrado ao criar o projeto (uma cópia: o
+   projeto guarda o seu). O mensal tem a mensalidade, o início e o fim do contrato e, opcionais, a multa e os juros
+   ao mês (em pontos-base) e a tolerância. Os dois têm o dia de fechamento do período (1 a 31; 31 é o último dia do
+   mês) e o prazo de pagamento. Um campo do outro modo é recusado, o mensal só existe no modo solo, e a **troca de modo
+   é travada em cliente com projetos** (`409 customer.mode_locked`; issue #25). O **projeto de um cliente mensal não
+   tem valor por hora** (`project.bill_rate_not_allowed`): as sessões dele guardam o valor cobrado nulo e o ponto
+   funciona igual, com as horas e o custo contando.
+3. **O recebível (uma conta a receber por cliente e período) é proposto pelo sistema e confirmado pelo dono, e
+   guardado a partir daí** (`receivables`). O período e a proposta continuam **calculados** das sessões e do contrato,
+   com a conta mensal da regra de pagamento (Decisão 15); o que fica gravado é a confirmação, com as horas e o valor que
+   o sistema calculou naquele momento, o valor que o dono confirmou (que ele pode ajustar), o vencimento, a nota e
+   a observação, e depois o recebimento. É a mesma ideia da baixa (Decisão 18): o cálculo muda com as horas, a decisão do
+   dono não. **Por hora**, só se confirma depois que o período fecha, e o valor é o das horas. **Mensal** é flexível: a
+   qualquer momento, inclusive adiantado, com o valor recebido livre e a multa e os juros **sugeridos** (nunca cobrados
+   sozinhos) a partir do vencimento e da tolerância. O sistema **não emite nota**: o número dela é só uma anotação.
+   "Atrasado" é derivado (confirmado, sem recebimento, com hoje depois do vencimento), e o dono desfaz o recebimento e
+   a confirmação. Só o dono gerencia (`receivables.manage`).
+
+**Receita e Receita projetada.** Na tela inicial do modo solo, **Receita é o dinheiro que entrou**, por data de
+recebimento, e **Receita projetada** soma o que se espera dos períodos da janela, **pago ou não**: o valor do recebível
+quando ele existe, senão a proposta (no por hora, com as horas até agora; no mensal, a mensalidade). O **valor por hora
+efetivo** é a receita projetada dividida pelas horas da janela. Valem só para o solo: a "receita" das visões gerais de
+organização e de projeto continua sendo o tempo vezes o valor cobrado, e a margem também. Um valor por hora efetivo
+abaixo de 10,00 (`validate.MinRateCents`) é um aviso, nunca um erro: no mensal as horas só ficam completas quando o
+período fecha.
+
+**Motivo:** o dono pediu que quem trabalha sozinho pudesse cobrar por contrato e saber o que tem a receber, sem criar
+um segundo produto. A organização de uma pessoa só já é o modelo (dona, projetos, clientes, ponto), e o que muda é o que
+se esconde e o que se acrescenta. Marcar o modo, em vez de deduzi-lo, deixa a escolha com o dono: quem tem uma pessoa hoje
+pode convidar amanhã sem perder o menu por conta própria. Propor e confirmar, em vez de gerar sozinho, evita cobrar um
+período errado e guarda o que de fato foi combinado. O banco estava vazio quando isto entrou, então não houve
+migração de dados nem backfill.
+
+**Alternativas descartadas:**
+- Um tipo de conta pessoal, à parte da organização: duplicaria o cadastro, o login, os convites e as permissões para
+  atender uma organização com uma pessoa.
+- Esconder as telas de equipe sempre que há uma pessoa só, sem marca: não diz se o dono quer o modo, esconderia o menu
+  de quem ainda vai convidar e não teria onde ligar o contrato mensal.
+- Apagar os clientes mensais e os recebíveis ao desligar o modo: perderia o que o dono registrou. Esconde, não apaga.
+- Responder `403` nas páginas escondidas: revelaria que elas existem. Respondem `404`, como os recursos de outra
+  organização.
+- Cobrar o cliente por hora e por contrato ao mesmo tempo (mensalidade com franquia de horas e excedente): dois
+  números por cliente e uma regra de excedente que ninguém pediu. Um ou outro, e a franquia fica para depois.
+- Gerar os recebíveis de todos os períodos sozinho: o sistema cobraria períodos que o dono não confirmou, e uma hora
+  registrada depois reescreveria uma cobrança já feita.
+- Calcular o primeiro mês parcial do contrato (pro-rata): o dono corrige o valor ao confirmar.
+- Emitir a nota fiscal: é um produto à parte, com impostos e integração com a prefeitura. O sistema guarda o número.
+- Converter a moeda: o recebível guarda a moeda da organização na confirmação, sem conversão.
+- Trocar o modo de cobrança de um cliente que já tem projetos: as sessões antigas guardam valores de um modo que o outro
+  não entende (issue #25).
+- Levar o contrato mensal e o A receber às organizações com equipe: exige decidir quem os vê e como se divide o que
+  entra entre os projetos (issue #24). Por ora a rota, a página e o modo mensal respondem `404` ou `400` fora do solo.
+- Chamar de "receita" o tempo vezes o valor cobrado também no solo: o que o freelancer quer saber é o que entrou.
+
+**Consequências:** os períodos são calculados do cadastro do cliente de hoje, e a sessão não guarda o cliente (vale o do
+projeto de hoje). Dois caminhos cobrariam as mesmas horas duas vezes e por isso são recusados com `409`: trocar o dia de
+fechamento de um cliente que já tem recebíveis (`customer.closing_day_locked`), porque os períodos novos cairiam por
+cima dos confirmados, e tirar do cliente um projeto com sessões quando o cliente já tem recebíveis
+(`project.customer_locked`). Ambos destravam quando os recebíveis são desfeitos; guardar o cliente em cada sessão, como
+o valor por hora, resolveria o segundo sem a trava, mas pede uma migração com preenchimento sobre dados reais e fica
+para depois. O recebimento grava só se o valor confirmado ainda é o que foi lido (`receivable.changed`), para uma
+edição em outra aba não ser recebida às cegas. Excluir um cliente com recebíveis é recusado (`customer.has_receivables`):
+a chave estrangeira do cliente não apaga em cascata, e apagar a organização leva tudo. Ficam para depois as contas a
+pagar, o Resultado (o que entrou menos as despesas), os impostos, a franquia de horas, a conversão de moeda e a emissão
+de nota. As regras de hoje estão em [overview.md](../product/overview.md#modo-solo),
+[money.md](../product/money.md#termos-comerciais-modo-solo) e [permissions.md](../product/permissions.md#modo-solo).
 
 ## Riscos e trade-offs
 

@@ -1,7 +1,9 @@
 {{/* As boas-vindas do primeiro acesso: um modal em quatro etapas que abre na página inicial do dono que acabou de criar
      a organização (o servidor só inclui este parcial enquanto Me.NeedsOnboarding). Etapa 1, os dados mais importantes
      da organização; 2, o primeiro cliente; 3, o primeiro convite; 4, onde ajustar cada coisa e a documentação. Cada
-     uma das três primeiras pode ser pulada. O estado e as chamadas estão em onboarding, em pages/org.js. */}}
+     uma das três primeiras pode ser pulada. No modo solo (Me.OrganizationSolo) não há convite: o modal tem três etapas
+     (organização, primeiro cliente e fim), e a etapa 3 não existe; o fim segue sendo a "4" por dentro (veja next() em
+     onboarding, em pages/org.js). O estado e as chamadas estão lá. */}}
 {{define "onboarding"}}
 <div x-data="onboarding" hidden>
   <template x-teleport="#modal-root">
@@ -9,8 +11,10 @@
       <ol class="wizard-steps" aria-label="{{.T "onboarding.steps_label"}}">
         <li :class="step === 1 && 'current'" :aria-current="step === 1 ? 'step' : false"><span class="n">1</span> {{.T "onboarding.step_org"}}</li>
         <li :class="step === 2 && 'current'" :aria-current="step === 2 ? 'step' : false"><span class="n">2</span> {{.T "onboarding.step_customers"}}</li>
+        {{if not .Me.OrganizationSolo}}
         <li :class="step === 3 && 'current'" :aria-current="step === 3 ? 'step' : false"><span class="n">3</span> {{.T "onboarding.step_people"}}</li>
-        <li :class="step === 4 && 'current'" :aria-current="step === 4 ? 'step' : false"><span class="n">4</span> {{.T "onboarding.step_done"}}</li>
+        {{end}}
+        <li :class="step === 4 && 'current'" :aria-current="step === 4 ? 'step' : false"><span class="n">{{if .Me.OrganizationSolo}}3{{else}}4{{end}}</span> {{.T "onboarding.step_done"}}</li>
       </ol>
 
       {{/* Etapa 1: a organização. Só o que mais importa; o resto fica na edição, em Organização › Sobre. */}}
@@ -81,6 +85,7 @@
         </div>
       </form>
 
+      {{if not .Me.OrganizationSolo}}
       {{/* Etapa 3: o primeiro convite. Igual ao modal da aba Colaboradores: com o Clerk e um e-mail, o convite sai por
            e-mail; sem e-mail, ou sem o Clerk, é um link para copiar, que só aparece agora. */}}
       <form class="stack" novalidate x-cloak x-show="step === 3" @submit.prevent="createInvite()">
@@ -131,6 +136,7 @@
           </div>
         </div>
       </form>
+      {{end}}
 
       {{/* Etapa 4: onde ajustar cada coisa, o que ficou para depois e a documentação. */}}
       <div class="stack" x-cloak x-show="step === 4">
@@ -150,6 +156,7 @@
               <span class="badge" :class="saved.customer ? 'badge-ok' : ''" x-text="saved.customer ? $t('onboarding.done.saved') : $t('onboarding.done.pending')"></span>
             </a>
           </li>
+          {{if not .Me.OrganizationSolo}}
           <li>
             <a class="onboarding-link" href="/orgs/{{.OrgID}}/people">
               <span class="onboarding-ico" aria-hidden="true">{{template "icon" "users"}}</span>
@@ -157,6 +164,7 @@
               <span class="badge" :class="invited > 0 ? 'badge-ok' : ''" x-text="invited > 0 ? $t('onboarding.done.invited', { count: invited }) : $t('onboarding.done.pending')"></span>
             </a>
           </li>
+          {{end}}
           <li>
             <a class="onboarding-link" href="/orgs/{{.OrgID}}/projects">
               <span class="onboarding-ico" aria-hidden="true">{{template "icon" "diagram-project"}}</span>

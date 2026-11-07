@@ -1,7 +1,8 @@
 # Working Time Tracker
 
 Ponto por tarefa para equipes que trabalham por projeto. Foi pensado para software houses e consultorias, que atendem
-vários clientes e alocam as pessoas em um ou mais projetos, mas o modelo não depende disso.
+vários clientes e alocam as pessoas em um ou mais projetos, mas o modelo não depende disso. Quem trabalha sozinho
+(freelancer, PJ) tem o modo solo.
 
 A pessoa faz **clock-in** numa tarefa e **clock-out** quando para, e o sistema soma o tempo por tarefa, por pessoa e por
 projeto e o transforma em custo, receita e margem. As tarefas podem andar sincronizadas com issues do GitHub e cartões
@@ -24,6 +25,7 @@ flowchart LR
 - **Organização, projetos e times.** O projeto tem um cliente, ou é interno. A pessoa entra no projeto com o valor por hora dela, e os times só organizam quem está nele.
 - **Quatro cargos.** Dono, admin, administrador de projeto e colaborador. O dinheiro (clientes, cobrança e pagamentos) é só do dono.
 - **Dinheiro.** Valor pago por pessoa em cada projeto, valor cobrado do cliente, margem e regra de pagamento mensal ou quinzenal. Tudo é calculado a partir das sessões.
+- **Modo solo.** Para quem trabalha sozinho (freelancer, PJ): a organização é uma pessoa só e perde o que é de equipe. Cada cliente é cobrado por hora ou por contrato mensal, e o dono confirma e acompanha o que tem a receber, com a multa e os juros sugeridos no contrato mensal.
 - **Painéis.** Cada pessoa tem o seu painel. A gestão tem a visão geral da organização e de cada projeto, além de saber quem está trabalhando agora e em quê.
 - **Integrações.** Issues do GitHub e cartões do Trello sincronizados com as tarefas nos dois sentidos, e a mesma tarefa pode estar nas duas plataformas. O GitLab está "em breve".
 - **Entrada e convites.** E-mail e senha, ou Google pelo Clerk. Os convites vão por link ou por e-mail.
@@ -45,13 +47,15 @@ num banco à parte, `make migrate-new name=<nome>` cria uma migração. O que ca
 [Comandos](_docs/development/commands.md), e o passo a passo sem o `make` em [Instalação](_docs/getting-started/installation.md).
 
 Abra **http://localhost:1243**. O seed cria a **Jatobá Software**, uma software house com doze pessoas, seis clientes e
-oito projetos. A senha de todas as contas é `demo12345`:
+oito projetos, e a **Marina Duarte Design**, uma organização no modo solo, com um cliente por hora e um por contrato
+mensal. A senha de todas as contas é `demo12345`:
 
 | Cargo | E-mail |
 |---|---|
 | Dona | `ana@example.com` |
 | Admin | `helena@example.com` |
 | Colaborador | `bruno`, `carla`, `diego`, `elisa`, `fabio`, `gabriela`, `henrique`, `isabela`, `joao` ou `larissa`, seguidos de `@example.com` |
+| Dona do modo solo (Marina Duarte Design) | `marina@example.com` |
 
 Sem o seed, clique em **Crie uma organização** na tela de login. A porta ocupada, as variáveis de ambiente e o que mais
 o seed cria estão em [Instalação](_docs/getting-started/installation.md) e [Configuração](_docs/getting-started/configuration.md).
@@ -71,7 +75,7 @@ make test
 | | [Configuração](_docs/getting-started/configuration.md) | Todas as variáveis de ambiente |
 | | [Deploy](_docs/getting-started/deploy.md) | A imagem Docker, o banco no Supabase e o servidor no Render, no Railway ou no Fly.io |
 | Produto | [Visão geral](_docs/product/overview.md) | Conceitos, organização, projetos e pessoas, tarefas, ponto e painéis |
-| | [Dinheiro](_docs/product/money.md) | Clientes, valores por hora, margem e pagamentos |
+| | [Dinheiro](_docs/product/money.md) | Clientes e os termos de cobrança, valores por hora, margem, pagamentos e as contas a receber do modo solo |
 | | [Permissões](_docs/product/permissions.md) | Os cargos, os grupos do projeto e o que cada um pode |
 | Integrações | [Visão geral](_docs/integrations/overview.md) | O modelo comum, a sincronização e como criar um tipo novo |
 | | [GitHub](_docs/integrations/github.md) · [Trello](_docs/integrations/trello.md) · [GitLab](_docs/integrations/gitlab.md) | Como conectar e as regras de cada plataforma |

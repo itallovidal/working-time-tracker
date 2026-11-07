@@ -66,6 +66,7 @@ vínculos com itens externos), `work_session` (o ponto) e `integration`. Alguns 
 | `collaborator` | Não tem tabela: junta o valor por hora e os times de quem está no projeto |
 | `overview` | Não tem tabela nem store: lê os services dos outros domínios e monta as visões gerais (do projeto, da organização e o painel da pessoa) |
 | `payment` | Não tem tabela: calcula os períodos de pagamento a partir das sessões e da regra de cada pessoa |
+| `receivable` | As contas a receber do modo solo (`receivables`): calcula os períodos e as propostas de cada cliente, do modo de cobrança dele (reaproveita a conta de períodos do `payment`), e guarda só a confirmação e o recebimento. As rotas valem só no modo solo |
 | `permission` | O catálogo de permissões e grupos (`catalog.go`) e a rota que o entrega à tela |
 | `projectaccess` | Predicados do Ent que dizem quem está num projeto (`PersonIn`, `ProjectsOf`, `Has`, `ColleaguesOf`) |
 | `projectinvite` | O convite que já leva a pessoa a um projeto, e quem a põe nele quando o convite é aceito (`Applier`) |

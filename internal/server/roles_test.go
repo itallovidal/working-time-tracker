@@ -45,6 +45,17 @@ func TestRoles_Matrix(t *testing.T) {
 		// A baixa é só do dono: ele passa da porta e esbarra no corpo vazio (400) ou na baixa que não existe (404).
 		{"mark a payment as paid", "POST", org + "/payouts", `{}`, [4]int{400, 403, 403, 403}},
 		{"undo a payment", "DELETE", org + "/payouts/00000000-0000-0000-0000-000000000000", "", [4]int{404, 403, 403, 403}},
+		// O A receber é do dono e do modo solo: o dono passa da permissão e esbarra no 404 de quem não trabalha sozinho; os
+		// outros ficam na permissão (403), antes do 404. O dono do modo solo está em receivables_test.go.
+		{"the receivables", "GET", org + "/receivables", "", [4]int{404, 403, 403, 403}},
+		{"confirm a receivable", "POST", org + "/receivables", `{}`, [4]int{404, 403, 403, 403}},
+		{"edit a receivable", "PATCH", org + "/receivables/00000000-0000-0000-0000-000000000000", `{}`, [4]int{404, 403, 403, 403}},
+		{"undo a receivable", "DELETE", org + "/receivables/00000000-0000-0000-0000-000000000000", "", [4]int{404, 403, 403, 403}},
+		{"the late charges of a receivable", "GET", org + "/receivables/00000000-0000-0000-0000-000000000000/late-charges", "", [4]int{404, 403, 403, 403}},
+		{"receive a receivable", "POST", org + "/receivables/00000000-0000-0000-0000-000000000000/receive", `{}`, [4]int{404, 403, 403, 403}},
+		{"undo the receipt of a receivable", "DELETE", org + "/receivables/00000000-0000-0000-0000-000000000000/receive", "", [4]int{404, 403, 403, 403}},
+		// A tela inicial do modo solo tem as mesmas regras do A receber: do dono e do modo solo.
+		{"the solo home overview", "GET", org + "/solo/overview", "", [4]int{404, 403, 403, 403}},
 		{"the organization overview", "GET", org + "/overview", "", [4]int{ok, ok, 403, 403}},
 		{"set the weekly hours", "PATCH", "/api/persons/" + plain.id + "/weekly-hours", `{"weekly_hours":30}`, [4]int{ok, ok, 403, 403}},
 		{"set a payment rule", "PATCH", "/api/persons/" + plain.id + "/payment", `{"frequency":"monthly","day":5}`, [4]int{ok, 403, 403, 403}},
@@ -117,6 +128,7 @@ func TestRoles_Pages(t *testing.T) {
 	}{
 		{"settings (edit the organization)", home + "/settings", [4]int{200, 404, 404, 404}},
 		{"the team payments", home + "/payments", [4]int{200, 404, 404, 404}},
+		{"the receivables (the owner of an organization that is not solo)", home + "/receivables", [4]int{404, 404, 404, 404}},
 		{"customers", home + "/customers", [4]int{200, 404, 404, 404}},
 		{"collaborators", home + "/people", [4]int{200, 200, 404, 404}},
 		{"a collaborator's profile", home + "/people/" + plain.id, [4]int{200, 200, 404, 404}},

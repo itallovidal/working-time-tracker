@@ -12,3 +12,6 @@
 
 # Os dumps do `make backup`: têm os dados do banco de produção
 /backups/
+
+# Config local dos servidores MCP (Supabase): fica só na máquina de quem usa
+/.mcp.json

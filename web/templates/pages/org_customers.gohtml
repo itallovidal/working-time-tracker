@@ -23,7 +23,7 @@
     <div class="table-wrap" x-show="customers.length > 0">
       <table>
         <thead>
-          <tr><th>{{.T "org.customers.customer"}}</th><th>{{.T "countries.generic.legal_id.label"}}</th><th>{{.T "org.customers.contact"}}</th><th>{{.T "org.customers.projects"}}</th><th class="actions"><span class="sr-only">{{.T "common.actions"}}</span></th></tr>
+          <tr><th>{{.T "org.customers.customer"}}</th><th>{{.T "countries.generic.legal_id.label"}}</th><th>{{.T "org.customers.contact"}}</th>{{if .Me.OrganizationSolo}}<th>{{.T "customer.billing.column"}}</th>{{end}}<th>{{.T "org.customers.projects"}}</th><th class="actions"><span class="sr-only">{{.T "common.actions"}}</span></th></tr>
         </thead>
         <tbody>
           <template x-for="c in customers" :key="c.id">
@@ -42,6 +42,12 @@
                 <div class="muted small" x-show="c.contact_email || c.contact_phone" x-text="[c.contact_email, c.contact_phone].filter(Boolean).join(' · ')"></div>
                 <span class="muted" x-show="!c.contact_name && !c.contact_email && !c.contact_phone" x-text="WTT.notInformed"></span>
               </td>
+              {{if .Me.OrganizationSolo}}
+              <td>
+                <div x-text="billingLabel(c)"></div>
+                <div class="muted small" x-text="billingTerms(c)"></div>
+              </td>
+              {{end}}
               <td class="num" x-text="c.project_count"></td>
               <td class="actions">
                 <span x-show="confirming !== c.id">
@@ -85,6 +91,89 @@
         <input id="customer-phone" type="tel" data-field="contact_phone" maxlength="{{limit "phone"}}" x-model="draft.contact_phone" @input="clearField('contact_phone')" :aria-invalid="fieldErrors.contact_phone ? 'true' : 'false'">
         {{template "field_error" "contact_phone"}}
       </div>
+      {{/* Os termos comerciais só existem no modo solo: o cliente por hora tem o valor padrão, e o mensal, o contrato. */}}
+      {{if .Me.OrganizationSolo}}
+      <fieldset class="form-group">
+        <legend>{{.T "customer.billing.title"}}</legend>
+        <div class="field">
+          <label for="customer-billing-mode">{{.T "customer.billing.mode"}}</label>
+          <select id="customer-billing-mode" data-field="billing_mode" x-model="draft.billing_mode" :disabled="modeLocked" @change="clearField('billing_mode')" :aria-invalid="fieldErrors.billing_mode ? 'true' : 'false'">
+            <option value="hourly">{{.T "customer.billing.hourly"}}</option>
+            <option value="monthly">{{.T "customer.billing.monthly"}}</option>
+          </select>
+          {{template "field_error" "billing_mode"}}
+          <span class="hint" x-show="modeLocked">{{.T "customer.billing.mode_locked"}}</span>
+          <span class="hint" x-show="!modeLocked">{{.T "customer.billing.mode_hint"}}</span>
+        </div>
+
+        <div class="field" x-show="draft.billing_mode === 'hourly'">
+          <label for="customer-default-rate"><span x-text="$t('customer.billing.default_rate', { unit: WTT.fmt.moneyUnit() })"></span> <span class="optional">{{.T "common.optional_label"}}</span></label>
+          <input id="customer-default-rate" type="text" inputmode="decimal" class="num" placeholder="{{.T "project_settings.rate_placeholder"}}" data-field="default_rate_cents" x-model="draft.default_rate" @input="clearField('default_rate_cents')" :aria-invalid="fieldErrors.default_rate_cents ? 'true' : 'false'">
+          {{template "field_error" "default_rate_cents"}}
+          <span class="hint">{{.T "customer.billing.default_rate_hint"}}</span>
+        </div>
+
+        <div class="stack" x-show="draft.billing_mode === 'monthly'">
+          <div class="field">
+            <label for="customer-monthly-fee"><span x-text="$t('customer.billing.monthly_fee', { unit: WTT.fmt.moneyUnit() })"></span></label>
+            <input id="customer-monthly-fee" type="text" inputmode="decimal" class="num" data-field="monthly_fee_cents" x-model="draft.monthly_fee" @input="clearField('monthly_fee_cents')" :aria-invalid="fieldErrors.monthly_fee_cents ? 'true' : 'false'">
+            {{template "field_error" "monthly_fee_cents"}}
+          </div>
+          <div class="fields">
+            <div class="field">
+              <label for="customer-contract-start">{{.T "customer.billing.contract_start"}}</label>
+              <input id="customer-contract-start" type="date" data-field="contract_start" x-model="draft.contract_start" @input="clearField('contract_start')" :aria-invalid="fieldErrors.contract_start ? 'true' : 'false'">
+              {{template "field_error" "contract_start"}}
+            </div>
+            <div class="field">
+              {{template "field_label" (dict "D" . "For" "customer-contract-end" "Key" "customer.billing.contract_end" "Optional" true)}}
+              <input id="customer-contract-end" type="date" data-field="contract_end" x-model="draft.contract_end" @input="clearField('contract_end')" :aria-invalid="fieldErrors.contract_end ? 'true' : 'false'">
+              {{template "field_error" "contract_end"}}
+            </div>
+          </div>
+          <span class="hint">{{.T "customer.billing.contract_end_hint"}}</span>
+        </div>
+
+        <div class="fields">
+          <div class="field">
+            <label for="customer-closing-day">{{.T "customer.billing.closing_day"}}</label>
+            <input id="customer-closing-day" type="number" min="1" max="31" step="1" class="num" data-field="closing_day" x-model="draft.closing_day" @input="clearField('closing_day')" :aria-invalid="fieldErrors.closing_day ? 'true' : 'false'">
+            {{template "field_error" "closing_day"}}
+          </div>
+          <div class="field">
+            <label for="customer-payment-days">{{.T "customer.billing.payment_days"}}</label>
+            <input id="customer-payment-days" type="number" min="0" max="{{limit "term_days"}}" step="1" class="num" data-field="payment_days" x-model="draft.payment_days" @input="clearField('payment_days')" :aria-invalid="fieldErrors.payment_days ? 'true' : 'false'">
+            {{template "field_error" "payment_days"}}
+          </div>
+        </div>
+        <span class="hint">{{.T "customer.billing.closing_day_hint"}} {{.T "customer.billing.payment_days_hint"}}</span>
+
+        {{/* Multa, juros e tolerância ficam recolhidos: quase todo cliente é cobrado sem eles. */}}
+        <details class="form-fold" x-show="draft.billing_mode === 'monthly'" :open="lateOpen" @toggle="lateOpen = $event.target.open">
+          <summary>{{.T "customer.billing.late_title"}}</summary>
+          <div class="stack">
+            <span class="hint">{{.T "customer.billing.late_hint"}}</span>
+            <div class="fields">
+              <div class="field">
+                {{template "field_label" (dict "D" . "For" "customer-late-fee" "Key" "customer.billing.late_fee" "Optional" true)}}
+                <input id="customer-late-fee" type="text" inputmode="decimal" class="num" placeholder="0" data-field="late_fee_bp" x-model="draft.late_fee" @input="clearField('late_fee_bp')" :aria-invalid="fieldErrors.late_fee_bp ? 'true' : 'false'">
+                {{template "field_error" "late_fee_bp"}}
+              </div>
+              <div class="field">
+                {{template "field_label" (dict "D" . "For" "customer-late-interest" "Key" "customer.billing.late_interest" "Optional" true)}}
+                <input id="customer-late-interest" type="text" inputmode="decimal" class="num" placeholder="0" data-field="late_interest_bp_month" x-model="draft.late_interest" @input="clearField('late_interest_bp_month')" :aria-invalid="fieldErrors.late_interest_bp_month ? 'true' : 'false'">
+                {{template "field_error" "late_interest_bp_month"}}
+              </div>
+              <div class="field">
+                {{template "field_label" (dict "D" . "For" "customer-grace-days" "Key" "customer.billing.grace_days" "Optional" true)}}
+                <input id="customer-grace-days" type="number" min="0" max="{{limit "term_days"}}" step="1" class="num" placeholder="0" data-field="grace_days" x-model="draft.grace_days" @input="clearField('grace_days')" :aria-invalid="fieldErrors.grace_days ? 'true' : 'false'">
+                {{template "field_error" "grace_days"}}
+              </div>
+            </div>
+          </div>
+        </details>
+      </fieldset>
+      {{end}}
       <p class="form-error" x-show="errors.save" x-text="errors.save" role="alert"></p>
       <div class="row row-end">
         <button type="button" class="btn btn-secondary" @click="$store.modal.dismiss()">{{.T "common.cancel"}}</button>

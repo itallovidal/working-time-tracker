@@ -31,6 +31,9 @@ const (
 	CustomersManage = "customers.manage" // cadastrar e alterar os clientes: só o dono
 	PeopleManage    = "people.manage"    // convidar pessoas e definir a jornada semanal
 	PaymentsManage  = "payments.manage"  // os pagamentos da equipe e a regra de pagamento de cada pessoa: só o dono
+	// ReceivablesManage é o A receber do modo solo: confirmar o que cobrar de cada cliente, registrar o recebimento e
+	// desfazer. Só o dono.
+	ReceivablesManage = "receivables.manage"
 )
 
 // ProjectKeys e OrganizationKeys são as permissões de cada escopo, na ordem em que
@@ -42,7 +45,7 @@ var (
 	}
 	// OrganizationKeys é o discriminador de Data.Can e do JavaScript: uma chave daqui vale na organização inteira, e
 	// não no projeto da página.
-	OrganizationKeys = []string{ProjectsCreate, CustomersManage, PeopleManage, PaymentsManage}
+	OrganizationKeys = []string{ProjectsCreate, CustomersManage, PeopleManage, PaymentsManage, ReceivablesManage}
 	// AdminProjectKeys é o que o admin tem em todo projeto: tudo do projeto, menos o dinheiro de cobrança (ver e
 	// definir o cliente e o valor cobrado), que é do dono. O custo de cada pessoa (rates.*) ele vê e define.
 	AdminProjectKeys = []string{

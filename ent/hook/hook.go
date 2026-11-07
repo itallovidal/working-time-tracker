@@ -128,6 +128,18 @@ func (f ProjectFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, err
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ProjectMutation", m)
 }
 
+// The ReceivableFunc type is an adapter to allow the use of ordinary
+// function as Receivable mutator.
+type ReceivableFunc func(context.Context, *ent.ReceivableMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ReceivableFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ReceivableMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ReceivableMutation", m)
+}
+
 // The SessionFunc type is an adapter to allow the use of ordinary
 // function as Session mutator.
 type SessionFunc func(context.Context, *ent.SessionMutation) (ent.Value, error)

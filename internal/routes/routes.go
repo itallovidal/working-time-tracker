@@ -16,6 +16,7 @@ import (
 	"working-time-tracker/internal/domain/person"
 	"working-time-tracker/internal/domain/project"
 	"working-time-tracker/internal/domain/projectinvite"
+	"working-time-tracker/internal/domain/receivable"
 	"working-time-tracker/internal/domain/task"
 	"working-time-tracker/internal/domain/team"
 	"working-time-tracker/internal/domain/work_session"
@@ -33,6 +34,7 @@ type Handlers struct {
 	Collaborator *collaborator.Handler
 	Overview     *overview.Handler
 	Payment      *payment.Handler
+	Receivable   *receivable.Handler
 	Task         *task.Handler
 	WorkSession  *work_session.Handler
 	Integration  *integration.Handler
@@ -93,6 +95,19 @@ func RegisterRoutes(e *echo.Echo, h Handlers, m *auth.Middleware, authLimiter ec
 	// A baixa de um pagamento (o dono marca que pagou um período) e o desfazer: também só do dono.
 	r.POST("/orgs/:orgId/payouts", h.Payment.MarkPaid, org, orgCan(permission.PaymentsManage))
 	r.DELETE("/orgs/:orgId/payouts/:payoutId", h.Payment.Unmark, org, orgCan(permission.PaymentsManage))
+	// O A receber é do modo solo e do dono: confirmar o que cobrar de cada cliente por período, receber e desfazer.
+	// Fora do modo solo as rotas respondem 404 (RequireSolo, depois da permissão).
+	receivables := []echo.MiddlewareFunc{org, orgCan(permission.ReceivablesManage), h.Receivable.RequireSolo}
+	r.GET("/orgs/:orgId/receivables", h.Receivable.List, receivables...)
+	r.POST("/orgs/:orgId/receivables", h.Receivable.Confirm, receivables...)
+	r.PATCH("/orgs/:orgId/receivables/:id", h.Receivable.Update, receivables...)
+	r.DELETE("/orgs/:orgId/receivables/:id", h.Receivable.Unconfirm, receivables...)
+	r.GET("/orgs/:orgId/receivables/:id/late-charges", h.Receivable.LateCharges, receivables...)
+	r.POST("/orgs/:orgId/receivables/:id/receive", h.Receivable.Receive, receivables...)
+	r.DELETE("/orgs/:orgId/receivables/:id/receive", h.Receivable.Unreceive, receivables...)
+	// A tela inicial do modo solo (horas, receita e receita projetada por janela e por cliente) tem as mesmas regras: só o
+	// dono e só em organização solo.
+	r.GET("/orgs/:orgId/solo/overview", h.Overview.Solo, receivables...)
 	r.GET("/orgs/:orgId/overview", h.Overview.Organization, org, admin)
 	// Quem está com o ponto aberto e em que tarefas, sem tempo nem dinheiro: a bolinha da lista de tarefas e a
 	// coluna "Agora" dos colaboradores. Também só dos admins.
@@ -101,13 +116,16 @@ func RegisterRoutes(e *echo.Echo, h Handlers, m *auth.Middleware, authLimiter ec
 	// todos os membros, e cada um lê só o seu.
 	r.GET("/orgs/:orgId/me/overview", h.Overview.Mine, org)
 	r.GET("/orgs/:orgId/me/tasks", h.Overview.MyTasks, org)
-	r.POST("/orgs/:orgId/invites", h.Auth.CreateInvite, org, orgCan(permission.PeopleManage))
+	// Numa organização no modo solo ninguém é convidado (409 organization.solo_no_invites), nem para a organização nem
+	// para um projeto.
+	noInvitesInSolo := m.RejectInvitesInSolo
+	r.POST("/orgs/:orgId/invites", h.Auth.CreateInvite, org, orgCan(permission.PeopleManage), noInvitesInSolo)
 	r.GET("/orgs/:orgId/invites", h.Auth.ListInvites, org, orgCan(permission.PeopleManage))
 	r.DELETE("/invites/:inviteId", h.Auth.RevokeInvite, inv, orgCan(permission.PeopleManage))
 	// O convite que já deixa pronto o projeto (valor, time e permissões) e a lista dos pendentes dele. Quem
 	// convida precisa das permissões de pôr alguém no projeto com valor: o administrador de projeto convida para o
 	// projeto dele, sem precisar da permissão de pessoas da organização.
-	r.POST("/projects/:projectId/invites", h.ProjectInvite.Create, prj, can(permission.CollaboratorsManage, permission.RatesManage))
+	r.POST("/projects/:projectId/invites", h.ProjectInvite.Create, prj, can(permission.CollaboratorsManage, permission.RatesManage), noInvitesInSolo)
 	r.GET("/projects/:projectId/invites", h.ProjectInvite.List, prj, can(permission.CollaboratorsManage))
 
 	// Os clientes são do dono.
