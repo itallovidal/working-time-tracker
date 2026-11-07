@@ -81,6 +81,10 @@ func RegisterRoutes(e *echo.Echo, h Handlers, m *auth.Middleware, authLimiter ec
 	r.GET("/auth/me", h.Auth.Me)
 	r.POST("/auth/password", h.Auth.ChangePassword)
 	r.POST("/auth/onboarding/complete", h.Auth.CompleteOnboarding)
+	// Os tokens do Claude (o servidor MCP em /mcp): cada um só vê e revoga os seus.
+	r.GET("/auth/tokens", h.Auth.ListAPITokens)
+	r.POST("/auth/tokens", h.Auth.CreateAPIToken)
+	r.DELETE("/auth/tokens/:tokenId", h.Auth.RevokeAPIToken)
 
 	r.GET("/orgs/:orgId", h.Organization.Get, org)
 	// Os dados da organização são do dono.

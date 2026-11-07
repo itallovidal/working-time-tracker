@@ -6,6 +6,7 @@ import (
 	"github.com/labstack/echo/v5"
 
 	"working-time-tracker/internal/domain/auth"
+	"working-time-tracker/internal/mcp"
 )
 
 // authProps junta as props de uma página de entrada com os dados do Clerk, quando ele está ligado.
@@ -58,7 +59,16 @@ func (h *Handler) ClerkContinue(c *echo.Context) error {
 
 // Profile tem os dados e a senha de quem está logado.
 func (h *Handler) Profile(c *echo.Context) error {
-	return h.render(c, "profile", Data{TitleKey: "titles.profile", Section: "profile", Script: "org"})
+	return h.render(c, "profile", Data{TitleKey: "titles.profile", Section: "profile", Script: "org",
+		Props: map[string]any{"mcpURL": h.baseURL(c) + mcp.Path}})
+}
+
+// baseURL é o endereço do sistema: o PUBLIC_URL, ou, sem ele, o da requisição (o protocolo que o proxy da frente diz).
+func (h *Handler) baseURL(c *echo.Context) string {
+	if h.deps.PublicURL != "" {
+		return h.deps.PublicURL
+	}
+	return c.Scheme() + "://" + c.Request().Host
 }
 
 // Home leva a pessoa logada para a página da organização dela.

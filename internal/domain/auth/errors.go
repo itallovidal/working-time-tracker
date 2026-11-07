@@ -26,6 +26,12 @@ var (
 	ErrPermissionRequired  = apperr.New("auth.permission_required", http.StatusForbidden)
 	ErrOwnProfileOnly      = apperr.New("auth.own_profile_only", http.StatusForbidden)
 
+	// Os tokens do Claude (MCP).
+	ErrTokenNameRequired = apperr.New("auth.token_name_required", http.StatusBadRequest)
+	ErrTokenDaysInvalid  = apperr.New("auth.token_days_invalid", http.StatusBadRequest)
+	ErrTokenLimit        = apperr.New("auth.token_limit", http.StatusConflict, "max")
+	ErrTokenNotFound     = apperr.New("auth.token_not_found", http.StatusNotFound)
+
 	// O login pelo Clerk.
 	ErrClerkDisabled        = apperr.New("auth.clerk_disabled", http.StatusNotFound)
 	ErrClerkTokenInvalid    = apperr.New("auth.clerk_token_invalid", http.StatusUnauthorized)

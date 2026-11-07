@@ -13,6 +13,8 @@ Todas as rotas falam JSON. Erros sempre vêm como `{"error": {"code": "dominio.m
 - Rotas marcadas como **admin** respondem **403** para membros. As marcadas com uma permissão (`project.edit`, `billing.view`…) ou **dono** respondem **403** a quem não a tem. Os cargos são quatro (dono, admin, administrador de projeto e colaborador): o dono tem todas, o admin tem as de projeto menos a cobrança (`billing.*`) e as da organização de criar projeto e cuidar de pessoas, e as do administrador de projeto vêm do grupo dele no projeto. A lista está em [`permissions.md`](../product/permissions.md).
 - `POST`, `PUT` e `PATCH` precisam de `Content-Type: application/json`. Outro formato responde **415**, o que também protege contra CSRF.
 - Signup, login e convites têm limite de tentativas por IP. Acima dele, a resposta é **429**.
+- O servidor MCP (`/mcp`, para o Claude) fica fora da API e entra com um token pessoal em `Authorization: Bearer`, não
+  com o cookie. Ver [`mcp.md`](mcp.md).
 
 ## Códigos de status
 
@@ -51,13 +53,16 @@ Toda validação de formulário devolve o campo que errou: `{"error": {"code": "
 | POST | `/api/auth/login` | público | Abre uma sessão |
 | POST | `/api/auth/logout` | logado | Encerra a sessão atual |
 | GET | `/api/auth/me` | logado | Quem está logado, com a organização e o papel. `needs_onboarding` é verdadeiro para o dono que ainda não viu as boas-vindas |
-| POST | `/api/auth/password` | logado | Troca a senha e encerra as suas outras sessões |
+| POST | `/api/auth/password` | logado | Troca a senha, encerra as suas outras sessões e revoga os seus tokens do Claude |
 | POST | `/api/auth/onboarding/complete` | logado | Dá baixa nas boas-vindas do primeiro acesso de quem chama (`204`). Repetir não muda nada |
 | GET | `/api/auth/invites/:token` | público | Mostra para qual organização e papel é o convite |
 | POST | `/api/auth/invites/:token/accept` | público | Cria a conta pelo convite e abre a sessão |
 | POST | `/api/auth/clerk/login` | público, token do Clerk | Entra pelo Clerk (ver abaixo) |
 | POST | `/api/auth/clerk/signup` | público, token do Clerk | Cria uma organização para quem entrou pelo Clerk |
 | POST | `/api/auth/clerk/join` | público, token do Clerk | Aceita um convite pendente feito para o email do Clerk |
+| GET | `/api/auth/tokens` | logado | Os seus tokens do Claude (ver abaixo), do mais novo para o mais antigo, sem o token em si |
+| POST | `/api/auth/tokens` | logado | Gera um token do Claude e o devolve em claro, uma vez só |
+| DELETE | `/api/auth/tokens/:tokenId` | logado | Revoga um token seu (`204`). O de outra pessoa responde `404` |
 
 ### Entrar pelo Clerk
 
@@ -143,6 +148,29 @@ Content-Type: application/json
 POST /api/auth/onboarding/complete
 ```
 Responde `204`, sem corpo. Só o dono vê as boas-vindas (o modal da página inicial); o `/api/auth/me` traz `needs_onboarding: true` enquanto ele não as concluiu ou dispensou, e a primeira chamada grava a data, as outras não mudam nada. Quem entrou por convite nunca as vê, e quem já existia antes do recurso não as vê.
+
+### Tokens do Claude
+```http
+POST /api/auth/tokens
+Content-Type: application/json
+
+{ "name": "Claude Code no notebook", "days": 90 }
+```
+O token é o que o Claude Code manda em `Authorization: Bearer` para o servidor MCP em `/mcp`
+([mcp.md](mcp.md)); ele **não abre a API**, que continua só com o cookie. `days` é 30, 90 (o padrão, quando não vem)
+ou 365. Responde `201`:
+
+```json
+{
+  "id": "…", "name": "Claude Code no notebook", "prefix": "wtt_Mt-Mne",
+  "expires_at": "2027-02-05T15:59:00Z", "last_used_at": null, "created_at": "2026-11-07T15:59:00Z",
+  "token": "wtt_…"
+}
+```
+
+`token` só aparece aqui; a lista traz o resto, e `prefix` é o começo do token, para reconhecê-lo. Cada pessoa tem até
+10 tokens válidos (`409` `auth.token_limit`; os vencidos não contam). `last_used_at` é gravado no máximo uma vez por
+minuto. Trocar a senha revoga todos.
 
 ### Aceitar convite
 ```http

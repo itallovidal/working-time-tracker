@@ -21,6 +21,25 @@ quê está em [permissions.md](../product/permissions.md); aqui está como isso 
   mundo teria o IP do proxy e uma pessoa errando a senha travaria o login das outras.
 - **Redirecionamentos.** O `?next=` do login e da troca de idioma só aceita um caminho do próprio sistema.
 
+## Tokens do Claude (MCP)
+
+O servidor MCP (`/mcp`) é a porta do Claude Code. Ele entra com um token pessoal, e não com o cookie
+([api/mcp.md](../api/mcp.md)).
+
+- **Como a sessão:** `wtt_` mais 32 bytes aleatórios, e o banco guarda só o sha256. O token aparece em claro uma vez,
+  na criação, e a lista mostra só o começo dele.
+- **Só no `/mcp`.** A API não aceita o token: com ele não se cria outro token, não se troca a senha nem se mexe em
+  pessoas ou dinheiro. E o `/mcp` não aceita o cookie, então um site de fora não usa a sessão do navegador para chamá-lo.
+- **Vence sempre** (30, 90 ou 365 dias), no máximo 10 válidos por pessoa, revogável no perfil. **Trocar a senha revoga
+  todos**: quem trocou a senha por desconfiar de alguém também tira dele um token que ele tenha gerado.
+- **A identidade é lida a cada requisição**, então um cargo que mudou ou um projeto de que a pessoa saiu valem na hora.
+- **O mesmo acesso da API:** cada projeto e cada tarefa passam pela checagem do `RequireOrg` (`Resolver.Reach`), e o
+  que a pessoa não alcança responde `not_found`. Uma falha do banco ao ler o projeto do recurso não deixa passar: a
+  checagem devolve o erro (e o `RequireOrg`, `500`). O ponto é sempre o dela, as ferramentas que mudam a sessão também
+  conferem o projeto dela, e nenhuma saída tem dinheiro.
+- **Outra origem:** um pedido de navegador vindo de outro site recebe `403` (`http.CrossOriginProtection`).
+- O token não vai para o log: o log de requisições não grava cabeçalhos.
+
 ## Entrar pelo Clerk
 
 O Clerk só diz quem a pessoa é; a sessão continua sendo a do sistema. O token de sessão do Clerk só vale se:

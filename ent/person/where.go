@@ -901,6 +901,29 @@ func HasSessionsWith(preds ...predicate.Session) predicate.Person {
 	})
 }
 
+// HasAPITokens applies the HasEdge predicate on the "api_tokens" edge.
+func HasAPITokens() predicate.Person {
+	return predicate.Person(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, APITokensTable, APITokensColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasAPITokensWith applies the HasEdge predicate on the "api_tokens" edge with a given conditions (other predicates).
+func HasAPITokensWith(preds ...predicate.APIToken) predicate.Person {
+	return predicate.Person(func(s *sql.Selector) {
+		step := newAPITokensStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // HasCreatedInvites applies the HasEdge predicate on the "created_invites" edge.
 func HasCreatedInvites() predicate.Person {
 	return predicate.Person(func(s *sql.Selector) {

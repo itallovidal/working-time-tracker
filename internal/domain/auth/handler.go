@@ -28,7 +28,7 @@ func fail(c *echo.Context, err error) error {
 	switch {
 	case errors.Is(err, ErrInvalidCredentials), errors.Is(err, ErrUnauthenticated):
 		status = http.StatusUnauthorized
-	case errors.Is(err, ErrEmailInUse), errors.Is(err, ErrAccountExists):
+	case errors.Is(err, ErrEmailInUse), errors.Is(err, ErrAccountExists), errors.Is(err, ErrTokenLimit):
 		status = http.StatusConflict
 	case errors.Is(err, ErrOwnerOnly), errors.Is(err, ErrClerkEmailUnverified):
 		status = http.StatusForbidden
@@ -44,12 +44,13 @@ func fail(c *echo.Context, err error) error {
 		status = http.StatusBadGateway
 	case errors.Is(err, organization.ErrSoloNoInvites):
 		status = http.StatusConflict
-	case errors.Is(err, ErrInviteInvalid), errors.Is(err, database.ErrNotFound):
+	case errors.Is(err, ErrInviteInvalid), errors.Is(err, database.ErrNotFound), errors.Is(err, ErrTokenNotFound):
 		status = http.StatusNotFound
 	case errors.Is(err, ErrWeakPassword), errors.Is(err, ErrLongPassword), errors.Is(err, ErrSamePassword),
 		errors.Is(err, apperr.ErrFieldRequired), errors.Is(err, apperr.ErrFieldTooLong), errors.Is(err, apperr.ErrFieldInvalid),
 		errors.Is(err, ErrNameRequired), errors.Is(err, ErrOrgNameRequired), errors.Is(err, ErrInvalidCountry),
 		errors.Is(err, ErrInviteEmailMismatch), errors.Is(err, ErrWrongPassword),
+		errors.Is(err, ErrTokenNameRequired), errors.Is(err, ErrTokenDaysInvalid),
 		errors.Is(err, person.ErrInvalidEmail), errors.Is(err, person.ErrInvalidRole):
 		status = http.StatusBadRequest
 	}
