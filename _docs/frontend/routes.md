@@ -70,7 +70,7 @@ flowchart LR
 | `/orgs/:orgId/settings` | A edição da organização (inclusive "Trabalho sozinho(a)") e a exclusão dela | dono |
 | `/orgs/:orgId/people` | Colaboradores: as pessoas, os papéis, a jornada, os convites pendentes e o Adicionar colaborador. `?add=1` abre já com o modal do convite. Não existe no modo solo | `people.manage` (dono e admin) |
 | `/orgs/:orgId/people/:personId` | O perfil de um colaborador, com o Editar. Pagamentos e regra só para o dono. Não existe no modo solo | dono e admin |
-| `/orgs/:orgId/customers` | Clientes, com cadastro e edição num modal. No modo solo, com os termos de cobrança de cada cliente (por hora ou mensal) | dono |
+| `/orgs/:orgId/customers` | Clientes, com a cobrança em colunas (valor por hora; no modo solo, também o modo, o fechamento e o vencimento). A linha abre os detalhes do cliente, de onde saem Editar (o modal de cadastro) e Excluir | dono |
 | `/orgs/:orgId/payments` | Pagamentos da equipe: os cartões (o que pagar, atrasados incluídos, o que fecha em 7 e 30 dias, as horas e quem está sem regra), Próximos pagamentos (com Dar baixa, o valor pelas horas e o bônus) e Pagos recentemente (com Desfazer). A linha leva ao perfil. Não existe no modo solo | dono |
 | `/orgs/:orgId/receivables` | A receber: os cartões (a confirmar, em aberto, atrasado e recebido no mês) e as listas A confirmar, Em aberto e Recebidos, com os modais de confirmar e de receber. Só existe no modo solo | dono (`receivables.manage`) |
 

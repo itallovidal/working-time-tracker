@@ -66,7 +66,7 @@ var monthlyControls = []string{
 	`data-field="billing_mode"`, `data-field="monthly_fee_cents"`, `data-field="contract_start"`,
 	`data-field="contract_end"`, `data-field="closing_day"`, `data-field="payment_days"`, `data-field="late_fee_bp"`,
 	`data-field="late_interest_bp_month"`, `data-field="grace_days"`,
-	`lateOpen`, `draft.billing_mode === 'monthly'`, `billingTerms(`,
+	`lateOpen`, `draft.billing_mode === 'monthly'`, `billingMode(`, `billingClosing(`, `billingDue(`,
 }
 
 func TestCustomerBilling_LinksAndControlsByMode(t *testing.T) {

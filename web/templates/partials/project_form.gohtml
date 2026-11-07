@@ -20,10 +20,11 @@
           {{template "field_error" "description"}}
         </div>
       </fieldset>
-      {{/* O cliente e o acréscimo são dinheiro do dono: o admin cria só projeto interno, e o dono converte. */}}
+      {{/* O cliente e o acréscimo são dinheiro do dono: o admin cria só projeto interno, e o dono converte. Os grupos seguem
+           a ordem do Editar projeto: Projeto, Cliente, Cobrança e Desenvolvimento. */}}
       {{if .IsOwner}}
       <fieldset class="form-group">
-        <legend>{{.T "project.groups.billing"}}</legend>
+        <legend>{{.T "project.groups.customer"}}</legend>
         <div class="field">
           <label for="project-customer">{{.T "org.projects.customer"}}</label>
           <select id="project-customer" data-field="customer_id" x-model="draft.customer_id" @change="customerChanged()"
@@ -35,13 +36,13 @@
           </select>
           {{template "field_error" "customer_id"}}
         </div>
-        {{template "project_billing_fields" (dict "Data" . "Customer" "customerOf()")}}
         {{template "project_customer_meeting" .}}
         <span class="hint">{{if .Me.OrganizationSolo}}{{.T "org.projects.admins_only_hint_solo"}}{{else}}{{.T "org.projects.admins_only_hint"}}{{end}}</span>
       </fieldset>
+      {{template "project_billing_group" (dict "Data" . "Id" "project" "Customer" "customerOf()")}}
       {{end}}
       <fieldset class="form-group">
-        <legend>{{if .Me.OrganizationSolo}}{{.T "project.groups.routine_solo"}}{{else}}{{.T "project.groups.routine"}}{{end}}</legend>
+        <legend>{{.T "project.groups.routine"}}</legend>
         <div class="field">
           <label for="project-sprint">{{.T "project.fields.sprint"}}</label>
           <select id="project-sprint" data-field="sprint_duration_days" x-model.number="draft.sprint_duration_days"
@@ -54,9 +55,6 @@
         </div>
         {{template "project_routine" .}}
       </fieldset>
-      {{if .IsOwner}}
-      {{template "project_extra_fold" (dict "Data" . "Id" "project" "Customer" "customerOf()")}}
-      {{end}}
       <p class="form-error" x-show="errors.create" x-text="errors.create" role="alert"></p>
       <div class="row row-end">
         <button type="button" class="btn btn-secondary" @click="$store.modal.dismiss()">{{.T "common.cancel"}}</button>
@@ -67,46 +65,39 @@
   {{end}}
 {{end}}
 
-{{/* project_billing_fields é a cobrança do cliente do projeto, no formulário de novo projeto e nas configurações. A
-   cobrança mora no cliente (Decisão 21): aqui ela aparece só para leitura, com o link para Clientes, e o cliente por
-   hora antigo, sem valor, mostra o aviso. O acréscimo do projeto fica no fim do formulário, em project_extra_fold. O
-   componente que inclui traz billing (WTT.billing). Parâmetros: Data (a página) e Customer (a expressão do cliente
-   escolhido). */}}
-{{define "project_billing_fields"}}
-{{$c := .Customer}}
-{{with .Data}}
-<div class="stack" x-cloak x-show="{{$c}}">
-  <dl class="facts">
-    <div class="fact">
-      <dt>{{.T "project.billing.customer_terms"}}</dt>
-      <dd><span x-text="billing.customer({{$c}})"></span> · <a href="/orgs/{{.OrgID}}/customers">{{.T "project.billing.edit_in_customers"}}</a></dd>
-    </div>
-  </dl>
-  <p class="form-error" x-show="billing.withoutRate({{$c}})">{{.T "project.billing.customer_without_rate"}}</p>
-</div>
-{{end}}
-{{end}}
-
-{{/* project_extra_fold é o acréscimo do projeto sobre a cobrança do cliente: por hora no cliente por hora, por mês no
-   mensal, com o total ao vivo. É um ajuste para algo pequeno ou temporário, então fica no fim do formulário, num bloco
-   "Avançado" recolhido (aberto quando o projeto já tem acréscimo ou quando o campo erra). Só existe com um cliente que
-   tem cobrança. O componente que inclui traz draft.extra, extraOpen, billing (WTT.billing) e o mixin WTT.form.
+{{/* project_billing_group é o grupo Cobrança do Novo projeto e do Editar projeto. Só aparece com um cliente escolhido:
+   projeto interno não tem cobrança. A cobrança mora no cliente (Decisão 21): aqui ela aparece só para leitura, numa
+   linha, com o botão para Clientes ao lado; o cliente por hora antigo, sem valor, mostra o aviso. Embaixo fica o
+   acréscimo do projeto, por hora no cliente por hora e por mês no mensal, com o total ao vivo: é um ajuste para algo
+   pequeno ou temporário, então fica num bloco "Avançado" recolhido (aberto quando o projeto já tem acréscimo ou quando o
+   campo erra). O componente que inclui traz draft.extra, extraOpen, billing (WTT.billing) e o mixin WTT.form.
    Parâmetros: Data (a página), Id (o prefixo do id do campo) e Customer (a expressão do cliente escolhido). */}}
-{{define "project_extra_fold"}}
+{{define "project_billing_group"}}
 {{$id := .Id}}{{$c := .Customer}}
 {{with .Data}}
-<details class="form-fold" x-cloak x-show="{{$c}} && !billing.withoutRate({{$c}})" :open="extraOpen" @toggle="extraOpen = $event.target.open">
-  <summary>{{.T "project.billing.advanced"}}</summary>
-  <div class="field">
-    <label for="{{$id}}-bill-extra">
-      <span x-text="billing.extraLabel({{$c}})"></span> <span class="optional">{{.T "common.optional_label"}}</span>
-    </label>
-    <input id="{{$id}}-bill-extra" type="text" inputmode="decimal" class="num" placeholder="0" data-field="bill_extra_cents" x-model="draft.extra"
-           @input="clearField('bill_extra_cents')" :aria-invalid="fieldErrors.bill_extra_cents ? 'true' : 'false'">
-    {{template "field_error" "bill_extra_cents"}}
-    <span class="hint" x-text="billing.monthly({{$c}}) ? $t('project.billing.extra_monthly_hint') : $t('project.billing.extra_hourly_hint')"></span>
-    <span class="hint num" x-text="billing.total({{$c}}, draft.extra)"></span>
+<fieldset class="form-group" x-cloak x-show="{{$c}}">
+  <legend>{{.T "project.groups.billing"}}</legend>
+  <div class="billing-line">
+    <div>
+      <div x-text="billing.customerMode({{$c}})"></div>
+      <div class="muted small num" x-text="billing.customerAmount({{$c}})"></div>
+    </div>
+    <a class="btn btn-ghost btn-sm" href="/orgs/{{.OrgID}}/customers">{{template "icon" "pen"}} {{.T "project.billing.edit_in_customers"}}</a>
   </div>
-</details>
+  <p class="form-error" x-show="billing.withoutRate({{$c}})">{{.T "project.billing.customer_without_rate"}}</p>
+  <details class="form-fold" x-show="!billing.withoutRate({{$c}})" :open="extraOpen" @toggle="extraOpen = $event.target.open">
+    <summary>{{.T "project.billing.advanced"}}</summary>
+    <div class="field">
+      <label for="{{$id}}-bill-extra">
+        <span x-text="billing.extraLabel({{$c}})"></span> <span class="optional">{{.T "common.optional_label"}}</span>
+      </label>
+      <input id="{{$id}}-bill-extra" type="text" inputmode="decimal" class="num" placeholder="0" data-field="bill_extra_cents" x-model="draft.extra"
+             @input="clearField('bill_extra_cents')" :aria-invalid="fieldErrors.bill_extra_cents ? 'true' : 'false'">
+      {{template "field_error" "bill_extra_cents"}}
+      <span class="hint" x-text="billing.monthly({{$c}}) ? $t('project.billing.extra_monthly_hint') : $t('project.billing.extra_hourly_hint')"></span>
+      <span class="hint num" x-text="billing.total({{$c}}, draft.extra)"></span>
+    </div>
+  </details>
+</fieldset>
 {{end}}
 {{end}}

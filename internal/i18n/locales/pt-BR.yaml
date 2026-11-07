@@ -57,6 +57,7 @@ titles:
   org_people: Colaboradores
   org_person: Colaborador
   overview: Gestão · Visão geral
+  overview_solo: Visão geral
   my_overview: Início
   collaborators: Colaboradores
   tasks: Lista de tarefas
@@ -774,6 +775,7 @@ help:
     numbers:
       title: Acompanhe os números
       text: "O dono e os administradores veem, no Início da organização, as horas e o custo de todos os projetos, em 7 dias, 30 dias ou tudo; a receita e a margem, só o dono. Cada projeto tem a sua “Visão geral” na Gestão, com as sessões de todo mundo e os totais."
+      text_solo: "O Início mostra as horas, a receita e a receita projetada, por cliente. Cada projeto tem a sua aba “Visão geral”, ao lado de Tarefas, com as sessões e os totais."
       tip: "As telas mostram quem está trabalhando agora e em qual tarefa, mas não ordenam nem comparam pessoas por horas."
   screens:
     intro: "Para cada tela: o que ela mostra e o que dá para fazer nela. Alguns botões só aparecem para quem tem a permissão (veja “Quem vê e faz o quê”)."
@@ -814,7 +816,7 @@ help:
     org_customers:
       title: Clientes
       text: "O cadastro de quem contrata a organização: nome, país, documento fiscal (CNPJ no Brasil, EIN nos EUA), pessoa de contato, email, telefone e a cobrança: o valor por hora, que vale para todos os projetos do cliente. A página é só do dono."
-      actions: "“Novo cliente” cadastra; cada linha tem as ações de editar e excluir."
+      actions: "“Novo cliente” cadastra. Clicar na linha abre os detalhes do cliente, com “Editar” e “Excluir”."
       link: "O cliente é ligado a um projeto ao criar o projeto ou nas configurações dele. Reajustar o valor do cliente muda o valor cobrado de todos os projetos dele, para as horas registradas daqui em diante."
     org_projects:
       title: Projetos
@@ -844,7 +846,9 @@ help:
       presence: "Para o dono e os administradores, a coluna “Agora” mostra quem está com o ponto aberto e em qual tarefa. Atualiza sozinha a cada 30 segundos."
     mgmt_overview:
       title: "Gestão: Visão geral"
+      title_solo: "Projeto: Visão geral"
       intro: "O botão “Gestão”, no fim das abas do projeto, aparece para quem tem alguma permissão no projeto. Cada aba da Gestão aparece conforme a permissão da pessoa."
+      intro_solo: "No modo solo, a Visão geral é uma aba do projeto, ao lado de Tarefas. O botão “Gestão”, no fim das abas, fica com Integrações e Configurações."
       text: "A Visão geral é o projeto em números: pessoas, times, horas dos últimos 7 e 30 dias, quem está trabalhando agora, tarefas atrasadas e, para o dono, o cliente e o valor cobrado."
       sessions: "Abaixo ficam as sessões de todo mundo, com filtros de pessoa, data e tarefa, e os totais de tempo e custo; a receita e a margem, só para o dono."
       who: "Abre para quem tem qualquer permissão no projeto."
@@ -1051,6 +1055,9 @@ org:
     projects: Projetos
     delete_question: Excluir?
     contact_person: Pessoa de contato
+    details_customer: Cliente
+    details_contact: Contato
+    details_billing: Cobrança
     create: Criar cliente
     saved: Cliente salvo.
     created: Cliente criado.
@@ -1079,7 +1086,6 @@ org:
 customer:
   billing:
     title: Cobrança
-    column: Cobrança
     mode: Modo de cobrança
     hourly: Por hora
     monthly: Mensal
@@ -1100,17 +1106,30 @@ customer:
     late_fee: Multa por atraso (%)
     late_interest: Juros ao mês (%)
     grace_days: Tolerância (dias)
-    cell_hourly_no_rate: Por hora · sem valor por hora
-    cell_hourly_rate: "Por hora · {{.rate}}"
-    cell_monthly: "Mensal · {{.fee}}"
-    cell_contract_from: "Contrato desde {{.start}}"
-    cell_contract_range: "Contrato de {{.start}} a {{.end}}"
-    cell_closing_last: Fecha no último dia
-    cell_closing_day: "Fecha no dia {{.day}}"
-    cell_due_closing: vence no fechamento
+    col_mode: Modo
+    col_amount: Valor
+    col_rate: Valor por hora
+    col_closing: Fechamento
+    col_due: Vencimento
+    fee: Mensalidade
+    contract: Contrato
+    contract_range: "{{.start}} a {{.end}}"
+    contract_open: "Desde {{.start}}, sem data de fim"
+    late_fee_fact: Multa por atraso
+    late_interest_fact: Juros ao mês
+    grace_days_fact: Tolerância
+    grace_days_value:
+      one: "{{.count}} dia"
+      other: "{{.count}} dias"
+    cell_fee_month: "{{.fee}}/mês"
+    cell_rate_hour: "{{.rate}}/h"
+    cell_no_rate: Sem valor por hora
+    cell_closing_last: Último dia
+    cell_closing_day: "Dia {{.day}}"
+    cell_due_closing: No fechamento
     cell_due_days:
-      one: "vence {{.count}} dia depois"
-      other: "vence {{.count}} dias depois"
+      one: "{{.count}} dia depois"
+      other: "{{.count}} dias depois"
     project_rate_monthly: "Não se aplica: cobrança mensal"
     option_label: "{{.name}} · {{.mode}}"
 project:
@@ -1128,11 +1147,13 @@ project:
     back: Voltar ao projeto
   groups:
     about: Projeto
-    billing: Cliente e cobrança
-    routine: Rotina do time
-    routine_solo: Rotina
+    customer: Cliente
+    billing: Cobrança
+    routine: Desenvolvimento
   billing:
     customer_terms: Cobrança do cliente
+    mode_monthly: Contrato mensal
+    mode_hourly: Por hora
     advanced: Avançado
     customer_hourly: "Por hora · {{.rate}}/h"
     customer_monthly: "Contrato mensal · {{.fee}}/mês"
@@ -1162,7 +1183,11 @@ project:
     pick_day: Escolha o dia
     no_daily: Sem daily
     no_weekly: Sem weekly
-    has_meeting: Possui reunião semanal com o cliente
+    has_meeting: Possui reunião com o cliente
+    meeting_every: Frequência
+    meeting_every_1: Toda semana
+    meeting_every_2: A cada duas semanas
+    meeting_biweekly_slot: "{{.slot}}, a cada duas semanas"
     meeting: Reunião com o cliente
     meeting_day: Dia da reunião
     meeting_time: Horário da reunião
@@ -1997,6 +2022,7 @@ errors:
     invalid_weekday: "dia da semana inválido: use monday, tuesday, wednesday, thursday, friday, saturday ou sunday"
     invalid_customer_meeting_time: "o horário da reunião com o cliente deve estar no formato HH:MM, por exemplo 10:30"
     customer_meeting_time_without_day: "o horário da reunião com o cliente precisa do dia da reunião"
+    invalid_customer_meeting_every_weeks: "a reunião com o cliente é toda semana (1) ou a cada duas semanas (2)"
     invalid_weekly_time: "o horário da weekly deve estar no formato HH:MM, por exemplo 13:00"
     weekly_time_without_day: "o horário da weekly precisa do dia da weekly"
     meeting_needs_customer: "a reunião com o cliente só vale em um projeto com cliente: escolha o cliente do projeto antes"
@@ -2142,6 +2168,7 @@ fields:
   weekly_sync_time: "o horário da weekly"
   customer_meeting_day: "o dia da reunião com o cliente"
   customer_meeting_time: "o horário da reunião com o cliente"
+  customer_meeting_every_weeks: "a frequência da reunião com o cliente"
   deadline: "o prazo"
   priority: "a prioridade"
   status: "o status"

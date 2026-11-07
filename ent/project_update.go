@@ -246,6 +246,27 @@ func (_u *ProjectUpdate) ClearCustomerMeetingTime() *ProjectUpdate {
 	return _u
 }
 
+// SetCustomerMeetingEveryWeeks sets the "customer_meeting_every_weeks" field.
+func (_u *ProjectUpdate) SetCustomerMeetingEveryWeeks(v int) *ProjectUpdate {
+	_u.mutation.ResetCustomerMeetingEveryWeeks()
+	_u.mutation.SetCustomerMeetingEveryWeeks(v)
+	return _u
+}
+
+// SetNillableCustomerMeetingEveryWeeks sets the "customer_meeting_every_weeks" field if the given value is not nil.
+func (_u *ProjectUpdate) SetNillableCustomerMeetingEveryWeeks(v *int) *ProjectUpdate {
+	if v != nil {
+		_u.SetCustomerMeetingEveryWeeks(*v)
+	}
+	return _u
+}
+
+// AddCustomerMeetingEveryWeeks adds value to the "customer_meeting_every_weeks" field.
+func (_u *ProjectUpdate) AddCustomerMeetingEveryWeeks(v int) *ProjectUpdate {
+	_u.mutation.AddCustomerMeetingEveryWeeks(v)
+	return _u
+}
+
 // SetCustomerID sets the "customer_id" field.
 func (_u *ProjectUpdate) SetCustomerID(v uuid.UUID) *ProjectUpdate {
 	_u.mutation.SetCustomerID(v)
@@ -674,6 +695,12 @@ func (_u *ProjectUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.CustomerMeetingTimeCleared() {
 		_spec.ClearField(project.FieldCustomerMeetingTime, field.TypeString)
+	}
+	if value, ok := _u.mutation.CustomerMeetingEveryWeeks(); ok {
+		_spec.SetField(project.FieldCustomerMeetingEveryWeeks, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedCustomerMeetingEveryWeeks(); ok {
+		_spec.AddField(project.FieldCustomerMeetingEveryWeeks, field.TypeInt, value)
 	}
 	if value, ok := _u.mutation.BillExtraCents(); ok {
 		_spec.SetField(project.FieldBillExtraCents, field.TypeInt, value)
@@ -1283,6 +1310,27 @@ func (_u *ProjectUpdateOne) ClearCustomerMeetingTime() *ProjectUpdateOne {
 	return _u
 }
 
+// SetCustomerMeetingEveryWeeks sets the "customer_meeting_every_weeks" field.
+func (_u *ProjectUpdateOne) SetCustomerMeetingEveryWeeks(v int) *ProjectUpdateOne {
+	_u.mutation.ResetCustomerMeetingEveryWeeks()
+	_u.mutation.SetCustomerMeetingEveryWeeks(v)
+	return _u
+}
+
+// SetNillableCustomerMeetingEveryWeeks sets the "customer_meeting_every_weeks" field if the given value is not nil.
+func (_u *ProjectUpdateOne) SetNillableCustomerMeetingEveryWeeks(v *int) *ProjectUpdateOne {
+	if v != nil {
+		_u.SetCustomerMeetingEveryWeeks(*v)
+	}
+	return _u
+}
+
+// AddCustomerMeetingEveryWeeks adds value to the "customer_meeting_every_weeks" field.
+func (_u *ProjectUpdateOne) AddCustomerMeetingEveryWeeks(v int) *ProjectUpdateOne {
+	_u.mutation.AddCustomerMeetingEveryWeeks(v)
+	return _u
+}
+
 // SetCustomerID sets the "customer_id" field.
 func (_u *ProjectUpdateOne) SetCustomerID(v uuid.UUID) *ProjectUpdateOne {
 	_u.mutation.SetCustomerID(v)
@@ -1741,6 +1789,12 @@ func (_u *ProjectUpdateOne) sqlSave(ctx context.Context) (_node *Project, err er
 	}
 	if _u.mutation.CustomerMeetingTimeCleared() {
 		_spec.ClearField(project.FieldCustomerMeetingTime, field.TypeString)
+	}
+	if value, ok := _u.mutation.CustomerMeetingEveryWeeks(); ok {
+		_spec.SetField(project.FieldCustomerMeetingEveryWeeks, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedCustomerMeetingEveryWeeks(); ok {
+		_spec.AddField(project.FieldCustomerMeetingEveryWeeks, field.TypeInt, value)
 	}
 	if value, ok := _u.mutation.BillExtraCents(); ok {
 		_spec.SetField(project.FieldBillExtraCents, field.TypeInt, value)
