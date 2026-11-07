@@ -40,6 +40,13 @@
           <dd :class="!current.customer_meeting_day && 'muted'" x-text="meeting()"></dd>
         </div>
         {{if .CanDo "billing.view"}}
+        {{/* No modo solo, como o projeto é cobrado (o modo é do cliente): por hora ou pelo contrato mensal. */}}
+        {{if .Me.OrganizationSolo}}
+        <div class="fact" x-show="current.customer">
+          <dt>{{.T "customer.billing.title"}}</dt>
+          <dd><span x-text="billingFact()"></span> · <a href="/orgs/{{.OrgID}}/customers">{{.T "customer.billing.project_contract_where"}}</a></dd>
+        </div>
+        {{end}}
         <div class="fact">
           <dt>{{.T "project_settings.bill_rate_fact"}}</dt>
           <dd class="num" :class="billRateCents === null && 'muted'" x-text="billRateCents !== null ? WTT.fmt.money(billRateCents) : (billingMode === 'monthly' ? $t('customer.billing.project_rate_monthly') : WTT.notInformed)"></dd>
@@ -47,7 +54,7 @@
         {{end}}
       </dl>
       {{if .CanDo "billing.view"}}
-      <p class="muted small">{{.T "project_settings.bill_rate_note"}}</p>
+      <p class="muted small">{{if .Me.OrganizationSolo}}{{.T "project_settings.bill_rate_note_solo"}}{{else}}{{.T "project_settings.bill_rate_note"}}{{end}}</p>
       {{end}}
     </section>
   </div>
@@ -87,7 +94,7 @@
                     :aria-invalid="fieldErrors.customer_id ? 'true' : 'false'">
               <option value="">{{.T "project_settings.internal"}}</option>
               <template x-for="c in customers" :key="c.id">
-                <option :value="c.id" x-text="c.name" :selected="c.id === draft.customer_id"></option>
+                <option :value="c.id" x-text="customerOption(c)" :selected="c.id === draft.customer_id"></option>
               </template>
             </select>
             {{template "field_error" "customer_id"}}
@@ -101,7 +108,7 @@
             <input id="ps-bill-rate" type="text" inputmode="decimal" class="num" placeholder="{{.T "project_settings.rate_placeholder"}}" data-field="bill_rate_cents"
                    x-model="draft.rate" @input="rateTouched = true; clearField('bill_rate_cents')" :aria-invalid="fieldErrors.bill_rate_cents ? 'true' : 'false'">
             {{template "field_error" "bill_rate_cents"}}
-            <span class="hint">{{.T "project_settings.bill_rate_hint"}}</span>
+            <span class="hint">{{if .Me.OrganizationSolo}}{{.T "project_settings.bill_rate_hint_solo"}}{{else}}{{.T "project_settings.bill_rate_hint"}}{{end}}</span>
             <span class="hint" x-cloak x-show="rateFromDefault()" x-text="$t('customer.billing.project_rate_default')"></span>
           </div>
         </div>
@@ -114,7 +121,7 @@
       {{end}}
       {{if .CanDo "project.edit"}}
       <fieldset class="form-group">
-        <legend>{{.T "project.groups.routine"}}</legend>
+        <legend>{{if .Me.OrganizationSolo}}{{.T "project.groups.routine_solo"}}{{else}}{{.T "project.groups.routine"}}{{end}}</legend>
         <div class="field">
           <label for="ps-sprint">{{.T "project.fields.sprint"}}</label>
           <select id="ps-sprint" data-field="sprint_duration_days" x-model.number="draft.sprint_duration_days"
@@ -132,7 +139,7 @@
       <p class="form-error" x-show="errors.delete" x-text="errors.delete" role="alert"></p>
       {{if .CanDo "project.delete"}}
       <div class="confirm" x-cloak x-show="confirmDelete">
-        <span>{{.T "project_settings.delete_confirm"}}</span>
+        <span>{{if .Me.OrganizationSolo}}{{.T "project_settings.delete_confirm_solo"}}{{else}}{{.T "project_settings.delete_confirm"}}{{end}}</span>
         <button type="button" class="btn btn-danger btn-sm" :disabled="pending" @click="remove()">{{.T "common.delete"}}</button>
         <button type="button" class="btn btn-ghost btn-sm" @click="confirmDelete = false">{{.T "common.cancel"}}</button>
       </div>

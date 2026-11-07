@@ -21,7 +21,7 @@
 <template x-if="detail">
   <div class="stack stack-sections">
     <div class="stack">
-      <p class="muted small" x-show="detail.owner">{{.T "collab.owner_rate_hint"}}</p>
+      <p class="muted small" x-show="detail.owner">{{if .Me.OrganizationSolo}}{{.T "collab.owner_rate_hint_solo"}}{{else}}{{.T "collab.owner_rate_hint"}}{{end}}</p>
       {{/* Sem regra não há período: o aviso diz a quem pedir (no meu perfil) ou deixa definir (no de um colaborador). */}}
       {{/* A regra é dinheiro: só o dono a vê e a define no perfil de outra pessoa. */}}
       {{if or (not .Person) (.Can "payments.manage")}}
@@ -50,10 +50,13 @@
             </div>
           </div>
           <dl class="facts" x-show="person">
+            {{/* O cargo e a jornada são coisa de equipe: no modo solo você é a organização, e a jornada não se edita. */}}
+            {{if not .Me.OrganizationSolo}}
             <dt>{{.T "profile.role"}}</dt>
             <dd><span class="badge" :class="person && person.role === 'admin' && 'badge-accent'" x-text="person ? (person.is_owner ? $t('roles.owner') : WTT.fmt.role(person.role)) : ''"></span></dd>
             <dt>{{.T "profile.weekly"}}</dt>
             <dd x-text="person ? (WTT.fmt.weeklyHours(person.weekly_hours) || $t('profile.no_weekly_hours')) : ''"></dd>
+            {{end}}
             {{if or (not .Person) (.Can "payments.manage")}}
             <template x-if="person && !person.is_owner">
               <div class="fact">

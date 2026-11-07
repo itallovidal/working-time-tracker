@@ -969,8 +969,9 @@ func TestPages_ProjectIntegrationsTab(t *testing.T) {
 	if !strings.Contains(board, `class="row-link" @click="if (!$event.target.closest('a, button')) location.href = '/tasks/' + t.id"`) {
 		t.Error("the board row does not open the task page when clicked, or opens it when the Pegar button is clicked")
 	}
-	// Pegar a tarefa, só na lista das sem responsável: associa a tarefa à pessoa sem bater o ponto.
-	for _, want := range []string{`<td class="actions" x-show="key === &#39;free&#39;">`, `@click="claim(t)"`, `<th class="actions" x-show="key === &#39;free&#39;">`, `x-show="errors.claim"`, " Pegar</button>"} {
+	// Pegar a tarefa, só nas sem responsável: a lista inteira delas (com equipe) ou, na lista única do modo solo, as
+	// linhas sem dono. Associa a tarefa à pessoa sem bater o ponto.
+	for _, want := range []string{`<td class="actions" x-show="key !== &#39;taken&#39;">`, `@click="claim(t)"`, `<th class="actions" x-show="key !== &#39;taken&#39;">`, `x-show="!t.assignee_id"`, `x-show="errors.claim"`, " Pegar</button>"} {
 		if !strings.Contains(board, want) {
 			t.Errorf("the board does not contain %q", want)
 		}

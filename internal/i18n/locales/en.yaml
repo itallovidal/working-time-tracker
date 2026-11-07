@@ -148,6 +148,7 @@ home:
     tab_closed: Completed
     empty_none: You have no tasks yet
     empty_none_text: When someone hands a task to you, or you take one from a project's list, it shows up here.
+    empty_none_text_solo: Create a task on a project's list and it shows up here.
     empty_open: No open tasks with you
     empty_open_text: Everything that was yours is already done.
     empty_closed: No completed tasks yet
@@ -350,6 +351,7 @@ onboarding:
     title: Welcome to Working Time Tracker
     lead: "The organization {{.name}} is created. Tell us a little about it: you can fill in the rest whenever you like, under Settings."
     money_note: The currency and the time zone apply to the whole organization. Set them now, before registering any rate.
+    timezone_note: The time zone applies to every hour and date in the organization. The currency follows the country.
   customers:
     title: Your customers
     lead: A customer is whoever hires the organization. Each project can have a customer and the rate billed to them per hour; an internal project doesn't need one.
@@ -370,12 +372,14 @@ onboarding:
       other: "{{.count}} invitations created"
     org: Organization details
     org_text: Summary, contact, legal data and how you work.
+    org_text_solo: Summary, contact, legal data and time zone.
     customers: Customers
     customers_text: Who hires the projects, with a contact for each.
     people: People
     people_text: Invitations, roles, permissions and weekly hours.
     projects: Projects
     projects_text: Create the first project and put the team on it, with each person's hourly rate. That is how time starts to count.
+    projects_text_solo: Create the first project, hourly or on a monthly contract. That is how time starts to count.
     docs: Documentation
     docs_text: The first-use walkthrough and what each screen does.
     finish: Finish
@@ -393,6 +397,7 @@ auth:
   signup:
     title: Create organization
     subtitle: You join as an admin and invite your team afterwards.
+    subtitle_solo: "The organization is just you: no invitations, no team."
     org_name: Organization name
     country: Country
     country_hint: Sets the currency, the time zone and the tax data of the organization.
@@ -723,6 +728,8 @@ help:
       tip: "Got an invitation? Skip this step: open the invitation link and create your account there."
     currency:
       title: Check the currency and time zone
+      title_solo: Check the time zone
+      text_solo: "The time zone applies to every hour and date in the organization; the currency follows the country. Take the chance to fill in the organization profile."
       text: "The currency (real, dollar or euro) and the time zone apply to the whole organization. Set them now, before registering any amount. Take the chance to fill in the profile: the whole team reads it under Settings."
       tip: "The currency only changes how amounts are shown; the app does not convert between currencies."
     customers:
@@ -813,6 +820,7 @@ help:
     project_tasks:
       title: "Project: Task list"
       text: "All the project's tasks in two lists: “Unassigned”, the ones nobody has picked up, and “Assigned”. Whoever clocks in on an unassigned task becomes its assignee; the “Take” button assigns the task to you without starting the timer."
+      text_solo: "All the project's tasks in a single list. A new task is already yours; on an unassigned one (from GitHub or Trello, for instance), “Assign to me” gives it to you without starting the timer, and so does clocking in on it."
       filters: "The search and the filters (deadline, priority, status and labels) stay in the URL: you can save or send the link to the filtered list."
       new: "“New task” opens a form in steps: the task, the details and, if the project has integrations, the platforms where it should also exist."
       open: "Click a row to open the task."
@@ -880,7 +888,7 @@ help:
       text: "Solo mode is for people who work on their own, as freelancers or solo contractors: the organization is just one person, and what belongs to a team goes away instead of crowding the menus."
       choose: "Tick “I work alone” when you create the organization or later, in Settings › Edit. Only the owner changes it, and it only turns on with you as the only person and no pending invites."
       hides: "The menu loses Collaborators and Payments and gains “Receivables”; the project loses the Collaborators tab, and nobody is invited. Turning the mode off deletes nothing: everything that was hidden comes back."
-      billing: "Each customer is billed per hour (the hours on their projects times the rate billed on each one) or by a monthly contract (a fixed amount per month, and their projects have no hourly rate), never both. Choose it in Customers: once a customer has projects, the mode cannot change."
+      billing: "Each customer is billed per hour (the hours on their projects times the rate billed on each one) or by a monthly contract (a fixed amount per month, and their projects have no hourly rate), never both. Choose it in Customers or when creating the project: the mode and the contract belong to the customer and apply to all of its projects, and once a customer has projects the mode cannot change."
       home: "Home shows the hours, the revenue (the money that came in) and the projected revenue (what you expect to receive, paid or not), per customer."
     integrations:
       title: GitHub and Trello integrations
@@ -892,6 +900,7 @@ help:
     no_clock:
       q: I cannot start the clock
       a: "Most often the person has no hourly rate on that project: an admin or the project administrator sets it in Management › Collaborators. The other cause is a clock already open on another project; stop it before starting this one."
+      a_solo: "Most often a clock is already open on another project: stop it before starting this one. On a project of an hourly customer, also check the billed rate under Management › Settings."
     forgot:
       q: I forgot to clock in. Can I add the hours afterwards?
       a: "No. The app only records timed work: there is no manual entry, approval or period closing. What you can adjust are the task intervals inside a session (open the session and use the pencil), without changing the session's total time."
@@ -919,8 +928,10 @@ org:
     currency: Currency
   about:
     intro: What every member reads about the organization.
+    intro_solo: Your organization profile.
     empty_profile: The organization profile is still empty.
     fill_profile: Fill in the details so the team can see them here.
+    fill_profile_solo: Fill in the organization details.
     identity: About
     how_we_work: How we work
     contact: Contact
@@ -932,6 +943,7 @@ org:
     summary: Summary
     summary_hint: A single line shown in the organization header.
     description_hint: What the organization does and for whom. Every member reads it under Settings.
+    description_hint_solo: What the organization does and for whom.
     contact: Contact
     contact_email: Contact email
     website_placeholder: https://example.com
@@ -942,8 +954,10 @@ org:
     how_we_work: How we work
     work_mode: Work mode
     hours_note: The sprint length is set in each project, and the weekly hours on each person.
+    hours_note_solo: The sprint length is set in each project.
     delete_title: Delete organization
     delete_warning: Deletes the organization, all people and invitations. Only possible after every project is deleted.
+    delete_warning_solo: Deletes the organization and your account in it. Only possible after every project is deleted.
     delete_confirm: Delete for good? This cannot be undone.
     saved: Organization saved.
   people:
@@ -1033,6 +1047,7 @@ org:
     internal: Internal project
     customer: Customer
     admins_only_hint: The customer and the billed rate are only visible to admins and can be changed later in the project settings.
+    admins_only_hint_solo: The customer and the billed rate can be changed later in the project settings.
     create: Create project
     loading: Loading projects…
     empty: No projects yet
@@ -1086,6 +1101,13 @@ customer:
     project_monthly_note: "This customer is billed monthly, so the project has no hourly rate. Hours are still tracked."
     project_rate_default: "Filled in with the customer's default rate. The project keeps its own rate: changing it here does not change the customer."
     project_rate_monthly: "Not applicable: billed monthly"
+    monthly_contract: Monthly contract
+    option_label: "{{.name}} · {{.mode}}"
+    project_mode_hint: The billing mode and the contract belong to the customer and apply to all of its projects.
+    project_contract_edit: Edit the contract under Customers
+    project_contract_where: set on the customer
+    project_contract_new: "The contract is saved on the customer {{.name}} and applies to all of its projects."
+    project_to_hourly: "The customer {{.name}} will be billed hourly."
 project:
   head:
     projects: Projects
@@ -1103,6 +1125,7 @@ project:
     about: Project
     billing: Customer and billing
     routine: Team routine
+    routine_solo: Routine
   fields:
     sprint: Sprint length
     daily: Daily
@@ -1172,6 +1195,7 @@ tasks:
   label_create: Create
   pick_person: Pick the person
   unassigned_hint: "Without an assignee the task is available: whoever clocks in on it becomes the assignee."
+  unassigned_hint_solo: "Without an assignee the task stays out of My tasks until you take it or clock in on it."
   new: New task
   loading: Loading tasks…
   sync: Sync
@@ -1204,6 +1228,10 @@ tasks:
   row_hint: Click a task to open its details.
   pager_free: Pages of the unassigned tasks
   pager_taken: Pages of the assigned tasks
+  section_all: Tasks
+  all_none: No tasks in this project
+  all_none_text: Create the first one with the New task button.
+  pager_all: Pages of the tasks
   col_task: Task
   col_assignee: Assignee
   col_deadline: Deadline
@@ -1214,6 +1242,8 @@ tasks:
   claim: Take
   claim_title: Assign the task to me, without starting the clock
   claim_label: "Take the task {{.name}}"
+  claim_solo: Assign to me
+  claim_label_solo: "Assign the task {{.name}} to me"
   claimed: "You took \"{{.name}}\". It is in My tasks."
   running: In progress
   start: Start
@@ -1267,6 +1297,7 @@ task_detail:
   created: Created on
   time_title: Time tracked
   no_time: Nobody has tracked time on this task yet.
+  no_time_solo: No time tracked on this task yet.
   in_progress: "· in progress"
   with_tasks: "with {{.names}}"
   session_total: "session of {{.time}}"
@@ -1332,6 +1363,7 @@ time:
   stopped: Stopped
   no_tasks: You have no tasks on this project.
   create_task: Pick an available one on the task list.
+  create_task_solo: Create one on the task list.
   task: Task
   start: Start
   yours: Your time on this project
@@ -1339,8 +1371,10 @@ time:
   this_week: This week
   your_rate_before: "Your rate on this project:"
   your_rate_after: per hour. Only you and the admins can see it.
+  your_rate_after_solo: per hour.
   sessions: Sessions
   sessions_admin: Collaborators’ sessions
+  sessions_solo: Sessions
   totals_follow: The totals follow the filters.
   person_filter: Filter by person
   all_people: All people
@@ -1511,12 +1545,15 @@ project_settings:
   internal: Internal project
   bill_rate_fact: Rate billed per hour
   bill_rate_note: The billed rate is what the customer pays the organization. Only admins see it.
+  bill_rate_note_solo: The billed rate is what the customer pays per hour.
   edit_title: Edit project
   delete_confirm: Delete the project? Its teams, tasks, work sessions and integrations are deleted.
+  delete_confirm_solo: Delete the project? Its tasks, work sessions and integrations are deleted.
   billing_title: Customer and billing
   customers_hint: Add customers under
   rate_placeholder: "10.00"
   bill_rate_hint: What the customer pays the organization, required on a project with a customer. Only admins see it.
+  bill_rate_hint_solo: What the customer pays per hour, required on a project with an hourly customer.
   delete_title: Delete project
   delete_text: Deletes the project with all its teams, tasks, work sessions and integrations.
   saved: Project saved.
@@ -1627,6 +1664,7 @@ collab:
   no_rate_badge: No rate
   owner_badge: Owner
   owner_rate_hint: "The owner earns the rate billed to the customer: their hours count as revenue for the project and have no cost."
+  owner_rate_hint_solo: "You earn the rate billed to the customer: your hours count as revenue for the project and have no cost."
   edit_person: Edit collaborator
   edit_person_label: "Edit {{.name}}"
   pager: Pages of the people list
@@ -1686,6 +1724,7 @@ overview:
   first_session: First clock-in
   last_session: Last clock-in
   nobody_clocked: Nobody has clocked in yet
+  nobody_clocked_solo: No clock-ins yet
   activity: Activity
   last_7: Last 7 days
   last_30: Last 30 days

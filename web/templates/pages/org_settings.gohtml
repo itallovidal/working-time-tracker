@@ -28,7 +28,7 @@
           {{template "field_label" (dict "D" . "For" "org-description" "Key" "common.description_label" "Optional" true)}}
           <textarea id="org-description" rows="5" data-field="description" maxlength="{{limit "description"}}" x-model="form.description" @input="clearField('description')" :aria-invalid="fieldErrors.description ? 'true' : 'false'"></textarea>
           {{template "field_error" "description"}}
-          <span class="hint">{{.T "org.settings.description_hint"}}</span>
+          <span class="hint">{{if .Me.OrganizationSolo}}{{.T "org.settings.description_hint_solo"}}{{else}}{{.T "org.settings.description_hint"}}{{end}}</span>
         </div>
       </section>
 
@@ -65,7 +65,7 @@
           </div>
           <div class="field">
             <label for="org-country">{{.T "org.settings.country"}}</label>
-            <select id="org-country" x-model="form.country">
+            <select id="org-country" x-model="form.country" @change="countryChanged()">
               <template x-for="c in countryOptions" :key="c.code">
                 <option :value="c.code" x-text="c.name" :selected="c.code === form.country"></option>
               </template>
@@ -96,8 +96,10 @@
 
       <section class="card">
         <div class="card-head"><h2>{{.T "org.settings.how_we_work"}}</h2></div>
+        {{/* No modo solo o regime e a moeda não se aplicam: somem com a caixa do solo marcada (a moeda segue o país,
+             em countryChanged) e voltam ao desmarcá-la. Os valores continuam no formulário e no corpo do PATCH. */}}
         <div class="fields">
-          <div class="field">
+          <div class="field" x-show="!form.solo">
             {{template "field_label" (dict "D" . "For" "org-work-mode" "Key" "org.settings.work_mode" "Optional" true)}}
             <select id="org-work-mode" x-model="form.work_mode">
               <option value="">{{.T "labels.not_informed"}}</option>
@@ -114,7 +116,7 @@
               </template>
             </select>
           </div>
-          <div class="field">
+          <div class="field" x-show="!form.solo">
             <label for="org-currency">{{.T "org.fields.currency"}}</label>
             <select id="org-currency" x-model="form.currency">
               <template x-for="c in WTT.currencies" :key="c.value">
@@ -130,7 +132,7 @@
           <span id="org-solo-hint" class="hint">{{.T "solo.hint"}} {{.T "solo.settings_hint"}}</span>
           {{template "field_error" "solo"}}
         </div>
-        <p class="muted small">{{.T "org.settings.hours_note"}}</p>
+        <p class="muted small">{{if .Me.OrganizationSolo}}{{.T "org.settings.hours_note_solo"}}{{else}}{{.T "org.settings.hours_note"}}{{end}}</p>
       </section>
 
       <p class="form-error" x-show="errors.org" x-text="errors.org" role="alert"></p>
@@ -144,7 +146,7 @@
     {{if .IsOwner}}
     <section class="card">
       <div class="card-head"><h2>{{.T "org.settings.delete_title"}}</h2></div>
-      <p class="muted small">{{.T "org.settings.delete_warning"}}</p>
+      <p class="muted small">{{if .Me.OrganizationSolo}}{{.T "org.settings.delete_warning_solo"}}{{else}}{{.T "org.settings.delete_warning"}}{{end}}</p>
       <p class="form-error" x-show="errors.delete" x-text="errors.delete" role="alert"></p>
       <div class="row" x-show="!confirmDelete">
         <button type="button" class="btn btn-danger-ghost" @click="confirmDelete = true">{{template "icon" "trash"}} {{.T "org.settings.delete_title"}}</button>

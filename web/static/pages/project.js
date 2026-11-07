@@ -589,8 +589,11 @@ document.addEventListener('alpine:init', () => {
     },
   }));
 
-  // As duas listas da página de tarefas: as que ninguém pegou e as que já têm responsável.
-  const taskLists = ['free', 'taken'];
+  // As listas da página de tarefas. Com equipe são duas: as que ninguém pegou e as que já têm responsável (de outra
+  // pessoa: as suas ficam em Minhas tarefas). No modo solo a organização é uma pessoa só, então a lista é uma, com todas
+  // as tarefas do projeto, e o filtro de responsável não existe.
+  const solo = !!me.organization_solo;
+  const taskLists = solo ? ['all'] : ['free', 'taken'];
   const emptyList = () => ({ tasks: [], total: 0, page: 1, perPage: 10 });
 
   Alpine.data('projectTasks', () => ({
@@ -598,8 +601,9 @@ document.addEventListener('alpine:init', () => {
     ...taskWizard(),
     loading: true,
     // Cada lista guarda só a página em uso; os filtros e a paginação rodam no servidor.
-    lists: { free: emptyList(), taken: emptyList() },
+    lists: Object.fromEntries(taskLists.map((key) => [key, emptyList()])),
     taskLists,
+    solo,
     ...labelTools(),
     ...projectSync(),
     members: [], // quem está no projeto: pode ser responsável por tarefa nova
@@ -616,8 +620,9 @@ document.addEventListener('alpine:init', () => {
     get publishStep() { return this.integrations.length > 0; },
     async init() {
       this.readURL();
-      // Para o dono e os admins: a bolinha do responsável (partials/task_table.gohtml).
-      Alpine.store('presence').watch();
+      // Para o dono e os admins: a bolinha do responsável (partials/task_table.gohtml). No solo não há coluna de
+      // responsável, e a bolinha não tem o que mostrar.
+      if (!solo) Alpine.store('presence').watch();
       const members = api('GET', '/api/projects/' + project.id + '/members')
         .then((list) => { this.members = list || []; })
         .catch((e) => { this.errors.members = e.message; });
@@ -642,8 +647,8 @@ document.addEventListener('alpine:init', () => {
       const p = new URLSearchParams(location.search);
       const due = p.get('due') || '';
       const isDate = /^\d{4}-\d{2}-\d{2}$/.test(due);
-      // As tarefas de quem está logado ficam em Minhas tarefas: a lista não as mostra.
-      const assignee = /^[0-9a-f-]{36}$/i.test(p.get('assignee') || '') && p.get('assignee') !== me.id ? p.get('assignee') : '';
+      // As tarefas de quem está logado ficam em Minhas tarefas: a lista não as mostra. No solo não há filtro de responsável.
+      const assignee = !solo && /^[0-9a-f-]{36}$/i.test(p.get('assignee') || '') && p.get('assignee') !== me.id ? p.get('assignee') : '';
       this.filters = {
         // O servidor recusa uma busca maior que o teto; o que vem na URL entra cortado nele, como o campo faz.
         q: Array.from(p.get('q') || '').slice(0, WTT.limits.search).join(''),
@@ -681,13 +686,13 @@ document.addEventListener('alpine:init', () => {
     },
     // loadList busca a página em uso de uma lista: a das sem responsável pede assignee_id=none,
     // e a das com responsável, a pessoa escolhida ou, sem escolha, as de outras pessoas (others):
-    // as de quem está logado ficam na aba Minhas tarefas.
+    // as de quem está logado ficam na aba Minhas tarefas. A lista do solo (all) não filtra o responsável.
     async loadList(key) {
       const f = this.filters;
       const list = this.lists[key];
       const p = new URLSearchParams({ page: list.page });
       if (f.q.trim()) p.set('q', f.q.trim());
-      p.set('assignee_id', key === 'free' ? 'none' : (f.assignee || 'others'));
+      if (key !== 'all') p.set('assignee_id', key === 'free' ? 'none' : (f.assignee || 'others'));
       const limit = dueLimit(f.due, f.date);
       if (limit) p.set('deadline_to', limit);
       if (f.priority.length) p.set('priority', f.priority.join(','));
@@ -754,6 +759,11 @@ document.addEventListener('alpine:init', () => {
     listFiltered(key) {
       const f = this.filters;
       return key === 'taken' ? this.hasFilters() : !!(f.q.trim() || dueLimit(f.due, f.date) || f.priority.length || f.status.length || f.label.length);
+    },
+    // listText é um texto de uma lista (o título, o estado vazio, o rótulo da paginação), que muda com a lista:
+    // tasks.section_free, tasks.free_none, tasks.pager_all...
+    listText(key, part) {
+      return WTT.t(part === 'section' ? 'tasks.section_' + key : (part === 'pager' ? 'tasks.pager_' + key : 'tasks.' + key + '_' + part));
     },
     pages(key) {
       const l = this.lists[key];
@@ -855,8 +865,9 @@ document.addEventListener('alpine:init', () => {
         // A tarefa nova é a primeira da lista dela, se os filtros em uso a mostrarem.
         await this.apply();
         const shown = taskLists.some((key) => this.lists[key].tasks.some((x) => x.id === t.id));
-        // Uma tarefa sua não aparece nesta página, que mostra as de outras pessoas: está em Minhas tarefas.
-        toast(WTT.t(shown ? 'tasks.created' : (t.assignee_id === me.id ? 'tasks.created_mine' : 'tasks.created_hidden')));
+        // Com equipe, uma tarefa sua não aparece nesta página, que mostra as de outras pessoas: está em Minhas tarefas.
+        // No solo a lista tem todas, e só os filtros a escondem.
+        toast(WTT.t(shown ? 'tasks.created' : (!solo && t.assignee_id === me.id ? 'tasks.created_mine' : 'tasks.created_hidden')));
         for (const { target, published, error } of results) {
           const provider = this.typeLabel(target.type);
           if (error) {
@@ -1667,6 +1678,22 @@ document.addEventListener('alpine:init', () => {
     // O cliente mensal paga o contrato, não as horas: o projeto dele não tem valor por hora.
     monthlyCustomer() {
       return this.customerMode() === 'monthly';
+    },
+    // No modo solo o cartão diz como o projeto é cobrado: por hora ou pelo contrato mensal do cliente (com a
+    // mensalidade, quando a lista de clientes a traz). O modo é do cliente e se muda em Clientes.
+    billingFact() {
+      if (!this.current.customer) return WTT.notInformed;
+      if (this.billingMode !== 'monthly') return WTT.t('customer.billing.hourly');
+      const c = this.customers.find((x) => x.id === this.current.customer.id);
+      return c && c.monthly_fee_cents != null
+        ? WTT.t('customer.billing.cell_monthly', { fee: WTT.fmt.money(c.monthly_fee_cents) })
+        : WTT.t('customer.billing.monthly_contract');
+    },
+    // customerOption é o texto do cliente na lista do formulário: no modo solo, com o modo de cobrança dele.
+    customerOption(c) {
+      if (!me.organization_solo) return c.name;
+      const mode = WTT.t(c.billing_mode === 'monthly' ? 'customer.billing.monthly' : 'customer.billing.hourly');
+      return WTT.t('customer.billing.option_label', { name: c.name, mode });
     },
     // hasRate diz que o campo do valor cobrado existe: há cliente, e ele é cobrado por hora.
     hasRate() {

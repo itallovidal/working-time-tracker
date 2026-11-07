@@ -17,7 +17,7 @@
   <div class="empty" x-cloak x-show="!loading && !errors.load && tasks.length === 0">
     {{template "icon" "list-check"}}
     <strong>{{.T "my_tasks.none"}}</strong>
-    <span>{{.T "my_tasks.none_text"}}</span>
+    <span>{{if .Me.OrganizationSolo}}{{.T "time.create_task_solo"}}{{else}}{{.T "my_tasks.none_text"}}{{end}}</span>
     <a class="btn btn-secondary btn-sm" href="/projects/{{.Project.ID}}/tasks">{{.T "my_tasks.none_link"}}</a>
   </div>
 

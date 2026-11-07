@@ -4,7 +4,8 @@
     <span class="brand"><span class="brand-mark" aria-hidden="true"></span>Working Time Tracker</span>
     <div class="stack">
       <h1>{{.T "auth.signup.title"}}</h1>
-      <p class="muted">{{.T "auth.signup.subtitle"}}</p>
+      {{/* Marcar "Trabalho sozinho(a)" troca a frase: não há time para convidar. */}}
+      <p class="muted" x-text="solo ? $t('auth.signup.subtitle_solo') : $t('auth.signup.subtitle')">{{.T "auth.signup.subtitle"}}</p>
     </div>
     {{/* Duas etapas: a organização (nome dela e o seu) e o acesso (email e senha). As etapas são blocos x-if, não x-show:
          assim só os campos à vista existem, e a conferência da tela (check) vale para eles. */}}

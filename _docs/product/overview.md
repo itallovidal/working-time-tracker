@@ -91,6 +91,11 @@ que é de quem cobra os próprios clientes (o **A receber**, que tem as suas reg
 | Tela inicial | Perde a **Visão geral** da organização (com o cartão **Trabalhando agora**, o custo e a margem) e o bloco da **Equipe**, e ganha a [visão geral do solo](#painéis): horas, Receita, Receita projetada e a tabela por cliente. O **Seu painel** fica |
 | Boas-vindas | Três etapas: organização, primeiro cliente e fim. Sem o convite, e sem o link para Colaboradores no fim |
 | Modal Editar colaborador | Sem jornada semanal nem regra de pagamento: uma pessoa só, que é o dono e não é paga |
+| Configurações | Sem **Regime de trabalho** e sem **Moeda**, na edição, no cartão "Como trabalhamos" e nas boas-vindas: a moeda segue o país (trocar o país na edição leva a moeda dele). Os campos voltam ao desmarcar o modo no formulário |
+| Novo projeto | Com um cliente escolhido, o rádio **Cobrança: Por hora / Contrato mensal**. O modo e o contrato continuam no cliente e valem para todos os projetos dele: com o cliente ainda sem projetos, escolher o outro modo grava os termos no cliente (`PATCH /api/customers/:id`) antes de criar o projeto, e o contrato mensal se preenche ali mesmo; com projetos, o outro modo fica desabilitado, com o motivo. A lista de clientes mostra o modo de cada um, e a Gestão › Configurações do projeto mostra a cobrança, só para ler |
+| Lista de tarefas | Uma lista só, **Tarefas**, com todas as tarefas do projeto, sem a coluna nem o filtro de responsável; "Atribuir a mim" fica nas que não têm responsável. A tarefa nova é sua (o modal não pergunta o responsável), e na página da tarefa não há "Outra pessoa" |
+| Visão geral do projeto | Sem pessoas, times, quem está trabalhando, filtro e coluna de pessoa, nem custo e margem (o dono não tem custo); a receita fica |
+| Outras telas | Sem o cargo ao lado do nome, sem a contagem de pessoas nos cartões de projeto, sem cargo e jornada no perfil, e a ajuda sem as seções de equipe (convites, colaboradores, pagamentos, cargos). Os textos que falam de "o time" ou de "alguém" têm uma versão do solo |
 
 A API de pessoas e de pagamentos (`/api/orgs/:orgId/persons`, `/payments`, ...) não muda: o modo esconde telas e fecha os
 convites, e não apaga nem recusa o que já existe. Uma organização com equipe (`solo = false`) continua exatamente igual.

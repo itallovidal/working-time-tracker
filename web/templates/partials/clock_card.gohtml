@@ -47,7 +47,7 @@
         <span class="small">{{.T "time.session_value"}}</span>
       </div>
       <p class="muted" x-show="tasks.length === 0 && !loading">
-        {{.T "time.no_tasks"}} <a href="/projects/{{.Project.ID}}/tasks">{{.T "time.create_task"}}</a>
+        {{.T "time.no_tasks"}} <a href="/projects/{{.Project.ID}}/tasks">{{if .Me.OrganizationSolo}}{{.T "time.create_task_solo"}}{{else}}{{.T "time.create_task"}}{{end}}</a>
       </p>
       <p class="muted" x-show="tasks.length > 0">{{.T "time.start_hint"}}</p>
     </div>

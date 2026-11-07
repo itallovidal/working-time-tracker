@@ -26,7 +26,9 @@
           {{template "field_error" "summary"}}
           <span class="hint">{{.T "org.settings.summary_hint"}} <span class="num" x-text="summaryLength() + '/{{limit "summary"}}'"></span></span>
         </div>
+        {{/* No modo solo o regime e a moeda não se aplicam (a moeda é a do país escolhido no cadastro): fica só o fuso. */}}
         <div class="fields">
+          {{if not .Me.OrganizationSolo}}
           <div class="field">
             {{template "field_label" (dict "D" . "For" "ob-work-mode" "Key" "org.settings.work_mode" "Optional" true)}}
             <select id="ob-work-mode" x-model="orgDraft.work_mode">
@@ -36,6 +38,7 @@
               </template>
             </select>
           </div>
+          {{end}}
           <div class="field">
             <label for="ob-timezone">{{.T "org.fields.timezone"}}</label>
             <select id="ob-timezone" x-model="orgDraft.timezone">
@@ -44,6 +47,7 @@
               </template>
             </select>
           </div>
+          {{if not .Me.OrganizationSolo}}
           <div class="field">
             <label for="ob-currency">{{.T "org.fields.currency"}}</label>
             <select id="ob-currency" x-model="orgDraft.currency">
@@ -52,8 +56,9 @@
               </template>
             </select>
           </div>
+          {{end}}
         </div>
-        <p class="muted small">{{.T "onboarding.org.money_note"}}</p>
+        <p class="muted small">{{if .Me.OrganizationSolo}}{{.T "onboarding.org.timezone_note"}}{{else}}{{.T "onboarding.org.money_note"}}{{end}}</p>
         <p class="form-error" x-cloak x-show="errors.org" x-text="errors.org" role="alert"></p>
         <div class="row row-end">
           <button type="button" class="btn btn-secondary" :disabled="pending" @click="next()">{{.T "onboarding.later"}}</button>
@@ -145,7 +150,7 @@
           <li>
             <a class="onboarding-link" href="/orgs/{{.OrgID}}/settings">
               <span class="onboarding-ico" aria-hidden="true">{{template "icon" "building"}}</span>
-              <span class="onboarding-text"><strong>{{.T "onboarding.done.org"}}</strong><span class="muted small">{{.T "onboarding.done.org_text"}}</span></span>
+              <span class="onboarding-text"><strong>{{.T "onboarding.done.org"}}</strong><span class="muted small">{{if .Me.OrganizationSolo}}{{.T "onboarding.done.org_text_solo"}}{{else}}{{.T "onboarding.done.org_text"}}{{end}}</span></span>
               <span class="badge" :class="saved.org ? 'badge-ok' : ''" x-text="saved.org ? $t('onboarding.done.saved') : $t('onboarding.done.pending')"></span>
             </a>
           </li>
@@ -168,7 +173,7 @@
           <li>
             <a class="onboarding-link" href="/orgs/{{.OrgID}}/projects">
               <span class="onboarding-ico" aria-hidden="true">{{template "icon" "diagram-project"}}</span>
-              <span class="onboarding-text"><strong>{{.T "onboarding.done.projects"}}</strong><span class="muted small">{{.T "onboarding.done.projects_text"}}</span></span>
+              <span class="onboarding-text"><strong>{{.T "onboarding.done.projects"}}</strong><span class="muted small">{{if .Me.OrganizationSolo}}{{.T "onboarding.done.projects_text_solo"}}{{else}}{{.T "onboarding.done.projects_text"}}{{end}}</span></span>
             </a>
           </li>
           <li>

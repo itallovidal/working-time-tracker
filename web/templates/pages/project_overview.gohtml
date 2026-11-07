@@ -28,6 +28,8 @@
     <div class="grid-2 items-stretch">
       <section class="card">
         <div class="card-head"><h2>{{.T "overview.project_title"}}</h2></div>
+        {{/* No modo solo a organização é uma pessoa só e não tem times: os dois totais não dizem nada. */}}
+        {{if not .Me.OrganizationSolo}}
         <div class="totals">
           <div class="total">
             <div class="v" x-text="data.people.total"></div>
@@ -40,6 +42,7 @@
             <div class="k" x-text="$t('overview.teams', { count: data.teams.total })"></div>
           </div>
         </div>
+        {{end}}
         <div class="totals">
           <div class="total">
             <div class="v" x-text="data.project.age.days"></div>
@@ -61,11 +64,11 @@
           </div>
           <div class="fact">
             <dt>{{.T "overview.first_session"}}</dt>
-            <dd :class="data.time.first_session_at ? '' : 'muted'" x-text="data.time.first_session_at ? WTT.fmt.date(data.time.first_session_at) : $t('overview.nobody_clocked')"></dd>
+            <dd :class="data.time.first_session_at ? '' : 'muted'" x-text="data.time.first_session_at ? WTT.fmt.date(data.time.first_session_at) : {{if .Me.OrganizationSolo}}$t('overview.nobody_clocked_solo'){{else}}$t('overview.nobody_clocked'){{end}}"></dd>
           </div>
           <div class="fact">
             <dt>{{.T "overview.last_session"}}</dt>
-            <dd :class="data.time.last_session_at ? '' : 'muted'" x-text="data.time.last_session_at ? WTT.fmt.date(data.time.last_session_at) : $t('overview.nobody_clocked')"></dd>
+            <dd :class="data.time.last_session_at ? '' : 'muted'" x-text="data.time.last_session_at ? WTT.fmt.date(data.time.last_session_at) : {{if .Me.OrganizationSolo}}$t('overview.nobody_clocked_solo'){{else}}$t('overview.nobody_clocked'){{end}}"></dd>
           </div>
         </dl>
       </section>
@@ -81,16 +84,21 @@
             <div class="v" x-text="WTT.fmt.hours(data.time.last_30_days_seconds)"></div>
             <div class="k">{{.T "overview.last_30"}}</div>
           </div>
+          {{/* Quem está com o ponto aberto agora é coisa de equipe: no solo é você, e o timer já diz. */}}
+          {{if not .Me.OrganizationSolo}}
           <div class="total">
             <div class="v" x-text="data.people.working_now"></div>
             <div class="k">{{.T "overview.working_now"}}</div>
           </div>
+          {{end}}
         </div>
         <dl class="facts">
+          {{if not .Me.OrganizationSolo}}
           <div class="fact">
             <dt>{{.T "overview.in_progress"}}</dt>
             <dd :class="data.people.working_now > 0 ? '' : 'muted'" x-text="workingNames() || $t('overview.nobody_open')"></dd>
           </div>
+          {{end}}
           <div class="fact">
             <dt>{{.T "overview.session_count"}}</dt>
             <dd class="num" x-text="data.time.session_count"></dd>
@@ -164,13 +172,17 @@
   <template x-if="data">
     <section class="stack">
       <div class="stack stack-tight">
-        <h2>{{.T "time.sessions_admin"}}</h2>
+        <h2>{{if .Me.OrganizationSolo}}{{.T "time.sessions_solo"}}{{else}}{{.T "time.sessions_admin"}}{{end}}</h2>
       </div>
       <div class="row filters">
+        {{/* No modo solo todas as sessões são suas: sem filtro de pessoa, sem coluna Pessoa e sem custo (o dono não
+             tem custo, e a margem repetiria a receita). */}}
+        {{if not .Me.OrganizationSolo}}
         <select x-model="filter.person" aria-label="{{.T "time.person_filter"}}">
           <option value="">{{.T "time.all_people"}}</option>
           <template x-for="p in people()" :key="p.id"><option :value="p.id" x-text="p.name"></option></template>
         </select>
+        {{end}}
         <input type="date" x-model="filter.date" aria-label="{{.T "time.date_filter"}}" title="{{.T "time.date_filter_title"}}">
         <select x-model="filter.task" aria-label="{{.T "time.task_filter"}}">
           <option value="">{{.T "time.all_tasks"}}</option>
@@ -190,35 +202,44 @@
             <div class="v" x-text="WTT.fmt.hours(filteredTotal())"></div>
             <div class="k">{{.T "time.time_total"}}</div>
           </div>
+          {{if not .Me.OrganizationSolo}}
           <div class="total">
             <div class="v" x-text="WTT.fmt.money(filteredAmount('pay'))"></div>
             <div class="k">{{.T "time.cost"}}</div>
           </div>
+          {{end}}
           {{if .Can "billing.view"}}
           <div class="total">
             <div class="v" x-text="WTT.fmt.money(filteredAmount('bill'))"></div>
             <div class="k">{{.T "time.revenue"}}</div>
           </div>
+          {{if not .Me.OrganizationSolo}}
           <div class="total">
             <div class="v" :class="filteredMargin() < 0 && 'text-danger'" x-text="WTT.fmt.money(filteredMargin())"></div>
             <div class="k">{{.T "time.margin"}}<span x-show="filteredMarginShare() !== null" x-text="$t('overview.margin_share', { percent: filteredMarginShare() })"></span></div>
           </div>
           {{end}}
+          {{end}}
         </div>
       </section>
 
+      {{/* No modo solo a frase fala de você, e não de "alguém". */}}
+      {{if .Me.OrganizationSolo}}
+      {{template "empty_state" (dict "Icon" "clock" "Cloak" true "Show" "filtered().length === 0" "Title" (.T "time.empty") "TextX" "hasFilters() ? $t('time.empty_filtered') : $t('time.empty_own')")}}
+      {{else}}
       {{template "empty_state" (dict "Icon" "clock" "Cloak" true "Show" "filtered().length === 0" "Title" (.T "time.empty") "TextX" "hasFilters() ? $t('time.empty_filtered') : $t('time.empty_text')")}}
+      {{end}}
       <div class="table-wrap" x-show="filtered().length > 0">
         <table>
           <thead>
             <tr>
-              <th>{{.T "time.col_person"}}</th><th>{{.T "time.col_tasks"}}</th><th>{{.T "time.col_start"}}</th><th>{{.T "time.col_end"}}</th><th class="actions">{{.T "time.col_duration"}}</th><th class="actions">{{.T "time.cost"}}</th>{{if .Can "billing.view"}}<th class="actions">{{.T "time.revenue"}}</th>{{end}}<th class="actions"><span class="sr-only">{{.T "time.col_details"}}</span></th>
+              {{if not .Me.OrganizationSolo}}<th>{{.T "time.col_person"}}</th>{{end}}<th>{{.T "time.col_tasks"}}</th><th>{{.T "time.col_start"}}</th><th>{{.T "time.col_end"}}</th><th class="actions">{{.T "time.col_duration"}}</th>{{if not .Me.OrganizationSolo}}<th class="actions">{{.T "time.cost"}}</th>{{end}}{{if .Can "billing.view"}}<th class="actions">{{.T "time.revenue"}}</th>{{end}}<th class="actions"><span class="sr-only">{{.T "time.col_details"}}</span></th>
             </tr>
           </thead>
           <tbody>
             <template x-for="s in sessionRows()" :key="s.id">
               <tr>
-                <td x-text="s.person ? s.person.name : ''"></td>
+                {{if not $.Me.OrganizationSolo}}<td x-text="s.person ? s.person.name : ''"></td>{{end}}
                 <td>
                   <div class="task-chips">
                     <template x-for="t in firstTasks(s)" :key="t.id"><a :href="'/tasks/' + t.id" x-text="t.name"></a></template>
@@ -232,7 +253,7 @@
                   <span class="badge badge-ok" x-show="!s.end_at">{{.T "time.open"}}</span>
                 </td>
                 <td class="actions mono num" x-text="WTT.fmt.clock(seconds(s))"></td>
-                <td class="actions num" x-text="WTT.fmt.money(amount(s, 'pay'))"></td>
+                {{if not $.Me.OrganizationSolo}}<td class="actions num" x-text="WTT.fmt.money(amount(s, 'pay'))"></td>{{end}}
                 {{if .Can "billing.view"}}<td class="actions num" x-text="WTT.fmt.money(amount(s, 'bill'))"></td>{{end}}
                 <td class="actions"><button type="button" class="btn btn-ghost btn-sm" aria-label="{{.T "session.details"}}" title="{{.T "session.details"}}" @click="openSession(s)">{{template "icon" "eye"}}</button></td>
               </tr>
