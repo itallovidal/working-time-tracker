@@ -653,7 +653,7 @@ func TestPages_ProjectSettingsAndWeeklyHours(t *testing.T) {
 		// Os grupos vêm na ordem Projeto, Cliente, Cobrança e Desenvolvimento, e a reunião com o cliente fica no grupo Cliente.
 		about, customer, billing, routine := strings.Index(body, "<legend>Projeto</legend>"), strings.Index(body, "<legend>Cliente</legend>"),
 			strings.Index(body, "<legend>Cobrança</legend>"), strings.Index(body, "<legend>Desenvolvimento</legend>")
-		if !(about < customer && customer < billing && billing < routine) {
+		if about >= customer || customer >= billing || billing >= routine {
 			t.Errorf("%s: the groups are out of order (Projeto %d, Cliente %d, Cobrança %d, Desenvolvimento %d)", path, about, customer, billing, routine)
 		}
 		if meeting := strings.Index(body, `<select id="meeting-day"`); meeting < customer || meeting > billing {
