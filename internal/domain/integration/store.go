@@ -67,15 +67,52 @@ func (s *Store) GetByID(id string) (*Integration, error) {
 	return toDomainIntegration(it), nil
 }
 
-func (s *Store) Update(it *Integration) error {
-	_, err := s.client.Integration.UpdateOneID(it.ID).
+// Update grava a integração. A credencial só é gravada com credentials: sem um token novo, ela fica como está no
+// banco, que pode ser mais nova que a cópia lida (a renovação do token que vence grava por conta própria).
+func (s *Store) Update(it *Integration, credentials bool) error {
+	update := s.client.Integration.UpdateOneID(it.ID).
 		SetDisplayName(it.DisplayName).
-		SetCredentials(it.Credentials).
 		SetMetadata(it.Metadata).
 		SetEnabled(it.Enabled).
-		SetSyncIssues(it.SyncIssues).
-		Save(context.Background())
+		SetSyncIssues(it.SyncIssues)
+	if credentials {
+		update.SetCredentials(it.Credentials)
+	}
+	_, err := update.Save(context.Background())
 	return err
+}
+
+// RefreshCredentials troca a credencial com a linha da integração travada (SELECT ... FOR UPDATE), para duas
+// renovações do mesmo token nunca correrem juntas, nem em dois processos: a renovação gira o par, e a segunda
+// usaria um token de renovação que a primeira já gastou. fn recebe a credencial guardada e devolve a nova, ou
+// nil para deixá-la como está. Devolve a credencial que ficou.
+func (s *Store) RefreshCredentials(id uuid.UUID, fn func(stored map[string]interface{}) (map[string]interface{}, error)) (map[string]interface{}, error) {
+	ctx := context.Background()
+	tx, err := s.client.Tx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	row, err := tx.Integration.Query().Where(integration.IDEQ(id)).ForUpdate().Only(ctx)
+	if err != nil {
+		_ = tx.Rollback()
+		if ent.IsNotFound(err) {
+			return nil, database.ErrNotFound
+		}
+		return nil, err
+	}
+	next, err := fn(row.Credentials)
+	if err != nil {
+		_ = tx.Rollback()
+		return nil, err
+	}
+	if next == nil {
+		return row.Credentials, tx.Commit()
+	}
+	if err := tx.Integration.UpdateOneID(id).SetCredentials(next).Exec(ctx); err != nil {
+		_ = tx.Rollback()
+		return nil, err
+	}
+	return next, tx.Commit()
 }
 
 // ListSyncing lista as integrações ativas com a sincronização das issues ligada, de todos os projetos.

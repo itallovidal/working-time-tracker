@@ -134,6 +134,10 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `integration.github_repo_not_found` | 400 | — | `repositório do GitHub não encontrado ou o token não tem acesso a ele` | `GitHub repository not found, or the token has no access to it` |
 | `integration.gitlab_forbidden` | 400 | — | `o token do GitLab não tem permissão para ler o projeto` | `the GitLab token has no permission to read the project` |
 | `integration.gitlab_invalid_project` | 400 | — | `projeto do GitLab inválido: use grupo/projeto` | `invalid GitLab project: use group/project` |
+| `integration.gitlab_oauth_denied` | 400 | — | `a autorização no GitLab foi cancelada` | `the authorization on GitLab was cancelled` |
+| `integration.gitlab_oauth_exchange` | 400 | — | `o GitLab não aceitou a autorização: tente conectar de novo` | `GitLab did not accept the authorization: try connecting again` |
+| `integration.gitlab_oauth_not_configured` | 400 | — | `a conexão com o GitLab não está configurada neste servidor: quem administra precisa definir GITLAB_CLIENT_ID, GITLAB_CLIENT_SECRET e PUBLIC_URL` | `the GitLab connection is not set up on this server: whoever runs it must define GITLAB_CLIENT_ID, GITLAB_CLIENT_SECRET and PUBLIC_URL` |
+| `integration.gitlab_oauth_state` | 400 | — | `a conexão com o GitLab venceu ou não pôde ser confirmada: tente de novo` | `the GitLab connection expired or could not be confirmed: try again` |
 | `integration.gitlab_project_not_found` | 400 | — | `projeto do GitLab não encontrado ou o token não tem acesso a ele` | `GitLab project not found, or the token has no access to it` |
 | `integration.invalid_issue_number` | 400 | — | `o número da issue precisa ter só dígitos` | `the issue number must contain only digits` |
 | `integration.invalid_token` | 400 | `provider` | `token do {{.provider}} inválido` | `invalid {{.provider}} token` |

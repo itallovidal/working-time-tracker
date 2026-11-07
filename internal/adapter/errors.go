@@ -48,6 +48,13 @@ var (
 	ErrGitLabForbidden      = apperr.New("integration.gitlab_forbidden", http.StatusBadRequest)
 	ErrGitLabProjectMissing = apperr.New("integration.gitlab_project_not_found", http.StatusBadRequest)
 
+	// A conexão com o GitLab por OAuth, como a do GitHub: o servidor sem app cadastrado, a pessoa que cancelou no
+	// GitLab, o retorno que não bate com o que foi pedido e o código que o GitLab não aceitou.
+	ErrGitLabOAuthNotConfigured = apperr.New("integration.gitlab_oauth_not_configured", http.StatusBadRequest)
+	ErrGitLabOAuthDenied        = apperr.New("integration.gitlab_oauth_denied", http.StatusBadRequest)
+	ErrGitLabOAuthState         = apperr.New("integration.gitlab_oauth_state", http.StatusBadRequest)
+	ErrGitLabOAuthExchange      = apperr.New("integration.gitlab_oauth_exchange", http.StatusBadRequest)
+
 	ErrTrelloInvalidKey     = apperr.New("integration.trello_invalid_key", http.StatusBadRequest)
 	ErrTrelloInvalidBoard   = apperr.New("integration.trello_invalid_board", http.StatusBadRequest)
 	ErrTrelloNoAccessBoard  = apperr.New("integration.trello_no_access_board", http.StatusBadRequest)
