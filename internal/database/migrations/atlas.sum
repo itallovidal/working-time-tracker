@@ -1,4 +1,4 @@
-h1:0osgOFfeESTryP/amk/2D8rVnLLp3oQFEkIuIs+BnxE=
+h1:wPbYhOUsdBVmrDa86FzfCxdGQVzqUO2enRyGvUsSDmQ=
 20261006010705_baseline.sql h1:In26R+bkQHX0yTBQ3cHUfkq0TyExXFWtzWiAp+CXcPk=
 20261006053300_integration_credentials_metadata.sql h1:o/Eet/4UpJcK+X/j0/hx8u5DPKRFuIPzq5e0spWIBX4=
 20261006220500_move_weekly_hours_to_person.sql h1:FSjx+g6ZU9ynL4VqWDbgWEb2QdpiaQV4ZE/YuC/imyI=
@@ -28,3 +28,4 @@ h1:0osgOFfeESTryP/amk/2D8rVnLLp3oQFEkIuIs+BnxE=
 20261106231028_solo_billing_receivables.sql h1:9lsA4Cmyi+7XIUDWHM/jZExO5WMiHXkkWA9fdNmdbNg=
 20261107030348_billing_on_customer.sql h1:+0y170pxDbPHXR1q+TPKXQwptjC/9JayuUkfuPrgrNM=
 20261107192331_project_meeting_every_weeks.sql h1:+aKdyi3cDQJSvgGwuv8+dT91ssZ/ejsN9ydWzOfmQ5E=
+20261107202436_api_tokens.sql h1:EAMCF/3t+ybAcBH9Y9gZK8I2dEkhoHNnCS53Y0p5g0g=

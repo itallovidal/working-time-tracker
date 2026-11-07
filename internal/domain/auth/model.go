@@ -25,6 +25,9 @@ type Identity struct {
 	// OrganizationSolo diz que a organização trabalha no modo solo (uma pessoa só, sem equipe). As telas leem daqui
 	// (.Me.OrganizationSolo, me.organization_solo) para esconder o que é de equipe e mostrar o que é do modo solo.
 	OrganizationSolo bool `json:"organization_solo"`
+	// OrganizationTimezone é o fuso da organização (IANA), lido com a pessoa. Quem age fora das telas (o servidor MCP)
+	// o usa para o dia de um prazo e a hora das saídas, sem consultar a organização de novo.
+	OrganizationTimezone string `json:"-"`
 	// HasPassword diz se a conta tem senha do sistema. Quem entra só pelo Clerk não tem, e a troca de senha
 	// não se aplica a essa pessoa.
 	HasPassword bool `json:"has_password"`

@@ -648,6 +648,40 @@ profile:
   title_other: Perfil do colaborador
   edit: Editar perfil
   tabs_label: O que editar
+  claude:
+    title: Conectar ao Claude
+    intro: "Com um token, o Claude Code cria e atualiza as suas tarefas, pega tarefas, sincroniza com as integrações do projeto e bate o seu ponto, como você. Ele vê o que você vê, menos os valores em dinheiro."
+    new: Novo token
+    loading: Carregando os tokens…
+    empty: Nenhum token ainda
+    empty_text: Gere um token para conectar o Claude Code a este sistema.
+    col_name: Nome
+    col_token: Token
+    col_last_used: Último uso
+    col_expires: Vence em
+    never_used: Nunca usado
+    expired: Venceu
+    revoke: Revogar
+    revoke_question: Revogar este token?
+    revoked: Token revogado. O Claude que o usava não entra mais.
+    password_note: Trocar a senha revoga todos os seus tokens.
+    modal_title: Novo token do Claude
+    name: Nome
+    name_hint: Para reconhecê-lo depois, como "Claude Code no notebook".
+    days: Validade
+    days_30: 30 dias
+    days_90: 90 dias
+    days_365: 1 ano
+    submit: Gerar token
+    copy_now: "Copie agora: o token não aparece de novo. Quem o tiver age como você até ele vencer ou ser revogado."
+    command: Comando do Claude Code
+    command_hint: Rode no terminal. Depois, numa conversa do Claude Code, peça por exemplo "quais são as minhas tarefas?".
+    token: Token
+    token_hint: Para colar em outro lugar, como a configuração de um projeto. Guarde-o como uma senha.
+    copy_command: Copiar comando
+    copy_token: Copiar token
+    copied: Copiado.
+    done: Pronto
   loading: Carregando o perfil…
   data: Dados
   role: Cargo
@@ -880,6 +914,7 @@ help:
       rates: "“Projetos e valores”: quanto você recebe por hora em cada projeto e o que fez neles, no período e desde o início. Só você e os administradores veem."
       edit: "“Editar perfil” abre os dados pessoais (nome e email, que é o que você usa para entrar) e, na aba “Senha”, a troca de senha, que encerra as suas outras sessões."
       language: "O idioma (PT | EN), a “Ajuda” e o “Sair” ficam no mesmo menu da conta, e o navegador lembra o idioma escolhido."
+      claude: "Em “Conectar ao Claude”, o “Novo token” gera um token e o comando que conecta o Claude Code: com ele, o Claude cria e atualiza as suas tarefas, pega tarefas, sincroniza e bate o seu ponto, como você e sem ver valores em dinheiro. O token aparece uma vez só, vence na data escolhida e pode ser revogado ali; trocar a senha revoga todos."
   concepts:
     rates:
       title: Valor por hora
@@ -1872,6 +1907,10 @@ errors:
     weak_password: "a senha precisa ter pelo menos 8 caracteres"
     wrong_password: "a senha atual está incorreta"
     same_password: "a nova senha precisa ser diferente da atual"
+    token_days_invalid: "a validade do token deve ser de 30, 90 ou 365 dias"
+    token_limit: "você já tem {{.max}} tokens; revogue um antes de criar outro"
+    token_name_required: "dê um nome ao token, para reconhecê-lo depois"
+    token_not_found: "token não encontrado"
   collaborator:
     not_in_project: "esta pessoa não está neste projeto"
   customer:
@@ -1967,6 +2006,12 @@ errors:
     name_taken: "o projeto já tem uma etiqueta com este nome"
     name_too_long: "o nome da etiqueta aceita até {{.max}} caracteres"
     not_found: "etiqueta não encontrada"
+  mcp:
+    invalid_assignee: "o responsável é me (você) ou none (ninguém)"
+    invalid_date: "data inválida em {{.field}}: use AAAA-MM-DD"
+    task_already_active: "esta tarefa já está em andamento na sessão"
+    task_not_in_session: "esta tarefa não está em andamento na sessão aberta"
+    unknown_label: "o projeto não tem a etiqueta {{.label}}; as que existem: {{.available}}"
   organization:
     field_too_long: "{{.field}} pode ter até {{.max}} caracteres"
     has_projects: "exclua todos os projetos antes de excluir a organização"
@@ -2173,6 +2218,9 @@ fields:
   priority: "a prioridade"
   status: "o status"
   assignee_id: "o responsável"
+  assignee: "o responsável"
+  days: "a validade"
+  query: "a busca"
   label: "o rótulo"
   label_ids: "os rótulos"
   integration_id: "a integração"

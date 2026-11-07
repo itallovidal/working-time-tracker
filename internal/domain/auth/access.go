@@ -227,12 +227,54 @@ func (m *Middleware) PeopleScope(c *echo.Context) (*uuid.UUID, error) {
 
 // SameOrganization diz se o recurso existe e é da organização da pessoa logada.
 func (r *Resolver) SameOrganization(c *echo.Context, kind Kind, id string) bool {
-	me := CurrentPerson(c)
+	return r.sameOrganization(CurrentPerson(c), kind, id)
+}
+
+func (r *Resolver) sameOrganization(me *Identity, kind Kind, id string) bool {
 	if me == nil {
 		return false
 	}
 	orgID, err := r.OrganizationOf(kind, id)
 	return err == nil && orgID == me.OrganizationID
+}
+
+// Reach é a checagem do RequireOrg sem o echo, para quem age em nome da pessoa fora das rotas da API (o servidor MCP):
+// o recurso existe e é da organização dela e, num recurso de projeto, quem não é dono está no projeto. Quem não
+// alcança deve receber a mesma resposta de um recurso que não existe.
+func (r *Resolver) Reach(me *Identity, kind Kind, id string) (bool, error) {
+	_, _, ok, err := r.reach(me, kind, id)
+	return ok, err
+}
+
+// reach faz a checagem. scoped diz que o conjunto veio do projeto do recurso; sem ele, quem chama usa o do cargo.
+func (r *Resolver) reach(me *Identity, kind Kind, id string) (set permission.Set, scoped, ok bool, err error) {
+	if !r.sameOrganization(me, kind, id) {
+		return permission.Set{}, false, false, nil
+	}
+	// Num recurso de projeto, quem não é admin só passa se estiver no projeto. Quem não está recebe a mesma resposta
+	// de um projeto que não existe, para não revelar que ele existe. Os admins estão em todos os projetos, mas com o
+	// que o cargo dá a eles (sem a cobrança), então também têm o conjunto montado aqui. Só o dono tem tudo em todos:
+	// para ele nada se consulta.
+	if me.IsOwner {
+		return permission.Set{}, false, true, nil
+	}
+	// Uma falha ao ler o projeto do recurso não deixa passar sem a checagem: o recurso que sumiu no meio é como um que
+	// não existe, e o erro do banco volta para quem chama.
+	projectID, err := r.ProjectOf(kind, id)
+	if ent.IsNotFound(err) {
+		return permission.Set{}, false, false, nil
+	}
+	if err != nil {
+		return permission.Set{}, false, false, err
+	}
+	if projectID == uuid.Nil {
+		return permission.Set{}, false, true, nil
+	}
+	set, in, err := r.ProjectAccess(me, projectID)
+	if err != nil {
+		return permission.Set{}, false, false, err
+	}
+	return set, true, in, nil
 }
 
 // RequireOrg responde 404 quando o recurso do parâmetro não existe ou é de outra
@@ -251,25 +293,18 @@ func (m *Middleware) RequireOrgPage(kind Kind, param string, notFound echo.Handl
 func (m *Middleware) requireOrg(kind Kind, param string, deny echo.HandlerFunc) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c *echo.Context) error {
-			if !m.resolver.SameOrganization(c, kind, c.Param(param)) {
+			// A regra está no reach, que o MCP também usa. Num recurso de projeto, as permissões da pessoa nele
+			// ficam à mão das rotas e dos handlers que vêm depois; num recurso sem projeto o conjunto não muda (uma
+			// rota com dois parâmetros, como o projeto e a pessoa, guarda o do projeto).
+			set, scoped, ok, err := m.resolver.reach(CurrentPerson(c), kind, c.Param(param))
+			if err != nil {
+				return err
+			}
+			if !ok {
 				return deny(c)
 			}
-			// Num recurso de projeto, quem não é admin só passa se estiver no projeto, e as permissões
-			// dele nele ficam à mão das rotas e dos handlers que vêm depois. Quem não está recebe a
-			// mesma resposta de um projeto que não existe, para não revelar que ele existe. Os admins
-			// estão em todos os projetos, mas com o que o cargo dá a eles (sem a cobrança), então também têm o
-			// conjunto montado aqui. Só o dono tem tudo em todos: para ele nada se consulta.
-			if me := CurrentPerson(c); me != nil && !me.IsOwner {
-				if projectID, err := m.resolver.ProjectOf(kind, c.Param(param)); err == nil && projectID != uuid.Nil {
-					set, in, err := m.resolver.ProjectAccess(me, projectID)
-					if err != nil {
-						return err
-					}
-					if !in {
-						return deny(c)
-					}
-					c.Set(projectSetKey, set)
-				}
+			if scoped {
+				c.Set(projectSetKey, set)
 			}
 			return next(c)
 		}

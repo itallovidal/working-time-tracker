@@ -175,6 +175,50 @@
       }
     },
     {
+      "_id": "req_01_tok1",
+      "_type": "request",
+      "parentId": "fld_01",
+      "name": "Tokens do Claude",
+      "method": "GET",
+      "url": "{{base_url}}/api/auth/tokens",
+      "authentication": {},
+      "metaSortKey": 3.1,
+      "headers": [],
+      "body": {}
+    },
+    {
+      "_id": "req_01_tok2",
+      "_type": "request",
+      "parentId": "fld_01",
+      "name": "Novo token do Claude",
+      "method": "POST",
+      "url": "{{base_url}}/api/auth/tokens",
+      "authentication": {},
+      "metaSortKey": 3.2,
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Claude Code no notebook\",\n  \"days\": 90\n}"
+      }
+    },
+    {
+      "_id": "req_01_tok3",
+      "_type": "request",
+      "parentId": "fld_01",
+      "name": "Revogar token do Claude",
+      "method": "DELETE",
+      "url": "{{base_url}}/api/auth/tokens/<id do token>",
+      "authentication": {},
+      "metaSortKey": 3.3,
+      "headers": [],
+      "body": {}
+    },
+    {
       "_id": "req_01_03_onboarding",
       "_type": "request",
       "parentId": "fld_01",

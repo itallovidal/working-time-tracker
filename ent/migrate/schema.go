@@ -9,6 +9,38 @@ import (
 )
 
 var (
+	// APITokensColumns holds the columns for the "api_tokens" table.
+	APITokensColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "name", Type: field.TypeString},
+		{Name: "token_hash", Type: field.TypeString, Unique: true},
+		{Name: "prefix", Type: field.TypeString},
+		{Name: "expires_at", Type: field.TypeTime},
+		{Name: "last_used_at", Type: field.TypeTime, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "person_id", Type: field.TypeUUID},
+	}
+	// APITokensTable holds the schema information for the "api_tokens" table.
+	APITokensTable = &schema.Table{
+		Name:       "api_tokens",
+		Columns:    APITokensColumns,
+		PrimaryKey: []*schema.Column{APITokensColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "api_tokens_persons_api_tokens",
+				Columns:    []*schema.Column{APITokensColumns[7]},
+				RefColumns: []*schema.Column{PersonsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "apitoken_person_id",
+				Unique:  false,
+				Columns: []*schema.Column{APITokensColumns[7]},
+			},
+		},
+	}
 	// AllocationsColumns holds the columns for the "allocations" table.
 	AllocationsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -655,6 +687,7 @@ var (
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		APITokensTable,
 		AllocationsTable,
 		CustomersTable,
 		IntegrationsTable,
@@ -677,6 +710,7 @@ var (
 )
 
 func init() {
+	APITokensTable.ForeignKeys[0].RefTable = PersonsTable
 	AllocationsTable.ForeignKeys[0].RefTable = PersonsTable
 	AllocationsTable.ForeignKeys[1].RefTable = ProjectsTable
 	CustomersTable.ForeignKeys[0].RefTable = OrganizationsTable

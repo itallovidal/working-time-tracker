@@ -6,9 +6,11 @@ de uma requisição até o banco. As tecnologias estão em [stack.md](stack.md),
 
 ## Um binário
 
-O servidor é um binário Go (Echo) que serve **três coisas** no mesmo endereço:
+O servidor é um binário Go (Echo) que serve **quatro coisas** no mesmo endereço:
 
 - a **API JSON** em `/api/*`, que é a fonte da verdade e serve também a clientes fora do navegador;
+- o **servidor MCP** em `/mcp`, por onde o Claude Code age como uma pessoa, com um token pessoal em vez do cookie
+  ([api/mcp.md](../api/mcp.md));
 - as **páginas HTML**, renderizadas no servidor (`html/template`), que já sabem quem está logado e em que
   organização e projeto ele está. Os componentes Alpine.js de cada página buscam e mudam os dados pela API;
 - os **arquivos estáticos** em `/static`, sem etapa de build.
@@ -62,7 +64,7 @@ vínculos com itens externos), `work_session` (o ponto) e `integration`. Alguns 
 
 | Pacote | O que tem de diferente |
 |---|---|
-| `auth` | Signup, login, sessões, convites, o login pelo Clerk e **os middlewares** de acesso (`middleware.go`, `access.go`) |
+| `auth` | Signup, login, sessões, convites, o login pelo Clerk, os tokens do Claude (`api_token.go`) e **os middlewares** de acesso (`middleware.go`, `access.go`; a checagem do `RequireOrg` também existe sem o echo, `Resolver.Reach`, para o MCP) |
 | `collaborator` | Não tem tabela: junta o valor por hora e os times de quem está no projeto |
 | `overview` | Não tem tabela nem store: lê os services dos outros domínios e monta as visões gerais (do projeto, da organização e o painel da pessoa) |
 | `payment` | Não tem tabela: calcula os períodos de pagamento a partir das sessões e da regra de cada pessoa |
@@ -102,6 +104,7 @@ internal/
   database/             conexão, migrations/ (SQL versionado) e quem as aplica
   domain/               os domínios (ver acima)
   i18n/                 catálogos YAML (locales/), escolha do idioma e o script dos textos
+  mcp/                  o servidor MCP (/mcp) e as ferramentas do Claude; lê os services, como o page/
   page/                 handlers das páginas HTML
   routes/               rotas da API (routes.go), das páginas (pages.go) e o /healthcheck
   server/               server.Build, que monta tudo, e os testes do router de verdade

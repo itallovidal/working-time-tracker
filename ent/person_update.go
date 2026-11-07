@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 	"working-time-tracker/ent/allocation"
+	"working-time-tracker/ent/apitoken"
 	"working-time-tracker/ent/invite"
 	"working-time-tracker/ent/organization"
 	"working-time-tracker/ent/payout"
@@ -326,6 +327,21 @@ func (_u *PersonUpdate) AddSessions(v ...*Session) *PersonUpdate {
 	return _u.AddSessionIDs(ids...)
 }
 
+// AddAPITokenIDs adds the "api_tokens" edge to the APIToken entity by IDs.
+func (_u *PersonUpdate) AddAPITokenIDs(ids ...uuid.UUID) *PersonUpdate {
+	_u.mutation.AddAPITokenIDs(ids...)
+	return _u
+}
+
+// AddAPITokens adds the "api_tokens" edges to the APIToken entity.
+func (_u *PersonUpdate) AddAPITokens(v ...*APIToken) *PersonUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddAPITokenIDs(ids...)
+}
+
 // AddCreatedInviteIDs adds the "created_invites" edge to the Invite entity by IDs.
 func (_u *PersonUpdate) AddCreatedInviteIDs(ids ...uuid.UUID) *PersonUpdate {
 	_u.mutation.AddCreatedInviteIDs(ids...)
@@ -464,6 +480,27 @@ func (_u *PersonUpdate) RemoveSessions(v ...*Session) *PersonUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveSessionIDs(ids...)
+}
+
+// ClearAPITokens clears all "api_tokens" edges to the APIToken entity.
+func (_u *PersonUpdate) ClearAPITokens() *PersonUpdate {
+	_u.mutation.ClearAPITokens()
+	return _u
+}
+
+// RemoveAPITokenIDs removes the "api_tokens" edge to APIToken entities by IDs.
+func (_u *PersonUpdate) RemoveAPITokenIDs(ids ...uuid.UUID) *PersonUpdate {
+	_u.mutation.RemoveAPITokenIDs(ids...)
+	return _u
+}
+
+// RemoveAPITokens removes "api_tokens" edges to APIToken entities.
+func (_u *PersonUpdate) RemoveAPITokens(v ...*APIToken) *PersonUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveAPITokenIDs(ids...)
 }
 
 // ClearCreatedInvites clears all "created_invites" edges to the Invite entity.
@@ -843,6 +880,51 @@ func (_u *PersonUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(session.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.APITokensCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   person.APITokensTable,
+			Columns: []string{person.APITokensColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(apitoken.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedAPITokensIDs(); len(nodes) > 0 && !_u.mutation.APITokensCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   person.APITokensTable,
+			Columns: []string{person.APITokensColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(apitoken.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.APITokensIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   person.APITokensTable,
+			Columns: []string{person.APITokensColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(apitoken.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1294,6 +1376,21 @@ func (_u *PersonUpdateOne) AddSessions(v ...*Session) *PersonUpdateOne {
 	return _u.AddSessionIDs(ids...)
 }
 
+// AddAPITokenIDs adds the "api_tokens" edge to the APIToken entity by IDs.
+func (_u *PersonUpdateOne) AddAPITokenIDs(ids ...uuid.UUID) *PersonUpdateOne {
+	_u.mutation.AddAPITokenIDs(ids...)
+	return _u
+}
+
+// AddAPITokens adds the "api_tokens" edges to the APIToken entity.
+func (_u *PersonUpdateOne) AddAPITokens(v ...*APIToken) *PersonUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddAPITokenIDs(ids...)
+}
+
 // AddCreatedInviteIDs adds the "created_invites" edge to the Invite entity by IDs.
 func (_u *PersonUpdateOne) AddCreatedInviteIDs(ids ...uuid.UUID) *PersonUpdateOne {
 	_u.mutation.AddCreatedInviteIDs(ids...)
@@ -1432,6 +1529,27 @@ func (_u *PersonUpdateOne) RemoveSessions(v ...*Session) *PersonUpdateOne {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveSessionIDs(ids...)
+}
+
+// ClearAPITokens clears all "api_tokens" edges to the APIToken entity.
+func (_u *PersonUpdateOne) ClearAPITokens() *PersonUpdateOne {
+	_u.mutation.ClearAPITokens()
+	return _u
+}
+
+// RemoveAPITokenIDs removes the "api_tokens" edge to APIToken entities by IDs.
+func (_u *PersonUpdateOne) RemoveAPITokenIDs(ids ...uuid.UUID) *PersonUpdateOne {
+	_u.mutation.RemoveAPITokenIDs(ids...)
+	return _u
+}
+
+// RemoveAPITokens removes "api_tokens" edges to APIToken entities.
+func (_u *PersonUpdateOne) RemoveAPITokens(v ...*APIToken) *PersonUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveAPITokenIDs(ids...)
 }
 
 // ClearCreatedInvites clears all "created_invites" edges to the Invite entity.
@@ -1841,6 +1959,51 @@ func (_u *PersonUpdateOne) sqlSave(ctx context.Context) (_node *Person, err erro
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(session.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.APITokensCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   person.APITokensTable,
+			Columns: []string{person.APITokensColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(apitoken.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedAPITokensIDs(); len(nodes) > 0 && !_u.mutation.APITokensCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   person.APITokensTable,
+			Columns: []string{person.APITokensColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(apitoken.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.APITokensIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   person.APITokensTable,
+			Columns: []string{person.APITokensColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(apitoken.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

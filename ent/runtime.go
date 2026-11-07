@@ -5,6 +5,7 @@ package ent
 import (
 	"time"
 	"working-time-tracker/ent/allocation"
+	"working-time-tracker/ent/apitoken"
 	"working-time-tracker/ent/customer"
 	"working-time-tracker/ent/integration"
 	"working-time-tracker/ent/invite"
@@ -30,6 +31,16 @@ import (
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	apitokenFields := schema.APIToken{}.Fields()
+	_ = apitokenFields
+	// apitokenDescCreatedAt is the schema descriptor for created_at field.
+	apitokenDescCreatedAt := apitokenFields[7].Descriptor()
+	// apitoken.DefaultCreatedAt holds the default value on creation for the created_at field.
+	apitoken.DefaultCreatedAt = apitokenDescCreatedAt.Default.(func() time.Time)
+	// apitokenDescID is the schema descriptor for id field.
+	apitokenDescID := apitokenFields[0].Descriptor()
+	// apitoken.DefaultID holds the default value on creation for the id field.
+	apitoken.DefaultID = apitokenDescID.Default.(func() uuid.UUID)
 	allocationFields := schema.Allocation{}.Fields()
 	_ = allocationFields
 	// allocationDescPayRateCents is the schema descriptor for pay_rate_cents field.

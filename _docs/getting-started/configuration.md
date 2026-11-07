@@ -17,7 +17,7 @@ ninguém pediu.
 | `CLIENT_IP_HEADER` | atrás de um proxy | O cabeçalho em que o proxy da frente põe o IP de quem chamou: `CF-Connecting-IP` no Render, `X-Real-IP` no Railway, `Fly-Client-IP` no Fly.io. O limite de tentativas do login conta por esse IP; sem ele, atrás de um proxy, todo mundo divide o mesmo limite. Vazio (padrão), vale o IP da conexão. Só se define quando o servidor só é alcançado pelo proxy. `X-Forwarded-For` derruba a subida: é uma lista que quem chama pode começar |
 | `INTEGRATION_ENCRYPTION_KEY` | sim | Chave da criptografia AES-GCM dos tokens das integrações (`openssl rand -hex 32`). Trocá-la torna os tokens salvos ilegíveis: cada integração pede o token de novo, e o resto dela (nome e `metadata`) continua |
 | `COOKIE_SECURE` | não | `true` marca os cookies como `Secure`. Use em produção, atrás de HTTPS |
-| `PUBLIC_URL` | com GitHub, Trello ou Clerk | O endereço em que as pessoas abrem o sistema, sem barra no fim (`http://localhost:1243`). As plataformas devolvem a pessoa para ele depois de autorizar |
+| `PUBLIC_URL` | com GitHub, Trello ou Clerk | O endereço em que as pessoas abrem o sistema, sem barra no fim (`http://localhost:1243`). As plataformas devolvem a pessoa para ele depois de autorizar. O servidor MCP o usa no link de cada tarefa, e o perfil, no comando que conecta o Claude Code (sem ele, o perfil usa o endereço da requisição) |
 
 ## Integrações
 
