@@ -1075,10 +1075,11 @@ document.addEventListener('alpine:init', () => {
   // Os campos do bloco recolhido (multa, juros e tolerância), que a tela abre quando um deles erra.
   const lateFields = ['late_fee_bp', 'late_interest_bp_month', 'grace_days'];
 
-  // blankBilling são os termos de um cliente novo: por hora, fechando no último dia e vencendo no fechamento. Os campos
-  // de texto guardam o que a pessoa digita; billingBody os converte.
+  // blankBilling são os termos de um cliente novo: por hora, ciclo mensal fechando no último dia e vencendo no
+  // fechamento. Os campos de texto guardam o que a pessoa digita; billingBody os converte.
   const blankBilling = () => ({
     billing_mode: 'hourly', hourly_rate: '', monthly_fee: '', contract_start: '', contract_end: '',
+    billing_cycle: 'monthly', cycle_anchor: '',
     closing_day: '31', payment_days: '0', late_fee: '', late_interest: '', grace_days: '',
   });
 
@@ -1089,6 +1090,8 @@ document.addEventListener('alpine:init', () => {
     monthly_fee: WTT.fmt.moneyInput(c.monthly_fee_cents),
     contract_start: c.contract_start || '',
     contract_end: c.contract_end || '',
+    billing_cycle: c.billing_cycle || 'monthly',
+    cycle_anchor: c.cycle_anchor || '',
     closing_day: String(c.closing_day || 31),
     payment_days: String(c.payment_days || 0),
     late_fee: c.late_fee_bp ? WTT.fmt.moneyInput(c.late_fee_bp) : '',
@@ -1101,12 +1104,16 @@ document.addEventListener('alpine:init', () => {
   const billingBody = (d) => {
     const monthly = d.billing_mode === 'monthly';
     const hasRate = !monthly && String(d.hourly_rate).trim() !== '';
+    // O ciclo de 14 dias é só do por hora; no mensal vai o ciclo mensal e a âncora vazia, que é o padrão.
+    const biweekly = !monthly && d.billing_cycle === 'biweekly';
     return {
       billing_mode: d.billing_mode,
       hourly_rate_cents: hasRate ? WTT.toCents(d.hourly_rate, { strict: true }) : null,
       monthly_fee_cents: monthly ? WTT.toCents(d.monthly_fee, { strict: true }) : null,
       contract_start: monthly ? String(d.contract_start).trim() : '',
       contract_end: monthly ? String(d.contract_end).trim() : '',
+      billing_cycle: biweekly ? 'biweekly' : 'monthly',
+      cycle_anchor: biweekly ? String(d.cycle_anchor).trim() : '',
       closing_day: Number(d.closing_day),
       payment_days: Number(d.payment_days),
       late_fee_bp: monthly ? percentBP(d.late_fee) : 0,
@@ -1144,13 +1151,18 @@ document.addEventListener('alpine:init', () => {
   const billingSpec = (d) => {
     const { rules } = WTT;
     const monthly = d.billing_mode === 'monthly';
+    // No ciclo de 14 dias o dia do mês some da tela e quem se confere é o último fechamento (a data no futuro, quem
+    // recusa é o servidor, que sabe o hoje da organização).
+    const biweekly = !monthly && d.billing_cycle === 'biweekly';
     return {
       ...(monthly ? {
         monthly_fee_cents: [d.monthly_fee, rules.required, amountRule(1, 'customer.invalid_monthly_fee')],
         contract_start: [d.contract_start, rules.required, rules.date],
         contract_end: [d.contract_end, rules.date, contractEndRule(String(d.contract_start).trim())],
       } : hourlyRateSpec(d)),
-      closing_day: [d.closing_day, rules.required, rules.integer(1, 31, 'customer.invalid_closing_day')],
+      ...(biweekly
+        ? { cycle_anchor: [d.cycle_anchor, rules.required, rules.date] }
+        : { closing_day: [d.closing_day, rules.required, rules.integer(1, 31, 'customer.invalid_closing_day')] }),
       payment_days: [d.payment_days, rules.required, rules.integer(0, WTT.limits.term_days, 'customer.invalid_payment_days')],
       ...(monthly ? {
         late_fee_bp: [d.late_fee, percentRule('customer.invalid_late_fee')],
@@ -1181,8 +1193,12 @@ document.addEventListener('alpine:init', () => {
       if (WTT.billing.withoutRate(c)) return WTT.t('customer.billing.cell_no_rate');
       return WTT.t('customer.billing.cell_rate_hour', { rate: WTT.fmt.money(c.hourly_rate_cents) });
     },
-    // billingClosing é a coluna Fechamento: o dia do mês, e 31 é o último dia.
+    // billingClosing é a coluna Fechamento: o dia do mês (31 é o último dia) ou, no ciclo de 14 dias do por hora, a
+    // cada 14 dias desde o último fechamento já pago.
     billingClosing(c) {
+      if (!WTT.billing.monthly(c) && c.billing_cycle === 'biweekly' && c.cycle_anchor) {
+        return WTT.t('customer.billing.cell_closing_biweekly', { date: WTT.fmt.day(c.cycle_anchor) });
+      }
       return c.closing_day >= 31 ? WTT.t('customer.billing.cell_closing_last') : WTT.t('customer.billing.cell_closing_day', { day: c.closing_day });
     },
     // billingDue é a coluna Vencimento: os dias depois do fechamento.

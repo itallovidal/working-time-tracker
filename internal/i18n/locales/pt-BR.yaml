@@ -940,7 +940,7 @@ help:
       text: "O modo solo é para quem atua sozinho, como freelancer ou PJ: a organização é uma pessoa só, e o que é de equipe some em vez de ficar sobrando nos menus."
       choose: "Marque “Trabalho sozinho(a)” ao criar a organização ou depois, em Configurações › Editar. Só o dono muda, e só liga com você como a única pessoa e sem convites pendentes."
       hides: "O menu perde Colaboradores e Pagamentos e ganha “A receber”; o projeto perde a aba Colaboradores, e ninguém é convidado. Desligar o modo não apaga nada: tudo o que ficou escondido volta."
-      billing: "Cada cliente é cobrado por hora (as horas dos projetos vezes o valor por hora dele) ou por contrato mensal (um valor fixo por mês, e os projetos dele não têm valor por hora), nunca pelos dois. A cobrança se define em Clientes e vale para todos os projetos do cliente; cada projeto só soma um acréscimo, por hora ou por mês. Depois que o cliente tem projetos o modo não muda."
+      billing: "Cada cliente é cobrado por hora (as horas dos projetos vezes o valor por hora dele) ou por contrato mensal (um valor fixo por mês, e os projetos dele não têm valor por hora), nunca pelos dois. A cobrança se define em Clientes e vale para todos os projetos do cliente; cada projeto só soma um acréscimo, por hora ou por mês. Depois que o cliente tem projetos o modo não muda. O período do cliente por hora fecha uma vez por mês, no dia de fechamento, ou a cada 14 dias (o bi-weekly dos EUA), contados a partir do último fechamento que ele já pagou."
       home: "O Início mostra as horas, a receita (o dinheiro que entrou) e a receita projetada (o que se espera receber, pago ou não), por cliente."
     integrations:
       title: Integrações com GitHub e Trello
@@ -1132,6 +1132,11 @@ customer:
     contract_start: Início do contrato
     contract_end: Fim do contrato
     contract_end_hint: Sem data, o contrato segue por tempo indeterminado.
+    cycle: Ciclo do período
+    cycle_monthly: Mensal, no dia de fechamento
+    cycle_biweekly: A cada 14 dias (bi-weekly)
+    cycle_anchor: Último fechamento já pago
+    cycle_anchor_hint: "O último dia do último período que o cliente já pagou. Os próximos fecham a cada 14 dias a partir dele, e as horas até esse dia não entram no A receber. Cliente novo: use o dia 14 dias antes do primeiro fechamento."
     closing_day: Dia de fechamento
     closing_day_hint: O dia do mês em que o período fecha. 31 é o último dia de cada mês.
     payment_days: Prazo de pagamento (dias)
@@ -1161,6 +1166,7 @@ customer:
     cell_no_rate: Sem valor por hora
     cell_closing_last: Último dia
     cell_closing_day: "Dia {{.day}}"
+    cell_closing_biweekly: "A cada 14 dias desde {{.date}}"
     cell_due_closing: No fechamento
     cell_due_days:
       one: "{{.count}} dia depois"
@@ -1929,8 +1935,12 @@ errors:
     mode_locked: "este cliente já tem projetos: o modo de cobrança não pode mais mudar"
     has_receivables: "este cliente tem contas a receber; desfaça-as na página A receber antes de excluir"
     closing_day_locked: "este cliente já tem contas a receber: o dia de fechamento não pode mais mudar"
+    cycle_locked: "este cliente já tem contas a receber: o ciclo só passa a ser de 14 dias com o último fechamento no fim da conta mais recente, ou depois, e não volta a ser mensal"
     field_hourly_only: "{{.field}} só vale em um cliente cobrado por hora"
     field_monthly_only: "{{.field}} só vale em um cliente com cobrança mensal"
+    field_biweekly_only: "{{.field}} só vale no ciclo de 14 dias"
+    invalid_billing_cycle: "ciclo inválido: use monthly (mensal) ou biweekly (a cada 14 dias)"
+    invalid_cycle_anchor: "o último fechamento já pago não pode ser depois de hoje"
     invalid_hourly_rate: "o valor por hora deve ficar entre 10,00 e 1.000.000,00"
     invalid_monthly_fee: "a mensalidade deve ficar entre 0,01 e 1.000.000,00"
     invalid_contract_end: "o fim do contrato deve ser depois do início"
@@ -2079,7 +2089,7 @@ errors:
     team_not_in_project: "o time não é deste projeto"
   receivable:
     not_found: "recebível não encontrado"
-    not_a_period: "as datas não formam um período deste cliente: confira o dia de fechamento dele e, no contrato mensal, o início e o fim"
+    not_a_period: "as datas não formam um período deste cliente: confira o ciclo dele (o dia de fechamento, ou os 14 dias desde o último fechamento já pago) e, no contrato mensal, o início e o fim"
     period_open: "este período ainda não fechou: o cliente por hora só se confirma depois do fechamento"
     already_confirmed: "este período já foi confirmado"
     already_received: "este recebível já foi recebido: desfaça o recebimento antes"
@@ -2188,6 +2198,8 @@ fields:
   monthly_fee_cents: "a mensalidade"
   contract_start: "o início do contrato"
   contract_end: "o fim do contrato"
+  billing_cycle: "o ciclo do período"
+  cycle_anchor: "o último fechamento já pago"
   closing_day: "o dia de fechamento"
   payment_days: "o prazo de pagamento"
   late_fee_bp: "a multa por atraso"

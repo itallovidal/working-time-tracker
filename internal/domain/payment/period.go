@@ -9,8 +9,17 @@ import (
 	"working-time-tracker/internal/domain/person"
 )
 
-// payPeriodDays é o tamanho do período quinzenal.
+// payPeriodDays é o tamanho do período quinzenal da pessoa: 15 dias.
 const payPeriodDays = 15
+
+// periodDays é o tamanho do período quinzenal da regra: o PeriodDays dela (os 14 dias do ciclo do cliente) ou, sem
+// ele, os 15 da quinzena da pessoa.
+func periodDays(rule person.PaymentRule) int {
+	if rule.PeriodDays > 0 {
+		return rule.PeriodDays
+	}
+	return payPeriodDays
+}
 
 // Period é um período de pagamento: o intervalo [Start, End) em instantes (meia-noite no fuso da organização) e a
 // data do pagamento, que é o último dia do período (meia-noite desse dia). Os instantes servem só para cortar
@@ -65,10 +74,11 @@ func biweeklyStart(rule person.PaymentRule, loc *time.Location) (time.Time, bool
 }
 
 func biweekly(rule person.PaymentRule, s time.Time, k int, loc *time.Location) Period {
+	n := periodDays(rule)
 	return Period{
-		Start:   s.AddDate(0, 0, payPeriodDays*k),
-		End:     s.AddDate(0, 0, payPeriodDays*(k+1)),
-		PayDate: s.AddDate(0, 0, payPeriodDays*k+payPeriodDays-1),
+		Start:   s.AddDate(0, 0, n*k),
+		End:     s.AddDate(0, 0, n*(k+1)),
+		PayDate: s.AddDate(0, 0, n*k+n-1),
 		rule:    rule,
 		loc:     loc,
 	}
@@ -93,7 +103,7 @@ func PeriodAt(rule person.PaymentRule, t time.Time, loc *time.Location) (Period,
 		if !ok || day.Before(s) {
 			return Period{}, false
 		}
-		return biweekly(rule, s, daysBetween(s, day)/payPeriodDays, loc), true
+		return biweekly(rule, s, daysBetween(s, day)/periodDays(rule), loc), true
 	}
 	return Period{}, false
 }
@@ -109,7 +119,7 @@ func Previous(p Period) (Period, bool) {
 		if !ok || !p.Start.After(s) {
 			return Period{}, false
 		}
-		return biweekly(p.rule, s, daysBetween(s, p.Start)/payPeriodDays-1, p.loc), true
+		return biweekly(p.rule, s, daysBetween(s, p.Start)/periodDays(p.rule)-1, p.loc), true
 	}
 	return Period{}, false
 }
@@ -120,7 +130,7 @@ func Next(p Period) Period {
 		return monthly(p.rule, monthlyPayDate(p.rule.Day, p.PayDate.Year(), p.PayDate.Month()+1, p.loc), p.loc)
 	}
 	s, _ := biweeklyStart(p.rule, p.loc)
-	return biweekly(p.rule, s, daysBetween(s, p.Start)/payPeriodDays+1, p.loc)
+	return biweekly(p.rule, s, daysBetween(s, p.Start)/periodDays(p.rule)+1, p.loc)
 }
 
 // Upcoming devolve os n próximos períodos a pagar a partir de from: o que está em curso (ou que paga hoje) e os

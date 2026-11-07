@@ -127,8 +127,9 @@ func effectiveRate(cents int, seconds float64) (rate *int, below bool) {
 //     janeiro recebida em 5 de fevereiro é Receita de fevereiro.
 //   - Receita projetada: dos períodos que terminam na janela (period_end), o amount_cents do recebível quando ele
 //     existe, e a proposta quando não. As propostas já excluem os períodos confirmados, então nada conta duas vezes.
-//     Os tetos das propostas (24 períodos fechados por cliente por hora, 60 por cliente mensal) não chegam a valer: uma
-//     janela tem no máximo 12 períodos de cada cliente, os mais recentes.
+//     Os tetos das propostas (por cliente por hora, 24 períodos fechados no ciclo mensal e 52 no de 14 dias; 60 por
+//     cliente mensal) não chegam a valer: uma janela tem no máximo 12 períodos mensais de cada cliente, ou 26 fechados
+//     do ciclo de 14 dias, os mais recentes.
 func (s *Service) Solo(orgID, window string) (*SoloOverview, error) {
 	if window == "" {
 		window = WindowMonth

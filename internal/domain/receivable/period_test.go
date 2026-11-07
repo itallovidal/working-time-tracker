@@ -107,6 +107,46 @@ func TestCycle_Exact(t *testing.T) {
 	}
 }
 
+// O ciclo de 14 dias começa no dia seguinte à âncora: com âncora 27/10 os períodos são 28/10 a 10/11 e 11/11 a 24/11,
+// e até a meia-noite de 28/10 em São Paulo (03:00 UTC) não há período nenhum.
+func TestCycle_Biweekly(t *testing.T) {
+	cyc := newBiweeklyCycle("2026-10-27", zone(t, "America/Sao_Paulo"))
+	if cyc.maxClosed() != MaxBiweeklyProposals || newCycle(31, time.UTC).maxClosed() != MaxHourlyProposals {
+		t.Errorf("maxClosed = %d / %d", cyc.maxClosed(), newCycle(31, time.UTC).maxClosed())
+	}
+	if p, ok := cyc.at(instant(t, "2026-10-28T02:59:59Z")); ok {
+		t.Errorf("the anchor day is not a period, got %s..%s", p.StartDay(), p.PayDay())
+	}
+	first, ok := cyc.at(instant(t, "2026-10-28T03:00:00Z"))
+	if !ok || first.StartDay() != "2026-10-28" || first.PayDay() != "2026-11-10" || first.Days() != 14 {
+		t.Fatalf("first = %s..%s days %d (ok %v)", first.StartDay(), first.PayDay(), first.Days(), ok)
+	}
+	if closed(first, instant(t, "2026-11-11T02:59:59Z")) || !closed(first, instant(t, "2026-11-11T03:00:00Z")) {
+		t.Error("the first period should close exactly at the midnight after 2026-11-10 in São Paulo")
+	}
+	if second, ok := cyc.at(instant(t, "2026-11-11T03:00:00Z")); !ok || second.StartDay() != "2026-11-11" || second.PayDay() != "2026-11-24" {
+		t.Errorf("second = %s..%s (ok %v)", second.StartDay(), second.PayDay(), ok)
+	}
+	for _, c := range []struct {
+		start, end string
+		ok         bool
+	}{
+		{"2026-10-28", "2026-11-10", true},
+		{"2026-11-11", "2026-11-24", true},
+		{"2026-10-14", "2026-10-27", false}, // até a âncora não há período
+		{"2026-10-28", "2026-11-11", false}, // 15 dias
+		{"2026-10-01", "2026-10-31", false}, // o mês
+	} {
+		if _, ok := cyc.exact(c.start, c.end); ok != c.ok {
+			t.Errorf("exact(%s, %s) = %v, want %v", c.start, c.end, ok, c.ok)
+		}
+	}
+	// Sem uma âncora que seja um dia, o ciclo não tem período: nada é proposto, em vez de períodos errados.
+	if _, ok := newBiweeklyCycle("", time.UTC).at(instant(t, "2026-11-01T12:00:00Z")); ok {
+		t.Error("a cycle without an anchor should have no period")
+	}
+}
+
 func TestDays(t *testing.T) {
 	if got := addDays("2026-09-30", 5); got != "2026-10-05" {
 		t.Errorf("addDays = %s, want 2026-10-05", got)

@@ -12,8 +12,9 @@ import (
 var (
 	// ErrNotFound é o recebível que não existe na organização.
 	ErrNotFound = apperr.New("receivable.not_found", http.StatusNotFound)
-	// ErrNotAPeriod são datas que não formam um período do cliente: fora do ciclo do closing_day dele, ou, no mensal,
-	// fora do contrato (antes do início, depois do fim ou além do período seguinte ao corrente).
+	// ErrNotAPeriod são datas que não formam um período do cliente: fora do ciclo dele (o do closing_day, ou o de 14 dias
+	// a partir da âncora, que não tem período até ela), ou, no mensal, fora do contrato (antes do início, depois do fim
+	// ou além do período corrente).
 	ErrNotAPeriod = apperr.New("receivable.not_a_period", http.StatusBadRequest)
 	// ErrPeriodOpen é a confirmação de um período do cliente por hora que ainda não fechou: só se cobra o que já
 	// terminou. O mensal não tem essa regra.

@@ -4,17 +4,21 @@ import (
 	"math"
 	"time"
 
+	"working-time-tracker/ent"
+	"working-time-tracker/internal/domain/customer"
 	"working-time-tracker/internal/domain/payment"
 	"working-time-tracker/internal/domain/person"
 	"working-time-tracker/internal/domain/work_session"
 	"working-time-tracker/internal/validate"
 )
 
-// cycle é o ciclo mensal de cobrança de um cliente: o período fecha no closing_day dele (31 é o último dia do mês, e
-// um mês mais curto fecha no último dia). É a mesma conta da regra mensal de pagamento da pessoa
-// (payment.PeriodAt, Previous e Next), que este pacote só usa: o período vai do dia seguinte ao fechamento do mês
-// anterior até o fechamento do mês, os dois dias inclusivos, e fecha à meia-noite do dia do fechamento no fuso da
-// organização.
+// cycle é o ciclo de cobrança de um cliente, com a mesma conta da regra de pagamento da pessoa (payment.PeriodAt,
+// Previous e Next), que este pacote só usa. O período fecha à meia-noite do último dia, no fuso da organização, e os
+// dois dias são inclusivos.
+//   - Mensal: o período fecha no closing_day do cliente (31 é o último dia do mês, e um mês mais curto fecha no último
+//     dia) e vai do dia seguinte ao fechamento do mês anterior até o fechamento do mês.
+//   - A cada 14 dias (o bi-weekly dos EUA): os períodos começam no dia seguinte à âncora do cliente (o fim do último
+//     período já pago fora do app) e têm 14 dias cada. Nada até a âncora é período: as horas de lá nunca são propostas.
 type cycle struct {
 	rule person.PaymentRule
 	loc  *time.Location
@@ -22,6 +26,37 @@ type cycle struct {
 
 func newCycle(closingDay int, loc *time.Location) cycle {
 	return cycle{rule: person.PaymentRule{Frequency: person.PaymentMonthly, Day: closingDay}, loc: loc}
+}
+
+// newBiweeklyCycle é o ciclo de 14 dias que começa no dia seguinte à âncora (YYYY-MM-DD). Uma âncora que não é um dia
+// dá um ciclo sem períodos: nada é proposto nem confirmado, em vez de períodos errados.
+func newBiweeklyCycle(anchor string, loc *time.Location) cycle {
+	start := ""
+	if validDay(anchor) {
+		start = addDays(anchor, 1)
+	}
+	return cycle{rule: person.PaymentRule{Frequency: person.PaymentBiweekly, Start: start, PeriodDays: customer.CycleDays}, loc: loc}
+}
+
+// cycleOf é o ciclo do cliente, pelo billing_cycle dele.
+func cycleOf(c *ent.Customer, loc *time.Location) cycle {
+	if c.BillingCycle == customer.CycleBiweekly {
+		anchor := ""
+		if c.CycleAnchor != nil {
+			anchor = *c.CycleAnchor
+		}
+		return newBiweeklyCycle(anchor, loc)
+	}
+	return newCycle(c.ClosingDay, loc)
+}
+
+// maxClosed é quantos períodos fechados do cliente por hora a lista A confirmar traz: os de cerca de dois anos nos
+// dois ciclos.
+func (c cycle) maxClosed() int {
+	if c.rule.Frequency == person.PaymentBiweekly {
+		return MaxBiweeklyProposals
+	}
+	return MaxHourlyProposals
 }
 
 // at é o período que contém o instante t.

@@ -68,6 +68,14 @@ func (f *fixture) hourly(name string) *ent.Customer {
 		SetBillingMode("hourly").SetClosingDay(31).SetPaymentDays(5).SaveX(context.Background())
 }
 
+// biweekly cria um cliente por hora no ciclo de 14 dias a partir da âncora, com 3 dias de prazo.
+func (f *fixture) biweekly(name, anchor string) *ent.Customer {
+	f.t.Helper()
+	return testClient.Customer.Create().SetOrganizationID(f.orgID).SetName(name).
+		SetBillingMode("hourly").SetBillingCycle("biweekly").SetCycleAnchor(anchor).SetPaymentDays(3).
+		SaveX(context.Background())
+}
+
 // monthly cria um cliente mensal de 5.000,00 que fecha no último dia do mês, dá 10 dias de prazo e cobra 2% de multa e 1% ao
 // mês de juros, com o contrato começando em start.
 func (f *fixture) monthly(name, start string, end *string) *ent.Customer {
@@ -234,6 +242,98 @@ func TestProposals_HourlyAtMost24(t *testing.T) {
 	}
 	if got[0].PeriodStart != "2024-10-01" || got[len(got)-1].PeriodStart != "2026-09-01" {
 		t.Errorf("proposals run from %s to %s, want October 2024 to September 2026 (the most recent 24)", got[0].PeriodStart, got[len(got)-1].PeriodStart)
+	}
+}
+
+// O ciclo de 14 dias propõe a partir do dia seguinte à âncora: com âncora 27/10 e hoje 12/11, o período fechado é 28/10 a
+// 10/11, que vence 3 dias depois, e 11/11 a 24/11 é o aberto. As horas do dia da âncora ficam de fora, e a sessão que
+// atravessa a meia-noite dela conta só a parte de depois.
+func TestProposals_BiweeklyFromTheAnchor(t *testing.T) {
+	f := setup(t)
+	acme := f.biweekly("Acme Inc.", "2026-10-27")
+	tk := f.task(acme, "Site")
+	f.session(tk, "2026-10-27T13:00:00Z", "2026-10-27T14:00:00Z", rate(10000)) // no dia da âncora: já acertado
+	f.session(tk, "2026-10-28T02:30:00Z", "2026-10-28T03:30:00Z", rate(10000)) // 23:30 a 00:30 em São Paulo: 30min contam
+	f.session(tk, "2026-10-29T13:00:00Z", "2026-10-29T15:00:00Z", rate(10000))
+	f.session(tk, "2026-11-11T13:00:00Z", "2026-11-11T14:00:00Z", rate(10000)) // o período aberto
+	f.now = at(t, "2026-11-12T15:00:00Z")
+
+	got := f.proposals(false)
+	if len(got) != 1 {
+		t.Fatalf("proposals = %+v, want only 2026-10-28..2026-11-10", got)
+	}
+	p := got[0]
+	if p.PeriodStart != "2026-10-28" || p.PeriodEnd != "2026-11-10" || p.Seconds != 9000 || p.CalculatedCents != 25000 ||
+		p.DueDate != "2026-11-13" || p.Open || p.Kind != "hourly" {
+		t.Errorf("proposal = %+v, want 2026-10-28..2026-11-10, 2h30 and 250,00, due 2026-11-13", p)
+	}
+
+	withOpen := f.proposals(true)
+	if len(withOpen) != 2 || withOpen[1].PeriodStart != "2026-11-11" || withOpen[1].PeriodEnd != "2026-11-24" ||
+		!withOpen[1].Open || withOpen[1].Seconds != 3600 {
+		t.Errorf("with the open period = %+v, want the closed one and 2026-11-11..2026-11-24 open with 1h", withOpen)
+	}
+
+	// No dia da âncora ainda não há período nenhum, nem o aberto.
+	f.now = at(t, "2026-10-27T15:00:00Z")
+	if got := f.proposals(true); len(got) != 0 {
+		t.Errorf("proposals on the anchor day = %+v, want none", got)
+	}
+}
+
+// Confirmar no ciclo de 14 dias: só as datas de um período dele, depois da âncora e já fechado; o vencimento padrão é o
+// fim mais o prazo.
+func TestConfirm_Biweekly(t *testing.T) {
+	f := setup(t)
+	acme := f.biweekly("Acme Inc.", "2026-10-27")
+	tk := f.task(acme, "Site")
+	f.session(tk, "2026-10-29T13:00:00Z", "2026-10-29T15:00:00Z", rate(10000))
+	f.now = at(t, "2026-11-12T15:00:00Z")
+	org, amount := f.orgID.String(), 20000
+	confirm := func(start, end string) (*receivable.Receivable, error) {
+		return f.svc.Confirm(org, receivable.ConfirmInput{CustomerID: acme.ID.String(), PeriodStart: start, PeriodEnd: end, AmountCents: &amount})
+	}
+
+	for _, c := range [][2]string{
+		{"2026-10-14", "2026-10-27"}, // até a âncora não há período
+		{"2026-10-28", "2026-11-11"}, // 15 dias
+		{"2026-10-01", "2026-10-31"}, // o mês
+	} {
+		_, err := confirm(c[0], c[1])
+		wantCode(t, err, receivable.ErrNotAPeriod, "period_start")
+	}
+	_, err := confirm("2026-11-11", "2026-11-24")
+	wantCode(t, err, receivable.ErrPeriodOpen, "")
+
+	r, err := confirm("2026-10-28", "2026-11-10")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r.Seconds != 7200 || r.CalculatedCents != 20000 || r.DueDate != "2026-11-13" {
+		t.Errorf("confirmed = %+v, want 2h, 200,00 and due 2026-11-13", r)
+	}
+	if got := f.proposals(false); len(got) != 0 {
+		t.Errorf("proposals after the confirmation = %+v, want none", got)
+	}
+}
+
+// No ciclo de 14 dias o teto é de 52 períodos fechados, os mais recentes: cerca de dois anos, como os 24 do mensal.
+func TestProposals_BiweeklyAtMost52(t *testing.T) {
+	f := setup(t)
+	acme := f.biweekly("Acme Inc.", "2024-05-31")
+	tk := f.task(acme, "Site")
+	// Hoje (9/10/2026) está no período 61, que começa em 3/10; os 61 anteriores, de 1/6/2024 em diante, têm uma hora
+	// cada, no segundo dia.
+	for k := 0; k < 61; k++ {
+		day := time.Date(2024, time.June, 2+14*k, 12, 0, 0, 0, time.UTC)
+		f.session(tk, day.Format(time.RFC3339), day.Add(time.Hour).Format(time.RFC3339), rate(10000))
+	}
+	got := f.proposals(false)
+	if len(got) != receivable.MaxBiweeklyProposals {
+		t.Fatalf("got %d proposals, want %d", len(got), receivable.MaxBiweeklyProposals)
+	}
+	if got[0].PeriodStart != "2024-10-05" || got[len(got)-1].PeriodStart != "2026-09-19" {
+		t.Errorf("proposals run from %s to %s, want 2024-10-05 to 2026-09-19 (the most recent 52)", got[0].PeriodStart, got[len(got)-1].PeriodStart)
 	}
 }
 

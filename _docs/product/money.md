@@ -30,7 +30,8 @@ os valores são em centavos, na moeda da organização.
 |---|---|---|
 | O que é | As horas dos projetos vezes o valor por hora do cliente, mais o acréscimo de cada projeto | Um valor fixo por mês, o contrato, mais o acréscimo mensal de cada projeto |
 | Só dele | `hourly_rate_cents`: o valor por hora, **obrigatório**, com o piso de 10,00 | `monthly_fee_cents` (obrigatório, maior que zero), `contract_start` (obrigatório) e `contract_end` (opcional, depois do início); `late_fee_bp` (multa, 200 = 2%), `late_interest_bp_month` (juros ao mês) e `grace_days` (tolerância depois do vencimento), que ficam num bloco recolhido na tela |
-| Dos dois | `closing_day` (1 a 31, padrão 31: 31 é o último dia do mês, e o mês curto fecha no último dia dele) e `payment_days` (dias entre o fechamento e o vencimento, padrão 0) | |
+| Só dele, o ciclo | `billing_cycle`: `monthly` (padrão, fecha no `closing_day`) ou `biweekly` (a cada 14 dias, o bi-weekly dos EUA), com `cycle_anchor`, o último dia do último período que o cliente já pagou | O ciclo é sempre o mensal |
+| Dos dois | `closing_day` (1 a 31, padrão 31: 31 é o último dia do mês, e o mês curto fecha no último dia dele; sem uso no ciclo de 14 dias) e `payment_days` (dias entre o fechamento e o vencimento, padrão 0) | |
 
 - **Sem o valor por hora o cliente por hora é recusado** (`request.field_required`, field `hourly_rate_cents`), na
   criação e ao apagá-lo. Um cliente antigo, de antes da Decisão 21, sem projetos e sem valor, aparece na lista como
@@ -145,11 +146,18 @@ pagamento da pessoa (`payment.PeriodAt`): o período vai do dia seguinte ao fech
 os dois dias inclusivos, e **fecha à meia-noite do fim do dia do fechamento, no fuso da organização**. O vencimento é o fim do
 período mais os `payment_days`.
 
+**O ciclo de 14 dias** (`billing_cycle: biweekly`, só no cliente por hora) é o bi-weekly dos clientes dos EUA. O dono
+informa a `cycle_anchor`, o último dia do último período que o cliente já pagou, e os períodos começam no dia seguinte,
+com 14 dias cada. As horas até a âncora já foram acertadas fora do app e **nunca são propostas**. Exemplo: âncora
+27/10/2026 e 3 dias de prazo dão 28/10 a 10/11 (vence 13/11), 11/11 a 24/11 (vence 27/11), e assim por diante. É a
+mesma conta da regra quinzenal da pessoa, com 14 dias em vez de 15 (`PaymentRule.PeriodDays`, que não sai na API). A
+âncora não pode ser depois de hoje; para um cliente novo, o dono usa o dia 14 dias antes do primeiro fechamento.
+
 **O que o sistema propõe** (calculado na hora; nada é gravado até o dono confirmar):
 
 | Modo do cliente | Períodos propostos | Valor proposto |
 |---|---|---|
-| **Por hora** | Os períodos **já fechados** com tempo nos projetos do cliente, ainda sem recebível. No máximo os 24 mais recentes | A soma das sessões de **todos os projetos do cliente**, cortadas no período e arredondadas ao centavo **por sessão**, pelo valor cobrado congelado nela (a mesma conta de [Da sessão ao dinheiro](#da-sessão-ao-dinheiro)). A sessão aberta conta até agora |
+| **Por hora** | Os períodos **já fechados** com tempo nos projetos do cliente, ainda sem recebível. No máximo os 24 mais recentes no ciclo mensal e os 52 no de 14 dias (cerca de dois anos nos dois) | A soma das sessões de **todos os projetos do cliente**, cortadas no período e arredondadas ao centavo **por sessão**, pelo valor cobrado congelado nela (a mesma conta de [Da sessão ao dinheiro](#da-sessão-ao-dinheiro)). A sessão aberta conta até agora |
 | **Mensal** | Do período do `contract_start` até o **período corrente** (o seguinte só entra quando começa), parando no período que contém o `contract_end`, ainda sem recebível. No máximo os 60 mais recentes | A `monthly_fee_cents` mais os acréscimos mensais dos projetos do cliente, como estão hoje (`extra_cents` diz quanto deles). O primeiro mês parcial, e um acréscimo que já acabou, o dono corrige ao confirmar: não há pro-rata |
 
 A proposta traz também o **valor por hora efetivo** (o valor dividido pelas horas). Abaixo de 10,00
@@ -202,7 +210,10 @@ e observação) também só vale enquanto não foi recebido.
 **Limites que valem saber.** Os períodos são calculados do cadastro do cliente de hoje, e "já cobrado" compara as
 datas exatas do período. Por isso o cliente com recebíveis não troca o `closing_day` (`customer.closing_day_locked`;
 mandar o dia que ele já tem passa): um dia novo geraria períodos por cima dos confirmados e as mesmas horas seriam
-propostas de novo. Desfeitos os recebíveis, o dia muda. Pelo mesmo motivo, e porque a sessão não guarda o cliente (vale
+propostas de novo. Desfeitos os recebíveis, o dia muda. O ciclo e a âncora travam do mesmo jeito
+(`customer.cycle_locked`), com uma exceção: passar para o de 14 dias, ou mover a âncora, com ela no fim do recebível
+mais recente ou depois, porque aí os períodos novos começam depois de tudo o que já foi confirmado. É assim que um
+cliente com histórico mensal passa para 14 dias. Pelo mesmo motivo, e porque a sessão não guarda o cliente (vale
 o do projeto de hoje), o projeto com sessões não sai de um cliente que já tem recebíveis (`project.customer_locked`).
 Receber um recebível cujo valor foi editado depois de a tela lê-lo é recusado (`receivable.changed`): o dono confere e
 tenta de novo. Excluir o cliente com recebíveis é recusado (`customer.has_receivables`); apagar a organização leva tudo.
@@ -234,9 +245,11 @@ janela é de calendário no fuso da organização: Este mês, Mês passado ou An
 - **Limite que vale saber.** As horas são da janela de calendário e a projetada é dos períodos que **terminam** nela. Com
   `closing_day` 31 (o padrão) os dois coincidem; com outro dia de fechamento o mês tem horas de um período que só termina
   no mês seguinte, e o valor por hora efetivo do cliente é uma aproximação (chega a zero, com o aviso, num mês em que
-  nenhum período dele termina).
-- **Os tetos das propostas** (24 períodos fechados por cliente por hora e 60 por cliente mensal) não chegam a valer na
-  tela: uma janela tem no máximo 12 períodos de cada cliente, sempre os mais recentes.
+  nenhum período dele termina). No ciclo de 14 dias um mês tem dois ou três fins de período, e a conta também é uma
+  aproximação.
+- **Os tetos das propostas** (por cliente por hora, 24 períodos fechados no ciclo mensal e 52 no de 14 dias; 60 por
+  cliente mensal) não chegam a valer na tela: uma janela tem no máximo 12 períodos mensais de cada cliente, ou 26
+  fechados do ciclo de 14 dias, sempre os mais recentes.
 
 ## Quem vê o quê
 

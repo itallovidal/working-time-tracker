@@ -1156,6 +1156,15 @@ Branch `feat/customers-and-project-form` (2026-11-07), from what the owner asked
 - [X] S112.4 The customer meeting is every week or every two weeks: `projects.customer_meeting_every_weeks` (1 or 2, default 1, `project.invalid_customer_meeting_every_weeks` otherwise), back to 1 when the meeting or the customer goes away. A "Frequência" select in the form, and Configurações says "…, a cada duas semanas". Only the frequency is kept: nothing computes meeting dates yet
 - [X] S112.5 Solo mode: the Overview is a main project tab, and Gestão holds Integrações and Configurações (its root opens Integrações). The tab strip comes from `page.Data.ProjectTabs()`, where `outsideManagement` is the one rule that changes with the mode; the Início tab id is `home`. Help texts follow
 
+### Sprint 113: The 14-Day Cycle for Hourly Customers
+
+Branch `feat/biweekly-billing-cycle` (2026-11-07), for US customers who pay hourly work bi-weekly (Decisão 23).
+
+- [X] S113.1 `customers.billing_cycle` (`monthly`, the default, or `biweekly`) and `customers.cycle_anchor` (the last day of the last period the customer already paid), migration `customer_billing_cycle`. The 14-day cycle is hourly only; the monthly contract is always monthly
+- [X] S113.2 The validation: `customer.invalid_billing_cycle`, `customer.invalid_cycle_anchor` (an anchor after today in the organization's zone), `customer.field_biweekly_only` (an anchor on the monthly cycle) and the anchor required and a real date. With receivables the cycle and the anchor lock (`409 customer.cycle_locked`), except moving to 14 days with the anchor on the end of the latest receivable or later. `customer.closing_day_locked` now answers the documented 409 instead of 400
+- [X] S113.3 Receivables: periods of 14 days from the day after the anchor (`PaymentRule.PeriodDays`, hidden from the API; the person's 15-day rule does not change), nothing proposed up to the anchor, and a cap of 52 closed periods in that cycle (24 in the monthly one), so a year of the solo home keeps all 26
+- [X] S113.4 The customer form in solo: a "Ciclo do período" select in hourly mode, and "Último fechamento já pago" in place of the closing day in the 14-day cycle. The Fechamento column and the details say "A cada 14 dias desde 27 de out. de 2026". Help and API docs follow
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open

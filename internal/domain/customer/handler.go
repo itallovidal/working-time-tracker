@@ -22,9 +22,10 @@ func fail(c *echo.Context, err error) error {
 	switch {
 	case errors.Is(err, database.ErrNotFound):
 		return apperr.Respond(c, http.StatusNotFound, ErrNotFound)
-	case errors.Is(err, ErrHasProjects), errors.Is(err, ErrHasReceivables), errors.Is(err, ErrModeLocked):
-		// Conflito com o estado atual (o cliente ainda tem projetos ou recebíveis, ou o modo dele não muda mais), não
-		// um corpo mal formado.
+	case errors.Is(err, ErrHasProjects), errors.Is(err, ErrHasReceivables), errors.Is(err, ErrModeLocked),
+		errors.Is(err, ErrClosingDayLocked), errors.Is(err, ErrCycleLocked):
+		// Conflito com o estado atual (o cliente ainda tem projetos ou recebíveis, ou o modo, o fechamento e o ciclo dele
+		// não mudam mais), não um corpo mal formado.
 		return apperr.Respond(c, http.StatusConflict, err)
 	}
 	return apperr.Respond(c, http.StatusBadRequest, err)

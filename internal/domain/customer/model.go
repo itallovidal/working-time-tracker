@@ -33,6 +33,15 @@ func BillRate(mode string, hourlyRateCents *int, extraCents int) *int {
 // DefaultClosingDay é o dia de fechamento do cliente sem termos: 31, o último dia de cada mês.
 const DefaultClosingDay = 31
 
+// Os ciclos do período do cliente: mensal (fecha no ClosingDay de cada mês, o padrão) ou a cada CycleDays dias a partir
+// da âncora, o bi-weekly dos EUA. O de 14 dias só vale no modo hourly; o contrato mensal é sempre mensal. Não é a
+// quinzena de 15 dias da regra de pagamento da pessoa.
+const (
+	CycleMonthly  = "monthly"
+	CycleBiweekly = "biweekly"
+	CycleDays     = 14
+)
+
 type Customer struct {
 	ID             uuid.UUID `json:"id"`
 	OrganizationID uuid.UUID `json:"organization_id"`
@@ -60,8 +69,13 @@ type Customer struct {
 	MonthlyFeeCents *int    `json:"monthly_fee_cents"`
 	ContractStart   *string `json:"contract_start"`
 	ContractEnd     *string `json:"contract_end"`
-	// ClosingDay é o dia do mês em que o período fecha (1 a 31; 31 é o último dia, e o mês curto fecha no último dia
-	// dele), e PaymentDays, os dias entre o fechamento e o vencimento. Valem nos dois modos.
+	// BillingCycle é monthly (padrão) ou biweekly, este só no modo hourly. CycleAnchor, só no biweekly, é o último dia
+	// do último período já pago, YYYY-MM-DD: os períodos de 14 dias começam no dia seguinte e nada até ele é cobrado.
+	BillingCycle string  `json:"billing_cycle"`
+	CycleAnchor  *string `json:"cycle_anchor"`
+	// ClosingDay é o dia do mês em que o período mensal fecha (1 a 31; 31 é o último dia, e o mês curto fecha no último
+	// dia dele); no ciclo de 14 dias fica guardado sem uso. PaymentDays são os dias entre o fechamento e o vencimento,
+	// em qualquer ciclo e nos dois modos.
 	ClosingDay  int `json:"closing_day"`
 	PaymentDays int `json:"payment_days"`
 	// LateFeeBP (multa, 200 = 2%), LateInterestBPMonth (juros ao mês, em pontos-base) e GraceDays (tolerância depois do
@@ -90,6 +104,8 @@ type Input struct {
 	MonthlyFeeCents     validate.Optional[int] `json:"monthly_fee_cents"`
 	ContractStart       *string                `json:"contract_start"`
 	ContractEnd         *string                `json:"contract_end"`
+	BillingCycle        *string                `json:"billing_cycle"`
+	CycleAnchor         *string                `json:"cycle_anchor"`
 	ClosingDay          *int                   `json:"closing_day"`
 	PaymentDays         *int                   `json:"payment_days"`
 	LateFeeBP           *int                   `json:"late_fee_bp"`

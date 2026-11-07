@@ -1594,6 +1594,8 @@ type CustomerMutation struct {
 	addclosing_day            *int
 	payment_days              *int
 	addpayment_days           *int
+	billing_cycle             *string
+	cycle_anchor              *string
 	late_fee_bp               *int
 	addlate_fee_bp            *int
 	late_interest_bp_month    *int
@@ -2409,6 +2411,91 @@ func (m *CustomerMutation) ResetPaymentDays() {
 	m.addpayment_days = nil
 }
 
+// SetBillingCycle sets the "billing_cycle" field.
+func (m *CustomerMutation) SetBillingCycle(s string) {
+	m.billing_cycle = &s
+}
+
+// BillingCycle returns the value of the "billing_cycle" field in the mutation.
+func (m *CustomerMutation) BillingCycle() (r string, exists bool) {
+	v := m.billing_cycle
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBillingCycle returns the old "billing_cycle" field's value of the Customer entity.
+// If the Customer object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CustomerMutation) OldBillingCycle(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBillingCycle is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBillingCycle requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBillingCycle: %w", err)
+	}
+	return oldValue.BillingCycle, nil
+}
+
+// ResetBillingCycle resets all changes to the "billing_cycle" field.
+func (m *CustomerMutation) ResetBillingCycle() {
+	m.billing_cycle = nil
+}
+
+// SetCycleAnchor sets the "cycle_anchor" field.
+func (m *CustomerMutation) SetCycleAnchor(s string) {
+	m.cycle_anchor = &s
+}
+
+// CycleAnchor returns the value of the "cycle_anchor" field in the mutation.
+func (m *CustomerMutation) CycleAnchor() (r string, exists bool) {
+	v := m.cycle_anchor
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCycleAnchor returns the old "cycle_anchor" field's value of the Customer entity.
+// If the Customer object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CustomerMutation) OldCycleAnchor(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCycleAnchor is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCycleAnchor requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCycleAnchor: %w", err)
+	}
+	return oldValue.CycleAnchor, nil
+}
+
+// ClearCycleAnchor clears the value of the "cycle_anchor" field.
+func (m *CustomerMutation) ClearCycleAnchor() {
+	m.cycle_anchor = nil
+	m.clearedFields[customer.FieldCycleAnchor] = struct{}{}
+}
+
+// CycleAnchorCleared returns if the "cycle_anchor" field was cleared in this mutation.
+func (m *CustomerMutation) CycleAnchorCleared() bool {
+	_, ok := m.clearedFields[customer.FieldCycleAnchor]
+	return ok
+}
+
+// ResetCycleAnchor resets all changes to the "cycle_anchor" field.
+func (m *CustomerMutation) ResetCycleAnchor() {
+	m.cycle_anchor = nil
+	delete(m.clearedFields, customer.FieldCycleAnchor)
+}
+
 // SetLateFeeBp sets the "late_fee_bp" field.
 func (m *CustomerMutation) SetLateFeeBp(i int) {
 	m.late_fee_bp = &i
@@ -2782,7 +2869,7 @@ func (m *CustomerMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *CustomerMutation) Fields() []string {
-	fields := make([]string, 0, 18)
+	fields := make([]string, 0, 20)
 	if m.organization != nil {
 		fields = append(fields, customer.FieldOrganizationID)
 	}
@@ -2824,6 +2911,12 @@ func (m *CustomerMutation) Fields() []string {
 	}
 	if m.payment_days != nil {
 		fields = append(fields, customer.FieldPaymentDays)
+	}
+	if m.billing_cycle != nil {
+		fields = append(fields, customer.FieldBillingCycle)
+	}
+	if m.cycle_anchor != nil {
+		fields = append(fields, customer.FieldCycleAnchor)
 	}
 	if m.late_fee_bp != nil {
 		fields = append(fields, customer.FieldLateFeeBp)
@@ -2873,6 +2966,10 @@ func (m *CustomerMutation) Field(name string) (ent.Value, bool) {
 		return m.ClosingDay()
 	case customer.FieldPaymentDays:
 		return m.PaymentDays()
+	case customer.FieldBillingCycle:
+		return m.BillingCycle()
+	case customer.FieldCycleAnchor:
+		return m.CycleAnchor()
 	case customer.FieldLateFeeBp:
 		return m.LateFeeBp()
 	case customer.FieldLateInterestBpMonth:
@@ -2918,6 +3015,10 @@ func (m *CustomerMutation) OldField(ctx context.Context, name string) (ent.Value
 		return m.OldClosingDay(ctx)
 	case customer.FieldPaymentDays:
 		return m.OldPaymentDays(ctx)
+	case customer.FieldBillingCycle:
+		return m.OldBillingCycle(ctx)
+	case customer.FieldCycleAnchor:
+		return m.OldCycleAnchor(ctx)
 	case customer.FieldLateFeeBp:
 		return m.OldLateFeeBp(ctx)
 	case customer.FieldLateInterestBpMonth:
@@ -3032,6 +3133,20 @@ func (m *CustomerMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetPaymentDays(v)
+		return nil
+	case customer.FieldBillingCycle:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBillingCycle(v)
+		return nil
+	case customer.FieldCycleAnchor:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCycleAnchor(v)
 		return nil
 	case customer.FieldLateFeeBp:
 		v, ok := value.(int)
@@ -3202,6 +3317,9 @@ func (m *CustomerMutation) ClearedFields() []string {
 	if m.FieldCleared(customer.FieldContractEnd) {
 		fields = append(fields, customer.FieldContractEnd)
 	}
+	if m.FieldCleared(customer.FieldCycleAnchor) {
+		fields = append(fields, customer.FieldCycleAnchor)
+	}
 	return fields
 }
 
@@ -3239,6 +3357,9 @@ func (m *CustomerMutation) ClearField(name string) error {
 		return nil
 	case customer.FieldContractEnd:
 		m.ClearContractEnd()
+		return nil
+	case customer.FieldCycleAnchor:
+		m.ClearCycleAnchor()
 		return nil
 	}
 	return fmt.Errorf("unknown Customer nullable field %s", name)
@@ -3289,6 +3410,12 @@ func (m *CustomerMutation) ResetField(name string) error {
 		return nil
 	case customer.FieldPaymentDays:
 		m.ResetPaymentDays()
+		return nil
+	case customer.FieldBillingCycle:
+		m.ResetBillingCycle()
+		return nil
+	case customer.FieldCycleAnchor:
+		m.ResetCycleAnchor()
 		return nil
 	case customer.FieldLateFeeBp:
 		m.ResetLateFeeBp()

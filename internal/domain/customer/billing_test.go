@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -63,7 +64,8 @@ func TestBilling_DefaultsAreTheOldBehaviour(t *testing.T) {
 		t.Fatalf("create: %v", err)
 	}
 	for name, c := range map[string]*customer.Customer{"created": created, "got": mustGet(t, svc, created.ID.String())} {
-		if c.BillingMode != customer.BillingHourly || c.ClosingDay != 31 || c.PaymentDays != 0 ||
+		if c.BillingMode != customer.BillingHourly || c.BillingCycle != customer.CycleMonthly || c.CycleAnchor != nil ||
+			c.ClosingDay != 31 || c.PaymentDays != 0 ||
 			c.HourlyRateCents == nil || *c.HourlyRateCents != 15000 || c.MonthlyFeeCents != nil || c.ContractStart != nil || c.ContractEnd != nil ||
 			c.LateFeeBP != 0 || c.LateInterestBPMonth != 0 || c.GraceDays != 0 {
 			t.Errorf("%s = %+v, want hourly at 150.00, closing day 31 and nothing else", name, c)
@@ -486,6 +488,187 @@ func TestBilling_ClosingDayLockedWithReceivables(t *testing.T) {
 	testClient.Receivable.DeleteOneID(rec.ID).ExecX(context.Background())
 	if got, err := svc.Update(id, customer.Input{ClosingDay: ptr(15)}); err != nil || got.ClosingDay != 15 {
 		t.Errorf("closing day after the receivable was undone: %+v, %v", got, err)
+	}
+}
+
+// todayIn devolve hoje e amanhã, YYYY-MM-DD, no fuso da organização do teste: o "hoje" da âncora do ciclo de 14 dias.
+func todayIn(t *testing.T, orgID string) (today, tomorrow string) {
+	t.Helper()
+	org := testClient.Organization.GetX(context.Background(), uuid.MustParse(orgID))
+	loc, err := time.LoadLocation(org.Timezone)
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now().In(loc)
+	return now.Format(time.DateOnly), now.AddDate(0, 0, 1).Format(time.DateOnly)
+}
+
+// biweekly é o corpo de um cliente por hora no ciclo de 14 dias, com a âncora dada.
+func biweekly(name, anchor string) customer.Input {
+	return withRate(customer.Input{Name: ptr(name), BillingCycle: ptr("biweekly"), CycleAnchor: ptr(anchor)})
+}
+
+// O ciclo de 14 dias do cliente por hora: guarda a âncora, sai assim do Get e da lista, não muda quando só outro campo
+// vem, e voltar ao mensal (ou trocar o modo para o contrato mensal) apaga a âncora.
+func TestBilling_BiweeklyCycle(t *testing.T) {
+	svc, _, orgID := setup(t)
+	setSolo(t, orgID, true)
+	in := biweekly("Acme Inc.", "2026-10-27")
+	in.PaymentDays = ptr(3)
+	created, err := svc.Create(orgID, in)
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	id := created.ID.String()
+	isBiweekly := func(c customer.Customer, anchor string) bool {
+		return c.BillingCycle == customer.CycleBiweekly && c.CycleAnchor != nil && *c.CycleAnchor == anchor
+	}
+	if got := mustGet(t, svc, id); !isBiweekly(*got, "2026-10-27") || got.PaymentDays != 3 || got.ClosingDay != 31 {
+		t.Errorf("got = %+v, want biweekly from 2026-10-27, due in 3 days", got)
+	}
+	if list, err := svc.ListByOrg(orgID); err != nil || len(list) != 1 || !isBiweekly(list[0], "2026-10-27") {
+		t.Errorf("list = %+v, %v", list, err)
+	}
+
+	// Só o nome, ou o mesmo ciclo e a mesma âncora de novo, não mexem no ciclo.
+	if got, err := svc.Update(id, customer.Input{Name: ptr("Acme")}); err != nil || !isBiweekly(*got, "2026-10-27") {
+		t.Errorf("update name = %+v, %v", got, err)
+	}
+	if got, err := svc.Update(id, customer.Input{BillingCycle: ptr("biweekly"), CycleAnchor: ptr("2026-10-27")}); err != nil || !isBiweekly(*got, "2026-10-27") {
+		t.Errorf("same cycle again = %+v, %v", got, err)
+	}
+	// Uma âncora já guardada não é conferida de novo: só a que muda não pode passar de hoje.
+	_, tomorrow := todayIn(t, orgID)
+	testClient.Customer.UpdateOneID(created.ID).SetCycleAnchor(tomorrow).ExecX(context.Background())
+	if got, err := svc.Update(id, customer.Input{Name: ptr("Acme Inc."), BillingCycle: ptr("biweekly"), CycleAnchor: ptr(tomorrow)}); err != nil || !isBiweekly(*got, tomorrow) {
+		t.Errorf("the stored anchor sent again = %+v, %v", got, err)
+	}
+	if got, err := svc.Update(id, customer.Input{CycleAnchor: ptr("2026-11-03")}); err != nil || !isBiweekly(*got, "2026-11-03") {
+		t.Errorf("move the anchor = %+v, %v", got, err)
+	}
+
+	// De volta ao mensal, como a tela manda: o ciclo mensal e a âncora vazia.
+	got, err := svc.Update(id, customer.Input{BillingCycle: ptr("monthly"), CycleAnchor: ptr("")})
+	if err != nil || got.BillingCycle != customer.CycleMonthly || got.CycleAnchor != nil {
+		t.Errorf("back to monthly = %+v, %v", got, err)
+	}
+	if got := mustGet(t, svc, id); got.BillingCycle != customer.CycleMonthly || got.CycleAnchor != nil {
+		t.Errorf("stored after back to monthly = %+v", got)
+	}
+
+	// Trocar o modo para o contrato mensal leva o ciclo junto, mesmo sem dizer o ciclo.
+	if _, err := svc.Update(id, customer.Input{BillingCycle: ptr("biweekly"), CycleAnchor: ptr("2026-10-27")}); err != nil {
+		t.Fatalf("biweekly again: %v", err)
+	}
+	got, err = svc.Update(id, customer.Input{BillingMode: ptr("monthly"), MonthlyFeeCents: opt(500000), ContractStart: ptr("2026-11-01")})
+	if err != nil || got.BillingMode != customer.BillingMonthly || got.BillingCycle != customer.CycleMonthly || got.CycleAnchor != nil {
+		t.Errorf("switch to the monthly contract = %+v, %v", got, err)
+	}
+}
+
+// O que o ciclo recusa, cada recusa com o campo.
+func TestBilling_BiweeklyRefusals(t *testing.T) {
+	svc, _, orgID := setup(t)
+	setSolo(t, orgID, true)
+	today, tomorrow := todayIn(t, orgID)
+	create := func(in customer.Input) error {
+		_, err := svc.Create(orgID, in)
+		return err
+	}
+	monthly := func(in customer.Input) customer.Input {
+		in.Name, in.BillingMode = ptr("Contrato"), ptr("monthly")
+		in.MonthlyFeeCents, in.ContractStart = opt(500000), ptr("2026-11-01")
+		return in
+	}
+
+	refused(t, "unknown cycle", create(withRate(customer.Input{Name: ptr("X"), BillingCycle: ptr("weekly")})), customer.ErrInvalidBillingCycle, "billing_cycle")
+	refused(t, "empty cycle", create(withRate(customer.Input{Name: ptr("X"), BillingCycle: ptr("")})), customer.ErrInvalidBillingCycle, "billing_cycle")
+	refused(t, "biweekly without an anchor", create(withRate(customer.Input{Name: ptr("X"), BillingCycle: ptr("biweekly")})), apperr.ErrFieldRequired, "cycle_anchor")
+	refused(t, "biweekly with an empty anchor", create(biweekly("X", "")), apperr.ErrFieldRequired, "cycle_anchor")
+	refused(t, "anchor in another format", create(biweekly("X", "27/10/2026")), apperr.ErrFieldInvalid, "cycle_anchor")
+	refused(t, "anchor that does not exist", create(biweekly("X", "2026-02-30")), apperr.ErrFieldInvalid, "cycle_anchor")
+	refused(t, "anchor tomorrow", create(biweekly("X", tomorrow)), customer.ErrInvalidCycleAnchor, "cycle_anchor")
+	refused(t, "anchor on the monthly cycle", create(withRate(customer.Input{Name: ptr("X"), CycleAnchor: ptr("2026-10-27")})), customer.ErrFieldBiweeklyOnly, "cycle_anchor")
+	refused(t, "biweekly on the monthly contract", create(monthly(customer.Input{BillingCycle: ptr("biweekly")})), customer.ErrFieldHourlyOnly, "billing_cycle")
+	refused(t, "anchor on the monthly contract", create(monthly(customer.Input{CycleAnchor: ptr("2026-10-27")})), customer.ErrFieldBiweeklyOnly, "cycle_anchor")
+	if list, _ := svc.ListByOrg(orgID); len(list) != 0 {
+		t.Fatalf("a refused create left %d customers", len(list))
+	}
+
+	// O que passa: a âncora de hoje, e o contrato mensal com o ciclo mensal e a âncora vazia, como a tela manda.
+	if c, err := svc.Create(orgID, biweekly("Hoje", today)); err != nil || c.CycleAnchor == nil || *c.CycleAnchor != today {
+		t.Errorf("anchor today = %+v, %v", c, err)
+	}
+	if c, err := svc.Create(orgID, monthly(customer.Input{BillingCycle: ptr("monthly"), CycleAnchor: ptr("")})); err != nil || c.BillingCycle != customer.CycleMonthly {
+		t.Errorf("monthly contract with the defaults spelled out = %+v, %v", c, err)
+	}
+}
+
+// Com recebíveis no cliente, o ciclo e a âncora travam como o dia de fechamento: os períodos novos não podem cair por
+// cima dos confirmados. Passar para o de 14 dias com a âncora no fim do último recebível, ou depois, é aceito.
+func TestBilling_CycleLockedWithReceivables(t *testing.T) {
+	svc, _, orgID := setup(t)
+	setSolo(t, orgID, true)
+	c, err := svc.Create(orgID, withRate(customer.Input{Name: ptr("Com recebível")}))
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	id := c.ID.String()
+	free, err := svc.Create(orgID, withRate(customer.Input{Name: ptr("Sem recebível")}))
+	if err != nil {
+		t.Fatalf("create free: %v", err)
+	}
+	toBiweekly := func(id, anchor string) (*customer.Customer, error) {
+		return svc.Update(id, customer.Input{BillingCycle: ptr("biweekly"), CycleAnchor: ptr(anchor)})
+	}
+	toMonthly := func(id string) (*customer.Customer, error) {
+		return svc.Update(id, customer.Input{BillingCycle: ptr("monthly"), CycleAnchor: ptr("")})
+	}
+
+	// Sem recebível o ciclo muda à vontade.
+	if _, err := toBiweekly(id, "2026-09-15"); err != nil {
+		t.Fatalf("biweekly without receivables: %v", err)
+	}
+	if _, err := toMonthly(id); err != nil {
+		t.Fatalf("monthly without receivables: %v", err)
+	}
+
+	rec := receivableOf(c) // 2026-09-01 a 2026-09-30
+
+	_, err = toBiweekly(id, "2026-09-29")
+	refused(t, "anchor before the last receivable", err, customer.ErrCycleLocked, "cycle_anchor")
+	if got := mustGet(t, svc, id); got.BillingCycle != customer.CycleMonthly || got.CycleAnchor != nil {
+		t.Errorf("stored after a refused change = %+v", got)
+	}
+	if got, err := toBiweekly(id, "2026-09-30"); err != nil || got.BillingCycle != customer.CycleBiweekly {
+		t.Errorf("anchor on the end of the last receivable = %+v, %v", got, err)
+	}
+	_, err = toBiweekly(id, "2026-09-15")
+	refused(t, "anchor moved back", err, customer.ErrCycleLocked, "cycle_anchor")
+	if got, err := toBiweekly(id, "2026-10-10"); err != nil || *got.CycleAnchor != "2026-10-10" {
+		t.Errorf("anchor moved forward = %+v, %v", got, err)
+	}
+	// O mesmo ciclo e a mesma âncora passam junto de outro campo.
+	if got, err := svc.Update(id, customer.Input{Name: ptr("Novo nome"), BillingCycle: ptr("biweekly"), CycleAnchor: ptr("2026-10-10")}); err != nil || got.Name != "Novo nome" {
+		t.Errorf("same cycle with another field = %+v, %v", got, err)
+	}
+
+	_, err = toMonthly(id)
+	refused(t, "back to monthly", err, customer.ErrCycleLocked, "billing_cycle")
+	_, err = svc.Update(id, customer.Input{BillingMode: ptr("monthly"), MonthlyFeeCents: opt(500000), ContractStart: ptr("2026-11-01")})
+	refused(t, "switch to the monthly contract", err, customer.ErrCycleLocked, "billing_cycle")
+	if got := mustGet(t, svc, id); got.BillingMode != customer.BillingHourly || got.BillingCycle != customer.CycleBiweekly {
+		t.Errorf("stored after the refused switches = %+v", got)
+	}
+
+	// O recebível deste cliente não trava o outro.
+	if _, err := toBiweekly(free.ID.String(), "2026-09-01"); err != nil {
+		t.Errorf("the other customer: %v", err)
+	}
+
+	testClient.Receivable.DeleteOneID(rec.ID).ExecX(context.Background())
+	if got, err := toMonthly(id); err != nil || got.BillingCycle != customer.CycleMonthly {
+		t.Errorf("back to monthly after the receivable was undone = %+v, %v", got, err)
 	}
 }
 

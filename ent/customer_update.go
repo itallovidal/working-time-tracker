@@ -303,6 +303,40 @@ func (_u *CustomerUpdate) AddPaymentDays(v int) *CustomerUpdate {
 	return _u
 }
 
+// SetBillingCycle sets the "billing_cycle" field.
+func (_u *CustomerUpdate) SetBillingCycle(v string) *CustomerUpdate {
+	_u.mutation.SetBillingCycle(v)
+	return _u
+}
+
+// SetNillableBillingCycle sets the "billing_cycle" field if the given value is not nil.
+func (_u *CustomerUpdate) SetNillableBillingCycle(v *string) *CustomerUpdate {
+	if v != nil {
+		_u.SetBillingCycle(*v)
+	}
+	return _u
+}
+
+// SetCycleAnchor sets the "cycle_anchor" field.
+func (_u *CustomerUpdate) SetCycleAnchor(v string) *CustomerUpdate {
+	_u.mutation.SetCycleAnchor(v)
+	return _u
+}
+
+// SetNillableCycleAnchor sets the "cycle_anchor" field if the given value is not nil.
+func (_u *CustomerUpdate) SetNillableCycleAnchor(v *string) *CustomerUpdate {
+	if v != nil {
+		_u.SetCycleAnchor(*v)
+	}
+	return _u
+}
+
+// ClearCycleAnchor clears the value of the "cycle_anchor" field.
+func (_u *CustomerUpdate) ClearCycleAnchor() *CustomerUpdate {
+	_u.mutation.ClearCycleAnchor()
+	return _u
+}
+
 // SetLateFeeBp sets the "late_fee_bp" field.
 func (_u *CustomerUpdate) SetLateFeeBp(v int) *CustomerUpdate {
 	_u.mutation.ResetLateFeeBp()
@@ -610,6 +644,15 @@ func (_u *CustomerUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.AddedPaymentDays(); ok {
 		_spec.AddField(customer.FieldPaymentDays, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.BillingCycle(); ok {
+		_spec.SetField(customer.FieldBillingCycle, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.CycleAnchor(); ok {
+		_spec.SetField(customer.FieldCycleAnchor, field.TypeString, value)
+	}
+	if _u.mutation.CycleAnchorCleared() {
+		_spec.ClearField(customer.FieldCycleAnchor, field.TypeString)
 	}
 	if value, ok := _u.mutation.LateFeeBp(); ok {
 		_spec.SetField(customer.FieldLateFeeBp, field.TypeInt, value)
@@ -1040,6 +1083,40 @@ func (_u *CustomerUpdateOne) AddPaymentDays(v int) *CustomerUpdateOne {
 	return _u
 }
 
+// SetBillingCycle sets the "billing_cycle" field.
+func (_u *CustomerUpdateOne) SetBillingCycle(v string) *CustomerUpdateOne {
+	_u.mutation.SetBillingCycle(v)
+	return _u
+}
+
+// SetNillableBillingCycle sets the "billing_cycle" field if the given value is not nil.
+func (_u *CustomerUpdateOne) SetNillableBillingCycle(v *string) *CustomerUpdateOne {
+	if v != nil {
+		_u.SetBillingCycle(*v)
+	}
+	return _u
+}
+
+// SetCycleAnchor sets the "cycle_anchor" field.
+func (_u *CustomerUpdateOne) SetCycleAnchor(v string) *CustomerUpdateOne {
+	_u.mutation.SetCycleAnchor(v)
+	return _u
+}
+
+// SetNillableCycleAnchor sets the "cycle_anchor" field if the given value is not nil.
+func (_u *CustomerUpdateOne) SetNillableCycleAnchor(v *string) *CustomerUpdateOne {
+	if v != nil {
+		_u.SetCycleAnchor(*v)
+	}
+	return _u
+}
+
+// ClearCycleAnchor clears the value of the "cycle_anchor" field.
+func (_u *CustomerUpdateOne) ClearCycleAnchor() *CustomerUpdateOne {
+	_u.mutation.ClearCycleAnchor()
+	return _u
+}
+
 // SetLateFeeBp sets the "late_fee_bp" field.
 func (_u *CustomerUpdateOne) SetLateFeeBp(v int) *CustomerUpdateOne {
 	_u.mutation.ResetLateFeeBp()
@@ -1377,6 +1454,15 @@ func (_u *CustomerUpdateOne) sqlSave(ctx context.Context) (_node *Customer, err 
 	}
 	if value, ok := _u.mutation.AddedPaymentDays(); ok {
 		_spec.AddField(customer.FieldPaymentDays, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.BillingCycle(); ok {
+		_spec.SetField(customer.FieldBillingCycle, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.CycleAnchor(); ok {
+		_spec.SetField(customer.FieldCycleAnchor, field.TypeString, value)
+	}
+	if _u.mutation.CycleAnchorCleared() {
+		_spec.ClearField(customer.FieldCycleAnchor, field.TypeString)
 	}
 	if value, ok := _u.mutation.LateFeeBp(); ok {
 		_spec.SetField(customer.FieldLateFeeBp, field.TypeInt, value)

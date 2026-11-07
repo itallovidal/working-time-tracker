@@ -39,4 +39,7 @@ type PaymentRule struct {
 	Frequency string `json:"frequency"`
 	Day       int    `json:"day,omitempty"`
 	Start     string `json:"start,omitempty"`
+	// PeriodDays é o tamanho do período quinzenal; zero vale 15, a quinzena da pessoa, que nunca o preenche. Só o ciclo
+	// de 14 dias do cliente (o bi-weekly dos EUA) usa outro tamanho, e por isso o campo não sai na API.
+	PeriodDays int `json:"-"`
 }

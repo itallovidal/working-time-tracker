@@ -98,14 +98,18 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 |---|---|---|---|---|
 | `customer.closing_day_locked` | 409 | — | `este cliente já tem contas a receber: o dia de fechamento não pode mais mudar` | `this customer already has receivables: the closing day can no longer change` |
 | `customer.contact_too_long` | 400 | — | `o nome do contato pode ter até 120 caracteres` | `the contact name can have up to 120 characters` |
+| `customer.cycle_locked` | 409 | — | `este cliente já tem contas a receber: o ciclo só passa a ser de 14 dias com o último fechamento no fim da conta mais recente, ou depois, e não volta a ser mensal` | `this customer already has receivables: the cycle only becomes every 14 days with the last closing on the end of the latest receivable or later, and it cannot go back to monthly` |
+| `customer.field_biweekly_only` | 400 | `field` | `{{.field}} só vale no ciclo de 14 dias` | `{{.field}} only applies to the 14-day cycle` |
 | `customer.field_hourly_only` | 400 | `field` | `{{.field}} só vale em um cliente cobrado por hora` | `{{.field}} only applies to an hourly customer` |
 | `customer.field_monthly_only` | 400 | `field` | `{{.field}} só vale em um cliente com cobrança mensal` | `{{.field}} only applies to a monthly customer` |
 | `customer.has_projects` | 409 | — | `este cliente tem projetos; tire o cliente dos projetos antes de excluir` | `this customer has projects; remove the customer from the projects before deleting` |
 | `customer.has_receivables` | 409 | — | `este cliente tem contas a receber; desfaça-as na página A receber antes de excluir` | `this customer has receivables; undo them on the Receivables page before deleting` |
+| `customer.invalid_billing_cycle` | 400 | — | `ciclo inválido: use monthly (mensal) ou biweekly (a cada 14 dias)` | `invalid cycle: use monthly or biweekly (every 14 days)` |
 | `customer.invalid_billing_mode` | 400 | — | `modo de cobrança inválido: use hourly (por hora) ou monthly (mensal)` | `invalid billing mode: use hourly or monthly` |
 | `customer.invalid_closing_day` | 400 | — | `o dia de fechamento deve ficar entre 1 e 31` | `the closing day must be between 1 and 31` |
 | `customer.invalid_contract_end` | 400 | — | `o fim do contrato deve ser depois do início` | `the contract end must be after the start` |
 | `customer.invalid_country` | 400 | — | `país inválido: use um código de país como BR, US ou DE` | `invalid country: use a country code like BR, US or DE` |
+| `customer.invalid_cycle_anchor` | 400 | — | `o último fechamento já pago não pode ser depois de hoje` | `the last closing already paid cannot be after today` |
 | `customer.invalid_document` | 400 | — | `documento fiscal inválido para o país do cliente: confira os números (CNPJ no Brasil, EIN nos EUA)` | `invalid tax ID for the customer's country: check the numbers (CNPJ in Brazil, EIN in the US)` |
 | `customer.invalid_email` | 400 | — | `informe um email de contato válido` | `enter a valid contact email` |
 | `customer.invalid_grace_days` | 400 | — | `a tolerância deve ficar entre 0 e 365 dias` | `the grace period must be between 0 and 365 days` |
@@ -315,7 +319,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `receivable.charges_not_allowed` | 400 | — | `multa e juros só valem no contrato mensal` | `late fee and interest only apply to a monthly contract` |
 | `receivable.invalid_amount` | 400 | — | `informe um valor maior que zero, até 1.000.000,00` | `enter an amount greater than zero, up to 1,000,000.00` |
 | `receivable.invalid_charge` | 400 | — | `a multa e os juros devem ser zero ou mais, até 1.000.000,00` | `the late fee and the interest must be zero or more, up to 1,000,000.00` |
-| `receivable.not_a_period` | 400 | — | `as datas não formam um período deste cliente: confira o dia de fechamento dele e, no contrato mensal, o início e o fim` | `the dates are not a period of this customer: check the customer's closing day and, on a monthly contract, the start and the end` |
+| `receivable.not_a_period` | 400 | — | `as datas não formam um período deste cliente: confira o ciclo dele (o dia de fechamento, ou os 14 dias desde o último fechamento já pago) e, no contrato mensal, o início e o fim` | `the dates are not a period of this customer: check the customer's cycle (the closing day, or the 14 days since the last closing already paid) and, on a monthly contract, the start and the end` |
 | `receivable.not_found` | 404 | — | `recebível não encontrado` | `receivable not found` |
 | `receivable.not_received` | 409 | — | `este recebível ainda não foi recebido` | `this receivable has not been received yet` |
 | `receivable.period_open` | 409 | — | `este período ainda não fechou: o cliente por hora só se confirma depois do fechamento` | `this period has not closed yet: an hourly customer is only confirmed after the period closes` |
