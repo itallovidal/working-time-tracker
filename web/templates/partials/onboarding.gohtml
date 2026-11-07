@@ -66,7 +66,8 @@
         </div>
       </form>
 
-      {{/* Etapa 2: o primeiro cliente. O resto do cadastro, com contato e telefone, fica na aba Clientes. */}}
+      {{/* Etapa 2: o primeiro cliente, por hora, com o valor por hora que é obrigatório (Decisão 21). O resto do cadastro,
+           com contato, telefone e, no modo solo, o contrato mensal, fica na aba Clientes. */}}
       <form class="stack" novalidate x-cloak x-show="step === 2" @submit.prevent="saveCustomer()">
         <p class="muted small">{{.T "onboarding.customers.lead"}}</p>
         <div class="field">
@@ -82,6 +83,13 @@
             <input id="ob-customer-email" type="email" data-field="contact_email" maxlength="{{limit "email"}}" x-model="customer.contact_email" @input="clearField('contact_email')" :aria-invalid="fieldErrors.contact_email ? 'true' : 'false'">
             {{template "field_error" "contact_email"}}
           </div>
+        </div>
+        <div class="field">
+          <label for="ob-customer-hourly-rate" x-text="$t('customer.billing.hourly_rate', { unit: WTT.fmt.moneyUnit() })"></label>
+          <input id="ob-customer-hourly-rate" type="text" inputmode="decimal" class="num" data-field="hourly_rate_cents" x-model="customer.hourly_rate"
+                 @input="clearField('hourly_rate_cents')" :aria-invalid="fieldErrors.hourly_rate_cents ? 'true' : 'false'">
+          {{template "field_error" "hourly_rate_cents"}}
+          <span class="hint">{{if .Me.OrganizationSolo}}{{.T "onboarding.customers.rate_hint_solo"}}{{else}}{{.T "onboarding.customers.rate_hint"}}{{end}}</span>
         </div>
         <p class="form-error" x-cloak x-show="errors.customer" x-text="errors.customer" role="alert"></p>
         <div class="row row-end">

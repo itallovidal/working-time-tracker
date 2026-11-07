@@ -135,7 +135,7 @@ func TestHandler_Create_InvalidType(t *testing.T) {
 }
 
 // Um tipo "em breve" funciona no adapter, mas a API não cria integração nova dele, nem com um corpo que
-// passaria na validação. Nenhum tipo de verdade está mais (o GitLab saiu na Sprint 106), então o teste marca o
+// passaria na validação. Nenhum tipo de verdade está mais (o GitLab saiu na Sprint 107), então o teste marca o
 // GitLab por um momento; o Trello segue para a validação na plataforma.
 func TestHandler_Create_ComingSoonType(t *testing.T) {
 	withComingSoon(t, "gitlab")

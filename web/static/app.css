@@ -472,12 +472,14 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 .form-fold > summary { cursor: pointer; font-size: 0.84rem; font-weight: 600; color: var(--ink-2); }
 .form-fold > summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--radius-sm); }
 .form-fold[open] > summary { margin-bottom: 12px; }
+/* A dica solta dentro de um bloco recolhido (fora de um .field) tem o tamanho e a cor das outras dicas. */
+.form-fold .hint { font-size: 0.8rem; color: var(--muted); margin: 0; }
 /* Daily ou weekly: a marca que diz se o projeto tem, e o horário que ela liga. */
 .routine { display: flex; flex-direction: column; gap: 10px; padding-top: 12px; border-top: 1px solid var(--rule); }
 .toggle { display: flex; align-items: center; gap: 10px; font-size: 0.92rem; font-weight: 600; color: var(--ink); cursor: pointer; }
 .toggle input { width: auto; flex: none; accent-color: var(--accent); }
 input, select, textarea {
-  font: inherit; color: var(--ink); background: var(--surface);
+  font: inherit; color: var(--ink); background-color: var(--surface);
   border: 1px solid var(--rule-strong); border-radius: var(--radius-sm);
   padding: 8px 10px; width: 100%; min-width: 0;
 }
@@ -486,7 +488,19 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--focus); out
 input[aria-invalid="true"] { border-color: var(--danger); }
 /* Campo desligado: sem isto ele fica igual aos outros, porque as cores acima
    valem também para ele. */
-input:disabled, select:disabled, textarea:disabled { background: var(--surface-2); color: var(--muted); cursor: not-allowed; }
+input:disabled, select:disabled, textarea:disabled { background-color: var(--surface-2); color: var(--muted); cursor: not-allowed; }
+/* O select perde a aparência do sistema, que no Safari é mais baixa e traz as setinhas dele, e fica com a altura dos
+   campos e uma seta própria: dois triângulos em currentColor, que seguem o tema e a cor dos selects de prioridade e de
+   status (.select-tone). As regras de cor acima usam background-color para não apagar a seta. A lista que abre continua
+   sendo a do sistema. */
+select {
+  -webkit-appearance: none; appearance: none;
+  padding-right: 32px;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: calc(100% - 17px) 50%, calc(100% - 12px) 50%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
 
 .btn {
   font: inherit; font-weight: 600; font-size: 0.92rem; cursor: pointer;

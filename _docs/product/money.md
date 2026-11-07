@@ -150,7 +150,7 @@ período mais os `payment_days`.
 | Modo do cliente | Períodos propostos | Valor proposto |
 |---|---|---|
 | **Por hora** | Os períodos **já fechados** com tempo nos projetos do cliente, ainda sem recebível. No máximo os 24 mais recentes | A soma das sessões de **todos os projetos do cliente**, cortadas no período e arredondadas ao centavo **por sessão**, pelo valor cobrado congelado nela (a mesma conta de [Da sessão ao dinheiro](#da-sessão-ao-dinheiro)). A sessão aberta conta até agora |
-| **Mensal** | Do período do `contract_start` até o período corrente **e o seguinte**, parando no período que contém o `contract_end`, ainda sem recebível. No máximo os 60 mais recentes | A `monthly_fee_cents` mais os acréscimos mensais dos projetos do cliente, como estão hoje (`extra_cents` diz quanto deles). O primeiro mês parcial, e um acréscimo que já acabou, o dono corrige ao confirmar: não há pro-rata |
+| **Mensal** | Do período do `contract_start` até o **período corrente** (o seguinte só entra quando começa), parando no período que contém o `contract_end`, ainda sem recebível. No máximo os 60 mais recentes | A `monthly_fee_cents` mais os acréscimos mensais dos projetos do cliente, como estão hoje (`extra_cents` diz quanto deles). O primeiro mês parcial, e um acréscimo que já acabou, o dono corrige ao confirmar: não há pro-rata |
 
 A proposta traz também o **valor por hora efetivo** (o valor dividido pelas horas). Abaixo de 10,00
 (`validate.MinRateCents`) vira um **aviso** na tela, nunca um erro: no mensal, as horas só estão completas depois que o
@@ -162,7 +162,8 @@ nota e a observação, e a moeda da organização (sem conversão). Uma hora reg
 cobrado.
 
 - **Por hora**: só depois que o período fechou (`409 receivable.period_open`).
-- **Mensal**: a qualquer momento, inclusive adiantado (o período seguinte), mas só dentro do contrato.
+- **Mensal**: a qualquer momento, inclusive adiantado (o período corrente, antes de fechar), mas só dentro do contrato
+  e até o período corrente. O seguinte se confirma quando começar.
 - O período tem de ser um do ciclo do cliente (`400 receivable.not_a_period`) e confirma uma vez só
   (`409 receivable.already_confirmed`, garantido também pelo índice único em cliente e período).
 
@@ -225,8 +226,8 @@ janela é de calendário no fuso da organização: Este mês, Mês passado ou An
   têm recebível.
 - **A proposta, na Receita projetada.** No cliente por hora ela traz também o **período em andamento**, com as horas até
   agora vezes o valor cobrado congelado nas sessões (no meio do mês, é o que se tem para receber até o fechamento). No
-  mensal é a mensalidade mais os acréscimos do período do contrato, também o corrente. Os períodos do contrato mensal que terminam depois
-  do fim do mês corrente (o seguinte, que se confirma adiantado) ficam para o mês deles.
+  mensal é a mensalidade mais os acréscimos do período do contrato, também o corrente. Um período corrente que termina
+  depois do fim do mês fica para o mês dele.
 - **Valor por hora efetivo** = Receita projetada ÷ horas da janela, ao centavo, ou um travessão sem horas. Abaixo do
   piso de 10,00 por hora é um aviso. O total divide pelas horas de **todos** os projetos, internos também; a linha de um
   cliente divide pelas horas dos projetos dele.

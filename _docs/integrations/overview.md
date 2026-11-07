@@ -68,7 +68,7 @@ Cada tipo se descreve num `Descriptor` (`internal/adapter/interface.go`). A tela
 | `ItemNumeric` | O id do item é um número (a issue). Num tipo assim, um id que não é número não é de item nenhum |
 | `Sync` | O tipo implementa `IssueSyncer`. Só ele ganha a caixa da sincronização |
 | `Caps` | O que a sincronização faz além do básico: `deadline` (o prazo da tarefa e a data de entrega do item se espelham), `assignee` (o responsável se liga pelo e-mail público), `server_since` (a plataforma filtra por data, então a rodada de fundo pode ser incremental), `auto_publish` (a tarefa criada aqui vira item sozinha) |
-| `ComingSoon` | O tipo existe mas não se oferece: a tela o mostra desabilitado com o selo "Em breve", e o `POST` responde `400` `integration.type_coming_soon`. As integrações que já existem seguem valendo. Nenhum tipo está assim hoje (o GitLab saiu na Sprint 106) |
+| `ComingSoon` | O tipo existe mas não se oferece: a tela o mostra desabilitado com o selo "Em breve", e o `POST` responde `400` `integration.type_coming_soon`. As integrações que já existem seguem valendo. Nenhum tipo está assim hoje (o GitLab saiu na Sprint 107) |
 | `Configured` | Preenchido pela página: o servidor tem o app de autorização daquele tipo configurado |
 
 ## A sincronização

@@ -35,7 +35,7 @@
           </select>
           {{template "field_error" "customer_id"}}
         </div>
-        {{template "project_billing_fields" (dict "Data" . "Id" "project" "Customer" "customerOf()")}}
+        {{template "project_billing_fields" (dict "Data" . "Customer" "customerOf()")}}
         {{template "project_customer_meeting" .}}
         <span class="hint">{{if .Me.OrganizationSolo}}{{.T "org.projects.admins_only_hint_solo"}}{{else}}{{.T "org.projects.admins_only_hint"}}{{end}}</span>
       </fieldset>
@@ -54,6 +54,9 @@
         </div>
         {{template "project_routine" .}}
       </fieldset>
+      {{if .IsOwner}}
+      {{template "project_extra_fold" (dict "Data" . "Id" "project" "Customer" "customerOf()")}}
+      {{end}}
       <p class="form-error" x-show="errors.create" x-text="errors.create" role="alert"></p>
       <div class="row row-end">
         <button type="button" class="btn btn-secondary" @click="$store.modal.dismiss()">{{.T "common.cancel"}}</button>
@@ -64,13 +67,13 @@
   {{end}}
 {{end}}
 
-{{/* project_billing_fields é a cobrança de um projeto com cliente, no formulário de novo projeto e nas configurações. A
-   cobrança mora no cliente (Decisão 21): aqui ela aparece só para leitura, com o link para Clientes, e o projeto só
-   soma um acréscimo, por hora no cliente por hora e por mês no mensal, com o total ao vivo. O cliente por hora antigo,
-   sem valor, mostra o aviso. O componente que inclui traz draft.extra, billing (WTT.billing) e o mixin WTT.form.
-   Parâmetros: Data (a página), Id (o prefixo do id do campo) e Customer (a expressão do cliente escolhido). */}}
+{{/* project_billing_fields é a cobrança do cliente do projeto, no formulário de novo projeto e nas configurações. A
+   cobrança mora no cliente (Decisão 21): aqui ela aparece só para leitura, com o link para Clientes, e o cliente por
+   hora antigo, sem valor, mostra o aviso. O acréscimo do projeto fica no fim do formulário, em project_extra_fold. O
+   componente que inclui traz billing (WTT.billing). Parâmetros: Data (a página) e Customer (a expressão do cliente
+   escolhido). */}}
 {{define "project_billing_fields"}}
-{{$id := .Id}}{{$c := .Customer}}
+{{$c := .Customer}}
 {{with .Data}}
 <div class="stack" x-cloak x-show="{{$c}}">
   <dl class="facts">
@@ -80,7 +83,21 @@
     </div>
   </dl>
   <p class="form-error" x-show="billing.withoutRate({{$c}})">{{.T "project.billing.customer_without_rate"}}</p>
-  <div class="field" x-show="!billing.withoutRate({{$c}})">
+</div>
+{{end}}
+{{end}}
+
+{{/* project_extra_fold é o acréscimo do projeto sobre a cobrança do cliente: por hora no cliente por hora, por mês no
+   mensal, com o total ao vivo. É um ajuste para algo pequeno ou temporário, então fica no fim do formulário, num bloco
+   "Avançado" recolhido (aberto quando o projeto já tem acréscimo ou quando o campo erra). Só existe com um cliente que
+   tem cobrança. O componente que inclui traz draft.extra, extraOpen, billing (WTT.billing) e o mixin WTT.form.
+   Parâmetros: Data (a página), Id (o prefixo do id do campo) e Customer (a expressão do cliente escolhido). */}}
+{{define "project_extra_fold"}}
+{{$id := .Id}}{{$c := .Customer}}
+{{with .Data}}
+<details class="form-fold" x-cloak x-show="{{$c}} && !billing.withoutRate({{$c}})" :open="extraOpen" @toggle="extraOpen = $event.target.open">
+  <summary>{{.T "project.billing.advanced"}}</summary>
+  <div class="field">
     <label for="{{$id}}-bill-extra">
       <span x-text="billing.extraLabel({{$c}})"></span> <span class="optional">{{.T "common.optional_label"}}</span>
     </label>
@@ -90,6 +107,6 @@
     <span class="hint" x-text="billing.monthly({{$c}}) ? $t('project.billing.extra_monthly_hint') : $t('project.billing.extra_hourly_hint')"></span>
     <span class="hint num" x-text="billing.total({{$c}}, draft.extra)"></span>
   </div>
-</div>
+</details>
 {{end}}
 {{end}}

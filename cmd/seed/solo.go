@@ -318,7 +318,7 @@ func seedSolo(ctx context.Context, db *database.DB, now time.Time) soloSummary {
 //
 //   - Clínica Aurora (mensal, vence 5 dias depois de fechar o mês): o mês retrasado, recebido 12 dias depois do
 //     vencimento, com a multa e os juros que o sistema sugere; o mês passado, recebido no vencimento (ou hoje, se ele
-//     ainda não chegou); o mês corrente, confirmado adiantado e em aberto; o seguinte, só proposta.
+//     ainda não chegou); o mês corrente, confirmado adiantado e em aberto. O seguinte só aparece quando começar.
 //   - Agência Pixel (por hora, fecha no dia 25): o período fechado mais antigo está confirmado e sem pagar, atrasado em
 //     qualquer data (vence 10 dias depois de fechar, e os fechados são de mais de um mês atrás); os outros, propostas.
 func seedReceivables(svc *receivable.Service, orgID string, customerID map[string]string, today time.Time, sum *soloSummary) {
@@ -369,8 +369,8 @@ func seedReceivables(svc *receivable.Service, orgID string, customerID map[strin
 	}
 
 	aurora := periodsOf("aurora")
-	if len(aurora) < 4 {
-		log.Fatalf("o contrato da Aurora devia propor 4 períodos, propôs %d", len(aurora))
+	if len(aurora) < 3 {
+		log.Fatalf("o contrato da Aurora devia propor 3 períodos, propôs %d", len(aurora))
 	}
 	fee := aurora[0].CalculatedCents
 	r := confirm(aurora[0], fee, "NF 101", "")
@@ -378,7 +378,6 @@ func seedReceivables(svc *receivable.Service, orgID string, customerID map[strin
 	r = confirm(aurora[1], fee, "NF 102", "")
 	receive(r, earlier(r.DueDate, day))
 	confirm(aurora[2], fee, "NF 103", "Cobrança adiantada, a pedido da clínica.")
-	sum.toConfirm++ // o período seguinte fica como proposta
 
 	pixel := periodsOf("pixel")
 	if len(pixel) < 2 {

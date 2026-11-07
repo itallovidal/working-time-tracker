@@ -60,6 +60,7 @@ document.addEventListener('alpine:init', () => {
     billing: WTT.billing,
     customers: null, // só carregados quando o modal de novo projeto abre pela primeira vez
     draft: blankProject(),
+    extraOpen: false, // o bloco Avançado, com o acréscimo do projeto
     // customerOf é o cliente escolhido no rascunho, ou null (projeto interno).
     customerOf() {
       return (this.customers || []).find((c) => c.id === this.draft.customer_id) || null;
@@ -80,6 +81,7 @@ document.addEventListener('alpine:init', () => {
     // definir um (o admin cria só projeto interno); por isso a lista vem aqui, e não no init.
     async openCreate() {
       this.draft = blankProject();
+      this.extraOpen = false;
       this.errors.create = '';
       this.clearFields();
       Alpine.store('modal').open('project', WTT.t('org.projects.new'), () => !this.pending);
@@ -109,7 +111,11 @@ document.addEventListener('alpine:init', () => {
           ...WTT.routine.rules(d),
           sprint_duration_days: [d.sprint_duration_days, R.integer(1, 90)],
         });
-        if (!ok) return;
+        if (!ok) {
+          // O acréscimo fica no bloco Avançado: com erro, o bloco abre e o campo recebe o foco.
+          if (this.fieldErrors.bill_extra_cents) openFold(this, 'extraOpen', 'bill_extra_cents');
+          return;
+        }
         const body = {
           name,
           description,
@@ -127,6 +133,13 @@ document.addEventListener('alpine:init', () => {
       });
     },
   });
+
+  // openFold abre um bloco recolhido (o estado `key` do componente) e leva o foco ao campo `field` dentro dele, que
+  // fechado não recebia o foco do check.
+  const openFold = (c, key, field) => {
+    c[key] = true;
+    c.$nextTick(() => c.focusField(field));
+  };
 
   // Tons dos cartões de projeto: só enfeite (as classes .hue-* do app.css), sorteados pelo id para
   // o projeto ter sempre a mesma cor, em qualquer lugar.
@@ -1268,7 +1281,8 @@ document.addEventListener('alpine:init', () => {
       timezone: org.timezone,
       currency: org.currency,
     },
-    customer: blankCustomer(),
+    // O primeiro cliente é por hora, com o valor por hora obrigatório (Decisão 21).
+    customer: { ...blankCustomer(), hourly_rate: '' },
     invite: { email: '', role: 'member' },
     lastLink: '',
     lastDelivery: '',
@@ -1330,7 +1344,8 @@ document.addEventListener('alpine:init', () => {
     },
     saveCustomer() {
       const body = customerBody(this.customer);
-      if (!this.check(customerSpec(body, false))) return undefined;
+      if (!this.check({ ...customerSpec(body, false), ...hourlyRateSpec(this.customer) })) return undefined;
+      body.hourly_rate_cents = WTT.toCents(this.customer.hourly_rate, { strict: true });
       return this.run('customer', async () => {
         await api('POST', '/api/orgs/' + orgId + '/customers', body);
         this.saved.customer = true;
