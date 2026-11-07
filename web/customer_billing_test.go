@@ -56,12 +56,14 @@ func TestCustomerBilling_ScreenSendsOnlyKnownKeys(t *testing.T) {
 		}
 	}
 
-	// Cada termo tem um campo na tela, com o erro embaixo dele.
-	tpl := templates(t)["templates/pages/org_customers.gohtml"]
+	// Cada termo tem um campo na tela, com o erro embaixo dele: o modo e o valor padrão no modal de cliente, e o resto
+	// no parcial customer_contract, que o modal inclui (e o formulário de novo projeto também).
+	all := templates(t)
+	tpl := all["templates/pages/org_customers.gohtml"] + all["templates/partials/customer_contract.gohtml"]
 	for _, m := range sent {
 		for _, want := range []string{`data-field="` + m[1] + `"`, `{{template "field_error" "` + m[1] + `"}}`} {
 			if !strings.Contains(tpl, want) {
-				t.Errorf("org_customers.gohtml lacks %s", want)
+				t.Errorf("org_customers.gohtml + customer_contract.gohtml lack %s", want)
 			}
 		}
 	}
@@ -74,13 +76,25 @@ func TestCustomerBilling_FieldsAreInsideTheSoloGate(t *testing.T) {
 	if gate < 0 {
 		t.Fatal("the billing fieldset is not behind .Me.OrganizationSolo")
 	}
-	for _, id := range []string{"customer-billing-mode", "customer-default-rate", "customer-monthly-fee", "customer-contract-start",
-		"customer-closing-day", "customer-payment-days", "customer-late-fee"} {
+	for _, id := range []string{"customer-billing-mode", "customer-default-rate"} {
 		at := strings.Index(tpl, `id="`+id+`"`)
 		if at < 0 {
 			t.Errorf("org_customers.gohtml has no field %s", id)
 		} else if at < gate {
 			t.Errorf("%s is outside the solo gate", id)
+		}
+	}
+	// O contrato vem do parcial, incluído dentro do mesmo bloco.
+	include := strings.Index(tpl, `{{template "customer_contract" (dict "Data" . "Model" "draft" "Id" "customer")}}`)
+	if include < 0 {
+		t.Error("org_customers.gohtml does not include customer_contract for the draft")
+	} else if include < gate {
+		t.Error("customer_contract is included outside the solo gate")
+	}
+	contract := templates(t)["templates/partials/customer_contract.gohtml"]
+	for _, id := range []string{"monthly-fee", "contract-start", "contract-end", "closing-day", "payment-days", "late-fee", "late-interest", "grace-days"} {
+		if !strings.Contains(contract, `id="{{$id}}-`+id+`"`) {
+			t.Errorf("customer_contract.gohtml has no field {{$id}}-%s", id)
 		}
 	}
 	// A coluna da lista também.

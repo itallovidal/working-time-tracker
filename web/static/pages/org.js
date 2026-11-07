@@ -52,31 +52,67 @@ document.addEventListener('alpine:init', () => {
   const bareURL = (url) => (url || '').replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
 
   // projectCreation é o modal de novo projeto da página Projetos (o formulário é o parcial project_form) e a criação.
+  // No modo solo a cobrança também se escolhe aqui (por hora ou contrato mensal), mas o modo e o contrato são do cliente
+  // e valem para todos os projetos dele (Decisão 20): `billing` são os termos do cliente escolhido, no formato do modal
+  // de cliente (billingDraft), e mudar o modo de um cliente ainda sem projetos grava os termos nele antes de criar o
+  // projeto. Com equipe não há escolha: o cliente é sempre por hora.
   const projectCreation = () => ({
     ...form(),
+    ...customerBilling(), // solo, lateOpen, billingLabel e billingTerms
     customers: null, // só carregados quando o modal de novo projeto abre pela primeira vez
     draft: blankProject(),
+    billing: blankBilling(),
     rateTouched: false, // a pessoa digitou o valor cobrado: trocar o cliente não o sobrescreve mais
     // customerOf é o cliente escolhido no rascunho, ou null (projeto interno).
     customerOf() {
       return (this.customers || []).find((c) => c.id === this.draft.customer_id) || null;
     },
-    // monthlyCustomer diz que o cliente escolhido é cobrado por mês: o projeto dele não tem valor por hora.
-    monthlyCustomer() {
+    // customerOption é o texto do cliente na lista: no modo solo, com o modo de cobrança dele.
+    customerOption(c) {
+      if (!this.solo) return c.name;
+      const mode = WTT.t(c.billing_mode === 'monthly' ? 'customer.billing.monthly' : 'customer.billing.hourly');
+      return WTT.t('customer.billing.option_label', { name: c.name, mode });
+    },
+    // billingMode é o modo gravado no cliente escolhido; customerLocked diz que ele não muda mais (o cliente tem projetos).
+    billingMode() {
       const c = this.customerOf();
-      return !!c && c.billing_mode === 'monthly';
+      return c && c.billing_mode === 'monthly' ? 'monthly' : 'hourly';
+    },
+    customerLocked() {
+      const c = this.customerOf();
+      return !!c && c.project_count > 0;
+    },
+    // modeChanged diz que o modo escolhido no rádio não é o do cliente: ao criar, os termos vão para o cliente antes.
+    modeChanged() {
+      return this.solo && !!this.customerOf() && this.billing.billing_mode !== this.billingMode();
+    },
+    // monthlyCustomer diz que o projeto vai ser cobrado por mês (o modo escolhido, no solo): ele não tem valor por hora.
+    monthlyCustomer() {
+      if (!this.customerOf()) return false;
+      return (this.solo ? this.billing.billing_mode : this.billingMode()) === 'monthly';
     },
     // hasRate diz que o campo do valor cobrado existe: há cliente, e ele é cobrado por hora.
     hasRate() {
       return !!this.draft.customer_id && !this.monthlyCustomer();
     },
     // customerChanged copia o valor por hora padrão do cliente para o campo (o projeto guarda o seu, e o cliente não
-    // muda), a menos que a pessoa já tenha digitado um valor.
+    // muda), a menos que a pessoa já tenha digitado um valor, e os termos do cliente para `billing`.
     customerChanged() {
       this.clearField('customer_id');
       this.clearField('bill_rate_cents');
       const c = this.customerOf();
       if (!this.rateTouched) this.draft.rate = c && c.default_rate_cents != null ? WTT.fmt.moneyInput(c.default_rate_cents) : '';
+      this.billing = c ? billingDraft(c) : blankBilling();
+      this.lateOpen = false;
+      this.clearBillingFields();
+    },
+    // modeSwitched limpa os erros dos termos quando a pessoa troca o modo no rádio.
+    modeSwitched() {
+      this.clearBillingFields();
+    },
+    clearBillingFields() {
+      ['billing_mode', 'monthly_fee_cents', 'contract_start', 'contract_end', 'closing_day', 'payment_days', ...lateFields]
+        .forEach((f) => this.clearField(f));
     },
     // rateFromDefault diz que o valor do campo é o padrão do cliente, ainda sem mexer, para a dica dizer de onde veio.
     rateFromDefault() {
@@ -87,6 +123,8 @@ document.addEventListener('alpine:init', () => {
     // definir um (o admin cria só projeto interno); por isso a lista vem aqui, e não no init.
     async openCreate() {
       this.draft = blankProject();
+      this.billing = blankBilling();
+      this.lateOpen = false;
       this.rateTouched = false;
       this.errors.create = '';
       this.clearFields();
@@ -99,8 +137,10 @@ document.addEventListener('alpine:init', () => {
         this.errors.create = WTT.t('org.projects.customers_load_failed', { error: e.message });
       }
     },
-    // create cria o projeto numa chamada só: o cliente e o valor cobrado vão juntos, porque com cliente o valor é
-    // obrigatório e sem cliente é recusado.
+    // create cria o projeto: o cliente e o valor cobrado vão juntos, porque com cliente o valor é obrigatório e sem
+    // cliente é recusado. No modo solo, se o modo de cobrança escolhido não é o do cliente, os termos vão antes para o
+    // cliente (PATCH), e a resposta substitui o cliente na lista: um erro na criação do projeto não grava os termos de
+    // novo, e o cliente, ainda sem projetos, fica no modo novo sem trava.
     create() {
       return this.run('create', async () => {
         const d = this.draft;
@@ -108,16 +148,27 @@ document.addEventListener('alpine:init', () => {
         // O valor só existe com cliente por hora (o campo some no projeto interno e no cliente mensal).
         const withCustomer = !!d.customer_id;
         const withRate = this.hasRate();
+        const switching = this.modeChanged();
         const name = String(d.name).trim();
         const description = String(d.description).trim();
         // A descrição chega do servidor como long_description, e o rótulo do campo é o dele.
-        if (!this.check({
+        const ok = this.check({
           name: [name, R.required, R.max('name')],
           description: [description, (v) => R.max('description')(v, 'long_description')],
+          ...(switching ? billingSpec(this.billing) : {}),
           bill_rate_cents: [withRate ? d.rate : '', ...(withRate ? [R.required] : []), R.rate],
           ...WTT.routine.rules(d),
           sprint_duration_days: [d.sprint_duration_days, R.integer(1, 90)],
-        })) return;
+        });
+        if (!ok) {
+          // O erro dentro do bloco recolhido só recebe o foco com o bloco aberto.
+          if (lateFields.some((f) => this.fieldErrors[f])) this.lateOpen = true;
+          return;
+        }
+        if (switching) {
+          const saved = await api('PATCH', '/api/customers/' + d.customer_id, billingBody(this.billing));
+          this.customers = this.customers.map((c) => (c.id === saved.id ? saved : c));
+        }
         const body = {
           name,
           description,
@@ -273,8 +324,9 @@ document.addEventListener('alpine:init', () => {
       if (on.length === 0) return WTT.t('home.team.no_task');
       return on[0].task.name + ' · ' + on[0].project.name;
     },
+    // A jornada combinada é coisa de equipe: no modo solo ela não se edita, e uma que ficou de antes não vira meta.
     weekHint() {
-      const goal = this.mine.weekly_hours;
+      const goal = me.organization_solo ? 0 : this.mine.weekly_hours;
       if (!goal) return WTT.t('home.me.week_hint');
       return WTT.t('home.me.week_goal', { percent: Math.round(this.mine.hours.week_seconds / (goal * 3600) * 100), hours: goal });
     },
@@ -291,7 +343,8 @@ document.addEventListener('alpine:init', () => {
 
     // O que a lista diz quando está vazia: a pessoa nunca teve tarefa, ou não tem nenhuma neste estado.
     myEmpty() {
-      if (this.mine && this.mine.tasks.total === 0) return { title: WTT.t('home.me.empty_none'), text: WTT.t('home.me.empty_none_text') };
+      // No modo solo ninguém passa tarefa para você: a frase fala só de criar ou pegar uma.
+      if (this.mine && this.mine.tasks.total === 0) return { title: WTT.t('home.me.empty_none'), text: WTT.t(me.organization_solo ? 'home.me.empty_none_text_solo' : 'home.me.empty_none_text') };
       return this.myState === 'closed'
         ? { title: WTT.t('home.me.empty_closed'), text: WTT.t('home.me.empty_closed_text') }
         : { title: WTT.t('home.me.empty_open'), text: WTT.t('home.me.empty_open_text') };
@@ -929,6 +982,12 @@ document.addEventListener('alpine:init', () => {
       const id = this.profile.legal_id;
       this.form[id.field] = WTT.fmt.mask(this.form[id.field], id.mask);
     },
+    // No modo solo a moeda não aparece no formulário e segue o país, como no cadastro: trocar o país leva a moeda dele.
+    // Com equipe a moeda tem o seu campo, e trocar o país não mexe nela.
+    countryChanged() {
+      const c = WTT.countries.get(this.form.country);
+      if (this.form.solo && c && c.currency) this.form.currency = c.currency;
+    },
     // O resumo é uma linha só: o servidor junta os espaços repetidos, e o contador conta como ele.
     summaryLength() {
       return Array.from(this.form.summary.trim().replace(/\s+/g, ' ')).length;
@@ -997,7 +1056,9 @@ document.addEventListener('alpine:init', () => {
         [WTT.t('org.fields.address'), [org.address_line1, org.address_line2].filter(Boolean).join(' · ')],
       ]);
     },
+    // No modo solo o regime e a moeda não se aplicam (a moeda segue o país): o cartão mostra só o fuso.
     defaults() {
+      if (me.organization_solo) return rows([[WTT.t('org.fields.timezone'), org.timezone]]);
       return rows([
         [WTT.t('org.about.work_mode'), WTT.fmt.workMode(org.work_mode)],
         [WTT.t('org.fields.timezone'), org.timezone],

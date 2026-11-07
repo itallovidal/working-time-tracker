@@ -55,16 +55,17 @@
   </div>
 
   {{/* Duas listas, cada uma com a sua página: as sem responsável, para o time pegar, e as que já têm dono.
-       Escolher uma pessoa no filtro esconde a primeira, que por definição não tem dono. */}}
+       Escolher uma pessoa no filtro esconde a primeira, que por definição não tem dono. No modo solo é uma lista só
+       (all), com todas as tarefas do projeto, sem coluna nem filtro de responsável (taskLists, em pages/project.js). */}}
   <div class="stack stack-sections" x-cloak x-show="!loading">
     <template x-for="key in taskLists" :key="key">
       <section class="stack" :aria-labelledby="'tasks-' + key + '-title'">
         <div class="section-head">
           <div class="row row-tight">
-            <h2 :id="'tasks-' + key + '-title'" x-text="key === 'free' ? $t('tasks.section_free') : $t('tasks.section_taken')"></h2>
+            <h2 :id="'tasks-' + key + '-title'" x-text="listText(key, 'section')"></h2>
             <span class="badge num" x-text="lists[key].total"></span>
           </div>
-          <p class="muted small" x-show="key !== 'free'" x-text="$t('tasks.section_taken_hint')"></p>
+          <p class="muted small" x-show="key === 'taken'" x-text="$t('tasks.section_taken_hint')"></p>
           <p class="muted small" x-show="lists[key].tasks.length > 0">{{.T "tasks.row_hint"}}</p>
         </div>
 
@@ -78,11 +79,12 @@
           </select>
         </div>
 
-        {{template "empty_state" (dict "Icon" "list-check" "Show" "lists[key].total === 0" "TitleX" "listFiltered(key) ? $t('tasks.none_filtered') : (key === 'free' ? $t('tasks.free_none') : $t('tasks.taken_none'))" "TextX" "listFiltered(key) ? '' : (key === 'free' ? $t('tasks.free_none_text') : $t('tasks.taken_none_text'))")}}
+        {{template "empty_state" (dict "Icon" "list-check" "Show" "lists[key].total === 0" "TitleX" "listFiltered(key) ? $t('tasks.none_filtered') : listText(key, 'none')" "TextX" "listFiltered(key) ? '' : listText(key, 'none_text')")}}
 
-        {{template "task_table" (dict "Data" . "Rows" "lists[key].tasks" "Assignee" "key === 'taken'" "Action" "claim" "ActionShow" "key === 'free'")}}
+        {{/* Pegar fica nas sem responsável: a lista inteira delas, ou, no solo, as linhas que ainda não têm dono. */}}
+        {{template "task_table" (dict "Data" . "Rows" "lists[key].tasks" "Assignee" "key === 'taken'" "Action" "claim" "ActionShow" "key !== 'taken'")}}
 
-        <nav class="pager" :aria-label="key === 'free' ? $t('tasks.pager_free') : $t('tasks.pager_taken')" x-cloak x-show="lists[key].total > 0">
+        <nav class="pager" :aria-label="listText(key, 'pager')" x-cloak x-show="lists[key].total > 0">
           <span class="muted small" x-text="summary(key)"></span>
           <div class="row row-tight" x-show="pages(key) > 1">
             <button type="button" class="btn btn-secondary btn-sm" :disabled="lists[key].page <= 1" @click="go(key, lists[key].page - 1)">{{template "icon" "chevron-left"}} {{.T "tasks.prev"}}</button>

@@ -65,6 +65,11 @@ Valem para telas novas e para as que forem revistas.
   middleware `RequireTeamPage`, que responde 404. Um link para uma página escondida é um bug. A varredura
   (`TestLinkSweep_*`) abre as páginas principais de uma organização solo e de uma com equipe, segue todo link interno
   e falha se algum dá 404, se a solo aponta para uma página de equipe ou se a com equipe aponta para o A receber.
+  Um texto que fala de equipe ("o time", "alguém", "só admins veem") ganha uma chave irmã `<chave>_solo`, escolhida no
+  template com `{{if .Me.OrganizationSolo}}`; dentro de um atributo do Alpine, cada ramo leva o seu `$t('...')`
+  inteiro, para a conferência das chaves (`TestUsedKeysExist`) ler as duas, e nunca um `{{if}}` dentro de uma string
+  passada ao `dict`, que o Go não avalia. Numa página pública, onde `.Me` pode ser nulo (a ajuda), a condição é `.Solo`.
+  `internal/page/solo_screens_test.go` renderiza as telas para o dono de uma organização solo e de uma com equipe.
 - **Sem ranking de pessoas por horas.** Nenhuma tela ordena, ranqueia ou põe barras proporcionais de horas entre
   pessoas. Somas (horas da equipe, receita, custo, margem) podem, porque não comparam ninguém. Horas não medem bem a
   contribuição, e a tela induziria essa leitura. O que se mostra da equipe é quem trabalha agora e em que tarefa. O

@@ -40,7 +40,8 @@
         </div>
         <p class="project-desc" x-show="p.description" x-text="p.description"></p>
         <div class="project-stats">
-          <span class="project-stat">{{template "icon" "users"}} <span x-text="$t('home.projects.people', { count: p.member_count })"></span></span>
+          {{/* No modo solo todo projeto tem a mesma pessoa: a contagem não diz nada. */}}
+          {{if not .Me.OrganizationSolo}}<span class="project-stat">{{template "icon" "users"}} <span x-text="$t('home.projects.people', { count: p.member_count })"></span></span>{{end}}
           <span class="project-stat">{{template "icon" "list-check"}} <span x-text="$t('home.projects.tasks', { count: p.task_count })"></span></span>
         </div>
       </a>

@@ -4,7 +4,7 @@
        Data        os dados da página (para os textos)
        Rows        a expressão do Alpine com as tarefas da tabela, por exemplo lists[key].tasks
        Assignee    a expressão que liga a coluna do responsável (false quando é sempre a própria pessoa)
-       Action      "claim" (Pegar, na lista Sem responsável), "start" (Iniciar ou Adicionar à sessão, em Minhas
+       Action      "claim" (Pegar, na lista Sem responsável e na lista única do solo), "start" (Iniciar ou Adicionar à sessão, em Minhas
                    tarefas) ou "" (sem coluna de ação)
        ActionShow  a expressão que liga a coluna de ação
      Para o dono e os admins a célula do responsável leva a bolinha de $store.presence (a página chama $store.presence.watch() ao abrir).
@@ -63,9 +63,10 @@
             </span>
           </td>
           {{if eq $.Action "claim"}}
-          {{/* Pegar é ficar com a tarefa sem bater o ponto: ela sai desta lista e vai para Minhas tarefas. */}}
+          {{/* Pegar é ficar com a tarefa sem bater o ponto: ela sai desta lista e vai para Minhas tarefas. Na lista única do
+               modo solo, que tem também as tarefas que já são suas, o botão só aparece nas que não têm responsável. */}}
           <td class="actions" x-show="{{$.ActionShow}}">
-            <button type="button" class="btn btn-secondary btn-sm" :disabled="pending" :title="$t('tasks.claim_title')" :aria-label="$t('tasks.claim_label', { name: t.name })" @click="claim(t)">{{template "icon" "user-plus"}} {{.T "tasks.claim"}}</button>
+            <button type="button" class="btn btn-secondary btn-sm" x-show="!t.assignee_id" :disabled="pending" :title="$t('tasks.claim_title')" :aria-label="{{if .Me.OrganizationSolo}}$t('tasks.claim_label_solo', { name: t.name }){{else}}$t('tasks.claim_label', { name: t.name }){{end}}" @click="claim(t)">{{template "icon" "user-plus"}} {{if .Me.OrganizationSolo}}{{.T "tasks.claim_solo"}}{{else}}{{.T "tasks.claim"}}{{end}}</button>
           </td>
           {{else if eq $.Action "start"}}
           {{/* Com o ponto aberto neste projeto, o botão põe a tarefa na sessão; com ele aberto em outro, fica desabilitado. */}}

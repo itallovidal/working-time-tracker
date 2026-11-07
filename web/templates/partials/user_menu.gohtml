@@ -8,7 +8,8 @@
     <span class="sr-only">{{.T "nav.account_sr"}}</span>
     <span class="avatar" aria-hidden="true">{{.Initials}}</span>
     <span class="name" data-me-name>{{.Me.Name}}</span>
-    {{if .IsOwner}}<span class="badge badge-accent">{{.T "roles.owner"}}</span>{{else if .IsAdmin}}<span class="badge badge-accent">{{.T "roles.admin"}}</span>{{end}}
+    {{/* O cargo ao lado do nome só diz algo numa equipe: no modo solo a única pessoa é a dona. */}}
+    {{if .Me.OrganizationSolo}}{{else if .IsOwner}}<span class="badge badge-accent">{{.T "roles.owner"}}</span>{{else if .IsAdmin}}<span class="badge badge-accent">{{.T "roles.admin"}}</span>{{end}}
     {{template "icon" "chevron-down"}}
   </button>
   <div class="nav-menu-panel" id="user-menu-panel" x-cloak x-show="open">

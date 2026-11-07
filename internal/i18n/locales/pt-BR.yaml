@@ -158,6 +158,7 @@ home:
     tab_closed: Concluídas
     empty_none: Você ainda não tem tarefas
     empty_none_text: Quando alguém passar uma tarefa para você, ou você pegar uma na lista de um projeto, ela aparece aqui.
+    empty_none_text_solo: Crie uma tarefa na lista de um projeto e ela aparece aqui.
     empty_open: Nenhuma tarefa aberta com você
     empty_open_text: Tudo o que era seu já foi concluído.
     empty_closed: Nenhuma tarefa concluída ainda
@@ -360,6 +361,7 @@ onboarding:
     title: Boas-vindas ao Working Time Tracker
     lead: "A organização {{.name}} está criada. Conte um pouco sobre ela: o resto você completa quando quiser, em Configurações."
     money_note: A moeda e o fuso valem para a organização inteira. Ajuste agora, antes de cadastrar qualquer valor.
+    timezone_note: O fuso vale para todas as horas e datas da organização. A moeda segue o país.
   customers:
     title: Seus clientes
     lead: Cliente é quem contrata a organização. Cada projeto pode ter um cliente e o valor cobrado dele por hora; um projeto interno não precisa de cliente.
@@ -380,12 +382,14 @@ onboarding:
       other: "{{.count}} convites criados"
     org: Dados da organização
     org_text: Resumo, contato, dados jurídicos e como vocês trabalham.
+    org_text_solo: Resumo, contato, dados jurídicos e fuso horário.
     customers: Clientes
     customers_text: Quem contrata os projetos, com o contato de cada um.
     people: Colaboradores
     people_text: Convites, papéis, permissões e jornada semanal.
     projects: Projetos
     projects_text: Crie o primeiro projeto e ponha o time nele, com o valor por hora de cada pessoa. É assim que o ponto passa a contar.
+    projects_text_solo: Crie o primeiro projeto, por hora ou com contrato mensal. É assim que o ponto passa a contar.
     docs: Documentação
     docs_text: O passo a passo do primeiro uso e o que cada tela faz.
     finish: Concluir
@@ -403,6 +407,7 @@ auth:
   signup:
     title: Criar organização
     subtitle: Você entra como admin e depois convida o time.
+    subtitle_solo: "A organização é só você: sem convites nem equipe."
     org_name: Nome da organização
     country: País
     country_hint: Define a moeda, o fuso e os dados fiscais da organização.
@@ -733,6 +738,8 @@ help:
       tip: "Recebeu um convite? Pule este passo: abra o link do convite e crie a sua conta por lá."
     currency:
       title: Confira a moeda e o fuso
+      title_solo: Confira o fuso
+      text_solo: "O fuso horário vale para todas as horas e datas da organização; a moeda segue o país. Aproveite para preencher o perfil da organização."
       text: "A moeda (real, dólar ou euro) e o fuso horário valem para a organização inteira. Ajuste agora, antes de cadastrar qualquer valor. Aproveite para preencher o perfil: o time inteiro lê em Configurações."
       tip: "A moeda só muda como os valores aparecem; o app não converte entre moedas."
     customers:
@@ -823,6 +830,7 @@ help:
     project_tasks:
       title: "Projeto: Lista de tarefas"
       text: "Todas as tarefas do projeto em duas listas: “Sem responsável”, as que ninguém pegou, e “Com responsável”. Quem inicia o ponto numa tarefa sem responsável passa a ser o responsável; o botão “Pegar” atribui a tarefa a você sem iniciar o cronômetro."
+      text_solo: "Todas as tarefas do projeto numa lista só. A tarefa nova já é sua; numa sem responsável (vinda do GitHub ou do Trello, por exemplo), “Atribuir a mim” a passa para você sem iniciar o cronômetro, e iniciar o ponto nela também."
       filters: "A busca e os filtros (prazo, prioridade, status e etiquetas) ficam na URL: dá para guardar ou mandar o link da lista filtrada."
       new: "“Nova tarefa” abre um formulário em passos: a tarefa, os detalhes e, se o projeto tem integrações, as plataformas onde ela também deve existir."
       open: "Clique numa linha para abrir a tarefa."
@@ -890,7 +898,7 @@ help:
       text: "O modo solo é para quem atua sozinho, como freelancer ou PJ: a organização é uma pessoa só, e o que é de equipe some em vez de ficar sobrando nos menus."
       choose: "Marque “Trabalho sozinho(a)” ao criar a organização ou depois, em Configurações › Editar. Só o dono muda, e só liga com você como a única pessoa e sem convites pendentes."
       hides: "O menu perde Colaboradores e Pagamentos e ganha “A receber”; o projeto perde a aba Colaboradores, e ninguém é convidado. Desligar o modo não apaga nada: tudo o que ficou escondido volta."
-      billing: "Cada cliente é cobrado por hora (as horas dos projetos vezes o valor cobrado de cada um) ou por contrato mensal (um valor fixo por mês, e os projetos dele não têm valor por hora), nunca pelos dois. Escolha em Clientes: depois que o cliente tem projetos, o modo não muda."
+      billing: "Cada cliente é cobrado por hora (as horas dos projetos vezes o valor cobrado de cada um) ou por contrato mensal (um valor fixo por mês, e os projetos dele não têm valor por hora), nunca pelos dois. Escolha em Clientes ou ao criar o projeto: o modo e o contrato são do cliente e valem para todos os projetos dele, e depois que o cliente tem projetos o modo não muda."
       home: "O Início mostra as horas, a receita (o dinheiro que entrou) e a receita projetada (o que se espera receber, pago ou não), por cliente."
     integrations:
       title: Integrações com GitHub e Trello
@@ -902,6 +910,7 @@ help:
     no_clock:
       q: Não consigo iniciar o ponto
       a: "Quase sempre falta o valor por hora da pessoa naquele projeto: um administrador ou o administrador do projeto define em Gestão › Colaboradores. A outra causa é um ponto já aberto em outro projeto; pare-o antes de iniciar este."
+      a_solo: "Quase sempre é um ponto já aberto em outro projeto: pare-o antes de iniciar este. Num projeto de cliente cobrado por hora, confira também o valor cobrado em Gestão › Configurações."
     forgot:
       q: Esqueci de bater o ponto. Dá para lançar as horas depois?
       a: "Não. O app só registra o tempo cronometrado: não há lançamento manual, aprovação nem fechamento de período. O que dá para ajustar são os intervalos das tarefas dentro de uma sessão (abra a sessão e use o lápis), sem mudar o tempo total dela."
@@ -929,8 +938,10 @@ org:
     currency: Moeda
   about:
     intro: O que todos os membros leem sobre a organização.
+    intro_solo: O perfil da sua organização.
     empty_profile: O perfil da organização ainda está vazio.
     fill_profile: Preencha os dados para o time ver aqui.
+    fill_profile_solo: Preencha os dados da organização.
     identity: Sobre
     how_we_work: Como trabalhamos
     contact: Contato
@@ -942,6 +953,7 @@ org:
     summary: Resumo
     summary_hint: Uma linha que aparece no cabeçalho da organização.
     description_hint: O que a organização faz e para quem. Todos os membros leem em Configurações.
+    description_hint_solo: O que a organização faz e para quem.
     contact: Contato
     contact_email: Email de contato
     website_placeholder: https://exemplo.com.br
@@ -952,8 +964,10 @@ org:
     how_we_work: Como trabalhamos
     work_mode: Regime de trabalho
     hours_note: A duração da sprint fica nas configurações de cada projeto, e a jornada semanal, no cadastro de cada pessoa.
+    hours_note_solo: A duração da sprint fica nas configurações de cada projeto.
     delete_title: Excluir organização
     delete_warning: Apaga a organização, todas as pessoas e os convites. Só é possível depois de excluir todos os projetos.
+    delete_warning_solo: Apaga a organização e a sua conta nela. Só é possível depois de excluir todos os projetos.
     delete_confirm: Excluir de vez? Isso não pode ser desfeito.
     saved: Organização salva.
   people:
@@ -1043,6 +1057,7 @@ org:
     internal: Projeto interno
     customer: Cliente
     admins_only_hint: O cliente e o valor cobrado só aparecem para admins e podem ser trocados depois, nas configurações do projeto.
+    admins_only_hint_solo: O cliente e o valor cobrado podem ser trocados depois, nas configurações do projeto.
     create: Criar projeto
     loading: Carregando projetos…
     empty: Nenhum projeto ainda
@@ -1096,6 +1111,13 @@ customer:
     project_monthly_note: "Este cliente é cobrado por mês, então o projeto não tem valor por hora. As horas continuam sendo contadas."
     project_rate_default: "Preenchido com o valor padrão do cliente. O projeto guarda o próprio valor: mudar aqui não altera o cliente."
     project_rate_monthly: "Não se aplica: cobrança mensal"
+    monthly_contract: Contrato mensal
+    option_label: "{{.name}} · {{.mode}}"
+    project_mode_hint: O modo de cobrança e o contrato ficam no cliente e valem para todos os projetos dele.
+    project_contract_edit: Editar o contrato em Clientes
+    project_contract_where: definido no cliente
+    project_contract_new: "O contrato fica no cliente {{.name}} e vale para todos os projetos dele."
+    project_to_hourly: "O cliente {{.name}} passa a ser cobrado por hora."
 project:
   head:
     projects: Projetos
@@ -1113,6 +1135,7 @@ project:
     about: Projeto
     billing: Cliente e cobrança
     routine: Rotina do time
+    routine_solo: Rotina
   fields:
     sprint: Duração da sprint
     daily: Daily
@@ -1182,6 +1205,7 @@ tasks:
   label_create: Criar
   pick_person: Escolha a pessoa
   unassigned_hint: "Sem responsável, a tarefa fica disponível: quem bater o ponto nela passa a ser o responsável."
+  unassigned_hint_solo: "Sem responsável, a tarefa fica fora de Minhas tarefas até você pegá-la ou bater o ponto nela."
   new: Nova tarefa
   loading: Carregando tarefas…
   sync: Sincronizar
@@ -1214,6 +1238,10 @@ tasks:
   row_hint: Clique em uma tarefa para abrir os detalhes.
   pager_free: Páginas das tarefas sem responsável
   pager_taken: Páginas das tarefas com responsável
+  section_all: Tarefas
+  all_none: Nenhuma tarefa neste projeto
+  all_none_text: Crie a primeira com o botão Nova tarefa.
+  pager_all: Páginas das tarefas
   col_task: Tarefa
   col_assignee: Responsável
   col_deadline: Prazo
@@ -1224,6 +1252,8 @@ tasks:
   claim: Pegar
   claim_title: Associar a tarefa a mim, sem iniciar o ponto
   claim_label: "Pegar a tarefa {{.name}}"
+  claim_solo: Atribuir a mim
+  claim_label_solo: "Atribuir a tarefa {{.name}} a mim"
   claimed: "Você pegou \"{{.name}}\". Ela está em Minhas tarefas."
   running: Em andamento
   start: Iniciar
@@ -1277,6 +1307,7 @@ task_detail:
   created: Criada em
   time_title: Tempo registrado
   no_time: Ninguém registrou tempo nesta tarefa ainda.
+  no_time_solo: Nenhum tempo registrado nesta tarefa ainda.
   in_progress: "· em andamento"
   with_tasks: "com {{.names}}"
   session_total: "sessão de {{.time}}"
@@ -1342,6 +1373,7 @@ time:
   stopped: Parado
   no_tasks: Você não tem tarefas neste projeto.
   create_task: Pegue uma disponível na lista de tarefas.
+  create_task_solo: Crie uma na lista de tarefas.
   task: Tarefa
   start: Iniciar
   yours: Seu tempo neste projeto
@@ -1349,8 +1381,10 @@ time:
   this_week: Nesta semana
   your_rate_before: "Seu valor neste projeto:"
   your_rate_after: por hora. Só você e os admins veem.
+  your_rate_after_solo: por hora.
   sessions: Sessões
   sessions_admin: Sessões dos Colaboradores
+  sessions_solo: Sessões
   totals_follow: Os totais acompanham os filtros.
   person_filter: Filtrar por pessoa
   all_people: Todas as pessoas
@@ -1521,12 +1555,15 @@ project_settings:
   internal: Projeto interno
   bill_rate_fact: Valor cobrado por hora
   bill_rate_note: O valor cobrado é o que o cliente paga à organização. Só admins veem.
+  bill_rate_note_solo: O valor cobrado é o que o cliente paga por hora.
   edit_title: Editar projeto
   delete_confirm: Excluir o projeto? Os times, as tarefas, as sessões de trabalho e as integrações dele são apagados.
+  delete_confirm_solo: Excluir o projeto? As tarefas, as sessões de trabalho e as integrações dele são apagadas.
   billing_title: Cliente e cobrança
   customers_hint: Cadastre clientes em
   rate_placeholder: "10,00"
   bill_rate_hint: O que o cliente paga à organização, obrigatório em um projeto com cliente. Só admins veem.
+  bill_rate_hint_solo: O que o cliente paga por hora, obrigatório em um projeto com cliente cobrado por hora.
   delete_title: Excluir projeto
   delete_text: Apaga o projeto com todos os times, tarefas, sessões de trabalho e integrações.
   saved: Projeto salvo.
@@ -1637,6 +1674,7 @@ collab:
   no_rate_badge: Sem valor
   owner_badge: Dono
   owner_rate_hint: "O dono recebe o valor cobrado do cliente: as horas dele entram na receita do projeto e não têm custo."
+  owner_rate_hint_solo: "Você recebe o valor cobrado do cliente: as suas horas entram na receita do projeto e não têm custo."
   edit_person: Editar colaborador
   edit_person_label: "Editar {{.name}}"
   pager: Páginas da lista de pessoas
@@ -1696,6 +1734,7 @@ overview:
   first_session: Primeiro ponto
   last_session: Último ponto
   nobody_clocked: Ninguém bateu ponto ainda
+  nobody_clocked_solo: Nenhum ponto ainda
   activity: Atividade
   last_7: Últimos 7 dias
   last_30: Últimos 30 dias

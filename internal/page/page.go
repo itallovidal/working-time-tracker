@@ -200,6 +200,12 @@ func (d Data) IsOwner() bool {
 	return d.Me != nil && d.Me.IsOwner
 }
 
+// Solo diz se quem olha está numa organização no modo solo. Vale também nas páginas públicas (a ajuda), onde não há
+// ninguém logado e .Me.OrganizationSolo quebraria o template.
+func (d Data) Solo() bool {
+	return d.Me != nil && d.Me.OrganizationSolo
+}
+
 func (d Data) Initials() string {
 	if d.Me == nil {
 		return ""
