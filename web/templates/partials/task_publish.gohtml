@@ -1,8 +1,8 @@
 {{/* task_publish é a etapa 3 do modal Nova tarefa, só em projeto com integração ativa: um cartão para cada
      integração, cada um com a sua caixa (não se excluem: a tarefa vai para todas as marcadas). A caixa de uma
      integração que a posta sozinha (o Trello) vem marcada, e desmarcá-la a deixa de fora; a das outras (o GitHub)
-     vem desmarcada, e a tela posta depois de criar. As que ainda não recebem tarefas (o GitLab, ou uma com a
-     sincronização desligada) aparecem desativadas, com o motivo.
+     vem desmarcada, e a tela posta depois de criar; o GitLab faz como o GitHub. As que ainda não recebem tarefas
+     (uma com a sincronização desligada, ou um tipo em breve) aparecem desativadas, com o motivo.
      Pede o mixin taskWizard, projectSync (integrations) e os métodos canPublish, autoPublish, ticked, pickPublish e publishOff. */}}
 {{define "task_publish"}}
 <div class="stack" x-show="step === 3">
@@ -28,6 +28,14 @@
             <li>{{.T "tasks.publish.github_after"}}</li>
           </ul>
         </template>
+        <template x-if="canPublish(i) && i.type === 'gitlab'">
+          <ul class="publish-points small muted">
+            <li>{{.T "tasks.publish.gitlab_sends"}}</li>
+            <li>{{.T "tasks.publish.gitlab_local"}}</li>
+            <li>{{.T "tasks.publish.gitlab_assignee"}}</li>
+            <li>{{.T "tasks.publish.gitlab_after"}}</li>
+          </ul>
+        </template>
         <template x-if="canPublish(i) && i.type === 'trello'">
           <ul class="publish-points small muted">
             <li>{{.T "tasks.publish.trello_sends"}}</li>
@@ -36,8 +44,9 @@
           </ul>
         </template>
         <span class="small muted" x-show="!canPublish(i) && i.type === 'github'">{{.T "tasks.publish.github_sync_off"}}</span>
+        <span class="small muted" x-show="!canPublish(i) && i.type === 'gitlab'">{{.T "tasks.publish.gitlab_sync_off"}}</span>
         <span class="small muted" x-show="!canPublish(i) && i.type === 'trello'">{{.T "tasks.publish.trello_sync_off"}}</span>
-        <span class="small muted" x-show="i.type !== 'github' && i.type !== 'trello' && !canPublish(i)" x-text="$t('tasks.publish.soon_note', { provider: typeLabel(i.type) })"></span>
+        <span class="small muted" x-show="!['github', 'gitlab', 'trello'].includes(i.type) && !canPublish(i)" x-text="$t('tasks.publish.soon_note', { provider: typeLabel(i.type) })"></span>
       </span>
     </label>
   </template>

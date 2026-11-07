@@ -821,7 +821,7 @@ help:
     project_tasks:
       title: "Project: Task list"
       text: "All the project's tasks in two lists: “Unassigned”, the ones nobody has picked up, and “Assigned”. Whoever clocks in on an unassigned task becomes its assignee; the “Take” button assigns the task to you without starting the timer."
-      text_solo: "All the project's tasks in a single list. A new task is already yours; on an unassigned one (from GitHub or Trello, for instance), “Assign to me” gives it to you without starting the timer, and so does clocking in on it."
+      text_solo: "All the project's tasks in a single list. A new task is already yours; on an unassigned one (from GitHub, GitLab or Trello, for instance), “Assign to me” gives it to you without starting the timer, and so does clocking in on it."
       filters: "The search and the filters (deadline, priority, status and labels) stay in the URL: you can save or send the link to the filtered list."
       new: "“New task” opens a form in steps: the task, the details and, if the project has integrations, the platforms where it should also exist."
       open: "Click a row to open the task."
@@ -843,7 +843,7 @@ help:
       edit: "The pencil on the row opens the edit: rate, group, teams and “Remove from the project” (the tasks and the hours stay)."
     mgmt_integrations:
       title: "Management: Integrations"
-      text: "Connects the project to a GitHub repository or a Trello board. See “GitHub and Trello integrations”, further down."
+      text: "Connects the project to a GitHub repository, a GitLab project or a Trello board. See “GitHub, GitLab and Trello integrations”, further down."
     mgmt_settings:
       title: "Management: Settings"
       text: "The project details (description, sprint length, daily and weekly), the customer and, for the owner, the rate billed per hour. The “Edit” button opens the edit form."
@@ -892,9 +892,9 @@ help:
       billing: "Each customer is billed per hour (the hours on their projects times the customer's hourly rate) or by a monthly contract (a fixed amount per month, and their projects have no hourly rate), never both. Billing is set under Customers and applies to all of the customer's projects; each project only adds an extra, per hour or per month. Once a customer has projects the mode cannot change."
       home: "Home shows the hours, the revenue (the money that came in) and the projected revenue (what you expect to receive, paid or not), per customer."
     integrations:
-      title: GitHub and Trello integrations
-      text: "Optional. Connects the project to a GitHub repository or a Trello board, so tasks move along with the issues and the cards."
-      connect: "In Management › Integrations, click “New integration” and “Connect with GitHub” (or with Trello): you authorize on the platform and pick the repository or the board."
+      title: GitHub, GitLab and Trello integrations
+      text: "Optional. Connects the project to a GitHub repository, a GitLab project or a Trello board, so tasks move along with the issues and the cards."
+      connect: "In Management › Integrations, click “New integration” and “Connect with GitHub” (or with GitLab, or with Trello): you authorize on the platform and pick the repository, the project or the board."
       sync: "With sync on, issues and cards become tasks, and changes go both ways."
       publish: "When you create a task, you can tick the platforms where it should also exist. On a task that already exists, the “Post to GitHub” (or “Post to Trello”) button sends it to the other platform."
   faq:
@@ -1218,6 +1218,11 @@ tasks:
     github_assignee: "The assignee only goes if the public email of their GitHub user is the same email registered here; otherwise the issue comes out unassigned."
     github_after: "Once posted, the task and the issue stay in sync in both directions."
     github_sync_off: "Turn on the issue sync on this integration, on the project's integrations screen, to post tasks to it."
+    gitlab_sends: "The name (the title), the description and the labels go to the issue; labels are created in the project if it lacks them."
+    gitlab_local: "Deadline and priority stay here only."
+    gitlab_assignee: "The assignee only goes if the public email of their GitLab user is the same email registered here; otherwise the issue comes out unassigned."
+    gitlab_after: "Once posted, the task and the issue stay in sync in both directions."
+    gitlab_sync_off: "Turn on the issue sync on this integration, on the project's integrations screen, to post tasks to it."
     soon: Coming soon
     sync_off: Sync off
     trello_sync_off: "Turn on the sync on this integration, on the project's integrations screen, so tasks become cards."
@@ -1327,6 +1332,7 @@ task_detail:
   publish_intro: "This task is not on {{.provider}} yet."
   publish_action: "Post to {{.provider}}"
   publish_github_note: "The name, the description and the labels go to the issue; deadline and priority stay here only, and the assignee only goes if their public GitHub email is the one registered here. After that, the task and the issue stay in sync."
+  publish_gitlab_note: "The name, the description and the labels go to the issue; deadline and priority stay here only, and the assignee only goes if their public GitLab email is the one registered here. After that, the task and the issue stay in sync."
   publish_trello_note: "The name, the description, the labels and the deadline (as the due date) go to the card, on the first list of the board. After that, the task and the card stay in sync."
   published: "Task posted to {{.provider}}."
   delete_title: Delete task
@@ -1334,6 +1340,8 @@ task_detail:
   delete_remote_intro: "This task also exists on other platforms. Tick where the deletion should apply too; with nothing ticked, it leaves only here and the items over there stay as they are."
   delete_remote_github: "Delete the issue on GitHub"
   delete_remote_github_note: "Only a repository admin can delete an issue. If the connected account is not one, the issue is only closed, as not planned."
+  delete_remote_gitlab: "Delete the issue on GitLab"
+  delete_remote_gitlab_note: "Only a project Owner can delete an issue. If the connected account is not one, the issue is only closed."
   delete_remote_trello: "Archive the card on Trello"
   delete_remote_trello_note: "The card is not deleted: it is archived, and you can restore it from Trello."
   delete_remote_other: "Close the item on {{.provider}}"
@@ -1431,7 +1439,7 @@ time:
     other: "Page {{.page}} of {{.pages}} · {{.count}} sessions"
 
 integrations:
-  intro: Link tasks to issues and cards, or sync every open issue of a GitHub repository, or every card of a Trello board, with the tasks. You authorize on the platform itself and pick the repository or the board; the access is stored encrypted. GitLab is coming soon.
+  intro: Link tasks to issues and cards, or sync every open issue of a GitHub repository or a GitLab project, or every card of a Trello board, with the tasks. You authorize on the platform itself and pick the repository, the project or the board; the access is stored encrypted.
   new: New integration
   loading: Loading integrations…
   none: No integrations
@@ -1485,7 +1493,7 @@ integrations:
   sync_nothing: "Everything matches: nothing to sync."
   sync_done: "Synced."
   sync_partial: "The round stopped before the end (a limit of the platform or an error): the rest waits for the next one."
-  unmatched_hint: "The assignee of an issue only becomes the task's if their public GitHub email is someone's on this project. Whoever does not publish an email has no match, and the task stays available."
+  unmatched_hint: "The assignee of an issue only becomes the task's if their public GitHub or GitLab email is someone's on this project. Whoever does not publish an email has no match, and the task stays available."
   sync_created:
     one: "{{.count}} new task"
     other: "{{.count}} new tasks"
@@ -1520,9 +1528,14 @@ integration_types:
         hint: The repository address is accepted too.
   gitlab:
     about: Issues of a project
-    token_hint: Token with the read_api scope.
+    token_hint: Personal token with the api scope, which reads and writes the issues.
     item_label: Issue number
     item_placeholder: "E.g.: 42"
+    pick_title: Pick the project
+    pick_hint: The list shows the projects your account is a member of. A project that does not show up can be typed as group/project.
+    sync_label: "Sync the issues of this project with the tasks"
+    sync_hint: "Open issues become tasks, and the name, description, labels, assignee and closing stay the same on both sides, whichever one changes. The assignee is linked by the user's public email on GitLab. If both sides change the same field, GitLab wins. Priority, deadline, hours and the In progress and Awaiting closure statuses stay here only."
+    connect_unconfigured: The GitLab connection is not set up on this server. Whoever runs it must define GITLAB_CLIENT_ID, GITLAB_CLIENT_SECRET and PUBLIC_URL.
     fields:
       project_url:
         label: Project
@@ -1876,6 +1889,10 @@ errors:
     github_repo_not_found: "GitHub repository not found, or the token has no access to it"
     gitlab_forbidden: "the GitLab token has no permission to read the project"
     gitlab_invalid_project: "invalid GitLab project: use group/project"
+    gitlab_oauth_denied: "the authorization on GitLab was cancelled"
+    gitlab_oauth_exchange: "GitLab did not accept the authorization: try connecting again"
+    gitlab_oauth_not_configured: "the GitLab connection is not set up on this server: whoever runs it must define GITLAB_CLIENT_ID, GITLAB_CLIENT_SECRET and PUBLIC_URL"
+    gitlab_oauth_state: "the GitLab connection expired or could not be confirmed: try again"
     gitlab_project_not_found: "GitLab project not found, or the token has no access to it"
     invalid_issue_number: "the issue number must contain only digits"
     invalid_token: "invalid {{.provider}} token"
@@ -1917,13 +1934,13 @@ errors:
     server_error: "internal error, please try again"
   issue_sync:
     label_refused: "the token cannot create labels on the other side: the new label stays here only"
-    no_login: "could not find the GitHub user of the person assigned here: they need a public email on their GitHub profile"
+    no_login: "could not find, on the platform, the user of the person assigned here: they need a public email on their GitHub or GitLab profile"
     push_discarded: "the platform ignored a change to this item (the token may lack write permission): it stays here only"
     push_rejected: "the platform refused a change to this item: it stays here only"
     read_only: "the token cannot write to this repository or board: items only come here, and changes made here do not go out"
     publish_read_only: "the token of this integration cannot write to the repository or board: the new item would come out without some of its data, so the task was not posted"
     remove_read_only: "the token of this integration cannot write to the repository or board, so the item is still there"
-    remove_only_closed: "the platform did not let the item be deleted (the connected account must be an admin of the repository), so it was only closed"
+    remove_only_closed: "the platform did not let the item be deleted (the connected account must be a repository admin on GitHub, or a project Owner on GitLab), so it was only closed"
   label:
     name_required: "enter the label name"
     name_taken: "the project already has a label with this name"

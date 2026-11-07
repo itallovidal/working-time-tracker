@@ -4,6 +4,8 @@ import (
 	"errors"
 	"reflect"
 	"strings"
+	"sync"
+	"time"
 	"unicode/utf8"
 
 	"github.com/google/uuid"
@@ -75,7 +77,15 @@ func checkMetadata(impl adapter.Integration, raw map[string]interface{}) (map[st
 type Service struct {
 	store      *Store
 	encryptKey string
+
+	mu sync.RWMutex
+	// refreshers renova, por tipo, o token que vence (o do OAuth do GitLab).
+	refreshers map[string]adapter.TokenRefresher
 }
+
+// refreshMargin é quanto antes de vencer o token é renovado: uma rodada da sincronização que começa com ele
+// ainda termina antes de ele vencer.
+const refreshMargin = 10 * time.Minute
 
 func NewService(store *Store, encryptKey string) *Service {
 	return &Service{store: store, encryptKey: encryptKey}
@@ -88,22 +98,128 @@ func redact(it *Integration) {
 	it.Credentials = nil
 }
 
-// seal criptografa o token, o único segredo de uma integração.
-func (s *Service) seal(token string) (map[string]interface{}, error) {
-	return adapter.EncryptConfig(map[string]interface{}{"token": token}, s.encryptKey)
+// SetRefresher diz quem renova o token que vence de um tipo: o app OAuth do GitLab. Sem ele, o token que vence
+// é usado como está, e a plataforma recusa quando ele vencer.
+func (s *Service) SetRefresher(integrationType string, r adapter.TokenRefresher) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.refreshers == nil {
+		s.refreshers = map[string]adapter.TokenRefresher{}
+	}
+	s.refreshers[integrationType] = r
 }
 
-// open devolve o token guardado.
-func (s *Service) open(it *Integration) (string, error) {
-	if len(it.Credentials) == 0 {
-		return "", ErrNoCredential
+func (s *Service) refresher(integrationType string) adapter.TokenRefresher {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.refreshers[integrationType]
+}
+
+// seal criptografa o token, o único segredo de uma integração.
+func (s *Service) seal(token string) (map[string]interface{}, error) {
+	return s.sealCredential(adapter.Credential{Token: token})
+}
+
+// sealCredential criptografa a credencial inteira: o token e, no token que vence, o de renovação e o vencimento.
+func (s *Service) sealCredential(cred adapter.Credential) (map[string]interface{}, error) {
+	secrets := map[string]interface{}{"token": cred.Token}
+	if cred.RefreshToken != "" {
+		secrets["refresh_token"] = cred.RefreshToken
+		if !cred.ExpiresAt.IsZero() {
+			secrets["expires_at"] = cred.ExpiresAt.UTC().Format(time.RFC3339)
+		}
 	}
+	return adapter.EncryptConfig(secrets, s.encryptKey)
+}
+
+// unseal lê a credencial guardada.
+func (s *Service) unseal(credentials map[string]interface{}) (adapter.Credential, error) {
+	if len(credentials) == 0 {
+		return adapter.Credential{}, ErrNoCredential
+	}
+	secrets, err := adapter.DecryptConfig(credentials, s.encryptKey)
+	if err != nil {
+		return adapter.Credential{}, ErrUnreadableCredential
+	}
+	var cred adapter.Credential
+	cred.Token, _ = secrets["token"].(string)
+	cred.RefreshToken, _ = secrets["refresh_token"].(string)
+	if at, ok := secrets["expires_at"].(string); ok {
+		cred.ExpiresAt, _ = time.Parse(time.RFC3339, at)
+	}
+	return cred, nil
+}
+
+// credentialKeys são as chaves que a credencial guarda hoje. Uma linha de antes do metadata guardava também o
+// repositório no blob.
+var credentialKeys = map[string]bool{"token": true, "refresh_token": true, "expires_at": true}
+
+// dropLegacy regrava a credencial sem as chaves de antes do metadata, se ela as tem, e diz se regravou. A
+// credencial de hoje fica como está: regravá-la sem necessidade poria a cópia lida por cima de uma renovação.
+func (s *Service) dropLegacy(it *Integration) (bool, error) {
 	secrets, err := adapter.DecryptConfig(it.Credentials, s.encryptKey)
 	if err != nil {
-		return "", ErrUnreadableCredential
+		return false, nil
 	}
-	token, _ := secrets["token"].(string)
-	return token, nil
+	for key := range secrets {
+		if !credentialKeys[key] {
+			cred, err := s.unseal(it.Credentials)
+			if err != nil {
+				return false, err
+			}
+			if it.Credentials, err = s.sealCredential(cred); err != nil {
+				return false, err
+			}
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// expiring diz se o token vence logo: só o que tem como ser renovado.
+func expiring(cred adapter.Credential) bool {
+	return cred.RefreshToken != "" && !cred.ExpiresAt.IsZero() && time.Until(cred.ExpiresAt) < refreshMargin
+}
+
+// open devolve o token de acesso guardado. O que vence logo (o do OAuth do GitLab) é renovado antes: a renovação
+// trava a linha da integração, relê a credencial (outra chamada pode ter acabado de renovar) e grava só ela. A
+// credencial nova também vai para it.Credentials, para quem chamou não gravar a velha por cima.
+func (s *Service) open(it *Integration) (string, error) {
+	cred, err := s.unseal(it.Credentials)
+	if err != nil {
+		return "", err
+	}
+	refresher := s.refresher(it.Type)
+	if !expiring(cred) || refresher == nil {
+		return cred.Token, nil
+	}
+	var fresh adapter.Credential
+	sealed, err := s.store.RefreshCredentials(it.ID, func(stored map[string]interface{}) (map[string]interface{}, error) {
+		current, err := s.unseal(stored)
+		if err != nil {
+			return nil, err
+		}
+		if !expiring(current) {
+			fresh = current
+			return nil, nil
+		}
+		next, err := refresher.Refresh(current.RefreshToken)
+		if err != nil {
+			return nil, err
+		}
+		fresh = next
+		return s.sealCredential(next)
+	})
+	if err != nil {
+		// A plataforma fora do ar não estraga um token que ainda vale: ele é usado, e a próxima chamada tenta de
+		// novo. O token de renovação recusado (revogado, já usado) é o token recusado.
+		if !errors.Is(err, adapter.ErrInvalidToken) && time.Now().Before(cred.ExpiresAt) {
+			return cred.Token, nil
+		}
+		return "", err
+	}
+	it.Credentials = sealed
+	return fresh.Token, nil
 }
 
 // Create recebe a estrutura comum a todos os tipos: o token e, em metadata, os
@@ -177,16 +293,26 @@ func (s *Service) Connect(projectID, integrationType, token string) (*Integratio
 // ConnectWith é o Connect de um tipo que traz do app, e não da pessoa, parte do metadata (a chave do app
 // no Trello): app entra na consulta de quem o token representa e fica guardado no metadata da integração.
 func (s *Service) ConnectWith(projectID, integrationType, token string, app map[string]interface{}) (*Integration, error) {
+	return s.connect(projectID, integrationType, adapter.Credential{Token: token}, app)
+}
+
+// ConnectCredential é o Connect de um tipo cujo token vence (o do GitLab): guarda o par inteiro, para o
+// servidor renovar o token sozinho.
+func (s *Service) ConnectCredential(projectID, integrationType string, cred adapter.Credential) (*Integration, error) {
+	return s.connect(projectID, integrationType, cred, nil)
+}
+
+func (s *Service) connect(projectID, integrationType string, cred adapter.Credential, app map[string]interface{}) (*Integration, error) {
 	impl, lookup, err := accountLookup(integrationType)
 	if err != nil {
 		return nil, err
 	}
-	token = strings.TrimSpace(token)
-	login, err := lookup.Account(adapter.Connection{Token: token, Metadata: app})
+	cred.Token = strings.TrimSpace(cred.Token)
+	login, err := lookup.Account(adapter.Connection{Token: cred.Token, Metadata: app})
 	if err != nil {
 		return nil, err
 	}
-	credentials, err := s.seal(token)
+	credentials, err := s.sealCredential(cred)
 	if err != nil {
 		return nil, err
 	}
@@ -217,6 +343,15 @@ func (s *Service) Reauthorize(id, token string) (*Integration, error) {
 // ReauthorizeWith é o Reauthorize de um tipo que traz do app parte do metadata: app vale sobre o que a
 // integração tinha (reconectar com a chave atual do app) e fica guardado.
 func (s *Service) ReauthorizeWith(id, token string, app map[string]interface{}) (*Integration, error) {
+	return s.reauthorize(id, adapter.Credential{Token: token}, app)
+}
+
+// ReauthorizeCredential é o Reauthorize de um tipo cujo token vence (o do GitLab): troca o par inteiro.
+func (s *Service) ReauthorizeCredential(id string, cred adapter.Credential) (*Integration, error) {
+	return s.reauthorize(id, cred, nil)
+}
+
+func (s *Service) reauthorize(id string, cred adapter.Credential, app map[string]interface{}) (*Integration, error) {
 	existing, err := s.store.GetByID(id)
 	if err != nil {
 		return nil, err
@@ -225,23 +360,23 @@ func (s *Service) ReauthorizeWith(id, token string, app map[string]interface{}) 
 	if err != nil {
 		return nil, err
 	}
-	token = strings.TrimSpace(token)
+	cred.Token = strings.TrimSpace(cred.Token)
 	merged := mergeMetadata(existing.Metadata, app)
-	if _, err := lookup.Account(adapter.Connection{Token: token, Metadata: merged}); err != nil {
+	if _, err := lookup.Account(adapter.Connection{Token: cred.Token, Metadata: merged}); err != nil {
 		return nil, err
 	}
 	if meta, err := impl.CheckMetadata(merged); err == nil {
-		if err := impl.Validate(adapter.Connection{Token: token, Metadata: meta}); err != nil {
+		if err := impl.Validate(adapter.Connection{Token: cred.Token, Metadata: meta}); err != nil {
 			return nil, err
 		}
 	}
-	if existing.Credentials, err = s.seal(token); err != nil {
+	if existing.Credentials, err = s.sealCredential(cred); err != nil {
 		return nil, err
 	}
 	if len(app) > 0 {
 		existing.Metadata = merged
 	}
-	if err := s.store.Update(existing); err != nil {
+	if err := s.store.Update(existing, true); err != nil {
 		return nil, err
 	}
 	redact(existing)
@@ -413,6 +548,9 @@ func (s *Service) Edit(id string, in EditInput) (*Integration, error) {
 
 	wasSyncing := existing.SyncIssues
 	repoChanged := false
+	// newCredential diz se a edição trouxe um token novo: só então a credencial é gravada. Gravá-la sempre poria
+	// por cima, com a cópia lida no começo, um token que a renovação acabou de girar.
+	newCredential := false
 	token, err := cleanToken(in.Token)
 	if err != nil {
 		return nil, err
@@ -440,15 +578,22 @@ func (s *Service) Edit(id string, in EditInput) (*Integration, error) {
 					return nil, ErrSyncRepoLocked
 				}
 			}
-			if token == "" {
-				if token, err = s.open(existing); err != nil {
+			// Sem token novo, vale o guardado (renovado antes, se for o que vence), e a credencial não muda.
+			check := token
+			if check == "" {
+				if check, err = s.open(existing); err != nil {
 					return nil, err
 				}
 			}
-			if err := impl.Validate(adapter.Connection{Token: token, Metadata: meta}); err != nil {
+			if err := impl.Validate(adapter.Connection{Token: check, Metadata: meta}); err != nil {
 				return nil, withField(err, desc)
 			}
-			if existing.Credentials, err = s.seal(token); err != nil {
+			if token != "" {
+				if existing.Credentials, err = s.seal(token); err != nil {
+					return nil, err
+				}
+				newCredential = true
+			} else if newCredential, err = s.dropLegacy(existing); err != nil {
 				return nil, err
 			}
 			repoChanged = meta[summary] != existing.Metadata[summary]
@@ -482,7 +627,7 @@ func (s *Service) Edit(id string, in EditInput) (*Integration, error) {
 		existing.SyncIssues = *in.SyncIssues
 	}
 
-	if err := s.store.Update(existing); err != nil {
+	if err := s.store.Update(existing, newCredential); err != nil {
 		return nil, err
 	}
 	if repoChanged {

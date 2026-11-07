@@ -15,10 +15,14 @@ var gitlabDescriptor = Descriptor{
 	Type:  "gitlab",
 	Label: "GitLab",
 	Metadata: []Field{
-		{Key: "project_url", Required: true, Summary: true},
+		{Key: "project_url", Required: true, Summary: true, Picker: "datalist"},
 	},
 	ItemNumeric: true,
-	ComingSoon:  true,
+	Sync:        true,
+	// Como o GitHub: o responsável se liga pelo e-mail público, e a lista filtra pela última mudança
+	// (updated_after). O prazo (due_date) fica de fora, como no GitHub.
+	Caps: SyncCaps{Assignee: true, ServerSince: true},
+	Auth: AuthOAuth,
 }
 
 // GitLabIntegration fala com a API do GitLab. BaseURL e Client são opcionais e
@@ -86,7 +90,8 @@ func (g *GitLabIntegration) get(conn Connection, path string) (*http.Response, e
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("PRIVATE-TOKEN", token)
+	// O cabeçalho Bearer serve ao token do OAuth e ao token pessoal.
+	req.Header.Set("Authorization", "Bearer "+token)
 
 	resp, err := g.client().Do(req)
 	if err != nil {
@@ -158,7 +163,66 @@ func (g *GitLabIntegration) FetchItemDetails(conn Connection, itemID string) (*I
 
 	return &ItemDetails{
 		Title: body.Title,
-		State: body.State,
+		State: gitlabState(body.State),
 		URL:   body.WebURL,
 	}, nil
+}
+
+// Account devolve o username de quem o token representa. A conexão OAuth o usa para conferir o token
+// recém-obtido e para nomear a integração.
+func (g *GitLabIntegration) Account(conn Connection) (string, error) {
+	resp, err := g.get(conn, "/user")
+	if err != nil {
+		return "", err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+	case http.StatusUnauthorized:
+		return "", ErrInvalidToken.With("provider", "GitLab")
+	default:
+		return "", ErrProviderStatus.With("provider", "GitLab", "status", resp.StatusCode)
+	}
+
+	var body struct {
+		Username string `json:"username"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil || body.Username == "" {
+		return "", ErrUnexpectedResponse.With("provider", "GitLab").Wrap(err)
+	}
+	return body.Username, nil
+}
+
+// ListRepositories devolve os projetos de que a conta é membro, os mexidos há menos tempo primeiro. É uma
+// página de 100, como no GitHub: quem tem mais digita o caminho, que o campo aceita.
+func (g *GitLabIntegration) ListRepositories(conn Connection) ([]Repository, error) {
+	resp, err := g.get(conn, "/projects?membership=true&order_by=last_activity_at&sort=desc&per_page=100")
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+	case http.StatusUnauthorized:
+		return nil, ErrInvalidToken.With("provider", "GitLab")
+	default:
+		return nil, ErrProviderStatus.With("provider", "GitLab", "status", resp.StatusCode)
+	}
+
+	var body []struct {
+		PathWithNamespace string `json:"path_with_namespace"`
+		Visibility        string `json:"visibility"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		return nil, ErrUnexpectedResponse.With("provider", "GitLab").Wrap(err)
+	}
+	repos := make([]Repository, 0, len(body))
+	for _, p := range body {
+		if p.PathWithNamespace != "" {
+			repos = append(repos, Repository{FullName: p.PathWithNamespace, Private: p.Visibility != "public"})
+		}
+	}
+	return repos, nil
 }

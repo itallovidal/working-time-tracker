@@ -36,6 +36,15 @@ type Config struct {
 	GitHubURL    string
 	GitHubAPIURL string
 
+	// O app OAuth do GitLab, para o botão "Conectar com o GitLab", cadastrado no gitlab.com como o do GitHub.
+	// Opcional: sem ele, ou sem PUBLIC_URL, a tela avisa que a conexão não está configurada. GitLabURL e
+	// GitLabAPIURL só se mudam para apontar para um servidor fake; vazios, valem gitlab.com e
+	// gitlab.com/api/v4.
+	GitLabClientID     string
+	GitLabClientSecret string
+	GitLabURL          string
+	GitLabAPIURL       string
+
 	// A chave do app do Trello, para o botão "Conectar com o Trello" (a tela de autorização do Trello a
 	// pede; ela é pública, o segredo é o token de cada pessoa). Opcional: sem ela, ou sem PUBLIC_URL, a tela
 	// avisa que a conexão não está configurada. TrelloURL e TrelloAPIURL só se mudam para apontar para um
@@ -58,15 +67,18 @@ type Config struct {
 	InviteDelivery string
 
 	// SyncInterval é de quanto em quanto tempo o servidor olha as integrações com a sincronização ligada
-	// (as issues do GitHub, os cartões do Trello). Zero desliga a rotina (o botão e o gancho das tarefas
-	// seguem valendo). SyncIntervals tem, por plataforma ("github", "trello"), o intervalo próprio de quem o
-	// definiu (GITHUB_SYNC_INTERVAL, TRELLO_SYNC_INTERVAL); a que não está aí usa SyncInterval.
+	// (as issues do GitHub e do GitLab, os cartões do Trello). Zero desliga a rotina (o botão e o gancho das
+	// tarefas seguem valendo). SyncIntervals tem, por plataforma ("github", "gitlab", "trello"), o intervalo
+	// próprio de quem o definiu (GITHUB_SYNC_INTERVAL, GITLAB_SYNC_INTERVAL, TRELLO_SYNC_INTERVAL); a que não está
+	// aí usa SyncInterval.
 	SyncInterval  time.Duration
 	SyncIntervals map[string]time.Duration
 }
 
 // syncIntervalEnv são as variáveis do intervalo de cada plataforma.
-var syncIntervalEnv = map[string]string{"github": "GITHUB_SYNC_INTERVAL", "trello": "TRELLO_SYNC_INTERVAL"}
+var syncIntervalEnv = map[string]string{
+	"github": "GITHUB_SYNC_INTERVAL", "gitlab": "GITLAB_SYNC_INTERVAL", "trello": "TRELLO_SYNC_INTERVAL",
+}
 
 // parseInterval lê uma duração do ambiente ("5m", "30s"; "0" desliga). Vazio é não definido. O que não é uma
 // duração derruba a subida: melhor que rodar com um intervalo que ninguém pediu.
@@ -177,6 +189,10 @@ func Load() (*Config, error) {
 		GitHubClientSecret:    strings.TrimSpace(os.Getenv("GITHUB_CLIENT_SECRET")),
 		GitHubURL:             strings.TrimRight(strings.TrimSpace(os.Getenv("GITHUB_URL")), "/"),
 		GitHubAPIURL:          strings.TrimRight(strings.TrimSpace(os.Getenv("GITHUB_API_URL")), "/"),
+		GitLabClientID:        strings.TrimSpace(os.Getenv("GITLAB_CLIENT_ID")),
+		GitLabClientSecret:    strings.TrimSpace(os.Getenv("GITLAB_CLIENT_SECRET")),
+		GitLabURL:             strings.TrimRight(strings.TrimSpace(os.Getenv("GITLAB_URL")), "/"),
+		GitLabAPIURL:          strings.TrimRight(strings.TrimSpace(os.Getenv("GITLAB_API_URL")), "/"),
 		TrelloAPIKey:          strings.TrimSpace(os.Getenv("TRELLO_API_KEY")),
 		TrelloAppName:         strings.TrimSpace(os.Getenv("TRELLO_APP_NAME")),
 		TrelloURL:             strings.TrimRight(strings.TrimSpace(os.Getenv("TRELLO_URL")), "/"),
@@ -196,7 +212,7 @@ func Load() (*Config, error) {
 	}
 
 	// O padrão é cinco minutos; "0" desliga. SYNC_INTERVAL vale para todas as plataformas, e
-	// GITHUB_SYNC_INTERVAL e TRELLO_SYNC_INTERVAL valem só para a delas, sobre o comum.
+	// GITHUB_SYNC_INTERVAL, GITLAB_SYNC_INTERVAL e TRELLO_SYNC_INTERVAL valem só para a delas, sobre o comum.
 	cfg.SyncInterval = 5 * time.Minute
 	if d, set, err := parseInterval("SYNC_INTERVAL"); err != nil {
 		return nil, err

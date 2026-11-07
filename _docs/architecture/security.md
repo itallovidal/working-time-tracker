@@ -94,12 +94,16 @@ Os clientes e a edição da organização também são só do dono.
   servidor confere o `state` em tempo constante e que a pessoa e a permissão `integrations.manage` no projeto
   continuam valendo. Como é uma navegação `GET`, e não uma chamada da API, a proteção contra CSRF dessas rotas é o
   `state`.
+- **Conectar com o GitLab** é o mesmo vai e volta do GitHub, com o cookie limitado a `/integrations/gitlab`. O par
+  de tokens (o de acesso vence em 2 horas) fica cifrado como os outros tokens, e a renovação trava a linha da
+  integração (`SELECT ... FOR UPDATE`): o token de renovação gira a cada uso, e duas renovações juntas deixariam a
+  integração com um par já gasto.
 - **Conectar com o Trello** usa o mesmo cookie, limitado a `/integrations/trello` e marcado com a plataforma (o do
   GitHub não serve para terminar uma conexão do Trello). O Trello devolve o token no fragmento da URL, que o
   navegador não manda ao servidor: a página de retorno lê o token, apaga o endereço do histórico e o entrega por
   `POST`, e responde com `Referrer-Policy: no-referrer` e `Cache-Control: no-store`.
 - **As escritas nas plataformas** saem com a conta de quem conectou a integração. Com a sincronização ligada,
-  qualquer pessoa do projeto que edita uma tarefa sincronizada escreve no GitHub ou no Trello com essa conta.
+  qualquer pessoa do projeto que edita uma tarefa sincronizada escreve no GitHub, no GitLab ou no Trello com essa conta.
 
 ## Conteúdo de quem usa
 

@@ -919,7 +919,7 @@ Content-Type: application/json
 | `type` | `token` | `metadata` (todos os campos são obrigatórios) |
 |---|---|---|
 | `github` | token pessoal com leitura de issues | `repo`: `dono/repositorio` ou o endereço do repositório |
-| `gitlab` | token com escopo `read_api` | `project_url`: `grupo/projeto` ou o endereço do projeto no gitlab.com |
+| `gitlab` | na tela, vem da autorização no GitLab (o par de tokens, renovado pelo servidor); a API também aceita um token pessoal com escopo `api` | `project_url`: `grupo/projeto` (com subgrupos) ou o endereço do projeto no gitlab.com |
 | `trello` | na tela, vem da autorização no Trello; a API também aceita o token da API do Trello, com leitura e escrita | `api_key`: a chave do app (`TRELLO_API_KEY`; a tela a guarda na conexão e uma edição não a troca); `board_id`: o endereço do quadro, o link curto ou o id; `board_name` (opcional): o nome do quadro, que a tela guarda ao escolher e que o cartão da integração mostra (trocar o quadro sem mandar outro nome o apaga) |
 
 Resposta (`201`), igual em todas as rotas de integração:
@@ -941,7 +941,7 @@ Resposta (`201`), igual em todas as rotas de integração:
 }
 ```
 
-- O `gitlab` está "em breve": o `POST` dele responde `400` com `integration.type_coming_soon` (`provider` no `params`). O `PATCH` e o `GET` das que já existem seguem como antes.
+- Um tipo "em breve" responde `400` no `POST`, com `integration.type_coming_soon` (`provider` no `params`). Nenhum tipo está assim hoje.
 - Cada tipo confere o próprio `metadata` antes de falar com a plataforma. Faltando um campo, a resposta é `400` com o nome dele, por exemplo `informe o campo "Quadro" do Trello`. Chave que o tipo não declara é descartada, e o valor é guardado normalizado (o endereço do repositório vira `dono/repositorio`; o do quadro, o link curto).
 - A conexão é validada na plataforma antes de salvar. O token fica criptografado (AES-GCM) no banco e nunca volta nas respostas: elas mostram só `has_token`. O `metadata` fica em claro e volta, então não é lugar de segredo.
 - Sem `enabled` no corpo, a integração nasce ativa.
