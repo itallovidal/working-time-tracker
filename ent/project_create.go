@@ -168,6 +168,20 @@ func (_c *ProjectCreate) SetNillableCustomerMeetingTime(v *string) *ProjectCreat
 	return _c
 }
 
+// SetCustomerMeetingEveryWeeks sets the "customer_meeting_every_weeks" field.
+func (_c *ProjectCreate) SetCustomerMeetingEveryWeeks(v int) *ProjectCreate {
+	_c.mutation.SetCustomerMeetingEveryWeeks(v)
+	return _c
+}
+
+// SetNillableCustomerMeetingEveryWeeks sets the "customer_meeting_every_weeks" field if the given value is not nil.
+func (_c *ProjectCreate) SetNillableCustomerMeetingEveryWeeks(v *int) *ProjectCreate {
+	if v != nil {
+		_c.SetCustomerMeetingEveryWeeks(*v)
+	}
+	return _c
+}
+
 // SetCustomerID sets the "customer_id" field.
 func (_c *ProjectCreate) SetCustomerID(v uuid.UUID) *ProjectCreate {
 	_c.mutation.SetCustomerID(v)
@@ -378,6 +392,10 @@ func (_c *ProjectCreate) defaults() {
 		v := project.DefaultSprintDurationDays
 		_c.mutation.SetSprintDurationDays(v)
 	}
+	if _, ok := _c.mutation.CustomerMeetingEveryWeeks(); !ok {
+		v := project.DefaultCustomerMeetingEveryWeeks
+		_c.mutation.SetCustomerMeetingEveryWeeks(v)
+	}
 	if _, ok := _c.mutation.BillExtraCents(); !ok {
 		v := project.DefaultBillExtraCents
 		_c.mutation.SetBillExtraCents(v)
@@ -402,6 +420,9 @@ func (_c *ProjectCreate) check() error {
 	}
 	if _, ok := _c.mutation.SprintDurationDays(); !ok {
 		return &ValidationError{Name: "sprint_duration_days", err: errors.New(`ent: missing required field "Project.sprint_duration_days"`)}
+	}
+	if _, ok := _c.mutation.CustomerMeetingEveryWeeks(); !ok {
+		return &ValidationError{Name: "customer_meeting_every_weeks", err: errors.New(`ent: missing required field "Project.customer_meeting_every_weeks"`)}
 	}
 	if _, ok := _c.mutation.BillExtraCents(); !ok {
 		return &ValidationError{Name: "bill_extra_cents", err: errors.New(`ent: missing required field "Project.bill_extra_cents"`)}
@@ -491,6 +512,10 @@ func (_c *ProjectCreate) createSpec() (*Project, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.CustomerMeetingTime(); ok {
 		_spec.SetField(project.FieldCustomerMeetingTime, field.TypeString, value)
 		_node.CustomerMeetingTime = &value
+	}
+	if value, ok := _c.mutation.CustomerMeetingEveryWeeks(); ok {
+		_spec.SetField(project.FieldCustomerMeetingEveryWeeks, field.TypeInt, value)
+		_node.CustomerMeetingEveryWeeks = value
 	}
 	if value, ok := _c.mutation.BillExtraCents(); ok {
 		_spec.SetField(project.FieldBillExtraCents, field.TypeInt, value)

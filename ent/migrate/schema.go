@@ -393,6 +393,7 @@ var (
 		{Name: "weekly_sync_time", Type: field.TypeString, Nullable: true},
 		{Name: "customer_meeting_day", Type: field.TypeString, Nullable: true},
 		{Name: "customer_meeting_time", Type: field.TypeString, Nullable: true},
+		{Name: "customer_meeting_every_weeks", Type: field.TypeInt, Default: 1},
 		{Name: "bill_extra_cents", Type: field.TypeInt, Default: 0},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "customer_id", Type: field.TypeUUID, Nullable: true},
@@ -406,13 +407,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "projects_customers_projects",
-				Columns:    []*schema.Column{ProjectsColumns[13]},
+				Columns:    []*schema.Column{ProjectsColumns[14]},
 				RefColumns: []*schema.Column{CustomersColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "projects_organizations_projects",
-				Columns:    []*schema.Column{ProjectsColumns[14]},
+				Columns:    []*schema.Column{ProjectsColumns[15]},
 				RefColumns: []*schema.Column{OrganizationsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},

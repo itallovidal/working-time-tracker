@@ -101,6 +101,7 @@ erDiagram
     string weekly_sync_time
     string customer_meeting_day
     string customer_meeting_time
+    int customer_meeting_every_weeks
   }
   PAYOUT {
     uuid person_id FK

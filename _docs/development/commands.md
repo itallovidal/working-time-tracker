@@ -69,7 +69,8 @@ go install github.com/air-verse/air@latest
 Sobe a demonstração ao lado do seu servidor, sem tocar no banco de dev: o banco é o `working_time_tracker_demo`, no
 mesmo Postgres. Ele é **apagado e recriado a cada `make demo`**, com as datas contadas a partir do dia, e o seed
 imprime os logins ao terminar (a senha de todos é `demo12345`). Vêm as duas organizações da seed, a software house e a do
-[modo solo](../product/overview.md#modo-solo) (`marina@example.com`), com os recebíveis dela em estados variados.
+[modo solo](../product/overview.md#modo-solo) (`marina@example.com`), com um ano de trabalho e os recebíveis dela em
+estados variados.
 
 - `port=9000` troca a porta (o padrão é 8090). O `PUBLIC_URL` passa a ser o da demonstração, para os links dos
   convites apontarem para ela.

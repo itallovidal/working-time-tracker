@@ -48,8 +48,8 @@ num banco à parte, `make migrate-new name=<nome>` cria uma migração. O que ca
 [Comandos](_docs/development/commands.md), e o passo a passo sem o `make` em [Instalação](_docs/getting-started/installation.md).
 
 Abra **http://localhost:1243**. O seed cria a **Jatobá Software**, uma software house com doze pessoas, seis clientes e
-oito projetos, e a **Marina Duarte Design**, uma organização no modo solo, com um cliente por hora e um por contrato
-mensal. A senha de todas as contas é `demo12345`:
+oito projetos, e a **Marina Duarte Design**, uma freelancer no modo solo com um ano de trabalho: cinco clientes (três
+por hora e dois por contrato mensal), dez projetos e o A receber cheio. A senha de todas as contas é `demo12345`:
 
 | Cargo | E-mail |
 |---|---|

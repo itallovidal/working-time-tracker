@@ -568,6 +568,7 @@ Content-Type: application/json
   "weekly_sync_time": "14:00",
   "customer_meeting_day": "wednesday",
   "customer_meeting_time": "10:30",
+  "customer_meeting_every_weeks": 2,
   "customer_id": "<id do cliente, opcional>",
   "bill_extra_cents": 2000
 }
@@ -577,7 +578,8 @@ Content-Type: application/json
 - `daily_time` usa o formato `HH:MM`. Sem ele, o projeto não tem daily.
 - `weekly_sync_day` vai de `monday` a `sunday`. Sem ele, o projeto não tem weekly.
 - `weekly_sync_time` usa o formato `HH:MM` e anda junto com o dia: horário sem `weekly_sync_day` é `400 project.weekly_time_without_day`, e dia sem horário é `400 request.field_required` com `params.field` = `weekly_sync_time`. A recusa do dia sem horário só vale quando o corpo mexe na weekly (manda o dia ou o horário): weeklies antigas, que ficaram só com o dia, seguem lendo e aceitam um `PATCH` que muda outro campo, e para consertar uma delas basta mandar o horário.
-- `customer_meeting_day` e `customer_meeting_time` são a reunião semanal com o cliente, com as mesmas regras da weekly: o dia vai de `monday` a `sunday` (outro valor é `400 project.invalid_weekday`), o horário usa `HH:MM` (`400 project.invalid_customer_meeting_time`) e andam juntos: horário sem o dia é `400 project.customer_meeting_time_without_day` e dia sem horário é `400 request.field_required` com `params.field` = `customer_meeting_time` (com a mesma guarda para linhas antigas). Não dependem da weekly do time. Qualquer pessoa do projeto lê os dois campos; só admin altera. Tirar o cliente do projeto (`PUT /api/projects/:projectId/billing` com `customer_id` nulo) apaga a reunião. As telas só oferecem a reunião num projeto com cliente, e a API recusa o dia num projeto sem cliente (`400 project.meeting_needs_customer`).
+- `customer_meeting_day` e `customer_meeting_time` são a reunião com o cliente, com as mesmas regras da weekly: o dia vai de `monday` a `sunday` (outro valor é `400 project.invalid_weekday`), o horário usa `HH:MM` (`400 project.invalid_customer_meeting_time`) e andam juntos: horário sem o dia é `400 project.customer_meeting_time_without_day` e dia sem horário é `400 request.field_required` com `params.field` = `customer_meeting_time` (com a mesma guarda para linhas antigas). Não dependem da weekly do time. Qualquer pessoa do projeto lê os dois campos; só admin altera. Tirar o cliente do projeto (`PUT /api/projects/:projectId/billing` com `customer_id` nulo) apaga a reunião. As telas só oferecem a reunião num projeto com cliente, e a API recusa o dia num projeto sem cliente (`400 project.meeting_needs_customer`).
+- `customer_meeting_every_weeks` é a frequência da reunião: `1` (toda semana) ou `2` (a cada duas semanas); outro valor é `400 project.invalid_customer_meeting_every_weeks`. Omitido mantém o atual (na criação, `1`). O projeto sem reunião, ou que perde a reunião (apagada ou junto com o cliente), fica em `1`, e a resposta sempre traz o campo.
 
 No `PATCH`, um campo omitido mantém o valor atual, e `""` apaga `daily_time`, `weekly_sync_day`, `weekly_sync_time`, `customer_meeting_day` ou `customer_meeting_time`. Apagar o dia da weekly ou da reunião apaga o horário junto. O `name` também mantém quando não vem (ausente ou `null`), como na organização e no cliente; vazio ou só espaços é `400 project.name_required`. O projeto não tem jornada semanal: ela é da pessoa (`PATCH /api/persons/:personId/weekly-hours`).
 

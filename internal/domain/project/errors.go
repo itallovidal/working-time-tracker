@@ -18,6 +18,8 @@ var (
 	ErrWeeklyTimeWithoutDay  = apperr.New("project.weekly_time_without_day", http.StatusBadRequest)
 	ErrInvalidMeetingTime    = apperr.New("project.invalid_customer_meeting_time", http.StatusBadRequest)
 	ErrMeetingTimeWithoutDay = apperr.New("project.customer_meeting_time_without_day", http.StatusBadRequest)
+	// ErrInvalidMeetingEvery recusa uma frequência da reunião com o cliente que não seja 1 ou 2 semanas.
+	ErrInvalidMeetingEvery = apperr.New("project.invalid_customer_meeting_every_weeks", http.StatusBadRequest)
 	// ErrMeetingNeedsCustomer recusa a reunião com o cliente num projeto sem cliente. O field é customer_meeting_day.
 	ErrMeetingNeedsCustomer = apperr.New("project.meeting_needs_customer", http.StatusBadRequest)
 	ErrCustomerNotFound     = apperr.New("project.customer_not_found", http.StatusBadRequest)

@@ -1,12 +1,21 @@
-{{/* project_customer_meeting é a reunião semanal com o cliente, no grupo Cliente e cobrança
-     dos modais Novo projeto e Editar projeto. Só existe com um cliente escolhido: projeto
-     interno não tem com quem se reunir. Como a weekly do time, a marca liga o dia e o
-     horário, e desligada o servidor recebe texto vazio, que apaga. Pede o rascunho em
-     `draft` (customer_id, has_meeting, customer_meeting_day, customer_meeting_time) e só
-     aparece uma vez por página, por causa dos ids. */}}
+{{/* project_customer_meeting é a reunião com o cliente, no grupo Cliente dos modais Novo projeto e Editar projeto. Só
+     existe com um cliente escolhido: projeto interno não tem com quem se reunir. Como a weekly do time, a marca liga a
+     frequência (toda semana ou a cada duas), o dia e o horário, e desligada o servidor recebe texto vazio, que apaga.
+     Pede o rascunho em `draft` (customer_id, has_meeting, customer_meeting_every_weeks, customer_meeting_day,
+     customer_meeting_time) e só aparece uma vez por página, por causa dos ids. A frequência fica numa linha própria: três
+     campos não cabem lado a lado no modal. */}}
 {{define "project_customer_meeting"}}
 <div class="routine" x-show="draft.customer_id">
   <label class="toggle"><input type="checkbox" x-model="draft.has_meeting"> {{.T "project.fields.has_meeting"}}</label>
+  <div class="field" x-show="draft.has_meeting">
+    <label for="meeting-every">{{.T "project.fields.meeting_every"}}</label>
+    <select id="meeting-every" data-field="customer_meeting_every_weeks" x-model.number="draft.customer_meeting_every_weeks"
+            @change="clearField('customer_meeting_every_weeks')" :aria-invalid="fieldErrors.customer_meeting_every_weeks ? 'true' : 'false'">
+      <option value="1" :selected="draft.customer_meeting_every_weeks === 1">{{.T "project.fields.meeting_every_1"}}</option>
+      <option value="2" :selected="draft.customer_meeting_every_weeks === 2">{{.T "project.fields.meeting_every_2"}}</option>
+    </select>
+    {{template "field_error" "customer_meeting_every_weeks"}}
+  </div>
   <div class="fields" x-show="draft.has_meeting">
     <div class="field">
       <label for="meeting-day">{{.T "project.fields.meeting_day"}}</label>

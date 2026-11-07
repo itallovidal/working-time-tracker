@@ -362,7 +362,7 @@ func TestCustomerBilling_PagesShowTheTermsOnlyInSolo(t *testing.T) {
 
 	// O formulário de novo projeto mostra a cobrança do cliente, só para leitura, e pede o acréscimo (Decisão 21).
 	projects := do(e, "GET", "/orgs/"+owner.orgID+"/projects", "", owner.session).Body.String()
-	for _, want := range []string{`@change="customerChanged()"`, `x-text="billing.customer(customerOf())"`, `id="project-bill-extra"`,
+	for _, want := range []string{`@change="customerChanged()"`, `x-text="billing.customerAmount(customerOf())"`, `id="project-bill-extra"`,
 		`data-field="bill_extra_cents"`, `x-text="billing.extraLabel(customerOf())"`, `x-text="billing.total(customerOf(), draft.extra)"`} {
 		if !strings.Contains(projects, want) {
 			t.Errorf("the new project form lacks %s", want)

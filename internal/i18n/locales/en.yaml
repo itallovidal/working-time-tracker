@@ -47,6 +47,7 @@ titles:
   org_people: Collaborators
   org_person: Collaborator
   overview: Management · Overview
+  overview_solo: Overview
   my_overview: Home
   collaborators: Collaborators
   tasks: Task list
@@ -798,6 +799,7 @@ help:
     numbers:
       title: Follow the numbers
       text: "The owner and the admins see, on the organization Home, the hours and cost of all projects, over 7 days, 30 days or all time; the revenue and margin, only the owner. Each project has its own “Overview” in Management, with everyone's sessions and the totals."
+      text_solo: "The Home shows the hours, the revenue and the projected revenue, by customer. Each project has its own “Overview” tab, next to Tasks, with the sessions and the totals."
       tip: "The screens show who is working right now and on which task, but they do not rank or compare people by hours."
   screens:
     intro: "For each screen: what it shows and what you can do there. Some buttons only appear for people with the permission (see “Who sees and does what”)."
@@ -838,7 +840,7 @@ help:
     org_customers:
       title: Customers
       text: "The register of who hires the organization: name, country, tax ID (CNPJ in Brazil, EIN in the US), contact person, email, phone and billing: the hourly rate, which applies to all of the customer's projects. The page is the owner's only."
-      actions: "“New customer” registers one; each row has the actions to edit and delete."
+      actions: "“New customer” registers one. Clicking a row opens the customer details, with “Edit” and “Delete”."
       link: "A customer is linked to a project when the project is created or in its settings. Raising the customer's rate changes the billed rate of all of its projects, for the hours logged from then on."
     org_projects:
       title: Projects
@@ -868,7 +870,9 @@ help:
       presence: "For the owner and the administrators, the “Now” column shows who has the clock running and on which task. It refreshes by itself every 30 seconds."
     mgmt_overview:
       title: "Management: Overview"
+      title_solo: "Project: Overview"
       intro: "The “Management” button, at the end of the project tabs, appears for whoever has some permission on the project. Each Management tab appears according to the person's permission."
+      intro_solo: "In solo mode, the Overview is a project tab, next to Tasks. The “Management” button, at the end of the tabs, holds Integrations and Settings."
       text: "The Overview is the project in numbers: people, teams, hours over the last 7 and 30 days, who is working right now, overdue tasks and, for the owner, the customer and billed rate."
       sessions: "Below are everyone's sessions, with person, date and task filters, and the totals of time and cost; the revenue and margin, only for the owner."
       who: "It opens for anyone with a permission on the project."
@@ -1076,6 +1080,9 @@ org:
     projects: Projects
     delete_question: Delete?
     contact_person: Contact person
+    details_customer: Customer
+    details_contact: Contact
+    details_billing: Billing
     create: Create customer
     saved: Customer saved.
     created: Customer created.
@@ -1104,7 +1111,6 @@ org:
 customer:
   billing:
     title: Billing
-    column: Billing
     mode: Billing mode
     hourly: Hourly
     monthly: Monthly
@@ -1125,17 +1131,30 @@ customer:
     late_fee: Late fee (%)
     late_interest: Interest per month (%)
     grace_days: Grace period (days)
-    cell_hourly_no_rate: Hourly · no hourly rate
-    cell_hourly_rate: "Hourly · {{.rate}}"
-    cell_monthly: "Monthly · {{.fee}}"
-    cell_contract_from: "Contract since {{.start}}"
-    cell_contract_range: "Contract from {{.start}} to {{.end}}"
-    cell_closing_last: Closes on the last day
-    cell_closing_day: "Closes on day {{.day}}"
-    cell_due_closing: due at closing
+    col_mode: Mode
+    col_amount: Amount
+    col_rate: Hourly rate
+    col_closing: Closing
+    col_due: Due
+    fee: Monthly fee
+    contract: Contract
+    contract_range: "{{.start}} to {{.end}}"
+    contract_open: "Since {{.start}}, no end date"
+    late_fee_fact: Late fee
+    late_interest_fact: Interest per month
+    grace_days_fact: Grace period
+    grace_days_value:
+      one: "{{.count}} day"
+      other: "{{.count}} days"
+    cell_fee_month: "{{.fee}}/month"
+    cell_rate_hour: "{{.rate}}/h"
+    cell_no_rate: No hourly rate
+    cell_closing_last: Last day
+    cell_closing_day: "Day {{.day}}"
+    cell_due_closing: At closing
     cell_due_days:
-      one: "due {{.count}} day later"
-      other: "due {{.count}} days later"
+      one: "{{.count}} day later"
+      other: "{{.count}} days later"
     project_rate_monthly: "Not applicable: billed monthly"
     option_label: "{{.name}} · {{.mode}}"
 project:
@@ -1153,11 +1172,13 @@ project:
     back: Back to the project
   groups:
     about: Project
-    billing: Customer and billing
-    routine: Team routine
-    routine_solo: Routine
+    customer: Customer
+    billing: Billing
+    routine: Development
   billing:
     customer_terms: Customer billing
+    mode_monthly: Monthly contract
+    mode_hourly: Hourly
     advanced: Advanced
     customer_hourly: "Hourly · {{.rate}}/h"
     customer_monthly: "Monthly contract · {{.fee}}/month"
@@ -1187,7 +1208,11 @@ project:
     pick_day: Pick the day
     no_daily: No daily
     no_weekly: No weekly
-    has_meeting: Has a weekly meeting with the customer
+    has_meeting: Has a meeting with the customer
+    meeting_every: How often
+    meeting_every_1: Every week
+    meeting_every_2: Every two weeks
+    meeting_biweekly_slot: "{{.slot}}, every two weeks"
     meeting: Customer meeting
     meeting_day: Meeting day
     meeting_time: Meeting time
@@ -2032,6 +2057,7 @@ errors:
     invalid_weekday: "invalid weekday: use monday, tuesday, wednesday, thursday, friday, saturday or sunday"
     invalid_customer_meeting_time: "the customer meeting time must use the HH:MM format, for example 10:30"
     customer_meeting_time_without_day: "the customer meeting time needs the meeting day"
+    invalid_customer_meeting_every_weeks: "the customer meeting is every week (1) or every two weeks (2)"
     invalid_weekly_time: "the weekly time must use the HH:MM format, for example 13:00"
     weekly_time_without_day: "the weekly time needs the weekly day"
     meeting_needs_customer: "the customer meeting only applies to a project with a customer: choose the project's customer first"
@@ -2177,6 +2203,7 @@ fields:
   weekly_sync_time: "the weekly time"
   customer_meeting_day: "the customer meeting day"
   customer_meeting_time: "the customer meeting time"
+  customer_meeting_every_weeks: "the customer meeting frequency"
   deadline: "the deadline"
   priority: "the priority"
   status: "the status"

@@ -427,12 +427,13 @@
   const routine = {
     blank: () => ({
       has_daily: false, daily_time: '', has_weekly: false, weekly_sync_day: '', weekly_sync_time: '',
-      has_meeting: false, customer_meeting_day: '', customer_meeting_time: '',
+      has_meeting: false, customer_meeting_day: '', customer_meeting_time: '', customer_meeting_every_weeks: 1,
     }),
     fromProject: (p) => ({
       has_daily: !!p.daily_time, daily_time: p.daily_time || '',
       has_weekly: !!p.weekly_sync_day, weekly_sync_day: p.weekly_sync_day || '', weekly_sync_time: p.weekly_sync_time || '',
       has_meeting: !!p.customer_meeting_day, customer_meeting_day: p.customer_meeting_day || '', customer_meeting_time: p.customer_meeting_time || '',
+      customer_meeting_every_weeks: p.customer_meeting_every_weeks || 1,
     }),
     // As conferências do rascunho para WTT.form().check, na ordem da tela: o dia e o horário ligados (a marca) são
     // obrigatórios, e a reunião com o cliente só vale com cliente escolhido (o servidor recusa sem ele).
@@ -456,6 +457,8 @@
         weekly_sync_time: d.has_weekly ? d.weekly_sync_time : '',
         customer_meeting_day: meeting ? d.customer_meeting_day : '',
         customer_meeting_time: meeting ? d.customer_meeting_time : '',
+        // Toda semana (1) ou a cada duas (2); sem reunião, volta a toda semana.
+        customer_meeting_every_weeks: meeting ? Number(d.customer_meeting_every_weeks) || 1 : 1,
       };
     },
   };
@@ -536,6 +539,12 @@
     // ("friday", "14:00") -> "Sexta às 14:00"; weekly antiga, sem horário, fica só com o dia
     weeklySlot(day, time) {
       return time ? t('labels.weekly_slot', { day: fmt.weekday(day), time }) : fmt.weekday(day);
+    },
+    // A reunião com o cliente: toda semana é só o dia e o horário ("Sexta às 14:00"); a cada duas semanas, com a
+    // frequência ("Sexta às 14:00, a cada duas semanas").
+    meetingSlot(day, time, everyWeeks) {
+      const slot = fmt.weeklySlot(day, time);
+      return everyWeeks === 2 ? t('project.fields.meeting_biweekly_slot', { slot }) : slot;
     },
     // 14 -> "14 dias"; 30 -> "1 mês"
     sprint(days) {
@@ -716,6 +725,18 @@
       if (billing.monthly(c)) return t('project.billing.customer_monthly', { fee: fmt.money(c.monthly_fee_cents) });
       if (billing.withoutRate(c)) return t('project.billing.customer_no_rate');
       return t('project.billing.customer_hourly', { rate: fmt.money(c.hourly_rate_cents) });
+    },
+    // customerMode e customerAmount são a mesma cobrança em duas linhas, para o grupo Cobrança dos formulários, onde o
+    // botão "Editar em Clientes" fica ao lado: "Contrato mensal" e "R$ 5.000,00/mês", ou "Por hora" e "R$ 150,00/h".
+    customerMode(c) {
+      if (!c) return '';
+      return t(billing.monthly(c) ? 'project.billing.mode_monthly' : 'project.billing.mode_hourly');
+    },
+    customerAmount(c) {
+      if (!c) return '';
+      if (billing.monthly(c)) return t('customer.billing.cell_fee_month', { fee: fmt.money(c.monthly_fee_cents) });
+      if (billing.withoutRate(c)) return t('customer.billing.cell_no_rate');
+      return t('customer.billing.cell_rate_hour', { rate: fmt.money(c.hourly_rate_cents) });
     },
     // extraLabel é o rótulo do campo do acréscimo: por hora ou por mês, conforme o cliente.
     extraLabel(c) {

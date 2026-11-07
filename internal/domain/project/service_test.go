@@ -360,6 +360,72 @@ func TestService_CustomerMeeting(t *testing.T) {
 	}
 }
 
+// A reunião com o cliente é toda semana (1) ou a cada duas (2). Omitir mantém, outro valor é recusado, e sem reunião
+// (apagada ou junto com o cliente) a frequência volta a toda semana.
+func TestService_CustomerMeetingEveryWeeks(t *testing.T) {
+	cleanup(t)
+	orgSvc := organization.NewService(organization.NewStore(testClient))
+	svc := project.NewService(project.NewStore(testClient))
+	org, _ := orgSvc.Create("Org")
+	customerID := testClient.Customer.Create().SetOrganizationID(org.ID).SetName("Empresa").SetHourlyRateCents(10000).SaveX(context.Background()).ID.String()
+
+	day, at, two, one := "friday", "11:00", 2, 1
+	proj, err := svc.CreateWithCustomer(org.ID.String(), project.CreateInput{
+		Name: "Quinzenal", CustomerID: customerID,
+		Routine: project.Routine{CustomerMeetingDay: &day, CustomerMeetingTime: &at, CustomerMeetingEveryWeeks: &two},
+	})
+	if err != nil || proj.CustomerMeetingEveryWeeks != 2 {
+		t.Fatalf("create a meeting every two weeks: every=%v err=%v", proj, err)
+	}
+	id := proj.ID.String()
+	if got, _ := svc.Get(id); got.CustomerMeetingEveryWeeks != 2 {
+		t.Errorf("stored frequency = %d, want 2", got.CustomerMeetingEveryWeeks)
+	}
+
+	// Sem o campo, a frequência fica; com 1, volta a toda semana.
+	if kept, err := svc.Update(id, ptr("Quinzenal"), nil, nil, project.Routine{}); err != nil || kept.CustomerMeetingEveryWeeks != 2 {
+		t.Errorf("an omitted frequency should be kept: %v, %v", kept, err)
+	}
+	if weekly, err := svc.Update(id, ptr("Quinzenal"), nil, nil, project.Routine{CustomerMeetingEveryWeeks: &one}); err != nil || weekly.CustomerMeetingEveryWeeks != 1 {
+		t.Errorf("set the meeting back to every week: %v, %v", weekly, err)
+	}
+
+	// 0 e 3 são recusados, com o campo no erro.
+	for _, bad := range []int{0, 3} {
+		_, err := svc.Update(id, ptr("Quinzenal"), nil, nil, project.Routine{CustomerMeetingEveryWeeks: &bad})
+		if !errors.Is(err, project.ErrInvalidMeetingEvery) || fieldOf(err) != "customer_meeting_every_weeks" {
+			t.Errorf("every %d weeks: err = %v (field %q), want ErrInvalidMeetingEvery", bad, err, fieldOf(err))
+		}
+	}
+
+	// Apagar a reunião volta a frequência para 1, mesmo que o corpo mande 2.
+	empty := ""
+	if _, err := svc.Update(id, ptr("Quinzenal"), nil, nil, project.Routine{CustomerMeetingEveryWeeks: &two}); err != nil {
+		t.Fatalf("back to every two weeks: %v", err)
+	}
+	cleared, err := svc.Update(id, ptr("Quinzenal"), nil, nil, project.Routine{CustomerMeetingDay: &empty, CustomerMeetingEveryWeeks: &two})
+	if err != nil || cleared.CustomerMeetingEveryWeeks != 1 {
+		t.Errorf("clearing the meeting must reset the frequency: %v, %v", cleared, err)
+	}
+
+	// Tirar o cliente também apaga a reunião e volta a frequência.
+	if _, err := svc.Update(id, ptr("Quinzenal"), nil, nil, project.Routine{CustomerMeetingDay: &day, CustomerMeetingTime: &at, CustomerMeetingEveryWeeks: &two}); err != nil {
+		t.Fatalf("meeting again: %v", err)
+	}
+	if _, err := svc.SetBilling(id, nil, 0); err != nil {
+		t.Fatalf("clear customer: %v", err)
+	}
+	if got, _ := svc.Get(id); got.CustomerMeetingDay != nil || got.CustomerMeetingEveryWeeks != 1 {
+		t.Errorf("an internal project has no meeting and every=1, got %v every=%d", got.CustomerMeetingDay, got.CustomerMeetingEveryWeeks)
+	}
+
+	// O projeto sem reunião fica em toda semana, mesmo que o corpo mande 2.
+	plain, err := svc.Create(org.ID.String(), "Sem reuniao", "", 0, project.Routine{CustomerMeetingEveryWeeks: &two})
+	if err != nil || plain.CustomerMeetingEveryWeeks != 1 {
+		t.Errorf("a project without meeting: %v, %v", plain, err)
+	}
+}
+
 // Dia e horário andam juntos, na weekly e na reunião com o cliente: gravar o dia sem o horário é recusado, na
 // criação e na edição, com o horário no erro, como a tela exige. Weeklies antigas ficaram só com o dia; quem edita
 // outro campo delas segue valendo, porque o corpo não mexeu no slot.

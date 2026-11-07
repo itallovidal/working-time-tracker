@@ -56,7 +56,7 @@ document.addEventListener('alpine:init', () => {
   // que se editam em Clientes) e só pede o acréscimo do projeto, por hora no cliente por hora e por mês no mensal.
   const projectCreation = () => ({
     ...form(),
-    ...customerBilling(), // solo, billingLabel e billingTerms
+    ...customerBilling(), // solo, que customerOption lê
     billing: WTT.billing,
     customers: null, // só carregados quando o modal de novo projeto abre pela primeira vez
     draft: blankProject(),
@@ -1160,30 +1160,41 @@ document.addEventListener('alpine:init', () => {
     };
   };
 
-  // customerBilling é a cobrança na página Clientes: o texto da coluna Cobrança e o estado do formulário (o modo
-  // travado e o bloco recolhido, que são do modo solo).
+  // percent mostra pontos-base como percentual: 250 -> "2,5%".
+  const percent = (bp) => new Intl.NumberFormat(WTT.lang, { style: 'percent', maximumFractionDigits: 2 }).format(bp / 10000);
+
+  // customerBilling é a cobrança do cliente vista da tela: uma função por coluna da página Clientes (o modo, o
+  // fechamento e o vencimento são do modo solo), o contrato dos detalhes e o estado do formulário (o modo travado e o
+  // bloco recolhido, que também são do solo).
   const customerBilling = () => ({
     solo: !!me.organization_solo,
     modeLocked: false, // o cliente já tem projetos: o modo não muda
     lateOpen: false, // o bloco de multa, juros e tolerância
-    // billingLabel é a primeira linha da coluna Cobrança: o modo e o valor (a mensalidade ou o valor por hora). O cliente
-    // por hora antigo, sem valor, diz que falta o valor.
-    billingLabel(c) {
-      if (c.billing_mode === 'monthly') return WTT.t('customer.billing.cell_monthly', { fee: WTT.fmt.money(c.monthly_fee_cents) });
-      if (c.hourly_rate_cents != null) return WTT.t('customer.billing.cell_hourly_rate', { rate: WTT.fmt.money(c.hourly_rate_cents) });
-      return WTT.t('customer.billing.cell_hourly_no_rate');
+    // billingMode é a coluna Modo: mensal ou por hora.
+    billingMode(c) {
+      return WTT.t(WTT.billing.monthly(c) ? 'customer.billing.monthly' : 'customer.billing.hourly');
     },
-    // billingTerms é a segunda: o contrato (no mensal), o fechamento e o prazo.
-    billingTerms(c) {
-      const parts = [];
-      if (c.billing_mode === 'monthly' && c.contract_start) {
-        parts.push(c.contract_end
-          ? WTT.t('customer.billing.cell_contract_range', { start: WTT.fmt.day(c.contract_start), end: WTT.fmt.day(c.contract_end) })
-          : WTT.t('customer.billing.cell_contract_from', { start: WTT.fmt.day(c.contract_start) }));
-      }
-      parts.push(c.closing_day >= 31 ? WTT.t('customer.billing.cell_closing_last') : WTT.t('customer.billing.cell_closing_day', { day: c.closing_day }));
-      parts.push(c.payment_days > 0 ? WTT.t('customer.billing.cell_due_days', { count: c.payment_days }) : WTT.t('customer.billing.cell_due_closing'));
-      return parts.join(' · ');
+    // billingAmount é a coluna Valor: a mensalidade ou o valor por hora. O cliente por hora antigo, sem valor, diz que
+    // falta o valor (e a tela o mostra apagado).
+    billingAmount(c) {
+      if (WTT.billing.monthly(c)) return WTT.t('customer.billing.cell_fee_month', { fee: WTT.fmt.money(c.monthly_fee_cents) });
+      if (WTT.billing.withoutRate(c)) return WTT.t('customer.billing.cell_no_rate');
+      return WTT.t('customer.billing.cell_rate_hour', { rate: WTT.fmt.money(c.hourly_rate_cents) });
+    },
+    // billingClosing é a coluna Fechamento: o dia do mês, e 31 é o último dia.
+    billingClosing(c) {
+      return c.closing_day >= 31 ? WTT.t('customer.billing.cell_closing_last') : WTT.t('customer.billing.cell_closing_day', { day: c.closing_day });
+    },
+    // billingDue é a coluna Vencimento: os dias depois do fechamento.
+    billingDue(c) {
+      return c.payment_days > 0 ? WTT.t('customer.billing.cell_due_days', { count: c.payment_days }) : WTT.t('customer.billing.cell_due_closing');
+    },
+    // billingContract é o contrato do cliente mensal, nos detalhes: do início ao fim, ou desde o início, sem fim.
+    billingContract(c) {
+      if (!WTT.billing.monthly(c) || !c.contract_start) return '';
+      return c.contract_end
+        ? WTT.t('customer.billing.contract_range', { start: WTT.fmt.day(c.contract_start), end: WTT.fmt.day(c.contract_end) })
+        : WTT.t('customer.billing.contract_open', { start: WTT.fmt.day(c.contract_start) });
     },
   });
 
@@ -1195,7 +1206,8 @@ document.addEventListener('alpine:init', () => {
     customers: [],
     editing: null, // id do cliente em edição; null quando o formulário cria um novo
     draft: { ...blankCustomer(), ...blankBilling() },
-    confirming: null,
+    viewingId: null, // o cliente dos detalhes
+    confirming: false, // a confirmação de Excluir, nos detalhes
     async init() {
       try {
         this.customers = (await api('GET', '/api/orgs/' + orgId + '/customers')) || [];
@@ -1205,7 +1217,55 @@ document.addEventListener('alpine:init', () => {
         this.loading = false;
       }
     },
-    // openForm abre o modal para criar (sem argumento) ou para editar o cliente c. O
+    // viewing é o cliente dos detalhes, lido da lista: depois de salvar, os detalhes já mostram o que foi salvo.
+    viewing() {
+      return this.customers.find((c) => c.id === this.viewingId) || null;
+    },
+    // openDetails abre os detalhes do cliente c, de onde saem Editar e Excluir. Volta para eles também ao cancelar ou
+    // salvar a edição: o modal já aberto só troca de conteúdo.
+    openDetails(c) {
+      this.viewingId = c.id;
+      this.confirming = false;
+      this.errors.remove = '';
+      Alpine.store('modal').open('customer-details', c.name, () => !this.pending);
+    },
+    // customerFacts são os três blocos dos detalhes (o cliente, o contato e a cobrança), cada um com uma lista de
+    // { label, value, empty, href, mono }. Os termos do modo solo só entram no solo.
+    customerFacts(c) {
+      if (!c) return [];
+      const id = WTT.countries.legalId(c.country);
+      const monthly = WTT.billing.monthly(c);
+      const billing = [];
+      if (this.solo) billing.push([WTT.t('customer.billing.col_mode'), this.billingMode(c)]);
+      billing.push(monthly
+        ? [WTT.t('customer.billing.fee'), WTT.fmt.money(c.monthly_fee_cents)]
+        : [WTT.t('customer.billing.col_rate'), WTT.billing.withoutRate(c) ? '' : WTT.fmt.money(c.hourly_rate_cents)]);
+      if (this.solo) {
+        if (monthly) billing.push([WTT.t('customer.billing.contract'), this.billingContract(c)]);
+        billing.push([WTT.t('customer.billing.col_closing'), this.billingClosing(c)]);
+        billing.push([WTT.t('customer.billing.col_due'), this.billingDue(c)]);
+        // Multa, juros e tolerância só aparecem quando o cliente tem algum deles, como no formulário.
+        if (monthly && (c.late_fee_bp || c.late_interest_bp_month || c.grace_days)) {
+          billing.push([WTT.t('customer.billing.late_fee_fact'), c.late_fee_bp ? percent(c.late_fee_bp) : '']);
+          billing.push([WTT.t('customer.billing.late_interest_fact'), c.late_interest_bp_month ? percent(c.late_interest_bp_month) : '']);
+          billing.push([WTT.t('customer.billing.grace_days_fact'), c.grace_days ? WTT.t('customer.billing.grace_days_value', { count: c.grace_days }) : '']);
+        }
+      }
+      return [
+        { title: WTT.t('org.customers.details_customer'), rows: rows([
+          [WTT.t('org.customers.country'), WTT.countries.name(c.country)],
+          [id.label, c.document && WTT.fmt.taxId(c.document, c.country), { mono: true }],
+          [WTT.t('org.customers.projects'), String(c.project_count)],
+        ]) },
+        { title: WTT.t('org.customers.details_contact'), rows: rows([
+          [WTT.t('org.customers.contact_person'), c.contact_name],
+          [WTT.t('common.email'), c.contact_email, { href: 'mailto:' + c.contact_email }],
+          [WTT.t('common.phone'), c.contact_phone, { href: 'tel:' + String(c.contact_phone || '').replace(/[^\d+]/g, '') }],
+        ]) },
+        { title: WTT.t('org.customers.details_billing'), rows: rows(billing) },
+      ];
+    },
+    // openForm abre o modal para criar (sem argumento) ou para editar o cliente c, que vem dos detalhes. O
     // formulário é zerado aqui, e não ao fechar, para não mudar durante a transição de saída.
     openForm(c) {
       this.editing = c ? c.id : null;
@@ -1225,6 +1285,12 @@ document.addEventListener('alpine:init', () => {
       // Enquanto salva, o modal não fecha: um erro do servidor ficaria sem ter onde aparecer.
       Alpine.store('modal').open('customer', c ? WTT.t('org.customers.edit_title') : WTT.t('org.customers.new'), () => !this.pending);
     },
+    // cancelForm desiste do formulário: a edição volta para os detalhes do cliente; o cliente novo fecha o modal.
+    cancelForm() {
+      const c = this.editing && this.viewing();
+      if (c) this.openDetails(c);
+      else Alpine.store('modal').dismiss();
+    },
     save() {
       const body = customerBody(this.draft);
       const spec = customerSpec(body, true);
@@ -1243,8 +1309,9 @@ document.addEventListener('alpine:init', () => {
         return undefined;
       }
       return this.run('save', async () => {
+        let saved = null;
         if (this.editing) {
-          const saved = await api('PATCH', '/api/customers/' + this.editing, body);
+          saved = await api('PATCH', '/api/customers/' + this.editing, body);
           this.customers = this.customers.map((c) => (c.id === saved.id ? saved : c));
           toast(WTT.t('org.customers.saved'));
         } else {
@@ -1252,14 +1319,21 @@ document.addEventListener('alpine:init', () => {
           toast(WTT.t('org.customers.created'));
         }
         this.customers.sort((a, b) => a.name.localeCompare(b.name, WTT.lang));
-        Alpine.store('modal').close();
+        // A edição volta para os detalhes, já com o que foi salvo; o cliente novo fecha o modal.
+        if (saved) this.openDetails(saved);
+        else Alpine.store('modal').close();
       });
     },
-    remove(c) {
+    // remove exclui o cliente dos detalhes. O servidor recusa o cliente que ainda tem projetos, e o erro aparece nos
+    // detalhes, com o modal aberto.
+    remove() {
+      const c = this.viewing();
+      if (!c) return undefined;
       return this.run('remove', async () => {
-        this.confirming = null;
+        this.confirming = false;
         await api('DELETE', '/api/customers/' + c.id);
         this.customers = this.customers.filter((x) => x.id !== c.id);
+        Alpine.store('modal').close();
         toast(WTT.t('org.customers.deleted'));
       });
     },

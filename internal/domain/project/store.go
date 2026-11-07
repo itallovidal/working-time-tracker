@@ -39,6 +39,7 @@ func (s *Store) Create(p *Project, billExtraCents int) error {
 		SetNillableWeeklySyncTime(p.WeeklySyncTime).
 		SetNillableCustomerMeetingDay(p.CustomerMeetingDay).
 		SetNillableCustomerMeetingTime(p.CustomerMeetingTime).
+		SetCustomerMeetingEveryWeeks(max(p.CustomerMeetingEveryWeeks, 1)).
 		SetBillExtraCents(billExtraCents)
 	if p.Customer != nil {
 		q = q.SetCustomerID(p.Customer.ID)
@@ -175,8 +176,8 @@ func (s *Store) SetBilling(projectID uuid.UUID, customerID *uuid.UUID, billExtra
 	if customerID != nil {
 		q = q.SetCustomerID(*customerID)
 	} else {
-		// Sem cliente não há reunião com ele.
-		q = q.ClearCustomer().ClearCustomerMeetingDay().ClearCustomerMeetingTime()
+		// Sem cliente não há reunião com ele, e a frequência volta a toda semana.
+		q = q.ClearCustomer().ClearCustomerMeetingDay().ClearCustomerMeetingTime().SetCustomerMeetingEveryWeeks(1)
 	}
 	_, err := q.SetBillExtraCents(billExtraCents).Save(context.Background())
 	if ent.IsNotFound(err) {
@@ -277,6 +278,7 @@ func (s *Store) Update(p *Project) error {
 	} else {
 		q = q.ClearCustomerMeetingTime()
 	}
+	q = q.SetCustomerMeetingEveryWeeks(max(p.CustomerMeetingEveryWeeks, 1))
 	_, err := q.Save(context.Background())
 	return err
 }
@@ -294,22 +296,23 @@ func toDomainProject(e *ent.Project) *Project {
 		return nil
 	}
 	return &Project{
-		ID:                  e.ID,
-		OrganizationID:      e.OrganizationID,
-		Name:                e.Name,
-		Description:         e.Description,
-		GithubRepoURL:       e.GithubRepoURL,
-		GitlabRepoURL:       e.GitlabRepoURL,
-		SprintDurationDays:  e.SprintDurationDays,
-		DailyTime:           e.DailyTime,
-		WeeklySyncDay:       e.WeeklySyncDay,
-		WeeklySyncTime:      e.WeeklySyncTime,
-		CustomerMeetingDay:  e.CustomerMeetingDay,
-		CustomerMeetingTime: e.CustomerMeetingTime,
-		Customer:            customerRef(e),
-		MemberCount:         memberCount(e),
-		TaskCount:           len(e.Edges.Tasks),
-		CreatedAt:           e.CreatedAt,
+		ID:                        e.ID,
+		OrganizationID:            e.OrganizationID,
+		Name:                      e.Name,
+		Description:               e.Description,
+		GithubRepoURL:             e.GithubRepoURL,
+		GitlabRepoURL:             e.GitlabRepoURL,
+		SprintDurationDays:        e.SprintDurationDays,
+		DailyTime:                 e.DailyTime,
+		WeeklySyncDay:             e.WeeklySyncDay,
+		WeeklySyncTime:            e.WeeklySyncTime,
+		CustomerMeetingDay:        e.CustomerMeetingDay,
+		CustomerMeetingTime:       e.CustomerMeetingTime,
+		CustomerMeetingEveryWeeks: e.CustomerMeetingEveryWeeks,
+		Customer:                  customerRef(e),
+		MemberCount:               memberCount(e),
+		TaskCount:                 len(e.Edges.Tasks),
+		CreatedAt:                 e.CreatedAt,
 	}
 }
 
