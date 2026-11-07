@@ -34,7 +34,9 @@ O servidor MCP (`/mcp`) é a porta do Claude Code. Ele entra com um token pessoa
   todos**: quem trocou a senha por desconfiar de alguém também tira dele um token que ele tenha gerado.
 - **A identidade é lida a cada requisição**, então um cargo que mudou ou um projeto de que a pessoa saiu valem na hora.
 - **O mesmo acesso da API:** cada projeto e cada tarefa passam pela checagem do `RequireOrg` (`Resolver.Reach`), e o
-  que a pessoa não alcança responde `not_found`. O ponto é sempre o dela, e nenhuma saída tem dinheiro.
+  que a pessoa não alcança responde `not_found`. Uma falha do banco ao ler o projeto do recurso não deixa passar: a
+  checagem devolve o erro (e o `RequireOrg`, `500`). O ponto é sempre o dela, as ferramentas que mudam a sessão também
+  conferem o projeto dela, e nenhuma saída tem dinheiro.
 - **Outra origem:** um pedido de navegador vindo de outro site recebe `403` (`http.CrossOriginProtection`).
 - O token não vai para o log: o log de requisições não grava cabeçalhos.
 

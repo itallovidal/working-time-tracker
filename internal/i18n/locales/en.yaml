@@ -651,6 +651,7 @@ profile:
     never_used: Never used
     expired: Expired
     revoke: Revoke
+    revoke_question: Revoke this token?
     revoked: Token revoked. The Claude that used it can no longer get in.
     password_note: Changing your password revokes all your tokens.
     modal_title: New Claude token

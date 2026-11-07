@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 
 	"working-time-tracker/ent"
+	"working-time-tracker/ent/apitoken"
 	"working-time-tracker/ent/invite"
 	"working-time-tracker/ent/person"
 	"working-time-tracker/ent/session"
@@ -155,8 +156,30 @@ func (s *Store) PasswordHash(personID uuid.UUID) (string, error) {
 	return *p.PasswordHash, nil
 }
 
-func (s *Store) SetPasswordHash(personID uuid.UUID, hash string) error {
-	return s.client.Person.UpdateOneID(personID).SetPasswordHash(hash).Exec(context.Background())
+// ReplacePassword grava a senha nova da pessoa e, na mesma transação, revoga os tokens do Claude dela e encerra as
+// outras sessões, mantendo a de keepHash. Juntas, uma falha no meio não deixa a senha trocada com os acessos antigos.
+func (s *Store) ReplacePassword(personID uuid.UUID, hash, keepHash string) error {
+	ctx := context.Background()
+	tx, err := s.client.Tx(ctx)
+	if err != nil {
+		return err
+	}
+	rollback := func(err error) error {
+		_ = tx.Rollback() // o erro que volta é o que motivou desfazer
+		return err
+	}
+	if err := tx.Person.UpdateOneID(personID).SetPasswordHash(hash).Exec(ctx); err != nil {
+		return rollback(err)
+	}
+	if _, err := tx.APIToken.Delete().Where(apitoken.PersonIDEQ(personID)).Exec(ctx); err != nil {
+		return rollback(err)
+	}
+	if _, err := tx.Session.Delete().
+		Where(session.PersonIDEQ(personID), session.TokenHashNEQ(keepHash)).
+		Exec(ctx); err != nil {
+		return rollback(err)
+	}
+	return tx.Commit()
 }
 
 // MarkOnboarded registra que a pessoa viu as boas-vindas. Só grava na primeira vez, para a data ser a de quando ela
@@ -195,15 +218,6 @@ func (s *Store) SessionIdentity(tokenHash string, now time.Time) (*Identity, err
 
 func (s *Store) DeleteSession(tokenHash string) error {
 	_, err := s.client.Session.Delete().Where(session.TokenHashEQ(tokenHash)).Exec(context.Background())
-	return err
-}
-
-// DeleteOtherSessions encerra as outras sessões da pessoa, por exemplo depois
-// de uma troca de senha.
-func (s *Store) DeleteOtherSessions(personID uuid.UUID, keepHash string) error {
-	_, err := s.client.Session.Delete().
-		Where(session.PersonIDEQ(personID), session.TokenHashNEQ(keepHash)).
-		Exec(context.Background())
 	return err
 }
 
@@ -332,6 +346,7 @@ func identityOf(p *ent.Person, org *ent.Organization) *Identity {
 		id.OrganizationName = org.Name
 		id.OrganizationCurrency = org.Currency
 		id.OrganizationSolo = org.Solo
+		id.OrganizationTimezone = org.Timezone
 	}
 	return id
 }

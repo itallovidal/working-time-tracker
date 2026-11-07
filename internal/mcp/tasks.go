@@ -270,9 +270,7 @@ func (s *server) myTasks(_ context.Context, req *mcp.CallToolRequest, in myTasks
 		if t.Deadline != nil {
 			item.Deadline = t.Deadline.In(loc).Format(time.DateOnly)
 		}
-		if s.PublicURL != "" {
-			item.URL = s.PublicURL + "/tasks/" + item.ID
-		}
+		item.URL = s.taskURL(item.ID)
 		out.Items = append(out.Items, item)
 	}
 	return nil, out, nil
@@ -379,7 +377,7 @@ func (s *server) updateTask(_ context.Context, req *mcp.CallToolRequest, in upda
 		}
 		attrs.LabelIDs = &ids
 	}
-	t, err := s.Tasks.PatchAs(id.PersonID.String(), in.TaskID, name, in.Description, assignee, deadline, attrs)
+	t, err := s.Tasks.PatchAs(id.PersonID.String(), current.ID.String(), name, in.Description, assignee, deadline, attrs)
 	if err != nil {
 		return nil, TaskOut{}, s.fail(err)
 	}
@@ -391,10 +389,11 @@ func (s *server) claimTask(_ context.Context, req *mcp.CallToolRequest, in taskI
 	if err != nil {
 		return nil, TaskOut{}, s.fail(err)
 	}
-	if _, err := s.reachTask(id, in.TaskID); err != nil {
+	current, err := s.reachTask(id, in.TaskID)
+	if err != nil {
 		return nil, TaskOut{}, err
 	}
-	t, err := s.Tasks.Claim(id.PersonID.String(), in.TaskID)
+	t, err := s.Tasks.Claim(id.PersonID.String(), current.ID.String())
 	if err != nil {
 		return nil, TaskOut{}, s.fail(err)
 	}
@@ -414,7 +413,7 @@ func (s *server) syncTask(ctx context.Context, req *mcp.CallToolRequest, in task
 	if err != nil {
 		return nil, SyncOut{}, s.fail(err)
 	}
-	after, err := s.Tasks.Get(in.TaskID)
+	after, err := s.Tasks.Get(t.ID.String())
 	if err != nil {
 		return nil, SyncOut{}, s.fail(err)
 	}

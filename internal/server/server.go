@@ -273,7 +273,7 @@ func Build(client *ent.Client, opts Options) (*App, error) {
 	}
 	// O servidor MCP, para o Claude. Fica fora do /api: entra com o token do Claude, não com o cookie.
 	mcpHandler := mcp.NewHandler(mcp.Deps{
-		Auth: authSvc, Resolver: resolver, Orgs: orgSvc, Projects: projectSvc, Tasks: taskSvc,
+		Auth: authSvc, Resolver: resolver, Projects: projectSvc, Tasks: taskSvc,
 		Sessions: workSessionSvc, Overview: overviewSvc, Syncer: syncer, I18n: catalog,
 		PublicURL: opts.PublicURL, Logger: e.Logger,
 	})

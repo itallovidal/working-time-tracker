@@ -43,7 +43,12 @@
                 <span class="badge" x-cloak x-show="expired(tok)">{{.T "profile.claude.expired"}}</span>
               </td>
               <td class="actions">
-                <button type="button" class="btn btn-danger-ghost btn-sm" :disabled="pending" @click="revoke(tok)">{{template "icon" "ban"}} {{.T "profile.claude.revoke"}}</button>
+                <button type="button" class="btn btn-danger-ghost btn-sm" x-show="confirming !== tok.id" @click="confirming = tok.id">{{template "icon" "ban"}} {{.T "profile.claude.revoke"}}</button>
+                <span class="confirm" x-cloak x-show="confirming === tok.id">
+                  <span>{{.T "profile.claude.revoke_question"}}</span>
+                  <button type="button" class="btn btn-danger btn-sm" :disabled="pending" @click="revoke(tok)">{{.T "profile.claude.revoke"}}</button>
+                  <button type="button" class="btn btn-ghost btn-sm" @click="confirming = null">{{.T "common.cancel"}}</button>
+                </span>
               </td>
             </tr>
           </template>

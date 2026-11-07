@@ -1403,6 +1403,7 @@ document.addEventListener('alpine:init', () => {
     loading: true,
     draft: { name: '', days: 90 },
     created: null,
+    confirming: null, // id do token cuja revogação espera a confirmação
     init() {
       return this.load();
     },
@@ -1432,10 +1433,10 @@ document.addEventListener('alpine:init', () => {
       const ok = this.check({ name: [this.draft.name, WTT.rules.required, WTT.rules.max('name')] });
       if (!ok) return undefined;
       return this.run('create', async () => {
-        const tok = await api('POST', '/api/auth/tokens', { name: this.draft.name, days: Number(this.draft.days) });
-        this.created = tok;
-        this.tokens = [{ ...tok, token: undefined }, ...this.tokens];
+        this.created = await api('POST', '/api/auth/tokens', { name: this.draft.name, days: Number(this.draft.days) });
         this.$nextTick(() => this.$refs.command && this.$refs.command.focus());
+        // A criação apaga os tokens vencidos da pessoa: a lista volta do servidor, já sem eles e com o novo.
+        await this.load();
       });
     },
     // command é o comando que conecta o Claude Code a este servidor, com o token recém-criado.
@@ -1450,6 +1451,7 @@ document.addEventListener('alpine:init', () => {
     },
     revoke(tok) {
       return this.run('revoke', async () => {
+        this.confirming = null;
         await api('DELETE', '/api/auth/tokens/' + tok.id);
         this.tokens = this.tokens.filter((t) => t.id !== tok.id);
         toast(WTT.t('profile.claude.revoked'));

@@ -19,7 +19,6 @@ import (
 
 	"working-time-tracker/internal/domain/auth"
 	"working-time-tracker/internal/domain/issuesync"
-	"working-time-tracker/internal/domain/organization"
 	"working-time-tracker/internal/domain/overview"
 	"working-time-tracker/internal/domain/project"
 	"working-time-tracker/internal/domain/task"
@@ -40,7 +39,6 @@ const Version = "1.0.0"
 type Deps struct {
 	Auth     *auth.Service
 	Resolver *auth.Resolver
-	Orgs     *organization.Service
 	Projects *project.Service
 	Tasks    *task.Service
 	Sessions *work_session.Service

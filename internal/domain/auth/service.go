@@ -200,13 +200,7 @@ func (s *Service) ChangePassword(actor *Identity, currentToken, current, next st
 	if err != nil {
 		return passwordField(err, "new_password")
 	}
-	if err := s.store.SetPasswordHash(actor.PersonID, newHash); err != nil {
-		return err
-	}
-	if err := s.store.DeleteAPITokens(actor.PersonID); err != nil {
-		return err
-	}
-	return s.store.DeleteOtherSessions(actor.PersonID, HashToken(currentToken))
+	return s.store.ReplacePassword(actor.PersonID, newHash, HashToken(currentToken))
 }
 
 // CompleteOnboarding dá baixa nas boas-vindas do primeiro acesso de quem está logado, seja porque terminou, seja porque

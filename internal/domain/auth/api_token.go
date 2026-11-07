@@ -139,12 +139,6 @@ func (s *Store) DeleteAPIToken(personID, id uuid.UUID) error {
 	return nil
 }
 
-// DeleteAPITokens apaga todos os tokens da pessoa, por exemplo depois de uma troca de senha.
-func (s *Store) DeleteAPITokens(personID uuid.UUID) error {
-	_, err := s.client.APIToken.Delete().Where(apitoken.PersonIDEQ(personID)).Exec(context.Background())
-	return err
-}
-
 // APITokenIdentity devolve a identidade dona do token, lida agora (um cargo que mudou vale na hora), e o token, ou
 // database.ErrNotFound quando o token não existe ou venceu.
 func (s *Store) APITokenIdentity(tokenHash string, now time.Time) (*Identity, *APIToken, error) {

@@ -195,6 +195,12 @@ func TestAPITokens_PasswordChangeRevokesThem(t *testing.T) {
 	owner := signup(t, e, "Org", "dono@example.com")
 	createToken(t, e, owner, "um")
 	createToken(t, e, owner, "outro")
+	// Outra sessão da mesma pessoa, como a de outro navegador: a troca a encerra junto com os tokens.
+	login := do(e, "POST", "/api/auth/login", `{"email":"dono@example.com","password":"senha-forte-1"}`, "")
+	if login.Code != http.StatusOK {
+		t.Fatalf("second login = %d: %s", login.Code, login.Body.String())
+	}
+	other := sessionFrom(t, login)
 
 	rec := do(e, "POST", "/api/auth/password",
 		`{"current_password":"senha-forte-1","new_password":"senha-forte-nova"}`, owner.session)
@@ -203,6 +209,12 @@ func TestAPITokens_PasswordChangeRevokesThem(t *testing.T) {
 	}
 	if rec := do(e, "GET", "/api/auth/tokens", "", owner.session); len(decodeList(t, rec)) != 0 {
 		t.Errorf("tokens survived the password change: %s", rec.Body.String())
+	}
+	if rec := do(e, "GET", "/api/auth/me", "", other); rec.Code != http.StatusUnauthorized {
+		t.Errorf("the other session after the password change = %d, want 401", rec.Code)
+	}
+	if rec := do(e, "GET", "/api/auth/me", "", owner.session); rec.Code != http.StatusOK {
+		t.Errorf("the session that changed the password = %d, want 200", rec.Code)
 	}
 }
 

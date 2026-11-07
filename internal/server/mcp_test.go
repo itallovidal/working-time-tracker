@@ -362,14 +362,16 @@ func TestMCP_Session(t *testing.T) {
 		t.Errorf("add_task_to_session = %v, want A and B running", added["tasks"])
 	}
 	wantCode(t, toolError(t, cs, "add_task_to_session", map[string]any{"task_id": b}), "mcp.task_already_active")
+	// O id em maiúsculas é o mesmo id (o Claude pode mandá-lo assim): a tarefa continua reconhecida na sessão.
+	wantCode(t, toolError(t, cs, "add_task_to_session", map[string]any{"task_id": strings.ToUpper(b)}), "mcp.task_already_active")
 	wantCode(t, toolError(t, cs, "add_task_to_session", map[string]any{"task_id": other}), "work_session.task_other_project")
 
-	// Trocar: só C roda, e A e B ficam com o tempo deles.
-	switched := callTool(t, cs, "add_task_to_session", map[string]any{"task_id": c, "switch": true})
+	// Trocar: só C roda, e A e B ficam com o tempo deles. Também com o id em maiúsculas.
+	switched := callTool(t, cs, "add_task_to_session", map[string]any{"task_id": strings.ToUpper(c), "switch": true})
 	if running(switched) != "C" || len(switched["tasks"].([]any)) != 3 {
 		t.Errorf("switch = %v, want only C running of three", switched["tasks"])
 	}
-	stopLast := toolError(t, cs, "stop_session_task", map[string]any{"task_id": c})
+	stopLast := toolError(t, cs, "stop_session_task", map[string]any{"task_id": strings.ToUpper(c)})
 	wantCode(t, stopLast, "work_session.last_task")
 	if !strings.Contains(stopLast, "clock_out") {
 		t.Errorf("last task error does not point to clock_out: %q", stopLast)
@@ -381,7 +383,7 @@ func TestMCP_Session(t *testing.T) {
 	if stopped := callTool(t, cs, "stop_session_task", map[string]any{"task_id": c}); running(stopped) != "A" {
 		t.Errorf("stop_session_task = %v, want only A running", stopped["tasks"])
 	}
-	removed := callTool(t, cs, "remove_session_task", map[string]any{"task_id": b})
+	removed := callTool(t, cs, "remove_session_task", map[string]any{"task_id": strings.ToUpper(b)})
 	for _, st := range removed["tasks"].([]any) {
 		if st.(map[string]any)["name"] == "B" {
 			t.Errorf("B still in the session: %v", removed["tasks"])
@@ -402,6 +404,36 @@ func TestMCP_Session(t *testing.T) {
 	}
 	if rec := do(e, "GET", "/api/work-sessions/active", "", member.session); strings.TrimSpace(rec.Body.String()) != "null" {
 		t.Errorf("the API still sees an open session: %s", rec.Body.String())
+	}
+}
+
+// Quem perde o acesso ao projeto com o ponto aberto não mexe mais na sessão pelo MCP, como na API: as ferramentas que
+// mudam a sessão respondem project.not_found, e só um admin a encerra. Ler a sessão continua valendo. Tirar a pessoa
+// do projeto pela tela já encerra a sessão dela (collaborator.Store.Remove), então o teste apaga só a alocação, para
+// chegar ao estado que a checagem cobre.
+func TestMCP_SessionAfterLeavingTheProject(t *testing.T) {
+	e := newServer(t)
+	owner := signup(t, e, "Org", "dono@example.com")
+	member := invite(t, e, owner, "membro@example.com", "member")
+	alfa := createProject(t, e, owner, "Alfa")
+	allocate(t, e, owner, alfa, member.id, 5000)
+	a := decode(t, do(e, "POST", "/api/projects/"+alfa+"/tasks", `{"name":"A"}`, owner.session))["id"].(string)
+	_, token := createToken(t, e, member, "claude")
+	cs := connectMCP(t, mcpEndpoint(t, e), token)
+
+	callTool(t, cs, "clock_in", map[string]any{"task_id": a})
+	if _, err := testDB.Exec(`DELETE FROM allocations WHERE project_id = $1 AND person_id = $2`, alfa, member.id); err != nil {
+		t.Fatalf("delete the allocation: %v", err)
+	}
+	for _, tool := range []string{"clock_out", "stop_session_task", "remove_session_task", "add_task_to_session"} {
+		args := map[string]any{"task_id": a}
+		if tool == "clock_out" {
+			args = nil
+		}
+		wantCode(t, toolError(t, cs, tool, args), "project.not_found")
+	}
+	if active := callTool(t, cs, "get_active_session", nil); active["open"] != true {
+		t.Errorf("get_active_session after leaving the project = %v, want the open session", active)
 	}
 }
 

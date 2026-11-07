@@ -117,10 +117,16 @@ func (s *server) taskOut(t *task.Task, me *auth.Identity, loc *time.Location, wi
 	if withDescription {
 		out.Description = t.Description
 	}
-	if s.PublicURL != "" {
-		out.URL = s.PublicURL + "/tasks/" + out.ID
-	}
+	out.URL = s.taskURL(out.ID)
 	return out
+}
+
+// taskURL é a página da tarefa no sistema, ou vazio quando o endereço público não está configurado.
+func (s *server) taskURL(taskID string) string {
+	if s.PublicURL == "" {
+		return ""
+	}
+	return s.PublicURL + "/tasks/" + taskID
 }
 
 func sessionOut(ws *work_session.WorkSession, projectName string, loc *time.Location, now time.Time) SessionOut {
@@ -168,14 +174,13 @@ func duration(seconds int) string {
 	return fmt.Sprintf("%dh%02dm", h, m)
 }
 
-// location é o fuso da organização da pessoa, que decide o dia de um prazo e a hora que volta nas saídas. Um fuso
-// que não se lê vale o padrão das organizações.
+// location é o fuso da organização da pessoa, que decide o dia de um prazo e a hora que volta nas saídas. Ele vem
+// com a identidade (lida a cada chamada, junto com o token), então nada se consulta aqui. Sem fuso vale o padrão das
+// organizações; um que não se lê vale UTC.
 func (s *server) location(me *auth.Identity) *time.Location {
-	name := organization.DefaultTimezone
-	if s.Orgs != nil {
-		if org, err := s.Orgs.Get(me.OrganizationID.String()); err == nil && org.Timezone != "" {
-			name = org.Timezone
-		}
+	name := me.OrganizationTimezone
+	if name == "" {
+		name = organization.DefaultTimezone
 	}
 	loc, err := time.LoadLocation(name)
 	if err != nil {
@@ -184,12 +189,12 @@ func (s *server) location(me *auth.Identity) *time.Location {
 	return loc
 }
 
-// parseDeadline lê o prazo: um dia (AAAA-MM-DD) vale às 23:59 dele no fuso da organização, como a tela grava; um
-// instante RFC 3339 vale como veio.
+// parseDeadline lê o prazo: um dia (AAAA-MM-DD) vale às 23:59 do relógio dele no fuso da organização, como a tela
+// grava (também no dia em que o horário de verão começa ou termina); um instante RFC 3339 vale como veio.
 func parseDeadline(raw string, loc *time.Location) (*time.Time, error) {
 	raw = strings.TrimSpace(raw)
 	if d, err := time.ParseInLocation(time.DateOnly, raw, loc); err == nil {
-		t := d.Add(23*time.Hour + 59*time.Minute)
+		t := time.Date(d.Year(), d.Month(), d.Day(), 23, 59, 0, 0, loc)
 		return &t, nil
 	}
 	if t, err := time.Parse(time.RFC3339, raw); err == nil {

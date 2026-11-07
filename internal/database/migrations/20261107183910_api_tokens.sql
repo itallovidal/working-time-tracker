@@ -16,3 +16,5 @@ CREATE TABLE "api_tokens" (
 );
 -- create index "api_tokens_token_hash_key" to table: "api_tokens"
 CREATE UNIQUE INDEX "api_tokens_token_hash_key" ON "api_tokens" ("token_hash");
+-- create index "apitoken_person_id" to table: "api_tokens"
+CREATE INDEX "apitoken_person_id" ON "api_tokens" ("person_id");

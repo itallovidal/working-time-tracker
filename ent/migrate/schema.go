@@ -33,6 +33,13 @@ var (
 				OnDelete:   schema.Cascade,
 			},
 		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "apitoken_person_id",
+				Unique:  false,
+				Columns: []*schema.Column{APITokensColumns[7]},
+			},
+		},
 	}
 	// AllocationsColumns holds the columns for the "allocations" table.
 	AllocationsColumns = []*schema.Column{

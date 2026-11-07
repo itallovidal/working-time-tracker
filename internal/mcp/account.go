@@ -2,10 +2,13 @@ package mcp
 
 import (
 	"context"
+	"errors"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"working-time-tracker/internal/database"
 	"working-time-tracker/internal/domain/auth"
 	"working-time-tracker/internal/domain/project"
 	"working-time-tracker/internal/domain/task"
@@ -139,7 +142,7 @@ func (s *server) whoami(_ context.Context, req *mcp.CallToolRequest, _ noInput) 
 		return nil, WhoAmIOut{}, s.fail(err)
 	}
 	if open != nil {
-		so := sessionOut(open, s.projectName(open.ProjectID.String()), loc, time.Now())
+		so := s.sessionOut(open, id)
 		out.OpenSession = &so
 	}
 	return nil, out, nil
@@ -231,7 +234,7 @@ func (s *server) myHours(_ context.Context, req *mcp.CallToolRequest, in hoursIn
 // reachProject confere que a pessoa alcança o projeto, com a regra do RequireOrg. Quem não alcança recebe
 // project.not_found, como na API.
 func (s *server) reachProject(id *auth.Identity, projectID string) error {
-	_, ok, err := s.Resolver.Reach(id, auth.KindProject, projectID)
+	ok, err := s.Resolver.Reach(id, auth.KindProject, projectID)
 	if err != nil {
 		return s.fail(err)
 	}
@@ -241,18 +244,26 @@ func (s *server) reachProject(id *auth.Identity, projectID string) error {
 	return nil
 }
 
-// reachTask confere que a pessoa alcança a tarefa (a organização e o projeto dela) e a devolve. Quem não alcança
-// recebe task.not_found, como na API.
-func (s *server) reachTask(id *auth.Identity, taskID string) (*task.Task, error) {
-	_, ok, err := s.Resolver.Reach(id, auth.KindTask, taskID)
+// reachTask lê a tarefa e confere que a pessoa alcança o projeto dela (o que inclui a organização), com a regra do
+// RequireOrg. Quem não alcança, e um id que não é de tarefa nenhuma, recebe task.not_found, como na API. A tarefa que
+// volta tem o id na forma canônica: quem chama usa t.ID, e não o texto que o Claude mandou.
+func (s *server) reachTask(id *auth.Identity, rawID string) (*task.Task, error) {
+	taskID, err := uuid.Parse(rawID)
+	if err != nil {
+		return nil, s.fail(task.ErrNotFound)
+	}
+	t, err := s.Tasks.Get(taskID.String())
+	if errors.Is(err, database.ErrNotFound) {
+		return nil, s.fail(task.ErrNotFound)
+	}
+	if err != nil {
+		return nil, s.fail(err)
+	}
+	ok, err := s.Resolver.Reach(id, auth.KindProject, t.ProjectID.String())
 	if err != nil {
 		return nil, s.fail(err)
 	}
 	if !ok {
-		return nil, s.fail(task.ErrNotFound)
-	}
-	t, err := s.Tasks.Get(taskID)
-	if err != nil {
 		return nil, s.fail(task.ErrNotFound)
 	}
 	return t, nil

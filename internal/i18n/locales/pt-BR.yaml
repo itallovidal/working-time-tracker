@@ -661,6 +661,7 @@ profile:
     never_used: Nunca usado
     expired: Venceu
     revoke: Revogar
+    revoke_question: Revogar este token?
     revoked: Token revogado. O Claude que o usava não entra mais.
     password_note: Trocar a senha revoga todos os seus tokens.
     modal_title: Novo token do Claude

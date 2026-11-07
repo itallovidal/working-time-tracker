@@ -199,7 +199,7 @@ erDiagram
 | `organizations` | A empresa. Perfil, dados jurídicos (o documento fiscal depende do `country`), regime, fuso e moeda, e a marca do modo solo (`solo`) |
 | `persons` | Uma pessoa de **uma** organização. O e-mail é único no sistema todo. `role` é `admin` ou `member`; o dono é um admin com `is_owner` |
 | `sessions` | A sessão de login (o cookie). Guarda só o sha256 do token |
-| `api_tokens` | Os tokens do Claude (o servidor MCP em `/mcp`): o nome, o começo do token para a lista, a validade e o último uso. Como a sessão, guarda só o sha256, e some com a pessoa |
+| `api_tokens` | Os tokens do Claude (o servidor MCP em `/mcp`): o nome, o começo do token para a lista, a validade e o último uso. Como a sessão, guarda só o sha256, e some com a pessoa. Índice em `person_id`, por onde a lista, o limite e a troca de senha os procuram |
 | `invites` | Convite de uso único, com validade. Pode levar a pessoa a um projeto, com valor, time e grupo |
 | `customers` | O cliente que contrata projetos. Tem país próprio, que decide como o documento é conferido, e os termos de cobrança, que valem para todos os projetos dele: o modo (`hourly` ou `monthly`), o valor por hora (no por hora), o fechamento do período, o prazo e, no mensal, a mensalidade, o contrato, a multa, os juros e a tolerância |
 | `receivables` | A conta a receber de um cliente por período, no modo solo: o que o dono confirmou cobrar e, depois, o que entrou. Um por cliente e período |

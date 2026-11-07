@@ -6,6 +6,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
+	"entgo.io/ent/schema/index"
 	"github.com/google/uuid"
 )
 
@@ -29,6 +30,13 @@ func (APIToken) Fields() []ent.Field {
 		// A última vez que o token entrou, gravada no máximo uma vez por minuto. Nulo: nunca foi usado.
 		field.Time("last_used_at").Optional().Nillable(),
 		field.Time("created_at").Default(time.Now).Immutable(),
+	}
+}
+
+// Indexes: a lista, o limite por pessoa, a troca de senha e o apagar da pessoa procuram os tokens por ela.
+func (APIToken) Indexes() []ent.Index {
+	return []ent.Index{
+		index.Fields("person_id"),
 	}
 }
 

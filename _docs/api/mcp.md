@@ -106,10 +106,14 @@ tela.
 
 - **O ponto é sempre o da pessoa.** Nenhuma ferramenta recebe outra pessoa, e as da sessão agem na sessão aberta
   dela. Por isso o MCP não precisa das checagens de quem registra o ponto de outro (`personFor`) nem de quem mexe na
-  sessão (`editable`).
+  sessão (`editable`). Mas, como as rotas da sessão na API, as que mudam a sessão (`add_task_to_session`,
+  `stop_session_task`, `remove_session_task`, `clock_out`) conferem o projeto dela: quem perdeu o acesso ao projeto
+  com o ponto aberto recebe `project.not_found`, e só um admin encerra aquela sessão. `get_active_session` e `whoami`
+  continuam a mostrá-la. (Tirar a pessoa do projeto pela tela já encerra a sessão dela.)
 - **Dinheiro fica de fora.** Nenhuma saída tem valor pago, cobrado, receita ou margem, nem para o dono.
-- **Datas:** o prazo entra e sai como dia (`AAAA-MM-DD`), às 23:59 no fuso da organização, como a tela grava. Os
-  instantes voltam em RFC 3339, no mesmo fuso.
+- **Datas:** o prazo entra e sai como dia (`AAAA-MM-DD`), às 23:59 do relógio no fuso da organização, como a tela
+  grava (também no dia em que o horário de verão começa ou termina). Os instantes voltam em RFC 3339, no mesmo fuso.
+- **Ids:** um id em outra forma que o UUID aceita (maiúsculas, por exemplo) vale o mesmo id.
 - **Etiquetas** vão pelo nome, sem diferenciar maiúsculas. Um nome que o projeto não tem é recusado
   (`mcp.unknown_label`) com a lista das que existem: criar etiqueta continua sendo da tela, com `labels.manage`.
 - O `initialize` devolve instruções curtas sobre o sistema (uma sessão por pessoa, como trocar de tarefa, os status e

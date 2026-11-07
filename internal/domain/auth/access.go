@@ -239,18 +239,11 @@ func (r *Resolver) sameOrganization(me *Identity, kind Kind, id string) bool {
 }
 
 // Reach é a checagem do RequireOrg sem o echo, para quem age em nome da pessoa fora das rotas da API (o servidor MCP):
-// o recurso existe e é da organização dela e, num recurso de projeto, quem não é dono está no projeto. Devolve o que a
-// pessoa pode no projeto do recurso (o que o cargo dá, quando o recurso não é de projeto ou quando ela é o dono) e se
-// ela o alcança. Quem não alcança deve receber a mesma resposta de um recurso que não existe.
-func (r *Resolver) Reach(me *Identity, kind Kind, id string) (permission.Set, bool, error) {
-	set, scoped, ok, err := r.reach(me, kind, id)
-	if err != nil || !ok {
-		return permission.Set{}, false, err
-	}
-	if !scoped {
-		set = BaseProjectSet(me)
-	}
-	return set, true, nil
+// o recurso existe e é da organização dela e, num recurso de projeto, quem não é dono está no projeto. Quem não
+// alcança deve receber a mesma resposta de um recurso que não existe.
+func (r *Resolver) Reach(me *Identity, kind Kind, id string) (bool, error) {
+	_, _, ok, err := r.reach(me, kind, id)
+	return ok, err
 }
 
 // reach faz a checagem. scoped diz que o conjunto veio do projeto do recurso; sem ele, quem chama usa o do cargo.
@@ -265,8 +258,16 @@ func (r *Resolver) reach(me *Identity, kind Kind, id string) (set permission.Set
 	if me.IsOwner {
 		return permission.Set{}, false, true, nil
 	}
-	projectID, perr := r.ProjectOf(kind, id)
-	if perr != nil || projectID == uuid.Nil {
+	// Uma falha ao ler o projeto do recurso não deixa passar sem a checagem: o recurso que sumiu no meio é como um que
+	// não existe, e o erro do banco volta para quem chama.
+	projectID, err := r.ProjectOf(kind, id)
+	if ent.IsNotFound(err) {
+		return permission.Set{}, false, false, nil
+	}
+	if err != nil {
+		return permission.Set{}, false, false, err
+	}
+	if projectID == uuid.Nil {
 		return permission.Set{}, false, true, nil
 	}
 	set, in, err := r.ProjectAccess(me, projectID)

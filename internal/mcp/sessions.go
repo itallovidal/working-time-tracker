@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"working-time-tracker/internal/domain/auth"
@@ -86,7 +87,7 @@ func (s *server) clockIn(_ context.Context, req *mcp.CallToolRequest, in taskInp
 	if err != nil {
 		return nil, SessionOut{}, err
 	}
-	ws, err := s.Sessions.ClockIn(t.ProjectID.String(), in.TaskID, id.PersonID.String())
+	ws, err := s.Sessions.ClockIn(t.ProjectID.String(), t.ID.String(), id.PersonID.String())
 	if errors.Is(err, work_session.ErrAlreadyOpen) {
 		return nil, SessionOut{}, s.failWith(err, s.openHint(id, t.ProjectID.String()))
 	}
@@ -125,13 +126,14 @@ func (s *server) addTaskToSession(_ context.Context, req *mcp.CallToolRequest, i
 	if err != nil {
 		return nil, SessionOut{}, err
 	}
-	if _, err := s.reachTask(id, in.TaskID); err != nil {
+	t, err := s.reachTask(id, in.TaskID)
+	if err != nil {
 		return nil, SessionOut{}, err
 	}
 	projectID, sessionID := open.ProjectID.String(), open.ID.String()
 	ws := open
-	if running := runningLink(open, in.TaskID); running == nil {
-		ws, err = s.Sessions.AddTask(projectID, sessionID, in.TaskID, nil, nil)
+	if running := runningLink(open, t.ID); running == nil {
+		ws, err = s.Sessions.AddTask(projectID, sessionID, t.ID.String(), nil, nil)
 		if errors.Is(err, work_session.ErrTaskOtherProject) {
 			return nil, SessionOut{}, s.failWith(err, "The open session is in another project: clock_out first, then clock_in on this task.")
 		}
@@ -143,7 +145,7 @@ func (s *server) addTaskToSession(_ context.Context, req *mcp.CallToolRequest, i
 	}
 	if in.Switch {
 		for _, st := range ws.Tasks {
-			if st.UntilAt == nil && st.TaskID.String() != in.TaskID {
+			if st.UntilAt == nil && st.TaskID != t.ID {
 				if ws, err = s.Sessions.UpdateTask(projectID, sessionID, st.ID.String(), work_session.TaskChange{Stop: true}); err != nil {
 					return nil, SessionOut{}, s.fail(err)
 				}
@@ -162,7 +164,11 @@ func (s *server) stopSessionTask(_ context.Context, req *mcp.CallToolRequest, in
 	if err != nil {
 		return nil, SessionOut{}, err
 	}
-	link := runningLink(open, in.TaskID)
+	t, err := s.reachTask(id, in.TaskID)
+	if err != nil {
+		return nil, SessionOut{}, err
+	}
+	link := runningLink(open, t.ID)
 	if link == nil {
 		return nil, SessionOut{}, s.fail(ErrTaskNotInSession)
 	}
@@ -185,11 +191,15 @@ func (s *server) removeSessionTask(_ context.Context, req *mcp.CallToolRequest, 
 	if err != nil {
 		return nil, SessionOut{}, err
 	}
+	t, err := s.reachTask(id, in.TaskID)
+	if err != nil {
+		return nil, SessionOut{}, err
+	}
 	// O trecho que sai é o que está rodando; sem ele, o mais recente da tarefa.
-	link := runningLink(open, in.TaskID)
+	link := runningLink(open, t.ID)
 	if link == nil {
 		for i := range open.Tasks {
-			if open.Tasks[i].TaskID.String() == in.TaskID {
+			if open.Tasks[i].TaskID == t.ID {
 				link = &open.Tasks[i]
 			}
 		}
@@ -223,7 +233,9 @@ func (s *server) clockOut(_ context.Context, req *mcp.CallToolRequest, _ noInput
 	return nil, s.sessionOut(ws, id), nil
 }
 
-// openSession é a sessão aberta da pessoa, ou work_session.not_open.
+// openSession é a sessão aberta da pessoa, para as ferramentas que mexem nela, ou work_session.not_open. Como as rotas
+// da sessão na API, ela passa pela checagem do projeto: quem saiu do projeto com o ponto aberto recebe
+// project.not_found, e só um admin encerra aquela sessão. Ler a sessão (get_active_session, whoami) não passa por aqui.
 func (s *server) openSession(id *auth.Identity) (*work_session.WorkSession, error) {
 	open, err := s.Sessions.Active(id.PersonID.String())
 	if err != nil {
@@ -232,13 +244,16 @@ func (s *server) openSession(id *auth.Identity) (*work_session.WorkSession, erro
 	if open == nil {
 		return nil, s.failWith(work_session.ErrNotOpen, "Use clock_in to start the clock on a task.")
 	}
+	if err := s.reachProject(id, open.ProjectID.String()); err != nil {
+		return nil, err
+	}
 	return open, nil
 }
 
 // runningLink é o trecho sem fim da tarefa na sessão, ou nil.
-func runningLink(ws *work_session.WorkSession, taskID string) *work_session.SessionTask {
+func runningLink(ws *work_session.WorkSession, taskID uuid.UUID) *work_session.SessionTask {
 	for i := range ws.Tasks {
-		if ws.Tasks[i].TaskID.String() == taskID && ws.Tasks[i].UntilAt == nil {
+		if ws.Tasks[i].TaskID == taskID && ws.Tasks[i].UntilAt == nil {
 			return &ws.Tasks[i]
 		}
 	}
