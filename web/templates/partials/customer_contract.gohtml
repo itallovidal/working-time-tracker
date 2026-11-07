@@ -1,10 +1,9 @@
 {{/* Os termos do cliente que valem para o período (modo solo): a mensalidade e o contrato (só no mensal), o fechamento e o
      prazo (nos dois modos) e, recolhidos, a multa, os juros e a tolerância (só no mensal). Aparecem no modal de cliente,
-     junto com o modo e o valor padrão, e no formulário de novo projeto, quando ali se escolhe "Contrato mensal" para um
-     cliente que ainda não tem projetos (o contrato é gravado no cliente). O componente que inclui traz o objeto dos
-     termos (blankBilling/billingDraft em pages/org.js), lateOpen e o mixin WTT.form (fieldErrors, clearField).
-     Parâmetros: Data (a página), Model (o nome do objeto dos termos no componente: "draft" ou "billing") e Id (o
-     prefixo dos ids dos campos). Os data-field são os nomes da API, para o erro do servidor cair embaixo do campo. */}}
+     junto com o modo e o valor por hora: a cobrança mora no cliente (Decisão 21). O componente que inclui traz o objeto
+     dos termos (blankBilling/billingDraft em pages/org.js), lateOpen e o mixin WTT.form (fieldErrors, clearField).
+     Parâmetros: Data (a página), Model (o nome do objeto dos termos no componente) e Id (o prefixo dos ids dos campos).
+     Os data-field são os nomes da API, para o erro do servidor cair embaixo do campo. */}}
 {{define "customer_contract"}}
 {{$m := .Model}}{{$id := .Id}}
 {{with .Data}}

@@ -168,7 +168,7 @@ func TestPages_ModalHostAndIcons(t *testing.T) {
 	for page, wants := range map[string][]string{
 		"customers": {"Novo cliente", `x-teleport="#modal-root"`, `id="customer-name"`},
 		"people":    {"Adicionar colaborador", `x-teleport="#modal-root"`, `id="invite-email"`, "Integrantes", "Convites pendentes"},
-		"projects":  {"Novo projeto", `x-teleport="#modal-root"`, `id="project-name"`, `id="project-customer"`, `id="project-bill-rate"`},
+		"projects":  {"Novo projeto", `x-teleport="#modal-root"`, `id="project-name"`, `id="project-customer"`, `id="project-bill-extra"`},
 	} {
 		body := do(e, "GET", "/orgs/"+admin.orgID+"/"+page, "", admin.session).Body.String()
 		for _, want := range wants {
@@ -350,7 +350,7 @@ func TestPages_ProjectCollaboratorsTab(t *testing.T) {
 	}
 
 	settings := "/projects/" + projectID + "/management/settings"
-	if body := do(e, "GET", settings, "", admin.session).Body.String(); !strings.Contains(body, `id="ps-bill-rate"`) {
+	if body := do(e, "GET", settings, "", admin.session).Body.String(); !strings.Contains(body, `id="ps-bill-extra"`) {
 		t.Error("admin does not see the billing card on the project settings")
 	}
 	if rec := do(e, "GET", settings, "", member.session); rec.Code != http.StatusNotFound {
@@ -619,7 +619,7 @@ func TestPages_ProjectSettingsAndWeeklyHours(t *testing.T) {
 		t.Error("the edit project form is not teleported to the modal")
 	}
 	for _, field := range []string{
-		`<input id="ps-name"`, `<select id="ps-customer"`, `<input id="ps-bill-rate"`,
+		`<input id="ps-name"`, `<select id="ps-customer"`, `<input id="ps-bill-extra"`,
 		`<select id="ps-sprint" data-field="sprint_duration_days"`, `x-for="o in sprintChoices()"`,
 		`<input id="routine-daily"`, `<select id="routine-weekly-day"`, `<input id="routine-weekly-time"`, `<textarea id="ps-description"`,
 		`<select id="meeting-day"`, `<input id="meeting-time"`,

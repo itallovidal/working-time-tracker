@@ -151,13 +151,13 @@ func TestCustomers_CountryAndDocument(t *testing.T) {
 		}
 		return decode(t, rec)
 	}
-	if c := post(`{"name":"Padrão","document":"11.222.333/0001-81"}`); c["country"] != "BR" || c["document"] != "11222333000181" {
+	if c := post(`{"hourly_rate_cents":10000,"name":"Padrão","document":"11.222.333/0001-81"}`); c["country"] != "BR" || c["document"] != "11222333000181" {
 		t.Errorf("default customer = %v", c)
 	}
-	if c := post(`{"name":"Acme Inc","country":"US","document":"12-3456789"}`); c["country"] != "US" || c["document"] != "123456789" {
+	if c := post(`{"hourly_rate_cents":10000,"name":"Acme Inc","country":"US","document":"12-3456789"}`); c["country"] != "US" || c["document"] != "123456789" {
 		t.Errorf("US customer = %v", c)
 	}
-	if c := post(`{"name":"Beispiel","country":"de","document":"DE 123456789"}`); c["country"] != "DE" || c["document"] != "DE 123456789" {
+	if c := post(`{"hourly_rate_cents":10000,"name":"Beispiel","country":"de","document":"DE 123456789"}`); c["country"] != "DE" || c["document"] != "DE 123456789" {
 		t.Errorf("DE customer = %v", c)
 	}
 

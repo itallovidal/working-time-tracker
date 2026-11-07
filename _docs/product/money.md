@@ -15,25 +15,33 @@ Só o dono cadastra, altera e exclui clientes (`customers.manage`). Um cliente c
 (`customer.has_projects`), nem um com recebíveis (`customer.has_receivables`: o dono os desfaz antes, na página
 A receber do modo solo).
 
-### Termos comerciais (modo solo)
+### A cobrança mora no cliente
 
-Todo cliente tem um **modo de cobrança**, um ou outro, nunca os dois. A tela de Clientes só mostra o seletor e os
-campos de cada modo na organização no **modo solo** (`organizations.solo`); a organização com equipe segue como era, e
-todo cliente dela é por hora. A API traz os campos para todos (`GET /api/orgs/:orgId/customers`), e os valores são em
-centavos, na moeda da organização.
+A cobrança se define no cliente e vale para todos os projetos dele: o projeto só soma um **acréscimo**
+([Decisão 21](../architecture/decisions.md#decisão-21-cobrança-num-lugar-só--o-valor-no-cliente-o-acréscimo-no-projeto)).
+O reajuste se faz no cliente, e as sessões já registradas guardam o valor delas.
 
-| | Por hora (`hourly`, padrão) | Mensal (`monthly`) |
+Todo cliente tem um **modo de cobrança**, um ou outro, nunca os dois. Na organização com equipe todo cliente é **por
+hora**, e a tela de Clientes pede só o valor por hora. No **modo solo** (`organizations.solo`) ela mostra também o
+seletor do modo, o contrato mensal e os prazos. A API traz os campos para todos (`GET /api/orgs/:orgId/customers`), e
+os valores são em centavos, na moeda da organização.
+
+| | Por hora (`hourly`, padrão) | Mensal (`monthly`, só no modo solo) |
 |---|---|---|
-| O que é | As horas dos projetos vezes o valor cobrado de cada projeto | Um valor fixo por mês: o contrato |
-| Só dele | `default_rate_cents`: o valor por hora que **preenche o campo** ao criar um projeto do cliente (opcional; vale o piso de 10,00) | `monthly_fee_cents` (obrigatório, maior que zero), `contract_start` (obrigatório) e `contract_end` (opcional, depois do início); `late_fee_bp` (multa, 200 = 2%), `late_interest_bp_month` (juros ao mês) e `grace_days` (tolerância depois do vencimento), que ficam num bloco recolhido na tela |
+| O que é | As horas dos projetos vezes o valor por hora do cliente, mais o acréscimo de cada projeto | Um valor fixo por mês, o contrato, mais o acréscimo mensal de cada projeto |
+| Só dele | `hourly_rate_cents`: o valor por hora, **obrigatório**, com o piso de 10,00 | `monthly_fee_cents` (obrigatório, maior que zero), `contract_start` (obrigatório) e `contract_end` (opcional, depois do início); `late_fee_bp` (multa, 200 = 2%), `late_interest_bp_month` (juros ao mês) e `grace_days` (tolerância depois do vencimento), que ficam num bloco recolhido na tela |
 | Dos dois | `closing_day` (1 a 31, padrão 31: 31 é o último dia do mês, e o mês curto fecha no último dia dele) e `payment_days` (dias entre o fechamento e o vencimento, padrão 0) | |
 
+- **Sem o valor por hora o cliente por hora é recusado** (`request.field_required`, field `hourly_rate_cents`), na
+  criação e ao apagá-lo. Um cliente antigo, de antes da Decisão 21, sem projetos e sem valor, aparece na lista como
+  "sem valor por hora", e um projeto não se liga a ele (`project.customer_without_rate`) até o dono informar o valor.
 - **Campo do outro modo é recusado** (`customer.field_hourly_only` e `customer.field_monthly_only`, com o campo), na
   tela (que só mostra os do modo escolhido) e no servidor. Trocar o modo apaga os campos do modo que saiu.
 - **O mensal só vale no modo solo** (`customer.monthly_needs_solo`). Desligar o modo solo esconde as telas, e o
   cliente mensal segue guardado, como o documento do outro país.
 - **O modo trava quando o cliente já tem projetos** (`409 customer.mode_locked`): a tela mostra o seletor desabilitado,
-  com o motivo. Trocar o modo com projetos fica para depois (issue #25).
+  com o motivo. Trocar o modo com projetos fica para depois (issue #25). O valor por hora e o contrato seguem
+  editáveis.
 - **Teto dos termos.** O prazo e a tolerância vão até 365 dias, e a multa e os juros até 100% (10000 pontos-base), para
   um número absurdo não estourar uma data.
 
@@ -41,21 +49,27 @@ centavos, na moeda da organização.
 
 | Valor | De quem | Onde fica | Regra |
 |---|---|---|---|
-| **Cobrado** | Do projeto: o que o cliente paga por hora | `projects.bill_rate_cents` | Obrigatório com cliente por hora; proibido sem cliente e com cliente mensal |
+| **Cobrado** | Do cliente: o que ele paga por hora naquele projeto | **Calculado**: `customers.hourly_rate_cents` mais `projects.bill_extra_cents` | Só com cliente por hora; o projeto interno e o do cliente mensal não têm |
 | **Pago** (o custo) | De cada pessoa em cada projeto: o que ela recebe por hora ali | `allocations.pay_rate_cents` | Obrigatório para estar no projeto |
 
-- **Um projeto tem cliente e valor cobrado, ou é interno, sem os dois.** O cliente e o valor andam juntos
-  (`PUT /api/projects/:projectId/billing`): sem valor com cliente por hora dá `project.bill_rate_required`, valor sem
-  cliente dá `project.bill_rate_needs_customer`. O projeto interno não tem receita.
-- **O cliente mensal não tem valor por hora.** O contrato é um valor por mês, então o projeto dele **não tem valor
-  cobrado**, e informar um é recusado (`project.bill_rate_not_allowed`), na criação, em `PUT .../billing` e ao trocar o
-  cliente do projeto (a regra segue o modo do cliente novo). As sessões desse projeto guardam `bill_rate_cents` nulo e
-  o ponto funciona igual: as horas e o custo contam, e a receita vem do recebível mensal, não das horas.
-- **O valor padrão do cliente por hora é uma cópia.** `default_rate_cents` só preenche o campo do valor cobrado ao
-  criar um projeto (e ao trocar o cliente dele) nas telas; o projeto guarda o seu, e mudar um não muda o outro.
+- **O acréscimo do projeto** (`bill_extra_cents`, zero por padrão) soma à cobrança do cliente só naquele projeto, para
+  algo pequeno ou temporário: **por hora** com cliente por hora, **por mês** com cliente mensal (soma à mensalidade
+  em A receber). Vai de zero ao teto de um valor em dinheiro (`project.invalid_bill_extra`) e não tem data de fim: o
+  dono o zera quando acaba.
+- **Um projeto tem cliente, ou é interno, sem cliente e sem acréscimo.** O cliente e o acréscimo andam juntos
+  (`PUT /api/projects/:projectId/billing`, e `POST` do projeto): acréscimo sem cliente dá
+  `project.bill_extra_needs_customer`. Trocar o cliente do projeto troca a cobrança, e o acréscimo passa a valer no
+  modo do cliente novo. O projeto interno não tem receita.
+- **O valor cobrado é calculado, não gravado no projeto** (`customer.BillRate`): reajustar o cliente muda o valor
+  cobrado de todos os projetos dele. As respostas de leitura (o billing do projeto, a visão geral, as sessões) seguem
+  com `bill_rate_cents`; o billing traz também `bill_extra_cents` e a cobrança do cliente
+  (`customer_hourly_rate_cents`, `customer_monthly_fee_cents`).
+- **O cliente mensal não tem valor por hora.** O contrato é um valor por mês, então o projeto dele não tem valor
+  cobrado por hora. As sessões desse projeto guardam `bill_rate_cents` nulo e o ponto funciona igual: as horas e o
+  custo contam, e a receita vem do recebível mensal, não das horas.
 - **A mesma pessoa pode receber valores diferentes em projetos diferentes**: 20 num, 25 no outro.
-- **Pisos e teto.** Os dois valores têm o piso de 10,00 por hora (`validate.MinRateCents`) e o teto de 1.000.000,00.
-  Ninguém trabalha de graça, e todo cliente paga.
+- **Pisos e teto.** O valor por hora do cliente e o pago têm o piso de 10,00 por hora (`validate.MinRateCents`) e o
+  teto de 1.000.000,00. Ninguém trabalha de graça, e todo cliente paga.
 - **O dono não recebe por hora.** Entra nos projetos com valor pago zero, e o que ele tira do projeto é a margem. As
   sessões dele levam a marca `owner_hours`: o custo é zero, e o valor cobrado conta como receita.
 - A **margem por hora** de uma pessoa num projeto é o valor cobrado menos o valor pago dela.
@@ -72,8 +86,8 @@ flowchart LR
   R --> M
 ```
 
-- **Mudar um valor só vale dali em diante.** Cada sessão guarda os valores do clock-in, então as sessões antigas não
-  mudam.
+- **Mudar um valor só vale dali em diante.** Cada sessão guarda os valores do clock-in (o valor cobrado é o do
+  cliente mais o acréscimo naquele momento), então reajustar o cliente ou mudar o acréscimo não muda as sessões antigas.
 - **Sem valor no projeto, não há ponto** (`work_session.no_rate`).
 - **Arredondamento por sessão.** O valor de cada sessão é arredondado ao centavo, e os totais somam valores já
   arredondados, para a soma da tela bater com as linhas. Por isso o total da organização é a soma dos projetos.
@@ -136,7 +150,7 @@ período mais os `payment_days`.
 | Modo do cliente | Períodos propostos | Valor proposto |
 |---|---|---|
 | **Por hora** | Os períodos **já fechados** com tempo nos projetos do cliente, ainda sem recebível. No máximo os 24 mais recentes | A soma das sessões de **todos os projetos do cliente**, cortadas no período e arredondadas ao centavo **por sessão**, pelo valor cobrado congelado nela (a mesma conta de [Da sessão ao dinheiro](#da-sessão-ao-dinheiro)). A sessão aberta conta até agora |
-| **Mensal** | Do período do `contract_start` até o período corrente **e o seguinte**, parando no período que contém o `contract_end`, ainda sem recebível. No máximo os 60 mais recentes | A `monthly_fee_cents`. O primeiro mês parcial o dono corrige ao confirmar: não há pro-rata |
+| **Mensal** | Do período do `contract_start` até o período corrente **e o seguinte**, parando no período que contém o `contract_end`, ainda sem recebível. No máximo os 60 mais recentes | A `monthly_fee_cents` mais os acréscimos mensais dos projetos do cliente, como estão hoje (`extra_cents` diz quanto deles). O primeiro mês parcial, e um acréscimo que já acabou, o dono corrige ao confirmar: não há pro-rata |
 
 A proposta traz também o **valor por hora efetivo** (o valor dividido pelas horas). Abaixo de 10,00
 (`validate.MinRateCents`) vira um **aviso** na tela, nunca um erro: no mensal, as horas só estão completas depois que o
@@ -211,7 +225,7 @@ janela é de calendário no fuso da organização: Este mês, Mês passado ou An
   têm recebível.
 - **A proposta, na Receita projetada.** No cliente por hora ela traz também o **período em andamento**, com as horas até
   agora vezes o valor cobrado congelado nas sessões (no meio do mês, é o que se tem para receber até o fechamento). No
-  mensal é a mensalidade do período do contrato, também o corrente. Os períodos do contrato mensal que terminam depois
+  mensal é a mensalidade mais os acréscimos do período do contrato, também o corrente. Os períodos do contrato mensal que terminam depois
   do fim do mês corrente (o seguinte, que se confirma adiantado) ficam para o mês deles.
 - **Valor por hora efetivo** = Receita projetada ÷ horas da janela, ao centavo, ou um travessão sem horas. Abaixo do
   piso de 10,00 por hora é um aviso. O total divide pelas horas de **todos** os projetos, internos também; a linha de um

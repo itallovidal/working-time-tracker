@@ -28,20 +28,20 @@ func setup(t *testing.T) (*customer.Service, *project.Service, string) {
 func TestService_CreateAndList(t *testing.T) {
 	svc, _, orgID := setup(t)
 
-	created, err := svc.Create(orgID, customer.Input{
+	created, err := svc.Create(orgID, withRate(customer.Input{
 		Name:         ptr("  Empresa A "),
 		Document:     ptr("11.222.333/0001-81"),
 		ContactName:  ptr("Carla Dias"),
 		ContactEmail: ptr(" Carla@EmpresaA.com "),
 		ContactPhone: ptr("(11) 4002-8922"),
-	})
+	}))
 	if err != nil {
 		t.Fatalf("create failed: %v", err)
 	}
 	if created.Name != "Empresa A" || created.Document != "11222333000181" || created.ContactEmail != "carla@empresaa.com" {
 		t.Errorf("created = %+v", created)
 	}
-	if _, err := svc.Create(orgID, customer.Input{Name: ptr("Armazém Zeta")}); err != nil {
+	if _, err := svc.Create(orgID, withRate(customer.Input{Name: ptr("Armazém Zeta")})); err != nil {
 		t.Fatalf("create second: %v", err)
 	}
 
@@ -69,7 +69,7 @@ func TestService_Validation(t *testing.T) {
 		{"phone", customer.Input{Name: ptr("X"), ContactPhone: ptr("ligar")}, customer.ErrInvalidPhone},
 	}
 	for _, c := range cases {
-		if _, err := svc.Create(orgID, c.in); !errors.Is(err, c.want) {
+		if _, err := svc.Create(orgID, withRate(c.in)); !errors.Is(err, c.want) {
 			t.Errorf("%s: err = %v, want %v", c.name, err, c.want)
 		}
 	}
@@ -122,7 +122,7 @@ func TestService_FieldRules(t *testing.T) {
 		{"country", customer.Input{Name: ptr("X"), Country: ptr("ZZZ")}, customer.ErrInvalidCountry, "country"},
 	}
 	for _, c := range cases {
-		_, err := svc.Create(orgID, c.in)
+		_, err := svc.Create(orgID, withRate(c.in))
 		if c.want == nil {
 			if err != nil {
 				t.Errorf("%s: err = %v, want none", c.name, err)
@@ -138,7 +138,7 @@ func TestService_FieldRules(t *testing.T) {
 		}
 	}
 
-	got, err := svc.Create(orgID, customer.Input{Name: ptr("Caixa"), ContactEmail: ptr(" CARLA@Empresa.COM ")})
+	got, err := svc.Create(orgID, withRate(customer.Input{Name: ptr("Caixa"), ContactEmail: ptr(" CARLA@Empresa.COM ")}))
 	if err != nil || got.ContactEmail != "carla@empresa.com" {
 		t.Errorf("email should be trimmed and lower-cased: %+v, %v", got, err)
 	}
@@ -146,7 +146,7 @@ func TestService_FieldRules(t *testing.T) {
 
 func TestService_Update(t *testing.T) {
 	svc, _, orgID := setup(t)
-	created, _ := svc.Create(orgID, customer.Input{Name: ptr("Empresa A"), ContactName: ptr("Carla"), Document: ptr("11222333000181")})
+	created, _ := svc.Create(orgID, withRate(customer.Input{Name: ptr("Empresa A"), ContactName: ptr("Carla"), Document: ptr("11222333000181")}))
 	id := created.ID.String()
 
 	// Só o que vem é alterado; texto vazio apaga.
@@ -169,10 +169,10 @@ func TestService_Update(t *testing.T) {
 // sem alguém decidir.
 func TestService_DeleteRefusedWithProjects(t *testing.T) {
 	svc, projSvc, orgID := setup(t)
-	created, _ := svc.Create(orgID, customer.Input{Name: ptr("Empresa A")})
+	created, _ := svc.Create(orgID, withRate(customer.Input{Name: ptr("Empresa A")}))
 	id := created.ID.String()
 	proj, _ := projSvc.Create(orgID, "Projeto X", "", 0, project.Routine{})
-	if _, err := projSvc.SetBilling(proj.ID.String(), &id, ptr(10000)); err != nil {
+	if _, err := projSvc.SetBilling(proj.ID.String(), &id, 0); err != nil {
 		t.Fatalf("set billing: %v", err)
 	}
 
@@ -184,7 +184,7 @@ func TestService_DeleteRefusedWithProjects(t *testing.T) {
 		t.Fatalf("delete with projects: err = %v, want ErrHasProjects", err)
 	}
 
-	if _, err := projSvc.SetBilling(proj.ID.String(), nil, nil); err != nil {
+	if _, err := projSvc.SetBilling(proj.ID.String(), nil, 0); err != nil {
 		t.Fatalf("clear billing: %v", err)
 	}
 	if err := svc.Delete(id); err != nil {

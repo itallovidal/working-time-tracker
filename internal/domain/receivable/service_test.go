@@ -332,6 +332,33 @@ func TestProposals_MonthlyHoursGiveTheEffectiveRate(t *testing.T) {
 	}
 }
 
+// O acréscimo mensal dos projetos de um cliente mensal soma à mensalidade, na proposta e na confirmação (Decisão 21).
+// O projeto sem acréscimo não muda nada, e o acréscimo de um projeto de outro cliente não entra.
+func TestProposals_MonthlyAddsTheProjectExtras(t *testing.T) {
+	f := setup(t)
+	ctx := context.Background()
+	acme := f.monthly("Acme", "2026-09-01", nil)
+	other := f.monthly("Outro", "2026-09-01", nil)
+	testClient.Project.Create().SetOrganizationID(f.orgID).SetName("Retainer").SetCustomerID(acme.ID).SaveX(ctx)
+	testClient.Project.Create().SetOrganizationID(f.orgID).SetName("Extra").SetCustomerID(acme.ID).SetBillExtraCents(80000).SaveX(ctx)
+	testClient.Project.Create().SetOrganizationID(f.orgID).SetName("Pequeno").SetCustomerID(acme.ID).SetBillExtraCents(5000).SaveX(ctx)
+	testClient.Project.Create().SetOrganizationID(f.orgID).SetName("Do outro").SetCustomerID(other.ID).SetBillExtraCents(30000).SaveX(ctx)
+
+	for _, p := range f.proposals(false) {
+		want, extra := 585000, 85000
+		if p.Customer.ID == other.ID {
+			want, extra = 530000, 30000
+		}
+		if p.CalculatedCents != want || p.ExtraCents != extra {
+			t.Errorf("%s %s = %d with %d of extras, want %d with %d", p.Customer.Name, p.PeriodStart, p.CalculatedCents, p.ExtraCents, want, extra)
+		}
+	}
+	r := f.confirm(acme, "2026-09-01", "2026-09-30", 585000)
+	if r.CalculatedCents != 585000 {
+		t.Errorf("confirmed calculated = %d, want 585000 (the fee plus the extras)", r.CalculatedCents)
+	}
+}
+
 func TestConfirm_Hourly(t *testing.T) {
 	f := setup(t)
 	acme := f.hourly("Acme")

@@ -12,15 +12,29 @@ import (
 	"working-time-tracker/internal/domain/work_session"
 )
 
-// terms são os termos comerciais do cliente de que as propostas dependem, lidos do cadastro dele.
+// terms são os termos comerciais do cliente de que as propostas dependem, lidos do cadastro dele. extraCents é a soma
+// dos acréscimos dos projetos do cliente (Decisão 21): no mensal, eles somam à mensalidade de cada período; no por hora
+// o acréscimo já está no valor cobrado congelado em cada sessão, e extraCents não entra na conta.
 type terms struct {
 	customer    *ent.Customer
 	cycle       cycle
 	paymentDays int
+	extraCents  int
 }
 
+// termsOf monta os termos do cliente, que precisa vir com os projetos carregados (Store.Customer e Store.Customers).
 func termsOf(c *ent.Customer, loc *time.Location) terms {
-	return terms{customer: c, cycle: newCycle(c.ClosingDay, loc), paymentDays: c.PaymentDays}
+	extra := 0
+	for _, p := range c.Edges.Projects {
+		extra += p.BillExtraCents
+	}
+	return terms{customer: c, cycle: newCycle(c.ClosingDay, loc), paymentDays: c.PaymentDays, extraCents: extra}
+}
+
+// monthlyCents é o valor de um período do contrato mensal: a mensalidade mais os acréscimos mensais dos projetos.
+// Vale o que está cadastrado agora, inclusive para um período passado ainda sem recebível: o dono confere ao confirmar.
+func (t terms) monthlyCents() int {
+	return *t.customer.MonthlyFeeCents + t.extraCents
 }
 
 func (t terms) ref() Ref { return Ref{ID: t.customer.ID, Name: t.customer.Name} }
@@ -106,8 +120,9 @@ func (t terms) contractPeriods(now time.Time) []payment.Period {
 }
 
 // monthly propõe os períodos do contrato mensal que ainda não foram confirmados, do mais novo ao limite
-// MaxMonthlyProposals. O valor é a mensalidade; as horas são as dos projetos do cliente no período, só para a conta do
-// valor por hora efetivo. O primeiro mês parcial o dono corrige ao confirmar: não há pro-rata.
+// MaxMonthlyProposals. O valor é a mensalidade mais os acréscimos mensais dos projetos (ExtraCents diz quanto deles);
+// as horas são as dos projetos do cliente no período, só para a conta do valor por hora efetivo. O primeiro mês parcial
+// o dono corrige ao confirmar: não há pro-rata.
 func (t terms) monthly(sessions []work_session.WorkSession, done map[string]bool, now time.Time) []Proposal {
 	periods := t.contractPeriods(now)
 	var out []Proposal
@@ -117,7 +132,9 @@ func (t terms) monthly(sessions []work_session.WorkSession, done map[string]bool
 			continue
 		}
 		sec, _ := sumWithin(sessions, p.Start, p.End, now)
-		out = append(out, t.proposal(KindMonthly, p, sec, *t.customer.MonthlyFeeCents, now))
+		prop := t.proposal(KindMonthly, p, sec, t.monthlyCents(), now)
+		prop.ExtraCents = t.extraCents
+		out = append(out, prop)
 	}
 	return out
 }

@@ -120,16 +120,16 @@ func (_c *CustomerCreate) SetNillableBillingMode(v *string) *CustomerCreate {
 	return _c
 }
 
-// SetDefaultRateCents sets the "default_rate_cents" field.
-func (_c *CustomerCreate) SetDefaultRateCents(v int) *CustomerCreate {
-	_c.mutation.SetDefaultRateCents(v)
+// SetHourlyRateCents sets the "hourly_rate_cents" field.
+func (_c *CustomerCreate) SetHourlyRateCents(v int) *CustomerCreate {
+	_c.mutation.SetHourlyRateCents(v)
 	return _c
 }
 
-// SetNillableDefaultRateCents sets the "default_rate_cents" field if the given value is not nil.
-func (_c *CustomerCreate) SetNillableDefaultRateCents(v *int) *CustomerCreate {
+// SetNillableHourlyRateCents sets the "hourly_rate_cents" field if the given value is not nil.
+func (_c *CustomerCreate) SetNillableHourlyRateCents(v *int) *CustomerCreate {
 	if v != nil {
-		_c.SetDefaultRateCents(*v)
+		_c.SetHourlyRateCents(*v)
 	}
 	return _c
 }
@@ -396,9 +396,9 @@ func (_c *CustomerCreate) check() error {
 	if _, ok := _c.mutation.BillingMode(); !ok {
 		return &ValidationError{Name: "billing_mode", err: errors.New(`ent: missing required field "Customer.billing_mode"`)}
 	}
-	if v, ok := _c.mutation.DefaultRateCents(); ok {
-		if err := customer.DefaultRateCentsValidator(v); err != nil {
-			return &ValidationError{Name: "default_rate_cents", err: fmt.Errorf(`ent: validator failed for field "Customer.default_rate_cents": %w`, err)}
+	if v, ok := _c.mutation.HourlyRateCents(); ok {
+		if err := customer.HourlyRateCentsValidator(v); err != nil {
+			return &ValidationError{Name: "hourly_rate_cents", err: fmt.Errorf(`ent: validator failed for field "Customer.hourly_rate_cents": %w`, err)}
 		}
 	}
 	if v, ok := _c.mutation.MonthlyFeeCents(); ok {
@@ -515,9 +515,9 @@ func (_c *CustomerCreate) createSpec() (*Customer, *sqlgraph.CreateSpec) {
 		_spec.SetField(customer.FieldBillingMode, field.TypeString, value)
 		_node.BillingMode = value
 	}
-	if value, ok := _c.mutation.DefaultRateCents(); ok {
-		_spec.SetField(customer.FieldDefaultRateCents, field.TypeInt, value)
-		_node.DefaultRateCents = &value
+	if value, ok := _c.mutation.HourlyRateCents(); ok {
+		_spec.SetField(customer.FieldHourlyRateCents, field.TypeInt, value)
+		_node.HourlyRateCents = &value
 	}
 	if value, ok := _c.mutation.MonthlyFeeCents(); ok {
 		_spec.SetField(customer.FieldMonthlyFeeCents, field.TypeInt, value)

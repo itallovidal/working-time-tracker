@@ -31,8 +31,8 @@ const (
 	FieldContactPhone = "contact_phone"
 	// FieldBillingMode holds the string denoting the billing_mode field in the database.
 	FieldBillingMode = "billing_mode"
-	// FieldDefaultRateCents holds the string denoting the default_rate_cents field in the database.
-	FieldDefaultRateCents = "default_rate_cents"
+	// FieldHourlyRateCents holds the string denoting the hourly_rate_cents field in the database.
+	FieldHourlyRateCents = "hourly_rate_cents"
 	// FieldMonthlyFeeCents holds the string denoting the monthly_fee_cents field in the database.
 	FieldMonthlyFeeCents = "monthly_fee_cents"
 	// FieldContractStart holds the string denoting the contract_start field in the database.
@@ -93,7 +93,7 @@ var Columns = []string{
 	FieldContactEmail,
 	FieldContactPhone,
 	FieldBillingMode,
-	FieldDefaultRateCents,
+	FieldHourlyRateCents,
 	FieldMonthlyFeeCents,
 	FieldContractStart,
 	FieldContractEnd,
@@ -120,8 +120,8 @@ var (
 	DefaultCountry string
 	// DefaultBillingMode holds the default value on creation for the "billing_mode" field.
 	DefaultBillingMode string
-	// DefaultRateCentsValidator is a validator for the "default_rate_cents" field. It is called by the builders before save.
-	DefaultRateCentsValidator func(int) error
+	// HourlyRateCentsValidator is a validator for the "hourly_rate_cents" field. It is called by the builders before save.
+	HourlyRateCentsValidator func(int) error
 	// MonthlyFeeCentsValidator is a validator for the "monthly_fee_cents" field. It is called by the builders before save.
 	MonthlyFeeCentsValidator func(int) error
 	// DefaultClosingDay holds the default value on creation for the "closing_day" field.
@@ -198,9 +198,9 @@ func ByBillingMode(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldBillingMode, opts...).ToFunc()
 }
 
-// ByDefaultRateCents orders the results by the default_rate_cents field.
-func ByDefaultRateCents(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldDefaultRateCents, opts...).ToFunc()
+// ByHourlyRateCents orders the results by the hourly_rate_cents field.
+func ByHourlyRateCents(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldHourlyRateCents, opts...).ToFunc()
 }
 
 // ByMonthlyFeeCents orders the results by the monthly_fee_cents field.

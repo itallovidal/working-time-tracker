@@ -9,12 +9,26 @@ import (
 	"working-time-tracker/internal/validate"
 )
 
-// Os modos de cobrança de um cliente: por hora (as horas dos projetos vezes o valor cobrado de cada um) ou mensal (um
-// valor fixo por mês, o contrato). Um ou outro, nunca os dois. O mensal só vale em organização solo.
+// Os modos de cobrança de um cliente: por hora (as horas dos projetos vezes o valor por hora do cliente, mais o
+// acréscimo de cada projeto) ou mensal (um valor fixo por mês, o contrato, mais o acréscimo mensal de cada projeto). Um
+// ou outro, nunca os dois. O mensal só vale em organização solo. A cobrança mora no cliente (Decisão 21): o projeto só
+// guarda o acréscimo.
 const (
 	BillingHourly  = "hourly"
 	BillingMonthly = "monthly"
 )
+
+// BillRate é o valor cobrado por hora de um projeto: o valor por hora do cliente mais o acréscimo do projeto. É nil
+// quando o projeto não é cobrado por hora: o projeto interno (mode vazio), o do cliente mensal (o contrato é por mês) e
+// o de um cliente antigo ainda sem valor. É a única conta do valor cobrado, para o ponto, o billing do projeto e as
+// margens darem o mesmo número.
+func BillRate(mode string, hourlyRateCents *int, extraCents int) *int {
+	if mode != BillingHourly || hourlyRateCents == nil {
+		return nil
+	}
+	v := *hourlyRateCents + extraCents
+	return &v
+}
 
 // DefaultClosingDay é o dia de fechamento do cliente sem termos: 31, o último dia de cada mês.
 const DefaultClosingDay = 31
@@ -37,9 +51,9 @@ type Customer struct {
 
 	// BillingMode é hourly (padrão) ou monthly. Os campos do outro modo ficam vazios: o servidor os recusa.
 	BillingMode string `json:"billing_mode"`
-	// DefaultRateCents, só hourly: o valor por hora que preenche o campo ao criar um projeto do cliente (o projeto
-	// guarda o seu). Quando existe, vale o piso de validate.MinRateCents.
-	DefaultRateCents *int `json:"default_rate_cents"`
+	// HourlyRateCents, só hourly: o valor por hora do cliente, o mesmo em todos os projetos dele (cada projeto pode somar
+	// um acréscimo). Obrigatório, com o piso de validate.MinRateCents; nulo só num cliente antigo sem projetos.
+	HourlyRateCents *int `json:"hourly_rate_cents"`
 	// MonthlyFeeCents, ContractStart e ContractEnd, só monthly: a mensalidade em centavos (obrigatória, maior que
 	// zero) e a vigência do contrato em dias de calendário YYYY-MM-DD, no fuso da organização. O início é obrigatório
 	// e o fim, quando existe, vem depois dele; sem fim, o contrato segue por tempo indeterminado.
@@ -72,7 +86,7 @@ type Input struct {
 	// null apaga; nas datas, texto vazio apaga. Um campo do outro modo, com valor, é recusado. Trocar o modo apaga
 	// os campos do modo que saiu.
 	BillingMode         *string                `json:"billing_mode"`
-	DefaultRateCents    validate.Optional[int] `json:"default_rate_cents"`
+	HourlyRateCents     validate.Optional[int] `json:"hourly_rate_cents"`
 	MonthlyFeeCents     validate.Optional[int] `json:"monthly_fee_cents"`
 	ContractStart       *string                `json:"contract_start"`
 	ContractEnd         *string                `json:"contract_end"`

@@ -38,6 +38,7 @@ import (
 	"working-time-tracker/internal/domain/task"
 	"working-time-tracker/internal/domain/team"
 	"working-time-tracker/internal/domain/work_session"
+	"working-time-tracker/internal/validate"
 )
 
 const password = "demo12345"
@@ -420,35 +421,52 @@ func main() {
 	})
 	must(err)
 
-	// Os clientes.
+	// Os clientes. A cobrança mora no cliente (Decisão 21): o valor por hora de cada um é o menor valor cobrado entre os
+	// projetos dele, e cada projeto soma a diferença como acréscimo, para os valores cobrados abaixo valerem como estão.
+	// O cliente sem projeto fica com 120,00.
+	customerRate := map[string]int{}
+	for _, p := range projects {
+		if p.customer != "" && (customerRate[p.customer] == 0 || p.billRate < customerRate[p.customer]) {
+			customerRate[p.customer] = p.billRate
+		}
+	}
 	customerID := map[string]string{}
 	for _, c := range customers {
+		rate := customerRate[c.key]
+		if rate == 0 {
+			rate = 12000
+		}
 		created, err := customerSvc.Create(orgID, customer.Input{
-			Name:         text(c.name),
-			Country:      optionalText(c.country),
-			Document:     text(c.document),
-			ContactName:  text(c.contact),
-			ContactEmail: text(c.email),
-			ContactPhone: text(c.phone),
+			Name:            text(c.name),
+			Country:         optionalText(c.country),
+			Document:        text(c.document),
+			ContactName:     text(c.contact),
+			ContactEmail:    text(c.email),
+			ContactPhone:    text(c.phone),
+			HourlyRateCents: validate.Optional[int]{Set: true, Value: &rate},
 		})
 		must(err)
 		customerID[c.key] = created.ID.String()
 	}
 
-	// Os projetos, com o cliente e o valor cobrado, os times e o valor de cada pessoa.
+	// Os projetos, com o cliente e o acréscimo, os times e o valor de cada pessoa.
 	type seededProject struct {
 		id       string
-		billRate *int
+		billRate *int // o valor cobrado do projeto (o do cliente mais o acréscimo), que as sessões guardam
 		rates    map[string]int
 	}
 	seeded := map[string]seededProject{}
 	for _, p := range projects {
-		// O cliente e o valor cobrado vão já na criação: com cliente o valor é obrigatório, sem cliente é recusado, e
-		// a reunião com o cliente só vale em um projeto que tem cliente.
+		// O cliente e o acréscimo vão já na criação: sem cliente não há acréscimo, e a reunião com o cliente só vale
+		// em um projeto que tem cliente.
 		billRate := optionalNumber(p.billRate)
+		extra := 0
+		if p.customer != "" {
+			extra = p.billRate - customerRate[p.customer]
+		}
 		created, err := projectSvc.CreateWithCustomer(orgID, project.CreateInput{
 			Name: p.name, Description: p.description, SprintDurationDays: p.sprintDays, CustomerID: customerID[p.customer],
-			BillRateCents: billRate,
+			BillExtraCents: extra,
 			Routine: project.Routine{
 				DailyTime: optionalText(p.daily), WeeklySyncDay: optionalText(p.weekly), WeeklySyncTime: optionalText(p.weeklyTime),
 				CustomerMeetingDay: optionalText(p.meetingDay), CustomerMeetingTime: optionalText(p.meetingTime),

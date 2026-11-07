@@ -192,16 +192,24 @@
         if (x === '') return '';
         return (taxIdValid[kind] || taxIdValid.generic)(x) ? '' : errorText({ code, params: { field } });
       },
-      // rate confere um valor por hora digitado (custo ou valor cobrado): só dígitos e separador, do piso ao teto do
-      // servidor. Fora da faixa o erro é o texto do código da API daquele campo, que diz os dois limites.
+      // rate confere um valor por hora digitado (o custo da pessoa ou o valor do cliente): só dígitos e separador, do
+      // piso ao teto do servidor. Fora da faixa o erro é o texto do código da API daquele campo, que diz os dois limites.
       rate: (v, field) => {
         if (text(v) === '') return '';
         const cents = toCents(v, { strict: true });
         if (cents === null) return msg('field_invalid', field);
         const min = limits.min_rate_cents || 1000;
         if (cents >= min && cents <= (limits.max_cents || 100000000)) return '';
-        const code = field === 'bill_rate_cents' ? 'project.invalid_bill_rate' : 'allocation.invalid_rate';
+        const code = field === 'hourly_rate_cents' ? 'customer.invalid_hourly_rate' : 'allocation.invalid_rate';
         return errorText({ code, params: { field } });
+      },
+      // extra confere o acréscimo de um projeto sobre a cobrança do cliente (Decisão 21): só dígitos e separador, de
+      // zero ao teto do servidor. Vazio é sem acréscimo.
+      extra: (v, field) => {
+        if (text(v) === '') return '';
+        const cents = toCents(v, { strict: true });
+        if (cents === null) return msg('field_invalid', field);
+        return cents <= (limits.max_cents || 100000000) ? '' : errorText({ code: 'project.invalid_bill_extra', params: { field } });
       },
       // integer(min, max, code) confere um número inteiro, escrito só com dígitos. Com code, o erro é o texto desse
       // código da API (que diz a faixa); sem ele é o "está inválido" genérico.
@@ -695,7 +703,40 @@
     },
   };
 
-  window.WTT = { can, t, lang, priorityClass, statusClass, hasDeadlineDate, deadlineInfo, errorText, api, ApiError, form, rules, limits, fmt, payments, toCents, copyText, notInformed, weekdays, priorities, taskStatuses, markdown, routine, sprintOptions, sprintChoices, workModes, currencies, countries, boot: window.BOOT || {} };
+  // billing é a cobrança de um projeto vista da tela, igual no formulário de novo projeto e nas configurações: a cobrança
+  // mora no cliente (Decisão 21), o valor por hora ou o contrato, e o projeto só soma um acréscimo, por hora no cliente
+  // por hora e por mês no mensal. c é o cliente como vem de GET /customers.
+  const billing = {
+    monthly: (c) => !!c && c.billing_mode === 'monthly',
+    // withoutRate é o cliente por hora antigo, ainda sem valor: o servidor recusa um projeto dele até o valor existir.
+    withoutRate: (c) => !!c && c.billing_mode !== 'monthly' && (c.hourly_rate_cents === null || c.hourly_rate_cents === undefined),
+    // customer é a cobrança do cliente numa linha: "Por hora · R$ 150,00/h" ou "Contrato mensal · R$ 5.000,00/mês".
+    customer(c) {
+      if (!c) return '';
+      if (billing.monthly(c)) return t('project.billing.customer_monthly', { fee: fmt.money(c.monthly_fee_cents) });
+      if (billing.withoutRate(c)) return t('project.billing.customer_no_rate');
+      return t('project.billing.customer_hourly', { rate: fmt.money(c.hourly_rate_cents) });
+    },
+    // extraLabel é o rótulo do campo do acréscimo: por hora ou por mês, conforme o cliente.
+    extraLabel(c) {
+      return t(billing.monthly(c) ? 'project.billing.extra_monthly' : 'project.billing.extra_hourly', { unit: fmt.moneyUnit() });
+    },
+    // total é o que o projeto cobra com o acréscimo digitado, numa frase: "Este projeto cobra R$ 170,00 por hora." ou
+    // "Soma R$ 800,00 por mês à mensalidade de R$ 5.000,00.". Vazio sem cliente, sem valor ou com o texto inválido.
+    total(c, extraText) {
+      if (!c || billing.withoutRate(c)) return '';
+      const raw = String(extraText === null || extraText === undefined ? '' : extraText).trim();
+      const extra = raw === '' ? 0 : toCents(raw, { strict: true });
+      if (extra === null || extra < 0) return '';
+      if (billing.monthly(c)) {
+        if (extra === 0) return t('project.billing.total_monthly_plain');
+        return t('project.billing.total_monthly', { extra: fmt.money(extra), fee: fmt.money(c.monthly_fee_cents) });
+      }
+      return t('project.billing.total_hourly', { rate: fmt.money(c.hourly_rate_cents + extra) });
+    },
+  };
+
+  window.WTT = { can, t, lang, priorityClass, statusClass, hasDeadlineDate, deadlineInfo, errorText, api, ApiError, form, rules, limits, fmt, payments, billing, toCents, copyText, notInformed, weekdays, priorities, taskStatuses, markdown, routine, sprintOptions, sprintChoices, workModes, currencies, countries, boot: window.BOOT || {} };
 
   // Onde flash() deixa a mensagem para a página seguinte.
   const flashKey = 'wtt:flash';

@@ -12,14 +12,23 @@ type CustomerRef struct {
 	Name string    `json:"name"`
 }
 
-// Billing é o lado comercial do projeto: quem contratou e quanto paga por hora.
-// Fica fora de Project porque só admins leem e alteram.
+// Billing é o lado comercial do projeto: quem contratou e quanto paga. A cobrança mora no cliente (Decisão 21); o
+// projeto só guarda o acréscimo. Fica fora de Project porque só admins leem e alteram.
 type Billing struct {
-	Customer      *CustomerRef `json:"customer"`
-	BillRateCents *int         `json:"bill_rate_cents"`
-	// CustomerBillingMode é o modo de cobrança do cliente (hourly ou monthly), ou nil no projeto interno. O projeto de
-	// cliente mensal não tem valor cobrado por hora (BillRateCents é nil).
+	Customer *CustomerRef `json:"customer"`
+	// BillRateCents é o valor cobrado por hora, calculado: o valor por hora do cliente mais o acréscimo do projeto
+	// (customer.BillRate). É nil no projeto interno e no de cliente mensal (o contrato é um valor por mês).
+	BillRateCents *int `json:"bill_rate_cents"`
+	// BillExtraCents é o acréscimo do projeto: por hora com cliente por hora, por mês com cliente mensal; zero sem
+	// acréscimo e no projeto interno.
+	BillExtraCents int `json:"bill_extra_cents"`
+	// CustomerBillingMode é o modo de cobrança do cliente (hourly ou monthly), ou nil no projeto interno.
 	CustomerBillingMode *string `json:"customer_billing_mode"`
+	// CustomerHourlyRateCents e CustomerMonthlyFeeCents são a cobrança do cliente (o valor por hora ou a mensalidade),
+	// para a tela mostrar de onde vem o valor cobrado sem a lista de clientes, que só o dono recebe. Nulos no projeto
+	// interno e no modo que não é o do cliente.
+	CustomerHourlyRateCents *int `json:"customer_hourly_rate_cents"`
+	CustomerMonthlyFeeCents *int `json:"customer_monthly_fee_cents"`
 }
 
 // Routine são os horários que o projeto combina: a daily e a weekly do time e a

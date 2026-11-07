@@ -24,8 +24,8 @@ func TestService_MonthlyCustomerProject_ClockInAndOut(t *testing.T) {
 		SetBillingMode("monthly").SetMonthlyFeeCents(630000).SetContractStart("2026-11-01").SaveX(ctx).ID.String()
 	proj, _ := projSvc.Create(org.ID.String(), "Contrato", "", 0, project.Routine{})
 	projectID := proj.ID.String()
-	if _, err := projSvc.SetBilling(projectID, &customerID, nil); err != nil {
-		t.Fatalf("set billing without a rate: %v", err)
+	if _, err := projSvc.SetBilling(projectID, &customerID, 0); err != nil {
+		t.Fatalf("set billing to the monthly customer: %v", err)
 	}
 	tm, _ := teamSvc.Create(projectID, "Time")
 	join(t, memberSvc, tm, member.ID.String())

@@ -12,6 +12,7 @@ import (
 	entperson "working-time-tracker/ent/person"
 	entproject "working-time-tracker/ent/project"
 	"working-time-tracker/internal/database"
+	"working-time-tracker/internal/domain/customer"
 )
 
 type Store struct {
@@ -108,7 +109,8 @@ func (s *Store) ListByPerson(personID uuid.UUID) ([]Allocation, error) {
 }
 
 // RateSet são os valores por hora de uma pessoa num projeto: o que ela recebe e o que
-// o cliente paga (nil em projeto sem valor cobrado). Found é false quando a pessoa não
+// o cliente paga (o valor do cliente mais o acréscimo do projeto; nil em projeto interno
+// e no de cliente mensal). Found é false quando a pessoa não
 // tem vínculo com o projeto. Owner marca o dono da organização: para ele o valor pago é
 // zero, porque o que ele tira do projeto é a margem, e Found vale sempre.
 type RateSet struct {
@@ -133,7 +135,7 @@ func (s *Store) Rates(personID, projectID uuid.UUID) (RateSet, error) {
 	}
 	a, err := s.client.Allocation.Query().
 		Where(entalloc.ProjectIDEQ(projectID), entalloc.PersonIDEQ(personID)).
-		WithProject().
+		WithProject(func(q *ent.ProjectQuery) { q.WithCustomer() }).
 		Only(ctx)
 	if ent.IsNotFound(err) {
 		return RateSet{}, nil
@@ -141,7 +143,13 @@ func (s *Store) Rates(personID, projectID uuid.UUID) (RateSet, error) {
 	if err != nil {
 		return RateSet{}, err
 	}
-	return RateSet{PayRateCents: a.PayRateCents, BillRateCents: a.Edges.Project.BillRateCents, Found: true, Owner: owner}, nil
+	// O valor cobrado vem do cliente, mais o acréscimo do projeto (Decisão 21).
+	p := a.Edges.Project
+	var bill *int
+	if c := p.Edges.Customer; c != nil {
+		bill = customer.BillRate(c.BillingMode, c.HourlyRateCents, p.BillExtraCents)
+	}
+	return RateSet{PayRateCents: a.PayRateCents, BillRateCents: bill, Found: true, Owner: owner}, nil
 }
 
 // IsOwner diz se a pessoa é o dono da organização.

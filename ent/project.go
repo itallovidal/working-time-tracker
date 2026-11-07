@@ -44,8 +44,8 @@ type Project struct {
 	CustomerMeetingTime *string `json:"customer_meeting_time,omitempty"`
 	// CustomerID holds the value of the "customer_id" field.
 	CustomerID *uuid.UUID `json:"customer_id,omitempty"`
-	// BillRateCents holds the value of the "bill_rate_cents" field.
-	BillRateCents *int `json:"bill_rate_cents,omitempty"`
+	// BillExtraCents holds the value of the "bill_extra_cents" field.
+	BillExtraCents int `json:"bill_extra_cents,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -171,7 +171,7 @@ func (*Project) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case project.FieldCustomerID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case project.FieldSprintDurationDays, project.FieldBillRateCents:
+		case project.FieldSprintDurationDays, project.FieldBillExtraCents:
 			values[i] = new(sql.NullInt64)
 		case project.FieldName, project.FieldDescription, project.FieldGithubRepoURL, project.FieldGitlabRepoURL, project.FieldDailyTime, project.FieldWeeklySyncDay, project.FieldWeeklySyncTime, project.FieldCustomerMeetingDay, project.FieldCustomerMeetingTime:
 			values[i] = new(sql.NullString)
@@ -280,12 +280,11 @@ func (_m *Project) assignValues(columns []string, values []any) error {
 				_m.CustomerID = new(uuid.UUID)
 				*_m.CustomerID = *value.S.(*uuid.UUID)
 			}
-		case project.FieldBillRateCents:
+		case project.FieldBillExtraCents:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field bill_rate_cents", values[i])
+				return fmt.Errorf("unexpected type %T for field bill_extra_cents", values[i])
 			} else if value.Valid {
-				_m.BillRateCents = new(int)
-				*_m.BillRateCents = int(value.Int64)
+				_m.BillExtraCents = int(value.Int64)
 			}
 		case project.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -426,10 +425,8 @@ func (_m *Project) String() string {
 		builder.WriteString(fmt.Sprintf("%v", *v))
 	}
 	builder.WriteString(", ")
-	if v := _m.BillRateCents; v != nil {
-		builder.WriteString("bill_rate_cents=")
-		builder.WriteString(fmt.Sprintf("%v", *v))
-	}
+	builder.WriteString("bill_extra_cents=")
+	builder.WriteString(fmt.Sprintf("%v", _m.BillExtraCents))
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))

@@ -20,58 +20,22 @@
           {{template "field_error" "description"}}
         </div>
       </fieldset>
-      {{/* O cliente e o valor cobrado são dinheiro do dono: o admin cria só projeto interno, e o dono converte. */}}
+      {{/* O cliente e o acréscimo são dinheiro do dono: o admin cria só projeto interno, e o dono converte. */}}
       {{if .IsOwner}}
       <fieldset class="form-group">
         <legend>{{.T "project.groups.billing"}}</legend>
-        <div class="fields">
-          <div class="field">
-            <label for="project-customer">{{.T "org.projects.customer"}}</label>
-            <select id="project-customer" data-field="customer_id" x-model="draft.customer_id" @change="customerChanged()"
-                    :aria-invalid="fieldErrors.customer_id ? 'true' : 'false'">
-              <option value="">{{.T "org.projects.internal"}}</option>
-              <template x-for="c in customers || []" :key="c.id">
-                <option :value="c.id" x-text="customerOption(c)"></option>
-              </template>
-            </select>
-            {{template "field_error" "customer_id"}}
-          </div>
-          {{if .Me.OrganizationSolo}}
-          {{/* No modo solo a cobrança se escolhe aqui, mas o modo e o contrato ficam no cliente e valem para todos os
-               projetos dele: o rádio começa no modo do cliente, e o do outro modo só se escolhe enquanto o cliente não
-               tem projetos (depois disso o servidor trava o modo, customer.mode_locked). */}}
-          <div class="field" role="radiogroup" aria-labelledby="project-billing-label" x-cloak x-show="draft.customer_id">
-            <span class="field-label" id="project-billing-label">{{.T "customer.billing.title"}}</span>
-            <label class="toggle"><input type="radio" name="project-billing" value="hourly" data-field="billing_mode" x-model="billing.billing_mode"
-                   :disabled="customerLocked() && billingMode() !== 'hourly'" @change="modeSwitched()"> {{.T "customer.billing.hourly"}}</label>
-            <label class="toggle"><input type="radio" name="project-billing" value="monthly" x-model="billing.billing_mode"
-                   :disabled="customerLocked() && billingMode() !== 'monthly'" @change="modeSwitched()"> {{.T "customer.billing.monthly_contract"}}</label>
-            {{template "field_error" "billing_mode"}}
-            <span class="hint" x-show="customerLocked()">{{.T "customer.billing.mode_locked"}}</span>
-            <span class="hint" x-show="!customerLocked()">{{.T "customer.billing.project_mode_hint"}}</span>
-          </div>
-          {{else}}
-          {{template "project_rate_field" .}}
-          {{end}}
+        <div class="field">
+          <label for="project-customer">{{.T "org.projects.customer"}}</label>
+          <select id="project-customer" data-field="customer_id" x-model="draft.customer_id" @change="customerChanged()"
+                  :aria-invalid="fieldErrors.customer_id ? 'true' : 'false'">
+            <option value="">{{.T "org.projects.internal"}}</option>
+            <template x-for="c in customers || []" :key="c.id">
+              <option :value="c.id" x-text="customerOption(c)"></option>
+            </template>
+          </select>
+          {{template "field_error" "customer_id"}}
         </div>
-        {{if .Me.OrganizationSolo}}
-        {{template "project_rate_field" .}}
-        {{/* O cliente já é mensal: o contrato dele vale para este projeto e se edita em Clientes. */}}
-        <div class="stack" x-cloak x-show="monthlyCustomer() && !modeChanged()">
-          <dl class="facts">
-            <div class="fact"><dt>{{.T "customer.billing.monthly_contract"}}</dt><dd><span x-text="customerOf() ? billingLabel(customerOf()) : ''"></span><br><span class="muted small" x-text="customerOf() ? billingTerms(customerOf()) : ''"></span></dd></div>
-          </dl>
-          <a class="small" href="/orgs/{{.OrgID}}/customers">{{.T "customer.billing.project_contract_edit"}}</a>
-        </div>
-        {{/* O cliente ainda não tem projetos e muda de modo aqui: para mensal, o contrato é preenchido agora e gravado
-             no cliente antes de o projeto ser criado (create, em pages/org.js). */}}
-        <div class="stack" x-cloak x-show="modeChanged() && billing.billing_mode === 'monthly'">
-          <p class="muted small" x-text="$t('customer.billing.project_contract_new', { name: customerOf() ? customerOf().name : '' })"></p>
-          {{template "customer_contract" (dict "Data" . "Model" "billing" "Id" "project")}}
-        </div>
-        <p class="muted small" x-cloak x-show="modeChanged() && billing.billing_mode === 'hourly'" x-text="$t('customer.billing.project_to_hourly', { name: customerOf() ? customerOf().name : '' })"></p>
-        {{end}}
-        <p class="muted small" x-cloak x-show="monthlyCustomer()" x-text="$t('customer.billing.project_monthly_note')"></p>
+        {{template "project_billing_fields" (dict "Data" . "Id" "project" "Customer" "customerOf()")}}
         {{template "project_customer_meeting" .}}
         <span class="hint">{{if .Me.OrganizationSolo}}{{.T "org.projects.admins_only_hint_solo"}}{{else}}{{.T "org.projects.admins_only_hint"}}{{end}}</span>
       </fieldset>
@@ -100,15 +64,32 @@
   {{end}}
 {{end}}
 
-{{/* project_rate_field é o valor cobrado por hora do projeto novo. Projeto interno não tem quem pague, e o cliente
-     mensal paga o contrato, não as horas: o campo só aparece com um cliente cobrado por hora (hasRate). Ele vem
-     preenchido com o valor padrão do cliente (o projeto guarda o seu). */}}
-{{define "project_rate_field"}}
-<div class="field" x-show="hasRate()">
-  <label for="project-bill-rate"><span x-text="$t('project.fields.bill_rate', { unit: WTT.fmt.moneyUnit() })"></span></label>
-  <input id="project-bill-rate" type="text" inputmode="decimal" class="num" data-field="bill_rate_cents" x-model="draft.rate"
-         @input="rateTouched = true; clearField('bill_rate_cents')" :aria-invalid="fieldErrors.bill_rate_cents ? 'true' : 'false'">
-  {{template "field_error" "bill_rate_cents"}}
-  <span class="hint" x-cloak x-show="rateFromDefault()" x-text="$t('customer.billing.project_rate_default')"></span>
+{{/* project_billing_fields é a cobrança de um projeto com cliente, no formulário de novo projeto e nas configurações. A
+   cobrança mora no cliente (Decisão 21): aqui ela aparece só para leitura, com o link para Clientes, e o projeto só
+   soma um acréscimo, por hora no cliente por hora e por mês no mensal, com o total ao vivo. O cliente por hora antigo,
+   sem valor, mostra o aviso. O componente que inclui traz draft.extra, billing (WTT.billing) e o mixin WTT.form.
+   Parâmetros: Data (a página), Id (o prefixo do id do campo) e Customer (a expressão do cliente escolhido). */}}
+{{define "project_billing_fields"}}
+{{$id := .Id}}{{$c := .Customer}}
+{{with .Data}}
+<div class="stack" x-cloak x-show="{{$c}}">
+  <dl class="facts">
+    <div class="fact">
+      <dt>{{.T "project.billing.customer_terms"}}</dt>
+      <dd><span x-text="billing.customer({{$c}})"></span> · <a href="/orgs/{{.OrgID}}/customers">{{.T "project.billing.edit_in_customers"}}</a></dd>
+    </div>
+  </dl>
+  <p class="form-error" x-show="billing.withoutRate({{$c}})">{{.T "project.billing.customer_without_rate"}}</p>
+  <div class="field" x-show="!billing.withoutRate({{$c}})">
+    <label for="{{$id}}-bill-extra">
+      <span x-text="billing.extraLabel({{$c}})"></span> <span class="optional">{{.T "common.optional_label"}}</span>
+    </label>
+    <input id="{{$id}}-bill-extra" type="text" inputmode="decimal" class="num" placeholder="0" data-field="bill_extra_cents" x-model="draft.extra"
+           @input="clearField('bill_extra_cents')" :aria-invalid="fieldErrors.bill_extra_cents ? 'true' : 'false'">
+    {{template "field_error" "bill_extra_cents"}}
+    <span class="hint" x-text="billing.monthly({{$c}}) ? $t('project.billing.extra_monthly_hint') : $t('project.billing.extra_hourly_hint')"></span>
+    <span class="hint num" x-text="billing.total({{$c}}, draft.extra)"></span>
+  </div>
 </div>
+{{end}}
 {{end}}

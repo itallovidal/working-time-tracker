@@ -39,8 +39,8 @@ const (
 	FieldCustomerMeetingTime = "customer_meeting_time"
 	// FieldCustomerID holds the string denoting the customer_id field in the database.
 	FieldCustomerID = "customer_id"
-	// FieldBillRateCents holds the string denoting the bill_rate_cents field in the database.
-	FieldBillRateCents = "bill_rate_cents"
+	// FieldBillExtraCents holds the string denoting the bill_extra_cents field in the database.
+	FieldBillExtraCents = "bill_extra_cents"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// EdgeOrganization holds the string denoting the organization edge name in mutations.
@@ -143,7 +143,7 @@ var Columns = []string{
 	FieldCustomerMeetingDay,
 	FieldCustomerMeetingTime,
 	FieldCustomerID,
-	FieldBillRateCents,
+	FieldBillExtraCents,
 	FieldCreatedAt,
 }
 
@@ -160,8 +160,10 @@ func ValidColumn(column string) bool {
 var (
 	// DefaultSprintDurationDays holds the default value on creation for the "sprint_duration_days" field.
 	DefaultSprintDurationDays int
-	// BillRateCentsValidator is a validator for the "bill_rate_cents" field. It is called by the builders before save.
-	BillRateCentsValidator func(int) error
+	// DefaultBillExtraCents holds the default value on creation for the "bill_extra_cents" field.
+	DefaultBillExtraCents int
+	// BillExtraCentsValidator is a validator for the "bill_extra_cents" field. It is called by the builders before save.
+	BillExtraCentsValidator func(int) error
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 	// DefaultID holds the default value on creation for the "id" field.
@@ -236,9 +238,9 @@ func ByCustomerID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCustomerID, opts...).ToFunc()
 }
 
-// ByBillRateCents orders the results by the bill_rate_cents field.
-func ByBillRateCents(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldBillRateCents, opts...).ToFunc()
+// ByBillExtraCents orders the results by the bill_extra_cents field.
+func ByBillExtraCents(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBillExtraCents, opts...).ToFunc()
 }
 
 // ByCreatedAt orders the results by the created_at field.

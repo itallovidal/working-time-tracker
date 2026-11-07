@@ -169,24 +169,21 @@ func meetingNeedsCustomer(r Routine, hasCustomer bool) error {
 	return nil
 }
 
-// checkBillRate confere o valor cobrado contra o cliente. customerMode é o modo de cobrança do cliente do projeto
-// (customer.BillingHourly ou customer.BillingMonthly), ou "" no projeto interno:
-//   - cliente por hora: o valor é obrigatório;
-//   - cliente mensal: o contrato é um valor por mês, então o projeto não tem valor por hora e informar um é recusado;
-//   - sem cliente: o valor é recusado (projeto interno é investimento, só existe o custo).
-//
-// Quando vem, o valor tem o piso de validate.MinRateCents.
-func checkBillRate(billRateCents *int, customerMode string) error {
-	hasCustomer := customerMode != ""
+// checkBillExtra confere o acréscimo do projeto contra o cliente dele (Decisão 21: a cobrança mora no cliente, e o
+// projeto só soma um acréscimo). cb é o cliente do projeto, ou nil no projeto interno:
+//   - sem cliente: o acréscimo só pode ser zero, porque o projeto interno não é cobrado;
+//   - cliente por hora ainda sem valor por hora (um cliente antigo): o projeto não teria o que cobrar, e o cliente é
+//     recusado até o dono informar o valor em Clientes;
+//   - com cliente: o acréscimo vai de zero ao teto de um valor em dinheiro. É por hora no cliente por hora (soma ao
+//     valor dele) e por mês no mensal (soma à mensalidade).
+func checkBillExtra(extraCents int, cb *CustomerBilling) error {
 	switch {
-	case billRateCents == nil && hasCustomer && customerMode != customer.BillingMonthly:
-		return ErrBillRateRequired.With("field", "bill_rate_cents")
-	case billRateCents != nil && !hasCustomer:
-		return ErrBillRateNeedsCustomer.With("field", "bill_rate_cents")
-	case billRateCents != nil && customerMode == customer.BillingMonthly:
-		return ErrBillRateNotAllowed.With("field", "bill_rate_cents")
-	case billRateCents != nil && validate.Rate("bill_rate_cents", *billRateCents) != nil:
-		return ErrInvalidBillRate.With("field", "bill_rate_cents")
+	case cb == nil && extraCents != 0:
+		return ErrBillExtraNeedsCustomer.With("field", "bill_extra_cents")
+	case cb != nil && cb.Mode == customer.BillingHourly && !cb.HasRate:
+		return ErrCustomerWithoutRate.With("field", "customer_id")
+	case extraCents < 0 || extraCents > validate.MaxCents:
+		return ErrInvalidBillExtra.With("field", "bill_extra_cents")
 	}
 	return nil
 }
@@ -200,9 +197,9 @@ type CreateInput struct {
 	Routine            Routine
 	// CustomerID é o cliente do projeto novo (vazio: projeto interno). A reunião com o cliente só vale com ele.
 	CustomerID string
-	// BillRateCents é o valor cobrado por hora: obrigatório com cliente por hora, recusado sem cliente e recusado
-	// com cliente mensal (o contrato é um valor por mês).
-	BillRateCents *int
+	// BillExtraCents é o acréscimo do projeto sobre a cobrança do cliente: por hora com cliente por hora, por mês com
+	// cliente mensal. Zero é sem acréscimo, e é o único valor aceito sem cliente.
+	BillExtraCents int
 }
 
 // Create cria o projeto sem cliente (ver CreateWithCustomer). Sprint zerada vira 14 dias. Daily, weekly e
@@ -237,20 +234,20 @@ func (s *Service) CreateWithCustomer(orgID string, in CreateInput) (*Project, er
 		return nil, err
 	}
 	var customerUID *uuid.UUID
-	customerMode := ""
+	var cb *CustomerBilling
 	if cid := strings.TrimSpace(in.CustomerID); cid != "" {
 		uid, err := uuid.Parse(cid)
 		if err != nil {
 			return nil, ErrCustomerNotFound.With("field", "customer_id")
 		}
-		mode, ok, err := s.store.CustomerBillingMode(uid, orgUID)
+		found, ok, err := s.store.CustomerBillingOf(uid, orgUID)
 		if err != nil {
 			return nil, err
 		}
 		if !ok {
 			return nil, ErrCustomerNotFound.With("field", "customer_id")
 		}
-		customerUID, customerMode = &uid, mode
+		customerUID, cb = &uid, &found
 	}
 	if err := meetingNeedsCustomer(routine, customerUID != nil); err != nil {
 		return nil, err
@@ -271,10 +268,10 @@ func (s *Service) CreateWithCustomer(orgID string, in CreateInput) (*Project, er
 	if project.CustomerMeetingDay, project.CustomerMeetingTime, err = mergeSlot(nil, nil, routine.CustomerMeetingDay, routine.CustomerMeetingTime, ErrMeetingTimeWithoutDay, "customer_meeting_time"); err != nil {
 		return nil, err
 	}
-	if err := checkBillRate(in.BillRateCents, customerMode); err != nil {
+	if err := checkBillExtra(in.BillExtraCents, cb); err != nil {
 		return nil, err
 	}
-	if err := s.store.Create(project, in.BillRateCents); err != nil {
+	if err := s.store.Create(project, in.BillExtraCents); err != nil {
 		return nil, err
 	}
 	if customerUID != nil {
@@ -417,38 +414,37 @@ func (s *Service) checkCustomerChange(projectID uuid.UUID, next *uuid.UUID) erro
 	return nil
 }
 
-// SetBilling substitui o cliente e o valor cobrado do projeto. Os dois andam juntos e o valor segue o modo de cobrança
-// do cliente novo: com cliente por hora o valor é obrigatório, com cliente mensal é recusado
-// (ErrBillRateNotAllowed) e sem cliente é recusado. nil (ou cliente vazio) apaga o cliente: é assim que um projeto
-// volta a ser interno, e então o valor também vai embora.
-func (s *Service) SetBilling(projectID string, customerID *string, billRateCents *int) (*Billing, error) {
+// SetBilling substitui o cliente e o acréscimo do projeto. Os dois andam juntos, porque o acréscimo segue o modo de
+// cobrança do cliente novo (por hora ou por mês); o valor por hora e o contrato são do cliente (Decisão 21). nil (ou
+// cliente vazio) apaga o cliente: é assim que um projeto volta a ser interno, e então o acréscimo só pode ser zero.
+func (s *Service) SetBilling(projectID string, customerID *string, billExtraCents int) (*Billing, error) {
 	uid, err := uuid.Parse(projectID)
 	if err != nil {
 		return nil, database.ErrNotFound
 	}
 	var customerUID *uuid.UUID
-	customerMode := ""
+	var cb *CustomerBilling
 	if customerID != nil && strings.TrimSpace(*customerID) != "" {
 		cid, err := uuid.Parse(strings.TrimSpace(*customerID))
 		if err != nil {
 			return nil, ErrCustomerNotFound.With("field", "customer_id")
 		}
-		mode, ok, err := s.store.CustomerBillingModeOfProject(cid, uid)
+		found, ok, err := s.store.CustomerBillingOfProject(cid, uid)
 		if err != nil {
 			return nil, err
 		}
 		if !ok {
 			return nil, ErrCustomerNotFound.With("field", "customer_id")
 		}
-		customerUID, customerMode = &cid, mode
+		customerUID, cb = &cid, &found
 	}
-	if err := checkBillRate(billRateCents, customerMode); err != nil {
+	if err := checkBillExtra(billExtraCents, cb); err != nil {
 		return nil, err
 	}
 	if err := s.checkCustomerChange(uid, customerUID); err != nil {
 		return nil, err
 	}
-	if err := s.store.SetBilling(uid, customerUID, billRateCents); err != nil {
+	if err := s.store.SetBilling(uid, customerUID, billExtraCents); err != nil {
 		return nil, err
 	}
 	return s.store.Billing(uid)

@@ -139,17 +139,18 @@ func createEmptyProject(t *testing.T, e *echo.Echo, admin account, name string) 
 	return id
 }
 
-// setBilling dá ao projeto um cliente novo e o valor cobrado, como o dono: com cliente o valor é obrigatório e sem
-// cliente é recusado, então os dois vão juntos. Devolve o id do cliente. prj é o caminho da API do projeto.
+// setBilling dá ao projeto um cliente novo que paga cents por hora, como o dono: a cobrança mora no cliente
+// (Decisão 21), e o projeto fica sem acréscimo, cobrando o valor do cliente. Devolve o id do cliente. prj é o caminho
+// da API do projeto.
 func setBilling(t *testing.T, e *echo.Echo, owner account, prj string, cents int) string {
 	t.Helper()
-	body := fmt.Sprintf(`{"name":"Cliente %d"}`, cents)
+	body := fmt.Sprintf(`{"name":"Cliente %d","hourly_rate_cents":%d}`, cents, cents)
 	rec := do(e, "POST", "/api/orgs/"+owner.orgID+"/customers", body, owner.session)
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("create customer = %d: %s", rec.Code, rec.Body.String())
 	}
 	customerID := decode(t, rec)["id"].(string)
-	body = fmt.Sprintf(`{"customer_id":"%s","bill_rate_cents":%d}`, customerID, cents)
+	body = fmt.Sprintf(`{"customer_id":"%s"}`, customerID)
 	if rec := do(e, "PUT", prj+"/billing", body, owner.session); rec.Code != http.StatusOK {
 		t.Fatalf("set billing = %d: %s", rec.Code, rec.Body.String())
 	}
@@ -411,13 +412,13 @@ func TestRates_VisibilityByRole(t *testing.T) {
 	projectID := createProject(t, e, admin, "Projeto X")
 	prj := "/api/projects/" + projectID
 
-	rec := do(e, "POST", "/api/orgs/"+admin.orgID+"/customers", `{"name":"Empresa A","document":"11.222.333/0001-81"}`, admin.session)
+	rec := do(e, "POST", "/api/orgs/"+admin.orgID+"/customers", `{"name":"Empresa A","hourly_rate_cents":10000,"document":"11.222.333/0001-81"}`, admin.session)
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("create customer = %d: %s", rec.Code, rec.Body.String())
 	}
 	customerID := decode(t, rec)["id"].(string)
 
-	rec = do(e, "PUT", prj+"/billing", `{"customer_id":"`+customerID+`","bill_rate_cents":10000}`, admin.session)
+	rec = do(e, "PUT", prj+"/billing", `{"customer_id":"`+customerID+`"}`, admin.session)
 	if rec.Code != http.StatusOK || decode(t, rec)["bill_rate_cents"] != float64(10000) {
 		t.Fatalf("set billing = %d: %s", rec.Code, rec.Body.String())
 	}
@@ -430,9 +431,9 @@ func TestRates_VisibilityByRole(t *testing.T) {
 	// Rotas de admin.
 	forbidden := []struct{ method, path, body string }{
 		{"GET", prj + "/billing", ""},
-		{"PUT", prj + "/billing", `{"bill_rate_cents":1}`},
+		{"PUT", prj + "/billing", `{"bill_extra_cents":1}`},
 		{"GET", "/api/orgs/" + admin.orgID + "/customers", ""},
-		{"POST", "/api/orgs/" + admin.orgID + "/customers", `{"name":"X"}`},
+		{"POST", "/api/orgs/" + admin.orgID + "/customers", `{"name":"X","hourly_rate_cents":10000}`},
 		{"GET", "/api/customers/" + customerID, ""},
 		{"PATCH", "/api/customers/" + customerID, `{"name":"X"}`},
 		{"DELETE", "/api/customers/" + customerID, ""},
@@ -507,17 +508,17 @@ func TestRates_StayInOrganization(t *testing.T) {
 	b := signup(t, e, "Org B", "bia@b.com")
 	projectA := createProject(t, e, a, "Projeto A")
 	projectB := createProject(t, e, b, "Projeto B")
-	customerA := decode(t, do(e, "POST", "/api/orgs/"+a.orgID+"/customers", `{"name":"Empresa A"}`, a.session))["id"].(string)
+	customerA := decode(t, do(e, "POST", "/api/orgs/"+a.orgID+"/customers", `{"name":"Empresa A","hourly_rate_cents":10000}`, a.session))["id"].(string)
 	do(e, "PUT", "/api/projects/"+projectA+"/allocations/"+a.id, `{"pay_rate_cents":2000}`, a.session)
 
 	notFound := []struct{ method, path, body string }{
 		{"GET", "/api/orgs/" + a.orgID + "/customers", ""},
-		{"POST", "/api/orgs/" + a.orgID + "/customers", `{"name":"X"}`},
+		{"POST", "/api/orgs/" + a.orgID + "/customers", `{"name":"X","hourly_rate_cents":10000}`},
 		{"GET", "/api/customers/" + customerA, ""},
 		{"PATCH", "/api/customers/" + customerA, `{"name":"X"}`},
 		{"DELETE", "/api/customers/" + customerA, ""},
 		{"GET", "/api/projects/" + projectA + "/billing", ""},
-		{"PUT", "/api/projects/" + projectA + "/billing", `{"bill_rate_cents":1}`},
+		{"PUT", "/api/projects/" + projectA + "/billing", `{"bill_extra_cents":1}`},
 		{"GET", "/api/projects/" + projectA + "/allocations", ""},
 		{"PUT", "/api/projects/" + projectA + "/allocations/" + a.id, `{"pay_rate_cents":1}`},
 		{"GET", "/api/persons/" + a.id + "/allocations", ""},
@@ -531,7 +532,7 @@ func TestRates_StayInOrganization(t *testing.T) {
 	}
 
 	// O ID do cliente vem no corpo, então quem confere a organização é o service.
-	rec := do(e, "PUT", "/api/projects/"+projectB+"/billing", `{"customer_id":"`+customerA+`","bill_rate_cents":5000}`, b.session)
+	rec := do(e, "PUT", "/api/projects/"+projectB+"/billing", `{"customer_id":"`+customerA+`"}`, b.session)
 	if rec.Code != http.StatusBadRequest {
 		t.Errorf("billing with another organization's customer = %d, want 400", rec.Code)
 	}
@@ -1268,7 +1269,7 @@ func TestProjects_CustomerMeeting(t *testing.T) {
 	e := newServer(t)
 	admin := signup(t, e, "Org", "ana@test.com")
 	member := invite(t, e, admin, "bia@test.com", "member")
-	cust := decode(t, do(e, "POST", "/api/orgs/"+admin.orgID+"/customers", `{"name":"Empresa A"}`, admin.session))["id"].(string)
+	cust := decode(t, do(e, "POST", "/api/orgs/"+admin.orgID+"/customers", `{"name":"Empresa A","hourly_rate_cents":10000}`, admin.session))["id"].(string)
 
 	rec := do(e, "POST", "/api/orgs/"+admin.orgID+"/projects",
 		`{"name":"Alfa","customer_meeting_day":"Wednesday","customer_meeting_time":"10:30"}`, admin.session)
@@ -1276,7 +1277,7 @@ func TestProjects_CustomerMeeting(t *testing.T) {
 		t.Fatalf("create a meeting without a customer = %d: %s", rec.Code, rec.Body.String())
 	}
 	rec = do(e, "POST", "/api/orgs/"+admin.orgID+"/projects",
-		`{"name":"Alfa","customer_id":"`+cust+`","bill_rate_cents":10000,"customer_meeting_day":"Wednesday","customer_meeting_time":"10:30"}`, admin.session)
+		`{"name":"Alfa","customer_id":"`+cust+`","customer_meeting_day":"Wednesday","customer_meeting_time":"10:30"}`, admin.session)
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("create = %d: %s", rec.Code, rec.Body.String())
 	}
@@ -1285,7 +1286,7 @@ func TestProjects_CustomerMeeting(t *testing.T) {
 	if created["customer_meeting_day"] != "wednesday" || created["customer_meeting_time"] != "10:30" {
 		t.Errorf("created meeting = %v %v, want wednesday 10:30", created["customer_meeting_day"], created["customer_meeting_time"])
 	}
-	if rec := do(e, "PUT", "/api/projects/"+id+"/billing", `{"customer_id":"`+cust+`","bill_rate_cents":9000}`, admin.session); rec.Code != http.StatusOK {
+	if rec := do(e, "PUT", "/api/projects/"+id+"/billing", `{"customer_id":"`+cust+`"}`, admin.session); rec.Code != http.StatusOK {
 		t.Fatalf("set customer = %d: %s", rec.Code, rec.Body.String())
 	}
 
@@ -1318,7 +1319,7 @@ func TestProjects_CustomerMeeting(t *testing.T) {
 	}
 
 	// Sem cliente não há reunião: tirar o cliente apaga o dia e o horário.
-	if rec := do(e, "PUT", "/api/projects/"+id+"/billing", `{"customer_id":null,"bill_rate_cents":null}`, admin.session); rec.Code != http.StatusOK {
+	if rec := do(e, "PUT", "/api/projects/"+id+"/billing", `{"customer_id":null}`, admin.session); rec.Code != http.StatusOK {
 		t.Fatalf("clear customer = %d: %s", rec.Code, rec.Body.String())
 	}
 	read = decode(t, do(e, "GET", "/api/projects/"+id, "", admin.session))

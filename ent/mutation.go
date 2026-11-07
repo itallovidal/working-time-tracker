@@ -850,8 +850,8 @@ type CustomerMutation struct {
 	contact_email             *string
 	contact_phone             *string
 	billing_mode              *string
-	default_rate_cents        *int
-	adddefault_rate_cents     *int
+	hourly_rate_cents         *int
+	addhourly_rate_cents      *int
 	monthly_fee_cents         *int
 	addmonthly_fee_cents      *int
 	contract_start            *string
@@ -1325,74 +1325,74 @@ func (m *CustomerMutation) ResetBillingMode() {
 	m.billing_mode = nil
 }
 
-// SetDefaultRateCents sets the "default_rate_cents" field.
-func (m *CustomerMutation) SetDefaultRateCents(i int) {
-	m.default_rate_cents = &i
-	m.adddefault_rate_cents = nil
+// SetHourlyRateCents sets the "hourly_rate_cents" field.
+func (m *CustomerMutation) SetHourlyRateCents(i int) {
+	m.hourly_rate_cents = &i
+	m.addhourly_rate_cents = nil
 }
 
-// DefaultRateCents returns the value of the "default_rate_cents" field in the mutation.
-func (m *CustomerMutation) DefaultRateCents() (r int, exists bool) {
-	v := m.default_rate_cents
+// HourlyRateCents returns the value of the "hourly_rate_cents" field in the mutation.
+func (m *CustomerMutation) HourlyRateCents() (r int, exists bool) {
+	v := m.hourly_rate_cents
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldDefaultRateCents returns the old "default_rate_cents" field's value of the Customer entity.
+// OldHourlyRateCents returns the old "hourly_rate_cents" field's value of the Customer entity.
 // If the Customer object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *CustomerMutation) OldDefaultRateCents(ctx context.Context) (v *int, err error) {
+func (m *CustomerMutation) OldHourlyRateCents(ctx context.Context) (v *int, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldDefaultRateCents is only allowed on UpdateOne operations")
+		return v, errors.New("OldHourlyRateCents is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldDefaultRateCents requires an ID field in the mutation")
+		return v, errors.New("OldHourlyRateCents requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldDefaultRateCents: %w", err)
+		return v, fmt.Errorf("querying old value for OldHourlyRateCents: %w", err)
 	}
-	return oldValue.DefaultRateCents, nil
+	return oldValue.HourlyRateCents, nil
 }
 
-// AddDefaultRateCents adds i to the "default_rate_cents" field.
-func (m *CustomerMutation) AddDefaultRateCents(i int) {
-	if m.adddefault_rate_cents != nil {
-		*m.adddefault_rate_cents += i
+// AddHourlyRateCents adds i to the "hourly_rate_cents" field.
+func (m *CustomerMutation) AddHourlyRateCents(i int) {
+	if m.addhourly_rate_cents != nil {
+		*m.addhourly_rate_cents += i
 	} else {
-		m.adddefault_rate_cents = &i
+		m.addhourly_rate_cents = &i
 	}
 }
 
-// AddedDefaultRateCents returns the value that was added to the "default_rate_cents" field in this mutation.
-func (m *CustomerMutation) AddedDefaultRateCents() (r int, exists bool) {
-	v := m.adddefault_rate_cents
+// AddedHourlyRateCents returns the value that was added to the "hourly_rate_cents" field in this mutation.
+func (m *CustomerMutation) AddedHourlyRateCents() (r int, exists bool) {
+	v := m.addhourly_rate_cents
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// ClearDefaultRateCents clears the value of the "default_rate_cents" field.
-func (m *CustomerMutation) ClearDefaultRateCents() {
-	m.default_rate_cents = nil
-	m.adddefault_rate_cents = nil
-	m.clearedFields[customer.FieldDefaultRateCents] = struct{}{}
+// ClearHourlyRateCents clears the value of the "hourly_rate_cents" field.
+func (m *CustomerMutation) ClearHourlyRateCents() {
+	m.hourly_rate_cents = nil
+	m.addhourly_rate_cents = nil
+	m.clearedFields[customer.FieldHourlyRateCents] = struct{}{}
 }
 
-// DefaultRateCentsCleared returns if the "default_rate_cents" field was cleared in this mutation.
-func (m *CustomerMutation) DefaultRateCentsCleared() bool {
-	_, ok := m.clearedFields[customer.FieldDefaultRateCents]
+// HourlyRateCentsCleared returns if the "hourly_rate_cents" field was cleared in this mutation.
+func (m *CustomerMutation) HourlyRateCentsCleared() bool {
+	_, ok := m.clearedFields[customer.FieldHourlyRateCents]
 	return ok
 }
 
-// ResetDefaultRateCents resets all changes to the "default_rate_cents" field.
-func (m *CustomerMutation) ResetDefaultRateCents() {
-	m.default_rate_cents = nil
-	m.adddefault_rate_cents = nil
-	delete(m.clearedFields, customer.FieldDefaultRateCents)
+// ResetHourlyRateCents resets all changes to the "hourly_rate_cents" field.
+func (m *CustomerMutation) ResetHourlyRateCents() {
+	m.hourly_rate_cents = nil
+	m.addhourly_rate_cents = nil
+	delete(m.clearedFields, customer.FieldHourlyRateCents)
 }
 
 // SetMonthlyFeeCents sets the "monthly_fee_cents" field.
@@ -2073,8 +2073,8 @@ func (m *CustomerMutation) Fields() []string {
 	if m.billing_mode != nil {
 		fields = append(fields, customer.FieldBillingMode)
 	}
-	if m.default_rate_cents != nil {
-		fields = append(fields, customer.FieldDefaultRateCents)
+	if m.hourly_rate_cents != nil {
+		fields = append(fields, customer.FieldHourlyRateCents)
 	}
 	if m.monthly_fee_cents != nil {
 		fields = append(fields, customer.FieldMonthlyFeeCents)
@@ -2127,8 +2127,8 @@ func (m *CustomerMutation) Field(name string) (ent.Value, bool) {
 		return m.ContactPhone()
 	case customer.FieldBillingMode:
 		return m.BillingMode()
-	case customer.FieldDefaultRateCents:
-		return m.DefaultRateCents()
+	case customer.FieldHourlyRateCents:
+		return m.HourlyRateCents()
 	case customer.FieldMonthlyFeeCents:
 		return m.MonthlyFeeCents()
 	case customer.FieldContractStart:
@@ -2172,8 +2172,8 @@ func (m *CustomerMutation) OldField(ctx context.Context, name string) (ent.Value
 		return m.OldContactPhone(ctx)
 	case customer.FieldBillingMode:
 		return m.OldBillingMode(ctx)
-	case customer.FieldDefaultRateCents:
-		return m.OldDefaultRateCents(ctx)
+	case customer.FieldHourlyRateCents:
+		return m.OldHourlyRateCents(ctx)
 	case customer.FieldMonthlyFeeCents:
 		return m.OldMonthlyFeeCents(ctx)
 	case customer.FieldContractStart:
@@ -2257,12 +2257,12 @@ func (m *CustomerMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetBillingMode(v)
 		return nil
-	case customer.FieldDefaultRateCents:
+	case customer.FieldHourlyRateCents:
 		v, ok := value.(int)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetDefaultRateCents(v)
+		m.SetHourlyRateCents(v)
 		return nil
 	case customer.FieldMonthlyFeeCents:
 		v, ok := value.(int)
@@ -2335,8 +2335,8 @@ func (m *CustomerMutation) SetField(name string, value ent.Value) error {
 // this mutation.
 func (m *CustomerMutation) AddedFields() []string {
 	var fields []string
-	if m.adddefault_rate_cents != nil {
-		fields = append(fields, customer.FieldDefaultRateCents)
+	if m.addhourly_rate_cents != nil {
+		fields = append(fields, customer.FieldHourlyRateCents)
 	}
 	if m.addmonthly_fee_cents != nil {
 		fields = append(fields, customer.FieldMonthlyFeeCents)
@@ -2364,8 +2364,8 @@ func (m *CustomerMutation) AddedFields() []string {
 // was not set, or was not defined in the schema.
 func (m *CustomerMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
-	case customer.FieldDefaultRateCents:
-		return m.AddedDefaultRateCents()
+	case customer.FieldHourlyRateCents:
+		return m.AddedHourlyRateCents()
 	case customer.FieldMonthlyFeeCents:
 		return m.AddedMonthlyFeeCents()
 	case customer.FieldClosingDay:
@@ -2387,12 +2387,12 @@ func (m *CustomerMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *CustomerMutation) AddField(name string, value ent.Value) error {
 	switch name {
-	case customer.FieldDefaultRateCents:
+	case customer.FieldHourlyRateCents:
 		v, ok := value.(int)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.AddDefaultRateCents(v)
+		m.AddHourlyRateCents(v)
 		return nil
 	case customer.FieldMonthlyFeeCents:
 		v, ok := value.(int)
@@ -2456,8 +2456,8 @@ func (m *CustomerMutation) ClearedFields() []string {
 	if m.FieldCleared(customer.FieldContactPhone) {
 		fields = append(fields, customer.FieldContactPhone)
 	}
-	if m.FieldCleared(customer.FieldDefaultRateCents) {
-		fields = append(fields, customer.FieldDefaultRateCents)
+	if m.FieldCleared(customer.FieldHourlyRateCents) {
+		fields = append(fields, customer.FieldHourlyRateCents)
 	}
 	if m.FieldCleared(customer.FieldMonthlyFeeCents) {
 		fields = append(fields, customer.FieldMonthlyFeeCents)
@@ -2494,8 +2494,8 @@ func (m *CustomerMutation) ClearField(name string) error {
 	case customer.FieldContactPhone:
 		m.ClearContactPhone()
 		return nil
-	case customer.FieldDefaultRateCents:
-		m.ClearDefaultRateCents()
+	case customer.FieldHourlyRateCents:
+		m.ClearHourlyRateCents()
 		return nil
 	case customer.FieldMonthlyFeeCents:
 		m.ClearMonthlyFeeCents()
@@ -2538,8 +2538,8 @@ func (m *CustomerMutation) ResetField(name string) error {
 	case customer.FieldBillingMode:
 		m.ResetBillingMode()
 		return nil
-	case customer.FieldDefaultRateCents:
-		m.ResetDefaultRateCents()
+	case customer.FieldHourlyRateCents:
+		m.ResetHourlyRateCents()
 		return nil
 	case customer.FieldMonthlyFeeCents:
 		m.ResetMonthlyFeeCents()
@@ -11821,8 +11821,8 @@ type ProjectMutation struct {
 	weekly_sync_time        *string
 	customer_meeting_day    *string
 	customer_meeting_time   *string
-	bill_rate_cents         *int
-	addbill_rate_cents      *int
+	bill_extra_cents        *int
+	addbill_extra_cents     *int
 	created_at              *time.Time
 	clearedFields           map[string]struct{}
 	organization            *uuid.UUID
@@ -12528,74 +12528,60 @@ func (m *ProjectMutation) ResetCustomerID() {
 	delete(m.clearedFields, project.FieldCustomerID)
 }
 
-// SetBillRateCents sets the "bill_rate_cents" field.
-func (m *ProjectMutation) SetBillRateCents(i int) {
-	m.bill_rate_cents = &i
-	m.addbill_rate_cents = nil
+// SetBillExtraCents sets the "bill_extra_cents" field.
+func (m *ProjectMutation) SetBillExtraCents(i int) {
+	m.bill_extra_cents = &i
+	m.addbill_extra_cents = nil
 }
 
-// BillRateCents returns the value of the "bill_rate_cents" field in the mutation.
-func (m *ProjectMutation) BillRateCents() (r int, exists bool) {
-	v := m.bill_rate_cents
+// BillExtraCents returns the value of the "bill_extra_cents" field in the mutation.
+func (m *ProjectMutation) BillExtraCents() (r int, exists bool) {
+	v := m.bill_extra_cents
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldBillRateCents returns the old "bill_rate_cents" field's value of the Project entity.
+// OldBillExtraCents returns the old "bill_extra_cents" field's value of the Project entity.
 // If the Project object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ProjectMutation) OldBillRateCents(ctx context.Context) (v *int, err error) {
+func (m *ProjectMutation) OldBillExtraCents(ctx context.Context) (v int, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldBillRateCents is only allowed on UpdateOne operations")
+		return v, errors.New("OldBillExtraCents is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldBillRateCents requires an ID field in the mutation")
+		return v, errors.New("OldBillExtraCents requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldBillRateCents: %w", err)
+		return v, fmt.Errorf("querying old value for OldBillExtraCents: %w", err)
 	}
-	return oldValue.BillRateCents, nil
+	return oldValue.BillExtraCents, nil
 }
 
-// AddBillRateCents adds i to the "bill_rate_cents" field.
-func (m *ProjectMutation) AddBillRateCents(i int) {
-	if m.addbill_rate_cents != nil {
-		*m.addbill_rate_cents += i
+// AddBillExtraCents adds i to the "bill_extra_cents" field.
+func (m *ProjectMutation) AddBillExtraCents(i int) {
+	if m.addbill_extra_cents != nil {
+		*m.addbill_extra_cents += i
 	} else {
-		m.addbill_rate_cents = &i
+		m.addbill_extra_cents = &i
 	}
 }
 
-// AddedBillRateCents returns the value that was added to the "bill_rate_cents" field in this mutation.
-func (m *ProjectMutation) AddedBillRateCents() (r int, exists bool) {
-	v := m.addbill_rate_cents
+// AddedBillExtraCents returns the value that was added to the "bill_extra_cents" field in this mutation.
+func (m *ProjectMutation) AddedBillExtraCents() (r int, exists bool) {
+	v := m.addbill_extra_cents
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// ClearBillRateCents clears the value of the "bill_rate_cents" field.
-func (m *ProjectMutation) ClearBillRateCents() {
-	m.bill_rate_cents = nil
-	m.addbill_rate_cents = nil
-	m.clearedFields[project.FieldBillRateCents] = struct{}{}
-}
-
-// BillRateCentsCleared returns if the "bill_rate_cents" field was cleared in this mutation.
-func (m *ProjectMutation) BillRateCentsCleared() bool {
-	_, ok := m.clearedFields[project.FieldBillRateCents]
-	return ok
-}
-
-// ResetBillRateCents resets all changes to the "bill_rate_cents" field.
-func (m *ProjectMutation) ResetBillRateCents() {
-	m.bill_rate_cents = nil
-	m.addbill_rate_cents = nil
-	delete(m.clearedFields, project.FieldBillRateCents)
+// ResetBillExtraCents resets all changes to the "bill_extra_cents" field.
+func (m *ProjectMutation) ResetBillExtraCents() {
+	m.bill_extra_cents = nil
+	m.addbill_extra_cents = nil
 }
 
 // SetCreatedAt sets the "created_at" field.
@@ -13137,8 +13123,8 @@ func (m *ProjectMutation) Fields() []string {
 	if m.customer != nil {
 		fields = append(fields, project.FieldCustomerID)
 	}
-	if m.bill_rate_cents != nil {
-		fields = append(fields, project.FieldBillRateCents)
+	if m.bill_extra_cents != nil {
+		fields = append(fields, project.FieldBillExtraCents)
 	}
 	if m.created_at != nil {
 		fields = append(fields, project.FieldCreatedAt)
@@ -13175,8 +13161,8 @@ func (m *ProjectMutation) Field(name string) (ent.Value, bool) {
 		return m.CustomerMeetingTime()
 	case project.FieldCustomerID:
 		return m.CustomerID()
-	case project.FieldBillRateCents:
-		return m.BillRateCents()
+	case project.FieldBillExtraCents:
+		return m.BillExtraCents()
 	case project.FieldCreatedAt:
 		return m.CreatedAt()
 	}
@@ -13212,8 +13198,8 @@ func (m *ProjectMutation) OldField(ctx context.Context, name string) (ent.Value,
 		return m.OldCustomerMeetingTime(ctx)
 	case project.FieldCustomerID:
 		return m.OldCustomerID(ctx)
-	case project.FieldBillRateCents:
-		return m.OldBillRateCents(ctx)
+	case project.FieldBillExtraCents:
+		return m.OldBillExtraCents(ctx)
 	case project.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	}
@@ -13309,12 +13295,12 @@ func (m *ProjectMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetCustomerID(v)
 		return nil
-	case project.FieldBillRateCents:
+	case project.FieldBillExtraCents:
 		v, ok := value.(int)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetBillRateCents(v)
+		m.SetBillExtraCents(v)
 		return nil
 	case project.FieldCreatedAt:
 		v, ok := value.(time.Time)
@@ -13334,8 +13320,8 @@ func (m *ProjectMutation) AddedFields() []string {
 	if m.addsprint_duration_days != nil {
 		fields = append(fields, project.FieldSprintDurationDays)
 	}
-	if m.addbill_rate_cents != nil {
-		fields = append(fields, project.FieldBillRateCents)
+	if m.addbill_extra_cents != nil {
+		fields = append(fields, project.FieldBillExtraCents)
 	}
 	return fields
 }
@@ -13347,8 +13333,8 @@ func (m *ProjectMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
 	case project.FieldSprintDurationDays:
 		return m.AddedSprintDurationDays()
-	case project.FieldBillRateCents:
-		return m.AddedBillRateCents()
+	case project.FieldBillExtraCents:
+		return m.AddedBillExtraCents()
 	}
 	return nil, false
 }
@@ -13365,12 +13351,12 @@ func (m *ProjectMutation) AddField(name string, value ent.Value) error {
 		}
 		m.AddSprintDurationDays(v)
 		return nil
-	case project.FieldBillRateCents:
+	case project.FieldBillExtraCents:
 		v, ok := value.(int)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.AddBillRateCents(v)
+		m.AddBillExtraCents(v)
 		return nil
 	}
 	return fmt.Errorf("unknown Project numeric field %s", name)
@@ -13406,9 +13392,6 @@ func (m *ProjectMutation) ClearedFields() []string {
 	}
 	if m.FieldCleared(project.FieldCustomerID) {
 		fields = append(fields, project.FieldCustomerID)
-	}
-	if m.FieldCleared(project.FieldBillRateCents) {
-		fields = append(fields, project.FieldBillRateCents)
 	}
 	return fields
 }
@@ -13450,9 +13433,6 @@ func (m *ProjectMutation) ClearField(name string) error {
 		return nil
 	case project.FieldCustomerID:
 		m.ClearCustomerID()
-		return nil
-	case project.FieldBillRateCents:
-		m.ClearBillRateCents()
 		return nil
 	}
 	return fmt.Errorf("unknown Project nullable field %s", name)
@@ -13498,8 +13478,8 @@ func (m *ProjectMutation) ResetField(name string) error {
 	case project.FieldCustomerID:
 		m.ResetCustomerID()
 		return nil
-	case project.FieldBillRateCents:
-		m.ResetBillRateCents()
+	case project.FieldBillExtraCents:
+		m.ResetBillExtraCents()
 		return nil
 	case project.FieldCreatedAt:
 		m.ResetCreatedAt()

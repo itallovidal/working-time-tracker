@@ -22,7 +22,7 @@ func TestRoles_Matrix(t *testing.T) {
 	withPreset(t, e, owner, alfa, manager.id, "manager")
 	allocate(t, e, owner, alfa, plain.id, 2000)
 	prj := "/api/projects/" + alfa
-	customerID := decode(t, do(e, "POST", org+"/customers", `{"name":"Cliente"}`, owner.session))["id"].(string)
+	customerID := decode(t, do(e, "POST", org+"/customers", `{"name":"Cliente","hourly_rate_cents":10000}`, owner.session))["id"].(string)
 
 	type who struct {
 		name    string
@@ -40,7 +40,7 @@ func TestRoles_Matrix(t *testing.T) {
 		{"edit the organization", "PATCH", org, `{"summary":"X"}`, [4]int{ok, 403, 403, 403}},
 		{"list the people", "GET", org + "/persons", "", [4]int{ok, ok, ok, ok}},
 		{"list customers", "GET", org + "/customers", "", [4]int{ok, 403, 403, 403}},
-		{"create a customer", "POST", org + "/customers", `{"name":"Outro"}`, [4]int{ok, 403, 403, 403}},
+		{"create a customer", "POST", org + "/customers", `{"name":"Outro","hourly_rate_cents":10000}`, [4]int{ok, 403, 403, 403}},
 		{"the team payments", "GET", org + "/payments", "", [4]int{ok, 403, 403, 403}},
 		// A baixa é só do dono: ele passa da porta e esbarra no corpo vazio (400) ou na baixa que não existe (404).
 		{"mark a payment as paid", "POST", org + "/payouts", `{}`, [4]int{400, 403, 403, 403}},
@@ -66,9 +66,9 @@ func TestRoles_Matrix(t *testing.T) {
 
 		// Projetos.
 		{"create an internal project", "POST", org + "/projects", `{"name":"Interno"}`, [4]int{ok, ok, 403, 403}},
-		{"create a project with a customer", "POST", org + "/projects", `{"name":"Cliente","customer_id":"` + customerID + `","bill_rate_cents":10000}`, [4]int{ok, 403, 403, 403}},
+		{"create a project with a customer", "POST", org + "/projects", `{"name":"Cliente","customer_id":"` + customerID + `"}`, [4]int{ok, 403, 403, 403}},
 		{"read the billing", "GET", prj + "/billing", "", [4]int{ok, 403, 403, 403}},
-		{"set the billing", "PUT", prj + "/billing", `{"customer_id":"` + customerID + `","bill_rate_cents":10000}`, [4]int{ok, 403, 403, 403}},
+		{"set the billing", "PUT", prj + "/billing", `{"customer_id":"` + customerID + `"}`, [4]int{ok, 403, 403, 403}},
 		{"the project overview", "GET", prj + "/overview", "", [4]int{ok, ok, ok, 403}},
 		{"edit the project", "PATCH", prj, `{"name":"Alfa 2"}`, [4]int{ok, ok, ok, 403}},
 		{"create a team", "POST", prj + "/teams", `{"name":"Time"}`, [4]int{ok, ok, ok, 403}},

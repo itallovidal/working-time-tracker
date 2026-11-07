@@ -590,9 +590,10 @@ recusa.
 por hora (pago ou cobrado) tem o piso de 10,00, zero é recusado menos para o dono, e um projeto ou tem cliente com
 valor cobrado ou é interno sem os dois, nos dois sentidos.
 
-**Hoje:** o admin cria só projetos internos; criar com cliente ou valor cobrado é do dono (`auth.owner_only`), e só
+**Hoje:** o admin cria só projetos internos; criar com cliente ou acréscimo é do dono (`auth.owner_only`), e só
 o dono é matriculado no projeto que cria (o admin já vê todos). O projeto de um cliente cobrado por contrato mensal
-também não tem valor cobrado por hora (`project.bill_rate_not_allowed`, Decisão 20).
+não tem valor cobrado por hora (Decisão 20), e o valor cobrado saiu do projeto: é o do cliente mais o acréscimo do
+projeto (Decisão 21).
 
 ### Decisão 17: Cargos e dinheiro — o cargo dá as permissões da organização, e o dinheiro tem eixo próprio
 
@@ -694,13 +695,14 @@ O schema é a única coisa que existe para todos; uma organização com equipe s
    de pagamento. Desligar sempre vale, e os clientes mensais e os recebíveis ficam guardados, como o documento do outro
    país (Decisão 14). A API de pessoas e de pagamentos não muda.
 2. **O cliente é cobrado por hora ou por contrato mensal, nunca pelos dois** (`customers.billing_mode`). O por hora é o
-   de sempre, com um valor padrão que **só preenche** o campo do valor cobrado ao criar o projeto (uma cópia: o
-   projeto guarda o seu). O mensal tem a mensalidade, o início e o fim do contrato e, opcionais, a multa e os juros
+   de sempre, com um valor padrão que **só preenchia** o campo do valor cobrado ao criar o projeto (uma cópia: o
+   projeto guardava o seu; a [Decisão 21](#decisão-21-cobrança-num-lugar-só--o-valor-no-cliente-o-acréscimo-no-projeto)
+   trocou isso pelo valor do cliente valendo para todos os projetos). O mensal tem a mensalidade, o início e o fim do contrato e, opcionais, a multa e os juros
    ao mês (em pontos-base) e a tolerância. Os dois têm o dia de fechamento do período (1 a 31; 31 é o último dia do
    mês) e o prazo de pagamento. Um campo do outro modo é recusado, o mensal só existe no modo solo, e a **troca de modo
    é travada em cliente com projetos** (`409 customer.mode_locked`; issue #25). O **projeto de um cliente mensal não
-   tem valor por hora** (`project.bill_rate_not_allowed`): as sessões dele guardam o valor cobrado nulo e o ponto
-   funciona igual, com as horas e o custo contando.
+   tem valor por hora**: as sessões dele guardam o valor cobrado nulo e o ponto funciona igual, com as horas e o custo
+   contando.
 3. **O recebível (uma conta a receber por cliente e período) é proposto pelo sistema e confirmado pelo dono, e
    guardado a partir daí** (`receivables`). O período e a proposta continuam **calculados** das sessões e do contrato,
    com a conta mensal da regra de pagamento (Decisão 15); o que fica gravado é a confirmação, com as horas e o valor que
@@ -759,7 +761,56 @@ edição em outra aba não ser recebida às cegas. Excluir um cliente com receb�
 a chave estrangeira do cliente não apaga em cascata, e apagar a organização leva tudo. Ficam para depois as contas a
 pagar, o Resultado (o que entrou menos as despesas), os impostos, a franquia de horas, a conversão de moeda e a emissão
 de nota. As regras de hoje estão em [overview.md](../product/overview.md#modo-solo),
-[money.md](../product/money.md#termos-comerciais-modo-solo) e [permissions.md](../product/permissions.md#modo-solo).
+[money.md](../product/money.md#a-cobrança-mora-no-cliente) e [permissions.md](../product/permissions.md#modo-solo).
+
+### Decisão 21: Cobrança num lugar só — o valor no cliente, o acréscimo no projeto
+
+**Contexto:** até aqui a cobrança morava em dois lugares. O cliente tinha o modo, o contrato e um valor por hora
+"padrão" que só preenchia o campo do projeto; o projeto guardava o seu valor cobrado (`projects.bill_rate_cents`),
+obrigatório com cliente por hora (Sprint 93). Na Sprint 102 o formulário de novo projeto ainda passou a trocar o modo do
+cliente. No primeiro uso do modo solo o dono não gostou de configurar a cobrança no cliente **e** no projeto, e
+reajustar um cliente não mudava os projetos dele: era preciso editar um por um.
+
+**Escolha:** a cobrança mora no cliente, e o projeto só soma um acréscimo, nos dois modos da organização.
+
+- O cliente por hora tem o **valor por hora** (`customers.hourly_rate_cents`, o antigo `default_rate_cents`
+  renomeado), **obrigatório**, com o piso e o teto de sempre. O mensal tem o contrato, como já tinha. O reajuste se faz
+  no cliente e vale para todos os projetos dele.
+- O projeto tem um **acréscimo** opcional (`projects.bill_extra_cents`, zero ou mais, até o teto de um valor em
+  dinheiro): **por hora** com cliente por hora e **por mês** com cliente mensal. Serve ao que é pequeno ou temporário,
+  e não tem data de fim: o dono o zera quando acaba. O projeto interno fica sempre em zero.
+- O **valor cobrado por hora é calculado, nunca gravado no projeto**: o do cliente mais o acréscimo
+  (`customer.BillRate`), a única conta, usada no clock-in, no billing do projeto, nas margens e na visão geral. As
+  respostas de leitura continuam com `bill_rate_cents`, agora calculado; quem escreve manda `bill_extra_cents`.
+- No mensal, a proposta de cada período é a **mensalidade mais os acréscimos** dos projetos do cliente (com
+  `extra_cents` dizendo quanto), e a confirmação guarda essa soma.
+- O formulário de projeto **não configura mais o cliente**: mostra a cobrança dele, só para leitura e com o link para
+  Clientes, e pede o acréscimo, com o total ao vivo. A troca de modo pelo formulário (Sprint 102) saiu.
+- Na equipe o modal de cliente passa a pedir o valor por hora (o modo, o contrato e os prazos continuam do solo).
+
+**Motivo:** um lugar só para a cobrança é o que o dono pediu, e é onde ela já estava no mensal. O valor no cliente
+resolve o reajuste; o acréscimo resolve o projeto que custa um pouco mais sem criar um segundo cadastro de valor.
+Calcular o valor na leitura, em vez de copiá-lo para o projeto, não deixa duas fontes divergirem. As sessões continuam
+guardando o valor do clock-in, então reajustar o cliente ou mudar o acréscimo só vale dali em diante.
+
+**Migração:** `billing_on_customer` renomeia a coluna do cliente, cria a do acréscimo e preserva os números: o cliente
+por hora com projetos recebe o **menor** valor cobrado entre eles, e cada projeto fica com a diferença como acréscimo
+(zero ou mais). O cliente sem projetos guarda o valor padrão que tinha, ou fica sem valor; um projeto não se liga a ele
+(`project.customer_without_rate`) até o dono informar o valor em Clientes, e a lista mostra "sem valor por hora".
+
+**Alternativas descartadas:**
+- Valor só no projeto: cada projeto teria de ser reajustado à mão, e o mensal ficaria de fora.
+- Valor no cliente sem acréscimo: o projeto que custa um pouco mais exigiria um cliente a mais.
+- Acréscimo em percentual: segue o reajuste sozinho, mas o dono pensa em "um a mais" em dinheiro, e o percentual de um
+  contrato mensal não diz nada.
+- Acréscimo negativo (desconto): ninguém pediu, e um desconto abaixo do piso de 10,00 por hora viraria uma regra nova.
+- Acréscimo com data de fim: mais um campo e uma regra no ponto e nas propostas; zerar à mão cobre o caso.
+- Gravar o valor efetivo no projeto e atualizá-lo quando o cliente muda: duas fontes do mesmo número, que divergem num
+  esquecimento.
+
+**Consequências:** a proposta mensal de um período passado ainda sem recebível usa os acréscimos de hoje: um acréscimo
+zerado antes de o dono confirmar o período some da proposta (ele confere o valor ao confirmar, como já fazia com o
+primeiro mês parcial). As regras de hoje estão em [money.md](../product/money.md#os-dois-valores-por-hora).
 
 ## Riscos e trade-offs
 

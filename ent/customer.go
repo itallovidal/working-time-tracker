@@ -35,8 +35,8 @@ type Customer struct {
 	ContactPhone string `json:"contact_phone,omitempty"`
 	// BillingMode holds the value of the "billing_mode" field.
 	BillingMode string `json:"billing_mode,omitempty"`
-	// DefaultRateCents holds the value of the "default_rate_cents" field.
-	DefaultRateCents *int `json:"default_rate_cents,omitempty"`
+	// HourlyRateCents holds the value of the "hourly_rate_cents" field.
+	HourlyRateCents *int `json:"hourly_rate_cents,omitempty"`
 	// MonthlyFeeCents holds the value of the "monthly_fee_cents" field.
 	MonthlyFeeCents *int `json:"monthly_fee_cents,omitempty"`
 	// ContractStart holds the value of the "contract_start" field.
@@ -108,7 +108,7 @@ func (*Customer) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case customer.FieldDefaultRateCents, customer.FieldMonthlyFeeCents, customer.FieldClosingDay, customer.FieldPaymentDays, customer.FieldLateFeeBp, customer.FieldLateInterestBpMonth, customer.FieldGraceDays:
+		case customer.FieldHourlyRateCents, customer.FieldMonthlyFeeCents, customer.FieldClosingDay, customer.FieldPaymentDays, customer.FieldLateFeeBp, customer.FieldLateInterestBpMonth, customer.FieldGraceDays:
 			values[i] = new(sql.NullInt64)
 		case customer.FieldName, customer.FieldCountry, customer.FieldDocument, customer.FieldContactName, customer.FieldContactEmail, customer.FieldContactPhone, customer.FieldBillingMode, customer.FieldContractStart, customer.FieldContractEnd:
 			values[i] = new(sql.NullString)
@@ -185,12 +185,12 @@ func (_m *Customer) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.BillingMode = value.String
 			}
-		case customer.FieldDefaultRateCents:
+		case customer.FieldHourlyRateCents:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field default_rate_cents", values[i])
+				return fmt.Errorf("unexpected type %T for field hourly_rate_cents", values[i])
 			} else if value.Valid {
-				_m.DefaultRateCents = new(int)
-				*_m.DefaultRateCents = int(value.Int64)
+				_m.HourlyRateCents = new(int)
+				*_m.HourlyRateCents = int(value.Int64)
 			}
 		case customer.FieldMonthlyFeeCents:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -324,8 +324,8 @@ func (_m *Customer) String() string {
 	builder.WriteString("billing_mode=")
 	builder.WriteString(_m.BillingMode)
 	builder.WriteString(", ")
-	if v := _m.DefaultRateCents; v != nil {
-		builder.WriteString("default_rate_cents=")
+	if v := _m.HourlyRateCents; v != nil {
+		builder.WriteString("hourly_rate_cents=")
 		builder.WriteString(fmt.Sprintf("%v", *v))
 	}
 	builder.WriteString(", ")

@@ -102,10 +102,10 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `customer.invalid_closing_day` | 400 | — | `o dia de fechamento deve ficar entre 1 e 31` | `the closing day must be between 1 and 31` |
 | `customer.invalid_contract_end` | 400 | — | `o fim do contrato deve ser depois do início` | `the contract end must be after the start` |
 | `customer.invalid_country` | 400 | — | `país inválido: use um código de país como BR, US ou DE` | `invalid country: use a country code like BR, US or DE` |
-| `customer.invalid_default_rate` | 400 | — | `o valor por hora padrão deve ficar entre 10,00 e 1.000.000,00` | `the default hourly rate must be between 10.00 and 1,000,000.00` |
 | `customer.invalid_document` | 400 | — | `documento fiscal inválido para o país do cliente: confira os números (CNPJ no Brasil, EIN nos EUA)` | `invalid tax ID for the customer's country: check the numbers (CNPJ in Brazil, EIN in the US)` |
 | `customer.invalid_email` | 400 | — | `informe um email de contato válido` | `enter a valid contact email` |
 | `customer.invalid_grace_days` | 400 | — | `a tolerância deve ficar entre 0 e 365 dias` | `the grace period must be between 0 and 365 days` |
+| `customer.invalid_hourly_rate` | 400 | — | `o valor por hora deve ficar entre 10,00 e 1.000.000,00` | `the hourly rate must be between 10.00 and 1,000,000.00` |
 | `customer.invalid_late_fee` | 400 | — | `a multa deve ficar entre 0% e 100%` | `the late fee must be between 0% and 100%` |
 | `customer.invalid_late_interest` | 400 | — | `os juros ao mês devem ficar entre 0% e 100%` | `the interest per month must be between 0% and 100%` |
 | `customer.invalid_monthly_fee` | 400 | — | `a mensalidade deve ficar entre 0,01 e 1.000.000,00` | `the monthly fee must be between 0.01 and 1,000,000.00` |
@@ -264,13 +264,12 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 
 | Código | Status | Parâmetros | pt-BR | en |
 |---|---|---|---|---|
-| `project.bill_rate_needs_customer` | 400 | — | `o valor cobrado só vale em um projeto com cliente: escolha o cliente do projeto antes` | `the billed rate only applies to a project with a customer: choose the project's customer first` |
-| `project.bill_rate_not_allowed` | 400 | — | `este cliente é cobrado por mês: o projeto dele não tem valor cobrado por hora` | `this customer is billed monthly: its projects have no hourly billed rate` |
-| `project.bill_rate_required` | 400 | — | `informe o valor cobrado por hora: um projeto com cliente precisa dele` | `enter the rate billed per hour: a project with a customer needs it` |
+| `project.bill_extra_needs_customer` | 400 | — | `o acréscimo só vale em um projeto com cliente: escolha o cliente do projeto antes` | `the extra only applies to a project with a customer: choose the project's customer first` |
 | `project.customer_locked` | 409 | — | `este projeto tem horas e o cliente dele já tem contas a receber: trocar o cliente cobraria as mesmas horas de novo` | `this project has hours and its customer already has receivables: moving it would bill the same hours again` |
 | `project.customer_meeting_time_without_day` | 400 | — | `o horário da reunião com o cliente precisa do dia da reunião` | `the customer meeting time needs the meeting day` |
 | `project.customer_not_found` | 400 | — | `cliente não encontrado nesta organização` | `customer not found in this organization` |
-| `project.invalid_bill_rate` | 400 | — | `o valor cobrado por hora deve ficar entre 10,00 e 1.000.000,00` | `the rate billed per hour must be between 10.00 and 1,000,000.00` |
+| `project.customer_without_rate` | 400 | — | `este cliente ainda não tem valor por hora: informe o valor em Clientes antes` | `this customer has no hourly rate yet: enter it under Customers first` |
+| `project.invalid_bill_extra` | 400 | — | `o acréscimo deve ficar entre 0 e 1.000.000,00` | `the extra must be between 0 and 1,000,000.00` |
 | `project.invalid_customer_meeting_time` | 400 | — | `o horário da reunião com o cliente deve estar no formato HH:MM, por exemplo 10:30` | `the customer meeting time must use the HH:MM format, for example 10:30` |
 | `project.invalid_daily_time` | 400 | — | `o horário da daily deve estar no formato HH:MM, por exemplo 09:30` | `the daily time must use the HH:MM format, for example 09:30` |
 | `project.invalid_organization` | 400 | — | `organização inválida` | `invalid organization` |

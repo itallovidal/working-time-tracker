@@ -12,7 +12,7 @@ document.addEventListener('alpine:init', () => {
 
   const blankProject = () => ({
     name: '', description: '', sprint_duration_days: 14, ...WTT.routine.blank(),
-    customer_id: '', rate: '',
+    customer_id: '', extra: '',
   });
 
   // Os documentos fiscais vêm do cadastro de países ('cnpj', 'ein'): um país novo com documento novo entra sozinho.
@@ -52,17 +52,14 @@ document.addEventListener('alpine:init', () => {
   const bareURL = (url) => (url || '').replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
 
   // projectCreation é o modal de novo projeto da página Projetos (o formulário é o parcial project_form) e a criação.
-  // No modo solo a cobrança também se escolhe aqui (por hora ou contrato mensal), mas o modo e o contrato são do cliente
-  // e valem para todos os projetos dele (Decisão 20): `billing` são os termos do cliente escolhido, no formato do modal
-  // de cliente (billingDraft), e mudar o modo de um cliente ainda sem projetos grava os termos nele antes de criar o
-  // projeto. Com equipe não há escolha: o cliente é sempre por hora.
+  // A cobrança mora no cliente (Decisão 21): o formulário mostra a do cliente escolhido (o valor por hora ou o contrato,
+  // que se editam em Clientes) e só pede o acréscimo do projeto, por hora no cliente por hora e por mês no mensal.
   const projectCreation = () => ({
     ...form(),
-    ...customerBilling(), // solo, lateOpen, billingLabel e billingTerms
+    ...customerBilling(), // solo, billingLabel e billingTerms
+    billing: WTT.billing,
     customers: null, // só carregados quando o modal de novo projeto abre pela primeira vez
     draft: blankProject(),
-    billing: blankBilling(),
-    rateTouched: false, // a pessoa digitou o valor cobrado: trocar o cliente não o sobrescreve mais
     // customerOf é o cliente escolhido no rascunho, ou null (projeto interno).
     customerOf() {
       return (this.customers || []).find((c) => c.id === this.draft.customer_id) || null;
@@ -73,59 +70,16 @@ document.addEventListener('alpine:init', () => {
       const mode = WTT.t(c.billing_mode === 'monthly' ? 'customer.billing.monthly' : 'customer.billing.hourly');
       return WTT.t('customer.billing.option_label', { name: c.name, mode });
     },
-    // billingMode é o modo gravado no cliente escolhido; customerLocked diz que ele não muda mais (o cliente tem projetos).
-    billingMode() {
-      const c = this.customerOf();
-      return c && c.billing_mode === 'monthly' ? 'monthly' : 'hourly';
-    },
-    customerLocked() {
-      const c = this.customerOf();
-      return !!c && c.project_count > 0;
-    },
-    // modeChanged diz que o modo escolhido no rádio não é o do cliente: ao criar, os termos vão para o cliente antes.
-    modeChanged() {
-      return this.solo && !!this.customerOf() && this.billing.billing_mode !== this.billingMode();
-    },
-    // monthlyCustomer diz que o projeto vai ser cobrado por mês (o modo escolhido, no solo): ele não tem valor por hora.
-    monthlyCustomer() {
-      if (!this.customerOf()) return false;
-      return (this.solo ? this.billing.billing_mode : this.billingMode()) === 'monthly';
-    },
-    // hasRate diz que o campo do valor cobrado existe: há cliente, e ele é cobrado por hora.
-    hasRate() {
-      return !!this.draft.customer_id && !this.monthlyCustomer();
-    },
-    // customerChanged copia o valor por hora padrão do cliente para o campo (o projeto guarda o seu, e o cliente não
-    // muda), a menos que a pessoa já tenha digitado um valor, e os termos do cliente para `billing`.
+    // customerChanged zera o acréscimo: ele é por hora ou por mês conforme o cliente, e não passa de um para o outro.
     customerChanged() {
       this.clearField('customer_id');
-      this.clearField('bill_rate_cents');
-      const c = this.customerOf();
-      if (!this.rateTouched) this.draft.rate = c && c.default_rate_cents != null ? WTT.fmt.moneyInput(c.default_rate_cents) : '';
-      this.billing = c ? billingDraft(c) : blankBilling();
-      this.lateOpen = false;
-      this.clearBillingFields();
-    },
-    // modeSwitched limpa os erros dos termos quando a pessoa troca o modo no rádio.
-    modeSwitched() {
-      this.clearBillingFields();
-    },
-    clearBillingFields() {
-      ['billing_mode', 'monthly_fee_cents', 'contract_start', 'contract_end', 'closing_day', 'payment_days', ...lateFields]
-        .forEach((f) => this.clearField(f));
-    },
-    // rateFromDefault diz que o valor do campo é o padrão do cliente, ainda sem mexer, para a dica dizer de onde veio.
-    rateFromDefault() {
-      const c = this.customerOf();
-      return !this.rateTouched && !!c && c.default_rate_cents != null && this.hasRate();
+      this.clearField('bill_extra_cents');
+      this.draft.extra = '';
     },
     // openCreate abre o modal de novo projeto. Só admins criam projeto, e só o dono pode listar os clientes e
     // definir um (o admin cria só projeto interno); por isso a lista vem aqui, e não no init.
     async openCreate() {
       this.draft = blankProject();
-      this.billing = blankBilling();
-      this.lateOpen = false;
-      this.rateTouched = false;
       this.errors.create = '';
       this.clearFields();
       Alpine.store('modal').open('project', WTT.t('org.projects.new'), () => !this.pending);
@@ -137,48 +91,35 @@ document.addEventListener('alpine:init', () => {
         this.errors.create = WTT.t('org.projects.customers_load_failed', { error: e.message });
       }
     },
-    // create cria o projeto: o cliente e o valor cobrado vão juntos, porque com cliente o valor é obrigatório e sem
-    // cliente é recusado. No modo solo, se o modo de cobrança escolhido não é o do cliente, os termos vão antes para o
-    // cliente (PATCH), e a resposta substitui o cliente na lista: um erro na criação do projeto não grava os termos de
-    // novo, e o cliente, ainda sem projetos, fica no modo novo sem trava.
+    // create cria o projeto: o cliente e o acréscimo vão juntos, porque sem cliente não há acréscimo.
     create() {
       return this.run('create', async () => {
         const d = this.draft;
         const R = WTT.rules;
-        // O valor só existe com cliente por hora (o campo some no projeto interno e no cliente mensal).
-        const withCustomer = !!d.customer_id;
-        const withRate = this.hasRate();
-        const switching = this.modeChanged();
+        const c = this.customerOf();
         const name = String(d.name).trim();
         const description = String(d.description).trim();
         // A descrição chega do servidor como long_description, e o rótulo do campo é o dele.
         const ok = this.check({
           name: [name, R.required, R.max('name')],
           description: [description, (v) => R.max('description')(v, 'long_description')],
-          ...(switching ? billingSpec(this.billing) : {}),
-          bill_rate_cents: [withRate ? d.rate : '', ...(withRate ? [R.required] : []), R.rate],
+          // O cliente por hora antigo, sem valor, não tem o que cobrar: o valor se informa em Clientes.
+          customer_id: [d.customer_id, (v, field) => (WTT.billing.withoutRate(c) ? WTT.errorText({ code: 'project.customer_without_rate', params: { field } }) : '')],
+          bill_extra_cents: [c ? d.extra : '', R.extra],
           ...WTT.routine.rules(d),
           sprint_duration_days: [d.sprint_duration_days, R.integer(1, 90)],
         });
-        if (!ok) {
-          // O erro dentro do bloco recolhido só recebe o foco com o bloco aberto.
-          if (lateFields.some((f) => this.fieldErrors[f])) this.lateOpen = true;
-          return;
-        }
-        if (switching) {
-          const saved = await api('PATCH', '/api/customers/' + d.customer_id, billingBody(this.billing));
-          this.customers = this.customers.map((c) => (c.id === saved.id ? saved : c));
-        }
+        if (!ok) return;
         const body = {
           name,
           description,
           sprint_duration_days: Number(d.sprint_duration_days) || 0,
           ...WTT.routine.payload(d),
         };
-        if (withCustomer) {
-          body.customer_id = d.customer_id;
-          // O cliente mensal não tem valor por hora: o servidor recusa um.
-          if (withRate) body.bill_rate_cents = WTT.toCents(d.rate, { strict: true });
+        if (c) {
+          body.customer_id = c.id;
+          const extra = String(d.extra).trim() === '' ? 0 : WTT.toCents(d.extra, { strict: true });
+          if (extra > 0) body.bill_extra_cents = extra;
         }
         const p = await api('POST', '/api/orgs/' + orgId + '/projects', body);
         Alpine.store('toast').flash(WTT.t('org.projects.created'));
@@ -1124,14 +1065,14 @@ document.addEventListener('alpine:init', () => {
   // blankBilling são os termos de um cliente novo: por hora, fechando no último dia e vencendo no fechamento. Os campos
   // de texto guardam o que a pessoa digita; billingBody os converte.
   const blankBilling = () => ({
-    billing_mode: 'hourly', default_rate: '', monthly_fee: '', contract_start: '', contract_end: '',
+    billing_mode: 'hourly', hourly_rate: '', monthly_fee: '', contract_start: '', contract_end: '',
     closing_day: '31', payment_days: '0', late_fee: '', late_interest: '', grace_days: '',
   });
 
   // billingDraft copia os termos do cliente para o formulário: o que não tem valor vira texto vazio.
   const billingDraft = (c) => ({
     billing_mode: c.billing_mode || 'hourly',
-    default_rate: WTT.fmt.moneyInput(c.default_rate_cents),
+    hourly_rate: WTT.fmt.moneyInput(c.hourly_rate_cents),
     monthly_fee: WTT.fmt.moneyInput(c.monthly_fee_cents),
     contract_start: c.contract_start || '',
     contract_end: c.contract_end || '',
@@ -1146,10 +1087,10 @@ document.addEventListener('alpine:init', () => {
   // servidor recusa um valor do outro modo, e trocar de modo apaga o que ficou para trás.
   const billingBody = (d) => {
     const monthly = d.billing_mode === 'monthly';
-    const hasRate = !monthly && String(d.default_rate).trim() !== '';
+    const hasRate = !monthly && String(d.hourly_rate).trim() !== '';
     return {
       billing_mode: d.billing_mode,
-      default_rate_cents: hasRate ? WTT.toCents(d.default_rate, { strict: true }) : null,
+      hourly_rate_cents: hasRate ? WTT.toCents(d.hourly_rate, { strict: true }) : null,
       monthly_fee_cents: monthly ? WTT.toCents(d.monthly_fee, { strict: true }) : null,
       contract_start: monthly ? String(d.contract_start).trim() : '',
       contract_end: monthly ? String(d.contract_end).trim() : '',
@@ -1180,6 +1121,11 @@ document.addEventListener('alpine:init', () => {
   const contractEndRule = (start) => (v, field) => (String(v).trim() !== '' && /^\d{4}-\d{2}-\d{2}$/.test(start) && String(v).trim() <= start
     ? WTT.errorText({ code: 'customer.invalid_contract_end', params: { field } }) : '');
 
+  // hourlyRateSpec confere o valor por hora do cliente por hora, obrigatório (Decisão 21), com o piso e o teto.
+  const hourlyRateSpec = (d) => ({
+    hourly_rate_cents: [d.hourly_rate, WTT.rules.required, amountRule(WTT.limits.min_rate_cents, 'customer.invalid_hourly_rate')],
+  });
+
   // billingSpec são as conferências dos termos, na ordem da tela e só dos campos do modo escolhido (os do outro modo
   // somem do formulário), com as mesmas regras do servidor.
   const billingSpec = (d) => {
@@ -1190,9 +1136,7 @@ document.addEventListener('alpine:init', () => {
         monthly_fee_cents: [d.monthly_fee, rules.required, amountRule(1, 'customer.invalid_monthly_fee')],
         contract_start: [d.contract_start, rules.required, rules.date],
         contract_end: [d.contract_end, rules.date, contractEndRule(String(d.contract_start).trim())],
-      } : {
-        default_rate_cents: [d.default_rate, amountRule(WTT.limits.min_rate_cents, 'customer.invalid_default_rate')],
-      }),
+      } : hourlyRateSpec(d)),
       closing_day: [d.closing_day, rules.required, rules.integer(1, 31, 'customer.invalid_closing_day')],
       payment_days: [d.payment_days, rules.required, rules.integer(0, WTT.limits.term_days, 'customer.invalid_payment_days')],
       ...(monthly ? {
@@ -1203,17 +1147,18 @@ document.addEventListener('alpine:init', () => {
     };
   };
 
-  // customerBilling é o que a página Clientes tem a mais no modo solo: o texto da coluna Cobrança e o estado do
-  // formulário (o modo travado e o bloco recolhido).
+  // customerBilling é a cobrança na página Clientes: o texto da coluna Cobrança e o estado do formulário (o modo
+  // travado e o bloco recolhido, que são do modo solo).
   const customerBilling = () => ({
     solo: !!me.organization_solo,
     modeLocked: false, // o cliente já tem projetos: o modo não muda
     lateOpen: false, // o bloco de multa, juros e tolerância
-    // billingLabel é a primeira linha da coluna Cobrança: o modo e o valor (a mensalidade ou o valor por hora padrão).
+    // billingLabel é a primeira linha da coluna Cobrança: o modo e o valor (a mensalidade ou o valor por hora). O cliente
+    // por hora antigo, sem valor, diz que falta o valor.
     billingLabel(c) {
       if (c.billing_mode === 'monthly') return WTT.t('customer.billing.cell_monthly', { fee: WTT.fmt.money(c.monthly_fee_cents) });
-      if (c.default_rate_cents != null) return WTT.t('customer.billing.cell_hourly_rate', { rate: WTT.fmt.money(c.default_rate_cents) });
-      return WTT.t('customer.billing.cell_hourly');
+      if (c.hourly_rate_cents != null) return WTT.t('customer.billing.cell_hourly_rate', { rate: WTT.fmt.money(c.hourly_rate_cents) });
+      return WTT.t('customer.billing.cell_hourly_no_rate');
     },
     // billingTerms é a segunda: o contrato (no mensal), o fechamento e o prazo.
     billingTerms(c) {
@@ -1270,10 +1215,14 @@ document.addEventListener('alpine:init', () => {
     save() {
       const body = customerBody(this.draft);
       const spec = customerSpec(body, true);
-      // Os termos só existem no modo solo; fora dele o corpo é o de sempre.
+      // A cobrança mora no cliente (Decisão 21). No modo solo vão todos os termos; na equipe todo cliente é por hora, e
+      // vai só o valor por hora.
       if (this.solo) {
         Object.assign(spec, billingSpec(this.draft));
         Object.assign(body, billingBody(this.draft));
+      } else {
+        Object.assign(spec, hourlyRateSpec(this.draft));
+        body.hourly_rate_cents = WTT.toCents(this.draft.hourly_rate, { strict: true });
       }
       if (!this.check(spec)) {
         // O erro dentro do bloco recolhido só recebe o foco com o bloco aberto.

@@ -366,9 +366,9 @@ func TestService_ClockIn_OwnerWorksAtTheBilledRate(t *testing.T) {
 	owner, _ := personSvc.Create(org.ID.String(), "Ana", "ana@test.com")
 	testClient.Person.UpdateOneID(owner.ID).SetIsOwner(true).ExecX(context.Background())
 	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, project.Routine{})
-	rate := 8000
-	customerID := testClient.Customer.Create().SetOrganizationID(org.ID).SetName("Cliente").SaveX(context.Background()).ID.String()
-	if _, err := projSvc.SetBilling(proj.ID.String(), &customerID, &rate); err != nil {
+	// O valor cobrado é o do cliente (Decisão 21).
+	customerID := testClient.Customer.Create().SetOrganizationID(org.ID).SetName("Cliente").SetHourlyRateCents(8000).SaveX(context.Background()).ID.String()
+	if _, err := projSvc.SetBilling(proj.ID.String(), &customerID, 0); err != nil {
 		t.Fatalf("set billing: %v", err)
 	}
 	task1, err := taskSvc.Create(proj.ID.String(), "Task", "", "", nil)
@@ -428,11 +428,11 @@ func TestService_RateIsSnapshottedAtClockIn(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// O admin muda os dois valores.
+	// O admin muda os dois valores: o projeto passa a ter um cliente, que paga 100,00 por hora.
 	setRate(t, projectID, personID, 2500)
-	bill := 10000
-	customerID := testClient.Customer.Create().SetOrganizationID(org.ID).SetName("Cliente").SaveX(context.Background()).ID.String()
-	if _, err := projSvc.SetBilling(projectID, &customerID, &bill); err != nil {
+	customer := testClient.Customer.Create().SetOrganizationID(org.ID).SetName("Cliente").SetHourlyRateCents(10000).SaveX(context.Background())
+	customerID := customer.ID.String()
+	if _, err := projSvc.SetBilling(projectID, &customerID, 0); err != nil {
 		t.Fatalf("set billing: %v", err)
 	}
 	if _, err := wsSvc.ClockIn(projectID, task1.ID.String(), personID); err != nil {
@@ -444,16 +444,31 @@ func TestService_RateIsSnapshottedAtClockIn(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	sessions, err := wsSvc.ListByProject(projectID, nil, nil)
-	if err != nil || len(sessions) != 2 {
-		t.Fatalf("list = %d sessions, %v; want 2", len(sessions), err)
+	// O cliente é reajustado para 120,00 e o projeto ganha 5,00 de acréscimo: vale para a sessão seguinte.
+	customer.Update().SetHourlyRateCents(12000).ExecX(context.Background())
+	if _, err := projSvc.SetBilling(projectID, &customerID, 500); err != nil {
+		t.Fatalf("set the extra: %v", err)
 	}
-	newest, oldest := sessions[0], sessions[1]
+	if _, err := wsSvc.ClockIn(projectID, task1.ID.String(), personID); err != nil {
+		t.Fatalf("third clock in: %v", err)
+	}
+	if _, err := wsSvc.ClockOut(projectID, personID); err != nil {
+		t.Fatal(err)
+	}
+
+	sessions, err := wsSvc.ListByProject(projectID, nil, nil)
+	if err != nil || len(sessions) != 3 {
+		t.Fatalf("list = %d sessions, %v; want 3", len(sessions), err)
+	}
+	newest, middle, oldest := sessions[0], sessions[1], sessions[2]
 	if oldest.PayRateCents == nil || *oldest.PayRateCents != 2000 || oldest.BillRateCents != nil {
 		t.Errorf("old session rates = %v / %v, want them unchanged (2000 / nil)", oldest.PayRateCents, oldest.BillRateCents)
 	}
-	if newest.PayRateCents == nil || *newest.PayRateCents != 2500 || newest.BillRateCents == nil || *newest.BillRateCents != 10000 {
-		t.Errorf("new session rates = %v / %v, want 2500 / 10000", newest.PayRateCents, newest.BillRateCents)
+	if middle.PayRateCents == nil || *middle.PayRateCents != 2500 || middle.BillRateCents == nil || *middle.BillRateCents != 10000 {
+		t.Errorf("second session rates = %v / %v, want 2500 / 10000 (the raise came after it)", middle.PayRateCents, middle.BillRateCents)
+	}
+	if newest.BillRateCents == nil || *newest.BillRateCents != 12500 {
+		t.Errorf("third session bill rate = %v, want 12500 (the customer's 120.00 plus the 5.00 extra)", newest.BillRateCents)
 	}
 }
 

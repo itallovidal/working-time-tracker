@@ -23,13 +23,18 @@ func makeSolo(t *testing.T, orgID string, solo bool) {
 
 const monthlyBody = `"billing_mode":"monthly","monthly_fee_cents":630000,"contract_start":"2026-11-01"`
 
-// Um cliente de antes dos termos (e um criado como sempre, só com o nome) é por hora, fecha no último dia e vence no
-// fechamento, com os campos de sempre iguais; a organização com equipe não ganha nada novo para fazer.
+// Na organização com equipe o cliente é por hora, com o valor por hora obrigatório (Decisão 21), fecha no último dia
+// e vence no fechamento; o projeto cobra o valor do cliente mais o acréscimo dele. A tela de Clientes mostra só o valor
+// por hora: o modo, o contrato e os prazos são do modo solo.
 func TestCustomerBilling_OrganizationWithoutTheTermsStaysTheSame(t *testing.T) {
 	e := newServer(t)
 	owner := signup(t, e, "Org", "ana@test.com")
 
-	rec := do(e, "POST", "/api/orgs/"+owner.orgID+"/customers", `{"name":"Empresa A","contact_name":"Carla"}`, owner.session)
+	rec := do(e, "POST", "/api/orgs/"+owner.orgID+"/customers", `{"name":"Sem valor"}`, owner.session)
+	if code, params := projErrorOf(t, rec.Body.String()); rec.Code != http.StatusBadRequest || code != "request.field_required" || params["field"] != "hourly_rate_cents" {
+		t.Errorf("customer without a rate = %d %s, want 400 request.field_required on hourly_rate_cents", rec.Code, rec.Body.String())
+	}
+	rec = do(e, "POST", "/api/orgs/"+owner.orgID+"/customers", `{"name":"Empresa A","hourly_rate_cents":10000,"contact_name":"Carla"}`, owner.session)
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("create = %d: %s", rec.Code, rec.Body.String())
 	}
@@ -38,14 +43,14 @@ func TestCustomerBilling_OrganizationWithoutTheTermsStaysTheSame(t *testing.T) {
 		t.Errorf("legacy fields = %v", got)
 	}
 	if got["billing_mode"] != "hourly" || got["closing_day"] != float64(31) || got["payment_days"] != float64(0) ||
-		got["default_rate_cents"] != nil || got["monthly_fee_cents"] != nil || got["contract_start"] != nil || got["contract_end"] != nil ||
+		got["hourly_rate_cents"] != float64(10000) || got["monthly_fee_cents"] != nil || got["contract_start"] != nil || got["contract_end"] != nil ||
 		got["late_fee_bp"] != float64(0) || got["late_interest_bp_month"] != float64(0) || got["grace_days"] != float64(0) {
 		t.Errorf("terms of a plain customer = %v", got)
 	}
 
 	id := got["id"].(string)
 	rec = do(e, "PATCH", "/api/customers/"+id, `{"name":"Empresa Alfa"}`, owner.session)
-	if body := decode(t, rec); rec.Code != http.StatusOK || body["name"] != "Empresa Alfa" || body["billing_mode"] != "hourly" || body["closing_day"] != float64(31) {
+	if body := decode(t, rec); rec.Code != http.StatusOK || body["name"] != "Empresa Alfa" || body["billing_mode"] != "hourly" || body["hourly_rate_cents"] != float64(10000) {
 		t.Errorf("PATCH name = %d %v", rec.Code, body)
 	}
 	list := decodeList(t, do(e, "GET", "/api/orgs/"+owner.orgID+"/customers", "", owner.session))
@@ -53,26 +58,34 @@ func TestCustomerBilling_OrganizationWithoutTheTermsStaysTheSame(t *testing.T) {
 		t.Errorf("list = %v", list)
 	}
 
-	// O projeto de um cliente por hora é o de sempre: valor obrigatório, com o piso.
+	// O projeto cobra o valor do cliente, e o acréscimo soma a ele. Reajustar o cliente muda o projeto.
 	prj := createProject(t, e, owner, "Projeto")
 	rec = do(e, "PUT", "/api/projects/"+prj+"/billing", `{"customer_id":"`+id+`"}`, owner.session)
-	if code, _ := projErrorOf(t, rec.Body.String()); rec.Code != http.StatusBadRequest || code != "project.bill_rate_required" {
-		t.Errorf("billing without a rate = %d %s", rec.Code, rec.Body.String())
+	if body := decode(t, rec); rec.Code != http.StatusOK || body["bill_rate_cents"] != float64(10000) || body["bill_extra_cents"] != float64(0) || body["customer_billing_mode"] != "hourly" {
+		t.Errorf("billing without an extra = %d %v", rec.Code, body)
 	}
-	rec = do(e, "PUT", "/api/projects/"+prj+"/billing", `{"customer_id":"`+id+`","bill_rate_cents":15000}`, owner.session)
-	if body := decode(t, rec); rec.Code != http.StatusOK || body["bill_rate_cents"] != float64(15000) || body["customer_billing_mode"] != "hourly" {
-		t.Errorf("billing with a rate = %d %v", rec.Code, body)
+	rec = do(e, "PUT", "/api/projects/"+prj+"/billing", `{"customer_id":"`+id+`","bill_extra_cents":2500}`, owner.session)
+	if body := decode(t, rec); rec.Code != http.StatusOK || body["bill_rate_cents"] != float64(12500) || body["bill_extra_cents"] != float64(2500) {
+		t.Errorf("billing with an extra = %d %v", rec.Code, body)
+	}
+	if rec := do(e, "PATCH", "/api/customers/"+id, `{"hourly_rate_cents":11000}`, owner.session); rec.Code != http.StatusOK {
+		t.Fatalf("raise the customer = %d: %s", rec.Code, rec.Body.String())
+	}
+	if body := decode(t, do(e, "GET", "/api/projects/"+prj+"/billing", "", owner.session)); body["bill_rate_cents"] != float64(13500) {
+		t.Errorf("billing after the raise = %v, want 135.00 (110.00 plus 25.00)", body)
 	}
 
-	// Fora do modo solo a tela de Clientes não tem os termos: nem o seletor, nem a coluna.
+	// Fora do modo solo a tela de Clientes tem o valor por hora, mas não o modo, o contrato nem a coluna de prazos.
 	page := do(e, "GET", "/orgs/"+owner.orgID+"/customers", "", owner.session).Body.String()
-	for _, absent := range []string{`id="customer-billing-mode"`, `id="customer-monthly-fee"`, `id="customer-default-rate"`, `data-field="billing_mode"`} {
+	for _, absent := range []string{`id="customer-billing-mode"`, `id="customer-monthly-fee"`, `data-field="billing_mode"`, `data-field="closing_day"`} {
 		if strings.Contains(page, absent) {
 			t.Errorf("the customers page of an organization with a team has %s", absent)
 		}
 	}
-	if !strings.Contains(page, `id="customer-name"`) {
-		t.Error("the customers page lost the name field")
+	for _, want := range []string{`id="customer-name"`, `id="customer-hourly-rate"`, `data-field="hourly_rate_cents"`} {
+		if !strings.Contains(page, want) {
+			t.Errorf("the customers page of an organization with a team lacks %s", want)
+		}
 	}
 }
 
@@ -83,7 +96,7 @@ func TestCustomerBilling_FormValidation(t *testing.T) {
 	makeSolo(t, owner.orgID, true)
 	orgID := owner.orgID
 
-	rec := do(e, "POST", "/api/orgs/"+orgID+"/customers", `{"name":"Hora"}`, owner.session)
+	rec := do(e, "POST", "/api/orgs/"+orgID+"/customers", `{"name":"Hora","hourly_rate_cents":10000}`, owner.session)
 	hourlyID := decode(t, rec)["id"].(string)
 	rec = do(e, "POST", "/api/orgs/"+orgID+"/customers", `{"name":"Mensal",`+monthlyBody+`}`, owner.session)
 	if rec.Code != http.StatusCreated {
@@ -100,10 +113,12 @@ func TestCustomerBilling_FormValidation(t *testing.T) {
 		{"unknown mode", "POST", create, `{"name":"X","billing_mode":"weekly"}`, 400, "customer.invalid_billing_mode", "billing_mode"},
 		{"empty mode", "POST", create, `{"name":"X","billing_mode":""}`, 400, "customer.invalid_billing_mode", "billing_mode"},
 
-		// Por hora.
-		{"default rate under the floor", "POST", create, `{"name":"X","default_rate_cents":999}`, 400, "customer.invalid_default_rate", "default_rate_cents"},
-		{"default rate zero", "POST", create, `{"name":"X","default_rate_cents":0}`, 400, "customer.invalid_default_rate", "default_rate_cents"},
-		{"default rate over the cap", "POST", create, `{"name":"X","default_rate_cents":100000001}`, 400, "customer.invalid_default_rate", "default_rate_cents"},
+		// Por hora: o valor por hora é obrigatório (Decisão 21).
+		{"hourly without a rate", "POST", create, `{"name":"X"}`, 400, "request.field_required", "hourly_rate_cents"},
+		{"hourly rate cleared", "PATCH", "/api/customers/" + hourlyID, `{"hourly_rate_cents":null}`, 400, "request.field_required", "hourly_rate_cents"},
+		{"hourly rate under the floor", "POST", create, `{"name":"X","hourly_rate_cents":999}`, 400, "customer.invalid_hourly_rate", "hourly_rate_cents"},
+		{"hourly rate zero", "POST", create, `{"name":"X","hourly_rate_cents":0}`, 400, "customer.invalid_hourly_rate", "hourly_rate_cents"},
+		{"hourly rate over the cap", "POST", create, `{"name":"X","hourly_rate_cents":100000001}`, 400, "customer.invalid_hourly_rate", "hourly_rate_cents"},
 		{"fee on an hourly customer", "POST", create, `{"name":"X","monthly_fee_cents":1000}`, 400, "customer.field_monthly_only", "monthly_fee_cents"},
 		{"contract start on an hourly customer", "POST", create, `{"name":"X","contract_start":"2026-11-01"}`, 400, "customer.field_monthly_only", "contract_start"},
 		{"late fee on an hourly customer", "PATCH", "/api/customers/" + hourlyID, `{"late_fee_bp":200}`, 400, "customer.field_monthly_only", "late_fee_bp"},
@@ -117,19 +132,19 @@ func TestCustomerBilling_FormValidation(t *testing.T) {
 		{"start not a date", "POST", create, `{"name":"X","billing_mode":"monthly","monthly_fee_cents":1000,"contract_start":"01/11/2026"}`, 400, "request.field_invalid", "contract_start"},
 		{"end not after start", "POST", create, `{"name":"X","billing_mode":"monthly","monthly_fee_cents":1000,"contract_start":"2026-11-01","contract_end":"2026-11-01"}`, 400, "customer.invalid_contract_end", "contract_end"},
 		{"end before start", "PATCH", "/api/customers/" + monthlyID, `{"contract_end":"2026-10-01"}`, 400, "customer.invalid_contract_end", "contract_end"},
-		{"default rate on a monthly customer", "PATCH", "/api/customers/" + monthlyID, `{"default_rate_cents":15000}`, 400, "customer.field_hourly_only", "default_rate_cents"},
+		{"hourly rate on a monthly customer", "PATCH", "/api/customers/" + monthlyID, `{"hourly_rate_cents":15000}`, 400, "customer.field_hourly_only", "hourly_rate_cents"},
 		{"late fee over 100%", "PATCH", "/api/customers/" + monthlyID, `{"late_fee_bp":10001}`, 400, "customer.invalid_late_fee", "late_fee_bp"},
 		{"interest negative", "PATCH", "/api/customers/" + monthlyID, `{"late_interest_bp_month":-1}`, 400, "customer.invalid_late_interest", "late_interest_bp_month"},
 		{"grace over the cap", "PATCH", "/api/customers/" + monthlyID, `{"grace_days":366}`, 400, "customer.invalid_grace_days", "grace_days"},
 
 		// Nos dois modos.
-		{"closing day zero", "POST", create, `{"name":"X","closing_day":0}`, 400, "customer.invalid_closing_day", "closing_day"},
+		{"closing day zero", "POST", create, `{"name":"X","hourly_rate_cents":10000,"closing_day":0}`, 400, "customer.invalid_closing_day", "closing_day"},
 		{"closing day 32", "PATCH", "/api/customers/" + monthlyID, `{"closing_day":32}`, 400, "customer.invalid_closing_day", "closing_day"},
-		{"payment days negative", "POST", create, `{"name":"X","payment_days":-1}`, 400, "customer.invalid_payment_days", "payment_days"},
+		{"payment days negative", "POST", create, `{"name":"X","hourly_rate_cents":10000,"payment_days":-1}`, 400, "customer.invalid_payment_days", "payment_days"},
 		{"payment days over the cap", "PATCH", "/api/customers/" + hourlyID, `{"payment_days":366}`, 400, "customer.invalid_payment_days", "payment_days"},
 
 		// O tipo errado de um campo novo é corpo inválido, com o nome do campo.
-		{"closing day as text", "POST", create, `{"name":"X","closing_day":"5"}`, 400, "request.invalid_body", "closing_day"},
+		{"closing day as text", "POST", create, `{"name":"X","hourly_rate_cents":10000,"closing_day":"5"}`, 400, "request.invalid_body", "closing_day"},
 		{"fee as text", "POST", create, `{"name":"X","billing_mode":"monthly","monthly_fee_cents":"muito"}`, 400, "request.invalid_body", "monthly_fee_cents"},
 	}
 	for _, tc := range cases {
@@ -146,8 +161,8 @@ func TestCustomerBilling_FormValidation(t *testing.T) {
 
 	// O que vale passa, nos limites, e volta como foi gravado.
 	ok := []struct{ name, method, path, body string }{
-		{"hourly with every term", "POST", create, `{"name":"A","default_rate_cents":1000,"closing_day":1,"payment_days":365}`},
-		{"hourly with the defaults spelled out", "POST", create, `{"name":"B","billing_mode":"hourly","default_rate_cents":null,"monthly_fee_cents":null,"contract_start":"","contract_end":"","late_fee_bp":0,"late_interest_bp_month":0,"grace_days":0,"closing_day":31,"payment_days":0}`},
+		{"hourly with every term", "POST", create, `{"name":"A","hourly_rate_cents":1000,"closing_day":1,"payment_days":365}`},
+		{"hourly with the defaults spelled out", "POST", create, `{"name":"B","billing_mode":"hourly","hourly_rate_cents":10000,"monthly_fee_cents":null,"contract_start":"","contract_end":"","late_fee_bp":0,"late_interest_bp_month":0,"grace_days":0,"closing_day":31,"payment_days":0}`},
 		{"monthly with every term", "POST", create, `{"name":"C",` + monthlyBody + `,"contract_end":"2027-10-31","closing_day":28,"payment_days":10,"late_fee_bp":10000,"late_interest_bp_month":100,"grace_days":365}`},
 		{"monthly edit", "PATCH", "/api/customers/" + monthlyID, `{"monthly_fee_cents":700000,"contract_end":""}`},
 	}
@@ -173,7 +188,7 @@ func TestCustomerBilling_MonthlyNeedsSolo(t *testing.T) {
 	if code, params := projErrorOf(t, rec.Body.String()); rec.Code != http.StatusBadRequest || code != "customer.monthly_needs_solo" || params["field"] != "billing_mode" {
 		t.Errorf("monthly outside solo = %d %s, want 400 customer.monthly_needs_solo on billing_mode", rec.Code, rec.Body.String())
 	}
-	rec = do(e, "POST", create, `{"name":"Hora"}`, owner.session)
+	rec = do(e, "POST", create, `{"name":"Hora","hourly_rate_cents":10000}`, owner.session)
 	hourlyID := decode(t, rec)["id"].(string)
 	rec = do(e, "PATCH", "/api/customers/"+hourlyID, `{`+monthlyBody+`}`, owner.session)
 	if code, _ := projErrorOf(t, rec.Body.String()); rec.Code != http.StatusBadRequest || code != "customer.monthly_needs_solo" {
@@ -211,8 +226,8 @@ func TestCustomerBilling_LockedModeAndReceivables(t *testing.T) {
 		t.Errorf("a locked switch changed the customer: %v", got)
 	}
 	// O mesmo modo e os outros termos seguem editáveis.
-	rec = do(e, "PATCH", "/api/customers/"+customerID, `{"billing_mode":"hourly","default_rate_cents":18000,"payment_days":7}`, owner.session)
-	if body := decode(t, rec); rec.Code != http.StatusOK || body["default_rate_cents"] != float64(18000) || body["payment_days"] != float64(7) {
+	rec = do(e, "PATCH", "/api/customers/"+customerID, `{"billing_mode":"hourly","hourly_rate_cents":18000,"payment_days":7}`, owner.session)
+	if body := decode(t, rec); rec.Code != http.StatusOK || body["hourly_rate_cents"] != float64(18000) || body["payment_days"] != float64(7) {
 		t.Errorf("edit of a locked customer = %d %v", rec.Code, body)
 	}
 
@@ -234,7 +249,8 @@ func TestCustomerBilling_LockedModeAndReceivables(t *testing.T) {
 	}
 }
 
-// O valor cobrado do projeto segue o modo do cliente: na criação, em PUT billing e ao trocar o cliente.
+// A cobrança do projeto segue o cliente: o valor por hora vem do cliente por hora, o mensal não tem valor por hora, e o
+// acréscimo do projeto vale no modo do cliente (por hora ou por mês), na criação, em PUT billing e ao trocar o cliente.
 func TestCustomerBilling_ProjectRateFollowsTheMode(t *testing.T) {
 	e := newServer(t)
 	owner := signup(t, e, "Org", "ana@test.com")
@@ -242,56 +258,40 @@ func TestCustomerBilling_ProjectRateFollowsTheMode(t *testing.T) {
 	orgID := owner.orgID
 
 	monthly := decode(t, do(e, "POST", "/api/orgs/"+orgID+"/customers", `{"name":"Mensal",`+monthlyBody+`}`, owner.session))["id"].(string)
-	hourly := decode(t, do(e, "POST", "/api/orgs/"+orgID+"/customers", `{"name":"Hora","default_rate_cents":15000}`, owner.session))["id"].(string)
+	hourly := decode(t, do(e, "POST", "/api/orgs/"+orgID+"/customers", `{"name":"Hora","hourly_rate_cents":15000}`, owner.session))["id"].(string)
 
-	// Criação.
-	rec := do(e, "POST", "/api/orgs/"+orgID+"/projects", `{"name":"P","customer_id":"`+monthly+`","bill_rate_cents":15000}`, owner.session)
-	if code, params := projErrorOf(t, rec.Body.String()); rec.Code != http.StatusBadRequest || code != "project.bill_rate_not_allowed" || params["field"] != "bill_rate_cents" {
-		t.Errorf("create with a rate on a monthly customer = %d %s", rec.Code, rec.Body.String())
-	}
-	rec = do(e, "POST", "/api/orgs/"+orgID+"/projects", `{"name":"P","customer_id":"`+monthly+`"}`, owner.session)
+	// Criação: o mensal leva um acréscimo por mês; o por hora, por hora.
+	rec := do(e, "POST", "/api/orgs/"+orgID+"/projects", `{"name":"P","customer_id":"`+monthly+`","bill_extra_cents":80000}`, owner.session)
 	if rec.Code != http.StatusCreated {
-		t.Fatalf("create without a rate on a monthly customer = %d: %s", rec.Code, rec.Body.String())
+		t.Fatalf("create on a monthly customer = %d: %s", rec.Code, rec.Body.String())
 	}
 	monthlyProject := decode(t, rec)["id"].(string)
-	rec = do(e, "POST", "/api/orgs/"+orgID+"/projects", `{"name":"P","customer_id":"`+hourly+`"}`, owner.session)
-	if code, _ := projErrorOf(t, rec.Body.String()); rec.Code != http.StatusBadRequest || code != "project.bill_rate_required" {
-		t.Errorf("create without a rate on an hourly customer = %d %s", rec.Code, rec.Body.String())
+	rec = do(e, "POST", "/api/orgs/"+orgID+"/projects", `{"name":"H","customer_id":"`+hourly+`","bill_extra_cents":-1}`, owner.session)
+	if code, params := projErrorOf(t, rec.Body.String()); rec.Code != http.StatusBadRequest || code != "project.invalid_bill_extra" || params["field"] != "bill_extra_cents" {
+		t.Errorf("create with a negative extra = %d %s", rec.Code, rec.Body.String())
 	}
 
-	// PUT billing: o cliente mensal não aceita valor, e o resultado diz o modo.
+	// O projeto do mensal não tem valor por hora, e o resultado diz o modo e o acréscimo.
 	billing := "/api/projects/" + monthlyProject + "/billing"
-	if got := decode(t, do(e, "GET", billing, "", owner.session)); got["bill_rate_cents"] != nil || got["customer_billing_mode"] != "monthly" {
+	if got := decode(t, do(e, "GET", billing, "", owner.session)); got["bill_rate_cents"] != nil || got["bill_extra_cents"] != float64(80000) || got["customer_billing_mode"] != "monthly" {
 		t.Errorf("monthly project billing = %v", got)
 	}
-	rec = do(e, "PUT", billing, `{"customer_id":"`+monthly+`","bill_rate_cents":15000}`, owner.session)
-	if code, _ := projErrorOf(t, rec.Body.String()); rec.Code != http.StatusBadRequest || code != "project.bill_rate_not_allowed" {
-		t.Errorf("PUT billing with a rate on a monthly customer = %d %s", rec.Code, rec.Body.String())
-	}
 
-	// Trocar o cliente do projeto revalida contra o modo do novo: do mensal para o por hora o valor passa a ser
-	// obrigatório, e do por hora para o mensal o valor antigo não vai junto.
-	rec = do(e, "PUT", billing, `{"customer_id":"`+hourly+`"}`, owner.session)
-	if code, _ := projErrorOf(t, rec.Body.String()); rec.Code != http.StatusBadRequest || code != "project.bill_rate_required" {
-		t.Errorf("monthly to hourly without a rate = %d %s", rec.Code, rec.Body.String())
+	// Trocar para o cliente por hora: o valor é o dele mais o acréscimo que veio.
+	rec = do(e, "PUT", billing, `{"customer_id":"`+hourly+`","bill_extra_cents":1000}`, owner.session)
+	if body := decode(t, rec); rec.Code != http.StatusOK || body["bill_rate_cents"] != float64(16000) || body["customer_billing_mode"] != "hourly" {
+		t.Errorf("monthly to hourly = %d %v", rec.Code, body)
 	}
-	rec = do(e, "PUT", billing, `{"customer_id":"`+hourly+`","bill_rate_cents":15000}`, owner.session)
-	if body := decode(t, rec); rec.Code != http.StatusOK || body["bill_rate_cents"] != float64(15000) || body["customer_billing_mode"] != "hourly" {
-		t.Errorf("monthly to hourly with a rate = %d %v", rec.Code, body)
-	}
-	rec = do(e, "PUT", billing, `{"customer_id":"`+monthly+`","bill_rate_cents":15000}`, owner.session)
-	if code, _ := projErrorOf(t, rec.Body.String()); rec.Code != http.StatusBadRequest || code != "project.bill_rate_not_allowed" {
-		t.Errorf("hourly to monthly carrying the rate = %d %s", rec.Code, rec.Body.String())
-	}
-	rec = do(e, "PUT", billing, `{"customer_id":"`+monthly+`","bill_rate_cents":null}`, owner.session)
-	if body := decode(t, rec); rec.Code != http.StatusOK || body["bill_rate_cents"] != nil || body["customer_billing_mode"] != "monthly" {
+	// E de volta para o mensal, sem acréscimo.
+	rec = do(e, "PUT", billing, `{"customer_id":"`+monthly+`"}`, owner.session)
+	if body := decode(t, rec); rec.Code != http.StatusOK || body["bill_rate_cents"] != nil || body["bill_extra_cents"] != float64(0) || body["customer_billing_mode"] != "monthly" {
 		t.Errorf("hourly to monthly = %d %v", rec.Code, body)
 	}
 
-	// O projeto interno não mudou: um valor sem cliente continua recusado.
-	rec = do(e, "PUT", billing, `{"bill_rate_cents":15000}`, owner.session)
-	if code, _ := projErrorOf(t, rec.Body.String()); rec.Code != http.StatusBadRequest || code != "project.bill_rate_needs_customer" {
-		t.Errorf("rate without a customer = %d %s", rec.Code, rec.Body.String())
+	// Um acréscimo sem cliente é recusado.
+	rec = do(e, "PUT", billing, `{"bill_extra_cents":1000}`, owner.session)
+	if code, _ := projErrorOf(t, rec.Body.String()); rec.Code != http.StatusBadRequest || code != "project.bill_extra_needs_customer" {
+		t.Errorf("extra without a customer = %d %s", rec.Code, rec.Body.String())
 	}
 }
 
@@ -329,7 +329,8 @@ func TestCustomerBilling_ClockInOnAMonthlyCustomersProject(t *testing.T) {
 	}
 }
 
-// A tela de Clientes tem os termos só no modo solo, e o formulário de projeto sabe o modo do cliente.
+// A tela de Clientes tem o modo, o contrato e os prazos só no modo solo, e o formulário de projeto mostra a cobrança do
+// cliente.
 func TestCustomerBilling_PagesShowTheTermsOnlyInSolo(t *testing.T) {
 	e := newServer(t)
 	owner := signup(t, e, "Org", "ana@test.com")
@@ -341,7 +342,7 @@ func TestCustomerBilling_PagesShowTheTermsOnlyInSolo(t *testing.T) {
 	}
 	body := page.Body.String()
 	for _, want := range []string{
-		`id="customer-billing-mode"`, `data-field="billing_mode"`, `data-field="default_rate_cents"`, `data-field="monthly_fee_cents"`,
+		`id="customer-billing-mode"`, `data-field="billing_mode"`, `data-field="hourly_rate_cents"`, `data-field="monthly_fee_cents"`,
 		`data-field="contract_start"`, `data-field="contract_end"`, `data-field="closing_day"`, `data-field="payment_days"`,
 		`data-field="late_fee_bp"`, `data-field="late_interest_bp_month"`, `data-field="grace_days"`, `<details class="form-fold"`,
 		"Cobrança", "Mensal", "Por hora", "Multa, juros e tolerância",
@@ -359,8 +360,10 @@ func TestCustomerBilling_PagesShowTheTermsOnlyInSolo(t *testing.T) {
 		t.Errorf("/api/auth/me organization_solo = %v, want true", me["organization_solo"])
 	}
 
+	// O formulário de novo projeto mostra a cobrança do cliente, só para leitura, e pede o acréscimo (Decisão 21).
 	projects := do(e, "GET", "/orgs/"+owner.orgID+"/projects", "", owner.session).Body.String()
-	for _, want := range []string{`@change="customerChanged()"`, `x-show="hasRate()"`, `x-show="monthlyCustomer()"`} {
+	for _, want := range []string{`@change="customerChanged()"`, `x-text="billing.customer(customerOf())"`, `id="project-bill-extra"`,
+		`data-field="bill_extra_cents"`, `x-text="billing.extraLabel(customerOf())"`, `x-text="billing.total(customerOf(), draft.extra)"`} {
 		if !strings.Contains(projects, want) {
 			t.Errorf("the new project form lacks %s", want)
 		}

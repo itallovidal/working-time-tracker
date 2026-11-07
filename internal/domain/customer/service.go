@@ -217,7 +217,7 @@ func (s *Service) applyBilling(c *Customer, in Input) error {
 
 	// Os campos seguem a ordem da tela: o valor ou a mensalidade, o contrato, o fechamento e o prazo, e a multa.
 	if mode == BillingHourly {
-		if err := applyDefaultRate(c, in.DefaultRateCents); err != nil {
+		if err := applyHourlyRate(c, in.HourlyRateCents); err != nil {
 			return err
 		}
 	} else if err := applyContract(c, in); err != nil {
@@ -258,8 +258,8 @@ func otherModeField(mode string, in Input) string {
 	filled := func(v *string) bool { return v != nil && strings.TrimSpace(*v) != "" }
 	nonZero := func(v *int) bool { return v != nil && *v != 0 }
 	if mode == BillingMonthly {
-		if in.DefaultRateCents.Value != nil {
-			return "default_rate_cents"
+		if in.HourlyRateCents.Value != nil {
+			return "hourly_rate_cents"
 		}
 		return ""
 	}
@@ -280,28 +280,32 @@ func otherModeField(mode string, in Input) string {
 	return ""
 }
 
-// resetModeFields apaga o que é de um modo só, na troca de modo: o valor por hora padrão e todo o contrato mensal.
+// resetModeFields apaga o que é de um modo só, na troca de modo: o valor por hora e todo o contrato mensal.
 func resetModeFields(c *Customer) {
-	c.DefaultRateCents = nil
+	c.HourlyRateCents = nil
 	c.MonthlyFeeCents, c.ContractStart, c.ContractEnd = nil, nil, nil
 	c.LateFeeBP, c.LateInterestBPMonth, c.GraceDays = 0, 0, 0
 }
 
-// applyDefaultRate aplica o valor por hora padrão do cliente por hora: ausente mantém, null apaga e, com valor, vale o
-// piso de validate.MinRateCents (e o teto).
-func applyDefaultRate(c *Customer, in validate.Optional[int]) error {
-	if !in.Set {
-		return nil
+// applyHourlyRate aplica o valor por hora do cliente por hora, o que todos os projetos dele cobram (cada um pode somar
+// um acréscimo): ausente mantém e, com valor, vale o piso de validate.MinRateCents (e o teto). É obrigatório: null, ou
+// ausente num cliente que ainda não tem valor (o cliente novo, ou um antigo de antes da Decisão 21), é recusado.
+// Mudar o valor vale para as sessões novas de todos os projetos do cliente; as já registradas guardam o delas.
+func applyHourlyRate(c *Customer, in validate.Optional[int]) error {
+	if in.Set {
+		if in.Value == nil {
+			c.HourlyRateCents = nil
+		} else {
+			if validate.Rate("hourly_rate_cents", *in.Value) != nil {
+				return ErrInvalidHourlyRate.With("field", "hourly_rate_cents")
+			}
+			v := *in.Value
+			c.HourlyRateCents = &v
+		}
 	}
-	if in.Value == nil {
-		c.DefaultRateCents = nil
-		return nil
+	if c.HourlyRateCents == nil {
+		return apperr.ErrFieldRequired.With("field", "hourly_rate_cents")
 	}
-	if validate.Rate("default_rate_cents", *in.Value) != nil {
-		return ErrInvalidDefaultRate.With("field", "default_rate_cents")
-	}
-	v := *in.Value
-	c.DefaultRateCents = &v
 	return nil
 }
 

@@ -96,9 +96,9 @@ func BillingMode(v string) predicate.Customer {
 	return predicate.Customer(sql.FieldEQ(FieldBillingMode, v))
 }
 
-// DefaultRateCents applies equality check predicate on the "default_rate_cents" field. It's identical to DefaultRateCentsEQ.
-func DefaultRateCents(v int) predicate.Customer {
-	return predicate.Customer(sql.FieldEQ(FieldDefaultRateCents, v))
+// HourlyRateCents applies equality check predicate on the "hourly_rate_cents" field. It's identical to HourlyRateCentsEQ.
+func HourlyRateCents(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldEQ(FieldHourlyRateCents, v))
 }
 
 // MonthlyFeeCents applies equality check predicate on the "monthly_fee_cents" field. It's identical to MonthlyFeeCentsEQ.
@@ -661,54 +661,54 @@ func BillingModeContainsFold(v string) predicate.Customer {
 	return predicate.Customer(sql.FieldContainsFold(FieldBillingMode, v))
 }
 
-// DefaultRateCentsEQ applies the EQ predicate on the "default_rate_cents" field.
-func DefaultRateCentsEQ(v int) predicate.Customer {
-	return predicate.Customer(sql.FieldEQ(FieldDefaultRateCents, v))
+// HourlyRateCentsEQ applies the EQ predicate on the "hourly_rate_cents" field.
+func HourlyRateCentsEQ(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldEQ(FieldHourlyRateCents, v))
 }
 
-// DefaultRateCentsNEQ applies the NEQ predicate on the "default_rate_cents" field.
-func DefaultRateCentsNEQ(v int) predicate.Customer {
-	return predicate.Customer(sql.FieldNEQ(FieldDefaultRateCents, v))
+// HourlyRateCentsNEQ applies the NEQ predicate on the "hourly_rate_cents" field.
+func HourlyRateCentsNEQ(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldNEQ(FieldHourlyRateCents, v))
 }
 
-// DefaultRateCentsIn applies the In predicate on the "default_rate_cents" field.
-func DefaultRateCentsIn(vs ...int) predicate.Customer {
-	return predicate.Customer(sql.FieldIn(FieldDefaultRateCents, vs...))
+// HourlyRateCentsIn applies the In predicate on the "hourly_rate_cents" field.
+func HourlyRateCentsIn(vs ...int) predicate.Customer {
+	return predicate.Customer(sql.FieldIn(FieldHourlyRateCents, vs...))
 }
 
-// DefaultRateCentsNotIn applies the NotIn predicate on the "default_rate_cents" field.
-func DefaultRateCentsNotIn(vs ...int) predicate.Customer {
-	return predicate.Customer(sql.FieldNotIn(FieldDefaultRateCents, vs...))
+// HourlyRateCentsNotIn applies the NotIn predicate on the "hourly_rate_cents" field.
+func HourlyRateCentsNotIn(vs ...int) predicate.Customer {
+	return predicate.Customer(sql.FieldNotIn(FieldHourlyRateCents, vs...))
 }
 
-// DefaultRateCentsGT applies the GT predicate on the "default_rate_cents" field.
-func DefaultRateCentsGT(v int) predicate.Customer {
-	return predicate.Customer(sql.FieldGT(FieldDefaultRateCents, v))
+// HourlyRateCentsGT applies the GT predicate on the "hourly_rate_cents" field.
+func HourlyRateCentsGT(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldGT(FieldHourlyRateCents, v))
 }
 
-// DefaultRateCentsGTE applies the GTE predicate on the "default_rate_cents" field.
-func DefaultRateCentsGTE(v int) predicate.Customer {
-	return predicate.Customer(sql.FieldGTE(FieldDefaultRateCents, v))
+// HourlyRateCentsGTE applies the GTE predicate on the "hourly_rate_cents" field.
+func HourlyRateCentsGTE(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldGTE(FieldHourlyRateCents, v))
 }
 
-// DefaultRateCentsLT applies the LT predicate on the "default_rate_cents" field.
-func DefaultRateCentsLT(v int) predicate.Customer {
-	return predicate.Customer(sql.FieldLT(FieldDefaultRateCents, v))
+// HourlyRateCentsLT applies the LT predicate on the "hourly_rate_cents" field.
+func HourlyRateCentsLT(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldLT(FieldHourlyRateCents, v))
 }
 
-// DefaultRateCentsLTE applies the LTE predicate on the "default_rate_cents" field.
-func DefaultRateCentsLTE(v int) predicate.Customer {
-	return predicate.Customer(sql.FieldLTE(FieldDefaultRateCents, v))
+// HourlyRateCentsLTE applies the LTE predicate on the "hourly_rate_cents" field.
+func HourlyRateCentsLTE(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldLTE(FieldHourlyRateCents, v))
 }
 
-// DefaultRateCentsIsNil applies the IsNil predicate on the "default_rate_cents" field.
-func DefaultRateCentsIsNil() predicate.Customer {
-	return predicate.Customer(sql.FieldIsNull(FieldDefaultRateCents))
+// HourlyRateCentsIsNil applies the IsNil predicate on the "hourly_rate_cents" field.
+func HourlyRateCentsIsNil() predicate.Customer {
+	return predicate.Customer(sql.FieldIsNull(FieldHourlyRateCents))
 }
 
-// DefaultRateCentsNotNil applies the NotNil predicate on the "default_rate_cents" field.
-func DefaultRateCentsNotNil() predicate.Customer {
-	return predicate.Customer(sql.FieldNotNull(FieldDefaultRateCents))
+// HourlyRateCentsNotNil applies the NotNil predicate on the "hourly_rate_cents" field.
+func HourlyRateCentsNotNil() predicate.Customer {
+	return predicate.Customer(sql.FieldNotNull(FieldHourlyRateCents))
 }
 
 // MonthlyFeeCentsEQ applies the EQ predicate on the "monthly_fee_cents" field.

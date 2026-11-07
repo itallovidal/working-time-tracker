@@ -83,6 +83,8 @@
                   {{/* O valor por hora que a proposta rende fica numa segunda linha; abaixo do piso ele vira um aviso, não um erro. */}}
                   <td class="nowrap num">
                     <div x-text="WTT.fmt.money(row.calculated_cents)"></div>
+                    {{/* No mensal, a parte que vem dos acréscimos dos projetos (Decisão 21). */}}
+                    <div class="muted small" x-show="row.extra_cents > 0" x-text="$t('receivable.extra_line', { amount: WTT.fmt.money(row.extra_cents) })"></div>
                     <div class="muted small" x-show="row.effective_rate_cents !== null && !row.below_min_rate" x-text="rateLine(row)"></div>
                     <div class="small" x-cloak x-show="row.below_min_rate">
                       <span class="badge badge-warn" :title="belowMin()">{{template "icon" "triangle-exclamation"}} <span x-text="rateLine(row)"></span></span>
@@ -215,7 +217,7 @@
           <dt>{{.T "receivable.modal.hours"}}</dt>
           <dd x-text="WTT.fmt.hours(target.seconds)"></dd>
           <dt>{{.T "receivable.modal.calculated"}}</dt>
-          <dd x-text="WTT.fmt.money(target.calculated_cents)"></dd>
+          <dd><span x-text="WTT.fmt.money(target.calculated_cents)"></span><span class="muted small" x-show="target.extra_cents > 0" x-text="' · ' + $t('receivable.extra_line', { amount: WTT.fmt.money(target.extra_cents) })"></span></dd>
         </dl>
       </template>
       <p class="muted small" x-show="target && target.open && target.kind === 'monthly' && !editing">{{.T "receivable.modal.open_period"}}</p>

@@ -24,6 +24,7 @@ import (
 	"working-time-tracker/internal/domain/task"
 	"working-time-tracker/internal/domain/team"
 	"working-time-tracker/internal/domain/work_session"
+	"working-time-tracker/internal/validate"
 	"working-time-tracker/testutil"
 )
 
@@ -182,13 +183,15 @@ func TestService_Totals(t *testing.T) {
 	if _, err := testDB.Exec(`UPDATE projects SET created_at = $1 WHERE id = $2`, started, x); err != nil {
 		t.Fatalf("backdate project: %v", err)
 	}
-	name := "Cliente"
-	c, err := customer.NewService(customer.NewStore(testClient)).Create(f.orgID, customer.Input{Name: &name})
+	name, rate := "Cliente", 10000
+	c, err := customer.NewService(customer.NewStore(testClient)).Create(f.orgID, customer.Input{
+		Name: &name, HourlyRateCents: validate.Optional[int]{Set: true, Value: &rate},
+	})
 	if err != nil {
 		t.Fatalf("fixture customer: %v", err)
 	}
 	customerID := c.ID.String()
-	if _, err := f.projects.SetBilling(x, &customerID, cents(10000)); err != nil {
+	if _, err := f.projects.SetBilling(x, &customerID, 0); err != nil {
 		t.Fatalf("fixture billing: %v", err)
 	}
 
