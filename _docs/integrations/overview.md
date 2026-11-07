@@ -14,7 +14,7 @@ GitLab). As tarefas do projeto se ligam aos itens desse alvo.
 |---|---|---|---|---|
 | `github` | Autorização no GitHub (**Conectar com o GitHub**). A API também aceita um token pessoal | `repo`: `dono/repositorio` ou o endereço | Sim | `assignee`, `server_since` |
 | `trello` | Autorização no Trello (**Conectar com o Trello**). A API também aceita o token da API | `api_key` (interno), `board_id` (endereço, link curto ou id), `board_name` (escondido) | Sim | `deadline`, `auto_publish` |
-| `gitlab` | Token com escopo `read_api` | `project_url`: `grupo/projeto` ou o endereço | Não | — (o tipo está "em breve") |
+| `gitlab` | Autorização no GitLab (**Conectar com o GitLab**), com o token que vence em 2 horas e é renovado pelo servidor. A API também aceita um token pessoal | `project_url`: `grupo/projeto` ou o endereço | Sim | `assignee`, `server_since` |
 
 O básico da sincronização, que todo tipo com sincronização faz, é o nome, a descrição, as etiquetas e o estado
 (aberto ou fechado).
@@ -68,14 +68,14 @@ Cada tipo se descreve num `Descriptor` (`internal/adapter/interface.go`). A tela
 | `ItemNumeric` | O id do item é um número (a issue). Num tipo assim, um id que não é número não é de item nenhum |
 | `Sync` | O tipo implementa `IssueSyncer`. Só ele ganha a caixa da sincronização |
 | `Caps` | O que a sincronização faz além do básico: `deadline` (o prazo da tarefa e a data de entrega do item se espelham), `assignee` (o responsável se liga pelo e-mail público), `server_since` (a plataforma filtra por data, então a rodada de fundo pode ser incremental), `auto_publish` (a tarefa criada aqui vira item sozinha) |
-| `ComingSoon` | O tipo existe mas não se oferece: a tela o mostra desabilitado com o selo "Em breve", e o `POST` responde `400` `integration.type_coming_soon`. As integrações que já existem seguem valendo |
+| `ComingSoon` | O tipo existe mas não se oferece: a tela o mostra desabilitado com o selo "Em breve", e o `POST` responde `400` `integration.type_coming_soon`. As integrações que já existem seguem valendo. Nenhum tipo está assim hoje (o GitLab saiu na Sprint 107) |
 | `Configured` | Preenchido pela página: o servidor tem o app de autorização daquele tipo configurado |
 
 ## A sincronização
 
 Com a caixa da sincronização ligada, **todo item aberto do alvo vira uma tarefa**, e as duas ficam iguais nos dois
-sentidos. O código está em `internal/domain/issuesync`. O GitHub e o Trello usam o mesmo núcleo e mudam só no que
-cada um declara em `caps`.
+sentidos. O código está em `internal/domain/issuesync`. O GitHub, o GitLab e o Trello usam o mesmo núcleo e mudam
+só no que cada um declara em `caps`.
 
 ### Ligar e desligar
 
@@ -141,14 +141,14 @@ Uma rodada sem diferença nenhuma não escreve nada na plataforma.
 
 **A rotina de fundo.** Não há webhook: a plataforma não alcança o servidor. A rotina acorda no menor dos intervalos,
 com um pequeno sorteio para espalhar as rodadas, e olha cada integração quando passou o intervalo do tipo dela. O
-intervalo vem de `SYNC_INTERVAL` (o comum, `5m` por padrão), e `GITHUB_SYNC_INTERVAL` e `TRELLO_SYNC_INTERVAL` valem
-sobre ele para a plataforma deles. `0` desliga a rotina (de todas ou só daquela plataforma), e os botões e o gancho
+intervalo vem de `SYNC_INTERVAL` (o comum, `5m` por padrão), e `GITHUB_SYNC_INTERVAL`, `GITLAB_SYNC_INTERVAL` e
+`TRELLO_SYNC_INTERVAL` valem sobre ele para a plataforma deles. `0` desliga a rotina (de todas ou só daquela plataforma), e os botões e o gancho
 seguem valendo. A primeira rodada sai poucos segundos depois de o servidor subir. Ver
 [configuração](../getting-started/configuration.md).
 
 **Completa ou incremental.** A rodada completa lista todos os itens abertos e confere os ligados que não vieram na
 lista (foram fechados, apagados ou transferidos). Um item fechado só é relido se a tarefa mudou desde o acordo. A
-rodada incremental pede só os itens mexidos desde a última rodada, e só existe no tipo com `server_since` (o GitHub).
+rodada incremental pede só os itens mexidos desde a última rodada, e só existe no tipo com `server_since` (o GitHub e o GitLab).
 A rotina faz a completa na primeira vez e de hora em hora, e a incremental no meio. Os botões fazem sempre a completa.
 Uma rodada manda mudanças a no máximo 100 itens, e o resto fica para a seguinte.
 
@@ -222,7 +222,7 @@ Os erros que param a rodada aparecem com o código deles, como `integration.inva
 ## Uma tarefa em várias plataformas
 
 Uma tarefa tem **no máximo um item por integração**, e um item serve a **uma tarefa só**. Então a mesma tarefa pode
-estar ao mesmo tempo numa issue do GitHub e num cartão do Trello. O JSON da tarefa traz `links`, um por item
+estar ao mesmo tempo numa issue do GitHub, numa do GitLab e num cartão do Trello. O JSON da tarefa traz `links`, um por item
 (`integration_id`, `integration`, `item_id`, `url`, `last_error`).
 
 ```mermaid
@@ -269,11 +269,12 @@ no alvo. A resposta é `200` `{"task", "problem"}`. Os erros são:
 A tela chama a rota em dois lugares:
 
 - **Nova tarefa.** Quando o projeto tem integração ativa, o modal ganha a etapa **Integrações**, com uma caixa por
-  integração com a sincronização ligada. As caixas não se excluem: um clique só cria a tarefa aqui, no GitHub e no
-  Trello. A caixa do **GitHub vem desmarcada**, e a tela publica a issue depois de criar a tarefa. A do **Trello vem
+  integração com a sincronização ligada. As caixas não se excluem: um clique só cria a tarefa aqui, no GitHub, no
+  GitLab e no Trello. As caixas do **GitHub e do GitLab vêm desmarcadas**, e a tela publica a issue depois de criar a
+  tarefa. A do **Trello vem
   marcada**, e é o servidor que posta o cartão sozinho (ver [Trello](trello.md)). Desmarcá-la manda `skip_publish`
-  na criação. As integrações sem sincronização e o GitLab aparecem desativados, com o motivo.
-- **Publicar no GitHub / no Trello**, na página da tarefa: um cartão para cada integração ativa, com a sincronização
+  na criação. As integrações sem sincronização aparecem desativadas, com o motivo.
+- **Publicar no GitHub / no GitLab / no Trello**, na página da tarefa: um cartão para cada integração ativa, com a sincronização
   ligada, em que a tarefa ainda não está, só enquanto ela não está Fechada. É assim que uma issue que veio do GitHub
   vira cartão do Trello, e o contrário, sem a tarefa sair do lugar.
 
@@ -286,7 +287,8 @@ modal de exclusão é uma caixa por plataforma em que a tarefa está, **todas de
 - A resposta é `200` `{"remote": [{"integration_id", "provider", "outcome", "problem"}]}`, com `outcome` igual a
   `deleted`, `archived`, `closed` ou `gone`.
 - O GitHub **apaga** a issue, e só **fecha** como não planejada quando a conta não é admin do repositório
-  (`issue_sync.remove_only_closed`). O Trello **arquiva** o cartão.
+  (`issue_sync.remove_only_closed`). O GitLab também apaga, e só fecha quando a conta não é Owner do projeto. O
+  Trello **arquiva** o cartão.
 - Um token sem escrita responde `issue_sync.remove_read_only`.
 - Sem `remove_in`, o item não é tocado: só vira descartado, e não volta a ser importado.
 

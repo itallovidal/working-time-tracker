@@ -134,9 +134,11 @@ func TestHandler_Create_InvalidType(t *testing.T) {
 	}
 }
 
-// O GitLab está "em breve": o adapter funciona, mas a API não cria integração nova dele, nem com um
-// corpo que passaria na validação. O Trello já não está: o pedido segue para a validação na plataforma.
+// Um tipo "em breve" funciona no adapter, mas a API não cria integração nova dele, nem com um corpo que
+// passaria na validação. Nenhum tipo de verdade está mais (o GitLab saiu na Sprint 107), então o teste marca o
+// GitLab por um momento; o Trello segue para a validação na plataforma.
 func TestHandler_Create_ComingSoonType(t *testing.T) {
+	withComingSoon(t, "gitlab")
 	cleanup(t)
 	e := echo.New()
 	e.Use(middleware.Recover())
@@ -154,7 +156,7 @@ func TestHandler_Create_ComingSoonType(t *testing.T) {
 	projectID := jsonPath(proj, "id")
 
 	bodies := map[string]string{
-		"GitLab": `{"type":"gitlab","display_name":"App","token":"glpat-x","metadata":{"project_url":"grupo/projeto"}}`,
+		"GitLab": `{"type":"gitlab","display_name":"App","token":"glpat-x","metadata":{"project_url":"group/project"}}`,
 	}
 	for provider, body := range bodies {
 		req := httptest.NewRequest("POST", "/api/projects/"+projectID+"/integrations", strings.NewReader(body))

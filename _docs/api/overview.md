@@ -72,7 +72,7 @@ a quem pode vê-los. As regras estão em [permissions.md](../product/permissions
 | Permissões | `/api/permissions` | logado: o catálogo, para as telas |
 | Saúde | `/healthcheck` | pública, fora do `/api` |
 
-As rotas que começam a conexão com o GitHub e o Trello não são da API: são idas e voltas do navegador, em
+As rotas que começam a conexão com o GitHub, o GitLab e o Trello não são da API: são idas e voltas do navegador, em
 [frontend/routes.md](../frontend/routes.md).
 
 ## Validação

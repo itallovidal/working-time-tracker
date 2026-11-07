@@ -17,7 +17,7 @@ ninguém pediu.
 | `CLIENT_IP_HEADER` | atrás de um proxy | O cabeçalho em que o proxy da frente põe o IP de quem chamou: `CF-Connecting-IP` no Render, `X-Real-IP` no Railway, `Fly-Client-IP` no Fly.io. O limite de tentativas do login conta por esse IP; sem ele, atrás de um proxy, todo mundo divide o mesmo limite. Vazio (padrão), vale o IP da conexão. Só se define quando o servidor só é alcançado pelo proxy. `X-Forwarded-For` derruba a subida: é uma lista que quem chama pode começar |
 | `INTEGRATION_ENCRYPTION_KEY` | sim | Chave da criptografia AES-GCM dos tokens das integrações (`openssl rand -hex 32`). Trocá-la torna os tokens salvos ilegíveis: cada integração pede o token de novo, e o resto dela (nome e `metadata`) continua |
 | `COOKIE_SECURE` | não | `true` marca os cookies como `Secure`. Use em produção, atrás de HTTPS |
-| `PUBLIC_URL` | com GitHub, Trello ou Clerk | O endereço em que as pessoas abrem o sistema, sem barra no fim (`http://localhost:1243`). As plataformas devolvem a pessoa para ele depois de autorizar. O servidor MCP o usa no link de cada tarefa, e o perfil, no comando que conecta o Claude Code (sem ele, o perfil usa o endereço da requisição) |
+| `PUBLIC_URL` | com GitHub, GitLab, Trello ou Clerk | O endereço em que as pessoas abrem o sistema, sem barra no fim (`http://localhost:1243`). As plataformas devolvem a pessoa para ele depois de autorizar. O servidor MCP o usa no link de cada tarefa, e o perfil, no comando que conecta o Claude Code (sem ele, o perfil usa o endereço da requisição) |
 
 ## Integrações
 
@@ -25,11 +25,13 @@ ninguém pediu.
 |---|---|---|
 | `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | para conectar o GitHub | O app OAuth do GitHub. Sem eles, o botão Conectar com o GitHub avisa que não está configurado. Ver [GitHub](../integrations/github.md) |
 | `GITHUB_URL`, `GITHUB_API_URL` | não | Só para um GitHub Enterprise ou um servidor fake. Os padrões são `https://github.com` e `https://api.github.com` |
+| `GITLAB_CLIENT_ID`, `GITLAB_CLIENT_SECRET` | para conectar o GitLab | O app OAuth do gitlab.com, confidencial e com o escopo `api`. Ele também renova o token do GitLab, que vence em 2 horas. Sem eles, o botão Conectar com o GitLab avisa que não está configurado. Ver [GitLab](../integrations/gitlab.md) |
+| `GITLAB_URL`, `GITLAB_API_URL` | não | Só para um servidor fake. Os padrões são `https://gitlab.com` e `https://gitlab.com/api/v4` |
 | `TRELLO_API_KEY` | para conectar o Trello | A chave de API do app do Trello (só letras e dígitos). Ver [Trello](../integrations/trello.md) |
 | `TRELLO_APP_NAME` | não | O nome que a tela de autorização do Trello mostra. Padrão: `Working Time Tracker` |
 | `TRELLO_URL`, `TRELLO_API_URL` | não | Só para um servidor fake. Os padrões são `https://trello.com` e `https://api.trello.com/1` |
 | `SYNC_INTERVAL` | não | De quanto em quanto tempo a rotina de fundo olha as integrações com a sincronização ligada (`5m`, `30s`). Padrão `5m`; `0` desliga a rotina. Ver [Integrações](../integrations/overview.md) |
-| `GITHUB_SYNC_INTERVAL`, `TRELLO_SYNC_INTERVAL` | não | O mesmo, só para aquela plataforma, por cima do `SYNC_INTERVAL` |
+| `GITHUB_SYNC_INTERVAL`, `GITLAB_SYNC_INTERVAL`, `TRELLO_SYNC_INTERVAL` | não | O mesmo, só para aquela plataforma, por cima do `SYNC_INTERVAL` |
 
 ## Login pelo Clerk
 

@@ -110,7 +110,7 @@ internal/
   server/               server.Build, que monta tudo, e os testes do router de verdade
   template/             o renderer dos templates
   validate/             limites dos campos e validadores (CNPJ, EIN, e-mail, valor por hora, URL)
-testutil/               banco de teste, sessões e as plataformas fake (GitHub, Trello, GitLab, Clerk)
+testutil/               banco de teste, sessões e as plataformas fake (GitHub, GitLab, Trello, Clerk)
 web/                    templates e estáticos, embutidos no binário
 docker-compose.yml      PostgreSQL de desenvolvimento e de testes
 _docs/                  esta documentação

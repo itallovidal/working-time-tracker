@@ -49,7 +49,7 @@ nenhum dos dois. Se mudá-la, ajuste o `DATABASE_URL` e o `TEST_DATABASE_URL` no
 | `make dev` | O `air`, que recompila e reinicia o servidor | Ver abaixo |
 | `make seed` | `go run ./cmd/seed` | Só num banco sem nenhuma organização. O que ele cria está em [Instalação](../getting-started/installation.md#dados-de-demonstração) |
 | `make demo` | Recria o banco `working_time_tracker_demo`, roda o seed nele e sobe o servidor na 8090 | Ver abaixo |
-| `make fakes` | `go run ./cmd/fakegithub -addr :8091` e `go run ./cmd/faketrello -addr :8092`, juntos | `github_port=` e `trello_port=` trocam as portas. Um Ctrl+C para os dois. Para um só: `make fake-github` ou `make fake-trello`. Como apontar o sistema para eles está em [GitHub](../integrations/github.md#conferir-sem-o-github-de-verdade) e [Trello](../integrations/trello.md#conferir-sem-o-trello-de-verdade) |
+| `make fakes` | `go run ./cmd/fakegithub -addr :8091`, `go run ./cmd/faketrello -addr :8092` e `go run ./cmd/fakegitlab -addr :8093`, juntos | `github_port=`, `trello_port=` e `gitlab_port=` trocam as portas. Um Ctrl+C para os três. Para um só: `make fake-github`, `make fake-trello` ou `make fake-gitlab`. Como apontar o sistema para eles está em [GitHub](../integrations/github.md#conferir-sem-o-github-de-verdade), [GitLab](../integrations/gitlab.md#conferir-sem-o-gitlab-de-verdade) e [Trello](../integrations/trello.md#conferir-sem-o-trello-de-verdade) |
 
 ### `make dev`
 

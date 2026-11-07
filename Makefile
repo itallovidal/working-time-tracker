@@ -22,10 +22,11 @@ TEST_LOG := /tmp/wtt-test.log
 db ?= working_time_tracker
 github_port ?= 8091
 trello_port ?= 8092
+gitlab_port ?= 8093
 demo: port ?= 8090
 image-run: port ?= 8080
 
-.PHONY: help setup db-up db-down db-psql db-reset run dev seed demo fakes fake-github fake-trello \
+.PHONY: help setup db-up db-down db-psql db-reset run dev seed demo fakes fake-github fake-trello fake-gitlab \
 	migrate-new migrate-status migrate-up migrate-checksum test test-pkg generate check lint \
 	build image image-run backup clean
 
@@ -86,14 +87,17 @@ demo: ## Sobe a demonstração em http://localhost:8090, num banco à parte recr
 	DATABASE_URL='$(DEMO_URL)' go run ./cmd/seed
 	DATABASE_URL='$(DEMO_URL)' API_PORT=$(port) PUBLIC_URL=http://localhost:$(port) go run ./cmd
 
-fakes: ## Sobe o GitHub falso (:8091) e o Trello falso (:8092), com o painel em /_fake (github_port=, trello_port=)
-	@$(MAKE) --no-print-directory -j2 fake-github fake-trello
+fakes: ## Sobe o GitHub (:8091), o Trello (:8092) e o GitLab (:8093) falsos, com o painel em /_fake (github_port=, trello_port=, gitlab_port=)
+	@$(MAKE) --no-print-directory -j3 fake-github fake-trello fake-gitlab
 
 fake-github:
 	go run ./cmd/fakegithub -addr :$(github_port)
 
 fake-trello:
 	go run ./cmd/faketrello -addr :$(trello_port)
+
+fake-gitlab:
+	go run ./cmd/fakegitlab -addr :$(gitlab_port)
 
 ##@ Migrações
 

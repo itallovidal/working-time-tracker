@@ -142,6 +142,10 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `integration.github_repo_not_found` | 400 | — | `repositório do GitHub não encontrado ou o token não tem acesso a ele` | `GitHub repository not found, or the token has no access to it` |
 | `integration.gitlab_forbidden` | 400 | — | `o token do GitLab não tem permissão para ler o projeto` | `the GitLab token has no permission to read the project` |
 | `integration.gitlab_invalid_project` | 400 | — | `projeto do GitLab inválido: use grupo/projeto` | `invalid GitLab project: use group/project` |
+| `integration.gitlab_oauth_denied` | 400 | — | `a autorização no GitLab foi cancelada` | `the authorization on GitLab was cancelled` |
+| `integration.gitlab_oauth_exchange` | 400 | — | `o GitLab não aceitou a autorização: tente conectar de novo` | `GitLab did not accept the authorization: try connecting again` |
+| `integration.gitlab_oauth_not_configured` | 400 | — | `a conexão com o GitLab não está configurada neste servidor: quem administra precisa definir GITLAB_CLIENT_ID, GITLAB_CLIENT_SECRET e PUBLIC_URL` | `the GitLab connection is not set up on this server: whoever runs it must define GITLAB_CLIENT_ID, GITLAB_CLIENT_SECRET and PUBLIC_URL` |
+| `integration.gitlab_oauth_state` | 400 | — | `a conexão com o GitLab venceu ou não pôde ser confirmada: tente de novo` | `the GitLab connection expired or could not be confirmed: try again` |
 | `integration.gitlab_project_not_found` | 400 | — | `projeto do GitLab não encontrado ou o token não tem acesso a ele` | `GitLab project not found, or the token has no access to it` |
 | `integration.invalid_issue_number` | 400 | — | `o número da issue precisa ter só dígitos` | `the issue number must contain only digits` |
 | `integration.invalid_token` | 400 | `provider` | `token do {{.provider}} inválido` | `invalid {{.provider}} token` |
@@ -192,12 +196,12 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | Código | Status | Parâmetros | pt-BR | en |
 |---|---|---|---|---|
 | `issue_sync.label_refused` | 400 | — | `o token não pode criar etiquetas do outro lado: a etiqueta nova fica só aqui` | `the token cannot create labels on the other side: the new label stays here only` |
-| `issue_sync.no_login` | 400 | — | `não achei o usuário do GitHub de quem é responsável aqui: ele precisa ter o e-mail público no perfil do GitHub` | `could not find the GitHub user of the person assigned here: they need a public email on their GitHub profile` |
+| `issue_sync.no_login` | 400 | — | `não achei, na plataforma, o usuário de quem é responsável aqui: ele precisa ter o e-mail público no perfil do GitHub ou do GitLab` | `could not find, on the platform, the user of the person assigned here: they need a public email on their GitHub or GitLab profile` |
 | `issue_sync.publish_read_only` | 400 | — | `o token desta integração não escreve no repositório ou quadro: o item novo sairia sem parte dos dados, então a tarefa não foi postada` | `the token of this integration cannot write to the repository or board: the new item would come out without some of its data, so the task was not posted` |
 | `issue_sync.push_discarded` | 400 | — | `a plataforma ignorou uma mudança deste item (o token pode não ter permissão de escrita): ela fica só aqui` | `the platform ignored a change to this item (the token may lack write permission): it stays here only` |
 | `issue_sync.push_rejected` | 400 | — | `a plataforma recusou uma mudança deste item: ela fica só aqui` | `the platform refused a change to this item: it stays here only` |
 | `issue_sync.read_only` | 400 | — | `o token não escreve neste repositório ou quadro: os itens só vêm para cá, e as mudanças daqui não saem` | `the token cannot write to this repository or board: items only come here, and changes made here do not go out` |
-| `issue_sync.remove_only_closed` | 400 | — | `a plataforma não deixou apagar o item (a conta conectada precisa ser admin do repositório), então ele só foi fechado` | `the platform did not let the item be deleted (the connected account must be an admin of the repository), so it was only closed` |
+| `issue_sync.remove_only_closed` | 400 | — | `a plataforma não deixou apagar o item (a conta conectada precisa ser admin do repositório no GitHub, ou Owner do projeto no GitLab), então ele só foi fechado` | `the platform did not let the item be deleted (the connected account must be a repository admin on GitHub, or a project Owner on GitLab), so it was only closed` |
 | `issue_sync.remove_read_only` | 400 | — | `o token desta integração não escreve no repositório ou quadro, então o item continua lá` | `the token of this integration cannot write to the repository or board, so the item is still there` |
 
 ### label

@@ -1,9 +1,5 @@
 package testutil
 
-import (
-	"net/http"
-)
-
 // InvalidToken é o único token que as plataformas fake rejeitam.
 const InvalidToken = "invalid-token"
 
@@ -35,22 +31,18 @@ const (
 	TrelloUsername            = "octotrello"
 )
 
-// FakeGitLab conhece o projeto group/project e a issue 7 dele. O adapter manda o
-// caminho do projeto escapado num segmento só, como a API do GitLab pede.
-func FakeGitLab() http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("PRIVATE-TOKEN") == InvalidToken {
-			http.Error(w, `{"message":"401 Unauthorized"}`, http.StatusUnauthorized)
-			return
-		}
-		// Os erros de escrita ficam de fora: o pedido que caiu não tem a quem responder.
-		switch r.URL.EscapedPath() {
-		case "/projects/group%2Fproject":
-			_, _ = w.Write([]byte(`{"path_with_namespace":"group/project"}`))
-		case "/projects/group%2Fproject/issues/7":
-			_, _ = w.Write([]byte(`{"title":"Ajustar relatório","state":"opened","web_url":"https://gitlab.com/group/project/-/issues/7"}`))
-		default:
-			http.Error(w, `{"message":"404 Not Found"}`, http.StatusNotFound)
-		}
-	})
-}
+// O app OAuth e a conta que o GitLab fake (gitlab.go) conhece, e o par de tokens em que cada código de retorno
+// se troca. O segundo código existe para os testes de reconexão: o token novo lista outros projetos. A renovação
+// gira o par, e os tokens renovados são outros (gloas-1, glrt-1, ...).
+const (
+	GitLabClientID           = "gitlab-client-id"
+	GitLabClientSecret       = "gitlab-client-secret"
+	GitLabLogin              = "octolab"
+	GitLabUserID             = 1
+	GitLabOAuthCode          = "gitlab-good-code"
+	GitLabOAuthToken         = "gloas_oauth_token"
+	GitLabRefreshToken       = "glrt_refresh_token"
+	GitLabSecondOAuthCode    = "gitlab-second-code"
+	GitLabSecondOAuthToken   = "gloas_second_token"
+	GitLabSecondRefreshToken = "glrt_second_token"
+)

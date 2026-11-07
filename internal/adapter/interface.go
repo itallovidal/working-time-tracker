@@ -305,7 +305,8 @@ func StopsSync(err error) bool {
 		return true
 	}
 	for _, stop := range []*apperr.Error{
-		ErrInvalidToken, ErrProviderUnreachable, ErrGitHubRepoNotFound, ErrTrelloBoardMissing, ErrTrelloNoAccessBoard,
+		ErrInvalidToken, ErrProviderUnreachable, ErrGitHubRepoNotFound, ErrGitLabProjectMissing, ErrTrelloBoardMissing,
+		ErrTrelloNoAccessBoard,
 	} {
 		if errors.Is(err, stop) {
 			return true

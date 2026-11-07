@@ -52,6 +52,9 @@ type Options struct {
 	// GitHubOAuth é o app OAuth do GitHub deste servidor. Nulo ou sem credenciais, o botão
 	// Conectar com o GitHub avisa que não está configurado.
 	GitHubOAuth *adapter.GitHubOAuth
+	// GitLabOAuth é o app OAuth do GitLab deste servidor, que também renova o token do GitLab, que vence. Nulo
+	// ou sem credenciais, o botão Conectar com o GitLab avisa que não está configurado.
+	GitLabOAuth *adapter.GitLabOAuth
 	// TrelloAuth é a autorização do Trello deste servidor (a chave do app). Nulo ou sem chave, o botão
 	// Conectar com o Trello avisa que não está configurado.
 	TrelloAuth *adapter.TrelloAuth
@@ -124,6 +127,11 @@ func Build(client *ent.Client, opts Options) (*App, error) {
 	allocationSvc := allocation.NewService(allocationStore)
 	collaboratorSvc := collaborator.NewService(collaborator.NewStore(client))
 	integrationSvc := integration.NewService(integrationStore, opts.EncryptKey)
+	// O token do OAuth do GitLab vence em 2 horas: o app do GitLab o renova antes de cada uso que pegaria ele
+	// vencido. Sem o app configurado, o token guardado vale até vencer.
+	if opts.GitLabOAuth.Configured() {
+		integrationSvc.SetRefresher("gitlab", opts.GitLabOAuth)
+	}
 	taskSvc := task.NewService(taskStore, membershipStore, integrationSvc)
 	workSessionSvc := work_session.NewService(sessionStore, taskStore, allocationStore)
 	receivableSvc := receivable.NewService(receivable.Deps{Store: receivable.NewStore(client)})
@@ -220,7 +228,9 @@ func Build(client *ent.Client, opts Options) (*App, error) {
 		}
 		return func(id uuid.UUID) bool { return id == me.PersonID || managed[id] }, nil
 	})
-	oauthHandler := integration.NewOAuthHandler(integrationSvc, opts.GitHubOAuth, opts.TrelloAuth, resolver, opts.EncryptKey, opts.CookieSecure)
+	oauthHandler := integration.NewOAuthHandler(integrationSvc, integration.OAuthApps{
+		GitHub: opts.GitHubOAuth, GitLab: opts.GitLabOAuth, Trello: opts.TrelloAuth,
+	}, resolver, opts.EncryptKey, opts.CookieSecure)
 	catalog, err := i18n.Load()
 	if err != nil {
 		return nil, err
@@ -228,10 +238,12 @@ func Build(client *ent.Client, opts Options) (*App, error) {
 	pages := page.NewHandler(page.Deps{
 		Orgs: orgSvc, Projects: projectSvc, Tasks: taskSvc, People: personSvc,
 		I18n: catalog, CookieSecure: opts.CookieSecure,
-		OAuthConfigured: map[string]bool{"github": opts.GitHubOAuth.Configured(), "trello": opts.TrelloAuth.Configured()},
-		Clerk:           clerkPage,
-		InviteByEmail:   clerkPage != nil,
-		PublicURL:       opts.PublicURL,
+		OAuthConfigured: map[string]bool{
+			"github": opts.GitHubOAuth.Configured(), "gitlab": opts.GitLabOAuth.Configured(), "trello": opts.TrelloAuth.Configured(),
+		},
+		Clerk:         clerkPage,
+		InviteByEmail: clerkPage != nil,
+		PublicURL:     opts.PublicURL,
 	})
 
 	renderer, err := tmpl.New(web.FS)

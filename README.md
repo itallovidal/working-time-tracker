@@ -27,7 +27,7 @@ flowchart LR
 - **Dinheiro.** Valor pago por pessoa em cada projeto, valor cobrado do cliente, margem e regra de pagamento mensal ou quinzenal. Tudo é calculado a partir das sessões.
 - **Modo solo.** Para quem trabalha sozinho (freelancer, PJ): a organização é uma pessoa só e perde o que é de equipe. Cada cliente é cobrado por hora ou por contrato mensal, e o dono confirma e acompanha o que tem a receber, com a multa e os juros sugeridos no contrato mensal.
 - **Painéis.** Cada pessoa tem o seu painel. A gestão tem a visão geral da organização e de cada projeto, além de saber quem está trabalhando agora e em quê.
-- **Integrações.** Issues do GitHub e cartões do Trello sincronizados com as tarefas nos dois sentidos, e a mesma tarefa pode estar nas duas plataformas. O GitLab está "em breve".
+- **Integrações.** Issues do GitHub e do GitLab e cartões do Trello sincronizados com as tarefas nos dois sentidos, e a mesma tarefa pode estar em mais de uma plataforma.
 - **Claude (MCP).** Com um token gerado no perfil, o Claude Code cria e atualiza tarefas, pega uma para você, sincroniza, bate o ponto e troca de tarefa, como você e sem ver dinheiro. Ver [MCP](_docs/api/mcp.md).
 - **Entrada e convites.** E-mail e senha, ou Google pelo Clerk. Os convites vão por link ou por e-mail.
 - **Idiomas e países.** Português e inglês. Brasil e EUA, com CNPJ e EIN.

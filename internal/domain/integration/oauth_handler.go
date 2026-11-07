@@ -37,12 +37,27 @@ type oauthFlow struct {
 
 var (
 	githubFlow = oauthFlow{typ: "github", cookiePath: "/integrations/github", okParam: "github", errParam: "github_error"}
+	gitlabFlow = oauthFlow{typ: "gitlab", cookiePath: "/integrations/gitlab", okParam: "gitlab", errParam: "gitlab_error"}
 	trelloFlow = oauthFlow{typ: "trello", cookiePath: "/integrations/trello", okParam: "trello", errParam: "trello_error"}
 )
 
 // CallbackPath é o caminho em que o GitHub devolve a pessoa. Quem monta o RedirectURL do
 // app (PUBLIC_URL mais isto) é o cmd/main.go, e é o endereço que se cadastra no GitHub.
 const CallbackPath = "/integrations/github/callback"
+
+// GitLabCallbackPath é o caminho em que o GitLab devolve a pessoa: o endereço que se cadastra no app do
+// gitlab.com (PUBLIC_URL mais isto).
+const GitLabCallbackPath = "/integrations/gitlab/callback"
+
+// codeErrs são os erros de uma conexão que volta com um código para trocar (o GitHub e o GitLab).
+type codeErrs struct {
+	notConfigured, denied, state, exchange error
+}
+
+var (
+	githubErrs = codeErrs{adapter.ErrGitHubOAuthNotConfigured, adapter.ErrGitHubOAuthDenied, adapter.ErrGitHubOAuthState, adapter.ErrGitHubOAuthExchange}
+	gitlabErrs = codeErrs{adapter.ErrGitLabOAuthNotConfigured, adapter.ErrGitLabOAuthDenied, adapter.ErrGitLabOAuthState, adapter.ErrGitLabOAuthExchange}
+)
 
 // oauthClaims é o que o cookie guarda: qual conexão a pessoa começou, em que projeto e,
 // quando ela está reconectando uma integração que já existe, qual. O state é o que a
@@ -57,21 +72,33 @@ type oauthClaims struct {
 	Expires       int64
 }
 
-// OAuthHandler faz o vai e volta da conexão com o GitHub e com o Trello: Connect leva a pessoa para
-// autorizar, e a volta (GitHubCallback, ou TrelloToken, que recebe o token que a página de retorno leu
-// do fragmento da URL) guarda a integração. São rotas de página (GET e redirecionamentos), então a
-// defesa contra CSRF não é o JSONOnly da API: é o state, selado no cookie.
+// OAuthHandler faz o vai e volta da conexão com o GitHub, o GitLab e o Trello: Connect leva a pessoa para
+// autorizar, e a volta (GitHubCallback e GitLabCallback, que trocam o código, ou TrelloToken, que recebe o
+// token que a página de retorno leu do fragmento da URL) guarda a integração. São rotas de página (GET e
+// redirecionamentos), então a defesa contra CSRF não é o JSONOnly da API: é o state, selado no cookie.
 type OAuthHandler struct {
 	svc          *Service
 	github       *adapter.GitHubOAuth
+	gitlab       *adapter.GitLabOAuth
 	trello       *adapter.TrelloAuth
 	resolver     *auth.Resolver
 	encryptKey   string
 	cookieSecure bool
 }
 
-func NewOAuthHandler(svc *Service, github *adapter.GitHubOAuth, trello *adapter.TrelloAuth, resolver *auth.Resolver, encryptKey string, cookieSecure bool) *OAuthHandler {
-	return &OAuthHandler{svc: svc, github: github, trello: trello, resolver: resolver, encryptKey: encryptKey, cookieSecure: cookieSecure}
+// OAuthApps são os apps de autorização do servidor. Um nulo, ou sem credenciais, tem o botão avisando que a
+// conexão não está configurada.
+type OAuthApps struct {
+	GitHub *adapter.GitHubOAuth
+	GitLab *adapter.GitLabOAuth
+	Trello *adapter.TrelloAuth
+}
+
+func NewOAuthHandler(svc *Service, apps OAuthApps, resolver *auth.Resolver, encryptKey string, cookieSecure bool) *OAuthHandler {
+	return &OAuthHandler{
+		svc: svc, github: apps.GitHub, gitlab: apps.GitLab, trello: apps.Trello,
+		resolver: resolver, encryptKey: encryptKey, cookieSecure: cookieSecure,
+	}
 }
 
 // integrationsTab é a aba para onde a pessoa volta, com sucesso ou com erro.
@@ -149,12 +176,39 @@ func (h *OAuthHandler) GitHubConnect(c *echo.Context) error {
 	return c.Redirect(http.StatusFound, h.github.AuthorizeURL(state))
 }
 
-// GitHubCallback recebe a volta do GitHub. A rota só exige login: o projeto vem do
-// cookie, e por isso a pessoa, a organização e a permissão são conferidas de novo aqui,
-// porque podem ter mudado nos minutos que a ida e a volta levaram.
+// GitHubCallback recebe a volta do GitHub.
 func (h *OAuthHandler) GitHubCallback(c *echo.Context) error {
-	claims, ok := h.readClaims(c, githubFlow)
-	h.clearCookie(c, githubFlow)
+	return h.codeCallback(c, githubFlow, githubErrs, func(code string) (adapter.Credential, error) {
+		token, err := h.github.Exchange(code)
+		return adapter.Credential{Token: token}, err
+	})
+}
+
+// GitLabConnect começa a conexão com o GitLab, como a do GitHub.
+func (h *OAuthHandler) GitLabConnect(c *echo.Context) error {
+	back := integrationsTab(c.Param("projectId"))
+	if !h.gitlab.Configured() {
+		return h.failBack(c, gitlabFlow, back, adapter.ErrGitLabOAuthNotConfigured)
+	}
+	state, ok, err := h.begin(c, gitlabFlow, back)
+	if !ok {
+		return err
+	}
+	return c.Redirect(http.StatusFound, h.gitlab.AuthorizeURL(state))
+}
+
+// GitLabCallback recebe a volta do GitLab. O código vira um par de tokens (o de acesso vence em 2 horas), e a
+// integração guarda os dois, para o servidor renovar o de acesso sozinho.
+func (h *OAuthHandler) GitLabCallback(c *echo.Context) error {
+	return h.codeCallback(c, gitlabFlow, gitlabErrs, h.gitlab.Exchange)
+}
+
+// codeCallback é a volta de uma plataforma que devolve um código para trocar (o GitHub e o GitLab). A rota só
+// exige login: o projeto vem do cookie, e por isso a pessoa, a organização e a permissão são conferidas de
+// novo aqui, porque podem ter mudado nos minutos que a ida e a volta levaram.
+func (h *OAuthHandler) codeCallback(c *echo.Context, flow oauthFlow, errs codeErrs, exchange func(code string) (adapter.Credential, error)) error {
+	claims, ok := h.readClaims(c, flow)
+	h.clearCookie(c, flow)
 	if !ok {
 		// Sem uma conexão em andamento não há para onde voltar: o link é velho ou não
 		// foi este servidor que o começou.
@@ -167,38 +221,38 @@ func (h *OAuthHandler) GitHubCallback(c *echo.Context) error {
 		return c.Redirect(http.StatusSeeOther, "/")
 	}
 	if subtle.ConstantTimeCompare([]byte(c.QueryParam("state")), []byte(claims.State)) != 1 {
-		return h.failBack(c, githubFlow, back, adapter.ErrGitHubOAuthState)
+		return h.failBack(c, flow, back, errs.state)
 	}
 	if reason := c.QueryParam("error"); reason != "" {
 		if reason == "access_denied" {
-			return h.failBack(c, githubFlow, back, adapter.ErrGitHubOAuthDenied)
+			return h.failBack(c, flow, back, errs.denied)
 		}
-		return h.failBack(c, githubFlow, back, adapter.ErrGitHubOAuthExchange)
+		return h.failBack(c, flow, back, errs.exchange)
 	}
 	code := c.QueryParam("code")
 	if code == "" {
-		return h.failBack(c, githubFlow, back, adapter.ErrGitHubOAuthExchange)
+		return h.failBack(c, flow, back, errs.exchange)
 	}
 
-	token, err := h.github.Exchange(code)
+	cred, err := exchange(code)
 	if err != nil {
-		return h.failBack(c, githubFlow, back, err)
+		return h.failBack(c, flow, back, err)
 	}
 
 	var it *Integration
 	if claims.IntegrationID != "" {
 		existing, gerr := h.svc.Get(claims.IntegrationID)
 		if gerr != nil || existing.ProjectID.String() != claims.ProjectID {
-			return h.failBack(c, githubFlow, back, ErrNotFound)
+			return h.failBack(c, flow, back, ErrNotFound)
 		}
-		it, err = h.svc.Reauthorize(claims.IntegrationID, token)
+		it, err = h.svc.ReauthorizeCredential(claims.IntegrationID, cred)
 	} else {
-		it, err = h.svc.Connect(claims.ProjectID, "github", token)
+		it, err = h.svc.ConnectCredential(claims.ProjectID, flow.typ, cred)
 	}
 	if err != nil {
-		return h.failBack(c, githubFlow, back, err)
+		return h.failBack(c, flow, back, err)
 	}
-	return c.Redirect(http.StatusSeeOther, back+"?"+githubFlow.okParam+"="+it.ID.String())
+	return c.Redirect(http.StatusSeeOther, back+"?"+flow.okParam+"="+it.ID.String())
 }
 
 // canManage confere, na volta, o que o middleware conferiu na ida: o projeto é da

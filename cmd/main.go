@@ -51,6 +51,22 @@ func main() {
 		})
 	}
 
+	// O app OAuth do GitLab, como o do GitHub: o GitLab devolve a pessoa para PUBLIC_URL mais o caminho do
+	// callback, e pede o mesmo endereço na troca do código e na renovação do token.
+	gitlab := &adapter.GitLabOAuth{
+		ClientID:     ENV.GitLabClientID,
+		ClientSecret: ENV.GitLabClientSecret,
+		SiteURL:      ENV.GitLabURL,
+	}
+	if ENV.PublicURL != "" {
+		gitlab.RedirectURL = ENV.PublicURL + integration.GitLabCallbackPath
+	}
+	if ENV.GitLabAPIURL != "" {
+		adapter.Register("gitlab", func() adapter.Integration {
+			return &adapter.GitLabIntegration{BaseURL: ENV.GitLabAPIURL}
+		})
+	}
+
 	// A chave do app do Trello também só vale com o endereço público: é para ele que o Trello devolve a pessoa.
 	trello := &adapter.TrelloAuth{APIKey: ENV.TrelloAPIKey, AppName: ENV.TrelloAppName, SiteURL: ENV.TrelloURL}
 	if ENV.PublicURL != "" {
@@ -82,6 +98,7 @@ func main() {
 		CookieSecure:   ENV.CookieSecure,
 		ClientIPHeader: ENV.ClientIPHeader,
 		GitHubOAuth:    github,
+		GitLabOAuth:    gitlab,
 		TrelloAuth:     trello,
 		Clerk:          clerkOpts,
 		Sync:           issuesync.Config{Interval: ENV.SyncInterval, Intervals: ENV.SyncIntervals},
@@ -105,15 +122,23 @@ func main() {
 		siteURL = "https://github.com"
 	}
 	e.Logger.Info("github", "api", apiURL, "site", siteURL)
+	gitlabAPI, gitlabSite := ENV.GitLabAPIURL, ENV.GitLabURL
+	if gitlabAPI == "" {
+		gitlabAPI = "https://gitlab.com/api/v4"
+	}
+	if gitlabSite == "" {
+		gitlabSite = "https://gitlab.com"
+	}
+	e.Logger.Info("gitlab", "api", gitlabAPI, "site", gitlabSite, "connection_configured", gitlab.Configured())
 	intervals := map[string]string{}
-	for _, platform := range []string{"github", "trello"} {
+	for _, platform := range []string{"github", "gitlab", "trello"} {
 		every := ENV.SyncInterval
 		if d, ok := ENV.SyncIntervals[platform]; ok {
 			every = d
 		}
 		intervals[platform] = every.String()
 	}
-	e.Logger.Info("sync intervals (0s is off)", "github", intervals["github"], "trello", intervals["trello"])
+	e.Logger.Info("sync intervals (0s is off)", "github", intervals["github"], "gitlab", intervals["gitlab"], "trello", intervals["trello"])
 	trelloAPI, trelloSite := ENV.TrelloAPIURL, ENV.TrelloURL
 	if trelloAPI == "" {
 		trelloAPI = "https://api.trello.com/1"

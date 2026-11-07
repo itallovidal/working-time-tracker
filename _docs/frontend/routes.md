@@ -109,12 +109,14 @@ pede a permissão do que mostra. Quem não tem recebe o 404. As permissões de c
 ## Conexão com as plataformas
 
 Não são telas: são idas e voltas do navegador durante a autorização. O detalhe está em
-[github.md](../integrations/github.md) e [trello.md](../integrations/trello.md).
+[github.md](../integrations/github.md), [gitlab.md](../integrations/gitlab.md) e [trello.md](../integrations/trello.md).
 
 | Rota | O que faz | Quem |
 |---|---|---|
 | `/projects/:id/management/integrations/github/connect` | Grava o cookie da conexão e leva ao GitHub. `?integration=<id>` reconecta | `integrations.manage` |
 | `/integrations/github/callback` | A volta do GitHub: confere o cookie, o `state`, a pessoa e a permissão e guarda a integração | logado |
+| `/projects/:id/management/integrations/gitlab/connect` | Grava o cookie da conexão e leva ao GitLab. `?integration=<id>` reconecta | `integrations.manage` |
+| `/integrations/gitlab/callback` | A volta do GitLab: confere o cookie, o `state`, a pessoa e a permissão, troca o código pelo par de tokens e guarda a integração | logado |
 | `/projects/:id/management/integrations/trello/connect` | Grava o cookie da conexão e leva à autorização do Trello. `?integration=<id>` reconecta | `integrations.manage` |
 | `/integrations/trello/callback` | A volta do Trello, com o token no fragmento da URL: o script da página o lê e o entrega à rota abaixo | logado |
 | `POST /integrations/trello/token` | Corpo `{state, token}`. Confere tudo de novo e responde `{"redirect": "…"}` | logado, JSON |

@@ -54,17 +54,14 @@ func TestService_SyncIssues_TurnOnAndOff(t *testing.T) {
 func TestService_SyncIssues_Requirements(t *testing.T) {
 	svc, projectID := setup(t)
 
-	// GitLab e Trello não leem nem escrevem issues desta forma.
-	for typ, meta := range map[string]map[string]interface{}{
-		"gitlab": {"project_url": "group/project"},
-	} {
-		it, err := svc.Create(projectID, typ, typ, "glpat-test", meta, true)
-		if err != nil {
-			t.Fatalf("create %s: %v", typ, err)
-		}
-		if _, err := svc.Edit(it.ID.String(), integration.EditInput{SyncIssues: yes()}); !errors.Is(err, integration.ErrSyncUnsupported) {
-			t.Errorf("%s: err = %v, want sync_unsupported", typ, err)
-		}
+	// Um tipo que não lê nem escreve issues não sincroniza.
+	withBasicOnly(t, "gitlab")
+	basic, err := svc.Create(projectID, "gitlab", "GitLab", "glpat-test", map[string]interface{}{"project_url": "group/project"}, true)
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	if _, err := svc.Edit(basic.ID.String(), integration.EditInput{SyncIssues: yes()}); !errors.Is(err, integration.ErrSyncUnsupported) {
+		t.Errorf("err = %v, want sync_unsupported", err)
 	}
 
 	// Uma conexão nova ainda não tem repositório: não há o que sincronizar.
