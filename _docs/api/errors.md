@@ -78,6 +78,10 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `auth.owner_only` | 403 | — | `só o dono da organização pode fazer isso` | `only the organization owner can do this` |
 | `auth.permission_required` | 403 | — | `você não tem permissão para fazer isso` | `you do not have permission to do this` |
 | `auth.same_password` | 400 | — | `a nova senha precisa ser diferente da atual` | `the new password must be different from the current one` |
+| `auth.token_days_invalid` | 400 | — | `a validade do token deve ser de 30, 90 ou 365 dias` | `a token must last 30, 90 or 365 days` |
+| `auth.token_limit` | 409 | `max` | `você já tem {{.max}} tokens; revogue um antes de criar outro` | `you already have {{.max}} tokens; revoke one before creating another` |
+| `auth.token_name_required` | 400 | — | `dê um nome ao token, para reconhecê-lo depois` | `give the token a name, so you can tell it apart later` |
+| `auth.token_not_found` | 404 | — | `token não encontrado` | `token not found` |
 | `auth.unauthenticated` | 401 | — | `faça login para continuar` | `sign in to continue` |
 | `auth.weak_password` | 400 | — | `a senha precisa ter pelo menos 8 caracteres` | `the password needs at least 8 characters` |
 | `auth.wrong_password` | 400 | — | `a senha atual está incorreta` | `the current password is wrong` |
@@ -200,6 +204,16 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `label.name_taken` | 409 | — | `o projeto já tem uma etiqueta com este nome` | `the project already has a label with this name` |
 | `label.name_too_long` | 400 | `max` | `o nome da etiqueta aceita até {{.max}} caracteres` | `the label name accepts up to {{.max}} characters` |
 | `label.not_found` | 404 | — | `etiqueta não encontrada` | `label not found` |
+
+### mcp
+
+| Código | Status | Parâmetros | pt-BR | en |
+|---|---|---|---|---|
+| `mcp.invalid_assignee` | 400 | — | `o responsável é me (você) ou none (ninguém)` | `the assignee is me (you) or none (nobody)` |
+| `mcp.invalid_date` | 400 | `field` | `data inválida em {{.field}}: use AAAA-MM-DD` | `invalid date in {{.field}}: use YYYY-MM-DD` |
+| `mcp.task_already_active` | 400 | — | `esta tarefa já está em andamento na sessão` | `this task is already running in the session` |
+| `mcp.task_not_in_session` | 400 | — | `esta tarefa não está em andamento na sessão aberta` | `this task is not running in the open session` |
+| `mcp.unknown_label` | 400 | `label`, `available` | `o projeto não tem a etiqueta {{.label}}; as que existem: {{.available}}` | `the project has no label {{.label}}; the ones it has: {{.available}}` |
 
 ### organization
 

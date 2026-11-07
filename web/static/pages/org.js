@@ -1394,6 +1394,69 @@ document.addEventListener('alpine:init', () => {
   }));
 
   // O meu perfil: o que fiz e quando sou pago, para ler, e o modal Editar perfil, com os dados pessoais e a senha.
+  // claudeTokens é a seção Conectar ao Claude do perfil: os tokens com que o Claude Code entra no servidor MCP (/mcp)
+  // e age como a pessoa. O token só aparece no modal, logo depois de criado, junto com o comando que o conecta; a
+  // lista mostra só o começo dele.
+  Alpine.data('claudeTokens', () => ({
+    ...form(),
+    tokens: [],
+    loading: true,
+    draft: { name: '', days: 90 },
+    created: null,
+    init() {
+      return this.load();
+    },
+    async load() {
+      this.loading = true;
+      this.errors.load = '';
+      try {
+        this.tokens = await api('GET', '/api/auth/tokens');
+      } catch (e) {
+        this.errors.load = e.message;
+      } finally {
+        this.loading = false;
+      }
+    },
+    expired(tok) {
+      return new Date(tok.expires_at).getTime() <= Date.now();
+    },
+    openNew() {
+      this.draft = { name: '', days: 90 };
+      this.created = null;
+      this.errors.create = '';
+      this.clearFields();
+      Alpine.store('modal').open('claude-token', WTT.t('profile.claude.modal_title'), () => !this.pending);
+    },
+    create() {
+      this.draft.name = this.draft.name.trim();
+      const ok = this.check({ name: [this.draft.name, WTT.rules.required, WTT.rules.max('name')] });
+      if (!ok) return undefined;
+      return this.run('create', async () => {
+        const tok = await api('POST', '/api/auth/tokens', { name: this.draft.name, days: Number(this.draft.days) });
+        this.created = tok;
+        this.tokens = [{ ...tok, token: undefined }, ...this.tokens];
+        this.$nextTick(() => this.$refs.command && this.$refs.command.focus());
+      });
+    },
+    // command é o comando que conecta o Claude Code a este servidor, com o token recém-criado.
+    command() {
+      if (!this.created) return '';
+      return 'claude mcp add --transport http --scope user wtt ' + (WTT.boot.mcpURL || '') +
+        ' --header "Authorization: Bearer ' + this.created.token + '"';
+    },
+    async copy(text) {
+      const ok = await WTT.copyText(text);
+      toast(ok ? WTT.t('profile.claude.copied') : WTT.t('org.people.copy_failed'), ok ? 'info' : 'error');
+    },
+    revoke(tok) {
+      return this.run('revoke', async () => {
+        await api('DELETE', '/api/auth/tokens/' + tok.id);
+        this.tokens = this.tokens.filter((t) => t.id !== tok.id);
+        toast(WTT.t('profile.claude.revoked'));
+      });
+    },
+  }));
+
   Alpine.data('profileSettings', () => ({
     ...form(),
     ...personProfile(me.id, true),

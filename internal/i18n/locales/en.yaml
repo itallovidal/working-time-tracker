@@ -637,6 +637,39 @@ profile:
   title_other: Collaborator profile
   edit: Edit profile
   tabs_label: What to edit
+  claude:
+    title: Connect to Claude
+    intro: "With a token, Claude Code creates and updates your tasks, claims tasks, syncs with the project's integrations and clocks in and out for you. It sees what you see, except the money amounts."
+    new: New token
+    loading: Loading the tokens…
+    empty: No tokens yet
+    empty_text: Create a token to connect Claude Code to this system.
+    col_name: Name
+    col_token: Token
+    col_last_used: Last used
+    col_expires: Expires on
+    never_used: Never used
+    expired: Expired
+    revoke: Revoke
+    revoked: Token revoked. The Claude that used it can no longer get in.
+    password_note: Changing your password revokes all your tokens.
+    modal_title: New Claude token
+    name: Name
+    name_hint: To tell it apart later, like "Claude Code on the laptop".
+    days: Valid for
+    days_30: 30 days
+    days_90: 90 days
+    days_365: 1 year
+    submit: Create token
+    copy_now: "Copy it now: the token is not shown again. Whoever has it acts as you until it expires or is revoked."
+    command: Claude Code command
+    command_hint: Run it in the terminal. Then, in a Claude Code conversation, ask for example "what are my tasks?".
+    token: Token
+    token_hint: To paste somewhere else, like a project's configuration. Keep it like a password.
+    copy_command: Copy command
+    copy_token: Copy token
+    copied: Copied.
+    done: Done
   loading: Loading the profile…
   data: Details
   role: Role
@@ -866,6 +899,7 @@ help:
       rates: "“Projects and rates”: how much you earn per hour on each project and what you did on them, in the period and since the start. Only you and the admins see it."
       edit: "“Edit profile” opens your personal details (name and email, the one you sign in with) and, on the “Password” tab, the password change, which signs out your other sessions."
       language: "The language (PT | EN), “Help” and “Sign out” are in the same account menu, and the browser remembers the language you chose."
+      claude: "In “Connect to Claude”, “New token” creates a token and the command that connects Claude Code: with it, Claude creates and updates your tasks, claims tasks, syncs and clocks in and out for you, as you and without seeing money amounts. The token is shown only once, expires on the chosen date and can be revoked there; changing your password revokes them all."
   concepts:
     rates:
       title: Hourly rate
@@ -1837,6 +1871,10 @@ errors:
     weak_password: "the password needs at least 8 characters"
     wrong_password: "the current password is wrong"
     same_password: "the new password must be different from the current one"
+    token_days_invalid: "a token must last 30, 90 or 365 days"
+    token_limit: "you already have {{.max}} tokens; revoke one before creating another"
+    token_name_required: "give the token a name, so you can tell it apart later"
+    token_not_found: "token not found"
   collaborator:
     not_in_project: "this person is not on this project"
   customer:
@@ -1932,6 +1970,12 @@ errors:
     name_taken: "the project already has a label with this name"
     name_too_long: "the label name accepts up to {{.max}} characters"
     not_found: "label not found"
+  mcp:
+    invalid_assignee: "the assignee is me (you) or none (nobody)"
+    invalid_date: "invalid date in {{.field}}: use YYYY-MM-DD"
+    task_already_active: "this task is already running in the session"
+    task_not_in_session: "this task is not running in the open session"
+    unknown_label: "the project has no label {{.label}}; the ones it has: {{.available}}"
   organization:
     field_too_long: "{{.field}} can have up to {{.max}} characters"
     has_projects: "delete all projects before deleting the organization"
@@ -2136,6 +2180,9 @@ fields:
   priority: "the priority"
   status: "the status"
   assignee_id: "the assignee"
+  assignee: "the assignee"
+  days: "the validity"
+  query: "the search"
   label: "the label"
   label_ids: "the labels"
   integration_id: "the integration"

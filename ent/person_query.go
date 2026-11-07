@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math"
 	"working-time-tracker/ent/allocation"
+	"working-time-tracker/ent/apitoken"
 	"working-time-tracker/ent/invite"
 	"working-time-tracker/ent/organization"
 	"working-time-tracker/ent/payout"
@@ -38,6 +39,7 @@ type PersonQuery struct {
 	withTeamMemberships *TeamMembershipQuery
 	withWorkSessions    *WorkSessionQuery
 	withSessions        *SessionQuery
+	withAPITokens       *APITokenQuery
 	withCreatedInvites  *InviteQuery
 	withAllocations     *AllocationQuery
 	withPayouts         *PayoutQuery
@@ -181,6 +183,28 @@ func (_q *PersonQuery) QuerySessions() *SessionQuery {
 			sqlgraph.From(person.Table, person.FieldID, selector),
 			sqlgraph.To(session.Table, session.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, person.SessionsTable, person.SessionsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryAPITokens chains the current query on the "api_tokens" edge.
+func (_q *PersonQuery) QueryAPITokens() *APITokenQuery {
+	query := (&APITokenClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(person.Table, person.FieldID, selector),
+			sqlgraph.To(apitoken.Table, apitoken.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, person.APITokensTable, person.APITokensColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -451,6 +475,7 @@ func (_q *PersonQuery) Clone() *PersonQuery {
 		withTeamMemberships: _q.withTeamMemberships.Clone(),
 		withWorkSessions:    _q.withWorkSessions.Clone(),
 		withSessions:        _q.withSessions.Clone(),
+		withAPITokens:       _q.withAPITokens.Clone(),
 		withCreatedInvites:  _q.withCreatedInvites.Clone(),
 		withAllocations:     _q.withAllocations.Clone(),
 		withPayouts:         _q.withPayouts.Clone(),
@@ -512,6 +537,17 @@ func (_q *PersonQuery) WithSessions(opts ...func(*SessionQuery)) *PersonQuery {
 		opt(query)
 	}
 	_q.withSessions = query
+	return _q
+}
+
+// WithAPITokens tells the query-builder to eager-load the nodes that are connected to
+// the "api_tokens" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *PersonQuery) WithAPITokens(opts ...func(*APITokenQuery)) *PersonQuery {
+	query := (&APITokenClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withAPITokens = query
 	return _q
 }
 
@@ -626,12 +662,13 @@ func (_q *PersonQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Perso
 	var (
 		nodes       = []*Person{}
 		_spec       = _q.querySpec()
-		loadedTypes = [8]bool{
+		loadedTypes = [9]bool{
 			_q.withOrganization != nil,
 			_q.withTasks != nil,
 			_q.withTeamMemberships != nil,
 			_q.withWorkSessions != nil,
 			_q.withSessions != nil,
+			_q.withAPITokens != nil,
 			_q.withCreatedInvites != nil,
 			_q.withAllocations != nil,
 			_q.withPayouts != nil,
@@ -689,6 +726,13 @@ func (_q *PersonQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Perso
 		if err := _q.loadSessions(ctx, query, nodes,
 			func(n *Person) { n.Edges.Sessions = []*Session{} },
 			func(n *Person, e *Session) { n.Edges.Sessions = append(n.Edges.Sessions, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withAPITokens; query != nil {
+		if err := _q.loadAPITokens(ctx, query, nodes,
+			func(n *Person) { n.Edges.APITokens = []*APIToken{} },
+			func(n *Person, e *APIToken) { n.Edges.APITokens = append(n.Edges.APITokens, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -853,6 +897,36 @@ func (_q *PersonQuery) loadSessions(ctx context.Context, query *SessionQuery, no
 	}
 	query.Where(predicate.Session(func(s *sql.Selector) {
 		s.Where(sql.InValues(s.C(person.SessionsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.PersonID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "person_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *PersonQuery) loadAPITokens(ctx context.Context, query *APITokenQuery, nodes []*Person, init func(*Person), assign func(*Person, *APIToken)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Person)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(apitoken.FieldPersonID)
+	}
+	query.Where(predicate.APIToken(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(person.APITokensColumn), fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {

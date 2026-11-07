@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"sync"
 	"working-time-tracker/ent/allocation"
+	"working-time-tracker/ent/apitoken"
 	"working-time-tracker/ent/customer"
 	"working-time-tracker/ent/integration"
 	"working-time-tracker/ent/invite"
@@ -89,6 +90,7 @@ var (
 func checkColumn(t, c string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
+			apitoken.Table:        apitoken.ValidColumn,
 			allocation.Table:      allocation.ValidColumn,
 			customer.Table:        customer.ValidColumn,
 			integration.Table:     integration.ValidColumn,

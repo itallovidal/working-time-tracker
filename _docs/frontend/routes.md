@@ -63,7 +63,7 @@ flowchart LR
 | Rota | Tela | Quem abre |
 |---|---|---|
 | `/` | Leva à organização de quem está logado | logado |
-| `/profile` | O seu perfil: jornada, regra de pagamento, horas e valores, histórico e próximos pagamentos. Editar perfil abre um modal | logado |
+| `/profile` | O seu perfil: jornada, regra de pagamento, horas e valores, histórico e próximos pagamentos. Editar perfil abre um modal. Embaixo, **Conectar ao Claude**: os tokens do servidor MCP, com o Novo token num modal que mostra o token uma vez e o comando do Claude Code | logado |
 | `/orgs/:orgId` | O Início. Para todos, o painel da pessoa (horas de hoje e da semana, as suas tarefas, a semana dia a dia). Para os admins, também a visão geral da organização e a equipe; receita e margem só para o dono. No modo solo, a visão geral e a equipe dão lugar à tela inicial do solo | membro |
 | `/orgs/:orgId/projects` | Projetos em cartões, seis por página (`?page=`). Quem não é admin vê só os projetos em que está. O dono e os admins têm o Novo projeto | membro |
 | `/orgs/:orgId/about` | Configurações: o perfil da organização, para ler. O Editar só aparece para o dono | membro |
