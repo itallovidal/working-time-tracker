@@ -1520,9 +1520,11 @@ integration_types:
         hint: The repository address is accepted too.
   gitlab:
     about: Issues of a project
-    token_hint: Token with the read_api scope.
+    token_hint: Personal token with the api scope, which reads and writes the issues.
     item_label: Issue number
     item_placeholder: "E.g.: 42"
+    sync_label: "Sync the issues of this project with the tasks"
+    sync_hint: "Open issues become tasks, and the name, description, labels, assignee and closing stay the same on both sides, whichever one changes. The assignee is linked by the user's public email on GitLab. If both sides change the same field, GitLab wins. Priority, deadline, hours and the In progress and Awaiting closure statuses stay here only."
     fields:
       project_url:
         label: Project

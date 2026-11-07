@@ -414,7 +414,7 @@ func TestService_GitLab(t *testing.T) {
 	}
 
 	res, err := svc.FetchItemDetails(created.ID.String(), "7")
-	if err != nil || res.Details == nil || res.Details.Title != "Ajustar relatório" || res.Details.State != "opened" {
+	if err != nil || res.Details == nil || res.Details.Title != "Ajustar relatório" || res.Details.State != "open" {
 		t.Errorf("fetch = %+v, %v", res, err)
 	}
 }
@@ -530,12 +530,10 @@ func TestService_Connect_Refused(t *testing.T) {
 	if _, err := svc.Connect(projectID, "github", testutil.InvalidToken); err == nil || !strings.Contains(err.Error(), "integration.invalid_token") {
 		t.Errorf("connect with a token GitHub rejects: %v", err)
 	}
-	// O GitLab não se conecta por autorização. (O Trello sabe dizer quem o token representa e, no fim da
-	// Sprint 69, também se conecta; aqui sem a chave do app a conexão não chega a existir.)
-	for _, typ := range []string{"gitlab"} {
-		if _, err := svc.Connect(projectID, typ, "x"); err == nil || !strings.Contains(err.Error(), "integration.not_connectable") {
-			t.Errorf("connect %s: %v, want integration.not_connectable", typ, err)
-		}
+	// Um tipo que não sabe dizer quem o token representa não se conecta por autorização.
+	withBasicOnly(t, "gitlab")
+	if _, err := svc.Connect(projectID, "gitlab", "x"); err == nil || !strings.Contains(err.Error(), "integration.not_connectable") {
+		t.Errorf("connect a type without account lookup: %v, want integration.not_connectable", err)
 	}
 	if _, err := svc.Connect(projectID, "nope", "x"); err == nil || !strings.Contains(err.Error(), "integration.unsupported_type") {
 		t.Errorf("connect an unknown type: %v", err)
@@ -603,12 +601,17 @@ func TestService_Repositories(t *testing.T) {
 	if _, err := svc.Repositories(bare.ID.String()); err == nil || !strings.Contains(err.Error(), "integration.no_credential") {
 		t.Errorf("repositories without a credential: %v", err)
 	}
-	// Um tipo que não lista repositórios.
+	// O GitLab lista os projetos de que a conta é membro.
 	gl, err := svc.Create(projectID, "gitlab", "GitLab", "glpat-test", map[string]interface{}{"project_url": "group/project"}, true)
 	if err != nil {
 		t.Fatalf("create gitlab: %v", err)
 	}
+	if repos, err := svc.Repositories(gl.ID.String()); err != nil || len(repos) != 2 || repos[1].FullName != "group/project" || !repos[1].Private {
+		t.Errorf("repositories of a GitLab integration = %v, %v", repos, err)
+	}
+	// Um tipo que não lista repositórios.
+	withBasicOnly(t, "gitlab")
 	if _, err := svc.Repositories(gl.ID.String()); err == nil || !strings.Contains(err.Error(), "integration.no_repositories") {
-		t.Errorf("repositories of a GitLab integration: %v", err)
+		t.Errorf("repositories of a type that does not list them: %v", err)
 	}
 }

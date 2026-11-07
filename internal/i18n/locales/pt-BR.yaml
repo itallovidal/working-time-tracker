@@ -1530,9 +1530,11 @@ integration_types:
         hint: Aceita também o endereço do repositório.
   gitlab:
     about: Issues de um projeto
-    token_hint: Token com escopo read_api.
+    token_hint: Token pessoal com escopo api, que lê e escreve as issues.
     item_label: Número da issue
     item_placeholder: "Ex.: 42"
+    sync_label: "Sincronizar as issues deste projeto com as tarefas"
+    sync_hint: "As issues abertas viram tarefas, e o nome, a descrição, as etiquetas, o responsável e o fechamento ficam iguais nos dois lados, para qualquer lado que mude. O responsável é ligado pelo e-mail público do usuário no GitLab. Se os dois lados mudarem o mesmo campo, vale o do GitLab. Prioridade, prazo, horas e os status Em progresso e Aguardando fechamento ficam só aqui."
     fields:
       project_url:
         label: Projeto

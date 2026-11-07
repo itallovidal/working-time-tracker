@@ -36,7 +36,7 @@ func TestMain(m *testing.M) {
 		return &adapter.GitHubIntegration{BaseURL: github.URL}
 	})
 	adapter.Register("gitlab", func() adapter.Integration {
-		return &adapter.GitLabIntegration{BaseURL: gitlab.URL}
+		return &adapter.GitLabIntegration{BaseURL: gitlab.URL + "/api/v4"}
 	})
 	adapter.Register("trello", func() adapter.Integration {
 		return &adapter.TrelloIntegration{BaseURL: trello.URL}
@@ -47,4 +47,20 @@ func TestMain(m *testing.M) {
 	gitlab.Close()
 	trello.Close()
 	os.Exit(code)
+}
+
+// basicOnly é um tipo que só tem o básico de Integration, sem as capacidades opcionais (dizer quem o token
+// representa, listar o que a conexão enxerga, sincronizar as issues).
+type basicOnly struct{ adapter.Integration }
+
+// withBasicOnly troca o tipo, durante o teste, pela versão só com o básico: é como se testa o que acontece com
+// um tipo que não sabe essas coisas, agora que os três sabem.
+func withBasicOnly(t *testing.T, typ string) {
+	t.Helper()
+	orig, err := adapter.GetIntegration(typ)
+	if err != nil {
+		t.Fatal(err)
+	}
+	adapter.Register(typ, func() adapter.Integration { return basicOnly{orig} })
+	t.Cleanup(func() { adapter.Register(typ, func() adapter.Integration { return orig }) })
 }

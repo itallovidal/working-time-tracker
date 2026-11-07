@@ -242,22 +242,15 @@ func TestGitHub_AccountAndRepositories(t *testing.T) {
 		t.Errorf("account without a token: %v", err)
 	}
 
-	// O GitHub e o Trello se autorizam no site e sabem listar o que a conta enxerga; o GitLab não.
+	// O GitHub, o GitLab e o Trello se autorizam no site e sabem listar o que a conta enxerga.
 	var _ AccountLookup = g
 	var _ RepositoryLister = g
 	if d := g.Descriptor(); d.Auth != AuthOAuth || d.ComingSoon {
 		t.Errorf("github descriptor: auth %q, coming soon %v", d.Auth, d.ComingSoon)
 	}
 	gitlab := &GitLabIntegration{}
-	if _, ok := Integration(gitlab).(AccountLookup); ok {
-		t.Error("gitlab looks up accounts")
-	}
-	if _, ok := Integration(gitlab).(RepositoryLister); ok {
-		t.Error("gitlab lists repositories")
-	}
-	if d := gitlab.Descriptor(); d.Auth == AuthOAuth || !d.ComingSoon {
-		t.Errorf("gitlab descriptor: auth %q, coming soon %v", d.Auth, d.ComingSoon)
-	}
+	var _ AccountLookup = gitlab
+	var _ RepositoryLister = gitlab
 	trello := &TrelloIntegration{}
 	if d := trello.Descriptor(); d.Auth != AuthOAuth || d.ComingSoon || !d.Sync {
 		t.Errorf("trello descriptor: auth %q, coming soon %v, sync %v", d.Auth, d.ComingSoon, d.Sync)
@@ -272,7 +265,7 @@ func TestGitHub_AccountAndRepositories(t *testing.T) {
 func TestGitLab_ValidateAndFetch(t *testing.T) {
 	srv := httptest.NewServer(testutil.FakeGitLab())
 	defer srv.Close()
-	g := &GitLabIntegration{BaseURL: srv.URL}
+	g := &GitLabIntegration{BaseURL: srv.URL + "/api/v4"}
 	conn := Connection{Token: "glpat-test", Metadata: map[string]any{"project_url": "https://gitlab.com/group/project"}}
 
 	if err := g.Validate(conn); err != nil {
@@ -282,7 +275,7 @@ func TestGitLab_ValidateAndFetch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("fetch: %v", err)
 	}
-	if details.Title != "Ajustar relatório" || details.State != "opened" {
+	if details.Title != "Ajustar relatório" || details.State != "open" {
 		t.Errorf("details = %+v", details)
 	}
 
