@@ -748,10 +748,15 @@ migração de dados nem backfill.
   entra entre os projetos (issue #24). Por ora a rota, a página e o modo mensal respondem `404` ou `400` fora do solo.
 - Chamar de "receita" o tempo vezes o valor cobrado também no solo: o que o freelancer quer saber é o que entrou.
 
-**Consequências:** os períodos são calculados do cadastro do cliente de hoje, então mudar o dia de fechamento de um
-cliente que já tem recebíveis não remexe os que existem (cada um guarda as suas datas), mas os períodos novos seguem o
-dia novo e podem se sobrepor aos antigos. Excluir um cliente com recebíveis é recusado (`customer.has_receivables`): a
-chave estrangeira do cliente não apaga em cascata, e apagar a organização leva tudo. Ficam para depois as contas a
+**Consequências:** os períodos são calculados do cadastro do cliente de hoje, e a sessão não guarda o cliente (vale o do
+projeto de hoje). Dois caminhos cobrariam as mesmas horas duas vezes e por isso são recusados com `409`: trocar o dia de
+fechamento de um cliente que já tem recebíveis (`customer.closing_day_locked`), porque os períodos novos cairiam por
+cima dos confirmados, e tirar do cliente um projeto com sessões quando o cliente já tem recebíveis
+(`project.customer_locked`). Ambos destravam quando os recebíveis são desfeitos; guardar o cliente em cada sessão, como
+o valor por hora, resolveria o segundo sem a trava, mas pede uma migração com preenchimento sobre dados reais e fica
+para depois. O recebimento grava só se o valor confirmado ainda é o que foi lido (`receivable.changed`), para uma
+edição em outra aba não ser recebida às cegas. Excluir um cliente com recebíveis é recusado (`customer.has_receivables`):
+a chave estrangeira do cliente não apaga em cascata, e apagar a organização leva tudo. Ficam para depois as contas a
 pagar, o Resultado (o que entrou menos as despesas), os impostos, a franquia de horas, a conversão de moeda e a emissão
 de nota. As regras de hoje estão em [overview.md](../product/overview.md#modo-solo),
 [money.md](../product/money.md#termos-comerciais-modo-solo) e [permissions.md](../product/permissions.md#modo-solo).

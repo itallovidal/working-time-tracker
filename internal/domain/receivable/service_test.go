@@ -914,6 +914,47 @@ func TestConfirm_ConcurrentConfirmationsMakeOne(t *testing.T) {
 	}
 }
 
+// Uma edição do valor que chega depois de o recebimento ler o recebível, e antes de ele gravar, não deixa o recebimento
+// valer o valor velho: a gravação confere o valor que foi lido e, se mudou, recusa (ErrChanged) sem gravar nada. O que
+// já foi recebido continua sendo ErrAlreadyReceived, e o que não existe, ErrNotFound.
+func TestReceive_RefusesAnAmountEditedAfterTheRead(t *testing.T) {
+	f := setup(t)
+	acme := f.monthly("Acme", "2026-09-01", nil)
+	org := f.orgID.String()
+	r := f.confirm(acme, "2026-09-01", "2026-09-30", 500000)
+	id := r.ID.String()
+	store := receivable.NewStore(testClient)
+	ctx := context.Background()
+
+	// O recebimento leu 500.000 e a edição para 520.000 entrou antes da gravação.
+	edited := 520000
+	if _, err := f.svc.Update(org, id, receivable.UpdateInput{AmountCents: &edited}); err != nil {
+		t.Fatalf("edit: %v", err)
+	}
+	err := store.Receive(f.orgID, r.ID, 500000, "2026-10-09", 500000, 0, 0)
+	wantCode(t, err, receivable.ErrChanged, "")
+	if row := testClient.Receivable.GetX(ctx, r.ID); row.ReceivedOn != nil || row.ReceivedCents != nil || row.AmountCents != 520000 {
+		t.Errorf("row after a refused receipt = received_on %v, received_cents %v, amount %d; want untouched at 520000", row.ReceivedOn, row.ReceivedCents, row.AmountCents)
+	}
+
+	// Lido de novo, o recebimento segue o valor editado.
+	got, err := f.svc.Receive(org, id, receivable.ReceiveInput{})
+	if err != nil {
+		t.Fatalf("receive after the edit: %v", err)
+	}
+	if got.ReceivedCents == nil || *got.ReceivedCents != 520000 {
+		t.Errorf("received = %v, want the edited 520000", got.ReceivedCents)
+	}
+
+	// Recebido, o valor velho é recusado como já recebido, não como mudado; e um recebível que não existe é ErrNotFound.
+	err = store.Receive(f.orgID, r.ID, 500000, "2026-10-09", 500000, 0, 0)
+	wantCode(t, err, receivable.ErrAlreadyReceived, "")
+	err = store.Receive(f.orgID, uuid.New(), 500000, "2026-10-09", 500000, 0, 0)
+	if !errors.Is(err, database.ErrNotFound) {
+		t.Errorf("receive of a missing receivable: err = %v, want ErrNotFound", err)
+	}
+}
+
 // Dois recebimentos ao mesmo tempo não se sobrescrevem: um grava, e o outro é recusado como já recebido.
 func TestReceive_ConcurrentReceiptsMakeOne(t *testing.T) {
 	f := setup(t)

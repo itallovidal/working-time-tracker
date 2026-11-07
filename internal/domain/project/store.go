@@ -10,7 +10,9 @@ import (
 	entorg "working-time-tracker/ent/organization"
 	"working-time-tracker/ent/predicate"
 	"working-time-tracker/ent/project"
+	entreceivable "working-time-tracker/ent/receivable"
 	enttask "working-time-tracker/ent/task"
+	entsession "working-time-tracker/ent/worksession"
 	"working-time-tracker/internal/database"
 	"working-time-tracker/internal/domain/projectaccess"
 )
@@ -183,6 +185,22 @@ func (s *Store) SetBilling(projectID uuid.UUID, customerID *uuid.UUID, billRateC
 		return database.ErrNotFound
 	}
 	return err
+}
+
+// HasBilledHistory diz se o projeto tem sessões e o cliente tem algum recebível, confirmado ou recebido. É quando tirar
+// o projeto do cliente refaria a atribuição das horas: elas passariam a entrar nas propostas do cliente novo, e o
+// recebível do antigo continuaria cobrando as mesmas.
+func (s *Store) HasBilledHistory(projectID, customerID uuid.UUID) (bool, error) {
+	ctx := context.Background()
+	has, err := s.client.Receivable.Query().
+		Where(entreceivable.CustomerIDEQ(customerID)).
+		Exist(ctx)
+	if err != nil || !has {
+		return false, err
+	}
+	return s.client.WorkSession.Query().
+		Where(entsession.ProjectIDEQ(projectID)).
+		Exist(ctx)
 }
 
 // CustomerBillingModeOfProject devolve o modo de cobrança do cliente (hourly ou monthly) e se ele existe e é da

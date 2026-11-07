@@ -92,6 +92,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 
 | Código | Status | Parâmetros | pt-BR | en |
 |---|---|---|---|---|
+| `customer.closing_day_locked` | 409 | — | `este cliente já tem contas a receber: o dia de fechamento não pode mais mudar` | `this customer already has receivables: the closing day can no longer change` |
 | `customer.contact_too_long` | 400 | — | `o nome do contato pode ter até 120 caracteres` | `the contact name can have up to 120 characters` |
 | `customer.field_hourly_only` | 400 | `field` | `{{.field}} só vale em um cliente cobrado por hora` | `{{.field}} only applies to an hourly customer` |
 | `customer.field_monthly_only` | 400 | `field` | `{{.field}} só vale em um cliente com cobrança mensal` | `{{.field}} only applies to a monthly customer` |
@@ -266,6 +267,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `project.bill_rate_needs_customer` | 400 | — | `o valor cobrado só vale em um projeto com cliente: escolha o cliente do projeto antes` | `the billed rate only applies to a project with a customer: choose the project's customer first` |
 | `project.bill_rate_not_allowed` | 400 | — | `este cliente é cobrado por mês: o projeto dele não tem valor cobrado por hora` | `this customer is billed monthly: its projects have no hourly billed rate` |
 | `project.bill_rate_required` | 400 | — | `informe o valor cobrado por hora: um projeto com cliente precisa dele` | `enter the rate billed per hour: a project with a customer needs it` |
+| `project.customer_locked` | 409 | — | `este projeto tem horas e o cliente dele já tem contas a receber: trocar o cliente cobraria as mesmas horas de novo` | `this project has hours and its customer already has receivables: moving it would bill the same hours again` |
 | `project.customer_meeting_time_without_day` | 400 | — | `o horário da reunião com o cliente precisa do dia da reunião` | `the customer meeting time needs the meeting day` |
 | `project.customer_not_found` | 400 | — | `cliente não encontrado nesta organização` | `customer not found in this organization` |
 | `project.invalid_bill_rate` | 400 | — | `o valor cobrado por hora deve ficar entre 10,00 e 1.000.000,00` | `the rate billed per hour must be between 10.00 and 1,000,000.00` |
@@ -294,6 +296,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 |---|---|---|---|---|
 | `receivable.already_confirmed` | 409 | — | `este período já foi confirmado` | `this period was already confirmed` |
 | `receivable.already_received` | 409 | — | `este recebível já foi recebido: desfaça o recebimento antes` | `this receivable was already received: undo the payment first` |
+| `receivable.changed` | 409 | — | `este recebível foi editado enquanto você o recebia: confira os valores e tente de novo` | `this receivable was edited while you were receiving it: check the values and try again` |
 | `receivable.charges_exceed_received` | 400 | — | `a multa e os juros fazem parte do valor recebido e não podem passar dele` | `the late fee and the interest are part of the amount received and cannot exceed it` |
 | `receivable.charges_not_allowed` | 400 | — | `multa e juros só valem no contrato mensal` | `late fee and interest only apply to a monthly contract` |
 | `receivable.invalid_amount` | 400 | — | `informe um valor maior que zero, até 1.000.000,00` | `enter an amount greater than zero, up to 1,000,000.00` |

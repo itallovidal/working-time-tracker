@@ -209,11 +209,15 @@ type editFields struct {
 	note    *string
 }
 
-// Receive grava o recebimento, se o recebível ainda não foi recebido (a condição vai na instrução, então dois
-// recebimentos ao mesmo tempo não se sobrescrevem: o segundo é ErrAlreadyReceived).
-func (s *Store) Receive(orgID, id uuid.UUID, on string, cents, fee, interest int) error {
+// Receive grava o recebimento, se o recebível ainda não foi recebido e continua com o valor confirmado que quem chama
+// leu (amount): as condições vão na instrução, então dois recebimentos ao mesmo tempo não se sobrescrevem (o segundo é
+// ErrAlreadyReceived) e uma edição do valor que chega no meio não é recebida às cegas (ErrChanged).
+func (s *Store) Receive(orgID, id uuid.UUID, amount int, on string, cents, fee, interest int) error {
 	n, err := s.client.Receivable.Update().
-		Where(entreceivable.IDEQ(id), entreceivable.OrganizationIDEQ(orgID), entreceivable.ReceivedOnIsNil()).
+		Where(
+			entreceivable.IDEQ(id), entreceivable.OrganizationIDEQ(orgID),
+			entreceivable.ReceivedOnIsNil(), entreceivable.AmountCentsEQ(amount),
+		).
 		SetReceivedOn(on).
 		SetReceivedCents(cents).
 		SetLateFeeCents(fee).
@@ -223,9 +227,22 @@ func (s *Store) Receive(orgID, id uuid.UUID, on string, cents, fee, interest int
 		return err
 	}
 	if n == 0 {
-		return s.whyNotChanged(orgID, id, ErrAlreadyReceived)
+		return s.whyNotReceived(orgID, id)
 	}
 	return nil
+}
+
+// whyNotReceived explica um recebimento que não mudou linha nenhuma: o recebível não existe na organização, já foi
+// recebido, ou foi editado depois de lido (ErrChanged).
+func (s *Store) whyNotReceived(orgID, id uuid.UUID) error {
+	r, err := s.Get(orgID, id.String())
+	if err != nil {
+		return err
+	}
+	if r.ReceivedOn != nil {
+		return ErrAlreadyReceived
+	}
+	return ErrChanged
 }
 
 // Unreceive desfaz o recebimento: o recebível volta a estar em aberto. Sem recebimento a desfazer, ErrNotReceived.

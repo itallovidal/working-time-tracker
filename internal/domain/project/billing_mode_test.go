@@ -4,10 +4,15 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
+
+	"github.com/google/uuid"
 
 	"working-time-tracker/internal/domain/customer"
 	"working-time-tracker/internal/domain/organization"
+	"working-time-tracker/internal/domain/person"
 	"working-time-tracker/internal/domain/project"
+	"working-time-tracker/testutil"
 )
 
 // O valor cobrado do projeto segue o modo de cobrança do cliente: o cliente por hora o exige, o mensal o recusa (o
@@ -133,5 +138,93 @@ func TestBillingMode_SetBillingFollowsTheCustomerMode(t *testing.T) {
 	// Voltar a interno: sem cliente e sem valor.
 	if b, err = f.svc.SetBilling(id, nil, nil); err != nil || b.Customer != nil || b.BillRateCents != nil || b.CustomerBillingMode != nil {
 		t.Errorf("back to internal: %+v, %v", b, err)
+	}
+}
+
+// A sessão não guarda o cliente: as horas de um projeto são do cliente que o projeto tem hoje. Tirar do cliente o
+// projeto que tem sessões, quando o cliente já tem recebíveis, jogaria as horas já cobradas nas propostas do cliente
+// novo. Sem recebível, ou sem sessão, o projeto troca à vontade, e o mesmo cliente com outro valor também passa.
+func TestBillingMode_MovingABilledProjectIsRefused(t *testing.T) {
+	f := newBillingFixture(t)
+	ctx := context.Background()
+	other := testClient.Customer.Create().SetOrganizationID(uuid.MustParse(f.orgID)).SetName("Outro").SaveX(ctx).ID.String()
+	who, err := person.NewService(person.NewStore(testClient)).Create(f.orgID, "Ana", "ana@test.com")
+	if err != nil {
+		t.Fatalf("create person: %v", err)
+	}
+
+	// newProject cria um projeto do cliente por hora, com uma sessão de duas horas ou sem nenhuma.
+	newProject := func(name string, withSession bool) string {
+		t.Helper()
+		p, err := f.svc.CreateWithCustomer(f.orgID, project.CreateInput{Name: name, CustomerID: f.hourly, BillRateCents: ptr(10000)})
+		if err != nil {
+			t.Fatalf("create %s: %v", name, err)
+		}
+		if withSession {
+			task := testClient.Task.Create().SetProjectID(p.ID).SetName("T").SaveX(ctx)
+			start := time.Date(2026, 9, 10, 12, 0, 0, 0, time.UTC)
+			end := start.Add(2 * time.Hour)
+			pay, bill := 0, 10000
+			testutil.Session(t, testClient, task.ID, who.ID, start, &end, &pay, &bill)
+		}
+		return p.ID.String()
+	}
+	billed := newProject("Com horas", true)
+	idle := newProject("Sem horas", false)
+	customerOf := func(id string) string {
+		t.Helper()
+		b, err := f.svc.Billing(id)
+		if err != nil {
+			t.Fatalf("billing: %v", err)
+		}
+		if b.Customer == nil {
+			return ""
+		}
+		return b.Customer.ID.String()
+	}
+
+	// Sem recebível o projeto com horas vai para outro cliente e volta.
+	if _, err := f.svc.SetBilling(billed, &other, ptr(12000)); err != nil {
+		t.Fatalf("move without receivables: %v", err)
+	}
+	if _, err := f.svc.SetBilling(billed, &f.hourly, ptr(10000)); err != nil {
+		t.Fatalf("move back without receivables: %v", err)
+	}
+
+	rec := testClient.Receivable.Create().
+		SetOrganizationID(uuid.MustParse(f.orgID)).SetCustomerID(uuid.MustParse(f.hourly)).SetKind("hourly").
+		SetPeriodStart("2026-09-01").SetPeriodEnd("2026-09-30").SetSeconds(7200).
+		SetCalculatedCents(20000).SetAmountCents(20000).SetCurrency("BRL").SetDueDate("2026-10-05").
+		SaveX(ctx)
+
+	// Com recebível no cliente, o projeto com horas não sai dele: nem para outro cliente, nem para interno.
+	_, err = f.svc.SetBilling(billed, &other, ptr(12000))
+	if !errors.Is(err, project.ErrCustomerLocked) || fieldOf(err) != "customer_id" {
+		t.Errorf("move to another customer: err = %v, want ErrCustomerLocked on customer_id", err)
+	}
+	_, err = f.svc.SetBilling(billed, nil, nil)
+	if !errors.Is(err, project.ErrCustomerLocked) || fieldOf(err) != "customer_id" {
+		t.Errorf("back to internal: err = %v, want ErrCustomerLocked on customer_id", err)
+	}
+	if got := customerOf(billed); got != f.hourly {
+		t.Errorf("customer = %s after refused moves, want the original %s", got, f.hourly)
+	}
+
+	// O mesmo cliente com outro valor passa: só o valor muda.
+	if b, err := f.svc.SetBilling(billed, &f.hourly, ptr(11000)); err != nil || b.BillRateCents == nil || *b.BillRateCents != 11000 {
+		t.Errorf("same customer, new rate: %+v, %v", b, err)
+	}
+	// O projeto sem sessões não tem horas para cobrar de novo e sai à vontade.
+	if _, err := f.svc.SetBilling(idle, &other, ptr(12000)); err != nil {
+		t.Errorf("move a project without sessions: %v", err)
+	}
+
+	// Desfeito o recebível, o projeto com horas pode sair.
+	testClient.Receivable.DeleteOneID(rec.ID).ExecX(ctx)
+	if _, err := f.svc.SetBilling(billed, &other, ptr(12000)); err != nil {
+		t.Errorf("move after the receivable was undone: %v", err)
+	}
+	if got := customerOf(billed); got != other {
+		t.Errorf("customer = %s, want %s after the move", got, other)
 	}
 }

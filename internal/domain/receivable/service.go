@@ -466,7 +466,7 @@ func (s *Service) Receive(orgID, id string, in ReceiveInput) (*Receivable, error
 			return nil, ErrChargesExceedReceived.With("field", "late_fee_cents")
 		}
 	}
-	if err := s.deps.Store.Receive(e.id, r.ID, on, cents, fee, interest); err != nil {
+	if err := s.deps.Store.Receive(e.id, r.ID, r.AmountCents, on, cents, fee, interest); err != nil {
 		return nil, err
 	}
 	r, err = s.deps.Store.Get(e.id, id)

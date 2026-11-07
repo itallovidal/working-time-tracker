@@ -184,10 +184,13 @@ e observação) também só vale enquanto não foi recebido.
 (os 50 mais recentes, com Desfazer recebimento). "Em aberto" inclui o atrasado; "Recebido no mês" é a soma de
 `received_cents` com `received_on` no mês do calendário da organização.
 
-**Limites que valem saber.** Os períodos são calculados do cadastro do cliente de hoje: mudar o `closing_day` de um
-cliente que já tem recebíveis não remexe os que existem (cada recebível guarda as datas dele), mas os períodos novos
-seguem o dia novo e podem se sobrepor aos antigos. Excluir o cliente com recebíveis é recusado
-(`customer.has_receivables`); apagar a organização leva tudo.
+**Limites que valem saber.** Os períodos são calculados do cadastro do cliente de hoje, e "já cobrado" compara as
+datas exatas do período. Por isso o cliente com recebíveis não troca o `closing_day` (`customer.closing_day_locked`;
+mandar o dia que ele já tem passa): um dia novo geraria períodos por cima dos confirmados e as mesmas horas seriam
+propostas de novo. Desfeitos os recebíveis, o dia muda. Pelo mesmo motivo, e porque a sessão não guarda o cliente (vale
+o do projeto de hoje), o projeto com sessões não sai de um cliente que já tem recebíveis (`project.customer_locked`).
+Receber um recebível cujo valor foi editado depois de a tela lê-lo é recusado (`receivable.changed`): o dono confere e
+tenta de novo. Excluir o cliente com recebíveis é recusado (`customer.has_receivables`); apagar a organização leva tudo.
 
 ## Receita e Receita projetada (modo solo)
 

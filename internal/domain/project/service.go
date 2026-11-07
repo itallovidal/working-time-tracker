@@ -395,6 +395,28 @@ func (s *Service) Billing(projectID string) (*Billing, error) {
 	return s.store.Billing(uid)
 }
 
+// checkCustomerChange recusa tirar o projeto de um cliente que já tem recebíveis quando o projeto tem sessões
+// (ErrCustomerLocked): a sessão não guarda o cliente, vale o do projeto de hoje, então as horas já cobradas do
+// cliente antigo entrariam de novo nas propostas do novo. Mandar o mesmo cliente (só o valor muda) passa, e o projeto
+// de um cliente sem recebível ou sem sessão troca à vontade.
+func (s *Service) checkCustomerChange(projectID uuid.UUID, next *uuid.UUID) error {
+	cur, err := s.store.Billing(projectID)
+	if err != nil {
+		return err
+	}
+	if cur.Customer == nil || (next != nil && *next == cur.Customer.ID) {
+		return nil
+	}
+	locked, err := s.store.HasBilledHistory(projectID, cur.Customer.ID)
+	if err != nil {
+		return err
+	}
+	if locked {
+		return ErrCustomerLocked.With("field", "customer_id")
+	}
+	return nil
+}
+
 // SetBilling substitui o cliente e o valor cobrado do projeto. Os dois andam juntos e o valor segue o modo de cobrança
 // do cliente novo: com cliente por hora o valor é obrigatório, com cliente mensal é recusado
 // (ErrBillRateNotAllowed) e sem cliente é recusado. nil (ou cliente vazio) apaga o cliente: é assim que um projeto
@@ -421,6 +443,9 @@ func (s *Service) SetBilling(projectID string, customerID *string, billRateCents
 		customerUID, customerMode = &cid, mode
 	}
 	if err := checkBillRate(billRateCents, customerMode); err != nil {
+		return nil, err
+	}
+	if err := s.checkCustomerChange(uid, customerUID); err != nil {
 		return nil, err
 	}
 	if err := s.store.SetBilling(uid, customerUID, billRateCents); err != nil {

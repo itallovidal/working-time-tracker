@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"working-time-tracker/ent"
 	"working-time-tracker/internal/apperr"
 	"working-time-tracker/internal/domain/customer"
 	"working-time-tracker/internal/domain/project"
@@ -412,6 +413,67 @@ func TestBilling_ModeLockedWithProjects(t *testing.T) {
 	}
 	if got, err := svc.Update(id, customer.Input{BillingMode: ptr("monthly"), MonthlyFeeCents: opt(500000), ContractStart: ptr("2026-11-01")}); err != nil || got.BillingMode != customer.BillingMonthly {
 		t.Errorf("switch without projects = %+v, %v", got, err)
+	}
+}
+
+// receivableOf grava um recebível por hora do cliente, de setembro, como se o dono o tivesse confirmado.
+func receivableOf(c *customer.Customer) *ent.Receivable {
+	return testClient.Receivable.Create().
+		SetOrganizationID(c.OrganizationID).SetCustomerID(c.ID).SetKind("hourly").
+		SetPeriodStart("2026-09-01").SetPeriodEnd("2026-09-30").SetSeconds(0).
+		SetCalculatedCents(10000).SetAmountCents(10000).SetCurrency("BRL").SetDueDate("2026-10-05").
+		SaveX(context.Background())
+}
+
+// O dia de fechamento de um cliente com recebíveis não muda: os períodos novos cairiam por cima dos confirmados, e as
+// mesmas horas poderiam ser cobradas duas vezes. Mandar o dia que ele já tem passa, o recebível de outro cliente não
+// trava este, e desfeitos os recebíveis o dia muda.
+func TestBilling_ClosingDayLockedWithReceivables(t *testing.T) {
+	svc, _, orgID := setup(t)
+	c, err := svc.Create(orgID, customer.Input{Name: ptr("Com recebível"), ClosingDay: ptr(20)})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	id := c.ID.String()
+	other, err := svc.Create(orgID, customer.Input{Name: ptr("Outro")})
+	if err != nil {
+		t.Fatalf("create other: %v", err)
+	}
+
+	// Sem recebível o dia muda à vontade.
+	if got, err := svc.Update(id, customer.Input{ClosingDay: ptr(25)}); err != nil || got.ClosingDay != 25 {
+		t.Fatalf("closing day without receivables: %+v, %v", got, err)
+	}
+
+	rec := receivableOf(c)
+	receivableOf(other) // o recebível do outro cliente não conta aqui
+
+	_, err = svc.Update(id, customer.Input{ClosingDay: ptr(15)})
+	refused(t, "another closing day", err, customer.ErrClosingDayLocked, "closing_day")
+	if got := mustGet(t, svc, id); got.ClosingDay != 25 {
+		t.Errorf("closing day = %d after a refused change, want 25", got.ClosingDay)
+	}
+
+	// O mesmo dia não muda nada e passa, também junto de outro campo.
+	if got, err := svc.Update(id, customer.Input{ClosingDay: ptr(25), Name: ptr("Novo nome")}); err != nil || got.ClosingDay != 25 || got.Name != "Novo nome" {
+		t.Errorf("same closing day with another field: %+v, %v", got, err)
+	}
+	// Um dia fora da faixa continua sendo o erro de faixa, não o da trava.
+	_, err = svc.Update(id, customer.Input{ClosingDay: ptr(32)})
+	refused(t, "closing day out of range", err, customer.ErrInvalidClosingDay, "closing_day")
+
+	// Na criação o dia é livre: o cliente ainda não tem recebível.
+	if created, err := svc.Create(orgID, customer.Input{Name: ptr("Novo"), ClosingDay: ptr(5)}); err != nil || created.ClosingDay != 5 {
+		t.Errorf("create with a closing day: %+v, %v", created, err)
+	}
+
+	// O outro cliente tem o recebível dele e está travado do mesmo jeito.
+	_, err = svc.Update(other.ID.String(), customer.Input{ClosingDay: ptr(10)})
+	refused(t, "the other customer", err, customer.ErrClosingDayLocked, "closing_day")
+
+	testClient.Receivable.DeleteOneID(rec.ID).ExecX(context.Background())
+	if got, err := svc.Update(id, customer.Input{ClosingDay: ptr(15)}); err != nil || got.ClosingDay != 15 {
+		t.Errorf("closing day after the receivable was undone: %+v, %v", got, err)
 	}
 }
 

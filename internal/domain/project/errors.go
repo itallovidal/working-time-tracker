@@ -33,4 +33,8 @@ var (
 	// ErrBillRateNotAllowed recusa o valor cobrado num projeto de cliente mensal: o contrato é um valor por mês, e o
 	// projeto não tem valor por hora. O field é bill_rate_cents.
 	ErrBillRateNotAllowed = apperr.New("project.bill_rate_not_allowed", http.StatusBadRequest)
+
+	// ErrCustomerLocked recusa tirar do cliente o projeto que tem sessões quando o cliente já tem recebíveis: as horas
+	// iam para as propostas do cliente novo e o recebível do antigo continuaria cobrando as mesmas. O field é customer_id.
+	ErrCustomerLocked = apperr.New("project.customer_locked", http.StatusConflict)
 )

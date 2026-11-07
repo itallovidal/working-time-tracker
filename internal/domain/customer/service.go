@@ -227,6 +227,17 @@ func (s *Service) applyBilling(c *Customer, in Input) error {
 		if *in.ClosingDay < 1 || *in.ClosingDay > 31 {
 			return ErrInvalidClosingDay.With("field", "closing_day")
 		}
+		// Mandar o dia que o cliente já tem não muda nada e passa. Trocar por outro com recebíveis no cliente é recusado:
+		// os períodos novos cairiam por cima dos confirmados, e "já cobrado" compara as datas exatas do período.
+		if *in.ClosingDay != c.ClosingDay && c.ID != uuid.Nil {
+			has, err := s.store.HasReceivables(c.ID)
+			if err != nil {
+				return err
+			}
+			if has {
+				return ErrClosingDayLocked.With("field", "closing_day")
+			}
+		}
 		c.ClosingDay = *in.ClosingDay
 	}
 	if in.PaymentDays != nil {

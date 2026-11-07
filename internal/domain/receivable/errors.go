@@ -23,6 +23,9 @@ var (
 	// ErrAlreadyReceived é o recebível que já foi recebido: não se edita, não se recebe de novo e a confirmação não
 	// se desfaz antes de desfazer o recebimento.
 	ErrAlreadyReceived = apperr.New("receivable.already_received", http.StatusConflict)
+	// ErrChanged é o recebimento de um recebível cujo valor foi editado depois de a tela o ler (duas abas): nada é
+	// gravado, para o dono não receber um valor que não viu. Ele confere e tenta de novo.
+	ErrChanged = apperr.New("receivable.changed", http.StatusConflict)
 	// ErrNotReceived é o desfazer do recebimento de um recebível que ainda não foi recebido.
 	ErrNotReceived = apperr.New("receivable.not_received", http.StatusConflict)
 	// ErrInvalidAmount é um valor que falta, é zero ou negativo, ou passa do teto. field diz qual: amount_cents ou

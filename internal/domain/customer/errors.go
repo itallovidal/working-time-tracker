@@ -31,6 +31,9 @@ var (
 	ErrModeLocked = apperr.New("customer.mode_locked", http.StatusConflict)
 	// ErrHasReceivables recusa excluir o cliente que tem recebíveis: quem os desfaz é o dono, na página A receber.
 	ErrHasReceivables = apperr.New("customer.has_receivables", http.StatusConflict)
+	// ErrClosingDayLocked recusa trocar o dia de fechamento de um cliente que já tem recebíveis: os períodos novos se
+	// sobreporiam aos já confirmados e as mesmas horas poderiam ser cobradas duas vezes. O field é closing_day.
+	ErrClosingDayLocked = apperr.New("customer.closing_day_locked", http.StatusConflict)
 	// ErrFieldHourlyOnly e ErrFieldMonthlyOnly recusam o campo do outro modo; o field diz qual.
 	ErrFieldHourlyOnly  = apperr.New("customer.field_hourly_only", http.StatusBadRequest, "field")
 	ErrFieldMonthlyOnly = apperr.New("customer.field_monthly_only", http.StatusBadRequest, "field")
