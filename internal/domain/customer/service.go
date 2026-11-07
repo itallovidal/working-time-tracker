@@ -25,7 +25,7 @@ func (s *Service) Create(orgID string, in Input) (*Customer, error) {
 	if err != nil {
 		return nil, ErrInvalidOrganization
 	}
-	c := &Customer{OrganizationID: orgUID, BillingMode: BillingHourly, ClosingDay: DefaultClosingDay}
+	c := &Customer{OrganizationID: orgUID, BillingMode: BillingHourly, BillingCycle: CycleMonthly, ClosingDay: DefaultClosingDay}
 	if in.Name == nil {
 		return nil, ErrNameRequired.With("field", "name")
 	}
@@ -178,7 +178,7 @@ func apply(c *Customer, in Input) error {
 }
 
 // applyBilling confere os termos comerciais de in e os aplica a c, que já traz o cliente atual (na criação, os
-// padrões: hourly e fechamento no dia 31). Todo erro diz o campo, para a tela marcá-lo.
+// padrões: hourly, ciclo mensal e fechamento no dia 31). Todo erro diz o campo, para a tela marcá-lo.
 //
 // O modo vale o de in, ou o que o cliente já tem. Trocar de modo é recusado quando o cliente tem projetos
 // (ErrModeLocked), e o monthly só vale em organização solo. Um campo do outro modo, com valor, é recusado; e trocar de
@@ -215,12 +215,15 @@ func (s *Service) applyBilling(c *Customer, in Input) error {
 		c.BillingMode = mode
 	}
 
-	// Os campos seguem a ordem da tela: o valor ou a mensalidade, o contrato, o fechamento e o prazo, e a multa.
+	// Os campos seguem a ordem da tela: o valor ou a mensalidade, o contrato, o ciclo, o fechamento e o prazo, e a multa.
 	if mode == BillingHourly {
 		if err := applyHourlyRate(c, in.HourlyRateCents); err != nil {
 			return err
 		}
 	} else if err := applyContract(c, in); err != nil {
+		return err
+	}
+	if err := s.applyCycle(c, mode, in); err != nil {
 		return err
 	}
 	if in.ClosingDay != nil {
@@ -258,8 +261,12 @@ func otherModeField(mode string, in Input) string {
 	filled := func(v *string) bool { return v != nil && strings.TrimSpace(*v) != "" }
 	nonZero := func(v *int) bool { return v != nil && *v != 0 }
 	if mode == BillingMonthly {
-		if in.HourlyRateCents.Value != nil {
+		switch {
+		case in.HourlyRateCents.Value != nil:
 			return "hourly_rate_cents"
+		case in.BillingCycle != nil && strings.TrimSpace(*in.BillingCycle) == CycleBiweekly:
+			// O contrato é por mês: o ciclo de 14 dias é do por hora. "monthly" e vazio são o padrão e passam.
+			return "billing_cycle"
 		}
 		return ""
 	}
@@ -344,6 +351,89 @@ func applyContract(c *Customer, in Input) error {
 		}
 	}
 	return nil
+}
+
+// applyCycle confere o ciclo do período e a âncora e os aplica a c, depois do modo (mode já é o final).
+//
+// O ciclo vale o de in, ou o que o cliente já tem; no modo monthly é sempre o mensal (o de 14 dias ali já foi recusado
+// em otherModeField). No mensal não há âncora: uma âncora com valor é recusada, e a guardada é apagada. No de 14 dias a
+// âncora é obrigatória e, quando muda, não pode ser depois de hoje no fuso da organização: é o fim de um período que já
+// fechou.
+//
+// Com recebíveis no cliente, mudar o ciclo ou a âncora é recusado (ErrCycleLocked), como o dia de fechamento: os
+// períodos novos cairiam por cima dos confirmados. A exceção é ficar no de 14 dias com a âncora no fim do último
+// recebível ou depois, porque aí os períodos novos começam depois de tudo o que já foi confirmado. Comparar com o que
+// está gravado, e não com o que veio, faz a trava valer também quando a mudança vem de uma troca de modo.
+func (s *Service) applyCycle(c *Customer, mode string, in Input) error {
+	cycle := c.BillingCycle
+	if in.BillingCycle != nil {
+		v := strings.TrimSpace(*in.BillingCycle)
+		if v != CycleMonthly && v != CycleBiweekly {
+			return ErrInvalidBillingCycle.With("field", "billing_cycle")
+		}
+		cycle = v
+	}
+	if mode == BillingMonthly {
+		cycle = CycleMonthly
+	}
+
+	var anchor *string
+	if cycle == CycleMonthly {
+		if in.CycleAnchor != nil && strings.TrimSpace(*in.CycleAnchor) != "" {
+			return ErrFieldBiweeklyOnly.With("field", "cycle_anchor")
+		}
+	} else {
+		var err error
+		if anchor, err = applyDay(c.CycleAnchor, in.CycleAnchor, "cycle_anchor"); err != nil {
+			return err
+		}
+		if anchor == nil {
+			return apperr.ErrFieldRequired.With("field", "cycle_anchor")
+		}
+		if !sameDay(anchor, c.CycleAnchor) {
+			today, err := s.today(c.OrganizationID)
+			if err != nil {
+				return err
+			}
+			if *anchor > today {
+				return ErrInvalidCycleAnchor.With("field", "cycle_anchor")
+			}
+		}
+	}
+
+	if c.ID != uuid.Nil && (cycle != c.BillingCycle || !sameDay(anchor, c.CycleAnchor)) {
+		last, has, err := s.store.LastPeriodEnd(c.ID)
+		if err != nil {
+			return err
+		}
+		if has && (cycle != CycleBiweekly || *anchor < last) {
+			// Voltar ao mensal é o que trava; no de 14 dias, é a âncora que precisa ir para depois.
+			if cycle == CycleMonthly {
+				return ErrCycleLocked.With("field", "billing_cycle")
+			}
+			return ErrCycleLocked.With("field", "cycle_anchor")
+		}
+	}
+	c.BillingCycle, c.CycleAnchor = cycle, anchor
+	return nil
+}
+
+// today é o dia de hoje, YYYY-MM-DD, no fuso da organização (um fuso inválido vale UTC).
+func (s *Service) today(orgID uuid.UUID) (string, error) {
+	tz, err := s.store.OrgTimezone(orgID)
+	if err != nil {
+		return "", err
+	}
+	loc, err := time.LoadLocation(tz)
+	if err != nil {
+		loc = time.UTC
+	}
+	return time.Now().In(loc).Format(time.DateOnly), nil
+}
+
+// sameDay diz se os dois dias opcionais são o mesmo (os dois nulos também são).
+func sameDay(a, b *string) bool {
+	return (a == nil) == (b == nil) && (a == nil || *a == *b)
 }
 
 // applyDay aplica um dia de calendário (YYYY-MM-DD): ausente mantém o atual, texto vazio apaga e o resto precisa ser

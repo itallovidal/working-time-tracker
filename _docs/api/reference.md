@@ -459,7 +459,7 @@ Content-Type: application/json
 
 ### Termos comerciais do cliente
 
-Todo cliente traz o **modo de cobrança** e os termos dele, que o `POST` e o `PATCH` aceitam. A cobrança mora no cliente e vale para todos os projetos dele (Decisão 21): o projeto só soma um acréscimo. O cliente só com o valor por hora é por hora, fecha no dia 31 e vence no fechamento. Os valores são em **centavos**, na moeda da organização.
+Todo cliente traz o **modo de cobrança** e os termos dele, que o `POST` e o `PATCH` aceitam. A cobrança mora no cliente e vale para todos os projetos dele (Decisão 21): o projeto só soma um acréscimo. O cliente só com o valor por hora é por hora, de ciclo mensal, fecha no dia 31 e vence no fechamento. Os valores são em **centavos**, na moeda da organização.
 
 | Campo | Tipo | Regra |
 |---|---|---|
@@ -468,7 +468,9 @@ Todo cliente traz o **modo de cobrança** e os termos dele, que o `POST` e o `PA
 | `monthly_fee_cents` | int ou `null` | Só `monthly`, obrigatório nele (`400 request.field_required`) e de 1 a 100000000 (`400 customer.invalid_monthly_fee`) |
 | `contract_start` | `YYYY-MM-DD` | Só `monthly`, obrigatório nele. Uma data que não existe é `400 request.field_invalid` |
 | `contract_end` | `YYYY-MM-DD` ou `""` | Só `monthly`, opcional (sem fim, o contrato segue). Tem de ser **depois** do início: `400 customer.invalid_contract_end` |
-| `closing_day` | int, padrão 31 | De 1 a 31: o dia em que o período fecha. 31 é o último dia do mês, e o mês curto fecha no último dia dele (`400 customer.invalid_closing_day`). Com recebíveis no cliente o dia não muda: outro valor é `409 customer.closing_day_locked` (o mesmo dia que ele já tem passa); desfeitos os recebíveis, muda |
+| `billing_cycle` | `"monthly"` (padrão) ou `"biweekly"` | O ciclo do período. `monthly` fecha no `closing_day` de cada mês; `biweekly` fecha **a cada 14 dias** (o bi-weekly dos EUA, não a quinzena de 15 dias da regra de pagamento da pessoa) e só vale em `hourly`: num cliente mensal é `400 customer.field_hourly_only`. Outro valor, ou vazio, é `400 customer.invalid_billing_cycle` |
+| `cycle_anchor` | `YYYY-MM-DD` ou `""` | Só `biweekly`, obrigatório nele (`400 request.field_required`): o último dia do último período que o cliente já pagou. Os períodos começam no dia seguinte e têm 14 dias; as horas até a âncora nunca são propostas. Uma data que não existe é `400 request.field_invalid`; depois de hoje, no fuso da organização, é `400 customer.invalid_cycle_anchor` (conferido só quando a âncora muda). No ciclo mensal, com valor, é `400 customer.field_biweekly_only`; voltar ao mensal apaga a âncora |
+| `closing_day` | int, padrão 31 | De 1 a 31: o dia em que o período mensal fecha. 31 é o último dia do mês, e o mês curto fecha no último dia dele (`400 customer.invalid_closing_day`). No ciclo de 14 dias fica guardado sem uso. Com recebíveis no cliente o dia não muda: outro valor é `409 customer.closing_day_locked` (o mesmo dia que ele já tem passa); desfeitos os recebíveis, muda |
 | `payment_days` | int, padrão 0 | De 0 a 365: dias entre o fechamento e o vencimento (`400 customer.invalid_payment_days`) |
 | `late_fee_bp` | int, padrão 0 | Só `monthly`. A multa em pontos-base (200 = 2%), de 0 a 10000 (`400 customer.invalid_late_fee`) |
 | `late_interest_bp_month` | int, padrão 0 | Só `monthly`. Os juros ao mês em pontos-base, de 0 a 10000 (`400 customer.invalid_late_interest`) |
@@ -477,6 +479,7 @@ Todo cliente traz o **modo de cobrança** e os termos dele, que o `POST` e o `PA
 - **Um modo ou o outro.** Um campo do outro modo, com valor, é recusado com o campo em `params.field`: `400 customer.field_hourly_only` (`hourly_rate_cents` num cliente mensal) ou `400 customer.field_monthly_only` (a mensalidade, o contrato, a multa, os juros ou a tolerância num cliente por hora). `null`, `""` e `0` são o padrão do campo, não valor. Trocar o modo apaga os campos do modo que saiu.
 - **`monthly` só no modo solo.** Numa organização que não é solo, `billing_mode: "monthly"` é `400 customer.monthly_needs_solo` (`params.field` = `billing_mode`), na criação e na troca. Desligar o modo solo esconde as telas, e o cliente mensal segue guardado e editável.
 - **O modo trava com projetos.** Trocar o `billing_mode` de um cliente que já tem projetos é `409 customer.mode_locked` (`params.field` = `billing_mode`). Mandar o modo que ele já tem, e mexer nos outros termos, vale.
+- **O ciclo trava com recebíveis.** Com recebíveis no cliente, mudar o `billing_cycle` ou a `cycle_anchor` é `409 customer.cycle_locked`, porque os períodos novos cairiam por cima dos confirmados. A exceção é ficar em `biweekly` com a âncora no `period_end` do recebível mais recente, ou depois: os períodos novos começam depois dele. `params.field` é `billing_cycle` na volta ao mensal (também por uma troca de modo) e `cycle_anchor` no resto. Mandar o ciclo e a âncora que ele já tem passa.
 - **`PATCH`.** Campo omitido mantém o valor. `null` em `hourly_rate_cents` ou `monthly_fee_cents` é recusado no modo que os exige (`400 request.field_required`); em `contract_start` e `contract_end`, `""` apaga (o início de um cliente mensal não pode ficar vazio).
 - Todo erro de termo leva `params.field` com a chave do corpo, para a tela marcar o campo. Chave desconhecida, ou do tipo errado (`"closing_day": "5"`), é `400 request.invalid_body`.
 
@@ -494,6 +497,19 @@ Content-Type: application/json
   "late_fee_bp": 200,
   "late_interest_bp_month": 100,
   "grace_days": 3
+}
+```
+
+Um cliente por hora que paga a cada 14 dias, com o último período pago fechando em 27/10/2026 e 3 dias de prazo: os períodos são 28/10 a 10/11 (vence 13/11), 11/11 a 24/11, e assim por diante.
+
+```http
+PATCH /api/customers/:customerId
+Content-Type: application/json
+
+{
+  "billing_cycle": "biweekly",
+  "cycle_anchor": "2026-10-27",
+  "payment_days": 3
 }
 ```
 

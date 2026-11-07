@@ -34,6 +34,17 @@ var (
 	// ErrClosingDayLocked recusa trocar o dia de fechamento de um cliente que já tem recebíveis: os períodos novos se
 	// sobreporiam aos já confirmados e as mesmas horas poderiam ser cobradas duas vezes. O field é closing_day.
 	ErrClosingDayLocked = apperr.New("customer.closing_day_locked", http.StatusConflict)
+	// ErrCycleLocked recusa trocar o ciclo ou a âncora de um cliente que já tem recebíveis, pelo mesmo motivo. Passar
+	// para o ciclo de 14 dias com a âncora no fim do último recebível, ou depois, é aceito: os períodos novos começam
+	// depois dos confirmados. O field é billing_cycle ou cycle_anchor.
+	ErrCycleLocked = apperr.New("customer.cycle_locked", http.StatusConflict)
+	// ErrInvalidBillingCycle recusa um ciclo que não é monthly nem biweekly. O field é billing_cycle.
+	ErrInvalidBillingCycle = apperr.New("customer.invalid_billing_cycle", http.StatusBadRequest)
+	// ErrInvalidCycleAnchor recusa uma âncora depois de hoje: ela é o fim de um período que já fechou. O field é
+	// cycle_anchor.
+	ErrInvalidCycleAnchor = apperr.New("customer.invalid_cycle_anchor", http.StatusBadRequest)
+	// ErrFieldBiweeklyOnly recusa a âncora num cliente de ciclo mensal; o field diz qual.
+	ErrFieldBiweeklyOnly = apperr.New("customer.field_biweekly_only", http.StatusBadRequest, "field")
 	// ErrFieldHourlyOnly e ErrFieldMonthlyOnly recusam o campo do outro modo; o field diz qual.
 	ErrFieldHourlyOnly  = apperr.New("customer.field_hourly_only", http.StatusBadRequest, "field")
 	ErrFieldMonthlyOnly = apperr.New("customer.field_monthly_only", http.StatusBadRequest, "field")

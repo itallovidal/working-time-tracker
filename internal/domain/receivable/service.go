@@ -74,7 +74,8 @@ func (s *Service) env(orgID string) (env, error) {
 
 // Proposals devolve o que se propõe cobrar dos clientes da organização, do período que fecha primeiro para o que
 // fecha depois: no cliente por hora, os períodos fechados com tempo ainda sem recebível (os mais recentes, até
-// MaxHourlyProposals por cliente); no mensal, os períodos do contrato ainda sem recebível. Com includeOpen entra também
+// MaxHourlyProposals por cliente no ciclo mensal e MaxBiweeklyProposals no de 14 dias); no mensal, os períodos do
+// contrato ainda sem recebível. Com includeOpen entra também
 // o período corrente dos clientes por hora, com as horas até agora (Open verdadeiro). Nada é gravado.
 func (s *Service) Proposals(orgID string, includeOpen bool) ([]Proposal, error) {
 	e, err := s.env(orgID)

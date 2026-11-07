@@ -28,7 +28,7 @@ func termsOf(c *ent.Customer, loc *time.Location) terms {
 	for _, p := range c.Edges.Projects {
 		extra += p.BillExtraCents
 	}
-	return terms{customer: c, cycle: newCycle(c.ClosingDay, loc), paymentDays: c.PaymentDays, extraCents: extra}
+	return terms{customer: c, cycle: cycleOf(c, loc), paymentDays: c.PaymentDays, extraCents: extra}
 }
 
 // monthlyCents é o valor de um período do contrato mensal: a mensalidade mais os acréscimos mensais dos projetos.
@@ -58,7 +58,8 @@ func (t terms) proposal(kind string, p payment.Period, seconds float64, cents in
 }
 
 // hourly propõe os períodos do cliente por hora: os já fechados com tempo nos projetos dele, os mais recentes primeiro
-// até MaxHourlyProposals, sem os que já foram confirmados (done). O valor de cada um é a soma das sessões de todos os
+// até o teto do ciclo (MaxHourlyProposals no mensal, MaxBiweeklyProposals no de 14 dias), sem os que já foram
+// confirmados (done). No de 14 dias nada vem de antes da âncora, e com a âncora hoje ainda não há período nenhum. O valor de cada um é a soma das sessões de todos os
 // projetos do cliente, cortadas no período e arredondadas por sessão pelo valor cobrado congelado nelas. Com
 // includeOpen entra também o período corrente, com as horas até agora; ele não conta no limite.
 func (t terms) hourly(sessions []work_session.WorkSession, done map[string]bool, now time.Time, includeOpen bool) []Proposal {
@@ -80,7 +81,7 @@ func (t terms) hourly(sessions []work_session.WorkSession, done map[string]bool,
 		}
 	}
 	closedCount := 0
-	for p, ok := payment.Previous(cur); ok && closedCount < MaxHourlyProposals && p.End.After(first); p, ok = payment.Previous(p) {
+	for p, ok := payment.Previous(cur); ok && closedCount < t.cycle.maxClosed() && p.End.After(first); p, ok = payment.Previous(p) {
 		if done[key(t.customer.ID, p.StartDay(), p.PayDay())] {
 			continue
 		}

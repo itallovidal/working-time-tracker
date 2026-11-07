@@ -62,6 +62,8 @@ var (
 		{Name: "contract_end", Type: field.TypeString, Nullable: true},
 		{Name: "closing_day", Type: field.TypeInt, Default: 31},
 		{Name: "payment_days", Type: field.TypeInt, Default: 0},
+		{Name: "billing_cycle", Type: field.TypeString, Default: "monthly"},
+		{Name: "cycle_anchor", Type: field.TypeString, Nullable: true},
 		{Name: "late_fee_bp", Type: field.TypeInt, Default: 0},
 		{Name: "late_interest_bp_month", Type: field.TypeInt, Default: 0},
 		{Name: "grace_days", Type: field.TypeInt, Default: 0},
@@ -76,7 +78,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "customers_organizations_customers",
-				Columns:    []*schema.Column{CustomersColumns[18]},
+				Columns:    []*schema.Column{CustomersColumns[20]},
 				RefColumns: []*schema.Column{OrganizationsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},

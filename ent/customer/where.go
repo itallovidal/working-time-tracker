@@ -126,6 +126,16 @@ func PaymentDays(v int) predicate.Customer {
 	return predicate.Customer(sql.FieldEQ(FieldPaymentDays, v))
 }
 
+// BillingCycle applies equality check predicate on the "billing_cycle" field. It's identical to BillingCycleEQ.
+func BillingCycle(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldEQ(FieldBillingCycle, v))
+}
+
+// CycleAnchor applies equality check predicate on the "cycle_anchor" field. It's identical to CycleAnchorEQ.
+func CycleAnchor(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldEQ(FieldCycleAnchor, v))
+}
+
 // LateFeeBp applies equality check predicate on the "late_fee_bp" field. It's identical to LateFeeBpEQ.
 func LateFeeBp(v int) predicate.Customer {
 	return predicate.Customer(sql.FieldEQ(FieldLateFeeBp, v))
@@ -989,6 +999,146 @@ func PaymentDaysLT(v int) predicate.Customer {
 // PaymentDaysLTE applies the LTE predicate on the "payment_days" field.
 func PaymentDaysLTE(v int) predicate.Customer {
 	return predicate.Customer(sql.FieldLTE(FieldPaymentDays, v))
+}
+
+// BillingCycleEQ applies the EQ predicate on the "billing_cycle" field.
+func BillingCycleEQ(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldEQ(FieldBillingCycle, v))
+}
+
+// BillingCycleNEQ applies the NEQ predicate on the "billing_cycle" field.
+func BillingCycleNEQ(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldNEQ(FieldBillingCycle, v))
+}
+
+// BillingCycleIn applies the In predicate on the "billing_cycle" field.
+func BillingCycleIn(vs ...string) predicate.Customer {
+	return predicate.Customer(sql.FieldIn(FieldBillingCycle, vs...))
+}
+
+// BillingCycleNotIn applies the NotIn predicate on the "billing_cycle" field.
+func BillingCycleNotIn(vs ...string) predicate.Customer {
+	return predicate.Customer(sql.FieldNotIn(FieldBillingCycle, vs...))
+}
+
+// BillingCycleGT applies the GT predicate on the "billing_cycle" field.
+func BillingCycleGT(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldGT(FieldBillingCycle, v))
+}
+
+// BillingCycleGTE applies the GTE predicate on the "billing_cycle" field.
+func BillingCycleGTE(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldGTE(FieldBillingCycle, v))
+}
+
+// BillingCycleLT applies the LT predicate on the "billing_cycle" field.
+func BillingCycleLT(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldLT(FieldBillingCycle, v))
+}
+
+// BillingCycleLTE applies the LTE predicate on the "billing_cycle" field.
+func BillingCycleLTE(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldLTE(FieldBillingCycle, v))
+}
+
+// BillingCycleContains applies the Contains predicate on the "billing_cycle" field.
+func BillingCycleContains(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldContains(FieldBillingCycle, v))
+}
+
+// BillingCycleHasPrefix applies the HasPrefix predicate on the "billing_cycle" field.
+func BillingCycleHasPrefix(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldHasPrefix(FieldBillingCycle, v))
+}
+
+// BillingCycleHasSuffix applies the HasSuffix predicate on the "billing_cycle" field.
+func BillingCycleHasSuffix(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldHasSuffix(FieldBillingCycle, v))
+}
+
+// BillingCycleEqualFold applies the EqualFold predicate on the "billing_cycle" field.
+func BillingCycleEqualFold(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldEqualFold(FieldBillingCycle, v))
+}
+
+// BillingCycleContainsFold applies the ContainsFold predicate on the "billing_cycle" field.
+func BillingCycleContainsFold(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldContainsFold(FieldBillingCycle, v))
+}
+
+// CycleAnchorEQ applies the EQ predicate on the "cycle_anchor" field.
+func CycleAnchorEQ(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldEQ(FieldCycleAnchor, v))
+}
+
+// CycleAnchorNEQ applies the NEQ predicate on the "cycle_anchor" field.
+func CycleAnchorNEQ(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldNEQ(FieldCycleAnchor, v))
+}
+
+// CycleAnchorIn applies the In predicate on the "cycle_anchor" field.
+func CycleAnchorIn(vs ...string) predicate.Customer {
+	return predicate.Customer(sql.FieldIn(FieldCycleAnchor, vs...))
+}
+
+// CycleAnchorNotIn applies the NotIn predicate on the "cycle_anchor" field.
+func CycleAnchorNotIn(vs ...string) predicate.Customer {
+	return predicate.Customer(sql.FieldNotIn(FieldCycleAnchor, vs...))
+}
+
+// CycleAnchorGT applies the GT predicate on the "cycle_anchor" field.
+func CycleAnchorGT(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldGT(FieldCycleAnchor, v))
+}
+
+// CycleAnchorGTE applies the GTE predicate on the "cycle_anchor" field.
+func CycleAnchorGTE(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldGTE(FieldCycleAnchor, v))
+}
+
+// CycleAnchorLT applies the LT predicate on the "cycle_anchor" field.
+func CycleAnchorLT(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldLT(FieldCycleAnchor, v))
+}
+
+// CycleAnchorLTE applies the LTE predicate on the "cycle_anchor" field.
+func CycleAnchorLTE(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldLTE(FieldCycleAnchor, v))
+}
+
+// CycleAnchorContains applies the Contains predicate on the "cycle_anchor" field.
+func CycleAnchorContains(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldContains(FieldCycleAnchor, v))
+}
+
+// CycleAnchorHasPrefix applies the HasPrefix predicate on the "cycle_anchor" field.
+func CycleAnchorHasPrefix(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldHasPrefix(FieldCycleAnchor, v))
+}
+
+// CycleAnchorHasSuffix applies the HasSuffix predicate on the "cycle_anchor" field.
+func CycleAnchorHasSuffix(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldHasSuffix(FieldCycleAnchor, v))
+}
+
+// CycleAnchorIsNil applies the IsNil predicate on the "cycle_anchor" field.
+func CycleAnchorIsNil() predicate.Customer {
+	return predicate.Customer(sql.FieldIsNull(FieldCycleAnchor))
+}
+
+// CycleAnchorNotNil applies the NotNil predicate on the "cycle_anchor" field.
+func CycleAnchorNotNil() predicate.Customer {
+	return predicate.Customer(sql.FieldNotNull(FieldCycleAnchor))
+}
+
+// CycleAnchorEqualFold applies the EqualFold predicate on the "cycle_anchor" field.
+func CycleAnchorEqualFold(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldEqualFold(FieldCycleAnchor, v))
+}
+
+// CycleAnchorContainsFold applies the ContainsFold predicate on the "cycle_anchor" field.
+func CycleAnchorContainsFold(v string) predicate.Customer {
+	return predicate.Customer(sql.FieldContainsFold(FieldCycleAnchor, v))
 }
 
 // LateFeeBpEQ applies the EQ predicate on the "late_fee_bp" field.

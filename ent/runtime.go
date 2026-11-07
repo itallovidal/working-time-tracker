@@ -92,26 +92,30 @@ func init() {
 	customer.DefaultPaymentDays = customerDescPaymentDays.Default.(int)
 	// customer.PaymentDaysValidator is a validator for the "payment_days" field. It is called by the builders before save.
 	customer.PaymentDaysValidator = customerDescPaymentDays.Validators[0].(func(int) error)
+	// customerDescBillingCycle is the schema descriptor for billing_cycle field.
+	customerDescBillingCycle := customerFields[15].Descriptor()
+	// customer.DefaultBillingCycle holds the default value on creation for the billing_cycle field.
+	customer.DefaultBillingCycle = customerDescBillingCycle.Default.(string)
 	// customerDescLateFeeBp is the schema descriptor for late_fee_bp field.
-	customerDescLateFeeBp := customerFields[15].Descriptor()
+	customerDescLateFeeBp := customerFields[17].Descriptor()
 	// customer.DefaultLateFeeBp holds the default value on creation for the late_fee_bp field.
 	customer.DefaultLateFeeBp = customerDescLateFeeBp.Default.(int)
 	// customer.LateFeeBpValidator is a validator for the "late_fee_bp" field. It is called by the builders before save.
 	customer.LateFeeBpValidator = customerDescLateFeeBp.Validators[0].(func(int) error)
 	// customerDescLateInterestBpMonth is the schema descriptor for late_interest_bp_month field.
-	customerDescLateInterestBpMonth := customerFields[16].Descriptor()
+	customerDescLateInterestBpMonth := customerFields[18].Descriptor()
 	// customer.DefaultLateInterestBpMonth holds the default value on creation for the late_interest_bp_month field.
 	customer.DefaultLateInterestBpMonth = customerDescLateInterestBpMonth.Default.(int)
 	// customer.LateInterestBpMonthValidator is a validator for the "late_interest_bp_month" field. It is called by the builders before save.
 	customer.LateInterestBpMonthValidator = customerDescLateInterestBpMonth.Validators[0].(func(int) error)
 	// customerDescGraceDays is the schema descriptor for grace_days field.
-	customerDescGraceDays := customerFields[17].Descriptor()
+	customerDescGraceDays := customerFields[19].Descriptor()
 	// customer.DefaultGraceDays holds the default value on creation for the grace_days field.
 	customer.DefaultGraceDays = customerDescGraceDays.Default.(int)
 	// customer.GraceDaysValidator is a validator for the "grace_days" field. It is called by the builders before save.
 	customer.GraceDaysValidator = customerDescGraceDays.Validators[0].(func(int) error)
 	// customerDescCreatedAt is the schema descriptor for created_at field.
-	customerDescCreatedAt := customerFields[18].Descriptor()
+	customerDescCreatedAt := customerFields[20].Descriptor()
 	// customer.DefaultCreatedAt holds the default value on creation for the created_at field.
 	customer.DefaultCreatedAt = customerDescCreatedAt.Default.(func() time.Time)
 	// customerDescID is the schema descriptor for id field.

@@ -895,7 +895,7 @@ help:
       text: "Solo mode is for people who work on their own, as freelancers or solo contractors: the organization is just one person, and what belongs to a team goes away instead of crowding the menus."
       choose: "Tick “I work alone” when you create the organization or later, in Settings › Edit. Only the owner changes it, and it only turns on with you as the only person and no pending invites."
       hides: "The menu loses Collaborators and Payments and gains “Receivables”; the project loses the Collaborators tab, and nobody is invited. Turning the mode off deletes nothing: everything that was hidden comes back."
-      billing: "Each customer is billed per hour (the hours on their projects times the customer's hourly rate) or by a monthly contract (a fixed amount per month, and their projects have no hourly rate), never both. Billing is set under Customers and applies to all of the customer's projects; each project only adds an extra, per hour or per month. Once a customer has projects the mode cannot change."
+      billing: "Each customer is billed per hour (the hours on their projects times the customer's hourly rate) or by a monthly contract (a fixed amount per month, and their projects have no hourly rate), never both. Billing is set under Customers and applies to all of the customer's projects; each project only adds an extra, per hour or per month. Once a customer has projects the mode cannot change. An hourly customer's period closes once a month, on the closing day, or every 14 days (US bi-weekly), counted from the last closing the customer already paid."
       home: "Home shows the hours, the revenue (the money that came in) and the projected revenue (what you expect to receive, paid or not), per customer."
     integrations:
       title: GitHub and Trello integrations
@@ -1087,6 +1087,11 @@ customer:
     contract_start: Contract start
     contract_end: Contract end
     contract_end_hint: Without a date, the contract runs indefinitely.
+    cycle: Billing cycle
+    cycle_monthly: Monthly, on the closing day
+    cycle_biweekly: Every 2 weeks (14 days)
+    cycle_anchor: Last closing already paid
+    cycle_anchor_hint: "The last day of the last period the customer already paid. The next ones close every 14 days from it, and the hours up to that day stay out of Receivables. New customer: use the day 14 days before the first closing."
     closing_day: Closing day
     closing_day_hint: The day of the month the period closes. 31 is the last day of every month.
     payment_days: Payment term (days)
@@ -1116,6 +1121,7 @@ customer:
     cell_no_rate: No hourly rate
     cell_closing_last: Last day
     cell_closing_day: "Day {{.day}}"
+    cell_closing_biweekly: "Every 14 days since {{.date}}"
     cell_due_closing: At closing
     cell_due_days:
       one: "{{.count}} day later"
@@ -1880,8 +1886,12 @@ errors:
     mode_locked: "this customer already has projects: the billing mode can no longer change"
     has_receivables: "this customer has receivables; undo them on the Receivables page before deleting"
     closing_day_locked: "this customer already has receivables: the closing day can no longer change"
+    cycle_locked: "this customer already has receivables: the cycle only becomes every 14 days with the last closing on the end of the latest receivable or later, and it cannot go back to monthly"
     field_hourly_only: "{{.field}} only applies to an hourly customer"
     field_monthly_only: "{{.field}} only applies to a monthly customer"
+    field_biweekly_only: "{{.field}} only applies to the 14-day cycle"
+    invalid_billing_cycle: "invalid cycle: use monthly or biweekly (every 14 days)"
+    invalid_cycle_anchor: "the last closing already paid cannot be after today"
     invalid_hourly_rate: "the hourly rate must be between 10.00 and 1,000,000.00"
     invalid_monthly_fee: "the monthly fee must be between 0.01 and 1,000,000.00"
     invalid_contract_end: "the contract end must be after the start"
@@ -2024,7 +2034,7 @@ errors:
     team_not_in_project: "the team is not in this project"
   receivable:
     not_found: "receivable not found"
-    not_a_period: "the dates are not a period of this customer: check the customer's closing day and, on a monthly contract, the start and the end"
+    not_a_period: "the dates are not a period of this customer: check the customer's cycle (the closing day, or the 14 days since the last closing already paid) and, on a monthly contract, the start and the end"
     period_open: "this period has not closed yet: an hourly customer is only confirmed after the period closes"
     already_confirmed: "this period was already confirmed"
     already_received: "this receivable was already received: undo the payment first"
@@ -2133,6 +2143,8 @@ fields:
   monthly_fee_cents: "the monthly fee"
   contract_start: "the contract start"
   contract_end: "the contract end"
+  billing_cycle: "the billing cycle"
+  cycle_anchor: "the last closing already paid"
   closing_day: "the closing day"
   payment_days: "the payment term"
   late_fee_bp: "the late fee"
