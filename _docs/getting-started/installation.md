@@ -69,16 +69,18 @@ uma software house, e a **Marina Duarte Design**, uma organização no [modo sol
 
 ### Marina Duarte Design (modo solo)
 
-Uma freelancer que atende sozinha, como PJ, com dois clientes. Ela é a única pessoa da organização (dona, sem convites e
-sem equipe), e a organização já vem marcada como **Trabalho sozinho(a)**:
+Uma freelancer que atende sozinha, como PJ, com **um ano de trabalho registrado**: as três janelas da tela inicial (este
+mês, o mês passado e o ano) têm horas e dinheiro em qualquer dia em que o seed rode. Ela é a única pessoa da organização
+(dona, sem convites e sem equipe), e a organização já vem marcada como **Trabalho sozinho(a)**:
 
 | O quê | Como fica |
 |---|---|
-| Clientes | Dois. A **Agência Pixel** é cobrada **por hora**: valor padrão de 150,00, fechamento no dia 25 e 10 dias para pagar. A **Clínica Aurora** é cobrada por **contrato mensal**: 6.300,00 por mês desde o primeiro dia do mês retrasado, fechamento no último dia do mês, 5 dias para pagar, multa de 2%, juros de 1% ao mês e 3 dias de tolerância |
-| Projetos | Quatro. Dois da Pixel, cada um com o seu valor por hora (150,00 e 135,00); um da Aurora, **sem valor por hora**; e um interno (Estudos e administração), que só tem horas |
-| Tarefas | 17, com prioridade, os quatro status e prazos de três semanas atrás a um mês à frente, todas da Marina |
-| Sessões | Cerca de 110, desde o primeiro dia do mês retrasado até hoje, de uma sequência fixa à parte (a da software house não muda). Terça e quinta têm suporte da Aurora, para o contrato mensal ter horas em todo mês |
-| A receber | Quatro recebíveis confirmados e duas propostas, calculados a partir do dia em que o seed roda: dois da Aurora **recebidos** (o do mês retrasado, com a multa e os juros que o sistema sugere, e o do mês passado), o do mês corrente **confirmado adiantado e em aberto**, e um da Pixel (o período fechado mais antigo) **atrasado**. O período seguinte da Aurora e os outros períodos fechados da Pixel ficam como propostas por confirmar |
+| Clientes | Cinco, todos do Brasil, quatro com CNPJ. Três **por hora**: a **Agência Pixel** (135,00, fecha no dia 25 e paga em 10 dias), o **Café Bambu** (120,00, fecha no fim do mês e paga em 15 dias) e a **Editora Ventania** (110,00, fecha no fim do mês e paga em 30 dias). Dois por **contrato mensal**: a **Clínica Aurora** (6.300,00 desde o começo do histórico, 5 dias para pagar, multa de 2%, juros de 1% ao mês e 3 dias de tolerância) e a **Escola Horizonte** (3.800,00, com o contrato **encerrado** há quatro meses e sem multa) |
+| Projetos | Dez, que começam e terminam ao longo do ano: três já entregues (a campanha de redes sociais da Pixel, o agendamento online da Aurora e o portal da Escola Horizonte), a identidade visual da Pixel com um acréscimo de 15,00 por hora, o suporte da Aurora com um acréscimo de 400,00 por mês, e dois internos (Estudos e administração, e o portfólio), que só têm horas |
+| Tarefas | 42, com prioridade, os quatro status e prazos de dez meses atrás a um mês à frente, todas da Marina. As dos projetos entregues estão fechadas, e o backlog fica sem horas |
+| Sessões | Cerca de 540, do primeiro dia do mês de onze meses atrás até hoje, de uma sequência fixa à parte (a da software house não muda), com duas semanas de férias no meio. Terça e quinta têm suporte da Aurora, e quarta a Escola Horizonte enquanto o contrato durou, para os contratos mensais terem horas em todo mês. A Marina fica com o ponto **aberto** na identidade visual da Pixel, até alguém parar |
+| Integrações | Duas, de demonstração e **sem credencial**: o GitHub na loja do Café Bambu e o Trello nas landing pages da Pixel, com tarefas ligadas a itens |
+| A receber | Cerca de 36 recebíveis, com as notas fiscais em sequência, calculados a partir do dia em que o seed roda. Quase todos **recebidos**, alguns dias depois do vencimento: os seis primeiros meses da Aurora com a mensalidade de antes do reajuste anual, e o de quatro meses atrás com a **multa e os juros** que o sistema sugere. Em aberto: o mês corrente da Aurora, **confirmado adiantado**, e o último mês da Ventania, ainda no prazo. **Atrasado**: o penúltimo período fechado da Pixel. **Por confirmar**: o último período fechado da Pixel e o do Café Bambu |
 
 O sorteio usa uma semente fixa: o mesmo seed dá sempre os mesmos dados, com as datas contadas a partir do dia em que
 roda. Por isso `make demo` (que recria o banco a cada vez) mostra os recebíveis sempre em estados variados.

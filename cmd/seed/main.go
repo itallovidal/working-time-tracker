@@ -6,8 +6,9 @@
 // geradas por uma sequência fixa (o mesmo seed dá sempre o mesmo banco), duas
 // pessoas com o ponto aberto e integrações com itens vinculados a tarefas.
 //
-// Na mesma execução vem uma segunda organização, no modo solo (solo.go): uma freelancer com um cliente por hora e um
-// por contrato mensal, os projetos deles, sessões desde o mês retrasado e recebíveis em vários estados.
+// Na mesma execução vem uma segunda organização, no modo solo (solo.go): uma freelancer com um ano de trabalho, cinco
+// clientes (por hora e por contrato mensal, um deles encerrado), os projetos deles, as sessões dos doze meses, o ponto
+// aberto agora e recebíveis em vários estados.
 //
 // Uso: go run ./cmd/seed (lê DATABASE_URL do ambiente ou do .env)
 package main
@@ -763,10 +764,12 @@ func main() {
 	fmt.Printf("  %d integrações sem credencial: informe o token na aba Integrações para usá-las\n", len(integrations))
 	fmt.Printf("  %d pagamentos com baixa; os outros períodos fechados aparecem como atrasados em Pagamentos\n", paidOut)
 	fmt.Println()
-	fmt.Printf("  Organização solo: %s, uma pessoa só, com um cliente por hora (Agência Pixel) e um por contrato mensal (Clínica Aurora)\n", soloOrgName)
-	fmt.Printf("  %d projetos (um interno), %d tarefas e %d sessões fechadas desde o mês retrasado\n", solo.projects, solo.tasks, solo.sessions)
-	fmt.Printf("  %d recebíveis confirmados (%d recebidos, %d em aberto, %d atrasado) e %d propostas por confirmar em A receber\n",
-		solo.confirmed, solo.received, solo.confirmed-solo.received-solo.late, solo.late, solo.toConfirm)
+	fmt.Printf("  Organização solo: %s, uma pessoa só, com %d clientes (%d por hora e %d por contrato mensal, um deles já encerrado)\n",
+		soloOrgName, solo.customers, solo.hourly, solo.monthly)
+	fmt.Printf("  %d projetos (%d internos), %d tarefas e %d integrações sem credencial\n", solo.projects, solo.internal, solo.tasks, solo.integrations)
+	fmt.Printf("  %d sessões fechadas nos últimos %d meses e o ponto aberto agora\n", solo.sessions, soloHistoryMonths+1)
+	fmt.Printf("  %d recebíveis confirmados (%d recebidos, %d em aberto, %d em atraso) e %d propostas por confirmar em A receber\n",
+		solo.confirmed, solo.received, solo.open, solo.late, solo.toConfirm)
 	fmt.Println()
 	fmt.Printf("  Dono:    %s / %s\n", people[0].email, password)
 	for _, p := range people[1:] {

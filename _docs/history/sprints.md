@@ -1125,6 +1125,7 @@ Branch `feat/small-fixes` (2026-11-07), from what the owner noted after using th
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open
 - [X] D2 The same run also creates a solo organization (Marina Duarte Design: an hourly and a monthly customer, their projects, sessions since the month before last and receivables in every state), and prints its login next to the others
+- [X] D3 Branch `feat/solo-seed` (2026-11-07): the solo organization becomes a full year of a freelancer's work, so the solo home has numbers in the month, last month and year windows. Five customers (three hourly; two on a monthly contract, one of them ended four months ago), ten projects that start and end along the year (three delivered, two internal), 42 tasks (the backlog has no hours), about 540 sessions over twelve months with a two-week vacation, the clock open now, two demo integrations (GitHub and Trello) with linked tasks, and about 36 receivables with sequential invoice numbers: almost all received, an annual fee raise, one paid late with fine and interest, one confirmed in advance, one late and two proposals. The team organization's data does not change
 
 ---
 
