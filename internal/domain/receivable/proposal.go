@@ -92,9 +92,11 @@ func (t terms) hourly(sessions []work_session.WorkSession, done map[string]bool,
 	return out
 }
 
-// contractPeriods são os períodos do contrato mensal que se podem cobrar: do período do contract_start até o corrente
-// e o seguinte, parando no contract_end (o período que o contém é o último). Vazio quando o cliente não tem mensalidade
-// e início de contrato, ou quando o contrato só começa depois do período seguinte. Do mais antigo para o mais novo.
+// contractPeriods são os períodos do contrato mensal que se podem cobrar: do período do contract_start até o corrente,
+// parando no contract_end (o período que o contém é o último). O corrente se confirma adiantado, a qualquer momento do
+// mês; o seguinte só entra quando começa (propor os dois parecia cobrança em dobro). Vazio quando o cliente não tem
+// mensalidade e início de contrato, ou quando o contrato só começa depois do período corrente. Do mais antigo para o
+// mais novo.
 func (t terms) contractPeriods(now time.Time) []payment.Period {
 	c := t.customer
 	if c.MonthlyFeeCents == nil || *c.MonthlyFeeCents <= 0 || c.ContractStart == nil {
@@ -108,9 +110,8 @@ func (t terms) contractPeriods(now time.Time) []payment.Period {
 	if !ok {
 		return nil
 	}
-	last := payment.Next(cur)
 	var out []payment.Period
-	for p := first; !p.Start.After(last.Start); p = payment.Next(p) {
+	for p := first; !p.Start.After(cur.Start); p = payment.Next(p) {
 		if c.ContractEnd != nil && p.StartDay() > *c.ContractEnd {
 			break
 		}

@@ -195,7 +195,7 @@ func checkSums(t *testing.T, o *overview.SoloOverview) {
 //     como proposta.
 //   - Beta, mensal a 5.000,00 desde 1/8, com 3h em outubro e 4h em novembro. Agosto confirmado e recebido em 12/10 com
 //     100,00 de multa (5.100,00); outubro confirmado em 4.500,00 e ainda não recebido; setembro e novembro (o período em
-//     andamento) só como proposta, e dezembro, o seguinte, termina depois do ano que a tela cobre.
+//     andamento) só como proposta; dezembro, o seguinte, ainda não é proposto.
 //   - Delta, por hora, sem nada. Um projeto interno com 1h em outubro e 1h30 em novembro. E outra organização solo, com
 //     horas e dinheiro, que não pode entrar em conta nenhuma.
 func richSolo(t *testing.T) *soloFixture {

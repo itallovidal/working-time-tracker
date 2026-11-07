@@ -5,6 +5,8 @@
      Parâmetros: Data (a página), Model (o nome do objeto dos termos no componente) e Id (o prefixo dos ids dos campos).
      Os data-field são os nomes da API, para o erro do servidor cair embaixo do campo. */}}
 {{define "customer_contract"}}
+{{/* Um campo por linha, cada um com a sua dica embaixo: em pares, os rótulos com "(opcional)" quebravam em alturas
+     diferentes e os campos desalinhavam. */}}
 {{$m := .Model}}{{$id := .Id}}
 {{with .Data}}
 <div class="stack" x-show="{{$m}}.billing_mode === 'monthly'">
@@ -13,56 +15,51 @@
     <input id="{{$id}}-monthly-fee" type="text" inputmode="decimal" class="num" data-field="monthly_fee_cents" x-model="{{$m}}.monthly_fee" @input="clearField('monthly_fee_cents')" :aria-invalid="fieldErrors.monthly_fee_cents ? 'true' : 'false'">
     {{template "field_error" "monthly_fee_cents"}}
   </div>
-  <div class="fields">
-    <div class="field">
-      <label for="{{$id}}-contract-start">{{.T "customer.billing.contract_start"}}</label>
-      <input id="{{$id}}-contract-start" type="date" data-field="contract_start" x-model="{{$m}}.contract_start" @input="clearField('contract_start')" :aria-invalid="fieldErrors.contract_start ? 'true' : 'false'">
-      {{template "field_error" "contract_start"}}
-    </div>
-    <div class="field">
-      {{template "field_label" (dict "D" . "For" (printf "%s-contract-end" $id) "Key" "customer.billing.contract_end" "Optional" true)}}
-      <input id="{{$id}}-contract-end" type="date" data-field="contract_end" x-model="{{$m}}.contract_end" @input="clearField('contract_end')" :aria-invalid="fieldErrors.contract_end ? 'true' : 'false'">
-      {{template "field_error" "contract_end"}}
-    </div>
+  <div class="field">
+    <label for="{{$id}}-contract-start">{{.T "customer.billing.contract_start"}}</label>
+    <input id="{{$id}}-contract-start" type="date" data-field="contract_start" x-model="{{$m}}.contract_start" @input="clearField('contract_start')" :aria-invalid="fieldErrors.contract_start ? 'true' : 'false'">
+    {{template "field_error" "contract_start"}}
   </div>
-  <span class="hint">{{.T "customer.billing.contract_end_hint"}}</span>
+  <div class="field">
+    {{template "field_label" (dict "D" . "For" (printf "%s-contract-end" $id) "Key" "customer.billing.contract_end" "Optional" true)}}
+    <input id="{{$id}}-contract-end" type="date" data-field="contract_end" x-model="{{$m}}.contract_end" @input="clearField('contract_end')" :aria-invalid="fieldErrors.contract_end ? 'true' : 'false'">
+    {{template "field_error" "contract_end"}}
+    <span class="hint">{{.T "customer.billing.contract_end_hint"}}</span>
+  </div>
 </div>
 
-<div class="fields">
-  <div class="field">
-    <label for="{{$id}}-closing-day">{{.T "customer.billing.closing_day"}}</label>
-    <input id="{{$id}}-closing-day" type="number" min="1" max="31" step="1" class="num" data-field="closing_day" x-model="{{$m}}.closing_day" @input="clearField('closing_day')" :aria-invalid="fieldErrors.closing_day ? 'true' : 'false'">
-    {{template "field_error" "closing_day"}}
-  </div>
-  <div class="field">
-    <label for="{{$id}}-payment-days">{{.T "customer.billing.payment_days"}}</label>
-    <input id="{{$id}}-payment-days" type="number" min="0" max="{{limit "term_days"}}" step="1" class="num" data-field="payment_days" x-model="{{$m}}.payment_days" @input="clearField('payment_days')" :aria-invalid="fieldErrors.payment_days ? 'true' : 'false'">
-    {{template "field_error" "payment_days"}}
-  </div>
+<div class="field">
+  <label for="{{$id}}-closing-day">{{.T "customer.billing.closing_day"}}</label>
+  <input id="{{$id}}-closing-day" type="number" min="1" max="31" step="1" class="num" data-field="closing_day" x-model="{{$m}}.closing_day" @input="clearField('closing_day')" :aria-invalid="fieldErrors.closing_day ? 'true' : 'false'">
+  {{template "field_error" "closing_day"}}
+  <span class="hint">{{.T "customer.billing.closing_day_hint"}}</span>
 </div>
-<span class="hint">{{.T "customer.billing.closing_day_hint"}} {{.T "customer.billing.payment_days_hint"}}</span>
+<div class="field">
+  <label for="{{$id}}-payment-days">{{.T "customer.billing.payment_days"}}</label>
+  <input id="{{$id}}-payment-days" type="number" min="0" max="{{limit "term_days"}}" step="1" class="num" data-field="payment_days" x-model="{{$m}}.payment_days" @input="clearField('payment_days')" :aria-invalid="fieldErrors.payment_days ? 'true' : 'false'">
+  {{template "field_error" "payment_days"}}
+  <span class="hint">{{.T "customer.billing.payment_days_hint"}}</span>
+</div>
 
 {{/* Multa, juros e tolerância ficam recolhidos: quase todo cliente é cobrado sem eles. */}}
 <details class="form-fold" x-show="{{$m}}.billing_mode === 'monthly'" :open="lateOpen" @toggle="lateOpen = $event.target.open">
   <summary>{{.T "customer.billing.late_title"}}</summary>
   <div class="stack">
-    <span class="hint">{{.T "customer.billing.late_hint"}}</span>
-    <div class="fields">
-      <div class="field">
-        {{template "field_label" (dict "D" . "For" (printf "%s-late-fee" $id) "Key" "customer.billing.late_fee" "Optional" true)}}
-        <input id="{{$id}}-late-fee" type="text" inputmode="decimal" class="num" placeholder="0" data-field="late_fee_bp" x-model="{{$m}}.late_fee" @input="clearField('late_fee_bp')" :aria-invalid="fieldErrors.late_fee_bp ? 'true' : 'false'">
-        {{template "field_error" "late_fee_bp"}}
-      </div>
-      <div class="field">
-        {{template "field_label" (dict "D" . "For" (printf "%s-late-interest" $id) "Key" "customer.billing.late_interest" "Optional" true)}}
-        <input id="{{$id}}-late-interest" type="text" inputmode="decimal" class="num" placeholder="0" data-field="late_interest_bp_month" x-model="{{$m}}.late_interest" @input="clearField('late_interest_bp_month')" :aria-invalid="fieldErrors.late_interest_bp_month ? 'true' : 'false'">
-        {{template "field_error" "late_interest_bp_month"}}
-      </div>
-      <div class="field">
-        {{template "field_label" (dict "D" . "For" (printf "%s-grace-days" $id) "Key" "customer.billing.grace_days" "Optional" true)}}
-        <input id="{{$id}}-grace-days" type="number" min="0" max="{{limit "term_days"}}" step="1" class="num" placeholder="0" data-field="grace_days" x-model="{{$m}}.grace_days" @input="clearField('grace_days')" :aria-invalid="fieldErrors.grace_days ? 'true' : 'false'">
-        {{template "field_error" "grace_days"}}
-      </div>
+    <p class="hint">{{.T "customer.billing.late_hint"}}</p>
+    <div class="field">
+      {{template "field_label" (dict "D" . "For" (printf "%s-late-fee" $id) "Key" "customer.billing.late_fee" "Optional" true)}}
+      <input id="{{$id}}-late-fee" type="text" inputmode="decimal" class="num" placeholder="0" data-field="late_fee_bp" x-model="{{$m}}.late_fee" @input="clearField('late_fee_bp')" :aria-invalid="fieldErrors.late_fee_bp ? 'true' : 'false'">
+      {{template "field_error" "late_fee_bp"}}
+    </div>
+    <div class="field">
+      {{template "field_label" (dict "D" . "For" (printf "%s-late-interest" $id) "Key" "customer.billing.late_interest" "Optional" true)}}
+      <input id="{{$id}}-late-interest" type="text" inputmode="decimal" class="num" placeholder="0" data-field="late_interest_bp_month" x-model="{{$m}}.late_interest" @input="clearField('late_interest_bp_month')" :aria-invalid="fieldErrors.late_interest_bp_month ? 'true' : 'false'">
+      {{template "field_error" "late_interest_bp_month"}}
+    </div>
+    <div class="field">
+      {{template "field_label" (dict "D" . "For" (printf "%s-grace-days" $id) "Key" "customer.billing.grace_days" "Optional" true)}}
+      <input id="{{$id}}-grace-days" type="number" min="0" max="{{limit "term_days"}}" step="1" class="num" placeholder="0" data-field="grace_days" x-model="{{$m}}.grace_days" @input="clearField('grace_days')" :aria-invalid="fieldErrors.grace_days ? 'true' : 'false'">
+      {{template "field_error" "grace_days"}}
     </div>
   </div>
 </details>

@@ -1110,6 +1110,17 @@ Branch `feat/billing-on-customer` (2026-11-07). The owner did not like setting b
 - [X] S103.4 Screens: the customer modal asks the hourly rate in both modes (the team modal only that; mode, contract and terms stay solo-only) and the Cobrança column shows in both; the new project form no longer switches the customer's mode (S102.2 reverted): it shows the customer's billing read only, with a link to Customers, and asks the extra with a live total (partial `project_billing_fields`, shared with the project settings); the project settings card shows the customer's billing, the extra and the billed rate. `WTT.billing` and `WTT.rules.extra` in `app.js`
 - [X] S103.5 Seed, tests and docs: the team seed puts each customer at the lowest of its projects' rates, so the demo numbers stay the same; the solo seed has a Pixel project with a 15.00 extra and an Aurora project with a 400.00 monthly extra. Decision 21, `product/money.md`, `api/reference.md`, `architecture/data-model.md`, `product/permissions.md`, `product/overview.md` and the help texts
 
+### Sprint 105: Small Fixes After the First Days
+
+Branch `feat/small-fixes` (2026-11-07), from what the owner noted after using the billing on the customer in production.
+
+- [X] S105.1 Welcome bug (from Sprint 103): the "first customer" step had no hourly rate, which became required, so the customer never saved. The step asks the rate (with a solo hint that a monthly-contract customer goes in Customers); a page test renders the field, and a `web/` test reads every customer POST in `org.js` and checks it sends `hourly_rate_cents`
+- [X] S105.2 The project extra moved out of "Cliente e cobrança" into an "Avançado" fold at the end of the new project and edit project forms (partial `project_extra_fold`), closed unless the project has an extra or the field errs; "Cliente e cobrança" keeps the customer's billing, read only
+- [X] S105.3 A receber proposes a monthly contract only up to the current period: the next one looked like a duplicate (both said "em andamento" and the card added them up). The current period is still confirmable in advance; the next one shows up when it starts, and confirming it earlier is `receivable.not_a_period`. Seed, tests, help text, money.md and Decision 20 follow
+- [X] S105.4 Customer modal: the billing fields one per line, each hint under its field; the hint inside the late fold has the size of the others (`.form-fold .hint`)
+- [X] S105.5 A receber intro without the "(America/Sao_Paulo)" time zone
+- [X] S105.6 Every `<select>` drops the system look (`appearance: none`) and gets the field height and an arrow drawn in `currentColor`, so Safari matches Chrome; color rules use `background-color` so the arrow stays. The open option list is still the system's
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open

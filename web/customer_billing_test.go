@@ -69,6 +69,39 @@ func TestCustomerBilling_ScreenSendsOnlyKnownKeys(t *testing.T) {
 	}
 }
 
+// Toda tela que cria cliente manda o valor por hora, que é obrigatório no cliente por hora (Decisão 21). A etapa do
+// primeiro cliente das boas-vindas não mandava, e o cliente não salvava: este teste lê cada POST de cliente do org.js e
+// confere que a função dele monta hourly_rate_cents (direto ou pelo billingBody).
+func TestCustomerCreation_EveryScreenSendsTheHourlyRate(t *testing.T) {
+	js := staticFile(t, "static/pages/org.js")
+	post := "api('POST', '/api/orgs/' + orgId + '/customers'"
+	method := regexp.MustCompile(`(?m)^    \w+\([^)]*\) \{$`)
+	found := 0
+	for at := strings.Index(js, post); at >= 0; at = next(js, post, at) {
+		found++
+		starts := method.FindAllStringIndex(js[:at], -1)
+		if len(starts) == 0 {
+			t.Fatalf("the customer POST at %d is not inside a method", at)
+		}
+		fn := js[starts[len(starts)-1][0]:at]
+		if !strings.Contains(fn, "hourly_rate_cents") && !strings.Contains(fn, "billingBody(") {
+			t.Errorf("%q creates a customer without hourly_rate_cents", strings.TrimSpace(strings.SplitN(fn, "\n", 2)[0]))
+		}
+	}
+	if found < 2 {
+		t.Errorf("found %d customer POSTs in org.js, want the customers modal and the welcome step", found)
+	}
+}
+
+// next é a próxima ocorrência de sub em s depois de at, ou -1.
+func next(s, sub string, at int) int {
+	i := strings.Index(s[at+1:], sub)
+	if i < 0 {
+		return -1
+	}
+	return at + 1 + i
+}
+
 // O modo, o contrato e os prazos só existem no modo solo: ficam dentro do {{if .Me.OrganizationSolo}}. O valor por hora
 // fica fora, porque todo cliente por hora tem um, na equipe também (Decisão 21).
 func TestCustomerBilling_FieldsAreInsideTheSoloGate(t *testing.T) {

@@ -354,7 +354,9 @@ onboarding:
     timezone_note: The time zone applies to every hour and date in the organization. The currency follows the country.
   customers:
     title: Your customers
-    lead: A customer is whoever hires the organization. Each project can have a customer and the rate billed to them per hour; an internal project doesn't need one.
+    lead: A customer is whoever hires the organization. The hourly rate belongs to the customer and applies to all of its projects; an internal project doesn't need one.
+    rate_hint: What the customer pays per hour. Each project can add an extra later.
+    rate_hint_solo: What the customer pays per hour. A customer on a monthly contract is added under Customers.
     later: Add later
   people:
     title: Your team
@@ -527,7 +529,7 @@ payments:
 receivable:
   refresh: Refresh
   loading: Loading the receivables…
-  intro: "What to charge each customer, what is already confirmed and what came in. The period closes at midnight ({{.tz}})."
+  intro: "What to charge each customer, what is already confirmed and what came in. The period closes at midnight."
   cards:
     to_confirm: To confirm
     to_confirm_hint:
@@ -781,7 +783,7 @@ help:
       title: Receivables
       text: "The “Receivables” item in the top bar, only for the owner of an organization in solo mode: what to charge each customer and what has already come in. Each receivable belongs to a customer and a period: the app proposes it, and you confirm it."
       cards: "At the top, four cards: what is waiting to be confirmed, what is open, what is late (confirmed, not received and past the due date) and what came in this month."
-      confirm: "“To confirm” lists the proposals. For an hourly customer, a period shows up after it closes, with the hours on the customer's projects times the rate billed on each one (the customer's rate plus the project's extra); for a monthly one, it is the monthly fee plus the projects' monthly extras, from the start of the contract to next month, and you can confirm it at any time. “Confirm” opens the amount, the due date, the invoice number and a note, and you adjust whatever you need."
+      confirm: "“To confirm” lists the proposals. For an hourly customer, a period shows up after it closes, with the hours on the customer's projects times the rate billed on each one (the customer's rate plus the project's extra); for a monthly one, it is the monthly fee plus the projects' monthly extras, from the start of the contract to the current month, and you can confirm it at any time. “Confirm” opens the amount, the due date, the invoice number and a note, and you adjust whatever you need."
       receive: "“Open” is what was confirmed and has not come in yet. “Receive” records the day and the amount. For an hourly customer the confirmed amount comes in; for a monthly one the amount is free, and the app suggests the late fee and interest when the payment goes past the due date plus the contract's grace days."
       undo: "“Received” lists what came in. You can undo the payment and, after that, the confirmation: the period goes back to being a proposal."
       invoice: "The app does not issue invoices: the number is only a note. An effective hourly rate below 10.00 shows up as a warning, never as an error."
@@ -1121,6 +1123,7 @@ project:
     routine_solo: Routine
   billing:
     customer_terms: Customer billing
+    advanced: Advanced
     customer_hourly: "Hourly · {{.rate}}/h"
     customer_monthly: "Monthly contract · {{.fee}}/month"
     customer_no_rate: Hourly, no hourly rate yet

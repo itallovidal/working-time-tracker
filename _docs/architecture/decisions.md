@@ -709,7 +709,8 @@ O schema é a única coisa que existe para todos; uma organização com equipe s
    o sistema calculou naquele momento, o valor que o dono confirmou (que ele pode ajustar), o vencimento, a nota e
    a observação, e depois o recebimento. É a mesma ideia da baixa (Decisão 18): o cálculo muda com as horas, a decisão do
    dono não. **Por hora**, só se confirma depois que o período fecha, e o valor é o das horas. **Mensal** é flexível: a
-   qualquer momento, inclusive adiantado, com o valor recebido livre e a multa e os juros **sugeridos** (nunca cobrados
+   qualquer momento, inclusive adiantado (o período corrente, antes de fechar; até a Sprint 105 também o seguinte, que
+   aparecia em "A confirmar" como uma cobrança em dobro), com o valor recebido livre e a multa e os juros **sugeridos** (nunca cobrados
    sozinhos) a partir do vencimento e da tolerância. O sistema **não emite nota**: o número dela é só uma anotação.
    "Atrasado" é derivado (confirmado, sem recebimento, com hoje depois do vencimento), e o dono desfaz o recebimento e
    a confirmação. Só o dono gerencia (`receivables.manage`).

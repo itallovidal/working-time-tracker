@@ -250,7 +250,8 @@ func TestProposals_BelowTheMinimumRateIsAWarning(t *testing.T) {
 	}
 }
 
-// O contrato mensal propõe do período do início do contrato até o corrente e o seguinte, parando no fim do contrato.
+// O contrato mensal propõe do período do início do contrato até o corrente, parando no fim do contrato. O seguinte só
+// entra quando começa.
 func TestProposals_Monthly(t *testing.T) {
 	f := setup(t)
 	periods := func(c *ent.Customer) (starts []string) {
@@ -274,8 +275,8 @@ func TestProposals_Monthly(t *testing.T) {
 	}
 
 	open := f.monthly("Sem fim", "2026-08-15", nil)
-	if got, want := periods(open), []string{"2026-08-01", "2026-09-01", "2026-10-01", "2026-11-01"}; !equal(got, want) {
-		t.Errorf("open-ended contract = %v, want %v (the start's period through the current and the next)", got, want)
+	if got, want := periods(open), []string{"2026-08-01", "2026-09-01", "2026-10-01"}; !equal(got, want) {
+		t.Errorf("open-ended contract = %v, want %v (the start's period through the current, not the next)", got, want)
 	}
 	end := "2026-09-20"
 	ended := f.monthly("Com fim", "2026-08-15", &end)
@@ -287,9 +288,11 @@ func TestProposals_Monthly(t *testing.T) {
 	if got, want := periods(endedOct), []string{"2026-10-01"}; !equal(got, want) {
 		t.Errorf("contract ending on the first day of October = %v, want %v (the period that holds the end is the last)", got, want)
 	}
-	future := f.monthly("Futuro", "2026-12-01", nil)
-	if got := periods(future); len(got) != 0 {
-		t.Errorf("a contract that starts after the next period = %v, want none", got)
+	for _, start := range []string{"2026-11-01", "2026-12-01"} {
+		future := f.monthly("Futuro "+start, start, nil)
+		if got := periods(future); len(got) != 0 {
+			t.Errorf("a contract that starts on %s, after the current period = %v, want none", start, got)
+		}
 	}
 	noFee := testClient.Customer.Create().SetOrganizationID(f.orgID).SetName("Sem valor").SetBillingMode("monthly").
 		SetContractStart("2026-08-01").SaveX(context.Background())
@@ -486,14 +489,12 @@ func TestConfirm_Monthly(t *testing.T) {
 	if partial.Kind != "monthly" || partial.CalculatedCents != 500000 || partial.AmountCents != 260000 || partial.DueDate != "2026-09-10" {
 		t.Errorf("partial first month = %+v", partial)
 	}
-	// O período corrente (aberto) e o seguinte (adiantado) se confirmam.
+	// O período corrente (aberto) se confirma adiantado; o seguinte, só quando começar.
 	if err := try("2026-10-01", "2026-10-31"); err != nil {
 		t.Errorf("the current period: %v", err)
 	}
-	if err := try("2026-11-01", "2026-11-30"); err != nil {
-		t.Errorf("the next period, in advance: %v", err)
-	}
-	// Fora do contrato: antes do início, depois do seguinte e depois do fim.
+	wantCode(t, try("2026-11-01", "2026-11-30"), receivable.ErrNotAPeriod, "period_start")
+	// Fora do contrato: antes do início e depois do corrente.
 	wantCode(t, try("2026-07-01", "2026-07-31"), receivable.ErrNotAPeriod, "period_start")
 	wantCode(t, try("2026-12-01", "2026-12-31"), receivable.ErrNotAPeriod, "period_start")
 	wantCode(t, try("2026-08-01", "2026-08-31"), receivable.ErrAlreadyConfirmed, "")
@@ -805,12 +806,13 @@ func TestSummary(t *testing.T) {
 	if s.Today != "2026-10-09" || s.Timezone != "America/Sao_Paulo" || s.Currency != "BRL" {
 		t.Errorf("header = %s / %s / %s", s.Today, s.Timezone, s.Currency)
 	}
-	// A confirmar: as mensalidades de outubro (corrente) e de novembro (seguinte); setembro por hora já foi confirmado.
-	if len(s.ToConfirm) != 2 || s.ToConfirm[0].PeriodStart != "2026-10-01" || s.ToConfirm[1].PeriodStart != "2026-11-01" {
+	// A confirmar: a mensalidade de outubro (corrente), sem a de novembro (o seguinte, que ainda não começou); setembro
+	// por hora já foi confirmado.
+	if len(s.ToConfirm) != 1 || s.ToConfirm[0].PeriodStart != "2026-10-01" {
 		t.Fatalf("to confirm = %+v", s.ToConfirm)
 	}
 	want := receivable.Totals{
-		ToConfirmCount: 2, ToConfirmCents: 1000000,
+		ToConfirmCount: 1, ToConfirmCents: 500000,
 		OpenCount: 2, OpenCents: 1000000, LateCount: 1, LateCents: 500000,
 		ReceivedMonthCount: 1, ReceivedMonthCents: 510000,
 	}

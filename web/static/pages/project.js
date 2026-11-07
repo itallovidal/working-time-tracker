@@ -1648,6 +1648,7 @@ document.addEventListener('alpine:init', () => {
     billing: WTT.billing,
     customers: [],
     draft: { name: '', description: '', sprint_duration_days: 14, ...WTT.routine.blank(), customer_id: '', extra: '' },
+    extraOpen: false, // o bloco Avançado, com o acréscimo: começa aberto quando o projeto já tem um
     confirmDelete: false,
     async init() {
       try {
@@ -1737,6 +1738,7 @@ document.addEventListener('alpine:init', () => {
       this.errors.save = '';
       this.errors.delete = '';
       this.clearFields();
+      this.extraOpen = this.billExtraCents > 0;
       this.confirmDelete = false;
       // Enquanto salva, o modal não fecha: um erro do servidor ficaria sem ter onde aparecer.
       Alpine.store('modal').open('project-edit', WTT.t('project_settings.edit_title'), () => !this.pending);
@@ -1768,7 +1770,14 @@ document.addEventListener('alpine:init', () => {
             ...WTT.routine.rules(d),
             sprint_duration_days: [d.sprint_duration_days, R.integer(1, 90)],
           } : {}),
-        })) return;
+        })) {
+          // O acréscimo fica no bloco Avançado: com erro, o bloco abre e o campo recebe o foco.
+          if (this.fieldErrors.bill_extra_cents) {
+            this.extraOpen = true;
+            this.$nextTick(() => this.focusField('bill_extra_cents'));
+          }
+          return;
+        }
         // Sem cliente não há acréscimo: vai zero.
         const extra = d.customer_id && String(d.extra).trim() !== '' ? WTT.toCents(d.extra, { strict: true }) : 0;
 
