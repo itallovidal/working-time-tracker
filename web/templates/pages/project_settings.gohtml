@@ -103,8 +103,8 @@
           <span class="hint">{{.T "project_settings.customers_hint"}} <a href="/orgs/{{.OrgID}}/customers">{{.T "nav.customers"}}</a>.</span>
         </div>
         {{end}}
-        {{/* A cobrança do cliente, só para leitura, e o acréscimo deste projeto: o mesmo parcial do novo projeto. */}}
-        {{template "project_billing_fields" (dict "Data" . "Id" "ps" "Customer" "draftCustomer()")}}
+        {{/* A cobrança do cliente, só para leitura: o mesmo parcial do novo projeto. O acréscimo fica no fim, em Avançado. */}}
+        {{template "project_billing_fields" (dict "Data" . "Customer" "draftCustomer()")}}
         {{end}}
         {{if .CanDo "project.edit"}}
         {{template "project_customer_meeting" .}}
@@ -126,6 +126,9 @@
         </div>
         {{template "project_routine" .}}
       </fieldset>
+      {{end}}
+      {{if .CanDo "billing.manage"}}
+      {{template "project_extra_fold" (dict "Data" . "Id" "ps" "Customer" "draftCustomer()")}}
       {{end}}
       <p class="form-error" x-show="errors.save" x-text="errors.save" role="alert"></p>
       <p class="form-error" x-show="errors.delete" x-text="errors.delete" role="alert"></p>

@@ -364,7 +364,9 @@ onboarding:
     timezone_note: O fuso vale para todas as horas e datas da organização. A moeda segue o país.
   customers:
     title: Seus clientes
-    lead: Cliente é quem contrata a organização. Cada projeto pode ter um cliente e o valor cobrado dele por hora; um projeto interno não precisa de cliente.
+    lead: Cliente é quem contrata a organização. O valor por hora é do cliente e vale para todos os projetos dele; um projeto interno não precisa de cliente.
+    rate_hint: O que o cliente paga por hora. Cada projeto pode somar um acréscimo depois.
+    rate_hint_solo: O que o cliente paga por hora. Cliente por contrato mensal se cadastra em Clientes.
     later: Cadastrar depois
   people:
     title: Seu time
@@ -537,7 +539,7 @@ payments:
 receivable:
   refresh: Atualizar
   loading: Carregando as contas a receber…
-  intro: "O que cobrar de cada cliente, o que já foi confirmado e o que entrou. O período fecha à meia-noite ({{.tz}})."
+  intro: "O que cobrar de cada cliente, o que já foi confirmado e o que entrou. O período fecha à meia-noite."
   cards:
     to_confirm: A confirmar
     to_confirm_hint:
@@ -791,7 +793,7 @@ help:
       title: A receber
       text: "O item “A receber” da barra superior, só para o dono de uma organização no modo solo: o que cobrar de cada cliente e o que já entrou. Cada conta a receber é de um cliente e de um período: o app propõe, e você confirma."
       cards: "No alto, quatro cartões: o que há para confirmar, o que está em aberto, o que está atrasado (confirmado, sem receber e depois do vencimento) e o que entrou no mês."
-      confirm: "“A confirmar” lista as propostas. No cliente por hora, o período aparece depois de fechar, com as horas dos projetos dele vezes o valor cobrado de cada um (o do cliente mais o acréscimo do projeto); no mensal, é a mensalidade mais os acréscimos mensais dos projetos, do começo do contrato até o mês seguinte, e dá para confirmar a qualquer hora. “Confirmar” abre o valor, o vencimento, o número da nota e uma observação, e você ajusta o que for preciso."
+      confirm: "“A confirmar” lista as propostas. No cliente por hora, o período aparece depois de fechar, com as horas dos projetos dele vezes o valor cobrado de cada um (o do cliente mais o acréscimo do projeto); no mensal, é a mensalidade mais os acréscimos mensais dos projetos, do começo do contrato até o mês corrente, e dá para confirmar a qualquer hora. “Confirmar” abre o valor, o vencimento, o número da nota e uma observação, e você ajusta o que for preciso."
       receive: "“Em aberto” é o que foi confirmado e ainda não entrou. “Receber” registra o dia e o valor. No cliente por hora entra o valor confirmado; no mensal o valor é livre, e o app sugere a multa e os juros quando o pagamento passa do vencimento mais a tolerância do contrato."
       undo: "“Recebidos” lista o que entrou. Dá para desfazer o recebimento e, depois, a confirmação: o período volta a ser uma proposta."
       invoice: "O app não emite nota: o número dela é só uma anotação. Um valor por hora efetivo abaixo de 10,00 aparece como aviso, nunca como erro."
@@ -1131,6 +1133,7 @@ project:
     routine_solo: Rotina
   billing:
     customer_terms: Cobrança do cliente
+    advanced: Avançado
     customer_hourly: "Por hora · {{.rate}}/h"
     customer_monthly: "Contrato mensal · {{.fee}}/mês"
     customer_no_rate: Por hora, ainda sem valor por hora

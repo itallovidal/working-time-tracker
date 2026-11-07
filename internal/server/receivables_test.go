@@ -167,16 +167,16 @@ func TestReceivables_OwnerFlow(t *testing.T) {
 
 	list := decode(t, do(e, "GET", org, "", owner.session))
 	proposals := list["to_confirm"].([]any)
-	// Do contrato do mês passado até o seguinte: mês passado, corrente e seguinte.
-	if len(proposals) != 3 {
-		t.Fatalf("proposals = %d, want 3 (last month, this month, next month): %v", len(proposals), proposals)
+	// Do contrato do mês passado até o corrente: mês passado e corrente (o seguinte só quando começar).
+	if len(proposals) != 2 {
+		t.Fatalf("proposals = %d, want 2 (last month and this month): %v", len(proposals), proposals)
 	}
 	first := proposals[0].(map[string]any)
 	if first["kind"] != "monthly" || first["calculated_cents"] != float64(500000) || first["customer"].(map[string]any)["name"] != "Mensal" {
 		t.Fatalf("first proposal = %v", first)
 	}
 	totals := list["totals"].(map[string]any)
-	if totals["to_confirm_count"] != float64(3) || totals["to_confirm_cents"] != float64(1500000) {
+	if totals["to_confirm_count"] != float64(2) || totals["to_confirm_cents"] != float64(1000000) {
 		t.Errorf("totals = %v", totals)
 	}
 
@@ -234,8 +234,8 @@ func TestReceivables_OwnerFlow(t *testing.T) {
 
 	// Os cartões: um recebido no mês corrente.
 	list = decode(t, do(e, "GET", org, "", owner.session))
-	if got := len(list["received"].([]any)); got != 1 || len(list["to_confirm"].([]any)) != 2 {
-		t.Errorf("after receiving: %d received, %d to confirm, want 1 and 2", got, len(list["to_confirm"].([]any)))
+	if got := len(list["received"].([]any)); got != 1 || len(list["to_confirm"].([]any)) != 1 {
+		t.Errorf("after receiving: %d received, %d to confirm, want 1 and 1", got, len(list["to_confirm"].([]any)))
 	}
 
 	// Cada passo se desfaz: primeiro o recebimento, depois a confirmação.
@@ -248,7 +248,7 @@ func TestReceivables_OwnerFlow(t *testing.T) {
 	if got := status(e, "DELETE", org+"/"+id, "", owner.session); got != http.StatusNoContent {
 		t.Errorf("undo the confirmation = %d, want 204", got)
 	}
-	if len(decode(t, do(e, "GET", org, "", owner.session))["to_confirm"].([]any)) != 3 {
+	if len(decode(t, do(e, "GET", org, "", owner.session))["to_confirm"].([]any)) != 2 {
 		t.Error("the period did not come back as a proposal")
 	}
 }

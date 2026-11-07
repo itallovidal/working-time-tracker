@@ -63,6 +63,21 @@ func TestOnboarding_SoloAsksOnlyTheTimeZone(t *testing.T) {
 	mustHave(t, "team onboarding", team, `id="ob-work-mode"`, `id="ob-currency"`, `id="ob-timezone"`)
 }
 
+// O primeiro cliente das boas-vindas é por hora e pede o valor por hora, que é obrigatório (Decisão 21): sem o campo,
+// o cliente não salvava. Vale para o solo e para a equipe, com a dica de cada um.
+func TestOnboarding_FirstCustomerAsksTheHourlyRate(t *testing.T) {
+	solo, team := pair(t, "org_home", func(s bool) Data {
+		me := identity("admin", true, s)
+		me.NeedsOnboarding = true
+		return Data{Me: me, Section: "home", Script: "org"}
+	})
+	for who, html := range map[string]string{"solo": solo, "team": team} {
+		mustHave(t, who+" onboarding", html, `id="ob-customer-hourly-rate"`, `data-field="hourly_rate_cents"`, `id="err-hourly_rate_cents"`)
+	}
+	mustHave(t, "solo onboarding", solo, "Cliente por contrato mensal se cadastra em Clientes.")
+	mustNotHave(t, "team onboarding", team, "Cliente por contrato mensal se cadastra em Clientes.")
+}
+
 // O novo projeto não configura a cobrança, que mora no cliente (Decisão 21): nos dois modos mostra a do cliente, só para
 // leitura, e pede o acréscimo. A escolha de modo e os campos do contrato ficam só no modal de cliente.
 func TestProjectForm_BillingComesFromTheCustomer(t *testing.T) {
@@ -76,6 +91,14 @@ func TestProjectForm_BillingComesFromTheCustomer(t *testing.T) {
 		if n := strings.Count(html, `id="project-bill-extra"`); n != 1 {
 			t.Errorf("%s project form has %d extra fields, want 1", who, n)
 		}
+		// O acréscimo é um ajuste: fica no bloco Avançado, recolhido, depois da Rotina.
+		extra := strings.Index(html, `id="project-bill-extra"`)
+		fold := strings.LastIndex(html[:max(extra, 0)], `<details class="form-fold"`)
+		routine := strings.Index(html, `id="project-sprint"`)
+		if fold < 0 || routine < 0 || fold < routine {
+			t.Errorf("%s project form: the extra is not in a fold after the routine (fold at %d, routine at %d)", who, fold, routine)
+		}
+		mustHave(t, who+" project form", html, `:open="extraOpen"`, ">Avançado</summary>")
 	}
 }
 
