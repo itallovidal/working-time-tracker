@@ -997,7 +997,8 @@ td .task-chips { min-width: 200px; }
   border-radius: 12px; padding: 28px 26px; box-shadow: var(--shadow);
   display: flex; flex-direction: column; gap: 18px;
 }
-.auth-card .brand { font-size: 1.05rem; }
+/* Nos cartões de entrada a marca é só o ícone, centralizado. */
+.auth-logo { align-self: center; width: 48px; height: 48px; }
 .auth-foot { text-align: center; font-size: 0.9rem; color: var(--muted); }
 /* Voltar e o botão principal lado a lado, o principal com mais espaço. */
 .auth-actions { display: flex; gap: 10px; }

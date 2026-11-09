@@ -3,7 +3,7 @@
    oauth.js; o servidor conferiu o pedido antes de mostrar a tela e confere de novo no "Permitir". */}}
 <main class="auth-page">
   <div class="auth-card" x-data="oauthConsent">
-    <span class="brand"><img class="brand-mark" src="/static/favicon.svg" alt="" width="26" height="26">Working Time Tracker</span>
+    <img class="auth-logo" src="/static/favicon.svg" alt="Working Time Tracker" width="48" height="48">
     <div class="stack">
       <h1>{{.T "oauth.consent.title" "app" .Props.oauth.ClientName}}</h1>
       <p class="muted">{{.T "oauth.consent.subtitle" "app" .Props.oauth.ClientName "name" .Me.Name "org" .Me.OrganizationName}}</p>
