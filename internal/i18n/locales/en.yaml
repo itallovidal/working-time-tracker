@@ -1165,6 +1165,7 @@ org:
     details: Details
     new_project: New project
     new_project_for: "New project for {{.name}}"
+    actions_for: "Actions for {{.name}}"
     no_projects: No projects for this customer yet.
     internal: Internal projects
     internal_hint: No customer

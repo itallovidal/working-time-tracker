@@ -1243,12 +1243,11 @@ document.addEventListener('alpine:init', () => {
       }
       return list;
     },
-    // groupMeta é a linha embaixo do nome do grupo: o país e o contato do cliente, ou o aviso dos internos.
+    // groupMeta é a linha embaixo do nome do grupo: o país do cliente, ou o aviso dos internos. O contato fica nos
+    // detalhes.
     groupMeta(g) {
       if (g.internal) return WTT.t('org.catalog.internal_hint');
-      const c = g.customer;
-      if (!c) return '';
-      return [WTT.countries.name(c.country), c.contact_name, c.contact_email].filter(Boolean).join(' · ');
+      return g.customer ? WTT.countries.name(g.customer.country) : '';
     },
     // summary conta o que a página mostra: os clientes (para quem os gerencia) e os projetos.
     summary() {

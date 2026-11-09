@@ -38,7 +38,7 @@
     <p class="muted small" x-text="summary()"></p>
     <template x-for="g in groups()" :key="g.id">
       <section class="catalog-group" :aria-label="g.name">
-        <div class="catalog-head" :class="g.customer && 'row-link'" @click="if (g.customer && !$event.target.closest('a, button')) openDetails(g.customer)">
+        <div class="catalog-head" :class="g.customer && 'row-link'" @click="if (g.customer && !$event.target.closest('a, button, .catalog-more')) openDetails(g.customer)">
           <span class="catalog-mark" :class="g.internal ? 'catalog-mark-internal' : 'hue-' + hueOf(g.id)" aria-hidden="true">
             <template x-if="g.internal"><i class="fa-solid fa-building"></i></template>
             <template x-if="!g.internal"><span x-text="initialsOf(g.name)"></span></template>
@@ -50,6 +50,18 @@
             </h2>
             <p class="muted small" x-show="groupMeta(g)" x-text="groupMeta(g)"></p>
           </div>
+          {{if .IsAdmin}}
+          {{/* No celular os botões do grupo viram um menu de três pontinhos ao lado do nome, com as mesmas ações; no
+               computador o menu some e os botões aparecem (.catalog-more e .catalog-actions, no app.css). */}}
+          <div class="catalog-more" x-show="g.internal || g.customer" x-data="{ open: false }" @click.outside="open = false" @keydown.escape.window="open = false">
+            <button type="button" class="btn btn-ghost btn-sm catalog-more-btn" aria-haspopup="true" :aria-expanded="open.toString()"
+                    :aria-label="$t('org.catalog.actions_for', { name: g.name })" @click="open = !open">{{template "icon" "ellipsis-vertical"}}</button>
+            <div class="catalog-menu" x-cloak x-show="open">
+              <button type="button" class="user-menu-item" x-show="g.customer" @click="open = false; openDetails(g.customer)">{{template "icon" "circle-info"}} {{.T "org.catalog.details"}}</button>
+              <button type="button" class="user-menu-item" @click="open = false; openCreate(g.customer ? g.customer.id : '')">{{template "icon" "plus"}} {{.T "org.catalog.new_project"}}</button>
+            </div>
+          </div>
+          {{end}}
           {{/* A cobrança do cliente, só para quem gerencia os clientes: no solo, o modo e o valor; na equipe, o valor por
                hora. O resto dos termos fica nos detalhes. */}}
           {{if .Can "customers.manage"}}

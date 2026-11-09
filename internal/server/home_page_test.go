@@ -84,6 +84,8 @@ func TestPages_ProjectsPageHasTheCards(t *testing.T) {
 		`class="project-card"`, `class="project-mark"`, `markOf(p.name)`, `'hue-' + hueOf(p.id)`,
 		"Novo projeto", "Novo cliente", `x-teleport="#modal-root"`, `id="project-name"`, `id="project-customer"`, `id="customer-name"`,
 		`openCreate(g.customer ? g.customer.id : '')`, `openDetails(g.customer)`,
+		// No celular as ações do grupo ficam num menu de três pontinhos, com as mesmas duas.
+		`class="catalog-more"`, `fa-ellipsis-vertical`, `class="catalog-menu"`,
 	} {
 		if !strings.Contains(ownerPage, want) {
 			t.Errorf("the owner's page does not contain %q", want)
@@ -132,7 +134,7 @@ func TestPages_ProjectsPageHasTheCards(t *testing.T) {
 			t.Errorf("member page does not contain %q", want)
 		}
 	}
-	for _, gone := range []string{"Novo projeto", "Novo cliente", `openCreate()`, `id="project-name"`, `id="customer-name"`, `class="catalog-billing"`} {
+	for _, gone := range []string{"Novo projeto", "Novo cliente", `openCreate()`, `id="project-name"`, `id="customer-name"`, `class="catalog-billing"`, `class="catalog-more"`} {
 		if strings.Contains(memberPage, gone) {
 			t.Errorf("member page contains %q, which is for who can create projects or customers", gone)
 		}

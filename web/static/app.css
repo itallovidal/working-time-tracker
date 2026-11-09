@@ -706,8 +706,8 @@ td.actions { text-align: right; white-space: nowrap; }
 /* Clientes e Projetos: um grupo por cliente, com o cabeçalho dele (a sigla, o nome, o país e o contato, a cobrança e os
    botões) sobre uma linha fina, e os cartões dos projetos embaixo. Os grupos não têm moldura: os cartões dos projetos já
    têm, e cartão dentro de cartão pesa. No celular a cobrança e os botões descem para baixo do nome. */
-.catalog { display: flex; flex-direction: column; gap: 32px; }
-.catalog > p { margin: 0 0 -16px; }
+.catalog { display: flex; flex-direction: column; gap: 64px; }
+.catalog > p { margin: 0 0 -40px; }
 .catalog-group { display: flex; flex-direction: column; gap: 14px; }
 .catalog-head {
   display: flex; align-items: center; gap: 12px 14px; flex-wrap: wrap;
@@ -726,10 +726,23 @@ td.actions { text-align: right; white-space: nowrap; }
 .catalog-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 .catalog-actions:empty { display: none; }
 .catalog-none { margin: 0; }
+/* O menu de três pontinhos do grupo, só no celular: o painel abre embaixo do botão, alinhado à direita, com os itens no
+   estilo dos do menu da conta (.user-menu-item). */
+.catalog-more { display: none; position: relative; flex: none; margin: -4px -6px 0 0; }
+.catalog-more-btn { padding: 6px 10px; }
+.catalog-menu {
+  position: absolute; top: calc(100% + 4px); right: 0; z-index: 30; width: 200px;
+  background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: 6px; display: flex; flex-direction: column; gap: 2px;
+}
 @media (max-width: 560px) {
+  .catalog { gap: 48px; }
+  .catalog > p { margin-bottom: -28px; }
   .catalog-head { align-items: flex-start; }
-  .catalog-title { flex-basis: calc(100% - 54px); }
-  .catalog-billing, .catalog-actions { margin-left: 54px; }
+  .catalog-title { flex: 1 1 0; }
+  .catalog-more { display: block; }
+  .catalog-actions { display: none; }
+  .catalog-billing { flex-basis: calc(100% - 54px); margin-left: 54px; }
 }
 
 /* A visão geral da organização: seis números, três por linha, cada um com o ícone na sua cor. */
