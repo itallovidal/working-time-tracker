@@ -1152,9 +1152,7 @@ customer:
     col_closing: Fechamento
     col_due: Vencimento
     fee: Mensalidade
-    contract: Contrato
-    contract_range: "{{.start}} a {{.end}}"
-    contract_open: "Desde {{.start}}, sem data de fim"
+    contract_no_end: Indeterminado
     late_fee_fact: Multa por atraso
     late_interest_fact: Juros ao mês
     grace_days_fact: Tolerância
