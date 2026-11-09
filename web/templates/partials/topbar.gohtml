@@ -1,24 +1,34 @@
 {{/* A barra superior: o nome da organização, uma página por assunto e, no canto, o menu da conta. Cada item só
      aparece para quem pode abrir a página dele. No modo solo (Me.OrganizationSolo, uma pessoa só) somem Colaboradores e
-     Pagamentos, que são de equipe, e entra A receber. */}}
+     Pagamentos, que são de equipe, e entra A receber.
+     Abaixo de 1024px os itens não cabem numa linha: vão para um painel que o botão de hambúrguer, antes do nome, abre
+     (componente mainNav). O ícone de cada item só aparece nesse painel. */}}
 {{define "topbar"}}
-<header class="topbar">
+<header class="topbar" x-data="mainNav" :class="open && 'is-nav-open'"
+        @keydown.escape.window="close(true)" @click.window="away($event)" @focusin.window="away($event)" @pageshow.window="open = false">
   <div class="topbar-inner">
+    <button type="button" class="mainnav-toggle" x-ref="toggle" aria-controls="mainnav" :aria-expanded="open.toString()" @click="toggle()">
+      <span class="sr-only">{{.T "nav.menu"}}</span>
+      <i class="fa-solid fa-bars" aria-hidden="true" x-show="!open"></i>
+      <i class="fa-solid fa-xmark" aria-hidden="true" x-cloak x-show="open"></i>
+    </button>
     <a class="brand" href="/orgs/{{.OrgID}}"><span data-org-name>{{.Me.OrganizationName}}</span></a>
-    <nav class="mainnav" aria-label="{{.T "nav.label"}}">
-      <a href="/orgs/{{.OrgID}}" {{if eq .Section "home"}}aria-current="page"{{end}}>{{.T "nav.home"}}</a>
+    <nav class="mainnav" id="mainnav" x-ref="nav" :class="open && 'is-open'" aria-label="{{.T "nav.label"}}">
+      <a href="/orgs/{{.OrgID}}" {{if eq .Section "home"}}aria-current="page"{{end}}>{{template "icon" "house"}} {{.T "nav.home"}}</a>
       {{/* Clientes e Projetos é de todos (cada um vê os seus projetos) e fica marcado também dentro de um projeto. */}}
-      <a href="/orgs/{{.OrgID}}/projects" {{if eq .Section "projects"}}aria-current="page"{{end}}>{{.T "nav.customers_projects"}}</a>
-      {{if and (not .Me.OrganizationSolo) (.Can "people.manage")}}<a href="/orgs/{{.OrgID}}/people" {{if eq .Section "people"}}aria-current="page"{{end}}>{{.T "nav.people"}}</a>{{end}}
+      <a href="/orgs/{{.OrgID}}/projects" {{if eq .Section "projects"}}aria-current="page"{{end}}>{{template "icon" "diagram-project"}} {{.T "nav.customers_projects"}}</a>
+      {{if and (not .Me.OrganizationSolo) (.Can "people.manage")}}<a href="/orgs/{{.OrgID}}/people" {{if eq .Section "people"}}aria-current="page"{{end}}>{{template "icon" "users"}} {{.T "nav.people"}}</a>{{end}}
       {{/* Os pagamentos da equipe são dinheiro de todos: só do dono. Cada pessoa vê os dela no perfil. */}}
-      {{if and (not .Me.OrganizationSolo) (.Can "payments.manage")}}<a href="/orgs/{{.OrgID}}/payments" {{if eq .Section "payments"}}aria-current="page"{{end}}>{{.T "nav.payments"}}</a>{{end}}
+      {{if and (not .Me.OrganizationSolo) (.Can "payments.manage")}}<a href="/orgs/{{.OrgID}}/payments" {{if eq .Section "payments"}}aria-current="page"{{end}}>{{template "icon" "wallet"}} {{.T "nav.payments"}}</a>{{end}}
       {{/* O que o dono tem a receber dos clientes: só no modo solo, e só para quem gerencia os recebíveis. */}}
-      {{if and .Me.OrganizationSolo (.Can "receivables.manage")}}<a href="/orgs/{{.OrgID}}/receivables" {{if eq .Section "receivables"}}aria-current="page"{{end}}>{{.T "nav.receivables"}}</a>{{end}}
-      <a href="/orgs/{{.OrgID}}/about" {{if eq .Section "organization"}}aria-current="page"{{end}}>{{.T "nav.settings"}}</a>
+      {{if and .Me.OrganizationSolo (.Can "receivables.manage")}}<a href="/orgs/{{.OrgID}}/receivables" {{if eq .Section "receivables"}}aria-current="page"{{end}}>{{template "icon" "hand-holding-dollar"}} {{.T "nav.receivables"}}</a>{{end}}
+      <a href="/orgs/{{.OrgID}}/about" {{if eq .Section "organization"}}aria-current="page"{{end}}>{{template "icon" "gear"}} {{.T "nav.settings"}}</a>
     </nav>
     <div class="topbar-right">
       {{template "user_menu" .}}
     </div>
   </div>
+  {{/* O véu atrás do painel aberto: escurece a página, e um toque nele fecha o painel. */}}
+  <div class="mainnav-scrim" x-cloak x-show="open" x-transition.opacity aria-hidden="true"></div>
 </header>
 {{end}}
