@@ -1,19 +1,21 @@
 /* Working Time Tracker: estilos da interface web. Sem build: este arquivo é servido como está. */
 
+/* Os neutros e o destaque vêm do ícone (web/static/favicon.svg): azul-ardósia escuro (#0c0f14 a #3f4a5b) e
+   ciano neon (#08b5d3, #6ae9fa). No tema claro o ciano é mais fechado, para o texto branco do botão se ler. */
 :root {
   color-scheme: light;
-  --ground: #f3f5f4;
+  --ground: #f1f4f8;
   --surface: #ffffff;
-  --surface-2: #f8faf9;
-  --ink: #172026;
-  --ink-2: #3b4751;
-  --muted: #5f6c76;
-  --rule: #dbe1e3;
-  --rule-strong: #c3cbcf;
-  --accent: #0f6b5c;
+  --surface-2: #f6f8fb;
+  --ink: #1b2029;
+  --ink-2: #3f4a5b;
+  --muted: #5a6678;
+  --rule: #d8dee6;
+  --rule-strong: #bdc7d2;
+  --accent: #0a7189;
   --accent-ink: #ffffff;
-  --accent-soft: #e0efeb;
-  --focus: #1e7f6e;
+  --accent-soft: #dcf2f7;
+  --focus: #0b8aa5;
   --ok: #17803d;
   --ok-soft: #dcf2e3;
   --warn: #a35a06;
@@ -33,11 +35,11 @@
   --gold-soft: #fbf0bf;
   --purple: #6a1b9a;
   --purple-soft: #ecd9f6;
-  --slate: #46535d;
-  --slate-soft: #e9edf0;
+  --slate: #3f4a5b;
+  --slate-soft: #e6eaf0;
   --on-tone: #ffffff;
-  --shadow: 0 1px 2px rgba(23, 32, 38, 0.06), 0 4px 16px rgba(23, 32, 38, 0.06);
-  --scrim: rgba(23, 32, 38, 0.45);
+  --shadow: 0 1px 2px rgba(27, 32, 41, 0.06), 0 4px 16px rgba(27, 32, 41, 0.06);
+  --scrim: rgba(12, 15, 20, 0.45);
 
   --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Mono", Menlo, Consolas, monospace;
@@ -48,18 +50,18 @@
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
-    --ground: #0e1214;
-    --surface: #151b1e;
-    --surface-2: #1a2125;
-    --ink: #e5ebee;
-    --ink-2: #c1ccd2;
-    --muted: #92a0a9;
-    --rule: #263036;
-    --rule-strong: #34414a;
-    --accent: #4cc2a6;
-    --accent-ink: #062520;
-    --accent-soft: #15302a;
-    --focus: #6fd6bd;
+    --ground: #0c0f14;
+    --surface: #141921;
+    --surface-2: #1b2029;
+    --ink: #e6edf4;
+    --ink-2: #c1cbd6;
+    --muted: #8e9bad;
+    --rule: #262d38;
+    --rule-strong: #3f4a5b;
+    --accent: #08b5d3;
+    --accent-ink: #0c0f14;
+    --accent-soft: #0c2b34;
+    --focus: #6ae9fa;
     --ok: #4fca80;
     --ok-soft: #14301f;
     --warn: #e6a64c;
@@ -78,9 +80,9 @@
     --gold-soft: #342b0b;
     --purple: #c07ae9;
     --purple-soft: #2d1442;
-    --slate: #aab6bf;
-    --slate-soft: #222b31;
-    --on-tone: #0e1214;
+    --slate: #a9b5c5;
+    --slate-soft: #212835;
+    --on-tone: #0c0f14;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.25);
     --scrim: rgba(0, 0, 0, 0.6);
   }
@@ -135,18 +137,8 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
   text-decoration: none;
   white-space: nowrap;
 }
-.brand-mark {
-  width: 22px; height: 22px; border-radius: 50%;
-  border: 2px solid var(--accent);
-  position: relative;
-  flex: none;
-}
-.brand-mark::before, .brand-mark::after {
-  content: ""; position: absolute; left: 50%; top: 50%;
-  background: var(--accent); border-radius: 2px; transform-origin: 50% 100%;
-}
-.brand-mark::before { width: 2px; height: 6px; margin: -6px 0 0 -1px; }
-.brand-mark::after { width: 2px; height: 5px; margin: -5px 0 0 -1px; transform: rotate(90deg); }
+/* A marca é o mesmo ícone da aba do navegador. */
+.brand-mark { width: 26px; height: 26px; flex: none; }
 .brand-org { color: var(--muted); font-weight: 500; }
 
 .mainnav { display: flex; gap: 2px; flex-wrap: wrap; }
@@ -1005,7 +997,8 @@ td .task-chips { min-width: 200px; }
   border-radius: 12px; padding: 28px 26px; box-shadow: var(--shadow);
   display: flex; flex-direction: column; gap: 18px;
 }
-.auth-card .brand { font-size: 1.05rem; }
+/* Nos cartões de entrada a marca é só o ícone, centralizado. */
+.auth-logo { align-self: center; width: 48px; height: 48px; }
 .auth-foot { text-align: center; font-size: 0.9rem; color: var(--muted); }
 /* Voltar e o botão principal lado a lado, o principal com mais espaço. */
 .auth-actions { display: flex; gap: 10px; }
