@@ -7,7 +7,8 @@ import (
 )
 
 // O modal da sessão mora no modal do layout, dentro do #modal-root e sem teleporte, e só em páginas
-// de quem está logado; o balão da sessão, fora da barra, abre a sessão e para o ponto.
+// de quem está logado; a pilha das sessões, fora da barra, tem um cartão por sessão aberta, que abre a sessão e para o
+// ponto dela, e a linha das sessões de outros projetos.
 func TestPages_SessionModalIsInTheLayout(t *testing.T) {
 	e := newServer(t)
 	admin := signup(t, e, "Org", "ana@test.com")
@@ -25,7 +26,7 @@ func TestPages_SessionModalIsInTheLayout(t *testing.T) {
 			if root < 0 || at < root {
 				t.Errorf("%s %s: the session modal is not inside #modal-root", who, path)
 			}
-			for _, want := range []string{`class="session-dock"`, `@click="details()"`, `@click="stop()"`} {
+			for _, want := range []string{`class="session-dock"`, `x-for="s in cards()"`, `@click="details(s)"`, `@click="stop(s)"`, `class="session-dock-others"`} {
 				if !strings.Contains(body, want) {
 					t.Errorf("%s %s: the active session dock does not contain %q", who, path, want)
 				}
@@ -46,7 +47,8 @@ func TestPages_SessionModalIsInTheLayout(t *testing.T) {
 }
 
 // As telas de sessões mostram as tarefas de cada sessão, e a linha abre o modal. O Início, a
-// Gestão e a página da tarefa põem a tarefa na sessão aberta em vez de iniciar outra.
+// Gestão e a página da tarefa põem a tarefa na sessão aberta do projeto em vez de iniciar outra; a sessão de outro
+// projeto não bloqueia nada (Decisão 26), então não há mais otherProject().
 func TestPages_SessionTasksOnTheScreens(t *testing.T) {
 	e := newServer(t)
 	admin := signup(t, e, "Org", "ana@test.com")
@@ -86,9 +88,9 @@ func TestPages_SessionTasksOnTheScreens(t *testing.T) {
 		[]string{"<th>Tarefas</th>", `x-for="t in firstTasks(s)"`, `@click="openSession(s)"`, "seconds(s)"},
 		append(oldShape, "<th>Tarefa</th>"))
 	check("/projects/"+projectID+"/my-tasks",
-		[]string{"sessionHere()", "otherProject()", "$t('session.add_to_session')", `@click="startTask(t)"`},
-		oldShape)
+		[]string{"sessionHere()", "here()", "$t('session.add_to_session')", `@click="startTask(t)"`},
+		append(oldShape, "otherProject()", "$store.clock.session)", "$store.clock.session.", "$store.clock.session &&"))
 	check("/tasks/"+taskID,
-		[]string{`@click="addToSession()"`, `@click="openSession()"`, `@click="openSession(s)"`, "taskTime(s)", "otherTasks(s)", "otherProject()", "Adicionar à sessão"},
-		oldShape)
+		[]string{`@click="addToSession()"`, `@click="openSession()"`, `@click="openSession(s)"`, "taskTime(s)", "otherTasks(s)", "sessionHere()", "Adicionar à sessão"},
+		append(oldShape, "otherProject()"))
 }

@@ -2,6 +2,7 @@ package work_session
 
 import (
 	"math"
+	"sort"
 	"time"
 
 	"github.com/google/uuid"
@@ -14,6 +15,12 @@ type Task struct {
 }
 
 type Person struct {
+	ID   uuid.UUID `json:"id"`
+	Name string    `json:"name"`
+}
+
+// Project é o projeto da sessão, com o nome: com uma sessão aberta por projeto, a tela precisa dizer de qual é cada uma.
+type Project struct {
 	ID   uuid.UUID `json:"id"`
 	Name string    `json:"name"`
 }
@@ -39,6 +46,8 @@ type SessionTask struct {
 type WorkSession struct {
 	ID        uuid.UUID `json:"id"`
 	ProjectID uuid.UUID `json:"project_id"`
+	// Project vem quando o store carrega o projeto (as sessões abertas e a sessão pelo id).
+	Project *Project `json:"project,omitempty"`
 	// Tasks são as tarefas trabalhadas na sessão, na ordem em que entraram. A sessão começa
 	// com uma e ganha outras depois; só fica sem nenhuma se as tarefas forem excluídas.
 	Tasks     []SessionTask `json:"tasks"`
@@ -164,4 +173,46 @@ func amount(seconds float64, rateCents *int) *int {
 	}
 	v := int(math.Round(seconds * float64(*rateCents) / 3600))
 	return &v
+}
+
+// MergedSeconds é o tempo que as sessões cobrem em [from, to), contando uma vez só o que se sobrepõe na mesma pessoa:
+// duas sessões dela ao mesmo tempo, em projetos diferentes, são uma hora de trabalho e não duas (Decisão 26). As
+// pessoas diferentes somam entre si. Um from zerado é sem começo, um to zerado é até now, e a sessão aberta conta
+// até now. O dinheiro não passa por aqui: cada sessão vale o próprio tempo vezes o valor do projeto dela.
+func MergedSeconds(sessions []WorkSession, from, to, now time.Time) float64 {
+	type span struct{ start, end time.Time }
+	byPerson := map[uuid.UUID][]span{}
+	for i := range sessions {
+		start, end := sessions[i].StartAt, now
+		if sessions[i].EndAt != nil {
+			end = *sessions[i].EndAt
+		}
+		if start.Before(from) {
+			start = from
+		}
+		if !to.IsZero() && end.After(to) {
+			end = to
+		}
+		if !end.After(start) {
+			continue
+		}
+		byPerson[sessions[i].PersonID] = append(byPerson[sessions[i].PersonID], span{start, end})
+	}
+	var total float64
+	for _, spans := range byPerson {
+		sort.Slice(spans, func(a, b int) bool { return spans[a].start.Before(spans[b].start) })
+		cur := spans[0]
+		for _, sp := range spans[1:] {
+			if !sp.start.After(cur.end) {
+				if sp.end.After(cur.end) {
+					cur.end = sp.end
+				}
+				continue
+			}
+			total += cur.end.Sub(cur.start).Seconds()
+			cur = sp
+		}
+		total += cur.end.Sub(cur.start).Seconds()
+	}
+	return total
 }

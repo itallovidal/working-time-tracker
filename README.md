@@ -20,7 +20,7 @@ flowchart LR
 
 ## Funcionalidades
 
-- **Ponto por tarefa.** Clock-in e clock-out com cronômetro. Uma sessão pode ter várias tarefas, e cada pessoa tem no máximo uma sessão aberta.
+- **Ponto por tarefa.** Clock-in e clock-out com cronômetro. Uma sessão pode ter várias tarefas, e cada pessoa tem no máximo uma sessão aberta em cada projeto (projetos diferentes correm ao mesmo tempo).
 - **Tarefas.** Status, prioridade, etiquetas, prazo e descrição em Markdown. O responsável é opcional: quem pega a tarefa ou bate o ponto nela vira o responsável.
 - **Organização, projetos e times.** O projeto tem um cliente, ou é interno. A pessoa entra no projeto com o valor por hora dela, e os times só organizam quem está nele.
 - **Quatro cargos.** Dono, admin, administrador de projeto e colaborador. O dinheiro (clientes, cobrança e pagamentos) é só do dono.

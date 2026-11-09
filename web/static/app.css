@@ -896,25 +896,38 @@ td.actions { text-align: right; white-space: nowrap; }
 .presence-cell { display: inline-flex; align-items: center; gap: 8px; }
 .presence-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; flex: none; background: var(--rule-strong); }
 .presence-dot.is-on { background: var(--ok); }
-/* O balão da sessão aberta (partials/active_session.gohtml): preso ao canto de baixo à direita, em todas as telas, acima
-   da barra (20) e abaixo do modal (40). Fechado é só a faixa verde; aberto ganha a moldura e os cartões das tarefas,
-   que crescem para cima. Com ele no ar, o body leva has-dock: a página ganha respiro embaixo e os avisos sobem para
-   acima dele (--dock-h é a altura dele, posta pelo sessionDock). */
+/* As sessões abertas (partials/active_session.gohtml): uma pilha de cartões, um por projeto com o ponto aberto, presa ao
+   canto de baixo à direita, em todas as telas, acima da barra (20) e abaixo do modal (40). O cartão fechado é só a faixa
+   verde; aberto ganha a moldura e as tarefas, que crescem para cima. A pilha rola quando passa da altura da tela; o
+   respiro em volta é para a rolagem não cortar a sombra dos cartões. Com ela no ar, o body leva has-dock: a página
+   ganha respiro embaixo e os avisos sobem para acima dela (--dock-h é a altura dela, posta pelo sessionDock). */
 .session-dock {
-  position: fixed; right: 16px; bottom: 16px; z-index: 30;
-  width: min(300px, calc(100vw - 32px)); display: flex; flex-direction: column; gap: 6px;
-  border-radius: 12px;
+  position: fixed; right: 8px; bottom: 8px; z-index: 30;
+  width: min(356px, calc(100vw - 16px)); max-height: calc(100dvh - 16px); overflow-y: auto;
+  display: flex; flex-direction: column; gap: 6px; padding: 8px;
 }
-.session-dock.is-open { padding: 6px; background: var(--surface); border: 1px solid var(--rule-strong); box-shadow: var(--shadow); }
+.session-card { display: flex; flex-direction: column; gap: 6px; flex: none; border-radius: 12px; }
+.session-card.is-open { padding: 6px; background: var(--surface); border: 1px solid var(--rule-strong); box-shadow: var(--shadow); }
 .session-dock-toggle {
   display: flex; align-items: center; gap: 8px; width: 100%; padding: 9px 12px;
   font: inherit; font-size: 0.86rem; font-weight: 600; text-align: left; cursor: pointer;
   color: var(--accent); background: var(--surface); border: 1px solid var(--accent); border-radius: var(--radius);
 }
-.session-dock:not(.is-open) .session-dock-toggle { box-shadow: var(--shadow); }
+.session-card:not(.is-open) .session-dock-toggle { box-shadow: var(--shadow); }
 .session-dock-toggle:hover { background: var(--accent-soft); }
-.session-dock-chevron { margin-left: auto; font-size: 0.8em; transition: transform 0.15s; }
-.session-dock.is-open .session-dock-chevron { transform: rotate(180deg); }
+.session-dock-toggle .num { flex: none; }
+.session-dock-project { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.session-dock-chevron { margin-left: auto; flex: none; font-size: 0.8em; transition: transform 0.15s; }
+.session-card.is-open .session-dock-chevron { transform: rotate(180deg); }
+/* A linha das sessões de outros projetos, dentro de um projeto: discreta, acima do cartão dele. */
+.session-dock-others {
+  display: flex; align-items: center; gap: 8px; align-self: flex-end; max-width: 100%; padding: 5px 12px;
+  font: inherit; font-size: 0.8rem; font-weight: 600; white-space: nowrap; cursor: pointer;
+  color: var(--ink-2); background: var(--surface); border: 1px solid var(--rule-strong); border-radius: 999px;
+  box-shadow: var(--shadow);
+}
+.session-dock-others:hover { background: var(--surface-2); }
+.session-dock-others[aria-expanded="true"] .session-dock-chevron { transform: rotate(180deg); }
 .session-dock-panel { display: flex; flex-direction: column; gap: 6px; }
 /* O cartão de uma tarefa: o link para ela, esticado, e ao lado o botão de parar só ela. */
 .session-dock-item {
@@ -930,7 +943,7 @@ td.actions { text-align: right; white-space: nowrap; }
 .session-dock-task .fa-arrow-right { margin-left: auto; flex: none; color: var(--muted); }
 .session-dock-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 2px 2px 0; }
 .has-dock .page { padding-bottom: 96px; }
-.has-dock .toasts { bottom: calc(var(--dock-h, 44px) + 28px); }
+.has-dock .toasts { bottom: calc(var(--dock-h, 60px) + 12px); }
 @media (prefers-reduced-motion: reduce) { .session-dock-chevron { transition: none; } }
 
 /* A sessão no modal: os fatos em colunas, e uma barra por tarefa mostrando onde ela entrou e

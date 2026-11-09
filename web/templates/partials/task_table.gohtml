@@ -9,7 +9,7 @@
        ActionShow  a expressão que liga a coluna de ação
      Para o dono e os admins a célula do responsável leva a bolinha de $store.presence (a página chama $store.presence.watch() ao abrir).
      A página tem de ter o que as linhas chamam: isRunning, statusClass, priorityClass, deadlineClass,
-     deadlineLabel, linkLabel, linkIcon, linkProvider, linkItem (os quatro vêm de taskBadges) e, conforme a ação, claim ou startTask, otherProject e sessionHere. */}}
+     deadlineLabel, linkLabel, linkIcon, linkProvider, linkItem (os quatro vêm de taskBadges) e, conforme a ação, claim ou startTask e sessionHere. */}}
 {{define "task_table"}}
 {{with .Data}}
 <div class="table-wrap" x-show="{{$.Rows}}.length > 0">
@@ -71,7 +71,7 @@
           {{else if eq $.Action "start"}}
           {{/* Com o ponto aberto neste projeto, o botão põe a tarefa na sessão; com ele aberto em outro, fica desabilitado. */}}
           <td class="actions" x-show="{{$.ActionShow}}">
-            <button type="button" class="btn btn-secondary btn-sm" x-show="!isRunning(t) && t.status !== 'closed'" :disabled="pending || otherProject()" @click="startTask(t)">{{template "icon" "play"}} <span x-text="sessionHere() ? $t('session.add_to_session') : $t('tasks.start')"></span></button>
+            <button type="button" class="btn btn-secondary btn-sm" x-show="!isRunning(t) && t.status !== 'closed'" :disabled="pending" @click="startTask(t)">{{template "icon" "play"}} <span x-text="sessionHere() ? $t('session.add_to_session') : $t('tasks.start')"></span></button>
             {{/* Em andamento, para só esta tarefa: a sessão segue com as outras, e sendo a única o ponto é encerrado. */}}
             <button type="button" class="btn btn-secondary btn-sm" x-show="isRunning(t)" :disabled="pending" :aria-label="$t('session.stop_task_label', { name: t.name })" title="{{.T "session.stop_task_hint"}}" @click="stopTask(t)">{{template "icon" "stop"}} {{.T "session.stop_task"}}</button>
           </td>

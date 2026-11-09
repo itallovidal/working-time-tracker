@@ -352,3 +352,58 @@ func TestWorkingNow(t *testing.T) {
 		t.Errorf("malformed organization id = %v, want ErrNotFound", err)
 	}
 }
+
+// Uma pessoa pode ter uma sessão aberta em cada projeto (Decisão 26). A Ana trabalhou no X das 4h às 1h atrás e no Y das
+// 4h atrás até agora, ao mesmo tempo: a visão conta 4h para ela (e não 7), cada sessão com o valor do projeto dela. O
+// Bruno está com o ponto aberto nos dois projetos: trabalhando agora conta ele uma vez, com as tarefas dos dois.
+func TestOrganization_ParallelSessionsCountOnce(t *testing.T) {
+	f := setup(t)
+	ana, bruno := f.person("Ana"), f.person("Bruno")
+	x, y := f.project("Projeto X"), f.project("Projeto Y")
+	named := func(projectID, name string) uuid.UUID {
+		id := f.task(projectID, ana, nil)
+		testClient.Task.UpdateOneID(id).SetName(name).ExecX(context.Background())
+		return id
+	}
+	tx, ty := named(x, "Login"), named(y, "Boletos")
+
+	f.session(tx, ana, 4*time.Hour, 3*time.Hour, cents(2000), nil)
+	f.session(ty, ana, 4*time.Hour, 4*time.Hour, cents(3000), nil)
+	testutil.Session(t, testClient, tx, bruno, f.now.Add(-time.Hour), nil, nil, nil)
+	testutil.Session(t, testClient, ty, bruno, f.now.Add(-30*time.Minute), nil, nil, nil)
+
+	got, err := f.svc.Organization(f.orgID, ana.String())
+	if err != nil {
+		t.Fatalf("organization overview: %v", err)
+	}
+	if line, want := periodLine(got.Periods.AllTime), "18000s (mine 14400s) in 4 sessions, pay 18000, bill -, margin -"; line != want {
+		t.Errorf("all time = %s\nwant       %s", line, want)
+	}
+	if got.People.WorkingNow != 1 {
+		t.Errorf("working now = %d, want 1 (Bruno, once, with two open sessions)", got.People.WorkingNow)
+	}
+	for _, p := range got.ByPerson {
+		switch p.Person.Name {
+		case "Ana":
+			if p.TotalSeconds != 4*3600 {
+				t.Errorf("Ana = %.0f seconds, want 14400 (the overlap counts once)", p.TotalSeconds)
+			}
+		case "Bruno":
+			var on []string
+			for _, w := range p.WorkingOn {
+				on = append(on, w.Task.Name+" @ "+w.Project.Name)
+			}
+			if p.TotalSeconds != 3600 || fmt.Sprint(on) != "[Login @ Projeto X Boletos @ Projeto Y]" {
+				t.Errorf("Bruno = %.0f seconds working on %v, want 3600 on both projects' tasks", p.TotalSeconds, on)
+			}
+		}
+	}
+
+	now, err := f.svc.WorkingNow(f.orgID)
+	if err != nil {
+		t.Fatalf("working now: %v", err)
+	}
+	if len(now) != 1 || now[0].PersonID != bruno || len(now[0].WorkingOn) != 2 {
+		t.Errorf("working now = %+v, want Bruno once with two tasks", now)
+	}
+}

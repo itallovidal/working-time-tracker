@@ -142,6 +142,7 @@ erDiagram
     timestamp deadline
   }
   WORK_SESSION {
+    uuid project_id FK
     uuid person_id FK
     timestamp start_at
     timestamp end_at "nulo: aberta"
@@ -249,9 +250,11 @@ o valor cobrado, sem custo. Para todos os outros, o valor pago e o cobrado têm 
 projeto, o valor por hora do cliente mais o acréscimo do projeto (nulo no projeto interno e no de cliente mensal). Mudar
 um valor, inclusive reajustar o cliente, só vale dali em diante. Quem não tem alocação no projeto não bate o ponto.
 
-**Uma sessão aberta por pessoa.** O índice único parcial `one_active_session` em
-`work_sessions (person_id) WHERE end_at IS NULL` garante isso no banco, mesmo com dois clock-ins ao mesmo tempo; o
-service confere antes só para dar um erro melhor.
+**Uma sessão aberta por pessoa em cada projeto** (Decisão 26). O índice único parcial `one_open_session_per_project`
+em `work_sessions (person_id, project_id) WHERE end_at IS NULL` garante isso no banco, mesmo com dois clock-ins ao
+mesmo tempo; o service confere antes só para dar um erro melhor. Sessões de projetos diferentes correm juntas: cada
+uma vale o valor do próprio projeto, e os totais de horas que juntam projetos (do cliente, da pessoa, da organização)
+contam uma vez só o tempo sobreposto da mesma pessoa (`work_session.MergedSeconds`).
 
 **A sessão tem tarefas ao longo do tempo.** Uma sessão é de um projeto e começa por uma tarefa dele. Outras entram
 e saem depois, inclusive depois de a sessão terminar; cada passagem é uma linha de `work_session_tasks`, com

@@ -40,7 +40,7 @@ const (
 	// soloHistoryMonths são os meses de histórico antes do corrente: com o corrente, um ano. Assim as três janelas
 	// da tela inicial (este mês, o mês passado e o ano) têm horas e dinheiro em qualquer dia em que o seed rode.
 	soloHistoryMonths = 11
-	// soloOpenMinutes é há quantos minutos a Marina está com o ponto aberto.
+	// soloOpenMinutes é há quantos minutos a Marina está com o primeiro ponto aberto (o mais antigo de soloOpenTasks).
 	soloOpenMinutes = 50
 )
 
@@ -160,8 +160,17 @@ var soloTasks = []struct {
 	{"portfolio", "Case da loja do Café Bambu", "", task.StatusBacklog, 30, ""},
 }
 
-// soloOpenTask é a tarefa em que a Marina está com o ponto aberto agora.
-var soloOpenTask = struct{ project, task string }{"identidade", "Logotipo e variações"}
+// soloOpenTasks são as tarefas em que a Marina está com o ponto aberto agora, uma sessão por projeto (Decisão 26): a
+// identidade e a landing, dois projetos da Pixel ao mesmo tempo, para a pilha do balão e as horas que se sobrepõem
+// (contam uma vez no total da Pixel, e cada uma vale o valor do próprio projeto). minutes é há quanto tempo cada uma
+// abriu; nenhuma passa de soloOpenMinutes.
+var soloOpenTasks = []struct {
+	project, task string
+	minutes       int
+}{
+	{"identidade", "Logotipo e variações", soloOpenMinutes},
+	{"landing", "Formulário de leads com validação", 30},
+}
 
 // soloSummary é o que main imprime da organização solo.
 type soloSummary struct {
@@ -340,7 +349,7 @@ func seedSolo(ctx context.Context, db *database.DB, now time.Time) soloSummary {
 
 	// As tarefas, todas da dona, com prazo, status, as etiquetas que o nome pede e os itens das integrações.
 	labelID := map[string]string{}
-	var openTask uuid.UUID
+	openTask := map[string]uuid.UUID{}
 	for _, t := range soloTasks {
 		prj := prjs[t.project]
 		deadline := today.Add(time.Duration(t.deadlineDays * 24 * float64(time.Hour)))
@@ -365,13 +374,17 @@ func seedSolo(ctx context.Context, db *database.DB, now time.Time) soloSummary {
 		if t.link != "" {
 			linkTask(ctx, db.Client, integrationOf, t.project, created.ID, t.link)
 		}
-		if t.project == soloOpenTask.project && t.name == soloOpenTask.task {
-			openTask = created.ID
+		for _, o := range soloOpenTasks {
+			if t.project == o.project && t.name == o.task {
+				openTask[o.project] = created.ID
+			}
 		}
 		prj.tasks = append(prj.tasks, soloTask{id: created.ID, deadline: deadline, status: t.status})
 	}
-	if openTask == uuid.Nil {
-		log.Fatalf("a tarefa do ponto aberto (%s) não está em soloTasks", soloOpenTask.task)
+	for _, o := range soloOpenTasks {
+		if openTask[o.project] == uuid.Nil {
+			log.Fatalf("a tarefa do ponto aberto (%s) não está em soloTasks", o.task)
+		}
 	}
 
 	// As sessões, do começo do histórico até agora, de uma sequência fixa à parte. Guardam o valor cobrado do projeto
@@ -496,18 +509,20 @@ func seedSolo(ctx context.Context, db *database.DB, now time.Time) soloSummary {
 	}
 	sum.sessions = len(builders)
 
-	// O ponto aberto agora, na identidade visual da Pixel.
-	openPrj := prjs[soloOpenTask.project]
-	startedAt := now.Add(-soloOpenMinutes * time.Minute)
-	session := db.Client.WorkSession.Create().
-		SetProjectID(uuid.MustParse(openPrj.id)).
-		SetPersonID(owner.PersonID).
-		SetStartAt(startedAt).
-		SetPayRateCents(0).
-		SetNillableBillRateCents(openPrj.billRate).
-		SetOwnerHours(true).
-		SaveX(ctx)
-	db.Client.WorkSessionTask.Create().SetSessionID(session.ID).SetTaskID(openTask).SetFromAt(startedAt).ExecX(ctx)
+	// Os pontos abertos agora, na identidade visual e nas landing pages da Pixel, ao mesmo tempo.
+	for _, o := range soloOpenTasks {
+		openPrj := prjs[o.project]
+		startedAt := now.Add(-time.Duration(o.minutes) * time.Minute)
+		session := db.Client.WorkSession.Create().
+			SetProjectID(uuid.MustParse(openPrj.id)).
+			SetPersonID(owner.PersonID).
+			SetStartAt(startedAt).
+			SetPayRateCents(0).
+			SetNillableBillRateCents(openPrj.billRate).
+			SetOwnerHours(true).
+			SaveX(ctx)
+		db.Client.WorkSessionTask.Create().SetSessionID(session.ID).SetTaskID(openTask[o.project]).SetFromAt(startedAt).ExecX(ctx)
+	}
 
 	// Bater o ponto põe a tarefa em progresso, mas o seed grava as sessões direto no banco: a tarefa com tempo
 	// registrado não fica no backlog.

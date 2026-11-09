@@ -64,8 +64,9 @@ func TestSessionTasks_IntervalErrorsSayTheField(t *testing.T) {
 	}
 }
 
-// Parar o ponto pela rota de outro projeto é recusado: a rota diz qual projeto se está parando.
-func TestClockOut_ChecksTheProjectOfTheOpenSession(t *testing.T) {
+// Parar o ponto pela rota de um projeto fecha só a sessão daquele projeto: pela rota de outro, sem sessão aberta lá, é
+// not_open, e a sessão do primeiro continua aberta (Decisão 26).
+func TestClockOut_ClosesOnlyTheSessionOfTheRouteProject(t *testing.T) {
 	orgSvc, personSvc, projSvc, _, _, taskSvc, wsSvc := setupDeps(t)
 	org, _ := orgSvc.Create("Org")
 	ana, _ := personSvc.Create(org.ID.String(), "Ana", "ana@test.com")
@@ -81,8 +82,11 @@ func TestClockOut_ChecksTheProjectOfTheOpenSession(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := wsSvc.ClockOut(other.ID.String(), ana.ID.String()); !errors.Is(err, work_session.ErrOpenInOtherProject) {
-		t.Errorf("clock-out through the other project = %v, want work_session.open_in_other_project", err)
+	if _, err := wsSvc.ClockOut(other.ID.String(), ana.ID.String()); !errors.Is(err, work_session.ErrNotOpen) {
+		t.Errorf("clock-out through the other project = %v, want work_session.not_open", err)
+	}
+	if open, _ := wsSvc.OpenIn(ana.ID.String(), one.ID.String()); open == nil {
+		t.Error("the clock-out through the other project closed this project's session")
 	}
 	if _, err := wsSvc.ClockOut(one.ID.String(), ana.ID.String()); err != nil {
 		t.Errorf("clock-out through its own project = %v, want it stopped", err)

@@ -47,13 +47,14 @@
     </div>
     <div class="task-card-actions">
       {{/* Na sessão (só dentro do painel do timer): o tempo desta tarefa e o botão para parar só ela. */}}
-      <span class="task-card-time mono num" x-show="isRunning(t)" x-text="isRunning(t) ? WTT.fmt.clock($store.clock.taskElapsed($store.clock.session, t.id)) : ''"></span>
+      <span class="task-card-time mono num" x-show="isRunning(t)" x-text="isRunning(t) ? WTT.fmt.clock($store.clock.taskElapsed(here(), t.id)) : ''"></span>
       <div class="btn-split">
         <button type="button" class="btn btn-secondary btn-sm btn-split-main" x-show="isRunning(t)"
                 :disabled="pending" :aria-label="$t('session.stop_task_label', { name: t.name })" title="{{.T "session.stop_task_hint"}}" @click="stopTask(t)">{{template "icon" "stop"}} {{.T "session.stop_task"}}</button>
-        {{/* Com o ponto aberto neste projeto, o botão põe a tarefa na sessão; com ele aberto em outro, fica desabilitado. */}}
+        {{/* Com o ponto aberto neste projeto, o botão põe a tarefa na sessão; sem ele, abre uma, mesmo com outro projeto
+             correndo (uma sessão por projeto). */}}
         <button type="button" class="btn btn-sm btn-split-main" x-show="!isRunning(t)"
-                :disabled="pending || noRate() || !$store.clock.ready || (!!$store.clock.session && !sessionHere())" @click="startTask(t)">{{template "icon" "play"}} <span x-text="sessionHere() ? $t('session.add_to_session') : $t('time.start')"></span></button>
+                :disabled="pending || noRate() || !$store.clock.ready" @click="startTask(t)">{{template "icon" "play"}} <span x-text="sessionHere() ? $t('session.add_to_session') : $t('time.start')"></span></button>
         <button type="button" class="btn btn-sm btn-split-toggle" :class="isRunning(t) && 'btn-secondary'"
                 :aria-expanded="open.toString()" :aria-controls="'card-more-' + t.id"
                 :aria-label="open ? $t('time.card_less') : $t('time.card_more')" :title="open ? $t('time.card_less') : $t('time.card_more')"

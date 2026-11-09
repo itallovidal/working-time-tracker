@@ -182,18 +182,21 @@ func (h *Handler) Total(c *echo.Context) error {
 	return c.JSON(200, total)
 }
 
-// Active devolve a sessão aberta da pessoa logada, ou null.
-func (h *Handler) Active(c *echo.Context) error {
+// Open devolve as sessões abertas da pessoa logada, uma por projeto, ou uma lista vazia.
+func (h *Handler) Open(c *echo.Context) error {
 	me := auth.CurrentPerson(c)
 	if me == nil {
 		return apperr.Respond(c, 401, auth.ErrUnauthenticated)
 	}
-	session, err := h.svc.Active(me.PersonID.String())
+	open, err := h.svc.Open(me.PersonID.String())
 	if err != nil {
 		return apperr.Respond(c, 500, err)
 	}
-	redact(auth.ProjectPermissions(c), me, session)
-	return c.JSON(200, session)
+	set := auth.ProjectPermissions(c)
+	for i := range open {
+		redact(set, me, &open[i])
+	}
+	return c.JSON(200, open)
 }
 
 // optTime é um horário que pode vir ausente, nulo ou preenchido no corpo: o nulo de until_at

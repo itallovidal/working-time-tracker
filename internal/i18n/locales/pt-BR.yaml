@@ -299,8 +299,13 @@ session:
   stop_task_label: "Parar a tarefa {{.name}}"
   stop_task_hint: Para só esta tarefa e a sessão continua. Se for a única em andamento, o ponto é encerrado.
   deleted_tasks: tarefa excluída
+  other_projects:
+    one: "+{{.count}} sessão em outro projeto"
+    other: "+{{.count}} sessões em outros projetos"
+  only_this_project: Só este projeto
   modal:
     title: "Sessão de {{.date}}"
+    title_project: "Sessão de {{.date}} · {{.project}}"
     person: Pessoa
     start: Início
     end: Fim
@@ -862,8 +867,8 @@ help:
       tip: "Tarefa sem responsável fica disponível para o time: quem iniciar o ponto nela passa a ser o responsável. O responsável precisa estar no projeto."
     track:
       title: Registre as horas
-      text: "No Início do projeto ou em Minhas tarefas, clique em “Iniciar” na tarefa em que vai trabalhar. O cronômetro começa e a “Sessão ativa” fica no canto da tela, em qualquer página. Para encerrar, clique em “Parar”."
-      tip: "Ao iniciar, a tarefa vai para “Em progresso”. Você pode trabalhar em várias tarefas na mesma sessão (“Adicionar à sessão”): cada uma conta o tempo cheio e a sessão conta uma vez só. Só existe um ponto aberto por pessoa."
+      text: "No Início do projeto ou em Minhas tarefas, clique em “Iniciar” na tarefa em que vai trabalhar. O cronômetro começa e a sessão fica no canto da tela, com o nome do projeto, em qualquer página. Para encerrar, clique em “Parar”."
+      tip: "Ao iniciar, a tarefa vai para “Em progresso”. Você pode trabalhar em várias tarefas na mesma sessão (“Adicionar à sessão”): cada uma conta o tempo cheio e a sessão conta uma vez só. Dá para ter um ponto aberto em cada projeto ao mesmo tempo: o valor é o de cada projeto, e as horas que se sobrepõem contam uma vez só no seu total."
     numbers:
       title: Acompanhe os números
       text: "O dono e os administradores veem, no Início da organização, as horas e o custo de todos os projetos, em 7 dias, 30 dias ou tudo; a receita e a margem, só o dono. Cada projeto tem a sua “Visão geral” na Gestão, com as sessões de todo mundo e os totais."
@@ -1009,8 +1014,8 @@ help:
   faq:
     no_clock:
       q: Não consigo iniciar o ponto
-      a: "Quase sempre falta o valor por hora da pessoa naquele projeto: um administrador ou o administrador do projeto define em Gestão › Colaboradores. A outra causa é um ponto já aberto em outro projeto; pare-o antes de iniciar este."
-      a_solo: "Quase sempre é um ponto já aberto em outro projeto: pare-o antes de iniciar este. Num projeto de cliente cobrado por hora, confira também o valor cobrado em Gestão › Configurações."
+      a: "Quase sempre falta o valor por hora da pessoa naquele projeto: um administrador ou o administrador do projeto define em Gestão › Colaboradores. Um ponto aberto em outro projeto não impede: cada projeto tem a sua sessão."
+      a_solo: "Num projeto de cliente cobrado por hora, confira o valor cobrado em Gestão › Configurações. Um ponto aberto em outro projeto não impede: cada projeto tem a sua sessão."
     forgot:
       q: Esqueci de bater o ponto. Dá para lançar as horas depois?
       a: "Não. O app só registra o tempo cronometrado: não há lançamento manual, aprovação nem fechamento de período. O que dá para ajustar são os intervalos das tarefas dentro de uma sessão (abra a sessão e use o lápis), sem mudar o tempo total dela."
@@ -1511,7 +1516,6 @@ time:
   since: "Desde as {{.time}}"
   start_hint: Clique em Iniciar numa das tarefas abaixo para começar a contar o tempo.
   all_in_session: Todas as suas tarefas estão na sessão.
-  other_project: Esta sessão é de outro projeto. Pare antes de iniciar uma tarefa daqui.
   stop: Parar
   stopped: Parado
   no_tasks: Você não tem tarefas neste projeto.
@@ -2095,6 +2099,7 @@ errors:
     invalid_date: "data inválida em {{.field}}: use AAAA-MM-DD"
     task_already_active: "esta tarefa já está em andamento na sessão"
     task_not_in_session: "esta tarefa não está em andamento na sessão aberta"
+    project_required: "há sessões abertas em mais de um projeto; diga qual encerrar"
     unknown_label: "o projeto não tem a etiqueta {{.label}}; as que existem: {{.available}}"
   oauth:
     request_invalid: "o pedido de conexão não confere mais; comece de novo pelo app"
@@ -2219,7 +2224,7 @@ errors:
     no_rate: "esta pessoa ainda não está no projeto: adicione-a com o valor por hora antes de colocá-la num time"
     person_required: "informe a pessoa (person_id)"
   work_session:
-    already_open: "já existe um ponto aberto para esta pessoa; pare a sessão atual antes de iniciar outra"
+    already_open: "já existe um ponto aberto para esta pessoa neste projeto; ponha a tarefa na sessão aberta"
     filter_required: "filtre por task_id ou person_id"
     invalid_interval: "o intervalo precisa começar e terminar dentro da sessão, com o fim depois do começo"
     invalid_person_filter: "pessoa inválida (person_id)"
@@ -2228,7 +2233,6 @@ errors:
     no_rate: "esta pessoa ainda não tem valor por hora neste projeto; um admin precisa definir na aba Colaboradores antes do ponto"
     not_found: "sessão não encontrada"
     not_open: "não há ponto aberto para esta pessoa"
-    open_in_other_project: "o ponto desta pessoa está aberto em outro projeto; pare-o por lá"
     not_yours: "só quem bateu o ponto, ou um admin, pode mexer nas tarefas desta sessão"
     other_person_admin_only: "só admins podem registrar o ponto de outra pessoa"
     person_not_found: "pessoa não encontrada"

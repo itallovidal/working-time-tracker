@@ -769,7 +769,7 @@ func main() {
 	fmt.Printf("  Organização solo: %s, uma pessoa só, com %d clientes (%d por hora e %d por contrato mensal, um deles já encerrado)\n",
 		soloOrgName, solo.customers, solo.hourly, solo.monthly)
 	fmt.Printf("  %d projetos (%d internos), %d tarefas e %d integrações sem credencial\n", solo.projects, solo.internal, solo.tasks, solo.integrations)
-	fmt.Printf("  %d sessões fechadas nos últimos %d meses e o ponto aberto agora\n", solo.sessions, soloHistoryMonths+1)
+	fmt.Printf("  %d sessões fechadas nos últimos %d meses e %d com o ponto aberto agora, em projetos diferentes\n", solo.sessions, soloHistoryMonths+1, len(soloOpenTasks))
 	fmt.Printf("  %d recebíveis confirmados (%d recebidos, %d em aberto, %d em atraso) e %d propostas por confirmar em A receber\n",
 		solo.confirmed, solo.received, solo.open, solo.late, solo.toConfirm)
 	fmt.Println()

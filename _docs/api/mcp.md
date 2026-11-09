@@ -141,7 +141,8 @@ O código está em `internal/oauth` (o protocolo) e em `internal/domain/auth/oau
   Render, no Railway e no Fly.io o pedido chega pela rede do container, e não acontece.
 - **Erros:** uma ferramenta que falha devolve um resultado com `isError` e o texto do erro em inglês, com o código
   estável entre parênteses e os parâmetros (`this task already has an assignee (task.already_assigned)`). Alguns trazem
-  uma dica do que fazer: o ponto que já está aberto diz em que projeto e sugere `add_task_to_session` ou `clock_out`. Os
+  uma dica do que fazer: o ponto que já está aberto no projeto diz o que roda nele e sugere `add_task_to_session`, e o
+  `clock_out` sem projeto, com sessões abertas em mais de um, lista os projetos (`mcp.project_required`). Os
   códigos são os da API, mais os `mcp.*` de [errors.md](errors.md).
 - **Código:** `internal/mcp` (o servidor e as ferramentas), `internal/domain/auth/api_token.go` (o token pessoal),
   `internal/oauth` e `internal/domain/auth/oauth_grant.go` (o OAuth), e os testes em `internal/server/mcp_test.go`,
@@ -159,13 +160,13 @@ tela.
 
 | Ferramenta | O que faz |
 |---|---|
-| `whoami` | A pessoa, o cargo, a organização (com o fuso), a sessão de ponto aberta e quando o token vence |
+| `whoami` | A pessoa, o cargo, a organização (com o fuso), as sessões de ponto abertas (`open_sessions`) e quando o token vence |
 | `list_projects` | Os projetos em que a pessoa está (todos, para admin) |
 | `list_labels` | As etiquetas de um projeto, pelo nome |
 | `list_tasks` | As tarefas de um projeto, por página, com busca, status, prioridade, responsável (`me`, `none`, `any`, `others`) e etiquetas. Sem status, só as abertas |
 | `my_tasks` | As tarefas da pessoa em todos os projetos, abertas (por prazo) ou fechadas |
 | `get_task` | Uma tarefa, com a descrição em Markdown e os itens ligados (GitHub, Trello…) |
-| `get_active_session` | A sessão aberta, com o trecho de cada tarefa e qual está rodando |
+| `get_active_session` | As sessões abertas (`sessions`), uma por projeto no máximo, com o trecho de cada tarefa e qual está rodando |
 | `my_hours` | Horas de hoje e da semana, dia a dia e por projeto, as contagens de tarefas e no que a pessoa trabalha agora |
 
 ### Escrita
@@ -176,14 +177,14 @@ tela.
 | `update_task` | Muda só o que vem: nome, descrição, status, prioridade, prazo (ou `clear_deadline`), etiquetas e responsável (`me` ou `none`). Numa tarefa sincronizada, a mudança vai à plataforma |
 | `claim_task` | Pega a tarefa sem responsável, sem bater o ponto. A de outra pessoa é recusada |
 | `sync_task` | Sincroniza agora a tarefa com os itens ligados a ela, nos dois sentidos (o botão Sincronizar da tarefa) |
-| `clock_in` | Abre o ponto numa tarefa. Ela passa a em progresso e, sem responsável, vira da pessoa |
-| `add_task_to_session` | Põe outra tarefa do mesmo projeto na sessão aberta, a partir de agora. Com `switch`, encerra os outros trechos ativos: é trocar de tarefa |
-| `stop_session_task` | Encerra agora o trecho de uma tarefa na sessão; as horas ficam |
-| `remove_session_task` | Tira a tarefa da sessão, com o trecho dela |
-| `clock_out` | Encerra o ponto |
+| `clock_in` | Abre o ponto numa tarefa, numa sessão do projeto dela; as sessões de outros projetos continuam. Ela passa a em progresso e, sem responsável, vira da pessoa |
+| `add_task_to_session` | Põe a tarefa na sessão aberta do projeto dela, a partir de agora. Com `switch`, encerra os outros trechos ativos daquela sessão: é trocar de tarefa |
+| `stop_session_task` | Encerra agora o trecho de uma tarefa na sessão do projeto dela; as horas ficam |
+| `remove_session_task` | Tira a tarefa da sessão do projeto dela, com o trecho dela |
+| `clock_out` | Encerra o ponto de um projeto. `project_id` só é preciso com sessões abertas em mais de um projeto |
 
-- **O ponto é sempre o da pessoa.** Nenhuma ferramenta recebe outra pessoa, e as da sessão agem na sessão aberta
-  dela. Por isso o MCP não precisa das checagens de quem registra o ponto de outro (`personFor`) nem de quem mexe na
+- **O ponto é sempre o da pessoa.** Nenhuma ferramenta recebe outra pessoa, e as da sessão agem nas sessões abertas
+  dela, uma por projeto (Decisão 26): as que recebem uma tarefa usam a sessão do projeto da tarefa. Por isso o MCP não precisa das checagens de quem registra o ponto de outro (`personFor`) nem de quem mexe na
   sessão (`editable`). Mas, como as rotas da sessão na API, as que mudam a sessão (`add_task_to_session`,
   `stop_session_task`, `remove_session_task`, `clock_out`) conferem o projeto dela: quem perdeu o acesso ao projeto
   com o ponto aberto recebe `project.not_found`, e só um admin encerra aquela sessão. `get_active_session` e `whoami`
@@ -194,8 +195,8 @@ tela.
 - **Ids:** um id em outra forma que o UUID aceita (maiúsculas, por exemplo) vale o mesmo id.
 - **Etiquetas** vão pelo nome, sem diferenciar maiúsculas. Um nome que o projeto não tem é recusado
   (`mcp.unknown_label`) com a lista das que existem: criar etiqueta continua sendo da tela, com `labels.manage`.
-- O `initialize` devolve instruções curtas sobre o sistema (uma sessão por pessoa, como trocar de tarefa, os status e
-  as prioridades), e as ferramentas de leitura vêm marcadas como só leitura.
+- O `initialize` devolve instruções curtas sobre o sistema (uma sessão por pessoa em cada projeto, como trocar de
+  tarefa, os status e as prioridades), e as ferramentas de leitura vêm marcadas como só leitura.
 
 ## Fora do MCP
 

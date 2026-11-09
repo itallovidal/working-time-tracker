@@ -27,8 +27,8 @@ type WhoAmIOut struct {
 	// Role é owner (o dono da organização), admin ou member.
 	Role         string `json:"role"`
 	Organization OrgOut `json:"organization"`
-	// OpenSession é a sessão de ponto aberta, ou null.
-	OpenSession *SessionOut `json:"open_session"`
+	// OpenSessions são as sessões de ponto abertas, uma por projeto no máximo; vazia com o ponto fechado.
+	OpenSessions []SessionOut `json:"open_sessions"`
 	// TokenExpiresAt é quando o token desta conexão vence; depois disso a pessoa gera outro no perfil.
 	TokenExpiresAt string `json:"token_expires_at"`
 }
@@ -137,13 +137,13 @@ func (s *server) whoami(_ context.Context, req *mcp.CallToolRequest, _ noInput) 
 	if req.Extra.TokenInfo != nil && !req.Extra.TokenInfo.Expiration.IsZero() {
 		out.TokenExpiresAt = req.Extra.TokenInfo.Expiration.In(loc).Format(time.RFC3339)
 	}
-	open, err := s.Sessions.Active(id.PersonID.String())
+	open, err := s.Sessions.Open(id.PersonID.String())
 	if err != nil {
 		return nil, WhoAmIOut{}, s.fail(err)
 	}
-	if open != nil {
-		so := s.sessionOut(open, id)
-		out.OpenSession = &so
+	out.OpenSessions = make([]SessionOut, 0, len(open))
+	for i := range open {
+		out.OpenSessions = append(out.OpenSessions, s.sessionOut(&open[i], id))
 	}
 	return nil, out, nil
 }

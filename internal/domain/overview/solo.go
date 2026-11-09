@@ -11,6 +11,7 @@ import (
 	"golang.org/x/text/language"
 
 	"working-time-tracker/internal/database"
+	"working-time-tracker/internal/domain/work_session"
 	"working-time-tracker/internal/validate"
 )
 
@@ -184,18 +185,22 @@ func (s *Service) Solo(orgID, window string) (*SoloOverview, error) {
 			customerOf[p.ID] = p.Customer.ID
 		}
 	}
+	// O que a pessoa trabalhou ao mesmo tempo em dois projetos conta uma vez só no total, no cliente e nos internos
+	// (Decisão 26): cada grupo junta as sessões dele antes de medir.
+	byCustomer := map[uuid.UUID][]work_session.WorkSession{}
+	var internal []work_session.WorkSession
 	for i := range sessions {
-		seconds, _, _ := sessions[i].WithinRange(w.from, w.to, now)
-		if seconds <= 0 {
-			continue
-		}
-		o.Totals.Seconds += seconds
 		if row := rows[customerOf[sessions[i].ProjectID]]; row != nil {
-			row.Seconds += seconds
+			byCustomer[row.Customer.ID] = append(byCustomer[row.Customer.ID], sessions[i])
 		} else {
-			o.InternalSeconds += seconds
+			internal = append(internal, sessions[i])
 		}
 	}
+	o.Totals.Seconds = work_session.MergedSeconds(sessions, w.from, w.to, now)
+	for id, own := range byCustomer {
+		rows[id].Seconds = work_session.MergedSeconds(own, w.from, w.to, now)
+	}
+	o.InternalSeconds = work_session.MergedSeconds(internal, w.from, w.to, now)
 
 	// A Receita é pelo dia do recebimento, e a projetada pelo fim do período: duas datas, duas contas.
 	for _, r := range receivables {

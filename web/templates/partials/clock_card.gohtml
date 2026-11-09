@@ -1,4 +1,5 @@
-{{/* O painel do timer, no Início e em Minhas tarefas (nesta, de ponta a ponta). Com o ponto aberto, duas colunas
+{{/* O painel do timer, no Início e em Minhas tarefas (nesta, de ponta a ponta). Mostra só a sessão deste projeto
+     (here()); a de outro projeto corre ao lado e aparece no balão (Decisão 26). Com o ponto aberto, duas colunas
      quando há largura: à esquerda o cronômetro, o valor da sessão, desde quando e os botões Parar e Tarefas da
      sessão; à direita os cartões das tarefas em andamento, com a largura que sobra. Em largura curta, uma coluna
      só, nessa ordem. Parado: o cronômetro zerado e um convite para iniciar uma tarefa da lista logo abaixo. A
@@ -7,20 +8,17 @@
 <section class="clock" aria-live="polite">
   <p class="muted" x-show="!$store.clock.ready">{{.T "common.loading"}}</p>
 
-  <template x-if="$store.clock.ready && $store.clock.session">
+  <template x-if="$store.clock.ready && here()">
     <div class="clock-running">
-      <p class="alert alert-warn clock-alert" x-show="!sessionHere()">
-        {{.T "time.other_project"}}
-      </p>
       <div class="clock-side">
         <div class="clock-status"><span class="pulse" aria-hidden="true"></span> {{.T "time.running"}}</div>
-        <div class="clock-face running" x-text="WTT.fmt.clock($store.clock.elapsed())"></div>
+        <div class="clock-face running" x-text="WTT.fmt.clock($store.clock.elapsed(here()))"></div>
         {{/* O valor da sessão sobe junto com o cronômetro, pelo valor por hora travado no clock-in. */}}
         <div class="clock-value" x-show="sessionValue() !== null">
           <span class="num" x-text="WTT.fmt.money(sessionValue())"></span>
           <span class="muted small">{{.T "time.session_value"}}</span>
         </div>
-        <p class="muted small clock-since" x-text="$t('time.since', { time: WTT.fmt.time($store.clock.session.start_at) })"></p>
+        <p class="muted small clock-since" x-text="$t('time.since', { time: WTT.fmt.time(here().start_at) })"></p>
         <div class="clock-actions">
           <button type="button" class="btn btn-danger" :disabled="pending" @click="stop()">{{.T "time.stop"}}</button>
           <button type="button" class="btn btn-secondary" @click="openSession()">{{template "icon" "list-check"}} {{.T "session.manage"}}</button>
@@ -38,7 +36,7 @@
     </div>
   </template>
 
-  <template x-if="$store.clock.ready && !$store.clock.session">
+  <template x-if="$store.clock.ready && !here()">
     <div class="stack">
       <div class="clock-status muted">{{.T "time.stopped"}}</div>
       <div class="clock-face">00:00:00</div>

@@ -301,33 +301,30 @@ func TestCollaborators_RemovalEndsTheOpenSession(t *testing.T) {
 			t.Fatalf("clock-in = %d: %s", rec.Code, rec.Body.String())
 		}
 	}
-	active := func() string {
-		return strings.TrimSpace(do(e, "GET", "/api/work-sessions/active", "", bia.session).Body.String())
+	// openIn são os projetos em que a Bia está com o ponto aberto.
+	openIn := func() []string {
+		var projects []string
+		for _, s := range decodeList(t, do(e, "GET", "/api/work-sessions/open", "", bia.session)) {
+			projects = append(projects, s["project_id"].(string))
+		}
+		return projects
 	}
 
-	// O ponto aberto no Alfa acaba quando a Bia sai do Alfa.
+	// A Bia abre o ponto no Alfa e no Beta ao mesmo tempo (uma sessão por projeto). Sair do Alfa acaba só a sessão
+	// do Alfa; a do Beta continua.
 	clockIn(alfa, alfaTask)
-	if active() == "null" {
-		t.Fatal("Bia has no open session after clocking in")
+	clockIn(beta, betaTask)
+	if got := openIn(); len(got) != 2 {
+		t.Fatalf("Bia's open sessions after clocking in on both = %v, want two", got)
 	}
 	if rec := do(e, "DELETE", "/api/projects/"+alfa+"/collaborators/"+bia.id, "", admin.session); rec.Code != http.StatusNoContent {
 		t.Fatalf("remove Bia from the Alfa = %d: %s", rec.Code, rec.Body.String())
 	}
-	if got := active(); got != "null" {
-		t.Errorf("Bia's open session after being removed from its project = %s, want none", got)
+	if got := openIn(); len(got) != 1 || got[0] != beta {
+		t.Errorf("Bia's open sessions after being removed from the Alfa = %v, want only the Beta", got)
 	}
 	sessions := decodeList(t, do(e, "GET", "/api/projects/"+alfa+"/work-sessions?person_id="+bia.id, "", admin.session))
 	if len(sessions) != 1 || sessions[0]["end_at"] == nil {
 		t.Errorf("the Alfa sessions after the removal = %v, want one, now closed (the time she worked is kept)", sessions)
-	}
-
-	// O ponto aberto no Beta não é tocado quando ela sai do Alfa (aqui, de novo).
-	allocate(t, e, admin, alfa, bia.id, 2000)
-	clockIn(beta, betaTask)
-	if rec := do(e, "DELETE", "/api/projects/"+alfa+"/collaborators/"+bia.id, "", admin.session); rec.Code != http.StatusNoContent {
-		t.Fatalf("remove Bia from the Alfa again = %d: %s", rec.Code, rec.Body.String())
-	}
-	if got := active(); got == "null" {
-		t.Error("Bia's open session in the Beta was closed by her removal from the Alfa")
 	}
 }

@@ -221,7 +221,7 @@ func TestValidation_WorkSessions(t *testing.T) {
 
 	runHTTPCases(t, e, bia.session, []httpCase{
 		{"clock-in without a task", "POST", prj + "/work-sessions/clock-in", `{}`, 400, "work_session.task_required", "task_id"},
-		{"clock-out through another project", "POST", "/api/projects/" + two + "/work-sessions/clock-out", `{}`, 400, "work_session.open_in_other_project", ""},
+		{"clock-out through a project without an open session", "POST", "/api/projects/" + two + "/work-sessions/clock-out", `{}`, 400, "work_session.not_open", ""},
 		{"list with a malformed task", "GET", prj + "/work-sessions?task_id=abc", "", 400, "work_session.invalid_task_filter", "task_id"},
 		{"total with a malformed task", "GET", prj + "/work-sessions/total?task_id=abc", "", 400, "work_session.invalid_task_filter", "task_id"},
 		{"add without a task", "POST", tasksPath, `{}`, 400, "work_session.task_required", "task_id"},

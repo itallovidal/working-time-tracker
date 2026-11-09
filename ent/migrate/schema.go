@@ -683,9 +683,9 @@ var (
 		},
 		Indexes: []*schema.Index{
 			{
-				Name:    "one_active_session",
+				Name:    "one_open_session_per_project",
 				Unique:  true,
-				Columns: []*schema.Column{WorkSessionsColumns[7]},
+				Columns: []*schema.Column{WorkSessionsColumns[7], WorkSessionsColumns[8]},
 				Annotation: &entsql.IndexAnnotation{
 					Where: "end_at IS NULL",
 				},

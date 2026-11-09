@@ -258,39 +258,47 @@ func TestMigrate_ReceivableRules(t *testing.T) {
 	}
 }
 
-func TestMigrate_OneActiveSessionIndex(t *testing.T) {
+func TestMigrate_OneOpenSessionPerProjectIndex(t *testing.T) {
 	var def string
 	err := testDB.QueryRow(`SELECT indexdef FROM pg_indexes
-		WHERE tablename = 'work_sessions' AND indexname = 'one_active_session'`).Scan(&def)
+		WHERE tablename = 'work_sessions' AND indexname = 'one_open_session_per_project'`).Scan(&def)
 	if err != nil {
-		t.Fatalf("one_active_session index not found: %v", err)
+		t.Fatalf("one_open_session_per_project index not found: %v", err)
 	}
-	if !strings.Contains(def, "UNIQUE") || !strings.Contains(def, "(person_id)") || !strings.Contains(def, "end_at IS NULL") {
+	if !strings.Contains(def, "UNIQUE") || !strings.Contains(def, "(person_id, project_id)") || !strings.Contains(def, "end_at IS NULL") {
 		t.Errorf("unexpected index definition: %s", def)
+	}
+	var old int
+	if err := testDB.QueryRow(`SELECT count(*) FROM pg_indexes WHERE indexname = 'one_active_session'`).Scan(&old); err != nil || old != 0 {
+		t.Errorf("the old one_active_session index is still there (count %d, err %v)", old, err)
 	}
 }
 
-// O índice parcial é a garantia final contra corrida no clock-in: mesmo gravando
-// direto no banco, sem passar pelo service, a segunda sessão aberta é rejeitada.
-func TestMigrate_DatabaseRejectsSecondOpenSession(t *testing.T) {
+// O índice parcial é a garantia final contra corrida no clock-in: mesmo gravando direto no banco, sem passar pelo
+// service, a segunda sessão aberta da pessoa no mesmo projeto é rejeitada. Em outro projeto, ela abre (Decisão 26).
+func TestMigrate_DatabaseRejectsSecondOpenSessionInTheProject(t *testing.T) {
 	testutil.Truncate(t, testDB)
 	ctx := context.Background()
 
 	org := testClient.Organization.Create().SetName("Org").SaveX(ctx)
 	p := testClient.Person.Create().SetName("Ana").SetEmail("ana@test.com").SetOrganizationID(org.ID).SaveX(ctx)
 	proj := testClient.Project.Create().SetName("Projeto").SetOrganizationID(org.ID).SaveX(ctx)
+	other := testClient.Project.Create().SetName("Outro").SetOrganizationID(org.ID).SaveX(ctx)
 
-	open := func() error {
+	open := func(projectID uuid.UUID) error {
 		_, err := testClient.WorkSession.Create().
-			SetProjectID(proj.ID).SetPersonID(p.ID).SetStartAt(time.Now()).
+			SetProjectID(projectID).SetPersonID(p.ID).SetStartAt(time.Now()).
 			Save(ctx)
 		return err
 	}
-	if err := open(); err != nil {
+	if err := open(proj.ID); err != nil {
 		t.Fatalf("first open session: %v", err)
 	}
-	if err := open(); err == nil {
-		t.Fatal("expected the database to reject a second open session for the same person")
+	if err := open(proj.ID); err == nil {
+		t.Fatal("expected the database to reject a second open session for the same person in the same project")
+	}
+	if err := open(other.ID); err != nil {
+		t.Fatalf("an open session in another project should be allowed: %v", err)
 	}
 
 	// Sessões encerradas não contam para o índice.

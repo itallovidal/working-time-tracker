@@ -597,7 +597,7 @@ func TestWorkSessions_RequireRate(t *testing.T) {
 	if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), `"code":"work_session.no_rate"`) {
 		t.Errorf("admin clock-in for a member without a rate = %d %s, want 400 explaining the missing rate", rec.Code, rec.Body.String())
 	}
-	if rec := do(e, "GET", "/api/work-sessions/active", "", member.session); strings.TrimSpace(rec.Body.String()) != "null" {
+	if rec := do(e, "GET", "/api/work-sessions/open", "", member.session); strings.TrimSpace(rec.Body.String()) != "[]" {
 		t.Errorf("a session was opened without a rate: %s", rec.Body.String())
 	}
 
@@ -762,7 +762,7 @@ func TestAccess_IDsInBodyAndQueryStayInOrganization(t *testing.T) {
 	if rec.Code != http.StatusBadRequest {
 		t.Errorf("admin of A clocking out someone from B = %d, want 400: %s", rec.Code, rec.Body.String())
 	}
-	if rec := do(e, "GET", "/api/work-sessions/active", "", b.session); strings.TrimSpace(rec.Body.String()) == "null" {
+	if rec := do(e, "GET", "/api/work-sessions/open", "", b.session); strings.TrimSpace(rec.Body.String()) == "[]" {
 		t.Error("the session in org B was closed by an admin of org A")
 	}
 
@@ -909,7 +909,7 @@ func TestRoutes_Table(t *testing.T) {
 		"POST /api/projects/:projectId/work-sessions/:sessionId/tasks",
 		"PATCH /api/projects/:projectId/work-sessions/:sessionId/tasks/:linkId",
 		"DELETE /api/projects/:projectId/work-sessions/:sessionId/tasks/:linkId",
-		"GET /api/work-sessions/active",
+		"GET /api/work-sessions/open",
 		"POST /api/projects/:projectId/integrations",
 		"GET /api/projects/:projectId/integrations",
 		"POST /api/projects/:projectId/sync",
@@ -959,15 +959,15 @@ func TestRoutes_Table(t *testing.T) {
 	}
 }
 
-// A tela de ponto usa a sessão ativa da pessoa logada, e o seletor de
+// O balão usa as sessões abertas da pessoa logada, uma por projeto, cada uma com o nome do projeto, e o seletor de
 // responsável usa os membros dos times do projeto.
-func TestAPI_ActiveSessionAndProjectMembers(t *testing.T) {
+func TestAPI_OpenSessionsAndProjectMembers(t *testing.T) {
 	e := newServer(t)
 	admin := signup(t, e, "Org", "ana@test.com")
 	projectID := createEmptyProject(t, e, admin, "Projeto")
 
-	if rec := do(e, "GET", "/api/work-sessions/active", "", admin.session); rec.Code != http.StatusOK || strings.TrimSpace(rec.Body.String()) != "null" {
-		t.Fatalf("active without session = %d %q, want 200 null", rec.Code, rec.Body.String())
+	if rec := do(e, "GET", "/api/work-sessions/open", "", admin.session); rec.Code != http.StatusOK || strings.TrimSpace(rec.Body.String()) != "[]" {
+		t.Fatalf("open without session = %d %q, want 200 []", rec.Code, rec.Body.String())
 	}
 	if rec := do(e, "GET", "/api/projects/"+projectID+"/members", "", admin.session); strings.TrimSpace(rec.Body.String()) != "[]" {
 		t.Fatalf("members of a project without teams = %q, want []", rec.Body.String())
@@ -994,7 +994,14 @@ func TestAPI_ActiveSessionAndProjectMembers(t *testing.T) {
 	taskID := decode(t, rec)["id"].(string)
 	do(e, "POST", "/api/projects/"+projectID+"/work-sessions/clock-in", `{"task_id":"`+taskID+`"}`, admin.session)
 
-	active := decode(t, do(e, "GET", "/api/work-sessions/active", "", admin.session))
+	open := decodeList(t, do(e, "GET", "/api/work-sessions/open", "", admin.session))
+	if len(open) != 1 {
+		t.Fatalf("open sessions = %v, want one", open)
+	}
+	active := open[0]
+	if prj, _ := active["project"].(map[string]any); prj == nil || prj["name"] != "Projeto" {
+		t.Errorf("open session project = %v, want the project's name", active["project"])
+	}
 	tasks, _ := active["tasks"].([]any)
 	var task map[string]any
 	if len(tasks) == 1 {

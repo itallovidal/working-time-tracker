@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
+
 	"working-time-tracker/internal/domain/allocation"
 	"working-time-tracker/internal/domain/collaborator"
 	"working-time-tracker/internal/domain/organization"
@@ -290,6 +292,98 @@ func TestService_OverlappingSessionRejected(t *testing.T) {
 	}
 }
 
+// Uma sessão aberta por projeto (Decisão 26): a pessoa abre o ponto em dois projetos ao mesmo tempo, as duas sessões
+// aparecem em Open, e fechar uma deixa a outra correndo.
+func TestService_OneOpenSessionPerProject(t *testing.T) {
+	orgSvc, personSvc, projSvc, teamSvc, memberSvc, taskSvc, wsSvc := setupDeps(t)
+
+	org, _ := orgSvc.Create("Org")
+	p, _ := personSvc.Create(org.ID.String(), "John", "john@test.com")
+	projA, _ := projSvc.Create(org.ID.String(), "Alfa", "", 0, project.Routine{})
+	projB, _ := projSvc.Create(org.ID.String(), "Beta", "", 0, project.Routine{})
+	tmA, _ := teamSvc.Create(projA.ID.String(), "Team A")
+	tmB, _ := teamSvc.Create(projB.ID.String(), "Team B")
+	join(t, memberSvc, tmA, p.ID.String())
+	join(t, memberSvc, tmB, p.ID.String())
+	setRate(t, projA.ID.String(), p.ID.String(), 2000)
+	setRate(t, projB.ID.String(), p.ID.String(), 3000)
+	taskA, _ := taskSvc.Create(projA.ID.String(), "Task A", "", p.ID.String(), nil)
+	taskB, _ := taskSvc.Create(projB.ID.String(), "Task B", "", p.ID.String(), nil)
+
+	a, err := wsSvc.ClockIn(projA.ID.String(), taskA.ID.String(), p.ID.String())
+	if err != nil {
+		t.Fatalf("clock in on A: %v", err)
+	}
+	b, err := wsSvc.ClockIn(projB.ID.String(), taskB.ID.String(), p.ID.String())
+	if err != nil {
+		t.Fatalf("clock in on B with A open: %v", err)
+	}
+	if *a.PayRateCents != 2000 || *b.PayRateCents != 3000 {
+		t.Errorf("rates = %d and %d, want each project's own (2000 and 3000)", *a.PayRateCents, *b.PayRateCents)
+	}
+
+	open, err := wsSvc.Open(p.ID.String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(open) != 2 || open[0].ID != a.ID || open[1].ID != b.ID {
+		t.Fatalf("open = %d sessions, want A then B", len(open))
+	}
+	if open[0].Project == nil || open[0].Project.Name != "Alfa" || open[1].Project == nil || open[1].Project.Name != "Beta" {
+		t.Errorf("open sessions should carry the project name, got %+v and %+v", open[0].Project, open[1].Project)
+	}
+	if got, _ := wsSvc.OpenIn(p.ID.String(), projB.ID.String()); got == nil || got.ID != b.ID {
+		t.Errorf("OpenIn(B) = %v, want the B session", got)
+	}
+
+	// Um segundo ponto no mesmo projeto continua recusado.
+	taskA2, _ := taskSvc.Create(projA.ID.String(), "Task A2", "", p.ID.String(), nil)
+	if _, err := wsSvc.ClockIn(projA.ID.String(), taskA2.ID.String(), p.ID.String()); !errors.Is(err, work_session.ErrAlreadyOpen) {
+		t.Fatalf("second clock in on A = %v, want ErrAlreadyOpen", err)
+	}
+
+	// Parar o A não mexe no B.
+	if _, err := wsSvc.ClockOut(projA.ID.String(), p.ID.String()); err != nil {
+		t.Fatalf("clock out of A: %v", err)
+	}
+	open, _ = wsSvc.Open(p.ID.String())
+	if len(open) != 1 || open[0].ID != b.ID {
+		t.Fatalf("after closing A, open = %d sessions, want only B", len(open))
+	}
+	if _, err := wsSvc.ClockOut(projA.ID.String(), p.ID.String()); !errors.Is(err, work_session.ErrNotOpen) {
+		t.Errorf("clock out of A again = %v, want ErrNotOpen", err)
+	}
+}
+
+// MergedSeconds conta uma vez o que a mesma pessoa trabalhou ao mesmo tempo, e soma pessoas diferentes.
+func TestMergedSeconds(t *testing.T) {
+	at := func(h, m int) time.Time { return time.Date(2026, 11, 9, h, m, 0, 0, time.UTC) }
+	end := func(h, m int) *time.Time { v := at(h, m); return &v }
+	ana, bia := uuid.New(), uuid.New()
+	now := at(18, 0)
+	sessions := []work_session.WorkSession{
+		{PersonID: ana, StartAt: at(12, 0), EndAt: end(15, 0)},  // projeto A
+		{PersonID: ana, StartAt: at(12, 0), EndAt: end(16, 0)},  // projeto B, ao mesmo tempo
+		{PersonID: ana, StartAt: at(16, 30), EndAt: end(17, 0)}, // depois, sem sobrepor
+		{PersonID: bia, StartAt: at(12, 0), EndAt: end(13, 0)},  // outra pessoa, mesma hora
+		{PersonID: ana, StartAt: at(17, 30)},                    // aberta: conta até now
+	}
+	cases := []struct {
+		name     string
+		from, to time.Time
+		want     float64
+	}{
+		{"everything", time.Time{}, time.Time{}, (4 + 0.5 + 1 + 0.5) * 3600},
+		{"a window cuts the overlap", at(14, 0), at(17, 0), (2 + 0.5) * 3600},
+		{"before anything", at(8, 0), at(9, 0), 0},
+	}
+	for _, c := range cases {
+		if got := work_session.MergedSeconds(sessions, c.from, c.to, now); got != c.want {
+			t.Errorf("%s: got %v seconds, want %v", c.name, got, c.want)
+		}
+	}
+}
+
 func TestService_TotalTime(t *testing.T) {
 	orgSvc, personSvc, projSvc, teamSvc, memberSvc, taskSvc, wsSvc := setupDeps(t)
 
@@ -342,7 +436,7 @@ func TestService_ClockIn_RequiresRate(t *testing.T) {
 	if _, err := wsSvc.ClockIn(proj.ID.String(), task1.ID.String(), p.ID.String()); !errors.Is(err, work_session.ErrNoRate) {
 		t.Fatalf("clock in without a rate: err = %v, want ErrNoRate", err)
 	}
-	if active, _ := wsSvc.Active(p.ID.String()); active != nil {
+	if open, _ := wsSvc.Open(p.ID.String()); len(open) != 0 {
 		t.Error("a session was opened for a person without a rate")
 	}
 

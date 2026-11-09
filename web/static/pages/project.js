@@ -238,10 +238,10 @@ document.addEventListener('alpine:init', () => {
         this.errors.load = e.message;
       }
     },
-    // A sessão pode ter tarefas que não são da pessoa (ou de outro projeto): o cartão delas precisa da
-    // tarefa inteira, e a lista da pessoa não a tem. Sem acesso, o cartão não aparece e a sessão segue.
+    // A sessão do projeto pode ter tarefas que não são da pessoa: o cartão delas precisa da tarefa inteira, e a lista
+    // da pessoa não a tem. Sem acesso, o cartão não aparece e a sessão segue.
     async loadRunning() {
-      const missing = clock().running().map((l) => l.task_id)
+      const missing = clock().running(this.here()).map((l) => l.task_id)
         .filter((id) => !this.tasks.some((t) => t.id === id) && !this.taskCache[id]);
       await Promise.all(missing.map(async (id) => {
         try {
@@ -250,11 +250,12 @@ document.addEventListener('alpine:init', () => {
       }));
     },
     watchClock() {
-      this.$watch('$store.clock.session', () => this.loadRunning());
+      this.$watch('$store.clock.sessions', () => this.loadRunning());
     },
-    // As tarefas na sessão aberta, inteiras e na ordem em que entraram, e as da pessoa que ainda não estão nela.
+    // As tarefas na sessão aberta deste projeto, inteiras e na ordem em que entraram, e as da pessoa que ainda não
+    // estão nela.
     runningTasks() {
-      return clock().running().map((l) => this.tasks.find((t) => t.id === l.task_id) || this.taskCache[l.task_id]).filter(Boolean);
+      return clock().running(this.here()).map((l) => this.tasks.find((t) => t.id === l.task_id) || this.taskCache[l.task_id]).filter(Boolean);
     },
     idleTasks() {
       return this.tasks.filter((t) => !this.isRunning(t));
@@ -267,20 +268,19 @@ document.addEventListener('alpine:init', () => {
     isRunning(t) {
       return clock().isRunning(t.id);
     },
-    sessionHere() {
-      const s = clock().session;
-      return !!s && s.project_id === project.id;
+    // here é a sessão aberta da pessoa neste projeto, ou null. As de outros projetos correm ao lado e não mudam
+    // nada aqui (Decisão 26).
+    here() {
+      return clock().sessionFor(project.id);
     },
-    // Com o ponto aberto em outro projeto, a tarefa daqui não entra.
-    otherProject() {
-      const s = clock().session;
-      return !!s && s.project_id !== project.id;
+    sessionHere() {
+      return !!this.here();
     },
     // Com o ponto aberto neste projeto, a tarefa entra na sessão em vez de abrir outra.
     startTask(t) {
       return this.run('clock', async () => {
         if (this.sessionHere()) {
-          await clock().addTask(t.id);
+          await clock().addTask(project.id, t.id);
           toast(WTT.t('session.modal.added', { name: t.name }));
           return;
         }
@@ -289,19 +289,19 @@ document.addEventListener('alpine:init', () => {
       });
     },
     stop() {
-      return this.run('clock', () => clock().clockOut());
+      return this.run('clock', () => clock().clockOut(this.here()));
     },
     // stopTask para só a tarefa do cartão ou da linha; a sessão segue com as outras, e a última encerra o ponto.
     stopTask(t) {
       return this.run('clock', () => clock().stopTask(t.id));
     },
     openSession(s) {
-      Alpine.store('sessionView').open(s || clock().session);
+      Alpine.store('sessionView').open(s || this.here());
     },
-    // sessionValue é quanto a sessão aberta já rendeu: o tempo corrido vezes o valor por
+    // sessionValue é quanto a sessão aberta deste projeto já rendeu: o tempo corrido vezes o valor por
     // hora travado no clock-in, com o arredondamento do servidor. null sem valor.
     sessionValue() {
-      const s = clock().session;
+      const s = this.here();
       const rate = s ? earnedRate(s) : null;
       if (rate === null || rate === undefined) return null;
       return Math.round(clock().elapsed(s) * rate / 3600);
@@ -1111,7 +1111,7 @@ document.addEventListener('alpine:init', () => {
     // Com o ponto aberto neste projeto, a tarefa entra na sessão em vez de abrir outra.
     addToSession() {
       return this.run('clock', async () => {
-        await clock().addTask(this.taskId);
+        await clock().addTask(project.id, this.taskId);
         toast(WTT.t('session.modal.added', { name: this.task.name }));
       });
     },
@@ -1122,17 +1122,13 @@ document.addEventListener('alpine:init', () => {
     isRunning() {
       return clock().isRunning(this.taskId);
     },
-    // sessionHere diz se o ponto aberto é deste projeto; num de outro, a tarefa não entra.
+    // sessionHere diz se há sessão aberta neste projeto: com ela, a tarefa entra nela; sem ela, Iniciar abre uma, e a
+    // sessão de outro projeto segue correndo ao lado.
     sessionHere() {
-      const s = clock().session;
-      return !!s && s.project_id === project.id;
-    },
-    otherProject() {
-      const s = clock().session;
-      return !!s && s.project_id !== project.id;
+      return !!clock().sessionFor(project.id);
     },
     openSession(s) {
-      Alpine.store('sessionView').open(s || clock().session);
+      Alpine.store('sessionView').open(s || clock().sessionFor(project.id));
     },
     // O tempo da tarefa numa sessão e os nomes das outras tarefas dela.
     taskTime(s) {

@@ -68,7 +68,7 @@ a quem pode vê-los. As regras estão em [permissions.md](../product/permissions
 | Projetos | `/api/projects/:projectId` (+ `overview`, `billing`, `allocations`, `collaborators`, `members`, `teams`, `labels`, `tasks`, `work-sessions`, `integrations`, `invites`, `sync`) | quem está no projeto; cada mudança pede a sua permissão do projeto |
 | Times | `/api/teams/:teamId` (+ `members`) | ler, quem está no projeto; mudar, `teams.manage` |
 | Tarefas | `/api/tasks/:taskId` (+ `claim`, `attributes`, `link-external-item`, `external-details`, `sync`, `publish`) | quem está no projeto da tarefa |
-| Ponto | `/api/projects/:projectId/work-sessions` (+ `clock-in`, `clock-out`, `total`, `:sessionId/tasks`), `/api/work-sessions/active` | quem está no projeto; cada um bate o próprio ponto, e o de outra pessoa só um admin registra |
+| Ponto | `/api/projects/:projectId/work-sessions` (+ `clock-in`, `clock-out`, `total`, `:sessionId/tasks`), `/api/work-sessions/open` | quem está no projeto; cada um bate o próprio ponto, e o de outra pessoa só um admin registra |
 | Integrações | `/api/integrations/:integrationId` (+ `repositories`, `sync`) | ler, quem está no projeto; o resto, `integrations.manage` |
 | Permissões | `/api/permissions` | logado: o catálogo, para as telas |
 | Saúde | `/healthcheck` | pública, fora do `/api` |

@@ -220,6 +220,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 |---|---|---|---|---|
 | `mcp.invalid_assignee` | 400 | — | `o responsável é me (você) ou none (ninguém)` | `the assignee is me (you) or none (nobody)` |
 | `mcp.invalid_date` | 400 | `field` | `data inválida em {{.field}}: use AAAA-MM-DD` | `invalid date in {{.field}}: use YYYY-MM-DD` |
+| `mcp.project_required` | 400 | — | `há sessões abertas em mais de um projeto; diga qual encerrar` | `sessions are open in more than one project; say which one to close` |
 | `mcp.task_already_active` | 400 | — | `esta tarefa já está em andamento na sessão` | `this task is already running in the session` |
 | `mcp.task_not_in_session` | 400 | — | `esta tarefa não está em andamento na sessão aberta` | `this task is not running in the open session` |
 | `mcp.unknown_label` | 400 | `label`, `available` | `o projeto não tem a etiqueta {{.label}}; as que existem: {{.available}}` | `the project has no label {{.label}}; the ones it has: {{.available}}` |
@@ -394,7 +395,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 
 | Código | Status | Parâmetros | pt-BR | en |
 |---|---|---|---|---|
-| `work_session.already_open` | 400 | — | `já existe um ponto aberto para esta pessoa; pare a sessão atual antes de iniciar outra` | `this person already has an open clock-in; stop the current session before starting another` |
+| `work_session.already_open` | 400 | — | `já existe um ponto aberto para esta pessoa neste projeto; ponha a tarefa na sessão aberta` | `this person already has an open clock-in on this project; add the task to the open session` |
 | `work_session.filter_required` | 400 | — | `filtre por task_id ou person_id` | `filter by task_id or person_id` |
 | `work_session.invalid_interval` | 400 | — | `o intervalo precisa começar e terminar dentro da sessão, com o fim depois do começo` | `the interval must start and end inside the session, with the end after the start` |
 | `work_session.invalid_person_filter` | 400 | — | `pessoa inválida (person_id)` | `invalid person (person_id)` |
@@ -404,7 +405,6 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `work_session.not_found` | 404 | — | `sessão não encontrada` | `session not found` |
 | `work_session.not_open` | 400 | — | `não há ponto aberto para esta pessoa` | `this person has no open clock-in` |
 | `work_session.not_yours` | 403 | — | `só quem bateu o ponto, ou um admin, pode mexer nas tarefas desta sessão` | `only the person who clocked in, or an admin, can change the tasks of this session` |
-| `work_session.open_in_other_project` | 400 | — | `o ponto desta pessoa está aberto em outro projeto; pare-o por lá` | `this person's clock-in is open in another project; stop it there` |
 | `work_session.other_person_admin_only` | 403 | — | `só admins podem registrar o ponto de outra pessoa` | `only admins can clock in for another person` |
 | `work_session.person_not_found` | 400 | — | `pessoa não encontrada` | `person not found` |
 | `work_session.person_not_in_org` | 400 | — | `pessoa não encontrada nesta organização` | `person not found in this organization` |

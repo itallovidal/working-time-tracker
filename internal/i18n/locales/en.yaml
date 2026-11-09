@@ -289,8 +289,13 @@ session:
   stop_task_label: "Stop task {{.name}}"
   stop_task_hint: Stops only this task and the session goes on. If it is the only one in progress, time tracking stops.
   deleted_tasks: deleted task
+  other_projects:
+    one: "+{{.count}} session in another project"
+    other: "+{{.count}} sessions in other projects"
+  only_this_project: Only this project
   modal:
     title: "Session on {{.date}}"
+    title_project: "Session on {{.date}} · {{.project}}"
     person: Person
     start: Start
     end: End
@@ -852,8 +857,8 @@ help:
       tip: "A task without an assignee is available to the team: whoever clocks in on it becomes the assignee. The assignee must be on the project."
     track:
       title: Track the hours
-      text: "On the project Home or in My tasks, click “Start” on the task you will work on. The timer starts and the “Active session” stays in the corner of the screen, on any page. To finish, click “Stop”."
-      tip: "When you start, the task moves to “In progress”. You can work on several tasks in the same session (“Add to the session”): each one counts the full time and the session counts once. Only one clock can be open per person."
+      text: "On the project Home or in My tasks, click “Start” on the task you will work on. The timer starts and the session stays in the corner of the screen, with the project name, on any page. To finish, click “Stop”."
+      tip: "When you start, the task moves to “In progress”. You can work on several tasks in the same session (“Add to the session”): each one counts the full time and the session counts once. You can have a clock open on each project at the same time: the amount is each project's own, and overlapping hours count once in your total."
     numbers:
       title: Follow the numbers
       text: "The owner and the admins see, on the organization Home, the hours and cost of all projects, over 7 days, 30 days or all time; the revenue and margin, only the owner. Each project has its own “Overview” in Management, with everyone's sessions and the totals."
@@ -999,8 +1004,8 @@ help:
   faq:
     no_clock:
       q: I cannot start the clock
-      a: "Most often the person has no hourly rate on that project: an admin or the project administrator sets it in Management › Collaborators. The other cause is a clock already open on another project; stop it before starting this one."
-      a_solo: "Most often a clock is already open on another project: stop it before starting this one. On a project of an hourly customer, also check the billed rate under Management › Settings."
+      a: "Most often the person has no hourly rate on that project: an admin or the project administrator sets it in Management › Collaborators. A clock open on another project does not block it: each project has its own session."
+      a_solo: "On a project of an hourly customer, check the billed rate under Management › Settings. A clock open on another project does not block it: each project has its own session."
     forgot:
       q: I forgot to clock in. Can I add the hours afterwards?
       a: "No. The app only records timed work: there is no manual entry, approval or period closing. What you can adjust are the task intervals inside a session (open the session and use the pencil), without changing the session's total time."
@@ -1501,7 +1506,6 @@ time:
   since: "Since {{.time}}"
   start_hint: Click Start on one of the tasks below to start counting time.
   all_in_session: All your tasks are in the session.
-  other_project: This session belongs to another project. Stop it before starting a task from here.
   stop: Stop
   stopped: Stopped
   no_tasks: You have no tasks on this project.
@@ -2085,6 +2089,7 @@ errors:
     invalid_date: "invalid date in {{.field}}: use YYYY-MM-DD"
     task_already_active: "this task is already running in the session"
     task_not_in_session: "this task is not running in the open session"
+    project_required: "sessions are open in more than one project; say which one to close"
     unknown_label: "the project has no label {{.label}}; the ones it has: {{.available}}"
   oauth:
     request_invalid: "the connection request no longer checks out; start again from the app"
@@ -2209,7 +2214,7 @@ errors:
     no_rate: "this person is not on the project yet: add them with an hourly rate before putting them on a team"
     person_required: "enter the person (person_id)"
   work_session:
-    already_open: "this person already has an open clock-in; stop the current session before starting another"
+    already_open: "this person already has an open clock-in on this project; add the task to the open session"
     filter_required: "filter by task_id or person_id"
     invalid_interval: "the interval must start and end inside the session, with the end after the start"
     invalid_person_filter: "invalid person (person_id)"
@@ -2218,7 +2223,6 @@ errors:
     no_rate: "this person has no hourly rate on this project yet; an admin must set one on the Collaborators tab before clocking in"
     not_found: "session not found"
     not_open: "this person has no open clock-in"
-    open_in_other_project: "this person's clock-in is open in another project; stop it there"
     not_yours: "only the person who clocked in, or an admin, can change the tasks of this session"
     other_person_admin_only: "only admins can clock in for another person"
     person_not_found: "person not found"
