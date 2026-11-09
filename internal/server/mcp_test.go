@@ -378,8 +378,8 @@ func TestMCP_Session(t *testing.T) {
 	}
 	stopLast := toolError(t, cs, "stop_session_task", map[string]any{"task_id": strings.ToUpper(c)})
 	wantCode(t, stopLast, "work_session.last_task")
-	if !strings.Contains(stopLast, "clock_out") {
-		t.Errorf("last task error does not point to clock_out: %q", stopLast)
+	if !strings.Contains(stopLast, "clock_out") || !strings.Contains(stopLast, "project_id") {
+		t.Errorf("last task error does not point to clock_out with the project_id: %q", stopLast)
 	}
 	wantCode(t, toolError(t, cs, "stop_session_task", map[string]any{"task_id": a}), "mcp.task_not_in_session")
 
@@ -415,6 +415,12 @@ func TestMCP_Session(t *testing.T) {
 	}
 	if open := decodeList(t, do(e, "GET", "/api/work-sessions/open", "", member.session)); len(open) != 1 || open[0]["project_id"] != beta {
 		t.Errorf("after closing Alfa, the API sees %v, want only the Beta session", open)
+	}
+	// Fechar de novo o Alfa é not_open, e a dica diz onde o ponto ainda está aberto.
+	again := toolError(t, cs, "clock_out", map[string]any{"project_id": alfa})
+	wantCode(t, again, "work_session.not_open")
+	if !strings.Contains(again, `"Beta" (`+beta+`)`) {
+		t.Errorf("clock_out of a project without a session does not say where the clock is open: %q", again)
 	}
 	// Com uma sessão só, clock_out sem projeto fecha essa.
 	if closed := callTool(t, cs, "clock_out", nil); closed["project"].(map[string]any)["name"] != "Beta" {

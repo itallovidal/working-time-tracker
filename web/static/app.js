@@ -935,9 +935,23 @@
           this.ready = true;
         }
       },
+      // call faz a chamada de uma ação do ponto. Se ela falha, relê as sessões antes de devolver o erro para quem chamou
+      // avisar: o ponto pode ter mudado em outra aba ou pelo MCP (already_open, not_open), e a tela não pode seguir
+      // mostrando o que já não é. As páginas só são avisadas quando o que se vê mudou mesmo.
+      async call(method, path, body) {
+        try {
+          return await api(method, path, body);
+        } catch (e) {
+          const shape = (list) => list.map((s) => s.id + ':' + this.running(s).map((l) => l.id).join(',')).join(' ');
+          const before = shape(this.sessions);
+          await this.refresh();
+          if (shape(this.sessions) !== before) window.dispatchEvent(new CustomEvent('wtt:sessions-changed'));
+          throw e;
+        }
+      },
       // clockIn abre a sessão do projeto; as sessões de outros projetos seguem correndo.
       async clockIn(projectId, taskId) {
-        await api('POST', '/api/projects/' + projectId + '/work-sessions/clock-in', { task_id: taskId });
+        await this.call('POST', '/api/projects/' + projectId + '/work-sessions/clock-in', { task_id: taskId });
         await this.refresh();
         window.dispatchEvent(new CustomEvent('wtt:sessions-changed'));
       },
@@ -945,7 +959,7 @@
       async addTask(projectId, taskId) {
         const s = this.sessionFor(projectId);
         if (!s) return;
-        await api('POST', '/api/projects/' + s.project_id + '/work-sessions/' + s.id + '/tasks', { task_id: taskId });
+        await this.call('POST', '/api/projects/' + s.project_id + '/work-sessions/' + s.id + '/tasks', { task_id: taskId });
         await this.refresh();
         window.dispatchEvent(new CustomEvent('wtt:sessions-changed'));
       },
@@ -961,7 +975,7 @@
           Alpine.store('toast').show(t('session.stopped'));
           return;
         }
-        await api('PATCH', '/api/projects/' + s.project_id + '/work-sessions/' + s.id + '/tasks/' + link.id, { stop: true });
+        await this.call('PATCH', '/api/projects/' + s.project_id + '/work-sessions/' + s.id + '/tasks/' + link.id, { stop: true });
         await this.refresh();
         window.dispatchEvent(new CustomEvent('wtt:sessions-changed'));
         Alpine.store('toast').show(t('session.modal.stopped_task', { name: link.task.name }));
@@ -969,7 +983,7 @@
       // clockOut encerra uma sessão; as dos outros projetos continuam.
       async clockOut(session) {
         if (!session) return;
-        await api('POST', '/api/projects/' + session.project_id + '/work-sessions/clock-out', {});
+        await this.call('POST', '/api/projects/' + session.project_id + '/work-sessions/clock-out', {});
         this.sessions = this.sessions.filter((s) => s.id !== session.id);
         window.dispatchEvent(new CustomEvent('wtt:sessions-changed'));
       },
