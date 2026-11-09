@@ -8,17 +8,21 @@ como a tela mostra isso.
 
 ```mermaid
 flowchart TB
-    top["Barra superior: organização, Início, Projetos, Colaboradores, Clientes, Pagamentos (ou A receber, no modo solo), Configurações, menu da conta"]
+    top["Barra superior: organização, Início, Clientes e Projetos, Colaboradores, Pagamentos (ou A receber, no modo solo), Configurações, menu da conta"]
     top --> proj["Página de projeto: abas Início, Minhas tarefas, Lista de tarefas, Colaboradores + botão Gestão"]
     proj --> mgmt["Gestão: abas Visão geral, Colaboradores, Integrações, Configurações + Voltar ao projeto"]
     proj --> task["Página da tarefa: cabeçalho próprio, sem abas"]
 ```
 
 - **Barra superior** (`partials/topbar.gohtml`). O nome da organização e uma página por assunto. Cada item só aparece
-  para quem pode abrir a página dele: Colaboradores com `people.manage`, Clientes com `customers.manage` e Pagamentos com
+  para quem pode abrir a página dele: Clientes e Projetos para todos, Colaboradores com `people.manage` e Pagamentos com
   `payments.manage`. No modo solo (`Me.OrganizationSolo`) somem Colaboradores e Pagamentos, que são de equipe, e entra A
-  receber, com `receivables.manage`. Projetos fica marcado também dentro de um projeto. No celular, o nome e o menu da conta dividem a
-  primeira linha, e os itens vão para baixo.
+  receber, com `receivables.manage`. Clientes e Projetos fica marcado também dentro de um projeto.
+- **Menu de hambúrguer** (componente `mainNav`). Abaixo de 1024px os itens não cabem numa linha ao lado do nome e do
+  menu da conta: a barra fica numa linha só, com o botão ☰ antes do nome, e os itens vão para um painel, cada um com o
+  seu ícone (no computador o ícone não aparece). No celular o painel ocupa a largura toda, colado à barra; no tablet é
+  um cartão de 280px embaixo do botão. Um véu escurece a página (e o balão das sessões) atrás dele. Fecha com Esc (o
+  foco volta ao botão), com um toque ou o foco fora dele, ao voltar pelo histórico e quando a tela alarga.
 - **Menu da conta** (`partials/user_menu.gohtml`). O avatar, o nome e o selo de dono ou admin abrem Perfil, Ajuda, o
   toggle de idioma (PT | EN) e Sair. Fecha com Esc, com um clique fora ou ao escolher. Sem login, o toggle fica no
   canto da tela.

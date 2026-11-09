@@ -61,6 +61,7 @@ titles:
 
 nav:
   label: Pages
+  menu: Pages menu
   home: Home
   customers_projects: Customers & Projects
   people: Collaborators
@@ -1163,7 +1164,6 @@ org:
     created: Project created.
   # Customers & Projects: each customer with its projects, and the internal projects at the end.
   catalog:
-    intro: Each customer with its projects. A customer's billing applies to all of its projects, and each project can add an extra.
     intro_member: Your projects, grouped by each one's customer.
     loading: Loading customers and projects…
     empty: No customers or projects yet

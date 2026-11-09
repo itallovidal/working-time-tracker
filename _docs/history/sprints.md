@@ -1272,6 +1272,14 @@ Branch `feat/customers-and-projects-page` (2026-11-09), from `main`, after the o
 - [X] S119.3 Texts and docs: every text that sent the reader to "Clientes" now says "Clientes e Projetos" (help, onboarding hint, billing hints, the `customer_without_rate` error, regenerated in `api/errors.md`); the help merges the two screen sections into one; `frontend/routes.md`
 - [X] S119.4 After the owner saw it: twice the space between groups (64px; 48px on the phone); the line under the customer's name shows only the country (contact person and email stay in the details); on the phone the group's Detalhes and Novo projeto go into a three-dots menu next to the name
 
+### Sprint 120: Hamburger Menu on Narrow Screens
+
+Branch `feat/mobile-hamburger-menu` (2026-11-09), from `main`, after the owner found the top bar bad on the phone: the items wrapped into two more lines under the organization name, and the sticky bar took almost 160px. Up to about 1000px the bar of an owner also wrapped (the account menu fell to a second line at 900px).
+
+- [X] S120.1 Top bar: below 1024px the bar is one line, with a ☰ button before the organization name (`mainnav-toggle`, `aria-controls="mainnav"`, `aria-expanded`, "Menu de páginas" / "Pages menu" for screen readers) that opens the items in a panel, each with its icon (hidden on wider screens). On the phone the panel is full width under the bar; on a tablet, a 280px card under the button. A scrim dims the page and the session dock behind it (the bar rises to z-index 35, under the modals). Alpine component `mainNav`: it closes with Esc (focus back on the button), a click or focus outside the panel and the button, `pageshow` (back from the history) and when the screen grows to 1024px. `TestPages_MainNavMenuButton`; the nav test now expects an icon in every item
+- [X] S120.2 Clientes e Projetos, after the owner asked: the owner no longer has the opening sentence under the title (members keep theirs, `org.catalog.intro_member`), and the customer's group header no longer shows the billing (the amount, and the mode in solo): it stays only in Detalhes. `billingAmount` and `.catalog-billing` are gone; `TestCustomerBilling_FieldsAreInsideTheSoloGate` checks the header has no billing
+- [X] S120.3 Docs: `frontend/patterns.md` (the hamburger menu, and the top bar items after Sprint 119), `frontend/routes.md`
+
 ### Sprint 121: The MCP Connector Section
 
 Branch `feat/mcp-connector-screen` (2026-11-09), from `main`, after the owner asked for the profile's "Conectar ao Claude" to be about the MCP connector, with what is connected first, one way of connecting at a time, and the explanations behind a "?".

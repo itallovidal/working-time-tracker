@@ -140,13 +140,11 @@ func TestCustomerBilling_FieldsAreInsideTheSoloGate(t *testing.T) {
 			t.Errorf("customer_contract.gohtml has no field {{$id}}-%s", id)
 		}
 	}
-	// O cabeçalho de cada cliente mostra a cobrança: o valor nos dois modos, e o modo só no solo. O fechamento e o
-	// vencimento ficam nos detalhes.
-	if !strings.Contains(tpl, `x-text="g.customer && billingAmount(g.customer)"`) {
-		t.Error("the customer header has no amount")
-	}
-	if !strings.Contains(tpl, `{{if .Me.OrganizationSolo}}<span class="badge" x-text="g.customer && billingMode(g.customer)"></span>{{end}}`) {
-		t.Error("the customer header lacks the solo-only billing mode")
+	// A cobrança (o valor e, no solo, o modo) fica só nos detalhes do cliente: o cabeçalho do grupo não a mostra.
+	for _, gone := range []string{`class="catalog-billing"`, `billingAmount(`, `billingMode(g.customer)`} {
+		if strings.Contains(tpl, gone) {
+			t.Errorf("the customer header still shows the billing (%s)", gone)
+		}
 	}
 }
 

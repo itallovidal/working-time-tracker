@@ -43,7 +43,7 @@ func TestPages_MainNavProjectsIsALink(t *testing.T) {
 		return rec.Body.String()
 	}
 
-	link := regexp.MustCompile(`<a href="` + regexp.QuoteMeta(home+"/projects") + `"\s*(aria-current="page")?>Clientes e Projetos</a>`)
+	link := regexp.MustCompile(`<a href="` + regexp.QuoteMeta(home+"/projects") + `"\s*(aria-current="page")?><i class="fa-solid fa-diagram-project" aria-hidden="true"></i> Clientes e Projetos</a>`)
 	for path, marked := range map[string]bool{
 		home:                           false,
 		home + "/projects":             true,

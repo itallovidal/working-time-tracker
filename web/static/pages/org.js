@@ -1156,13 +1156,6 @@ document.addEventListener('alpine:init', () => {
     billingMode(c) {
       return WTT.t(WTT.billing.monthly(c) ? 'customer.billing.monthly' : 'customer.billing.hourly');
     },
-    // billingAmount é a coluna Valor: a mensalidade ou o valor por hora. O cliente por hora antigo, sem valor, diz que
-    // falta o valor (e a tela o mostra apagado).
-    billingAmount(c) {
-      if (WTT.billing.monthly(c)) return WTT.t('customer.billing.cell_fee_month', { fee: WTT.fmt.money(c.monthly_fee_cents) });
-      if (WTT.billing.withoutRate(c)) return WTT.t('customer.billing.cell_no_rate');
-      return WTT.t('customer.billing.cell_rate_hour', { rate: WTT.fmt.money(c.hourly_rate_cents) });
-    },
     // billingClosing é a coluna Fechamento: o dia do mês (31 é o último dia) ou, no ciclo de 14 dias do por hora, a
     // cada 14 dias desde o último fechamento já pago.
     billingClosing(c) {

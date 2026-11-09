@@ -553,7 +553,7 @@ func TestReceivables_PageLinksStayInSoloMode(t *testing.T) {
 	}
 	html := rec.Body.String()
 
-	topbarStart, topbarEnd := strings.Index(html, `<header class="topbar">`), strings.Index(html, "</header>")
+	topbarStart, topbarEnd := strings.Index(html, `<header class="topbar"`), strings.Index(html, "</header>")
 	if topbarStart < 0 || topbarEnd < topbarStart {
 		t.Fatal("the page has no topbar to tell it apart from the content")
 	}

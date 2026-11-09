@@ -149,6 +149,38 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 .mainnav a:hover { background: var(--surface-2); color: var(--ink); }
 .mainnav a[aria-current="page"] { background: var(--accent-soft); color: var(--accent); }
 
+/* O menu de hambúrguer: abaixo de 1024px os itens não cabem numa linha ao lado do nome e do menu da conta, então saem
+   da barra para um painel que o botão antes do nome abre. A barra fica numa linha só. O botão, o ícone de cada item e
+   o véu só existem nessa largura. */
+.mainnav-toggle, .mainnav-scrim, .mainnav a i { display: none; }
+@media (max-width: 1023px) {
+  .topbar-inner { flex-wrap: nowrap; gap: 10px; }
+  .mainnav-toggle {
+    display: inline-flex; align-items: center; justify-content: center; flex: none;
+    width: 38px; height: 38px; margin-left: -9px; padding: 0; border: 0; border-radius: var(--radius-sm);
+    background: transparent; color: var(--ink-2); font-size: 1.15rem; cursor: pointer;
+  }
+  .mainnav-toggle:hover, .mainnav-toggle[aria-expanded="true"] { background: var(--surface-2); color: var(--ink); }
+  .brand { flex: 1 1 0; min-width: 0; }
+  .brand span { overflow: hidden; text-overflow: ellipsis; }
+  /* O painel desce do botão, por cima da página. Fechado, fica invisível (e fora do Tab) depois de sumir. */
+  .mainnav {
+    position: absolute; top: calc(100% + 6px); left: 12px; z-index: 1; width: 280px; max-width: calc(100vw - 24px);
+    max-height: calc(100dvh - 100% - 18px); overflow-y: auto; overscroll-behavior: contain;
+    flex-direction: column; flex-wrap: nowrap; gap: 2px; padding: 8px;
+    background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius); box-shadow: var(--shadow);
+    visibility: hidden; opacity: 0; transform: translateY(-6px);
+    transition: opacity 0.15s, transform 0.15s, visibility 0s 0.15s;
+  }
+  .mainnav.is-open { visibility: visible; opacity: 1; transform: none; transition: opacity 0.15s, transform 0.15s; }
+  .mainnav a { display: flex; align-items: center; gap: 12px; padding: 10px 12px; font-size: 1rem; white-space: nowrap; }
+  .mainnav a i { display: inline-block; width: 18px; text-align: center; color: var(--muted); }
+  .mainnav a[aria-current="page"] i { color: inherit; }
+  .mainnav-scrim { display: block; position: absolute; top: 100%; left: 0; right: 0; height: 100vh; background: var(--scrim); }
+  /* Aberto, a barra sobe acima do balão das sessões (z-index 30), para o véu cobri-lo também; os modais ficam acima. */
+  .topbar.is-nav-open { z-index: 35; }
+}
+
 /* O menu da conta: um botão com o avatar e o nome, e o painel logo abaixo, alinhado ao canto da barra (em tela
    estreita, colado à borda dela). */
 .topbar-inner { position: relative; }
@@ -724,7 +756,6 @@ td.actions { text-align: right; white-space: nowrap; }
 .catalog-title h2 { margin: 0; overflow-wrap: anywhere; }
 .catalog-title h2 .row-open { font-weight: inherit; }
 .catalog-title p { margin: 2px 0 0; overflow-wrap: anywhere; text-wrap: pretty; }
-.catalog-billing { display: flex; gap: 6px; flex-wrap: wrap; }
 .catalog-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 .catalog-actions:empty { display: none; }
 .catalog-none { margin: 0; }
@@ -744,7 +775,6 @@ td.actions { text-align: right; white-space: nowrap; }
   .catalog-title { flex: 1 1 0; }
   .catalog-more { display: block; }
   .catalog-actions { display: none; }
-  .catalog-billing { flex-basis: calc(100% - 54px); margin-left: 54px; }
 }
 
 /* A visão geral da organização: seis números, três por linha, cada um com o ícone na sua cor. */
@@ -1120,13 +1150,9 @@ html.modal-open { overflow: hidden; }
 }
 
 @media (max-width: 640px) {
-  .topbar-inner { padding: 10px 16px; gap: 6px 10px; }
-  /* No celular o nome da organização e o menu da conta dividem a primeira linha, e os itens ficam embaixo, na
-     largura toda: a barra é fixa, e uma linha a menos sobra para a página. */
-  .brand { flex: 1 1 0; min-width: 0; }
-  .brand span { overflow: hidden; text-overflow: ellipsis; }
-  .topbar-right { order: 2; }
-  .mainnav { order: 3; flex-basis: 100%; }
+  .topbar-inner { padding: 10px 16px; }
+  /* No celular o painel do menu de hambúrguer ocupa a largura toda, colado à barra. */
+  .mainnav { top: 100%; left: 0; width: auto; right: 0; max-width: none; max-height: calc(100dvh - 100%); border-width: 0 0 1px; border-radius: 0; padding: 8px 12px 12px; }
   .page { padding: 20px 16px 48px; }
   .user-menu-btn .name { display: none; }
 }
