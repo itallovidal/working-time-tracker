@@ -218,6 +218,7 @@ Se o convite foi criado com email, só esse email consegue aceitar. Um convite v
 | DELETE | `/api/orgs/:orgId/payouts/:payoutId` | `payments.manage` (dono) | Desfaz a baixa: o que ela cobria volta para `due[]`. `204`; `404 payment.payout_not_found` |
 | GET | `/api/orgs/:orgId/overview` | admin | Visão geral da organização: o tempo e o custo de todos os projetos em três janelas, e as horas de cada pessoa; a receita e a margem só vão para o dono (`null` para o admin). Veja abaixo |
 | GET | `/api/orgs/:orgId/solo/overview` | `receivables.manage` (dono), só no modo solo | A tela inicial do modo solo: horas, Receita, Receita projetada e o valor por hora efetivo, no total e por cliente, numa janela de calendário. `404` fora do modo solo. Veja abaixo |
+| GET | `/api/orgs/:orgId/solo/dedication` | `receivables.manage` (dono), só no modo solo | A dedicação de cada cliente com contrato mensal e estimativa de horas, no período do contrato em andamento (os detalhes do cliente). Veja abaixo |
 | GET | `/api/orgs/:orgId/working-now` | admin | Quem está com o ponto aberto na organização e em que tarefas, sem tempo nem dinheiro. Veja abaixo |
 | GET | `/api/orgs/:orgId/me/overview` | logado | O painel de quem pede: as horas dele (hoje, a semana, dia a dia e por projeto) e as tarefas dele, em todos os projetos. Veja abaixo |
 | GET | `/api/orgs/:orgId/me/tasks` | logado | As tarefas de quem pede, em todos os projetos, abertas ou concluídas, em páginas. Veja abaixo |
@@ -296,9 +297,13 @@ A organização é criada pelo signup, e o `organization_id` vem no `/api/auth/m
   },
   "customers": [
     { "customer": { "id": "…", "name": "Alfa" }, "kind": "hourly", "seconds": 23400,
-      "received_cents": 40000, "projected_cents": 65000, "effective_rate_cents": 10000, "below_min_rate": false },
+      "received_cents": 40000, "projected_cents": 65000, "effective_rate_cents": 10000, "below_min_rate": false,
+      "dedication": null },
     { "customer": { "id": "…", "name": "Beta" }, "kind": "monthly", "seconds": 14400,
-      "received_cents": 0, "projected_cents": 500000, "effective_rate_cents": 125000, "below_min_rate": false }
+      "received_cents": 0, "projected_cents": 500000, "effective_rate_cents": 125000, "below_min_rate": false,
+      "dedication": { "customer": { "id": "…", "name": "Beta" }, "period_start": "2026-11-01", "period_end": "2026-11-30",
+        "open": true, "estimated_hours": 40, "seconds": 14400, "percent": 10,
+        "projects": [ { "id": "…", "name": "Site", "seconds": 14400 } ] } }
   ],
   "internal_seconds": 5400
 }
@@ -320,6 +325,19 @@ A organização é criada pelo signup, e o `organization_id` vem no `/api/auth/m
   `seconds` são as horas das sessões dos projetos do cliente, também no mensal. Nunca é `null`: `[]` sem nada. As linhas, com
   `internal_seconds`, somam os `totals`.
 - **`internal_seconds`** são as horas dos projetos sem cliente (internos) na janela, só tempo. `0` sem elas.
+- **`dedication`**, na linha do cliente com contrato mensal e estimativa de horas
+  ([Decisão 26](../architecture/decisions.md#decisão-26-horas-estimadas-por-mês-no-contrato-mensal-só-para-acompanhar)):
+  as horas de um **período do contrato**, não da janela. Em `month`, o período em andamento; em `last_month`, o anterior a
+  ele; em `year`, sempre `null`. `null` também no por hora, sem estimativa e quando o contrato não cobre o período. Com o
+  fechamento no dia 31, o período é o mês da janela; com outro dia, `seconds` da linha e `dedication.seconds` medem
+  intervalos diferentes. A linha com dedicação entra em `customers` mesmo sem horas, recebimento nem valor na janela.
+  - `period_start` e `period_end` são os dias do período, inclusivos; `open` diz que ele ainda não fechou.
+  - `estimated_hours` é a estimativa do cliente; `seconds`, o tempo de todos os projetos do cliente no período, cada
+    sessão cortada nas bordas e a aberta até `generated_at`; `percent`, os dois divididos e arredondados (passa de 100).
+  - `projects` são os projetos do cliente com o tempo de cada um no período, por nome, os sem tempo com `0`.
+
+`GET /api/orgs/:orgId/solo/dedication` tem as mesmas regras de acesso e devolve a lista das dedicações, no mesmo formato,
+do período em andamento de cada cliente com contrato mensal e estimativa, por nome. `[]` sem nenhum.
 
 ### Quem está trabalhando agora
 
@@ -515,6 +533,7 @@ Todo cliente traz o **modo de cobrança** e os termos dele, que o `POST` e o `PA
 | `billing_mode` | `"hourly"` (padrão) ou `"monthly"` | Um ou outro, nunca os dois. Outro valor, ou vazio, é `400 customer.invalid_billing_mode` |
 | `hourly_rate_cents` | int | Só `hourly`, **obrigatório** nele (`400 request.field_required`, também com `null`): o valor por hora do cliente, o mesmo em todos os projetos dele. De 1000 (10,00) a 100000000: `400 customer.invalid_hourly_rate`. Mudar o valor vale para as sessões novas de todos os projetos do cliente. Só um cliente antigo, de antes da Decisão 21 e sem projetos, pode vir com `null` |
 | `monthly_fee_cents` | int ou `null` | Só `monthly`, obrigatório nele (`400 request.field_required`) e de 1 a 100000000 (`400 customer.invalid_monthly_fee`) |
+| `estimated_monthly_hours` | int ou `null` | Só `monthly`, opcional: as horas que o dono estima dedicar ao cliente em cada período do contrato, em todos os projetos dele, de 1 a 744 (`400 customer.invalid_estimated_hours`). Só acompanhamento: não muda nenhum valor (Decisão 26). `null` apaga |
 | `contract_start` | `YYYY-MM-DD` | Só `monthly`, obrigatório nele. Uma data que não existe é `400 request.field_invalid` |
 | `contract_end` | `YYYY-MM-DD` ou `""` | Só `monthly`, opcional (sem fim, o contrato segue). Tem de ser **depois** do início: `400 customer.invalid_contract_end` |
 | `billing_cycle` | `"monthly"` (padrão) ou `"biweekly"` | O ciclo do período. `monthly` fecha no `closing_day` de cada mês; `biweekly` fecha **a cada 14 dias** (o bi-weekly dos EUA, não a quinzena de 15 dias da regra de pagamento da pessoa) e só vale em `hourly`: num cliente mensal é `400 customer.field_hourly_only`. Outro valor, ou vazio, é `400 customer.invalid_billing_cycle` |
@@ -525,7 +544,7 @@ Todo cliente traz o **modo de cobrança** e os termos dele, que o `POST` e o `PA
 | `late_interest_bp_month` | int, padrão 0 | Só `monthly`. Os juros ao mês em pontos-base, de 0 a 10000 (`400 customer.invalid_late_interest`) |
 | `grace_days` | int, padrão 0 | Só `monthly`. Dias de tolerância depois do vencimento, de 0 a 365 (`400 customer.invalid_grace_days`) |
 
-- **Um modo ou o outro.** Um campo do outro modo, com valor, é recusado com o campo em `params.field`: `400 customer.field_hourly_only` (`hourly_rate_cents` num cliente mensal) ou `400 customer.field_monthly_only` (a mensalidade, o contrato, a multa, os juros ou a tolerância num cliente por hora). `null`, `""` e `0` são o padrão do campo, não valor. Trocar o modo apaga os campos do modo que saiu.
+- **Um modo ou o outro.** Um campo do outro modo, com valor, é recusado com o campo em `params.field`: `400 customer.field_hourly_only` (`hourly_rate_cents` num cliente mensal) ou `400 customer.field_monthly_only` (a mensalidade, a estimativa de horas, o contrato, a multa, os juros ou a tolerância num cliente por hora). `null`, `""` e `0` são o padrão do campo, não valor. Trocar o modo apaga os campos do modo que saiu.
 - **`monthly` só no modo solo.** Numa organização que não é solo, `billing_mode: "monthly"` é `400 customer.monthly_needs_solo` (`params.field` = `billing_mode`), na criação e na troca. Desligar o modo solo esconde as telas, e o cliente mensal segue guardado e editável.
 - **O modo trava com projetos.** Trocar o `billing_mode` de um cliente que já tem projetos é `409 customer.mode_locked` (`params.field` = `billing_mode`). Mandar o modo que ele já tem, e mexer nos outros termos, vale.
 - **O ciclo trava com recebíveis.** Com recebíveis no cliente, mudar o `billing_cycle` ou a `cycle_anchor` é `409 customer.cycle_locked`, porque os períodos novos cairiam por cima dos confirmados. A exceção é ficar em `biweekly` com a âncora no `period_end` do recebível mais recente, ou depois: os períodos novos começam depois dele. `params.field` é `billing_cycle` na volta ao mensal (também por uma troca de modo) e `cycle_anchor` no resto. Mandar o ciclo e a âncora que ele já tem passa.
@@ -539,6 +558,7 @@ Content-Type: application/json
 {
   "billing_mode": "monthly",
   "monthly_fee_cents": 630000,
+  "estimated_monthly_hours": 40,
   "contract_start": "2026-11-01",
   "contract_end": "",
   "closing_day": 5,
@@ -757,6 +777,7 @@ Tudo o que a aba Visão geral mostra, numa resposta só. É só de admins, porqu
 - `tasks.overdue` conta as tarefas com o prazo vencido. Tarefa sem prazo não entra, e como tarefa não tem estado de concluída, ela só sai da conta quando o prazo muda ou ela é apagada.
 - `integrations.items` vem da mais nova para a mais antiga, sem o token e sem o `metadata`. É `[]` quando não há integração.
 - `by_person` traz só quem tem sessão no projeto, de quem mais trabalhou para quem menos, e a soma das linhas dá os totais. Quem já saiu do projeto continua na lista, com `in_project: false`, e não entra em `people.total`. É `[]` quando ninguém bateu ponto.
+- `dedication` vem no projeto de um cliente com contrato mensal e estimativa de horas (Decisão 26): a dedicação do cliente no período do contrato em andamento, no formato da [tela inicial do modo solo](#visão-geral-do-modo-solo), mais `project_seconds`, o tempo deste projeto no período. `null` nos outros projetos e sem `billing.view`.
 
 ---
 
@@ -1095,7 +1116,10 @@ de 10,00 por hora: um aviso, não um erro).
   ajustada adiantado ou com o recebimento desfeito), `customer`, `kind`, `period_start`, `period_end`, `seconds`,
   `calculated_cents`, `amount_cents` (na calculada, o próprio `calculated_cents`), `extra_cents` (no mensal calculado,
   a parte que vem dos acréscimos mensais dos projetos do cliente), `due_date`, `invoice_number`, `note`, `late`,
-  `days_late`, `effective_rate_cents` e `below_min_rate`;
+  `days_late`, `effective_rate_cents`, `below_min_rate` e `dedication`;
+- `dedication` só vem na conta mensal de `in_progress[]`, quando o cliente tem estimativa de horas: as horas do período
+  contra ela, no formato da [tela inicial do modo solo](#visão-geral-do-modo-solo), com o tempo **de agora** (o `seconds`
+  da conta gravada é o da gravação). `null` no resto;
 - `received[]`: os recebidos, o mais recente primeiro, até 50.
 
 ---

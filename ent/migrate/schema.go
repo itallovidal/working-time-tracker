@@ -92,6 +92,7 @@ var (
 		{Name: "monthly_fee_cents", Type: field.TypeInt, Nullable: true},
 		{Name: "contract_start", Type: field.TypeString, Nullable: true},
 		{Name: "contract_end", Type: field.TypeString, Nullable: true},
+		{Name: "estimated_monthly_hours", Type: field.TypeInt, Nullable: true},
 		{Name: "closing_day", Type: field.TypeInt, Default: 31},
 		{Name: "payment_days", Type: field.TypeInt, Default: 0},
 		{Name: "billing_cycle", Type: field.TypeString, Default: "monthly"},
@@ -110,7 +111,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "customers_organizations_customers",
-				Columns:    []*schema.Column{CustomersColumns[20]},
+				Columns:    []*schema.Column{CustomersColumns[21]},
 				RefColumns: []*schema.Column{OrganizationsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},

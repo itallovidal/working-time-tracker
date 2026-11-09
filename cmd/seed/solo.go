@@ -237,7 +237,8 @@ func seedSolo(ctx context.Context, db *database.DB, now time.Time) soloSummary {
 	// Os clientes, com os termos de cada um:
 	//   - Agência Pixel, por hora: 135,00, fecha no dia 25 e paga em 10 dias.
 	//   - Clínica Aurora, contrato mensal de 6.300,00 desde o começo do histórico, fechando no último dia do mês (o
-	//     padrão), 5 dias para pagar, multa de 2%, juros de 1% ao mês e 3 dias de tolerância.
+	//     padrão), 5 dias para pagar, multa de 2%, juros de 1% ao mês e 3 dias de tolerância. A dona estima dedicar 32
+	//     horas por mês a ela (só acompanhamento, Decisão 26).
 	//   - Escola Horizonte, contrato mensal de 3.800,00 que acabou há quatro meses, 10 dias para pagar e sem multa.
 	//   - Café Bambu, por hora: 120,00, fecha no último dia do mês e paga em 15 dias.
 	//   - Editora Ventania, por hora: 110,00, fecha no último dia do mês e paga em 30 dias.
@@ -260,6 +261,7 @@ func seedSolo(ctx context.Context, db *database.DB, now time.Time) soloSummary {
 			in.PaymentDays = number(10)
 		case "aurora":
 			in.MonthlyFeeCents = money(630000)
+			in.EstimatedMonthlyHours = validate.Optional[int]{Set: true, Value: number(32)}
 			in.PaymentDays = number(5)
 			in.LateFeeBP = number(200)
 			in.LateInterestBPMonth = number(100)

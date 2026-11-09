@@ -997,6 +997,41 @@ com a pessoa entrando pelo login de sempre. O token pessoal continua igual.
 `PUBLIC_URL` derruba as conexões (o recurso muda). O que o Claude faz é o mesmo do token pessoal (Decisão 22). O como
 usar está em [api/mcp.md](../api/mcp.md), e a segurança em [security.md](security.md#oauth-do-mcp).
 
+### Decisão 26: Horas estimadas por mês no contrato mensal, só para acompanhar
+
+**Contexto:** no cliente com contrato mensal, a mensalidade não depende das horas, mas o dono continua batendo ponto
+nele (Decisão 20). Usando o app, ele sentiu falta de saber se está dedicando pouco ou muito ao contrato no mês: as horas
+apareciam, mas sem nada para comparar.
+
+**Escolha:** uma estimativa de horas por mês no cliente, e as horas do período do contrato contra ela.
+
+- **No cliente, junto da mensalidade:** `customers.estimated_monthly_hours`, opcional, horas inteiras de 1 a 744 (as de
+  um mês de 31 dias). É só do mensal: o por hora a recusa (`customer.field_monthly_only`), e a troca de modo a apaga com
+  o resto do contrato. Ela soma as horas de todos os projetos do cliente, porque o contrato é do cliente.
+- **O período é o do contrato,** o mesmo que a mensalidade paga: fecha no dia de fechamento do cliente, e só conta
+  enquanto o contrato cobre o período (`contractPeriods`). Antes do início e depois do fim não há dedicação.
+- **Só "18h de 40h" e a porcentagem.** Não há ritmo (o esperado até hoje), por escolha do dono. Passar de 100% deixa a
+  barra cheia, no tom de aviso.
+- **A conta é do domínio dos recebíveis** (`receivable.Dedication`), que já tem o período do contrato e as sessões por
+  cliente. Ela aparece em quatro lugares: no painel solo, numa coluna Estimativa (o período em andamento em "Este mês",
+  o anterior em "Mês passado", nada em "Ano"); nos detalhes do cliente (`GET /solo/dedication`); na visão geral do
+  projeto (`dedication`, com as horas do projeto, para quem vê a cobrança); e na lista Em andamento do A receber, com as
+  horas ao vivo mesmo no mês ajustado adiantado.
+- **Nada muda na cobrança:** a proposta, o recebível e o valor por hora efetivo continuam iguais.
+
+**Alternativas descartadas:**
+- **A estimativa em cada projeto:** separaria a estimativa da mensalidade, que mora no cliente (Decisão 21).
+- **O mês do calendário:** bateria com a coluna Horas do painel, mas um cliente que fecha no dia 25 seria medido num mês
+  que o contrato não paga. Com o fechamento no último dia (o padrão), os dois dão o mesmo resultado.
+- **A franquia de horas** (Decisão 20): a estimativa não cobra excedente nem muda valor nenhum. A franquia continua para
+  depois.
+- **Guardar a estimativa em cada período:** mudar a estimativa muda a comparação do período anterior também. Para
+  acompanhar o mês, um número só basta.
+
+**Consequências:** o painel solo pode mostrar, na mesma linha, horas diferentes: a coluna Horas é do mês do calendário,
+e a Estimativa é do período do contrato, que aparece embaixo quando é diferente. As regras de hoje estão em
+[money.md](../product/money.md#horas-estimadas-do-contrato-mensal).
+
 ## Riscos e trade-offs
 
 - **Limite de requisições das plataformas.** Buscar detalhes e sincronizar gasta a cota de cada plataforma. →

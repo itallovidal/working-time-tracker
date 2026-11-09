@@ -11,6 +11,7 @@ import (
 	"golang.org/x/text/language"
 
 	"working-time-tracker/internal/database"
+	"working-time-tracker/internal/domain/receivable"
 	"working-time-tracker/internal/validate"
 )
 
@@ -75,6 +76,11 @@ type SoloCustomer struct {
 	ProjectedCents     int     `json:"projected_cents"`
 	EffectiveRateCents *int    `json:"effective_rate_cents"`
 	BelowMinRate       bool    `json:"below_min_rate"`
+	// Dedication é, no cliente com contrato mensal e estimativa de horas, as horas de um período do contrato contra a
+	// estimativa (Decisão 26). O período é o do contrato (o dia de fechamento do cliente), não a janela: na janela
+	// month, o período em andamento; na last_month, o anterior a ele; na year, nenhum. Por isso Seconds e
+	// Dedication.Seconds só batem quando o cliente fecha no último dia do mês.
+	Dedication *receivable.Dedication `json:"dedication"`
 }
 
 // soloWindow é a janela já resolvida: os dias (para comparar com as datas de calendário dos recebíveis) e os instantes
@@ -167,6 +173,12 @@ func (s *Service) Solo(orgID, window string) (*SoloOverview, error) {
 	if err != nil {
 		return nil, err
 	}
+	var dedications []receivable.Dedication
+	if window != WindowYear {
+		if dedications, err = s.deps.Receivables.Dedications(orgID, window == WindowLastMonth); err != nil {
+			return nil, err
+		}
+	}
 
 	rows := make(map[uuid.UUID]*SoloCustomer, len(customers))
 	for _, c := range customers {
@@ -215,13 +227,18 @@ func (s *Service) Solo(orgID, window string) (*SoloOverview, error) {
 			row.ProjectedCents += p.CalculatedCents
 		}
 	}
+	for i := range dedications {
+		if row := rows[dedications[i].Customer.ID]; row != nil {
+			row.Dedication = &dedications[i]
+		}
+	}
 
-	// A tabela traz quem tem alguma coisa na janela, em ordem de nome (o do cadastro, sem acento nem caixa).
+	// A tabela traz quem tem alguma coisa na janela (ou a dedicação de um contrato), em ordem de nome (o do cadastro, sem acento nem caixa).
 	byName := collate.New(language.Und)
 	for _, row := range rows {
 		o.Totals.ReceivedCents += row.ReceivedCents
 		o.Totals.ProjectedCents += row.ProjectedCents
-		if row.Seconds <= 0 && row.ReceivedCents == 0 && row.ProjectedCents == 0 {
+		if row.Seconds <= 0 && row.ReceivedCents == 0 && row.ProjectedCents == 0 && row.Dedication == nil {
 			continue
 		}
 		row.EffectiveRateCents, row.BelowMinRate = effectiveRate(row.ProjectedCents, row.Seconds)
@@ -236,4 +253,13 @@ func (s *Service) Solo(orgID, window string) (*SoloOverview, error) {
 	})
 	o.Totals.EffectiveRateCents, o.Totals.BelowMinRate = effectiveRate(o.Totals.ProjectedCents, o.Totals.Seconds)
 	return o, nil
+}
+
+// SoloDedications é a dedicação de cada cliente com contrato mensal e estimativa de horas no período do contrato em
+// andamento, em ordem de nome. Quem chama garante que a organização é solo e que quem pede é o dono.
+func (s *Service) SoloDedications(orgID string) ([]receivable.Dedication, error) {
+	if _, err := uuid.Parse(orgID); err != nil {
+		return nil, database.ErrNotFound
+	}
+	return s.deps.Receivables.Dedications(orgID, false)
 }
