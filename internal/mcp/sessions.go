@@ -54,7 +54,7 @@ func (s *server) addSessionTools(srv *mcp.Server) {
 	}, s.addTaskToSession)
 	mcp.AddTool(srv, &mcp.Tool{
 		Name:        "stop_session_task",
-		Description: "Stop a running task in the open session of its project now; its time stays. The last running task cannot stop: use clock_out.",
+		Description: "Stop a running task in the open session of its project now; its time stays. The last running task cannot stop: use clock_out with that project_id.",
 		Annotations: write("Stop task in session", true),
 	}, s.stopSessionTask)
 	mcp.AddTool(srv, &mcp.Tool{
@@ -116,7 +116,33 @@ func (s *server) openHint(id *auth.Identity, projectID string) string {
 			names = append(names, st.Task.Name)
 		}
 	}
-	return fmt.Sprintf("Project %q already has an open session, running: %s. Use add_task_to_session (switch=true to switch tasks).", s.projectName(projectID), strings.Join(names, ", "))
+	return fmt.Sprintf("Project %s already has an open session, running: %s. Use add_task_to_session (switch=true to switch tasks).", s.projectLabel(open), strings.Join(names, ", "))
+}
+
+// projectLabel é o projeto da sessão para o Claude: o nome entre aspas e o id, que é o project_id do clock_out. O nome
+// vem da sessão (o store carrega o projeto) e, se faltar, do projeto.
+func (s *server) projectLabel(ws *work_session.WorkSession) string {
+	name := ""
+	if ws.Project != nil {
+		name = ws.Project.Name
+	} else {
+		name = s.projectName(ws.ProjectID.String())
+	}
+	return fmt.Sprintf("%q (%s)", name, ws.ProjectID)
+}
+
+// openList são os projetos das sessões abertas, para as dicas que dizem onde o ponto está aberto.
+func (s *server) openList(open []work_session.WorkSession) string {
+	names := make([]string, 0, len(open))
+	for i := range open {
+		names = append(names, s.projectLabel(&open[i]))
+	}
+	return strings.Join(names, ", ")
+}
+
+// lastTaskHint é a dica de quando a tarefa é a última em andamento da sessão: só o clock_out daquele projeto a para.
+func lastTaskHint(ws *work_session.WorkSession) string {
+	return fmt.Sprintf("It is the last running task of the session: to stop the clock in this project, use clock_out with project_id %s.", ws.ProjectID)
 }
 
 func (s *server) addTaskToSession(_ context.Context, req *mcp.CallToolRequest, in switchInput) (*mcp.CallToolResult, SessionOut, error) {
@@ -165,7 +191,7 @@ func (s *server) stopSessionTask(_ context.Context, req *mcp.CallToolRequest, in
 	}
 	ws, err := s.Sessions.UpdateTask(open.ProjectID.String(), open.ID.String(), link.ID.String(), work_session.TaskChange{Stop: true})
 	if errors.Is(err, work_session.ErrLastTask) {
-		return nil, SessionOut{}, s.failWith(err, "To stop everything, use clock_out.")
+		return nil, SessionOut{}, s.failWith(err, lastTaskHint(open))
 	}
 	if err != nil {
 		return nil, SessionOut{}, s.fail(err)
@@ -196,7 +222,7 @@ func (s *server) removeSessionTask(_ context.Context, req *mcp.CallToolRequest, 
 	}
 	ws, err := s.Sessions.RemoveTask(open.ProjectID.String(), open.ID.String(), link.ID.String())
 	if errors.Is(err, work_session.ErrLastTask) {
-		return nil, SessionOut{}, s.failWith(err, "To stop everything, use clock_out.")
+		return nil, SessionOut{}, s.failWith(err, lastTaskHint(open))
 	}
 	if err != nil {
 		return nil, SessionOut{}, s.fail(err)
@@ -221,11 +247,7 @@ func (s *server) clockOut(_ context.Context, req *mcp.CallToolRequest, in clockO
 		case 1:
 			projectID = open[0].ProjectID.String()
 		default:
-			names := make([]string, 0, len(open))
-			for i := range open {
-				names = append(names, fmt.Sprintf("%q (%s)", s.projectName(open[i].ProjectID.String()), open[i].ProjectID))
-			}
-			return nil, SessionOut{}, s.failWith(ErrProjectRequired, "Sessions are open in: "+strings.Join(names, ", ")+". Call clock_out again with project_id.")
+			return nil, SessionOut{}, s.failWith(ErrProjectRequired, "Sessions are open in: "+s.openList(open)+". Call clock_out again with project_id.")
 		}
 	}
 	open, err := s.openSession(id, projectID)
@@ -252,7 +274,12 @@ func (s *server) openSession(id *auth.Identity, projectID string) (*work_session
 		return nil, s.fail(err)
 	}
 	if open == nil {
-		return nil, s.failWith(work_session.ErrNotOpen, "This project has no open session. Use clock_in to start the clock on a task.")
+		hint := "This project has no open session."
+		// Onde o ponto está aberto ajuda o Claude a ver que errou o projeto; sem conseguir ler, a dica fica sem a lista.
+		if others, err := s.Sessions.Open(id.PersonID.String()); err == nil && len(others) > 0 {
+			hint += " Sessions are open in: " + s.openList(others) + "."
+		}
+		return nil, s.failWith(work_session.ErrNotOpen, hint+" Use clock_in to start the clock on a task.")
 	}
 	return open, nil
 }

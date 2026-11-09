@@ -63,9 +63,9 @@ type Period struct {
 type OrgPersonTotal struct {
 	Person     Person `json:"person"`
 	WorkingNow bool   `json:"working_now"`
-	// WorkingOn são as tarefas que a pessoa tem na sessão aberta neste instante, na ordem em
-	// que entraram, cada uma com o projeto. Vem vazia (nunca nula) para quem não trabalha agora
-	// e para quem abriu uma sessão que já ficou sem tarefa.
+	// WorkingOn são as tarefas que a pessoa tem nas sessões abertas neste instante (uma por projeto), cada uma com o
+	// projeto: as da sessão que começou primeiro antes, e dentro de cada sessão na ordem em que entraram. Vem vazia
+	// (nunca nula) para quem não trabalha agora e para quem abriu uma sessão que já ficou sem tarefa.
 	WorkingOn         []WorkingOn `json:"working_on"`
 	Last7DaysSeconds  float64     `json:"last_7_days_seconds"`
 	Last30DaysSeconds float64     `json:"last_30_days_seconds"`
@@ -201,8 +201,9 @@ func (s *Service) Organization(orgID, viewerID string) (*OrgOverview, error) {
 // trabalha agora sem somar o tempo de ninguém.
 type Presence struct {
 	PersonID uuid.UUID `json:"person_id"`
-	// WorkingOn são as tarefas que a pessoa tem nas sessões abertas neste instante (uma por projeto), na ordem
-	// em que entraram. Vem vazia (nunca nula) quando a sessão já ficou sem tarefa.
+	// WorkingOn são as tarefas que a pessoa tem nas sessões abertas neste instante (uma por projeto): as da sessão que
+	// começou primeiro antes, e dentro de cada sessão na ordem em que entraram. Vem vazia (nunca nula) quando as
+	// sessões já ficaram sem tarefa.
 	WorkingOn []WorkingOn `json:"working_on"`
 }
 
@@ -217,7 +218,7 @@ func (s *Service) WorkingNow(orgID string) ([]Presence, error) {
 	return s.openWork(orgID)
 }
 
-// addWorkingOn põe em cada pessoa com o ponto aberto as tarefas que estão na sessão dela agora
+// addWorkingOn põe em cada pessoa com o ponto aberto as tarefas que estão nas sessões dela agora
 // (os intervalos sem fim), com o nome do projeto. Só olha as pessoas que a conta principal já
 // marcou como trabalhando, para working_on nunca vir cheio sem working_now.
 func (s *Service) addWorkingOn(orgID string, byPerson map[uuid.UUID]*OrgPersonTotal) error {

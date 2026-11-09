@@ -200,7 +200,7 @@ func (o *Overview) addSessions(sessions []work_session.WorkSession, inProject ma
 		pt.SessionCount++
 		pt.PayAmountCents = sum(pt.PayAmountCents, s.PayAmountCents)
 		pt.BillAmountCents = sum(pt.BillAmountCents, s.BillAmountCents)
-		// Uma pessoa só tem uma sessão aberta por vez, então cada uma conta uma vez.
+		// Uma pessoa tem no máximo uma sessão aberta neste projeto (Decisão 27), então cada uma conta uma vez.
 		if s.EndAt == nil {
 			pt.WorkingNow = true
 			o.People.WorkingNow++

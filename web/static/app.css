@@ -903,13 +903,17 @@ td.actions { text-align: right; white-space: nowrap; }
 /* As sessões abertas (partials/active_session.gohtml): uma pilha de cartões, um por projeto com o ponto aberto, presa ao
    canto de baixo à direita, em todas as telas, acima da barra (20) e abaixo do modal (40). O cartão fechado é só a faixa
    verde; aberto ganha a moldura e as tarefas, que crescem para cima. A pilha rola quando passa da altura da tela; o
-   respiro em volta é para a rolagem não cortar a sombra dos cartões. Com ela no ar, o body leva has-dock: a página
-   ganha respiro embaixo e os avisos sobem para acima dela (--dock-h é a altura dela, posta pelo sessionDock). */
+   respiro em volta é para a rolagem não cortar a sombra dos cartões. A caixa tem a largura de um cartão mesmo quando só
+   aparece a linha de outros projetos, então só os cartões e essa linha pegam o clique: o vazio em volta deixa passar
+   para a página embaixo. Com ela no ar, o body leva has-dock: a página ganha embaixo a altura dela, para o fim não ficar
+   coberto com vários cartões, e os avisos sobem para acima dela (--dock-h é a altura dela, posta pelo sessionDock). */
 .session-dock {
   position: fixed; right: 8px; bottom: 8px; z-index: 30;
   width: min(356px, calc(100vw - 16px)); max-height: calc(100dvh - 16px); overflow-y: auto;
   display: flex; flex-direction: column; gap: 6px; padding: 8px;
+  pointer-events: none;
 }
+.session-dock > * { pointer-events: auto; }
 .session-card { display: flex; flex-direction: column; gap: 6px; flex: none; border-radius: 12px; }
 .session-card.is-open { padding: 6px; background: var(--surface); border: 1px solid var(--rule-strong); box-shadow: var(--shadow); }
 .session-dock-toggle {
@@ -946,7 +950,7 @@ td.actions { text-align: right; white-space: nowrap; }
 .session-dock-task-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
 .session-dock-task .fa-arrow-right { margin-left: auto; flex: none; color: var(--muted); }
 .session-dock-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 2px 2px 0; }
-.has-dock .page { padding-bottom: 96px; }
+.has-dock .page { padding-bottom: max(96px, calc(var(--dock-h, 60px) + 24px)); }
 .has-dock .toasts { bottom: calc(var(--dock-h, 60px) + 12px); }
 @media (prefers-reduced-motion: reduce) { .session-dock-chevron { transition: none; } }
 

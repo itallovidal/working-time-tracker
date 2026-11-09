@@ -1264,7 +1264,7 @@
       "_id": "req_07_01",
       "_type": "request",
       "parentId": "fld_07",
-      "name": "Sessão ativa",
+      "name": "Sessões abertas",
       "method": "GET",
       "url": "{{base_url}}/api/work-sessions/open",
       "authentication": {},

@@ -46,7 +46,7 @@ type SessionTask struct {
 type WorkSession struct {
 	ID        uuid.UUID `json:"id"`
 	ProjectID uuid.UUID `json:"project_id"`
-	// Project vem quando o store carrega o projeto (as sessões abertas e a sessão pelo id).
+	// Project vem quando o store carrega o projeto: ListOpenByPerson, GetOpenByPersonProject e GetByID.
 	Project *Project `json:"project,omitempty"`
 	// Tasks são as tarefas trabalhadas na sessão, na ordem em que entraram. A sessão começa
 	// com uma e ganha outras depois; só fica sem nenhuma se as tarefas forem excluídas.
