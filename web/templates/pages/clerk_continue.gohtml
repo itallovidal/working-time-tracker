@@ -2,7 +2,7 @@
 {{/* A volta do Clerk: o token de sessão dele vira, aqui, uma sessão do sistema. Ver clerkContinue em auth.js. */}}
 <main class="auth-page">
   <div class="auth-card" x-data="clerkContinue">
-    <span class="brand"><span class="brand-mark" aria-hidden="true"></span>Working Time Tracker</span>
+    <span class="brand"><img class="brand-mark" src="/static/favicon.svg" alt="" width="26" height="26">Working Time Tracker</span>
 
     <div class="stack" x-show="state === 'working'">
       <h1>{{.T "auth.clerk.finishing"}}</h1>

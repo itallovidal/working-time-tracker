@@ -7,7 +7,7 @@
 <main class="page help {{if .Me}}has-topbar{{end}}" x-data="helpPage">
   {{- if not .Me}}
   <div class="help-public">
-    <span class="brand"><span class="brand-mark" aria-hidden="true"></span>Working Time Tracker</span>
+    <span class="brand"><img class="brand-mark" src="/static/favicon.svg" alt="" width="26" height="26">Working Time Tracker</span>
     <a class="btn btn-secondary btn-sm" href="/login">{{.T "auth.login.submit"}}</a>
     <a class="btn btn-sm" href="/signup">{{.T "auth.signup.submit"}}</a>
     {{/* O toggle flutuante do layout cobriria os cartões ao rolar; aqui ele é parte do cabeçalho. */}}
