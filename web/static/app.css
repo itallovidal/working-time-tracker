@@ -498,6 +498,8 @@ input, select, textarea {
   padding: 8px 10px; width: 100%; min-width: 0;
 }
 textarea { resize: vertical; min-height: 72px; }
+/* Caixa só de leitura que cresce com o texto (o fit do componente mede a altura): sem alça nem rolagem dentro. */
+.textarea-fit { resize: none; overflow: hidden; min-height: 0; }
 input:focus, select:focus, textarea:focus { outline: 2px solid var(--focus); outline-offset: -1px; border-color: transparent; }
 input[aria-invalid="true"] { border-color: var(--danger); }
 /* Campo desligado: sem isto ele fica igual aos outros, porque as cores acima

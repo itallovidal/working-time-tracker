@@ -686,43 +686,53 @@ profile:
   title_other: Perfil do colaborador
   edit: Editar perfil
   tabs_label: O que editar
-  claude:
-    title: Conectar ao Claude
-    intro: "O Claude cria e atualiza as suas tarefas, pega tarefas, sincroniza com as integrações do projeto e bate o seu ponto, como você. Ele vê o que você vê, menos os valores em dinheiro."
-    app_title: claude.ai, Claude Desktop e celular
-    app_steps: "No claude.ai, abra Personalizar → Conectores → Adicionar conector personalizado e cole o endereço abaixo. Em OAuth, deixe “Usar a identidade publicada do Claude”. O Claude abre esta página para você entrar e permitir, e o conector passa a valer também no Claude Desktop e no app do celular."
-    app_url: Endereço do conector
-    copy_url: Copiar endereço
-    app_code: "No Claude Code, o mesmo endereço entra sem token: rode este comando e, numa conversa, use /mcp e escolha Authenticate."
-    app_code_command: Comando do Claude Code
-    connections_title: Apps conectados
-    connections_loading: Carregando os apps…
-    connections_empty: Nenhum app conectado ainda
-    connections_empty_text: Conecte o Claude pelo endereço acima.
-    col_app: App
+  mcp:
+    title: Conector MCP
+    help: Como funciona o conector MCP
+    help_title: Conector MCP
+    help_intro: "Um assistente conectado, como o Claude, cria e atualiza as suas tarefas, pega tarefas, sincroniza com as integrações do projeto e bate o seu ponto, como você. Ele vê o que você vê, menos os valores em dinheiro."
+    help_oauth_app: "No claude.ai, abra Personalizar → Conectores → Adicionar\u00a0conector\u00a0personalizado e cole este endereço:"
+    help_oauth_app_next: "Em OAuth, deixe “Usar\u00a0a\u00a0identidade\u00a0publicada\u00a0do\u00a0Claude”. O Claude abre este sistema para você entrar e permitir, e o conector passa a valer também no Claude Desktop e no app do celular."
+    help_oauth_code: "No Claude Code, copie o prompt da aba OAuth e cole numa conversa: o Claude adiciona o conector e explica como entrar (/mcp, wtt e Authenticate)."
+    help_oauth_limits: "Por enquanto, só os apps do Claude entram por OAuth. A conexão cai depois de 30\u00a0dias sem uso."
+    help_token: "Para o Claude Code sem a autorização no navegador, ou outro cliente MCP que aceite um cabeçalho: o token vai no comando e vence na data que você escolher. Ele aparece uma vez só, quando é gerado."
+    help_password: Trocar a senha desconecta todos os apps e revoga todos os tokens.
+    help_done: Entendi
+    connected_title: Conectados
+    loading: Carregando…
+    empty: Nada conectado ainda
+    empty_text: Conecte um app por OAuth ou por token, logo abaixo.
+    col_name: Nome
+    col_kind: Tipo
     col_connected: Conectado em
-    col_drops: Cai sem uso em
+    col_last_used: Último uso
+    col_expires: Vence em
+    kind_oauth: OAuth
+    kind_token: Token
+    never_used: Nunca usado
+    expired: Venceu
     disconnect: Desconectar
     disconnect_question: Desconectar este app?
     disconnected: App desconectado. Para entrar de novo, ele precisa da sua autorização.
-    connections_note: A conexão cai depois de 30 dias sem uso. Trocar a senha desconecta todos os apps.
-    tokens_title: Token pessoal
-    tokens_intro: "Para o Claude Code sem a autorização no navegador: um token que vai no comando e vence na data que você escolher."
-    new: Novo token
-    loading: Carregando os tokens…
-    empty: Nenhum token ainda
-    empty_text: Gere um token para conectar o Claude Code a este sistema.
-    col_name: Nome
-    col_token: Token
-    col_last_used: Último uso
-    col_expires: Vence em
-    never_used: Nunca usado
-    expired: Venceu
     revoke: Revogar
     revoke_question: Revogar este token?
-    revoked: Token revogado. O Claude que o usava não entra mais.
-    password_note: Trocar a senha revoga todos os seus tokens.
-    modal_title: Novo token do Claude
+    revoked: Token revogado. Quem o usava não entra mais.
+    connect_title: Conectar
+    method_oauth: OAuth
+    method_token: Token pessoal
+    app_url: Endereço do conector
+    code_command: Comando do Claude Code
+    code_prompt: Prompt para o Claude Code
+    code_prompt_text: "Configure o conector MCP do Working Time Tracker no meu Claude Code. Rode: `{{.command}}`. Depois, me explique como autenticar (/mcp, wtt e Authenticate)."
+    copy: Copiar
+    copy_url: Copiar endereço
+    copy_command: Copiar comando
+    copy_prompt: Copiar prompt
+    copy_token: Copiar token
+    copied: Copiado.
+    token_text: Um token que vai no comando e vence na data que você escolher.
+    new: Novo token
+    modal_title: Novo token
     name: Nome
     name_hint: Para reconhecê-lo depois, como "Claude Code no notebook".
     days: Validade
@@ -731,13 +741,9 @@ profile:
     days_365: 1 ano
     submit: Gerar token
     copy_now: "Copie agora: o token não aparece de novo. Quem o tiver age como você até ele vencer ou ser revogado."
-    command: Comando do Claude Code
     command_hint: Rode no terminal. Depois, numa conversa do Claude Code, peça por exemplo "quais são as minhas tarefas?".
     token: Token
     token_hint: Para colar em outro lugar, como a configuração de um projeto. Guarde-o como uma senha.
-    copy_command: Copiar comando
-    copy_token: Copiar token
-    copied: Copiado.
     done: Pronto
   loading: Carregando o perfil…
   data: Dados
@@ -969,7 +975,7 @@ help:
       rates: "“Projetos e valores”: quanto você recebe por hora em cada projeto e o que fez neles, no período e desde o início. Só você e os administradores veem."
       edit: "“Editar perfil” abre os dados pessoais (nome e email, que é o que você usa para entrar) e, na aba “Senha”, a troca de senha, que encerra as suas outras sessões."
       language: "O idioma (PT | EN), a “Ajuda” e o “Sair” ficam no mesmo menu da conta, e o navegador lembra o idioma escolhido."
-      claude: "Em “Conectar ao Claude”, o Claude passa a criar e atualizar as suas tarefas, pegar tarefas, sincronizar e bater o seu ponto, como você e sem ver valores em dinheiro. No claude.ai (e, com ele, no Claude Desktop e no celular), cole o endereço do conector em Personalizar → Conectores e permita o acesso; a lista “Apps conectados” mostra o que está ligado e desconecta. Para o Claude Code, o “Novo token” gera um token e o comando: o token aparece uma vez só, vence na data escolhida e pode ser revogado ali. Trocar a senha desconecta os apps e revoga os tokens."
+      mcp: "Em “Conector MCP”, um assistente como o Claude passa a criar e atualizar as suas tarefas, pegar tarefas, sincronizar e bater o seu ponto, como você e sem ver valores em dinheiro. A lista “Conectados” mostra os apps e os tokens que entram, e desconecta ou revoga cada um. Embaixo, escolha como conectar: por OAuth, colando no claude.ai o endereço do conector, que o “?” mostra (Personalizar → Conectores; vale também no Claude Desktop e no celular) ou colando no Claude Code o prompt pronto, que ele mesmo configura; ou por um token pessoal, que aparece uma vez só e vence na data escolhida. O “?” ao lado do título explica os passos e tem o endereço do conector. Trocar a senha desconecta os apps e revoga os tokens."
   concepts:
     rates:
       title: Valor por hora

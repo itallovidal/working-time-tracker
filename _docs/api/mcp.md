@@ -14,8 +14,9 @@ Há dois jeitos de entrar:
 
 ## Conectar
 
-O endereço do conector é o `PUBLIC_URL` mais `/mcp` (`https://<endereço do sistema>/mcp`). O perfil o mostra em
-**Conectar ao Claude**, com o botão de copiar.
+O endereço do conector é o `PUBLIC_URL` mais `/mcp` (`https://<endereço do sistema>/mcp`). O perfil o mostra no **?** ao
+lado do título **Conector MCP**, no passo do claude.ai, com o botão de copiar; a aba **OAuth** da seção tem um prompt
+para o Claude Code, que já o leva.
 
 ### claude.ai, Claude Desktop e celular
 
@@ -27,11 +28,12 @@ O endereço do conector é o `PUBLIC_URL` mais `/mcp` (`https://<endereço do si
 3. Numa conversa, peça, por exemplo, "quais são as minhas tarefas?" ou "bate o ponto na tarefa X". O conector vale
    também no Claude Desktop e no app do celular, com a mesma conta do Claude.
 
-A conexão aparece em **Perfil → Conectar ao Claude → Apps conectados**, de onde também se desconecta.
+A conexão aparece em **Perfil → Conector MCP → Conectados**, de onde também se desconecta.
 
 ### Claude Code
 
-Com o OAuth, sem token:
+Com o OAuth, sem token. O jeito mais curto é o **Copiar prompt** da aba **OAuth** do perfil: colado numa conversa do
+Claude Code, ele pede ao Claude que rode o comando abaixo e explique como autenticar. À mão:
 
 ```bash
 claude mcp add --transport http --scope user wtt https://<endereço do sistema>/mcp
@@ -42,7 +44,7 @@ consentimento. Cada máquina vira um app conectado.
 
 Ou com um **token pessoal**:
 
-1. No sistema, abra **Perfil** e, em **Conectar ao Claude → Token pessoal**, clique em **Novo token**. Dê um nome
+1. No sistema, abra **Perfil** e, em **Conector MCP → Conectar**, escolha **Token pessoal** e clique em **Novo token**. Dê um nome
    (para reconhecê-lo depois) e escolha a validade: 30, 90 ou 365 dias.
 2. O modal mostra o token **uma vez só**, com o comando pronto. Rode no terminal:
 
@@ -110,7 +112,7 @@ O código está em `internal/oauth` (o protocolo) e em `internal/domain/auth/oau
   O token de renovação anterior, mandado de novo em até 60 segundos, recebe o mesmo sucessor (dois processos renovando
   juntos); depois disso é reuso, e a conexão cai inteira.
 - **O código** vale 2 minutos e uma vez só: a troca o gasta na primeira tentativa, e um segundo uso derruba a conexão.
-- **Desconectar:** na lista **Apps conectados** do perfil, pelo `/oauth/revoke` ou trocando a senha, que desconecta
+- **Desconectar:** na lista **Conectados** do perfil, pelo `/oauth/revoke` ou trocando a senha, que desconecta
   todos os apps. Cada pessoa tem até 10 apps conectados; passando disso, sai o que está há mais tempo sem uso. Uma
   autorização que o app ainda não trocou não conta nesse limite nem tira um app conectado.
 - **Conectar de novo:** o claude.ai tem uma conexão por pessoa. Quando ele conecta de novo, a conexão nova substitui a
