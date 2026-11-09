@@ -16,7 +16,8 @@ func mainNav(t *testing.T, body string) []string {
 	}
 	nav := body[start : start+strings.Index(body[start:], "</nav>")]
 	var items []string
-	for _, m := range regexp.MustCompile(`<a href="([^"]+)"\s*(aria-current="page")?>([^<]+)</a>`).FindAllStringSubmatch(nav, -1) {
+	// Cada item tem o seu ícone, que só aparece no painel do menu de hambúrguer.
+	for _, m := range regexp.MustCompile(`<a href="([^"]+)"\s*(aria-current="page")?><i class="fa-solid fa-[a-z-]+" aria-hidden="true"></i> ([^<]+)</a>`).FindAllStringSubmatch(nav, -1) {
 		item := m[3] + " " + m[1]
 		if m[2] != "" {
 			item += " (current)"
@@ -78,7 +79,7 @@ func TestPages_MainNavHasOnePagePerSubject(t *testing.T) {
 		if strings.Contains(body, "Seções da organização") {
 			t.Errorf("%s: GET %s still has the organization tab strip", c.who, c.path)
 		}
-		topbar := body[strings.Index(body, `<header class="topbar">`):strings.Index(body, `</header>`)]
+		topbar := body[strings.Index(body, `<header class="topbar"`):strings.Index(body, `</header>`)]
 		if strings.Contains(topbar, "brand-mark") || !strings.Contains(topbar, `<a class="brand" href="`+home+`"><span data-org-name>Org</span></a>`) {
 			t.Errorf("%s: GET %s: the brand should be just the organization name, without the icon", c.who, c.path)
 		}
@@ -136,5 +137,29 @@ func TestPages_AccountMenu(t *testing.T) {
 	// Sem login não há barra nem menu.
 	if strings.Contains(do(e, "GET", "/login", "", "").Body.String(), "nav-menu") {
 		t.Error("the login page has the account menu")
+	}
+}
+
+// Abaixo de 1024px os itens da barra vão para um painel: o botão de hambúrguer, antes do nome da organização, abre o
+// #mainnav (aria-controls, aria-expanded) e tem um nome para o leitor de tela; o véu atrás do painel fecha ao toque.
+func TestPages_MainNavMenuButton(t *testing.T) {
+	e := newServer(t)
+	admin := signup(t, e, "Org", "ana@test.com")
+	body := do(e, "GET", "/orgs/"+admin.orgID, "", admin.session).Body.String()
+	topbar := body[strings.Index(body, `<header class="topbar"`):strings.Index(body, `</header>`)]
+
+	button := regexp.MustCompile(`<button type="button" class="mainnav-toggle"[^>]*>`).FindString(topbar)
+	for _, want := range []string{`aria-controls="mainnav"`, `:aria-expanded="open.toString()"`, `@click="toggle()"`} {
+		if !strings.Contains(button, want) {
+			t.Errorf("the menu button = %q, want it to contain %q", button, want)
+		}
+	}
+	for _, want := range []string{`x-data="mainNav"`, `<span class="sr-only">Menu de páginas</span>`, `<nav class="mainnav" id="mainnav"`, `class="mainnav-scrim"`} {
+		if !strings.Contains(topbar, want) {
+			t.Errorf("the top bar does not contain %q", want)
+		}
+	}
+	if strings.Index(topbar, `class="mainnav-toggle"`) > strings.Index(topbar, `class="brand"`) {
+		t.Error("the menu button should come before the organization name")
 	}
 }

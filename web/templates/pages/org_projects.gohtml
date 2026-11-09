@@ -8,7 +8,8 @@
     <div>
       <div class="eyebrow" data-org-name>{{.Me.OrganizationName}}</div>
       <h1>{{.T "nav.customers_projects"}}</h1>
-      <p class="lede">{{if .Can "customers.manage"}}{{.T "org.catalog.intro"}}{{else}}{{.T "org.catalog.intro_member"}}{{end}}</p>
+      {{/* Quem gerencia os clientes não tem frase de abertura: a página fala por si. */}}
+      {{if not (.Can "customers.manage")}}<p class="lede">{{.T "org.catalog.intro_member"}}</p>{{end}}
     </div>
     <div class="row">
       {{if .Can "customers.manage"}}
@@ -60,14 +61,6 @@
               <button type="button" class="user-menu-item" x-show="g.customer" @click="open = false; openDetails(g.customer)">{{template "icon" "circle-info"}} {{.T "org.catalog.details"}}</button>
               <button type="button" class="user-menu-item" @click="open = false; openCreate(g.customer ? g.customer.id : '')">{{template "icon" "plus"}} {{.T "org.catalog.new_project"}}</button>
             </div>
-          </div>
-          {{end}}
-          {{/* A cobrança do cliente, só para quem gerencia os clientes: no solo, o modo e o valor; na equipe, o valor por
-               hora. O resto dos termos fica nos detalhes. */}}
-          {{if .Can "customers.manage"}}
-          <div class="catalog-billing" x-show="g.customer">
-            {{if .Me.OrganizationSolo}}<span class="badge" x-text="g.customer && billingMode(g.customer)"></span>{{end}}
-            <span class="badge num" :class="g.customer && WTT.billing.withoutRate(g.customer) && 'badge-warn'" x-text="g.customer && billingAmount(g.customer)"></span>
           </div>
           {{end}}
           {{if .IsAdmin}}

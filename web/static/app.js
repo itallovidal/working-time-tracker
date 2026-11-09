@@ -1306,6 +1306,27 @@
     }));
 
     // O menu da conta, no canto da barra superior: o perfil, a ajuda, o idioma e a saída.
+    // mainNav é o menu de hambúrguer da barra superior (partials/topbar.gohtml). Abaixo de 1024px os itens ficam num
+    // painel que o botão abre; o painel fecha com Esc, com um clique ou o foco fora dele e do botão, ao voltar para a
+    // página pelo histórico e quando a tela alarga. Na tela larga os itens ficam na barra e open não muda nada.
+    Alpine.data('mainNav', () => ({
+      open: false,
+      init() {
+        matchMedia('(min-width: 1024px)').addEventListener('change', () => this.close());
+      },
+      toggle() {
+        this.open = !this.open;
+      },
+      // close(refocus) devolve o foco ao botão quando ele estava num item do painel, para não se perder ao fechar.
+      close(refocus) {
+        if (!this.open) return;
+        this.open = false;
+        if (refocus && this.$refs.nav.contains(document.activeElement)) this.$refs.toggle.focus();
+      },
+      away(e) {
+        if (this.open && !this.$refs.toggle.contains(e.target) && !this.$refs.nav.contains(e.target)) this.close();
+      },
+    }));
     Alpine.data('userMenu', () => ({
       open: false,
       busy: false,

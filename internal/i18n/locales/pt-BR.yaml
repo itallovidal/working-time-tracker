@@ -71,6 +71,7 @@ titles:
 
 nav:
   label: Páginas
+  menu: Menu de páginas
   home: Início
   customers_projects: Clientes e Projetos
   people: Colaboradores
@@ -1167,7 +1168,6 @@ org:
     created: Projeto criado.
   # Clientes e Projetos: cada cliente com os projetos dele, e os projetos internos no fim.
   catalog:
-    intro: Cada cliente com os projetos dele. A cobrança do cliente vale para todos os projetos dele, e cada projeto pode somar um acréscimo.
     intro_member: Os seus projetos, agrupados pelo cliente de cada um.
     loading: Carregando clientes e projetos…
     empty: Nenhum cliente nem projeto ainda
