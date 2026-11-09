@@ -67,6 +67,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `auth.clerk_invite_failed` | 502 | — | `o serviço de login não aceitou o convite. Confira o email e tente de novo` | `the sign-in service did not accept the invitation. Check the email and try again` |
 | `auth.clerk_token_invalid` | 401 | — | `não foi possível confirmar o seu login. Entre de novo` | `could not confirm your sign-in. Sign in again` |
 | `auth.clerk_unavailable` | 502 | — | `o serviço de login não respondeu. Tente de novo em instantes` | `the sign-in service did not answer. Try again in a moment` |
+| `auth.connection_not_found` | 404 | — | `app conectado não encontrado` | `connected app not found` |
 | `auth.invalid_country` | 400 | — | `país inválido: use um código como BR ou US` | `invalid country: use a code like BR or US` |
 | `auth.invalid_credentials` | 401 | — | `email ou senha incorretos` | `wrong email or password` |
 | `auth.invite_email_mismatch` | 400 | — | `este convite foi feito para outro email` | `this invitation was made for another email` |
@@ -222,6 +223,12 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `mcp.task_already_active` | 400 | — | `esta tarefa já está em andamento na sessão` | `this task is already running in the session` |
 | `mcp.task_not_in_session` | 400 | — | `esta tarefa não está em andamento na sessão aberta` | `this task is not running in the open session` |
 | `mcp.unknown_label` | 400 | `label`, `available` | `o projeto não tem a etiqueta {{.label}}; as que existem: {{.available}}` | `the project has no label {{.label}}; the ones it has: {{.available}}` |
+
+### oauth
+
+| Código | Status | Parâmetros | pt-BR | en |
+|---|---|---|---|---|
+| `oauth.request_invalid` | 400 | — | `o pedido de conexão não confere mais; comece de novo pelo app` | `the connection request no longer checks out; start again from the app` |
 
 ### organization
 

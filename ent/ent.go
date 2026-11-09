@@ -15,6 +15,8 @@ import (
 	"working-time-tracker/ent/invite"
 	"working-time-tracker/ent/issuesync"
 	"working-time-tracker/ent/label"
+	"working-time-tracker/ent/oauthaccesstoken"
+	"working-time-tracker/ent/oauthgrant"
 	"working-time-tracker/ent/organization"
 	"working-time-tracker/ent/payout"
 	"working-time-tracker/ent/person"
@@ -90,24 +92,26 @@ var (
 func checkColumn(t, c string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
-			apitoken.Table:        apitoken.ValidColumn,
-			allocation.Table:      allocation.ValidColumn,
-			customer.Table:        customer.ValidColumn,
-			integration.Table:     integration.ValidColumn,
-			invite.Table:          invite.ValidColumn,
-			issuesync.Table:       issuesync.ValidColumn,
-			label.Table:           label.ValidColumn,
-			organization.Table:    organization.ValidColumn,
-			payout.Table:          payout.ValidColumn,
-			person.Table:          person.ValidColumn,
-			project.Table:         project.ValidColumn,
-			receivable.Table:      receivable.ValidColumn,
-			session.Table:         session.ValidColumn,
-			task.Table:            task.ValidColumn,
-			team.Table:            team.ValidColumn,
-			teammembership.Table:  teammembership.ValidColumn,
-			worksession.Table:     worksession.ValidColumn,
-			worksessiontask.Table: worksessiontask.ValidColumn,
+			apitoken.Table:         apitoken.ValidColumn,
+			allocation.Table:       allocation.ValidColumn,
+			customer.Table:         customer.ValidColumn,
+			integration.Table:      integration.ValidColumn,
+			invite.Table:           invite.ValidColumn,
+			issuesync.Table:        issuesync.ValidColumn,
+			label.Table:            label.ValidColumn,
+			oauthaccesstoken.Table: oauthaccesstoken.ValidColumn,
+			oauthgrant.Table:       oauthgrant.ValidColumn,
+			organization.Table:     organization.ValidColumn,
+			payout.Table:           payout.ValidColumn,
+			person.Table:           person.ValidColumn,
+			project.Table:          project.ValidColumn,
+			receivable.Table:       receivable.ValidColumn,
+			session.Table:          session.ValidColumn,
+			task.Table:             task.ValidColumn,
+			team.Table:             team.ValidColumn,
+			teammembership.Table:   teammembership.ValidColumn,
+			worksession.Table:      worksession.ValidColumn,
+			worksessiontask.Table:  worksessiontask.ValidColumn,
 		})
 	})
 	return columnCheck(t, c)

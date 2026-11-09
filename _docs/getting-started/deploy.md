@@ -201,6 +201,11 @@ Depois, cada `fly deploy` constrói e sobe a versão nova. `fly logs` mostra o l
 - Se usar as integrações ou o Clerk, troque o endereço de retorno para o `PUBLIC_URL`: a "Authorization callback URL"
   do app OAuth do GitHub, o "Redirect URI" do app do GitLab (`PUBLIC_URL/integrations/gitlab/callback`; o app aceita
   mais de um, um por linha), as "Allowed origins" da chave do Trello e o domínio no Clerk.
+- Com o `PUBLIC_URL` em `https`, o OAuth do MCP liga sozinho, e a linha `mcp` do log mostra `oauth=true`. Para
+  conferir, `curl <PUBLIC_URL>/.well-known/oauth-authorization-server` responde os metadados, e um `POST` ao `/mcp` sem
+  token responde `401` com `resource_metadata` no `WWW-Authenticate`. No claude.ai, o endereço do conector é
+  exatamente o `PUBLIC_URL` mais `/mcp` ([MCP](../api/mcp.md#conectar)); trocar o `PUBLIC_URL` (um domínio próprio, por
+  exemplo) derruba as conexões, e cada pessoa conecta de novo.
 
 ## Atualizar e voltar uma versão
 

@@ -1,0 +1,18 @@
+{{define "content"}}
+{{/* Um pedido do OAuth do MCP que não pode voltar ao app (o app não é conhecido, ou o endereço de volta não é dele): a
+   tela explica e para aqui, sem redirecionar. */}}
+<main class="auth-page">
+  <div class="auth-card">
+    <span class="brand"><span class="brand-mark" aria-hidden="true"></span>Working Time Tracker</span>
+    <div class="stack">
+      <h1>{{.T "oauth.error.title"}}</h1>
+      <p class="form-error" role="alert">
+        {{- if eq .Props.reason "client_unknown"}}{{.T "oauth.error.client_unknown"}}
+        {{- else if eq .Props.reason "redirect_invalid"}}{{.T "oauth.error.redirect_invalid"}}
+        {{- else}}{{.T "oauth.error.request_invalid"}}{{end -}}
+      </p>
+    </div>
+    <a class="btn btn-secondary btn-block" href="/">{{.T "oauth.error.home"}}</a>
+  </div>
+</main>
+{{end}}

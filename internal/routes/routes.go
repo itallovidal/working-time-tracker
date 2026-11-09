@@ -1,6 +1,9 @@
 package routes
 
 import (
+	"net/http"
+	"strings"
+
 	"github.com/labstack/echo/v5"
 
 	"working-time-tracker/internal/domain/allocation"
@@ -20,6 +23,7 @@ import (
 	"working-time-tracker/internal/domain/task"
 	"working-time-tracker/internal/domain/team"
 	"working-time-tracker/internal/domain/work_session"
+	"working-time-tracker/internal/oauth"
 )
 
 type Handlers struct {
@@ -42,6 +46,8 @@ type Handlers struct {
 	Sync *issuesync.Handler
 	// ProjectInvite é o convite que já deixa pronto o projeto da pessoa.
 	ProjectInvite *projectinvite.Handler
+	// OAuth é o servidor de autorização do MCP, para o "Permitir" da tela de consentimento. Nulo com o OAuth desligado.
+	OAuth *oauth.Server
 }
 
 // RegisterRoutes monta a API JSON. Tudo fora de /api/auth exige login, e cada
@@ -85,6 +91,15 @@ func RegisterRoutes(e *echo.Echo, h Handlers, m *auth.Middleware, authLimiter ec
 	r.GET("/auth/tokens", h.Auth.ListAPITokens)
 	r.POST("/auth/tokens", h.Auth.CreateAPIToken)
 	r.DELETE("/auth/tokens/:tokenId", h.Auth.RevokeAPIToken)
+	// Os apps conectados pelo OAuth do MCP (o claude.ai, o Claude Code): cada um só vê e desconecta os seus.
+	r.GET("/auth/connections", h.Auth.ListOAuthConnections)
+	r.DELETE("/auth/connections/:connectionId", h.Auth.RevokeOAuthConnection)
+	// O "Permitir" da tela de consentimento do OAuth. Além do JSONOnly, recusa o pedido que um navegador manda de outra
+	// origem: quem autoriza é sempre a pessoa, na tela daqui.
+	if h.OAuth != nil {
+		r.POST(strings.TrimPrefix(oauth.ConsentPath, "/api"), h.OAuth.Consent,
+			echo.WrapMiddleware(http.NewCrossOriginProtection().Handler))
+	}
 
 	r.GET("/orgs/:orgId", h.Organization.Get, org)
 	// Os dados da organização são do dono.

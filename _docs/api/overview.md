@@ -16,8 +16,9 @@ rota, com corpo e resposta, está em [reference.md](reference.md), e cada códig
 - **Erro é código, não texto.** Toda resposta de erro é
   `{"error": {"code": "dominio.motivo", "params": {...}}}`. Quem chama mostra o texto no idioma da pessoa. Um erro que a
   API não previu vira `500` `internal.server_error`, sem detalhe interno.
-- **O Claude não entra por aqui.** O servidor MCP fica em `/mcp`, fora da API, e entra com um token pessoal em
-  `Authorization: Bearer`; o token não vale na API, e o cookie não vale no `/mcp`. Ver [mcp.md](mcp.md).
+- **O Claude não entra por aqui.** O servidor MCP fica em `/mcp`, fora da API, e entra com um token pessoal ou com o
+  token de acesso do OAuth em `Authorization: Bearer`; nenhum dos dois vale na API, e o cookie não vale no `/mcp`. Ver
+  [mcp.md](mcp.md).
 - **Corpo estrito.** Chave desconhecida é `400` `request.invalid_body`. Tipo errado devolve o mesmo código com
   `params.field`. Corpo acima de 1 MiB é `413` `request.body_too_large` (`internal/server/binder.go`).
 - **`PATCH` parcial.** Campo omitido mantém o valor, e `null` apaga onde faz sentido (o prazo da tarefa).

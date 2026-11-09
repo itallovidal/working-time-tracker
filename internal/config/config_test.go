@@ -245,3 +245,50 @@ func TestLoad_ClientIPHeader(t *testing.T) {
 		}
 	}
 }
+
+// O OAuth do MCP liga sozinho quando o PUBLIC_URL serve de emissor (uma origem pura em https, ou em http no próprio
+// computador); MCP_OAUTH=off o desliga, e MCP_OAUTH=on com um endereço que não serve derruba a subida.
+func TestLoad_MCPOAuth(t *testing.T) {
+	setRequired(t)
+	// O Clerk exige o PUBLIC_URL; aqui ele fica desligado, para o PUBLIC_URL vazio valer.
+	t.Setenv("CLERK_SECRET_KEY", "")
+	t.Setenv("CLERK_PUBLISHABLE_KEY", "")
+	cases := []struct {
+		publicURL, mode string
+		want, fails     bool
+	}{
+		{"https://wtt.example.com", "", true, false},
+		{"https://wtt.example.com/", "", true, false}, // a barra do fim sai na leitura
+		{"http://localhost:1243", "", true, false},
+		{"http://127.0.0.1:1243", "", true, false},
+		{"http://[::1]:1243", "", true, false},
+		{"", "", false, false},
+		{"http://wtt.example.com", "", false, false},      // http fora do próprio computador
+		{"https://wtt.example.com/app", "", false, false}, // com caminho, o emissor não seria a origem
+		{"https://wtt.example.com?x=1", "", false, false},
+		{"https://user@wtt.example.com", "", false, false},
+		{"https://wtt.example.com", "off", false, false},
+		{"https://wtt.example.com", " ON ", true, false},
+		{"http://wtt.example.com", "on", false, true},
+		{"", "on", false, true},
+		{"https://wtt.example.com", "yes", false, true},
+	}
+	for _, tc := range cases {
+		t.Setenv("PUBLIC_URL", tc.publicURL)
+		t.Setenv("MCP_OAUTH", tc.mode)
+		cfg, err := Load()
+		if tc.fails {
+			if err == nil {
+				t.Errorf("PUBLIC_URL=%q MCP_OAUTH=%q: no error, want one", tc.publicURL, tc.mode)
+			}
+			continue
+		}
+		if err != nil {
+			t.Errorf("PUBLIC_URL=%q MCP_OAUTH=%q: %v", tc.publicURL, tc.mode, err)
+			continue
+		}
+		if cfg.OAuthEnabled != tc.want {
+			t.Errorf("PUBLIC_URL=%q MCP_OAUTH=%q: OAuthEnabled = %v, want %v", tc.publicURL, tc.mode, cfg.OAuthEnabled, tc.want)
+		}
+	}
+}

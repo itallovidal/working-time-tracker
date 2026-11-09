@@ -36,6 +36,8 @@ type Service struct {
 	// projects faz a pessoa que aceita um convite com projeto entrar nele (ver SetProjectApplier).
 	projects   ProjectApplier
 	projectLog func(msg string, args ...any)
+	// oauthKey cifra o sucessor do token de renovação do OAuth do MCP durante a janela de renovação (ver SetOAuthKey).
+	oauthKey string
 }
 
 func NewService(store *Store) *Service {

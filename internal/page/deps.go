@@ -6,6 +6,7 @@ import (
 	"working-time-tracker/internal/domain/project"
 	"working-time-tracker/internal/domain/task"
 	"working-time-tracker/internal/i18n"
+	"working-time-tracker/internal/oauth"
 )
 
 // Deps são os services que as páginas usam para montar o cabeçalho (nomes de
@@ -34,6 +35,9 @@ type Deps struct {
 	// PublicURL é o endereço do sistema, sem barra no fim. O perfil o usa no comando que conecta o Claude; vazio, usa
 	// o endereço da requisição.
 	PublicURL string
+	// OAuth é o servidor de autorização do MCP, que confere o pedido da tela de consentimento. Nulo, o OAuth está
+	// desligado: a tela é um 404 e o perfil não mostra o caminho do claude.ai.
+	OAuth *oauth.Server
 }
 
 // Clerk é o que o navegador precisa para carregar o clerk-js: a chave pública do app (ela não é segredo) e o

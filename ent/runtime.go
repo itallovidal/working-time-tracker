@@ -11,6 +11,8 @@ import (
 	"working-time-tracker/ent/invite"
 	"working-time-tracker/ent/issuesync"
 	"working-time-tracker/ent/label"
+	"working-time-tracker/ent/oauthaccesstoken"
+	"working-time-tracker/ent/oauthgrant"
 	"working-time-tracker/ent/organization"
 	"working-time-tracker/ent/payout"
 	"working-time-tracker/ent/person"
@@ -213,6 +215,26 @@ func init() {
 	labelDescID := labelFields[0].Descriptor()
 	// label.DefaultID holds the default value on creation for the id field.
 	label.DefaultID = labelDescID.Default.(func() uuid.UUID)
+	oauthaccesstokenFields := schema.OAuthAccessToken{}.Fields()
+	_ = oauthaccesstokenFields
+	// oauthaccesstokenDescCreatedAt is the schema descriptor for created_at field.
+	oauthaccesstokenDescCreatedAt := oauthaccesstokenFields[4].Descriptor()
+	// oauthaccesstoken.DefaultCreatedAt holds the default value on creation for the created_at field.
+	oauthaccesstoken.DefaultCreatedAt = oauthaccesstokenDescCreatedAt.Default.(func() time.Time)
+	// oauthaccesstokenDescID is the schema descriptor for id field.
+	oauthaccesstokenDescID := oauthaccesstokenFields[0].Descriptor()
+	// oauthaccesstoken.DefaultID holds the default value on creation for the id field.
+	oauthaccesstoken.DefaultID = oauthaccesstokenDescID.Default.(func() uuid.UUID)
+	oauthgrantFields := schema.OAuthGrant{}.Fields()
+	_ = oauthgrantFields
+	// oauthgrantDescCreatedAt is the schema descriptor for created_at field.
+	oauthgrantDescCreatedAt := oauthgrantFields[17].Descriptor()
+	// oauthgrant.DefaultCreatedAt holds the default value on creation for the created_at field.
+	oauthgrant.DefaultCreatedAt = oauthgrantDescCreatedAt.Default.(func() time.Time)
+	// oauthgrantDescID is the schema descriptor for id field.
+	oauthgrantDescID := oauthgrantFields[0].Descriptor()
+	// oauthgrant.DefaultID holds the default value on creation for the id field.
+	oauthgrant.DefaultID = oauthgrantDescID.Default.(func() uuid.UUID)
 	organizationFields := schema.Organization{}.Fields()
 	_ = organizationFields
 	// organizationDescCountry is the schema descriptor for country field.

@@ -984,6 +984,17 @@ td .task-chips { min-width: 200px; }
 .auth-actions { display: flex; gap: 10px; }
 .auth-actions .btn { flex: 1; }
 .auth-actions .btn:last-child { flex: 2; }
+/* A tela de consentimento do OAuth do MCP: quem está autorizando e o que o Claude vai poder fazer. */
+.consent-account {
+  display: flex; align-items: center; gap: 12px; padding: 10px 12px;
+  border: 1px solid var(--rule); border-radius: var(--radius-sm); background: var(--surface-2);
+}
+.consent-account .stack { min-width: 0; }
+.consent-account .small { overflow-wrap: anywhere; }
+.consent-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.consent-list li { display: flex; gap: 10px; align-items: baseline; color: var(--ink-2); }
+.consent-list li > i { flex: none; width: 1.1em; text-align: center; color: var(--ok); }
+.consent-list .consent-no > i { color: var(--muted); }
 /* O "ou" entre o email e a senha do sistema e o Google. */
 .auth-divider { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 0.85rem; }
 .auth-divider::before, .auth-divider::after { content: ""; flex: 1; height: 1px; background: var(--rule); }

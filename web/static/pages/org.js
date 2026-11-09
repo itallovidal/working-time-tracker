@@ -1484,6 +1484,46 @@ document.addEventListener('alpine:init', () => {
   }));
 
   // O meu perfil: o que fiz e quando sou pago, para ler, e o modal Editar perfil, com os dados pessoais e a senha.
+  // claudeConnections são os apps conectados pelo OAuth do MCP (o claude.ai, que vale no Claude Desktop e no celular, e o
+  // Claude Code): o endereço para colar no Claude e a lista do que está ligado, com o Desconectar. Só aparece com o OAuth
+  // ligado no servidor.
+  Alpine.data('claudeConnections', () => ({
+    ...form(),
+    connections: [],
+    loading: true,
+    confirming: null, // id do app cuja desconexão espera a confirmação
+    init() {
+      return this.load();
+    },
+    async load() {
+      this.loading = true;
+      this.errors.load = '';
+      try {
+        this.connections = await api('GET', '/api/auth/connections');
+      } catch (e) {
+        this.errors.load = e.message;
+      } finally {
+        this.loading = false;
+      }
+    },
+    // command conecta o Claude Code pelo OAuth: sem token, a autorização é no navegador, pelo /mcp do Claude Code.
+    command() {
+      return 'claude mcp add --transport http --scope user wtt ' + (WTT.boot.mcpURL || '');
+    },
+    async copy(text) {
+      const ok = await WTT.copyText(text);
+      toast(ok ? WTT.t('profile.claude.copied') : WTT.t('org.people.copy_failed'), ok ? 'info' : 'error');
+    },
+    disconnect(conn) {
+      return this.run('disconnect', async () => {
+        this.confirming = null;
+        await api('DELETE', '/api/auth/connections/' + conn.id);
+        this.connections = this.connections.filter((c) => c.id !== conn.id);
+        toast(WTT.t('profile.claude.disconnected'));
+      });
+    },
+  }));
+
   // claudeTokens é a seção Conectar ao Claude do perfil: os tokens com que o Claude Code entra no servidor MCP (/mcp)
   // e age como a pessoa. O token só aparece no modal, logo depois de criado, junto com o comando que o conecta; a
   // lista mostra só o começo dele.

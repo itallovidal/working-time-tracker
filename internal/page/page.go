@@ -42,7 +42,10 @@ type Data struct {
 	Tab         string // aba ativa do projeto (overview, tasks, time, teams, integrations, settings)
 	Script      string // página em /static/pages/<Script>.js com os componentes Alpine
 	Markdown    bool   // a página mostra ou escreve Markdown: carrega o marked e o DOMPurify (ligado em prepare)
-	Props       map[string]any
+	// Bare tira a barra superior e o ponto aberto de uma página de quem está logado: a tela de consentimento do OAuth
+	// é só a pergunta, como o login.
+	Bare  bool
+	Props map[string]any
 	// Access é o que a pessoa pode fazer no projeto da página (tudo, para os admins).
 	Access permission.Set
 

@@ -1,25 +1,56 @@
 # MCP: o Claude no sistema
 
-O servidor MCP ([Model Context Protocol](https://modelcontextprotocol.io)) deixa o Claude Code agir como uma pessoa:
-ver e criar tarefas, atualizá-las, pegar uma tarefa para si, sincronizá-la com a plataforma, bater o ponto, trocar de
-tarefa e ver as próprias horas. Ele mora no mesmo binário, em `/mcp`, e entra com um **token pessoal** que a pessoa gera
-no perfil. Quem decidiu e por quê está na [Decisão 22](../architecture/decisions.md).
+O servidor MCP ([Model Context Protocol](https://modelcontextprotocol.io)) deixa o Claude agir como uma pessoa: ver e
+criar tarefas, atualizá-las, pegar uma tarefa para si, sincronizá-la com a plataforma, bater o ponto, trocar de tarefa e
+ver as próprias horas. Ele mora no mesmo binário, em `/mcp`. Quem decidiu e por quê está nas
+[Decisões 22 e 24](../architecture/decisions.md).
 
-Nesta etapa o caminho é o **Claude Code**, que aceita o token num cabeçalho. O claude.ai, o Claude Desktop e o
-celular só conectam um servidor remoto por OAuth, que ainda não existe aqui (ver [Fora do MCP](#fora-do-mcp)).
+Há dois jeitos de entrar:
+
+- **OAuth**, para o **claude.ai**, o **Claude Desktop** e o **app do celular** (que só conectam um servidor remoto
+  assim) e também para o **Claude Code**: a pessoa autoriza o Claude numa tela do sistema, e ele recebe tokens que se
+  renovam sozinhos. Liga com um `PUBLIC_URL` em `https` (ver [OAuth](#oauth)).
+- **Token pessoal**, para o **Claude Code**: um token gerado no perfil, que vai num cabeçalho.
 
 ## Conectar
 
-1. No sistema, abra **Perfil** e, em **Conectar ao Claude**, clique em **Novo token**. Dê um nome (para reconhecê-lo
-   depois) e escolha a validade: 30, 90 ou 365 dias.
+O endereço do conector é o `PUBLIC_URL` mais `/mcp` (`https://<endereço do sistema>/mcp`). O perfil o mostra em
+**Conectar ao Claude**, com o botão de copiar.
+
+### claude.ai, Claude Desktop e celular
+
+1. No claude.ai, abra **Personalizar → Conectores → Adicionar conector personalizado** e cole o endereço do conector.
+   Em OAuth, deixe **Usar a identidade publicada do Claude** (o padrão). No Team e no Enterprise, quem adiciona o
+   conector é o dono da conta do Claude; cada pessoa conecta a sua.
+2. O Claude abre a tela de entrada do sistema. Entre (se ainda não estiver) e, na tela de consentimento, clique em
+   **Permitir**.
+3. Numa conversa, peça, por exemplo, "quais são as minhas tarefas?" ou "bate o ponto na tarefa X". O conector vale
+   também no Claude Desktop e no app do celular, com a mesma conta do Claude.
+
+A conexão aparece em **Perfil → Conectar ao Claude → Apps conectados**, de onde também se desconecta.
+
+### Claude Code
+
+Com o OAuth, sem token:
+
+```bash
+claude mcp add --transport http --scope user wtt https://<endereço do sistema>/mcp
+```
+
+Numa conversa do Claude Code, `/mcp`, escolha `wtt` e **Authenticate**: o navegador abre a mesma tela de
+consentimento. Cada máquina vira um app conectado.
+
+Ou com um **token pessoal**:
+
+1. No sistema, abra **Perfil** e, em **Conectar ao Claude → Token pessoal**, clique em **Novo token**. Dê um nome
+   (para reconhecê-lo depois) e escolha a validade: 30, 90 ou 365 dias.
 2. O modal mostra o token **uma vez só**, com o comando pronto. Rode no terminal:
 
    ```bash
    claude mcp add --transport http --scope user wtt https://<endereço do sistema>/mcp --header "Authorization: Bearer wtt_…"
    ```
 
-3. Numa conversa do Claude Code, peça, por exemplo, "quais são as minhas tarefas?" ou "bate o ponto na tarefa X".
-   `claude mcp list` mostra se a conexão está de pé.
+3. Numa conversa do Claude Code, peça o que quiser. `claude mcp list` mostra se a conexão está de pé.
 
 O comando grava o token em claro na configuração do Claude Code (`~/.claude.json`). Para não deixá-lo num arquivo de
 projeto, um `.mcp.json` pode ler o token de uma variável de ambiente:
@@ -38,7 +69,7 @@ projeto, um `.mcp.json` pode ler o token de uma variável de ambiente:
 
 O endereço é o `PUBLIC_URL` do servidor; sem ele, o perfil mostra o endereço por onde a página foi aberta.
 
-## O token
+## O token pessoal
 
 - É `wtt_` seguido de 32 bytes aleatórios. O banco guarda só o sha256 (`api_tokens.token_hash`), e a lista do perfil
   mostra só o começo (`prefix`).
@@ -50,13 +81,52 @@ O endereço é o `PUBLIC_URL` do servidor; sem ele, o perfil mostra o endereço 
 - A identidade é lida de novo a cada requisição: um cargo que mudou, ou um projeto de que a pessoa saiu, vale na hora.
 - As rotas da API do token estão em [reference.md](reference.md#tokens-do-claude).
 
+## OAuth
+
+O sistema é o próprio servidor de autorização (OAuth 2.1, como a
+[especificação de autorização do MCP](https://modelcontextprotocol.io/specification/latest/basic/authorization) pede).
+O código está em `internal/oauth` (o protocolo) e em `internal/domain/auth/oauth_grant.go` (os códigos e os tokens).
+
+- **Liga sozinho** quando o `PUBLIC_URL` é uma origem pura em `https`, ou em `http` no próprio computador para
+  desenvolver; `MCP_OAUTH=off` desliga ([configuration.md](../getting-started/configuration.md)). Desligado, o `/mcp`
+  aceita só o token pessoal e o perfil não mostra o caminho do claude.ai.
+- **Só os apps do Claude.** O claude.ai (com o Desktop e o celular) e o Claude Code se identificam pela URL de um
+  documento público (CIMD): `https://claude.ai/oauth/mcp-oauth-client-metadata` e
+  `https://claude.ai/oauth/claude-code-client-metadata`. O servidor busca o documento e o guarda pelo `max-age` (entre
+  5 minutos e 24 horas); se a busca falha, vale o último ou a cópia embutida. Não há cadastro dinâmico (DCR). Os outros
+  clientes MCP estão na [issue #36](https://github.com/itallovidal/working-time-tracker/issues/36).
+- **O caminho:**
+  1. o `/mcp` sem token responde `401` com
+     `WWW-Authenticate: Bearer resource_metadata="<PUBLIC_URL>/.well-known/oauth-protected-resource/mcp", scope="mcp"`;
+  2. os metadados do recurso apontam o servidor de autorização (o `PUBLIC_URL`), e os dele
+     (`/.well-known/oauth-authorization-server`) dão os endereços;
+  3. o Claude manda a pessoa a `/oauth/authorize` com o PKCE `S256` e o `resource` (o `/mcp`). Quem não está logado
+     passa pelo login e volta;
+  4. a tela de consentimento mostra o app, a pessoa, a organização e para onde volta (um aviso quando é um programa no
+     próprio computador). O **Permitir** volta ao app com um código, o `state` e o `iss`;
+  5. o app troca o código em `/oauth/token` pelos tokens.
+- **Os tokens:** o de acesso é `wtta_…` e vale 1 hora, só no `/mcp` e só para o recurso em que foi emitido; o de
+  renovação é `wttr_…` e gira a cada uso. A conexão **cai depois de 30 dias sem uso** (cada renovação empurra a data).
+  O token de renovação anterior, mandado de novo em até 60 segundos, recebe o mesmo sucessor (dois processos renovando
+  juntos); depois disso é reuso, e a conexão cai inteira.
+- **O código** vale 2 minutos e uma vez só: a troca o gasta na primeira tentativa, e um segundo uso derruba a conexão.
+- **Desconectar:** na lista **Apps conectados** do perfil, pelo `/oauth/revoke` ou trocando a senha, que desconecta
+  todos os apps. Cada pessoa tem até 10 apps conectados; passando disso, sai o que está há mais tempo sem uso.
+- **Igual ao token pessoal:** a identidade é lida a cada requisição, o token não abre a API, e o que o Claude pode é o
+  mesmo ([O que o Claude pode](#o-que-o-claude-pode)).
+- **O endereço importa:** a URL colada no Claude tem de ser exatamente o `PUBLIC_URL` mais `/mcp`. Trocar o
+  `PUBLIC_URL` (um domínio próprio, por exemplo) derruba as conexões, e cada pessoa conecta de novo.
+- As rotas estão em [reference.md](reference.md#oauth-do-mcp), e a segurança em
+  [security.md](../architecture/security.md#oauth-do-mcp).
+
 ## Como funciona
 
 - **Transporte:** Streamable HTTP **sem estado** (cada `POST /mcp` é completo, e as respostas vêm em JSON). Nenhuma
   sessão fica na memória do processo, então a troca de processo de um deploy não derruba quem está conectado. Um `GET`
   responde `405`.
-- **Sem token, ou com um inválido, vencido ou revogado:** `401` com `WWW-Authenticate: Bearer scope="mcp"`. O cookie
-  de sessão não vale no `/mcp`.
+- **Sem token, ou com um inválido, vencido ou revogado:** `401` com `WWW-Authenticate: Bearer scope="mcp"` (com o
+  OAuth ligado, também o `resource_metadata`, que leva o Claude a autorizar de novo). O cookie de sessão não vale no
+  `/mcp`.
 - **Navegador de outro site:** um pedido com `Origin` (ou `Sec-Fetch-Site`) de outra origem recebe `403`. O Claude
   Code não manda esses cabeçalhos.
 - **Corpo:** até 1 MiB, como na API.
@@ -67,8 +137,10 @@ O endereço é o `PUBLIC_URL` do servidor; sem ele, o perfil mostra o endereço 
   estável entre parênteses e os parâmetros (`this task already has an assignee (task.already_assigned)`). Alguns trazem
   uma dica do que fazer: o ponto que já está aberto diz em que projeto e sugere `add_task_to_session` ou `clock_out`. Os
   códigos são os da API, mais os `mcp.*` de [errors.md](errors.md).
-- **Código:** `internal/mcp` (o servidor e as ferramentas), `internal/domain/auth/api_token.go` (o token) e os testes
-  em `internal/server/mcp_test.go` e `internal/server/api_tokens_test.go`.
+- **Código:** `internal/mcp` (o servidor e as ferramentas), `internal/domain/auth/api_token.go` (o token pessoal),
+  `internal/oauth` e `internal/domain/auth/oauth_grant.go` (o OAuth), e os testes em `internal/server/mcp_test.go`,
+  `internal/server/api_tokens_test.go`, `internal/server/oauth_test.go` (inclusive de ponta a ponta com o cliente OAuth
+  do SDK) e `internal/oauth/oauth_test.go`.
 
 ## O que o Claude pode
 
@@ -123,9 +195,7 @@ tela.
 
 Ainda não estão no MCP:
 
-- **O claude.ai, o Desktop e o celular.** Eles só conectam por OAuth 2.1: os metadados do recurso
-  (`/.well-known/oauth-protected-resource`), o servidor de autorização com a tela de consentimento, `/oauth/token` com
-  renovação e o cadastro do cliente (CIMD ou DCR). O verificador do token (`internal/mcp/auth.go`) é onde isso encaixa,
-  com o mesmo escopo `mcp`.
+- **Outros clientes MCP** (ChatGPT, Cursor e afins): o OAuth aceita só os apps do Claude
+  ([issue #36](https://github.com/itallovidal/working-time-tracker/issues/36)).
 - Sincronizar o projeto inteiro, publicar uma tarefa numa plataforma, excluir tarefa, atribuir a outra pessoa, o ponto
   de outra pessoa e tudo o que é dinheiro.

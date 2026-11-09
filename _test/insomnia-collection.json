@@ -219,6 +219,42 @@
       "body": {}
     },
     {
+      "_id": "req_01_conn1",
+      "_type": "request",
+      "parentId": "fld_01",
+      "name": "Apps conectados (OAuth do MCP)",
+      "method": "GET",
+      "url": "{{base_url}}/api/auth/connections",
+      "authentication": {},
+      "metaSortKey": 3.4,
+      "headers": [],
+      "body": {}
+    },
+    {
+      "_id": "req_01_conn2",
+      "_type": "request",
+      "parentId": "fld_01",
+      "name": "Desconectar app",
+      "method": "DELETE",
+      "url": "{{base_url}}/api/auth/connections/<id do app conectado>",
+      "authentication": {},
+      "metaSortKey": 3.5,
+      "headers": [],
+      "body": {}
+    },
+    {
+      "_id": "req_01_oauth_meta",
+      "_type": "request",
+      "parentId": "fld_01",
+      "name": "Metadados do OAuth do MCP",
+      "method": "GET",
+      "url": "{{base_url}}/.well-known/oauth-authorization-server",
+      "authentication": {},
+      "metaSortKey": 3.6,
+      "headers": [],
+      "body": {}
+    },
+    {
       "_id": "req_01_03_onboarding",
       "_type": "request",
       "parentId": "fld_01",

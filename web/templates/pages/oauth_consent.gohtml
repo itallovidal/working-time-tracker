@@ -1,0 +1,45 @@
+{{define "content"}}
+{{/* A tela de consentimento do OAuth do MCP: o Claude pede para agir em nome de quem está logado. Ver oauthConsent em
+   oauth.js; o servidor conferiu o pedido antes de mostrar a tela e confere de novo no "Permitir". */}}
+<main class="auth-page">
+  <div class="auth-card" x-data="oauthConsent">
+    <span class="brand"><span class="brand-mark" aria-hidden="true"></span>Working Time Tracker</span>
+    <div class="stack">
+      <h1>{{.T "oauth.consent.title" "app" .Props.oauth.ClientName}}</h1>
+      <p class="muted">{{.T "oauth.consent.subtitle" "app" .Props.oauth.ClientName "name" .Me.Name "org" .Me.OrganizationName}}</p>
+    </div>
+
+    <div class="consent-account">
+      <span class="avatar" aria-hidden="true">{{.Initials}}</span>
+      <span class="stack stack-tight">
+        <strong>{{.Me.Name}}</strong>
+        <span class="muted small">{{.Me.Email}}</span>
+      </span>
+    </div>
+
+    <div class="stack">
+      <p><strong>{{.T "oauth.consent.can_title"}}</strong></p>
+      <ul class="consent-list">
+        <li>{{template "icon" "check"}} <span>{{.T "oauth.consent.can_tasks"}}</span></li>
+        <li>{{template "icon" "rotate"}} <span>{{.T "oauth.consent.can_sync"}}</span></li>
+        <li>{{template "icon" "clock"}} <span>{{.T "oauth.consent.can_clock"}}</span></li>
+        <li class="consent-no">{{template "icon" "ban"}} <span>{{.T "oauth.consent.cannot_money"}}</span></li>
+      </ul>
+    </div>
+
+    {{- if .Props.loopback}}
+    <div class="alert alert-warn" role="note"><p>{{.T "oauth.consent.loopback"}}</p></div>
+    {{- end}}
+    <p class="muted small">{{.T "oauth.consent.redirect" "host" .Props.redirectHost}} {{.T "oauth.consent.expiry"}}</p>
+
+    <p class="form-error" x-cloak x-show="errors.consent" x-text="errors.consent" role="alert"></p>
+    <form class="auth-actions" novalidate @submit.prevent="answer(true)">
+      <button class="btn btn-secondary" type="button" :disabled="pending" @click="answer(false)">{{.T "oauth.consent.deny"}}</button>
+      <button class="btn" type="submit" :disabled="pending">
+        <span x-text="pending ? $t('oauth.consent.pending') : $t('oauth.consent.allow')">{{.T "oauth.consent.allow"}}</span>
+      </button>
+    </form>
+    <button class="btn btn-ghost btn-block" type="button" :disabled="pending" @click="otherAccount()">{{.T "oauth.consent.other_account"}}</button>
+  </div>
+</main>
+{{end}}

@@ -67,6 +67,8 @@ titles:
   trello_callback: Conectando com o Trello
   project_settings: Gestão · Configurações
   help: Ajuda
+  oauth_consent: Conectar ao Claude
+  oauth_error: Não deu para conectar
 
 nav:
   label: Páginas
@@ -643,6 +645,30 @@ receivable:
     suggestion_loading: Calculando a sugestão…
     receive: Registrar recebimento
 
+# A tela de consentimento do OAuth do MCP: o Claude pede para agir em nome da pessoa.
+oauth:
+  consent:
+    title: "{{.app}} quer acessar a sua conta"
+    subtitle: "Você está conectando {{.app}} ao Working Time Tracker como {{.name}}, em {{.org}}."
+    can_title: "Ele vai poder, como você:"
+    can_tasks: "ver, criar e atualizar as tarefas dos seus projetos e pegar tarefas para você;"
+    can_sync: "sincronizar uma tarefa com as integrações do projeto;"
+    can_clock: "bater o seu ponto, trocar de tarefa e ver as suas horas."
+    cannot_money: "Ele não vê valores em dinheiro: pagamentos, cobranças e receita ficam de fora."
+    redirect: "Ao permitir, você volta para {{.host}}."
+    loopback: "A volta é para um programa neste computador (o Claude Code). Permita só se foi você quem pediu a conexão agora."
+    expiry: "A conexão cai depois de 30 dias sem uso, e você pode desconectar a qualquer hora no seu perfil."
+    allow: Permitir
+    deny: Cancelar
+    pending: Conectando…
+    other_account: Entrar com outra conta
+  error:
+    title: Não deu para conectar
+    client_unknown: "Este app não pode se conectar ao sistema. Por enquanto, só o Claude (claude.ai, Desktop e celular) e o Claude Code."
+    redirect_invalid: "O endereço de volta do pedido não é do app que pediu, então, por segurança, a conexão parou aqui. Tente conectar de novo pelo app."
+    request_invalid: "O pedido de conexão veio incompleto. Tente conectar de novo pelo app."
+    home: Voltar ao início
+
 profile:
   eyebrow: Seu perfil
   title_other: Perfil do colaborador
@@ -650,7 +676,26 @@ profile:
   tabs_label: O que editar
   claude:
     title: Conectar ao Claude
-    intro: "Com um token, o Claude Code cria e atualiza as suas tarefas, pega tarefas, sincroniza com as integrações do projeto e bate o seu ponto, como você. Ele vê o que você vê, menos os valores em dinheiro."
+    intro: "O Claude cria e atualiza as suas tarefas, pega tarefas, sincroniza com as integrações do projeto e bate o seu ponto, como você. Ele vê o que você vê, menos os valores em dinheiro."
+    app_title: claude.ai, Claude Desktop e celular
+    app_steps: "No claude.ai, abra Personalizar → Conectores → Adicionar conector personalizado e cole o endereço abaixo. Em OAuth, deixe “Usar a identidade publicada do Claude”. O Claude abre esta página para você entrar e permitir, e o conector passa a valer também no Claude Desktop e no app do celular."
+    app_url: Endereço do conector
+    copy_url: Copiar endereço
+    app_code: "No Claude Code, o mesmo endereço entra sem token: rode este comando e, numa conversa, use /mcp e escolha Authenticate."
+    app_code_command: Comando do Claude Code
+    connections_title: Apps conectados
+    connections_loading: Carregando os apps…
+    connections_empty: Nenhum app conectado ainda
+    connections_empty_text: Conecte o Claude pelo endereço acima.
+    col_app: App
+    col_connected: Conectado em
+    col_drops: Cai sem uso em
+    disconnect: Desconectar
+    disconnect_question: Desconectar este app?
+    disconnected: App desconectado. Para entrar de novo, ele precisa da sua autorização.
+    connections_note: A conexão cai depois de 30 dias sem uso. Trocar a senha desconecta todos os apps.
+    tokens_title: Token pessoal
+    tokens_intro: "Para o Claude Code sem a autorização no navegador: um token que vai no comando e vence na data que você escolher."
     new: Novo token
     loading: Carregando os tokens…
     empty: Nenhum token ainda
@@ -914,7 +959,7 @@ help:
       rates: "“Projetos e valores”: quanto você recebe por hora em cada projeto e o que fez neles, no período e desde o início. Só você e os administradores veem."
       edit: "“Editar perfil” abre os dados pessoais (nome e email, que é o que você usa para entrar) e, na aba “Senha”, a troca de senha, que encerra as suas outras sessões."
       language: "O idioma (PT | EN), a “Ajuda” e o “Sair” ficam no mesmo menu da conta, e o navegador lembra o idioma escolhido."
-      claude: "Em “Conectar ao Claude”, o “Novo token” gera um token e o comando que conecta o Claude Code: com ele, o Claude cria e atualiza as suas tarefas, pega tarefas, sincroniza e bate o seu ponto, como você e sem ver valores em dinheiro. O token aparece uma vez só, vence na data escolhida e pode ser revogado ali; trocar a senha revoga todos."
+      claude: "Em “Conectar ao Claude”, o Claude passa a criar e atualizar as suas tarefas, pegar tarefas, sincronizar e bater o seu ponto, como você e sem ver valores em dinheiro. No claude.ai (e, com ele, no Claude Desktop e no celular), cole o endereço do conector em Personalizar → Conectores e permita o acesso; a lista “Apps conectados” mostra o que está ligado e desconecta. Para o Claude Code, o “Novo token” gera um token e o comando: o token aparece uma vez só, vence na data escolhida e pode ser revogado ali. Trocar a senha desconecta os apps e revoga os tokens."
   concepts:
     rates:
       title: Valor por hora
@@ -1928,6 +1973,7 @@ errors:
     token_limit: "você já tem {{.max}} tokens; revogue um antes de criar outro"
     token_name_required: "dê um nome ao token, para reconhecê-lo depois"
     token_not_found: "token não encontrado"
+    connection_not_found: "app conectado não encontrado"
   collaborator:
     not_in_project: "esta pessoa não está neste projeto"
   customer:
@@ -2037,6 +2083,8 @@ errors:
     task_already_active: "esta tarefa já está em andamento na sessão"
     task_not_in_session: "esta tarefa não está em andamento na sessão aberta"
     unknown_label: "o projeto não tem a etiqueta {{.label}}; as que existem: {{.available}}"
+  oauth:
+    request_invalid: "o pedido de conexão não confere mais; comece de novo pelo app"
   organization:
     field_too_long: "{{.field}} pode ter até {{.max}} caracteres"
     has_projects: "exclua todos os projetos antes de excluir a organização"
