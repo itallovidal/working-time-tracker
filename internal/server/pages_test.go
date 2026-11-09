@@ -35,12 +35,11 @@ func managementPagePaths(projectID string) []string {
 	}
 }
 
-// orgPagePaths são as páginas da organização que um membro sem permissão não abre: Colaboradores e Clientes (de quem
-// cuida deles) e Pagamentos (só de admins).
+// orgPagePaths são as páginas da organização que um membro sem permissão não abre: Colaboradores (de quem cuida das
+// pessoas) e Pagamentos (só do dono). Os clientes ficam dentro de Clientes e Projetos, que é de todos.
 func orgPagePaths(orgID string) []string {
 	return []string{
 		"/orgs/" + orgID + "/people",
-		"/orgs/" + orgID + "/customers",
 		"/orgs/" + orgID + "/payments",
 	}
 }
@@ -87,7 +86,39 @@ func TestPages_RenderForAdminAndMember(t *testing.T) {
 	}
 }
 
-// Colaboradores, Clientes e Pagamentos não são de todo mundo: um membro sem permissão não vê os links na barra
+// A página Clientes virou parte de Clientes e Projetos: o endereço antigo leva o dono para lá, com a consulta junto
+// (?customer=id abre os detalhes daquele cliente), e para quem não gerencia os clientes ele segue não existindo.
+func TestPages_OldCustomersAddressGoesToCustomersAndProjects(t *testing.T) {
+	e := newServer(t)
+	owner := signup(t, e, "Org", "ana@test.com")
+	admin := invite(t, e, owner, "caio@test.com", "admin")
+	member := invite(t, e, owner, "bia@test.com", "member")
+	org := "/orgs/" + owner.orgID
+
+	for path, want := range map[string]string{
+		org + "/customers":              org + "/projects",
+		org + "/customers?customer=abc": org + "/projects?customer=abc",
+	} {
+		rec := do(e, "GET", path, "", owner.session)
+		if rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != want {
+			t.Errorf("owner GET %s = %d to %q, want 303 to %q", path, rec.Code, rec.Header().Get("Location"), want)
+		}
+	}
+	for who, a := range map[string]account{"admin": admin, "member": member} {
+		if rec := do(e, "GET", org+"/customers", "", a.session); rec.Code != http.StatusNotFound {
+			t.Errorf("GET %s as %s = %d, want 404", org+"/customers", who, rec.Code)
+		}
+	}
+	// Nenhuma página leva mais ao endereço antigo: os links "Editar cliente" abrem os detalhes em Clientes e Projetos.
+	prj := createProject(t, e, owner, "Projeto Alfa")
+	for _, path := range []string{org, org + "/projects", org + "/about", "/projects/" + prj + "/management/settings", "/help"} {
+		if body := do(e, "GET", path, "", owner.session).Body.String(); strings.Contains(body, org+"/customers") {
+			t.Errorf("GET %s still links to the old customers page", path)
+		}
+	}
+}
+
+// Colaboradores e Pagamentos não são de todo mundo: um membro sem permissão não vê os links na barra
 // e recebe "Página não encontrada" se abrir o endereço.
 func TestPages_OrgPagesNeedPermission(t *testing.T) {
 	e := newServer(t)
@@ -164,11 +195,11 @@ func TestPages_ModalHostAndIcons(t *testing.T) {
 		}
 	}
 
-	// As telas que usam o modal: o formulário é teleportado e um botão abre.
+	// As telas que usam o modal: o formulário é teleportado e um botão abre. Clientes e Projetos tem os dois, o do cliente
+	// e o do projeto novo.
 	for page, wants := range map[string][]string{
-		"customers": {"Novo cliente", `x-teleport="#modal-root"`, `id="customer-name"`},
-		"people":    {"Adicionar colaborador", `x-teleport="#modal-root"`, `id="invite-email"`, "Integrantes", "Convites pendentes"},
-		"projects":  {"Novo projeto", `x-teleport="#modal-root"`, `id="project-name"`, `id="project-customer"`, `id="project-bill-extra"`},
+		"people":   {"Adicionar colaborador", `x-teleport="#modal-root"`, `id="invite-email"`, "Integrantes", "Convites pendentes"},
+		"projects": {"Novo projeto", "Novo cliente", `x-teleport="#modal-root"`, `id="project-name"`, `id="project-customer"`, `id="project-bill-extra"`, `id="customer-name"`},
 	} {
 		body := do(e, "GET", "/orgs/"+admin.orgID+"/"+page, "", admin.session).Body.String()
 		for _, want := range wants {
@@ -777,7 +808,7 @@ func TestPages_AllTemplatesLoad(t *testing.T) {
 	sort.Strings(got)
 	for _, name := range []string{
 		"login", "signup", "invite", "clerk_continue", "notfound", "help", "oauth_consent", "oauth_error",
-		"org_projects", "org_people", "org_person", "org_payments", "org_settings", "org_about", "org_customers", "profile",
+		"org_projects", "org_people", "org_person", "org_payments", "org_settings", "org_about", "profile",
 		"project_overview", "project_my_overview", "project_tasks", "project_teams", "project_integrations", "project_settings", "task_detail",
 	} {
 		i := sort.SearchStrings(got, name)

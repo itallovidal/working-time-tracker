@@ -56,14 +56,14 @@ func TestCustomerBilling_ScreenSendsOnlyKnownKeys(t *testing.T) {
 		}
 	}
 
-	// Cada termo tem um campo na tela, com o erro embaixo dele: o modo e o valor por hora no modal de cliente, e o resto
-	// no parcial customer_contract, que o modal inclui.
+	// Cada termo tem um campo na tela, com o erro embaixo dele: o modo e o valor por hora no modal de cliente (na página
+	// Clientes e Projetos), e o resto no parcial customer_contract, que o modal inclui.
 	all := templates(t)
-	tpl := all["templates/pages/org_customers.gohtml"] + all["templates/partials/customer_contract.gohtml"]
+	tpl := all["templates/pages/org_projects.gohtml"] + all["templates/partials/customer_contract.gohtml"]
 	for _, m := range sent {
 		for _, want := range []string{`data-field="` + m[1] + `"`, `{{template "field_error" "` + m[1] + `"}}`} {
 			if !strings.Contains(tpl, want) {
-				t.Errorf("org_customers.gohtml + customer_contract.gohtml lack %s", want)
+				t.Errorf("org_projects.gohtml + customer_contract.gohtml lack %s", want)
 			}
 		}
 	}
@@ -105,10 +105,10 @@ func next(s, sub string, at int) int {
 // O modo, o contrato e os prazos só existem no modo solo: ficam dentro do {{if .Me.OrganizationSolo}}. O valor por hora
 // fica fora, porque todo cliente por hora tem um, na equipe também (Decisão 21).
 func TestCustomerBilling_FieldsAreInsideTheSoloGate(t *testing.T) {
-	tpl := templates(t)["templates/pages/org_customers.gohtml"]
+	tpl := templates(t)["templates/pages/org_projects.gohtml"]
 	fieldset := strings.Index(tpl, `<legend>{{.T "customer.billing.title"}}</legend>`)
 	if fieldset < 0 {
-		t.Fatal("org_customers.gohtml has no billing fieldset")
+		t.Fatal("org_projects.gohtml has no billing fieldset")
 	}
 	gate := strings.Index(tpl[fieldset:], "{{if .Me.OrganizationSolo}}")
 	if gate < 0 {
@@ -121,16 +121,16 @@ func TestCustomerBilling_FieldsAreInsideTheSoloGate(t *testing.T) {
 	}
 	rate := strings.Index(tpl, `id="customer-hourly-rate"`)
 	if rate < 0 {
-		t.Error("org_customers.gohtml has no field customer-hourly-rate")
+		t.Error("org_projects.gohtml has no field customer-hourly-rate")
 	}
 	// O valor por hora vem depois do fim do bloco do modo, fora do modo solo.
 	if end := strings.Index(tpl[mode:], "{{end}}"); end < 0 || rate < mode+end {
 		t.Error("customer-hourly-rate is inside the solo gate, but every hourly customer has a rate")
 	}
 	// O contrato vem do parcial, num bloco do modo solo depois do valor por hora.
-	include := strings.Index(tpl, `{{template "customer_contract" (dict "Data" . "Model" "draft" "Id" "customer")}}`)
+	include := strings.Index(tpl, `{{template "customer_contract" (dict "Data" . "Model" "customerDraft" "Id" "customer")}}`)
 	if include < 0 {
-		t.Error("org_customers.gohtml does not include customer_contract for the draft")
+		t.Error("org_projects.gohtml does not include customer_contract for the customer draft")
 	} else if gated := strings.LastIndex(tpl[:include], "{{if .Me.OrganizationSolo}}"); gated < rate {
 		t.Error("customer_contract is included outside a solo gate")
 	}
@@ -140,33 +140,26 @@ func TestCustomerBilling_FieldsAreInsideTheSoloGate(t *testing.T) {
 			t.Errorf("customer_contract.gohtml has no field {{$id}}-%s", id)
 		}
 	}
-	// A cobrança na lista tem uma coluna por informação: o valor nos dois modos; o modo, o fechamento e o vencimento só
-	// no solo (o cabeçalho e a célula).
-	if !strings.Contains(tpl, `x-text="billingAmount(c)"`) {
-		t.Error("the customers list has no amount column")
+	// O cabeçalho de cada cliente mostra a cobrança: o valor nos dois modos, e o modo só no solo. O fechamento e o
+	// vencimento ficam nos detalhes.
+	if !strings.Contains(tpl, `x-text="g.customer && billingAmount(g.customer)"`) {
+		t.Error("the customer header has no amount")
 	}
-	for _, want := range []string{
-		`{{if .Me.OrganizationSolo}}<th>{{.T "customer.billing.col_mode"}}</th>{{end}}`,
-		`{{if .Me.OrganizationSolo}}<th>{{.T "customer.billing.col_closing"}}</th><th>{{.T "customer.billing.col_due"}}</th>{{end}}`,
-		`{{if .Me.OrganizationSolo}}<td class="nowrap" x-text="billingMode(c)"></td>{{end}}`,
-		`{{if .Me.OrganizationSolo}}<td class="nowrap" x-text="billingClosing(c)"></td><td class="nowrap" x-text="billingDue(c)"></td>{{end}}`,
-	} {
-		if !strings.Contains(tpl, want) {
-			t.Errorf("the customers list lacks the solo-only column %s", want)
-		}
+	if !strings.Contains(tpl, `{{if .Me.OrganizationSolo}}<span class="badge" x-text="g.customer && billingMode(g.customer)"></span>{{end}}`) {
+		t.Error("the customer header lacks the solo-only billing mode")
 	}
 }
 
-// A linha da lista abre os detalhes do cliente, e Editar e Excluir moram neles, não na linha.
+// O cabeçalho do cliente, em Clientes e Projetos, abre os detalhes dele, e Editar e Excluir moram neles, não na lista.
 func TestCustomers_RowOpensTheDetails(t *testing.T) {
-	tpl := templates(t)["templates/pages/org_customers.gohtml"]
+	tpl := templates(t)["templates/pages/org_projects.gohtml"]
 	details := strings.Index(tpl, `x-show="$store.modal.name === 'customer-details'"`)
 	if details < 0 {
-		t.Fatal("org_customers.gohtml has no customer-details modal")
+		t.Fatal("org_projects.gohtml has no customer-details modal")
 	}
-	for _, want := range []string{`class="row-link"`, `openDetails(c)`, `class="row-open"`} {
+	for _, want := range []string{`'row-link'`, `openDetails(g.customer)`, `class="row-open"`} {
 		if at := strings.Index(tpl, want); at < 0 || at > details {
-			t.Errorf("the customers list row lacks %s", want)
+			t.Errorf("the customer header lacks %s", want)
 		}
 	}
 	for _, want := range []string{`@click="openForm(viewing())"`, `@click="remove()"`, `x-text="errors.remove"`, `customerFacts(viewing())`} {
@@ -174,8 +167,8 @@ func TestCustomers_RowOpensTheDetails(t *testing.T) {
 			t.Errorf("%s is not in the customer-details modal", want)
 		}
 	}
-	if strings.Contains(tpl, `openForm(c)`) {
-		t.Error("the customers list row still opens the edit form directly")
+	if strings.Contains(tpl, `openForm(c)`) || strings.Contains(tpl, `openForm(g.customer)`) {
+		t.Error("the customer header still opens the edit form directly")
 	}
 	// Cancelar a edição volta para os detalhes.
 	if !strings.Contains(tpl, `@click="cancelForm()"`) {

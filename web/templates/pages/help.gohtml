@@ -48,7 +48,6 @@
               <li><a href="#home">{{.T "help.screens.home.title"}}</a></li>
               <li><a href="#org-projects">{{.T "help.screens.org_projects.title"}}</a></li>
               {{if not .Solo}}<li><a href="#org-people">{{.T "help.screens.org_people.title"}}</a></li>{{end}}
-              <li><a href="#org-customers">{{.T "help.screens.org_customers.title"}}</a></li>
               {{if not .Solo}}<li><a href="#payments">{{.T "help.screens.payments.title"}}</a></li>{{end}}
               <li><a href="#receivables">{{.T "help.screens.receivables.title"}}</a></li>
               <li><a href="#org-about">{{.T "help.screens.org_about.title"}}</a></li>
@@ -114,14 +113,14 @@
         <section class="card help-section" id="customers" data-help-section>
           <h3>{{.T "help.steps.customers.title"}}</h3>
           <p>{{.T "help.steps.customers.text"}}</p>
-          <ol class="help-path" aria-label="{{.T "help.path_label"}}"><li>{{.T "nav.customers"}}</li><li>{{.T "org.customers.new"}}</li></ol>
+          <ol class="help-path" aria-label="{{.T "help.path_label"}}"><li>{{.T "nav.customers_projects"}}</li><li>{{.T "org.customers.new"}}</li></ol>
           <p class="help-tip">{{.T "help.steps.customers.tip"}}</p>
         </section>
 
         <section class="card help-section" id="new-project" data-help-section>
           <h3>{{.T "help.steps.project.title"}}</h3>
           <p>{{.T "help.steps.project.text"}}</p>
-          <ol class="help-path" aria-label="{{.T "help.path_label"}}"><li>{{.T "nav.projects"}}</li><li>{{.T "org.projects.new"}}</li></ol>
+          <ol class="help-path" aria-label="{{.T "help.path_label"}}"><li>{{.T "nav.customers_projects"}}</li><li>{{.T "org.projects.new"}}</li></ol>
           <p class="help-tip">{{.T "help.steps.project.tip"}}</p>
         </section>
 
@@ -183,9 +182,16 @@
           </ul>
         </section>
 
+        {{/* Clientes e Projetos juntou as páginas Projetos e Clientes: o âncora antigo dos clientes continua levando para cá. */}}
         <section class="card help-section" id="org-projects" data-help-section>
+          <span id="org-customers"></span>
           <h3>{{.T "help.screens.org_projects.title"}}</h3>
           <p>{{.T "help.screens.org_projects.text"}}</p>
+          <ul class="help-list">
+            <li>{{.T "help.screens.org_projects.customers"}}</li>
+            <li>{{.T "help.screens.org_projects.actions"}}</li>
+            <li>{{.T "help.screens.org_projects.link"}}</li>
+          </ul>
         </section>
 
         {{if not .Solo}}<section class="card help-section" id="org-people" data-help-section>
@@ -199,15 +205,6 @@
             <li>{{.T "help.screens.org_people.profile"}}</li>
           </ul>
         </section>{{end}}
-
-        <section class="card help-section" id="org-customers" data-help-section>
-          <h3>{{.T "help.screens.org_customers.title"}}</h3>
-          <p>{{.T "help.screens.org_customers.text"}}</p>
-          <ul class="help-list">
-            <li>{{.T "help.screens.org_customers.actions"}}</li>
-            <li>{{.T "help.screens.org_customers.link"}}</li>
-          </ul>
-        </section>
 
         {{if not .Solo}}<section class="card help-section" id="payments" data-help-section>
           <h3>{{.T "help.screens.payments.title"}}</h3>

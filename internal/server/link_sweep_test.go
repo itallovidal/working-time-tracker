@@ -73,7 +73,7 @@ func newSweepOrg(t *testing.T, e *echo.Echo, solo bool) sweepOrg {
 func (o sweepOrg) pages() []string {
 	org, prj := "/orgs/"+o.owner.orgID, "/projects/"+o.project
 	pages := []string{
-		org, org + "/about", org + "/settings", org + "/projects", org + "/customers", "/profile", "/help",
+		org, org + "/about", org + "/settings", org + "/projects", "/profile", "/help",
 		prj + "/overview", prj + "/my-tasks", prj + "/tasks",
 		prj + "/management/overview", prj + "/management/integrations", prj + "/management/settings",
 		"/tasks/" + o.task,
@@ -273,7 +273,7 @@ func TestLinkSweep_EveryLinkOfTheOwnerLeadsToAPage(t *testing.T) {
 		// as regras abaixo passariam por não ter o que conferir.
 		org, prj := "/orgs/"+o.owner.orgID, "/projects/"+o.project
 		for _, want := range []string{
-			org, org + "/projects", org + "/customers", org + "/about", "/profile", "/help",
+			org, org + "/projects", org + "/about", "/profile", "/help",
 			prj + "/overview", prj + "/my-tasks", prj + "/tasks", prj + "/management", "/tasks/" + o.task,
 			prj + "/management/overview", prj + "/management/integrations", prj + "/management/settings",
 		} {

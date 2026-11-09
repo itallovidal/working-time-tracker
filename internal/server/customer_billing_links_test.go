@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-// Os links das telas de Clientes e do formulário de projeto. No modo solo as páginas de equipe respondem 404
+// Os links de Clientes e Projetos e do formulário de projeto. No modo solo as páginas de equipe respondem 404
 // (/orgs/:id/people, /orgs/:id/payments, /projects/:id/collaborators, /projects/:id/management/teams e
 // /projects/:id/teams), então nada que é desta frente aponta para elas; e fora do modo solo a tela não ganha controle
 // do modo mensal.
@@ -94,13 +94,12 @@ func TestCustomerBilling_LinksAndControlsByMode(t *testing.T) {
 			}
 			return rec.Body.String()
 		}
-		customers := get("/orgs/" + o.orgID + "/customers")
-		newProject := get("/orgs/" + o.orgID + "/projects")
+		// Clientes e Projetos tem a lista, o formulário do cliente e o do projeto novo.
+		page := get("/orgs/" + o.orgID + "/projects")
 		settings := get("/projects/" + projects[o.orgID] + "/management/settings")
 		return []view{
-			{"customers page", mainOf(t, "customers page", customers)},
-			{"new project page", mainOf(t, "new project page", newProject)},
-			{"new project form", formOf(t, "new project page", newProject, "project")},
+			{"customers and projects page", mainOf(t, "customers and projects page", page)},
+			{"new project form", formOf(t, "new project page", page, "project")},
 			{"edit project form", formOf(t, "project settings page", settings, "project-edit")},
 		}
 	}
@@ -118,7 +117,7 @@ func TestCustomerBilling_LinksAndControlsByMode(t *testing.T) {
 	if seen == 0 {
 		t.Error("no href found in the solo pages: the test is not reading the links")
 	}
-	// A tela de Clientes e os formulários do solo, de fato, têm os termos.
+	// Clientes e Projetos e os formulários do solo, de fato, têm os termos.
 	soloViews := pagesOf(solo)
 	if !strings.Contains(soloViews[0].html, `id="customer-billing-mode"`) {
 		t.Error("the solo customers page has no billing mode selector")
@@ -133,7 +132,7 @@ func TestCustomerBilling_LinksAndControlsByMode(t *testing.T) {
 			}
 		}
 	}
-	if hrefs := hrefsOf(teamViews[3].html); len(hrefs) == 0 {
+	if hrefs := hrefsOf(teamViews[2].html); len(hrefs) == 0 {
 		t.Error("the edit project form of the team organization lost its customers link")
 	}
 }

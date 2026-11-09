@@ -299,7 +299,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `project.customer_locked` | 409 | — | `este projeto tem horas e o cliente dele já tem contas a receber: trocar o cliente cobraria as mesmas horas de novo` | `this project has hours and its customer already has receivables: moving it would bill the same hours again` |
 | `project.customer_meeting_time_without_day` | 400 | — | `o horário da reunião com o cliente precisa do dia da reunião` | `the customer meeting time needs the meeting day` |
 | `project.customer_not_found` | 400 | — | `cliente não encontrado nesta organização` | `customer not found in this organization` |
-| `project.customer_without_rate` | 400 | — | `este cliente ainda não tem valor por hora: informe o valor em Clientes antes` | `this customer has no hourly rate yet: enter it under Customers first` |
+| `project.customer_without_rate` | 400 | — | `este cliente ainda não tem valor por hora: informe o valor em Clientes e Projetos antes` | `this customer has no hourly rate yet: enter it under Customers & Projects first` |
 | `project.invalid_bill_extra` | 400 | — | `o acréscimo deve ficar entre 0 e 1.000.000,00` | `the extra must be between 0 and 1,000,000.00` |
 | `project.invalid_customer_meeting_every_weeks` | 400 | — | `a reunião com o cliente é toda semana (1) ou a cada duas semanas (2)` | `the customer meeting is every week (1) or every two weeks (2)` |
 | `project.invalid_customer_meeting_time` | 400 | — | `o horário da reunião com o cliente deve estar no formato HH:MM, por exemplo 10:30` | `the customer meeting time must use the HH:MM format, for example 10:30` |

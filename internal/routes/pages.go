@@ -37,11 +37,11 @@ func RegisterPages(e *echo.Echo, p *page.Handler, m *auth.Middleware, oauth *int
 	org := m.RequireOrgPage(auth.KindOrganization, "orgId", p.NotFound)
 	g.GET("/orgs/:orgId", p.Org, org)
 	g.GET("/orgs/:orgId/about", p.About, org)
-	// Os projetos de quem olha: a página é de todos, e a API entrega a cada um só os dele.
+	// Clientes e Projetos: a página é de todos, e a API entrega a cada um só os projetos dele; os clientes, com a
+	// cobrança, só quem os gerencia recebe.
 	g.GET("/orgs/:orgId/projects", p.OrgProjects, org)
 	// A tela de edição da organização e os pagamentos da equipe são só do dono (o segundo é dinheiro); o perfil de
-	// um colaborador é dos admins, sem pagamentos nem receita; Colaboradores é de quem cuida das pessoas, e
-	// Clientes, do dono.
+	// um colaborador é dos admins, sem pagamentos nem receita; Colaboradores é de quem cuida das pessoas.
 	admin := m.RequireAdminPage(p.NotFound)
 	owner := m.RequireOwnerPage(p.NotFound)
 	orgCan := func(key string) echo.MiddlewareFunc { return m.RequireOrgPermissionPage(p.NotFound, key) }
@@ -54,7 +54,9 @@ func RegisterPages(e *echo.Echo, p *page.Handler, m *auth.Middleware, oauth *int
 	g.GET("/orgs/:orgId/receivables", p.Receivables, org, orgCan(permission.ReceivablesManage))
 	g.GET("/orgs/:orgId/people", p.People, org, orgCan(permission.PeopleManage), team)
 	g.GET("/orgs/:orgId/people/:personId", p.Person, org, admin, m.RequireOrgPage(auth.KindPerson, "personId", p.NotFound), team)
-	g.GET("/orgs/:orgId/customers", p.Customers, org, orgCan(permission.CustomersManage))
+	// A página Clientes virou parte de Clientes e Projetos: o endereço antigo continua levando para lá, para quem
+	// gerencia os clientes (para os outros ele segue não existindo).
+	g.GET("/orgs/:orgId/customers", p.ToCustomers, org, orgCan(permission.CustomersManage))
 
 	prj := m.RequireOrgPage(auth.KindProject, "projectId", p.NotFound)
 	g.GET("/projects/:projectId", p.Project, prj)

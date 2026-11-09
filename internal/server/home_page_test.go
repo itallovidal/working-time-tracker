@@ -64,40 +64,61 @@ func TestPages_HomeIsAnOverview(t *testing.T) {
 	}
 }
 
-// A página Projetos é de todos: os projetos em cartões coloridos, por páginas, sem os horários da rotina que antes
-// enchiam o cartão. Só quem pode criar projeto vê o Novo projeto, no cabeçalho da página, e o formulário dele. A
-// tabela de gestão da antiga aba Projetos saiu: os cartões já mostram o cliente, as pessoas e as tarefas.
+// A página Clientes e Projetos é de todos: os projetos em cartões coloridos, agrupados pelo cliente, sem os horários da
+// rotina que antes enchiam o cartão nem a paginação da antiga página Projetos. Só quem pode criar projeto vê o Novo
+// projeto, no cabeçalho da página, e o formulário dele; só o dono vê o Novo cliente e o formulário do cliente.
 func TestPages_ProjectsPageHasTheCards(t *testing.T) {
 	e := newServer(t)
-	admin := signup(t, e, "Org", "ana@test.com")
-	member := invite(t, e, admin, "bia@test.com", "member")
-	projects := "/orgs/" + admin.orgID + "/projects"
+	owner := signup(t, e, "Org", "ana@test.com")
+	admin := invite(t, e, owner, "caio@test.com", "admin")
+	member := invite(t, e, owner, "bia@test.com", "member")
+	projects := "/orgs/" + owner.orgID + "/projects"
 
-	rec := do(e, "GET", projects, "", admin.session)
+	rec := do(e, "GET", projects, "", owner.session)
 	if rec.Code != 200 {
-		t.Fatalf("admin GET %s = %d", projects, rec.Code)
+		t.Fatalf("owner GET %s = %d", projects, rec.Code)
 	}
-	adminPage := rec.Body.String()
+	ownerPage := rec.Body.String()
 	for _, want := range []string{
-		`x-data="orgProjects"`, "<h1>Projetos</h1>", `class="project-card"`, `class="project-mark"`, `markOf(p.name)`, `'hue-' + hueOf(p.id)`,
-		`aria-label="Páginas da lista de projetos"`, "Novo projeto", `x-teleport="#modal-root"`, `id="project-name"`, `id="project-customer"`,
+		`x-data="customersProjects"`, "<h1>Clientes e Projetos</h1>", `class="catalog-group"`, `x-for="g in groups()"`,
+		`class="project-card"`, `class="project-mark"`, `markOf(p.name)`, `'hue-' + hueOf(p.id)`,
+		"Novo projeto", "Novo cliente", `x-teleport="#modal-root"`, `id="project-name"`, `id="project-customer"`, `id="customer-name"`,
+		`openCreate(g.customer ? g.customer.id : '')`, `openDetails(g.customer)`,
 	} {
-		if !strings.Contains(adminPage, want) {
-			t.Errorf("the projects page does not contain %q", want)
+		if !strings.Contains(ownerPage, want) {
+			t.Errorf("the owner's page does not contain %q", want)
 		}
 	}
-	head := adminPage[strings.Index(adminPage, `class="page-head"`):strings.Index(adminPage, `class="project-grid"`)]
-	if !strings.Contains(head, `openCreate()`) {
-		t.Error("the New project button is not in the page header")
+	head := ownerPage[strings.Index(ownerPage, `class="page-head"`):strings.Index(ownerPage, `class="catalog"`)]
+	for _, want := range []string{`openCreate()`, `openForm()`} {
+		if !strings.Contains(head, want) {
+			t.Errorf("the page header lacks %s", want)
+		}
 	}
-	if strings.Contains(adminPage, "<table") || strings.Contains(adminPage, "<th>Projeto</th>") {
-		t.Error("the projects page still has the management table")
+	for _, gone := range []string{"<table", "<th>Projeto</th>", `class="pager"`} {
+		if strings.Contains(ownerPage, gone) {
+			t.Errorf("the page still has %q from the old pages", gone)
+		}
 	}
-	// O cartão não carrega a rotina (sprint, daily, weekly, reunião): só quem é, o cliente e o tamanho.
-	for _, gone := range []string{"Sprint de", "Daily ", "Weekly ", "Reunião ", "sprint_duration_days) }"} {
-		grid := adminPage[strings.Index(adminPage, `class="project-grid"`):]
-		if strings.Contains(grid[:strings.Index(grid, `class="pager"`)], gone) {
+	// O cartão não carrega a rotina (sprint, daily, weekly, reunião) nem o cliente, que já é o do grupo.
+	cards := ownerPage[strings.Index(ownerPage, `x-for="p in g.projects"`):]
+	cards = cards[:strings.Index(cards, "</template>")]
+	for _, gone := range []string{"Sprint de", "Daily ", "Weekly ", "Reunião ", "sprint_duration_days) }", "project-customer"} {
+		if strings.Contains(cards, gone) {
 			t.Errorf("a project card still shows %q", gone)
+		}
+	}
+
+	// O admin cria projeto (só interno), mas não vê os clientes.
+	adminPage := do(e, "GET", projects, "", admin.session).Body.String()
+	for _, want := range []string{`x-data="customersProjects"`, "Novo projeto", `id="project-name"`} {
+		if !strings.Contains(adminPage, want) {
+			t.Errorf("admin page does not contain %q", want)
+		}
+	}
+	for _, gone := range []string{"Novo cliente", `id="customer-name"`, `customer-details`, `id="project-customer"`} {
+		if strings.Contains(adminPage, gone) {
+			t.Errorf("admin page contains %q, which is the owner's", gone)
 		}
 	}
 
@@ -106,21 +127,26 @@ func TestPages_ProjectsPageHasTheCards(t *testing.T) {
 		t.Fatalf("member GET %s = %d, want 200: the page is for everyone", projects, rec.Code)
 	}
 	memberPage := rec.Body.String()
-	for _, want := range []string{`x-data="orgProjects"`, `class="project-card"`, "Você ainda não foi adicionado a nenhum projeto"} {
+	for _, want := range []string{`x-data="customersProjects"`, `class="project-card"`, "Você ainda não foi adicionado a nenhum projeto", "Os seus projetos, agrupados pelo cliente de cada um."} {
 		if !strings.Contains(memberPage, want) {
-			t.Errorf("member projects page does not contain %q", want)
+			t.Errorf("member page does not contain %q", want)
 		}
 	}
-	for _, gone := range []string{"Novo projeto", `openCreate()`, `id="project-name"`} {
+	for _, gone := range []string{"Novo projeto", "Novo cliente", `openCreate()`, `id="project-name"`, `id="customer-name"`, `class="catalog-billing"`} {
 		if strings.Contains(memberPage, gone) {
-			t.Errorf("member projects page contains %q, which is for who can create projects", gone)
+			t.Errorf("member page contains %q, which is for who can create projects or customers", gone)
 		}
 	}
-	// A lista é paginada pelo servidor, e o componente lê a página do endereço.
+	// A lista vem inteira (sem page) e o componente agrupa pelo cliente; os clientes só vêm para quem os gerencia.
 	script := do(e, "GET", "/static/pages/org.js", "", "").Body.String()
-	for _, want := range []string{"Alpine.data('orgProjects'", "'/projects?page='", "searchParams.set('page'"} {
+	for _, want := range []string{"Alpine.data('customersProjects'", "api('GET', '/api/orgs/' + orgId + '/projects')", "this.manage ? api('GET', '/api/orgs/' + orgId + '/customers')"} {
 		if !strings.Contains(script, want) {
 			t.Errorf("org.js does not contain %q", want)
+		}
+	}
+	for _, gone := range []string{"Alpine.data('orgProjects'", "Alpine.data('orgCustomers'"} {
+		if strings.Contains(script, gone) {
+			t.Errorf("org.js still has %q", gone)
 		}
 	}
 }

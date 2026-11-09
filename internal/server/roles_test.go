@@ -132,7 +132,8 @@ func TestRoles_Pages(t *testing.T) {
 		{"settings (edit the organization)", home + "/settings", [4]int{200, 404, 404, 404}},
 		{"the team payments", home + "/payments", [4]int{200, 404, 404, 404}},
 		{"the receivables (the owner of an organization that is not solo)", home + "/receivables", [4]int{404, 404, 404, 404}},
-		{"customers", home + "/customers", [4]int{200, 404, 404, 404}},
+		// O endereço antigo de Clientes leva o dono a Clientes e Projetos (303); para os outros ele segue não existindo.
+		{"customers", home + "/customers", [4]int{303, 404, 404, 404}},
 		{"collaborators", home + "/people", [4]int{200, 200, 404, 404}},
 		{"a collaborator's profile", home + "/people/" + plain.id, [4]int{200, 200, 404, 404}},
 		{"the project overview in the management", "/projects/" + alfa + "/management/overview", [4]int{200, 200, 200, 404}},

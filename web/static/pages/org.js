@@ -163,7 +163,6 @@ document.addEventListener('alpine:init', () => {
     return letters.join('').toUpperCase();
   };
 
-  const PROJECTS_PER_PAGE = 6;
   const HOME_TEAM_PER_PAGE = 5; // listas de pessoas ficam em cinco por vez
   // As três janelas da visão geral: a chave é a da API, o campo é o tempo da pessoa nela.
   const periodFields = { last_7_days: 'last_7_days_seconds', last_30_days: 'last_30_days_seconds', all_time: 'total_seconds' };
@@ -390,56 +389,6 @@ document.addEventListener('alpine:init', () => {
       return WTT.t('home.solo.cards.rate_below', { min: WTT.fmt.money(WTT.limits.min_rate_cents) });
     },
   });
-
-  // A página Projetos: os projetos de quem olha (todos, para os admins) em cartões, seis por página.
-  Alpine.data('orgProjects', () => ({
-    ...projectCreation(),
-    loading: true,
-    projects: [],
-    total: 0,
-    page: 1,
-    hueOf,
-    markOf,
-    init() {
-      const wanted = parseInt(new URLSearchParams(location.search).get('page'), 10);
-      this.page = wanted > 0 ? wanted : 1;
-      this.loadProjects();
-    },
-    // Uma página por vez, vinda do servidor, que corrige uma página que não existe mais.
-    loadProjects() {
-      return this.run('page', async () => {
-        this.errors.load = '';
-        try {
-          const res = await api('GET', '/api/orgs/' + orgId + '/projects?page=' + this.page + '&per_page=' + PROJECTS_PER_PAGE);
-          this.projects = res.items || [];
-          this.total = res.total;
-          this.page = res.page;
-          this.syncURL();
-        } catch (e) {
-          this.errors.load = e.message;
-        } finally {
-          this.loading = false;
-        }
-      });
-    },
-    go(page) {
-      this.page = page;
-      return this.loadProjects();
-    },
-    pages() {
-      return Math.max(1, Math.ceil(this.total / PROJECTS_PER_PAGE));
-    },
-    summary() {
-      return WTT.t('home.projects.summary', { page: this.page, pages: this.pages(), count: this.total });
-    },
-    // A página fica no endereço, para recarregar ou voltar cair onde a pessoa estava.
-    syncURL() {
-      const url = new URL(location.href);
-      if (this.page > 1) url.searchParams.set('page', this.page);
-      else url.searchParams.delete('page');
-      history.replaceState(null, '', url);
-    },
-  }));
 
   // A página inicial: para admins, a visão geral da organização (tempo e dinheiro de todos os
   // projetos) e a equipe, ou, no modo solo, a visão geral do solo (soloHome); para todos, o painel da
@@ -1228,31 +1177,98 @@ document.addEventListener('alpine:init', () => {
     },
   });
 
-  Alpine.data('orgCustomers', () => ({
-    ...form(),
+  // A página Clientes e Projetos: cada cliente com os projetos dele, em ordem de nome, e os projetos internos (sem
+  // cliente) no fim. Quem gerencia os clientes (o dono) carrega a lista deles, com a cobrança e o contato, e vê também
+  // os que ainda não têm projeto; os outros só têm o cliente que vem em cada projeto (o id e o nome). Os detalhes do
+  // cliente, o formulário dele e o novo projeto abrem no modal do layout base. O rascunho do cliente é customerDraft, e
+  // o do projeto, o draft de projectCreation.
+  Alpine.data('customersProjects', () => ({
+    ...projectCreation(),
     ...customerDocument(),
-    ...customerBilling(),
+    manage: WTT.can('customers.manage'),
     loading: true,
-    customers: [],
+    projects: [],
+    customers: [], // só de quem gerencia os clientes; o novo projeto escolhe o cliente nesta mesma lista
     editing: null, // id do cliente em edição; null quando o formulário cria um novo
-    draft: { ...blankCustomer(), ...blankBilling() },
+    customerDraft: { ...blankCustomer(), ...blankBilling() },
     viewingId: null, // o cliente dos detalhes
     confirming: false, // a confirmação de Excluir, nos detalhes
     dedications: {}, // a dedicação de cada cliente mensal com estimativa, pelo id; só no solo
+    hueOf,
+    markOf,
+    initialsOf,
     async init() {
       try {
-        this.customers = (await api('GET', '/api/orgs/' + orgId + '/customers')) || [];
+        const [projects, customers] = await Promise.all([
+          api('GET', '/api/orgs/' + orgId + '/projects'),
+          this.manage ? api('GET', '/api/orgs/' + orgId + '/customers') : null,
+        ]);
+        this.projects = projects || [];
+        this.customers = customers || [];
       } catch (e) {
         this.errors.load = e.message;
       } finally {
         this.loading = false;
       }
+      this.openLinked();
       await this.loadDedications();
+    },
+    // openLinked abre os detalhes do cliente do endereço (?customer=id), que é para onde levam os links "Editar
+    // cliente" do projeto. O parâmetro sai do endereço, para recarregar não abrir de novo.
+    openLinked() {
+      const url = new URL(location.href);
+      const id = url.searchParams.get('customer');
+      if (!id) return;
+      url.searchParams.delete('customer');
+      history.replaceState(null, '', url);
+      const c = this.customers.find((x) => x.id === id);
+      if (c) this.openDetails(c);
+    },
+    // groups são os grupos da página, cada um { id, name, customer, internal, projects }: um por cliente, em ordem de
+    // nome, e o dos projetos internos no fim, quando há algum. customer é o cadastro inteiro (só de quem gerencia os
+    // clientes) ou null; o cliente que só aparece num projeto entra com o nome que vem nele.
+    groups() {
+      const byName = (a, b) => a.name.localeCompare(b.name, WTT.lang);
+      const byId = new Map(this.customers.map((c) => [c.id, { id: c.id, name: c.name, customer: c, internal: false, projects: [] }]));
+      const internal = [];
+      this.projects.forEach((p) => {
+        if (!p.customer) { internal.push(p); return; }
+        if (!byId.has(p.customer.id)) byId.set(p.customer.id, { id: p.customer.id, name: p.customer.name, customer: null, internal: false, projects: [] });
+        byId.get(p.customer.id).projects.push(p);
+      });
+      const list = [...byId.values()].sort(byName);
+      list.forEach((g) => g.projects.sort(byName));
+      if (internal.length > 0) {
+        list.push({ id: 'internal', name: WTT.t('org.catalog.internal'), customer: null, internal: true, projects: internal.sort(byName) });
+      }
+      return list;
+    },
+    // groupMeta é a linha embaixo do nome do grupo: o país e o contato do cliente, ou o aviso dos internos.
+    groupMeta(g) {
+      if (g.internal) return WTT.t('org.catalog.internal_hint');
+      const c = g.customer;
+      if (!c) return '';
+      return [WTT.countries.name(c.country), c.contact_name, c.contact_email].filter(Boolean).join(' · ');
+    },
+    // summary conta o que a página mostra: os clientes (para quem os gerencia) e os projetos.
+    summary() {
+      const projects = WTT.t('org.catalog.count_projects', { count: this.projects.length });
+      if (!this.manage) return projects;
+      return WTT.t('org.catalog.count_customers', { count: this.customers.length }) + ' · ' + projects;
+    },
+    // openCreate abre o novo projeto, já com o cliente do grupo de onde veio (vazio é projeto interno). A lista de
+    // clientes é a da página: um cliente recém-cadastrado já aparece no formulário.
+    openCreate(customerId) {
+      this.draft = { ...blankProject(), customer_id: (me.is_owner && customerId) || '' };
+      this.extraOpen = false;
+      this.errors.create = '';
+      this.clearFields();
+      Alpine.store('modal').open('project', WTT.t('org.projects.new'), () => !this.pending);
     },
     // loadDedications lê as horas do período em andamento dos contratos mensais com estimativa (Decisão 26), que os
     // detalhes mostram. Só no modo solo; uma falha aqui não derruba a página: os detalhes ficam sem a linha.
     async loadDedications() {
-      if (!this.solo) return;
+      if (!this.solo || !this.manage) return;
       try {
         const list = (await api('GET', '/api/orgs/' + orgId + '/solo/dedication')) || [];
         this.dedications = Object.fromEntries(list.map((d) => [d.customer.id, d]));
@@ -1324,7 +1340,7 @@ document.addEventListener('alpine:init', () => {
     // formulário é zerado aqui, e não ao fechar, para não mudar durante a transição de saída.
     openForm(c) {
       this.editing = c ? c.id : null;
-      this.draft = c ? {
+      this.customerDraft = c ? {
         name: c.name,
         country: c.country,
         document: WTT.fmt.taxId(c.document, c.country),
@@ -1347,16 +1363,16 @@ document.addEventListener('alpine:init', () => {
       else Alpine.store('modal').dismiss();
     },
     save() {
-      const body = customerBody(this.draft);
+      const body = customerBody(this.customerDraft);
       const spec = customerSpec(body, true);
       // A cobrança mora no cliente (Decisão 21). No modo solo vão todos os termos; na equipe todo cliente é por hora, e
       // vai só o valor por hora.
       if (this.solo) {
-        Object.assign(spec, billingSpec(this.draft));
-        Object.assign(body, billingBody(this.draft));
+        Object.assign(spec, billingSpec(this.customerDraft));
+        Object.assign(body, billingBody(this.customerDraft));
       } else {
-        Object.assign(spec, hourlyRateSpec(this.draft));
-        body.hourly_rate_cents = WTT.toCents(this.draft.hourly_rate, { strict: true });
+        Object.assign(spec, hourlyRateSpec(this.customerDraft));
+        body.hourly_rate_cents = WTT.toCents(this.customerDraft.hourly_rate, { strict: true });
       }
       if (!this.check(spec)) {
         // O erro dentro do bloco recolhido só recebe o foco com o bloco aberto.
@@ -1368,6 +1384,8 @@ document.addEventListener('alpine:init', () => {
         if (this.editing) {
           saved = await api('PATCH', '/api/customers/' + this.editing, body);
           this.customers = this.customers.map((c) => (c.id === saved.id ? saved : c));
+          // O nome do cliente também aparece nos projetos dele.
+          this.projects = this.projects.map((p) => (p.customer && p.customer.id === saved.id ? { ...p, customer: { ...p.customer, name: saved.name } } : p));
           toast(WTT.t('org.customers.saved'));
         } else {
           this.customers = [...this.customers, await api('POST', '/api/orgs/' + orgId + '/customers', body)];

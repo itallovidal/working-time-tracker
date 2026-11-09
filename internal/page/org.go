@@ -1,6 +1,8 @@
 package page
 
 import (
+	"net/http"
+
 	"github.com/labstack/echo/v5"
 
 	"working-time-tracker/internal/domain/auth"
@@ -59,14 +61,21 @@ func (h *Handler) OrgSettings(c *echo.Context) error {
 	return h.orgPage(c, "org_settings", "titles.org_settings", "organization")
 }
 
-// OrgProjects é a página Projetos: os projetos de quem olha (todos, para os admins), em cartões.
+// OrgProjects é a página Clientes e Projetos: cada cliente com os projetos dele, e os projetos internos no fim. Quem
+// gerencia os clientes (o dono) vê todos eles, com a cobrança, e os cadastra e edita ali; os outros veem os seus
+// projetos (todos, para os admins), agrupados pelo cliente de cada um.
 func (h *Handler) OrgProjects(c *echo.Context) error {
 	return h.orgPage(c, "org_projects", "titles.org_projects", "projects")
 }
 
-// Customers é a página Clientes: quem contrata os projetos da organização (S12.4).
-func (h *Handler) Customers(c *echo.Context) error {
-	return h.orgPage(c, "org_customers", "titles.org_customers", "customers")
+// ToCustomers leva o endereço antigo da página Clientes para Clientes e Projetos, que juntou as duas. A consulta vai
+// junto: ?customer=id abre os detalhes daquele cliente.
+func (h *Handler) ToCustomers(c *echo.Context) error {
+	to := "/orgs/" + c.Param("orgId") + "/projects"
+	if q := c.QueryString(); q != "" {
+		to += "?" + q
+	}
+	return c.Redirect(http.StatusSeeOther, to)
 }
 
 // People é a página Colaboradores: as pessoas da organização, os papéis e os convites (S8.3).

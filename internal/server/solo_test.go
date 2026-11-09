@@ -266,7 +266,7 @@ func TestSolo_TeamPagesAre404(t *testing.T) {
 			"/projects/" + project + "/collaborators", "/projects/" + project + "/management/teams", "/projects/" + project + "/teams",
 		}
 		shown = []string{
-			org, org + "/projects", org + "/customers", org + "/about", org + "/settings", "/profile",
+			org, org + "/projects", org + "/about", org + "/settings", "/profile",
 			"/projects/" + project + "/overview", "/projects/" + project + "/tasks", "/projects/" + project + "/my-tasks",
 			"/projects/" + project + "/management/overview", "/projects/" + project + "/management/integrations",
 			"/projects/" + project + "/management/settings",
@@ -329,7 +329,7 @@ func TestSolo_MenuHasReceivablesInsteadOfTheTeamPages(t *testing.T) {
 	home := "/orgs/" + solo.orgID
 
 	soloNav := func(current string) []string {
-		items := []string{"Início " + home, "Projetos " + home + "/projects", "Clientes " + home + "/customers", "A receber " + home + "/receivables", "Configurações " + home + "/about"}
+		items := []string{"Início " + home, "Clientes e Projetos " + home + "/projects", "A receber " + home + "/receivables", "Configurações " + home + "/about"}
 		for i, it := range items {
 			if strings.HasPrefix(it, current+" ") {
 				items[i] += " (current)"
@@ -339,9 +339,8 @@ func TestSolo_MenuHasReceivablesInsteadOfTheTeamPages(t *testing.T) {
 	}
 	for _, c := range []struct{ name, path, current string }{
 		{"home", home, "Início"},
-		{"projects", home + "/projects", "Projetos"},
-		{"in a project", "/projects/" + soloProject + "/tasks", "Projetos"},
-		{"customers", home + "/customers", "Clientes"},
+		{"customers and projects", home + "/projects", "Clientes e Projetos"},
+		{"in a project", "/projects/" + soloProject + "/tasks", "Clientes e Projetos"},
 		{"settings", home + "/about", "Configurações"},
 		{"edit organization", home + "/settings", "Configurações"},
 		{"profile", "/profile", ""},
@@ -358,7 +357,7 @@ func TestSolo_MenuHasReceivablesInsteadOfTheTeamPages(t *testing.T) {
 
 	// Em inglês.
 	en := strings.Join(mainNav(t, getPage(e, home, solo.session, "en", "").Body.String()), " | ")
-	want := "Home " + home + " (current) | Projects " + home + "/projects | Customers " + home + "/customers | Receivables " + home + "/receivables | Settings " + home + "/about"
+	want := "Home " + home + " (current) | Customers &amp; Projects " + home + "/projects | Receivables " + home + "/receivables | Settings " + home + "/about"
 	if en != want {
 		t.Errorf("solo nav in English = %q, want %q", en, want)
 	}
@@ -366,7 +365,7 @@ func TestSolo_MenuHasReceivablesInsteadOfTheTeamPages(t *testing.T) {
 	// Com equipe: o menu de sempre, sem A receber.
 	teamHome := "/orgs/" + team.orgID
 	teamNav := strings.Join(mainNav(t, do(e, "GET", teamHome, "", team.session).Body.String()), " | ")
-	wantTeam := "Início " + teamHome + " (current) | Projetos " + teamHome + "/projects | Colaboradores " + teamHome + "/people | Clientes " + teamHome + "/customers | Pagamentos " + teamHome + "/payments | Configurações " + teamHome + "/about"
+	wantTeam := "Início " + teamHome + " (current) | Clientes e Projetos " + teamHome + "/projects | Colaboradores " + teamHome + "/people | Pagamentos " + teamHome + "/payments | Configurações " + teamHome + "/about"
 	if teamNav != wantTeam {
 		t.Errorf("team nav = %q, want %q", teamNav, wantTeam)
 	}
@@ -445,7 +444,7 @@ func TestSolo_WelcomeHasNoInviteStep(t *testing.T) {
 			t.Errorf("the solo welcome still has %q", gone)
 		}
 	}
-	for _, want := range []string{"ob-customer-name", `/customers`, `/projects`, `/settings`} {
+	for _, want := range []string{"ob-customer-name", `/projects`, `/settings`} {
 		if !strings.Contains(welcome, want) {
 			t.Errorf("the solo welcome lost %q", want)
 		}

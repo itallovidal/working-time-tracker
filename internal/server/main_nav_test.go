@@ -26,10 +26,10 @@ func mainNav(t *testing.T, body string) []string {
 	return items
 }
 
-// A barra superior tem uma página por assunto, sem sub-abas: Início, Projetos, Colaboradores, Clientes, Pagamentos
-// e Configurações. Cada item só aparece para quem pode abrir a página dele: Colaboradores e Clientes para quem
-// cuida deles, Pagamentos (a equipe, que é dinheiro de todos) só para o dono. O admin que não é o dono vê
-// Colaboradores, mas não Clientes nem Pagamentos.
+// A barra superior tem uma página por assunto, sem sub-abas: Início, Clientes e Projetos, Colaboradores, Pagamentos
+// e Configurações. Cada item só aparece para quem pode abrir a página dele: Clientes e Projetos para todos (os clientes,
+// dentro dela, só para o dono), Colaboradores para quem cuida deles, Pagamentos (a equipe, que é dinheiro de todos) só
+// para o dono. O admin que não é o dono vê Colaboradores, mas não Pagamentos.
 func TestPages_MainNavHasOnePagePerSubject(t *testing.T) {
 	e := newServer(t)
 	admin := signup(t, e, "Org", "ana@test.com")
@@ -40,7 +40,7 @@ func TestPages_MainNavHasOnePagePerSubject(t *testing.T) {
 
 	// all é a barra de um admin, com o item current marcado.
 	all := func(current string) []string {
-		items := []string{"Início " + home, "Projetos " + home + "/projects", "Colaboradores " + home + "/people", "Clientes " + home + "/customers", "Pagamentos " + home + "/payments", "Configurações " + home + "/about"}
+		items := []string{"Início " + home, "Clientes e Projetos " + home + "/projects", "Colaboradores " + home + "/people", "Pagamentos " + home + "/payments", "Configurações " + home + "/about"}
 		for i, it := range items {
 			if strings.HasPrefix(it, current+" ") {
 				items[i] += " (current)"
@@ -53,18 +53,17 @@ func TestPages_MainNavHasOnePagePerSubject(t *testing.T) {
 		want               []string
 	}{
 		{"admin on the home page", home, admin.session, all("Início")},
-		{"admin on the projects page", home + "/projects", admin.session, all("Projetos")},
-		{"admin in a project", "/projects/" + projectID + "/tasks", admin.session, all("Projetos")},
+		{"admin on the customers and projects page", home + "/projects", admin.session, all("Clientes e Projetos")},
+		{"admin in a project", "/projects/" + projectID + "/tasks", admin.session, all("Clientes e Projetos")},
 		{"admin on the collaborators page", home + "/people", admin.session, all("Colaboradores")},
 		{"admin on a collaborator's profile", home + "/people/" + member.id, admin.session, all("Colaboradores")},
-		{"admin on the customers page", home + "/customers", admin.session, all("Clientes")},
 		{"admin on the payments page", home + "/payments", admin.session, all("Pagamentos")},
 		{"admin on the settings page", home + "/about", admin.session, all("Configurações")},
 		{"admin on the organization edit page", home + "/settings", admin.session, all("Configurações")},
-		{"an admin who is not the owner", home, otherAdmin.session, []string{"Início " + home + " (current)", "Projetos " + home + "/projects", "Colaboradores " + home + "/people", "Configurações " + home + "/about"}},
+		{"an admin who is not the owner", home, otherAdmin.session, []string{"Início " + home + " (current)", "Clientes e Projetos " + home + "/projects", "Colaboradores " + home + "/people", "Configurações " + home + "/about"}},
 		{"admin on the help page", "/help", admin.session, all("")},
 		{"admin on the profile page", "/profile", admin.session, all("")},
-		{"member without a permission", home, member.session, []string{"Início " + home + " (current)", "Projetos " + home + "/projects", "Configurações " + home + "/about"}},
+		{"member without a permission", home, member.session, []string{"Início " + home + " (current)", "Clientes e Projetos " + home + "/projects", "Configurações " + home + "/about"}},
 	} {
 		rec := do(e, "GET", c.path, "", c.session)
 		if rec.Code != http.StatusOK {

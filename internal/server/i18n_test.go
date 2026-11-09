@@ -265,7 +265,6 @@ func migratedPages(admin account, projectID, taskID string) []string {
 		"/orgs/" + admin.orgID + "/about",
 		"/orgs/" + admin.orgID + "/settings",
 		"/orgs/" + admin.orgID + "/people",
-		"/orgs/" + admin.orgID + "/customers",
 		"/orgs/" + admin.orgID + "/projects",
 	}
 }
