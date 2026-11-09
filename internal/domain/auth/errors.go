@@ -31,6 +31,8 @@ var (
 	ErrTokenDaysInvalid  = apperr.New("auth.token_days_invalid", http.StatusBadRequest)
 	ErrTokenLimit        = apperr.New("auth.token_limit", http.StatusConflict, "max")
 	ErrTokenNotFound     = apperr.New("auth.token_not_found", http.StatusNotFound)
+	// Um app conectado pelo OAuth do MCP (a lista do perfil).
+	ErrConnectionNotFound = apperr.New("auth.connection_not_found", http.StatusNotFound)
 
 	// O login pelo Clerk.
 	ErrClerkDisabled        = apperr.New("auth.clerk_disabled", http.StatusNotFound)

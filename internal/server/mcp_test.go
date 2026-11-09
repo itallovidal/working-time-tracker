@@ -232,7 +232,7 @@ func TestMCP_Tasks(t *testing.T) {
 	cs := connectMCP(t, mcpEndpoint(t, e), token)
 
 	who := callTool(t, cs, "whoami", nil)
-	if who["role"] != "member" || who["email"] != "membro@example.com" || who["open_session"] != nil || who["token_expires_at"] == "" {
+	if who["role"] != "member" || who["email"] != "membro@example.com" || len(who["open_sessions"].([]any)) != 0 || who["token_expires_at"] == "" {
 		t.Errorf("whoami = %v", who)
 	}
 	projects := callTool(t, cs, "list_projects", nil)["projects"].([]any)
@@ -337,7 +337,7 @@ func TestMCP_Session(t *testing.T) {
 	cs := connectMCP(t, mcpEndpoint(t, e), token)
 
 	wantCode(t, toolError(t, cs, "clock_out", nil), "work_session.not_open")
-	if active := callTool(t, cs, "get_active_session", nil); active["open"] != false || active["session"] != nil {
+	if active := callTool(t, cs, "get_active_session", nil); active["open"] != false || len(active["sessions"].([]any)) != 0 {
 		t.Errorf("get_active_session with the clock stopped = %v", active)
 	}
 
@@ -353,8 +353,12 @@ func TestMCP_Session(t *testing.T) {
 	if !strings.Contains(text, "add_task_to_session") || !strings.Contains(text, `"Alfa"`) {
 		t.Errorf("already open error does not say what to do: %q", text)
 	}
-	if text := toolError(t, cs, "clock_in", map[string]any{"task_id": other}); !strings.Contains(text, "clock_out first") {
-		t.Errorf("already open in another project does not say to clock out: %q", text)
+	// Uma sessão por projeto: a tarefa do Beta abre a sessão do Beta, e a do Alfa continua correndo.
+	if beside := callTool(t, cs, "clock_in", map[string]any{"task_id": other}); beside["open"] != true || beside["project"].(map[string]any)["name"] != "Beta" {
+		t.Fatalf("clock_in on another project with Alfa open = %v, want a Beta session", beside)
+	}
+	if active := callTool(t, cs, "get_active_session", nil); len(active["sessions"].([]any)) != 2 {
+		t.Errorf("get_active_session with Alfa and Beta open = %v, want two sessions", active)
 	}
 
 	// Pôr outra tarefa: as duas rodam; de novo, sem trocar, é recusado.
@@ -364,7 +368,8 @@ func TestMCP_Session(t *testing.T) {
 	wantCode(t, toolError(t, cs, "add_task_to_session", map[string]any{"task_id": b}), "mcp.task_already_active")
 	// O id em maiúsculas é o mesmo id (o Claude pode mandá-lo assim): a tarefa continua reconhecida na sessão.
 	wantCode(t, toolError(t, cs, "add_task_to_session", map[string]any{"task_id": strings.ToUpper(b)}), "mcp.task_already_active")
-	wantCode(t, toolError(t, cs, "add_task_to_session", map[string]any{"task_id": other}), "work_session.task_other_project")
+	// A tarefa do Beta já roda na sessão do Beta.
+	wantCode(t, toolError(t, cs, "add_task_to_session", map[string]any{"task_id": other}), "mcp.task_already_active")
 
 	// Trocar: só C roda, e A e B ficam com o tempo deles. Também com o id em maiúsculas.
 	switched := callTool(t, cs, "add_task_to_session", map[string]any{"task_id": strings.ToUpper(c), "switch": true})
@@ -373,8 +378,8 @@ func TestMCP_Session(t *testing.T) {
 	}
 	stopLast := toolError(t, cs, "stop_session_task", map[string]any{"task_id": strings.ToUpper(c)})
 	wantCode(t, stopLast, "work_session.last_task")
-	if !strings.Contains(stopLast, "clock_out") {
-		t.Errorf("last task error does not point to clock_out: %q", stopLast)
+	if !strings.Contains(stopLast, "clock_out") || !strings.Contains(stopLast, "project_id") {
+		t.Errorf("last task error does not point to clock_out with the project_id: %q", stopLast)
 	}
 	wantCode(t, toolError(t, cs, "stop_session_task", map[string]any{"task_id": a}), "mcp.task_not_in_session")
 
@@ -394,15 +399,34 @@ func TestMCP_Session(t *testing.T) {
 	if hours := callTool(t, cs, "my_hours", nil); hours["working_now"] != true || hours["timezone"] != "America/Sao_Paulo" || len(hours["days"].([]any)) != 7 {
 		t.Errorf("my_hours = %v", hours)
 	}
-	if who := callTool(t, cs, "whoami", nil); who["open_session"] == nil {
-		t.Errorf("whoami without the open session: %v", who)
+	if who := callTool(t, cs, "whoami", nil); len(who["open_sessions"].([]any)) != 2 {
+		t.Errorf("whoami without the two open sessions: %v", who)
 	}
 
-	closed := callTool(t, cs, "clock_out", nil)
-	if closed["open"] != false || closed["ended_at"] == "" || running(closed) != "" {
-		t.Errorf("clock_out = %v", closed)
+	// Com duas sessões abertas, clock_out pede o projeto; com ele, fecha só aquela.
+	text = toolError(t, cs, "clock_out", nil)
+	wantCode(t, text, "mcp.project_required")
+	if !strings.Contains(text, `"Alfa"`) || !strings.Contains(text, `"Beta"`) || !strings.Contains(text, "project_id") {
+		t.Errorf("project required error does not list the open projects: %q", text)
 	}
-	if rec := do(e, "GET", "/api/work-sessions/active", "", member.session); strings.TrimSpace(rec.Body.String()) != "null" {
+	closed := callTool(t, cs, "clock_out", map[string]any{"project_id": alfa})
+	if closed["open"] != false || closed["ended_at"] == "" || running(closed) != "" || closed["project"].(map[string]any)["name"] != "Alfa" {
+		t.Errorf("clock_out of Alfa = %v", closed)
+	}
+	if open := decodeList(t, do(e, "GET", "/api/work-sessions/open", "", member.session)); len(open) != 1 || open[0]["project_id"] != beta {
+		t.Errorf("after closing Alfa, the API sees %v, want only the Beta session", open)
+	}
+	// Fechar de novo o Alfa é not_open, e a dica diz onde o ponto ainda está aberto.
+	again := toolError(t, cs, "clock_out", map[string]any{"project_id": alfa})
+	wantCode(t, again, "work_session.not_open")
+	if !strings.Contains(again, `"Beta" (`+beta+`)`) {
+		t.Errorf("clock_out of a project without a session does not say where the clock is open: %q", again)
+	}
+	// Com uma sessão só, clock_out sem projeto fecha essa.
+	if closed := callTool(t, cs, "clock_out", nil); closed["project"].(map[string]any)["name"] != "Beta" {
+		t.Errorf("clock_out with only Beta open = %v", closed)
+	}
+	if rec := do(e, "GET", "/api/work-sessions/open", "", member.session); strings.TrimSpace(rec.Body.String()) != "[]" {
 		t.Errorf("the API still sees an open session: %s", rec.Body.String())
 	}
 }

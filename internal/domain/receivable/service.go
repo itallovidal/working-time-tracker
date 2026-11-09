@@ -17,6 +17,7 @@ import (
 	"working-time-tracker/internal/database"
 	"working-time-tracker/internal/domain/customer"
 	"working-time-tracker/internal/domain/payment"
+	"working-time-tracker/internal/domain/work_session"
 	"working-time-tracker/internal/validate"
 )
 
@@ -90,27 +91,33 @@ func (s *Service) Proposals(orgID string, includeOpen bool) ([]Proposal, error) 
 	if err != nil {
 		return nil, err
 	}
-	return s.proposalsOf(e, customers, doneOf(rows), includeOpen)
+	sessions, err := s.sessionsOf(e, customers)
+	if err != nil {
+		return nil, err
+	}
+	return proposalsOf(e, customers, sessions, doneOf(rows), includeOpen), nil
 }
 
-// proposalsOf propõe os períodos dos clientes, que o chamador já leu, descontando os confirmados (done).
-func (s *Service) proposalsOf(e env, customers []*ent.Customer, done map[string]bool, includeOpen bool) ([]Proposal, error) {
+// sessionsOf lê as sessões dos clientes que se cobram (por hora ou mensal), agrupadas por cliente.
+func (s *Service) sessionsOf(e env, customers []*ent.Customer) (map[uuid.UUID][]work_session.WorkSession, error) {
 	var billable []uuid.UUID
 	for _, c := range customers {
 		if c.BillingMode == KindHourly || c.BillingMode == KindMonthly {
 			billable = append(billable, c.ID)
 		}
 	}
-	sessions, err := s.deps.Store.SessionsByCustomer(e.id, billable)
-	if err != nil {
-		return nil, err
-	}
+	return s.deps.Store.SessionsByCustomer(e.id, billable)
+}
+
+// proposalsOf propõe os períodos dos clientes, com as sessões deles, que o chamador já leu, descontando os confirmados
+// (done).
+func proposalsOf(e env, customers []*ent.Customer, sessions map[uuid.UUID][]work_session.WorkSession, done map[string]bool, includeOpen bool) []Proposal {
 	out := []Proposal{}
 	for _, c := range customers {
 		out = append(out, termsOf(c, e.loc).proposals(sessions[c.ID], done, e.now, includeOpen)...)
 	}
 	sortProposals(out)
-	return out, nil
+	return out
 }
 
 // doneOf junta os períodos que já têm recebível, por cliente.
@@ -175,16 +182,61 @@ func view(e env, r *ent.Receivable, customerName string) Receivable {
 		ConfirmedAt: r.ConfirmedAt, ReceivedOn: r.ReceivedOn, ReceivedCents: r.ReceivedCents,
 		LateFeeCents: r.LateFeeCents, InterestCents: r.InterestCents,
 	}
-	if r.ReceivedOn == nil && e.today > r.DueDate {
-		v.Late = true
-		v.DaysLate = daysBetween(r.DueDate, e.today)
+	if r.ReceivedOn == nil {
+		v.Late, v.DaysLate = lateOn(e, r.DueDate)
 	}
 	v.EffectiveRateCents, v.BelowMinRate = effectiveRate(r.AmountCents, r.Seconds)
 	return v
 }
 
-// Summary monta a página A receber: os cartões e as três listas. A confirmação e o recebimento são do dono, e esta
-// leitura também.
+// lateOn diz se uma conta que vence em due está atrasada hoje (hoje depois do vencimento) e há quantos dias.
+func lateOn(e env, due string) (bool, int) {
+	if e.today > due {
+		return true, daysBetween(due, e.today)
+	}
+	return false, 0
+}
+
+// dedicationOfDue é a dedicação do período de uma conta mensal em andamento, com as horas ao vivo: o recebível ajustado
+// ou recebido adiantado guarda as horas de quando foi gravado, e a dedicação mostra as de agora. Nula fora do mensal,
+// sem estimativa, ou quando as datas da conta não são as de um período do ciclo do cliente.
+func dedicationOfDue(e env, c *ent.Customer, sessions map[uuid.UUID][]work_session.WorkSession, d Due) *Dedication {
+	if c == nil || d.Kind != KindMonthly || !tracked(c) {
+		return nil
+	}
+	t := termsOf(c, e.loc)
+	p, ok := t.cycle.exact(d.PeriodStart, d.PeriodEnd)
+	if !ok {
+		return nil
+	}
+	return t.dedication(sessions[c.ID], p, e.now)
+}
+
+// dueOfProposal é o período calculado e já fechado na lista A receber: nada gravado, o valor é o calculado.
+func dueOfProposal(e env, p Proposal) Due {
+	d := Due{
+		Customer: p.Customer, Kind: p.Kind, PeriodStart: p.PeriodStart, PeriodEnd: p.PeriodEnd,
+		Seconds: p.Seconds, CalculatedCents: p.CalculatedCents, AmountCents: p.CalculatedCents, ExtraCents: p.ExtraCents,
+		DueDate: p.DueDate, EffectiveRateCents: p.EffectiveRateCents, BelowMinRate: p.BelowMinRate,
+	}
+	d.Late, d.DaysLate = lateOn(e, p.DueDate)
+	return d
+}
+
+// dueOfReceivable é o recebível gravado e não recebido na lista A receber, com o atraso que view já calculou.
+func dueOfReceivable(r Receivable) Due {
+	id := r.ID
+	return Due{
+		ID: &id, Adjusted: true, Customer: r.Customer, Kind: r.Kind, PeriodStart: r.PeriodStart, PeriodEnd: r.PeriodEnd,
+		Seconds: r.Seconds, CalculatedCents: r.CalculatedCents, AmountCents: r.AmountCents,
+		DueDate: r.DueDate, InvoiceNumber: r.InvoiceNumber, Note: r.Note, Late: r.Late, DaysLate: r.DaysLate,
+		EffectiveRateCents: r.EffectiveRateCents, BelowMinRate: r.BelowMinRate,
+	}
+}
+
+// Summary monta a página A receber: os cartões e as três listas. Em andamento são os períodos ainda abertos (o mês
+// corrente do contrato mensal e o período corrente do por hora, com as horas até agora); A receber, o que fechou e não
+// entrou, calculado ou gravado; Recebidos, o histórico. O recebimento é do dono, e esta leitura também.
 func (s *Service) Summary(orgID string) (*Summary, error) {
 	e, err := s.env(orgID)
 	if err != nil {
@@ -198,17 +250,33 @@ func (s *Service) Summary(orgID string) (*Summary, error) {
 	if err != nil {
 		return nil, err
 	}
-	proposals, err := s.proposalsOf(e, customers, doneOf(rows), false)
+	sessions, err := s.sessionsOf(e, customers)
 	if err != nil {
 		return nil, err
 	}
+	proposals := proposalsOf(e, customers, sessions, doneOf(rows), true)
+	byID := make(map[uuid.UUID]*ent.Customer, len(customers))
+	for _, c := range customers {
+		byID[c.ID] = c
+	}
 	out := &Summary{
 		GeneratedAt: e.now, Timezone: e.org.Timezone, Currency: e.org.Currency, Today: e.today,
-		ToConfirm: proposals, Open: []Receivable{}, Received: []Receivable{},
+		InProgress: []Due{}, ToReceive: []Due{}, Received: []Receivable{},
 	}
-	out.Totals.ToConfirmCount = len(proposals)
+	// Um período está em andamento enquanto não fechou: hoje ainda é o último dia dele, ou antes. Vale para o calculado e
+	// para o gravado (o mês ajustado adiantado), que só passa para A receber quando o período fecha.
+	place := func(d Due) {
+		if e.today <= d.PeriodEnd {
+			d.Dedication = dedicationOfDue(e, byID[d.Customer.ID], sessions, d)
+			out.InProgress = append(out.InProgress, d)
+			out.Totals.InProgressCount++
+			out.Totals.InProgressCents += d.AmountCents
+			return
+		}
+		out.ToReceive = append(out.ToReceive, d)
+	}
 	for _, p := range proposals {
-		out.Totals.ToConfirmCents += p.CalculatedCents
+		place(dueOfProposal(e, p))
 	}
 	month := e.today[:len("2006-01")]
 	for _, r := range viewsOf(e, rows, namesOf(customers)) {
@@ -220,12 +288,31 @@ func (s *Service) Summary(orgID string) (*Summary, error) {
 			}
 			continue
 		}
-		out.Open = append(out.Open, r)
-		out.Totals.OpenCount++
-		out.Totals.OpenCents += r.AmountCents
-		if r.Late {
+		place(dueOfReceivable(r))
+	}
+	// Em andamento, o que fecha primeiro antes.
+	slices.SortStableFunc(out.InProgress, func(a, b Due) int {
+		if c := strings.Compare(a.PeriodEnd, b.PeriodEnd); c != 0 {
+			return c
+		}
+		return strings.Compare(a.Customer.Name, b.Customer.Name)
+	})
+	// A receber, o vencimento mais antigo primeiro: os atrasados (o mais atrasado no topo) e depois o que vence antes.
+	slices.SortStableFunc(out.ToReceive, func(a, b Due) int {
+		if c := strings.Compare(a.DueDate, b.DueDate); c != 0 {
+			return c
+		}
+		if c := strings.Compare(a.Customer.Name, b.Customer.Name); c != 0 {
+			return c
+		}
+		return strings.Compare(a.PeriodEnd, b.PeriodEnd)
+	})
+	for _, d := range out.ToReceive {
+		out.Totals.ToReceiveCount++
+		out.Totals.ToReceiveCents += d.AmountCents
+		if d.Late {
 			out.Totals.LateCount++
-			out.Totals.LateCents += r.AmountCents
+			out.Totals.LateCents += d.AmountCents
 		}
 	}
 	// Os recebidos, o mais recente primeiro; só os últimos MaxReceived vão para a tela.
@@ -251,49 +338,16 @@ func (s *Service) Confirm(orgID string, in ConfirmInput) (*Receivable, error) {
 	if err != nil {
 		return nil, err
 	}
-	cid, err := uuid.Parse(in.CustomerID)
+	b, err := s.billableOf(e, in.CustomerID, in.PeriodStart, in.PeriodEnd)
 	if err != nil {
-		return nil, customer.ErrNotFound
-	}
-	c, err := s.deps.Store.Customer(e.id, cid)
-	if err != nil {
-		if errors.Is(err, database.ErrNotFound) {
-			return nil, customer.ErrNotFound
-		}
 		return nil, err
-	}
-	for field, v := range map[string]string{"period_start": in.PeriodStart, "period_end": in.PeriodEnd} {
-		if v == "" {
-			return nil, apperr.ErrFieldRequired.With("field", field)
-		}
-		if !validDay(v) {
-			return nil, apperr.ErrFieldInvalid.With("field", field)
-		}
-	}
-	t := termsOf(c, e.loc)
-	period, ok := t.cycle.exact(in.PeriodStart, in.PeriodEnd)
-	if !ok {
-		return nil, ErrNotAPeriod.With("field", "period_start")
-	}
-	kind := c.BillingMode
-	switch kind {
-	case KindHourly:
-		if !closed(period, e.now) {
-			return nil, ErrPeriodOpen
-		}
-	case KindMonthly:
-		if !slices.ContainsFunc(t.contractPeriods(e.now), func(p payment.Period) bool { return p.StartDay() == in.PeriodStart }) {
-			return nil, ErrNotAPeriod.With("field", "period_start")
-		}
-	default:
-		return nil, ErrNotAPeriod.With("field", "period_start")
 	}
 	if in.AmountCents == nil || *in.AmountCents <= 0 || *in.AmountCents > validate.MaxCents {
 		return nil, ErrInvalidAmount.With("field", "amount_cents")
 	}
 	due := in.DueDate
 	if due == "" {
-		due = addDays(in.PeriodEnd, c.PaymentDays)
+		due = b.defaultDue()
 	} else if !validDay(due) {
 		return nil, apperr.ErrFieldInvalid.With("field", "due_date")
 	}
@@ -305,30 +359,158 @@ func (s *Service) Confirm(orgID string, in ConfirmInput) (*Receivable, error) {
 	if err != nil {
 		return nil, err
 	}
-	if exists, err := s.deps.Store.Exists(c.ID, in.PeriodStart, in.PeriodEnd); err != nil {
+	if err := s.notYetRecorded(b); err != nil {
 		return nil, err
-	} else if exists {
-		return nil, ErrAlreadyConfirmed
 	}
-
-	sessions, err := s.deps.Store.SessionsByCustomer(e.id, []uuid.UUID{c.ID})
+	seconds, calculated, err := s.calculate(e, b)
 	if err != nil {
 		return nil, err
 	}
-	seconds, calculated := sumWithin(sessions[c.ID], period.Start, period.End, e.now)
-	if kind == KindMonthly {
-		calculated = t.monthlyCents()
-	}
 	created, err := s.deps.Store.Create(e.id, &ent.Receivable{
-		CustomerID: c.ID, Kind: kind, PeriodStart: in.PeriodStart, PeriodEnd: in.PeriodEnd,
+		CustomerID: b.customer.ID, Kind: b.kind, PeriodStart: in.PeriodStart, PeriodEnd: in.PeriodEnd,
 		Seconds: seconds, CalculatedCents: calculated, AmountCents: *in.AmountCents, Currency: e.org.Currency,
 		DueDate: due, InvoiceNumber: invoice, Note: note, ConfirmedAt: e.now,
 	})
 	if err != nil {
 		return nil, err
 	}
-	v := view(e, created, c.Name)
+	v := view(e, created, b.customer.Name)
 	return &v, nil
+}
+
+// ReceivePeriod recebe um período calculado num passo só: grava o recebível já recebido, com o valor que o sistema
+// calcula agora e o vencimento padrão do cliente. As regras do período são as de Confirm (no mensal, o mês corrente é o
+// recebimento adiantado; no por hora, só depois de fechar) e as do valor são as de Receive. Outro valor ou outro
+// vencimento se ajustam antes, por Confirm.
+func (s *Service) ReceivePeriod(orgID string, in ReceivePeriodInput) (*Receivable, error) {
+	e, err := s.env(orgID)
+	if err != nil {
+		return nil, err
+	}
+	b, err := s.billableOf(e, in.CustomerID, in.PeriodStart, in.PeriodEnd)
+	if err != nil {
+		return nil, err
+	}
+	on, err := receivedOn(e, in.ReceiveInput)
+	if err != nil {
+		return nil, err
+	}
+	invoice := ""
+	if in.InvoiceNumber != nil {
+		if invoice, err = validate.Text("invoice_number", *in.InvoiceNumber, validate.MaxInvoiceNumber); err != nil {
+			return nil, err
+		}
+	}
+	note, err := validate.Text("note", in.Note, validate.MaxNote)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.notYetRecorded(b); err != nil {
+		return nil, err
+	}
+	seconds, calculated, err := s.calculate(e, b)
+	if err != nil {
+		return nil, err
+	}
+	// Um período sem valor (as sessões não têm valor cobrado) não se recebe assim: o dono ajusta o valor antes.
+	if calculated <= 0 || calculated > validate.MaxCents {
+		return nil, ErrInvalidAmount.With("field", "amount_cents")
+	}
+	cents, fee, interest, err := receiveAmounts(b.kind, calculated, in.ReceiveInput)
+	if err != nil {
+		return nil, err
+	}
+	created, err := s.deps.Store.Create(e.id, &ent.Receivable{
+		CustomerID: b.customer.ID, Kind: b.kind, PeriodStart: in.PeriodStart, PeriodEnd: in.PeriodEnd,
+		Seconds: seconds, CalculatedCents: calculated, AmountCents: calculated, Currency: e.org.Currency,
+		DueDate: b.defaultDue(), InvoiceNumber: invoice, Note: note, ConfirmedAt: e.now,
+		ReceivedOn: &on, ReceivedCents: &cents, LateFeeCents: fee, InterestCents: interest,
+	})
+	if err != nil {
+		return nil, err
+	}
+	v := view(e, created, b.customer.Name)
+	return &v, nil
+}
+
+// billable é um período de um cliente que se pode cobrar agora, já conferido por billableOf.
+type billable struct {
+	customer *ent.Customer
+	terms    terms
+	kind     string
+	period   payment.Period
+}
+
+// defaultDue é o vencimento padrão do período: o fim dele mais os payment_days do cliente.
+func (b billable) defaultDue() string { return addDays(b.period.PayDay(), b.customer.PaymentDays) }
+
+// billableOf confere o cliente e o período de uma cobrança: o período tem de ser um do ciclo do cliente; no por hora,
+// já fechado (ErrPeriodOpen); no mensal, um dos do contrato até o corrente. Um ID malformado ou de outra organização
+// vale como "cliente não encontrado".
+func (s *Service) billableOf(e env, customerID, start, end string) (billable, error) {
+	cid, err := uuid.Parse(customerID)
+	if err != nil {
+		return billable{}, customer.ErrNotFound
+	}
+	c, err := s.deps.Store.Customer(e.id, cid)
+	if err != nil {
+		if errors.Is(err, database.ErrNotFound) {
+			return billable{}, customer.ErrNotFound
+		}
+		return billable{}, err
+	}
+	for field, v := range map[string]string{"period_start": start, "period_end": end} {
+		if v == "" {
+			return billable{}, apperr.ErrFieldRequired.With("field", field)
+		}
+		if !validDay(v) {
+			return billable{}, apperr.ErrFieldInvalid.With("field", field)
+		}
+	}
+	t := termsOf(c, e.loc)
+	period, ok := t.cycle.exact(start, end)
+	if !ok {
+		return billable{}, ErrNotAPeriod.With("field", "period_start")
+	}
+	switch c.BillingMode {
+	case KindHourly:
+		if !closed(period, e.now) {
+			return billable{}, ErrPeriodOpen
+		}
+	case KindMonthly:
+		if !slices.ContainsFunc(t.contractPeriods(e.now), func(p payment.Period) bool { return p.StartDay() == start }) {
+			return billable{}, ErrNotAPeriod.With("field", "period_start")
+		}
+	default:
+		return billable{}, ErrNotAPeriod.With("field", "period_start")
+	}
+	return billable{customer: c, terms: t, kind: c.BillingMode, period: period}, nil
+}
+
+// notYetRecorded recusa o período que já tem recebível (ErrAlreadyConfirmed); o índice único garante o mesmo.
+func (s *Service) notYetRecorded(b billable) error {
+	exists, err := s.deps.Store.Exists(b.customer.ID, b.period.StartDay(), b.period.PayDay())
+	if err != nil {
+		return err
+	}
+	if exists {
+		return ErrAlreadyConfirmed
+	}
+	return nil
+}
+
+// calculate é o tempo e o valor que o sistema calcula agora para o período: as sessões dos projetos do cliente
+// cortadas nele; no mensal, o valor é a mensalidade mais os acréscimos mensais dos projetos.
+func (s *Service) calculate(e env, b billable) (float64, int, error) {
+	sessions, err := s.deps.Store.SessionsByCustomer(e.id, []uuid.UUID{b.customer.ID})
+	if err != nil {
+		return 0, 0, err
+	}
+	seconds, cents := sumWithin(sessions[b.customer.ID], b.period.Start, b.period.End, e.now)
+	if b.kind == KindMonthly {
+		cents = b.terms.monthlyCents()
+	}
+	return seconds, cents, nil
 }
 
 // one lê um recebível da organização e o nome do cliente dele.
@@ -418,56 +600,23 @@ func (s *Service) Receive(orgID, id string, in ReceiveInput) (*Receivable, error
 	if r.ReceivedOn != nil {
 		return nil, ErrAlreadyReceived
 	}
-	on := e.today
-	if in.ReceivedOn != "" {
-		on = in.ReceivedOn
-		if !validDay(on) {
-			return nil, apperr.ErrFieldInvalid.With("field", "received_on")
-		}
+	on, err := receivedOn(e, in)
+	if err != nil {
+		return nil, err
 	}
-	if on > e.today {
-		return nil, ErrReceivedInFuture.With("field", "received_on")
+	cents, fee, interest, err := receiveAmounts(r.Kind, r.AmountCents, in)
+	if err != nil {
+		return nil, err
 	}
-
-	var cents, fee, interest int
-	if r.Kind == KindHourly {
-		if in.ReceivedCents != nil && *in.ReceivedCents != r.AmountCents {
-			return nil, ErrReceivedMustMatch.With("field", "received_cents")
+	var invoice *string
+	if in.InvoiceNumber != nil {
+		v, err := validate.Text("invoice_number", *in.InvoiceNumber, validate.MaxInvoiceNumber)
+		if err != nil {
+			return nil, err
 		}
-		if in.LateFeeCents != nil && *in.LateFeeCents != 0 {
-			return nil, ErrChargesNotAllowed.With("field", "late_fee_cents")
-		}
-		if in.InterestCents != nil && *in.InterestCents != 0 {
-			return nil, ErrChargesNotAllowed.With("field", "interest_cents")
-		}
-		cents = r.AmountCents
-	} else {
-		if in.ReceivedCents != nil && (*in.ReceivedCents <= 0 || *in.ReceivedCents > validate.MaxCents) {
-			return nil, ErrInvalidAmount.With("field", "received_cents")
-		}
-		for _, c := range []struct {
-			field string
-			in    *int
-			out   *int
-		}{{"late_fee_cents", in.LateFeeCents, &fee}, {"interest_cents", in.InterestCents, &interest}} {
-			if c.in == nil {
-				continue
-			}
-			if *c.in < 0 || *c.in > validate.MaxCents {
-				return nil, ErrInvalidCharge.With("field", c.field)
-			}
-			*c.out = *c.in
-		}
-		if in.ReceivedCents != nil {
-			cents = *in.ReceivedCents
-		} else if cents = r.AmountCents + fee + interest; cents > validate.MaxCents {
-			return nil, ErrInvalidAmount.With("field", "received_cents")
-		}
-		if fee+interest > cents {
-			return nil, ErrChargesExceedReceived.With("field", "late_fee_cents")
-		}
+		invoice = &v
 	}
-	if err := s.deps.Store.Receive(e.id, r.ID, r.AmountCents, on, cents, fee, interest); err != nil {
+	if err := s.deps.Store.Receive(e.id, r.ID, r.AmountCents, on, cents, fee, interest, invoice); err != nil {
 		return nil, err
 	}
 	r, err = s.deps.Store.Get(e.id, id)
@@ -476,6 +625,63 @@ func (s *Service) Receive(orgID, id string, in ReceiveInput) (*Receivable, error
 	}
 	v := view(e, r, name)
 	return &v, nil
+}
+
+// receivedOn é o dia do recebimento: o informado, ou hoje sem ele. Uma data depois de hoje é recusada.
+func receivedOn(e env, in ReceiveInput) (string, error) {
+	if in.ReceivedOn == "" {
+		return e.today, nil
+	}
+	if !validDay(in.ReceivedOn) {
+		return "", apperr.ErrFieldInvalid.With("field", "received_on")
+	}
+	if in.ReceivedOn > e.today {
+		return "", ErrReceivedInFuture.With("field", "received_on")
+	}
+	return in.ReceivedOn, nil
+}
+
+// receiveAmounts confere o que entrou de uma conta de valor amount e devolve o valor recebido, a multa e os juros. No
+// por hora o valor recebido é o da conta e multa e juros são recusados; no mensal o valor é livre (maior que zero, e
+// sem ele vale a conta mais a multa e os juros), e a multa e os juros valem zero ou mais, partes do valor recebido.
+func receiveAmounts(kind string, amount int, in ReceiveInput) (cents, fee, interest int, err error) {
+	if kind == KindHourly {
+		if in.ReceivedCents != nil && *in.ReceivedCents != amount {
+			return 0, 0, 0, ErrReceivedMustMatch.With("field", "received_cents")
+		}
+		if in.LateFeeCents != nil && *in.LateFeeCents != 0 {
+			return 0, 0, 0, ErrChargesNotAllowed.With("field", "late_fee_cents")
+		}
+		if in.InterestCents != nil && *in.InterestCents != 0 {
+			return 0, 0, 0, ErrChargesNotAllowed.With("field", "interest_cents")
+		}
+		return amount, 0, 0, nil
+	}
+	if in.ReceivedCents != nil && (*in.ReceivedCents <= 0 || *in.ReceivedCents > validate.MaxCents) {
+		return 0, 0, 0, ErrInvalidAmount.With("field", "received_cents")
+	}
+	for _, c := range []struct {
+		field string
+		in    *int
+		out   *int
+	}{{"late_fee_cents", in.LateFeeCents, &fee}, {"interest_cents", in.InterestCents, &interest}} {
+		if c.in == nil {
+			continue
+		}
+		if *c.in < 0 || *c.in > validate.MaxCents {
+			return 0, 0, 0, ErrInvalidCharge.With("field", c.field)
+		}
+		*c.out = *c.in
+	}
+	if in.ReceivedCents != nil {
+		cents = *in.ReceivedCents
+	} else if cents = amount + fee + interest; cents > validate.MaxCents {
+		return 0, 0, 0, ErrInvalidAmount.With("field", "received_cents")
+	}
+	if fee+interest > cents {
+		return 0, 0, 0, ErrChargesExceedReceived.With("field", "late_fee_cents")
+	}
+	return cents, fee, interest, nil
 }
 
 // Unreceive desfaz o recebimento: o recebível volta a estar em aberto, e a multa e os juros informados se vão com ele.
@@ -531,5 +737,35 @@ func (s *Service) LateCharges(orgID, id, on string) (*LateCharges, error) {
 		return nil, err
 	}
 	out := lateCharges(r.AmountCents, c.LateFeeBp, c.LateInterestBpMonth, c.GraceDays, r.DueDate, on)
+	return &out, nil
+}
+
+// PeriodLateCharges é a mesma sugestão para um período calculado, ainda sem recebível: o valor é o que o sistema
+// calcula agora e o vencimento é o padrão do cliente. O período segue as regras de Confirm.
+func (s *Service) PeriodLateCharges(orgID, customerID, start, end, on string) (*LateCharges, error) {
+	e, err := s.env(orgID)
+	if err != nil {
+		return nil, err
+	}
+	if on == "" {
+		on = e.today
+	} else if !validDay(on) {
+		return nil, apperr.ErrFieldInvalid.With("field", "on")
+	}
+	b, err := s.billableOf(e, customerID, start, end)
+	if err != nil {
+		return nil, err
+	}
+	_, amount, err := s.calculate(e, b)
+	if err != nil {
+		return nil, err
+	}
+	if b.kind != KindMonthly {
+		out := lateCharges(amount, 0, 0, 0, b.defaultDue(), on)
+		out.Charged, out.TotalCents = false, amount
+		return &out, nil
+	}
+	c := b.customer
+	out := lateCharges(amount, c.LateFeeBp, c.LateInterestBpMonth, c.GraceDays, b.defaultDue(), on)
 	return &out, nil
 }

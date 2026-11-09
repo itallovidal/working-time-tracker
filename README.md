@@ -20,7 +20,7 @@ flowchart LR
 
 ## Funcionalidades
 
-- **Ponto por tarefa.** Clock-in e clock-out com cronômetro. Uma sessão pode ter várias tarefas, e cada pessoa tem no máximo uma sessão aberta.
+- **Ponto por tarefa.** Clock-in e clock-out com cronômetro. Uma sessão pode ter várias tarefas, e cada pessoa tem no máximo uma sessão aberta em cada projeto (projetos diferentes correm ao mesmo tempo).
 - **Tarefas.** Status, prioridade, etiquetas, prazo e descrição em Markdown. O responsável é opcional: quem pega a tarefa ou bate o ponto nela vira o responsável.
 - **Organização, projetos e times.** O projeto tem um cliente, ou é interno. A pessoa entra no projeto com o valor por hora dela, e os times só organizam quem está nele.
 - **Quatro cargos.** Dono, admin, administrador de projeto e colaborador. O dinheiro (clientes, cobrança e pagamentos) é só do dono.
@@ -28,7 +28,7 @@ flowchart LR
 - **Modo solo.** Para quem trabalha sozinho (freelancer, PJ): a organização é uma pessoa só e perde o que é de equipe. Cada cliente é cobrado por hora ou por contrato mensal, e o dono confirma e acompanha o que tem a receber, com a multa e os juros sugeridos no contrato mensal.
 - **Painéis.** Cada pessoa tem o seu painel. A gestão tem a visão geral da organização e de cada projeto, além de saber quem está trabalhando agora e em quê.
 - **Integrações.** Issues do GitHub e do GitLab e cartões do Trello sincronizados com as tarefas nos dois sentidos, e a mesma tarefa pode estar em mais de uma plataforma.
-- **Claude (MCP).** Com um token gerado no perfil, o Claude Code cria e atualiza tarefas, pega uma para você, sincroniza, bate o ponto e troca de tarefa, como você e sem ver dinheiro. Ver [MCP](_docs/api/mcp.md).
+- **Claude (MCP).** O Claude cria e atualiza tarefas, pega uma para você, sincroniza, bate o ponto e troca de tarefa, como você e sem ver dinheiro. No claude.ai (e com ele no Claude Desktop e no celular), cole o endereço do conector e autorize pelo OAuth; no Claude Code, use o mesmo endereço ou um token gerado no perfil. Ver [MCP](_docs/api/mcp.md).
 - **Entrada e convites.** E-mail e senha, ou Google pelo Clerk. Os convites vão por link ou por e-mail.
 - **Idiomas e países.** Português e inglês. Brasil e EUA, com CNPJ e EIN.
 - **Ajuda pública** em `/help`, com o passo a passo do primeiro uso.
@@ -92,7 +92,7 @@ make test
 | API | [Visão geral](_docs/api/overview.md) | Convenções, grupos de rotas e validação |
 | | [Referência](_docs/api/reference.md) | Todas as rotas, com exemplos |
 | | [Erros](_docs/api/errors.md) | Os códigos de erro (gerado por teste) |
-| | [MCP](_docs/api/mcp.md) | Conectar o Claude Code, o token pessoal e as ferramentas |
+| | [MCP](_docs/api/mcp.md) | Conectar o claude.ai e o Claude Code (OAuth ou token pessoal) e as ferramentas |
 | Desenvolvimento | [Comandos](_docs/development/commands.md) | O `Makefile`: subir, testar, migrar, gerar a imagem e o backup |
 | | [Testes e migrações](_docs/development/workflow.md) | Rodar a suíte e mudar o banco |
 | | [Idiomas e países](_docs/development/i18n-and-countries.md) | Como os textos funcionam e como acrescentar um idioma ou um país |

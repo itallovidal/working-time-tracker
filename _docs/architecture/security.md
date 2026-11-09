@@ -23,7 +23,8 @@ quê está em [permissions.md](../product/permissions.md); aqui está como isso 
 
 ## Tokens do Claude (MCP)
 
-O servidor MCP (`/mcp`) é a porta do Claude Code. Ele entra com um token pessoal, e não com o cookie
+O servidor MCP (`/mcp`) é a porta do Claude. O Claude Code entra com um token pessoal, e o claude.ai (com o Desktop e o
+celular) e o Claude Code entram também pelo OAuth ([OAuth do MCP](#oauth-do-mcp)); nunca com o cookie
 ([api/mcp.md](../api/mcp.md)).
 
 - **Como a sessão:** `wtt_` mais 32 bytes aleatórios, e o banco guarda só o sha256. O token aparece em claro uma vez,
@@ -39,6 +40,48 @@ O servidor MCP (`/mcp`) é a porta do Claude Code. Ele entra com um token pessoa
   conferem o projeto dela, e nenhuma saída tem dinheiro.
 - **Outra origem:** um pedido de navegador vindo de outro site recebe `403` (`http.CrossOriginProtection`).
 - O token não vai para o log: o log de requisições não grava cabeçalhos.
+
+## OAuth do MCP
+
+O claude.ai, o Claude Desktop e o celular só conectam um servidor remoto por OAuth 2.1. O sistema é o próprio servidor
+de autorização (`internal/oauth`, [Decisão 25](decisions.md#decisão-25-oauth-no-mcp--o-claudeai-o-desktop-e-o-celular-pela-identidade-publicada-do-claude)).
+
+- **Só os apps do Claude.** O client_id tem de ser uma das duas URLs de identidade publicadas do Claude (o claude.ai e o
+  Claude Code). O documento é buscado dessas URLs e de nenhuma outra: sem redirecionamento, em até 5 segundos e até
+  64 KiB; o client_id dele tem de ser a própria URL, o app tem de ser público (`none`) e cada endereço de volta, https
+  ou http no próprio computador. Se a busca falha, vale a última cópia boa ou a embutida.
+- **O endereço de volta é exato,** menos no http do próprio computador (o Claude Code abre uma porta qualquer): ali a
+  porta não conta, mas o nome, o caminho e a query, sim. Um app desconhecido, ou um endereço de volta que não é dele,
+  para numa página de erro, sem redirecionar: mandar o erro a um endereço desconhecido seria um redirecionamento aberto.
+- **PKCE S256 obrigatório.** Sem o desafio, com outro método ou com um verificador errado, não há código nem token.
+- **O código vale uma vez, por 2 minutos.** A troca o gasta na primeira tentativa, mesmo errada (outro app, outro
+  endereço de volta, outro verificador, outro recurso). Um código usado de novo derruba a conexão, com os tokens que ela
+  já deu.
+- **O token de acesso (`wtta_`) só vale no `/mcp` e só para o recurso em que foi emitido** (o `PUBLIC_URL` mais
+  `/mcp`, comparado na forma canônica). Vale 1 hora e, como o pessoal, relê a pessoa a cada requisição.
+- **O token de renovação (`wttr_`) gira a cada uso.** O anterior, mandado de novo em até 60 segundos, recebe o mesmo
+  sucessor; depois disso, é reuso, e a conexão cai inteira. A conexão cai também depois de 30 dias sem uso.
+- **Todos os tokens e códigos são guardados como sha256,** como a sessão. A única exceção é a cópia do sucessor para a
+  janela de 60 segundos, guardada cifrada com uma chave que junta a `INTEGRATION_ENCRYPTION_KEY`, um rótulo próprio e
+  o token anterior. O banco só tem o hash desse token, então nem o banco com a chave do servidor abre a cópia: só quem
+  manda o token anterior de novo. Passada a janela, a cópia sai no primeiro uso do `/mcp`, e cada renovação a troca.
+- **Uma conexão por app no claude.ai.** Ele volta sempre ao mesmo endereço e não revoga a conexão antiga quando conecta
+  de novo, então a nova a substitui na troca do código. O Claude Code, que volta ao próprio computador, tem uma por
+  máquina. O limite de 10 conta só os apps conectados; as autorizações que o app não trocou têm um limite à parte e
+  nunca tiram um app conectado.
+- **A tela de consentimento** sempre pergunta (não há aprovação automática), mostra o app, a pessoa, a organização e o
+  host para onde volta, e avisa quando a volta é um programa no próprio computador. Ela responde com
+  `X-Frame-Options: DENY`, `frame-ancestors 'none'`, `Referrer-Policy: no-referrer` e `Cache-Control: no-store`.
+- **O "Permitir" é da API** (`POST /api/oauth/consent`): pede o cookie, o JSON (`JSONOnly`) e a mesma origem
+  (`http.CrossOriginProtection`), e confere o pedido de novo. A concessão é sempre de quem está logado.
+- **O `/oauth/token` e o `/oauth/revoke`** aceitam só o corpo do formulário (parâmetros na URL não contam, e um
+  parâmetro repetido é recusado), respondem com `Cache-Control: no-store` e têm o próprio limite por IP (1 por segundo,
+  rajada de 30), mais folgado que o do login porque o claude.ai renova os tokens de todo mundo pelos mesmos IPs.
+- **Desconectar** é na lista "Apps conectados" do perfil (cada pessoa só vê e desconecta os seus) ou no
+  `/oauth/revoke`. **Trocar a senha desconecta todos os apps**, como revoga os tokens pessoais. Uma conta só com o
+  Clerk não troca a senha: para ela, o corte é desconectar no perfil.
+- **Os documentos de descoberta** (`/.well-known/*`) são públicos e respondem a qualquer origem; um que não existe é um
+  `404` em JSON, nunca o redirecionamento para o login.
 
 ## Entrar pelo Clerk
 

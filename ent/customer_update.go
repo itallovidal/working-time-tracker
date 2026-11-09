@@ -261,6 +261,33 @@ func (_u *CustomerUpdate) ClearContractEnd() *CustomerUpdate {
 	return _u
 }
 
+// SetEstimatedMonthlyHours sets the "estimated_monthly_hours" field.
+func (_u *CustomerUpdate) SetEstimatedMonthlyHours(v int) *CustomerUpdate {
+	_u.mutation.ResetEstimatedMonthlyHours()
+	_u.mutation.SetEstimatedMonthlyHours(v)
+	return _u
+}
+
+// SetNillableEstimatedMonthlyHours sets the "estimated_monthly_hours" field if the given value is not nil.
+func (_u *CustomerUpdate) SetNillableEstimatedMonthlyHours(v *int) *CustomerUpdate {
+	if v != nil {
+		_u.SetEstimatedMonthlyHours(*v)
+	}
+	return _u
+}
+
+// AddEstimatedMonthlyHours adds value to the "estimated_monthly_hours" field.
+func (_u *CustomerUpdate) AddEstimatedMonthlyHours(v int) *CustomerUpdate {
+	_u.mutation.AddEstimatedMonthlyHours(v)
+	return _u
+}
+
+// ClearEstimatedMonthlyHours clears the value of the "estimated_monthly_hours" field.
+func (_u *CustomerUpdate) ClearEstimatedMonthlyHours() *CustomerUpdate {
+	_u.mutation.ClearEstimatedMonthlyHours()
+	return _u
+}
+
 // SetClosingDay sets the "closing_day" field.
 func (_u *CustomerUpdate) SetClosingDay(v int) *CustomerUpdate {
 	_u.mutation.ResetClosingDay()
@@ -527,6 +554,11 @@ func (_u *CustomerUpdate) check() error {
 			return &ValidationError{Name: "monthly_fee_cents", err: fmt.Errorf(`ent: validator failed for field "Customer.monthly_fee_cents": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.EstimatedMonthlyHours(); ok {
+		if err := customer.EstimatedMonthlyHoursValidator(v); err != nil {
+			return &ValidationError{Name: "estimated_monthly_hours", err: fmt.Errorf(`ent: validator failed for field "Customer.estimated_monthly_hours": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.ClosingDay(); ok {
 		if err := customer.ClosingDayValidator(v); err != nil {
 			return &ValidationError{Name: "closing_day", err: fmt.Errorf(`ent: validator failed for field "Customer.closing_day": %w`, err)}
@@ -632,6 +664,15 @@ func (_u *CustomerUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.ContractEndCleared() {
 		_spec.ClearField(customer.FieldContractEnd, field.TypeString)
+	}
+	if value, ok := _u.mutation.EstimatedMonthlyHours(); ok {
+		_spec.SetField(customer.FieldEstimatedMonthlyHours, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedEstimatedMonthlyHours(); ok {
+		_spec.AddField(customer.FieldEstimatedMonthlyHours, field.TypeInt, value)
+	}
+	if _u.mutation.EstimatedMonthlyHoursCleared() {
+		_spec.ClearField(customer.FieldEstimatedMonthlyHours, field.TypeInt)
 	}
 	if value, ok := _u.mutation.ClosingDay(); ok {
 		_spec.SetField(customer.FieldClosingDay, field.TypeInt, value)
@@ -1041,6 +1082,33 @@ func (_u *CustomerUpdateOne) ClearContractEnd() *CustomerUpdateOne {
 	return _u
 }
 
+// SetEstimatedMonthlyHours sets the "estimated_monthly_hours" field.
+func (_u *CustomerUpdateOne) SetEstimatedMonthlyHours(v int) *CustomerUpdateOne {
+	_u.mutation.ResetEstimatedMonthlyHours()
+	_u.mutation.SetEstimatedMonthlyHours(v)
+	return _u
+}
+
+// SetNillableEstimatedMonthlyHours sets the "estimated_monthly_hours" field if the given value is not nil.
+func (_u *CustomerUpdateOne) SetNillableEstimatedMonthlyHours(v *int) *CustomerUpdateOne {
+	if v != nil {
+		_u.SetEstimatedMonthlyHours(*v)
+	}
+	return _u
+}
+
+// AddEstimatedMonthlyHours adds value to the "estimated_monthly_hours" field.
+func (_u *CustomerUpdateOne) AddEstimatedMonthlyHours(v int) *CustomerUpdateOne {
+	_u.mutation.AddEstimatedMonthlyHours(v)
+	return _u
+}
+
+// ClearEstimatedMonthlyHours clears the value of the "estimated_monthly_hours" field.
+func (_u *CustomerUpdateOne) ClearEstimatedMonthlyHours() *CustomerUpdateOne {
+	_u.mutation.ClearEstimatedMonthlyHours()
+	return _u
+}
+
 // SetClosingDay sets the "closing_day" field.
 func (_u *CustomerUpdateOne) SetClosingDay(v int) *CustomerUpdateOne {
 	_u.mutation.ResetClosingDay()
@@ -1320,6 +1388,11 @@ func (_u *CustomerUpdateOne) check() error {
 			return &ValidationError{Name: "monthly_fee_cents", err: fmt.Errorf(`ent: validator failed for field "Customer.monthly_fee_cents": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.EstimatedMonthlyHours(); ok {
+		if err := customer.EstimatedMonthlyHoursValidator(v); err != nil {
+			return &ValidationError{Name: "estimated_monthly_hours", err: fmt.Errorf(`ent: validator failed for field "Customer.estimated_monthly_hours": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.ClosingDay(); ok {
 		if err := customer.ClosingDayValidator(v); err != nil {
 			return &ValidationError{Name: "closing_day", err: fmt.Errorf(`ent: validator failed for field "Customer.closing_day": %w`, err)}
@@ -1442,6 +1515,15 @@ func (_u *CustomerUpdateOne) sqlSave(ctx context.Context) (_node *Customer, err 
 	}
 	if _u.mutation.ContractEndCleared() {
 		_spec.ClearField(customer.FieldContractEnd, field.TypeString)
+	}
+	if value, ok := _u.mutation.EstimatedMonthlyHours(); ok {
+		_spec.SetField(customer.FieldEstimatedMonthlyHours, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedEstimatedMonthlyHours(); ok {
+		_spec.AddField(customer.FieldEstimatedMonthlyHours, field.TypeInt, value)
+	}
+	if _u.mutation.EstimatedMonthlyHoursCleared() {
+		_spec.ClearField(customer.FieldEstimatedMonthlyHours, field.TypeInt)
 	}
 	if value, ok := _u.mutation.ClosingDay(); ok {
 		_spec.SetField(customer.FieldClosingDay, field.TypeInt, value)

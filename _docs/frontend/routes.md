@@ -63,7 +63,8 @@ flowchart LR
 | Rota | Tela | Quem abre |
 |---|---|---|
 | `/` | Leva à organização de quem está logado | logado |
-| `/profile` | O seu perfil: jornada, regra de pagamento, horas e valores, histórico e próximos pagamentos. Editar perfil abre um modal. Embaixo, **Conectar ao Claude**: os tokens do servidor MCP, com o Novo token num modal que mostra o token uma vez e o comando do Claude Code | logado |
+| `/profile` | O seu perfil: jornada, regra de pagamento, horas e valores, histórico e próximos pagamentos. Editar perfil abre um modal. Embaixo, **Conectar ao Claude**: com o OAuth ligado, o endereço do conector para colar no claude.ai, o comando do Claude Code e a lista **Apps conectados** (com o Desconectar); depois, o **Token pessoal**, com o Novo token num modal que mostra o token uma vez e o comando do Claude Code | logado |
+| `/oauth/authorize` | A tela de consentimento do OAuth do MCP: o Claude (claude.ai, Desktop, celular) ou o Claude Code pede para agir como a pessoa, e ela permite ou cancela. Sem a barra superior. Sem sessão, passa pelo login e volta com o pedido. Um app desconhecido ou um endereço de volta que não é dele mostra a página de erro. Só existe com o OAuth ligado. Ver [mcp.md](../api/mcp.md#oauth) | logado |
 | `/orgs/:orgId` | O Início. Para todos, o painel da pessoa (horas de hoje e da semana, as suas tarefas, a semana dia a dia). Para os admins, também a visão geral da organização e a equipe; receita e margem só para o dono. No modo solo, a visão geral e a equipe dão lugar à tela inicial do solo | membro |
 | `/orgs/:orgId/projects` | Projetos em cartões, seis por página (`?page=`). Quem não é admin vê só os projetos em que está. O dono e os admins têm o Novo projeto | membro |
 | `/orgs/:orgId/about` | Configurações: o perfil da organização, para ler. O Editar só aparece para o dono | membro |

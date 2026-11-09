@@ -22,13 +22,13 @@
   <script src="/static/alpine.min.js" defer></script>
 </head>
 <body>
-{{- if .Me}}
+{{- if and .Me (not .Bare)}}
 {{template "topbar" .}}
 {{- else}}
 <div class="lang-float">{{template "lang_switch" .}}</div>
 {{- end}}
 {{template "content" .}}
-{{- if .Me}}
+{{- if and .Me (not .Bare)}}
 {{template "active_session" .}}
 {{- end}}
 {{template "modal" .}}

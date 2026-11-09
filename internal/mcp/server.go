@@ -1,8 +1,9 @@
 // Package mcp é o servidor MCP (Model Context Protocol) do sistema, em /mcp: o que o Claude Code usa para criar e
 // mudar tarefas, pegar uma tarefa, sincronizá-la, bater o ponto e ver as horas em nome de uma pessoa.
 //
-// Como o internal/page, não é um domínio: lê os services dos outros. A pessoa entra com um token pessoal (gerado no
-// perfil, ver auth/api_token.go) em Authorization: Bearer, e cada ferramenta age só sobre ela: o ponto é sempre o
+// Como o internal/page, não é um domínio: lê os services dos outros. A pessoa entra em Authorization: Bearer com um
+// token pessoal (gerado no perfil, ver auth/api_token.go) ou com o token de acesso de um app conectado pelo OAuth (o
+// claude.ai, ver internal/oauth), e cada ferramenta age só sobre ela: o ponto é sempre o
 // dela, e um projeto ou uma tarefa passam pela mesma checagem do RequireOrg (auth.Resolver.Reach). Nenhuma saída tem
 // dinheiro (valor pago, cobrado, receita ou margem).
 //
@@ -47,7 +48,13 @@ type Deps struct {
 	I18n     *i18n.Catalog
 	// PublicURL é o endereço do sistema, sem barra no fim. Com ele, cada tarefa volta com o link da página dela.
 	PublicURL string
-	Logger    *slog.Logger
+	// Resource é o endereço canônico deste /mcp quando o OAuth está ligado: os tokens de acesso do OAuth só valem para
+	// ele. Vazio, o OAuth está desligado e só o token pessoal entra.
+	Resource string
+	// ResourceMetadataURL é o endereço dos metadados do recurso (RFC 9728), que o 401 aponta para o Claude achar onde
+	// autorizar. Vazio com o OAuth desligado.
+	ResourceMetadataURL string
+	Logger              *slog.Logger
 }
 
 type server struct {
@@ -59,11 +66,14 @@ const instructions = `Working Time Tracker: time tracking per task. You act as t
 
 - Tasks live in projects. Use list_projects, then list_tasks or my_tasks to find ids.
 - Task status: backlog, in_progress, awaiting_closure, closed. Priority: urgent, high, medium, low, none.
-- A person has at most one open work session (the clock). clock_in opens it on one task, and the task becomes
-  in_progress and, if it had no assignee, the person's.
-- To work on another task of the same project, use add_task_to_session (switch=true stops the other tasks).
-  A task of another project needs clock_out first, then clock_in.
-- A session keeps at least one running task: to stop everything, use clock_out.
+- A person has at most one open work session (the clock) per project, and sessions in different projects run at the
+  same time. clock_in opens one on a task, and the task becomes in_progress and, if it had no assignee, the person's.
+- To work on another task of a project whose session is open, use add_task_to_session (switch=true stops the other
+  tasks of that session). A task of another project gets its own session with clock_in.
+- A session keeps at least one running task: to stop everything in a project, use clock_out (with project_id when
+  sessions are open in more than one project).
+- Overlapping time in two projects counts once in the person's total hours; the money is per project, at each
+  project's rate.
 - Dates: deadline is YYYY-MM-DD, in the organization's time zone. Times come back in RFC 3339.
 - Errors come back as text with a stable code in parentheses.`
 
@@ -83,7 +93,9 @@ func NewHandler(d Deps) http.Handler {
 		JSONResponse:        true,
 		MaxRequestBodyBytes: maxBody,
 	})
-	bearer := mcpauth.RequireBearerToken(s.verify, &mcpauth.RequireBearerTokenOptions{Scopes: []string{scope}})
+	bearer := mcpauth.RequireBearerToken(s.verify, &mcpauth.RequireBearerTokenOptions{
+		Scopes: []string{scope}, ResourceMetadataURL: d.ResourceMetadataURL,
+	})
 	return http.NewCrossOriginProtection().Handler(bearer(handler))
 }
 

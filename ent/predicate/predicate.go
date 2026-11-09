@@ -27,6 +27,12 @@ type IssueSync func(*sql.Selector)
 // Label is the predicate function for label builders.
 type Label func(*sql.Selector)
 
+// OAuthAccessToken is the predicate function for oauthaccesstoken builders.
+type OAuthAccessToken func(*sql.Selector)
+
+// OAuthGrant is the predicate function for oauthgrant builders.
+type OAuthGrant func(*sql.Selector)
+
 // Organization is the predicate function for organization builders.
 type Organization func(*sql.Selector)
 

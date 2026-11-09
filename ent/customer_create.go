@@ -176,6 +176,20 @@ func (_c *CustomerCreate) SetNillableContractEnd(v *string) *CustomerCreate {
 	return _c
 }
 
+// SetEstimatedMonthlyHours sets the "estimated_monthly_hours" field.
+func (_c *CustomerCreate) SetEstimatedMonthlyHours(v int) *CustomerCreate {
+	_c.mutation.SetEstimatedMonthlyHours(v)
+	return _c
+}
+
+// SetNillableEstimatedMonthlyHours sets the "estimated_monthly_hours" field if the given value is not nil.
+func (_c *CustomerCreate) SetNillableEstimatedMonthlyHours(v *int) *CustomerCreate {
+	if v != nil {
+		_c.SetEstimatedMonthlyHours(*v)
+	}
+	return _c
+}
+
 // SetClosingDay sets the "closing_day" field.
 func (_c *CustomerCreate) SetClosingDay(v int) *CustomerCreate {
 	_c.mutation.SetClosingDay(v)
@@ -438,6 +452,11 @@ func (_c *CustomerCreate) check() error {
 			return &ValidationError{Name: "monthly_fee_cents", err: fmt.Errorf(`ent: validator failed for field "Customer.monthly_fee_cents": %w`, err)}
 		}
 	}
+	if v, ok := _c.mutation.EstimatedMonthlyHours(); ok {
+		if err := customer.EstimatedMonthlyHoursValidator(v); err != nil {
+			return &ValidationError{Name: "estimated_monthly_hours", err: fmt.Errorf(`ent: validator failed for field "Customer.estimated_monthly_hours": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.ClosingDay(); !ok {
 		return &ValidationError{Name: "closing_day", err: errors.New(`ent: missing required field "Customer.closing_day"`)}
 	}
@@ -565,6 +584,10 @@ func (_c *CustomerCreate) createSpec() (*Customer, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.ContractEnd(); ok {
 		_spec.SetField(customer.FieldContractEnd, field.TypeString, value)
 		_node.ContractEnd = &value
+	}
+	if value, ok := _c.mutation.EstimatedMonthlyHours(); ok {
+		_spec.SetField(customer.FieldEstimatedMonthlyHours, field.TypeInt, value)
+		_node.EstimatedMonthlyHours = &value
 	}
 	if value, ok := _c.mutation.ClosingDay(); ok {
 		_spec.SetField(customer.FieldClosingDay, field.TypeInt, value)

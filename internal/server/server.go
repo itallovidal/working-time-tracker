@@ -33,6 +33,7 @@ import (
 	"working-time-tracker/internal/domain/work_session"
 	"working-time-tracker/internal/i18n"
 	"working-time-tracker/internal/mcp"
+	"working-time-tracker/internal/oauth"
 	"working-time-tracker/internal/page"
 	"working-time-tracker/internal/routes"
 	tmpl "working-time-tracker/internal/template"
@@ -66,6 +67,16 @@ type Options struct {
 	// PublicURL é o endereço do sistema, sem barra no fim (PUBLIC_URL). O servidor MCP o usa no link de cada tarefa,
 	// e o perfil, no endereço que mostra para conectar o Claude. Vazio, o perfil usa o endereço da requisição.
 	PublicURL string
+	// OAuth liga o servidor de autorização do MCP (internal/oauth), por onde o claude.ai, o Claude Desktop e o celular
+	// se conectam. Precisa do PublicURL, que é o emissor. Desligado, o /mcp aceita só o token pessoal.
+	OAuth bool
+	// OAuthClients são os apps que podem se conectar. Vazio vale oauth.ClaudeClients; os testes trocam.
+	OAuthClients []oauth.Client
+	// OAuthHTTPClient busca os documentos de identidade dos apps. Nulo usa o padrão do internal/oauth.
+	OAuthHTTPClient *http.Client
+	// OAuthRateLimit é o limite de requisições por segundo, por IP, no /oauth/token e no /oauth/revoke. Zero usa o
+	// padrão (uma por segundo, rajada de 30): os IPs de saída do claude.ai são os mesmos para todo mundo.
+	OAuthRateLimit float64
 }
 
 // ClerkOptions são os dados do login pelo Clerk.
@@ -149,6 +160,10 @@ func Build(client *ent.Client, opts Options) (*App, error) {
 	})
 	paymentSvc := payment.NewService(payment.Deps{Orgs: orgSvc, People: personSvc, Sessions: workSessionSvc, Projects: projectSvc, Tasks: taskSvc, Payouts: payment.NewStore(client)})
 	authSvc := auth.NewService(authStore)
+	authSvc.SetOAuthKey(opts.EncryptKey)
+	if opts.OAuth && opts.PublicURL == "" {
+		return nil, errors.New("server: OAuth needs the PublicURL (the issuer)")
+	}
 	var clerkPage *page.Clerk
 	if opts.Clerk != nil && opts.Clerk.Provider != nil {
 		clerkPage = &page.Clerk{
@@ -160,6 +175,14 @@ func Build(client *ent.Client, opts Options) (*App, error) {
 	e := echo.New()
 	if opts.ClientIPHeader != "" {
 		e.IPExtractor = clientIPFromHeader(opts.ClientIPHeader)
+	}
+	// O servidor de autorização do MCP: o emissor é o PublicURL, e o recurso, o /mcp dele.
+	var oauthSrv *oauth.Server
+	if opts.OAuth {
+		oauthSrv = oauth.New(oauth.Config{
+			Issuer: opts.PublicURL, ResourcePath: mcp.Path, Auth: authSvc,
+			Clients: opts.OAuthClients, HTTPClient: opts.OAuthHTTPClient, Logger: e.Logger,
+		})
 	}
 	// Quem aceita um convite que leva a um projeto entra nele com o valor, o grupo e o time escolhidos.
 	authSvc.SetProjectApplier(projectinvite.NewApplier(allocationSvc, membershipSvc), e.Logger.Warn)
@@ -202,6 +225,7 @@ func Build(client *ent.Client, opts Options) (*App, error) {
 		Integration:   integration.NewHandler(integrationSvc),
 		Sync:          issuesync.NewHandler(syncer),
 		ProjectInvite: projectinvite.NewHandler(authSvc, teamSvc),
+		OAuth:         oauthSrv,
 	}
 	resolver := auth.NewResolver(client)
 	authMW := auth.NewMiddleware(authSvc, resolver, opts.CookieSecure)
@@ -244,6 +268,7 @@ func Build(client *ent.Client, opts Options) (*App, error) {
 		Clerk:         clerkPage,
 		InviteByEmail: clerkPage != nil,
 		PublicURL:     opts.PublicURL,
+		OAuth:         oauthSrv,
 	})
 
 	renderer, err := tmpl.New(web.FS)
@@ -284,16 +309,64 @@ func Build(client *ent.Client, opts Options) (*App, error) {
 		return nil, err
 	}
 	// O servidor MCP, para o Claude. Fica fora do /api: entra com o token do Claude, não com o cookie.
-	mcpHandler := mcp.NewHandler(mcp.Deps{
+	mcpDeps := mcp.Deps{
 		Auth: authSvc, Resolver: resolver, Projects: projectSvc, Tasks: taskSvc,
 		Sessions: workSessionSvc, Overview: overviewSvc, Syncer: syncer, I18n: catalog,
 		PublicURL: opts.PublicURL, Logger: e.Logger,
-	})
-	e.Any(mcp.Path, echo.WrapHandler(mcpHandler))
+	}
+	if oauthSrv != nil {
+		mcpDeps.Resource = oauthSrv.Resource()
+		mcpDeps.ResourceMetadataURL = oauthSrv.ResourceMetadataURL(mcp.Path)
+	}
+	e.Any(mcp.Path, echo.WrapHandler(mcp.NewHandler(mcpDeps)))
+	// Os documentos de descoberta que não existem respondem 404 em JSON, mesmo com o OAuth desligado: sem isso eles
+	// cairiam no grupo das páginas, que manda quem não está logado para o login.
+	e.Any(oauth.WellKnownPrefix+"*", oauth.WellKnownNotFound)
+	if oauthSrv != nil {
+		registerOAuth(e, oauthSrv, opts.OAuthRateLimit)
+	}
 	routes.RegisterRoutes(e, handlers, authMW, authRateLimiter(opts.AuthRateLimit))
 	routes.RegisterPages(e, pages, authMW, oauthHandler)
 
 	return &App{Echo: e, Sync: syncer}, nil
+}
+
+// registerOAuth monta o servidor de autorização do MCP fora do /api: os metadados, o token e a revogação são chamados
+// pelo servidor do Claude, sem cookie, e o token e a revogação recebem formulário, que o /api recusa. A tela de
+// consentimento fica nas páginas, e o "Permitir", na API.
+func registerOAuth(e *echo.Echo, s *oauth.Server, rate float64) {
+	resource := echo.WrapHandler(s.ResourceMetadataHandler())
+	e.GET(oauth.ResourceMetadataPath(mcp.Path), resource)
+	e.OPTIONS(oauth.ResourceMetadataPath(mcp.Path), resource)
+	e.GET(oauth.ServerMetadataPath, s.ServerMetadata)
+	e.OPTIONS(oauth.ServerMetadataPath, oauth.Preflight)
+	limit := oauthRateLimiter(rate)
+	e.POST(oauth.TokenPath, s.Token, limit)
+	e.OPTIONS(oauth.TokenPath, oauth.Preflight)
+	e.POST(oauth.RevokePath, s.Revoke, limit)
+	e.OPTIONS(oauth.RevokePath, oauth.Preflight)
+}
+
+// oauthRateLimiter limita o /oauth/token e o /oauth/revoke por IP, com a resposta de erro do OAuth. É mais folgado que o
+// do login: o claude.ai renova os tokens de todas as pessoas pelos mesmos IPs.
+func oauthRateLimiter(perSecond float64) echo.MiddlewareFunc {
+	burst := 30
+	if perSecond <= 0 {
+		perSecond = 1
+	} else {
+		burst = int(perSecond) + 1
+	}
+	return middleware.RateLimiterWithConfig(middleware.RateLimiterConfig{
+		Store: middleware.NewRateLimiterMemoryStoreWithConfig(middleware.RateLimiterMemoryStoreConfig{
+			Rate:  perSecond,
+			Burst: burst,
+		}),
+		DenyHandler: func(c *echo.Context, _ string, _ error) error {
+			return c.JSON(http.StatusTooManyRequests, map[string]string{
+				"error": "temporarily_unavailable", "error_description": "too many requests, try again soon",
+			})
+		},
+	})
 }
 
 // clientIPFromHeader lê o IP de quem chamou no cabeçalho que o proxy da frente escreve. Sem o cabeçalho, ou com

@@ -57,6 +57,8 @@ titles:
   trello_callback: Connecting to Trello
   project_settings: Management · Settings
   help: Help
+  oauth_consent: Connect to Claude
+  oauth_error: Could not connect
 
 nav:
   label: Pages
@@ -203,6 +205,7 @@ home:
     customers:
       title: By customer
       intro: The hours of each customer's projects, what came in and what is expected, in name order.
+      estimate_hint: "Estimate: the hours of the contract period against the estimated hours per month. When the contract does not close on the last day, the period shows below."
       internal: No customer (internal)
       internal_hint: Projects without a customer
     col:
@@ -212,6 +215,7 @@ home:
       received: Revenue
       projected: Projected
       rate: Effective hourly rate
+      estimate: Estimate
     kind:
       hourly: Hourly
       monthly: Monthly
@@ -287,8 +291,13 @@ session:
   stop_task_label: "Stop task {{.name}}"
   stop_task_hint: Stops only this task and the session goes on. If it is the only one in progress, time tracking stops.
   deleted_tasks: deleted task
+  other_projects:
+    one: "+{{.count}} session in another project"
+    other: "+{{.count}} sessions in other projects"
+  only_this_project: Only this project
   modal:
     title: "Session on {{.date}}"
+    title_project: "Session on {{.date}} · {{.project}}"
     person: Person
     start: Start
     end: End
@@ -530,36 +539,56 @@ payments:
 receivable:
   refresh: Refresh
   loading: Loading the receivables…
-  intro: "What to charge each customer, what is already confirmed and what came in. The period closes at midnight."
+  intro: "What is running, what has closed and is still to receive, and what came in. The period closes at midnight."
   cards:
-    to_confirm: To confirm
-    to_confirm_hint:
-      one: "{{.count}} period to confirm"
-      other: "{{.count}} periods to confirm"
-    open: Open
-    open_hint:
-      one: "{{.count}} confirmed invoice"
-      other: "{{.count}} confirmed invoices"
+    in_progress: In progress
+    in_progress_hint:
+      one: "{{.count}} period running"
+      other: "{{.count}} periods running"
+    to_receive: To receive
+    to_receive_hint:
+      one: "{{.count}} closed period"
+      other: "{{.count}} closed periods"
     late: Late
     late_hint:
-      one: "{{.count}} invoice is past due"
-      other: "{{.count}} invoices are past due"
+      one: "{{.count}} invoice past due"
+      other: "{{.count}} invoices past due"
     late_none: Nothing late
     received_month: Received this month
     received_month_hint:
       one: "{{.count}} payment"
       other: "{{.count}} payments"
-  to_confirm:
-    title: To confirm
-    empty: Nothing to confirm.
-    empty_text: "Closed periods with hours from hourly customers and the months of monthly contracts show up here."
-  open:
-    title: Open
-    empty: No open invoices.
+  in_progress:
+    title: In progress
+    note: "Each customer's current period, still open. When it closes, it moves to To receive."
+    empty: Nothing in progress.
+    empty_text: "The current month of monthly contracts and the period of hourly customers with hours show up here."
+    day_of: "day {{.day}} of {{.days}}"
+    closes_today: closes today
+    closes_tomorrow: closes tomorrow
+    closes_in:
+      one: "closes in {{.count}} day"
+      other: "closes in {{.count}} days"
+    fee: monthly fee
+    so_far: "{{.hours}} so far"
+  to_receive:
+    title: To receive
+    note: "Periods that have closed and have not come in yet, the oldest due date first."
+    empty: Nothing to receive.
+    empty_text: "When a period closes, it shows up here until you record the payment."
+  due:
+    late:
+      one: "{{.count}} day late"
+      other: "{{.count}} days late"
+    today: Due today
+    tomorrow: Due tomorrow
+    in:
+      one: "Due in {{.count}} day"
+      other: "Due in {{.count}} days"
   received:
     title: Received
     empty: Nothing received yet.
-    note: "The most recent payments."
+    note: "The history of what came in, the most recent first."
   col:
     customer: Customer
     period: Period
@@ -571,11 +600,6 @@ receivable:
   kind:
     hourly: Hourly
     monthly: Monthly
-  running: in progress
-  late:
-    one: "{{.count}} day late"
-    other: "{{.count}} days late"
-  late_badge: Late
   below_min: "Effective hourly rate below {{.min}}: check the amount."
   rate_line: "{{.rate}} per hour"
   calculated_line: "calculated {{.amount}}"
@@ -584,29 +608,29 @@ receivable:
   fee_line: "late fee {{.amount}}"
   interest_line: "interest {{.amount}}"
   actions:
-    confirm: Confirm
     receive: Receive
+    advance: Received in advance
     edit: Edit
     undo: Undo
-    undo_confirm: Undo confirmation
     undo_receive: Undo payment
-    undo_confirm_ask: Undo the confirmation?
     undo_receive_ask: Undo the payment?
+    reset: Back to the calculated amount
+    reset_ask: "Back to the calculated amount? The adjusted amount, due date and invoice are lost."
   toast:
-    confirmed: "Confirmed: {{.name}}."
-    updated: "Updated: {{.name}}."
+    adjusted: "Adjusted: {{.name}}."
     received: "Payment recorded: {{.name}}."
-    unconfirmed: Confirmation undone.
+    reset: Back to the calculated amount.
     unreceived: Payment undone.
   modal:
-    confirm_title: "Confirm · {{.name}}"
     edit_title: "Edit · {{.name}}"
     receive_title: "Receive · {{.name}}"
+    advance_title: "Receive in advance · {{.name}}"
+    advance_hint: "The period has not closed yet. Record here what the customer already paid for it; when it closes, it will not show up in To receive."
     period: Period
     hours: Hours
     calculated: Calculated amount
     amount_label: "Amount to charge ({{.unit}})"
-    amount_hint: Comes with the calculated amount. Change it if you will charge another amount.
+    amount_hint: Comes with today's amount. Change it if you will charge another amount (a partial first month, for example).
     rate: "Effective hourly rate: {{.rate}}"
     rate_below: "Effective hourly rate: {{.rate}}, below the {{.min}} floor. Check the amount."
     due_label: Due date
@@ -614,14 +638,12 @@ receivable:
     invoice_label: Invoice number
     invoice_hint: The system does not issue invoices. Keep here the number of the one you issued.
     note_label: Note
-    open_period: "The period has not closed yet. The amount is the monthly fee, and you can correct it (a partial first month, for example)."
-    confirm: Confirm
     save: Save
     received_on_label: Date received
     received_on_hint: Comes with today. Change it if the money came in on another day.
     received_label: "Amount received ({{.unit}})"
-    received_hint_hourly: For an hourly customer the confirmed amount comes in.
-    received_hint_monthly: Free, it can be more or less than the confirmed amount. Comes with the confirmed amount.
+    received_hint_hourly: "For an hourly customer the invoice amount comes in. To receive another amount, use Edit first."
+    received_hint_monthly: Free, it can be more or less than the invoice amount. Comes with the invoice amount.
     fee_label: "Late fee ({{.unit}})"
     interest_label: "Interest ({{.unit}})"
     charges_hint: The late fee and interest are already part of the amount received. Left blank, they are zero.
@@ -633,6 +655,30 @@ receivable:
     suggestion_loading: Calculating the suggestion…
     receive: Record payment
 
+# The consent screen of the MCP OAuth: Claude asks to act on the person's behalf.
+oauth:
+  consent:
+    title: "{{.app}} wants to access your account"
+    subtitle: "You are connecting {{.app}} to Working Time Tracker as {{.name}}, in {{.org}}."
+    can_title: "As you, it will be able to:"
+    can_tasks: "see, create and update the tasks of your projects and claim tasks for you;"
+    can_sync: "sync a task with the project's integrations;"
+    can_clock: "clock you in and out, switch tasks and see your hours."
+    cannot_money: "It does not see money amounts: payments, billing and revenue stay out."
+    redirect: "When you allow it, you go back to {{.host}}."
+    loopback: "It goes back to a program on this computer (Claude Code). Allow it only if you asked for the connection just now."
+    expiry: "The connection drops after 30 days without use, and you can disconnect it anytime on your profile."
+    allow: Allow
+    deny: Cancel
+    pending: Connecting…
+    other_account: Sign in with another account
+  error:
+    title: Could not connect
+    client_unknown: "This app cannot connect to the system. For now, only Claude (claude.ai, Desktop and mobile) and Claude Code."
+    redirect_invalid: "The request's return address does not belong to the app that sent it, so, for safety, the connection stopped here. Try connecting again from the app."
+    request_invalid: "The connection request came incomplete. Try connecting again from the app."
+    home: Back to home
+
 profile:
   eyebrow: Your profile
   title_other: Collaborator profile
@@ -640,7 +686,26 @@ profile:
   tabs_label: What to edit
   claude:
     title: Connect to Claude
-    intro: "With a token, Claude Code creates and updates your tasks, claims tasks, syncs with the project's integrations and clocks in and out for you. It sees what you see, except the money amounts."
+    intro: "Claude creates and updates your tasks, claims tasks, syncs with the project's integrations and clocks you in and out, as you. It sees what you see, except the money amounts."
+    app_title: claude.ai, Claude Desktop and mobile
+    app_steps: "On claude.ai, open Customize → Connectors → Add custom connector and paste the address below. Under OAuth, keep “Use Claude's published identity”. Claude opens this site for you to sign in and allow it, and the connector also works in Claude Desktop and the mobile app."
+    app_url: Connector address
+    copy_url: Copy address
+    app_code: "In Claude Code, the same address works without a token: run this command and, in a conversation, use /mcp and choose Authenticate."
+    app_code_command: Claude Code command
+    connections_title: Connected apps
+    connections_loading: Loading the apps…
+    connections_empty: No connected apps yet
+    connections_empty_text: Connect Claude with the address above.
+    col_app: App
+    col_connected: Connected on
+    col_drops: Drops if unused on
+    disconnect: Disconnect
+    disconnect_question: Disconnect this app?
+    disconnected: App disconnected. To get in again, it needs your permission.
+    connections_note: The connection drops after 30 days without use. Changing your password disconnects all apps.
+    tokens_title: Personal token
+    tokens_intro: "For Claude Code without the browser permission: a token that goes in the command and expires on the date you choose."
     new: New token
     loading: Loading the tokens…
     empty: No tokens yet
@@ -794,8 +859,8 @@ help:
       tip: "A task without an assignee is available to the team: whoever clocks in on it becomes the assignee. The assignee must be on the project."
     track:
       title: Track the hours
-      text: "On the project Home or in My tasks, click “Start” on the task you will work on. The timer starts and the “Active session” stays in the corner of the screen, on any page. To finish, click “Stop”."
-      tip: "When you start, the task moves to “In progress”. You can work on several tasks in the same session (“Add to the session”): each one counts the full time and the session counts once. Only one clock can be open per person."
+      text: "On the project Home or in My tasks, click “Start” on the task you will work on. The timer starts and the session stays in the corner of the screen, with the project name, on any page. To finish, click “Stop”."
+      tip: "When you start, the task moves to “In progress”. You can work on several tasks in the same session (“Add to the session”): each one counts the full time and the session counts once. You can have a clock open on each project at the same time: the amount is each project's own, and overlapping hours count once in your total."
     numbers:
       title: Follow the numbers
       text: "The owner and the admins see, on the organization Home, the hours and cost of all projects, over 7 days, 30 days or all time; the revenue and margin, only the owner. Each project has its own “Overview” in Management, with everyone's sessions and the totals."
@@ -817,11 +882,11 @@ help:
       team: "The team: what to pay (overdue included), what closes in 7 and 30 days, the team's hours and who has no rule. “Upcoming payments” is ordered by pay date, not by hours; “Recently paid” shows the payments recorded in the last 30 days. Click a row to open the person's profile, with the history and the breakdown by project. The owner is not paid and does not show in the tables."
     receivables:
       title: Receivables
-      text: "The “Receivables” item in the top bar, only for the owner of an organization in solo mode: what to charge each customer and what has already come in. Each receivable belongs to a customer and a period: the app proposes it, and you confirm it."
-      cards: "At the top, four cards: what is waiting to be confirmed, what is open, what is late (confirmed, not received and past the due date) and what came in this month."
-      confirm: "“To confirm” lists the proposals. For an hourly customer, a period shows up after it closes, with the hours on the customer's projects times the rate billed on each one (the customer's rate plus the project's extra); for a monthly one, it is the monthly fee plus the projects' monthly extras, from the start of the contract to the current month, and you can confirm it at any time. “Confirm” opens the amount, the due date, the invoice number and a note, and you adjust whatever you need."
-      receive: "“Open” is what was confirmed and has not come in yet. “Receive” records the day and the amount. For an hourly customer the confirmed amount comes in; for a monthly one the amount is free, and the app suggests the late fee and interest when the payment goes past the due date plus the contract's grace days."
-      undo: "“Received” lists what came in. You can undo the payment and, after that, the confirmation: the period goes back to being a proposal."
+      text: "The “Receivables” item in the top bar, only for the owner of an organization in solo mode: what is running, what has closed and is still to receive, and what came in. Each receivable belongs to a customer and a period, and the app works out the amount and the due date."
+      cards: "At the top, four cards: what is in progress, what is to receive, the part of it that is late (past the due date) and what came in this month."
+      in_progress: "“In progress” is each customer's current period, still open: for a monthly customer, the contract month, with the monthly fee plus the projects' monthly extras; for an hourly one, the hours on the projects so far times the rate billed on each (the customer's rate plus the project's extra). For a monthly customer, “Received in advance” records a payment before the month closes."
+      to_receive: "“To receive” is what has closed and has not come in yet, the oldest due date first, with a late badge. “Receive” records the day, the amount and the invoice number: for an hourly customer the invoice amount comes in; for a monthly one the amount is free, and the app suggests the late fee and interest when the payment goes past the due date plus the contract's grace days. “Edit” adjusts the amount, the due date and the invoice before receiving (a partial first month, for example), and an adjusted invoice can go back to the calculated amount."
+      undo: "“Received” is the history of what came in. You can undo a payment: the invoice goes back to “To receive”."
       invoice: "The app does not issue invoices: the number is only a note. An effective hourly rate below 10.00 shows up as a warning, never as an error."
     org_about:
       title: Settings
@@ -904,7 +969,7 @@ help:
       rates: "“Projects and rates”: how much you earn per hour on each project and what you did on them, in the period and since the start. Only you and the admins see it."
       edit: "“Edit profile” opens your personal details (name and email, the one you sign in with) and, on the “Password” tab, the password change, which signs out your other sessions."
       language: "The language (PT | EN), “Help” and “Sign out” are in the same account menu, and the browser remembers the language you chose."
-      claude: "In “Connect to Claude”, “New token” creates a token and the command that connects Claude Code: with it, Claude creates and updates your tasks, claims tasks, syncs and clocks in and out for you, as you and without seeing money amounts. The token is shown only once, expires on the chosen date and can be revoked there; changing your password revokes them all."
+      claude: "In “Connect to Claude”, Claude starts creating and updating your tasks, claiming tasks, syncing and clocking you in and out, as you and without seeing money amounts. On claude.ai (and, through it, Claude Desktop and mobile), paste the connector address under Customize → Connectors and allow the access; the “Connected apps” list shows what is connected and disconnects it. For Claude Code, “New token” creates a token and the command: the token is shown only once, expires on the chosen date and can be revoked there. Changing your password disconnects the apps and revokes the tokens."
   concepts:
     rates:
       title: Hourly rate
@@ -930,7 +995,7 @@ help:
       text: "Solo mode is for people who work on their own, as freelancers or solo contractors: the organization is just one person, and what belongs to a team goes away instead of crowding the menus."
       choose: "Tick “I work alone” when you create the organization or later, in Settings › Edit. Only the owner changes it, and it only turns on with you as the only person and no pending invites."
       hides: "The menu loses Collaborators and Payments and gains “Receivables”; the project loses the Collaborators tab, and nobody is invited. Turning the mode off deletes nothing: everything that was hidden comes back."
-      billing: "Each customer is billed per hour (the hours on their projects times the customer's hourly rate) or by a monthly contract (a fixed amount per month, and their projects have no hourly rate), never both. Billing is set under Customers and applies to all of the customer's projects; each project only adds an extra, per hour or per month. Once a customer has projects the mode cannot change. An hourly customer's period closes once a month, on the closing day, or every 14 days (US bi-weekly), counted from the last closing the customer already paid."
+      billing: "Each customer is billed per hour (the hours on their projects times the customer's hourly rate) or by a monthly contract (a fixed amount per month, and their projects have no hourly rate), never both. Billing is set under Customers and applies to all of the customer's projects; each project only adds an extra, per hour or per month. Once a customer has projects the mode cannot change. An hourly customer's period closes once a month, on the closing day, or every 14 days (US bi-weekly), counted from the last closing the customer already paid. A monthly contract can have estimated hours per month: Home, the customer details, the project overview and Receivables show the contract period's hours against them, for tracking only."
       home: "Home shows the hours, the revenue (the money that came in) and the projected revenue (what you expect to receive, paid or not), per customer."
     integrations:
       title: GitHub, GitLab and Trello integrations
@@ -941,8 +1006,8 @@ help:
   faq:
     no_clock:
       q: I cannot start the clock
-      a: "Most often the person has no hourly rate on that project: an admin or the project administrator sets it in Management › Collaborators. The other cause is a clock already open on another project; stop it before starting this one."
-      a_solo: "Most often a clock is already open on another project: stop it before starting this one. On a project of an hourly customer, also check the billed rate under Management › Settings."
+      a: "Most often the person has no hourly rate on that project: an admin or the project administrator sets it in Management › Collaborators. A clock open on another project does not block it: each project has its own session."
+      a_solo: "On a project of an hourly customer, check the billed rate under Management › Settings. A clock open on another project does not block it: each project has its own session."
     forgot:
       q: I forgot to clock in. Can I add the hours afterwards?
       a: "No. The app only records timed work: there is no manual entry, approval or period closing. What you can adjust are the task intervals inside a session (open the session and use the pencil), without changing the session's total time."
@@ -1122,6 +1187,11 @@ customer:
     contract_start: Contract start
     contract_end: Contract end
     contract_end_hint: Without a date, the contract runs indefinitely.
+    estimated_hours: Estimated hours per month
+    estimated_hours_hint: "How much you expect to spend on this customer in each contract period, across all of their projects. For tracking only: billing does not change."
+    estimated_hours_fact: Estimated hours
+    estimated_hours_value: "{{.hours}}h per month"
+    dedication_fact: In the current period
     cycle: Billing cycle
     cycle_monthly: Monthly, on the closing day
     cycle_biweekly: Every 2 weeks (14 days)
@@ -1142,9 +1212,7 @@ customer:
     col_closing: Closing
     col_due: Due
     fee: Monthly fee
-    contract: Contract
-    contract_range: "{{.start}} to {{.end}}"
-    contract_open: "Since {{.start}}, no end date"
+    contract_no_end: Open-ended
     late_fee_fact: Late fee
     late_interest_fact: Interest per month
     grace_days_fact: Grace period
@@ -1163,6 +1231,16 @@ customer:
       other: "{{.count}} days later"
     project_rate_monthly: "Not applicable: billed monthly"
     option_label: "{{.name}} · {{.mode}}"
+# The hours of a monthly contract period against the customer's estimate (Decision 26).
+dedication:
+  of: "{{.done}} of {{.goal}}"
+  percent: "{{.percent}}%"
+  period: "Period\u00a0{{.period}}"
+  estimated_line: "{{.done}} of {{.goal}} estimated"
+  project_line: "{{.name}}:\u00a0{{.hours}}"
+  this_project: "This project: {{.hours}}"
+  card_title: Customer estimate
+  card_hint: "The hours of all of {{.customer}}'s projects in the contract period, against the estimated hours per month."
 project:
   head:
     projects: Projects
@@ -1445,7 +1523,6 @@ time:
   since: "Since {{.time}}"
   start_hint: Click Start on one of the tasks below to start counting time.
   all_in_session: All your tasks are in the session.
-  other_project: This session belongs to another project. Stop it before starting a task from here.
   stop: Stop
   stopped: Stopped
   no_tasks: You have no tasks on this project.
@@ -1920,6 +1997,7 @@ errors:
     token_limit: "you already have {{.max}} tokens; revoke one before creating another"
     token_name_required: "give the token a name, so you can tell it apart later"
     token_not_found: "token not found"
+    connection_not_found: "connected app not found"
   collaborator:
     not_in_project: "this person is not on this project"
   customer:
@@ -1947,6 +2025,7 @@ errors:
     invalid_hourly_rate: "the hourly rate must be between 10.00 and 1,000,000.00"
     invalid_monthly_fee: "the monthly fee must be between 0.01 and 1,000,000.00"
     invalid_contract_end: "the contract end must be after the start"
+    invalid_estimated_hours: "the estimated hours per month must be between 1 and 744"
     invalid_closing_day: "the closing day must be between 1 and 31"
     invalid_payment_days: "the payment term must be between 0 and 365 days"
     invalid_late_fee: "the late fee must be between 0% and 100%"
@@ -2028,7 +2107,10 @@ errors:
     invalid_date: "invalid date in {{.field}}: use YYYY-MM-DD"
     task_already_active: "this task is already running in the session"
     task_not_in_session: "this task is not running in the open session"
+    project_required: "sessions are open in more than one project; say which one to close"
     unknown_label: "the project has no label {{.label}}; the ones it has: {{.available}}"
+  oauth:
+    request_invalid: "the connection request no longer checks out; start again from the app"
   organization:
     field_too_long: "{{.field}} can have up to {{.max}} characters"
     has_projects: "delete all projects before deleting the organization"
@@ -2150,7 +2232,7 @@ errors:
     no_rate: "this person is not on the project yet: add them with an hourly rate before putting them on a team"
     person_required: "enter the person (person_id)"
   work_session:
-    already_open: "this person already has an open clock-in; stop the current session before starting another"
+    already_open: "this person already has an open clock-in on this project; add the task to the open session"
     filter_required: "filter by task_id or person_id"
     invalid_interval: "the interval must start and end inside the session, with the end after the start"
     invalid_person_filter: "invalid person (person_id)"
@@ -2158,8 +2240,7 @@ errors:
     last_task: "the session must keep at least one task; while it is open, at least one still in progress"
     no_rate: "this person has no hourly rate on this project yet; an admin must set one on the Collaborators tab before clocking in"
     not_found: "session not found"
-    not_open: "this person has no open clock-in"
-    open_in_other_project: "this person's clock-in is open in another project; stop it there"
+    not_open: "this person has no open clock-in on this project"
     not_yours: "only the person who clocked in, or an admin, can change the tasks of this session"
     other_person_admin_only: "only admins can clock in for another person"
     person_not_found: "person not found"
@@ -2203,6 +2284,7 @@ fields:
   hourly_rate_cents: "the hourly rate"
   bill_extra_cents: "the extra"
   monthly_fee_cents: "the monthly fee"
+  estimated_monthly_hours: "the estimated hours per month"
   contract_start: "the contract start"
   contract_end: "the contract end"
   billing_cycle: "the billing cycle"

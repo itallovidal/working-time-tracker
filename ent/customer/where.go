@@ -116,6 +116,11 @@ func ContractEnd(v string) predicate.Customer {
 	return predicate.Customer(sql.FieldEQ(FieldContractEnd, v))
 }
 
+// EstimatedMonthlyHours applies equality check predicate on the "estimated_monthly_hours" field. It's identical to EstimatedMonthlyHoursEQ.
+func EstimatedMonthlyHours(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldEQ(FieldEstimatedMonthlyHours, v))
+}
+
 // ClosingDay applies equality check predicate on the "closing_day" field. It's identical to ClosingDayEQ.
 func ClosingDay(v int) predicate.Customer {
 	return predicate.Customer(sql.FieldEQ(FieldClosingDay, v))
@@ -919,6 +924,56 @@ func ContractEndEqualFold(v string) predicate.Customer {
 // ContractEndContainsFold applies the ContainsFold predicate on the "contract_end" field.
 func ContractEndContainsFold(v string) predicate.Customer {
 	return predicate.Customer(sql.FieldContainsFold(FieldContractEnd, v))
+}
+
+// EstimatedMonthlyHoursEQ applies the EQ predicate on the "estimated_monthly_hours" field.
+func EstimatedMonthlyHoursEQ(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldEQ(FieldEstimatedMonthlyHours, v))
+}
+
+// EstimatedMonthlyHoursNEQ applies the NEQ predicate on the "estimated_monthly_hours" field.
+func EstimatedMonthlyHoursNEQ(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldNEQ(FieldEstimatedMonthlyHours, v))
+}
+
+// EstimatedMonthlyHoursIn applies the In predicate on the "estimated_monthly_hours" field.
+func EstimatedMonthlyHoursIn(vs ...int) predicate.Customer {
+	return predicate.Customer(sql.FieldIn(FieldEstimatedMonthlyHours, vs...))
+}
+
+// EstimatedMonthlyHoursNotIn applies the NotIn predicate on the "estimated_monthly_hours" field.
+func EstimatedMonthlyHoursNotIn(vs ...int) predicate.Customer {
+	return predicate.Customer(sql.FieldNotIn(FieldEstimatedMonthlyHours, vs...))
+}
+
+// EstimatedMonthlyHoursGT applies the GT predicate on the "estimated_monthly_hours" field.
+func EstimatedMonthlyHoursGT(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldGT(FieldEstimatedMonthlyHours, v))
+}
+
+// EstimatedMonthlyHoursGTE applies the GTE predicate on the "estimated_monthly_hours" field.
+func EstimatedMonthlyHoursGTE(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldGTE(FieldEstimatedMonthlyHours, v))
+}
+
+// EstimatedMonthlyHoursLT applies the LT predicate on the "estimated_monthly_hours" field.
+func EstimatedMonthlyHoursLT(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldLT(FieldEstimatedMonthlyHours, v))
+}
+
+// EstimatedMonthlyHoursLTE applies the LTE predicate on the "estimated_monthly_hours" field.
+func EstimatedMonthlyHoursLTE(v int) predicate.Customer {
+	return predicate.Customer(sql.FieldLTE(FieldEstimatedMonthlyHours, v))
+}
+
+// EstimatedMonthlyHoursIsNil applies the IsNil predicate on the "estimated_monthly_hours" field.
+func EstimatedMonthlyHoursIsNil() predicate.Customer {
+	return predicate.Customer(sql.FieldIsNull(FieldEstimatedMonthlyHours))
+}
+
+// EstimatedMonthlyHoursNotNil applies the NotNil predicate on the "estimated_monthly_hours" field.
+func EstimatedMonthlyHoursNotNil() predicate.Customer {
+	return predicate.Customer(sql.FieldNotNull(FieldEstimatedMonthlyHours))
 }
 
 // ClosingDayEQ applies the EQ predicate on the "closing_day" field.

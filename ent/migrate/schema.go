@@ -92,6 +92,7 @@ var (
 		{Name: "monthly_fee_cents", Type: field.TypeInt, Nullable: true},
 		{Name: "contract_start", Type: field.TypeString, Nullable: true},
 		{Name: "contract_end", Type: field.TypeString, Nullable: true},
+		{Name: "estimated_monthly_hours", Type: field.TypeInt, Nullable: true},
 		{Name: "closing_day", Type: field.TypeInt, Default: 31},
 		{Name: "payment_days", Type: field.TypeInt, Default: 0},
 		{Name: "billing_cycle", Type: field.TypeString, Default: "monthly"},
@@ -110,7 +111,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "customers_organizations_customers",
-				Columns:    []*schema.Column{CustomersColumns[20]},
+				Columns:    []*schema.Column{CustomersColumns[21]},
 				RefColumns: []*schema.Column{OrganizationsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -271,6 +272,77 @@ var (
 				Name:    "label_project_id_name",
 				Unique:  true,
 				Columns: []*schema.Column{LabelsColumns[3], LabelsColumns[1]},
+			},
+		},
+	}
+	// OauthAccessTokensColumns holds the columns for the "oauth_access_tokens" table.
+	OauthAccessTokensColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "token_hash", Type: field.TypeString, Unique: true},
+		{Name: "expires_at", Type: field.TypeTime},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "grant_id", Type: field.TypeUUID},
+	}
+	// OauthAccessTokensTable holds the schema information for the "oauth_access_tokens" table.
+	OauthAccessTokensTable = &schema.Table{
+		Name:       "oauth_access_tokens",
+		Columns:    OauthAccessTokensColumns,
+		PrimaryKey: []*schema.Column{OauthAccessTokensColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "oauth_access_tokens_oauth_grants_access_tokens",
+				Columns:    []*schema.Column{OauthAccessTokensColumns[4]},
+				RefColumns: []*schema.Column{OauthGrantsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "oauthaccesstoken_grant_id_expires_at",
+				Unique:  false,
+				Columns: []*schema.Column{OauthAccessTokensColumns[4], OauthAccessTokensColumns[2]},
+			},
+		},
+	}
+	// OauthGrantsColumns holds the columns for the "oauth_grants" table.
+	OauthGrantsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "client_id", Type: field.TypeString},
+		{Name: "client_name", Type: field.TypeString},
+		{Name: "redirect_uri", Type: field.TypeString},
+		{Name: "scope", Type: field.TypeString},
+		{Name: "resource", Type: field.TypeString},
+		{Name: "code_hash", Type: field.TypeString, Unique: true},
+		{Name: "code_challenge", Type: field.TypeString},
+		{Name: "code_expires_at", Type: field.TypeTime},
+		{Name: "code_used_at", Type: field.TypeTime, Nullable: true},
+		{Name: "refresh_hash", Type: field.TypeString, Unique: true, Nullable: true},
+		{Name: "prev_refresh_hash", Type: field.TypeString, Unique: true, Nullable: true},
+		{Name: "refresh_replay_enc", Type: field.TypeString, Nullable: true},
+		{Name: "rotated_at", Type: field.TypeTime, Nullable: true},
+		{Name: "refresh_expires_at", Type: field.TypeTime, Nullable: true},
+		{Name: "last_used_at", Type: field.TypeTime, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "person_id", Type: field.TypeUUID},
+	}
+	// OauthGrantsTable holds the schema information for the "oauth_grants" table.
+	OauthGrantsTable = &schema.Table{
+		Name:       "oauth_grants",
+		Columns:    OauthGrantsColumns,
+		PrimaryKey: []*schema.Column{OauthGrantsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "oauth_grants_persons_oauth_grants",
+				Columns:    []*schema.Column{OauthGrantsColumns[17]},
+				RefColumns: []*schema.Column{PersonsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "oauthgrant_person_id",
+				Unique:  false,
+				Columns: []*schema.Column{OauthGrantsColumns[17]},
 			},
 		},
 	}
@@ -612,9 +684,9 @@ var (
 		},
 		Indexes: []*schema.Index{
 			{
-				Name:    "one_active_session",
+				Name:    "one_open_session_per_project",
 				Unique:  true,
-				Columns: []*schema.Column{WorkSessionsColumns[7]},
+				Columns: []*schema.Column{WorkSessionsColumns[7], WorkSessionsColumns[8]},
 				Annotation: &entsql.IndexAnnotation{
 					Where: "end_at IS NULL",
 				},
@@ -696,6 +768,8 @@ var (
 		InvitesTable,
 		IssueSyncsTable,
 		LabelsTable,
+		OauthAccessTokensTable,
+		OauthGrantsTable,
 		OrganizationsTable,
 		PayoutsTable,
 		PersonsTable,
@@ -724,6 +798,14 @@ func init() {
 	IssueSyncsTable.ForeignKeys[0].RefTable = IntegrationsTable
 	IssueSyncsTable.ForeignKeys[1].RefTable = TasksTable
 	LabelsTable.ForeignKeys[0].RefTable = ProjectsTable
+	OauthAccessTokensTable.ForeignKeys[0].RefTable = OauthGrantsTable
+	OauthAccessTokensTable.Annotation = &entsql.Annotation{
+		Table: "oauth_access_tokens",
+	}
+	OauthGrantsTable.ForeignKeys[0].RefTable = PersonsTable
+	OauthGrantsTable.Annotation = &entsql.Annotation{
+		Table: "oauth_grants",
+	}
 	PayoutsTable.ForeignKeys[0].RefTable = PersonsTable
 	PersonsTable.ForeignKeys[0].RefTable = OrganizationsTable
 	ProjectsTable.ForeignKeys[0].RefTable = CustomersTable

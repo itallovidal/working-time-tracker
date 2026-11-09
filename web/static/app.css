@@ -265,6 +265,12 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 .profile-tasks { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .meter { height: 8px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
 .meter > span { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
+/* A barrinha do período em andamento (A receber), entre as datas e "dia 4 de 30". */
+.meter-thin { height: 4px; margin: 5px 0 3px; }
+/* A dedicação que passou da estimativa de horas do contrato (Decisão 26): a barra cheia, no tom de aviso. */
+.meter-over > span { background: var(--warn); }
+.dedication { min-width: 8.5rem; }
+.dedication-wide { max-width: 32rem; }
 .grid-aside { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 18px; align-items: start; }
 @media (max-width: 860px) { .grid-2, .grid-aside { grid-template-columns: 1fr; } }
 /* A página da tarefa: duas colunas de cartões, e em tela estreita uma coluna só, na ordem
@@ -339,6 +345,8 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 .divider { border: 0; border-top: 1px solid var(--rule); margin: 0; }
 .flex-1 { flex: 1; min-width: 160px; }
 .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+/* O grupo da direita fica à direita mesmo quando o botão da esquerda está escondido (x-show). */
+.toolbar > .row-end { margin-left: auto; }
 .check { display: inline-flex; align-items: center; gap: 8px; font-size: 0.92rem; color: var(--ink-2); cursor: pointer; }
 .check input { width: auto; }
 .filters select, .filters input { width: auto; max-width: 240px; }
@@ -360,7 +368,13 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 .fact { display: contents; }
 /* Vários blocos .facts em sequência (os detalhes do cliente): a coluna dos rótulos tem a mesma largura em todos, para
    os valores ficarem alinhados de um bloco para o outro. */
-.facts-wide { grid-template-columns: 9.5rem 1fr; }
+.facts-wide { grid-template-columns: 11rem 1fr; }
+/* O ícone antes do rótulo (os detalhes do cliente): herda a cor apagada do dt, com largura fixa para os rótulos
+   começarem alinhados. */
+.fact-icon { margin-right: 8px; }
+/* No celular a coluna dos rótulos fica no justo para o maior deles ("Pessoa de contato" com o ícone), e os valores
+   ficam com a largura que tinham antes dos ícones: a data e o telefone cabem numa linha. */
+@media (max-width: 640px) { .facts-wide { grid-template-columns: 9.75rem 1fr; column-gap: 10px; } }
 .prose { white-space: pre-line; color: var(--ink-2); }
 /* Descrição em Markdown, já sanitizada: o texto corre como numa página, e os títulos ficam
    pequenos para não competir com o da tarefa. */
@@ -437,6 +451,8 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 .field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 .field label, .field-label { font-size: 0.84rem; font-weight: 600; color: var(--ink-2); }
 .field .hint { font-size: 0.8rem; color: var(--muted); }
+/* As frases de apoio quebram sem deixar uma palavra sozinha na última linha ("outro / dia."). */
+.hint, .alert p, p.muted { text-wrap: pretty; }
 /* "(opcional)" no rótulo: o obrigatório não diz nada, o opcional diz, mais leve que o nome. */
 .field label .optional, .field-label .optional { font-weight: 400; color: var(--muted); }
 /* Dica que muda com o que a pessoa digita: verde quando a regra foi cumprida, vermelha quando falhou. */
@@ -876,25 +892,42 @@ td.actions { text-align: right; white-space: nowrap; }
 .presence-cell { display: inline-flex; align-items: center; gap: 8px; }
 .presence-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; flex: none; background: var(--rule-strong); }
 .presence-dot.is-on { background: var(--ok); }
-/* O balão da sessão aberta (partials/active_session.gohtml): preso ao canto de baixo à direita, em todas as telas, acima
-   da barra (20) e abaixo do modal (40). Fechado é só a faixa verde; aberto ganha a moldura e os cartões das tarefas,
-   que crescem para cima. Com ele no ar, o body leva has-dock: a página ganha respiro embaixo e os avisos sobem para
-   acima dele (--dock-h é a altura dele, posta pelo sessionDock). */
+/* As sessões abertas (partials/active_session.gohtml): uma pilha de cartões, um por projeto com o ponto aberto, presa ao
+   canto de baixo à direita, em todas as telas, acima da barra (20) e abaixo do modal (40). O cartão fechado é só a faixa
+   verde; aberto ganha a moldura e as tarefas, que crescem para cima. A pilha rola quando passa da altura da tela; o
+   respiro em volta é para a rolagem não cortar a sombra dos cartões. A caixa tem a largura de um cartão mesmo quando só
+   aparece a linha de outros projetos, então só os cartões e essa linha pegam o clique: o vazio em volta deixa passar
+   para a página embaixo. Com ela no ar, o body leva has-dock: a página ganha embaixo a altura dela, para o fim não ficar
+   coberto com vários cartões, e os avisos sobem para acima dela (--dock-h é a altura dela, posta pelo sessionDock). */
 .session-dock {
-  position: fixed; right: 16px; bottom: 16px; z-index: 30;
-  width: min(300px, calc(100vw - 32px)); display: flex; flex-direction: column; gap: 6px;
-  border-radius: 12px;
+  position: fixed; right: 8px; bottom: 8px; z-index: 30;
+  width: min(356px, calc(100vw - 16px)); max-height: calc(100dvh - 16px); overflow-y: auto;
+  display: flex; flex-direction: column; gap: 6px; padding: 8px;
+  pointer-events: none;
 }
-.session-dock.is-open { padding: 6px; background: var(--surface); border: 1px solid var(--rule-strong); box-shadow: var(--shadow); }
+.session-dock > * { pointer-events: auto; }
+.session-card { display: flex; flex-direction: column; gap: 6px; flex: none; border-radius: 12px; }
+.session-card.is-open { padding: 6px; background: var(--surface); border: 1px solid var(--rule-strong); box-shadow: var(--shadow); }
 .session-dock-toggle {
   display: flex; align-items: center; gap: 8px; width: 100%; padding: 9px 12px;
   font: inherit; font-size: 0.86rem; font-weight: 600; text-align: left; cursor: pointer;
   color: var(--accent); background: var(--surface); border: 1px solid var(--accent); border-radius: var(--radius);
 }
-.session-dock:not(.is-open) .session-dock-toggle { box-shadow: var(--shadow); }
+.session-card:not(.is-open) .session-dock-toggle { box-shadow: var(--shadow); }
 .session-dock-toggle:hover { background: var(--accent-soft); }
-.session-dock-chevron { margin-left: auto; font-size: 0.8em; transition: transform 0.15s; }
-.session-dock.is-open .session-dock-chevron { transform: rotate(180deg); }
+.session-dock-toggle .num { flex: none; }
+.session-dock-project { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.session-dock-chevron { margin-left: auto; flex: none; font-size: 0.8em; transition: transform 0.15s; }
+.session-card.is-open .session-dock-chevron { transform: rotate(180deg); }
+/* A linha das sessões de outros projetos, dentro de um projeto: discreta, acima do cartão dele. */
+.session-dock-others {
+  display: flex; align-items: center; gap: 8px; align-self: flex-end; max-width: 100%; padding: 5px 12px;
+  font: inherit; font-size: 0.8rem; font-weight: 600; white-space: nowrap; cursor: pointer;
+  color: var(--ink-2); background: var(--surface); border: 1px solid var(--rule-strong); border-radius: 999px;
+  box-shadow: var(--shadow);
+}
+.session-dock-others:hover { background: var(--surface-2); }
+.session-dock-others[aria-expanded="true"] .session-dock-chevron { transform: rotate(180deg); }
 .session-dock-panel { display: flex; flex-direction: column; gap: 6px; }
 /* O cartão de uma tarefa: o link para ela, esticado, e ao lado o botão de parar só ela. */
 .session-dock-item {
@@ -909,8 +942,8 @@ td.actions { text-align: right; white-space: nowrap; }
 .session-dock-task-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
 .session-dock-task .fa-arrow-right { margin-left: auto; flex: none; color: var(--muted); }
 .session-dock-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 2px 2px 0; }
-.has-dock .page { padding-bottom: 96px; }
-.has-dock .toasts { bottom: calc(var(--dock-h, 44px) + 28px); }
+.has-dock .page { padding-bottom: max(96px, calc(var(--dock-h, 60px) + 24px)); }
+.has-dock .toasts { bottom: calc(var(--dock-h, 60px) + 12px); }
 @media (prefers-reduced-motion: reduce) { .session-dock-chevron { transition: none; } }
 
 /* A sessão no modal: os fatos em colunas, e uma barra por tarefa mostrando onde ela entrou e
@@ -970,6 +1003,17 @@ td .task-chips { min-width: 200px; }
 .auth-actions { display: flex; gap: 10px; }
 .auth-actions .btn { flex: 1; }
 .auth-actions .btn:last-child { flex: 2; }
+/* A tela de consentimento do OAuth do MCP: quem está autorizando e o que o Claude vai poder fazer. */
+.consent-account {
+  display: flex; align-items: center; gap: 12px; padding: 10px 12px;
+  border: 1px solid var(--rule); border-radius: var(--radius-sm); background: var(--surface-2);
+}
+.consent-account .stack { min-width: 0; }
+.consent-account .small { overflow-wrap: anywhere; }
+.consent-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.consent-list li { display: flex; gap: 10px; align-items: baseline; color: var(--ink-2); }
+.consent-list li > i { flex: none; width: 1.1em; text-align: center; color: var(--ok); }
+.consent-list .consent-no > i { color: var(--muted); }
 /* O "ou" entre o email e a senha do sistema e o Google. */
 .auth-divider { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 0.85rem; }
 .auth-divider::before, .auth-divider::after { content: ""; flex: 1; height: 1px; background: var(--rule); }

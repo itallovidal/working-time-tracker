@@ -67,6 +67,8 @@ titles:
   trello_callback: Conectando com o Trello
   project_settings: Gestão · Configurações
   help: Ajuda
+  oauth_consent: Conectar ao Claude
+  oauth_error: Não deu para conectar
 
 nav:
   label: Páginas
@@ -213,6 +215,7 @@ home:
     customers:
       title: Por cliente
       intro: As horas dos projetos de cada cliente, o que entrou e o que se espera receber, em ordem de nome.
+      estimate_hint: "Estimativa: as horas do período do contrato contra as horas estimadas por mês. Quando o contrato não fecha no último dia, o período aparece embaixo."
       internal: Sem cliente (internos)
       internal_hint: Projetos sem cliente
     col:
@@ -222,6 +225,7 @@ home:
       received: Receita
       projected: Projetada
       rate: Valor por hora efetivo
+      estimate: Estimativa
     kind:
       hourly: Por hora
       monthly: Mensal
@@ -297,8 +301,13 @@ session:
   stop_task_label: "Parar a tarefa {{.name}}"
   stop_task_hint: Para só esta tarefa e a sessão continua. Se for a única em andamento, o ponto é encerrado.
   deleted_tasks: tarefa excluída
+  other_projects:
+    one: "+{{.count}} sessão em outro projeto"
+    other: "+{{.count}} sessões em outros projetos"
+  only_this_project: Só este projeto
   modal:
     title: "Sessão de {{.date}}"
+    title_project: "Sessão de {{.date}} · {{.project}}"
     person: Pessoa
     start: Início
     end: Fim
@@ -540,36 +549,56 @@ payments:
 receivable:
   refresh: Atualizar
   loading: Carregando as contas a receber…
-  intro: "O que cobrar de cada cliente, o que já foi confirmado e o que entrou. O período fecha à meia-noite."
+  intro: "O que está correndo, o que já fechou e falta receber, e o que entrou. O período fecha à meia‑noite."
   cards:
-    to_confirm: A confirmar
-    to_confirm_hint:
-      one: "{{.count}} período para confirmar"
-      other: "{{.count}} períodos para confirmar"
-    open: Em aberto
-    open_hint:
-      one: "{{.count}} conta confirmada"
-      other: "{{.count}} contas confirmadas"
+    in_progress: Em andamento
+    in_progress_hint:
+      one: "{{.count}} período correndo"
+      other: "{{.count}} períodos correndo"
+    to_receive: A receber
+    to_receive_hint:
+      one: "{{.count}} período fechado"
+      other: "{{.count}} períodos fechados"
     late: Atrasado
     late_hint:
-      one: "{{.count}} conta passou do vencimento"
-      other: "{{.count}} contas passaram do vencimento"
+      one: "{{.count}} conta vencida"
+      other: "{{.count}} contas vencidas"
     late_none: Nada atrasado
     received_month: Recebido no mês
     received_month_hint:
       one: "{{.count}} recebimento"
       other: "{{.count}} recebimentos"
-  to_confirm:
-    title: A confirmar
-    empty: Nada para confirmar.
-    empty_text: "Os períodos fechados com horas dos clientes por hora e os meses dos contratos mensais aparecem aqui."
-  open:
-    title: Em aberto
-    empty: Nenhuma conta em aberto.
+  in_progress:
+    title: Em andamento
+    note: "O período atual de cada cliente, ainda aberto. Quando fecha, passa para A receber."
+    empty: Nada em andamento.
+    empty_text: "O mês corrente dos contratos mensais e o período dos clientes por hora com horas aparecem aqui."
+    day_of: "dia {{.day}} de {{.days}}"
+    closes_today: fecha hoje
+    closes_tomorrow: fecha amanhã
+    closes_in:
+      one: "fecha em {{.count}} dia"
+      other: "fecha em {{.count}} dias"
+    fee: mensalidade
+    so_far: "{{.hours}} até agora"
+  to_receive:
+    title: A receber
+    note: "Os períodos que já fecharam e ainda não entraram, o vencimento mais antigo primeiro."
+    empty: Nada a receber.
+    empty_text: "Quando um período fecha, ele aparece aqui até você registrar o recebimento."
+  due:
+    late:
+      one: "Atrasado há {{.count}} dia"
+      other: "Atrasado há {{.count}} dias"
+    today: Vence hoje
+    tomorrow: Vence amanhã
+    in:
+      one: "Vence em {{.count}} dia"
+      other: "Vence em {{.count}} dias"
   received:
     title: Recebidos
     empty: Nenhum recebimento ainda.
-    note: "Os recebimentos mais recentes."
+    note: "O histórico do que entrou, o mais recente primeiro."
   col:
     customer: Cliente
     period: Período
@@ -581,11 +610,6 @@ receivable:
   kind:
     hourly: Por hora
     monthly: Mensal
-  running: em andamento
-  late:
-    one: "{{.count}} dia de atraso"
-    other: "{{.count}} dias de atraso"
-  late_badge: Atrasado
   below_min: "Valor por hora efetivo abaixo de {{.min}}: confira o valor."
   rate_line: "{{.rate}} por hora"
   calculated_line: "calculado {{.amount}}"
@@ -594,29 +618,29 @@ receivable:
   fee_line: "multa {{.amount}}"
   interest_line: "juros {{.amount}}"
   actions:
-    confirm: Confirmar
     receive: Receber
+    advance: Recebi adiantado
     edit: Editar
     undo: Desfazer
-    undo_confirm: Desfazer confirmação
     undo_receive: Desfazer recebimento
-    undo_confirm_ask: Desfazer a confirmação?
     undo_receive_ask: Desfazer o recebimento?
+    reset: Voltar ao valor calculado
+    reset_ask: "Voltar ao valor calculado? O valor, o vencimento e a nota ajustados se perdem."
   toast:
-    confirmed: "Confirmado: {{.name}}."
-    updated: "Alterado: {{.name}}."
+    adjusted: "Ajustado: {{.name}}."
     received: "Recebimento registrado: {{.name}}."
-    unconfirmed: Confirmação desfeita.
+    reset: De volta ao valor calculado.
     unreceived: Recebimento desfeito.
   modal:
-    confirm_title: "Confirmar · {{.name}}"
     edit_title: "Editar · {{.name}}"
     receive_title: "Receber · {{.name}}"
+    advance_title: "Receber adiantado · {{.name}}"
+    advance_hint: "O período ainda não fechou. Registre aqui o que o cliente já pagou dele; quando fechar, ele não aparece em A receber."
     period: Período
     hours: Horas
     calculated: Valor calculado
     amount_label: "Valor a cobrar ({{.unit}})"
-    amount_hint: Vem com o valor calculado. Mude se vai cobrar outro valor.
+    amount_hint: Vem com o valor de hoje. Mude se vai cobrar outro valor (o primeiro mês parcial, por exemplo).
     rate: "Valor por hora efetivo: {{.rate}}"
     rate_below: "Valor por hora efetivo: {{.rate}}, abaixo do piso de {{.min}}. Confira o valor."
     due_label: Vencimento
@@ -624,14 +648,12 @@ receivable:
     invoice_label: Número da nota
     invoice_hint: O sistema não emite a nota. Guarde aqui o número da que você emitiu.
     note_label: Observação
-    open_period: "O período ainda não fechou. O valor é a mensalidade, e você pode corrigi-lo (o primeiro mês parcial, por exemplo)."
-    confirm: Confirmar
     save: Salvar
     received_on_label: Data do recebimento
     received_on_hint: Vem com hoje. Mude se o dinheiro entrou em outro dia.
     received_label: "Valor recebido ({{.unit}})"
-    received_hint_hourly: No cliente por hora entra o valor confirmado.
-    received_hint_monthly: Livre, pode ser mais ou menos que o confirmado. Vem com o valor confirmado.
+    received_hint_hourly: "No cliente por hora entra o valor da conta. Para receber outro valor, use Editar antes."
+    received_hint_monthly: Livre, pode ser mais ou menos que o da conta. Vem com o valor da conta.
     fee_label: "Multa ({{.unit}})"
     interest_label: "Juros ({{.unit}})"
     charges_hint: A multa e os juros já estão dentro do valor recebido. Em branco, ficam zerados.
@@ -643,6 +665,30 @@ receivable:
     suggestion_loading: Calculando a sugestão…
     receive: Registrar recebimento
 
+# A tela de consentimento do OAuth do MCP: o Claude pede para agir em nome da pessoa.
+oauth:
+  consent:
+    title: "{{.app}} quer acessar a sua conta"
+    subtitle: "Você está conectando {{.app}} ao Working Time Tracker como {{.name}}, em {{.org}}."
+    can_title: "Ele vai poder, como você:"
+    can_tasks: "ver, criar e atualizar as tarefas dos seus projetos e pegar tarefas para você;"
+    can_sync: "sincronizar uma tarefa com as integrações do projeto;"
+    can_clock: "bater o seu ponto, trocar de tarefa e ver as suas horas."
+    cannot_money: "Ele não vê valores em dinheiro: pagamentos, cobranças e receita ficam de fora."
+    redirect: "Ao permitir, você volta para {{.host}}."
+    loopback: "A volta é para um programa neste computador (o Claude Code). Permita só se foi você quem pediu a conexão agora."
+    expiry: "A conexão cai depois de 30 dias sem uso, e você pode desconectar a qualquer hora no seu perfil."
+    allow: Permitir
+    deny: Cancelar
+    pending: Conectando…
+    other_account: Entrar com outra conta
+  error:
+    title: Não deu para conectar
+    client_unknown: "Este app não pode se conectar ao sistema. Por enquanto, só o Claude (claude.ai, Desktop e celular) e o Claude Code."
+    redirect_invalid: "O endereço de volta do pedido não é do app que pediu, então, por segurança, a conexão parou aqui. Tente conectar de novo pelo app."
+    request_invalid: "O pedido de conexão veio incompleto. Tente conectar de novo pelo app."
+    home: Voltar ao início
+
 profile:
   eyebrow: Seu perfil
   title_other: Perfil do colaborador
@@ -650,7 +696,26 @@ profile:
   tabs_label: O que editar
   claude:
     title: Conectar ao Claude
-    intro: "Com um token, o Claude Code cria e atualiza as suas tarefas, pega tarefas, sincroniza com as integrações do projeto e bate o seu ponto, como você. Ele vê o que você vê, menos os valores em dinheiro."
+    intro: "O Claude cria e atualiza as suas tarefas, pega tarefas, sincroniza com as integrações do projeto e bate o seu ponto, como você. Ele vê o que você vê, menos os valores em dinheiro."
+    app_title: claude.ai, Claude Desktop e celular
+    app_steps: "No claude.ai, abra Personalizar → Conectores → Adicionar conector personalizado e cole o endereço abaixo. Em OAuth, deixe “Usar a identidade publicada do Claude”. O Claude abre esta página para você entrar e permitir, e o conector passa a valer também no Claude Desktop e no app do celular."
+    app_url: Endereço do conector
+    copy_url: Copiar endereço
+    app_code: "No Claude Code, o mesmo endereço entra sem token: rode este comando e, numa conversa, use /mcp e escolha Authenticate."
+    app_code_command: Comando do Claude Code
+    connections_title: Apps conectados
+    connections_loading: Carregando os apps…
+    connections_empty: Nenhum app conectado ainda
+    connections_empty_text: Conecte o Claude pelo endereço acima.
+    col_app: App
+    col_connected: Conectado em
+    col_drops: Cai sem uso em
+    disconnect: Desconectar
+    disconnect_question: Desconectar este app?
+    disconnected: App desconectado. Para entrar de novo, ele precisa da sua autorização.
+    connections_note: A conexão cai depois de 30 dias sem uso. Trocar a senha desconecta todos os apps.
+    tokens_title: Token pessoal
+    tokens_intro: "Para o Claude Code sem a autorização no navegador: um token que vai no comando e vence na data que você escolher."
     new: Novo token
     loading: Carregando os tokens…
     empty: Nenhum token ainda
@@ -804,8 +869,8 @@ help:
       tip: "Tarefa sem responsável fica disponível para o time: quem iniciar o ponto nela passa a ser o responsável. O responsável precisa estar no projeto."
     track:
       title: Registre as horas
-      text: "No Início do projeto ou em Minhas tarefas, clique em “Iniciar” na tarefa em que vai trabalhar. O cronômetro começa e a “Sessão ativa” fica no canto da tela, em qualquer página. Para encerrar, clique em “Parar”."
-      tip: "Ao iniciar, a tarefa vai para “Em progresso”. Você pode trabalhar em várias tarefas na mesma sessão (“Adicionar à sessão”): cada uma conta o tempo cheio e a sessão conta uma vez só. Só existe um ponto aberto por pessoa."
+      text: "No Início do projeto ou em Minhas tarefas, clique em “Iniciar” na tarefa em que vai trabalhar. O cronômetro começa e a sessão fica no canto da tela, com o nome do projeto, em qualquer página. Para encerrar, clique em “Parar”."
+      tip: "Ao iniciar, a tarefa vai para “Em progresso”. Você pode trabalhar em várias tarefas na mesma sessão (“Adicionar à sessão”): cada uma conta o tempo cheio e a sessão conta uma vez só. Dá para ter um ponto aberto em cada projeto ao mesmo tempo: o valor é o de cada projeto, e as horas que se sobrepõem contam uma vez só no seu total."
     numbers:
       title: Acompanhe os números
       text: "O dono e os administradores veem, no Início da organização, as horas e o custo de todos os projetos, em 7 dias, 30 dias ou tudo; a receita e a margem, só o dono. Cada projeto tem a sua “Visão geral” na Gestão, com as sessões de todo mundo e os totais."
@@ -827,11 +892,11 @@ help:
       team: "A equipe: o que pagar (atrasados incluídos), o que fecha em 7 e 30 dias, as horas da equipe e quem está sem regra. “Próximos pagamentos” segue a data do pagamento, e não as horas; “Pagos recentemente” mostra as baixas dos últimos 30 dias. Clique numa linha para abrir o perfil da pessoa, com o histórico e o detalhe por projeto. O dono não é pago e não aparece nas tabelas."
     receivables:
       title: A receber
-      text: "O item “A receber” da barra superior, só para o dono de uma organização no modo solo: o que cobrar de cada cliente e o que já entrou. Cada conta a receber é de um cliente e de um período: o app propõe, e você confirma."
-      cards: "No alto, quatro cartões: o que há para confirmar, o que está em aberto, o que está atrasado (confirmado, sem receber e depois do vencimento) e o que entrou no mês."
-      confirm: "“A confirmar” lista as propostas. No cliente por hora, o período aparece depois de fechar, com as horas dos projetos dele vezes o valor cobrado de cada um (o do cliente mais o acréscimo do projeto); no mensal, é a mensalidade mais os acréscimos mensais dos projetos, do começo do contrato até o mês corrente, e dá para confirmar a qualquer hora. “Confirmar” abre o valor, o vencimento, o número da nota e uma observação, e você ajusta o que for preciso."
-      receive: "“Em aberto” é o que foi confirmado e ainda não entrou. “Receber” registra o dia e o valor. No cliente por hora entra o valor confirmado; no mensal o valor é livre, e o app sugere a multa e os juros quando o pagamento passa do vencimento mais a tolerância do contrato."
-      undo: "“Recebidos” lista o que entrou. Dá para desfazer o recebimento e, depois, a confirmação: o período volta a ser uma proposta."
+      text: "O item “A receber” da barra superior, só para o dono de uma organização no modo solo: o que está correndo, o que já fechou e falta receber, e o que entrou. Cada conta é de um cliente e de um período, e o app calcula o valor e o vencimento."
+      cards: "No alto, quatro cartões: o que está em andamento, o que está a receber, a parte disso que está atrasada (depois do vencimento) e o que entrou no mês."
+      in_progress: "“Em andamento” é o período atual de cada cliente, ainda aberto: no mensal, o mês do contrato, com a mensalidade mais os acréscimos mensais dos projetos; no por hora, as horas dos projetos até agora vezes o valor cobrado de cada uma (o do cliente mais o acréscimo do projeto). No mensal, “Recebi adiantado” registra um pagamento antes de o mês fechar."
+      to_receive: "“A receber” é o que fechou e ainda não entrou, o vencimento mais antigo primeiro, com o selo do atraso. “Receber” registra o dia, o valor e o número da nota: no por hora entra o valor da conta; no mensal o valor é livre, e o app sugere a multa e os juros quando o pagamento passa do vencimento mais a tolerância do contrato. “Editar” ajusta o valor, o vencimento e a nota antes de receber (o primeiro mês parcial, por exemplo), e a conta ajustada pode voltar ao valor calculado."
+      undo: "“Recebidos” é o histórico do que entrou. Dá para desfazer o recebimento: a conta volta para “A receber”."
       invoice: "O app não emite nota: o número dela é só uma anotação. Um valor por hora efetivo abaixo de 10,00 aparece como aviso, nunca como erro."
     org_about:
       title: Configurações
@@ -914,7 +979,7 @@ help:
       rates: "“Projetos e valores”: quanto você recebe por hora em cada projeto e o que fez neles, no período e desde o início. Só você e os administradores veem."
       edit: "“Editar perfil” abre os dados pessoais (nome e email, que é o que você usa para entrar) e, na aba “Senha”, a troca de senha, que encerra as suas outras sessões."
       language: "O idioma (PT | EN), a “Ajuda” e o “Sair” ficam no mesmo menu da conta, e o navegador lembra o idioma escolhido."
-      claude: "Em “Conectar ao Claude”, o “Novo token” gera um token e o comando que conecta o Claude Code: com ele, o Claude cria e atualiza as suas tarefas, pega tarefas, sincroniza e bate o seu ponto, como você e sem ver valores em dinheiro. O token aparece uma vez só, vence na data escolhida e pode ser revogado ali; trocar a senha revoga todos."
+      claude: "Em “Conectar ao Claude”, o Claude passa a criar e atualizar as suas tarefas, pegar tarefas, sincronizar e bater o seu ponto, como você e sem ver valores em dinheiro. No claude.ai (e, com ele, no Claude Desktop e no celular), cole o endereço do conector em Personalizar → Conectores e permita o acesso; a lista “Apps conectados” mostra o que está ligado e desconecta. Para o Claude Code, o “Novo token” gera um token e o comando: o token aparece uma vez só, vence na data escolhida e pode ser revogado ali. Trocar a senha desconecta os apps e revoga os tokens."
   concepts:
     rates:
       title: Valor por hora
@@ -940,7 +1005,7 @@ help:
       text: "O modo solo é para quem atua sozinho, como freelancer ou PJ: a organização é uma pessoa só, e o que é de equipe some em vez de ficar sobrando nos menus."
       choose: "Marque “Trabalho sozinho(a)” ao criar a organização ou depois, em Configurações › Editar. Só o dono muda, e só liga com você como a única pessoa e sem convites pendentes."
       hides: "O menu perde Colaboradores e Pagamentos e ganha “A receber”; o projeto perde a aba Colaboradores, e ninguém é convidado. Desligar o modo não apaga nada: tudo o que ficou escondido volta."
-      billing: "Cada cliente é cobrado por hora (as horas dos projetos vezes o valor por hora dele) ou por contrato mensal (um valor fixo por mês, e os projetos dele não têm valor por hora), nunca pelos dois. A cobrança se define em Clientes e vale para todos os projetos do cliente; cada projeto só soma um acréscimo, por hora ou por mês. Depois que o cliente tem projetos o modo não muda. O período do cliente por hora fecha uma vez por mês, no dia de fechamento, ou a cada 14 dias (o bi-weekly dos EUA), contados a partir do último fechamento que ele já pagou."
+      billing: "Cada cliente é cobrado por hora (as horas dos projetos vezes o valor por hora dele) ou por contrato mensal (um valor fixo por mês, e os projetos dele não têm valor por hora), nunca pelos dois. A cobrança se define em Clientes e vale para todos os projetos do cliente; cada projeto só soma um acréscimo, por hora ou por mês. Depois que o cliente tem projetos o modo não muda. O período do cliente por hora fecha uma vez por mês, no dia de fechamento, ou a cada 14 dias (o bi-weekly dos EUA), contados a partir do último fechamento que ele já pagou. No contrato mensal dá para informar as horas estimadas por mês: o Início, os detalhes do cliente, a visão geral do projeto e o A receber mostram as horas do período do contrato contra elas, só para acompanhar."
       home: "O Início mostra as horas, a receita (o dinheiro que entrou) e a receita projetada (o que se espera receber, pago ou não), por cliente."
     integrations:
       title: Integrações com GitHub, GitLab e Trello
@@ -951,8 +1016,8 @@ help:
   faq:
     no_clock:
       q: Não consigo iniciar o ponto
-      a: "Quase sempre falta o valor por hora da pessoa naquele projeto: um administrador ou o administrador do projeto define em Gestão › Colaboradores. A outra causa é um ponto já aberto em outro projeto; pare-o antes de iniciar este."
-      a_solo: "Quase sempre é um ponto já aberto em outro projeto: pare-o antes de iniciar este. Num projeto de cliente cobrado por hora, confira também o valor cobrado em Gestão › Configurações."
+      a: "Quase sempre falta o valor por hora da pessoa naquele projeto: um administrador ou o administrador do projeto define em Gestão › Colaboradores. Um ponto aberto em outro projeto não impede: cada projeto tem a sua sessão."
+      a_solo: "Num projeto de cliente cobrado por hora, confira o valor cobrado em Gestão › Configurações. Um ponto aberto em outro projeto não impede: cada projeto tem a sua sessão."
     forgot:
       q: Esqueci de bater o ponto. Dá para lançar as horas depois?
       a: "Não. O app só registra o tempo cronometrado: não há lançamento manual, aprovação nem fechamento de período. O que dá para ajustar são os intervalos das tarefas dentro de uma sessão (abra a sessão e use o lápis), sem mudar o tempo total dela."
@@ -1132,6 +1197,11 @@ customer:
     contract_start: Início do contrato
     contract_end: Fim do contrato
     contract_end_hint: Sem data, o contrato segue por tempo indeterminado.
+    estimated_hours: Horas estimadas por mês
+    estimated_hours_hint: "Quanto você espera dedicar a este cliente em cada período do contrato, somando todos os projetos dele. Só para acompanhar: não muda a cobrança."
+    estimated_hours_fact: Horas estimadas
+    estimated_hours_value: "{{.hours}}h por mês"
+    dedication_fact: No período atual
     cycle: Ciclo do período
     cycle_monthly: Mensal, no dia de fechamento
     cycle_biweekly: A cada 14 dias (bi-weekly)
@@ -1152,9 +1222,7 @@ customer:
     col_closing: Fechamento
     col_due: Vencimento
     fee: Mensalidade
-    contract: Contrato
-    contract_range: "{{.start}} a {{.end}}"
-    contract_open: "Desde {{.start}}, sem data de fim"
+    contract_no_end: Indeterminado
     late_fee_fact: Multa por atraso
     late_interest_fact: Juros ao mês
     grace_days_fact: Tolerância
@@ -1173,6 +1241,17 @@ customer:
       other: "{{.count}} dias depois"
     project_rate_monthly: "Não se aplica: cobrança mensal"
     option_label: "{{.name}} · {{.mode}}"
+# As horas de um período do contrato mensal contra a estimativa do cliente (Decisão 26). O espaço inquebrável (\u00a0)
+# segura as horas e o período junto do que vem antes: nada de "0h" sozinho na linha de baixo.
+dedication:
+  of: "{{.done}} de {{.goal}}"
+  percent: "{{.percent}}%"
+  period: "Período\u00a0{{.period}}"
+  estimated_line: "{{.done}} de {{.goal}} estimadas"
+  project_line: "{{.name}}:\u00a0{{.hours}}"
+  this_project: "Este projeto: {{.hours}}"
+  card_title: Estimativa do cliente
+  card_hint: "As horas de todos os projetos de {{.customer}} no período do contrato, contra as horas estimadas por mês."
 project:
   head:
     projects: Projetos
@@ -1455,7 +1534,6 @@ time:
   since: "Desde as {{.time}}"
   start_hint: Clique em Iniciar numa das tarefas abaixo para começar a contar o tempo.
   all_in_session: Todas as suas tarefas estão na sessão.
-  other_project: Esta sessão é de outro projeto. Pare antes de iniciar uma tarefa daqui.
   stop: Parar
   stopped: Parado
   no_tasks: Você não tem tarefas neste projeto.
@@ -1930,6 +2008,7 @@ errors:
     token_limit: "você já tem {{.max}} tokens; revogue um antes de criar outro"
     token_name_required: "dê um nome ao token, para reconhecê-lo depois"
     token_not_found: "token não encontrado"
+    connection_not_found: "app conectado não encontrado"
   collaborator:
     not_in_project: "esta pessoa não está neste projeto"
   customer:
@@ -1957,6 +2036,7 @@ errors:
     invalid_hourly_rate: "o valor por hora deve ficar entre 10,00 e 1.000.000,00"
     invalid_monthly_fee: "a mensalidade deve ficar entre 0,01 e 1.000.000,00"
     invalid_contract_end: "o fim do contrato deve ser depois do início"
+    invalid_estimated_hours: "as horas estimadas por mês devem ficar entre 1 e 744"
     invalid_closing_day: "o dia de fechamento deve ficar entre 1 e 31"
     invalid_payment_days: "o prazo de pagamento deve ficar entre 0 e 365 dias"
     invalid_late_fee: "a multa deve ficar entre 0% e 100%"
@@ -2038,7 +2118,10 @@ errors:
     invalid_date: "data inválida em {{.field}}: use AAAA-MM-DD"
     task_already_active: "esta tarefa já está em andamento na sessão"
     task_not_in_session: "esta tarefa não está em andamento na sessão aberta"
+    project_required: "há sessões abertas em mais de um projeto; diga qual encerrar"
     unknown_label: "o projeto não tem a etiqueta {{.label}}; as que existem: {{.available}}"
+  oauth:
+    request_invalid: "o pedido de conexão não confere mais; comece de novo pelo app"
   organization:
     field_too_long: "{{.field}} pode ter até {{.max}} caracteres"
     has_projects: "exclua todos os projetos antes de excluir a organização"
@@ -2160,7 +2243,7 @@ errors:
     no_rate: "esta pessoa ainda não está no projeto: adicione-a com o valor por hora antes de colocá-la num time"
     person_required: "informe a pessoa (person_id)"
   work_session:
-    already_open: "já existe um ponto aberto para esta pessoa; pare a sessão atual antes de iniciar outra"
+    already_open: "já existe um ponto aberto para esta pessoa neste projeto; ponha a tarefa na sessão aberta"
     filter_required: "filtre por task_id ou person_id"
     invalid_interval: "o intervalo precisa começar e terminar dentro da sessão, com o fim depois do começo"
     invalid_person_filter: "pessoa inválida (person_id)"
@@ -2168,8 +2251,7 @@ errors:
     last_task: "a sessão precisa ficar com ao menos uma tarefa; enquanto aberta, ao menos uma em andamento"
     no_rate: "esta pessoa ainda não tem valor por hora neste projeto; um admin precisa definir na aba Colaboradores antes do ponto"
     not_found: "sessão não encontrada"
-    not_open: "não há ponto aberto para esta pessoa"
-    open_in_other_project: "o ponto desta pessoa está aberto em outro projeto; pare-o por lá"
+    not_open: "não há ponto aberto para esta pessoa neste projeto"
     not_yours: "só quem bateu o ponto, ou um admin, pode mexer nas tarefas desta sessão"
     other_person_admin_only: "só admins podem registrar o ponto de outra pessoa"
     person_not_found: "pessoa não encontrada"
@@ -2213,6 +2295,7 @@ fields:
   hourly_rate_cents: "o valor por hora"
   bill_extra_cents: "o acréscimo"
   monthly_fee_cents: "a mensalidade"
+  estimated_monthly_hours: "as horas estimadas por mês"
   contract_start: "o início do contrato"
   contract_end: "o fim do contrato"
   billing_cycle: "o ciclo do período"

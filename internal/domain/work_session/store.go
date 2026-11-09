@@ -74,14 +74,39 @@ func rollback(tx *ent.Tx, err error) error {
 	return err
 }
 
-func (s *Store) GetActiveByPerson(personID string) (*WorkSession, error) {
+// ListOpenByPerson devolve as sessões abertas da pessoa, uma por projeto no máximo, da que começou primeiro para a
+// última, cada uma com as tarefas e o projeto.
+func (s *Store) ListOpenByPerson(personID string) ([]WorkSession, error) {
 	uid, err := uuid.Parse(personID)
 	if err != nil {
 		return nil, err
 	}
-	session, err := s.client.WorkSession.Query().
+	sessions, err := s.client.WorkSession.Query().
 		Where(worksession.PersonIDEQ(uid), worksession.EndAtIsNil()).
 		WithTaskLinks(withTasks).
+		WithProject().
+		Order(ent.Asc(worksession.FieldStartAt)).
+		All(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	return toDomainSessions(sessions), nil
+}
+
+// GetOpenByPersonProject devolve a sessão aberta da pessoa no projeto, com as tarefas, ou database.ErrNotFound.
+func (s *Store) GetOpenByPersonProject(personID, projectID string) (*WorkSession, error) {
+	puid, err := uuid.Parse(personID)
+	if err != nil {
+		return nil, database.ErrNotFound
+	}
+	prjid, err := uuid.Parse(projectID)
+	if err != nil {
+		return nil, database.ErrNotFound
+	}
+	session, err := s.client.WorkSession.Query().
+		Where(worksession.PersonIDEQ(puid), worksession.ProjectIDEQ(prjid), worksession.EndAtIsNil()).
+		WithTaskLinks(withTasks).
+		WithProject().
 		Only(context.Background())
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -92,7 +117,7 @@ func (s *Store) GetActiveByPerson(personID string) (*WorkSession, error) {
 	return toDomainSession(session), nil
 }
 
-// GetByID devolve a sessão com as tarefas e a pessoa, ou database.ErrNotFound.
+// GetByID devolve a sessão com as tarefas, a pessoa e o projeto, ou database.ErrNotFound.
 func (s *Store) GetByID(id string) (*WorkSession, error) {
 	uid, err := uuid.Parse(id)
 	if err != nil {
@@ -102,6 +127,7 @@ func (s *Store) GetByID(id string) (*WorkSession, error) {
 		Where(worksession.IDEQ(uid)).
 		WithTaskLinks(withTasks).
 		WithPerson().
+		WithProject().
 		Only(context.Background())
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -324,6 +350,9 @@ func toDomainSession(e *ent.WorkSession) *WorkSession {
 			link.Task = &Task{ID: l.Edges.Task.ID, Name: l.Edges.Task.Name, ProjectID: l.Edges.Task.ProjectID}
 		}
 		s.Tasks = append(s.Tasks, link)
+	}
+	if e.Edges.Project != nil {
+		s.Project = &Project{ID: e.Edges.Project.ID, Name: e.Edges.Project.Name}
 	}
 	if e.Edges.Person != nil {
 		s.Person = &Person{

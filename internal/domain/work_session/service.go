@@ -54,7 +54,8 @@ func (s *Service) ClockIn(projectID, taskID, personID string) (*WorkSession, err
 		return nil, ErrNoRate
 	}
 
-	_, err = s.sessionStore.GetActiveByPerson(personID)
+	// Uma sessão aberta por projeto: a de outro projeto segue correndo ao lado desta (Decisão 27).
+	_, err = s.sessionStore.GetOpenByPersonProject(personID, task.ProjectID.String())
 	if err == nil {
 		return nil, ErrAlreadyOpen
 	}
@@ -72,7 +73,7 @@ func (s *Service) ClockIn(projectID, taskID, personID string) (*WorkSession, err
 	}
 	if err := s.sessionStore.Create(session, task.ID); err != nil {
 		// Duas requisições simultâneas passam pela checagem acima; o índice
-		// one_active_session barra a segunda aqui.
+		// one_open_session_per_project barra a segunda aqui.
 		if ent.IsConstraintError(err) {
 			return nil, ErrAlreadyOpen
 		}
@@ -95,21 +96,35 @@ func (s *Service) ClockIn(projectID, taskID, personID string) (*WorkSession, err
 	return session, nil
 }
 
-// Active devolve a sessão aberta da pessoa, ou nil quando ela não está com o ponto aberto.
-func (s *Service) Active(personID string) (*WorkSession, error) {
-	active, err := s.sessionStore.GetActiveByPerson(personID)
+// Open devolve as sessões abertas da pessoa, uma por projeto no máximo, da que começou primeiro para a última. Sem
+// ponto aberto, a lista vem vazia.
+func (s *Service) Open(personID string) ([]WorkSession, error) {
+	open, err := s.sessionStore.ListOpenByPerson(personID)
+	if err != nil {
+		return nil, err
+	}
+	now := time.Now()
+	for i := range open {
+		open[i].fillAmounts(now)
+	}
+	return open, nil
+}
+
+// OpenIn devolve a sessão aberta da pessoa no projeto, ou nil quando não há.
+func (s *Service) OpenIn(personID, projectID string) (*WorkSession, error) {
+	open, err := s.sessionStore.GetOpenByPersonProject(personID, projectID)
 	if errors.Is(err, database.ErrNotFound) {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, err
 	}
-	active.fillAmounts(time.Now())
-	return active, nil
+	open.fillAmounts(time.Now())
+	return open, nil
 }
 
-// ClockOut fecha a sessão aberta da pessoa. Como o person_id vem do corpo, a
-// pessoa precisa ser da organização do projeto da rota, como no ClockIn.
+// ClockOut fecha a sessão aberta da pessoa no projeto da rota; a de outro projeto continua. Como o person_id vem do
+// corpo, a pessoa precisa ser da organização do projeto, como no ClockIn.
 func (s *Service) ClockOut(projectID, personID string) (*WorkSession, error) {
 	inOrg, err := s.sessionStore.PersonInProjectOrganization(personID, projectID)
 	if err != nil {
@@ -119,16 +134,12 @@ func (s *Service) ClockOut(projectID, personID string) (*WorkSession, error) {
 		return nil, ErrPersonNotInOrg
 	}
 
-	active, err := s.sessionStore.GetActiveByPerson(personID)
+	active, err := s.sessionStore.GetOpenByPersonProject(personID, projectID)
 	if err != nil {
 		if errors.Is(err, database.ErrNotFound) {
 			return nil, ErrNotOpen
 		}
 		return nil, err
-	}
-	// O ponto aberto é de outro projeto: parar por esta rota fecharia a sessão de lá, que não é o que a rota diz.
-	if active.ProjectID.String() != projectID {
-		return nil, ErrOpenInOtherProject
 	}
 
 	now := time.Now()

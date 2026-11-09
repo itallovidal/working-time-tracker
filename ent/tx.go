@@ -26,6 +26,10 @@ type Tx struct {
 	IssueSync *IssueSyncClient
 	// Label is the client for interacting with the Label builders.
 	Label *LabelClient
+	// OAuthAccessToken is the client for interacting with the OAuthAccessToken builders.
+	OAuthAccessToken *OAuthAccessTokenClient
+	// OAuthGrant is the client for interacting with the OAuthGrant builders.
+	OAuthGrant *OAuthGrantClient
 	// Organization is the client for interacting with the Organization builders.
 	Organization *OrganizationClient
 	// Payout is the client for interacting with the Payout builders.
@@ -186,6 +190,8 @@ func (tx *Tx) init() {
 	tx.Invite = NewInviteClient(tx.config)
 	tx.IssueSync = NewIssueSyncClient(tx.config)
 	tx.Label = NewLabelClient(tx.config)
+	tx.OAuthAccessToken = NewOAuthAccessTokenClient(tx.config)
+	tx.OAuthGrant = NewOAuthGrantClient(tx.config)
 	tx.Organization = NewOrganizationClient(tx.config)
 	tx.Payout = NewPayoutClient(tx.config)
 	tx.Person = NewPersonClient(tx.config)

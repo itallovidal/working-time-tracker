@@ -4,14 +4,81 @@
 <main class="page" x-data="profileSettings">
   {{template "person_profile" .}}
 
-  {{/* Os tokens do Claude: cada um deixa o Claude Code (o servidor MCP em /mcp) agir como a pessoa. O token aparece
-       uma vez só, no modal, junto com o comando pronto; a lista mostra só o começo dele. */}}
-  <section class="card stack" aria-labelledby="claude-title" x-data="claudeTokens">
+  {{/* Conectar ao Claude: o claude.ai (e com ele o Claude Desktop e o celular) e o Claude Code entram no servidor MCP
+       (/mcp) e agem como a pessoa. Com o OAuth ligado, o caminho principal é colar o endereço no Claude e autorizar; a
+       lista "Apps conectados" mostra o que está ligado. O token pessoal continua para o Claude Code: ele aparece uma vez
+       só, no modal, junto com o comando pronto, e a lista mostra só o começo dele. */}}
+  <section class="card stack" aria-labelledby="claude-title">
     <div class="card-head">
       <h2 id="claude-title">{{template "icon" "robot"}} {{.T "profile.claude.title"}}</h2>
-      <button type="button" class="btn btn-secondary btn-sm" @click="openNew()">{{template "icon" "plus"}} {{.T "profile.claude.new"}}</button>
     </div>
     <p class="muted">{{.T "profile.claude.intro"}}</p>
+
+    {{- if .Props.oauth}}
+    <div class="stack" x-data="claudeConnections">
+      <h3 id="claude-app-title">{{.T "profile.claude.app_title"}}</h3>
+      <p class="muted">{{.T "profile.claude.app_steps"}}</p>
+      <div class="field">
+        <label for="claude-mcp-url">{{.T "profile.claude.app_url"}}</label>
+        <div class="row">
+          <input id="claude-mcp-url" class="flex-1" type="text" readonly :value="WTT.boot.mcpURL" @focus="$event.target.select()">
+          <button type="button" class="btn btn-secondary" @click="copy(WTT.boot.mcpURL)">{{template "icon" "copy"}} {{.T "profile.claude.copy_url"}}</button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="claude-code-oauth">{{.T "profile.claude.app_code_command"}}</label>
+        <input id="claude-code-oauth" type="text" readonly :value="command()" @focus="$event.target.select()">
+        <span class="hint">{{.T "profile.claude.app_code"}}</span>
+      </div>
+
+      <h3 id="claude-connections-title">{{.T "profile.claude.connections_title"}}</h3>
+      <p class="muted" x-show="loading && connections.length === 0">{{.T "profile.claude.connections_loading"}}</p>
+      <p class="form-error" x-cloak x-show="errors.load" x-text="errors.load" role="alert"></p>
+      <p class="form-error" x-cloak x-show="errors.disconnect" x-text="errors.disconnect" role="alert"></p>
+      <div class="empty" x-cloak x-show="!loading && !errors.load && connections.length === 0">
+        {{template "icon" "plug"}}
+        <strong>{{.T "profile.claude.connections_empty"}}</strong>
+        <span>{{.T "profile.claude.connections_empty_text"}}</span>
+      </div>
+      <div class="table-wrap" x-cloak x-show="connections.length > 0">
+        <table aria-labelledby="claude-connections-title">
+          <thead>
+            <tr>
+              <th>{{.T "profile.claude.col_app"}}</th><th>{{.T "profile.claude.col_connected"}}</th>
+              <th>{{.T "profile.claude.col_last_used"}}</th><th>{{.T "profile.claude.col_drops"}}</th>
+              <th class="actions"><span class="sr-only">{{.T "common.actions"}}</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="conn in connections" :key="conn.id">
+              <tr>
+                <td><strong x-text="conn.name"></strong></td>
+                <td class="nowrap" x-text="WTT.fmt.date(conn.created_at)"></td>
+                <td class="nowrap" x-text="conn.last_used_at ? WTT.fmt.date(conn.last_used_at) : $t('profile.claude.never_used')"></td>
+                <td class="nowrap" x-text="WTT.fmt.date(conn.expires_at)"></td>
+                <td class="actions">
+                  <button type="button" class="btn btn-danger-ghost btn-sm" x-show="confirming !== conn.id" @click="confirming = conn.id">{{template "icon" "plug-circle-xmark"}} {{.T "profile.claude.disconnect"}}</button>
+                  <span class="confirm" x-cloak x-show="confirming === conn.id">
+                    <span>{{.T "profile.claude.disconnect_question"}}</span>
+                    <button type="button" class="btn btn-danger btn-sm" :disabled="pending" @click="disconnect(conn)">{{.T "profile.claude.disconnect"}}</button>
+                    <button type="button" class="btn btn-ghost btn-sm" @click="confirming = null">{{.T "common.cancel"}}</button>
+                  </span>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+      <p class="muted small">{{.T "profile.claude.connections_note"}}</p>
+    </div>
+    {{- end}}
+
+    <div class="stack" x-data="claudeTokens">
+    <div class="card-head">
+      <h3 id="claude-tokens-title">{{.T "profile.claude.tokens_title"}}</h3>
+      <button type="button" class="btn btn-secondary btn-sm" @click="openNew()">{{template "icon" "plus"}} {{.T "profile.claude.new"}}</button>
+    </div>
+    <p class="muted">{{.T "profile.claude.tokens_intro"}}</p>
 
     <p class="muted" x-show="loading && tokens.length === 0">{{.T "profile.claude.loading"}}</p>
     <p class="form-error" x-cloak x-show="errors.load" x-text="errors.load" role="alert"></p>
@@ -102,6 +169,7 @@
         </div>
       </form>
     </template>
+    </div>
   </section>
 
   <template x-teleport="#modal-root">

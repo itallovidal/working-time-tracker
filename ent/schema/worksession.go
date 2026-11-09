@@ -46,12 +46,13 @@ func (WorkSession) Edges() []ent.Edge {
 	}
 }
 
-// Indexes garante no banco que cada pessoa tenha no máximo uma sessão aberta.
+// Indexes garante no banco que cada pessoa tenha no máximo uma sessão aberta em cada projeto: em projetos diferentes,
+// as sessões podem correr ao mesmo tempo (Decisão 27).
 func (WorkSession) Indexes() []ent.Index {
 	return []ent.Index{
-		index.Fields("person_id").
+		index.Fields("person_id", "project_id").
 			Unique().
-			StorageKey("one_active_session").
+			StorageKey("one_open_session_per_project").
 			Annotations(entsql.IndexWhere("end_at IS NULL")),
 	}
 }

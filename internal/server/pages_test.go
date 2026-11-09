@@ -776,7 +776,7 @@ func TestPages_AllTemplatesLoad(t *testing.T) {
 	got := r.Pages()
 	sort.Strings(got)
 	for _, name := range []string{
-		"login", "signup", "invite", "clerk_continue", "notfound", "help",
+		"login", "signup", "invite", "clerk_continue", "notfound", "help", "oauth_consent", "oauth_error",
 		"org_projects", "org_people", "org_person", "org_payments", "org_settings", "org_about", "org_customers", "profile",
 		"project_overview", "project_my_overview", "project_tasks", "project_teams", "project_integrations", "project_settings", "task_detail",
 	} {

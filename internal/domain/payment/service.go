@@ -270,7 +270,9 @@ func addTo(perProject map[uuid.UUID]*sum, projectID uuid.UUID, seconds float64, 
 	ps.add(seconds, pay, bill, owner)
 }
 
-// within soma o que as sessões têm em [from, to), no total e, com perProject, por projeto.
+// within soma o que as sessões têm em [from, to), no total e, com perProject, por projeto. O dinheiro é por sessão, pelo
+// valor do projeto dela; o tempo do total conta uma vez só o que a pessoa trabalhou ao mesmo tempo em dois projetos
+// (Decisão 27), e o de cada projeto é o tempo inteiro das sessões dele.
 func within(sessions []work_session.WorkSession, from, to, now time.Time, owner bool, perProject map[uuid.UUID]*sum) sum {
 	var total sum
 	for i := range sessions {
@@ -283,11 +285,12 @@ func within(sessions []work_session.WorkSession, from, to, now time.Time, owner 
 			addTo(perProject, sessions[i].ProjectID, sec, pay, bill, owner)
 		}
 	}
+	total.seconds = work_session.MergedSeconds(sessions, from, to, now)
 	return total
 }
 
 // lifetime preenche o "desde o início" e devolve o detalhe por projeto dele. Cada sessão entra inteira, com o valor
-// arredondado uma vez, então o total bate com a soma das sessões que as telas dos projetos mostram.
+// arredondado uma vez, então o valor bate com a soma das sessões que as telas dos projetos mostram.
 func lifetime(out *Summary, sessions []work_session.WorkSession, now time.Time, owner bool, loc *time.Location) map[uuid.UUID]*sum {
 	byProject := map[uuid.UUID]*sum{}
 	var total sum
@@ -303,6 +306,8 @@ func lifetime(out *Summary, sessions []work_session.WorkSession, now time.Time, 
 		total.add(sec, pay, bill, owner)
 		addTo(byProject, sessions[i].ProjectID, sec, pay, bill, owner)
 	}
+	// O tempo de uma sessão em paralelo com outra da pessoa conta uma vez no total; cada projeto fica com o seu inteiro.
+	total.seconds = work_session.MergedSeconds(sessions, time.Time{}, time.Time{}, now)
 	out.Lifetime.Seconds, out.Lifetime.AmountCents = total.seconds, total.amount(owner)
 	if !first.IsZero() {
 		out.Lifetime.FirstDay = first.In(loc).Format(time.DateOnly)

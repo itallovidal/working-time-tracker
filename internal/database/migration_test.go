@@ -147,36 +147,38 @@ func TestMigrations_SumFileIsCurrent(t *testing.T) {
 
 func TestMigrate_ForeignKeyDeleteRules(t *testing.T) {
 	want := map[string]string{
-		"persons_organizations_persons":               "CASCADE",
-		"integrations_projects_integrations":          "CASCADE",
-		"tasks_projects_tasks":                        "CASCADE",
-		"teams_projects_teams":                        "CASCADE",
-		"team_memberships_teams_memberships":          "CASCADE",
-		"work_sessions_projects_work_sessions":        "CASCADE",
-		"work_session_tasks_tasks_session_links":      "CASCADE",
-		"work_session_tasks_work_sessions_task_links": "CASCADE",
-		"customers_organizations_customers":           "CASCADE",
-		"allocations_projects_allocations":            "CASCADE",
-		"allocations_persons_allocations":             "CASCADE",
-		"invites_organizations_invites":               "CASCADE",
-		"sessions_persons_sessions":                   "CASCADE",
-		"api_tokens_persons_api_tokens":               "CASCADE",
-		"payouts_persons_payouts":                     "CASCADE",
-		"receivables_organizations_receivables":       "CASCADE",
-		"labels_projects_labels":                      "CASCADE",
-		"task_labels_task_id":                         "CASCADE",
-		"task_labels_label_id":                        "CASCADE",
-		"projects_customers_projects":                 "SET NULL",
-		"issue_syncs_integrations_issue_syncs":        "CASCADE",
-		"issue_syncs_tasks_issue_syncs":               "SET NULL",
-		"invites_persons_created_invites":             "SET NULL",
-		"invites_projects_invites":                    "SET NULL",
-		"invites_teams_invites":                       "SET NULL",
-		"projects_organizations_projects":             "NO ACTION",
-		"tasks_persons_tasks":                         "NO ACTION",
-		"team_memberships_persons_team_memberships":   "NO ACTION",
-		"work_sessions_persons_work_sessions":         "NO ACTION",
-		"receivables_customers_receivables":           "NO ACTION",
+		"persons_organizations_persons":                  "CASCADE",
+		"integrations_projects_integrations":             "CASCADE",
+		"tasks_projects_tasks":                           "CASCADE",
+		"teams_projects_teams":                           "CASCADE",
+		"team_memberships_teams_memberships":             "CASCADE",
+		"work_sessions_projects_work_sessions":           "CASCADE",
+		"work_session_tasks_tasks_session_links":         "CASCADE",
+		"work_session_tasks_work_sessions_task_links":    "CASCADE",
+		"customers_organizations_customers":              "CASCADE",
+		"allocations_projects_allocations":               "CASCADE",
+		"allocations_persons_allocations":                "CASCADE",
+		"invites_organizations_invites":                  "CASCADE",
+		"sessions_persons_sessions":                      "CASCADE",
+		"api_tokens_persons_api_tokens":                  "CASCADE",
+		"oauth_grants_persons_oauth_grants":              "CASCADE",
+		"oauth_access_tokens_oauth_grants_access_tokens": "CASCADE",
+		"payouts_persons_payouts":                        "CASCADE",
+		"receivables_organizations_receivables":          "CASCADE",
+		"labels_projects_labels":                         "CASCADE",
+		"task_labels_task_id":                            "CASCADE",
+		"task_labels_label_id":                           "CASCADE",
+		"projects_customers_projects":                    "SET NULL",
+		"issue_syncs_integrations_issue_syncs":           "CASCADE",
+		"issue_syncs_tasks_issue_syncs":                  "SET NULL",
+		"invites_persons_created_invites":                "SET NULL",
+		"invites_projects_invites":                       "SET NULL",
+		"invites_teams_invites":                          "SET NULL",
+		"projects_organizations_projects":                "NO ACTION",
+		"tasks_persons_tasks":                            "NO ACTION",
+		"team_memberships_persons_team_memberships":      "NO ACTION",
+		"work_sessions_persons_work_sessions":            "NO ACTION",
+		"receivables_customers_receivables":              "NO ACTION",
 	}
 
 	rows, err := testDB.Query(`SELECT constraint_name, delete_rule
@@ -256,39 +258,47 @@ func TestMigrate_ReceivableRules(t *testing.T) {
 	}
 }
 
-func TestMigrate_OneActiveSessionIndex(t *testing.T) {
+func TestMigrate_OneOpenSessionPerProjectIndex(t *testing.T) {
 	var def string
 	err := testDB.QueryRow(`SELECT indexdef FROM pg_indexes
-		WHERE tablename = 'work_sessions' AND indexname = 'one_active_session'`).Scan(&def)
+		WHERE tablename = 'work_sessions' AND indexname = 'one_open_session_per_project'`).Scan(&def)
 	if err != nil {
-		t.Fatalf("one_active_session index not found: %v", err)
+		t.Fatalf("one_open_session_per_project index not found: %v", err)
 	}
-	if !strings.Contains(def, "UNIQUE") || !strings.Contains(def, "(person_id)") || !strings.Contains(def, "end_at IS NULL") {
+	if !strings.Contains(def, "UNIQUE") || !strings.Contains(def, "(person_id, project_id)") || !strings.Contains(def, "end_at IS NULL") {
 		t.Errorf("unexpected index definition: %s", def)
+	}
+	var old int
+	if err := testDB.QueryRow(`SELECT count(*) FROM pg_indexes WHERE indexname = 'one_active_session'`).Scan(&old); err != nil || old != 0 {
+		t.Errorf("the old one_active_session index is still there (count %d, err %v)", old, err)
 	}
 }
 
-// O índice parcial é a garantia final contra corrida no clock-in: mesmo gravando
-// direto no banco, sem passar pelo service, a segunda sessão aberta é rejeitada.
-func TestMigrate_DatabaseRejectsSecondOpenSession(t *testing.T) {
+// O índice parcial é a garantia final contra corrida no clock-in: mesmo gravando direto no banco, sem passar pelo
+// service, a segunda sessão aberta da pessoa no mesmo projeto é rejeitada. Em outro projeto, ela abre (Decisão 27).
+func TestMigrate_DatabaseRejectsSecondOpenSessionInTheProject(t *testing.T) {
 	testutil.Truncate(t, testDB)
 	ctx := context.Background()
 
 	org := testClient.Organization.Create().SetName("Org").SaveX(ctx)
 	p := testClient.Person.Create().SetName("Ana").SetEmail("ana@test.com").SetOrganizationID(org.ID).SaveX(ctx)
 	proj := testClient.Project.Create().SetName("Projeto").SetOrganizationID(org.ID).SaveX(ctx)
+	other := testClient.Project.Create().SetName("Outro").SetOrganizationID(org.ID).SaveX(ctx)
 
-	open := func() error {
+	open := func(projectID uuid.UUID) error {
 		_, err := testClient.WorkSession.Create().
-			SetProjectID(proj.ID).SetPersonID(p.ID).SetStartAt(time.Now()).
+			SetProjectID(projectID).SetPersonID(p.ID).SetStartAt(time.Now()).
 			Save(ctx)
 		return err
 	}
-	if err := open(); err != nil {
+	if err := open(proj.ID); err != nil {
 		t.Fatalf("first open session: %v", err)
 	}
-	if err := open(); err == nil {
-		t.Fatal("expected the database to reject a second open session for the same person")
+	if err := open(proj.ID); err == nil {
+		t.Fatal("expected the database to reject a second open session for the same person in the same project")
+	}
+	if err := open(other.ID); err != nil {
+		t.Fatalf("an open session in another project should be allowed: %v", err)
 	}
 
 	// Sessões encerradas não contam para o índice.

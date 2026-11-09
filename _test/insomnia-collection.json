@@ -219,6 +219,42 @@
       "body": {}
     },
     {
+      "_id": "req_01_conn1",
+      "_type": "request",
+      "parentId": "fld_01",
+      "name": "Apps conectados (OAuth do MCP)",
+      "method": "GET",
+      "url": "{{base_url}}/api/auth/connections",
+      "authentication": {},
+      "metaSortKey": 3.4,
+      "headers": [],
+      "body": {}
+    },
+    {
+      "_id": "req_01_conn2",
+      "_type": "request",
+      "parentId": "fld_01",
+      "name": "Desconectar app",
+      "method": "DELETE",
+      "url": "{{base_url}}/api/auth/connections/<id do app conectado>",
+      "authentication": {},
+      "metaSortKey": 3.5,
+      "headers": [],
+      "body": {}
+    },
+    {
+      "_id": "req_01_oauth_meta",
+      "_type": "request",
+      "parentId": "fld_01",
+      "name": "Metadados do OAuth do MCP",
+      "method": "GET",
+      "url": "{{base_url}}/.well-known/oauth-authorization-server",
+      "authentication": {},
+      "metaSortKey": 3.6,
+      "headers": [],
+      "body": {}
+    },
+    {
       "_id": "req_01_03_onboarding",
       "_type": "request",
       "parentId": "fld_01",
@@ -1228,9 +1264,9 @@
       "_id": "req_07_01",
       "_type": "request",
       "parentId": "fld_07",
-      "name": "Sessão ativa",
+      "name": "Sessões abertas",
       "method": "GET",
-      "url": "{{base_url}}/api/work-sessions/active",
+      "url": "{{base_url}}/api/work-sessions/open",
       "authentication": {},
       "metaSortKey": 1,
       "headers": [],
@@ -1810,7 +1846,7 @@
       ],
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"name\": \"Clínica Aurora\",\n  \"billing_mode\": \"monthly\",\n  \"monthly_fee_cents\": 630000,\n  \"contract_start\": \"2026-09-01\",\n  \"payment_days\": 5,\n  \"late_fee_bp\": 200,\n  \"late_interest_bp_month\": 100,\n  \"grace_days\": 3\n}"
+        "text": "{\n  \"name\": \"Clínica Aurora\",\n  \"billing_mode\": \"monthly\",\n  \"monthly_fee_cents\": 630000,\n  \"estimated_monthly_hours\": 32,\n  \"contract_start\": \"2026-09-01\",\n  \"payment_days\": 5,\n  \"late_fee_bp\": 200,\n  \"late_interest_bp_month\": 100,\n  \"grace_days\": 3\n}"
       }
     },
     {

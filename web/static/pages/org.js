@@ -45,10 +45,10 @@ document.addEventListener('alpine:init', () => {
   }
 
   // rows monta as linhas de uma lista de [rótulo, valor, extras]. Uma linha sem
-  // valor aparece como "Não informado", sem link.
+  // valor aparece como "Não informado", sem link, mas mantém o ícone.
   const rows = (list) => list.map((r) => (r[1]
     ? { label: r[0], value: r[1], ...(r[2] || {}) }
-    : { label: r[0], value: WTT.notInformed, empty: true }));
+    : { label: r[0], value: WTT.notInformed, empty: true, icon: (r[2] || {}).icon }));
   const bareURL = (url) => (url || '').replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
 
   // projectCreation é o modal de novo projeto da página Projetos (o formulário é o parcial project_form) e a criação.
@@ -379,6 +379,11 @@ document.addEventListener('alpine:init', () => {
     },
     soloKind(kind) {
       return WTT.t(kind === 'monthly' ? 'home.solo.kind.monthly' : 'home.solo.kind.hourly');
+    },
+    // A coluna Estimativa só aparece quando algum cliente da janela tem dedicação: um contrato mensal com estimativa de
+    // horas, nas janelas Este mês e Mês passado (Decisão 26). Sem isso a coluna seria só de traços.
+    soloEstimates() {
+      return !!this.solo && this.solo.customers.some((row) => row.dedication);
     },
     // O aviso de valor por hora abaixo do piso: não é um erro, e o piso é o mesmo que o servidor confere.
     soloBelowMin() {
@@ -1078,7 +1083,7 @@ document.addEventListener('alpine:init', () => {
   // blankBilling são os termos de um cliente novo: por hora, ciclo mensal fechando no último dia e vencendo no
   // fechamento. Os campos de texto guardam o que a pessoa digita; billingBody os converte.
   const blankBilling = () => ({
-    billing_mode: 'hourly', hourly_rate: '', monthly_fee: '', contract_start: '', contract_end: '',
+    billing_mode: 'hourly', hourly_rate: '', monthly_fee: '', estimated_hours: '', contract_start: '', contract_end: '',
     billing_cycle: 'monthly', cycle_anchor: '',
     closing_day: '31', payment_days: '0', late_fee: '', late_interest: '', grace_days: '',
   });
@@ -1088,6 +1093,7 @@ document.addEventListener('alpine:init', () => {
     billing_mode: c.billing_mode || 'hourly',
     hourly_rate: WTT.fmt.moneyInput(c.hourly_rate_cents),
     monthly_fee: WTT.fmt.moneyInput(c.monthly_fee_cents),
+    estimated_hours: c.estimated_monthly_hours ? String(c.estimated_monthly_hours) : '',
     contract_start: c.contract_start || '',
     contract_end: c.contract_end || '',
     billing_cycle: c.billing_cycle || 'monthly',
@@ -1110,6 +1116,8 @@ document.addEventListener('alpine:init', () => {
       billing_mode: d.billing_mode,
       hourly_rate_cents: hasRate ? WTT.toCents(d.hourly_rate, { strict: true }) : null,
       monthly_fee_cents: monthly ? WTT.toCents(d.monthly_fee, { strict: true }) : null,
+      // A estimativa de horas por mês é opcional: vazio vai null, que apaga (Decisão 26).
+      estimated_monthly_hours: monthly && String(d.estimated_hours).trim() !== '' ? Number(String(d.estimated_hours).trim()) : null,
       contract_start: monthly ? String(d.contract_start).trim() : '',
       contract_end: monthly ? String(d.contract_end).trim() : '',
       billing_cycle: biweekly ? 'biweekly' : 'monthly',
@@ -1157,6 +1165,7 @@ document.addEventListener('alpine:init', () => {
     return {
       ...(monthly ? {
         monthly_fee_cents: [d.monthly_fee, rules.required, amountRule(1, 'customer.invalid_monthly_fee')],
+        estimated_monthly_hours: [d.estimated_hours, rules.integer(1, WTT.limits.monthly_hours, 'customer.invalid_estimated_hours')],
         contract_start: [d.contract_start, rules.required, rules.date],
         contract_end: [d.contract_end, rules.date, contractEndRule(String(d.contract_start).trim())],
       } : hourlyRateSpec(d)),
@@ -1170,6 +1179,18 @@ document.addEventListener('alpine:init', () => {
         grace_days: [d.grace_days, rules.integer(0, WTT.limits.term_days, 'customer.invalid_grace_days')],
       } : {}),
     };
+  };
+
+  // dedicationFact é a linha "No período atual" dos detalhes do cliente: "18h de 40h · 45%", a barrinha, o período quando
+  // não é o mês do calendário e, com mais de um projeto, as horas de cada um (em ordem de nome, como vêm da API).
+  const dedicationFact = (d) => {
+    const v = WTT.dedication(d);
+    const notes = [];
+    if (v.period) notes.push(WTT.t('dedication.period', { period: v.period }));
+    if (d.projects.length > 1) {
+      d.projects.forEach((p) => notes.push(WTT.t('dedication.project_line', { name: p.name, hours: WTT.fmt.hoursShort(p.seconds) || '0h' })));
+    }
+    return [WTT.t('customer.billing.dedication_fact'), v.text + ' · ' + v.percent, { icon: 'chart-simple', meter: { pct: v.pct, over: v.over }, notes }];
   };
 
   // percent mostra pontos-base como percentual: 250 -> "2,5%".
@@ -1205,13 +1226,6 @@ document.addEventListener('alpine:init', () => {
     billingDue(c) {
       return c.payment_days > 0 ? WTT.t('customer.billing.cell_due_days', { count: c.payment_days }) : WTT.t('customer.billing.cell_due_closing');
     },
-    // billingContract é o contrato do cliente mensal, nos detalhes: do início ao fim, ou desde o início, sem fim.
-    billingContract(c) {
-      if (!WTT.billing.monthly(c) || !c.contract_start) return '';
-      return c.contract_end
-        ? WTT.t('customer.billing.contract_range', { start: WTT.fmt.day(c.contract_start), end: WTT.fmt.day(c.contract_end) })
-        : WTT.t('customer.billing.contract_open', { start: WTT.fmt.day(c.contract_start) });
-    },
   });
 
   Alpine.data('orgCustomers', () => ({
@@ -1224,6 +1238,7 @@ document.addEventListener('alpine:init', () => {
     draft: { ...blankCustomer(), ...blankBilling() },
     viewingId: null, // o cliente dos detalhes
     confirming: false, // a confirmação de Excluir, nos detalhes
+    dedications: {}, // a dedicação de cada cliente mensal com estimativa, pelo id; só no solo
     async init() {
       try {
         this.customers = (await api('GET', '/api/orgs/' + orgId + '/customers')) || [];
@@ -1231,6 +1246,18 @@ document.addEventListener('alpine:init', () => {
         this.errors.load = e.message;
       } finally {
         this.loading = false;
+      }
+      await this.loadDedications();
+    },
+    // loadDedications lê as horas do período em andamento dos contratos mensais com estimativa (Decisão 26), que os
+    // detalhes mostram. Só no modo solo; uma falha aqui não derruba a página: os detalhes ficam sem a linha.
+    async loadDedications() {
+      if (!this.solo) return;
+      try {
+        const list = (await api('GET', '/api/orgs/' + orgId + '/solo/dedication')) || [];
+        this.dedications = Object.fromEntries(list.map((d) => [d.customer.id, d]));
+      } catch (e) {
+        this.dedications = {};
       }
     },
     // viewing é o cliente dos detalhes, lido da lista: depois de salvar, os detalhes já mostram o que foi salvo.
@@ -1246,37 +1273,49 @@ document.addEventListener('alpine:init', () => {
       Alpine.store('modal').open('customer-details', c.name, () => !this.pending);
     },
     // customerFacts são os três blocos dos detalhes (o cliente, o contato e a cobrança), cada um com uma lista de
-    // { label, value, empty, href, mono }. Os termos do modo solo só entram no solo.
+    // { label, value, icon, empty, muted, href, mono }; icon é o nome do ícone do Font Awesome, sem o "fa-". Os termos
+    // do modo solo só entram no solo.
     customerFacts(c) {
       if (!c) return [];
       const id = WTT.countries.legalId(c.country);
       const monthly = WTT.billing.monthly(c);
       const billing = [];
-      if (this.solo) billing.push([WTT.t('customer.billing.col_mode'), this.billingMode(c)]);
+      if (this.solo) billing.push([WTT.t('customer.billing.col_mode'), this.billingMode(c), { icon: 'repeat' }]);
       billing.push(monthly
-        ? [WTT.t('customer.billing.fee'), WTT.fmt.money(c.monthly_fee_cents)]
-        : [WTT.t('customer.billing.col_rate'), WTT.billing.withoutRate(c) ? '' : WTT.fmt.money(c.hourly_rate_cents)]);
+        ? [WTT.t('customer.billing.fee'), WTT.fmt.money(c.monthly_fee_cents), { icon: 'money-bill-wave' }]
+        : [WTT.t('customer.billing.col_rate'), WTT.billing.withoutRate(c) ? '' : WTT.fmt.money(c.hourly_rate_cents), { icon: 'clock' }]);
       if (this.solo) {
-        if (monthly) billing.push([WTT.t('customer.billing.contract'), this.billingContract(c)]);
-        billing.push([WTT.t('customer.billing.col_closing'), this.billingClosing(c)]);
-        billing.push([WTT.t('customer.billing.col_due'), this.billingDue(c)]);
+        // O contrato em duas linhas, com os nomes do formulário; sem fim, ele segue por tempo indeterminado.
+        if (monthly) {
+          // A estimativa de horas e, com ela, as horas do período do contrato em andamento (Decisão 26).
+          billing.push([WTT.t('customer.billing.estimated_hours_fact'),
+            c.estimated_monthly_hours ? WTT.t('customer.billing.estimated_hours_value', { hours: c.estimated_monthly_hours }) : '', { icon: 'business-time' }]);
+          const d = this.dedications[c.id];
+          if (c.estimated_monthly_hours && d) billing.push(dedicationFact(d));
+          billing.push([WTT.t('customer.billing.contract_start'), c.contract_start && WTT.fmt.day(c.contract_start), { icon: 'file-signature' }]);
+          billing.push(c.contract_end
+            ? [WTT.t('customer.billing.contract_end'), WTT.fmt.day(c.contract_end), { icon: 'flag-checkered' }]
+            : [WTT.t('customer.billing.contract_end'), WTT.t('customer.billing.contract_no_end'), { icon: 'flag-checkered', muted: true }]);
+        }
+        billing.push([WTT.t('customer.billing.col_closing'), this.billingClosing(c), { icon: 'calendar-check' }]);
+        billing.push([WTT.t('customer.billing.col_due'), this.billingDue(c), { icon: 'calendar-day' }]);
         // Multa, juros e tolerância só aparecem quando o cliente tem algum deles, como no formulário.
         if (monthly && (c.late_fee_bp || c.late_interest_bp_month || c.grace_days)) {
-          billing.push([WTT.t('customer.billing.late_fee_fact'), c.late_fee_bp ? percent(c.late_fee_bp) : '']);
-          billing.push([WTT.t('customer.billing.late_interest_fact'), c.late_interest_bp_month ? percent(c.late_interest_bp_month) : '']);
-          billing.push([WTT.t('customer.billing.grace_days_fact'), c.grace_days ? WTT.t('customer.billing.grace_days_value', { count: c.grace_days }) : '']);
+          billing.push([WTT.t('customer.billing.late_fee_fact'), c.late_fee_bp ? percent(c.late_fee_bp) : '', { icon: 'triangle-exclamation' }]);
+          billing.push([WTT.t('customer.billing.late_interest_fact'), c.late_interest_bp_month ? percent(c.late_interest_bp_month) : '', { icon: 'percent' }]);
+          billing.push([WTT.t('customer.billing.grace_days_fact'), c.grace_days ? WTT.t('customer.billing.grace_days_value', { count: c.grace_days }) : '', { icon: 'hourglass-half' }]);
         }
       }
       return [
         { title: WTT.t('org.customers.details_customer'), rows: rows([
-          [WTT.t('org.customers.country'), WTT.countries.name(c.country)],
-          [id.label, c.document && WTT.fmt.taxId(c.document, c.country), { mono: true }],
-          [WTT.t('org.customers.projects'), String(c.project_count)],
+          [WTT.t('org.customers.country'), WTT.countries.name(c.country), { icon: 'globe' }],
+          [id.label, c.document && WTT.fmt.taxId(c.document, c.country), { mono: true, icon: 'id-card' }],
+          [WTT.t('org.customers.projects'), String(c.project_count), { icon: 'diagram-project' }],
         ]) },
         { title: WTT.t('org.customers.details_contact'), rows: rows([
-          [WTT.t('org.customers.contact_person'), c.contact_name],
-          [WTT.t('common.email'), c.contact_email, { href: 'mailto:' + c.contact_email }],
-          [WTT.t('common.phone'), c.contact_phone, { href: 'tel:' + String(c.contact_phone || '').replace(/[^\d+]/g, '') }],
+          [WTT.t('org.customers.contact_person'), c.contact_name, { icon: 'user' }],
+          [WTT.t('common.email'), c.contact_email, { href: 'mailto:' + c.contact_email, icon: 'envelope' }],
+          [WTT.t('common.phone'), c.contact_phone, { href: 'tel:' + String(c.contact_phone || '').replace(/[^\d+]/g, ''), icon: 'phone' }],
         ]) },
         { title: WTT.t('org.customers.details_billing'), rows: rows(billing) },
       ];
@@ -1335,6 +1374,8 @@ document.addEventListener('alpine:init', () => {
           toast(WTT.t('org.customers.created'));
         }
         this.customers.sort((a, b) => a.name.localeCompare(b.name, WTT.lang));
+        // A estimativa pode ter mudado: a dedicação dos detalhes é lida de novo.
+        await this.loadDedications();
         // A edição volta para os detalhes, já com o que foi salvo; o cliente novo fecha o modal.
         if (saved) this.openDetails(saved);
         else Alpine.store('modal').close();
@@ -1484,6 +1525,46 @@ document.addEventListener('alpine:init', () => {
   }));
 
   // O meu perfil: o que fiz e quando sou pago, para ler, e o modal Editar perfil, com os dados pessoais e a senha.
+  // claudeConnections são os apps conectados pelo OAuth do MCP (o claude.ai, que vale no Claude Desktop e no celular, e o
+  // Claude Code): o endereço para colar no Claude e a lista do que está ligado, com o Desconectar. Só aparece com o OAuth
+  // ligado no servidor.
+  Alpine.data('claudeConnections', () => ({
+    ...form(),
+    connections: [],
+    loading: true,
+    confirming: null, // id do app cuja desconexão espera a confirmação
+    init() {
+      return this.load();
+    },
+    async load() {
+      this.loading = true;
+      this.errors.load = '';
+      try {
+        this.connections = await api('GET', '/api/auth/connections');
+      } catch (e) {
+        this.errors.load = e.message;
+      } finally {
+        this.loading = false;
+      }
+    },
+    // command conecta o Claude Code pelo OAuth: sem token, a autorização é no navegador, pelo /mcp do Claude Code.
+    command() {
+      return 'claude mcp add --transport http --scope user wtt ' + (WTT.boot.mcpURL || '');
+    },
+    async copy(text) {
+      const ok = await WTT.copyText(text);
+      toast(ok ? WTT.t('profile.claude.copied') : WTT.t('org.people.copy_failed'), ok ? 'info' : 'error');
+    },
+    disconnect(conn) {
+      return this.run('disconnect', async () => {
+        this.confirming = null;
+        await api('DELETE', '/api/auth/connections/' + conn.id);
+        this.connections = this.connections.filter((c) => c.id !== conn.id);
+        toast(WTT.t('profile.claude.disconnected'));
+      });
+    },
+  }));
+
   // claudeTokens é a seção Conectar ao Claude do perfil: os tokens com que o Claude Code entra no servidor MCP (/mcp)
   // e age como a pessoa. O token só aparece no modal, logo depois de criado, junto com o comando que o conecta; a
   // lista mostra só o começo dele.

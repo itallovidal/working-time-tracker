@@ -80,7 +80,7 @@ func TestSoloOverview_OwnerReadsTheWindows(t *testing.T) {
 	// Confirmar o mês passado do Por hora e receber hoje: é Receita do mês corrente (a data do recebimento), e continua
 	// projetada do mês passado (o fim do período), sem contar duas vezes em lugar nenhum.
 	var period map[string]any
-	for _, p := range decode(t, do(e, "GET", receivablesPath(owner), "", owner.session))["to_confirm"].([]any) {
+	for _, p := range decode(t, do(e, "GET", receivablesPath(owner), "", owner.session))["to_receive"].([]any) {
 		if p.(map[string]any)["kind"] == "hourly" {
 			period = p.(map[string]any)
 		}
@@ -311,5 +311,44 @@ func TestSoloOverview_TeamHomeIsUnchanged(t *testing.T) {
 	setSolo(t, team.orgID, false)
 	if page := do(e, "GET", home, "", team.session).Body.String(); strings.Contains(page, `id="home-solo-title"`) || !strings.Contains(page, `id="home-stats-title"`) {
 		t.Error("turned solo off again, the home must be the team overview")
+	}
+}
+
+// A dedicação aos contratos mensais com estimativa de horas (Decisão 26): GET /solo/dedication traz o período em
+// andamento de cada um, e a tela inicial a traz na linha do cliente. Sem estimativa, nada; o cliente por hora também não.
+func TestSoloDedication_OwnerReadsTheCurrentPeriod(t *testing.T) {
+	e := newServer(t)
+	owner := signup(t, e, "Org", "ana@test.com")
+	setSolo(t, owner.orgID, true)
+	hourlyCustomerWithHours(t, owner.orgID, owner.id)
+	monthly := monthlyCustomer(t, owner.orgID)
+	path := "/api/orgs/" + owner.orgID + "/solo/dedication"
+
+	rec := do(e, "GET", path, "", owner.session)
+	if rec.Code != http.StatusOK || strings.TrimSpace(rec.Body.String()) != "[]" {
+		t.Fatalf("without an estimate = %d %s, want an empty list", rec.Code, rec.Body.String())
+	}
+	if rec := do(e, "PATCH", "/api/customers/"+monthly.ID.String(), `{"estimated_monthly_hours":40}`, owner.session); rec.Code != http.StatusOK {
+		t.Fatalf("set the estimate = %d %s", rec.Code, rec.Body.String())
+	}
+	first, last := monthDays(t, 0)
+	rec = do(e, "GET", path, "", owner.session)
+	list := decodeList(t, rec)
+	if rec.Code != http.StatusOK || len(list) != 1 {
+		t.Fatalf("dedications = %d %s, want one", rec.Code, rec.Body.String())
+	}
+	d := list[0]
+	if d["customer"].(map[string]any)["name"] != "Mensal" || d["period_start"] != first || d["period_end"] != last ||
+		d["estimated_hours"] != float64(40) || d["seconds"] != float64(0) || d["percent"] != float64(0) || d["open"] != true {
+		t.Errorf("dedication = %v, want Mensal's %s..%s period, 0h of 40h", d, first, last)
+	}
+
+	home := decode(t, do(e, "GET", soloOverviewPath(owner)+"?window=month", "", owner.session))
+	for _, row := range home["customers"].([]any) {
+		r := row.(map[string]any)
+		has := r["dedication"] != nil
+		if name := r["customer"].(map[string]any)["name"]; has != (name == "Mensal") {
+			t.Errorf("solo home row %s: dedication = %v", name, r["dedication"])
+		}
 	}
 }

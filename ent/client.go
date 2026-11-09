@@ -18,6 +18,8 @@ import (
 	"working-time-tracker/ent/invite"
 	"working-time-tracker/ent/issuesync"
 	"working-time-tracker/ent/label"
+	"working-time-tracker/ent/oauthaccesstoken"
+	"working-time-tracker/ent/oauthgrant"
 	"working-time-tracker/ent/organization"
 	"working-time-tracker/ent/payout"
 	"working-time-tracker/ent/person"
@@ -56,6 +58,10 @@ type Client struct {
 	IssueSync *IssueSyncClient
 	// Label is the client for interacting with the Label builders.
 	Label *LabelClient
+	// OAuthAccessToken is the client for interacting with the OAuthAccessToken builders.
+	OAuthAccessToken *OAuthAccessTokenClient
+	// OAuthGrant is the client for interacting with the OAuthGrant builders.
+	OAuthGrant *OAuthGrantClient
 	// Organization is the client for interacting with the Organization builders.
 	Organization *OrganizationClient
 	// Payout is the client for interacting with the Payout builders.
@@ -96,6 +102,8 @@ func (c *Client) init() {
 	c.Invite = NewInviteClient(c.config)
 	c.IssueSync = NewIssueSyncClient(c.config)
 	c.Label = NewLabelClient(c.config)
+	c.OAuthAccessToken = NewOAuthAccessTokenClient(c.config)
+	c.OAuthGrant = NewOAuthGrantClient(c.config)
 	c.Organization = NewOrganizationClient(c.config)
 	c.Payout = NewPayoutClient(c.config)
 	c.Person = NewPersonClient(c.config)
@@ -197,26 +205,28 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	cfg := c.config
 	cfg.driver = tx
 	return &Tx{
-		ctx:             ctx,
-		config:          cfg,
-		APIToken:        NewAPITokenClient(cfg),
-		Allocation:      NewAllocationClient(cfg),
-		Customer:        NewCustomerClient(cfg),
-		Integration:     NewIntegrationClient(cfg),
-		Invite:          NewInviteClient(cfg),
-		IssueSync:       NewIssueSyncClient(cfg),
-		Label:           NewLabelClient(cfg),
-		Organization:    NewOrganizationClient(cfg),
-		Payout:          NewPayoutClient(cfg),
-		Person:          NewPersonClient(cfg),
-		Project:         NewProjectClient(cfg),
-		Receivable:      NewReceivableClient(cfg),
-		Session:         NewSessionClient(cfg),
-		Task:            NewTaskClient(cfg),
-		Team:            NewTeamClient(cfg),
-		TeamMembership:  NewTeamMembershipClient(cfg),
-		WorkSession:     NewWorkSessionClient(cfg),
-		WorkSessionTask: NewWorkSessionTaskClient(cfg),
+		ctx:              ctx,
+		config:           cfg,
+		APIToken:         NewAPITokenClient(cfg),
+		Allocation:       NewAllocationClient(cfg),
+		Customer:         NewCustomerClient(cfg),
+		Integration:      NewIntegrationClient(cfg),
+		Invite:           NewInviteClient(cfg),
+		IssueSync:        NewIssueSyncClient(cfg),
+		Label:            NewLabelClient(cfg),
+		OAuthAccessToken: NewOAuthAccessTokenClient(cfg),
+		OAuthGrant:       NewOAuthGrantClient(cfg),
+		Organization:     NewOrganizationClient(cfg),
+		Payout:           NewPayoutClient(cfg),
+		Person:           NewPersonClient(cfg),
+		Project:          NewProjectClient(cfg),
+		Receivable:       NewReceivableClient(cfg),
+		Session:          NewSessionClient(cfg),
+		Task:             NewTaskClient(cfg),
+		Team:             NewTeamClient(cfg),
+		TeamMembership:   NewTeamMembershipClient(cfg),
+		WorkSession:      NewWorkSessionClient(cfg),
+		WorkSessionTask:  NewWorkSessionTaskClient(cfg),
 	}, nil
 }
 
@@ -234,26 +244,28 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
-		ctx:             ctx,
-		config:          cfg,
-		APIToken:        NewAPITokenClient(cfg),
-		Allocation:      NewAllocationClient(cfg),
-		Customer:        NewCustomerClient(cfg),
-		Integration:     NewIntegrationClient(cfg),
-		Invite:          NewInviteClient(cfg),
-		IssueSync:       NewIssueSyncClient(cfg),
-		Label:           NewLabelClient(cfg),
-		Organization:    NewOrganizationClient(cfg),
-		Payout:          NewPayoutClient(cfg),
-		Person:          NewPersonClient(cfg),
-		Project:         NewProjectClient(cfg),
-		Receivable:      NewReceivableClient(cfg),
-		Session:         NewSessionClient(cfg),
-		Task:            NewTaskClient(cfg),
-		Team:            NewTeamClient(cfg),
-		TeamMembership:  NewTeamMembershipClient(cfg),
-		WorkSession:     NewWorkSessionClient(cfg),
-		WorkSessionTask: NewWorkSessionTaskClient(cfg),
+		ctx:              ctx,
+		config:           cfg,
+		APIToken:         NewAPITokenClient(cfg),
+		Allocation:       NewAllocationClient(cfg),
+		Customer:         NewCustomerClient(cfg),
+		Integration:      NewIntegrationClient(cfg),
+		Invite:           NewInviteClient(cfg),
+		IssueSync:        NewIssueSyncClient(cfg),
+		Label:            NewLabelClient(cfg),
+		OAuthAccessToken: NewOAuthAccessTokenClient(cfg),
+		OAuthGrant:       NewOAuthGrantClient(cfg),
+		Organization:     NewOrganizationClient(cfg),
+		Payout:           NewPayoutClient(cfg),
+		Person:           NewPersonClient(cfg),
+		Project:          NewProjectClient(cfg),
+		Receivable:       NewReceivableClient(cfg),
+		Session:          NewSessionClient(cfg),
+		Task:             NewTaskClient(cfg),
+		Team:             NewTeamClient(cfg),
+		TeamMembership:   NewTeamMembershipClient(cfg),
+		WorkSession:      NewWorkSessionClient(cfg),
+		WorkSessionTask:  NewWorkSessionTaskClient(cfg),
 	}, nil
 }
 
@@ -284,8 +296,9 @@ func (c *Client) Close() error {
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.APIToken, c.Allocation, c.Customer, c.Integration, c.Invite, c.IssueSync,
-		c.Label, c.Organization, c.Payout, c.Person, c.Project, c.Receivable,
-		c.Session, c.Task, c.Team, c.TeamMembership, c.WorkSession, c.WorkSessionTask,
+		c.Label, c.OAuthAccessToken, c.OAuthGrant, c.Organization, c.Payout, c.Person,
+		c.Project, c.Receivable, c.Session, c.Task, c.Team, c.TeamMembership,
+		c.WorkSession, c.WorkSessionTask,
 	} {
 		n.Use(hooks...)
 	}
@@ -296,8 +309,9 @@ func (c *Client) Use(hooks ...Hook) {
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.APIToken, c.Allocation, c.Customer, c.Integration, c.Invite, c.IssueSync,
-		c.Label, c.Organization, c.Payout, c.Person, c.Project, c.Receivable,
-		c.Session, c.Task, c.Team, c.TeamMembership, c.WorkSession, c.WorkSessionTask,
+		c.Label, c.OAuthAccessToken, c.OAuthGrant, c.Organization, c.Payout, c.Person,
+		c.Project, c.Receivable, c.Session, c.Task, c.Team, c.TeamMembership,
+		c.WorkSession, c.WorkSessionTask,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -320,6 +334,10 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.IssueSync.mutate(ctx, m)
 	case *LabelMutation:
 		return c.Label.mutate(ctx, m)
+	case *OAuthAccessTokenMutation:
+		return c.OAuthAccessToken.mutate(ctx, m)
+	case *OAuthGrantMutation:
+		return c.OAuthGrant.mutate(ctx, m)
 	case *OrganizationMutation:
 		return c.Organization.mutate(ctx, m)
 	case *PayoutMutation:
@@ -1534,6 +1552,320 @@ func (c *LabelClient) mutate(ctx context.Context, m *LabelMutation) (Value, erro
 	}
 }
 
+// OAuthAccessTokenClient is a client for the OAuthAccessToken schema.
+type OAuthAccessTokenClient struct {
+	config
+}
+
+// NewOAuthAccessTokenClient returns a client for the OAuthAccessToken from the given config.
+func NewOAuthAccessTokenClient(c config) *OAuthAccessTokenClient {
+	return &OAuthAccessTokenClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `oauthaccesstoken.Hooks(f(g(h())))`.
+func (c *OAuthAccessTokenClient) Use(hooks ...Hook) {
+	c.hooks.OAuthAccessToken = append(c.hooks.OAuthAccessToken, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `oauthaccesstoken.Intercept(f(g(h())))`.
+func (c *OAuthAccessTokenClient) Intercept(interceptors ...Interceptor) {
+	c.inters.OAuthAccessToken = append(c.inters.OAuthAccessToken, interceptors...)
+}
+
+// Create returns a builder for creating a OAuthAccessToken entity.
+func (c *OAuthAccessTokenClient) Create() *OAuthAccessTokenCreate {
+	mutation := newOAuthAccessTokenMutation(c.config, OpCreate)
+	return &OAuthAccessTokenCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of OAuthAccessToken entities.
+func (c *OAuthAccessTokenClient) CreateBulk(builders ...*OAuthAccessTokenCreate) *OAuthAccessTokenCreateBulk {
+	return &OAuthAccessTokenCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *OAuthAccessTokenClient) MapCreateBulk(slice any, setFunc func(*OAuthAccessTokenCreate, int)) *OAuthAccessTokenCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &OAuthAccessTokenCreateBulk{err: fmt.Errorf("calling to OAuthAccessTokenClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*OAuthAccessTokenCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &OAuthAccessTokenCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for OAuthAccessToken.
+func (c *OAuthAccessTokenClient) Update() *OAuthAccessTokenUpdate {
+	mutation := newOAuthAccessTokenMutation(c.config, OpUpdate)
+	return &OAuthAccessTokenUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *OAuthAccessTokenClient) UpdateOne(_m *OAuthAccessToken) *OAuthAccessTokenUpdateOne {
+	mutation := newOAuthAccessTokenMutation(c.config, OpUpdateOne, withOAuthAccessToken(_m))
+	return &OAuthAccessTokenUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *OAuthAccessTokenClient) UpdateOneID(id uuid.UUID) *OAuthAccessTokenUpdateOne {
+	mutation := newOAuthAccessTokenMutation(c.config, OpUpdateOne, withOAuthAccessTokenID(id))
+	return &OAuthAccessTokenUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for OAuthAccessToken.
+func (c *OAuthAccessTokenClient) Delete() *OAuthAccessTokenDelete {
+	mutation := newOAuthAccessTokenMutation(c.config, OpDelete)
+	return &OAuthAccessTokenDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *OAuthAccessTokenClient) DeleteOne(_m *OAuthAccessToken) *OAuthAccessTokenDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *OAuthAccessTokenClient) DeleteOneID(id uuid.UUID) *OAuthAccessTokenDeleteOne {
+	builder := c.Delete().Where(oauthaccesstoken.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &OAuthAccessTokenDeleteOne{builder}
+}
+
+// Query returns a query builder for OAuthAccessToken.
+func (c *OAuthAccessTokenClient) Query() *OAuthAccessTokenQuery {
+	return &OAuthAccessTokenQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeOAuthAccessToken},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a OAuthAccessToken entity by its id.
+func (c *OAuthAccessTokenClient) Get(ctx context.Context, id uuid.UUID) (*OAuthAccessToken, error) {
+	return c.Query().Where(oauthaccesstoken.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *OAuthAccessTokenClient) GetX(ctx context.Context, id uuid.UUID) *OAuthAccessToken {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryGrant queries the grant edge of a OAuthAccessToken.
+func (c *OAuthAccessTokenClient) QueryGrant(_m *OAuthAccessToken) *OAuthGrantQuery {
+	query := (&OAuthGrantClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(oauthaccesstoken.Table, oauthaccesstoken.FieldID, id),
+			sqlgraph.To(oauthgrant.Table, oauthgrant.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, oauthaccesstoken.GrantTable, oauthaccesstoken.GrantColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *OAuthAccessTokenClient) Hooks() []Hook {
+	return c.hooks.OAuthAccessToken
+}
+
+// Interceptors returns the client interceptors.
+func (c *OAuthAccessTokenClient) Interceptors() []Interceptor {
+	return c.inters.OAuthAccessToken
+}
+
+func (c *OAuthAccessTokenClient) mutate(ctx context.Context, m *OAuthAccessTokenMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&OAuthAccessTokenCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&OAuthAccessTokenUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&OAuthAccessTokenUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&OAuthAccessTokenDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown OAuthAccessToken mutation op: %q", m.Op())
+	}
+}
+
+// OAuthGrantClient is a client for the OAuthGrant schema.
+type OAuthGrantClient struct {
+	config
+}
+
+// NewOAuthGrantClient returns a client for the OAuthGrant from the given config.
+func NewOAuthGrantClient(c config) *OAuthGrantClient {
+	return &OAuthGrantClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `oauthgrant.Hooks(f(g(h())))`.
+func (c *OAuthGrantClient) Use(hooks ...Hook) {
+	c.hooks.OAuthGrant = append(c.hooks.OAuthGrant, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `oauthgrant.Intercept(f(g(h())))`.
+func (c *OAuthGrantClient) Intercept(interceptors ...Interceptor) {
+	c.inters.OAuthGrant = append(c.inters.OAuthGrant, interceptors...)
+}
+
+// Create returns a builder for creating a OAuthGrant entity.
+func (c *OAuthGrantClient) Create() *OAuthGrantCreate {
+	mutation := newOAuthGrantMutation(c.config, OpCreate)
+	return &OAuthGrantCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of OAuthGrant entities.
+func (c *OAuthGrantClient) CreateBulk(builders ...*OAuthGrantCreate) *OAuthGrantCreateBulk {
+	return &OAuthGrantCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *OAuthGrantClient) MapCreateBulk(slice any, setFunc func(*OAuthGrantCreate, int)) *OAuthGrantCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &OAuthGrantCreateBulk{err: fmt.Errorf("calling to OAuthGrantClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*OAuthGrantCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &OAuthGrantCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for OAuthGrant.
+func (c *OAuthGrantClient) Update() *OAuthGrantUpdate {
+	mutation := newOAuthGrantMutation(c.config, OpUpdate)
+	return &OAuthGrantUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *OAuthGrantClient) UpdateOne(_m *OAuthGrant) *OAuthGrantUpdateOne {
+	mutation := newOAuthGrantMutation(c.config, OpUpdateOne, withOAuthGrant(_m))
+	return &OAuthGrantUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *OAuthGrantClient) UpdateOneID(id uuid.UUID) *OAuthGrantUpdateOne {
+	mutation := newOAuthGrantMutation(c.config, OpUpdateOne, withOAuthGrantID(id))
+	return &OAuthGrantUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for OAuthGrant.
+func (c *OAuthGrantClient) Delete() *OAuthGrantDelete {
+	mutation := newOAuthGrantMutation(c.config, OpDelete)
+	return &OAuthGrantDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *OAuthGrantClient) DeleteOne(_m *OAuthGrant) *OAuthGrantDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *OAuthGrantClient) DeleteOneID(id uuid.UUID) *OAuthGrantDeleteOne {
+	builder := c.Delete().Where(oauthgrant.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &OAuthGrantDeleteOne{builder}
+}
+
+// Query returns a query builder for OAuthGrant.
+func (c *OAuthGrantClient) Query() *OAuthGrantQuery {
+	return &OAuthGrantQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeOAuthGrant},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a OAuthGrant entity by its id.
+func (c *OAuthGrantClient) Get(ctx context.Context, id uuid.UUID) (*OAuthGrant, error) {
+	return c.Query().Where(oauthgrant.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *OAuthGrantClient) GetX(ctx context.Context, id uuid.UUID) *OAuthGrant {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryPerson queries the person edge of a OAuthGrant.
+func (c *OAuthGrantClient) QueryPerson(_m *OAuthGrant) *PersonQuery {
+	query := (&PersonClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(oauthgrant.Table, oauthgrant.FieldID, id),
+			sqlgraph.To(person.Table, person.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, oauthgrant.PersonTable, oauthgrant.PersonColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryAccessTokens queries the access_tokens edge of a OAuthGrant.
+func (c *OAuthGrantClient) QueryAccessTokens(_m *OAuthGrant) *OAuthAccessTokenQuery {
+	query := (&OAuthAccessTokenClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(oauthgrant.Table, oauthgrant.FieldID, id),
+			sqlgraph.To(oauthaccesstoken.Table, oauthaccesstoken.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, oauthgrant.AccessTokensTable, oauthgrant.AccessTokensColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *OAuthGrantClient) Hooks() []Hook {
+	return c.hooks.OAuthGrant
+}
+
+// Interceptors returns the client interceptors.
+func (c *OAuthGrantClient) Interceptors() []Interceptor {
+	return c.inters.OAuthGrant
+}
+
+func (c *OAuthGrantClient) mutate(ctx context.Context, m *OAuthGrantMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&OAuthGrantCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&OAuthGrantUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&OAuthGrantUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&OAuthGrantDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown OAuthGrant mutation op: %q", m.Op())
+	}
+}
+
 // OrganizationClient is a client for the Organization schema.
 type OrganizationClient struct {
 	config
@@ -2093,6 +2425,22 @@ func (c *PersonClient) QueryAPITokens(_m *Person) *APITokenQuery {
 			sqlgraph.From(person.Table, person.FieldID, id),
 			sqlgraph.To(apitoken.Table, apitoken.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, person.APITokensTable, person.APITokensColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryOauthGrants queries the oauth_grants edge of a Person.
+func (c *PersonClient) QueryOauthGrants(_m *Person) *OAuthGrantQuery {
+	query := (&OAuthGrantClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(person.Table, person.FieldID, id),
+			sqlgraph.To(oauthgrant.Table, oauthgrant.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, person.OauthGrantsTable, person.OauthGrantsColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -3673,12 +4021,14 @@ func (c *WorkSessionTaskClient) mutate(ctx context.Context, m *WorkSessionTaskMu
 type (
 	hooks struct {
 		APIToken, Allocation, Customer, Integration, Invite, IssueSync, Label,
-		Organization, Payout, Person, Project, Receivable, Session, Task, Team,
-		TeamMembership, WorkSession, WorkSessionTask []ent.Hook
+		OAuthAccessToken, OAuthGrant, Organization, Payout, Person, Project,
+		Receivable, Session, Task, Team, TeamMembership, WorkSession,
+		WorkSessionTask []ent.Hook
 	}
 	inters struct {
 		APIToken, Allocation, Customer, Integration, Invite, IssueSync, Label,
-		Organization, Payout, Person, Project, Receivable, Session, Task, Team,
-		TeamMembership, WorkSession, WorkSessionTask []ent.Interceptor
+		OAuthAccessToken, OAuthGrant, Organization, Payout, Person, Project,
+		Receivable, Session, Task, Team, TeamMembership, WorkSession,
+		WorkSessionTask []ent.Interceptor
 	}
 )

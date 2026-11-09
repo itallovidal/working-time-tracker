@@ -142,6 +142,7 @@ erDiagram
     timestamp deadline
   }
   WORK_SESSION {
+    uuid project_id FK
     uuid person_id FK
     timestamp start_at
     timestamp end_at "nulo: aberta"
@@ -203,8 +204,10 @@ erDiagram
 | `persons` | Uma pessoa de **uma** organização. O e-mail é único no sistema todo. `role` é `admin` ou `member`; o dono é um admin com `is_owner` |
 | `sessions` | A sessão de login (o cookie). Guarda só o sha256 do token |
 | `api_tokens` | Os tokens do Claude (o servidor MCP em `/mcp`): o nome, o começo do token para a lista, a validade e o último uso. Como a sessão, guarda só o sha256, e some com a pessoa. Índice em `person_id`, por onde a lista, o limite e a troca de senha os procuram |
+| `oauth_grants` | Um app conectado pelo OAuth do MCP (o claude.ai, o Claude Code de uma máquina): o client_id e o nome do app, o endereço de volta, o recurso, o código de autorização (com o desafio do PKCE, a validade de 2 minutos e quando foi usado) e, depois da troca, o token de renovação atual, o anterior e, cifrado com uma chave que depende do token anterior, o sucessor para a janela de 60 segundos (apagado no primeiro uso depois dela), a validade da conexão (30 dias depois do último uso) e o último uso. Guarda só o sha256 de cada código e token, e some com a pessoa. Até 10 conectados por pessoa, mais até 10 autorizações pendentes; o claude.ai tem um só. Ver [Decisão 25](decisions.md#decisão-25-oauth-no-mcp--o-claudeai-o-desktop-e-o-celular-pela-identidade-publicada-do-claude) |
+| `oauth_access_tokens` | Os tokens de acesso de um app conectado (1 hora cada), o que o app manda ao `/mcp`. Só o sha256; somem com o app conectado. Os vencidos saem na renovação seguinte |
 | `invites` | Convite de uso único, com validade. Pode levar a pessoa a um projeto, com valor, time e grupo |
-| `customers` | O cliente que contrata projetos. Tem país próprio, que decide como o documento é conferido, e os termos de cobrança, que valem para todos os projetos dele: o modo (`hourly` ou `monthly`), o valor por hora (no por hora), o ciclo do período (mensal, ou a cada 14 dias a partir de uma âncora, no por hora), o fechamento do período, o prazo e, no mensal, a mensalidade, o contrato, a multa, os juros e a tolerância |
+| `customers` | O cliente que contrata projetos. Tem país próprio, que decide como o documento é conferido, e os termos de cobrança, que valem para todos os projetos dele: o modo (`hourly` ou `monthly`), o valor por hora (no por hora), o ciclo do período (mensal, ou a cada 14 dias a partir de uma âncora, no por hora), o fechamento do período, o prazo e, no mensal, a mensalidade, a estimativa de horas por mês (opcional, só para acompanhar), o contrato, a multa, os juros e a tolerância |
 | `receivables` | A conta a receber de um cliente por período, no modo solo: o que o dono confirmou cobrar e, depois, o que entrou. Um por cliente e período |
 | `projects` | O projeto. Com cliente, tem um acréscimo opcional sobre a cobrança dele (por hora no cliente por hora, por mês no mensal); o valor cobrado por hora é o do cliente mais o acréscimo, calculado, nunca gravado aqui. Sem cliente é interno, sem acréscimo |
 | `allocations` | A pessoa no projeto: o valor pago por hora e o grupo de permissões dela ali. Uma por pessoa e projeto |
@@ -247,9 +250,11 @@ o valor cobrado, sem custo. Para todos os outros, o valor pago e o cobrado têm 
 projeto, o valor por hora do cliente mais o acréscimo do projeto (nulo no projeto interno e no de cliente mensal). Mudar
 um valor, inclusive reajustar o cliente, só vale dali em diante. Quem não tem alocação no projeto não bate o ponto.
 
-**Uma sessão aberta por pessoa.** O índice único parcial `one_active_session` em
-`work_sessions (person_id) WHERE end_at IS NULL` garante isso no banco, mesmo com dois clock-ins ao mesmo tempo; o
-service confere antes só para dar um erro melhor.
+**Uma sessão aberta por pessoa em cada projeto** (Decisão 27). O índice único parcial `one_open_session_per_project`
+em `work_sessions (person_id, project_id) WHERE end_at IS NULL` garante isso no banco, mesmo com dois clock-ins ao
+mesmo tempo; o service confere antes só para dar um erro melhor. Sessões de projetos diferentes correm juntas: cada
+uma vale o valor do próprio projeto, e os totais de horas que juntam projetos (do cliente, da pessoa, da organização)
+contam uma vez só o tempo sobreposto da mesma pessoa (`work_session.MergedSeconds`).
 
 **A sessão tem tarefas ao longo do tempo.** Uma sessão é de um projeto e começa por uma tarefa dele. Outras entram
 e saem depois, inclusive depois de a sessão terminar; cada passagem é uma linha de `work_session_tasks`, com

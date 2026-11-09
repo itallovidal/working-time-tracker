@@ -68,10 +68,17 @@
           <dl class="facts facts-wide">
             <template x-for="f in block.rows" :key="f.label">
               <div class="fact">
-                <dt x-text="f.label"></dt>
+                <dt><i class="fa-solid fa-fw fact-icon" :class="'fa-' + f.icon" aria-hidden="true" x-show="f.icon"></i><span x-text="f.label"></span></dt>
                 <dd>
                   <a x-show="f.href && !f.empty" :href="f.href" x-text="f.value"></a>
-                  <span x-show="!f.href || f.empty" :class="{ mono: f.mono && !f.empty, muted: f.empty }" x-text="f.value"></span>
+                  <span x-show="!f.href || f.empty" :class="{ mono: f.mono && !f.empty, muted: f.empty || f.muted }" x-text="f.value"></span>
+                  {{/* A linha da dedicação ao contrato (Decisão 26) traz a barrinha e, embaixo, o período e os projetos. */}}
+                  <template x-if="f.meter">
+                    <div class="meter meter-thin" :class="f.meter.over && 'meter-over'" role="presentation"><span :style="'width: ' + f.meter.pct + '%'"></span></div>
+                  </template>
+                  <template x-for="note in (f.notes || [])" :key="note">
+                    <div class="muted small" x-text="note"></div>
+                  </template>
                 </dd>
               </div>
             </template>

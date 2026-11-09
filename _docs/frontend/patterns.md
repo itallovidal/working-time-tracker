@@ -30,8 +30,11 @@ flowchart TB
   `page.ManagementTabs`, de onde as rotas também leem). A administração do projeto (pessoas, valores, times,
   integrações e os dados dele) só se edita lá: nas abas de todos ela aparece para ler. `Data.CanDo` é o `Can` que só
   vale dentro da Gestão.
-- **Balão da sessão** (`partials/active_session.gohtml`). Com o ponto aberto, fica no canto de baixo à direita de
-  todas as páginas de quem está logado, acima dos avisos e abaixo dos modais.
+- **Balão das sessões** (`partials/active_session.gohtml`). Com o ponto aberto, fica no canto de baixo à direita de
+  todas as páginas de quem está logado, acima dos avisos e abaixo dos modais. É uma pilha de cartões, um por projeto
+  com o ponto aberto (o nome do projeto e o cronômetro), um aberto por vez. Dentro de um projeto (`WTT.boot.project`)
+  aparece só o cartão dele, com a linha "+N em outros projetos" que abre os outros. Quem lê a sessão de um projeto usa
+  `$store.clock.sessionFor(projectId)`; `$store.clock.sessions` é a lista inteira.
 - Ação que a pessoa não pode usar não aparece. A API continua sendo quem garante a permissão.
 
 ## Regras de interface

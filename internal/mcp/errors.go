@@ -20,6 +20,8 @@ var (
 	ErrInvalidAssignee   = apperr.New("mcp.invalid_assignee", http.StatusBadRequest)
 	ErrTaskNotInSession  = apperr.New("mcp.task_not_in_session", http.StatusBadRequest)
 	ErrTaskAlreadyActive = apperr.New("mcp.task_already_active", http.StatusBadRequest)
+	// ErrProjectRequired é o clock_out sem projeto quando há sessões abertas em mais de um.
+	ErrProjectRequired = apperr.New("mcp.project_required", http.StatusBadRequest)
 )
 
 // toolError é o erro que a ferramenta devolve ao Claude: o texto do catálogo (em inglês), o código entre parênteses

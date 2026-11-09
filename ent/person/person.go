@@ -54,6 +54,8 @@ const (
 	EdgeSessions = "sessions"
 	// EdgeAPITokens holds the string denoting the api_tokens edge name in mutations.
 	EdgeAPITokens = "api_tokens"
+	// EdgeOauthGrants holds the string denoting the oauth_grants edge name in mutations.
+	EdgeOauthGrants = "oauth_grants"
 	// EdgeCreatedInvites holds the string denoting the created_invites edge name in mutations.
 	EdgeCreatedInvites = "created_invites"
 	// EdgeAllocations holds the string denoting the allocations edge name in mutations.
@@ -104,6 +106,13 @@ const (
 	APITokensInverseTable = "api_tokens"
 	// APITokensColumn is the table column denoting the api_tokens relation/edge.
 	APITokensColumn = "person_id"
+	// OauthGrantsTable is the table that holds the oauth_grants relation/edge.
+	OauthGrantsTable = "oauth_grants"
+	// OauthGrantsInverseTable is the table name for the OAuthGrant entity.
+	// It exists in this package in order to avoid circular dependency with the "oauthgrant" package.
+	OauthGrantsInverseTable = "oauth_grants"
+	// OauthGrantsColumn is the table column denoting the oauth_grants relation/edge.
+	OauthGrantsColumn = "person_id"
 	// CreatedInvitesTable is the table that holds the created_invites relation/edge.
 	CreatedInvitesTable = "invites"
 	// CreatedInvitesInverseTable is the table name for the Invite entity.
@@ -340,6 +349,20 @@ func ByAPITokens(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
+// ByOauthGrantsCount orders the results by oauth_grants count.
+func ByOauthGrantsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newOauthGrantsStep(), opts...)
+	}
+}
+
+// ByOauthGrants orders the results by oauth_grants terms.
+func ByOauthGrants(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newOauthGrantsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
 // ByCreatedInvitesCount orders the results by created_invites count.
 func ByCreatedInvitesCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -421,6 +444,13 @@ func newAPITokensStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(APITokensInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, APITokensTable, APITokensColumn),
+	)
+}
+func newOauthGrantsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(OauthGrantsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, OauthGrantsTable, OauthGrantsColumn),
 	)
 }
 func newCreatedInvitesStep() *sqlgraph.Step {

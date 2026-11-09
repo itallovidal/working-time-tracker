@@ -67,6 +67,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `auth.clerk_invite_failed` | 502 | — | `o serviço de login não aceitou o convite. Confira o email e tente de novo` | `the sign-in service did not accept the invitation. Check the email and try again` |
 | `auth.clerk_token_invalid` | 401 | — | `não foi possível confirmar o seu login. Entre de novo` | `could not confirm your sign-in. Sign in again` |
 | `auth.clerk_unavailable` | 502 | — | `o serviço de login não respondeu. Tente de novo em instantes` | `the sign-in service did not answer. Try again in a moment` |
+| `auth.connection_not_found` | 404 | — | `app conectado não encontrado` | `connected app not found` |
 | `auth.invalid_country` | 400 | — | `país inválido: use um código como BR ou US` | `invalid country: use a code like BR or US` |
 | `auth.invalid_credentials` | 401 | — | `email ou senha incorretos` | `wrong email or password` |
 | `auth.invite_email_mismatch` | 400 | — | `este convite foi feito para outro email` | `this invitation was made for another email` |
@@ -112,6 +113,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `customer.invalid_cycle_anchor` | 400 | — | `o último fechamento já pago não pode ser depois de hoje` | `the last closing already paid cannot be after today` |
 | `customer.invalid_document` | 400 | — | `documento fiscal inválido para o país do cliente: confira os números (CNPJ no Brasil, EIN nos EUA)` | `invalid tax ID for the customer's country: check the numbers (CNPJ in Brazil, EIN in the US)` |
 | `customer.invalid_email` | 400 | — | `informe um email de contato válido` | `enter a valid contact email` |
+| `customer.invalid_estimated_hours` | 400 | — | `as horas estimadas por mês devem ficar entre 1 e 744` | `the estimated hours per month must be between 1 and 744` |
 | `customer.invalid_grace_days` | 400 | — | `a tolerância deve ficar entre 0 e 365 dias` | `the grace period must be between 0 and 365 days` |
 | `customer.invalid_hourly_rate` | 400 | — | `o valor por hora deve ficar entre 10,00 e 1.000.000,00` | `the hourly rate must be between 10.00 and 1,000,000.00` |
 | `customer.invalid_late_fee` | 400 | — | `a multa deve ficar entre 0% e 100%` | `the late fee must be between 0% and 100%` |
@@ -219,9 +221,16 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 |---|---|---|---|---|
 | `mcp.invalid_assignee` | 400 | — | `o responsável é me (você) ou none (ninguém)` | `the assignee is me (you) or none (nobody)` |
 | `mcp.invalid_date` | 400 | `field` | `data inválida em {{.field}}: use AAAA-MM-DD` | `invalid date in {{.field}}: use YYYY-MM-DD` |
+| `mcp.project_required` | 400 | — | `há sessões abertas em mais de um projeto; diga qual encerrar` | `sessions are open in more than one project; say which one to close` |
 | `mcp.task_already_active` | 400 | — | `esta tarefa já está em andamento na sessão` | `this task is already running in the session` |
 | `mcp.task_not_in_session` | 400 | — | `esta tarefa não está em andamento na sessão aberta` | `this task is not running in the open session` |
 | `mcp.unknown_label` | 400 | `label`, `available` | `o projeto não tem a etiqueta {{.label}}; as que existem: {{.available}}` | `the project has no label {{.label}}; the ones it has: {{.available}}` |
+
+### oauth
+
+| Código | Status | Parâmetros | pt-BR | en |
+|---|---|---|---|---|
+| `oauth.request_invalid` | 400 | — | `o pedido de conexão não confere mais; comece de novo pelo app` | `the connection request no longer checks out; start again from the app` |
 
 ### organization
 
@@ -387,7 +396,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 
 | Código | Status | Parâmetros | pt-BR | en |
 |---|---|---|---|---|
-| `work_session.already_open` | 400 | — | `já existe um ponto aberto para esta pessoa; pare a sessão atual antes de iniciar outra` | `this person already has an open clock-in; stop the current session before starting another` |
+| `work_session.already_open` | 400 | — | `já existe um ponto aberto para esta pessoa neste projeto; ponha a tarefa na sessão aberta` | `this person already has an open clock-in on this project; add the task to the open session` |
 | `work_session.filter_required` | 400 | — | `filtre por task_id ou person_id` | `filter by task_id or person_id` |
 | `work_session.invalid_interval` | 400 | — | `o intervalo precisa começar e terminar dentro da sessão, com o fim depois do começo` | `the interval must start and end inside the session, with the end after the start` |
 | `work_session.invalid_person_filter` | 400 | — | `pessoa inválida (person_id)` | `invalid person (person_id)` |
@@ -395,9 +404,8 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `work_session.last_task` | 400 | — | `a sessão precisa ficar com ao menos uma tarefa; enquanto aberta, ao menos uma em andamento` | `the session must keep at least one task; while it is open, at least one still in progress` |
 | `work_session.no_rate` | 400 | — | `esta pessoa ainda não tem valor por hora neste projeto; um admin precisa definir na aba Colaboradores antes do ponto` | `this person has no hourly rate on this project yet; an admin must set one on the Collaborators tab before clocking in` |
 | `work_session.not_found` | 404 | — | `sessão não encontrada` | `session not found` |
-| `work_session.not_open` | 400 | — | `não há ponto aberto para esta pessoa` | `this person has no open clock-in` |
+| `work_session.not_open` | 400 | — | `não há ponto aberto para esta pessoa neste projeto` | `this person has no open clock-in on this project` |
 | `work_session.not_yours` | 403 | — | `só quem bateu o ponto, ou um admin, pode mexer nas tarefas desta sessão` | `only the person who clocked in, or an admin, can change the tasks of this session` |
-| `work_session.open_in_other_project` | 400 | — | `o ponto desta pessoa está aberto em outro projeto; pare-o por lá` | `this person's clock-in is open in another project; stop it there` |
 | `work_session.other_person_admin_only` | 403 | — | `só admins podem registrar o ponto de outra pessoa` | `only admins can clock in for another person` |
 | `work_session.person_not_found` | 400 | — | `pessoa não encontrada` | `person not found` |
 | `work_session.person_not_in_org` | 400 | — | `pessoa não encontrada nesta organização` | `person not found in this organization` |

@@ -11,6 +11,7 @@ import (
 
 	"working-time-tracker/internal/database"
 	"working-time-tracker/internal/domain/task"
+	"working-time-tracker/internal/domain/work_session"
 )
 
 // Mine é o painel de quem abriu a primeira tela: o que a pessoa trabalhou hoje e na semana e como
@@ -28,19 +29,21 @@ type Mine struct {
 	Hours       MineHours `json:"hours"`
 	Tasks       MineTasks `json:"tasks"`
 	// WorkingNow diz que a pessoa está com o ponto aberto, em qualquer projeto, e WorkingOn em que
-	// tarefas (vazia, nunca nula, quando a sessão ficou sem tarefa).
+	// tarefas, as de todas as sessões abertas dela (vazia, nunca nula, quando elas ficaram sem tarefa).
 	WorkingNow bool        `json:"working_now"`
 	WorkingOn  []WorkingOn `json:"working_on"`
 }
 
-// MineHours é o tempo da pessoa, só o dela, somando os projetos todos.
+// MineHours é o tempo da pessoa, só o dela, em todos os projetos: o que ela trabalhou ao mesmo tempo em dois conta uma vez
+// (Decisão 27).
 type MineHours struct {
 	TodaySeconds float64 `json:"today_seconds"`
 	WeekSeconds  float64 `json:"week_seconds"`
 	// Days são os sete dias da semana, de segunda a domingo; o que ainda não chegou vem com zero.
 	Days []MineDay `json:"days"`
 	// Projects é onde as horas da semana foram, projeto a projeto, do que mais teve tempo para o que menos
-	// (é o tempo da própria pessoa em cada projeto, não uma comparação entre pessoas); só os que têm tempo.
+	// (é o tempo da própria pessoa em cada projeto, não uma comparação entre pessoas); só os que têm tempo. Cada
+	// projeto tem o tempo inteiro das sessões dele, então com sessões ao mesmo tempo a soma passa de WeekSeconds.
 	Projects []MineProject `json:"projects"`
 }
 
@@ -139,25 +142,20 @@ func (s *Service) Mine(orgID, personID, tz string, onlyMyProjects bool) (*Mine, 
 		WorkingOn:   []WorkingOn{},
 	}
 
+	// As horas do dia, da semana e de hoje contam uma vez só o que a pessoa trabalhou ao mesmo tempo em dois projetos
+	// (Decisão 27); as de cada projeto são o tempo inteiro das sessões dele.
 	todayStart := startOfDay(now, loc)
 	for i := range m.Hours.Days {
 		from := weekStart.AddDate(0, 0, i)
 		m.Hours.Days[i].Date = from.Format(time.DateOnly)
 		to := weekStart.AddDate(0, 0, i+1)
-		for j := range sessions {
-			// Within mede da borda até o fim da sessão: o dia é o que sobra tirando o que vem depois dele.
-			in, _, _ := sessions[j].Within(from, now)
-			after, _, _ := sessions[j].Within(to, now)
-			m.Hours.Days[i].Seconds += in - after
-		}
+		m.Hours.Days[i].Seconds = work_session.MergedSeconds(sessions, from, to, now)
 	}
+	m.Hours.WeekSeconds = work_session.MergedSeconds(sessions, weekStart, time.Time{}, now)
+	m.Hours.TodaySeconds = work_session.MergedSeconds(sessions, todayStart, time.Time{}, now)
 	byProject := map[uuid.UUID]float64{}
 	for j := range sessions {
-		week, _, _ := sessions[j].Within(weekStart, now)
-		today, _, _ := sessions[j].Within(todayStart, now)
-		m.Hours.WeekSeconds += week
-		m.Hours.TodaySeconds += today
-		if week > 0 {
+		if week, _, _ := sessions[j].Within(weekStart, now); week > 0 {
 			byProject[sessions[j].ProjectID] += week
 		}
 	}
@@ -176,7 +174,7 @@ func (s *Service) Mine(orgID, personID, tz string, onlyMyProjects bool) (*Mine, 
 	for _, p := range open {
 		if p.PersonID == pid {
 			m.WorkingNow = true
-			m.WorkingOn = p.WorkingOn
+			m.WorkingOn = append(m.WorkingOn, p.WorkingOn...)
 		}
 	}
 	return m, nil

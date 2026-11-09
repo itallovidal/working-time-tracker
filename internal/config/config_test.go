@@ -245,3 +245,89 @@ func TestLoad_ClientIPHeader(t *testing.T) {
 		}
 	}
 }
+
+// O PUBLIC_URL fica na forma canônica: o esquema e o nome em minúsculas, sem a porta padrão e sem a barra do fim. O
+// recurso do OAuth do MCP sai sempre assim, e o endereço que o perfil mostra tem de bater com ele.
+func TestLoad_PublicURLIsCanonical(t *testing.T) {
+	setRequired(t)
+	t.Setenv("CLERK_SECRET_KEY", "")
+	t.Setenv("CLERK_PUBLISHABLE_KEY", "")
+	t.Setenv("MCP_OAUTH", "")
+	for raw, want := range map[string]string{
+		"HTTPS://WTT.Example.com:443/": "https://wtt.example.com",
+		"https://wtt.example.com:8443": "https://wtt.example.com:8443",
+		"http://LocalHost:80":          "http://localhost",
+		"http://localhost:8080":        "http://localhost:8080",
+		"http://[::1]:80":              "http://[::1]",
+		"http://[::1]:1243":            "http://[::1]:1243",
+		"https://WTT.example.com/App":  "https://wtt.example.com/App", // o caminho não muda
+		"localhost:8080":               "localhost:8080",              // não é http(s): fica para quem usa recusar
+		"":                             "",
+	} {
+		t.Setenv("PUBLIC_URL", raw)
+		cfg, err := Load()
+		if err != nil {
+			t.Errorf("PUBLIC_URL=%q: %v", raw, err)
+			continue
+		}
+		if cfg.PublicURL != want {
+			t.Errorf("PUBLIC_URL=%q: got %q, want %q", raw, cfg.PublicURL, want)
+		}
+	}
+	// Com a porta padrão escrita, o OAuth liga do mesmo jeito: o emissor é a origem canônica.
+	t.Setenv("PUBLIC_URL", "https://WTT.example.com:443")
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("PUBLIC_URL with :443: %v", err)
+	}
+	if !cfg.OAuthEnabled || cfg.PublicURL != "https://wtt.example.com" {
+		t.Errorf("PUBLIC_URL with :443: OAuth %v, PUBLIC_URL %q; want OAuth on with https://wtt.example.com", cfg.OAuthEnabled, cfg.PublicURL)
+	}
+}
+
+// O OAuth do MCP liga sozinho quando o PUBLIC_URL serve de emissor (uma origem pura em https, ou em http no próprio
+// computador); MCP_OAUTH=off o desliga, e MCP_OAUTH=on com um endereço que não serve derruba a subida.
+func TestLoad_MCPOAuth(t *testing.T) {
+	setRequired(t)
+	// O Clerk exige o PUBLIC_URL; aqui ele fica desligado, para o PUBLIC_URL vazio valer.
+	t.Setenv("CLERK_SECRET_KEY", "")
+	t.Setenv("CLERK_PUBLISHABLE_KEY", "")
+	cases := []struct {
+		publicURL, mode string
+		want, fails     bool
+	}{
+		{"https://wtt.example.com", "", true, false},
+		{"https://wtt.example.com/", "", true, false}, // a barra do fim sai na leitura
+		{"http://localhost:1243", "", true, false},
+		{"http://127.0.0.1:1243", "", true, false},
+		{"http://[::1]:1243", "", true, false},
+		{"", "", false, false},
+		{"http://wtt.example.com", "", false, false},      // http fora do próprio computador
+		{"https://wtt.example.com/app", "", false, false}, // com caminho, o emissor não seria a origem
+		{"https://wtt.example.com?x=1", "", false, false},
+		{"https://user@wtt.example.com", "", false, false},
+		{"https://wtt.example.com", "off", false, false},
+		{"https://wtt.example.com", " ON ", true, false},
+		{"http://wtt.example.com", "on", false, true},
+		{"", "on", false, true},
+		{"https://wtt.example.com", "yes", false, true},
+	}
+	for _, tc := range cases {
+		t.Setenv("PUBLIC_URL", tc.publicURL)
+		t.Setenv("MCP_OAUTH", tc.mode)
+		cfg, err := Load()
+		if tc.fails {
+			if err == nil {
+				t.Errorf("PUBLIC_URL=%q MCP_OAUTH=%q: no error, want one", tc.publicURL, tc.mode)
+			}
+			continue
+		}
+		if err != nil {
+			t.Errorf("PUBLIC_URL=%q MCP_OAUTH=%q: %v", tc.publicURL, tc.mode, err)
+			continue
+		}
+		if cfg.OAuthEnabled != tc.want {
+			t.Errorf("PUBLIC_URL=%q MCP_OAUTH=%q: OAuthEnabled = %v, want %v", tc.publicURL, tc.mode, cfg.OAuthEnabled, tc.want)
+		}
+	}
+}

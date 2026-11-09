@@ -114,6 +114,29 @@ func (h *Handler) Receive(c *echo.Context) error {
 	return c.JSON(http.StatusOK, r)
 }
 
+// ReceivePeriod recebe um período calculado num passo só. Responde 201 com o recebível, já recebido.
+func (h *Handler) ReceivePeriod(c *echo.Context) error {
+	var body ReceivePeriodInput
+	if err := c.Bind(&body); err != nil {
+		return apperr.Respond(c, http.StatusBadRequest, apperr.BindError(err))
+	}
+	r, err := h.svc.ReceivePeriod(c.Param("orgId"), body)
+	if err != nil {
+		return fail(c, err)
+	}
+	return c.JSON(http.StatusCreated, r)
+}
+
+// PeriodLateCharges devolve a sugestão de multa e juros de um período calculado (?customer_id, ?period_start,
+// ?period_end) recebido na data ?on= (hoje, sem ela).
+func (h *Handler) PeriodLateCharges(c *echo.Context) error {
+	out, err := h.svc.PeriodLateCharges(c.Param("orgId"), c.QueryParam("customer_id"), c.QueryParam("period_start"), c.QueryParam("period_end"), c.QueryParam("on"))
+	if err != nil {
+		return fail(c, err)
+	}
+	return c.JSON(http.StatusOK, out)
+}
+
 // Unreceive desfaz o recebimento. Responde 204.
 func (h *Handler) Unreceive(c *echo.Context) error {
 	if err := h.svc.Unreceive(c.Param("orgId"), c.Param("id")); err != nil {

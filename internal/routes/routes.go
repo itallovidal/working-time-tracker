@@ -1,6 +1,9 @@
 package routes
 
 import (
+	"net/http"
+	"strings"
+
 	"github.com/labstack/echo/v5"
 
 	"working-time-tracker/internal/domain/allocation"
@@ -20,6 +23,7 @@ import (
 	"working-time-tracker/internal/domain/task"
 	"working-time-tracker/internal/domain/team"
 	"working-time-tracker/internal/domain/work_session"
+	"working-time-tracker/internal/oauth"
 )
 
 type Handlers struct {
@@ -42,6 +46,8 @@ type Handlers struct {
 	Sync *issuesync.Handler
 	// ProjectInvite é o convite que já deixa pronto o projeto da pessoa.
 	ProjectInvite *projectinvite.Handler
+	// OAuth é o servidor de autorização do MCP, para o "Permitir" da tela de consentimento. Nulo com o OAuth desligado.
+	OAuth *oauth.Server
 }
 
 // RegisterRoutes monta a API JSON. Tudo fora de /api/auth exige login, e cada
@@ -85,6 +91,15 @@ func RegisterRoutes(e *echo.Echo, h Handlers, m *auth.Middleware, authLimiter ec
 	r.GET("/auth/tokens", h.Auth.ListAPITokens)
 	r.POST("/auth/tokens", h.Auth.CreateAPIToken)
 	r.DELETE("/auth/tokens/:tokenId", h.Auth.RevokeAPIToken)
+	// Os apps conectados pelo OAuth do MCP (o claude.ai, o Claude Code): cada um só vê e desconecta os seus.
+	r.GET("/auth/connections", h.Auth.ListOAuthConnections)
+	r.DELETE("/auth/connections/:connectionId", h.Auth.RevokeOAuthConnection)
+	// O "Permitir" da tela de consentimento do OAuth. Além do JSONOnly, recusa o pedido que um navegador manda de outra
+	// origem: quem autoriza é sempre a pessoa, na tela daqui.
+	if h.OAuth != nil {
+		r.POST(strings.TrimPrefix(oauth.ConsentPath, "/api"), h.OAuth.Consent,
+			echo.WrapMiddleware(http.NewCrossOriginProtection().Handler))
+	}
 
 	r.GET("/orgs/:orgId", h.Organization.Get, org)
 	// Os dados da organização são do dono.
@@ -99,11 +114,14 @@ func RegisterRoutes(e *echo.Echo, h Handlers, m *auth.Middleware, authLimiter ec
 	// A baixa de um pagamento (o dono marca que pagou um período) e o desfazer: também só do dono.
 	r.POST("/orgs/:orgId/payouts", h.Payment.MarkPaid, org, orgCan(permission.PaymentsManage))
 	r.DELETE("/orgs/:orgId/payouts/:payoutId", h.Payment.Unmark, org, orgCan(permission.PaymentsManage))
-	// O A receber é do modo solo e do dono: confirmar o que cobrar de cada cliente por período, receber e desfazer.
-	// Fora do modo solo as rotas respondem 404 (RequireSolo, depois da permissão).
+	// O A receber é do modo solo e do dono: receber o que cada cliente deve por período (direto, ou depois de ajustar o
+	// valor e o vencimento) e desfazer. Fora do modo solo as rotas respondem 404 (RequireSolo, depois da permissão).
+	// /receive e /late-charges sem :id são do período calculado, ainda sem recebível.
 	receivables := []echo.MiddlewareFunc{org, orgCan(permission.ReceivablesManage), h.Receivable.RequireSolo}
 	r.GET("/orgs/:orgId/receivables", h.Receivable.List, receivables...)
 	r.POST("/orgs/:orgId/receivables", h.Receivable.Confirm, receivables...)
+	r.POST("/orgs/:orgId/receivables/receive", h.Receivable.ReceivePeriod, receivables...)
+	r.GET("/orgs/:orgId/receivables/late-charges", h.Receivable.PeriodLateCharges, receivables...)
 	r.PATCH("/orgs/:orgId/receivables/:id", h.Receivable.Update, receivables...)
 	r.DELETE("/orgs/:orgId/receivables/:id", h.Receivable.Unconfirm, receivables...)
 	r.GET("/orgs/:orgId/receivables/:id/late-charges", h.Receivable.LateCharges, receivables...)
@@ -112,6 +130,8 @@ func RegisterRoutes(e *echo.Echo, h Handlers, m *auth.Middleware, authLimiter ec
 	// A tela inicial do modo solo (horas, receita e receita projetada por janela e por cliente) tem as mesmas regras: só o
 	// dono e só em organização solo.
 	r.GET("/orgs/:orgId/solo/overview", h.Overview.Solo, receivables...)
+	// A dedicação aos contratos mensais com estimativa de horas, no período em andamento (os detalhes do cliente).
+	r.GET("/orgs/:orgId/solo/dedication", h.Overview.SoloDedications, receivables...)
 	r.GET("/orgs/:orgId/overview", h.Overview.Organization, org, admin)
 	// Quem está com o ponto aberto e em que tarefas, sem tempo nem dinheiro: a bolinha da lista de tarefas e a
 	// coluna "Agora" dos colaboradores. Também só dos admins.
@@ -187,7 +207,7 @@ func RegisterRoutes(e *echo.Echo, h Handlers, m *auth.Middleware, authLimiter ec
 	r.POST("/projects/:projectId/work-sessions/:sessionId/tasks", h.WorkSession.AddTask, prj)
 	r.PATCH("/projects/:projectId/work-sessions/:sessionId/tasks/:linkId", h.WorkSession.UpdateTask, prj)
 	r.DELETE("/projects/:projectId/work-sessions/:sessionId/tasks/:linkId", h.WorkSession.RemoveTask, prj)
-	r.GET("/work-sessions/active", h.WorkSession.Active)
+	r.GET("/work-sessions/open", h.WorkSession.Open)
 	r.POST("/projects/:projectId/integrations", h.Integration.Create, prj, can(permission.IntegrationsManage))
 	r.GET("/projects/:projectId/integrations", h.Integration.ListByProject, prj)
 	// O botão Sincronizar das listas de tarefas: uma rodada completa nas integrações do projeto com a sincronização ligada.

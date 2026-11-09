@@ -6,6 +6,7 @@ import (
 	"working-time-tracker/internal/domain/auth"
 	"working-time-tracker/internal/domain/integration"
 	"working-time-tracker/internal/domain/permission"
+	oauthserver "working-time-tracker/internal/oauth"
 	"working-time-tracker/internal/page"
 )
 
@@ -30,6 +31,8 @@ func RegisterPages(e *echo.Echo, p *page.Handler, m *auth.Middleware, oauth *int
 	g := e.Group("", m.RequirePage)
 	g.GET("/", p.Home)
 	g.GET("/profile", p.Profile)
+	// A tela de consentimento do OAuth do MCP: quem não está logado passa pelo login e volta com o pedido inteiro.
+	g.GET(oauthserver.AuthorizePath, p.OAuthAuthorize)
 
 	org := m.RequireOrgPage(auth.KindOrganization, "orgId", p.NotFound)
 	g.GET("/orgs/:orgId", p.Org, org)

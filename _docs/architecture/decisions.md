@@ -24,7 +24,8 @@ público, atendido pelo modo solo (Decisão 20).
 
 **Objetivos:**
 - Uma estrutura organizacional: organização → projetos → times → pessoas.
-- Clock-in e clock-out como a peça central do registro de tempo, com uma sessão aberta por pessoa.
+- Clock-in e clock-out como a peça central do registro de tempo, com uma sessão aberta por pessoa (desde a Decisão 27,
+  uma por pessoa em cada projeto).
 - Tarefas dentro dos projetos, com prazo padrão de uma semana e um responsável só.
 - Integrações genéricas com plataformas externas, configuradas por projeto, sem prender o sistema a uma plataforma.
 - Ligar tarefas a itens externos e buscar os detalhes deles na hora.
@@ -90,7 +91,7 @@ tabela de junção `TeamMembership`. Vieram depois `Customer` (o cliente; chama-
   campo: nulo é "o projeto não tem". O horário de uma weekly ou de uma reunião não existe sem o dia, e a reunião com o
   cliente só existe num projeto com cliente.
 
-Um índice único parcial garante uma sessão aberta por pessoa (Decisão 3).
+Um índice único parcial garante uma sessão aberta por pessoa (Decisão 3), hoje uma em cada projeto (Decisão 27).
 
 **Motivo:** o modelo segue a hierarquia da organização. Os vínculos com itens externos ficam em `issue_syncs` (no
 máximo um por tarefa e integração, então uma tarefa pode estar numa issue e num cartão ao mesmo tempo). O JSON de
@@ -121,6 +122,9 @@ máximo um por tarefa e integração, então uma tarefa pode estar numa issue e 
 **Hoje:** o modelo completo, com os cargos e as exclusões, está em [data-model.md](data-model.md).
 
 ### Decisão 3: Uma sessão aberta por pessoa — índice único parcial
+
+> **Substituída pela [Decisão 27](#decisão-27-uma-sessão-aberta-por-projeto-e-as-horas-sobrepostas-contadas-uma-vez):**
+> a regra passou a ser uma sessão aberta por pessoa em cada projeto. A escolha do índice parcial continua.
 
 **Escolha:** a regra "uma sessão aberta por pessoa" é garantida por um índice único parcial do PostgreSQL:
 `CREATE UNIQUE INDEX one_active_session ON work_sessions (person_id) WHERE end_at IS NULL`, declarado no schema do
@@ -847,7 +851,9 @@ um token pessoal gerado no perfil. A primeira etapa é o Claude Code.
 **Alternativas descartadas:**
 - **OAuth já na primeira etapa:** é o que abre o claude.ai e o Desktop, mas pede um servidor de autorização inteiro
   (metadados, consentimento, troca de código com PKCE, renovação, cadastro do cliente por CIMD ou DCR). Fica para a
-  próxima etapa; o verificador do token é o ponto de encaixe, com o mesmo escopo `mcp`.
+  próxima etapa; o verificador do token é o ponto de encaixe, com o mesmo escopo `mcp`. **Hoje:** o OAuth chegou na
+  [Decisão 25](#decisão-25-oauth-no-mcp--o-claudeai-o-desktop-e-o-celular-pela-identidade-publicada-do-claude), e o
+  token pessoal continua.
 - **O token também na API:** daria ao Claude tudo o que a API faz, inclusive dinheiro e a própria conta. O MCP expõe só
   as ferramentas escolhidas.
 - **Chamar a API por dentro** (montar a requisição e passá-la ao router): manteria as checagens dos handlers sem
@@ -895,6 +901,182 @@ aproximação, como já era com outro dia de fechamento. O `closing_day` fica gu
 a valer quando o ciclo volta ao mensal. As regras de hoje estão em
 [money.md](../product/money.md#contas-a-receber-modo-solo).
 
+### Decisão 24: A receber em três listas, e receber sem confirmar
+
+**Contexto:** a página A receber tinha "A confirmar" (as propostas, com o mês corrente "em andamento" misturado aos
+períodos fechados), "Em aberto" (o que foi confirmado e não entrou) e "Recebidos". Para chegar a "Em aberto" era
+preciso um passo, "Confirmar", e o atraso só aparecia depois dele. Na primeira semana de uso real, o dono não conseguia
+olhar a tela e saber o que estava correndo, o que já devia ter entrado e o que entrou.
+
+**Escolha:** três listas pelo momento da conta, e o recebimento direto.
+
+- **Em andamento:** o período atual de cada cliente, ainda aberto: o mês corrente do contrato mensal e o período
+  corrente do por hora com tempo, com as horas e o valor até agora. No mensal, "Recebi adiantado" recebe o mês antes de
+  fechar. O que divide as listas é o período ter fechado, não a conta estar gravada: um mês ajustado adiantado fica em
+  andamento até fechar.
+- **A receber:** o que fechou e não entrou, do vencimento mais antigo para o mais novo, com o selo do atraso, que agora
+  vale também para o período calculado.
+- **Recebidos:** o histórico.
+- **Receber direto.** `POST /receivables/receive` grava o recebível já recebido, com o valor calculado e o vencimento
+  padrão, num passo só. Confirmar continua existindo como "Editar": ajusta o valor, o vencimento e a nota antes de
+  receber, e a conta fica em A receber marcada como ajustada; "Voltar ao valor calculado" a apaga. O número da nota
+  pode entrar no recebimento.
+- **O modelo não muda.** Nada novo é gravado: continua um recebível por cliente e período, gravado só quando o dono age
+  (Decisão 20). As regras do período (`billableOf`) e do valor recebido (`receiveAmounts`) são as mesmas do ajuste e do
+  recebimento, extraídas para não duplicar.
+
+**Alternativas descartadas:**
+- Manter "Confirmar" dentro de A receber, com duas ações por linha: o passo extra era a origem da confusão, e o dono não
+  emite nota pelo app.
+- Gravar o recebível sozinho quando o período fecha: o app passaria a escrever sem o dono agir, e mudar o cadastro do
+  cliente depois exigiria apagar o que foi gravado.
+- Esconder o período por hora em andamento: o dono quer ver as horas e o valor do mês enquanto ele corre.
+
+**Consequências:** a resposta de `GET /receivables` muda (`in_progress`, `to_receive`; saem `to_confirm` e `open`), e a
+tela é a única que a lê. Um período calculado sem valor (sessões sem valor cobrado) não se recebe direto: o dono ajusta
+o valor antes. As regras de hoje estão em [money.md](../product/money.md#contas-a-receber-modo-solo).
+
+### Decisão 25: OAuth no MCP — o claude.ai, o Desktop e o celular pela identidade publicada do Claude
+
+**Contexto:** a Decisão 22 abriu o `/mcp` ao Claude Code com um token pessoal. O dono quer usar o sistema também no
+claude.ai, no Claude Desktop e no app do celular, que só conectam um servidor remoto por OAuth 2.1, como a especificação
+de autorização do MCP pede (metadados do recurso do RFC 9728, metadados do servidor do RFC 8414, PKCE S256, o recurso
+do RFC 8707). O sistema não tinha servidor de autorização.
+
+**Escolha:** um servidor de autorização OAuth 2.1 no mesmo binário (`internal/oauth`), só para os clientes do Claude,
+com a pessoa entrando pelo login de sempre. O token pessoal continua igual.
+
+- **Só os clientes do Claude, pela identidade publicada (CIMD).** O claude.ai (que vale no Desktop e no celular) e o
+  Claude Code se identificam pela URL de um documento público (`https://claude.ai/oauth/mcp-oauth-client-metadata` e
+  `.../claude-code-client-metadata`). O servidor aceita só essas duas URLs, busca o documento (o client_id dele tem de
+  ser a própria URL, e o app, público) e o guarda pelo `max-age`; se a busca falha, vale o último ou uma cópia
+  embutida. Sem cadastro dinâmico (DCR) e sem tabela de clientes. O claude.ai só usa o CIMD com
+  `client_id_metadata_document_supported` e `none` nos métodos do token, e os dois estão nos metadados.
+- **A tela de consentimento é uma página daqui,** atrás do `RequirePage`: quem não está logado passa pelo login (com o
+  Clerk também) e volta com o pedido inteiro. Ela mostra o app, a pessoa, a organização, para onde volta (com um aviso
+  quando é um programa no próprio computador) e o que o Claude pode fazer, sem dinheiro. O "Permitir" é um JSON na API
+  (`/api/oauth/consent`, com o cookie e a proteção contra outra origem), que confere o pedido de novo. A página não
+  entra em iframe e não fica em cache.
+- **Um app conectado é uma linha** (`oauth_grants`): ela nasce com o código de autorização (2 minutos, uma vez só; um
+  segundo uso derruba a linha) e depois guarda o token de renovação. Os tokens de acesso (`wtta_`, 1 hora) ficam em
+  `oauth_access_tokens`. Como as sessões, só o sha256 de cada um vai ao banco.
+- **A conexão cai depois de 30 dias sem uso** (escolha do dono). O token de renovação (`wttr_`) gira a cada uso e cada
+  uso empurra os 30 dias; não há teto absoluto. O token anterior, mandado de novo em até 60 segundos, recebe o mesmo
+  sucessor: dois processos do Claude Code renovando juntos não derrubam a conexão. Depois disso, é reuso, e a conexão
+  cai inteira. O sucessor fica guardado cifrado com a chave das integrações **junto com o token anterior** (e um
+  rótulo que separa esta cifra da das integrações): como o banco só tem o hash do token anterior, nem o banco com a
+  chave abre a cópia. Passada a janela, ela sai no primeiro uso do `/mcp`.
+- **O claude.ai tem uma conexão por pessoa; o Claude Code, uma por máquina.** O claude.ai volta sempre ao mesmo
+  endereço e não revoga a conexão antiga quando conecta de novo; a conexão nova, na troca do código, tira as da mesma
+  pessoa com o mesmo app e o mesmo endereço de volta. Uma volta ao próprio computador (o Claude Code, numa porta
+  qualquer) nunca substitui. A troca, e não o "Permitir", é que substitui: uma autorização que não chegou ao fim não
+  derruba a conexão que funciona.
+- **O token de acesso só vale no `/mcp`, e só para o recurso em que foi emitido** (o `PUBLIC_URL` mais `/mcp`). O
+  `verify` do MCP olha o prefixo: `wtta_` é do OAuth, `wtt_` é o pessoal. Com o OAuth desligado, um `wtta_` não entra.
+- **Desconectar** é na lista "Apps conectados" do perfil (cada pessoa vê e desconecta os seus), no `/oauth/revoke`
+  (RFC 7009) ou numa troca de senha, que também leva os apps. Cada pessoa tem até 10 apps conectados; passando disso,
+  na troca do código, sai o que está há mais tempo sem uso. As autorizações pendentes (o app ainda não trocou o
+  código) não contam: têm um limite igual, à parte, em que sai a pendente mais antiga.
+- **Liga sozinho com um `PUBLIC_URL` que serve de emissor:** uma origem pura em `https`, ou `http` no próprio computador
+  para desenvolver. `MCP_OAUTH=off` desliga, e `MCP_OAUTH=on` exige o endereço. O emissor é o `PUBLIC_URL` exato,
+  porque o cliente o compara byte a byte; por isso o `PUBLIC_URL` é lido na forma canônica (nome em minúsculas, sem a
+  porta padrão), a mesma do recurso: o endereço que o perfil mostra bate com o dos metadados.
+
+**Alternativas descartadas:**
+- **Qualquer cliente MCP (ChatGPT, Cursor e afins) já agora:** pede o CIMD aberto, com proteção contra SSRF ao buscar
+  documentos de qualquer endereço, e o DCR, com uma tabela de clientes e a limpeza dos cadastros que o Claude cria a
+  cada conexão. Fica para depois:
+  [issue #36](https://github.com/itallovidal/working-time-tracker/issues/36).
+- **Uma biblioteca de servidor de autorização** (ory/fosite, go-oauth2): nenhuma tem o CIMD, o recurso do RFC 8707 nem
+  os metadados do RFC 9728; adaptar daria mais trabalho que o pedaço pequeno que o MCP usa (autorização com PKCE,
+  troca, renovação, revogação).
+- **JWT no lugar de tokens opacos:** o servidor de autorização e o `/mcp` são o mesmo processo, com o mesmo banco. Um
+  token opaco se revoga na hora e relê a pessoa a cada chamada, como o pessoal; um JWT valeria até vencer.
+- **Rotação estrita, sem a janela de 60 segundos:** o Claude Code divide a credencial entre os processos, e dois
+  renovando juntos derrubariam a conexão.
+- **Pedir o login de novo no consentimento,** ou guardar o pedido entre a tela e o "Permitir": o pedido volta inteiro
+  no corpo e é conferido de novo, e a sessão é a de sempre.
+
+**Consequências:** quem conecta pelo claude.ai precisa colar exatamente o `PUBLIC_URL` mais `/mcp`, e trocar o
+`PUBLIC_URL` derruba as conexões (o recurso muda). O que o Claude faz é o mesmo do token pessoal (Decisão 22). O como
+usar está em [api/mcp.md](../api/mcp.md), e a segurança em [security.md](security.md#oauth-do-mcp).
+
+### Decisão 26: Horas estimadas por mês no contrato mensal, só para acompanhar
+
+**Contexto:** no cliente com contrato mensal, a mensalidade não depende das horas, mas o dono continua batendo ponto
+nele (Decisão 20). Usando o app, ele sentiu falta de saber se está dedicando pouco ou muito ao contrato no mês: as horas
+apareciam, mas sem nada para comparar.
+
+**Escolha:** uma estimativa de horas por mês no cliente, e as horas do período do contrato contra ela.
+
+- **No cliente, junto da mensalidade:** `customers.estimated_monthly_hours`, opcional, horas inteiras de 1 a 744 (as de
+  um mês de 31 dias). É só do mensal: o por hora a recusa (`customer.field_monthly_only`), e a troca de modo a apaga com
+  o resto do contrato. Ela soma as horas de todos os projetos do cliente, porque o contrato é do cliente.
+- **O período é o do contrato,** o mesmo que a mensalidade paga: fecha no dia de fechamento do cliente, e só conta
+  enquanto o contrato cobre o período (`contractPeriods`). Antes do início e depois do fim não há dedicação.
+- **Só "18h de 40h" e a porcentagem.** Não há ritmo (o esperado até hoje), por escolha do dono. Passar de 100% deixa a
+  barra cheia, no tom de aviso.
+- **A conta é do domínio dos recebíveis** (`receivable.Dedication`), que já tem o período do contrato e as sessões por
+  cliente. Ela aparece em quatro lugares: no painel solo, numa coluna Estimativa (o período em andamento em "Este mês",
+  o anterior em "Mês passado", nada em "Ano"); nos detalhes do cliente (`GET /solo/dedication`); na visão geral do
+  projeto (`dedication`, com as horas do projeto, para quem vê a cobrança); e na lista Em andamento do A receber, com as
+  horas ao vivo mesmo no mês ajustado adiantado.
+- **Nada muda na cobrança:** a proposta, o recebível e o valor por hora efetivo continuam iguais.
+
+**Alternativas descartadas:**
+- **A estimativa em cada projeto:** separaria a estimativa da mensalidade, que mora no cliente (Decisão 21).
+- **O mês do calendário:** bateria com a coluna Horas do painel, mas um cliente que fecha no dia 25 seria medido num mês
+  que o contrato não paga. Com o fechamento no último dia (o padrão), os dois dão o mesmo resultado.
+- **A franquia de horas** (Decisão 20): a estimativa não cobra excedente nem muda valor nenhum. A franquia continua para
+  depois.
+- **Guardar a estimativa em cada período:** mudar a estimativa muda a comparação do período anterior também. Para
+  acompanhar o mês, um número só basta.
+
+**Consequências:** o painel solo pode mostrar, na mesma linha, horas diferentes: a coluna Horas é do mês do calendário,
+e a Estimativa é do período do contrato, que aparece embaixo quando é diferente. As regras de hoje estão em
+[money.md](../product/money.md#horas-estimadas-do-contrato-mensal).
+
+### Decisão 27: Uma sessão aberta por projeto, e as horas sobrepostas contadas uma vez
+
+**Contexto:** a Decisão 3 deixava cada pessoa com uma sessão aberta em toda a organização. Quem trabalha em dois
+projetos ao mesmo tempo (o dono, um freelancer com dois clientes, alguém que espera um build num projeto e mexe no
+outro) precisava parar um ponto para abrir o outro, e os botões de iniciar ficavam desligados no outro projeto.
+
+**Escolha:**
+- **Uma sessão aberta por pessoa em cada projeto.** O índice único parcial passa a ser
+  `one_open_session_per_project`, em `work_sessions (person_id, project_id) WHERE end_at IS NULL`. Vale para todos,
+  colaboradores incluídos. Abrir o ponto no projeto B não mexe na sessão do A, e o clock-out de um projeto fecha só a
+  sessão dele (`work_session.open_in_other_project` deixa de existir; sem sessão no projeto é `work_session.not_open`).
+- **O dinheiro é por sessão, pelo valor do projeto dela,** como sempre: o A das 12h às 15h a 20,00/h e o B das 12h às
+  16h a 30,00/h valem 3 × 20 + 4 × 30, no valor pago e no cobrado.
+- **As horas de cada projeto são o tempo inteiro das sessões dele** (A = 3h, B = 4h).
+- **Todo total de horas que junta projetos conta uma vez o tempo sobreposto da mesma pessoa** (no exemplo, 4h): as
+  horas do cliente no A receber (e o valor por hora efetivo do contrato mensal), o período de pagamento e a meta, o
+  dia e a semana do Início, as horas por pessoa e as janelas da visão da organização, o Início do modo solo, por
+  cliente e no total, e as horas do período na estimativa do contrato mensal (Decisão 26), cujos projetos ficam com o
+  tempo inteiro. Vale também entre clientes diferentes; as horas de pessoas diferentes somam. A conta é uma só,
+  `work_session.MergedSeconds`, que junta os intervalos de cada pessoa antes de somar.
+- **Trabalhando agora conta a pessoa uma vez,** com as tarefas de todos os projetos em que ela está com o ponto aberto.
+- **A tela mostra uma pilha de cartões** no canto, um por sessão aberta, com o nome do projeto. Dentro de um projeto
+  aparece só o cartão dele, com uma linha "+N em outros projetos" que abre os outros, para ninguém esquecer um ponto
+  aberto. O painel do timer do projeto mostra só a sessão dele.
+- **A API:** `GET /api/work-sessions/open` devolve a lista (vazia sem ponto), cada sessão com o `project`, no lugar de
+  `GET /api/work-sessions/active`. No MCP, `get_active_session` e o `whoami` devolvem a lista, as ferramentas que
+  mexem numa tarefa usam a sessão do projeto dela, e o `clock_out` pede `project_id` quando há mais de uma sessão.
+
+**Alternativas descartadas:**
+- **Somar as horas sobrepostas cheias em todo lugar:** a semana da pessoa passaria das horas do relógio, e o contrato
+  mensal pareceria render menos por hora do que rendeu.
+- **Dividir a hora sobreposta entre os projetos:** cada projeto cobraria menos que o cronômetro dele mostra, e o
+  dinheiro mudaria em todas as telas.
+- **Só o dono e o modo solo com várias sessões:** quem é pago por hora também trabalha em dois projetos às vezes, e
+  cada sessão já vale o valor do próprio projeto.
+
+**Consequências:** a soma das horas por projeto pode passar do total da pessoa ou do cliente, e isso é esperado. A
+pessoa pode receber, pela mesma hora de relógio, o valor de dois projetos. A migração `one_open_session_per_project`
+só afrouxa a regra, então os dados que já existem continuam válidos. As regras de hoje estão em
+[data-model.md](data-model.md) e em [money.md](../product/money.md).
+
 ## Riscos e trade-offs
 
 - **Limite de requisições das plataformas.** Buscar detalhes e sincronizar gasta a cota de cada plataforma. →
@@ -916,5 +1098,10 @@ a valer quando o ciclo volta ao mensal. As regras de hoje estão em
   pequenos, a validação do servidor como fonte da verdade e testes das páginas servidas.
 - **Um token do Claude vazado.** Quem o tiver age como a pessoa no `/mcp` até ele vencer. → O token só vale no `/mcp`
   (sem conta e sem dinheiro), vence, é revogado no perfil e numa troca de senha, e o perfil mostra o último uso.
+- **Um token de renovação do OAuth vazado.** Quem o tiver renova a conexão em nome da pessoa. → Ele gira a cada uso, e o
+  anterior usado fora da janela de 60 segundos derruba a conexão inteira; o perfil mostra o último uso e desconecta, e
+  a troca de senha leva todos os apps.
+- **Alguém leva a pessoa à tela de consentimento de um pedido que não é dela** (um link com o pedido de outra conta do
+  claude.ai). → A tela sempre pergunta, mostra o app, a pessoa e para onde volta, e não entra em iframe.
 - **A fila da sincronização é da memória.** Um reinício esquece as tarefas que esperavam para virar cartão. → Elas
   podem ser postadas pela página da tarefa (`POST /api/tasks/:taskId/publish`).
