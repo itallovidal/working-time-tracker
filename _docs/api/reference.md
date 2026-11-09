@@ -13,8 +13,8 @@ Todas as rotas falam JSON. Erros sempre vêm como `{"error": {"code": "dominio.m
 - Rotas marcadas como **admin** respondem **403** para membros. As marcadas com uma permissão (`project.edit`, `billing.view`…) ou **dono** respondem **403** a quem não a tem. Os cargos são quatro (dono, admin, administrador de projeto e colaborador): o dono tem todas, o admin tem as de projeto menos a cobrança (`billing.*`) e as da organização de criar projeto e cuidar de pessoas, e as do administrador de projeto vêm do grupo dele no projeto. A lista está em [`permissions.md`](../product/permissions.md).
 - `POST`, `PUT` e `PATCH` precisam de `Content-Type: application/json`. Outro formato responde **415**, o que também protege contra CSRF.
 - Signup, login e convites têm limite de tentativas por IP. Acima dele, a resposta é **429**.
-- O servidor MCP (`/mcp`, para o Claude) fica fora da API e entra com um token pessoal em `Authorization: Bearer`, não
-  com o cookie. Ver [`mcp.md`](mcp.md).
+- O servidor MCP (`/mcp`, para o Claude) fica fora da API e entra em `Authorization: Bearer`, com um token pessoal ou
+  com o token de acesso do OAuth, não com o cookie. Ver [`mcp.md`](mcp.md) e [OAuth do MCP](#oauth-do-mcp).
 
 ## Códigos de status
 
@@ -63,6 +63,9 @@ Toda validação de formulário devolve o campo que errou: `{"error": {"code": "
 | GET | `/api/auth/tokens` | logado | Os seus tokens do Claude (ver abaixo), do mais novo para o mais antigo, sem o token em si |
 | POST | `/api/auth/tokens` | logado | Gera um token do Claude e o devolve em claro, uma vez só |
 | DELETE | `/api/auth/tokens/:tokenId` | logado | Revoga um token seu (`204`). O de outra pessoa responde `404` |
+| GET | `/api/auth/connections` | logado | Os seus apps conectados pelo OAuth do MCP (ver abaixo), do mais novo para o mais antigo |
+| DELETE | `/api/auth/connections/:connectionId` | logado | Desconecta um app seu (`204`); os tokens dele param na hora. O de outra pessoa responde `404` `auth.connection_not_found` |
+| POST | `/api/oauth/consent` | logado, mesma origem | O "Permitir" ou o "Cancelar" da tela de consentimento do OAuth (ver [OAuth do MCP](#oauth-do-mcp)). Só existe com o OAuth ligado |
 
 ### Entrar pelo Clerk
 
@@ -171,6 +174,24 @@ ou 365. Responde `201`:
 `token` só aparece aqui; a lista traz o resto, e `prefix` é o começo do token, para reconhecê-lo. Cada pessoa tem até
 10 tokens válidos (`409` `auth.token_limit`; os vencidos não contam). `last_used_at` é gravado no máximo uma vez por
 minuto. Trocar a senha revoga todos.
+
+### Apps conectados
+```http
+GET /api/auth/connections
+```
+Os apps que a pessoa conectou pelo OAuth do MCP (o claude.ai, o Claude Code), só os que trocaram o código e não
+caíram:
+
+```json
+[
+  { "id": "…", "client_id": "https://claude.ai/oauth/mcp-oauth-client-metadata", "name": "Claude",
+    "created_at": "2026-11-09T03:40:00Z", "last_used_at": "2026-11-09T04:10:00Z", "expires_at": "2026-12-09T04:10:00Z" }
+]
+```
+
+`expires_at` é quando a conexão cai sem uso: cada renovação dos tokens empurra a data para 30 dias depois.
+`last_used_at` é gravado no máximo uma vez por minuto. Cada pessoa tem até 10 apps conectados; uma conexão nova passando
+disso tira a que está há mais tempo sem uso. Trocar a senha desconecta todos.
 
 ### Aceitar convite
 ```http
@@ -1089,6 +1110,50 @@ A interface fala português do Brasil (padrão) e inglês. Estas duas rotas são
 | GET | `/i18n/:idioma.js?v=<hash>` | `window.I18N = {lang, messages}`, os textos do idioma para o JavaScript. Com o `v` certo, o cache é de um ano (`immutable`); sem ele, o navegador revalida pelo `ETag`. **404** para idioma desconhecido |
 
 Qual idioma uma página usa: o cookie `wtt_lang`; sem ele, o `Accept-Language`; sem nenhum dos dois, português. As respostas variam por `Cookie` e `Accept-Language`.
+
+---
+
+## OAuth do MCP
+
+O servidor de autorização do MCP, para o claude.ai, o Claude Desktop, o celular e o Claude Code
+([mcp.md](mcp.md#oauth)). Existe só com o OAuth ligado (um `PUBLIC_URL` que serve de emissor, ver
+[configuration.md](../getting-started/configuration.md)); desligado, as rotas não existem. Nenhuma é da API JSON: os
+erros do token e da revogação são os do OAuth (`{"error": "invalid_grant", "error_description": "…"}`, RFC 6749), não
+os códigos do sistema.
+
+| Método | Rota | Descrição |
+|--------|------|-----------|
+| GET | `/.well-known/oauth-protected-resource/mcp` | Os metadados do recurso (RFC 9728): o `/mcp`, quem o autoriza e o escopo `mcp`. Público, com CORS |
+| GET | `/.well-known/oauth-authorization-server` | Os metadados do servidor de autorização (RFC 8414): os endereços, o PKCE `S256`, o método `none` e o `client_id_metadata_document_supported`. Público, com CORS |
+| GET | `/.well-known/*` (outro) | **404** em JSON, mesmo com o OAuth desligado |
+| GET | `/oauth/authorize` | A tela de consentimento (HTML). Sem sessão, **303** para o login, que volta com o pedido inteiro. Com um app desconhecido ou um endereço de volta que não é dele, **400** com a página de erro, sem redirecionar; os outros erros voltam ao app (**302**) com `error`, `state` e `iss` |
+| POST | `/oauth/token` | A troca do código (`grant_type=authorization_code`, com `code`, `code_verifier`, `redirect_uri`, `client_id` e, opcional, `resource`) ou a renovação (`grant_type=refresh_token`, com `refresh_token` e `client_id`). Corpo `application/x-www-form-urlencoded`. Responde `access_token` (`wtta_…`, 1 hora), `refresh_token` (`wttr_…`), `token_type: Bearer`, `expires_in: 3600` e `scope: mcp`, com `Cache-Control: no-store`. Limite: 1 por segundo por IP, rajada de 30 (**429** `temporarily_unavailable`) |
+| POST | `/oauth/revoke` | A revogação (RFC 7009): `token` no corpo do formulário. O de acesso para de valer; o de renovação desconecta o app. **200** também para um token que não existe |
+
+O pedido da tela, como o claude.ai manda:
+
+```http
+GET /oauth/authorize?response_type=code&client_id=https%3A%2F%2Fclaude.ai%2Foauth%2Fmcp-oauth-client-metadata
+    &redirect_uri=https%3A%2F%2Fclaude.ai%2Fapi%2Fmcp%2Fauth_callback&state=…&code_challenge=…
+    &code_challenge_method=S256&resource=https%3A%2F%2F<sistema>%2Fmcp&scope=mcp
+```
+
+O "Permitir" da tela devolve o mesmo pedido em JSON, com `approve`:
+
+```http
+POST /api/oauth/consent
+Content-Type: application/json
+
+{ "client_id": "https://claude.ai/oauth/mcp-oauth-client-metadata",
+  "redirect_uri": "https://claude.ai/api/mcp/auth_callback", "state": "…", "response_type": "code",
+  "code_challenge": "…", "code_challenge_method": "S256", "resource": "https://<sistema>/mcp", "scope": "mcp",
+  "approve": true }
+```
+
+Responde `{"redirect": "https://claude.ai/api/mcp/auth_callback?code=…&state=…&iss=…"}` (com `approve: false`, o
+`error=access_denied`), e a tela vai para lá. O pedido é conferido de novo: um app ou um endereço de volta que não
+confere responde **400** `oauth.request_invalid`; os outros erros voltam como o endereço com o `error`. Um pedido de
+outra origem recebe **403**.
 
 ---
 

@@ -103,6 +103,8 @@ func main() {
 		Clerk:          clerkOpts,
 		Sync:           issuesync.Config{Interval: ENV.SyncInterval, Intervals: ENV.SyncIntervals},
 		PublicURL:      ENV.PublicURL,
+		// O OAuth do MCP liga sozinho com um PUBLIC_URL que serve de emissor (ou com MCP_OAUTH=on).
+		OAuth: ENV.OAuthEnabled,
 	})
 	if err != nil {
 		log.Fatalf("server: %v", err)
@@ -113,7 +115,7 @@ func main() {
 		clientIP = "the connection address"
 	}
 	e.Logger.Info("server", "port", ENV.APIPort, "db_max_conns", ENV.DBMaxConns, "client_ip_from", clientIP)
-	e.Logger.Info("mcp", "path", mcp.Path, "public_url", ENV.PublicURL)
+	e.Logger.Info("mcp", "path", mcp.Path, "public_url", ENV.PublicURL, "oauth", ENV.OAuthEnabled)
 	apiURL, siteURL := ENV.GitHubAPIURL, ENV.GitHubURL
 	if apiURL == "" {
 		apiURL = "https://api.github.com"

@@ -10,6 +10,7 @@ import (
 	"working-time-tracker/ent/allocation"
 	"working-time-tracker/ent/apitoken"
 	"working-time-tracker/ent/invite"
+	"working-time-tracker/ent/oauthgrant"
 	"working-time-tracker/ent/organization"
 	"working-time-tracker/ent/payout"
 	"working-time-tracker/ent/person"
@@ -40,6 +41,7 @@ type PersonQuery struct {
 	withWorkSessions    *WorkSessionQuery
 	withSessions        *SessionQuery
 	withAPITokens       *APITokenQuery
+	withOauthGrants     *OAuthGrantQuery
 	withCreatedInvites  *InviteQuery
 	withAllocations     *AllocationQuery
 	withPayouts         *PayoutQuery
@@ -205,6 +207,28 @@ func (_q *PersonQuery) QueryAPITokens() *APITokenQuery {
 			sqlgraph.From(person.Table, person.FieldID, selector),
 			sqlgraph.To(apitoken.Table, apitoken.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, person.APITokensTable, person.APITokensColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryOauthGrants chains the current query on the "oauth_grants" edge.
+func (_q *PersonQuery) QueryOauthGrants() *OAuthGrantQuery {
+	query := (&OAuthGrantClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(person.Table, person.FieldID, selector),
+			sqlgraph.To(oauthgrant.Table, oauthgrant.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, person.OauthGrantsTable, person.OauthGrantsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -476,6 +500,7 @@ func (_q *PersonQuery) Clone() *PersonQuery {
 		withWorkSessions:    _q.withWorkSessions.Clone(),
 		withSessions:        _q.withSessions.Clone(),
 		withAPITokens:       _q.withAPITokens.Clone(),
+		withOauthGrants:     _q.withOauthGrants.Clone(),
 		withCreatedInvites:  _q.withCreatedInvites.Clone(),
 		withAllocations:     _q.withAllocations.Clone(),
 		withPayouts:         _q.withPayouts.Clone(),
@@ -548,6 +573,17 @@ func (_q *PersonQuery) WithAPITokens(opts ...func(*APITokenQuery)) *PersonQuery 
 		opt(query)
 	}
 	_q.withAPITokens = query
+	return _q
+}
+
+// WithOauthGrants tells the query-builder to eager-load the nodes that are connected to
+// the "oauth_grants" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *PersonQuery) WithOauthGrants(opts ...func(*OAuthGrantQuery)) *PersonQuery {
+	query := (&OAuthGrantClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withOauthGrants = query
 	return _q
 }
 
@@ -662,13 +698,14 @@ func (_q *PersonQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Perso
 	var (
 		nodes       = []*Person{}
 		_spec       = _q.querySpec()
-		loadedTypes = [9]bool{
+		loadedTypes = [10]bool{
 			_q.withOrganization != nil,
 			_q.withTasks != nil,
 			_q.withTeamMemberships != nil,
 			_q.withWorkSessions != nil,
 			_q.withSessions != nil,
 			_q.withAPITokens != nil,
+			_q.withOauthGrants != nil,
 			_q.withCreatedInvites != nil,
 			_q.withAllocations != nil,
 			_q.withPayouts != nil,
@@ -733,6 +770,13 @@ func (_q *PersonQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Perso
 		if err := _q.loadAPITokens(ctx, query, nodes,
 			func(n *Person) { n.Edges.APITokens = []*APIToken{} },
 			func(n *Person, e *APIToken) { n.Edges.APITokens = append(n.Edges.APITokens, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withOauthGrants; query != nil {
+		if err := _q.loadOauthGrants(ctx, query, nodes,
+			func(n *Person) { n.Edges.OauthGrants = []*OAuthGrant{} },
+			func(n *Person, e *OAuthGrant) { n.Edges.OauthGrants = append(n.Edges.OauthGrants, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -927,6 +971,36 @@ func (_q *PersonQuery) loadAPITokens(ctx context.Context, query *APITokenQuery, 
 	}
 	query.Where(predicate.APIToken(func(s *sql.Selector) {
 		s.Where(sql.InValues(s.C(person.APITokensColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.PersonID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "person_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *PersonQuery) loadOauthGrants(ctx context.Context, query *OAuthGrantQuery, nodes []*Person, init func(*Person), assign func(*Person, *OAuthGrant)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Person)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(oauthgrant.FieldPersonID)
+	}
+	query.Where(predicate.OAuthGrant(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(person.OauthGrantsColumn), fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {

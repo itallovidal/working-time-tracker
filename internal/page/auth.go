@@ -57,10 +57,11 @@ func (h *Handler) ClerkContinue(c *echo.Context) error {
 	})
 }
 
-// Profile tem os dados e a senha de quem está logado.
+// Profile tem os dados e a senha de quem está logado. Com o OAuth do MCP ligado, a seção Conectar ao Claude mostra o
+// endereço para colar no claude.ai: ele sai do PUBLIC_URL, nunca do endereço da requisição, que quem chama pode forjar.
 func (h *Handler) Profile(c *echo.Context) error {
 	return h.render(c, "profile", Data{TitleKey: "titles.profile", Section: "profile", Script: "org",
-		Props: map[string]any{"mcpURL": h.baseURL(c) + mcp.Path}})
+		Props: map[string]any{"mcpURL": h.baseURL(c) + mcp.Path, "oauth": h.deps.OAuth != nil}})
 }
 
 // baseURL é o endereço do sistema: o PUBLIC_URL, ou, sem ele, o da requisição (o protocolo que o proxy da frente diz).

@@ -1,8 +1,9 @@
 // Package mcp é o servidor MCP (Model Context Protocol) do sistema, em /mcp: o que o Claude Code usa para criar e
 // mudar tarefas, pegar uma tarefa, sincronizá-la, bater o ponto e ver as horas em nome de uma pessoa.
 //
-// Como o internal/page, não é um domínio: lê os services dos outros. A pessoa entra com um token pessoal (gerado no
-// perfil, ver auth/api_token.go) em Authorization: Bearer, e cada ferramenta age só sobre ela: o ponto é sempre o
+// Como o internal/page, não é um domínio: lê os services dos outros. A pessoa entra em Authorization: Bearer com um
+// token pessoal (gerado no perfil, ver auth/api_token.go) ou com o token de acesso de um app conectado pelo OAuth (o
+// claude.ai, ver internal/oauth), e cada ferramenta age só sobre ela: o ponto é sempre o
 // dela, e um projeto ou uma tarefa passam pela mesma checagem do RequireOrg (auth.Resolver.Reach). Nenhuma saída tem
 // dinheiro (valor pago, cobrado, receita ou margem).
 //
@@ -47,7 +48,13 @@ type Deps struct {
 	I18n     *i18n.Catalog
 	// PublicURL é o endereço do sistema, sem barra no fim. Com ele, cada tarefa volta com o link da página dela.
 	PublicURL string
-	Logger    *slog.Logger
+	// Resource é o endereço canônico deste /mcp quando o OAuth está ligado: os tokens de acesso do OAuth só valem para
+	// ele. Vazio, o OAuth está desligado e só o token pessoal entra.
+	Resource string
+	// ResourceMetadataURL é o endereço dos metadados do recurso (RFC 9728), que o 401 aponta para o Claude achar onde
+	// autorizar. Vazio com o OAuth desligado.
+	ResourceMetadataURL string
+	Logger              *slog.Logger
 }
 
 type server struct {
@@ -83,7 +90,9 @@ func NewHandler(d Deps) http.Handler {
 		JSONResponse:        true,
 		MaxRequestBodyBytes: maxBody,
 	})
-	bearer := mcpauth.RequireBearerToken(s.verify, &mcpauth.RequireBearerTokenOptions{Scopes: []string{scope}})
+	bearer := mcpauth.RequireBearerToken(s.verify, &mcpauth.RequireBearerTokenOptions{
+		Scopes: []string{scope}, ResourceMetadataURL: d.ResourceMetadataURL,
+	})
 	return http.NewCrossOriginProtection().Handler(bearer(handler))
 }
 

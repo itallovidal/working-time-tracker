@@ -129,11 +129,13 @@ document.addEventListener('alpine:init', () => {
   }
 
   // leaveClerk desconecta do Clerk e volta ao login. Sem isso, quem saiu do sistema entraria de novo sozinho,
-  // porque o Clerk continua logado.
+  // porque o Clerk continua logado. O login de volta guarda para onde a pessoa ia (a tela de consentimento do
+  // Claude, por exemplo, quando ela troca de conta).
   async function leaveClerk() {
     clearTried();
     const clerk = await loadClerk();
-    await clerk.signOut({ redirectUrl: '/login' });
+    const next = WTT.boot.next && WTT.boot.next !== '/' ? '?next=' + encodeURIComponent(WTT.boot.next) : '';
+    await clerk.signOut({ redirectUrl: '/login' + next });
   }
 
   // ---------- Login ----------

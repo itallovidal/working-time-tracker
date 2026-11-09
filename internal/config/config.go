@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -26,9 +27,15 @@ type Config struct {
 	// conta por esse IP: atrás de um proxy, sem o cabeçalho, todo mundo teria o IP do proxy e dividiria o mesmo limite.
 	ClientIPHeader string
 
+	// PublicURL é o endereço em que as pessoas abrem o sistema, sem barra no fim e na forma canônica (ver
+	// canonicalURL).
+	PublicURL string
+	// OAuthEnabled liga o OAuth do servidor MCP, por onde o claude.ai, o Claude Desktop e o celular se conectam (ver
+	// loadOAuth). Desligado, o /mcp aceita só o token pessoal.
+	OAuthEnabled bool
+
 	// O app OAuth do GitHub, para o botão "Conectar com o GitHub". São opcionais: sem
 	// eles a tela avisa que a conexão não está configurada.
-	PublicURL          string
 	GitHubClientID     string
 	GitHubClientSecret string
 	// GitHubURL e GitHubAPIURL só se mudam para apontar para um GitHub Enterprise ou
@@ -167,6 +174,73 @@ func (c *Config) loadProxyAndPool() error {
 	return nil
 }
 
+// loadOAuth decide se o OAuth do MCP fica ligado. MCP_OAUTH vazio liga sozinho quando o PUBLIC_URL serve de emissor
+// (oauthIssuer); "off" desliga; "on" exige que sirva e derruba a subida quando não serve, para ninguém achar que o
+// claude.ai vai conectar e ele não conectar.
+func (c *Config) loadOAuth() error {
+	mode := strings.ToLower(strings.TrimSpace(os.Getenv("MCP_OAUTH")))
+	ok := oauthIssuer(c.PublicURL)
+	switch mode {
+	case "":
+		c.OAuthEnabled = ok
+	case "off":
+		c.OAuthEnabled = false
+	case "on":
+		if !ok {
+			return fmt.Errorf("MCP_OAUTH=on needs PUBLIC_URL to be an https origin without a path (or http on localhost), got %q", c.PublicURL)
+		}
+		c.OAuthEnabled = true
+	default:
+		return fmt.Errorf("MCP_OAUTH %q is not on, off or empty", mode)
+	}
+	return nil
+}
+
+// oauthIssuer diz se o endereço serve de emissor do OAuth: uma origem pura (sem caminho, query nem fragmento), em https,
+// ou em http só no próprio computador (para desenvolver). O claude.ai compara o emissor byte a byte e só fala https.
+func oauthIssuer(raw string) bool {
+	u, err := url.Parse(raw)
+	if err != nil || u.Host == "" || u.User != nil || u.Path != "" || u.RawQuery != "" || u.Fragment != "" ||
+		strings.HasSuffix(raw, "?") || strings.HasSuffix(raw, "#") {
+		return false
+	}
+	switch u.Scheme {
+	case "https":
+		return true
+	case "http":
+		switch u.Hostname() {
+		case "localhost", "127.0.0.1", "::1":
+			return true
+		}
+	}
+	return false
+}
+
+// canonicalURL escreve o endereço como o navegador escreve a origem: o esquema e o nome em minúsculas e sem a porta
+// padrão (https://WTT.example.com:443 vira https://wtt.example.com). O OAuth do MCP compara o emissor e o recurso byte
+// a byte, e o recurso sai sempre na forma canônica: sem isto, o endereço que o perfil mostra para colar no Claude não
+// bateria com o dos metadados, e o Claude recusaria a conexão. Um endereço que não é http(s) volta como veio, para quem
+// o usa recusar com a própria mensagem.
+func canonicalURL(raw string) string {
+	u, err := url.Parse(raw)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+		return raw
+	}
+	host, port := strings.ToLower(u.Hostname()), u.Port()
+	if (u.Scheme == "https" && port == "443") || (u.Scheme == "http" && port == "80") {
+		port = ""
+	}
+	switch {
+	case port != "":
+		u.Host = net.JoinHostPort(host, port)
+	case strings.Contains(host, ":"):
+		u.Host = "[" + host + "]"
+	default:
+		u.Host = host
+	}
+	return u.String()
+}
+
 // originOf é a origem de um endereço: esquema, nome e porta, sem caminho.
 func originOf(raw string) (string, error) {
 	u, err := url.Parse(raw)
@@ -184,7 +258,7 @@ func Load() (*Config, error) {
 		DatabaseURL:           os.Getenv("DATABASE_URL"),
 		IntegrationEncryptKey: os.Getenv("INTEGRATION_ENCRYPTION_KEY"),
 		CookieSecure:          os.Getenv("COOKIE_SECURE") == "true",
-		PublicURL:             strings.TrimRight(strings.TrimSpace(os.Getenv("PUBLIC_URL")), "/"),
+		PublicURL:             canonicalURL(strings.TrimRight(strings.TrimSpace(os.Getenv("PUBLIC_URL")), "/")),
 		GitHubClientID:        strings.TrimSpace(os.Getenv("GITHUB_CLIENT_ID")),
 		GitHubClientSecret:    strings.TrimSpace(os.Getenv("GITHUB_CLIENT_SECRET")),
 		GitHubURL:             strings.TrimRight(strings.TrimSpace(os.Getenv("GITHUB_URL")), "/"),
@@ -203,6 +277,9 @@ func Load() (*Config, error) {
 		InviteDelivery:        strings.ToLower(strings.TrimSpace(os.Getenv("INVITE_DELIVERY"))),
 	}
 	if err := cfg.loadClerk(); err != nil {
+		return nil, err
+	}
+	if err := cfg.loadOAuth(); err != nil {
 		return nil, err
 	}
 	// A chave vai no cabeçalho das requisições ao Trello: uma que não é só letras e dígitos é um erro de

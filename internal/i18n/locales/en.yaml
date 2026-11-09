@@ -57,6 +57,8 @@ titles:
   trello_callback: Connecting to Trello
   project_settings: Management · Settings
   help: Help
+  oauth_consent: Connect to Claude
+  oauth_error: Could not connect
 
 nav:
   label: Pages
@@ -645,6 +647,31 @@ receivable:
     suggestion_apply: Use the suggestion
     suggestion_loading: Calculating the suggestion…
     receive: Record payment
+
+# The consent screen of the MCP OAuth: Claude asks to act on the person's behalf.
+oauth:
+  consent:
+    title: "{{.app}} wants to access your account"
+    subtitle: "You are connecting {{.app}} to Working Time Tracker as {{.name}}, in {{.org}}."
+    can_title: "As you, it will be able to:"
+    can_tasks: "see, create and update the tasks of your projects and claim tasks for you;"
+    can_sync: "sync a task with the project's integrations;"
+    can_clock: "clock you in and out, switch tasks and see your hours."
+    cannot_money: "It does not see money amounts: payments, billing and revenue stay out."
+    redirect: "When you allow it, you go back to {{.host}}."
+    loopback: "It goes back to a program on this computer (Claude Code). Allow it only if you asked for the connection just now."
+    expiry: "The connection drops after 30 days without use, and you can disconnect it anytime on your profile."
+    allow: Allow
+    deny: Cancel
+    pending: Connecting…
+    other_account: Sign in with another account
+  error:
+    title: Could not connect
+    client_unknown: "This app cannot connect to the system. For now, only Claude (claude.ai, Desktop and mobile) and Claude Code."
+    redirect_invalid: "The request's return address does not belong to the app that sent it, so, for safety, the connection stopped here. Try connecting again from the app."
+    request_invalid: "The connection request came incomplete. Try connecting again from the app."
+    home: Back to home
+
 profile:
   eyebrow: Your profile
   title_other: Collaborator profile
@@ -652,7 +679,26 @@ profile:
   tabs_label: What to edit
   claude:
     title: Connect to Claude
-    intro: "With a token, Claude Code creates and updates your tasks, claims tasks, syncs with the project's integrations and clocks in and out for you. It sees what you see, except the money amounts."
+    intro: "Claude creates and updates your tasks, claims tasks, syncs with the project's integrations and clocks you in and out, as you. It sees what you see, except the money amounts."
+    app_title: claude.ai, Claude Desktop and mobile
+    app_steps: "On claude.ai, open Customize → Connectors → Add custom connector and paste the address below. Under OAuth, keep “Use Claude's published identity”. Claude opens this site for you to sign in and allow it, and the connector also works in Claude Desktop and the mobile app."
+    app_url: Connector address
+    copy_url: Copy address
+    app_code: "In Claude Code, the same address works without a token: run this command and, in a conversation, use /mcp and choose Authenticate."
+    app_code_command: Claude Code command
+    connections_title: Connected apps
+    connections_loading: Loading the apps…
+    connections_empty: No connected apps yet
+    connections_empty_text: Connect Claude with the address above.
+    col_app: App
+    col_connected: Connected on
+    col_drops: Drops if unused on
+    disconnect: Disconnect
+    disconnect_question: Disconnect this app?
+    disconnected: App disconnected. To get in again, it needs your permission.
+    connections_note: The connection drops after 30 days without use. Changing your password disconnects all apps.
+    tokens_title: Personal token
+    tokens_intro: "For Claude Code without the browser permission: a token that goes in the command and expires on the date you choose."
     new: New token
     loading: Loading the tokens…
     empty: No tokens yet
@@ -916,7 +962,7 @@ help:
       rates: "“Projects and rates”: how much you earn per hour on each project and what you did on them, in the period and since the start. Only you and the admins see it."
       edit: "“Edit profile” opens your personal details (name and email, the one you sign in with) and, on the “Password” tab, the password change, which signs out your other sessions."
       language: "The language (PT | EN), “Help” and “Sign out” are in the same account menu, and the browser remembers the language you chose."
-      claude: "In “Connect to Claude”, “New token” creates a token and the command that connects Claude Code: with it, Claude creates and updates your tasks, claims tasks, syncs and clocks in and out for you, as you and without seeing money amounts. The token is shown only once, expires on the chosen date and can be revoked there; changing your password revokes them all."
+      claude: "In “Connect to Claude”, Claude starts creating and updating your tasks, claiming tasks, syncing and clocking you in and out, as you and without seeing money amounts. On claude.ai (and, through it, Claude Desktop and mobile), paste the connector address under Customize → Connectors and allow the access; the “Connected apps” list shows what is connected and disconnects it. For Claude Code, “New token” creates a token and the command: the token is shown only once, expires on the chosen date and can be revoked there. Changing your password disconnects the apps and revokes the tokens."
   concepts:
     rates:
       title: Hourly rate
@@ -1930,6 +1976,7 @@ errors:
     token_limit: "you already have {{.max}} tokens; revoke one before creating another"
     token_name_required: "give the token a name, so you can tell it apart later"
     token_not_found: "token not found"
+    connection_not_found: "connected app not found"
   collaborator:
     not_in_project: "this person is not on this project"
   customer:
@@ -2039,6 +2086,8 @@ errors:
     task_already_active: "this task is already running in the session"
     task_not_in_session: "this task is not running in the open session"
     unknown_label: "the project has no label {{.label}}; the ones it has: {{.available}}"
+  oauth:
+    request_invalid: "the connection request no longer checks out; start again from the app"
   organization:
     field_too_long: "{{.field}} can have up to {{.max}} characters"
     has_projects: "delete all projects before deleting the organization"

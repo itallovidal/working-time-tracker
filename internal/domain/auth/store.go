@@ -9,6 +9,7 @@ import (
 	"working-time-tracker/ent"
 	"working-time-tracker/ent/apitoken"
 	"working-time-tracker/ent/invite"
+	"working-time-tracker/ent/oauthgrant"
 	"working-time-tracker/ent/person"
 	"working-time-tracker/ent/session"
 	"working-time-tracker/internal/database"
@@ -156,8 +157,9 @@ func (s *Store) PasswordHash(personID uuid.UUID) (string, error) {
 	return *p.PasswordHash, nil
 }
 
-// ReplacePassword grava a senha nova da pessoa e, na mesma transação, revoga os tokens do Claude dela e encerra as
-// outras sessões, mantendo a de keepHash. Juntas, uma falha no meio não deixa a senha trocada com os acessos antigos.
+// ReplacePassword grava a senha nova da pessoa e, na mesma transação, revoga os tokens do Claude dela, desconecta os
+// apps do OAuth do MCP e encerra as outras sessões, mantendo a de keepHash. Juntas, uma falha no meio não deixa a senha
+// trocada com os acessos antigos.
 func (s *Store) ReplacePassword(personID uuid.UUID, hash, keepHash string) error {
 	ctx := context.Background()
 	tx, err := s.client.Tx(ctx)
@@ -172,6 +174,9 @@ func (s *Store) ReplacePassword(personID uuid.UUID, hash, keepHash string) error
 		return rollback(err)
 	}
 	if _, err := tx.APIToken.Delete().Where(apitoken.PersonIDEQ(personID)).Exec(ctx); err != nil {
+		return rollback(err)
+	}
+	if _, err := tx.OAuthGrant.Delete().Where(oauthgrant.PersonIDEQ(personID)).Exec(ctx); err != nil {
 		return rollback(err)
 	}
 	if _, err := tx.Session.Delete().

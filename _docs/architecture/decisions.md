@@ -847,7 +847,9 @@ um token pessoal gerado no perfil. A primeira etapa é o Claude Code.
 **Alternativas descartadas:**
 - **OAuth já na primeira etapa:** é o que abre o claude.ai e o Desktop, mas pede um servidor de autorização inteiro
   (metadados, consentimento, troca de código com PKCE, renovação, cadastro do cliente por CIMD ou DCR). Fica para a
-  próxima etapa; o verificador do token é o ponto de encaixe, com o mesmo escopo `mcp`.
+  próxima etapa; o verificador do token é o ponto de encaixe, com o mesmo escopo `mcp`. **Hoje:** o OAuth chegou na
+  [Decisão 25](#decisão-25-oauth-no-mcp--o-claudeai-o-desktop-e-o-celular-pela-identidade-publicada-do-claude), e o
+  token pessoal continua.
 - **O token também na API:** daria ao Claude tudo o que a API faz, inclusive dinheiro e a própria conta. O MCP expõe só
   as ferramentas escolhidas.
 - **Chamar a API por dentro** (montar a requisição e passá-la ao router): manteria as checagens dos handlers sem
@@ -930,6 +932,71 @@ olhar a tela e saber o que estava correndo, o que já devia ter entrado e o que 
 tela é a única que a lê. Um período calculado sem valor (sessões sem valor cobrado) não se recebe direto: o dono ajusta
 o valor antes. As regras de hoje estão em [money.md](../product/money.md#contas-a-receber-modo-solo).
 
+### Decisão 25: OAuth no MCP — o claude.ai, o Desktop e o celular pela identidade publicada do Claude
+
+**Contexto:** a Decisão 22 abriu o `/mcp` ao Claude Code com um token pessoal. O dono quer usar o sistema também no
+claude.ai, no Claude Desktop e no app do celular, que só conectam um servidor remoto por OAuth 2.1, como a especificação
+de autorização do MCP pede (metadados do recurso do RFC 9728, metadados do servidor do RFC 8414, PKCE S256, o recurso
+do RFC 8707). O sistema não tinha servidor de autorização.
+
+**Escolha:** um servidor de autorização OAuth 2.1 no mesmo binário (`internal/oauth`), só para os clientes do Claude,
+com a pessoa entrando pelo login de sempre. O token pessoal continua igual.
+
+- **Só os clientes do Claude, pela identidade publicada (CIMD).** O claude.ai (que vale no Desktop e no celular) e o
+  Claude Code se identificam pela URL de um documento público (`https://claude.ai/oauth/mcp-oauth-client-metadata` e
+  `.../claude-code-client-metadata`). O servidor aceita só essas duas URLs, busca o documento (o client_id dele tem de
+  ser a própria URL, e o app, público) e o guarda pelo `max-age`; se a busca falha, vale o último ou uma cópia
+  embutida. Sem cadastro dinâmico (DCR) e sem tabela de clientes. O claude.ai só usa o CIMD com
+  `client_id_metadata_document_supported` e `none` nos métodos do token, e os dois estão nos metadados.
+- **A tela de consentimento é uma página daqui,** atrás do `RequirePage`: quem não está logado passa pelo login (com o
+  Clerk também) e volta com o pedido inteiro. Ela mostra o app, a pessoa, a organização, para onde volta (com um aviso
+  quando é um programa no próprio computador) e o que o Claude pode fazer, sem dinheiro. O "Permitir" é um JSON na API
+  (`/api/oauth/consent`, com o cookie e a proteção contra outra origem), que confere o pedido de novo. A página não
+  entra em iframe e não fica em cache.
+- **Um app conectado é uma linha** (`oauth_grants`): ela nasce com o código de autorização (2 minutos, uma vez só; um
+  segundo uso derruba a linha) e depois guarda o token de renovação. Os tokens de acesso (`wtta_`, 1 hora) ficam em
+  `oauth_access_tokens`. Como as sessões, só o sha256 de cada um vai ao banco.
+- **A conexão cai depois de 30 dias sem uso** (escolha do dono). O token de renovação (`wttr_`) gira a cada uso e cada
+  uso empurra os 30 dias; não há teto absoluto. O token anterior, mandado de novo em até 60 segundos, recebe o mesmo
+  sucessor: dois processos do Claude Code renovando juntos não derrubam a conexão. Depois disso, é reuso, e a conexão
+  cai inteira. O sucessor fica guardado cifrado com a chave das integrações **junto com o token anterior** (e um
+  rótulo que separa esta cifra da das integrações): como o banco só tem o hash do token anterior, nem o banco com a
+  chave abre a cópia. Passada a janela, ela sai no primeiro uso do `/mcp`.
+- **O claude.ai tem uma conexão por pessoa; o Claude Code, uma por máquina.** O claude.ai volta sempre ao mesmo
+  endereço e não revoga a conexão antiga quando conecta de novo; a conexão nova, na troca do código, tira as da mesma
+  pessoa com o mesmo app e o mesmo endereço de volta. Uma volta ao próprio computador (o Claude Code, numa porta
+  qualquer) nunca substitui. A troca, e não o "Permitir", é que substitui: uma autorização que não chegou ao fim não
+  derruba a conexão que funciona.
+- **O token de acesso só vale no `/mcp`, e só para o recurso em que foi emitido** (o `PUBLIC_URL` mais `/mcp`). O
+  `verify` do MCP olha o prefixo: `wtta_` é do OAuth, `wtt_` é o pessoal. Com o OAuth desligado, um `wtta_` não entra.
+- **Desconectar** é na lista "Apps conectados" do perfil (cada pessoa vê e desconecta os seus), no `/oauth/revoke`
+  (RFC 7009) ou numa troca de senha, que também leva os apps. Cada pessoa tem até 10 apps conectados; passando disso,
+  na troca do código, sai o que está há mais tempo sem uso. As autorizações pendentes (o app ainda não trocou o
+  código) não contam: têm um limite igual, à parte, em que sai a pendente mais antiga.
+- **Liga sozinho com um `PUBLIC_URL` que serve de emissor:** uma origem pura em `https`, ou `http` no próprio computador
+  para desenvolver. `MCP_OAUTH=off` desliga, e `MCP_OAUTH=on` exige o endereço. O emissor é o `PUBLIC_URL` exato,
+  porque o cliente o compara byte a byte; por isso o `PUBLIC_URL` é lido na forma canônica (nome em minúsculas, sem a
+  porta padrão), a mesma do recurso: o endereço que o perfil mostra bate com o dos metadados.
+
+**Alternativas descartadas:**
+- **Qualquer cliente MCP (ChatGPT, Cursor e afins) já agora:** pede o CIMD aberto, com proteção contra SSRF ao buscar
+  documentos de qualquer endereço, e o DCR, com uma tabela de clientes e a limpeza dos cadastros que o Claude cria a
+  cada conexão. Fica para depois:
+  [issue #36](https://github.com/itallovidal/working-time-tracker/issues/36).
+- **Uma biblioteca de servidor de autorização** (ory/fosite, go-oauth2): nenhuma tem o CIMD, o recurso do RFC 8707 nem
+  os metadados do RFC 9728; adaptar daria mais trabalho que o pedaço pequeno que o MCP usa (autorização com PKCE,
+  troca, renovação, revogação).
+- **JWT no lugar de tokens opacos:** o servidor de autorização e o `/mcp` são o mesmo processo, com o mesmo banco. Um
+  token opaco se revoga na hora e relê a pessoa a cada chamada, como o pessoal; um JWT valeria até vencer.
+- **Rotação estrita, sem a janela de 60 segundos:** o Claude Code divide a credencial entre os processos, e dois
+  renovando juntos derrubariam a conexão.
+- **Pedir o login de novo no consentimento,** ou guardar o pedido entre a tela e o "Permitir": o pedido volta inteiro
+  no corpo e é conferido de novo, e a sessão é a de sempre.
+
+**Consequências:** quem conecta pelo claude.ai precisa colar exatamente o `PUBLIC_URL` mais `/mcp`, e trocar o
+`PUBLIC_URL` derruba as conexões (o recurso muda). O que o Claude faz é o mesmo do token pessoal (Decisão 22). O como
+usar está em [api/mcp.md](../api/mcp.md), e a segurança em [security.md](security.md#oauth-do-mcp).
+
 ## Riscos e trade-offs
 
 - **Limite de requisições das plataformas.** Buscar detalhes e sincronizar gasta a cota de cada plataforma. →
@@ -951,5 +1018,10 @@ o valor antes. As regras de hoje estão em [money.md](../product/money.md#contas
   pequenos, a validação do servidor como fonte da verdade e testes das páginas servidas.
 - **Um token do Claude vazado.** Quem o tiver age como a pessoa no `/mcp` até ele vencer. → O token só vale no `/mcp`
   (sem conta e sem dinheiro), vence, é revogado no perfil e numa troca de senha, e o perfil mostra o último uso.
+- **Um token de renovação do OAuth vazado.** Quem o tiver renova a conexão em nome da pessoa. → Ele gira a cada uso, e o
+  anterior usado fora da janela de 60 segundos derruba a conexão inteira; o perfil mostra o último uso e desconecta, e
+  a troca de senha leva todos os apps.
+- **Alguém leva a pessoa à tela de consentimento de um pedido que não é dela** (um link com o pedido de outra conta do
+  claude.ai). → A tela sempre pergunta, mostra o app, a pessoa e para onde volta, e não entra em iframe.
 - **A fila da sincronização é da memória.** Um reinício esquece as tarefas que esperavam para virar cartão. → Elas
   podem ser postadas pela página da tarefa (`POST /api/tasks/:taskId/publish`).

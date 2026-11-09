@@ -44,7 +44,8 @@ func fail(c *echo.Context, err error) error {
 		status = http.StatusBadGateway
 	case errors.Is(err, organization.ErrSoloNoInvites):
 		status = http.StatusConflict
-	case errors.Is(err, ErrInviteInvalid), errors.Is(err, database.ErrNotFound), errors.Is(err, ErrTokenNotFound):
+	case errors.Is(err, ErrInviteInvalid), errors.Is(err, database.ErrNotFound), errors.Is(err, ErrTokenNotFound),
+		errors.Is(err, ErrConnectionNotFound):
 		status = http.StatusNotFound
 	case errors.Is(err, ErrWeakPassword), errors.Is(err, ErrLongPassword), errors.Is(err, ErrSamePassword),
 		errors.Is(err, apperr.ErrFieldRequired), errors.Is(err, apperr.ErrFieldTooLong), errors.Is(err, apperr.ErrFieldInvalid),
