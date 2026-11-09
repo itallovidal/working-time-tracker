@@ -44,6 +44,10 @@ func (Customer) Fields() []ent.Field {
 		field.Int("monthly_fee_cents").Optional().Nillable().NonNegative(),
 		field.String("contract_start").Optional().Nillable(),
 		field.String("contract_end").Optional().Nillable(),
+		// Só monthly e opcional: as horas que o dono estima dedicar ao cliente em cada período do contrato, somando todos
+		// os projetos dele. É só para acompanhar (as horas do período contra a estimativa): não muda a mensalidade nem
+		// cobra excedente, e por isso não é a franquia de horas que a Decisão 20 deixou para depois (Decisão 26).
+		field.Int("estimated_monthly_hours").Optional().Nillable().Positive(),
 		// O dia do mês em que o período fecha (31 é o último dia; mês curto fecha no último dia dele) e os dias entre o
 		// fechamento e o vencimento do recebível.
 		field.Int("closing_day").Default(31).Min(1).Max(31),

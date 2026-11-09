@@ -1,4 +1,4 @@
-{{/* Os termos do cliente que valem para o período (modo solo): a mensalidade e o contrato (só no mensal), o ciclo (só no
+{{/* Os termos do cliente que valem para o período (modo solo): a mensalidade, a estimativa de horas e o contrato (só no mensal), o ciclo (só no
      por hora: mensal ou a cada 14 dias), o fechamento (o dia do mês no ciclo mensal, ou o último fechamento já pago no de
      14 dias), o prazo (nos dois modos) e, recolhidos, a multa, os juros e a tolerância (só no mensal). Aparecem no modal de cliente,
      junto com o modo e o valor por hora: a cobrança mora no cliente (Decisão 21). O componente que inclui traz o objeto
@@ -15,6 +15,13 @@
     <label for="{{$id}}-monthly-fee"><span x-text="$t('customer.billing.monthly_fee', { unit: WTT.fmt.moneyUnit() })"></span></label>
     <input id="{{$id}}-monthly-fee" type="text" inputmode="decimal" class="num" data-field="monthly_fee_cents" x-model="{{$m}}.monthly_fee" @input="clearField('monthly_fee_cents')" :aria-invalid="fieldErrors.monthly_fee_cents ? 'true' : 'false'">
     {{template "field_error" "monthly_fee_cents"}}
+  </div>
+  {{/* Só acompanhamento (Decisão 26): as horas do período do contrato contra esta estimativa, sem mudar a cobrança. */}}
+  <div class="field">
+    {{template "field_label" (dict "D" . "For" (printf "%s-estimated-hours" $id) "Key" "customer.billing.estimated_hours" "Optional" true)}}
+    <input id="{{$id}}-estimated-hours" type="number" inputmode="numeric" min="1" max="{{limit "monthly_hours"}}" step="1" class="num" data-field="estimated_monthly_hours" x-model="{{$m}}.estimated_hours" @input="clearField('estimated_monthly_hours')" :aria-invalid="fieldErrors.estimated_monthly_hours ? 'true' : 'false'">
+    {{template "field_error" "estimated_monthly_hours"}}
+    <span class="hint">{{.T "customer.billing.estimated_hours_hint"}}</span>
   </div>
   <div class="field">
     <label for="{{$id}}-contract-start">{{.T "customer.billing.contract_start"}}</label>

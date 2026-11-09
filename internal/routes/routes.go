@@ -130,6 +130,8 @@ func RegisterRoutes(e *echo.Echo, h Handlers, m *auth.Middleware, authLimiter ec
 	// A tela inicial do modo solo (horas, receita e receita projetada por janela e por cliente) tem as mesmas regras: só o
 	// dono e só em organização solo.
 	r.GET("/orgs/:orgId/solo/overview", h.Overview.Solo, receivables...)
+	// A dedicação aos contratos mensais com estimativa de horas, no período em andamento (os detalhes do cliente).
+	r.GET("/orgs/:orgId/solo/dedication", h.Overview.SoloDedications, receivables...)
 	r.GET("/orgs/:orgId/overview", h.Overview.Organization, org, admin)
 	// Quem está com o ponto aberto e em que tarefas, sem tempo nem dinheiro: a bolinha da lista de tarefas e a
 	// coluna "Agora" dos colaboradores. Também só dos admins.

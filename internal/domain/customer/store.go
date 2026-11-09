@@ -34,6 +34,7 @@ func (s *Store) Create(c *Customer) error {
 		SetNillableMonthlyFeeCents(c.MonthlyFeeCents).
 		SetNillableContractStart(c.ContractStart).
 		SetNillableContractEnd(c.ContractEnd).
+		SetNillableEstimatedMonthlyHours(c.EstimatedMonthlyHours).
 		SetBillingCycle(c.BillingCycle).
 		SetNillableCycleAnchor(c.CycleAnchor).
 		SetClosingDay(c.ClosingDay).
@@ -131,6 +132,11 @@ func (s *Store) Update(c *Customer) error {
 	} else {
 		q = q.ClearContractEnd()
 	}
+	if c.EstimatedMonthlyHours != nil {
+		q = q.SetEstimatedMonthlyHours(*c.EstimatedMonthlyHours)
+	} else {
+		q = q.ClearEstimatedMonthlyHours()
+	}
 	_, err := q.Save(context.Background())
 	return err
 }
@@ -213,17 +219,18 @@ func toDomain(e *ent.Customer) *Customer {
 		ProjectCount:   len(e.Edges.Projects),
 		CreatedAt:      e.CreatedAt,
 
-		BillingMode:         e.BillingMode,
-		HourlyRateCents:     e.HourlyRateCents,
-		MonthlyFeeCents:     e.MonthlyFeeCents,
-		ContractStart:       e.ContractStart,
-		ContractEnd:         e.ContractEnd,
-		BillingCycle:        e.BillingCycle,
-		CycleAnchor:         e.CycleAnchor,
-		ClosingDay:          e.ClosingDay,
-		PaymentDays:         e.PaymentDays,
-		LateFeeBP:           e.LateFeeBp,
-		LateInterestBPMonth: e.LateInterestBpMonth,
-		GraceDays:           e.GraceDays,
+		BillingMode:           e.BillingMode,
+		HourlyRateCents:       e.HourlyRateCents,
+		MonthlyFeeCents:       e.MonthlyFeeCents,
+		ContractStart:         e.ContractStart,
+		ContractEnd:           e.ContractEnd,
+		EstimatedMonthlyHours: e.EstimatedMonthlyHours,
+		BillingCycle:          e.BillingCycle,
+		CycleAnchor:           e.CycleAnchor,
+		ClosingDay:            e.ClosingDay,
+		PaymentDays:           e.PaymentDays,
+		LateFeeBP:             e.LateFeeBp,
+		LateInterestBPMonth:   e.LateInterestBpMonth,
+		GraceDays:             e.GraceDays,
 	}
 }

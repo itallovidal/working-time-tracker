@@ -72,6 +72,13 @@
                 <dd>
                   <a x-show="f.href && !f.empty" :href="f.href" x-text="f.value"></a>
                   <span x-show="!f.href || f.empty" :class="{ mono: f.mono && !f.empty, muted: f.empty || f.muted }" x-text="f.value"></span>
+                  {{/* A linha da dedicação ao contrato (Decisão 26) traz a barrinha e, embaixo, o período e os projetos. */}}
+                  <template x-if="f.meter">
+                    <div class="meter meter-thin" :class="f.meter.over && 'meter-over'" role="presentation"><span :style="'width: ' + f.meter.pct + '%'"></span></div>
+                  </template>
+                  <template x-for="note in (f.notes || [])" :key="note">
+                    <div class="muted small" x-text="note"></div>
+                  </template>
                 </dd>
               </div>
             </template>

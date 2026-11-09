@@ -1578,47 +1578,49 @@ func (m *AllocationMutation) ResetEdge(name string) error {
 // CustomerMutation represents an operation that mutates the Customer nodes in the graph.
 type CustomerMutation struct {
 	config
-	op                        Op
-	typ                       string
-	id                        *uuid.UUID
-	name                      *string
-	country                   *string
-	document                  *string
-	contact_name              *string
-	contact_email             *string
-	contact_phone             *string
-	billing_mode              *string
-	hourly_rate_cents         *int
-	addhourly_rate_cents      *int
-	monthly_fee_cents         *int
-	addmonthly_fee_cents      *int
-	contract_start            *string
-	contract_end              *string
-	closing_day               *int
-	addclosing_day            *int
-	payment_days              *int
-	addpayment_days           *int
-	billing_cycle             *string
-	cycle_anchor              *string
-	late_fee_bp               *int
-	addlate_fee_bp            *int
-	late_interest_bp_month    *int
-	addlate_interest_bp_month *int
-	grace_days                *int
-	addgrace_days             *int
-	created_at                *time.Time
-	clearedFields             map[string]struct{}
-	organization              *uuid.UUID
-	clearedorganization       bool
-	projects                  map[uuid.UUID]struct{}
-	removedprojects           map[uuid.UUID]struct{}
-	clearedprojects           bool
-	receivables               map[uuid.UUID]struct{}
-	removedreceivables        map[uuid.UUID]struct{}
-	clearedreceivables        bool
-	done                      bool
-	oldValue                  func(context.Context) (*Customer, error)
-	predicates                []predicate.Customer
+	op                         Op
+	typ                        string
+	id                         *uuid.UUID
+	name                       *string
+	country                    *string
+	document                   *string
+	contact_name               *string
+	contact_email              *string
+	contact_phone              *string
+	billing_mode               *string
+	hourly_rate_cents          *int
+	addhourly_rate_cents       *int
+	monthly_fee_cents          *int
+	addmonthly_fee_cents       *int
+	contract_start             *string
+	contract_end               *string
+	estimated_monthly_hours    *int
+	addestimated_monthly_hours *int
+	closing_day                *int
+	addclosing_day             *int
+	payment_days               *int
+	addpayment_days            *int
+	billing_cycle              *string
+	cycle_anchor               *string
+	late_fee_bp                *int
+	addlate_fee_bp             *int
+	late_interest_bp_month     *int
+	addlate_interest_bp_month  *int
+	grace_days                 *int
+	addgrace_days              *int
+	created_at                 *time.Time
+	clearedFields              map[string]struct{}
+	organization               *uuid.UUID
+	clearedorganization        bool
+	projects                   map[uuid.UUID]struct{}
+	removedprojects            map[uuid.UUID]struct{}
+	clearedprojects            bool
+	receivables                map[uuid.UUID]struct{}
+	removedreceivables         map[uuid.UUID]struct{}
+	clearedreceivables         bool
+	done                       bool
+	oldValue                   func(context.Context) (*Customer, error)
+	predicates                 []predicate.Customer
 }
 
 var _ ent.Mutation = (*CustomerMutation)(nil)
@@ -2303,6 +2305,76 @@ func (m *CustomerMutation) ResetContractEnd() {
 	delete(m.clearedFields, customer.FieldContractEnd)
 }
 
+// SetEstimatedMonthlyHours sets the "estimated_monthly_hours" field.
+func (m *CustomerMutation) SetEstimatedMonthlyHours(i int) {
+	m.estimated_monthly_hours = &i
+	m.addestimated_monthly_hours = nil
+}
+
+// EstimatedMonthlyHours returns the value of the "estimated_monthly_hours" field in the mutation.
+func (m *CustomerMutation) EstimatedMonthlyHours() (r int, exists bool) {
+	v := m.estimated_monthly_hours
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEstimatedMonthlyHours returns the old "estimated_monthly_hours" field's value of the Customer entity.
+// If the Customer object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CustomerMutation) OldEstimatedMonthlyHours(ctx context.Context) (v *int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEstimatedMonthlyHours is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEstimatedMonthlyHours requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEstimatedMonthlyHours: %w", err)
+	}
+	return oldValue.EstimatedMonthlyHours, nil
+}
+
+// AddEstimatedMonthlyHours adds i to the "estimated_monthly_hours" field.
+func (m *CustomerMutation) AddEstimatedMonthlyHours(i int) {
+	if m.addestimated_monthly_hours != nil {
+		*m.addestimated_monthly_hours += i
+	} else {
+		m.addestimated_monthly_hours = &i
+	}
+}
+
+// AddedEstimatedMonthlyHours returns the value that was added to the "estimated_monthly_hours" field in this mutation.
+func (m *CustomerMutation) AddedEstimatedMonthlyHours() (r int, exists bool) {
+	v := m.addestimated_monthly_hours
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearEstimatedMonthlyHours clears the value of the "estimated_monthly_hours" field.
+func (m *CustomerMutation) ClearEstimatedMonthlyHours() {
+	m.estimated_monthly_hours = nil
+	m.addestimated_monthly_hours = nil
+	m.clearedFields[customer.FieldEstimatedMonthlyHours] = struct{}{}
+}
+
+// EstimatedMonthlyHoursCleared returns if the "estimated_monthly_hours" field was cleared in this mutation.
+func (m *CustomerMutation) EstimatedMonthlyHoursCleared() bool {
+	_, ok := m.clearedFields[customer.FieldEstimatedMonthlyHours]
+	return ok
+}
+
+// ResetEstimatedMonthlyHours resets all changes to the "estimated_monthly_hours" field.
+func (m *CustomerMutation) ResetEstimatedMonthlyHours() {
+	m.estimated_monthly_hours = nil
+	m.addestimated_monthly_hours = nil
+	delete(m.clearedFields, customer.FieldEstimatedMonthlyHours)
+}
+
 // SetClosingDay sets the "closing_day" field.
 func (m *CustomerMutation) SetClosingDay(i int) {
 	m.closing_day = &i
@@ -2873,7 +2945,7 @@ func (m *CustomerMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *CustomerMutation) Fields() []string {
-	fields := make([]string, 0, 20)
+	fields := make([]string, 0, 21)
 	if m.organization != nil {
 		fields = append(fields, customer.FieldOrganizationID)
 	}
@@ -2909,6 +2981,9 @@ func (m *CustomerMutation) Fields() []string {
 	}
 	if m.contract_end != nil {
 		fields = append(fields, customer.FieldContractEnd)
+	}
+	if m.estimated_monthly_hours != nil {
+		fields = append(fields, customer.FieldEstimatedMonthlyHours)
 	}
 	if m.closing_day != nil {
 		fields = append(fields, customer.FieldClosingDay)
@@ -2966,6 +3041,8 @@ func (m *CustomerMutation) Field(name string) (ent.Value, bool) {
 		return m.ContractStart()
 	case customer.FieldContractEnd:
 		return m.ContractEnd()
+	case customer.FieldEstimatedMonthlyHours:
+		return m.EstimatedMonthlyHours()
 	case customer.FieldClosingDay:
 		return m.ClosingDay()
 	case customer.FieldPaymentDays:
@@ -3015,6 +3092,8 @@ func (m *CustomerMutation) OldField(ctx context.Context, name string) (ent.Value
 		return m.OldContractStart(ctx)
 	case customer.FieldContractEnd:
 		return m.OldContractEnd(ctx)
+	case customer.FieldEstimatedMonthlyHours:
+		return m.OldEstimatedMonthlyHours(ctx)
 	case customer.FieldClosingDay:
 		return m.OldClosingDay(ctx)
 	case customer.FieldPaymentDays:
@@ -3124,6 +3203,13 @@ func (m *CustomerMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetContractEnd(v)
 		return nil
+	case customer.FieldEstimatedMonthlyHours:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEstimatedMonthlyHours(v)
+		return nil
 	case customer.FieldClosingDay:
 		v, ok := value.(int)
 		if !ok {
@@ -3194,6 +3280,9 @@ func (m *CustomerMutation) AddedFields() []string {
 	if m.addmonthly_fee_cents != nil {
 		fields = append(fields, customer.FieldMonthlyFeeCents)
 	}
+	if m.addestimated_monthly_hours != nil {
+		fields = append(fields, customer.FieldEstimatedMonthlyHours)
+	}
 	if m.addclosing_day != nil {
 		fields = append(fields, customer.FieldClosingDay)
 	}
@@ -3221,6 +3310,8 @@ func (m *CustomerMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedHourlyRateCents()
 	case customer.FieldMonthlyFeeCents:
 		return m.AddedMonthlyFeeCents()
+	case customer.FieldEstimatedMonthlyHours:
+		return m.AddedEstimatedMonthlyHours()
 	case customer.FieldClosingDay:
 		return m.AddedClosingDay()
 	case customer.FieldPaymentDays:
@@ -3253,6 +3344,13 @@ func (m *CustomerMutation) AddField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddMonthlyFeeCents(v)
+		return nil
+	case customer.FieldEstimatedMonthlyHours:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddEstimatedMonthlyHours(v)
 		return nil
 	case customer.FieldClosingDay:
 		v, ok := value.(int)
@@ -3321,6 +3419,9 @@ func (m *CustomerMutation) ClearedFields() []string {
 	if m.FieldCleared(customer.FieldContractEnd) {
 		fields = append(fields, customer.FieldContractEnd)
 	}
+	if m.FieldCleared(customer.FieldEstimatedMonthlyHours) {
+		fields = append(fields, customer.FieldEstimatedMonthlyHours)
+	}
 	if m.FieldCleared(customer.FieldCycleAnchor) {
 		fields = append(fields, customer.FieldCycleAnchor)
 	}
@@ -3361,6 +3462,9 @@ func (m *CustomerMutation) ClearField(name string) error {
 		return nil
 	case customer.FieldContractEnd:
 		m.ClearContractEnd()
+		return nil
+	case customer.FieldEstimatedMonthlyHours:
+		m.ClearEstimatedMonthlyHours()
 		return nil
 	case customer.FieldCycleAnchor:
 		m.ClearCycleAnchor()
@@ -3408,6 +3512,9 @@ func (m *CustomerMutation) ResetField(name string) error {
 		return nil
 	case customer.FieldContractEnd:
 		m.ResetContractEnd()
+		return nil
+	case customer.FieldEstimatedMonthlyHours:
+		m.ResetEstimatedMonthlyHours()
 		return nil
 	case customer.FieldClosingDay:
 		m.ResetClosingDay()
