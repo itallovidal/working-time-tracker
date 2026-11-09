@@ -204,7 +204,7 @@ Se o convite foi criado com email, só esse email consegue aceitar. Um convite v
 | GET | `/api/orgs/:orgId/projects` | logado | Projetos da organização, do mais novo para o mais antigo (para quem não é admin, só os em que está). Sem `page`, todos num array; com `page`, uma página. Veja abaixo |
 | POST | `/api/orgs/:orgId/customers` | `customers.manage` (dono) | Cria um cliente |
 | GET | `/api/orgs/:orgId/customers` | `customers.manage` (dono) | Clientes da organização, em ordem alfabética |
-| GET, POST | `/api/orgs/:orgId/receivables` (+ `/:id`, `/:id/late-charges`, `/:id/receive`) | `receivables.manage` (dono), só no modo solo | As contas a receber: ver [Contas a receber](#contas-a-receber-modo-solo) |
+| GET, POST | `/api/orgs/:orgId/receivables` (+ `/receive`, `/late-charges`, `/:id`, `/:id/late-charges`, `/:id/receive`) | `receivables.manage` (dono), só no modo solo | As contas a receber: ver [Contas a receber](#contas-a-receber-modo-solo) |
 
 A organização é criada pelo signup, e o `organization_id` vem no `/api/auth/me`, junto com `organization_currency` e `organization_solo`.
 
@@ -1028,43 +1028,53 @@ Content-Type: application/json
 ## Contas a receber (modo solo)
 
 O A receber é do **modo solo** (`organizations.solo`) e do **dono** (`receivables.manage`). Em uma organização que não
-trabalha sozinha as sete rotas respondem `404 request.not_found`, mesmo para o dono (a permissão vem antes: quem não é
+trabalha sozinha as nove rotas respondem `404 request.not_found`, mesmo para o dono (a permissão vem antes: quem não é
 o dono recebe `403 auth.permission_required`). Desligar o modo esconde as rotas e guarda os recebíveis. Os valores são
 em centavos e os dias, `YYYY-MM-DD` no fuso da organização, os dois lados do período inclusivos. As regras estão em
 [../product/money.md](../product/money.md#contas-a-receber-modo-solo).
 
+O app **calcula** cada período de cada cliente; um **recebível** só é gravado quando o dono recebe o período direto
+(`POST /receivables/receive`) ou o ajusta antes (`POST /receivables`). As rotas sem `:id` são do período calculado.
+
 | Método | Rota | Descrição |
 |---|---|---|
-| GET | `/api/orgs/:orgId/receivables` | A página inteira: `totals`, `to_confirm[]`, `open[]` e `received[]`. Veja abaixo |
-| POST | `/api/orgs/:orgId/receivables` | Confirma um período de um cliente: `{customer_id, period_start, period_end, amount_cents, due_date, invoice_number, note}`. Só `amount_cents` (maior que zero, até 1.000.000,00) e os três primeiros são obrigatórios; sem `due_date` vale o fim do período mais os `payment_days` do cliente. `201` com o recebível; `404 customer.not_found` (cliente malformado, inexistente ou de outra organização); `400 receivable.not_a_period` (as datas não são um período do ciclo do cliente, ou, no mensal, ficam fora do contrato ou depois do período corrente); `409 receivable.period_open` (por hora, período que ainda não fechou); `409 receivable.already_confirmed`; `400 receivable.invalid_amount` (`field: amount_cents`); `request.field_required`, `request.field_invalid` e `request.field_too_long` com `field` (`period_start`, `period_end`, `due_date`, `invoice_number` até 60, `note` até 500) |
-| PATCH | `/api/orgs/:orgId/receivables/:id` | Altera `amount_cents`, `due_date`, `invoice_number` e `note` (campo ausente mantém; texto vazio apaga a nota e o número da nota). `200` com o recebível; `409 receivable.already_received` se já foi recebido; `404 receivable.not_found`; os mesmos erros de campo da confirmação |
-| DELETE | `/api/orgs/:orgId/receivables/:id` | Desfaz a confirmação: o período volta a ser uma proposta. `204`; `409 receivable.already_received` (desfaça o recebimento antes); `404 receivable.not_found` |
+| GET | `/api/orgs/:orgId/receivables` | A página inteira: `totals`, `in_progress[]`, `to_receive[]` e `received[]`. Veja abaixo |
+| POST | `/api/orgs/:orgId/receivables/receive` | Recebe um período calculado num passo só: `{customer_id, period_start, period_end, received_on, received_cents, late_fee_cents, interest_cents, invoice_number, note}`. Só os três primeiros são obrigatórios. Grava o recebível já recebido, com o valor calculado agora (`amount_cents` igual a `calculated_cents`) e o vencimento padrão (o fim do período mais os `payment_days` do cliente). O período segue as regras do ajuste (abaixo; no mensal, o período corrente é o recebimento adiantado) e o valor, as do recebimento (`POST /:id/receive`). `201` com o recebível; `400 receivable.invalid_amount` (`field: amount_cents`) para um período calculado sem valor (sessões sem valor cobrado: ajuste antes) |
+| GET | `/api/orgs/:orgId/receivables/late-charges` | A sugestão de multa e juros de um período calculado (`?customer_id=&period_start=&period_end=`), recebido na data `?on=YYYY-MM-DD` (hoje, sem ela), com o valor calculado e o vencimento padrão. A mesma resposta de `/:id/late-charges`, e os erros de período do ajuste |
+| POST | `/api/orgs/:orgId/receivables` | Ajusta um período antes de receber (o "Editar" da tela): `{customer_id, period_start, period_end, amount_cents, due_date, invoice_number, note}`. Só `amount_cents` (maior que zero, até 1.000.000,00) e os três primeiros são obrigatórios; sem `due_date` vale o padrão. `201` com o recebível, sem recebimento; `404 customer.not_found` (cliente malformado, inexistente ou de outra organização); `400 receivable.not_a_period` (as datas não são um período do ciclo do cliente, ou, no mensal, ficam fora do contrato ou depois do período corrente); `409 receivable.period_open` (por hora, período que ainda não fechou); `409 receivable.already_confirmed` (o período já tem recebível); `400 receivable.invalid_amount` (`field: amount_cents`); `request.field_required`, `request.field_invalid` e `request.field_too_long` com `field` (`period_start`, `period_end`, `due_date`, `invoice_number` até 60, `note` até 500) |
+| PATCH | `/api/orgs/:orgId/receivables/:id` | Altera `amount_cents`, `due_date`, `invoice_number` e `note` (campo ausente mantém; texto vazio apaga a nota e o número da nota). `200` com o recebível; `409 receivable.already_received` se já foi recebido; `404 receivable.not_found`; os mesmos erros de campo do ajuste |
+| DELETE | `/api/orgs/:orgId/receivables/:id` | Volta ao valor calculado: apaga o recebível, e o período volta a ser calculado. `204`; `409 receivable.already_received` (desfaça o recebimento antes); `404 receivable.not_found` |
 | GET | `/api/orgs/:orgId/receivables/:id/late-charges` | A sugestão de multa e juros para receber na data `?on=YYYY-MM-DD` (hoje, sem ela): `{on, due_date, grace_days, amount_cents, days_late, charged, late_fee_cents, interest_cents, total_cents}`. Só o contrato mensal tem multa e juros; no recebível por hora tudo vem zerado. `400 request.field_invalid` (`field: on`) para uma data que não existe |
-| POST | `/api/orgs/:orgId/receivables/:id/receive` | Registra o recebimento: `{received_on, received_cents, late_fee_cents, interest_cents}`, tudo opcional. Sem `received_on` vale hoje; depois de hoje é `400 receivable.received_in_future`. **Por hora:** o valor recebido é o confirmado (outro valor é `400 receivable.received_must_match`) e multa e juros diferentes de zero são `400 receivable.charges_not_allowed`. **Mensal:** `received_cents` é livre (maior que zero, `400 receivable.invalid_amount`; sem ele vale o confirmado mais a multa e os juros), `late_fee_cents` e `interest_cents` valem zero ou mais (`400 receivable.invalid_charge`) e somados não passam de `received_cents` (`400 receivable.charges_exceed_received`). `200` com o recebível; `409 receivable.already_received`; `409 receivable.changed` se o valor confirmado foi editado depois de o recebimento lê-lo (duas abas): nada é gravado, e quem recebe confere o valor e tenta de novo |
-| DELETE | `/api/orgs/:orgId/receivables/:id/receive` | Desfaz o recebimento: o recebível volta para `open[]` e a multa e os juros informados se vão com ele. `204`; `409 receivable.not_received`; `404 receivable.not_found` |
+| POST | `/api/orgs/:orgId/receivables/:id/receive` | Registra o recebimento: `{received_on, received_cents, late_fee_cents, interest_cents, invoice_number}`, tudo opcional (`invoice_number` ausente mantém o número da nota; vazio o apaga). Sem `received_on` vale hoje; depois de hoje é `400 receivable.received_in_future`. **Por hora:** o valor recebido é o da conta (outro valor é `400 receivable.received_must_match`) e multa e juros diferentes de zero são `400 receivable.charges_not_allowed`. **Mensal:** `received_cents` é livre (maior que zero, `400 receivable.invalid_amount`; sem ele vale o da conta mais a multa e os juros), `late_fee_cents` e `interest_cents` valem zero ou mais (`400 receivable.invalid_charge`) e somados não passam de `received_cents` (`400 receivable.charges_exceed_received`). `200` com o recebível; `409 receivable.already_received`; `409 receivable.changed` se o valor foi editado depois de o recebimento lê-lo (duas abas): nada é gravado, e quem recebe confere o valor e tenta de novo |
+| DELETE | `/api/orgs/:orgId/receivables/:id/receive` | Desfaz o recebimento: o recebível volta para `to_receive[]`, ajustado, e a multa e os juros informados se vão com ele. `204`; `409 receivable.not_received`; `404 receivable.not_found` |
 
 Os erros de campo levam `params.field` com a chave do corpo, para a tela mostrar o erro embaixo do campo. O corpo é JSON
 estrito (`400 request.invalid_body` para chave desconhecida).
 
-**O recebível** (`201`, `200` e os itens de `open[]` e `received[]`): `id`, `customer` (`{id, name}`), `kind`
-(`hourly` ou `monthly`, o modo do cliente na confirmação), `period_start`, `period_end`, `seconds` e `calculated_cents`
-(o que o sistema calculou na confirmação), `amount_cents` (o confirmado), `currency`, `due_date`, `invoice_number`,
-`note`, `confirmed_at`, `received_on`, `received_cents`, `late_fee_cents`, `interest_cents` (os três do recebimento,
-nulos ou zero antes dele) e os derivados `late` (confirmado, sem recebimento e com hoje depois do vencimento),
-`days_late`, `effective_rate_cents` (o confirmado dividido pelas horas; nulo sem horas) e `below_min_rate` (abaixo de
-10,00 por hora: um aviso, não um erro).
+**O recebível** (`201`, `200` e os itens de `received[]`): `id`, `customer` (`{id, name}`), `kind` (`hourly` ou
+`monthly`, o modo do cliente ao gravar), `period_start`, `period_end`, `seconds` e `calculated_cents` (o que o sistema
+calculou ao gravar), `amount_cents` (o valor da conta), `currency`, `due_date`, `invoice_number`, `note`,
+`confirmed_at` (quando foi gravado), `received_on`, `received_cents`, `late_fee_cents`, `interest_cents` (os três do
+recebimento, nulos ou zero antes dele) e os derivados `late` (sem recebimento e com hoje depois do vencimento),
+`days_late`, `effective_rate_cents` (o valor da conta dividido pelas horas; nulo sem horas) e `below_min_rate` (abaixo
+de 10,00 por hora: um aviso, não um erro).
 
 **`GET /receivables`** responde:
 
 - `generated_at`, `timezone`, `currency` e `today` (o dia de hoje no fuso da organização);
-- `totals`: `to_confirm_count` e `to_confirm_cents` (as propostas), `open_count` e `open_cents` (tudo o que foi
-  confirmado e não entrou, atrasado incluído), `late_count` e `late_cents` (a parte vencida) e `received_month_count` e
-  `received_month_cents` (o que entrou no mês corrente do calendário, a soma de `received_cents`);
-- `to_confirm[]`: as propostas, do período que fecha primeiro para o que fecha depois (e por nome do cliente). Cada uma
-  tem `customer`, `kind`, `period_start`, `period_end`, `seconds`, `calculated_cents`, `extra_cents` (no mensal, a parte
-  de `calculated_cents` que vem dos acréscimos mensais dos projetos do cliente; zero no por hora), `due_date` (o padrão),
-  `open` (o período ainda não fechou; só acontece no mensal), `effective_rate_cents` e `below_min_rate`;
-- `open[]`: os recebíveis sem recebimento, do vencimento mais antigo para o mais novo;
+- `totals`: `in_progress_count` e `in_progress_cents` (os períodos abertos: a mensalidade do mensal, ou o ajustado, e o
+  valor até agora do por hora), `to_receive_count` e `to_receive_cents` (tudo o que fechou e não entrou, atrasado incluído),
+  `late_count` e `late_cents` (a parte vencida) e `received_month_count` e `received_month_cents` (o que entrou no mês
+  corrente do calendário, a soma de `received_cents`);
+- `in_progress[]`: os períodos que ainda não fecharam (hoje é o último dia deles, ou antes), o que fecha primeiro antes
+  (e por nome do cliente): o mês corrente do contrato mensal, calculado ou ajustado adiantado, e o período corrente do
+  por hora com tempo, com as horas e o valor até agora;
+- `to_receive[]`: o que fechou e não entrou, do vencimento mais antigo (o mais atrasado) para o mais novo;
+- as contas das duas listas têm o mesmo formato: `id` (nulo na calculada), `adjusted` (verdadeiro na gravada: ajustada,
+  ajustada adiantado ou com o recebimento desfeito), `customer`, `kind`, `period_start`, `period_end`, `seconds`,
+  `calculated_cents`, `amount_cents` (na calculada, o próprio `calculated_cents`), `extra_cents` (no mensal calculado,
+  a parte que vem dos acréscimos mensais dos projetos do cliente), `due_date`, `invoice_number`, `note`, `late`,
+  `days_late`, `effective_rate_cents` e `below_min_rate`;
 - `received[]`: os recebidos, o mais recente primeiro, até 50.
 
 ---
