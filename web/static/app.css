@@ -693,7 +693,7 @@ td.actions { text-align: right; white-space: nowrap; }
 .project-card h3 { color: var(--ink); overflow-wrap: anywhere; }
 .project-customer { margin: 2px 0 0; font-size: 0.85rem; color: var(--muted); overflow-wrap: anywhere; }
 .project-desc {
-  margin: 0; color: var(--ink-2); font-size: 0.9rem;
+  margin: 0; color: var(--ink-2); font-size: 0.9rem; text-wrap: pretty;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
 .project-stats { display: flex; gap: 8px; flex-wrap: wrap; margin-top: auto; padding-top: 4px; }
@@ -702,6 +702,48 @@ td.actions { text-align: right; white-space: nowrap; }
   padding: 3px 10px; border-radius: 999px; background: var(--surface-2); color: var(--muted);
 }
 .project-stat i { color: var(--tone); }
+
+/* Clientes e Projetos: um grupo por cliente, com o cabeçalho dele (a sigla, o nome, o país e o contato, a cobrança e os
+   botões) sobre uma linha fina, e os cartões dos projetos embaixo. Os grupos não têm moldura: os cartões dos projetos já
+   têm, e cartão dentro de cartão pesa. No celular a cobrança e os botões descem para baixo do nome. */
+.catalog { display: flex; flex-direction: column; gap: 64px; }
+.catalog > p { margin: 0 0 -40px; }
+.catalog-group { display: flex; flex-direction: column; gap: 14px; }
+.catalog-head {
+  display: flex; align-items: center; gap: 12px 14px; flex-wrap: wrap;
+  padding-bottom: 12px; border-bottom: 1px solid var(--rule);
+}
+.catalog-mark {
+  width: 40px; height: 40px; border-radius: 50%; flex: none; display: grid; place-items: center;
+  background: var(--tone-soft); color: var(--tone); font-weight: 700; font-size: 0.9rem; letter-spacing: 0.02em;
+}
+.catalog-mark-internal { background: var(--surface-2); color: var(--muted); }
+.catalog-title { flex: 1 1 220px; min-width: 0; }
+.catalog-title h2 { margin: 0; overflow-wrap: anywhere; }
+.catalog-title h2 .row-open { font-weight: inherit; }
+.catalog-title p { margin: 2px 0 0; overflow-wrap: anywhere; text-wrap: pretty; }
+.catalog-billing { display: flex; gap: 6px; flex-wrap: wrap; }
+.catalog-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.catalog-actions:empty { display: none; }
+.catalog-none { margin: 0; }
+/* O menu de três pontinhos do grupo, só no celular: o painel abre embaixo do botão, alinhado à direita, com os itens no
+   estilo dos do menu da conta (.user-menu-item). */
+.catalog-more { display: none; position: relative; flex: none; margin: -4px -6px 0 0; }
+.catalog-more-btn { padding: 6px 10px; }
+.catalog-menu {
+  position: absolute; top: calc(100% + 4px); right: 0; z-index: 30; width: 200px;
+  background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: 6px; display: flex; flex-direction: column; gap: 2px;
+}
+@media (max-width: 560px) {
+  .catalog { gap: 48px; }
+  .catalog > p { margin-bottom: -28px; }
+  .catalog-head { align-items: flex-start; }
+  .catalog-title { flex: 1 1 0; }
+  .catalog-more { display: block; }
+  .catalog-actions { display: none; }
+  .catalog-billing { flex-basis: calc(100% - 54px); margin-left: 54px; }
+}
 
 /* A visão geral da organização: seis números, três por linha, cada um com o ícone na sua cor. */
 .kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }

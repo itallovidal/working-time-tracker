@@ -1,4 +1,4 @@
-{{/* O formulário de novo projeto, da página Projetos. Aparece no modal do layout base e continua no escopo
+{{/* O formulário de novo projeto, da página Clientes e Projetos. Aparece no modal do layout base e continua no escopo
    do componente que o inclui, que traz draft, customers, errors, pending, openCreate e create. */}}
 {{define "project_form"}}
 {{if .IsAdmin}}
@@ -82,7 +82,7 @@
       <div x-text="billing.customerMode({{$c}})"></div>
       <div class="muted small num" x-text="billing.customerAmount({{$c}})"></div>
     </div>
-    <a class="btn btn-ghost btn-sm" href="/orgs/{{.OrgID}}/customers">{{template "icon" "pen"}} {{.T "project.billing.edit_in_customers"}}</a>
+    <a class="btn btn-ghost btn-sm" :href="'/orgs/{{.OrgID}}/projects?customer=' + ({{$c}} || {}).id">{{template "icon" "pen"}} {{.T "project.billing.edit_in_customers"}}</a>
   </div>
   <p class="form-error" x-show="billing.withoutRate({{$c}})">{{.T "project.billing.customer_without_rate"}}</p>
   <details class="form-fold" x-show="!billing.withoutRate({{$c}})" :open="extraOpen" @toggle="extraOpen = $event.target.open">

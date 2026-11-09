@@ -7,10 +7,9 @@
     <a class="brand" href="/orgs/{{.OrgID}}"><span data-org-name>{{.Me.OrganizationName}}</span></a>
     <nav class="mainnav" aria-label="{{.T "nav.label"}}">
       <a href="/orgs/{{.OrgID}}" {{if eq .Section "home"}}aria-current="page"{{end}}>{{.T "nav.home"}}</a>
-      {{/* Projetos fica marcado também dentro de um projeto. */}}
-      <a href="/orgs/{{.OrgID}}/projects" {{if eq .Section "projects"}}aria-current="page"{{end}}>{{.T "nav.projects"}}</a>
+      {{/* Clientes e Projetos é de todos (cada um vê os seus projetos) e fica marcado também dentro de um projeto. */}}
+      <a href="/orgs/{{.OrgID}}/projects" {{if eq .Section "projects"}}aria-current="page"{{end}}>{{.T "nav.customers_projects"}}</a>
       {{if and (not .Me.OrganizationSolo) (.Can "people.manage")}}<a href="/orgs/{{.OrgID}}/people" {{if eq .Section "people"}}aria-current="page"{{end}}>{{.T "nav.people"}}</a>{{end}}
-      {{if .Can "customers.manage"}}<a href="/orgs/{{.OrgID}}/customers" {{if eq .Section "customers"}}aria-current="page"{{end}}>{{.T "nav.customers"}}</a>{{end}}
       {{/* Os pagamentos da equipe são dinheiro de todos: só do dono. Cada pessoa vê os dela no perfil. */}}
       {{if and (not .Me.OrganizationSolo) (.Can "payments.manage")}}<a href="/orgs/{{.OrgID}}/payments" {{if eq .Section "payments"}}aria-current="page"{{end}}>{{.T "nav.payments"}}</a>{{end}}
       {{/* O que o dono tem a receber dos clientes: só no modo solo, e só para quem gerencia os recebíveis. */}}

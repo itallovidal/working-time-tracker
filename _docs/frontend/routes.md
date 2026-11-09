@@ -9,10 +9,9 @@ administrador de projeto ou colaborador está em [permissions.md](../product/per
 ```mermaid
 flowchart LR
     login["/login, /signup, /invite/:token"] --> home["/orgs/:orgId (Início)"]
-    home --> projects["/orgs/:orgId/projects"]
+    home --> projects["/orgs/:orgId/projects (Clientes e Projetos)"]
     home --> about["/orgs/:orgId/about (Configurações)"]
     home --> people["/orgs/:orgId/people"]
-    home --> customers["/orgs/:orgId/customers"]
     home --> payments["/orgs/:orgId/payments"]
     home --> receivables["/orgs/:orgId/receivables (A receber, modo solo)"]
     people --> person["/orgs/:orgId/people/:personId"]
@@ -66,12 +65,12 @@ flowchart LR
 | `/profile` | O seu perfil: jornada, regra de pagamento, horas e valores, histórico e próximos pagamentos. Editar perfil abre um modal. Embaixo, **Conectar ao Claude**: com o OAuth ligado, o endereço do conector para colar no claude.ai, o comando do Claude Code e a lista **Apps conectados** (com o Desconectar); depois, o **Token pessoal**, com o Novo token num modal que mostra o token uma vez e o comando do Claude Code | logado |
 | `/oauth/authorize` | A tela de consentimento do OAuth do MCP: o Claude (claude.ai, Desktop, celular) ou o Claude Code pede para agir como a pessoa, e ela permite ou cancela. Sem a barra superior. Sem sessão, passa pelo login e volta com o pedido. Um app desconhecido ou um endereço de volta que não é dele mostra a página de erro. Só existe com o OAuth ligado. Ver [mcp.md](../api/mcp.md#oauth) | logado |
 | `/orgs/:orgId` | O Início. Para todos, o painel da pessoa (horas de hoje e da semana, as suas tarefas, a semana dia a dia). Para os admins, também a visão geral da organização e a equipe; receita e margem só para o dono. No modo solo, a visão geral e a equipe dão lugar à tela inicial do solo | membro |
-| `/orgs/:orgId/projects` | Projetos em cartões, seis por página (`?page=`). Quem não é admin vê só os projetos em que está. O dono e os admins têm o Novo projeto | membro |
+| `/orgs/:orgId/projects` | Clientes e Projetos: um grupo por cliente, em ordem de nome, com os projetos dele em cartões, e os projetos internos no fim. Quem não é admin vê só os projetos em que está, agrupados pelo cliente de cada um. O dono vê também os clientes sem projeto, com a cobrança no cabeçalho do grupo (o valor; no modo solo, também o modo), e tem o Novo cliente, os Detalhes (de onde saem Editar e Excluir) e o Novo projeto de cada grupo, que já vem com o cliente. O dono e os admins têm o Novo projeto (o admin só cria projeto interno). `?customer=id` abre os detalhes daquele cliente | membro |
 | `/orgs/:orgId/about` | Configurações: o perfil da organização, para ler. O Editar só aparece para o dono | membro |
 | `/orgs/:orgId/settings` | A edição da organização (inclusive "Trabalho sozinho(a)") e a exclusão dela | dono |
 | `/orgs/:orgId/people` | Colaboradores: as pessoas, os papéis, a jornada, os convites pendentes e o Adicionar colaborador. `?add=1` abre já com o modal do convite. Não existe no modo solo | `people.manage` (dono e admin) |
 | `/orgs/:orgId/people/:personId` | O perfil de um colaborador, com o Editar. Pagamentos e regra só para o dono. Não existe no modo solo | dono e admin |
-| `/orgs/:orgId/customers` | Clientes, com a cobrança em colunas (valor por hora; no modo solo, também o modo, o fechamento e o vencimento). A linha abre os detalhes do cliente, de onde saem Editar (o modal de cadastro) e Excluir | dono |
+| `/orgs/:orgId/customers` | Leva a Clientes e Projetos (303), com a consulta junto; para quem não é o dono, segue "Página não encontrada" | dono |
 | `/orgs/:orgId/payments` | Pagamentos da equipe: os cartões (o que pagar, atrasados incluídos, o que fecha em 7 e 30 dias, as horas e quem está sem regra), Próximos pagamentos (com Dar baixa, o valor pelas horas e o bônus) e Pagos recentemente (com Desfazer). A linha leva ao perfil. Não existe no modo solo | dono |
 | `/orgs/:orgId/receivables` | A receber: os cartões (a confirmar, em aberto, atrasado e recebido no mês) e as listas A confirmar, Em aberto e Recebidos, com os modais de confirmar e de receber. Só existe no modo solo | dono (`receivables.manage`) |
 

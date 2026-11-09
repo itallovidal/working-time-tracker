@@ -75,8 +75,8 @@ func TestCustomerBilling_OrganizationWithoutTheTermsStaysTheSame(t *testing.T) {
 		t.Errorf("billing after the raise = %v, want 135.00 (110.00 plus 25.00)", body)
 	}
 
-	// Fora do modo solo a tela de Clientes tem o valor por hora, mas não o modo, o contrato nem a coluna de prazos.
-	page := do(e, "GET", "/orgs/"+owner.orgID+"/customers", "", owner.session).Body.String()
+	// Fora do modo solo o cliente, em Clientes e Projetos, tem o valor por hora, mas não o modo, o contrato nem os prazos.
+	page := do(e, "GET", "/orgs/"+owner.orgID+"/projects", "", owner.session).Body.String()
 	for _, absent := range []string{`id="customer-billing-mode"`, `id="customer-monthly-fee"`, `data-field="billing_mode"`, `data-field="closing_day"`} {
 		if strings.Contains(page, absent) {
 			t.Errorf("the customers page of an organization with a team has %s", absent)
@@ -384,16 +384,16 @@ func TestCustomerBilling_ClockInOnAMonthlyCustomersProject(t *testing.T) {
 	}
 }
 
-// A tela de Clientes tem o modo, o contrato e os prazos só no modo solo, e o formulário de projeto mostra a cobrança do
-// cliente.
+// O cliente, em Clientes e Projetos, tem o modo, o contrato e os prazos só no modo solo, e o formulário de projeto mostra
+// a cobrança do cliente.
 func TestCustomerBilling_PagesShowTheTermsOnlyInSolo(t *testing.T) {
 	e := newServer(t)
 	owner := signup(t, e, "Org", "ana@test.com")
 	makeSolo(t, owner.orgID, true)
 
-	page := do(e, "GET", "/orgs/"+owner.orgID+"/customers", "", owner.session)
+	page := do(e, "GET", "/orgs/"+owner.orgID+"/projects", "", owner.session)
 	if page.Code != http.StatusOK {
-		t.Fatalf("customers page = %d", page.Code)
+		t.Fatalf("customers and projects page = %d", page.Code)
 	}
 	body := page.Body.String()
 	for _, want := range []string{
@@ -407,7 +407,7 @@ func TestCustomerBilling_PagesShowTheTermsOnlyInSolo(t *testing.T) {
 		}
 	}
 	// Os dois modos mostram o fechamento e o prazo; o bloco recolhido é só do mensal.
-	if !strings.Contains(body, `x-show="draft.billing_mode === 'monthly'"`) {
+	if !strings.Contains(body, `x-show="customerDraft.billing_mode === 'monthly'"`) {
 		t.Error("the monthly fields are not tied to the monthly mode")
 	}
 	// O identity diz que a organização é solo, para o JavaScript.

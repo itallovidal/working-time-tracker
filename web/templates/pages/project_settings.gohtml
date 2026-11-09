@@ -44,7 +44,7 @@
              dois (no mensal, o contrato não tem valor por hora). */}}
         <div class="fact" x-show="current.customer">
           <dt>{{.T "project.billing.customer_terms"}}</dt>
-          <dd><span x-text="billing.customer(currentCustomer())"></span>{{if .Can "customers.manage"}} · <a href="/orgs/{{.OrgID}}/customers">{{.T "project.billing.edit_in_customers"}}</a>{{end}}</dd>
+          <dd><span x-text="billing.customer(currentCustomer())"></span>{{if .Can "customers.manage"}} · <a :href="'/orgs/{{.OrgID}}/projects?customer=' + current.customer.id">{{.T "project.billing.edit_in_customers"}}</a>{{end}}</dd>
         </div>
         <div class="fact" x-show="current.customer">
           <dt>{{.T "project.billing.extra_fact"}}</dt>
@@ -102,7 +102,7 @@
             </template>
           </select>
           {{template "field_error" "customer_id"}}
-          <span class="hint">{{.T "project_settings.customers_hint"}} <a href="/orgs/{{.OrgID}}/customers">{{.T "nav.customers"}}</a>.</span>
+          <span class="hint">{{.T "project_settings.customers_hint"}} <a href="/orgs/{{.OrgID}}/projects">{{.T "nav.customers_projects"}}</a>.</span>
         </div>
         {{end}}
         {{if .CanDo "project.edit"}}

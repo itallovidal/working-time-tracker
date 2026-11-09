@@ -42,8 +42,7 @@ titles:
   home: Home
   org_about: Settings
   org_settings: Edit organization
-  org_projects: Projects
-  org_customers: Customers
+  org_projects: Customers & Projects
   org_people: Collaborators
   org_person: Collaborator
   overview: Management · Overview
@@ -63,9 +62,8 @@ titles:
 nav:
   label: Pages
   home: Home
-  projects: Projects
+  customers_projects: Customers & Projects
   people: Collaborators
-  customers: Customers
   payments: Payments
   receivables: Receivables
   settings: Settings
@@ -169,12 +167,6 @@ home:
     intro: Each person's hours in the period, from who worked the most to who worked the least.
     nobody_worked: Nobody clocked in during this period.
   projects:
-    pager: Project list pages
-    prev: Previous
-    next: Next
-    summary:
-      one: "Page {{.page}} of {{.pages}} · {{.count}} project"
-      other: "Page {{.page}} of {{.pages}} · {{.count}} projects"
     people:
       one: "{{.count}} person"
       other: "{{.count}} people"
@@ -366,7 +358,7 @@ onboarding:
     title: Your customers
     lead: A customer is whoever hires the organization. The hourly rate belongs to the customer and applies to all of its projects; an internal project doesn't need one.
     rate_hint: What the customer pays per hour. Each project can add an extra later.
-    rate_hint_solo: What the customer pays per hour. A customer on a monthly contract is added under Customers.
+    rate_hint_solo: What the customer pays per hour. A customer on a monthly contract is added under Customers & Projects.
     later: Add later
   people:
     title: Your team
@@ -842,7 +834,7 @@ help:
     project:
       title: Create the first project
       text: "Enter the name and, if you want, a description. Pick the customer and, if needed, an extra on top of the customer's billing (only the owner sees these fields: an admin creates internal projects only) and the sprint length: 7, 14 or 30 days. Tick “The project has a daily” and “The project has a weekly” if the team holds those meetings."
-      tip: "Billing belongs to the customer: the hourly rate or the monthly contract, set under Customers and the same on all of its projects. A project only adds an extra, per hour or per month, for something small or temporary."
+      tip: "Billing belongs to the customer: the hourly rate or the monthly contract, set under Customers & Projects and the same on all of its projects. A project only adds an extra, per hour or per month, for something small or temporary."
     invite:
       title: Invite the team
       text: "Generate an invitation link, copy it and send it to the person any way you like: the app does not send email. Whoever opens the link enters their name, picks a password and joins the organization with the role you chose."
@@ -902,14 +894,12 @@ help:
       edit: "The pencil on the row opens “Edit collaborator”, in tabs: “Payment”, with the hours agreed per week and, for the owner, when the person is paid; and “Projects and rates”, with the person's hourly rate on each project, where you can put them on other projects or take them off."
       role: "Only the owner makes someone an admin, or back to a member."
       profile: "For the owner and the admins, clicking the row opens the person's profile: the weekly hours, the hours of the period and since the start, and their projects. The payment rule, the payment history and the next dates only appear for the owner. “Edit” on the profile opens the same modal as the pencil."
-    org_customers:
-      title: Customers
-      text: "The register of who hires the organization: name, country, tax ID (CNPJ in Brazil, EIN in the US), contact person, email, phone and billing: the hourly rate, which applies to all of the customer's projects. The page is the owner's only."
-      actions: "“New customer” registers one. Clicking a row opens the customer details, with “Edit” and “Delete”."
-      link: "A customer is linked to a project when the project is created or in its settings. Raising the customer's rate changes the billed rate of all of its projects, for the hours logged from then on."
     org_projects:
-      title: Projects
-      text: "The “Projects” item in the top bar, for everyone: your projects (all of them, for the owner and the admins) as cards, six per page, each with the customer, the people and the tasks. Click a card to open the project. Whoever can create projects sees the “New project” button at the top of the page."
+      title: Customers & Projects
+      text: "The “Customers & Projects” item in the top bar, for everyone: each customer with its projects below, as cards with the people and the tasks, and the internal projects (no customer) at the end. Each person sees their own projects (the owner and the admins see all of them). Click a card to open the project. Whoever can create projects sees the “New project” button at the top of the page."
+      customers: "For the owner, the page is also the customer register, including customers with no project yet: name, country, tax ID (CNPJ in Brazil, EIN in the US), contact person, email, phone and billing, which applies to all of the customer's projects. Only the owner sees the customers and their billing."
+      actions: "“New customer” registers one. Clicking the customer's name, or “Details”, opens the details, with “Edit” and “Delete”. A group's “New project” creates the project with that customer already chosen."
+      link: "A customer is linked to a project when the project is created or in its settings. Raising the customer's rate changes the billed rate of all of its projects, for the hours logged from then on."
     project_home:
       title: "Project: Home"
       text: "This is where you clock in, and the first tab when you open a project."
@@ -975,7 +965,7 @@ help:
       title: Hourly rate
       text: "The app uses two amounts, and both are per project."
       paid: "Paid rate (cost): how much each person earns per hour on that project. It is set when the person is added to the project and can differ from one project to another."
-      billed: "Billed rate (revenue): how much the customer pays per hour on that project. It is the customer's hourly rate, set under Customers, plus the project's extra, if any."
+      billed: "Billed rate (revenue): how much the customer pays per hour on that project. It is the customer's hourly rate, set under Customers & Projects, plus the project's extra, if any."
       margin: "Margin is revenue minus cost. The Overviews add everything up; the Collaborators list in Management shows each person's margin per hour."
       history: "Changing a rate only applies to new sessions: the ones already tracked keep the rate of the time."
       owner: "The owner has no cost: the value of their hours counts as revenue, and they clock in without an hourly rate."
@@ -987,7 +977,7 @@ help:
       admin: "Admin: creates internal projects, invites people and administers every project. Does not see customers, billing or payments."
       member: "Collaborator: the day to day on the projects they were put in."
       groups: "When you add someone to a project, you pick their group: “Collaborator” (no extra permissions) or “Project administrator” (runs the project, its teams, its people, its labels and its integrations). The group only applies to that project."
-      org_perms: "The pages follow the role: Customers and Payments are only for the owner, Collaborators is for the owner and the admins, and so is the “New project” button (an admin creates internal projects only)."
+      org_perms: "The pages follow the role: Payments and the customers in Customers & Projects are only for the owner, Collaborators is for the owner and the admins, and so is the “New project” button (an admin creates internal projects only)."
       money: "The rates paid to colleagues only show for whoever runs the project, and billing and payments only for the owner. Everyone always sees their own rate."
       missing: "If a page, a tab or a button does not show up for you, you lack a permission: ask an admin."
     solo:
@@ -995,7 +985,7 @@ help:
       text: "Solo mode is for people who work on their own, as freelancers or solo contractors: the organization is just one person, and what belongs to a team goes away instead of crowding the menus."
       choose: "Tick “I work alone” when you create the organization or later, in Settings › Edit. Only the owner changes it, and it only turns on with you as the only person and no pending invites."
       hides: "The menu loses Collaborators and Payments and gains “Receivables”; the project loses the Collaborators tab, and nobody is invited. Turning the mode off deletes nothing: everything that was hidden comes back."
-      billing: "Each customer is billed per hour (the hours on their projects times the customer's hourly rate) or by a monthly contract (a fixed amount per month, and their projects have no hourly rate), never both. Billing is set under Customers and applies to all of the customer's projects; each project only adds an extra, per hour or per month. Once a customer has projects the mode cannot change. An hourly customer's period closes once a month, on the closing day, or every 14 days (US bi-weekly), counted from the last closing the customer already paid. A monthly contract can have estimated hours per month: Home, the customer details, the project overview and Receivables show the contract period's hours against them, for tracking only."
+      billing: "Each customer is billed per hour (the hours on their projects times the customer's hourly rate) or by a monthly contract (a fixed amount per month, and their projects have no hourly rate), never both. Billing is set under Customers & Projects and applies to all of the customer's projects; each project only adds an extra, per hour or per month. Once a customer has projects the mode cannot change. An hourly customer's period closes once a month, on the closing day, or every 14 days (US bi-weekly), counted from the last closing the customer already paid. A monthly contract can have estimated hours per month: Home, the customer details, the project overview and Receivables show the contract period's hours against them, for tracking only."
       home: "Home shows the hours, the revenue (the money that came in) and the projected revenue (what you expect to receive, paid or not), per customer."
     integrations:
       title: GitHub, GitLab and Trello integrations
@@ -1013,10 +1003,10 @@ help:
       a: "No. The app only records timed work: there is no manual entry, approval or period closing. What you can adjust are the task intervals inside a session (open the session and use the pencil), without changing the session's total time."
     missing_tab:
       q: I do not see a page, a tab or a button
-      a: "It is a permission. Project Management and the Collaborators, Customers and Payments pages only appear for whoever can use them. Ask an admin (see “Who sees and does what”)."
+      a: "It is a permission. Project Management, the Collaborators and Payments pages and the customers in Customers & Projects only appear for whoever can use them. Ask an admin (see “Who sees and does what”)."
     missing_project:
       q: I do not see a project
-      a: "Each person sees only the projects they were put in, with an hourly rate (the owner and the admins see all of them). Open “Projects”, in the top bar: the page lists yours. If the project is not there, ask an admin or the project administrator to add you in Management › Collaborators."
+      a: "Each person sees only the projects they were put in, with an hourly rate (the owner and the admins see all of them). Open “Customers & Projects”, in the top bar: the page lists yours. If the project is not there, ask an admin or the project administrator to add you in Management › Collaborators."
     invite:
       q: The invitation did not arrive by email
       a: "The app does not send email: copy the link when it is generated and send it yourself. If it expired (7 days) or was already used, generate another one."
@@ -1133,15 +1123,9 @@ org:
     link_copied: Link copied.
     copy_failed: Could not copy. Select the link and copy it manually.
   customers:
-    intro: Who hires the organization and how they pay. Each customer's billing applies to all of its projects, and each project can add an extra.
     new: New customer
     country: Country
     edit_title: Edit customer
-    loading: Loading customers…
-    empty: No customers yet
-    empty_text: Add the first customer to link to projects.
-    customer: Customer
-    contact: Contact
     projects: Projects
     delete_question: Delete?
     contact_person: Contact person
@@ -1159,7 +1143,6 @@ org:
     admins_only_hint: The customer and the extra are only visible to admins and can be changed later in the project settings.
     admins_only_hint_solo: The customer and the extra can be changed later in the project settings.
     create: Create project
-    loading: Loading projects…
     empty: No projects yet
     empty_admin: Create the first project to set up the teams and start tracking time.
     empty_member: You have not been added to any project yet. When an admin puts you in a project, with your hourly rate, it shows up here.
@@ -1172,6 +1155,26 @@ org:
     rate_invalid: Enter the rate billed per hour, for example 150.00.
     rate_too_high: The rate billed per hour must be between 0 and 1,000,000.00.
     created: Project created.
+  # Customers & Projects: each customer with its projects, and the internal projects at the end.
+  catalog:
+    intro: Each customer with its projects. A customer's billing applies to all of its projects, and each project can add an extra.
+    intro_member: Your projects, grouped by each one's customer.
+    loading: Loading customers and projects…
+    empty: No customers or projects yet
+    empty_owner: Register your first customer and create a project for it, or create an internal project.
+    details: Details
+    new_project: New project
+    new_project_for: "New project for {{.name}}"
+    actions_for: "Actions for {{.name}}"
+    no_projects: No projects for this customer yet.
+    internal: Internal projects
+    internal_hint: No customer
+    count_customers:
+      one: "{{.count}} customer"
+      other: "{{.count}} customers"
+    count_projects:
+      one: "{{.count}} project"
+      other: "{{.count}} projects"
 
 customer:
   billing:
@@ -1243,7 +1246,7 @@ dedication:
   card_hint: "The hours of all of {{.customer}}'s projects in the contract period, against the estimated hours per month."
 project:
   head:
-    projects: Projects
+    projects: Customers & Projects
     sections: Project sections
     overview: Overview
     tasks: Task list
@@ -1267,11 +1270,11 @@ project:
     customer_hourly: "Hourly · {{.rate}}/h"
     customer_monthly: "Monthly contract · {{.fee}}/month"
     customer_no_rate: Hourly, no hourly rate yet
-    customer_without_rate: This customer has no hourly rate yet. Enter it under Customers to bill the project.
-    edit_in_customers: Edit under Customers
+    customer_without_rate: This customer has no hourly rate yet. Enter it under Customers & Projects to bill the project.
+    edit_in_customers: Edit customer
     extra_hourly: "Extra per hour ({{.unit}})"
     extra_monthly: "Extra per month ({{.unit}})"
-    extra_hourly_hint: Added to the customer's hourly rate on this project only, for something small or temporary. Raise the customer's rate under Customers.
+    extra_hourly_hint: Added to the customer's hourly rate on this project only, for something small or temporary. Raise the customer's rate under Customers & Projects.
     extra_monthly_hint: Added to the customer's monthly fee every month, for an extra project. Set it to zero when it ends.
     total_hourly: "This project bills {{.rate}} per hour."
     total_monthly: "Adds {{.extra}} per month to the {{.fee}} monthly fee."
@@ -2158,7 +2161,7 @@ errors:
     customer_not_found: "customer not found in this organization"
     invalid_bill_extra: "the extra must be between 0 and 1,000,000.00"
     bill_extra_needs_customer: "the extra only applies to a project with a customer: choose the project's customer first"
-    customer_without_rate: "this customer has no hourly rate yet: enter it under Customers first"
+    customer_without_rate: "this customer has no hourly rate yet: enter it under Customers & Projects first"
     customer_locked: "this project has hours and its customer already has receivables: moving it would bill the same hours again"
     invalid_daily_time: "the daily time must use the HH:MM format, for example 09:30"
     invalid_organization: "invalid organization"

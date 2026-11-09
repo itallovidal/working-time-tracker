@@ -163,7 +163,7 @@
             </a>
           </li>
           <li>
-            <a class="onboarding-link" href="/orgs/{{.OrgID}}/customers">
+            <a class="onboarding-link" href="/orgs/{{.OrgID}}/projects">
               <span class="onboarding-ico" aria-hidden="true">{{template "icon" "handshake"}}</span>
               <span class="onboarding-text"><strong>{{.T "onboarding.done.customers"}}</strong><span class="muted small">{{.T "onboarding.done.customers_text"}}</span></span>
               <span class="badge" :class="saved.customer ? 'badge-ok' : ''" x-text="saved.customer ? $t('onboarding.done.saved') : $t('onboarding.done.pending')"></span>

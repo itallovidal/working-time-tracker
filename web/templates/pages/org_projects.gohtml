@@ -1,61 +1,217 @@
 {{define "content"}}
-<main class="page" x-data="orgProjects">
-  {{/* Os projetos de quem olha (todos, para os admins), em cartões, seis por página. Quem pode criar projeto tem o
-       botão no cabeçalho. */}}
+<main class="page" x-data="customersProjects">
+  {{/* Clientes e Projetos: cada cliente com os projetos dele embaixo, em ordem de nome, e os projetos internos (sem
+       cliente) no fim. Quem gerencia os clientes (o dono) vê todos eles, também os que ainda não têm projeto, com a
+       cobrança e o contato, e abre os detalhes, de onde edita e exclui. Os outros veem só os seus projetos (todos, para
+       os admins), agrupados pelo cliente de cada um. Quem pode criar projeto tem o botão no cabeçalho. */}}
   <div class="page-head">
     <div>
       <div class="eyebrow" data-org-name>{{.Me.OrganizationName}}</div>
-      <div class="row row-tight">
-        <h1>{{.T "nav.projects"}}</h1>
-        <span class="badge num" x-cloak x-show="!loading" x-text="total"></span>
-      </div>
+      <h1>{{.T "nav.customers_projects"}}</h1>
+      <p class="lede">{{if .Can "customers.manage"}}{{.T "org.catalog.intro"}}{{else}}{{.T "org.catalog.intro_member"}}{{end}}</p>
     </div>
-    {{if .IsAdmin}}
-    <button type="button" class="btn" @click="openCreate()">{{template "icon" "plus"}} {{.T "org.projects.new"}}</button>
-    {{end}}
+    <div class="row">
+      {{if .Can "customers.manage"}}
+      <button type="button" class="btn btn-secondary" @click="openForm()">{{template "icon" "plus"}} {{.T "org.customers.new"}}</button>
+      {{end}}
+      {{if .IsAdmin}}
+      <button type="button" class="btn" @click="openCreate()">{{template "icon" "plus"}} {{.T "org.projects.new"}}</button>
+      {{end}}
+    </div>
   </div>
 
-  <p class="muted" x-show="loading">{{.T "org.projects.loading"}}</p>
+  <p class="muted" x-show="loading">{{.T "org.catalog.loading"}}</p>
   <p class="form-error" x-cloak x-show="errors.load" x-text="errors.load" role="alert"></p>
 
-  <div class="empty" x-cloak x-show="!loading && !errors.load && total === 0">
+  <div class="empty" x-cloak x-show="!loading && !errors.load && groups().length === 0">
     {{template "icon" "diagram-project"}}
-    <strong>{{.T "org.projects.empty"}}</strong>
-    {{if .IsAdmin}}
-    <span>{{.T "org.projects.empty_admin"}}</span>
+    {{if .Can "customers.manage"}}
+    <strong>{{.T "org.catalog.empty"}}</strong>
+    <span>{{.T "org.catalog.empty_owner"}}</span>
     {{else}}
-    <span>{{.T "org.projects.empty_member"}}</span>
+    <strong>{{.T "org.projects.empty"}}</strong>
+    {{if .IsAdmin}}<span>{{.T "org.projects.empty_admin"}}</span>{{else}}<span>{{.T "org.projects.empty_member"}}</span>{{end}}
     {{end}}
   </div>
 
-  <div class="project-grid" x-cloak x-show="projects.length > 0">
-    <template x-for="p in projects" :key="p.id">
-      <a class="project-card" :class="'hue-' + hueOf(p.id)" :href="'/projects/' + p.id">
-        <div class="project-top">
-          <span class="project-mark" aria-hidden="true" x-text="markOf(p.name)"></span>
-          <div class="project-title">
-            <h3 x-text="p.name"></h3>
-            <p class="project-customer" x-text="p.customer ? p.customer.name : $t('org.projects.internal')"></p>
+  <div class="catalog" x-cloak x-show="!loading && groups().length > 0">
+    <p class="muted small" x-text="summary()"></p>
+    <template x-for="g in groups()" :key="g.id">
+      <section class="catalog-group" :aria-label="g.name">
+        <div class="catalog-head" :class="g.customer && 'row-link'" @click="if (g.customer && !$event.target.closest('a, button, .catalog-more')) openDetails(g.customer)">
+          <span class="catalog-mark" :class="g.internal ? 'catalog-mark-internal' : 'hue-' + hueOf(g.id)" aria-hidden="true">
+            <template x-if="g.internal"><i class="fa-solid fa-building"></i></template>
+            <template x-if="!g.internal"><span x-text="initialsOf(g.name)"></span></template>
+          </span>
+          <div class="catalog-title">
+            <h2>
+              <template x-if="g.customer"><button type="button" class="row-open" aria-haspopup="dialog" @click="openDetails(g.customer)" x-text="g.name"></button></template>
+              <template x-if="!g.customer"><span x-text="g.name"></span></template>
+            </h2>
+            <p class="muted small" x-show="groupMeta(g)" x-text="groupMeta(g)"></p>
           </div>
+          {{if .IsAdmin}}
+          {{/* No celular os botões do grupo viram um menu de três pontinhos ao lado do nome, com as mesmas ações; no
+               computador o menu some e os botões aparecem (.catalog-more e .catalog-actions, no app.css). */}}
+          <div class="catalog-more" x-show="g.internal || g.customer" x-data="{ open: false }" @click.outside="open = false" @keydown.escape.window="open = false">
+            <button type="button" class="btn btn-ghost btn-sm catalog-more-btn" aria-haspopup="true" :aria-expanded="open.toString()"
+                    :aria-label="$t('org.catalog.actions_for', { name: g.name })" @click="open = !open">{{template "icon" "ellipsis-vertical"}}</button>
+            <div class="catalog-menu" x-cloak x-show="open">
+              <button type="button" class="user-menu-item" x-show="g.customer" @click="open = false; openDetails(g.customer)">{{template "icon" "circle-info"}} {{.T "org.catalog.details"}}</button>
+              <button type="button" class="user-menu-item" @click="open = false; openCreate(g.customer ? g.customer.id : '')">{{template "icon" "plus"}} {{.T "org.catalog.new_project"}}</button>
+            </div>
+          </div>
+          {{end}}
+          {{/* A cobrança do cliente, só para quem gerencia os clientes: no solo, o modo e o valor; na equipe, o valor por
+               hora. O resto dos termos fica nos detalhes. */}}
+          {{if .Can "customers.manage"}}
+          <div class="catalog-billing" x-show="g.customer">
+            {{if .Me.OrganizationSolo}}<span class="badge" x-text="g.customer && billingMode(g.customer)"></span>{{end}}
+            <span class="badge num" :class="g.customer && WTT.billing.withoutRate(g.customer) && 'badge-warn'" x-text="g.customer && billingAmount(g.customer)"></span>
+          </div>
+          {{end}}
+          {{if .IsAdmin}}
+          {{/* O projeto novo já vem com o cliente do grupo. Só o dono define o cliente de um projeto; o admin cria só projeto
+               interno, e por isso tem o botão só no grupo dos internos. */}}
+          <div class="catalog-actions">
+            <button type="button" class="btn btn-ghost btn-sm" x-show="g.customer" @click="openDetails(g.customer)">{{template "icon" "circle-info"}} {{.T "org.catalog.details"}}</button>
+            <button type="button" class="btn btn-secondary btn-sm" x-show="g.internal || g.customer" @click="openCreate(g.customer ? g.customer.id : '')" :aria-label="$t('org.catalog.new_project_for', { name: g.name })">{{template "icon" "plus"}} {{.T "org.catalog.new_project"}}</button>
+          </div>
+          {{end}}
         </div>
-        <p class="project-desc" x-show="p.description" x-text="p.description"></p>
-        <div class="project-stats">
-          {{/* No modo solo todo projeto tem a mesma pessoa: a contagem não diz nada. */}}
-          {{if not .Me.OrganizationSolo}}<span class="project-stat">{{template "icon" "users"}} <span x-text="$t('home.projects.people', { count: p.member_count })"></span></span>{{end}}
-          <span class="project-stat">{{template "icon" "list-check"}} <span x-text="$t('home.projects.tasks', { count: p.task_count })"></span></span>
+
+        <p class="muted small catalog-none" x-show="g.projects.length === 0">{{.T "org.catalog.no_projects"}}</p>
+
+        <div class="project-grid" x-show="g.projects.length > 0">
+          <template x-for="p in g.projects" :key="p.id">
+            <a class="project-card" :class="'hue-' + hueOf(p.id)" :href="'/projects/' + p.id">
+              <div class="project-top">
+                <span class="project-mark" aria-hidden="true" x-text="markOf(p.name)"></span>
+                <div class="project-title">
+                  <h3 x-text="p.name"></h3>
+                </div>
+              </div>
+              <p class="project-desc" x-show="p.description" x-text="p.description"></p>
+              <div class="project-stats">
+                {{/* No modo solo todo projeto tem a mesma pessoa: a contagem não diz nada. */}}
+                {{if not .Me.OrganizationSolo}}<span class="project-stat">{{template "icon" "users"}} <span x-text="$t('home.projects.people', { count: p.member_count })"></span></span>{{end}}
+                <span class="project-stat">{{template "icon" "list-check"}} <span x-text="$t('home.projects.tasks', { count: p.task_count })"></span></span>
+              </div>
+            </a>
+          </template>
         </div>
-      </a>
+      </section>
     </template>
   </div>
 
-  <nav class="pager" aria-label="{{.T "home.projects.pager"}}" x-cloak x-show="total > 0">
-    <span class="muted small" x-text="summary()"></span>
-    <div class="row row-tight" x-show="pages() > 1">
-      <button type="button" class="btn btn-secondary btn-sm" :disabled="page <= 1 || pending === 'page'" @click="go(page - 1)">{{template "icon" "chevron-left"}} {{.T "home.projects.prev"}}</button>
-      <button type="button" class="btn btn-secondary btn-sm" :disabled="page >= pages() || pending === 'page'" @click="go(page + 1)">{{.T "home.projects.next"}} {{template "icon" "chevron-right"}}</button>
-    </div>
-  </nav>
-
   {{template "project_form" .}}
+
+  {{if .Can "customers.manage"}}
+  {{/* Os detalhes do cliente: o cliente, o contato e a cobrança, só para ler. Editar troca para o formulário, que volta
+       para cá ao cancelar ou salvar; Excluir pede confirmação, e o erro do servidor (cliente com projetos) aparece aqui. */}}
+  <template x-teleport="#modal-root">
+    <div class="stack" x-show="$store.modal.name === 'customer-details'">
+      <template x-for="block in customerFacts(viewing())" :key="block.title">
+        <section class="stack stack-tight">
+          <h3 class="eyebrow" x-text="block.title"></h3>
+          <dl class="facts facts-wide">
+            <template x-for="f in block.rows" :key="f.label">
+              <div class="fact">
+                <dt><i class="fa-solid fa-fw fact-icon" :class="'fa-' + f.icon" aria-hidden="true" x-show="f.icon"></i><span x-text="f.label"></span></dt>
+                <dd>
+                  <a x-show="f.href && !f.empty" :href="f.href" x-text="f.value"></a>
+                  <span x-show="!f.href || f.empty" :class="{ mono: f.mono && !f.empty, muted: f.empty || f.muted }" x-text="f.value"></span>
+                  {{/* A linha da dedicação ao contrato (Decisão 26) traz a barrinha e, embaixo, o período e os projetos. */}}
+                  <template x-if="f.meter">
+                    <div class="meter meter-thin" :class="f.meter.over && 'meter-over'" role="presentation"><span :style="'width: ' + f.meter.pct + '%'"></span></div>
+                  </template>
+                  <template x-for="note in (f.notes || [])" :key="note">
+                    <div class="muted small" x-text="note"></div>
+                  </template>
+                </dd>
+              </div>
+            </template>
+          </dl>
+        </section>
+      </template>
+      <p class="form-error" x-show="errors.remove" x-text="errors.remove" role="alert"></p>
+      <div class="confirm" x-cloak x-show="confirming">
+        <span>{{.T "org.customers.delete_question"}}</span>
+        <button type="button" class="btn btn-danger btn-sm" :disabled="pending" @click="remove()">{{.T "common.delete"}}</button>
+        <button type="button" class="btn btn-ghost btn-sm" @click="confirming = false">{{.T "common.cancel"}}</button>
+      </div>
+      <div class="toolbar" x-show="!confirming">
+        <button type="button" class="btn btn-danger-ghost" @click="confirming = true; errors.remove = ''">{{template "icon" "trash"}} {{.T "common.delete"}}</button>
+        <div class="row">
+          <button type="button" class="btn btn-secondary" @click="$store.modal.dismiss()">{{.T "common.close"}}</button>
+          <button type="button" class="btn" data-autofocus @click="openForm(viewing())">{{template "icon" "pen"}} {{.T "common.edit"}}</button>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  {{/* O formulário do cliente aparece no modal do layout base, mas continua no escopo de customersProjects. O rascunho é
+       customerDraft, para não se misturar com o draft do projeto novo. */}}
+  <template x-teleport="#modal-root">
+    <form class="stack" novalidate x-show="$store.modal.name === 'customer'" @submit.prevent="save()">
+      <div class="field">
+        <label for="customer-name">{{.T "common.name"}}</label>
+        <input id="customer-name" type="text" data-field="name" maxlength="{{limit "name"}}" x-model="customerDraft.name" @input="clearField('name')" :aria-invalid="fieldErrors.name ? 'true' : 'false'" data-autofocus>
+        {{template "field_error" "name"}}
+      </div>
+      {{template "customer_document" (dict "Data" . "Model" "customerDraft" "Id" "customer" "Country" true)}}
+      <div class="field">
+        {{template "field_label" (dict "D" . "For" "customer-contact" "Key" "org.customers.contact_person" "Optional" true)}}
+        <input id="customer-contact" type="text" data-field="contact_name" maxlength="{{limit "name"}}" x-model="customerDraft.contact_name" @input="clearField('contact_name')" :aria-invalid="fieldErrors.contact_name ? 'true' : 'false'">
+        {{template "field_error" "contact_name"}}
+      </div>
+      <div class="field">
+        {{template "field_label" (dict "D" . "For" "customer-email" "Key" "common.email" "Optional" true)}}
+        <input id="customer-email" type="email" data-field="contact_email" maxlength="{{limit "email"}}" x-model="customerDraft.contact_email" @input="clearField('contact_email')" :aria-invalid="fieldErrors.contact_email ? 'true' : 'false'">
+        {{template "field_error" "contact_email"}}
+      </div>
+      <div class="field">
+        {{template "field_label" (dict "D" . "For" "customer-phone" "Key" "common.phone" "Optional" true)}}
+        <input id="customer-phone" type="tel" data-field="contact_phone" maxlength="{{limit "phone"}}" x-model="customerDraft.contact_phone" @input="clearField('contact_phone')" :aria-invalid="fieldErrors.contact_phone ? 'true' : 'false'">
+        {{template "field_error" "contact_phone"}}
+      </div>
+      {{/* A cobrança mora no cliente (Decisão 21): o valor por hora vale para todos os projetos dele, e cada projeto só
+           soma um acréscimo. O modo, o contrato mensal e os prazos só existem no modo solo; na equipe todo cliente é
+           por hora, e o modal pede só o valor. */}}
+      <fieldset class="form-group">
+        <legend>{{.T "customer.billing.title"}}</legend>
+        {{if .Me.OrganizationSolo}}
+        <div class="field">
+          <label for="customer-billing-mode">{{.T "customer.billing.mode"}}</label>
+          <select id="customer-billing-mode" data-field="billing_mode" x-model="customerDraft.billing_mode" :disabled="modeLocked" @change="clearField('billing_mode')" :aria-invalid="fieldErrors.billing_mode ? 'true' : 'false'">
+            <option value="hourly">{{.T "customer.billing.hourly"}}</option>
+            <option value="monthly">{{.T "customer.billing.monthly"}}</option>
+          </select>
+          {{template "field_error" "billing_mode"}}
+          <span class="hint" x-show="modeLocked">{{.T "customer.billing.mode_locked"}}</span>
+          <span class="hint" x-show="!modeLocked">{{.T "customer.billing.mode_hint"}}</span>
+        </div>
+        {{end}}
+
+        <div class="field" x-show="customerDraft.billing_mode === 'hourly'">
+          <label for="customer-hourly-rate" x-text="$t('customer.billing.hourly_rate', { unit: WTT.fmt.moneyUnit() })"></label>
+          <input id="customer-hourly-rate" type="text" inputmode="decimal" class="num" placeholder="{{.T "project_settings.rate_placeholder"}}" data-field="hourly_rate_cents" x-model="customerDraft.hourly_rate" @input="clearField('hourly_rate_cents')" :aria-invalid="fieldErrors.hourly_rate_cents ? 'true' : 'false'">
+          {{template "field_error" "hourly_rate_cents"}}
+          <span class="hint">{{.T "customer.billing.hourly_rate_hint"}}</span>
+        </div>
+
+        {{if .Me.OrganizationSolo}}
+        {{/* O contrato, o fechamento, o prazo e a multa. */}}
+        {{template "customer_contract" (dict "Data" . "Model" "customerDraft" "Id" "customer")}}
+        {{end}}
+      </fieldset>
+      <p class="form-error" x-show="errors.save" x-text="errors.save" role="alert"></p>
+      <div class="row row-end">
+        <button type="button" class="btn btn-secondary" @click="cancelForm()">{{.T "common.cancel"}}</button>
+        <button type="submit" class="btn" :disabled="pending" x-text="editing ? $t('common.save') : $t('org.customers.create')">{{.T "org.customers.create"}}</button>
+      </div>
+    </form>
+  </template>
+  {{end}}
 </main>
 {{end}}

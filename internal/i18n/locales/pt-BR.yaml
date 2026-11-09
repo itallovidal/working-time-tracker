@@ -52,8 +52,7 @@ titles:
   home: Início
   org_about: Configurações
   org_settings: Editar organização
-  org_projects: Projetos
-  org_customers: Clientes
+  org_projects: Clientes e Projetos
   org_people: Colaboradores
   org_person: Colaborador
   overview: Gestão · Visão geral
@@ -73,9 +72,8 @@ titles:
 nav:
   label: Páginas
   home: Início
-  projects: Projetos
+  customers_projects: Clientes e Projetos
   people: Colaboradores
-  customers: Clientes
   payments: Pagamentos
   receivables: A receber
   settings: Configurações
@@ -179,12 +177,6 @@ home:
     intro: Horas de cada pessoa no período, de quem mais trabalhou para quem menos.
     nobody_worked: Ninguém bateu ponto neste período.
   projects:
-    pager: Páginas da lista de projetos
-    prev: Anterior
-    next: Próxima
-    summary:
-      one: "Página {{.page}} de {{.pages}} · {{.count}} projeto"
-      other: "Página {{.page}} de {{.pages}} · {{.count}} projetos"
     people:
       one: "{{.count}} pessoa"
       other: "{{.count}} pessoas"
@@ -376,7 +368,7 @@ onboarding:
     title: Seus clientes
     lead: Cliente é quem contrata a organização. O valor por hora é do cliente e vale para todos os projetos dele; um projeto interno não precisa de cliente.
     rate_hint: O que o cliente paga por hora. Cada projeto pode somar um acréscimo depois.
-    rate_hint_solo: O que o cliente paga por hora. Cliente por contrato mensal se cadastra em Clientes.
+    rate_hint_solo: O que o cliente paga por hora. Cliente por contrato mensal se cadastra em Clientes e Projetos.
     later: Cadastrar depois
   people:
     title: Seu time
@@ -852,7 +844,7 @@ help:
     project:
       title: Crie o primeiro projeto
       text: "Informe o nome e, se quiser, uma descrição. Escolha o cliente e, se precisar, um acréscimo sobre a cobrança dele (só o dono vê esses campos: o administrador cria só projeto interno) e a duração da sprint: 7, 14 ou 30 dias. Marque “O projeto tem daily” e “O projeto tem weekly” se o time faz essas reuniões."
-      tip: "A cobrança é do cliente: o valor por hora ou o contrato mensal, definido em Clientes e igual em todos os projetos dele. O projeto só soma um acréscimo, por hora ou por mês, para algo pequeno ou temporário."
+      tip: "A cobrança é do cliente: o valor por hora ou o contrato mensal, definido em Clientes e Projetos e igual em todos os projetos dele. O projeto só soma um acréscimo, por hora ou por mês, para algo pequeno ou temporário."
     invite:
       title: Convide o time
       text: "Gere um link de convite, copie e envie à pessoa por onde preferir: o app não envia email. Quem abrir o link informa o nome, escolhe uma senha e entra na organização com o papel que você escolheu."
@@ -912,14 +904,12 @@ help:
       edit: "O lápis da linha abre “Editar colaborador”, em abas: “Pagamento”, com as horas combinadas por semana e, para o dono, a regra de quando a pessoa é paga; e “Projetos e valores”, com o valor por hora da pessoa em cada projeto, onde dá para pô-la em outros projetos ou tirá-la deles."
       role: "Só o dono torna alguém administrador, ou volta a membro."
       profile: "Para o dono e os administradores, clicar na linha abre o perfil da pessoa: a jornada, as horas do período e desde o início e os projetos dela. A regra de pagamento, o histórico de pagamentos e as próximas datas só aparecem para o dono. O “Editar” do perfil abre o mesmo modal do lápis."
-    org_customers:
-      title: Clientes
-      text: "O cadastro de quem contrata a organização: nome, país, documento fiscal (CNPJ no Brasil, EIN nos EUA), pessoa de contato, email, telefone e a cobrança: o valor por hora, que vale para todos os projetos do cliente. A página é só do dono."
-      actions: "“Novo cliente” cadastra. Clicar na linha abre os detalhes do cliente, com “Editar” e “Excluir”."
-      link: "O cliente é ligado a um projeto ao criar o projeto ou nas configurações dele. Reajustar o valor do cliente muda o valor cobrado de todos os projetos dele, para as horas registradas daqui em diante."
     org_projects:
-      title: Projetos
-      text: "O item “Projetos” da barra superior, para todos: os seus projetos (todos, para o dono e os administradores) em cartões, seis por página, cada um com o cliente, as pessoas e as tarefas. Clique num cartão para abrir o projeto. Quem pode criar projetos vê o botão “Novo projeto” no alto da página."
+      title: Clientes e Projetos
+      text: "O item “Clientes e Projetos” da barra superior, para todos: cada cliente com os projetos dele embaixo, em cartões com as pessoas e as tarefas, e os projetos internos (sem cliente) no fim. Cada pessoa vê os seus projetos (o dono e os administradores veem todos). Clique num cartão para abrir o projeto. Quem pode criar projetos vê o botão “Novo projeto” no alto da página."
+      customers: "Para o dono, a página também é o cadastro dos clientes, até dos que ainda não têm projeto: nome, país, documento fiscal (CNPJ no Brasil, EIN nos EUA), pessoa de contato, email, telefone e a cobrança, que vale para todos os projetos do cliente. Só o dono vê os clientes e a cobrança."
+      actions: "“Novo cliente” cadastra. Clicar no nome do cliente, ou em “Detalhes”, abre os detalhes, com “Editar” e “Excluir”. O “Novo projeto” de um grupo já cria o projeto com aquele cliente."
+      link: "O cliente é ligado a um projeto ao criar o projeto ou nas configurações dele. Reajustar o valor do cliente muda o valor cobrado de todos os projetos dele, para as horas registradas daqui em diante."
     project_home:
       title: "Projeto: Início"
       text: "É onde você bate o ponto, e a primeira aba ao abrir um projeto."
@@ -985,7 +975,7 @@ help:
       title: Valor por hora
       text: "O app usa dois valores, e os dois são por projeto."
       paid: "Valor pago (custo): quanto cada pessoa recebe por hora naquele projeto. É definido ao pôr a pessoa no projeto e pode ser diferente de um projeto para outro."
-      billed: "Valor cobrado (receita): quanto o cliente paga por hora naquele projeto. É o valor por hora do cliente, definido em Clientes, mais o acréscimo do projeto, se houver."
+      billed: "Valor cobrado (receita): quanto o cliente paga por hora naquele projeto. É o valor por hora do cliente, definido em Clientes e Projetos, mais o acréscimo do projeto, se houver."
       margin: "Margem é a receita menos o custo. As Visões gerais somam tudo; a lista de Colaboradores da Gestão mostra a margem por hora de cada pessoa."
       history: "Mudar um valor só vale para as sessões novas: as que já foram registradas guardam o valor da época."
       owner: "O dono não tem custo: o valor das horas dele entra como receita, e ele bate ponto sem ter valor por hora."
@@ -997,7 +987,7 @@ help:
       admin: "Admin: cria projetos internos, convida pessoas e administra todos os projetos. Não vê clientes, cobrança nem pagamentos."
       member: "Colaborador: o dia a dia nos projetos em que foi posto."
       groups: "Ao pôr alguém num projeto, você escolhe o grupo dela: “Colaborador” (sem permissões extras) ou “Administrador de projeto” (cuida do projeto, dos times, das pessoas, das etiquetas e das integrações). O grupo vale só naquele projeto."
-      org_perms: "As páginas seguem o papel: Clientes e Pagamentos são só do dono, Colaboradores é do dono e dos admins, e o botão “Novo projeto” também (o admin cria só projeto interno)."
+      org_perms: "As páginas seguem o papel: Pagamentos e os clientes de Clientes e Projetos são só do dono, Colaboradores é do dono e dos admins, e o botão “Novo projeto” também (o admin cria só projeto interno)."
       money: "Os valores pagos aos colegas só aparecem para quem cuida do projeto, e o faturamento e os pagamentos, só para o dono. Cada pessoa sempre vê o próprio valor."
       missing: "Se uma página, uma aba ou um botão não aparece para você, falta permissão: peça a um administrador."
     solo:
@@ -1005,7 +995,7 @@ help:
       text: "O modo solo é para quem atua sozinho, como freelancer ou PJ: a organização é uma pessoa só, e o que é de equipe some em vez de ficar sobrando nos menus."
       choose: "Marque “Trabalho sozinho(a)” ao criar a organização ou depois, em Configurações › Editar. Só o dono muda, e só liga com você como a única pessoa e sem convites pendentes."
       hides: "O menu perde Colaboradores e Pagamentos e ganha “A receber”; o projeto perde a aba Colaboradores, e ninguém é convidado. Desligar o modo não apaga nada: tudo o que ficou escondido volta."
-      billing: "Cada cliente é cobrado por hora (as horas dos projetos vezes o valor por hora dele) ou por contrato mensal (um valor fixo por mês, e os projetos dele não têm valor por hora), nunca pelos dois. A cobrança se define em Clientes e vale para todos os projetos do cliente; cada projeto só soma um acréscimo, por hora ou por mês. Depois que o cliente tem projetos o modo não muda. O período do cliente por hora fecha uma vez por mês, no dia de fechamento, ou a cada 14 dias (o bi-weekly dos EUA), contados a partir do último fechamento que ele já pagou. No contrato mensal dá para informar as horas estimadas por mês: o Início, os detalhes do cliente, a visão geral do projeto e o A receber mostram as horas do período do contrato contra elas, só para acompanhar."
+      billing: "Cada cliente é cobrado por hora (as horas dos projetos vezes o valor por hora dele) ou por contrato mensal (um valor fixo por mês, e os projetos dele não têm valor por hora), nunca pelos dois. A cobrança se define em Clientes e Projetos e vale para todos os projetos do cliente; cada projeto só soma um acréscimo, por hora ou por mês. Depois que o cliente tem projetos o modo não muda. O período do cliente por hora fecha uma vez por mês, no dia de fechamento, ou a cada 14 dias (o bi-weekly dos EUA), contados a partir do último fechamento que ele já pagou. No contrato mensal dá para informar as horas estimadas por mês: o Início, os detalhes do cliente, a visão geral do projeto e o A receber mostram as horas do período do contrato contra elas, só para acompanhar."
       home: "O Início mostra as horas, a receita (o dinheiro que entrou) e a receita projetada (o que se espera receber, pago ou não), por cliente."
     integrations:
       title: Integrações com GitHub, GitLab e Trello
@@ -1023,10 +1013,10 @@ help:
       a: "Não. O app só registra o tempo cronometrado: não há lançamento manual, aprovação nem fechamento de período. O que dá para ajustar são os intervalos das tarefas dentro de uma sessão (abra a sessão e use o lápis), sem mudar o tempo total dela."
     missing_tab:
       q: Não vejo uma página, uma aba ou um botão
-      a: "É permissão. A Gestão do projeto e as páginas Colaboradores, Clientes e Pagamentos aparecem só para quem pode usá-las. Peça a um administrador (veja “Quem vê e faz o quê”)."
+      a: "É permissão. A Gestão do projeto, as páginas Colaboradores e Pagamentos e os clientes de Clientes e Projetos aparecem só para quem pode usá-los. Peça a um administrador (veja “Quem vê e faz o quê”)."
     missing_project:
       q: Não vejo um projeto
-      a: "Cada pessoa vê só os projetos em que foi posta, com valor por hora (o dono e os administradores veem todos). Abra “Projetos”, na barra superior: a página lista os seus. Se o projeto não está lá, peça a um administrador ou ao administrador do projeto para pôr você nele em Gestão › Colaboradores."
+      a: "Cada pessoa vê só os projetos em que foi posta, com valor por hora (o dono e os administradores veem todos). Abra “Clientes e Projetos”, na barra superior: a página lista os seus. Se o projeto não está lá, peça a um administrador ou ao administrador do projeto para pôr você nele em Gestão › Colaboradores."
     invite:
       q: O convite não chegou por email
       a: "O app não envia email: copie o link na hora em que ele é gerado e mande você mesmo. Se ele venceu (7 dias) ou já foi usado, gere outro."
@@ -1143,15 +1133,9 @@ org:
     link_copied: Link copiado.
     copy_failed: Não deu para copiar. Selecione o link e copie manualmente.
   customers:
-    intro: Quem contrata a organização e como paga. A cobrança de cada cliente vale para todos os projetos dele, e cada projeto pode somar um acréscimo.
     new: Novo cliente
     country: País
     edit_title: Editar cliente
-    loading: Carregando clientes…
-    empty: Nenhum cliente ainda
-    empty_text: Cadastre o primeiro cliente para vincular aos projetos.
-    customer: Cliente
-    contact: Contato
     projects: Projetos
     delete_question: Excluir?
     contact_person: Pessoa de contato
@@ -1169,7 +1153,6 @@ org:
     admins_only_hint: O cliente e o acréscimo só aparecem para admins e podem ser trocados depois, nas configurações do projeto.
     admins_only_hint_solo: O cliente e o acréscimo podem ser trocados depois, nas configurações do projeto.
     create: Criar projeto
-    loading: Carregando projetos…
     empty: Nenhum projeto ainda
     empty_admin: Crie o primeiro projeto para montar os times e começar a registrar tempo.
     empty_member: Você ainda não foi adicionado a nenhum projeto. Quando um admin pôr você num projeto, com o seu valor por hora, ele aparece aqui.
@@ -1182,6 +1165,26 @@ org:
     rate_invalid: Informe o valor cobrado por hora, por exemplo 150,00.
     rate_too_high: O valor cobrado por hora deve ficar entre 0 e 1.000.000,00.
     created: Projeto criado.
+  # Clientes e Projetos: cada cliente com os projetos dele, e os projetos internos no fim.
+  catalog:
+    intro: Cada cliente com os projetos dele. A cobrança do cliente vale para todos os projetos dele, e cada projeto pode somar um acréscimo.
+    intro_member: Os seus projetos, agrupados pelo cliente de cada um.
+    loading: Carregando clientes e projetos…
+    empty: Nenhum cliente nem projeto ainda
+    empty_owner: Cadastre o primeiro cliente e crie um projeto para ele, ou crie um projeto interno.
+    details: Detalhes
+    new_project: Novo projeto
+    new_project_for: "Novo projeto de {{.name}}"
+    actions_for: "Ações de {{.name}}"
+    no_projects: Nenhum projeto deste cliente ainda.
+    internal: Projetos internos
+    internal_hint: Sem cliente
+    count_customers:
+      one: "{{.count}} cliente"
+      other: "{{.count}} clientes"
+    count_projects:
+      one: "{{.count}} projeto"
+      other: "{{.count}} projetos"
   
 customer:
   billing:
@@ -1254,7 +1257,7 @@ dedication:
   card_hint: "As horas de todos os projetos de {{.customer}} no período do contrato, contra as horas estimadas por mês."
 project:
   head:
-    projects: Projetos
+    projects: Clientes e Projetos
     sections: Seções do projeto
     overview: Visão geral
     tasks: Lista de tarefas
@@ -1278,11 +1281,11 @@ project:
     customer_hourly: "Por hora · {{.rate}}/h"
     customer_monthly: "Contrato mensal · {{.fee}}/mês"
     customer_no_rate: Por hora, ainda sem valor por hora
-    customer_without_rate: Este cliente ainda não tem valor por hora. Informe o valor em Clientes para cobrar o projeto.
-    edit_in_customers: Editar em Clientes
+    customer_without_rate: Este cliente ainda não tem valor por hora. Informe o valor em Clientes e Projetos para cobrar o projeto.
+    edit_in_customers: Editar cliente
     extra_hourly: "Acréscimo por hora ({{.unit}})"
     extra_monthly: "Acréscimo por mês ({{.unit}})"
-    extra_hourly_hint: Soma ao valor por hora do cliente só neste projeto, para algo pequeno ou temporário. O reajuste do cliente se faz em Clientes.
+    extra_hourly_hint: Soma ao valor por hora do cliente só neste projeto, para algo pequeno ou temporário. O reajuste do cliente se faz em Clientes e Projetos.
     extra_monthly_hint: Soma à mensalidade do cliente a cada mês, para um projeto a mais. Zere quando acabar.
     total_hourly: "Este projeto cobra {{.rate}} por hora."
     total_monthly: "Soma {{.extra}} por mês à mensalidade de {{.fee}}."
@@ -2169,7 +2172,7 @@ errors:
     customer_not_found: "cliente não encontrado nesta organização"
     invalid_bill_extra: "o acréscimo deve ficar entre 0 e 1.000.000,00"
     bill_extra_needs_customer: "o acréscimo só vale em um projeto com cliente: escolha o cliente do projeto antes"
-    customer_without_rate: "este cliente ainda não tem valor por hora: informe o valor em Clientes antes"
+    customer_without_rate: "este cliente ainda não tem valor por hora: informe o valor em Clientes e Projetos antes"
     customer_locked: "este projeto tem horas e o cliente dele já tem contas a receber: trocar o cliente cobraria as mesmas horas de novo"
     invalid_daily_time: "o horário da daily deve estar no formato HH:MM, por exemplo 09:30"
     invalid_organization: "organização inválida"

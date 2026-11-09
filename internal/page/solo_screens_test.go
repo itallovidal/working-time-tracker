@@ -74,8 +74,8 @@ func TestOnboarding_FirstCustomerAsksTheHourlyRate(t *testing.T) {
 	for who, html := range map[string]string{"solo": solo, "team": team} {
 		mustHave(t, who+" onboarding", html, `id="ob-customer-hourly-rate"`, `data-field="hourly_rate_cents"`, `id="err-hourly_rate_cents"`)
 	}
-	mustHave(t, "solo onboarding", solo, "Cliente por contrato mensal se cadastra em Clientes.")
-	mustNotHave(t, "team onboarding", team, "Cliente por contrato mensal se cadastra em Clientes.")
+	mustHave(t, "solo onboarding", solo, "Cliente por contrato mensal se cadastra em Clientes e Projetos.")
+	mustNotHave(t, "team onboarding", team, "Cliente por contrato mensal se cadastra em Clientes e Projetos.")
 }
 
 // O novo projeto não configura a cobrança, que mora no cliente (Decisão 21): nos dois modos mostra a do cliente, só para
@@ -105,12 +105,17 @@ func TestProjectForm_BillingComesFromTheCustomer(t *testing.T) {
 	}
 }
 
-// O modal de cliente continua com os campos do contrato, agora vindos do parcial.
+// O modal de cliente, em Clientes e Projetos, continua com os campos do contrato, vindos do parcial. O rascunho é
+// customerDraft, para não se misturar com o draft do projeto novo, no mesmo componente.
 func TestCustomerModal_KeepsTheContractFields(t *testing.T) {
-	html := render(t, "org_customers", Data{Me: identity("admin", true, true), Section: "customers", Script: "org"})
+	html := render(t, "org_projects", Data{Me: identity("admin", true, true), Section: "projects", Script: "org"})
 	mustHave(t, "solo customer modal", html, `id="customer-billing-mode"`, `id="customer-monthly-fee"`, `id="customer-contract-end"`,
-		`id="customer-payment-days"`, `id="customer-grace-days"`, `x-model="draft.monthly_fee"`,
-		`id="customer-estimated-hours"`, `max="744"`, `x-model="draft.estimated_hours"`, "Horas estimadas por mês")
+		`id="customer-payment-days"`, `id="customer-grace-days"`, `x-model="customerDraft.monthly_fee"`,
+		`id="customer-estimated-hours"`, `max="744"`, `x-model="customerDraft.estimated_hours"`, "Horas estimadas por mês")
+	mustNotHave(t, "solo customer modal", html, `x-model="draft.monthly_fee"`, `x-model="draft.country"`)
+	// Quem não gerencia os clientes não recebe o formulário nem os detalhes.
+	admin := render(t, "org_projects", Data{Me: identity("admin", false, false), Section: "projects", Script: "org"})
+	mustNotHave(t, "admin page", admin, `id="customer-name"`, `customer-details`)
 }
 
 // A dedicação aos contratos mensais com estimativa de horas (Decisão 26) é do modo solo: a coluna Estimativa da tela
