@@ -1142,9 +1142,7 @@ customer:
     col_closing: Closing
     col_due: Due
     fee: Monthly fee
-    contract: Contract
-    contract_range: "{{.start}} to {{.end}}"
-    contract_open: "Since {{.start}}, no end date"
+    contract_no_end: Open-ended
     late_fee_fact: Late fee
     late_interest_fact: Interest per month
     grace_days_fact: Grace period

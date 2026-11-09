@@ -45,10 +45,10 @@ document.addEventListener('alpine:init', () => {
   }
 
   // rows monta as linhas de uma lista de [rótulo, valor, extras]. Uma linha sem
-  // valor aparece como "Não informado", sem link.
+  // valor aparece como "Não informado", sem link, mas mantém o ícone.
   const rows = (list) => list.map((r) => (r[1]
     ? { label: r[0], value: r[1], ...(r[2] || {}) }
-    : { label: r[0], value: WTT.notInformed, empty: true }));
+    : { label: r[0], value: WTT.notInformed, empty: true, icon: (r[2] || {}).icon }));
   const bareURL = (url) => (url || '').replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
 
   // projectCreation é o modal de novo projeto da página Projetos (o formulário é o parcial project_form) e a criação.
@@ -1205,13 +1205,6 @@ document.addEventListener('alpine:init', () => {
     billingDue(c) {
       return c.payment_days > 0 ? WTT.t('customer.billing.cell_due_days', { count: c.payment_days }) : WTT.t('customer.billing.cell_due_closing');
     },
-    // billingContract é o contrato do cliente mensal, nos detalhes: do início ao fim, ou desde o início, sem fim.
-    billingContract(c) {
-      if (!WTT.billing.monthly(c) || !c.contract_start) return '';
-      return c.contract_end
-        ? WTT.t('customer.billing.contract_range', { start: WTT.fmt.day(c.contract_start), end: WTT.fmt.day(c.contract_end) })
-        : WTT.t('customer.billing.contract_open', { start: WTT.fmt.day(c.contract_start) });
-    },
   });
 
   Alpine.data('orgCustomers', () => ({
@@ -1246,37 +1239,44 @@ document.addEventListener('alpine:init', () => {
       Alpine.store('modal').open('customer-details', c.name, () => !this.pending);
     },
     // customerFacts são os três blocos dos detalhes (o cliente, o contato e a cobrança), cada um com uma lista de
-    // { label, value, empty, href, mono }. Os termos do modo solo só entram no solo.
+    // { label, value, icon, empty, muted, href, mono }; icon é o nome do ícone do Font Awesome, sem o "fa-". Os termos
+    // do modo solo só entram no solo.
     customerFacts(c) {
       if (!c) return [];
       const id = WTT.countries.legalId(c.country);
       const monthly = WTT.billing.monthly(c);
       const billing = [];
-      if (this.solo) billing.push([WTT.t('customer.billing.col_mode'), this.billingMode(c)]);
+      if (this.solo) billing.push([WTT.t('customer.billing.col_mode'), this.billingMode(c), { icon: 'repeat' }]);
       billing.push(monthly
-        ? [WTT.t('customer.billing.fee'), WTT.fmt.money(c.monthly_fee_cents)]
-        : [WTT.t('customer.billing.col_rate'), WTT.billing.withoutRate(c) ? '' : WTT.fmt.money(c.hourly_rate_cents)]);
+        ? [WTT.t('customer.billing.fee'), WTT.fmt.money(c.monthly_fee_cents), { icon: 'money-bill-wave' }]
+        : [WTT.t('customer.billing.col_rate'), WTT.billing.withoutRate(c) ? '' : WTT.fmt.money(c.hourly_rate_cents), { icon: 'clock' }]);
       if (this.solo) {
-        if (monthly) billing.push([WTT.t('customer.billing.contract'), this.billingContract(c)]);
-        billing.push([WTT.t('customer.billing.col_closing'), this.billingClosing(c)]);
-        billing.push([WTT.t('customer.billing.col_due'), this.billingDue(c)]);
+        // O contrato em duas linhas, com os nomes do formulário; sem fim, ele segue por tempo indeterminado.
+        if (monthly) {
+          billing.push([WTT.t('customer.billing.contract_start'), c.contract_start && WTT.fmt.day(c.contract_start), { icon: 'file-signature' }]);
+          billing.push(c.contract_end
+            ? [WTT.t('customer.billing.contract_end'), WTT.fmt.day(c.contract_end), { icon: 'flag-checkered' }]
+            : [WTT.t('customer.billing.contract_end'), WTT.t('customer.billing.contract_no_end'), { icon: 'flag-checkered', muted: true }]);
+        }
+        billing.push([WTT.t('customer.billing.col_closing'), this.billingClosing(c), { icon: 'calendar-check' }]);
+        billing.push([WTT.t('customer.billing.col_due'), this.billingDue(c), { icon: 'calendar-day' }]);
         // Multa, juros e tolerância só aparecem quando o cliente tem algum deles, como no formulário.
         if (monthly && (c.late_fee_bp || c.late_interest_bp_month || c.grace_days)) {
-          billing.push([WTT.t('customer.billing.late_fee_fact'), c.late_fee_bp ? percent(c.late_fee_bp) : '']);
-          billing.push([WTT.t('customer.billing.late_interest_fact'), c.late_interest_bp_month ? percent(c.late_interest_bp_month) : '']);
-          billing.push([WTT.t('customer.billing.grace_days_fact'), c.grace_days ? WTT.t('customer.billing.grace_days_value', { count: c.grace_days }) : '']);
+          billing.push([WTT.t('customer.billing.late_fee_fact'), c.late_fee_bp ? percent(c.late_fee_bp) : '', { icon: 'triangle-exclamation' }]);
+          billing.push([WTT.t('customer.billing.late_interest_fact'), c.late_interest_bp_month ? percent(c.late_interest_bp_month) : '', { icon: 'percent' }]);
+          billing.push([WTT.t('customer.billing.grace_days_fact'), c.grace_days ? WTT.t('customer.billing.grace_days_value', { count: c.grace_days }) : '', { icon: 'hourglass-half' }]);
         }
       }
       return [
         { title: WTT.t('org.customers.details_customer'), rows: rows([
-          [WTT.t('org.customers.country'), WTT.countries.name(c.country)],
-          [id.label, c.document && WTT.fmt.taxId(c.document, c.country), { mono: true }],
-          [WTT.t('org.customers.projects'), String(c.project_count)],
+          [WTT.t('org.customers.country'), WTT.countries.name(c.country), { icon: 'globe' }],
+          [id.label, c.document && WTT.fmt.taxId(c.document, c.country), { mono: true, icon: 'id-card' }],
+          [WTT.t('org.customers.projects'), String(c.project_count), { icon: 'diagram-project' }],
         ]) },
         { title: WTT.t('org.customers.details_contact'), rows: rows([
-          [WTT.t('org.customers.contact_person'), c.contact_name],
-          [WTT.t('common.email'), c.contact_email, { href: 'mailto:' + c.contact_email }],
-          [WTT.t('common.phone'), c.contact_phone, { href: 'tel:' + String(c.contact_phone || '').replace(/[^\d+]/g, '') }],
+          [WTT.t('org.customers.contact_person'), c.contact_name, { icon: 'user' }],
+          [WTT.t('common.email'), c.contact_email, { href: 'mailto:' + c.contact_email, icon: 'envelope' }],
+          [WTT.t('common.phone'), c.contact_phone, { href: 'tel:' + String(c.contact_phone || '').replace(/[^\d+]/g, ''), icon: 'phone' }],
         ]) },
         { title: WTT.t('org.customers.details_billing'), rows: rows(billing) },
       ];

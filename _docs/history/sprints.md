@@ -1204,6 +1204,14 @@ Branch `feat/biweekly-billing-cycle` (2026-11-07), for US customers who pay hour
 - [X] S113.3 Receivables: periods of 14 days from the day after the anchor (`PaymentRule.PeriodDays`, hidden from the API; the person's 15-day rule does not change), nothing proposed up to the anchor, and a cap of 52 closed periods in that cycle (24 in the monthly one), so a year of the solo home keeps all 26
 - [X] S113.4 The customer form in solo: a "Ciclo do período" select in hourly mode, and "Último fechamento já pago" in place of the closing day in the 14-day cycle. The Fechamento column and the details say "A cada 14 dias desde 27 de out. de 2026". Help and API docs follow
 
+### Sprint 114: The Contract's First Period and the Customer Details
+
+Branch `feat/contract-first-period` (2026-11-09), after a real monthly customer (contract from 2026-10-05, closing on the 5th) showed a 06/09–05/10 period in A receber.
+
+- [X] S114.1 Receivables: a monthly contract that starts on the closing day itself starts with the next period (`contractPeriods`). The start's period would hold only its last day, and with no pro-rata that is a month billed for one day. `Confirm` refuses that period with `receivable.not_a_period`; receivables already confirmed stay as they are. `TestProposals_Monthly`, `TestConfirm_MonthlySkipsAClosingDayStart`
+- [X] S114.2 Customer details: a muted Font Awesome icon before every label (`icon` in the `customerFacts` rows; `rows` keeps it on the "Não informado" ones), and the label column grows to 11rem so the longer labels stay on one line (9.75rem with a smaller gap up to 640px wide, so the values keep the width they had on a phone)
+- [X] S114.3 Customer details: the contract is two rows, "Início do contrato" and "Fim do contrato" (the form's labels), and an open contract says "Indeterminado", muted. The `customer.billing.contract`, `contract_range` and `contract_open` texts are gone; `contract_no_end` is new
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open

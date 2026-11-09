@@ -368,7 +368,13 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 .fact { display: contents; }
 /* Vários blocos .facts em sequência (os detalhes do cliente): a coluna dos rótulos tem a mesma largura em todos, para
    os valores ficarem alinhados de um bloco para o outro. */
-.facts-wide { grid-template-columns: 9.5rem 1fr; }
+.facts-wide { grid-template-columns: 11rem 1fr; }
+/* O ícone antes do rótulo (os detalhes do cliente): herda a cor apagada do dt, com largura fixa para os rótulos
+   começarem alinhados. */
+.fact-icon { margin-right: 8px; }
+/* No celular a coluna dos rótulos fica no justo para o maior deles ("Pessoa de contato" com o ícone), e os valores
+   ficam com a largura que tinham antes dos ícones: a data e o telefone cabem numa linha. */
+@media (max-width: 640px) { .facts-wide { grid-template-columns: 9.75rem 1fr; column-gap: 10px; } }
 .prose { white-space: pre-line; color: var(--ink-2); }
 /* Descrição em Markdown, já sanitizada: o texto corre como numa página, e os títulos ficam
    pequenos para não competir com o da tarefa. */

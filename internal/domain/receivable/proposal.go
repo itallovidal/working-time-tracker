@@ -94,10 +94,11 @@ func (t terms) hourly(sessions []work_session.WorkSession, done map[string]bool,
 }
 
 // contractPeriods são os períodos do contrato mensal que se podem cobrar: do período do contract_start até o corrente,
-// parando no contract_end (o período que o contém é o último). O corrente se confirma adiantado, a qualquer momento do
-// mês; o seguinte só entra quando começa (propor os dois parecia cobrança em dobro). Vazio quando o cliente não tem
-// mensalidade e início de contrato, ou quando o contrato só começa depois do período corrente. Do mais antigo para o
-// mais novo.
+// parando no contract_end (o período que o contém é o último). O contrato que começa no próprio dia de fechamento
+// começa no período seguinte: no do início ele teria só o último dia, e sem pro-rata isso seria um mês inteiro cobrado
+// por um dia. O corrente se confirma adiantado, a qualquer momento do mês; o seguinte só entra quando começa (propor os
+// dois parecia cobrança em dobro). Vazio quando o cliente não tem mensalidade e início de contrato, ou quando o
+// contrato só começa depois do período corrente. Do mais antigo para o mais novo.
 func (t terms) contractPeriods(now time.Time) []payment.Period {
 	c := t.customer
 	if c.MonthlyFeeCents == nil || *c.MonthlyFeeCents <= 0 || c.ContractStart == nil {
@@ -106,6 +107,9 @@ func (t terms) contractPeriods(now time.Time) []payment.Period {
 	first, ok := t.cycle.ofDay(*c.ContractStart)
 	if !ok {
 		return nil
+	}
+	if first.PayDay() == *c.ContractStart {
+		first = payment.Next(first)
 	}
 	cur, ok := t.cycle.at(now)
 	if !ok {
@@ -124,7 +128,8 @@ func (t terms) contractPeriods(now time.Time) []payment.Period {
 // monthly propõe os períodos do contrato mensal que ainda não foram confirmados, do mais novo ao limite
 // MaxMonthlyProposals. O valor é a mensalidade mais os acréscimos mensais dos projetos (ExtraCents diz quanto deles);
 // as horas são as dos projetos do cliente no período, só para a conta do valor por hora efetivo. O primeiro mês parcial
-// o dono corrige ao confirmar: não há pro-rata.
+// o dono corrige ao confirmar: não há pro-rata (o contrato que começa no dia de fechamento já pula o período de um dia,
+// em contractPeriods).
 func (t terms) monthly(sessions []work_session.WorkSession, done map[string]bool, now time.Time) []Proposal {
 	periods := t.contractPeriods(now)
 	var out []Proposal

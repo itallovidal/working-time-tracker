@@ -68,10 +68,10 @@
           <dl class="facts facts-wide">
             <template x-for="f in block.rows" :key="f.label">
               <div class="fact">
-                <dt x-text="f.label"></dt>
+                <dt><i class="fa-solid fa-fw fact-icon" :class="'fa-' + f.icon" aria-hidden="true" x-show="f.icon"></i><span x-text="f.label"></span></dt>
                 <dd>
                   <a x-show="f.href && !f.empty" :href="f.href" x-text="f.value"></a>
-                  <span x-show="!f.href || f.empty" :class="{ mono: f.mono && !f.empty, muted: f.empty }" x-text="f.value"></span>
+                  <span x-show="!f.href || f.empty" :class="{ mono: f.mono && !f.empty, muted: f.empty || f.muted }" x-text="f.value"></span>
                 </dd>
               </div>
             </template>

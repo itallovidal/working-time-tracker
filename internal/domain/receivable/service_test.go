@@ -394,6 +394,25 @@ func TestProposals_Monthly(t *testing.T) {
 			t.Errorf("a contract that starts on %s, after the current period = %v, want none", start, got)
 		}
 	}
+	// O contrato que começa no próprio dia de fechamento começa no período seguinte: no do início teria só esse dia.
+	onClosing := f.monthly("No fechamento", "2026-07-31", nil)
+	if got, want := periods(onClosing), []string{"2026-08-01", "2026-09-01", "2026-10-01"}; !equal(got, want) {
+		t.Errorf("contract starting on the closing day = %v, want %v (the period after the start's)", got, want)
+	}
+	closesOn5 := testClient.Customer.Create().SetOrganizationID(f.orgID).SetName("Fecha no dia 5").SetBillingMode("monthly").
+		SetMonthlyFeeCents(200000).SetContractStart("2026-09-05").SetClosingDay(5).SetPaymentDays(10).SaveX(context.Background())
+	if got, want := periods(closesOn5), []string{"2026-09-06", "2026-10-06"}; !equal(got, want) {
+		t.Errorf("contract starting on the 5th, closing on the 5th = %v, want %v (no one-day 2026-08-06 period)", got, want)
+	}
+	onCurrentClosing := f.monthly("No fechamento corrente", "2026-10-31", nil)
+	if got := periods(onCurrentClosing); len(got) != 0 {
+		t.Errorf("a contract that starts on the current period's closing day = %v, want none (it starts with the next one)", got)
+	}
+	oneDay := "2026-07-31"
+	sameDay := f.monthly("Um dia no fechamento", "2026-07-31", &oneDay)
+	if got := periods(sameDay); len(got) != 0 {
+		t.Errorf("a contract that starts and ends on the closing day = %v, want none", got)
+	}
 	noFee := testClient.Customer.Create().SetOrganizationID(f.orgID).SetName("Sem valor").SetBillingMode("monthly").
 		SetContractStart("2026-08-01").SaveX(context.Background())
 	if got := periods(noFee); len(got) != 0 {
@@ -607,6 +626,16 @@ func TestConfirm_MonthlyStopsAtTheContractEnd(t *testing.T) {
 	acme := f.monthly("Acme", "2026-08-15", &end)
 	_, err := f.svc.Confirm(f.orgID.String(), receivable.ConfirmInput{CustomerID: acme.ID.String(), PeriodStart: "2026-10-01", PeriodEnd: "2026-10-31", AmountCents: rate(500000)})
 	wantCode(t, err, receivable.ErrNotAPeriod, "period_start")
+}
+
+// O período em que o contrato só teria o dia de fechamento não é dele: confirmá-lo é recusado como qualquer data fora
+// do contrato, e o seguinte confirma.
+func TestConfirm_MonthlySkipsAClosingDayStart(t *testing.T) {
+	f := setup(t)
+	acme := f.monthly("Acme", "2026-07-31", nil)
+	_, err := f.svc.Confirm(f.orgID.String(), receivable.ConfirmInput{CustomerID: acme.ID.String(), PeriodStart: "2026-07-01", PeriodEnd: "2026-07-31", AmountCents: rate(500000)})
+	wantCode(t, err, receivable.ErrNotAPeriod, "period_start")
+	f.confirm(acme, "2026-08-01", "2026-08-31", 500000)
 }
 
 func TestEdit(t *testing.T) {
