@@ -136,8 +136,10 @@ fazer, com o que já foi pago, e leva outra baixa, que cobre só ele. Por isso:
 ## Contas a receber (modo solo)
 
 Na organização do **modo solo** (uma pessoa só), o dono acompanha o que cobra de cada cliente na página **A receber**
-(`/orgs/:orgId/receivables`, `receivables.manage`, só o dono; `404` fora do modo solo). Cada conta a receber é um
-**recebível**: um por cliente e período, com o valor que o dono confirmou e, depois, o que entrou. O sistema não emite
+(`/orgs/:orgId/receivables`, `receivables.manage`, só o dono; `404` fora do modo solo). Cada conta a receber é de um
+cliente e de um período: o app **calcula** o valor e o vencimento, e o dono **recebe** direto ou, antes, **ajusta** o
+valor, o vencimento e a nota (Decisão 24). Só o recebido e o ajustado ficam gravados, como um **recebível**: um por
+cliente e período, com o valor da conta e, depois, o que entrou. O sistema não emite
 nota: o número dela é só uma anotação. As rotas estão em [../api/reference.md](../api/reference.md#contas-a-receber-modo-solo).
 
 **Como o período fecha.** O cliente tem um `closing_day` (1 a 31; 31 é o último dia do mês, e um mês curto fecha no
@@ -153,35 +155,42 @@ com 14 dias cada. As horas até a âncora já foram acertadas fora do app e **nu
 mesma conta da regra quinzenal da pessoa, com 14 dias em vez de 15 (`PaymentRule.PeriodDays`, que não sai na API). A
 âncora não pode ser depois de hoje; para um cliente novo, o dono usa o dia 14 dias antes do primeiro fechamento.
 
-**O que o sistema propõe** (calculado na hora; nada é gravado até o dono confirmar):
+**O que o sistema calcula** (na hora; nada é gravado até o dono receber ou ajustar):
 
-| Modo do cliente | Períodos propostos | Valor proposto |
+| Modo do cliente | Períodos calculados | Valor calculado |
 |---|---|---|
-| **Por hora** | Os períodos **já fechados** com tempo nos projetos do cliente, ainda sem recebível. No máximo os 24 mais recentes no ciclo mensal e os 52 no de 14 dias (cerca de dois anos nos dois) | A soma das sessões de **todos os projetos do cliente**, cortadas no período e arredondadas ao centavo **por sessão**, pelo valor cobrado congelado nela (a mesma conta de [Da sessão ao dinheiro](#da-sessão-ao-dinheiro)). A sessão aberta conta até agora |
-| **Mensal** | Do período do `contract_start` até o **período corrente** (o seguinte só entra quando começa), parando no período que contém o `contract_end`, ainda sem recebível. No máximo os 60 mais recentes. Um `contract_start` no próprio dia de fechamento começa no **período seguinte**: no do início o contrato teria só esse último dia, e sem pro-rata isso seria um mês cobrado por um dia (início em 05/10 com fechamento no dia 5: o primeiro período é 06/10–05/11) | A `monthly_fee_cents` mais os acréscimos mensais dos projetos do cliente, como estão hoje (`extra_cents` diz quanto deles). O primeiro mês parcial, e um acréscimo que já acabou, o dono corrige ao confirmar: não há pro-rata |
+| **Por hora** | Os períodos **já fechados** com tempo nos projetos do cliente, ainda sem recebível. No máximo os 24 mais recentes no ciclo mensal e os 52 no de 14 dias (cerca de dois anos nos dois). O período corrente, com tempo, entra em Em andamento com as horas até agora | A soma das sessões de **todos os projetos do cliente**, cortadas no período e arredondadas ao centavo **por sessão**, pelo valor cobrado congelado nela (a mesma conta de [Da sessão ao dinheiro](#da-sessão-ao-dinheiro)). A sessão aberta conta até agora |
+| **Mensal** | Do período do `contract_start` até o **período corrente** (o seguinte só entra quando começa), parando no período que contém o `contract_end`, ainda sem recebível. No máximo os 60 mais recentes. Um `contract_start` no próprio dia de fechamento começa no **período seguinte**: no do início o contrato teria só esse último dia, e sem pro-rata isso seria um mês cobrado por um dia (início em 05/10 com fechamento no dia 5: o primeiro período é 06/10–05/11) | A `monthly_fee_cents` mais os acréscimos mensais dos projetos do cliente, como estão hoje (`extra_cents` diz quanto deles). O primeiro mês parcial, e um acréscimo que já acabou, o dono corrige ao ajustar: não há pro-rata |
 
-A proposta traz também o **valor por hora efetivo** (o valor dividido pelas horas). Abaixo de 10,00
+A conta traz também o **valor por hora efetivo** (o valor dividido pelas horas). Abaixo de 10,00
 (`validate.MinRateCents`) vira um **aviso** na tela, nunca um erro: no mensal, as horas só estão completas depois que o
 período fecha.
 
-**Confirmar** (`POST /receivables`) grava o recebível com as horas e o valor que o sistema calcula naquele momento
-(`seconds`, `calculated_cents`), o valor que o dono confirmou (`amount_cents`, que ele pode ajustar), o vencimento, a
-nota e a observação, e a moeda da organização (sem conversão). Uma hora registrada depois não reescreve o que foi
-cobrado.
+**Receber direto** (`POST /receivables/receive`, o período calculado) grava o recebível já recebido, num passo só: as
+horas e o valor que o sistema calcula naquele momento (`seconds`, `calculated_cents`, e `amount_cents` igual a eles), o
+vencimento padrão, o recebimento, o número da nota e a observação, e a moeda da organização (sem conversão).
+
+**Ajustar** (`POST /receivables`, o "Editar" da tela) grava o recebível sem recebimento, com o valor que o dono quer
+cobrar (`amount_cents`), o vencimento, a nota e a observação; a conta continua em A receber, marcada como ajustada, e
+`PATCH` a altera de novo. Nos dois casos, uma hora registrada depois não reescreve o que foi gravado.
 
 - **Por hora**: só depois que o período fechou (`409 receivable.period_open`).
-- **Mensal**: a qualquer momento, inclusive adiantado (o período corrente, antes de fechar), mas só dentro do contrato
-  e até o período corrente. O seguinte se confirma quando começar.
-- O período tem de ser um do ciclo do cliente (`400 receivable.not_a_period`) e confirma uma vez só
+- **Mensal**: a qualquer momento, inclusive adiantado (o período corrente, antes de fechar: o "Recebi adiantado" da
+  tela), mas só dentro do contrato e até o período corrente. O seguinte só quando começar.
+- O período tem de ser um do ciclo do cliente (`400 receivable.not_a_period`) e grava uma vez só
   (`409 receivable.already_confirmed`, garantido também pelo índice único em cliente e período).
+- Um período calculado sem valor (sessões sem valor cobrado) não se recebe direto (`400 receivable.invalid_amount`):
+  ajuste o valor antes.
 
-**Receber** (`POST /receivables/:id/receive`) registra o dia (hoje, por padrão; depois de hoje é recusado) e o valor:
+**Receber** a conta ajustada (`POST /receivables/:id/receive`) registra o dia (hoje, por padrão; depois de hoje é
+recusado), o valor e, se vier, o número da nota. As regras do valor valem também para o recebimento direto:
 
-- **Por hora**: entra o valor confirmado; multa e juros são recusados.
+- **Por hora**: entra o valor da conta; multa e juros são recusados.
 - **Mensal**: o valor recebido é livre (maior que zero); a **multa** e os **juros** são zero ou mais e são partes
   informativas do valor recebido, então somados não passam dele.
 
-**Multa e juros sugeridos** (`GET /receivables/:id/late-charges?on=`), só no mensal. Se a data passa de
+**Multa e juros sugeridos** (`GET /receivables/:id/late-charges?on=` na conta ajustada, e
+`GET /receivables/late-charges?customer_id=&period_start=&period_end=&on=` na calculada), só no mensal. Se a data passa de
 `vencimento + grace_days`:
 
 ```
@@ -192,27 +201,38 @@ juros = valor × late_interest_bp_month / 10000 × diasAtraso / 30
 Os dois são arredondados ao centavo (o meio centavo sobe). `diasAtraso` são os dias entre o **vencimento** e a data: a
 tolerância adia a cobrança, mas não os dias que contam (passou da tolerância, os juros valem desde o vencimento). Antes
 disso a sugestão é zero. Exemplo: 6.300,00 com 2% de multa e 1% ao mês, recebidos 10 dias depois do vencimento, são
-126,00 de multa, 21,00 de juros e 6.447,00 no total. É só uma sugestão: o dono confirma ou muda os valores no modal de
+126,00 de multa, 21,00 de juros e 6.447,00 no total. É só uma sugestão: o dono aceita ou muda os valores no modal de
 receber.
 
-**Atrasado** é derivado, não gravado: confirmado, sem recebimento e com hoje depois do vencimento.
+**Atrasado** é derivado, não gravado: sem recebimento e com hoje depois do vencimento, na conta calculada e na
+ajustada.
 
 **Desfazer.** `DELETE /receivables/:id/receive` desfaz o recebimento (a multa e os juros informados se vão com ele), e
-`DELETE /receivables/:id` desfaz a confirmação, que volta a ser uma proposta. A confirmação com o recebimento registrado
-não se desfaz (`409 receivable.already_received`): desfaça o recebimento antes. Editar (`PATCH`: valor, vencimento, nota
-e observação) também só vale enquanto não foi recebido.
+a conta volta para A receber como ajustada. `DELETE /receivables/:id` ("Voltar ao valor calculado") apaga o recebível,
+e o período volta a ser calculado. Com o recebimento registrado ele não se apaga (`409 receivable.already_received`):
+desfaça o recebimento antes. Editar (`PATCH`: valor, vencimento, nota e observação) também só vale enquanto não foi
+recebido.
 
-**A página.** Quatro cartões (a confirmar, em aberto, atrasado e recebido no mês) e três listas: **A confirmar**
-(as propostas), **Em aberto** (confirmado e não recebido, com Receber, Editar e Desfazer confirmação) e **Recebidos**
-(os 50 mais recentes, com Desfazer recebimento). "Em aberto" inclui o atrasado; "Recebido no mês" é a soma de
-`received_cents` com `received_on` no mês do calendário da organização.
+**A página** (`GET /receivables`). Quatro cartões (em andamento, a receber, atrasado e recebido no mês) e três listas:
+
+- **Em andamento** (`in_progress`): o período atual de cada cliente, ainda aberto. O mês corrente do contrato mensal,
+  com a mensalidade, e o período corrente do por hora com tempo, com as horas e o valor até agora. A linha mostra em que
+  dia do período está e quando fecha; no mensal, "Recebi adiantado" recebe o mês antes de fechar. Um mês ajustado
+  adiantado (gravado e não recebido) também fica aqui, pelo valor ajustado, até o período fechar.
+- **A receber** (`to_receive`): o que fechou e não entrou, calculado (`id` nulo) ou ajustado (`adjusted`), do
+  vencimento mais antigo (o mais atrasado) para o mais novo, com o selo do vencimento: atrasado há N dias, vence hoje,
+  amanhã ou em N dias. Ações: Receber e Editar.
+- **Recebidos** (`received`): os 50 mais recentes, com Desfazer recebimento.
+
+"A receber" inclui o atrasado; "Recebido no mês" é a soma de `received_cents` com `received_on` no mês do calendário da
+organização.
 
 **Limites que valem saber.** Os períodos são calculados do cadastro do cliente de hoje, e "já cobrado" compara as
 datas exatas do período. Por isso o cliente com recebíveis não troca o `closing_day` (`customer.closing_day_locked`;
-mandar o dia que ele já tem passa): um dia novo geraria períodos por cima dos confirmados e as mesmas horas seriam
-propostas de novo. Desfeitos os recebíveis, o dia muda. O ciclo e a âncora travam do mesmo jeito
+mandar o dia que ele já tem passa): um dia novo geraria períodos por cima dos gravados e as mesmas horas seriam
+calculadas de novo. Desfeitos os recebíveis, o dia muda. O ciclo e a âncora travam do mesmo jeito
 (`customer.cycle_locked`), com uma exceção: passar para o de 14 dias, ou mover a âncora, com ela no fim do recebível
-mais recente ou depois, porque aí os períodos novos começam depois de tudo o que já foi confirmado. É assim que um
+mais recente ou depois, porque aí os períodos novos começam depois de tudo o que já foi gravado. É assim que um
 cliente com histórico mensal passa para 14 dias. Pelo mesmo motivo, e porque a sessão não guarda o cliente (vale
 o do projeto de hoje), o projeto com sessões não sai de um cliente que já tem recebíveis (`project.customer_locked`).
 Receber um recebível cujo valor foi editado depois de a tela lê-lo é recusado (`receivable.changed`): o dono confere e
@@ -227,15 +247,15 @@ janela é de calendário no fuso da organização: Este mês, Mês passado ou An
 |---|---|---|
 | O que é | O que **entrou**: o dinheiro que o dono marcou como recebido | O que se **espera** dos períodos de cobrança que terminam na janela, pagos ou não |
 | A data que conta | O dia do recebimento (`received_on`) | O último dia do período (`period_end`) |
-| Valor | A soma de `received_cents` (com a multa e os juros do mensal, que são partes dele) | O `amount_cents` do recebível, quando o período já foi confirmado; senão a proposta |
+| Valor | A soma de `received_cents` (com a multa e os juros do mensal, que são partes dele) | O `amount_cents` do recebível, quando o período já foi gravado (ajustado ou recebido); senão o calculado |
 
 - **Uma cobrança de janeiro recebida em 5 de fevereiro é Receita de fevereiro** e projetada de janeiro. Desfazer o
-  recebimento tira o valor da Receita e não mexe na projetada; desfazer a confirmação devolve o período a proposta, e
-  a projetada passa a ser o calculado das horas (ou a mensalidade).
-- **O confirmado vale mais que a proposta.** Se o dono ajustou o valor ao confirmar, é o ajustado que se espera, e as horas
-  registradas depois da confirmação não o mexem. Cada período conta uma vez só: as propostas já excluem os períodos que
-  têm recebível.
-- **A proposta, na Receita projetada.** No cliente por hora ela traz também o **período em andamento**, com as horas até
+  recebimento tira o valor da Receita e não mexe na projetada; voltar ao valor calculado devolve o período ao
+  calculado, e a projetada passa a ser o das horas (ou a mensalidade).
+- **O gravado vale mais que o calculado.** Se o dono ajustou o valor, é o ajustado que se espera, e as horas
+  registradas depois de gravar não o mexem. Cada período conta uma vez só: o calculado já exclui os períodos que têm
+  recebível.
+- **O calculado, na Receita projetada.** No cliente por hora ela traz também o **período em andamento**, com as horas até
   agora vezes o valor cobrado congelado nas sessões (no meio do mês, é o que se tem para receber até o fechamento). No
   mensal é a mensalidade mais os acréscimos do período do contrato, também o corrente. Um período corrente que termina
   depois do fim do mês fica para o mês dele.
@@ -247,7 +267,7 @@ janela é de calendário no fuso da organização: Este mês, Mês passado ou An
   no mês seguinte, e o valor por hora efetivo do cliente é uma aproximação (chega a zero, com o aviso, num mês em que
   nenhum período dele termina). No ciclo de 14 dias um mês tem dois ou três fins de período, e a conta também é uma
   aproximação.
-- **Os tetos das propostas** (por cliente por hora, 24 períodos fechados no ciclo mensal e 52 no de 14 dias; 60 por
+- **Os tetos do calculado** (por cliente por hora, 24 períodos fechados no ciclo mensal e 52 no de 14 dias; 60 por
   cliente mensal) não chegam a valer na tela: uma janela tem no máximo 12 períodos mensais de cada cliente, ou 26
   fechados do ciclo de 14 dias, sempre os mais recentes.
 

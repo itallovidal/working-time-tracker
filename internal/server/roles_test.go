@@ -49,6 +49,8 @@ func TestRoles_Matrix(t *testing.T) {
 		// outros ficam na permissão (403), antes do 404. O dono do modo solo está em receivables_test.go.
 		{"the receivables", "GET", org + "/receivables", "", [4]int{404, 403, 403, 403}},
 		{"confirm a receivable", "POST", org + "/receivables", `{}`, [4]int{404, 403, 403, 403}},
+		{"receive a calculated period", "POST", org + "/receivables/receive", `{}`, [4]int{404, 403, 403, 403}},
+		{"the late charges of a calculated period", "GET", org + "/receivables/late-charges", "", [4]int{404, 403, 403, 403}},
 		{"edit a receivable", "PATCH", org + "/receivables/00000000-0000-0000-0000-000000000000", `{}`, [4]int{404, 403, 403, 403}},
 		{"undo a receivable", "DELETE", org + "/receivables/00000000-0000-0000-0000-000000000000", "", [4]int{404, 403, 403, 403}},
 		{"the late charges of a receivable", "GET", org + "/receivables/00000000-0000-0000-0000-000000000000/late-charges", "", [4]int{404, 403, 403, 403}},

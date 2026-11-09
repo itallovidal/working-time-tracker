@@ -3,7 +3,7 @@
 O servidor MCP ([Model Context Protocol](https://modelcontextprotocol.io)) deixa o Claude agir como uma pessoa: ver e
 criar tarefas, atualizá-las, pegar uma tarefa para si, sincronizá-la com a plataforma, bater o ponto, trocar de tarefa e
 ver as próprias horas. Ele mora no mesmo binário, em `/mcp`. Quem decidiu e por quê está nas
-[Decisões 22 e 24](../architecture/decisions.md).
+[Decisões 22 e 25](../architecture/decisions.md).
 
 Há dois jeitos de entrar:
 

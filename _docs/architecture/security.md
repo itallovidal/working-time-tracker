@@ -44,7 +44,7 @@ celular) e o Claude Code entram também pelo OAuth ([OAuth do MCP](#oauth-do-mcp
 ## OAuth do MCP
 
 O claude.ai, o Claude Desktop e o celular só conectam um servidor remoto por OAuth 2.1. O sistema é o próprio servidor
-de autorização (`internal/oauth`, [Decisão 24](decisions.md#decisão-24-oauth-no-mcp--o-claudeai-o-desktop-e-o-celular-pela-identidade-publicada-do-claude)).
+de autorização (`internal/oauth`, [Decisão 25](decisions.md#decisão-25-oauth-no-mcp--o-claudeai-o-desktop-e-o-celular-pela-identidade-publicada-do-claude)).
 
 - **Só os apps do Claude.** O client_id tem de ser uma das duas URLs de identidade publicadas do Claude (o claude.ai e o
   Claude Code). O documento é buscado dessas URLs e de nenhuma outra: sem redirecionamento, em até 5 segundos e até

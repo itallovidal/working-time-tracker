@@ -73,8 +73,19 @@ func errCode(t *testing.T, e *echo.Echo, method, path, body, session string) (in
 	return rec.Code, code
 }
 
-// Fora do modo solo as sete rotas e a página não existem, nem para o dono; ligar o modo as abre, e desligá-lo as esconde
-// de novo sem apagar o que foi confirmado.
+// adjustedCount conta as contas gravadas (ajustadas) da lista A receber.
+func adjustedCount(list map[string]any) int {
+	n := 0
+	for _, d := range list["to_receive"].([]any) {
+		if d.(map[string]any)["id"] != nil {
+			n++
+		}
+	}
+	return n
+}
+
+// Fora do modo solo as nove rotas e a página não existem, nem para o dono; ligar o modo as abre, e desligá-lo as esconde
+// de novo sem apagar o que foi gravado.
 func TestReceivables_OnlyInSoloMode(t *testing.T) {
 	e := newServer(t)
 	owner := signup(t, e, "Org", "ana@test.com")
@@ -83,6 +94,8 @@ func TestReceivables_OnlyInSoloMode(t *testing.T) {
 	routes := []struct{ method, path, body string }{
 		{"GET", org, ""},
 		{"POST", org, `{}`},
+		{"POST", org + "/receive", `{}`},
+		{"GET", org + "/late-charges", ""},
 		{"PATCH", org + "/" + missing, `{}`},
 		{"DELETE", org + "/" + missing, ""},
 		{"GET", org + "/" + missing + "/late-charges", ""},
@@ -113,7 +126,7 @@ func TestReceivables_OnlyInSoloMode(t *testing.T) {
 	// Desligar o modo esconde as rotas; os recebíveis ficam guardados e voltam quando ele liga de novo.
 	customer := monthlyCustomer(t, owner.orgID)
 	rec := do(e, "GET", org, "", owner.session)
-	first := decode(t, rec)["to_confirm"].([]any)[0].(map[string]any)
+	first := decode(t, rec)["to_receive"].([]any)[0].(map[string]any)
 	body := fmt.Sprintf(`{"customer_id":"%s","period_start":"%s","period_end":"%s","amount_cents":500000}`, customer.ID, first["period_start"], first["period_end"])
 	if rec := do(e, "POST", org, body, owner.session); rec.Code != http.StatusCreated {
 		t.Fatalf("confirm = %d: %s", rec.Code, rec.Body.String())
@@ -123,8 +136,8 @@ func TestReceivables_OnlyInSoloMode(t *testing.T) {
 		t.Errorf("the list after turning the mode off = %d, want 404", got)
 	}
 	setSolo(t, owner.orgID, true)
-	if open, _ := decode(t, do(e, "GET", org, "", owner.session))["open"].([]any); len(open) != 1 {
-		t.Errorf("after turning the mode off and on again the open list has %d items, want the 1 that was confirmed", len(open))
+	if got := adjustedCount(decode(t, do(e, "GET", org, "", owner.session))); got != 1 {
+		t.Errorf("after turning the mode off and on again A receber has %d adjusted items, want the 1 that was recorded", got)
 	}
 }
 
@@ -156,8 +169,8 @@ func TestReceivables_OwnerOnly(t *testing.T) {
 	}
 }
 
-// O caminho inteiro do dono: a proposta, a confirmação, a edição, a sugestão de multa e juros, o recebimento e cada passo
-// desfeito.
+// O caminho do dono com ajuste: a conta calculada, o ajuste (a confirmação), a edição, a sugestão de multa e juros, o
+// recebimento e cada passo desfeito.
 func TestReceivables_OwnerFlow(t *testing.T) {
 	e := newServer(t)
 	owner := signup(t, e, "Org", "ana@test.com")
@@ -166,17 +179,23 @@ func TestReceivables_OwnerFlow(t *testing.T) {
 	customer := monthlyCustomer(t, owner.orgID)
 
 	list := decode(t, do(e, "GET", org, "", owner.session))
-	proposals := list["to_confirm"].([]any)
-	// Do contrato do mês passado até o corrente: mês passado e corrente (o seguinte só quando começar).
-	if len(proposals) != 2 {
-		t.Fatalf("proposals = %d, want 2 (last month and this month): %v", len(proposals), proposals)
+	// Do contrato do mês passado até o corrente: o mês passado já fechou (A receber) e o corrente está em andamento (o
+	// seguinte só quando começar).
+	toReceive, progress := list["to_receive"].([]any), list["in_progress"].([]any)
+	if len(toReceive) != 1 || len(progress) != 1 {
+		t.Fatalf("to receive %d, in progress %d, want 1 and 1: %v", len(toReceive), len(progress), list)
 	}
-	first := proposals[0].(map[string]any)
-	if first["kind"] != "monthly" || first["calculated_cents"] != float64(500000) || first["customer"].(map[string]any)["name"] != "Mensal" {
-		t.Fatalf("first proposal = %v", first)
+	first := toReceive[0].(map[string]any)
+	if first["kind"] != "monthly" || first["calculated_cents"] != float64(500000) || first["amount_cents"] != float64(500000) ||
+		first["id"] != nil || first["adjusted"] != false || first["customer"].(map[string]any)["name"] != "Mensal" {
+		t.Fatalf("the closed month = %v", first)
+	}
+	if p := progress[0].(map[string]any); p["id"] != nil || p["amount_cents"] != float64(500000) {
+		t.Errorf("the current month = %v", p)
 	}
 	totals := list["totals"].(map[string]any)
-	if totals["to_confirm_count"] != float64(2) || totals["to_confirm_cents"] != float64(1000000) {
+	if totals["to_receive_count"] != float64(1) || totals["to_receive_cents"] != float64(500000) ||
+		totals["in_progress_count"] != float64(1) || totals["in_progress_cents"] != float64(500000) {
 		t.Errorf("totals = %v", totals)
 	}
 
@@ -232,24 +251,93 @@ func TestReceivables_OwnerFlow(t *testing.T) {
 		t.Errorf("undoing the confirmation of a received receivable = %d %s", status, code)
 	}
 
-	// Os cartões: um recebido no mês corrente.
+	// Recebido, o mês sai de A receber; o corrente segue em andamento.
 	list = decode(t, do(e, "GET", org, "", owner.session))
-	if got := len(list["received"].([]any)); got != 1 || len(list["to_confirm"].([]any)) != 1 {
-		t.Errorf("after receiving: %d received, %d to confirm, want 1 and 1", got, len(list["to_confirm"].([]any)))
+	if got := len(list["received"].([]any)); got != 1 || len(list["to_receive"].([]any)) != 0 || len(list["in_progress"].([]any)) != 1 {
+		t.Errorf("after receiving: %d received, %d to receive, %d in progress, want 1, 0 and 1", got, len(list["to_receive"].([]any)), len(list["in_progress"].([]any)))
 	}
 
-	// Cada passo se desfaz: primeiro o recebimento, depois a confirmação.
+	// Cada passo se desfaz: o recebimento (a conta volta ajustada para A receber) e o ajuste (volta a ser calculada).
 	if got := status(e, "DELETE", org+"/"+id+"/receive", "", owner.session); got != http.StatusNoContent {
 		t.Errorf("undo the receipt = %d, want 204", got)
 	}
 	if status, code := errCode(t, e, "DELETE", org+"/"+id+"/receive", "", owner.session); status != http.StatusConflict || code != "receivable.not_received" {
 		t.Errorf("undoing a receipt that is not there = %d %s", status, code)
 	}
-	if got := status(e, "DELETE", org+"/"+id, "", owner.session); got != http.StatusNoContent {
-		t.Errorf("undo the confirmation = %d, want 204", got)
+	if got := adjustedCount(decode(t, do(e, "GET", org, "", owner.session))); got != 1 {
+		t.Errorf("after undoing the receipt A receber has %d adjusted items, want 1", got)
 	}
-	if len(decode(t, do(e, "GET", org, "", owner.session))["to_confirm"].([]any)) != 2 {
-		t.Error("the period did not come back as a proposal")
+	if got := status(e, "DELETE", org+"/"+id, "", owner.session); got != http.StatusNoContent {
+		t.Errorf("undo the adjustment = %d, want 204", got)
+	}
+	list = decode(t, do(e, "GET", org, "", owner.session))
+	if len(list["to_receive"].([]any)) != 1 || adjustedCount(list) != 0 {
+		t.Errorf("the period did not come back as calculated: %v", list["to_receive"])
+	}
+}
+
+// Receber direto, sem ajustar: o mês corrente adiantado, o mês fechado atrasado com a sugestão de multa e juros do período
+// calculado, e as recusas.
+func TestReceivables_ReceiveCalculated(t *testing.T) {
+	e := newServer(t)
+	owner := signup(t, e, "Org", "ana@test.com")
+	setSolo(t, owner.orgID, true)
+	org := receivablesPath(owner)
+	customer := monthlyCustomer(t, owner.orgID)
+	list := decode(t, do(e, "GET", org, "", owner.session))
+	current := list["in_progress"].([]any)[0].(map[string]any)
+	closed := list["to_receive"].([]any)[0].(map[string]any)
+	periodBody := func(p map[string]any, extra string) string {
+		return fmt.Sprintf(`{"customer_id":"%s","period_start":"%s","period_end":"%s"%s}`, customer.ID, p["period_start"], p["period_end"], extra)
+	}
+
+	if status, code := errCode(t, e, "POST", org+"/receive", `{"cliente":"x"}`, owner.session); status != http.StatusBadRequest || code != "request.invalid_body" {
+		t.Errorf("an unknown key = %d %s, want 400 request.invalid_body", status, code)
+	}
+	rec := do(e, "POST", org+"/receive", periodBody(current, ""), owner.session)
+	if got := decode(t, rec); rec.Code != http.StatusCreated || got["received_cents"] != float64(500000) || got["received_on"] == nil {
+		t.Errorf("receive the current month in advance = %d %v", rec.Code, got)
+	}
+	if status, code := errCode(t, e, "POST", org+"/receive", periodBody(current, ""), owner.session); status != http.StatusConflict || code != "receivable.already_confirmed" {
+		t.Errorf("receiving twice = %d %s, want 409 receivable.already_confirmed", status, code)
+	}
+
+	// A sugestão de 10 dias depois do vencimento: 2% de multa e 1% ao mês de juros sobre 5.000,00.
+	due, _ := time.Parse(time.DateOnly, closed["due_date"].(string))
+	on := due.AddDate(0, 0, 10).Format(time.DateOnly)
+	query := fmt.Sprintf("?customer_id=%s&period_start=%s&period_end=%s&on=%s", customer.ID, closed["period_start"], closed["period_end"], on)
+	rec = do(e, "GET", org+"/late-charges"+query, "", owner.session)
+	charges := decode(t, rec)
+	if rec.Code != http.StatusOK || charges["late_fee_cents"] != float64(10000) || charges["interest_cents"] != float64(1667) || charges["total_cents"] != float64(511667) {
+		t.Errorf("late charges of the calculated period = %d %v, want fee 100,00, interest 16,67, total 5.116,67", rec.Code, charges)
+	}
+	rec = do(e, "POST", org+"/receive", periodBody(closed, `,"received_cents":511667,"late_fee_cents":10000,"interest_cents":1667,"invoice_number":"NF-5"`), owner.session)
+	if got := decode(t, rec); rec.Code != http.StatusCreated || got["received_cents"] != float64(511667) || got["invoice_number"] != "NF-5" || got["amount_cents"] != float64(500000) {
+		t.Errorf("receive the closed month = %d %v", rec.Code, got)
+	}
+	list = decode(t, do(e, "GET", org, "", owner.session))
+	if len(list["received"].([]any)) != 2 || len(list["to_receive"].([]any)) != 0 || len(list["in_progress"].([]any)) != 0 {
+		t.Errorf("after receiving both: %v", list)
+	}
+
+	// No por hora o período aberto é recusado, e multa e juros também.
+	hourly := hourlyCustomerWithHours(t, owner.orgID, owner.id)
+	now := time.Now().In(time.FixedZone("BRT", -3*3600))
+	first := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+	open := fmt.Sprintf(`{"customer_id":"%s","period_start":"%s","period_end":"%s"}`, hourly.ID, first.Format(time.DateOnly), first.AddDate(0, 1, -1).Format(time.DateOnly))
+	if status, code := errCode(t, e, "POST", org+"/receive", open, owner.session); status != http.StatusConflict || code != "receivable.period_open" {
+		t.Errorf("the open hourly period = %d %s, want 409 receivable.period_open", status, code)
+	}
+	var hourlyDue map[string]any
+	for _, d := range decode(t, do(e, "GET", org, "", owner.session))["to_receive"].([]any) {
+		hourlyDue = d.(map[string]any)
+	}
+	if hourlyDue == nil {
+		t.Fatal("the hourly customer has nothing to receive")
+	}
+	withFee := fmt.Sprintf(`{"customer_id":"%s","period_start":"%s","period_end":"%s","late_fee_cents":100}`, hourly.ID, hourlyDue["period_start"], hourlyDue["period_end"])
+	if status, code := errCode(t, e, "POST", org+"/receive", withFee, owner.session); status != http.StatusBadRequest || code != "receivable.charges_not_allowed" {
+		t.Errorf("a late fee on an hourly period = %d %s", status, code)
 	}
 }
 
@@ -270,9 +358,9 @@ func TestReceivables_HourlyPeriodRules(t *testing.T) {
 		t.Errorf("the open period = %d %s, want 409 receivable.period_open", status, code)
 	}
 
-	proposals := decode(t, do(e, "GET", org, "", owner.session))["to_confirm"].([]any)
+	proposals := decode(t, do(e, "GET", org, "", owner.session))["to_receive"].([]any)
 	if len(proposals) != 1 {
-		t.Fatalf("proposals = %v, want the one closed month with hours", proposals)
+		t.Fatalf("to receive = %v, want the one closed month with hours", proposals)
 	}
 	p := proposals[0].(map[string]any)
 	if p["kind"] != "hourly" || p["calculated_cents"] != float64(10000) || p["seconds"] != float64(3600) {
@@ -304,7 +392,7 @@ func TestReceivables_BodyAndOrganizations(t *testing.T) {
 	if status, code := errCode(t, e, "POST", org, `{"cliente":"x"}`, owner.session); status != http.StatusBadRequest || code != "request.invalid_body" {
 		t.Errorf("an unknown key = %d %s, want 400 request.invalid_body", status, code)
 	}
-	proposals := decode(t, do(e, "GET", org, "", owner.session))["to_confirm"].([]any)
+	proposals := decode(t, do(e, "GET", org, "", owner.session))["to_receive"].([]any)
 	p := proposals[0].(map[string]any)
 	body := fmt.Sprintf(`{"customer_id":"%s","period_start":"%s","period_end":"%s","amount_cents":500000}`, customer.ID, p["period_start"], p["period_end"])
 	id := decode(t, do(e, "POST", org, body, owner.session))["id"].(string)
@@ -332,12 +420,12 @@ func TestReceivables_BodyAndOrganizations(t *testing.T) {
 		t.Errorf("another organization's list = %d, want 404", status)
 	}
 	theirList := decode(t, do(e, "GET", theirs, "", other.session))
-	if len(theirList["to_confirm"].([]any)) != 0 || len(theirList["open"].([]any)) != 0 {
+	if len(theirList["to_receive"].([]any)) != 0 || len(theirList["in_progress"].([]any)) != 0 {
 		t.Errorf("the other organization sees %v", theirList)
 	}
 	// O recebível dela segue intacto.
-	if open := decode(t, do(e, "GET", org, "", owner.session))["open"].([]any); len(open) != 1 || open[0].(map[string]any)["note"] != "" {
-		t.Errorf("the receivable changed: %v", open)
+	if due := decode(t, do(e, "GET", org, "", owner.session))["to_receive"].([]any); len(due) != 1 || due[0].(map[string]any)["id"] != id || due[0].(map[string]any)["note"] != "" {
+		t.Errorf("the receivable changed: %v", due)
 	}
 }
 
@@ -353,7 +441,7 @@ func TestReceivables_Page(t *testing.T) {
 	html := rec.Body.String()
 	for _, want := range []string{
 		`x-data="orgReceivables"`, "/static/pages/receivables.js", "<h1>A receber</h1>",
-		`data-field="amount_cents"`, `data-field="received_on"`, `data-field="late_fee_cents"`, "receivable-confirm", "receivable-receive",
+		`data-field="amount_cents"`, `data-field="received_on"`, `data-field="late_fee_cents"`, "receivable-edit", "receivable-receive", `data-field="invoice_number"`,
 	} {
 		if !strings.Contains(html, want) {
 			t.Errorf("the page lacks %q", want)

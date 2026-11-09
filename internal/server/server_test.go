@@ -873,6 +873,8 @@ func TestRoutes_Table(t *testing.T) {
 		"DELETE /api/orgs/:orgId/payouts/:payoutId",
 		"GET /api/orgs/:orgId/receivables",
 		"POST /api/orgs/:orgId/receivables",
+		"POST /api/orgs/:orgId/receivables/receive",
+		"GET /api/orgs/:orgId/receivables/late-charges",
 		"PATCH /api/orgs/:orgId/receivables/:id",
 		"DELETE /api/orgs/:orgId/receivables/:id",
 		"GET /api/orgs/:orgId/receivables/:id/late-charges",

@@ -848,7 +848,7 @@ um token pessoal gerado no perfil. A primeira etapa é o Claude Code.
 - **OAuth já na primeira etapa:** é o que abre o claude.ai e o Desktop, mas pede um servidor de autorização inteiro
   (metadados, consentimento, troca de código com PKCE, renovação, cadastro do cliente por CIMD ou DCR). Fica para a
   próxima etapa; o verificador do token é o ponto de encaixe, com o mesmo escopo `mcp`. **Hoje:** o OAuth chegou na
-  [Decisão 24](#decisão-24-oauth-no-mcp--o-claudeai-o-desktop-e-o-celular-pela-identidade-publicada-do-claude), e o
+  [Decisão 25](#decisão-25-oauth-no-mcp--o-claudeai-o-desktop-e-o-celular-pela-identidade-publicada-do-claude), e o
   token pessoal continua.
 - **O token também na API:** daria ao Claude tudo o que a API faz, inclusive dinheiro e a própria conta. O MCP expõe só
   as ferramentas escolhidas.
@@ -897,7 +897,42 @@ aproximação, como já era com outro dia de fechamento. O `closing_day` fica gu
 a valer quando o ciclo volta ao mensal. As regras de hoje estão em
 [money.md](../product/money.md#contas-a-receber-modo-solo).
 
-### Decisão 24: OAuth no MCP — o claude.ai, o Desktop e o celular pela identidade publicada do Claude
+### Decisão 24: A receber em três listas, e receber sem confirmar
+
+**Contexto:** a página A receber tinha "A confirmar" (as propostas, com o mês corrente "em andamento" misturado aos
+períodos fechados), "Em aberto" (o que foi confirmado e não entrou) e "Recebidos". Para chegar a "Em aberto" era
+preciso um passo, "Confirmar", e o atraso só aparecia depois dele. Na primeira semana de uso real, o dono não conseguia
+olhar a tela e saber o que estava correndo, o que já devia ter entrado e o que entrou.
+
+**Escolha:** três listas pelo momento da conta, e o recebimento direto.
+
+- **Em andamento:** o período atual de cada cliente, ainda aberto: o mês corrente do contrato mensal e o período
+  corrente do por hora com tempo, com as horas e o valor até agora. No mensal, "Recebi adiantado" recebe o mês antes de
+  fechar. O que divide as listas é o período ter fechado, não a conta estar gravada: um mês ajustado adiantado fica em
+  andamento até fechar.
+- **A receber:** o que fechou e não entrou, do vencimento mais antigo para o mais novo, com o selo do atraso, que agora
+  vale também para o período calculado.
+- **Recebidos:** o histórico.
+- **Receber direto.** `POST /receivables/receive` grava o recebível já recebido, com o valor calculado e o vencimento
+  padrão, num passo só. Confirmar continua existindo como "Editar": ajusta o valor, o vencimento e a nota antes de
+  receber, e a conta fica em A receber marcada como ajustada; "Voltar ao valor calculado" a apaga. O número da nota
+  pode entrar no recebimento.
+- **O modelo não muda.** Nada novo é gravado: continua um recebível por cliente e período, gravado só quando o dono age
+  (Decisão 20). As regras do período (`billableOf`) e do valor recebido (`receiveAmounts`) são as mesmas do ajuste e do
+  recebimento, extraídas para não duplicar.
+
+**Alternativas descartadas:**
+- Manter "Confirmar" dentro de A receber, com duas ações por linha: o passo extra era a origem da confusão, e o dono não
+  emite nota pelo app.
+- Gravar o recebível sozinho quando o período fecha: o app passaria a escrever sem o dono agir, e mudar o cadastro do
+  cliente depois exigiria apagar o que foi gravado.
+- Esconder o período por hora em andamento: o dono quer ver as horas e o valor do mês enquanto ele corre.
+
+**Consequências:** a resposta de `GET /receivables` muda (`in_progress`, `to_receive`; saem `to_confirm` e `open`), e a
+tela é a única que a lê. Um período calculado sem valor (sessões sem valor cobrado) não se recebe direto: o dono ajusta
+o valor antes. As regras de hoje estão em [money.md](../product/money.md#contas-a-receber-modo-solo).
+
+### Decisão 25: OAuth no MCP — o claude.ai, o Desktop e o celular pela identidade publicada do Claude
 
 **Contexto:** a Decisão 22 abriu o `/mcp` ao Claude Code com um token pessoal. O dono quer usar o sistema também no
 claude.ai, no Claude Desktop e no app do celular, que só conectam um servidor remoto por OAuth 2.1, como a especificação

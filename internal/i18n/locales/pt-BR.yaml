@@ -542,36 +542,56 @@ payments:
 receivable:
   refresh: Atualizar
   loading: Carregando as contas a receber…
-  intro: "O que cobrar de cada cliente, o que já foi confirmado e o que entrou. O período fecha à meia-noite."
+  intro: "O que está correndo, o que já fechou e falta receber, e o que entrou. O período fecha à meia‑noite."
   cards:
-    to_confirm: A confirmar
-    to_confirm_hint:
-      one: "{{.count}} período para confirmar"
-      other: "{{.count}} períodos para confirmar"
-    open: Em aberto
-    open_hint:
-      one: "{{.count}} conta confirmada"
-      other: "{{.count}} contas confirmadas"
+    in_progress: Em andamento
+    in_progress_hint:
+      one: "{{.count}} período correndo"
+      other: "{{.count}} períodos correndo"
+    to_receive: A receber
+    to_receive_hint:
+      one: "{{.count}} período fechado"
+      other: "{{.count}} períodos fechados"
     late: Atrasado
     late_hint:
-      one: "{{.count}} conta passou do vencimento"
-      other: "{{.count}} contas passaram do vencimento"
+      one: "{{.count}} conta vencida"
+      other: "{{.count}} contas vencidas"
     late_none: Nada atrasado
     received_month: Recebido no mês
     received_month_hint:
       one: "{{.count}} recebimento"
       other: "{{.count}} recebimentos"
-  to_confirm:
-    title: A confirmar
-    empty: Nada para confirmar.
-    empty_text: "Os períodos fechados com horas dos clientes por hora e os meses dos contratos mensais aparecem aqui."
-  open:
-    title: Em aberto
-    empty: Nenhuma conta em aberto.
+  in_progress:
+    title: Em andamento
+    note: "O período atual de cada cliente, ainda aberto. Quando fecha, passa para A receber."
+    empty: Nada em andamento.
+    empty_text: "O mês corrente dos contratos mensais e o período dos clientes por hora com horas aparecem aqui."
+    day_of: "dia {{.day}} de {{.days}}"
+    closes_today: fecha hoje
+    closes_tomorrow: fecha amanhã
+    closes_in:
+      one: "fecha em {{.count}} dia"
+      other: "fecha em {{.count}} dias"
+    fee: mensalidade
+    so_far: "{{.hours}} até agora"
+  to_receive:
+    title: A receber
+    note: "Os períodos que já fecharam e ainda não entraram, o vencimento mais antigo primeiro."
+    empty: Nada a receber.
+    empty_text: "Quando um período fecha, ele aparece aqui até você registrar o recebimento."
+  due:
+    late:
+      one: "Atrasado há {{.count}} dia"
+      other: "Atrasado há {{.count}} dias"
+    today: Vence hoje
+    tomorrow: Vence amanhã
+    in:
+      one: "Vence em {{.count}} dia"
+      other: "Vence em {{.count}} dias"
   received:
     title: Recebidos
     empty: Nenhum recebimento ainda.
-    note: "Os recebimentos mais recentes."
+    note: "O histórico do que entrou, o mais recente primeiro."
   col:
     customer: Cliente
     period: Período
@@ -583,11 +603,6 @@ receivable:
   kind:
     hourly: Por hora
     monthly: Mensal
-  running: em andamento
-  late:
-    one: "{{.count}} dia de atraso"
-    other: "{{.count}} dias de atraso"
-  late_badge: Atrasado
   below_min: "Valor por hora efetivo abaixo de {{.min}}: confira o valor."
   rate_line: "{{.rate}} por hora"
   calculated_line: "calculado {{.amount}}"
@@ -596,29 +611,29 @@ receivable:
   fee_line: "multa {{.amount}}"
   interest_line: "juros {{.amount}}"
   actions:
-    confirm: Confirmar
     receive: Receber
+    advance: Recebi adiantado
     edit: Editar
     undo: Desfazer
-    undo_confirm: Desfazer confirmação
     undo_receive: Desfazer recebimento
-    undo_confirm_ask: Desfazer a confirmação?
     undo_receive_ask: Desfazer o recebimento?
+    reset: Voltar ao valor calculado
+    reset_ask: "Voltar ao valor calculado? O valor, o vencimento e a nota ajustados se perdem."
   toast:
-    confirmed: "Confirmado: {{.name}}."
-    updated: "Alterado: {{.name}}."
+    adjusted: "Ajustado: {{.name}}."
     received: "Recebimento registrado: {{.name}}."
-    unconfirmed: Confirmação desfeita.
+    reset: De volta ao valor calculado.
     unreceived: Recebimento desfeito.
   modal:
-    confirm_title: "Confirmar · {{.name}}"
     edit_title: "Editar · {{.name}}"
     receive_title: "Receber · {{.name}}"
+    advance_title: "Receber adiantado · {{.name}}"
+    advance_hint: "O período ainda não fechou. Registre aqui o que o cliente já pagou dele; quando fechar, ele não aparece em A receber."
     period: Período
     hours: Horas
     calculated: Valor calculado
     amount_label: "Valor a cobrar ({{.unit}})"
-    amount_hint: Vem com o valor calculado. Mude se vai cobrar outro valor.
+    amount_hint: Vem com o valor de hoje. Mude se vai cobrar outro valor (o primeiro mês parcial, por exemplo).
     rate: "Valor por hora efetivo: {{.rate}}"
     rate_below: "Valor por hora efetivo: {{.rate}}, abaixo do piso de {{.min}}. Confira o valor."
     due_label: Vencimento
@@ -626,14 +641,12 @@ receivable:
     invoice_label: Número da nota
     invoice_hint: O sistema não emite a nota. Guarde aqui o número da que você emitiu.
     note_label: Observação
-    open_period: "O período ainda não fechou. O valor é a mensalidade, e você pode corrigi-lo (o primeiro mês parcial, por exemplo)."
-    confirm: Confirmar
     save: Salvar
     received_on_label: Data do recebimento
     received_on_hint: Vem com hoje. Mude se o dinheiro entrou em outro dia.
     received_label: "Valor recebido ({{.unit}})"
-    received_hint_hourly: No cliente por hora entra o valor confirmado.
-    received_hint_monthly: Livre, pode ser mais ou menos que o confirmado. Vem com o valor confirmado.
+    received_hint_hourly: "No cliente por hora entra o valor da conta. Para receber outro valor, use Editar antes."
+    received_hint_monthly: Livre, pode ser mais ou menos que o da conta. Vem com o valor da conta.
     fee_label: "Multa ({{.unit}})"
     interest_label: "Juros ({{.unit}})"
     charges_hint: A multa e os juros já estão dentro do valor recebido. Em branco, ficam zerados.
@@ -872,11 +885,11 @@ help:
       team: "A equipe: o que pagar (atrasados incluídos), o que fecha em 7 e 30 dias, as horas da equipe e quem está sem regra. “Próximos pagamentos” segue a data do pagamento, e não as horas; “Pagos recentemente” mostra as baixas dos últimos 30 dias. Clique numa linha para abrir o perfil da pessoa, com o histórico e o detalhe por projeto. O dono não é pago e não aparece nas tabelas."
     receivables:
       title: A receber
-      text: "O item “A receber” da barra superior, só para o dono de uma organização no modo solo: o que cobrar de cada cliente e o que já entrou. Cada conta a receber é de um cliente e de um período: o app propõe, e você confirma."
-      cards: "No alto, quatro cartões: o que há para confirmar, o que está em aberto, o que está atrasado (confirmado, sem receber e depois do vencimento) e o que entrou no mês."
-      confirm: "“A confirmar” lista as propostas. No cliente por hora, o período aparece depois de fechar, com as horas dos projetos dele vezes o valor cobrado de cada um (o do cliente mais o acréscimo do projeto); no mensal, é a mensalidade mais os acréscimos mensais dos projetos, do começo do contrato até o mês corrente, e dá para confirmar a qualquer hora. “Confirmar” abre o valor, o vencimento, o número da nota e uma observação, e você ajusta o que for preciso."
-      receive: "“Em aberto” é o que foi confirmado e ainda não entrou. “Receber” registra o dia e o valor. No cliente por hora entra o valor confirmado; no mensal o valor é livre, e o app sugere a multa e os juros quando o pagamento passa do vencimento mais a tolerância do contrato."
-      undo: "“Recebidos” lista o que entrou. Dá para desfazer o recebimento e, depois, a confirmação: o período volta a ser uma proposta."
+      text: "O item “A receber” da barra superior, só para o dono de uma organização no modo solo: o que está correndo, o que já fechou e falta receber, e o que entrou. Cada conta é de um cliente e de um período, e o app calcula o valor e o vencimento."
+      cards: "No alto, quatro cartões: o que está em andamento, o que está a receber, a parte disso que está atrasada (depois do vencimento) e o que entrou no mês."
+      in_progress: "“Em andamento” é o período atual de cada cliente, ainda aberto: no mensal, o mês do contrato, com a mensalidade mais os acréscimos mensais dos projetos; no por hora, as horas dos projetos até agora vezes o valor cobrado de cada uma (o do cliente mais o acréscimo do projeto). No mensal, “Recebi adiantado” registra um pagamento antes de o mês fechar."
+      to_receive: "“A receber” é o que fechou e ainda não entrou, o vencimento mais antigo primeiro, com o selo do atraso. “Receber” registra o dia, o valor e o número da nota: no por hora entra o valor da conta; no mensal o valor é livre, e o app sugere a multa e os juros quando o pagamento passa do vencimento mais a tolerância do contrato. “Editar” ajusta o valor, o vencimento e a nota antes de receber (o primeiro mês parcial, por exemplo), e a conta ajustada pode voltar ao valor calculado."
+      undo: "“Recebidos” é o histórico do que entrou. Dá para desfazer o recebimento: a conta volta para “A receber”."
       invoice: "O app não emite nota: o número dela é só uma anotação. Um valor por hora efetivo abaixo de 10,00 aparece como aviso, nunca como erro."
     org_about:
       title: Configurações

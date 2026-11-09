@@ -114,11 +114,14 @@ func RegisterRoutes(e *echo.Echo, h Handlers, m *auth.Middleware, authLimiter ec
 	// A baixa de um pagamento (o dono marca que pagou um período) e o desfazer: também só do dono.
 	r.POST("/orgs/:orgId/payouts", h.Payment.MarkPaid, org, orgCan(permission.PaymentsManage))
 	r.DELETE("/orgs/:orgId/payouts/:payoutId", h.Payment.Unmark, org, orgCan(permission.PaymentsManage))
-	// O A receber é do modo solo e do dono: confirmar o que cobrar de cada cliente por período, receber e desfazer.
-	// Fora do modo solo as rotas respondem 404 (RequireSolo, depois da permissão).
+	// O A receber é do modo solo e do dono: receber o que cada cliente deve por período (direto, ou depois de ajustar o
+	// valor e o vencimento) e desfazer. Fora do modo solo as rotas respondem 404 (RequireSolo, depois da permissão).
+	// /receive e /late-charges sem :id são do período calculado, ainda sem recebível.
 	receivables := []echo.MiddlewareFunc{org, orgCan(permission.ReceivablesManage), h.Receivable.RequireSolo}
 	r.GET("/orgs/:orgId/receivables", h.Receivable.List, receivables...)
 	r.POST("/orgs/:orgId/receivables", h.Receivable.Confirm, receivables...)
+	r.POST("/orgs/:orgId/receivables/receive", h.Receivable.ReceivePeriod, receivables...)
+	r.GET("/orgs/:orgId/receivables/late-charges", h.Receivable.PeriodLateCharges, receivables...)
 	r.PATCH("/orgs/:orgId/receivables/:id", h.Receivable.Update, receivables...)
 	r.DELETE("/orgs/:orgId/receivables/:id", h.Receivable.Unconfirm, receivables...)
 	r.GET("/orgs/:orgId/receivables/:id/late-charges", h.Receivable.LateCharges, receivables...)
