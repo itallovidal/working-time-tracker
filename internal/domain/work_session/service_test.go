@@ -382,6 +382,16 @@ func TestMergedSeconds(t *testing.T) {
 			t.Errorf("%s: got %v seconds, want %v", c.name, got, c.want)
 		}
 	}
+
+	// Uma sessão dentro de outra não estica nem encurta a de fora, e a ordem em que elas chegam não importa.
+	contained := []work_session.WorkSession{
+		{PersonID: ana, StartAt: at(13, 0), EndAt: end(14, 0)},
+		{PersonID: ana, StartAt: at(12, 0), EndAt: end(16, 0)},
+		{PersonID: ana, StartAt: at(12, 30), EndAt: end(15, 0)},
+	}
+	if got := work_session.MergedSeconds(contained, time.Time{}, time.Time{}, now); got != 4*3600 {
+		t.Errorf("sessions inside another: got %v seconds, want %v", got, 4*3600)
+	}
 }
 
 func TestService_TotalTime(t *testing.T) {

@@ -404,7 +404,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `work_session.last_task` | 400 | — | `a sessão precisa ficar com ao menos uma tarefa; enquanto aberta, ao menos uma em andamento` | `the session must keep at least one task; while it is open, at least one still in progress` |
 | `work_session.no_rate` | 400 | — | `esta pessoa ainda não tem valor por hora neste projeto; um admin precisa definir na aba Colaboradores antes do ponto` | `this person has no hourly rate on this project yet; an admin must set one on the Collaborators tab before clocking in` |
 | `work_session.not_found` | 404 | — | `sessão não encontrada` | `session not found` |
-| `work_session.not_open` | 400 | — | `não há ponto aberto para esta pessoa` | `this person has no open clock-in` |
+| `work_session.not_open` | 400 | — | `não há ponto aberto para esta pessoa neste projeto` | `this person has no open clock-in on this project` |
 | `work_session.not_yours` | 403 | — | `só quem bateu o ponto, ou um admin, pode mexer nas tarefas desta sessão` | `only the person who clocked in, or an admin, can change the tasks of this session` |
 | `work_session.other_person_admin_only` | 403 | — | `só admins podem registrar o ponto de outra pessoa` | `only admins can clock in for another person` |
 | `work_session.person_not_found` | 400 | — | `pessoa não encontrada` | `person not found` |

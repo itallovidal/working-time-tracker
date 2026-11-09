@@ -1013,6 +1013,51 @@ func TestAPI_OpenSessionsAndProjectMembers(t *testing.T) {
 	}
 }
 
+// Cada sessão de GET /api/work-sessions/open passa pela regra dos valores, com as tarefas dela: quem tem sessões
+// abertas em dois projetos cobrados vê o que ganha nas duas e nenhum valor cobrado; o dono vê o cobrado nas duas.
+func TestAPI_OpenSessionsRedactEachSession(t *testing.T) {
+	e := newServer(t)
+	owner := signup(t, e, "Org", "ana@test.com")
+	bia := invite(t, e, owner, "bia@test.com", "member")
+	for i, name := range []string{"Alfa", "Beta"} {
+		projectID := createProject(t, e, owner, name)
+		prj := "/api/projects/" + projectID
+		allocate(t, e, owner, projectID, bia.id, 2000+1000*i)
+		setBilling(t, e, owner, prj, 10000+1000*i)
+		for _, who := range []account{bia, owner} {
+			taskID := decode(t, do(e, "POST", prj+"/tasks", `{"name":"`+who.id+`"}`, owner.session))["id"].(string)
+			if rec := do(e, "POST", prj+"/work-sessions/clock-in", `{"task_id":"`+taskID+`"}`, who.session); rec.Code != http.StatusCreated {
+				t.Fatalf("clock-in on %s = %d: %s", name, rec.Code, rec.Body.String())
+			}
+		}
+	}
+
+	check := func(who account, seesBill bool) {
+		t.Helper()
+		open := decodeList(t, do(e, "GET", "/api/work-sessions/open", "", who.session))
+		if len(open) != 2 {
+			t.Fatalf("open sessions = %d, want one in each project", len(open))
+		}
+		for _, s := range open {
+			if s["pay_rate_cents"] == nil || s["pay_amount_cents"] == nil {
+				t.Errorf("session of %v: pay = %v / %v, want what the person earns", s["project"], s["pay_rate_cents"], s["pay_amount_cents"])
+			}
+			if (s["bill_rate_cents"] != nil) != seesBill || (s["bill_amount_cents"] != nil) != seesBill {
+				t.Errorf("session of %v: bill = %v / %v, want shown = %v", s["project"], s["bill_rate_cents"], s["bill_amount_cents"], seesBill)
+			}
+			links, _ := s["tasks"].([]any)
+			if len(links) != 1 {
+				t.Fatalf("session of %v has tasks %v, want one", s["project"], s["tasks"])
+			}
+			if l := links[0].(map[string]any); l["pay_amount_cents"] == nil || (l["bill_amount_cents"] != nil) != seesBill {
+				t.Errorf("task of the session of %v = %v, want its pay and the bill shown = %v", s["project"], l, seesBill)
+			}
+		}
+	}
+	check(bia, false)
+	check(owner, true)
+}
+
 // Todos no projeto veem quem são os colaboradores e os times de cada um. O
 // valor por hora dos colegas é só de admins. A pessoa entra no projeto com o
 // valor por hora, e um time recusa quem ainda não entrou. Só um admin tira

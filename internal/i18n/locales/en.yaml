@@ -2240,7 +2240,7 @@ errors:
     last_task: "the session must keep at least one task; while it is open, at least one still in progress"
     no_rate: "this person has no hourly rate on this project yet; an admin must set one on the Collaborators tab before clocking in"
     not_found: "session not found"
-    not_open: "this person has no open clock-in"
+    not_open: "this person has no open clock-in on this project"
     not_yours: "only the person who clocked in, or an admin, can change the tasks of this session"
     other_person_admin_only: "only admins can clock in for another person"
     person_not_found: "person not found"

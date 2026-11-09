@@ -109,7 +109,7 @@ type WorkingOut struct {
 func (s *server) addAccountTools(srv *mcp.Server) {
 	mcp.AddTool(srv, &mcp.Tool{
 		Name:        "whoami",
-		Description: "Who you are acting as: the person, their role, their organization, the open work session (if any) and when the token expires.",
+		Description: "Who you are acting as: the person, their role, their organization, the open work sessions (at most one per project; empty when no clock is running) and when the token expires.",
 		Annotations: readOnly("Who am I"),
 	}, s.whoami)
 	mcp.AddTool(srv, &mcp.Tool{

@@ -1909,9 +1909,14 @@ document.addEventListener('alpine:init', () => {
       }
     },
     // A coluna "Agora" (só admins): o que a pessoa faz neste instante, lido do store presence. A tarefa só leva o
-    // nome do projeto quando é de outro projeto que o desta página; as outras tarefas da sessão vão na dica.
+    // nome do projeto quando é de outro projeto que o desta página; as outras tarefas vão na dica. Com sessões abertas
+    // em dois projetos (Decisão 26), as tarefas deste vêm primeiro, para a coluna mostrar o que a pessoa faz aqui.
     nowOf(c) {
-      return Alpine.store('presence').of(c.person.id);
+      const p = Alpine.store('presence').of(c.person.id);
+      if (!p) return null;
+      const here = p.working_on.filter((w) => !this.nowElsewhere(w));
+      if (here.length === 0 || here.length === p.working_on.length) return p;
+      return { ...p, working_on: here.concat(p.working_on.filter((w) => this.nowElsewhere(w))) };
     },
     nowElsewhere(w) {
       return w.project.id !== project.id;

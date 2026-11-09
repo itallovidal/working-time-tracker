@@ -245,7 +245,9 @@ abre os outros; o painel do timer do projeto mostra só a sessão dele.
   guarda quando foi fechada, então "concluídas" é o total.
 - **Visão geral**, para o dono e os admins: todos os projetos somados, em 7 dias, 30 dias ou tudo, com as suas horas, as
   da equipe e o custo. A receita e a margem só vão para o dono. A sessão que atravessa a borda da janela conta só o
-  trecho de dentro, e cada sessão é arredondada ao centavo, então o total da organização é a soma dos projetos.
+  trecho de dentro, e cada sessão é arredondada ao centavo, então o dinheiro da organização é a soma dos projetos. As
+  horas não: o tempo em que a mesma pessoa estava em dois projetos ao mesmo tempo conta uma vez no total e cheio em cada
+  projeto ([Decisão 27](../architecture/decisions.md)), então o total pode ficar abaixo da soma dos projetos.
 - **Equipe**, para o dono e os admins: quem está com o ponto aberto agora e em que tarefa. Não existe no
   [modo solo](#modo-solo), nem o cartão Trabalhando agora da visão geral.
 - **Visão geral do modo solo**, só para o dono, **no lugar** da Visão geral e da Equipe acima (a organização com equipe

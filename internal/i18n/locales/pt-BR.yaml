@@ -2251,7 +2251,7 @@ errors:
     last_task: "a sessão precisa ficar com ao menos uma tarefa; enquanto aberta, ao menos uma em andamento"
     no_rate: "esta pessoa ainda não tem valor por hora neste projeto; um admin precisa definir na aba Colaboradores antes do ponto"
     not_found: "sessão não encontrada"
-    not_open: "não há ponto aberto para esta pessoa"
+    not_open: "não há ponto aberto para esta pessoa neste projeto"
     not_yours: "só quem bateu o ponto, ou um admin, pode mexer nas tarefas desta sessão"
     other_person_admin_only: "só admins podem registrar o ponto de outra pessoa"
     person_not_found: "pessoa não encontrada"
