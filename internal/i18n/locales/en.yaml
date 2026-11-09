@@ -530,36 +530,56 @@ payments:
 receivable:
   refresh: Refresh
   loading: Loading the receivables…
-  intro: "What to charge each customer, what is already confirmed and what came in. The period closes at midnight."
+  intro: "What is running, what has closed and is still to receive, and what came in. The period closes at midnight."
   cards:
-    to_confirm: To confirm
-    to_confirm_hint:
-      one: "{{.count}} period to confirm"
-      other: "{{.count}} periods to confirm"
-    open: Open
-    open_hint:
-      one: "{{.count}} confirmed invoice"
-      other: "{{.count}} confirmed invoices"
+    in_progress: In progress
+    in_progress_hint:
+      one: "{{.count}} period running"
+      other: "{{.count}} periods running"
+    to_receive: To receive
+    to_receive_hint:
+      one: "{{.count}} closed period"
+      other: "{{.count}} closed periods"
     late: Late
     late_hint:
-      one: "{{.count}} invoice is past due"
-      other: "{{.count}} invoices are past due"
+      one: "{{.count}} invoice past due"
+      other: "{{.count}} invoices past due"
     late_none: Nothing late
     received_month: Received this month
     received_month_hint:
       one: "{{.count}} payment"
       other: "{{.count}} payments"
-  to_confirm:
-    title: To confirm
-    empty: Nothing to confirm.
-    empty_text: "Closed periods with hours from hourly customers and the months of monthly contracts show up here."
-  open:
-    title: Open
-    empty: No open invoices.
+  in_progress:
+    title: In progress
+    note: "Each customer's current period, still open. When it closes, it moves to To receive."
+    empty: Nothing in progress.
+    empty_text: "The current month of monthly contracts and the period of hourly customers with hours show up here."
+    day_of: "day {{.day}} of {{.days}}"
+    closes_today: closes today
+    closes_tomorrow: closes tomorrow
+    closes_in:
+      one: "closes in {{.count}} day"
+      other: "closes in {{.count}} days"
+    fee: monthly fee
+    so_far: "{{.hours}} so far"
+  to_receive:
+    title: To receive
+    note: "Periods that have closed and have not come in yet, the oldest due date first."
+    empty: Nothing to receive.
+    empty_text: "When a period closes, it shows up here until you record the payment."
+  due:
+    late:
+      one: "{{.count}} day late"
+      other: "{{.count}} days late"
+    today: Due today
+    tomorrow: Due tomorrow
+    in:
+      one: "Due in {{.count}} day"
+      other: "Due in {{.count}} days"
   received:
     title: Received
     empty: Nothing received yet.
-    note: "The most recent payments."
+    note: "The history of what came in, the most recent first."
   col:
     customer: Customer
     period: Period
@@ -571,11 +591,6 @@ receivable:
   kind:
     hourly: Hourly
     monthly: Monthly
-  running: in progress
-  late:
-    one: "{{.count}} day late"
-    other: "{{.count}} days late"
-  late_badge: Late
   below_min: "Effective hourly rate below {{.min}}: check the amount."
   rate_line: "{{.rate}} per hour"
   calculated_line: "calculated {{.amount}}"
@@ -584,29 +599,29 @@ receivable:
   fee_line: "late fee {{.amount}}"
   interest_line: "interest {{.amount}}"
   actions:
-    confirm: Confirm
     receive: Receive
+    advance: Received in advance
     edit: Edit
     undo: Undo
-    undo_confirm: Undo confirmation
     undo_receive: Undo payment
-    undo_confirm_ask: Undo the confirmation?
     undo_receive_ask: Undo the payment?
+    reset: Back to the calculated amount
+    reset_ask: "Back to the calculated amount? The adjusted amount, due date and invoice are lost."
   toast:
-    confirmed: "Confirmed: {{.name}}."
-    updated: "Updated: {{.name}}."
+    adjusted: "Adjusted: {{.name}}."
     received: "Payment recorded: {{.name}}."
-    unconfirmed: Confirmation undone.
+    reset: Back to the calculated amount.
     unreceived: Payment undone.
   modal:
-    confirm_title: "Confirm · {{.name}}"
     edit_title: "Edit · {{.name}}"
     receive_title: "Receive · {{.name}}"
+    advance_title: "Receive in advance · {{.name}}"
+    advance_hint: "The period has not closed yet. Record here what the customer already paid for it; when it closes, it will not show up in To receive."
     period: Period
     hours: Hours
     calculated: Calculated amount
     amount_label: "Amount to charge ({{.unit}})"
-    amount_hint: Comes with the calculated amount. Change it if you will charge another amount.
+    amount_hint: Comes with today's amount. Change it if you will charge another amount (a partial first month, for example).
     rate: "Effective hourly rate: {{.rate}}"
     rate_below: "Effective hourly rate: {{.rate}}, below the {{.min}} floor. Check the amount."
     due_label: Due date
@@ -614,14 +629,12 @@ receivable:
     invoice_label: Invoice number
     invoice_hint: The system does not issue invoices. Keep here the number of the one you issued.
     note_label: Note
-    open_period: "The period has not closed yet. The amount is the monthly fee, and you can correct it (a partial first month, for example)."
-    confirm: Confirm
     save: Save
     received_on_label: Date received
     received_on_hint: Comes with today. Change it if the money came in on another day.
     received_label: "Amount received ({{.unit}})"
-    received_hint_hourly: For an hourly customer the confirmed amount comes in.
-    received_hint_monthly: Free, it can be more or less than the confirmed amount. Comes with the confirmed amount.
+    received_hint_hourly: "For an hourly customer the invoice amount comes in. To receive another amount, use Edit first."
+    received_hint_monthly: Free, it can be more or less than the invoice amount. Comes with the invoice amount.
     fee_label: "Late fee ({{.unit}})"
     interest_label: "Interest ({{.unit}})"
     charges_hint: The late fee and interest are already part of the amount received. Left blank, they are zero.
@@ -632,7 +645,6 @@ receivable:
     suggestion_apply: Use the suggestion
     suggestion_loading: Calculating the suggestion…
     receive: Record payment
-
 profile:
   eyebrow: Your profile
   title_other: Collaborator profile
@@ -817,11 +829,11 @@ help:
       team: "The team: what to pay (overdue included), what closes in 7 and 30 days, the team's hours and who has no rule. “Upcoming payments” is ordered by pay date, not by hours; “Recently paid” shows the payments recorded in the last 30 days. Click a row to open the person's profile, with the history and the breakdown by project. The owner is not paid and does not show in the tables."
     receivables:
       title: Receivables
-      text: "The “Receivables” item in the top bar, only for the owner of an organization in solo mode: what to charge each customer and what has already come in. Each receivable belongs to a customer and a period: the app proposes it, and you confirm it."
-      cards: "At the top, four cards: what is waiting to be confirmed, what is open, what is late (confirmed, not received and past the due date) and what came in this month."
-      confirm: "“To confirm” lists the proposals. For an hourly customer, a period shows up after it closes, with the hours on the customer's projects times the rate billed on each one (the customer's rate plus the project's extra); for a monthly one, it is the monthly fee plus the projects' monthly extras, from the start of the contract to the current month, and you can confirm it at any time. “Confirm” opens the amount, the due date, the invoice number and a note, and you adjust whatever you need."
-      receive: "“Open” is what was confirmed and has not come in yet. “Receive” records the day and the amount. For an hourly customer the confirmed amount comes in; for a monthly one the amount is free, and the app suggests the late fee and interest when the payment goes past the due date plus the contract's grace days."
-      undo: "“Received” lists what came in. You can undo the payment and, after that, the confirmation: the period goes back to being a proposal."
+      text: "The “Receivables” item in the top bar, only for the owner of an organization in solo mode: what is running, what has closed and is still to receive, and what came in. Each receivable belongs to a customer and a period, and the app works out the amount and the due date."
+      cards: "At the top, four cards: what is in progress, what is to receive, the part of it that is late (past the due date) and what came in this month."
+      in_progress: "“In progress” is each customer's current period, still open: for a monthly customer, the contract month, with the monthly fee plus the projects' monthly extras; for an hourly one, the hours on the projects so far times the rate billed on each (the customer's rate plus the project's extra). For a monthly customer, “Received in advance” records a payment before the month closes."
+      to_receive: "“To receive” is what has closed and has not come in yet, the oldest due date first, with a late badge. “Receive” records the day, the amount and the invoice number: for an hourly customer the invoice amount comes in; for a monthly one the amount is free, and the app suggests the late fee and interest when the payment goes past the due date plus the contract's grace days. “Edit” adjusts the amount, the due date and the invoice before receiving (a partial first month, for example), and an adjusted invoice can go back to the calculated amount."
+      undo: "“Received” is the history of what came in. You can undo a payment: the invoice goes back to “To receive”."
       invoice: "The app does not issue invoices: the number is only a note. An effective hourly rate below 10.00 shows up as a warning, never as an error."
     org_about:
       title: Settings

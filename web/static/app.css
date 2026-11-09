@@ -273,6 +273,8 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 .profile-tasks { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .meter { height: 8px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
 .meter > span { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
+/* A barrinha do período em andamento (A receber), entre as datas e "dia 4 de 30". */
+.meter-thin { height: 4px; margin: 5px 0 3px; }
 .grid-aside { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 18px; align-items: start; }
 @media (max-width: 860px) { .grid-2, .grid-aside { grid-template-columns: 1fr; } }
 /* A página da tarefa: duas colunas de cartões, e em tela estreita uma coluna só, na ordem
@@ -347,6 +349,8 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 .divider { border: 0; border-top: 1px solid var(--rule); margin: 0; }
 .flex-1 { flex: 1; min-width: 160px; }
 .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+/* O grupo da direita fica à direita mesmo quando o botão da esquerda está escondido (x-show). */
+.toolbar > .row-end { margin-left: auto; }
 .check { display: inline-flex; align-items: center; gap: 8px; font-size: 0.92rem; color: var(--ink-2); cursor: pointer; }
 .check input { width: auto; }
 .filters select, .filters input { width: auto; max-width: 240px; }
@@ -451,6 +455,8 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 .field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 .field label, .field-label { font-size: 0.84rem; font-weight: 600; color: var(--ink-2); }
 .field .hint { font-size: 0.8rem; color: var(--muted); }
+/* As frases de apoio quebram sem deixar uma palavra sozinha na última linha ("outro / dia."). */
+.hint, .alert p, p.muted { text-wrap: pretty; }
 /* "(opcional)" no rótulo: o obrigatório não diz nada, o opcional diz, mais leve que o nome. */
 .field label .optional, .field-label .optional { font-weight: 400; color: var(--muted); }
 /* Dica que muda com o que a pessoa digita: verde quando a regra foi cumprida, vermelha quando falhou. */

@@ -150,8 +150,9 @@ func (s *Store) Exists(customerID uuid.UUID, start, end string) (bool, error) {
 		Exist(context.Background())
 }
 
-// Create grava a confirmação. Outra confirmação do mesmo cliente e período, gravada ao mesmo tempo, esbarra no índice
-// único: ErrAlreadyConfirmed.
+// Create grava a confirmação e, quando r já traz o recebimento (ReceivePeriod), o recebimento junto, numa instrução
+// só. Outra confirmação do mesmo cliente e período, gravada ao mesmo tempo, esbarra no índice único:
+// ErrAlreadyConfirmed.
 func (s *Store) Create(orgID uuid.UUID, r *ent.Receivable) (*ent.Receivable, error) {
 	create := s.client.Receivable.Create().
 		SetOrganizationID(orgID).
@@ -166,7 +167,11 @@ func (s *Store) Create(orgID uuid.UUID, r *ent.Receivable) (*ent.Receivable, err
 		SetDueDate(r.DueDate).
 		SetInvoiceNumber(r.InvoiceNumber).
 		SetNote(r.Note).
-		SetConfirmedAt(r.ConfirmedAt)
+		SetConfirmedAt(r.ConfirmedAt).
+		SetNillableReceivedOn(r.ReceivedOn).
+		SetNillableReceivedCents(r.ReceivedCents).
+		SetLateFeeCents(r.LateFeeCents).
+		SetInterestCents(r.InterestCents)
 	created, err := create.Save(context.Background())
 	if err != nil {
 		if ent.IsConstraintError(err) {
@@ -215,8 +220,9 @@ type editFields struct {
 
 // Receive grava o recebimento, se o recebível ainda não foi recebido e continua com o valor confirmado que quem chama
 // leu (amount): as condições vão na instrução, então dois recebimentos ao mesmo tempo não se sobrescrevem (o segundo é
-// ErrAlreadyReceived) e uma edição do valor que chega no meio não é recebida às cegas (ErrChanged).
-func (s *Store) Receive(orgID, id uuid.UUID, amount int, on string, cents, fee, interest int) error {
+// ErrAlreadyReceived) e uma edição do valor que chega no meio não é recebida às cegas (ErrChanged). invoice nulo
+// mantém o número da nota.
+func (s *Store) Receive(orgID, id uuid.UUID, amount int, on string, cents, fee, interest int, invoice *string) error {
 	n, err := s.client.Receivable.Update().
 		Where(
 			entreceivable.IDEQ(id), entreceivable.OrganizationIDEQ(orgID),
@@ -226,6 +232,7 @@ func (s *Store) Receive(orgID, id uuid.UUID, amount int, on string, cents, fee, 
 		SetReceivedCents(cents).
 		SetLateFeeCents(fee).
 		SetInterestCents(interest).
+		SetNillableInvoiceNumber(invoice).
 		Save(context.Background())
 	if err != nil {
 		return err

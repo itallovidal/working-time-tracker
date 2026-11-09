@@ -13,8 +13,8 @@ const (
 )
 
 const (
-	// MaxHourlyProposals é quantos períodos fechados do cliente por hora de ciclo mensal a lista A confirmar traz, os
-	// mais recentes: dois anos.
+	// MaxHourlyProposals é quantos períodos fechados do cliente por hora de ciclo mensal se calculam, os mais
+	// recentes: dois anos.
 	MaxHourlyProposals = 24
 	// MaxBiweeklyProposals é o mesmo teto no ciclo de 14 dias, também cerca de dois anos. Um ano da tela inicial tem
 	// no máximo 26 períodos fechados desse ciclo, abaixo dele.
@@ -34,8 +34,8 @@ type Ref struct {
 	Name string    `json:"name"`
 }
 
-// Proposal é o que o sistema propõe cobrar de um cliente por um período: calculado na hora, nada gravado até o dono
-// confirmar. Os dias são YYYY-MM-DD no fuso da organização, os dois inclusivos.
+// Proposal é o que o sistema calcula cobrar de um cliente por um período: calculado na hora, nada gravado até o dono
+// receber ou ajustar. Os dias são YYYY-MM-DD no fuso da organização, os dois inclusivos.
 type Proposal struct {
 	Customer    Ref    `json:"customer"`
 	Kind        string `json:"kind"`
@@ -51,8 +51,7 @@ type Proposal struct {
 	ExtraCents int `json:"extra_cents"`
 	// DueDate é o vencimento que a confirmação usa se o dono não mudar: o fim do período mais os payment_days.
 	DueDate string `json:"due_date"`
-	// Open diz que o período ainda não fechou. A lista A confirmar só tem períodos abertos no mensal, que se confirma
-	// adiantado.
+	// Open diz que o período ainda não fechou: é a lista Em andamento da página.
 	Open bool `json:"open"`
 	// EffectiveRateCents é o valor por hora que a proposta rende: o valor dividido pelas horas. Nulo sem horas.
 	// BelowMinRate avisa que ficou abaixo do piso de valor por hora (validate.MinRateCents); não é um erro.
@@ -97,16 +96,45 @@ type Receivable struct {
 // Received diz que o recebimento foi registrado.
 func (r Receivable) Received() bool { return r.ReceivedOn != nil }
 
+// Due é uma conta das listas Em andamento (o período ainda não fechou) e A receber (fechou e não entrou). Sem ID é o
+// calculado, que nada grava até o dono receber ou ajustar; com ID (Adjusted) é o recebível gravado, que o dono ajustou,
+// ajustou adiantado, ou recebeu e desfez o recebimento. O atraso vale para os dois: hoje depois do vencimento.
+type Due struct {
+	ID       *uuid.UUID `json:"id"`
+	Adjusted bool       `json:"adjusted"`
+	Customer Ref        `json:"customer"`
+	Kind     string     `json:"kind"`
+	// Os dias do período, YYYY-MM-DD, os dois inclusivos.
+	PeriodStart string `json:"period_start"`
+	PeriodEnd   string `json:"period_end"`
+	// Seconds é o tempo no período; CalculatedCents, o que o sistema calcula (no gravado, o que calculava ao gravar);
+	// AmountCents, o que se vai receber (no calculado, o próprio CalculatedCents). ExtraCents é a parte dos acréscimos
+	// mensais dos projetos, só no mensal calculado.
+	Seconds         float64 `json:"seconds"`
+	CalculatedCents int     `json:"calculated_cents"`
+	AmountCents     int     `json:"amount_cents"`
+	ExtraCents      int     `json:"extra_cents"`
+	DueDate         string  `json:"due_date"`
+	InvoiceNumber   string  `json:"invoice_number"`
+	Note            string  `json:"note"`
+	Late            bool    `json:"late"`
+	DaysLate        int     `json:"days_late"`
+	// EffectiveRateCents é AmountCents dividido pelas horas; nulo sem horas.
+	EffectiveRateCents *int `json:"effective_rate_cents"`
+	BelowMinRate       bool `json:"below_min_rate"`
+}
+
 // Totals são os cartões da página, em centavos da moeda da organização.
 type Totals struct {
-	// ToConfirm é o que as propostas somam; só as que a lista traz.
-	ToConfirmCount int `json:"to_confirm_count"`
-	ToConfirmCents int `json:"to_confirm_cents"`
-	// Open é tudo o que foi confirmado e ainda não entrou, atrasado incluído; Late é a parte que passou do vencimento.
-	OpenCount int `json:"open_count"`
-	OpenCents int `json:"open_cents"`
-	LateCount int `json:"late_count"`
-	LateCents int `json:"late_cents"`
+	// InProgress é o que os períodos ainda abertos somam: a mensalidade do mensal (ou o ajustado) e o valor até agora do
+	// por hora.
+	InProgressCount int `json:"in_progress_count"`
+	InProgressCents int `json:"in_progress_cents"`
+	// ToReceive é tudo o que fechou e ainda não entrou, atrasado incluído; Late é a parte que passou do vencimento.
+	ToReceiveCount int `json:"to_receive_count"`
+	ToReceiveCents int `json:"to_receive_cents"`
+	LateCount      int `json:"late_count"`
+	LateCents      int `json:"late_cents"`
 	// ReceivedMonth é o que entrou no mês corrente (calendário, no fuso da organização): a soma de received_cents.
 	ReceivedMonthCount int `json:"received_month_count"`
 	ReceivedMonthCents int `json:"received_month_cents"`
@@ -120,11 +148,12 @@ type Summary struct {
 	// Today é o dia de hoje (YYYY-MM-DD) no fuso da organização, de onde saem o atraso e o mês dos cartões.
 	Today  string `json:"today"`
 	Totals Totals `json:"totals"`
-	// ToConfirm são as propostas, do período que fechou há mais tempo para o mais novo; Open, o que foi confirmado e
-	// não entrou, do vencimento mais antigo para o mais novo; Received, o que entrou, o mais recente primeiro.
-	ToConfirm []Proposal   `json:"to_confirm"`
-	Open      []Receivable `json:"open"`
-	Received  []Receivable `json:"received"`
+	// InProgress são os períodos ainda abertos, calculados ou ajustados adiantado, o que fecha primeiro antes; ToReceive,
+	// o que fechou e não entrou, do vencimento mais antigo (o mais atrasado) para o mais novo; Received, o que entrou, o
+	// mais recente primeiro.
+	InProgress []Due        `json:"in_progress"`
+	ToReceive  []Due        `json:"to_receive"`
+	Received   []Receivable `json:"received"`
 }
 
 // LateCharges é a sugestão de multa e juros para receber um recebível mensal numa data.
@@ -167,9 +196,22 @@ type UpdateInput struct {
 
 // ReceiveInput é o pedido de recebimento. Sem received_on vale hoje. No por hora o valor recebido é o confirmado e
 // multa e juros são recusados; no mensal o valor é livre, e sem ele vale o confirmado mais a multa e os juros.
+// InvoiceNumber ausente (nil) mantém o número da nota; texto vazio o apaga.
 type ReceiveInput struct {
-	ReceivedOn    string `json:"received_on"`
-	ReceivedCents *int   `json:"received_cents"`
-	LateFeeCents  *int   `json:"late_fee_cents"`
-	InterestCents *int   `json:"interest_cents"`
+	ReceivedOn    string  `json:"received_on"`
+	ReceivedCents *int    `json:"received_cents"`
+	LateFeeCents  *int    `json:"late_fee_cents"`
+	InterestCents *int    `json:"interest_cents"`
+	InvoiceNumber *string `json:"invoice_number"`
+}
+
+// ReceivePeriodInput é o recebimento de um período calculado, num passo só: o cliente e o período, o recebimento e a
+// observação. O valor é o calculado e o vencimento é o padrão do cliente; para outros, o dono ajusta antes
+// (POST /receivables).
+type ReceivePeriodInput struct {
+	CustomerID  string `json:"customer_id"`
+	PeriodStart string `json:"period_start"`
+	PeriodEnd   string `json:"period_end"`
+	ReceiveInput
+	Note string `json:"note"`
 }

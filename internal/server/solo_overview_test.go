@@ -80,7 +80,7 @@ func TestSoloOverview_OwnerReadsTheWindows(t *testing.T) {
 	// Confirmar o mês passado do Por hora e receber hoje: é Receita do mês corrente (a data do recebimento), e continua
 	// projetada do mês passado (o fim do período), sem contar duas vezes em lugar nenhum.
 	var period map[string]any
-	for _, p := range decode(t, do(e, "GET", receivablesPath(owner), "", owner.session))["to_confirm"].([]any) {
+	for _, p := range decode(t, do(e, "GET", receivablesPath(owner), "", owner.session))["to_receive"].([]any) {
 		if p.(map[string]any)["kind"] == "hourly" {
 			period = p.(map[string]any)
 		}

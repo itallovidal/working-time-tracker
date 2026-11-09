@@ -909,18 +909,22 @@ func TestLate_IsDerived(t *testing.T) {
 	}
 }
 
-// Os cartões e as três listas da página.
+// Os cartões e as três listas da página: Em andamento (os períodos abertos), A receber (o que fechou e não entrou,
+// calculado ou gravado) e Recebidos.
 func TestSummary(t *testing.T) {
 	f := setup(t)
 	org := f.orgID.String()
 	hourly := f.hourly("Por hora")
 	tk := f.task(hourly, "Site")
-	f.session(tk, "2026-09-10T12:00:00Z", "2026-09-10T14:00:00Z", rate(10000)) // setembro: 200,00 a confirmar
+	f.session(tk, "2026-08-10T12:00:00Z", "2026-08-10T14:00:00Z", rate(10000)) // agosto: 200,00 calculados, vence 5/9
+	f.session(tk, "2026-09-10T12:00:00Z", "2026-09-10T14:00:00Z", rate(10000)) // setembro: recebido
+	f.session(tk, "2026-10-05T12:00:00Z", "2026-10-05T13:00:00Z", rate(10000)) // outubro: 100,00 até agora
 	monthly := f.monthly("Mensal", "2026-07-01", nil)
 	f.confirm(monthly, "2026-07-01", "2026-07-31", 500000)        // vence 10/8: atrasado
-	jul := f.confirm(monthly, "2026-08-01", "2026-08-31", 500000) // vence 10/9: atrasado
-	f.confirm(monthly, "2026-09-01", "2026-09-30", 500000)        // vence 10/10: em aberto
-	if _, err := f.svc.Receive(org, jul.ID.String(), receivable.ReceiveInput{ReceivedOn: "2026-10-02", ReceivedCents: rate(510000)}); err != nil {
+	aug := f.confirm(monthly, "2026-08-01", "2026-08-31", 500000) // recebido
+	f.confirm(monthly, "2026-09-01", "2026-09-30", 500000)        // vence 10/10: ainda no prazo
+	f.confirm(monthly, "2026-10-01", "2026-10-31", 480000)        // outubro ajustado adiantado: segue em andamento
+	if _, err := f.svc.Receive(org, aug.ID.String(), receivable.ReceiveInput{ReceivedOn: "2026-10-02", ReceivedCents: rate(510000)}); err != nil {
 		t.Fatal(err)
 	}
 	old := f.confirm(hourly, "2026-09-01", "2026-09-30", 20000)
@@ -935,24 +939,185 @@ func TestSummary(t *testing.T) {
 	if s.Today != "2026-10-09" || s.Timezone != "America/Sao_Paulo" || s.Currency != "BRL" {
 		t.Errorf("header = %s / %s / %s", s.Today, s.Timezone, s.Currency)
 	}
-	// A confirmar: a mensalidade de outubro (corrente), sem a de novembro (o seguinte, que ainda não começou); setembro
-	// por hora já foi confirmado.
-	if len(s.ToConfirm) != 1 || s.ToConfirm[0].PeriodStart != "2026-10-01" {
-		t.Fatalf("to confirm = %+v", s.ToConfirm)
+	// Em andamento: outubro dos dois. O mensal, ajustado adiantado, fica aqui até o período fechar, pelo valor ajustado;
+	// o por hora vem calculado, pelas horas até agora. Novembro (o seguinte) ainda não começou.
+	if len(s.InProgress) != 2 {
+		t.Fatalf("in progress = %+v", s.InProgress)
+	}
+	octMonthly, octHourly := s.InProgress[0], s.InProgress[1]
+	if octMonthly.Customer.Name != "Mensal" || octMonthly.ID == nil || !octMonthly.Adjusted || octMonthly.AmountCents != 480000 || octMonthly.Late {
+		t.Errorf("october monthly = %+v, want the adjusted 4.800,00", octMonthly)
+	}
+	if octHourly.Customer.Name != "Por hora" || octHourly.ID != nil || octHourly.Seconds != 3600 || octHourly.AmountCents != 10000 {
+		t.Errorf("october hourly = %+v, want the calculated 1h and 100,00 so far", octHourly)
+	}
+	// A receber, do vencimento mais antigo: julho mensal (gravado, 60 dias de atraso), agosto por hora (calculado, 34
+	// dias) e setembro mensal (gravado, no prazo).
+	if len(s.ToReceive) != 3 {
+		t.Fatalf("to receive = %+v", s.ToReceive)
+	}
+	jul, augHourly, sep := s.ToReceive[0], s.ToReceive[1], s.ToReceive[2]
+	if jul.PeriodStart != "2026-07-01" || jul.ID == nil || !jul.Adjusted || !jul.Late || jul.DaysLate != 60 {
+		t.Errorf("july = %+v, want the stored monthly, 60 days late", jul)
+	}
+	if augHourly.PeriodStart != "2026-08-01" || augHourly.ID != nil || augHourly.Adjusted || augHourly.AmountCents != 20000 ||
+		augHourly.DueDate != "2026-09-05" || !augHourly.Late || augHourly.DaysLate != 34 {
+		t.Errorf("august hourly = %+v, want the calculated 200,00 due 2026-09-05, 34 days late", augHourly)
+	}
+	if sep.PeriodStart != "2026-09-01" || sep.Late || sep.DueDate != "2026-10-10" {
+		t.Errorf("september = %+v, want the stored monthly due 2026-10-10, not late", sep)
 	}
 	want := receivable.Totals{
-		ToConfirmCount: 1, ToConfirmCents: 500000,
-		OpenCount: 2, OpenCents: 1000000, LateCount: 1, LateCents: 500000,
+		InProgressCount: 2, InProgressCents: 490000,
+		ToReceiveCount: 3, ToReceiveCents: 1020000, LateCount: 2, LateCents: 520000,
 		ReceivedMonthCount: 1, ReceivedMonthCents: 510000,
 	}
 	if s.Totals != want {
 		t.Errorf("totals = %+v, want %+v", s.Totals, want)
 	}
-	if len(s.Open) != 2 || s.Open[0].PeriodStart != "2026-07-01" || !s.Open[0].Late || s.Open[1].PeriodStart != "2026-09-01" || s.Open[1].Late {
-		t.Errorf("open (by due date) = %+v", s.Open)
-	}
 	if len(s.Received) != 2 || *s.Received[0].ReceivedOn != "2026-10-02" || *s.Received[1].ReceivedOn != "2026-09-30" {
 		t.Errorf("received (newest first) = %+v", s.Received)
+	}
+}
+
+// Receber um período calculado num passo só: grava o recebível já recebido, com o valor calculado e o vencimento
+// padrão, e o período sai de A receber para Recebidos.
+func TestReceivePeriod_Hourly(t *testing.T) {
+	f := setup(t)
+	org := f.orgID.String()
+	acme := f.hourly("Acme")
+	tk := f.task(acme, "Site")
+	f.session(tk, "2026-08-10T12:00:00Z", "2026-08-10T13:00:00Z", rate(10000))
+	f.session(tk, "2026-09-10T12:00:00Z", "2026-09-10T14:00:00Z", rate(10000))
+	f.session(tk, "2026-10-05T12:00:00Z", "2026-10-05T13:00:00Z", rate(10000))
+	in := func(start, end string) receivable.ReceivePeriodInput {
+		return receivable.ReceivePeriodInput{CustomerID: acme.ID.String(), PeriodStart: start, PeriodEnd: end}
+	}
+
+	nf := "NF-9"
+	sep := in("2026-09-01", "2026-09-30")
+	sep.ReceivedOn, sep.InvoiceNumber, sep.Note = "2026-10-08", &nf, "pix"
+	got, err := f.svc.ReceivePeriod(org, sep)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.ReceivedOn == nil || *got.ReceivedOn != "2026-10-08" || got.ReceivedCents == nil || *got.ReceivedCents != 20000 ||
+		got.AmountCents != 20000 || got.CalculatedCents != 20000 || got.Seconds != 7200 || got.DueDate != "2026-10-05" ||
+		got.InvoiceNumber != "NF-9" || got.Note != "pix" || got.Kind != "hourly" {
+		t.Errorf("received = %+v", got)
+	}
+	s, _ := f.svc.Summary(org)
+	for _, d := range s.ToReceive {
+		if d.PeriodStart == "2026-09-01" {
+			t.Errorf("september is still to receive: %+v", d)
+		}
+	}
+	if len(s.Received) != 1 || s.Received[0].PeriodStart != "2026-09-01" {
+		t.Errorf("received list = %+v", s.Received)
+	}
+
+	_, err = f.svc.ReceivePeriod(org, sep)
+	wantCode(t, err, receivable.ErrAlreadyConfirmed, "")
+	_, err = f.svc.ReceivePeriod(org, in("2026-10-01", "2026-10-31"))
+	wantCode(t, err, receivable.ErrPeriodOpen, "")
+
+	aug := in("2026-08-01", "2026-08-31")
+	aug.ReceivedCents = rate(5000)
+	_, err = f.svc.ReceivePeriod(org, aug)
+	wantCode(t, err, receivable.ErrReceivedMustMatch, "received_cents")
+	aug = in("2026-08-01", "2026-08-31")
+	aug.LateFeeCents = rate(100)
+	_, err = f.svc.ReceivePeriod(org, aug)
+	wantCode(t, err, receivable.ErrChargesNotAllowed, "late_fee_cents")
+	aug = in("2026-08-01", "2026-08-31")
+	aug.ReceivedOn = "2026-10-10"
+	_, err = f.svc.ReceivePeriod(org, aug)
+	wantCode(t, err, receivable.ErrReceivedInFuture, "received_on")
+	if s, _ := f.svc.Summary(org); len(s.Received) != 1 {
+		t.Errorf("a refused receipt recorded something: %+v", s.Received)
+	}
+
+	// Sessões sem valor cobrado não dão o que receber: o dono ajusta o valor antes.
+	free := f.hourly("Sem valor")
+	ftk := f.task(free, "Site")
+	f.session(ftk, "2026-09-10T12:00:00Z", "2026-09-10T13:00:00Z", nil)
+	_, err = f.svc.ReceivePeriod(org, receivable.ReceivePeriodInput{CustomerID: free.ID.String(), PeriodStart: "2026-09-01", PeriodEnd: "2026-09-30"})
+	wantCode(t, err, receivable.ErrInvalidAmount, "amount_cents")
+}
+
+// No mensal, o mês corrente se recebe adiantado, e a multa e os juros informados entram no valor recebido.
+func TestReceivePeriod_Monthly(t *testing.T) {
+	f := setup(t)
+	org := f.orgID.String()
+	acme := f.monthly("Acme", "2026-09-01", nil)
+
+	got, err := f.svc.ReceivePeriod(org, receivable.ReceivePeriodInput{CustomerID: acme.ID.String(), PeriodStart: "2026-10-01", PeriodEnd: "2026-10-31"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if *got.ReceivedOn != "2026-10-09" || *got.ReceivedCents != 500000 || got.DueDate != "2026-11-10" {
+		t.Errorf("received in advance = %+v, want today, 5.000,00, due 2026-11-10", got)
+	}
+	s, _ := f.svc.Summary(org)
+	if len(s.InProgress) != 0 {
+		t.Errorf("october received in advance is still in progress: %+v", s.InProgress)
+	}
+
+	sep := receivable.ReceivePeriodInput{CustomerID: acme.ID.String(), PeriodStart: "2026-09-01", PeriodEnd: "2026-09-30"}
+	sep.LateFeeCents, sep.InterestCents = rate(10000), rate(500)
+	got, err = f.svc.ReceivePeriod(org, sep)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if *got.ReceivedCents != 510500 || got.LateFeeCents != 10000 || got.InterestCents != 500 || got.AmountCents != 500000 {
+		t.Errorf("received with charges = %+v, want 5.105,00 with 100,00 and 5,00", got)
+	}
+	_, err = f.svc.ReceivePeriod(org, receivable.ReceivePeriodInput{CustomerID: acme.ID.String(), PeriodStart: "2026-11-01", PeriodEnd: "2026-11-30"})
+	wantCode(t, err, receivable.ErrNotAPeriod, "period_start")
+}
+
+// A sugestão de multa e juros de um período calculado usa o valor calculado e o vencimento padrão.
+func TestPeriodLateCharges(t *testing.T) {
+	f := setup(t)
+	org := f.orgID.String()
+	acme := f.monthly("Acme", "2026-08-01", nil)
+	got, err := f.svc.PeriodLateCharges(org, acme.ID.String(), "2026-08-01", "2026-08-31", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Vence 10/9; hoje, 9/10, são 29 dias: 2% de multa (100,00) e 1% ao mês por 29 dias (48,33).
+	if got.DueDate != "2026-09-10" || got.DaysLate != 29 || !got.Charged || got.LateFeeCents != 10000 || got.InterestCents != 4833 || got.TotalCents != 514833 {
+		t.Errorf("late charges = %+v", got)
+	}
+	hourly := f.hourly("Por hora")
+	tk := f.task(hourly, "Site")
+	f.session(tk, "2026-08-10T12:00:00Z", "2026-08-10T13:00:00Z", rate(10000))
+	got, err = f.svc.PeriodLateCharges(org, hourly.ID.String(), "2026-08-01", "2026-08-31", "")
+	if err != nil || got.Charged || got.LateFeeCents != 0 || got.TotalCents != 10000 {
+		t.Errorf("hourly late charges = %+v (%v), want none", got, err)
+	}
+	_, err = f.svc.PeriodLateCharges(org, acme.ID.String(), "2026-08-01", "2026-08-31", "ontem")
+	wantCode(t, err, apperr.ErrFieldInvalid, "on")
+}
+
+// Receber um recebível gravado também grava o número da nota, quando vem; ausente, mantém o que havia.
+func TestReceive_InvoiceNumber(t *testing.T) {
+	f := setup(t)
+	org := f.orgID.String()
+	acme := f.monthly("Acme", "2026-08-01", nil)
+	a := f.confirm(acme, "2026-08-01", "2026-08-31", 500000)
+	nf := "NF-12"
+	got, err := f.svc.Receive(org, a.ID.String(), receivable.ReceiveInput{InvoiceNumber: &nf})
+	if err != nil || got.InvoiceNumber != "NF-12" {
+		t.Errorf("received with the invoice = %+v (%v)", got, err)
+	}
+	amount := 500000
+	b, err := f.svc.Confirm(org, receivable.ConfirmInput{CustomerID: acme.ID.String(), PeriodStart: "2026-09-01", PeriodEnd: "2026-09-30", AmountCents: &amount, InvoiceNumber: "NF-13"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, err := f.svc.Receive(org, b.ID.String(), receivable.ReceiveInput{}); err != nil || got.InvoiceNumber != "NF-13" {
+		t.Errorf("received without an invoice = %+v (%v), want NF-13 kept", got, err)
 	}
 }
 
@@ -1021,7 +1186,7 @@ func TestIsolationBetweenOrganizations(t *testing.T) {
 		t.Errorf("late charges from another organization = %v, want not found", err)
 	}
 	s, err := f.svc.Summary(other)
-	if err != nil || len(s.Open) != 0 || len(s.ToConfirm) != 0 || len(s.Received) != 0 {
+	if err != nil || len(s.ToReceive) != 0 || len(s.InProgress) != 0 || len(s.Received) != 0 {
 		t.Errorf("the other organization's summary = %+v (%v), want it empty", s, err)
 	}
 	// O recebível continua intacto na organização dele.
@@ -1089,7 +1254,7 @@ func TestReceive_RefusesAnAmountEditedAfterTheRead(t *testing.T) {
 	if _, err := f.svc.Update(org, id, receivable.UpdateInput{AmountCents: &edited}); err != nil {
 		t.Fatalf("edit: %v", err)
 	}
-	err := store.Receive(f.orgID, r.ID, 500000, "2026-10-09", 500000, 0, 0)
+	err := store.Receive(f.orgID, r.ID, 500000, "2026-10-09", 500000, 0, 0, nil)
 	wantCode(t, err, receivable.ErrChanged, "")
 	if row := testClient.Receivable.GetX(ctx, r.ID); row.ReceivedOn != nil || row.ReceivedCents != nil || row.AmountCents != 520000 {
 		t.Errorf("row after a refused receipt = received_on %v, received_cents %v, amount %d; want untouched at 520000", row.ReceivedOn, row.ReceivedCents, row.AmountCents)
@@ -1105,9 +1270,9 @@ func TestReceive_RefusesAnAmountEditedAfterTheRead(t *testing.T) {
 	}
 
 	// Recebido, o valor velho é recusado como já recebido, não como mudado; e um recebível que não existe é ErrNotFound.
-	err = store.Receive(f.orgID, r.ID, 500000, "2026-10-09", 500000, 0, 0)
+	err = store.Receive(f.orgID, r.ID, 500000, "2026-10-09", 500000, 0, 0, nil)
 	wantCode(t, err, receivable.ErrAlreadyReceived, "")
-	err = store.Receive(f.orgID, uuid.New(), 500000, "2026-10-09", 500000, 0, 0)
+	err = store.Receive(f.orgID, uuid.New(), 500000, "2026-10-09", 500000, 0, 0, nil)
 	if !errors.Is(err, database.ErrNotFound) {
 		t.Errorf("receive of a missing receivable: err = %v, want ErrNotFound", err)
 	}
