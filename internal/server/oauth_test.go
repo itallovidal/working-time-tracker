@@ -20,6 +20,7 @@ import (
 	mcpauth "github.com/modelcontextprotocol/go-sdk/auth"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"working-time-tracker/internal/adapter"
 	"working-time-tracker/internal/domain/auth"
 	"working-time-tracker/internal/server"
 	"working-time-tracker/testutil"
@@ -167,6 +168,24 @@ func connectClaude(t *testing.T, e *echo.Echo, acct account) (access, refresh st
 	t.Helper()
 	code, p := authorizeCode(t, e, acct, claudeID, claudeCallback)
 	return tokenOK(t, tokenRequest(e, exchangeForm(code, p, claudeID, claudeCallback)))
+}
+
+// connectClaudeCode conecta o Claude Code, que volta a uma porta do próprio computador, e devolve os tokens.
+func connectClaudeCode(t *testing.T, e *echo.Echo, acct account, port int) (access, refresh string) {
+	t.Helper()
+	callback := fmt.Sprintf("http://127.0.0.1:%d/callback", port)
+	code, p := authorizeCode(t, e, acct, claudeCodeID, callback)
+	return tokenOK(t, tokenRequest(e, exchangeForm(code, p, claudeCodeID, callback)))
+}
+
+// grantCounts conta as concessões da pessoa: as conectadas (o código já foi trocado) e as pendentes.
+func grantCounts(t *testing.T, acct account) (connected, pending int) {
+	t.Helper()
+	if err := testDB.QueryRow(`SELECT count(*) FILTER (WHERE refresh_hash IS NOT NULL), count(*) FILTER (WHERE refresh_hash IS NULL)
+		FROM oauth_grants WHERE person_id = $1`, acct.id).Scan(&connected, &pending); err != nil {
+		t.Fatal(err)
+	}
+	return connected, pending
 }
 
 // mcpStatus é o status de um initialize no /mcp com o token.
@@ -732,7 +751,7 @@ func TestOAuth_RevocationCutsAccess(t *testing.T) {
 	if got := mcpStatus(e, access); got != http.StatusOK {
 		t.Errorf("mcp with a new access token = %d, want 200", got)
 	}
-	_, refresh2 := connectClaude(t, e, acct)
+	_, refresh2 := connectClaudeCode(t, e, acct, 3118)
 	revoke(refresh2)
 	if got := len(decodeList(t, do(e, "GET", "/api/auth/connections", "", acct.session))); got != 1 {
 		t.Errorf("connections after revoking a refresh token = %d, want 1", got)
@@ -757,13 +776,13 @@ func TestOAuth_RevocationCutsAccess(t *testing.T) {
 }
 
 // A lista mostra só as conexões de verdade (a autorização que o app ainda não trocou fica de fora), e cada pessoa tem
-// no máximo dez: a que está há mais tempo sem uso sai.
+// no máximo dez: a que está há mais tempo sem uso sai. As autorizações pendentes têm um limite próprio e nunca tiram
+// um app conectado.
 func TestOAuth_ConnectionsListAndLimit(t *testing.T) {
 	e := newOAuthServer(t)
 	acct := signup(t, e, "Org", "ana@test.com")
 	connectClaude(t, e, acct)
-	code, p := authorizeCode(t, e, acct, claudeCodeID, "http://127.0.0.1:3118/callback")
-	tokenOK(t, tokenRequest(e, exchangeForm(code, p, claudeCodeID, "http://127.0.0.1:3118/callback")))
+	connectClaudeCode(t, e, acct, 3118)
 	authorizeCode(t, e, acct, claudeID, claudeCallback) // autorizado, não trocado
 
 	list := decodeList(t, do(e, "GET", "/api/auth/connections", "", acct.session))
@@ -784,16 +803,113 @@ func TestOAuth_ConnectionsListAndLimit(t *testing.T) {
 	if _, err := testDB.Exec(`UPDATE oauth_grants SET last_used_at = now() - interval '10 days' WHERE id = $1`, oldest); err != nil {
 		t.Fatal(err)
 	}
-	for range 9 {
-		connectClaude(t, e, acct)
+	// Nove Claude Code (um por máquina, cada um numa porta) levam a pessoa a onze conexões.
+	for i := range 9 {
+		connectClaudeCode(t, e, acct, 4000+i)
 	}
-	var total, kept int
-	if err := testDB.QueryRow(`SELECT count(*), count(*) FILTER (WHERE id = $1) FROM oauth_grants`, oldest).Scan(&total, &kept); err != nil {
+	var kept int
+	if err := testDB.QueryRow(`SELECT count(*) FROM oauth_grants WHERE id = $1`, oldest).Scan(&kept); err != nil {
 		t.Fatal(err)
 	}
-	if total != 10 || kept != 0 {
-		t.Errorf("grants = %d (oldest kept: %d), want 10 without the oldest", total, kept)
+	if connected, pending := grantCounts(t, acct); connected != 10 || pending != 1 || kept != 0 {
+		t.Errorf("connected %d, pending %d (oldest kept: %d), want 10 connected without the oldest and the pending one", connected, pending, kept)
 	}
+
+	// Com as dez vagas cheias, autorizações que o app não troca não derrubam ninguém: as pendentes passam de dez só
+	// tirando a pendente mais antiga.
+	for i := range 10 {
+		authorizeCode(t, e, acct, claudeCodeID, fmt.Sprintf("http://127.0.0.1:%d/callback", 5000+i))
+	}
+	if connected, pending := grantCounts(t, acct); connected != 10 || pending != 10 {
+		t.Errorf("after 10 pending authorizations: connected %d, pending %d, want 10 and 10", connected, pending)
+	}
+	if got := len(decodeList(t, do(e, "GET", "/api/auth/connections", "", acct.session))); got != 10 {
+		t.Errorf("connections listed = %d, want 10", got)
+	}
+}
+
+// O claude.ai volta sempre ao mesmo endereço e não revoga a conexão antiga quando conecta de novo: a conexão nova,
+// quando o código é trocado, substitui a anterior da mesma pessoa. O Claude Code, uma conexão por máquina, não
+// substitui, e a conexão de outra pessoa não muda.
+func TestOAuth_ReconnectReplacesTheSameApp(t *testing.T) {
+	e := newOAuthServer(t)
+	acct := signup(t, e, "Org", "ana@test.com")
+	other := invite(t, e, acct, "bia@test.com", "member")
+	otherAccess, _ := connectClaude(t, e, other)
+
+	access1, refresh1 := connectClaude(t, e, acct)
+	codeA, _ := connectClaudeCode(t, e, acct, 3118)
+	codeB, _ := connectClaudeCode(t, e, acct, 3119)
+
+	// Autorizar de novo ainda não troca nada: a conexão antiga vale até o código novo ser trocado.
+	code, p := authorizeCode(t, e, acct, claudeID, claudeCallback)
+	if got := mcpStatus(e, access1); got != http.StatusOK {
+		t.Errorf("mcp with the old connection before the exchange = %d, want 200", got)
+	}
+	access2, _ := tokenOK(t, tokenRequest(e, exchangeForm(code, p, claudeID, claudeCallback)))
+
+	if got := mcpStatus(e, access1); got != http.StatusUnauthorized {
+		t.Errorf("mcp with the replaced connection = %d, want 401", got)
+	}
+	tokenError(t, tokenRequest(e, refreshForm(refresh1, claudeID)), 400, "invalid_grant")
+	for name, tok := range map[string]string{"new claude.ai": access2, "Claude Code A": codeA, "Claude Code B": codeB, "other person": otherAccess} {
+		if got := mcpStatus(e, tok); got != http.StatusOK {
+			t.Errorf("mcp with %s = %d, want 200", name, got)
+		}
+	}
+	var names []string
+	for _, c := range decodeList(t, do(e, "GET", "/api/auth/connections", "", acct.session)) {
+		names = append(names, c["name"].(string))
+	}
+	slices.Sort(names)
+	if strings.Join(names, ",") != "Claude,Claude Code,Claude Code" {
+		t.Errorf("connections = %v, want one Claude and two Claude Code", names)
+	}
+}
+
+// A cópia do sucessor que a janela de renovação usa não abre só com a chave do servidor (ela depende do token
+// anterior, que o banco não tem), e sai no primeiro uso do /mcp depois da janela.
+func TestOAuth_ReplayCopyIsBoundAndCleared(t *testing.T) {
+	e := newOAuthServer(t)
+	acct := signup(t, e, "Org", "ana@test.com")
+	_, refresh1 := connectClaude(t, e, acct)
+	access2, refresh2 := tokenOK(t, tokenRequest(e, refreshForm(refresh1, claudeID)))
+
+	replayCopy := func() *string {
+		t.Helper()
+		var enc *string
+		if err := testDB.QueryRow(`SELECT refresh_replay_enc FROM oauth_grants`).Scan(&enc); err != nil {
+			t.Fatal(err)
+		}
+		return enc
+	}
+	enc := replayCopy()
+	if enc == nil {
+		t.Fatal("the rotation kept no replay copy")
+	}
+	if _, err := adapter.DecryptConfig(map[string]any{"encrypted_data": *enc}, "test-key"); err == nil {
+		t.Error("the replay copy opens with the server key alone")
+	}
+
+	// Dentro da janela, o uso não apaga a cópia: o outro processo ainda pode chegar com o token anterior.
+	if got := mcpStatus(e, access2); got != http.StatusOK {
+		t.Fatalf("mcp = %d", got)
+	}
+	if replayCopy() == nil {
+		t.Error("the replay copy was cleared inside the window")
+	}
+
+	if _, err := testDB.Exec(`UPDATE oauth_grants SET rotated_at = now() - interval '2 minutes'`); err != nil {
+		t.Fatal(err)
+	}
+	if got := mcpStatus(e, access2); got != http.StatusOK {
+		t.Fatalf("mcp after the window = %d", got)
+	}
+	if replayCopy() != nil {
+		t.Error("the replay copy is still stored after the window")
+	}
+	// O token atual continua renovando.
+	tokenOK(t, tokenRequest(e, refreshForm(refresh2, claudeID)))
 }
 
 // De ponta a ponta com o cliente OAuth do próprio SDK do MCP, como um cliente de verdade: o 401 do /mcp, a descoberta,

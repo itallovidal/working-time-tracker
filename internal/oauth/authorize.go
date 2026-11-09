@@ -32,8 +32,7 @@ func (r *Request) RedirectHost() string {
 
 // Loopback diz se a volta é para um programa no próprio computador (o Claude Code): a tela avisa.
 func (r *Request) Loopback() bool {
-	u, err := url.Parse(r.RedirectURI)
-	return err == nil && u.Scheme == "http" && isLoopback(u.Hostname())
+	return loopbackRedirect(r.RedirectURI)
 }
 
 // As razões de um pedido que não pode voltar ao app: o app não é conhecido, ou o endereço de volta não é dele, ou falta

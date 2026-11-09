@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -26,7 +27,8 @@ type Config struct {
 	// conta por esse IP: atrás de um proxy, sem o cabeçalho, todo mundo teria o IP do proxy e dividiria o mesmo limite.
 	ClientIPHeader string
 
-	// PublicURL é o endereço em que as pessoas abrem o sistema, sem barra no fim.
+	// PublicURL é o endereço em que as pessoas abrem o sistema, sem barra no fim e na forma canônica (ver
+	// canonicalURL).
 	PublicURL string
 	// OAuthEnabled liga o OAuth do servidor MCP, por onde o claude.ai, o Claude Desktop e o celular se conectam (ver
 	// loadOAuth). Desligado, o /mcp aceita só o token pessoal.
@@ -214,6 +216,31 @@ func oauthIssuer(raw string) bool {
 	return false
 }
 
+// canonicalURL escreve o endereço como o navegador escreve a origem: o esquema e o nome em minúsculas e sem a porta
+// padrão (https://WTT.example.com:443 vira https://wtt.example.com). O OAuth do MCP compara o emissor e o recurso byte
+// a byte, e o recurso sai sempre na forma canônica: sem isto, o endereço que o perfil mostra para colar no Claude não
+// bateria com o dos metadados, e o Claude recusaria a conexão. Um endereço que não é http(s) volta como veio, para quem
+// o usa recusar com a própria mensagem.
+func canonicalURL(raw string) string {
+	u, err := url.Parse(raw)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+		return raw
+	}
+	host, port := strings.ToLower(u.Hostname()), u.Port()
+	if (u.Scheme == "https" && port == "443") || (u.Scheme == "http" && port == "80") {
+		port = ""
+	}
+	switch {
+	case port != "":
+		u.Host = net.JoinHostPort(host, port)
+	case strings.Contains(host, ":"):
+		u.Host = "[" + host + "]"
+	default:
+		u.Host = host
+	}
+	return u.String()
+}
+
 // originOf é a origem de um endereço: esquema, nome e porta, sem caminho.
 func originOf(raw string) (string, error) {
 	u, err := url.Parse(raw)
@@ -231,7 +258,7 @@ func Load() (*Config, error) {
 		DatabaseURL:           os.Getenv("DATABASE_URL"),
 		IntegrationEncryptKey: os.Getenv("INTEGRATION_ENCRYPTION_KEY"),
 		CookieSecure:          os.Getenv("COOKIE_SECURE") == "true",
-		PublicURL:             strings.TrimRight(strings.TrimSpace(os.Getenv("PUBLIC_URL")), "/"),
+		PublicURL:             canonicalURL(strings.TrimRight(strings.TrimSpace(os.Getenv("PUBLIC_URL")), "/")),
 		GitHubClientID:        strings.TrimSpace(os.Getenv("GITHUB_CLIENT_ID")),
 		GitHubClientSecret:    strings.TrimSpace(os.Getenv("GITHUB_CLIENT_SECRET")),
 		GitHubURL:             strings.TrimRight(strings.TrimSpace(os.Getenv("GITHUB_URL")), "/"),

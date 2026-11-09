@@ -246,6 +246,45 @@ func TestLoad_ClientIPHeader(t *testing.T) {
 	}
 }
 
+// O PUBLIC_URL fica na forma canônica: o esquema e o nome em minúsculas, sem a porta padrão e sem a barra do fim. O
+// recurso do OAuth do MCP sai sempre assim, e o endereço que o perfil mostra tem de bater com ele.
+func TestLoad_PublicURLIsCanonical(t *testing.T) {
+	setRequired(t)
+	t.Setenv("CLERK_SECRET_KEY", "")
+	t.Setenv("CLERK_PUBLISHABLE_KEY", "")
+	t.Setenv("MCP_OAUTH", "")
+	for raw, want := range map[string]string{
+		"HTTPS://WTT.Example.com:443/": "https://wtt.example.com",
+		"https://wtt.example.com:8443": "https://wtt.example.com:8443",
+		"http://LocalHost:80":          "http://localhost",
+		"http://localhost:8080":        "http://localhost:8080",
+		"http://[::1]:80":              "http://[::1]",
+		"http://[::1]:1243":            "http://[::1]:1243",
+		"https://WTT.example.com/App":  "https://wtt.example.com/App", // o caminho não muda
+		"localhost:8080":               "localhost:8080",              // não é http(s): fica para quem usa recusar
+		"":                             "",
+	} {
+		t.Setenv("PUBLIC_URL", raw)
+		cfg, err := Load()
+		if err != nil {
+			t.Errorf("PUBLIC_URL=%q: %v", raw, err)
+			continue
+		}
+		if cfg.PublicURL != want {
+			t.Errorf("PUBLIC_URL=%q: got %q, want %q", raw, cfg.PublicURL, want)
+		}
+	}
+	// Com a porta padrão escrita, o OAuth liga do mesmo jeito: o emissor é a origem canônica.
+	t.Setenv("PUBLIC_URL", "https://WTT.example.com:443")
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("PUBLIC_URL with :443: %v", err)
+	}
+	if !cfg.OAuthEnabled || cfg.PublicURL != "https://wtt.example.com" {
+		t.Errorf("PUBLIC_URL with :443: OAuth %v, PUBLIC_URL %q; want OAuth on with https://wtt.example.com", cfg.OAuthEnabled, cfg.PublicURL)
+	}
+}
+
 // O OAuth do MCP liga sozinho quando o PUBLIC_URL serve de emissor (uma origem pura em https, ou em http no próprio
 // computador); MCP_OAUTH=off o desliga, e MCP_OAUTH=on com um endereço que não serve derruba a subida.
 func TestLoad_MCPOAuth(t *testing.T) {

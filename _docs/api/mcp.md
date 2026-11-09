@@ -111,11 +111,17 @@ O código está em `internal/oauth` (o protocolo) e em `internal/domain/auth/oau
   juntos); depois disso é reuso, e a conexão cai inteira.
 - **O código** vale 2 minutos e uma vez só: a troca o gasta na primeira tentativa, e um segundo uso derruba a conexão.
 - **Desconectar:** na lista **Apps conectados** do perfil, pelo `/oauth/revoke` ou trocando a senha, que desconecta
-  todos os apps. Cada pessoa tem até 10 apps conectados; passando disso, sai o que está há mais tempo sem uso.
+  todos os apps. Cada pessoa tem até 10 apps conectados; passando disso, sai o que está há mais tempo sem uso. Uma
+  autorização que o app ainda não trocou não conta nesse limite nem tira um app conectado.
+- **Conectar de novo:** o claude.ai tem uma conexão por pessoa. Quando ele conecta de novo, a conexão nova substitui a
+  anterior assim que o código é trocado, porque o claude.ai não revoga a antiga. O Claude Code tem uma conexão por
+  máquina, e cada uma fica na lista.
 - **Igual ao token pessoal:** a identidade é lida a cada requisição, o token não abre a API, e o que o Claude pode é o
   mesmo ([O que o Claude pode](#o-que-o-claude-pode)).
-- **O endereço importa:** a URL colada no Claude tem de ser exatamente o `PUBLIC_URL` mais `/mcp`. Trocar o
-  `PUBLIC_URL` (um domínio próprio, por exemplo) derruba as conexões, e cada pessoa conecta de novo.
+- **O endereço importa:** a URL colada no Claude tem de ser exatamente a que o perfil mostra, o `PUBLIC_URL` mais
+  `/mcp`, na forma canônica: o sistema lê o `PUBLIC_URL` com o nome em minúsculas e sem a porta padrão
+  (`https://WTT.example.com:443` vira `https://wtt.example.com`). Trocar o `PUBLIC_URL` (um domínio próprio, por
+  exemplo) derruba as conexões, e cada pessoa conecta de novo.
 - As rotas estão em [reference.md](reference.md#oauth-do-mcp), e a segurança em
   [security.md](../architecture/security.md#oauth-do-mcp).
 

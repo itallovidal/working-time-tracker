@@ -225,6 +225,12 @@ func isLoopback(host string) bool {
 	return host == "localhost" || host == "127.0.0.1" || host == "::1"
 }
 
+// loopbackRedirect diz se o endereço de volta é um programa no próprio computador (o Claude Code, numa porta qualquer).
+func loopbackRedirect(raw string) bool {
+	u, err := url.Parse(raw)
+	return err == nil && u.Scheme == "http" && isLoopback(u.Hostname())
+}
+
 // MatchRedirect diz se o redirect_uri pedido é um dos do app. A comparação é exata, menos no http do próprio
 // computador (o Claude Code abre uma porta qualquer a cada vez): aí a porta não conta, mas o nome, o caminho e a query
 // têm de ser os mesmos (RFC 8252, seção 7.3).

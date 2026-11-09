@@ -958,16 +958,25 @@ com a pessoa entrando pelo login de sempre. O token pessoal continua igual.
   `oauth_access_tokens`. Como as sessões, só o sha256 de cada um vai ao banco.
 - **A conexão cai depois de 30 dias sem uso** (escolha do dono). O token de renovação (`wttr_`) gira a cada uso e cada
   uso empurra os 30 dias; não há teto absoluto. O token anterior, mandado de novo em até 60 segundos, recebe o mesmo
-  sucessor (guardado cifrado com a chave das integrações): dois processos do Claude Code renovando juntos não derrubam
-  a conexão. Depois disso, é reuso, e a conexão cai inteira.
+  sucessor: dois processos do Claude Code renovando juntos não derrubam a conexão. Depois disso, é reuso, e a conexão
+  cai inteira. O sucessor fica guardado cifrado com a chave das integrações **junto com o token anterior** (e um
+  rótulo que separa esta cifra da das integrações): como o banco só tem o hash do token anterior, nem o banco com a
+  chave abre a cópia. Passada a janela, ela sai no primeiro uso do `/mcp`.
+- **O claude.ai tem uma conexão por pessoa; o Claude Code, uma por máquina.** O claude.ai volta sempre ao mesmo
+  endereço e não revoga a conexão antiga quando conecta de novo; a conexão nova, na troca do código, tira as da mesma
+  pessoa com o mesmo app e o mesmo endereço de volta. Uma volta ao próprio computador (o Claude Code, numa porta
+  qualquer) nunca substitui. A troca, e não o "Permitir", é que substitui: uma autorização que não chegou ao fim não
+  derruba a conexão que funciona.
 - **O token de acesso só vale no `/mcp`, e só para o recurso em que foi emitido** (o `PUBLIC_URL` mais `/mcp`). O
   `verify` do MCP olha o prefixo: `wtta_` é do OAuth, `wtt_` é o pessoal. Com o OAuth desligado, um `wtta_` não entra.
 - **Desconectar** é na lista "Apps conectados" do perfil (cada pessoa vê e desconecta os seus), no `/oauth/revoke`
-  (RFC 7009) ou numa troca de senha, que também leva os apps. Cada pessoa tem até 10; passando disso, sai o que está
-  há mais tempo sem uso.
+  (RFC 7009) ou numa troca de senha, que também leva os apps. Cada pessoa tem até 10 apps conectados; passando disso,
+  na troca do código, sai o que está há mais tempo sem uso. As autorizações pendentes (o app ainda não trocou o
+  código) não contam: têm um limite igual, à parte, em que sai a pendente mais antiga.
 - **Liga sozinho com um `PUBLIC_URL` que serve de emissor:** uma origem pura em `https`, ou `http` no próprio computador
   para desenvolver. `MCP_OAUTH=off` desliga, e `MCP_OAUTH=on` exige o endereço. O emissor é o `PUBLIC_URL` exato,
-  porque o cliente o compara byte a byte.
+  porque o cliente o compara byte a byte; por isso o `PUBLIC_URL` é lido na forma canônica (nome em minúsculas, sem a
+  porta padrão), a mesma do recurso: o endereço que o perfil mostra bate com o dos metadados.
 
 **Alternativas descartadas:**
 - **Qualquer cliente MCP (ChatGPT, Cursor e afins) já agora:** pede o CIMD aberto, com proteção contra SSRF ao buscar

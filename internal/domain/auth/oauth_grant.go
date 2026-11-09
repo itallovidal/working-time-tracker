@@ -18,6 +18,7 @@ import (
 	"working-time-tracker/ent/oauthaccesstoken"
 	"working-time-tracker/ent/oauthgrant"
 	"working-time-tracker/ent/person"
+	"working-time-tracker/ent/predicate"
 	"working-time-tracker/internal/adapter"
 	"working-time-tracker/internal/database"
 )
@@ -47,6 +48,7 @@ const (
 	// derruba a concessão.
 	OAuthReplayWindow = time.Minute
 	// OAuthGrantMax é quantos apps conectados uma pessoa pode ter. Passando dele, sai o que está há mais tempo sem uso.
+	// As autorizações pendentes (o app ainda não trocou o código) têm um limite igual, à parte, e não contam neste.
 	OAuthGrantMax = 10
 	// OAuthScope é o único escopo: tudo o que o /mcp faz.
 	OAuthScope = "mcp"
@@ -73,13 +75,16 @@ type OAuthGrantRequest struct {
 }
 
 // OAuthExchange é a troca do código pelos tokens. Resource vazio é o app que não mandou o recurso: vale o da
-// concessão.
+// concessão. Replace faz a conexão nova tirar as anteriores da pessoa com o mesmo app e o mesmo endereço de volta: é o
+// caso do claude.ai, que tem um endereço só e conecta de novo sem revogar a conexão de antes. O Claude Code volta a uma
+// porta do próprio computador e tem uma conexão por máquina, então não substitui (ver internal/oauth).
 type OAuthExchange struct {
 	Code         string
 	ClientID     string
 	RedirectURI  string
 	CodeVerifier string
 	Resource     string
+	Replace      bool
 }
 
 // OAuthTokens é a resposta do /oauth/token.
@@ -100,10 +105,18 @@ type OAuthConnection struct {
 	ExpiresAt  time.Time  `json:"expires_at"`
 }
 
-// SetOAuthKey dá a chave que cifra o sucessor guardado para a janela de renovação (OAuthReplayWindow). É a mesma das
-// integrações (INTEGRATION_ENCRYPTION_KEY).
+// SetOAuthKey dá a chave do servidor que entra na cifra do sucessor guardado para a janela de renovação
+// (OAuthReplayWindow). É a INTEGRATION_ENCRYPTION_KEY, mas a cifra nunca usa só ela: ver replayKey.
 func (s *Service) SetOAuthKey(key string) {
 	s.oauthKey = key
+}
+
+// replayKey é a chave da cópia cifrada do sucessor: a chave do servidor junto com o token de renovação que foi
+// trocado. O banco só tem o hash desse token, então nem o banco com a chave do servidor abre a cópia; só quem manda o
+// token anterior de novo, que é quem a janela serve. O rótulo a separa das credenciais das integrações, cifradas com a
+// mesma chave do servidor.
+func (s *Service) replayKey(prevToken string) string {
+	return s.oauthKey + "\x00oauth-refresh-replay\x00" + prevToken
 }
 
 // PKCEMatches confere o code_verifier do app contra o code_challenge da autorização (PKCE S256, RFC 7636): o verificador
@@ -127,9 +140,11 @@ func ValidPKCEChallenge(challenge string) bool {
 
 // --- store ---
 
-// CreateOAuthGrant grava a concessão nova da pessoa, com o código de autorização. Antes saem as concessões vencidas e
-// as pendentes cujo código venceu, e, se ela já tem o máximo, a que está há mais tempo sem uso. A linha da pessoa fica
-// travada na transação, para duas autorizações ao mesmo tempo não passarem juntas do limite.
+// CreateOAuthGrant grava a concessão nova da pessoa, ainda pendente, com o código de autorização. Antes saem as
+// concessões vencidas e as pendentes cujo código venceu, e, se ela já tem OAuthGrantMax pendentes, a pendente mais
+// antiga. Uma pendente nunca tira a vaga de um app conectado: o limite dos conectados vale na troca do código (ver
+// IssueOAuthTokens), quando a concessão vira conexão. A linha da pessoa fica travada na transação, para duas
+// autorizações ao mesmo tempo não passarem juntas do limite.
 func (s *Store) CreateOAuthGrant(personID uuid.UUID, req OAuthGrantRequest, codeHash string, codeExpires, now time.Time) error {
 	ctx := context.Background()
 	tx, err := s.client.Tx(ctx)
@@ -140,7 +155,7 @@ func (s *Store) CreateOAuthGrant(personID uuid.UUID, req OAuthGrantRequest, code
 		_ = tx.Rollback() // o erro que volta é o que motivou desfazer
 		return err
 	}
-	if _, err := tx.Person.Query().Where(person.IDEQ(personID)).ForUpdate().Only(ctx); err != nil {
+	if err := lockPerson(ctx, tx, personID); err != nil {
 		if ent.IsNotFound(err) {
 			return rollback(database.ErrNotFound)
 		}
@@ -152,18 +167,15 @@ func (s *Store) CreateOAuthGrant(personID uuid.UUID, req OAuthGrantRequest, code
 	)).Exec(ctx); err != nil {
 		return rollback(err)
 	}
-	rows, err := tx.OAuthGrant.Query().Where(oauthgrant.PersonIDEQ(personID)).All(ctx)
+	pending, err := tx.OAuthGrant.Query().
+		Where(oauthgrant.PersonIDEQ(personID), oauthgrant.RefreshHashIsNil()).
+		Order(ent.Asc(oauthgrant.FieldCreatedAt)).
+		IDs(ctx)
 	if err != nil {
 		return rollback(err)
 	}
-	if extra := len(rows) - OAuthGrantMax + 1; extra > 0 {
-		// Sai quem está há mais tempo sem uso; quem nunca foi usado conta da criação.
-		slices.SortFunc(rows, func(a, b *ent.OAuthGrant) int { return lastUse(a).Compare(lastUse(b)) })
-		ids := make([]uuid.UUID, extra)
-		for i := range ids {
-			ids[i] = rows[i].ID
-		}
-		if _, err := tx.OAuthGrant.Delete().Where(oauthgrant.IDIn(ids...)).Exec(ctx); err != nil {
+	if extra := len(pending) - OAuthGrantMax + 1; extra > 0 {
+		if _, err := tx.OAuthGrant.Delete().Where(oauthgrant.IDIn(pending[:extra]...)).Exec(ctx); err != nil {
 			return rollback(err)
 		}
 	}
@@ -182,6 +194,12 @@ func (s *Store) CreateOAuthGrant(personID uuid.UUID, req OAuthGrantRequest, code
 		return rollback(err)
 	}
 	return tx.Commit()
+}
+
+// lockPerson trava a linha da pessoa até o fim da transação: as mudanças nas concessões dela passam uma de cada vez.
+func lockPerson(ctx context.Context, tx *ent.Tx, personID uuid.UUID) error {
+	_, err := tx.Person.Query().Where(person.IDEQ(personID)).ForUpdate().Only(ctx)
+	return err
 }
 
 func lastUse(g *ent.OAuthGrant) time.Time {
@@ -219,35 +237,69 @@ func (s *Store) ClaimOAuthCode(codeHash string, now time.Time) (*ent.OAuthGrant,
 	return row, nil
 }
 
-// IssueOAuthTokens grava o primeiro token de renovação da concessão e o primeiro de acesso, juntos.
-func (s *Store) IssueOAuthTokens(grantID uuid.UUID, refreshHash, accessHash string, refreshExpires, accessExpires, now time.Time) error {
+// IssueOAuthTokens grava o primeiro token de renovação da concessão g e o primeiro de acesso, juntos: a concessão vira
+// um app conectado. Com replace, as outras conexões da pessoa com o mesmo app e o mesmo endereço de volta saem (o
+// claude.ai que conecta de novo não deixa a conexão anterior valendo). Se a pessoa passa de OAuthGrantMax apps
+// conectados, sai o que está há mais tempo sem uso. A linha da pessoa fica travada, como em CreateOAuthGrant.
+func (s *Store) IssueOAuthTokens(g *ent.OAuthGrant, replace bool, refreshHash, accessHash string, refreshExpires, accessExpires, now time.Time) error {
 	ctx := context.Background()
 	tx, err := s.client.Tx(ctx)
 	if err != nil {
 		return err
 	}
+	rollback := func(err error) error {
+		_ = tx.Rollback() // o erro que volta é o que motivou desfazer
+		return err
+	}
+	if err := lockPerson(ctx, tx, g.PersonID); err != nil {
+		if ent.IsNotFound(err) {
+			return rollback(ErrOAuthGrantInvalid)
+		}
+		return rollback(err)
+	}
 	n, err := tx.OAuthGrant.Update().
-		Where(oauthgrant.IDEQ(grantID), oauthgrant.RefreshHashIsNil()).
+		Where(oauthgrant.IDEQ(g.ID), oauthgrant.RefreshHashIsNil()).
 		SetRefreshHash(refreshHash).
 		SetRefreshExpiresAt(refreshExpires).
 		SetLastUsedAt(now).
 		Save(ctx)
 	if err != nil {
-		_ = tx.Rollback()
-		return err
+		return rollback(err)
 	}
 	if n == 0 {
-		_ = tx.Rollback()
-		return ErrOAuthGrantInvalid
+		return rollback(ErrOAuthGrantInvalid)
+	}
+	connected := []predicate.OAuthGrant{
+		oauthgrant.PersonIDEQ(g.PersonID), oauthgrant.IDNEQ(g.ID), oauthgrant.RefreshHashNotNil(),
+	}
+	if replace {
+		same := append(slices.Clone(connected), oauthgrant.ClientIDEQ(g.ClientID), oauthgrant.RedirectURIEQ(g.RedirectURI))
+		if _, err := tx.OAuthGrant.Delete().Where(same...).Exec(ctx); err != nil {
+			return rollback(err)
+		}
+	}
+	rows, err := tx.OAuthGrant.Query().Where(connected...).All(ctx)
+	if err != nil {
+		return rollback(err)
+	}
+	if extra := len(rows) - OAuthGrantMax + 1; extra > 0 {
+		// Sai quem está há mais tempo sem uso.
+		slices.SortFunc(rows, func(a, b *ent.OAuthGrant) int { return lastUse(a).Compare(lastUse(b)) })
+		ids := make([]uuid.UUID, extra)
+		for i := range ids {
+			ids[i] = rows[i].ID
+		}
+		if _, err := tx.OAuthGrant.Delete().Where(oauthgrant.IDIn(ids...)).Exec(ctx); err != nil {
+			return rollback(err)
+		}
 	}
 	if err := tx.OAuthAccessToken.Create().
-		SetGrantID(grantID).
+		SetGrantID(g.ID).
 		SetTokenHash(accessHash).
 		SetExpiresAt(accessExpires).
 		SetCreatedAt(now).
 		Exec(ctx); err != nil {
-		_ = tx.Rollback()
-		return err
+		return rollback(err)
 	}
 	return tx.Commit()
 }
@@ -372,6 +424,15 @@ func (s *Store) TouchOAuthGrant(id uuid.UUID, now, before time.Time) error {
 		Exec(context.Background())
 }
 
+// ClearOAuthReplay apaga a cópia cifrada do sucessor da concessão, se ela ainda é a da rotação de rotatedAt: uma
+// rotação nova no meio do caminho guarda a dela, que não pode sumir.
+func (s *Store) ClearOAuthReplay(id uuid.UUID, rotatedAt time.Time) error {
+	return s.client.OAuthGrant.Update().
+		Where(oauthgrant.IDEQ(id), oauthgrant.RotatedAtEQ(rotatedAt), oauthgrant.RefreshReplayEncNotNil()).
+		ClearRefreshReplayEnc().
+		Exec(context.Background())
+}
+
 // ListOAuthGrants devolve os apps conectados da pessoa, do mais novo para o mais antigo. As concessões pendentes (o
 // código ainda não foi trocado) e as vencidas ficam de fora: não há conexão.
 func (s *Store) ListOAuthGrants(personID uuid.UUID, now time.Time) ([]OAuthConnection, error) {
@@ -470,7 +531,7 @@ func (s *Service) ExchangeOAuthCode(in OAuthExchange) (*OAuthTokens, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := s.store.IssueOAuthTokens(g.ID, refreshHash, accessHash, now.Add(OAuthRefreshTTL), now.Add(OAuthAccessTTL), now); err != nil {
+	if err := s.store.IssueOAuthTokens(g, in.Replace, refreshHash, accessHash, now.Add(OAuthRefreshTTL), now.Add(OAuthAccessTTL), now); err != nil {
 		return nil, err
 	}
 	return &OAuthTokens{AccessToken: access, RefreshToken: refresh, ExpiresIn: int(OAuthAccessTTL.Seconds()), Scope: g.Scope}, nil
@@ -490,7 +551,7 @@ func (s *Service) RefreshOAuthToken(token, clientID, resource string) (*OAuthTok
 	if err != nil {
 		return nil, err
 	}
-	enc, err := adapter.EncryptConfig(map[string]any{"token": refresh}, s.oauthKey)
+	enc, err := adapter.EncryptConfig(map[string]any{"token": refresh}, s.replayKey(token))
 	if err != nil {
 		return nil, err
 	}
@@ -505,7 +566,7 @@ func (s *Service) RefreshOAuthToken(token, clientID, resource string) (*OAuthTok
 		return nil, err
 	}
 	if replay != "" {
-		plain, err := adapter.DecryptConfig(map[string]any{"encrypted_data": replay}, s.oauthKey)
+		plain, err := adapter.DecryptConfig(map[string]any{"encrypted_data": replay}, s.replayKey(token))
 		if err != nil {
 			return nil, err
 		}
@@ -545,6 +606,11 @@ func (s *Service) AuthenticateOAuthToken(token, resource string) (*Identity, tim
 	}
 	// O último uso é só informação: uma falha ao gravá-lo não impede a entrada.
 	_ = s.store.TouchOAuthGrant(g.ID, now, now.Add(-oauthTouchEvery))
+	// A cópia do sucessor só serve dentro da janela de renovação; passada ela, sai no primeiro uso do /mcp (a renovação
+	// seguinte também a troca). Como o último uso, uma falha aqui não impede a entrada: a cópia vencida não abre nada.
+	if g.RefreshReplayEnc != nil && g.RotatedAt != nil && now.Sub(*g.RotatedAt) > OAuthReplayWindow {
+		_ = s.store.ClearOAuthReplay(g.ID, *g.RotatedAt)
+	}
 	return id, expires, nil
 }
 

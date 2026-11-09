@@ -115,8 +115,11 @@ func (s *Server) Token(c *echo.Context) error {
 		if code == "" || redirect == "" || verifier == "" {
 			return c.JSON(http.StatusBadRequest, tokenError{Error: "invalid_request", Description: "code, redirect_uri and code_verifier are required"})
 		}
+		// Um app que volta a um endereço fixo (o claude.ai) tem uma conexão por pessoa: a nova substitui a anterior, que
+		// ele não revoga ao conectar de novo. O Claude Code volta ao próprio computador e tem uma por máquina.
 		tokens, err = s.auth.ExchangeOAuthCode(auth.OAuthExchange{
 			Code: code, ClientID: clientID, RedirectURI: redirect, CodeVerifier: verifier, Resource: resource,
+			Replace: !loopbackRedirect(redirect),
 		})
 	case "refresh_token":
 		refresh := form.Get("refresh_token")

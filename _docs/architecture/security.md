@@ -60,9 +60,15 @@ de autorização (`internal/oauth`, [Decisão 25](decisions.md#decisão-25-oauth
 - **O token de acesso (`wtta_`) só vale no `/mcp` e só para o recurso em que foi emitido** (o `PUBLIC_URL` mais
   `/mcp`, comparado na forma canônica). Vale 1 hora e, como o pessoal, relê a pessoa a cada requisição.
 - **O token de renovação (`wttr_`) gira a cada uso.** O anterior, mandado de novo em até 60 segundos, recebe o mesmo
-  sucessor (guardado cifrado com a `INTEGRATION_ENCRYPTION_KEY`); depois disso, é reuso, e a conexão cai inteira. A
-  conexão cai também depois de 30 dias sem uso.
-- **Todos os tokens e códigos são guardados como sha256,** como a sessão.
+  sucessor; depois disso, é reuso, e a conexão cai inteira. A conexão cai também depois de 30 dias sem uso.
+- **Todos os tokens e códigos são guardados como sha256,** como a sessão. A única exceção é a cópia do sucessor para a
+  janela de 60 segundos, guardada cifrada com uma chave que junta a `INTEGRATION_ENCRYPTION_KEY`, um rótulo próprio e
+  o token anterior. O banco só tem o hash desse token, então nem o banco com a chave do servidor abre a cópia: só quem
+  manda o token anterior de novo. Passada a janela, a cópia sai no primeiro uso do `/mcp`, e cada renovação a troca.
+- **Uma conexão por app no claude.ai.** Ele volta sempre ao mesmo endereço e não revoga a conexão antiga quando conecta
+  de novo, então a nova a substitui na troca do código. O Claude Code, que volta ao próprio computador, tem uma por
+  máquina. O limite de 10 conta só os apps conectados; as autorizações que o app não trocou têm um limite à parte e
+  nunca tiram um app conectado.
 - **A tela de consentimento** sempre pergunta (não há aprovação automática), mostra o app, a pessoa, a organização e o
   host para onde volta, e avisa quando a volta é um programa no próprio computador. Ela responde com
   `X-Frame-Options: DENY`, `frame-ancestors 'none'`, `Referrer-Policy: no-referrer` e `Cache-Control: no-store`.
