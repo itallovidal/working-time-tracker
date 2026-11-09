@@ -132,6 +132,47 @@ func TestMine_Hours(t *testing.T) {
 	}
 }
 
+// Sessões ao mesmo tempo em dois projetos (Decisão 27), com hoje quarta 7/10 ao meio-dia em São Paulo (15:00 UTC): na
+// terça, o X das 12h às 15h UTC e o Y das 12h às 16h; hoje, o Y aberto desde as 14h e o X aberto desde as 14h30, dentro
+// dele. O dia, a semana e hoje contam uma vez o que se sobrepõe; cada projeto fica com o tempo inteiro das sessões dele,
+// e trabalhando agora traz as tarefas das duas sessões abertas.
+func TestMine_ParallelProjectsCountTheHoursOnce(t *testing.T) {
+	f := setup(t)
+	f.now = at(t, "2026-10-07T15:00:00Z")
+	ana := f.person("Ana")
+	x, y := f.project("Projeto X"), f.project("Projeto Y")
+	end := func(s string) *time.Time { v := at(t, s); return &v }
+	testutil.Session(t, testClient, f.task(x, ana, nil), ana, at(t, "2026-10-06T12:00:00Z"), end("2026-10-06T15:00:00Z"), nil, nil)
+	testutil.Session(t, testClient, f.task(y, ana, nil), ana, at(t, "2026-10-06T12:00:00Z"), end("2026-10-06T16:00:00Z"), nil, nil)
+	openY, openX := f.task(y, ana, nil), f.task(x, ana, nil)
+	testutil.Session(t, testClient, openY, ana, at(t, "2026-10-07T14:00:00Z"), nil, nil, nil)
+	testutil.Session(t, testClient, openX, ana, at(t, "2026-10-07T14:30:00Z"), nil, nil, nil)
+
+	m := f.mine(ana, saoPaulo)
+	want := []float64{0, 4 * 3600, 3600, 0, 0, 0, 0}
+	got := make([]float64, len(m.Hours.Days))
+	for i, d := range m.Hours.Days {
+		got[i] = d.Seconds
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("days = %v, want %v", got, want)
+	}
+	if m.Hours.WeekSeconds != 5*3600 || m.Hours.TodaySeconds != 3600 {
+		t.Errorf("week = %.0fs, today = %.0fs, want 18000 and 3600", m.Hours.WeekSeconds, m.Hours.TodaySeconds)
+	}
+	projects := ""
+	for _, p := range m.Hours.Projects {
+		projects += fmt.Sprintf("%s=%.0f ", p.Project.Name, p.Seconds)
+	}
+	// O Y teve 4h na terça e 1h hoje; o X, 3h na terça e 30min hoje: a soma passa da semana, e é assim mesmo.
+	if projects != "Projeto Y=18000 Projeto X=12600 " {
+		t.Errorf("hours by project = %q, want the Y with 18000s then the X with 12600s", projects)
+	}
+	if !m.WorkingNow || len(m.WorkingOn) != 2 || m.WorkingOn[0].Task.ID != openY || m.WorkingOn[1].Task.ID != openX {
+		t.Errorf("working on = %+v (now = %v), want the open tasks of Y and then X, in the order the sessions started", m.WorkingOn, m.WorkingNow)
+	}
+}
+
 // O fuso decide onde o dia e a semana começam: a mesma sessão da segunda às 01:00–02:00 UTC é do
 // domingo em São Paulo e da segunda em UTC. Sem fuso, ou com um que não existe, vale UTC, e a resposta
 // diz qual foi usado.

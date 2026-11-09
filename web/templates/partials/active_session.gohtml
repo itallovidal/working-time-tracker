@@ -1,35 +1,46 @@
-{{/* O balão da sessão aberta: fica no canto de baixo à direita de todas as telas de quem está logado
-     (layouts/base.gohtml), com "Sessão ativa" e o cronômetro. Clicar nele abre, para cima, um cartão por tarefa em
-     andamento, com o tempo dela na sessão e o caminho para ela, e no rodapé o que a pílula da barra fazia: Tarefas da
-     sessão e Parar. O estado é o do componente sessionDock (app.js); o relógio vem do store clock. */}}
+{{/* As sessões abertas: ficam no canto de baixo à direita de todas as telas de quem está logado (layouts/base.gohtml),
+     uma pilha de cartões, um por projeto com o ponto aberto (Decisão 27). Cada cartão mostra o projeto e o cronômetro;
+     clicar nele abre, para cima, uma linha por tarefa em andamento, com o tempo dela na sessão e o caminho para ela, e
+     no rodapé Tarefas da sessão e Parar daquela sessão. Um cartão aberto por vez. Dentro de um projeto aparece só o
+     cartão dele, e uma linha "+N em outros projetos" abre os outros. O estado é o do componente sessionDock (app.js); o
+     relógio vem do store clock. */}}
 {{define "active_session"}}
-<div class="session-dock" :class="open && 'is-open'" x-data="sessionDock" x-cloak x-show="$store.clock.session"
-     x-effect="document.body.classList.toggle('has-dock', !!$store.clock.session)"
-     @keydown.escape.window="open = false" @click.outside="open = false">
-  <button type="button" class="session-dock-toggle" aria-controls="session-dock-panel" :aria-expanded="open" @click="open = !open">
-    <span class="pulse" aria-hidden="true"></span>
-    <span>{{.T "session.active"}} •</span>
-    <span class="mono num" x-text="WTT.fmt.clock($store.clock.elapsed())"></span>
+<div class="session-dock" x-data="sessionDock" x-cloak x-show="$store.clock.sessions.length > 0"
+     x-effect="document.body.classList.toggle('has-dock', $store.clock.sessions.length > 0)"
+     @keydown.escape.window="openId = null" @click.outside="openId = null">
+  <button type="button" class="session-dock-others" x-show="others().length > 0" :aria-expanded="showAll" @click="showAll = !showAll">
+    <span x-text="showAll ? $t('session.only_this_project') : $t('session.other_projects', { count: others().length })"></span>
     <span class="session-dock-chevron">{{template "icon" "chevron-up"}}</span>
   </button>
-  <div id="session-dock-panel" class="session-dock-panel" x-show="open">
-    <template x-for="l in $store.clock.running()" :key="l.id">
-      {{/* O cartão é o link para a tarefa; o botão ao lado para só ela (um botão não vai dentro do link). */}}
-      <div class="session-dock-item">
-        <a class="session-dock-task" :href="'/tasks/' + l.task_id">
-          <span class="session-dock-task-name" x-text="l.task.name"></span>
-          <span>•</span>
-          <span class="mono num" x-text="WTT.fmt.clock($store.clock.taskElapsed($store.clock.session, l.task_id))"></span>
-          {{template "icon" "arrow-right"}}
-        </a>
-        <button type="button" class="btn btn-ghost btn-icon" :disabled="busy"
-                :aria-label="$t('session.stop_task_label', { name: l.task.name })" title="{{.T "session.stop_task_hint"}}" @click="stopTask(l)">{{template "icon" "stop"}}</button>
+  <template x-for="s in cards()" :key="s.id">
+    <div class="session-card" :class="isOpen(s) && 'is-open'">
+      <button type="button" class="session-dock-toggle" :aria-controls="'session-dock-panel-' + s.id" :aria-expanded="isOpen(s)" @click="toggle(s)">
+        <span class="pulse" aria-hidden="true"></span>
+        <span class="session-dock-project" x-text="s.project ? s.project.name : $t('session.active')" :title="s.project ? s.project.name : ''"></span>
+        <span aria-hidden="true">•</span>
+        <span class="mono num" x-text="WTT.fmt.clock($store.clock.elapsed(s))"></span>
+        <span class="session-dock-chevron">{{template "icon" "chevron-up"}}</span>
+      </button>
+      <div :id="'session-dock-panel-' + s.id" class="session-dock-panel" x-show="isOpen(s)">
+        <template x-for="l in $store.clock.running(s)" :key="l.id">
+          {{/* O cartão é o link para a tarefa; o botão ao lado para só ela (um botão não vai dentro do link). */}}
+          <div class="session-dock-item">
+            <a class="session-dock-task" :href="'/tasks/' + l.task_id">
+              <span class="session-dock-task-name" x-text="l.task.name"></span>
+              <span>•</span>
+              <span class="mono num" x-text="WTT.fmt.clock($store.clock.taskElapsed(s, l.task_id))"></span>
+              {{template "icon" "arrow-right"}}
+            </a>
+            <button type="button" class="btn btn-ghost btn-icon" :disabled="busy"
+                    :aria-label="$t('session.stop_task_label', { name: l.task.name })" title="{{.T "session.stop_task_hint"}}" @click="stopTask(l)">{{template "icon" "stop"}}</button>
+          </div>
+        </template>
+        <div class="session-dock-foot">
+          <button type="button" class="btn btn-secondary btn-sm" @click="details(s)">{{template "icon" "list-check"}} {{.T "session.manage"}}</button>
+          <button type="button" class="btn btn-danger btn-sm" :disabled="busy" @click="stop(s)">{{.T "session.stop"}}</button>
+        </div>
       </div>
-    </template>
-    <div class="session-dock-foot">
-      <button type="button" class="btn btn-secondary btn-sm" @click="details()">{{template "icon" "list-check"}} {{.T "session.manage"}}</button>
-      <button type="button" class="btn btn-danger btn-sm" :disabled="busy" @click="stop()">{{.T "session.stop"}}</button>
     </div>
-  </div>
+  </template>
 </div>
 {{end}}

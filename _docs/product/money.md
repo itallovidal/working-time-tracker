@@ -94,6 +94,11 @@ flowchart LR
   arredondados, para a soma da tela bater com as linhas. Por isso o total da organização é a soma dos projetos.
 - **Várias tarefas numa sessão** não multiplicam o dinheiro: a pessoa e o projeto contam a sessão uma vez só (ver
   [overview.md](overview.md#ponto)).
+- **Sessões em projetos diferentes ao mesmo tempo** (uma por projeto, Decisão 27): cada uma vale o tempo dela vezes o
+  valor do **próprio** projeto, no valor pago e no cobrado. As **horas** de cada projeto são o tempo inteiro das sessões
+  dele, mas todo total que junta projetos conta o tempo sobreposto da mesma pessoa uma vez só: as horas do cliente no A
+  receber (e por isso o valor por hora efetivo), o período de pagamento e a meta, e os painéis. Exemplo: o projeto A das
+  12h às 15h a 20,00/h e o B das 12h às 16h a 30,00/h valem 3 × 20 + 4 × 30 = 180,00, em 4 horas, e não 7.
 
 ## Regra de pagamento
 
@@ -159,7 +164,7 @@ mesma conta da regra quinzenal da pessoa, com 14 dias em vez de 15 (`PaymentRule
 
 | Modo do cliente | Períodos calculados | Valor calculado |
 |---|---|---|
-| **Por hora** | Os períodos **já fechados** com tempo nos projetos do cliente, ainda sem recebível. No máximo os 24 mais recentes no ciclo mensal e os 52 no de 14 dias (cerca de dois anos nos dois). O período corrente, com tempo, entra em Em andamento com as horas até agora | A soma das sessões de **todos os projetos do cliente**, cortadas no período e arredondadas ao centavo **por sessão**, pelo valor cobrado congelado nela (a mesma conta de [Da sessão ao dinheiro](#da-sessão-ao-dinheiro)). A sessão aberta conta até agora |
+| **Por hora** | Os períodos **já fechados** com tempo nos projetos do cliente, ainda sem recebível. No máximo os 24 mais recentes no ciclo mensal e os 52 no de 14 dias (cerca de dois anos nos dois). O período corrente, com tempo, entra em Em andamento com as horas até agora | A soma das sessões de **todos os projetos do cliente**, cortadas no período e arredondadas ao centavo **por sessão**, pelo valor cobrado congelado nela (a mesma conta de [Da sessão ao dinheiro](#da-sessão-ao-dinheiro)). A sessão aberta conta até agora. As horas do período contam uma vez o tempo em que a mesma pessoa estava em dois projetos do cliente ao mesmo tempo |
 | **Mensal** | Do período do `contract_start` até o **período corrente** (o seguinte só entra quando começa), parando no período que contém o `contract_end`, ainda sem recebível. No máximo os 60 mais recentes. Um `contract_start` no próprio dia de fechamento começa no **período seguinte**: no do início o contrato teria só esse último dia, e sem pro-rata isso seria um mês cobrado por um dia (início em 05/10 com fechamento no dia 5: o primeiro período é 06/10–05/11) | A `monthly_fee_cents` mais os acréscimos mensais dos projetos do cliente, como estão hoje (`extra_cents` diz quanto deles). O primeiro mês parcial, e um acréscimo que já acabou, o dono corrige ao ajustar: não há pro-rata |
 
 A conta traz também o **valor por hora efetivo** (o valor dividido pelas horas). Abaixo de 10,00
@@ -278,7 +283,9 @@ as horas do **período do contrato** contra ela: "18h de 40h · 45%"
 ([Decisão 26](../architecture/decisions.md#decisão-26-horas-estimadas-por-mês-no-contrato-mensal-só-para-acompanhar)).
 É só para acompanhar: a mensalidade, a proposta e o valor por hora efetivo não mudam, e não há excedente.
 
-- **As horas são de todos os projetos do cliente**, cada sessão cortada nas bordas do período, a aberta até agora.
+- **As horas são de todos os projetos do cliente**, cada sessão cortada nas bordas do período, a aberta até agora. O
+  tempo em que a mesma pessoa estava em dois projetos do cliente ao mesmo tempo conta uma vez no total (Decisão 27);
+  cada projeto, nos detalhes, fica com o tempo inteiro dele.
 - **O período é o do contrato,** o que fecha no `closing_day` do cliente: em 9/10, um cliente que fecha no dia 25 está
   no período de 26/9 a 25/10. Só conta o período que o contrato cobre: antes do `contract_start` e depois do
   `contract_end` não há dedicação. O período que contém o fim do contrato ainda conta.

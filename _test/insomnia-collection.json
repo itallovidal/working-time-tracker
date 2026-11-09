@@ -1266,7 +1266,7 @@
       "parentId": "fld_07",
       "name": "Sessão ativa",
       "method": "GET",
-      "url": "{{base_url}}/api/work-sessions/active",
+      "url": "{{base_url}}/api/work-sessions/open",
       "authentication": {},
       "metaSortKey": 1,
       "headers": [],

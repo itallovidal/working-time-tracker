@@ -24,7 +24,8 @@ público, atendido pelo modo solo (Decisão 20).
 
 **Objetivos:**
 - Uma estrutura organizacional: organização → projetos → times → pessoas.
-- Clock-in e clock-out como a peça central do registro de tempo, com uma sessão aberta por pessoa.
+- Clock-in e clock-out como a peça central do registro de tempo, com uma sessão aberta por pessoa (desde a Decisão 27,
+  uma por pessoa em cada projeto).
 - Tarefas dentro dos projetos, com prazo padrão de uma semana e um responsável só.
 - Integrações genéricas com plataformas externas, configuradas por projeto, sem prender o sistema a uma plataforma.
 - Ligar tarefas a itens externos e buscar os detalhes deles na hora.
@@ -90,7 +91,7 @@ tabela de junção `TeamMembership`. Vieram depois `Customer` (o cliente; chama-
   campo: nulo é "o projeto não tem". O horário de uma weekly ou de uma reunião não existe sem o dia, e a reunião com o
   cliente só existe num projeto com cliente.
 
-Um índice único parcial garante uma sessão aberta por pessoa (Decisão 3).
+Um índice único parcial garante uma sessão aberta por pessoa (Decisão 3), hoje uma em cada projeto (Decisão 27).
 
 **Motivo:** o modelo segue a hierarquia da organização. Os vínculos com itens externos ficam em `issue_syncs` (no
 máximo um por tarefa e integração, então uma tarefa pode estar numa issue e num cartão ao mesmo tempo). O JSON de
@@ -121,6 +122,9 @@ máximo um por tarefa e integração, então uma tarefa pode estar numa issue e 
 **Hoje:** o modelo completo, com os cargos e as exclusões, está em [data-model.md](data-model.md).
 
 ### Decisão 3: Uma sessão aberta por pessoa — índice único parcial
+
+> **Substituída pela [Decisão 27](#decisão-27-uma-sessão-aberta-por-projeto-e-as-horas-sobrepostas-contadas-uma-vez):**
+> a regra passou a ser uma sessão aberta por pessoa em cada projeto. A escolha do índice parcial continua.
 
 **Escolha:** a regra "uma sessão aberta por pessoa" é garantida por um índice único parcial do PostgreSQL:
 `CREATE UNIQUE INDEX one_active_session ON work_sessions (person_id) WHERE end_at IS NULL`, declarado no schema do
@@ -1031,6 +1035,47 @@ apareciam, mas sem nada para comparar.
 **Consequências:** o painel solo pode mostrar, na mesma linha, horas diferentes: a coluna Horas é do mês do calendário,
 e a Estimativa é do período do contrato, que aparece embaixo quando é diferente. As regras de hoje estão em
 [money.md](../product/money.md#horas-estimadas-do-contrato-mensal).
+
+### Decisão 27: Uma sessão aberta por projeto, e as horas sobrepostas contadas uma vez
+
+**Contexto:** a Decisão 3 deixava cada pessoa com uma sessão aberta em toda a organização. Quem trabalha em dois
+projetos ao mesmo tempo (o dono, um freelancer com dois clientes, alguém que espera um build num projeto e mexe no
+outro) precisava parar um ponto para abrir o outro, e os botões de iniciar ficavam desligados no outro projeto.
+
+**Escolha:**
+- **Uma sessão aberta por pessoa em cada projeto.** O índice único parcial passa a ser
+  `one_open_session_per_project`, em `work_sessions (person_id, project_id) WHERE end_at IS NULL`. Vale para todos,
+  colaboradores incluídos. Abrir o ponto no projeto B não mexe na sessão do A, e o clock-out de um projeto fecha só a
+  sessão dele (`work_session.open_in_other_project` deixa de existir; sem sessão no projeto é `work_session.not_open`).
+- **O dinheiro é por sessão, pelo valor do projeto dela,** como sempre: o A das 12h às 15h a 20,00/h e o B das 12h às
+  16h a 30,00/h valem 3 × 20 + 4 × 30, no valor pago e no cobrado.
+- **As horas de cada projeto são o tempo inteiro das sessões dele** (A = 3h, B = 4h).
+- **Todo total de horas que junta projetos conta uma vez o tempo sobreposto da mesma pessoa** (no exemplo, 4h): as
+  horas do cliente no A receber (e o valor por hora efetivo do contrato mensal), o período de pagamento e a meta, o
+  dia e a semana do Início, as horas por pessoa e as janelas da visão da organização, o Início do modo solo, por
+  cliente e no total, e as horas do período na estimativa do contrato mensal (Decisão 26), cujos projetos ficam com o
+  tempo inteiro. Vale também entre clientes diferentes; as horas de pessoas diferentes somam. A conta é uma só,
+  `work_session.MergedSeconds`, que junta os intervalos de cada pessoa antes de somar.
+- **Trabalhando agora conta a pessoa uma vez,** com as tarefas de todos os projetos em que ela está com o ponto aberto.
+- **A tela mostra uma pilha de cartões** no canto, um por sessão aberta, com o nome do projeto. Dentro de um projeto
+  aparece só o cartão dele, com uma linha "+N em outros projetos" que abre os outros, para ninguém esquecer um ponto
+  aberto. O painel do timer do projeto mostra só a sessão dele.
+- **A API:** `GET /api/work-sessions/open` devolve a lista (vazia sem ponto), cada sessão com o `project`, no lugar de
+  `GET /api/work-sessions/active`. No MCP, `get_active_session` e o `whoami` devolvem a lista, as ferramentas que
+  mexem numa tarefa usam a sessão do projeto dela, e o `clock_out` pede `project_id` quando há mais de uma sessão.
+
+**Alternativas descartadas:**
+- **Somar as horas sobrepostas cheias em todo lugar:** a semana da pessoa passaria das horas do relógio, e o contrato
+  mensal pareceria render menos por hora do que rendeu.
+- **Dividir a hora sobreposta entre os projetos:** cada projeto cobraria menos que o cronômetro dele mostra, e o
+  dinheiro mudaria em todas as telas.
+- **Só o dono e o modo solo com várias sessões:** quem é pago por hora também trabalha em dois projetos às vezes, e
+  cada sessão já vale o valor do próprio projeto.
+
+**Consequências:** a soma das horas por projeto pode passar do total da pessoa ou do cliente, e isso é esperado. A
+pessoa pode receber, pela mesma hora de relógio, o valor de dois projetos. A migração `one_open_session_per_project`
+só afrouxa a regra, então os dados que já existem continuam válidos. As regras de hoje estão em
+[data-model.md](data-model.md) e em [money.md](../product/money.md).
 
 ## Riscos e trade-offs
 

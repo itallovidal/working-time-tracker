@@ -28,12 +28,14 @@ type Dedication struct {
 	// Open diz que o período ainda não fechou: as horas são até agora, com a sessão aberta.
 	Open           bool `json:"open"`
 	EstimatedHours int  `json:"estimated_hours"`
-	// Seconds é o tempo do período em todos os projetos do cliente, cada sessão cortada nas bordas dele.
+	// Seconds é o tempo do período em todos os projetos do cliente, cada sessão cortada nas bordas dele. O que a mesma
+	// pessoa trabalhou ao mesmo tempo em dois projetos do cliente conta uma vez só (Decisão 27), então Seconds pode ser
+	// menor que a soma dos Projects.
 	Seconds float64 `json:"seconds"`
 	// Percent é Seconds sobre a estimativa, arredondado; passa de 100 quando as horas passam da estimativa.
 	Percent int `json:"percent"`
 	// Projects são os projetos do cliente com o tempo de cada um no período, em ordem de nome (nunca por horas: o
-	// sistema não ranqueia). Os sem tempo também entram, com zero.
+	// sistema não ranqueia), cada um com o tempo inteiro das sessões dele. Os sem tempo também entram, com zero.
 	Projects []DedicationProject `json:"projects"`
 }
 
@@ -58,15 +60,15 @@ func (t terms) dedication(sessions []work_session.WorkSession, p payment.Period,
 		return nil
 	}
 	byProject := map[uuid.UUID]float64{}
-	var total float64
 	for i := range sessions {
 		sec, _, _ := sessions[i].WithinRange(p.Start, p.End, now)
 		if sec <= 0 {
 			continue
 		}
-		total += sec
 		byProject[sessions[i].ProjectID] += sec
 	}
+	// Cada projeto fica com o tempo inteiro dele; o total do cliente conta uma vez o tempo sobreposto (Decisão 27).
+	total := work_session.MergedSeconds(sessions, p.Start, p.End, now)
 	projects := make([]DedicationProject, 0, len(c.Edges.Projects))
 	for _, pr := range c.Edges.Projects {
 		projects = append(projects, DedicationProject{ID: pr.ID, Name: pr.Name, Seconds: byProject[pr.ID]})

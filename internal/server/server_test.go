@@ -597,7 +597,7 @@ func TestWorkSessions_RequireRate(t *testing.T) {
 	if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), `"code":"work_session.no_rate"`) {
 		t.Errorf("admin clock-in for a member without a rate = %d %s, want 400 explaining the missing rate", rec.Code, rec.Body.String())
 	}
-	if rec := do(e, "GET", "/api/work-sessions/active", "", member.session); strings.TrimSpace(rec.Body.String()) != "null" {
+	if rec := do(e, "GET", "/api/work-sessions/open", "", member.session); strings.TrimSpace(rec.Body.String()) != "[]" {
 		t.Errorf("a session was opened without a rate: %s", rec.Body.String())
 	}
 
@@ -762,7 +762,7 @@ func TestAccess_IDsInBodyAndQueryStayInOrganization(t *testing.T) {
 	if rec.Code != http.StatusBadRequest {
 		t.Errorf("admin of A clocking out someone from B = %d, want 400: %s", rec.Code, rec.Body.String())
 	}
-	if rec := do(e, "GET", "/api/work-sessions/active", "", b.session); strings.TrimSpace(rec.Body.String()) == "null" {
+	if rec := do(e, "GET", "/api/work-sessions/open", "", b.session); strings.TrimSpace(rec.Body.String()) == "[]" {
 		t.Error("the session in org B was closed by an admin of org A")
 	}
 
@@ -910,7 +910,7 @@ func TestRoutes_Table(t *testing.T) {
 		"POST /api/projects/:projectId/work-sessions/:sessionId/tasks",
 		"PATCH /api/projects/:projectId/work-sessions/:sessionId/tasks/:linkId",
 		"DELETE /api/projects/:projectId/work-sessions/:sessionId/tasks/:linkId",
-		"GET /api/work-sessions/active",
+		"GET /api/work-sessions/open",
 		"POST /api/projects/:projectId/integrations",
 		"GET /api/projects/:projectId/integrations",
 		"POST /api/projects/:projectId/sync",
@@ -960,15 +960,15 @@ func TestRoutes_Table(t *testing.T) {
 	}
 }
 
-// A tela de ponto usa a sessão ativa da pessoa logada, e o seletor de
+// O balão usa as sessões abertas da pessoa logada, uma por projeto, cada uma com o nome do projeto, e o seletor de
 // responsável usa os membros dos times do projeto.
-func TestAPI_ActiveSessionAndProjectMembers(t *testing.T) {
+func TestAPI_OpenSessionsAndProjectMembers(t *testing.T) {
 	e := newServer(t)
 	admin := signup(t, e, "Org", "ana@test.com")
 	projectID := createEmptyProject(t, e, admin, "Projeto")
 
-	if rec := do(e, "GET", "/api/work-sessions/active", "", admin.session); rec.Code != http.StatusOK || strings.TrimSpace(rec.Body.String()) != "null" {
-		t.Fatalf("active without session = %d %q, want 200 null", rec.Code, rec.Body.String())
+	if rec := do(e, "GET", "/api/work-sessions/open", "", admin.session); rec.Code != http.StatusOK || strings.TrimSpace(rec.Body.String()) != "[]" {
+		t.Fatalf("open without session = %d %q, want 200 []", rec.Code, rec.Body.String())
 	}
 	if rec := do(e, "GET", "/api/projects/"+projectID+"/members", "", admin.session); strings.TrimSpace(rec.Body.String()) != "[]" {
 		t.Fatalf("members of a project without teams = %q, want []", rec.Body.String())
@@ -995,7 +995,14 @@ func TestAPI_ActiveSessionAndProjectMembers(t *testing.T) {
 	taskID := decode(t, rec)["id"].(string)
 	do(e, "POST", "/api/projects/"+projectID+"/work-sessions/clock-in", `{"task_id":"`+taskID+`"}`, admin.session)
 
-	active := decode(t, do(e, "GET", "/api/work-sessions/active", "", admin.session))
+	open := decodeList(t, do(e, "GET", "/api/work-sessions/open", "", admin.session))
+	if len(open) != 1 {
+		t.Fatalf("open sessions = %v, want one", open)
+	}
+	active := open[0]
+	if prj, _ := active["project"].(map[string]any); prj == nil || prj["name"] != "Projeto" {
+		t.Errorf("open session project = %v, want the project's name", active["project"])
+	}
 	tasks, _ := active["tasks"].([]any)
 	var task map[string]any
 	if len(tasks) == 1 {
@@ -1004,6 +1011,51 @@ func TestAPI_ActiveSessionAndProjectMembers(t *testing.T) {
 	if task == nil || task["id"] != taskID || task["project_id"] != projectID || active["project_id"] != projectID {
 		t.Errorf("active session = %v, want task %s of project %s", active, taskID, projectID)
 	}
+}
+
+// Cada sessão de GET /api/work-sessions/open passa pela regra dos valores, com as tarefas dela: quem tem sessões
+// abertas em dois projetos cobrados vê o que ganha nas duas e nenhum valor cobrado; o dono vê o cobrado nas duas.
+func TestAPI_OpenSessionsRedactEachSession(t *testing.T) {
+	e := newServer(t)
+	owner := signup(t, e, "Org", "ana@test.com")
+	bia := invite(t, e, owner, "bia@test.com", "member")
+	for i, name := range []string{"Alfa", "Beta"} {
+		projectID := createProject(t, e, owner, name)
+		prj := "/api/projects/" + projectID
+		allocate(t, e, owner, projectID, bia.id, 2000+1000*i)
+		setBilling(t, e, owner, prj, 10000+1000*i)
+		for _, who := range []account{bia, owner} {
+			taskID := decode(t, do(e, "POST", prj+"/tasks", `{"name":"`+who.id+`"}`, owner.session))["id"].(string)
+			if rec := do(e, "POST", prj+"/work-sessions/clock-in", `{"task_id":"`+taskID+`"}`, who.session); rec.Code != http.StatusCreated {
+				t.Fatalf("clock-in on %s = %d: %s", name, rec.Code, rec.Body.String())
+			}
+		}
+	}
+
+	check := func(who account, seesBill bool) {
+		t.Helper()
+		open := decodeList(t, do(e, "GET", "/api/work-sessions/open", "", who.session))
+		if len(open) != 2 {
+			t.Fatalf("open sessions = %d, want one in each project", len(open))
+		}
+		for _, s := range open {
+			if s["pay_rate_cents"] == nil || s["pay_amount_cents"] == nil {
+				t.Errorf("session of %v: pay = %v / %v, want what the person earns", s["project"], s["pay_rate_cents"], s["pay_amount_cents"])
+			}
+			if (s["bill_rate_cents"] != nil) != seesBill || (s["bill_amount_cents"] != nil) != seesBill {
+				t.Errorf("session of %v: bill = %v / %v, want shown = %v", s["project"], s["bill_rate_cents"], s["bill_amount_cents"], seesBill)
+			}
+			links, _ := s["tasks"].([]any)
+			if len(links) != 1 {
+				t.Fatalf("session of %v has tasks %v, want one", s["project"], s["tasks"])
+			}
+			if l := links[0].(map[string]any); l["pay_amount_cents"] == nil || (l["bill_amount_cents"] != nil) != seesBill {
+				t.Errorf("task of the session of %v = %v, want its pay and the bill shown = %v", s["project"], l, seesBill)
+			}
+		}
+	}
+	check(bia, false)
+	check(owner, true)
 }
 
 // Todos no projeto veem quem são os colaboradores e os times de cada um. O

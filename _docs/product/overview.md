@@ -196,16 +196,20 @@ ela está numa plataforma, o modal oferece apagar ou arquivar o item lá também
 
 ## Ponto
 
-**Clock-in.** Abre uma sessão no projeto da tarefa. O ponto é recusado quando:
+**Clock-in.** Abre uma sessão no projeto da tarefa. Cada pessoa tem no máximo uma sessão aberta **em cada projeto**, e
+as de projetos diferentes correm ao mesmo tempo ([Decisão 27](../architecture/decisions.md)). O ponto é recusado
+quando:
 
 - a pessoa não tem valor por hora no projeto (`work_session.no_rate`);
-- ela já tem uma sessão aberta, em qualquer projeto (`work_session.already_open`). O índice único parcial
-  `one_active_session` garante isso no banco, inclusive com dois pedidos ao mesmo tempo.
+- ela já tem uma sessão aberta neste projeto (`work_session.already_open`): a tarefa entra nela com "Adicionar à
+  sessão". O índice único parcial `one_open_session_per_project` garante isso no banco, inclusive com dois pedidos ao
+  mesmo tempo.
 
 A sessão guarda os valores por hora do momento do clock-in (ver [money.md](money.md)). Se a tarefa não tinha
 responsável, passa a ser de quem bateu o ponto, e ela vai para em progresso.
 
-**Clock-out.** Encerra a sessão aberta. Só vale pela rota do projeto da sessão (`work_session.open_in_other_project`).
+**Clock-out.** Encerra a sessão aberta do projeto da rota; as dos outros projetos continuam. Sem sessão aberta nesse
+projeto, é `work_session.not_open`.
 
 **Várias tarefas numa sessão.** A sessão começa por uma tarefa e pode ganhar outras, cada uma com o intervalo em que
 esteve nela (`WorkSessionTask`):
@@ -217,8 +221,16 @@ esteve nela (`WorkSessionTask`):
 - a sessão nunca fica sem tarefa (`work_session.last_task`);
 - só quem bateu o ponto, o dono e os admins mexem nas tarefas de uma sessão, aberta ou encerrada.
 
-**Como o tempo conta.** Cada tarefa conta o tempo cheio do seu intervalo, mesmo em paralelo com outra. A pessoa, o
-projeto e o dinheiro contam a sessão uma vez só. Editar o começo e o fim de uma sessão ainda não existe.
+**Como o tempo conta.** Cada tarefa conta o tempo cheio do seu intervalo, mesmo em paralelo com outra. O projeto e o
+dinheiro contam a sessão uma vez só. Duas sessões da mesma pessoa ao mesmo tempo, em projetos diferentes, valem cada
+uma o valor do próprio projeto, e cada projeto conta o tempo inteiro da sua; os totais que juntam projetos (as horas
+do cliente, o dia e a semana da pessoa, o período de pagamento, a organização e o Início do modo solo) contam o tempo
+sobreposto uma vez só. Exemplo: o A das 12h às 15h a 20,00/h e o B das 12h às 16h a 30,00/h dão 3 × 20 + 4 × 30 e 4
+horas no total. Editar o começo e o fim de uma sessão ainda não existe.
+
+**O balão das sessões.** As sessões abertas ficam numa pilha de cartões no canto da tela, um por projeto, com o nome
+do projeto e o cronômetro. Dentro de um projeto aparece só o cartão dele, com uma linha "+N em outros projetos" que
+abre os outros; o painel do timer do projeto mostra só a sessão dele.
 
 **Quem vê as sessões.** Cada pessoa vê as próprias. Quem tem alguma permissão no projeto vê as de todos.
 
@@ -233,7 +245,9 @@ projeto e o dinheiro contam a sessão uma vez só. Editar o começo e o fim de u
   guarda quando foi fechada, então "concluídas" é o total.
 - **Visão geral**, para o dono e os admins: todos os projetos somados, em 7 dias, 30 dias ou tudo, com as suas horas, as
   da equipe e o custo. A receita e a margem só vão para o dono. A sessão que atravessa a borda da janela conta só o
-  trecho de dentro, e cada sessão é arredondada ao centavo, então o total da organização é a soma dos projetos.
+  trecho de dentro, e cada sessão é arredondada ao centavo, então o dinheiro da organização é a soma dos projetos. As
+  horas não: o tempo em que a mesma pessoa estava em dois projetos ao mesmo tempo conta uma vez no total e cheio em cada
+  projeto ([Decisão 27](../architecture/decisions.md)), então o total pode ficar abaixo da soma dos projetos.
 - **Equipe**, para o dono e os admins: quem está com o ponto aberto agora e em que tarefa. Não existe no
   [modo solo](#modo-solo), nem o cartão Trabalhando agora da visão geral.
 - **Visão geral do modo solo**, só para o dono, **no lugar** da Visão geral e da Equipe acima (a organização com equipe

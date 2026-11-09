@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 
 	"working-time-tracker/internal/database"
+	"working-time-tracker/internal/domain/work_session"
 )
 
 // OrgOverview é a visão geral da organização inteira, para admins: o tempo registrado e o
@@ -132,29 +133,49 @@ func (s *Service) Organization(orgID, viewerID string) (*OrgOverview, error) {
 		{&o.Periods.Last30Days, now.Add(-30 * day), func(p *OrgPersonTotal) *float64 { return &p.Last30DaysSeconds }},
 		{&o.Periods.AllTime, time.Time{}, func(p *OrgPersonTotal) *float64 { return &p.TotalSeconds }},
 	}
+	// O dinheiro e a contagem de sessões são por sessão; o tempo conta uma vez só o que a mesma pessoa trabalhou ao mesmo
+	// tempo em dois projetos (Decisão 27), e o de pessoas diferentes soma. Por isso as sessões vão por pessoa.
+	sessionsOf := map[uuid.UUID][]work_session.WorkSession{}
 	for i := range sessions {
 		sess := &sessions[i]
 		pt := byPerson[sess.PersonID]
+		sessionsOf[sess.PersonID] = append(sessionsOf[sess.PersonID], *sess)
 		for _, w := range windows {
 			seconds, pay, bill := sess.Within(w.since, now)
 			if seconds <= 0 {
 				continue
 			}
-			w.period.Seconds += seconds
 			w.period.SessionCount++
 			w.period.Money.PayAmountCents = sum(w.period.Money.PayAmountCents, pay)
 			w.period.Money.BillAmountCents = sum(w.period.Money.BillAmountCents, bill)
-			if sess.PersonID == viewer {
+		}
+		// Uma pessoa pode ter uma sessão aberta em cada projeto, mas trabalhando agora ela conta uma vez.
+		if sess.EndAt == nil && pt != nil && !pt.WorkingNow {
+			pt.WorkingNow = true
+			o.People.WorkingNow++
+		}
+	}
+	// Em ordem fixa, para a soma em ponto flutuante dar sempre o mesmo resultado.
+	personIDs := make([]uuid.UUID, 0, len(sessionsOf))
+	for id := range sessionsOf {
+		personIDs = append(personIDs, id)
+	}
+	slices.SortFunc(personIDs, func(a, b uuid.UUID) int { return cmp.Compare(a.String(), b.String()) })
+	for _, personID := range personIDs {
+		own := sessionsOf[personID]
+		pt := byPerson[personID]
+		for _, w := range windows {
+			seconds := work_session.MergedSeconds(own, w.since, time.Time{}, now)
+			if seconds <= 0 {
+				continue
+			}
+			w.period.Seconds += seconds
+			if personID == viewer {
 				w.period.MySeconds += seconds
 			}
 			if pt != nil {
 				*w.person(pt) += seconds
 			}
-		}
-		// Uma pessoa só tem uma sessão aberta por vez, então cada uma conta uma vez.
-		if sess.EndAt == nil && pt != nil {
-			pt.WorkingNow = true
-			o.People.WorkingNow++
 		}
 	}
 	for _, w := range windows {
@@ -180,8 +201,8 @@ func (s *Service) Organization(orgID, viewerID string) (*OrgOverview, error) {
 // trabalha agora sem somar o tempo de ninguém.
 type Presence struct {
 	PersonID uuid.UUID `json:"person_id"`
-	// WorkingOn são as tarefas que a pessoa tem na sessão aberta neste instante, na ordem em que
-	// entraram. Vem vazia (nunca nula) quando a sessão já ficou sem tarefa.
+	// WorkingOn são as tarefas que a pessoa tem nas sessões abertas neste instante (uma por projeto), na ordem
+	// em que entraram. Vem vazia (nunca nula) quando a sessão já ficou sem tarefa.
 	WorkingOn []WorkingOn `json:"working_on"`
 }
 
@@ -212,8 +233,8 @@ func (s *Service) addWorkingOn(orgID string, byPerson map[uuid.UUID]*OrgPersonTo
 	return nil
 }
 
-// openWork lê as sessões abertas da organização e devolve, por pessoa, as tarefas dela agora
-// (os intervalos sem fim), com o nome do projeto. Um projeto excluído no meio do caminho deixa
+// openWork lê as sessões abertas da organização e devolve, uma vez por pessoa, as tarefas dela agora
+// (os intervalos sem fim, de todos os projetos em que ela está com o ponto aberto), com o nome do projeto. Um projeto excluído no meio do caminho deixa
 // de aparecer, sem derrubar a resposta; a pessoa continua na lista, sem tarefas.
 func (s *Service) openWork(orgID string) ([]Presence, error) {
 	open, err := s.deps.Sessions.ListOpenByOrganization(orgID)
@@ -221,10 +242,19 @@ func (s *Service) openWork(orgID string) ([]Presence, error) {
 		return nil, err
 	}
 	out := make([]Presence, 0, len(open))
+	// Uma presença por pessoa: quem tem sessões abertas em dois projetos aparece uma vez, com as tarefas dos dois, na
+	// ordem da sessão que começou primeiro.
+	at := map[uuid.UUID]int{}
 	projects := map[uuid.UUID]*Ref{} // nil: o projeto não existe mais
 	for i := range open {
 		sess := &open[i]
-		p := Presence{PersonID: sess.PersonID, WorkingOn: []WorkingOn{}}
+		idx, seen := at[sess.PersonID]
+		if !seen {
+			idx = len(out)
+			at[sess.PersonID] = idx
+			out = append(out, Presence{PersonID: sess.PersonID, WorkingOn: []WorkingOn{}})
+		}
+		p := &out[idx]
 		project, seen := projects[sess.ProjectID]
 		if !seen {
 			got, err := s.deps.Projects.Get(sess.ProjectID.String())
@@ -247,7 +277,6 @@ func (s *Service) openWork(orgID string) ([]Presence, error) {
 				})
 			}
 		}
-		out = append(out, p)
 	}
 	return out, nil
 }

@@ -878,13 +878,13 @@
       },
     });
 
-    // clock guarda a sessão de trabalho aberta da pessoa logada e um relógio que
-    // avança a cada segundo. O balão da sessão e a tela de ponto leem daqui.
-    // A sessão tem tarefas (tasks), cada uma com o intervalo em que esteve nela; as que
-    // estão em andamento são as que ainda não têm fim (until_at).
+    // clock guarda as sessões de trabalho abertas da pessoa logada, uma por projeto no máximo (Decisão 27), e um
+    // relógio que avança a cada segundo. O balão das sessões e as telas de ponto leem daqui. Cada sessão tem tarefas
+    // (tasks), cada uma com o intervalo em que esteve nela; as que estão em andamento são as que ainda não têm fim
+    // (until_at).
     const ms = (iso) => new Date(iso).getTime();
     Alpine.store('clock', {
-      session: null,
+      sessions: [],
       now: Date.now(),
       ready: false,
       init() {
@@ -892,11 +892,18 @@
         this.refresh();
         setInterval(() => { this.now = Date.now(); }, 1000);
       },
+      // sessionFor é a sessão aberta no projeto, ou null.
+      sessionFor(projectId) {
+        return this.sessions.find((s) => s.project_id === projectId) || null;
+      },
+      // sessionOfTask é a sessão aberta em que a tarefa está em andamento, ou null.
+      sessionOfTask(taskId) {
+        return this.sessions.find((s) => this.running(s).some((l) => l.task_id === taskId)) || null;
+      },
       elapsed(session) {
-        const s = session || this.session;
-        if (!s) return 0;
-        const end = s.end_at ? ms(s.end_at) : this.now;
-        return Math.max(0, (end - ms(s.start_at)) / 1000);
+        if (!session) return 0;
+        const end = session.end_at ? ms(session.end_at) : this.now;
+        return Math.max(0, (end - ms(session.start_at)) / 1000);
       },
       // linkElapsed é o tempo de um intervalo de tarefa dentro da sessão, como o servidor
       // calcula: o intervalo recortado entre o início e o fim da sessão (ou agora).
@@ -908,58 +915,62 @@
       },
       // taskElapsed é o tempo de uma tarefa na sessão, somando os intervalos dela.
       taskElapsed(session, taskId) {
+        if (!session) return 0;
         return (session.tasks || []).filter((l) => l.task_id === taskId)
           .reduce((sum, l) => sum + this.linkElapsed(session, l), 0);
       },
-      // running são as tarefas em andamento na sessão aberta.
+      // running são as tarefas em andamento numa sessão aberta.
       running(session) {
-        const s = session || this.session;
-        return s && !s.end_at ? (s.tasks || []).filter((l) => !l.until_at) : [];
+        return session && !session.end_at ? (session.tasks || []).filter((l) => !l.until_at) : [];
       },
       isRunning(taskId) {
-        return this.running().some((l) => l.task_id === taskId);
+        return !!this.sessionOfTask(taskId);
       },
       async refresh() {
         try {
-          this.session = await api('GET', '/api/work-sessions/active');
+          this.sessions = (await api('GET', '/api/work-sessions/open')) || [];
         } catch (e) {
-          // O cabeçalho só deixa de mostrar o indicador; a tela de ponto mostra o erro.
+          // O balão só deixa de mudar; a tela de ponto mostra o erro.
         } finally {
           this.ready = true;
         }
       },
+      // clockIn abre a sessão do projeto; as sessões de outros projetos seguem correndo.
       async clockIn(projectId, taskId) {
         await api('POST', '/api/projects/' + projectId + '/work-sessions/clock-in', { task_id: taskId });
         await this.refresh();
         window.dispatchEvent(new CustomEvent('wtt:sessions-changed'));
       },
-      // addTask põe uma tarefa na sessão aberta, que passa a contá-la daqui em diante.
-      async addTask(taskId) {
-        if (!this.session) return;
-        await api('POST', '/api/projects/' + this.session.project_id + '/work-sessions/' + this.session.id + '/tasks', { task_id: taskId });
+      // addTask põe uma tarefa na sessão aberta do projeto dela, que passa a contá-la daqui em diante.
+      async addTask(projectId, taskId) {
+        const s = this.sessionFor(projectId);
+        if (!s) return;
+        await api('POST', '/api/projects/' + s.project_id + '/work-sessions/' + s.id + '/tasks', { task_id: taskId });
         await this.refresh();
         window.dispatchEvent(new CustomEvent('wtt:sessions-changed'));
       },
-      // stopTask para uma tarefa só: o intervalo dela fecha agora e a sessão segue com as outras. A sessão
+      // stopTask para uma tarefa só: o intervalo dela fecha agora e a sessão dela segue com as outras. A sessão
       // aberta guarda sempre uma tarefa em andamento (o servidor recusa parar a última por aqui), então
-      // parar a única em andamento é encerrar o ponto. O aviso é daqui porque todas as telas chamam.
+      // parar a única em andamento é encerrar o ponto daquele projeto. O aviso é daqui porque todas as telas chamam.
       async stopTask(taskId) {
-        const link = this.running().find((l) => l.task_id === taskId);
-        if (!link) return;
-        if (this.running().length === 1) {
-          await this.clockOut();
+        const s = this.sessionOfTask(taskId);
+        if (!s) return;
+        const link = this.running(s).find((l) => l.task_id === taskId);
+        if (this.running(s).length === 1) {
+          await this.clockOut(s);
           Alpine.store('toast').show(t('session.stopped'));
           return;
         }
-        await api('PATCH', '/api/projects/' + this.session.project_id + '/work-sessions/' + this.session.id + '/tasks/' + link.id, { stop: true });
+        await api('PATCH', '/api/projects/' + s.project_id + '/work-sessions/' + s.id + '/tasks/' + link.id, { stop: true });
         await this.refresh();
         window.dispatchEvent(new CustomEvent('wtt:sessions-changed'));
         Alpine.store('toast').show(t('session.modal.stopped_task', { name: link.task.name }));
       },
-      async clockOut() {
-        if (!this.session) return;
-        await api('POST', '/api/projects/' + this.session.project_id + '/work-sessions/clock-out', {});
-        this.session = null;
+      // clockOut encerra uma sessão; as dos outros projetos continuam.
+      async clockOut(session) {
+        if (!session) return;
+        await api('POST', '/api/projects/' + session.project_id + '/work-sessions/clock-out', {});
+        this.sessions = this.sessions.filter((s) => s.id !== session.id);
         window.dispatchEvent(new CustomEvent('wtt:sessions-changed'));
       },
     });
@@ -1040,7 +1051,11 @@
         this.errors = {};
         this.results = [];
         this.pick = '';
-        Alpine.store('modal').open('session', t('session.modal.title', { date: fmt.date(session.start_at) }), () => !this.pending);
+        // Com uma sessão aberta por projeto, o título diz de qual projeto ela é quando a sessão traz o nome.
+        const title = session.project
+          ? t('session.modal.title_project', { date: fmt.date(session.start_at), project: session.project.name })
+          : t('session.modal.title', { date: fmt.date(session.start_at) });
+        Alpine.store('modal').open('session', title, () => !this.pending);
         if (this.canEdit) this.find();
       },
       // Os valores da sessão: a pessoa vê o que ganhou; quem vê o dos outros, o custo e a receita.
@@ -1104,8 +1119,8 @@
           this.errors.add = e.message;
         }
       },
-      // changed guarda a sessão que o servidor devolveu, atualiza o relógio (a sessão aberta é a
-      // do cabeçalho) e avisa as páginas.
+      // changed guarda a sessão que o servidor devolveu, atualiza o relógio (a sessão aberta é uma das do
+      // balão) e avisa as páginas.
       async changed(session) {
         this.session = session;
         await Alpine.store('clock').refresh();
@@ -1210,23 +1225,52 @@
       },
     }));
 
-    // sessionDock é o balão da sessão aberta (partials/active_session.gohtml): aberto, lista as tarefas
-    // em andamento; Tarefas da sessão e Parar ficam no rodapé dele. Ao acabar a sessão, volta a fechado.
+    // sessionDock é a pilha das sessões abertas (partials/active_session.gohtml): um cartão por projeto, um aberto por
+    // vez (openId), com as tarefas em andamento e, no rodapé, Tarefas da sessão e Parar daquela sessão. Dentro de um
+    // projeto mostra só o cartão dele; showAll traz os outros. O cartão que acaba fecha junto.
     Alpine.data('sessionDock', () => ({
-      open: false,
+      openId: null,
+      showAll: false,
       busy: false,
       init() {
-        this.$watch('$store.clock.session', (s) => { if (!s) this.open = false; });
-        // Os avisos sobem acima do balão, que cresce com as tarefas: a altura vai para o CSS.
+        this.$watch('$store.clock.sessions', (list) => {
+          if (!list.some((s) => s.id === this.openId)) this.openId = null;
+          if (this.others().length === 0) this.showAll = false;
+        });
+        // Os avisos sobem acima da pilha, que cresce com os cartões: a altura vai para o CSS.
         new ResizeObserver(() => document.documentElement.style.setProperty('--dock-h', this.$root.offsetHeight + 'px')).observe(this.$root);
       },
-      details() {
-        Alpine.store('sessionView').open(Alpine.store('clock').session);
+      // here é o projeto da tela, ou null fora de um projeto.
+      here() {
+        const p = window.WTT.boot.project;
+        return p ? p.id : null;
       },
-      async stop() {
+      // others são as sessões de outros projetos que não o da tela; fora de um projeto, nenhuma (todas já aparecem).
+      others() {
+        const here = this.here();
+        return here ? Alpine.store('clock').sessions.filter((s) => s.project_id !== here) : [];
+      },
+      // cards são os cartões à vista: fora de um projeto, todos; dentro, o dele, e com showAll os outros acima dele.
+      cards() {
+        const all = Alpine.store('clock').sessions;
+        const here = this.here();
+        if (!here) return all;
+        const mine = all.filter((s) => s.project_id === here);
+        return this.showAll ? [...this.others(), ...mine] : mine;
+      },
+      isOpen(s) {
+        return this.openId === s.id;
+      },
+      toggle(s) {
+        this.openId = this.isOpen(s) ? null : s.id;
+      },
+      details(s) {
+        Alpine.store('sessionView').open(s);
+      },
+      async stop(s) {
         this.busy = true;
         try {
-          await Alpine.store('clock').clockOut();
+          await Alpine.store('clock').clockOut(s);
           Alpine.store('toast').show(t('session.stopped'));
         } catch (e) {
           Alpine.store('toast').error(e.message);
@@ -1234,7 +1278,7 @@
           this.busy = false;
         }
       },
-      // stopTask para só a tarefa do cartão; sendo a única em andamento, é o mesmo que Parar.
+      // stopTask para só a tarefa da linha; sendo a única em andamento na sessão, é o mesmo que Parar.
       async stopTask(l) {
         this.busy = true;
         try {

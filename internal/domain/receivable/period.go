@@ -121,21 +121,22 @@ func validDay(v string) bool {
 	return err == nil && t.Format(time.DateOnly) == v
 }
 
-// sumWithin soma o que as sessões têm em [from, to): o tempo e o valor cobrado. Cada sessão é cortada no intervalo e
-// arredondada ao centavo pelo valor cobrado congelado nela, como em payment e overview, então a soma bate com as
-// linhas. A sessão aberta conta até now; a sem valor cobrado conta o tempo e nenhum centavo.
+// sumWithin soma o que as sessões têm em [from, to): o tempo e o valor cobrado. O valor é por sessão: cada uma é
+// cortada no intervalo e arredondada ao centavo pelo valor cobrado congelado nela (o do projeto dela), como em payment
+// e overview, então a soma bate com as linhas. O tempo conta uma vez só o que a mesma pessoa trabalhou ao mesmo tempo
+// em dois projetos do cliente (Decisão 27). A sessão aberta conta até now; a sem valor cobrado conta o tempo e nenhum
+// centavo.
 func sumWithin(sessions []work_session.WorkSession, from, to, now time.Time) (seconds float64, cents int) {
 	for i := range sessions {
 		sec, _, bill := sessions[i].WithinRange(from, to, now)
 		if sec <= 0 {
 			continue
 		}
-		seconds += sec
 		if bill != nil {
 			cents += *bill
 		}
 	}
-	return seconds, cents
+	return work_session.MergedSeconds(sessions, from, to, now), cents
 }
 
 // effectiveRate é o valor por hora que cents rendem em seconds: o valor sobre as horas, ao centavo. Nulo sem horas.

@@ -82,6 +82,25 @@ func TestDedications_CurrentAndPreviousPeriod(t *testing.T) {
 	}
 }
 
+// Duas sessões ao mesmo tempo em dois projetos do cliente (uma por projeto, Decisão 27): cada projeto fica com o tempo
+// inteiro dele, e o total do cliente, e com ele a porcentagem da estimativa, conta o tempo sobreposto uma vez.
+func TestDedications_OverlappingSessionsCountOnce(t *testing.T) {
+	f := setup(t)
+	aurora := f.estimate(f.monthly("Aurora", "2026-01-01", nil), 10)
+	site := f.task(aurora, "Site")
+	app := f.task(aurora, "App")
+	f.session(site, "2026-10-01T13:00:00Z", "2026-10-01T16:00:00Z", nil) // 3h
+	f.session(app, "2026-10-01T13:00:00Z", "2026-10-01T17:00:00Z", nil)  // 4h, ao mesmo tempo
+
+	d := f.dedications(false)["Aurora"]
+	if hoursOf(d.Seconds) != 4 || d.Percent != 40 {
+		t.Errorf("total = %vh (%d%%), want 4h of 10h (40%%): the overlap counts once", hoursOf(d.Seconds), d.Percent)
+	}
+	if len(d.Projects) != 2 || hoursOf(d.Projects[0].Seconds) != 4 || hoursOf(d.Projects[1].Seconds) != 3 {
+		t.Errorf("projects = %+v, want App 4h and Site 3h, each with its full time", d.Projects)
+	}
+}
+
 // O período é o do contrato: o cliente que fecha no dia 25 está, em 9/10, no período de 26/9 a 25/10.
 func TestDedications_FollowTheClosingDay(t *testing.T) {
 	f := setup(t)

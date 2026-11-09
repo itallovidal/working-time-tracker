@@ -279,8 +279,8 @@ A organização é criada pelo signup, e o `organization_id` vem no `/api/auth/m
 - **Janelas.** `last_7_days` e `last_30_days` contam só o trecho de cada sessão que caiu dentro delas, e `all_time`, tudo. Uma sessão toda dentro da janela vale os mesmos valores dela; a que atravessa a borda vale o tempo de dentro vezes os valores por hora dela, arredondado ao centavo. A sessão aberta conta até `generated_at`, o mesmo instante das janelas.
 - `seconds` é o tempo de todos e `my_seconds` o de quem pediu (o dono vê o dele); `session_count` são as sessões com algum tempo na janela.
 - `money` segue a visão geral do projeto: `pay_amount_cents` (custo) e `bill_amount_cents` (receita) são `null` quando nenhuma sessão da janela tem aquele valor por hora, e `margin_cents` é a receita menos o custo, `null` sem receita. As horas do dono têm custo `0`, então entram inteiras na margem.
-- `by_person` traz **todas** as pessoas da organização, também as que ainda não bateram ponto (com zeros), da que mais trabalhou no total para a que menos; a soma de cada janela é a das linhas. `working_now` marca quem tem uma sessão aberta em qualquer projeto, e `people.working_now` conta essas pessoas. `working_on` são as tarefas que a pessoa tem na sessão aberta neste instante (os intervalos que ainda não terminaram), na ordem em que entraram, cada uma com o projeto, com id e nome para a tela levar até elas; vem `[]`, nunca `null`, para quem não trabalha agora e para quem abriu uma sessão que ficou sem tarefa. A tela da página inicial usa isso e não ordena nem compara as pessoas pelas horas.
-- O total de `all_time` é a soma das visões gerais dos projetos (`GET /api/projects/:projectId/overview`).
+- `by_person` traz **todas** as pessoas da organização, também as que ainda não bateram ponto (com zeros), da que mais trabalhou no total para a que menos; a soma de cada janela é a das linhas. `working_now` marca quem tem uma sessão aberta em qualquer projeto, e `people.working_now` conta essas pessoas (cada uma uma vez, mesmo com sessões em dois projetos). As horas de cada pessoa contam uma vez o tempo em que ela estava em dois projetos ao mesmo tempo. `working_on` são as tarefas que a pessoa tem nas sessões abertas neste instante (os intervalos que ainda não terminaram), na ordem em que entraram, cada uma com o projeto, com id e nome para a tela levar até elas; vem `[]`, nunca `null`, para quem não trabalha agora e para quem abriu uma sessão que ficou sem tarefa. A tela da página inicial usa isso e não ordena nem compara as pessoas pelas horas.
+- O dinheiro de `all_time` é a soma das visões gerais dos projetos (`GET /api/projects/:projectId/overview`). As horas não: o tempo em que a mesma pessoa estava em dois projetos ao mesmo tempo conta uma vez em `seconds` e cheio no `total_seconds` de cada projeto (Decisão 27), então `seconds` pode ficar abaixo da soma dos projetos.
 
 ### Visão geral do modo solo
 
@@ -333,7 +333,9 @@ A organização é criada pelo signup, e o `organization_id` vem no `/api/auth/m
   intervalos diferentes. A linha com dedicação entra em `customers` mesmo sem horas, recebimento nem valor na janela.
   - `period_start` e `period_end` são os dias do período, inclusivos; `open` diz que ele ainda não fechou.
   - `estimated_hours` é a estimativa do cliente; `seconds`, o tempo de todos os projetos do cliente no período, cada
-    sessão cortada nas bordas e a aberta até `generated_at`; `percent`, os dois divididos e arredondados (passa de 100).
+    sessão cortada nas bordas e a aberta até `generated_at`, com o tempo em que a mesma pessoa estava em dois projetos
+    ao mesmo tempo contado uma vez (Decisão 27), então pode ficar abaixo da soma dos `projects`; `percent`, os dois
+    divididos e arredondados (passa de 100).
   - `projects` são os projetos do cliente com o tempo de cada um no período, por nome, os sem tempo com `0`.
 
 `GET /api/orgs/:orgId/solo/dedication` tem as mesmas regras de acesso e devolve a lista das dedicações, no mesmo formato,
@@ -341,7 +343,7 @@ do período em andamento de cada cliente com contrato mensal e estimativa, por n
 
 ### Quem está trabalhando agora
 
-`GET /api/orgs/:orgId/working-now` é só de admins (`403` para um membro, `404` para outra organização ou um id malformado, `401` sem sessão). Lê só as sessões abertas, então é leve o bastante para a tela repetir de 30 em 30 segundos: a bolinha da Lista de tarefas e a coluna Agora dos colaboradores leem dela. Devolve um array, vazio (nunca `null`) quando ninguém trabalha, com **uma linha por pessoa com o ponto aberto**, da sessão que começou primeiro para a última; quem não aparece não está trabalhando.
+`GET /api/orgs/:orgId/working-now` é só de admins (`403` para um membro, `404` para outra organização ou um id malformado, `401` sem sessão). Lê só as sessões abertas, então é leve o bastante para a tela repetir de 30 em 30 segundos: a bolinha da Lista de tarefas e a coluna Agora dos colaboradores leem dela. Devolve um array, vazio (nunca `null`) quando ninguém trabalha, com **uma linha por pessoa com o ponto aberto** (quem tem sessões em dois projetos aparece uma vez, com as tarefas dos dois), da sessão que começou primeiro para a última; quem não aparece não está trabalhando.
 
 ```json
 [
@@ -906,18 +908,19 @@ Na lista de tarefas e no detalhe, a tarefa traz `links`, um por item externo a q
 
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
-| POST | `/api/projects/:projectId/work-sessions/clock-in` | logado | Abre uma sessão: `{"task_id": "…"}` |
-| POST | `/api/projects/:projectId/work-sessions/clock-out` | logado | Fecha a sessão aberta: `{}` |
+| POST | `/api/projects/:projectId/work-sessions/clock-in` | logado | Abre uma sessão no projeto: `{"task_id": "…"}`. As sessões abertas em outros projetos continuam |
+| POST | `/api/projects/:projectId/work-sessions/clock-out` | logado | Fecha a sessão aberta neste projeto: `{}`. As dos outros projetos continuam |
 | GET | `/api/projects/:projectId/work-sessions` | logado | Sessões do projeto. Filtros: `?task_id=` e `?person_id=`. O membro só recebe as próprias: sem `person_id` vale o dele, e o de outra pessoa dá 403 |
 | GET | `/api/projects/:projectId/work-sessions/total` | logado | `{"total_seconds", "pay_amount_cents", "bill_amount_cents"}`. Exige `task_id`, `person_id` ou os dois. Para o membro vale o mesmo recorte das sessões |
-| GET | `/api/work-sessions/active` | logado | A sua sessão aberta, com as tarefas e o projeto, ou `null` |
+| GET | `/api/work-sessions/open` | logado | As suas sessões abertas, uma por projeto no máximo, da que começou primeiro para a última, cada uma com as tarefas e o `project` (`id` e `name`). Sem ponto aberto, `[]` |
 | POST | `/api/projects/:projectId/work-sessions/:sessionId/tasks` | quem bateu o ponto, ou admin | Põe uma tarefa do projeto na sessão, aberta ou encerrada: `{"task_id": "…"}`, e opcionalmente `from_at` e `until_at`. Responde `201` com a sessão |
 | PATCH | `/api/projects/:projectId/work-sessions/:sessionId/tasks/:linkId` | quem bateu o ponto, ou admin | Muda o intervalo de uma tarefa da sessão: `from_at`, `until_at` (`null` é "até o fim da sessão") ou `{"stop": true}` para encerrar agora. Responde com a sessão |
 | DELETE | `/api/projects/:projectId/work-sessions/:sessionId/tasks/:linkId` | quem bateu o ponto, ou admin | Tira a tarefa da sessão. Responde `200` com a sessão |
 
 - Sem `person_id`, clock-in e clock-out valem para a pessoa logada. Só admins podem mandar o `person_id` de outra pessoa, e ela precisa ser da organização do projeto.
 - O total só soma sessões de tarefas do projeto da rota. Um `task_id` de outro projeto dá `0`.
-- Cada pessoa tem no máximo uma sessão aberta. O banco garante isso com o índice único parcial `one_active_session`, então nem duas requisições simultâneas conseguem abrir duas sessões.
+- Cada pessoa tem no máximo uma sessão aberta **em cada projeto** (Decisão 27); em projetos diferentes, elas correm ao mesmo tempo. O banco garante isso com o índice único parcial `one_open_session_per_project`, então nem duas requisições simultâneas conseguem abrir duas sessões no mesmo projeto. Um segundo clock-in no projeto é `work_session.already_open`, e o clock-out num projeto sem sessão aberta é `work_session.not_open`.
+- Cada sessão vale o valor do próprio projeto. Os totais de horas que juntam projetos (as horas do cliente nos recebíveis, o período de pagamento, `/me/overview`, a visão da organização e a do modo solo) contam uma vez o tempo em que a mesma pessoa tinha duas sessões abertas ao mesmo tempo; o dinheiro continua somando sessão por sessão.
 - Uma sessão aberta conta no total até o momento da consulta.
 
 ### Tarefas da sessão
@@ -1202,7 +1205,7 @@ A ajuda é uma página do navegador, não da API JSON, e não precisa de sessão
 6. **Criar time:** `POST /api/projects/:projectId/teams`, e depois `POST /api/teams/:teamId/members` com o seu próprio `id`.
 7. **Criar tarefa:** `POST /api/projects/:projectId/tasks` com você como responsável.
 8. **Cliente e acréscimo:** `POST /api/orgs/:orgId/customers` com o `hourly_rate_cents`, e `PUT /api/projects/:projectId/billing` com o cliente e, se quiser, `bill_extra_cents`.
-9. **Bater o ponto:** `clock-in` com `{"task_id": "…"}`, `GET /api/work-sessions/active`, `POST .../work-sessions/:sessionId/tasks` com uma segunda tarefa (copie o `id` da sessão para `session_id`) e `clock-out`.
+9. **Bater o ponto:** `clock-in` com `{"task_id": "…"}`, `GET /api/work-sessions/open`, `POST .../work-sessions/:sessionId/tasks` com uma segunda tarefa (copie o `id` da sessão para `session_id`) e `clock-out`.
 10. **Totais:** `GET /api/projects/:projectId/work-sessions/total?task_id=…`.
 11. **Convidar alguém:** `POST /api/orgs/:orgId/invites`, depois `POST /api/auth/invites/:token/accept` numa sessão sem cookie (ou após `logout`).
 12. **Modo solo:** numa organização de uma pessoa só (`signup` com `"solo": true`, ou `PATCH /api/orgs/:orgId` com `{"solo": true}`), crie um cliente mensal (`billing_mode: "monthly"`), `GET /api/orgs/:orgId/receivables` para ver as propostas, `POST` para confirmar um período e `POST .../receivables/:id/receive` para receber (copie o `id` do recebível para `receivable_id`).

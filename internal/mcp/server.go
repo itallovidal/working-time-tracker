@@ -66,11 +66,14 @@ const instructions = `Working Time Tracker: time tracking per task. You act as t
 
 - Tasks live in projects. Use list_projects, then list_tasks or my_tasks to find ids.
 - Task status: backlog, in_progress, awaiting_closure, closed. Priority: urgent, high, medium, low, none.
-- A person has at most one open work session (the clock). clock_in opens it on one task, and the task becomes
-  in_progress and, if it had no assignee, the person's.
-- To work on another task of the same project, use add_task_to_session (switch=true stops the other tasks).
-  A task of another project needs clock_out first, then clock_in.
-- A session keeps at least one running task: to stop everything, use clock_out.
+- A person has at most one open work session (the clock) per project, and sessions in different projects run at the
+  same time. clock_in opens one on a task, and the task becomes in_progress and, if it had no assignee, the person's.
+- To work on another task of a project whose session is open, use add_task_to_session (switch=true stops the other
+  tasks of that session). A task of another project gets its own session with clock_in.
+- A session keeps at least one running task: to stop everything in a project, use clock_out (with project_id when
+  sessions are open in more than one project).
+- Overlapping time in two projects counts once in the person's total hours; the money is per project, at each
+  project's rate.
 - Dates: deadline is YYYY-MM-DD, in the organization's time zone. Times come back in RFC 3339.
 - Errors come back as text with a stable code in parentheses.`
 

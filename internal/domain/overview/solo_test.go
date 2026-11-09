@@ -179,7 +179,9 @@ func rowLines(o *overview.SoloOverview) []string {
 	return out
 }
 
-// checkSums confere que as linhas da tabela, com as horas internas, somam o que os cartões dizem.
+// checkSums confere que as linhas da tabela, com as horas internas, somam o que os cartões dizem. Vale só sem sessões
+// ao mesmo tempo em clientes diferentes: aí o tempo conta cheio em cada linha e uma vez no total (Decisão 27), e o
+// TestSolo_ParallelProjectsCountTheHoursOnce confere as duas contas.
 func checkSums(t *testing.T, o *overview.SoloOverview) {
 	t.Helper()
 	seconds, received, projected := o.InternalSeconds, 0, 0
@@ -551,6 +553,33 @@ func TestSolo_EffectiveRateBelowTheMinimumIsAWarning(t *testing.T) {
 	}
 	if rate := got.Totals.EffectiveRateCents; rate == nil || *rate != 952 || !got.Totals.BelowMinRate {
 		t.Errorf("total rate = %s below=%v, want 952 and the warning", rateText(got.Totals.EffectiveRateCents), got.Totals.BelowMinRate)
+	}
+}
+
+// Sessões ao mesmo tempo (Decisão 27): no dia 10, o Alfa tem dois projetos, um das 12h às 16h e outro das 13h às 15h,
+// dentro dele; o Beta tem 1h às 13h, junto com o Alfa; o interno, das 15h30 às 16h30, meia hora junto com o Alfa. Cada
+// linha conta uma vez o que se sobrepõe nela (o Alfa tem 4h, não 6h, e o valor efetivo é sobre essas 4h), e o total
+// conta uma vez o que se sobrepõe entre os clientes e o interno: das 12h às 16h30, 4h30, abaixo da soma das linhas.
+func TestSolo_ParallelProjectsCountTheHoursOnce(t *testing.T) {
+	f := newSolo(t, "2026-11-18T15:00:00Z", "America/Sao_Paulo")
+	alfa := f.monthly("Alfa", 40000, "2026-11-01") // 400,00 por mês
+	beta := f.monthly("Beta", 10000, "2026-11-01") // 100,00 por mês
+	f.session(f.task(alfa, "Alfa site"), "2026-11-10T12:00:00Z", "2026-11-10T16:00:00Z", nil)
+	f.session(f.task(alfa, "Alfa app"), "2026-11-10T13:00:00Z", "2026-11-10T15:00:00Z", nil)
+	f.session(f.task(beta, "Beta"), "2026-11-10T13:00:00Z", "2026-11-10T14:00:00Z", nil)
+	f.session(f.task(nil, "Interno"), "2026-11-10T15:30:00Z", "2026-11-10T16:30:00Z", nil)
+
+	got := f.solo(overview.WindowMonth)
+	want := []string{
+		"Alfa [monthly]: 14400s, received 0, projected 40000, rate 10000 below=false",
+		"Beta [monthly]: 3600s, received 0, projected 10000, rate 10000 below=false",
+	}
+	if rows := rowLines(got); !slices.Equal(rows, want) {
+		t.Errorf("rows\n got  %q\n want %q", rows, want)
+	}
+	// 500,00 em 4h30: 111,11 por hora.
+	if line, want := totalsLine(got), "2026-11-01..2026-11-30: 16200s, received 0, projected 50000, rate 11111 below=false, internal 3600s"; line != want {
+		t.Errorf("totals\n got  %s\n want %s", line, want)
 	}
 }
 
