@@ -77,7 +77,7 @@ de autorização (`internal/oauth`, [Decisão 25](decisions.md#decisão-25-oauth
 - **O `/oauth/token` e o `/oauth/revoke`** aceitam só o corpo do formulário (parâmetros na URL não contam, e um
   parâmetro repetido é recusado), respondem com `Cache-Control: no-store` e têm o próprio limite por IP (1 por segundo,
   rajada de 30), mais folgado que o do login porque o claude.ai renova os tokens de todo mundo pelos mesmos IPs.
-- **Desconectar** é na lista "Apps conectados" do perfil (cada pessoa só vê e desconecta os seus) ou no
+- **Desconectar** é na lista "Conectados" do perfil (cada pessoa só vê e desconecta os seus) ou no
   `/oauth/revoke`. **Trocar a senha desconecta todos os apps**, como revoga os tokens pessoais. Uma conta só com o
   Clerk não troca a senha: para ela, o corte é desconectar no perfil.
 - **Os documentos de descoberta** (`/.well-known/*`) são públicos e respondem a qualquer origem; um que não existe é um

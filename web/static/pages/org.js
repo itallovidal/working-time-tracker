@@ -1534,57 +1534,21 @@ document.addEventListener('alpine:init', () => {
     },
   }));
 
-  // O meu perfil: o que fiz e quando sou pago, para ler, e o modal Editar perfil, com os dados pessoais e a senha.
-  // claudeConnections são os apps conectados pelo OAuth do MCP (o claude.ai, que vale no Claude Desktop e no celular, e o
-  // Claude Code): o endereço para colar no Claude e a lista do que está ligado, com o Desconectar. Só aparece com o OAuth
-  // ligado no servidor.
-  Alpine.data('claudeConnections', () => ({
+  // mcpConnector é a seção Conector MCP do perfil: quem entra no servidor MCP (/mcp) e age como a pessoa. A lista junta
+  // os apps conectados pelo OAuth (o claude.ai, que vale no Claude Desktop e no celular, e o Claude Code; só com o OAuth
+  // ligado no servidor) e os tokens pessoais. Embaixo, um jeito de conectar de cada vez (method): o OAuth, com o endereço
+  // e o comando do Claude Code, ou o token, que só aparece no modal, logo depois de criado, junto com o comando que o
+  // conecta; a lista mostra só o começo dele.
+  Alpine.data('mcpConnector', () => ({
     ...form(),
+    oauth: !!WTT.boot.oauth,
+    method: WTT.boot.oauth ? 'oauth' : 'token',
     connections: [],
-    loading: true,
-    confirming: null, // id do app cuja desconexão espera a confirmação
-    init() {
-      return this.load();
-    },
-    async load() {
-      this.loading = true;
-      this.errors.load = '';
-      try {
-        this.connections = await api('GET', '/api/auth/connections');
-      } catch (e) {
-        this.errors.load = e.message;
-      } finally {
-        this.loading = false;
-      }
-    },
-    // command conecta o Claude Code pelo OAuth: sem token, a autorização é no navegador, pelo /mcp do Claude Code.
-    command() {
-      return 'claude mcp add --transport http --scope user wtt ' + (WTT.boot.mcpURL || '');
-    },
-    async copy(text) {
-      const ok = await WTT.copyText(text);
-      toast(ok ? WTT.t('profile.claude.copied') : WTT.t('org.people.copy_failed'), ok ? 'info' : 'error');
-    },
-    disconnect(conn) {
-      return this.run('disconnect', async () => {
-        this.confirming = null;
-        await api('DELETE', '/api/auth/connections/' + conn.id);
-        this.connections = this.connections.filter((c) => c.id !== conn.id);
-        toast(WTT.t('profile.claude.disconnected'));
-      });
-    },
-  }));
-
-  // claudeTokens é a seção Conectar ao Claude do perfil: os tokens com que o Claude Code entra no servidor MCP (/mcp)
-  // e age como a pessoa. O token só aparece no modal, logo depois de criado, junto com o comando que o conecta; a
-  // lista mostra só o começo dele.
-  Alpine.data('claudeTokens', () => ({
-    ...form(),
     tokens: [],
     loading: true,
     draft: { name: '', days: 90 },
     created: null,
-    confirming: null, // id do token cuja revogação espera a confirmação
+    confirming: null, // a chave (tipo:id) do item cuja desconexão ou revogação espera a confirmação
     init() {
       return this.load();
     },
@@ -1592,22 +1556,65 @@ document.addEventListener('alpine:init', () => {
       this.loading = true;
       this.errors.load = '';
       try {
-        this.tokens = await api('GET', '/api/auth/tokens');
+        const [connections, tokens] = await Promise.all([
+          this.oauth ? api('GET', '/api/auth/connections') : [],
+          api('GET', '/api/auth/tokens'),
+        ]);
+        this.connections = connections;
+        this.tokens = tokens;
       } catch (e) {
         this.errors.load = e.message;
       } finally {
         this.loading = false;
       }
     },
-    expired(tok) {
-      return new Date(tok.expires_at).getTime() <= Date.now();
+    // items são os apps e os tokens numa lista só, do mais novo para o mais antigo.
+    items() {
+      return [
+        ...this.connections.map((c) => ({ ...c, kind: 'oauth', key: 'oauth:' + c.id })),
+        ...this.tokens.map((t) => ({ ...t, kind: 'token', key: 'token:' + t.id })),
+      ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    },
+    expired(item) {
+      return new Date(item.expires_at).getTime() <= Date.now();
+    },
+    // focusMethod troca a aba pelas setas e leva o foco junto, como pede o padrão de abas.
+    focusMethod(method) {
+      this.method = method;
+      this.$nextTick(() => this.$refs['tab-' + method].focus());
+    },
+    openHelp() {
+      Alpine.store('modal').open('mcp-help', WTT.t('profile.mcp.help_title'));
+    },
+    // oauthCommand conecta o Claude Code pelo OAuth: sem token, a autorização é no navegador, pelo /mcp do Claude Code.
+    oauthCommand() {
+      return 'claude mcp add --transport http --scope user wtt ' + (WTT.boot.mcpURL || '');
+    },
+    // oauthPrompt é o pedido que a pessoa cola numa conversa do Claude Code: ele roda o comando e explica como entrar.
+    oauthPrompt() {
+      return WTT.t('profile.mcp.code_prompt_text', { command: this.oauthCommand() });
+    },
+    // fit deixa a caixa do prompt da altura do texto, para ele aparecer inteiro também no celular, sem rolagem dentro.
+    fit(el) {
+      if (!el.offsetParent) return;
+      el.style.height = 'auto';
+      el.style.height = el.scrollHeight + (el.offsetHeight - el.clientHeight) + 'px';
+    },
+    // tokenCommand é o comando que conecta o Claude Code a este servidor, com o token recém-criado.
+    tokenCommand() {
+      if (!this.created) return '';
+      return this.oauthCommand() + ' --header "Authorization: Bearer ' + this.created.token + '"';
+    },
+    async copy(text) {
+      const ok = await WTT.copyText(text);
+      toast(ok ? WTT.t('profile.mcp.copied') : WTT.t('org.people.copy_failed'), ok ? 'info' : 'error');
     },
     openNew() {
       this.draft = { name: '', days: 90 };
       this.created = null;
       this.errors.create = '';
       this.clearFields();
-      Alpine.store('modal').open('claude-token', WTT.t('profile.claude.modal_title'), () => !this.pending);
+      Alpine.store('modal').open('mcp-token', WTT.t('profile.mcp.modal_title'), () => !this.pending);
     },
     create() {
       this.draft.name = this.draft.name.trim();
@@ -1617,29 +1624,27 @@ document.addEventListener('alpine:init', () => {
         this.created = await api('POST', '/api/auth/tokens', { name: this.draft.name, days: Number(this.draft.days) });
         this.$nextTick(() => this.$refs.command && this.$refs.command.focus());
         // A criação apaga os tokens vencidos da pessoa: a lista volta do servidor, já sem eles e com o novo.
-        await this.load();
+        this.tokens = await api('GET', '/api/auth/tokens');
       });
     },
-    // command é o comando que conecta o Claude Code a este servidor, com o token recém-criado.
-    command() {
-      if (!this.created) return '';
-      return 'claude mcp add --transport http --scope user wtt ' + (WTT.boot.mcpURL || '') +
-        ' --header "Authorization: Bearer ' + this.created.token + '"';
-    },
-    async copy(text) {
-      const ok = await WTT.copyText(text);
-      toast(ok ? WTT.t('profile.claude.copied') : WTT.t('org.people.copy_failed'), ok ? 'info' : 'error');
-    },
-    revoke(tok) {
-      return this.run('revoke', async () => {
+    // remove desconecta um app ou revoga um token, conforme o item.
+    remove(item) {
+      return this.run('remove', async () => {
         this.confirming = null;
-        await api('DELETE', '/api/auth/tokens/' + tok.id);
-        this.tokens = this.tokens.filter((t) => t.id !== tok.id);
-        toast(WTT.t('profile.claude.revoked'));
+        if (item.kind === 'oauth') {
+          await api('DELETE', '/api/auth/connections/' + item.id);
+          this.connections = this.connections.filter((c) => c.id !== item.id);
+          toast(WTT.t('profile.mcp.disconnected'));
+        } else {
+          await api('DELETE', '/api/auth/tokens/' + item.id);
+          this.tokens = this.tokens.filter((t) => t.id !== item.id);
+          toast(WTT.t('profile.mcp.revoked'));
+        }
       });
     },
   }));
 
+  // O meu perfil: o que fiz e quando sou pago, para ler, e o modal Editar perfil, com os dados pessoais e a senha.
   Alpine.data('profileSettings', () => ({
     ...form(),
     ...personProfile(me.id, true),

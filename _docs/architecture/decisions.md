@@ -973,7 +973,7 @@ com a pessoa entrando pelo login de sempre. O token pessoal continua igual.
   derruba a conexão que funciona.
 - **O token de acesso só vale no `/mcp`, e só para o recurso em que foi emitido** (o `PUBLIC_URL` mais `/mcp`). O
   `verify` do MCP olha o prefixo: `wtta_` é do OAuth, `wtt_` é o pessoal. Com o OAuth desligado, um `wtta_` não entra.
-- **Desconectar** é na lista "Apps conectados" do perfil (cada pessoa vê e desconecta os seus), no `/oauth/revoke`
+- **Desconectar** é na lista "Conectados" do perfil (antes "Apps conectados"; cada pessoa vê e desconecta os seus), no `/oauth/revoke`
   (RFC 7009) ou numa troca de senha, que também leva os apps. Cada pessoa tem até 10 apps conectados; passando disso,
   na troca do código, sai o que está há mais tempo sem uso. As autorizações pendentes (o app ainda não trocou o
   código) não contam: têm um limite igual, à parte, em que sai a pendente mais antiga.

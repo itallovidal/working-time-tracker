@@ -1280,6 +1280,14 @@ Branch `feat/mobile-hamburger-menu` (2026-11-09), from `main`, after the owner f
 - [X] S120.2 Clientes e Projetos, after the owner asked: the owner no longer has the opening sentence under the title (members keep theirs, `org.catalog.intro_member`), and the customer's group header no longer shows the billing (the amount, and the mode in solo): it stays only in Detalhes. `billingAmount` and `.catalog-billing` are gone; `TestCustomerBilling_FieldsAreInsideTheSoloGate` checks the header has no billing
 - [X] S120.3 Docs: `frontend/patterns.md` (the hamburger menu, and the top bar items after Sprint 119), `frontend/routes.md`
 
+### Sprint 121: The MCP Connector Section
+
+Branch `feat/mcp-connector-screen` (2026-11-09), from `main`, after the owner asked for the profile's "Conectar ao Claude" to be about the MCP connector, with what is connected first, one way of connecting at a time, and the explanations behind a "?".
+
+- [X] S121.1 Profile, section Conector MCP (en "MCP connector"; `profile.gohtml`, component `mcpConnector` in `org.js`, which replaces `claudeConnections` and `claudeTokens`): the list **Conectados** first, with the OAuth apps and the personal tokens together (name, with the token's start under it; type; connected on; last used; expires on, or Venceu), newest first, each with Desconectar or Revogar and the inline confirmation; then **Conectar**, with OAuth and Token pessoal tabs (only the token without OAuth on the server): a short prompt for Claude Code (it runs `claude mcp add` itself and explains /mcp → Authenticate; the owner asked for it in place of the bare command) with Copiar prompt, or a short line and Novo token. The token modal keeps the command, so the token does not go into a conversation
+- [X] S121.2 The "?" next to the title opens a modal with what the assistant can do, the OAuth steps (claude.ai, Desktop and mobile, with the connector address and its Copiar right in that step, after the owner asked to take it out of the section; Claude Code with /mcp; only Claude's apps for now; 30 days without use), the personal token and the password note. The section's paragraphs and notes moved there
+- [X] S121.3 Texts: the `profile.claude` keys become `profile.mcp` in both languages, the token modal is "Novo token", and the help's Profile paragraph describes the new section; docs `api/mcp.md`, `frontend/routes.md`, `architecture/security.md`, Decision 25
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open
