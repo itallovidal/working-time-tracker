@@ -176,7 +176,7 @@ func amount(seconds float64, rateCents *int) *int {
 }
 
 // MergedSeconds é o tempo que as sessões cobrem em [from, to), contando uma vez só o que se sobrepõe na mesma pessoa:
-// duas sessões dela ao mesmo tempo, em projetos diferentes, são uma hora de trabalho e não duas (Decisão 26). As
+// duas sessões dela ao mesmo tempo, em projetos diferentes, são uma hora de trabalho e não duas (Decisão 27). As
 // pessoas diferentes somam entre si. Um from zerado é sem começo, um to zerado é até now, e a sessão aberta conta
 // até now. O dinheiro não passa por aqui: cada sessão vale o próprio tempo vezes o valor do projeto dela.
 func MergedSeconds(sessions []WorkSession, from, to, now time.Time) float64 {

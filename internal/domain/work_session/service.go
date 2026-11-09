@@ -54,7 +54,7 @@ func (s *Service) ClockIn(projectID, taskID, personID string) (*WorkSession, err
 		return nil, ErrNoRate
 	}
 
-	// Uma sessão aberta por projeto: a de outro projeto segue correndo ao lado desta (Decisão 26).
+	// Uma sessão aberta por projeto: a de outro projeto segue correndo ao lado desta (Decisão 27).
 	_, err = s.sessionStore.GetOpenByPersonProject(personID, task.ProjectID.String())
 	if err == nil {
 		return nil, ErrAlreadyOpen

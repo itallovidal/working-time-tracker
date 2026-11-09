@@ -47,8 +47,8 @@ func TestCustomerBilling_ScreenSendsOnlyKnownKeys(t *testing.T) {
 	body := js[start : start+end]
 	known := inputKeys()
 	sent := regexp.MustCompile(`(?m)^\s+(\w+):`).FindAllStringSubmatch(body, -1)
-	if len(sent) != 12 {
-		t.Errorf("billingBody sends %d keys, want the 12 terms: %v", len(sent), sent)
+	if len(sent) != 13 {
+		t.Errorf("billingBody sends %d keys, want the 13 terms: %v", len(sent), sent)
 	}
 	for _, m := range sent {
 		if !known[m[1]] {
@@ -135,7 +135,7 @@ func TestCustomerBilling_FieldsAreInsideTheSoloGate(t *testing.T) {
 		t.Error("customer_contract is included outside a solo gate")
 	}
 	contract := templates(t)["templates/partials/customer_contract.gohtml"]
-	for _, id := range []string{"monthly-fee", "contract-start", "contract-end", "billing-cycle", "cycle-anchor", "closing-day", "payment-days", "late-fee", "late-interest", "grace-days"} {
+	for _, id := range []string{"monthly-fee", "estimated-hours", "contract-start", "contract-end", "billing-cycle", "cycle-anchor", "closing-day", "payment-days", "late-fee", "late-interest", "grace-days"} {
 		if !strings.Contains(contract, `id="{{$id}}-`+id+`"`) {
 			t.Errorf("customer_contract.gohtml has no field {{$id}}-%s", id)
 		}

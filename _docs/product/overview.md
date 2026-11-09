@@ -94,7 +94,7 @@ que é de quem cobra os próprios clientes (o **A receber**, que tem as suas reg
 | Configurações | Sem **Regime de trabalho** e sem **Moeda**, na edição, no cartão "Como trabalhamos" e nas boas-vindas: a moeda segue o país (trocar o país na edição leva a moeda dele). Os campos voltam ao desmarcar o modo no formulário |
 | Novo projeto | Com um cliente escolhido, o rádio **Cobrança: Por hora / Contrato mensal**. O modo e o contrato continuam no cliente e valem para todos os projetos dele: com o cliente ainda sem projetos, escolher o outro modo grava os termos no cliente (`PATCH /api/customers/:id`) antes de criar o projeto, e o contrato mensal se preenche ali mesmo; com projetos, o outro modo fica desabilitado, com o motivo. A lista de clientes mostra o modo de cada um, e a Gestão › Configurações do projeto mostra a cobrança, só para ler |
 | Lista de tarefas | Uma lista só, **Tarefas**, com todas as tarefas do projeto, sem a coluna nem o filtro de responsável; "Atribuir a mim" fica nas que não têm responsável. A tarefa nova é sua (o modal não pergunta o responsável), e na página da tarefa não há "Outra pessoa" |
-| Visão geral do projeto | Sem pessoas, times, quem está trabalhando, filtro e coluna de pessoa, nem custo e margem (o dono não tem custo); a receita fica |
+| Visão geral do projeto | Sem pessoas, times, quem está trabalhando, filtro e coluna de pessoa, nem custo e margem (o dono não tem custo); a receita fica. No projeto de um cliente mensal com estimativa de horas, o cartão **Estimativa do cliente** mostra as horas do período do contrato contra ela, com as deste projeto ([money.md](money.md#horas-estimadas-do-contrato-mensal)) |
 | Outras telas | Sem o cargo ao lado do nome, sem a contagem de pessoas nos cartões de projeto, sem cargo e jornada no perfil, e a ajuda sem as seções de equipe (convites, colaboradores, pagamentos, cargos). Os textos que falam de "o time" ou de "alguém" têm uma versão do solo |
 
 A API de pessoas e de pagamentos (`/api/orgs/:orgId/persons`, `/payments`, ...) não muda: o modo esconde telas e fecha os
@@ -197,7 +197,7 @@ ela está numa plataforma, o modal oferece apagar ou arquivar o item lá também
 ## Ponto
 
 **Clock-in.** Abre uma sessão no projeto da tarefa. Cada pessoa tem no máximo uma sessão aberta **em cada projeto**, e
-as de projetos diferentes correm ao mesmo tempo ([Decisão 26](../architecture/decisions.md)). O ponto é recusado
+as de projetos diferentes correm ao mesmo tempo ([Decisão 27](../architecture/decisions.md)). O ponto é recusado
 quando:
 
 - a pessoa não tem valor por hora no projeto (`work_session.no_rate`);
@@ -265,6 +265,11 @@ abre os outros; o painel do timer do projeto mostra só a sessão dele.
     projetado na janela; as horas de um cliente mensal são as das sessões dos projetos dele (o dono bate ponto neles
     também). Uma linha **Sem cliente (internos)** traz só as horas dos projetos sem cliente. Sem nada na janela, a tabela
     dá lugar a um estado vazio. A tela não leva a páginas de equipe, que respondem `404` no solo.
+  - **Estimativa**, uma coluna que só aparece quando algum cliente mensal tem
+    [horas estimadas](money.md#horas-estimadas-do-contrato-mensal): "18h de 40h · 45%", com uma barra, das horas do
+    período do contrato (o em andamento em Este mês, o anterior em Mês passado; nada em Ano). Quando o contrato não fecha
+    no último dia, o período aparece embaixo, porque ele não é a janela da coluna Horas. A linha de um cliente mensal com
+    estimativa entra na tabela mesmo sem nada mais na janela.
 
 **Quem trabalha agora.** Para o dono e os admins, a Lista de tarefas marca se o responsável está com o ponto aberto, e a
 aba Colaboradores do projeto mostra em que tarefa cada um está. Os dois leem `GET /api/orgs/:orgId/working-now`, que

@@ -48,7 +48,7 @@ func TestPages_SessionModalIsInTheLayout(t *testing.T) {
 
 // As telas de sessões mostram as tarefas de cada sessão, e a linha abre o modal. O Início, a
 // Gestão e a página da tarefa põem a tarefa na sessão aberta do projeto em vez de iniciar outra; a sessão de outro
-// projeto não bloqueia nada (Decisão 26), então não há mais otherProject().
+// projeto não bloqueia nada (Decisão 27), então não há mais otherProject().
 func TestPages_SessionTasksOnTheScreens(t *testing.T) {
 	e := newServer(t)
 	admin := signup(t, e, "Org", "ana@test.com")

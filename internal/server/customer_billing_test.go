@@ -136,6 +136,11 @@ func TestCustomerBilling_FormValidation(t *testing.T) {
 		{"late fee over 100%", "PATCH", "/api/customers/" + monthlyID, `{"late_fee_bp":10001}`, 400, "customer.invalid_late_fee", "late_fee_bp"},
 		{"interest negative", "PATCH", "/api/customers/" + monthlyID, `{"late_interest_bp_month":-1}`, 400, "customer.invalid_late_interest", "late_interest_bp_month"},
 		{"grace over the cap", "PATCH", "/api/customers/" + monthlyID, `{"grace_days":366}`, 400, "customer.invalid_grace_days", "grace_days"},
+		// A estimativa de horas por mês, só do mensal e opcional (Decisão 26).
+		{"estimate zero", "PATCH", "/api/customers/" + monthlyID, `{"estimated_monthly_hours":0}`, 400, "customer.invalid_estimated_hours", "estimated_monthly_hours"},
+		{"estimate over the cap", "POST", create, `{"name":"X",` + monthlyBody + `,"estimated_monthly_hours":745}`, 400, "customer.invalid_estimated_hours", "estimated_monthly_hours"},
+		{"estimate on an hourly customer", "PATCH", "/api/customers/" + hourlyID, `{"estimated_monthly_hours":40}`, 400, "customer.field_monthly_only", "estimated_monthly_hours"},
+		{"estimate as text", "PATCH", "/api/customers/" + monthlyID, `{"estimated_monthly_hours":"40"}`, 400, "request.invalid_body", "estimated_monthly_hours"},
 
 		// Nos dois modos.
 		{"closing day zero", "POST", create, `{"name":"X","hourly_rate_cents":10000,"closing_day":0}`, 400, "customer.invalid_closing_day", "closing_day"},
@@ -173,7 +178,9 @@ func TestCustomerBilling_FormValidation(t *testing.T) {
 		{"hourly with the defaults spelled out", "POST", create, `{"name":"B","billing_mode":"hourly","hourly_rate_cents":10000,"monthly_fee_cents":null,"contract_start":"","contract_end":"","billing_cycle":"monthly","cycle_anchor":"","late_fee_bp":0,"late_interest_bp_month":0,"grace_days":0,"closing_day":31,"payment_days":0}`},
 		{"hourly every 14 days", "POST", create, `{"name":"D","billing_mode":"hourly","hourly_rate_cents":10000,"billing_cycle":"biweekly","cycle_anchor":"2026-10-27","closing_day":31,"payment_days":3}`},
 		{"monthly with the cycle defaults", "POST", create, `{"name":"E",` + monthlyBody + `,"billing_cycle":"monthly","cycle_anchor":""}`},
-		{"monthly with every term", "POST", create, `{"name":"C",` + monthlyBody + `,"contract_end":"2027-10-31","closing_day":28,"payment_days":10,"late_fee_bp":10000,"late_interest_bp_month":100,"grace_days":365}`},
+		{"monthly with every term", "POST", create, `{"name":"C",` + monthlyBody + `,"estimated_monthly_hours":744,"contract_end":"2027-10-31","closing_day":28,"payment_days":10,"late_fee_bp":10000,"late_interest_bp_month":100,"grace_days":365}`},
+		{"hourly with a null estimate", "POST", create, `{"name":"F","hourly_rate_cents":10000,"estimated_monthly_hours":null}`},
+		{"monthly estimate set", "PATCH", "/api/customers/" + monthlyID, `{"estimated_monthly_hours":40}`},
 		{"monthly edit", "PATCH", "/api/customers/" + monthlyID, `{"monthly_fee_cents":700000,"contract_end":""}`},
 	}
 	for _, tc := range ok {
@@ -183,7 +190,8 @@ func TestCustomerBilling_FormValidation(t *testing.T) {
 		}
 	}
 	edited := decode(t, do(e, "GET", "/api/customers/"+monthlyID, "", owner.session))
-	if edited["monthly_fee_cents"] != float64(700000) || edited["contract_end"] != nil || edited["contract_start"] != "2026-11-01" || edited["billing_mode"] != "monthly" {
+	if edited["monthly_fee_cents"] != float64(700000) || edited["contract_end"] != nil || edited["contract_start"] != "2026-11-01" || edited["billing_mode"] != "monthly" ||
+		edited["estimated_monthly_hours"] != float64(40) {
 		t.Errorf("monthly customer after the edit = %v", edited)
 	}
 }

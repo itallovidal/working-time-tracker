@@ -69,6 +69,7 @@
         <div class="section-head">
           <h3 id="home-solo-customers-title">{{.T "home.solo.customers.title"}}</h3>
           <p class="muted small">{{.T "home.solo.customers.intro"}}</p>
+          <p class="muted small" x-cloak x-show="soloEstimates()">{{.T "home.solo.customers.estimate_hint"}}</p>
         </div>
         {{template "empty_state" (dict "Icon" "chart-line" "Show" "soloEmpty()" "Cloak" true "Title" (.T "home.solo.empty.title") "Text" (.T "home.solo.empty.text"))}}
         <div class="table-wrap" x-cloak x-show="!soloEmpty()">
@@ -76,6 +77,7 @@
             <thead>
               <tr>
                 <th>{{.T "home.solo.col.customer"}}</th><th>{{.T "home.solo.col.kind"}}</th><th class="num">{{.T "home.solo.col.hours"}}</th>
+                <th x-show="soloEstimates()">{{.T "home.solo.col.estimate"}}</th>
                 <th class="num">{{.T "home.solo.col.received"}}</th><th class="num">{{.T "home.solo.col.projected"}}</th><th class="num">{{.T "home.solo.col.rate"}}</th>
               </tr>
             </thead>
@@ -85,6 +87,11 @@
                   <td class="nowrap" x-text="row.customer.name"></td>
                   <td class="nowrap"><span class="badge" x-text="soloKind(row.kind)"></span></td>
                   <td class="nowrap num" x-text="hoursText(row.seconds)"></td>
+                  {{/* As horas do período do contrato contra a estimativa (Decisão 26): só no mensal com estimativa. */}}
+                  <td x-show="soloEstimates()">
+                    <template x-if="row.dedication">{{template "dedication" (dict "Expr" "row.dedication")}}</template>
+                    <span class="muted" x-show="!row.dedication">—</span>
+                  </td>
                   <td class="nowrap num" x-text="WTT.fmt.money(row.received_cents)"></td>
                   <td class="nowrap num" x-text="WTT.fmt.money(row.projected_cents)"></td>
                   <td class="nowrap num">
@@ -102,6 +109,7 @@
                   </td>
                   <td class="muted">—</td>
                   <td class="nowrap num" x-text="hoursText(solo.internal_seconds)"></td>
+                  <td class="muted" x-show="soloEstimates()">—</td>
                   <td class="muted">—</td>
                   <td class="muted">—</td>
                   <td class="muted">—</td>

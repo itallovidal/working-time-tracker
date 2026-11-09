@@ -74,6 +74,17 @@ func (h *Handler) Solo(c *echo.Context) error {
 	return c.JSON(http.StatusOK, o)
 }
 
+// SoloDedications devolve a dedicação de cada cliente com contrato mensal e estimativa de horas, no período do
+// contrato em andamento (Decisão 26): é o que a página Clientes mostra nos detalhes do cliente. As regras da rota são as
+// da tela inicial do modo solo: só o dono e só em organização solo.
+func (h *Handler) SoloDedications(c *echo.Context) error {
+	list, err := h.svc.SoloDedications(c.Param("orgId"))
+	if err != nil {
+		return failOrg(c, err)
+	}
+	return c.JSON(http.StatusOK, list)
+}
+
 // WorkingNow devolve quem está com o ponto aberto na organização e em que tarefas, sem tempo
 // nem dinheiro. É só de admins, como a visão geral: mostra o que cada pessoa faz agora.
 func (h *Handler) WorkingNow(c *echo.Context) error {

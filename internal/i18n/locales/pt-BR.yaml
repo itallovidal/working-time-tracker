@@ -215,6 +215,7 @@ home:
     customers:
       title: Por cliente
       intro: As horas dos projetos de cada cliente, o que entrou e o que se espera receber, em ordem de nome.
+      estimate_hint: "Estimativa: as horas do período do contrato contra as horas estimadas por mês. Quando o contrato não fecha no último dia, o período aparece embaixo."
       internal: Sem cliente (internos)
       internal_hint: Projetos sem cliente
     col:
@@ -224,6 +225,7 @@ home:
       received: Receita
       projected: Projetada
       rate: Valor por hora efetivo
+      estimate: Estimativa
     kind:
       hourly: Por hora
       monthly: Mensal
@@ -1003,7 +1005,7 @@ help:
       text: "O modo solo é para quem atua sozinho, como freelancer ou PJ: a organização é uma pessoa só, e o que é de equipe some em vez de ficar sobrando nos menus."
       choose: "Marque “Trabalho sozinho(a)” ao criar a organização ou depois, em Configurações › Editar. Só o dono muda, e só liga com você como a única pessoa e sem convites pendentes."
       hides: "O menu perde Colaboradores e Pagamentos e ganha “A receber”; o projeto perde a aba Colaboradores, e ninguém é convidado. Desligar o modo não apaga nada: tudo o que ficou escondido volta."
-      billing: "Cada cliente é cobrado por hora (as horas dos projetos vezes o valor por hora dele) ou por contrato mensal (um valor fixo por mês, e os projetos dele não têm valor por hora), nunca pelos dois. A cobrança se define em Clientes e vale para todos os projetos do cliente; cada projeto só soma um acréscimo, por hora ou por mês. Depois que o cliente tem projetos o modo não muda. O período do cliente por hora fecha uma vez por mês, no dia de fechamento, ou a cada 14 dias (o bi-weekly dos EUA), contados a partir do último fechamento que ele já pagou."
+      billing: "Cada cliente é cobrado por hora (as horas dos projetos vezes o valor por hora dele) ou por contrato mensal (um valor fixo por mês, e os projetos dele não têm valor por hora), nunca pelos dois. A cobrança se define em Clientes e vale para todos os projetos do cliente; cada projeto só soma um acréscimo, por hora ou por mês. Depois que o cliente tem projetos o modo não muda. O período do cliente por hora fecha uma vez por mês, no dia de fechamento, ou a cada 14 dias (o bi-weekly dos EUA), contados a partir do último fechamento que ele já pagou. No contrato mensal dá para informar as horas estimadas por mês: o Início, os detalhes do cliente, a visão geral do projeto e o A receber mostram as horas do período do contrato contra elas, só para acompanhar."
       home: "O Início mostra as horas, a receita (o dinheiro que entrou) e a receita projetada (o que se espera receber, pago ou não), por cliente."
     integrations:
       title: Integrações com GitHub, GitLab e Trello
@@ -1195,6 +1197,11 @@ customer:
     contract_start: Início do contrato
     contract_end: Fim do contrato
     contract_end_hint: Sem data, o contrato segue por tempo indeterminado.
+    estimated_hours: Horas estimadas por mês
+    estimated_hours_hint: "Quanto você espera dedicar a este cliente em cada período do contrato, somando todos os projetos dele. Só para acompanhar: não muda a cobrança."
+    estimated_hours_fact: Horas estimadas
+    estimated_hours_value: "{{.hours}}h por mês"
+    dedication_fact: No período atual
     cycle: Ciclo do período
     cycle_monthly: Mensal, no dia de fechamento
     cycle_biweekly: A cada 14 dias (bi-weekly)
@@ -1234,6 +1241,17 @@ customer:
       other: "{{.count}} dias depois"
     project_rate_monthly: "Não se aplica: cobrança mensal"
     option_label: "{{.name}} · {{.mode}}"
+# As horas de um período do contrato mensal contra a estimativa do cliente (Decisão 26). O espaço inquebrável (\u00a0)
+# segura as horas e o período junto do que vem antes: nada de "0h" sozinho na linha de baixo.
+dedication:
+  of: "{{.done}} de {{.goal}}"
+  percent: "{{.percent}}%"
+  period: "Período\u00a0{{.period}}"
+  estimated_line: "{{.done}} de {{.goal}} estimadas"
+  project_line: "{{.name}}:\u00a0{{.hours}}"
+  this_project: "Este projeto: {{.hours}}"
+  card_title: Estimativa do cliente
+  card_hint: "As horas de todos os projetos de {{.customer}} no período do contrato, contra as horas estimadas por mês."
 project:
   head:
     projects: Projetos
@@ -2018,6 +2036,7 @@ errors:
     invalid_hourly_rate: "o valor por hora deve ficar entre 10,00 e 1.000.000,00"
     invalid_monthly_fee: "a mensalidade deve ficar entre 0,01 e 1.000.000,00"
     invalid_contract_end: "o fim do contrato deve ser depois do início"
+    invalid_estimated_hours: "as horas estimadas por mês devem ficar entre 1 e 744"
     invalid_closing_day: "o dia de fechamento deve ficar entre 1 e 31"
     invalid_payment_days: "o prazo de pagamento deve ficar entre 0 e 365 dias"
     invalid_late_fee: "a multa deve ficar entre 0% e 100%"
@@ -2276,6 +2295,7 @@ fields:
   hourly_rate_cents: "o valor por hora"
   bill_extra_cents: "o acréscimo"
   monthly_fee_cents: "a mensalidade"
+  estimated_monthly_hours: "as horas estimadas por mês"
   contract_start: "o início do contrato"
   contract_end: "o fim do contrato"
   billing_cycle: "o ciclo do período"

@@ -24,6 +24,21 @@
     </p>
   </template>
 
+  {{/* O cliente com contrato mensal e estimativa de horas (Decisão 26): as horas do período do contrato em andamento, em
+       todos os projetos do cliente, contra a estimativa, e as deste projeto. É da cobrança, como o cliente. */}}
+  {{if .Can "billing.view"}}
+  <template x-if="data && data.dedication">
+    <section class="card">
+      <div class="card-head"><h2>{{template "icon" "business-time"}} {{.T "dedication.card_title"}}</h2></div>
+      <p class="muted small" x-text="$t('dedication.card_hint', { customer: data.project.customer ? data.project.customer.name : '' })"></p>
+      <div class="dedication-wide">
+        {{template "dedication" (dict "Expr" "data.dedication")}}
+        <div class="muted small nowrap" x-show="data.dedication.projects.length > 1" x-text="$t('dedication.this_project', { hours: WTT.fmt.hoursShort(data.dedication.project_seconds) || '0h' })"></div>
+      </div>
+    </section>
+  </template>
+  {{end}}
+
   <template x-if="data">
     <div class="grid-2 items-stretch">
       <section class="card">

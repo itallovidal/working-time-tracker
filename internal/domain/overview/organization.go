@@ -134,7 +134,7 @@ func (s *Service) Organization(orgID, viewerID string) (*OrgOverview, error) {
 		{&o.Periods.AllTime, time.Time{}, func(p *OrgPersonTotal) *float64 { return &p.TotalSeconds }},
 	}
 	// O dinheiro e a contagem de sessões são por sessão; o tempo conta uma vez só o que a mesma pessoa trabalhou ao mesmo
-	// tempo em dois projetos (Decisão 26), e o de pessoas diferentes soma. Por isso as sessões vão por pessoa.
+	// tempo em dois projetos (Decisão 27), e o de pessoas diferentes soma. Por isso as sessões vão por pessoa.
 	sessionsOf := map[uuid.UUID][]work_session.WorkSession{}
 	for i := range sessions {
 		sess := &sessions[i]

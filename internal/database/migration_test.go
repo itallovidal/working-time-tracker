@@ -275,7 +275,7 @@ func TestMigrate_OneOpenSessionPerProjectIndex(t *testing.T) {
 }
 
 // O índice parcial é a garantia final contra corrida no clock-in: mesmo gravando direto no banco, sem passar pelo
-// service, a segunda sessão aberta da pessoa no mesmo projeto é rejeitada. Em outro projeto, ela abre (Decisão 26).
+// service, a segunda sessão aberta da pessoa no mesmo projeto é rejeitada. Em outro projeto, ela abre (Decisão 27).
 func TestMigrate_DatabaseRejectsSecondOpenSessionInTheProject(t *testing.T) {
 	testutil.Truncate(t, testDB)
 	ctx := context.Background()

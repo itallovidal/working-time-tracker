@@ -17,6 +17,7 @@ import (
 	"working-time-tracker/internal/database"
 	"working-time-tracker/internal/domain/customer"
 	"working-time-tracker/internal/domain/payment"
+	"working-time-tracker/internal/domain/work_session"
 	"working-time-tracker/internal/validate"
 )
 
@@ -90,27 +91,33 @@ func (s *Service) Proposals(orgID string, includeOpen bool) ([]Proposal, error) 
 	if err != nil {
 		return nil, err
 	}
-	return s.proposalsOf(e, customers, doneOf(rows), includeOpen)
+	sessions, err := s.sessionsOf(e, customers)
+	if err != nil {
+		return nil, err
+	}
+	return proposalsOf(e, customers, sessions, doneOf(rows), includeOpen), nil
 }
 
-// proposalsOf propõe os períodos dos clientes, que o chamador já leu, descontando os confirmados (done).
-func (s *Service) proposalsOf(e env, customers []*ent.Customer, done map[string]bool, includeOpen bool) ([]Proposal, error) {
+// sessionsOf lê as sessões dos clientes que se cobram (por hora ou mensal), agrupadas por cliente.
+func (s *Service) sessionsOf(e env, customers []*ent.Customer) (map[uuid.UUID][]work_session.WorkSession, error) {
 	var billable []uuid.UUID
 	for _, c := range customers {
 		if c.BillingMode == KindHourly || c.BillingMode == KindMonthly {
 			billable = append(billable, c.ID)
 		}
 	}
-	sessions, err := s.deps.Store.SessionsByCustomer(e.id, billable)
-	if err != nil {
-		return nil, err
-	}
+	return s.deps.Store.SessionsByCustomer(e.id, billable)
+}
+
+// proposalsOf propõe os períodos dos clientes, com as sessões deles, que o chamador já leu, descontando os confirmados
+// (done).
+func proposalsOf(e env, customers []*ent.Customer, sessions map[uuid.UUID][]work_session.WorkSession, done map[string]bool, includeOpen bool) []Proposal {
 	out := []Proposal{}
 	for _, c := range customers {
 		out = append(out, termsOf(c, e.loc).proposals(sessions[c.ID], done, e.now, includeOpen)...)
 	}
 	sortProposals(out)
-	return out, nil
+	return out
 }
 
 // doneOf junta os períodos que já têm recebível, por cliente.
@@ -190,6 +197,21 @@ func lateOn(e env, due string) (bool, int) {
 	return false, 0
 }
 
+// dedicationOfDue é a dedicação do período de uma conta mensal em andamento, com as horas ao vivo: o recebível ajustado
+// ou recebido adiantado guarda as horas de quando foi gravado, e a dedicação mostra as de agora. Nula fora do mensal,
+// sem estimativa, ou quando as datas da conta não são as de um período do ciclo do cliente.
+func dedicationOfDue(e env, c *ent.Customer, sessions map[uuid.UUID][]work_session.WorkSession, d Due) *Dedication {
+	if c == nil || d.Kind != KindMonthly || !tracked(c) {
+		return nil
+	}
+	t := termsOf(c, e.loc)
+	p, ok := t.cycle.exact(d.PeriodStart, d.PeriodEnd)
+	if !ok {
+		return nil
+	}
+	return t.dedication(sessions[c.ID], p, e.now)
+}
+
 // dueOfProposal é o período calculado e já fechado na lista A receber: nada gravado, o valor é o calculado.
 func dueOfProposal(e env, p Proposal) Due {
 	d := Due{
@@ -228,9 +250,14 @@ func (s *Service) Summary(orgID string) (*Summary, error) {
 	if err != nil {
 		return nil, err
 	}
-	proposals, err := s.proposalsOf(e, customers, doneOf(rows), true)
+	sessions, err := s.sessionsOf(e, customers)
 	if err != nil {
 		return nil, err
+	}
+	proposals := proposalsOf(e, customers, sessions, doneOf(rows), true)
+	byID := make(map[uuid.UUID]*ent.Customer, len(customers))
+	for _, c := range customers {
+		byID[c.ID] = c
 	}
 	out := &Summary{
 		GeneratedAt: e.now, Timezone: e.org.Timezone, Currency: e.org.Currency, Today: e.today,
@@ -240,6 +267,7 @@ func (s *Service) Summary(orgID string) (*Summary, error) {
 	// para o gravado (o mês ajustado adiantado), que só passa para A receber quando o período fecha.
 	place := func(d Due) {
 		if e.today <= d.PeriodEnd {
+			d.Dedication = dedicationOfDue(e, byID[d.Customer.ID], sessions, d)
 			out.InProgress = append(out.InProgress, d)
 			out.Totals.InProgressCount++
 			out.Totals.InProgressCents += d.AmountCents

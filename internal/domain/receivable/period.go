@@ -124,7 +124,7 @@ func validDay(v string) bool {
 // sumWithin soma o que as sessões têm em [from, to): o tempo e o valor cobrado. O valor é por sessão: cada uma é
 // cortada no intervalo e arredondada ao centavo pelo valor cobrado congelado nela (o do projeto dela), como em payment
 // e overview, então a soma bate com as linhas. O tempo conta uma vez só o que a mesma pessoa trabalhou ao mesmo tempo
-// em dois projetos do cliente (Decisão 26). A sessão aberta conta até now; a sem valor cobrado conta o tempo e nenhum
+// em dois projetos do cliente (Decisão 27). A sessão aberta conta até now; a sem valor cobrado conta o tempo e nenhum
 // centavo.
 func sumWithin(sessions []work_session.WorkSession, from, to, now time.Time) (seconds float64, cents int) {
 	for i := range sessions {

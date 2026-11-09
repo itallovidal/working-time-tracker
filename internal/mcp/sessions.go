@@ -17,7 +17,7 @@ import (
 
 // As ferramentas do ponto. O ponto é sempre o da pessoa do token, e as sessões são sempre as abertas dela: não há como
 // bater o ponto de outra pessoa nem mexer na sessão de alguém. As regras são do work_session: uma sessão aberta por
-// pessoa em cada projeto (Decisão 26), valor por hora no projeto, a tarefa de outro projeto não entra na sessão deste,
+// pessoa em cada projeto (Decisão 27), valor por hora no projeto, a tarefa de outro projeto não entra na sessão deste,
 // a última tarefa ativa não sai. As ferramentas que mexem numa tarefa usam a sessão aberta do projeto dela.
 
 type switchInput struct {

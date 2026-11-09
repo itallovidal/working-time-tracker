@@ -272,7 +272,7 @@ func addTo(perProject map[uuid.UUID]*sum, projectID uuid.UUID, seconds float64, 
 
 // within soma o que as sessões têm em [from, to), no total e, com perProject, por projeto. O dinheiro é por sessão, pelo
 // valor do projeto dela; o tempo do total conta uma vez só o que a pessoa trabalhou ao mesmo tempo em dois projetos
-// (Decisão 26), e o de cada projeto é o tempo inteiro das sessões dele.
+// (Decisão 27), e o de cada projeto é o tempo inteiro das sessões dele.
 func within(sessions []work_session.WorkSession, from, to, now time.Time, owner bool, perProject map[uuid.UUID]*sum) sum {
 	var total sum
 	for i := range sessions {

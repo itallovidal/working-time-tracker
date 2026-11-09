@@ -353,7 +353,7 @@ func TestWorkingNow(t *testing.T) {
 	}
 }
 
-// Uma pessoa pode ter uma sessão aberta em cada projeto (Decisão 26). A Ana trabalhou no X das 4h às 1h atrás e no Y das
+// Uma pessoa pode ter uma sessão aberta em cada projeto (Decisão 27). A Ana trabalhou no X das 4h às 1h atrás e no Y das
 // 4h atrás até agora, ao mesmo tempo: a visão conta 4h para ela (e não 7), cada sessão com o valor do projeto dela. O
 // Bruno está com o ponto aberto nos dois projetos: trabalhando agora conta ele uma vez, com as tarefas dos dois.
 func TestOrganization_ParallelSessionsCountOnce(t *testing.T) {

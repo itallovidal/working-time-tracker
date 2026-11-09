@@ -9,7 +9,7 @@ import (
 	"working-time-tracker/internal/domain/work_session"
 )
 
-// A pessoa trabalha em dois projetos ao mesmo tempo (Decisão 26): o A das 12h às 15h a 20,00/h e o B das 12h às 16h a
+// A pessoa trabalha em dois projetos ao mesmo tempo (Decisão 27): o A das 12h às 15h a 20,00/h e o B das 12h às 16h a
 // 30,00/h. Ela recebe cada sessão pelo valor do projeto dela (3 × 20 + 4 × 30 = 180,00); as horas do período são 4,
 // não 7, e cada projeto fica com o tempo inteiro dele (3h e 4h).
 func TestWithin_ParallelProjectsCountTheHoursOnce(t *testing.T) {

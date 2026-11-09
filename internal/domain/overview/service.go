@@ -140,7 +140,30 @@ func (s *Service) Get(projectID string) (*Overview, error) {
 		})
 	}
 	o.addSessions(sessions, inProject, now)
+	if err := s.addDedication(o, p.OrganizationID.String(), billing); err != nil {
+		return nil, err
+	}
 	return o, nil
+}
+
+// addDedication põe na visão geral a dedicação do cliente do projeto, quando ele tem contrato mensal com estimativa
+// de horas: o período em andamento do contrato, em todos os projetos do cliente, e o tempo deste projeto nele.
+func (s *Service) addDedication(o *Overview, orgID string, billing *project.Billing) error {
+	if s.deps.Receivables == nil || billing.Customer == nil || billing.CustomerBillingMode == nil ||
+		*billing.CustomerBillingMode != customer.BillingMonthly {
+		return nil
+	}
+	d, err := s.deps.Receivables.Dedication(orgID, billing.Customer.ID.String())
+	if err != nil || d == nil {
+		return err
+	}
+	o.Dedication = &ProjectDedication{Dedication: *d}
+	for _, p := range d.Projects {
+		if p.ID == o.Project.ID {
+			o.Dedication.ProjectSeconds = p.Seconds
+		}
+	}
+	return nil
 }
 
 // addSessions soma as sessões do projeto: o tempo, o que ele custou e rendeu, e

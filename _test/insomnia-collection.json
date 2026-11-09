@@ -1846,7 +1846,7 @@
       ],
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"name\": \"Clínica Aurora\",\n  \"billing_mode\": \"monthly\",\n  \"monthly_fee_cents\": 630000,\n  \"contract_start\": \"2026-09-01\",\n  \"payment_days\": 5,\n  \"late_fee_bp\": 200,\n  \"late_interest_bp_month\": 100,\n  \"grace_days\": 3\n}"
+        "text": "{\n  \"name\": \"Clínica Aurora\",\n  \"billing_mode\": \"monthly\",\n  \"monthly_fee_cents\": 630000,\n  \"estimated_monthly_hours\": 32,\n  \"contract_start\": \"2026-09-01\",\n  \"payment_days\": 5,\n  \"late_fee_bp\": 200,\n  \"late_interest_bp_month\": 100,\n  \"grace_days\": 3\n}"
       }
     },
     {

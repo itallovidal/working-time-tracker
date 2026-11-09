@@ -1,0 +1,11 @@
+{{/* dedication são as horas de um período do contrato mensal contra a estimativa do cliente (Decisão 26): "18h de 40h ·
+     45%", a barrinha (cheia e no tom de aviso quando passa da estimativa) e, embaixo, o período, só quando ele não é o
+     mês do calendário. É a mesma peça no painel solo e na visão geral do projeto; as contas são de WTT.dedication.
+     Recebe um dict:
+       Expr  a expressão do Alpine com a dedicação como vem da API (row.dedication, overview.dedication...)
+     Quem inclui garante que a dedicação existe (x-if), porque a partial não confere. */}}
+{{define "dedication"}}<div class="dedication">
+  <div class="nowrap"><span x-text="WTT.dedication({{.Expr}}).text"></span> · <span class="muted" x-text="WTT.dedication({{.Expr}}).percent"></span></div>
+  <div class="meter meter-thin" :class="WTT.dedication({{.Expr}}).over && 'meter-over'" role="presentation"><span :style="'width: ' + WTT.dedication({{.Expr}}).pct + '%'"></span></div>
+  <div class="muted small nowrap" x-show="WTT.dedication({{.Expr}}).period" x-text="WTT.dedication({{.Expr}}).period"></div>
+</div>{{end}}

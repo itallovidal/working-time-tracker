@@ -109,7 +109,27 @@ func TestProjectForm_BillingComesFromTheCustomer(t *testing.T) {
 func TestCustomerModal_KeepsTheContractFields(t *testing.T) {
 	html := render(t, "org_customers", Data{Me: identity("admin", true, true), Section: "customers", Script: "org"})
 	mustHave(t, "solo customer modal", html, `id="customer-billing-mode"`, `id="customer-monthly-fee"`, `id="customer-contract-end"`,
-		`id="customer-payment-days"`, `id="customer-grace-days"`, `x-model="draft.monthly_fee"`)
+		`id="customer-payment-days"`, `id="customer-grace-days"`, `x-model="draft.monthly_fee"`,
+		`id="customer-estimated-hours"`, `max="744"`, `x-model="draft.estimated_hours"`, "Horas estimadas por mês")
+}
+
+// A dedicação aos contratos mensais com estimativa de horas (Decisão 26) é do modo solo: a coluna Estimativa da tela
+// inicial e o cartão da visão geral do projeto (este, só para quem vê a cobrança). A equipe não tem cliente mensal.
+func TestDedication_OnlyInSoloScreens(t *testing.T) {
+	solo, team := pair(t, "org_home", func(s bool) Data {
+		return Data{Me: identity("admin", true, s), Section: "home", Script: "org"}
+	})
+	mustHave(t, "solo home", solo, `x-show="soloEstimates()"`, "Estimativa", `WTT.dedication(row.dedication)`)
+	mustNotHave(t, "team home", team, `soloEstimates()`, `WTT.dedication(`)
+
+	project := &Crumb{ID: uuid.NewString(), Name: "Site"}
+	// render dá a cada um o acesso de base: o dono vê a cobrança; o admin que não é dono, não.
+	overview := func(owner bool) string {
+		return render(t, "project_overview", Data{Me: identity("admin", owner, true), Project: project, Tab: "overview", Script: "project"})
+	}
+	mustHave(t, "solo overview of the owner", overview(true), `x-if="data && data.dedication"`, "Estimativa do cliente",
+		`WTT.dedication(data.dedication)`)
+	mustNotHave(t, "overview without billing.view", overview(false), `data.dedication`)
 }
 
 // A tarefa nova do solo é sua: o modal não pergunta o responsável. Na página da tarefa ficam "Comigo" e "Sem

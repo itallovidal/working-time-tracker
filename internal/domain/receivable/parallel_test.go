@@ -9,7 +9,7 @@ import (
 	"working-time-tracker/internal/domain/work_session"
 )
 
-// Duas sessões da mesma pessoa ao mesmo tempo, em dois projetos do mesmo cliente (Decisão 26): o projeto A das 12h às
+// Duas sessões da mesma pessoa ao mesmo tempo, em dois projetos do mesmo cliente (Decisão 27): o projeto A das 12h às
 // 15h a 20,00/h e o B das 12h às 16h a 30,00/h. O cliente paga cada sessão pelo valor do projeto dela (3 × 20 + 4 ×
 // 30 = 180,00), e as horas do cliente são 4, não 7. Outra pessoa na mesma hora soma as horas dela.
 func TestSumWithin_ParallelProjectsCountTheHoursOnce(t *testing.T) {

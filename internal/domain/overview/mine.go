@@ -141,7 +141,7 @@ func (s *Service) Mine(orgID, personID, tz string, onlyMyProjects bool) (*Mine, 
 	}
 
 	// As horas do dia, da semana e de hoje contam uma vez só o que a pessoa trabalhou ao mesmo tempo em dois projetos
-	// (Decisão 26); as de cada projeto são o tempo inteiro das sessões dele.
+	// (Decisão 27); as de cada projeto são o tempo inteiro das sessões dele.
 	todayStart := startOfDay(now, loc)
 	for i := range m.Hours.Days {
 		from := weekStart.AddDate(0, 0, i)

@@ -122,6 +122,10 @@ type Due struct {
 	// EffectiveRateCents é AmountCents dividido pelas horas; nulo sem horas.
 	EffectiveRateCents *int `json:"effective_rate_cents"`
 	BelowMinRate       bool `json:"below_min_rate"`
+	// Dedication é, na lista Em andamento, as horas do período do contrato mensal contra a estimativa do cliente, ao
+	// vivo mesmo no recebível gravado adiantado (Seconds congela na gravação). Nula fora do mensal, sem estimativa e
+	// na lista A receber.
+	Dedication *Dedication `json:"dedication"`
 }
 
 // Totals são os cartões da página, em centavos da moeda da organização.

@@ -65,7 +65,7 @@ func TestSessionTasks_IntervalErrorsSayTheField(t *testing.T) {
 }
 
 // Parar o ponto pela rota de um projeto fecha só a sessão daquele projeto: pela rota de outro, sem sessão aberta lá, é
-// not_open, e a sessão do primeiro continua aberta (Decisão 26).
+// not_open, e a sessão do primeiro continua aberta (Decisão 27).
 func TestClockOut_ClosesOnlyTheSessionOfTheRouteProject(t *testing.T) {
 	orgSvc, personSvc, projSvc, _, _, taskSvc, wsSvc := setupDeps(t)
 	org, _ := orgSvc.Create("Org")

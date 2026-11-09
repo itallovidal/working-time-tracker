@@ -275,6 +275,10 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 .meter > span { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
 /* A barrinha do período em andamento (A receber), entre as datas e "dia 4 de 30". */
 .meter-thin { height: 4px; margin: 5px 0 3px; }
+/* A dedicação que passou da estimativa de horas do contrato (Decisão 26): a barra cheia, no tom de aviso. */
+.meter-over > span { background: var(--warn); }
+.dedication { min-width: 8.5rem; }
+.dedication-wide { max-width: 32rem; }
 .grid-aside { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 18px; align-items: start; }
 @media (max-width: 860px) { .grid-2, .grid-aside { grid-template-columns: 1fr; } }
 /* A página da tarefa: duas colunas de cartões, e em tela estreita uma coluna só, na ordem

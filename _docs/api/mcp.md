@@ -184,7 +184,7 @@ tela.
 | `clock_out` | Encerra o ponto de um projeto. `project_id` só é preciso com sessões abertas em mais de um projeto |
 
 - **O ponto é sempre o da pessoa.** Nenhuma ferramenta recebe outra pessoa, e as da sessão agem nas sessões abertas
-  dela, uma por projeto (Decisão 26): as que recebem uma tarefa usam a sessão do projeto da tarefa. Por isso o MCP não precisa das checagens de quem registra o ponto de outro (`personFor`) nem de quem mexe na
+  dela, uma por projeto (Decisão 27): as que recebem uma tarefa usam a sessão do projeto da tarefa. Por isso o MCP não precisa das checagens de quem registra o ponto de outro (`personFor`) nem de quem mexe na
   sessão (`editable`). Mas, como as rotas da sessão na API, as que mudam a sessão (`add_task_to_session`,
   `stop_session_task`, `remove_session_task`, `clock_out`) conferem o projeto dela: quem perdeu o acesso ao projeto
   com o ponto aberto recebe `project.not_found`, e só um admin encerra aquela sessão. `get_active_session` e `whoami`

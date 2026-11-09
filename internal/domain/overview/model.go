@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 
 	"working-time-tracker/internal/domain/project"
+	"working-time-tracker/internal/domain/receivable"
 )
 
 type Overview struct {
@@ -23,9 +24,20 @@ type Overview struct {
 	// ByPerson traz só quem tem sessão no projeto, de quem mais trabalhou para
 	// quem menos. A soma das linhas é igual aos totais de Time e Money.
 	ByPerson []PersonTotal `json:"by_person"`
+	// Dedication é, no projeto de um cliente com contrato mensal e estimativa de horas, as horas do período do
+	// contrato em andamento (em todos os projetos do cliente) contra a estimativa, com as deste projeto (Decisão 26).
+	// Nula nos outros projetos e para quem não vê a cobrança.
+	Dedication *ProjectDedication `json:"dedication"`
 	// GeneratedAt é o instante da conta: as sessões abertas, a idade do projeto e
 	// as janelas de 7 e 30 dias foram medidas até aqui.
 	GeneratedAt time.Time `json:"generated_at"`
+}
+
+// ProjectDedication é a dedicação do cliente vista de um dos projetos dele: a do cliente inteiro e ProjectSeconds, o
+// tempo deste projeto no mesmo período.
+type ProjectDedication struct {
+	receivable.Dedication
+	ProjectSeconds float64 `json:"project_seconds"`
 }
 
 type Project struct {
@@ -127,10 +139,11 @@ type PersonTotal struct {
 	BillAmountCents *int    `json:"bill_amount_cents"`
 }
 
-// HideBilling tira da visão geral do projeto o que é cobrança: o cliente e o valor cobrado, a receita e a margem,
-// do projeto e de cada pessoa. O custo fica. É o que quem administra o projeto sem ver o faturamento recebe.
+// HideBilling tira da visão geral do projeto o que é cobrança: o cliente e o valor cobrado, a dedicação ao contrato,
+// a receita e a margem, do projeto e de cada pessoa. O custo fica. É o que quem administra o projeto sem ver o faturamento recebe.
 func (o *Overview) HideBilling() {
 	o.Project.Customer, o.Project.BillRateCents = nil, nil
+	o.Dedication = nil
 	o.Money.hideBilling()
 	for i := range o.ByPerson {
 		o.ByPerson[i].BillAmountCents = nil

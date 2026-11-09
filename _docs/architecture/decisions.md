@@ -24,7 +24,7 @@ público, atendido pelo modo solo (Decisão 20).
 
 **Objetivos:**
 - Uma estrutura organizacional: organização → projetos → times → pessoas.
-- Clock-in e clock-out como a peça central do registro de tempo, com uma sessão aberta por pessoa (desde a Decisão 26,
+- Clock-in e clock-out como a peça central do registro de tempo, com uma sessão aberta por pessoa (desde a Decisão 27,
   uma por pessoa em cada projeto).
 - Tarefas dentro dos projetos, com prazo padrão de uma semana e um responsável só.
 - Integrações genéricas com plataformas externas, configuradas por projeto, sem prender o sistema a uma plataforma.
@@ -91,7 +91,7 @@ tabela de junção `TeamMembership`. Vieram depois `Customer` (o cliente; chama-
   campo: nulo é "o projeto não tem". O horário de uma weekly ou de uma reunião não existe sem o dia, e a reunião com o
   cliente só existe num projeto com cliente.
 
-Um índice único parcial garante uma sessão aberta por pessoa (Decisão 3), hoje uma em cada projeto (Decisão 26).
+Um índice único parcial garante uma sessão aberta por pessoa (Decisão 3), hoje uma em cada projeto (Decisão 27).
 
 **Motivo:** o modelo segue a hierarquia da organização. Os vínculos com itens externos ficam em `issue_syncs` (no
 máximo um por tarefa e integração, então uma tarefa pode estar numa issue e num cartão ao mesmo tempo). O JSON de
@@ -123,7 +123,7 @@ máximo um por tarefa e integração, então uma tarefa pode estar numa issue e 
 
 ### Decisão 3: Uma sessão aberta por pessoa — índice único parcial
 
-> **Substituída pela [Decisão 26](#decisão-26-uma-sessão-aberta-por-projeto-e-as-horas-sobrepostas-contadas-uma-vez):**
+> **Substituída pela [Decisão 27](#decisão-27-uma-sessão-aberta-por-projeto-e-as-horas-sobrepostas-contadas-uma-vez):**
 > a regra passou a ser uma sessão aberta por pessoa em cada projeto. A escolha do índice parcial continua.
 
 **Escolha:** a regra "uma sessão aberta por pessoa" é garantida por um índice único parcial do PostgreSQL:
@@ -1001,7 +1001,42 @@ com a pessoa entrando pelo login de sempre. O token pessoal continua igual.
 `PUBLIC_URL` derruba as conexões (o recurso muda). O que o Claude faz é o mesmo do token pessoal (Decisão 22). O como
 usar está em [api/mcp.md](../api/mcp.md), e a segurança em [security.md](security.md#oauth-do-mcp).
 
-### Decisão 26: Uma sessão aberta por projeto, e as horas sobrepostas contadas uma vez
+### Decisão 26: Horas estimadas por mês no contrato mensal, só para acompanhar
+
+**Contexto:** no cliente com contrato mensal, a mensalidade não depende das horas, mas o dono continua batendo ponto
+nele (Decisão 20). Usando o app, ele sentiu falta de saber se está dedicando pouco ou muito ao contrato no mês: as horas
+apareciam, mas sem nada para comparar.
+
+**Escolha:** uma estimativa de horas por mês no cliente, e as horas do período do contrato contra ela.
+
+- **No cliente, junto da mensalidade:** `customers.estimated_monthly_hours`, opcional, horas inteiras de 1 a 744 (as de
+  um mês de 31 dias). É só do mensal: o por hora a recusa (`customer.field_monthly_only`), e a troca de modo a apaga com
+  o resto do contrato. Ela soma as horas de todos os projetos do cliente, porque o contrato é do cliente.
+- **O período é o do contrato,** o mesmo que a mensalidade paga: fecha no dia de fechamento do cliente, e só conta
+  enquanto o contrato cobre o período (`contractPeriods`). Antes do início e depois do fim não há dedicação.
+- **Só "18h de 40h" e a porcentagem.** Não há ritmo (o esperado até hoje), por escolha do dono. Passar de 100% deixa a
+  barra cheia, no tom de aviso.
+- **A conta é do domínio dos recebíveis** (`receivable.Dedication`), que já tem o período do contrato e as sessões por
+  cliente. Ela aparece em quatro lugares: no painel solo, numa coluna Estimativa (o período em andamento em "Este mês",
+  o anterior em "Mês passado", nada em "Ano"); nos detalhes do cliente (`GET /solo/dedication`); na visão geral do
+  projeto (`dedication`, com as horas do projeto, para quem vê a cobrança); e na lista Em andamento do A receber, com as
+  horas ao vivo mesmo no mês ajustado adiantado.
+- **Nada muda na cobrança:** a proposta, o recebível e o valor por hora efetivo continuam iguais.
+
+**Alternativas descartadas:**
+- **A estimativa em cada projeto:** separaria a estimativa da mensalidade, que mora no cliente (Decisão 21).
+- **O mês do calendário:** bateria com a coluna Horas do painel, mas um cliente que fecha no dia 25 seria medido num mês
+  que o contrato não paga. Com o fechamento no último dia (o padrão), os dois dão o mesmo resultado.
+- **A franquia de horas** (Decisão 20): a estimativa não cobra excedente nem muda valor nenhum. A franquia continua para
+  depois.
+- **Guardar a estimativa em cada período:** mudar a estimativa muda a comparação do período anterior também. Para
+  acompanhar o mês, um número só basta.
+
+**Consequências:** o painel solo pode mostrar, na mesma linha, horas diferentes: a coluna Horas é do mês do calendário,
+e a Estimativa é do período do contrato, que aparece embaixo quando é diferente. As regras de hoje estão em
+[money.md](../product/money.md#horas-estimadas-do-contrato-mensal).
+
+### Decisão 27: Uma sessão aberta por projeto, e as horas sobrepostas contadas uma vez
 
 **Contexto:** a Decisão 3 deixava cada pessoa com uma sessão aberta em toda a organização. Quem trabalha em dois
 projetos ao mesmo tempo (o dono, um freelancer com dois clientes, alguém que espera um build num projeto e mexe no
@@ -1017,8 +1052,9 @@ outro) precisava parar um ponto para abrir o outro, e os botões de iniciar fica
 - **As horas de cada projeto são o tempo inteiro das sessões dele** (A = 3h, B = 4h).
 - **Todo total de horas que junta projetos conta uma vez o tempo sobreposto da mesma pessoa** (no exemplo, 4h): as
   horas do cliente no A receber (e o valor por hora efetivo do contrato mensal), o período de pagamento e a meta, o
-  dia e a semana do Início, as horas por pessoa e as janelas da visão da organização, e o Início do modo solo, por
-  cliente e no total. Vale também entre clientes diferentes; as horas de pessoas diferentes somam. A conta é uma só,
+  dia e a semana do Início, as horas por pessoa e as janelas da visão da organização, o Início do modo solo, por
+  cliente e no total, e as horas do período na estimativa do contrato mensal (Decisão 26), cujos projetos ficam com o
+  tempo inteiro. Vale também entre clientes diferentes; as horas de pessoas diferentes somam. A conta é uma só,
   `work_session.MergedSeconds`, que junta os intervalos de cada pessoa antes de somar.
 - **Trabalhando agora conta a pessoa uma vez,** com as tarefas de todos os projetos em que ela está com o ponto aberto.
 - **A tela mostra uma pilha de cartões** no canto, um por sessão aberta, com o nome do projeto. Dentro de um projeto

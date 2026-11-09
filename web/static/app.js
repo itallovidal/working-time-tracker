@@ -757,7 +757,30 @@
     },
   };
 
-  window.WTT = { can, t, lang, priorityClass, statusClass, hasDeadlineDate, deadlineInfo, errorText, api, ApiError, form, rules, limits, fmt, payments, billing, toCents, copyText, notInformed, weekdays, priorities, taskStatuses, markdown, routine, sprintOptions, sprintChoices, workModes, currencies, countries, boot: window.BOOT || {} };
+  // dedication é a dedicação a um contrato mensal com estimativa de horas (Decisão 26), como vem da API, pronta para a
+  // tela, igual nos quatro lugares que a mostram (o painel solo, os detalhes do cliente, a visão geral do projeto e o A
+  // receber): "18h de 40h", "45%", a parte da barra (até 100) e se passou da estimativa. period é o período em datas
+  // curtas, "26/10 – 25/11", e fica vazio quando o período é o mês do calendário (do dia 1 ao último dia), que a tela já
+  // diz. Nulo sem dedicação.
+  const dedication = (d) => {
+    if (!d) return null;
+    const short = { day: '2-digit', month: '2-digit' };
+    const [y, m] = d.period_start.split('-').map(Number);
+    const lastDay = new Date(y, m, 0).getDate();
+    const calendar = d.period_start.endsWith('-01') && d.period_end === d.period_start.slice(0, 8) + String(lastDay).padStart(2, '0');
+    return {
+      done: fmt.hoursShort(d.seconds) || '0h',
+      goal: d.estimated_hours + 'h',
+      text: t('dedication.of', { done: fmt.hoursShort(d.seconds) || '0h', goal: d.estimated_hours + 'h' }),
+      percent: t('dedication.percent', { percent: d.percent }),
+      pct: Math.min(100, Math.max(0, d.percent)),
+      over: d.percent > 100,
+      // Com espaços inquebráveis, o período nunca parte no meio.
+      period: calendar ? '' : fmt.day(d.period_start, short) + '\u00a0–\u00a0' + fmt.day(d.period_end, short),
+    };
+  };
+
+  window.WTT = { can, t, lang, priorityClass, statusClass, hasDeadlineDate, deadlineInfo, errorText, api, ApiError, form, rules, limits, fmt, payments, billing, dedication, toCents, copyText, notInformed, weekdays, priorities, taskStatuses, markdown, routine, sprintOptions, sprintChoices, workModes, currencies, countries, boot: window.BOOT || {} };
 
   // Onde flash() deixa a mensagem para a página seguinte.
   const flashKey = 'wtt:flash';
@@ -855,7 +878,7 @@
       },
     });
 
-    // clock guarda as sessões de trabalho abertas da pessoa logada, uma por projeto no máximo (Decisão 26), e um
+    // clock guarda as sessões de trabalho abertas da pessoa logada, uma por projeto no máximo (Decisão 27), e um
     // relógio que avança a cada segundo. O balão das sessões e as telas de ponto leem daqui. Cada sessão tem tarefas
     // (tasks), cada uma com o intervalo em que esteve nela; as que estão em andamento são as que ainda não têm fim
     // (until_at).

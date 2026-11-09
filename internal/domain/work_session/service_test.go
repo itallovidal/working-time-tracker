@@ -292,7 +292,7 @@ func TestService_OverlappingSessionRejected(t *testing.T) {
 	}
 }
 
-// Uma sessão aberta por projeto (Decisão 26): a pessoa abre o ponto em dois projetos ao mesmo tempo, as duas sessões
+// Uma sessão aberta por projeto (Decisão 27): a pessoa abre o ponto em dois projetos ao mesmo tempo, as duas sessões
 // aparecem em Open, e fechar uma deixa a outra correndo.
 func TestService_OneOpenSessionPerProject(t *testing.T) {
 	orgSvc, personSvc, projSvc, teamSvc, memberSvc, taskSvc, wsSvc := setupDeps(t)

@@ -269,7 +269,7 @@ document.addEventListener('alpine:init', () => {
       return clock().isRunning(t.id);
     },
     // here é a sessão aberta da pessoa neste projeto, ou null. As de outros projetos correm ao lado e não mudam
-    // nada aqui (Decisão 26).
+    // nada aqui (Decisão 27).
     here() {
       return clock().sessionFor(project.id);
     },
