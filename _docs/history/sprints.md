@@ -1288,6 +1288,13 @@ Branch `feat/mcp-connector-screen` (2026-11-09), from `main`, after the owner as
 - [X] S121.2 The "?" next to the title opens a modal with what the assistant can do, the OAuth steps (claude.ai, Desktop and mobile, with the connector address and its Copiar right in that step, after the owner asked to take it out of the section; Claude Code with /mcp; only Claude's apps for now; 30 days without use), the personal token and the password note. The section's paragraphs and notes moved there
 - [X] S121.3 Texts: the `profile.claude` keys become `profile.mcp` in both languages, the token modal is "Novo token", and the help's Profile paragraph describes the new section; docs `api/mcp.md`, `frontend/routes.md`, `architecture/security.md`, Decision 25
 
+### Sprint 122: Session Tasks as Rows
+
+Branch `feat/session-tasks-rows` (2026-11-09), from `main`, after the owner saw a long task name push the time onto its own line in the side-by-side cards of the session modal and asked for one full-width card per task, one under the other, in a modal that scrolls.
+
+- [X] S122.1 Session modal, Tarefas da sessão (`session_modal.gohtml`, `.session-task-list` in `app.css`): a list of full-width rows in place of the grid of cards. On the left the name (with Em andamento when it runs) and the interval bar under it; in the middle the time and the range, right-aligned in a column with a minimum width so bars and times line up from one row to the next; at the end Abrir tarefa and the edit pencil. A long name wraps inside its own column (`text-wrap: balance`) and the time stays on its first line
+- [X] S122.2 Below 520px of list width (container query) each row becomes three lines: the name with the time, the bar with the range, and the actions. The modal body already scrolls with the header fixed; checked with seven tasks and an 88-character name at 1280, 1024 and 375px, with no split words or lone last words
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open

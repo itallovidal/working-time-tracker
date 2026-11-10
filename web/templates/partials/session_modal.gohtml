@@ -8,7 +8,7 @@
   <div class="stack" x-show="$store.modal.name === 'session'">
     <template x-if="v.session && v.view === 'overview'">
       <div class="stack">
-        {{/* Três grupos, cada um com o nome na borda, como o modal de novo projeto: o resumo, as tarefas (um cartão
+        {{/* Três grupos, cada um com o nome na borda, como o modal de novo projeto: o resumo, as tarefas (uma linha
              por tarefa, com o caminho para ela) e, para quem pode mudar a sessão, o formulário de adicionar. */}}
         <fieldset class="form-group">
           <legend>{{.T "session.modal.summary"}}</legend>
@@ -45,24 +45,27 @@
           <legend>{{.T "session.modal.tasks"}}</legend>
           <p class="muted small">{{.T "session.modal.parallel_hint"}}</p>
           <p class="muted" x-show="v.session.tasks.length === 0">{{.T "session.modal.no_tasks"}}</p>
-          <div class="session-task-cards">
+          {{/* Uma tarefa por linha, de ponta a ponta: o nome e a barra à esquerda, o tempo e o intervalo numa coluna
+               à direita (alinhada de uma linha para outra) e as ações na ponta. Em largura estreita vira um cartão de
+               três linhas. O layout está em .session-task, no app.css. */}}
+          <ul class="session-task-list" x-show="v.session.tasks.length > 0">
             <template x-for="l in v.session.tasks" :key="l.id">
-              <article class="session-task">
-                <div class="session-task-head">
-                  <strong class="session-task-name" x-text="l.task.name"></strong>
+              <li class="session-task">
+                <div class="session-task-name">
+                  <strong x-text="l.task.name"></strong>
                   <span class="badge badge-ok" x-show="v.isRunning(l)">{{.T "time.running"}}</span>
-                  <span class="mono num session-task-time" x-text="WTT.fmt.clock($store.clock.linkElapsed(v.session, l))"></span>
                 </div>
-                <div class="timeline" aria-hidden="true"><span class="timeline-fill" :style="v.bar(l)"></span></div>
-                <div class="muted small" x-text="v.range(l)"></div>
+                <span class="mono num session-task-time" x-text="WTT.fmt.clock($store.clock.linkElapsed(v.session, l))"></span>
+                <div class="timeline session-task-bar" aria-hidden="true"><span class="timeline-fill" :style="v.bar(l)"></span></div>
+                <span class="muted small num session-task-range" x-text="v.range(l)"></span>
                 <div class="session-task-actions">
                   <a class="btn btn-secondary btn-sm" :href="'/tasks/' + l.task_id" :aria-label="$t('session.modal.open_task_label', { name: l.task.name })">{{template "icon" "arrow-up-right-from-square"}} {{.T "session.modal.open_task"}}</a>
                   <button type="button" class="btn btn-ghost btn-icon" x-show="v.canEdit"
                           aria-label="{{.T "session.modal.edit"}}" title="{{.T "session.modal.edit"}}" @click="v.edit(l)">{{template "icon" "pen"}}</button>
                 </div>
-              </article>
+              </li>
             </template>
-          </div>
+          </ul>
         </fieldset>
 
         <form class="stack" novalidate x-show="v.canEdit" @submit.prevent="v.add()">
