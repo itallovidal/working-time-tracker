@@ -1027,16 +1027,36 @@ td.actions { text-align: right; white-space: nowrap; }
 .session-facts dd { margin: 0; font-weight: 600; }
 .timeline { position: relative; height: 6px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--rule); overflow: hidden; }
 .timeline-fill { position: absolute; top: 0; bottom: 0; background: var(--accent); border-radius: 999px; }
-/* As tarefas da sessão no modal: um cartão simples por tarefa, com o tempo, a linha do intervalo e o caminho para ela. */
-.session-task-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
+/* As tarefas da sessão no modal: uma linha por tarefa, de ponta a ponta, uma embaixo da outra. O nome e a barra do
+   intervalo à esquerda; o tempo e o horário numa coluna à direita, com largura mínima para as barras e os tempos
+   ficarem alinhados de uma linha para a outra; as ações na ponta. O nome longo quebra dentro da própria coluna, sem
+   empurrar o tempo para outra linha. */
+.session-task-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; container-type: inline-size; }
 .session-task {
-  display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 12px 14px;
+  display: grid; align-items: center; gap: 6px 16px;
+  grid-template-columns: minmax(0, 1fr) minmax(6.5rem, auto) auto;
+  grid-template-areas: "name time actions" "bar range actions";
+  padding: 10px 12px 10px 14px;
   background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius);
 }
-.session-task-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
-.session-task-name { min-width: 0; overflow-wrap: anywhere; }
-.session-task-time { margin-left: auto; font-weight: 600; }
-.session-task-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 2px; }
+/* O tempo acompanha a primeira linha do nome (baseline), mesmo quando o nome quebra ou leva o selo embaixo. */
+.session-task-name { grid-area: name; align-self: baseline; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; min-width: 0; }
+.session-task-name strong { min-width: 0; overflow-wrap: anywhere; text-wrap: balance; }
+.session-task-time { grid-area: time; align-self: baseline; justify-self: end; font-weight: 600; white-space: nowrap; }
+.session-task-bar { grid-area: bar; }
+.session-task-range { grid-area: range; justify-self: end; white-space: nowrap; }
+.session-task-actions { grid-area: actions; display: flex; align-items: center; gap: 4px; }
+/* Estreito (celular): três linhas, o nome com o tempo, a barra com o horário e as ações embaixo. A coluna do meio
+   existe só para o horário (mais largo que o tempo) não tirar largura do nome: o nome vai até o tempo, e a barra até
+   o horário. */
+@container (max-width: 520px) {
+  .session-task {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas: "name name time" "bar range range" "actions actions actions";
+    gap: 8px 10px;
+  }
+  .session-task-actions { justify-content: space-between; }
+}
 /* As tarefas de uma sessão numa célula de tabela ou de lista: os nomes e o "+N" das outras. */
 .task-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; }
 /* Na tabela a célula tem largura mínima: em tela estreita a tabela rola na horizontal, em vez de espremer os nomes. */
