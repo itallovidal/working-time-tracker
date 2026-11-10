@@ -219,7 +219,8 @@ var managementTabViews = map[string]struct{ icon, label string }{
 
 // outsideManagement diz se a aba da Gestão de nome id mora na barra principal do projeto, junto do Início e das
 // Tarefas, em vez de dentro da Gestão. No modo solo a Visão geral é uma tela do dia a dia: a pessoa é a própria
-// gestora, e a Gestão fica com Integrações e Configurações. É a única regra que muda a barra entre os modos.
+// gestora, e a Gestão fica com Integrações e Configurações. A outra diferença da barra entre os modos fica em
+// ProjectTabs: no solo, Minhas tarefas e a Lista de tarefas são uma aba só, Tarefas (Decisão 28).
 func (d Data) outsideManagement(id string) bool {
 	return id == "overview" && d.Solo()
 }
@@ -250,9 +251,9 @@ func (d Data) managementTab(id string) ProjectTab {
 }
 
 // ProjectTabs é a barra de abas do projeto (partials/project_head). Dentro da Gestão: as abas dela que a pessoa abre e a
-// volta para o projeto. Fora: Início, Minhas tarefas, Tarefas, Colaboradores (fora do modo solo), as abas da Gestão
-// que moram fora (outsideManagement) e o botão Gestão. Uma aba da Gestão que mora fora mostra a barra de fora, com ela
-// marcada.
+// volta para o projeto. Fora: Início, Minhas tarefas, Lista de tarefas, Colaboradores (fora do modo solo), as abas da
+// Gestão que moram fora (outsideManagement) e o botão Gestão. No modo solo Minhas tarefas não existe: a aba das
+// tarefas, Tarefas, junta as duas (Decisão 28). Uma aba da Gestão que mora fora mostra a barra de fora, com ela marcada.
 func (d Data) ProjectTabs() []ProjectTab {
 	if d.Project == nil {
 		return nil
@@ -268,15 +269,26 @@ func (d Data) ProjectTabs() []ProjectTab {
 		return append(tabs, ProjectTab{ID: "back", Href: base + "/overview", Icon: "arrow-left", Label: "project.head.back", End: true})
 	}
 	current := func(id string) bool { return !d.Management && d.Tab == id }
+	home := ProjectTab{ID: "home", Href: base + "/overview", Icon: "house", Label: "project.head.home", Current: current("home")}
+	// No modo solo a organização é uma pessoa só: as tarefas dela e as do projeto são as mesmas, numa aba (Decisão 28),
+	// e a aba Colaboradores (as pessoas e os times) não existe.
+	if d.Solo() {
+		tabs := []ProjectTab{home, {ID: "tasks", Href: base + "/tasks", Icon: "list-check", Label: "project.head.tasks_solo", Current: current("tasks")}}
+		return d.appendOutsideTabs(tabs)
+	}
 	tabs := []ProjectTab{
-		{ID: "home", Href: base + "/overview", Icon: "house", Label: "project.head.home", Current: current("home")},
+		home,
 		{ID: "mine", Href: base + "/my-tasks", Icon: "user-check", Label: "project.head.my_tasks", Current: current("mine")},
 		{ID: "tasks", Href: base + "/tasks", Icon: "list-check", Label: "project.head.tasks", Current: current("tasks")},
+		{ID: "teams", Href: base + "/collaborators", Icon: "people-group", Label: "project.head.teams", Current: current("teams")},
 	}
-	// No modo solo a aba Colaboradores (as pessoas e os times) não existe: a organização é uma pessoa só.
-	if !d.Solo() {
-		tabs = append(tabs, ProjectTab{ID: "teams", Href: base + "/collaborators", Icon: "people-group", Label: "project.head.teams", Current: current("teams")})
-	}
+	return d.appendOutsideTabs(tabs)
+}
+
+// appendOutsideTabs põe no fim da barra de fora da Gestão as abas dela que moram fora (outsideManagement) e o botão
+// Gestão, para quem abre alguma aba de dentro.
+func (d Data) appendOutsideTabs(tabs []ProjectTab) []ProjectTab {
+	base := "/projects/" + d.Project.ID
 	for _, t := range ManagementTabs {
 		if d.outsideManagement(t.ID) && d.OpensTab(t.ID) {
 			tabs = append(tabs, d.managementTab(t.ID))

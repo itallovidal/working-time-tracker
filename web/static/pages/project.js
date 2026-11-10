@@ -590,52 +590,48 @@ document.addEventListener('alpine:init', () => {
     },
   }));
 
-  // As listas da página de tarefas. Com equipe são duas: as que ninguém pegou e as que já têm responsável (de outra
-  // pessoa: as suas ficam em Minhas tarefas). No modo solo a organização é uma pessoa só, então a lista é uma, com todas
-  // as tarefas do projeto, e o filtro de responsável não existe.
-  const solo = !!me.organization_solo;
-  const taskLists = solo ? ['all'] : ['free', 'taken'];
+  // As listas das páginas de tarefas. Cada lista guarda só a página em uso; os filtros e a paginação rodam no servidor.
   const emptyList = () => ({ tasks: [], total: 0, page: 1, perPage: 10 });
+  // priority, status e label são listas: a tarefa passa se tem qualquer uma das marcadas. assignee e status só existem
+  // na Lista de tarefas da equipe.
+  const emptyFilters = () => ({ q: '', assignee: '', due: '', date: '', priority: [], status: [], label: [] });
 
-  Alpine.data('projectTasks', () => ({
+  // taskListPage é o que a Lista de tarefas da equipe e a aba Tarefas do modo solo têm em comum: os filtros, que a URL
+  // guarda com a página de cada lista, as listas buscadas juntas, o Sincronizar e o passo a passo da tarefa nova.
+  //   keys            as listas da página, na ordem da tela
+  //   scope(key, p)   põe na busca de uma lista o que a separa das outras (o responsável, ou o status)
+  //   assigneeFilter  se a página tem o filtro de responsável (só a da equipe)
+  //   statusFilter    se a página tem o filtro de status (a do solo não: cada status já é uma lista)
+  // Sem getters: quem usa espalha o objeto, e um getter viraria um valor fixo. Quem usa define publishStep (getter),
+  // chama initLists() no init e pode trocar createdText e sessionsChanged.
+  const taskListPage = ({ keys, scope, assigneeFilter = false, statusFilter = false }) => ({
     ...form(),
     ...taskWizard(),
-    loading: true,
-    // Cada lista guarda só a página em uso; os filtros e a paginação rodam no servidor.
-    lists: Object.fromEntries(taskLists.map((key) => [key, emptyList()])),
-    taskLists,
-    solo,
     ...labelTools(),
     ...projectSync(),
-    members: [], // quem está no projeto: pode ser responsável por tarefa nova
-    assignees: [], // quem já é responsável por alguma tarefa, mesmo fora dos times
-    // priority, status e label são listas: a tarefa passa se tem qualquer uma das marcadas.
-    // assignee só vale para a lista Com responsável: a das sem responsável não tem dono.
-    filters: { q: '', assignee: '', due: '', date: '', priority: [], status: [], label: [] },
+    ...taskBadges,
+    loading: true,
+    lists: Object.fromEntries(keys.map((key) => [key, emptyList()])),
+    filters: emptyFilters(),
     dueOptions,
     seq: 0,
     // assign: me, none ou other. publish_to são as integrações marcadas que a tela posta depois de criar (o GitHub); skip_publish,
     // as que o servidor posta sozinho (o Trello) e a pessoa desmarcou: sem isso, a caixa vem marcada.
     draft: { name: '', description: '', assign: 'none', assignee_id: '', deadline: '', priority: 'none', label_ids: [], publish_to: [], skip_publish: [] },
-    // Com integração ativa, a tarefa nova tem uma terceira etapa: postá-la numa delas.
-    get publishStep() { return this.integrations.length > 0; },
-    async init() {
+    // initLists lê os filtros da URL e busca as listas. As etiquetas vêm antes da primeira busca: uma etiqueta excluída
+    // que ainda está na URL sai do filtro, em vez de zerar a lista. extra são as outras buscas da página, feitas junto.
+    async initLists(...extra) {
       this.readURL();
-      // Para o dono e os admins: a bolinha do responsável (partials/task_table.gohtml). No solo não há coluna de
-      // responsável, e a bolinha não tem o que mostrar.
-      if (!solo) Alpine.store('presence').watch();
-      const members = api('GET', '/api/projects/' + project.id + '/members')
-        .then((list) => { this.members = list || []; })
-        .catch((e) => { this.errors.members = e.message; });
-      // As etiquetas vêm antes da primeira busca: uma etiqueta excluída que ainda está na
-      // URL sai do filtro, em vez de zerar a lista.
       this.loadSync();
-      await Promise.all([members, this.loadLabels()]);
+      await Promise.all([...extra, this.loadLabels()]);
       this.filters.label = this.filters.label.filter((id) => this.labels.some((l) => l.id === id));
       await this.load();
       this.loading = false;
-      // Bater o ponto numa tarefa sem responsável a passa para quem bateu.
-      window.addEventListener('wtt:sessions-changed', () => this.load());
+      // Bater o ponto numa tarefa sem responsável a passa para quem bateu, e no backlog a leva para Em progresso.
+      window.addEventListener('wtt:sessions-changed', () => this.sessionsChanged());
+    },
+    sessionsChanged() {
+      return this.load();
     },
     // Depois de sincronizar entram tarefas e etiquetas novas: a lista e os filtros as mostram.
     async afterSync() {
@@ -648,8 +644,8 @@ document.addEventListener('alpine:init', () => {
       const p = new URLSearchParams(location.search);
       const due = p.get('due') || '';
       const isDate = /^\d{4}-\d{2}-\d{2}$/.test(due);
-      // As tarefas de quem está logado ficam em Minhas tarefas: a lista não as mostra. No solo não há filtro de responsável.
-      const assignee = !solo && /^[0-9a-f-]{36}$/i.test(p.get('assignee') || '') && p.get('assignee') !== me.id ? p.get('assignee') : '';
+      // As tarefas de quem está logado ficam em Minhas tarefas: a lista não as mostra.
+      const assignee = assigneeFilter && /^[0-9a-f-]{36}$/i.test(p.get('assignee') || '') && p.get('assignee') !== me.id ? p.get('assignee') : '';
       this.filters = {
         // O servidor recusa uma busca maior que o teto; o que vem na URL entra cortado nele, como o campo faz.
         q: Array.from(p.get('q') || '').slice(0, WTT.limits.search).join(''),
@@ -657,10 +653,10 @@ document.addEventListener('alpine:init', () => {
         due: isDate ? 'date' : (dueOptions.some((o) => o.value === due) ? due : ''),
         date: isDate ? due : '',
         priority: (p.get('priority') || '').split(',').filter((v) => WTT.priorities.some((o) => o.value === v)),
-        status: (p.get('status') || '').split(',').filter((v) => WTT.taskStatuses.some((o) => o.value === v)),
+        status: statusFilter ? (p.get('status') || '').split(',').filter((v) => WTT.taskStatuses.some((o) => o.value === v)) : [],
         label: (p.get('label') || '').split(',').filter((v) => /^[0-9a-f-]{36}$/i.test(v)),
       };
-      taskLists.forEach((key) => {
+      keys.forEach((key) => {
         this.lists[key].page = Math.max(1, parseInt(p.get(key + '_page'), 10) || 1);
       });
     },
@@ -674,7 +670,7 @@ document.addEventListener('alpine:init', () => {
       if (f.priority.length) p.set('priority', f.priority.join(','));
       if (f.status.length) p.set('status', f.status.join(','));
       if (f.label.length) p.set('label', f.label.join(','));
-      taskLists.forEach((key) => {
+      keys.forEach((key) => {
         if (this.lists[key].page > 1) p.set(key + '_page', this.lists[key].page);
       });
       const query = p.toString();
@@ -685,31 +681,29 @@ document.addEventListener('alpine:init', () => {
         // Sem sessionStorage o Voltar da tarefa só deixa de lembrar os filtros.
       }
     },
-    // loadList busca a página em uso de uma lista: a das sem responsável pede assignee_id=none,
-    // e a das com responsável, a pessoa escolhida ou, sem escolha, as de outras pessoas (others):
-    // as de quem está logado ficam na aba Minhas tarefas. A lista do solo (all) não filtra o responsável.
+    // loadList busca a página em uso de uma lista, com os filtros e o que separa a lista das outras (scope).
     async loadList(key) {
       const f = this.filters;
       const list = this.lists[key];
       const p = new URLSearchParams({ page: list.page });
       if (f.q.trim()) p.set('q', f.q.trim());
-      if (key !== 'all') p.set('assignee_id', key === 'free' ? 'none' : (f.assignee || 'others'));
       const limit = dueLimit(f.due, f.date);
       if (limit) p.set('deadline_to', limit);
       if (f.priority.length) p.set('priority', f.priority.join(','));
       if (f.status.length) p.set('status', f.status.join(','));
       if (f.label.length) p.set('label_id', f.label.join(','));
+      scope(key, p, f);
       return api('GET', '/api/projects/' + project.id + '/tasks?' + p);
     },
-    // load busca a página em uso das duas listas. Não passa por run(), que descartaria uma
+    // load busca a página em uso de todas as listas. Não passa por run(), que descartaria uma
     // troca de filtro feita durante outra ação, e ignora a resposta de um
     // pedido mais antigo que o último.
     async load() {
       const seq = ++this.seq;
       try {
-        const results = await Promise.all(taskLists.map((key) => this.loadList(key)));
+        const results = await Promise.all(keys.map((key) => this.loadList(key)));
         if (seq !== this.seq) return;
-        taskLists.forEach((key, i) => {
+        keys.forEach((key, i) => {
           const res = results[i];
           this.lists[key] = {
             tasks: res.items || [],
@@ -717,7 +711,7 @@ document.addEventListener('alpine:init', () => {
             page: res.page, // o servidor devolve a última quando a pedida não existe mais
             perPage: res.per_page,
           };
-          this.assignees = res.assignees || [];
+          this.listLoaded(res);
         });
         this.errors.load = '';
         this.clearField('q');
@@ -733,9 +727,11 @@ document.addEventListener('alpine:init', () => {
         }
       }
     },
-    // apply é o que os filtros chamam ao mudar: as duas listas voltam para a primeira página.
+    // listLoaded recebe a resposta de cada lista, para quem lê mais dela (a equipe guarda os responsáveis).
+    listLoaded() {},
+    // apply é o que os filtros chamam ao mudar: as listas voltam para a primeira página.
     apply() {
-      taskLists.forEach((key) => { this.lists[key].page = 1; });
+      keys.forEach((key) => { this.lists[key].page = 1; });
       return this.load();
     },
     go(key, page) {
@@ -743,7 +739,7 @@ document.addEventListener('alpine:init', () => {
       return this.load();
     },
     clear() {
-      this.filters = { q: '', assignee: '', due: '', date: '', priority: [], status: [], label: [] };
+      this.filters = emptyFilters();
       return this.apply();
     },
     // toggleFilter marca ou desmarca uma prioridade, um status ou uma etiqueta do filtro.
@@ -756,33 +752,12 @@ document.addEventListener('alpine:init', () => {
       const f = this.filters;
       return !!(f.q.trim() || f.assignee || dueLimit(f.due, f.date) || f.priority.length || f.status.length || f.label.length);
     },
-    // listFiltered diz se algum filtro vale para a lista: o responsável só vale para a dos que têm um.
-    listFiltered(key) {
-      const f = this.filters;
-      return key === 'taken' ? this.hasFilters() : !!(f.q.trim() || dueLimit(f.due, f.date) || f.priority.length || f.status.length || f.label.length);
-    },
-    // listText é um texto de uma lista (o título, o estado vazio, o rótulo da paginação), que muda com a lista:
-    // tasks.section_free, tasks.free_none, tasks.pager_all...
-    listText(key, part) {
-      return WTT.t(part === 'section' ? 'tasks.section_' + key : (part === 'pager' ? 'tasks.pager_' + key : 'tasks.' + key + '_' + part));
-    },
     pages(key) {
       const l = this.lists[key];
       return Math.max(1, Math.ceil(l.total / l.perPage));
     },
     summary(key) {
       return WTT.t('tasks.summary', { page: this.lists[key].page, pages: this.pages(key), count: this.lists[key].total });
-    },
-    // Quem aparece no filtro de responsável: os times e quem tem tarefa aqui, menos a própria
-    // pessoa, cujas tarefas ficam em Minhas tarefas.
-    assigneeOptions() {
-      const byId = new Map();
-      [...this.assignees, ...this.members].forEach((p) => { if (p.id !== me.id) byId.set(p.id, p); });
-      return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name, WTT.lang));
-    },
-    // Outra pessoa só pode ser responsável se estiver num time do projeto; a própria, não precisa.
-    otherMembers() {
-      return this.members.filter((m) => m.id !== me.id);
     },
     typeLabel(type) {
       const t = integrationType(type);
@@ -827,6 +802,10 @@ document.addEventListener('alpine:init', () => {
       this.resetWizard();
       Alpine.store('modal').open('task-new', WTT.t('tasks.new'), () => !this.pending);
     },
+    // createdText é o aviso da tarefa criada: shown diz se ela aparece numa das listas.
+    createdText(t, shown) {
+      return WTT.t(shown ? 'tasks.created' : 'tasks.created_hidden');
+    },
     create() {
       return this.run('create', async () => {
         // As integrações que o servidor posta sozinho (o Trello) e a pessoa desmarcou: ele não as posta.
@@ -865,10 +844,7 @@ document.addEventListener('alpine:init', () => {
         Alpine.store('modal').close();
         // A tarefa nova é a primeira da lista dela, se os filtros em uso a mostrarem.
         await this.apply();
-        const shown = taskLists.some((key) => this.lists[key].tasks.some((x) => x.id === t.id));
-        // Com equipe, uma tarefa sua não aparece nesta página, que mostra as de outras pessoas: está em Minhas tarefas.
-        // No solo a lista tem todas, e só os filtros a escondem.
-        toast(WTT.t(shown ? 'tasks.created' : (!solo && t.assignee_id === me.id ? 'tasks.created_mine' : 'tasks.created_hidden')));
+        toast(this.createdText(t, keys.some((key) => this.lists[key].tasks.some((x) => x.id === t.id))));
         for (const { target, published, error } of results) {
           const provider = this.typeLabel(target.type);
           if (error) {
@@ -885,6 +861,62 @@ document.addEventListener('alpine:init', () => {
     isRunning(t) {
       return clock().isRunning(t.id);
     },
+  });
+
+  // A Lista de tarefas da equipe são duas listas: as que ninguém pegou e as que já têm responsável, de outra pessoa (as
+  // suas ficam em Minhas tarefas). No modo solo a página é outra, a aba Tarefas (projectSoloTasks).
+  const teamLists = ['free', 'taken'];
+
+  Alpine.data('projectTasks', () => ({
+    // A das sem responsável pede assignee_id=none, e a das com responsável, a pessoa escolhida ou, sem escolha, as de
+    // outras pessoas (others): as de quem está logado ficam na aba Minhas tarefas.
+    ...taskListPage({
+      keys: teamLists,
+      scope: (key, p, f) => p.set('assignee_id', key === 'free' ? 'none' : (f.assignee || 'others')),
+      assigneeFilter: true,
+      statusFilter: true,
+    }),
+    taskLists: teamLists,
+    members: [], // quem está no projeto: pode ser responsável por tarefa nova
+    assignees: [], // quem já é responsável por alguma tarefa, mesmo fora dos times
+    // Com integração ativa, a tarefa nova tem uma terceira etapa: postá-la numa delas.
+    get publishStep() { return this.integrations.length > 0; },
+    async init() {
+      // Para o dono e os admins: a bolinha do responsável (partials/task_table.gohtml).
+      Alpine.store('presence').watch();
+      const members = api('GET', '/api/projects/' + project.id + '/members')
+        .then((list) => { this.members = list || []; })
+        .catch((e) => { this.errors.members = e.message; });
+      await this.initLists(members);
+    },
+    listLoaded(res) {
+      this.assignees = res.assignees || [];
+    },
+    // listFiltered diz se algum filtro vale para a lista: o responsável só vale para a dos que têm um.
+    listFiltered(key) {
+      const f = this.filters;
+      return key === 'taken' ? this.hasFilters() : !!(f.q.trim() || dueLimit(f.due, f.date) || f.priority.length || f.status.length || f.label.length);
+    },
+    // listText é um texto de uma lista (o título, o estado vazio, o rótulo da paginação), que muda com a lista:
+    // tasks.section_free, tasks.free_none, tasks.pager_taken...
+    listText(key, part) {
+      return WTT.t(part === 'section' ? 'tasks.section_' + key : (part === 'pager' ? 'tasks.pager_' + key : 'tasks.' + key + '_' + part));
+    },
+    // Quem aparece no filtro de responsável: os times e quem tem tarefa aqui, menos a própria
+    // pessoa, cujas tarefas ficam em Minhas tarefas.
+    assigneeOptions() {
+      const byId = new Map();
+      [...this.assignees, ...this.members].forEach((p) => { if (p.id !== me.id) byId.set(p.id, p); });
+      return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name, WTT.lang));
+    },
+    // Outra pessoa só pode ser responsável se estiver num time do projeto; a própria, não precisa.
+    otherMembers() {
+      return this.members.filter((m) => m.id !== me.id);
+    },
+    // Uma tarefa sua não aparece nesta página, que mostra as de outras pessoas: está em Minhas tarefas.
+    createdText(t, shown) {
+      return WTT.t(shown ? 'tasks.created' : (t.assignee_id === me.id ? 'tasks.created_mine' : 'tasks.created_hidden'));
+    },
     // claim pega uma tarefa sem responsável para a pessoa, sem bater o ponto: ela sai da lista das sem
     // responsável e passa para Minhas tarefas. Se outra pessoa chegou antes, a lista é recarregada e o
     // erro (a tarefa já tem responsável) aparece no alto.
@@ -900,12 +932,37 @@ document.addEventListener('alpine:init', () => {
         toast(WTT.t('tasks.claimed', { name: t.name }));
       });
     },
-    deadlineClass: (t) => deadlineInfo(t.deadline).cls,
-    deadlineLabel: (t) => deadlineInfo(t.deadline).label,
-    linkLabel: taskBadges.linkLabel,
-    linkIcon: taskBadges.linkIcon,
-    linkProvider: taskBadges.linkProvider,
-    linkItem: taskBadges.linkItem,
+  }));
+
+  // A aba Tarefas do modo solo (Decisão 28): Minhas tarefas e a Lista de tarefas numa tela só. O painel do timer e uma
+  // lista por status, cada uma com a sua página, com todas as tarefas do projeto; a organização é uma pessoa só, e não
+  // há responsável para filtrar nem tarefa para pegar: Iniciar numa sem responsável já a passa para quem bateu o ponto.
+  const soloLists = WTT.taskStatuses.map((s) => s.value);
+
+  Alpine.data('projectSoloTasks', () => ({
+    ...taskClock(),
+    ...taskListPage({ keys: soloLists, scope: (key, p) => p.set('status', key) }),
+    statuses: WTT.taskStatuses,
+    // O que já fechou começa recolhido, porque só cresce.
+    open: { backlog: true, in_progress: true, awaiting_closure: true, closed: false },
+    // As tarefas das páginas em uso, para o painel do timer: as da sessão que estão em outra página vêm uma a uma
+    // (taskClock, loadRunning).
+    get tasks() { return soloLists.flatMap((key) => this.lists[key].tasks); },
+    get publishStep() { return this.integrations.length > 0; },
+    async init() {
+      await Promise.all([this.initLists(), this.loadMyRate()]);
+      await this.loadRunning();
+      this.watchClock();
+    },
+    // Bater o ponto ou parar mexe no status das tarefas: as listas e os cartões do timer se recarregam.
+    async sessionsChanged() {
+      this.taskCache = {};
+      await this.load();
+      await this.loadRunning();
+    },
+    toggle(status) {
+      this.open[status] = !this.open[status];
+    },
   }));
 
   // Minhas tarefas: as tarefas de que a pessoa é responsável, numa lista por status, na ordem

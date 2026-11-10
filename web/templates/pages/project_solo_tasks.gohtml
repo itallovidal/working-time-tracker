@@ -1,0 +1,84 @@
+{{/* A aba Tarefas do modo solo (Decisão 28): Minhas tarefas e a Lista de tarefas numa tela só, porque a organização é
+     uma pessoa e as tarefas dela são as do projeto. O painel do timer, os filtros e uma lista por status, cada uma com
+     a sua página; cada linha tem Iniciar, e bater o ponto numa tarefa sem responsável a passa para quem bateu. */}}
+{{define "content"}}
+<main class="page" x-data="projectSoloTasks">
+  {{template "project_head" .}}
+
+  {{template "clock_card" .}}
+
+  <div class="toolbar">
+    <div class="stack">
+      <div class="row filters">
+        <input type="search" maxlength="{{limit "search"}}" placeholder="{{.T "tasks.search_placeholder"}}" aria-label="{{.T "tasks.search_label"}}"
+               data-field="q" :aria-invalid="fieldErrors.q ? 'true' : 'false'"
+               x-model="filters.q" @input="clearField('q')" @input.debounce.300ms="apply()">
+        <select aria-label="{{.T "tasks.due_filter"}}" x-model="filters.due" @change="apply()">
+          <option value="">{{.T "tasks.any_due"}}</option>
+          <template x-for="o in dueOptions" :key="o.value">
+            <option :value="o.value" x-text="o.label" :selected="o.value === filters.due"></option>
+          </template>
+        </select>
+        <input type="date" aria-label="{{.T "tasks.due_date"}}" x-cloak x-show="filters.due === 'date'"
+               x-model="filters.date" @change="apply()">
+      </div>
+      {{template "field_error" "q"}}
+      {{/* Sem o filtro de status: cada status já é uma lista, que se recolhe pelo cabeçalho. */}}
+      <div class="row filter-chips" role="group" aria-label="{{.T "tasks.priority_filter"}}">
+        <span class="muted small">{{.T "tasks.col_priority"}}</span>
+        <template x-for="p in WTT.priorities" :key="p.value">
+          <button type="button" class="chip" :class="priorityClass(p.value)" :aria-pressed="filters.priority.includes(p.value)" @click="toggleFilter('priority', p.value)" x-text="p.label"></button>
+        </template>
+      </div>
+      <div class="row filter-chips" x-cloak x-show="labels.length > 0" role="group" aria-label="{{.T "tasks.labels_filter"}}">
+        <span class="muted small">{{.T "tasks.labels"}}</span>
+        <template x-for="l in labels" :key="l.id">
+          <button type="button" class="chip" :aria-pressed="filters.label.includes(l.id)" @click="toggleFilter('label', l.id)" x-text="l.name"></button>
+        </template>
+      </div>
+    </div>
+    <div class="row self-start">
+      {{template "sync_button" .}}
+      <button type="button" class="btn" @click="openCreate()">{{template "icon" "plus"}} {{.T "tasks.new"}}</button>
+    </div>
+  </div>
+
+  <p class="muted" x-show="loading">{{.T "tasks.loading"}}</p>
+  <p class="form-error" x-cloak x-show="errors.load" x-text="errors.load"></p>
+  <p class="form-error" x-cloak x-show="errors.sync" x-text="errors.sync" role="alert"></p>
+
+  <div class="row" x-cloak x-show="!loading && hasFilters()">
+    <button type="button" class="btn btn-secondary btn-sm" @click="clear()">{{.T "common.clear_filters"}}</button>
+  </div>
+
+  {{/* Uma lista por status, na ordem em que o trabalho anda, cada uma com a sua página. Cada cabeçalho recolhe a sua
+       lista, e Fechada começa recolhida, porque só cresce. */}}
+  <div class="stack stack-sections" x-cloak x-show="!loading">
+    <template x-for="s in statuses" :key="s.value">
+      <section class="stack" :aria-labelledby="'tasks-' + s.value + '-title'">
+        <h2 class="fold-head" :id="'tasks-' + s.value + '-title'">
+          <button type="button" class="fold-toggle" :aria-expanded="open[s.value].toString()" :aria-controls="'tasks-' + s.value + '-body'" @click="toggle(s.value)">
+            <span class="fold-icon" aria-hidden="true">{{template "icon" "chevron-down"}}</span>
+            <span x-text="s.label"></span>
+            <span class="badge num" :class="statusClass(s.value)" x-text="lists[s.value].total"></span>
+          </button>
+        </h2>
+        <div class="stack" :id="'tasks-' + s.value + '-body'" x-show="open[s.value]">
+          <p class="muted small" x-show="lists[s.value].tasks.length > 0">{{.T "tasks.row_hint"}}</p>
+          {{template "empty_state" (dict "Icon" "inbox" "Show" "lists[s.value].total === 0" "TitleX" "hasFilters() ? $t('tasks.none_filtered') : $t('tasks.solo.none')")}}
+          {{template "task_table" (dict "Data" . "Rows" "lists[s.value].tasks" "Assignee" "false" "Action" "start" "ActionShow" "true")}}
+          <nav class="pager" :aria-label="$t('tasks.solo.pager', { status: s.label })" x-cloak x-show="lists[s.value].total > 0">
+            <span class="muted small" x-text="summary(s.value)"></span>
+            <div class="row row-tight" x-show="pages(s.value) > 1">
+              <button type="button" class="btn btn-secondary btn-sm" :disabled="lists[s.value].page <= 1" @click="go(s.value, lists[s.value].page - 1)">{{template "icon" "chevron-left"}} {{.T "tasks.prev"}}</button>
+              <button type="button" class="btn btn-secondary btn-sm" :disabled="lists[s.value].page >= pages(s.value)" @click="go(s.value, lists[s.value].page + 1)">{{.T "tasks.next"}} {{template "icon" "chevron-right"}}</button>
+            </div>
+          </nav>
+        </div>
+      </section>
+    </template>
+  </div>
+
+  {{template "task_new_form" .}}
+</main>
+{{end}}

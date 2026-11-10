@@ -1,4 +1,5 @@
 {{define "content"}}
+{{/* Só da equipe: no modo solo o endereço leva à aba Tarefas (project_solo_tasks), que tem o que esta mostrava. */}}
 <main class="page" x-data="projectMyTasks">
   {{template "project_head" .}}
 
@@ -17,7 +18,7 @@
   <div class="empty" x-cloak x-show="!loading && !errors.load && tasks.length === 0">
     {{template "icon" "list-check"}}
     <strong>{{.T "my_tasks.none"}}</strong>
-    <span>{{if .Me.OrganizationSolo}}{{.T "time.create_task_solo"}}{{else}}{{.T "my_tasks.none_text"}}{{end}}</span>
+    <span>{{.T "my_tasks.none_text"}}</span>
     <a class="btn btn-secondary btn-sm" href="/projects/{{.Project.ID}}/tasks">{{.T "my_tasks.none_link"}}</a>
   </div>
 

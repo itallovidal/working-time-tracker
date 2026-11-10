@@ -149,7 +149,7 @@ func TestTaskCardsFollowTheirLayout(t *testing.T) {
 			t.Errorf("the task card calls %s, which project.js does not define", name)
 		}
 	}
-	for _, page := range []string{"projectMyOverview", "projectMyTasks"} {
+	for _, page := range []string{"projectMyOverview", "projectMyTasks", "projectSoloTasks"} {
 		component := js[strings.Index(js, "Alpine.data('"+page+"'"):]
 		component = component[:strings.Index(component, "\n  }));")]
 		if !strings.Contains(component, "...taskClock()") {

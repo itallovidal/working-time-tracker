@@ -55,8 +55,8 @@
   </div>
 
   {{/* Duas listas, cada uma com a sua página: as sem responsável, para o time pegar, e as que já têm dono.
-       Escolher uma pessoa no filtro esconde a primeira, que por definição não tem dono. No modo solo é uma lista só
-       (all), com todas as tarefas do projeto, sem coluna nem filtro de responsável (taskLists, em pages/project.js). */}}
+       Escolher uma pessoa no filtro esconde a primeira, que por definição não tem dono. A página é só da equipe: no
+       modo solo o endereço abre a aba Tarefas (project_solo_tasks). */}}
   <div class="stack stack-sections" x-cloak x-show="!loading">
     <template x-for="key in taskLists" :key="key">
       <section class="stack" :aria-labelledby="'tasks-' + key + '-title'">
@@ -81,7 +81,7 @@
 
         {{template "empty_state" (dict "Icon" "list-check" "Show" "lists[key].total === 0" "TitleX" "listFiltered(key) ? $t('tasks.none_filtered') : listText(key, 'none')" "TextX" "listFiltered(key) ? '' : listText(key, 'none_text')")}}
 
-        {{/* Pegar fica nas sem responsável: a lista inteira delas, ou, no solo, as linhas que ainda não têm dono. */}}
+        {{/* Pegar fica nas sem responsável. */}}
         {{template "task_table" (dict "Data" . "Rows" "lists[key].tasks" "Assignee" "key === 'taken'" "Action" "claim" "ActionShow" "key !== 'taken'")}}
 
         <nav class="pager" :aria-label="listText(key, 'pager')" x-cloak x-show="lists[key].total > 0">
@@ -96,20 +96,6 @@
   </div>
 
   {{/* O formulário aparece no modal do layout base e continua no escopo de projectTasks. */}}
-  <template x-teleport="#modal-root">
-    {{/* novalidate: a etapa que não está à vista tem campos escondidos, e o navegador não os valida; quem confere é submitStep. */}}
-    <form class="stack" novalidate x-show="$store.modal.name === 'task-new'" @submit.prevent="submitStep('create')">
-      {{template "task_fields" .}}
-      {{template "task_publish" .}}
-      <p class="form-error" x-show="errors.create" x-text="errors.create" role="alert"></p>
-      <div class="row row-end">
-        <button type="button" class="btn btn-secondary" x-show="step === 1" @click="$store.modal.dismiss()">{{.T "common.cancel"}}</button>
-        <button type="button" class="btn btn-secondary" x-show="step > 1" @click="back()">{{template "icon" "arrow-left"}} {{.T "tasks.wizard.back"}}</button>
-        {{/* Com a etapa Integrações, a 2 também segue em frente, e quem cria é a 3. */}}
-        <button type="submit" class="btn" x-show="step === 1 || (step === 2 && publishStep)">{{.T "tasks.wizard.next"}} {{template "icon" "arrow-right"}}</button>
-        <button type="submit" class="btn" x-show="(step === 2 && !publishStep) || step === 3" :disabled="pending">{{.T "tasks.create"}}</button>
-      </div>
-    </form>
-  </template>
+  {{template "task_new_form" .}}
 </main>
 {{end}}

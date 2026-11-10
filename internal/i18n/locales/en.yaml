@@ -50,6 +50,7 @@ titles:
   my_overview: Home
   collaborators: Collaborators
   tasks: Task list
+  tasks_solo: Tasks
   my_tasks: My tasks
   teams: Management · Collaborators
   integrations: Management · Integrations
@@ -856,8 +857,10 @@ help:
       title: Create the tasks
       text: "Give the task a name and, if you want, a description, deadline, priority, labels and assignee. The task starts in Backlog; with no deadline, the app uses 7 days from today."
       tip: "A task without an assignee is available to the team: whoever clocks in on it becomes the assignee. The assignee must be on the project."
+      tip_solo: "A new task is already yours. An unassigned one (from GitHub, GitLab or Trello, for instance) becomes yours when you clock in on it."
     track:
       title: Track the hours
+      text_solo: "On the project Home or in Tasks, click “Start” on the task you will work on. The timer starts and the session stays in the corner of the screen, with the project name, on any page. To finish, click “Stop”."
       text: "On the project Home or in My tasks, click “Start” on the task you will work on. The timer starts and the session stays in the corner of the screen, with the project name, on any page. To finish, click “Stop”."
       tip: "When you start, the task moves to “In progress”. You can work on several tasks in the same session (“Add to the session”): each one counts the full time and the session counts once. You can have a clock open on each project at the same time: the amount is each project's own, and overlapping hours count once in your total."
     numbers:
@@ -915,13 +918,16 @@ help:
       tasks: "“Your tasks” lists the tasks you are assigned to, each with the “Start” button."
       sessions: "“Sessions” is the history of your sessions, with a date and a task filter. Click a session to see its tasks and adjust the intervals."
       blocked: "If a notice says you have no hourly rate, the clock stays blocked until an admin sets yours."
+    project_solo_tasks:
+      title: "Project: Tasks"
+      text: "The timer panel and all the project's tasks, split by status: Backlog, In progress, Awaiting closure and Closed (this one starts collapsed), each with its own pages. Each row shows priority and deadline and has the “Start” button. A new task is already yours; on an unassigned one (from GitHub, GitLab or Trello, for instance), clocking in gives it to you."
+      filters: "The search and the filters (deadline, priority and labels) stay in the URL: you can save or send the link to the filtered list."
     project_my_tasks:
       title: "Project: My tasks"
       text: "Everything that is with you, split by status: Backlog, In progress, Awaiting closure and Closed (this one starts collapsed). Each row shows priority and deadline and has the “Start” button. What nobody has picked up stays on the Task list."
     project_tasks:
       title: "Project: Task list"
       text: "All the project's tasks in two lists: “Unassigned”, the ones nobody has picked up, and “Assigned”. Whoever clocks in on an unassigned task becomes its assignee; the “Take” button assigns the task to you without starting the timer."
-      text_solo: "All the project's tasks in a single list. A new task is already yours; on an unassigned one (from GitHub, GitLab or Trello, for instance), “Assign to me” gives it to you without starting the timer, and so does clocking in on it."
       filters: "The search and the filters (deadline, priority, status and labels) stay in the URL: you can save or send the link to the filtered list."
       new: "“New task” opens a form in steps: the task, the details and, if the project has integrations, the platforms where it should also exist."
       open: "Click a row to open the task."
@@ -1256,6 +1262,7 @@ project:
     sections: Project sections
     overview: Overview
     tasks: Task list
+    tasks_solo: Tasks
     my_tasks: My tasks
     home: Home
     teams: Collaborators on the project
@@ -1361,7 +1368,7 @@ tasks:
   label_create: Create
   pick_person: Pick the person
   unassigned_hint: "Without an assignee the task is available: whoever clocks in on it becomes the assignee."
-  unassigned_hint_solo: "Without an assignee the task stays out of My tasks until you take it or clock in on it."
+  unassigned_hint_solo: "Without an assignee, the task becomes yours when you clock in on it."
   new: New task
   loading: Loading tasks…
   sync: Sync
@@ -1399,10 +1406,10 @@ tasks:
   row_hint: Click a task to open its details.
   pager_free: Pages of the unassigned tasks
   pager_taken: Pages of the assigned tasks
-  section_all: Tasks
-  all_none: No tasks in this project
-  all_none_text: Create the first one with the New task button.
-  pager_all: Pages of the tasks
+  # The solo Tasks tab: one list per status.
+  solo:
+    none: No tasks in this status
+    pager: "Pages of {{.status}}"
   col_task: Task
   col_assignee: Assignee
   col_deadline: Deadline
@@ -1413,8 +1420,6 @@ tasks:
   claim: Take
   claim_title: Assign the task to me, without starting the clock
   claim_label: "Take the task {{.name}}"
-  claim_solo: Assign to me
-  claim_label_solo: "Assign the task {{.name}} to me"
   claimed: "You took \"{{.name}}\". It is in My tasks."
   running: In progress
   start: Start
@@ -1445,6 +1450,7 @@ my_tasks:
   none: You have no tasks in this project.
   none_text: Pick an available one on the task list.
   none_link: See the task list
+  none_link_solo: See the tasks
   empty: No tasks in this status.
   count:
     one: "{{.count}} task"
@@ -1536,7 +1542,8 @@ time:
   stopped: Stopped
   no_tasks: You have no tasks on this project.
   create_task: Pick an available one on the task list.
-  create_task_solo: Create one on the task list.
+  create_task_solo: Create one in Tasks.
+  create_task_here: Create one with the New task button.
   task: Task
   start: Start
   yours: Your time on this project

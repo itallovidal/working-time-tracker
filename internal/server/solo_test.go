@@ -267,7 +267,7 @@ func TestSolo_TeamPagesAre404(t *testing.T) {
 		}
 		shown = []string{
 			org, org + "/projects", org + "/about", org + "/settings", "/profile",
-			"/projects/" + project + "/overview", "/projects/" + project + "/tasks", "/projects/" + project + "/my-tasks",
+			"/projects/" + project + "/overview", "/projects/" + project + "/tasks",
 			"/projects/" + project + "/management/overview", "/projects/" + project + "/management/integrations",
 			"/projects/" + project + "/management/settings",
 		}
@@ -285,6 +285,13 @@ func TestSolo_TeamPagesAre404(t *testing.T) {
 		if rec := do(e, "GET", path, "", solo.session); rec.Code != http.StatusOK {
 			t.Errorf("solo GET %s = %d, want 200", path, rec.Code)
 		}
+	}
+	// No solo Minhas tarefas é parte da aba Tarefas (Decisão 28): o endereço leva para ela. Com equipe, abre.
+	if rec := do(e, "GET", "/projects/"+soloProject+"/my-tasks", "", solo.session); rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != "/projects/"+soloProject+"/tasks" {
+		t.Errorf("solo GET my-tasks = %d to %q, want 303 to the tasks", rec.Code, rec.Header().Get("Location"))
+	}
+	if rec := do(e, "GET", "/projects/"+teamProject+"/my-tasks", "", team.session); rec.Code != http.StatusOK {
+		t.Errorf("team GET my-tasks = %d, want 200", rec.Code)
 	}
 	// No solo a Visão geral é uma aba do projeto, fora da Gestão: a raiz da Gestão cai em Integrações.
 	if rec := do(e, "GET", "/projects/"+soloProject+"/management", "", solo.session); rec.Code != http.StatusSeeOther || !strings.HasSuffix(rec.Header().Get("Location"), "/management/integrations") {
@@ -496,8 +503,9 @@ func TestSolo_ProjectTabsLoseTheTeamTab(t *testing.T) {
 		keep, gone []string
 		current    string
 	}{
-		{"home", "/projects/%s/overview", []string{"/overview", "/my-tasks", "/tasks", "/management/overview", "/management"}, []string{"/management/integrations", "/management/settings"}, "/overview"},
-		{"overview", "/projects/%s/management/overview", []string{"/overview", "/my-tasks", "/tasks", "/management/overview", "/management"}, []string{"/management/integrations", "/management/settings"}, "/management/overview"},
+		{"home", "/projects/%s/overview", []string{"/overview", "/tasks", "/management/overview", "/management"}, []string{"/my-tasks", "/management/integrations", "/management/settings"}, "/overview"},
+		{"tasks", "/projects/%s/tasks", []string{"/overview", "/tasks", "/management/overview", "/management"}, []string{"/my-tasks", "/management/integrations", "/management/settings"}, "/tasks"},
+		{"overview", "/projects/%s/management/overview", []string{"/overview", "/tasks", "/management/overview", "/management"}, []string{"/my-tasks", "/management/integrations", "/management/settings"}, "/management/overview"},
 		{"management", "/projects/%s/management/integrations", []string{"/management/integrations", "/management/settings", "/overview"}, []string{"/management/overview", "/my-tasks", "/tasks"}, "/management/integrations"},
 	} {
 		soloTabs := tabs(solo, strings.Replace(c.path, "%s", soloProject, 1))
@@ -605,5 +613,76 @@ func TestSolo_TeamOrganizationAPIIsUnchanged(t *testing.T) {
 	}
 	if rec := do(e, "PATCH", org, `{"solo":"sim"}`, owner.session); rec.Code != http.StatusBadRequest || errorCode(t, rec) != "request.invalid_body" {
 		t.Errorf("a solo that is not a boolean = %d %s, want 400 request.invalid_body", rec.Code, rec.Body.String())
+	}
+}
+
+// No modo solo Minhas tarefas e a Lista de tarefas são uma aba só, Tarefas (Decisão 28): o painel do timer, os filtros
+// sem o de status nem o de responsável, a Nova tarefa e uma lista por status, cada uma com a sua página e o Iniciar.
+// Não há "Atribuir a mim", nem na página da tarefa. Com equipe as duas abas seguem como eram.
+func TestSolo_TasksTabJoinsMyTasksAndTheList(t *testing.T) {
+	e := newServer(t)
+	solo := soloSignup(t, e, "Solo", "ana@solo.com")
+	team := signup(t, e, "Equipe", "bia@equipe.com")
+	soloProject := createProject(t, e, solo, "Projeto Solo")
+	teamProject := createProject(t, e, team, "Projeto Equipe")
+
+	body := do(e, "GET", "/projects/"+soloProject+"/tasks", "", solo.session).Body.String()
+	for _, want := range []string{
+		`x-data="projectSoloTasks"`, `<section class="clock"`, `x-for="s in statuses"`, `go(s.value, lists[s.value].page + 1)`,
+		`:aria-expanded="open[s.value].toString()"`, `@click="startTask(t)"`, `aria-label="Buscar tarefa pelo nome"`,
+		`aria-label="Filtrar por prazo"`, `role="group" aria-label="Filtrar por prioridade"`, `role="group" aria-label="Filtrar por etiqueta"`,
+		"Nova tarefa", `x-show="$store.modal.name === 'task-new'"`, `id="task-name"`,
+		`/tasks" aria-current="page"`, "<title>Tarefas · Projeto Solo",
+		// O convite do timer parado aponta o botão desta página, em vez de um link para ela mesma.
+		"Crie uma com o botão Nova tarefa.",
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("solo tasks tab does not contain %q", want)
+		}
+	}
+	for _, not := range []string{
+		`x-data="projectTasks"`, `aria-label="Filtrar por status"`, `aria-label="Filtrar por responsável"`, `@click="claim(t)"`,
+		"Atribuir a mim", "Lista de tarefas", "Minhas tarefas", `/my-tasks"`, `id="task-assignee"`,
+	} {
+		if strings.Contains(body, not) {
+			t.Errorf("solo tasks tab still has %q", not)
+		}
+	}
+
+	// A página da tarefa: no solo, Iniciar sem o Pegar; com equipe, os dois.
+	task := func(a account, project string) string {
+		t.Helper()
+		rec := do(e, "POST", "/api/projects/"+project+"/tasks", `{"name":"Sem dono"}`, a.session)
+		if rec.Code != http.StatusCreated {
+			t.Fatalf("create task = %d: %s", rec.Code, rec.Body.String())
+		}
+		return decode(t, rec)["id"].(string)
+	}
+	if detail := do(e, "GET", "/tasks/"+task(solo, soloProject), "", solo.session).Body.String(); strings.Contains(detail, `@click="claim()"`) || !strings.Contains(detail, `@click="start()"`) {
+		t.Error("solo task page: want Iniciar without the claim button")
+	}
+	if detail := do(e, "GET", "/tasks/"+task(team, teamProject), "", team.session).Body.String(); !strings.Contains(detail, `@click="claim()"`) {
+		t.Error("team task page lost the claim button")
+	}
+
+	// Com equipe nada muda: a Lista de tarefas e Minhas tarefas, cada uma com a sua aba.
+	teamBody := do(e, "GET", "/projects/"+teamProject+"/tasks", "", team.session).Body.String()
+	for _, want := range []string{`x-data="projectTasks"`, `x-for="key in taskLists"`, `@click="claim(t)"`, `/my-tasks"`, "Lista de tarefas"} {
+		if !strings.Contains(teamBody, want) {
+			t.Errorf("team tasks page does not contain %q", want)
+		}
+	}
+	if strings.Contains(teamBody, `x-data="projectSoloTasks"`) {
+		t.Error("team tasks page renders the solo tab")
+	}
+
+	// O script: a aba do solo pede cada lista pelo status e lê o timer; a Lista de tarefas pede pelo responsável.
+	script := do(e, "GET", "/static/pages/project.js", "", "").Body.String()
+	for _, want := range []string{
+		"scope: (key, p) => p.set('status', key)", "scope: (key, p, f) => p.set('assignee_id', key === 'free' ? 'none' : (f.assignee || 'others'))",
+	} {
+		if !strings.Contains(script, want) {
+			t.Errorf("project.js does not contain %q", want)
+		}
 	}
 }

@@ -13,8 +13,11 @@
       <div class="row" x-cloak x-show="task">
         <span class="badge badge-ok" x-show="isRunning()">{{.T "tasks.running"}}</span>
         <button type="button" class="btn btn-secondary btn-sm" x-show="isRunning()" @click="openSession()">{{template "icon" "list-check"}} {{.T "session.details"}}</button>
-        {{/* Sem responsável, dá para pegar a tarefa sem bater o ponto: ela passa a ser da pessoa e o ponto fica para depois. */}}
-        <button type="button" class="btn btn-secondary btn-sm" x-show="task && !task.assignee_id" :disabled="pending" title="{{.T "task_detail.claim_title"}}" @click="claim()">{{template "icon" "user-plus"}} {{if .Me.OrganizationSolo}}{{.T "tasks.claim_solo"}}{{else}}{{.T "task_detail.claim"}}{{end}}</button>
+        {{/* Sem responsável, dá para pegar a tarefa sem bater o ponto: ela passa a ser da pessoa e o ponto fica para depois.
+             No modo solo não há a quem mais a tarefa iria: Iniciar já a passa para você (Decisão 28). */}}
+        {{if not .Me.OrganizationSolo}}
+        <button type="button" class="btn btn-secondary btn-sm" x-show="task && !task.assignee_id" :disabled="pending" title="{{.T "task_detail.claim_title"}}" @click="claim()">{{template "icon" "user-plus"}} {{.T "task_detail.claim"}}</button>
+        {{end}}
         {{/* Parado, inicia o ponto deste projeto (o de outro projeto segue correndo); com o ponto aberto aqui, põe a tarefa
              na sessão. */}}
         <button type="button" class="btn btn-secondary btn-sm" x-show="!isRunning() && !sessionHere()" :disabled="pending" @click="start()">{{template "icon" "play"}} {{.T "tasks.start"}}</button>

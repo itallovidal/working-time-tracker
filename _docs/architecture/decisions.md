@@ -1077,6 +1077,34 @@ pessoa pode receber, pela mesma hora de relógio, o valor de dois projetos. A mi
 só afrouxa a regra, então os dados que já existem continuam válidos. As regras de hoje estão em
 [data-model.md](data-model.md) e em [money.md](../product/money.md).
 
+### Decisão 28: No modo solo, as tarefas do projeto são uma aba só
+
+**Contexto:** o projeto tinha, para todos, Início, **Minhas tarefas** (as tarefas da pessoa, por status, com o timer) e
+**Lista de tarefas** (todas, com os filtros, a Nova tarefa e o "Pegar"). Numa organização no modo solo a pessoa é a única:
+as tarefas dela são as do projeto, e a separação só obrigava a trocar de aba para ver a mesma coisa.
+
+**Escolha:**
+- **No modo solo a barra do projeto é Início · Tarefas · Visão geral · Gestão.** Minhas tarefas sai da barra, e
+  `/projects/:projectId/my-tasks` leva (303) para `/projects/:projectId/tasks`, que no solo abre a aba **Tarefas**
+  (`project_solo_tasks`). Ficar no endereço da lista mantém os links que já levam para ela: os estados vazios, o painel
+  do timer e o Voltar da página da tarefa.
+- **A aba Tarefas é Minhas tarefas com todas as tarefas do projeto:** o painel do timer em cima, a busca e os filtros de
+  prazo, prioridade e etiqueta, o Sincronizar e a Nova tarefa, e uma lista por status (Backlog, Em progresso,
+  Aguardando fechamento e Fechada, esta recolhida), cada uma com a sua paginação no servidor. Não tem o filtro de
+  status, porque cada status já é uma lista, nem o de responsável.
+- **Sem "Atribuir a mim" no solo,** na aba e na página da tarefa: cada linha tem Iniciar, e bater o ponto numa tarefa
+  sem responsável já a passa para quem bateu (`ClaimIfUnassigned`). A API `POST /api/tasks/:taskId/claim` não muda.
+- **A equipe não muda:** Minhas tarefas e a Lista de tarefas seguem como eram.
+
+**Alternativas descartadas:**
+- **Colunas de kanban, uma por status:** uma tela nova para manter, e no celular as colunas virariam uma rolagem lateral.
+- **Uma tabela só, como a Lista de tarefas, com o timer em cima:** misturaria o que está em andamento com o que já
+  fechou, que só cresce.
+
+**Consequências:** a Lista de tarefas (`projectTasks`) passa a ser só da equipe, e as duas páginas de lista dividem o
+mesmo código (`taskListPage`, em `pages/project.js`). Uma tarefa sem responsável vinda de uma integração não aparece no
+Início do solo, que mostra as suas tarefas, até alguém bater o ponto nela.
+
 ## Riscos e trade-offs
 
 - **Limite de requisições das plataformas.** Buscar detalhes e sincronizar gasta a cota de cada plataforma. →
