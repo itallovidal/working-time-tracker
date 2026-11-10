@@ -16,8 +16,8 @@ flowchart LR
     home --> receivables["/orgs/:orgId/receivables (A receber, modo solo)"]
     people --> person["/orgs/:orgId/people/:personId"]
     projects --> pov["/projects/:id/overview (Início do projeto)"]
-    pov --> mine["/projects/:id/my-tasks"]
-    pov --> tasks["/projects/:id/tasks"]
+    pov --> mine["/projects/:id/my-tasks (fora do modo solo)"]
+    pov --> tasks["/projects/:id/tasks (Tarefas, no modo solo)"]
     pov --> collab["/projects/:id/collaborators"]
     tasks --> task["/tasks/:taskId"]
     pov --> mgmt["/projects/:id/management/*"]
@@ -82,13 +82,15 @@ Todas pedem que a pessoa esteja no projeto.
 |---|---|
 | `/projects/:id` | Leva ao Início do projeto |
 | `/projects/:id/overview` | Início do projeto, igual para todos: o painel do timer, as suas tarefas, o seu tempo de hoje e da semana e as suas sessões, com filtros e páginas |
-| `/projects/:id/my-tasks` | Minhas tarefas: o painel do timer e as tarefas de que a pessoa é responsável, uma lista por status |
-| `/projects/:id/tasks` | Lista de tarefas: as sem responsável e as de outras pessoas, cada lista com a sua paginação. A linha abre a tarefa |
+| `/projects/:id/my-tasks` | Minhas tarefas: o painel do timer e as tarefas de que a pessoa é responsável, uma lista por status. No modo solo leva (303) a `/projects/:id/tasks` |
+| `/projects/:id/tasks` | Lista de tarefas: as sem responsável e as de outras pessoas, cada lista com a sua paginação. A linha abre a tarefa. No modo solo é a aba **Tarefas** ([Decisão 28](../architecture/decisions.md)): o painel do timer e todas as tarefas do projeto, uma lista por status, cada uma com a sua paginação e o botão Iniciar |
 | `/projects/:id/collaborators` | Colaboradores, só para ler: pessoas e times, sem valores nem ações. Para os admins, a coluna Agora. Não existe no modo solo |
 | `/tasks/:taskId` | A página da tarefa, sem as abas do projeto: nome e descrição, detalhes, tempo registrado, um cartão por item externo, publicar nas integrações e excluir |
 
 **A lista de tarefas guarda o estado na URL:** `?q=`, `?assignee=` (só para a lista Com responsável), `?due=`,
-`?priority=`, `?status=`, `?label=` (os três últimos separados por vírgula) e `?free_page=` e `?taken_page=`.
+`?priority=`, `?status=`, `?label=` (os três últimos separados por vírgula) e `?free_page=` e `?taken_page=`. A aba
+Tarefas do modo solo guarda os mesmos, menos `?assignee=` e `?status=`, com uma página por status (`?backlog_page=`,
+`?in_progress_page=`, `?awaiting_closure_page=`, `?closed_page=`).
 Recarregar mantém a tela, o link pode ser compartilhado, e o Voltar da tarefa volta ao mesmo ponto da lista (a query fica
 também no `sessionStorage`).
 

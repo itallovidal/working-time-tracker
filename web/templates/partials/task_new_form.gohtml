@@ -1,0 +1,20 @@
+{{/* task_new_form é o modal da tarefa nova, as etapas do assistente (Escrever, Detalhes e, com integração ativa,
+     Integrações), na Lista de tarefas e na aba Tarefas do modo solo. Vai para o modal do layout base e continua no
+     escopo da página, que tem de ter o que ele chama: o taskWizard() e o create() de taskListPage (pages/project.js). */}}
+{{define "task_new_form"}}
+<template x-teleport="#modal-root">
+  {{/* novalidate: a etapa que não está à vista tem campos escondidos, e o navegador não os valida; quem confere é submitStep. */}}
+  <form class="stack" novalidate x-show="$store.modal.name === 'task-new'" @submit.prevent="submitStep('create')">
+    {{template "task_fields" .}}
+    {{template "task_publish" .}}
+    <p class="form-error" x-show="errors.create" x-text="errors.create" role="alert"></p>
+    <div class="row row-end">
+      <button type="button" class="btn btn-secondary" x-show="step === 1" @click="$store.modal.dismiss()">{{.T "common.cancel"}}</button>
+      <button type="button" class="btn btn-secondary" x-show="step > 1" @click="back()">{{template "icon" "arrow-left"}} {{.T "tasks.wizard.back"}}</button>
+      {{/* Com a etapa Integrações, a 2 também segue em frente, e quem cria é a 3. */}}
+      <button type="submit" class="btn" x-show="step === 1 || (step === 2 && publishStep)">{{.T "tasks.wizard.next"}} {{template "icon" "arrow-right"}}</button>
+      <button type="submit" class="btn" x-show="(step === 2 && !publishStep) || step === 3" :disabled="pending">{{.T "tasks.create"}}</button>
+    </div>
+  </form>
+</template>
+{{end}}

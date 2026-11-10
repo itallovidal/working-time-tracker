@@ -600,6 +600,8 @@ td.actions { text-align: right; white-space: nowrap; }
 /* Linha que leva a outra página: o link fica no nome e a linha inteira aceita o clique. */
 .row-link { cursor: pointer; }
 .row-link a { color: var(--ink); font-weight: 600; text-decoration: none; }
+/* O nome da tarefa que quebra não deixa a última palavra sozinha na linha de baixo. */
+.row-link a, .task-card-name { text-wrap: pretty; }
 .row-link:hover a, .row-link a:focus-visible { color: var(--accent); }
 /* O botão de uma linha que abre um modal (o horário da sessão): com cara de texto, e um alvo para o teclado. */
 .row-open { font: inherit; font-weight: 600; color: var(--ink); background: none; border: 0; padding: 0; cursor: pointer; text-align: left; }

@@ -74,14 +74,15 @@ func (o sweepOrg) pages() []string {
 	org, prj := "/orgs/"+o.owner.orgID, "/projects/"+o.project
 	pages := []string{
 		org, org + "/about", org + "/settings", org + "/projects", "/profile", "/help",
-		prj + "/overview", prj + "/my-tasks", prj + "/tasks",
+		prj + "/overview", prj + "/tasks",
 		prj + "/management/overview", prj + "/management/integrations", prj + "/management/settings",
 		"/tasks/" + o.task,
 	}
 	if o.solo {
 		return append(pages, org+"/receivables")
 	}
-	return append(pages, org+"/people", org+"/people/"+o.owner.id, org+"/payments", prj+"/collaborators", prj+"/management/teams")
+	// Minhas tarefas também é da equipe: no solo é parte da aba Tarefas, e o endereço leva para ela (Decisão 28).
+	return append(pages, org+"/people", org+"/people/"+o.owner.id, org+"/payments", prj+"/my-tasks", prj+"/collaborators", prj+"/management/teams")
 }
 
 var (
@@ -274,7 +275,7 @@ func TestLinkSweep_EveryLinkOfTheOwnerLeadsToAPage(t *testing.T) {
 		org, prj := "/orgs/"+o.owner.orgID, "/projects/"+o.project
 		for _, want := range []string{
 			org, org + "/projects", org + "/about", "/profile", "/help",
-			prj + "/overview", prj + "/my-tasks", prj + "/tasks", prj + "/management", "/tasks/" + o.task,
+			prj + "/overview", prj + "/tasks", prj + "/management", "/tasks/" + o.task,
 			prj + "/management/overview", prj + "/management/integrations", prj + "/management/settings",
 		} {
 			if !hrefs[want] {
@@ -283,7 +284,7 @@ func TestLinkSweep_EveryLinkOfTheOwnerLeadsToAPage(t *testing.T) {
 		}
 		for path, want := range map[string]bool{
 			org + "/receivables": o.solo, org + "/people": !o.solo, org + "/payments": !o.solo,
-			prj + "/collaborators": !o.solo, prj + "/management/teams": !o.solo,
+			prj + "/collaborators": !o.solo, prj + "/management/teams": !o.solo, prj + "/my-tasks": !o.solo,
 		} {
 			if hrefs[path] != want {
 				t.Errorf("%s: link to %s present = %v, want %v", o.label, path, hrefs[path], want)

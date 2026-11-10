@@ -1,4 +1,4 @@
-{{/* O painel do timer, no Início e em Minhas tarefas (nesta, de ponta a ponta). Mostra só a sessão deste projeto
+{{/* O painel do timer, no Início, em Minhas tarefas e na aba Tarefas do modo solo (nas duas, de ponta a ponta). Mostra só a sessão deste projeto
      (here()); a de outro projeto corre ao lado e aparece no balão (Decisão 27). Com o ponto aberto, duas colunas
      quando há largura: à esquerda o cronômetro, o valor da sessão, desde quando e os botões Parar e Tarefas da
      sessão; à direita os cartões das tarefas em andamento, com a largura que sobra. Em largura curta, uma coluna
@@ -44,9 +44,15 @@
         <span class="num" x-text="WTT.fmt.money(0)"></span>
         <span class="small">{{.T "time.session_value"}}</span>
       </div>
+      {{if eq .Tab "tasks"}}
+      {{/* Na aba Tarefas do modo solo a lista é a própria página: o convite aponta o botão, e não um link para ela. Com
+           filtro, uma lista vazia não quer dizer que o projeto não tem tarefas. */}}
+      <p class="muted" x-show="tasks.length === 0 && !loading && !hasFilters()">{{.T "time.no_tasks"}} {{.T "time.create_task_here"}}</p>
+      {{else}}
       <p class="muted" x-show="tasks.length === 0 && !loading">
         {{.T "time.no_tasks"}} <a href="/projects/{{.Project.ID}}/tasks">{{if .Me.OrganizationSolo}}{{.T "time.create_task_solo"}}{{else}}{{.T "time.create_task"}}{{end}}</a>
       </p>
+      {{end}}
       <p class="muted" x-show="tasks.length > 0">{{.T "time.start_hint"}}</p>
     </div>
   </template>

@@ -60,6 +60,7 @@ titles:
   my_overview: Início
   collaborators: Colaboradores
   tasks: Lista de tarefas
+  tasks_solo: Tarefas
   my_tasks: Minhas tarefas
   teams: Gestão · Colaboradores
   integrations: Gestão · Integrações
@@ -866,8 +867,10 @@ help:
       title: Crie as tarefas
       text: "Dê um nome à tarefa e, se quiser, uma descrição, o prazo, a prioridade, as etiquetas e o responsável. A tarefa nasce em Backlog; sem prazo, o app usa 7 dias a partir de hoje."
       tip: "Tarefa sem responsável fica disponível para o time: quem iniciar o ponto nela passa a ser o responsável. O responsável precisa estar no projeto."
+      tip_solo: "A tarefa nova já é sua. Uma sem responsável (vinda do GitHub, do GitLab ou do Trello, por exemplo) passa para você quando você iniciar o ponto nela."
     track:
       title: Registre as horas
+      text_solo: "No Início do projeto ou em Tarefas, clique em “Iniciar” na tarefa em que vai trabalhar. O cronômetro começa e a sessão fica no canto da tela, com o nome do projeto, em qualquer página. Para encerrar, clique em “Parar”."
       text: "No Início do projeto ou em Minhas tarefas, clique em “Iniciar” na tarefa em que vai trabalhar. O cronômetro começa e a sessão fica no canto da tela, com o nome do projeto, em qualquer página. Para encerrar, clique em “Parar”."
       tip: "Ao iniciar, a tarefa vai para “Em progresso”. Você pode trabalhar em várias tarefas na mesma sessão (“Adicionar à sessão”): cada uma conta o tempo cheio e a sessão conta uma vez só. Dá para ter um ponto aberto em cada projeto ao mesmo tempo: o valor é o de cada projeto, e as horas que se sobrepõem contam uma vez só no seu total."
     numbers:
@@ -925,13 +928,16 @@ help:
       tasks: "“Suas tarefas” lista as tarefas em que você é responsável, cada uma com o botão “Iniciar”."
       sessions: "“Sessões” é o histórico das suas sessões, com filtro de data e de tarefa. Clique numa sessão para ver as tarefas dela e ajustar os intervalos."
       blocked: "Se aparecer o aviso de que você não tem valor por hora, o ponto fica bloqueado até um administrador definir o seu."
+    project_solo_tasks:
+      title: "Projeto: Tarefas"
+      text: "O painel do cronômetro e todas as tarefas do projeto, separadas por status: Backlog, Em progresso, Aguardando fechamento e Fechada (esta começa recolhida), cada uma com as suas páginas. Cada linha mostra prioridade e prazo e tem o botão “Iniciar”. A tarefa nova já é sua; numa sem responsável (vinda do GitHub, do GitLab ou do Trello, por exemplo), iniciar o ponto a passa para você."
+      filters: "A busca e os filtros (prazo, prioridade e etiquetas) ficam na URL: dá para guardar ou mandar o link da lista filtrada."
     project_my_tasks:
       title: "Projeto: Minhas tarefas"
       text: "Tudo o que está com você, separado por status: Backlog, Em progresso, Aguardando fechamento e Fechada (esta começa recolhida). Cada linha mostra prioridade e prazo e tem o botão “Iniciar”. O que ninguém pegou fica na Lista de tarefas."
     project_tasks:
       title: "Projeto: Lista de tarefas"
       text: "Todas as tarefas do projeto em duas listas: “Sem responsável”, as que ninguém pegou, e “Com responsável”. Quem inicia o ponto numa tarefa sem responsável passa a ser o responsável; o botão “Pegar” atribui a tarefa a você sem iniciar o cronômetro."
-      text_solo: "Todas as tarefas do projeto numa lista só. A tarefa nova já é sua; numa sem responsável (vinda do GitHub, do GitLab ou do Trello, por exemplo), “Atribuir a mim” a passa para você sem iniciar o cronômetro, e iniciar o ponto nela também."
       filters: "A busca e os filtros (prazo, prioridade, status e etiquetas) ficam na URL: dá para guardar ou mandar o link da lista filtrada."
       new: "“Nova tarefa” abre um formulário em passos: a tarefa, os detalhes e, se o projeto tem integrações, as plataformas onde ela também deve existir."
       open: "Clique numa linha para abrir a tarefa."
@@ -1267,6 +1273,7 @@ project:
     sections: Seções do projeto
     overview: Visão geral
     tasks: Lista de tarefas
+    tasks_solo: Tarefas
     my_tasks: Minhas tarefas
     home: Início
     teams: Colaboradores no projeto
@@ -1372,7 +1379,7 @@ tasks:
   label_create: Criar
   pick_person: Escolha a pessoa
   unassigned_hint: "Sem responsável, a tarefa fica disponível: quem bater o ponto nela passa a ser o responsável."
-  unassigned_hint_solo: "Sem responsável, a tarefa fica fora de Minhas tarefas até você pegá-la ou bater o ponto nela."
+  unassigned_hint_solo: "Sem responsável, a tarefa passa para você quando você bater o ponto nela."
   new: Nova tarefa
   loading: Carregando tarefas…
   sync: Sincronizar
@@ -1410,10 +1417,10 @@ tasks:
   row_hint: Clique em uma tarefa para abrir os detalhes.
   pager_free: Páginas das tarefas sem responsável
   pager_taken: Páginas das tarefas com responsável
-  section_all: Tarefas
-  all_none: Nenhuma tarefa neste projeto
-  all_none_text: Crie a primeira com o botão Nova tarefa.
-  pager_all: Páginas das tarefas
+  # A aba Tarefas do modo solo: uma lista por status.
+  solo:
+    none: Nenhuma tarefa neste status
+    pager: "Páginas de {{.status}}"
   col_task: Tarefa
   col_assignee: Responsável
   col_deadline: Prazo
@@ -1424,8 +1431,6 @@ tasks:
   claim: Pegar
   claim_title: Associar a tarefa a mim, sem iniciar o ponto
   claim_label: "Pegar a tarefa {{.name}}"
-  claim_solo: Atribuir a mim
-  claim_label_solo: "Atribuir a tarefa {{.name}} a mim"
   claimed: "Você pegou \"{{.name}}\". Ela está em Minhas tarefas."
   running: Em andamento
   start: Iniciar
@@ -1456,6 +1461,7 @@ my_tasks:
   none: Você não tem tarefas neste projeto.
   none_text: Pegue uma disponível na lista de tarefas.
   none_link: Ver a lista de tarefas
+  none_link_solo: Ver as tarefas
   empty: Nenhuma tarefa neste status.
   count:
     one: "{{.count}} tarefa"
@@ -1547,7 +1553,8 @@ time:
   stopped: Parado
   no_tasks: Você não tem tarefas neste projeto.
   create_task: Pegue uma disponível na lista de tarefas.
-  create_task_solo: Crie uma na lista de tarefas.
+  create_task_solo: Crie uma em Tarefas.
+  create_task_here: Crie uma com o botão Nova tarefa.
   task: Tarefa
   start: Iniciar
   yours: Seu tempo neste projeto

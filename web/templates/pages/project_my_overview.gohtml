@@ -47,7 +47,7 @@
         {{template "icon" "list-check"}}
         <strong>{{.T "time.no_tasks"}}</strong>
         <span>{{if .Me.OrganizationSolo}}{{.T "time.create_task_solo"}}{{else}}{{.T "time.create_task"}}{{end}}</span>
-        <a class="btn btn-secondary btn-sm" href="/projects/{{.Project.ID}}/tasks">{{.T "my_tasks.none_link"}}</a>
+        <a class="btn btn-secondary btn-sm" href="/projects/{{.Project.ID}}/tasks">{{if .Me.OrganizationSolo}}{{.T "my_tasks.none_link_solo"}}{{else}}{{.T "my_tasks.none_link"}}{{end}}</a>
       </div>
       {{template "empty_state" (dict "Icon" "circle-check" "Cloak" true "Show" "tasks.length > 0 && idleTasks().length === 0" "Title" (.T "time.all_in_session"))}}
       <div class="task-cards" x-show="idleTasks().length > 0">

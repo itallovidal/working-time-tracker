@@ -39,8 +39,9 @@ func TestProjectTabs(t *testing.T) {
 		{"team member", page(false, member, false, "tasks"), "home mine tasks* teams"},
 		{"team overview", page(false, all, true, "overview"), "overview* teams integrations settings back"},
 		{"team integrations only", page(false, onlyIntegrations, true, "integrations"), "overview integrations* back"},
-		{"solo home", page(true, all, false, "home"), "home* mine tasks overview management"},
-		{"solo overview", page(true, all, true, "overview"), "home mine tasks overview* management"},
+		{"solo home", page(true, all, false, "home"), "home* tasks overview management"},
+		{"solo tasks", page(true, member, false, "tasks"), "home tasks*"},
+		{"solo overview", page(true, all, true, "overview"), "home tasks overview* management"},
 		{"solo settings", page(true, all, true, "settings"), "integrations settings* back"},
 	} {
 		if got := tabsOf(c.d); got != c.want {
@@ -48,14 +49,23 @@ func TestProjectTabs(t *testing.T) {
 		}
 	}
 
-	// Os endereços: a Visão geral continua em /management/overview, e o Início em /overview.
+	// Os endereços: a Visão geral continua em /management/overview, e o Início em /overview. No solo a aba das tarefas
+	// é Tarefas, que junta Minhas tarefas e a Lista de tarefas (Decisão 28), no endereço da lista.
 	for _, tab := range page(true, all, false, "home").ProjectTabs() {
 		want := map[string]string{
-			"home": "/projects/p1/overview", "mine": "/projects/p1/my-tasks", "tasks": "/projects/p1/tasks",
+			"home": "/projects/p1/overview", "tasks": "/projects/p1/tasks",
 			"overview": "/projects/p1/management/overview", "management": "/projects/p1/management",
 		}[tab.ID]
 		if tab.Href != want {
 			t.Errorf("solo %s: href = %q, want %q", tab.ID, tab.Href, want)
+		}
+		if tab.ID == "tasks" && tab.Label != "project.head.tasks_solo" {
+			t.Errorf("solo tasks: label = %q, want project.head.tasks_solo", tab.Label)
+		}
+	}
+	for _, tab := range page(false, all, false, "home").ProjectTabs() {
+		if tab.ID == "tasks" && tab.Label != "project.head.tasks" {
+			t.Errorf("team tasks: label = %q, want project.head.tasks", tab.Label)
 		}
 	}
 }

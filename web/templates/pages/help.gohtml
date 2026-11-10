@@ -52,8 +52,9 @@
               <li><a href="#receivables">{{.T "help.screens.receivables.title"}}</a></li>
               <li><a href="#org-about">{{.T "help.screens.org_about.title"}}</a></li>
               <li><a href="#project-home">{{.T "help.screens.project_home.title"}}</a></li>
+              {{if .Solo}}<li><a href="#solo-tasks">{{.T "help.screens.project_solo_tasks.title"}}</a></li>{{else}}
               <li><a href="#my-tasks">{{.T "help.screens.project_my_tasks.title"}}</a></li>
-              <li><a href="#task-list">{{.T "help.screens.project_tasks.title"}}</a></li>
+              <li><a href="#task-list">{{.T "help.screens.project_tasks.title"}}</a></li>{{end}}
               {{if not .Solo}}<li><a href="#project-people">{{.T "help.screens.project_people.title"}}</a></li>{{end}}
               <li><a href="#mgmt-overview">{{if .Solo}}{{.T "help.screens.mgmt_overview.title_solo"}}{{else}}{{.T "help.screens.mgmt_overview.title"}}{{end}}</a></li>
               {{if not .Solo}}<li><a href="#mgmt-people">{{.T "help.screens.mgmt_people.title"}}</a></li>{{end}}
@@ -142,13 +143,13 @@
         <section class="card help-section" id="create-tasks" data-help-section>
           <h3>{{.T "help.steps.tasks.title"}}</h3>
           <p>{{.T "help.steps.tasks.text"}}</p>
-          <ol class="help-path" aria-label="{{.T "help.path_label"}}"><li>{{.T "help.project"}}</li><li>{{.T "project.head.tasks"}}</li><li>{{.T "tasks.new"}}</li></ol>
-          <p class="help-tip">{{.T "help.steps.tasks.tip"}}</p>
+          <ol class="help-path" aria-label="{{.T "help.path_label"}}"><li>{{.T "help.project"}}</li><li>{{if .Solo}}{{.T "project.head.tasks_solo"}}{{else}}{{.T "project.head.tasks"}}{{end}}</li><li>{{.T "tasks.new"}}</li></ol>
+          <p class="help-tip">{{if .Solo}}{{.T "help.steps.tasks.tip_solo"}}{{else}}{{.T "help.steps.tasks.tip"}}{{end}}</p>
         </section>
 
         <section class="card help-section" id="track-hours" data-help-section>
           <h3>{{.T "help.steps.track.title"}}</h3>
-          <p>{{.T "help.steps.track.text"}}</p>
+          <p>{{if .Solo}}{{.T "help.steps.track.text_solo"}}{{else}}{{.T "help.steps.track.text"}}{{end}}</p>
           <ol class="help-path" aria-label="{{.T "help.path_label"}}"><li>{{.T "help.project"}}</li><li>{{.T "project.head.home"}}</li><li>{{.T "time.start"}}</li></ol>
           <p class="help-tip">{{.T "help.steps.track.tip"}}</p>
         </section>
@@ -249,6 +250,16 @@
           {{if not .Solo}}<p class="help-tip">{{.T "help.screens.project_home.blocked"}}</p>{{end}}
         </section>
 
+        {{/* No modo solo Minhas tarefas e a Lista de tarefas são uma aba só, Tarefas (Decisão 28). */}}
+        {{if .Solo}}<section class="card help-section" id="solo-tasks" data-help-section>
+          <h3>{{.T "help.screens.project_solo_tasks.title"}}</h3>
+          <p>{{.T "help.screens.project_solo_tasks.text"}}</p>
+          <ul class="help-list">
+            <li>{{.T "help.screens.project_solo_tasks.filters"}}</li>
+            <li>{{.T "help.screens.project_tasks.new"}}</li>
+            <li>{{.T "help.screens.project_tasks.open"}}</li>
+          </ul>
+        </section>{{else}}
         <section class="card help-section" id="my-tasks" data-help-section>
           <h3>{{.T "help.screens.project_my_tasks.title"}}</h3>
           <p>{{.T "help.screens.project_my_tasks.text"}}</p>
@@ -256,14 +267,14 @@
 
         <section class="card help-section" id="task-list" data-help-section>
           <h3>{{.T "help.screens.project_tasks.title"}}</h3>
-          <p>{{if .Solo}}{{.T "help.screens.project_tasks.text_solo"}}{{else}}{{.T "help.screens.project_tasks.text"}}{{end}}</p>
+          <p>{{.T "help.screens.project_tasks.text"}}</p>
           <ul class="help-list">
             <li>{{.T "help.screens.project_tasks.filters"}}</li>
             <li>{{.T "help.screens.project_tasks.new"}}</li>
             <li>{{.T "help.screens.project_tasks.open"}}</li>
-            {{if not .Solo}}<li>{{.T "help.screens.project_tasks.presence"}}</li>{{end}}
+            <li>{{.T "help.screens.project_tasks.presence"}}</li>
           </ul>
-        </section>
+        </section>{{end}}
 
         {{if not .Solo}}<section class="card help-section" id="project-people" data-help-section>
           <h3>{{.T "help.screens.project_people.title"}}</h3>

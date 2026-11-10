@@ -6,6 +6,7 @@ import (
 	"github.com/labstack/echo/v5"
 
 	"working-time-tracker/internal/adapter"
+	"working-time-tracker/internal/domain/auth"
 )
 
 // integrationTypes vai no window.BOOT das páginas que mostram integrações: o que
@@ -90,14 +91,28 @@ func (h *Handler) Project(c *echo.Context) error {
 	return c.Redirect(http.StatusSeeOther, "/projects/"+c.Param("projectId")+"/"+projectHome())
 }
 
-// Tasks é a lista de tarefas do projeto (S9.1).
+// Tasks é a lista de tarefas do projeto (S9.1). No modo solo é a aba Tarefas, que junta a lista e Minhas tarefas: o
+// painel do timer e todas as tarefas do projeto, uma lista por status (Decisão 28).
 func (h *Handler) Tasks(c *echo.Context) error {
+	if soloOrg(c) {
+		return h.projectPage(c, "project_solo_tasks", "titles.tasks_solo", "tasks", h.integrationTypes(c))
+	}
 	return h.projectPage(c, "project_tasks", "titles.tasks", "tasks", h.integrationTypes(c))
 }
 
-// MyTasks é a aba Minhas tarefas: as tarefas de que a pessoa é responsável, em listas por status.
+// MyTasks é a aba Minhas tarefas: as tarefas de que a pessoa é responsável, em listas por status. No modo solo ela
+// não existe, e o endereço leva à aba Tarefas, que tem o que ela mostrava.
 func (h *Handler) MyTasks(c *echo.Context) error {
+	if soloOrg(c) {
+		return c.Redirect(http.StatusSeeOther, "/projects/"+c.Param("projectId")+"/tasks")
+	}
 	return h.projectPage(c, "project_my_tasks", "titles.my_tasks", "mine", h.integrationTypes(c))
+}
+
+// soloOrg diz se quem está logado está numa organização no modo solo.
+func soloOrg(c *echo.Context) bool {
+	me := auth.CurrentPerson(c)
+	return me != nil && me.OrganizationSolo
 }
 
 // ToHome é o caminho antigo do Ponto, que passou para o Início do projeto.
