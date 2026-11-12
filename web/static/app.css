@@ -722,9 +722,8 @@ td.actions { text-align: right; white-space: nowrap; }
 .select-tone { font-weight: 600; }
 .select-tone option { background-color: var(--tone-soft); color: var(--tone); }
 
-/* Tons só de enfeite, para dar cor aos cartões da página inicial: não carregam o sentido de
-   prioridade nem de status. O cartão de projeto sorteia um pelo id, e os números da visão geral
-   têm o seu. Usam as mesmas cores da paleta, nos dois temas. */
+/* Tons só de enfeite, para dar cor aos números da visão geral: não carregam o sentido de
+   prioridade nem de status. Usam as mesmas cores da paleta, nos dois temas. */
 .hue-teal { --tone: var(--teal); --tone-soft: var(--teal-soft); }
 .hue-blue { --tone: var(--blue); --tone-soft: var(--blue-soft); }
 .hue-purple { --tone: var(--purple); --tone-soft: var(--purple-soft); }
@@ -732,23 +731,24 @@ td.actions { text-align: right; white-space: nowrap; }
 .hue-orange { --tone: var(--orange); --tone-soft: var(--orange-soft); }
 .hue-gold { --tone: var(--gold); --tone-soft: var(--gold-soft); }
 
-/* Cartões de projeto na página inicial: fundo neutro e a cor do projeto só num toque, a sigla
-   em tom suave, os ícones e a borda ao passar o mouse. O nome, o cliente e só o que ajuda a
-   escolher (quantas pessoas e tarefas). Nada de faixa nem de fundo cheio: a lista não pode virar
-   um arco-íris. */
+/* Cartões de projeto em Clientes e Projetos: fundo neutro e a cor só num toque, o ícone em tom
+   suave, os ícones das contagens e a borda ao passar o mouse. Todo projeto tem o ciano da marca:
+   a cor sorteada por projeto misturava tons com a do cliente e parecia trocada. O nome e só o que
+   ajuda a escolher (quantas pessoas e tarefas). Nada de faixa nem de fundo cheio. */
 .project-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
 .project-card {
   background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius);
   padding: 16px 18px; display: flex; flex-direction: column; gap: 10px;
   text-decoration: none; color: inherit;
   transition: border-color 0.15s, box-shadow 0.15s;
+  --tone: var(--accent); --tone-soft: var(--accent-soft);
 }
 .project-card:hover { border-color: var(--tone); box-shadow: var(--shadow); }
 .project-card:focus-visible { outline: 2px solid var(--tone); outline-offset: 2px; }
 .project-top { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .project-mark {
   width: 40px; height: 40px; border-radius: 10px; flex: none; display: grid; place-items: center;
-  background: var(--tone-soft); color: var(--tone); font-weight: 700; font-size: 0.9rem; letter-spacing: 0.02em;
+  background: var(--tone-soft); color: var(--tone); font-size: 1rem;
 }
 .project-title { min-width: 0; }
 .project-card h3 { color: var(--ink); overflow-wrap: anywhere; }
@@ -764,7 +764,7 @@ td.actions { text-align: right; white-space: nowrap; }
 }
 .project-stat i { color: var(--tone); }
 
-/* Clientes e Projetos: um grupo por cliente, com o cabeçalho dele (a sigla, o nome, o país e o contato, a cobrança e os
+/* Clientes e Projetos: um grupo por cliente, com o cabeçalho dele (o ícone, o nome, o país e o contato, a cobrança e os
    botões) sobre uma linha fina, e os cartões dos projetos embaixo. Os grupos não têm moldura: os cartões dos projetos já
    têm, e cartão dentro de cartão pesa. No celular a cobrança e os botões descem para baixo do nome. */
 .catalog { display: flex; flex-direction: column; gap: 64px; }
@@ -774,9 +774,11 @@ td.actions { text-align: right; white-space: nowrap; }
   display: flex; align-items: center; gap: 12px 14px; flex-wrap: wrap;
   padding-bottom: 12px; border-bottom: 1px solid var(--rule);
 }
+/* O círculo do grupo é neutro, para a cor ficar só com os projetos: a maleta do cliente em ardósia e a casa dos projetos
+   internos mais apagada ainda. */
 .catalog-mark {
   width: 40px; height: 40px; border-radius: 50%; flex: none; display: grid; place-items: center;
-  background: var(--tone-soft); color: var(--tone); font-weight: 700; font-size: 0.9rem; letter-spacing: 0.02em;
+  background: var(--slate-soft); color: var(--slate); font-size: 1rem;
 }
 .catalog-mark-internal { background: var(--surface-2); color: var(--muted); }
 .catalog-title { flex: 1 1 220px; min-width: 0; }

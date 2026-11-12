@@ -56,8 +56,10 @@ Valem para telas novas e para as que forem revistas.
 - **Nada de editar na linha.** Uma linha ou um cartão não tem campo editável nem ação destrutiva (mudar valor, tirar
   alguém do projeto, excluir). Ele abre um modal que reúne tudo daquele item, com rascunho e um Salvar. A exceção que
   ainda existe é a página Colaboradores da organização, com o botão de papel e o lápis na linha.
-- **Cor com moderação.** O cartão é neutro (`--surface`), e a cor entra só num toque: a sigla em tom suave, os ícones e
-  a borda no hover. Nada de faixa, fundo cheio ou chips coloridos em lista. `TestProjectCardsStayCalm`
+- **Cor com moderação.** O cartão é neutro (`--surface`), e a cor entra só num toque: o ícone em tom suave, os ícones
+  e a borda no hover. Nada de faixa, fundo cheio ou chips coloridos em lista. Em Clientes e Projetos a cor é fixa por
+  tipo, não sorteada por item: todo cartão de projeto tem o ciano da marca, com o diagrama (de cliente) ou as camadas
+  (interno), e o círculo do grupo é neutro, com a maleta (cliente) ou a casa (internos). `TestProjectCardsStayCalm`
   (`web/tones_test.go`) segura isso nos cartões de projeto.
 - **Prioridade e status têm cor própria**, a mesma em todo lugar (selos, chips de filtro, selects dos modais), com um
   par para o tema claro e outro para o escuro. Prioridade: urgente vermelha, alta laranja, média verde, baixa azul e

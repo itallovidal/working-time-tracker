@@ -114,27 +114,9 @@ document.addEventListener('alpine:init', () => {
     c.$nextTick(() => c.focusField(field));
   };
 
-  // Tons dos cartões de projeto: só enfeite (as classes .hue-* do app.css), sorteados pelo id para
-  // o projeto ter sempre a mesma cor, em qualquer lugar.
-  const projectHues = ['teal', 'blue', 'purple', 'green', 'orange', 'gold'];
-  const hueOf = (id) => {
-    let h = 0;
-    for (const c of String(id)) h = (h * 31 + c.charCodeAt(0)) >>> 0;
-    return projectHues[h % projectHues.length];
-  };
   // initialsOf são as iniciais das duas primeiras palavras, como a do canto da barra superior:
   // "Ana Souza" -> "AS".
   const initialsOf = (name) => String(name || '').trim().split(/\s+/).filter(Boolean).slice(0, 2).map((w) => Array.from(w)[0].toUpperCase()).join('') || '?';
-  // markOf é a sigla do cartão do projeto. As palavras curtas e minúsculas que ligam o nome ("da",
-  // "de", "do") ficam de fora, para "Site da Jatobá" dar "SJ" e não "SD"; um nome de uma palavra só
-  // usa as duas primeiras letras dela.
-  const markOf = (name) => {
-    const words = String(name || '').trim().split(/\s+/).filter(Boolean);
-    const main = words.filter((w) => !(w.length <= 3 && w === w.toLowerCase() && w !== w.toUpperCase()));
-    const picked = main.length ? main : words;
-    const letters = picked.length > 1 ? picked.slice(0, 2).map((w) => Array.from(w)[0]) : Array.from(picked[0] || '?').slice(0, 2);
-    return letters.join('').toUpperCase();
-  };
 
   const HOME_TEAM_PER_PAGE = 5; // listas de pessoas ficam em cinco por vez
   // As três janelas da visão geral: a chave é a da API, o campo é o tempo da pessoa nela.
@@ -1264,9 +1246,6 @@ document.addEventListener('alpine:init', () => {
     viewingId: null, // o cliente dos detalhes
     confirming: false, // a confirmação de Excluir, nos detalhes
     dedications: {}, // a dedicação de cada cliente mensal com estimativa, pelo id; só no solo
-    hueOf,
-    markOf,
-    initialsOf,
     async init() {
       try {
         const [projects, customers] = await Promise.all([
