@@ -16,11 +16,12 @@
     <input id="{{$id}}-monthly-fee" type="text" inputmode="decimal" class="num" data-field="monthly_fee_cents" x-model="{{$m}}.monthly_fee" @input="clearField('monthly_fee_cents')" :aria-invalid="fieldErrors.monthly_fee_cents ? 'true' : 'false'">
     {{template "field_error" "monthly_fee_cents"}}
   </div>
-  {{/* Só acompanhamento (Decisão 26): as horas do período do contrato contra esta estimativa, sem mudar a cobrança. */}}
+  {{/* Só acompanhamento (Decisões 26 e 29): as horas da semana contra esta estimativa, e as do período do contrato
+       contra ela vezes os dias do período sobre 7, sem mudar a cobrança. */}}
   <div class="field">
     {{template "field_label" (dict "D" . "For" (printf "%s-estimated-hours" $id) "Key" "customer.billing.estimated_hours" "Optional" true)}}
-    <input id="{{$id}}-estimated-hours" type="number" inputmode="numeric" min="1" max="{{limit "monthly_hours"}}" step="1" class="num" data-field="estimated_monthly_hours" x-model="{{$m}}.estimated_hours" @input="clearField('estimated_monthly_hours')" :aria-invalid="fieldErrors.estimated_monthly_hours ? 'true' : 'false'">
-    {{template "field_error" "estimated_monthly_hours"}}
+    <input id="{{$id}}-estimated-hours" type="number" inputmode="numeric" min="1" max="{{limit "weekly_hours"}}" step="1" class="num" data-field="estimated_weekly_hours" x-model="{{$m}}.estimated_hours" @input="clearField('estimated_weekly_hours')" :aria-invalid="fieldErrors.estimated_weekly_hours ? 'true' : 'false'">
+    {{template "field_error" "estimated_weekly_hours"}}
     <span class="hint">{{.T "customer.billing.estimated_hours_hint"}}</span>
   </div>
   <div class="field">

@@ -69,9 +69,10 @@ type Customer struct {
 	MonthlyFeeCents *int    `json:"monthly_fee_cents"`
 	ContractStart   *string `json:"contract_start"`
 	ContractEnd     *string `json:"contract_end"`
-	// EstimatedMonthlyHours, só monthly e opcional: as horas que o dono estima dedicar ao cliente em cada período do
-	// contrato, em todos os projetos dele (1 a validate.MaxMonthlyHours). Só acompanhamento: não muda nenhum valor.
-	EstimatedMonthlyHours *int `json:"estimated_monthly_hours"`
+	// EstimatedWeeklyHours, só monthly e opcional: as horas que o dono estima dedicar ao cliente por semana, em todos os
+	// projetos dele (1 a validate.MaxWeeklyHours). A meta do período do contrato sai dela (Decisão 29). Só
+	// acompanhamento: não muda nenhum valor.
+	EstimatedWeeklyHours *int `json:"estimated_weekly_hours"`
 	// BillingCycle é monthly (padrão) ou biweekly, este só no modo hourly. CycleAnchor, só no biweekly, é o último dia
 	// do último período já pago, YYYY-MM-DD: os períodos de 14 dias começam no dia seguinte e nada até ele é cobrado.
 	BillingCycle string  `json:"billing_cycle"`
@@ -107,13 +108,13 @@ type Input struct {
 	MonthlyFeeCents validate.Optional[int] `json:"monthly_fee_cents"`
 	ContractStart   *string                `json:"contract_start"`
 	ContractEnd     *string                `json:"contract_end"`
-	// EstimatedMonthlyHours: null apaga a estimativa, como nos campos opcionais de dinheiro.
-	EstimatedMonthlyHours validate.Optional[int] `json:"estimated_monthly_hours"`
-	BillingCycle          *string                `json:"billing_cycle"`
-	CycleAnchor           *string                `json:"cycle_anchor"`
-	ClosingDay            *int                   `json:"closing_day"`
-	PaymentDays           *int                   `json:"payment_days"`
-	LateFeeBP             *int                   `json:"late_fee_bp"`
-	LateInterestBPMonth   *int                   `json:"late_interest_bp_month"`
-	GraceDays             *int                   `json:"grace_days"`
+	// EstimatedWeeklyHours: null apaga a estimativa, como nos campos opcionais de dinheiro.
+	EstimatedWeeklyHours validate.Optional[int] `json:"estimated_weekly_hours"`
+	BillingCycle         *string                `json:"billing_cycle"`
+	CycleAnchor          *string                `json:"cycle_anchor"`
+	ClosingDay           *int                   `json:"closing_day"`
+	PaymentDays          *int                   `json:"payment_days"`
+	LateFeeBP            *int                   `json:"late_fee_bp"`
+	LateInterestBPMonth  *int                   `json:"late_interest_bp_month"`
+	GraceDays            *int                   `json:"grace_days"`
 }

@@ -52,7 +52,7 @@ var (
 	ErrInvalidHourlyRate  = apperr.New("customer.invalid_hourly_rate", http.StatusBadRequest)
 	ErrInvalidMonthlyFee  = apperr.New("customer.invalid_monthly_fee", http.StatusBadRequest)
 	ErrInvalidContractEnd = apperr.New("customer.invalid_contract_end", http.StatusBadRequest)
-	// ErrInvalidEstimatedHours recusa uma estimativa de horas por mês fora de 1 a validate.MaxMonthlyHours.
+	// ErrInvalidEstimatedHours recusa uma estimativa de horas por semana fora de 1 a validate.MaxWeeklyHours.
 	ErrInvalidEstimatedHours = apperr.New("customer.invalid_estimated_hours", http.StatusBadRequest)
 	ErrInvalidClosingDay     = apperr.New("customer.invalid_closing_day", http.StatusBadRequest)
 	ErrInvalidPaymentDays    = apperr.New("customer.invalid_payment_days", http.StatusBadRequest)

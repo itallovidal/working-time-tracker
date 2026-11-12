@@ -20,6 +20,8 @@ type terms struct {
 	cycle       cycle
 	paymentDays int
 	extraCents  int
+	// loc é o fuso da organização, onde começa a semana da dedicação.
+	loc *time.Location
 }
 
 // termsOf monta os termos do cliente, que precisa vir com os projetos carregados (Store.Customer e Store.Customers).
@@ -28,7 +30,7 @@ func termsOf(c *ent.Customer, loc *time.Location) terms {
 	for _, p := range c.Edges.Projects {
 		extra += p.BillExtraCents
 	}
-	return terms{customer: c, cycle: cycleOf(c, loc), paymentDays: c.PaymentDays, extraCents: extra}
+	return terms{customer: c, cycle: cycleOf(c, loc), paymentDays: c.PaymentDays, extraCents: extra, loc: loc}
 }
 
 // monthlyCents é o valor de um período do contrato mensal: a mensalidade mais os acréscimos mensais dos projetos.

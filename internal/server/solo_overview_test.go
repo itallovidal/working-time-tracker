@@ -28,6 +28,20 @@ func monthDays(t *testing.T, back int) (string, string) {
 	return first.Format(time.DateOnly), first.AddDate(0, 1, -1).Format(time.DateOnly)
 }
 
+// dayCount conta os dias de from a to, YYYY-MM-DD, os dois inclusivos.
+func dayCount(t *testing.T, from, to string) int {
+	t.Helper()
+	a, err := time.Parse(time.DateOnly, from)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := time.Parse(time.DateOnly, to)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return int(b.Sub(a).Hours()/24) + 1
+}
+
 // O dono do modo solo lê as horas, a Receita e a projetada do mês passado e do corrente, por cliente e em ordem de nome.
 func TestSoloOverview_OwnerReadsTheWindows(t *testing.T) {
 	e := newServer(t)
@@ -328,7 +342,7 @@ func TestSoloDedication_OwnerReadsTheCurrentPeriod(t *testing.T) {
 	if rec.Code != http.StatusOK || strings.TrimSpace(rec.Body.String()) != "[]" {
 		t.Fatalf("without an estimate = %d %s, want an empty list", rec.Code, rec.Body.String())
 	}
-	if rec := do(e, "PATCH", "/api/customers/"+monthly.ID.String(), `{"estimated_monthly_hours":40}`, owner.session); rec.Code != http.StatusOK {
+	if rec := do(e, "PATCH", "/api/customers/"+monthly.ID.String(), `{"estimated_weekly_hours":40}`, owner.session); rec.Code != http.StatusOK {
 		t.Fatalf("set the estimate = %d %s", rec.Code, rec.Body.String())
 	}
 	first, last := monthDays(t, 0)
@@ -338,9 +352,17 @@ func TestSoloDedication_OwnerReadsTheCurrentPeriod(t *testing.T) {
 		t.Fatalf("dedications = %d %s, want one", rec.Code, rec.Body.String())
 	}
 	d := list[0]
+	// A meta do período é a semanal vezes os dias dele sobre 7 (Decisão 29).
+	days := dayCount(t, first, last)
 	if d["customer"].(map[string]any)["name"] != "Mensal" || d["period_start"] != first || d["period_end"] != last ||
-		d["estimated_hours"] != float64(40) || d["seconds"] != float64(0) || d["percent"] != float64(0) || d["open"] != true {
-		t.Errorf("dedication = %v, want Mensal's %s..%s period, 0h of 40h", d, first, last)
+		d["estimated_weekly_hours"] != float64(40) || d["estimated_seconds"] != float64(40*3600)*float64(days)/7 ||
+		d["seconds"] != float64(0) || d["percent"] != float64(0) || d["open"] != true {
+		t.Errorf("dedication = %v, want Mensal's %s..%s period, 0h of 40h a week", d, first, last)
+	}
+	// A semana em andamento vem junto, de segunda a domingo.
+	week, _ := d["week"].(map[string]any)
+	if week == nil || week["seconds"] != float64(0) || week["percent"] != float64(0) || dayCount(t, week["start"].(string), week["end"].(string)) != 7 {
+		t.Errorf("week = %v, want the running week, 0h", d["week"])
 	}
 
 	home := decode(t, do(e, "GET", soloOverviewPath(owner)+"?window=month", "", owner.session))

@@ -29,7 +29,7 @@ os valores são em centavos, na moeda da organização.
 | | Por hora (`hourly`, padrão) | Mensal (`monthly`, só no modo solo) |
 |---|---|---|
 | O que é | As horas dos projetos vezes o valor por hora do cliente, mais o acréscimo de cada projeto | Um valor fixo por mês, o contrato, mais o acréscimo mensal de cada projeto |
-| Só dele | `hourly_rate_cents`: o valor por hora, **obrigatório**, com o piso de 10,00 | `monthly_fee_cents` (obrigatório, maior que zero), `estimated_monthly_hours` (opcional, de 1 a 744: as [horas estimadas](#horas-estimadas-do-contrato-mensal), só para acompanhar), `contract_start` (obrigatório) e `contract_end` (opcional, depois do início); `late_fee_bp` (multa, 200 = 2%), `late_interest_bp_month` (juros ao mês) e `grace_days` (tolerância depois do vencimento), que ficam num bloco recolhido na tela |
+| Só dele | `hourly_rate_cents`: o valor por hora, **obrigatório**, com o piso de 10,00 | `monthly_fee_cents` (obrigatório, maior que zero), `estimated_weekly_hours` (opcional, de 1 a 168: as [horas estimadas por semana](#horas-estimadas-do-contrato-mensal), só para acompanhar), `contract_start` (obrigatório) e `contract_end` (opcional, depois do início); `late_fee_bp` (multa, 200 = 2%), `late_interest_bp_month` (juros ao mês) e `grace_days` (tolerância depois do vencimento), que ficam num bloco recolhido na tela |
 | Só dele, o ciclo | `billing_cycle`: `monthly` (padrão, fecha no `closing_day`) ou `biweekly` (a cada 14 dias, o bi-weekly dos EUA), com `cycle_anchor`, o último dia do último período que o cliente já pagou | O ciclo é sempre o mensal |
 | Dos dois | `closing_day` (1 a 31, padrão 31: 31 é o último dia do mês, e o mês curto fecha no último dia dele; sem uso no ciclo de 14 dias) e `payment_days` (dias entre o fechamento e o vencimento, padrão 0) | |
 
@@ -278,10 +278,17 @@ janela é de calendário no fuso da organização: Este mês, Mês passado ou An
 
 ## Horas estimadas do contrato mensal
 
-O cliente com contrato mensal pode ter uma **estimativa de horas por mês** (`estimated_monthly_hours`), e a tela mostra
-as horas do **período do contrato** contra ela: "18h de 40h · 45%"
-([Decisão 26](../architecture/decisions.md#decisão-26-horas-estimadas-por-mês-no-contrato-mensal-só-para-acompanhar)).
-É só para acompanhar: a mensalidade, a proposta e o valor por hora efetivo não mudam, e não há excedente.
+O cliente com contrato mensal pode ter uma **estimativa de horas por semana** (`estimated_weekly_hours`), e a tela
+mostra as horas da **semana em andamento** contra ela e as do **período do contrato** contra a meta dele: "18h de 40h ·
+45%" ([Decisões 26](../architecture/decisions.md#decisão-26-horas-estimadas-por-mês-no-contrato-mensal-só-para-acompanhar)
+e [29](../architecture/decisions.md#decisão-29-horas-estimadas-por-semana-e-a-meta-do-período-pelos-dias)). É só para
+acompanhar: a mensalidade, a proposta e o valor por hora efetivo não mudam, e não há excedente.
+
+- **A meta do período é a estimativa semanal vezes os dias do período sobre 7,** como a jornada semanal da pessoa nos
+  pagamentos: 20h por semana são 85h43 num período de 30 dias e 88h34 num de 31. A porcentagem é sobre a meta exata, e
+  a tela mostra a meta em horas inteiras.
+- **A semana vai de segunda a domingo,** no fuso da organização, sempre inteira, e só aparece com o período em
+  andamento (que o contrato cobre).
 
 - **As horas são de todos os projetos do cliente**, cada sessão cortada nas bordas do período, a aberta até agora. O
   tempo em que a mesma pessoa estava em dois projetos do cliente ao mesmo tempo conta uma vez no total (Decisão 27);
@@ -289,12 +296,13 @@ as horas do **período do contrato** contra ela: "18h de 40h · 45%"
 - **O período é o do contrato,** o que fecha no `closing_day` do cliente: em 9/10, um cliente que fecha no dia 25 está
   no período de 26/9 a 25/10. Só conta o período que o contrato cobre: antes do `contract_start` e depois do
   `contract_end` não há dedicação. O período que contém o fim do contrato ainda conta.
-- **Sem ritmo.** A tela não diz quanto já devia estar feito; mostra as horas, a estimativa e a porcentagem. Acima de
-  100% a barra fica cheia, no tom de aviso.
+- **Sem ritmo.** A tela não diz quanto já devia estar feito; mostra as horas, a meta e a porcentagem. Acima de 100% a
+  barra fica cheia, no tom de aviso.
 - **Onde aparece:** na tela inicial do modo solo, a coluna Estimativa da tabela Por cliente (o período em andamento em
-  Este mês, o anterior em Mês passado, nada em Ano). Nos detalhes do cliente, as horas do período em andamento e as de
-  cada projeto. Na visão geral do projeto, o cartão "Estimativa do cliente", com as horas deste projeto. No A receber,
-  a linha do mensal em Em andamento, com as horas ao vivo mesmo no mês ajustado adiantado.
+  Este mês, o anterior em Mês passado, nada em Ano), só o período. Nos detalhes do cliente, "Nesta semana" e "No período
+  atual", este com as horas de cada projeto. Na visão geral do projeto, o cartão "Estimativa do cliente", com a semana,
+  o período e as horas deste projeto. No A receber, a linha do mensal em Em andamento, só o período, com as horas ao
+  vivo mesmo no mês ajustado adiantado.
 - **Uma estimativa só, a de agora:** mudar a estimativa muda também a comparação do período anterior.
 
 ## Quem vê o quê

@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 
 	"working-time-tracker/internal/database"
+	"working-time-tracker/internal/domain/payment"
 	"working-time-tracker/internal/domain/task"
 	"working-time-tracker/internal/domain/work_session"
 )
@@ -120,7 +121,7 @@ func (s *Service) Mine(orgID, personID, tz string, onlyMyProjects bool) (*Mine, 
 		return nil, database.ErrNotFound
 	}
 	loc := location(tz)
-	weekStart := startOfWeek(s.now(), loc)
+	weekStart := payment.WeekStart(s.now(), loc)
 
 	me, err := s.deps.People.Get(personID)
 	if err != nil {
@@ -364,10 +365,4 @@ func location(name string) *time.Location {
 func startOfDay(t time.Time, loc *time.Location) time.Time {
 	t = t.In(loc)
 	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, loc)
-}
-
-// startOfWeek é a segunda-feira à meia-noite da semana de t no fuso loc.
-func startOfWeek(t time.Time, loc *time.Location) time.Time {
-	midnight := startOfDay(t, loc)
-	return midnight.AddDate(0, 0, -((int(midnight.Weekday()) + 6) % 7))
 }

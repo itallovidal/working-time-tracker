@@ -199,7 +199,7 @@ home:
     customers:
       title: By customer
       intro: The hours of each customer's projects, what came in and what is expected, in name order.
-      estimate_hint: "Estimate: the hours of the contract period against the estimated hours per month. When the contract does not close on the last day, the period shows below."
+      estimate_hint: "Estimate: the hours of the contract period against its goal, the estimated hours per week times the period's days\u00a0÷\u00a07. When the contract does not close on the last day, the period shows below."
       internal: No customer (internal)
       internal_hint: Projects without a customer
     col:
@@ -997,7 +997,7 @@ help:
       text: "Solo mode is for people who work on their own, as freelancers or solo contractors: the organization is just one person, and what belongs to a team goes away instead of crowding the menus."
       choose: "Tick “I work alone” when you create the organization or later, in Settings › Edit. Only the owner changes it, and it only turns on with you as the only person and no pending invites."
       hides: "The menu loses Collaborators and Payments and gains “Receivables”; the project loses the Collaborators tab, and nobody is invited. Turning the mode off deletes nothing: everything that was hidden comes back."
-      billing: "Each customer is billed per hour (the hours on their projects times the customer's hourly rate) or by a monthly contract (a fixed amount per month, and their projects have no hourly rate), never both. Billing is set under Customers & Projects and applies to all of the customer's projects; each project only adds an extra, per hour or per month. Once a customer has projects the mode cannot change. An hourly customer's period closes once a month, on the closing day, or every 14 days (US bi-weekly), counted from the last closing the customer already paid. A monthly contract can have estimated hours per month: Home, the customer details, the project overview and Receivables show the contract period's hours against them, for tracking only."
+      billing: "Each customer is billed per hour (the hours on their projects times the customer's hourly rate) or by a monthly contract (a fixed amount per month, and their projects have no hourly rate), never both. Billing is set under Customers & Projects and applies to all of the customer's projects; each project only adds an extra, per hour or per month. Once a customer has projects the mode cannot change. An hourly customer's period closes once a month, on the closing day, or every 14 days (US bi-weekly), counted from the last closing the customer already paid. A monthly contract can have estimated hours per week: the customer details and the project overview show the week's hours against them, and Home, the details, the overview and Receivables show the contract period's hours against its goal (the hours per week times the period's days\u00a0÷\u00a07), for tracking only."
       home: "Home shows the hours, the revenue (the money that came in) and the projected revenue (what you expect to receive, paid or not), per customer."
     integrations:
       title: GitHub, GitLab and Trello integrations
@@ -1207,10 +1207,11 @@ customer:
     contract_start: Contract start
     contract_end: Contract end
     contract_end_hint: Without a date, the contract runs indefinitely.
-    estimated_hours: Estimated hours per month
-    estimated_hours_hint: "How much you expect to spend on this customer in each contract period, across all of their projects. For tracking only: billing does not change."
+    estimated_hours: Estimated hours per week
+    estimated_hours_hint: "How much you expect to spend on this customer each week, across all of their projects. The month's goal is this times the period's days\u00a0÷\u00a07. For tracking only: billing does not change."
     estimated_hours_fact: Estimated hours
-    estimated_hours_value: "{{.hours}}h per month"
+    estimated_hours_value: "{{.hours}}h per week"
+    dedication_week_fact: This week
     dedication_fact: In the current period
     cycle: Billing cycle
     cycle_monthly: Monthly, on the closing day
@@ -1251,7 +1252,7 @@ customer:
       other: "{{.count}} days later"
     project_rate_monthly: "Not applicable: billed monthly"
     option_label: "{{.name}} · {{.mode}}"
-# The hours of a monthly contract period against the customer's estimate (Decision 26).
+# The hours of the week and of a monthly contract period against the customer's estimate (Decisions 26 and 29).
 dedication:
   of: "{{.done}} of {{.goal}}"
   percent: "{{.percent}}%"
@@ -1260,7 +1261,9 @@ dedication:
   project_line: "{{.name}}:\u00a0{{.hours}}"
   this_project: "This project: {{.hours}}"
   card_title: Customer estimate
-  card_hint: "The hours of all of {{.customer}}'s projects in the contract period, against the estimated hours per month."
+  week_label: This week
+  period_label: In the current period
+  card_hint: "The hours of all of {{.customer}}'s projects in the week and in the contract period, against the estimated hours per week."
 project:
   head:
     projects: Customers & Projects
@@ -2049,7 +2052,7 @@ errors:
     invalid_hourly_rate: "the hourly rate must be between 10.00 and 1,000,000.00"
     invalid_monthly_fee: "the monthly fee must be between 0.01 and 1,000,000.00"
     invalid_contract_end: "the contract end must be after the start"
-    invalid_estimated_hours: "the estimated hours per month must be between 1 and 744"
+    invalid_estimated_hours: "the estimated hours per week must be between 1 and 168"
     invalid_closing_day: "the closing day must be between 1 and 31"
     invalid_payment_days: "the payment term must be between 0 and 365 days"
     invalid_late_fee: "the late fee must be between 0% and 100%"
@@ -2308,7 +2311,7 @@ fields:
   hourly_rate_cents: "the hourly rate"
   bill_extra_cents: "the extra"
   monthly_fee_cents: "the monthly fee"
-  estimated_monthly_hours: "the estimated hours per month"
+  estimated_weekly_hours: "the estimated hours per week"
   contract_start: "the contract start"
   contract_end: "the contract end"
   billing_cycle: "the billing cycle"

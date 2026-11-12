@@ -43,6 +43,12 @@ func midnight(t time.Time, loc *time.Location) time.Time {
 	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, loc)
 }
 
+// WeekStart é a segunda-feira à meia-noite da semana de t no fuso loc.
+func WeekStart(t time.Time, loc *time.Location) time.Time {
+	day := midnight(t, loc)
+	return day.AddDate(0, 0, -((int(day.Weekday()) + 6) % 7))
+}
+
 // daysBetween conta os dias de calendário de a até b (meias-noites), sem depender do horário de verão.
 func daysBetween(a, b time.Time) int {
 	ua := time.Date(a.Year(), a.Month(), a.Day(), 0, 0, 0, 0, time.UTC)

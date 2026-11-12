@@ -39,8 +39,8 @@ const (
 	FieldContractStart = "contract_start"
 	// FieldContractEnd holds the string denoting the contract_end field in the database.
 	FieldContractEnd = "contract_end"
-	// FieldEstimatedMonthlyHours holds the string denoting the estimated_monthly_hours field in the database.
-	FieldEstimatedMonthlyHours = "estimated_monthly_hours"
+	// FieldEstimatedWeeklyHours holds the string denoting the estimated_weekly_hours field in the database.
+	FieldEstimatedWeeklyHours = "estimated_weekly_hours"
 	// FieldClosingDay holds the string denoting the closing_day field in the database.
 	FieldClosingDay = "closing_day"
 	// FieldPaymentDays holds the string denoting the payment_days field in the database.
@@ -103,7 +103,7 @@ var Columns = []string{
 	FieldMonthlyFeeCents,
 	FieldContractStart,
 	FieldContractEnd,
-	FieldEstimatedMonthlyHours,
+	FieldEstimatedWeeklyHours,
 	FieldClosingDay,
 	FieldPaymentDays,
 	FieldBillingCycle,
@@ -133,8 +133,8 @@ var (
 	HourlyRateCentsValidator func(int) error
 	// MonthlyFeeCentsValidator is a validator for the "monthly_fee_cents" field. It is called by the builders before save.
 	MonthlyFeeCentsValidator func(int) error
-	// EstimatedMonthlyHoursValidator is a validator for the "estimated_monthly_hours" field. It is called by the builders before save.
-	EstimatedMonthlyHoursValidator func(int) error
+	// EstimatedWeeklyHoursValidator is a validator for the "estimated_weekly_hours" field. It is called by the builders before save.
+	EstimatedWeeklyHoursValidator func(int) error
 	// DefaultClosingDay holds the default value on creation for the "closing_day" field.
 	DefaultClosingDay int
 	// ClosingDayValidator is a validator for the "closing_day" field. It is called by the builders before save.
@@ -231,9 +231,9 @@ func ByContractEnd(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldContractEnd, opts...).ToFunc()
 }
 
-// ByEstimatedMonthlyHours orders the results by the estimated_monthly_hours field.
-func ByEstimatedMonthlyHours(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldEstimatedMonthlyHours, opts...).ToFunc()
+// ByEstimatedWeeklyHours orders the results by the estimated_weekly_hours field.
+func ByEstimatedWeeklyHours(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldEstimatedWeeklyHours, opts...).ToFunc()
 }
 
 // ByClosingDay orders the results by the closing_day field.
