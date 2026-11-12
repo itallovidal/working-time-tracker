@@ -93,7 +93,7 @@
                     <div class="muted small" x-show="row.adjusted && row.amount_cents !== row.calculated_cents" x-text="$t('receivable.calculated_line', { amount: WTT.fmt.money(row.calculated_cents) })"></div>
                     <div class="muted small" x-show="row.invoice_number" x-text="$t('receivable.invoice_line', { number: row.invoice_number })"></div>
                     <div class="muted small" x-show="row.kind !== 'monthly'" x-text="$t('receivable.in_progress.so_far', { hours: WTT.fmt.hours(row.seconds) })"></div>
-                    {{/* No mensal com estimativa de horas, as horas do período até agora contra ela (Decisão 26). */}}
+                    {{/* No mensal com estimativa de horas, as horas do período até agora contra a meta dele (Decisões 26 e 29). */}}
                     <div class="muted small nowrap" x-show="row.dedication" x-text="row.dedication ? $t('dedication.estimated_line', { done: WTT.dedication(row.dedication).done, goal: WTT.dedication(row.dedication).goal }) + ' · ' + WTT.dedication(row.dedication).percent : ''"></div>
                   </td>
                   <td class="nowrap" x-text="WTT.fmt.day(row.due_date)"></td>

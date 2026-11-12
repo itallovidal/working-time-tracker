@@ -1003,6 +1003,10 @@ usar está em [api/mcp.md](../api/mcp.md), e a segurança em [security.md](secur
 
 ### Decisão 26: Horas estimadas por mês no contrato mensal, só para acompanhar
 
+> **Revista pela [Decisão 29](#decisão-29-horas-estimadas-por-semana-e-a-meta-do-período-pelos-dias):** a estimativa
+> passou a ser por semana, com a semana em andamento na tela e a meta do período tirada dela pelos dias. O resto
+> continua: no cliente, só do mensal, só para acompanhar.
+
 **Contexto:** no cliente com contrato mensal, a mensalidade não depende das horas, mas o dono continua batendo ponto
 nele (Decisão 20). Usando o app, ele sentiu falta de saber se está dedicando pouco ou muito ao contrato no mês: as horas
 apareciam, mas sem nada para comparar.
@@ -1104,6 +1108,36 @@ as tarefas dela são as do projeto, e a separação só obrigava a trocar de aba
 **Consequências:** a Lista de tarefas (`projectTasks`) passa a ser só da equipe, e as duas páginas de lista dividem o
 mesmo código (`taskListPage`, em `pages/project.js`). Uma tarefa sem responsável vinda de uma integração não aparece no
 Início do solo, que mostra as suas tarefas, até alguém bater o ponto nela.
+
+### Decisão 29: Horas estimadas por semana, e a meta do período pelos dias
+
+**Contexto:** a estimativa da Decisão 26 era por mês. O dono pensa a dedicação a um contrato por semana e quer
+acompanhar a semana, sem perder a comparação do mês.
+
+**Escolha:** a estimativa passa a ser por semana, e a do período sai dela.
+
+- **No cliente, no lugar da mensal:** `customers.estimated_weekly_hours`, opcional, horas inteiras de 1 a 168 (as de
+  uma semana). Continua só do mensal, apagada na troca de modo, somando todos os projetos do cliente. A migração
+  `customer_estimated_weekly_hours` renomeia a coluna e converte a mensal que já existia: 12 meses em 52 semanas,
+  arredondado e nunca menos de 1.
+- **A meta do período é a semanal vezes os dias do período sobre 7,** a mesma conta da jornada semanal da pessoa nos
+  pagamentos: 20h por semana num período de 30 dias são 85h43, num de 31, 88h34. A porcentagem é sobre a meta exata; a
+  tela mostra a meta em horas inteiras ("86h").
+- **A semana em andamento, de segunda a domingo no fuso da organização,** contra a estimativa semanal, com o tempo de
+  todos os projetos do cliente e o sobreposto contado uma vez (Decisão 27). Ela vem só com o período em andamento e
+  aparece nos detalhes do cliente ("Nesta semana") e no cartão da visão geral do projeto, acima do período. A tela
+  inicial solo e o A receber são do mês e continuam só com o período.
+- **A semana é sempre inteira,** como o período: sem pro-rata no começo nem no fim do contrato.
+
+**Alternativas descartadas:**
+- **Uma média fixa de 4,33 semanas por mês** (52 ÷ 12): todo mês teria a mesma meta, mas um período de 31 dias seria
+  medido como um de 28.
+- **Só trocar o campo e manter só o mês:** a semana, que é como o dono acompanha, não apareceria.
+- **A semana cortada no contrato:** o período também não é cortado (Decisão 26), e as duas contas ficariam diferentes.
+
+**Consequências:** a dedicação na API troca `estimated_hours` por `estimated_weekly_hours` e `estimated_seconds` (a
+meta do período) e ganha `week`. As regras de hoje estão em
+[money.md](../product/money.md#horas-estimadas-do-contrato-mensal).
 
 ## Riscos e trade-offs
 

@@ -113,7 +113,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `customer.invalid_cycle_anchor` | 400 | — | `o último fechamento já pago não pode ser depois de hoje` | `the last closing already paid cannot be after today` |
 | `customer.invalid_document` | 400 | — | `documento fiscal inválido para o país do cliente: confira os números (CNPJ no Brasil, EIN nos EUA)` | `invalid tax ID for the customer's country: check the numbers (CNPJ in Brazil, EIN in the US)` |
 | `customer.invalid_email` | 400 | — | `informe um email de contato válido` | `enter a valid contact email` |
-| `customer.invalid_estimated_hours` | 400 | — | `as horas estimadas por mês devem ficar entre 1 e 744` | `the estimated hours per month must be between 1 and 744` |
+| `customer.invalid_estimated_hours` | 400 | — | `as horas estimadas por semana devem ficar entre 1 e 168` | `the estimated hours per week must be between 1 and 168` |
 | `customer.invalid_grace_days` | 400 | — | `a tolerância deve ficar entre 0 e 365 dias` | `the grace period must be between 0 and 365 days` |
 | `customer.invalid_hourly_rate` | 400 | — | `o valor por hora deve ficar entre 10,00 e 1.000.000,00` | `the hourly rate must be between 10.00 and 1,000,000.00` |
 | `customer.invalid_late_fee` | 400 | — | `a multa deve ficar entre 0% e 100%` | `the late fee must be between 0% and 100%` |

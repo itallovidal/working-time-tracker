@@ -44,8 +44,8 @@ const (
 	// absurdo de estourar uma data ou de virar multa de milhares por cento.
 	MaxTermDays = 365
 	MaxRateBP   = 10000
-	// MaxMonthlyHours é o teto das horas estimadas por mês de um cliente mensal: as horas de um mês de 31 dias.
-	MaxMonthlyHours = 31 * 24
+	// MaxWeeklyHours é o teto das horas estimadas por semana de um cliente mensal: as horas de uma semana.
+	MaxWeeklyHours = 7 * 24
 	// MaxCents é o teto de um valor em dinheiro (valor por hora, valor cobrado): 1.000.000,00, em centavos.
 	MaxCents = 100_000_000
 	// MaxInvoiceNumber é o número da nota de um recebível, e MaxNote, a observação dele.
@@ -62,7 +62,7 @@ func Limits() map[string]int {
 		"name": MaxName, "task_name": MaxTaskName, "label": MaxLabel, "email": MaxEmail, "url": MaxURL,
 		"item_url": MaxItemURL, "external_item": MaxExternalItem, "token": MaxToken, "legal_name": MaxLegalName,
 		"address": MaxAddress, "summary": MaxSummary, "description": MaxDescription,
-		"term_days": MaxTermDays, "rate_bp": MaxRateBP, "monthly_hours": MaxMonthlyHours,
+		"term_days": MaxTermDays, "rate_bp": MaxRateBP, "weekly_hours": MaxWeeklyHours,
 		"task_description": MaxTaskDescription, "search": MaxSearch, "repo": MaxRepo, "phone": MaxPhone,
 		"phone_min": MinPhone, "phone_min_digits": MinPhoneDigits, "tax_id": MaxTaxID, "max_cents": MaxCents,
 		"min_rate_cents": MinRateCents,

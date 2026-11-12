@@ -23,18 +23,18 @@ import (
 	"working-time-tracker/internal/domain/work_session"
 )
 
-// A dedicação aos contratos mensais com estimativa de horas (Decisão 26) na tela inicial do modo solo e na visão geral
-// do projeto. O cenário: hoje é quarta 18/11/2026, meio-dia em São Paulo.
+// A dedicação aos contratos mensais com estimativa de horas (Decisões 26 e 29) na tela inicial do modo solo e na visão
+// geral do projeto. O cenário: hoje é quarta 18/11/2026, meio-dia em São Paulo, na semana de 16/11 a 22/11.
 const dedicationNow = "2026-11-18T15:00:00Z"
 
 func roundHours(seconds float64) float64 { return math.Round(seconds/36) / 100 }
 
-// monthlyClosing cria um cliente mensal com estimativa de horas, que fecha no dia closing.
+// monthlyClosing cria um cliente mensal com estimativa de horas por semana, que fecha no dia closing.
 func (f *soloFixture) monthlyClosing(name string, closing int, start string, hours int) *ent.Customer {
 	f.t.Helper()
 	return testClient.Customer.Create().SetOrganizationID(f.orgID).SetName(name).
 		SetBillingMode("monthly").SetMonthlyFeeCents(300000).SetContractStart(start).
-		SetClosingDay(closing).SetPaymentDays(10).SetEstimatedMonthlyHours(hours).SaveX(context.Background())
+		SetClosingDay(closing).SetPaymentDays(10).SetEstimatedWeeklyHours(hours).SaveX(context.Background())
 }
 
 func rowOf(o *overview.SoloOverview, name string) *overview.SoloCustomer {
@@ -48,8 +48,9 @@ func rowOf(o *overview.SoloOverview, name string) *overview.SoloCustomer {
 
 func TestSolo_DedicationFollowsTheContractPeriod(t *testing.T) {
 	f := newSolo(t, dedicationNow, "America/Sao_Paulo")
-	aurora := f.monthlyClosing("Aurora", 31, "2026-01-01", 40)
-	pixel := f.monthlyClosing("Pixel", 20, "2026-01-01", 10)
+	// 7h por semana: a meta de novembro (30 dias) é 30h, a do período de 21/10 a 20/11 (31 dias), 31h.
+	aurora := f.monthlyClosing("Aurora", 31, "2026-01-01", 7)
+	pixel := f.monthlyClosing("Pixel", 20, "2026-01-01", 7)
 	// O contrato começa no dia 12 e fecha no dia 10: o único período dele vai de 11/11 a 10/12, termina em dezembro e não
 	// tem horas, recebimento nem valor projetado em novembro. A linha fica pela dedicação.
 	f.monthlyClosing("Novo", 10, "2026-11-12", 20)
@@ -62,12 +63,12 @@ func TestSolo_DedicationFollowsTheContractPeriod(t *testing.T) {
 	month := f.solo(overview.WindowMonth)
 	checkSums(t, month)
 	if d := rowOf(month, "Aurora").Dedication; d == nil || d.PeriodStart != "2026-11-01" || d.PeriodEnd != "2026-11-30" ||
-		roundHours(d.Seconds) != 4 || d.Percent != 10 || len(d.Projects) != 2 {
-		t.Errorf("Aurora this month = %+v, want November with 4h of 40h and both projects", d)
+		roundHours(d.Seconds) != 4 || d.Percent != 13 || len(d.Projects) != 2 || d.Week == nil || d.Week.Start != "2026-11-16" {
+		t.Errorf("Aurora this month = %+v, want November with 4h of 30h, both projects and the week", d)
 	}
 	if d := rowOf(month, "Pixel").Dedication; d == nil || d.PeriodStart != "2026-10-21" || d.PeriodEnd != "2026-11-20" ||
-		roundHours(d.Seconds) != 2 || d.Percent != 20 {
-		t.Errorf("Pixel this month = %+v, want 21/10 to 20/11 with 2h of 10h", d)
+		roundHours(d.Seconds) != 2 || d.Percent != 6 {
+		t.Errorf("Pixel this month = %+v, want 21/10 to 20/11 with 2h of 31h", d)
 	}
 	if row := rowOf(month, "Novo"); row == nil || row.Dedication == nil || row.Dedication.Seconds != 0 || row.ProjectedCents != 0 {
 		t.Errorf("Novo this month = %+v, want the row kept by its dedication, with no hours", row)
@@ -82,8 +83,8 @@ func TestSolo_DedicationFollowsTheContractPeriod(t *testing.T) {
 
 	last := f.solo(overview.WindowLastMonth)
 	checkSums(t, last)
-	if d := rowOf(last, "Aurora").Dedication; d == nil || d.PeriodStart != "2026-10-01" || roundHours(d.Seconds) != 2 {
-		t.Errorf("Aurora last month = %+v, want October with 2h", d)
+	if d := rowOf(last, "Aurora").Dedication; d == nil || d.PeriodStart != "2026-10-01" || roundHours(d.Seconds) != 2 || d.Week != nil {
+		t.Errorf("Aurora last month = %+v, want October with 2h and no week", d)
 	}
 	if d := rowOf(last, "Pixel").Dedication; d == nil || d.PeriodStart != "2026-09-21" || d.PeriodEnd != "2026-10-20" || d.Seconds != 0 {
 		t.Errorf("Pixel last month = %+v, want 21/9 to 20/10 with no hours", d)
@@ -133,16 +134,20 @@ func (f *soloFixture) projectOverview(taskID uuid.UUID) *overview.Overview {
 
 func TestProjectOverview_ShowsTheCustomerDedication(t *testing.T) {
 	f := newSolo(t, dedicationNow, "America/Sao_Paulo")
-	aurora := f.monthlyClosing("Aurora", 31, "2026-01-01", 40)
+	aurora := f.monthlyClosing("Aurora", 31, "2026-01-01", 7)
 	site := f.task(aurora, "Site")
 	app := f.task(aurora, "App")
 	f.session(site, "2026-11-03T13:00:00Z", "2026-11-03T17:00:00Z", nil)
 	f.session(app, "2026-11-04T13:00:00Z", "2026-11-04T15:00:00Z", nil)
+	f.session(app, "2026-11-17T13:00:00Z", "2026-11-17T14:00:00Z", nil) // na semana
 
 	o := f.projectOverview(site)
-	if o.Dedication == nil || roundHours(o.Dedication.Seconds) != 6 || roundHours(o.Dedication.ProjectSeconds) != 4 ||
-		o.Dedication.PeriodStart != "2026-11-01" || o.Dedication.Percent != 15 {
-		t.Fatalf("Site dedication = %+v, want 6h of 40h for the customer and 4h for this project", o.Dedication)
+	if o.Dedication == nil || roundHours(o.Dedication.Seconds) != 7 || roundHours(o.Dedication.ProjectSeconds) != 4 ||
+		o.Dedication.PeriodStart != "2026-11-01" || o.Dedication.Percent != 23 {
+		t.Fatalf("Site dedication = %+v, want 7h of 30h for the customer and 4h for this project", o.Dedication)
+	}
+	if w := o.Dedication.Week; w == nil || w.Start != "2026-11-16" || w.End != "2026-11-22" || roundHours(w.Seconds) != 1 || w.Percent != 14 {
+		t.Errorf("Site week = %+v, want 16/11 to 22/11 with 1h of 7h (14%%)", o.Dedication.Week)
 	}
 	o.HideBilling()
 	if o.Dedication != nil {

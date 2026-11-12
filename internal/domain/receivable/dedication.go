@@ -16,27 +16,33 @@ import (
 	"working-time-tracker/internal/domain/work_session"
 )
 
-// Dedication é o acompanhamento de um cliente com contrato mensal e estimativa de horas (Decisão 26): as horas
-// trabalhadas num período do contrato, em todos os projetos dele, contra as horas que o dono estima dedicar por mês
-// (customers.estimated_monthly_hours). É só leitura: não muda a mensalidade nem cobra excedente. O período é o mesmo que
-// a mensalidade paga, o do dia de fechamento do cliente, e os dias são YYYY-MM-DD no fuso da organização, os dois
+// Dedication é o acompanhamento de um cliente com contrato mensal e estimativa de horas (Decisões 26 e 29): as horas
+// trabalhadas num período do contrato, em todos os projetos dele, contra a meta do período, que sai das horas que o dono
+// estima dedicar por semana (customers.estimated_weekly_hours) vezes os dias do período sobre 7, a mesma conta da
+// jornada semanal da pessoa. É só leitura: não muda a mensalidade nem cobra excedente. O período é o mesmo que a
+// mensalidade paga, o do dia de fechamento do cliente, e os dias são YYYY-MM-DD no fuso da organização, os dois
 // inclusivos.
 type Dedication struct {
 	Customer    Ref    `json:"customer"`
 	PeriodStart string `json:"period_start"`
 	PeriodEnd   string `json:"period_end"`
 	// Open diz que o período ainda não fechou: as horas são até agora, com a sessão aberta.
-	Open           bool `json:"open"`
-	EstimatedHours int  `json:"estimated_hours"`
+	Open bool `json:"open"`
+	// EstimatedWeeklyHours é a estimativa do cliente, por semana; EstimatedSeconds, a meta do período que sai dela.
+	EstimatedWeeklyHours int     `json:"estimated_weekly_hours"`
+	EstimatedSeconds     float64 `json:"estimated_seconds"`
 	// Seconds é o tempo do período em todos os projetos do cliente, cada sessão cortada nas bordas dele. O que a mesma
 	// pessoa trabalhou ao mesmo tempo em dois projetos do cliente conta uma vez só (Decisão 27), então Seconds pode ser
 	// menor que a soma dos Projects.
 	Seconds float64 `json:"seconds"`
-	// Percent é Seconds sobre a estimativa, arredondado; passa de 100 quando as horas passam da estimativa.
+	// Percent é Seconds sobre a meta do período, arredondado; passa de 100 quando as horas passam da meta.
 	Percent int `json:"percent"`
 	// Projects são os projetos do cliente com o tempo de cada um no período, em ordem de nome (nunca por horas: o
 	// sistema não ranqueia), cada um com o tempo inteiro das sessões dele. Os sem tempo também entram, com zero.
 	Projects []DedicationProject `json:"projects"`
+	// Week é a semana em andamento contra a estimativa semanal. Só vem com o período em andamento: nula no período
+	// anterior e no A receber.
+	Week *DedicationWeek `json:"week"`
 }
 
 // DedicationProject é um projeto do cliente na dedicação, com o tempo dele no período.
@@ -46,14 +52,30 @@ type DedicationProject struct {
 	Seconds float64   `json:"seconds"`
 }
 
+// DedicationWeek é a semana em andamento, de segunda a domingo no fuso da organização (YYYY-MM-DD, os dois inclusivos):
+// o tempo em todos os projetos do cliente, até agora e com o sobreposto contado uma vez, contra as horas estimadas por
+// semana. A semana é sempre inteira, como o período, que também não tem pro-rata.
+type DedicationWeek struct {
+	Start   string  `json:"start"`
+	End     string  `json:"end"`
+	Seconds float64 `json:"seconds"`
+	// Percent é Seconds sobre a estimativa semanal, arredondado; passa de 100 quando as horas passam dela.
+	Percent int `json:"percent"`
+}
+
 // tracked diz se o cliente tem o que acompanhar: o contrato mensal com estimativa de horas.
 func tracked(c *ent.Customer) bool {
-	return c.BillingMode == KindMonthly && c.EstimatedMonthlyHours != nil && *c.EstimatedMonthlyHours > 0
+	return c.BillingMode == KindMonthly && c.EstimatedWeeklyHours != nil && *c.EstimatedWeeklyHours > 0
+}
+
+// percentOf é seconds sobre goal, em porcentagem arredondada.
+func percentOf(seconds, goal float64) int {
+	return int(math.Round(seconds * 100 / goal))
 }
 
 // dedication é a dedicação do cliente no período p, com as sessões dele (as de todos os projetos). Nula quando o
 // cliente não tem o que acompanhar ou quando p não é um período do contrato (contractPeriods): antes do início, depois
-// do fim, ou o período de um dia do contrato que começa no dia de fechamento.
+// do fim, ou o período de um dia do contrato que começa no dia de fechamento. Não traz a semana (veja dedicationAt).
 func (t terms) dedication(sessions []work_session.WorkSession, p payment.Period, now time.Time) *Dedication {
 	c := t.customer
 	if !tracked(c) || !slices.ContainsFunc(t.contractPeriods(now), func(q payment.Period) bool { return q.Start.Equal(p.Start) }) {
@@ -77,16 +99,31 @@ func (t terms) dedication(sessions []work_session.WorkSession, p payment.Period,
 	slices.SortFunc(projects, func(a, b DedicationProject) int {
 		return cmp.Or(byName.CompareString(a.Name, b.Name), cmp.Compare(a.Name, b.Name), cmp.Compare(a.ID.String(), b.ID.String()))
 	})
-	estimate := *c.EstimatedMonthlyHours
+	weekly := *c.EstimatedWeeklyHours
+	// A meta do período é a semanal vezes os dias dele sobre 7 (Decisão 29): 20h por semana num período de 30 dias
+	// são 85h43.
+	goal := float64(weekly) * 3600 * float64(p.Days()) / 7
 	return &Dedication{
 		Customer: t.ref(), PeriodStart: p.StartDay(), PeriodEnd: p.PayDay(), Open: !closed(p, now),
-		EstimatedHours: estimate, Seconds: total,
-		Percent:  int(math.Round(total * 100 / (float64(estimate) * 3600))),
+		EstimatedWeeklyHours: weekly, EstimatedSeconds: goal, Seconds: total,
+		Percent:  percentOf(total, goal),
 		Projects: projects,
 	}
 }
 
-// dedicationAt é a dedicação do cliente no período do contrato que contém now, ou no anterior a ele com previous.
+// week é a semana em andamento do cliente, de segunda a domingo no fuso da organização, contra a estimativa semanal.
+func (t terms) week(sessions []work_session.WorkSession, now time.Time) *DedicationWeek {
+	start := payment.WeekStart(now, t.loc)
+	end := start.AddDate(0, 0, 7)
+	total := work_session.MergedSeconds(sessions, start, end, now)
+	return &DedicationWeek{
+		Start: start.Format(time.DateOnly), End: end.AddDate(0, 0, -1).Format(time.DateOnly),
+		Seconds: total, Percent: percentOf(total, float64(*t.customer.EstimatedWeeklyHours)*3600),
+	}
+}
+
+// dedicationAt é a dedicação do cliente no período do contrato que contém now, com a semana em andamento, ou no
+// período anterior a ele com previous, sem a semana.
 func (t terms) dedicationAt(sessions []work_session.WorkSession, now time.Time, previous bool) *Dedication {
 	p, ok := t.cycle.at(now)
 	if ok && previous {
@@ -95,7 +132,11 @@ func (t terms) dedicationAt(sessions []work_session.WorkSession, now time.Time, 
 	if !ok {
 		return nil
 	}
-	return t.dedication(sessions, p, now)
+	d := t.dedication(sessions, p, now)
+	if d != nil && !previous {
+		d.Week = t.week(sessions, now)
+	}
+	return d
 }
 
 // Dedications devolve a dedicação de cada cliente com contrato mensal e estimativa de horas, no período do contrato em

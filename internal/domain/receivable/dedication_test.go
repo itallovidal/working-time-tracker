@@ -11,13 +11,15 @@ import (
 	"working-time-tracker/internal/domain/receivable"
 )
 
-// A dedicação aos contratos mensais com estimativa de horas (Decisão 26): as horas de um período do contrato, em todos
-// os projetos do cliente, contra a estimativa. O relógio é o do cenário (sexta 9/10/2026, meio-dia em São Paulo).
+// A dedicação aos contratos mensais com estimativa de horas (Decisões 26 e 29): as horas de um período do contrato, em
+// todos os projetos do cliente, contra a meta do período (a estimativa semanal vezes os dias do período sobre 7), e as
+// da semana em andamento contra a estimativa semanal. O relógio é o do cenário (sexta 9/10/2026, meio-dia em São
+// Paulo): a semana é de segunda 5/10 a domingo 11/10.
 
-// estimate dá ao cliente a estimativa de horas por mês.
+// estimate dá ao cliente a estimativa de horas por semana.
 func (f *fixture) estimate(c *ent.Customer, hours int) *ent.Customer {
 	f.t.Helper()
-	return c.Update().SetEstimatedMonthlyHours(hours).SaveX(context.Background())
+	return c.Update().SetEstimatedWeeklyHours(hours).SaveX(context.Background())
 }
 
 func (f *fixture) dedications(previous bool) map[string]receivable.Dedication {
@@ -40,7 +42,8 @@ func hoursOf(seconds float64) float64 { return math.Round(seconds/36) / 100 }
 
 func TestDedications_CurrentAndPreviousPeriod(t *testing.T) {
 	f := setup(t)
-	aurora := f.estimate(f.monthly("Aurora", "2026-01-01", nil), 40)
+	// 7h por semana: a meta de outubro (31 dias) é 31h, a de setembro (30 dias), 30h.
+	aurora := f.estimate(f.monthly("Aurora", "2026-01-01", nil), 7)
 	site := f.task(aurora, "Site")
 	app := f.task(aurora, "App")
 	// Outubro: 4h no Site, 2h no App, a hora de outubro da sessão que atravessa a meia-noite de 30/9 e a sessão aberta
@@ -61,9 +64,13 @@ func TestDedications_CurrentAndPreviousPeriod(t *testing.T) {
 		t.Fatalf("current dedications = %v, want only Aurora", cur)
 	}
 	d := cur["Aurora"]
-	if d.PeriodStart != "2026-10-01" || d.PeriodEnd != "2026-10-31" || !d.Open || d.EstimatedHours != 40 ||
-		hoursOf(d.Seconds) != 8 || d.Percent != 20 {
-		t.Errorf("current = %+v, want October, open, 8h of 40h (20%%)", d)
+	if d.PeriodStart != "2026-10-01" || d.PeriodEnd != "2026-10-31" || !d.Open || d.EstimatedWeeklyHours != 7 ||
+		hoursOf(d.EstimatedSeconds) != 31 || hoursOf(d.Seconds) != 8 || d.Percent != 26 {
+		t.Errorf("current = %+v, want October, open, 8h of 31h (26%%)", d)
+	}
+	// A semana em andamento: as 2h do App na segunda e a hora da sessão aberta, contra as 7h da semana.
+	if w := d.Week; w == nil || w.Start != "2026-10-05" || w.End != "2026-10-11" || hoursOf(w.Seconds) != 3 || w.Percent != 43 {
+		t.Errorf("week = %+v, want 5/10 to 11/10 with 3h of 7h (43%%)", d.Week)
 	}
 	if len(d.Projects) != 2 || d.Projects[0].Name != "App" || d.Projects[1].Name != "Site" ||
 		hoursOf(d.Projects[0].Seconds) != 3 || hoursOf(d.Projects[1].Seconds) != 5 {
@@ -71,52 +78,63 @@ func TestDedications_CurrentAndPreviousPeriod(t *testing.T) {
 	}
 
 	prev := f.dedications(true)["Aurora"]
-	if prev.PeriodStart != "2026-09-01" || prev.PeriodEnd != "2026-09-30" || prev.Open || hoursOf(prev.Seconds) != 4 || prev.Percent != 10 {
-		t.Errorf("previous = %+v, want September, closed, 4h of 40h (10%%)", prev)
+	if prev.PeriodStart != "2026-09-01" || prev.PeriodEnd != "2026-09-30" || prev.Open || hoursOf(prev.EstimatedSeconds) != 30 ||
+		hoursOf(prev.Seconds) != 4 || prev.Percent != 13 {
+		t.Errorf("previous = %+v, want September, closed, 4h of 30h (13%%)", prev)
+	}
+	if prev.Week != nil {
+		t.Errorf("previous week = %+v, want none: the week comes only with the running period", prev.Week)
 	}
 
-	// Passar da estimativa passa de 100%.
+	// Passar da meta passa de 100%, no período e na semana.
 	f.session(site, "2026-10-06T10:00:00Z", "2026-10-07T20:00:00Z", nil) // 34h
-	if over := f.dedications(false)["Aurora"]; over.Percent != 105 {
-		t.Errorf("over the estimate: percent = %d, want 105 (42h of 40h)", over.Percent)
+	if over := f.dedications(false)["Aurora"]; over.Percent != 135 || over.Week == nil || over.Week.Percent != 529 {
+		t.Errorf("over the estimate: percent = %d, week = %+v; want 135 (42h of 31h) and 529 (37h of 7h)", over.Percent, over.Week)
 	}
 }
 
 // Duas sessões ao mesmo tempo em dois projetos do cliente (uma por projeto, Decisão 27): cada projeto fica com o tempo
-// inteiro dele, e o total do cliente, e com ele a porcentagem da estimativa, conta o tempo sobreposto uma vez.
+// inteiro dele, e o total do cliente, e com ele a porcentagem da meta, conta o tempo sobreposto uma vez, no período e
+// na semana.
 func TestDedications_OverlappingSessionsCountOnce(t *testing.T) {
 	f := setup(t)
-	aurora := f.estimate(f.monthly("Aurora", "2026-01-01", nil), 10)
+	aurora := f.estimate(f.monthly("Aurora", "2026-01-01", nil), 7)
 	site := f.task(aurora, "Site")
 	app := f.task(aurora, "App")
-	f.session(site, "2026-10-01T13:00:00Z", "2026-10-01T16:00:00Z", nil) // 3h
-	f.session(app, "2026-10-01T13:00:00Z", "2026-10-01T17:00:00Z", nil)  // 4h, ao mesmo tempo
+	f.session(site, "2026-10-06T13:00:00Z", "2026-10-06T16:00:00Z", nil) // 3h
+	f.session(app, "2026-10-06T13:00:00Z", "2026-10-06T17:00:00Z", nil)  // 4h, ao mesmo tempo
 
 	d := f.dedications(false)["Aurora"]
-	if hoursOf(d.Seconds) != 4 || d.Percent != 40 {
-		t.Errorf("total = %vh (%d%%), want 4h of 10h (40%%): the overlap counts once", hoursOf(d.Seconds), d.Percent)
+	if hoursOf(d.Seconds) != 4 || d.Percent != 13 {
+		t.Errorf("total = %vh (%d%%), want 4h of 31h (13%%): the overlap counts once", hoursOf(d.Seconds), d.Percent)
+	}
+	if d.Week == nil || hoursOf(d.Week.Seconds) != 4 || d.Week.Percent != 57 {
+		t.Errorf("week = %+v, want 4h of 7h (57%%): the overlap counts once", d.Week)
 	}
 	if len(d.Projects) != 2 || hoursOf(d.Projects[0].Seconds) != 4 || hoursOf(d.Projects[1].Seconds) != 3 {
 		t.Errorf("projects = %+v, want App 4h and Site 3h, each with its full time", d.Projects)
 	}
 }
 
-// O período é o do contrato: o cliente que fecha no dia 25 está, em 9/10, no período de 26/9 a 25/10.
+// O período é o do contrato: o cliente que fecha no dia 25 está, em 9/10, no período de 26/9 a 25/10, de 30 dias, e a
+// meta é a dele.
 func TestDedications_FollowTheClosingDay(t *testing.T) {
 	f := setup(t)
 	c := testClient.Customer.Create().SetOrganizationID(f.orgID).SetName("Pixel").
 		SetBillingMode("monthly").SetMonthlyFeeCents(300000).SetContractStart("2026-01-01").SetClosingDay(25).
-		SetEstimatedMonthlyHours(20).SaveX(context.Background())
+		SetEstimatedWeeklyHours(7).SaveX(context.Background())
 	task := f.task(c, "Site")
 	f.session(task, "2026-09-27T13:00:00Z", "2026-09-27T15:00:00Z", nil) // 2h, dentro
 	f.session(task, "2026-09-25T13:00:00Z", "2026-09-25T15:00:00Z", nil) // 2h, no período anterior
 
 	d := f.dedications(false)["Pixel"]
-	if d.PeriodStart != "2026-09-26" || d.PeriodEnd != "2026-10-25" || hoursOf(d.Seconds) != 2 || d.Percent != 10 {
-		t.Errorf("current = %+v, want 26/9 to 25/10 with 2h (10%%)", d)
+	if d.PeriodStart != "2026-09-26" || d.PeriodEnd != "2026-10-25" || hoursOf(d.EstimatedSeconds) != 30 ||
+		hoursOf(d.Seconds) != 2 || d.Percent != 7 {
+		t.Errorf("current = %+v, want 26/9 to 25/10 with 2h of 30h (7%%)", d)
 	}
-	if prev := f.dedications(true)["Pixel"]; prev.PeriodStart != "2026-08-26" || prev.PeriodEnd != "2026-09-25" || hoursOf(prev.Seconds) != 2 {
-		t.Errorf("previous = %+v, want 26/8 to 25/9 with 2h", prev)
+	if prev := f.dedications(true)["Pixel"]; prev.PeriodStart != "2026-08-26" || prev.PeriodEnd != "2026-09-25" ||
+		hoursOf(prev.EstimatedSeconds) != 31 || hoursOf(prev.Seconds) != 2 {
+		t.Errorf("previous = %+v, want 26/8 to 25/9 (31 days, 31h) with 2h", prev)
 	}
 }
 
@@ -156,8 +174,8 @@ func TestDedication_OneCustomer(t *testing.T) {
 	aurora := f.estimate(f.monthly("Aurora", "2026-01-01", nil), 40)
 	f.session(f.task(aurora, "Site"), "2026-10-01T13:00:00Z", "2026-10-01T15:00:00Z", nil)
 	d, err := f.svc.Dedication(f.orgID.String(), aurora.ID.String())
-	if err != nil || d == nil || hoursOf(d.Seconds) != 2 || d.PeriodStart != "2026-10-01" {
-		t.Fatalf("Dedication = %+v, %v; want October with 2h", d, err)
+	if err != nil || d == nil || hoursOf(d.Seconds) != 2 || d.PeriodStart != "2026-10-01" || d.Week == nil || d.Week.Seconds != 0 {
+		t.Fatalf("Dedication = %+v, %v; want October with 2h and the week with none", d, err)
 	}
 	if d, err := f.svc.Dedication(f.orgID.String(), f.hourly("Hora").ID.String()); err != nil || d != nil {
 		t.Errorf("hourly customer = %+v, %v; want nil", d, err)
@@ -168,7 +186,7 @@ func TestDedication_OneCustomer(t *testing.T) {
 
 	otherOrg, _ := f.newOrg("Outra", true)
 	other := testClient.Customer.Create().SetOrganizationID(otherOrg).SetName("Alheio").SetBillingMode("monthly").
-		SetMonthlyFeeCents(100000).SetContractStart("2026-01-01").SetEstimatedMonthlyHours(10).SaveX(context.Background())
+		SetMonthlyFeeCents(100000).SetContractStart("2026-01-01").SetEstimatedWeeklyHours(10).SaveX(context.Background())
 	if _, err := f.svc.Dedication(f.orgID.String(), other.ID.String()); !errors.Is(err, database.ErrNotFound) {
 		t.Errorf("another org's customer: err = %v, want not found", err)
 	}
@@ -181,7 +199,7 @@ func TestDedication_OneCustomer(t *testing.T) {
 // adiantado (o recebível gravado guarda as horas da gravação). A do por hora e as de A receber não trazem.
 func TestSummary_InProgressMonthlyCarriesTheLiveDedication(t *testing.T) {
 	f := setup(t)
-	aurora := f.estimate(f.monthly("Aurora", "2026-09-01", nil), 40)
+	aurora := f.estimate(f.monthly("Aurora", "2026-09-01", nil), 7)
 	task := f.task(aurora, "Site")
 	f.session(task, "2026-10-01T13:00:00Z", "2026-10-01T15:00:00Z", nil)
 	f.session(task, "2026-09-10T13:00:00Z", "2026-09-10T15:00:00Z", nil)
@@ -207,9 +225,12 @@ func TestSummary_InProgressMonthlyCarriesTheLiveDedication(t *testing.T) {
 	if monthly == nil || !monthly.Adjusted || monthly.Dedication == nil {
 		t.Fatalf("Aurora in progress = %+v, want the adjusted month with a dedication", monthly)
 	}
-	if hoursOf(monthly.Seconds) != 2 || hoursOf(monthly.Dedication.Seconds) != 5 || monthly.Dedication.Percent != 13 {
-		t.Errorf("adjusted month: seconds %.2fh, dedication %.2fh (%d%%); want 2h stored and 5h live (13%%)",
+	if hoursOf(monthly.Seconds) != 2 || hoursOf(monthly.Dedication.Seconds) != 5 || monthly.Dedication.Percent != 16 {
+		t.Errorf("adjusted month: seconds %.2fh, dedication %.2fh (%d%%); want 2h stored and 5h live of 31h (16%%)",
 			hoursOf(monthly.Seconds), hoursOf(monthly.Dedication.Seconds), monthly.Dedication.Percent)
+	}
+	if monthly.Dedication.Week != nil {
+		t.Errorf("in progress week = %+v, want none: A receber shows only the period", monthly.Dedication.Week)
 	}
 	if hourly == nil || hourly.Dedication != nil {
 		t.Errorf("hourly in progress = %+v, want no dedication", hourly)

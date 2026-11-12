@@ -111,15 +111,16 @@ func TestCustomerModal_KeepsTheContractFields(t *testing.T) {
 	html := render(t, "org_projects", Data{Me: identity("admin", true, true), Section: "projects", Script: "org"})
 	mustHave(t, "solo customer modal", html, `id="customer-billing-mode"`, `id="customer-monthly-fee"`, `id="customer-contract-end"`,
 		`id="customer-payment-days"`, `id="customer-grace-days"`, `x-model="customerDraft.monthly_fee"`,
-		`id="customer-estimated-hours"`, `max="744"`, `x-model="customerDraft.estimated_hours"`, "Horas estimadas por mês")
+		`id="customer-estimated-hours"`, `max="168"`, `x-model="customerDraft.estimated_hours"`, "Horas estimadas por semana")
 	mustNotHave(t, "solo customer modal", html, `x-model="draft.monthly_fee"`, `x-model="draft.country"`)
 	// Quem não gerencia os clientes não recebe o formulário nem os detalhes.
 	admin := render(t, "org_projects", Data{Me: identity("admin", false, false), Section: "projects", Script: "org"})
 	mustNotHave(t, "admin page", admin, `id="customer-name"`, `customer-details`)
 }
 
-// A dedicação aos contratos mensais com estimativa de horas (Decisão 26) é do modo solo: a coluna Estimativa da tela
-// inicial e o cartão da visão geral do projeto (este, só para quem vê a cobrança). A equipe não tem cliente mensal.
+// A dedicação aos contratos mensais com estimativa de horas (Decisões 26 e 29) é do modo solo: a coluna Estimativa da
+// tela inicial e o cartão da visão geral do projeto (este, só para quem vê a cobrança, com a semana e o período). A
+// equipe não tem cliente mensal.
 func TestDedication_OnlyInSoloScreens(t *testing.T) {
 	solo, team := pair(t, "org_home", func(s bool) Data {
 		return Data{Me: identity("admin", true, s), Section: "home", Script: "org"}
@@ -133,7 +134,8 @@ func TestDedication_OnlyInSoloScreens(t *testing.T) {
 		return render(t, "project_overview", Data{Me: identity("admin", owner, true), Project: project, Tab: "overview", Script: "project"})
 	}
 	mustHave(t, "solo overview of the owner", overview(true), `x-if="data && data.dedication"`, "Estimativa do cliente",
-		`WTT.dedication(data.dedication)`)
+		`WTT.dedication(data.dedication)`, `x-if="data.dedication.week"`, `WTT.dedicationWeek(data.dedication)`, "Nesta semana",
+		"No período atual")
 	mustNotHave(t, "overview without billing.view", overview(false), `data.dedication`)
 }
 

@@ -1042,7 +1042,7 @@ document.addEventListener('alpine:init', () => {
     billing_mode: c.billing_mode || 'hourly',
     hourly_rate: WTT.fmt.moneyInput(c.hourly_rate_cents),
     monthly_fee: WTT.fmt.moneyInput(c.monthly_fee_cents),
-    estimated_hours: c.estimated_monthly_hours ? String(c.estimated_monthly_hours) : '',
+    estimated_hours: c.estimated_weekly_hours ? String(c.estimated_weekly_hours) : '',
     contract_start: c.contract_start || '',
     contract_end: c.contract_end || '',
     billing_cycle: c.billing_cycle || 'monthly',
@@ -1065,8 +1065,8 @@ document.addEventListener('alpine:init', () => {
       billing_mode: d.billing_mode,
       hourly_rate_cents: hasRate ? WTT.toCents(d.hourly_rate, { strict: true }) : null,
       monthly_fee_cents: monthly ? WTT.toCents(d.monthly_fee, { strict: true }) : null,
-      // A estimativa de horas por mês é opcional: vazio vai null, que apaga (Decisão 26).
-      estimated_monthly_hours: monthly && String(d.estimated_hours).trim() !== '' ? Number(String(d.estimated_hours).trim()) : null,
+      // A estimativa de horas por semana é opcional: vazio vai null, que apaga (Decisões 26 e 29).
+      estimated_weekly_hours: monthly && String(d.estimated_hours).trim() !== '' ? Number(String(d.estimated_hours).trim()) : null,
       contract_start: monthly ? String(d.contract_start).trim() : '',
       contract_end: monthly ? String(d.contract_end).trim() : '',
       billing_cycle: biweekly ? 'biweekly' : 'monthly',
@@ -1114,7 +1114,7 @@ document.addEventListener('alpine:init', () => {
     return {
       ...(monthly ? {
         monthly_fee_cents: [d.monthly_fee, rules.required, amountRule(1, 'customer.invalid_monthly_fee')],
-        estimated_monthly_hours: [d.estimated_hours, rules.integer(1, WTT.limits.monthly_hours, 'customer.invalid_estimated_hours')],
+        estimated_weekly_hours: [d.estimated_hours, rules.integer(1, WTT.limits.weekly_hours, 'customer.invalid_estimated_hours')],
         contract_start: [d.contract_start, rules.required, rules.date],
         contract_end: [d.contract_end, rules.date, contractEndRule(String(d.contract_start).trim())],
       } : hourlyRateSpec(d)),
@@ -1130,16 +1130,22 @@ document.addEventListener('alpine:init', () => {
     };
   };
 
-  // dedicationFact é a linha "No período atual" dos detalhes do cliente: "18h de 40h · 45%", a barrinha, o período quando
-  // não é o mês do calendário e, com mais de um projeto, as horas de cada um (em ordem de nome, como vêm da API).
-  const dedicationFact = (d) => {
+  // dedicationFacts são as linhas da dedicação nos detalhes do cliente (Decisão 29): "Nesta semana", com as horas da
+  // semana em andamento contra a estimativa semanal, e "No período atual", com as do período do contrato contra a meta
+  // dele ("18h de 40h · 45%"), as duas com a barrinha. A do período traz o período quando ele não é o mês do calendário
+  // e, com mais de um projeto, as horas de cada um (em ordem de nome, como vêm da API).
+  const dedicationFacts = (d) => {
+    const out = [];
+    const w = WTT.dedicationWeek(d);
+    if (w) out.push([WTT.t('customer.billing.dedication_week_fact'), w.text + ' · ' + w.percent, { icon: 'calendar-week', meter: { pct: w.pct, over: w.over } }]);
     const v = WTT.dedication(d);
     const notes = [];
     if (v.period) notes.push(WTT.t('dedication.period', { period: v.period }));
     if (d.projects.length > 1) {
       d.projects.forEach((p) => notes.push(WTT.t('dedication.project_line', { name: p.name, hours: WTT.fmt.hoursShort(p.seconds) || '0h' })));
     }
-    return [WTT.t('customer.billing.dedication_fact'), v.text + ' · ' + v.percent, { icon: 'chart-simple', meter: { pct: v.pct, over: v.over }, notes }];
+    out.push([WTT.t('customer.billing.dedication_fact'), v.text + ' · ' + v.percent, { icon: 'chart-simple', meter: { pct: v.pct, over: v.over }, notes }]);
+    return out;
   };
 
   // percent mostra pontos-base como percentual: 250 -> "2,5%".
@@ -1295,11 +1301,12 @@ document.addEventListener('alpine:init', () => {
       if (this.solo) {
         // O contrato em duas linhas, com os nomes do formulário; sem fim, ele segue por tempo indeterminado.
         if (monthly) {
-          // A estimativa de horas e, com ela, as horas do período do contrato em andamento (Decisão 26).
+          // A estimativa de horas por semana e, com ela, as horas da semana e do período do contrato em andamento
+          // (Decisões 26 e 29).
           billing.push([WTT.t('customer.billing.estimated_hours_fact'),
-            c.estimated_monthly_hours ? WTT.t('customer.billing.estimated_hours_value', { hours: c.estimated_monthly_hours }) : '', { icon: 'business-time' }]);
+            c.estimated_weekly_hours ? WTT.t('customer.billing.estimated_hours_value', { hours: c.estimated_weekly_hours }) : '', { icon: 'business-time' }]);
           const d = this.dedications[c.id];
-          if (c.estimated_monthly_hours && d) billing.push(dedicationFact(d));
+          if (c.estimated_weekly_hours && d) billing.push(...dedicationFacts(d));
           billing.push([WTT.t('customer.billing.contract_start'), c.contract_start && WTT.fmt.day(c.contract_start), { icon: 'file-signature' }]);
           billing.push(c.contract_end
             ? [WTT.t('customer.billing.contract_end'), WTT.fmt.day(c.contract_end), { icon: 'flag-checkered' }]
