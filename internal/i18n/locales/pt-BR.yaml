@@ -851,7 +851,7 @@ help:
       tip: "Este passo é opcional: um projeto sem cliente é um projeto interno, e o cliente pode ser escolhido depois, nas configurações do projeto."
     project:
       title: Crie o primeiro projeto
-      text: "Informe o nome e, se quiser, uma descrição. Escolha o cliente e, se precisar, um acréscimo sobre a cobrança dele (só o dono vê esses campos: o administrador cria só projeto interno) e a duração da sprint: 7, 14 ou 30 dias. Marque “O projeto tem daily” e “O projeto tem weekly” se o time faz essas reuniões."
+      text: "O projeto de um cliente nasce no “Novo projeto” dele, já com o cliente; o projeto sem cliente, no “Novo projeto interno” do alto da página (o administrador cria só projeto interno). Informe o nome e, se quiser, uma descrição, um acréscimo sobre a cobrança do cliente (só o dono vê esse campo) e a duração da sprint: 7, 14 ou 30 dias. Marque “O projeto tem daily” e “O projeto tem weekly” se o time faz essas reuniões."
       tip: "A cobrança é do cliente: o valor por hora ou o contrato mensal, definido em Clientes e Projetos e igual em todos os projetos dele. O projeto só soma um acréscimo, por hora ou por mês, para algo pequeno ou temporário."
     invite:
       title: Convide o time
@@ -916,9 +916,9 @@ help:
       profile: "Para o dono e os administradores, clicar na linha abre o perfil da pessoa: a jornada, as horas do período e desde o início e os projetos dela. A regra de pagamento, o histórico de pagamentos e as próximas datas só aparecem para o dono. O “Editar” do perfil abre o mesmo modal do lápis."
     org_projects:
       title: Clientes e Projetos
-      text: "O item “Clientes e Projetos” da barra superior, para todos: cada cliente com os projetos dele embaixo, em cartões com as pessoas e as tarefas, e os projetos internos (sem cliente) no fim. Cada pessoa vê os seus projetos (o dono e os administradores veem todos). Clique num cartão para abrir o projeto. Quem pode criar projetos vê o botão “Novo projeto” no alto da página."
+      text: "O item “Clientes e Projetos” da barra superior, para todos: cada cliente com os projetos dele embaixo, em cartões com as pessoas e as tarefas, e os projetos internos (sem cliente) no fim. Cada pessoa vê os seus projetos (o dono e os administradores veem todos). Clique num cartão para abrir o projeto. Quem pode criar projetos vê o botão “Novo projeto interno” no alto da página, para um projeto sem cliente."
       customers: "Para o dono, a página também é o cadastro dos clientes, até dos que ainda não têm projeto: nome, país, documento fiscal (CNPJ no Brasil, EIN nos EUA), pessoa de contato, email, telefone e a cobrança, que vale para todos os projetos do cliente. Só o dono vê os clientes e a cobrança."
-      actions: "“Novo cliente” cadastra. Clicar no nome do cliente, ou em “Detalhes”, abre os detalhes, com “Editar” e “Excluir”. O “Novo projeto” de um grupo já cria o projeto com aquele cliente."
+      actions: "“Novo cliente”, no alto da página, cadastra. Clicar no nome do cliente, ou em “Detalhes”, abre os detalhes, com “Editar” e “Excluir”. O “Novo projeto” de um cliente cria o projeto já com ele, e o formulário não troca o cliente: isso fica para depois, nas configurações do projeto."
       link: "O cliente é ligado a um projeto ao criar o projeto ou nas configurações dele. Reajustar o valor do cliente muda o valor cobrado de todos os projetos dele, para as horas registradas daqui em diante."
     project_home:
       title: "Projeto: Início"
@@ -1000,7 +1000,7 @@ help:
       admin: "Admin: cria projetos internos, convida pessoas e administra todos os projetos. Não vê clientes, cobrança nem pagamentos."
       member: "Colaborador: o dia a dia nos projetos em que foi posto."
       groups: "Ao pôr alguém num projeto, você escolhe o grupo dela: “Colaborador” (sem permissões extras) ou “Administrador de projeto” (cuida do projeto, dos times, das pessoas, das etiquetas e das integrações). O grupo vale só naquele projeto."
-      org_perms: "As páginas seguem o papel: Pagamentos e os clientes de Clientes e Projetos são só do dono, Colaboradores é do dono e dos admins, e o botão “Novo projeto” também (o admin cria só projeto interno)."
+      org_perms: "As páginas seguem o papel: Pagamentos e os clientes de Clientes e Projetos são só do dono, e Colaboradores é do dono e dos admins. O dono cria o projeto de um cliente no “Novo projeto” dele; o admin cria só projeto interno, no “Novo projeto interno”."
       money: "Os valores pagos aos colegas só aparecem para quem cuida do projeto, e o faturamento e os pagamentos, só para o dono. Cada pessoa sempre vê o próprio valor."
       missing: "Se uma página, uma aba ou um botão não aparece para você, falta permissão: peça a um administrador."
     solo:
@@ -1160,7 +1160,7 @@ org:
     created: Cliente criado.
     deleted: Cliente excluído.
   projects:
-    new: Novo projeto
+    new_internal: Novo projeto interno
     internal: Projeto interno
     customer: Cliente
     admins_only_hint: O cliente e o acréscimo só aparecem para admins e podem ser trocados depois, nas configurações do projeto.
@@ -1174,7 +1174,6 @@ org:
     col_people: Pessoas
     col_people_title: "Colaboradores do projeto: quem está em algum time ou tem valor por hora nele"
     col_tasks: Tarefas
-    customers_load_failed: "Não deu para carregar os clientes: {{.error}}"
     rate_invalid: Informe o valor cobrado por hora, por exemplo 150,00.
     rate_too_high: O valor cobrado por hora deve ficar entre 0 e 1.000.000,00.
     created: Projeto criado.

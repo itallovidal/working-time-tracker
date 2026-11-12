@@ -3,7 +3,8 @@
   {{/* Clientes e Projetos: cada cliente com os projetos dele embaixo, em ordem de nome, e os projetos internos (sem
        cliente) no fim. Quem gerencia os clientes (o dono) vê todos eles, também os que ainda não têm projeto, com a
        cobrança e o contato, e abre os detalhes, de onde edita e exclui. Os outros veem só os seus projetos (todos, para
-       os admins), agrupados pelo cliente de cada um. Quem pode criar projeto tem o botão no cabeçalho. */}}
+       os admins), agrupados pelo cliente de cada um. O cabeçalho cria clientes (o botão principal) e projetos internos;
+       o projeto de um cliente nasce no Novo projeto do grupo dele, já com o cliente, que o formulário não troca. */}}
   <div class="page-head">
     <div>
       <div class="eyebrow" data-org-name>{{.Me.OrganizationName}}</div>
@@ -11,12 +12,12 @@
       {{/* Quem gerencia os clientes não tem frase de abertura: a página fala por si. */}}
       {{if not (.Can "customers.manage")}}<p class="lede">{{.T "org.catalog.intro_member"}}</p>{{end}}
     </div>
-    <div class="row">
+    <div class="row catalog-page-actions">
       {{if .Can "customers.manage"}}
-      <button type="button" class="btn btn-secondary" @click="openForm()">{{template "icon" "plus"}} {{.T "org.customers.new"}}</button>
+      <button type="button" class="btn" @click="openForm()">{{template "icon" "plus"}} {{.T "org.customers.new"}}</button>
       {{end}}
       {{if .IsAdmin}}
-      <button type="button" class="btn" @click="openCreate()">{{template "icon" "plus"}} {{.T "org.projects.new"}}</button>
+      <button type="button" class="btn btn-secondary" @click="openCreate()">{{template "icon" "plus"}} {{.T "org.projects.new_internal"}}</button>
       {{end}}
     </div>
   </div>

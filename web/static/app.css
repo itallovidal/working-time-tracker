@@ -777,6 +777,10 @@ td.actions { text-align: right; white-space: nowrap; }
   .catalog-title { flex: 1 1 0; }
   .catalog-more { display: block; }
   .catalog-actions { display: none; }
+  /* Os botões do cabeçalho da página (Novo cliente e Novo projeto interno) não cabem lado a lado no celular: cada um
+     ocupa a linha inteira, com a mesma largura. Onde cabem, dividem a linha. */
+  .catalog-page-actions { width: 100%; }
+  .catalog-page-actions > .btn { flex: 1 1 auto; }
 }
 
 /* A visão geral da organização: seis números, três por linha, cada um com o ícone na sua cor. */
