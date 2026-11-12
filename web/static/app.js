@@ -780,6 +780,43 @@
     };
   };
 
+  // ---------- Campo de data ----------
+  // O <input type="date"> escreve a data no formato do idioma do navegador, e não no da página: num Chrome em inglês, a
+  // tela em português pedia mês/dia/ano. A diretiva x-date (no alpine:init, abaixo) faz de um campo de texto o campo de
+  // data, na ordem do idioma da página (dd/mm/aaaa em português, mm/dd/yyyy em inglês), e guarda no modelo a mesma data
+  // aaaa-mm-dd que o type="date" guardava: a API, rules.date, fmt.dateInput e os filtros não mudam.
+  const isoDate = /^\d{4}-\d{2}-\d{2}$/;
+  // A ordem do dia, do mês e do ano no idioma da página, e a máscara que sai dela (99/99/9999).
+  const dateParts = (() => {
+    const order = new Intl.DateTimeFormat(lang, { day: '2-digit', month: '2-digit', year: 'numeric' })
+      .formatToParts(new Date(2026, 10, 30)).map((p) => p.type).filter((type) => ['day', 'month', 'year'].includes(type));
+    return order.length === 3 ? order : ['day', 'month', 'year'];
+  })();
+  const dateMask = dateParts.map((p) => (p === 'year' ? '9999' : '99')).join('/');
+  // dateText é a data do modelo como o campo a mostra: "2026-11-30" -> "30/11/2026". O que não é uma data (o texto pela
+  // metade que ficou no modelo) aparece como está.
+  const dateText = (value) => {
+    const v = value === null || value === undefined ? '' : String(value);
+    if (!isoDate.test(v)) return v;
+    const [year, month, day] = v.split('-');
+    const by = { year, month, day };
+    return dateParts.map((p) => by[p]).join('/');
+  };
+  // dateValue é o texto do campo (já com a máscara) como vai para o modelo: a data completa e real vira aaaa-mm-dd, vazio
+  // é ''. Pela metade ou impossível (31/02) fica o texto, e rules.date o acusa como inválido.
+  const dateValue = (text) => {
+    if (text === '') return '';
+    if (text.length !== dateMask.length) return text;
+    const by = {};
+    text.split('/').forEach((n, i) => { by[dateParts[i]] = n; });
+    const y = Number(by.year);
+    const m = Number(by.month);
+    const d = Number(by.day);
+    const at = new Date(Date.UTC(y, m - 1, d));
+    const real = y >= 1000 && at.getUTCFullYear() === y && at.getUTCMonth() === m - 1 && at.getUTCDate() === d;
+    return real ? by.year + '-' + by.month + '-' + by.day : text;
+  };
+
   window.WTT = { can, t, lang, priorityClass, statusClass, hasDeadlineDate, deadlineInfo, errorText, api, ApiError, form, rules, limits, fmt, payments, billing, dedication, toCents, copyText, notInformed, weekdays, priorities, taskStatuses, markdown, routine, sprintOptions, sprintChoices, workModes, currencies, countries, boot: window.BOOT || {} };
 
   // Onde flash() deixa a mensagem para a página seguinte.
@@ -788,6 +825,88 @@
   document.addEventListener('alpine:init', () => {
     // $t('chave', { nome: valor }) nas expressões do Alpine (x-text, :title...).
     Alpine.magic('t', () => t);
+
+    // x-date="draft.deadline" num <input type="text">, no lugar do x-model: o campo de data no formato da página (ver
+    // dateText e dateValue, acima). O campo fica dentro de um <span class="date-input">, com o parcial date_picker logo
+    // depois dele: o botão que abre o calendário do navegador por um <input type="date"> invisível, e a data escolhida
+    // volta para o campo de texto. O invólucro vem do template, e não daqui: mover o campo enquanto o Alpine percorre a
+    // página deixaria os irmãos dele (o erro, a dica) sem iniciar.
+    // O modelo recebe a data a cada tecla (aaaa-mm-dd, '' ou o texto pela metade); com .complete (nos filtros), só a data
+    // completa ou o vazio, e o campo volta à data do modelo ao sair dele. O change do campo só dispara com a data
+    // completa ou vazia (o @change="apply()" dos filtros não recarrega com meia data, nem duas vezes ao sair).
+    Alpine.directive('date', (el, { expression, modifiers }, { effect, evaluateLater, cleanup }) => {
+      const read = evaluateLater(expression);
+      const write = evaluateLater(expression + ' = __date');
+      const complete = modifiers.includes('complete');
+      let last = null; // o último valor que o campo pôs no modelo, ou que leu dele
+      el.setAttribute('inputmode', 'numeric');
+      el.setAttribute('autocomplete', 'off');
+      el.setAttribute('maxlength', String(dateMask.length));
+      if (!el.getAttribute('placeholder')) el.setAttribute('placeholder', t('date_field.placeholder'));
+
+      const set = (value) => {
+        if (value === last) return;
+        last = value;
+        write(() => {}, { scope: { __date: value } });
+        if (value === '' || isoDate.test(value)) el.dispatchEvent(new CustomEvent('change', { bubbles: true, detail: { date: value } }));
+      };
+      const onInput = () => {
+        const masked = fmt.mask(el.value, dateMask);
+        if (masked !== el.value) el.value = masked;
+        const value = dateValue(masked);
+        if (!complete || value === '' || isoDate.test(value)) set(value);
+      };
+      // O change do próprio navegador (ao sair do campo) não passa: quem avisa é set(). No alvo, o ouvinte de captura
+      // roda antes dos outros, o @change do Alpine também.
+      const onNativeChange = (e) => { if (!(e instanceof CustomEvent)) e.stopImmediatePropagation(); };
+      const onBlur = () => { if (complete) el.value = dateText(last); };
+      el.addEventListener('input', onInput);
+      el.addEventListener('change', onNativeChange, true);
+      el.addEventListener('blur', onBlur);
+
+      // O modelo que muda por fora (abrir a edição, limpar o filtro) aparece no campo; o que o próprio campo escreveu
+      // não, para não mexer no que está sendo digitado.
+      effect(() => read((value) => {
+        const v = value === null || value === undefined ? '' : String(value);
+        if (v === last) return;
+        last = v;
+        el.value = dateText(v);
+      }));
+
+      // O calendário do navegador, onde há showPicker; sem ele o botão fica escondido e o campo de texto basta.
+      const box = el.closest('.date-input');
+      const button = box && box.querySelector('[data-date-open]');
+      const picker = box && box.querySelector('.date-input-picker');
+      let onOpen = null;
+      let onPicked = null;
+      if (button && picker && typeof picker.showPicker === 'function') {
+        button.hidden = false;
+        onOpen = () => {
+          picker.value = isoDate.test(last) ? last : '';
+          try {
+            picker.showPicker();
+          } catch (e) {
+            el.focus();
+          }
+        };
+        onPicked = () => {
+          if (!picker.value) return;
+          el.value = dateText(picker.value);
+          el.dispatchEvent(new Event('input', { bubbles: true }));
+          el.focus();
+        };
+        button.addEventListener('click', onOpen);
+        picker.addEventListener('change', onPicked);
+      }
+
+      cleanup(() => {
+        el.removeEventListener('input', onInput);
+        el.removeEventListener('change', onNativeChange, true);
+        el.removeEventListener('blur', onBlur);
+        if (onOpen) button.removeEventListener('click', onOpen);
+        if (onPicked) picker.removeEventListener('change', onPicked);
+      });
+    });
 
     Alpine.store('toast', {
       items: [],

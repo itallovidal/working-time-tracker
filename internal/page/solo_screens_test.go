@@ -63,19 +63,66 @@ func TestOnboarding_SoloAsksOnlyTheTimeZone(t *testing.T) {
 	mustHave(t, "team onboarding", team, `id="ob-work-mode"`, `id="ob-currency"`, `id="ob-timezone"`)
 }
 
-// O primeiro cliente das boas-vindas é por hora e pede o valor por hora, que é obrigatório (Decisão 21): sem o campo,
-// o cliente não salvava. Vale para o solo e para a equipe, com a dica de cada um.
-func TestOnboarding_FirstCustomerAsksTheHourlyRate(t *testing.T) {
+// O primeiro cliente das boas-vindas tem o formulário inteiro do modal de cliente, nas mesmas duas partes: os dados
+// (país, documento, contato, e-mail e telefone) e a cobrança. O valor por hora é obrigatório (Decisão 21) nos dois
+// modos; no solo a cobrança também cria o cliente por contrato mensal, e na equipe não há modo nem contrato.
+func TestOnboarding_FirstCustomerHasTheWholeCustomerForm(t *testing.T) {
 	solo, team := pair(t, "org_home", func(s bool) Data {
 		me := identity("admin", true, s)
 		me.NeedsOnboarding = true
 		return Data{Me: me, Section: "home", Script: "org"}
 	})
 	for who, html := range map[string]string{"solo": solo, "team": team} {
-		mustHave(t, who+" onboarding", html, `id="ob-customer-hourly-rate"`, `data-field="hourly_rate_cents"`, `id="err-hourly_rate_cents"`)
+		mustHave(t, who+" onboarding", html, `class="wizard-substeps"`, `data-customer-step="1"`, `data-customer-step="2"`,
+			`id="ob-customer-name"`, `id="ob-customer-country"`, `id="ob-customer-document"`, `id="ob-customer-contact"`,
+			`id="ob-customer-email"`, `id="ob-customer-phone"`, `id="ob-customer-hourly-rate"`, `data-field="hourly_rate_cents"`,
+			`id="err-hourly_rate_cents"`)
 	}
-	mustHave(t, "solo onboarding", solo, "Cliente por contrato mensal se cadastra em Clientes e Projetos.")
-	mustNotHave(t, "team onboarding", team, "Cliente por contrato mensal se cadastra em Clientes e Projetos.")
+	billing := []string{
+		`id="ob-customer-billing-mode"`, `id="ob-customer-monthly-fee"`, `id="ob-customer-estimated-hours"`,
+		`id="ob-customer-contract-start"`, `id="ob-customer-contract-end"`, `id="ob-customer-billing-cycle"`,
+		`id="ob-customer-cycle-anchor"`, `id="ob-customer-closing-day"`, `id="ob-customer-payment-days"`, `id="ob-customer-late-fee"`,
+	}
+	mustHave(t, "solo onboarding", solo, billing...)
+	mustNotHave(t, "team onboarding", team, billing...)
+	mustHave(t, "solo onboarding", solo, "Cliente é quem contrata você. A cobrança, por hora ou por contrato mensal")
+	mustHave(t, "team onboarding", team, "Cliente é quem contrata a organização.")
+}
+
+// formFields são os data-field do formulário que começa no marcador, na ordem em que aparecem.
+func formFields(t *testing.T, html, marker string) []string {
+	t.Helper()
+	at := strings.Index(html, marker)
+	if at < 0 {
+		t.Fatalf("the page has no form with %s", marker)
+	}
+	end := strings.Index(html[at:], "</form>")
+	if end < 0 {
+		t.Fatalf("the form with %s has no end", marker)
+	}
+	var out []string
+	for _, m := range regexp.MustCompile(`data-field="(\w+)"`).FindAllStringSubmatch(html[at:at+end], -1) {
+		out = append(out, m[1])
+	}
+	return out
+}
+
+// O cliente das boas-vindas e o do modal de Clientes e Projetos são o mesmo formulário (o parcial customer_fields): os
+// mesmos campos, na mesma ordem, no solo e na equipe. Antes eram escritos à mão em dois lugares, e a etapa das
+// boas-vindas ficou sem o contato, o telefone, o país e o contrato mensal.
+func TestCustomerForm_TheWelcomeAndTheModalAskTheSame(t *testing.T) {
+	for _, solo := range []bool{true, false} {
+		me := identity("admin", true, solo)
+		projects := render(t, "org_projects", Data{Me: me, Section: "projects", Script: "org"})
+		me = identity("admin", true, solo)
+		me.NeedsOnboarding = true
+		home := render(t, "org_home", Data{Me: me, Section: "home", Script: "org"})
+		modal := formFields(t, projects, `@submit.prevent="submitCustomer()"`)
+		welcome := formFields(t, home, `@submit.prevent="customerStep === 1 ? customerNext(customer) : saveCustomer()"`)
+		if len(modal) < 7 || strings.Join(modal, " ") != strings.Join(welcome, " ") {
+			t.Errorf("solo=%v: the welcome asks %v, the customer modal asks %v", solo, welcome, modal)
+		}
+	}
 }
 
 // O novo projeto não configura a cobrança, que mora no cliente (Decisão 21): nos dois modos mostra a do cliente, só para

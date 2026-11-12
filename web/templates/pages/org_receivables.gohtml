@@ -238,8 +238,8 @@
       </div>
       <div class="field">
         <label for="receivable-due">{{.T "receivable.modal.due_label"}}</label>
-        <input id="receivable-due" type="date" min="1971-01-01" data-field="due_date" x-model="draft.due"
-               @input="clearField('due_date')" :aria-invalid="fieldErrors.due_date ? 'true' : 'false'">
+        <span class="date-input"><input id="receivable-due" type="text" data-field="due_date" x-date="draft.due"
+               @input="clearField('due_date')" :aria-invalid="fieldErrors.due_date ? 'true' : 'false'">{{template "date_picker" .}}</span>
         {{template "field_error" "due_date"}}
         <span class="hint">{{.T "receivable.modal.due_hint"}}</span>
       </div>
@@ -293,8 +293,8 @@
       <p class="muted small" x-show="advance">{{.T "receivable.modal.advance_hint"}}</p>
       <div class="field">
         <label for="receivable-received-on">{{.T "receivable.modal.received_on_label"}}</label>
-        <input id="receivable-received-on" type="date" min="1971-01-01" data-field="received_on" x-model="rec.on"
-               @input="clearField('received_on')" @change="loadSuggestion()" :aria-invalid="fieldErrors.received_on ? 'true' : 'false'">
+        <span class="date-input"><input id="receivable-received-on" type="text" data-field="received_on" x-date="rec.on"
+               @input="clearField('received_on')" @change="loadSuggestion()" :aria-invalid="fieldErrors.received_on ? 'true' : 'false'">{{template "date_picker" .}}</span>
         {{template "field_error" "received_on"}}
         <span class="hint">{{.T "receivable.modal.received_on_hint"}}</span>
       </div>

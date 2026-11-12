@@ -19,8 +19,8 @@
 <div class="stack" x-show="step === 2">
   <div class="field">
     {{template "field_label" (dict "D" . "For" "task-deadline" "Key" "tasks.col_deadline" "Optional" true)}}
-    <input id="task-deadline" type="date" min="1971-01-01" data-field="deadline" x-model="draft.deadline" @input="clearField('deadline')"
-           :aria-invalid="fieldErrors.deadline ? 'true' : 'false'">
+    <span class="date-input"><input id="task-deadline" type="text" data-field="deadline" x-date="draft.deadline" @input="clearField('deadline')"
+           :aria-invalid="fieldErrors.deadline ? 'true' : 'false'">{{template "date_picker" .}}</span>
     {{template "field_error" "deadline"}}
     <span class="hint">{{.T "tasks.deadline_hint"}}</span>
   </div>

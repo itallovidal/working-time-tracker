@@ -61,7 +61,7 @@
       <template x-if="draft.payment.frequency === 'biweekly'">
         <div class="field">
           <label for="person-payment-start">{{.T "org.people.payment_start_label"}}</label>
-          <input id="person-payment-start" type="date" data-field="start" x-model="draft.payment.start" @input="clearField('start')" :aria-invalid="fieldErrors.start ? 'true' : 'false'">
+          <span class="date-input"><input id="person-payment-start" type="text" data-field="start" x-date="draft.payment.start" @input="clearField('start')" :aria-invalid="fieldErrors.start ? 'true' : 'false'">{{template "date_picker" .}}</span>
           {{template "field_error" "start"}}
           <span class="hint">{{.T "org.people.payment_start_hint"}}</span>
         </div>

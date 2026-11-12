@@ -46,6 +46,8 @@ e só existe um por organização. Com o Clerk ligado, também dá para entrar e
 
 **Boas-vindas.** No primeiro acesso, só o dono vê um modal em quatro etapas: os dados da organização (com a moeda e o
 fuso), o primeiro cliente, o primeiro convite e onde ajustar cada coisa. As três primeiras podem ficar para depois.
+O primeiro cliente tem o mesmo formulário do Novo cliente de Clientes e Projetos, nas mesmas duas partes: os dados
+(nome, país, documento, contato, email e telefone) e a cobrança.
 No [modo solo](#modo-solo) são três etapas, sem o convite.
 Fechar o modal de qualquer jeito o encerra para sempre. A data fica em `persons.onboarded_at`, gravada por
 `POST /api/auth/onboarding/complete`, e `GET /api/auth/me` diz se falta (`needs_onboarding`). Quem entra por convite não
@@ -89,7 +91,7 @@ que é de quem cobra os próprios clientes (o **A receber**, que tem as suas reg
 | Páginas | `/orgs/:orgId/people`, `/orgs/:orgId/people/:personId` e `/orgs/:orgId/payments` respondem `404` |
 | Projeto | Somem as abas **Colaboradores** e **Times** (a aba é uma só, dentro e fora da Gestão): `/projects/:projectId/collaborators`, `/projects/:projectId/management/teams` e o caminho antigo `/projects/:projectId/teams` respondem `404`, e a barra de abas e o aviso de valor por hora não a oferecem |
 | Tela inicial | Perde a **Visão geral** da organização (com o cartão **Trabalhando agora**, o custo e a margem) e o bloco da **Equipe**, e ganha a [visão geral do solo](#painéis): horas, Receita, Receita projetada e a tabela por cliente. O **Seu painel** fica |
-| Boas-vindas | Três etapas: organização, primeiro cliente e fim. Sem o convite, e sem o link para Colaboradores no fim |
+| Boas-vindas | Três etapas: organização, primeiro cliente e fim. Sem o convite, e sem o link para Colaboradores no fim. A cobrança do primeiro cliente tem o modo e o contrato mensal, como no modal de cliente |
 | Modal Editar colaborador | Sem jornada semanal nem regra de pagamento: uma pessoa só, que é o dono e não é paga |
 | Configurações | Sem **Regime de trabalho** e sem **Moeda**, na edição, no cartão "Como trabalhamos" e nas boas-vindas: a moeda segue o país (trocar o país na edição leva a moeda dele). Os campos voltam ao desmarcar o modo no formulário |
 | Novo projeto | Com um cliente escolhido, o rádio **Cobrança: Por hora / Contrato mensal**. O modo e o contrato continuam no cliente e valem para todos os projetos dele: com o cliente ainda sem projetos, escolher o outro modo grava os termos no cliente (`PATCH /api/customers/:id`) antes de criar o projeto, e o contrato mensal se preenche ali mesmo; com projetos, o outro modo fica desabilitado, com o motivo. A lista de clientes mostra o modo de cada um, e a Gestão › Configurações do projeto mostra a cobrança, só para ler |

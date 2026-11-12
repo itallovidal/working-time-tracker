@@ -369,8 +369,7 @@ onboarding:
   customers:
     title: Seus clientes
     lead: Cliente é quem contrata a organização. O valor por hora é do cliente e vale para todos os projetos dele; um projeto interno não precisa de cliente.
-    rate_hint: O que o cliente paga por hora. Cada projeto pode somar um acréscimo depois.
-    rate_hint_solo: O que o cliente paga por hora. Cliente por contrato mensal se cadastra em Clientes e Projetos.
+    lead_solo: Cliente é quem contrata você. A cobrança, por hora ou por contrato mensal, é do cliente e vale para todos os projetos dele; um projeto interno não precisa de cliente.
     later: Cadastrar depois
   people:
     title: Seu time
@@ -395,7 +394,7 @@ onboarding:
     people_text: Convites, papéis, permissões e jornada semanal.
     projects: Projetos
     projects_text: Crie o primeiro projeto e ponha o time nele, com o valor por hora de cada pessoa. É assim que o ponto passa a contar.
-    projects_text_solo: Crie o primeiro projeto, por hora ou com contrato mensal. É assim que o ponto passa a contar.
+    projects_text_solo: Crie o primeiro projeto e escolha o cliente, que já traz a cobrança. É assim que o ponto passa a contar.
     docs: Documentação
     docs_text: O passo a passo do primeiro uso e o que cada tela faz.
     finish: Concluir
@@ -847,7 +846,7 @@ help:
       tip: "A moeda só muda como os valores aparecem; o app não converte entre moedas."
     customers:
       title: Cadastre os clientes
-      text: "Cliente é quem contrata o seu time. Só o nome é obrigatório; o país (que começa no da organização), o documento fiscal (CNPJ no Brasil, EIN nos EUA), a pessoa de contato, o email e o telefone são opcionais."
+      text: "Cliente é quem contrata o seu time. O cadastro tem duas etapas. Em Dados do cliente, só o nome é obrigatório; o país (que começa no da organização), o documento fiscal (CNPJ no Brasil, EIN nos EUA), a pessoa de contato, o email e o telefone são opcionais. Em Cobrança fica como o cliente paga, o que vale para todos os projetos dele: o valor por hora ou, no modo solo, também o contrato mensal."
       tip: "Este passo é opcional: um projeto sem cliente é um projeto interno, e o cliente pode ser escolhido depois, nas configurações do projeto."
     project:
       title: Crie o primeiro projeto
@@ -1199,6 +1198,12 @@ org:
       other: "{{.count}} projetos"
   
 customer:
+  wizard:
+    label: Etapas do cadastro do cliente
+    step_data: Dados do cliente
+    step_billing: Cobrança
+    next: Próximo
+    back: Voltar
   billing:
     title: Cobrança
     mode: Modo de cobrança
@@ -1948,6 +1953,9 @@ overview:
   bill_rate: Valor cobrado por hora
   no_bill_rate: Sem valor cobrado
 
+date_field:
+  placeholder: dd/mm/aaaa
+  open_calendar: Abrir o calendário
 labels:
   not_informed: Não informado
   sprint:

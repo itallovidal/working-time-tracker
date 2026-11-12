@@ -1,0 +1,70 @@
+{{/* Os campos do cliente, em duas etapas: 1, os dados (nome, país, documento, contato, e-mail e telefone); 2, a cobrança
+     (no modo solo o modo, o valor por hora e os termos de customer_contract; na equipe só o valor por hora, Decisão 21).
+     É o mesmo formulário no modal de cliente (Clientes e Projetos) e na etapa dos clientes das boas-vindas: cada tela põe
+     em volta a faixa das etapas, o aviso de erro e os botões, que são diferentes. As duas etapas ficam no HTML e a que não
+     está à vista só é escondida (o form é novalidate; quem confere é o mixin, em pages/org.js).
+     O componente que inclui traz customerStep (1 ou 2), o mixin WTT.form (fieldErrors, clearField), customerDocument e
+     customerBilling (modeLocked, lateOpen); ver customerForm em pages/org.js.
+     Parâmetros: Data (a página), Model (o nome do objeto do cliente no componente), Id (o prefixo dos ids dos campos) e
+     Step (opcional: o data-step do nome, que as boas-vindas usam para pôr o foco no primeiro campo da etapa delas). */}}
+{{define "customer_fields"}}
+{{$m := .Model}}{{$id := .Id}}{{$step := .Step}}
+{{with .Data}}
+<div class="stack" data-customer-step="1" x-show="customerStep === 1">
+  <div class="field">
+    <label for="{{$id}}-name">{{.T "common.name"}}</label>
+    <input id="{{$id}}-name" type="text" data-field="name" maxlength="{{limit "name"}}" x-model="{{$m}}.name" @input="clearField('name')" :aria-invalid="fieldErrors.name ? 'true' : 'false'" data-autofocus{{if $step}} data-step="{{$step}}"{{end}}>
+    {{template "field_error" "name"}}
+  </div>
+  {{template "customer_document" (dict "Data" . "Model" $m "Id" $id "Country" true)}}
+  <div class="field">
+    {{template "field_label" (dict "D" . "For" (printf "%s-contact" $id) "Key" "org.customers.contact_person" "Optional" true)}}
+    <input id="{{$id}}-contact" type="text" data-field="contact_name" maxlength="{{limit "name"}}" x-model="{{$m}}.contact_name" @input="clearField('contact_name')" :aria-invalid="fieldErrors.contact_name ? 'true' : 'false'">
+    {{template "field_error" "contact_name"}}
+  </div>
+  {{/* Os dois são opcionais: os rótulos têm a mesma altura e os campos ficam alinhados lado a lado. */}}
+  <div class="fields">
+    <div class="field">
+      {{template "field_label" (dict "D" . "For" (printf "%s-email" $id) "Key" "common.email" "Optional" true)}}
+      <input id="{{$id}}-email" type="email" data-field="contact_email" maxlength="{{limit "email"}}" x-model="{{$m}}.contact_email" @input="clearField('contact_email')" :aria-invalid="fieldErrors.contact_email ? 'true' : 'false'">
+      {{template "field_error" "contact_email"}}
+    </div>
+    <div class="field">
+      {{template "field_label" (dict "D" . "For" (printf "%s-phone" $id) "Key" "common.phone" "Optional" true)}}
+      <input id="{{$id}}-phone" type="tel" data-field="contact_phone" maxlength="{{limit "phone"}}" x-model="{{$m}}.contact_phone" @input="clearField('contact_phone')" :aria-invalid="fieldErrors.contact_phone ? 'true' : 'false'">
+      {{template "field_error" "contact_phone"}}
+    </div>
+  </div>
+</div>
+
+{{/* A cobrança mora no cliente (Decisão 21): o valor por hora vale para todos os projetos dele, e cada projeto só soma um
+     acréscimo. O modo, o contrato mensal e os prazos só existem no modo solo; na equipe todo cliente é por hora, e a
+     etapa pede só o valor. */}}
+<div class="stack" data-customer-step="2" x-cloak x-show="customerStep === 2">
+  {{if .Me.OrganizationSolo}}
+  <div class="field">
+    <label for="{{$id}}-billing-mode">{{.T "customer.billing.mode"}}</label>
+    <select id="{{$id}}-billing-mode" data-field="billing_mode" x-model="{{$m}}.billing_mode" :disabled="modeLocked" @change="clearField('billing_mode')" :aria-invalid="fieldErrors.billing_mode ? 'true' : 'false'">
+      <option value="hourly">{{.T "customer.billing.hourly"}}</option>
+      <option value="monthly">{{.T "customer.billing.monthly"}}</option>
+    </select>
+    {{template "field_error" "billing_mode"}}
+    <span class="hint" x-show="modeLocked">{{.T "customer.billing.mode_locked"}}</span>
+    <span class="hint" x-show="!modeLocked">{{.T "customer.billing.mode_hint"}}</span>
+  </div>
+  {{end}}
+
+  <div class="field" x-show="{{$m}}.billing_mode === 'hourly'">
+    <label for="{{$id}}-hourly-rate" x-text="$t('customer.billing.hourly_rate', { unit: WTT.fmt.moneyUnit() })"></label>
+    <input id="{{$id}}-hourly-rate" type="text" inputmode="decimal" class="num" placeholder="{{.T "project_settings.rate_placeholder"}}" data-field="hourly_rate_cents" x-model="{{$m}}.hourly_rate" @input="clearField('hourly_rate_cents')" :aria-invalid="fieldErrors.hourly_rate_cents ? 'true' : 'false'">
+    {{template "field_error" "hourly_rate_cents"}}
+    <span class="hint">{{.T "customer.billing.hourly_rate_hint"}}</span>
+  </div>
+
+  {{if .Me.OrganizationSolo}}
+  {{/* O contrato, o ciclo, o fechamento, o prazo e a multa. */}}
+  {{template "customer_contract" (dict "Data" . "Model" $m "Id" $id)}}
+  {{end}}
+</div>
+{{end}}
+{{end}}

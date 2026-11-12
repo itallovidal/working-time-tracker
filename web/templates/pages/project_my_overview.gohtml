@@ -63,7 +63,7 @@
         <p class="muted">{{.T "time.sessions_intro_own"}} {{.T "time.totals_follow"}}</p>
       </div>
       <div class="row filters">
-        <input type="date" x-model="filter.date" aria-label="{{.T "time.date_filter"}}" title="{{.T "time.date_filter_title"}}">
+        <span class="date-input"><input type="text" x-date.complete="filter.date" aria-label="{{.T "time.date_filter"}}" title="{{.T "time.date_filter_title"}}">{{template "date_picker" .}}</span>
         <select x-model="filter.task" aria-label="{{.T "time.task_filter"}}">
           <option value="">{{.T "time.all_tasks"}}</option>
           <template x-for="t in sessionTasks()" :key="t.id"><option :value="t.id" x-text="t.name"></option></template>
