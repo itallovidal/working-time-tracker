@@ -108,11 +108,12 @@ func contrast(t *testing.T, a, b string) float64 {
 	return (math.Max(la, lb) + 0.05) / (math.Min(la, lb) + 0.05)
 }
 
-// A página inicial dá cor aos cartões de projeto e aos números da visão geral com as classes
-// `.hue-*`, que não têm o sentido de prioridade nem de status. O teste cuida do que o navegador
-// não avisa: um tom sorteado por app.js que não existe no app.css, um tom usado no modelo sem
-// classe, uma cor que falta num dos temas e texto que não se lê em cima da cor (o tom sobre o
-// fundo suave, que é como a sigla do projeto e os ícones da visão geral aparecem).
+// A página inicial dá cor aos números da visão geral com as classes `.hue-*`, que não têm o
+// sentido de prioridade nem de status; em Clientes e Projetos os cartões de projeto usam o ciano
+// da marca e o círculo do cliente a ardósia. O teste cuida do que o navegador não avisa: um tom
+// usado no modelo sem classe, uma cor que falta num dos temas e um ícone que não se lê em cima da
+// cor (o tom sobre o fundo suave, que é como o ícone do projeto, o do cliente e os da visão geral
+// aparecem).
 func TestHomeHuesAreColoredAndReadable(t *testing.T) {
 	read := func(name string) string {
 		t.Helper()
@@ -122,12 +123,9 @@ func TestHomeHuesAreColoredAndReadable(t *testing.T) {
 		}
 		return string(raw)
 	}
-	css, orgJS, home := read("static/app.css"), read("static/pages/org.js"), read("templates/pages/org_home.gohtml")
+	css, home := read("static/app.css"), read("templates/pages/org_home.gohtml")
 
 	hues := map[string]bool{}
-	for _, h := range valuesIn(t, orgJS, "projectHues") {
-		hues[h] = true
-	}
 	for _, m := range regexp.MustCompile(`hue-([a-z]+)`).FindAllStringSubmatch(home, -1) {
 		hues[m[1]] = true
 	}
@@ -148,7 +146,12 @@ func TestHomeHuesAreColoredAndReadable(t *testing.T) {
 		for _, m := range tokens.FindAllStringSubmatch(block, -1) {
 			colors[m[1]] = m[2]
 		}
+		// Além dos tons da visão geral, o ciano dos cartões de projeto e a ardósia do círculo do cliente.
+		pairs := []string{"accent", "slate"}
 		for h := range hues {
+			pairs = append(pairs, h)
+		}
+		for _, h := range pairs {
 			tone, soft := colors[h], colors[h+"-soft"]
 			if tone == "" || soft == "" {
 				t.Errorf("%s theme: --%s or --%s-soft is not defined", theme, h, h)
@@ -161,9 +164,11 @@ func TestHomeHuesAreColoredAndReadable(t *testing.T) {
 	}
 }
 
-// Os cartões de projeto levam cor só num toque: a sigla em tom suave, os ícones e a borda ao
-// passar o mouse. Faixa no topo, sigla de fundo cheio e selos coloridos deixaram a lista muito
-// colorida e foram tirados; o teste segura isso, para um ajuste de estilo não trazê-los de volta.
+// Os cartões de projeto levam cor só num toque: o ícone em tom suave, os ícones das contagens e a
+// borda ao passar o mouse. Faixa no topo, sigla de fundo cheio e selos coloridos deixaram a lista
+// muito colorida e foram tirados; o teste segura isso, para um ajuste de estilo não trazê-los de
+// volta. A cor é uma só, o ciano da marca, e o círculo do cliente é neutro: com um tom sorteado
+// para cada um, o cliente e o projeto dele saíam com cores trocadas.
 func TestProjectCardsStayCalm(t *testing.T) {
 	raw, err := FS.ReadFile("static/app.css")
 	if err != nil {
@@ -187,6 +192,23 @@ func TestProjectCardsStayCalm(t *testing.T) {
 	}
 	if !strings.Contains(card, "background: var(--surface);") {
 		t.Errorf("the project card background is not the neutral surface: %s", card)
+	}
+	if !strings.Contains(card, "--tone: var(--accent); --tone-soft: var(--accent-soft);") {
+		t.Errorf("every project card should take the brand cyan as its tone: %s", card)
+	}
+	circle, found := rule(".catalog-mark")
+	if !found {
+		t.Fatal("app.css has no .catalog-mark")
+	}
+	if strings.Contains(circle, "var(--tone") {
+		t.Errorf("the customer circle should be neutral, not take a tone: %s", circle)
+	}
+	page, err := FS.ReadFile("templates/pages/org_projects.gohtml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(page), "hue-") {
+		t.Error("Clientes e Projetos gives a customer or a project a hue of its own: the colors are fixed by type")
 	}
 	mark, found := rule(".project-mark")
 	if !found {

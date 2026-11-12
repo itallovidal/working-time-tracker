@@ -41,9 +41,10 @@
     <template x-for="g in groups()" :key="g.id">
       <section class="catalog-group" :aria-label="g.name">
         <div class="catalog-head" :class="g.customer && 'row-link'" @click="if (g.customer && !$event.target.closest('a, button, .catalog-more')) openDetails(g.customer)">
-          <span class="catalog-mark" :class="g.internal ? 'catalog-mark-internal' : 'hue-' + hueOf(g.id)" aria-hidden="true">
-            <template x-if="g.internal"><i class="fa-solid fa-building"></i></template>
-            <template x-if="!g.internal"><span x-text="initialsOf(g.name)"></span></template>
+          {{/* Cada tipo tem o seu ícone, igual em todos os grupos: a maleta para o cliente e a casa para os projetos
+               internos. Quem diferencia um cliente do outro é o nome ao lado. */}}
+          <span class="catalog-mark" :class="g.internal && 'catalog-mark-internal'" aria-hidden="true">
+            <i class="fa-solid" :class="g.internal ? 'fa-house' : 'fa-briefcase'"></i>
           </span>
           <div class="catalog-title">
             <h2>
@@ -78,18 +79,21 @@
 
         <div class="project-grid" x-show="g.projects.length > 0">
           <template x-for="p in g.projects" :key="p.id">
-            <a class="project-card" :class="'hue-' + hueOf(p.id)" :href="'/projects/' + p.id">
+            {{/* Todo cartão de projeto tem o ciano da marca; o ícone diz se o projeto é de um cliente (o diagrama) ou
+                 interno (as camadas). */}}
+            <a class="project-card" :href="'/projects/' + p.id">
               <div class="project-top">
-                <span class="project-mark" aria-hidden="true" x-text="markOf(p.name)"></span>
+                <span class="project-mark" aria-hidden="true"><i class="fa-solid" :class="g.internal ? 'fa-layer-group' : 'fa-diagram-project'"></i></span>
                 <div class="project-title">
                   <h3 x-text="p.name"></h3>
                 </div>
               </div>
               <p class="project-desc" x-show="p.description" x-text="p.description"></p>
               <div class="project-stats">
-                {{/* No modo solo todo projeto tem a mesma pessoa: a contagem não diz nada. */}}
-                {{if not .Me.OrganizationSolo}}<span class="project-stat">{{template "icon" "users"}} <span x-text="$t('home.projects.people', { count: p.member_count })"></span></span>{{end}}
-                <span class="project-stat">{{template "icon" "list-check"}} <span x-text="$t('home.projects.tasks', { count: p.task_count })"></span></span>
+                {{/* No modo solo todo projeto tem a mesma pessoa: a contagem não diz nada. No português o zero cai na forma
+                     do singular ("0 tarefa"), então o zero tem a sua frase. */}}
+                {{if not .Me.OrganizationSolo}}<span class="project-stat">{{template "icon" "users"}} <span x-text="p.member_count ? $t('home.projects.people', { count: p.member_count }) : $t('home.projects.no_people')"></span></span>{{end}}
+                <span class="project-stat">{{template "icon" "list-check"}} <span x-text="p.task_count ? $t('home.projects.tasks', { count: p.task_count }) : $t('home.projects.no_tasks')"></span></span>
               </div>
             </a>
           </template>

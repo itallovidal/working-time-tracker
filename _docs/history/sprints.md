@@ -1357,6 +1357,14 @@ Same branch, after the owner saw the contract dates asking month/day/year in Por
 - [X] S127.4 Texts `date_field.placeholder` and `date_field.open_calendar`; `frontend/patterns.md` (why not `type="date"`); `TestTemplates_DatesFollowThePageLanguage` (no `type="date"` outside the picker, every `x-date` on a text field inside `.date-input` with the picker after it)
 - [X] S127.5 Checked in the browser: the contract dates show dd/mm/aaaa with the calendar button; typing 01112026 shows 01/11/2026 and saves 2026-11-01, which the edit form shows back as 01/11/2026. Not checked: the other 11 fields one by one, the picker round trip and the English screens
 
+### Sprint 128: Icons and Fixed Colors on Clientes e Projetos
+
+The owner found the colors of Clientes e Projetos odd: the customer circle and each project card drew a hue from the id, so a gold customer had a teal project and the next customer the other way around.
+
+- [X] S128.1 The colors are fixed by type. The group circle is neutral (`--slate` on `--slate-soft`) with a briefcase (`fa-briefcase`) for a customer, and stays muted with a house (`fa-house`, was the building) for the internal projects. Every project card takes the brand cyan (`--accent` on `--accent-soft`, set on `.project-card`) with a diagram (`fa-diagram-project`) on a customer's project and layers (`fa-layer-group`) on an internal one. The initials are gone from both; `hueOf`, `projectHues` and `markOf` left `org.js`, and `.hue-*` now only color the overview numbers
+- [X] S128.2 The counts on the card said "0 tarefa" (in Portuguese CLDR puts zero in `one`): zero now has its own text, `home.projects.no_tasks` and `home.projects.no_people` ("Nenhuma tarefa", "Nenhuma pessoa"), as `development/i18n-and-countries.md` asks
+- [X] S128.3 `TestHomeHuesAreColoredAndReadable` checks the cyan and the slate on their soft backgrounds (4.5:1, both themes) besides the overview hues; `TestProjectCardsStayCalm` holds the cyan on every card, the neutral circle and no `hue-` on the page; `TestPages_ProjectsPageHasTheCards` looks for the four icons and the zero texts. `frontend/patterns.md` (color fixed by type)
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open

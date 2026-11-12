@@ -175,6 +175,8 @@ home:
     tasks:
       one: "{{.count}} task"
       other: "{{.count}} tasks"
+    no_people: No people
+    no_tasks: No tasks
 
   # The solo mode home: hours, revenue and projected revenue by calendar window and by customer.
   solo:

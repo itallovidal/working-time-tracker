@@ -82,7 +82,11 @@ func TestPages_ProjectsPageHasTheCards(t *testing.T) {
 	ownerPage := rec.Body.String()
 	for _, want := range []string{
 		`x-data="customersProjects"`, "<h1>Clientes e Projetos</h1>", `class="catalog-group"`, `x-for="g in groups()"`,
-		`class="project-card"`, `class="project-mark"`, `markOf(p.name)`, `'hue-' + hueOf(p.id)`,
+		`class="project-card"`, `class="project-mark"`,
+		// Um ícone por tipo: a maleta do cliente e a casa dos internos no círculo, o diagrama do projeto de cliente e as
+		// camadas do interno no cartão. E o zero tem a sua frase, não "0 tarefa".
+		`g.internal ? 'fa-house' : 'fa-briefcase'`, `g.internal ? 'fa-layer-group' : 'fa-diagram-project'`,
+		`$t('home.projects.no_tasks')`, `$t('home.projects.no_people')`,
 		"Novo projeto interno", "Novo cliente", `x-teleport="#modal-root"`, `id="project-name"`, `id="customer-name"`,
 		`openCreate(g.customer ? g.customer.id : '')`, `openDetails(g.customer)`,
 		// No celular as ações do grupo ficam num menu de três pontinhos, com as mesmas duas.

@@ -185,6 +185,9 @@ home:
     tasks:
       one: "{{.count}} tarefa"
       other: "{{.count}} tarefas"
+    # O zero é uma frase à parte: no português ele cai na forma do singular ("0 tarefa").
+    no_people: Nenhuma pessoa
+    no_tasks: Nenhuma tarefa
 
   # A tela inicial do modo solo: horas, receita e receita projetada por janela de calendário e por cliente.
   solo:
