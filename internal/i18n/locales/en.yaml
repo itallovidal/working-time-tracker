@@ -840,7 +840,7 @@ help:
       tip: "This step is optional: a project without a customer is an internal project, and the customer can be picked later, in the project settings."
     project:
       title: Create the first project
-      text: "Enter the name and, if you want, a description. Pick the customer and, if needed, an extra on top of the customer's billing (only the owner sees these fields: an admin creates internal projects only) and the sprint length: 7, 14 or 30 days. Tick “The project has a daily” and “The project has a weekly” if the team holds those meetings."
+      text: "A customer's project starts from that customer's “New project”, with the customer already set; a project with no customer, from “New internal project” at the top of the page (an admin creates internal projects only). Enter the name and, if you want, a description, an extra on top of the customer's billing (only the owner sees this field) and the sprint length: 7, 14 or 30 days. Tick “The project has a daily” and “The project has a weekly” if the team holds those meetings."
       tip: "Billing belongs to the customer: the hourly rate or the monthly contract, set under Customers & Projects and the same on all of its projects. A project only adds an extra, per hour or per month, for something small or temporary."
     invite:
       title: Invite the team
@@ -905,9 +905,9 @@ help:
       profile: "For the owner and the admins, clicking the row opens the person's profile: the weekly hours, the hours of the period and since the start, and their projects. The payment rule, the payment history and the next dates only appear for the owner. “Edit” on the profile opens the same modal as the pencil."
     org_projects:
       title: Customers & Projects
-      text: "The “Customers & Projects” item in the top bar, for everyone: each customer with its projects below, as cards with the people and the tasks, and the internal projects (no customer) at the end. Each person sees their own projects (the owner and the admins see all of them). Click a card to open the project. Whoever can create projects sees the “New project” button at the top of the page."
+      text: "The “Customers & Projects” item in the top bar, for everyone: each customer with its projects below, as cards with the people and the tasks, and the internal projects (no customer) at the end. Each person sees their own projects (the owner and the admins see all of them). Click a card to open the project. Whoever can create projects sees the “New internal project” button at the top of the page, for a project with no customer."
       customers: "For the owner, the page is also the customer register, including customers with no project yet: name, country, tax ID (CNPJ in Brazil, EIN in the US), contact person, email, phone and billing, which applies to all of the customer's projects. Only the owner sees the customers and their billing."
-      actions: "“New customer” registers one. Clicking the customer's name, or “Details”, opens the details, with “Edit” and “Delete”. A group's “New project” creates the project with that customer already chosen."
+      actions: "“New customer”, at the top of the page, registers one. Clicking the customer's name, or “Details”, opens the details, with “Edit” and “Delete”. A customer's “New project” creates the project with that customer, and the form does not change the customer: that is for later, in the project settings."
       link: "A customer is linked to a project when the project is created or in its settings. Raising the customer's rate changes the billed rate of all of its projects, for the hours logged from then on."
     project_home:
       title: "Project: Home"
@@ -989,7 +989,7 @@ help:
       admin: "Admin: creates internal projects, invites people and administers every project. Does not see customers, billing or payments."
       member: "Collaborator: the day to day on the projects they were put in."
       groups: "When you add someone to a project, you pick their group: “Collaborator” (no extra permissions) or “Project administrator” (runs the project, its teams, its people, its labels and its integrations). The group only applies to that project."
-      org_perms: "The pages follow the role: Payments and the customers in Customers & Projects are only for the owner, Collaborators is for the owner and the admins, and so is the “New project” button (an admin creates internal projects only)."
+      org_perms: "The pages follow the role: Payments and the customers in Customers & Projects are only for the owner, and Collaborators is for the owner and the admins. The owner creates a customer's project from that customer's “New project”; an admin creates internal projects only, from “New internal project”."
       money: "The rates paid to colleagues only show for whoever runs the project, and billing and payments only for the owner. Everyone always sees their own rate."
       missing: "If a page, a tab or a button does not show up for you, you lack a permission: ask an admin."
     solo:
@@ -1149,7 +1149,7 @@ org:
     created: Customer created.
     deleted: Customer deleted.
   projects:
-    new: New project
+    new_internal: New internal project
     internal: Internal project
     customer: Customer
     admins_only_hint: The customer and the extra are only visible to admins and can be changed later in the project settings.
@@ -1163,7 +1163,6 @@ org:
     col_people: People
     col_people_title: "Project collaborators: whoever is on a team or has an hourly rate on it"
     col_tasks: Tasks
-    customers_load_failed: "Could not load the customers: {{.error}}"
     rate_invalid: Enter the rate billed per hour, for example 150.00.
     rate_too_high: The rate billed per hour must be between 0 and 1,000,000.00.
     created: Project created.

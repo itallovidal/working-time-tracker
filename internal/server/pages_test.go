@@ -199,7 +199,7 @@ func TestPages_ModalHostAndIcons(t *testing.T) {
 	// e o do projeto novo.
 	for page, wants := range map[string][]string{
 		"people":   {"Adicionar colaborador", `x-teleport="#modal-root"`, `id="invite-email"`, "Integrantes", "Convites pendentes"},
-		"projects": {"Novo projeto", "Novo cliente", `x-teleport="#modal-root"`, `id="project-name"`, `id="project-customer"`, `id="project-bill-extra"`, `id="customer-name"`},
+		"projects": {"Novo projeto", "Novo cliente", `x-teleport="#modal-root"`, `id="project-name"`, `id="project-bill-extra"`, `id="customer-name"`},
 	} {
 		body := do(e, "GET", "/orgs/"+admin.orgID+"/"+page, "", admin.session).Body.String()
 		for _, want := range wants {

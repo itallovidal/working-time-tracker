@@ -1,5 +1,5 @@
 {{/* O formulário de novo projeto, da página Clientes e Projetos. Aparece no modal do layout base e continua no escopo
-   do componente que o inclui, que traz draft, customers, errors, pending, openCreate e create. */}}
+   do componente que o inclui, que traz draft, customers, customerOf, errors, pending, openCreate e create. */}}
 {{define "project_form"}}
 {{if .IsAdmin}}
   <template x-teleport="#modal-root">
@@ -20,22 +20,13 @@
           {{template "field_error" "description"}}
         </div>
       </fieldset>
-      {{/* O cliente e o acréscimo são dinheiro do dono: o admin cria só projeto interno, e o dono converte. Os grupos seguem
-           a ordem do Editar projeto: Projeto, Cliente, Cobrança e Desenvolvimento. */}}
+      {{/* O cliente e o acréscimo são dinheiro do dono: o admin cria só projeto interno, e o dono converte. O cliente vem do
+           grupo de onde o formulário abriu (o título diz qual) e não se troca aqui; sem cliente, o projeto é interno e os
+           grupos Cliente e Cobrança somem. Os grupos seguem a ordem do Editar projeto: Projeto, Cliente, Cobrança e
+           Desenvolvimento. */}}
       {{if .IsOwner}}
-      <fieldset class="form-group">
+      <fieldset class="form-group" x-cloak x-show="draft.customer_id">
         <legend>{{.T "project.groups.customer"}}</legend>
-        <div class="field">
-          <label for="project-customer">{{.T "org.projects.customer"}}</label>
-          <select id="project-customer" data-field="customer_id" x-model="draft.customer_id" @change="customerChanged()"
-                  :aria-invalid="fieldErrors.customer_id ? 'true' : 'false'">
-            <option value="">{{.T "org.projects.internal"}}</option>
-            <template x-for="c in customers || []" :key="c.id">
-              <option :value="c.id" x-text="customerOption(c)"></option>
-            </template>
-          </select>
-          {{template "field_error" "customer_id"}}
-        </div>
         {{template "project_customer_meeting" .}}
         <span class="hint">{{if .Me.OrganizationSolo}}{{.T "org.projects.admins_only_hint_solo"}}{{else}}{{.T "org.projects.admins_only_hint"}}{{end}}</span>
       </fieldset>
@@ -58,7 +49,9 @@
       <p class="form-error" x-show="errors.create" x-text="errors.create" role="alert"></p>
       <div class="row row-end">
         <button type="button" class="btn btn-secondary" @click="$store.modal.dismiss()">{{.T "common.cancel"}}</button>
-        <button type="submit" class="btn" :disabled="pending">{{.T "org.projects.create"}}</button>
+        {{/* O cliente por hora antigo, sem valor, não tem o que cobrar: o aviso do grupo Cobrança diz por quê, e o valor se
+             informa no cliente. */}}
+        <button type="submit" class="btn" :disabled="pending || billing.withoutRate(customerOf())">{{.T "org.projects.create"}}</button>
       </div>
     </form>
   </template>
