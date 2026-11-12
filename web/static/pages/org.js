@@ -51,49 +51,24 @@ document.addEventListener('alpine:init', () => {
     : { label: r[0], value: WTT.notInformed, empty: true, icon: (r[2] || {}).icon }));
   const bareURL = (url) => (url || '').replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
 
-  // projectCreation é o modal de novo projeto da página Projetos (o formulário é o parcial project_form) e a criação.
-  // A cobrança mora no cliente (Decisão 21): o formulário mostra a do cliente escolhido (o valor por hora ou o contrato,
-  // que se editam em Clientes) e só pede o acréscimo do projeto, por hora no cliente por hora e por mês no mensal.
+  // projectCreation é o modal de novo projeto da página Clientes e Projetos (o formulário é o parcial project_form) e a
+  // criação; quem o inclui traz a lista de clientes (customers) e o openCreate, que abre o modal já com o cliente do
+  // grupo, que o formulário não troca. A cobrança mora no cliente (Decisão 21): o formulário mostra a do cliente (o valor
+  // por hora ou o contrato, que se editam nos detalhes dele) e só pede o acréscimo do projeto, por hora no cliente por
+  // hora e por mês no mensal.
   const projectCreation = () => ({
     ...form(),
-    ...customerBilling(), // solo, que customerOption lê
+    ...customerBilling(), // solo, modeLocked e as colunas da cobrança, dos detalhes e do formulário do cliente
     billing: WTT.billing,
-    customers: null, // só carregados quando o modal de novo projeto abre pela primeira vez
+    customers: [],
     draft: blankProject(),
     extraOpen: false, // o bloco Avançado, com o acréscimo do projeto
-    // customerOf é o cliente escolhido no rascunho, ou null (projeto interno).
+    // customerOf é o cliente do rascunho, ou null (projeto interno).
     customerOf() {
-      return (this.customers || []).find((c) => c.id === this.draft.customer_id) || null;
+      return this.customers.find((c) => c.id === this.draft.customer_id) || null;
     },
-    // customerOption é o texto do cliente na lista: no modo solo, com o modo de cobrança dele.
-    customerOption(c) {
-      if (!this.solo) return c.name;
-      const mode = WTT.t(c.billing_mode === 'monthly' ? 'customer.billing.monthly' : 'customer.billing.hourly');
-      return WTT.t('customer.billing.option_label', { name: c.name, mode });
-    },
-    // customerChanged zera o acréscimo: ele é por hora ou por mês conforme o cliente, e não passa de um para o outro.
-    customerChanged() {
-      this.clearField('customer_id');
-      this.clearField('bill_extra_cents');
-      this.draft.extra = '';
-    },
-    // openCreate abre o modal de novo projeto. Só admins criam projeto, e só o dono pode listar os clientes e
-    // definir um (o admin cria só projeto interno); por isso a lista vem aqui, e não no init.
-    async openCreate() {
-      this.draft = blankProject();
-      this.extraOpen = false;
-      this.errors.create = '';
-      this.clearFields();
-      Alpine.store('modal').open('project', WTT.t('org.projects.new'), () => !this.pending);
-      if (!me.is_owner) { this.customers = []; return; }
-      if (this.customers !== null) return;
-      try {
-        this.customers = (await api('GET', '/api/orgs/' + orgId + '/customers')) || [];
-      } catch (e) {
-        this.errors.create = WTT.t('org.projects.customers_load_failed', { error: e.message });
-      }
-    },
-    // create cria o projeto: o cliente e o acréscimo vão juntos, porque sem cliente não há acréscimo.
+    // create cria o projeto: o cliente e o acréscimo vão juntos, porque sem cliente não há acréscimo. O cliente por hora
+    // antigo, sem valor, não chega aqui: o botão Criar projeto fica desligado, com o aviso no grupo Cobrança.
     create() {
       return this.run('create', async () => {
         const d = this.draft;
@@ -105,8 +80,6 @@ document.addEventListener('alpine:init', () => {
         const ok = this.check({
           name: [name, R.required, R.max('name')],
           description: [description, (v) => R.max('description')(v, 'long_description')],
-          // O cliente por hora antigo, sem valor, não tem o que cobrar: o valor se informa em Clientes.
-          customer_id: [d.customer_id, (v, field) => (WTT.billing.withoutRate(c) ? WTT.errorText({ code: 'project.customer_without_rate', params: { field } }) : '')],
           bill_extra_cents: [c ? d.extra : '', R.extra],
           ...WTT.routine.rules(d),
           sprint_duration_days: [d.sprint_duration_days, R.integer(1, 90)],
@@ -1254,14 +1227,17 @@ document.addEventListener('alpine:init', () => {
       if (!this.manage) return projects;
       return WTT.t('org.catalog.count_customers', { count: this.customers.length }) + ' · ' + projects;
     },
-    // openCreate abre o novo projeto, já com o cliente do grupo de onde veio (vazio é projeto interno). A lista de
-    // clientes é a da página: um cliente recém-cadastrado já aparece no formulário.
+    // openCreate abre o novo projeto, já com o cliente do grupo de onde veio, que o título nomeia e o formulário não
+    // troca; sem cliente (o botão do cabeçalho, o grupo dos internos e todo projeto do admin) ele é interno. O cliente é
+    // lido da lista da página, que só o dono tem.
     openCreate(customerId) {
-      this.draft = { ...blankProject(), customer_id: (me.is_owner && customerId) || '' };
+      const c = (me.is_owner && customerId && this.customers.find((x) => x.id === customerId)) || null;
+      this.draft = { ...blankProject(), customer_id: c ? c.id : '' };
       this.extraOpen = false;
       this.errors.create = '';
       this.clearFields();
-      Alpine.store('modal').open('project', WTT.t('org.projects.new'), () => !this.pending);
+      const title = c ? WTT.t('org.catalog.new_project_for', { name: c.name }) : WTT.t('org.projects.new_internal');
+      Alpine.store('modal').open('project', title, () => !this.pending);
     },
     // loadDedications lê as horas do período em andamento dos contratos mensais com estimativa (Decisão 26), que os
     // detalhes mostram. Só no modo solo; uma falha aqui não derruba a página: os detalhes ficam sem a linha.

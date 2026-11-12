@@ -66,7 +66,8 @@ func TestPages_HomeIsAnOverview(t *testing.T) {
 
 // A página Clientes e Projetos é de todos: os projetos em cartões coloridos, agrupados pelo cliente, sem os horários da
 // rotina que antes enchiam o cartão nem a paginação da antiga página Projetos. Só quem pode criar projeto vê o Novo
-// projeto, no cabeçalho da página, e o formulário dele; só o dono vê o Novo cliente e o formulário do cliente.
+// projeto interno, no cabeçalho da página, e o formulário dele; só o dono vê o Novo cliente (o botão principal do
+// cabeçalho), o formulário do cliente e o Novo projeto de cada cliente, que já vem com ele e não deixa trocá-lo.
 func TestPages_ProjectsPageHasTheCards(t *testing.T) {
 	e := newServer(t)
 	owner := signup(t, e, "Org", "ana@test.com")
@@ -82,7 +83,7 @@ func TestPages_ProjectsPageHasTheCards(t *testing.T) {
 	for _, want := range []string{
 		`x-data="customersProjects"`, "<h1>Clientes e Projetos</h1>", `class="catalog-group"`, `x-for="g in groups()"`,
 		`class="project-card"`, `class="project-mark"`, `markOf(p.name)`, `'hue-' + hueOf(p.id)`,
-		"Novo projeto", "Novo cliente", `x-teleport="#modal-root"`, `id="project-name"`, `id="project-customer"`, `id="customer-name"`,
+		"Novo projeto interno", "Novo cliente", `x-teleport="#modal-root"`, `id="project-name"`, `id="customer-name"`,
 		`openCreate(g.customer ? g.customer.id : '')`, `openDetails(g.customer)`,
 		// No celular as ações do grupo ficam num menu de três pontinhos, com as mesmas duas.
 		`class="catalog-more"`, `fa-ellipsis-vertical`, `class="catalog-menu"`,
@@ -92,10 +93,18 @@ func TestPages_ProjectsPageHasTheCards(t *testing.T) {
 		}
 	}
 	head := ownerPage[strings.Index(ownerPage, `class="page-head"`):strings.Index(ownerPage, `class="catalog"`)]
-	for _, want := range []string{`openCreate()`, `openForm()`} {
+	// O azul é do Novo cliente; o Novo projeto interno é secundário.
+	for _, want := range []string{`class="btn" @click="openForm()"`, `class="btn btn-secondary" @click="openCreate()"`, "Novo projeto interno"} {
 		if !strings.Contains(head, want) {
 			t.Errorf("the page header lacks %s", want)
 		}
+	}
+	// O formulário do projeto não troca o cliente: ele vem do grupo, e sem cliente o grupo Cliente some.
+	if strings.Contains(ownerPage, `id="project-customer"`) || strings.Contains(ownerPage, "customerChanged()") {
+		t.Error("the new project form still lets the customer be changed")
+	}
+	if !strings.Contains(ownerPage, `<fieldset class="form-group" x-cloak x-show="draft.customer_id">`) {
+		t.Error("the Cliente group of the new project form is not tied to draft.customer_id")
 	}
 	for _, gone := range []string{"<table", "<th>Projeto</th>", `class="pager"`} {
 		if strings.Contains(ownerPage, gone) {
@@ -113,7 +122,7 @@ func TestPages_ProjectsPageHasTheCards(t *testing.T) {
 
 	// O admin cria projeto (só interno), mas não vê os clientes.
 	adminPage := do(e, "GET", projects, "", admin.session).Body.String()
-	for _, want := range []string{`x-data="customersProjects"`, "Novo projeto", `id="project-name"`} {
+	for _, want := range []string{`x-data="customersProjects"`, "Novo projeto interno", `class="btn btn-secondary" @click="openCreate()"`, `id="project-name"`} {
 		if !strings.Contains(adminPage, want) {
 			t.Errorf("admin page does not contain %q", want)
 		}
@@ -141,12 +150,14 @@ func TestPages_ProjectsPageHasTheCards(t *testing.T) {
 	}
 	// A lista vem inteira (sem page) e o componente agrupa pelo cliente; os clientes só vêm para quem os gerencia.
 	script := do(e, "GET", "/static/pages/org.js", "", "").Body.String()
-	for _, want := range []string{"Alpine.data('customersProjects'", "api('GET', '/api/orgs/' + orgId + '/projects')", "this.manage ? api('GET', '/api/orgs/' + orgId + '/customers')"} {
+	// O título do modal diz o cliente do grupo, ou que o projeto é interno.
+	for _, want := range []string{"Alpine.data('customersProjects'", "api('GET', '/api/orgs/' + orgId + '/projects')", "this.manage ? api('GET', '/api/orgs/' + orgId + '/customers')",
+		"WTT.t('org.catalog.new_project_for', { name: c.name })", "WTT.t('org.projects.new_internal')"} {
 		if !strings.Contains(script, want) {
 			t.Errorf("org.js does not contain %q", want)
 		}
 	}
-	for _, gone := range []string{"Alpine.data('orgProjects'", "Alpine.data('orgCustomers'"} {
+	for _, gone := range []string{"Alpine.data('orgProjects'", "Alpine.data('orgCustomers'", "customerOption(", "customerChanged(", "customers_load_failed"} {
 		if strings.Contains(script, gone) {
 			t.Errorf("org.js still has %q", gone)
 		}

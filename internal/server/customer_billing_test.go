@@ -415,9 +415,10 @@ func TestCustomerBilling_PagesShowTheTermsOnlyInSolo(t *testing.T) {
 		t.Errorf("/api/auth/me organization_solo = %v, want true", me["organization_solo"])
 	}
 
-	// O formulário de novo projeto mostra a cobrança do cliente, só para leitura, e pede o acréscimo (Decisão 21).
+	// O formulário de novo projeto mostra a cobrança do cliente, só para leitura, e pede o acréscimo (Decisão 21). O cliente
+	// por hora antigo, sem valor, deixa o Criar projeto desligado.
 	projects := do(e, "GET", "/orgs/"+owner.orgID+"/projects", "", owner.session).Body.String()
-	for _, want := range []string{`@change="customerChanged()"`, `x-text="billing.customerAmount(customerOf())"`, `id="project-bill-extra"`,
+	for _, want := range []string{`x-text="billing.customerAmount(customerOf())"`, `id="project-bill-extra"`, `:disabled="pending || billing.withoutRate(customerOf())"`,
 		`data-field="bill_extra_cents"`, `x-text="billing.extraLabel(customerOf())"`, `x-text="billing.total(customerOf(), draft.extra)"`} {
 		if !strings.Contains(projects, want) {
 			t.Errorf("the new project form lacks %s", want)
