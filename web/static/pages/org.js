@@ -962,17 +962,17 @@ document.addEventListener('alpine:init', () => {
     contact_email: String(c.contact_email || '').trim(),
     contact_phone: String(c.contact_phone || '').trim(),
   });
-  // customerSpec são as conferências do cliente, na ordem dos campos. O nome é obrigatório; o resto é opcional e,
-  // preenchido, confere. full diz se o formulário tem a pessoa de contato e o telefone (a etapa das boas-vindas não).
-  const customerSpec = (b, full) => {
+  // customerSpec são as conferências dos dados do cliente (a etapa 1 do formulário), na ordem dos campos. O nome é
+  // obrigatório; o resto é opcional e, preenchido, confere.
+  const customerSpec = (b) => {
     const { rules } = WTT;
     return {
       name: [b.name, rules.required, rules.max('name')],
       // O documento confere pelo país do cliente, como o servidor: CNPJ, EIN ou texto livre nos outros países.
       document: [b.document, rules.taxId(WTT.countries.legalId(b.country).field, 'customer.invalid_document')],
-      ...(full ? { contact_name: [b.contact_name, rules.max('name')] } : {}),
+      contact_name: [b.contact_name, rules.max('name')],
       contact_email: [b.contact_email, rules.email, rules.max('email')],
-      ...(full ? { contact_phone: [b.contact_phone, rules.phone, rules.max('phone')] } : {}),
+      contact_phone: [b.contact_phone, rules.phone, rules.max('phone')],
     };
   };
 
@@ -1103,6 +1103,31 @@ document.addEventListener('alpine:init', () => {
     };
   };
 
+  // customerRequest é o cliente do formulário como vai para a API e as conferências de tudo o que ele manda, na ordem da
+  // tela. A cobrança mora no cliente (Decisão 21): no modo solo vão todos os termos; na equipe todo cliente é por hora, e
+  // vai só o valor por hora.
+  const customerRequest = (d) => {
+    const body = customerBody(d);
+    const spec = customerSpec(body);
+    if (me.organization_solo) {
+      Object.assign(spec, billingSpec(d));
+      Object.assign(body, billingBody(d));
+    } else {
+      Object.assign(spec, hourlyRateSpec(d));
+      body.hourly_rate_cents = WTT.toCents(d.hourly_rate, { strict: true });
+    }
+    return { body, spec };
+  };
+
+  // customerStepOf é a etapa do formulário de cliente em que cada campo da API está: os dados na 1 e a cobrança na 2. Um
+  // erro, da tela ou do servidor, leva de volta à etapa do campo, onde ele está à vista.
+  const customerStepOf = {
+    name: 1, country: 1, document: 1, contact_name: 1, contact_email: 1, contact_phone: 1,
+    billing_mode: 2, hourly_rate_cents: 2, monthly_fee_cents: 2, estimated_weekly_hours: 2, contract_start: 2,
+    contract_end: 2, billing_cycle: 2, cycle_anchor: 2, closing_day: 2, payment_days: 2, late_fee_bp: 2,
+    late_interest_bp_month: 2, grace_days: 2,
+  };
+
   // dedicationFacts são as linhas da dedicação nos detalhes do cliente (Decisão 29): "Nesta semana", com as horas da
   // semana em andamento contra a estimativa semanal, e "No período atual", com as do período do contrato contra a meta
   // dele ("18h de 40h · 45%"), as duas com a barrinha. A do período traz o período quando ele não é o mês do calendário
@@ -1149,6 +1174,79 @@ document.addEventListener('alpine:init', () => {
     },
   });
 
+  // customerForm é o formulário de cliente em duas etapas (o parcial customer_fields), no modal de Clientes e Projetos e
+  // na etapa dos clientes das boas-vindas: a 1 são os dados e a 2, a cobrança. As duas ficam na página, e a que não está
+  // à vista só é escondida. Quem usa tem ...form() e o objeto do cliente (blankCustomer com blankBilling).
+  const customerForm = () => ({
+    ...customerDocument(),
+    ...customerBilling(),
+    customerStep: 1,
+    // customerStepShown espera a etapa atual aparecer e a devolve (ou null, se não aparecer em um segundo). O x-show só
+    // mostra o bloco no quadro seguinte (requestAnimationFrame), depois do $nextTick, e um campo escondido não recebe o
+    // foco nem o erro do servidor (o run() só põe o erro embaixo de um campo à vista).
+    async customerStepShown() {
+      for (let tries = 0; tries < 40; tries += 1) {
+        const box = document.querySelector('.modal-panel [data-customer-step="' + this.customerStep + '"]');
+        if (box && box.offsetParent !== null) return box;
+        await new Promise((resolve) => { setTimeout(resolve, 25); });
+      }
+      return null;
+    },
+    // focusCustomerStep põe o foco no primeiro campo à vista da etapa atual (com o modo travado, o campo depois dele).
+    async focusCustomerStep() {
+      const box = await this.customerStepShown();
+      if (!box) return;
+      // A etapa nova começa do topo: o miolo que rola (.modal-split-body) guardava a posição da outra.
+      const scroller = box.closest('.modal-split-body');
+      if (scroller) scroller.scrollTop = 0;
+      const el = Array.from(box.querySelectorAll('input, select')).find((e) => !e.disabled && e.offsetParent !== null);
+      if (el) el.focus();
+    },
+    // customerNext confere os dados e vai para a cobrança.
+    customerNext(d) {
+      if (!this.check(customerSpec(customerBody(d)))) return false;
+      this.customerStep = 2;
+      this.focusCustomerStep();
+      return true;
+    },
+    customerBack() {
+      this.customerStep = 1;
+      this.focusCustomerStep();
+    },
+    // checkCustomer confere o formulário inteiro antes de gravar e devolve o corpo da API, ou null. O primeiro erro leva
+    // à etapa dele (na edição, salvar da etapa 1 pode errar na cobrança), e um erro do bloco recolhido o abre.
+    checkCustomer(d) {
+      const { body, spec } = customerRequest(d);
+      if (this.check(spec)) return body;
+      const first = Object.keys(this.fieldErrors)[0];
+      if (lateFields.some((f) => this.fieldErrors[f])) this.lateOpen = true;
+      const step = customerStepOf[first];
+      // Na outra etapa, o foco do check() chega antes de ela aparecer: vai de novo quando ela está à vista.
+      if (step && step !== this.customerStep) {
+        this.customerStep = step;
+        this.customerStepShown().then(() => this.focusField(first));
+      }
+      return null;
+    },
+    // customerPost chama a API (fn) e, quando o servidor recusa um campo que não está à vista (o da outra etapa, ou o do
+    // bloco recolhido), mostra o campo antes de o erro subir: o run() só põe o erro embaixo de um campo à vista.
+    async customerPost(fn) {
+      try {
+        return await fn();
+      } catch (e) {
+        const field = e && e.params && e.params.field;
+        const step = customerStepOf[field];
+        const moved = Boolean(step && step !== this.customerStep);
+        if (moved) this.customerStep = step;
+        const unfold = lateFields.includes(field) && !this.lateOpen;
+        if (unfold) this.lateOpen = true;
+        if (moved) await this.customerStepShown();
+        if (unfold) await this.$nextTick();
+        throw e;
+      }
+    },
+  });
+
   // A página Clientes e Projetos: cada cliente com os projetos dele, em ordem de nome, e os projetos internos (sem
   // cliente) no fim. Quem gerencia os clientes (o dono) carrega a lista deles, com a cobrança e o contato, e vê também
   // os que ainda não têm projeto; os outros só têm o cliente que vem em cada projeto (o id e o nome). Os detalhes do
@@ -1156,7 +1254,7 @@ document.addEventListener('alpine:init', () => {
   // o do projeto, o draft de projectCreation.
   Alpine.data('customersProjects', () => ({
     ...projectCreation(),
-    ...customerDocument(),
+    ...customerForm(),
     manage: WTT.can('customers.manage'),
     loading: true,
     projects: [],
@@ -1326,6 +1424,7 @@ document.addEventListener('alpine:init', () => {
       } : { ...blankCustomer(), ...blankBilling() };
       this.modeLocked = !!c && c.project_count > 0;
       this.lateOpen = !!c && !!(c.late_fee_bp || c.late_interest_bp_month || c.grace_days);
+      this.customerStep = 1;
       this.errors.save = '';
       this.clearFields();
       // Enquanto salva, o modal não fecha: um erro do servidor ficaria sem ter onde aparecer.
@@ -1337,24 +1436,16 @@ document.addEventListener('alpine:init', () => {
       if (c) this.openDetails(c);
       else Alpine.store('modal').dismiss();
     },
+    // submitCustomer é o envio do formulário (Enter ou o botão principal): criando, a etapa 1 segue para a cobrança; na
+    // edição, e na etapa 2, grava.
+    submitCustomer() {
+      if (this.customerStep === 1 && !this.editing) return this.customerNext(this.customerDraft);
+      return this.save();
+    },
     save() {
-      const body = customerBody(this.customerDraft);
-      const spec = customerSpec(body, true);
-      // A cobrança mora no cliente (Decisão 21). No modo solo vão todos os termos; na equipe todo cliente é por hora, e
-      // vai só o valor por hora.
-      if (this.solo) {
-        Object.assign(spec, billingSpec(this.customerDraft));
-        Object.assign(body, billingBody(this.customerDraft));
-      } else {
-        Object.assign(spec, hourlyRateSpec(this.customerDraft));
-        body.hourly_rate_cents = WTT.toCents(this.customerDraft.hourly_rate, { strict: true });
-      }
-      if (!this.check(spec)) {
-        // O erro dentro do bloco recolhido só recebe o foco com o bloco aberto.
-        if (lateFields.some((f) => this.fieldErrors[f])) this.lateOpen = true;
-        return undefined;
-      }
-      return this.run('save', async () => {
+      const body = this.checkCustomer(this.customerDraft);
+      if (!body) return undefined;
+      return this.run('save', () => this.customerPost(async () => {
         let saved = null;
         if (this.editing) {
           saved = await api('PATCH', '/api/customers/' + this.editing, body);
@@ -1372,7 +1463,7 @@ document.addEventListener('alpine:init', () => {
         // A edição volta para os detalhes, já com o que foi salvo; o cliente novo fecha o modal.
         if (saved) this.openDetails(saved);
         else Alpine.store('modal').close();
-      });
+      }));
     },
     // remove exclui o cliente dos detalhes. O servidor recusa o cliente que ainda tem projetos, e o erro aparece nos
     // detalhes, com o modal aberto.
@@ -1395,7 +1486,7 @@ document.addEventListener('alpine:init', () => {
   // no servidor, e elas não voltam; recarregar no meio, sem fechar, recomeça da etapa 1, já com o que foi salvo.
   Alpine.data('onboarding', () => ({
     ...form(),
-    ...customerDocument(),
+    ...customerForm(),
     step: 1,
     orgName: me.organization_name,
     timezones: timezoneOptions(org.timezone),
@@ -1405,8 +1496,8 @@ document.addEventListener('alpine:init', () => {
       timezone: org.timezone,
       currency: org.currency,
     },
-    // O primeiro cliente é por hora, com o valor por hora obrigatório (Decisão 21).
-    customer: { ...blankCustomer(), hourly_rate: '' },
+    // O primeiro cliente tem o formulário inteiro do modal de cliente: os dados e a cobrança (Decisão 21).
+    customer: { ...blankCustomer(), ...blankBilling() },
     invite: { email: '', role: 'member' },
     lastLink: '',
     lastDelivery: '',
@@ -1429,17 +1520,18 @@ document.addEventListener('alpine:init', () => {
       this.shown = true;
       // Enquanto grava, o modal não fecha: um erro do servidor ficaria sem ter onde aparecer.
       Alpine.store('modal').open('onboarding', this.titles()[0], () => !this.pending);
-      this.focusField();
+      this.focusStep();
     },
-    // focusField põe o foco no primeiro campo da etapa atual (o data-step dele). O modal abre durante o carregamento
+    // focusStep põe o foco no primeiro campo da etapa atual (o data-step dele). O modal abre durante o carregamento
     // da página, com o painel ainda em transição, e na troca de etapa a anterior só some depois: o campo só aceita
     // foco quando está à vista, por isso a tentativa se repete por um instante. O campo é o da etapa, e não "o primeiro
-    // visível", senão o da etapa que está saindo contaria como pronto.
-    focusField(tries = 0) {
+    // visível", senão o da etapa que está saindo contaria como pronto. Não é o focusField(nome) do form(), que leva o foco
+    // ao campo com erro e continua valendo aqui.
+    focusStep(tries = 0) {
       const field = document.querySelector('.modal-panel [data-autofocus][data-step="' + this.step + '"]');
       const ready = !!field && !!field.offsetParent;
       if (ready) field.focus();
-      if ((!ready || document.activeElement !== field) && tries < 60) setTimeout(() => this.focusField(tries + 1), 50);
+      if ((!ready || document.activeElement !== field) && tries < 60) setTimeout(() => this.focusStep(tries + 1), 50);
     },
     // go muda de etapa, troca o título do modal e põe o foco no primeiro campo dela.
     go(step) {
@@ -1448,7 +1540,7 @@ document.addEventListener('alpine:init', () => {
       Alpine.store('modal').title = this.titles()[step - 1];
       // Quem chegou à última etapa pode sair pelos links dela: a baixa vai antes, não ao fechar.
       if (step === 4) this.complete();
-      this.$nextTick(() => this.focusField());
+      this.$nextTick(() => this.focusStep());
     },
     // No modo solo não há convite: da etapa 2 (o cliente) vai direto à última, a 4.
     next() { this.go(me.organization_solo && this.step === 2 ? 4 : this.step + 1); },
@@ -1467,15 +1559,14 @@ document.addEventListener('alpine:init', () => {
       });
     },
     saveCustomer() {
-      const body = customerBody(this.customer);
-      if (!this.check({ ...customerSpec(body, false), ...hourlyRateSpec(this.customer) })) return undefined;
-      body.hourly_rate_cents = WTT.toCents(this.customer.hourly_rate, { strict: true });
-      return this.run('customer', async () => {
+      const body = this.checkCustomer(this.customer);
+      if (!body) return undefined;
+      return this.run('customer', () => this.customerPost(async () => {
         await api('POST', '/api/orgs/' + orgId + '/customers', body);
         this.saved.customer = true;
         toast(WTT.t('org.customers.created'));
         this.next();
-      });
+      }));
     },
     // O convite fica na etapa depois de criado: o link só aparece agora, e quem convidou pode gerar outro.
     createInvite() {

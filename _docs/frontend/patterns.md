@@ -143,7 +143,25 @@ Cada campo tem uma regra só, a mesma na tela e no servidor.
   os dois de `internal/validate/limits.go`. A descrição da tarefa não tem `maxlength`, para não cortar em silêncio o
   que for colado: um contador mostra o tamanho e a regra avisa.
 - Um campo por linha, com a dica dele embaixo, dentro do `.field`. Em pares, os rótulos com "(opcional)" quebram em
-  alturas diferentes e os campos desalinham.
+  alturas diferentes e os campos desalinham. A exceção é um par curto de rótulos iguais e sem dica, lado a lado num
+  `.fields` (no cliente, País e documento, e E-mail e Telefone, os dois opcionais).
+- Um formulário longo vira etapas no próprio modal (`.wizard-steps` em cima, Voltar e Próximo embaixo, as etapas todas
+  no HTML e a que não está à vista só escondida), como o Nova tarefa e o cliente (Dados do cliente, Cobrança: o parcial
+  `customer_fields`, o mesmo no modal de Clientes e Projetos e nas boas-vindas). Cada campo da API tem a etapa dele
+  (`wizardStepOf` em `pages/project.js`, `customerStepOf` em `pages/org.js`): o erro da tela ou do servidor leva de
+  volta à etapa do campo antes de pôr o erro embaixo dele, porque um campo escondido não recebe o erro nem o foco. Na
+  edição do cliente o Salvar já está na primeira etapa.
+- Nesses modais longos (o cliente e as boas-vindas), as etapas em cima e os botões embaixo ficam parados, cada um
+  separado por uma linha, e só os campos rolam: `modal.gohtml` liga `.modal-body-fixed` pelo nome do modal, e o
+  conteúdo é um `.modal-split` com `.modal-split-head`, `.modal-split-body` e `.modal-split-foot` (o aviso de erro do
+  formulário fica no rodapé, sempre à vista). Um modal novo que precise disso entra na lista de nomes.
+- Data é um campo de texto com a diretiva `x-date`, nunca `<input type="date">`: o navegador escreve o `type="date"`
+  no formato do idioma dele, e não no da página (num Chrome em inglês, a tela em português pedia mês/dia/ano). O campo
+  fica num `<span class="date-input">`, com o parcial `{{template "date_picker" .}}` logo depois dele (o botão que abre
+  o calendário do navegador por um `type="date"` invisível), e mostra a data na ordem do idioma da página (dd/mm/aaaa
+  em português, mm/dd/yyyy em inglês). O modelo guarda `aaaa-mm-dd`, como antes; a data pela metade ou impossível fica
+  como texto, e `rules.date` a acusa. Num filtro, `x-date.complete` só põe no modelo a data completa ou o vazio. O
+  `change` do campo só dispara com a data completa ou vazia (`TestTemplates_DatesFollowThePageLanguage`).
 - O que é raro ou um ajuste fica num bloco recolhido no fim do grupo dele (`<details class="form-fold">`, como "Multa,
   juros e tolerância" na cobrança do cliente e "Avançado" na cobrança do projeto), aberto quando já tem valor e quando um campo dele erra (o
   componente abre o bloco e leva o foco ao campo, que fechado não o recebe).

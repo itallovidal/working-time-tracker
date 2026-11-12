@@ -26,12 +26,12 @@
   </div>
   <div class="field">
     <label for="{{$id}}-contract-start">{{.T "customer.billing.contract_start"}}</label>
-    <input id="{{$id}}-contract-start" type="date" data-field="contract_start" x-model="{{$m}}.contract_start" @input="clearField('contract_start')" :aria-invalid="fieldErrors.contract_start ? 'true' : 'false'">
+    <span class="date-input"><input id="{{$id}}-contract-start" type="text" data-field="contract_start" x-date="{{$m}}.contract_start" @input="clearField('contract_start')" :aria-invalid="fieldErrors.contract_start ? 'true' : 'false'">{{template "date_picker" .}}</span>
     {{template "field_error" "contract_start"}}
   </div>
   <div class="field">
     {{template "field_label" (dict "D" . "For" (printf "%s-contract-end" $id) "Key" "customer.billing.contract_end" "Optional" true)}}
-    <input id="{{$id}}-contract-end" type="date" data-field="contract_end" x-model="{{$m}}.contract_end" @input="clearField('contract_end')" :aria-invalid="fieldErrors.contract_end ? 'true' : 'false'">
+    <span class="date-input"><input id="{{$id}}-contract-end" type="text" data-field="contract_end" x-date="{{$m}}.contract_end" @input="clearField('contract_end')" :aria-invalid="fieldErrors.contract_end ? 'true' : 'false'">{{template "date_picker" .}}</span>
     {{template "field_error" "contract_end"}}
     <span class="hint">{{.T "customer.billing.contract_end_hint"}}</span>
   </div>
@@ -49,7 +49,7 @@
 </div>
 <div class="field" x-show="{{$m}}.billing_mode === 'hourly' && {{$m}}.billing_cycle === 'biweekly'">
   <label for="{{$id}}-cycle-anchor">{{.T "customer.billing.cycle_anchor"}}</label>
-  <input id="{{$id}}-cycle-anchor" type="date" data-field="cycle_anchor" x-model="{{$m}}.cycle_anchor" @input="clearField('cycle_anchor')" :aria-invalid="fieldErrors.cycle_anchor ? 'true' : 'false'">
+  <span class="date-input"><input id="{{$id}}-cycle-anchor" type="text" data-field="cycle_anchor" x-date="{{$m}}.cycle_anchor" @input="clearField('cycle_anchor')" :aria-invalid="fieldErrors.cycle_anchor ? 'true' : 'false'">{{template "date_picker" .}}</span>
   {{template "field_error" "cycle_anchor"}}
   <span class="hint">{{.T "customer.billing.cycle_anchor_hint"}}</span>
 </div>

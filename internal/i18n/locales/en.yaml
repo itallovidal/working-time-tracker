@@ -359,8 +359,7 @@ onboarding:
   customers:
     title: Your customers
     lead: A customer is whoever hires the organization. The hourly rate belongs to the customer and applies to all of its projects; an internal project doesn't need one.
-    rate_hint: What the customer pays per hour. Each project can add an extra later.
-    rate_hint_solo: What the customer pays per hour. A customer on a monthly contract is added under Customers & Projects.
+    lead_solo: A customer is whoever hires you. Billing, hourly or on a monthly contract, belongs to the customer and applies to all of its projects; an internal project doesn't need one.
     later: Add later
   people:
     title: Your team
@@ -385,7 +384,7 @@ onboarding:
     people_text: Invitations, roles, permissions and weekly hours.
     projects: Projects
     projects_text: Create the first project and put the team on it, with each person's hourly rate. That is how time starts to count.
-    projects_text_solo: Create the first project, hourly or on a monthly contract. That is how time starts to count.
+    projects_text_solo: Create the first project and pick its customer, who already brings the billing. That is how time starts to count.
     docs: Documentation
     docs_text: The first-use walkthrough and what each screen does.
     finish: Finish
@@ -837,7 +836,7 @@ help:
       tip: "The currency only changes how amounts are shown; the app does not convert between currencies."
     customers:
       title: Register the customers
-      text: "A customer is who hires your team. Only the name is required; the country (which starts as the organization's), the tax ID (CNPJ in Brazil, EIN in the US), contact person, email and phone are optional."
+      text: "A customer is who hires your team. The form has two steps. In Customer details only the name is required; the country (which starts as the organization's), the tax ID (CNPJ in Brazil, EIN in the US), contact person, email and phone are optional. Billing holds how the customer pays, which applies to all of its projects: the hourly rate or, in solo mode, a monthly contract too."
       tip: "This step is optional: a project without a customer is an internal project, and the customer can be picked later, in the project settings."
     project:
       title: Create the first project
@@ -1188,6 +1187,12 @@ org:
       other: "{{.count}} projects"
 
 customer:
+  wizard:
+    label: Customer form steps
+    step_data: Customer details
+    step_billing: Billing
+    next: Next
+    back: Back
   billing:
     title: Billing
     mode: Billing mode
@@ -1939,6 +1944,9 @@ overview:
   bill_rate: Rate billed per hour
   no_bill_rate: No billed rate
 
+date_field:
+  placeholder: mm/dd/yyyy
+  open_calendar: Open the calendar
 labels:
   not_informed: Not provided
   sprint:

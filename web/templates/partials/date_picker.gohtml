@@ -1,0 +1,5 @@
+{{/* date_picker vai logo depois do campo de data (o <input type="text" x-date="..."> dentro de um <span class="date-input">):
+     o botão que abre o calendário do navegador e o <input type="date"> invisível que o mostra. O campo de texto escreve a
+     data na ordem do idioma da página; o type="date" escreveria na do navegador. A diretiva x-date (em app.js) mostra o
+     botão onde o navegador tem showPicker e liga a data escolhida ao campo. Parâmetro: a página (para o texto). */}}
+{{define "date_picker"}}<button type="button" class="date-input-btn" data-date-open hidden aria-label="{{.T "date_field.open_calendar"}}" title="{{.T "date_field.open_calendar"}}">{{template "icon" "calendar-days"}}</button><input type="date" class="date-input-picker" tabindex="-1" aria-hidden="true">{{end}}

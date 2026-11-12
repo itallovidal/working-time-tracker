@@ -14,8 +14,8 @@
             <option :value="o.value" x-text="o.label" :selected="o.value === filters.due"></option>
           </template>
         </select>
-        <input type="date" aria-label="{{.T "tasks.due_date"}}" x-cloak x-show="filters.due === 'date'"
-               x-model="filters.date" @change="apply()">
+        <span class="date-input" x-cloak x-show="filters.due === 'date'"><input type="text" aria-label="{{.T "tasks.due_date"}}"
+               x-date.complete="filters.date" @change="apply()">{{template "date_picker" .}}</span>
       </div>
       {{template "field_error" "q"}}
       {{/* Prioridade e etiqueta aceitam várias: a tarefa passa se tem qualquer uma das marcadas. */}}

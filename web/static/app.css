@@ -106,6 +106,9 @@ h3 { font-size: 0.98rem; font-weight: 650; }
 p { margin: 0; }
 a { color: var(--accent); text-underline-offset: 2px; }
 code, .mono { font-family: var(--mono); font-size: 0.9em; }
+/* O campo mono tem a letra a 90%, e a linha encolheria junto: a altura da linha compensa (1,55 / 0,9), para ele ficar da
+   altura dos outros campos (o CNPJ ao lado do País, no cliente). */
+input.mono { line-height: 1.7222; }
 .num { font-variant-numeric: tabular-nums; }
 .muted { color: var(--muted); }
 .small { font-size: 0.86rem; }
@@ -440,6 +443,12 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 }
 .wizard-steps li.current { color: var(--ink); }
 .wizard-steps li.current .n { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+/* As partes de uma etapa (o cliente das boas-vindas: Dados do cliente · Cobrança), menores que a faixa de cima, que
+   continua dizendo em que etapa a pessoa está. */
+.wizard-substeps { display: flex; flex-wrap: wrap; gap: 4px 8px; list-style: none; margin: 0; padding: 0; font-size: 0.84rem; color: var(--muted); }
+.wizard-substeps li { white-space: nowrap; }
+.wizard-substeps li + li::before { content: "·"; margin-right: 8px; color: var(--muted); }
+.wizard-substeps li.current { color: var(--ink); font-weight: 600; }
 /* A última etapa das boas-vindas: um cartão-link por assunto, com o ícone, o texto e o estado. */
 .onboarding-links { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .onboarding-link {
@@ -534,6 +543,22 @@ textarea { resize: vertical; min-height: 72px; }
 .textarea-fit { resize: none; overflow: hidden; min-height: 0; }
 input:focus, select:focus, textarea:focus { outline: 2px solid var(--focus); outline-offset: -1px; border-color: transparent; }
 input[aria-invalid="true"] { border-color: var(--danger); }
+/* O campo de data (a diretiva x-date e o parcial date_picker): o texto na ordem do idioma da página e, dentro dele, à
+   direita, o botão que abre o calendário do navegador por um <input type="date"> invisível, do mesmo tamanho do campo,
+   que não recebe clique nem foco. */
+.date-input { position: relative; display: block; min-width: 0; }
+.date-input > input[type="text"] { padding-right: 38px; }
+.date-input-btn {
+  position: absolute; top: 50%; right: 4px; transform: translateY(-50%);
+  display: inline-grid; place-items: center; width: 30px; height: 30px; padding: 0;
+  border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--muted); cursor: pointer;
+}
+.date-input-btn[hidden] { display: none; }
+.date-input-btn:hover { background: var(--surface-2); color: var(--ink); }
+.date-input-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 0; }
+.date-input-picker { position: absolute; inset: 0; width: 100%; height: 100%; padding: 0; border: 0; opacity: 0; pointer-events: none; }
+.filters .date-input { flex: none; width: 11.5em; }
+.filters .date-input > input[type="text"] { width: 100%; max-width: none; }
 /* Campo desligado: sem isto ele fica igual aos outros, porque as cores acima
    valem também para ele. */
 input:disabled, select:disabled, textarea:disabled { background-color: var(--surface-2); color: var(--muted); cursor: not-allowed; }
@@ -1164,6 +1189,19 @@ html.modal-open { overflow: hidden; }
   padding: 14px 14px 14px 20px; border-bottom: 1px solid var(--rule);
 }
 .modal-body { padding: 18px 20px; overflow-y: auto; overscroll-behavior: contain; }
+/* Um modal de formulário longo (o cliente e as boas-vindas; modal.gohtml liga .modal-body-fixed pelo nome do modal): as
+   etapas em cima e os botões embaixo ficam parados, separados por uma linha, e só os campos rolam entre os dois. O
+   conteúdo é um .modal-split com .modal-split-head, .modal-split-body e .modal-split-foot, e um .modal-split pode ter
+   outro dentro (cada etapa das boas-vindas, com o cabeçalho e os botões dela). */
+.modal-body.modal-body-fixed { display: flex; flex-direction: column; min-height: 0; padding: 0; overflow: hidden; }
+.modal-split { display: flex; flex-direction: column; flex: 0 1 auto; min-height: 0; }
+.modal-split-head { flex: none; display: flex; flex-direction: column; gap: 10px; padding: 14px 20px 0; }
+.modal-body-fixed > .modal-split > .modal-split-head { padding-top: 18px; }
+.modal-split-head > .wizard-steps { margin-bottom: 0; }
+/* O cabeçalho de uma etapa, embaixo da faixa das etapas: a linha o separa dos campos que rolam. */
+.modal-split .modal-split > .modal-split-head { padding-bottom: 12px; border-bottom: 1px solid var(--rule); }
+.modal-split-body { flex: 0 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 14px 20px 18px; }
+.modal-split-foot { flex: none; padding: 14px 20px 18px; border-top: 1px solid var(--rule); }
 /* A coluna do grid não passa da largura da tela: sem isto, um conteúdo que não quebra linha (a faixa de abas do
    colaborador) alargava o painel além do celular. A faixa rola por dentro quando não cabe. */
 .modal { grid-template-columns: minmax(0, 1fr); }

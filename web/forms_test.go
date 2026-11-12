@@ -259,3 +259,36 @@ func TestErrorTexts_TheScreenSaysWhatTheServerSays(t *testing.T) {
 		}
 	}
 }
+
+// O <input type="date"> escreve a data no formato do idioma do navegador, e não no da página (num Chrome em inglês, a
+// tela em português pedia mês/dia/ano). Todo campo de data é um campo de texto com a diretiva x-date, dentro de um
+// .date-input e com o parcial date_picker logo depois, que tem o único type="date" (o invisível que abre o calendário).
+func TestTemplates_DatesFollowThePageLanguage(t *testing.T) {
+	field := regexp.MustCompile(`<input\b[^>]*\bx-date(\.complete)?="[^"]+"[^>]*>`)
+	for path, src := range templates(t) {
+		if path == "templates/partials/date_picker.gohtml" {
+			continue
+		}
+		if strings.Contains(src, `type="date"`) {
+			t.Errorf("%s has a type=\"date\" input: use a type=\"text\" field with x-date and the date_picker partial", path)
+		}
+		for _, loc := range field.FindAllStringIndex(src, -1) {
+			tag := src[loc[0]:loc[1]]
+			if !strings.Contains(tag, `type="text"`) {
+				t.Errorf("%s: %s is not a type=\"text\" field", path, tag)
+			}
+			if strings.Contains(tag, "x-model=") {
+				t.Errorf("%s: %s has x-model besides x-date", path, tag)
+			}
+			if open := strings.LastIndex(src[:loc[0]], "<"); !strings.HasPrefix(src[open:], `<span class="date-input"`) {
+				t.Errorf("%s: %s is not inside a <span class=\"date-input\">", path, tag)
+			}
+			if !strings.HasPrefix(src[loc[1]:], `{{template "date_picker" .}}</span>`) {
+				t.Errorf("%s: %s is not followed by the date_picker partial", path, tag)
+			}
+		}
+	}
+	if picker := templates(t)["templates/partials/date_picker.gohtml"]; !strings.Contains(picker, `data-date-open`) || !strings.Contains(picker, `class="date-input-picker"`) {
+		t.Error("date_picker.gohtml lacks the calendar button or the hidden date input that x-date looks for")
+	}
+}
