@@ -43,8 +43,8 @@ type Customer struct {
 	ContractStart *string `json:"contract_start,omitempty"`
 	// ContractEnd holds the value of the "contract_end" field.
 	ContractEnd *string `json:"contract_end,omitempty"`
-	// EstimatedMonthlyHours holds the value of the "estimated_monthly_hours" field.
-	EstimatedMonthlyHours *int `json:"estimated_monthly_hours,omitempty"`
+	// EstimatedWeeklyHours holds the value of the "estimated_weekly_hours" field.
+	EstimatedWeeklyHours *int `json:"estimated_weekly_hours,omitempty"`
 	// ClosingDay holds the value of the "closing_day" field.
 	ClosingDay int `json:"closing_day,omitempty"`
 	// PaymentDays holds the value of the "payment_days" field.
@@ -114,7 +114,7 @@ func (*Customer) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case customer.FieldHourlyRateCents, customer.FieldMonthlyFeeCents, customer.FieldEstimatedMonthlyHours, customer.FieldClosingDay, customer.FieldPaymentDays, customer.FieldLateFeeBp, customer.FieldLateInterestBpMonth, customer.FieldGraceDays:
+		case customer.FieldHourlyRateCents, customer.FieldMonthlyFeeCents, customer.FieldEstimatedWeeklyHours, customer.FieldClosingDay, customer.FieldPaymentDays, customer.FieldLateFeeBp, customer.FieldLateInterestBpMonth, customer.FieldGraceDays:
 			values[i] = new(sql.NullInt64)
 		case customer.FieldName, customer.FieldCountry, customer.FieldDocument, customer.FieldContactName, customer.FieldContactEmail, customer.FieldContactPhone, customer.FieldBillingMode, customer.FieldContractStart, customer.FieldContractEnd, customer.FieldBillingCycle, customer.FieldCycleAnchor:
 			values[i] = new(sql.NullString)
@@ -219,12 +219,12 @@ func (_m *Customer) assignValues(columns []string, values []any) error {
 				_m.ContractEnd = new(string)
 				*_m.ContractEnd = value.String
 			}
-		case customer.FieldEstimatedMonthlyHours:
+		case customer.FieldEstimatedWeeklyHours:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field estimated_monthly_hours", values[i])
+				return fmt.Errorf("unexpected type %T for field estimated_weekly_hours", values[i])
 			} else if value.Valid {
-				_m.EstimatedMonthlyHours = new(int)
-				*_m.EstimatedMonthlyHours = int(value.Int64)
+				_m.EstimatedWeeklyHours = new(int)
+				*_m.EstimatedWeeklyHours = int(value.Int64)
 			}
 		case customer.FieldClosingDay:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -370,8 +370,8 @@ func (_m *Customer) String() string {
 		builder.WriteString(*v)
 	}
 	builder.WriteString(", ")
-	if v := _m.EstimatedMonthlyHours; v != nil {
-		builder.WriteString("estimated_monthly_hours=")
+	if v := _m.EstimatedWeeklyHours; v != nil {
+		builder.WriteString("estimated_weekly_hours=")
 		builder.WriteString(fmt.Sprintf("%v", *v))
 	}
 	builder.WriteString(", ")

@@ -701,9 +701,9 @@ func TestBilling_DeleteRefusedWithReceivables(t *testing.T) {
 	}
 }
 
-// A estimativa de horas por mês é do cliente mensal, opcional, de 1 a validate.MaxMonthlyHours; null apaga, o por hora
+// A estimativa de horas por semana é do cliente mensal, opcional, de 1 a validate.MaxWeeklyHours; null apaga, o por hora
 // a recusa e a troca de modo a apaga (Decisão 26).
-func TestBilling_EstimatedMonthlyHours(t *testing.T) {
+func TestBilling_EstimatedWeeklyHours(t *testing.T) {
 	svc, _, orgID := setup(t)
 	setSolo(t, orgID, true)
 	base := func() customer.Input {
@@ -712,62 +712,62 @@ func TestBilling_EstimatedMonthlyHours(t *testing.T) {
 
 	// Sem a estimativa o cliente mensal continua valendo: ela é opcional.
 	plain, err := svc.Create(orgID, base())
-	if err != nil || plain.EstimatedMonthlyHours != nil {
+	if err != nil || plain.EstimatedWeeklyHours != nil {
 		t.Fatalf("monthly without an estimate = %+v, %v", plain, err)
 	}
 
-	for _, hours := range []int{0, -1, validate.MaxMonthlyHours + 1} {
+	for _, hours := range []int{0, -1, validate.MaxWeeklyHours + 1} {
 		in := base()
-		in.EstimatedMonthlyHours = opt(hours)
+		in.EstimatedWeeklyHours = opt(hours)
 		_, err := svc.Create(orgID, in)
-		refused(t, "estimate out of range", err, customer.ErrInvalidEstimatedHours, "estimated_monthly_hours")
+		refused(t, "estimate out of range", err, customer.ErrInvalidEstimatedHours, "estimated_weekly_hours")
 	}
-	for _, hours := range []int{1, validate.MaxMonthlyHours} {
+	for _, hours := range []int{1, validate.MaxWeeklyHours} {
 		in := base()
-		in.EstimatedMonthlyHours = opt(hours)
+		in.EstimatedWeeklyHours = opt(hours)
 		c, err := svc.Create(orgID, in)
-		if err != nil || c.EstimatedMonthlyHours == nil || *c.EstimatedMonthlyHours != hours {
+		if err != nil || c.EstimatedWeeklyHours == nil || *c.EstimatedWeeklyHours != hours {
 			t.Errorf("estimate %d = %+v, %v", hours, c, err)
 		}
 	}
 
 	in := base()
-	in.EstimatedMonthlyHours = opt(40)
+	in.EstimatedWeeklyHours = opt(40)
 	c, err := svc.Create(orgID, in)
 	if err != nil {
 		t.Fatalf("create with an estimate: %v", err)
 	}
 	id := c.ID.String()
-	if got := mustGet(t, svc, id); got.EstimatedMonthlyHours == nil || *got.EstimatedMonthlyHours != 40 {
-		t.Fatalf("stored estimate = %v, want 40", got.EstimatedMonthlyHours)
+	if got := mustGet(t, svc, id); got.EstimatedWeeklyHours == nil || *got.EstimatedWeeklyHours != 40 {
+		t.Fatalf("stored estimate = %v, want 40", got.EstimatedWeeklyHours)
 	}
 	// Ausente mantém; outro valor troca; null apaga.
-	if kept, err := svc.Update(id, customer.Input{Name: ptr("Mensal 2")}); err != nil || kept.EstimatedMonthlyHours == nil || *kept.EstimatedMonthlyHours != 40 {
+	if kept, err := svc.Update(id, customer.Input{Name: ptr("Mensal 2")}); err != nil || kept.EstimatedWeeklyHours == nil || *kept.EstimatedWeeklyHours != 40 {
 		t.Errorf("update without the estimate = %+v, %v; want it kept", kept, err)
 	}
-	if changed, err := svc.Update(id, customer.Input{EstimatedMonthlyHours: opt(55)}); err != nil || changed.EstimatedMonthlyHours == nil || *changed.EstimatedMonthlyHours != 55 {
+	if changed, err := svc.Update(id, customer.Input{EstimatedWeeklyHours: opt(55)}); err != nil || changed.EstimatedWeeklyHours == nil || *changed.EstimatedWeeklyHours != 55 {
 		t.Errorf("new estimate = %+v, %v; want 55", changed, err)
 	}
-	if cleared, err := svc.Update(id, customer.Input{EstimatedMonthlyHours: validate.Optional[int]{Set: true}}); err != nil || cleared.EstimatedMonthlyHours != nil {
+	if cleared, err := svc.Update(id, customer.Input{EstimatedWeeklyHours: validate.Optional[int]{Set: true}}); err != nil || cleared.EstimatedWeeklyHours != nil {
 		t.Errorf("null estimate = %+v, %v; want it cleared", cleared, err)
 	}
-	if got := mustGet(t, svc, id); got.EstimatedMonthlyHours != nil {
-		t.Errorf("stored estimate after null = %v, want none", *got.EstimatedMonthlyHours)
+	if got := mustGet(t, svc, id); got.EstimatedWeeklyHours != nil {
+		t.Errorf("stored estimate after null = %v, want none", *got.EstimatedWeeklyHours)
 	}
 
 	// O cliente por hora não tem estimativa: com valor é recusada; null passa, como manda a tela.
-	_, err = svc.Create(orgID, customer.Input{Name: ptr("Hora"), HourlyRateCents: opt(15000), EstimatedMonthlyHours: opt(40)})
-	refused(t, "hourly with an estimate", err, customer.ErrFieldMonthlyOnly, "estimated_monthly_hours")
-	if _, err := svc.Create(orgID, customer.Input{Name: ptr("Hora"), HourlyRateCents: opt(15000), EstimatedMonthlyHours: validate.Optional[int]{Set: true}}); err != nil {
+	_, err = svc.Create(orgID, customer.Input{Name: ptr("Hora"), HourlyRateCents: opt(15000), EstimatedWeeklyHours: opt(40)})
+	refused(t, "hourly with an estimate", err, customer.ErrFieldMonthlyOnly, "estimated_weekly_hours")
+	if _, err := svc.Create(orgID, customer.Input{Name: ptr("Hora"), HourlyRateCents: opt(15000), EstimatedWeeklyHours: validate.Optional[int]{Set: true}}); err != nil {
 		t.Errorf("hourly with a null estimate: %v", err)
 	}
 
 	// Trocar o mensal (sem projetos) para o por hora apaga a estimativa com o resto do contrato.
-	if _, err := svc.Update(id, customer.Input{EstimatedMonthlyHours: opt(30)}); err != nil {
+	if _, err := svc.Update(id, customer.Input{EstimatedWeeklyHours: opt(30)}); err != nil {
 		t.Fatalf("set the estimate again: %v", err)
 	}
 	back, err := svc.Update(id, customer.Input{BillingMode: ptr("hourly"), HourlyRateCents: opt(20000)})
-	if err != nil || back.EstimatedMonthlyHours != nil {
+	if err != nil || back.EstimatedWeeklyHours != nil {
 		t.Errorf("switch to hourly = %+v, %v; want the estimate gone", back, err)
 	}
 }

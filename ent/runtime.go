@@ -79,10 +79,10 @@ func init() {
 	customerDescMonthlyFeeCents := customerFields[10].Descriptor()
 	// customer.MonthlyFeeCentsValidator is a validator for the "monthly_fee_cents" field. It is called by the builders before save.
 	customer.MonthlyFeeCentsValidator = customerDescMonthlyFeeCents.Validators[0].(func(int) error)
-	// customerDescEstimatedMonthlyHours is the schema descriptor for estimated_monthly_hours field.
-	customerDescEstimatedMonthlyHours := customerFields[13].Descriptor()
-	// customer.EstimatedMonthlyHoursValidator is a validator for the "estimated_monthly_hours" field. It is called by the builders before save.
-	customer.EstimatedMonthlyHoursValidator = customerDescEstimatedMonthlyHours.Validators[0].(func(int) error)
+	// customerDescEstimatedWeeklyHours is the schema descriptor for estimated_weekly_hours field.
+	customerDescEstimatedWeeklyHours := customerFields[13].Descriptor()
+	// customer.EstimatedWeeklyHoursValidator is a validator for the "estimated_weekly_hours" field. It is called by the builders before save.
+	customer.EstimatedWeeklyHoursValidator = customerDescEstimatedWeeklyHours.Validators[0].(func(int) error)
 	// customerDescClosingDay is the schema descriptor for closing_day field.
 	customerDescClosingDay := customerFields[14].Descriptor()
 	// customer.DefaultClosingDay holds the default value on creation for the closing_day field.

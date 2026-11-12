@@ -634,7 +634,9 @@ func TestPages_ProjectSettingsAndWeeklyHours(t *testing.T) {
 				t.Errorf("%s: the settings tab does not contain %q", who, want)
 			}
 		}
-		for _, gone := range []string{"Jornada semanal", "weekly_hours", `type="number"`, `class="grid-aside"`} {
+		// O campo da jornada, não o texto solto: o limite weekly_hours (window.BOOT.limits) e a estimativa semanal do
+		// cliente mensal (estimated_weekly_hours, Decisão 29) existem em outras páginas.
+		for _, gone := range []string{"Jornada semanal", `data-field="weekly_hours"`, `weekly-hours"`, `type="number"`, `class="grid-aside"`} {
 			if strings.Contains(body, gone) {
 				t.Errorf("%s: the settings tab still contains %q", who, gone)
 			}
@@ -690,7 +692,7 @@ func TestPages_ProjectSettingsAndWeeklyHours(t *testing.T) {
 		if meeting := strings.Index(body, `<select id="meeting-day"`); meeting < customer || meeting > billing {
 			t.Errorf("%s: the customer meeting is not inside Cliente (customer %d, meeting %d, billing %d)", path, customer, meeting, billing)
 		}
-		if strings.Contains(body, "project-weekly-hours") || strings.Contains(body, "weekly_hours") {
+		if strings.Contains(body, "project-weekly-hours") || strings.Contains(body, `data-field="weekly_hours"`) {
 			t.Errorf("%s: the new project form or the project card still has the weekly hours", path)
 		}
 	}

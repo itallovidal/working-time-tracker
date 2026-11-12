@@ -273,8 +273,8 @@ func otherModeField(mode string, in Input) string {
 	switch {
 	case in.MonthlyFeeCents.Value != nil:
 		return "monthly_fee_cents"
-	case in.EstimatedMonthlyHours.Value != nil:
-		return "estimated_monthly_hours"
+	case in.EstimatedWeeklyHours.Value != nil:
+		return "estimated_weekly_hours"
 	case filled(in.ContractStart):
 		return "contract_start"
 	case filled(in.ContractEnd):
@@ -292,7 +292,7 @@ func otherModeField(mode string, in Input) string {
 // resetModeFields apaga o que é de um modo só, na troca de modo: o valor por hora e todo o contrato mensal.
 func resetModeFields(c *Customer) {
 	c.HourlyRateCents = nil
-	c.MonthlyFeeCents, c.ContractStart, c.ContractEnd, c.EstimatedMonthlyHours = nil, nil, nil, nil
+	c.MonthlyFeeCents, c.ContractStart, c.ContractEnd, c.EstimatedWeeklyHours = nil, nil, nil, nil
 	c.LateFeeBP, c.LateInterestBPMonth, c.GraceDays = 0, 0, 0
 }
 
@@ -319,8 +319,8 @@ func applyHourlyRate(c *Customer, in validate.Optional[int]) error {
 }
 
 // applyContract aplica o contrato do cliente mensal: a mensalidade (maior que zero) e o início são obrigatórios, e o
-// fim, quando existe, vem depois do início. A estimativa de horas por mês é opcional (null apaga), de 1 a
-// validate.MaxMonthlyHours.
+// fim, quando existe, vem depois do início. A estimativa de horas por semana é opcional (null apaga), de 1 a
+// validate.MaxWeeklyHours.
 func applyContract(c *Customer, in Input) error {
 	if in.MonthlyFeeCents.Set {
 		if in.MonthlyFeeCents.Value == nil {
@@ -336,15 +336,15 @@ func applyContract(c *Customer, in Input) error {
 	if c.MonthlyFeeCents == nil {
 		return apperr.ErrFieldRequired.With("field", "monthly_fee_cents")
 	}
-	if in.EstimatedMonthlyHours.Set {
-		if in.EstimatedMonthlyHours.Value == nil {
-			c.EstimatedMonthlyHours = nil
+	if in.EstimatedWeeklyHours.Set {
+		if in.EstimatedWeeklyHours.Value == nil {
+			c.EstimatedWeeklyHours = nil
 		} else {
-			if *in.EstimatedMonthlyHours.Value < 1 || *in.EstimatedMonthlyHours.Value > validate.MaxMonthlyHours {
-				return ErrInvalidEstimatedHours.With("field", "estimated_monthly_hours")
+			if *in.EstimatedWeeklyHours.Value < 1 || *in.EstimatedWeeklyHours.Value > validate.MaxWeeklyHours {
+				return ErrInvalidEstimatedHours.With("field", "estimated_weekly_hours")
 			}
-			v := *in.EstimatedMonthlyHours.Value
-			c.EstimatedMonthlyHours = &v
+			v := *in.EstimatedWeeklyHours.Value
+			c.EstimatedWeeklyHours = &v
 		}
 	}
 	var err error

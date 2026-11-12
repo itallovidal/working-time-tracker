@@ -757,11 +757,25 @@
     },
   };
 
-  // dedication é a dedicação a um contrato mensal com estimativa de horas (Decisão 26), como vem da API, pronta para a
-  // tela, igual nos quatro lugares que a mostram (o painel solo, os detalhes do cliente, a visão geral do projeto e o A
-  // receber): "18h de 40h", "45%", a parte da barra (até 100) e se passou da estimativa. period é o período em datas
-  // curtas, "26/10 – 25/11", e fica vazio quando o período é o mês do calendário (do dia 1 ao último dia), que a tela já
-  // diz. Nulo sem dedicação.
+  // dedicationView são horas contra uma meta, prontas para a barrinha: "18h de 40h", "45%", a parte da barra (até 100)
+  // e se passou da meta. A meta aparece em horas inteiras; a porcentagem vem da API, sobre a meta exata.
+  const dedicationView = (seconds, goalSeconds, percent) => {
+    const done = fmt.hoursShort(seconds) || '0h';
+    const goal = Math.round(goalSeconds / 3600) + 'h';
+    return {
+      done, goal,
+      text: t('dedication.of', { done, goal }),
+      percent: t('dedication.percent', { percent }),
+      pct: Math.min(100, Math.max(0, percent)),
+      over: percent > 100,
+    };
+  };
+
+  // dedication é a dedicação a um contrato mensal com estimativa de horas (Decisões 26 e 29), como vem da API, pronta
+  // para a tela, igual nos quatro lugares que a mostram (o painel solo, os detalhes do cliente, a visão geral do projeto
+  // e o A receber): as horas do período contra a meta dele (a estimativa semanal vezes os dias do período sobre 7).
+  // period é o período em datas curtas, "26/10 – 25/11", e fica vazio quando o período é o mês do calendário (do dia 1
+  // ao último dia), que a tela já diz. Nulo sem dedicação.
   const dedication = (d) => {
     if (!d) return null;
     const short = { day: '2-digit', month: '2-digit' };
@@ -769,18 +783,20 @@
     const lastDay = new Date(y, m, 0).getDate();
     const calendar = d.period_start.endsWith('-01') && d.period_end === d.period_start.slice(0, 8) + String(lastDay).padStart(2, '0');
     return {
-      done: fmt.hoursShort(d.seconds) || '0h',
-      goal: d.estimated_hours + 'h',
-      text: t('dedication.of', { done: fmt.hoursShort(d.seconds) || '0h', goal: d.estimated_hours + 'h' }),
-      percent: t('dedication.percent', { percent: d.percent }),
-      pct: Math.min(100, Math.max(0, d.percent)),
-      over: d.percent > 100,
+      ...dedicationView(d.seconds, d.estimated_seconds, d.percent),
       // Com espaços inquebráveis, o período nunca parte no meio.
       period: calendar ? '' : fmt.day(d.period_start, short) + '\u00a0–\u00a0' + fmt.day(d.period_end, short),
     };
   };
 
-  window.WTT = { can, t, lang, priorityClass, statusClass, hasDeadlineDate, deadlineInfo, errorText, api, ApiError, form, rules, limits, fmt, payments, billing, dedication, toCents, copyText, notInformed, weekdays, priorities, taskStatuses, markdown, routine, sprintOptions, sprintChoices, workModes, currencies, countries, boot: window.BOOT || {} };
+  // dedicationWeek é a semana em andamento da dedicação (de segunda a domingo) contra a estimativa semanal, no mesmo
+  // formato de dedication. Nulo sem a semana, que só vem com o período em andamento.
+  const dedicationWeek = (d) => {
+    if (!d || !d.week) return null;
+    return dedicationView(d.week.seconds, d.estimated_weekly_hours * 3600, d.week.percent);
+  };
+
+  window.WTT = { can, t, lang, priorityClass, statusClass, hasDeadlineDate, deadlineInfo, errorText, api, ApiError, form, rules, limits, fmt, payments, billing, dedication, dedicationWeek, toCents, copyText, notInformed, weekdays, priorities, taskStatuses, markdown, routine, sprintOptions, sprintChoices, workModes, currencies, countries, boot: window.BOOT || {} };
 
   // Onde flash() deixa a mensagem para a página seguinte.
   const flashKey = 'wtt:flash';

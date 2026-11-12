@@ -270,7 +270,7 @@ func seedSolo(ctx context.Context, db *database.DB, now time.Time) soloSummary {
 			in.PaymentDays = number(10)
 		case "aurora":
 			in.MonthlyFeeCents = money(630000)
-			in.EstimatedMonthlyHours = validate.Optional[int]{Set: true, Value: number(32)}
+			in.EstimatedWeeklyHours = validate.Optional[int]{Set: true, Value: number(8)}
 			in.PaymentDays = number(5)
 			in.LateFeeBP = number(200)
 			in.LateInterestBPMonth = number(100)
