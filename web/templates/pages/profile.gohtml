@@ -176,6 +176,49 @@
     </template>
   </section>
 
+  {{/* Contas conectadas: o GitHub e o GitLab da pessoa. Com a conta ligada, a sincronização a põe como responsável
+       nas issues das tarefas dela, e as tarefas que exigem a conta passam a poder ser dela. Conectar autoriza na
+       plataforma só para ler quem a pessoa é (o token é descartado na volta). Só aparecem as plataformas com o app
+       OAuth configurado no servidor; sem nenhuma, a seção some. */}}
+  {{if .Props.accountPlatforms}}
+  <section class="card stack" aria-labelledby="accounts-title" x-data="connectedAccounts">
+    <div class="stack-tight">
+      <h2 id="accounts-title">{{template "icon" "link"}} {{.T "profile.accounts.title"}}</h2>
+      <p class="muted">{{.T "profile.accounts.intro"}}</p>
+    </div>
+    <p class="muted" x-show="loading">{{.T "profile.accounts.loading"}}</p>
+    <p class="form-error" x-cloak x-show="errors.load" x-text="errors.load" role="alert"></p>
+    <p class="form-error" x-cloak x-show="errors.connect" x-text="errors.connect" role="alert"></p>
+    <p class="form-error" x-cloak x-show="errors.change" x-text="errors.change" role="alert"></p>
+    <ul class="account-list" x-cloak x-show="!loading && !errors.load">
+      <template x-for="p in platforms" :key="p">
+        <li class="account-row">
+          <i class="account-brand" :class="icon(p)" aria-hidden="true"></i>
+          <div class="account-who">
+            <strong x-text="name(p)"></strong>
+            <span class="muted small" x-show="linked(p)" x-text="who(p)"></span>
+            <span class="muted small" x-show="linked(p) && origin(p)" x-text="origin(p)"></span>
+            <span class="muted small" x-show="noAccount(p)" x-text="$t('profile.accounts.no_account_state', { platform: name(p) })"></span>
+            <span class="muted small" x-show="!linked(p) && !noAccount(p)">{{.T "profile.accounts.not_connected"}}</span>
+          </div>
+          <div class="account-actions">
+            <a class="btn btn-secondary btn-sm" x-show="!linked(p)" :href="connectURL(p)">{{template "icon" "plug"}} {{.T "profile.accounts.connect"}}</a>
+            <button type="button" class="btn btn-ghost btn-sm" x-show="!linked(p) && !noAccount(p)" :disabled="pending"
+                    @click="setNoAccount(p)">{{.T "profile.accounts.no_account"}}</button>
+            <button type="button" class="btn btn-danger-ghost btn-sm" x-show="linked(p) && confirming !== p"
+                    @click="confirming = p">{{template "icon" "plug-circle-xmark"}} {{.T "profile.accounts.disconnect"}}</button>
+            <span class="confirm" x-cloak x-show="linked(p) && confirming === p">
+              <span x-text="$t('profile.accounts.disconnect_question', { platform: name(p) })"></span>
+              <button type="button" class="btn btn-danger btn-sm" :disabled="pending" @click="disconnect(p)">{{.T "profile.accounts.disconnect"}}</button>
+              <button type="button" class="btn btn-ghost btn-sm" @click="confirming = null">{{.T "common.cancel"}}</button>
+            </span>
+          </div>
+        </li>
+      </template>
+    </ul>
+  </section>
+  {{end}}
+
   <template x-teleport="#modal-root">
     <div class="stack" x-show="$store.modal.name === 'profile-edit'">
       {{- if .Me.HasPassword}}

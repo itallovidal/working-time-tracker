@@ -55,6 +55,8 @@ func (Person) Edges() []ent.Edge {
 		edge.To("api_tokens", APIToken.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
 		// Os apps conectados pelo OAuth do MCP também.
 		edge.To("oauth_grants", OAuthGrant.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
+		// As contas dela no GitHub e no GitLab.
+		edge.To("accounts", PersonAccount.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("created_invites", Invite.Type),
 		edge.To("allocations", Allocation.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
 		// As baixas dos pagamentos dela. Sem a pessoa, não há a quem ter pago.

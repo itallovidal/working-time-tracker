@@ -1697,6 +1697,83 @@ document.addEventListener('alpine:init', () => {
     },
   }));
 
+  // Contas conectadas: o GitHub e o GitLab da pessoa, para ela aparecer como responsável nas issues. Conectar é uma
+  // página (o OAuth da plataforma, que volta aqui com ?account= ou ?account_error=); "Não tenho conta" e Desconectar
+  // são da API. Só aparecem as plataformas com o app OAuth configurado no servidor (BOOT.accountPlatforms).
+  Alpine.data('connectedAccounts', () => ({
+    ...form(),
+    platforms: WTT.boot.accountPlatforms || [],
+    accounts: [],
+    loading: true,
+    confirming: null, // a plataforma cuja desconexão espera a confirmação
+    init() {
+      const q = new URLSearchParams(location.search);
+      const ok = q.get('account');
+      const err = q.get('account_error');
+      if (ok || err) {
+        q.delete('account');
+        q.delete('account_error');
+        history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q : ''));
+        if (err) this.errors.connect = WTT.errorText({ code: err });
+        else toast(WTT.t('profile.accounts.connected', { platform: WTT.accounts.name(ok) }));
+      }
+      return this.load();
+    },
+    async load() {
+      this.loading = true;
+      this.errors.load = '';
+      try {
+        this.accounts = await WTT.accounts.mine(true);
+      } catch (e) {
+        this.errors.load = e.message;
+      } finally {
+        this.loading = false;
+      }
+    },
+    name: (p) => WTT.accounts.name(p),
+    icon: (p) => WTT.accounts.icon(p),
+    accountOf(p) {
+      return this.accounts.find((a) => a.platform === p) || null;
+    },
+    linked(p) {
+      return WTT.accounts.linked(this.accounts, p);
+    },
+    noAccount(p) {
+      const a = this.accountOf(p);
+      return !!(a && !a.username && a.no_account);
+    },
+    // who é o login e o e-mail da conta, como a linha mostra.
+    who(p) {
+      const a = this.accountOf(p);
+      if (!a || !a.username) return '';
+      return '@' + a.username + (a.email ? ' · ' + a.email : '');
+    },
+    // origin explica a conta que a pessoa não autorizou ela mesma (um admin a ligou, ou o e-mail público casou).
+    origin(p) {
+      const a = this.accountOf(p);
+      if (!a || !a.username || a.source === 'oauth') return '';
+      return WTT.t('profile.accounts.source_' + a.source);
+    },
+    connectURL(p) {
+      return WTT.accounts.connectURL(p, '/profile');
+    },
+    setNoAccount(p) {
+      return this.run('change', async () => {
+        const a = await WTT.accounts.noAccount(p);
+        this.accounts = [...this.accounts.filter((x) => x.platform !== p), a];
+      });
+    },
+    disconnect(p) {
+      return this.run('change', async () => {
+        this.confirming = null;
+        await api('DELETE', '/api/auth/accounts/' + p);
+        WTT.accounts.forget();
+        this.accounts = this.accounts.filter((x) => x.platform !== p);
+        toast(WTT.t('profile.accounts.disconnected', { platform: this.name(p) }));
+      });
+    },
+  }));
+
   // O meu perfil: o que fiz e quando sou pago, para ler, e o modal Editar perfil, com os dados pessoais e a senha.
   Alpine.data('profileSettings', () => ({
     ...form(),

@@ -6,6 +6,7 @@ import (
 	"github.com/labstack/echo/v5"
 
 	"working-time-tracker/internal/domain/auth"
+	"working-time-tracker/internal/domain/personaccount"
 	"working-time-tracker/internal/mcp"
 )
 
@@ -61,7 +62,20 @@ func (h *Handler) ClerkContinue(c *echo.Context) error {
 // endereço para colar no claude.ai: ele sai do PUBLIC_URL, nunca do endereço da requisição, que quem chama pode forjar.
 func (h *Handler) Profile(c *echo.Context) error {
 	return h.render(c, "profile", Data{TitleKey: "titles.profile", Section: "profile", Script: "org",
-		Props: map[string]any{"mcpURL": h.baseURL(c) + mcp.Path, "oauth": h.deps.OAuth != nil}})
+		Props: map[string]any{"mcpURL": h.baseURL(c) + mcp.Path, "oauth": h.deps.OAuth != nil,
+			"accountPlatforms": h.accountPlatforms()}})
+}
+
+// accountPlatforms são as plataformas em que a pessoa pode ligar a conta (Contas conectadas): as que têm o app OAuth
+// configurado no servidor, na ordem da tela.
+func (h *Handler) accountPlatforms() []string {
+	out := []string{}
+	for _, p := range personaccount.Platforms {
+		if h.deps.OAuthConfigured[p] {
+			out = append(out, p)
+		}
+	}
+	return out
 }
 
 // baseURL é o endereço do sistema: o PUBLIC_URL, ou, sem ele, o da requisição (o protocolo que o proxy da frente diz).

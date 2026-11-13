@@ -56,6 +56,8 @@ const (
 	EdgeAPITokens = "api_tokens"
 	// EdgeOauthGrants holds the string denoting the oauth_grants edge name in mutations.
 	EdgeOauthGrants = "oauth_grants"
+	// EdgeAccounts holds the string denoting the accounts edge name in mutations.
+	EdgeAccounts = "accounts"
 	// EdgeCreatedInvites holds the string denoting the created_invites edge name in mutations.
 	EdgeCreatedInvites = "created_invites"
 	// EdgeAllocations holds the string denoting the allocations edge name in mutations.
@@ -113,6 +115,13 @@ const (
 	OauthGrantsInverseTable = "oauth_grants"
 	// OauthGrantsColumn is the table column denoting the oauth_grants relation/edge.
 	OauthGrantsColumn = "person_id"
+	// AccountsTable is the table that holds the accounts relation/edge.
+	AccountsTable = "person_accounts"
+	// AccountsInverseTable is the table name for the PersonAccount entity.
+	// It exists in this package in order to avoid circular dependency with the "personaccount" package.
+	AccountsInverseTable = "person_accounts"
+	// AccountsColumn is the table column denoting the accounts relation/edge.
+	AccountsColumn = "person_id"
 	// CreatedInvitesTable is the table that holds the created_invites relation/edge.
 	CreatedInvitesTable = "invites"
 	// CreatedInvitesInverseTable is the table name for the Invite entity.
@@ -363,6 +372,20 @@ func ByOauthGrants(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
+// ByAccountsCount orders the results by accounts count.
+func ByAccountsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newAccountsStep(), opts...)
+	}
+}
+
+// ByAccounts orders the results by accounts terms.
+func ByAccounts(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAccountsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
 // ByCreatedInvitesCount orders the results by created_invites count.
 func ByCreatedInvitesCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -451,6 +474,13 @@ func newOauthGrantsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(OauthGrantsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, OauthGrantsTable, OauthGrantsColumn),
+	)
+}
+func newAccountsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(AccountsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, AccountsTable, AccountsColumn),
 	)
 }
 func newCreatedInvitesStep() *sqlgraph.Step {

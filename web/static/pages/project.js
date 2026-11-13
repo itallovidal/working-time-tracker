@@ -1556,6 +1556,29 @@ document.addEventListener('alpine:init', () => {
     syncMessage(sum) { return syncMessage(sum, 'integrations.sync_nothing'); },
     // Sincronizar agora: uma rodada completa, que pode demorar com muitas issues. Depois, relê a integração
     // para o cartão mostrar a hora, o aviso e a contagem de quem ficou sem correspondência.
+    // linking é o modal Ligar responsáveis: os logins sem pessoa da integração, as pessoas do projeto e a escolha de
+    // cada login.
+    linking: { id: null, type: '', logins: [], people: [], choice: {} },
+    async openLink(it) {
+      this.linking = { id: it.id, type: it.type, logins: [...(it.sync_unmatched_logins || [])], people: [], choice: {} };
+      this.errors.link = '';
+      Alpine.store('modal').open('link-logins', WTT.t('integrations.link.title'), () => !this.pending);
+      try {
+        const list = await api('GET', '/api/projects/' + project.id + '/collaborators');
+        this.linking.people = list.map((c) => c.person).sort((a, b) => a.name.localeCompare(b.name));
+      } catch (e) {
+        this.errors.link = e.message;
+      }
+    },
+    linkLogin(login) {
+      return this.run('link', async () => {
+        const fresh = await api('POST', '/api/integrations/' + this.linking.id + '/accounts',
+          { login, person_id: this.linking.choice[login] });
+        this.items = this.items.map((x) => (x.id === fresh.id ? fresh : x));
+        this.linking.logins = this.linking.logins.filter((l) => l !== login);
+        toast(WTT.t('integrations.link.linked', { login }));
+      });
+    },
     syncNow(it) {
       return this.run('sync:' + it.id, async () => {
         let sum = null;

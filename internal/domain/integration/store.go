@@ -2,6 +2,8 @@ package integration
 
 import (
 	"context"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -162,24 +164,31 @@ func (s *Store) ResetSync(id uuid.UUID) error {
 	return err
 }
 
-// Unmatched conta as issues abertas e ligadas a uma tarefa que têm responsável no GitHub sem
-// ninguém daqui que corresponda a ele (sem e-mail público, ou o e-mail não é de ninguém do projeto).
-func (s *Store) Unmatched(id uuid.UUID) (int, error) {
+// Unmatched devolve os logins, sem repetir e em ordem alfabética, dos responsáveis das issues abertas e ligadas a uma
+// tarefa que não correspondem a ninguém daqui: sem conta ligada a uma pessoa do projeto e sem e-mail público de
+// alguém dele. Só entram as issues sem nenhum responsável ligado; numa que já tem um, os outros logins nem foram
+// procurados.
+func (s *Store) Unmatched(id uuid.UUID) ([]string, error) {
 	rows, err := s.client.IssueSync.Query().
 		Where(issuesync.IntegrationIDEQ(id), issuesync.StateEQ(issuesync.StateOpen),
 			issuesync.TaskIDNotNil(), issuesync.MappedLoginEQ("")).
 		Select(issuesync.FieldAssigneeLogins).
 		All(context.Background())
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	n := 0
+	seen := map[string]bool{}
+	logins := []string{}
 	for _, r := range rows {
-		if len(r.AssigneeLogins) > 0 {
-			n++
+		for _, l := range r.AssigneeLogins {
+			if k := strings.ToLower(strings.TrimSpace(l)); k != "" && !seen[k] {
+				seen[k] = true
+				logins = append(logins, l)
+			}
 		}
 	}
-	return n, nil
+	sort.Slice(logins, func(i, j int) bool { return strings.ToLower(logins[i]) < strings.ToLower(logins[j]) })
+	return logins, nil
 }
 
 func (s *Store) Delete(id string) error {

@@ -9,6 +9,7 @@ import (
 	"working-time-tracker/internal/adapter"
 	"working-time-tracker/internal/apperr"
 	"working-time-tracker/internal/database"
+	"working-time-tracker/internal/domain/personaccount"
 )
 
 type Handler struct {
@@ -64,6 +65,35 @@ func (h *Handler) SyncTask(c *echo.Context) error {
 	case errors.Is(err, ErrSyncRunning):
 		return apperr.Respond(c, 409, err)
 	case errors.Is(err, database.ErrNotFound), errors.Is(err, adapter.ErrIssueGone):
+		return apperr.Respond(c, 404, err)
+	}
+	return apperr.Respond(c, 400, err)
+}
+
+// linkBody é o corpo de POST /api/integrations/:integrationId/accounts.
+type linkBody struct {
+	Login    string `json:"login"`
+	PersonID string `json:"person_id"`
+}
+
+// LinkLogin é o admin ligando o login de um responsável das issues a uma pessoa do projeto, no cartão da integração.
+// Responde a integração como ficou, com a lista dos logins sem pessoa já sem este.
+func (h *Handler) LinkLogin(c *echo.Context) error {
+	var body linkBody
+	if err := c.Bind(&body); err != nil {
+		return apperr.Respond(c, 400, apperr.BindError(err))
+	}
+	personID, err := uuid.Parse(body.PersonID)
+	if err != nil {
+		return apperr.Respond(c, 400, ErrLinkNotInProject)
+	}
+	it, err := h.syncer.LinkLogin(c.Request().Context(), parseID(c.Param("integrationId")), body.Login, personID)
+	switch {
+	case err == nil:
+		return c.JSON(200, it)
+	case errors.Is(err, personaccount.ErrLoginTaken), errors.Is(err, personaccount.ErrPersonLinked):
+		return apperr.Respond(c, 409, err)
+	case errors.Is(err, database.ErrNotFound):
 		return apperr.Respond(c, 404, err)
 	}
 	return apperr.Respond(c, 400, err)

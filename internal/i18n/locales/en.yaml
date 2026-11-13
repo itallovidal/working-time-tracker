@@ -679,6 +679,21 @@ profile:
   title_other: Collaborator profile
   edit: Edit profile
   tabs_label: What to edit
+  accounts:
+    title: Connected accounts
+    intro: "Link your GitHub or GitLab account to show up as the assignee on the issues of the tasks you take. The authorization only reads who you are."
+    loading: Loading…
+    not_connected: Not connected
+    no_account_state: "You said you don't have a {{.platform}} account."
+    connect: Connect
+    no_account: I don't have an account
+    disconnect: Disconnect
+    disconnect_question: "Disconnect your {{.platform}} account?"
+    disconnected: "{{.platform}} account disconnected."
+    connected: "{{.platform}} account connected."
+    source_integration: Linked when you connected an integration
+    source_admin: Linked by a project admin
+    source_email: Found by your public email
   mcp:
     title: MCP connector
     help: How the MCP connector works
@@ -1664,7 +1679,7 @@ integrations:
   sync_nothing: "Everything matches: nothing to sync."
   sync_done: "Synced."
   sync_partial: "The round stopped before the end (a limit of the platform or an error): the rest waits for the next one."
-  unmatched_hint: "The assignee of an issue only becomes the task's if their public GitHub or GitLab email is someone's on this project. Whoever does not publish an email has no match, and the task stays available."
+  unmatched_hint: "An issue's assignee only becomes the task's if the person connected their account on their profile (Connected accounts) or publishes on GitHub or GitLab the same email they use here. Otherwise the task stays available."
   sync_created:
     one: "{{.count}} new task"
     other: "{{.count}} new tasks"
@@ -1677,6 +1692,16 @@ integrations:
   sync_errors:
     one: "{{.count}} with an error"
     other: "{{.count}} with an error"
+  link:
+    open: Link
+    open_label: "Link the assignees of {{.name}} to people on the project"
+    title: Link assignees
+    intro: "Pick the project person who owns each login. The tasks of that login go to them, and whoever connects their own account on their profile keeps theirs."
+    person_label: "Person of @{{.login}}"
+    pick: Pick the person
+    submit: Link
+    linked: "@{{.login}} linked."
+    all_done: All assignees are linked.
   unmatched:
     one: "{{.count}} assignee without a match"
     other: "{{.count}} assignees without a match"
@@ -1990,6 +2015,12 @@ errors:
   session_expired: "Your session expired. Please sign in again."
   http_status: "The server responded with error {{.status}}."
   unknown: "Something went wrong. Please try again."
+  account:
+    invalid_platform: "This platform has no account to link."
+    not_found: "You have no account linked on this platform."
+    login_taken: "The login {{.login}} already belongs to someone else in the organization, who authorized it on the platform."
+    person_linked: "This person already authorized another account ({{.login}}) on this platform."
+    invalid_login: "This login is not valid."
   allocation:
     preset_above_yours: "the group gives a permission you do not have"
     invalid_preset: "unknown permission group"
@@ -2118,7 +2149,8 @@ errors:
     server_error: "internal error, please try again"
   issue_sync:
     label_refused: "the token cannot create labels on the other side: the new label stays here only"
-    no_login: "could not find, on the platform, the user of the person assigned here: they need a public email on their GitHub or GitLab profile"
+    link_not_in_project: "Pick someone who is in the project."
+    no_login: "could not find, on the platform, the user of the person assigned here: they need to connect their account on their profile (Connected accounts)"
     push_discarded: "the platform ignored a change to this item (the token may lack write permission): it stays here only"
     push_rejected: "the platform refused a change to this item: it stays here only"
     read_only: "the token cannot write to this repository or board: items only come here, and changes made here do not go out"

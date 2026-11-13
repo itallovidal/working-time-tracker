@@ -67,6 +67,8 @@ type PersonEdges struct {
 	APITokens []*APIToken `json:"api_tokens,omitempty"`
 	// OauthGrants holds the value of the oauth_grants edge.
 	OauthGrants []*OAuthGrant `json:"oauth_grants,omitempty"`
+	// Accounts holds the value of the accounts edge.
+	Accounts []*PersonAccount `json:"accounts,omitempty"`
 	// CreatedInvites holds the value of the created_invites edge.
 	CreatedInvites []*Invite `json:"created_invites,omitempty"`
 	// Allocations holds the value of the allocations edge.
@@ -75,7 +77,7 @@ type PersonEdges struct {
 	Payouts []*Payout `json:"payouts,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [10]bool
+	loadedTypes [11]bool
 }
 
 // OrganizationOrErr returns the Organization value or an error if the edge
@@ -143,10 +145,19 @@ func (e PersonEdges) OauthGrantsOrErr() ([]*OAuthGrant, error) {
 	return nil, &NotLoadedError{edge: "oauth_grants"}
 }
 
+// AccountsOrErr returns the Accounts value or an error if the edge
+// was not loaded in eager-loading.
+func (e PersonEdges) AccountsOrErr() ([]*PersonAccount, error) {
+	if e.loadedTypes[7] {
+		return e.Accounts, nil
+	}
+	return nil, &NotLoadedError{edge: "accounts"}
+}
+
 // CreatedInvitesOrErr returns the CreatedInvites value or an error if the edge
 // was not loaded in eager-loading.
 func (e PersonEdges) CreatedInvitesOrErr() ([]*Invite, error) {
-	if e.loadedTypes[7] {
+	if e.loadedTypes[8] {
 		return e.CreatedInvites, nil
 	}
 	return nil, &NotLoadedError{edge: "created_invites"}
@@ -155,7 +166,7 @@ func (e PersonEdges) CreatedInvitesOrErr() ([]*Invite, error) {
 // AllocationsOrErr returns the Allocations value or an error if the edge
 // was not loaded in eager-loading.
 func (e PersonEdges) AllocationsOrErr() ([]*Allocation, error) {
-	if e.loadedTypes[8] {
+	if e.loadedTypes[9] {
 		return e.Allocations, nil
 	}
 	return nil, &NotLoadedError{edge: "allocations"}
@@ -164,7 +175,7 @@ func (e PersonEdges) AllocationsOrErr() ([]*Allocation, error) {
 // PayoutsOrErr returns the Payouts value or an error if the edge
 // was not loaded in eager-loading.
 func (e PersonEdges) PayoutsOrErr() ([]*Payout, error) {
-	if e.loadedTypes[9] {
+	if e.loadedTypes[10] {
 		return e.Payouts, nil
 	}
 	return nil, &NotLoadedError{edge: "payouts"}
@@ -337,6 +348,11 @@ func (_m *Person) QueryAPITokens() *APITokenQuery {
 // QueryOauthGrants queries the "oauth_grants" edge of the Person entity.
 func (_m *Person) QueryOauthGrants() *OAuthGrantQuery {
 	return NewPersonClient(_m.config).QueryOauthGrants(_m)
+}
+
+// QueryAccounts queries the "accounts" edge of the Person entity.
+func (_m *Person) QueryAccounts() *PersonAccountQuery {
+	return NewPersonClient(_m.config).QueryAccounts(_m)
 }
 
 // QueryCreatedInvites queries the "created_invites" edge of the Person entity.

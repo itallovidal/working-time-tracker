@@ -108,6 +108,12 @@ func (_c *TaskCreate) SetNillableDeadline(v *time.Time) *TaskCreate {
 	return _c
 }
 
+// SetRequiredAccounts sets the "required_accounts" field.
+func (_c *TaskCreate) SetRequiredAccounts(v []string) *TaskCreate {
+	_c.mutation.SetRequiredAccounts(v)
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *TaskCreate) SetCreatedAt(v time.Time) *TaskCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -328,6 +334,10 @@ func (_c *TaskCreate) createSpec() (*Task, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Deadline(); ok {
 		_spec.SetField(task.FieldDeadline, field.TypeTime, value)
 		_node.Deadline = value
+	}
+	if value, ok := _c.mutation.RequiredAccounts(); ok {
+		_spec.SetField(task.FieldRequiredAccounts, field.TypeJSON, value)
+		_node.RequiredAccounts = value
 	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(task.FieldCreatedAt, field.TypeTime, value)

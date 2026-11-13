@@ -10,6 +10,7 @@ import (
 	"working-time-tracker/ent/invite"
 	"working-time-tracker/ent/organization"
 	"working-time-tracker/ent/person"
+	"working-time-tracker/ent/personaccount"
 	"working-time-tracker/ent/predicate"
 	"working-time-tracker/ent/project"
 	"working-time-tracker/ent/receivable"
@@ -398,6 +399,21 @@ func (_u *OrganizationUpdate) AddReceivables(v ...*Receivable) *OrganizationUpda
 	return _u.AddReceivableIDs(ids...)
 }
 
+// AddPersonAccountIDs adds the "person_accounts" edge to the PersonAccount entity by IDs.
+func (_u *OrganizationUpdate) AddPersonAccountIDs(ids ...uuid.UUID) *OrganizationUpdate {
+	_u.mutation.AddPersonAccountIDs(ids...)
+	return _u
+}
+
+// AddPersonAccounts adds the "person_accounts" edges to the PersonAccount entity.
+func (_u *OrganizationUpdate) AddPersonAccounts(v ...*PersonAccount) *OrganizationUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddPersonAccountIDs(ids...)
+}
+
 // Mutation returns the OrganizationMutation object of the builder.
 func (_u *OrganizationUpdate) Mutation() *OrganizationMutation {
 	return _u.mutation
@@ -506,6 +522,27 @@ func (_u *OrganizationUpdate) RemoveReceivables(v ...*Receivable) *OrganizationU
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveReceivableIDs(ids...)
+}
+
+// ClearPersonAccounts clears all "person_accounts" edges to the PersonAccount entity.
+func (_u *OrganizationUpdate) ClearPersonAccounts() *OrganizationUpdate {
+	_u.mutation.ClearPersonAccounts()
+	return _u
+}
+
+// RemovePersonAccountIDs removes the "person_accounts" edge to PersonAccount entities by IDs.
+func (_u *OrganizationUpdate) RemovePersonAccountIDs(ids ...uuid.UUID) *OrganizationUpdate {
+	_u.mutation.RemovePersonAccountIDs(ids...)
+	return _u
+}
+
+// RemovePersonAccounts removes "person_accounts" edges to PersonAccount entities.
+func (_u *OrganizationUpdate) RemovePersonAccounts(v ...*PersonAccount) *OrganizationUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemovePersonAccountIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -843,6 +880,51 @@ func (_u *OrganizationUpdate) sqlSave(ctx context.Context) (_node int, err error
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(receivable.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.PersonAccountsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   organization.PersonAccountsTable,
+			Columns: []string{organization.PersonAccountsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(personaccount.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedPersonAccountsIDs(); len(nodes) > 0 && !_u.mutation.PersonAccountsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   organization.PersonAccountsTable,
+			Columns: []string{organization.PersonAccountsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(personaccount.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.PersonAccountsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   organization.PersonAccountsTable,
+			Columns: []string{organization.PersonAccountsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(personaccount.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1235,6 +1317,21 @@ func (_u *OrganizationUpdateOne) AddReceivables(v ...*Receivable) *OrganizationU
 	return _u.AddReceivableIDs(ids...)
 }
 
+// AddPersonAccountIDs adds the "person_accounts" edge to the PersonAccount entity by IDs.
+func (_u *OrganizationUpdateOne) AddPersonAccountIDs(ids ...uuid.UUID) *OrganizationUpdateOne {
+	_u.mutation.AddPersonAccountIDs(ids...)
+	return _u
+}
+
+// AddPersonAccounts adds the "person_accounts" edges to the PersonAccount entity.
+func (_u *OrganizationUpdateOne) AddPersonAccounts(v ...*PersonAccount) *OrganizationUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddPersonAccountIDs(ids...)
+}
+
 // Mutation returns the OrganizationMutation object of the builder.
 func (_u *OrganizationUpdateOne) Mutation() *OrganizationMutation {
 	return _u.mutation
@@ -1343,6 +1440,27 @@ func (_u *OrganizationUpdateOne) RemoveReceivables(v ...*Receivable) *Organizati
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveReceivableIDs(ids...)
+}
+
+// ClearPersonAccounts clears all "person_accounts" edges to the PersonAccount entity.
+func (_u *OrganizationUpdateOne) ClearPersonAccounts() *OrganizationUpdateOne {
+	_u.mutation.ClearPersonAccounts()
+	return _u
+}
+
+// RemovePersonAccountIDs removes the "person_accounts" edge to PersonAccount entities by IDs.
+func (_u *OrganizationUpdateOne) RemovePersonAccountIDs(ids ...uuid.UUID) *OrganizationUpdateOne {
+	_u.mutation.RemovePersonAccountIDs(ids...)
+	return _u
+}
+
+// RemovePersonAccounts removes "person_accounts" edges to PersonAccount entities.
+func (_u *OrganizationUpdateOne) RemovePersonAccounts(v ...*PersonAccount) *OrganizationUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemovePersonAccountIDs(ids...)
 }
 
 // Where appends a list predicates to the OrganizationUpdate builder.
@@ -1710,6 +1828,51 @@ func (_u *OrganizationUpdateOne) sqlSave(ctx context.Context) (_node *Organizati
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(receivable.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.PersonAccountsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   organization.PersonAccountsTable,
+			Columns: []string{organization.PersonAccountsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(personaccount.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedPersonAccountsIDs(); len(nodes) > 0 && !_u.mutation.PersonAccountsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   organization.PersonAccountsTable,
+			Columns: []string{organization.PersonAccountsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(personaccount.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.PersonAccountsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   organization.PersonAccountsTable,
+			Columns: []string{organization.PersonAccountsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(personaccount.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

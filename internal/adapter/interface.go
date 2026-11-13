@@ -140,6 +140,12 @@ type AccountLookup interface {
 	Account(conn Connection) (login string, err error)
 }
 
+// UserLookup é a capacidade opcional de dizer quem o token representa com o e-mail dele: é a conta que a pessoa liga
+// no perfil (Contas conectadas). O e-mail é o principal e verificado, quando o token pode lê-lo; vazio, quando não.
+type UserLookup interface {
+	User(conn Connection) (login, email string, err error)
+}
+
 // IssueRepo é o repositório como a sincronização de issues o enxerga.
 type IssueRepo struct {
 	FullName string

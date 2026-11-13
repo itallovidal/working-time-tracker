@@ -42,6 +42,9 @@ type Payout func(*sql.Selector)
 // Person is the predicate function for person builders.
 type Person func(*sql.Selector)
 
+// PersonAccount is the predicate function for personaccount builders.
+type PersonAccount func(*sql.Selector)
+
 // Project is the predicate function for project builders.
 type Project func(*sql.Selector)
 

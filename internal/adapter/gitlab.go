@@ -171,27 +171,35 @@ func (g *GitLabIntegration) FetchItemDetails(conn Connection, itemID string) (*I
 // Account devolve o username de quem o token representa. A conexão OAuth o usa para conferir o token
 // recém-obtido e para nomear a integração.
 func (g *GitLabIntegration) Account(conn Connection) (string, error) {
+	login, _, err := g.User(conn)
+	return login, err
+}
+
+// User devolve o username de quem o token representa e o e-mail principal, que o /user dá ao próprio dono do token
+// (com o escopo read_user ou api).
+func (g *GitLabIntegration) User(conn Connection) (string, string, error) {
 	resp, err := g.get(conn, "/user")
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	defer closeBody(resp)
 
 	switch resp.StatusCode {
 	case http.StatusOK:
 	case http.StatusUnauthorized:
-		return "", ErrInvalidToken.With("provider", "GitLab")
+		return "", "", ErrInvalidToken.With("provider", "GitLab")
 	default:
-		return "", ErrProviderStatus.With("provider", "GitLab", "status", resp.StatusCode)
+		return "", "", ErrProviderStatus.With("provider", "GitLab", "status", resp.StatusCode)
 	}
 
 	var body struct {
 		Username string `json:"username"`
+		Email    string `json:"email"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil || body.Username == "" {
-		return "", ErrUnexpectedResponse.With("provider", "GitLab").Wrap(err)
+		return "", "", ErrUnexpectedResponse.With("provider", "GitLab").Wrap(err)
 	}
-	return body.Username, nil
+	return body.Username, strings.TrimSpace(body.Email), nil
 }
 
 // ListRepositories devolve os projetos de que a conta é membro, os mexidos há menos tempo primeiro. É uma

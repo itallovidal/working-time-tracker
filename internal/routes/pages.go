@@ -31,6 +31,9 @@ func RegisterPages(e *echo.Echo, p *page.Handler, m *auth.Middleware, oauth *int
 	g := e.Group("", m.RequirePage)
 	g.GET("/", p.Home)
 	g.GET("/profile", p.Profile)
+	// Ligar a conta do GitHub ou do GitLab (o perfil, Contas conectadas): a ida pede só o escopo que lê quem a pessoa
+	// é, e a volta é a mesma de conectar uma integração.
+	g.GET(integration.AccountConnectPath, oauth.AccountConnect)
 	// A tela de consentimento do OAuth do MCP: quem não está logado passa pelo login e volta com o pedido inteiro.
 	g.GET(oauthserver.AuthorizePath, p.OAuthAuthorize)
 

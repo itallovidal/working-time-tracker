@@ -17,6 +17,7 @@ import (
 	"working-time-tracker/internal/domain/payment"
 	"working-time-tracker/internal/domain/permission"
 	"working-time-tracker/internal/domain/person"
+	"working-time-tracker/internal/domain/personaccount"
 	"working-time-tracker/internal/domain/project"
 	"working-time-tracker/internal/domain/projectinvite"
 	"working-time-tracker/internal/domain/receivable"
@@ -31,6 +32,8 @@ type Handlers struct {
 	Organization *organization.Handler
 	Customer     *customer.Handler
 	Person       *person.Handler
+	// Account são as contas da pessoa no GitHub e no GitLab (o perfil, Contas conectadas).
+	Account      *personaccount.Handler
 	Permission   *permission.Handler
 	Project      *project.Handler
 	Team         *team.Handler
@@ -92,6 +95,10 @@ func RegisterRoutes(e *echo.Echo, h Handlers, m *auth.Middleware, authLimiter ec
 	r.POST("/auth/tokens", h.Auth.CreateAPIToken)
 	r.DELETE("/auth/tokens/:tokenId", h.Auth.RevokeAPIToken)
 	// Os apps conectados pelo OAuth do MCP (o claude.ai, o Claude Code): cada um só vê e desconecta os seus.
+	// As contas no GitHub e no GitLab: cada um só vê e mexe nas suas. Conectar é uma página (o OAuth da plataforma).
+	r.GET("/auth/accounts", h.Account.List)
+	r.POST("/auth/accounts/:platform/no-account", h.Account.NoAccount)
+	r.DELETE("/auth/accounts/:platform", h.Account.Disconnect)
 	r.GET("/auth/connections", h.Auth.ListOAuthConnections)
 	r.DELETE("/auth/connections/:connectionId", h.Auth.RevokeOAuthConnection)
 	// O "Permitir" da tela de consentimento do OAuth. Além do JSONOnly, recusa o pedido que um navegador manda de outra
@@ -238,6 +245,8 @@ func RegisterRoutes(e *echo.Echo, h Handlers, m *auth.Middleware, authLimiter ec
 	r.GET("/integrations/:integrationId/repositories", h.Integration.Repositories, integ, can(permission.IntegrationsManage))
 	// Uma rodada completa de sincronização das issues com as tarefas, na hora.
 	r.POST("/integrations/:integrationId/sync", h.Sync.Sync, integ, can(permission.IntegrationsManage))
+	// O admin escolhe a pessoa do projeto dona do login de um responsável das issues (o cartão da integração).
+	r.POST("/integrations/:integrationId/accounts", h.Sync.LinkLogin, integ, can(permission.IntegrationsManage))
 	r.PATCH("/integrations/:integrationId", h.Integration.Update, integ, can(permission.IntegrationsManage))
 	r.DELETE("/integrations/:integrationId", h.Integration.Delete, integ, can(permission.IntegrationsManage))
 

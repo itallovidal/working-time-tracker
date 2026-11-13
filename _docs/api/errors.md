@@ -43,6 +43,16 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 
 ## Códigos
 
+### account
+
+| Código | Status | Parâmetros | pt-BR | en |
+|---|---|---|---|---|
+| `account.invalid_login` | 400 | — | `Este login não é válido.` | `This login is not valid.` |
+| `account.invalid_platform` | 404 | — | `Esta plataforma não tem conta para ligar.` | `This platform has no account to link.` |
+| `account.login_taken` | 409 | `login` | `O login {{.login}} já é de outra pessoa da organização, que o autorizou na plataforma.` | `The login {{.login}} already belongs to someone else in the organization, who authorized it on the platform.` |
+| `account.not_found` | 404 | — | `Você não tem conta ligada nesta plataforma.` | `You have no account linked on this platform.` |
+| `account.person_linked` | 409 | `login` | `Esta pessoa já autorizou outra conta ({{.login}}) nesta plataforma.` | `This person already authorized another account ({{.login}}) on this platform.` |
+
 ### allocation
 
 | Código | Status | Parâmetros | pt-BR | en |
@@ -198,7 +208,8 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | Código | Status | Parâmetros | pt-BR | en |
 |---|---|---|---|---|
 | `issue_sync.label_refused` | 400 | — | `o token não pode criar etiquetas do outro lado: a etiqueta nova fica só aqui` | `the token cannot create labels on the other side: the new label stays here only` |
-| `issue_sync.no_login` | 400 | — | `não achei, na plataforma, o usuário de quem é responsável aqui: ele precisa ter o e-mail público no perfil do GitHub ou do GitLab` | `could not find, on the platform, the user of the person assigned here: they need a public email on their GitHub or GitLab profile` |
+| `issue_sync.link_not_in_project` | 400 | — | `Escolha alguém que está no projeto.` | `Pick someone who is in the project.` |
+| `issue_sync.no_login` | 400 | — | `não achei, na plataforma, o usuário de quem é responsável aqui: ele precisa conectar a conta no perfil (Contas conectadas)` | `could not find, on the platform, the user of the person assigned here: they need to connect their account on their profile (Connected accounts)` |
 | `issue_sync.publish_read_only` | 400 | — | `o token desta integração não escreve no repositório ou quadro: o item novo sairia sem parte dos dados, então a tarefa não foi postada` | `the token of this integration cannot write to the repository or board: the new item would come out without some of its data, so the task was not posted` |
 | `issue_sync.push_discarded` | 400 | — | `a plataforma ignorou uma mudança deste item (o token pode não ter permissão de escrita): ela fica só aqui` | `the platform ignored a change to this item (the token may lack write permission): it stays here only` |
 | `issue_sync.push_rejected` | 400 | — | `a plataforma recusou uma mudança deste item: ela fica só aqui` | `the platform refused a change to this item: it stays here only` |

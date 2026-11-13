@@ -59,6 +59,8 @@ const (
 	EdgeInvites = "invites"
 	// EdgeReceivables holds the string denoting the receivables edge name in mutations.
 	EdgeReceivables = "receivables"
+	// EdgePersonAccounts holds the string denoting the person_accounts edge name in mutations.
+	EdgePersonAccounts = "person_accounts"
 	// Table holds the table name of the organization in the database.
 	Table = "organizations"
 	// PersonsTable is the table that holds the persons relation/edge.
@@ -96,6 +98,13 @@ const (
 	ReceivablesInverseTable = "receivables"
 	// ReceivablesColumn is the table column denoting the receivables relation/edge.
 	ReceivablesColumn = "organization_id"
+	// PersonAccountsTable is the table that holds the person_accounts relation/edge.
+	PersonAccountsTable = "person_accounts"
+	// PersonAccountsInverseTable is the table name for the PersonAccount entity.
+	// It exists in this package in order to avoid circular dependency with the "personaccount" package.
+	PersonAccountsInverseTable = "person_accounts"
+	// PersonAccountsColumn is the table column denoting the person_accounts relation/edge.
+	PersonAccountsColumn = "organization_id"
 )
 
 // Columns holds all SQL columns for organization fields.
@@ -307,6 +316,20 @@ func ByReceivables(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newReceivablesStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByPersonAccountsCount orders the results by person_accounts count.
+func ByPersonAccountsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newPersonAccountsStep(), opts...)
+	}
+}
+
+// ByPersonAccounts orders the results by person_accounts terms.
+func ByPersonAccounts(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newPersonAccountsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newPersonsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -340,5 +363,12 @@ func newReceivablesStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(ReceivablesInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, ReceivablesTable, ReceivablesColumn),
+	)
+}
+func newPersonAccountsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(PersonAccountsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, PersonAccountsTable, PersonAccountsColumn),
 	)
 }

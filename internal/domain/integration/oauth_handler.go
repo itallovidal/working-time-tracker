@@ -15,6 +15,7 @@ import (
 	"working-time-tracker/internal/apperr"
 	"working-time-tracker/internal/domain/auth"
 	"working-time-tracker/internal/domain/permission"
+	"working-time-tracker/internal/domain/personaccount"
 )
 
 // O cookie que guarda a conexão em andamento entre a ida à plataforma e a volta. Fica restrito ao
@@ -63,8 +64,14 @@ var (
 // quando ela está reconectando uma integração que já existe, qual. O state é o que a
 // plataforma devolve na volta para provar que a volta é desta conexão. Type diz de qual
 // plataforma é: um cookie de uma não serve à volta da outra.
+//
+// Purpose separa as duas idas que voltam pelo mesmo endereço: vazio é conectar uma integração do projeto, e
+// accountPurpose é a pessoa ligando a conta dela no perfil (Contas conectadas), que não tem projeto e volta para
+// Return.
 type oauthClaims struct {
 	Type          string
+	Purpose       string
+	Return        string
 	State         string
 	PersonID      string
 	ProjectID     string
@@ -84,6 +91,9 @@ type OAuthHandler struct {
 	resolver     *auth.Resolver
 	encryptKey   string
 	cookieSecure bool
+	// accounts grava a conta da pessoa: a que ela liga no perfil e a de quem conecta uma integração. Nulo, nenhuma
+	// das duas acontece.
+	accounts *personaccount.Service
 }
 
 // OAuthApps são os apps de autorização do servidor. Um nulo, ou sem credenciais, tem o botão avisando que a
@@ -100,6 +110,9 @@ func NewOAuthHandler(svc *Service, apps OAuthApps, resolver *auth.Resolver, encr
 		resolver: resolver, encryptKey: encryptKey, cookieSecure: cookieSecure,
 	}
 }
+
+// SetAccounts liga as contas da pessoa: o "Conectar" do perfil e a conta de quem conecta uma integração.
+func (h *OAuthHandler) SetAccounts(accounts *personaccount.Service) { h.accounts = accounts }
 
 // integrationsTab é a aba para onde a pessoa volta, com sucesso ou com erro.
 func integrationsTab(projectID string) string {
@@ -149,6 +162,12 @@ func (h *OAuthHandler) begin(c *echo.Context, flow oauthFlow, back string) (stat
 	if err != nil {
 		return "", false, h.failBack(c, flow, back, err)
 	}
+	h.setCookie(c, flow, value)
+	return state, true, nil
+}
+
+// setCookie grava o cookie da conexão em andamento, preso ao caminho da volta da plataforma.
+func (h *OAuthHandler) setCookie(c *echo.Context, flow oauthFlow, value string) {
 	c.SetCookie(&http.Cookie{
 		Name:     oauthCookie,
 		Value:    value,
@@ -158,7 +177,6 @@ func (h *OAuthHandler) begin(c *echo.Context, flow oauthFlow, back string) (stat
 		Secure:   h.cookieSecure,
 		SameSite: http.SameSiteLaxMode,
 	})
-	return state, true, nil
 }
 
 // GitHubConnect começa a conexão: grava o cookie e manda a pessoa para o GitHub. A
@@ -214,6 +232,9 @@ func (h *OAuthHandler) codeCallback(c *echo.Context, flow oauthFlow, errs codeEr
 		// foi este servidor que o começou.
 		return c.Redirect(http.StatusSeeOther, "/")
 	}
+	if claims.Purpose == accountPurpose {
+		return h.accountCallback(c, flow, errs, claims, exchange)
+	}
 	back := integrationsTab(claims.ProjectID)
 
 	me := auth.CurrentPerson(c)
@@ -252,6 +273,7 @@ func (h *OAuthHandler) codeCallback(c *echo.Context, flow oauthFlow, errs codeEr
 	if err != nil {
 		return h.failBack(c, flow, back, err)
 	}
+	h.linkConnector(c, me, flow.typ, it.ConnectedLogin)
 	return c.Redirect(http.StatusSeeOther, back+"?"+flow.okParam+"="+it.ID.String())
 }
 
@@ -274,6 +296,8 @@ func (h *OAuthHandler) canManage(c *echo.Context, me *auth.Identity, projectID s
 func (h *OAuthHandler) seal(claims oauthClaims) (string, error) {
 	sealed, err := adapter.EncryptConfig(map[string]interface{}{
 		"type":           claims.Type,
+		"purpose":        claims.Purpose,
+		"return":         claims.Return,
 		"state":          claims.State,
 		"person_id":      claims.PersonID,
 		"project_id":     claims.ProjectID,
@@ -302,13 +326,17 @@ func (h *OAuthHandler) readClaims(c *echo.Context, flow oauthFlow) (oauthClaims,
 	expires, _ := opened["expires"].(float64)
 	claims := oauthClaims{
 		Type:          text("type"),
+		Purpose:       text("purpose"),
+		Return:        text("return"),
 		State:         text("state"),
 		PersonID:      text("person_id"),
 		ProjectID:     text("project_id"),
 		IntegrationID: text("integration_id"),
 		Expires:       int64(expires),
 	}
-	if claims.Type != flow.typ || claims.State == "" || claims.ProjectID == "" || time.Now().Unix() > claims.Expires {
+	// A conexão de uma integração é de um projeto; a conta da pessoa não tem projeto.
+	noProject := claims.ProjectID == "" && claims.Purpose != accountPurpose
+	if claims.Type != flow.typ || claims.State == "" || noProject || time.Now().Unix() > claims.Expires {
 		return oauthClaims{}, false
 	}
 	return claims, true

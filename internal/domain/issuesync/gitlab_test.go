@@ -15,6 +15,7 @@ import (
 	"working-time-tracker/internal/domain/issuesync"
 	"working-time-tracker/internal/domain/organization"
 	"working-time-tracker/internal/domain/person"
+	"working-time-tracker/internal/domain/personaccount"
 	"working-time-tracker/internal/domain/project"
 	"working-time-tracker/internal/domain/task"
 	"working-time-tracker/internal/domain/team"
@@ -82,7 +83,7 @@ func newGitLabEnv(t *testing.T) *glenv {
 	e.rows = issuesync.NewStore(testClient)
 	e.syncer = issuesync.New(issuesync.Deps{
 		Integrations: e.integ, Tasks: e.tasks, People: person.NewStore(testClient),
-		Members: team.NewMembershipStore(testClient), Rows: e.rows,
+		Members: team.NewMembershipStore(testClient), Rows: e.rows, Accounts: personaccount.NewStore(testClient),
 	}, issuesync.Config{})
 	e.taskSvc.SetRemover(e.syncer)
 	e.fake.Reset()

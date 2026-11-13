@@ -3,6 +3,7 @@
 package ent
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -34,6 +35,8 @@ type Task struct {
 	AssigneeID *uuid.UUID `json:"assignee_id,omitempty"`
 	// Deadline holds the value of the "deadline" field.
 	Deadline time.Time `json:"deadline,omitempty"`
+	// RequiredAccounts holds the value of the "required_accounts" field.
+	RequiredAccounts []string `json:"required_accounts,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -115,6 +118,8 @@ func (*Task) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case task.FieldAssigneeID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
+		case task.FieldRequiredAccounts:
+			values[i] = new([]byte)
 		case task.FieldName, task.FieldDescription, task.FieldPriority, task.FieldStatus:
 			values[i] = new(sql.NullString)
 		case task.FieldDeadline, task.FieldCreatedAt:
@@ -184,6 +189,14 @@ func (_m *Task) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field deadline", values[i])
 			} else if value.Valid {
 				_m.Deadline = value.Time
+			}
+		case task.FieldRequiredAccounts:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field required_accounts", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.RequiredAccounts); err != nil {
+					return fmt.Errorf("unmarshal field required_accounts: %w", err)
+				}
 			}
 		case task.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -274,6 +287,9 @@ func (_m *Task) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("deadline=")
 	builder.WriteString(_m.Deadline.Format(time.ANSIC))
+	builder.WriteString(", ")
+	builder.WriteString("required_accounts=")
+	builder.WriteString(fmt.Sprintf("%v", _m.RequiredAccounts))
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))

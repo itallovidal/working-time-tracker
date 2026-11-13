@@ -14,6 +14,7 @@ import (
 	"working-time-tracker/ent/organization"
 	"working-time-tracker/ent/payout"
 	"working-time-tracker/ent/person"
+	"working-time-tracker/ent/personaccount"
 	"working-time-tracker/ent/session"
 	"working-time-tracker/ent/task"
 	"working-time-tracker/ent/teammembership"
@@ -296,6 +297,21 @@ func (_c *PersonCreate) AddOauthGrants(v ...*OAuthGrant) *PersonCreate {
 		ids[i] = v[i].ID
 	}
 	return _c.AddOauthGrantIDs(ids...)
+}
+
+// AddAccountIDs adds the "accounts" edge to the PersonAccount entity by IDs.
+func (_c *PersonCreate) AddAccountIDs(ids ...uuid.UUID) *PersonCreate {
+	_c.mutation.AddAccountIDs(ids...)
+	return _c
+}
+
+// AddAccounts adds the "accounts" edges to the PersonAccount entity.
+func (_c *PersonCreate) AddAccounts(v ...*PersonAccount) *PersonCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddAccountIDs(ids...)
 }
 
 // AddCreatedInviteIDs adds the "created_invites" edge to the Invite entity by IDs.
@@ -613,6 +629,22 @@ func (_c *PersonCreate) createSpec() (*Person, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(oauthgrant.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.AccountsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   person.AccountsTable,
+			Columns: []string{person.AccountsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(personaccount.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

@@ -22,12 +22,13 @@ type integrationResponse struct {
 	Metadata    map[string]interface{} `json:"metadata"`
 	Enabled     bool                   `json:"enabled"`
 	// A sincronização das issues com as tarefas (só o GitHub): se está ligada, quando terminou a última
-	// rodada, o código do erro dela e quantas issues têm responsável sem correspondência aqui.
-	SyncIssues    bool       `json:"sync_issues"`
-	LastSyncedAt  *time.Time `json:"last_synced_at"`
-	LastSyncError string     `json:"last_sync_error"`
-	SyncUnmatched int        `json:"sync_unmatched"`
-	CreatedAt     time.Time  `json:"created_at"`
+	// rodada, o código do erro dela e os logins de responsáveis sem correspondência aqui (e quantos são).
+	SyncIssues          bool       `json:"sync_issues"`
+	LastSyncedAt        *time.Time `json:"last_synced_at"`
+	LastSyncError       string     `json:"last_sync_error"`
+	SyncUnmatched       int        `json:"sync_unmatched"`
+	SyncUnmatchedLogins []string   `json:"sync_unmatched_logins"`
+	CreatedAt           time.Time  `json:"created_at"`
 }
 
 func toIntegrationResponse(m *Integration) integrationResponse {
@@ -40,11 +41,12 @@ func toIntegrationResponse(m *Integration) integrationResponse {
 		Metadata:    m.Metadata,
 		Enabled:     m.Enabled,
 
-		SyncIssues:    m.SyncIssues,
-		LastSyncedAt:  m.LastSyncedAt,
-		LastSyncError: m.LastSyncError,
-		SyncUnmatched: m.SyncUnmatched,
-		CreatedAt:     m.CreatedAt,
+		SyncIssues:          m.SyncIssues,
+		LastSyncedAt:        m.LastSyncedAt,
+		LastSyncError:       m.LastSyncError,
+		SyncUnmatched:       m.SyncUnmatched,
+		SyncUnmatchedLogins: nonNilLogins(m.SyncUnmatchedLogins),
+		CreatedAt:           m.CreatedAt,
 	}
 }
 
@@ -152,4 +154,12 @@ func (h *Handler) Delete(c *echo.Context) error {
 		return apperr.Respond(c, 400, err)
 	}
 	return c.NoContent(204)
+}
+
+// nonNilLogins faz a lista vazia sair como [] no JSON, e não null.
+func nonNilLogins(l []string) []string {
+	if l == nil {
+		return []string{}
+	}
+	return l
 }

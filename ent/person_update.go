@@ -14,6 +14,7 @@ import (
 	"working-time-tracker/ent/organization"
 	"working-time-tracker/ent/payout"
 	"working-time-tracker/ent/person"
+	"working-time-tracker/ent/personaccount"
 	"working-time-tracker/ent/predicate"
 	"working-time-tracker/ent/session"
 	"working-time-tracker/ent/task"
@@ -358,6 +359,21 @@ func (_u *PersonUpdate) AddOauthGrants(v ...*OAuthGrant) *PersonUpdate {
 	return _u.AddOauthGrantIDs(ids...)
 }
 
+// AddAccountIDs adds the "accounts" edge to the PersonAccount entity by IDs.
+func (_u *PersonUpdate) AddAccountIDs(ids ...uuid.UUID) *PersonUpdate {
+	_u.mutation.AddAccountIDs(ids...)
+	return _u
+}
+
+// AddAccounts adds the "accounts" edges to the PersonAccount entity.
+func (_u *PersonUpdate) AddAccounts(v ...*PersonAccount) *PersonUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddAccountIDs(ids...)
+}
+
 // AddCreatedInviteIDs adds the "created_invites" edge to the Invite entity by IDs.
 func (_u *PersonUpdate) AddCreatedInviteIDs(ids ...uuid.UUID) *PersonUpdate {
 	_u.mutation.AddCreatedInviteIDs(ids...)
@@ -538,6 +554,27 @@ func (_u *PersonUpdate) RemoveOauthGrants(v ...*OAuthGrant) *PersonUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveOauthGrantIDs(ids...)
+}
+
+// ClearAccounts clears all "accounts" edges to the PersonAccount entity.
+func (_u *PersonUpdate) ClearAccounts() *PersonUpdate {
+	_u.mutation.ClearAccounts()
+	return _u
+}
+
+// RemoveAccountIDs removes the "accounts" edge to PersonAccount entities by IDs.
+func (_u *PersonUpdate) RemoveAccountIDs(ids ...uuid.UUID) *PersonUpdate {
+	_u.mutation.RemoveAccountIDs(ids...)
+	return _u
+}
+
+// RemoveAccounts removes "accounts" edges to PersonAccount entities.
+func (_u *PersonUpdate) RemoveAccounts(v ...*PersonAccount) *PersonUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveAccountIDs(ids...)
 }
 
 // ClearCreatedInvites clears all "created_invites" edges to the Invite entity.
@@ -1007,6 +1044,51 @@ func (_u *PersonUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(oauthgrant.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.AccountsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   person.AccountsTable,
+			Columns: []string{person.AccountsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(personaccount.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedAccountsIDs(); len(nodes) > 0 && !_u.mutation.AccountsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   person.AccountsTable,
+			Columns: []string{person.AccountsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(personaccount.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AccountsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   person.AccountsTable,
+			Columns: []string{person.AccountsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(personaccount.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1488,6 +1570,21 @@ func (_u *PersonUpdateOne) AddOauthGrants(v ...*OAuthGrant) *PersonUpdateOne {
 	return _u.AddOauthGrantIDs(ids...)
 }
 
+// AddAccountIDs adds the "accounts" edge to the PersonAccount entity by IDs.
+func (_u *PersonUpdateOne) AddAccountIDs(ids ...uuid.UUID) *PersonUpdateOne {
+	_u.mutation.AddAccountIDs(ids...)
+	return _u
+}
+
+// AddAccounts adds the "accounts" edges to the PersonAccount entity.
+func (_u *PersonUpdateOne) AddAccounts(v ...*PersonAccount) *PersonUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddAccountIDs(ids...)
+}
+
 // AddCreatedInviteIDs adds the "created_invites" edge to the Invite entity by IDs.
 func (_u *PersonUpdateOne) AddCreatedInviteIDs(ids ...uuid.UUID) *PersonUpdateOne {
 	_u.mutation.AddCreatedInviteIDs(ids...)
@@ -1668,6 +1765,27 @@ func (_u *PersonUpdateOne) RemoveOauthGrants(v ...*OAuthGrant) *PersonUpdateOne 
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveOauthGrantIDs(ids...)
+}
+
+// ClearAccounts clears all "accounts" edges to the PersonAccount entity.
+func (_u *PersonUpdateOne) ClearAccounts() *PersonUpdateOne {
+	_u.mutation.ClearAccounts()
+	return _u
+}
+
+// RemoveAccountIDs removes the "accounts" edge to PersonAccount entities by IDs.
+func (_u *PersonUpdateOne) RemoveAccountIDs(ids ...uuid.UUID) *PersonUpdateOne {
+	_u.mutation.RemoveAccountIDs(ids...)
+	return _u
+}
+
+// RemoveAccounts removes "accounts" edges to PersonAccount entities.
+func (_u *PersonUpdateOne) RemoveAccounts(v ...*PersonAccount) *PersonUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveAccountIDs(ids...)
 }
 
 // ClearCreatedInvites clears all "created_invites" edges to the Invite entity.
@@ -2167,6 +2285,51 @@ func (_u *PersonUpdateOne) sqlSave(ctx context.Context) (_node *Person, err erro
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(oauthgrant.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.AccountsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   person.AccountsTable,
+			Columns: []string{person.AccountsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(personaccount.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedAccountsIDs(); len(nodes) > 0 && !_u.mutation.AccountsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   person.AccountsTable,
+			Columns: []string{person.AccountsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(personaccount.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AccountsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   person.AccountsTable,
+			Columns: []string{person.AccountsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(personaccount.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

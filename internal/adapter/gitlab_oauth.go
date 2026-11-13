@@ -15,6 +15,9 @@ const defaultGitLabSiteURL = "https://gitlab.com"
 // etiquetas, responsáveis e estado, e cria etiquetas (gitlab_sync.go). read_api só leria.
 const gitlabOAuthScope = "api"
 
+// GitLabAccountScope é o escopo da conta que a pessoa liga no perfil: só lê o usuário dela (o username e o e-mail).
+const GitLabAccountScope = "read_user"
+
 // Credential é o segredo de uma integração. Token é o de acesso, o único que o adapter recebe. RefreshToken e
 // ExpiresAt só existem no token que vence, o do OAuth do GitLab (2 horas): o servidor o renova antes de usar.
 // O token colado (e o do GitHub e do Trello) só tem Token.
@@ -67,14 +70,38 @@ func (o *GitLabOAuth) client() *http.Client {
 // AuthorizeURL é para onde a pessoa vai autorizar o acesso. O state volta igual no retorno, e é ele que prova
 // que a volta é de uma conexão que este servidor começou.
 func (o *GitLabOAuth) AuthorizeURL(state string) string {
+	return o.AuthorizeURLScope(state, gitlabOAuthScope)
+}
+
+// AuthorizeURLScope é o AuthorizeURL com outro escopo: a conta do perfil pede só GitLabAccountScope.
+func (o *GitLabOAuth) AuthorizeURLScope(state, scope string) string {
 	q := url.Values{
 		"client_id":     {o.ClientID},
 		"redirect_uri":  {o.RedirectURL},
 		"response_type": {"code"},
-		"scope":         {gitlabOAuthScope},
+		"scope":         {scope},
 		"state":         {state},
 	}
 	return o.siteURL() + "/oauth/authorize?" + q.Encode()
+}
+
+// Revoke revoga um token do app (o de acesso ou o de renovação).
+func (o *GitLabOAuth) Revoke(token string) error {
+	form := url.Values{"token": {token}, "client_id": {o.ClientID}, "client_secret": {o.ClientSecret}}
+	req, err := http.NewRequest("POST", o.siteURL()+"/oauth/revoke", strings.NewReader(form.Encode()))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp, err := o.client().Do(req)
+	if err != nil {
+		return ErrProviderUnreachable.With("provider", "GitLab").Wrap(err)
+	}
+	defer closeBody(resp)
+	if resp.StatusCode != http.StatusOK {
+		return ErrProviderStatus.With("provider", "GitLab", "status", resp.StatusCode)
+	}
+	return nil
 }
 
 // Exchange troca o código da volta pelo par de tokens.

@@ -24,6 +24,7 @@ import (
 	"working-time-tracker/internal/domain/payment"
 	"working-time-tracker/internal/domain/permission"
 	"working-time-tracker/internal/domain/person"
+	"working-time-tracker/internal/domain/personaccount"
 	"working-time-tracker/internal/domain/project"
 	"working-time-tracker/internal/domain/projectaccess"
 	"working-time-tracker/internal/domain/projectinvite"
@@ -127,6 +128,7 @@ func Build(client *ent.Client, opts Options) (*App, error) {
 	sessionStore := work_session.NewStore(client)
 	integrationStore := integration.NewStore(client)
 	authStore := auth.NewStore(client)
+	accountStore := personaccount.NewStore(client)
 
 	// Services (integration before task; task before work_session due to cross-domain deps)
 	orgSvc := organization.NewService(orgStore)
@@ -137,6 +139,7 @@ func Build(client *ent.Client, opts Options) (*App, error) {
 	membershipSvc := team.NewMembershipService(membershipStore)
 	allocationSvc := allocation.NewService(allocationStore)
 	collaboratorSvc := collaborator.NewService(collaborator.NewStore(client))
+	accountSvc := personaccount.NewService(accountStore)
 	integrationSvc := integration.NewService(integrationStore, opts.EncryptKey)
 	// O token do OAuth do GitLab vence em 2 horas: o app do GitLab o renova antes de cada uso que pegaria ele
 	// vencido. Sem o app configurado, o token guardado vale até vencer.
@@ -200,7 +203,7 @@ func Build(client *ent.Client, opts Options) (*App, error) {
 	}
 	syncer := issuesync.New(issuesync.Deps{
 		Integrations: integrationSvc, Tasks: taskStore, People: personStore,
-		Members: membershipStore, Rows: issuesync.NewStore(client),
+		Members: membershipStore, Rows: issuesync.NewStore(client), Accounts: accountStore,
 	}, opts.Sync)
 	taskStore.SetChangeHook(syncer.Notify)
 	taskStore.SetCreateHook(syncer.NotifyCreated)
@@ -212,6 +215,7 @@ func Build(client *ent.Client, opts Options) (*App, error) {
 		Organization:  organization.NewHandler(orgSvc),
 		Customer:      customer.NewHandler(customerSvc),
 		Person:        personHandler,
+		Account:       personaccount.NewHandler(accountSvc),
 		Permission:    permission.NewHandler(),
 		Project:       project.NewHandler(projectSvc, allocationSvc),
 		Team:          team.NewHandler(teamSvc, membershipSvc),
@@ -255,6 +259,7 @@ func Build(client *ent.Client, opts Options) (*App, error) {
 	oauthHandler := integration.NewOAuthHandler(integrationSvc, integration.OAuthApps{
 		GitHub: opts.GitHubOAuth, GitLab: opts.GitLabOAuth, Trello: opts.TrelloAuth,
 	}, resolver, opts.EncryptKey, opts.CookieSecure)
+	oauthHandler.SetAccounts(accountSvc)
 	catalog, err := i18n.Load()
 	if err != nil {
 		return nil, err

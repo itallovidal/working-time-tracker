@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"strings"
 	"sync"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"working-time-tracker/internal/database"
 	"working-time-tracker/internal/domain/integration"
 	"working-time-tracker/internal/domain/person"
+	"working-time-tracker/internal/domain/personaccount"
 	"working-time-tracker/internal/domain/task"
 	"working-time-tracker/internal/domain/team"
 )
@@ -113,6 +115,9 @@ type Deps struct {
 	People       *person.Store
 	Members      *team.MembershipStore
 	Rows         *Store
+	// Accounts são as contas das pessoas no GitHub e no GitLab: o responsável da issue se liga por elas antes de
+	// tentar o e-mail público. Nulo, só o e-mail.
+	Accounts *personaccount.Store
 }
 
 // Syncer sincroniza as issues das integrações com as tarefas.
@@ -770,4 +775,42 @@ func (s *Syncer) syncLinkNow(ctx context.Context, t *task.Task, l task.Link) (*T
 	}
 	s.afterRun(l.IntegrationID, nil)
 	return &TaskSummary{Summary: r.sum, Problem: r.problem}, nil
+}
+
+// LinkLogin é o admin escolhendo, no cartão da integração, a pessoa do projeto dona do login de um responsável das
+// issues. A conta fica ligada (origem admin, que não toma o login de quem o autorizou na plataforma) e uma rodada
+// completa já passa as tarefas desse login para a pessoa. Uma rodada em andamento fica com a ligação para a próxima.
+func (s *Syncer) LinkLogin(ctx context.Context, integrationID uuid.UUID, login string, personID uuid.UUID) (*integration.Integration, error) {
+	integ, err := s.d.Integrations.Get(integrationID.String())
+	if err != nil {
+		return nil, err
+	}
+	if s.d.Accounts == nil || !personaccount.ValidPlatform(integ.Type) {
+		return nil, personaccount.ErrInvalidPlatform
+	}
+	login = strings.TrimSpace(login)
+	if !personaccount.ValidLogin(login) {
+		return nil, personaccount.ErrInvalidLogin
+	}
+	inProject, err := s.d.Members.IsPersonInProject(personID.String(), integ.ProjectID.String())
+	if err != nil {
+		return nil, err
+	}
+	if !inProject {
+		return nil, ErrLinkNotInProject
+	}
+	orgID, err := s.d.Rows.OrganizationOf(integ.ProjectID)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := s.d.Accounts.Link(personaccount.Account{
+		PersonID: personID, OrganizationID: orgID, Platform: integ.Type, Username: login,
+		Source: personaccount.SourceAdmin,
+	}); err != nil {
+		return nil, err
+	}
+	if _, err := s.SyncNow(ctx, integrationID); err != nil && !errors.Is(err, ErrSyncRunning) {
+		s.cfg.Logger.Warn("issue sync: the round after linking a login", "integration", integrationID, "error", err)
+	}
+	return s.d.Integrations.Get(integrationID.String())
 }

@@ -19,6 +19,18 @@ const (
 	GitHubSecondOAuthToken = "gho_second_token"
 )
 
+// A conta que a pessoa liga no perfil (Contas conectadas): outro código, que se troca por um token de outra pessoa
+// do GitHub, com o e-mail principal em /user/emails.
+const (
+	GitHubAccountCode  = "account-code"
+	GitHubAccountToken = "gho_account_token"
+	GitHubAccountLogin = "monalisa"
+	GitHubAccountEmail = "monalisa@github.test"
+)
+
+// O e-mail principal que o /user do GitLab fake devolve ao dono do token.
+const GitLabEmail = "octolab@gitlab.test"
+
 // Os quadros que o Trello fake (trello.go) conhece, pelo id e pelo link curto, o token em que a autorização
 // se resolve, e o usuário que ele representa. O segundo token existe para os testes de reconexão.
 const (

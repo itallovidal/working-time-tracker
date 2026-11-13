@@ -837,6 +837,9 @@ func TestRoutes_Table(t *testing.T) {
 		"GET /api/auth/tokens",
 		"POST /api/auth/tokens",
 		"DELETE /api/auth/tokens/:tokenId",
+		"GET /api/auth/accounts",
+		"POST /api/auth/accounts/:platform/no-account",
+		"DELETE /api/auth/accounts/:platform",
 		"GET /api/auth/connections",
 		"DELETE /api/auth/connections/:connectionId",
 
@@ -936,6 +939,7 @@ func TestRoutes_Table(t *testing.T) {
 		"GET /api/integrations/:integrationId",
 		"GET /api/integrations/:integrationId/repositories",
 		"POST /api/integrations/:integrationId/sync",
+		"POST /api/integrations/:integrationId/accounts",
 		"PATCH /api/integrations/:integrationId",
 		"DELETE /api/integrations/:integrationId",
 

@@ -10,6 +10,7 @@ import (
 	"working-time-tracker/internal/adapter"
 	"working-time-tracker/internal/apperr"
 	"working-time-tracker/internal/database"
+	"working-time-tracker/internal/domain/personaccount"
 	"working-time-tracker/internal/domain/task"
 )
 
@@ -375,14 +376,38 @@ func (r *run) ensureLabels(names []string) {
 	}
 }
 
-// resolver liga logins do GitHub a pessoas do projeto, pelo e-mail.
+// resolver liga logins do GitHub e do GitLab a pessoas do projeto: pela conta que a pessoa ligou (a tabela de contas)
+// e, sem ela, pelo e-mail público.
 type resolver struct{ r *run }
 
-// PersonFor acha a pessoa do projeto cujo e-mail é o público do login. O e-mail só existe se a pessoa o
-// publica no perfil do GitHub, e só vale se é de alguém da organização que está neste projeto: o e-mail
-// é único no sistema todo, e sem essa conferência uma issue ligaria a tarefa a alguém de outra empresa.
+// accounts devolve as contas das pessoas quando a plataforma tem conta (o GitHub e o GitLab); nulo, só o e-mail.
+func (x resolver) accounts() *personaccount.Store {
+	if !personaccount.ValidPlatform(x.r.integ.Type) {
+		return nil
+	}
+	return x.r.s.d.Accounts
+}
+
+// PersonFor acha a pessoa do projeto dona do login. Primeiro a conta ligada a ele na organização; depois a pessoa
+// cujo e-mail é o público do login, que só existe se ela o publica no perfil da plataforma. As duas só valem para
+// alguém que está neste projeto: o e-mail é único no sistema todo, e sem essa conferência uma issue ligaria a tarefa
+// a alguém de outra empresa. Quem casa pelo e-mail fica com a conta ligada (origem email), para a trava da tarefa e o
+// perfil a verem.
 func (x resolver) PersonFor(ctx context.Context, login string) (*uuid.UUID, error) {
 	r := x.r
+	if accounts := x.accounts(); accounts != nil {
+		a, err := accounts.FindByUsername(r.orgID, r.integ.Type, login)
+		if err != nil && !errors.Is(err, database.ErrNotFound) {
+			return nil, err
+		}
+		if a != nil {
+			inProject, err := r.s.d.Members.IsPersonInProject(a.PersonID.String(), r.integ.ProjectID.String())
+			if err != nil || !inProject {
+				return nil, err
+			}
+			return &a.PersonID, nil
+		}
+	}
 	email, err := r.s.cache.get(r.integ.ID.String()+"/user/"+key(login), cacheFound, cacheMissing, func() (string, error) {
 		return r.src.UserEmail(ctx, r.conn, login)
 	})
@@ -400,12 +425,42 @@ func (x resolver) PersonFor(ctx context.Context, login string) (*uuid.UUID, erro
 	if err != nil || !inProject {
 		return nil, err
 	}
+	x.remember(p.ID, login, email)
 	return &p.ID, nil
 }
 
-// LoginFor acha o usuário do GitHub que publica o e-mail da pessoa.
+// remember guarda a conta de quem casou pelo e-mail público. Só entra onde a pessoa não tem conta, e uma falha fica
+// no log: a ligação desta rodada já está feita.
+func (x resolver) remember(personID uuid.UUID, login, email string) {
+	accounts := x.accounts()
+	if accounts == nil {
+		return
+	}
+	r := x.r
+	if _, err := accounts.Link(personaccount.Account{
+		PersonID: personID, OrganizationID: r.orgID, Platform: r.integ.Type,
+		Username: login, Email: email, Source: personaccount.SourceEmail,
+	}); err != nil {
+		r.s.cfg.Logger.Warn("issue sync: saving the account found by e-mail", "integration", r.integ.ID, "error", err)
+	}
+}
+
+// LoginFor acha o login da pessoa: o da conta que ela ligou e, sem ela, o do usuário que publica o e-mail dela. Quem
+// disse que não tem conta não é procurado.
 func (x resolver) LoginFor(ctx context.Context, personID uuid.UUID) (string, error) {
 	r := x.r
+	if accounts := x.accounts(); accounts != nil {
+		a, err := accounts.Get(personID, r.integ.Type)
+		if err != nil && !errors.Is(err, database.ErrNotFound) {
+			return "", err
+		}
+		if a.Linked() {
+			return a.Username, nil
+		}
+		if a != nil && a.NoAccount {
+			return "", nil
+		}
+	}
 	p, err := r.s.d.People.GetByID(personID.String())
 	if errors.Is(err, database.ErrNotFound) {
 		return "", nil

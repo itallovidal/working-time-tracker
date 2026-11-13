@@ -833,7 +833,42 @@
     return dedicationView(d.week.seconds, d.estimated_weekly_hours * 3600, d.week.percent);
   };
 
-  window.WTT = { can, t, lang, priorityClass, statusClass, hasDeadlineDate, deadlineInfo, errorText, api, ApiError, form, rules, limits, fmt, payments, billing, dedication, dedicationWeek, toCents, copyText, notInformed, weekdays, priorities, taskStatuses, markdown, routine, sprintOptions, sprintChoices, workModes, currencies, countries, boot: window.BOOT || {} };
+  // accounts são as contas da pessoa no GitHub e no GitLab (o perfil, Contas conectadas). O modal de pegar uma tarefa
+  // ligada a uma issue e o select de responsável leem daqui: mine() pede a lista uma vez por página. connectURL leva
+  // ao OAuth da plataforma, que volta para back (o caminho atual, por padrão) com ?account= ou ?account_error=.
+  const accounts = (() => {
+    const names = { github: 'GitHub', gitlab: 'GitLab' };
+    let cache = null;
+    return {
+      platforms: ['github', 'gitlab'],
+      name: (p) => names[p] || p,
+      icon: (p) => 'fa-brands fa-' + p,
+      mine(fresh) {
+        if (!cache || fresh) {
+          cache = api('GET', '/api/auth/accounts').catch((e) => {
+            cache = null;
+            throw e;
+          });
+        }
+        return cache;
+      },
+      // linked diz se a pessoa tem login na plataforma; answered, se ela já respondeu (tem login ou disse que não tem).
+      linked: (list, p) => list.some((a) => a.platform === p && a.username),
+      answered: (list, p) => list.some((a) => a.platform === p && (a.username || a.no_account)),
+      connectURL: (p, back) => '/profile/accounts/' + p + '/connect?return=' +
+        encodeURIComponent(back || location.pathname + location.search),
+      async noAccount(p) {
+        const a = await api('POST', '/api/auth/accounts/' + p + '/no-account');
+        cache = null;
+        return a;
+      },
+      forget() {
+        cache = null;
+      },
+    };
+  })();
+
+  window.WTT = { can, t, lang, accounts, priorityClass, statusClass, hasDeadlineDate, deadlineInfo, errorText, api, ApiError, form, rules, limits, fmt, payments, billing, dedication, dedicationWeek, toCents, copyText, notInformed, weekdays, priorities, taskStatuses, markdown, routine, sprintOptions, sprintChoices, workModes, currencies, countries, boot: window.BOOT || {} };
 
   // Onde flash() deixa a mensagem para a página seguinte.
   const flashKey = 'wtt:flash';

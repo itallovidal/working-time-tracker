@@ -18,6 +18,7 @@ import (
 	"working-time-tracker/internal/domain/issuesync"
 	"working-time-tracker/internal/domain/organization"
 	"working-time-tracker/internal/domain/person"
+	"working-time-tracker/internal/domain/personaccount"
 	"working-time-tracker/internal/domain/project"
 	"working-time-tracker/internal/domain/task"
 	"working-time-tracker/internal/domain/team"
@@ -80,7 +81,7 @@ func newDualEnvWith(t *testing.T, cfg issuesync.Config) *denv {
 	d.rows = issuesync.NewStore(testClient)
 	d.syncer = issuesync.New(issuesync.Deps{
 		Integrations: d.integ, Tasks: d.tasks, People: person.NewStore(testClient),
-		Members: team.NewMembershipStore(testClient), Rows: d.rows,
+		Members: team.NewMembershipStore(testClient), Rows: d.rows, Accounts: personaccount.NewStore(testClient),
 	}, cfg)
 	d.tasks.SetChangeHook(d.syncer.Notify)
 	d.taskSvc.SetRemover(d.syncer)

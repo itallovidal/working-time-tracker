@@ -61,10 +61,19 @@
           <dd x-show="it.sync_issues" :class="it.last_synced_at ? 'num' : 'muted'" x-text="it.last_synced_at ? WTT.fmt.dateTime(it.last_synced_at) : $t('integrations.never_synced')"></dd>
         </dl>
 
-        {{/* Quantas issues têm responsável no GitHub que não se liga a ninguém daqui (sem e-mail público, ou o
-             e-mail não é de ninguém do projeto): a tarefa delas fica disponível. */}}
+        {{/* Quantos logins de responsáveis das issues não se ligam a ninguém daqui (a pessoa não conectou a conta e
+             não publica o e-mail): a tarefa delas fica disponível. Quem gerencia as integrações escolhe a pessoa de
+             cada login num modal. */}}
+        {{if .CanDo "integrations.manage"}}
+        <p class="row row-tight" x-cloak x-show="it.sync_issues && it.sync_unmatched > 0">
+          <span class="muted small" :title="$t('integrations.unmatched_hint')" x-text="$t('integrations.unmatched', { count: it.sync_unmatched })"></span>
+          <button type="button" class="btn btn-ghost btn-sm" :aria-label="$t('integrations.link.open_label', { name: it.display_name })"
+                  @click="openLink(it)">{{template "icon" "user-plus"}} {{.T "integrations.link.open"}}</button>
+        </p>
+        {{else}}
         <p class="muted small" x-cloak x-show="it.sync_issues && it.sync_unmatched > 0" :title="$t('integrations.unmatched_hint')"
            x-text="$t('integrations.unmatched', { count: it.sync_unmatched })"></p>
+        {{end}}
         <p class="alert alert-warn" x-cloak x-show="it.sync_issues && it.last_sync_error" x-text="syncWarning(it)"></p>
         {{if .CanDo "integrations.manage"}}
         <p class="form-error" x-cloak x-show="errors['sync:' + it.id]" x-text="errors['sync:' + it.id]" role="alert"></p>
@@ -212,6 +221,38 @@
         </div>
       </div>
     </form>
+  </template>
+
+  {{/* Ligar os responsáveis: cada login das issues sem pessoa aqui, com a escolha da pessoa do projeto. Ligar já faz
+       uma rodada, e as tarefas desse login passam para a pessoa. Um login que alguém autorizou no perfil não aparece:
+       ele já está ligado. */}}
+  <template x-teleport="#modal-root">
+    <div class="stack" x-show="$store.modal.name === 'link-logins'">
+      <p class="muted">{{.T "integrations.link.intro"}}</p>
+      <p class="form-error" x-show="errors.link" x-text="errors.link" role="alert"></p>
+      <ul class="account-list" x-show="linking.logins.length > 0">
+        <template x-for="login in linking.logins" :key="login">
+          <li class="account-row">
+            <i class="account-brand" :class="WTT.accounts.icon(linking.type)" aria-hidden="true"></i>
+            <strong class="account-who" x-text="'@' + login"></strong>
+            <div class="account-actions">
+              <select x-model="linking.choice[login]" :aria-label="$t('integrations.link.person_label', { login })">
+                <option value="">{{.T "integrations.link.pick"}}</option>
+                <template x-for="p in linking.people" :key="p.id">
+                  <option :value="p.id" x-text="p.name"></option>
+                </template>
+              </select>
+              <button type="button" class="btn btn-sm" :disabled="pending || !linking.choice[login]" @click="linkLogin(login)">{{.T "integrations.link.submit"}}</button>
+            </div>
+          </li>
+        </template>
+      </ul>
+      <p class="muted" x-show="linking.logins.length === 0">{{.T "integrations.link.all_done"}}</p>
+      <div class="toolbar">
+        <span></span>
+        <button type="button" class="btn btn-secondary" @click="$store.modal.dismiss()">{{.T "common.close"}}</button>
+      </div>
+    </div>
   </template>
   {{end}}
 </main>

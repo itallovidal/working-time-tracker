@@ -427,13 +427,37 @@ func (g *GitHub) routes() *http.ServeMux {
 			_, _ = fmt.Fprintf(w, `{"access_token":%q,"token_type":"bearer","scope":"repo"}`, GitHubOAuthToken)
 		case body.Code == GitHubSecondOAuthCode:
 			_, _ = fmt.Fprintf(w, `{"access_token":%q,"token_type":"bearer","scope":"repo"}`, GitHubSecondOAuthToken)
+		case body.Code == GitHubAccountCode:
+			_, _ = fmt.Fprintf(w, `{"access_token":%q,"token_type":"bearer","scope":"user:email"}`, GitHubAccountToken)
 		default:
 			_, _ = w.Write([]byte(`{"error":"bad_verification_code"}`))
 		}
 	})
 	mux.HandleFunc("GET /user", auth(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = fmt.Fprintf(w, `{"login":%q}`, GitHubLogin)
+		if r.Header.Get("Authorization") == "Bearer "+GitHubAccountToken {
+			_, _ = fmt.Fprintf(w, `{"login":%q,"email":null}`, GitHubAccountLogin)
+			return
+		}
+		_, _ = fmt.Fprintf(w, `{"login":%q,"email":null}`, GitHubLogin)
 	}))
+	// Os e-mails só para o token com o escopo user:email (o da conta do perfil); os outros recebem 404, como no GitHub.
+	mux.HandleFunc("GET /user/emails", auth(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "Bearer "+GitHubAccountToken {
+			http.Error(w, `{"message":"Not Found"}`, http.StatusNotFound)
+			return
+		}
+		_, _ = fmt.Fprintf(w, `[{"email":"other@github.test","primary":false,"verified":true},`+
+			`{"email":%q,"primary":true,"verified":true}]`, GitHubAccountEmail)
+	}))
+	// A revogação de um token do app, com as credenciais do app na autenticação básica.
+	mux.HandleFunc("DELETE /applications/{client}/token", func(w http.ResponseWriter, r *http.Request) {
+		id, secret, ok := r.BasicAuth()
+		if !ok || id != GitHubClientID || secret != GitHubClientSecret || r.PathValue("client") != GitHubClientID {
+			http.Error(w, `{"message":"Not Found"}`, http.StatusNotFound)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	})
 	mux.HandleFunc("GET /user/repos", auth(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Authorization") == "Bearer "+GitHubSecondOAuthToken {
 			_, _ = w.Write([]byte(`[{"full_name":"owner/second","private":false}]`))
@@ -458,7 +482,12 @@ func (g *GitHub) authorize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	v := back.Query()
-	v.Set("code", GitHubOAuthCode)
+	// A conta do perfil pede só user:email, e quem a autoriza é outra pessoa do GitHub (GitHubAccountLogin).
+	code := GitHubOAuthCode
+	if q.Get("scope") == "user:email" {
+		code = GitHubAccountCode
+	}
+	v.Set("code", code)
 	v.Set("state", q.Get("state"))
 	back.RawQuery = v.Encode()
 	http.Redirect(w, r, back.String(), http.StatusFound)

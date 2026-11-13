@@ -24,6 +24,9 @@ func (Task) Fields() []ent.Field {
 		field.Enum("status").Values("backlog", "in_progress", "awaiting_closure", "closed").Default("backlog"),
 		field.UUID("assignee_id", uuid.UUID{}).Optional().Nillable(),
 		field.Time("deadline").Optional(),
+		// As plataformas em que o responsável precisa ter conta ("github", "gitlab"): a tarefa só vai para quem tem
+		// todas. Vazio: qualquer pessoa do projeto. A tarefa importada de uma issue nasce com a plataforma dela.
+		field.Strings("required_accounts").Optional(),
 		field.Time("created_at").Default(time.Now).Immutable(),
 	}
 }

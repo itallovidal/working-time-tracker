@@ -16,6 +16,7 @@ import (
 	"working-time-tracker/ent/organization"
 	"working-time-tracker/ent/payout"
 	"working-time-tracker/ent/person"
+	"working-time-tracker/ent/personaccount"
 	"working-time-tracker/ent/project"
 	"working-time-tracker/ent/receivable"
 	"working-time-tracker/ent/schema"
@@ -317,6 +318,28 @@ func init() {
 	personDescID := personFields[0].Descriptor()
 	// person.DefaultID holds the default value on creation for the id field.
 	person.DefaultID = personDescID.Default.(func() uuid.UUID)
+	personaccountFields := schema.PersonAccount{}.Fields()
+	_ = personaccountFields
+	// personaccountDescUsername is the schema descriptor for username field.
+	personaccountDescUsername := personaccountFields[4].Descriptor()
+	// personaccount.DefaultUsername holds the default value on creation for the username field.
+	personaccount.DefaultUsername = personaccountDescUsername.Default.(string)
+	// personaccountDescEmail is the schema descriptor for email field.
+	personaccountDescEmail := personaccountFields[5].Descriptor()
+	// personaccount.DefaultEmail holds the default value on creation for the email field.
+	personaccount.DefaultEmail = personaccountDescEmail.Default.(string)
+	// personaccountDescNoAccount is the schema descriptor for no_account field.
+	personaccountDescNoAccount := personaccountFields[6].Descriptor()
+	// personaccount.DefaultNoAccount holds the default value on creation for the no_account field.
+	personaccount.DefaultNoAccount = personaccountDescNoAccount.Default.(bool)
+	// personaccountDescCreatedAt is the schema descriptor for created_at field.
+	personaccountDescCreatedAt := personaccountFields[8].Descriptor()
+	// personaccount.DefaultCreatedAt holds the default value on creation for the created_at field.
+	personaccount.DefaultCreatedAt = personaccountDescCreatedAt.Default.(func() time.Time)
+	// personaccountDescID is the schema descriptor for id field.
+	personaccountDescID := personaccountFields[0].Descriptor()
+	// personaccount.DefaultID holds the default value on creation for the id field.
+	personaccount.DefaultID = personaccountDescID.Default.(func() uuid.UUID)
 	projectFields := schema.Project{}.Fields()
 	_ = projectFields
 	// projectDescSprintDurationDays is the schema descriptor for sprint_duration_days field.
@@ -396,7 +419,7 @@ func init() {
 	taskFields := schema.Task{}.Fields()
 	_ = taskFields
 	// taskDescCreatedAt is the schema descriptor for created_at field.
-	taskDescCreatedAt := taskFields[8].Descriptor()
+	taskDescCreatedAt := taskFields[9].Descriptor()
 	// task.DefaultCreatedAt holds the default value on creation for the created_at field.
 	task.DefaultCreatedAt = taskDescCreatedAt.Default.(func() time.Time)
 	// taskDescID is the schema descriptor for id field.
