@@ -1,0 +1,25 @@
+{{/* account_gate_modal é o modal de pegar (ou começar) uma tarefa ligada a uma issue do GitHub ou do GitLab quando a
+     pessoa ainda não ligou a conta da plataforma. Fica no modal do layout base, como o da sessão, porque abre da lista
+     de tarefas e da página da tarefa. Na tarefa sem trava, a pessoa conecta ou diz que não tem conta (e não é
+     perguntada de novo); na que exige a conta, só conectar libera. O estado é do store accountGate (app.js). */}}
+{{define "account_gate_modal"}}
+<div x-data="{ g: $store.accountGate }" x-cloak>
+  <div class="stack" x-show="$store.modal.name === 'account-gate'">
+    <p x-show="!g.required" x-text="$t('account_gate.intro', { platform: g.name() })"></p>
+    <p x-show="g.required" x-text="$t('account_gate.intro_required', { platform: g.name() })"></p>
+    <p class="muted small" x-text="$t('account_gate.how', { platform: g.name() })"></p>
+    <p class="form-error" x-show="g.error" x-text="g.error" role="alert"></p>
+    <div class="toolbar">
+      <span>
+        <button type="button" class="btn btn-ghost" x-show="!g.required" :disabled="g.pending" @click="g.noAccount()"
+                x-text="$t('account_gate.no_account', { platform: g.name() })"></button>
+      </span>
+      <div class="row">
+        <button type="button" class="btn btn-secondary" @click="$store.modal.dismiss()">{{.T "common.cancel"}}</button>
+        <a class="btn" :href="g.connectURL()" data-autofocus><i :class="WTT.accounts.icon(g.platform)" aria-hidden="true"></i>
+          <span x-text="$t('account_gate.connect', { platform: g.name() })"></span></a>
+      </div>
+    </div>
+  </div>
+</div>
+{{end}}

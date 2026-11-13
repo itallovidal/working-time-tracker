@@ -28,8 +28,13 @@ type Integration struct {
 	// se deu certo).
 	LastSyncedAt  *time.Time `json:"last_synced_at"`
 	LastSyncError string     `json:"last_sync_error"`
-	// SyncUnmatched é quantas issues abertas têm responsável no GitHub que não se liga a ninguém aqui.
-	// Só é calculado quando a sincronização está ligada.
-	SyncUnmatched int       `json:"sync_unmatched"`
-	CreatedAt     time.Time `json:"created_at"`
+	// SyncUnmatched é quantos logins de responsáveis das issues abertas não se ligam a ninguém aqui, e
+	// SyncUnmatchedLogins são eles, para o admin escolher a pessoa de cada um. Só são calculados quando a
+	// sincronização está ligada.
+	SyncUnmatched       int       `json:"sync_unmatched"`
+	SyncUnmatchedLogins []string  `json:"sync_unmatched_logins"`
+	CreatedAt           time.Time `json:"created_at"`
+	// ConnectedLogin é o login de quem autorizou, logo depois de conectar ou reconectar pelo OAuth: a volta liga essa
+	// conta à pessoa. Não é guardado.
+	ConnectedLogin string `json:"-"`
 }

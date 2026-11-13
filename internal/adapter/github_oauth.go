@@ -17,6 +17,10 @@ const defaultGitHubSiteURL = "https://github.com"
 // etiquetas, responsáveis e estado das issues, e cria etiquetas.
 const githubOAuthScope = "repo"
 
+// GitHubAccountScope é o escopo da conta que a pessoa liga no perfil: só lê os e-mails dela. O /user, de onde vem o
+// login, não pede escopo nenhum.
+const GitHubAccountScope = "user:email"
+
 // GitHubOAuth é o app OAuth que o servidor tem cadastrado no GitHub. Ele só monta o
 // endereço de autorização e troca o código da volta por um token; o que se faz com o
 // token (quem é, quais repositórios) está no GitHubIntegration. SiteURL e Client são
@@ -28,7 +32,9 @@ type GitHubOAuth struct {
 	// do callback). O GitHub só devolve a pessoa para ele.
 	RedirectURL string
 	SiteURL     string
-	Client      *http.Client
+	// APIURL é a API do GitHub, que revoga o token da conta ligada no perfil. O padrão é api.github.com.
+	APIURL string
+	Client *http.Client
 }
 
 // Configured diz se o servidor tem tudo para começar uma conexão.
@@ -43,6 +49,13 @@ func (o *GitHubOAuth) siteURL() string {
 	return strings.TrimRight(o.SiteURL, "/")
 }
 
+func (o *GitHubOAuth) apiURL() string {
+	if o.APIURL == "" {
+		return defaultGitHubBaseURL
+	}
+	return strings.TrimRight(o.APIURL, "/")
+}
+
 func (o *GitHubOAuth) client() *http.Client {
 	if o.Client == nil {
 		return &http.Client{Timeout: 10 * time.Second}
@@ -53,13 +66,44 @@ func (o *GitHubOAuth) client() *http.Client {
 // AuthorizeURL é para onde a pessoa vai autorizar o acesso. O state volta igual no
 // retorno, e é ele que prova que a volta é de uma conexão que este servidor começou.
 func (o *GitHubOAuth) AuthorizeURL(state string) string {
+	return o.AuthorizeURLScope(state, githubOAuthScope)
+}
+
+// AuthorizeURLScope é o AuthorizeURL com outro escopo: a conta do perfil pede só GitHubAccountScope.
+func (o *GitHubOAuth) AuthorizeURLScope(state, scope string) string {
 	q := url.Values{
 		"client_id":    {o.ClientID},
 		"redirect_uri": {o.RedirectURL},
-		"scope":        {githubOAuthScope},
+		"scope":        {scope},
 		"state":        {state},
 	}
 	return o.siteURL() + "/login/oauth/authorize?" + q.Encode()
+}
+
+// Revoke revoga um token do app. É só aquele token (DELETE .../token), não a autorização inteira (.../grant), que
+// derrubaria também o token de uma integração conectada pela mesma pessoa.
+func (o *GitHubOAuth) Revoke(token string) error {
+	payload, err := json.Marshal(map[string]string{"access_token": token})
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequest("DELETE", o.apiURL()+"/applications/"+url.PathEscape(o.ClientID)+"/token",
+		bytes.NewReader(payload))
+	if err != nil {
+		return err
+	}
+	req.SetBasicAuth(o.ClientID, o.ClientSecret)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/vnd.github+json")
+	resp, err := o.client().Do(req)
+	if err != nil {
+		return ErrProviderUnreachable.With("provider", "GitHub").Wrap(err)
+	}
+	defer closeBody(resp)
+	if resp.StatusCode != http.StatusNoContent {
+		return ErrProviderStatus.With("provider", "GitHub", "status", resp.StatusCode)
+	}
+	return nil
 }
 
 // Exchange troca o código da volta pelo token de acesso. O GitHub responde 200 também

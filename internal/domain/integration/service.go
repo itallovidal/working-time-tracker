@@ -329,6 +329,7 @@ func (s *Service) connect(projectID, integrationType string, cred adapter.Creden
 		return nil, err
 	}
 	redact(it)
+	it.ConnectedLogin = login
 	return it, nil
 }
 
@@ -362,7 +363,8 @@ func (s *Service) reauthorize(id string, cred adapter.Credential, app map[string
 	}
 	cred.Token = strings.TrimSpace(cred.Token)
 	merged := mergeMetadata(existing.Metadata, app)
-	if _, err := lookup.Account(adapter.Connection{Token: cred.Token, Metadata: merged}); err != nil {
+	login, err := lookup.Account(adapter.Connection{Token: cred.Token, Metadata: merged})
+	if err != nil {
 		return nil, err
 	}
 	if meta, err := impl.CheckMetadata(merged); err == nil {
@@ -380,6 +382,7 @@ func (s *Service) reauthorize(id string, cred adapter.Credential, app map[string
 		return nil, err
 	}
 	redact(existing)
+	existing.ConnectedLogin = login
 	return existing, nil
 }
 
@@ -471,8 +474,8 @@ func (s *Service) fillSync(it *Integration) error {
 	if !it.SyncIssues {
 		return nil
 	}
-	n, err := s.store.Unmatched(it.ID)
-	it.SyncUnmatched = n
+	logins, err := s.store.Unmatched(it.ID)
+	it.SyncUnmatched, it.SyncUnmatchedLogins = len(logins), logins
 	return err
 }
 

@@ -112,6 +112,12 @@
                 <span class="badge">{{.T "tasks.unassigned"}}</span>
                 <p class="muted small hint-line">{{if .Me.OrganizationSolo}}{{.T "tasks.unassigned_hint_solo"}}{{else}}{{.T "tasks.unassigned_hint"}}{{end}}</p>
               </div>
+              {{/* A trava do responsável: só quem tem conta nas plataformas dela pode pegar a tarefa. */}}
+              {{if not .Me.OrganizationSolo}}
+              <p class="muted small hint-line" x-cloak x-show="task && (task.required_accounts || []).length > 0">
+                {{template "icon" "lock"}} <span x-text="task ? $t('tasks.required.badge', { platforms: (task.required_accounts || []).map(WTT.accounts.name).join(', ') }) : ''"></span>
+              </p>
+              {{end}}
             </dd>
           </div>
           <div class="detail-row">

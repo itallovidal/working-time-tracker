@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -239,11 +240,12 @@ func TestService_SyncUnmatched(t *testing.T) {
 	mk(3, issuesync.StateOpen, nil, "", true)                       // não: sem responsável no GitHub
 	mk(4, issuesync.StateClosed, []string{"bob"}, "", true)         // não: fechada
 	mk(5, issuesync.StateOpen, []string{"bob"}, "", false)          // não: descartada, sem tarefa
-	mk(6, issuesync.StateOpen, []string{"carol", "dave"}, "", true) // conta uma vez, não por login
+	mk(6, issuesync.StateOpen, []string{"dave", "Carol"}, "", true) // os dois logins
+	mk(7, issuesync.StateOpen, []string{"BOB"}, "", true)           // o mesmo bob, sem olhar maiúsculas
 
 	got, err := svc.Get(it.ID.String())
-	if err != nil || got.SyncUnmatched != 2 {
-		t.Errorf("unmatched = %d, %v, want 2", got.SyncUnmatched, err)
+	if err != nil || got.SyncUnmatched != 3 || strings.Join(got.SyncUnmatchedLogins, ",") != "bob,Carol,dave" {
+		t.Errorf("unmatched = %d %v, %v, want 3: bob, Carol, dave", got.SyncUnmatched, got.SyncUnmatchedLogins, err)
 	}
 	// Com a sincronização desligada a contagem não é calculada.
 	if _, err := svc.Edit(it.ID.String(), integration.EditInput{SyncIssues: no()}); err != nil {

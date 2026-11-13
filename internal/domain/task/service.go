@@ -2,6 +2,7 @@ package task
 
 import (
 	"errors"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -13,6 +14,7 @@ import (
 	"working-time-tracker/internal/apperr"
 	"working-time-tracker/internal/database"
 	"working-time-tracker/internal/domain/integration"
+	"working-time-tracker/internal/domain/personaccount"
 	"working-time-tracker/internal/domain/team"
 	"working-time-tracker/internal/validate"
 )
@@ -101,6 +103,10 @@ func (s *Service) CreateAs(selfID, projectID, name, description, assigneeID stri
 	} else {
 		dl = time.Now().Add(7 * 24 * time.Hour)
 	}
+	required, err := cleanRequired(attrs.RequiredAccounts)
+	if err != nil {
+		return nil, err
+	}
 
 	task := &Task{
 		ProjectID:   uuid.MustParse(projectID),
@@ -111,6 +117,14 @@ func (s *Service) CreateAs(selfID, projectID, name, description, assigneeID stri
 		Labels:      labels,
 		AssigneeID:  assignee,
 		Deadline:    dl,
+	}
+	if required != nil {
+		task.RequiredAccounts = *required
+	}
+	if assignee != nil {
+		if err := s.checkRequired(task, *assignee); err != nil {
+			return nil, err
+		}
 	}
 	if err := s.taskStore.Create(task); err != nil {
 		return nil, err
@@ -232,6 +246,13 @@ func (s *Service) PatchAs(selfID, id, name string, description *string, assignee
 			return nil, err
 		}
 	}
+	required, err := cleanRequired(attrs.RequiredAccounts)
+	if err != nil {
+		return nil, err
+	}
+	if required != nil {
+		task.RequiredAccounts = *required
+	}
 	assignee, unassign, err := s.checkAssignee(selfID, task, assigneeID)
 	if err != nil {
 		return nil, err
@@ -300,6 +321,9 @@ func (s *Service) Claim(selfID, id string) (*Task, error) {
 		}
 		return nil, ErrAlreadyAssigned
 	}
+	if err := s.taskStore.CheckRequired(t, person); err != nil {
+		return nil, err
+	}
 	claimed, err := s.taskStore.TryClaim(t.ID, person)
 	if err != nil {
 		return nil, err
@@ -338,7 +362,44 @@ func (s *Service) checkAssignee(selfID string, t *Task, assigneeID *string) (ass
 			return nil, false, ErrAssigneeNotInTeam.With("field", "assignee_id")
 		}
 	}
+	// A trava vale para quem passa a ser o responsável: ligá-la não tira quem já é.
+	if t.AssigneeID == nil || uid != *t.AssigneeID {
+		if err := s.checkRequired(t, uid); err != nil {
+			return nil, false, err
+		}
+	}
 	return &uid, false, nil
+}
+
+// checkRequired é o CheckRequired do store com o erro preso ao campo do responsável, para o formulário mostrá-lo
+// embaixo dele.
+func (s *Service) checkRequired(t *Task, personID uuid.UUID) error {
+	err := s.taskStore.CheckRequired(t, personID)
+	var ae *apperr.Error
+	if errors.As(err, &ae) {
+		return ae.With("field", "assignee_id")
+	}
+	return err
+}
+
+// cleanRequired confere as plataformas da trava e as devolve sem repetir, na ordem de personaccount.Platforms. Nil
+// é ausente (mantém); vazio tira a trava.
+func cleanRequired(list *[]string) (*[]string, error) {
+	if list == nil {
+		return nil, nil
+	}
+	out := []string{}
+	for _, p := range personaccount.Platforms {
+		if slices.Contains(*list, p) {
+			out = append(out, p)
+		}
+	}
+	for _, p := range *list {
+		if !personaccount.ValidPlatform(p) {
+			return nil, ErrInvalidRequiredAccount.With("field", "required_accounts")
+		}
+	}
+	return &out, nil
 }
 
 // UpdateAttrs é UpdateAttrsAs sem responsável e sem prazo, os campos que só quem edita os detalhes manda.
@@ -377,6 +438,12 @@ func (s *Service) PatchAttrsAs(selfID, id string, attrs Attrs, assigneeID *strin
 			return nil, err
 		}
 		patch.labels = &resolved
+	}
+	if patch.required, err = cleanRequired(attrs.RequiredAccounts); err != nil {
+		return nil, err
+	}
+	if patch.required != nil {
+		t.RequiredAccounts = *patch.required
 	}
 	if patch.assignee, patch.unassign, err = s.checkAssignee(selfID, t, assigneeID); err != nil {
 		return nil, err

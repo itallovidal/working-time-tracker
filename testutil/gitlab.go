@@ -477,7 +477,7 @@ func (g *GitLab) routes() *http.ServeMux {
 	}
 
 	mux.HandleFunc("GET /api/v4/user", auth(func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, map[string]any{"id": GitLabUserID, "username": GitLabLogin})
+		writeJSON(w, http.StatusOK, map[string]any{"id": GitLabUserID, "username": GitLabLogin, "email": GitLabEmail})
 	}))
 	mux.HandleFunc("GET /api/v4/projects", auth(g.listProjects))
 	mux.HandleFunc("GET /api/v4/projects/{id}", auth(g.getProject))
@@ -494,6 +494,15 @@ func (g *GitLab) routes() *http.ServeMux {
 
 	mux.HandleFunc("GET /oauth/authorize", g.authorize)
 	mux.HandleFunc("POST /oauth/token", g.token)
+	// A revogação de um token do app: o GitLab responde 200 mesmo ao token que não conhece.
+	mux.HandleFunc("POST /oauth/revoke", func(w http.ResponseWriter, r *http.Request) {
+		if err := r.ParseForm(); err != nil || r.PostForm.Get("client_id") != GitLabClientID ||
+			r.PostForm.Get("client_secret") != GitLabClientSecret {
+			writeJSON(w, http.StatusUnauthorized, map[string]any{"error": "invalid_client"})
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{})
+	})
 	return mux
 }
 

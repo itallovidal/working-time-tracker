@@ -266,12 +266,20 @@ func deref(t *time.Time) time.Time {
 // OrganizationOf devolve a organização do projeto: o e-mail de quem é responsável no GitHub só vale
 // para as pessoas dela.
 func (s *Store) OrganizationOf(projectID uuid.UUID) (uuid.UUID, error) {
-	p, err := s.client.Project.Query().Where(project.IDEQ(projectID)).Only(context.Background())
+	id, _, err := s.organizationOf(projectID)
+	return id, err
+}
+
+// organizationOf é o OrganizationOf que diz também se a organização está no modo solo, em que a tarefa importada
+// não nasce com a trava do responsável (a pessoa é uma só).
+func (s *Store) organizationOf(projectID uuid.UUID) (uuid.UUID, bool, error) {
+	p, err := s.client.Project.Query().Where(project.IDEQ(projectID)).WithOrganization().Only(context.Background())
 	if ent.IsNotFound(err) {
-		return uuid.Nil, database.ErrNotFound
+		return uuid.Nil, false, database.ErrNotFound
 	}
 	if err != nil {
-		return uuid.Nil, err
+		return uuid.Nil, false, err
 	}
-	return p.OrganizationID, nil
+	solo := p.Edges.Organization != nil && p.Edges.Organization.Solo
+	return p.OrganizationID, solo, nil
 }

@@ -30,6 +30,8 @@ const (
 	FieldAssigneeID = "assignee_id"
 	// FieldDeadline holds the string denoting the deadline field in the database.
 	FieldDeadline = "deadline"
+	// FieldRequiredAccounts holds the string denoting the required_accounts field in the database.
+	FieldRequiredAccounts = "required_accounts"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// EdgeProject holds the string denoting the project edge name in mutations.
@@ -89,6 +91,7 @@ var Columns = []string{
 	FieldStatus,
 	FieldAssigneeID,
 	FieldDeadline,
+	FieldRequiredAccounts,
 	FieldCreatedAt,
 }
 

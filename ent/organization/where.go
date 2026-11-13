@@ -1391,6 +1391,29 @@ func HasReceivablesWith(preds ...predicate.Receivable) predicate.Organization {
 	})
 }
 
+// HasPersonAccounts applies the HasEdge predicate on the "person_accounts" edge.
+func HasPersonAccounts() predicate.Organization {
+	return predicate.Organization(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, PersonAccountsTable, PersonAccountsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasPersonAccountsWith applies the HasEdge predicate on the "person_accounts" edge with a given conditions (other predicates).
+func HasPersonAccountsWith(preds ...predicate.PersonAccount) predicate.Organization {
+	return predicate.Organization(func(s *sql.Selector) {
+		step := newPersonAccountsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.Organization) predicate.Organization {
 	return predicate.Organization(sql.AndPredicates(predicates...))

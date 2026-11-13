@@ -41,6 +41,7 @@ func main() {
 		ClientID:     ENV.GitHubClientID,
 		ClientSecret: ENV.GitHubClientSecret,
 		SiteURL:      ENV.GitHubURL,
+		APIURL:       ENV.GitHubAPIURL,
 	}
 	if ENV.PublicURL != "" {
 		github.RedirectURL = ENV.PublicURL + integration.CallbackPath

@@ -2,6 +2,7 @@ package adapter
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"regexp"
 	"strings"
@@ -166,27 +167,69 @@ func (g *GitHubIntegration) FetchItemDetails(conn Connection, itemID string) (*I
 // Account devolve o login de quem o token representa. A conexão OAuth o usa para
 // conferir o token recém-obtido e para nomear a integração.
 func (g *GitHubIntegration) Account(conn Connection) (string, error) {
+	login, _, err := g.user(conn)
+	return login, err
+}
+
+// User devolve o login de quem o token representa e o e-mail principal dele. O e-mail vem de /user/emails, que pede
+// o escopo user:email; sem ele, vale o e-mail público do perfil, que pode não existir.
+func (g *GitHubIntegration) User(conn Connection) (string, string, error) {
+	login, email, err := g.user(conn)
+	if err != nil {
+		return "", "", err
+	}
+	resp, err := g.get(conn, "/user/emails")
+	if err != nil {
+		return login, email, nil // o e-mail é só para mostrar: sem ele, a conta vale do mesmo jeito
+	}
+	defer closeBody(resp)
+	if resp.StatusCode != http.StatusOK {
+		return login, email, nil
+	}
+	var emails []struct {
+		Email    string `json:"email"`
+		Primary  bool   `json:"primary"`
+		Verified bool   `json:"verified"`
+	}
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&emails); err != nil {
+		return login, email, nil
+	}
+	for _, e := range emails {
+		if e.Primary && e.Verified && e.Email != "" {
+			return login, e.Email, nil
+		}
+	}
+	return login, email, nil
+}
+
+// user lê /user: o login e o e-mail público (vazio quando a pessoa não publica um).
+func (g *GitHubIntegration) user(conn Connection) (string, string, error) {
 	resp, err := g.get(conn, "/user")
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	defer closeBody(resp)
 
 	switch resp.StatusCode {
 	case http.StatusOK:
 	case http.StatusUnauthorized:
-		return "", ErrInvalidToken.With("provider", "GitHub")
+		return "", "", ErrInvalidToken.With("provider", "GitHub")
 	default:
-		return "", ErrProviderStatus.With("provider", "GitHub", "status", resp.StatusCode)
+		return "", "", ErrProviderStatus.With("provider", "GitHub", "status", resp.StatusCode)
 	}
 
 	var body struct {
-		Login string `json:"login"`
+		Login string  `json:"login"`
+		Email *string `json:"email"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil || body.Login == "" {
-		return "", ErrUnexpectedResponse.With("provider", "GitHub").Wrap(err)
+		return "", "", ErrUnexpectedResponse.With("provider", "GitHub").Wrap(err)
 	}
-	return body.Login, nil
+	email := ""
+	if body.Email != nil {
+		email = strings.TrimSpace(*body.Email)
+	}
+	return body.Login, email, nil
 }
 
 // ListRepositories devolve os repositórios que o token enxerga, os mexidos há menos

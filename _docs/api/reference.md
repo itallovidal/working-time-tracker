@@ -65,6 +65,9 @@ Toda validação de formulário devolve o campo que errou: `{"error": {"code": "
 | DELETE | `/api/auth/tokens/:tokenId` | logado | Revoga um token seu (`204`). O de outra pessoa responde `404` |
 | GET | `/api/auth/connections` | logado | Os seus apps conectados pelo OAuth do MCP (ver abaixo), do mais novo para o mais antigo |
 | DELETE | `/api/auth/connections/:connectionId` | logado | Desconecta um app seu (`204`); os tokens dele param na hora. O de outra pessoa responde `404` `auth.connection_not_found` |
+| GET | `/api/auth/accounts` | logado | As suas contas no GitHub e no GitLab (Contas conectadas): `[{"platform","username","email","no_account","source","created_at"}]`. Conectar é a página `GET /profile/accounts/:platform/connect?return=<caminho>`, o OAuth da plataforma (ver [contas das pessoas](../integrations/overview.md#contas-das-pessoas)) |
+| POST | `/api/auth/accounts/:platform/no-account` | logado | Grava que você não tem conta na plataforma (`github` ou `gitlab`): o modal de pegar a tarefa não pergunta de novo. Quem já tem um login ligado fica com ele. `404` `account.invalid_platform` |
+| DELETE | `/api/auth/accounts/:platform` | logado | Desconecta a sua conta na plataforma (e apaga também o "não tenho conta"). `204`; `404` `account.not_found` |
 | POST | `/api/oauth/consent` | logado, mesma origem | O "Permitir" ou o "Cancelar" da tela de consentimento do OAuth (ver [OAuth do MCP](#oauth-do-mcp)). Só existe com o OAuth ligado |
 
 ### Entrar pelo Clerk
@@ -619,7 +622,7 @@ A pessoa traz `weekly_hours`, a jornada semanal combinada com ela, em horas: val
 | PATCH | `/api/projects/:projectId` | `project.edit` | Altera o projeto |
 | DELETE | `/api/projects/:projectId` | `project.delete` | Exclui o projeto com times, tarefas, sessões e integrações |
 | GET | `/api/projects/:projectId/overview` | qualquer permissão do projeto | O projeto em números: pessoas, times, horas, custo, receita, tempo de projeto, tarefas e integrações; o cliente, o valor cobrado, a receita e a margem só vêm com `billing.view`. Veja [Visão geral](#visão-geral) |
-| GET | `/api/projects/:projectId/members` | logado | Pessoas que estão no projeto (com valor por hora ou em algum time), sem repetir: são as que podem ser responsáveis por tarefas |
+| GET | `/api/projects/:projectId/members` | logado | Pessoas que estão no projeto (com valor por hora ou em algum time), sem repetir: são as que podem ser responsáveis por tarefas. Cada uma traz `accounts`, as plataformas em que tem conta ligada (`["github"]`), para o select de responsável conferir a trava da tarefa |
 
 ```http
 POST /api/orgs/:orgId/projects
@@ -819,7 +822,7 @@ A pessoa precisa ser da mesma organização do projeto e já estar nele, com val
 | DELETE | `/api/projects/:projectId/labels/:labelId` | `labels.manage` | Exclui a etiqueta; as tarefas só a perdem |
 | GET | `/api/tasks/:taskId` | logado | Detalhes da tarefa |
 | PATCH | `/api/tasks/:taskId` | logado | Altera a tarefa |
-| POST | `/api/tasks/:taskId/claim` | logado | Pega a tarefa para quem está logado, sem bater o ponto e sem mexer no status: só vale se ela não tem responsável (se já é sua, volta como está; se é de outra pessoa, 409 `task.already_assigned`) |
+| POST | `/api/tasks/:taskId/claim` | logado | Pega a tarefa para quem está logado, sem bater o ponto e sem mexer no status: só vale se ela não tem responsável (se já é sua, volta como está; se é de outra pessoa, 409 `task.already_assigned`). Numa tarefa com `required_accounts`, quem não tem conta ligada em todas as plataformas dela recebe 409 `task.account_required` (`params.platforms` com os códigos, `params.names` com os nomes); a mesma recusa vale ao escolher o responsável e ao bater o ponto numa tarefa livre |
 | PATCH | `/api/tasks/:taskId/attributes` | logado | Edição dos detalhes: `priority`, `status`, `label_ids`, `assignee_id` (vazio tira o responsável) e `deadline`, cada um opcional; não toca no nome nem na descrição |
 | DELETE | `/api/tasks/:taskId?remove_in=` | logado | Exclui a tarefa (as sessões e as horas ficam). `remove_in`, repetido (até 20), lista as integrações em que o item dela também deve sair: a issue do **GitHub** é apagada (pelo GraphQL, que só deixa quem é admin do repositório; senão a issue é só **fechada** como não planejada, com o aviso `issue_sync.remove_only_closed`) e o cartão do **Trello** é **arquivado**. Uma integração a que a tarefa não está ligada é ignorada; um valor que não é um UUID dá `400` `task.integration_not_found` e a tarefa fica. Responde `200` `{"remote":[{"integration_id","provider","outcome","problem"}]}`, com a lista vazia quando não há `remove_in`: `outcome` é `deleted`, `archived`, `closed` ou `gone` (o item já não existia), e `problem` (`{code, params}`) é o motivo de o item não ter sido tratado (`issue_sync.remove_read_only`, `integration.sync_off`, `integration.invalid_token`, `integration.forbidden`...) ou o aviso de ele ter sido só fechado. O que falha lá não desfaz a exclusão: a tarefa sai de qualquer jeito |
 | POST | `/api/tasks/:taskId/link-external-item` | logado | Vincula a uma issue ou a um cartão, à mão. Uma tarefa tem **no máximo um item por integração** (a issue do GitHub e o cartão do Trello ao mesmo tempo): `409` `task.already_linked` (com `params.field` = `integration_id`) se ela já tem item nesta integração e `task.item_taken` (com `params.field` = `external_item_id`) se o item é de outra tarefa. O vínculo nasce pendente (`pending`) e a primeira rodada em que o item está aberto o adota |
@@ -843,6 +846,8 @@ Content-Type: application/json
 }
 ```
 `skip_publish` (opcional, só na criação, não é guardado) são as integrações em que a tarefa nova **não** deve ser postada sozinha: é o que o modal manda quando a pessoa desmarca o Trello. Sem ele, num projeto com o Trello ligado e a sincronização ligada, o servidor posta o cartão poucos segundos depois (por integração: uma tarefa que o modal já postou no GitHub também vira cartão). Um id que não é de nenhuma integração do projeto não casa com nada; um que não é um UUID, ou mais de 20 ids, responde `400 task.integration_not_found`. `priority` é `urgent`, `high`, `medium`, `low` ou `none` (o padrão, sem prioridade). `label_ids` são etiquetas do próprio projeto: uma de outro projeto responde `400 task.label_other_project`, e um id repetido conta uma vez. A tarefa devolve `priority` e `labels` (`[{"id", "name"}]`, sempre uma lista). No `PATCH`, campo omitido mantém o valor, e `label_ids: []` tira todas as etiquetas.
+
+`required_accounts` (na criação, no `PATCH` e em `/attributes`) são as plataformas em que o responsável precisa ter conta ligada: `github`, `gitlab` ou as duas (outra responde `400 task.invalid_required_account`). Omitido mantém; `[]` tira a trava. A tarefa sempre o devolve (lista vazia sem trava), e a importada de um item do GitHub ou do GitLab nasce com a plataforma dele. Ligar a trava não tira o responsável atual.
 
 Toda tarefa nasce em `backlog`: o `POST` não lê `status`. O `PATCH` aceita `status` (`backlog`, `in_progress`, `awaiting_closure` ou `closed`; omitido, mantém) e a tarefa o devolve; outro valor responde `400 task.invalid_status`. Qualquer um do projeto muda o status, e a troca é livre entre os quatro. Além do `PATCH`, o `POST .../work-sessions/clock-in` põe a tarefa em `in_progress`, seja qual for o status dela, depois de criar a sessão (um ponto recusado não muda nada); o clock-out não mexe no status.
 
@@ -987,6 +992,7 @@ Na lista de tarefas e no detalhe, a tarefa traz `links`, um por item externo a q
 | PATCH | `/api/integrations/:integrationId` | `integrations.manage` | Altera nome, token, `metadata`, `enabled` ou `sync_issues` |
 | DELETE | `/api/integrations/:integrationId` | `integrations.manage` | Exclui. As tarefas vinculadas perdem o vínculo |
 | GET | `/api/integrations/:integrationId/repositories` | `integrations.manage` | Lista o que o token guardado enxerga: `[{"full_name","private"}]` no GitHub (repositórios) e `[{"id","full_name","private"}]` no Trello (os quadros abertos, com o espaço de trabalho em `full_name`, e o `id` que vai em `metadata.board_id`). `400` `integration.no_repositories` nos tipos que não listam |
+| POST | `/api/integrations/:integrationId/accounts` | `integrations.manage` | **Ligar** no cartão: `{"login","person_id"}` liga o login de um responsável das issues (GitHub ou GitLab) a uma pessoa do projeto (origem `admin`) e faz uma rodada completa. `200` com a integração como ficou; `400` `issue_sync.link_not_in_project` ou `account.invalid_login`; `409` `account.login_taken` (alguém autorizou esse login) ou `account.person_linked` (a pessoa já autorizou outro) |
 | POST | `/api/integrations/:integrationId/sync` | `integrations.manage` | Uma rodada completa da sincronização das issues com as tarefas, na hora. `200` `{"created","updated","closed","pushed","unmapped","errors","partial"}`; `409` `integration.sync_running` se já há uma rodada nesta integração; `400` `integration.sync_off` se a sincronização está desligada ou a integração desativada; `404` entre organizações |
 
 **Conectar com o GitHub e com o Trello** são rotas de página (GET e redirecionamentos, fora do `/api`), que o navegador percorre; não há como chamá-las pela API:
@@ -1035,6 +1041,7 @@ Resposta (`201`), igual em todas as rotas de integração:
   "last_synced_at": null,
   "last_sync_error": "",
   "sync_unmatched": 0,
+  "sync_unmatched_logins": [],
   "created_at": "2026-10-06T09:00:00-03:00"
 }
 ```
@@ -1071,7 +1078,7 @@ Content-Type: application/json
 
 - Só liga no GitHub e no Trello (`400` `integration.sync_unsupported` nos outros), com o repositório (ou o quadro) já escolhido (`integration.sync_needs_repo`), a integração ativa (`integration.sync_needs_enabled`, vale para a mudança de desligada para ligada, e dá para mandar `enabled` e `sync_issues` juntos) e com a credencial guardada.
 - Ligada, o campo que identifica a conexão (`metadata.repo` no GitHub, `metadata.board_id` no Trello) **não troca**: `400` `integration.sync_repo_locked`. Desligar e trocar na mesma chamada vale, e trocar o repositório com ela desligada esquece o vínculo das issues do antigo (e os vínculos feitos à mão). Trocar só o token com ela ligada vale.
-- As respostas trazem `sync_issues`, `last_synced_at` (o fim da última rodada, nulo antes da primeira), `last_sync_error` (o código do último aviso ou erro: `issue_sync.read_only`, `issue_sync.push_discarded`, `issue_sync.push_rejected`, `issue_sync.no_login`, `issue_sync.label_refused`, `integration.rate_limited`, `integration.invalid_token`...; vazio se a última rodada não achou nada) e `sync_unmatched` (quantas issues abertas têm responsável no GitHub sem correspondência aqui; só é calculado com a sincronização ligada).
+- As respostas trazem `sync_issues`, `last_synced_at` (o fim da última rodada, nulo antes da primeira), `last_sync_error` (o código do último aviso ou erro: `issue_sync.read_only`, `issue_sync.push_discarded`, `issue_sync.push_rejected`, `issue_sync.no_login`, `issue_sync.label_refused`, `integration.rate_limited`, `integration.invalid_token`...; vazio se a última rodada não achou nada) `sync_unmatched_logins` (os logins dos responsáveis das issues abertas que não correspondem a ninguém daqui: sem conta ligada e sem e-mail público de alguém do projeto) e `sync_unmatched` (quantos são). Os dois só são calculados com a sincronização ligada.
 - `POST .../sync` leva a rodada à hora, sem esperar o intervalo de `SYNC_INTERVAL`, e responde o que ela fez. `partial: true` é uma rodada que parou antes de olhar tudo (limite de requisições do GitHub, falha de rede): o que fez fica feito, e o resto fica para a seguinte.
 - As tarefas importadas aparecem na lista como qualquer outra, com um item em `links` (`item_id` é o número da issue, ou o link curto do cartão no Trello, e `url` o endereço); a tarefa criada por uma issue nasce em `backlog`, sem prazo. A criada por um cartão nasce em `backlog` com o prazo da data de entrega do cartão (ou sem prazo) e `created_at` igual à data de criação do cartão.
 

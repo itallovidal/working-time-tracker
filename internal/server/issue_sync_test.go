@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -149,6 +150,19 @@ func TestIssueSync_EndToEnd(t *testing.T) {
 	app.Sync.Flush(context.Background())
 	if issue, _ := fake.Issue("owner/repo", one); len(issue.Assignees) != 0 {
 		t.Errorf("assignees on GitHub = %v, want none", issue.Assignees)
+	}
+
+	// A tarefa importada nasce só para quem tem conta no GitHub ligada: quem não ligou não bate o ponto nela, e
+	// quem pode editar a tarefa tira a trava.
+	if req, _ := free["required_accounts"].([]any); len(req) != 1 || req[0] != "github" {
+		t.Errorf("required_accounts of the imported task = %v, want [github]", free["required_accounts"])
+	}
+	rec = do(e, "POST", "/api/projects/"+prj+"/work-sessions/clock-in", `{"task_id":"`+freeID+`"}`, member.session)
+	if !strings.Contains(rec.Body.String(), `"task.account_required"`) {
+		t.Fatalf("clock in without the account = %d: %s", rec.Code, rec.Body.String())
+	}
+	if rec = do(e, "PATCH", "/api/tasks/"+freeID+"/attributes", `{"required_accounts":[]}`, admin.session); rec.Code != http.StatusOK {
+		t.Fatalf("turn the requirement off = %d: %s", rec.Code, rec.Body.String())
 	}
 
 	// Bater o ponto numa tarefa livre a torna de quem bateu, e isso vai para a issue.

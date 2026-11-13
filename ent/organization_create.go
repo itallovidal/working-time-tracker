@@ -11,6 +11,7 @@ import (
 	"working-time-tracker/ent/invite"
 	"working-time-tracker/ent/organization"
 	"working-time-tracker/ent/person"
+	"working-time-tracker/ent/personaccount"
 	"working-time-tracker/ent/project"
 	"working-time-tracker/ent/receivable"
 
@@ -345,6 +346,21 @@ func (_c *OrganizationCreate) AddReceivables(v ...*Receivable) *OrganizationCrea
 	return _c.AddReceivableIDs(ids...)
 }
 
+// AddPersonAccountIDs adds the "person_accounts" edge to the PersonAccount entity by IDs.
+func (_c *OrganizationCreate) AddPersonAccountIDs(ids ...uuid.UUID) *OrganizationCreate {
+	_c.mutation.AddPersonAccountIDs(ids...)
+	return _c
+}
+
+// AddPersonAccounts adds the "person_accounts" edges to the PersonAccount entity.
+func (_c *OrganizationCreate) AddPersonAccounts(v ...*PersonAccount) *OrganizationCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddPersonAccountIDs(ids...)
+}
+
 // Mutation returns the OrganizationMutation object of the builder.
 func (_c *OrganizationCreate) Mutation() *OrganizationMutation {
 	return _c.mutation
@@ -602,6 +618,22 @@ func (_c *OrganizationCreate) createSpec() (*Organization, *sqlgraph.CreateSpec)
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(receivable.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.PersonAccountsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   organization.PersonAccountsTable,
+			Columns: []string{organization.PersonAccountsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(personaccount.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

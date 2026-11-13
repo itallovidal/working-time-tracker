@@ -20,6 +20,7 @@ import (
 	"working-time-tracker/ent/organization"
 	"working-time-tracker/ent/payout"
 	"working-time-tracker/ent/person"
+	"working-time-tracker/ent/personaccount"
 	"working-time-tracker/ent/project"
 	"working-time-tracker/ent/receivable"
 	"working-time-tracker/ent/session"
@@ -104,6 +105,7 @@ func checkColumn(t, c string) error {
 			organization.Table:     organization.ValidColumn,
 			payout.Table:           payout.ValidColumn,
 			person.Table:           person.ValidColumn,
+			personaccount.Table:    personaccount.ValidColumn,
 			project.Table:          project.ValidColumn,
 			receivable.Table:       receivable.ValidColumn,
 			session.Table:          session.ValidColumn,

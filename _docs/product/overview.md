@@ -302,7 +302,9 @@ alguma permissão nele, e cada aba pede a permissão do que mostra.
 
 **Perfil.** O perfil da própria pessoa (`/profile`) e o de um colaborador (`/orgs/:orgId/people/:personId`, só para o
 dono e os admins) mostram a jornada, as horas por projeto, o período corrente e o histórico de pagamentos. O que cada
-um vê do dinheiro está em [money.md](money.md#quem-vê-o-quê).
+um vê do dinheiro está em [money.md](money.md#quem-vê-o-quê). O da própria pessoa tem ainda o Conector MCP e as
+**Contas conectadas**, onde ela liga a conta do GitHub e do GitLab para aparecer como responsável nas issues (ver
+[contas das pessoas](../integrations/overview.md#contas-das-pessoas)).
 
 **A receber** (`/orgs/:orgId/receivables`, só o dono e só no modo solo): o que cobrar de cada cliente. Os cartões
 (a confirmar, em aberto, atrasado e recebido no mês) e as listas A confirmar, Em aberto e Recebidos. As regras estão em

@@ -48,6 +48,34 @@ document.addEventListener('alpine:init', () => {
     statusClass,
   });
 
+  // requiredTools é a trava "só quem tem conta no GitHub" do formulário da tarefa (Decisão 30): as plataformas que dá
+  // para exigir (as das integrações do projeto, e as que a tarefa já exige) e quem não passa nela. Quem usa tem
+  // `draft.required_accounts`, `integrations` e `members` (cada um com `accounts`, as plataformas em que tem conta).
+  const requiredTools = () => ({
+    requirablePlatforms() {
+      const types = (this.integrations || []).map((i) => i.type);
+      const chosen = this.draft.required_accounts || [];
+      return WTT.accounts.platforms.filter((p) => types.includes(p) || chosen.includes(p));
+    },
+    // missingFor são as plataformas exigidas em que a pessoa (um item de members) não tem conta.
+    missingFor(m) {
+      const req = this.draft.required_accounts || [];
+      return m ? req.filter((p) => !(m.accounts || []).includes(p)) : [];
+    },
+    lacksRequired(m) {
+      return this.missingFor(m).length > 0;
+    },
+    memberLabel(m) {
+      const missing = this.missingFor(m);
+      if (missing.length === 0) return m.name;
+      return WTT.t('tasks.required.member_without', { name: m.name, platforms: missing.map(WTT.accounts.name).join(', ') });
+    },
+    // meMissing são as plataformas exigidas em que quem está logado não tem conta: o aviso embaixo de "Atribuir a mim".
+    meMissing() {
+      return this.missingFor(this.members.find((m) => m.id === me.id) || { accounts: [] }).map(WTT.accounts.name).join(', ');
+    },
+  });
+
   // projectSync é o botão Sincronizar das listas de tarefas: uma rodada completa nas integrações do projeto
   // com a sincronização das issues ligada (o servidor soma as rodadas), e a lista se recarrega com o que
   // veio. Só aparece com uma dessas ligada. Quem usa define afterSync(), que recarrega a lista dele.
@@ -276,16 +304,24 @@ document.addEventListener('alpine:init', () => {
     sessionHere() {
       return !!this.here();
     },
-    // Com o ponto aberto neste projeto, a tarefa entra na sessão em vez de abrir outra.
-    startTask(t) {
+    // Com o ponto aberto neste projeto, a tarefa entra na sessão em vez de abrir outra. Começar uma tarefa sem
+    // responsável a torna da pessoa: numa ligada a uma issue, o modal da conta (accountGate) vem antes.
+    async startTask(t) {
+      const gate = Alpine.store('accountGate');
+      if (!t.assignee_id && !(await gate.ask(t, 'start'))) return;
       return this.run('clock', async () => {
-        if (this.sessionHere()) {
-          await clock().addTask(project.id, t.id);
-          toast(WTT.t('session.modal.added', { name: t.name }));
-          return;
+        try {
+          if (this.sessionHere()) {
+            await clock().addTask(project.id, t.id);
+            toast(WTT.t('session.modal.added', { name: t.name }));
+            return;
+          }
+          await clock().clockIn(project.id, t.id);
+          toast(WTT.t('tasks.started', { name: t.name }));
+        } catch (e) {
+          if (gate.fromError(e, t, 'start')) return;
+          throw e;
         }
-        await clock().clockIn(project.id, t.id);
-        toast(WTT.t('tasks.started', { name: t.name }));
       });
     },
     stop() {
@@ -609,6 +645,7 @@ document.addEventListener('alpine:init', () => {
     ...taskWizard(),
     ...labelTools(),
     ...projectSync(),
+    ...requiredTools(),
     ...taskBadges,
     loading: true,
     lists: Object.fromEntries(keys.map((key) => [key, emptyList()])),
@@ -617,7 +654,7 @@ document.addEventListener('alpine:init', () => {
     seq: 0,
     // assign: me, none ou other. publish_to são as integrações marcadas que a tela posta depois de criar (o GitHub); skip_publish,
     // as que o servidor posta sozinho (o Trello) e a pessoa desmarcou: sem isso, a caixa vem marcada.
-    draft: { name: '', description: '', assign: 'none', assignee_id: '', deadline: '', priority: 'none', label_ids: [], publish_to: [], skip_publish: [] },
+    draft: { name: '', description: '', assign: 'none', assignee_id: '', deadline: '', priority: 'none', label_ids: [], required_accounts: [], publish_to: [], skip_publish: [] },
     // initLists lê os filtros da URL e busca as listas. As etiquetas vêm antes da primeira busca: uma etiqueta excluída
     // que ainda está na URL sai do filtro, em vez de zerar a lista. extra são as outras buscas da página, feitas junto.
     async initLists(...extra) {
@@ -629,6 +666,22 @@ document.addEventListener('alpine:init', () => {
       this.loading = false;
       // Bater o ponto numa tarefa sem responsável a passa para quem bateu, e no backlog a leva para Em progresso.
       window.addEventListener('wtt:sessions-changed', () => this.sessionsChanged());
+      this.resumeAccount();
+    },
+    // resumeAccount termina o que a pessoa começou antes de conectar a conta no modal accountGate (pegar ou começar a
+    // tarefa). A recusa na plataforma aparece no alto da lista.
+    resumeAccount() {
+      const back = Alpine.store('accountGate').takeReturn();
+      if (!back) return;
+      if (back.err) {
+        this.errors.claim = WTT.errorText(back.err);
+        return;
+      }
+      if (back.ok) toast(WTT.t('profile.accounts.connected', { platform: WTT.accounts.name(back.ok) }));
+      if (!back.task) return;
+      const t = Object.values(this.lists).flatMap((l) => l.tasks).find((x) => x.id === back.task) || { id: back.task, name: '' };
+      if (back.then === 'claim' && this.claim) this.claim(t);
+      else if (back.then === 'start' && this.startTask) this.startTask(t);
     },
     sessionsChanged() {
       return this.load();
@@ -795,7 +848,7 @@ document.addEventListener('alpine:init', () => {
       this.draft[key] = listed ? [...others, i.id] : others;
     },
     openCreate() {
-      this.draft = { name: '', description: '', assign: 'me', assignee_id: '', deadline: '', priority: 'none', label_ids: [], publish_to: [], skip_publish: [] };
+      this.draft = { name: '', description: '', assign: 'me', assignee_id: '', deadline: '', priority: 'none', label_ids: [], required_accounts: [], publish_to: [], skip_publish: [] };
       this.newLabel = '';
       this.errors.create = '';
       this.errors.label = '';
@@ -819,6 +872,7 @@ document.addEventListener('alpine:init', () => {
             deadline: WTT.fmt.fromDateInput(this.draft.deadline),
             priority: this.draft.priority,
             label_ids: this.draft.label_ids,
+            required_accounts: this.draft.required_accounts,
             skip_publish: skip,
           });
         } catch (e) {
@@ -920,16 +974,22 @@ document.addEventListener('alpine:init', () => {
     // claim pega uma tarefa sem responsável para a pessoa, sem bater o ponto: ela sai da lista das sem
     // responsável e passa para Minhas tarefas. Se outra pessoa chegou antes, a lista é recarregada e o
     // erro (a tarefa já tem responsável) aparece no alto.
-    claim(t) {
+    // Numa tarefa ligada a uma issue, o modal da conta (accountGate) vem antes; a recusa do servidor por falta da
+    // conta abre o mesmo modal.
+    async claim(t) {
+      const gate = Alpine.store('accountGate');
+      if (!(await gate.ask(t, 'claim'))) return;
       return this.run('claim', async () => {
+        let got;
         try {
-          await api('POST', '/api/tasks/' + t.id + '/claim');
+          got = await api('POST', '/api/tasks/' + t.id + '/claim');
         } catch (e) {
           await this.load();
+          if (gate.fromError(e, t, 'claim')) return;
           throw e;
         }
         await this.load();
-        toast(WTT.t('tasks.claimed', { name: t.name }));
+        toast(WTT.t('tasks.claimed', { name: t.name || got.name }));
       });
     },
   }));
@@ -998,6 +1058,7 @@ document.addEventListener('alpine:init', () => {
   Alpine.data('taskDetail', () => ({
     ...form(),
     ...mdTools(),
+    ...requiredTools(),
     taskId: WTT.boot.task_id,
     loading: true,
     task: null,
@@ -1005,7 +1066,7 @@ document.addEventListener('alpine:init', () => {
     integrations: [],
     sessions: [],
     ...labelTools(),
-    draft: { name: '', description: '', assign: 'none', assignee_id: '', deadline: '', priority: 'none', status: 'backlog', label_ids: [] }, // assign: me, none ou other
+    draft: { name: '', description: '', assign: 'none', assignee_id: '', deadline: '', priority: 'none', status: 'backlog', label_ids: [], required_accounts: [] }, // assign: me, none ou other
     deadlineWas: '', // o dia do prazo quando a tarefa foi lida: só se manda o prazo se a pessoa o mudou
     assigneeWas: '', // o responsável quando a tarefa foi lida ('' é nenhum): idem
     linkForm: { integration_id: '', external_item_id: '', external_item_url: '' },
@@ -1034,6 +1095,7 @@ document.addEventListener('alpine:init', () => {
         this.loading = false;
       }
       window.addEventListener('wtt:sessions-changed', () => this.reloadSessions());
+      if (this.task) this.resumeAccount();
     },
     setTask(t) {
       this.task = t;
@@ -1050,6 +1112,7 @@ document.addEventListener('alpine:init', () => {
         priority: t.priority || 'none',
         status: t.status || 'backlog',
         label_ids: (t.labels || []).map((l) => l.id),
+        required_accounts: [...(t.required_accounts || [])],
       };
       // Quem saiu dos times continua aparecendo como responsável atual.
       if (t.assignee && !this.members.some((m) => m.id === t.assignee_id)) {
@@ -1135,6 +1198,9 @@ document.addEventListener('alpine:init', () => {
         };
         // fromDateInput devolve null para o campo vazio: é o apagar.
         if (this.draft.deadline !== this.deadlineWas) body.deadline = WTT.fmt.fromDateInput(this.draft.deadline);
+        // A trava só vai se mudou: a lista vazia a tira.
+        const required = [...this.draft.required_accounts].sort().join();
+        if (required !== [...(this.task.required_accounts || [])].sort().join()) body.required_accounts = this.draft.required_accounts;
         const t = await api('PATCH', '/api/tasks/' + this.taskId + '/attributes', body);
         this.setTask(t);
         Alpine.store('modal').close();
@@ -1143,32 +1209,64 @@ document.addEventListener('alpine:init', () => {
     },
     // claim pega a tarefa sem responsável para a pessoa, sem bater o ponto: ela passa a ser dela e o ponto
     // fica para quando quiser. Se outra pessoa chegou antes, a tarefa é recarregada e o erro aparece.
-    claim() {
+    async claim() {
+      const gate = Alpine.store('accountGate');
+      if (!(await gate.ask(this.task, 'claim'))) return;
       return this.run('claim', async () => {
         try {
           this.setTask(await api('POST', '/api/tasks/' + this.taskId + '/claim'));
         } catch (e) {
           this.setTask(await api('GET', '/api/tasks/' + this.taskId));
+          if (gate.fromError(e, this.task, 'claim')) return;
           throw e;
         }
         toast(WTT.t('task_detail.claimed'));
       });
+    },
+    // gateStart é o modal da conta antes de começar a tarefa sem responsável (começar a torna da pessoa).
+    async gateStart() {
+      return !!this.task.assignee_id || Alpine.store('accountGate').ask(this.task, 'start');
+    },
+    // resumeAccount termina o que a pessoa começou antes de conectar a conta (pegar ou começar esta tarefa).
+    resumeAccount() {
+      const back = Alpine.store('accountGate').takeReturn();
+      if (!back) return;
+      if (back.err) {
+        this.errors.claim = WTT.errorText(back.err);
+        return;
+      }
+      if (back.ok) toast(WTT.t('profile.accounts.connected', { platform: WTT.accounts.name(back.ok) }));
+      if (back.task !== this.taskId) return;
+      if (back.then === 'claim') this.claim();
+      else if (back.then === 'start') this.sessionHere() ? this.addToSession() : this.start();
     },
     // Outra pessoa só pode ser responsável se estiver no projeto; quem saiu dele
     // continua aparecendo enquanto for o responsável atual (ver setTask).
     otherMembers() {
       return this.members.filter((m) => m.id !== me.id);
     },
-    start() {
+    async start() {
+      if (!(await this.gateStart())) return;
       return this.run('clock', async () => {
-        await clock().clockIn(project.id, this.taskId);
+        try {
+          await clock().clockIn(project.id, this.taskId);
+        } catch (e) {
+          if (Alpine.store('accountGate').fromError(e, this.task, 'start')) return;
+          throw e;
+        }
         toast(WTT.t('tasks.started', { name: this.task.name }));
       });
     },
     // Com o ponto aberto neste projeto, a tarefa entra na sessão em vez de abrir outra.
-    addToSession() {
+    async addToSession() {
+      if (!(await this.gateStart())) return;
       return this.run('clock', async () => {
-        await clock().addTask(project.id, this.taskId);
+        try {
+          await clock().addTask(project.id, this.taskId);
+        } catch (e) {
+          if (Alpine.store('accountGate').fromError(e, this.task, 'start')) return;
+          throw e;
+        }
         toast(WTT.t('session.modal.added', { name: this.task.name }));
       });
     },
@@ -1556,6 +1654,29 @@ document.addEventListener('alpine:init', () => {
     syncMessage(sum) { return syncMessage(sum, 'integrations.sync_nothing'); },
     // Sincronizar agora: uma rodada completa, que pode demorar com muitas issues. Depois, relê a integração
     // para o cartão mostrar a hora, o aviso e a contagem de quem ficou sem correspondência.
+    // linking é o modal Ligar responsáveis: os logins sem pessoa da integração, as pessoas do projeto e a escolha de
+    // cada login.
+    linking: { id: null, type: '', logins: [], people: [], choice: {} },
+    async openLink(it) {
+      this.linking = { id: it.id, type: it.type, logins: [...(it.sync_unmatched_logins || [])], people: [], choice: {} };
+      this.errors.link = '';
+      Alpine.store('modal').open('link-logins', WTT.t('integrations.link.title'), () => !this.pending);
+      try {
+        const list = await api('GET', '/api/projects/' + project.id + '/collaborators');
+        this.linking.people = list.map((c) => c.person).sort((a, b) => a.name.localeCompare(b.name));
+      } catch (e) {
+        this.errors.link = e.message;
+      }
+    },
+    linkLogin(login) {
+      return this.run('link', async () => {
+        const fresh = await api('POST', '/api/integrations/' + this.linking.id + '/accounts',
+          { login, person_id: this.linking.choice[login] });
+        this.items = this.items.map((x) => (x.id === fresh.id ? fresh : x));
+        this.linking.logins = this.linking.logins.filter((l) => l !== login);
+        toast(WTT.t('integrations.link.linked', { login }));
+      });
+    },
     syncNow(it) {
       return this.run('sync:' + it.id, async () => {
         let sum = null;

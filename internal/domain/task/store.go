@@ -2,6 +2,8 @@ package task
 
 import (
 	"context"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -9,16 +11,20 @@ import (
 	"working-time-tracker/ent"
 	"working-time-tracker/ent/issuesync"
 	entlabel "working-time-tracker/ent/label"
+	entorganization "working-time-tracker/ent/organization"
 	entperson "working-time-tracker/ent/person"
 	entproject "working-time-tracker/ent/project"
 	"working-time-tracker/ent/task"
 	"working-time-tracker/internal/database"
+	"working-time-tracker/internal/domain/personaccount"
 	"working-time-tracker/internal/domain/projectaccess"
 )
 
 type Store struct {
 	client *ent.Client
 	changeHook
+	// accounts são as contas das pessoas no GitHub e no GitLab, para a trava da tarefa. Nulo, a trava não confere.
+	accounts *personaccount.Store
 }
 
 func NewStore(client *ent.Client) *Store {
@@ -34,7 +40,8 @@ func (s *Store) Create(t *Task) error {
 		SetStatus(statusOf(t.Status)).
 		AddLabelIDs(labelIDs(t.Labels)...).
 		SetNillableAssigneeID(t.AssigneeID).
-		SetDeadline(t.Deadline)
+		SetDeadline(t.Deadline).
+		SetRequiredAccounts(nonNil(t.RequiredAccounts))
 	// A tarefa importada nasce com a data de criação do item, e não com a de agora.
 	if !t.CreatedAt.IsZero() {
 		q = q.SetCreatedAt(t.CreatedAt)
@@ -294,7 +301,8 @@ func (s *Store) Update(t *Task) error {
 		SetStatus(statusOf(t.Status)).
 		ClearLabels().
 		AddLabelIDs(labelIDs(t.Labels)...).
-		SetDeadline(t.Deadline)
+		SetDeadline(t.Deadline).
+		SetRequiredAccounts(nonNil(t.RequiredAccounts))
 	// Sem responsável, a coluna fica nula: Clear* é a única forma de desvincular.
 	if t.AssigneeID != nil {
 		q = q.SetAssigneeID(*t.AssigneeID)
@@ -337,6 +345,7 @@ type attrsPatch struct {
 	assignee         *uuid.UUID
 	unassign         bool
 	deadline         *time.Time
+	required         *[]string
 }
 
 // UpdateAttrs grava só os campos do patch, sem reescrever o resto da tarefa: uma edição dos detalhes não
@@ -359,6 +368,9 @@ func (s *Store) UpdateAttrs(id uuid.UUID, p attrsPatch) error {
 	}
 	if p.deadline != nil {
 		q = q.SetDeadline(*p.deadline)
+	}
+	if p.required != nil {
+		q = q.SetRequiredAccounts(nonNil(*p.required))
 	}
 	_, err := q.Save(context.Background())
 	if ent.IsNotFound(err) {
@@ -403,6 +415,48 @@ func (s *Store) Delete(id string) error {
 	return s.client.Task.DeleteOneID(uid).Exec(context.Background())
 }
 
+// nonNil faz a lista vazia sair [] (no banco e no JSON), e não nula.
+func nonNil(l []string) []string {
+	if l == nil {
+		return []string{}
+	}
+	return l
+}
+
+// SetAccounts liga as contas das pessoas no GitHub e no GitLab, que a trava da tarefa confere (CheckRequired).
+func (s *Store) SetAccounts(accounts *personaccount.Store) { s.accounts = accounts }
+
+// CheckRequired confere que a pessoa tem conta ligada em cada plataforma que a tarefa exige: é a trava de quem pode
+// ser o responsável. Sem trava (ou sem as contas ligadas ao store), passa; no modo solo também, porque a pessoa é uma
+// só e não há de quem restringir.
+func (s *Store) CheckRequired(t *Task, personID uuid.UUID) error {
+	if len(t.RequiredAccounts) == 0 || s.accounts == nil {
+		return nil
+	}
+	if solo, err := s.client.Project.Query().
+		Where(entproject.IDEQ(t.ProjectID), entproject.HasOrganizationWith(entorganization.Solo(true))).
+		Exist(context.Background()); err != nil {
+		return err
+	} else if solo {
+		return nil
+	}
+	linked, err := s.accounts.LinkedPlatforms([]uuid.UUID{personID})
+	if err != nil {
+		return err
+	}
+	var missing, names []string
+	for _, p := range t.RequiredAccounts {
+		if !slices.Contains(linked[personID], p) {
+			missing = append(missing, p)
+			names = append(names, personaccount.Name(p))
+		}
+	}
+	if len(missing) == 0 {
+		return nil
+	}
+	return ErrAccountRequired.With("platforms", strings.Join(missing, ","), "names", strings.Join(names, ", "))
+}
+
 func toDomainTask(e *ent.Task) *Task {
 	if e == nil {
 		return nil
@@ -419,6 +473,8 @@ func toDomainTask(e *ent.Task) *Task {
 		Deadline:    e.Deadline,
 		Links:       []Link{},
 		CreatedAt:   e.CreatedAt,
+
+		RequiredAccounts: nonNil(e.RequiredAccounts),
 	}
 	if e.Edges.Assignee != nil {
 		t.Assignee = &Person{

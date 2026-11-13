@@ -690,6 +690,21 @@ profile:
   title_other: Perfil do colaborador
   edit: Editar perfil
   tabs_label: O que editar
+  accounts:
+    title: Contas conectadas
+    intro: "Ligue a sua conta do GitHub ou do GitLab para aparecer como responsável nas issues das tarefas que você pegar. A autorização só lê quem você é."
+    loading: Carregando…
+    not_connected: Não conectada
+    no_account_state: "Você disse que não tem conta no\u00a0{{.platform}}."
+    connect: Conectar
+    no_account: Não tenho conta
+    disconnect: Desconectar
+    disconnect_question: "Desconectar a conta do {{.platform}}?"
+    disconnected: "Conta do {{.platform}} desconectada."
+    connected: "Conta do {{.platform}} conectada."
+    source_integration: Ligada quando você conectou uma integração
+    source_admin: Ligada por um admin do projeto
+    source_email: Achada pelo seu e-mail público
   mcp:
     title: Conector MCP
     help: Como funciona o conector MCP
@@ -1366,6 +1381,13 @@ tasks:
     awaiting_closure: Aguardando fechamento
     closed: Fechada
   labels: Etiquetas
+  required:
+    label: Quem pode ser responsável
+    only: "Só quem tem conta no {{.platform}}"
+    hint: "Quem não tem a conta ligada no perfil não pega a tarefa nem bate o ponto nela. Tirar a marca libera para todos."
+    member_without: "{{.name}} (sem conta no {{.platforms}})"
+    me_without: "Você não tem conta no {{.platforms}} ligada: conecte no seu perfil, em Contas\u00a0conectadas."
+    badge: "Só com conta no {{.platforms}}"
   wizard:
     label: Etapas
     step_task: Tarefa
@@ -1477,6 +1499,15 @@ my_tasks:
     one: "{{.count}} tarefa"
     other: "{{.count}} tarefas"
   loading: Carregando as suas tarefas…
+
+account_gate:
+  title: "Conectar o {{.platform}}?"
+  title_required: "Esta tarefa pede uma conta do {{.platform}}"
+  intro: "Esta tarefa está ligada a uma issue do {{.platform}}. Conecte a sua conta para aparecer como responsável lá também."
+  intro_required: "Esta tarefa é só para quem tem conta no {{.platform}}. Conecte a sua para pegá-la."
+  how: "A autorização só lê quem você é no {{.platform}}. Depois você volta para cá, e a tarefa fica com você."
+  connect: "Conectar o {{.platform}}"
+  no_account: "Não tenho conta no {{.platform}}"
 
 task_detail:
   loading: Carregando a tarefa…
@@ -1676,7 +1707,7 @@ integrations:
   sync_nothing: "Tudo igual: não havia nada para sincronizar."
   sync_done: "Sincronizado."
   sync_partial: "A rodada parou antes do fim (um limite da plataforma ou um erro): o resto fica para a próxima."
-  unmatched_hint: "O responsável de uma issue só vira o da tarefa se o e-mail público dele no GitHub ou no GitLab for o de alguém deste projeto. Quem não publica o e-mail fica sem correspondência, e a tarefa fica disponível."
+  unmatched_hint: "O responsável de uma issue só vira o da tarefa se a pessoa conectou a conta no perfil (Contas conectadas) ou publica no GitHub ou no GitLab o mesmo e-mail que usa aqui. Sem isso, a tarefa fica disponível."
   sync_created:
     one: "{{.count}} tarefa nova"
     other: "{{.count}} tarefas novas"
@@ -1689,6 +1720,16 @@ integrations:
   sync_errors:
     one: "{{.count}} com erro"
     other: "{{.count}} com erro"
+  link:
+    open: Ligar
+    open_label: "Ligar os responsáveis de {{.name}} às pessoas do projeto"
+    title: Ligar responsáveis
+    intro: "Escolha a pessoa do projeto dona de cada login. As tarefas desse login passam para ela, e quem conectar a própria conta no perfil fica com a dela."
+    person_label: "Pessoa de @{{.login}}"
+    pick: Escolha a pessoa
+    submit: Ligar
+    linked: "@{{.login}} ligado."
+    all_done: Todos os responsáveis estão ligados.
   unmatched:
     one: "{{.count}} responsável sem correspondência"
     other: "{{.count}} responsáveis sem correspondência"
@@ -2002,6 +2043,12 @@ errors:
   session_expired: "Sua sessão expirou. Entre de novo."
   http_status: "O servidor respondeu com erro {{.status}}."
   unknown: "Algo deu errado. Tente de novo."
+  account:
+    invalid_platform: "Esta plataforma não tem conta para ligar."
+    not_found: "Você não tem conta ligada nesta plataforma."
+    login_taken: "O login {{.login}} já é de outra pessoa da organização, que o autorizou na plataforma."
+    person_linked: "Esta pessoa já autorizou outra conta ({{.login}}) nesta plataforma."
+    invalid_login: "Este login não é válido."
   allocation:
     preset_above_yours: "o grupo dá uma permissão que você não tem"
     invalid_preset: "grupo de permissões desconhecido"
@@ -2130,7 +2177,8 @@ errors:
     server_error: "erro interno, tente de novo"
   issue_sync:
     label_refused: "o token não pode criar etiquetas do outro lado: a etiqueta nova fica só aqui"
-    no_login: "não achei, na plataforma, o usuário de quem é responsável aqui: ele precisa ter o e-mail público no perfil do GitHub ou do GitLab"
+    link_not_in_project: "Escolha alguém que está no projeto."
+    no_login: "não achei, na plataforma, o usuário de quem é responsável aqui: ele precisa conectar a conta no perfil (Contas conectadas)"
     push_discarded: "a plataforma ignorou uma mudança deste item (o token pode não ter permissão de escrita): ela fica só aqui"
     push_rejected: "a plataforma recusou uma mudança deste item: ela fica só aqui"
     read_only: "o token não escreve neste repositório ou quadro: os itens só vêm para cá, e as mudanças daqui não saem"
@@ -2240,6 +2288,8 @@ errors:
     not_found: "não encontrado"
     too_many_attempts: "muitas tentativas seguidas; espere um minuto e tente de novo"
   task:
+    account_required: "esta tarefa é só para quem tem conta no {{.names}} ligada no perfil (Contas conectadas)"
+    invalid_required_account: "só o GitHub e o GitLab podem ser exigidos do responsável"
     assignee_not_in_team: "o responsável precisa estar neste projeto"
     description_too_long: "a descrição aceita até {{.max}} caracteres"
     integration_not_found: "integração não encontrada"
@@ -2358,6 +2408,7 @@ fields:
   deadline: "o prazo"
   priority: "a prioridade"
   status: "o status"
+  required_accounts: "a trava do responsável"
   assignee_id: "o responsável"
   assignee: "o responsável"
   days: "a validade"

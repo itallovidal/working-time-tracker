@@ -53,7 +53,8 @@ Toda integração tem o mesmo corpo, seja qual for a plataforma. O que muda de u
   desligar o item de uma tarefa é de quem vê a tarefa. Ver [permissões](../product/permissions.md).
 
 As respostas de integração trazem também `sync_issues`, `last_synced_at`, `last_sync_error` (o código do último
-aviso) e `sync_unmatched` (quantos itens têm responsável na plataforma sem ninguém daqui que corresponda).
+aviso), `sync_unmatched_logins` (os logins de responsáveis dos itens abertos que não correspondem a ninguém daqui) e
+`sync_unmatched` (quantos são).
 
 ### O `Descriptor`
 
@@ -67,7 +68,7 @@ Cada tipo se descreve num `Descriptor` (`internal/adapter/interface.go`). A tela
 | `Metadata` | Os campos do tipo. Cada um pode ser `Required`, `Summary` (o que identifica a conexão e o cartão mostra), `Internal` (a conexão o guarda, a tela não o mostra e a edição mantém o valor guardado), `Hidden` (a tela o preenche e não o mostra), ter um `Picker` (`select`, a lista fechada dos quadros, ou `datalist`, o campo com sugestões de repositório) e um `NameKey` (o campo com o nome legível do que se escolheu) |
 | `ItemNumeric` | O id do item é um número (a issue). Num tipo assim, um id que não é número não é de item nenhum |
 | `Sync` | O tipo implementa `IssueSyncer`. Só ele ganha a caixa da sincronização |
-| `Caps` | O que a sincronização faz além do básico: `deadline` (o prazo da tarefa e a data de entrega do item se espelham), `assignee` (o responsável se liga pelo e-mail público), `server_since` (a plataforma filtra por data, então a rodada de fundo pode ser incremental), `auto_publish` (a tarefa criada aqui vira item sozinha) |
+| `Caps` | O que a sincronização faz além do básico: `deadline` (o prazo da tarefa e a data de entrega do item se espelham), `assignee` (o responsável se liga pela conta da pessoa e, sem ela, pelo e-mail público; ver [contas das pessoas](#contas-das-pessoas)), `server_since` (a plataforma filtra por data, então a rodada de fundo pode ser incremental), `auto_publish` (a tarefa criada aqui vira item sozinha) |
 | `ComingSoon` | O tipo existe mas não se oferece: a tela o mostra desabilitado com o selo "Em breve", e o `POST` responde `400` `integration.type_coming_soon`. As integrações que já existem seguem valendo. Nenhum tipo está assim hoje (o GitLab saiu na Sprint 107) |
 | `Configured` | Preenchido pela página: o servidor tem o app de autorização daquele tipo configurado |
 
@@ -205,8 +206,8 @@ sequenceDiagram
 
 ### Os avisos
 
-O cartão da integração mostra a última rodada, quantos itens têm responsável sem correspondência e o último aviso
-(`last_sync_error`). Os avisos que não param a rodada, do mais grave para o mais leve:
+O cartão da integração mostra a última rodada, quantos logins de responsáveis estão sem correspondência (com o botão
+**Ligar**, para quem gerencia as integrações escolher a pessoa de cada um) e o último aviso (`last_sync_error`). Os avisos que não param a rodada, do mais grave para o mais leve:
 
 | Código | Quer dizer |
 |---|---|
@@ -214,10 +215,41 @@ O cartão da integração mostra a última rodada, quantos itens têm responsáv
 | `issue_sync.push_discarded` | A plataforma respondeu `200` sem gravar (sem permissão para etiquetas ou responsáveis) |
 | `issue_sync.push_rejected` | A plataforma recusou a mudança (um título grande demais, uma etiqueta inválida) |
 | `issue_sync.label_refused` | O token não pode criar etiquetas no alvo |
-| `issue_sync.no_login` | O responsável escolhido aqui não tem usuário na plataforma que se ache pelo e-mail |
+| `issue_sync.no_login` | O responsável escolhido aqui não tem conta ligada nem usuário na plataforma que se ache pelo e-mail |
 
 Os erros que param a rodada aparecem com o código deles, como `integration.invalid_token` ou
 `integration.rate_limited`. A lista completa está em [erros](../api/errors.md).
+
+### Contas das pessoas
+
+No GitHub e no GitLab, o responsável do item se liga a uma pessoa daqui pela **conta** dela na plataforma
+(`person_accounts`, Decisão 30): o login, o e-mail que a plataforma deu e de onde veio o vínculo. Uma conta por pessoa
+em cada plataforma, e um login liga a uma pessoa só dentro da organização.
+
+| Origem | Como entra | Força |
+|---|---|---|
+| `oauth` | A pessoa clica em **Conectar** no perfil (Contas conectadas) ou no modal de pegar a tarefa | Vence as outras: tira o mesmo login de quem o tinha por outra origem |
+| `integration` | Quem conecta (ou reconecta) uma integração pelo OAuth fica com o login com que autorizou | Só entra se a pessoa ainda não tem conta na plataforma: a integração pode ser de um robô |
+| `admin` | Quem gerencia as integrações escolhe, no cartão (**Ligar**), a pessoa do projeto de um login sem correspondência | Não toma um login autorizado (`account.login_taken`) nem troca a conta autorizada da pessoa (`account.person_linked`) |
+| `email` | A rodada achou a pessoa pelo e-mail público do login | Só entra onde não há conta |
+| `self` | A pessoa disse "Não tenho conta" | Não tem login; o modal de pegar a tarefa não pergunta de novo |
+
+- **Conectar no perfil** é o mesmo vai e volta da integração, pelo mesmo endereço de retorno (o único que o app da
+  plataforma aceita), mas pede só o escopo que lê quem a pessoa é (`user:email` no GitHub, `read_user` no GitLab), não
+  pede permissão nenhuma e não guarda o token: ele é revogado logo depois de ler o login. O cookie leva o `purpose` e
+  o caminho de volta (`return`, só um caminho desta aplicação). A volta traz `?account=<plataforma>` ou
+  `?account_error=<código>`, com os parâmetros do erro em `account_error_<nome>`.
+- **A rodada** procura o login na tabela antes do e-mail, e só vale para quem está no projeto. Quem disse que não tem
+  conta não é procurado na plataforma (fica o aviso `issue_sync.no_login`). Quem casa pelo e-mail ganha a conta.
+- **A trava da tarefa** (`required_accounts`): a tarefa pode exigir que o responsável tenha conta ligada no GitHub, no
+  GitLab ou nos dois. Ela vale ao pegar, ao escolher o responsável e ao bater o ponto numa tarefa livre
+  (`task.account_required`), e não tira quem já é o responsável. A tarefa importada de um item do GitHub ou do GitLab
+  nasce com a plataforma dele; quem edita a tarefa tira a marca. "Não tenho conta" não conta como conta. **No modo
+  solo a trava não vale:** a pessoa é uma só, a tarefa importada nasce sem ela, a conferência passa e a tela não mostra
+  a caixa.
+- **O modal de pegar a tarefa:** numa tarefa ligada a um item do GitHub ou do GitLab, quem ainda não respondeu sobre a
+  conta da plataforma conecta ou diz que não tem; na tarefa com a trava, só conectar libera. Conectar volta para a
+  tarefa (`?then=claim|start&task=<id>`) e termina de pegá-la ou começá-la.
 
 ## Uma tarefa em várias plataformas
 

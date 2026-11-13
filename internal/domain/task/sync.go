@@ -123,6 +123,9 @@ type Imported struct {
 	// nasceu na plataforma; zero deixa a tarefa nascer agora.
 	Deadline  time.Time
 	CreatedAt time.Time
+	// RequiredAccounts é a trava com que a tarefa nasce: a de uma issue do GitHub ou do GitLab exige a conta da
+	// plataforma, e quem edita a tarefa pode tirá-la.
+	RequiredAccounts []string
 }
 
 // CreateImported cria a tarefa de um item: em backlog, sem prazo (a menos que o item traga uma data de
@@ -138,6 +141,8 @@ func (s *Store) CreateImported(in Imported) (*Task, error) {
 		AssigneeID:  in.AssigneeID,
 		Deadline:    in.Deadline,
 		CreatedAt:   in.CreatedAt,
+
+		RequiredAccounts: in.RequiredAccounts,
 	}
 	if err := s.Create(t); err != nil {
 		return nil, err

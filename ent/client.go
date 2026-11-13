@@ -23,6 +23,7 @@ import (
 	"working-time-tracker/ent/organization"
 	"working-time-tracker/ent/payout"
 	"working-time-tracker/ent/person"
+	"working-time-tracker/ent/personaccount"
 	"working-time-tracker/ent/project"
 	"working-time-tracker/ent/receivable"
 	"working-time-tracker/ent/session"
@@ -68,6 +69,8 @@ type Client struct {
 	Payout *PayoutClient
 	// Person is the client for interacting with the Person builders.
 	Person *PersonClient
+	// PersonAccount is the client for interacting with the PersonAccount builders.
+	PersonAccount *PersonAccountClient
 	// Project is the client for interacting with the Project builders.
 	Project *ProjectClient
 	// Receivable is the client for interacting with the Receivable builders.
@@ -107,6 +110,7 @@ func (c *Client) init() {
 	c.Organization = NewOrganizationClient(c.config)
 	c.Payout = NewPayoutClient(c.config)
 	c.Person = NewPersonClient(c.config)
+	c.PersonAccount = NewPersonAccountClient(c.config)
 	c.Project = NewProjectClient(c.config)
 	c.Receivable = NewReceivableClient(c.config)
 	c.Session = NewSessionClient(c.config)
@@ -219,6 +223,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		Organization:     NewOrganizationClient(cfg),
 		Payout:           NewPayoutClient(cfg),
 		Person:           NewPersonClient(cfg),
+		PersonAccount:    NewPersonAccountClient(cfg),
 		Project:          NewProjectClient(cfg),
 		Receivable:       NewReceivableClient(cfg),
 		Session:          NewSessionClient(cfg),
@@ -258,6 +263,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		Organization:     NewOrganizationClient(cfg),
 		Payout:           NewPayoutClient(cfg),
 		Person:           NewPersonClient(cfg),
+		PersonAccount:    NewPersonAccountClient(cfg),
 		Project:          NewProjectClient(cfg),
 		Receivable:       NewReceivableClient(cfg),
 		Session:          NewSessionClient(cfg),
@@ -297,8 +303,8 @@ func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.APIToken, c.Allocation, c.Customer, c.Integration, c.Invite, c.IssueSync,
 		c.Label, c.OAuthAccessToken, c.OAuthGrant, c.Organization, c.Payout, c.Person,
-		c.Project, c.Receivable, c.Session, c.Task, c.Team, c.TeamMembership,
-		c.WorkSession, c.WorkSessionTask,
+		c.PersonAccount, c.Project, c.Receivable, c.Session, c.Task, c.Team,
+		c.TeamMembership, c.WorkSession, c.WorkSessionTask,
 	} {
 		n.Use(hooks...)
 	}
@@ -310,8 +316,8 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.APIToken, c.Allocation, c.Customer, c.Integration, c.Invite, c.IssueSync,
 		c.Label, c.OAuthAccessToken, c.OAuthGrant, c.Organization, c.Payout, c.Person,
-		c.Project, c.Receivable, c.Session, c.Task, c.Team, c.TeamMembership,
-		c.WorkSession, c.WorkSessionTask,
+		c.PersonAccount, c.Project, c.Receivable, c.Session, c.Task, c.Team,
+		c.TeamMembership, c.WorkSession, c.WorkSessionTask,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -344,6 +350,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Payout.mutate(ctx, m)
 	case *PersonMutation:
 		return c.Person.mutate(ctx, m)
+	case *PersonAccountMutation:
+		return c.PersonAccount.mutate(ctx, m)
 	case *ProjectMutation:
 		return c.Project.mutate(ctx, m)
 	case *ReceivableMutation:
@@ -2054,6 +2062,22 @@ func (c *OrganizationClient) QueryReceivables(_m *Organization) *ReceivableQuery
 	return query
 }
 
+// QueryPersonAccounts queries the person_accounts edge of a Organization.
+func (c *OrganizationClient) QueryPersonAccounts(_m *Organization) *PersonAccountQuery {
+	query := (&PersonAccountClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(organization.Table, organization.FieldID, id),
+			sqlgraph.To(personaccount.Table, personaccount.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, organization.PersonAccountsTable, organization.PersonAccountsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *OrganizationClient) Hooks() []Hook {
 	return c.hooks.Organization
@@ -2448,6 +2472,22 @@ func (c *PersonClient) QueryOauthGrants(_m *Person) *OAuthGrantQuery {
 	return query
 }
 
+// QueryAccounts queries the accounts edge of a Person.
+func (c *PersonClient) QueryAccounts(_m *Person) *PersonAccountQuery {
+	query := (&PersonAccountClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(person.Table, person.FieldID, id),
+			sqlgraph.To(personaccount.Table, personaccount.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, person.AccountsTable, person.AccountsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryCreatedInvites queries the created_invites edge of a Person.
 func (c *PersonClient) QueryCreatedInvites(_m *Person) *InviteQuery {
 	query := (&InviteClient{config: c.config}).Query()
@@ -2518,6 +2558,171 @@ func (c *PersonClient) mutate(ctx context.Context, m *PersonMutation) (Value, er
 		return (&PersonDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown Person mutation op: %q", m.Op())
+	}
+}
+
+// PersonAccountClient is a client for the PersonAccount schema.
+type PersonAccountClient struct {
+	config
+}
+
+// NewPersonAccountClient returns a client for the PersonAccount from the given config.
+func NewPersonAccountClient(c config) *PersonAccountClient {
+	return &PersonAccountClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `personaccount.Hooks(f(g(h())))`.
+func (c *PersonAccountClient) Use(hooks ...Hook) {
+	c.hooks.PersonAccount = append(c.hooks.PersonAccount, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `personaccount.Intercept(f(g(h())))`.
+func (c *PersonAccountClient) Intercept(interceptors ...Interceptor) {
+	c.inters.PersonAccount = append(c.inters.PersonAccount, interceptors...)
+}
+
+// Create returns a builder for creating a PersonAccount entity.
+func (c *PersonAccountClient) Create() *PersonAccountCreate {
+	mutation := newPersonAccountMutation(c.config, OpCreate)
+	return &PersonAccountCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of PersonAccount entities.
+func (c *PersonAccountClient) CreateBulk(builders ...*PersonAccountCreate) *PersonAccountCreateBulk {
+	return &PersonAccountCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *PersonAccountClient) MapCreateBulk(slice any, setFunc func(*PersonAccountCreate, int)) *PersonAccountCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &PersonAccountCreateBulk{err: fmt.Errorf("calling to PersonAccountClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*PersonAccountCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &PersonAccountCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for PersonAccount.
+func (c *PersonAccountClient) Update() *PersonAccountUpdate {
+	mutation := newPersonAccountMutation(c.config, OpUpdate)
+	return &PersonAccountUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *PersonAccountClient) UpdateOne(_m *PersonAccount) *PersonAccountUpdateOne {
+	mutation := newPersonAccountMutation(c.config, OpUpdateOne, withPersonAccount(_m))
+	return &PersonAccountUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *PersonAccountClient) UpdateOneID(id uuid.UUID) *PersonAccountUpdateOne {
+	mutation := newPersonAccountMutation(c.config, OpUpdateOne, withPersonAccountID(id))
+	return &PersonAccountUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for PersonAccount.
+func (c *PersonAccountClient) Delete() *PersonAccountDelete {
+	mutation := newPersonAccountMutation(c.config, OpDelete)
+	return &PersonAccountDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *PersonAccountClient) DeleteOne(_m *PersonAccount) *PersonAccountDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *PersonAccountClient) DeleteOneID(id uuid.UUID) *PersonAccountDeleteOne {
+	builder := c.Delete().Where(personaccount.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &PersonAccountDeleteOne{builder}
+}
+
+// Query returns a query builder for PersonAccount.
+func (c *PersonAccountClient) Query() *PersonAccountQuery {
+	return &PersonAccountQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypePersonAccount},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a PersonAccount entity by its id.
+func (c *PersonAccountClient) Get(ctx context.Context, id uuid.UUID) (*PersonAccount, error) {
+	return c.Query().Where(personaccount.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *PersonAccountClient) GetX(ctx context.Context, id uuid.UUID) *PersonAccount {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryPerson queries the person edge of a PersonAccount.
+func (c *PersonAccountClient) QueryPerson(_m *PersonAccount) *PersonQuery {
+	query := (&PersonClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(personaccount.Table, personaccount.FieldID, id),
+			sqlgraph.To(person.Table, person.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, personaccount.PersonTable, personaccount.PersonColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryOrganization queries the organization edge of a PersonAccount.
+func (c *PersonAccountClient) QueryOrganization(_m *PersonAccount) *OrganizationQuery {
+	query := (&OrganizationClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(personaccount.Table, personaccount.FieldID, id),
+			sqlgraph.To(organization.Table, organization.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, personaccount.OrganizationTable, personaccount.OrganizationColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *PersonAccountClient) Hooks() []Hook {
+	return c.hooks.PersonAccount
+}
+
+// Interceptors returns the client interceptors.
+func (c *PersonAccountClient) Interceptors() []Interceptor {
+	return c.inters.PersonAccount
+}
+
+func (c *PersonAccountClient) mutate(ctx context.Context, m *PersonAccountMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&PersonAccountCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&PersonAccountUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&PersonAccountUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&PersonAccountDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown PersonAccount mutation op: %q", m.Op())
 	}
 }
 
@@ -4021,14 +4226,14 @@ func (c *WorkSessionTaskClient) mutate(ctx context.Context, m *WorkSessionTaskMu
 type (
 	hooks struct {
 		APIToken, Allocation, Customer, Integration, Invite, IssueSync, Label,
-		OAuthAccessToken, OAuthGrant, Organization, Payout, Person, Project,
-		Receivable, Session, Task, Team, TeamMembership, WorkSession,
+		OAuthAccessToken, OAuthGrant, Organization, Payout, Person, PersonAccount,
+		Project, Receivable, Session, Task, Team, TeamMembership, WorkSession,
 		WorkSessionTask []ent.Hook
 	}
 	inters struct {
 		APIToken, Allocation, Customer, Integration, Invite, IssueSync, Label,
-		OAuthAccessToken, OAuthGrant, Organization, Payout, Person, Project,
-		Receivable, Session, Task, Team, TeamMembership, WorkSession,
+		OAuthAccessToken, OAuthGrant, Organization, Payout, Person, PersonAccount,
+		Project, Receivable, Session, Task, Team, TeamMembership, WorkSession,
 		WorkSessionTask []ent.Interceptor
 	}
 )

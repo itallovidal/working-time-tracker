@@ -70,9 +70,11 @@ type OrganizationEdges struct {
 	Invites []*Invite `json:"invites,omitempty"`
 	// Receivables holds the value of the receivables edge.
 	Receivables []*Receivable `json:"receivables,omitempty"`
+	// PersonAccounts holds the value of the person_accounts edge.
+	PersonAccounts []*PersonAccount `json:"person_accounts,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [5]bool
+	loadedTypes [6]bool
 }
 
 // PersonsOrErr returns the Persons value or an error if the edge
@@ -118,6 +120,15 @@ func (e OrganizationEdges) ReceivablesOrErr() ([]*Receivable, error) {
 		return e.Receivables, nil
 	}
 	return nil, &NotLoadedError{edge: "receivables"}
+}
+
+// PersonAccountsOrErr returns the PersonAccounts value or an error if the edge
+// was not loaded in eager-loading.
+func (e OrganizationEdges) PersonAccountsOrErr() ([]*PersonAccount, error) {
+	if e.loadedTypes[5] {
+		return e.PersonAccounts, nil
+	}
+	return nil, &NotLoadedError{edge: "person_accounts"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -292,6 +303,11 @@ func (_m *Organization) QueryInvites() *InviteQuery {
 // QueryReceivables queries the "receivables" edge of the Organization entity.
 func (_m *Organization) QueryReceivables() *ReceivableQuery {
 	return NewOrganizationClient(_m.config).QueryReceivables(_m)
+}
+
+// QueryPersonAccounts queries the "person_accounts" edge of the Organization entity.
+func (_m *Organization) QueryPersonAccounts() *PersonAccountQuery {
+	return NewOrganizationClient(_m.config).QueryPersonAccounts(_m)
 }
 
 // Update returns a builder for updating this Organization.

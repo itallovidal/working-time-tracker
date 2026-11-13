@@ -60,5 +60,6 @@ func (Organization) Edges() []ent.Edge {
 		edge.To("customers", Customer.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("invites", Invite.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("receivables", Receivable.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
+		edge.To("person_accounts", PersonAccount.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
 	}
 }

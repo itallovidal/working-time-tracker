@@ -366,6 +366,16 @@ func DeadlineNotNil() predicate.Task {
 	return predicate.Task(sql.FieldNotNull(FieldDeadline))
 }
 
+// RequiredAccountsIsNil applies the IsNil predicate on the "required_accounts" field.
+func RequiredAccountsIsNil() predicate.Task {
+	return predicate.Task(sql.FieldIsNull(FieldRequiredAccounts))
+}
+
+// RequiredAccountsNotNil applies the NotNil predicate on the "required_accounts" field.
+func RequiredAccountsNotNil() predicate.Task {
+	return predicate.Task(sql.FieldNotNull(FieldRequiredAccounts))
+}
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.Task {
 	return predicate.Task(sql.FieldEQ(FieldCreatedAt, v))

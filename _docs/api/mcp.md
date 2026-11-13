@@ -177,7 +177,7 @@ tela.
 |---|---|
 | `create_task` | Cria a tarefa (nome, descrição, prioridade, prazo, etiquetas pelo nome, e `assign_to_me`). Nasce em backlog; sem prazo, o prazo é daqui a 7 dias, como na API; a publicação automática das integrações vale como na tela |
 | `update_task` | Muda só o que vem: nome, descrição, status, prioridade, prazo (ou `clear_deadline`), etiquetas e responsável (`me` ou `none`). Numa tarefa sincronizada, a mudança vai à plataforma |
-| `claim_task` | Pega a tarefa sem responsável, sem bater o ponto. A de outra pessoa é recusada |
+| `claim_task` | Pega a tarefa sem responsável, sem bater o ponto. A de outra pessoa é recusada, e a que exige uma conta (`required_accounts`) que a pessoa não ligou também (`task.account_required`: o texto pede para conectar a conta no perfil) |
 | `sync_task` | Sincroniza agora a tarefa com os itens ligados a ela, nos dois sentidos (o botão Sincronizar da tarefa) |
 | `clock_in` | Abre o ponto numa tarefa, numa sessão do projeto dela; as sessões de outros projetos continuam. Ela passa a em progresso e, sem responsável, vira da pessoa |
 | `add_task_to_session` | Põe a tarefa na sessão aberta do projeto dela, a partir de agora. Com `switch`, encerra os outros trechos ativos daquela sessão: é trocar de tarefa |

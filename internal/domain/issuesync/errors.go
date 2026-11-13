@@ -41,4 +41,6 @@ var (
 	ErrNoLogin = apperr.New("issue_sync.no_login", http.StatusBadRequest)
 	// ErrLabelRefused: o token não pode criar etiquetas no repositório.
 	ErrLabelRefused = apperr.New("issue_sync.label_refused", http.StatusBadRequest)
+	// ErrLinkNotInProject: o admin escolheu, para o login de um responsável, alguém que não está no projeto.
+	ErrLinkNotInProject = apperr.New("issue_sync.link_not_in_project", http.StatusBadRequest)
 )

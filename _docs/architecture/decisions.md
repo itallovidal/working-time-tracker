@@ -1139,6 +1139,52 @@ acompanhar a semana, sem perder a comparação do mês.
 meta do período) e ganha `week`. As regras de hoje estão em
 [money.md](../product/money.md#horas-estimadas-do-contrato-mensal).
 
+### Decisão 30: Contas conectadas e a trava do responsável
+
+**Contexto:** a sincronização lê e escreve o responsável das issues, mas um login do GitHub ou do GitLab só virava uma
+pessoa pelo e-mail público dela, e quase ninguém o publica. Nem quem conectava a integração ficava ligado: o login dele
+só ia para o nome da integração. Além disso, há tarefas que são só de quem desenvolve: quem não tem conta na plataforma
+não deveria pegá-las.
+
+**Escolha:** a conta de cada pessoa na plataforma fica guardada, e a tarefa pode exigir a conta do responsável.
+
+- **Uma tabela de contas:** `person_accounts` (pessoa, organização, plataforma, login, e-mail, "não tenho conta" e a
+  origem). Uma conta por pessoa em cada plataforma, e um login liga a uma pessoa só dentro da organização. Por enquanto
+  só GitHub e GitLab, que são as plataformas que sincronizam o responsável.
+- **Quatro jeitos de ligar, em ordem de força:**
+  1. A própria pessoa autoriza no perfil (Contas conectadas). O OAuth pede só `user:email` no GitHub e `read_user` no
+     GitLab, volta pelo mesmo endereço da integração (o único que o app da plataforma aceita) e o token é revogado
+     logo depois de ler o login.
+  2. Quem conecta uma integração pelo OAuth fica com o login com que autorizou, se ainda não tinha conta (a integração
+     pode ser de um robô).
+  3. Quem gerencia as integrações liga, no cartão, cada login sem pessoa a alguém do projeto.
+  4. O e-mail público que casa fica guardado.
+
+  O que a pessoa autorizou vence os outros; um admin não toma um login autorizado.
+- **A sincronização procura o login na tabela antes do e-mail.** Quem disse que não tem conta não é procurado na
+  plataforma.
+- **A trava:** a tarefa tem `required_accounts`, as plataformas em que o responsável precisa ter conta ligada. Ela vale
+  ao pegar, ao escolher o responsável (na criação e na edição) e ao bater o ponto numa tarefa livre, que a tornaria da
+  pessoa. A tarefa importada de uma issue nasce com a plataforma dela, e quem edita a tarefa pode tirar. Ligar a trava
+  não tira quem já é o responsável. No modo solo ela não vale: a pessoa é uma só.
+- **O modal ao pegar:** numa tarefa ligada a uma issue, quem ainda não respondeu sobre a conta conecta ou diz que não
+  tem (e não é perguntado de novo); na tarefa com a trava, só conectar libera. Conectar volta para a tarefa e termina
+  de pegá-la.
+- **A tarefa continua com um responsável só.** A issue pode ter vários, e a sincronização mexe só no login ligado.
+
+**Alternativas descartadas:**
+- **Um campo "usuário do GitHub" que a pessoa digita:** qualquer um digitaria o login de outra pessoa, e o login
+  digitado errado não daria erro nenhum.
+- **Um endereço de retorno só para a conta da pessoa:** pediria cadastrar outra URL nos apps do GitHub e do GitLab, em
+  cada ambiente.
+- **Vários responsáveis por tarefa:** os painéis, o ponto, o dinheiro e o MCP partem de um responsável só. Ficou para
+  depois.
+
+**Consequências:** a contagem de "responsáveis sem correspondência" passa a ser de logins, e não de issues. Uma pessoa
+que só casava pelo e-mail ganha a conta na primeira rodada que a encontra. O GitHub falso dos testes devolve outra
+pessoa (`monalisa`) quando o escopo é o da conta. As regras de hoje estão em
+[overview.md](../integrations/overview.md#contas-das-pessoas).
+
 ## Riscos e trade-offs
 
 - **Limite de requisições das plataformas.** Buscar detalhes e sincronizar gasta a cota de cada plataforma. →

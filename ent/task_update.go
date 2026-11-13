@@ -17,6 +17,7 @@ import (
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"entgo.io/ent/dialect/sql/sqljson"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 )
@@ -147,6 +148,24 @@ func (_u *TaskUpdate) SetNillableDeadline(v *time.Time) *TaskUpdate {
 // ClearDeadline clears the value of the "deadline" field.
 func (_u *TaskUpdate) ClearDeadline() *TaskUpdate {
 	_u.mutation.ClearDeadline()
+	return _u
+}
+
+// SetRequiredAccounts sets the "required_accounts" field.
+func (_u *TaskUpdate) SetRequiredAccounts(v []string) *TaskUpdate {
+	_u.mutation.SetRequiredAccounts(v)
+	return _u
+}
+
+// AppendRequiredAccounts appends value to the "required_accounts" field.
+func (_u *TaskUpdate) AppendRequiredAccounts(v []string) *TaskUpdate {
+	_u.mutation.AppendRequiredAccounts(v)
+	return _u
+}
+
+// ClearRequiredAccounts clears the value of the "required_accounts" field.
+func (_u *TaskUpdate) ClearRequiredAccounts() *TaskUpdate {
+	_u.mutation.ClearRequiredAccounts()
 	return _u
 }
 
@@ -362,6 +381,17 @@ func (_u *TaskUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.DeadlineCleared() {
 		_spec.ClearField(task.FieldDeadline, field.TypeTime)
+	}
+	if value, ok := _u.mutation.RequiredAccounts(); ok {
+		_spec.SetField(task.FieldRequiredAccounts, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedRequiredAccounts(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, task.FieldRequiredAccounts, value)
+		})
+	}
+	if _u.mutation.RequiredAccountsCleared() {
+		_spec.ClearField(task.FieldRequiredAccounts, field.TypeJSON)
 	}
 	if _u.mutation.ProjectCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -692,6 +722,24 @@ func (_u *TaskUpdateOne) ClearDeadline() *TaskUpdateOne {
 	return _u
 }
 
+// SetRequiredAccounts sets the "required_accounts" field.
+func (_u *TaskUpdateOne) SetRequiredAccounts(v []string) *TaskUpdateOne {
+	_u.mutation.SetRequiredAccounts(v)
+	return _u
+}
+
+// AppendRequiredAccounts appends value to the "required_accounts" field.
+func (_u *TaskUpdateOne) AppendRequiredAccounts(v []string) *TaskUpdateOne {
+	_u.mutation.AppendRequiredAccounts(v)
+	return _u
+}
+
+// ClearRequiredAccounts clears the value of the "required_accounts" field.
+func (_u *TaskUpdateOne) ClearRequiredAccounts() *TaskUpdateOne {
+	_u.mutation.ClearRequiredAccounts()
+	return _u
+}
+
 // SetProject sets the "project" edge to the Project entity.
 func (_u *TaskUpdateOne) SetProject(v *Project) *TaskUpdateOne {
 	return _u.SetProjectID(v.ID)
@@ -934,6 +982,17 @@ func (_u *TaskUpdateOne) sqlSave(ctx context.Context) (_node *Task, err error) {
 	}
 	if _u.mutation.DeadlineCleared() {
 		_spec.ClearField(task.FieldDeadline, field.TypeTime)
+	}
+	if value, ok := _u.mutation.RequiredAccounts(); ok {
+		_spec.SetField(task.FieldRequiredAccounts, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedRequiredAccounts(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, task.FieldRequiredAccounts, value)
+		})
+	}
+	if _u.mutation.RequiredAccountsCleared() {
+		_spec.ClearField(task.FieldRequiredAccounts, field.TypeJSON)
 	}
 	if _u.mutation.ProjectCleared() {
 		edge := &sqlgraph.EdgeSpec{

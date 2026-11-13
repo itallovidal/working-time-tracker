@@ -34,6 +34,8 @@ func (h *Handler) Create(c *echo.Context) error {
 		Deadline    *time.Time `json:"deadline"`
 		Priority    *string    `json:"priority"`
 		LabelIDs    *[]string  `json:"label_ids"`
+		// RequiredAccounts são as plataformas em que o responsável precisa ter conta (a trava).
+		RequiredAccounts *[]string `json:"required_accounts"`
 		// SkipPublish são as integrações em que a tarefa nova não deve ser postada sozinha.
 		SkipPublish []string `json:"skip_publish"`
 	}
@@ -45,7 +47,7 @@ func (h *Handler) Create(c *echo.Context) error {
 		return apperr.Respond(c, 400, err)
 	}
 	task, err := h.svc.CreateAs(selfID(c), projectID, body.Name, body.Description, body.AssigneeID, body.Deadline,
-		Attrs{Priority: body.Priority, LabelIDs: body.LabelIDs, SkipPublish: skip})
+		Attrs{Priority: body.Priority, LabelIDs: body.LabelIDs, RequiredAccounts: body.RequiredAccounts, SkipPublish: skip})
 	if err != nil {
 		return apperr.Respond(c, 400, err)
 	}
@@ -198,12 +200,14 @@ func (h *Handler) Update(c *echo.Context) error {
 		Priority    *string                      `json:"priority"`
 		Status      *string                      `json:"status"`
 		LabelIDs    *[]string                    `json:"label_ids"`
+		// RequiredAccounts omitido mantém a trava; [] a tira.
+		RequiredAccounts *[]string `json:"required_accounts"`
 	}
 	if err := c.Bind(&body); err != nil {
 		return apperr.Respond(c, 400, apperr.BindError(err))
 	}
 	task, err := h.svc.PatchAs(selfID(c), id, body.Name, body.Description, body.AssigneeID, body.Deadline,
-		Attrs{Priority: body.Priority, Status: body.Status, LabelIDs: body.LabelIDs})
+		Attrs{Priority: body.Priority, Status: body.Status, LabelIDs: body.LabelIDs, RequiredAccounts: body.RequiredAccounts})
 	if err != nil {
 		return apperr.Respond(c, 400, err)
 	}
@@ -215,7 +219,7 @@ func (h *Handler) Update(c *echo.Context) error {
 func (h *Handler) Claim(c *echo.Context) error {
 	task, err := h.svc.Claim(selfID(c), c.Param("taskId"))
 	if err != nil {
-		if errors.Is(err, ErrAlreadyAssigned) {
+		if errors.Is(err, ErrAlreadyAssigned) || errors.Is(err, ErrAccountRequired) {
 			return apperr.Respond(c, http.StatusConflict, err)
 		}
 		return apperr.Respond(c, 400, err)
@@ -232,12 +236,15 @@ func (h *Handler) UpdateAttrs(c *echo.Context) error {
 		LabelIDs   *[]string                    `json:"label_ids"`
 		AssigneeID *string                      `json:"assignee_id"`
 		Deadline   validate.Optional[time.Time] `json:"deadline"`
+		// RequiredAccounts omitido mantém a trava; [] a tira.
+		RequiredAccounts *[]string `json:"required_accounts"`
 	}
 	if err := c.Bind(&body); err != nil {
 		return apperr.Respond(c, 400, apperr.BindError(err))
 	}
 	task, err := h.svc.PatchAttrsAs(selfID(c), c.Param("taskId"),
-		Attrs{Priority: body.Priority, Status: body.Status, LabelIDs: body.LabelIDs}, body.AssigneeID, body.Deadline)
+		Attrs{Priority: body.Priority, Status: body.Status, LabelIDs: body.LabelIDs, RequiredAccounts: body.RequiredAccounts},
+		body.AssigneeID, body.Deadline)
 	if err != nil {
 		return apperr.Respond(c, 400, err)
 	}

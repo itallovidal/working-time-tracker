@@ -454,6 +454,53 @@ var (
 			},
 		},
 	}
+	// PersonAccountsColumns holds the columns for the "person_accounts" table.
+	PersonAccountsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "platform", Type: field.TypeEnum, Enums: []string{"github", "gitlab"}},
+		{Name: "username", Type: field.TypeString, Default: ""},
+		{Name: "email", Type: field.TypeString, Default: ""},
+		{Name: "no_account", Type: field.TypeBool, Default: false},
+		{Name: "source", Type: field.TypeEnum, Enums: []string{"oauth", "integration", "admin", "email", "self"}},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "organization_id", Type: field.TypeUUID},
+		{Name: "person_id", Type: field.TypeUUID},
+	}
+	// PersonAccountsTable holds the schema information for the "person_accounts" table.
+	PersonAccountsTable = &schema.Table{
+		Name:       "person_accounts",
+		Columns:    PersonAccountsColumns,
+		PrimaryKey: []*schema.Column{PersonAccountsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "person_accounts_organizations_person_accounts",
+				Columns:    []*schema.Column{PersonAccountsColumns[7]},
+				RefColumns: []*schema.Column{OrganizationsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "person_accounts_persons_accounts",
+				Columns:    []*schema.Column{PersonAccountsColumns[8]},
+				RefColumns: []*schema.Column{PersonsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "personaccount_person_id_platform",
+				Unique:  true,
+				Columns: []*schema.Column{PersonAccountsColumns[8], PersonAccountsColumns[1]},
+			},
+			{
+				Name:    "one_person_per_platform_login",
+				Unique:  true,
+				Columns: []*schema.Column{PersonAccountsColumns[7], PersonAccountsColumns[1], PersonAccountsColumns[2]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "((username)::text <> ''::text)",
+				},
+			},
+		},
+	}
 	// ProjectsColumns holds the columns for the "projects" table.
 	ProjectsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -572,6 +619,7 @@ var (
 		{Name: "priority", Type: field.TypeEnum, Enums: []string{"urgent", "high", "medium", "low", "none"}, Default: "none"},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"backlog", "in_progress", "awaiting_closure", "closed"}, Default: "backlog"},
 		{Name: "deadline", Type: field.TypeTime, Nullable: true},
+		{Name: "required_accounts", Type: field.TypeJSON, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "assignee_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "project_id", Type: field.TypeUUID},
@@ -584,13 +632,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "tasks_persons_tasks",
-				Columns:    []*schema.Column{TasksColumns[7]},
+				Columns:    []*schema.Column{TasksColumns[8]},
 				RefColumns: []*schema.Column{PersonsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "tasks_projects_tasks",
-				Columns:    []*schema.Column{TasksColumns[8]},
+				Columns:    []*schema.Column{TasksColumns[9]},
 				RefColumns: []*schema.Column{ProjectsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -773,6 +821,7 @@ var (
 		OrganizationsTable,
 		PayoutsTable,
 		PersonsTable,
+		PersonAccountsTable,
 		ProjectsTable,
 		ReceivablesTable,
 		SessionsTable,
@@ -808,6 +857,8 @@ func init() {
 	}
 	PayoutsTable.ForeignKeys[0].RefTable = PersonsTable
 	PersonsTable.ForeignKeys[0].RefTable = OrganizationsTable
+	PersonAccountsTable.ForeignKeys[0].RefTable = OrganizationsTable
+	PersonAccountsTable.ForeignKeys[1].RefTable = PersonsTable
 	ProjectsTable.ForeignKeys[0].RefTable = CustomersTable
 	ProjectsTable.ForeignKeys[1].RefTable = OrganizationsTable
 	ReceivablesTable.ForeignKeys[0].RefTable = CustomersTable

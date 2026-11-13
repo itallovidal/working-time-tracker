@@ -15,6 +15,7 @@ import (
 	"working-time-tracker/internal/domain/issuesync"
 	"working-time-tracker/internal/domain/organization"
 	"working-time-tracker/internal/domain/person"
+	"working-time-tracker/internal/domain/personaccount"
 	"working-time-tracker/internal/domain/project"
 	"working-time-tracker/internal/domain/task"
 	"working-time-tracker/internal/domain/team"
@@ -66,7 +67,7 @@ func newTrelloEnv(t *testing.T, cfg issuesync.Config) *tenv {
 	e.rows = issuesync.NewStore(testClient)
 	e.syncer = issuesync.New(issuesync.Deps{
 		Integrations: e.integ, Tasks: e.tasks, People: person.NewStore(testClient),
-		Members: team.NewMembershipStore(testClient), Rows: e.rows,
+		Members: team.NewMembershipStore(testClient), Rows: e.rows, Accounts: personaccount.NewStore(testClient),
 	}, cfg)
 	// Como no servidor: criar uma tarefa avisa a sincronização, que a posta se há onde.
 	e.tasks.SetCreateHook(e.syncer.NotifyCreated)

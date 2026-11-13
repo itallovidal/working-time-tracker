@@ -37,7 +37,7 @@ func githubServer(t *testing.T, configured bool) *echo.Echo {
 	if configured {
 		opts.GitHubOAuth = &adapter.GitHubOAuth{
 			ClientID: testutil.GitHubClientID, ClientSecret: testutil.GitHubClientSecret,
-			RedirectURL: "http://wtt.test" + oauthCallback, SiteURL: fake.URL,
+			RedirectURL: "http://wtt.test" + oauthCallback, SiteURL: fake.URL, APIURL: fake.URL,
 		}
 	}
 	e, err := server.New(testClient, opts)

@@ -18,6 +18,7 @@ erDiagram
   CUSTOMER ||--o{ RECEIVABLE : "gera"
   PERSON ||--o{ SESSION : "entra com"
   PERSON ||--o{ API_TOKEN : "conecta o Claude com"
+  PERSON ||--o{ PERSON_ACCOUNT : "tem conta em"
   PROJECT ||--o{ ALLOCATION : "tem"
   PERSON ||--o{ ALLOCATION : "tem"
   PROJECT ||--o{ TEAM : "tem"
@@ -191,6 +192,13 @@ erDiagram
     timestamp expires_at
     timestamp last_used_at "opcional"
   }
+  PERSON_ACCOUNT {
+    string platform "github ou gitlab"
+    string username "vazio sem conta"
+    string email
+    bool no_account
+    string source "oauth, integration, admin, email ou self"
+  }
 ```
 
 `ISSUE_SYNC.snapshot` resume várias colunas (`title`, `body`, `labels`, `assignee_logins`, `mapped_login`,
@@ -206,6 +214,7 @@ erDiagram
 | `api_tokens` | Os tokens do Claude (o servidor MCP em `/mcp`): o nome, o começo do token para a lista, a validade e o último uso. Como a sessão, guarda só o sha256, e some com a pessoa. Índice em `person_id`, por onde a lista, o limite e a troca de senha os procuram |
 | `oauth_grants` | Um app conectado pelo OAuth do MCP (o claude.ai, o Claude Code de uma máquina): o client_id e o nome do app, o endereço de volta, o recurso, o código de autorização (com o desafio do PKCE, a validade de 2 minutos e quando foi usado) e, depois da troca, o token de renovação atual, o anterior e, cifrado com uma chave que depende do token anterior, o sucessor para a janela de 60 segundos (apagado no primeiro uso depois dela), a validade da conexão (30 dias depois do último uso) e o último uso. Guarda só o sha256 de cada código e token, e some com a pessoa. Até 10 conectados por pessoa, mais até 10 autorizações pendentes; o claude.ai tem um só. Ver [Decisão 25](decisions.md#decisão-25-oauth-no-mcp--o-claudeai-o-desktop-e-o-celular-pela-identidade-publicada-do-claude) |
 | `oauth_access_tokens` | Os tokens de acesso de um app conectado (1 hora cada), o que o app manda ao `/mcp`. Só o sha256; somem com o app conectado. Os vencidos saem na renovação seguinte |
+| `person_accounts` | A conta da pessoa no GitHub ou no GitLab: o login, o e-mail que a plataforma deu ao conectar, a resposta "não tenho conta" (`no_account`, login vazio) e de onde veio o vínculo (`source`). Uma por pessoa e plataforma; um login liga a uma pessoa só dentro da organização (índice único parcial, sem o login vazio). Some com a pessoa e com a organização. Ver [contas das pessoas](../integrations/overview.md#contas-das-pessoas) |
 | `invites` | Convite de uso único, com validade. Pode levar a pessoa a um projeto, com valor, time e grupo |
 | `customers` | O cliente que contrata projetos. Tem país próprio, que decide como o documento é conferido, e os termos de cobrança, que valem para todos os projetos dele: o modo (`hourly` ou `monthly`), o valor por hora (no por hora), o ciclo do período (mensal, ou a cada 14 dias a partir de uma âncora, no por hora), o fechamento do período, o prazo e, no mensal, a mensalidade, a estimativa de horas por mês (opcional, só para acompanhar), o contrato, a multa, os juros e a tolerância |
 | `receivables` | A conta a receber de um cliente por período, no modo solo: o que o dono confirmou cobrar e, depois, o que entrou. Um por cliente e período |
@@ -213,7 +222,7 @@ erDiagram
 | `allocations` | A pessoa no projeto: o valor pago por hora e o grupo de permissões dela ali. Uma por pessoa e projeto |
 | `teams`, `team_memberships` | Os times de um projeto e quem está em cada um |
 | `labels`, `task_labels` | As etiquetas de um projeto e as de cada tarefa |
-| `tasks` | A tarefa, com prioridade, status, responsável opcional e prazo |
+| `tasks` | A tarefa, com prioridade, status, responsável opcional, prazo e as plataformas em que o responsável precisa ter conta (`required_accounts`, a trava) |
 | `work_sessions` | Uma sessão de ponto: de um projeto, de uma pessoa, com os valores por hora do momento em que abriu |
 | `work_session_tasks` | Cada intervalo em que uma tarefa esteve numa sessão |
 | `integrations` | A conexão de um projeto com uma plataforma: token criptografado e os campos da plataforma em `metadata` |
@@ -303,7 +312,7 @@ em `customer_id`, `period_start` e `period_end` impede duas confirmações do me
 | Time | Apaga quem estava nele. O convite que levava a ele fica sem time |
 | Integração | Apaga os vínculos dela |
 | Cliente | Só sem projetos apontando para ele (`customer.has_projects`) e sem recebíveis (`customer.has_receivables`) |
-| Organização | Só sem projetos (`organization.has_projects`). Apaga as pessoas, as sessões de login, os tokens do Claude, os clientes, os recebíveis e os convites |
+| Organização | Só sem projetos (`organization.has_projects`). Apaga as pessoas, as sessões de login, os tokens do Claude, as contas no GitHub e no GitLab, os clientes, os recebíveis e os convites |
 
 Uma pessoa com tarefas não pode ser apagada do banco (a chave estrangeira recusa), e não há rota que apague uma
 pessoa.
