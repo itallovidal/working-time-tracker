@@ -87,7 +87,7 @@ type ghFault struct {
 func NewGitHub() *GitHub {
 	g := &GitHub{
 		repos:   map[string]*ghRepo{},
-		users:   map[string]string{GitHubLogin: ""},
+		users:   map[string]string{GitHubLogin: "", GitHubAccountLogin: ""},
 		nologin: map[string]bool{},
 		remains: -1,
 	}

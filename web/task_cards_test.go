@@ -145,7 +145,7 @@ func TestTaskCardsFollowTheirLayout(t *testing.T) {
 		}
 	}
 	for name := range names {
-		if !regexp.MustCompile(`(?m)^\s+` + name + `(\(|,|:)`).MatchString(js) {
+		if !regexp.MustCompile(`(?m)^\s+(?:async\s+)?` + name + `(\(|,|:)`).MatchString(js) {
 			t.Errorf("the task card calls %s, which project.js does not define", name)
 		}
 	}

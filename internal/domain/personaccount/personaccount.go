@@ -25,6 +25,17 @@ var Platforms = []string{GitHub, GitLab}
 // ValidPlatform diz se p é uma plataforma com conta.
 func ValidPlatform(p string) bool { return slices.Contains(Platforms, p) }
 
+// Name é o nome da plataforma como as telas o escrevem.
+func Name(p string) string {
+	switch p {
+	case GitHub:
+		return "GitHub"
+	case GitLab:
+		return "GitLab"
+	}
+	return p
+}
+
 // De onde veio o vínculo. A conta autorizada pela própria pessoa (SourceOAuth) vence as outras; a de quem conectou
 // uma integração (SourceIntegration) também foi autorizada, mas pode ser de um robô; o admin (SourceAdmin) e o e-mail
 // público (SourceEmail) não provam nada. SourceSelf é a pessoa dizendo que não tem conta.

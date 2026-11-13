@@ -367,6 +367,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 
 | Código | Status | Parâmetros | pt-BR | en |
 |---|---|---|---|---|
+| `task.account_required` | 409 | `names` | `esta tarefa é só para quem tem conta no {{.names}} ligada no perfil (Contas conectadas)` | `this task is only for people with a {{.names}} account linked on their profile (Connected accounts)` |
 | `task.already_assigned` | 409 | — | `esta tarefa já tem responsável` | `this task already has an assignee` |
 | `task.already_linked` | 409 | — | `a tarefa já está ligada a um item desta integração` | `the task is already linked to an item of this integration` |
 | `task.assignee_not_in_team` | 400 | — | `o responsável precisa estar neste projeto` | `the assignee must be on this project` |
@@ -382,6 +383,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `task.invalid_per_page` | 400 | — | `tamanho de página inválido (per_page): use um número a partir de 1` | `invalid page size (per_page): use a number from 1` |
 | `task.invalid_priority` | 400 | — | `prioridade inválida: use urgent, high, medium, low ou none` | `invalid priority: use urgent, high, medium, low or none` |
 | `task.invalid_priority_filter` | 400 | — | `prioridade inválida (priority): use urgent, high, medium, low ou none, separadas por vírgula` | `invalid priority (priority): use urgent, high, medium, low or none, separated by commas` |
+| `task.invalid_required_account` | 400 | — | `só o GitHub e o GitLab podem ser exigidos do responsável` | `only GitHub and GitLab can be required of the assignee` |
 | `task.invalid_status` | 400 | — | `status inválido: use backlog, in_progress, awaiting_closure ou closed` | `invalid status: use backlog, in_progress, awaiting_closure or closed` |
 | `task.invalid_status_filter` | 400 | — | `status inválido (status): use backlog, in_progress, awaiting_closure ou closed, separados por vírgula` | `invalid status (status): use backlog, in_progress, awaiting_closure or closed, separated by commas` |
 | `task.item_taken` | 409 | — | `este item já está ligado a outra tarefa` | `this item is already linked to another task` |

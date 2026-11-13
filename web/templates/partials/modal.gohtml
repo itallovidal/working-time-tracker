@@ -11,7 +11,7 @@
     </header>
     {{/* Os modais de formulário longo (o cliente e as boas-vindas) deixam as etapas e os botões parados e só os campos
          rolam: o corpo deixa de rolar e o conteúdo é um .modal-split (app.css). */}}
-    <div id="modal-root" class="modal-body" :class="{ 'modal-body-fixed': ['customer', 'onboarding'].includes($store.modal.name) }">{{if .Me}}{{template "session_modal" .}}{{end}}</div>
+    <div id="modal-root" class="modal-body" :class="{ 'modal-body-fixed': ['customer', 'onboarding'].includes($store.modal.name) }">{{if .Me}}{{template "session_modal" .}}{{template "account_gate_modal" .}}{{end}}</div>
   </section>
 </div>
 {{end}}

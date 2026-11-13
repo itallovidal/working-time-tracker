@@ -86,20 +86,26 @@ Aguardando fechamento ficam só aqui.
 
 ### Responsável
 
-A tarefa tem um responsável só, e a issue pode ter vários. A ligação é pelo **e-mail público** do usuário, no perfil
-do GitHub:
+A tarefa tem um responsável só, e a issue pode ter vários. A ligação é pela **conta** da pessoa no GitHub, e, sem ela,
+pelo **e-mail público** do usuário (ver [contas das pessoas](overview.md#contas-das-pessoas)):
 
-- Um `login` só se liga a uma pessoa **do projeto** cujo e-mail é o público dele. O e-mail é único no sistema, e por
-  isso a busca fica dentro da organização e do projeto: sem essa conferência, uma issue ligaria a tarefa a alguém de
-  outra empresa.
-- Do lado de cá para lá, o login é achado pela busca de usuários por e-mail, e só vale se o e-mail é de **um único**
-  usuário.
+- Cada pessoa liga a conta no perfil, em **Contas conectadas** (ou no modal que aparece ao pegar uma tarefa ligada a
+  uma issue). Quem conecta a integração já fica com a conta com que autorizou, e quem gerencia as integrações liga os
+  logins que sobraram no cartão (**Ligar**).
+- Um `login` só se liga a uma pessoa **do projeto**: pela conta dela na organização ou pelo e-mail público, que é único
+  no sistema. Sem essa conferência, uma issue ligaria a tarefa a alguém de outra empresa.
+- Do lado de cá para lá, o login é o da conta da pessoa; sem conta, o da busca de usuários pelo e-mail, que só vale se
+  o e-mail é de **um único** usuário. Quem disse que não tem conta não é procurado.
 - Só o login **ligado** é mexido. Os outros responsáveis da issue ficam como estão nos dois sentidos.
 - Tirar o responsável no GitHub tira daqui, e o contrário também.
-- Escolher aqui alguém sem usuário que se ache pelo e-mail não manda nada e deixa o aviso `issue_sync.no_login`.
-- Quem publica o e-mail depois passa a ser reconhecido na rodada seguinte. O botão Sincronizar pergunta tudo de novo.
+- Escolher aqui alguém sem conta e sem usuário que se ache pelo e-mail não manda nada e deixa o aviso
+  `issue_sync.no_login`.
+- Quem conecta a conta (ou publica o e-mail) depois passa a ser reconhecido na rodada seguinte. O botão Sincronizar
+  pergunta tudo de novo.
+- A tarefa importada de uma issue nasce **só para quem tem conta no GitHub** (`required_accounts`); quem edita a tarefa
+  tira a marca.
 
-O cartão da integração conta quantas issues têm responsável sem correspondência (`sync_unmatched`). Nesse caso a
+O cartão da integração lista os logins de responsáveis sem correspondência (`sync_unmatched_logins`). Nesse caso a
 tarefa fica sem responsável, disponível para alguém pegar.
 
 ### As rodadas no GitHub
@@ -129,8 +135,8 @@ tarefa fica sem responsável, disponível para alguém pegar.
 - Num repositório **público**, quem abre uma issue cria uma tarefa. O Markdown é sanitizado ao exibir.
 - A descrição de uma tarefa vai até 65.536 caracteres e uma etiqueta até 50, que são os limites do GitHub, para a
   sincronização não cortar o texto.
-- O responsável pelo e-mail funciona para poucos, porque quase ninguém publica o e-mail no GitHub. Um campo "usuário
-  do GitHub" na pessoa resolveria, e é um passo pequeno.
+- O e-mail público funciona para poucos, porque quase ninguém o publica no GitHub: a conta ligada no perfil é o
+  caminho.
 - Com a sincronização ligada, o repositório não troca. Ver [ligar e desligar](overview.md#ligar-e-desligar).
 
 ## Conferir sem o GitHub de verdade

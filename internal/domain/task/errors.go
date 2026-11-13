@@ -39,6 +39,12 @@ var (
 	ErrLabelNotFound         = apperr.New("label.not_found", http.StatusNotFound)
 	ErrInvalidPage           = apperr.New("task.invalid_page", http.StatusBadRequest)
 	ErrInvalidPerPage        = apperr.New("task.invalid_per_page", http.StatusBadRequest)
+	// A trava da tarefa: o responsável precisa ter conta ligada nas plataformas que ela exige. names são os nomes para o
+	// texto ("GitHub, GitLab"); o erro também leva platforms, os códigos ("github,gitlab"), para a tela abrir o modal
+	// da conta certa.
+	ErrAccountRequired = apperr.New("task.account_required", http.StatusConflict, "names")
+	// Uma plataforma pedida na trava que não tem conta (só o GitHub e o GitLab têm).
+	ErrInvalidRequiredAccount = apperr.New("task.invalid_required_account", http.StatusBadRequest)
 )
 
 // ErrDeadlineOutOfRange é o prazo antes de 1971: a tarefa guarda o "sem prazo" como uma data antiga, então uma

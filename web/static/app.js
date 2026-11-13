@@ -865,6 +865,18 @@
       forget() {
         cache = null;
       },
+      // returnError lê o erro da volta do OAuth: o código (account_error) e os parâmetros dele (account_error_<nome>),
+      // e tira tudo isso de q. Nulo sem erro.
+      returnError(q) {
+        const code = q.get('account_error');
+        const params = {};
+        [...q.keys()].filter((k) => k.startsWith('account_error_')).forEach((k) => {
+          params[k.slice('account_error_'.length)] = q.get(k);
+          q.delete(k);
+        });
+        q.delete('account_error');
+        return code ? { code, params } : null;
+      },
     };
   })();
 
@@ -1045,6 +1057,92 @@
         opener = null;
         // Depois de o x-for reordenar a lista: mover a linha tiraria o foco do botão.
         Alpine.nextTick(() => el && el.isConnected && el.focus());
+      },
+    });
+
+    // accountGate é o modal de pegar (ou começar) uma tarefa ligada a uma issue do GitHub ou do GitLab quando a pessoa
+    // ainda não ligou a conta da plataforma (Decisão 30). Na tarefa sem trava ela conecta ou diz que não tem conta, e a
+    // ação segue; na que exige a conta (required_accounts), só conectar libera. ask() devolve uma promessa: true segue
+    // com a ação, false a cancela. Conectar sai da página para o OAuth da plataforma, que volta com
+    // ?then=<claim|start>&task=<id>: a página lê a volta com takeReturn() e termina o que a pessoa começou.
+    Alpine.store('accountGate', {
+      platform: '',
+      required: false,
+      then: '',
+      taskId: '',
+      pending: false,
+      error: '',
+      resolve: null,
+      async ask(task, then) {
+        const accounts = window.WTT.accounts;
+        const onIssue = (task.links || []).map((l) => l.integration && l.integration.type).filter((p) => accounts.platforms.includes(p));
+        const required = task.required_accounts || [];
+        if (onIssue.length === 0 && required.length === 0) return true;
+        let mine;
+        try {
+          mine = await accounts.mine();
+        } catch (e) {
+          return true; // o servidor confere de novo
+        }
+        const missing = required.find((p) => !accounts.linked(mine, p));
+        const platform = missing || onIssue.find((p) => !accounts.answered(mine, p));
+        if (!platform) return true;
+        return new Promise((resolve) => this.show(platform, !!missing, then, task.id, resolve));
+      },
+      // fromError abre o modal a partir da recusa do servidor (task.account_required), quando a tela estava velha.
+      // Diz se abriu.
+      fromError(e, task, then) {
+        if (!e || e.code !== 'task.account_required') return false;
+        const platform = String((e.params && e.params.platforms) || '').split(',')[0];
+        if (!platform) return false;
+        window.WTT.accounts.forget();
+        this.show(platform, true, then, task.id, null);
+        return true;
+      },
+      show(platform, required, then, taskId, resolve) {
+        Object.assign(this, { platform, required, then, taskId, resolve, pending: false, error: '' });
+        const name = window.WTT.accounts.name(platform);
+        Alpine.store('modal').open('account-gate', window.WTT.t(required ? 'account_gate.title_required' : 'account_gate.title', { platform: name }),
+          () => { this.finish(false); return true; });
+      },
+      name() {
+        return window.WTT.accounts.name(this.platform);
+      },
+      connectURL() {
+        const q = new URLSearchParams(location.search);
+        q.set('then', this.then);
+        q.set('task', this.taskId);
+        return window.WTT.accounts.connectURL(this.platform, location.pathname + '?' + q);
+      },
+      async noAccount() {
+        this.pending = true;
+        this.error = '';
+        try {
+          await window.WTT.accounts.noAccount(this.platform);
+        } catch (e) {
+          this.error = e.message;
+          return;
+        } finally {
+          this.pending = false;
+        }
+        Alpine.store('modal').close();
+        this.finish(true);
+      },
+      finish(ok) {
+        const r = this.resolve;
+        this.resolve = null;
+        if (r) r(ok);
+      },
+      // takeReturn lê a volta do OAuth (?then=&task= e ?account= ou ?account_error=), tira esses parâmetros da URL e a
+      // devolve, com o erro como {code, params}; null quando a página não veio de lá.
+      takeReturn() {
+        const q = new URLSearchParams(location.search);
+        const back = { then: q.get('then'), task: q.get('task'), ok: q.get('account'), err: window.WTT.accounts.returnError(q) };
+        if (!back.then && !back.ok && !back.err) return null;
+        ['then', 'task', 'account'].forEach((k) => q.delete(k));
+        history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q : ''));
+        if (back.ok) window.WTT.accounts.forget();
+        return back;
       },
     });
 

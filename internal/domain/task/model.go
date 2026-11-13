@@ -76,6 +76,9 @@ type Attrs struct {
 	Priority *string
 	Status   *string
 	LabelIDs *[]string
+	// RequiredAccounts são as plataformas em que o responsável precisa ter conta ("github", "gitlab"). Nil mantém as
+	// que a tarefa tem; vazio tira a trava.
+	RequiredAccounts *[]string
 	// SkipPublish são as integrações em que a tarefa nova NÃO deve ser postada sozinha: a pessoa as
 	// desmarcou na etapa Integrações. Só vale na criação (não é guardado) e vai ao gancho de criação.
 	SkipPublish []uuid.UUID
@@ -105,6 +108,9 @@ type Task struct {
 	AssigneeID  *uuid.UUID `json:"assignee_id"`
 	Assignee    *Person    `json:"assignee,omitempty"`
 	Deadline    time.Time  `json:"deadline"`
+	// RequiredAccounts são as plataformas em que o responsável precisa ter conta ligada (a trava "só quem tem conta
+	// no GitHub"); vazio, qualquer pessoa do projeto. Sempre uma lista.
+	RequiredAccounts []string `json:"required_accounts"`
 	// Links são os itens externos a que a tarefa está ligada, do mais antigo para o mais novo.
 	Links     []Link    `json:"links"`
 	CreatedAt time.Time `json:"created_at"`

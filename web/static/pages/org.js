@@ -1709,12 +1709,11 @@ document.addEventListener('alpine:init', () => {
     init() {
       const q = new URLSearchParams(location.search);
       const ok = q.get('account');
-      const err = q.get('account_error');
+      const err = WTT.accounts.returnError(q);
       if (ok || err) {
         q.delete('account');
-        q.delete('account_error');
         history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q : ''));
-        if (err) this.errors.connect = WTT.errorText({ code: err });
+        if (err) this.errors.connect = WTT.errorText(err);
         else toast(WTT.t('profile.accounts.connected', { platform: WTT.accounts.name(ok) }));
       }
       return this.load();

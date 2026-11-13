@@ -1,15 +1,29 @@
 package team
 
 import (
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v5"
 
 	"working-time-tracker/internal/apperr"
 	"working-time-tracker/internal/database"
+	"working-time-tracker/internal/domain/personaccount"
 )
 
 type Handler struct {
 	svc           *Service
 	membershipSvc *MembershipService
+	// accounts dá, na lista de quem está no projeto, as plataformas em que cada um tem conta ligada: o select de
+	// responsável desabilita quem não passa na trava da tarefa. Nulo, a lista vem sem elas.
+	accounts *personaccount.Store
+}
+
+// SetAccounts liga as contas das pessoas à lista de quem está no projeto.
+func (h *Handler) SetAccounts(accounts *personaccount.Store) { h.accounts = accounts }
+
+// projectMember é a pessoa do projeto com as plataformas em que ela tem conta ligada ("github", "gitlab").
+type projectMember struct {
+	Person
+	Accounts []string `json:"accounts"`
 }
 
 func NewHandler(svc *Service, membershipSvc *MembershipService) *Handler {
@@ -126,5 +140,22 @@ func (h *Handler) ListProjectMembers(c *echo.Context) error {
 	if err != nil {
 		return apperr.Respond(c, 500, err)
 	}
-	return c.JSON(200, persons)
+	linked := map[uuid.UUID][]string{}
+	if h.accounts != nil {
+		ids := make([]uuid.UUID, len(persons))
+		for i, p := range persons {
+			ids[i] = p.ID
+		}
+		if linked, err = h.accounts.LinkedPlatforms(ids); err != nil {
+			return apperr.Respond(c, 500, err)
+		}
+	}
+	out := make([]projectMember, len(persons))
+	for i, p := range persons {
+		out[i] = projectMember{Person: p, Accounts: linked[p.ID]}
+		if out[i].Accounts == nil {
+			out[i].Accounts = []string{}
+		}
+	}
+	return c.JSON(200, out)
 }

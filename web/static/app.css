@@ -347,8 +347,8 @@ input.mono { line-height: 1.7222; }
   display: flex; align-items: center; gap: 8px 14px; flex-wrap: wrap; padding: 14px 0;
   border-top: 1px solid var(--rule);
 }
-.account-row:first-child { border-top: 0; padding-top: 0; }
-.account-row:last-child { padding-bottom: 0; }
+.account-row:first-of-type { border-top: 0; padding-top: 0; }
+.account-row:last-of-type { padding-bottom: 0; }
 .account-brand { font-size: 1.7rem; line-height: 1; width: 1.7rem; text-align: center; color: var(--ink); }
 .account-who { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 220px; }
 .account-who .small { overflow-wrap: anywhere; }

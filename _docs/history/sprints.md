@@ -1365,6 +1365,27 @@ The owner found the colors of Clientes e Projetos odd: the customer circle and e
 - [X] S128.2 The counts on the card said "0 tarefa" (in Portuguese CLDR puts zero in `one`): zero now has its own text, `home.projects.no_tasks` and `home.projects.no_people` ("Nenhuma tarefa", "Nenhuma pessoa"), as `development/i18n-and-countries.md` asks
 - [X] S128.3 `TestHomeHuesAreColoredAndReadable` checks the cyan and the slate on their soft backgrounds (4.5:1, both themes) besides the overview hues; `TestProjectCardsStayCalm` holds the cyan on every card, the neutral circle and no `hue-` on the page; `TestPages_ProjectsPageHasTheCards` looks for the four icons and the zero texts. `frontend/patterns.md` (color fixed by type)
 
+### Sprint 129: Connected Accounts and the Assignee Through Them
+
+The sync read and wrote the issue assignee, but a GitHub or GitLab login only became a person through their public email, which almost nobody publishes. The owner asked for a table of each person's accounts and a connector on the profile (Decision 30).
+
+- [X] S129.1 Table `person_accounts` (person, organization, platform, username, email, `no_account`, source), one account per person and platform, one person per login inside the organization (partial unique index on a non-empty username). Package `internal/domain/personaccount`: the store applies the precedence (oauth wins; an admin does not take an authorized login nor replace an authorized account; integration and email only fill a gap)
+- [X] S129.2 Profile, Contas conectadas: Conectar (OAuth with `user:email` / `read_user`, back through the integration callback with a `purpose` in the sealed cookie and a local `return` path, token revoked right after reading the login), "Não tenho conta" and Desconectar. `GET /api/auth/accounts`, `POST /api/auth/accounts/:platform/no-account`, `DELETE /api/auth/accounts/:platform`
+- [X] S129.3 Whoever connects (or reconnects) an integration through OAuth gets the login they authorized, when they had no account on the platform
+- [X] S129.4 The sync resolver looks up the login in the table before the public email, remembers an email match as an account, and does not search the platform for someone who said they have no account
+- [X] S129.5 The integration card lists the unmatched logins (`sync_unmatched_logins`, the count is now of logins) and Ligar opens a modal where the admin picks the person of each login (`POST /api/integrations/:id/accounts`), followed by a full round
+- [X] S129.6 Tests: precedence and uniqueness (`personaccount`), the shared callback (scope, return path, someone else's cookie, denial, revoke, GitLab), the resolver through the table, the admin link. The fake GitHub answers the account scope with another user (`monalisa`) and serves `/user/emails` and the token revoke; the fake GitLab serves `/oauth/revoke`
+
+### Sprint 130: Who Can Be the Assignee
+
+Some tasks are only for developers: whoever has no account on the platform should not take them (Decision 30).
+
+- [X] S130.1 `tasks.required_accounts`: the platforms where the assignee must have a linked account. Checked on claim, on choosing the assignee (create and edit) and on clocking in on a free task; `task.account_required` (409 on claim) with the platform codes and names. Turning it on does not remove the current assignee
+- [X] S130.2 A task imported from a GitHub or GitLab issue starts with its platform required; whoever can edit the task turns it off in Editar detalhes
+- [X] S130.3 The task form: "Quem pode ser responsável" with a box per platform integrated in the project; the assignee select disables who lacks the account (the project members API now returns each person's `accounts`) and "Atribuir a mim" warns when you lack it. The task page shows the requirement under the assignee
+- [X] S130.4 The account modal (`accountGate`): taking or starting a task linked to an issue asks a person who has not answered for that platform to connect or say they have none; with the requirement, only Conectar. Connecting comes back to the task (`?then=claim|start&task=`) and finishes taking it; an error comes back with its parameters (`account_error_login`)
+- [X] S130.5 Checked in the browser on a seeded database with the fake GitHub: connecting on the profile, the card with two unmatched logins and the link modal, the required modal (error and success), the "Não tenho conta" path, the form with the box and the disabled member, and the profile and the modal at 375px. Not checked: GitLab on a real server and the English screens
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open

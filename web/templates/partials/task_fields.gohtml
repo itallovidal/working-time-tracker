@@ -76,6 +76,20 @@
      qualquer um. No modo solo não há outra pessoa: ficam as duas primeiras (e a tarefa nova nem pergunta, em
      task_fields). Pede `draft` (assign, assignee_id), fieldErrors.assignee_id (WTT.form) e otherMembers(). */}}
 {{define "task_assignee"}}
+{{/* A trava do responsável (Decisão 30): só quem tem conta na plataforma pode ser o responsável. As caixas são as
+     plataformas com conta das integrações do projeto; a tarefa importada de uma issue já vem com a dela marcada.
+     Some sem integração do GitHub ou do GitLab, e no modo solo, em que a pessoa é uma só. */}}
+{{if not .Me.OrganizationSolo}}
+<div class="field" role="group" aria-labelledby="task-required-label" x-show="requirablePlatforms().length > 0">
+  <span class="field-label" id="task-required-label">{{.T "tasks.required.label"}}</span>
+  <template x-for="p in requirablePlatforms()" :key="p">
+    <label class="toggle"><input type="checkbox" :value="p" x-model="draft.required_accounts" @change="clearField('assignee_id')">
+      <span x-text="$t('tasks.required.only', { platform: WTT.accounts.name(p) })"></span></label>
+  </template>
+  {{template "field_error" "required_accounts"}}
+  <span class="hint">{{.T "tasks.required.hint"}}</span>
+</div>
+{{end}}
 <div class="field" role="radiogroup" aria-labelledby="task-assign-label">
   <span class="field-label" id="task-assign-label">{{.T "tasks.col_assignee"}}</span>
   <label class="toggle"><input type="radio" name="task-assign" value="me" x-model="draft.assign"> {{.T "tasks.assign_me"}}</label>
@@ -85,9 +99,10 @@
   <select id="task-assignee" data-field="assignee_id" x-show="draft.assign === 'other'" x-model="draft.assignee_id" @change="clearField('assignee_id')" aria-label="{{.T "tasks.col_assignee"}}">
     <option value="" disabled>{{.T "tasks.pick_person"}}</option>
     <template x-for="m in otherMembers()" :key="m.id">
-      <option :value="m.id" x-text="m.name" :selected="m.id === draft.assignee_id"></option>
+      <option :value="m.id" x-text="memberLabel(m)" :disabled="lacksRequired(m) && m.id !== draft.assignee_id" :selected="m.id === draft.assignee_id"></option>
     </template>
   </select>
+  <span class="hint" x-cloak x-show="draft.assign === 'me' && meMissing()" x-text="$t('tasks.required.me_without', { platforms: meMissing() })"></span>
   {{end}}
   {{template "field_error" "assignee_id"}}
   <span class="hint" x-show="draft.assign === 'none'">{{if .Me.OrganizationSolo}}{{.T "tasks.unassigned_hint_solo"}}{{else}}{{.T "tasks.unassigned_hint"}}{{end}}</span>

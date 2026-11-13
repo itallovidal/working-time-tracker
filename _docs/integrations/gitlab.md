@@ -108,7 +108,10 @@ a do [GitHub](github.md#o-que-sincroniza), com estas diferenças:
 
 ### Responsável
 
-Pelo **e-mail público**, como no GitHub, com duas diferenças:
+Pela **conta** da pessoa e, sem ela, pelo **e-mail público**, como no GitHub (ver
+[contas das pessoas](overview.md#contas-das-pessoas)). Conectar a conta no perfil pede só o escopo `read_user`, e o
+e-mail que fica guardado é o principal, que o `/user` dá ao dono do token. A tarefa importada de uma issue nasce só para
+quem tem conta no GitLab. Há duas diferenças:
 
 - O GitLab escreve o responsável pelo **id** do usuário (`assignee_ids`). O adapter acha o id pelo username antes de
   mandar. Um username que o GitLab não tem fica de fora, sem erro.

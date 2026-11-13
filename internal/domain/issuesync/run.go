@@ -129,6 +129,10 @@ func (r *run) importIssue(issue adapter.Issue) error {
 	if r.caps.Deadline {
 		imported.Deadline = normDeadline(issue.Deadline)
 	}
+	// A tarefa que vem de uma issue do GitHub ou do GitLab nasce só para quem tem conta na plataforma.
+	if personaccount.ValidPlatform(r.integ.Type) {
+		imported.RequiredAccounts = []string{r.integ.Type}
+	}
 	row := &Row{
 		IntegrationID: r.integ.ID, ItemID: issue.ID, State: stateOf(issue), URL: issue.URL,
 		Snapshot: snapshotFrom(issue, mapped), SyncedAt: r.s.cfg.Now(),

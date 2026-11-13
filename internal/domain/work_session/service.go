@@ -63,6 +63,13 @@ func (s *Service) ClockIn(projectID, taskID, personID string) (*WorkSession, err
 		return nil, err
 	}
 
+	// Bater o ponto numa tarefa livre a torna de quem bateu: a trava da tarefa vale antes de abrir a sessão.
+	if task.AssigneeID == nil {
+		if err := s.taskStore.CheckRequired(task, personUID); err != nil {
+			return nil, err
+		}
+	}
+
 	session := &WorkSession{
 		ProjectID:     task.ProjectID,
 		PersonID:      personUID,
@@ -311,6 +318,12 @@ func (s *Service) AddTask(projectID, sessionID, taskID string, from, until *time
 	}
 	if overlaps(session, t.ID, uuid.Nil, start, until) {
 		return nil, ErrTaskOverlap.With("field", "from_at")
+	}
+	// Na sessão aberta, a tarefa livre passa a ser de quem a pôs nela: a trava vale antes.
+	if session.EndAt == nil && t.AssigneeID == nil {
+		if err := s.taskStore.CheckRequired(t, session.PersonID); err != nil {
+			return nil, err
+		}
 	}
 	if _, err := s.sessionStore.AddTask(session.ID, t.ID, start, until); err != nil {
 		return nil, err

@@ -145,3 +145,13 @@ func TestLinkLogin_ByTheAdmin(t *testing.T) {
 		t.Errorf("a verified login = %v, want ErrLoginTaken", err)
 	}
 }
+
+// A tarefa importada de uma issue do GitHub nasce exigindo a conta do GitHub.
+func TestSync_ImportedTaskRequiresTheAccount(t *testing.T) {
+	e := newEnv(t, issuesync.Config{})
+	n := e.add(testutil.GitHubIssue{Title: "De dev"})
+	e.sync(issuesync.Full)
+	if got := e.taskFor(n).RequiredAccounts; len(got) != 1 || got[0] != "github" {
+		t.Errorf("required = %v, want [github]", got)
+	}
+}

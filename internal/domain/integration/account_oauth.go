@@ -2,14 +2,18 @@ package integration
 
 import (
 	"crypto/subtle"
+	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/labstack/echo/v5"
 
 	"working-time-tracker/internal/adapter"
+	"working-time-tracker/internal/apperr"
 	"working-time-tracker/internal/domain/auth"
 	"working-time-tracker/internal/domain/personaccount"
 )
@@ -38,18 +42,18 @@ func (h *OAuthHandler) AccountConnect(c *echo.Context) error {
 	platform := c.Param("platform")
 	flow, ok := accountFlows[platform]
 	if !ok || h.accounts == nil {
-		return failAccount(c, back, personaccount.ErrInvalidPlatform.Code)
+		return h.failAccount(c, githubFlow, back, personaccount.ErrInvalidPlatform)
 	}
 	errs := githubErrs
 	if platform == personaccount.GitLab {
 		errs = gitlabErrs
 	}
 	if !h.accountConfigured(platform) {
-		return failAccount(c, back, h.errorCode(c, flow, errs.notConfigured))
+		return h.failAccount(c, flow, back, errs.notConfigured)
 	}
 	state, err := randomState()
 	if err != nil {
-		return failAccount(c, back, h.errorCode(c, flow, err))
+		return h.failAccount(c, flow, back, err)
 	}
 	value, err := h.seal(oauthClaims{
 		Type:     flow.typ,
@@ -60,7 +64,7 @@ func (h *OAuthHandler) AccountConnect(c *echo.Context) error {
 		Expires:  time.Now().Add(oauthTTL).Unix(),
 	})
 	if err != nil {
-		return failAccount(c, back, h.errorCode(c, flow, err))
+		return h.failAccount(c, flow, back, err)
 	}
 	h.setCookie(c, flow, value)
 	if platform == personaccount.GitLab {
@@ -97,32 +101,32 @@ func (h *OAuthHandler) accountCallback(c *echo.Context, flow oauthFlow, errs cod
 		return c.Redirect(http.StatusSeeOther, "/")
 	}
 	if subtle.ConstantTimeCompare([]byte(c.QueryParam("state")), []byte(claims.State)) != 1 {
-		return failAccount(c, back, h.errorCode(c, flow, errs.state))
+		return h.failAccount(c, flow, back, errs.state)
 	}
 	if reason := c.QueryParam("error"); reason != "" {
 		if reason == "access_denied" {
-			return failAccount(c, back, h.errorCode(c, flow, errs.denied))
+			return h.failAccount(c, flow, back, errs.denied)
 		}
-		return failAccount(c, back, h.errorCode(c, flow, errs.exchange))
+		return h.failAccount(c, flow, back, errs.exchange)
 	}
 	code := c.QueryParam("code")
 	if code == "" {
-		return failAccount(c, back, h.errorCode(c, flow, errs.exchange))
+		return h.failAccount(c, flow, back, errs.exchange)
 	}
 	cred, err := exchange(code)
 	if err != nil {
-		return failAccount(c, back, h.errorCode(c, flow, err))
+		return h.failAccount(c, flow, back, err)
 	}
 	login, email, err := lookupUser(flow.typ, cred.Token)
 	h.revoke(c, flow.typ, cred.Token)
 	if err != nil {
-		return failAccount(c, back, h.errorCode(c, flow, err))
+		return h.failAccount(c, flow, back, err)
 	}
 	if _, err := h.accounts.Link(personaccount.Account{
 		PersonID: me.PersonID, OrganizationID: me.OrganizationID, Platform: flow.typ,
 		Username: login, Email: email, Source: personaccount.SourceOAuth,
 	}); err != nil {
-		return failAccount(c, back, h.errorCode(c, flow, err))
+		return h.failAccount(c, flow, back, err)
 	}
 	return c.Redirect(http.StatusSeeOther, withQuery(back, "account", flow.typ))
 }
@@ -170,9 +174,22 @@ func (h *OAuthHandler) linkConnector(c *echo.Context, me *auth.Identity, platfor
 	}
 }
 
-// failAccount volta para onde a pessoa estava com o código do erro, que a tela traduz.
-func failAccount(c *echo.Context, back, code string) error {
-	return c.Redirect(http.StatusSeeOther, withQuery(back, "account_error", code))
+// failAccount volta para onde a pessoa estava com o código do erro, que a tela traduz, e os parâmetros dele
+// (account_error_login=...), que o texto usa.
+func (h *OAuthHandler) failAccount(c *echo.Context, flow oauthFlow, back string, err error) error {
+	to := withQuery(back, "account_error", h.errorCode(c, flow, err))
+	var ae *apperr.Error
+	if errors.As(err, &ae) {
+		names := make([]string, 0, len(ae.Params))
+		for k := range ae.Params {
+			names = append(names, k)
+		}
+		sort.Strings(names)
+		for _, k := range names {
+			to = withQuery(to, "account_error_"+k, fmt.Sprint(ae.Params[k]))
+		}
+	}
+	return c.Redirect(http.StatusSeeOther, to)
 }
 
 // withQuery acrescenta um parâmetro ao caminho de volta, que pode já ter outros.

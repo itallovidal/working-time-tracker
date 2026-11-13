@@ -202,7 +202,7 @@ func TestAccountOAuth_LoginTaken(t *testing.T) {
 			sessionCookie(who.session), cookie)
 		want := "/profile?account=github"
 		if i == 1 {
-			want = "/profile?account_error=account.login_taken"
+			want = "/profile?account_error=account.login_taken&account_error_login=monalisa"
 		}
 		if got := rec.Header().Get("Location"); got != want {
 			t.Errorf("person %d: back to %q, want %q", i, got, want)
@@ -291,5 +291,51 @@ func TestAccounts_NoAccountAndDisconnect(t *testing.T) {
 	}
 	if rec := do(e, "GET", "/api/auth/accounts", "", ""); rec.Code != http.StatusUnauthorized {
 		t.Errorf("without a session = %d, want 401", rec.Code)
+	}
+}
+
+// A trava "só quem tem conta no GitHub", pela API: a tarefa a guarda, pegar e bater o ponto recusam quem não tem a
+// conta, e depois de conectar no perfil passa.
+func TestRequiredAccounts_ClaimAndClockIn(t *testing.T) {
+	e, _, _ := accountServer(t)
+	admin := signup(t, e, "Org", "ana@test.com")
+	bruno := invite(t, e, admin, "bruno@test.com", "member")
+	prj := createProject(t, e, admin, "Alfa")
+	if rec := do(e, "PUT", "/api/projects/"+prj+"/allocations/"+bruno.id, `{"pay_rate_cents":1000}`, admin.session); rec.Code != http.StatusOK {
+		t.Fatalf("allocate bruno = %d: %s", rec.Code, rec.Body.String())
+	}
+	rec := do(e, "POST", "/api/projects/"+prj+"/tasks", `{"name":"Dev","required_accounts":["github"]}`, admin.session)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("create task = %d: %s", rec.Code, rec.Body.String())
+	}
+	task := decode(t, rec)
+	if req, _ := task["required_accounts"].([]any); len(req) != 1 || req[0] != "github" {
+		t.Fatalf("required_accounts = %v", task["required_accounts"])
+	}
+	id := task["id"].(string)
+
+	rec = do(e, "POST", "/api/tasks/"+id+"/claim", "", bruno.session)
+	if rec.Code != http.StatusConflict || !strings.Contains(rec.Body.String(), `"task.account_required"`) {
+		t.Errorf("claim without the account = %d: %s", rec.Code, rec.Body.String())
+	}
+	rec = do(e, "POST", "/api/projects/"+prj+"/work-sessions/clock-in", `{"task_id":"`+id+`"}`, bruno.session)
+	if !strings.Contains(rec.Body.String(), `"task.account_required"`) {
+		t.Errorf("clock-in without the account = %d: %s", rec.Code, rec.Body.String())
+	}
+	if rec := do(e, "GET", "/api/work-sessions/open", "", bruno.session); strings.Contains(rec.Body.String(), prj) {
+		t.Errorf("a refused clock-in left a session open: %s", rec.Body.String())
+	}
+
+	cookie, state, _ := startAccount(t, e, bruno.session, "github", "")
+	doCookies(e, oauthCallback+"?code="+testutil.GitHubAccountCode+"&state="+url.QueryEscape(state),
+		sessionCookie(bruno.session), cookie)
+	if rec := do(e, "POST", "/api/tasks/"+id+"/claim", "", bruno.session); rec.Code != http.StatusOK {
+		t.Errorf("claim with the account = %d: %s", rec.Code, rec.Body.String())
+	}
+
+	// Tirar a trava pelos detalhes: a lista vazia.
+	rec = do(e, "PATCH", "/api/tasks/"+id+"/attributes", `{"required_accounts":[]}`, admin.session)
+	if req, _ := decode(t, rec)["required_accounts"].([]any); rec.Code != http.StatusOK || len(req) != 0 {
+		t.Errorf("turning it off = %d: %s", rec.Code, rec.Body.String())
 	}
 }

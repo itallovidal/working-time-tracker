@@ -129,6 +129,7 @@ func Build(client *ent.Client, opts Options) (*App, error) {
 	integrationStore := integration.NewStore(client)
 	authStore := auth.NewStore(client)
 	accountStore := personaccount.NewStore(client)
+	taskStore.SetAccounts(accountStore)
 
 	// Services (integration before task; task before work_session due to cross-domain deps)
 	orgSvc := organization.NewService(orgStore)
@@ -210,6 +211,8 @@ func Build(client *ent.Client, opts Options) (*App, error) {
 	taskSvc.SetRemover(syncer)
 
 	personHandler := person.NewHandler(personSvc)
+	teamHandler := team.NewHandler(teamSvc, membershipSvc)
+	teamHandler.SetAccounts(accountStore)
 	handlers := routes.Handlers{
 		Auth:          auth.NewHandler(authSvc, opts.CookieSecure),
 		Organization:  organization.NewHandler(orgSvc),
@@ -218,7 +221,7 @@ func Build(client *ent.Client, opts Options) (*App, error) {
 		Account:       personaccount.NewHandler(accountSvc),
 		Permission:    permission.NewHandler(),
 		Project:       project.NewHandler(projectSvc, allocationSvc),
-		Team:          team.NewHandler(teamSvc, membershipSvc),
+		Team:          teamHandler,
 		Allocation:    allocation.NewHandler(allocationSvc),
 		Collaborator:  collaborator.NewHandler(collaboratorSvc),
 		Overview:      overview.NewHandler(overviewSvc),
