@@ -1,6 +1,7 @@
 package task_test
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
@@ -20,6 +21,7 @@ import (
 
 type reqEnv struct {
 	svc      *task.Service
+	org      uuid.UUID
 	project  string
 	ana, bia *person.Person // ana tem conta no GitHub; bia não
 }
@@ -46,7 +48,7 @@ func newReqEnv(t *testing.T) reqEnv {
 		}
 		return p
 	}
-	e := reqEnv{project: prj.ID.String(), ana: mk("Ana", "ana@test.com"), bia: mk("Bia", "bia@test.com")}
+	e := reqEnv{org: org.ID, project: prj.ID.String(), ana: mk("Ana", "ana@test.com"), bia: mk("Bia", "bia@test.com")}
 	accounts := personaccount.NewStore(testClient)
 	if _, err := personaccount.NewService(accounts).Link(personaccount.Account{
 		PersonID: e.ana.ID, OrganizationID: org.ID, Platform: personaccount.GitHub, Username: "ana-dev",
@@ -158,5 +160,18 @@ func TestRequired_StoreCheck(t *testing.T) {
 	var ae *apperr.Error
 	if !errors.As(err, &ae) || ae.Params["platforms"] != "gitlab" || ae.Params["names"] != "GitLab" {
 		t.Errorf("ana without gitlab = %v", err)
+	}
+}
+
+// No modo solo a trava não vale: a pessoa é uma só, e uma tarefa que ficou com ela não a trava.
+func TestRequired_SoloSkipsTheCheck(t *testing.T) {
+	e := newReqEnv(t)
+	tk, err := e.svc.CreateAs("", e.project, "Dev", "", "", nil, task.Attrs{RequiredAccounts: github()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	testClient.Organization.UpdateOneID(e.org).SetSolo(true).ExecX(context.Background())
+	if got, err := e.svc.Claim(e.bia.ID.String(), tk.ID.String()); err != nil || got.AssigneeID == nil || *got.AssigneeID != e.bia.ID {
+		t.Errorf("claiming in a solo organization = %v, %v, want it taken", got, err)
 	}
 }

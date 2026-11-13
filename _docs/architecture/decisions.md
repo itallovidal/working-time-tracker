@@ -1166,7 +1166,7 @@ não deveria pegá-las.
 - **A trava:** a tarefa tem `required_accounts`, as plataformas em que o responsável precisa ter conta ligada. Ela vale
   ao pegar, ao escolher o responsável (na criação e na edição) e ao bater o ponto numa tarefa livre, que a tornaria da
   pessoa. A tarefa importada de uma issue nasce com a plataforma dela, e quem edita a tarefa pode tirar. Ligar a trava
-  não tira quem já é o responsável.
+  não tira quem já é o responsável. No modo solo ela não vale: a pessoa é uma só.
 - **O modal ao pegar:** numa tarefa ligada a uma issue, quem ainda não respondeu sobre a conta conecta ou diz que não
   tem (e não é perguntado de novo); na tarefa com a trava, só conectar libera. Conectar volta para a tarefa e termina
   de pegá-la.

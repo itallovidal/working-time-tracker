@@ -1385,6 +1385,7 @@ Some tasks are only for developers: whoever has no account on the platform shoul
 - [X] S130.3 The task form: "Quem pode ser responsável" with a box per platform integrated in the project; the assignee select disables who lacks the account (the project members API now returns each person's `accounts`) and "Atribuir a mim" warns when you lack it. The task page shows the requirement under the assignee
 - [X] S130.4 The account modal (`accountGate`): taking or starting a task linked to an issue asks a person who has not answered for that platform to connect or say they have none; with the requirement, only Conectar. Connecting comes back to the task (`?then=claim|start&task=`) and finishes taking it; an error comes back with its parameters (`account_error_login`)
 - [X] S130.5 Checked in the browser on a seeded database with the fake GitHub: connecting on the profile, the card with two unmatched logins and the link modal, the required modal (error and success), the "Não tenho conta" path, the form with the box and the disabled member, and the profile and the modal at 375px. Not checked: GitLab on a real server and the English screens
+- [X] S130.6 Not in solo mode (the owner, after trying it on a solo organization): an imported task starts without the requirement, `CheckRequired` passes when the project's organization is solo, and the account modal ignores `required_accounts` there. The form box was already hidden in solo
 
 ### Seed with a Full Demo
 

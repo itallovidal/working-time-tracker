@@ -244,7 +244,9 @@ em cada plataforma, e um login liga a uma pessoa só dentro da organização.
 - **A trava da tarefa** (`required_accounts`): a tarefa pode exigir que o responsável tenha conta ligada no GitHub, no
   GitLab ou nos dois. Ela vale ao pegar, ao escolher o responsável e ao bater o ponto numa tarefa livre
   (`task.account_required`), e não tira quem já é o responsável. A tarefa importada de um item do GitHub ou do GitLab
-  nasce com a plataforma dele; quem edita a tarefa tira a marca. "Não tenho conta" não conta como conta.
+  nasce com a plataforma dele; quem edita a tarefa tira a marca. "Não tenho conta" não conta como conta. **No modo
+  solo a trava não vale:** a pessoa é uma só, a tarefa importada nasce sem ela, a conferência passa e a tela não mostra
+  a caixa.
 - **O modal de pegar a tarefa:** numa tarefa ligada a um item do GitHub ou do GitLab, quem ainda não respondeu sobre a
   conta da plataforma conecta ou diz que não tem; na tarefa com a trava, só conectar libera. Conectar volta para a
   tarefa (`?then=claim|start&task=<id>`) e termina de pegá-la ou começá-la.

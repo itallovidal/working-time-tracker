@@ -129,8 +129,9 @@ func (r *run) importIssue(issue adapter.Issue) error {
 	if r.caps.Deadline {
 		imported.Deadline = normDeadline(issue.Deadline)
 	}
-	// A tarefa que vem de uma issue do GitHub ou do GitLab nasce só para quem tem conta na plataforma.
-	if personaccount.ValidPlatform(r.integ.Type) {
+	// A tarefa que vem de uma issue do GitHub ou do GitLab nasce só para quem tem conta na plataforma. No modo solo
+	// a pessoa é uma só, e não há de quem restringir.
+	if personaccount.ValidPlatform(r.integ.Type) && !r.solo {
 		imported.RequiredAccounts = []string{r.integ.Type}
 	}
 	row := &Row{

@@ -10,8 +10,9 @@ difere. O que é comum às plataformas (o vínculo, a regra de conflito, os gati
 O botão **Conectar com o GitLab** usa um **app OAuth** do gitlab.com, cadastrado uma vez por servidor:
 
 1. Em gitlab.com, **Preferências › Aplicações** (`gitlab.com/-/user_settings/applications`), **Adicionar nova
-   aplicação**. *Redirect URI*: `PUBLIC_URL/integrations/gitlab/callback`. Marque **Confidencial** e o escopo
-   **`api`**.
+   aplicação**. *Redirect URI*: `PUBLIC_URL/integrations/gitlab/callback`. Marque **Confidencial** e os escopos
+   **`api`** (a integração) e **`read_user`** (a conta que cada pessoa liga no perfil). O GitLab recusa um escopo que o
+   app não tem marcado, e sem o `read_user` o **Conectar** do perfil volta com erro.
 2. Copie o **Application ID** e o **Secret**. No `.env`: `GITLAB_CLIENT_ID`, `GITLAB_CLIENT_SECRET` e `PUBLIC_URL`.
    Reinicie o servidor.
 3. Em Gestão › Integrações › **Nova integração** › GitLab › **Conectar com o GitLab**: autorize no GitLab, volte e

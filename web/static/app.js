@@ -1076,7 +1076,8 @@
       async ask(task, then) {
         const accounts = window.WTT.accounts;
         const onIssue = (task.links || []).map((l) => l.integration && l.integration.type).filter((p) => accounts.platforms.includes(p));
-        const required = task.required_accounts || [];
+        // No modo solo a trava não vale: a pessoa é uma só (o servidor também a ignora).
+        const required = window.WTT.boot.me && window.WTT.boot.me.organization_solo ? [] : (task.required_accounts || []);
         if (onIssue.length === 0 && required.length === 0) return true;
         let mine;
         try {

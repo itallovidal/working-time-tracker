@@ -155,3 +155,14 @@ func TestSync_ImportedTaskRequiresTheAccount(t *testing.T) {
 		t.Errorf("required = %v, want [github]", got)
 	}
 }
+
+// No modo solo a pessoa é uma só: a tarefa importada não nasce com a trava.
+func TestSync_SoloImportHasNoRequirement(t *testing.T) {
+	e := newEnv(t, issuesync.Config{})
+	testClient.Organization.UpdateOneID(uuid.MustParse(e.org)).SetSolo(true).ExecX(context.Background())
+	n := e.add(testutil.GitHubIssue{Title: "Do solo"})
+	e.sync(issuesync.Full)
+	if got := e.taskFor(n).RequiredAccounts; len(got) != 0 {
+		t.Errorf("required = %v, want none in a solo organization", got)
+	}
+}

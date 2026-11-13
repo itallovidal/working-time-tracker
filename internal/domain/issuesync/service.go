@@ -215,6 +215,8 @@ type run struct {
 	conn  adapter.Connection
 	src   adapter.IssueSyncer
 	orgID uuid.UUID
+	// solo diz que a organização está no modo solo: a tarefa importada não nasce com a trava do responsável.
+	solo bool
 	// caps é o que o tipo sabe sincronizar além do básico; k liga o id guardado na tarefa à chave do vínculo;
 	// label e numeric nomeiam o item quando ele chega sem título.
 	caps    adapter.SyncCaps
@@ -255,13 +257,13 @@ func (s *Syncer) newRun(ctx context.Context, id uuid.UUID, cachedRepo bool) (*ru
 	if !ok {
 		return nil, ErrSyncOff
 	}
-	orgID, err := s.d.Rows.OrganizationOf(integ.ProjectID)
+	orgID, solo, err := s.d.Rows.organizationOf(integ.ProjectID)
 	if err != nil {
 		return nil, err
 	}
 	desc := impl.Descriptor()
 	r := &run{
-		s: s, ctx: ctx, integ: integ, conn: conn, src: src, orgID: orgID,
+		s: s, ctx: ctx, integ: integ, conn: conn, src: src, orgID: orgID, solo: solo,
 		caps: desc.Caps, k: adapter.NewItemKeyer(impl), label: desc.Label, numeric: desc.ItemNumeric,
 		rows: map[string]*Row{}, tasks: map[uuid.UUID]*task.Task{},
 	}

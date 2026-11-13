@@ -11,6 +11,7 @@ import (
 	"working-time-tracker/ent"
 	"working-time-tracker/ent/issuesync"
 	entlabel "working-time-tracker/ent/label"
+	entorganization "working-time-tracker/ent/organization"
 	entperson "working-time-tracker/ent/person"
 	entproject "working-time-tracker/ent/project"
 	"working-time-tracker/ent/task"
@@ -426,9 +427,17 @@ func nonNil(l []string) []string {
 func (s *Store) SetAccounts(accounts *personaccount.Store) { s.accounts = accounts }
 
 // CheckRequired confere que a pessoa tem conta ligada em cada plataforma que a tarefa exige: é a trava de quem pode
-// ser o responsável. Sem trava (ou sem as contas ligadas ao store), passa.
+// ser o responsável. Sem trava (ou sem as contas ligadas ao store), passa; no modo solo também, porque a pessoa é uma
+// só e não há de quem restringir.
 func (s *Store) CheckRequired(t *Task, personID uuid.UUID) error {
 	if len(t.RequiredAccounts) == 0 || s.accounts == nil {
+		return nil
+	}
+	if solo, err := s.client.Project.Query().
+		Where(entproject.IDEQ(t.ProjectID), entproject.HasOrganizationWith(entorganization.Solo(true))).
+		Exist(context.Background()); err != nil {
+		return err
+	} else if solo {
 		return nil
 	}
 	linked, err := s.accounts.LinkedPlatforms([]uuid.UUID{personID})
