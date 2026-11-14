@@ -58,8 +58,9 @@ func (h *Handler) ClerkContinue(c *echo.Context) error {
 	})
 }
 
-// Profile tem os dados e a senha de quem está logado. Com o OAuth do MCP ligado, a seção Conector MCP mostra o
-// endereço para colar no claude.ai: ele sai do PUBLIC_URL, nunca do endereço da requisição, que quem chama pode forjar.
+// Profile tem os dados e a senha de quem está logado. Com o OAuth do MCP ligado, a aba OAuth da seção Conector MCP
+// mostra o endereço para colar no claude.ai: ele sai do PUBLIC_URL, nunca do endereço da requisição, que quem chama pode
+// forjar.
 func (h *Handler) Profile(c *echo.Context) error {
 	return h.render(c, "profile", Data{TitleKey: "titles.profile", Section: "profile", Script: "org",
 		Props: map[string]any{"mcpURL": h.baseURL(c) + mcp.Path, "oauth": h.deps.OAuth != nil,

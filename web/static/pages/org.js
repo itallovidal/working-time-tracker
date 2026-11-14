@@ -1590,8 +1590,8 @@ document.addEventListener('alpine:init', () => {
   // mcpConnector é a seção Conector MCP do perfil: quem entra no servidor MCP (/mcp) e age como a pessoa. A lista junta
   // os apps conectados pelo OAuth (o claude.ai, que vale no Claude Desktop e no celular, e o Claude Code; só com o OAuth
   // ligado no servidor) e os tokens pessoais. Embaixo, um jeito de conectar de cada vez (method): o OAuth, com o endereço
-  // e o comando do Claude Code, ou o token, que só aparece no modal, logo depois de criado, junto com o comando que o
-  // conecta; a lista mostra só o começo dele.
+  // do conector para o claude.ai e o prompt do Claude Code, ou o token, que só aparece no modal, logo depois de criado,
+  // junto com o comando que o conecta; a lista mostra só o começo dele. O "?" (openHelp) compara os dois jeitos.
   Alpine.data('mcpConnector', () => ({
     ...form(),
     oauth: !!WTT.boot.oauth,

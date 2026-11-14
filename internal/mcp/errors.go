@@ -22,6 +22,15 @@ var (
 	ErrTaskAlreadyActive = apperr.New("mcp.task_already_active", http.StatusBadRequest)
 	// ErrProjectRequired é o clock_out sem projeto quando há sessões abertas em mais de um.
 	ErrProjectRequired = apperr.New("mcp.project_required", http.StatusBadRequest)
+	// ErrProjectSyncOff é o sync_project num projeto sem nenhuma integração com a sincronização ligada. O
+	// integration.sync_off do domínio fala de uma integração, o que confunde quem pediu o projeto inteiro.
+	ErrProjectSyncOff = apperr.New("mcp.project_sync_off", http.StatusBadRequest)
+	// ErrLabelsConflict é o update_task com labels (trocar todas) junto com add_labels ou remove_labels.
+	ErrLabelsConflict = apperr.New("mcp.labels_conflict", http.StatusBadRequest)
+	// ErrFindCriteria é a find_tasks sem issue e sem query.
+	ErrFindCriteria = apperr.New("mcp.find_criteria_required", http.StatusBadRequest)
+	// ErrInvalidIssue é a issue da find_tasks que não é a URL de uma issue ou de um cartão, nem owner/repo#12.
+	ErrInvalidIssue = apperr.New("mcp.invalid_issue", http.StatusBadRequest)
 )
 
 // toolError é o erro que a ferramenta devolve ao Claude: o texto do catálogo (em inglês), o código entre parênteses

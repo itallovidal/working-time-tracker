@@ -1155,6 +1155,10 @@ td .task-chips { min-width: 200px; }
 .consent-list li { display: flex; gap: 10px; align-items: baseline; color: var(--ink-2); }
 .consent-list li > i { flex: none; width: 1.1em; text-align: center; color: var(--ok); }
 .consent-list .consent-no > i { color: var(--muted); }
+/* Uma lista curta com um ícone antes de cada linha, no tom do texto de apoio (o que o conector MCP faz, no perfil). */
+.icon-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; color: var(--muted); }
+.icon-list li { display: flex; gap: 10px; align-items: baseline; text-wrap: pretty; }
+.icon-list li > i { flex: none; width: 1.1em; text-align: center; }
 /* O "ou" entre o email e a senha do sistema e o Google. */
 .auth-divider { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 0.85rem; }
 .auth-divider::before, .auth-divider::after { content: ""; flex: 1; height: 1px; background: var(--rule); }

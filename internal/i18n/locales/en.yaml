@@ -696,14 +696,14 @@ profile:
     source_email: Found by your public email
   mcp:
     title: MCP connector
-    help: How the MCP connector works
-    help_title: MCP connector
-    help_intro: "A connected assistant, like Claude, creates and updates your tasks, claims tasks, syncs with the project's integrations and clocks you in and out, as you. It sees what you see, except the money amounts."
-    help_oauth_app: "On claude.ai, open Customize → Connectors → Add\u00a0custom\u00a0connector and paste this address:"
-    help_oauth_app_next: "Under OAuth, keep “Use\u00a0Claude's\u00a0published\u00a0identity”. Claude opens this site for you to sign in and allow it, and the connector also works in Claude Desktop and the mobile app."
-    help_oauth_code: "In Claude Code, copy the prompt from the OAuth tab and paste it in a conversation: Claude adds the connector and explains how to sign in (/mcp, wtt and Authenticate)."
-    help_oauth_limits: "For now, only Claude's apps connect through OAuth. The connection drops after 30\u00a0days without use."
-    help_token: "For Claude Code without the browser permission, or another MCP client that accepts a header: the token goes in the command and expires on the date you choose. It is shown only once, when created."
+    intro: "Connect Claude and, in a conversation:"
+    intro_sessions: "Manage your sessions: clock in, switch tasks and clock\u00a0out."
+    intro_tasks: "Create and update tasks, with\u00a0labels."
+    intro_sync: "Sync the project with GitHub, GitLab or\u00a0Trello."
+    help: The difference between OAuth and a personal token
+    help_title: OAuth or personal token?
+    help_oauth: "You authorize Claude on a screen of this site, without copying anything secret. It works on claude.ai, in Claude\u00a0Desktop, in the mobile app and in Claude\u00a0Code. The connection renews itself and drops after 30\u00a0days without use. For now, only Claude's apps connect this way."
+    help_token: "A code you create here and paste into the Claude\u00a0Code command, or into another MCP client that accepts a header. It is shown only once and expires on the date you choose (30, 90 or 365\u00a0days)."
     help_password: Changing your password disconnects all apps and revokes all tokens.
     help_done: Got it
     connected_title: Connected
@@ -729,6 +729,7 @@ profile:
     method_oauth: OAuth
     method_token: Personal token
     app_url: Connector address
+    app_hint: "For claude.ai, Claude\u00a0Desktop and mobile: in Customize → Connectors → Add\u00a0custom\u00a0connector, paste this address. Under OAuth, keep “Use\u00a0Claude's\u00a0published\u00a0identity”."
     code_command: Claude Code command
     code_prompt: Prompt for Claude Code
     code_prompt_text: "Set up the Working Time Tracker MCP connector in my Claude Code. Run: `{{.command}}`. Then explain how to authenticate (/mcp, wtt and Authenticate)."
@@ -988,7 +989,7 @@ help:
       rates: "“Projects and rates”: how much you earn per hour on each project and what you did on them, in the period and since the start. Only you and the admins see it."
       edit: "“Edit profile” opens your personal details (name and email, the one you sign in with) and, on the “Password” tab, the password change, which signs out your other sessions."
       language: "The language (PT | EN), “Help” and “Sign out” are in the same account menu, and the browser remembers the language you chose."
-      mcp: "In “MCP connector”, an assistant like Claude starts creating and updating your tasks, claiming tasks, syncing and clocking you in and out, as you and without seeing money amounts. The “Connected” list shows the apps and tokens that get in, and disconnects or revokes each one. Below, pick how to connect: through OAuth, pasting on claude.ai the connector address, which the “?” shows (Customize → Connectors; it also works in Claude Desktop and mobile) or pasting the ready prompt into Claude Code, which sets itself up; or through a personal token, shown only once and expiring on the chosen date. The “?” next to the title explains the steps and has the connector address. Changing your password disconnects the apps and revokes the tokens."
+      mcp: "In “MCP connector”, an assistant like Claude starts managing your sessions, creating and updating your tasks and labels and syncing the project, as you and without seeing money amounts. The “Connected” list shows the apps and tokens that get in, and disconnects or revokes each one. Below, pick how to connect: through OAuth, pasting on claude.ai the connector address, which the OAuth tab shows with a copy button (Customize → Connectors; it also works in Claude Desktop and mobile), or pasting the ready prompt into Claude Code, which sets itself up; or through a personal token, shown only once and expiring on the chosen date. The “?” next to the title explains the difference between the two. Changing your password disconnects the apps and revokes the tokens."
   concepts:
     rates:
       title: Hourly rate
@@ -2187,7 +2188,11 @@ errors:
     task_already_active: "this task is already running in the session"
     task_not_in_session: "this task is not running in the open session"
     project_required: "sessions are open in more than one project; say which one to close"
-    unknown_label: "the project has no label {{.label}}; the ones it has: {{.available}}"
+    project_sync_off: "no integration of this project has the sync on: turn it on in Management → Integrations"
+    labels_conflict: "use labels to replace them all, or add_labels and remove_labels to change some, not both"
+    find_criteria_required: "say what to look for: an issue, a query or both"
+    invalid_issue: "use the URL of a GitHub or GitLab issue or a Trello card, or owner/repo#12"
+    unknown_label: "the project has no label {{.label}}; the ones it has: {{.available}}. Someone who manages labels can create it with create_label"
   oauth:
     request_invalid: "the connection request no longer checks out; start again from the app"
   organization:

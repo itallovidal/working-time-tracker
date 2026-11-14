@@ -230,12 +230,16 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 
 | Código | Status | Parâmetros | pt-BR | en |
 |---|---|---|---|---|
+| `mcp.find_criteria_required` | 400 | — | `diga o que procurar: uma issue, um texto ou os dois` | `say what to look for: an issue, a query or both` |
 | `mcp.invalid_assignee` | 400 | — | `o responsável é me (você) ou none (ninguém)` | `the assignee is me (you) or none (nobody)` |
 | `mcp.invalid_date` | 400 | `field` | `data inválida em {{.field}}: use AAAA-MM-DD` | `invalid date in {{.field}}: use YYYY-MM-DD` |
+| `mcp.invalid_issue` | 400 | — | `use a URL de uma issue do GitHub ou do GitLab ou de um cartão do Trello, ou dono/repositório#12` | `use the URL of a GitHub or GitLab issue or a Trello card, or owner/repo#12` |
+| `mcp.labels_conflict` | 400 | — | `use labels para trocar todas, ou add_labels e remove_labels para mudar algumas, não os dois` | `use labels to replace them all, or add_labels and remove_labels to change some, not both` |
 | `mcp.project_required` | 400 | — | `há sessões abertas em mais de um projeto; diga qual encerrar` | `sessions are open in more than one project; say which one to close` |
+| `mcp.project_sync_off` | 400 | — | `nenhuma integração deste projeto está com a sincronização ligada: ligue-a em Gestão → Integrações` | `no integration of this project has the sync on: turn it on in Management → Integrations` |
 | `mcp.task_already_active` | 400 | — | `esta tarefa já está em andamento na sessão` | `this task is already running in the session` |
 | `mcp.task_not_in_session` | 400 | — | `esta tarefa não está em andamento na sessão aberta` | `this task is not running in the open session` |
-| `mcp.unknown_label` | 400 | `label`, `available` | `o projeto não tem a etiqueta {{.label}}; as que existem: {{.available}}` | `the project has no label {{.label}}; the ones it has: {{.available}}` |
+| `mcp.unknown_label` | 400 | `label`, `available` | `o projeto não tem a etiqueta {{.label}}; as que existem: {{.available}}. Quem cuida das etiquetas pode criá-la com create_label` | `the project has no label {{.label}}; the ones it has: {{.available}}. Someone who manages labels can create it with create_label` |
 
 ### oauth
 

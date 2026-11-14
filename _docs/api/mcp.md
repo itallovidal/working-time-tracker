@@ -1,8 +1,8 @@
 # MCP: o Claude no sistema
 
 O servidor MCP ([Model Context Protocol](https://modelcontextprotocol.io)) deixa o Claude agir como uma pessoa: ver e
-criar tarefas, atualizá-las, pegar uma tarefa para si, sincronizá-la com a plataforma, bater o ponto, trocar de tarefa e
-ver as próprias horas. Ele mora no mesmo binário, em `/mcp`. Quem decidiu e por quê está nas
+criar tarefas, atualizá-las, pôr etiquetas e criar novas, pegar uma tarefa para si, sincronizar a tarefa ou o projeto
+inteiro com a plataforma, bater o ponto, trocar de tarefa e ver as próprias horas. Ele mora no mesmo binário, em `/mcp`. Quem decidiu e por quê está nas
 [Decisões 22 e 25](../architecture/decisions.md).
 
 Há dois jeitos de entrar:
@@ -14,9 +14,9 @@ Há dois jeitos de entrar:
 
 ## Conectar
 
-O endereço do conector é o `PUBLIC_URL` mais `/mcp` (`https://<endereço do sistema>/mcp`). O perfil o mostra no **?** ao
-lado do título **Conector MCP**, no passo do claude.ai, com o botão de copiar; a aba **OAuth** da seção tem um prompt
-para o Claude Code, que já o leva.
+O endereço do conector é o `PUBLIC_URL` mais `/mcp` (`https://<endereço do sistema>/mcp`). O perfil o mostra na aba
+**OAuth** da seção **Conector MCP**, com o botão de copiar, acima de um prompt para o Claude Code, que já o leva. O **?**
+ao lado do título explica a diferença entre o OAuth e o token pessoal.
 
 ### claude.ai, Claude Desktop e celular
 
@@ -167,6 +167,7 @@ tela.
 | `list_labels` | As etiquetas de um projeto, pelo nome |
 | `list_tasks` | As tarefas de um projeto, por página, com busca, status, prioridade, responsável (`me`, `none`, `any`, `others`) e etiquetas. Sem status, só as abertas |
 | `my_tasks` | As tarefas da pessoa em todos os projetos, abertas (por prazo) ou fechadas |
+| `find_tasks` | Acha tarefas em todos os projetos que a pessoa alcança (ou num só, com `project_id`): pela issue do GitHub ou do GitLab ou pelo cartão do Trello ligado a elas (`issue`: a URL, com ou sem `https://`, ou `owner/repo#12`; o mesmo número em outro repositório não entra), por palavras que precisam aparecer, cada uma, no nome ou na descrição (`query`), ou pelos dois. Sem status, todos; filtra também por responsável, por página. Cada tarefa traz o `project` |
 | `get_task` | Uma tarefa, com a descrição em Markdown e os itens ligados (GitHub, Trello…) |
 | `get_active_session` | As sessões abertas (`sessions`), uma por projeto no máximo, com o trecho de cada tarefa e qual está rodando |
 | `my_hours` | Horas de hoje e da semana, dia a dia e por projeto, as contagens de tarefas e no que a pessoa trabalha agora |
@@ -176,9 +177,11 @@ tela.
 | Ferramenta | O que faz |
 |---|---|
 | `create_task` | Cria a tarefa (nome, descrição, prioridade, prazo, etiquetas pelo nome, e `assign_to_me`). Nasce em backlog; sem prazo, o prazo é daqui a 7 dias, como na API; a publicação automática das integrações vale como na tela |
-| `update_task` | Muda só o que vem: nome, descrição, status, prioridade, prazo (ou `clear_deadline`), etiquetas e responsável (`me` ou `none`). Numa tarefa sincronizada, a mudança vai à plataforma |
+| `update_task` | Muda só o que vem: nome, descrição, status, prioridade, prazo (ou `clear_deadline`), etiquetas e responsável (`me` ou `none`). Nas etiquetas, `add_labels` e `remove_labels` põem e tiram algumas e mantêm as outras; `labels` troca todas (os dois juntos: `mcp.labels_conflict`). Numa tarefa sincronizada, a mudança vai à plataforma |
+| `create_label` | Cria uma etiqueta no projeto, para quem tem `labels.manage` nele (o dono, os admins e o grupo de gerente), como a rota da API; sem ela, `auth.permission_required`. Um nome que o projeto já tem, sem diferenciar maiúsculas, volta com `created: false` |
 | `claim_task` | Pega a tarefa sem responsável, sem bater o ponto. A de outra pessoa é recusada, e a que exige uma conta (`required_accounts`) que a pessoa não ligou também (`task.account_required`: o texto pede para conectar a conta no perfil) |
 | `sync_task` | Sincroniza agora a tarefa com os itens ligados a ela, nos dois sentidos (o botão Sincronizar da tarefa) |
+| `sync_project` | Sincroniza agora o projeto inteiro, como o botão Sincronizar da lista de tarefas: uma rodada em cada integração com a sincronização ligada. Os itens abertos que ainda não estão aqui viram tarefas, e os ligados se atualizam; os fechados não entram, e uma tarefa apagada aqui não volta. Qualquer pessoa do projeto pode pedir. Sem integração sincronizando, `mcp.project_sync_off` diz onde ligar |
 | `clock_in` | Abre o ponto numa tarefa, numa sessão do projeto dela; as sessões de outros projetos continuam. Ela passa a em progresso e, sem responsável, vira da pessoa |
 | `add_task_to_session` | Põe a tarefa na sessão aberta do projeto dela, a partir de agora. Com `switch`, encerra os outros trechos ativos daquela sessão: é trocar de tarefa |
 | `stop_session_task` | Encerra agora o trecho de uma tarefa na sessão do projeto dela; as horas ficam |
@@ -196,7 +199,8 @@ tela.
   grava (também no dia em que o horário de verão começa ou termina). Os instantes voltam em RFC 3339, no mesmo fuso.
 - **Ids:** um id em outra forma que o UUID aceita (maiúsculas, por exemplo) vale o mesmo id.
 - **Etiquetas** vão pelo nome, sem diferenciar maiúsculas. Um nome que o projeto não tem é recusado
-  (`mcp.unknown_label`) com a lista das que existem: criar etiqueta continua sendo da tela, com `labels.manage`.
+  (`mcp.unknown_label`) com a lista das que existem e a lembrança de que quem tem `labels.manage` a cria com
+  `create_label`.
 - O `initialize` devolve instruções curtas sobre o sistema (uma sessão por pessoa em cada projeto, como trocar de
   tarefa, os status e as prioridades), e as ferramentas de leitura vêm marcadas como só leitura.
 
@@ -206,5 +210,5 @@ Ainda não estão no MCP:
 
 - **Outros clientes MCP** (ChatGPT, Cursor e afins): o OAuth aceita só os apps do Claude
   ([issue #36](https://github.com/itallovidal/working-time-tracker/issues/36)).
-- Sincronizar o projeto inteiro, publicar uma tarefa numa plataforma, excluir tarefa, atribuir a outra pessoa, o ponto
+- Publicar uma tarefa numa plataforma, excluir tarefa, renomear ou excluir etiqueta, atribuir a outra pessoa, o ponto
   de outra pessoa e tudo o que é dinheiro.

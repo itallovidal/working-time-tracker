@@ -133,6 +133,7 @@ Prioridade, horas e os status Em progresso e Aguardando fechamento ficam só aqu
 |---|---|---|
 | **Sincronizar agora**, no cartão da integração | `POST /api/integrations/:integrationId/sync`: uma rodada completa | `integrations.manage` |
 | **Sincronizar**, na Lista de tarefas e em Minhas tarefas | `POST /api/projects/:projectId/sync`: uma rodada completa em cada integração do projeto com a sincronização ligada, uma depois da outra, com os resumos somados | Qualquer pessoa do projeto |
+| **`sync_project`**, no MCP | O mesmo do botão Sincronizar da lista, pedido pelo Claude ([mcp.md](../api/mcp.md)) | Qualquer pessoa do projeto |
 | **Sincronizar**, no cartão do item na página da tarefa | `POST /api/tasks/:taskId/sync`: relê só aquele item (`?integration_id=`) ou todos os da tarefa | Quem vê a tarefa |
 | **Gancho das tarefas** | Editar, mudar status ou etiquetas, pegar uma tarefa livre ou bater o ponto nela avisa o gancho, que espera 1,5 s para juntar as mudanças e empurra em lotes de 50 | Automático |
 | **Rotina de fundo** | Olha cada integração ligada no intervalo do tipo dela | Automático |
