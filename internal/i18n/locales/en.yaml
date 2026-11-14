@@ -1729,6 +1729,7 @@ integration_types:
     item_label: Issue number
     item_placeholder: "E.g.: 42"
     pick_title: Pick the repository
+    pick_loading: Loading repositories…
     pick_hint: The list shows the repositories your account can see. If a repository of an organization does not show up, the organization owner must approve the app in the organization settings, under third-party application access.
     sync_label: "Sync the issues of this repository with the tasks"
     sync_hint: "Open issues become tasks, and the name, description, labels, assignee and closing stay the same on both sides, whichever one changes. The assignee is linked by the user's public email on GitHub. If both sides change the same field, GitHub wins. Priority, deadline, hours and the In progress and Awaiting closure statuses stay here only."
@@ -1744,6 +1745,7 @@ integration_types:
     item_label: Issue number
     item_placeholder: "E.g.: 42"
     pick_title: Pick the project
+    pick_loading: Loading projects…
     pick_hint: The list shows the projects your account is a member of. A project that does not show up can be typed as group/project.
     sync_label: "Sync the issues of this project with the tasks"
     sync_hint: "Open issues become tasks, and the name, description, labels, assignee and closing stay the same on both sides, whichever one changes. The assignee is linked by the user's public email on GitLab. If both sides change the same field, GitLab wins. Priority, deadline, hours and the In progress and Awaiting closure statuses stay here only."
@@ -1759,6 +1761,7 @@ integration_types:
     item_label: Card
     item_placeholder: "Short link, e.g.: H0TZyzbK"
     pick_title: Pick the board
+    pick_loading: Loading boards…
     pick_hint: The list shows the open boards your Trello account can see, with their workspace.
     sync_label: "Sync the cards of this board with the tasks"
     sync_hint: "Every card of the board becomes a task, and the name, description, labels and due date stay the same on both sides, whichever one changes. An archived card, or one with its due date marked done, closes the task, and closing a task archives the card. If both sides change the same field, Trello wins. The lists, the assignee, priority, hours and the In progress and Awaiting closure statuses stay out of the sync."

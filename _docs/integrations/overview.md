@@ -43,7 +43,8 @@ Toda integração tem o mesmo corpo, seja qual for a plataforma. O que muda de u
 - **A integração conectada por autorização nasce desativada** e sem alvo, com o nome da plataforma e o login de quem
   autorizou (`GitHub · @login`). Ela é
   ativada quando a pessoa escolhe o repositório ou o quadro, numa lista que vem de
-  `GET /api/integrations/:integrationId/repositories`. **Reconectar** (`?integration=<id>` na ida) troca o token de
+  `GET /api/integrations/:integrationId/repositories` (enquanto ela não chega, o campo dá lugar a "Carregando os
+  repositórios/projetos/quadros…"). **Reconectar** (`?integration=<id>` na ida) troca o token de
   uma integração que já existe e o valida contra o alvo dela antes de valer.
 - **Os detalhes do item** (título, estado, endereço) são buscados na hora, por
   `GET /api/tasks/:taskId/external-details?integration_id=`. Se a plataforma não responde, a resposta continua `200`,
