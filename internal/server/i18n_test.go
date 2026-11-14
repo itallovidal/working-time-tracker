@@ -304,8 +304,8 @@ func TestLanguage_MigratedPagesHaveNoPortugueseInEnglish(t *testing.T) {
 
 // Cada tipo de integração tem o seu texto em todos os idiomas: a sobre, a dica do
 // token, o rótulo do item vinculado e o rótulo de cada campo do metadata; o que se
-// conecta por autorização tem também o título e a dica da escolha e o aviso de que o
-// servidor não a configurou, e o que sincroniza tem a caixa e a explicação dela.
+// conecta por autorização tem também o título, a dica e o aviso de carregamento da escolha e o
+// aviso de que o servidor não a configurou, e o que sincroniza tem a caixa e a explicação dela.
 func TestIntegrationTypes_HaveTextsInEveryLanguage(t *testing.T) {
 	cat, err := i18n.Load()
 	if err != nil {
@@ -319,7 +319,7 @@ func TestIntegrationTypes_HaveTextsInEveryLanguage(t *testing.T) {
 				required = append(required, base+"fields."+f.Key+".label")
 			}
 			if d.Auth == adapter.AuthOAuth {
-				required = append(required, base+"pick_title", base+"pick_hint", base+"connect_unconfigured")
+				required = append(required, base+"pick_title", base+"pick_hint", base+"pick_loading", base+"connect_unconfigured")
 			}
 			if d.Sync {
 				required = append(required, base+"sync_label", base+"sync_hint")

@@ -89,10 +89,12 @@ type Descriptor struct {
 	ItemLabel       string `json:"item_label"`
 	ItemPlaceholder string `json:"item_placeholder,omitempty"`
 	// Os textos da conexão e da sincronização que dependem da plataforma (o repositório ou o quadro, a issue ou
-	// o cartão), do catálogo, em integration_types.<tipo>: o título e a dica da escolha do que sincronizar, a
-	// caixa da sincronização e a explicação dela, e o aviso de que o servidor não tem a conexão configurada.
+	// o cartão), do catálogo, em integration_types.<tipo>: o título e a dica da escolha do que sincronizar, o
+	// aviso enquanto a lista dessa escolha carrega, a caixa da sincronização e a explicação dela, e o aviso de
+	// que o servidor não tem a conexão configurada.
 	PickTitle           string `json:"pick_title,omitempty"`
 	PickHint            string `json:"pick_hint,omitempty"`
+	PickLoading         string `json:"pick_loading,omitempty"`
 	SyncLabel           string `json:"sync_label,omitempty"`
 	SyncHint            string `json:"sync_hint,omitempty"`
 	ConnectUnconfigured string `json:"connect_unconfigured,omitempty"`

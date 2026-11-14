@@ -1387,6 +1387,14 @@ Some tasks are only for developers: whoever has no account on the platform shoul
 - [X] S130.5 Checked in the browser on a seeded database with the fake GitHub: connecting on the profile, the card with two unmatched logins and the link modal, the required modal (error and success), the "Não tenho conta" path, the form with the box and the disabled member, and the profile and the modal at 375px. Not checked: GitLab on a real server and the English screens
 - [X] S130.6 Not in solo mode (the owner, after trying it on a solo organization): an imported task starts without the requirement, `CheckRequired` passes when the project's organization is solo, and the account modal ignores `required_accounts` there. The form box was already hidden in solo
 
+### Sprint 131: "Carregando…" While the Integration List Loads
+
+The list of repositories, projects or boards can take a while, and the owner kept opening an empty dropdown to see whether it had arrived.
+
+- [X] S131.1 While `GET /api/integrations/:id/repositories` has not answered, the integration modal shows the platform's "Carregando os repositórios/projetos/quadros…" (`integration_types.<type>.pick_loading`, required for OAuth types) in place of the field; the field comes back with the list and the saved value selected, or with the existing error when the call fails
+- [X] S131.2 Each load has a sequence number: the late answer of an integration opened before does not overwrite the one now open
+- [X] S131.3 Checked in the browser on a seeded database with the list call delayed: GitHub, GitLab and Trello, the failure path, quickly switching between two integrations, and 375px
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open

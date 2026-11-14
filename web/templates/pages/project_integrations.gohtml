@@ -151,7 +151,9 @@
         <template x-for="f in typeOf(draft.type).metadata" :key="draft.type + '-' + f.key">
           <div class="field" x-show="!f.internal && !f.hidden">
             <label :for="'int-meta-' + f.key" x-text="f.label"></label>
-            <template x-if="f.picker === 'select'">
+            {{/* Enquanto a lista do que a conta enxerga não chega, o campo dá lugar ao aviso; com ela, o campo volta. */}}
+            <p class="muted" role="status" x-cloak x-show="f.picker && reposLoading" x-text="typeOf(draft.type).pick_loading"></p>
+            <template x-if="f.picker === 'select' && !reposLoading">
               <select :id="'int-meta-' + f.key" :data-field="f.key" :aria-invalid="fieldErrors[f.key] ? 'true' : 'false'" :disabled="f.summary && repoLocked()"
                       @change="clearField(f.key); draft.metadata[f.key] = $event.target.value; if (f.name_key) draft.metadata[f.name_key] = $event.target.value ? $event.target.selectedOptions[0].textContent.trim() : ''">
                 <option value="" :selected="!draft.metadata[f.key]">{{$.T "integrations.pick_placeholder"}}</option>
@@ -164,7 +166,7 @@
                 </template>
               </select>
             </template>
-            <template x-if="f.picker !== 'select'">
+            <template x-if="f.picker !== 'select' && !(f.picker && reposLoading)">
               <input :id="'int-meta-' + f.key" type="text" autocomplete="off" spellcheck="false" maxlength="{{limit "repo"}}"
                      :data-field="f.key" :placeholder="f.placeholder || ''" :list="f.picker === 'datalist' ? 'int-repos' : null"
                      :readonly="f.summary && repoLocked()" x-model="draft.metadata[f.key]" @input="clearField(f.key)"
@@ -172,7 +174,7 @@
             </template>
             <p class="form-error" x-cloak x-show="fieldErrors[f.key]" x-text="fieldErrors[f.key]" role="alert"></p>
             <span class="hint" x-cloak x-show="f.summary && repoLocked()">{{$.T "integrations.sync_locked"}}</span>
-            <span class="hint" x-show="f.hint && !f.internal && f.picker !== 'select'" x-text="f.hint"></span>
+            <span class="hint" x-show="f.hint && !f.internal && f.picker !== 'select' && !(f.picker && reposLoading)" x-text="f.hint"></span>
           </div>
         </template>
         {{/* Os repositórios que a conta autorizada enxerga: o campo os oferece, e aceita digitar outro. */}}

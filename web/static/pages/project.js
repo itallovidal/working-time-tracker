@@ -1543,6 +1543,10 @@ document.addEventListener('alpine:init', () => {
     confirming: false,
     // Os repositórios que a conta autorizada enxerga, para o campo do repositório oferecer.
     repos: [],
+    // Enquanto a lista não chega, o campo dá lugar a "Carregando…": a pessoa não abre uma lista vazia sem saber
+    // se ela ainda vem. reposSeq é a busca da vez: a resposta de outra integração, aberta antes, não vale mais.
+    reposLoading: false,
+    reposSeq: 0,
     async init() {
       try {
         this.items = (await api('GET', '/api/projects/' + project.id + '/integrations')) || [];
@@ -1590,14 +1594,24 @@ document.addEventListener('alpine:init', () => {
       if (this.incomplete(it)) this.$nextTick(() => this.openEdit(it, true));
       else toast(WTT.t('integrations.reconnected'));
     },
-    async loadRepos(it) {
+    // resetRepos esquece a lista e a busca em curso; devolve o número da busca nova.
+    resetRepos() {
       this.repos = [];
       this.errors.repos = '';
+      this.reposLoading = false;
+      return ++this.reposSeq;
+    },
+    async loadRepos(it) {
+      const seq = this.resetRepos();
       if (!this.isOAuth(it.type) || !it.has_token) return;
+      this.reposLoading = true;
       try {
-        this.repos = (await api('GET', '/api/integrations/' + it.id + '/repositories')) || [];
+        const list = (await api('GET', '/api/integrations/' + it.id + '/repositories')) || [];
+        if (seq === this.reposSeq) this.repos = list;
       } catch (e) {
-        this.errors.repos = WTT.t('integrations.repos_failed');
+        if (seq === this.reposSeq) this.errors.repos = WTT.t('integrations.repos_failed');
+      } finally {
+        if (seq === this.reposSeq) this.reposLoading = false;
       }
     },
     // facts são os campos que identificam a conexão no cartão: o repositório, o quadro.
@@ -1611,8 +1625,7 @@ document.addEventListener('alpine:init', () => {
     },
     openCreate() {
       // Um tipo "em breve" não se escolhe: o modal abre no primeiro que está disponível.
-      this.repos = [];
-      this.errors.repos = '';
+      this.resetRepos();
       const first = this.types.find((t) => !t.coming_soon);
       this.draft = { id: null, type: first ? first.type : '', display_name: '', token: '', metadata: {}, enabled: true, has_token: false, sync_issues: false, sync_was: false };
       this.openForm(WTT.t('integrations.new'));

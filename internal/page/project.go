@@ -37,7 +37,7 @@ func (h *Handler) localizeDescriptor(d *adapter.Descriptor, lang string) {
 	}
 	// Os textos de quem se conecta por autorização e de quem sincroniza dependem da plataforma.
 	for key, into := range map[string]*string{
-		"pick_title": &d.PickTitle, "pick_hint": &d.PickHint, "sync_label": &d.SyncLabel,
+		"pick_title": &d.PickTitle, "pick_hint": &d.PickHint, "pick_loading": &d.PickLoading, "sync_label": &d.SyncLabel,
 		"sync_hint": &d.SyncHint, "connect_unconfigured": &d.ConnectUnconfigured,
 	} {
 		if cat.Has(lang, base+key) {
