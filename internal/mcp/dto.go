@@ -40,6 +40,8 @@ type TaskOut struct {
 	// URL é a página da tarefa no sistema, quando o endereço público está configurado.
 	URL       string `json:"url,omitempty"`
 	CreatedAt string `json:"created_at"`
+	// Project é o projeto pelo nome; só a find_tasks, que olha vários projetos, o traz.
+	Project *Ref `json:"project,omitempty"`
 }
 
 // AssigneeOut é o responsável pela tarefa. IsYou marca quando é a própria pessoa do token.

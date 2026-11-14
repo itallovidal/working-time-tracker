@@ -196,25 +196,27 @@ func TestMCP_ListsTheTools(t *testing.T) {
 	}
 	slices.Sort(names)
 	want := []string{
-		"add_task_to_session", "claim_task", "clock_in", "clock_out", "create_task", "get_active_session", "get_task",
-		"list_labels", "list_projects", "list_tasks", "my_hours", "my_tasks", "remove_session_task",
-		"stop_session_task", "sync_task", "update_task", "whoami",
+		"add_task_to_session", "claim_task", "clock_in", "clock_out", "create_label", "create_task", "find_tasks",
+		"get_active_session", "get_task", "list_labels", "list_projects", "list_tasks", "my_hours", "my_tasks",
+		"remove_session_task", "stop_session_task", "sync_project", "sync_task", "update_task", "whoami",
 	}
 	if !slices.Equal(names, want) {
 		t.Fatalf("tools = %v, want %v", names, want)
 	}
-	for _, name := range []string{"whoami", "list_projects", "list_tasks", "my_tasks", "get_task", "list_labels", "get_active_session", "my_hours"} {
+	for _, name := range []string{"whoami", "list_projects", "list_tasks", "my_tasks", "get_task", "list_labels", "get_active_session", "my_hours", "find_tasks"} {
 		if !readOnly[name] {
 			t.Errorf("%s is not marked read-only", name)
 		}
 	}
-	for _, name := range []string{"create_task", "update_task", "clock_in", "clock_out"} {
+	for _, name := range []string{"create_task", "update_task", "clock_in", "clock_out", "create_label", "sync_project"} {
 		if readOnly[name] {
 			t.Errorf("%s is marked read-only", name)
 		}
 	}
-	if !strings.Contains(cs.InitializeResult().Instructions, "add_task_to_session") {
-		t.Errorf("instructions do not explain the session: %q", cs.InitializeResult().Instructions)
+	for _, word := range []string{"add_task_to_session", "sync_project", "add_labels", "find_tasks"} {
+		if !strings.Contains(cs.InitializeResult().Instructions, word) {
+			t.Errorf("instructions do not mention %s: %q", word, cs.InitializeResult().Instructions)
+		}
 	}
 }
 
@@ -503,6 +505,8 @@ func TestMCP_Isolation(t *testing.T) {
 		wantCode(t, toolError(t, cs, "list_tasks", map[string]any{"project_id": projectID}), "project.not_found")
 		wantCode(t, toolError(t, cs, "create_task", map[string]any{"project_id": projectID, "name": "x"}), "project.not_found")
 		wantCode(t, toolError(t, cs, "list_labels", map[string]any{"project_id": projectID}), "project.not_found")
+		wantCode(t, toolError(t, cs, "create_label", map[string]any{"project_id": projectID, "name": "x"}), "project.not_found")
+		wantCode(t, toolError(t, cs, "sync_project", map[string]any{"project_id": projectID}), "project.not_found")
 	}
 	if n := testClient.Task.Query().CountX(t.Context()); n != 2 {
 		t.Errorf("%d tasks, want the two of the setup", n)
@@ -583,6 +587,194 @@ func TestMCP_SyncTask(t *testing.T) {
 		t.Errorf("sync_task = %v, want the new title", sum)
 	}
 	wantCode(t, toolError(t, cs, "sync_task", map[string]any{"task_id": plain}), "task.no_external_item")
+}
+
+// sync_project é o botão Sincronizar da lista de tarefas: as issues abertas que ainda não estão aqui viram tarefas,
+// as fechadas não entram, e quem está no projeto pode pedir.
+func TestMCP_SyncProject(t *testing.T) {
+	app, fake := syncServer(t)
+	e := app.Echo
+	admin := signup(t, e, "Org", "ana@test.com")
+	member := invite(t, e, admin, "bia@test.com", "member")
+	prj := createProject(t, e, admin, "Alfa")
+	allocate(t, e, admin, prj, member.id, 5000)
+	_, token := createToken(t, e, member, "claude")
+	cs := connectMCP(t, mcpEndpoint(t, e), token)
+
+	// Sem integração, e com uma em que a sincronização está desligada, o erro diz onde ligar.
+	wantCode(t, toolError(t, cs, "sync_project", map[string]any{"project_id": prj}), "mcp.project_sync_off")
+	fake.AddIssue("owner/repo", testutil.GitHubIssue{Title: "Corrigir login"})
+	fake.AddIssue("owner/repo", testutil.GitHubIssue{Title: "Nova tela"})
+	fake.AddIssue("owner/repo", testutil.GitHubIssue{Title: "Antiga", State: "closed"})
+	rec := do(e, "POST", "/api/projects/"+prj+"/integrations", `{"type":"github","display_name":"Repo","token":"tok","metadata":{"repo":"owner/repo"}}`, admin.session)
+	integ := decode(t, rec)["id"].(string)
+	text := toolError(t, cs, "sync_project", map[string]any{"project_id": prj})
+	wantCode(t, text, "mcp.project_sync_off")
+	if !strings.Contains(text, "Integrations") {
+		t.Errorf("sync off error = %q, want where to turn it on", text)
+	}
+	do(e, "PATCH", "/api/integrations/"+integ, `{"sync_issues":true}`, admin.session)
+
+	sum := callTool(t, cs, "sync_project", map[string]any{"project_id": prj})
+	if sum["created"] != 2.0 || sum["errors"] != 0.0 || sum["partial"] != false {
+		t.Errorf("sync_project = %v, want the two open issues", sum)
+	}
+	var names []string
+	for _, task := range decodeList(t, do(e, "GET", "/api/projects/"+prj+"/tasks", "", admin.session)) {
+		names = append(names, task["name"].(string))
+	}
+	slices.Sort(names)
+	if !slices.Equal(names, []string{"Corrigir login", "Nova tela"}) {
+		t.Errorf("tasks = %v, want the open issues only", names)
+	}
+	if again := callTool(t, cs, "sync_project", map[string]any{"project_id": prj}); again["created"] != 0.0 {
+		t.Errorf("second sync_project = %v, want nothing new", again)
+	}
+}
+
+// find_tasks acha a tarefa pela issue (a URL ou owner/repo#12), em qualquer projeto que a pessoa alcança, mesmo
+// quando outro repositório tem uma issue com o mesmo número; e por palavras no nome e na descrição.
+func TestMCP_FindTasks(t *testing.T) {
+	app, fake := syncServer(t)
+	e := app.Echo
+	admin := signup(t, e, "Org", "ana@test.com")
+	member := invite(t, e, admin, "bia@test.com", "member")
+	site := createProject(t, e, admin, "Site")
+	app2 := createProject(t, e, admin, "App")
+	allocate(t, e, admin, site, member.id, 5000)
+	fake.AddRepo("owner/app")
+	fake.AddIssue("owner/repo", testutil.GitHubIssue{Title: "Corrigir login", Body: "Erro ao entrar com o Google"})
+	fake.AddIssue("owner/repo", testutil.GitHubIssue{Title: "Nova home"})
+	fake.AddIssue("owner/app", testutil.GitHubIssue{Title: "Tela de login do app"})
+	for prj, repo := range map[string]string{site: "owner/repo", app2: "owner/app"} {
+		body := `{"type":"github","display_name":"Repo","token":"tok","metadata":{"repo":"` + repo + `"}}`
+		integ := decode(t, do(e, "POST", "/api/projects/"+prj+"/integrations", body, admin.session))["id"].(string)
+		do(e, "PATCH", "/api/integrations/"+integ, `{"sync_issues":true}`, admin.session)
+		if rec := do(e, "POST", "/api/projects/"+prj+"/sync", "", admin.session); rec.Code != http.StatusOK {
+			t.Fatalf("sync %s = %d: %s", repo, rec.Code, rec.Body.String())
+		}
+	}
+	endpoint := mcpEndpoint(t, e)
+	_, adminToken := createToken(t, e, admin, "claude")
+	acs := connectMCP(t, endpoint, adminToken)
+	_, memberToken := createToken(t, e, member, "claude")
+	mcs := connectMCP(t, endpoint, memberToken)
+
+	names := func(out map[string]any) []string {
+		var got []string
+		for _, it := range out["items"].([]any) {
+			item := it.(map[string]any)
+			got = append(got, item["name"].(string)+" @ "+item["project"].(map[string]any)["name"].(string))
+		}
+		slices.Sort(got)
+		return got
+	}
+	find := func(cs *mcp.ClientSession, args map[string]any) []string {
+		t.Helper()
+		return names(callTool(t, cs, "find_tasks", args))
+	}
+
+	// A issue #1 existe nos dois repositórios: a URL e a forma curta dizem qual.
+	for _, issue := range []string{
+		"https://github.com/owner/repo/issues/1", "github.com/Owner/Repo/issues/1#issuecomment-5", "owner/repo#1",
+	} {
+		if got := find(acs, map[string]any{"issue": issue}); !slices.Equal(got, []string{"Corrigir login @ Site"}) {
+			t.Errorf("find_tasks issue %q = %v, want the Site task", issue, got)
+		}
+	}
+	if got := find(acs, map[string]any{"issue": "owner/app#1"}); !slices.Equal(got, []string{"Tela de login do app @ App"}) {
+		t.Errorf("find_tasks owner/app#1 = %v, want the App task", got)
+	}
+	if got := find(acs, map[string]any{"issue": "owner/repo#99"}); len(got) != 0 {
+		t.Errorf("find_tasks of an issue with no task = %v, want none", got)
+	}
+
+	// Palavras no nome e na descrição, em qualquer ordem, nos projetos que a pessoa alcança.
+	if got := find(acs, map[string]any{"query": "login"}); !slices.Equal(got, []string{"Corrigir login @ Site", "Tela de login do app @ App"}) {
+		t.Errorf("find_tasks login = %v, want both projects", got)
+	}
+	if got := find(acs, map[string]any{"query": "google LOGIN"}); !slices.Equal(got, []string{"Corrigir login @ Site"}) {
+		t.Errorf("find_tasks google login = %v, want the task with Google in the description", got)
+	}
+	if got := find(acs, map[string]any{"query": "login", "project_id": app2}); !slices.Equal(got, []string{"Tela de login do app @ App"}) {
+		t.Errorf("find_tasks in App = %v", got)
+	}
+	if got := find(acs, map[string]any{"query": "login", "statuses": []string{"closed"}}); len(got) != 0 {
+		t.Errorf("find_tasks closed = %v, want none", got)
+	}
+	page := callTool(t, acs, "find_tasks", map[string]any{"query": "o", "per_page": 1, "page": 2})
+	if page["total"] != 3.0 || len(page["items"].([]any)) != 1 || page["page"] != 2.0 {
+		t.Errorf("find_tasks page 2 = %v, want one of three", page)
+	}
+
+	// O membro só está no Site: o App não aparece, nem pela issue, nem pedindo o projeto.
+	if got := find(mcs, map[string]any{"query": "login"}); !slices.Equal(got, []string{"Corrigir login @ Site"}) {
+		t.Errorf("member find_tasks login = %v, want only the Site", got)
+	}
+	if got := find(mcs, map[string]any{"issue": "owner/app#1"}); len(got) != 0 {
+		t.Errorf("member find_tasks owner/app#1 = %v, want none", got)
+	}
+	wantCode(t, toolError(t, mcs, "find_tasks", map[string]any{"query": "login", "project_id": app2}), "project.not_found")
+
+	wantCode(t, toolError(t, acs, "find_tasks", map[string]any{"query": "  "}), "mcp.find_criteria_required")
+	wantCode(t, toolError(t, acs, "find_tasks", map[string]any{"issue": "corrigir login"}), "mcp.invalid_issue")
+	// Um responsável fora da lista nem chega à ferramenta: o esquema dela o recusa.
+	if text := toolError(t, acs, "find_tasks", map[string]any{"query": "x", "assignee": "todos"}); !strings.Contains(text, "enum") {
+		t.Errorf("invalid assignee error = %q", text)
+	}
+}
+
+// Criar etiqueta é de quem tem o labels.manage no projeto, como na API; pôr e tirar etiquetas de uma tarefa é de quem
+// a altera, e mantém as outras.
+func TestMCP_Labels(t *testing.T) {
+	e := newServer(t)
+	admin := signup(t, e, "Org", "ana@test.com")
+	manager := invite(t, e, admin, "gabi@test.com", "member")
+	plain := invite(t, e, admin, "caio@test.com", "member")
+	prj := createProject(t, e, admin, "Alfa")
+	withPreset(t, e, admin, prj, manager.id, "manager")
+	withPreset(t, e, admin, prj, plain.id, "member")
+	endpoint := mcpEndpoint(t, e)
+	_, managerToken := createToken(t, e, manager, "claude")
+	mcs := connectMCP(t, endpoint, managerToken)
+	_, plainToken := createToken(t, e, plain, "claude")
+	pcs := connectMCP(t, endpoint, plainToken)
+
+	wantCode(t, toolError(t, pcs, "create_label", map[string]any{"project_id": prj, "name": "bug"}), "auth.permission_required")
+	if got := callTool(t, mcs, "create_label", map[string]any{"project_id": prj, "name": " Bug "}); got["name"] != "Bug" || got["created"] != true {
+		t.Errorf("create_label = %v, want Bug created", got)
+	}
+	// O mesmo nome com outras maiúsculas devolve a que existe, como a tela.
+	if got := callTool(t, mcs, "create_label", map[string]any{"project_id": prj, "name": "bug"}); got["name"] != "Bug" || got["created"] != false {
+		t.Errorf("create_label again = %v, want the existing Bug", got)
+	}
+	callTool(t, mcs, "create_label", map[string]any{"project_id": prj, "name": "frontend"})
+	wantCode(t, toolError(t, mcs, "create_label", map[string]any{"project_id": prj, "name": "  "}), "label.name_required")
+	if labels := callTool(t, pcs, "list_labels", map[string]any{"project_id": prj})["labels"]; !slices.Equal(toStrings(labels), []string{"Bug", "frontend"}) {
+		t.Errorf("list_labels = %v", labels)
+	}
+
+	taskID := callTool(t, pcs, "create_task", map[string]any{"project_id": prj, "name": "Login", "labels": []string{"bug"}})["id"].(string)
+	if got := callTool(t, pcs, "update_task", map[string]any{"task_id": taskID, "add_labels": []string{"FRONTEND", "bug"}}); !slices.Equal(toStrings(got["labels"]), []string{"Bug", "frontend"}) {
+		t.Errorf("add_labels = %v, want both, keeping Bug", got["labels"])
+	}
+	if got := callTool(t, pcs, "update_task", map[string]any{"task_id": taskID, "remove_labels": []string{"bug"}}); !slices.Equal(toStrings(got["labels"]), []string{"frontend"}) {
+		t.Errorf("remove_labels = %v, want frontend only", got["labels"])
+	}
+	// Tirar uma que a tarefa não tem não faz nada.
+	if got := callTool(t, pcs, "update_task", map[string]any{"task_id": taskID, "remove_labels": []string{"bug"}}); !slices.Equal(toStrings(got["labels"]), []string{"frontend"}) {
+		t.Errorf("remove a missing label = %v, want frontend", got["labels"])
+	}
+	wantCode(t, toolError(t, pcs, "update_task", map[string]any{"task_id": taskID, "labels": []string{}, "add_labels": []string{"bug"}}), "mcp.labels_conflict")
+	text := toolError(t, pcs, "update_task", map[string]any{"task_id": taskID, "add_labels": []string{"infra"}})
+	wantCode(t, text, "mcp.unknown_label")
+	if !strings.Contains(text, "create_label") {
+		t.Errorf("unknown label error = %q, want the create_label hint", text)
+	}
+	api := decode(t, do(e, "GET", "/api/tasks/"+taskID, "", admin.session))
+	if labels, _ := api["labels"].([]any); len(labels) != 1 {
+		t.Errorf("labels through the API = %v, want one", api["labels"])
+	}
 }
 
 func toStrings(v any) []string {

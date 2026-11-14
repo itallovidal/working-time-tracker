@@ -1395,6 +1395,30 @@ The list of repositories, projects or boards can take a while, and the owner kep
 - [X] S131.2 Each load has a sequence number: the late answer of an integration opened before does not overwrite the one now open
 - [X] S131.3 Checked in the browser on a seeded database with the list call delayed: GitHub, GitLab and Trello, the failure path, quickly switching between two integrations, and 375px
 
+### Sprint 132: The MCP Syncs the Whole Project, and Creates and Adds Labels
+
+The owner created a project, asked Claude to sync it and got nothing new: the MCP only had `sync_task`, which syncs a task already linked to an item, so the platform's new issues and cards never came in.
+
+- [X] S132.1 `sync_project`: the Sync button of the task list (`Syncer.SyncProject`), one full round in each integration of the project with the sync on. Open items not here yet become tasks; closed ones do not. Like the API route, anyone who reaches the project can call it. A project with no integration syncing gets `mcp.project_sync_off`, which says where to turn it on (the domain's `integration.sync_off` talks about one integration)
+- [X] S132.2 `create_label`: for whoever has `labels.manage` in the project (`Resolver.ProjectSet`), the same check as `POST /projects/:projectId/labels`; otherwise `auth.permission_required`. A name the project already has (case-insensitive) comes back with `created: false`, as the screen does
+- [X] S132.3 `update_task` takes `add_labels` and `remove_labels`, by name, keeping the other labels; `labels` still replaces them all, and both at once is `mcp.labels_conflict`. `mcp.unknown_label` now points to `create_label`
+- [X] S132.4 The initialize instructions mention `sync_project` and the label tools. Tests: the tool list, the project sync with the fake GitHub (two open issues and a closed one, a second call with nothing new, sync off), labels by preset (member refused, manager creates), add, remove and the conflict, and both new tools in the isolation test
+
+### Sprint 133: The MCP Connector Section Says What It Does
+
+- [X] S133.1 Under the "Conector MCP" title, a short list of what to ask Claude: manage sessions, create and update tasks with labels, sync the project (`profile.mcp.intro*`, `.icon-list`)
+- [X] S133.2 The "?" only compares OAuth and the personal token, and shows only with OAuth on (without it there is nothing to compare). Its old steps (`help_intro`, `help_oauth_*`) are gone
+- [X] S133.3 The connector address for claude.ai, with its Copy button, moved from the "?" modal to the OAuth tab, above the Claude Code prompt: it was the only place with the address, so it could not just go. The help page text follows
+- [X] S133.4 Checked in the browser on a seeded database with OAuth on: the section, the OAuth tab and the modal at 1280, 1024 and 375px with no split phrase or lone last word, and the English page. Not checked: the Copy buttons, because the browser pane refuses the clipboard (the untouched Copiar prompt fails the same way)
+
+### Sprint 134: The MCP Finds a Task by Its Issue
+
+A skill that clocks in from `/ponto #12` could not find the task of an issue: `list_tasks` looks at one project and only at the name, so it had to search by the issue title and check the links, which breaks when the title changes.
+
+- [X] S134.1 `find_tasks`, read-only, across every project the person reaches (non-admins only their own, as everywhere), or one with `project_id`: `issue` takes the URL of a GitHub or GitLab issue or a Trello card (with or without `https://`, a comment anchor or the card name after it; GitLab `work_items` too) or `owner/repo#12`; `query` takes words that must each appear in the name or the description. Statuses (every one by default), assignee and pages, and each task comes with its `project`
+- [X] S134.2 The same issue number in another repository does not count: the query filters by the link's key (`ListFilter.ItemID`) and the link's URL says which repository it is. `ListFilter.Words` and `Service.Search` (the organization or one project) are new in the task domain; `list_tasks` keeps its name-only search and points to `find_tasks`
+- [X] S134.3 `mcp.find_criteria_required` without issue and query, `mcp.invalid_issue` for anything else. Tests: the reference parser (GitHub, GitLab, Trello, short form, refusals) and, with the fake GitHub, two repositories with an issue #1 each, the words in name and description, a project, a status, a page, and a member who only sees their project
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open

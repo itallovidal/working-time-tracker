@@ -1,5 +1,6 @@
 // Package mcp é o servidor MCP (Model Context Protocol) do sistema, em /mcp: o que o Claude Code usa para criar e
-// mudar tarefas, pegar uma tarefa, sincronizá-la, bater o ponto e ver as horas em nome de uma pessoa.
+// mudar tarefas e etiquetas, pegar uma tarefa, sincronizar a tarefa ou o projeto, bater o ponto e ver as horas em nome
+// de uma pessoa.
 //
 // Como o internal/page, não é um domínio: lê os services dos outros. A pessoa entra em Authorization: Bearer com um
 // token pessoal (gerado no perfil, ver auth/api_token.go) ou com o token de acesso de um app conectado pelo OAuth (o
@@ -64,7 +65,8 @@ type server struct {
 // instructions é o que o initialize diz ao Claude sobre como o sistema funciona.
 const instructions = `Working Time Tracker: time tracking per task. You act as the person who owns the token.
 
-- Tasks live in projects. Use list_projects, then list_tasks or my_tasks to find ids.
+- Tasks live in projects. Use list_projects, then list_tasks or my_tasks to find ids. find_tasks finds a task in any
+  project by its GitHub or GitLab issue or Trello card (URL or owner/repo#12), or by words in its name or description.
 - Task status: backlog, in_progress, awaiting_closure, closed. Priority: urgent, high, medium, low, none.
 - A person has at most one open work session (the clock) per project, and sessions in different projects run at the
   same time. clock_in opens one on a task, and the task becomes in_progress and, if it had no assignee, the person's.
@@ -74,6 +76,10 @@ const instructions = `Working Time Tracker: time tracking per task. You act as t
   sessions are open in more than one project).
 - Overlapping time in two projects counts once in the person's total hours; the money is per project, at each
   project's rate.
+- sync_project brings a project's new GitHub, GitLab or Trello items in as tasks and updates the linked ones;
+  sync_task does the same for one task.
+- Labels go by name. create_label adds one to a project (for those who manage labels). In update_task, add_labels and
+  remove_labels change some labels, and labels replaces them all.
 - Dates: deadline is YYYY-MM-DD, in the organization's time zone. Times come back in RFC 3339.
 - Errors come back as text with a stable code in parentheses.`
 
@@ -103,6 +109,7 @@ func NewHandler(d Deps) http.Handler {
 func (s *server) addTools(srv *mcp.Server) {
 	s.addAccountTools(srv)
 	s.addTaskTools(srv)
+	s.addFindTool(srv)
 	s.addSessionTools(srv)
 }
 

@@ -98,6 +98,12 @@ func applyFilter(q *ent.TaskQuery, f ListFilter) *ent.TaskQuery {
 	if len(f.LabelIDs) > 0 {
 		q = q.Where(task.HasLabelsWith(entlabel.IDIn(f.LabelIDs...)))
 	}
+	for _, w := range f.Words {
+		q = q.Where(task.Or(task.NameContainsFold(w), task.DescriptionContainsFold(w)))
+	}
+	if f.ItemID != "" {
+		q = q.Where(task.HasIssueSyncsWith(issuesync.ItemIDEQ(f.ItemID)))
+	}
 	if f.InProjectsOf != nil {
 		q = q.Where(task.HasProjectWith(projectaccess.ProjectsOf(*f.InProjectsOf)))
 	}
@@ -207,6 +213,47 @@ func (s *Store) ListAssigned(orgID, personID string, f ListFilter) ([]Assigned, 
 		}
 	}
 	return out, nil
+}
+
+// inOrganization monta a consulta das tarefas de todos os projetos da organização (ou só do projeto, quando vem um)
+// que passam pelos filtros. Quem não é admin limita com f.InProjectsOf.
+func (s *Store) inOrganization(orgID uuid.UUID, projectID *uuid.UUID, f ListFilter) *ent.TaskQuery {
+	q := s.client.Task.Query().Where(task.HasProjectWith(entproject.OrganizationIDEQ(orgID)))
+	if projectID != nil {
+		q = q.Where(task.ProjectIDEQ(*projectID))
+	}
+	return applyFilter(q, f)
+}
+
+// ListInOrganization lista as tarefas da organização que passam pelos filtros, da mais nova para a mais antiga, cada
+// uma com o projeto, o responsável, as etiquetas e os vínculos. Com f.Page maior que zero, devolve só aquela página.
+func (s *Store) ListInOrganization(orgID uuid.UUID, projectID *uuid.UUID, f ListFilter) ([]Assigned, error) {
+	q := s.inOrganization(orgID, projectID, f).
+		WithProject().
+		WithAssignee().
+		WithIssueSyncs(withLinks).
+		WithLabels(withLabels).
+		Order(ent.Desc(task.FieldCreatedAt, task.FieldID))
+	if f.Page > 0 {
+		q = q.Limit(f.PerPage).Offset((f.Page - 1) * f.PerPage)
+	}
+	tasks, err := q.All(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	out := make([]Assigned, len(tasks))
+	for i, e := range tasks {
+		out[i] = Assigned{Task: *toDomainTask(e)}
+		if e.Edges.Project != nil {
+			out[i].ProjectName = e.Edges.Project.Name
+		}
+	}
+	return out, nil
+}
+
+// CountInOrganization conta as tarefas da organização que passam pelos filtros.
+func (s *Store) CountInOrganization(orgID uuid.UUID, projectID *uuid.UUID, f ListFilter) (int, error) {
+	return s.inOrganization(orgID, projectID, f).Count(context.Background())
 }
 
 // CountAssigned conta as tarefas da pessoa na organização que passam pelos filtros.

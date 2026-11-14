@@ -167,6 +167,27 @@ func (s *Service) ListPage(projectID string, f ListFilter) (*Page, error) {
 	return &Page{Items: items, Total: total, Page: f.Page, PerPage: f.PerPage, Assignees: assignees}, nil
 }
 
+// Search lista as tarefas da organização (ou só do projeto, quando vem um) que passam pelos filtros, cada uma com o
+// nome do projeto: a busca do MCP. Com f.Page maior que zero, devolve só aquela página (até MaxPerPage) e o total;
+// com zero, todas.
+func (s *Service) Search(orgID uuid.UUID, projectID *uuid.UUID, f ListFilter) ([]Assigned, int, error) {
+	if f.Page > 0 {
+		if f.PerPage <= 0 {
+			f.PerPage = DefaultPerPage
+		}
+		f.PerPage = min(f.PerPage, MaxPerPage)
+	}
+	total, err := s.taskStore.CountInOrganization(orgID, projectID, f)
+	if err != nil {
+		return nil, 0, err
+	}
+	items, err := s.taskStore.ListInOrganization(orgID, projectID, f)
+	if err != nil {
+		return nil, 0, err
+	}
+	return items, total, nil
+}
+
 func (s *Service) Get(id string) (*Task, error) {
 	return s.taskStore.GetByID(id)
 }

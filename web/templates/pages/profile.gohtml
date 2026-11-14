@@ -4,18 +4,29 @@
 <main class="page" x-data="profileSettings">
   {{template "person_profile" .}}
 
-  {{/* Conector MCP: quem entra no servidor MCP (/mcp) e age como a pessoa. Em cima, tudo o que está conectado, numa
-       lista só: os apps do OAuth (o claude.ai, que vale no Claude Desktop e no celular, e o Claude Code) e os tokens
-       pessoais, cada um com o seu Desconectar ou Revogar. Embaixo, os dois jeitos de conectar, um de cada vez: o OAuth
-       (um prompt para colar no Claude Code, que se configura sozinho), que só existe com o OAuth ligado no servidor, e o
-       token pessoal, que aparece uma vez só, no modal, junto com o comando pronto (fica de fora de um prompt, para o
-       token não ir parar numa conversa). O "?" abre a explicação num modal, para a seção ficar curta; o endereço
-       do conector, que se cola no claude.ai, fica nele, no passo do claude.ai. */}}
+  {{/* Conector MCP: quem entra no servidor MCP (/mcp) e age como a pessoa. Embaixo do título, o que dá para pedir ao
+       Claude. Em cima, tudo o que está conectado, numa lista só: os apps do OAuth (o claude.ai, que vale no Claude
+       Desktop e no celular, e o Claude Code) e os tokens pessoais, cada um com o seu Desconectar ou Revogar. Embaixo, os
+       dois jeitos de conectar, um de cada vez: o OAuth, que só existe com o OAuth ligado no servidor (o endereço do
+       conector, que se cola no claude.ai, e um prompt para colar no Claude Code, que se configura sozinho), e o token
+       pessoal, que aparece uma vez só, no modal, junto com o comando pronto (fica de fora de um prompt, para o token não
+       ir parar numa conversa). O "?" explica a diferença entre os dois jeitos; sem o OAuth, não há o que comparar, e
+       ele não aparece. */}}
   <section class="card stack" aria-labelledby="mcp-title" x-data="mcpConnector">
-    <div class="row row-tight">
-      <h2 id="mcp-title">{{template "icon" "plug"}} {{.T "profile.mcp.title"}}</h2>
-      <button type="button" class="btn btn-ghost btn-sm btn-icon" aria-label="{{.T "profile.mcp.help"}}" title="{{.T "profile.mcp.help"}}"
-              @click="openHelp()">{{template "icon" "circle-question"}}</button>
+    <div class="stack stack-tight">
+      <div class="row row-tight">
+        <h2 id="mcp-title">{{template "icon" "plug"}} {{.T "profile.mcp.title"}}</h2>
+        {{- if .Props.oauth}}
+        <button type="button" class="btn btn-ghost btn-sm btn-icon" aria-label="{{.T "profile.mcp.help"}}" title="{{.T "profile.mcp.help"}}"
+                @click="openHelp()">{{template "icon" "circle-question"}}</button>
+        {{- end}}
+      </div>
+      <p class="muted">{{.T "profile.mcp.intro"}}</p>
+      <ul class="icon-list">
+        <li>{{template "icon" "clock"}} <span>{{.T "profile.mcp.intro_sessions"}}</span></li>
+        <li>{{template "icon" "list-check"}} <span>{{.T "profile.mcp.intro_tasks"}}</span></li>
+        <li>{{template "icon" "rotate"}} <span>{{.T "profile.mcp.intro_sync"}}</span></li>
+      </ul>
     </div>
 
     <div class="stack">
@@ -86,6 +97,14 @@
 
       <div class="stack" id="mcp-panel-oauth" role="tabpanel" aria-labelledby="mcp-tab-oauth" x-show="method === 'oauth'">
         <div class="field">
+          <label for="mcp-url">{{.T "profile.mcp.app_url"}}</label>
+          <div class="row">
+            <input id="mcp-url" class="flex-1" type="text" readonly :value="WTT.boot.mcpURL" @focus="$event.target.select()">
+            <button type="button" class="btn btn-secondary" aria-label="{{.T "profile.mcp.copy_url"}}" @click="copy(WTT.boot.mcpURL)">{{template "icon" "copy"}} {{.T "profile.mcp.copy"}}</button>
+          </div>
+          <span class="hint">{{.T "profile.mcp.app_hint"}}</span>
+        </div>
+        <div class="field">
           <label for="mcp-code-prompt">{{.T "profile.mcp.code_prompt"}}</label>
           <textarea id="mcp-code-prompt" class="textarea-fit" rows="2" readonly :value="oauthPrompt()" @focus="$event.target.select()"
                     x-effect="method === 'oauth' && $nextTick(() => fit($el))" @resize.window.debounce="fit($el)"></textarea>
@@ -102,22 +121,13 @@
       </div>
     </div>
 
+    {{- if .Props.oauth}}
     <template x-teleport="#modal-root">
       <div class="stack" x-show="$store.modal.name === 'mcp-help'">
-        <p>{{.T "profile.mcp.help_intro"}}</p>
-        {{- if .Props.oauth}}
         <div class="stack stack-tight">
           <h3>{{template "icon" "right-to-bracket"}} {{.T "profile.mcp.method_oauth"}}</h3>
-          <p class="muted">{{.T "profile.mcp.help_oauth_app"}}</p>
-          <div class="row">
-            <input id="mcp-url" class="flex-1" type="text" readonly aria-label="{{.T "profile.mcp.app_url"}}" :value="WTT.boot.mcpURL" @focus="$event.target.select()">
-            <button type="button" class="btn btn-secondary" aria-label="{{.T "profile.mcp.copy_url"}}" @click="copy(WTT.boot.mcpURL)">{{template "icon" "copy"}} {{.T "profile.mcp.copy"}}</button>
-          </div>
-          <p class="muted">{{.T "profile.mcp.help_oauth_app_next"}}</p>
-          <p class="muted">{{.T "profile.mcp.help_oauth_code"}}</p>
-          <p class="muted">{{.T "profile.mcp.help_oauth_limits"}}</p>
+          <p class="muted">{{.T "profile.mcp.help_oauth"}}</p>
         </div>
-        {{- end}}
         <div class="stack stack-tight">
           <h3>{{template "icon" "key"}} {{.T "profile.mcp.method_token"}}</h3>
           <p class="muted">{{.T "profile.mcp.help_token"}}</p>
@@ -128,6 +138,7 @@
         </div>
       </div>
     </template>
+    {{- end}}
 
     <template x-teleport="#modal-root">
       <form class="stack" novalidate x-show="$store.modal.name === 'mcp-token'" @submit.prevent="create()">

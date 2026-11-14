@@ -314,6 +314,26 @@ func TestOAuth_RoutesOnlyWhenEnabled(t *testing.T) {
 	}
 }
 
+// A seção Conector MCP do perfil diz o que dá para pedir ao Claude. Com o OAuth ligado, a aba OAuth tem o endereço do
+// conector, e o "?" compara OAuth e token; sem ele não há aba nem "?", só o token pessoal.
+func TestOAuth_ProfileConnectorSection(t *testing.T) {
+	check := func(e *echo.Echo, on bool) {
+		t.Helper()
+		owner := signup(t, e, "Org", "dono@example.com")
+		page := do(e, "GET", "/profile", "", owner.session).Body.String()
+		if !strings.Contains(page, `class="icon-list"`) {
+			t.Errorf("OAuth %v: the section does not list what the connector does", on)
+		}
+		for _, mark := range []string{`id="mcp-panel-oauth"`, `id="mcp-url"`, `@click="openHelp()"`, `'mcp-help'`} {
+			if strings.Contains(page, mark) != on {
+				t.Errorf("OAuth %v: %s on the page = %v, want %v", on, mark, !on, on)
+			}
+		}
+	}
+	check(newOAuthServer(t), true)
+	check(newServer(t), false)
+}
+
 // Quem não está logado passa pelo login e volta com o pedido inteiro.
 func TestOAuth_AuthorizeGoesThroughTheLogin(t *testing.T) {
 	e := newOAuthServer(t)

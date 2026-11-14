@@ -149,6 +149,12 @@ type ListFilter struct {
 	Priorities []string    // só as com uma destas prioridades
 	Statuses   []string    // só as com um destes status
 	LabelIDs   []uuid.UUID // só as que têm alguma destas etiquetas
+	// Words são palavras que precisam aparecer, cada uma, no nome ou na descrição, sem diferenciar maiúsculas (a
+	// busca do MCP). O Query continua só no nome, como a busca das listas.
+	Words []string
+	// ItemID limita às tarefas ligadas a um item de plataforma com esta chave: o número da issue, o link curto do
+	// cartão. A mesma chave pode existir em repositórios diferentes: quem chama confere a URL do vínculo.
+	ItemID string
 	// InProjectsOf limita às tarefas de projetos em que esta pessoa está (tem valor por hora nele), para quem
 	// não é admin; nil não limita. Só as consultas que juntam vários projetos (as do painel) a usam.
 	InProjectsOf *uuid.UUID

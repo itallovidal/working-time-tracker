@@ -707,14 +707,14 @@ profile:
     source_email: Achada pelo seu e-mail público
   mcp:
     title: Conector MCP
-    help: Como funciona o conector MCP
-    help_title: Conector MCP
-    help_intro: "Um assistente conectado, como o Claude, cria e atualiza as suas tarefas, pega tarefas, sincroniza com as integrações do projeto e bate o seu ponto, como você. Ele vê o que você vê, menos os valores em dinheiro."
-    help_oauth_app: "No claude.ai, abra Personalizar → Conectores → Adicionar\u00a0conector\u00a0personalizado e cole este endereço:"
-    help_oauth_app_next: "Em OAuth, deixe “Usar\u00a0a\u00a0identidade\u00a0publicada\u00a0do\u00a0Claude”. O Claude abre este sistema para você entrar e permitir, e o conector passa a valer também no Claude Desktop e no app do celular."
-    help_oauth_code: "No Claude Code, copie o prompt da aba OAuth e cole numa conversa: o Claude adiciona o conector e explica como entrar (/mcp, wtt e Authenticate)."
-    help_oauth_limits: "Por enquanto, só os apps do Claude entram por OAuth. A conexão cai depois de 30\u00a0dias sem uso."
-    help_token: "Para o Claude Code sem a autorização no navegador, ou outro cliente MCP que aceite um cabeçalho: o token vai no comando e vence na data que você escolher. Ele aparece uma vez só, quando é gerado."
+    intro: "Conecte o Claude e, numa conversa:"
+    intro_sessions: "Administre as suas sessões: bata o ponto, troque de tarefa e\u00a0encerre."
+    intro_tasks: "Crie e atualize tarefas, com\u00a0etiquetas."
+    intro_sync: "Sincronize o projeto com o GitHub, o\u00a0GitLab ou o\u00a0Trello."
+    help: Qual a diferença entre OAuth e token pessoal
+    help_title: OAuth ou token pessoal?
+    help_oauth: "Você autoriza o Claude numa tela deste sistema, sem copiar nada secreto. Vale no claude.ai, no Claude\u00a0Desktop, no app do celular e no Claude\u00a0Code. A conexão se renova sozinha e cai depois de 30\u00a0dias sem uso. Por enquanto, só os apps do Claude entram assim."
+    help_token: "Um código que você gera aqui e cola no comando do Claude\u00a0Code, ou de outro cliente MCP que aceite um cabeçalho. Aparece uma vez só e vence na data que você escolher (30, 90 ou 365\u00a0dias)."
     help_password: Trocar a senha desconecta todos os apps e revoga todos os tokens.
     help_done: Entendi
     connected_title: Conectados
@@ -740,6 +740,7 @@ profile:
     method_oauth: OAuth
     method_token: Token pessoal
     app_url: Endereço do conector
+    app_hint: "Para o claude.ai, o Claude\u00a0Desktop e o celular: em Personalizar → Conectores → Adicionar\u00a0conector\u00a0personalizado, cole este endereço. Em OAuth, deixe “Usar\u00a0a\u00a0identidade\u00a0publicada\u00a0do\u00a0Claude”."
     code_command: Comando do Claude Code
     code_prompt: Prompt para o Claude Code
     code_prompt_text: "Configure o conector MCP do Working Time Tracker no meu Claude Code. Rode: `{{.command}}`. Depois, me explique como autenticar (/mcp, wtt e Authenticate)."
@@ -999,7 +1000,7 @@ help:
       rates: "“Projetos e valores”: quanto você recebe por hora em cada projeto e o que fez neles, no período e desde o início. Só você e os administradores veem."
       edit: "“Editar perfil” abre os dados pessoais (nome e email, que é o que você usa para entrar) e, na aba “Senha”, a troca de senha, que encerra as suas outras sessões."
       language: "O idioma (PT | EN), a “Ajuda” e o “Sair” ficam no mesmo menu da conta, e o navegador lembra o idioma escolhido."
-      mcp: "Em “Conector MCP”, um assistente como o Claude passa a criar e atualizar as suas tarefas, pegar tarefas, sincronizar e bater o seu ponto, como você e sem ver valores em dinheiro. A lista “Conectados” mostra os apps e os tokens que entram, e desconecta ou revoga cada um. Embaixo, escolha como conectar: por OAuth, colando no claude.ai o endereço do conector, que o “?” mostra (Personalizar → Conectores; vale também no Claude Desktop e no celular) ou colando no Claude Code o prompt pronto, que ele mesmo configura; ou por um token pessoal, que aparece uma vez só e vence na data escolhida. O “?” ao lado do título explica os passos e tem o endereço do conector. Trocar a senha desconecta os apps e revoga os tokens."
+      mcp: "Em “Conector MCP”, um assistente como o Claude passa a administrar as suas sessões, criar e atualizar as suas tarefas e etiquetas e sincronizar o projeto, como você e sem ver valores em dinheiro. A lista “Conectados” mostra os apps e os tokens que entram, e desconecta ou revoga cada um. Embaixo, escolha como conectar: por OAuth, colando no claude.ai o endereço do conector, que a aba OAuth mostra com o botão de copiar (Personalizar → Conectores; vale também no Claude Desktop e no celular), ou colando no Claude Code o prompt pronto, que ele mesmo configura; ou por um token pessoal, que aparece uma vez só e vence na data escolhida. O “?” ao lado do título explica a diferença entre os dois. Trocar a senha desconecta os apps e revoga os tokens."
   concepts:
     rates:
       title: Valor por hora
@@ -2199,7 +2200,11 @@ errors:
     task_already_active: "esta tarefa já está em andamento na sessão"
     task_not_in_session: "esta tarefa não está em andamento na sessão aberta"
     project_required: "há sessões abertas em mais de um projeto; diga qual encerrar"
-    unknown_label: "o projeto não tem a etiqueta {{.label}}; as que existem: {{.available}}"
+    project_sync_off: "nenhuma integração deste projeto está com a sincronização ligada: ligue-a em Gestão → Integrações"
+    labels_conflict: "use labels para trocar todas, ou add_labels e remove_labels para mudar algumas, não os dois"
+    find_criteria_required: "diga o que procurar: uma issue, um texto ou os dois"
+    invalid_issue: "use a URL de uma issue do GitHub ou do GitLab ou de um cartão do Trello, ou dono/repositório#12"
+    unknown_label: "o projeto não tem a etiqueta {{.label}}; as que existem: {{.available}}. Quem cuida das etiquetas pode criá-la com create_label"
   oauth:
     request_invalid: "o pedido de conexão não confere mais; comece de novo pelo app"
   organization:

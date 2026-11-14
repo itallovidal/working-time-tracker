@@ -2,20 +2,26 @@ package mcp
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"working-time-tracker/internal/domain/auth"
+	"working-time-tracker/internal/domain/issuesync"
 	"working-time-tracker/internal/domain/overview"
+	"working-time-tracker/internal/domain/permission"
+	"working-time-tracker/internal/domain/project"
 	"working-time-tracker/internal/domain/task"
 	"working-time-tracker/internal/validate"
 )
 
-// As ferramentas das tarefas. Cada uma confere antes que a pessoa alcança o projeto ou a tarefa (reachProject,
-// reachTask), e o resto das regras é dos services: o responsável precisa estar no projeto, o nome é obrigatório, a
-// tarefa nova nasce em backlog, a que já é de outra pessoa não se pega.
+// As ferramentas das tarefas e das etiquetas. Cada uma confere antes que a pessoa alcança o projeto ou a tarefa
+// (reachProject, reachTask), e o resto das regras é dos services: o responsável precisa estar no projeto, o nome é
+// obrigatório, a tarefa nova nasce em backlog, a que já é de outra pessoa não se pega. Criar etiqueta pede, além
+// disso, o labels.manage no projeto, como a rota da API.
 
 // defaultPerPage é o tamanho de página das listas quando o Claude não pede outro.
 const defaultPerPage = 20
@@ -66,8 +72,15 @@ type updateTaskInput struct {
 	Priority      string    `json:"priority,omitempty" jsonschema:"New priority."`
 	Deadline      string    `json:"deadline,omitempty" jsonschema:"New deadline, YYYY-MM-DD."`
 	ClearDeadline bool      `json:"clear_deadline,omitempty" jsonschema:"Remove the deadline."`
-	Labels        *[]string `json:"labels,omitempty" jsonschema:"Replaces the labels, by name; an empty list removes them all. Without it, they stay."`
+	Labels        *[]string `json:"labels,omitempty" jsonschema:"Replaces the labels, by name; an empty list removes them all. Without it, they stay. Not with add_labels or remove_labels."`
+	AddLabels     []string  `json:"add_labels,omitempty" jsonschema:"Adds these labels, by name, and keeps the others."`
+	RemoveLabels  []string  `json:"remove_labels,omitempty" jsonschema:"Removes these labels, by name, and keeps the others."`
 	Assignee      string    `json:"assignee,omitempty" jsonschema:"me to make the person the assignee, none to leave the task without one."`
+}
+
+type createLabelInput struct {
+	ProjectID string `json:"project_id" jsonschema:"The project id, from list_projects."`
+	Name      string `json:"name" jsonschema:"The label name, up to 50 characters."`
 }
 
 // TasksOut é uma página de tarefas.
@@ -102,6 +115,24 @@ type LabelsOut struct {
 	Labels []string `json:"labels"`
 }
 
+// LabelOut é a etiqueta que create_label devolve: a nova ou, com created false, a que o projeto já tinha com o mesmo
+// nome.
+type LabelOut struct {
+	Name    string `json:"name"`
+	Created bool   `json:"created"`
+}
+
+// ProjectSyncOut é o que a sincronização do projeto fez, somando as integrações dele.
+type ProjectSyncOut struct {
+	Created  int  `json:"created"`
+	Updated  int  `json:"updated"`
+	Closed   int  `json:"closed"`
+	Pushed   int  `json:"pushed"`
+	Unmapped int  `json:"unmapped"`
+	Errors   int  `json:"errors"`
+	Partial  bool `json:"partial"`
+}
+
 // SyncOut é o que a sincronização da tarefa fez, e a tarefa depois dela.
 type SyncOut struct {
 	Created  int     `json:"created"`
@@ -118,12 +149,12 @@ type SyncOut struct {
 func (s *server) addTaskTools(srv *mcp.Server) {
 	mcp.AddTool(srv, &mcp.Tool{
 		Name:        "list_labels",
-		Description: "The labels of a project, by name. create_task and update_task take these names.",
+		Description: "The labels of a project, by name. create_task and update_task take these names; create_label adds a new one.",
 		Annotations: readOnly("List labels"),
 	}, s.listLabels)
 	mcp.AddTool(srv, &mcp.Tool{
 		Name:        "list_tasks",
-		Description: "The tasks of a project, newest first, one page at a time. Without statuses it lists only open tasks.",
+		Description: "The tasks of a project, newest first, one page at a time. Without statuses it lists only open tasks. The query looks at the name only; to search every project, the description or by issue, use find_tasks.",
 		InputSchema: schemaFor[listTasksInput](map[string][]string{
 			"statuses": task.Statuses, "priorities": task.Priorities, "assignee": {"me", "none", "any", "others"},
 		}),
@@ -148,7 +179,7 @@ func (s *server) addTaskTools(srv *mcp.Server) {
 	}, s.createTask)
 	mcp.AddTool(srv, &mcp.Tool{
 		Name:        "update_task",
-		Description: "Change a task: name, description, status, priority, deadline, labels or assignee (me or none). Only what is sent changes. A synced task also changes on GitHub, GitLab or Trello.",
+		Description: "Change a task: name, description, status, priority, deadline, labels or assignee (me or none). Only what is sent changes. add_labels and remove_labels change some labels; labels replaces them all. A synced task also changes on GitHub, GitLab or Trello.",
 		InputSchema: schemaFor[updateTaskInput](map[string][]string{
 			"status": task.Statuses, "priority": task.Priorities, "assignee": {"me", "none"},
 		}),
@@ -164,6 +195,19 @@ func (s *server) addTaskTools(srv *mcp.Server) {
 		Description: "Sync the task now with the GitHub, GitLab or Trello items linked to it (both ways), like the Sync button of the task.",
 		Annotations: write("Sync task", true),
 	}, s.syncTask)
+	mcp.AddTool(srv, &mcp.Tool{
+		Name: "sync_project",
+		Description: "Sync the whole project now with its GitHub, GitLab or Trello integrations (both ways), like the Sync button of the task list: " +
+			"open items that are not here yet become tasks, and the linked ones are updated. Closed items are not imported. " +
+			"Only integrations with the sync on take part. It can take a while on a big repository.",
+		Annotations: write("Sync project", true),
+	}, s.syncProject)
+	mcp.AddTool(srv, &mcp.Tool{
+		Name: "create_label",
+		Description: "Create a label in a project, for those who manage its labels. If the project already has a label with that name " +
+			"(case-insensitive), it comes back with created false.",
+		Annotations: write("Create label", true),
+	}, s.createLabel)
 }
 
 func (s *server) listLabels(_ context.Context, req *mcp.CallToolRequest, in projectInput) (*mcp.CallToolResult, LabelsOut, error) {
@@ -206,18 +250,8 @@ func (s *server) listTasks(_ context.Context, req *mcp.CallToolRequest, in listT
 	if len(f.Statuses) == 0 {
 		f.Statuses = openStatuses
 	}
-	switch in.Assignee {
-	case "":
-	case "me":
-		f.AssigneeID = &id.PersonID
-	case "none":
-		f.Unassigned = true
-	case "any":
-		f.Assigned = true
-	case "others":
-		f.OthersOf = &id.PersonID
-	default:
-		return nil, TasksOut{}, s.fail(task.ErrInvalidAssigneeFilter.With("field", "assignee"))
+	if err := assigneeFilter(&f, in.Assignee, id); err != nil {
+		return nil, TasksOut{}, s.fail(err)
 	}
 	if len(in.Labels) > 0 {
 		ids, err := s.labelIDs(in.ProjectID, in.Labels)
@@ -370,8 +404,18 @@ func (s *server) updateTask(_ context.Context, req *mcp.CallToolRequest, in upda
 	if in.Priority != "" {
 		attrs.Priority = &in.Priority
 	}
-	if in.Labels != nil {
+	changing := len(in.AddLabels) > 0 || len(in.RemoveLabels) > 0
+	switch {
+	case in.Labels != nil && changing:
+		return nil, TaskOut{}, s.fail(ErrLabelsConflict)
+	case in.Labels != nil:
 		ids, err := s.labelIDs(current.ProjectID.String(), *in.Labels)
+		if err != nil {
+			return nil, TaskOut{}, err
+		}
+		attrs.LabelIDs = &ids
+	case changing:
+		ids, err := s.changedLabels(current, in.AddLabels, in.RemoveLabels)
 		if err != nil {
 			return nil, TaskOut{}, err
 		}
@@ -424,8 +468,109 @@ func (s *server) syncTask(ctx context.Context, req *mcp.CallToolRequest, in task
 	}, nil
 }
 
+// syncProject é o botão Sincronizar da lista de tarefas: uma rodada em cada integração do projeto com a sincronização
+// ligada. Como na rota da API, basta alcançar o projeto.
+func (s *server) syncProject(ctx context.Context, req *mcp.CallToolRequest, in projectInput) (*mcp.CallToolResult, ProjectSyncOut, error) {
+	id, err := me(req)
+	if err != nil {
+		return nil, ProjectSyncOut{}, s.fail(err)
+	}
+	if err := s.reachProject(id, in.ProjectID); err != nil {
+		return nil, ProjectSyncOut{}, err
+	}
+	projectID, err := uuid.Parse(in.ProjectID)
+	if err != nil {
+		return nil, ProjectSyncOut{}, s.fail(project.ErrNotFound)
+	}
+	sum, err := s.Syncer.SyncProject(ctx, projectID)
+	if errors.Is(err, issuesync.ErrSyncOff) {
+		return nil, ProjectSyncOut{}, s.fail(ErrProjectSyncOff)
+	}
+	if err != nil {
+		return nil, ProjectSyncOut{}, s.fail(err)
+	}
+	return nil, ProjectSyncOut{
+		Created: sum.Created, Updated: sum.Updated, Closed: sum.Closed, Pushed: sum.Pushed,
+		Unmapped: sum.Unmapped, Errors: sum.Errors, Partial: sum.Partial,
+	}, nil
+}
+
+// createLabel cria a etiqueta para quem tem o labels.manage no projeto, a mesma checagem da rota da API. Um nome que o
+// projeto já tem (sem diferenciar maiúsculas) devolve a que existe, como a tela faz, em vez de label.name_taken.
+func (s *server) createLabel(_ context.Context, req *mcp.CallToolRequest, in createLabelInput) (*mcp.CallToolResult, LabelOut, error) {
+	id, err := me(req)
+	if err != nil {
+		return nil, LabelOut{}, s.fail(err)
+	}
+	if err := s.reachProject(id, in.ProjectID); err != nil {
+		return nil, LabelOut{}, err
+	}
+	projectID, err := uuid.Parse(in.ProjectID)
+	if err != nil {
+		return nil, LabelOut{}, s.fail(project.ErrNotFound)
+	}
+	set, err := s.Resolver.ProjectSet(id, projectID)
+	if err != nil {
+		return nil, LabelOut{}, s.fail(err)
+	}
+	if !set.Has(permission.LabelsManage) {
+		return nil, LabelOut{}, s.fail(auth.ErrPermissionRequired)
+	}
+	name := strings.TrimSpace(in.Name)
+	labels, err := s.Tasks.ListLabels(projectID.String())
+	if err != nil {
+		return nil, LabelOut{}, s.fail(err)
+	}
+	for _, l := range labels {
+		if strings.EqualFold(l.Name, name) {
+			return nil, LabelOut{Name: l.Name}, nil
+		}
+	}
+	l, err := s.Tasks.CreateLabel(projectID.String(), name)
+	if err != nil {
+		return nil, LabelOut{}, s.fail(err)
+	}
+	return nil, LabelOut{Name: l.Name, Created: true}, nil
+}
+
+// changedLabels parte das etiquetas da tarefa, põe as de add e tira as de remove, pelo nome. Tirar uma que a tarefa
+// não tem não faz nada, e um nome nas duas listas sai.
+func (s *server) changedLabels(t *task.Task, add, remove []string) ([]string, error) {
+	projectID := t.ProjectID.String()
+	var addIDs, removeIDs []string
+	var err error
+	if len(add) > 0 {
+		if addIDs, err = s.labelIDs(projectID, add); err != nil {
+			return nil, err
+		}
+	}
+	if len(remove) > 0 {
+		if removeIDs, err = s.labelIDs(projectID, remove); err != nil {
+			return nil, err
+		}
+	}
+	drop := make(map[string]bool, len(removeIDs))
+	for _, lid := range removeIDs {
+		drop[lid] = true
+	}
+	ids := make([]string, 0, len(t.Labels)+len(addIDs))
+	for _, l := range t.Labels {
+		ids = append(ids, l.ID.String())
+	}
+	ids = append(ids, addIDs...)
+	out := make([]string, 0, len(ids))
+	seen := map[string]bool{}
+	for _, lid := range ids {
+		if !drop[lid] && !seen[lid] {
+			seen[lid] = true
+			out = append(out, lid)
+		}
+	}
+	return out, nil
+}
+
 // labelIDs troca os nomes das etiquetas pelos ids delas no projeto, sem diferenciar maiúsculas. Um nome que o projeto
-// não tem é mcp.unknown_label, com os que existem: criar etiqueta é de quem cuida delas, na tela.
+// não tem é mcp.unknown_label, com os que existem; o texto lembra que quem cuida das etiquetas a cria com create_label.
 func (s *server) labelIDs(projectID string, names []string) ([]string, error) {
 	labels, err := s.Tasks.ListLabels(projectID)
 	if err != nil {
