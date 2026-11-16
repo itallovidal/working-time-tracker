@@ -26,7 +26,7 @@ erDiagram
   PERSON ||--o{ TEAM_MEMBERSHIP : "participa"
   PROJECT ||--o{ LABEL : "tem"
   PROJECT ||--o{ TASK : "tem"
-  PERSON |o--o{ TASK : "responsavel"
+  TASK }o--o{ PERSON : "task_assignees"
   TASK }o--o{ LABEL : "task_labels"
   PROJECT ||--o{ WORK_SESSION : "tem"
   PERSON ||--o{ WORK_SESSION : "bate o ponto"
@@ -139,7 +139,6 @@ erDiagram
     string description "Markdown"
     enum priority
     enum status
-    uuid assignee_id FK "opcional"
     timestamp deadline
   }
   WORK_SESSION {
@@ -201,8 +200,8 @@ erDiagram
   }
 ```
 
-`ISSUE_SYNC.snapshot` resume várias colunas (`title`, `body`, `labels`, `assignee_logins`, `mapped_login`,
-`mapped_person_id`, `deadline`); ver a seção do vínculo abaixo.
+`ISSUE_SYNC.snapshot` resume várias colunas (`title`, `body`, `labels`, `assignee_logins`, `mapped`, `deadline`); ver a
+seção do vínculo abaixo.
 
 ## As entidades
 
@@ -222,11 +221,11 @@ erDiagram
 | `allocations` | A pessoa no projeto: o valor pago por hora e o grupo de permissões dela ali. Uma por pessoa e projeto |
 | `teams`, `team_memberships` | Os times de um projeto e quem está em cada um |
 | `labels`, `task_labels` | As etiquetas de um projeto e as de cada tarefa |
-| `tasks` | A tarefa, com prioridade, status, responsável opcional, prazo e as plataformas em que o responsável precisa ter conta (`required_accounts`, a trava) |
+| `tasks`, `task_assignees` | A tarefa, com prioridade, status, prazo e as plataformas em que cada responsável precisa ter conta (`required_accounts`, a trava), e os responsáveis dela: nenhum (a tarefa livre) ou até 10 |
 | `work_sessions` | Uma sessão de ponto: de um projeto, de uma pessoa, com os valores por hora do momento em que abriu |
 | `work_session_tasks` | Cada intervalo em que uma tarefa esteve numa sessão |
 | `integrations` | A conexão de um projeto com uma plataforma: token criptografado e os campos da plataforma em `metadata` |
-| `issue_syncs` | O vínculo de uma tarefa com um item da plataforma (issue, cartão) e o snapshot do último acordo entre os dois |
+| `issue_syncs` | O vínculo de uma tarefa com um item da plataforma (issue, cartão) e o snapshot do último acordo entre os dois. `mapped` guarda os pares login → pessoa do acordo: os logins da issue que são responsáveis da tarefa |
 
 ## Cargos e permissões no modelo
 
@@ -244,7 +243,7 @@ As regras de cada cargo estão em [permissions.md](../product/permissions.md).
 
 **Estar num projeto é ter valor por hora nele.** A alocação (`allocations`) é o que põe a pessoa no projeto, e o
 valor é obrigatório nesse momento: ele libera o ponto e o acesso ao projeto. Só quem já tem a alocação entra num
-time (`team.no_rate`), e estar num time é o que deixa alguém ser escolhido como responsável de uma tarefa. Tirar a
+time (`team.no_rate`), e só quem está no projeto pode ser um dos responsáveis de uma tarefa dele. Tirar a
 pessoa do projeto apaga a alocação e os times dela ali numa transação só, encerra a sessão que ela tinha aberta
 naquele projeto e mantém as tarefas e as sessões. Não há como apagar só o valor.
 
@@ -278,8 +277,10 @@ um item **descartado** (a tarefa foi excluída ou desligada dele), que não volt
 um vínculo feito à mão que a sincronização ainda não adotou; `gone` é o item que sumiu da plataforma. Ver
 [integrations/overview.md](../integrations/overview.md).
 
-**O responsável é opcional.** Uma tarefa sem responsável fica disponível; quem bate o ponto nela ou a pega passa a
-ser o responsável, com um `UPDATE ... WHERE assignee_id IS NULL`, então de dois pedidos ao mesmo tempo só um ganha.
+**Os responsáveis são opcionais.** Uma tarefa tem até 10 responsáveis (`task_assignees`), ou nenhum, e então fica
+disponível: quem bate o ponto nela ou a pega passa a ser o responsável. A tomada trava a linha da tarefa na transação
+(`SELECT ... FOR UPDATE`) e só insere a pessoa se a tarefa não tem ninguém, então de dois pedidos ao mesmo tempo só um
+ganha. Quem mais entra e quem sai segue [permissions.md](../product/permissions.md#responsáveis-da-tarefa).
 O prazo padrão de uma tarefa nova é de 7 dias; uma tarefa importada de uma plataforma pode nascer sem prazo.
 
 **Os períodos de pagamento não são gravados, a baixa é.** Os períodos são calculados da regra da pessoa
@@ -307,15 +308,15 @@ em `customer_id`, `period_start` e `period_end` impede duas confirmações do me
 
 | Excluir | O que acontece |
 |---|---|
-| Tarefa | Sai das sessões (os intervalos dela são apagados), mas as sessões e as horas ficam: uma sessão pode ficar sem tarefa. As etiquetas dela se soltam. Os itens das plataformas viram descartados (e, se pedido, são apagados ou arquivados lá) |
+| Tarefa | Sai das sessões (os intervalos dela são apagados), mas as sessões e as horas ficam: uma sessão pode ficar sem tarefa. As etiquetas e os responsáveis dela se soltam. Os itens das plataformas viram descartados (e, se pedido, são apagados ou arquivados lá) |
 | Projeto | Apaga os times, as alocações, as etiquetas, as tarefas, as sessões e as integrações (com os vínculos). O convite que levava a ele continua valendo, só para a organização |
 | Time | Apaga quem estava nele. O convite que levava a ele fica sem time |
 | Integração | Apaga os vínculos dela |
 | Cliente | Só sem projetos apontando para ele (`customer.has_projects`) e sem recebíveis (`customer.has_receivables`) |
 | Organização | Só sem projetos (`organization.has_projects`). Apaga as pessoas, as sessões de login, os tokens do Claude, as contas no GitHub e no GitLab, os clientes, os recebíveis e os convites |
 
-Uma pessoa com tarefas não pode ser apagada do banco (a chave estrangeira recusa), e não há rota que apague uma
-pessoa.
+Uma pessoa com sessões ou times não pode ser apagada do banco (a chave estrangeira recusa); as linhas dela em
+`task_assignees` sairiam junto. Não há rota que apague uma pessoa.
 
 ## Restos de modelos antigos
 

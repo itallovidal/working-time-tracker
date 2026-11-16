@@ -50,7 +50,6 @@ func newResolver() *fakeResolver {
 
 func str(s string) *string       { return &s }
 func list(s ...string) *[]string { return &s }
-func pid(u uuid.UUID) *uuid.UUID { return &u }
 func sorted(p *[]string) []string {
 	if p == nil {
 		return nil
@@ -62,9 +61,9 @@ func sorted(p *[]string) []string {
 
 // agreed é um snapshot em que os dois lados concordam, com tudo preenchido.
 func agreed() (Snapshot, Remote, Local) {
-	return Snapshot{Title: "Corrigir login", Body: "Passo 1\nPasso 2", Labels: []string{"bug"}, Logins: []string{"ana-dev"}, MappedLogin: "ana-dev", MappedPerson: pid(ana)},
+	return Snapshot{Title: "Corrigir login", Body: "Passo 1\nPasso 2", Labels: []string{"bug"}, Logins: []string{"ana-dev"}, Mapped: []Mapping{{"ana-dev", ana}}},
 		Remote{Title: "Corrigir login", Body: "Passo 1\nPasso 2", Labels: []string{"bug"}, Assignee: []string{"ana-dev"}},
-		Local{Title: "Corrigir login", Body: "Passo 1\nPasso 2", Labels: []string{"bug"}, Person: pid(ana)}
+		Local{Title: "Corrigir login", Body: "Passo 1\nPasso 2", Labels: []string{"bug"}, People: []uuid.UUID{ana}}
 }
 
 func merge(t *testing.T, b Snapshot, r Remote, l Local, res Resolver) Plan {
@@ -83,7 +82,7 @@ func TestMerge_NothingChanged(t *testing.T) {
 	if !plan.Local.Empty() || !plan.Push.Empty() || plan.Problem != "" {
 		t.Errorf("plan = %+v, want nothing to do", plan)
 	}
-	if plan.Mapped.Login != "ana-dev" || !samePerson(plan.Mapped.Person, pid(ana)) {
+	if len(plan.Mapped) != 1 || plan.Mapped[0].Login != "ana-dev" || plan.Mapped[0].Person != ana {
 		t.Errorf("mapping = %+v, want it kept", plan.Mapped)
 	}
 	if res.asked != 0 {
@@ -247,18 +246,31 @@ func TestMerge_LabelCase(t *testing.T) {
 	}
 }
 
+// pairs são os pares do plano como "login=pessoa", em ordem, para comparar.
+func pairs(m []Mapping) []string {
+	out := []string{}
+	for _, x := range m {
+		name := map[uuid.UUID]string{ana: "ana", bia: "bia", cai: "cai"}[x.Person]
+		out = append(out, strings.ToLower(x.Login)+"="+name)
+	}
+	slices.Sort(out)
+	return out
+}
+
+func ids(p ...uuid.UUID) []uuid.UUID { return p }
+
 func TestMerge_Assignee(t *testing.T) {
 	unmappedSnapshot := func() (Snapshot, Remote, Local) {
 		b, r, l := agreed()
-		b.Logins, b.MappedLogin, b.MappedPerson = []string{}, "", nil
-		r.Assignee, l.Person = nil, nil
+		b.Logins, b.Mapped = []string{}, nil
+		r.Assignee, l.People = nil, nil
 		return b, r, l
 	}
-	t.Run("GitHub removed the linked assignee: the task is cleared", func(t *testing.T) {
+	t.Run("GitHub removed the linked assignee: the person leaves the task", func(t *testing.T) {
 		b, r, l := agreed()
 		r.Assignee = nil
 		plan := merge(t, b, r, l, newResolver())
-		if !plan.Local.SetAssignee || plan.Local.Person != nil || plan.Mapped.Login != "" || plan.Mapped.Person != nil || !plan.Push.Empty() {
+		if !reflect.DeepEqual(plan.Local.RemovePeople, ids(ana)) || len(plan.Local.AddPeople) != 0 || len(plan.Mapped) != 0 || !plan.Push.Empty() {
 			t.Errorf("plan = %+v", plan)
 		}
 	})
@@ -266,52 +278,91 @@ func TestMerge_Assignee(t *testing.T) {
 		b, r, l := agreed()
 		r.Assignee = []string{"bia-dev"}
 		plan := merge(t, b, r, l, newResolver())
-		if !plan.Local.SetAssignee || !samePerson(plan.Local.Person, pid(bia)) || plan.Mapped.Login != "bia-dev" || !plan.Push.Empty() {
+		if !reflect.DeepEqual(plan.Local.RemovePeople, ids(ana)) || !reflect.DeepEqual(plan.Local.AddPeople, ids(bia)) ||
+			!reflect.DeepEqual(pairs(plan.Mapped), []string{"bia-dev=bia"}) || !plan.Push.Empty() {
 			t.Errorf("plan = %+v", plan)
 		}
 	})
-	t.Run("GitHub replaced it by someone we cannot link: the task is cleared", func(t *testing.T) {
+	t.Run("GitHub replaced it by someone we cannot link: the person leaves", func(t *testing.T) {
 		b, r, l := agreed()
 		r.Assignee = []string{"estranho"}
 		plan := merge(t, b, r, l, newResolver())
-		if !plan.Local.SetAssignee || plan.Local.Person != nil || plan.Mapped.Login != "" {
+		if !reflect.DeepEqual(plan.Local.RemovePeople, ids(ana)) || len(plan.Mapped) != 0 || !plan.Push.Empty() {
 			t.Errorf("plan = %+v", plan)
 		}
 	})
-	t.Run("GitHub added an unrelated assignee: the task keeps its own", func(t *testing.T) {
+	t.Run("GitHub added someone we cannot link: the task keeps its own", func(t *testing.T) {
 		b, r, l := agreed()
 		r.Assignee = []string{"ana-dev", "estranho"}
 		plan := merge(t, b, r, l, newResolver())
-		if plan.Local.SetAssignee || !plan.Push.Empty() || plan.Mapped.Login != "ana-dev" {
+		if !plan.Local.Empty() || !plan.Push.Empty() || !reflect.DeepEqual(pairs(plan.Mapped), []string{"ana-dev=ana"}) {
 			t.Errorf("plan = %+v", plan)
 		}
 	})
-	t.Run("GitHub added an unrelated assignee while the task changed its own: the change goes", func(t *testing.T) {
+	t.Run("GitHub added someone we know: the person joins the task", func(t *testing.T) {
+		b, r, l := agreed()
+		r.Assignee = []string{"ana-dev", "bia-dev"}
+		plan := merge(t, b, r, l, newResolver())
+		if !reflect.DeepEqual(plan.Local.AddPeople, ids(bia)) || len(plan.Local.RemovePeople) != 0 || !plan.Push.Empty() ||
+			!reflect.DeepEqual(pairs(plan.Mapped), []string{"ana-dev=ana", "bia-dev=bia"}) {
+			t.Errorf("plan = %+v", plan)
+		}
+	})
+	t.Run("GitHub removed one of two linked assignees: only that one leaves", func(t *testing.T) {
+		b, r, l := agreed()
+		b.Logins, b.Mapped = []string{"ana-dev", "bia-dev"}, []Mapping{{"ana-dev", ana}, {"bia-dev", bia}}
+		r.Assignee, l.People = []string{"bia-dev"}, ids(ana, bia)
+		plan := merge(t, b, r, l, newResolver())
+		if !reflect.DeepEqual(plan.Local.RemovePeople, ids(ana)) || len(plan.Local.AddPeople) != 0 || !plan.Push.Empty() ||
+			!reflect.DeepEqual(pairs(plan.Mapped), []string{"bia-dev=bia"}) {
+			t.Errorf("plan = %+v", plan)
+		}
+	})
+	t.Run("the task added someone: the login joins the issue and the unlinked one stays", func(t *testing.T) {
+		b, r, l := agreed()
+		r.Assignee, b.Logins = []string{"ana-dev", "estranho"}, []string{"ana-dev", "estranho"}
+		l.People = ids(ana, bia)
+		plan := merge(t, b, r, l, newResolver())
+		if !plan.Local.Empty() || !reflect.DeepEqual(sorted(plan.Push.Assignees), []string{"ana-dev", "bia-dev", "estranho"}) {
+			t.Errorf("plan = %+v", plan)
+		}
+		if !reflect.DeepEqual(pairs(plan.Mapped), []string{"ana-dev=ana", "bia-dev=bia"}) {
+			t.Errorf("mapping = %v", pairs(plan.Mapped))
+		}
+	})
+	t.Run("the task swapped its assignee while GitHub added an unlinked one: the swap goes", func(t *testing.T) {
 		b, r, l := agreed()
 		r.Assignee = []string{"ana-dev", "estranho"}
-		l.Person = pid(bia)
+		l.People = ids(bia)
 		plan := merge(t, b, r, l, newResolver())
-		if plan.Local.SetAssignee || plan.Push.Assignees == nil || !reflect.DeepEqual(sorted(plan.Push.Assignees), []string{"bia-dev", "estranho"}) {
+		if !plan.Local.Empty() || !reflect.DeepEqual(sorted(plan.Push.Assignees), []string{"bia-dev", "estranho"}) {
 			t.Errorf("plan = %+v; the unrelated assignee must stay and the linked one be replaced", plan)
 		}
-		if plan.Mapped.Login != "bia-dev" || !samePerson(plan.Mapped.Person, pid(bia)) {
-			t.Errorf("mapping = %+v", plan.Mapped)
+		if !reflect.DeepEqual(pairs(plan.Mapped), []string{"bia-dev=bia"}) {
+			t.Errorf("mapping = %v", pairs(plan.Mapped))
 		}
 	})
 	t.Run("GitHub assigned someone we know to an issue with no linked assignee", func(t *testing.T) {
 		b, r, l := unmappedSnapshot()
 		r.Assignee = []string{"estranho", "bia-dev"}
 		plan := merge(t, b, r, l, newResolver())
-		if !plan.Local.SetAssignee || !samePerson(plan.Local.Person, pid(bia)) || plan.Mapped.Login != "bia-dev" {
+		if !reflect.DeepEqual(plan.Local.AddPeople, ids(bia)) || !reflect.DeepEqual(pairs(plan.Mapped), []string{"bia-dev=bia"}) {
+			t.Errorf("plan = %+v", plan)
+		}
+	})
+	t.Run("GitHub assigned two people we know: both join", func(t *testing.T) {
+		b, r, l := unmappedSnapshot()
+		r.Assignee = []string{"ana-dev", "bia-dev"}
+		plan := merge(t, b, r, l, newResolver())
+		if !reflect.DeepEqual(plan.Local.AddPeople, ids(ana, bia)) || !plan.Push.Empty() {
 			t.Errorf("plan = %+v", plan)
 		}
 	})
 	t.Run("GitHub assigned someone we do not know: the task is untouched", func(t *testing.T) {
 		b, r, l := unmappedSnapshot()
 		r.Assignee = []string{"estranho"}
-		l.Person = nil
 		plan := merge(t, b, r, l, newResolver())
-		if !plan.Local.Empty() || !plan.Push.Empty() || plan.Mapped.Login != "" {
+		if !plan.Local.Empty() || !plan.Push.Empty() || len(plan.Mapped) != 0 {
 			t.Errorf("plan = %+v", plan)
 		}
 	})
@@ -319,64 +370,93 @@ func TestMerge_Assignee(t *testing.T) {
 		b, r, l := unmappedSnapshot()
 		r.Assignee, b.Logins = []string{"bia-dev"}, []string{"bia-dev"}
 		plan := merge(t, b, r, l, newResolver())
-		if !plan.Local.SetAssignee || !samePerson(plan.Local.Person, pid(bia)) || plan.Mapped.Login != "bia-dev" {
+		if !reflect.DeepEqual(plan.Local.AddPeople, ids(bia)) || !reflect.DeepEqual(pairs(plan.Mapped), []string{"bia-dev=bia"}) {
 			t.Errorf("plan = %+v", plan)
 		}
 	})
-	t.Run("a pending choice of the task is not overridden by an assignee that was already there", func(t *testing.T) {
+	t.Run("the task chose someone while an assignee became known: both stay", func(t *testing.T) {
 		b, r, l := unmappedSnapshot()
 		r.Assignee, b.Logins = []string{"bia-dev"}, []string{"bia-dev"}
-		l.Person = pid(ana)
+		l.People = ids(ana)
 		plan := merge(t, b, r, l, newResolver())
-		if plan.Local.SetAssignee || plan.Push.Assignees == nil || !reflect.DeepEqual(sorted(plan.Push.Assignees), []string{"ana-dev", "bia-dev"}) {
-			t.Errorf("plan = %+v; the task chose Ana, who joins the assignee that was already there", plan)
+		if !reflect.DeepEqual(plan.Local.AddPeople, ids(bia)) || !reflect.DeepEqual(sorted(plan.Push.Assignees), []string{"ana-dev", "bia-dev"}) {
+			t.Errorf("plan = %+v; Ana goes to the issue and Bia comes to the task", plan)
 		}
 	})
 	t.Run("the task cleared its assignee: only the linked login leaves the issue", func(t *testing.T) {
 		b, r, l := agreed()
 		r.Assignee = []string{"ana-dev", "estranho"}
 		b.Logins = []string{"ana-dev", "estranho"}
-		l.Person = nil
+		l.People = nil
 		plan := merge(t, b, r, l, newResolver())
 		if plan.Push.Assignees == nil || !reflect.DeepEqual(sorted(plan.Push.Assignees), []string{"estranho"}) {
 			t.Errorf("push assignees = %v, want the unlinked one kept", plan.Push.Assignees)
 		}
-		if plan.Mapped.Login != "" || plan.Mapped.Person != nil {
-			t.Errorf("mapping = %+v", plan.Mapped)
+		if len(plan.Mapped) != 0 || !plan.Local.Empty() {
+			t.Errorf("plan = %+v", plan)
+		}
+	})
+	t.Run("the task removed one of two: only that login leaves", func(t *testing.T) {
+		b, r, l := agreed()
+		b.Logins, b.Mapped = []string{"ana-dev", "bia-dev"}, []Mapping{{"ana-dev", ana}, {"bia-dev", bia}}
+		r.Assignee, l.People = []string{"ana-dev", "bia-dev"}, ids(bia)
+		plan := merge(t, b, r, l, newResolver())
+		if !plan.Local.Empty() || !reflect.DeepEqual(sorted(plan.Push.Assignees), []string{"bia-dev"}) ||
+			!reflect.DeepEqual(pairs(plan.Mapped), []string{"bia-dev=bia"}) {
+			t.Errorf("plan = %+v", plan)
 		}
 	})
 	t.Run("the task got its first assignee", func(t *testing.T) {
 		b, r, l := unmappedSnapshot()
-		l.Person = pid(ana)
+		l.People = ids(ana)
 		plan := merge(t, b, r, l, newResolver())
-		if plan.Push.Assignees == nil || !reflect.DeepEqual(*plan.Push.Assignees, []string{"ana-dev"}) || plan.Mapped.Login != "ana-dev" {
+		if plan.Push.Assignees == nil || !reflect.DeepEqual(*plan.Push.Assignees, []string{"ana-dev"}) || !reflect.DeepEqual(pairs(plan.Mapped), []string{"ana-dev=ana"}) {
 			t.Errorf("plan = %+v", plan)
 		}
 	})
-	t.Run("the task chose someone with no GitHub login we can find", func(t *testing.T) {
+	t.Run("the task added someone with no GitHub login we can find: the others still go", func(t *testing.T) {
 		b, r, l := unmappedSnapshot()
-		l.Person = pid(cai)
+		l.People = ids(cai, bia)
 		plan := merge(t, b, r, l, newResolver())
-		if plan.Problem != ErrNoLogin.Code || !plan.Push.Empty() || plan.Mapped.Person != nil || plan.Mapped.Login != "" {
-			t.Errorf("plan = %+v; the snapshot mapping must stay so the next round tries again", plan)
+		if plan.Problem != ErrNoLogin.Code || !reflect.DeepEqual(sorted(plan.Push.Assignees), []string{"bia-dev"}) ||
+			!reflect.DeepEqual(pairs(plan.Mapped), []string{"bia-dev=bia"}) {
+			t.Errorf("plan = %+v; Cai has no pair, so the next round tries again", plan)
 		}
 	})
-	t.Run("both changed the assignee: GitHub wins", func(t *testing.T) {
+	t.Run("both sides changed the assignees: each change counts, person by person", func(t *testing.T) {
 		b, r, l := agreed()
 		r.Assignee = []string{"bia-dev"}
-		l.Person = pid(cai)
+		l.People = ids(cai)
 		plan := merge(t, b, r, l, newResolver())
-		if !plan.Local.SetAssignee || !samePerson(plan.Local.Person, pid(bia)) || !plan.Push.Empty() {
+		if !reflect.DeepEqual(plan.Local.AddPeople, ids(bia)) || len(plan.Local.RemovePeople) != 0 || plan.Problem != ErrNoLogin.Code {
+			t.Errorf("plan = %+v; Ana left on both sides, Bia came from GitHub, Cai stays", plan)
+		}
+	})
+	t.Run("GitHub removed a login the task had just removed: nothing to do", func(t *testing.T) {
+		b, r, l := agreed()
+		r.Assignee, l.People = nil, nil
+		plan := merge(t, b, r, l, newResolver())
+		if !plan.Local.Empty() || !plan.Push.Empty() || len(plan.Mapped) != 0 {
 			t.Errorf("plan = %+v", plan)
+		}
+	})
+	t.Run("GitHub removed someone the task kept, and the task added them again: GitHub wins", func(t *testing.T) {
+		b, r, l := agreed()
+		r.Assignee = nil
+		l.People = ids(ana, bia)
+		plan := merge(t, b, r, l, newResolver())
+		if !reflect.DeepEqual(plan.Local.RemovePeople, ids(ana)) || !reflect.DeepEqual(sorted(plan.Push.Assignees), []string{"bia-dev"}) {
+			t.Errorf("plan = %+v; Ana leaves (GitHub), Bia goes to the issue (task)", plan)
 		}
 	})
 	t.Run("the login the task picked is already on the issue: only the old one leaves", func(t *testing.T) {
 		b, r, l := agreed()
 		r.Assignee = []string{"ana-dev", "bia-dev"}
 		b.Logins = []string{"ana-dev", "bia-dev"}
-		l.Person = pid(bia)
+		l.People = ids(bia)
 		plan := merge(t, b, r, l, newResolver())
-		if plan.Push.Assignees == nil || !reflect.DeepEqual(*plan.Push.Assignees, []string{"bia-dev"}) || plan.Mapped.Login != "bia-dev" {
+		if plan.Push.Assignees == nil || !reflect.DeepEqual(*plan.Push.Assignees, []string{"bia-dev"}) ||
+			!reflect.DeepEqual(pairs(plan.Mapped), []string{"bia-dev=bia"}) {
 			t.Errorf("plan = %+v", plan)
 		}
 	})
@@ -384,10 +464,10 @@ func TestMerge_Assignee(t *testing.T) {
 		b, r, l := agreed()
 		r.Assignee = []string{"bia-dev"}
 		b.Logins = []string{"bia-dev"}
-		b.MappedLogin, b.MappedPerson = "", nil
-		l.Person = pid(bia)
+		b.Mapped = nil
+		l.People = ids(bia)
 		plan := merge(t, b, r, l, newResolver())
-		if !plan.Push.Empty() || plan.Mapped.Login != "bia-dev" {
+		if !plan.Push.Empty() || !plan.Local.Empty() || !reflect.DeepEqual(pairs(plan.Mapped), []string{"bia-dev=bia"}) {
 			t.Errorf("plan = %+v; the issue already has it, only the mapping moves", plan)
 		}
 	})

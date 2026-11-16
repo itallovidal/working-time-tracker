@@ -19,6 +19,7 @@ import (
 	"log"
 	"math/rand"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -169,7 +170,8 @@ var projects = []struct {
 
 // As tarefas, com o prazo em dias a partir de hoje (negativo é atrasada).
 // assignee vazio é uma tarefa sem responsável: fica disponível no quadro, e quem
-// bater o ponto nela a pega. link, quando há, vincula a tarefa a um item da
+// bater o ponto nela a pega. Vários responsáveis vão separados por vírgula ("diego,gabriela"), e
+// cada um bate o ponto só nas suas tarefas (Decisão 31). link, quando há, vincula a tarefa a um item da
 // integração do projeto: "gh:42" (issue do GitHub), "gl:17" (issue do GitLab) ou
 // "tr:AbCd1234" (cartão do Trello); uma tarefa pode estar em mais de uma plataforma: "gh:142,tr:Cz5Pw2Ln".
 // priorityFor e labelsFor dão a prioridade e as etiquetas de cada tarefa a partir do que ela
@@ -233,9 +235,9 @@ var tasks = []struct {
 	link                                 string
 }{
 	// App de Pedidos: mais de uma página, com prazos espalhados.
-	{"app", "Tela de checkout", "Resumo do pedido, endereço e pagamento em uma tela só.", "diego", 5, "gh:142,tr:Cz5Pw2Ln"},
+	{"app", "Tela de checkout", "Resumo do pedido, endereço e pagamento em uma tela só.", "diego,gabriela", 5, "gh:142,tr:Cz5Pw2Ln"},
 	{"app", "Notificações de status do pedido", "Push quando o pedido sai para entrega e quando chega.", "diego", 9, "gh:151"},
-	{"app", "Endpoint de cálculo de frete", "Frete por distância, com frete grátis acima de R$ 100.", "bruno", -2, "gh:138"},
+	{"app", "Endpoint de cálculo de frete", "Frete por distância, com frete grátis acima de R$ 100.", "bruno,henrique", -2, "gh:138"},
 	{"app", "Revisão de arquitetura do app", "", "ana", 0.8, ""},
 	{"app", "Carrinho com itens salvos", "O carrinho continua como estava quando o cliente volta ao app.", "diego", 2, "gh:149"},
 	{"app", "Histórico de pedidos", "", "gabriela", 11, "tr:Hq4Lm8Zp"},
@@ -247,7 +249,7 @@ var tasks = []struct {
 	{"app", "Testes de carga da API de pedidos", "", "fabio", -4, ""},
 	{"app", "Política de privacidade no app", "", "isabela", 3, ""},
 	{"app", "Publicação nas lojas de aplicativos", "", "ana", 25, ""},
-	{"app", "Plano de testes da release 2.4", "Casos de regressão para checkout, cupom e rastreamento.", "elisa", 4, "tr:Xr7Tn2Ka"},
+	{"app", "Plano de testes da release 2.4", "Casos de regressão para checkout, cupom e rastreamento.", "elisa,fabio", 4, "tr:Xr7Tn2Ka"},
 	{"app", "Pipeline de build e distribuição interna", "", "fabio", 7, "gh:129"},
 	{"app", "Pesquisa de satisfação pós-entrega", "Duas perguntas e um campo livre, depois da avaliação.", "isabela", 18, ""},
 	{"app", "Fluxo de boas-vindas do app", "Telas de apresentação no primeiro acesso.", "", 8, ""},
@@ -534,8 +536,8 @@ func main() {
 
 	// As tarefas. Guarda as que têm responsável, por projeto, para as sessões.
 	type seededTask struct {
-		task     *task.Task
-		assignee string
+		task *task.Task
+		keys []string // os responsáveis, pela chave das pessoas
 	}
 	byProject := map[string][]seededTask{}
 	labelID := map[string]string{} // projeto/etiqueta -> id
@@ -543,9 +545,12 @@ func main() {
 	for i, t := range tasks {
 		prj := seeded[t.project]
 		deadline := now.Add(time.Duration(t.deadlineDays * 24 * float64(time.Hour)))
-		assignee := "" // sem responsável
+		keys, assignees := []string{}, []string{} // vazio é sem responsável
 		if t.assignee != "" {
-			assignee = person[t.assignee].PersonID.String()
+			keys = strings.Split(t.assignee, ",")
+			for _, k := range keys {
+				assignees = append(assignees, person[k].PersonID.String())
+			}
 		}
 		// As etiquetas do projeto nascem quando a primeira tarefa as usa.
 		ids := []string{}
@@ -559,15 +564,15 @@ func main() {
 			ids = append(ids, labelID[key])
 		}
 		priority := priorityFor(t.deadlineDays)
-		created, err := taskSvc.CreateAs("", prj.id, t.name, t.description, assignee, &deadline,
-			task.Attrs{Priority: &priority, LabelIDs: &ids})
+		created, err := taskSvc.CreateAs(task.Actor{}, prj.id, t.name, t.description, "", &deadline,
+			task.Attrs{Priority: &priority, LabelIDs: &ids, Assignees: &assignees})
 		must(err)
 		// Toda tarefa nasce em backlog; o seed a leva ao status que a tela deve mostrar.
 		if status := statusFor(i, t.assignee != "", t.deadlineDays); status != task.StatusBacklog {
-			created, err = taskSvc.UpdateAs("", created.ID.String(), created.Name, created.Description, nil, nil, task.Attrs{Status: &status})
+			created, err = taskSvc.UpdateAs(task.Actor{}, created.ID.String(), created.Name, created.Description, nil, nil, task.Attrs{Status: &status})
 			must(err)
 		}
-		st := seededTask{task: created, assignee: t.assignee}
+		st := seededTask{task: created, keys: keys}
 		byTaskName[t.project+"/"+t.name] = st
 		if t.assignee != "" {
 			byProject[t.project] = append(byProject[t.project], st)
@@ -609,8 +614,17 @@ func main() {
 				key  string
 				rate int
 			}
+			// Só os projetos em que a pessoa tem tarefa: ela bate o ponto só nas suas (Decisão 31).
+			hasOwn := func(projectKey string) bool {
+				for _, st := range byProject[projectKey] {
+					if slices.Contains(st.keys, who.key) {
+						return true
+					}
+				}
+				return false
+			}
 			for _, p := range projects {
-				if rate, ok := p.rates[who.key]; ok && projectAge[p.key] > daysAgo+1 && len(byProject[p.key]) > 0 {
+				if rate, ok := p.rates[who.key]; ok && projectAge[p.key] > daysAgo+1 && hasOwn(p.key) {
 					mine = append(mine, struct {
 						key  string
 						rate int
@@ -639,18 +653,13 @@ func main() {
 				}
 				prj := mine[idx]
 				pool := byProject[prj.key]
-				var pick seededTask
 				var own []seededTask
 				for _, st := range pool {
-					if st.assignee == who.key {
+					if slices.Contains(st.keys, who.key) {
 						own = append(own, st)
 					}
 				}
-				if len(own) > 0 && rng.Float64() < 0.8 {
-					pick = own[rng.Intn(len(own))]
-				} else {
-					pick = pool[rng.Intn(len(pool))]
-				}
+				pick := own[rng.Intn(len(own))]
 				share := target / float64(blocks)
 				length := int((share*(0.6+rng.Float64()*0.8))*60/5) * 5
 				if length < 30 {
@@ -670,8 +679,9 @@ func main() {
 					SetOwnerHours(who.key == people[0].key))
 				from, until := at(daysAgo, startMin), at(daysAgo, endMin)
 				sessionLinks := []seedLink{{task: pick.task.ID, from: &from, until: &until}}
-				if len(pool) > 1 && rngParallel.Float64() < 0.3 {
-					other := pool[rngParallel.Intn(len(pool))]
+				// A segunda tarefa da sessão também é uma das da pessoa (Decisão 31).
+				if len(own) > 1 && rngParallel.Float64() < 0.3 {
+					other := own[rngParallel.Intn(len(own))]
 					if other.task.ID != pick.task.ID {
 						// A segunda tarefa entra no meio da sessão e vai até o fim dela.
 						joined := at(daysAgo, startMin+length*(30+rngParallel.Intn(30))/100)

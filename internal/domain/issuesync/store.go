@@ -3,6 +3,7 @@ package issuesync
 import (
 	"context"
 	"errors"
+	"sort"
 	"time"
 
 	"github.com/google/uuid"
@@ -61,6 +62,27 @@ type Store struct {
 
 func NewStore(client *ent.Client) *Store { return &Store{client: client} }
 
+// mappingOf lê os pares login/pessoa gravados (login -> id), em ordem de login; um id que não se lê fica de fora.
+func mappingOf(m map[string]string) []Mapping {
+	out := make([]Mapping, 0, len(m))
+	for login, id := range m {
+		if p, err := uuid.Parse(id); err == nil {
+			out = append(out, Mapping{Login: login, Person: p})
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return key(out[i].Login) < key(out[j].Login) })
+	return out
+}
+
+// mappedOf é o que se grava dos pares: login -> id da pessoa.
+func mappedOf(m []Mapping) map[string]string {
+	out := make(map[string]string, len(m))
+	for _, x := range m {
+		out[x.Login] = x.Person.String()
+	}
+	return out
+}
+
 func toRow(e *ent.IssueSync) *Row {
 	return &Row{
 		ID:            e.ID,
@@ -70,14 +92,13 @@ func toRow(e *ent.IssueSync) *Row {
 		State:         string(e.State),
 		URL:           e.URL,
 		Snapshot: Snapshot{
-			Title:        e.Title,
-			Body:         e.Body,
-			Closed:       e.State == issuesync.StateClosed,
-			Labels:       append([]string{}, e.Labels...),
-			Logins:       append([]string{}, e.AssigneeLogins...),
-			MappedLogin:  e.MappedLogin,
-			MappedPerson: e.MappedPersonID,
-			Deadline:     deref(e.Deadline),
+			Title:    e.Title,
+			Body:     e.Body,
+			Closed:   e.State == issuesync.StateClosed,
+			Labels:   append([]string{}, e.Labels...),
+			Logins:   append([]string{}, e.AssigneeLogins...),
+			Mapped:   mappingOf(e.Mapped),
+			Deadline: deref(e.Deadline),
 		},
 		StuckSig:  e.StuckSig,
 		LastError: e.LastError,
@@ -159,8 +180,7 @@ func (s *Store) Create(r *Row) error {
 		SetBody(r.Body).
 		SetLabels(r.Labels).
 		SetAssigneeLogins(r.Logins).
-		SetMappedLogin(r.MappedLogin).
-		SetNillableMappedPersonID(r.MappedPerson).
+		SetMapped(mappedOf(r.Mapped)).
 		SetNillableDeadline(ptr(r.Deadline)).
 		SetStuckSig(r.StuckSig).
 		SetLastError(r.LastError).
@@ -187,15 +207,10 @@ func (s *Store) Save(r *Row) error {
 		SetBody(r.Body).
 		SetLabels(r.Labels).
 		SetAssigneeLogins(r.Logins).
-		SetMappedLogin(r.MappedLogin).
+		SetMapped(mappedOf(r.Mapped)).
 		SetStuckSig(r.StuckSig).
 		SetLastError(r.LastError).
 		SetSyncedAt(r.SyncedAt)
-	if r.MappedPerson != nil {
-		q = q.SetMappedPersonID(*r.MappedPerson)
-	} else {
-		q = q.ClearMappedPersonID()
-	}
 	if d := ptr(r.Deadline); d != nil {
 		q = q.SetDeadline(*d)
 	} else {

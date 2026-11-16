@@ -55,8 +55,8 @@ type Person struct {
 type PersonEdges struct {
 	// Organization holds the value of the organization edge.
 	Organization *Organization `json:"organization,omitempty"`
-	// Tasks holds the value of the tasks edge.
-	Tasks []*Task `json:"tasks,omitempty"`
+	// AssignedTasks holds the value of the assigned_tasks edge.
+	AssignedTasks []*Task `json:"assigned_tasks,omitempty"`
 	// TeamMemberships holds the value of the team_memberships edge.
 	TeamMemberships []*TeamMembership `json:"team_memberships,omitempty"`
 	// WorkSessions holds the value of the work_sessions edge.
@@ -91,13 +91,13 @@ func (e PersonEdges) OrganizationOrErr() (*Organization, error) {
 	return nil, &NotLoadedError{edge: "organization"}
 }
 
-// TasksOrErr returns the Tasks value or an error if the edge
+// AssignedTasksOrErr returns the AssignedTasks value or an error if the edge
 // was not loaded in eager-loading.
-func (e PersonEdges) TasksOrErr() ([]*Task, error) {
+func (e PersonEdges) AssignedTasksOrErr() ([]*Task, error) {
 	if e.loadedTypes[1] {
-		return e.Tasks, nil
+		return e.AssignedTasks, nil
 	}
-	return nil, &NotLoadedError{edge: "tasks"}
+	return nil, &NotLoadedError{edge: "assigned_tasks"}
 }
 
 // TeamMembershipsOrErr returns the TeamMemberships value or an error if the edge
@@ -320,9 +320,9 @@ func (_m *Person) QueryOrganization() *OrganizationQuery {
 	return NewPersonClient(_m.config).QueryOrganization(_m)
 }
 
-// QueryTasks queries the "tasks" edge of the Person entity.
-func (_m *Person) QueryTasks() *TaskQuery {
-	return NewPersonClient(_m.config).QueryTasks(_m)
+// QueryAssignedTasks queries the "assigned_tasks" edge of the Person entity.
+func (_m *Person) QueryAssignedTasks() *TaskQuery {
+	return NewPersonClient(_m.config).QueryAssignedTasks(_m)
 }
 
 // QueryTeamMemberships queries the "team_memberships" edge of the Person entity.

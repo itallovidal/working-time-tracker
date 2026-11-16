@@ -113,7 +113,7 @@ func (e *tenv) lastError() string {
 // edit muda a tarefa aqui, como quem a edita na tela.
 func (e *tenv) edit(tk *task.Task, name, desc string, deadline *time.Time, labelIDs *[]string) {
 	e.t.Helper()
-	_, err := e.taskSvc.UpdateAs("", tk.ID.String(), name, desc, nil, deadline, task.Attrs{LabelIDs: labelIDs})
+	_, err := e.taskSvc.UpdateAs(task.Actor{}, tk.ID.String(), name, desc, nil, deadline, task.Attrs{LabelIDs: labelIDs})
 	must(e.t, err)
 }
 
@@ -381,7 +381,7 @@ func TestTrello_ReadOnlyToken(t *testing.T) {
 
 func (e *tenv) mustTask(name string) *task.Task {
 	e.t.Helper()
-	tk, err := e.taskSvc.CreateAs("", e.project, name, "", "", nil, task.Attrs{})
+	tk, err := e.taskSvc.CreateAs(task.Actor{}, e.project, name, "", "", nil, task.Attrs{})
 	must(e.t, err)
 	return tk
 }

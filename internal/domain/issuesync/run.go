@@ -3,6 +3,7 @@ package issuesync
 import (
 	"context"
 	"errors"
+	"slices"
 	"strings"
 
 	"github.com/google/uuid"
@@ -24,24 +25,32 @@ func toRemote(i adapter.Issue) Remote {
 }
 
 func toLocal(t *task.Task) Local {
-	l := Local{Title: t.Name, Body: t.Description, Closed: t.Status == "closed", Person: t.AssigneeID, Deadline: t.Deadline}
+	l := Local{Title: t.Name, Body: t.Description, Closed: t.Status == "closed", People: t.AssigneeIDs(), Deadline: t.Deadline}
 	for _, label := range t.Labels {
 		l.Labels = append(l.Labels, label.Name)
 	}
 	return l
 }
 
-// snapshotFrom é o acordo depois da rodada: a issue como ficou, e o responsável ligado que a rodada decidiu.
-func snapshotFrom(i adapter.Issue, m Mapping) Snapshot {
+// snapshotFrom é o acordo depois da rodada: a issue como ficou, e os responsáveis ligados que a rodada decidiu. Só
+// entram os pares cujo login está mesmo na issue: o que a plataforma não guardou (o GitLab grátis fica com um
+// responsável só) não vira acordo, senão a rodada seguinte leria que a issue o tirou e tiraria a pessoa da tarefa.
+func snapshotFrom(i adapter.Issue, m []Mapping) Snapshot {
+	onIssue := keyed(i.Assignees)
+	mapped := []Mapping{}
+	for _, x := range m {
+		if inSet(onIssue, key(x.Login)) {
+			mapped = append(mapped, x)
+		}
+	}
 	return Snapshot{
-		Title:        normTitle(i.Title),
-		Body:         norm(i.Body),
-		Closed:       i.State == stateClosed,
-		Labels:       append([]string{}, i.Labels...),
-		Logins:       append([]string{}, i.Assignees...),
-		MappedLogin:  m.Login,
-		MappedPerson: m.Person,
-		Deadline:     normDeadline(i.Deadline),
+		Title:    normTitle(i.Title),
+		Body:     norm(i.Body),
+		Closed:   i.State == stateClosed,
+		Labels:   append([]string{}, i.Labels...),
+		Logins:   append([]string{}, i.Assignees...),
+		Mapped:   mapped,
+		Deadline: normDeadline(i.Deadline),
 	}
 }
 
@@ -83,11 +92,28 @@ func matches(after adapter.Issue, p Push) bool {
 	return true
 }
 
+// assigneesCut diz se a única diferença entre o que se mandou e o que a issue ficou é que ela guardou só parte dos
+// responsáveis, todos entre os mandados: é o GitLab grátis, que aceita um responsável só por issue.
+func assigneesCut(after adapter.Issue, p Push) bool {
+	if p.Assignees == nil || len(after.Assignees) == 0 || len(after.Assignees) >= len(*p.Assignees) {
+		return false
+	}
+	sent := keyed(*p.Assignees)
+	for _, a := range after.Assignees {
+		if !inSet(sent, key(a)) {
+			return false
+		}
+	}
+	rest := p
+	rest.Assignees = nil
+	return matches(after, rest)
+}
+
 func sameRow(a, b *Row) bool {
 	same := func(x, y *uuid.UUID) bool { return samePerson(x, y) }
 	return a.State == b.State && a.URL == b.URL && same(a.TaskID, b.TaskID) && normTitle(a.Title) == normTitle(b.Title) && norm(a.Body) == norm(b.Body) &&
 		sameKeys(keyed(a.Labels), keyed(b.Labels)) && sameKeys(keyed(a.Logins), keyed(b.Logins)) &&
-		a.MappedLogin == b.MappedLogin && same(a.MappedPerson, b.MappedPerson) &&
+		sameMapping(a.Mapped, b.Mapped) &&
 		normDeadline(a.Deadline).Equal(normDeadline(b.Deadline)) &&
 		a.StuckSig == b.StuckSig && a.LastError == b.LastError
 }
@@ -98,17 +124,19 @@ func (r *run) importIssue(issue adapter.Issue) error {
 	if err != nil {
 		return err
 	}
+	// Cada login da issue que se liga a alguém do projeto vira um responsável da tarefa (Decisão 31).
 	res := resolver{r}
-	var mapped Mapping
+	var mapped []Mapping
+	var people []uuid.UUID
 	if r.caps.Assignee {
 		for _, login := range issue.Assignees {
 			p, err := res.PersonFor(r.ctx, login)
 			if err != nil {
 				return err
 			}
-			if p != nil {
-				mapped = Mapping{Login: login, Person: p}
-				break
+			if p != nil && !slices.Contains(people, *p) {
+				mapped = append(mapped, Mapping{Login: login, Person: *p})
+				people = append(people, *p)
 			}
 		}
 	}
@@ -124,7 +152,7 @@ func (r *run) importIssue(issue adapter.Issue) error {
 	}
 	imported := task.Imported{
 		ProjectID: r.integ.ProjectID, Name: name, Description: lf(issue.Body), Labels: labels,
-		AssigneeID: mapped.Person, CreatedAt: issue.CreatedAt,
+		AssigneeIDs: people, CreatedAt: issue.CreatedAt,
 	}
 	if r.caps.Deadline {
 		imported.Deadline = normDeadline(issue.Deadline)
@@ -150,10 +178,9 @@ func (r *run) importIssue(issue adapter.Issue) error {
 }
 
 // adopt passa a sincronizar uma tarefa que alguém ligou à mão à issue (o vínculo pending). Não há acordo
-// anterior: o GitHub vence no título e no corpo, as etiquetas dos dois lados se somam, e o responsável da
-// tarefa fica como está.
+// anterior: o GitHub vence no título e no corpo, e as etiquetas e os responsáveis dos dois lados se somam.
 func (r *run) adopt(row *Row, t *task.Task, issue adapter.Issue) error {
-	b := Snapshot{Logins: issue.Assignees, MappedPerson: t.AssigneeID}
+	b := Snapshot{Logins: issue.Assignees}
 	return r.apply(row, t, issue, b)
 }
 
@@ -248,7 +275,7 @@ func (r *run) apply(row *Row, t *task.Task, issue adapter.Issue, b Snapshot) err
 		}
 	}
 
-	after, discarded, rejected := issue, false, false
+	after, discarded, rejected, cut := issue, false, false, false
 	if !push.Empty() {
 		if push.Labels != nil {
 			r.ensureLabels(*push.Labels)
@@ -270,6 +297,7 @@ func (r *run) apply(row *Row, t *task.Task, issue adapter.Issue, b Snapshot) err
 			r.pushes++
 			r.sum.Pushed++
 			discarded = !matches(after, push)
+			cut = discarded && assigneesCut(after, push)
 		}
 	}
 
@@ -280,6 +308,9 @@ func (r *run) apply(row *Row, t *task.Task, issue adapter.Issue, b Snapshot) err
 	switch {
 	case rejected:
 		next.StuckSig, next.LastError = push.Signature(), ErrPushRejected.Code
+	case cut:
+		// A tarefa fica com todos; a issue, com o que a plataforma aceitou. Não se tenta de novo.
+		next.StuckSig, next.LastError = push.Signature(), ErrSingleAssignee.Code
 	case discarded:
 		next.StuckSig, next.LastError = push.Signature(), ErrPushDiscarded.Code
 	case stuck:
@@ -336,7 +367,7 @@ func (r *run) localPatch(t *task.Task, c LocalChange) (task.RemotePatch, error) 
 	}
 	p.Description = c.Body
 	p.Status = c.Status
-	p.SetAssignee, p.AssigneeID = c.SetAssignee, c.Person
+	p.AddAssignees, p.RemoveAssignees = c.AddPeople, c.RemovePeople
 	p.Deadline = c.Deadline
 	if c.Labels != nil {
 		labels, err := r.s.d.Tasks.FindOrCreateLabels(t.ProjectID, *c.Labels)

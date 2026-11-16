@@ -63,11 +63,11 @@ func (s *Service) ClockIn(projectID, taskID, personID string) (*WorkSession, err
 		return nil, err
 	}
 
-	// Bater o ponto numa tarefa livre a torna de quem bateu: a trava da tarefa vale antes de abrir a sessão.
-	if task.AssigneeID == nil {
-		if err := s.taskStore.CheckRequired(task, personUID); err != nil {
-			return nil, err
-		}
+	// Só bate o ponto quem é responsável pela tarefa; numa tarefa livre, bater o ponto a torna de quem bateu, e a trava
+	// dela vale antes (Decisão 31). A tarefa fica travada até a sessão estar gravada.
+	hold, err := s.holdFor(task, personUID, true)
+	if err != nil {
+		return nil, err
 	}
 
 	session := &WorkSession{
@@ -79,6 +79,8 @@ func (s *Service) ClockIn(projectID, taskID, personID string) (*WorkSession, err
 		BillRateCents: rates.BillRateCents,
 	}
 	if err := s.sessionStore.Create(session, task.ID); err != nil {
+		// Um ponto recusado não leva a tarefa livre: o Release desfaz a tomada.
+		hold.Release()
 		// Duas requisições simultâneas passam pela checagem acima; o índice
 		// one_open_session_per_project barra a segunda aqui.
 		if ent.IsConstraintError(err) {
@@ -86,15 +88,12 @@ func (s *Service) ClockIn(projectID, taskID, personID string) (*WorkSession, err
 		}
 		return nil, err
 	}
-	// Bater o ponto numa tarefa sem responsável a torna de quem bateu. Fica depois
-	// da sessão criada para um ponto recusado não levar a tarefa.
-	if task.AssigneeID == nil {
-		if err := s.taskStore.ClaimIfUnassigned(task.ID, personUID); err != nil {
-			return nil, err
-		}
+	if err := hold.Commit(); err != nil {
+		return nil, err
 	}
 	// E a tarefa em que se bateu o ponto passa a estar em progresso, de qualquer status. O
-	// clock-out não a tira de lá: parar ou pausar não é terminar.
+	// clock-out não a tira de lá: parar ou pausar não é terminar. Vem depois do Commit: ela grava na linha da
+	// tarefa, que o hold travava.
 	if err := s.taskStore.StartProgress(task.ID); err != nil {
 		return nil, err
 	}
@@ -319,21 +318,21 @@ func (s *Service) AddTask(projectID, sessionID, taskID string, from, until *time
 	if overlaps(session, t.ID, uuid.Nil, start, until) {
 		return nil, ErrTaskOverlap.With("field", "from_at")
 	}
-	// Na sessão aberta, a tarefa livre passa a ser de quem a pôs nela: a trava vale antes.
-	if session.EndAt == nil && t.AssigneeID == nil {
-		if err := s.taskStore.CheckRequired(t, session.PersonID); err != nil {
-			return nil, err
-		}
+	// Só entra na sessão a tarefa de que a pessoa é responsável (Decisão 31), conferida com a tarefa travada até o
+	// trecho estar gravado. Na sessão aberta, a tarefa livre passa a ser dela, com a trava de contas antes; numa sessão
+	// já fechada, a livre entra sem mudar de dono.
+	hold, err := s.holdFor(t, session.PersonID, session.EndAt == nil)
+	if err != nil {
+		return nil, err
 	}
 	if _, err := s.sessionStore.AddTask(session.ID, t.ID, start, until); err != nil {
+		hold.Release()
+		return nil, err
+	}
+	if err := hold.Commit(); err != nil {
 		return nil, err
 	}
 	if session.EndAt == nil {
-		if t.AssigneeID == nil {
-			if err := s.taskStore.ClaimIfUnassigned(t.ID, session.PersonID); err != nil {
-				return nil, err
-			}
-		}
 		if err := s.taskStore.StartProgress(t.ID); err != nil {
 			return nil, err
 		}
@@ -389,8 +388,28 @@ func (s *Service) UpdateTask(projectID, sessionID, linkID string, change TaskCha
 	if session.EndAt == nil && until != nil && !hasOtherActive(session, link.ID) {
 		return nil, ErrLastTask
 	}
+	// Reabrir um trecho parado numa sessão aberta é voltar a trabalhar na tarefa: vale a regra do ponto (Decisão 31),
+	// com a tarefa travada até o trecho estar gravado. Quem saiu da tarefa não volta por aqui; a livre passa a ser dela.
+	var hold *taskdom.WorkHold
+	if session.EndAt == nil && link.UntilAt != nil && until == nil {
+		t, err := s.taskStore.GetByID(link.TaskID.String())
+		if err != nil {
+			return nil, err
+		}
+		if hold, err = s.holdFor(t, session.PersonID, true); err != nil {
+			return nil, err
+		}
+	}
 	if err := s.sessionStore.UpdateTask(link.ID, from, until); err != nil {
+		if hold != nil {
+			hold.Release()
+		}
 		return nil, err
+	}
+	if hold != nil {
+		if err := hold.Commit(); err != nil {
+			return nil, err
+		}
 	}
 	return s.Get(projectID, sessionID)
 }
@@ -413,6 +432,66 @@ func (s *Service) RemoveTask(projectID, sessionID, linkID string) (*WorkSession,
 		return nil, err
 	}
 	return s.Get(projectID, sessionID)
+}
+
+// holdFor trava a tarefa para a pessoa trabalhar nela (Decisão 31) e confere, com a tarefa travada, que ela é uma das
+// responsáveis. Numa tarefa livre, com claim, a tarefa passa a ser dela (com a trava de contas antes); sem claim (a
+// sessão já encerrada), entra sem mudar de dono. A tarefa de outras pessoas é ErrNotAssignee. Quem recebe o hold grava
+// o ponto e termina com Commit; com Release, nada fica, nem a tomada.
+func (s *Service) holdFor(t *taskdom.Task, personID uuid.UUID, claim bool) (*taskdom.WorkHold, error) {
+	hold, err := s.taskStore.HoldForWork(t.ID)
+	if err != nil {
+		return nil, err
+	}
+	switch {
+	case hold.Has(personID):
+	case !hold.Free():
+		hold.Release()
+		return nil, ErrNotAssignee.With("field", "task_id")
+	case claim:
+		if err := s.taskStore.CheckRequired(t, personID); err != nil {
+			hold.Release()
+			return nil, err
+		}
+		if err := hold.Claim(personID); err != nil {
+			hold.Release()
+			return nil, err
+		}
+	}
+	return hold, nil
+}
+
+// StopTaskFor para o trabalho da pessoa na tarefa quando ela deixa de ser responsável (Decisão 31): o trecho aberto
+// dela na tarefa termina agora e, se era a única tarefa rodando na sessão, a sessão fecha (uma sessão aberta precisa de
+// uma tarefa sem fim). As outras tarefas da sessão seguem. Sem sessão aberta no projeto, ou sem trecho aberto na
+// tarefa, nada muda. É o task.WorkStopper.
+func (s *Service) StopTaskFor(personID, taskID uuid.UUID) error {
+	t, err := s.taskStore.GetByID(taskID.String())
+	if err != nil {
+		return err
+	}
+	open, err := s.sessionStore.GetOpenByPersonProject(personID.String(), t.ProjectID.String())
+	if errors.Is(err, database.ErrNotFound) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	var link *SessionTask
+	for i := range open.Tasks {
+		if open.Tasks[i].TaskID == taskID && open.Tasks[i].UntilAt == nil {
+			link = &open.Tasks[i]
+		}
+	}
+	if link == nil {
+		return nil
+	}
+	if hasOtherActive(open, link.ID) {
+		_, err = s.UpdateTask(t.ProjectID.String(), open.ID.String(), link.ID.String(), TaskChange{Stop: true})
+		return err
+	}
+	_, err = s.ClockOut(t.ProjectID.String(), personID.String())
+	return err
 }
 
 func findLink(session *WorkSession, linkID string) *SessionTask {

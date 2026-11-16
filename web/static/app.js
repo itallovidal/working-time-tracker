@@ -521,6 +521,18 @@
     initials(name) {
       return (name || '?').trim().split(/\s+/).slice(0, 2).map((p) => p[0].toUpperCase()).join('');
     },
+    // assigneeNames é a coluna do responsável numa lista de tarefas: o primeiro nome dos dois primeiros (Decisão 31);
+    // assigneesMore, quantos mais ("+2"), e assigneesFull, todos os nomes inteiros, para a dica.
+    assigneeNames(list) {
+      return (list || []).slice(0, 2).map((p) => (p.name || '').trim().split(/\s+/)[0]).join(', ');
+    },
+    assigneesMore(list) {
+      const n = (list || []).length - 2;
+      return n > 0 ? '+' + n : '';
+    },
+    assigneesFull(list) {
+      return (list || []).map((p) => p.name).join(', ');
+    },
     role(role) {
       return t(role === 'admin' ? 'roles.admin' : 'roles.member');
     },
@@ -1294,6 +1306,16 @@
       working(personId) {
         return !!this.of(personId);
       },
+      // anyWorking diz se alguém da lista (os responsáveis de uma tarefa) está com o ponto aberto.
+      anyWorking(people) {
+        return (people || []).some((p) => this.working(p.id));
+      },
+      // labelMany é a dica da bolinha de uma tarefa com várias pessoas: o que cada uma faz, uma por linha.
+      labelMany(people) {
+        const list = people || [];
+        if (list.length <= 1) return list.length ? this.label(list[0].id) : '';
+        return list.map((p) => p.name + ': ' + this.label(p.id).split('\n')[0]).join('\n');
+      },
       // label é a dica da bolinha: em que a pessoa está, ou que o ponto está fechado.
       label(personId) {
         const p = this.of(personId);
@@ -1394,9 +1416,11 @@
         const s = this.session;
         const q = this.search.trim();
         try {
-          const page = await api('GET', '/api/projects/' + s.project_id + '/tasks?page=1&per_page=20' + (q ? '&q=' + encodeURIComponent(q) : ''));
+          const page = await api('GET', '/api/projects/' + s.project_id + '/tasks?page=1&per_page=50' + (q ? '&q=' + encodeURIComponent(q) : ''));
           const inSession = new Set(s.tasks.map((l) => l.task_id));
-          this.results = (page.items || []).filter((x) => !inSession.has(x.id));
+          // Só entram na sessão as tarefas de quem bateu o ponto, e as livres (Decisão 31).
+          const workable = (x) => (x.assignees || []).length === 0 || x.assignees.some((a) => a.id === s.person_id);
+          this.results = (page.items || []).filter((x) => !inSession.has(x.id) && workable(x)).slice(0, 20);
           this.pick = this.results.length ? this.results[0].id : '';
         } catch (e) {
           this.errors.add = e.message;

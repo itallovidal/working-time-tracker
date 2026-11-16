@@ -72,17 +72,19 @@ func (s *Syncer) Publish(ctx context.Context, taskID, integrationID uuid.UUID) (
 	}
 	r.ensureLabels(labels)
 	var assignees []string
-	if t.AssigneeID != nil && r.caps.Assignee {
-		login, err := resolver{r}.LoginFor(ctx, *t.AssigneeID)
-		if err != nil && !stop(err) {
-			login = "" // a busca do usuário falhou: a issue sai sem responsável, e o aviso diz
-		} else if err != nil {
-			return nil, err
-		}
-		if login == "" {
-			r.note(ErrNoLogin.Code)
-		} else {
-			assignees = []string{login}
+	if r.caps.Assignee {
+		for _, p := range t.AssigneeIDs() {
+			login, err := resolver{r}.LoginFor(ctx, p)
+			if err != nil && !stop(err) {
+				login = "" // a busca do usuário falhou: a issue sai sem essa pessoa, e o aviso diz
+			} else if err != nil {
+				return nil, err
+			}
+			if login == "" {
+				r.note(ErrNoLogin.Code)
+			} else {
+				assignees = append(assignees, login)
+			}
 		}
 	}
 
@@ -94,9 +96,13 @@ func (s *Syncer) Publish(ctx context.Context, taskID, integrationID uuid.UUID) (
 	if err != nil {
 		return nil, err
 	}
-	// O GitHub devolveu 201 mas o responsável pedido não ficou na issue (o usuário não pode ser designado).
-	if len(assignees) > 0 && len(issue.Assignees) == 0 {
+	// O GitHub devolveu 201 mas o responsável pedido não ficou na issue (o usuário não pode ser designado); ou ficou só
+	// parte deles, como no GitLab grátis.
+	switch {
+	case len(assignees) > 0 && len(issue.Assignees) == 0:
 		r.note(ErrPushDiscarded.Code)
+	case len(issue.Assignees) < len(assignees):
+		r.note(ErrSingleAssignee.Code)
 	}
 
 	// Liga a tarefa à issue: o vínculo nasce pending, e o handle abaixo o adota (grava o acordo e empurra o

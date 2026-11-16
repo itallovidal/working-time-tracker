@@ -35,6 +35,9 @@ var (
 	// ErrPushDiscarded: o GitHub respondeu 200 mas não gravou o que se mandou, como faz com quem não
 	// tem permissão para mudar etiquetas e responsáveis.
 	ErrPushDiscarded = apperr.New("issue_sync.push_discarded", http.StatusBadRequest)
+	// ErrSingleAssignee: a issue ficou com só parte dos responsáveis que se mandaram, como faz o GitLab grátis, que
+	// aceita um responsável só. A tarefa fica com todos.
+	ErrSingleAssignee = apperr.New("issue_sync.single_assignee", http.StatusBadRequest)
 	// ErrPushRejected: o GitHub recusou a mudança (por exemplo, um título grande demais).
 	ErrPushRejected = apperr.New("issue_sync.push_rejected", http.StatusBadRequest)
 	// ErrNoLogin: o responsável escolhido aqui não tem usuário do GitHub que se ache pelo e-mail.

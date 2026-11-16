@@ -166,13 +166,11 @@ func (s *Store) ResetSync(id uuid.UUID) error {
 
 // Unmatched devolve os logins, sem repetir e em ordem alfabética, dos responsáveis das issues abertas e ligadas a uma
 // tarefa que não correspondem a ninguém daqui: sem conta ligada a uma pessoa do projeto e sem e-mail público de
-// alguém dele. Só entram as issues sem nenhum responsável ligado; numa que já tem um, os outros logins nem foram
-// procurados.
+// alguém dele. Cada login da issue é procurado (Decisão 31), então entra todo login que não está entre os ligados.
 func (s *Store) Unmatched(id uuid.UUID) ([]string, error) {
 	rows, err := s.client.IssueSync.Query().
-		Where(issuesync.IntegrationIDEQ(id), issuesync.StateEQ(issuesync.StateOpen),
-			issuesync.TaskIDNotNil(), issuesync.MappedLoginEQ("")).
-		Select(issuesync.FieldAssigneeLogins).
+		Where(issuesync.IntegrationIDEQ(id), issuesync.StateEQ(issuesync.StateOpen), issuesync.TaskIDNotNil()).
+		Select(issuesync.FieldAssigneeLogins, issuesync.FieldMapped).
 		All(context.Background())
 	if err != nil {
 		return nil, err
@@ -180,8 +178,12 @@ func (s *Store) Unmatched(id uuid.UUID) ([]string, error) {
 	seen := map[string]bool{}
 	logins := []string{}
 	for _, r := range rows {
+		linked := map[string]bool{}
+		for l := range r.Mapped {
+			linked[strings.ToLower(strings.TrimSpace(l))] = true
+		}
 		for _, l := range r.AssigneeLogins {
-			if k := strings.ToLower(strings.TrimSpace(l)); k != "" && !seen[k] {
+			if k := strings.ToLower(strings.TrimSpace(l)); k != "" && !seen[k] && !linked[k] {
 				seen[k] = true
 				logins = append(logins, l)
 			}

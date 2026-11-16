@@ -84,7 +84,7 @@ func TestService_ClockInSuccess(t *testing.T) {
 }
 
 // Bater o ponto numa tarefa sem responsável a torna de quem bateu, mesmo sem time;
-// quem bate depois, numa tarefa que já tem dono, não a leva.
+// quem não é responsável não bate o ponto numa tarefa que já tem dono (Decisão 31).
 func TestService_ClockIn_ClaimsAnUnassignedTask(t *testing.T) {
 	orgSvc, personSvc, projSvc, _, _, taskSvc, wsSvc := setupDeps(t)
 
@@ -100,16 +100,19 @@ func TestService_ClockIn_ClaimsAnUnassignedTask(t *testing.T) {
 		t.Fatalf("clock in: %v", err)
 	}
 	got, _ := taskSvc.Get(free.ID.String())
-	if got.AssigneeID == nil || *got.AssigneeID != ana.ID {
-		t.Fatalf("assignee after the clock in = %v, want Ana", got.AssigneeID)
+	if !got.HasAssignee(ana.ID) {
+		t.Fatalf("assignee after the clock in = %v, want Ana", got.AssigneeIDs())
 	}
 
-	if _, err := wsSvc.ClockIn(proj.ID.String(), free.ID.String(), bia.ID.String()); err != nil {
-		t.Fatalf("second clock in: %v", err)
+	if _, err := wsSvc.ClockIn(proj.ID.String(), free.ID.String(), bia.ID.String()); !errors.Is(err, work_session.ErrNotAssignee) {
+		t.Fatalf("second clock in by someone else: %v, want ErrNotAssignee", err)
+	}
+	if open, _ := wsSvc.Open(bia.ID.String()); len(open) != 0 {
+		t.Errorf("the refused clock in left a session open: %+v", open)
 	}
 	got, _ = taskSvc.Get(free.ID.String())
-	if got.AssigneeID == nil || *got.AssigneeID != ana.ID {
-		t.Errorf("assignee after another person clocked in = %v, want still Ana", got.AssigneeID)
+	if !got.HasAssignee(ana.ID) {
+		t.Errorf("assignee after another person clocked in = %v, want still Ana", got.AssigneeIDs())
 	}
 }
 
@@ -125,8 +128,8 @@ func TestService_ClockIn_RefusedDoesNotClaim(t *testing.T) {
 	if _, err := wsSvc.ClockIn(proj.ID.String(), free.ID.String(), ana.ID.String()); !errors.Is(err, work_session.ErrNoRate) {
 		t.Fatalf("err = %v, want ErrNoRate", err)
 	}
-	if got, _ := taskSvc.Get(free.ID.String()); got.AssigneeID != nil {
-		t.Errorf("assignee after a refused clock in = %v, want none", got.AssigneeID)
+	if got, _ := taskSvc.Get(free.ID.String()); !got.Free() {
+		t.Errorf("assignee after a refused clock in = %v, want none", got.AssigneeIDs())
 	}
 }
 
@@ -202,7 +205,7 @@ func TestService_ClockIn_StartsTheTask(t *testing.T) {
 
 	// Retomar uma tarefa que já estava aguardando fechamento ou fechada a põe em progresso de novo.
 	for _, from := range []string{"awaiting_closure", "closed"} {
-		if _, err := taskSvc.UpdateAs("", fresh.ID.String(), "Nova", "", nil, nil, task.Attrs{Status: &from}); err != nil {
+		if _, err := taskSvc.UpdateAs(task.Actor{}, fresh.ID.String(), "Nova", "", nil, nil, task.Attrs{Status: &from}); err != nil {
 			t.Fatal(err)
 		}
 		if _, err := wsSvc.ClockIn(pid, fresh.ID.String(), ana.ID.String()); err != nil {

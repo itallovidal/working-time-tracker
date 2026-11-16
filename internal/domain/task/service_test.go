@@ -143,11 +143,11 @@ func TestService_AssignToSelfWithoutTeam(t *testing.T) {
 	proj, _ := projSvc.Create(org.ID.String(), "Project", "", 0, project.Routine{})
 	pid, meID, otherID := proj.ID.String(), me.ID.String(), other.ID.String()
 
-	own, err := taskSvc.CreateAs(meID, pid, "Minha", "", meID, nil, task.Attrs{})
-	if err != nil || own.Assignee == nil || own.Assignee.ID != me.ID {
+	own, err := taskSvc.CreateAs(task.Actor{ID: meID}, pid, "Minha", "", meID, nil, task.Attrs{})
+	if err != nil || !own.HasAssignee(me.ID) {
 		t.Fatalf("create assigned to the caller outside any team: %v, %+v", err, own)
 	}
-	if _, err := taskSvc.CreateAs(meID, pid, "Dela", "", otherID, nil, task.Attrs{}); err == nil {
+	if _, err := taskSvc.CreateAs(task.Actor{ID: meID}, pid, "Dela", "", otherID, nil, task.Attrs{}); err == nil {
 		t.Error("assigning to someone else outside the teams must fail")
 	}
 	if _, err := taskSvc.Create(pid, "Sem sessão", "", meID, nil); err == nil {
@@ -155,11 +155,11 @@ func TestService_AssignToSelfWithoutTeam(t *testing.T) {
 	}
 
 	free, _ := taskSvc.Create(pid, "Livre", "", "", nil)
-	if _, err := taskSvc.UpdateAs(otherID, free.ID.String(), "Livre", "", &meID, nil, task.Attrs{}); err == nil {
+	if _, err := taskSvc.UpdateAs(task.Actor{ID: otherID}, free.ID.String(), "Livre", "", &meID, nil, task.Attrs{}); err == nil {
 		t.Error("update: assigning to someone who is not the caller and is outside the teams must fail")
 	}
-	updated, err := taskSvc.UpdateAs(meID, free.ID.String(), "Livre", "", &meID, nil, task.Attrs{})
-	if err != nil || updated.Assignee == nil || updated.Assignee.ID != me.ID {
+	updated, err := taskSvc.UpdateAs(task.Actor{ID: meID}, free.ID.String(), "Livre", "", &meID, nil, task.Attrs{})
+	if err != nil || !updated.HasAssignee(me.ID) {
 		t.Errorf("update assigned to the caller: %v, %+v", err, updated)
 	}
 }
@@ -178,7 +178,7 @@ func TestService_AssignToCollaboratorWithoutTeam(t *testing.T) {
 	}
 	testClient.Allocation.Create().SetProjectID(proj.ID).SetPersonID(bruno.ID).SetPayRateCents(5000).SaveX(context.Background())
 	task, err := taskSvc.Create(pid, "Depois", "", bid, nil)
-	if err != nil || task.Assignee == nil || task.Assignee.ID != bruno.ID {
+	if err != nil || !task.HasAssignee(bruno.ID) {
 		t.Fatalf("assigning to a collaborator without a team: %v, %+v", err, task)
 	}
 }
@@ -215,15 +215,15 @@ func TestService_Priority(t *testing.T) {
 		t.Fatalf("a new task has priority %q and labels %v (err %v), want none and an empty list", plain.Priority, plain.Labels, err)
 	}
 	urgent := "urgent"
-	tk, err := taskSvc.CreateAs("", pid, "Fogo", "", "", nil, task.Attrs{Priority: &urgent})
+	tk, err := taskSvc.CreateAs(task.Actor{}, pid, "Fogo", "", "", nil, task.Attrs{Priority: &urgent})
 	if err != nil || tk.Priority != "urgent" {
 		t.Fatalf("create with priority: %v, %+v", err, tk)
 	}
 	bad := "critical"
-	if _, err := taskSvc.CreateAs("", pid, "X", "", "", nil, task.Attrs{Priority: &bad}); !errors.Is(err, task.ErrInvalidPriority) {
+	if _, err := taskSvc.CreateAs(task.Actor{}, pid, "X", "", "", nil, task.Attrs{Priority: &bad}); !errors.Is(err, task.ErrInvalidPriority) {
 		t.Errorf("invalid priority on create: err = %v", err)
 	}
-	if _, err := taskSvc.UpdateAs("", tk.ID.String(), "Fogo", "", nil, nil, task.Attrs{Priority: &bad}); !errors.Is(err, task.ErrInvalidPriority) {
+	if _, err := taskSvc.UpdateAs(task.Actor{}, tk.ID.String(), "Fogo", "", nil, nil, task.Attrs{Priority: &bad}); !errors.Is(err, task.ErrInvalidPriority) {
 		t.Errorf("invalid priority on update: err = %v", err)
 	}
 	kept, err := taskSvc.Update(tk.ID.String(), "Fogo 2", "", nil, nil)
@@ -231,7 +231,7 @@ func TestService_Priority(t *testing.T) {
 		t.Errorf("an update without priority must keep it, got %q (%v)", kept.Priority, err)
 	}
 	low := "low"
-	moved, _ := taskSvc.UpdateAs("", tk.ID.String(), "Fogo 2", "", nil, nil, task.Attrs{Priority: &low})
+	moved, _ := taskSvc.UpdateAs(task.Actor{}, tk.ID.String(), "Fogo 2", "", nil, nil, task.Attrs{Priority: &low})
 	if moved.Priority != "low" {
 		t.Errorf("priority after the update = %q, want low", moved.Priority)
 	}
@@ -250,20 +250,20 @@ func TestService_Status(t *testing.T) {
 		t.Fatalf("a new task has status %q (err %v), want backlog", plain.Status, err)
 	}
 	closed := "closed"
-	asked, err := taskSvc.CreateAs("", pid, "Já fechada?", "", "", nil, task.Attrs{Status: &closed})
+	asked, err := taskSvc.CreateAs(task.Actor{}, pid, "Já fechada?", "", "", nil, task.Attrs{Status: &closed})
 	if err != nil || asked.Status != "backlog" {
 		t.Fatalf("a task created asking for %q has status %q (err %v), want backlog", closed, asked.Status, err)
 	}
 
 	id := plain.ID.String()
 	for _, s := range task.Statuses {
-		moved, err := taskSvc.UpdateAs("", id, "Nova", "", nil, nil, task.Attrs{Status: &s})
+		moved, err := taskSvc.UpdateAs(task.Actor{}, id, "Nova", "", nil, nil, task.Attrs{Status: &s})
 		if err != nil || moved.Status != s {
 			t.Fatalf("update to %q: status %q (err %v)", s, moved.Status, err)
 		}
 	}
 	progress := "in_progress"
-	if _, err := taskSvc.UpdateAs("", id, "Nova", "", nil, nil, task.Attrs{Status: &progress}); err != nil {
+	if _, err := taskSvc.UpdateAs(task.Actor{}, id, "Nova", "", nil, nil, task.Attrs{Status: &progress}); err != nil {
 		t.Fatal(err)
 	}
 	kept, err := taskSvc.Update(id, "Nova 2", "", nil, nil)
@@ -271,7 +271,7 @@ func TestService_Status(t *testing.T) {
 		t.Errorf("an update without status must keep it, got %q (%v)", kept.Status, err)
 	}
 	bad := "done"
-	if _, err := taskSvc.UpdateAs("", id, "Nova", "", nil, nil, task.Attrs{Status: &bad}); !errors.Is(err, task.ErrInvalidStatus) {
+	if _, err := taskSvc.UpdateAs(task.Actor{}, id, "Nova", "", nil, nil, task.Attrs{Status: &bad}); !errors.Is(err, task.ErrInvalidStatus) {
 		t.Errorf("invalid status on update: err = %v", err)
 	}
 	if got, _ := taskSvc.Get(id); got.Status != "in_progress" {
@@ -291,7 +291,7 @@ func TestService_ListFilters_Status(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := taskSvc.UpdateAs("", tk.ID.String(), name, "", nil, nil, task.Attrs{Status: &status}); err != nil {
+		if _, err := taskSvc.UpdateAs(task.Actor{}, tk.ID.String(), name, "", nil, nil, task.Attrs{Status: &status}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -355,15 +355,15 @@ func TestService_Labels(t *testing.T) {
 	}
 
 	ids := []string{bug.ID.String(), design.ID.String(), bug.ID.String()}
-	tk, err := taskSvc.CreateAs("", aid, "Com etiquetas", "", "", nil, task.Attrs{LabelIDs: &ids})
+	tk, err := taskSvc.CreateAs(task.Actor{}, aid, "Com etiquetas", "", "", nil, task.Attrs{LabelIDs: &ids})
 	if err != nil || len(tk.Labels) != 2 || tk.Labels[0].Name != "bug" || tk.Labels[1].Name != "design" {
 		t.Fatalf("create with labels (a repeated id counts once): %v, %+v", err, tk.Labels)
 	}
 	foreign := []string{other.ID.String()}
-	if _, err := taskSvc.CreateAs("", aid, "X", "", "", nil, task.Attrs{LabelIDs: &foreign}); !errors.Is(err, task.ErrLabelOtherProject) {
+	if _, err := taskSvc.CreateAs(task.Actor{}, aid, "X", "", "", nil, task.Attrs{LabelIDs: &foreign}); !errors.Is(err, task.ErrLabelOtherProject) {
 		t.Errorf("a label of another project on create: err = %v", err)
 	}
-	if _, err := taskSvc.UpdateAs("", tk.ID.String(), "X", "", nil, nil, task.Attrs{LabelIDs: &foreign}); !errors.Is(err, task.ErrLabelOtherProject) {
+	if _, err := taskSvc.UpdateAs(task.Actor{}, tk.ID.String(), "X", "", nil, nil, task.Attrs{LabelIDs: &foreign}); !errors.Is(err, task.ErrLabelOtherProject) {
 		t.Errorf("a label of another project on update: err = %v", err)
 	}
 
@@ -372,12 +372,12 @@ func TestService_Labels(t *testing.T) {
 		t.Errorf("an update without label_ids must keep the labels, got %+v", kept.Labels)
 	}
 	one := []string{design.ID.String()}
-	swapped, _ := taskSvc.UpdateAs("", tk.ID.String(), "Renomeada", "", nil, nil, task.Attrs{LabelIDs: &one})
+	swapped, _ := taskSvc.UpdateAs(task.Actor{}, tk.ID.String(), "Renomeada", "", nil, nil, task.Attrs{LabelIDs: &one})
 	if len(swapped.Labels) != 1 || swapped.Labels[0].Name != "design" {
 		t.Errorf("labels after the swap = %+v, want only design", swapped.Labels)
 	}
 	none := []string{}
-	cleared, _ := taskSvc.UpdateAs("", tk.ID.String(), "Renomeada", "", nil, nil, task.Attrs{LabelIDs: &none})
+	cleared, _ := taskSvc.UpdateAs(task.Actor{}, tk.ID.String(), "Renomeada", "", nil, nil, task.Attrs{LabelIDs: &none})
 	if len(cleared.Labels) != 0 || cleared.Labels == nil {
 		t.Errorf("labels after clearing = %+v, want an empty list", cleared.Labels)
 	}
@@ -394,7 +394,7 @@ func TestService_Labels(t *testing.T) {
 		t.Errorf("rename: %v, %+v", err, renamed)
 	}
 	both := []string{bug.ID.String(), design.ID.String()}
-	if _, err := taskSvc.UpdateAs("", tk.ID.String(), "Renomeada", "", nil, nil, task.Attrs{LabelIDs: &both}); err != nil {
+	if _, err := taskSvc.UpdateAs(task.Actor{}, tk.ID.String(), "Renomeada", "", nil, nil, task.Attrs{LabelIDs: &both}); err != nil {
 		t.Fatal(err)
 	}
 	if err := taskSvc.DeleteLabel(bid, bug.ID.String()); err == nil {
@@ -424,7 +424,7 @@ func TestService_ListFilters_PriorityAndLabels(t *testing.T) {
 		for _, l := range labels {
 			ids = append(ids, l.String())
 		}
-		if _, err := taskSvc.CreateAs("", pid, name, "", "", nil, task.Attrs{Priority: &priority, LabelIDs: &ids}); err != nil {
+		if _, err := taskSvc.CreateAs(task.Actor{}, pid, name, "", "", nil, task.Attrs{Priority: &priority, LabelIDs: &ids}); err != nil {
 			t.Fatalf("create %s: %v", name, err)
 		}
 	}
@@ -480,8 +480,8 @@ func TestService_Create_WithoutAssignee(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create without assignee: %v", err)
 	}
-	if tk.AssigneeID != nil || tk.Assignee != nil {
-		t.Errorf("assignee = %v / %v, want none", tk.AssigneeID, tk.Assignee)
+	if !tk.Free() {
+		t.Errorf("assignee = %v / %v, want none", tk.AssigneeIDs(), tk.Assignees)
 	}
 }
 
@@ -514,8 +514,8 @@ func TestService_Update_UnassignAndFilter(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unassign: %v", err)
 	}
-	if updated.AssigneeID != nil || updated.Assignee != nil {
-		t.Errorf("assignee after unassign = %v, want none", updated.AssigneeID)
+	if !updated.Free() {
+		t.Errorf("assignee after unassign = %v, want none", updated.AssigneeIDs())
 	}
 
 	none, err := taskSvc.ListByProject(proj.ID.String(), task.ListFilter{Unassigned: true})
@@ -1013,8 +1013,8 @@ func TestService_ListByProject_DeadlineFilterSkipsTasksWithoutDeadline(t *testin
 	if _, err := taskSvc.Create(proj.ID.String(), "Overdue", "", p.ID.String(), &overdue); err != nil {
 		t.Fatal(err)
 	}
-	testClient.Task.Create().SetProjectID(proj.ID).SetName("Null deadline").SetAssigneeID(p.ID).SaveX(ctx)
-	testClient.Task.Create().SetProjectID(proj.ID).SetName("Zero deadline").SetAssigneeID(p.ID).
+	testClient.Task.Create().SetProjectID(proj.ID).SetName("Null deadline").AddAssigneeIDs(p.ID).SaveX(ctx)
+	testClient.Task.Create().SetProjectID(proj.ID).SetName("Zero deadline").AddAssigneeIDs(p.ID).
 		SetDeadline(time.Time{}).SaveX(ctx)
 
 	now := time.Now()
@@ -1140,21 +1140,21 @@ func TestService_Claim(t *testing.T) {
 	if err != nil {
 		t.Fatalf("claim a free task: %v", err)
 	}
-	if got.AssigneeID == nil || *got.AssigneeID != ana.ID {
-		t.Errorf("assignee after the claim = %v, want Ana", got.AssigneeID)
+	if !got.HasAssignee(ana.ID) {
+		t.Errorf("assignee after the claim = %v, want Ana", got.AssigneeIDs())
 	}
 	if got.Status != "backlog" {
 		t.Errorf("status after the claim = %q, want it untouched (backlog): claiming is not starting", got.Status)
 	}
 
-	if again, err := taskSvc.Claim(ana.ID.String(), free.ID.String()); err != nil || again.AssigneeID == nil || *again.AssigneeID != ana.ID {
+	if again, err := taskSvc.Claim(ana.ID.String(), free.ID.String()); err != nil || !again.HasAssignee(ana.ID) {
 		t.Errorf("claiming a task that is already yours = %v, %v; want it unchanged and no error", again, err)
 	}
 	if _, err := taskSvc.Claim(bia.ID.String(), free.ID.String()); !errors.Is(err, task.ErrAlreadyAssigned) {
 		t.Errorf("claiming the task of another person: %v, want ErrAlreadyAssigned", err)
 	}
-	if after, _ := taskSvc.Get(free.ID.String()); after.AssigneeID == nil || *after.AssigneeID != ana.ID {
-		t.Errorf("the refused claim took the task from Ana: %v", after.AssigneeID)
+	if after, _ := taskSvc.Get(free.ID.String()); !after.HasAssignee(ana.ID) {
+		t.Errorf("the refused claim took the task from Ana: %v", after.AssigneeIDs())
 	}
 	if _, err := taskSvc.Claim("", free.ID.String()); !errors.Is(err, task.ErrInvalidAssignee) {
 		t.Errorf("claiming without a person: %v, want ErrInvalidAssignee", err)
@@ -1203,8 +1203,8 @@ func TestService_Claim_Race(t *testing.T) {
 	if len(won) != 1 || refused != len(people)-1 {
 		t.Fatalf("%d people won and %d were refused, want exactly one winner and the rest refused", len(won), refused)
 	}
-	if after, _ := taskSvc.Get(free.ID.String()); after.AssigneeID == nil || after.AssigneeID.String() != won[0] {
-		t.Errorf("the task ended with %v, want the winner %s", after.AssigneeID, won[0])
+	if after, _ := taskSvc.Get(free.ID.String()); after.Free() || after.AssigneeIDs()[0].String() != won[0] {
+		t.Errorf("the task ended with %v, want the winner %s", after.AssigneeIDs(), won[0])
 	}
 }
 
@@ -1250,8 +1250,8 @@ func TestStore_TryClaim_Atomic(t *testing.T) {
 	if len(winners) != 1 {
 		t.Fatalf("%d callers got the task, want exactly one", len(winners))
 	}
-	if after, _ := taskSvc.Get(free.ID.String()); after.AssigneeID == nil || *after.AssigneeID != winners[0] {
-		t.Errorf("the task ended with %v, want the winner %s", after.AssigneeID, winners[0])
+	if after, _ := taskSvc.Get(free.ID.String()); !after.HasAssignee(winners[0]) {
+		t.Errorf("the task ended with %v, want the winner %s", after.AssigneeIDs(), winners[0])
 	}
 	if claimed, _ := store.TryClaim(free.ID, people[0]); claimed {
 		t.Error("a task that already has an assignee was claimed again")
@@ -1273,7 +1273,7 @@ func TestService_UpdateAttrs(t *testing.T) {
 
 	deadline := time.Date(2026, 11, 20, 12, 0, 0, 0, time.UTC)
 	bugIDs := []string{bug.ID.String()}
-	created, err := taskSvc.CreateAs(ana.ID.String(), pid, "Nome", "Descrição", ana.ID.String(), &deadline, task.Attrs{LabelIDs: &bugIDs})
+	created, err := taskSvc.CreateAs(task.Actor{ID: ana.ID.String()}, pid, "Nome", "Descrição", ana.ID.String(), &deadline, task.Attrs{LabelIDs: &bugIDs})
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
@@ -1289,8 +1289,8 @@ func TestService_UpdateAttrs(t *testing.T) {
 	}
 	untouched := func(step string, tk *task.Task) {
 		t.Helper()
-		if tk.Name != "Nome" || tk.Description != "Descrição" || tk.AssigneeID == nil || *tk.AssigneeID != ana.ID || !tk.Deadline.Equal(deadline) {
-			t.Errorf("%s changed what the update did not ask for: %q %q %v %v", step, tk.Name, tk.Description, tk.AssigneeID, tk.Deadline)
+		if tk.Name != "Nome" || tk.Description != "Descrição" || !tk.HasAssignee(ana.ID) || !tk.Deadline.Equal(deadline) {
+			t.Errorf("%s changed what the update did not ask for: %q %q %v %v", step, tk.Name, tk.Description, tk.AssigneeIDs(), tk.Deadline)
 		}
 	}
 
@@ -1356,7 +1356,7 @@ func TestService_UpdateAttrsAs_AssigneeAndDeadline(t *testing.T) {
 	join(t, memberSvc, tm, bia.ID.String())
 
 	deadline := time.Date(2026, 11, 20, 12, 0, 0, 0, time.UTC)
-	created, err := taskSvc.CreateAs(ana.ID.String(), proj.ID.String(), "Nome", "Descrição", ana.ID.String(), &deadline, task.Attrs{})
+	created, err := taskSvc.CreateAs(task.Actor{ID: ana.ID.String()}, proj.ID.String(), "Nome", "Descrição", ana.ID.String(), &deadline, task.Attrs{})
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
@@ -1366,44 +1366,51 @@ func TestService_UpdateAttrsAs_AssigneeAndDeadline(t *testing.T) {
 
 	// Outra pessoa do projeto assume, e o prazo muda junto; o nome e a descrição ficam.
 	later := time.Date(2026, 12, 1, 12, 0, 0, 0, time.UTC)
-	got, err := taskSvc.UpdateAttrsAs(self, id, task.Attrs{Status: str("in_progress")}, str(bia.ID.String()), &later)
+	got, err := taskSvc.UpdateAttrsAs(task.Actor{ID: self}, id, task.Attrs{Status: str("in_progress")}, str(bia.ID.String()), &later)
 	if err != nil {
 		t.Fatalf("assign to another member: %v", err)
 	}
-	if got.AssigneeID == nil || *got.AssigneeID != bia.ID || got.Assignee == nil || got.Assignee.Name != "Bia" || !got.Deadline.Equal(later) || got.Status != "in_progress" {
-		t.Errorf("after the update: assignee %v, deadline %v, status %q; want Bia, %v, in_progress", got.AssigneeID, got.Deadline, got.Status, later)
+	if !got.HasAssignee(bia.ID) || len(got.Assignees) != 1 || got.Assignees[0].Name != "Bia" || !got.Deadline.Equal(later) || got.Status != "in_progress" {
+		t.Errorf("after the update: assignee %v, deadline %v, status %q; want Bia, %v, in_progress", got.AssigneeIDs(), got.Deadline, got.Status, later)
 	}
 	if got.Name != "Nome" || got.Description != "Descrição" {
 		t.Errorf("the update changed the name or the description: %q %q", got.Name, got.Description)
 	}
 
 	// Sem responsável e sem prazo no pedido, os dois ficam como estão.
-	if got, err = taskSvc.UpdateAttrsAs(self, id, task.Attrs{Priority: str("high")}, nil, nil); err != nil || got.AssigneeID == nil || *got.AssigneeID != bia.ID || !got.Deadline.Equal(later) {
+	if got, err = taskSvc.UpdateAttrsAs(task.Actor{ID: self}, id, task.Attrs{Priority: str("high")}, nil, nil); err != nil || !got.HasAssignee(bia.ID) || !got.Deadline.Equal(later) {
 		t.Errorf("an update without assignee and deadline = %v, %v; want Bia and %v kept", got, err, later)
 	}
 
-	// Quem pede para si mesmo entra mesmo fora dos times; outra pessoa fora deles, não.
-	if _, err := taskSvc.UpdateAttrsAs(zeca.ID.String(), id, task.Attrs{}, str(zeca.ID.String()), nil); err != nil {
-		t.Errorf("taking the task for yourself outside the teams: %v", err)
+	// A tarefa agora é da Bia (Decisão 31): quem não está nela não entra sozinho, e a Ana, que saiu, não escolhe mais
+	// ninguém por ela.
+	if _, err := taskSvc.UpdateAttrsAs(task.Actor{ID: zeca.ID.String()}, id, task.Attrs{}, str(zeca.ID.String()), nil); !errors.Is(err, task.ErrAlreadyAssigned) {
+		t.Errorf("taking a task that has an assignee: %v, want ErrAlreadyAssigned", err)
 	}
-	if _, err := taskSvc.UpdateAttrsAs(self, id, task.Attrs{}, str(zeca.ID.String()), nil); err != nil {
-		t.Errorf("the current assignee is not asked to be in a team again: %v", err)
+	if _, err := taskSvc.UpdateAttrsAs(task.Actor{ID: self}, id, task.Attrs{}, str(zeca.ID.String()), nil); !errors.Is(err, task.ErrShareForbidden) {
+		t.Errorf("someone outside the task choosing for it: %v, want ErrShareForbidden", err)
 	}
-	if _, err := taskSvc.UpdateAttrsAs(self, id, task.Attrs{}, str(ana.ID.String()), nil); err != nil {
-		t.Fatalf("assign back to a member: %v", err)
+	// O admin do projeto escolhe quem quiser do projeto, mas não quem está fora dele.
+	admin := task.Actor{ID: self, Manage: true}
+	if _, err := taskSvc.UpdateAttrsAs(admin, id, task.Attrs{}, str(ana.ID.String()), nil); err != nil {
+		t.Fatalf("the admin assigning back to a member: %v", err)
 	}
-	if _, err := taskSvc.UpdateAttrsAs(self, id, task.Attrs{}, str(zeca.ID.String()), nil); !errors.Is(err, task.ErrAssigneeNotInTeam) {
-		t.Errorf("assigning someone outside the teams: %v, want ErrAssigneeNotInTeam", err)
+	if _, err := taskSvc.UpdateAttrsAs(admin, id, task.Attrs{}, str(zeca.ID.String()), nil); !errors.Is(err, task.ErrAssigneeNotInTeam) {
+		t.Errorf("assigning someone outside the project: %v, want ErrAssigneeNotInTeam", err)
 	}
-	if _, err := taskSvc.UpdateAttrsAs(self, id, task.Attrs{}, str("not-a-uuid"), nil); !errors.Is(err, task.ErrInvalidAssignee) {
+	if _, err := taskSvc.UpdateAttrsAs(admin, id, task.Attrs{}, str("not-a-uuid"), nil); !errors.Is(err, task.ErrInvalidAssignee) {
 		t.Errorf("an assignee that is not an id: %v, want ErrInvalidAssignee", err)
 	}
-	if after, _ := taskSvc.Get(id); after.AssigneeID == nil || *after.AssigneeID != ana.ID {
-		t.Errorf("a refused update moved the task to %v", after.AssigneeID)
+	if after, _ := taskSvc.Get(id); !after.HasAssignee(ana.ID) || len(after.Assignees) != 1 {
+		t.Errorf("a refused update moved the task to %v", after.AssigneeIDs())
 	}
 
-	// Vazio tira o responsável: a tarefa volta a ficar disponível.
-	if got, err = taskSvc.UpdateAttrsAs(self, id, task.Attrs{}, str(""), nil); err != nil || got.AssigneeID != nil || got.Assignee != nil {
+	// Vazio tira o responsável: a Ana sai, e a tarefa volta a ficar disponível.
+	if got, err = taskSvc.UpdateAttrsAs(task.Actor{ID: self}, id, task.Attrs{}, str(""), nil); err != nil || !got.Free() {
 		t.Errorf("an empty assignee = %v, %v; want the task unassigned", got, err)
+	}
+	// Livre, quem pede para si mesmo a pega mesmo fora dos times.
+	if got, err = taskSvc.UpdateAttrsAs(task.Actor{ID: zeca.ID.String()}, id, task.Attrs{}, str(zeca.ID.String()), nil); err != nil || !got.HasAssignee(zeca.ID) {
+		t.Errorf("taking the free task for yourself outside the teams: %v, %v", got, err)
 	}
 }

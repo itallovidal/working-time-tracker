@@ -22,9 +22,8 @@ func (Task) Fields() []ent.Field {
 		field.String("description").Optional(),
 		field.Enum("priority").Values("urgent", "high", "medium", "low", "none").Default("none"),
 		field.Enum("status").Values("backlog", "in_progress", "awaiting_closure", "closed").Default("backlog"),
-		field.UUID("assignee_id", uuid.UUID{}).Optional().Nillable(),
 		field.Time("deadline").Optional(),
-		// As plataformas em que o responsável precisa ter conta ("github", "gitlab"): a tarefa só vai para quem tem
+		// As plataformas em que cada responsável precisa ter conta ("github", "gitlab"): a tarefa só vai para quem tem
 		// todas. Vazio: qualquer pessoa do projeto. A tarefa importada de uma issue nasce com a plataforma dela.
 		field.Strings("required_accounts").Optional(),
 		field.Time("created_at").Default(time.Now).Immutable(),
@@ -34,7 +33,9 @@ func (Task) Fields() []ent.Field {
 func (Task) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("project", Project.Type).Ref("tasks").Field("project_id").Unique().Required(),
-		edge.From("assignee", Person.Type).Ref("tasks").Field("assignee_id").Unique(),
+		// Os responsáveis: nenhum é a tarefa livre, que passa a ser de quem bater o ponto nela (Decisão 31). A tabela
+		// de junção é task_assignees; excluir a tarefa a esvazia.
+		edge.To("assignees", Person.Type),
 		// Excluir a tarefa a tira das sessões, mas as sessões e as horas ficam.
 		edge.To("session_links", WorkSessionTask.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("labels", Label.Type),

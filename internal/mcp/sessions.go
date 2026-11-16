@@ -44,7 +44,7 @@ func (s *server) addSessionTools(srv *mcp.Server) {
 	}, s.getActiveSession)
 	mcp.AddTool(srv, &mcp.Tool{
 		Name:        "clock_in",
-		Description: "Start the clock on a task (opens a work session in the task's project). Sessions in other projects keep running. The task becomes in_progress and, if it had no assignee, the person's. Fails if a session is already open in this project: use add_task_to_session.",
+		Description: "Start the clock on a task (opens a work session in the task's project). Sessions in other projects keep running. The task becomes in_progress and, if it had no assignee, the person's. Only works on the person's own tasks (they are one of the assignees) or on a free task. Fails if a session is already open in this project: use add_task_to_session.",
 		Annotations: write("Clock in", false),
 	}, s.clockIn)
 	mcp.AddTool(srv, &mcp.Tool{

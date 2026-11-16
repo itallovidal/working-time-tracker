@@ -53,8 +53,13 @@ func TestService_MonthlyCustomerProject_ClockInAndOut(t *testing.T) {
 		t.Errorf("closed owner session = end %v, bill %v / %v; want an end and no billed rate or amount", closed.EndAt, closed.BillRateCents, closed.BillAmountCents)
 	}
 
-	// Quem tem custo no projeto também: o valor pago conta, o cobrado fica nulo.
-	if _, err := wsSvc.ClockIn(projectID, task1.ID.String(), member.ID.String()); err != nil {
+	// Quem tem custo no projeto também: o valor pago conta, o cobrado fica nulo. A primeira tarefa ficou do dono, que
+	// bateu o ponto nela; a pessoa bate numa livre.
+	task2, err := taskSvc.Create(projectID, "Outra tarefa", "", "", nil)
+	if err != nil {
+		t.Fatalf("create task: %v", err)
+	}
+	if _, err := wsSvc.ClockIn(projectID, task2.ID.String(), member.ID.String()); err != nil {
 		t.Fatalf("a collaborator clocks in: %v", err)
 	}
 	time.Sleep(5 * time.Millisecond)

@@ -61,6 +61,7 @@ type GitLab struct {
 	projects map[string]*glProject
 	users    map[string]*glUser // username → usuário
 	nologin  map[string]bool    // usernames que existem mas o GitLab descarta como responsável
+	single   bool               // o GitLab grátis: a issue guarda só o primeiro responsável
 	requests []GitLabRequest
 	faults   []*ghFault
 	handler  *http.ServeMux
@@ -168,6 +169,14 @@ func (g *GitLab) AddUser(username, email string) {
 
 // Unassignable faz o GitLab descartar o usuário quando ele é posto como responsável de uma issue, como
 // acontece com quem não é membro do projeto.
+// SingleAssignee faz o fake se portar como o GitLab grátis, que aceita um responsável só por issue: de vários
+// assignee_ids, fica o primeiro.
+func (g *GitLab) SingleAssignee() {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.single = true
+}
+
 func (g *GitLab) Unassignable(username string) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
@@ -841,6 +850,9 @@ func (g *GitLab) assign(i *GitLabIssue, ids []int) {
 				i.Assignees = append(i.Assignees, u.username)
 			}
 		}
+	}
+	if g.single && len(i.Assignees) > 1 {
+		i.Assignees = i.Assignees[:1]
 	}
 }
 

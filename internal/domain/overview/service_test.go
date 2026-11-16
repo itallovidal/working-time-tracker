@@ -126,7 +126,7 @@ func (f *fixture) join(teamID string, personID uuid.UUID) {
 // regras de quem pode ser responsável.
 func (f *fixture) task(projectID string, assignee uuid.UUID, deadline *time.Time) uuid.UUID {
 	f.t.Helper()
-	q := testClient.Task.Create().SetProjectID(uuid.MustParse(projectID)).SetName("Tarefa").SetAssigneeID(assignee)
+	q := testClient.Task.Create().SetProjectID(uuid.MustParse(projectID)).SetName("Tarefa").AddAssigneeIDs(assignee)
 	if deadline != nil {
 		q = q.SetDeadline(*deadline)
 	}

@@ -69,7 +69,8 @@ const instructions = `Working Time Tracker: time tracking per task. You act as t
   project by its GitHub or GitLab issue or Trello card (URL or owner/repo#12), or by words in its name or description.
 - Task status: backlog, in_progress, awaiting_closure, closed. Priority: urgent, high, medium, low, none.
 - A person has at most one open work session (the clock) per project, and sessions in different projects run at the
-  same time. clock_in opens one on a task, and the task becomes in_progress and, if it had no assignee, the person's.
+  same time. clock_in opens one on a task, and the task becomes in_progress and, if it had no assignee, the person's. A task can
+  have several assignees, and each one clocks their own hours; the clock only runs on the person's own tasks or a free one.
 - To work on another task of a project whose session is open, use add_task_to_session (switch=true stops the other
   tasks of that session). A task of another project gets its own session with clock_in.
 - A session keeps at least one running task: to stop everything in a project, use clock_out (with project_id when

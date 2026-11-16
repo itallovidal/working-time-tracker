@@ -110,7 +110,7 @@ func (d *denv) flush() { d.syncer.Flush(context.Background()) }
 // posted cria uma tarefa e a posta nas duas plataformas.
 func (d *denv) posted(name string) *task.Task {
 	d.t.Helper()
-	tk, err := d.taskSvc.CreateAs("", d.project, name, "descrição", "", nil, task.Attrs{})
+	tk, err := d.taskSvc.CreateAs(task.Actor{}, d.project, name, "descrição", "", nil, task.Attrs{})
 	must(d.t, err)
 	for _, it := range []*integration.Integration{d.ghIt, d.trIt} {
 		_, err := d.syncer.Publish(context.Background(), tk.ID, it.ID)
@@ -355,7 +355,7 @@ func TestDual_DeletingTheTaskDiscardsBothItems(t *testing.T) {
 // A tarefa com um vínculo só nunca entra na fila entre plataformas: não há para onde levar.
 func TestDual_ASingleLinkNeverQueues(t *testing.T) {
 	d := newDualEnv(t)
-	tk, err := d.taskSvc.CreateAs("", d.project, "Só no GitHub", "", "", nil, task.Attrs{})
+	tk, err := d.taskSvc.CreateAs(task.Actor{}, d.project, "Só no GitHub", "", "", nil, task.Attrs{})
 	must(t, err)
 	_, err = d.syncer.Publish(context.Background(), tk.ID, d.ghIt.ID)
 	must(t, err)
@@ -374,7 +374,7 @@ func TestDual_ASingleLinkNeverQueues(t *testing.T) {
 func TestDual_ClosedIssueIsNotAdopted(t *testing.T) {
 	d := newDualEnv(t)
 	n := d.gh.AddIssue(repo, testutil.GitHubIssue{Title: "Antiga", State: "closed"})
-	tk, err := d.taskSvc.CreateAs("", d.project, "Minha", "", "", nil, task.Attrs{})
+	tk, err := d.taskSvc.CreateAs(task.Actor{}, d.project, "Minha", "", "", nil, task.Attrs{})
 	must(t, err)
 	_, err = d.taskSvc.LinkExternalItem(tk.ID.String(), d.ghIt.ID.String(), strconv.Itoa(n), "https://github.com/owner/repo/issues/"+strconv.Itoa(n))
 	must(t, err)
@@ -397,7 +397,7 @@ func TestDual_ClosedIssueIsNotAdopted(t *testing.T) {
 // Duas postagens ao mesmo tempo na mesma integração criam um item só: a segunda vê o vínculo da primeira.
 func TestDual_ConcurrentPostsMakeOneItem(t *testing.T) {
 	d := newDualEnv(t)
-	tk, err := d.taskSvc.CreateAs("", d.project, "Duas vezes", "", "", nil, task.Attrs{})
+	tk, err := d.taskSvc.CreateAs(task.Actor{}, d.project, "Duas vezes", "", "", nil, task.Attrs{})
 	must(t, err)
 
 	errs := make([]error, 2)
@@ -453,7 +453,7 @@ func TestDual_AutoPostIsPerIntegration(t *testing.T) {
 	d := newDualEnv(t)
 	d.tasks.SetCreateHook(d.syncer.NotifyCreated)
 
-	tk, err := d.taskSvc.CreateAs("", d.project, "Nos dois", "", "", nil, task.Attrs{})
+	tk, err := d.taskSvc.CreateAs(task.Actor{}, d.project, "Nos dois", "", "", nil, task.Attrs{})
 	must(t, err)
 	_, err = d.syncer.Publish(context.Background(), tk.ID, d.ghIt.ID)
 	must(t, err)
@@ -468,7 +468,7 @@ func TestDual_AutoPostIsPerIntegration(t *testing.T) {
 
 	// Um item ligado à mão no Trello: a postagem sozinha não cria um segundo.
 	d.tr.AddCard(testutil.TrelloCard{ShortLink: "Manual01", Name: "Do Trello"})
-	manual, err := d.taskSvc.CreateAs("", d.project, "Já tem cartão", "", "", nil, task.Attrs{})
+	manual, err := d.taskSvc.CreateAs(task.Actor{}, d.project, "Já tem cartão", "", "", nil, task.Attrs{})
 	must(t, err)
 	_, err = d.taskSvc.LinkExternalItem(manual.ID.String(), d.trIt.ID.String(), "Manual01", "https://trello.com/c/Manual01")
 	must(t, err)
@@ -485,7 +485,7 @@ func TestDual_UntickedIntegrationIsSkipped(t *testing.T) {
 	d := newDualEnv(t)
 	d.tasks.SetCreateHook(d.syncer.NotifyCreated)
 
-	only, err := d.taskSvc.CreateAs("", d.project, "Só no GitHub", "", "", nil, task.Attrs{SkipPublish: []uuid.UUID{d.trIt.ID}})
+	only, err := d.taskSvc.CreateAs(task.Actor{}, d.project, "Só no GitHub", "", "", nil, task.Attrs{SkipPublish: []uuid.UUID{d.trIt.ID}})
 	must(t, err)
 	_, err = d.syncer.Publish(context.Background(), only.ID, d.ghIt.ID)
 	must(t, err)
@@ -497,7 +497,7 @@ func TestDual_UntickedIntegrationIsSkipped(t *testing.T) {
 		t.Errorf("%d cards, want none for a task made with the Trello unticked", n)
 	}
 
-	unknown, err := d.taskSvc.CreateAs("", d.project, "Id desconhecido", "", "", nil, task.Attrs{SkipPublish: []uuid.UUID{uuid.New()}})
+	unknown, err := d.taskSvc.CreateAs(task.Actor{}, d.project, "Id desconhecido", "", "", nil, task.Attrs{SkipPublish: []uuid.UUID{uuid.New()}})
 	must(t, err)
 	d.flush()
 	if got := d.reload(unknown); got.LinkFor(d.trIt.ID.String()) == nil {
@@ -576,7 +576,7 @@ func TestDual_EditingTheTaskPushesToBothPlatforms(t *testing.T) {
 	d := newDualEnv(t)
 	tk := d.posted("Tarefa nos dois")
 
-	if _, err := d.taskSvc.UpdateAs("", tk.ID.String(), "Tarefa nos dois", "descrição nova", nil, nil, task.Attrs{}); err != nil {
+	if _, err := d.taskSvc.UpdateAs(task.Actor{}, tk.ID.String(), "Tarefa nos dois", "descrição nova", nil, nil, task.Attrs{}); err != nil {
 		t.Fatalf("edit: %v", err)
 	}
 	d.flush()
@@ -602,7 +602,7 @@ func TestDual_AnEditWaitsOutABackedOffIntegration(t *testing.T) {
 
 	// O GitHub recusa o token no empurrão: o Trello recebe a edição, o GitHub entra em espera.
 	d.gh.Fail("PATCH", "/repos/"+repo+"/issues", http.StatusUnauthorized, 1)
-	if _, err := d.taskSvc.UpdateAs("", tk.ID.String(), "Com o token recusado", "primeira edição", nil, nil, task.Attrs{}); err != nil {
+	if _, err := d.taskSvc.UpdateAs(task.Actor{}, tk.ID.String(), "Com o token recusado", "primeira edição", nil, nil, task.Attrs{}); err != nil {
 		t.Fatalf("edit: %v", err)
 	}
 	d.flush()
@@ -614,7 +614,7 @@ func TestDual_AnEditWaitsOutABackedOffIntegration(t *testing.T) {
 	}
 
 	// Uma segunda edição com o GitHub em espera: nem tenta, e também não se perde.
-	if _, err := d.taskSvc.UpdateAs("", tk.ID.String(), "Com o token recusado", "segunda edição", nil, nil, task.Attrs{}); err != nil {
+	if _, err := d.taskSvc.UpdateAs(task.Actor{}, tk.ID.String(), "Com o token recusado", "segunda edição", nil, nil, task.Attrs{}); err != nil {
 		t.Fatalf("edit: %v", err)
 	}
 	d.gh.Reset()

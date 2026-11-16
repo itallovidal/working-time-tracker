@@ -145,13 +145,13 @@ func TestGitLab_ImportsOpenIssues(t *testing.T) {
 	if tk.Name != "Corrigir login" || tk.Description != "Passos:\n1. abrir" || tk.Status != "backlog" || !eq(labelNames(tk), []string{"UX", "bug"}) {
 		t.Errorf("task = %+v, labels %v", tk, labelNames(tk))
 	}
-	if tk.AssigneeID == nil || *tk.AssigneeID != e.ana.ID {
-		t.Errorf("assignee = %v, want Ana (her email is public on GitLab)", tk.AssigneeID)
+	if !tk.HasAssignee(e.ana.ID) {
+		t.Errorf("assignee = %v, want Ana (her email is public on GitLab)", tk.AssigneeIDs())
 	}
 	if len(tk.Links) != 1 || tk.Links[0].ItemID != "1" || tk.Links[0].URL != "https://gitlab.com/group/project/-/issues/1" {
 		t.Errorf("links = %+v", tk.Links)
 	}
-	if e.taskFor(ghost).AssigneeID != nil {
+	if !e.taskFor(ghost).Free() {
 		t.Error("an assignee with no public email leaves the task available")
 	}
 	for _, n := range []int{closed, incident} {
@@ -187,8 +187,8 @@ func TestGitLab_ChangesComeIn(t *testing.T) {
 		t.Fatalf("requests = %+v", q)
 	}
 	tk := e.taskFor(one)
-	if tk.Name != "Corrigir o login" || !eq(labelNames(tk), []string{"api", "bug"}) || tk.AssigneeID == nil || *tk.AssigneeID != e.bia.ID {
-		t.Errorf("task after the GitLab edit = %q, %v, %v", tk.Name, labelNames(tk), tk.AssigneeID)
+	if tk.Name != "Corrigir o login" || !eq(labelNames(tk), []string{"api", "bug"}) || !tk.HasAssignee(e.bia.ID) {
+		t.Errorf("task after the GitLab edit = %q, %v, %v", tk.Name, labelNames(tk), tk.AssigneeIDs())
 	}
 	if e.taskFor(two).Status != "closed" {
 		t.Errorf("task of the closed issue = %q, want closed", e.taskFor(two).Status)
@@ -214,7 +214,7 @@ func TestGitLab_LocalChangesGoOut(t *testing.T) {
 	bug, _ := e.tasks.FindOrCreateLabels(uuid.MustParse(e.project), []string{"bug"})
 	ids := []string{bug[0].ID.String(), ux.ID.String()}
 	bia := e.bia.ID.String()
-	if _, err := e.taskSvc.UpdateAs(bia, tk.ID.String(), "Corrigir o login (daqui)", "texto daqui", &bia, nil, task.Attrs{LabelIDs: &ids}); err != nil {
+	if _, err := e.taskSvc.UpdateAs(task.Actor{ID: bia}, tk.ID.String(), "Corrigir o login (daqui)", "texto daqui", &bia, nil, task.Attrs{LabelIDs: &ids}); err != nil {
 		t.Fatalf("edit the task: %v", err)
 	}
 	closed := "closed"
@@ -267,7 +267,7 @@ func TestGitLab_ReadOnlyProject(t *testing.T) {
 	n := e.add(testutil.GitLabIssue{Title: "Só leitura"})
 	e.fake.SetAccess(glPath, testutil.GitLabGuest)
 	e.sync(issuesync.Full)
-	if _, err := e.taskSvc.UpdateAs("", e.taskFor(n).ID.String(), "Mudei aqui", "", nil, nil, task.Attrs{}); err != nil {
+	if _, err := e.taskSvc.UpdateAs(task.Actor{}, e.taskFor(n).ID.String(), "Mudei aqui", "", nil, nil, task.Attrs{}); err != nil {
 		t.Fatal(err)
 	}
 	e.fake.Reset()
@@ -336,7 +336,7 @@ func TestGitLab_PublishAndRemove(t *testing.T) {
 	ana := e.ana.ID.String()
 	bug, err := e.taskSvc.CreateLabel(e.project, "bug")
 	must(t, err)
-	tk, err := e.taskSvc.CreateAs("", e.project, "Nova daqui", "descrição", ana, nil, task.Attrs{LabelIDs: &[]string{bug.ID.String()}})
+	tk, err := e.taskSvc.CreateAs(task.Actor{}, e.project, "Nova daqui", "descrição", ana, nil, task.Attrs{LabelIDs: &[]string{bug.ID.String()}})
 	must(t, err)
 
 	if _, err := e.syncer.Publish(context.Background(), tk.ID, e.it.ID); err != nil {
@@ -356,7 +356,7 @@ func TestGitLab_PublishAndRemove(t *testing.T) {
 	}
 
 	e.fake.SetAccess(glPath, testutil.GitLabDeveloper)
-	other, err := e.taskSvc.CreateAs("", e.project, "Outra", "", "", nil, task.Attrs{})
+	other, err := e.taskSvc.CreateAs(task.Actor{}, e.project, "Outra", "", "", nil, task.Attrs{})
 	must(t, err)
 	if _, err := e.syncer.Publish(context.Background(), other.ID, e.it.ID); err != nil {
 		t.Fatalf("publish as developer: %v", err)
@@ -387,7 +387,7 @@ func TestDual_GitHubAndGitLab(t *testing.T) {
 	must(t, err)
 	e.tasks.SetChangeHook(e.syncer.Notify)
 
-	tk, err := e.taskSvc.CreateAs("", e.project, "Nas duas", "descrição", "", nil, task.Attrs{})
+	tk, err := e.taskSvc.CreateAs(task.Actor{}, e.project, "Nas duas", "descrição", "", nil, task.Attrs{})
 	must(t, err)
 	for _, it := range []*integration.Integration{ghIt, e.it} {
 		_, err := e.syncer.Publish(context.Background(), tk.ID, it.ID)
@@ -427,5 +427,70 @@ func TestDual_GitHubAndGitLab(t *testing.T) {
 	e.syncer.Flush(context.Background())
 	if e.fake.Writes() != 0 || gh.Writes() != 0 || e.syncer.Pending() != 0 {
 		t.Errorf("after settling: GitLab %v, GitHub %v, pending %d", e.fake.Requests(), gh.Requests(), e.syncer.Pending())
+	}
+}
+
+// Os responsáveis da issue que se ligam a gente do projeto entram todos na tarefa; tirar um aqui o tira do GitLab, e
+// o login sem ninguém daqui fica (Decisão 31).
+func TestGitLab_ManyAssignees(t *testing.T) {
+	e := newGitLabEnv(t)
+	one := e.add(testutil.GitLabIssue{Title: "Dividida", Assignees: []string{"ana-lab", "bia-lab", "ghost"}})
+	e.sync(issuesync.Full)
+	tk := e.taskFor(one)
+	if len(tk.Assignees) != 2 || !tk.HasAssignee(e.ana.ID) || !tk.HasAssignee(e.bia.ID) {
+		t.Fatalf("assignees after the import = %v, want Ana and Bia", tk.AssigneeIDs())
+	}
+
+	onlyAna := []string{e.ana.ID.String()}
+	if _, err := e.taskSvc.UpdateAttrs(tk.ID.String(), task.Attrs{Assignees: &onlyAna}); err != nil {
+		t.Fatal(err)
+	}
+	e.sync(issuesync.Full)
+	if issue, _ := e.fake.Issue(glPath, one); !eq(issue.Assignees, []string{"ana-lab", "ghost"}) {
+		t.Errorf("issue assignees = %v, want Bia gone and the ghost kept", issue.Assignees)
+	}
+	e.fake.Reset()
+	for _, mode := range []issuesync.Mode{issuesync.Full, issuesync.Full} {
+		if sum := e.sync(mode); sum.Pushed != 0 || sum.Updated != 0 || sum.Errors != 0 {
+			t.Errorf("round after the push = %+v, want nothing to do", sum)
+		}
+	}
+	if got := e.taskFor(one); len(got.Assignees) != 1 || !got.HasAssignee(e.ana.ID) {
+		t.Errorf("assignees after the rounds = %v, want only Ana", got.AssigneeIDs())
+	}
+}
+
+// No GitLab grátis a issue fica com um responsável só: a tarefa continua com os dois, o vínculo avisa, e as rodadas
+// seguintes não insistem.
+func TestGitLab_FreePlanKeepsOneAssignee(t *testing.T) {
+	e := newGitLabEnv(t)
+	e.fake.SingleAssignee()
+	one := e.add(testutil.GitLabIssue{Title: "Livre"})
+	e.sync(issuesync.Full)
+	tk := e.taskFor(one)
+
+	both := []string{e.ana.ID.String(), e.bia.ID.String()}
+	if _, err := e.taskSvc.UpdateAttrs(tk.ID.String(), task.Attrs{Assignees: &both}); err != nil {
+		t.Fatal(err)
+	}
+	e.sync(issuesync.Full)
+	if issue, _ := e.fake.Issue(glPath, one); len(issue.Assignees) != 1 {
+		t.Errorf("issue assignees = %v, want the one the free plan keeps", issue.Assignees)
+	}
+	if row := e.row(one); row.LastError != issuesync.ErrSingleAssignee.Code {
+		t.Errorf("link warning = %q, want %s", row.LastError, issuesync.ErrSingleAssignee.Code)
+	}
+
+	e.fake.Reset()
+	for _, mode := range []issuesync.Mode{issuesync.Full, issuesync.Full} {
+		if sum := e.sync(mode); sum.Pushed != 0 || sum.Updated != 0 || sum.Errors != 0 {
+			t.Errorf("round after the cut = %+v, want nothing to do", sum)
+		}
+	}
+	if n := e.fake.Count("PUT", "/api/v4/projects/group%2Fproject/issues/"); n != 0 {
+		t.Errorf("%d PUT requests after the cut, want none", n)
+	}
+	if got := e.taskFor(one); len(got.Assignees) != 2 {
+		t.Errorf("task assignees = %v, want both kept here", got.AssigneeIDs())
 	}
 }

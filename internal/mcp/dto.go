@@ -31,10 +31,11 @@ type TaskOut struct {
 	Status    string `json:"status"`
 	Priority  string `json:"priority"`
 	// Deadline é o dia do prazo (AAAA-MM-DD), ou vazio quando a tarefa não tem prazo.
-	Deadline string       `json:"deadline"`
-	Assignee *AssigneeOut `json:"assignee"`
-	Labels   []string     `json:"labels"`
-	Links    []LinkOut    `json:"links"`
+	Deadline string `json:"deadline"`
+	// Assignees são os responsáveis, por nome; vazio é a tarefa livre.
+	Assignees []AssigneeOut `json:"assignees"`
+	Labels    []string      `json:"labels"`
+	Links     []LinkOut     `json:"links"`
 	// Description é a descrição em Markdown; só a get_task a traz.
 	Description string `json:"description,omitempty"`
 	// URL é a página da tarefa no sistema, quando o endereço público está configurado.
@@ -44,7 +45,20 @@ type TaskOut struct {
 	Project *Ref `json:"project,omitempty"`
 }
 
-// AssigneeOut é o responsável pela tarefa. IsYou marca quando é a própria pessoa do token.
+// PeopleOut são as pessoas de um projeto.
+type PeopleOut struct {
+	People []PersonOut `json:"people"`
+}
+
+// PersonOut é uma pessoa do projeto. IsYou marca a própria pessoa do token.
+type PersonOut struct {
+	ID    string `json:"id"`
+	Name  string `json:"name"`
+	Email string `json:"email"`
+	IsYou bool   `json:"is_you"`
+}
+
+// AssigneeOut é um responsável pela tarefa. IsYou marca quando é a própria pessoa do token.
 type AssigneeOut struct {
 	ID    string `json:"id"`
 	Name  string `json:"name"`
@@ -92,6 +106,7 @@ func (s *server) taskOut(t *task.Task, me *auth.Identity, loc *time.Location, wi
 		Name:      t.Name,
 		Status:    t.Status,
 		Priority:  t.Priority,
+		Assignees: []AssigneeOut{},
 		Labels:    []string{},
 		Links:     []LinkOut{},
 		CreatedAt: t.CreatedAt.In(loc).Format(time.RFC3339),
@@ -99,12 +114,8 @@ func (s *server) taskOut(t *task.Task, me *auth.Identity, loc *time.Location, wi
 	if t.HasDeadline() {
 		out.Deadline = t.Deadline.In(loc).Format(time.DateOnly)
 	}
-	if t.AssigneeID != nil {
-		a := &AssigneeOut{ID: t.AssigneeID.String(), IsYou: *t.AssigneeID == me.PersonID}
-		if t.Assignee != nil {
-			a.Name = t.Assignee.Name
-		}
-		out.Assignee = a
+	for _, a := range t.Assignees {
+		out.Assignees = append(out.Assignees, AssigneeOut{ID: a.ID.String(), Name: a.Name, IsYou: a.ID == me.PersonID})
 	}
 	for _, l := range t.Labels {
 		out.Labels = append(out.Labels, l.Name)

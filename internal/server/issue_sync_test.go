@@ -114,10 +114,10 @@ func TestIssueSync_EndToEnd(t *testing.T) {
 	if login == nil || free == nil {
 		t.Fatalf("tasks = %v", byName)
 	}
-	if login["assignee_id"] != admin.id || !linkedItem(login, "1") || login["status"] != "backlog" {
+	if firstAssignee(login) != admin.id || !linkedItem(login, "1") || login["status"] != "backlog" {
 		t.Errorf("imported task = %v", login)
 	}
-	if free["assignee_id"] != nil {
+	if firstAssignee(free) != nil {
 		t.Errorf("the issue with no assignee must be an available task: %v", free)
 	}
 
@@ -456,8 +456,8 @@ func TestIssueSync_PublishTask(t *testing.T) {
 	if issue, _ = fake.Issue("owner/repo", 2); len(issue.Assignees) != 0 {
 		t.Errorf("assignees on GitHub = %v, want none", issue.Assignees)
 	}
-	if got := decode(t, do(e, "GET", "/api/tasks/"+second, "", admin.session)); got["assignee_id"] != carla.id {
-		t.Errorf("the task lost its assignee: %v", got["assignee_id"])
+	if got := decode(t, do(e, "GET", "/api/tasks/"+second, "", admin.session)); firstAssignee(got) != carla.id {
+		t.Errorf("the task lost its assignee: %v", firstAssignee(got))
 	}
 
 	// Sem permissão de escrita a issue sairia diferente da tarefa: não posta, e a tarefa fica solta.

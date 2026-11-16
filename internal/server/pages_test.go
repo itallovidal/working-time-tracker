@@ -405,11 +405,11 @@ func TestPages_ProjectTasksTab(t *testing.T) {
 		for _, want := range []string{
 			`aria-label="Buscar tarefa pelo nome"`, `aria-label="Filtrar por responsável"`, `aria-label="Filtrar por prazo"`,
 			`class="pager"`,
-			"Nova tarefa", `x-teleport="#modal-root"`, `x-show="$store.modal.name === 'task-new'"`, `id="task-name"`, `id="task-assignee"`,
+			"Nova tarefa", `x-teleport="#modal-root"`, `x-show="$store.modal.name === 'task-new'"`, `id="task-name"`, `data-field="assignee_ids"`,
 			// A página diz o que é e tem duas listas, cada uma com a sua página: as sem responsável e as que têm.
 			`x-for="key in taskLists"`, `go(key, lists[key].page + 1)`,
 			// Uma tarefa pode ficar sem responsável, e a lista mostra o que está disponível.
-			"Lista de tarefas", "Atribuir a mim", "Outra pessoa", `value="none" x-model="draft.assign"`,
+			"Lista de tarefas", "Atribuir a mim", "Escolher pessoas", `value="none" x-model="draft.assign"`,
 			// Prioridade e etiqueta: os filtros (várias de cada), a coluna e os campos do modal.
 			`role="group" aria-label="Filtrar por prioridade"`, `role="group" aria-label="Filtrar por etiqueta"`, `toggleFilter('priority', p.value)`,
 			`toggleFilter('label', l.id)`, "<th>Prioridade</th>", `id="task-priority"`, `x-model="draft.label_ids"`,
@@ -930,16 +930,16 @@ func TestPages_ProjectIntegrationsTab(t *testing.T) {
 	// parte do nome e da descrição, na outra coluna.
 	for _, want := range []string{
 		`class="task-layout"`, `class="card task-main"`, `class="card task-details"`, `class="detail-list"`, `class="task-description"`,
-		"<h2 id=\"task-details-title\">Detalhes</h2>", "<dt>Status</dt>", "<dt>Prioridade</dt>", "<dt>Responsável</dt>", "<dt>Prazo</dt>", "<dt>Etiquetas</dt>", "<dt>Criada em</dt>",
+		"<h2 id=\"task-details-title\">Detalhes</h2>", "<dt>Status</dt>", "<dt>Prioridade</dt>", ">Responsável</dt>", "<dt>Prazo</dt>", "<dt>Etiquetas</dt>", "<dt>Criada em</dt>",
 		// Prioridade e status com cor própria, no selo e nos selects do modal Editar detalhes.
 		`:class="statusClass(task && task.status)"`, `:class="priorityClass(task && task.priority)" x-text="task && WTT.fmt.priority(task.priority)"`,
 		`class="select-tone" :class="statusClass(draft.status)"`, `class="select-tone" :class="priorityClass(draft.priority)"`,
 		// Pegar a tarefa sem bater o ponto.
-		`@click="claim()"`, `x-show="task && !task.assignee_id"`, "Pegar tarefa", `x-show="errors.claim"`,
+		`@click="claim()"`, `x-show="task && task.assignees.length === 0"`, "Pegar tarefa", `x-show="errors.claim"`,
 		// Editar detalhes: o botão do cartão (à vista só "Editar", com o nome acessível completo) e um modal com o status,
 		// a prioridade, o responsável, o prazo e as etiquetas.
 		`@click="openDetails()"`, `aria-label="Editar detalhes"`, `x-show="$store.modal.name === 'task-details'"`, `@submit.prevent="saveDetails()"`,
-		`id="task-status"`, `id="task-priority"`, `for="task-priority"`, `id="task-labels-label"`, `id="task-assignee"`, `id="task-deadline"`,
+		`id="task-status"`, `id="task-priority"`, `for="task-priority"`, `id="task-labels-label"`, `data-field="assignee_ids"`, `id="task-deadline"`,
 		// Excluir é um botão à parte, fora dos modais de edição, que pede confirmação em outro modal.
 		`@click="openDelete()"`, "Excluir tarefa", `x-show="$store.modal.name === 'task-delete'"`, `@submit.prevent="remove()"`,
 	} {
@@ -964,7 +964,7 @@ func TestPages_ProjectIntegrationsTab(t *testing.T) {
 		t.Error("the task page still hides the priority badge when there is none")
 	}
 	// Cada id da página aparece uma vez só, senão o `for` dos rótulos aponta para o errado.
-	for _, id := range []string{"task-name", "task-description", "task-status", "task-priority", "task-labels-label", "task-assignee", "task-deadline"} {
+	for _, id := range []string{"task-name", "task-description", "task-status", "task-priority", "task-labels-label", "task-deadline"} {
 		if n := strings.Count(detail, `id="`+id+`"`); n != 1 {
 			t.Errorf("the task page has id=%q %d times, want once", id, n)
 		}
@@ -1008,7 +1008,7 @@ func TestPages_ProjectIntegrationsTab(t *testing.T) {
 	}
 	// Pegar a tarefa, só nas sem responsável: a lista inteira delas (com equipe) ou, na lista única do modo solo, as
 	// linhas sem dono. Associa a tarefa à pessoa sem bater o ponto.
-	for _, want := range []string{`<td class="actions" x-show="key !== &#39;taken&#39;">`, `@click="claim(t)"`, `<th class="actions" x-show="key !== &#39;taken&#39;">`, `x-show="!t.assignee_id"`, `x-show="errors.claim"`, " Pegar</button>"} {
+	for _, want := range []string{`<td class="actions" x-show="key !== &#39;taken&#39;">`, `@click="claim(t)"`, `<th class="actions" x-show="key !== &#39;taken&#39;">`, `x-show="t.assignees.length === 0"`, `x-show="errors.claim"`, " Pegar</button>"} {
 		if !strings.Contains(board, want) {
 			t.Errorf("the board does not contain %q", want)
 		}

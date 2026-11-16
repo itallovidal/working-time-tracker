@@ -77,7 +77,7 @@ func linkItem(ctx context.Context, tx *ent.Tx, taskID, integrationID uuid.UUID, 
 	return tx.IssueSync.UpdateOneID(row.ID).
 		SetTaskID(taskID).SetURL(url).SetState(issuesync.StatePending).SetSyncedAt(time.Now()).
 		SetTitle("").SetBody("").ClearLabels().ClearAssigneeLogins().
-		SetMappedLogin("").ClearMappedPersonID().ClearDeadline().SetStuckSig("").SetLastError("").
+		ClearMapped().ClearDeadline().SetStuckSig("").SetLastError("").
 		Exec(ctx)
 }
 

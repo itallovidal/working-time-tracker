@@ -12,7 +12,6 @@ import (
 	"working-time-tracker/ent"
 	entlabel "working-time-tracker/ent/label"
 	"working-time-tracker/ent/task"
-	"working-time-tracker/internal/database"
 )
 
 // O que a sincronização das issues do GitHub precisa da tarefa. As escritas daqui (ApplyRemote,
@@ -70,45 +69,41 @@ type RemotePatch struct {
 	Name        *string
 	Description *string
 	Status      *string
-	// SetAssignee diz que o responsável passa a ser AssigneeID; nulo tira o responsável.
-	SetAssignee bool
-	AssigneeID  *uuid.UUID
-	Labels      *[]Label
+	// AddAssignees e RemoveAssignees são as pessoas que entram e que saem da lista de responsáveis. Quem já está (ou
+	// já saiu) passa sem erro.
+	AddAssignees    []uuid.UUID
+	RemoveAssignees []uuid.UUID
+	Labels          *[]Label
 	// Deadline é o prazo novo; apontar para o tempo zero deixa a tarefa sem prazo.
 	Deadline *time.Time
 }
 
 // ApplyRemote grava o que veio da plataforma na tarefa, sem o gancho e sem as regras de quem edita
-// (limite da descrição, responsável do time): o que vem da issue é aceito como está.
+// (limite da descrição, responsável do time, quem pode dividir): o que vem da issue é aceito como está. Quem sai da
+// lista de responsáveis perde o ponto na tarefa, como na edição, e a lista muda com a tarefa travada (Store.write).
 func (s *Store) ApplyRemote(id uuid.UUID, p RemotePatch) error {
-	q := s.client.Task.UpdateOneID(id)
-	if p.Name != nil {
-		q = q.SetName(*p.Name)
+	var change *AssigneeChange
+	if len(p.AddAssignees) > 0 || len(p.RemoveAssignees) > 0 {
+		change = &AssigneeChange{Add: p.AddAssignees, Remove: p.RemoveAssignees}
 	}
-	if p.Description != nil {
-		q = q.SetDescription(*p.Description)
-	}
-	if p.Status != nil {
-		q = q.SetStatus(statusOf(*p.Status))
-	}
-	if p.SetAssignee {
-		if p.AssigneeID != nil {
-			q = q.SetAssigneeID(*p.AssigneeID)
-		} else {
-			q = q.ClearAssigneeID()
+	return s.write(id, change, nil, func(q *ent.TaskUpdateOne) *ent.TaskUpdateOne {
+		if p.Name != nil {
+			q = q.SetName(*p.Name)
 		}
-	}
-	if p.Labels != nil {
-		q = q.ClearLabels().AddLabelIDs(labelIDs(*p.Labels)...)
-	}
-	if p.Deadline != nil {
-		q = q.SetDeadline(*p.Deadline)
-	}
-	_, err := q.Save(context.Background())
-	if ent.IsNotFound(err) {
-		return database.ErrNotFound
-	}
-	return err
+		if p.Description != nil {
+			q = q.SetDescription(*p.Description)
+		}
+		if p.Status != nil {
+			q = q.SetStatus(statusOf(*p.Status))
+		}
+		if p.Labels != nil {
+			q = q.ClearLabels().AddLabelIDs(labelIDs(*p.Labels)...)
+		}
+		if p.Deadline != nil {
+			q = q.SetDeadline(*p.Deadline)
+		}
+		return q
+	})
 }
 
 // Imported é a tarefa que nasce de um item da plataforma. O vínculo com o item é de quem importa: ele grava a
@@ -118,7 +113,8 @@ type Imported struct {
 	Name        string
 	Description string
 	Labels      []Label
-	AssigneeID  *uuid.UUID
+	// AssigneeIDs são os responsáveis com que a tarefa nasce: os logins da issue que se ligam a alguém do projeto.
+	AssigneeIDs []uuid.UUID
 	// Deadline é o prazo da tarefa; zero é sem prazo (a issue não tem um). CreatedAt é quando o item
 	// nasceu na plataforma; zero deixa a tarefa nascer agora.
 	Deadline  time.Time
@@ -138,7 +134,7 @@ func (s *Store) CreateImported(in Imported) (*Task, error) {
 		Priority:    "none",
 		Status:      StatusBacklog,
 		Labels:      in.Labels,
-		AssigneeID:  in.AssigneeID,
+		Assignees:   people(in.AssigneeIDs),
 		Deadline:    in.Deadline,
 		CreatedAt:   in.CreatedAt,
 
@@ -148,6 +144,15 @@ func (s *Store) CreateImported(in Imported) (*Task, error) {
 		return nil, err
 	}
 	return s.GetByID(t.ID.String())
+}
+
+// people são pessoas só com o id, para gravar uma lista de responsáveis.
+func people(ids []uuid.UUID) []Person {
+	out := make([]Person, len(ids))
+	for i, id := range ids {
+		out[i] = Person{ID: id}
+	}
+	return out
 }
 
 // listByIDsChunk é quantos ids vão num IN: um repositório grande liga dezenas de milhares de tarefas.
@@ -160,7 +165,7 @@ func (s *Store) ListByIDs(ids []uuid.UUID) ([]Task, error) {
 		end := min(start+listByIDsChunk, len(ids))
 		rows, err := s.client.Task.Query().
 			Where(task.IDIn(ids[start:end]...)).
-			WithAssignee().WithIssueSyncs(withLinks).WithLabels(withLabels).
+			WithAssignees(withAssignees).WithIssueSyncs(withLinks).WithLabels(withLabels).
 			Order(ent.Asc(task.FieldCreatedAt, task.FieldID)).
 			All(context.Background())
 		if err != nil {

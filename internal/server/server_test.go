@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -73,6 +74,16 @@ func decode(t *testing.T, rec *httptest.ResponseRecorder) map[string]any {
 		t.Fatalf("decode %q: %v", rec.Body.String(), err)
 	}
 	return m
+}
+
+// firstAssignee é o id do primeiro responsável da tarefa da resposta (eles vêm por nome), ou nil na tarefa livre.
+func firstAssignee(task map[string]any) any {
+	list, _ := task["assignees"].([]any)
+	if len(list) == 0 {
+		return nil
+	}
+	p, _ := list[0].(map[string]any)
+	return p["id"]
 }
 
 func decodeList(t *testing.T, rec *httptest.ResponseRecorder) []map[string]any {
@@ -623,7 +634,8 @@ func TestWorkSessions_AmountsByRole(t *testing.T) {
 	for _, p := range []account{bia, caio} {
 		do(e, "POST", "/api/teams/"+teamID+"/members", `{"person_id":"`+p.id+`"}`, admin.session)
 	}
-	taskID := decode(t, do(e, "POST", prj+"/tasks", `{"name":"Tarefa","assignee_id":"`+bia.id+`"}`, admin.session))["id"].(string)
+	// A tarefa é das duas pessoas: cada uma bate o ponto nas suas (Decisão 31).
+	taskID := decode(t, do(e, "POST", prj+"/tasks", `{"name":"Tarefa","assignee_ids":["`+bia.id+`","`+caio.id+`"]}`, admin.session))["id"].(string)
 	setBilling(t, e, admin, prj, 10000)
 
 	clockIn := `{"task_id":"` + taskID + `"}`
@@ -701,7 +713,7 @@ func TestWorkSessions_MemberOnlySeesOwn(t *testing.T) {
 	prj := "/api/projects/" + projectID
 	allocate(t, e, admin, projectID, bia.id, 2000)
 	allocate(t, e, admin, projectID, caio.id, 2500)
-	taskID := decode(t, do(e, "POST", prj+"/tasks", `{"name":"Livre"}`, admin.session))["id"].(string)
+	taskID := decode(t, do(e, "POST", prj+"/tasks", `{"name":"Dividida","assignee_ids":["`+bia.id+`","`+caio.id+`"]}`, admin.session))["id"].(string)
 
 	for _, p := range []account{bia, caio} {
 		do(e, "POST", prj+"/work-sessions/clock-in", `{"task_id":"`+taskID+`"}`, p.session)
@@ -1174,8 +1186,8 @@ func TestCollaborators_VisibilityAndRemoval(t *testing.T) {
 		t.Errorf("rates after the removal = %v, want only Caio's", rates)
 	}
 	// A tarefa continua com ela, mas fora do projeto ela já nem o alcança: não bate mais ponto aqui.
-	if task := decode(t, do(e, "GET", "/api/tasks/"+taskID, "", admin.session)); task["assignee_id"] != member.id {
-		t.Errorf("task assignee after the removal = %v, want it unchanged", task["assignee_id"])
+	if task := decode(t, do(e, "GET", "/api/tasks/"+taskID, "", admin.session)); firstAssignee(task) != member.id {
+		t.Errorf("task assignee after the removal = %v, want it unchanged", firstAssignee(task))
 	}
 	if rec := do(e, "POST", "/api/projects/"+projectID+"/work-sessions/clock-in", `{"task_id":"`+taskID+`"}`, member.session); rec.Code != http.StatusNotFound {
 		t.Errorf("clock-in after the removal = %d, want 404", rec.Code)
@@ -1463,8 +1475,8 @@ func TestTasks_WithoutAssigneeIsClaimedByTheFirstClockIn(t *testing.T) {
 	}
 	created := decode(t, rec)
 	taskID := created["id"].(string)
-	if created["assignee_id"] != nil {
-		t.Errorf("assignee_id = %v, want null", created["assignee_id"])
+	if firstAssignee(created) != nil {
+		t.Errorf("assignee_id = %v, want null", firstAssignee(created))
 	}
 
 	free := func() int {
@@ -1485,13 +1497,13 @@ func TestTasks_WithoutAssigneeIsClaimedByTheFirstClockIn(t *testing.T) {
 		t.Errorf("unassigned after the clock in = %d, want 0", n)
 	}
 	rec = do(e, "GET", "/api/tasks/"+taskID, "", member.session)
-	if got := decode(t, rec)["assignee_id"]; got != member.id {
+	if got := firstAssignee(decode(t, rec)); got != member.id {
 		t.Errorf("assignee_id after the clock in = %v, want %s", got, member.id)
 	}
 
 	// Um PATCH com assignee_id vazio desvincula de novo.
 	rec = do(e, "PATCH", "/api/tasks/"+taskID, `{"name":"Livre","assignee_id":""}`, admin.session)
-	if rec.Code != http.StatusOK || decode(t, rec)["assignee_id"] != nil {
+	if rec.Code != http.StatusOK || firstAssignee(decode(t, rec)) != nil {
 		t.Errorf("unassign = %d %s, want 200 with a null assignee", rec.Code, rec.Body.String())
 	}
 }
@@ -1625,8 +1637,8 @@ func TestTasks_Claim(t *testing.T) {
 		t.Fatalf("claim = %d: %s", rec.Code, rec.Body.String())
 	}
 	got := decode(t, rec)
-	if got["assignee_id"] != member.id || got["status"] != "backlog" {
-		t.Errorf("after the claim: assignee %v and status %v, want the member and backlog (claiming is not starting)", got["assignee_id"], got["status"])
+	if firstAssignee(got) != member.id || got["status"] != "backlog" {
+		t.Errorf("after the claim: assignee %v and status %v, want the member and backlog (claiming is not starting)", firstAssignee(got), got["status"])
 	}
 	if rec := do(e, "POST", claim, "", member.session); rec.Code != http.StatusOK {
 		t.Errorf("claiming a task that is already yours = %d, want 200", rec.Code)
@@ -1634,8 +1646,8 @@ func TestTasks_Claim(t *testing.T) {
 	if rec := do(e, "POST", claim, "", admin.session); rec.Code != http.StatusConflict || !strings.Contains(rec.Body.String(), "task.already_assigned") {
 		t.Errorf("claiming the task of another person = %d: %s, want 409 task.already_assigned", rec.Code, rec.Body.String())
 	}
-	if after := decode(t, do(e, "GET", "/api/tasks/"+id, "", admin.session)); after["assignee_id"] != member.id {
-		t.Errorf("the refused claim moved the task to %v", after["assignee_id"])
+	if after := decode(t, do(e, "GET", "/api/tasks/"+id, "", admin.session)); firstAssignee(after) != member.id {
+		t.Errorf("the refused claim moved the task to %v", firstAssignee(after))
 	}
 
 	// Pegar não bate o ponto: a pessoa não fica com sessão, e a tarefa sai das sem responsável e passa às dela.
@@ -1672,8 +1684,8 @@ func TestTasks_UpdateAttributes(t *testing.T) {
 	attrs := "/api/tasks/" + id + "/attributes"
 	untouched := func(step string, task map[string]any) {
 		t.Helper()
-		if task["name"] != "Tarefa" || task["description"] != "Detalhes importantes" || task["assignee_id"] != member.id || task["deadline"] != created["deadline"] {
-			t.Errorf("%s changed what the update did not ask for: %v %v %v %v", step, task["name"], task["description"], task["assignee_id"], task["deadline"])
+		if task["name"] != "Tarefa" || task["description"] != "Detalhes importantes" || firstAssignee(task) != member.id || task["deadline"] != created["deadline"] {
+			t.Errorf("%s changed what the update did not ask for: %v %v %v %v", step, task["name"], task["description"], firstAssignee(task), task["deadline"])
 		}
 	}
 
@@ -1737,22 +1749,26 @@ func TestTasks_UpdateAttributes(t *testing.T) {
 		at, err := time.Parse(time.RFC3339, task["deadline"].(string))
 		return err == nil && at.Equal(newDeadline)
 	}
-	if got["assignee_id"] != nil || !deadlineIs(got) || got["name"] != "Tarefa" || got["description"] != "Detalhes importantes" {
-		t.Errorf("after unassigning and moving the deadline: assignee %v, deadline %v, name %v, description %v", got["assignee_id"], got["deadline"], got["name"], got["description"])
+	if firstAssignee(got) != nil || !deadlineIs(got) || got["name"] != "Tarefa" || got["description"] != "Detalhes importantes" {
+		t.Errorf("after unassigning and moving the deadline: assignee %v, deadline %v, name %v, description %v", firstAssignee(got), got["deadline"], got["name"], got["description"])
 	}
 	if got["status"] != "awaiting_closure" || got["priority"] != "urgent" {
 		t.Errorf("unassigning changed the status or the priority: %v %v", got["status"], got["priority"])
 	}
-	if rec := do(e, "PATCH", attrs, fmt.Sprintf(`{"assignee_id":"%s"}`, outsider.id), member.session); rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "task.assignee_not_in_team") {
-		t.Errorf("assigning someone outside the teams = %d: %s, want 400 task.assignee_not_in_team", rec.Code, rec.Body.String())
+	// Numa tarefa livre, só o admin do projeto põe outra pessoa (Decisão 31); e nem ele põe quem está fora do projeto.
+	if rec := do(e, "PATCH", attrs, fmt.Sprintf(`{"assignee_id":"%s"}`, outsider.id), member.session); rec.Code != http.StatusForbidden || !strings.Contains(rec.Body.String(), "task.share_forbidden") {
+		t.Errorf("a member choosing someone else for a free task = %d: %s, want 403 task.share_forbidden", rec.Code, rec.Body.String())
+	}
+	if rec := do(e, "PATCH", attrs, fmt.Sprintf(`{"assignee_id":"%s"}`, outsider.id), admin.session); rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "task.assignee_not_in_team") {
+		t.Errorf("assigning someone outside the project = %d: %s, want 400 task.assignee_not_in_team", rec.Code, rec.Body.String())
 	}
 	if rec := do(e, "PATCH", attrs, `{"assignee_id":"not-an-id"}`, member.session); rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "task.invalid_assignee") {
 		t.Errorf("an assignee that is not an id = %d: %s, want 400 task.invalid_assignee", rec.Code, rec.Body.String())
 	}
 	// Quem pede para si mesmo entra, e o prazo que não vem fica.
 	rec = do(e, "PATCH", attrs, fmt.Sprintf(`{"assignee_id":"%s"}`, member.id), member.session)
-	if got = decode(t, rec); rec.Code != http.StatusOK || got["assignee_id"] != member.id || !deadlineIs(got) {
-		t.Errorf("taking the task back = %d: assignee %v, deadline %v, want the member and the new deadline kept", rec.Code, got["assignee_id"], got["deadline"])
+	if got = decode(t, rec); rec.Code != http.StatusOK || firstAssignee(got) != member.id || !deadlineIs(got) {
+		t.Errorf("taking the task back = %d: assignee %v, deadline %v, want the member and the new deadline kept", rec.Code, firstAssignee(got), got["deadline"])
 	}
 }
 
@@ -2046,5 +2062,43 @@ func TestPayments_Permissions(t *testing.T) {
 	}
 	if rec := do(e, "DELETE", payouts+"/"+id, "", admin.session); rec.Code != http.StatusNotFound || !strings.Contains(rec.Body.String(), "payment.payout_not_found") {
 		t.Errorf("undo twice = %d %s, want 404 payment.payout_not_found", rec.Code, rec.Body.String())
+	}
+}
+
+// A tarefa pela API com o que entra e o que sai (add_assignee_ids, remove_assignee_ids), que é o que a tela manda:
+// quem está acrescenta, quem sai tira só a si, e a lista inteira junto com o que entra é recusada.
+func TestTasks_AssigneeDeltas(t *testing.T) {
+	e := newServer(t)
+	admin := signup(t, e, "Org", "ana@test.com")
+	bia := invite(t, e, admin, "bia@test.com", "member")
+	caio := invite(t, e, admin, "caio@test.com", "member")
+	projectID := createProject(t, e, admin, "Projeto")
+	allocate(t, e, admin, projectID, bia.id, 2000)
+	allocate(t, e, admin, projectID, caio.id, 2500)
+	taskID := decode(t, do(e, "POST", "/api/projects/"+projectID+"/tasks", `{"name":"Da Bia","assignee_ids":["`+bia.id+`"]}`, admin.session))["id"].(string)
+	attrs := "/api/tasks/" + taskID + "/attributes"
+	ids := func(rec *httptest.ResponseRecorder) []string {
+		t.Helper()
+		out := []string{}
+		for _, a := range decode(t, rec)["assignees"].([]any) {
+			out = append(out, a.(map[string]any)["id"].(string))
+		}
+		slices.Sort(out)
+		return out
+	}
+	both := []string{bia.id, caio.id}
+	slices.Sort(both)
+
+	if rec := do(e, "PATCH", attrs, `{"add_assignee_ids":["`+caio.id+`"]}`, bia.session); rec.Code != http.StatusOK || !slices.Equal(ids(rec), both) {
+		t.Fatalf("Bia adding Caio = %d %s, want both on the task", rec.Code, rec.Body.String())
+	}
+	if rec := do(e, "PATCH", attrs, `{"remove_assignee_ids":["`+caio.id+`"]}`, caio.session); rec.Code != http.StatusOK || !slices.Equal(ids(rec), []string{bia.id}) {
+		t.Fatalf("Caio leaving = %d %s, want only Bia", rec.Code, rec.Body.String())
+	}
+	if code, msg := errCode(t, e, "PATCH", attrs, `{"assignee_ids":["`+bia.id+`"],"add_assignee_ids":["`+caio.id+`"]}`, bia.session); code != http.StatusBadRequest || msg != "task.assignees_conflict" {
+		t.Errorf("whole list and delta together = %d %s, want 400 task.assignees_conflict", code, msg)
+	}
+	if rec := do(e, "PATCH", "/api/tasks/"+taskID, `{"name":"Livre","remove_assignee_ids":["`+bia.id+`"]}`, bia.session); rec.Code != http.StatusOK || len(ids(rec)) != 0 {
+		t.Errorf("Bia leaving through the full edit = %d %s, want a free task", rec.Code, rec.Body.String())
 	}
 }

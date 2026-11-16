@@ -14,6 +14,7 @@ import (
 	"working-time-tracker/internal/apperr"
 	"working-time-tracker/internal/database"
 	"working-time-tracker/internal/domain/auth"
+	"working-time-tracker/internal/domain/permission"
 	"working-time-tracker/internal/validate"
 )
 
@@ -28,13 +29,15 @@ func NewHandler(svc *Service) *Handler {
 func (h *Handler) Create(c *echo.Context) error {
 	projectID := c.Param("projectId")
 	var body struct {
-		Name        string     `json:"name"`
-		Description string     `json:"description"`
-		AssigneeID  string     `json:"assignee_id"`
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		AssigneeID  string `json:"assignee_id"`
+		// AssigneeIDs são os responsáveis; vale no lugar de assignee_id, que é o atalho de uma pessoa.
+		AssigneeIDs *[]string  `json:"assignee_ids"`
 		Deadline    *time.Time `json:"deadline"`
 		Priority    *string    `json:"priority"`
 		LabelIDs    *[]string  `json:"label_ids"`
-		// RequiredAccounts são as plataformas em que o responsável precisa ter conta (a trava).
+		// RequiredAccounts são as plataformas em que cada responsável precisa ter conta (a trava).
 		RequiredAccounts *[]string `json:"required_accounts"`
 		// SkipPublish são as integrações em que a tarefa nova não deve ser postada sozinha.
 		SkipPublish []string `json:"skip_publish"`
@@ -46,10 +49,11 @@ func (h *Handler) Create(c *echo.Context) error {
 	if err != nil {
 		return apperr.Respond(c, 400, err)
 	}
-	task, err := h.svc.CreateAs(selfID(c), projectID, body.Name, body.Description, body.AssigneeID, body.Deadline,
-		Attrs{Priority: body.Priority, LabelIDs: body.LabelIDs, RequiredAccounts: body.RequiredAccounts, SkipPublish: skip})
+	task, err := h.svc.CreateAs(actorOf(c), projectID, body.Name, body.Description, body.AssigneeID, body.Deadline,
+		Attrs{Priority: body.Priority, LabelIDs: body.LabelIDs, RequiredAccounts: body.RequiredAccounts,
+			Assignees: body.AssigneeIDs, SkipPublish: skip})
 	if err != nil {
-		return apperr.Respond(c, 400, err)
+		return respondAssignee(c, err)
 	}
 	return c.JSON(201, task)
 }
@@ -193,29 +197,34 @@ func (h *Handler) Update(c *echo.Context) error {
 	// A descrição omitida mantém a que a tarefa tem (só "" a esvazia), e o prazo distingue ausente (mantém) de
 	// null (apaga).
 	var body struct {
-		Name        string                       `json:"name"`
-		Description *string                      `json:"description"`
-		AssigneeID  *string                      `json:"assignee_id"`
-		Deadline    validate.Optional[time.Time] `json:"deadline"`
-		Priority    *string                      `json:"priority"`
-		Status      *string                      `json:"status"`
-		LabelIDs    *[]string                    `json:"label_ids"`
+		Name        string    `json:"name"`
+		Description *string   `json:"description"`
+		AssigneeID  *string   `json:"assignee_id"`
+		AssigneeIDs *[]string `json:"assignee_ids"`
+		// AddAssigneeIDs e RemoveAssigneeIDs põem e tiram algumas pessoas e deixam as outras; não vão com os dois acima.
+		AddAssigneeIDs    []string                     `json:"add_assignee_ids"`
+		RemoveAssigneeIDs []string                     `json:"remove_assignee_ids"`
+		Deadline          validate.Optional[time.Time] `json:"deadline"`
+		Priority          *string                      `json:"priority"`
+		Status            *string                      `json:"status"`
+		LabelIDs          *[]string                    `json:"label_ids"`
 		// RequiredAccounts omitido mantém a trava; [] a tira.
 		RequiredAccounts *[]string `json:"required_accounts"`
 	}
 	if err := c.Bind(&body); err != nil {
 		return apperr.Respond(c, 400, apperr.BindError(err))
 	}
-	task, err := h.svc.PatchAs(selfID(c), id, body.Name, body.Description, body.AssigneeID, body.Deadline,
-		Attrs{Priority: body.Priority, Status: body.Status, LabelIDs: body.LabelIDs, RequiredAccounts: body.RequiredAccounts})
+	task, err := h.svc.PatchAs(actorOf(c), id, body.Name, body.Description, body.AssigneeID, body.Deadline,
+		Attrs{Priority: body.Priority, Status: body.Status, LabelIDs: body.LabelIDs, RequiredAccounts: body.RequiredAccounts,
+			Assignees: body.AssigneeIDs, AddAssignees: body.AddAssigneeIDs, RemoveAssignees: body.RemoveAssigneeIDs})
 	if err != nil {
-		return apperr.Respond(c, 400, err)
+		return respondAssignee(c, err)
 	}
 	return c.JSON(200, task)
 }
 
-// Claim é "pegar a tarefa": passa uma tarefa sem responsável para quem está logado, sem bater o ponto.
-// Uma tarefa que já é de outra pessoa responde 409.
+// Claim é "pegar a tarefa": passa uma tarefa livre para quem está logado, sem bater o ponto.
+// Uma tarefa que já tem responsável responde 409.
 func (h *Handler) Claim(c *echo.Context) error {
 	task, err := h.svc.Claim(selfID(c), c.Param("taskId"))
 	if err != nil {
@@ -227,26 +236,32 @@ func (h *Handler) Claim(c *echo.Context) error {
 	return c.JSON(200, task)
 }
 
-// UpdateAttrs é a edição dos detalhes da tarefa: prioridade, status, etiquetas, responsável e prazo, cada um
-// opcional. O responsável vazio tira o atual, e o prazo null o apaga (ausente o mantém).
+// UpdateAttrs é a edição dos detalhes da tarefa: prioridade, status, etiquetas, responsáveis e prazo, cada um
+// opcional. assignee_ids é a lista inteira de responsáveis ([] deixa a tarefa livre); assignee_id, o atalho de uma
+// pessoa só (vazio a deixa livre); add_assignee_ids e remove_assignee_ids põem e tiram algumas pessoas contra a lista
+// que a tarefa tem na hora, que é o que a tela manda. O prazo null o apaga (ausente o mantém).
 func (h *Handler) UpdateAttrs(c *echo.Context) error {
 	var body struct {
-		Priority   *string                      `json:"priority"`
-		Status     *string                      `json:"status"`
-		LabelIDs   *[]string                    `json:"label_ids"`
-		AssigneeID *string                      `json:"assignee_id"`
-		Deadline   validate.Optional[time.Time] `json:"deadline"`
+		Priority          *string                      `json:"priority"`
+		Status            *string                      `json:"status"`
+		LabelIDs          *[]string                    `json:"label_ids"`
+		AssigneeID        *string                      `json:"assignee_id"`
+		AssigneeIDs       *[]string                    `json:"assignee_ids"`
+		AddAssigneeIDs    []string                     `json:"add_assignee_ids"`
+		RemoveAssigneeIDs []string                     `json:"remove_assignee_ids"`
+		Deadline          validate.Optional[time.Time] `json:"deadline"`
 		// RequiredAccounts omitido mantém a trava; [] a tira.
 		RequiredAccounts *[]string `json:"required_accounts"`
 	}
 	if err := c.Bind(&body); err != nil {
 		return apperr.Respond(c, 400, apperr.BindError(err))
 	}
-	task, err := h.svc.PatchAttrsAs(selfID(c), c.Param("taskId"),
-		Attrs{Priority: body.Priority, Status: body.Status, LabelIDs: body.LabelIDs, RequiredAccounts: body.RequiredAccounts},
+	task, err := h.svc.PatchAttrsAs(actorOf(c), c.Param("taskId"),
+		Attrs{Priority: body.Priority, Status: body.Status, LabelIDs: body.LabelIDs, RequiredAccounts: body.RequiredAccounts,
+			Assignees: body.AssigneeIDs, AddAssignees: body.AddAssigneeIDs, RemoveAssignees: body.RemoveAssigneeIDs},
 		body.AssigneeID, body.Deadline)
 	if err != nil {
-		return apperr.Respond(c, 400, err)
+		return respondAssignee(c, err)
 	}
 	return c.JSON(200, task)
 }
@@ -316,6 +331,24 @@ func selfID(c *echo.Context) string {
 		return me.PersonID.String()
 	}
 	return ""
+}
+
+// actorOf é quem está logado como quem mexe nos responsáveis: a pessoa e se ela administra o projeto da tarefa
+// (collaborators.manage, que o RequireOrg da rota deixou no contexto).
+func actorOf(c *echo.Context) Actor {
+	return Actor{ID: selfID(c), Manage: auth.ProjectPermissions(c).Has(permission.CollaboratorsManage)}
+}
+
+// respondAssignee responde ao erro de criar ou editar uma tarefa: as regras de quem mexe nos responsáveis saem com o
+// status delas (403 para quem não pode, 409 para a tarefa que já tem gente); o resto é 400.
+func respondAssignee(c *echo.Context, err error) error {
+	switch {
+	case errors.Is(err, ErrShareForbidden), errors.Is(err, ErrRemoveForbidden):
+		return apperr.Respond(c, http.StatusForbidden, err)
+	case errors.Is(err, ErrAlreadyAssigned):
+		return apperr.Respond(c, http.StatusConflict, err)
+	}
+	return apperr.Respond(c, http.StatusBadRequest, err)
 }
 
 // labelFail responde ao erro de uma rota de etiqueta: um projeto ou uma etiqueta

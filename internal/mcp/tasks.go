@@ -62,20 +62,22 @@ type createTaskInput struct {
 	Deadline    string   `json:"deadline,omitempty" jsonschema:"YYYY-MM-DD. Without it, the deadline is 7 days from now."`
 	Labels      []string `json:"labels,omitempty" jsonschema:"Label names of the project (see list_labels)."`
 	AssignToMe  bool     `json:"assign_to_me,omitempty" jsonschema:"Make the person the assignee. Without it the task has no assignee (clocking in on it later makes it theirs)."`
+	Assignees   []string `json:"assignees,omitempty" jsonschema:"The assignees: me or person ids (see list_people). Only a project admin picks other people; others create the task for themselves (assign_to_me) or free. Replaces assign_to_me."`
 }
 
 type updateTaskInput struct {
-	TaskID        string    `json:"task_id" jsonschema:"The task id."`
-	Name          string    `json:"name,omitempty" jsonschema:"New name. Without it, the name stays."`
-	Description   *string   `json:"description,omitempty" jsonschema:"New description, in Markdown; an empty string clears it. Without it, it stays."`
-	Status        string    `json:"status,omitempty" jsonschema:"New status."`
-	Priority      string    `json:"priority,omitempty" jsonschema:"New priority."`
-	Deadline      string    `json:"deadline,omitempty" jsonschema:"New deadline, YYYY-MM-DD."`
-	ClearDeadline bool      `json:"clear_deadline,omitempty" jsonschema:"Remove the deadline."`
-	Labels        *[]string `json:"labels,omitempty" jsonschema:"Replaces the labels, by name; an empty list removes them all. Without it, they stay. Not with add_labels or remove_labels."`
-	AddLabels     []string  `json:"add_labels,omitempty" jsonschema:"Adds these labels, by name, and keeps the others."`
-	RemoveLabels  []string  `json:"remove_labels,omitempty" jsonschema:"Removes these labels, by name, and keeps the others."`
-	Assignee      string    `json:"assignee,omitempty" jsonschema:"me to make the person the assignee, none to leave the task without one."`
+	TaskID          string    `json:"task_id" jsonschema:"The task id."`
+	Name            string    `json:"name,omitempty" jsonschema:"New name. Without it, the name stays."`
+	Description     *string   `json:"description,omitempty" jsonschema:"New description, in Markdown; an empty string clears it. Without it, it stays."`
+	Status          string    `json:"status,omitempty" jsonschema:"New status."`
+	Priority        string    `json:"priority,omitempty" jsonschema:"New priority."`
+	Deadline        string    `json:"deadline,omitempty" jsonschema:"New deadline, YYYY-MM-DD."`
+	ClearDeadline   bool      `json:"clear_deadline,omitempty" jsonschema:"Remove the deadline."`
+	Labels          *[]string `json:"labels,omitempty" jsonschema:"Replaces the labels, by name; an empty list removes them all. Without it, they stay. Not with add_labels or remove_labels."`
+	AddLabels       []string  `json:"add_labels,omitempty" jsonschema:"Adds these labels, by name, and keeps the others."`
+	RemoveLabels    []string  `json:"remove_labels,omitempty" jsonschema:"Removes these labels, by name, and keeps the others."`
+	AddAssignees    []string  `json:"add_assignees,omitempty" jsonschema:"Adds these assignees (me or person ids) and keeps the others. On a free task, me takes it; only a project admin adds someone else to it. On a task with assignees, one of them (or a project admin) shares it with others."`
+	RemoveAssignees []string  `json:"remove_assignees,omitempty" jsonschema:"Removes these assignees (me or person ids). An assignee can always leave (me); removing someone else needs a project admin. Whoever leaves while clocked in on the task stops working on it."`
 }
 
 type createLabelInput struct {
@@ -153,6 +155,11 @@ func (s *server) addTaskTools(srv *mcp.Server) {
 		Annotations: readOnly("List labels"),
 	}, s.listLabels)
 	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "list_people",
+		Description: "The people of a project (id, name, e-mail), who can be assignees of its tasks. create_task assignees and update_task add_assignees take these ids.",
+		Annotations: readOnly("List people"),
+	}, s.listPeople)
+	mcp.AddTool(srv, &mcp.Tool{
 		Name:        "list_tasks",
 		Description: "The tasks of a project, newest first, one page at a time. Without statuses it lists only open tasks. The query looks at the name only; to search every project, the description or by issue, use find_tasks.",
 		InputSchema: schemaFor[listTasksInput](map[string][]string{
@@ -179,15 +186,15 @@ func (s *server) addTaskTools(srv *mcp.Server) {
 	}, s.createTask)
 	mcp.AddTool(srv, &mcp.Tool{
 		Name:        "update_task",
-		Description: "Change a task: name, description, status, priority, deadline, labels or assignee (me or none). Only what is sent changes. add_labels and remove_labels change some labels; labels replaces them all. A synced task also changes on GitHub, GitLab or Trello.",
+		Description: "Change a task: name, description, status, priority, deadline, labels or assignees. Only what is sent changes. add_labels and remove_labels change some labels; labels replaces them all. add_assignees and remove_assignees change the assignees (a task can have several). A synced task also changes on GitHub, GitLab or Trello.",
 		InputSchema: schemaFor[updateTaskInput](map[string][]string{
-			"status": task.Statuses, "priority": task.Priorities, "assignee": {"me", "none"},
+			"status": task.Statuses, "priority": task.Priorities,
 		}),
 		Annotations: write("Update task", true),
 	}, s.updateTask)
 	mcp.AddTool(srv, &mcp.Tool{
 		Name:        "claim_task",
-		Description: "Take a task without assignee for the person, without clocking in. Fails if someone else already has it.",
+		Description: "Take a free task (no assignee) for the person, without clocking in. Fails if it already has assignees: one of them, or a project admin, adds the person with update_task add_assignees.",
 		Annotations: write("Claim task", true),
 	}, s.claimTask)
 	mcp.AddTool(srv, &mcp.Tool{
@@ -225,6 +232,25 @@ func (s *server) listLabels(_ context.Context, req *mcp.CallToolRequest, in proj
 	out := LabelsOut{Labels: []string{}}
 	for _, l := range labels {
 		out.Labels = append(out.Labels, l.Name)
+	}
+	return nil, out, nil
+}
+
+func (s *server) listPeople(_ context.Context, req *mcp.CallToolRequest, in projectInput) (*mcp.CallToolResult, PeopleOut, error) {
+	id, err := me(req)
+	if err != nil {
+		return nil, PeopleOut{}, s.fail(err)
+	}
+	if err := s.reachProject(id, in.ProjectID); err != nil {
+		return nil, PeopleOut{}, err
+	}
+	people, err := s.Tasks.People(in.ProjectID)
+	if err != nil {
+		return nil, PeopleOut{}, s.fail(err)
+	}
+	out := PeopleOut{People: []PersonOut{}}
+	for _, p := range people {
+		out.People = append(out.People, PersonOut{ID: p.ID.String(), Name: p.Name, Email: p.Email, IsYou: p.ID == id.PersonID})
 	}
 	return nil, out, nil
 }
@@ -352,7 +378,18 @@ func (s *server) createTask(_ context.Context, req *mcp.CallToolRequest, in crea
 	if in.AssignToMe {
 		assignee = id.PersonID.String()
 	}
-	t, err := s.Tasks.CreateAs(id.PersonID.String(), in.ProjectID, in.Name, in.Description, assignee, deadline, attrs)
+	if len(in.Assignees) > 0 {
+		ids, err := personIDs(id, in.Assignees)
+		if err != nil {
+			return nil, TaskOut{}, s.fail(err)
+		}
+		attrs.Assignees = &ids
+	}
+	actor, err := s.actorFor(id, in.ProjectID)
+	if err != nil {
+		return nil, TaskOut{}, s.fail(err)
+	}
+	t, err := s.Tasks.CreateAs(actor, in.ProjectID, in.Name, in.Description, assignee, deadline, attrs)
 	if err != nil {
 		return nil, TaskOut{}, s.fail(err)
 	}
@@ -385,19 +422,14 @@ func (s *server) updateTask(_ context.Context, req *mcp.CallToolRequest, in upda
 		}
 		deadline = validate.Optional[time.Time]{Set: true, Value: t}
 	}
-	var assignee *string
-	switch in.Assignee {
-	case "":
-	case "me":
-		self := id.PersonID.String()
-		assignee = &self
-	case "none":
-		none := ""
-		assignee = &none
-	default:
-		return nil, TaskOut{}, s.fail(ErrInvalidAssignee)
-	}
 	attrs := task.Attrs{}
+	// O que entra e o que sai vão como estão: o serviço os aplica à lista que a tarefa tem na hora de gravar.
+	if attrs.AddAssignees, err = personIDs(id, in.AddAssignees); err != nil {
+		return nil, TaskOut{}, s.fail(err)
+	}
+	if attrs.RemoveAssignees, err = personIDs(id, in.RemoveAssignees); err != nil {
+		return nil, TaskOut{}, s.fail(err)
+	}
 	if in.Status != "" {
 		attrs.Status = &in.Status
 	}
@@ -421,7 +453,11 @@ func (s *server) updateTask(_ context.Context, req *mcp.CallToolRequest, in upda
 		}
 		attrs.LabelIDs = &ids
 	}
-	t, err := s.Tasks.PatchAs(id.PersonID.String(), current.ID.String(), name, in.Description, assignee, deadline, attrs)
+	actor, err := s.actorFor(id, current.ProjectID.String())
+	if err != nil {
+		return nil, TaskOut{}, s.fail(err)
+	}
+	t, err := s.Tasks.PatchAs(actor, current.ID.String(), name, in.Description, nil, deadline, attrs)
 	if err != nil {
 		return nil, TaskOut{}, s.fail(err)
 	}
@@ -531,6 +567,39 @@ func (s *server) createLabel(_ context.Context, req *mcp.CallToolRequest, in cre
 		return nil, LabelOut{}, s.fail(err)
 	}
 	return nil, LabelOut{Name: l.Name, Created: true}, nil
+}
+
+// actorFor é a pessoa do token como quem mexe nos responsáveis, com o que pode no projeto: administrar o projeto
+// (collaborators.manage) deixa pôr e tirar qualquer pessoa.
+func (s *server) actorFor(id *auth.Identity, projectID string) (task.Actor, error) {
+	pid, err := uuid.Parse(projectID)
+	if err != nil {
+		return task.Actor{}, project.ErrNotFound
+	}
+	set, err := s.Resolver.ProjectSet(id, pid)
+	if err != nil {
+		return task.Actor{}, err
+	}
+	return task.Actor{ID: id.PersonID.String(), Manage: set.Has(permission.CollaboratorsManage)}, nil
+}
+
+// personIDs traduz a lista de pessoas do MCP ("me" ou ids) para ids. Um valor que não é nem um nem outro é
+// ErrInvalidAssignee.
+func personIDs(id *auth.Identity, list []string) ([]string, error) {
+	out := make([]string, 0, len(list))
+	for _, v := range list {
+		v = strings.TrimSpace(v)
+		switch {
+		case strings.EqualFold(v, "me"):
+			out = append(out, id.PersonID.String())
+		default:
+			if _, err := uuid.Parse(v); err != nil {
+				return nil, ErrInvalidAssignee
+			}
+			out = append(out, v)
+		}
+	}
+	return out, nil
 }
 
 // changedLabels parte das etiquetas da tarefa, põe as de add e tira as de remove, pelo nome. Tirar uma que a tarefa

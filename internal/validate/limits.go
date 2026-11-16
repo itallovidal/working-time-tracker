@@ -54,6 +54,8 @@ const (
 	// MinRateCents é o piso de um valor por hora (custo e valor cobrado): 10,00, em centavos. Zero não vale; só o
 	// dono entra num projeto com custo 0.
 	MinRateCents = 1000
+	// MaxTaskAssignees é quantos responsáveis uma tarefa tem no máximo: o mesmo teto do GitHub numa issue.
+	MaxTaskAssignees = 10
 )
 
 // Limits são os tamanhos que a tela precisa, por nome, em window.BOOT.limits e na função de template limit.
@@ -66,6 +68,6 @@ func Limits() map[string]int {
 		"task_description": MaxTaskDescription, "search": MaxSearch, "repo": MaxRepo, "phone": MaxPhone,
 		"phone_min": MinPhone, "phone_min_digits": MinPhoneDigits, "tax_id": MaxTaxID, "max_cents": MaxCents,
 		"min_rate_cents": MinRateCents,
-		"invoice_number": MaxInvoiceNumber, "note": MaxNote,
+		"invoice_number": MaxInvoiceNumber, "note": MaxNote, "task_assignees": MaxTaskAssignees,
 	}
 }

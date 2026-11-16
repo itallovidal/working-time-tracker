@@ -80,20 +80,6 @@ func (_c *TaskCreate) SetNillableStatus(v *task.Status) *TaskCreate {
 	return _c
 }
 
-// SetAssigneeID sets the "assignee_id" field.
-func (_c *TaskCreate) SetAssigneeID(v uuid.UUID) *TaskCreate {
-	_c.mutation.SetAssigneeID(v)
-	return _c
-}
-
-// SetNillableAssigneeID sets the "assignee_id" field if the given value is not nil.
-func (_c *TaskCreate) SetNillableAssigneeID(v *uuid.UUID) *TaskCreate {
-	if v != nil {
-		_c.SetAssigneeID(*v)
-	}
-	return _c
-}
-
 // SetDeadline sets the "deadline" field.
 func (_c *TaskCreate) SetDeadline(v time.Time) *TaskCreate {
 	_c.mutation.SetDeadline(v)
@@ -147,9 +133,19 @@ func (_c *TaskCreate) SetProject(v *Project) *TaskCreate {
 	return _c.SetProjectID(v.ID)
 }
 
-// SetAssignee sets the "assignee" edge to the Person entity.
-func (_c *TaskCreate) SetAssignee(v *Person) *TaskCreate {
-	return _c.SetAssigneeID(v.ID)
+// AddAssigneeIDs adds the "assignees" edge to the Person entity by IDs.
+func (_c *TaskCreate) AddAssigneeIDs(ids ...uuid.UUID) *TaskCreate {
+	_c.mutation.AddAssigneeIDs(ids...)
+	return _c
+}
+
+// AddAssignees adds the "assignees" edges to the Person entity.
+func (_c *TaskCreate) AddAssignees(v ...*Person) *TaskCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddAssigneeIDs(ids...)
 }
 
 // AddSessionLinkIDs adds the "session_links" edge to the WorkSessionTask entity by IDs.
@@ -360,12 +356,12 @@ func (_c *TaskCreate) createSpec() (*Task, *sqlgraph.CreateSpec) {
 		_node.ProjectID = nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := _c.mutation.AssigneeIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.AssigneesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   task.AssigneeTable,
-			Columns: []string{task.AssigneeColumn},
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   task.AssigneesTable,
+			Columns: task.AssigneesPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(person.FieldID, field.TypeUUID),
@@ -374,7 +370,6 @@ func (_c *TaskCreate) createSpec() (*Task, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.AssigneeID = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := _c.mutation.SessionLinksIDs(); len(nodes) > 0 {

@@ -31,7 +31,7 @@ type TaskQuery struct {
 	inters           []Interceptor
 	predicates       []predicate.Task
 	withProject      *ProjectQuery
-	withAssignee     *PersonQuery
+	withAssignees    *PersonQuery
 	withSessionLinks *WorkSessionTaskQuery
 	withLabels       *LabelQuery
 	withIssueSyncs   *IssueSyncQuery
@@ -94,8 +94,8 @@ func (_q *TaskQuery) QueryProject() *ProjectQuery {
 	return query
 }
 
-// QueryAssignee chains the current query on the "assignee" edge.
-func (_q *TaskQuery) QueryAssignee() *PersonQuery {
+// QueryAssignees chains the current query on the "assignees" edge.
+func (_q *TaskQuery) QueryAssignees() *PersonQuery {
 	query := (&PersonClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := _q.prepareQuery(ctx); err != nil {
@@ -108,7 +108,7 @@ func (_q *TaskQuery) QueryAssignee() *PersonQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(task.Table, task.FieldID, selector),
 			sqlgraph.To(person.Table, person.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, task.AssigneeTable, task.AssigneeColumn),
+			sqlgraph.Edge(sqlgraph.M2M, false, task.AssigneesTable, task.AssigneesPrimaryKey...),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -375,7 +375,7 @@ func (_q *TaskQuery) Clone() *TaskQuery {
 		inters:           append([]Interceptor{}, _q.inters...),
 		predicates:       append([]predicate.Task{}, _q.predicates...),
 		withProject:      _q.withProject.Clone(),
-		withAssignee:     _q.withAssignee.Clone(),
+		withAssignees:    _q.withAssignees.Clone(),
 		withSessionLinks: _q.withSessionLinks.Clone(),
 		withLabels:       _q.withLabels.Clone(),
 		withIssueSyncs:   _q.withIssueSyncs.Clone(),
@@ -396,14 +396,14 @@ func (_q *TaskQuery) WithProject(opts ...func(*ProjectQuery)) *TaskQuery {
 	return _q
 }
 
-// WithAssignee tells the query-builder to eager-load the nodes that are connected to
-// the "assignee" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *TaskQuery) WithAssignee(opts ...func(*PersonQuery)) *TaskQuery {
+// WithAssignees tells the query-builder to eager-load the nodes that are connected to
+// the "assignees" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *TaskQuery) WithAssignees(opts ...func(*PersonQuery)) *TaskQuery {
 	query := (&PersonClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	_q.withAssignee = query
+	_q.withAssignees = query
 	return _q
 }
 
@@ -520,7 +520,7 @@ func (_q *TaskQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Task, e
 		_spec       = _q.querySpec()
 		loadedTypes = [5]bool{
 			_q.withProject != nil,
-			_q.withAssignee != nil,
+			_q.withAssignees != nil,
 			_q.withSessionLinks != nil,
 			_q.withLabels != nil,
 			_q.withIssueSyncs != nil,
@@ -553,9 +553,10 @@ func (_q *TaskQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Task, e
 			return nil, err
 		}
 	}
-	if query := _q.withAssignee; query != nil {
-		if err := _q.loadAssignee(ctx, query, nodes, nil,
-			func(n *Task, e *Person) { n.Edges.Assignee = e }); err != nil {
+	if query := _q.withAssignees; query != nil {
+		if err := _q.loadAssignees(ctx, query, nodes,
+			func(n *Task) { n.Edges.Assignees = []*Person{} },
+			func(n *Task, e *Person) { n.Edges.Assignees = append(n.Edges.Assignees, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -612,34 +613,63 @@ func (_q *TaskQuery) loadProject(ctx context.Context, query *ProjectQuery, nodes
 	}
 	return nil
 }
-func (_q *TaskQuery) loadAssignee(ctx context.Context, query *PersonQuery, nodes []*Task, init func(*Task), assign func(*Task, *Person)) error {
-	ids := make([]uuid.UUID, 0, len(nodes))
-	nodeids := make(map[uuid.UUID][]*Task)
-	for i := range nodes {
-		if nodes[i].AssigneeID == nil {
-			continue
+func (_q *TaskQuery) loadAssignees(ctx context.Context, query *PersonQuery, nodes []*Task, init func(*Task), assign func(*Task, *Person)) error {
+	edgeIDs := make([]driver.Value, len(nodes))
+	byID := make(map[uuid.UUID]*Task)
+	nids := make(map[uuid.UUID]map[*Task]struct{})
+	for i, node := range nodes {
+		edgeIDs[i] = node.ID
+		byID[node.ID] = node
+		if init != nil {
+			init(node)
 		}
-		fk := *nodes[i].AssigneeID
-		if _, ok := nodeids[fk]; !ok {
-			ids = append(ids, fk)
-		}
-		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
-	if len(ids) == 0 {
-		return nil
+	query.Where(func(s *sql.Selector) {
+		joinT := sql.Table(task.AssigneesTable)
+		s.Join(joinT).On(s.C(person.FieldID), joinT.C(task.AssigneesPrimaryKey[1]))
+		s.Where(sql.InValues(joinT.C(task.AssigneesPrimaryKey[0]), edgeIDs...))
+		columns := s.SelectedColumns()
+		s.Select(joinT.C(task.AssigneesPrimaryKey[0]))
+		s.AppendSelect(columns...)
+		s.SetDistinct(false)
+	})
+	if err := query.prepareQuery(ctx); err != nil {
+		return err
 	}
-	query.Where(person.IDIn(ids...))
-	neighbors, err := query.All(ctx)
+	qr := QuerierFunc(func(ctx context.Context, q Query) (Value, error) {
+		return query.sqlAll(ctx, func(_ context.Context, spec *sqlgraph.QuerySpec) {
+			assign := spec.Assign
+			values := spec.ScanValues
+			spec.ScanValues = func(columns []string) ([]any, error) {
+				values, err := values(columns[1:])
+				if err != nil {
+					return nil, err
+				}
+				return append([]any{new(uuid.UUID)}, values...), nil
+			}
+			spec.Assign = func(columns []string, values []any) error {
+				outValue := *values[0].(*uuid.UUID)
+				inValue := *values[1].(*uuid.UUID)
+				if nids[inValue] == nil {
+					nids[inValue] = map[*Task]struct{}{byID[outValue]: {}}
+					return assign(columns[1:], values[1:])
+				}
+				nids[inValue][byID[outValue]] = struct{}{}
+				return nil
+			}
+		})
+	})
+	neighbors, err := withInterceptors[[]*Person](ctx, query, qr, query.inters)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		nodes, ok := nodeids[n.ID]
+		nodes, ok := nids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "assignee_id" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected "assignees" node returned %v`, n.ID)
 		}
-		for i := range nodes {
-			assign(nodes[i], n)
+		for kn := range nodes {
+			assign(kn, n)
 		}
 	}
 	return nil
@@ -799,9 +829,6 @@ func (_q *TaskQuery) querySpec() *sqlgraph.QuerySpec {
 		}
 		if _q.withProject != nil {
 			_spec.Node.AddColumnOnce(task.FieldProjectID)
-		}
-		if _q.withAssignee != nil {
-			_spec.Node.AddColumnOnce(task.FieldAssigneeID)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {

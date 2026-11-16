@@ -2376,15 +2376,15 @@ func (c *PersonClient) QueryOrganization(_m *Person) *OrganizationQuery {
 	return query
 }
 
-// QueryTasks queries the tasks edge of a Person.
-func (c *PersonClient) QueryTasks(_m *Person) *TaskQuery {
+// QueryAssignedTasks queries the assigned_tasks edge of a Person.
+func (c *PersonClient) QueryAssignedTasks(_m *Person) *TaskQuery {
 	query := (&TaskClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := _m.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(person.Table, person.FieldID, id),
 			sqlgraph.To(task.Table, task.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, person.TasksTable, person.TasksColumn),
+			sqlgraph.Edge(sqlgraph.M2M, true, person.AssignedTasksTable, person.AssignedTasksPrimaryKey...),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -3441,15 +3441,15 @@ func (c *TaskClient) QueryProject(_m *Task) *ProjectQuery {
 	return query
 }
 
-// QueryAssignee queries the assignee edge of a Task.
-func (c *TaskClient) QueryAssignee(_m *Task) *PersonQuery {
+// QueryAssignees queries the assignees edge of a Task.
+func (c *TaskClient) QueryAssignees(_m *Task) *PersonQuery {
 	query := (&PersonClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := _m.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(task.Table, task.FieldID, id),
 			sqlgraph.To(person.Table, person.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, task.AssigneeTable, task.AssigneeColumn),
+			sqlgraph.Edge(sqlgraph.M2M, false, task.AssigneesTable, task.AssigneesPrimaryKey...),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil

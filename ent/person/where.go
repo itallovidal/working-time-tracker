@@ -809,21 +809,21 @@ func HasOrganizationWith(preds ...predicate.Organization) predicate.Person {
 	})
 }
 
-// HasTasks applies the HasEdge predicate on the "tasks" edge.
-func HasTasks() predicate.Person {
+// HasAssignedTasks applies the HasEdge predicate on the "assigned_tasks" edge.
+func HasAssignedTasks() predicate.Person {
 	return predicate.Person(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, TasksTable, TasksColumn),
+			sqlgraph.Edge(sqlgraph.M2M, true, AssignedTasksTable, AssignedTasksPrimaryKey...),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasTasksWith applies the HasEdge predicate on the "tasks" edge with a given conditions (other predicates).
-func HasTasksWith(preds ...predicate.Task) predicate.Person {
+// HasAssignedTasksWith applies the HasEdge predicate on the "assigned_tasks" edge with a given conditions (other predicates).
+func HasAssignedTasksWith(preds ...predicate.Task) predicate.Person {
 	return predicate.Person(func(s *sql.Selector) {
-		step := newTasksStep()
+		step := newAssignedTasksStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

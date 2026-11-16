@@ -39,10 +39,8 @@ type IssueSync struct {
 	Labels []string `json:"labels,omitempty"`
 	// AssigneeLogins holds the value of the "assignee_logins" field.
 	AssigneeLogins []string `json:"assignee_logins,omitempty"`
-	// MappedLogin holds the value of the "mapped_login" field.
-	MappedLogin string `json:"mapped_login,omitempty"`
-	// MappedPersonID holds the value of the "mapped_person_id" field.
-	MappedPersonID *uuid.UUID `json:"mapped_person_id,omitempty"`
+	// Mapped holds the value of the "mapped" field.
+	Mapped map[string]string `json:"mapped,omitempty"`
 	// Deadline holds the value of the "deadline" field.
 	Deadline *time.Time `json:"deadline,omitempty"`
 	// StuckSig holds the value of the "stuck_sig" field.
@@ -97,11 +95,11 @@ func (*IssueSync) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case issuesync.FieldTaskID, issuesync.FieldMappedPersonID:
+		case issuesync.FieldTaskID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case issuesync.FieldLabels, issuesync.FieldAssigneeLogins:
+		case issuesync.FieldLabels, issuesync.FieldAssigneeLogins, issuesync.FieldMapped:
 			values[i] = new([]byte)
-		case issuesync.FieldItemID, issuesync.FieldURL, issuesync.FieldState, issuesync.FieldTitle, issuesync.FieldBody, issuesync.FieldMappedLogin, issuesync.FieldStuckSig, issuesync.FieldLastError:
+		case issuesync.FieldItemID, issuesync.FieldURL, issuesync.FieldState, issuesync.FieldTitle, issuesync.FieldBody, issuesync.FieldStuckSig, issuesync.FieldLastError:
 			values[i] = new(sql.NullString)
 		case issuesync.FieldDeadline, issuesync.FieldSyncedAt, issuesync.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
@@ -187,18 +185,13 @@ func (_m *IssueSync) assignValues(columns []string, values []any) error {
 					return fmt.Errorf("unmarshal field assignee_logins: %w", err)
 				}
 			}
-		case issuesync.FieldMappedLogin:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field mapped_login", values[i])
-			} else if value.Valid {
-				_m.MappedLogin = value.String
-			}
-		case issuesync.FieldMappedPersonID:
-			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field mapped_person_id", values[i])
-			} else if value.Valid {
-				_m.MappedPersonID = new(uuid.UUID)
-				*_m.MappedPersonID = *value.S.(*uuid.UUID)
+		case issuesync.FieldMapped:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field mapped", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.Mapped); err != nil {
+					return fmt.Errorf("unmarshal field mapped: %w", err)
+				}
 			}
 		case issuesync.FieldDeadline:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -306,13 +299,8 @@ func (_m *IssueSync) String() string {
 	builder.WriteString("assignee_logins=")
 	builder.WriteString(fmt.Sprintf("%v", _m.AssigneeLogins))
 	builder.WriteString(", ")
-	builder.WriteString("mapped_login=")
-	builder.WriteString(_m.MappedLogin)
-	builder.WriteString(", ")
-	if v := _m.MappedPersonID; v != nil {
-		builder.WriteString("mapped_person_id=")
-		builder.WriteString(fmt.Sprintf("%v", *v))
-	}
+	builder.WriteString("mapped=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Mapped))
 	builder.WriteString(", ")
 	if v := _m.Deadline; v != nil {
 		builder.WriteString("deadline=")

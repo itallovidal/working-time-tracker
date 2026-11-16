@@ -37,8 +37,8 @@ func TestSync_AssigneeByLinkedAccount(t *testing.T) {
 	e.linkAccount(e.dan.ID, "ghost", personaccount.SourceOAuth)
 	n := e.add(testutil.GitHubIssue{Title: "Do fantasma", Assignees: []string{"ghost"}})
 	e.sync(issuesync.Full)
-	if got := e.taskFor(n); got.AssigneeID == nil || *got.AssigneeID != e.dan.ID {
-		t.Fatalf("assignee = %v, want Dan by the linked account", got.AssigneeID)
+	if got := e.taskFor(n); !got.HasAssignee(e.dan.ID) {
+		t.Fatalf("assignee = %v, want Dan by the linked account", got.AssigneeIDs())
 	}
 	if e.integration().SyncUnmatched != 0 {
 		t.Errorf("unmatched = %d", e.integration().SyncUnmatched)
@@ -49,7 +49,7 @@ func TestSync_AssigneeByLinkedAccount(t *testing.T) {
 	e.sync(issuesync.Full)
 	tk := e.taskFor(m)
 	dan := e.dan.ID.String()
-	if _, err := e.taskSvc.UpdateAs("", tk.ID.String(), tk.Name, "", &dan, nil, task.Attrs{}); err != nil {
+	if _, err := e.taskSvc.UpdateAs(task.Actor{}, tk.ID.String(), tk.Name, "", &dan, nil, task.Attrs{}); err != nil {
 		t.Fatal(err)
 	}
 	e.fake.Reset()
@@ -68,8 +68,8 @@ func TestSync_LinkedAccountOutsideTheProject(t *testing.T) {
 	e.linkAccount(e.cai.ID, "ghost", personaccount.SourceOAuth)
 	n := e.add(testutil.GitHubIssue{Title: "De fora", Assignees: []string{"ghost"}})
 	e.sync(issuesync.Full)
-	if got := e.taskFor(n); got.AssigneeID != nil {
-		t.Errorf("assignee = %v, want nobody: Cai is not in the project", got.AssigneeID)
+	if got := e.taskFor(n); !got.Free() {
+		t.Errorf("assignee = %v, want nobody: Cai is not in the project", got.AssigneeIDs())
 	}
 }
 
@@ -78,8 +78,8 @@ func TestSync_EmailMatchIsRemembered(t *testing.T) {
 	e := newEnv(t, issuesync.Config{})
 	n := e.add(testutil.GitHubIssue{Title: "Da Ana", Assignees: []string{"ana-dev"}})
 	e.sync(issuesync.Full)
-	if got := e.taskFor(n); got.AssigneeID == nil || *got.AssigneeID != e.ana.ID {
-		t.Fatalf("assignee = %v", got.AssigneeID)
+	if got := e.taskFor(n); !got.HasAssignee(e.ana.ID) {
+		t.Fatalf("assignee = %v", got.AssigneeIDs())
 	}
 	a := e.account(e.ana.ID)
 	if a == nil || a.Username != "ana-dev" || a.Source != personaccount.SourceEmail || a.Email != "ana@test.com" {
@@ -99,7 +99,7 @@ func TestSync_NoAccountIsNotSearched(t *testing.T) {
 	must(t, err)
 	tk := e.taskFor(n)
 	bia := e.bia.ID.String()
-	if _, err := e.taskSvc.UpdateAs("", tk.ID.String(), tk.Name, "", &bia, nil, task.Attrs{}); err != nil {
+	if _, err := e.taskSvc.UpdateAs(task.Actor{}, tk.ID.String(), tk.Name, "", &bia, nil, task.Attrs{}); err != nil {
 		t.Fatal(err)
 	}
 	e.fake.Reset()
@@ -135,8 +135,8 @@ func TestLinkLogin_ByTheAdmin(t *testing.T) {
 	if it.SyncUnmatched != 0 {
 		t.Errorf("unmatched after linking = %d %v", it.SyncUnmatched, it.SyncUnmatchedLogins)
 	}
-	if got := e.taskFor(n); got.AssigneeID == nil || *got.AssigneeID != e.dan.ID {
-		t.Errorf("assignee = %v, want Dan right after linking", got.AssigneeID)
+	if got := e.taskFor(n); !got.HasAssignee(e.dan.ID) {
+		t.Errorf("assignee = %v, want Dan right after linking", got.AssigneeIDs())
 	}
 
 	// Um login que alguém autorizou na plataforma não vai para outra pessoa.

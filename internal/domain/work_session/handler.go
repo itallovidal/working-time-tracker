@@ -93,7 +93,7 @@ func (h *Handler) ClockIn(c *echo.Context) error {
 	}
 	session, err := h.svc.ClockIn(projectID, body.TaskID, personID)
 	if err != nil {
-		return apperr.Respond(c, 400, err)
+		return respond(c, err)
 	}
 	redact(auth.ProjectPermissions(c), auth.CurrentPerson(c), session)
 	return c.JSON(201, session)
@@ -221,12 +221,12 @@ func (o *optTime) UnmarshalJSON(b []byte) error {
 }
 
 // respond responde um erro do serviço: a sessão ou o intervalo que não existem são 404, quem
-// não pode mexer na sessão é 403, o resto é 400.
+// não pode mexer na sessão (ou bate o ponto numa tarefa que não é sua) é 403, o resto é 400.
 func respond(c *echo.Context, err error) error {
 	switch {
 	case errors.Is(err, ErrSessionNotFound), errors.Is(err, ErrTaskLinkNotFound):
 		return apperr.Respond(c, 404, err)
-	case errors.Is(err, ErrSessionNotYours):
+	case errors.Is(err, ErrSessionNotYours), errors.Is(err, ErrNotAssignee):
 		return apperr.Respond(c, 403, err)
 	}
 	return apperr.Respond(c, 400, err)

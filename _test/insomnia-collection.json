@@ -910,7 +910,7 @@
       ],
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"name\": \"Tela de checkout\",\n  \"description\": \"Resumo, endereço e pagamento\",\n  \"assignee_id\": \"{{person_id}}\",\n  \"skip_publish\": []\n}"
+        "text": "{\n  \"name\": \"Tela de checkout\",\n  \"description\": \"Resumo, endereço e pagamento\",\n  \"assignee_ids\": [\"{{person_id}}\"],\n  \"skip_publish\": []\n}"
       }
     },
     {
@@ -1206,7 +1206,7 @@
       ],
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"status\": \"in_progress\",\n  \"priority\": \"high\",\n  \"label_ids\": [\"{{label_id}}\"],\n  \"assignee_id\": \"{{person_id}}\",\n  \"deadline\": \"2026-11-20T23:59:00Z\"\n}"
+        "text": "{\n  \"status\": \"in_progress\",\n  \"priority\": \"high\",\n  \"label_ids\": [\"{{label_id}}\"],\n  \"assignee_ids\": [\"{{person_id}}\"],\n  \"deadline\": \"2026-11-20T23:59:00Z\"\n}"
       }
     },
     {

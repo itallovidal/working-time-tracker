@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
+
 	"working-time-tracker/ent/issuesync"
 	"working-time-tracker/internal/domain/integration"
 )
@@ -228,7 +230,10 @@ func TestService_SyncUnmatched(t *testing.T) {
 	ctx := context.Background()
 	mk := func(n int, state issuesync.State, logins []string, mapped string, withTask bool) {
 		q := testClient.IssueSync.Create().SetIntegrationID(it.ID).SetItemID(strconv.Itoa(n)).SetState(state).
-			SetAssigneeLogins(logins).SetMappedLogin(mapped)
+			SetAssigneeLogins(logins)
+		if mapped != "" {
+			q = q.SetMapped(map[string]string{mapped: uuid.NewString()})
+		}
 		if withTask {
 			tk := testClient.Task.Create().SetProjectID(it.ProjectID).SetName("t").SaveX(ctx)
 			q = q.SetTaskID(tk.ID)

@@ -117,31 +117,9 @@ func (_c *IssueSyncCreate) SetAssigneeLogins(v []string) *IssueSyncCreate {
 	return _c
 }
 
-// SetMappedLogin sets the "mapped_login" field.
-func (_c *IssueSyncCreate) SetMappedLogin(v string) *IssueSyncCreate {
-	_c.mutation.SetMappedLogin(v)
-	return _c
-}
-
-// SetNillableMappedLogin sets the "mapped_login" field if the given value is not nil.
-func (_c *IssueSyncCreate) SetNillableMappedLogin(v *string) *IssueSyncCreate {
-	if v != nil {
-		_c.SetMappedLogin(*v)
-	}
-	return _c
-}
-
-// SetMappedPersonID sets the "mapped_person_id" field.
-func (_c *IssueSyncCreate) SetMappedPersonID(v uuid.UUID) *IssueSyncCreate {
-	_c.mutation.SetMappedPersonID(v)
-	return _c
-}
-
-// SetNillableMappedPersonID sets the "mapped_person_id" field if the given value is not nil.
-func (_c *IssueSyncCreate) SetNillableMappedPersonID(v *uuid.UUID) *IssueSyncCreate {
-	if v != nil {
-		_c.SetMappedPersonID(*v)
-	}
+// SetMapped sets the "mapped" field.
+func (_c *IssueSyncCreate) SetMapped(v map[string]string) *IssueSyncCreate {
+	_c.mutation.SetMapped(v)
 	return _c
 }
 
@@ -290,10 +268,6 @@ func (_c *IssueSyncCreate) defaults() {
 		v := issuesync.DefaultBody
 		_c.mutation.SetBody(v)
 	}
-	if _, ok := _c.mutation.MappedLogin(); !ok {
-		v := issuesync.DefaultMappedLogin
-		_c.mutation.SetMappedLogin(v)
-	}
 	if _, ok := _c.mutation.StuckSig(); !ok {
 		v := issuesync.DefaultStuckSig
 		_c.mutation.SetStuckSig(v)
@@ -340,9 +314,6 @@ func (_c *IssueSyncCreate) check() error {
 	}
 	if _, ok := _c.mutation.Body(); !ok {
 		return &ValidationError{Name: "body", err: errors.New(`ent: missing required field "IssueSync.body"`)}
-	}
-	if _, ok := _c.mutation.MappedLogin(); !ok {
-		return &ValidationError{Name: "mapped_login", err: errors.New(`ent: missing required field "IssueSync.mapped_login"`)}
 	}
 	if _, ok := _c.mutation.StuckSig(); !ok {
 		return &ValidationError{Name: "stuck_sig", err: errors.New(`ent: missing required field "IssueSync.stuck_sig"`)}
@@ -422,13 +393,9 @@ func (_c *IssueSyncCreate) createSpec() (*IssueSync, *sqlgraph.CreateSpec) {
 		_spec.SetField(issuesync.FieldAssigneeLogins, field.TypeJSON, value)
 		_node.AssigneeLogins = value
 	}
-	if value, ok := _c.mutation.MappedLogin(); ok {
-		_spec.SetField(issuesync.FieldMappedLogin, field.TypeString, value)
-		_node.MappedLogin = value
-	}
-	if value, ok := _c.mutation.MappedPersonID(); ok {
-		_spec.SetField(issuesync.FieldMappedPersonID, field.TypeUUID, value)
-		_node.MappedPersonID = &value
+	if value, ok := _c.mutation.Mapped(); ok {
+		_spec.SetField(issuesync.FieldMapped, field.TypeJSON, value)
+		_node.Mapped = value
 	}
 	if value, ok := _c.mutation.Deadline(); ok {
 		_spec.SetField(issuesync.FieldDeadline, field.TypeTime, value)

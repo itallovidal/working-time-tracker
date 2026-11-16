@@ -203,8 +203,8 @@ func TestSync_ImportsOpenIssues(t *testing.T) {
 	if !eq(labelNames(tk), []string{"UX", "bug"}) {
 		t.Errorf("labels = %v", labelNames(tk))
 	}
-	if tk.AssigneeID == nil || *tk.AssigneeID != e.ana.ID {
-		t.Errorf("assignee = %v, want Ana (her email is public on GitHub)", tk.AssigneeID)
+	if !tk.HasAssignee(e.ana.ID) {
+		t.Errorf("assignee = %v, want Ana (her email is public on GitHub)", tk.AssigneeIDs())
 	}
 	if len(tk.Links) != 1 || tk.Links[0].IntegrationID != e.it.ID || tk.Links[0].ItemID != "1" ||
 		tk.Links[0].URL != "https://github.com/owner/repo/issues/1" {
@@ -213,10 +213,10 @@ func TestSync_ImportsOpenIssues(t *testing.T) {
 	if tk.Deadline.After(time.Date(1971, 1, 1, 0, 0, 0, 0, time.UTC)) {
 		t.Errorf("an imported task has no deadline, got %v", tk.Deadline)
 	}
-	if e.taskFor(two).AssigneeID != nil {
+	if !e.taskFor(two).Free() {
 		t.Error("an issue with no assignee must become an available task")
 	}
-	if e.taskFor(ghost).AssigneeID != nil || e.taskFor(carol).AssigneeID != nil {
+	if !e.taskFor(ghost).Free() || !e.taskFor(carol).Free() {
 		t.Error("an assignee with no public email, or whose email is nobody's here, leaves the task available")
 	}
 	for _, n := range []int{closed, pr} {
@@ -284,8 +284,8 @@ func TestSync_GitHubChangesComeIn(t *testing.T) {
 	}
 	tk := e.taskFor(one)
 	if tk.Name != "Corrigir o login" || tk.Description != "novo\ntexto" || !eq(labelNames(tk), []string{"api", "bug"}) ||
-		tk.AssigneeID == nil || *tk.AssigneeID != e.bia.ID {
-		t.Errorf("task after the GitHub edit = name %q, description %q, labels %v, assignee %v", tk.Name, tk.Description, labelNames(tk), tk.AssigneeID)
+		!tk.HasAssignee(e.bia.ID) {
+		t.Errorf("task after the GitHub edit = name %q, description %q, labels %v, assignee %v", tk.Name, tk.Description, labelNames(tk), tk.AssigneeIDs())
 	}
 	if e.taskFor(two).Status != "closed" {
 		t.Errorf("task of the closed issue = %q, want closed", e.taskFor(two).Status)
@@ -297,7 +297,7 @@ func TestSync_GitHubChangesComeIn(t *testing.T) {
 	// Tirar o responsável no GitHub tira daqui.
 	e.fake.EditIssue(repo, one, func(i *testutil.GitHubIssue) { i.Assignees = nil })
 	e.sync(issuesync.Incremental)
-	if e.taskFor(one).AssigneeID != nil {
+	if !e.taskFor(one).Free() {
 		t.Error("removing the assignee on GitHub must clear it here")
 	}
 
@@ -321,7 +321,7 @@ func TestSync_LocalChangesGoOut(t *testing.T) {
 	bug, _ := e.tasks.FindOrCreateLabels(uuid.MustParse(e.project), []string{"bug"})
 	ids := []string{bug[0].ID.String(), ux.ID.String()}
 	bia := e.bia.ID.String()
-	if _, err := e.taskSvc.UpdateAs(bia, tk.ID.String(), "Corrigir o login (daqui)", "texto daqui", &bia, nil, task.Attrs{LabelIDs: &ids}); err != nil {
+	if _, err := e.taskSvc.UpdateAs(task.Actor{ID: bia}, tk.ID.String(), "Corrigir o login (daqui)", "texto daqui", &bia, nil, task.Attrs{LabelIDs: &ids}); err != nil {
 		t.Fatalf("edit the task: %v", err)
 	}
 	closed := "closed"
@@ -388,7 +388,7 @@ func TestSync_GitHubWinsConflicts(t *testing.T) {
 	api, _ := e.taskSvc.CreateLabel(e.project, "api")
 	bug, _ := e.tasks.FindOrCreateLabels(uuid.MustParse(e.project), []string{"bug"})
 	ids := []string{bug[0].ID.String(), api.ID.String()}
-	if _, err := e.taskSvc.UpdateAs("", tk.ID.String(), "Título daqui", "corpo daqui", nil, nil, task.Attrs{LabelIDs: &ids}); err != nil {
+	if _, err := e.taskSvc.UpdateAs(task.Actor{}, tk.ID.String(), "Título daqui", "corpo daqui", nil, nil, task.Attrs{LabelIDs: &ids}); err != nil {
 		t.Fatalf("edit: %v", err)
 	}
 	e.fake.EditIssue(repo, one, func(i *testutil.GitHubIssue) {
@@ -422,16 +422,16 @@ func TestSync_AdoptsManuallyLinkedTask(t *testing.T) {
 	e := newEnv(t, issuesync.Config{})
 	n := e.add(testutil.GitHubIssue{Title: "Do GitHub", Body: "corpo", Labels: []string{"bug"}})
 
-	mine, err := e.taskSvc.CreateAs("", e.project, "Minha tarefa", "minha descrição", e.dan.ID.String(), nil, task.Attrs{})
+	mine, err := e.taskSvc.CreateAs(task.Actor{}, e.project, "Minha tarefa", "minha descrição", e.dan.ID.String(), nil, task.Attrs{})
 	must(t, err)
 	ux, _ := e.taskSvc.CreateLabel(e.project, "ux")
 	ids := []string{ux.ID.String()}
-	if _, err := e.taskSvc.UpdateAs("", mine.ID.String(), "Minha tarefa", "minha descrição", nil, nil, task.Attrs{LabelIDs: &ids}); err != nil {
+	if _, err := e.taskSvc.UpdateAs(task.Actor{}, mine.ID.String(), "Minha tarefa", "minha descrição", nil, nil, task.Attrs{LabelIDs: &ids}); err != nil {
 		t.Fatal(err)
 	}
 	_, err = e.taskSvc.LinkExternalItem(mine.ID.String(), e.it.ID.String(), "1", "https://github.com/owner/repo/issues/1")
 	must(t, err)
-	dup, _ := e.taskSvc.CreateAs("", e.project, "Duplicada", "", "", nil, task.Attrs{})
+	dup, _ := e.taskSvc.CreateAs(task.Actor{}, e.project, "Duplicada", "", "", nil, task.Attrs{})
 	if _, err := e.taskSvc.LinkExternalItem(dup.ID.String(), e.it.ID.String(), "1", "https://github.com/owner/repo/issues/1"); !errors.Is(err, task.ErrItemTaken) {
 		t.Fatalf("linking a second task to the same issue = %v, want task.item_taken", err)
 	}
@@ -454,8 +454,8 @@ func TestSync_AdoptsManuallyLinkedTask(t *testing.T) {
 	if !eq(labelNames(got), []string{"bug", "ux"}) {
 		t.Errorf("labels = %v, want the union", labelNames(got))
 	}
-	if got.AssigneeID == nil || *got.AssigneeID != e.dan.ID {
-		t.Errorf("assignee = %v; a task assigned here keeps its assignee when the issue has none", got.AssigneeID)
+	if !got.HasAssignee(e.dan.ID) {
+		t.Errorf("assignee = %v; a task assigned here keeps its assignee when the issue has none", got.AssigneeIDs())
 	}
 	issue, _ := e.fake.Issue(repo, n)
 	if !eq(issue.Labels, []string{"bug", "ux"}) {
@@ -489,7 +489,7 @@ func TestSync_DeletedTaskIsATombstone(t *testing.T) {
 	}
 
 	// Ligar uma tarefa a ela à mão a traz de volta.
-	back, _ := e.taskSvc.CreateAs("", e.project, "De volta", "", "", nil, task.Attrs{})
+	back, _ := e.taskSvc.CreateAs(task.Actor{}, e.project, "De volta", "", "", nil, task.Attrs{})
 	if _, err := e.taskSvc.LinkExternalItem(back.ID.String(), e.it.ID.String(), "1", "https://github.com/owner/repo/issues/1"); err != nil {
 		t.Fatal(err)
 	}
@@ -513,7 +513,7 @@ func TestSync_UnlinkedTaskLeavesTheSync(t *testing.T) {
 
 	e.fake.EditIssue(repo, n, func(i *testutil.GitHubIssue) { i.Title = "Mudou lá" })
 	name := "Mudou aqui"
-	if _, err := e.taskSvc.UpdateAs("", tk.ID.String(), name, "", nil, nil, task.Attrs{}); err != nil {
+	if _, err := e.taskSvc.UpdateAs(task.Actor{}, tk.ID.String(), name, "", nil, nil, task.Attrs{}); err != nil {
 		t.Fatal(err)
 	}
 	e.fake.Reset()
@@ -609,7 +609,7 @@ func TestSync_ReadOnlyRepository(t *testing.T) {
 		t.Errorf("summary = %+v; reading still works", sum)
 	}
 	tk := e.taskFor(n)
-	if _, err := e.taskSvc.UpdateAs("", tk.ID.String(), "Mudei aqui", "", nil, nil, task.Attrs{}); err != nil {
+	if _, err := e.taskSvc.UpdateAs(task.Actor{}, tk.ID.String(), "Mudei aqui", "", nil, nil, task.Attrs{}); err != nil {
 		t.Fatal(err)
 	}
 	closed := "closed"
@@ -652,7 +652,7 @@ func TestSync_SilentDiscardDoesNotLoop(t *testing.T) {
 	tk := e.taskFor(n)
 	l, _ := e.taskSvc.CreateLabel(e.project, "ux")
 	ids := []string{l.ID.String()}
-	if _, err := e.taskSvc.UpdateAs("", tk.ID.String(), tk.Name, "", nil, nil, task.Attrs{LabelIDs: &ids}); err != nil {
+	if _, err := e.taskSvc.UpdateAs(task.Actor{}, tk.ID.String(), tk.Name, "", nil, nil, task.Attrs{LabelIDs: &ids}); err != nil {
 		t.Fatal(err)
 	}
 	e.fake.Reset()
@@ -685,7 +685,7 @@ func TestSync_SilentDiscardDoesNotLoop(t *testing.T) {
 	}
 
 	// Outra mudança é outra tentativa.
-	if _, err := e.taskSvc.UpdateAs("", tk.ID.String(), "Novo nome", "", nil, nil, task.Attrs{LabelIDs: &ids}); err != nil {
+	if _, err := e.taskSvc.UpdateAs(task.Actor{}, tk.ID.String(), "Novo nome", "", nil, nil, task.Attrs{LabelIDs: &ids}); err != nil {
 		t.Fatal(err)
 	}
 	e.fake.Reset()
@@ -701,12 +701,12 @@ func TestSync_AssigneeWithoutPublicEmailIsKept(t *testing.T) {
 	n := e.add(testutil.GitHubIssue{Title: "Dois responsáveis", Assignees: []string{"ghost"}})
 	e.sync(issuesync.Full)
 	tk := e.taskFor(n)
-	if tk.AssigneeID != nil {
-		t.Fatalf("assignee = %v", tk.AssigneeID)
+	if !tk.Free() {
+		t.Fatalf("assignee = %v", tk.AssigneeIDs())
 	}
 
 	ana := e.ana.ID.String()
-	if _, err := e.taskSvc.UpdateAs("", tk.ID.String(), tk.Name, "", &ana, nil, task.Attrs{}); err != nil {
+	if _, err := e.taskSvc.UpdateAs(task.Actor{}, tk.ID.String(), tk.Name, "", &ana, nil, task.Attrs{}); err != nil {
 		t.Fatal(err)
 	}
 	e.sync(issuesync.Full)
@@ -714,20 +714,21 @@ func TestSync_AssigneeWithoutPublicEmailIsKept(t *testing.T) {
 	if !eq(issue.Assignees, []string{"ghost", "ana-dev"}) {
 		t.Errorf("assignees = %v, want the fantasma kept and Ana added", issue.Assignees)
 	}
-	if e.integration().SyncUnmatched != 0 {
-		t.Errorf("unmatched = %d; the issue has a linked assignee now", e.integration().SyncUnmatched)
+	// O fantasma continua sem ninguém daqui, mesmo com a Ana ligada na mesma issue: cada login conta (Decisão 31).
+	if e.integration().SyncUnmatched != 1 {
+		t.Errorf("unmatched = %d; ghost still links to nobody", e.integration().SyncUnmatched)
 	}
 
 	// Tirar o responsável aqui tira só o que estava ligado.
 	none := ""
-	if _, err := e.taskSvc.UpdateAs("", tk.ID.String(), tk.Name, "", &none, nil, task.Attrs{}); err != nil {
+	if _, err := e.taskSvc.UpdateAs(task.Actor{}, tk.ID.String(), tk.Name, "", &none, nil, task.Attrs{}); err != nil {
 		t.Fatal(err)
 	}
 	e.sync(issuesync.Full)
 	if issue, _ = e.fake.Issue(repo, n); !eq(issue.Assignees, []string{"ghost"}) {
 		t.Errorf("assignees = %v, want only the fantasma", issue.Assignees)
 	}
-	if e.taskFor(n).AssigneeID != nil {
+	if !e.taskFor(n).Free() {
 		t.Error("the task must stay unassigned")
 	}
 }
@@ -740,7 +741,7 @@ func TestSync_NoGitHubLoginForThePerson(t *testing.T) {
 	tk := e.taskFor(n)
 
 	dan := e.dan.ID.String()
-	if _, err := e.taskSvc.UpdateAs("", tk.ID.String(), tk.Name, "", &dan, nil, task.Attrs{}); err != nil {
+	if _, err := e.taskSvc.UpdateAs(task.Actor{}, tk.ID.String(), tk.Name, "", &dan, nil, task.Attrs{}); err != nil {
 		t.Fatal(err)
 	}
 	e.fake.Reset()
@@ -754,8 +755,8 @@ func TestSync_NoGitHubLoginForThePerson(t *testing.T) {
 	if e.integration().LastSyncError != "issue_sync.no_login" || e.row(n).LastError != "issue_sync.no_login" {
 		t.Errorf("errors: integration %q, row %q", e.integration().LastSyncError, e.row(n).LastError)
 	}
-	if got := e.taskFor(n); got.AssigneeID == nil || *got.AssigneeID != e.dan.ID {
-		t.Errorf("the local choice must stay: %v", got.AssigneeID)
+	if got := e.taskFor(n); !got.HasAssignee(e.dan.ID) {
+		t.Errorf("the local choice must stay: %v", got.AssigneeIDs())
 	}
 
 	// Perguntar de novo a cada rodada não custa buscas ao GitHub: a resposta "não achei" fica guardada.
@@ -772,19 +773,19 @@ func TestSync_AssigneeWhoPublishesTheEmailLater(t *testing.T) {
 	e := newEnv(t, issuesync.Config{})
 	n := e.add(testutil.GitHubIssue{Title: "Do fantasma", Assignees: []string{"ghost"}})
 	e.sync(issuesync.Full)
-	if e.taskFor(n).AssigneeID != nil {
+	if !e.taskFor(n).Free() {
 		t.Fatal("ghost has no public email")
 	}
 
 	e.fake.AddUser("ghost", "bia@test.com") // agora publica
 	e.sync(issuesync.Full)
-	if e.taskFor(n).AssigneeID != nil {
+	if !e.taskFor(n).Free() {
 		t.Error("a background round within the cache time must not ask again")
 	}
 	sum, err := e.syncer.SyncNow(context.Background(), e.it.ID)
 	must(t, err)
-	if got := e.taskFor(n); got.AssigneeID == nil || *got.AssigneeID != e.bia.ID || sum.Updated != 1 {
-		t.Errorf("after Sincronizar agora: assignee %v, summary %+v", got.AssigneeID, sum)
+	if got := e.taskFor(n); !got.HasAssignee(e.bia.ID) || sum.Updated != 1 {
+		t.Errorf("after Sincronizar agora: assignee %v, summary %+v", got.AssigneeIDs(), sum)
 	}
 	if e.integration().SyncUnmatched != 0 {
 		t.Errorf("unmatched = %d", e.integration().SyncUnmatched)
@@ -912,7 +913,7 @@ func TestSync_PushCapPerRound(t *testing.T) {
 	}
 	e.sync(issuesync.Full)
 	for _, n := range numbers {
-		if _, err := e.taskSvc.UpdateAs("", e.taskFor(n).ID.String(), "Renomeada", "", nil, nil, task.Attrs{}); err != nil {
+		if _, err := e.taskSvc.UpdateAs(task.Actor{}, e.taskFor(n).ID.String(), "Renomeada", "", nil, nil, task.Attrs{}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -939,7 +940,7 @@ func TestSync_LabelCreationRefused(t *testing.T) {
 	tk := e.taskFor(n)
 	l, _ := e.taskSvc.CreateLabel(e.project, "nova")
 	ids := []string{l.ID.String()}
-	if _, err := e.taskSvc.UpdateAs("", tk.ID.String(), tk.Name, "", nil, nil, task.Attrs{LabelIDs: &ids}); err != nil {
+	if _, err := e.taskSvc.UpdateAs(task.Actor{}, tk.ID.String(), tk.Name, "", nil, nil, task.Attrs{LabelIDs: &ids}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -997,10 +998,10 @@ func TestSync_HookPushesATaskThatChanged(t *testing.T) {
 	e.sync(issuesync.Full)
 	e.tasks.SetChangeHook(e.syncer.Notify)
 	tk := e.taskFor(n)
-	free, _ := e.taskSvc.CreateAs("", e.project, "Sem issue", "", "", nil, task.Attrs{})
+	free, _ := e.taskSvc.CreateAs(task.Actor{}, e.project, "Sem issue", "", "", nil, task.Attrs{})
 	e.fake.Reset()
 
-	if _, err := e.taskSvc.UpdateAs("", tk.ID.String(), "Renomeada aqui", "", nil, nil, task.Attrs{}); err != nil {
+	if _, err := e.taskSvc.UpdateAs(task.Actor{}, tk.ID.String(), "Renomeada aqui", "", nil, nil, task.Attrs{}); err != nil {
 		t.Fatal(err)
 	}
 	// Pegar uma tarefa livre (o que bater o ponto faz) vai para o responsável da issue.
@@ -1008,7 +1009,7 @@ func TestSync_HookPushesATaskThatChanged(t *testing.T) {
 		t.Fatalf("claim: %v", err)
 	}
 	// Mudanças em tarefas sem issue não custam nada.
-	if _, err := e.taskSvc.UpdateAs("", free.ID.String(), "Sem issue 2", "", nil, nil, task.Attrs{}); err != nil {
+	if _, err := e.taskSvc.UpdateAs(task.Actor{}, free.ID.String(), "Sem issue 2", "", nil, nil, task.Attrs{}); err != nil {
 		t.Fatal(err)
 	}
 	if e.syncer.Pending() != 3 {
@@ -1051,7 +1052,7 @@ func TestSync_RunStopsWithTheContext(t *testing.T) {
 	stopped := make(chan struct{})
 	go func() { e.syncer.Run(ctx); close(stopped) }()
 
-	if _, err := e.taskSvc.UpdateAs("", e.taskFor(n).ID.String(), "Pelo worker", "", nil, nil, task.Attrs{}); err != nil {
+	if _, err := e.taskSvc.UpdateAs(task.Actor{}, e.taskFor(n).ID.String(), "Pelo worker", "", nil, nil, task.Attrs{}); err != nil {
 		t.Fatal(err)
 	}
 	deadline := time.Now().Add(5 * time.Second)

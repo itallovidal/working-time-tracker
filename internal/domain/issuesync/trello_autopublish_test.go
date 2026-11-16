@@ -16,7 +16,7 @@ import (
 // create cria uma tarefa como a tela cria, o que avisa a sincronização.
 func (e *tenv) create(name, desc string, deadline *time.Time, labelIDs *[]string) *task.Task {
 	e.t.Helper()
-	tk, err := e.taskSvc.CreateAs("", e.project, name, desc, "", deadline, task.Attrs{LabelIDs: labelIDs})
+	tk, err := e.taskSvc.CreateAs(task.Actor{}, e.project, name, desc, "", deadline, task.Attrs{LabelIDs: labelIDs})
 	must(e.t, err)
 	return tk
 }
