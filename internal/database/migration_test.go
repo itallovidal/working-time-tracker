@@ -1034,3 +1034,115 @@ func TestMigrate_BillingOnCustomerKeepsTheBilledRates(t *testing.T) {
 }
 
 func ptr[T any](v T) *T { return &v }
+
+// A migração dos vários responsáveis (Decisão 31) roda sobre um banco com um responsável por tarefa: cada responsável
+// vira uma linha em task_assignees, e o par login/pessoa do vínculo com a issue vira o mapa mapped. Um par pela metade
+// não vira nada, e as colunas antigas somem.
+func TestMigrate_TaskAssigneesKeepsTheAssignees(t *testing.T) {
+	ctx := context.Background()
+	defer restoreSchema(t)
+	testutil.ResetSchema(t, testDB)
+
+	const migration = "20261115053204_task_assignees.sql"
+	files, err := os.ReadDir("migrations")
+	if err != nil {
+		t.Fatalf("read migrations: %v", err)
+	}
+	before := fstest.MapFS{}
+	for _, f := range files {
+		if !strings.HasSuffix(f.Name(), ".sql") || f.Name() >= migration {
+			continue
+		}
+		raw, err := os.ReadFile("migrations/" + f.Name())
+		if err != nil {
+			t.Fatalf("read %s: %v", f.Name(), err)
+		}
+		before[f.Name()] = &fstest.MapFile{Data: raw}
+	}
+	provider, err := goose.NewProvider(goose.DialectPostgres, testDB, before)
+	if err != nil {
+		t.Fatalf("goose provider: %v", err)
+	}
+	if _, err := provider.Up(ctx); err != nil {
+		t.Fatalf("apply the migrations before %s: %v", migration, err)
+	}
+
+	exec := func(query string, args ...any) {
+		t.Helper()
+		if _, err := testDB.ExecContext(ctx, query, args...); err != nil {
+			t.Fatalf("seed the old schema: %v\n%s", err, query)
+		}
+	}
+	// O banco como era: tasks.assignee_id e, no vínculo, mapped_login e mapped_person_id.
+	org, prj, gh, ana, bia := uuid.New(), uuid.New(), uuid.New(), uuid.New(), uuid.New()
+	withAna, withBia, free := uuid.New(), uuid.New(), uuid.New()
+	exec(`INSERT INTO organizations (id, name, created_at) VALUES ($1, 'Org', now())`, org)
+	exec(`INSERT INTO persons (id, name, email, organization_id, created_at) VALUES ($1, 'Ana', 'ana@test.com', $3, now()),
+		($2, 'Bia', 'bia@test.com', $3, now())`, ana, bia, org)
+	exec(`INSERT INTO projects (id, name, organization_id, created_at) VALUES ($1, 'A', $2, now())`, prj, org)
+	exec(`INSERT INTO integrations (id, type, display_name, project_id, created_at) VALUES ($1, 'github', 'GitHub', $2, now())`, gh, prj)
+	exec(`INSERT INTO tasks (id, name, project_id, assignee_id, created_at) VALUES ($1, 'Da Ana', $4, $5, now()),
+		($2, 'Da Bia', $4, $6, now()), ($3, 'Livre', $4, NULL, now())`, withAna, withBia, free, prj, ana, bia)
+	link := func(item string, taskID uuid.UUID, login string, person *uuid.UUID) uuid.UUID {
+		id := uuid.New()
+		exec(`INSERT INTO issue_syncs (id, item_id, title, integration_id, task_id, mapped_login, mapped_person_id, synced_at, created_at)
+			VALUES ($1, $2, 'Issue', $3, $4, $5, $6, now(), now())`, id, item, gh, taskID, login, person)
+		return id
+	}
+	paired := link("1", withAna, "ana-dev", &ana)
+	noLogin := link("2", free, "", nil)
+	half := link("3", withBia, "bia-dev", nil)
+
+	raw, err := os.ReadFile("migrations/" + migration)
+	if err != nil {
+		t.Fatalf("read migration: %v", err)
+	}
+	if _, err := testDB.ExecContext(ctx, string(raw)); err != nil {
+		t.Fatalf("run %s over the single assignees: %v", migration, err)
+	}
+
+	rows, err := testDB.QueryContext(ctx, `SELECT task_id, person_id FROM task_assignees`)
+	if err != nil {
+		t.Fatalf("query task_assignees: %v", err)
+	}
+	defer func() { _ = rows.Close() }() // só leitura: o erro do Close não muda o teste
+	got := map[uuid.UUID]uuid.UUID{}
+	for rows.Next() {
+		var task, person uuid.UUID
+		if err := rows.Scan(&task, &person); err != nil {
+			t.Fatalf("scan: %v", err)
+		}
+		got[task] = person
+	}
+	if len(got) != 2 || got[withAna] != ana || got[withBia] != bia {
+		t.Errorf("task_assignees = %v, want the task of Ana with Ana and the one of Bia with Bia (and nothing for the free one)", got)
+	}
+
+	mapped := func(id uuid.UUID) sql.NullString {
+		t.Helper()
+		var m sql.NullString
+		if err := testDB.QueryRowContext(ctx, `SELECT mapped::text FROM issue_syncs WHERE id = $1`, id).Scan(&m); err != nil {
+			t.Fatalf("read mapped: %v", err)
+		}
+		return m
+	}
+	if m := mapped(paired); !m.Valid || m.String != `{"ana-dev": "`+ana.String()+`"}` {
+		t.Errorf("mapped of the paired link = %v, want {\"ana-dev\": %q}", m, ana)
+	}
+	if m := mapped(noLogin); m.Valid {
+		t.Errorf("mapped of a link with no login = %q, want NULL", m.String)
+	}
+	if m := mapped(half); m.Valid {
+		t.Errorf("mapped of a login with no person = %q, want NULL", m.String)
+	}
+
+	var left int
+	if err := testDB.QueryRowContext(ctx, `SELECT count(*) FROM information_schema.columns
+		WHERE (table_name = 'tasks' AND column_name = 'assignee_id')
+		   OR (table_name = 'issue_syncs' AND column_name IN ('mapped_login', 'mapped_person_id'))`).Scan(&left); err != nil {
+		t.Fatalf("read the columns: %v", err)
+	}
+	if left != 0 {
+		t.Errorf("%d of the old columns are still there, want none", left)
+	}
+}
