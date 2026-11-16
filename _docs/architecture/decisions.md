@@ -108,7 +108,8 @@ máximo um por tarefa e integração, então uma tarefa pode estar numa issue e 
   `UPDATE ... WHERE assignee_id IS NULL`, então de dois pedidos simultâneos só um ganha (o outro recebe `409`
   `task.already_assigned`). Para pegar uma tarefa para si não é preciso estar num time. **Hoje:** a tarefa tem uma
   lista de responsáveis (Decisão 31), e pegar só vale na livre: a tomada trava a linha da tarefa
-  (`SELECT ... FOR UPDATE`) e só insere a pessoa se a tarefa não tem ninguém, então continua um ganhador só.
+  (`SELECT ... FOR NO KEY UPDATE`, a trava única da lista) e só insere a pessoa se a tarefa não tem ninguém, então
+  continua um ganhador só.
 - **Status da tarefa.** Um enum de quatro valores (`backlog`, `in_progress`, `awaiting_closure`, `closed`). A tarefa
   nasce sempre em backlog, e a troca é livre entre os quatro, sem ordem, porque os times pulam etapas e voltam
   atrás. O status muda sozinho num lugar só: o clock-in põe a tarefa em progresso, de qualquer status (voltar a
@@ -1217,19 +1218,30 @@ sincronização, no MCP e nas telas (issue #52).
   - Sem poder, `403 task.share_forbidden` (pôr) ou `403 task.remove_forbidden` (tirar).
   - Os outros campos da tarefa (nome, status, prazo, etiquetas) seguem abertos a todo o projeto: só a lista ganhou
     regra.
-- **O ponto só nas suas tarefas.** O clock-in e pôr uma tarefa numa sessão, aberta ou encerrada, só valem numa tarefa de
-  que a pessoa é responsável, ou numa livre, que passa a ser dela (com a trava de contas antes; numa sessão encerrada, a
-  livre entra sem mudar de dono). Fora disso, `403 work_session.not_assignee`. Cada responsável bate o seu ponto, junto
-  ou em horas diferentes, e o dinheiro segue a sessão, como antes.
+- **O ponto só nas suas tarefas.** O clock-in, pôr uma tarefa numa sessão (aberta ou encerrada) e reabrir, numa sessão
+  aberta, o trecho parado de uma tarefa só valem numa tarefa de que a pessoa é responsável, ou numa livre, que passa a
+  ser dela (com a trava de contas antes; numa sessão encerrada, a livre entra sem mudar de dono). Fora disso,
+  `403 work_session.not_assignee`. Cada responsável bate o seu ponto, junto ou em horas diferentes, e o dinheiro segue a
+  sessão, como antes.
 - **Sair com o ponto aberto para o trecho.** Quem sai da tarefa, ou é tirado dela (pela tela, pela API, pelo MCP ou
   pela sincronização), com um trecho aberto nela tem esse trecho parado na hora; se era a única tarefa rodando na
   sessão, a sessão fecha (clock-out). As outras tarefas da sessão seguem. É o `work_session.Service.StopTaskFor`, ligado
   ao store das tarefas como `task.WorkStopper`.
 - **A trava vale para cada pessoa que entra** (`required_accounts`, Decisão 30). Ligá-la não tira ninguém, e a
   sincronização passa por cima dela, como antes. O modo solo não muda: a pessoa é uma só.
-- **A tomada da tarefa livre** trava a linha da tarefa na transação (`SELECT ... FOR UPDATE`) e só insere a pessoa se a
-  tarefa não tem ninguém: de dois pedidos juntos, só um leva. O ponto que perde a disputa recebe `not_assignee`, e um
-  ponto recusado depois da tomada devolve a tarefa.
+- **Uma trava por tarefa.** Tudo que mexe na lista de responsáveis ou trabalha na tarefa trava a linha dela na
+  transação (`SELECT ... FOR NO KEY UPDATE`, `task.lockTask`): o Pegar, a edição, a sincronização (`Store.write`) e o
+  ponto (`task.Store.HoldForWork`), um de cada vez. A lista nova é calculada e conferida contra a lista lida com a
+  trava, e quem sai tem o ponto parado ainda com ela. O ponto fica com a tarefa travada até a sessão (ou o trecho)
+  estar gravado: quem sai depois vê o trecho novo e o para, e quem bate o ponto depois de sair vê que saiu. É
+  `NO KEY UPDATE`, e não `UPDATE`, porque o trecho da sessão é gravado por outra conexão enquanto a trava está de pé, e
+  a chave estrangeira dele pede um `FOR KEY SHARE` na linha da tarefa, que `FOR UPDATE` barraria. Nada que roda com a
+  trava escreve na linha da tarefa por outra conexão (pôr a tarefa em progresso vem depois). Na tomada da tarefa livre,
+  de dois pedidos juntos só um leva; um ponto recusado desfaz a tomada com a transação.
+- **A edição manda o que entra e o que sai.** Além da lista inteira (`assignee_ids`), o `PATCH` da tarefa aceita
+  `add_assignee_ids` e `remove_assignee_ids`, aplicados à lista que a tarefa tem na hora de gravar. A tela e o MCP
+  mandam só isso: uma tela aberta antes de alguém entrar não tira essa pessoa, e o Sair tira só quem sai. Uma edição que
+  não muda a lista (o nome, o status) não a toca.
 - **A sincronização liga todos.** Todo login da issue ligado a uma pessoa do projeto vira responsável, e os logins sem
   pessoa ficam só na issue. A comparação é pessoa a pessoa contra o último acordo (os pares de `mapped`): tirar alguém
   de um lado tira do outro, a pessoa nova na tarefa leva o login dela à issue, e o mesmo elemento mudado dos dois lados

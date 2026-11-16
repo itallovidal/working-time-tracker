@@ -1464,6 +1464,16 @@ The sync only touched the first issue login that matched someone here.
   without "Escolher pessoas" for a member, Minhas tarefas with a shared task, and a solo task unchanged. Not checked:
   what a real gitlab.com Free project does with two `assignee_ids` (the fake keeps the first)
 
+### Sprint 139: Review Fixes for Many Assignees
+
+The review of PR #56 found four ressalvas: a stale page sent the whole list and removed (and stopped) whoever had joined since; reopening a stopped stretch ran the clock on a task the person had left; only Pegar locked the task, so edits, the sync and the clock raced; and the migration had no data test.
+
+- [X] S139.1 One lock per task: `task.lockTask` (`SELECT ... FOR NO KEY UPDATE`) for Pegar (`TryClaim`), every list change (`Store.write`, used by `Update`, `UpdateAttrs` and `ApplyRemote`) and the clock (`task.Store.HoldForWork`). The new list is computed from the list read under the lock (`AssigneeChange`) and checked there (`AssigneeCheck`, the service's `checkAssignees` with the fresh list); whoever leaves is stopped while the lock holds, and an edit that does not change the list does not touch it. `NO KEY UPDATE` lets the session stretch be written by another connection while the task is held (its foreign key asks for `FOR KEY SHARE`); `TestStore_HoldForWorkLetsTheSessionIn` fails with `FOR UPDATE`
+- [X] S139.2 `PATCH /api/tasks/:taskId` and `/attributes` take `add_assignee_ids` and `remove_assignee_ids`, applied to the list the task has when it is written; with `assignee_ids` or `assignee_id` they are `400 task.assignees_conflict`. Editar detalhes sends only who joins and who leaves (`assigneeDelta`), Sair sends `remove_assignee_ids: [me]`, and the MCP `update_task` passes `add_assignees`/`remove_assignees` through
+- [X] S139.3 Clock-in, adding a task to a session and reopening a stopped stretch in an open session (`UpdateTask` clearing `until`) go through `holdFor`: the person must be an assignee, or the free task becomes theirs; the hold stays until the session or stretch is written, and a refused clock-in rolls the claim back (`Unclaim` is gone). `StartProgress` runs after the commit
+- [X] S139.4 `TestMigrate_TaskAssigneesKeepsTheAssignees`: the migration over single-assignee data copies each assignee to `task_assignees`, turns the login/person pair into `mapped` (a half pair stays NULL) and drops the old columns. No Down section, as in every migration: the backup comes before the merge, since main deploys itself
+- [X] S139.5 Tests: the stale page keeping who joined and leaving alone, the whole list with a delta, an edit without the list, Pegar and joining at once (`task/assignees_test.go`); reopening after leaving, reopening a free task, two clock-ins at once, removal and clock-in at once (`work_session/assignees_test.go`); the deltas over HTTP (`TestTasks_AssigneeDeltas`)
+
 ### Seed with a Full Demo
 
 - [X] D1 `cmd/seed` fills every screen: twelve people (two admins), four customers, eight projects (one internal, one with negative margin), 62 tasks (11 unassigned, some overdue, 24 linked to GitHub, GitLab and Trello items), eight integrations, about 1,400 closed sessions over 75 days from a fixed random sequence, and two people with the clock open
