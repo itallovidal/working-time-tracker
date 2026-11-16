@@ -76,6 +76,18 @@ document.addEventListener('alpine:init', () => {
     },
   });
 
+  // assigneeDelta é o pedaço do PATCH que muda os responsáveis: só quem entra e quem sai, de was (a lista de quando a
+  // tela leu a tarefa) para want. O servidor aplica isso à lista que a tarefa tem na hora, então quem entrou enquanto
+  // isso fica (Decisão 31). Sem mudança, sai vazio e a lista nem vai.
+  const assigneeDelta = (was, want) => {
+    const body = {};
+    const add = want.filter((id) => !was.includes(id));
+    const remove = was.filter((id) => !want.includes(id));
+    if (add.length) body.add_assignee_ids = add;
+    if (remove.length) body.remove_assignee_ids = remove;
+    return body;
+  };
+
   // assigneePicker é a lista de pessoas que escolhe os responsáveis de uma tarefa (Decisão 31): no criar, para o admin
   // do projeto, e no Editar detalhes. Cada caixa só deixa o que a regra deixa: o admin põe e tira qualquer pessoa; quem
   // não é pega a tarefa livre para si e, estando nela, acrescenta outras pessoas e sai, mas não desmarca quem já estava.
@@ -118,10 +130,6 @@ document.addEventListener('alpine:init', () => {
       if (this.manageAssignees()) return '';
       if (this.assigneesWas.length === 0) return WTT.t('tasks.assignees.hint_free');
       return this.assigneesWas.includes(me.id) ? WTT.t('tasks.assignees.hint_mine') : WTT.t('tasks.assignees.hint_other');
-    },
-    // assigneesChanged diz se a lista marcada difere da que a tarefa tinha.
-    assigneesChanged() {
-      return [...this.draft.assignee_ids].sort().join() !== [...this.assigneesWas].sort().join();
     },
   });
 
@@ -1149,7 +1157,7 @@ document.addEventListener('alpine:init', () => {
     setTask(t) {
       this.task = t;
       this.deadlineWas = hasDeadlineDate(t.deadline) ? WTT.fmt.dateInput(t.deadline) : '';
-      // Os responsáveis só vão no Salvar se a pessoa os mudou, como o prazo (assigneesChanged).
+      // No Salvar, os responsáveis vão como o que entra e o que sai desta lista (assigneeDelta).
       this.assigneesWas = (t.assignees || []).map((a) => a.id);
       this.draft = {
         name: t.name,
@@ -1241,13 +1249,10 @@ document.addEventListener('alpine:init', () => {
           priority: this.draft.priority,
           label_ids: this.draft.label_ids,
         };
-        // No modo solo é Atribuir a mim ou Sem responsável; na equipe, a lista marcada.
-        if (me.organization_solo) {
-          const solo = this.draft.assign === 'me' ? [me.id] : [];
-          if ([...solo].sort().join() !== [...this.assigneesWas].sort().join()) body.assignee_ids = solo;
-        } else if (this.assigneesChanged()) {
-          body.assignee_ids = this.draft.assignee_ids;
-        }
+        // No modo solo é Atribuir a mim ou Sem responsável; na equipe, a lista marcada. Vai só quem entra e quem sai
+        // (comparado com a lista de quando o modal abriu): quem entrou na tarefa enquanto isso fica (Decisão 31).
+        const want = me.organization_solo ? (this.draft.assign === 'me' ? [me.id] : []) : this.draft.assignee_ids;
+        Object.assign(body, assigneeDelta(this.assigneesWas, want));
         // fromDateInput devolve null para o campo vazio: é o apagar.
         if (this.draft.deadline !== this.deadlineWas) body.deadline = WTT.fmt.fromDateInput(this.draft.deadline);
         // A trava só vai se mudou: a lista vazia a tira.
@@ -1296,8 +1301,8 @@ document.addEventListener('alpine:init', () => {
     async leave() {
       if (this.isRunning() && !window.confirm(WTT.t('task_detail.leave_running'))) return undefined;
       return this.run('claim', async () => {
-        const rest = (this.task.assignees || []).map((a) => a.id).filter((id) => id !== me.id);
-        this.setTask(await api('PATCH', '/api/tasks/' + this.taskId + '/attributes', { assignee_ids: rest }));
+        // Só a pessoa sai: as outras ficam, mesmo as que entraram depois que a página abriu.
+        this.setTask(await api('PATCH', '/api/tasks/' + this.taskId + '/attributes', { remove_assignee_ids: [me.id] }));
         window.dispatchEvent(new CustomEvent('wtt:sessions-changed'));
         toast(WTT.t('task_detail.left'));
       });
