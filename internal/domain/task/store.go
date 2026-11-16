@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
 
 	"working-time-tracker/ent"
@@ -39,8 +40,9 @@ type WorkStopper interface {
 // SetWorkStopper liga quem para o ponto de quem sai da tarefa.
 func (s *Store) SetWorkStopper(w WorkStopper) { s.work = w }
 
-// stopWork para o ponto de cada pessoa que sai da tarefa. Vem antes de a lista mudar: se parar falha, ela continua
-// responsável e com o ponto como estava.
+// stopWork para o ponto de cada pessoa que sai da tarefa. Roda com a tarefa travada e antes de a lista mudar: se parar
+// falha, nada é gravado e ela continua responsável. O ponto é gravado por outra conexão, e nada nele escreve na linha da
+// tarefa (só em work_sessions e work_session_tasks), então a trava não o prende.
 func (s *Store) stopWork(taskID uuid.UUID, leaving []uuid.UUID) error {
 	if s.work == nil {
 		return nil
@@ -372,59 +374,121 @@ func (s *Store) GetByID(id string) (*Task, error) {
 	return toDomainTask(t), nil
 }
 
-// Update grava a tarefa inteira, com a lista de responsáveis que ela tem. Quem sai da lista perde o ponto na tarefa
-// (stopWork) antes.
-func (s *Store) Update(t *Task) error {
-	leaving, err := s.leaving(t.ID, t.AssigneeIDs())
-	if err != nil {
-		return err
-	}
-	if err := s.stopWork(t.ID, leaving); err != nil {
-		return err
-	}
-	q := s.client.Task.UpdateOneID(t.ID).
-		SetName(t.Name).
-		SetDescription(t.Description).
-		SetPriority(priorityOf(t.Priority)).
-		SetStatus(statusOf(t.Status)).
-		ClearLabels().
-		AddLabelIDs(labelIDs(t.Labels)...).
-		SetDeadline(t.Deadline).
-		SetRequiredAccounts(nonNil(t.RequiredAccounts)).
-		ClearAssignees().
-		AddAssigneeIDs(t.AssigneeIDs()...)
-	if _, err := q.Save(context.Background()); err != nil {
-		return err
-	}
-	s.changed(t.ID)
-	return nil
+// AssigneeChange é o que um pedido faz com a lista de responsáveis, aplicado à lista que a tarefa tem na hora de
+// gravar (com ela travada): Set troca a lista inteira; Add e Remove põem e tiram algumas pessoas e deixam as outras,
+// inclusive quem entrou depois que a tela abriu. Remove vale depois de Set e Add.
+type AssigneeChange struct {
+	Set    *[]uuid.UUID
+	Add    []uuid.UUID
+	Remove []uuid.UUID
 }
 
-// leaving são as pessoas que deixam de ser responsáveis quando a tarefa passa a ter a lista next.
-func (s *Store) leaving(taskID uuid.UUID, next []uuid.UUID) ([]uuid.UUID, error) {
-	current, err := s.client.Task.Query().Where(task.IDEQ(taskID)).QueryAssignees().IDs(context.Background())
-	if err != nil {
-		return nil, err
+// apply é a lista que a tarefa passa a ter, partindo da que ela tem: sem repetir, na ordem.
+func (c AssigneeChange) apply(current []uuid.UUID) []uuid.UUID {
+	base := current
+	if c.Set != nil {
+		base = *c.Set
 	}
-	var out []uuid.UUID
-	for _, p := range current {
-		if !slices.Contains(next, p) {
-			out = append(out, p)
+	out := []uuid.UUID{}
+	for _, id := range append(slices.Clone(base), c.Add...) {
+		if !slices.Contains(c.Remove, id) && !slices.Contains(out, id) {
+			out = append(out, id)
 		}
 	}
-	return out, nil
+	return out
 }
 
-// ClaimIfUnassigned passa a tarefa para a pessoa só se ela ainda não tem
-// responsável: de dois pontos batidos juntos na mesma tarefa livre, só o primeiro a leva.
-func (s *Store) ClaimIfUnassigned(taskID, personID uuid.UUID) error {
-	_, err := s.TryClaim(taskID, personID)
+// AssigneeCheck confere a lista que a tarefa passa a ter (next) contra a que ela tem (current), lida com a tarefa
+// travada: são as regras de quem põe e quem tira (Service.checkAssignees). Nil aceita qualquer lista.
+type AssigneeCheck func(current, next []uuid.UUID) error
+
+// lockTask trava a linha da tarefa até o fim da transação: é a trava única da lista de responsáveis, que o Pegar, a
+// edição, a sincronização e o ponto (HoldForWork) respeitam, um de cada vez (Decisão 31). É FOR NO KEY UPDATE, e não
+// FOR UPDATE, para não barrar o FOR KEY SHARE que o Postgres pede quando outra conexão grava uma linha que aponta para
+// a tarefa (o trecho da sessão em work_session_tasks): o ponto é gravado com a tarefa travada.
+func lockTask(ctx context.Context, tx *ent.Tx, id uuid.UUID) error {
+	_, err := tx.Task.Query().Where(task.IDEQ(id)).ForUpdate(sql.WithLockClause("FOR NO KEY UPDATE")).Only(ctx)
+	if ent.IsNotFound(err) {
+		return database.ErrNotFound
+	}
 	return err
 }
 
-// TryClaim é o ClaimIfUnassigned que diz se a pessoa levou a tarefa: false quando ela já
-// tinha responsável (de dois pedidos juntos, só um recebe true). A linha da tarefa fica travada na transação
-// enquanto se confere que ela está livre, e é isso que decide a disputa no banco.
+// assigneeIDs são os responsáveis da tarefa, lidos pela transação.
+func assigneeIDs(ctx context.Context, tx *ent.Tx, id uuid.UUID) ([]uuid.UUID, error) {
+	return tx.Task.Query().Where(task.IDEQ(id)).QueryAssignees().IDs(ctx)
+}
+
+// write grava a tarefa numa transação, com ela travada. fields monta os campos; com change, a lista de responsáveis
+// muda contra a que a tarefa tem agora, depois do check, e quem sai tem o ponto parado antes (stopWork). Sem change, a
+// lista fica como está. Não chama o gancho: quem chama decide.
+func (s *Store) write(id uuid.UUID, change *AssigneeChange, check AssigneeCheck, fields func(*ent.TaskUpdateOne) *ent.TaskUpdateOne) error {
+	ctx := context.Background()
+	tx, err := s.client.Tx(ctx)
+	if err != nil {
+		return err
+	}
+	err = func() error {
+		if err := lockTask(ctx, tx, id); err != nil {
+			return err
+		}
+		q := fields(tx.Task.UpdateOneID(id))
+		if change != nil {
+			current, err := assigneeIDs(ctx, tx, id)
+			if err != nil {
+				return err
+			}
+			next := change.apply(current)
+			if check != nil {
+				if err := check(current, next); err != nil {
+					return err
+				}
+			}
+			removed := minus(current, next)
+			if err := s.stopWork(id, removed); err != nil {
+				return err
+			}
+			if len(removed) > 0 {
+				q = q.RemoveAssigneeIDs(removed...)
+			}
+			if added := minus(next, current); len(added) > 0 {
+				q = q.AddAssigneeIDs(added...)
+			}
+		}
+		_, err := q.Save(ctx)
+		if ent.IsNotFound(err) {
+			return database.ErrNotFound
+		}
+		return err
+	}()
+	if err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	return tx.Commit()
+}
+
+// Update grava a tarefa inteira. Com change, a lista de responsáveis muda junto, conferida pelo check contra a lista
+// que a tarefa tem na hora (write); sem ela, a lista fica como está, mesmo que alguém tenha entrado no meio.
+func (s *Store) Update(t *Task, change *AssigneeChange, check AssigneeCheck) error {
+	err := s.write(t.ID, change, check, func(q *ent.TaskUpdateOne) *ent.TaskUpdateOne {
+		return q.SetName(t.Name).
+			SetDescription(t.Description).
+			SetPriority(priorityOf(t.Priority)).
+			SetStatus(statusOf(t.Status)).
+			ClearLabels().
+			AddLabelIDs(labelIDs(t.Labels)...).
+			SetDeadline(t.Deadline).
+			SetRequiredAccounts(nonNil(t.RequiredAccounts))
+	})
+	if err == nil {
+		s.changed(t.ID)
+	}
+	return err
+}
+
+// TryClaim passa a tarefa para a pessoa só se ela ainda está livre, e diz se passou: false quando ela já tinha
+// responsável. A tarefa fica travada (lockTask) enquanto se confere, então de dois pedidos juntos só um recebe true.
 func (s *Store) TryClaim(taskID, personID uuid.UUID) (bool, error) {
 	ctx := context.Background()
 	tx, err := s.client.Tx(ctx)
@@ -432,10 +496,7 @@ func (s *Store) TryClaim(taskID, personID uuid.UUID) (bool, error) {
 		return false, err
 	}
 	claimed, err := func() (bool, error) {
-		if _, err := tx.Task.Query().Where(task.IDEQ(taskID)).ForUpdate().Only(ctx); err != nil {
-			if ent.IsNotFound(err) {
-				return false, database.ErrNotFound
-			}
+		if err := lockTask(ctx, tx, taskID); err != nil {
 			return false, err
 		}
 		taken, err := tx.Task.Query().Where(task.IDEQ(taskID), task.HasAssignees()).Exist(ctx)
@@ -455,21 +516,74 @@ func (s *Store) TryClaim(taskID, personID uuid.UUID) (bool, error) {
 	return true, nil
 }
 
-// Unclaim desfaz o TryClaim de quem acabou não abrindo o ponto: tira a pessoa dos responsáveis.
-func (s *Store) Unclaim(taskID, personID uuid.UUID) error {
-	err := s.client.Task.UpdateOneID(taskID).RemoveAssigneeIDs(personID).Exec(context.Background())
-	if err == nil {
-		s.changed(taskID)
-	}
-	return err
+// WorkHold é a tarefa travada para quem vai trabalhar nela: bater o ponto, pô-la numa sessão ou reabrir um trecho.
+// Enquanto o hold está de pé, ninguém muda a lista de responsáveis nem pega a tarefa, então o que se conferiu nele vale
+// até o ponto estar gravado: quem sai depois vê o trecho novo e o para, e quem bate o ponto depois de sair vê que saiu.
+// O ponto é gravado por outra conexão no meio (a trava deixa, lockTask). Termina com Commit ou Release.
+type WorkHold struct {
+	store     *Store
+	tx        *ent.Tx
+	taskID    uuid.UUID
+	assignees []uuid.UUID
+	claimed   bool
 }
 
-// attrsPatch é o que Store.UpdateAttrs grava: cada campo nil fica como está. assignees é a lista inteira de
-// responsáveis; vazia deixa a tarefa livre.
+// HoldForWork trava a tarefa e lê os responsáveis dela.
+func (s *Store) HoldForWork(taskID uuid.UUID) (*WorkHold, error) {
+	ctx := context.Background()
+	tx, err := s.client.Tx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err := lockTask(ctx, tx, taskID); err != nil {
+		_ = tx.Rollback()
+		return nil, err
+	}
+	ids, err := assigneeIDs(ctx, tx, taskID)
+	if err != nil {
+		_ = tx.Rollback()
+		return nil, err
+	}
+	return &WorkHold{store: s, tx: tx, taskID: taskID, assignees: ids}, nil
+}
+
+// Has diz se a pessoa é uma das responsáveis.
+func (h *WorkHold) Has(personID uuid.UUID) bool { return slices.Contains(h.assignees, personID) }
+
+// Free diz se a tarefa está sem responsável.
+func (h *WorkHold) Free() bool { return len(h.assignees) == 0 }
+
+// Claim passa a tarefa livre para a pessoa. Só vale com o Commit; o Release a devolve.
+func (h *WorkHold) Claim(personID uuid.UUID) error {
+	if err := h.tx.Task.UpdateOneID(h.taskID).AddAssigneeIDs(personID).Exec(context.Background()); err != nil {
+		return err
+	}
+	h.assignees = append(h.assignees, personID)
+	h.claimed = true
+	return nil
+}
+
+// Commit grava a tomada, se houve, e solta a tarefa.
+func (h *WorkHold) Commit() error {
+	if err := h.tx.Commit(); err != nil {
+		return err
+	}
+	if h.claimed {
+		h.store.changed(h.taskID)
+	}
+	return nil
+}
+
+// Release solta a tarefa sem gravar nada: a tomada, se houve, é desfeita.
+func (h *WorkHold) Release() { _ = h.tx.Rollback() }
+
+// attrsPatch é o que Store.UpdateAttrs grava: cada campo nil fica como está. assignees é a mudança na lista de
+// responsáveis, conferida por check com a tarefa travada.
 type attrsPatch struct {
 	priority, status *string
 	labels           *[]Label
-	assignees        *[]uuid.UUID
+	assignees        *AssigneeChange
+	check            AssigneeCheck
 	deadline         *time.Time
 	required         *[]string
 }
@@ -477,38 +591,24 @@ type attrsPatch struct {
 // UpdateAttrs grava só os campos do patch, sem reescrever o resto da tarefa: uma edição dos detalhes não
 // desfaz o nome, a descrição ou um responsável que chegaram no meio.
 func (s *Store) UpdateAttrs(id uuid.UUID, p attrsPatch) error {
-	if p.assignees != nil {
-		leaving, err := s.leaving(id, *p.assignees)
-		if err != nil {
-			return err
+	err := s.write(id, p.assignees, p.check, func(q *ent.TaskUpdateOne) *ent.TaskUpdateOne {
+		if p.priority != nil {
+			q = q.SetPriority(priorityOf(*p.priority))
 		}
-		if err := s.stopWork(id, leaving); err != nil {
-			return err
+		if p.status != nil {
+			q = q.SetStatus(statusOf(*p.status))
 		}
-	}
-	q := s.client.Task.UpdateOneID(id)
-	if p.priority != nil {
-		q = q.SetPriority(priorityOf(*p.priority))
-	}
-	if p.status != nil {
-		q = q.SetStatus(statusOf(*p.status))
-	}
-	if p.labels != nil {
-		q = q.ClearLabels().AddLabelIDs(labelIDs(*p.labels)...)
-	}
-	if p.assignees != nil {
-		q = q.ClearAssignees().AddAssigneeIDs(*p.assignees...)
-	}
-	if p.deadline != nil {
-		q = q.SetDeadline(*p.deadline)
-	}
-	if p.required != nil {
-		q = q.SetRequiredAccounts(nonNil(*p.required))
-	}
-	_, err := q.Save(context.Background())
-	if ent.IsNotFound(err) {
-		return database.ErrNotFound
-	}
+		if p.labels != nil {
+			q = q.ClearLabels().AddLabelIDs(labelIDs(*p.labels)...)
+		}
+		if p.deadline != nil {
+			q = q.SetDeadline(*p.deadline)
+		}
+		if p.required != nil {
+			q = q.SetRequiredAccounts(nonNil(*p.required))
+		}
+		return q
+	})
 	if err == nil {
 		s.changed(id)
 	}

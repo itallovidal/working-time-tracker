@@ -2318,6 +2318,7 @@ errors:
     share_forbidden: "só quem é responsável pela tarefa, ou administra o projeto, põe outra pessoa nela"
     remove_forbidden: "só quem administra o projeto tira outra pessoa da tarefa; você pode sair dela"
     too_many_assignees: "uma tarefa tem no máximo {{.max}} responsáveis"
+    assignees_conflict: "mande a lista inteira (assignee_ids) ou quem entra e quem sai (add_assignee_ids, remove_assignee_ids), não os dois"
     already_linked: "a tarefa já está ligada a um item desta integração"
     invalid_assignee_filter: "responsável inválido (assignee_id)"
     invalid_deadline_filter: "prazo inválido (deadline_to): use data e hora, como 2026-10-12T23:59:59Z"

@@ -2306,6 +2306,7 @@ errors:
     share_forbidden: "only an assignee of the task, or a project admin, can add someone else to it"
     remove_forbidden: "only a project admin can remove someone else from the task; you can leave it"
     too_many_assignees: "a task has at most {{.max}} assignees"
+    assignees_conflict: "send the whole list (assignee_ids) or who joins and who leaves (add_assignee_ids, remove_assignee_ids), not both"
     already_linked: "the task is already linked to an item of this integration"
     invalid_assignee_filter: "invalid assignee (assignee_id)"
     invalid_deadline_filter: "invalid deadline (deadline_to): use date and time, like 2026-10-12T23:59:59Z"

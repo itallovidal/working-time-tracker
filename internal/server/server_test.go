@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -2061,5 +2062,43 @@ func TestPayments_Permissions(t *testing.T) {
 	}
 	if rec := do(e, "DELETE", payouts+"/"+id, "", admin.session); rec.Code != http.StatusNotFound || !strings.Contains(rec.Body.String(), "payment.payout_not_found") {
 		t.Errorf("undo twice = %d %s, want 404 payment.payout_not_found", rec.Code, rec.Body.String())
+	}
+}
+
+// A tarefa pela API com o que entra e o que sai (add_assignee_ids, remove_assignee_ids), que é o que a tela manda:
+// quem está acrescenta, quem sai tira só a si, e a lista inteira junto com o que entra é recusada.
+func TestTasks_AssigneeDeltas(t *testing.T) {
+	e := newServer(t)
+	admin := signup(t, e, "Org", "ana@test.com")
+	bia := invite(t, e, admin, "bia@test.com", "member")
+	caio := invite(t, e, admin, "caio@test.com", "member")
+	projectID := createProject(t, e, admin, "Projeto")
+	allocate(t, e, admin, projectID, bia.id, 2000)
+	allocate(t, e, admin, projectID, caio.id, 2500)
+	taskID := decode(t, do(e, "POST", "/api/projects/"+projectID+"/tasks", `{"name":"Da Bia","assignee_ids":["`+bia.id+`"]}`, admin.session))["id"].(string)
+	attrs := "/api/tasks/" + taskID + "/attributes"
+	ids := func(rec *httptest.ResponseRecorder) []string {
+		t.Helper()
+		out := []string{}
+		for _, a := range decode(t, rec)["assignees"].([]any) {
+			out = append(out, a.(map[string]any)["id"].(string))
+		}
+		slices.Sort(out)
+		return out
+	}
+	both := []string{bia.id, caio.id}
+	slices.Sort(both)
+
+	if rec := do(e, "PATCH", attrs, `{"add_assignee_ids":["`+caio.id+`"]}`, bia.session); rec.Code != http.StatusOK || !slices.Equal(ids(rec), both) {
+		t.Fatalf("Bia adding Caio = %d %s, want both on the task", rec.Code, rec.Body.String())
+	}
+	if rec := do(e, "PATCH", attrs, `{"remove_assignee_ids":["`+caio.id+`"]}`, caio.session); rec.Code != http.StatusOK || !slices.Equal(ids(rec), []string{bia.id}) {
+		t.Fatalf("Caio leaving = %d %s, want only Bia", rec.Code, rec.Body.String())
+	}
+	if code, msg := errCode(t, e, "PATCH", attrs, `{"assignee_ids":["`+bia.id+`"],"add_assignee_ids":["`+caio.id+`"]}`, bia.session); code != http.StatusBadRequest || msg != "task.assignees_conflict" {
+		t.Errorf("whole list and delta together = %d %s, want 400 task.assignees_conflict", code, msg)
+	}
+	if rec := do(e, "PATCH", "/api/tasks/"+taskID, `{"name":"Livre","remove_assignee_ids":["`+bia.id+`"]}`, bia.session); rec.Code != http.StatusOK || len(ids(rec)) != 0 {
+		t.Errorf("Bia leaving through the full edit = %d %s, want a free task", rec.Code, rec.Body.String())
 	}
 }

@@ -197,14 +197,17 @@ func (h *Handler) Update(c *echo.Context) error {
 	// A descrição omitida mantém a que a tarefa tem (só "" a esvazia), e o prazo distingue ausente (mantém) de
 	// null (apaga).
 	var body struct {
-		Name        string                       `json:"name"`
-		Description *string                      `json:"description"`
-		AssigneeID  *string                      `json:"assignee_id"`
-		AssigneeIDs *[]string                    `json:"assignee_ids"`
-		Deadline    validate.Optional[time.Time] `json:"deadline"`
-		Priority    *string                      `json:"priority"`
-		Status      *string                      `json:"status"`
-		LabelIDs    *[]string                    `json:"label_ids"`
+		Name        string    `json:"name"`
+		Description *string   `json:"description"`
+		AssigneeID  *string   `json:"assignee_id"`
+		AssigneeIDs *[]string `json:"assignee_ids"`
+		// AddAssigneeIDs e RemoveAssigneeIDs põem e tiram algumas pessoas e deixam as outras; não vão com os dois acima.
+		AddAssigneeIDs    []string                     `json:"add_assignee_ids"`
+		RemoveAssigneeIDs []string                     `json:"remove_assignee_ids"`
+		Deadline          validate.Optional[time.Time] `json:"deadline"`
+		Priority          *string                      `json:"priority"`
+		Status            *string                      `json:"status"`
+		LabelIDs          *[]string                    `json:"label_ids"`
 		// RequiredAccounts omitido mantém a trava; [] a tira.
 		RequiredAccounts *[]string `json:"required_accounts"`
 	}
@@ -213,7 +216,7 @@ func (h *Handler) Update(c *echo.Context) error {
 	}
 	task, err := h.svc.PatchAs(actorOf(c), id, body.Name, body.Description, body.AssigneeID, body.Deadline,
 		Attrs{Priority: body.Priority, Status: body.Status, LabelIDs: body.LabelIDs, RequiredAccounts: body.RequiredAccounts,
-			Assignees: body.AssigneeIDs})
+			Assignees: body.AssigneeIDs, AddAssignees: body.AddAssigneeIDs, RemoveAssignees: body.RemoveAssigneeIDs})
 	if err != nil {
 		return respondAssignee(c, err)
 	}
@@ -235,15 +238,18 @@ func (h *Handler) Claim(c *echo.Context) error {
 
 // UpdateAttrs é a edição dos detalhes da tarefa: prioridade, status, etiquetas, responsáveis e prazo, cada um
 // opcional. assignee_ids é a lista inteira de responsáveis ([] deixa a tarefa livre); assignee_id, o atalho de uma
-// pessoa só (vazio a deixa livre). O prazo null o apaga (ausente o mantém).
+// pessoa só (vazio a deixa livre); add_assignee_ids e remove_assignee_ids põem e tiram algumas pessoas contra a lista
+// que a tarefa tem na hora, que é o que a tela manda. O prazo null o apaga (ausente o mantém).
 func (h *Handler) UpdateAttrs(c *echo.Context) error {
 	var body struct {
-		Priority    *string                      `json:"priority"`
-		Status      *string                      `json:"status"`
-		LabelIDs    *[]string                    `json:"label_ids"`
-		AssigneeID  *string                      `json:"assignee_id"`
-		AssigneeIDs *[]string                    `json:"assignee_ids"`
-		Deadline    validate.Optional[time.Time] `json:"deadline"`
+		Priority          *string                      `json:"priority"`
+		Status            *string                      `json:"status"`
+		LabelIDs          *[]string                    `json:"label_ids"`
+		AssigneeID        *string                      `json:"assignee_id"`
+		AssigneeIDs       *[]string                    `json:"assignee_ids"`
+		AddAssigneeIDs    []string                     `json:"add_assignee_ids"`
+		RemoveAssigneeIDs []string                     `json:"remove_assignee_ids"`
+		Deadline          validate.Optional[time.Time] `json:"deadline"`
 		// RequiredAccounts omitido mantém a trava; [] a tira.
 		RequiredAccounts *[]string `json:"required_accounts"`
 	}
@@ -252,7 +258,7 @@ func (h *Handler) UpdateAttrs(c *echo.Context) error {
 	}
 	task, err := h.svc.PatchAttrsAs(actorOf(c), c.Param("taskId"),
 		Attrs{Priority: body.Priority, Status: body.Status, LabelIDs: body.LabelIDs, RequiredAccounts: body.RequiredAccounts,
-			Assignees: body.AssigneeIDs},
+			Assignees: body.AssigneeIDs, AddAssignees: body.AddAssigneeIDs, RemoveAssignees: body.RemoveAssigneeIDs},
 		body.AssigneeID, body.Deadline)
 	if err != nil {
 		return respondAssignee(c, err)

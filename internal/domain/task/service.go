@@ -79,11 +79,13 @@ func (s *Service) CreateAs(actor Actor, projectID, name, description, assigneeID
 			return nil, err
 		}
 	}
-	// Sem responsável, a tarefa fica disponível: quem bater o ponto nela a pega.
-	want, field, err := wantedAssignees(&assigneeID, attrs.Assignees)
+	// Sem responsável, a tarefa fica disponível: quem bater o ponto nela a pega. Na criação não há lista de antes, então
+	// só vale a lista inteira (o que entra e o que sai é da edição).
+	change, field, err := wantedAssignees(&assigneeID, Attrs{Assignees: attrs.Assignees})
 	if err != nil {
 		return nil, err
 	}
+	want := change.apply(nil)
 
 	var dl time.Time
 	if deadline != nil {
@@ -109,10 +111,10 @@ func (s *Service) CreateAs(actor Actor, projectID, name, description, assigneeID
 	if required != nil {
 		task.RequiredAccounts = *required
 	}
-	if err := s.checkAssignees(actor, task, *want, field); err != nil {
+	if err := s.checkAssignees(actor, task, nil, want, field); err != nil {
 		return nil, err
 	}
-	task.Assignees = people(*want)
+	task.Assignees = people(want)
 	if err := s.taskStore.Create(task); err != nil {
 		return nil, err
 	}
@@ -276,23 +278,28 @@ func (s *Service) PatchAs(actor Actor, id, name string, description *string, ass
 	if required != nil {
 		task.RequiredAccounts = *required
 	}
-	want, field, err := wantedAssignees(assigneeID, attrs.Assignees)
+	change, field, err := wantedAssignees(assigneeID, attrs)
 	if err != nil {
 		return nil, err
-	}
-	if want != nil {
-		if err := s.checkAssignees(actor, task, *want, field); err != nil {
-			return nil, err
-		}
-		task.Assignees = people(*want)
 	}
 	if dl != nil {
 		task.Deadline = *dl
 	}
-	if err := s.taskStore.Update(task); err != nil {
+	if err := s.taskStore.Update(task, change, s.assigneeCheck(actor, task, change, field)); err != nil {
 		return nil, err
 	}
 	return s.taskStore.GetByID(id)
+}
+
+// assigneeCheck é o checkAssignees que o store roda com a tarefa travada, contra a lista que ela tem na hora. t dá o
+// projeto e a trava de contas (já com a mudança do pedido). Sem mudança na lista, não há o que conferir.
+func (s *Service) assigneeCheck(actor Actor, t *Task, change *AssigneeChange, field string) AssigneeCheck {
+	if change == nil {
+		return nil
+	}
+	return func(current, next []uuid.UUID) error {
+		return s.checkAssignees(actor, t, current, next, field)
+	}
 }
 
 // cleanName apara o nome da tarefa e confere o tamanho. O servidor é a regra: a tela só adianta o aviso.
@@ -363,37 +370,64 @@ func (s *Service) Claim(selfID, id string) (*Task, error) {
 	return t, nil
 }
 
-// wantedAssignees traduz o pedido para a lista de responsáveis que a tarefa passa a ter, e diz o campo dos erros:
-// list (assignee_ids) é a lista inteira; sem ela, o assigneeID de uma pessoa só (vazio deixa a tarefa livre). Nil nos
-// dois mantém o que a tarefa tem (devolve nil). Os ids repetidos contam uma vez.
-func wantedAssignees(assigneeID *string, list *[]string) (*[]uuid.UUID, string, error) {
-	field, raw := "assignee_ids", []string{}
-	switch {
-	case list != nil:
-		raw = *list
-	case assigneeID == nil:
-		return nil, "", nil
-	default:
+// wantedAssignees traduz o pedido para a mudança na lista de responsáveis, e diz o campo dos erros. attrs.Assignees
+// (assignee_ids) é a lista inteira; sem ela, o assigneeID de uma pessoa só (vazio deixa a tarefa livre);
+// attrs.AddAssignees e attrs.RemoveAssignees põem e tiram algumas pessoas, contra a lista que a tarefa tem na hora de
+// gravar. Sem nada disso, a lista fica como está (devolve nil). A lista inteira junto com o que entra e o que sai é
+// ErrAssigneesConflict. Os ids repetidos contam uma vez.
+func wantedAssignees(assigneeID *string, attrs Attrs) (*AssigneeChange, string, error) {
+	delta := len(attrs.AddAssignees) > 0 || len(attrs.RemoveAssignees) > 0
+	field := "assignee_ids"
+	if attrs.Assignees == nil && assigneeID != nil {
 		field = "assignee_id"
-		if *assigneeID != "" {
-			raw = []string{*assigneeID}
-		}
 	}
+	whole := attrs.Assignees != nil || assigneeID != nil
+	switch {
+	case whole && delta:
+		return nil, field, ErrAssigneesConflict.With("field", field)
+	case delta:
+		add, err := parseAssignees(attrs.AddAssignees, field)
+		if err != nil {
+			return nil, field, err
+		}
+		remove, err := parseAssignees(attrs.RemoveAssignees, field)
+		if err != nil {
+			return nil, field, err
+		}
+		return &AssigneeChange{Add: add, Remove: remove}, field, nil
+	case !whole:
+		return nil, "", nil
+	}
+	raw := []string{}
+	if attrs.Assignees != nil {
+		raw = *attrs.Assignees
+	} else if *assigneeID != "" {
+		raw = []string{*assigneeID}
+	}
+	set, err := parseAssignees(raw, field)
+	if err != nil {
+		return nil, field, err
+	}
+	return &AssigneeChange{Set: &set}, field, nil
+}
+
+// parseAssignees lê os ids de pessoas de um pedido, sem repetir. Um que não é uuid é ErrInvalidAssignee no campo dado.
+func parseAssignees(raw []string, field string) ([]uuid.UUID, error) {
 	out := []uuid.UUID{}
 	for _, r := range raw {
 		uid, err := uuid.Parse(strings.TrimSpace(r))
 		if err != nil {
-			return nil, field, ErrInvalidAssignee.With("field", field)
+			return nil, ErrInvalidAssignee.With("field", field)
 		}
 		if !slices.Contains(out, uid) {
 			out = append(out, uid)
 		}
 	}
-	return &out, field, nil
+	return out, nil
 }
 
-// checkAssignees confere a lista de responsáveis que a tarefa t passa a ter (Decisão 31), pessoa a pessoa, só em
-// quem entra ou sai:
+// checkAssignees confere a lista de responsáveis que a tarefa t passa a ter (want) contra a que ela tem (current, lida
+// com a tarefa travada; nil numa tarefa nova), pessoa a pessoa, só em quem entra ou sai (Decisão 31):
 //   - Numa tarefa livre, quem não administra o projeto só pega a tarefa para si; pôr outra pessoa é ErrShareForbidden.
 //   - Numa tarefa com gente, quem não está nela não entra sozinho (ErrAlreadyAssigned: alguém dela o acrescenta), e
 //     só um responsável acrescenta outras pessoas.
@@ -402,7 +436,7 @@ func wantedAssignees(assigneeID *string, list *[]string) (*[]uuid.UUID, string, 
 // O sistema (Actor vazio) e o admin passam por essas regras. Para todos, quem entra precisa estar no projeto (salvo
 // quem pede para si) e ter as contas da trava, e a lista tem no máximo MaxAssignees. A trava vale só para quem entra:
 // ligá-la não tira quem já está.
-func (s *Service) checkAssignees(actor Actor, t *Task, want []uuid.UUID, field string) error {
+func (s *Service) checkAssignees(actor Actor, t *Task, current, want []uuid.UUID, field string) error {
 	if len(want) > MaxAssignees {
 		return ErrTooManyAssignees.With("max", MaxAssignees, "field", field)
 	}
@@ -414,7 +448,6 @@ func (s *Service) checkAssignees(actor Actor, t *Task, want []uuid.UUID, field s
 			return ErrInvalidAssignee.With("field", field)
 		}
 	}
-	current := t.AssigneeIDs()
 	added, removed := minus(want, current), minus(current, want)
 	if !system && !actor.Manage {
 		mine := slices.Contains(current, self)
@@ -536,16 +569,11 @@ func (s *Service) PatchAttrsAs(actor Actor, id string, attrs Attrs, assigneeID *
 	if patch.required != nil {
 		t.RequiredAccounts = *patch.required
 	}
-	want, field, err := wantedAssignees(assigneeID, attrs.Assignees)
+	change, field, err := wantedAssignees(assigneeID, attrs)
 	if err != nil {
 		return nil, err
 	}
-	if want != nil {
-		if err := s.checkAssignees(actor, t, *want, field); err != nil {
-			return nil, err
-		}
-		patch.assignees = want
-	}
+	patch.assignees, patch.check = change, s.assigneeCheck(actor, t, change, field)
 	if err := s.taskStore.UpdateAttrs(t.ID, patch); err != nil {
 		return nil, err
 	}

@@ -1,7 +1,10 @@
 package task_test
 
 import (
+	"context"
 	"errors"
+	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -15,10 +18,16 @@ import (
 	"working-time-tracker/internal/validate"
 )
 
-// stopRecorder é o WorkStopper dos testes: anota quem foi parado em que tarefa.
-type stopRecorder struct{ calls []string }
+// stopRecorder é o WorkStopper dos testes: anota quem foi parado em que tarefa. Os testes de corrida o chamam de mais
+// de uma goroutine, daí a trava.
+type stopRecorder struct {
+	mu    sync.Mutex
+	calls []string
+}
 
 func (s *stopRecorder) StopTaskFor(personID, taskID uuid.UUID) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.calls = append(s.calls, personID.String()+"/"+taskID.String())
 	return nil
 }
@@ -70,6 +79,11 @@ func (e asgEnv) set(actor task.Actor, taskID string, ids ...string) (*task.Task,
 		ids = []string{}
 	}
 	return e.svc.PatchAttrsAs(actor, taskID, task.Attrs{Assignees: &ids}, nil, noDeadline())
+}
+
+// delta põe e tira algumas pessoas em nome de quem pede, como a tela manda.
+func (e asgEnv) delta(actor task.Actor, taskID string, add, remove []string) (*task.Task, error) {
+	return e.svc.PatchAttrsAs(actor, taskID, task.Attrs{AddAssignees: add, RemoveAssignees: remove}, nil, noDeadline())
 }
 
 func names(t *task.Task) []string {
@@ -269,5 +283,154 @@ func TestAssignees_RemoteRemovalStopsWork(t *testing.T) {
 	}
 	if len(e.stopped.calls) != 1 || e.stopped.calls[0] != bia+"/"+tk.ID.String() {
 		t.Errorf("stopped = %v, want Bia", e.stopped.calls)
+	}
+}
+
+// A tela que leu a tarefa antes de alguém entrar manda só o que mudou nela: quem entrou no meio fica e não tem o ponto
+// parado, e o Sair pela tela velha tira só quem sai.
+func TestAssignees_DeltaKeepsWhoJoinedMeanwhile(t *testing.T) {
+	e := newAsgEnv(t)
+	ana, bia := e.ana.ID.String(), e.bia.ID.String()
+	tk, err := e.svc.Create(e.project, "Dividida", "", ana, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := tk.ID.String()
+	// A Ana acrescenta a Bia enquanto a tela do admin ainda mostra só a Ana.
+	if _, err := e.delta(e.actor(ana), id, []string{bia}, nil); err != nil {
+		t.Fatalf("Ana sharing the task: %v", err)
+	}
+	// O admin marca o Cai na tela velha: vai só o Cai, e a Bia fica.
+	got, err := e.delta(e.admin(e.cai), id, []string{e.cai}, nil)
+	if err != nil || !sameNames(got, "Ana", "Bia", "Cai") {
+		t.Fatalf("the admin adding Cai from a stale page = %v, %v; want Ana, Bia and Cai", names(got), err)
+	}
+	if len(e.stopped.calls) != 0 {
+		t.Errorf("stopped = %v, want nobody: nobody left", e.stopped.calls)
+	}
+	// A Ana sai pela tela velha, que não conhece o Cai: sai só ela, sem o 403 de tirar outra pessoa.
+	got, err = e.delta(e.actor(ana), id, nil, []string{ana})
+	if err != nil || !sameNames(got, "Bia", "Cai") {
+		t.Fatalf("Ana leaving from a stale page = %v, %v; want Bia and Cai", names(got), err)
+	}
+	if len(e.stopped.calls) != 1 || e.stopped.calls[0] != ana+"/"+id {
+		t.Errorf("stopped = %v, want only Ana", e.stopped.calls)
+	}
+	// As regras valem para o que entra e o que sai: quem não é admin não tira outra pessoa.
+	if _, err := e.delta(e.actor(bia), id, nil, []string{e.cai}); !errors.Is(err, task.ErrRemoveForbidden) {
+		t.Errorf("an assignee removing another by delta = %v, want ErrRemoveForbidden", err)
+	}
+}
+
+// A lista inteira e o que entra e o que sai são dois jeitos de mudar a lista, um de cada vez.
+func TestAssignees_WholeListAndDeltaConflict(t *testing.T) {
+	e := newAsgEnv(t)
+	ana := e.ana.ID.String()
+	tk, _ := e.svc.Create(e.project, "Livre", "", "", nil)
+	list := []string{ana}
+	_, err := e.svc.PatchAttrsAs(e.actor(ana), tk.ID.String(), task.Attrs{Assignees: &list, AddAssignees: []string{ana}}, nil, noDeadline())
+	if !errors.Is(err, task.ErrAssigneesConflict) {
+		t.Errorf("assignee_ids with add_assignee_ids = %v, want ErrAssigneesConflict", err)
+	}
+	_, err = e.svc.PatchAs(e.actor(ana), tk.ID.String(), "Livre", nil, &ana, noDeadline(), task.Attrs{RemoveAssignees: []string{ana}})
+	if !errors.Is(err, task.ErrAssigneesConflict) {
+		t.Errorf("assignee_id with remove_assignee_ids = %v, want ErrAssigneesConflict", err)
+	}
+	if _, err := e.delta(e.actor(ana), tk.ID.String(), []string{"nope"}, nil); !errors.Is(err, task.ErrInvalidAssignee) {
+		t.Errorf("a delta with a bad id = %v, want ErrInvalidAssignee", err)
+	}
+}
+
+// Uma edição que não muda a lista não a toca: a tarefa lida antes de alguém entrar, gravada depois, não tira essa
+// pessoa nem para o ponto dela.
+func TestAssignees_EditWithoutTheListKeepsIt(t *testing.T) {
+	e := newAsgEnv(t)
+	tk, _ := e.svc.Create(e.project, "Livre", "", "", nil)
+	stale, err := e.svc.Get(tk.ID.String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.svc.Claim(e.ana.ID.String(), tk.ID.String()); err != nil {
+		t.Fatal(err)
+	}
+	stale.Name = "Renomeada"
+	if err := e.store.Update(stale, nil, nil); err != nil {
+		t.Fatal(err)
+	}
+	got, _ := e.svc.Get(tk.ID.String())
+	if got.Name != "Renomeada" || !sameNames(got, "Ana") {
+		t.Errorf("after a rename from a stale read = %q with %v, want the new name and Ana still on it", got.Name, names(got))
+	}
+	if len(e.stopped.calls) != 0 {
+		t.Errorf("stopped = %v, want nobody", e.stopped.calls)
+	}
+}
+
+// Com a tarefa travada para o ponto (HoldForWork), outra conexão grava um trecho de sessão nela: a trava é FOR NO KEY
+// UPDATE, que não barra a chave estrangeira do trecho. Com FOR UPDATE, o clock-in ficaria parado para sempre.
+func TestStore_HoldForWorkLetsTheSessionIn(t *testing.T) {
+	e := newAsgEnv(t)
+	tk, _ := e.svc.Create(e.project, "Travada", "", e.ana.ID.String(), nil)
+	hold, err := e.store.HoldForWork(tk.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer hold.Release()
+	done := make(chan error, 1)
+	go func() {
+		ctx := context.Background()
+		s, err := testClient.WorkSession.Create().
+			SetProjectID(uuid.MustParse(e.project)).SetPersonID(e.ana.ID).SetStartAt(time.Now()).Save(ctx)
+		if err != nil {
+			done <- err
+			return
+		}
+		done <- testClient.WorkSessionTask.Create().SetSessionID(s.ID).SetTaskID(tk.ID).SetFromAt(time.Now()).Exec(ctx)
+	}()
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("write a session stretch on the held task: %v", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("writing a session stretch on a held task blocked: the lock must be FOR NO KEY UPDATE")
+	}
+}
+
+// Pegar a tarefa livre e se pôr nela pela edição, ao mesmo tempo: a trava da tarefa deixa uma pessoa só entrar, e a
+// outra recebe o já tem responsável.
+func TestAssignees_ClaimAndJoinAtOnce(t *testing.T) {
+	e := newAsgEnv(t)
+	ana, bia := e.ana.ID.String(), e.bia.ID.String()
+	for round := range 20 {
+		tk, err := e.svc.Create(e.project, fmt.Sprintf("Livre %d", round), "", "", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		id := tk.ID.String()
+		var wg sync.WaitGroup
+		start := make(chan struct{})
+		errs := make([]error, 2)
+		wg.Add(2)
+		go func() { defer wg.Done(); <-start; _, errs[0] = e.svc.Claim(ana, id) }()
+		go func() { defer wg.Done(); <-start; _, errs[1] = e.delta(e.actor(bia), id, []string{bia}, nil) }()
+		close(start)
+		wg.Wait()
+		got, _ := e.svc.Get(id)
+		if len(got.Assignees) != 1 {
+			t.Fatalf("round %d: assignees = %v (errors %v), want exactly one", round, names(got), errs)
+		}
+		lost := 0
+		for _, err := range errs {
+			switch {
+			case errors.Is(err, task.ErrAlreadyAssigned):
+				lost++
+			case err != nil:
+				t.Fatalf("round %d: unexpected error %v", round, err)
+			}
+		}
+		if lost != 1 {
+			t.Fatalf("round %d: errors %v, want one ErrAlreadyAssigned", round, errs)
+		}
 	}
 }

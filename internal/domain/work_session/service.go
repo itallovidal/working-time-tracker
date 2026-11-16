@@ -64,8 +64,8 @@ func (s *Service) ClockIn(projectID, taskID, personID string) (*WorkSession, err
 	}
 
 	// Só bate o ponto quem é responsável pela tarefa; numa tarefa livre, bater o ponto a torna de quem bateu, e a trava
-	// dela vale antes (Decisão 31).
-	claimed, err := s.claimFor(task, personUID)
+	// dela vale antes (Decisão 31). A tarefa fica travada até a sessão estar gravada.
+	hold, err := s.holdFor(task, personUID, true)
 	if err != nil {
 		return nil, err
 	}
@@ -79,8 +79,8 @@ func (s *Service) ClockIn(projectID, taskID, personID string) (*WorkSession, err
 		BillRateCents: rates.BillRateCents,
 	}
 	if err := s.sessionStore.Create(session, task.ID); err != nil {
-		// Um ponto recusado não leva a tarefa livre.
-		s.unclaim(claimed, task.ID, personUID)
+		// Um ponto recusado não leva a tarefa livre: o Release desfaz a tomada.
+		hold.Release()
 		// Duas requisições simultâneas passam pela checagem acima; o índice
 		// one_open_session_per_project barra a segunda aqui.
 		if ent.IsConstraintError(err) {
@@ -88,8 +88,12 @@ func (s *Service) ClockIn(projectID, taskID, personID string) (*WorkSession, err
 		}
 		return nil, err
 	}
+	if err := hold.Commit(); err != nil {
+		return nil, err
+	}
 	// E a tarefa em que se bateu o ponto passa a estar em progresso, de qualquer status. O
-	// clock-out não a tira de lá: parar ou pausar não é terminar.
+	// clock-out não a tira de lá: parar ou pausar não é terminar. Vem depois do Commit: ela grava na linha da
+	// tarefa, que o hold travava.
 	if err := s.taskStore.StartProgress(task.ID); err != nil {
 		return nil, err
 	}
@@ -314,19 +318,18 @@ func (s *Service) AddTask(projectID, sessionID, taskID string, from, until *time
 	if overlaps(session, t.ID, uuid.Nil, start, until) {
 		return nil, ErrTaskOverlap.With("field", "from_at")
 	}
-	// Só entra na sessão a tarefa de que a pessoa é responsável (Decisão 31). Na sessão aberta, a tarefa livre passa a
-	// ser dela, com a trava antes; numa sessão já fechada, a livre entra sem mudar de dono.
-	claimed := false
-	if session.EndAt == nil {
-		var err error
-		if claimed, err = s.claimFor(t, session.PersonID); err != nil {
-			return nil, err
-		}
-	} else if !t.Free() && !t.HasAssignee(session.PersonID) {
-		return nil, ErrNotAssignee.With("field", "task_id")
+	// Só entra na sessão a tarefa de que a pessoa é responsável (Decisão 31), conferida com a tarefa travada até o
+	// trecho estar gravado. Na sessão aberta, a tarefa livre passa a ser dela, com a trava de contas antes; numa sessão
+	// já fechada, a livre entra sem mudar de dono.
+	hold, err := s.holdFor(t, session.PersonID, session.EndAt == nil)
+	if err != nil {
+		return nil, err
 	}
 	if _, err := s.sessionStore.AddTask(session.ID, t.ID, start, until); err != nil {
-		s.unclaim(claimed, t.ID, session.PersonID)
+		hold.Release()
+		return nil, err
+	}
+	if err := hold.Commit(); err != nil {
 		return nil, err
 	}
 	if session.EndAt == nil {
@@ -385,8 +388,28 @@ func (s *Service) UpdateTask(projectID, sessionID, linkID string, change TaskCha
 	if session.EndAt == nil && until != nil && !hasOtherActive(session, link.ID) {
 		return nil, ErrLastTask
 	}
+	// Reabrir um trecho parado numa sessão aberta é voltar a trabalhar na tarefa: vale a regra do ponto (Decisão 31),
+	// com a tarefa travada até o trecho estar gravado. Quem saiu da tarefa não volta por aqui; a livre passa a ser dela.
+	var hold *taskdom.WorkHold
+	if session.EndAt == nil && link.UntilAt != nil && until == nil {
+		t, err := s.taskStore.GetByID(link.TaskID.String())
+		if err != nil {
+			return nil, err
+		}
+		if hold, err = s.holdFor(t, session.PersonID, true); err != nil {
+			return nil, err
+		}
+	}
 	if err := s.sessionStore.UpdateTask(link.ID, from, until); err != nil {
+		if hold != nil {
+			hold.Release()
+		}
 		return nil, err
+	}
+	if hold != nil {
+		if err := hold.Commit(); err != nil {
+			return nil, err
+		}
 	}
 	return s.Get(projectID, sessionID)
 }
@@ -411,38 +434,31 @@ func (s *Service) RemoveTask(projectID, sessionID, linkID string) (*WorkSession,
 	return s.Get(projectID, sessionID)
 }
 
-// claimFor confere que a pessoa pode trabalhar na tarefa e, se a tarefa está livre, a passa para ela (claimed diz
-// que passou, para quem falhar depois desfazer). A tarefa de outras pessoas é ErrNotAssignee; a livre passa pela
-// trava de contas antes e, se outra pessoa a levou no meio, também é ErrNotAssignee.
-func (s *Service) claimFor(t *taskdom.Task, personID uuid.UUID) (claimed bool, err error) {
-	if t.HasAssignee(personID) {
-		return false, nil
-	}
-	if !t.Free() {
-		return false, ErrNotAssignee.With("field", "task_id")
-	}
-	if err := s.taskStore.CheckRequired(t, personID); err != nil {
-		return false, err
-	}
-	if claimed, err = s.taskStore.TryClaim(t.ID, personID); err != nil || claimed {
-		return claimed, err
-	}
-	fresh, err := s.taskStore.GetByID(t.ID.String())
+// holdFor trava a tarefa para a pessoa trabalhar nela (Decisão 31) e confere, com a tarefa travada, que ela é uma das
+// responsáveis. Numa tarefa livre, com claim, a tarefa passa a ser dela (com a trava de contas antes); sem claim (a
+// sessão já encerrada), entra sem mudar de dono. A tarefa de outras pessoas é ErrNotAssignee. Quem recebe o hold grava
+// o ponto e termina com Commit; com Release, nada fica, nem a tomada.
+func (s *Service) holdFor(t *taskdom.Task, personID uuid.UUID, claim bool) (*taskdom.WorkHold, error) {
+	hold, err := s.taskStore.HoldForWork(t.ID)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
-	if !fresh.HasAssignee(personID) {
-		return false, ErrNotAssignee.With("field", "task_id")
+	switch {
+	case hold.Has(personID):
+	case !hold.Free():
+		hold.Release()
+		return nil, ErrNotAssignee.With("field", "task_id")
+	case claim:
+		if err := s.taskStore.CheckRequired(t, personID); err != nil {
+			hold.Release()
+			return nil, err
+		}
+		if err := hold.Claim(personID); err != nil {
+			hold.Release()
+			return nil, err
+		}
 	}
-	return false, nil
-}
-
-// unclaim devolve a tarefa livre que claimFor passou para a pessoa, quando o ponto acabou não abrindo. A falha aqui
-// não muda a resposta: o erro que importa é o do ponto.
-func (s *Service) unclaim(claimed bool, taskID, personID uuid.UUID) {
-	if claimed {
-		_ = s.taskStore.Unclaim(taskID, personID)
-	}
+	return hold, nil
 }
 
 // StopTaskFor para o trabalho da pessoa na tarefa quando ela deixa de ser responsável (Decisão 31): o trecho aberto

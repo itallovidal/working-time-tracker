@@ -2,7 +2,6 @@ package task
 
 import (
 	"context"
-	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -13,7 +12,6 @@ import (
 	"working-time-tracker/ent"
 	entlabel "working-time-tracker/ent/label"
 	"working-time-tracker/ent/task"
-	"working-time-tracker/internal/database"
 )
 
 // O que a sincronização das issues do GitHub precisa da tarefa. As escritas daqui (ApplyRemote,
@@ -82,55 +80,30 @@ type RemotePatch struct {
 
 // ApplyRemote grava o que veio da plataforma na tarefa, sem o gancho e sem as regras de quem edita
 // (limite da descrição, responsável do time, quem pode dividir): o que vem da issue é aceito como está. Quem sai da
-// lista de responsáveis perde o ponto na tarefa, como na edição.
+// lista de responsáveis perde o ponto na tarefa, como na edição, e a lista muda com a tarefa travada (Store.write).
 func (s *Store) ApplyRemote(id uuid.UUID, p RemotePatch) error {
-	var add, remove []uuid.UUID
+	var change *AssigneeChange
 	if len(p.AddAssignees) > 0 || len(p.RemoveAssignees) > 0 {
-		current, err := s.client.Task.Query().Where(task.IDEQ(id)).QueryAssignees().IDs(context.Background())
-		if err != nil {
-			return err
+		change = &AssigneeChange{Add: p.AddAssignees, Remove: p.RemoveAssignees}
+	}
+	return s.write(id, change, nil, func(q *ent.TaskUpdateOne) *ent.TaskUpdateOne {
+		if p.Name != nil {
+			q = q.SetName(*p.Name)
 		}
-		for _, a := range p.AddAssignees {
-			if !slices.Contains(current, a) && !slices.Contains(add, a) {
-				add = append(add, a)
-			}
+		if p.Description != nil {
+			q = q.SetDescription(*p.Description)
 		}
-		for _, r := range p.RemoveAssignees {
-			if slices.Contains(current, r) && !slices.Contains(remove, r) {
-				remove = append(remove, r)
-			}
+		if p.Status != nil {
+			q = q.SetStatus(statusOf(*p.Status))
 		}
-		if err := s.stopWork(id, remove); err != nil {
-			return err
+		if p.Labels != nil {
+			q = q.ClearLabels().AddLabelIDs(labelIDs(*p.Labels)...)
 		}
-	}
-	q := s.client.Task.UpdateOneID(id)
-	if p.Name != nil {
-		q = q.SetName(*p.Name)
-	}
-	if p.Description != nil {
-		q = q.SetDescription(*p.Description)
-	}
-	if p.Status != nil {
-		q = q.SetStatus(statusOf(*p.Status))
-	}
-	if len(remove) > 0 {
-		q = q.RemoveAssigneeIDs(remove...)
-	}
-	if len(add) > 0 {
-		q = q.AddAssigneeIDs(add...)
-	}
-	if p.Labels != nil {
-		q = q.ClearLabels().AddLabelIDs(labelIDs(*p.Labels)...)
-	}
-	if p.Deadline != nil {
-		q = q.SetDeadline(*p.Deadline)
-	}
-	_, err := q.Save(context.Background())
-	if ent.IsNotFound(err) {
-		return database.ErrNotFound
-	}
-	return err
+		if p.Deadline != nil {
+			q = q.SetDeadline(*p.Deadline)
+		}
+		return q
+	})
 }
 
 // Imported é a tarefa que nasce de um item da plataforma. O vínculo com o item é de quem importa: ele grava a

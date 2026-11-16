@@ -423,12 +423,12 @@ func (s *server) updateTask(_ context.Context, req *mcp.CallToolRequest, in upda
 		deadline = validate.Optional[time.Time]{Set: true, Value: t}
 	}
 	attrs := task.Attrs{}
-	if len(in.AddAssignees) > 0 || len(in.RemoveAssignees) > 0 {
-		ids, err := changedAssignees(id, current, in.AddAssignees, in.RemoveAssignees)
-		if err != nil {
-			return nil, TaskOut{}, s.fail(err)
-		}
-		attrs.Assignees = &ids
+	// O que entra e o que sai vão como estão: o serviço os aplica à lista que a tarefa tem na hora de gravar.
+	if attrs.AddAssignees, err = personIDs(id, in.AddAssignees); err != nil {
+		return nil, TaskOut{}, s.fail(err)
+	}
+	if attrs.RemoveAssignees, err = personIDs(id, in.RemoveAssignees); err != nil {
+		return nil, TaskOut{}, s.fail(err)
 	}
 	if in.Status != "" {
 		attrs.Status = &in.Status
@@ -569,8 +569,6 @@ func (s *server) createLabel(_ context.Context, req *mcp.CallToolRequest, in cre
 	return nil, LabelOut{Name: l.Name, Created: true}, nil
 }
 
-// changedLabels parte das etiquetas da tarefa, põe as de add e tira as de remove, pelo nome. Tirar uma que a tarefa
-// não tem não faz nada, e um nome nas duas listas sai.
 // actorFor é a pessoa do token como quem mexe nos responsáveis, com o que pode no projeto: administrar o projeto
 // (collaborators.manage) deixa pôr e tirar qualquer pessoa.
 func (s *server) actorFor(id *auth.Identity, projectID string) (task.Actor, error) {
@@ -604,42 +602,8 @@ func personIDs(id *auth.Identity, list []string) ([]string, error) {
 	return out, nil
 }
 
-// changedAssignees é a lista de responsáveis da tarefa com add somados e remove tirados.
-func changedAssignees(id *auth.Identity, t *task.Task, add, remove []string) ([]string, error) {
-	addIDs, err := personIDs(id, add)
-	if err != nil {
-		return nil, err
-	}
-	removeIDs, err := personIDs(id, remove)
-	if err != nil {
-		return nil, err
-	}
-	drop := map[string]bool{}
-	for _, r := range removeIDs {
-		drop[strings.ToLower(r)] = true
-	}
-	out := []string{}
-	seen := map[string]bool{}
-	for _, p := range append(t.AssigneeIDs(), uuidsOf(addIDs)...) {
-		k := p.String()
-		if !drop[k] && !seen[k] {
-			seen[k] = true
-			out = append(out, k)
-		}
-	}
-	return out, nil
-}
-
-func uuidsOf(ids []string) []uuid.UUID {
-	out := make([]uuid.UUID, 0, len(ids))
-	for _, s := range ids {
-		if u, err := uuid.Parse(s); err == nil {
-			out = append(out, u)
-		}
-	}
-	return out
-}
-
+// changedLabels parte das etiquetas da tarefa, põe as de add e tira as de remove, pelo nome. Tirar uma que a tarefa
+// não tem não faz nada, e um nome nas duas listas sai.
 func (s *server) changedLabels(t *task.Task, add, remove []string) ([]string, error) {
 	projectID := t.ProjectID.String()
 	var addIDs, removeIDs []string

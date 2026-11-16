@@ -82,6 +82,11 @@ type Attrs struct {
 	// Assignees é a lista inteira de responsáveis que a tarefa passa a ter (ids). Nil mantém a que ela tem; vazio a
 	// deixa livre. Vale no lugar do assigneeID dos métodos que o recebem.
 	Assignees *[]string
+	// AddAssignees e RemoveAssignees põem e tiram algumas pessoas (ids) e deixam as outras, contra a lista que a
+	// tarefa tem na hora de gravar: quem entrou depois que a tela abriu fica. Não vão com Assignees nem com o
+	// assigneeID (ErrAssigneesConflict). Só na edição.
+	AddAssignees    []string
+	RemoveAssignees []string
 	// SkipPublish são as integrações em que a tarefa nova NÃO deve ser postada sozinha: a pessoa as
 	// desmarcou na etapa Integrações. Só vale na criação (não é guardado) e vai ao gancho de criação.
 	SkipPublish []uuid.UUID

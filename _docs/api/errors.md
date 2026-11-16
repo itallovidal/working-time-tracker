@@ -376,6 +376,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `task.already_assigned` | 409 | — | `esta tarefa já tem responsável: peça a quem está nela para acrescentar você` | `this task already has an assignee: ask someone on it to add you` |
 | `task.already_linked` | 409 | — | `a tarefa já está ligada a um item desta integração` | `the task is already linked to an item of this integration` |
 | `task.assignee_not_in_team` | 400 | — | `o responsável precisa estar neste projeto` | `the assignee must be on this project` |
+| `task.assignees_conflict` | 400 | — | `mande a lista inteira (assignee_ids) ou quem entra e quem sai (add_assignee_ids, remove_assignee_ids), não os dois` | `send the whole list (assignee_ids) or who joins and who leaves (add_assignee_ids, remove_assignee_ids), not both` |
 | `task.description_too_long` | 400 | `max` | `a descrição aceita até {{.max}} caracteres` | `the description accepts up to {{.max}} characters` |
 | `task.integration_not_found` | 400 | — | `integração não encontrada` | `integration not found` |
 | `task.integration_other_project` | 400 | — | `a integração é de outro projeto` | `the integration belongs to another project` |

@@ -21,7 +21,10 @@ var (
 	// ErrRemoveForbidden é tirar outra pessoa da tarefa sem ser admin do projeto: o responsável só sai ele mesmo.
 	ErrRemoveForbidden = apperr.New("task.remove_forbidden", http.StatusForbidden)
 	// ErrTooManyAssignees é passar de MaxAssignees responsáveis.
-	ErrTooManyAssignees        = apperr.New("task.too_many_assignees", http.StatusBadRequest, "max")
+	ErrTooManyAssignees = apperr.New("task.too_many_assignees", http.StatusBadRequest, "max")
+	// ErrAssigneesConflict é mandar a lista inteira (assignee_ids ou assignee_id) junto com o que entra e o que sai
+	// (add_assignee_ids, remove_assignee_ids): são dois jeitos de mudar a lista, um de cada vez.
+	ErrAssigneesConflict       = apperr.New("task.assignees_conflict", http.StatusBadRequest)
 	ErrIntegrationNotFound     = apperr.New("task.integration_not_found", http.StatusBadRequest)
 	ErrIntegrationOtherProject = apperr.New("task.integration_other_project", http.StatusBadRequest)
 	ErrNoExternalItem          = apperr.New("task.no_external_item", http.StatusBadRequest)
